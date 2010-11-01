@@ -9,6 +9,24 @@ import junit.framework.TestSuite;
  */
 public class HadoopBspTest 
     extends TestCase {
+	
+	/**
+	 * Sample BSP application.
+	 * 
+	 * @author aching
+	 *
+	 * @param <V>
+	 * @param <E>
+	 * @param <M>
+	 */
+	public final class TestBSP<V, E, M> extends HadoopVertex<V, E, M> {
+	    public void compute() {
+	    	if (getSuperstep() > 30) {
+	    		voteToHalt();
+	        }
+	    }
+	}
+	
     /**
      * Create the test case
      *
