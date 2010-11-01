@@ -3,6 +3,7 @@ package com.yahoo.hadoop_bsp;
 import java.util.Iterator;
 
 /**
+ * Basic interface for writing a BSP application.
  * 
  * @author aching
  *
