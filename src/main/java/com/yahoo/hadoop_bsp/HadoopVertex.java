@@ -19,7 +19,7 @@ public abstract class HadoopVertex<V, E, M> implements Vertex<V, E, M> {
 		m_vertexValue = vertexValue;
 	}
 	
-	public Iterator getOutEdgeIterator() {
+	public Iterator<E> getOutEdgeIterator() {
 		return m_outEdgeSet.iterator();
 	}
 	

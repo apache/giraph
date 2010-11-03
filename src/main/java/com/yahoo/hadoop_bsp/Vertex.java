@@ -32,10 +32,11 @@ public interface Vertex<V, E, M> {
 	 */
 	public void setVertexValue(V vertexValue);
 	/**
-	 * Every vertex has edges to other vertices.  Get a handle to the outward vertices.
+	 * Every vertex has edges to other vertices.  Get a handle to the outward 
+	 * vertices.
 	 * @return iterator to the outward edges
 	 */
-	public Iterator getOutEdgeIterator();
+	public Iterator<E> getOutEdgeIterator();
 	/**
 	 * After this is called, the compute() code will no longer be called for
 	 * this vertice unless a message is sent to it.  Then the compute() code
