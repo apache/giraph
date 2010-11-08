@@ -1,6 +1,7 @@
 package com.yahoo.hadoop_bsp;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Job;
@@ -13,15 +14,40 @@ import org.apache.hadoop.mapreduce.Mapper;
  * @author aching
  */
 public class BspJob extends Job {
+	/** Minimum number of simultaneous processes before this job can run (int) */
+	public static final String BSP_MIN_PROCESSES = "bsp.minProcs";
+	/** Initial number of simultaneous tasks started by this job (int) */
+	public static final String BSP_INITIAL_PROCESSES = "bsp.maxProcs";
+	/** Minimum percent of initial processes that have responded (float) */
+	public static final String BSP_MIN_PERCENT_RESPONDED = 
+		"bsp.minPercentResponded";
+	/** Polling timeout to check on the number of responded tasks (int) */
+	public static final String BSP_POLL_MSECS = "bsp.pollMsecs";
+	/** Default poll msecs (30 seconds) */
+	public static int DEFAULT_BSP_POLL_MSECS = 30000;
+	/** Number of poll attempts prior to failing the job (int) */
+	public static final String BSP_POLL_ATTEMPTS = "bsp.pollAttempts";
+	/** Default poll attempts */
+	public static int DEFAULT_BSP_POLL_ATTEMPTS = 3;
+	
 	/**
 	 *  Constructor.
-	 * @param conf user-defined configuation
+	 * @param conf user-defined configuration
 	 * @param jobName user-defined job name
 	 * @throws IOException
 	 */
 	public BspJob(
 			Configuration conf, String jobName) throws IOException {
 		super(conf, jobName);
+		if (conf.getInt(BSP_INITIAL_PROCESSES, -1) < 0) {
+			throw new IOException("No valid " + BSP_INITIAL_PROCESSES);
+		}
+		if (conf.getFloat(BSP_MIN_PERCENT_RESPONDED, 0.0f) <= 0) {
+			throw new IOException("No valid " + BSP_MIN_PERCENT_RESPONDED);
+		}
+		if (conf.getInt(BSP_MIN_PROCESSES, -1) < 0) {
+			throw new IOException("No valid " + BSP_MIN_PROCESSES);
+		}
 	}
 	
 	/**
@@ -30,9 +56,20 @@ public class BspJob extends Job {
 	 * types are irrelevant.
 	 * 
 	 * @author aching
+	 * @param <V>
+	 * @param <V>
 	 */
-	public static class BspMapper 
+	public static class BspMapper<V, E>
 		extends Mapper<Object, Object, Object, Object> {
+		ArrayList<VertexData<V, E>> m_vertexArray;
+		
+		/**
+		 * Load the vertices from the user-defined RecordReader into our 
+		 * vertexArray.
+		 */
+		public void loadVertices() {
+			
+		}
 		
 		@Override
 		public void setup(Context context) 
@@ -41,6 +78,7 @@ public class BspJob extends Job {
 			 * Do some initial setup, but mainly decide whether to load from a 
 			 * checkpoint or from the InputFormat.
 			 */
+			m_vertexArray = new ArrayList<VertexData<V,E>>();
 		}
 		
 		@Override

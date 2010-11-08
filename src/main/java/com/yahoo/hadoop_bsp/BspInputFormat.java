@@ -22,12 +22,13 @@ public class BspInputFormat extends InputFormat<Text, Text> {
 	public List<InputSplit> getSplits(JobContext context) 
     	throws IOException, InterruptedException {
 		Configuration conf = context.getConfiguration();
-		int minMapTasks = conf.getInt("bsp.minTasks", 0);
-		if (minMapTasks <= 0) {
-			throw new InterruptedException("Set bsp.minTasks > 0");
+		int initialTasks = conf.getInt(BspJob.BSP_INITIAL_PROCESSES, 0);
+		if (initialTasks <= 0) {
+			throw new InterruptedException(
+				"Set " + BspJob.BSP_INITIAL_PROCESSES + " > 0");
 		}
         List<InputSplit> inputSplitList = new ArrayList<InputSplit>();
-        for (int i = 0; i < minMapTasks; ++i) {
+        for (int i = 0; i < initialTasks; ++i) {
         	inputSplitList.add(new BspInputSplit());
         }
         return inputSplitList;

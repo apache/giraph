@@ -33,12 +33,12 @@ public class BspRecordReader extends RecordReader<Text, Text> {
 
 	@Override
 	public Text getCurrentKey() throws IOException, InterruptedException {
-		return new Text("key");	
+		return new Text("only key");	
 	}
 
 	@Override
 	public Text getCurrentValue() throws IOException, InterruptedException {
-		return new Text("value");
+		return new Text("only value");
 	}
 
 	@Override
