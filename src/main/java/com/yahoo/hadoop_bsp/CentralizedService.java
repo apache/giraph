@@ -29,4 +29,9 @@ public interface CentralizedService {
 	 * Get the current superstep.
 	 */
 	int getSuperStep();
+	
+	/**
+	 * Clean up the service (no calls may be issued after this)
+	 */
+	void cleanup();
 }

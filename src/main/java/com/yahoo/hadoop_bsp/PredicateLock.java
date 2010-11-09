@@ -3,10 +3,11 @@ package com.yahoo.hadoop_bsp;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class PredicateLock implements BspEvent {
 	/** Lock */
-	Lock m_lock;
+	Lock m_lock = new ReentrantLock();
 	/** Condition associated with m_lock */
 	Condition m_cond = m_lock.newCondition();
 	/** Predicate */

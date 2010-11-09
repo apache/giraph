@@ -6,10 +6,12 @@ import java.util.ArrayList;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.zookeeper.KeeperException;
+import org.json.JSONException;
 
 /**
  * Limits the functions that can be called by the user.  Job is too flexible
- * for our needs.  For instance, there are no reduce tasks.
+ * for our needs.  For instance, our job should not have any reduce tasks.
  * 
  * @author aching
  */
@@ -23,12 +25,19 @@ public class BspJob extends Job {
 		"bsp.minPercentResponded";
 	/** Polling timeout to check on the number of responded tasks (int) */
 	public static final String BSP_POLL_MSECS = "bsp.pollMsecs";
+	/** Zookeeper list (empty for start up Zookeeper locally) */
+	public static final String BSP_ZOOKEEPER_LIST = "bsp.zkList";
+	/** Zookeeper session millisecond timeout */
+	public static final String BSP_ZOOKEEPER_SESSION_TIMEOUT = 
+		"bsp.zkSessionMsecTimeout";
 	/** Default poll msecs (30 seconds) */
-	public static int DEFAULT_BSP_POLL_MSECS = 30000;
+	public static int DEFAULT_BSP_POLL_MSECS = 30*1000;
 	/** Number of poll attempts prior to failing the job (int) */
 	public static final String BSP_POLL_ATTEMPTS = "bsp.pollAttempts";
 	/** Default poll attempts */
 	public static int DEFAULT_BSP_POLL_ATTEMPTS = 3;
+	/** Default Zookeeper session millisecond timeout */
+	public static int DEFAULT_BSP_ZOOKEEPER_SESSION_TIMEOUT = 30*1000;
 	
 	/**
 	 *  Constructor.
@@ -48,6 +57,10 @@ public class BspJob extends Job {
 		if (conf.getInt(BSP_MIN_PROCESSES, -1) < 0) {
 			throw new IOException("No valid " + BSP_MIN_PROCESSES);
 		}
+		if (conf.get(BSP_ZOOKEEPER_LIST, "").isEmpty()) {
+			throw new IOException(
+				"Empty zk list not yet supported (future work");
+		}
 	}
 	
 	/**
@@ -61,7 +74,10 @@ public class BspJob extends Job {
 	 */
 	public static class BspMapper<V, E>
 		extends Mapper<Object, Object, Object, Object> {
+		/** Data structure for managing vertices */
 		ArrayList<VertexData<V, E>> m_vertexArray;
+		/** */
+		CentralizedService m_service;
 		
 		/**
 		 * Load the vertices from the user-defined RecordReader into our 
@@ -79,6 +95,23 @@ public class BspJob extends Job {
 			 * checkpoint or from the InputFormat.
 			 */
 			m_vertexArray = new ArrayList<VertexData<V,E>>();
+			Configuration configuration = context.getConfiguration();
+			String serverPortList = 
+				configuration.get(BspJob.BSP_ZOOKEEPER_LIST, "");
+			int sessionMsecTimeout = 
+				configuration.getInt(
+					BspJob.BSP_POLL_MSECS,
+					BspJob.DEFAULT_BSP_ZOOKEEPER_SESSION_TIMEOUT);
+				try {
+					m_service = new BspService(
+						serverPortList, sessionMsecTimeout, configuration);
+				} catch (KeeperException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (JSONException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 		}
 		
 		@Override
@@ -91,11 +124,6 @@ public class BspJob extends Job {
 			 */
 			System.out.printf("Key: '%s'\n", key);
 			System.out.printf("Value: '%s'\n", value);
-		}
-		
-		@Override
-		public void cleanup(Context context) 
-			throws IOException, InterruptedException {
 			/*
 			 * 1) For every vertex on this mapper, run the compute() function
 			 * 2) Wait until all messaging is done.
@@ -104,6 +132,11 @@ public class BspJob extends Job {
 			 */
 		}
 		
+		@Override
+		public void cleanup(Context context) 
+			throws IOException, InterruptedException {
+			m_service.cleanup();
+		}
 	}
 	
 	/**

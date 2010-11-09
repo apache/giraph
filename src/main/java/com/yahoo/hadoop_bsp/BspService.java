@@ -9,6 +9,7 @@ import org.json.JSONObject;
 
 import org.apache.log4j.Logger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.zookeeper.KeeperException;
@@ -27,7 +28,7 @@ import org.apache.zookeeper.data.Stat;
  */
 public class BspService implements CentralizedService, Watcher {
 	/** Private Zookeeper instance that implements the service */
-	private ZooKeeper m_zk = null;
+	private ZooKeeperExt m_zk = null;
 	/** My virtual identity in the group */
 	private int m_myVirtualId = -1;
 	/** Am I the master? */
@@ -36,24 +37,37 @@ public class BspService implements CentralizedService, Watcher {
 	private Object m_barrierObject;
 	/** Registration synchronization */
 	private BspEvent m_partitionCountSet = new PredicateLock();
-	private Boolean m_partitionCountReady = false;
+	/** Partition count */
+	private Integer m_partitionCount;
 	/** Configuration of the job*/
 	private Configuration m_conf;
+	/** Current superstep */
 	Integer m_currentSuperStep = -1;
 	/** Job id, to ensure uniqueness */
 	String m_jobId;
+	/** My process health znode */
+	String m_myHealthZode;
 	/** Master thread */
 	Thread m_masterThread;
 	/** Class logger */
     private static final Logger LOG = Logger.getLogger(BspService.class);
-
+    /** State of the service? */
+    private enum State {
+    	INIT, 
+    	RUNNING, 
+    	FAILED, 
+    	FINISHED
+    }
+    /** Current state */
+    private State m_currentState = State.INIT;
+        
 	public static final String BASE_DIR = "/_hadoopBsp";
 	public static final String BARRIER_DIR = "/_barrier";
-	public static final String SUPERSTEP_DIR = "/_superstep";
+	public static final String SUPERSTEP_NODE = "/_superstep";
 	public static final String PROCESS_HEALTH_DIR = "/_processHealth";
-	public static final String PARTITION_COUNT = "/_partitionCount";
+	public static final String PARTITION_COUNT_NODE = "/_partitionCount";
 	public static final String VIRTUAL_ID_DIR = "/_virtualIdDir";
-	public static final String FAIL_JOB_DIR = "/_failJob";
+	public static final String JOB_STATE_NODE = "/_jobState";
 
 	private final String BASE_PATH;
 	private final String BARRIER_PATH;
@@ -61,7 +75,7 @@ public class BspService implements CentralizedService, Watcher {
 	private final String PROCESS_HEALTH_PATH;
 	private final String PARTITION_COUNT_PATH;
 	private final String VIRTUAL_ID_PATH;
-	private final String FAIL_JOB_PATH;
+	private final String JOB_STATE_PATH;
 	
 	public BspService(String serverPortList, int sessionMsecTimeout, 
 		Configuration conf) throws IOException, KeeperException, InterruptedException, 
@@ -70,16 +84,13 @@ public class BspService implements CentralizedService, Watcher {
 		m_jobId = conf.get("mapred.job.id", "Unknown Job");
 		BASE_PATH = "/" + m_jobId + BASE_DIR;
 		BARRIER_PATH = BASE_PATH + BARRIER_DIR;
-		SUPERSTEP_PATH = BASE_PATH + SUPERSTEP_DIR;
-		PROCESS_HEALTH_PATH= BASE_PATH + PROCESS_HEALTH_DIR;
-		PARTITION_COUNT_PATH = BASE_PATH + PARTITION_COUNT;
+		SUPERSTEP_PATH = BASE_PATH + SUPERSTEP_NODE;
+		PROCESS_HEALTH_PATH = BASE_PATH + PROCESS_HEALTH_DIR;
+		PARTITION_COUNT_PATH = BASE_PATH + PARTITION_COUNT_NODE;
 		VIRTUAL_ID_PATH = BASE_PATH + VIRTUAL_ID_DIR;
-		FAIL_JOB_PATH = BASE_PATH + FAIL_JOB_DIR;
+		JOB_STATE_PATH = BASE_PATH + JOB_STATE_NODE;
 			
-	    m_zk = new ZooKeeper(serverPortList, sessionMsecTimeout, this);
-	    m_currentSuperStep = (Integer) JSONObject.stringToValue(
-	    	new String(m_zk.getData(SUPERSTEP_DIR, false, null)));
-	    
+	    m_zk = new ZooKeeperExt(serverPortList, sessionMsecTimeout, this);
 	    m_masterThread = new MasterThread(this);
 	    m_masterThread.start();
 	}
@@ -94,11 +105,22 @@ public class BspService implements CentralizedService, Watcher {
 	 * @throws InterruptedException 
 	 * @throws KeeperException 
 	 */
-	public void masterFailJob() throws KeeperException, InterruptedException {
-		m_zk.create(FAIL_JOB_PATH, 
-				    null,
-				    Ids.OPEN_ACL_UNSAFE, 
-			   	    CreateMode.PERSISTENT);
+	public synchronized void masterSetJobState(State state) 
+		throws KeeperException, InterruptedException {
+		m_currentState = state;
+		try {
+			m_zk.createExt(JOB_STATE_PATH, 
+						   state.toString().getBytes(),
+						   Ids.OPEN_ACL_UNSAFE, 
+						   CreateMode.PERSISTENT,
+						   true);
+		} catch (KeeperException.NodeExistsException e) {
+			m_zk.setData(JOB_STATE_PATH, state.toString().getBytes(), -1);
+		}
+	}
+	
+	public synchronized State getJobState() {
+		return m_currentState;
 	}
 	
 	/**
@@ -123,7 +145,6 @@ public class BspService implements CentralizedService, Watcher {
 			LOG.info("Need to create the partitions at " + 
 					 PARTITION_COUNT_PATH);
 		}
-		int pollAttempt = 0;
 		int maxPollAttempts = m_conf.getInt(BspJob.BSP_POLL_ATTEMPTS, 
 											BspJob.DEFAULT_BSP_POLL_ATTEMPTS);
 		int initialProcs = m_conf.getInt(BspJob.BSP_INITIAL_PROCESSES, -1);
@@ -131,60 +152,91 @@ public class BspService implements CentralizedService, Watcher {
 		float minPercentResponded = 
 			m_conf.getFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 0.0f);
 		List<String> procsReported = null;
+		int msecsPollPeriod = m_conf.getInt(BspJob.BSP_POLL_MSECS, 
+											BspJob.DEFAULT_BSP_POLL_MSECS);
 		boolean failJob = true;
+		int pollAttempt = 0;
 		while (pollAttempt < maxPollAttempts) {
-			procsReported = m_zk.getChildren(PROCESS_HEALTH_PATH, false);
-			if (procsReported.size() / initialProcs >= minPercentResponded) {
-				failJob = false;
-				break;
+			try {
+				procsReported = m_zk.getChildren(PROCESS_HEALTH_PATH, false);
+				if (procsReported.size() / initialProcs >= minPercentResponded) {
+					failJob = false;
+					break;
+				}
+			} catch (KeeperException.NoNodeException e) {
+				LOG.info("No node " + PROCESS_HEALTH_PATH + " exists: " + 
+						 e.getMessage());
 			}
+			Thread.sleep(msecsPollPeriod);
+			++pollAttempt;
 		}
 		if (failJob) {
-			masterFailJob();
+			masterSetJobState(State.FAILED);
 			throw new InterruptedException(
 			    "Did not receive enough processes in time");
 		}
 		
 		int healthyProcs = 0;
-		Iterator procsReportedIt = procsReported.iterator();
-		while (procsReportedIt.hasNext()) {
+		for (String proc : procsReported) {
 			try {
-				String jsonObject = new String(
-					m_zk.getData((String) procsReportedIt.next(), false, null));
+				String jsonObject = new String(m_zk.getData(proc, false, null));
 				Boolean processHealth = 
 					(Boolean) JSONObject.stringToValue(jsonObject);
 				if (processHealth.booleanValue()) {
 					++healthyProcs;
 				}
-			}
-			catch (KeeperException e){
-				LOG.error("Process at " + procsReportedIt.next() + 
+			} catch (KeeperException.NoNodeException e) {
+				LOG.error("Process at " + proc + 
 						  " between retrieving children and getting znode");
 			}
 		}
 		if (healthyProcs < minProcs) {
-			masterFailJob();
+			masterSetJobState(State.FAILED);
 			throw new InterruptedException(
 				"Only " + Integer.toString(healthyProcs) + " available when " + 
 				Integer.toString(minProcs) + " are required.");
 		}
-		
-		m_zk.create(BASE_DIR + VIRTUAL_ID_DIR, 
-				  null,
-				  Ids.OPEN_ACL_UNSAFE, 
-				  CreateMode.PERSISTENT);
-		for (int i = 0; i < healthyProcs; ++i) {
-			m_zk.create(BASE_DIR + VIRTUAL_ID_DIR + "/" + Integer.toString(i), 
-					  null,
-					  Ids.OPEN_ACL_UNSAFE, 
-					  CreateMode.PERSISTENT);
+
+		/*
+		 *  When creating znodes, in case the master has already run, resume 
+		 *  where it left off.
+		 */
+		try {
+			m_zk.create(VIRTUAL_ID_PATH, 
+						null,
+						Ids.OPEN_ACL_UNSAFE, 
+						CreateMode.PERSISTENT);
+		} catch (KeeperException.NodeExistsException e) {
+			LOG.info("Node " + VIRTUAL_ID_PATH + " already exists.");
 		}
-		m_zk.create(BASE_DIR + PARTITION_COUNT, 
-				  Integer.toString(healthyProcs).getBytes(),
-				  Ids.OPEN_ACL_UNSAFE, 
-				  CreateMode.PERSISTENT);
+		for (int i = 0; i < healthyProcs; ++i) {
+			try {
+				m_zk.create(VIRTUAL_ID_PATH + "/" + Integer.toString(i), 
+							null,
+					  		Ids.OPEN_ACL_UNSAFE, 
+					  		CreateMode.PERSISTENT);
+			} catch (KeeperException.NodeExistsException e) {
+					LOG.info("Node " + VIRTUAL_ID_PATH+ "/" + 
+							Integer.toString(i) +" already exists.");
+			}
+		}
+		try {
+			m_zk.create(SUPERSTEP_PATH,
+						Integer.toString(0).getBytes(),
+						Ids.OPEN_ACL_UNSAFE, 
+						CreateMode.PERSISTENT);
+		} catch (KeeperException.NodeExistsException e) {
+			LOG.info("Node " + SUPERSTEP_PATH + " already exists.");
+		}
+		try {
+			m_zk.create(PARTITION_COUNT_PATH, 
+						Integer.toString(healthyProcs).getBytes(),
+						Ids.OPEN_ACL_UNSAFE, 
+						CreateMode.PERSISTENT);
+		} catch (KeeperException.NodeExistsException e) {
+			LOG.info("Node " + PARTITION_COUNT_PATH + " already exists.");	
+		}
 	}
-	
 	
 	public void setup() {
 		/*
@@ -192,26 +244,63 @@ public class BspService implements CentralizedService, Watcher {
 		 * *
 		 * 1) Everyone creates their health node
 		 * 2) If PARTITION_COUNT exists, goto 5)
-		 * 2) Wait for event on the node below to see if they are the master.
-		 * 3) Wait for exist event on PARTITION_COUNT node
-		 * 4) Master - lowest child, determines whether it is sufficient to 
-		 *    proceed based on the minimum required processes, the min % 
-		 *    responded, a polling timeout, and a maximum timeout.  Write out
-		 *    the virtual ids and then finally the PARTITION_COUNT.
+		 * 3) Wait for on PARTITION_COUNT node to be created
 		 * 5) Everyone checks their own node to see the virtual id "suggested"
-		 *    by the master.
+		 *    by the master. (Future work)
 		 * 6) Try the suggested virtual id, otherwise, scan for a free one.
 		 */
 		try {
-			m_zk.create(BASE_DIR + PROCESS_HEALTH_DIR, 
-					  (new JSONObject(isHealthy())).toString().getBytes(),
-					  Ids.OPEN_ACL_UNSAFE,
-					  CreateMode.EPHEMERAL_SEQUENTIAL);
+			m_myHealthZode =
+				m_zk.create(PROCESS_HEALTH_PATH, 
+						    (new JSONObject(isHealthy())).toString().getBytes(),
+						    Ids.OPEN_ACL_UNSAFE,
+						    CreateMode.EPHEMERAL_SEQUENTIAL);
 			
-			Stat partitionDone = null;
-			while (partitionDone == null) {
-				partitionDone = m_zk.exists(BASE_DIR + PARTITION_COUNT, this);
+			byte[] partitionCountByteArr = null;
+			try {
+				partitionCountByteArr = 
+					m_zk.getData(PARTITION_COUNT_PATH, true, null);
 			}
+			catch (KeeperException.NoNodeException e) {
+				m_partitionCountSet.waitForever();
+				partitionCountByteArr = 
+					m_zk.getData(PARTITION_COUNT_PATH, true, null);
+			}
+			finally {
+				m_partitionCount = (Integer) 
+					JSONObject.stringToValue(new String(partitionCountByteArr));
+			}
+			
+		    m_currentSuperStep = (Integer) JSONObject.stringToValue(
+			    	new String(m_zk.getData(SUPERSTEP_PATH, false, null)));
+		    
+		    /*
+		     *  Try to claim a virtual id in a polling period.
+		     */
+		    List<String> virtualIdList = null;
+		    boolean reservedNode = false;
+		    while ((getJobState() != State.FAILED) &&
+		    	   (getJobState() != State.FINISHED)) {
+		    	virtualIdList = m_zk.getChildren(VIRTUAL_ID_PATH, false);
+		    	for (String virtualId : virtualIdList) {
+		    		try {
+		    			m_zk.create(virtualId + "/reserved", 
+		    					    null,
+		    					    Ids.OPEN_ACL_UNSAFE, 
+		    					    CreateMode.EPHEMERAL);
+		    			reservedNode = true;
+		    			break;
+		    		} catch (KeeperException.NodeExistsException e) {
+		    			LOG.info("Failed to reserve " + virtualId);
+		    		}
+		    	}
+		    	if (reservedNode) {
+		    		return;
+		    	}
+		    	Thread.sleep(
+		    		m_conf.getInt(BspJob.BSP_POLL_MSECS, 
+		    				      BspJob.DEFAULT_BSP_POLL_MSECS));
+			} 
 		} catch (KeeperException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -238,12 +327,38 @@ public class BspService implements CentralizedService, Watcher {
 				m_barrierObject.notifyAll();				
 			}
 		}
-		else if (event.getPath().contains(PARTITION_COUNT)) {
+		else if (event.getPath().equals(PARTITION_COUNT_PATH)) {
 			m_partitionCountSet.signal();
+		}
+		else if (event.getPath().equals(JOB_STATE_PATH)) {
+			try {
+				synchronized (this) {
+					m_currentState = State.valueOf(
+							new String(m_zk.getData(event.getPath(), true, null)));					
+				}
+			} catch (KeeperException.NoNodeException e) {
+				LOG.error(JOB_STATE_PATH + " was unusually removed.");
+			} catch (Exception e) {
+				// Shouldn't ever happen
+				m_currentState = State.FAILED;
+			}
 		}
 	}
 	
 	public int getSuperStep() {
 		return m_currentSuperStep;
+	}
+	
+	public void cleanup() {
+		try {
+			m_masterThread.join();
+		} catch (InterruptedException e) {
+			throw new RuntimeException("Master thread couldn't join");
+		}
+		try {
+			m_zk.close();
+		} catch (InterruptedException e) {
+			throw new RuntimeException("Zookeeper failed to close");
+		}
 	}
 }
