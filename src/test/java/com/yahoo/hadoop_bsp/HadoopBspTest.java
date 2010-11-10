@@ -1,6 +1,7 @@
 package com.yahoo.hadoop_bsp;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -8,6 +9,10 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.zookeeper.WatchedEvent;
+import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.proto.WatcherEvent;
+
 import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
@@ -15,7 +20,7 @@ import junit.framework.TestSuite;
 /**
  * Unit test for simple App.
  */
-public class HadoopBspTest extends TestCase {
+public class HadoopBspTest extends TestCase implements Watcher {
 	
 	/**
 	 * Sample BSP application.
@@ -59,6 +64,24 @@ public class HadoopBspTest extends TestCase {
         System.out.println(test.getSuperstep());
     }
     
+    @Override
+    public void setUp() {
+    	try {
+			ZooKeeperExt zooKeeperExt = 
+				new ZooKeeperExt("localhost:2181", 30*1000, this);
+			List<String> rootChildren = zooKeeperExt.getChildren("/", false);
+			for (String rootChild : rootChildren) {
+				if (rootChild.startsWith("job_local_")) {
+					System.out.println("Cleaning up /" + rootChild);
+					zooKeeperExt.deleteExt("/" + rootChild, -1, true);
+				}
+			}
+			zooKeeperExt.close();
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+    }
+    
     /**
      * Run a sample BSP job locally.
      * @throws IOException
@@ -72,8 +95,8 @@ public class HadoopBspTest extends TestCase {
         conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
         conf.setInt(BspJob.BSP_MIN_PROCESSES, 1);
         conf.setInt(BspJob.BSP_POLL_ATTEMPTS, 1);
-        conf.setInt(BspJob.BSP_POLL_MSECS, 1000);
-        conf.set(BspJob.BSP_ZOOKEEPER_LIST, "localhost:2221");
+        conf.setInt(BspJob.BSP_POLL_MSECS, 5*1000);
+        conf.set(BspJob.BSP_ZOOKEEPER_LIST, "localhost:2181");
         FileSystem hdfs = FileSystem.get(conf);
     	BspJob bspJob = new BspJob(conf, "testBspJob");
        	Path inputPath = new Path("/tmp/testBspJobInput");
@@ -141,4 +164,8 @@ public class HadoopBspTest extends TestCase {
     	FileOutputFormat.setOutputPath(bspJob, outputPath);
     	bspJob.run();
     }
+
+	public void process(WatchedEvent event) {
+		return;
+	}
 }

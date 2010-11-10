@@ -6,8 +6,10 @@ import java.util.ArrayList;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.log4j.Logger;
 import org.apache.zookeeper.KeeperException;
 import org.json.JSONException;
+import org.mortbay.log.Log;
 
 /**
  * Limits the functions that can be called by the user.  Job is too flexible
@@ -74,6 +76,8 @@ public class BspJob extends Job {
 	 */
 	public static class BspMapper<V, E>
 		extends Mapper<Object, Object, Object, Object> {
+		/** Logger */
+	    private static final Logger LOG = Logger.getLogger(BspMapper.class);
 		/** Data structure for managing vertices */
 		ArrayList<VertexData<V, E>> m_vertexArray;
 		/** */
@@ -103,14 +107,14 @@ public class BspJob extends Job {
 					BspJob.BSP_POLL_MSECS,
 					BspJob.DEFAULT_BSP_ZOOKEEPER_SESSION_TIMEOUT);
 				try {
+					LOG.info("Starting up BspService...");
 					m_service = new BspService(
 						serverPortList, sessionMsecTimeout, configuration);
-				} catch (KeeperException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} catch (JSONException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+					LOG.info("Registering health of this process...");
+					m_service.setup();
+				} catch (Exception e) {
+					LOG.error(e.getMessage());
+					throw new RuntimeException(e);
 				}
 		}
 		
@@ -135,6 +139,7 @@ public class BspJob extends Job {
 		@Override
 		public void cleanup(Context context) 
 			throws IOException, InterruptedException {
+			Log.info("Client done.");
 			m_service.cleanup();
 		}
 	}

@@ -3,9 +3,11 @@ package com.yahoo.hadoop_bsp;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
+import java.net.InetAddress;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.mortbay.log.Log;
 
 import org.apache.log4j.Logger;
 import org.apache.hadoop.conf.Configuration;
@@ -45,6 +47,8 @@ public class BspService implements CentralizedService, Watcher {
 	Integer m_currentSuperStep = -1;
 	/** Job id, to ensure uniqueness */
 	String m_jobId;
+	/** Task id, to ensure uniqueness */
+	String m_taskId;
 	/** My process health znode */
 	String m_myHealthZode;
 	/** Master thread */
@@ -52,7 +56,7 @@ public class BspService implements CentralizedService, Watcher {
 	/** Class logger */
     private static final Logger LOG = Logger.getLogger(BspService.class);
     /** State of the service? */
-    private enum State {
+    public enum State {
     	INIT, 
     	RUNNING, 
     	FAILED, 
@@ -82,6 +86,8 @@ public class BspService implements CentralizedService, Watcher {
 		JSONException {
 		m_conf = conf;
 		m_jobId = conf.get("mapred.job.id", "Unknown Job");
+		m_taskId = conf.get("mapred.task.id", "Unknown Task");
+
 		BASE_PATH = "/" + m_jobId + BASE_DIR;
 		BARRIER_PATH = BASE_PATH + BARRIER_DIR;
 		SUPERSTEP_PATH = BASE_PATH + SUPERSTEP_NODE;
@@ -95,8 +101,12 @@ public class BspService implements CentralizedService, Watcher {
 	    m_masterThread.start();
 	}
 
+	/** 
+	 * Intended to check the health of the node.  For instance, can it ssh, 
+	 * dmesg, etc. 
+	 */
 	public boolean isHealthy() {
-		return false;
+		return true;
 	}
 	
 	/**
@@ -157,9 +167,13 @@ public class BspService implements CentralizedService, Watcher {
 		boolean failJob = true;
 		int pollAttempt = 0;
 		while (pollAttempt < maxPollAttempts) {
+			Thread.sleep(msecsPollPeriod);
+			LOG.info("Sleeping for " + msecsPollPeriod + " msecs for " +
+					 maxPollAttempts + " attempts.");
 			try {
 				procsReported = m_zk.getChildren(PROCESS_HEALTH_PATH, false);
-				if (procsReported.size() / initialProcs >= minPercentResponded) {
+				if ((procsReported.size() * 100.0f / initialProcs) >= 
+					minPercentResponded) {
 					failJob = false;
 					break;
 				}
@@ -167,19 +181,23 @@ public class BspService implements CentralizedService, Watcher {
 				LOG.info("No node " + PROCESS_HEALTH_PATH + " exists: " + 
 						 e.getMessage());
 			}
-			Thread.sleep(msecsPollPeriod);
 			++pollAttempt;
 		}
 		if (failJob) {
 			masterSetJobState(State.FAILED);
 			throw new InterruptedException(
-			    "Did not receive enough processes in time");
+			    "Did not receive enough processes in time (only " + 
+			    procsReported.size());
 		}
 		
 		int healthyProcs = 0;
 		for (String proc : procsReported) {
 			try {
-				String jsonObject = new String(m_zk.getData(proc, false, null));
+				String jsonObject = 
+					new String(m_zk.getData(PROCESS_HEALTH_PATH + "/" + proc, 
+							   false, 
+							   null));
+				LOG.info("Health of " + proc + " = " + jsonObject);
 				Boolean processHealth = 
 					(Boolean) JSONObject.stringToValue(jsonObject);
 				if (processHealth.booleanValue()) {
@@ -215,6 +233,8 @@ public class BspService implements CentralizedService, Watcher {
 							null,
 					  		Ids.OPEN_ACL_UNSAFE, 
 					  		CreateMode.PERSISTENT);
+				LOG.info("Created virtual id " + VIRTUAL_ID_PATH + "/" + 
+						 Integer.toString(i));
 			} catch (KeeperException.NodeExistsException e) {
 					LOG.info("Node " + VIRTUAL_ID_PATH+ "/" + 
 							Integer.toString(i) +" already exists.");
@@ -233,6 +253,8 @@ public class BspService implements CentralizedService, Watcher {
 						Integer.toString(healthyProcs).getBytes(),
 						Ids.OPEN_ACL_UNSAFE, 
 						CreateMode.PERSISTENT);
+			LOG.info("Created partition count path " + PARTITION_COUNT_PATH + 
+					 " with count = " + healthyProcs);
 		} catch (KeeperException.NodeExistsException e) {
 			LOG.info("Node " + PARTITION_COUNT_PATH + " already exists.");	
 		}
@@ -251,13 +273,17 @@ public class BspService implements CentralizedService, Watcher {
 		 */
 		try {
 			m_myHealthZode =
-				m_zk.create(PROCESS_HEALTH_PATH, 
-						    (new JSONObject(isHealthy())).toString().getBytes(),
-						    Ids.OPEN_ACL_UNSAFE,
-						    CreateMode.EPHEMERAL_SEQUENTIAL);
-			
+				m_zk.createExt(
+					PROCESS_HEALTH_PATH + "/" 
+					+ InetAddress.getLocalHost().getHostName() + "-" + m_taskId, 
+					Boolean.toString(isHealthy()).getBytes(),
+					Ids.OPEN_ACL_UNSAFE,
+					CreateMode.EPHEMERAL_SEQUENTIAL,
+					true);
+			LOG.info("Created my health node: " + m_myHealthZode);
 			byte[] partitionCountByteArr = null;
 			try {
+				m_zk.exists(PARTITION_COUNT_PATH, true);
 				partitionCountByteArr = 
 					m_zk.getData(PARTITION_COUNT_PATH, true, null);
 			}
@@ -273,6 +299,7 @@ public class BspService implements CentralizedService, Watcher {
 			
 		    m_currentSuperStep = (Integer) JSONObject.stringToValue(
 			    	new String(m_zk.getData(SUPERSTEP_PATH, false, null)));
+		    LOG.info("Using super step " + m_currentSuperStep);
 		    
 		    /*
 		     *  Try to claim a virtual id in a polling period.
@@ -288,6 +315,7 @@ public class BspService implements CentralizedService, Watcher {
 		    					    null,
 		    					    Ids.OPEN_ACL_UNSAFE, 
 		    					    CreateMode.EPHEMERAL);
+			    		LOG.info("Reserved virtual id " + virtualId);
 		    			reservedNode = true;
 		    			break;
 		    		} catch (KeeperException.NodeExistsException e) {
@@ -301,12 +329,9 @@ public class BspService implements CentralizedService, Watcher {
 		    		m_conf.getInt(BspJob.BSP_POLL_MSECS, 
 		    				      BspJob.DEFAULT_BSP_POLL_MSECS));
 			} 
-		} catch (KeeperException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		} catch (Exception e) {
+			LOG.error(e.getMessage());
+			throw new RuntimeException(e);
 		}
 	}
 	
@@ -322,6 +347,13 @@ public class BspService implements CentralizedService, Watcher {
 	}
 
 	public void process(WatchedEvent event) {
+		LOG.info("Got a new event: path = " + event.getPath() + ", type = "
+				 + event.getType() + ", state = " + event.getState());
+		/* Nothing to do */
+		if (event.getPath() == null) {
+			return;
+		}
+		
 		if (event.getPath().contains(BARRIER_DIR)) {
 			synchronized (m_barrierObject) {
 				m_barrierObject.notifyAll();				

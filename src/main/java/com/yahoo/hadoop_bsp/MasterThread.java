@@ -28,16 +28,9 @@ public class MasterThread extends Thread {
 	public void run() {
 		try {
 			m_bspService.masterCreatePartitions();
-		} catch (KeeperException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (JSONException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			m_bspService.masterSetJobState(BspService.State.FINISHED);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
 		}
-		
 	}
 }

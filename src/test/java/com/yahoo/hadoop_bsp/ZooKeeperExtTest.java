@@ -1,13 +1,10 @@
 package com.yahoo.hadoop_bsp;
 
-import java.io.IOException;
-
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooDefs.Ids;
-import org.json.JSONObject;
 
 import junit.framework.TestCase;
 
@@ -18,7 +15,6 @@ public class ZooKeeperExtTest
 
 	public final String BASE_PATH = "/_zooKeeperExtTest"; 
 	public final String FIRST_PATH = "/_first"; 
-	public final String SECOND_PATH = "/_second"; 
 	
 	public void process(WatchedEvent event) {
 		return;
@@ -28,7 +24,7 @@ public class ZooKeeperExtTest
 	public void setUp() {
 		try {
 			m_zooKeeperExt = 
-				new ZooKeeperExt("localhost:2221", 30*1000, this);
+				new ZooKeeperExt("localhost:2181", 30*1000, this);
 			m_zooKeeperExt.deleteExt(BASE_PATH, -1, true);
 		} catch (KeeperException.NoNodeException e) {
 			System.out.println("Clean start: No node " + BASE_PATH);
