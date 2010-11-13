@@ -8,6 +8,11 @@ package com.yahoo.hadoop_bsp;
  */
 public interface BspEvent {	
 	/**
+	 * Reset the permanent signal.
+	 */
+	void reset();
+	
+	/**
 	 * The event occurred and the occurrence has been logged for future 
 	 * waiters.
 	 */

@@ -42,7 +42,7 @@ public class BspRecordReader extends RecordReader<Text, Text> {
 	}
 
 	@Override
-	public void initialize(InputSplit arg0, TaskAttemptContext arg1)
+	public void initialize(InputSplit inputSplit, TaskAttemptContext context)
 		throws IOException, InterruptedException {
 	}
 

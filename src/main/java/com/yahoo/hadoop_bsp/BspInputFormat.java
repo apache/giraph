@@ -14,7 +14,8 @@ import org.apache.hadoop.mapreduce.InputSplit;
 
 /**
  * This InputFormat supports the BSP model by ensuring that the user specifies
- * how many splits (number of mappers) should be started simultaneously.
+ * how many splits (number of mappers) should be started simultaneously.  It is
+ * not meant to do any meaningful split of user-data.
  * @author aching
  *
  */

@@ -13,6 +13,15 @@ public class PredicateLock implements BspEvent {
 	/** Predicate */
 	boolean m_eventOccurred = false;
 	
+	public void reset() {
+		m_lock.lock();
+		try {
+			m_eventOccurred = false;
+		} finally {
+			m_lock.unlock();
+		}
+	}
+	
 	public void signal() {
 		m_lock.lock();
 		try {

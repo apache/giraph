@@ -1,10 +1,20 @@
 package com.yahoo.hadoop_bsp;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInput;
+import java.io.DataInputStream;
+import java.io.DataOutput;
+import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Iterator;
 import java.util.List;
 import java.net.InetAddress;
 
+import javax.management.RuntimeErrorException;
+
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.mortbay.log.Log;
@@ -12,16 +22,20 @@ import org.mortbay.log.Log;
 import org.apache.log4j.Logger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.Watcher.Event.EventType;
 import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Stat;
+
+import com.yahoo.hadoop_bsp.HadoopBspTest.GeneratedVertexInputFormat;
 
 /**
  * Zookeeper-based implementation of {@link CentralizedService}.
@@ -32,19 +46,23 @@ public class BspService implements CentralizedService, Watcher {
 	/** Private Zookeeper instance that implements the service */
 	private ZooKeeperExt m_zk = null;
 	/** My virtual identity in the group */
-	private int m_myVirtualId = -1;
+	private String m_myVirtualId = null;
+	/** My input split */
+	private InputSplit m_myInputSplit = null;
 	/** Am I the master? */
 	private boolean m_isMaster = false;
-	/** All barriers are synchronized with this object */
-	private Object m_barrierObject;
 	/** Registration synchronization */
 	private BspEvent m_partitionCountSet = new PredicateLock();
+	/** Barrier synchronization */
+	private BspEvent m_barrierDone= new PredicateLock();
+	/** Barrier children synchronization */
+	private BspEvent m_barrierChildrenChanged= new PredicateLock();
 	/** Partition count */
 	private Integer m_partitionCount;
 	/** Configuration of the job*/
 	private Configuration m_conf;
-	/** Current superstep */
-	Integer m_currentSuperStep = -1;
+	/** Cached superstep */
+	long m_cachedSuperstep = -1;
 	/** Job id, to ensure uniqueness */
 	String m_jobId;
 	/** Task id, to ensure uniqueness */
@@ -67,6 +85,7 @@ public class BspService implements CentralizedService, Watcher {
         
 	public static final String BASE_DIR = "/_hadoopBsp";
 	public static final String BARRIER_DIR = "/_barrier";
+	public static final String BARRIER_NODE = "_barrierDone";
 	public static final String SUPERSTEP_NODE = "/_superstep";
 	public static final String PROCESS_HEALTH_DIR = "/_processHealth";
 	public static final String PARTITION_COUNT_NODE = "/_partitionCount";
@@ -110,6 +129,33 @@ public class BspService implements CentralizedService, Watcher {
 	}
 	
 	/**
+	 * Calculate the input split and write it to zookeeper.
+	 * @param context
+	 * @param numSplits
+	 * @throws InstantiationException
+	 * @throws IllegalAccessException
+	 * @throws IOException
+	 * @throws InterruptedException
+	 */
+	public List<InputSplit> generateInputSplits(int numSplits) 
+		throws InstantiationException, IllegalAccessException, IOException, 
+		       InterruptedException {
+		Class<VertexInputFormat> vertexInputFormatClass = 
+			(Class<VertexInputFormat>) 
+			m_conf.getClass("bsp.vertexInputFormatClass", 
+						    VertexInputFormat.class);
+		return vertexInputFormatClass.newInstance().getSplits(numSplits);
+	}
+	
+	/**
+	 * Get the {@link InputSplit} for this process.
+	 * @return this process's InputSplit
+	 */
+	public InputSplit getInputSplit() {
+		return m_myInputSplit;
+	}
+	
+	/**
 	 * If the master decides that this job doesn't have the resources to 
 	 * continue, it can fail the job.
 	 * @throws InterruptedException 
@@ -129,6 +175,14 @@ public class BspService implements CentralizedService, Watcher {
 		}
 	}
 	
+	/**
+	 * Master will determine the vertex split for all the workers.
+	 * @return
+	 */
+	public void masterCalculateVertexSplit() {
+		
+	}
+	
 	public synchronized State getJobState() {
 		return m_currentState;
 	}
@@ -142,18 +196,22 @@ public class BspService implements CentralizedService, Watcher {
 	 * @throws InterruptedException 
 	 * @throws KeeperException 
 	 * @throws JSONException 
+	 * @throws IOException 
+	 * @throws IllegalAccessException 
+	 * @throws InstantiationException 
 	 */
-	public void masterCreatePartitions() 
-		throws KeeperException, InterruptedException, JSONException {
+	public int masterCreatePartitions() 
+		throws KeeperException, InterruptedException, JSONException, InstantiationException, IllegalAccessException, IOException {
 		try {
 			if (m_zk.exists(PARTITION_COUNT_PATH, false) != null) {
 				LOG.info(PARTITION_COUNT_PATH + 
 						 " already exists, no need to create");
-				return;
+				return Integer.parseInt(
+					new String(m_zk.getData(PARTITION_COUNT_PATH, false, null)));
 			}
 		} catch (KeeperException.NoNodeException e) {
-			LOG.info("Need to create the partitions at " + 
-					 PARTITION_COUNT_PATH);
+			LOG.info("masterCreatePartitions: Need to create the " + 
+					 "partitions at " + PARTITION_COUNT_PATH);
 		}
 		int maxPollAttempts = m_conf.getInt(BspJob.BSP_POLL_ATTEMPTS, 
 											BspJob.DEFAULT_BSP_POLL_ATTEMPTS);
@@ -168,7 +226,8 @@ public class BspService implements CentralizedService, Watcher {
 		int pollAttempt = 0;
 		while (pollAttempt < maxPollAttempts) {
 			Thread.sleep(msecsPollPeriod);
-			LOG.info("Sleeping for " + msecsPollPeriod + " msecs for " +
+			LOG.info("masterCreateParititions: Sleeping for " + 
+					 msecsPollPeriod + " msecs for " +
 					 maxPollAttempts + " attempts.");
 			try {
 				procsReported = m_zk.getChildren(PROCESS_HEALTH_PATH, false);
@@ -178,7 +237,8 @@ public class BspService implements CentralizedService, Watcher {
 					break;
 				}
 			} catch (KeeperException.NoNodeException e) {
-				LOG.info("No node " + PROCESS_HEALTH_PATH + " exists: " + 
+				LOG.info("masterCreatePartitions: No node " + 
+						 PROCESS_HEALTH_PATH + " exists: " + 
 						 e.getMessage());
 			}
 			++pollAttempt;
@@ -197,14 +257,15 @@ public class BspService implements CentralizedService, Watcher {
 					new String(m_zk.getData(PROCESS_HEALTH_PATH + "/" + proc, 
 							   false, 
 							   null));
-				LOG.info("Health of " + proc + " = " + jsonObject);
+				LOG.info("masterCreatePartitions: Health of " + proc + " = "
+						 + jsonObject);
 				Boolean processHealth = 
 					(Boolean) JSONObject.stringToValue(jsonObject);
 				if (processHealth.booleanValue()) {
 					++healthyProcs;
 				}
 			} catch (KeeperException.NoNodeException e) {
-				LOG.error("Process at " + proc + 
+				LOG.error("masterCreatePartitions: Process at " + proc + 
 						  " between retrieving children and getting znode");
 			}
 		}
@@ -225,18 +286,28 @@ public class BspService implements CentralizedService, Watcher {
 						Ids.OPEN_ACL_UNSAFE, 
 						CreateMode.PERSISTENT);
 		} catch (KeeperException.NodeExistsException e) {
-			LOG.info("Node " + VIRTUAL_ID_PATH + " already exists.");
+			LOG.info("masterCreatePartitions: Node " + VIRTUAL_ID_PATH + 
+					 " already exists.");
 		}
+		List<InputSplit> splitArray = generateInputSplits(healthyProcs);
 		for (int i = 0; i < healthyProcs; ++i) {
 			try {
+				ByteArrayOutputStream byteArrayOutputStream = 
+					new ByteArrayOutputStream();
+				DataOutput outputStream = 
+					new DataOutputStream(byteArrayOutputStream);
+				((Writable) splitArray.get(i)).write(outputStream);
 				m_zk.create(VIRTUAL_ID_PATH + "/" + Integer.toString(i), 
-							null,
+							byteArrayOutputStream.toByteArray(),
 					  		Ids.OPEN_ACL_UNSAFE, 
 					  		CreateMode.PERSISTENT);
-				LOG.info("Created virtual id " + VIRTUAL_ID_PATH + "/" + 
-						 Integer.toString(i));
+				LOG.info("masterCreatePartitions: Created virtual id " + 
+						 VIRTUAL_ID_PATH + "/" + 
+						 Integer.toString(i) + " with split " + 
+						 byteArrayOutputStream.toString());
 			} catch (KeeperException.NodeExistsException e) {
-					LOG.info("Node " + VIRTUAL_ID_PATH+ "/" + 
+					LOG.info("masterCreatePartitions: Node " + 
+							VIRTUAL_ID_PATH + "/" + 
 							Integer.toString(i) +" already exists.");
 			}
 		}
@@ -246,18 +317,21 @@ public class BspService implements CentralizedService, Watcher {
 						Ids.OPEN_ACL_UNSAFE, 
 						CreateMode.PERSISTENT);
 		} catch (KeeperException.NodeExistsException e) {
-			LOG.info("Node " + SUPERSTEP_PATH + " already exists.");
+			LOG.info("masterCreatePartitions: Node " + SUPERSTEP_PATH + 
+					 " already exists.");
 		}
 		try {
 			m_zk.create(PARTITION_COUNT_PATH, 
 						Integer.toString(healthyProcs).getBytes(),
 						Ids.OPEN_ACL_UNSAFE, 
 						CreateMode.PERSISTENT);
-			LOG.info("Created partition count path " + PARTITION_COUNT_PATH + 
-					 " with count = " + healthyProcs);
+			LOG.info("masterCreatePartitions: Created partition count path " + 
+					 PARTITION_COUNT_PATH + " with count = " + healthyProcs);
 		} catch (KeeperException.NodeExistsException e) {
 			LOG.info("Node " + PARTITION_COUNT_PATH + " already exists.");	
 		}
+		
+		return healthyProcs;
 	}
 	
 	public void setup() {
@@ -297,9 +371,8 @@ public class BspService implements CentralizedService, Watcher {
 					JSONObject.stringToValue(new String(partitionCountByteArr));
 			}
 			
-		    m_currentSuperStep = (Integer) JSONObject.stringToValue(
-			    	new String(m_zk.getData(SUPERSTEP_PATH, false, null)));
-		    LOG.info("Using super step " + m_currentSuperStep);
+		    m_cachedSuperstep = getSuperStep();
+		    LOG.info("Using super step " + m_cachedSuperstep);
 		    
 		    /*
 		     *  Try to claim a virtual id in a polling period.
@@ -311,55 +384,207 @@ public class BspService implements CentralizedService, Watcher {
 		    	virtualIdList = m_zk.getChildren(VIRTUAL_ID_PATH, false);
 		    	for (String virtualId : virtualIdList) {
 		    		try {
-		    			m_zk.create(virtualId + "/reserved", 
+		    			m_zk.create(VIRTUAL_ID_PATH + "/" + virtualId + 
+		    					    "/reserved", 
 		    					    null,
 		    					    Ids.OPEN_ACL_UNSAFE, 
 		    					    CreateMode.EPHEMERAL);
 			    		LOG.info("Reserved virtual id " + virtualId);
 		    			reservedNode = true;
+		    			m_myVirtualId = virtualId;
 		    			break;
 		    		} catch (KeeperException.NodeExistsException e) {
 		    			LOG.info("Failed to reserve " + virtualId);
 		    		}
 		    	}
 		    	if (reservedNode) {
+					Class<Writable> inputSplitClass = 
+						(Class<Writable>) m_conf.getClass("bsp.inputSplitClass", 
+									    				  InputSplit.class);
+					m_myInputSplit = (InputSplit) inputSplitClass.newInstance();
+					byte [] splitArray = m_zk.getData(
+				    		VIRTUAL_ID_PATH + "/" + m_myVirtualId, false, null);
+					LOG.info("For " + VIRTUAL_ID_PATH + "/" + m_myVirtualId + 
+							 ", got '" + splitArray + "'");
+				    InputStream input = 
+				    	new ByteArrayInputStream(splitArray);
+					((Writable) m_myInputSplit).readFields(
+						new DataInputStream(input));
 		    		return;
 		    	}
 		    	Thread.sleep(
 		    		m_conf.getInt(BspJob.BSP_POLL_MSECS, 
 		    				      BspJob.DEFAULT_BSP_POLL_MSECS));
-			} 
+			}
 		} catch (Exception e) {
 			LOG.error(e.getMessage());
 			throw new RuntimeException(e);
 		}
 	}
-	
-	public void barrier() {
+	public boolean barrier(long verticesDone, long verticesTotal) {
 		/* Note that this barrier blocks until success.  It would be best if 
 		 * it were interruptable if for instance there was a failure. */
 		
+		/*
+		 * Master will coordinate the barriers and aggregate "doneness".
+		 * Each process writes its virtual id to the barrier superstep and 
+		 * encodes the number of done vertices and total vertices.  
+		 * Then it waits for the master to say whether to stop or not.
+		 */
+		try {
+			JSONArray doneTotalArray = new JSONArray();
+			doneTotalArray.put(verticesDone);
+			doneTotalArray.put(verticesTotal);
+			m_zk.createExt(BARRIER_PATH + "/" + 
+					       Long.toString(m_cachedSuperstep) + "/" +
+					       m_myVirtualId, 
+					       doneTotalArray.toString().getBytes(),
+						   Ids.OPEN_ACL_UNSAFE, 
+						   CreateMode.EPHEMERAL,
+						   true);
+			String barrierNode = BARRIER_PATH + "/" + 
+								 Long.toString(m_cachedSuperstep) + 
+								 "/" + BARRIER_NODE; 
+			if (m_zk.exists(barrierNode, true) == null) {
+				m_barrierDone.waitForever();
+				m_barrierDone.reset();
+			}
+			boolean done = Boolean.parseBoolean(
+				new String(m_zk.getData(barrierNode, false, null)));
+			LOG.info("barrier: Completed superstep " + 
+					 m_cachedSuperstep + " with result " +
+					 Boolean.toString(done));
+			++m_cachedSuperstep;
+			return done;
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
 	}
 
-	public InputSplit getInputSplit() {
-		// TODO Auto-generated method stub
-		return null;
-	}
+	/**
+	 * Master will watch the children until the number of children is the same
+	 * as the number of partitions.  Then it will determine whether to finish 
+	 * the application or not.
+	 * @return true if done with application
+	 * @throws InterruptedException 
+	 * @throws KeeperException 
+	 * @throws JSONException 
+	 */
+	public boolean masterBarrier(long superstep, int partitions) 
+		throws KeeperException, InterruptedException, JSONException {
+		String barrierChildrenNode = 
+			BARRIER_PATH + "/" + Long.toString(superstep); 
 
+		try {
+			m_zk.createExt(barrierChildrenNode, 
+						   null, 
+					       Ids.OPEN_ACL_UNSAFE, 
+					       CreateMode.PERSISTENT,
+					       true);
+		} catch (KeeperException.NodeExistsException e) {
+			LOG.info("masterBarrier: Node " + barrierChildrenNode + 
+					 " already exists, no need to create");
+		}
+		
+		List<String> childrenList = null;
+		long verticesDone = -1;
+		long verticesTotal = -1;
+		while (true) {
+			childrenList = m_zk.getChildren(barrierChildrenNode, true);
+			LOG.info("masterBarrier: Got " + childrenList.size() + " of " +
+					 partitions + " children from " + barrierChildrenNode);
+			if (childrenList.size() == partitions) {
+				boolean allReachedBarrier = true;
+				verticesDone = 0;
+				verticesTotal = 0;
+				for (String child : childrenList) {
+					try {
+						JSONArray jsonArray = new JSONArray(
+							new String(m_zk.getData(barrierChildrenNode + "/" + child, false, null)));
+						verticesDone += jsonArray.getLong(0);
+						verticesTotal += jsonArray.getLong(1);
+						LOG.info("masterBarrier Got " + jsonArray.getLong(0) + 
+								 " of " + jsonArray.getLong(1) + 
+								 " vertices done for " + barrierChildrenNode + "/" 
+								 + child);
+					} catch (KeeperException.NoNodeException e) {
+						allReachedBarrier = false;
+						LOG.info("masterBarrier: Node " + barrierChildrenNode + 
+								 "/" + child + " was good, but died.");
+						break;
+					}
+					continue;
+				}
+				if (allReachedBarrier) {
+					break;	
+				}
+			}
+			LOG.info("masterBarrier: Waiting for the children of " + 
+					 barrierChildrenNode + " to change since only got " +
+					 childrenList.size() + " nodes.");
+			m_barrierChildrenChanged.waitForever();
+			m_barrierChildrenChanged.reset();
+		}
+
+		boolean applicationDone = false;
+		if (verticesDone == verticesTotal) {
+			applicationDone = true;
+		}
+		LOG.info("masterBarrier: Aggregate got " + verticesDone + " of " + 
+				 verticesTotal + " halted on superstep = " + superstep + 
+				 " (application done = " + applicationDone + ")");
+		setSuperStep(superstep + 1);
+		String barrierNode = BARRIER_PATH + "/" + Long.toString(superstep) + 
+		 					 "/" + BARRIER_NODE;
+		m_zk.create(barrierNode, 
+					Boolean.toString(applicationDone).getBytes(), 
+					Ids.OPEN_ACL_UNSAFE, 
+					CreateMode.PERSISTENT);
+		return applicationDone;
+	}
+	
+	public long getSuperStep() {
+	    try {
+			return (Integer) JSONObject.stringToValue(
+			    	new String(m_zk.getData(SUPERSTEP_PATH, false, null)));
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
+	
+	public void setSuperStep(long superStep) {
+	    try {
+	    	m_zk.setData(SUPERSTEP_PATH, 
+	    				 Long.toString(superStep).getBytes(),
+	    			     -1);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}		
+	}
+	
+	public void cleanup() {
+		try {
+			m_masterThread.join();
+		} catch (InterruptedException e) {
+			throw new RuntimeException("Master thread couldn't join");
+		}
+		try {
+			m_zk.close();
+		} catch (InterruptedException e) {
+			throw new RuntimeException("Zookeeper failed to close");
+		}
+	}
+	
 	public void process(WatchedEvent event) {
-		LOG.info("Got a new event: path = " + event.getPath() + ", type = "
-				 + event.getType() + ", state = " + event.getState());
+		LOG.info("process: Got a new event, path = " + event.getPath() + 
+				 ", type = " + event.getType() + ", state = " + 
+				 event.getState());
 		/* Nothing to do */
 		if (event.getPath() == null) {
 			return;
 		}
 		
-		if (event.getPath().contains(BARRIER_DIR)) {
-			synchronized (m_barrierObject) {
-				m_barrierObject.notifyAll();				
-			}
-		}
-		else if (event.getPath().equals(PARTITION_COUNT_PATH)) {
+		if (event.getPath().equals(PARTITION_COUNT_PATH)) {
 			m_partitionCountSet.signal();
 		}
 		else if (event.getPath().equals(JOB_STATE_PATH)) {
@@ -375,22 +600,19 @@ public class BspService implements CentralizedService, Watcher {
 				m_currentState = State.FAILED;
 			}
 		}
-	}
-	
-	public int getSuperStep() {
-		return m_currentSuperStep;
-	}
-	
-	public void cleanup() {
-		try {
-			m_masterThread.join();
-		} catch (InterruptedException e) {
-			throw new RuntimeException("Master thread couldn't join");
+		else if (event.getPath().contains(BARRIER_PATH) &&
+				 event.getType() == EventType.NodeCreated) {
+			LOG.info("process: m_barrierDone signaled");
+			m_barrierDone.signal();
 		}
-		try {
-			m_zk.close();
-		} catch (InterruptedException e) {
-			throw new RuntimeException("Zookeeper failed to close");
+		else if (event.getPath().contains(BARRIER_PATH) &&
+				 event.getType() == EventType.NodeChildrenChanged) {
+			LOG.info("process: m_barrierChildrenChanged signaled");
+			m_barrierChildrenChanged.signal();
+		}
+		else {
+			LOG.error("process; Unknown event");
 		}
 	}
+	
 }

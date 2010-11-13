@@ -7,11 +7,12 @@ import java.util.Iterator;
  * 
  * @author aching
  *
+ * @param <I> vertex id
  * @param <V> vertex data
  * @param <E> edge data
  * @param <M> message data
  */
-public interface Vertex<V, E, M> {
+public interface Vertex<I, V, E, M> {
 	/**
 	 * Must be defined by user to do computation on a single Vertex.
 	 */
@@ -20,7 +21,11 @@ public interface Vertex<V, E, M> {
 	 * Retrieves the BSP superstep.
 	 * @return BSP superstep
 	 */
-	public int getSuperstep();
+	public long getSuperstep();
+	/**
+	 * Get the vertex id
+	 */
+	public I id();
 	/**
 	 * Get the vertex data
 	 * @return vertex data
@@ -44,4 +49,8 @@ public interface Vertex<V, E, M> {
 	 * finishes only when all vertices vote to halt.
 	 */
 	public void voteToHalt();
+	/**
+	 * Is this vertex done?
+	 */
+	public boolean isHalted();
 }

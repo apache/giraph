@@ -1,17 +1,26 @@
 package com.yahoo.hadoop_bsp;
 
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
-import org.apache.zookeeper.proto.WatcherEvent;
+
+import com.sun.tools.internal.xjc.model.Constructor;
 
 import junit.framework.Test;
 import junit.framework.TestCase;
@@ -31,12 +40,74 @@ public class HadoopBspTest extends TestCase implements Watcher {
 	 * @param <E>
 	 * @param <M>
 	 */
-	public final class TestBsp<V, E, M> extends HadoopVertex<V, E, M> {
+	public static final class TestBsp extends HadoopVertex<String, String, Integer, Integer> {
 	    public void compute() {
-	    	if (getSuperstep() > 30) {
+	    	if (getSuperstep() > 3) {
 	    		voteToHalt();
 	        }
 	    }
+	}
+	
+	/**
+	 * Generated vertex reader
+	 */
+	public static final class GeneratedVertexReader implements 
+		VertexReader<String, Integer, Integer> {
+		long m_recordsRead = 0;
+		long m_totalRecords = 0;
+		
+		public void initialize(
+			InputSplit inputSplit, TaskAttemptContext context)
+			throws IOException {
+			Configuration configuration = context.getConfiguration();
+				m_totalRecords = configuration.getLong("vertices", 10);
+		}
+		
+		public boolean next(String vertexId, 
+							Integer vertexValue,
+							Integer edgeValue) throws IOException {
+			if (m_totalRecords <= m_recordsRead) {
+				return false;
+			}
+			vertexId = "id" + Long.toString(m_recordsRead);
+			vertexValue = (int) m_recordsRead;
+			edgeValue = (int) (m_recordsRead * 10);
+			++m_recordsRead;
+			return true;
+		}
+
+		public long getPos() throws IOException {
+			return m_recordsRead;
+		}
+
+		public void close() throws IOException {
+		}
+
+		public float getProgress() throws IOException {
+			return m_recordsRead * 100.0f / m_totalRecords;
+		}
+	}
+	
+	/**
+	 * Generated vertex input format.
+	 */
+	public static final class GeneratedVertexInputFormat implements 
+		VertexInputFormat<String, Integer, Integer> {
+		
+		public List<InputSplit> getSplits(int numSplits)
+			throws IOException, InterruptedException {
+	        List<InputSplit> inputSplitList = new ArrayList<InputSplit>();
+	        for (int i = 0; i < numSplits; ++i) {
+	        	inputSplitList.add(new BspInputSplit(Integer.toString(i)));
+	        }
+	        return inputSplitList;
+		}
+		
+		public VertexReader<String, Integer, Integer> createRecordReader(
+			InputSplit split, TaskAttemptContext context) 
+			throws IOException {
+			return new GeneratedVertexReader();
+		}
 	}
 	
     /**
@@ -56,12 +127,34 @@ public class HadoopBspTest extends TestCase implements Watcher {
     }
 
     /**
-     * Just instantiate the vertex (all functions are implemented)
+     * Just instantiate the vertex (all functions are implemented) and the 
+     * VertexInputFormat using reflection.
+     * 
+     * @throws IllegalAccessException 
+     * @throws InstantiationException 
+     * @throws InterruptedException 
+     * @throws IOException 
+     * @throws InvocationTargetException 
+     * @throws IllegalArgumentException 
+     * @throws NoSuchMethodException 
+     * @throws SecurityException 
      */
-    public void testInstantiateVertex() {
-        TestBsp<Integer, String, String> test = 
-        	new TestBsp<Integer, String, String>();
+    public void testInstantiateVertex() 
+    	throws InstantiationException, IllegalAccessException, 
+    	IOException, InterruptedException, IllegalArgumentException, InvocationTargetException, SecurityException, NoSuchMethodException {
+    	java.lang.reflect.Constructor<?> ctor = TestBsp.class.getConstructor();
+    	assertNotNull(ctor);
+    	TestBsp test = (TestBsp) ctor.newInstance();
         System.out.println(test.getSuperstep());
+        GeneratedVertexInputFormat inputFormat = 
+        	GeneratedVertexInputFormat.class.newInstance();
+        List<InputSplit> splitArray = inputFormat.getSplits(1);
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        DataOutputStream outputStream = 
+        	new DataOutputStream(byteArrayOutputStream);
+        ((Writable) splitArray.get(0)).write(outputStream);
+        System.out.println("Example output split = " + 
+        	byteArrayOutputStream.toString());
     }
     
     @Override
@@ -97,27 +190,20 @@ public class HadoopBspTest extends TestCase implements Watcher {
         conf.setInt(BspJob.BSP_POLL_ATTEMPTS, 1);
         conf.setInt(BspJob.BSP_POLL_MSECS, 5*1000);
         conf.set(BspJob.BSP_ZOOKEEPER_LIST, "localhost:2181");
+        /* GeneratedInputSplit will generate 5 vertices */
+        conf.setLong("vertices", 5);
         FileSystem hdfs = FileSystem.get(conf);
-    	BspJob bspJob = new BspJob(conf, "testBspJob");
-       	Path inputPath = new Path("/tmp/testBspJobInput");
+    	conf.setClass("bsp.vertexClass", TestBsp.class, HadoopVertex.class);
+    	conf.setClass("bsp.inputSplitClass", 
+    				  BspInputSplit.class, 
+    				  InputSplit.class);
+    	conf.setClass("bsp.vertexInputFormatClass", 
+    				  GeneratedVertexInputFormat.class,
+    				  VertexInputFormat.class);
+    	BspJob<Integer, String, String> bspJob = 
+    		new BspJob<Integer, String, String>(conf, "testBspJob");
        	Path outputPath = new Path("/tmp/testBspJobOutput");    	
-       	hdfs.delete(inputPath, true);
-    	hdfs.mkdirs(inputPath);
-    	byte[] outputArray = new byte[20];
-    	for (int i = 0; i < 20; ++i) {
-    		if ((i % 2) == 1) {
-    			outputArray[i] = 13;
-    		}
-    		else {
-    			outputArray[i] = (byte) (65 + (i % 26));
-    		}
-    	}
-    	FSDataOutputStream outputStream = 
-    		hdfs.create(new Path(inputPath + "/testFile"), true);
-		outputStream.write(outputArray);
-		outputStream.close();
     	hdfs.delete(outputPath, true);
-    	FileInputFormat.addInputPath(bspJob, inputPath);
     	FileOutputFormat.setOutputPath(bspJob, outputPath);
     	bspJob.run();
     }
@@ -137,7 +223,8 @@ public class HadoopBspTest extends TestCase implements Watcher {
         conf.setInt(BspJob.BSP_POLL_ATTEMPTS, 1);
         conf.setInt(BspJob.BSP_POLL_MSECS, 1000);
         FileSystem hdfs = FileSystem.get(conf);
-    	BspJob bspJob = new BspJob(conf, "testBspJob");
+    	BspJob<String, Integer, Integer> bspJob = 
+    		new BspJob<String, Integer, Integer>(conf, "testBspJob");
        	Path inputPath = new Path("/tmp/testBspJobMultipleInput");
        	Path outputPath = new Path("/tmp/testBspJobMultipleOutput");
        	hdfs.delete(inputPath, true);

@@ -65,6 +65,16 @@ public class ZooKeeperExt extends ZooKeeper {
 		return create(path, data, acl, createMode);
     }
     
+    /**
+     * Delete a path recursively.  When the deletion is recursive, it is a
+     * non-atomic operation, hence, not part of ZooKeeper.
+     * @param path path to remove (i.e. /tmp will remove /tmp/1 and /tmp/2)
+     * @param version expected version (-1 for all)
+     * @param recursive if true, remove all children, otherwise behave like 
+     *        remove()
+     * @throws InterruptedException
+     * @throws KeeperException
+     */
     public void deleteExt(final String path, int version, boolean recursive)
     	throws InterruptedException, KeeperException {
     	if (recursive == false) {

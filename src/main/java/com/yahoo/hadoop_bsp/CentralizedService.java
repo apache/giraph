@@ -17,8 +17,11 @@ public interface CentralizedService {
 	/**
 	 * Synchronizes all clients.  All clients should eventually call this, 
 	 * or else it will never complete.
+	 * @param done true if the vertices for this process are complete, false
+	 *        otherwise
+	 * @return true if that was the last barrier to do, false otherwise
 	 */
-	void barrier();
+	boolean barrier(long verticesDone, long verticesTotal);
 	
 	/**
 	 * All clients will get their own input split (exactly one per client).
@@ -27,9 +30,10 @@ public interface CentralizedService {
 	
 	/**
 	 * Get the current superstep.
+	 * @return global superstep (begins at 0)
 	 */
-	int getSuperStep();
-	
+	long getSuperStep();
+		
 	/**
 	 * Clean up the service (no calls may be issued after this)
 	 */

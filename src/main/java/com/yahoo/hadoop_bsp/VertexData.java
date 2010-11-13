@@ -10,7 +10,28 @@ import java.util.ArrayList;
  */
 public class VertexData<V, E> {
 	/** Edges are stored as a list, since they do not need random access */
-	ArrayList<E> m_edgeList;
+	private ArrayList<E> m_edgeList;
 	/** User data associated with a vertex (likely not edges) */
-	V m_userData;
+	private V m_userData;
+	/** Done? */
+	private boolean m_done = false;
+	
+	public void setEdgeList(ArrayList<E> edgeList) {
+		m_edgeList = edgeList;
+	}
+	public ArrayList<E> getEdgeList() {
+		return m_edgeList;
+	}
+	public void setUserData(V userData) {
+		m_userData = userData;
+	}
+	public V getUserData() {
+		return m_userData;
+	}
+	public void setDone(boolean done) {
+		m_done = done;
+	}
+	public boolean isDone() {
+		return m_done;
+	}
 }

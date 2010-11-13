@@ -1,5 +1,6 @@
 package com.yahoo.hadoop_bsp;
 
+import org.apache.log4j.Logger;
 import org.apache.zookeeper.KeeperException;
 import org.json.JSONException;
 
@@ -11,6 +12,8 @@ import org.json.JSONException;
  *
  */
 public class MasterThread extends Thread {
+	/** Class logger */
+    private static final Logger LOG = Logger.getLogger(BspService.class);
 	/** Reference to shared BspService */
 	private BspService m_bspService = null;
 	
@@ -27,9 +30,15 @@ public class MasterThread extends Thread {
 	@Override
 	public void run() {
 		try {
-			m_bspService.masterCreatePartitions();
+			int partitions = m_bspService.masterCreatePartitions();
+			long superStep = m_bspService.getSuperStep();
+			while (m_bspService.masterBarrier(superStep, partitions) == false) {
+				LOG.info("masterThread: Finished another barrier at superstep " + superStep);
+				++superStep;
+			}
 			m_bspService.masterSetJobState(BspService.State.FINISHED);
 		} catch (Exception e) {
+			LOG.error("masterThread: Master algorithm failed: " + e.getMessage());
 			throw new RuntimeException(e);
 		}
 	}
