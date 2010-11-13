@@ -5,11 +5,7 @@ import java.io.IOException;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.data.ACL;
-import org.apache.zookeeper.data.Stat;
-
-import java.util.Iterator;
 import java.util.List;
 
 import org.apache.zookeeper.Watcher;

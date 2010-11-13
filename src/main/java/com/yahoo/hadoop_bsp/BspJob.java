@@ -9,9 +9,6 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
-import org.apache.zookeeper.KeeperException;
-import org.json.JSONException;
-import org.mortbay.log.Log;
 
 /**
  * Limits the functions that can be called by the user.  Job is too flexible
@@ -171,8 +168,6 @@ public class BspJob<V, E, M> extends Job {
 			 * 5) Check if all vertices are done.  If not goto 2).
 			 * 6) Dump output.
 			 */
-			Configuration configuration = context.getConfiguration();
-
 			if (m_mapAlreadyRun) {
 				throw new RuntimeException("In BSP, map should have only been" +
 										   " run exactly once, (already run)");

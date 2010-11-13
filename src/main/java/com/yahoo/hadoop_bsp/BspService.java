@@ -2,40 +2,27 @@ package com.yahoo.hadoop_bsp;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Iterator;
 import java.util.List;
 import java.net.InetAddress;
-
-import javax.management.RuntimeErrorException;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.mortbay.log.Log;
-
 import org.apache.log4j.Logger;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hdfs.protocol.FSConstants.SafeModeAction;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputSplit;
-import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.Watcher.Event.EventType;
-import org.apache.zookeeper.ZooKeeper;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.ZooDefs.Ids;
-import org.apache.zookeeper.data.ACL;
-import org.apache.zookeeper.data.Stat;
-
-import com.yahoo.hadoop_bsp.HadoopBspTest.GeneratedVertexInputFormat;
 
 /**
  * Zookeeper-based implementation of {@link CentralizedService}.
@@ -49,12 +36,10 @@ public class BspService implements CentralizedService, Watcher {
 	private String m_myVirtualId = null;
 	/** My input split */
 	private InputSplit m_myInputSplit = null;
-	/** Am I the master? */
-	private boolean m_isMaster = false;
 	/** Registration synchronization */
 	private BspEvent m_partitionCountSet = new PredicateLock();
 	/** Barrier synchronization */
-	private BspEvent m_barrierDone= new PredicateLock();
+	private BspEvent m_barrierDone = new PredicateLock();
 	/** Barrier children synchronization */
 	private BspEvent m_barrierChildrenChanged= new PredicateLock();
 	/** Partition count */
@@ -372,7 +357,8 @@ public class BspService implements CentralizedService, Watcher {
 			}
 			
 		    m_cachedSuperstep = getSuperStep();
-		    LOG.info("Using super step " + m_cachedSuperstep);
+		    LOG.info("Using super step " + m_cachedSuperstep + 
+		    		 " with partition count "+ m_partitionCount);
 		    
 		    /*
 		     *  Try to claim a virtual id in a polling period.

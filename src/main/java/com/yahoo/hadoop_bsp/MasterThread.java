@@ -1,8 +1,6 @@
 package com.yahoo.hadoop_bsp;
 
 import org.apache.log4j.Logger;
-import org.apache.zookeeper.KeeperException;
-import org.json.JSONException;
 
 /**
  * Master thread that will coordinate the activities of the tasks.  It runs
