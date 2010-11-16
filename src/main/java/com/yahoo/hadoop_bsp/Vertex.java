@@ -43,6 +43,12 @@ public interface Vertex<I, V, E, M> {
 	 */
 	public Iterator<E> getOutEdgeIterator();
 	/**
+	 * Send a message to a vertex id.
+	 * @param id vertex id to send the message to
+	 * @param msg message data to send
+	 */
+	public void sendMsg(I id, M msg);
+	/**
 	 * After this is called, the compute() code will no longer be called for
 	 * this vertice unless a message is sent to it.  Then the compute() code
 	 * will be called once again until this function is called.  The application

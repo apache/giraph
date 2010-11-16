@@ -3,6 +3,8 @@ package com.yahoo.hadoop_bsp;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -34,6 +36,8 @@ public class BspJob<V, E, M> extends Job {
 	/** Zookeeper session millisecond timeout */
 	public static final String BSP_ZOOKEEPER_SESSION_TIMEOUT = 
 		"bsp.zkSessionMsecTimeout";
+	/** Initial port to start using for the RPC communication */
+	public static final String BSP_RPC_INITIAL_PORT = "bsp.rpcInitialPort";
 	/** Default poll msecs (30 seconds) */
 	public static int DEFAULT_BSP_POLL_MSECS = 30*1000;
 	/** Number of poll attempts prior to failing the job (int) */
@@ -42,7 +46,7 @@ public class BspJob<V, E, M> extends Job {
 	public static int DEFAULT_BSP_POLL_ATTEMPTS = 3;
 	/** Default Zookeeper session millisecond timeout */
 	public static int DEFAULT_BSP_ZOOKEEPER_SESSION_TIMEOUT = 30*1000;
-
+	
 	/**
 	 *  Constructor.
 	 * @param conf user-defined configuration
@@ -84,13 +88,14 @@ public class BspJob<V, E, M> extends Job {
 		List<HadoopVertex<I, V, E, M>> m_vertexList = 
 			new ArrayList<HadoopVertex<I, V, E, M>>();
 		/** Coordination */
-		CentralizedService m_service;
+		CentralizedService<I> m_service;
 		/** The map should be run exactly once, or else there is a problem. */
 		boolean m_mapAlreadyRun = false;
 		
 		/**
 		 * Load the vertices from the user-defined VertexReader into our 
-		 * vertexArray.
+		 * vertexArray.  As per the VertexInputFormat, determine the partitions
+		 * based on the split.
 		 * @throws IllegalAccessException 
 		 * @throws InstantiationException 
 		 * @throws InterruptedException 
@@ -113,16 +118,23 @@ public class BspJob<V, E, M> extends Job {
 			VertexReader<I, V, E> vertexReader = 
 				vertexInputFormat.createRecordReader(myInputSplit, context);
 			vertexReader.initialize(myInputSplit, context);
-			I vertexId = null;
-			V vertexValue = null;
-			E edgeValue = null;
-			while (vertexReader.next(vertexId, vertexValue, edgeValue)) {
+			I vertexId = vertexReader.createVertexId();
+			V vertexValue = vertexReader.createVertexValue();
+			Set<E> edgeValueSet = new TreeSet<E>();
+			I vertexIdMax = vertexReader.createVertexId();
+			while (vertexReader.next(vertexId, vertexValue, edgeValueSet)) {
 				HadoopVertex<I, V, E, M> vertex = 
 					vertexClass.newInstance();
 				vertex.setVertexValue(vertexValue);
-				vertex.addEdge(edgeValue);
+				for (E edgeValue : edgeValueSet) {
+					vertex.addEdge(edgeValue);
+				}
 				m_vertexList.add(vertex);
+				if (((Comparable<I>) vertexId).compareTo(vertexIdMax) < 0) {
+					vertexIdMax = vertexId;
+				}
 			}
+			m_service.setPartitionMax(vertexIdMax);
 		}
 				
 		@Override

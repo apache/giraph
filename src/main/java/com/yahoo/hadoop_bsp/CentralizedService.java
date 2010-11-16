@@ -1,5 +1,7 @@
 package com.yahoo.hadoop_bsp;
 
+import java.util.List;
+
 import org.apache.hadoop.mapreduce.InputSplit;
 
 /**
@@ -8,7 +10,7 @@ import org.apache.hadoop.mapreduce.InputSplit;
  * @author aching
  *
  */
-public interface CentralizedService {
+public interface CentralizedService<I> {
 	/**
 	 * Guaranteed to be called prior to any other method.
 	 */
@@ -27,6 +29,16 @@ public interface CentralizedService {
 	 * All clients will get their own input split (exactly one per client).
 	 */
 	InputSplit getInputSplit();
+	
+	/**
+	 * Each client will set its own partition maximum.
+	 */
+	void setPartitionMax(I max);
+	
+	/**
+	 * Every client will need to get a partition for an index
+	 */
+	Partition<I> getPartition(I index);
 	
 	/**
 	 * Get the current superstep.

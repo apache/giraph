@@ -8,6 +8,17 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
+/**
+ * Use this to load data for a BSP application.  Note that the InputSplit must
+ * also implement Writable.  The InputSplits will determine the partitioning of
+ * vertices across the mappers, so keep that in consideration when implementing
+ * getSplits().
+ * @author aching
+ *
+ * @param <I>
+ * @param <V>
+ * @param <E>
+ */
 public interface VertexInputFormat<I, V, E> {
 	/** 
 	 * Logically split the vertices for a BSP application.  

@@ -7,7 +7,11 @@ import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.SortedMap;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.net.InetAddress;
 
 import org.json.JSONArray;
@@ -29,7 +33,7 @@ import org.apache.zookeeper.ZooDefs.Ids;
  * @author aching
  *
  */
-public class BspService implements CentralizedService, Watcher {
+public class BspService<I> implements CentralizedService<I>, Watcher {
 	/** Private Zookeeper instance that implements the service */
 	private ZooKeeperExt m_zk = null;
 	/** My virtual identity in the group */
@@ -46,6 +50,8 @@ public class BspService implements CentralizedService, Watcher {
 	private Integer m_partitionCount;
 	/** Configuration of the job*/
 	private Configuration m_conf;
+	/** The partition map */
+	private SortedSet<Partition<I>> m_partitionSet = null;
 	/** Cached superstep */
 	long m_cachedSuperstep = -1;
 	/** Job id, to ensure uniqueness */
@@ -92,7 +98,7 @@ public class BspService implements CentralizedService, Watcher {
 		m_jobId = conf.get("mapred.job.id", "Unknown Job");
 		m_taskId = conf.get("mapred.task.id", "Unknown Task");
 
-		BASE_PATH = "/" + m_jobId + BASE_DIR;
+		BASE_PATH = BASE_DIR + "/" + m_jobId;
 		BARRIER_PATH = BASE_PATH + BARRIER_DIR;
 		SUPERSTEP_PATH = BASE_PATH + SUPERSTEP_NODE;
 		PROCESS_HEALTH_PATH = BASE_PATH + PROCESS_HEALTH_DIR;
@@ -100,6 +106,8 @@ public class BspService implements CentralizedService, Watcher {
 		VIRTUAL_ID_PATH = BASE_PATH + VIRTUAL_ID_DIR;
 		JOB_STATE_PATH = BASE_PATH + JOB_STATE_NODE;
 			
+		LOG.info("BspService: Starting up zookeeper with " + m_jobId + ", " +
+		         m_taskId + " on " + serverPortList);
 	    m_zk = new ZooKeeperExt(serverPortList, sessionMsecTimeout, this);
 	    m_masterThread = new MasterThread(this);
 	    m_masterThread.start();
@@ -132,14 +140,10 @@ public class BspService implements CentralizedService, Watcher {
 		return vertexInputFormatClass.newInstance().getSplits(numSplits);
 	}
 	
-	/**
-	 * Get the {@link InputSplit} for this process.
-	 * @return this process's InputSplit
-	 */
 	public InputSplit getInputSplit() {
 		return m_myInputSplit;
 	}
-	
+		
 	/**
 	 * If the master decides that this job doesn't have the resources to 
 	 * continue, it can fail the job.
@@ -158,14 +162,6 @@ public class BspService implements CentralizedService, Watcher {
 		} catch (KeeperException.NodeExistsException e) {
 			m_zk.setData(JOB_STATE_PATH, state.toString().getBytes(), -1);
 		}
-	}
-	
-	/**
-	 * Master will determine the vertex split for all the workers.
-	 * @return
-	 */
-	public void masterCalculateVertexSplit() {
-		
 	}
 	
 	public synchronized State getJobState() {
@@ -204,16 +200,12 @@ public class BspService implements CentralizedService, Watcher {
 		int minProcs = m_conf.getInt(BspJob.BSP_MIN_PROCESSES, -1);
 		float minPercentResponded = 
 			m_conf.getFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 0.0f);
-		List<String> procsReported = null;
+		List<String> procsReported = new ArrayList<String>();
 		int msecsPollPeriod = m_conf.getInt(BspJob.BSP_POLL_MSECS, 
 											BspJob.DEFAULT_BSP_POLL_MSECS);
 		boolean failJob = true;
 		int pollAttempt = 0;
 		while (pollAttempt < maxPollAttempts) {
-			Thread.sleep(msecsPollPeriod);
-			LOG.info("masterCreateParititions: Sleeping for " + 
-					 msecsPollPeriod + " msecs for " +
-					 maxPollAttempts + " attempts.");
 			try {
 				procsReported = m_zk.getChildren(PROCESS_HEALTH_PATH, false);
 				if ((procsReported.size() * 100.0f / initialProcs) >= 
@@ -226,13 +218,17 @@ public class BspService implements CentralizedService, Watcher {
 						 PROCESS_HEALTH_PATH + " exists: " + 
 						 e.getMessage());
 			}
+			LOG.info("masterCreatePartitions: Sleeping for " + 
+					 msecsPollPeriod + " msecs and used " + pollAttempt + 
+					 " of " + maxPollAttempts + " attempts.");
+			Thread.sleep(msecsPollPeriod);
 			++pollAttempt;
 		}
 		if (failJob) {
 			masterSetJobState(State.FAILED);
 			throw new InterruptedException(
 			    "Did not receive enough processes in time (only " + 
-			    procsReported.size());
+			    procsReported.size() + " of " + minProcs + " required)");
 		}
 		
 		int healthyProcs = 0;
@@ -339,7 +335,7 @@ public class BspService implements CentralizedService, Watcher {
 					Ids.OPEN_ACL_UNSAFE,
 					CreateMode.EPHEMERAL_SEQUENTIAL,
 					true);
-			LOG.info("Created my health node: " + m_myHealthZode);
+			LOG.info("setup: Created my health node: " + m_myHealthZode);
 			byte[] partitionCountByteArr = null;
 			try {
 				m_zk.exists(PARTITION_COUNT_PATH, true);
@@ -357,14 +353,28 @@ public class BspService implements CentralizedService, Watcher {
 			}
 			
 		    m_cachedSuperstep = getSuperStep();
-		    LOG.info("Using super step " + m_cachedSuperstep + 
+		    LOG.info("setup: Using super step " + m_cachedSuperstep + 
 		    		 " with partition count "+ m_partitionCount);
 		    
 		    /*
-		     *  Try to claim a virtual id in a polling period.
+		     *  Try to claim a virtual id in a polling period (use it to store
+		     *  your hostname and port number for the messaging service.
 		     */
 		    List<String> virtualIdList = null;
 		    boolean reservedNode = false;
+		    JSONArray hostnamePort = new JSONArray();
+		    hostnamePort.put(InetAddress.getLocalHost().getHostName());
+		    int randomRpcPort = (int) (30000 * Math.random()) + 30000;
+		    int finalRpcPort = m_conf.getInt(BspJob.BSP_RPC_INITIAL_PORT, 
+		    								 randomRpcPort);
+		    String[] taskIdArray= m_taskId.split("_");
+		    if (!taskIdArray[0].equals("attempt")) {
+		    	throw new RuntimeException("setup: Failed to parse task id " +
+		    			                   " from " + m_taskId);
+		    }
+		    finalRpcPort += Integer.parseInt(taskIdArray[2]);
+		    LOG.info("setup: Using port " + finalRpcPort);
+		    hostnamePort.put(finalRpcPort);
 		    while ((getJobState() != State.FAILED) &&
 		    	   (getJobState() != State.FINISHED)) {
 		    	virtualIdList = m_zk.getChildren(VIRTUAL_ID_PATH, false);
@@ -372,10 +382,12 @@ public class BspService implements CentralizedService, Watcher {
 		    		try {
 		    			m_zk.create(VIRTUAL_ID_PATH + "/" + virtualId + 
 		    					    "/reserved", 
-		    					    null,
+		    					    hostnamePort.toString().getBytes(),
 		    					    Ids.OPEN_ACL_UNSAFE, 
 		    					    CreateMode.EPHEMERAL);
-			    		LOG.info("Reserved virtual id " + virtualId);
+			    		LOG.info("setup: Reserved virtual id " + virtualId +
+			    				 " with hostname port = " + 
+			    				 hostnamePort.toString());
 		    			reservedNode = true;
 		    			m_myVirtualId = virtualId;
 		    			break;
@@ -390,8 +402,8 @@ public class BspService implements CentralizedService, Watcher {
 					m_myInputSplit = (InputSplit) inputSplitClass.newInstance();
 					byte [] splitArray = m_zk.getData(
 				    		VIRTUAL_ID_PATH + "/" + m_myVirtualId, false, null);
-					LOG.info("For " + VIRTUAL_ID_PATH + "/" + m_myVirtualId + 
-							 ", got '" + splitArray + "'");
+					LOG.info("setup: For " + VIRTUAL_ID_PATH + "/" + 
+							 m_myVirtualId + ", got '" + splitArray + "'");
 				    InputStream input = 
 				    	new ByteArrayInputStream(splitArray);
 					((Writable) m_myInputSplit).readFields(
@@ -526,6 +538,22 @@ public class BspService implements CentralizedService, Watcher {
 					Boolean.toString(applicationDone).getBytes(), 
 					Ids.OPEN_ACL_UNSAFE, 
 					CreateMode.PERSISTENT);
+		
+		/* Clean up the old barriers */
+		if ((superstep - 1) >= 0) {
+			try {
+				LOG.info("masterBarrier: Cleaning up old barrier " + 
+						BARRIER_PATH + "/" + Long.toString(superstep - 1));
+				m_zk.deleteExt(BARRIER_PATH + "/" + 
+						       Long.toString(superstep - 1),
+						       -1, 
+						       true);
+			} catch (KeeperException.NoNodeException e) {
+				LOG.warn("masterBarrier: Already cleaned up " + 
+						 BARRIER_PATH + "/" + Long.toString(superstep - 1));
+			}
+		}
+		
 		return applicationDone;
 	}
 	
@@ -600,5 +628,27 @@ public class BspService implements CentralizedService, Watcher {
 			LOG.error("process; Unknown event");
 		}
 	}
-	
+
+	public void setPartitionMax(I max) {
+		String reservedPath = VIRTUAL_ID_PATH + "/" + m_myVirtualId + 
+			      "/reserved";
+		JSONArray hostnamePort = null;
+		try {
+			hostnamePort = new JSONArray(new String
+				(m_zk.getData(reservedPath, false, null)));
+			hostnamePort.put(max);
+			m_zk.setData(reservedPath, hostnamePort.toString().getBytes(), -1);
+		} catch (Exception e) {
+			LOG.error("setPartition: Failed to set the partition of node " + 
+					  reservedPath + " to " + hostnamePort.toString());
+		}
+	}
+
+	public Partition<I> getPartition(I index) {
+		if (m_partitionSet == null) {
+			m_partitionSet = new TreeSet<Partition<I>>();
+			// TO BE IMPLEMENTED
+		}
+		return m_partitionSet.tailSet(new Partition<I>(null, -1, index)).last();
+	}
 }

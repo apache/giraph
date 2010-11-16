@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.conf.Configuration;
@@ -62,13 +63,13 @@ public class HadoopBspTest extends TestCase implements Watcher {
 		
 		public boolean next(String vertexId, 
 							Integer vertexValue,
-							Integer edgeValue) throws IOException {
+							Set<Integer> edgeValueSet) throws IOException {
 			if (m_totalRecords <= m_recordsRead) {
 				return false;
 			}
 			vertexId = "id" + Long.toString(m_recordsRead);
 			vertexValue = (int) m_recordsRead;
-			edgeValue = (int) (m_recordsRead * 10);
+			edgeValueSet.add((int) (m_recordsRead * 10));
 			++m_recordsRead;
 			return true;
 		}
@@ -82,6 +83,18 @@ public class HadoopBspTest extends TestCase implements Watcher {
 
 		public float getProgress() throws IOException {
 			return m_recordsRead * 100.0f / m_totalRecords;
+		}
+
+		public String createVertexId() {
+			return new String();
+		}
+
+		public Integer createVertexValue() {
+			return new Integer(-1);
+		}
+
+		public Integer createEdgeValue() {
+			return new Integer(-1);
 		}
 	}
 	
@@ -122,7 +135,33 @@ public class HadoopBspTest extends TestCase implements Watcher {
     public static Test suite() {
         return new TestSuite(HadoopBspTest.class);
     }
-
+    
+    @Override
+    public void setUp() {
+    	try {
+			ZooKeeperExt zooKeeperExt = 
+				new ZooKeeperExt("localhost:2181", 30*1000, this);
+			List<String> rootChildren = zooKeeperExt.getChildren("/", false);
+			for (String rootChild : rootChildren) {
+				if (rootChild.startsWith("_hadoopBsp")) {
+					List<String> children = 
+						zooKeeperExt.getChildren("/" + rootChild, false);
+					for (String child: children) {
+						if (child.contains("job_local_")) {
+							System.out.println("Cleaning up /_hadoopBs/" +
+									           child);
+							zooKeeperExt.deleteExt(
+								"/_hadoopBsp/" + child, -1, true);
+						}
+					}
+				}
+			}
+			zooKeeperExt.close();
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+    }
+    
     /**
      * Just instantiate the vertex (all functions are implemented) and the 
      * VertexInputFormat using reflection.
@@ -138,7 +177,8 @@ public class HadoopBspTest extends TestCase implements Watcher {
      */
     public void testInstantiateVertex() 
     	throws InstantiationException, IllegalAccessException, 
-    	IOException, InterruptedException, IllegalArgumentException, InvocationTargetException, SecurityException, NoSuchMethodException {
+    	IOException, InterruptedException, IllegalArgumentException, 
+    	InvocationTargetException, SecurityException, NoSuchMethodException {
     	java.lang.reflect.Constructor<?> ctor = TestBsp.class.getConstructor();
     	assertNotNull(ctor);
     	TestBsp test = (TestBsp) ctor.newInstance();
@@ -146,30 +186,13 @@ public class HadoopBspTest extends TestCase implements Watcher {
         GeneratedVertexInputFormat inputFormat = 
         	GeneratedVertexInputFormat.class.newInstance();
         List<InputSplit> splitArray = inputFormat.getSplits(1);
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        ByteArrayOutputStream byteArrayOutputStream = 
+        	new ByteArrayOutputStream();
         DataOutputStream outputStream = 
         	new DataOutputStream(byteArrayOutputStream);
         ((Writable) splitArray.get(0)).write(outputStream);
         System.out.println("Example output split = " + 
         	byteArrayOutputStream.toString());
-    }
-    
-    @Override
-    public void setUp() {
-    	try {
-			ZooKeeperExt zooKeeperExt = 
-				new ZooKeeperExt("localhost:2181", 30*1000, this);
-			List<String> rootChildren = zooKeeperExt.getChildren("/", false);
-			for (String rootChild : rootChildren) {
-				if (rootChild.startsWith("job_local_")) {
-					System.out.println("Cleaning up /" + rootChild);
-					zooKeeperExt.deleteExt("/" + rootChild, -1, true);
-				}
-			}
-			zooKeeperExt.close();
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
     }
     
     /**
@@ -184,9 +207,10 @@ public class HadoopBspTest extends TestCase implements Watcher {
         conf.setInt(BspJob.BSP_INITIAL_PROCESSES, 1);
         conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
         conf.setInt(BspJob.BSP_MIN_PROCESSES, 1);
-        conf.setInt(BspJob.BSP_POLL_ATTEMPTS, 1);
+        conf.setInt(BspJob.BSP_POLL_ATTEMPTS, 2);
         conf.setInt(BspJob.BSP_POLL_MSECS, 5*1000);
         conf.set(BspJob.BSP_ZOOKEEPER_LIST, "localhost:2181");
+        conf.setInt(BspJob.BSP_RPC_INITIAL_PORT, 60000);
         /* GeneratedInputSplit will generate 5 vertices */
         conf.setLong("vertices", 5);
         FileSystem hdfs = FileSystem.get(conf);
@@ -205,50 +229,6 @@ public class HadoopBspTest extends TestCase implements Watcher {
     	bspJob.run();
     }
     
-    /**
-     * Run a sample BSP job locally with multiple mappers.
-     * @throws IOException
-     * @throws ClassNotFoundException 
-     * @throws InterruptedException 
-     */
-    public void tBspJobMultiple() 
-    	throws IOException, InterruptedException, ClassNotFoundException {
-        Configuration conf = new Configuration();
-        conf.setInt(BspJob.BSP_INITIAL_PROCESSES, 2);
-        conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
-        conf.setInt(BspJob.BSP_MIN_PROCESSES, 2);
-        conf.setInt(BspJob.BSP_POLL_ATTEMPTS, 1);
-        conf.setInt(BspJob.BSP_POLL_MSECS, 1000);
-        FileSystem hdfs = FileSystem.get(conf);
-    	BspJob<String, Integer, Integer> bspJob = 
-    		new BspJob<String, Integer, Integer>(conf, "testBspJob");
-       	Path inputPath = new Path("/tmp/testBspJobMultipleInput");
-       	Path outputPath = new Path("/tmp/testBspJobMultipleOutput");
-       	hdfs.delete(inputPath, true);
-    	hdfs.mkdirs(inputPath);
-    	byte[] outputArray = new byte[20];
-    	for (int i = 0; i < 20; ++i) {
-    		if ((i % 2) == 1) {
-    			outputArray[i] = 13;
-    		}
-    		else {
-    			outputArray[i] = (byte) (65 + (i % 26));
-    		}
-    	}
-    	FSDataOutputStream outputStream = 
-    		hdfs.create(new Path(inputPath + "/testFile1"), true);
-		outputStream.write(outputArray);
-		outputStream.close();
-		outputStream = 
-    		hdfs.create(new Path(inputPath + "/testFile2"), true);
-		outputStream.write(outputArray);
-		outputStream.close();
-    	hdfs.delete(outputPath, true);
-    	FileInputFormat.addInputPath(bspJob, inputPath);
-    	FileOutputFormat.setOutputPath(bspJob, outputPath);
-    	bspJob.run();
-    }
-
 	public void process(WatchedEvent event) {
 		return;
 	}

@@ -37,7 +37,7 @@ public abstract class HadoopVertex<I, V, E, M> implements Vertex<I, V, E, M> {
 		return m_outEdgeList.iterator();
 	}
 	
-	public void sendMsg(String vertex, M msg) {
+	public void sendMsg(I id, M msg) {
 		
 	}
 	
