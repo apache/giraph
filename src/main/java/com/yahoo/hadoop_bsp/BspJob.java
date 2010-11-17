@@ -38,6 +38,11 @@ public class BspJob<V, E, M> extends Job {
 		"bsp.zkSessionMsecTimeout";
 	/** Initial port to start using for the RPC communication */
 	public static final String BSP_RPC_INITIAL_PORT = "bsp.rpcInitialPort";
+	/** 
+	 * If BSP_ZOOKEEPER_LIST is not set, then use this directory to manage ZooKeeper 
+	 */
+	public static final String BSP_ZOOKEEPER_MANAGER_DIRECTORY = 
+		"bsp.zkManagerDirectory";
 	/** Default poll msecs (30 seconds) */
 	public static int DEFAULT_BSP_POLL_MSECS = 30*1000;
 	/** Number of poll attempts prior to failing the job (int) */
@@ -46,6 +51,9 @@ public class BspJob<V, E, M> extends Job {
 	public static int DEFAULT_BSP_POLL_ATTEMPTS = 3;
 	/** Default Zookeeper session millisecond timeout */
 	public static int DEFAULT_BSP_ZOOKEEPER_SESSION_TIMEOUT = 30*1000;
+	/** Default ZooKeeper manager directory */
+	public static final String DEFAULT_ZOOKEEPER_MANAGER_DIRECTORY =
+		"/tmp";
 	
 	/**
 	 *  Constructor.
@@ -105,10 +113,12 @@ public class BspJob<V, E, M> extends Job {
 			Configuration configuration = context.getConfiguration();
 			
 			InputSplit myInputSplit = m_service.getInputSplit();
+			@SuppressWarnings("unchecked")
 			Class<? extends VertexInputFormat<I, V, E>> vertexInputFormatClass = 
 				(Class<? extends VertexInputFormat<I, V, E>>) 
 					configuration.getClass("bsp.vertexInputFormatClass", 
 							       		   VertexInputFormat.class);
+			@SuppressWarnings("rawtypes")
 			Class<? extends HadoopVertex> vertexClass = 
 				configuration.getClass("bsp.vertexClass", 
 								       HadoopVertex.class, 
@@ -123,6 +133,7 @@ public class BspJob<V, E, M> extends Job {
 			Set<E> edgeValueSet = new TreeSet<E>();
 			I vertexIdMax = vertexReader.createVertexId();
 			while (vertexReader.next(vertexId, vertexValue, edgeValueSet)) {
+				@SuppressWarnings("unchecked")
 				HadoopVertex<I, V, E, M> vertex = 
 					vertexClass.newInstance();
 				vertex.setVertexValue(vertexValue);
@@ -130,7 +141,11 @@ public class BspJob<V, E, M> extends Job {
 					vertex.addEdge(edgeValue);
 				}
 				m_vertexList.add(vertex);
-				if (((Comparable<I>) vertexId).compareTo(vertexIdMax) < 0) {
+				edgeValueSet.clear();
+				@SuppressWarnings("unchecked")
+				Comparable<I> comparable =
+						(Comparable<I>) vertexId;
+				if (comparable.compareTo(vertexIdMax) < 0) {
 					vertexIdMax = vertexId;
 				}
 			}
@@ -141,19 +156,23 @@ public class BspJob<V, E, M> extends Job {
 		public void setup(Context context) 
 			throws IOException, InterruptedException {
 			/*
-			 * Do some initial setup, but mainly decide whether to load from a 
-			 * checkpoint or from the InputFormat.
+			 * Do some initial setup (possibly starting up a Zookeeper service), 
+			 * but mainly decide whether to load data 
+			 * from a checkpoint or from the InputFormat.
 			 */
 			Configuration configuration = context.getConfiguration();
 			String serverPortList = 
 				configuration.get(BspJob.BSP_ZOOKEEPER_LIST, "");
+			if (serverPortList == "") {
+				// TODO: Implement starting a ZK process
+			}
 			int sessionMsecTimeout = 
 				configuration.getInt(
 					BspJob.BSP_POLL_MSECS,
 					BspJob.DEFAULT_BSP_ZOOKEEPER_SESSION_TIMEOUT);
 				try {
 					LOG.info("Starting up BspService...");
-					m_service = new BspService(
+					m_service = new BspService<I>(
 						serverPortList, sessionMsecTimeout, configuration);
 					LOG.info("Registering health of this process...");
 					m_service.setup();

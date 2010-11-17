@@ -4,21 +4,19 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.InputSplit;
-import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
+
+import com.yahoo.hadoop_bsp.examples.TestVertexInputFormat;
+import com.yahoo.hadoop_bsp.examples.TestVertexReader;
 
 import junit.framework.Test;
 import junit.framework.TestCase;
@@ -38,86 +36,13 @@ public class HadoopBspTest extends TestCase implements Watcher {
 	 * @param <E>
 	 * @param <M>
 	 */
-	public static final class TestBsp extends HadoopVertex<String, String, Integer, Integer> {
+	public static final class TestBsp extends 
+		HadoopVertex<String, String, Integer, Integer> {
 	    public void compute() {
 	    	if (getSuperstep() > 3) {
 	    		voteToHalt();
 	        }
 	    }
-	}
-	
-	/**
-	 * Generated vertex reader
-	 */
-	public static final class GeneratedVertexReader implements 
-		VertexReader<String, Integer, Integer> {
-		long m_recordsRead = 0;
-		long m_totalRecords = 0;
-		
-		public void initialize(
-			InputSplit inputSplit, TaskAttemptContext context)
-			throws IOException {
-			Configuration configuration = context.getConfiguration();
-				m_totalRecords = configuration.getLong("vertices", 10);
-		}
-		
-		public boolean next(String vertexId, 
-							Integer vertexValue,
-							Set<Integer> edgeValueSet) throws IOException {
-			if (m_totalRecords <= m_recordsRead) {
-				return false;
-			}
-			vertexId = "id" + Long.toString(m_recordsRead);
-			vertexValue = (int) m_recordsRead;
-			edgeValueSet.add((int) (m_recordsRead * 10));
-			++m_recordsRead;
-			return true;
-		}
-
-		public long getPos() throws IOException {
-			return m_recordsRead;
-		}
-
-		public void close() throws IOException {
-		}
-
-		public float getProgress() throws IOException {
-			return m_recordsRead * 100.0f / m_totalRecords;
-		}
-
-		public String createVertexId() {
-			return new String();
-		}
-
-		public Integer createVertexValue() {
-			return new Integer(-1);
-		}
-
-		public Integer createEdgeValue() {
-			return new Integer(-1);
-		}
-	}
-	
-	/**
-	 * Generated vertex input format.
-	 */
-	public static final class GeneratedVertexInputFormat implements 
-		VertexInputFormat<String, Integer, Integer> {
-		
-		public List<InputSplit> getSplits(int numSplits)
-			throws IOException, InterruptedException {
-	        List<InputSplit> inputSplitList = new ArrayList<InputSplit>();
-	        for (int i = 0; i < numSplits; ++i) {
-	        	inputSplitList.add(new BspInputSplit(Integer.toString(i)));
-	        }
-	        return inputSplitList;
-		}
-		
-		public VertexReader<String, Integer, Integer> createRecordReader(
-			InputSplit split, TaskAttemptContext context) 
-			throws IOException {
-			return new GeneratedVertexReader();
-		}
 	}
 	
     /**
@@ -183,8 +108,8 @@ public class HadoopBspTest extends TestCase implements Watcher {
     	assertNotNull(ctor);
     	TestBsp test = (TestBsp) ctor.newInstance();
         System.out.println(test.getSuperstep());
-        GeneratedVertexInputFormat inputFormat = 
-        	GeneratedVertexInputFormat.class.newInstance();
+        TestVertexInputFormat inputFormat = 
+        	TestVertexInputFormat.class.newInstance();
         List<InputSplit> splitArray = inputFormat.getSplits(1);
         ByteArrayOutputStream byteArrayOutputStream = 
         	new ByteArrayOutputStream();
@@ -212,14 +137,14 @@ public class HadoopBspTest extends TestCase implements Watcher {
         conf.set(BspJob.BSP_ZOOKEEPER_LIST, "localhost:2181");
         conf.setInt(BspJob.BSP_RPC_INITIAL_PORT, 60000);
         /* GeneratedInputSplit will generate 5 vertices */
-        conf.setLong("vertices", 5);
+        conf.setLong(TestVertexReader.READER_VERTICES, 5);
         FileSystem hdfs = FileSystem.get(conf);
     	conf.setClass("bsp.vertexClass", TestBsp.class, HadoopVertex.class);
     	conf.setClass("bsp.inputSplitClass", 
     				  BspInputSplit.class, 
     				  InputSplit.class);
     	conf.setClass("bsp.vertexInputFormatClass", 
-    				  GeneratedVertexInputFormat.class,
+    				  TestVertexInputFormat.class,
     				  VertexInputFormat.class);
     	BspJob<Integer, String, String> bspJob = 
     		new BspJob<Integer, String, String>(conf, "testBspJob");

@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.SortedMap;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.net.InetAddress;
@@ -33,7 +32,8 @@ import org.apache.zookeeper.ZooDefs.Ids;
  * @author aching
  *
  */
-public class BspService<I> implements CentralizedService<I>, Watcher {
+public class BspService<I> implements 
+	CentralizedService<I>, CentralizedServiceMaster<I>, Watcher {
 	/** Private Zookeeper instance that implements the service */
 	private ZooKeeperExt m_zk = null;
 	/** My virtual identity in the group */
@@ -109,7 +109,7 @@ public class BspService<I> implements CentralizedService<I>, Watcher {
 		LOG.info("BspService: Starting up zookeeper with " + m_jobId + ", " +
 		         m_taskId + " on " + serverPortList);
 	    m_zk = new ZooKeeperExt(serverPortList, sessionMsecTimeout, this);
-	    m_masterThread = new MasterThread(this);
+	    m_masterThread = new MasterThread<I>(this);
 	    m_masterThread.start();
 	}
 
@@ -130,14 +130,21 @@ public class BspService<I> implements CentralizedService<I>, Watcher {
 	 * @throws IOException
 	 * @throws InterruptedException
 	 */
-	public List<InputSplit> generateInputSplits(int numSplits) 
-		throws InstantiationException, IllegalAccessException, IOException, 
-		       InterruptedException {
-		Class<VertexInputFormat> vertexInputFormatClass = 
-			(Class<VertexInputFormat>) 
-			m_conf.getClass("bsp.vertexInputFormatClass", 
-						    VertexInputFormat.class);
-		return vertexInputFormatClass.newInstance().getSplits(numSplits);
+	public List<InputSplit> generateInputSplits(int numSplits) { 
+		try {
+			@SuppressWarnings({
+					"rawtypes", "unchecked" })
+			Class<VertexInputFormat> vertexInputFormatClass = 
+				(Class<VertexInputFormat>) 
+				 m_conf.getClass("bsp.vertexInputFormatClass", 
+						  	 	 VertexInputFormat.class);
+			@SuppressWarnings("unchecked")
+			List<InputSplit> splits =
+					vertexInputFormatClass.newInstance().getSplits(numSplits);
+			return splits;
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
 	}
 	
 	public InputSplit getInputSplit() {
@@ -150,8 +157,7 @@ public class BspService<I> implements CentralizedService<I>, Watcher {
 	 * @throws InterruptedException 
 	 * @throws KeeperException 
 	 */
-	public synchronized void masterSetJobState(State state) 
-		throws KeeperException, InterruptedException {
+	public synchronized void masterSetJobState(State state) { 
 		m_currentState = state;
 		try {
 			m_zk.createExt(JOB_STATE_PATH, 
@@ -160,7 +166,13 @@ public class BspService<I> implements CentralizedService<I>, Watcher {
 						   CreateMode.PERSISTENT,
 						   true);
 		} catch (KeeperException.NodeExistsException e) {
-			m_zk.setData(JOB_STATE_PATH, state.toString().getBytes(), -1);
+			try {
+				m_zk.setData(JOB_STATE_PATH, state.toString().getBytes(), -1);
+			} catch (Exception e1) {
+				throw new RuntimeException(e1);
+			}
+		} catch (Exception e) {
+			throw new RuntimeException(e);
 		}
 	}
 	
@@ -181,8 +193,7 @@ public class BspService<I> implements CentralizedService<I>, Watcher {
 	 * @throws IllegalAccessException 
 	 * @throws InstantiationException 
 	 */
-	public int masterCreatePartitions() 
-		throws KeeperException, InterruptedException, JSONException, InstantiationException, IllegalAccessException, IOException {
+	public int masterCreatePartitions() {
 		try {
 			if (m_zk.exists(PARTITION_COUNT_PATH, false) != null) {
 				LOG.info(PARTITION_COUNT_PATH + 
@@ -193,6 +204,8 @@ public class BspService<I> implements CentralizedService<I>, Watcher {
 		} catch (KeeperException.NoNodeException e) {
 			LOG.info("masterCreatePartitions: Need to create the " + 
 					 "partitions at " + PARTITION_COUNT_PATH);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
 		}
 		int maxPollAttempts = m_conf.getInt(BspJob.BSP_POLL_ATTEMPTS, 
 											BspJob.DEFAULT_BSP_POLL_ATTEMPTS);
@@ -217,16 +230,22 @@ public class BspService<I> implements CentralizedService<I>, Watcher {
 				LOG.info("masterCreatePartitions: No node " + 
 						 PROCESS_HEALTH_PATH + " exists: " + 
 						 e.getMessage());
+			} catch (Exception e) {
+				throw new RuntimeException(e);
 			}
 			LOG.info("masterCreatePartitions: Sleeping for " + 
 					 msecsPollPeriod + " msecs and used " + pollAttempt + 
 					 " of " + maxPollAttempts + " attempts.");
-			Thread.sleep(msecsPollPeriod);
+			try {
+				Thread.sleep(msecsPollPeriod);
+			} catch (InterruptedException e) {
+				LOG.error("materCreatePartitions: Sleep interrupted!");
+			}
 			++pollAttempt;
 		}
 		if (failJob) {
 			masterSetJobState(State.FAILED);
-			throw new InterruptedException(
+			throw new RuntimeException(
 			    "Did not receive enough processes in time (only " + 
 			    procsReported.size() + " of " + minProcs + " required)");
 		}
@@ -248,11 +267,13 @@ public class BspService<I> implements CentralizedService<I>, Watcher {
 			} catch (KeeperException.NoNodeException e) {
 				LOG.error("masterCreatePartitions: Process at " + proc + 
 						  " between retrieving children and getting znode");
+			} catch (Exception e) {
+				throw new RuntimeException(e);
 			}
 		}
 		if (healthyProcs < minProcs) {
 			masterSetJobState(State.FAILED);
-			throw new InterruptedException(
+			throw new RuntimeException(
 				"Only " + Integer.toString(healthyProcs) + " available when " + 
 				Integer.toString(minProcs) + " are required.");
 		}
@@ -269,6 +290,8 @@ public class BspService<I> implements CentralizedService<I>, Watcher {
 		} catch (KeeperException.NodeExistsException e) {
 			LOG.info("masterCreatePartitions: Node " + VIRTUAL_ID_PATH + 
 					 " already exists.");
+		} catch (Exception e) {
+			throw new RuntimeException(e);
 		}
 		List<InputSplit> splitArray = generateInputSplits(healthyProcs);
 		for (int i = 0; i < healthyProcs; ++i) {
@@ -287,9 +310,11 @@ public class BspService<I> implements CentralizedService<I>, Watcher {
 						 Integer.toString(i) + " with split " + 
 						 byteArrayOutputStream.toString());
 			} catch (KeeperException.NodeExistsException e) {
-					LOG.info("masterCreatePartitions: Node " + 
-							VIRTUAL_ID_PATH + "/" + 
-							Integer.toString(i) +" already exists.");
+				LOG.info("masterCreatePartitions: Node " + 
+						 VIRTUAL_ID_PATH + "/" + 
+						 Integer.toString(i) +" already exists.");
+			} catch (Exception e) {
+				throw new RuntimeException(e);
 			}
 		}
 		try {
@@ -300,6 +325,8 @@ public class BspService<I> implements CentralizedService<I>, Watcher {
 		} catch (KeeperException.NodeExistsException e) {
 			LOG.info("masterCreatePartitions: Node " + SUPERSTEP_PATH + 
 					 " already exists.");
+		} catch (Exception e) {
+			throw new RuntimeException(e);
 		}
 		try {
 			m_zk.create(PARTITION_COUNT_PATH, 
@@ -310,6 +337,8 @@ public class BspService<I> implements CentralizedService<I>, Watcher {
 					 PARTITION_COUNT_PATH + " with count = " + healthyProcs);
 		} catch (KeeperException.NodeExistsException e) {
 			LOG.info("Node " + PARTITION_COUNT_PATH + " already exists.");	
+		} catch (Exception e) {
+			throw new RuntimeException(e);
 		}
 		
 		return healthyProcs;
@@ -396,7 +425,8 @@ public class BspService<I> implements CentralizedService<I>, Watcher {
 		    		}
 		    	}
 		    	if (reservedNode) {
-					Class<Writable> inputSplitClass = 
+					@SuppressWarnings("unchecked")
+					Class<? extends Writable> inputSplitClass = 
 						(Class<Writable>) m_conf.getClass("bsp.inputSplitClass", 
 									    				  InputSplit.class);
 					m_myInputSplit = (InputSplit) inputSplitClass.newInstance();
@@ -421,7 +451,7 @@ public class BspService<I> implements CentralizedService<I>, Watcher {
 	}
 	public boolean barrier(long verticesDone, long verticesTotal) {
 		/* Note that this barrier blocks until success.  It would be best if 
-		 * it were interruptable if for instance there was a failure. */
+		 * it were interruptible if for instance there was a failure. */
 		
 		/*
 		 * Master will coordinate the barriers and aggregate "doneness".
@@ -468,8 +498,7 @@ public class BspService<I> implements CentralizedService<I>, Watcher {
 	 * @throws KeeperException 
 	 * @throws JSONException 
 	 */
-	public boolean masterBarrier(long superstep, int partitions) 
-		throws KeeperException, InterruptedException, JSONException {
+	public boolean masterBarrier(long superstep, int partitions) {
 		String barrierChildrenNode = 
 			BARRIER_PATH + "/" + Long.toString(superstep); 
 
@@ -482,13 +511,19 @@ public class BspService<I> implements CentralizedService<I>, Watcher {
 		} catch (KeeperException.NodeExistsException e) {
 			LOG.info("masterBarrier: Node " + barrierChildrenNode + 
 					 " already exists, no need to create");
+		} catch (Exception e) {
+			throw new RuntimeException(e);
 		}
 		
 		List<String> childrenList = null;
 		long verticesDone = -1;
 		long verticesTotal = -1;
 		while (true) {
-			childrenList = m_zk.getChildren(barrierChildrenNode, true);
+			try {
+				childrenList = m_zk.getChildren(barrierChildrenNode, true);
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
 			LOG.info("masterBarrier: Got " + childrenList.size() + " of " +
 					 partitions + " children from " + barrierChildrenNode);
 			if (childrenList.size() == partitions) {
@@ -510,6 +545,8 @@ public class BspService<I> implements CentralizedService<I>, Watcher {
 						LOG.info("masterBarrier: Node " + barrierChildrenNode + 
 								 "/" + child + " was good, but died.");
 						break;
+					} catch (Exception e) {
+						throw new RuntimeException(e);
 					}
 					continue;
 				}
@@ -534,10 +571,15 @@ public class BspService<I> implements CentralizedService<I>, Watcher {
 		setSuperStep(superstep + 1);
 		String barrierNode = BARRIER_PATH + "/" + Long.toString(superstep) + 
 		 					 "/" + BARRIER_NODE;
-		m_zk.create(barrierNode, 
-					Boolean.toString(applicationDone).getBytes(), 
-					Ids.OPEN_ACL_UNSAFE, 
-					CreateMode.PERSISTENT);
+		/* Let everyone through the barrier */
+		try {
+			m_zk.create(barrierNode, 
+						Boolean.toString(applicationDone).getBytes(), 
+						Ids.OPEN_ACL_UNSAFE, 
+						CreateMode.PERSISTENT);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
 		
 		/* Clean up the old barriers */
 		if ((superstep - 1) >= 0) {
@@ -551,6 +593,8 @@ public class BspService<I> implements CentralizedService<I>, Watcher {
 			} catch (KeeperException.NoNodeException e) {
 				LOG.warn("masterBarrier: Already cleaned up " + 
 						 BARRIER_PATH + "/" + Long.toString(superstep - 1));
+			} catch (Exception e) {
+				throw new RuntimeException(e);
 			}
 		}
 		
@@ -644,6 +688,10 @@ public class BspService<I> implements CentralizedService<I>, Watcher {
 		}
 	}
 
+	public SortedSet<Partition<I>> getPartitionSet() {
+		return m_partitionSet;
+	}
+	
 	public Partition<I> getPartition(I index) {
 		if (m_partitionSet == null) {
 			m_partitionSet = new TreeSet<Partition<I>>();

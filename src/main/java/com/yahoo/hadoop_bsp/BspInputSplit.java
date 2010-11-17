@@ -4,7 +4,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputSplit;
 
@@ -15,15 +14,16 @@ import org.apache.hadoop.mapreduce.InputSplit;
  *
  */
 public class BspInputSplit extends InputSplit implements Writable {
-	/** Arbitrary name */
-	private String m_name = new String();
+	/** Number of splits */
+	int m_numSplits = -1;
+	/** Split index */
+	int m_splitIndex = -1;
 	
-	public BspInputSplit() {
-		m_name = this.getName();
-	}
+	public BspInputSplit() {}
 
-	public BspInputSplit(String name) {
-		m_name = name;
+	public BspInputSplit(int splitIndex, int numSplits) {
+		m_splitIndex = splitIndex;
+		m_numSplits = numSplits;
 	}
 	
 	@Override
@@ -37,14 +37,20 @@ public class BspInputSplit extends InputSplit implements Writable {
 	}
 
 	public void readFields(DataInput in) throws IOException {
-	    m_name = Text.readString(in);
+	    m_numSplits = in.readInt();
+	    m_splitIndex = in.readInt();
 	}
 
 	public void write(DataOutput out) throws IOException {
-	    Text.writeString(out, m_name);
+		out.writeInt(m_splitIndex);
+	    out.writeInt(m_numSplits);
 	}
 	
-	public String getName() {
-		return m_name;
+	public int getSplitIndex() {
+		return m_splitIndex;
+	}
+	
+	public int getNumSplits() {
+		return m_numSplits;
 	}
 }

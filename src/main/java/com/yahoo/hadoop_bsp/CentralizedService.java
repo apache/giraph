@@ -1,7 +1,5 @@
 package com.yahoo.hadoop_bsp;
 
-import java.util.List;
-
 import org.apache.hadoop.mapreduce.InputSplit;
 
 /**
