@@ -38,6 +38,12 @@ public class BspJob<V, E, M> extends Job {
 		"bsp.zkSessionMsecTimeout";
 	/** Initial port to start using for the RPC communication */
 	public static final String BSP_RPC_INITIAL_PORT = "bsp.rpcInitialPort";
+	/** Default port to start using for the RPC communication */
+	public static int BSP_RPC_DEFAULT_PORT = 60000;
+	/** Maximum number of messages per peer before flush */
+	public static final String BSP_MSG_SIZE = "bsp.msgSize";
+	/** Default maximum number of messages per peer before flush */
+	public static int BSP_MSG_DEFAULT_SIZE = 1000;
 	/** 
 	 * If BSP_ZOOKEEPER_LIST is not set, then use this directory to manage ZooKeeper 
 	 */
@@ -97,6 +103,8 @@ public class BspJob<V, E, M> extends Job {
 			new ArrayList<HadoopVertex<I, V, E, M>>();
 		/** Coordination */
 		CentralizedService<I> m_service;
+		/** Communication */
+		RPCCommunications<I, M> m_commService;
 		/** The map should be run exactly once, or else there is a problem. */
 		boolean m_mapAlreadyRun = false;
 		
@@ -176,6 +184,9 @@ public class BspJob<V, E, M> extends Job {
 						serverPortList, sessionMsecTimeout, configuration);
 					LOG.info("Registering health of this process...");
 					m_service.setup();
+					LOG.info("Starting communication service...");
+					m_commService = new RPCCommunications<I, M>(
+							configuration, m_service);
 					LOG.info("Loading the vertices...");
 					loadVertices(context);
 				} catch (Exception e) {

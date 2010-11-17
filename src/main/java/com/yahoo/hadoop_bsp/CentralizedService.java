@@ -1,5 +1,6 @@
 package com.yahoo.hadoop_bsp;
 
+import java.util.SortedSet;
 import org.apache.hadoop.mapreduce.InputSplit;
 
 /**
@@ -33,6 +34,11 @@ public interface CentralizedService<I> {
 	 */
 	void setPartitionMax(I max);
 	
+	/**
+	 * @return partition set
+	 */
+	
+	SortedSet<Partition<I>> getPartitionSet();
 	/**
 	 * Every client will need to get a partition for an index
 	 */
