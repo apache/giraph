@@ -6,6 +6,7 @@ import java.util.List;
 
 public abstract class HadoopVertex<I, V, E, M> implements Vertex<I, V, E, M> {
 	private static long m_superstep = 0;
+    private BspJob.BspMapper m_bspMapper;
 	private I m_id;
 	private V m_vertexValue;
 	private List<E> m_outEdgeList = new ArrayList<E>();
@@ -17,6 +18,10 @@ public abstract class HadoopVertex<I, V, E, M> implements Vertex<I, V, E, M> {
 	
 	public I id() {
 		return m_id;
+	}
+	
+	public void setBspMapper(BspJob.BspMapper bspMapper) {
+		m_bspMapper = bspMapper;
 	}
 	
 	public static void setSuperstep(long superstep) {
@@ -38,7 +43,7 @@ public abstract class HadoopVertex<I, V, E, M> implements Vertex<I, V, E, M> {
 	}
 	
 	public void sendMsg(I id, M msg) {
-		
+       m_bspMapper.sendMsg(id, msg);
 	}
 	
 	public void voteToHalt() {

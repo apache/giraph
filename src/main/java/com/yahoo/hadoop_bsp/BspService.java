@@ -698,6 +698,6 @@ public class BspService<I> implements
 			m_partitionSet = new TreeSet<Partition<I>>();
 			// TO BE IMPLEMENTED
 		}
-		return m_partitionSet.tailSet(new Partition<I>(null, -1, index)).last();
+		return m_partitionSet.tailSet(new Partition<I>("", -1, index)).last();
 	}
 }

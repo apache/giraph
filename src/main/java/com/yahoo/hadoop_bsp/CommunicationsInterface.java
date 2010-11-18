@@ -33,10 +33,8 @@ public interface CommunicationsInterface<I, M>
 	 * 
 	 * @param destVertex
 	 * @param msg
-	 * @throws IOException
 	 */
-  void sendMessage(I destVertex, M msg)
-      throws IOException;
+  void sendMessage(I destVertex, M msg);
   
   /**
    * Adds incoming message.

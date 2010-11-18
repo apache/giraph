@@ -42,6 +42,7 @@ public class HadoopBspTest extends TestCase implements Watcher {
 	    	if (getSuperstep() > 3) {
 	    		voteToHalt();
 	        }
+            sendMsg("remote", new Integer((int)getSuperstep()));
 	    }
 	}
 	
@@ -135,7 +136,7 @@ public class HadoopBspTest extends TestCase implements Watcher {
         conf.setInt(BspJob.BSP_POLL_ATTEMPTS, 2);
         conf.setInt(BspJob.BSP_POLL_MSECS, 5*1000);
         conf.set(BspJob.BSP_ZOOKEEPER_LIST, "localhost:2181");
-        conf.setInt(BspJob.BSP_RPC_INITIAL_PORT, 60000);
+        conf.setInt(BspJob.BSP_RPC_INITIAL_PORT, BspJob.BSP_RPC_DEFAULT_PORT);
         /* GeneratedInputSplit will generate 5 vertices */
         conf.setLong(TestVertexReader.READER_VERTICES, 5);
         FileSystem hdfs = FileSystem.get(conf);

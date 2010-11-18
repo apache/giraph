@@ -25,6 +25,8 @@ public class RPCCommunications<I, M>
                    implements CommunicationsInterface<I, M> {
 	
 	public static final Logger LOG = Logger.getLogger(RPCCommunications.class);
+
+  private Object waitingOn;
 	
   private String localHostname;
   protected String myName;
@@ -44,27 +46,46 @@ public class RPCCommunications<I, M>
   	Map<I, ArrayList<M>> outMessagesPerPeer;
   	CommunicationsInterface<I, M> peer;
   	int maxSize;
+    private boolean isProxy;
     private boolean flush = false;
     private boolean notDone = true;
   	
     PeerThread(Map<I, ArrayList<M>> m,
-    		     CommunicationsInterface<I, M> i, int maxSize) {
+    		     CommunicationsInterface<I, M> i,
+                 int maxSize,
+                 boolean isProxy) {
       this.outMessagesPerPeer = m;
       this.peer = i;
       this.maxSize = maxSize;
+      this.isProxy = isProxy;
     }
     
     public synchronized void flush() { 
     	this.flush = true;
+        synchronized (waitingOn) {
+          waitingOn.notify();
+        }
     }
     
     public void close() {
     	this.notDone = false;
+        synchronized (waitingOn) {
+          waitingOn.notify();
+        }
+
     }
     
     public void run() {
     	try {
     		while(notDone) {
+                synchronized (waitingOn) {
+                  try {
+                    waitingOn.wait(1000);
+                    LOG.info(peer.getName() + " RPC client waking up");
+                  } catch (InterruptedException e) {
+                      // continue;
+                  }
+                }
     			if (flush) {
     				Iterator<Entry<I, ArrayList<M>>> ei = 
     				       outMessagesPerPeer.entrySet().iterator();
@@ -75,7 +96,9 @@ public class RPCCommunications<I, M>
     					synchronized(msgList) {
     					  Iterator<M> mi = msgList.iterator();
     					  while (mi.hasNext()) {
-    						  peer.put(e.getKey(), mi.next());
+                              M msg = mi.next();
+                              LOG.info(peer.getName() + " putting " + msg + " to " + e.getKey());
+    						  peer.put(e.getKey(), msg);
     					  }
     					  msgList.clear();
     					}
@@ -85,6 +108,10 @@ public class RPCCommunications<I, M>
     				}
     			}
     		}
+            LOG.info(peer.getName() + " RPC client thread terminating");
+            if (isProxy) {
+              RPC.stopProxy(peer);
+            }
     	} catch (IOException e) {
     		LOG.error(e);  
     	}
@@ -96,6 +123,8 @@ public class RPCCommunications<I, M>
 	{
 		this.conf = conf;
 		this.service = service;
+
+        this.waitingOn = new Object();
 		
 		this.localHostname = InetAddress.getLocalHost().getHostName();
 		int taskId = conf.getInt("mapred.task.partition", 0);
@@ -111,10 +140,17 @@ public class RPCCommunications<I, M>
     this.myName = myAddress.toString();
     LOG.info("Started RPC communication server: " + myName);
     
-    Iterator<Partition<I>> partitions = service.getPartitionSet().iterator();
-    while (partitions.hasNext()) {
-    	startPeerConnectionThread(partitions.next());
+    Set<Partition<I>> partitions = service.getPartitionSet();
+    if (partitions == null) {
+        // TODO: no longer necessary when getPartitionSet is implemented
+        Partition partition = new Partition<I>(localHostname, bindPort, null);
+    	startPeerConnectionThread(partition);
+    } else {
+    Iterator<Partition<I>> pIt = partitions.iterator();
+    while (pIt.hasNext()) {
+    	startPeerConnectionThread(pIt.next());
     }
+	}	
 	}	
 	
   /**
@@ -130,8 +166,10 @@ public class RPCCommunications<I, M>
     InetSocketAddress addr = new InetSocketAddress(
   		                          partition.getHostname(),
   		                          partition.getPort());
+        boolean isProxy = true;
 		if (myName.equals(addr.toString())) {
 			peer = this;
+            isProxy = false;
 		} else {
       peer = (CommunicationsInterface<I, M>) RPC.getProxy(CommunicationsInterface.class,
       		            versionID, addr, conf);
@@ -144,7 +182,8 @@ public class RPCCommunications<I, M>
     }
     
 		 PeerThread th = new PeerThread(msgMap, peer,
-				 conf.getInt(BspJob.BSP_MSG_SIZE, BspJob.BSP_MSG_DEFAULT_SIZE));
+				 conf.getInt(BspJob.BSP_MSG_SIZE, BspJob.BSP_MSG_DEFAULT_SIZE),
+                 isProxy);
 		 th.start();
 		 peerThreads.add(th);
 	}
@@ -168,6 +207,7 @@ public class RPCCommunications<I, M>
     	  LOG.info(e.getStackTrace());
     	}
     }
+        LOG.info("shutting down RPC server");
 		server.stop();
 
 	}
@@ -181,9 +221,12 @@ public class RPCCommunications<I, M>
 		msgs.add(msg);
   }
 	
-	public void sendMessage(I destVertex, M msg) throws IOException {
-		LOG.debug("Send bytes (" + msg.toString() + ") to " + destVertex);
-		Partition<I> destPartition = service.getPartition(destVertex);
+	public void sendMessage(I destVertex, M msg) {
+		LOG.info("Send bytes (" + msg.toString() + ") to " + destVertex);
+        // TODO: implement getPartition
+		//Partition<I> destPartition = service.getPartition(destVertex);
+        Partition<I> destPartition = new Partition<I>(localHostname,
+                       Integer.parseInt(getName().split(":")[1]), null);
     InetSocketAddress addr = new InetSocketAddress(
     		                                 destPartition.getHostname(),
     		                                 destPartition.getPort());
@@ -200,7 +243,13 @@ public class RPCCommunications<I, M>
     }
     synchronized(msgList) {
       msgList.add(msg);
+      LOG.info("added msg, size=" + msgList.size());
+
     }
+    synchronized (waitingOn) {
+      waitingOn.notify();
+    }
+
 
 	}
 	

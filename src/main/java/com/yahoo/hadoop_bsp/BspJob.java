@@ -39,7 +39,7 @@ public class BspJob<V, E, M> extends Job {
 	/** Initial port to start using for the RPC communication */
 	public static final String BSP_RPC_INITIAL_PORT = "bsp.rpcInitialPort";
 	/** Default port to start using for the RPC communication */
-	public static int BSP_RPC_DEFAULT_PORT = 60000;
+	public static int BSP_RPC_DEFAULT_PORT = 61000;
 	/** Maximum number of messages per peer before flush */
 	public static final String BSP_MSG_SIZE = "bsp.msgSize";
 	/** Default maximum number of messages per peer before flush */
@@ -104,7 +104,7 @@ public class BspJob<V, E, M> extends Job {
 		/** Coordination */
 		CentralizedService<I> m_service;
 		/** Communication */
-		RPCCommunications<I, M> m_commService;
+		private RPCCommunications<I, M> m_commService;
 		/** The map should be run exactly once, or else there is a problem. */
 		boolean m_mapAlreadyRun = false;
 		
@@ -144,6 +144,7 @@ public class BspJob<V, E, M> extends Job {
 				@SuppressWarnings("unchecked")
 				HadoopVertex<I, V, E, M> vertex = 
 					vertexClass.newInstance();
+				vertex.setBspMapper(this);
 				vertex.setVertexValue(vertexValue);
 				for (E edgeValue : edgeValueSet) {
 					vertex.addEdge(edgeValue);
@@ -160,6 +161,10 @@ public class BspJob<V, E, M> extends Job {
 			m_service.setPartitionMax(vertexIdMax);
 		}
 				
+        public void sendMsg(I indx, M msg) {
+            m_commService.sendMessage(indx, msg);
+        }
+
 		@Override
 		public void setup(Context context) 
 			throws IOException, InterruptedException {
@@ -225,6 +230,7 @@ public class BspJob<V, E, M> extends Job {
 						++verticesDone;
 					}
 				}
+                m_commService.flush();
 				LOG.info("All " + m_vertexList.size() + 
 						 " vertices finished superstep " + 
 						 m_service.getSuperStep() + " (" + verticesDone + 
@@ -239,6 +245,7 @@ public class BspJob<V, E, M> extends Job {
 			throws IOException, InterruptedException {
 			LOG.info("Client done.");
 			m_service.cleanup();
+            m_commService.close();
 		}
 	}
 	
