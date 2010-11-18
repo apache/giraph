@@ -41,8 +41,8 @@ public class HadoopBspTest extends TestCase implements Watcher {
 	    public void compute() {
 	    	if (getSuperstep() > 3) {
 	    		voteToHalt();
-	        }
-            sendMsg("remote", new Integer((int)getSuperstep()));
+	      }
+        sendMsg("remote", new Integer((int)getSuperstep()));
 	    }
 	}
 	

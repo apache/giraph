@@ -97,7 +97,7 @@ public class BspJob<V, E, M> extends Job {
 	public static class BspMapper<I, V, E, M>
 		extends Mapper<Object, Object, Object, Object> {
 		/** Logger */
-	    private static final Logger LOG = Logger.getLogger(BspMapper.class);
+	  private static final Logger LOG = Logger.getLogger(BspMapper.class);
 		/** Data structure for managing vertices */
 		List<HadoopVertex<I, V, E, M>> m_vertexList = 
 			new ArrayList<HadoopVertex<I, V, E, M>>();
@@ -160,10 +160,16 @@ public class BspJob<V, E, M> extends Job {
 			}
 			m_service.setPartitionMax(vertexIdMax);
 		}
-				
-        public void sendMsg(I indx, M msg) {
-            m_commService.sendMessage(indx, msg);
-        }
+			
+		/**
+		 * Passes message on to communication service.
+		 * 
+		 * @param indx
+		 * @param msg
+		 */
+    public void sendMsg(I indx, M msg) {
+      m_commService.sendMessage(indx, msg);
+    }
 
 		@Override
 		public void setup(Context context) 
@@ -230,7 +236,7 @@ public class BspJob<V, E, M> extends Job {
 						++verticesDone;
 					}
 				}
-                m_commService.flush();
+        m_commService.flush();
 				LOG.info("All " + m_vertexList.size() + 
 						 " vertices finished superstep " + 
 						 m_service.getSuperStep() + " (" + verticesDone + 
@@ -245,7 +251,7 @@ public class BspJob<V, E, M> extends Job {
 			throws IOException, InterruptedException {
 			LOG.info("Client done.");
 			m_service.cleanup();
-            m_commService.close();
+      m_commService.close();
 		}
 	}
 	
