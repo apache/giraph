@@ -387,7 +387,8 @@ public class ZooKeeperManager {
 				try {
 					LOG.info("onlineZooKeeperServers: Connect attempt " +
 							 connectAttempts + " trying to connect to " +
-							 m_myHostname + ":" + m_zkBasePort); 
+							 m_myHostname + ":" + m_zkBasePort + 
+							 " with poll msecs = " + m_pollMsecs); 
 					InetSocketAddress zkServerAddress = 
 						new InetSocketAddress(m_myHostname, m_zkBasePort);
 					Socket testServerSock = new Socket();

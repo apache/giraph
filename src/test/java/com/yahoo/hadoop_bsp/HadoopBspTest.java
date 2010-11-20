@@ -47,8 +47,12 @@ public class HadoopBspTest extends TestCase implements Watcher {
     @Override
     public void setUp() {
     	try {
+            String zkList = System.getProperty("prop.zookeeper.list");
+            if (zkList == null) {
+            	return;
+            }
 			ZooKeeperExt zooKeeperExt = 
-				new ZooKeeperExt("localhost:2181", 30*1000, this);
+				new ZooKeeperExt(zkList, 30*1000, this);
 			List<String> rootChildren = zooKeeperExt.getChildren("/", false);
 			for (String rootChild : rootChildren) {
 				if (rootChild.startsWith("_hadoopBsp")) {
@@ -127,7 +131,8 @@ public class HadoopBspTest extends TestCase implements Watcher {
             conf.set("mapred.jar", jarLocation);
         }
         else {
-        	System.out.println("testBspJob: Using local job runner...");
+        	System.out.println("testBspJob: Using local job runner with " + 
+        			           "location " + jarLocation + "...");
             conf.set("mapred.jar", jarLocation);
         }
         conf.setInt(BspJob.BSP_INITIAL_PROCESSES, 1);
