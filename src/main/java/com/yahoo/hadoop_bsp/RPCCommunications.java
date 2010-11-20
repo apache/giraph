@@ -17,7 +17,6 @@ import java.util.Set;
 import org.apache.log4j.Logger;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RPC.Server;
 

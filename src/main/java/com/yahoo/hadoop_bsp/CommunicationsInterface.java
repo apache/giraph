@@ -7,7 +7,6 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 
 import org.apache.hadoop.ipc.VersionedProtocol;
-import org.apache.hadoop.io.Writable;
 
 /**
  * Basic interface for communication between workers.

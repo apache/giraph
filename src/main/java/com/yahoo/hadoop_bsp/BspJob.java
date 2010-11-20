@@ -31,32 +31,56 @@ public class BspJob<V, E, M> extends Job {
 		"bsp.minPercentResponded";
 	/** Polling timeout to check on the number of responded tasks (int) */
 	public static final String BSP_POLL_MSECS = "bsp.pollMsecs";
-	/** Zookeeper list (empty for start up Zookeeper locally) */
+	/** ZooKeeper list (empty for start up ZooKeeper locally) */
 	public static final String BSP_ZOOKEEPER_LIST = "bsp.zkList";
-	/** Zookeeper session millisecond timeout */
+	/** ZooKeeper session millisecond timeout */
 	public static final String BSP_ZOOKEEPER_SESSION_TIMEOUT = 
 		"bsp.zkSessionMsecTimeout";
+	/** Polling interval to check for the final ZooKeeper server data */
+	public static final String BSP_ZOOKEEPER_SERVERLIST_POLL_MSECS = 
+		"bsp.zkServerlistPollMsecs";
+	/** Number of nodes to run Zookeeper on */
+	public static final String BSP_ZOOKEEPER_SERVER_COUNT =
+		"bsp.zkServerCount";
+	/** ZooKeeper port to use */
+	public static final String BSP_ZOOKEEPER_SERVER_PORT =
+		"bsp.zkServerPort";
+	/** Location of the ZooKeeper jar - Used internally, not meant for users */
+	public static final String BSP_ZOOKEEPER_JAR = "bsp.zkJar";
+	/** Local ZooKeeper directory to use */
+	public static final String BSP_ZOOKEEPER_DIR = "bsp.zkDir";
 	/** Initial port to start using for the RPC communication */
 	public static final String BSP_RPC_INITIAL_PORT = "bsp.rpcInitialPort";
 	/** Default port to start using for the RPC communication */
-	public static int BSP_RPC_DEFAULT_PORT = 61000;
+	public static final int BSP_RPC_DEFAULT_PORT = 61000;
 	/** Maximum number of messages per peer before flush */
 	public static final String BSP_MSG_SIZE = "bsp.msgSize";
 	/** Default maximum number of messages per peer before flush */
 	public static int BSP_MSG_DEFAULT_SIZE = 1000;
+
 	/** 
-	 * If BSP_ZOOKEEPER_LIST is not set, then use this directory to manage ZooKeeper 
+	 * If BSP_ZOOKEEPER_LIST is not set, then use this directory to manage 
+	 * ZooKeeper 
 	 */
 	public static final String BSP_ZOOKEEPER_MANAGER_DIRECTORY = 
 		"bsp.zkManagerDirectory";
 	/** Default poll msecs (30 seconds) */
-	public static int DEFAULT_BSP_POLL_MSECS = 30*1000;
+	public static final int DEFAULT_BSP_POLL_MSECS = 30*1000;
 	/** Number of poll attempts prior to failing the job (int) */
 	public static final String BSP_POLL_ATTEMPTS = "bsp.pollAttempts";
 	/** Default poll attempts */
-	public static int DEFAULT_BSP_POLL_ATTEMPTS = 3;
+	public static final int DEFAULT_BSP_POLL_ATTEMPTS = 3;
 	/** Default Zookeeper session millisecond timeout */
-	public static int DEFAULT_BSP_ZOOKEEPER_SESSION_TIMEOUT = 30*1000;
+	public static final int DEFAULT_BSP_ZOOKEEPER_SESSION_TIMEOUT = 30*1000;
+	/** Default polling interval to check for the final ZooKeeper server data */
+	public static final int DEFAULT_BSP_ZOOKEEPER_SERVERLIST_POLL_MSECS = 
+		10*1000;
+	/** Default number of nodes to run Zookeeper on */
+	public static final int DEFAULT_BSP_ZOOKEEPER_SERVER_COUNT = 1;
+	/** Default ZooKeeper port to use */
+	public static final int DEFAULT_BSP_ZOOKEEPER_SERVER_PORT = 22181;
+	/** Default local ZooKeeper directory to use */
+	public static final String DEFAULT_BSP_ZOOKEEPER_DIR = "/tmp/bspZooKeeper";
 	/** Default ZooKeeper manager directory */
 	public static final String DEFAULT_ZOOKEEPER_MANAGER_DIRECTORY =
 		"/tmp";
@@ -78,10 +102,6 @@ public class BspJob<V, E, M> extends Job {
 		}
 		if (conf.getInt(BSP_MIN_PROCESSES, -1) < 0) {
 			throw new IOException("No valid " + BSP_MIN_PROCESSES);
-		}
-		if (conf.get(BSP_ZOOKEEPER_LIST, "").isEmpty()) {
-			throw new IOException(
-				"Empty zk list not yet supported (future work");
 		}
 	}
 	
@@ -107,6 +127,8 @@ public class BspJob<V, E, M> extends Job {
 		private RPCCommunications<I, M> m_commService;
 		/** The map should be run exactly once, or else there is a problem. */
 		boolean m_mapAlreadyRun = false;
+		/** Manages the ZooKeeper server if necessary */
+		ZooKeeperManager m_manager;
 		
 		/**
 		 * Load the vertices from the user-defined VertexReader into our 
@@ -179,11 +201,19 @@ public class BspJob<V, E, M> extends Job {
 			 * but mainly decide whether to load data 
 			 * from a checkpoint or from the InputFormat.
 			 */
+			String jarFile = context.getJar();
+			String trimmedJarFile = jarFile.replaceFirst("file:", "");
+			LOG.info("setup: jar file @ " + jarFile + 
+					 ", using " + trimmedJarFile);
 			Configuration configuration = context.getConfiguration();
+			configuration.set(BSP_ZOOKEEPER_JAR, trimmedJarFile);
 			String serverPortList = 
 				configuration.get(BspJob.BSP_ZOOKEEPER_LIST, "");
 			if (serverPortList == "") {
-				// TODO: Implement starting a ZK process
+				m_manager = new ZooKeeperManager(configuration);
+				m_manager.setup();
+				m_manager.onlineZooKeeperServers();
+				serverPortList = m_manager.getZooKeeperServerPortString();
 			}
 			int sessionMsecTimeout = 
 				configuration.getInt(
@@ -197,7 +227,7 @@ public class BspJob<V, E, M> extends Job {
 					m_service.setup();
 					LOG.info("Starting communication service...");
 					m_commService = new RPCCommunications<I, M>(
-							configuration, m_service);
+						configuration, m_service);
 					LOG.info("Loading the vertices...");
 					loadVertices(context);
 				} catch (Exception e) {
@@ -236,7 +266,7 @@ public class BspJob<V, E, M> extends Job {
 						++verticesDone;
 					}
 				}
-        m_commService.flush();
+				m_commService.flush();
 				LOG.info("All " + m_vertexList.size() + 
 						 " vertices finished superstep " + 
 						 m_service.getSuperStep() + " (" + verticesDone + 
@@ -251,7 +281,10 @@ public class BspJob<V, E, M> extends Job {
 			throws IOException, InterruptedException {
 			LOG.info("Client done.");
 			m_service.cleanup();
-      m_commService.close();
+			if (m_manager != null) {
+				m_manager.offlineZooKeeperServers();
+			}
+			m_commService.close();
 		}
 	}
 	

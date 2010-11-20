@@ -34,4 +34,10 @@ public interface CentralizedServiceMaster<I> {
 	 * @param state state of the job
 	 */
 	void masterSetJobState(State state); 
+	
+	/**
+	 * Master does special singular cleanup procedures (i.e. cleanup files,
+	 * znodes, etc.)
+	 */
+	void masterCleanup(int partitions);
 }

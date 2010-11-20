@@ -35,6 +35,7 @@ public class MasterThread<I> extends Thread {
 				++superStep;
 			}
 			m_bspService.masterSetJobState(BspService.State.FINISHED);
+			m_bspService.masterCleanup(partitions);
 		} catch (Exception e) {
 			LOG.error("masterThread: Master algorithm failed: " + 
 					  e.getMessage());

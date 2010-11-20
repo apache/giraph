@@ -47,6 +47,8 @@ public class BspService<I> implements
 	private BspEvent m_barrierDone = new PredicateLock();
 	/** Barrier children synchronization */
 	private BspEvent m_barrierChildrenChanged= new PredicateLock();
+	/** Finished children synchronization */
+	private BspEvent m_finishedChildrenChanged= new PredicateLock();
 	/** Partition count */
 	private Integer m_partitionCount;
 	/** Configuration of the job*/
@@ -57,8 +59,8 @@ public class BspService<I> implements
 	long m_cachedSuperstep = -1;
 	/** Job id, to ensure uniqueness */
 	String m_jobId;
-	/** Task id, to ensure uniqueness */
-	String m_taskId;
+	/** Task partition, to ensure uniqueness */
+	int m_taskPartition;
 	/** My process health znode */
 	String m_myHealthZode;
 	/** Master thread */
@@ -83,6 +85,8 @@ public class BspService<I> implements
 	public static final String PARTITION_COUNT_NODE = "/_partitionCount";
 	public static final String VIRTUAL_ID_DIR = "/_virtualIdDir";
 	public static final String JOB_STATE_NODE = "/_jobState";
+	public static final String FINISHED_NODE = "/_finished";
+
 
 	private final String BASE_PATH;
 	private final String BARRIER_PATH;
@@ -91,13 +95,14 @@ public class BspService<I> implements
 	private final String PARTITION_COUNT_PATH;
 	private final String VIRTUAL_ID_PATH;
 	private final String JOB_STATE_PATH;
+	private final String FINISHED_PATH;
 	
 	public BspService(String serverPortList, int sessionMsecTimeout, 
 		Configuration conf) throws IOException, KeeperException, InterruptedException, 
 		JSONException {
 		m_conf = conf;
 		m_jobId = conf.get("mapred.job.id", "Unknown Job");
-		m_taskId = conf.get("mapred.task.id", "Unknown Task");
+		m_taskPartition = conf.getInt("mapred.task.partition", -1);
 
 		BASE_PATH = BASE_DIR + "/" + m_jobId;
 		BARRIER_PATH = BASE_PATH + BARRIER_DIR;
@@ -106,9 +111,10 @@ public class BspService<I> implements
 		PARTITION_COUNT_PATH = BASE_PATH + PARTITION_COUNT_NODE;
 		VIRTUAL_ID_PATH = BASE_PATH + VIRTUAL_ID_DIR;
 		JOB_STATE_PATH = BASE_PATH + JOB_STATE_NODE;
-			
+		FINISHED_PATH = BASE_PATH + FINISHED_NODE;	
+		
 		LOG.info("BspService: Starting up zookeeper with " + m_jobId + ", " +
-		         m_taskId + " on " + serverPortList);
+		         m_taskPartition + " on " + serverPortList);
 	    m_zk = new ZooKeeperExt(serverPortList, sessionMsecTimeout, this);
 	    m_masterThread = new MasterThread<I>(this);
 	    m_masterThread.start();
@@ -360,7 +366,8 @@ public class BspService<I> implements
 			m_myHealthZode =
 				m_zk.createExt(
 					PROCESS_HEALTH_PATH + "/" 
-					+ InetAddress.getLocalHost().getHostName() + "-" + m_taskId, 
+					+ InetAddress.getLocalHost().getHostName() + "-" + 
+					m_taskPartition, 
 					Boolean.toString(isHealthy()).getBytes(),
 					Ids.OPEN_ACL_UNSAFE,
 					CreateMode.EPHEMERAL_SEQUENTIAL,
@@ -397,12 +404,7 @@ public class BspService<I> implements
 		    int randomRpcPort = (int) (30000 * Math.random()) + 30000;
 		    int finalRpcPort = m_conf.getInt(BspJob.BSP_RPC_INITIAL_PORT, 
 		    								 randomRpcPort);
-		    String[] taskIdArray= m_taskId.split("_");
-		    if (!taskIdArray[0].equals("attempt")) {
-		    	throw new RuntimeException("setup: Failed to parse task id " +
-		    			                   " from " + m_taskId);
-		    }
-		    finalRpcPort += Integer.parseInt(taskIdArray[2]);
+		    finalRpcPort += m_taskPartition;
 		    LOG.info("setup: Using port " + finalRpcPort);
 		    hostnamePort.put(finalRpcPort);
 		    while ((getJobState() != State.FAILED) &&
@@ -622,6 +624,28 @@ public class BspService<I> implements
 	}
 	
 	public void cleanup() {
+		/*
+		 * All processes should denote they are done by adding special
+		 * znode.  Once the number of znodes equals the number of partitions,
+		 * the master will clean up the ZooKeeper znodes associated with this
+		 * job.
+		 */
+		try {
+			String finalFinishedPath = 
+				m_zk.createExt(
+					FINISHED_PATH + "/" + m_taskPartition, 
+					null, 
+					Ids.OPEN_ACL_UNSAFE, 
+					CreateMode.PERSISTENT, 
+					true);
+			LOG.info("cleanup: Notifying master its okay to cleanup with " +
+					 finalFinishedPath);
+		} catch (KeeperException.NodeExistsException e) { 
+			LOG.info("cleanup: Couldn't create finished node '" +
+					FINISHED_PATH + "/" + m_taskPartition + "'");
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
 		try {
 			m_masterThread.join();
 		} catch (InterruptedException e) {
@@ -631,6 +655,42 @@ public class BspService<I> implements
 			m_zk.close();
 		} catch (InterruptedException e) {
 			throw new RuntimeException("Zookeeper failed to close");
+		}
+	}
+	
+	public void masterCleanup(int partitions) {
+		List<String> childrenList = null;
+		while (true) {
+			try {
+				childrenList = m_zk.getChildren(FINISHED_PATH, true);
+			} catch (KeeperException.NoNodeException e) {
+				LOG.info("masterCleanup: No children yet in " + FINISHED_PATH);
+			}
+			catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+			LOG.info("masterCleanup: Got " + childrenList.size() + " of " +
+					 partitions + " children from " + FINISHED_PATH);
+			if (childrenList.size() == partitions) {
+					break;	
+			}
+			LOG.info("masterCleanup: Waiting for the children of " + 
+					 FINISHED_PATH + " to change since only got " +
+					 childrenList.size() + " nodes.");
+			m_finishedChildrenChanged.waitForever();
+			m_finishedChildrenChanged.reset();
+		}
+		
+		/* 
+		 * At this point, all processes have acknowledged the cleanup, 
+		 * and the master can do any final cleanup 
+		 */
+		try {
+			LOG.info("masterCleanup: Removing the following path and all " + 
+					 "children - " + BASE_PATH);
+			m_zk.deleteExt(BASE_PATH, -1, true);
+		} catch (Exception e) {
+			LOG.error("masterCleanup: Failed to do cleanup of " + BASE_PATH);
 		}
 	}
 	
@@ -668,6 +728,11 @@ public class BspService<I> implements
 				 event.getType() == EventType.NodeChildrenChanged) {
 			LOG.info("process: m_barrierChildrenChanged signaled");
 			m_barrierChildrenChanged.signal();
+		}
+		else if (event.getPath().contains(FINISHED_PATH) &&
+				 event.getType() == EventType.NodeChildrenChanged) {
+			LOG.info("process: m_finishedChildrenChanged signaled");
+			m_finishedChildrenChanged.signal();
 		}
 		else {
 			LOG.error("process; Unknown event");
