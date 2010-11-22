@@ -667,20 +667,21 @@ public class BspService<I> implements
 		while (true) {
 			try {
 				childrenList = m_zk.getChildren(FINISHED_PATH, true);
+				LOG.info("masterCleanup: Got " + childrenList.size() + " of " +
+						 partitions + " children from " + FINISHED_PATH);
+				if (childrenList.size() == partitions) {
+						break;	
+				}
+				LOG.info("masterCleanup: Waiting for the children of " + 
+						 FINISHED_PATH + " to change since only got " +
+						 childrenList.size() + " nodes.");
 			} catch (KeeperException.NoNodeException e) {
 				LOG.info("masterCleanup: No children yet in " + FINISHED_PATH);
 			}
 			catch (Exception e) {
 				throw new RuntimeException(e);
 			}
-			LOG.info("masterCleanup: Got " + childrenList.size() + " of " +
-					 partitions + " children from " + FINISHED_PATH);
-			if (childrenList.size() == partitions) {
-					break;	
-			}
-			LOG.info("masterCleanup: Waiting for the children of " + 
-					 FINISHED_PATH + " to change since only got " +
-					 childrenList.size() + " nodes.");
+
 			m_finishedChildrenChanged.waitForever();
 			m_finishedChildrenChanged.reset();
 		}
