@@ -35,10 +35,11 @@ public interface CentralizedService<I> {
 	void setPartitionMax(I max);
 	
 	/**
+	 * Get the partition set.
 	 * @return partition set
 	 */
-	
 	SortedSet<Partition<I>> getPartitionSet();
+	
 	/**
 	 * Every client will need to get a partition for an index
 	 */

@@ -146,7 +146,7 @@ public class ZooKeeperManager {
 	
 	/**
 	 * Task 0 will call this to create the ZooKeeper server list.  The result is
-	 * a file that describes the Zookeeper servers through the filename.
+	 * a file that describes the ZooKeeper servers through the filename.
 	 */
 	private void createZooKeeperServerList() {
 		int candidateRetrievalAttempt = 0;
@@ -352,12 +352,19 @@ public class ZooKeeperManager {
 	 */
 	public void onlineZooKeeperServers() {
 		if (m_zkServerList.contains(m_myHostname)) {
+			File zkDir = new File(m_zkDir);
+			try {
+				LOG.info("onlineZooKeeperServers: Trying to delete old " + 
+						 "directory " + zkDir);
+				FileUtils.deleteDirectory(zkDir);
+			} catch (IOException e) {
+				LOG.warn("onlineZooKeeperServers: Failed to delete " + 
+						 "directory " + zkDir);
+			}
 			generateZooKeeperConfigFile(m_zkServerList);
 			copyJarToLocal();
 			ProcessBuilder processBuilder = new ProcessBuilder();
 			List<String> commandList = new ArrayList<String>();
-			//commandList.add("/bin/sh");
-			//commandList.add("-c");
 			commandList.add("java");
 			commandList.add("-cp");
 			Path fullJarPath = new Path(m_conf.get(BspJob.BSP_ZOOKEEPER_JAR));
@@ -368,7 +375,7 @@ public class ZooKeeperManager {
 			File execDirectory = new File(m_conf.get(
 				BspJob.BSP_ZOOKEEPER_DIR, BspJob.DEFAULT_BSP_ZOOKEEPER_DIR));
 			processBuilder.directory(execDirectory);
-			LOG.info("onlineZooKeepServers: Attempting to start ZooKeeper " + 
+			LOG.info("onlineZooKeeperServers: Attempting to start ZooKeeper " + 
 				"server with command " + commandList);
 			try {
 				m_zkProcess = processBuilder.start();

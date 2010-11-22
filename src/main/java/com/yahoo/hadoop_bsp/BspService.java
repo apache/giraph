@@ -325,8 +325,12 @@ public class BspService<I> implements
 			}
 		}
 		try {
+			/* 
+			 * The first superstep is -1, this is so that it can be used 
+			 * as a barrier so that the communications service can be started. 
+			 */
 			m_zk.create(SUPERSTEP_PATH,
-						Integer.toString(0).getBytes(),
+						Integer.toString(-1).getBytes(),
 						Ids.OPEN_ACL_UNSAFE, 
 						CreateMode.PERSISTENT);
 		} catch (KeeperException.NodeExistsException e) {
@@ -755,12 +759,36 @@ public class BspService<I> implements
 	}
 
 	public SortedSet<Partition<I>> getPartitionSet() {
+		if (m_partitionSet == null) {
+			m_partitionSet = new TreeSet<Partition<I>>();
+			try {
+				for (int i = 0; i < m_partitionCount; ++i) {
+					String tmpPath = VIRTUAL_ID_PATH + "/" + i + "/reserved";
+					JSONArray jsonArray = new JSONArray(new String(
+						m_zk.getData(tmpPath, false, null)));
+					LOG.info("getPartitionSet: Got partition " + 
+							 jsonArray.toString() + " from " + tmpPath);
+					if (jsonArray.length() != 3) {
+						throw new RuntimeException(
+							"getPartitionSet: Impossible that znode " + 
+							tmpPath + " has jsonArray " + jsonArray);
+					}
+					m_partitionSet.add(
+						new Partition<I>(jsonArray.getString(0), 
+										 jsonArray.getInt(1), 
+										 (I) jsonArray.get(2)));
+				}
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		}		
 		return m_partitionSet;
 	}
 	
 	public Partition<I> getPartition(I index) {
 		if (m_partitionSet == null) {
 			m_partitionSet = new TreeSet<Partition<I>>();
+			
 			// TO BE IMPLEMENTED
 		}
 		return m_partitionSet.tailSet(new Partition<I>("", -1, index)).last();

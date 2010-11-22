@@ -117,7 +117,7 @@ public class BspJob<V, E, M> extends Job {
 	public static class BspMapper<I, V, E, M>
 		extends Mapper<Object, Object, Object, Object> {
 		/** Logger */
-	  private static final Logger LOG = Logger.getLogger(BspMapper.class);
+		private static final Logger LOG = Logger.getLogger(BspMapper.class);
 		/** Data structure for managing vertices */
 		List<HadoopVertex<I, V, E, M>> m_vertexList = 
 			new ArrayList<HadoopVertex<I, V, E, M>>();
@@ -129,6 +129,8 @@ public class BspJob<V, E, M> extends Job {
 		boolean m_mapAlreadyRun = false;
 		/** Manages the ZooKeeper server if necessary */
 		ZooKeeperManager m_manager;
+		/** Configuration */
+		Configuration m_conf = null;
 		
 		/**
 		 * Load the vertices from the user-defined VertexReader into our 
@@ -139,18 +141,16 @@ public class BspJob<V, E, M> extends Job {
 		 * @throws InterruptedException 
 		 * @throws IOException 
 		 */
-		public void loadVertices(Context context) throws InstantiationException, IllegalAccessException, IOException {
-			Configuration configuration = context.getConfiguration();
-			
+		public void loadVertices(Context context) throws InstantiationException, IllegalAccessException, IOException {			
 			InputSplit myInputSplit = m_service.getInputSplit();
 			@SuppressWarnings("unchecked")
 			Class<? extends VertexInputFormat<I, V, E>> vertexInputFormatClass = 
 				(Class<? extends VertexInputFormat<I, V, E>>) 
-					configuration.getClass("bsp.vertexInputFormatClass", 
+					m_conf.getClass("bsp.vertexInputFormatClass", 
 							       		   VertexInputFormat.class);
 			@SuppressWarnings("rawtypes")
 			Class<? extends HadoopVertex> vertexClass = 
-				configuration.getClass("bsp.vertexClass", 
+				m_conf.getClass("bsp.vertexClass", 
 								       HadoopVertex.class, 
 								       HadoopVertex.class);
 			VertexInputFormat<I, V, E> vertexInputFormat = 
@@ -189,13 +189,14 @@ public class BspJob<V, E, M> extends Job {
 		 * @param indx
 		 * @param msg
 		 */
-    public void sendMsg(I indx, M msg) {
-      m_commService.sendMessage(indx, msg);
-    }
+		public void sendMsg(I indx, M msg) {
+			m_commService.sendMessage(indx, msg);
+		}
 
 		@Override
 		public void setup(Context context) 
 			throws IOException, InterruptedException {
+			m_conf = context.getConfiguration();
 			/*
 			 * Do some initial setup (possibly starting up a Zookeeper service), 
 			 * but mainly decide whether to load data 
@@ -205,29 +206,25 @@ public class BspJob<V, E, M> extends Job {
 			String trimmedJarFile = jarFile.replaceFirst("file:", "");
 			LOG.info("setup: jar file @ " + jarFile + 
 					 ", using " + trimmedJarFile);
-			Configuration configuration = context.getConfiguration();
-			configuration.set(BSP_ZOOKEEPER_JAR, trimmedJarFile);
+			m_conf.set(BSP_ZOOKEEPER_JAR, trimmedJarFile);
 			String serverPortList = 
-				configuration.get(BspJob.BSP_ZOOKEEPER_LIST, "");
+				m_conf.get(BspJob.BSP_ZOOKEEPER_LIST, "");
 			if (serverPortList == "") {
-				m_manager = new ZooKeeperManager(configuration);
+				m_manager = new ZooKeeperManager(m_conf);
 				m_manager.setup();
 				m_manager.onlineZooKeeperServers();
 				serverPortList = m_manager.getZooKeeperServerPortString();
 			}
 			int sessionMsecTimeout = 
-				configuration.getInt(
+				m_conf.getInt(
 					BspJob.BSP_POLL_MSECS,
 					BspJob.DEFAULT_BSP_ZOOKEEPER_SESSION_TIMEOUT);
 				try {
 					LOG.info("Starting up BspService...");
 					m_service = new BspService<I>(
-						serverPortList, sessionMsecTimeout, configuration);
+						serverPortList, sessionMsecTimeout, m_conf);
 					LOG.info("Registering health of this process...");
 					m_service.setup();
-					LOG.info("Starting communication service...");
-					m_commService = new RPCCommunications<I, M>(
-						configuration, m_service);
 					LOG.info("Loading the vertices...");
 					loadVertices(context);
 				} catch (Exception e) {
@@ -257,7 +254,13 @@ public class BspJob<V, E, M> extends Job {
 			}
 			m_mapAlreadyRun = true;
 			long verticesDone = 0;
-			do {
+			while (!m_service.barrier(verticesDone, m_vertexList.size())) {
+				LOG.info("map: superstep = " + m_service.getSuperStep());
+				if (m_service.getSuperStep() == 0) {
+					LOG.info("Starting communication service...");
+					m_commService = new RPCCommunications<I, M>(
+							m_conf, m_service);
+				}
 				verticesDone = 0;
 				HadoopVertex.setSuperstep(m_service.getSuperStep());
 				for (HadoopVertex<I, V, E, M> vertex : m_vertexList) {
@@ -271,7 +274,7 @@ public class BspJob<V, E, M> extends Job {
 						 " vertices finished superstep " + 
 						 m_service.getSuperStep() + " (" + verticesDone + 
 						 " of " + m_vertexList.size() + " vertices done)");
-			} while (!m_service.barrier(verticesDone, m_vertexList.size()));
+			} 
 			
 			LOG.info("BSP application done (global vertices marked done)");
 		}
