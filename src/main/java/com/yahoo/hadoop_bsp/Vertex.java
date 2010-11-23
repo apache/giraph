@@ -16,7 +16,7 @@ public interface Vertex<I, V, E, M> {
 	/**
 	 * Must be defined by user to do computation on a single Vertex.
 	 */
-	public void compute();
+	public void compute(Iterator<M> msgIterator);
 	/**
 	 * Retrieves the BSP superstep.
 	 * @return BSP superstep

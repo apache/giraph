@@ -16,6 +16,10 @@ public abstract class HadoopVertex<I, V, E, M> implements Vertex<I, V, E, M> {
 		m_outEdgeList.add(edgeValue);
 	}
 	
+	public void setId(I id) {
+		m_id = id;
+	}
+	
 	public I id() {
 		return m_id;
 	}

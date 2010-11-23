@@ -59,52 +59,57 @@ public class RPCCommunications<I, M>
       this.isProxy = isProxy;
     }
     
-    public synchronized void flush() { 
-    	this.flush = true;
+    public void flush() { 
         synchronized (waitingOn) {
-          waitingOn.notify();
+        	this.flush = true;
+        	waitingOn.notify();
         }
     }
     
     public void close() {
-    	this.notDone = false;
+        LOG.info("close: Done");
         synchronized (waitingOn) {
-          waitingOn.notify();
+        	this.notDone = false;
+            waitingOn.notify();
         }
 
     }
     
     public void run() {
     	try {
-    		while(notDone) {
+    		while (true) {
                 synchronized (waitingOn) {
-                  try {
-                    waitingOn.wait(1000);
-                    LOG.info(peer.getName() + " RPC client waking up");
-                  } catch (InterruptedException e) {
-                      // continue;
-                  }
-                }
-    			if (flush) {
-    				Iterator<Entry<I, ArrayList<M>>> ei = 
-    				       outMessagesPerPeer.entrySet().iterator();
-    				while (ei.hasNext()) {
-    	        // TODO: apply combiner
-    					Entry<I, ArrayList<M>> e = ei.next();
-    					ArrayList<M> msgList = e.getValue();
-    					synchronized(msgList) {
-    					  Iterator<M> mi = msgList.iterator();
-    					  while (mi.hasNext()) {
-                              M msg = mi.next();
-                              LOG.info(peer.getName() + " putting " + msg + " to " + e.getKey());
-    						  peer.put(e.getKey(), msg);
-    					  }
-    					  msgList.clear();
-    					}
+                    try {
+                    	waitingOn.wait(2000);
+                    	LOG.debug(peer.getName() + " RPC client waking up");
+                    } catch (InterruptedException e) {
+                    	// continue;
+                    }
+
+                	if (flush) {
+                		Iterator<Entry<I, ArrayList<M>>> ei = 
+                			outMessagesPerPeer.entrySet().iterator();
+                		while (ei.hasNext()) {
+                			// TODO: apply combiner
+                			Entry<I, ArrayList<M>> e = ei.next();
+                			ArrayList<M> msgList = e.getValue();
+                			synchronized(msgList) {
+                				Iterator<M> mi = msgList.iterator();
+                				while (mi.hasNext()) {
+                					M msg = mi.next();
+                					LOG.info(peer.getName() + " putting " + 
+                							 msg + " to " + e.getKey());
+                					peer.put(e.getKey(), msg);
+                				}
+                				msgList.clear();
+                			}
+                		}
+    				    flush = false;
     				}
-    				synchronized(this) {
-    				  flush = false;
-    				}
+                	
+                    if (!notDone) {
+                        break;
+                    }
     			}
     		}
             LOG.info(peer.getName() + " RPC client thread terminating");
@@ -118,8 +123,8 @@ public class RPCCommunications<I, M>
   }
   
 	
-	public RPCCommunications(Configuration conf, CentralizedService<I> service) throws IOException, UnknownHostException
-	{
+	public RPCCommunications(Configuration conf, CentralizedService<I> service) 
+		throws IOException, UnknownHostException {
 		this.conf = conf;
 		this.service = service;
 
@@ -128,29 +133,27 @@ public class RPCCommunications<I, M>
 		this.localHostname = InetAddress.getLocalHost().getHostName();
 		int taskId = conf.getInt("mapred.task.partition", 0);
     
-    String bindAddress = localHostname;
-    int bindPort = conf.getInt(BspJob.BSP_RPC_INITIAL_PORT, BspJob.BSP_RPC_DEFAULT_PORT)
-                   + taskId;
+		String bindAddress = localHostname;
+		int bindPort = conf.getInt(BspJob.BSP_RPC_INITIAL_PORT, 
+								  BspJob.BSP_RPC_DEFAULT_PORT) + taskId;
     
-    this.myAddress = new InetSocketAddress(bindAddress, bindPort);
-    server = RPC.getServer(this, myAddress.getHostName(), myAddress.getPort(), conf);
-    server.start();
+		this.myAddress = new InetSocketAddress(bindAddress, bindPort);
+		server = 
+			RPC.getServer(this, myAddress.getHostName(), myAddress.getPort(), conf);
+		server.start();
 
-    this.myName = myAddress.toString();
-    LOG.info("Started RPC communication server: " + myName);
+		this.myName = myAddress.toString();
+		LOG.info("Started RPC communication server: " + myName);
     
-    Set<Partition<I>> partitions = service.getPartitionSet();
-    if (partitions == null) {
-        // TODO: no longer necessary when getPartitionSet is implemented
-        Partition partition = new Partition<I>(localHostname, bindPort, null);
-    	startPeerConnectionThread(partition);
-    } else {
-    Iterator<Partition<I>> pIt = partitions.iterator();
-    while (pIt.hasNext()) {
-    	startPeerConnectionThread(pIt.next());
-    }
-	}	
-	}	
+		Set<Partition<I>> partitions = service.getPartitionSet();
+		for (Partition<I> partition : partitions) {
+			LOG.info("RPCCommunications: Connecting to " + 
+					 partition.getHostname() + ", port = " + 
+					 partition.getPort() + ", max index = " + 
+					 partition.getMaxIndex());  
+			startPeerConnectionThread(partition);
+		}	
+	}		
 	
   /**
    * 
@@ -162,15 +165,15 @@ public class RPCCommunications<I, M>
 
 		CommunicationsInterface<I, M> peer;
 
-    InetSocketAddress addr = new InetSocketAddress(
-  		                          partition.getHostname(),
-  		                          partition.getPort());
+		InetSocketAddress addr = new InetSocketAddress(
+				partition.getHostname(),
+				partition.getPort());
         boolean isProxy = true;
 		if (myName.equals(addr.toString())) {
 			peer = this;
             isProxy = false;
 		} else {
-      peer = (CommunicationsInterface<I, M>) RPC.getProxy(CommunicationsInterface.class,
+			peer = (CommunicationsInterface<I, M>) RPC.getProxy(CommunicationsInterface.class,
       		            versionID, addr, conf);
 		}
 		
@@ -222,34 +225,29 @@ public class RPCCommunications<I, M>
 	
 	public void sendMessage(I destVertex, M msg) {
 		LOG.info("Send bytes (" + msg.toString() + ") to " + destVertex);
-        // TODO: implement getPartition
-		//Partition<I> destPartition = service.getPartition(destVertex);
-        Partition<I> destPartition = new Partition<I>(localHostname,
-                       Integer.parseInt(getName().split(":")[1]), null);
-    InetSocketAddress addr = new InetSocketAddress(
-    		                                 destPartition.getHostname(),
-    		                                 destPartition.getPort());
-    HashMap<I, ArrayList<M>> msgMap = outMessages.get(addr);
-    if (msgMap == null) { // should never happen after constructor
-      msgMap = new HashMap<I, ArrayList<M>>();
-      outMessages.put(addr, msgMap);
-    }
+		Partition<I> destPartition = service.getPartition(destVertex);
+		InetSocketAddress addr = new InetSocketAddress(
+			destPartition.getHostname(),
+			destPartition.getPort());
+		HashMap<I, ArrayList<M>> msgMap = outMessages.get(addr);
+		if (msgMap == null) { // should never happen after constructor
+			msgMap = new HashMap<I, ArrayList<M>>();
+			outMessages.put(addr, msgMap);
+		}
     
-    ArrayList<M> msgList = msgMap.get(destVertex);
-    if (msgList == null) {
-    	msgList = new ArrayList<M>();
-    	msgMap.put(destVertex, msgList);
-    }
-    synchronized(msgList) {
-      msgList.add(msg);
-      LOG.info("added msg, size=" + msgList.size());
+		ArrayList<M> msgList = msgMap.get(destVertex);
+		if (msgList == null) {
+			msgList = new ArrayList<M>();
+			msgMap.put(destVertex, msgList);
+		}
+		synchronized(msgList) {
+			msgList.add(msg);
+			LOG.info("added msg, size=" + msgList.size());
 
-    }
-    synchronized (waitingOn) {
-      waitingOn.notify();
-    }
-
-
+		}
+		synchronized (waitingOn) {
+			waitingOn.notify();
+		}
 	}
 	
 	public void flush() {
@@ -264,6 +262,14 @@ public class RPCCommunications<I, M>
 		return inMessages.entrySet().iterator();
 	}
 
+	public Iterator<M> getVertexMessageIterator(I vertex) {
+	    ArrayList<M> msgList = inMessages.get(vertex);
+	    if (msgList == null) {
+	        return null;
+	    }
+	    return msgList.iterator();
+	}
+	
 	public int getNumCurrentMessages()
 	     throws IOException {
 		Iterator<Entry<I, ArrayList<M>>> it = getMessageIterator();

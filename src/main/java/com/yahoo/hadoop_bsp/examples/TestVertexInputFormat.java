@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
@@ -18,7 +20,7 @@ import com.yahoo.hadoop_bsp.VertexReader;
  *
  */
 public class TestVertexInputFormat implements 
-	VertexInputFormat<Long, Integer, Float> {
+	VertexInputFormat<LongWritable, IntWritable, Float> {
 	
 	public List<InputSplit> getSplits(int numSplits)
 		throws IOException, InterruptedException {
@@ -33,7 +35,7 @@ public class TestVertexInputFormat implements
         return inputSplitList;
 	}
 	
-	public VertexReader<Long, Integer, Float> createRecordReader(
+	public VertexReader<LongWritable, IntWritable, Float> createRecordReader(
 		InputSplit split, TaskAttemptContext context) 
 		throws IOException {
 		return new TestVertexReader();

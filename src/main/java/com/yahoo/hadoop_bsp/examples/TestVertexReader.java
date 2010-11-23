@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.util.Set;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.log4j.Logger;
@@ -20,7 +22,8 @@ import com.yahoo.hadoop_bsp.BspJob.BspMapper;
  * @param <V>
  * @param <E>
  */
-public class TestVertexReader implements VertexReader<Long, Integer, Float> {
+public class TestVertexReader implements 
+	VertexReader<LongWritable, IntWritable, Float> {
 	/** Logger */
     private static final Logger LOG = Logger.getLogger(BspMapper.class);
     /** Records read so far */
@@ -44,16 +47,16 @@ public class TestVertexReader implements VertexReader<Long, Integer, Float> {
 			m_inputSplit = (BspInputSplit) inputSplit;
 	}
 	
-	public boolean next(Long vertexId, 
-						Integer vertexValue,
+	public boolean next(LongWritable vertexId, 
+						IntWritable vertexValue,
 						Set<Float> edgeValueSet) throws IOException {
 		if (m_totalRecords <= m_recordsRead) {
 			return false;
 		}
-		vertexId = 
-			(m_inputSplit.getNumSplits() * m_totalRecords) + m_recordsRead;
-		vertexValue = (int) (vertexId * 10);
-		edgeValueSet.add((float) vertexId * 100);
+		vertexId.set(
+			(m_inputSplit.getNumSplits() * m_totalRecords) + m_recordsRead);
+		vertexValue.set((int) (vertexId.get() * 10));
+		edgeValueSet.add((float) vertexId.get() * 100);
 		++m_recordsRead;
 		LOG.info("next: Return vertexId=" + vertexId + ", vertexValue=" + 
 				 vertexValue + ", edge=" + edgeValueSet);
@@ -72,12 +75,12 @@ public class TestVertexReader implements VertexReader<Long, Integer, Float> {
 		return m_recordsRead * 100.0f / m_totalRecords;
 	}
 
-	public Long createVertexId() {
-		return new Long(-1);
+	public LongWritable createVertexId() {
+		return new LongWritable(-1);
 	}
 
-	public Integer createVertexValue() {
-		return new Integer(-1);
+	public IntWritable createVertexValue() {
+		return new IntWritable(-1);
 	}
 
 	public Float createEdgeValue() {

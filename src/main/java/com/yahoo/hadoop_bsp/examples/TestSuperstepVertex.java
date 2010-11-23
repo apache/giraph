@@ -1,5 +1,10 @@
 package com.yahoo.hadoop_bsp.examples;
 
+import java.util.Iterator;
+
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
+
 import com.yahoo.hadoop_bsp.HadoopVertex;
 
 /**
@@ -8,9 +13,9 @@ import com.yahoo.hadoop_bsp.HadoopVertex;
  * @author aching
  *
  */
-public class TestSuperstepOnlyVertex extends 
-	HadoopVertex<String, String, Integer, Integer> {
-    public void compute() {
+public class TestSuperstepVertex extends 
+	HadoopVertex<LongWritable, IntWritable, Float, Integer> {
+    public void compute(Iterator<Integer> msgIterator) {
     	if (getSuperstep() > 3) {
     		voteToHalt();
         }

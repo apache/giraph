@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.net.InetAddress;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -20,6 +22,7 @@ import org.json.JSONObject;
 import org.apache.log4j.Logger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
@@ -289,6 +292,18 @@ public class BspService<I> implements
 		 *  When creating znodes, in case the master has already run, resume 
 		 *  where it left off.
 		 */
+		try {
+		    m_zk.create(FINISHED_PATH, 
+		                null, 
+		                Ids.OPEN_ACL_UNSAFE, 
+		                CreateMode.PERSISTENT);
+		} catch (KeeperException.NodeExistsException e) {
+		    LOG.info("masterCreatePartitions: Finished path " + FINISHED_PATH + 
+		             " already exists.");
+		} catch (Exception e) {
+		    throw new RuntimeException(e);
+		}
+		
 		try {
 			m_zk.create(VIRTUAL_ID_PATH, 
 						null,
@@ -666,18 +681,20 @@ public class BspService<I> implements
 		List<String> childrenList = null;
 		while (true) {
 			try {
+			    /*
+			     * FINISHED_PATH already exists from masterCreatePartitions()
+			     * so there should be no Exceptions.
+			     */
 				childrenList = m_zk.getChildren(FINISHED_PATH, true);
 				LOG.info("masterCleanup: Got " + childrenList.size() + " of " +
 						 partitions + " children from " + FINISHED_PATH);
 				if (childrenList.size() == partitions) {
-						break;	
+					break;	
 				}
 				LOG.info("masterCleanup: Waiting for the children of " + 
 						 FINISHED_PATH + " to change since only got " +
 						 childrenList.size() + " nodes.");
-			} catch (KeeperException.NoNodeException e) {
-				LOG.info("masterCleanup: No children yet in " + FINISHED_PATH);
-			}
+			} 
 			catch (Exception e) {
 				throw new RuntimeException(e);
 			}
@@ -751,7 +768,12 @@ public class BspService<I> implements
 		try {
 			hostnamePort = new JSONArray(new String
 				(m_zk.getData(reservedPath, false, null)));
-			hostnamePort.put(max);
+			ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+			DataOutput output = new DataOutputStream(outputStream);
+			((Writable) max).write(output);
+			hostnamePort.put(outputStream.toString());
+			LOG.info("setPartitionMax: Wrote JSON Array " + hostnamePort + 
+			         " to " + reservedPath);
 			m_zk.setData(reservedPath, hostnamePort.toString().getBytes(), -1);
 		} catch (Exception e) {
 			LOG.error("setPartition: Failed to set the partition of node " + 
@@ -774,10 +796,21 @@ public class BspService<I> implements
 							"getPartitionSet: Impossible that znode " + 
 							tmpPath + " has jsonArray " + jsonArray);
 					}
+					@SuppressWarnings({"rawtypes", "unchecked" })
+			        Class<? extends WritableComparable> indexClass =
+			            (Class<? extends WritableComparable>) 
+			                m_conf.getClass("bsp.indexClass", 
+			                                WritableComparable.class);
+                    @SuppressWarnings("unchecked")
+                    I index = (I) indexClass.newInstance();
+		            InputStream input = 
+		                new ByteArrayInputStream(jsonArray.get(2).toString().getBytes());
+	                 ((Writable) index).readFields(
+	                         new DataInputStream(input));
 					m_partitionSet.add(
 						new Partition<I>(jsonArray.getString(0), 
 										 jsonArray.getInt(1), 
-										 (I) jsonArray.get(2)));
+										 index));
 				}
 			} catch (Exception e) {
 				throw new RuntimeException(e);
@@ -788,10 +821,10 @@ public class BspService<I> implements
 	
 	public Partition<I> getPartition(I index) {
 		if (m_partitionSet == null) {
-			m_partitionSet = new TreeSet<Partition<I>>();
-			
-			// TO BE IMPLEMENTED
+			getPartitionSet();
 		}
-		return m_partitionSet.tailSet(new Partition<I>("", -1, index)).last();
+		SortedSet<Partition<I>> foundPartitionSet = 
+		    m_partitionSet.tailSet(new Partition<I>("", -1, index));
+		return foundPartitionSet.last();
 	}
 }

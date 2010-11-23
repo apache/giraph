@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.Iterator;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -69,12 +70,12 @@ public class BspJob<V, E, M> extends Job {
 	/** Number of poll attempts prior to failing the job (int) */
 	public static final String BSP_POLL_ATTEMPTS = "bsp.pollAttempts";
 	/** Default poll attempts */
-	public static final int DEFAULT_BSP_POLL_ATTEMPTS = 3;
+	public static final int DEFAULT_BSP_POLL_ATTEMPTS = 5;
 	/** Default Zookeeper session millisecond timeout */
 	public static final int DEFAULT_BSP_ZOOKEEPER_SESSION_TIMEOUT = 30*1000;
 	/** Default polling interval to check for the final ZooKeeper server data */
 	public static final int DEFAULT_BSP_ZOOKEEPER_SERVERLIST_POLL_MSECS = 
-		10*1000;
+		3*1000;
 	/** Default number of nodes to run Zookeeper on */
 	public static final int DEFAULT_BSP_ZOOKEEPER_SERVER_COUNT = 1;
 	/** Default ZooKeeper port to use */
@@ -141,32 +142,35 @@ public class BspJob<V, E, M> extends Job {
 		 * @throws InterruptedException 
 		 * @throws IOException 
 		 */
-		public void loadVertices(Context context) throws InstantiationException, IllegalAccessException, IOException {			
+		public void loadVertices(Context context) 
+		    throws InstantiationException, IllegalAccessException, IOException {			
 			InputSplit myInputSplit = m_service.getInputSplit();
 			@SuppressWarnings("unchecked")
 			Class<? extends VertexInputFormat<I, V, E>> vertexInputFormatClass = 
 				(Class<? extends VertexInputFormat<I, V, E>>) 
 					m_conf.getClass("bsp.vertexInputFormatClass", 
-							       		   VertexInputFormat.class);
+							        VertexInputFormat.class);
 			@SuppressWarnings("rawtypes")
 			Class<? extends HadoopVertex> vertexClass = 
 				m_conf.getClass("bsp.vertexClass", 
-								       HadoopVertex.class, 
-								       HadoopVertex.class);
+								HadoopVertex.class, 
+								HadoopVertex.class);
 			VertexInputFormat<I, V, E> vertexInputFormat = 
 				vertexInputFormatClass.newInstance();
 			VertexReader<I, V, E> vertexReader = 
 				vertexInputFormat.createRecordReader(myInputSplit, context);
 			vertexReader.initialize(myInputSplit, context);
-			I vertexId = vertexReader.createVertexId();
-			V vertexValue = vertexReader.createVertexValue();
+
 			Set<E> edgeValueSet = new TreeSet<E>();
+	        I vertexId = vertexReader.createVertexId();
+	        V vertexValue = vertexReader.createVertexValue();
 			I vertexIdMax = vertexReader.createVertexId();
 			while (vertexReader.next(vertexId, vertexValue, edgeValueSet)) {
 				@SuppressWarnings("unchecked")
 				HadoopVertex<I, V, E, M> vertex = 
 					vertexClass.newInstance();
 				vertex.setBspMapper(this);
+				vertex.setId(vertexId);
 				vertex.setVertexValue(vertexValue);
 				for (E edgeValue : edgeValueSet) {
 					vertex.addEdge(edgeValue);
@@ -176,9 +180,11 @@ public class BspJob<V, E, M> extends Job {
 				@SuppressWarnings("unchecked")
 				Comparable<I> comparable =
 						(Comparable<I>) vertexId;
-				if (comparable.compareTo(vertexIdMax) < 0) {
+				if (comparable.compareTo(vertexIdMax) > 0) {
 					vertexIdMax = vertexId;
 				}
+	            vertexId = vertexReader.createVertexId();
+	            vertexValue = vertexReader.createVertexValue();
 			}
 			m_service.setPartitionMax(vertexIdMax);
 		}
@@ -264,7 +270,12 @@ public class BspJob<V, E, M> extends Job {
 				verticesDone = 0;
 				HadoopVertex.setSuperstep(m_service.getSuperStep());
 				for (HadoopVertex<I, V, E, M> vertex : m_vertexList) {
-					vertex.compute();
+				    Iterator<M> vertexMsgIt = 
+				        m_commService.getVertexMessageIterator(vertex.id());
+				    if (!vertex.isHalted() || 
+				        (vertexMsgIt != null && vertexMsgIt.hasNext())) { 
+				        vertex.compute(vertexMsgIt);
+				    }
 					if (vertex.isHalted()) {
 						++verticesDone;
 					}
@@ -282,12 +293,12 @@ public class BspJob<V, E, M> extends Job {
 		@Override
 		public void cleanup(Context context) 
 			throws IOException, InterruptedException {
-			LOG.info("Client done.");
+			LOG.info("cleanup: Client done.");
+	        m_commService.close();
 			m_service.cleanup();
 			if (m_manager != null) {
 				m_manager.offlineZooKeeperServers();
 			}
-			m_commService.close();
 		}
 	}
 	

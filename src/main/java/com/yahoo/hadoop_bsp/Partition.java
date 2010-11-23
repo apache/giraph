@@ -6,7 +6,7 @@ package com.yahoo.hadoop_bsp;
  *
  * @param <I>
  */
-public class Partition<I> {
+public class Partition<I> implements Comparable<Partition<I>> {
 	private String m_hostname;
 	private int m_port;
 	private I m_maxIndex;
@@ -28,4 +28,9 @@ public class Partition<I> {
 	public I getMaxIndex() {
 		return m_maxIndex;
 	}
+
+    public int compareTo(Partition<I> otherObject) {
+          return ((Comparable<I>) m_maxIndex).compareTo(
+                  ((Partition<I>) otherObject).getMaxIndex());
+    }
 }

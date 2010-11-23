@@ -7,7 +7,9 @@ import java.lang.reflect.InvocationTargetException;
 
 import java.util.List;
 
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -16,7 +18,8 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 
-import com.yahoo.hadoop_bsp.examples.TestSuperstepOnlyVertex;
+import com.yahoo.hadoop_bsp.examples.TestMsgVertex;
+import com.yahoo.hadoop_bsp.examples.TestSuperstepVertex;
 import com.yahoo.hadoop_bsp.examples.TestVertexInputFormat;
 import com.yahoo.hadoop_bsp.examples.TestVertexReader;
 
@@ -94,10 +97,10 @@ public class HadoopBspTest extends TestCase implements Watcher {
     	System.out.println("testInstantiateVertex: java.class.path=" + 
     			           System.getProperty("java.class.path"));
     	java.lang.reflect.Constructor<?> ctor = 
-    		TestSuperstepOnlyVertex.class.getConstructor();
+    		TestSuperstepVertex.class.getConstructor();
     	assertNotNull(ctor);
-    	TestSuperstepOnlyVertex test = 
-    		(TestSuperstepOnlyVertex) ctor.newInstance();
+    	TestSuperstepVertex test = 
+    		(TestSuperstepVertex) ctor.newInstance();
         System.out.println("testInstantiateVertex: superstep=" + 
         		           test.getSuperstep());
         TestVertexInputFormat inputFormat = 
@@ -113,12 +116,12 @@ public class HadoopBspTest extends TestCase implements Watcher {
     }
     
     /**
-     * Run a sample BSP job locally.
+     * Run a sample BSP job locally and test supersteps.
      * @throws IOException
      * @throws ClassNotFoundException 
      * @throws InterruptedException 
      */
-    public void testBspJob() 
+    public void testBspSuperStep() 
     	throws IOException, InterruptedException, ClassNotFoundException {
         Configuration conf = new Configuration();
         /* Allow this test to be run on a real Hadoop setup */
@@ -138,8 +141,8 @@ public class HadoopBspTest extends TestCase implements Watcher {
         conf.setInt(BspJob.BSP_INITIAL_PROCESSES, 1);
         conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
         conf.setInt(BspJob.BSP_MIN_PROCESSES, 1);
-        conf.setInt(BspJob.BSP_POLL_ATTEMPTS, 2);
-        conf.setInt(BspJob.BSP_POLL_MSECS, 5*1000);
+        conf.setInt(BspJob.BSP_POLL_ATTEMPTS, 5);
+        conf.setInt(BspJob.BSP_POLL_MSECS, 3*1000);
         String zkList = System.getProperty("prop.zookeeper.list");
         if (zkList != null) {
         	conf.set(BspJob.BSP_ZOOKEEPER_LIST, zkList);	
@@ -149,7 +152,7 @@ public class HadoopBspTest extends TestCase implements Watcher {
         conf.setLong(TestVertexReader.READER_VERTICES, 5);
         FileSystem hdfs = FileSystem.get(conf);
     	conf.setClass("bsp.vertexClass", 
-    				  TestSuperstepOnlyVertex.class, 
+    				  TestSuperstepVertex.class, 
     				  HadoopVertex.class);
     	conf.setClass("bsp.inputSplitClass", 
     				  BspInputSplit.class, 
@@ -157,6 +160,9 @@ public class HadoopBspTest extends TestCase implements Watcher {
     	conf.setClass("bsp.vertexInputFormatClass", 
     				  TestVertexInputFormat.class,
     				  VertexInputFormat.class);
+        conf.setClass("bsp.indexClass",
+                      LongWritable.class,
+                      WritableComparable.class);
     	BspJob<Integer, String, String> bspJob = 
     		new BspJob<Integer, String, String>(conf, "testBspJob");
        	Path outputPath = new Path("/tmp/testBspJobOutput");    	
@@ -164,6 +170,63 @@ public class HadoopBspTest extends TestCase implements Watcher {
     	FileOutputFormat.setOutputPath(bspJob, outputPath);
     	assertTrue(bspJob.run());
     }
+    
+    /**
+     * Run a sample BSP job locally and test messages.
+     * @throws IOException
+     * @throws ClassNotFoundException 
+     * @throws InterruptedException 
+     */
+    public void testBspMsg() 
+        throws IOException, InterruptedException, ClassNotFoundException {
+        Configuration conf = new Configuration();
+        /* Allow this test to be run on a real Hadoop setup */
+        String jobTracker = System.getProperty("prop.mapred.job.tracker");
+        String jarLocation = System.getProperty("prop.jarLocation");
+        if (jobTracker != null) {
+            System.out.println("testBspJob: Sending job to job tracker " +
+                       jobTracker + " with jar path " + jarLocation);
+            conf.set("mapred.job.tracker", jobTracker);
+            conf.set("mapred.jar", jarLocation);
+        }
+        else {
+            System.out.println("testBspJob: Using local job runner with " + 
+                               "location " + jarLocation + "...");
+            conf.set("mapred.jar", jarLocation);
+        }
+        conf.setInt(BspJob.BSP_INITIAL_PROCESSES, 1);
+        conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
+        conf.setInt(BspJob.BSP_MIN_PROCESSES, 1);
+        conf.setInt(BspJob.BSP_POLL_ATTEMPTS, 5);
+        conf.setInt(BspJob.BSP_POLL_MSECS, 3*1000);
+        String zkList = System.getProperty("prop.zookeeper.list");
+        if (zkList != null) {
+            conf.set(BspJob.BSP_ZOOKEEPER_LIST, zkList);    
+        }
+        conf.setInt(BspJob.BSP_RPC_INITIAL_PORT, BspJob.BSP_RPC_DEFAULT_PORT);
+        /* GeneratedInputSplit will generate 5 vertices */
+        conf.setLong(TestVertexReader.READER_VERTICES, 5);
+        FileSystem hdfs = FileSystem.get(conf);
+        conf.setClass("bsp.vertexClass", 
+                      TestMsgVertex.class, 
+                      HadoopVertex.class);
+        conf.setClass("bsp.inputSplitClass", 
+                      BspInputSplit.class, 
+                      InputSplit.class);
+        conf.setClass("bsp.vertexInputFormatClass", 
+                      TestVertexInputFormat.class,
+                      VertexInputFormat.class);
+        conf.setClass("bsp.indexClass",
+                      LongWritable.class,
+                      WritableComparable.class);
+        BspJob<Integer, String, String> bspJob = 
+            new BspJob<Integer, String, String>(conf, "testBspJob");
+        Path outputPath = new Path("/tmp/testBspJobOutput");        
+        hdfs.delete(outputPath, true);
+        FileOutputFormat.setOutputPath(bspJob, outputPath);
+        assertTrue(bspJob.run());
+    }
+    
     
 	public void process(WatchedEvent event) {
 		return;

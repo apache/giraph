@@ -57,6 +57,11 @@ public interface CommunicationsInterface<I, M>
   Iterator<Entry<I, ArrayList<M>>> getMessageIterator() throws IOException;
 
   /**
+   * Get the message iterator for a particular vertex
+   */
+  Iterator<M> getVertexMessageIterator(I vertex);
+  
+  /**
    * @return The number of messages in the received message queue.
    */
   int getNumCurrentMessages() throws IOException;
