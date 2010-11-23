@@ -30,7 +30,10 @@ public class Partition<I> implements Comparable<Partition<I>> {
 	}
 
     public int compareTo(Partition<I> otherObject) {
-          return ((Comparable<I>) m_maxIndex).compareTo(
+        @SuppressWarnings("unchecked")
+        Comparable<I> comparable =
+                (Comparable<I>) m_maxIndex;
+        return comparable.compareTo(
                   ((Partition<I>) otherObject).getMaxIndex());
     }
 }

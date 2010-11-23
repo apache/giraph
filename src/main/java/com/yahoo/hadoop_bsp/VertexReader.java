@@ -1,7 +1,7 @@
 package com.yahoo.hadoop_bsp;
 
 import java.io.IOException;
-import java.util.Set;
+import java.util.Map;
 
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
@@ -24,10 +24,10 @@ public interface VertexReader<I, V, E> {
 	 *
 	 * @param vertexId vertex id that is read into
 	 * @param vertexValue vertex value that is read into
-	 * @param edgeValue edge value that is read into 
+	 * @param destVertexIdEdgeValueMap destination vertex id - edge value pairs
 	 * @return true iff a vertex and associated data was read, false if at EOF
 	 */      
-	boolean next(I vertexId, V vertexValue, Set<E> edgeValueSet) 
+	boolean next(I vertexId, V vertexValue, Map<I, E> destVertexIdEdgeValueMap) 
 		throws IOException;
 	  
 	/**

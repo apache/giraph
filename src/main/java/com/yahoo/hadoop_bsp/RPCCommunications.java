@@ -173,8 +173,11 @@ public class RPCCommunications<I, M>
 			peer = this;
             isProxy = false;
 		} else {
-			peer = (CommunicationsInterface<I, M>) RPC.getProxy(CommunicationsInterface.class,
-      		            versionID, addr, conf);
+			@SuppressWarnings("unchecked")
+            CommunicationsInterface<I, M> proxy =
+                    (CommunicationsInterface<I, M>) RPC.getProxy(CommunicationsInterface.class,
+                                versionID, addr, conf);
+            peer = proxy;
 		}
 		
     HashMap<I, ArrayList<M>> msgMap = outMessages.get(addr);

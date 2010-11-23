@@ -3,8 +3,8 @@ package com.yahoo.hadoop_bsp;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.Iterator;
 
 import org.apache.hadoop.conf.Configuration;
@@ -161,22 +161,25 @@ public class BspJob<V, E, M> extends Job {
 				vertexInputFormat.createRecordReader(myInputSplit, context);
 			vertexReader.initialize(myInputSplit, context);
 
-			Set<E> edgeValueSet = new TreeSet<E>();
+			Map<I, E> destVertexIdEdgeValueMap = new TreeMap<I, E>();
 	        I vertexId = vertexReader.createVertexId();
 	        V vertexValue = vertexReader.createVertexValue();
 			I vertexIdMax = vertexReader.createVertexId();
-			while (vertexReader.next(vertexId, vertexValue, edgeValueSet)) {
+			while (vertexReader.next(
+			       vertexId, vertexValue, destVertexIdEdgeValueMap)) {
 				@SuppressWarnings("unchecked")
 				HadoopVertex<I, V, E, M> vertex = 
 					vertexClass.newInstance();
 				vertex.setBspMapper(this);
 				vertex.setId(vertexId);
 				vertex.setVertexValue(vertexValue);
-				for (E edgeValue : edgeValueSet) {
-					vertex.addEdge(edgeValue);
+				for (Map.Entry<I, E> destVertexIdEdgeValue : 
+				     destVertexIdEdgeValueMap.entrySet()) {
+					vertex.addEdge(destVertexIdEdgeValue.getKey(),
+					               destVertexIdEdgeValue.getValue());
 				}
 				m_vertexList.add(vertex);
-				edgeValueSet.clear();
+				destVertexIdEdgeValueMap.clear();
 				@SuppressWarnings("unchecked")
 				Comparable<I> comparable =
 						(Comparable<I>) vertexId;

@@ -12,8 +12,6 @@ import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.net.InetAddress;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 
 import org.json.JSONArray;
 import org.json.JSONException;

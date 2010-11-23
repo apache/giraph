@@ -1,7 +1,7 @@
 package com.yahoo.hadoop_bsp.examples;
 
 import java.io.IOException;
-import java.util.Set;
+import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IntWritable;
@@ -49,17 +49,20 @@ public class TestVertexReader implements
 	
 	public boolean next(LongWritable vertexId, 
 						IntWritable vertexValue,
-						Set<Float> edgeValueSet) throws IOException {
+						Map<LongWritable, Float> destVertexIdEdgeValueMap) 
+	    throws IOException {
 		if (m_totalRecords <= m_recordsRead) {
 			return false;
 		}
 		vertexId.set(
 			(m_inputSplit.getNumSplits() * m_totalRecords) + m_recordsRead);
 		vertexValue.set((int) (vertexId.get() * 10));
-		edgeValueSet.add((float) vertexId.get() * 100);
+		destVertexIdEdgeValueMap.put(
+		    new LongWritable((vertexId.get() + 1) % m_totalRecords), (float) vertexId.get() * 100);
 		++m_recordsRead;
 		LOG.info("next: Return vertexId=" + vertexId + ", vertexValue=" + 
-				 vertexValue + ", edge=" + edgeValueSet);
+				 vertexValue + ", destVertexIdEdgeValueSet=" + 
+				 destVertexIdEdgeValueMap.toString());
 		
 		return true;
 	}
