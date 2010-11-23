@@ -47,7 +47,7 @@ public class BspService<I> implements
 	/** Barrier synchronization */
 	private BspEvent m_barrierDone = new PredicateLock();
 	/** Barrier children synchronization */
-	private BspEvent m_barrierChildrenChanged= new PredicateLock();
+	private BspEvent m_barrierChildrenChanged = new PredicateLock();
 	/** Finished children synchronization */
 	private BspEvent m_finishedChildrenChanged= new PredicateLock();
 	/** Partition count */
@@ -58,6 +58,8 @@ public class BspService<I> implements
 	private SortedSet<Partition<I>> m_partitionSet = null;
 	/** Cached superstep */
 	long m_cachedSuperstep = -1;
+	/** Cached aggregate number of vertices in the entire application */
+	long m_totalVertices = -1;
 	/** Job id, to ensure uniqueness */
 	String m_jobId;
 	/** Task partition, to ensure uniqueness */
@@ -88,7 +90,9 @@ public class BspService<I> implements
 	public static final String JOB_STATE_NODE = "/_jobState";
 	public static final String FINISHED_NODE = "/_finished";
 
-
+	public static final String INFO_DONE_KEY = "done_key";
+	public static final String INFO_NUM_VERTICES = "numVertices_key";
+	
 	private final String BASE_PATH;
 	private final String BARRIER_PATH;
 	private final String SUPERSTEP_PATH;
@@ -497,11 +501,13 @@ public class BspService<I> implements
 				m_barrierDone.waitForever();
 				m_barrierDone.reset();
 			}
-			boolean done = Boolean.parseBoolean(
-				new String(m_zk.getData(barrierNode, false, null)));
+			JSONObject infoObject = new JSONObject(
+			    new String(m_zk.getData(barrierNode, false, null)));
+			boolean done = infoObject.optBoolean(INFO_DONE_KEY);
+			m_totalVertices = infoObject.optLong(INFO_NUM_VERTICES);
 			LOG.info("barrier: Completed superstep " + 
-					 m_cachedSuperstep + " with result " +
-					 Boolean.toString(done));
+					 m_cachedSuperstep + " with done=" + done + 
+					 ", numVertices=" + m_totalVertices);
 			++m_cachedSuperstep;
 			return done;
 		} catch (Exception e) {
@@ -593,8 +599,11 @@ public class BspService<I> implements
 		 					 "/" + BARRIER_NODE;
 		/* Let everyone through the barrier */
 		try {
-			m_zk.create(barrierNode, 
-						Boolean.toString(applicationDone).getBytes(), 
+		    JSONObject globalInfoObject = new JSONObject();
+		    globalInfoObject.put(INFO_DONE_KEY, applicationDone);
+		    globalInfoObject.put(INFO_NUM_VERTICES, verticesTotal);
+			m_zk.create(barrierNode,
+			            globalInfoObject.toString().getBytes(),
 						Ids.OPEN_ACL_UNSAFE, 
 						CreateMode.PERSISTENT);
 		} catch (Exception e) {
@@ -628,6 +637,10 @@ public class BspService<I> implements
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
+	}
+	
+	public long getTotalVertices() {
+	    return m_totalVertices;
 	}
 	
 	public void setSuperStep(long superStep) {

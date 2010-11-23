@@ -42,6 +42,12 @@ public interface Vertex<I, V, E, M> {
 	public void setVertexValue(V vertexValue);
 	
 	/**
+	 * Get the total number of vertices
+	 * @return total number of vertices
+	 */
+	public long getNumVertices();
+	
+	/**
 	 * Every vertex has edges to other vertices.  Get a handle to the outward 
 	 * edges and their vertices.
 	 * @return iterator to the outward edges and their destination vertices

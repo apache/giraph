@@ -268,7 +268,7 @@ public class RPCCommunications<I, M>
 	public Iterator<M> getVertexMessageIterator(I vertex) {
 	    ArrayList<M> msgList = inMessages.get(vertex);
 	    if (msgList == null) {
-	        return null;
+	        return new ArrayList<M>().iterator();
 	    }
 	    return msgList.iterator();
 	}

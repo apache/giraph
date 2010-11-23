@@ -72,7 +72,7 @@ public class BspJob<V, E, M> extends Job {
 	/** Default poll attempts */
 	public static final int DEFAULT_BSP_POLL_ATTEMPTS = 5;
 	/** Default Zookeeper session millisecond timeout */
-	public static final int DEFAULT_BSP_ZOOKEEPER_SESSION_TIMEOUT = 30*1000;
+	public static final int DEFAULT_BSP_ZOOKEEPER_SESSION_TIMEOUT = 60*1000;
 	/** Default polling interval to check for the final ZooKeeper server data */
 	public static final int DEFAULT_BSP_ZOOKEEPER_SERVERLIST_POLL_MSECS = 
 		3*1000;
@@ -226,7 +226,7 @@ public class BspJob<V, E, M> extends Job {
 			}
 			int sessionMsecTimeout = 
 				m_conf.getInt(
-					BspJob.BSP_POLL_MSECS,
+					BspJob.BSP_ZOOKEEPER_SESSION_TIMEOUT,
 					BspJob.DEFAULT_BSP_ZOOKEEPER_SESSION_TIMEOUT);
 				try {
 					LOG.info("Starting up BspService...");
@@ -272,11 +272,11 @@ public class BspJob<V, E, M> extends Job {
 				}
 				verticesDone = 0;
 				HadoopVertex.setSuperstep(m_service.getSuperStep());
+				HadoopVertex.setNumVertices(m_service.getTotalVertices());
 				for (HadoopVertex<I, V, E, M> vertex : m_vertexList) {
 				    Iterator<M> vertexMsgIt = 
 				        m_commService.getVertexMessageIterator(vertex.id());
-				    if (!vertex.isHalted() || 
-				        (vertexMsgIt != null && vertexMsgIt.hasNext())) { 
+				    if (!vertex.isHalted() || vertexMsgIt.hasNext()) { 
 				        vertex.compute(vertexMsgIt);
 				    }
 					if (vertex.isHalted()) {

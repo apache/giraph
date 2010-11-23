@@ -8,6 +8,7 @@ import java.util.TreeMap;
 
 public abstract class HadoopVertex<I, V, E, M> implements Vertex<I, V, E, M> {
 	private static long m_superstep = 0;
+	private static long m_numVertices = -1;
 	private BspJob.BspMapper<I, V, E, M> m_bspMapper;
 	private I m_id;
 	private V m_vertexValue;
@@ -49,6 +50,14 @@ public abstract class HadoopVertex<I, V, E, M> implements Vertex<I, V, E, M> {
 		m_vertexValue = vertexValue;
 	}
 	
+	public static void setNumVertices(long numVertices) {
+	    m_numVertices = numVertices;
+	}
+	
+	public long getNumVertices() {
+	    return m_numVertices;
+	}
+	
 	/**
 	 * Implements the {@link OutEdgeIterator} for {@link HadoopVertex}
 	 * @author aching
@@ -81,6 +90,10 @@ public abstract class HadoopVertex<I, V, E, M> implements Vertex<I, V, E, M> {
 
         public void remove() {
             m_destEdgeMapSetIt.remove();
+        }
+        
+        public long size() {
+            return m_destEdgeMapSet.size();
         }
 	}
 	

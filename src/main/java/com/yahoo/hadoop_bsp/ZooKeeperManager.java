@@ -313,6 +313,9 @@ public class ZooKeeperManager {
 			writer.write("tickTime=2000\n");
 			writer.write("dataDir=" + m_zkDir + "\n");
 			writer.write("clientPort=" + m_zkBasePort + "\n");
+            writer.write("maxClientCnxns=10000\n");
+            writer.write("minSessionTimeout=10000\n");
+            writer.write("maxSessionTimeout=100000\n");
 			writer.write("initLimit=10\n");
 			writer.write("syncLimit=5\n");
 			writer.write("snapCount=5000\n");

@@ -18,11 +18,11 @@ public interface CentralizedService<I> {
 	/**
 	 * Synchronizes all clients.  All clients should eventually call this, 
 	 * or else it will never complete.
-	 * @param done true if the vertices for this process are complete, false
-	 *        otherwise
+     * @param localVerticesDone number of vertices done on this process
+     * @param localVerticesTotal number of vertices handled by this process
 	 * @return true if that was the last barrier to do, false otherwise
 	 */
-	boolean barrier(long verticesDone, long verticesTotal);
+	boolean barrier(long localVerticesDone, long localVerticesTotal);
 	
 	/**
 	 * All clients will get their own input split (exactly one per client).
@@ -51,6 +51,13 @@ public interface CentralizedService<I> {
 	 */
 	long getSuperStep();
 		
+	/**
+	 * Get the total vertices in the entire application during a given
+	 * superstep.
+	 * @return count of all the vertices (local and non-local)
+	 */
+	long getTotalVertices();
+	
 	/**
 	 * Clean up the service (no calls may be issued after this)
 	 */
