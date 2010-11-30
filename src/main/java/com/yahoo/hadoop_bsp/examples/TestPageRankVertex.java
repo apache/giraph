@@ -23,7 +23,7 @@ public class TestPageRankVertex extends
             setVertexValue(
                 new DoubleWritable((0.15f / getNumVertices()) + 0.85f * sum));
             
-            if (getSuperstep() < 5) {
+            if (getSuperstep() < 30) {
                 long edges = getOutEdgeIterator().size();
                 sentMsgToAllEdges(new Double(getVertexValue().get() / edges));
             } else {

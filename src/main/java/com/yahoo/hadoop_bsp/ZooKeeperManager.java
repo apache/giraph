@@ -1,8 +1,11 @@
 package com.yahoo.hadoop_bsp;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.ConnectException;
 import java.net.InetAddress;
@@ -50,6 +53,8 @@ public class ZooKeeperManager {
 	FileSystem m_fs;
 	/** ZooKeeper process */
 	Process m_zkProcess = null;
+	/** Thread that gets the m_zkProcess output */
+	StreamCollector m_zkProcessCollector = null;
 	/** ZooKeeper local filesystem directory */
 	String m_zkDir = null;
 	/** ZooKeeper config file path */
@@ -68,6 +73,38 @@ public class ZooKeeperManager {
     /** The ZooKeeperString filename prefix */
     private static final String ZOOKEEPER_SERVER_LIST_FILE_PREFIX = 
     	"zkServerList_";
+    
+    /**
+     * Collects the output of a stream and dumps it to the log.
+     * @author aching
+     *
+     */
+    private static class StreamCollector extends Thread {
+        /** Input stream to dump */
+        private final InputStream m_is;
+        
+        /**
+         * Constructor.
+         * @param is InputStream to dump to LOG.info
+         */
+        public StreamCollector(final InputStream is) {
+            m_is = is;
+        }
+        
+        @Override
+        public void run() {
+            InputStreamReader streamReader = new InputStreamReader(m_is);
+            BufferedReader bufferedReader = new BufferedReader(streamReader);
+            String line = null;
+            try {
+                while ((line = bufferedReader.readLine()) != null) {
+                    LOG.info(line);
+                }
+            } catch (IOException e) {
+                LOG.error(e);
+            }
+        }
+    }
     
 	public ZooKeeperManager(Configuration configuration) {
 		m_conf = configuration;
@@ -378,10 +415,14 @@ public class ZooKeeperManager {
 			File execDirectory = new File(m_conf.get(
 				BspJob.BSP_ZOOKEEPER_DIR, BspJob.DEFAULT_BSP_ZOOKEEPER_DIR));
 			processBuilder.directory(execDirectory);
+			processBuilder.redirectErrorStream(true);
 			LOG.info("onlineZooKeeperServers: Attempting to start ZooKeeper " + 
 				"server with command " + commandList);
 			try {
 				m_zkProcess = processBuilder.start();
+				m_zkProcessCollector = 
+				    new StreamCollector(m_zkProcess.getInputStream());
+				m_zkProcessCollector.start();
 			} catch (IOException e) {
 				LOG.error("onlineZooKeeperServers: Failed to start " +
 						  "ZooKeeper process");
@@ -492,6 +533,7 @@ public class ZooKeeperManager {
 			int exitValue = -1;
 			File zkDir = null;
 			try {
+			    m_zkProcessCollector.join();
 				exitValue = m_zkProcess.waitFor();
 				zkDir = new File(m_zkDir);
 				FileUtils.deleteDirectory(zkDir);
