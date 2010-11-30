@@ -238,6 +238,9 @@ public class BspJob<V, E, M> extends Job {
 					loadVertices(context);
 				} catch (Exception e) {
 					LOG.error(e.getMessage());
+					if (m_manager != null ) {
+					    m_manager.offlineZooKeeperServers();
+					}
 					throw new RuntimeException(e);
 				}
 		}
@@ -263,32 +266,39 @@ public class BspJob<V, E, M> extends Job {
 			}
 			m_mapAlreadyRun = true;
 			long verticesDone = 0;
-			while (!m_service.barrier(verticesDone, m_vertexList.size())) {
-				LOG.info("map: superstep = " + m_service.getSuperStep());
-				if (m_service.getSuperStep() == 0) {
-					LOG.info("Starting communication service...");
-					m_commService = new RPCCommunications<I, M>(
+			try {
+			    while (!m_service.barrier(verticesDone, m_vertexList.size())) {
+			        LOG.info("map: superstep = " + m_service.getSuperStep());
+			        if (m_service.getSuperStep() == 0) {
+			            LOG.info("Starting communication service...");
+			            m_commService = new RPCCommunications<I, M>(
 							m_conf, m_service);
-				}
-				verticesDone = 0;
-				HadoopVertex.setSuperstep(m_service.getSuperStep());
-				HadoopVertex.setNumVertices(m_service.getTotalVertices());
-				for (HadoopVertex<I, V, E, M> vertex : m_vertexList) {
-				    Iterator<M> vertexMsgIt = 
-				        m_commService.getVertexMessageIterator(vertex.id());
-				    if (!vertex.isHalted() || vertexMsgIt.hasNext()) { 
-				        vertex.compute(vertexMsgIt);
-				    }
-					if (vertex.isHalted()) {
-						++verticesDone;
-					}
-				}
-				m_commService.flush();
-				LOG.info("All " + m_vertexList.size() + 
+			        }
+			        verticesDone = 0;
+			        HadoopVertex.setSuperstep(m_service.getSuperStep());
+			        HadoopVertex.setNumVertices(m_service.getTotalVertices());
+			        for (HadoopVertex<I, V, E, M> vertex : m_vertexList) {
+			            Iterator<M> vertexMsgIt = 
+			                m_commService.getVertexMessageIterator(vertex.id());
+			            if (!vertex.isHalted() || vertexMsgIt.hasNext()) { 
+			                vertex.compute(vertexMsgIt);
+			            }
+			            if (vertex.isHalted()) {
+			                ++verticesDone;
+			            }
+			        }
+			        m_commService.flush();
+			        LOG.info("All " + m_vertexList.size() + 
 						 " vertices finished superstep " + 
 						 m_service.getSuperStep() + " (" + verticesDone + 
 						 " of " + m_vertexList.size() + " vertices done)");
-			} 
+			    }
+			} catch (Exception e) {
+			    if (m_manager != null) {
+			        m_manager.offlineZooKeeperServers();
+			    }
+			    throw new RuntimeException(e);
+			}
 			
 			LOG.info("BSP application done (global vertices marked done)");
 		}
