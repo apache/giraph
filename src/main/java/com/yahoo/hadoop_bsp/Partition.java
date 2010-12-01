@@ -1,10 +1,10 @@
 package com.yahoo.hadoop_bsp;
 
 /**
- * Represents a range of responsibility for an index range of keys
+ * Represents a range of responsibility on a process for an index range of keys
  * @author aching
  *
- * @param <I>
+ * @param <I> vertex index type
  */
 public class Partition<I> implements Comparable<Partition<I>> {
 	private String m_hostname;

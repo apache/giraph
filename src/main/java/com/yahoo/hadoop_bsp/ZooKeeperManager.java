@@ -38,41 +38,52 @@ public class ZooKeeperManager {
 	/** Class logger */
     private static final Logger LOG = Logger.getLogger(ZooKeeperManager.class);
 	/** Task partition, to ensure uniqueness */
-	int m_taskPartition;
+	private int m_taskPartition;
 	/** HDFS base directory for all file-based coordination */
-	Path m_managerDirectory;
-	/** HDFS task candidate directory for all file-based coordination */
-	Path m_candidateDirectory;
-	/** HDFS server ready directory for all file-based coordination */
-	Path m_readyDirectory;
+	private Path m_baseDirectory;
+	/** 
+	 * HDFS task ZooKeeper candidate/completed
+	 * directory for all file-based coordination 
+	 */
+	private Path m_taskDirectory;
+	/** 
+	 * HDFS ZooKeeper server ready/done directory 
+	 * for all file-based coordination 
+	 */
+	private Path m_serverDirectory;
+	/** HDFS path to whether the task is done */
+    private Path m_myClosedPath;
 	/** Polling msecs timeout */
-	int m_pollMsecs;
+	private int m_pollMsecs;
 	/** Server count */ 
-	int m_serverCount;
+	private int m_serverCount;
 	/** File system */
-	FileSystem m_fs;
+	private FileSystem m_fs;
 	/** ZooKeeper process */
-	Process m_zkProcess = null;
+	private Process m_zkProcess = null;
 	/** Thread that gets the m_zkProcess output */
-	StreamCollector m_zkProcessCollector = null;
-	/** ZooKeeper local filesystem directory */
-	String m_zkDir = null;
+	private StreamCollector m_zkProcessCollector = null;
+	/** ZooKeeper local file system directory */
+	private String m_zkDir = null;
 	/** ZooKeeper config file path */
-	String m_configFilePath = null;
+	private String m_configFilePath = null;
 	/** ZooKeeper server list */
-	List<String> m_zkServerList = null;
+	private Map<String, Integer> m_zkServerPortMap = 
+	    new TreeMap<String, Integer>();
 	/** ZooKeeper base port */
-	int m_zkBasePort = -1;
+	private int m_zkBasePort = -1;
 	/** Final ZooKeeper server port list (for clients) */
-	String m_zkServerPortString = null;
+	private String m_zkServerPortString = null;
 	/** My hostname */
-	String m_myHostname = null;
+	private String m_myHostname = null;
 	
     /** Separates the hostname and task in the candidate stamp */
     private static final String HOSTNAME_TASK_SEPARATOR = " ";
     /** The ZooKeeperString filename prefix */
     private static final String ZOOKEEPER_SERVER_LIST_FILE_PREFIX = 
     	"zkServerList_";
+    /** Denotes that the computation is done for a partition */
+    private static final String COMPUTATION_DONE_SUFFIX = ".COMPUTATION_DONE";
     
     /**
      * Collects the output of a stream and dumps it to the log.
@@ -109,15 +120,18 @@ public class ZooKeeperManager {
 	public ZooKeeperManager(Configuration configuration) {
 		m_conf = configuration;
 		m_taskPartition = m_conf.getInt("mapred.task.partition", -1);
-		m_managerDirectory = 
+		m_baseDirectory = 
 			new Path(m_conf.get(
 				BspJob.BSP_ZOOKEEPER_MANAGER_DIRECTORY,
 				BspJob.DEFAULT_ZOOKEEPER_MANAGER_DIRECTORY) +
 				"/" + m_conf.get("mapred.job.id", "Unknown Job"));
-		m_candidateDirectory = new Path(m_managerDirectory, 
-										"_taskCandidate");
-		m_readyDirectory = new Path(m_managerDirectory, 
-									"_zkServerReady");
+		m_taskDirectory = new Path(m_baseDirectory, 
+								   "_task");
+		m_serverDirectory = new Path(m_baseDirectory, 
+									"_zkServer");
+		m_myClosedPath = new Path(m_taskDirectory,             
+		                          Integer.toString(m_taskPartition) + 
+		                          COMPUTATION_DONE_SUFFIX);
 		m_pollMsecs = m_conf.getInt(
 			BspJob.BSP_ZOOKEEPER_SERVERLIST_POLL_MSECS,
 			BspJob.DEFAULT_BSP_ZOOKEEPER_SERVERLIST_POLL_MSECS);
@@ -160,16 +174,16 @@ public class ZooKeeperManager {
 	 */
 	public void createCandidateStamp() {
         try {
-			m_fs.mkdirs(m_managerDirectory);
+			m_fs.mkdirs(m_baseDirectory);
 			LOG.info("createCandidateStamp: Made the directory " + 
-					  m_managerDirectory);
+					  m_baseDirectory);
 		} catch (IOException e) {
 			LOG.error("createCandidateStamp: Failed to mkdirs " + 
-					  m_managerDirectory);
+					  m_baseDirectory);
 		}
         
 		Path myCandidacyPath = new Path(
-			m_candidateDirectory, m_myHostname + 
+			m_taskDirectory, m_myHostname + 
 			HOSTNAME_TASK_SEPARATOR + m_taskPartition);
 		try {
 			LOG.info("createCandidateStamp: Creating my filestamp " +
@@ -179,6 +193,34 @@ public class ZooKeeperManager {
 			LOG.error("createCandidateStamp: Failed (maybe previous task " + 
 					  "failed) to create filestamp " + myCandidacyPath);
 		}
+	}
+	
+	/**
+	 * Every task must create a stamp to let the ZooKeeper servers know that 
+	 * they can shutdown.  This also lets the task know that it was already 
+	 * completed.
+	 */
+	private void createZooKeeperClosedStamp() {
+	    try {
+	        LOG.info("createZooKeeperClosedStamp: Creating my filestamp " +
+	                 m_myClosedPath);
+	        m_fs.createNewFile(m_myClosedPath);
+	    } catch (IOException e) {
+            LOG.error("createZooKeeperClosedStamp: Failed (maybe previous task " + 
+                      "failed) to create filestamp " + m_myClosedPath);
+        }
+	}
+	
+	/**
+	 * Check if all the computation is done.
+	 * @return true if all computation is done.
+	 */
+	public boolean computationDone() {
+	    try {
+            return m_fs.exists(m_myClosedPath);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
 	}
 	
 	/**
@@ -192,7 +234,7 @@ public class ZooKeeperManager {
 		while (true) {
 			try {
 				FileStatus [] fileStatusArray = 
-					m_fs.listStatus(m_candidateDirectory);
+					m_fs.listStatus(m_taskDirectory);
 				hostnameTaskMap.clear();
 				if (fileStatusArray.length > 0) {
 					for (int i = 0; i < fileStatusArray.length; ++i) {
@@ -209,7 +251,7 @@ public class ZooKeeperManager {
 							hostnameTaskArray[0])) {
 							hostnameTaskMap.put(
 								hostnameTaskArray[0], 
-								Integer.getInteger(hostnameTaskArray[1]));
+								new Integer(hostnameTaskArray[1]));
 						}
 					}
 					LOG.info("getZooKeeperServerList: Got " + 
@@ -237,12 +279,13 @@ public class ZooKeeperManager {
 				new String(ZOOKEEPER_SERVER_LIST_FILE_PREFIX);
 			for (Map.Entry<String, Integer> hostnameTask : 
 				 hostnameTaskMap.entrySet()) {
-				serverListFile += hostnameTask.getKey() 
-					+ HOSTNAME_TASK_SEPARATOR;
+				serverListFile += hostnameTask.getKey() +
+					HOSTNAME_TASK_SEPARATOR + hostnameTask.getValue() + 
+					HOSTNAME_TASK_SEPARATOR;
 			}
-			Path serverListPath = new Path(m_managerDirectory, serverListFile); 
+			Path serverListPath = new Path(m_baseDirectory, serverListFile); 
 			LOG.info("createZooKeeperServerList: Creating the final " +
-					 "ZooKeeper file " + serverListPath);
+					 "ZooKeeper file '" + serverListPath + "'");
 			m_fs.createNewFile(serverListPath);
 		} catch (IOException e) {
 			throw new RuntimeException(e);
@@ -259,7 +302,7 @@ public class ZooKeeperManager {
 		String serverListFile = null;
 		try {
 			FileStatus [] fileStatusArray = 
-				m_fs.listStatus(m_managerDirectory);
+				m_fs.listStatus(m_baseDirectory);
 			for (FileStatus fileStatus : fileStatusArray) {
 				if (fileStatus.getPath().getName().startsWith(
 					ZOOKEEPER_SERVER_LIST_FILE_PREFIX)) {
@@ -292,7 +335,7 @@ public class ZooKeeperManager {
 		while (true) {
 			serverListFile = getServerListFile();
 			LOG.info("getZooKeeperServerList: For task " + m_taskPartition + 
-					 ", got file " + serverListFile + " (polling period is " +
+					 ", got file '" + serverListFile + "' (polling period is " +
 					 m_pollMsecs + ")");
 			if (serverListFile != null) {
 				break;
@@ -307,20 +350,25 @@ public class ZooKeeperManager {
 
 		}
 		
-		m_zkServerList = Arrays.asList(serverListFile.substring(
+		List<String> serverHostList = Arrays.asList(serverListFile.substring(
 			ZOOKEEPER_SERVER_LIST_FILE_PREFIX.length()).split(
 				HOSTNAME_TASK_SEPARATOR));
-		LOG.info("getZooKeeperServerList: Found " + m_zkServerList + " " + 
-				 m_zkServerList.size() + 
+		LOG.info("getZooKeeperServerList: Found " + serverHostList + " " + 
+				 serverHostList.size() + 
 				 " hosts in filename '" + serverListFile + "'");
-		if (m_zkServerList.size() != m_serverCount) {
+		if (serverHostList.size() != m_serverCount * 2) {
 			throw new RuntimeException("getZooKeeperServerList: Impossible " + 
-					                   " that " + m_zkServerList.size() + " != " +
+					                   " that " + serverHostList.size() + 
+					                   " != 2 * " +
 					                   m_serverCount + " asked for.");
 		}
 
+		for (int i = 0; i < serverHostList.size(); i += 2) {
+		    m_zkServerPortMap.put(serverHostList.get(i), 
+		                          Integer.parseInt(serverHostList.get(i+1)));
+		}
 		m_zkServerPortString = new String();
-		for (String server : m_zkServerList) {
+		for (String server : m_zkServerPortMap.keySet()) {
 			m_zkServerPortString += server + ":" + m_zkBasePort; 
 		}
 	}
@@ -391,7 +439,8 @@ public class ZooKeeperManager {
 	 * wait until this task knows that the ZooKeeper servers have been onlined.
 	 */
 	public void onlineZooKeeperServers() {
-		if (m_zkServerList.contains(m_myHostname)) {
+	    Integer taskId = m_zkServerPortMap.get(m_myHostname);
+		if ((taskId != null) && (taskId.intValue() == m_taskPartition)) {
 			File zkDir = new File(m_zkDir);
 			try {
 				LOG.info("onlineZooKeeperServers: Trying to delete old " + 
@@ -401,7 +450,8 @@ public class ZooKeeperManager {
 				LOG.warn("onlineZooKeeperServers: Failed to delete " + 
 						 "directory " + zkDir);
 			}
-			generateZooKeeperConfigFile(m_zkServerList);
+			generateZooKeeperConfigFile(
+			    new ArrayList<String>(m_zkServerPortMap.keySet()));
 			copyJarToLocal();
 			ProcessBuilder processBuilder = new ProcessBuilder();
 			List<String> commandList = new ArrayList<String>();
@@ -468,7 +518,7 @@ public class ZooKeeperManager {
 					"onlineZooKeeperServers: Failed to connect in 5 tries!");
 			}
 			Path myReadyPath = new Path(
-					m_readyDirectory, m_myHostname + 
+					m_serverDirectory, m_myHostname + 
 					HOSTNAME_TASK_SEPARATOR + m_taskPartition);
 			try {
 				LOG.info("onlineZooKeeperServers: Creating my filestamp " +
@@ -485,7 +535,7 @@ public class ZooKeeperManager {
 			while (true) {
 				try {
 					FileStatus [] fileStatusArray = 
-						m_fs.listStatus(m_candidateDirectory);
+						m_fs.listStatus(m_serverDirectory);
 					foundList.clear();
 					if (fileStatusArray.length > 0) {
 						for (int i = 0; i < fileStatusArray.length; ++i) {
@@ -507,7 +557,7 @@ public class ZooKeeperManager {
 								 m_serverCount + " required (polling period is " +
 								 m_pollMsecs + ") on attempt " + 
 								 readyRetrievalAttempt);
-						if (foundList.containsAll(m_zkServerList)) {
+						if (foundList.containsAll(m_zkServerPortMap.keySet())) {
 							break;
 						}
 						++readyRetrievalAttempt;
@@ -524,11 +574,54 @@ public class ZooKeeperManager {
 	}
 	
 	/**
-	 * If this task is running a ZooKeeper server, kill it and wait for 
-	 * completion.  Clean up the ZooKeeper local directory as well.
+	 * Wait for partitions to complete
+	 * @param totalPartitions
 	 */
-	public void offlineZooKeeperServers() {
+	private void waitUntilAllTasksDone(int totalPartitions) {
+	   int attempt = 0;
+       while (true) {
+           try {
+               FileStatus [] fileStatusArray = 
+                   m_fs.listStatus(m_taskDirectory);
+               int totalDone = 0;
+               if (fileStatusArray.length > 0) {
+                   for (int i = 0; i < fileStatusArray.length; ++i) {
+                       if (fileStatusArray[i].getPath().getName().endsWith(
+                           COMPUTATION_DONE_SUFFIX)) {
+                           ++totalDone;
+                       }
+                   }
+               }
+               LOG.info("waitUntilAllTasksDone: Got " + totalDone +  
+                        " and " + totalPartitions + 
+                        " desired (polling period is " +
+                        m_pollMsecs + ") on attempt " + 
+                        attempt);
+               if (totalDone >= totalPartitions) {
+                   break;
+               }
+               ++attempt;
+               Thread.sleep(m_pollMsecs);
+	        } catch (IOException e) {
+	            throw new RuntimeException(e);
+            } catch (InterruptedException e) {
+                LOG.warn("waitUntilAllTasksDone: Strange interrupt from " +
+                         e.getMessage());
+            }
+	    }
+	}
+	
+	/**
+	 * Notify the ZooKeeper servers that this partition is done with all 
+	 * ZooKeeper communication.  If this task is running a ZooKeeper server, 
+	 * kill it when all partitions are done and wait for 
+	 * completion.  Clean up the ZooKeeper local directory as well.
+	 * @param totalPartitions number of partitions to wait for
+	 */
+	public void offlineZooKeeperServers(int totalPartitions) {
+        createZooKeeperClosedStamp();
 		if (m_zkProcess != null) {
+		    waitUntilAllTasksDone(totalPartitions);
 			m_zkProcess.destroy();
 			int exitValue = -1;
 			File zkDir = null;
@@ -545,5 +638,9 @@ public class ZooKeeperManager {
 			LOG.info("offlineZooKeeperServers: waitFor returned " + exitValue +
 					 " and deleted directory " + zkDir); 
 		}
+	}
+	
+	public void cleanup() {
+	    
 	}
 }

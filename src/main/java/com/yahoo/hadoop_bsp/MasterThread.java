@@ -27,6 +27,9 @@ public class MasterThread<I> extends Thread {
 	@Override
 	public void run() {
 		try {
+		    if (m_bspService.becomeMaster() == false) {
+		        return;
+		    }
 			int partitions = m_bspService.masterCreatePartitions();
 			long superStep = m_bspService.getSuperStep();
 			while (m_bspService.masterBarrier(superStep, partitions) == false) {

@@ -1,5 +1,7 @@
 package com.yahoo.hadoop_bsp;
 
+import java.util.List;
+
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
@@ -12,6 +14,8 @@ public class ZooKeeperExtTest
 		extends TestCase implements Watcher {
 	/** ZooKeeperExt instance */
 	ZooKeeperExt m_zooKeeperExt = null;
+	/** ZooKeeper server list */
+    String m_zkList = System.getProperty("prop.zookeeper.list");
 
 	public final String BASE_PATH = "/_zooKeeperExtTest"; 
 	public final String FIRST_PATH = "/_first"; 
@@ -23,12 +27,11 @@ public class ZooKeeperExtTest
 	@Override
 	public void setUp() {
 		try {
-            String zkList = System.getProperty("prop.zookeeper.list");
-            if (zkList == null) {
+            if (m_zkList == null) {
             	return;
             }
 			m_zooKeeperExt = 
-				new ZooKeeperExt(zkList, 30*1000, this);
+				new ZooKeeperExt(m_zkList, 30*1000, this);
 			m_zooKeeperExt.deleteExt(BASE_PATH, -1, true);
 		} catch (KeeperException.NoNodeException e) {
 			System.out.println("Clean start: No node " + BASE_PATH);
@@ -69,7 +72,7 @@ public class ZooKeeperExtTest
 	public void testDeleteExt() throws KeeperException, InterruptedException {
 		if (m_zooKeeperExt == null) { 
 			System.out.println(
-				"testCreateExt: No prop.zookeeper.list set, skipping test");
+				"testDeleteExt: No prop.zookeeper.list set, skipping test");
 			return;
 		}
 		m_zooKeeperExt.create(BASE_PATH,
@@ -87,5 +90,49 @@ public class ZooKeeperExtTest
 				"Correctly failed to delete since not recursive");
 		}
 		m_zooKeeperExt.deleteExt(BASE_PATH, -1, true);
+	}
+	
+	public void testGetChildrenExt() 
+	    throws KeeperException, InterruptedException {
+	    if (m_zooKeeperExt == null) {
+	       System.out.println(
+               "testGetChildrenExt: No prop.zookeeper.list set, skipping test");
+           return;
+	    }
+	    m_zooKeeperExt.create(BASE_PATH,
+	                          null,
+	                          Ids.OPEN_ACL_UNSAFE,
+	                          CreateMode.PERSISTENT);
+        m_zooKeeperExt.create(BASE_PATH + "/b", 
+                null, 
+                Ids.OPEN_ACL_UNSAFE, 
+                CreateMode.PERSISTENT_SEQUENTIAL);
+        m_zooKeeperExt.create(BASE_PATH + "/a", 
+                null, 
+                Ids.OPEN_ACL_UNSAFE, 
+                CreateMode.PERSISTENT_SEQUENTIAL);
+        m_zooKeeperExt.create(BASE_PATH + "/d", 
+                null, 
+                Ids.OPEN_ACL_UNSAFE, 
+                CreateMode.PERSISTENT_SEQUENTIAL);
+        m_zooKeeperExt.create(BASE_PATH + "/c", 
+                null, 
+                Ids.OPEN_ACL_UNSAFE, 
+                CreateMode.PERSISTENT_SEQUENTIAL);
+        List<String> fullPathList = 
+            m_zooKeeperExt.getChildrenExt(BASE_PATH, false, false, true);
+        for (String fullPath : fullPathList) {
+            assertTrue(fullPath.contains(BASE_PATH + "/"));
+        }
+        List<String> sequenceOrderedList = 
+            m_zooKeeperExt.getChildrenExt(BASE_PATH, false, true, true);
+        for (String fullPath : sequenceOrderedList) {
+            assertTrue(fullPath.contains(BASE_PATH + "/"));
+        }
+        assertTrue(sequenceOrderedList.size() == 4);
+        assertTrue(sequenceOrderedList.get(0).contains("/b"));
+        assertTrue(sequenceOrderedList.get(1).contains("/a"));
+        assertTrue(sequenceOrderedList.get(2).contains("/d"));
+        assertTrue(sequenceOrderedList.get(3).contains("/c"));
 	}
 }

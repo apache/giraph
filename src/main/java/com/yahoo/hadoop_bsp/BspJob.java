@@ -132,6 +132,8 @@ public class BspJob<V, E, M> extends Job {
 		ZooKeeperManager m_manager;
 		/** Configuration */
 		Configuration m_conf = null;
+		/** Already complete? */
+		boolean m_done = false;
 		
 		/**
 		 * Load the vertices from the user-defined VertexReader into our 
@@ -221,6 +223,10 @@ public class BspJob<V, E, M> extends Job {
 			if (serverPortList == "") {
 				m_manager = new ZooKeeperManager(m_conf);
 				m_manager.setup();
+				if (m_manager.computationDone()) {
+				    m_done = false;
+				    return;
+				}
 				m_manager.onlineZooKeeperServers();
 				serverPortList = m_manager.getZooKeeperServerPortString();
 			}
@@ -239,7 +245,7 @@ public class BspJob<V, E, M> extends Job {
 				} catch (Exception e) {
 					LOG.error(e.getMessage());
 					if (m_manager != null ) {
-					    m_manager.offlineZooKeeperServers();
+					    m_manager.offlineZooKeeperServers(0);
 					}
 					throw new RuntimeException(e);
 				}
@@ -260,6 +266,10 @@ public class BspJob<V, E, M> extends Job {
 			 * 5) Check if all vertices are done.  If not goto 2).
 			 * 6) Dump output.
 			 */
+		    if (m_done == true) {
+		        return;
+		    }
+		    
 			if (m_mapAlreadyRun) {
 				throw new RuntimeException("In BSP, map should have only been" +
 										   " run exactly once, (already run)");
@@ -295,7 +305,7 @@ public class BspJob<V, E, M> extends Job {
 			    }
 			} catch (Exception e) {
 			    if (m_manager != null) {
-			        m_manager.offlineZooKeeperServers();
+			        m_manager.offlineZooKeeperServers(0);
 			    }
 			    throw new RuntimeException(e);
 			}
@@ -307,10 +317,15 @@ public class BspJob<V, E, M> extends Job {
 		public void cleanup(Context context) 
 			throws IOException, InterruptedException {
 			LOG.info("cleanup: Client done.");
+			if (m_done) {
+			    return;
+			}
+			
 	        m_commService.close();
+	        int totalPartitions = m_service.getPartitionSet().size();
 			m_service.cleanup();
 			if (m_manager != null) {
-				m_manager.offlineZooKeeperServers();
+				m_manager.offlineZooKeeperServers(totalPartitions);
 			}
 		}
 	}

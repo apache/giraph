@@ -6,6 +6,10 @@ import org.apache.log4j.Logger;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.data.ACL;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 import org.apache.zookeeper.Watcher;
@@ -18,8 +22,11 @@ import org.apache.zookeeper.ZooKeeper;
  *
  */
 public class ZooKeeperExt extends ZooKeeper {
+    /** Internal logger */
     private static final Logger LOG = Logger.getLogger(ZooKeeperExt.class);
-	
+	/** Length of the ZK sequence number */
+    private static final int SEQUENCE_NUMBER_LENGTH = 10;
+    
 	public ZooKeeperExt(
 		String connectString, 
 		int sessionTimeout, 
@@ -28,9 +35,18 @@ public class ZooKeeperExt extends ZooKeeper {
 	}
 
 	/**
-	 * Provides a possibility of a creating a path consisting of more than one
-	 * znode (not atomic).  If recursive is false, operates exactly the 
-	 * same as create().
+	 * 
+     * Provides a possibility of a creating a path consisting of more than one
+     * znode (not atomic).  If recursive is false, operates exactly the 
+     * same as create().
+	 * @param path path to create
+	 * @param data data to set on the final znode
+	 * @param acl acls on each znode created
+	 * @param createMode only affects the final znode
+	 * @param recursive if true, creates all ancestors
+	 * @return
+	 * @throws KeeperException
+	 * @throws InterruptedException
 	 */
     public String createExt(
     	final String path, 
@@ -91,5 +107,57 @@ public class ZooKeeperExt extends ZooKeeper {
     	}
     	
     	delete(path, version);
+    }
+    
+    /**
+     * Get the children of the path with extensions.  
+     * Extension 1: Sort the children based on sequence number
+     * Extension 2: Get the full path instead of relative path
+     * @param path
+     * @param watch
+     * @param sequenceSorted
+     * @param fullPath
+     * @return
+     * @throws InterruptedException 
+     * @throws KeeperException 
+     */
+    public List<String> getChildrenExt(final String path, 
+                                       boolean watch, 
+                                       boolean sequenceSorted,
+                                       boolean fullPath) 
+        throws KeeperException, InterruptedException {
+        List<String> childList = getChildren(path, watch);
+        /* Sort children according to the sequence number, if desired */
+        if (sequenceSorted) {
+            Collections.sort(childList, 
+                new Comparator<String>() {
+                    public int compare(String s1, String s2) {
+                        if ((s1.length() <= SEQUENCE_NUMBER_LENGTH) ||
+                            (s2.length() <= SEQUENCE_NUMBER_LENGTH)) {
+                            throw new RuntimeException(
+                                "getChildrenExt: Invalid length > " +
+                                SEQUENCE_NUMBER_LENGTH +
+                                " for s1 (" + 
+                                s1.length() + ") or s2 " + s2.length() + ")");
+                        }
+                        int s1sequenceNumber = Integer.parseInt(
+                                s1.substring(s1.length() - 
+                                             SEQUENCE_NUMBER_LENGTH));
+                        int s2sequenceNumber = Integer.parseInt(
+                                s2.substring(s2.length() - 
+                                             SEQUENCE_NUMBER_LENGTH));
+                        return s1sequenceNumber - s2sequenceNumber;
+                    }
+                }
+            );
+        }
+        if (fullPath) {
+            List<String> fullChildList = new ArrayList<String>();
+            for (String child : childList) {
+                fullChildList.add(path + "/" + child);
+            }
+            return fullChildList;
+        }
+        return childList;
     }
 }

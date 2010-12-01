@@ -9,17 +9,23 @@ import com.yahoo.hadoop_bsp.BspService.State;
  * @param <I>
  */
 public interface CentralizedServiceMaster<I> {
+    /**
+     * Become the master.
+     * @return true if became the master, false if the application is done.
+     */
+    public boolean becomeMaster();
+    
 	/**
 	 * Create the partitioning of the index range
 	 * @return number of partitions
 	 */
-	int masterCreatePartitions();
+	public int masterCreatePartitions();
 	
 	/**
 	 * Get the current superstep
 	 * @return
 	 */
-	long getSuperStep();
+	public long getSuperStep();
 	
 	/**
 	 * Master coordinates the barriers 
@@ -27,17 +33,17 @@ public interface CentralizedServiceMaster<I> {
 	 * @param partitions how many partitions to wait for
 	 * @return true if this is the last barrier
 	 */
-	boolean masterBarrier(long superstep, int partitions);
+	public boolean masterBarrier(long superstep, int partitions);
 	
 	/**
 	 * Master determines the job state.
 	 * @param state state of the job
 	 */
-	void masterSetJobState(State state); 
+	public void masterSetJobState(State state); 
 	
 	/**
 	 * Master does special singular cleanup procedures (i.e. cleanup files,
 	 * znodes, etc.)
 	 */
-	void masterCleanup(int partitions);
+	public void masterCleanup(int partitions);
 }

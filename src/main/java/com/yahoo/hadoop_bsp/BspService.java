@@ -11,6 +11,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.net.InetAddress;
 
 import org.json.JSONArray;
@@ -50,6 +52,8 @@ public class BspService<I> implements
 	private BspEvent m_barrierChildrenChanged = new PredicateLock();
 	/** Finished children synchronization */
 	private BspEvent m_finishedChildrenChanged= new PredicateLock();
+    /** Master children synchronization */
+    private BspEvent m_masterChildrenChanged= new PredicateLock();
 	/** Partition count */
 	private Integer m_partitionCount;
 	/** Configuration of the job*/
@@ -65,9 +69,13 @@ public class BspService<I> implements
 	/** Task partition, to ensure uniqueness */
 	int m_taskPartition;
 	/** My process health znode */
-	String m_myHealthZode;
+	String m_myHealthZnode;
 	/** Master thread */
 	Thread m_masterThread;
+	/** Master should stop trying to become the leader? */
+	boolean m_masterThreadGiveUpLeader = false;
+	/** Lock to protect m_masterThreadGiveUpLeader */
+    Lock m_masterThreadGiveUpLeaderLock = new ReentrantLock();
 	/** Class logger */
     private static final Logger LOG = Logger.getLogger(BspService.class);
     /** State of the service? */
@@ -85,6 +93,7 @@ public class BspService<I> implements
 	public static final String BARRIER_NODE = "_barrierDone";
 	public static final String SUPERSTEP_NODE = "/_superstep";
 	public static final String PROCESS_HEALTH_DIR = "/_processHealth";
+	public static final String MASTER_DIR = "/_master";
 	public static final String PARTITION_COUNT_NODE = "/_partitionCount";
 	public static final String VIRTUAL_ID_DIR = "/_virtualIdDir";
 	public static final String JOB_STATE_NODE = "/_jobState";
@@ -97,6 +106,7 @@ public class BspService<I> implements
 	private final String BARRIER_PATH;
 	private final String SUPERSTEP_PATH;
 	private final String PROCESS_HEALTH_PATH;
+	private final String MASTER_PATH;
 	private final String PARTITION_COUNT_PATH;
 	private final String VIRTUAL_ID_PATH;
 	private final String JOB_STATE_PATH;
@@ -113,12 +123,13 @@ public class BspService<I> implements
 		BARRIER_PATH = BASE_PATH + BARRIER_DIR;
 		SUPERSTEP_PATH = BASE_PATH + SUPERSTEP_NODE;
 		PROCESS_HEALTH_PATH = BASE_PATH + PROCESS_HEALTH_DIR;
+		MASTER_PATH = BARRIER_PATH + MASTER_DIR;
 		PARTITION_COUNT_PATH = BASE_PATH + PARTITION_COUNT_NODE;
 		VIRTUAL_ID_PATH = BASE_PATH + VIRTUAL_ID_DIR;
 		JOB_STATE_PATH = BASE_PATH + JOB_STATE_NODE;
 		FINISHED_PATH = BASE_PATH + FINISHED_NODE;	
 		
-		LOG.info("BspService: Starting up zookeeper with " + m_jobId + ", " +
+		LOG.info("BspService: Connecting to ZooKeeper with " + m_jobId + ", " +
 		         m_taskPartition + " on " + serverPortList);
 	    m_zk = new ZooKeeperExt(serverPortList, sessionMsecTimeout, this);
 	    m_masterThread = new MasterThread<I>(this);
@@ -384,7 +395,7 @@ public class BspService<I> implements
 		 * 6) Try the suggested virtual id, otherwise, scan for a free one.
 		 */
 		try {
-			m_myHealthZode =
+			m_myHealthZnode =
 				m_zk.createExt(
 					PROCESS_HEALTH_PATH + "/" 
 					+ InetAddress.getLocalHost().getHostName() + "-" + 
@@ -393,7 +404,7 @@ public class BspService<I> implements
 					Ids.OPEN_ACL_UNSAFE,
 					CreateMode.EPHEMERAL_SEQUENTIAL,
 					true);
-			LOG.info("setup: Created my health node: " + m_myHealthZode);
+			LOG.info("setup: Created my health node: " + m_myHealthZnode);
 			byte[] partitionCountByteArr = null;
 			try {
 				m_zk.exists(PARTITION_COUNT_PATH, true);
@@ -515,6 +526,50 @@ public class BspService<I> implements
 		}
 	}
 
+	public boolean becomeMaster() {
+	    /*
+	     * Create my bid to become the master, then try to become the worker 
+	     * or return false.
+	     */
+	    String myBid = null;
+	    try {
+	        myBid = 
+	            m_zk.createExt(
+	                MASTER_PATH + "/" + Integer.toString(m_taskPartition), 
+	                null,
+	                Ids.OPEN_ACL_UNSAFE, 
+	                CreateMode.EPHEMERAL_SEQUENTIAL, 
+	                true);
+	    } catch (Exception e) {
+	        throw new RuntimeException(e);
+	    }
+	    while (true) {
+	        try {
+	            m_masterThreadGiveUpLeaderLock.lock();
+	            if (m_masterThreadGiveUpLeader == true) {
+	                m_masterThreadGiveUpLeaderLock.unlock();
+                    LOG.info("becomeMaster: Give up trying to be the master!");
+	                return false;
+	            }
+                m_masterThreadGiveUpLeaderLock.unlock();
+	            List<String> masterChildArr = 
+	                m_zk.getChildrenExt(MASTER_PATH, true, true, true);
+	            LOG.info("becomeMaster: First child is '" + 
+	                     masterChildArr.get(0) + "' and my bid is '" +
+	                     myBid + "'");
+	            if (masterChildArr.get(0).equals(myBid)) {
+	                LOG.info("becomeMaster: Became the master!");
+	                return true;
+	            }
+	            LOG.info("becomeMaster: Waiting to become the master...");
+	            m_masterChildrenChanged.waitForever();
+	            m_masterChildrenChanged.reset();
+	        } catch (Exception e) {
+	            throw new RuntimeException(e);
+	        }
+	    }
+	}
+	
 	/**
 	 * Master will watch the children until the number of children is the same
 	 * as the number of partitions.  Then it will determine whether to finish 
@@ -597,7 +652,7 @@ public class BspService<I> implements
 		setSuperStep(superstep + 1);
 		String barrierNode = BARRIER_PATH + "/" + Long.toString(superstep) + 
 		 					 "/" + BARRIER_NODE;
-		/* Let everyone through the barrier */
+		/* Let everyone know the overall application state through the barrier */
 		try {
 		    JSONObject globalInfoObject = new JSONObject();
 		    globalInfoObject.put(INFO_DONE_KEY, applicationDone);
@@ -668,19 +723,23 @@ public class BspService<I> implements
 					Ids.OPEN_ACL_UNSAFE, 
 					CreateMode.PERSISTENT, 
 					true);
-			LOG.info("cleanup: Notifying master its okay to cleanup with " +
-					 finalFinishedPath);
+	         LOG.info("cleanup: Notifying master its okay to cleanup with " +
+                     finalFinishedPath);
 		} catch (KeeperException.NodeExistsException e) { 
 			LOG.info("cleanup: Couldn't create finished node '" +
 					FINISHED_PATH + "/" + m_taskPartition + "'");
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
-		try {
-			m_masterThread.join();
-		} catch (InterruptedException e) {
-			throw new RuntimeException("Master thread couldn't join");
-		}
+        m_masterThreadGiveUpLeaderLock.lock();
+        m_masterThreadGiveUpLeader = true;
+        m_masterThreadGiveUpLeaderLock.unlock();
+        m_masterChildrenChanged.signal();
+	    try {
+	        m_masterThread.join();
+        } catch (InterruptedException e) {
+            throw new RuntimeException("Master thread couldn't join");
+        }
 		try {
 			m_zk.close();
 		} catch (InterruptedException e) {
@@ -743,7 +802,7 @@ public class BspService<I> implements
 			try {
 				synchronized (this) {
 					m_currentState = State.valueOf(
-							new String(m_zk.getData(event.getPath(), true, null)));					
+					    new String(m_zk.getData(event.getPath(), true, null)));					
 				}
 			} catch (KeeperException.NoNodeException e) {
 				LOG.error(JOB_STATE_PATH + " was unusually removed.");
@@ -762,11 +821,16 @@ public class BspService<I> implements
 			LOG.info("process: m_barrierChildrenChanged signaled");
 			m_barrierChildrenChanged.signal();
 		}
-		else if (event.getPath().contains(FINISHED_PATH) &&
-				 event.getType() == EventType.NodeChildrenChanged) {
-			LOG.info("process: m_finishedChildrenChanged signaled");
-			m_finishedChildrenChanged.signal();
-		}
+        else if (event.getPath().contains(FINISHED_PATH) &&
+                event.getType() == EventType.NodeChildrenChanged) {
+           LOG.info("process: m_finishedChildrenChanged signaled");
+           m_finishedChildrenChanged.signal();
+       }
+        else if (event.getPath().contains(MASTER_PATH) &&
+                event.getType() == EventType.NodeChildrenChanged) {
+           LOG.info("process: m_masterChildrenChanged signaled");
+           m_masterChildrenChanged.signal();
+       }
 		else {
 			LOG.error("process; Unknown event");
 		}

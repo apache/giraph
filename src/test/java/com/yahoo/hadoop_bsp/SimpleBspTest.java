@@ -29,34 +29,55 @@ import junit.framework.TestCase;
 import junit.framework.TestSuite;
 
 /**
- * Unit test for simple App.
+ * Unit test for simple BSP applications.
  */
-public class HadoopBspTest extends TestCase implements Watcher {
+public class SimpleBspTest extends TestCase implements Watcher {
+    /** JobTracker system property */
+    private static String m_jobTracker = System.getProperty("prop.mapred.job.tracker");
+    /** Jar location system property */
+    private String m_jarLocation = System.getProperty("prop.jarLocation", "");
+    /** Number of actual processes for the BSP application */
+    private static int m_numProcs = 1;
+    /** ZooKeeper list system property */
+    private String m_zkList = System.getProperty("prop.zookeeper.list");
+
     /**
      * Create the test case
      *
      * @param testName name of the test case
      */
-    public HadoopBspTest(String testName) {
+    public SimpleBspTest(String testName) {
         super(testName);
+        if (m_jobTracker != null) {
+            System.out.println(
+                "Setting tasks to 3 since JobTracker exists...");
+            setNumProcs(3);
+        }
     }
 
     /**
      * @return the suite of tests being tested
      */
     public static Test suite() {
-        return new TestSuite(HadoopBspTest.class);
+        return new TestSuite(SimpleBspTest.class);
+    }
+    
+    /**
+     * Set the number of processes to use in the BSP application
+     * @param numProcs number of processes to use
+     */
+    public static void setNumProcs(int numProcs) {
+        m_numProcs = numProcs;
     }
     
     @Override
     public void setUp() {
     	try {
-            String zkList = System.getProperty("prop.zookeeper.list");
-            if (zkList == null) {
+            if (m_zkList == null) {
             	return;
             }
 			ZooKeeperExt zooKeeperExt = 
-				new ZooKeeperExt(zkList, 30*1000, this);
+				new ZooKeeperExt(m_zkList, 30*1000, this);
 			List<String> rootChildren = zooKeeperExt.getChildren("/", false);
 			for (String rootChild : rootChildren) {
 				if (rootChild.startsWith("_hadoopBsp")) {
@@ -126,27 +147,28 @@ public class HadoopBspTest extends TestCase implements Watcher {
     	throws IOException, InterruptedException, ClassNotFoundException {
         Configuration conf = new Configuration();
         /* Allow this test to be run on a real Hadoop setup */
-        String jobTracker = System.getProperty("prop.mapred.job.tracker");
-        String jarLocation = System.getProperty("prop.jarLocation");
-        if (jobTracker != null) {
+        conf.set("mapred.jar", m_jarLocation);
+
+        if (m_jobTracker != null) {
         	System.out.println("testBspSuperstep: Sending job to job tracker " +
-			           jobTracker + " with jar path " + jarLocation);
-            conf.set("mapred.job.tracker", jobTracker);
-            conf.set("mapred.jar", jarLocation);
+			           m_jobTracker + " with jar path " + m_jarLocation);
+            conf.set("mapred.job.tracker", m_jobTracker);
+            conf.setInt(BspJob.BSP_INITIAL_PROCESSES, m_numProcs);
+            conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
+            conf.setInt(BspJob.BSP_MIN_PROCESSES, m_numProcs);
         }
         else {
         	System.out.println("testBspSuperStep: Using local job runner with " + 
-        			           "location " + jarLocation + "...");
-            conf.set("mapred.jar", jarLocation);
+        			           "location " + m_jarLocation + "...");
+            conf.setInt(BspJob.BSP_INITIAL_PROCESSES, 1);
+            conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
+            conf.setInt(BspJob.BSP_MIN_PROCESSES, 1);
         }
-        conf.setInt(BspJob.BSP_INITIAL_PROCESSES, 1);
-        conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
-        conf.setInt(BspJob.BSP_MIN_PROCESSES, 1);
+
         conf.setInt(BspJob.BSP_POLL_ATTEMPTS, 5);
         conf.setInt(BspJob.BSP_POLL_MSECS, 3*1000);
-        String zkList = System.getProperty("prop.zookeeper.list");
-        if (zkList != null) {
-        	conf.set(BspJob.BSP_ZOOKEEPER_LIST, zkList);	
+        if (m_zkList != null) {
+        	conf.set(BspJob.BSP_ZOOKEEPER_LIST, m_zkList);	
         }
         conf.setInt(BspJob.BSP_RPC_INITIAL_PORT, BspJob.BSP_RPC_DEFAULT_PORT);
         /* GeneratedInputSplit will generate 5 vertices */
@@ -181,28 +203,28 @@ public class HadoopBspTest extends TestCase implements Watcher {
     public void testBspMsg() 
         throws IOException, InterruptedException, ClassNotFoundException {
         Configuration conf = new Configuration();
+        conf.set("mapred.jar", m_jarLocation);
         /* Allow this test to be run on a real Hadoop setup */
-        String jobTracker = System.getProperty("prop.mapred.job.tracker");
-        String jarLocation = System.getProperty("prop.jarLocation");
-        if (jobTracker != null) {
+        if (m_jobTracker != null) {
             System.out.println("testBspMsg: Sending job to job tracker " +
-                       jobTracker + " with jar path " + jarLocation);
-            conf.set("mapred.job.tracker", jobTracker);
-            conf.set("mapred.jar", jarLocation);
+                       m_jobTracker + " with jar path " + m_jarLocation);
+            conf.set("mapred.job.tracker", m_jobTracker);
+            conf.setInt(BspJob.BSP_INITIAL_PROCESSES, m_numProcs);
+            conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
+            conf.setInt(BspJob.BSP_MIN_PROCESSES, m_numProcs);
         }
         else {
             System.out.println("testBspMsg: Using local job runner with " + 
-                               "location " + jarLocation + "...");
-            conf.set("mapred.jar", jarLocation);
+                               "location " + m_jarLocation + "...");
+            conf.setInt(BspJob.BSP_INITIAL_PROCESSES, 1);
+            conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
+            conf.setInt(BspJob.BSP_MIN_PROCESSES, 1);
         }
-        conf.setInt(BspJob.BSP_INITIAL_PROCESSES, 1);
-        conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
-        conf.setInt(BspJob.BSP_MIN_PROCESSES, 1);
+
         conf.setInt(BspJob.BSP_POLL_ATTEMPTS, 5);
         conf.setInt(BspJob.BSP_POLL_MSECS, 3*1000);
-        String zkList = System.getProperty("prop.zookeeper.list");
-        if (zkList != null) {
-            conf.set(BspJob.BSP_ZOOKEEPER_LIST, zkList);    
+        if (m_zkList != null) {
+            conf.set(BspJob.BSP_ZOOKEEPER_LIST, m_zkList);    
         }
         conf.setInt(BspJob.BSP_RPC_INITIAL_PORT, BspJob.BSP_RPC_DEFAULT_PORT);
         /* GeneratedInputSplit will generate 5 vertices */
@@ -237,28 +259,27 @@ public class HadoopBspTest extends TestCase implements Watcher {
     public void testBspPageRank() 
         throws IOException, InterruptedException, ClassNotFoundException {
         Configuration conf = new Configuration();
+        conf.set("mapred.jar", m_jarLocation);
         /* Allow this test to be run on a real Hadoop setup */
-        String jobTracker = System.getProperty("prop.mapred.job.tracker");
-        String jarLocation = System.getProperty("prop.jarLocation");
-        if (jobTracker != null) {
+        if (m_jobTracker != null) {
             System.out.println("testBspJob: Sending job to job tracker " +
-                       jobTracker + " with jar path " + jarLocation);
-            conf.set("mapred.job.tracker", jobTracker);
-            conf.set("mapred.jar", jarLocation);
+                       m_jobTracker + " with jar path " + m_jarLocation);
+            conf.set("mapred.job.tracker", m_jobTracker);
+            conf.setInt(BspJob.BSP_INITIAL_PROCESSES, m_numProcs);
+            conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
+            conf.setInt(BspJob.BSP_MIN_PROCESSES, m_numProcs);
         }
         else {
             System.out.println("testBspPageRank: Using local job runner with " + 
-                               "location " + jarLocation + "...");
-            conf.set("mapred.jar", jarLocation);
+                               "location " + m_jarLocation + "...");
+            conf.setInt(BspJob.BSP_INITIAL_PROCESSES, 1);
+            conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
+            conf.setInt(BspJob.BSP_MIN_PROCESSES, 1);
         }
-        conf.setInt(BspJob.BSP_INITIAL_PROCESSES, 1);
-        conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
-        conf.setInt(BspJob.BSP_MIN_PROCESSES, 1);
         conf.setInt(BspJob.BSP_POLL_ATTEMPTS, 5);
         conf.setInt(BspJob.BSP_POLL_MSECS, 3*1000);
-        String zkList = System.getProperty("prop.zookeeper.list");
-        if (zkList != null) {
-            conf.set(BspJob.BSP_ZOOKEEPER_LIST, zkList);    
+        if (m_zkList != null) {
+            conf.set(BspJob.BSP_ZOOKEEPER_LIST, m_zkList);    
         }
         conf.setInt(BspJob.BSP_RPC_INITIAL_PORT, BspJob.BSP_RPC_DEFAULT_PORT);
         /* GeneratedInputSplit will generate 5 vertices */
@@ -282,8 +303,7 @@ public class HadoopBspTest extends TestCase implements Watcher {
         hdfs.delete(outputPath, true);
         FileOutputFormat.setOutputPath(bspJob, outputPath);
         assertTrue(bspJob.run());
-    }
-    
+    } 
     
 	public void process(WatchedEvent event) {
 		return;
