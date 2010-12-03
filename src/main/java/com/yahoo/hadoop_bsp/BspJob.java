@@ -80,11 +80,17 @@ public class BspJob<V, E, M> extends Job {
 	public static final int DEFAULT_BSP_ZOOKEEPER_SERVER_COUNT = 1;
 	/** Default ZooKeeper port to use */
 	public static final int DEFAULT_BSP_ZOOKEEPER_SERVER_PORT = 22181;
-	/** Default local ZooKeeper directory to use */
+	/** 
+	 * Default local ZooKeeper directory to use (where ZooKeeper server 
+	 * files will go) 
+	 */
 	public static final String DEFAULT_BSP_ZOOKEEPER_DIR = "/tmp/bspZooKeeper";
-	/** Default ZooKeeper manager directory */
+	/** 
+	 * Default ZooKeeper manager directory (where determining the servers in 
+	 * HDFS files will go) 
+	 */
 	public static final String DEFAULT_ZOOKEEPER_MANAGER_DIRECTORY =
-		"/tmp";
+		"/tmp/_defaultZkManagerDir";
 	
 	/**
 	 *  Constructor.

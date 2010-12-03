@@ -11,6 +11,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -73,6 +74,20 @@ public class SimpleBspTest extends TestCase implements Watcher {
     @Override
     public void setUp() {
     	try {
+            Configuration conf = new Configuration();
+            FileSystem hdfs = FileSystem.get(conf);
+            /* Since local jobs always use the same paths, remove them */
+            Path oldLocalJobPaths = new Path(
+                BspJob.DEFAULT_ZOOKEEPER_MANAGER_DIRECTORY); 
+            FileStatus [] fileStatusArr = hdfs.listStatus(oldLocalJobPaths);
+            for (FileStatus fileStatus : fileStatusArr) {
+                if (fileStatus.isDir() && 
+                    fileStatus.getPath().getName().contains("job_local")) {
+                    System.out.println("Cleaning up local job path " + 
+                                       fileStatus.getPath().getName());
+                    hdfs.delete(oldLocalJobPaths, true);
+                }
+            }
             if (m_zkList == null) {
             	return;
             }
