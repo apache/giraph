@@ -14,8 +14,8 @@ import com.yahoo.hadoop_bsp.HadoopVertex;
  *
  */
 public class TestSuperstepVertex extends 
-	HadoopVertex<LongWritable, IntWritable, Float, Integer> {
-    public void compute(Iterator<Integer> msgIterator) {
+	HadoopVertex<LongWritable, IntWritable, Float, IntWritable> {
+    public void compute(Iterator<IntWritable> msgIterator) {
     	if (getSuperstep() > 3) {
     		voteToHalt();
         }

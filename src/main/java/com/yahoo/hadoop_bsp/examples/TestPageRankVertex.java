@@ -13,19 +13,19 @@ import com.yahoo.hadoop_bsp.HadoopVertex;
  *
  */
 public class TestPageRankVertex extends 
-    HadoopVertex<LongWritable, DoubleWritable, Float, Double> {
-    public void compute(Iterator<Double> msgIterator) {
+    HadoopVertex<LongWritable, DoubleWritable, Float, DoubleWritable> {
+    public void compute(Iterator<DoubleWritable> msgIterator) {
         if (getSuperstep() >= 1) {
             double sum = 0;
             while (msgIterator.hasNext()) {
-                sum += msgIterator.next();
+                sum += msgIterator.next().get();
             }
             setVertexValue(
                 new DoubleWritable((0.15f / getNumVertices()) + 0.85f * sum));
             
             if (getSuperstep() < 30) {
                 long edges = getOutEdgeIterator().size();
-                sentMsgToAllEdges(new Double(getVertexValue().get() / edges));
+                sentMsgToAllEdges(new DoubleWritable(getVertexValue().get() / edges));
             } else {
                 voteToHalt();  
             }

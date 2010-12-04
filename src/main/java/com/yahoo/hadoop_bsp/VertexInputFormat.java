@@ -3,6 +3,7 @@ package com.yahoo.hadoop_bsp;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.RecordReader;
@@ -31,15 +32,16 @@ public interface VertexInputFormat<I, V, E> {
 	 * be <i>&lt;input-file-path, start, offset&gt;</i> tuple. The InputFormat
 	 * also creates the {@link VertexReader} to read the {@link InputSplit}.
 	 * 
+	 * @param conf configuration
 	 * @param numSplits number of splits for the input
 	 * @return an array of {@link InputSplit}s for the job.
 	 */	
-	public List<InputSplit> getSplits(int numSplits) 
+	public List<InputSplit> getSplits(Configuration conf, int numSplits) 
 		throws IOException, InterruptedException;
 	
 	/**
 	 * Create a vertex reader for a given split. The framework will call
-	 * {@link RecordReader#initialize(InputSplit, TaskAttemptContext)} before
+	 * {@link VertexReader#initialize(InputSplit, TaskAttemptContext)} before
 	 * the split is used.
 	 * @param split the split to be read
 	 * @param context the information about the task
@@ -47,6 +49,6 @@ public interface VertexInputFormat<I, V, E> {
 	 * @throws IOException
 	 * @throws InterruptedException
 	 */
-	public VertexReader<I, V, E> createRecordReader(InputSplit split,
+	public VertexReader<I, V, E> createVertexReader(InputSplit split,
 		TaskAttemptContext context) throws IOException; 
 }

@@ -9,7 +9,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.SortedSet;
+import java.util.NavigableSet;
 import java.util.TreeSet;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -24,6 +24,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.util.ReflectionUtils;
+
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
@@ -59,7 +61,7 @@ public class BspService<I> implements
 	/** Configuration of the job*/
 	private Configuration m_conf;
 	/** The partition map */
-	private SortedSet<Partition<I>> m_partitionSet = null;
+	private NavigableSet<Partition<I>> m_partitionSet = null;
 	/** Cached superstep */
 	long m_cachedSuperstep = -1;
 	/** Cached aggregate number of vertices in the entire application */
@@ -72,6 +74,8 @@ public class BspService<I> implements
 	String m_myHealthZnode;
 	/** Master thread */
 	Thread m_masterThread;
+    /** Partition to compare with */
+    Partition<I> comparePartition = new Partition<I>("", -1, null);
 	/** Master should stop trying to become the leader? */
 	boolean m_masterThreadGiveUpLeader = false;
 	/** Lock to protect m_masterThreadGiveUpLeader */
@@ -163,7 +167,7 @@ public class BspService<I> implements
 						  	 	 VertexInputFormat.class);
 			@SuppressWarnings("unchecked")
 			List<InputSplit> splits =
-					vertexInputFormatClass.newInstance().getSplits(numSplits);
+					vertexInputFormatClass.newInstance().getSplits(m_conf, numSplits);
 			return splits;
 		} catch (Exception e) {
 			throw new RuntimeException(e);
@@ -262,7 +266,7 @@ public class BspService<I> implements
 			try {
 				Thread.sleep(msecsPollPeriod);
 			} catch (InterruptedException e) {
-				LOG.error("materCreatePartitions: Sleep interrupted!");
+				LOG.error("masterCreatePartitions: Sleep interrupted!");
 			}
 			++pollAttempt;
 		}
@@ -464,7 +468,7 @@ public class BspService<I> implements
 					Class<? extends Writable> inputSplitClass = 
 						(Class<Writable>) m_conf.getClass("bsp.inputSplitClass", 
 									    				  InputSplit.class);
-					m_myInputSplit = (InputSplit) inputSplitClass.newInstance();
+					m_myInputSplit = (InputSplit) ReflectionUtils.newInstance(inputSplitClass, m_conf);
 					byte [] splitArray = m_zk.getData(
 				    		VIRTUAL_ID_PATH + "/" + m_myVirtualId, false, null);
 					LOG.info("setup: For " + VIRTUAL_ID_PATH + "/" + 
@@ -846,17 +850,17 @@ public class BspService<I> implements
 			ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 			DataOutput output = new DataOutputStream(outputStream);
 			((Writable) max).write(output);
-			hostnamePort.put(outputStream.toString());
+			hostnamePort.put(outputStream.toString("UTF-8"));
 			LOG.info("setPartitionMax: Wrote JSON Array " + hostnamePort + 
-			         " to " + reservedPath);
-			m_zk.setData(reservedPath, hostnamePort.toString().getBytes(), -1);
+			         " to " + reservedPath + ", maxIndex=" + max);
+			m_zk.setData(reservedPath, hostnamePort.toString().getBytes("UTF-8"), -1);
 		} catch (Exception e) {
 			LOG.error("setPartition: Failed to set the partition of node " + 
 					  reservedPath + " to " + hostnamePort.toString());
 		}
 	}
 
-	public SortedSet<Partition<I>> getPartitionSet() {
+	public NavigableSet<Partition<I>> getPartitionSet() {
 		if (m_partitionSet == null) {
 			m_partitionSet = new TreeSet<Partition<I>>();
 			try {
@@ -879,13 +883,14 @@ public class BspService<I> implements
                     @SuppressWarnings("unchecked")
                     I index = (I) indexClass.newInstance();
 		            InputStream input = 
-		                new ByteArrayInputStream(jsonArray.get(2).toString().getBytes());
+		                new ByteArrayInputStream(jsonArray.get(2).toString().getBytes("UTF-8"));
 	                 ((Writable) index).readFields(
 	                         new DataInputStream(input));
 					m_partitionSet.add(
 						new Partition<I>(jsonArray.getString(0), 
 										 jsonArray.getInt(1), 
 										 index));
+                    LOG.info("Partition split point: " + index);
 				}
 			} catch (Exception e) {
 				throw new RuntimeException(e);
@@ -898,8 +903,7 @@ public class BspService<I> implements
 		if (m_partitionSet == null) {
 			getPartitionSet();
 		}
-		SortedSet<Partition<I>> foundPartitionSet = 
-		    m_partitionSet.tailSet(new Partition<I>("", -1, index));
-		return foundPartitionSet.last();
+        comparePartition.setMaxIndex(index);
+		return m_partitionSet.ceiling(comparePartition);
 	}
 }

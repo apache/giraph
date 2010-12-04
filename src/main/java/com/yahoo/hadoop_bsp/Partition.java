@@ -29,6 +29,10 @@ public class Partition<I> implements Comparable<Partition<I>> {
 		return m_maxIndex;
 	}
 
+	public void setMaxIndex(I index) {
+		m_maxIndex = index;
+	}
+
     public int compareTo(Partition<I> otherObject) {
         @SuppressWarnings("unchecked")
         Comparable<I> comparable =

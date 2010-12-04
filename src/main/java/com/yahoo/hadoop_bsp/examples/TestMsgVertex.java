@@ -13,12 +13,12 @@ import com.yahoo.hadoop_bsp.HadoopVertex;
  *
  */
 public class TestMsgVertex extends 
-    HadoopVertex<LongWritable, IntWritable, Float, Integer> {
-    public void compute(Iterator<Integer> msgIterator) {
+    HadoopVertex<LongWritable, IntWritable, Float, IntWritable> {
+    public void compute(Iterator<IntWritable> msgIterator) {
         if (id().equals(new LongWritable(2))) {
-            sendMsg(new LongWritable(1), 101);
-            sendMsg(new LongWritable(1), 102);
-            sendMsg(new LongWritable(1), 103);
+            sendMsg(new LongWritable(1), new IntWritable(101));
+            sendMsg(new LongWritable(1), new IntWritable(102));
+            sendMsg(new LongWritable(1), new IntWritable(103));
         }
         if (!id().equals(new LongWritable(1))) {
             voteToHalt();
@@ -27,7 +27,7 @@ public class TestMsgVertex extends
             /* Check the messages */
             int sum = 0;
             while (msgIterator != null && msgIterator.hasNext()) {
-                sum += msgIterator.next();
+                sum += msgIterator.next().get();
             }
             System.out.println("TestMsgVertex: Received a sum of " + sum + 
             " (should have 306)");

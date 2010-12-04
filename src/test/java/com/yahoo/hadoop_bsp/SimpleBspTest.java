@@ -7,6 +7,8 @@ import java.lang.reflect.InvocationTargetException;
 
 import java.util.List;
 
+import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -24,6 +26,7 @@ import com.yahoo.hadoop_bsp.examples.TestPageRankVertex;
 import com.yahoo.hadoop_bsp.examples.TestSuperstepVertex;
 import com.yahoo.hadoop_bsp.examples.TestVertexInputFormat;
 import com.yahoo.hadoop_bsp.examples.TestVertexReader;
+import com.yahoo.hadoop_bsp.examples.TestVertexWriter;
 
 import junit.framework.Test;
 import junit.framework.TestCase;
@@ -142,7 +145,8 @@ public class SimpleBspTest extends TestCase implements Watcher {
         		           test.getSuperstep());
         TestVertexInputFormat inputFormat = 
         	TestVertexInputFormat.class.newInstance();
-        List<InputSplit> splitArray = inputFormat.getSplits(1);
+        Configuration conf = new Configuration();
+        List<InputSplit> splitArray = inputFormat.getSplits(conf, 1);
         ByteArrayOutputStream byteArrayOutputStream = 
         	new ByteArrayOutputStream();
         DataOutputStream outputStream = 
@@ -192,12 +196,18 @@ public class SimpleBspTest extends TestCase implements Watcher {
     	conf.setClass("bsp.vertexClass", 
     				  TestSuperstepVertex.class, 
     				  HadoopVertex.class);
+    	conf.setClass("bsp.msgValueClass", 
+    				  IntWritable.class, 
+    				  Writable.class);
     	conf.setClass("bsp.inputSplitClass", 
     				  BspInputSplit.class, 
     				  InputSplit.class);
     	conf.setClass("bsp.vertexInputFormatClass", 
     				  TestVertexInputFormat.class,
     				  VertexInputFormat.class);
+        conf.setClass("bsp.vertexWriterClass",
+                      TestVertexWriter.class,
+                      VertexWriter.class);
         conf.setClass("bsp.indexClass",
                       LongWritable.class,
                       WritableComparable.class);
@@ -207,6 +217,11 @@ public class SimpleBspTest extends TestCase implements Watcher {
     	hdfs.delete(outputPath, true);
     	FileOutputFormat.setOutputPath(bspJob, outputPath);
     	assertTrue(bspJob.run());
+            Path oldLocalJobPaths = new Path(
+                BspJob.DEFAULT_ZOOKEEPER_MANAGER_DIRECTORY); 
+        FileStatus [] fileStatusArr = hdfs.listStatus(outputPath);
+        assertTrue(fileStatusArr.length == 1);
+        assertTrue(fileStatusArr[0].getLen() == 24);
     }
     
     /**
@@ -248,6 +263,9 @@ public class SimpleBspTest extends TestCase implements Watcher {
         conf.setClass("bsp.vertexClass", 
                       TestMsgVertex.class, 
                       HadoopVertex.class);
+    	conf.setClass("bsp.msgValueClass", 
+    				  IntWritable.class, 
+    				  Writable.class);
         conf.setClass("bsp.inputSplitClass", 
                       BspInputSplit.class, 
                       InputSplit.class);
@@ -303,6 +321,9 @@ public class SimpleBspTest extends TestCase implements Watcher {
         conf.setClass("bsp.vertexClass", 
                       TestPageRankVertex.class, 
                       HadoopVertex.class);
+    	conf.setClass("bsp.msgValueClass", 
+    				  DoubleWritable.class, 
+    				  Writable.class);
         conf.setClass("bsp.inputSplitClass", 
                       BspInputSplit.class, 
                       InputSplit.class);

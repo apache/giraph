@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Map.Entry;
 
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.VersionedProtocol;
 
 /**
@@ -17,7 +18,8 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  *
  **/
 
-public interface CommunicationsInterface<I, M>
+public interface CommunicationsInterface
+      <I extends Writable, M extends Writable>
       extends VersionedProtocol, Closeable {
 
 	/**
@@ -46,9 +48,22 @@ public interface CommunicationsInterface<I, M>
       throws IOException;
   
   /**
-   * Flush all outgoing messages.
+   * Adds incoming message list.
+   * 
+   * @param vertex
+   * @param msg
+   * @throws IOException
    */
-  void flush();
+  void put(I vertex, MsgArrayList<M> msgList)
+      throws IOException;
+  
+  /**
+   * Flush all outgoing messages.
+   *
+   * @throws IOException
+   */
+  void flush()
+      throws IOException;
   
   /**
    * @return A message iterator for the Worker's received message queue,

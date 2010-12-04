@@ -8,6 +8,7 @@ import java.util.TreeMap;
 import java.util.Iterator;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -121,7 +122,7 @@ public class BspJob<V, E, M> extends Job {
 	 * @param <V>
 	 * @param <V>
 	 */
-	public static class BspMapper<I, V, E, M>
+	public static class BspMapper<I extends Writable, V, E, M extends Writable>
 		extends Mapper<Object, Object, Object, Object> {
 		/** Logger */
 		private static final Logger LOG = Logger.getLogger(BspMapper.class);
@@ -166,7 +167,7 @@ public class BspJob<V, E, M> extends Job {
 			VertexInputFormat<I, V, E> vertexInputFormat = 
 				vertexInputFormatClass.newInstance();
 			VertexReader<I, V, E> vertexReader = 
-				vertexInputFormat.createRecordReader(myInputSplit, context);
+				vertexInputFormat.createVertexReader(myInputSplit, context);
 			vertexReader.initialize(myInputSplit, context);
 
 			Map<I, E> destVertexIdEdgeValueMap = new TreeMap<I, E>();
@@ -197,8 +198,46 @@ public class BspJob<V, E, M> extends Job {
 	            vertexId = vertexReader.createVertexId();
 	            vertexValue = vertexReader.createVertexValue();
 			}
+            vertexReader.close();
 			m_service.setPartitionMax(vertexIdMax);
 		}
+			
+		/**
+		 * Save the vertices using the user-defined OutputFormat from our 
+		 * vertexArray.
+		 * based on the split.
+		 * @throws IllegalAccessException 
+		 * @throws InstantiationException 
+		 * @throws InterruptedException 
+		 * @throws IOException 
+		 */
+		public void saveVertices(Context context)
+		    throws InstantiationException, IllegalAccessException,
+                   IOException, InterruptedException {			
+            if (m_conf.get("bsp.vertexWriterClass") == null) {
+                LOG.warn("bsp.vertexWriterClass not specified" + 
+                         " -- there will be no saved output");
+                return;
+            }
+
+			@SuppressWarnings("rawtypes")
+			Class<? extends HadoopVertex> vertexClass = 
+				m_conf.getClass("bsp.vertexClass", 
+								HadoopVertex.class, 
+								HadoopVertex.class);
+			@SuppressWarnings("unchecked")
+			Class<? extends VertexWriter<I, V, E>> vertexWriterClass = 
+				(Class<? extends VertexWriter<I, V, E>>) 
+					m_conf.getClass("bsp.vertexWriterClass", 
+							        VertexWriter.class);
+			VertexWriter<I, V, E> vertexWriter = 
+				vertexWriterClass.newInstance();
+            for (HadoopVertex<I, V, E, M> vertex : m_vertexList) {
+                vertexWriter.write(context, vertex.id(),
+                        vertex.getVertexValue(), vertex.getOutEdgeIterator());
+            }
+            vertexWriter.close(context);
+        }
 			
 		/**
 		 * Passes message on to communication service.
@@ -284,39 +323,57 @@ public class BspJob<V, E, M> extends Job {
 			long verticesDone = 0;
 			try {
 			    while (!m_service.barrier(verticesDone, m_vertexList.size())) {
-			        LOG.info("map: superstep = " + m_service.getSuperStep());
+                    long superStep = m_service.getSuperStep();
+			        LOG.info("map: superstep = " + superStep);
+			        LOG.info("totalMem=" + Runtime.getRuntime().totalMemory() +
+                             " maxMem=" + Runtime.getRuntime().maxMemory() +
+                             " freeMem=" + Runtime.getRuntime().freeMemory());
 			        if (m_service.getSuperStep() == 0) {
 			            LOG.info("Starting communication service...");
 			            m_commService = new RPCCommunications<I, M>(
 							m_conf, m_service);
 			        }
+                    context.progress();
 			        verticesDone = 0;
-			        HadoopVertex.setSuperstep(m_service.getSuperStep());
+			        HadoopVertex.setSuperstep(superStep);
 			        HadoopVertex.setNumVertices(m_service.getTotalVertices());
 			        for (HadoopVertex<I, V, E, M> vertex : m_vertexList) {
-			            Iterator<M> vertexMsgIt = 
-			                m_commService.getVertexMessageIterator(vertex.id());
-			            if (!vertex.isHalted() || vertexMsgIt.hasNext()) { 
+			            if (!vertex.isHalted()) { 
+			                Iterator<M> vertexMsgIt = 
+			                    m_commService.getVertexMessageIterator(vertex.id());
+                            context.progress();
 			                vertex.compute(vertexMsgIt);
 			            }
 			            if (vertex.isHalted()) {
 			                ++verticesDone;
 			            }
 			        }
+                    context.progress();
+			        LOG.info("totalMem=" + Runtime.getRuntime().totalMemory() +
+                             " maxMem=" + Runtime.getRuntime().maxMemory() +
+                             " freeMem=" + Runtime.getRuntime().freeMemory());
 			        m_commService.flush();
 			        LOG.info("All " + m_vertexList.size() + 
 						 " vertices finished superstep " + 
 						 m_service.getSuperStep() + " (" + verticesDone + 
 						 " of " + m_vertexList.size() + " vertices done)");
-			    }
-			} catch (Exception e) {
+			    } 
+			    LOG.info("BSP application done (global vertices marked done)");
+
+                context.progress();
+                saveVertices(context);
+            } catch (InstantiationException e) {
+                LOG.error(e.getMessage());
+            } catch (IllegalAccessException e) {
+                LOG.error(e.getMessage());
+            } catch (Exception e) {
+                LOG.error(e.getMessage());
 			    if (m_manager != null) {
 			        m_manager.offlineZooKeeperServers(0);
 			    }
-			    throw new RuntimeException(e);
-			}
+				throw new RuntimeException(e);
+            }
 			
-			LOG.info("BSP application done (global vertices marked done)");
 		}
 		
 		@Override

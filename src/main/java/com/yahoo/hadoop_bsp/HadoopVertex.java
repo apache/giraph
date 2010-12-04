@@ -6,7 +6,10 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
 
-public abstract class HadoopVertex<I, V, E, M> implements Vertex<I, V, E, M> {
+import org.apache.hadoop.io.Writable;
+
+public abstract class HadoopVertex<I extends Writable, V, E, M extends Writable>
+              implements Vertex<I, V, E, M> {
 	private static long m_superstep = 0;
 	private static long m_numVertices = -1;
 	private BspJob.BspMapper<I, V, E, M> m_bspMapper;
@@ -57,6 +60,10 @@ public abstract class HadoopVertex<I, V, E, M> implements Vertex<I, V, E, M> {
 	public long getNumVertices() {
 	    return m_numVertices;
 	}
+
+    public long getNumEdges() {
+        return m_destEdgeMap.size();
+    }
 	
 	/**
 	 * Implements the {@link OutEdgeIterator} for {@link HadoopVertex}
@@ -106,9 +113,7 @@ public abstract class HadoopVertex<I, V, E, M> implements Vertex<I, V, E, M> {
 	}
 	
     public final void sentMsgToAllEdges(M msg) {
-        OutEdgeIterator<I, E> destEdgeIt = getOutEdgeIterator();
-        while (destEdgeIt.hasNext()) {
-            Entry<I, E> destEdge = destEdgeIt.next();
+        for (Entry<I, E> destEdge : m_destEdgeMap.entrySet()) {
             sendMsg(destEdge.getKey(), msg);
         }
     }
