@@ -87,14 +87,14 @@ public class RPCCommunications<I extends Writable, M extends Writable>
         LOG.info("close: Done");
         synchronized (waitingInPeer) {
         	notDone = false;
-            waitingInPeer.notify();
+          waitingInPeer.notify();
         }
 
     }
     
     public void run() {
-    	try {
-    		while (true) {
+    	  try {
+    		    while (true) {
                 boolean flushValue = false;
                 boolean notDoneValue = false;
                 synchronized (waitingInPeer) {
@@ -117,33 +117,33 @@ public class RPCCommunications<I extends Writable, M extends Writable>
                     LOG.info(peer.getName() + ": flushing messages");
                     for (Entry<I, MsgArrayList<M>> e :
                         outMessagesPerPeer.entrySet()) {
-               			// TODO: apply combiner
-               			MsgArrayList<M> msgList = e.getValue();
-               			synchronized(msgList) {
-                            peer.put(e.getKey(), msgList);
-                            for (M msg : msgList) {
-               				  LOG.debug(peer.getName() + " putting " + 
-               							 msg + " to " + e.getKey());
-               				}
-               				msgList.clear();
-               			}
-               		}
+               			  // TODO: apply combiner
+               			  MsgArrayList<M> msgList = e.getValue();
+               			  synchronized(msgList) {
+                        peer.put(e.getKey(), msgList);
+                        for (M msg : msgList) {
+               				    LOG.debug(peer.getName() + " putting " + 
+               							        msg + " to " + e.getKey());
+               				  }
+               				  msgList.clear();
+               			  }
+               		  }
                     LOG.info(peer.getName() + ": all messages flushed");
                     synchronized (waitingInMain) {
                         synchronized (waitingInPeer) {
-    			            flush = false;
+    			                  flush = false;
                         }
                         waitingInMain.notify();
                     }
                 	
-    			}
-    		}
+    			      }
+    		    }
             LOG.info(peer.getName() + " RPC client thread terminating");
             if (isProxy) {
               RPC.stopProxy(peer);
             }
-    	} catch (IOException e) {
-    		LOG.error(e);  
+    	  } catch (IOException e) {
+    		    LOG.error(e);  
             synchronized(waitingInMain) {
                 synchronized (waitingInPeer) {
                     notDone = false;
@@ -154,7 +154,7 @@ public class RPCCommunications<I extends Writable, M extends Writable>
               RPC.stopProxy(peer);
             }
             throw new RuntimeException(e);
-    	}
+    	  }
     }
   }
   
@@ -205,16 +205,16 @@ public class RPCCommunications<I extends Writable, M extends Writable>
         boolean isProxy = true;
 		if (myName.equals(addr.toString())) {
 			peer = this;
-            isProxy = false;
+      isProxy = false;
 		} else {
 			@SuppressWarnings("unchecked")
-            CommunicationsInterface<I, M> proxy =
-                    (CommunicationsInterface<I, M>) RPC.getProxy(CommunicationsInterface.class,
+      CommunicationsInterface<I, M> proxy =
+            (CommunicationsInterface<I, M>) RPC.getProxy(CommunicationsInterface.class,
                                 versionID, addr, conf);
-            peer = proxy;
+      peer = proxy;
 		}
 		
-        InetSocketAddress addrUnresolved = InetSocketAddress.createUnresolved(
+    InetSocketAddress addrUnresolved = InetSocketAddress.createUnresolved(
                                   addr.getHostName(), addr.getPort());
     HashMap<I, MsgArrayList<M>> outMsgMap = outMessages.get(addrUnresolved);
     if (outMsgMap == null) { // at this stage always true
@@ -222,11 +222,11 @@ public class RPCCommunications<I extends Writable, M extends Writable>
       outMessages.put(addrUnresolved, outMsgMap);
     }
     
-		 PeerThread th = new PeerThread(outMsgMap, peer,
-				 conf.getInt(BspJob.BSP_MSG_SIZE, BspJob.BSP_MSG_DEFAULT_SIZE),
+		PeerThread th = new PeerThread(outMsgMap, peer,
+				         conf.getInt(BspJob.BSP_MSG_SIZE, BspJob.BSP_MSG_DEFAULT_SIZE),
                  isProxy);
-		 th.start();
-		 peerThreads.add(th);
+		th.start();
+		peerThreads.add(th);
 	}
 
 	public long getProtocolVersion(String protocol, long clientVersion)
@@ -235,79 +235,78 @@ public class RPCCommunications<I extends Writable, M extends Writable>
 	}
 
 	public void close() throws IOException {
-        for (PeerThread pt : peerThreads) {
-    	  pt.close();
-        }
+    for (PeerThread pt : peerThreads) {
+    	pt.close();
+    }
     
-        for (PeerThread pt : peerThreads) {
-    	    try {
-    	        pt.join();
-    	    } catch (InterruptedException e) {
-    	        LOG.info(e.getStackTrace());
-    	    }
-        }
-        LOG.info("shutting down RPC server");
+    for (PeerThread pt : peerThreads) {
+    	try {
+    	  pt.join();
+    	} catch (InterruptedException e) {
+    	  LOG.info(e.getStackTrace());
+    	}
+    }
+    LOG.info("shutting down RPC server");
 		server.stop();
-
 	}
 
 	public void put(I vertex, M msg) throws IOException {
-        ArrayList<M> msgs = inMessages.get(vertex);
+    ArrayList<M> msgs = inMessages.get(vertex);
+    if (msgs == null) {
+      synchronized(inMessages) {
+        msgs = inMessages.get(vertex);
         if (msgs == null) {
-            synchronized(inMessages) {
-                msgs = inMessages.get(vertex);
-                if (msgs == null) {
-                    msgs = new ArrayList<M>();
-	                inMessages.put(vertex, msgs);
-                }
-            }
-		}
-        synchronized(msgs) {
-		    msgs.add(msg);
+          msgs = new ArrayList<M>();
+	        inMessages.put(vertex, msgs);
         }
+      }
+		}
+    synchronized(msgs) {
+		  msgs.add(msg);
+    }
   }
 
 	public void put(I vertex, MsgArrayList<M> msgList) throws IOException {
-        ArrayList<M> msgs = inMessages.get(vertex);
+    ArrayList<M> msgs = inMessages.get(vertex);
+    if (msgs == null) {
+      synchronized(inMessages) {
+        msgs = inMessages.get(vertex);
         if (msgs == null) {
-            synchronized(inMessages) {
-                msgs = inMessages.get(vertex);
-                if (msgs == null) {
-                    msgs = new ArrayList<M>();
-	                inMessages.put(vertex, msgs);
-                }
-            }
-		}
-        synchronized(msgs) {
-		    msgs.addAll(msgList);
+          msgs = new ArrayList<M>();
+	        inMessages.put(vertex, msgs);
         }
+      }
+		}
+    synchronized(msgs) {
+		  msgs.addAll(msgList);
+    }
   }
 
 	public void sendMessage(I destVertex, M msg) {
 		LOG.debug("Send bytes (" + msg.toString() + ") to " + destVertex);
 		Partition<I> destPartition = service.getPartition(destVertex);
-        if (destPartition == null) {
+    if (destPartition == null) {
 		   LOG.error("No partition found for " + destVertex);
-        }
-        InetSocketAddress addr = partitionMap.get(destPartition);
-        if (addr == null) {
-		    addr = InetSocketAddress.createUnresolved(
+    }
+    InetSocketAddress addr = partitionMap.get(destPartition);
+    if (addr == null) {
+		  addr = InetSocketAddress.createUnresolved(
                     destPartition.getHostname(),
                     destPartition.getPort());
-            partitionMap.put(destPartition, addr);
-        }
+      partitionMap.put(destPartition, addr);
+    }
 		LOG.debug("Send bytes (" + msg.toString() + ") to " + destVertex +
                 " on " + destPartition.getHostname() + ":" + destPartition.getPort());
 		HashMap<I, MsgArrayList<M>> msgMap = outMessages.get(addr);
 		if (msgMap == null) { // should never happen after constructor
-            throw new RuntimeException("msgMap did not exist for "
-                    + destPartition.getHostname() + ":" + destPartition.getPort());
+      throw new RuntimeException("msgMap did not exist for "
+                + destPartition.getHostname() + ":" + destPartition.getPort());
 		}
     
 		MsgArrayList<M> msgList = msgMap.get(destVertex);
 		if (msgList == null) { // should only happen once
-            msgList = new MsgArrayList<M>();
-            msgList.setConf(conf);
+      msgList = new MsgArrayList<M>();
+      msgList.setConf(conf);
 			msgMap.put(destVertex, msgList);
 		}
 		synchronized(msgList) {
@@ -315,48 +314,43 @@ public class RPCCommunications<I extends Writable, M extends Writable>
 			LOG.debug("added msg, size=" + msgList.size());
 
 		}
-        /* waiting for flush for now
-		synchronized (waitingInPeer) {
-			waitingInPeer.notify();
-		}
-        */
 	}
 	
 	public void flush() throws IOException {
-        synchronized(inMessages) {
-            for (ArrayList<M> msgList : inMessages.values()) {
-                msgList.clear();
-            }
-        }
+    synchronized(inMessages) {
+      for (ArrayList<M> msgList : inMessages.values()) {
+        msgList.clear();
+      }
+    }
+    for (PeerThread pt : peerThreads) {
+    	pt.flush();
+    }
+    while (true) {
+      synchronized (waitingInMain) {
         for (PeerThread pt : peerThreads) {
-    	    pt.flush();
-        }
-        while (true) {
-            synchronized (waitingInMain) {
-                for (PeerThread pt : peerThreads) {
-    	            if (pt.getNotDoneState() && pt.getFlushState()) {
-                        try {
-                	        waitingInMain.wait(2000);
-                   	        LOG.debug("main waking up");
-                        } catch (InterruptedException e) {
-                   	        // continue;
-                        }
-                    }
-                }
-                boolean flush = false;
-                for (PeerThread pt : peerThreads) {
-                    if (!pt.getNotDoneState()) {
-                        throw new RuntimeException("peer thread disappeared");
-                    }
-    	            if (pt.getFlushState()) {
-                        flush = true; // still flushing
-                    }
-                }
-                if (!flush) {
-                    break;
-                }
+    	    if (pt.getNotDoneState() && pt.getFlushState()) {
+            try {
+              waitingInMain.wait(2000);
+              LOG.debug("main waking up");
+            } catch (InterruptedException e) {
+              // continue;
             }
+          }
         }
+        boolean flush = false;
+        for (PeerThread pt : peerThreads) {
+          if (!pt.getNotDoneState()) {
+            throw new RuntimeException("peer thread disappeared");
+          }
+    	    if (pt.getFlushState()) {
+            flush = true; // still flushing
+          }
+        }
+        if (!flush) {
+          break;
+        }
+      }
+    }
 	}
 
 	public Iterator<Entry<I, ArrayList<M>>> getMessageIterator()
@@ -367,7 +361,7 @@ public class RPCCommunications<I extends Writable, M extends Writable>
 	public Iterator<M> getVertexMessageIterator(I vertex) {
 	    ArrayList<M> msgList = inMessages.get(vertex);
 	    if (msgList == null) {
-	        return emptyMsgList.iterator();
+	      return emptyMsgList.iterator();
 	    }
 	    return msgList.iterator();
 	}

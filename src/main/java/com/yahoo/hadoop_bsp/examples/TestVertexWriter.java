@@ -35,7 +35,7 @@ public class TestVertexWriter implements
         context.write((KEYOUT)new Text(sb.toString()), (VALUEOUT)null);
 	}
 
-    public void close(TaskAttemptContext context
+  public void close(TaskAttemptContext context
                       ) throws IOException, InterruptedException {
-    }
+  }
 }

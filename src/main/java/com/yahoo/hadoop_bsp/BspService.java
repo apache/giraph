@@ -54,8 +54,8 @@ public class BspService<I> implements
 	private BspEvent m_barrierChildrenChanged = new PredicateLock();
 	/** Finished children synchronization */
 	private BspEvent m_finishedChildrenChanged= new PredicateLock();
-    /** Master children synchronization */
-    private BspEvent m_masterChildrenChanged= new PredicateLock();
+  /** Master children synchronization */
+  private BspEvent m_masterChildrenChanged= new PredicateLock();
 	/** Partition count */
 	private Integer m_partitionCount;
 	/** Configuration of the job*/
@@ -74,23 +74,23 @@ public class BspService<I> implements
 	String m_myHealthZnode;
 	/** Master thread */
 	Thread m_masterThread;
-    /** Partition to compare with */
-    Partition<I> comparePartition = new Partition<I>("", -1, null);
+  /** Partition to compare with */
+  Partition<I> comparePartition = new Partition<I>("", -1, null);
 	/** Master should stop trying to become the leader? */
 	boolean m_masterThreadGiveUpLeader = false;
 	/** Lock to protect m_masterThreadGiveUpLeader */
-    Lock m_masterThreadGiveUpLeaderLock = new ReentrantLock();
+  Lock m_masterThreadGiveUpLeaderLock = new ReentrantLock();
 	/** Class logger */
-    private static final Logger LOG = Logger.getLogger(BspService.class);
-    /** State of the service? */
-    public enum State {
+  private static final Logger LOG = Logger.getLogger(BspService.class);
+  /** State of the service? */
+  public enum State {
     	INIT, 
     	RUNNING, 
     	FAILED, 
     	FINISHED
-    }
-    /** Current state */
-    private State m_currentState = State.INIT;
+  }
+  /** Current state */
+  private State m_currentState = State.INIT;
         
 	public static final String BASE_DIR = "/_hadoopBsp";
 	public static final String BARRIER_DIR = "/_barrier";
@@ -473,7 +473,7 @@ public class BspService<I> implements
 				    		VIRTUAL_ID_PATH + "/" + m_myVirtualId, false, null);
 					LOG.info("setup: For " + VIRTUAL_ID_PATH + "/" + 
 							 m_myVirtualId + ", got '" + splitArray + "'");
-				    InputStream input = 
+				  InputStream input = 
 				    	new ByteArrayInputStream(splitArray);
 					((Writable) m_myInputSplit).readFields(
 						new DataInputStream(input));
@@ -876,13 +876,13 @@ public class BspService<I> implements
 							tmpPath + " has jsonArray " + jsonArray);
 					}
 					@SuppressWarnings({"rawtypes", "unchecked" })
-			        Class<? extends WritableComparable> indexClass =
+			    Class<? extends WritableComparable> indexClass =
 			            (Class<? extends WritableComparable>) 
-			                m_conf.getClass("bsp.indexClass", 
+			            m_conf.getClass("bsp.indexClass", 
 			                                WritableComparable.class);
-                    @SuppressWarnings("unchecked")
-                    I index = (I) indexClass.newInstance();
-		            InputStream input = 
+          @SuppressWarnings("unchecked")
+          I index = (I) indexClass.newInstance();
+		      InputStream input = 
 		                new ByteArrayInputStream(jsonArray.get(2).toString().getBytes("UTF-8"));
 	                 ((Writable) index).readFields(
 	                         new DataInputStream(input));
@@ -890,7 +890,7 @@ public class BspService<I> implements
 						new Partition<I>(jsonArray.getString(0), 
 										 jsonArray.getInt(1), 
 										 index));
-                    LOG.info("Partition split point: " + index);
+          LOG.info("Partition split point: " + index);
 				}
 			} catch (Exception e) {
 				throw new RuntimeException(e);
@@ -903,7 +903,7 @@ public class BspService<I> implements
 		if (m_partitionSet == null) {
 			getPartitionSet();
 		}
-        comparePartition.setMaxIndex(index);
+    comparePartition.setMaxIndex(index);
 		return m_partitionSet.ceiling(comparePartition);
 	}
 }

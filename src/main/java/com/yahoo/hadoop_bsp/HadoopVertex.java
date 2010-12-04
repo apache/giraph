@@ -61,9 +61,9 @@ public abstract class HadoopVertex<I extends Writable, V, E, M extends Writable>
 	    return m_numVertices;
 	}
 
-    public long getNumEdges() {
-        return m_destEdgeMap.size();
-    }
+  public long getNumEdges() {
+      return m_destEdgeMap.size();
+  }
 	
 	/**
 	 * Implements the {@link OutEdgeIterator} for {@link HadoopVertex}
@@ -112,11 +112,11 @@ public abstract class HadoopVertex<I extends Writable, V, E, M extends Writable>
        m_bspMapper.sendMsg(id, msg);
 	}
 	
-    public final void sentMsgToAllEdges(M msg) {
-        for (Entry<I, E> destEdge : m_destEdgeMap.entrySet()) {
-            sendMsg(destEdge.getKey(), msg);
-        }
-    }
+  public final void sentMsgToAllEdges(M msg) {
+      for (Entry<I, E> destEdge : m_destEdgeMap.entrySet()) {
+          sendMsg(destEdge.getKey(), msg);
+      }
+  }
 	
 	public final void voteToHalt() {
 		m_halt = true;

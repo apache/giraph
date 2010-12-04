@@ -40,41 +40,41 @@ public class VISBspMainTest {
 	 */
 	public static final class TestBsp extends 
             HadoopVertex<Text, DoubleWritable, Float, DoubleWritable> {
-        public void compute(Iterator<DoubleWritable> msgIterator) {
-            if (getSuperstep() >= 1) {
-                double sum = 0;
-                while (msgIterator.hasNext()) {
-                    sum += msgIterator.next().get();
-                }
-                double vertexValue = (0.1f / getNumVertices()) + 0.9 * sum;
-                if (getSuperstep() < 50) {
-                    long edges = getNumEdges();
-                    sentMsgToAllEdges(new DoubleWritable(vertexValue/edges));
-                } else {
-                    setVertexValue(new DoubleWritable(vertexValue));
-                    voteToHalt();
-                }
-            }
-        }
-    }
+      public void compute(Iterator<DoubleWritable> msgIterator) {
+          if (getSuperstep() >= 1) {
+              double sum = 0;
+              while (msgIterator.hasNext()) {
+                  sum += msgIterator.next().get();
+              }
+              double vertexValue = (0.1f / getNumVertices()) + 0.9 * sum;
+              if (getSuperstep() < 50) {
+                  long edges = getNumEdges();
+                  sentMsgToAllEdges(new DoubleWritable(vertexValue/edges));
+              } else {
+                  setVertexValue(new DoubleWritable(vertexValue));
+                  voteToHalt();
+              }
+          }
+      }
+  }
 	
-    /**
-     * Run a sample BSP job.
-     * @throws IOException
-     * @throws ClassNotFoundException 
-     * @throws InterruptedException 
-     */
+  /**
+   * Run a sample BSP job.
+   * @throws IOException
+   * @throws ClassNotFoundException 
+   * @throws InterruptedException 
+   */
 
-    public static void main(String[] args)
-    	throws IOException, InterruptedException, ClassNotFoundException {
-        Configuration conf = new Configuration();
+  public static void main(String[] args)
+        throws IOException, InterruptedException, ClassNotFoundException {
+      Configuration conf = new Configuration();
 
-        conf.set(BspJob.BSP_ZOOKEEPER_LIST, "localhost:2181");
-        conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
-        conf.setInt(BspJob.BSP_POLL_ATTEMPTS, 5);
-        conf.setInt(BspJob.BSP_POLL_MSECS, 5*1000);
-        conf.setInt(BspJob.BSP_RPC_INITIAL_PORT, BspJob.BSP_RPC_DEFAULT_PORT);
-        FileSystem hdfs = FileSystem.get(conf);
+      conf.set(BspJob.BSP_ZOOKEEPER_LIST, "localhost:2181");
+      conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
+      conf.setInt(BspJob.BSP_POLL_ATTEMPTS, 5);
+      conf.setInt(BspJob.BSP_POLL_MSECS, 5*1000);
+      conf.setInt(BspJob.BSP_RPC_INITIAL_PORT, BspJob.BSP_RPC_DEFAULT_PORT);
+      FileSystem hdfs = FileSystem.get(conf);
     	conf.setClass("bsp.vertexClass", TestBsp.class, HadoopVertex.class);
     	conf.setClass("bsp.msgValueClass", DoubleWritable.class, Writable.class);
     	conf.setClass("bsp.inputSplitClass", 
@@ -86,24 +86,24 @@ public class VISBspMainTest {
     	conf.setClass("bsp.vertexWriterClass", 
     				  VISVertexWriter.class,
     				  VertexWriter.class);
-        conf.setClass("mapreduce.outputformat.class",
-                      TextOutputFormat.class,
-                      OutputFormat.class);
-        conf.setClass("bsp.indexClass",
-                      Text.class,
-                      WritableComparable.class);
-        conf.setClass("mapred.output.key.class",
-                      Text.class,
-                      Object.class);
-        conf.setClass("mapred.output.value.class",
-                      NullWritable.class,
-                      Object.class);
+      conf.setClass("mapreduce.outputformat.class",
+              TextOutputFormat.class,
+              OutputFormat.class);
+      conf.setClass("bsp.indexClass",
+              Text.class,
+              WritableComparable.class);
+      conf.setClass("mapred.output.key.class",
+              Text.class,
+              Object.class);
+      conf.setClass("mapred.output.value.class",
+              NullWritable.class,
+              Object.class);
 
-        args = new GenericOptionsParser(conf, args).getRemainingArgs();
-        Path outputPath = null;
-        Path inputPath = null;
+      args = new GenericOptionsParser(conf, args).getRemainingArgs();
+      Path outputPath = null;
+      Path inputPath = null;
 
-        try {
+      try {
           for(int i=0; i < args.length; ++i) {
             if ("-outputDir".equals(args[i])) {
        	      outputPath = new Path((String)args[++i]);    	
@@ -122,17 +122,17 @@ public class VISBspMainTest {
               System.out.println("-map " + args[i]);
             } else
               System.out.println("unknwon option " + args[i]);
-            }
-        } catch (ArrayIndexOutOfBoundsException except) {
-        }
+          }
+      } catch (ArrayIndexOutOfBoundsException except) {
+      }
 
-        conf.set("keep.failed.task.files", "true");
+      conf.set("keep.failed.task.files", "true");
 
     	BspJob<Integer, String, String> bspJob = 
     		new BspJob<Integer, String, String>(conf, "testBspJob");
     	FileOutputFormat.setOutputPath(bspJob, outputPath);
         FileInputFormat.setInputPaths(bspJob, inputPath);
     	bspJob.run();
-    }
+  }
     
 }

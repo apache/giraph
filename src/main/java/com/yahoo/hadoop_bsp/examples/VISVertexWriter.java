@@ -26,18 +26,18 @@ public class VISVertexWriter extends TextOutputFormat<NullWritable, Text> implem
             TaskInputOutputContext<Object, Object,
                                    KEYOUT, VALUEOUT> context,
             Text vertexId, 
-			DoubleWritable vertexValue,
-			OutEdgeIterator<Text, Float> destEdgeIt) 
-	    throws IOException, InterruptedException {
+			      DoubleWritable vertexValue,
+			      OutEdgeIterator<Text, Float> destEdgeIt) 
+	          throws IOException, InterruptedException {
            
-        StringBuilder sb = new StringBuilder();
-        sb.append(vertexId.toString());
-        sb.append('\t');
-        sb.append(vertexValue.toString());
-        context.write((KEYOUT)new Text(sb.toString()), (VALUEOUT)null);
+      StringBuilder sb = new StringBuilder();
+      sb.append(vertexId.toString());
+      sb.append('\t');
+      sb.append(vertexValue.toString());
+      context.write((KEYOUT)new Text(sb.toString()), (VALUEOUT)null);
 	}
 
-    public void close(TaskAttemptContext context
+  public void close(TaskAttemptContext context
                       ) throws IOException, InterruptedException {
-    }
+  }
 }

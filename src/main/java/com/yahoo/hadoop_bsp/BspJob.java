@@ -195,10 +195,10 @@ public class BspJob<V, E, M> extends Job {
 				if (comparable.compareTo(vertexIdMax) > 0) {
 					vertexIdMax = vertexId;
 				}
-	            vertexId = vertexReader.createVertexId();
-	            vertexValue = vertexReader.createVertexValue();
+	      vertexId = vertexReader.createVertexId();
+	      vertexValue = vertexReader.createVertexValue();
 			}
-            vertexReader.close();
+      vertexReader.close();
 			m_service.setPartitionMax(vertexIdMax);
 		}
 			
@@ -214,30 +214,31 @@ public class BspJob<V, E, M> extends Job {
 		public void saveVertices(Context context)
 		    throws InstantiationException, IllegalAccessException,
                    IOException, InterruptedException {			
-            if (m_conf.get("bsp.vertexWriterClass") == null) {
-                LOG.warn("bsp.vertexWriterClass not specified" + 
-                         " -- there will be no saved output");
-                return;
-            }
+      if (m_conf.get("bsp.vertexWriterClass") == null) {
+        LOG.warn("bsp.vertexWriterClass not specified" + 
+                 " -- there will be no saved output");
+        return;
+      }
 
 			@SuppressWarnings("rawtypes")
 			Class<? extends HadoopVertex> vertexClass = 
-				m_conf.getClass("bsp.vertexClass", 
-								HadoopVertex.class, 
-								HadoopVertex.class);
+				  m_conf.getClass("bsp.vertexClass", 
+								          HadoopVertex.class, 
+								          HadoopVertex.class);
 			@SuppressWarnings("unchecked")
 			Class<? extends VertexWriter<I, V, E>> vertexWriterClass = 
-				(Class<? extends VertexWriter<I, V, E>>) 
+				  (Class<? extends VertexWriter<I, V, E>>) 
 					m_conf.getClass("bsp.vertexWriterClass", 
-							        VertexWriter.class);
+							            VertexWriter.class);
 			VertexWriter<I, V, E> vertexWriter = 
-				vertexWriterClass.newInstance();
-            for (HadoopVertex<I, V, E, M> vertex : m_vertexList) {
-                vertexWriter.write(context, vertex.id(),
-                        vertex.getVertexValue(), vertex.getOutEdgeIterator());
-            }
-            vertexWriter.close(context);
-        }
+				  vertexWriterClass.newInstance();
+      for (HadoopVertex<I, V, E, M> vertex : m_vertexList) {
+        vertexWriter.write(context, vertex.id(),
+                           vertex.getVertexValue(),
+                           vertex.getOutEdgeIterator());
+      }
+      vertexWriter.close(context);
+    }
 			
 		/**
 		 * Passes message on to communication service.
@@ -323,7 +324,7 @@ public class BspJob<V, E, M> extends Job {
 			long verticesDone = 0;
 			try {
 			    while (!m_service.barrier(verticesDone, m_vertexList.size())) {
-                    long superStep = m_service.getSuperStep();
+              long superStep = m_service.getSuperStep();
 			        LOG.info("map: superstep = " + superStep);
 			        LOG.info("totalMem=" + Runtime.getRuntime().totalMemory() +
                              " maxMem=" + Runtime.getRuntime().maxMemory() +
@@ -333,7 +334,7 @@ public class BspJob<V, E, M> extends Job {
 			            m_commService = new RPCCommunications<I, M>(
 							m_conf, m_service);
 			        }
-                    context.progress();
+              context.progress();
 			        verticesDone = 0;
 			        HadoopVertex.setSuperstep(superStep);
 			        HadoopVertex.setNumVertices(m_service.getTotalVertices());
@@ -348,31 +349,31 @@ public class BspJob<V, E, M> extends Job {
 			                ++verticesDone;
 			            }
 			        }
-                    context.progress();
+              context.progress();
 			        LOG.info("totalMem=" + Runtime.getRuntime().totalMemory() +
                              " maxMem=" + Runtime.getRuntime().maxMemory() +
                              " freeMem=" + Runtime.getRuntime().freeMemory());
 			        m_commService.flush();
 			        LOG.info("All " + m_vertexList.size() + 
-						 " vertices finished superstep " + 
-						 m_service.getSuperStep() + " (" + verticesDone + 
-						 " of " + m_vertexList.size() + " vertices done)");
+						           " vertices finished superstep " + 
+						           m_service.getSuperStep() + " (" + verticesDone + 
+						           " of " + m_vertexList.size() + " vertices done)");
 			    } 
 			    LOG.info("BSP application done (global vertices marked done)");
 
-                context.progress();
-                saveVertices(context);
-            } catch (InstantiationException e) {
-                LOG.error(e.getMessage());
-            } catch (IllegalAccessException e) {
-                LOG.error(e.getMessage());
-            } catch (Exception e) {
-                LOG.error(e.getMessage());
+          context.progress();
+          saveVertices(context);
+      } catch (InstantiationException e) {
+          LOG.error(e.getMessage());
+      } catch (IllegalAccessException e) {
+          LOG.error(e.getMessage());
+      } catch (Exception e) {
+          LOG.error(e.getMessage());
 			    if (m_manager != null) {
 			        m_manager.offlineZooKeeperServers(0);
 			    }
-				throw new RuntimeException(e);
-            }
+				  throw new RuntimeException(e);
+      }
 			
 		}
 		

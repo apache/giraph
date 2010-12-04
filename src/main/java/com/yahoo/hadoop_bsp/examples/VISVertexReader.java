@@ -34,22 +34,22 @@ public class VISVertexReader extends LineRecordReader implements
 						Map<Text, Float> destVertexIdEdgeValueMap) 
 	    throws IOException {
            
-        if (nextKeyValue() == false) {
-			return false;
-		}
-        Text val = getCurrentValue();
-        String[] s = val.toString().split("\t");
-        vertexId.set(s[0]);
-        vertexValue.set(0.0);
-        for (int i=1; i < s.length; i++) {
-            destVertexIdEdgeValueMap.put(new Text(s[i]), 1.0f);
-        }
-		++m_recordsRead;
-		LOG.debug("next: Return vertexId=" + vertexId + ", vertexValue=" + 
+      if (nextKeyValue() == false) {
+        return false;
+		  }
+      Text val = getCurrentValue();
+      String[] s = val.toString().split("\t");
+      vertexId.set(s[0]);
+      vertexValue.set(0.0);
+      for (int i=1; i < s.length; i++) {
+        destVertexIdEdgeValueMap.put(new Text(s[i]), 1.0f);
+      }
+		  ++m_recordsRead;
+		  LOG.debug("next: Return vertexId=" + vertexId + ", vertexValue=" + 
 				 vertexValue + ", destVertexIdEdgeValueSet=" + 
 				 destVertexIdEdgeValueMap.toString());
 		
-		return true;
+		  return true;
 	}
 
 	public long getPos() throws IOException {

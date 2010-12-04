@@ -29,11 +29,11 @@ public class TestVertexInputFormat implements
 		 * This is meaningless, the VertexReader will generate all the test
 		 * data.
 		 */
-        List<InputSplit> inputSplitList = new ArrayList<InputSplit>();
-        for (int i = 0; i < numSplits; ++i) {
-        	inputSplitList.add(new BspInputSplit(i, numSplits));
-        }
-        return inputSplitList;
+    List<InputSplit> inputSplitList = new ArrayList<InputSplit>();
+    for (int i = 0; i < numSplits; ++i) {
+      inputSplitList.add(new BspInputSplit(i, numSplits));
+    }
+    return inputSplitList;
 	}
 	
 	public VertexReader<LongWritable, IntWritable, Float> createVertexReader(
