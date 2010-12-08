@@ -16,6 +16,8 @@ import org.apache.hadoop.util.ReflectionUtils;
 public class MsgArrayList<M extends Writable> extends ArrayList<M>
           implements Writable, Configurable {
 
+    /** Defining a layout version for a serializable class. */
+    private static final long serialVersionUID = 1L;
     private Configuration conf;
 
     MsgArrayList() {
@@ -35,7 +37,10 @@ public class MsgArrayList<M extends Writable> extends ArrayList<M>
             @SuppressWarnings("unchecked")
             Class<? extends Writable> msgValueClass =
                 (Class<Writable>) conf.getClass("bsp.msgValueClass", Writable.class);
-            return (M)ReflectionUtils.newInstance(msgValueClass, conf);
+            @SuppressWarnings("unchecked")
+            M newInstance =
+                    (M)ReflectionUtils.newInstance(msgValueClass, conf);
+            return newInstance;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

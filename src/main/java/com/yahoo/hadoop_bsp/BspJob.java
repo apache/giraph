@@ -214,17 +214,12 @@ public class BspJob<V, E, M> extends Job {
 		public void saveVertices(Context context)
 		    throws InstantiationException, IllegalAccessException,
                    IOException, InterruptedException {			
-      if (m_conf.get("bsp.vertexWriterClass") == null) {
-        LOG.warn("bsp.vertexWriterClass not specified" + 
-                 " -- there will be no saved output");
-        return;
-      }
+		    if (m_conf.get("bsp.vertexWriterClass") == null) {
+		        LOG.warn("bsp.vertexWriterClass not specified" + 
+                          " -- there will be no saved output");
+		        return;
+		    }
 
-			@SuppressWarnings("rawtypes")
-			Class<? extends HadoopVertex> vertexClass = 
-				  m_conf.getClass("bsp.vertexClass", 
-								          HadoopVertex.class, 
-								          HadoopVertex.class);
 			@SuppressWarnings("unchecked")
 			Class<? extends VertexWriter<I, V, E>> vertexWriterClass = 
 				  (Class<? extends VertexWriter<I, V, E>>) 

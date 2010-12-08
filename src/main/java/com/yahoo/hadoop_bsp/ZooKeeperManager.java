@@ -420,21 +420,6 @@ public class ZooKeeperManager {
 	}
 	
 	/**
-	 * Copy the ZooKeeper and log4j jars to the local file system.
-	 */
-	private void copyJarToLocal() {
-		try {
-			LOG.info("copyJarToLocal: Copying HDFS ZooKeeper jar " +
-					m_conf.get(BspJob.BSP_ZOOKEEPER_JAR) + " to " +
-					m_zkDir);
-			m_fs.copyToLocalFile(new Path(m_conf.get(BspJob.BSP_ZOOKEEPER_JAR)), 
-					             new Path(m_zkDir));
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
-	}
-	
-	/**
 	 * If this task has been selected, online a ZooKeeper server.  Otherwise, 
 	 * wait until this task knows that the ZooKeeper servers have been onlined.
 	 */
@@ -452,13 +437,16 @@ public class ZooKeeperManager {
 			}
 			generateZooKeeperConfigFile(
 			    new ArrayList<String>(m_zkServerPortMap.keySet()));
-			copyJarToLocal();
 			ProcessBuilder processBuilder = new ProcessBuilder();
 			List<String> commandList = new ArrayList<String>();
-			commandList.add("java");
+			String javaHome = System.getProperty("java.home");
+			if (javaHome == null) {
+			    throw new RuntimeException("java.home is not set!");
+			}
+			commandList.add(javaHome + "/bin/java");
 			commandList.add("-cp");
 			Path fullJarPath = new Path(m_conf.get(BspJob.BSP_ZOOKEEPER_JAR));
-			commandList.add(m_zkDir + "/" + fullJarPath.getName());
+			commandList.add(fullJarPath.toString());
 			commandList.add("org.apache.zookeeper.server.quorum.QuorumPeerMain");
 			commandList.add(m_configFilePath);
 			processBuilder.command(commandList);
@@ -537,7 +525,8 @@ public class ZooKeeperManager {
 					FileStatus [] fileStatusArray = 
 						m_fs.listStatus(m_serverDirectory);
 					foundList.clear();
-					if (fileStatusArray.length > 0) {
+					if ((fileStatusArray != null) && 
+					    (fileStatusArray.length > 0)) {
 						for (int i = 0; i < fileStatusArray.length; ++i) {
 							String[] hostnameTaskArray = 
 								fileStatusArray[i].getPath().getName().split(
@@ -560,8 +549,8 @@ public class ZooKeeperManager {
 						if (foundList.containsAll(m_zkServerPortMap.keySet())) {
 							break;
 						}
-						++readyRetrievalAttempt;
-						Thread.sleep(m_pollMsecs);
+	                    Thread.sleep(m_pollMsecs);
+	                    ++readyRetrievalAttempt;
 					}
 				} catch (IOException e) {
 					throw new RuntimeException(e);

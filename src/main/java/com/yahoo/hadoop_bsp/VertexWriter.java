@@ -1,7 +1,6 @@
 package com.yahoo.hadoop_bsp;
 
 import java.io.IOException;
-import java.util.Map;
 
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskInputOutputContext;
