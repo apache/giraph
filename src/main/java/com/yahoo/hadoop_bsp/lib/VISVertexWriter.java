@@ -1,4 +1,4 @@
-package com.yahoo.hadoop_bsp.examples;
+package com.yahoo.hadoop_bsp.lib;
 
 import java.io.IOException;
 
