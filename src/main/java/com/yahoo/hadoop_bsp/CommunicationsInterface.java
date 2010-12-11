@@ -30,12 +30,20 @@ public interface CommunicationsInterface
 	static final long versionID = 0L;
 	
 	/**
+	 * Prepare next superstep.
+	 * In particular, move transient inMessages
+	 * to the inMessages used for next superstep.
+	 * 
+	 */
+	void prepareSuperstep();
+  
+	/**
 	 * Sends a message to destination vertex.
 	 * 
 	 * @param destVertex
 	 * @param msg
 	 */
-  void sendMessage(I destVertex, M msg);
+	void sendMessage(I destVertex, M msg);
   
   /**
    * Adds incoming message.
@@ -65,6 +73,19 @@ public interface CommunicationsInterface
   void flush()
       throws IOException;
   
+  /**
+   * Closes all connections.
+   *
+   * @throws IOException
+   */
+  void closeConnections()
+      throws IOException;
+
+  /**
+   * Shuts down.
+   */
+  void close();
+
   /**
    * @return A message iterator for the Worker's received message queue,
    * @throws IOException

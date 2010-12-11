@@ -20,38 +20,76 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RPC.Server;
+import org.apache.hadoop.security.UserGroupInformation;
+
+//needed for secure hadoop
+//import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION;
+//import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION;
 
 public class RPCCommunications<I extends Writable, M extends Writable>
                    implements CommunicationsInterface<I, M> {
 	
-	public static final Logger LOG = Logger.getLogger(RPCCommunications.class);
+  /** Class logger */
+  public static final Logger LOG = Logger.getLogger(RPCCommunications.class);
 
+  /** Synchronization object */
   private Object waitingInMain = new Object();
 	
+  /** Local hostname */
   private String localHostname;
+  /** Name of RPC server, == myAddress.toString() */
   protected String myName;
+  /** Name of RPC server, == myAddress.toString() */
   protected Server server;
+  /** Centralized service, needed to get partitions */
   protected CentralizedService<I> service;
+  /** Hadoop configuration */
   protected Configuration conf;
   
-  // TODO add support for mutating messages
+  /** Address of RPC server */
   private InetSocketAddress myAddress;
+  /** Set of threads connecting to rsmote RPC servers */
   private Set<PeerThread> peerThreads = new HashSet<PeerThread>();
+  /** Map of outbound messages, mapping from remote server to
+    * destination vertex index to list of messages */
   private Map<InetSocketAddress, HashMap<I, MsgArrayList<M>>> outMessages
                     = new HashMap<InetSocketAddress, HashMap<I, MsgArrayList<M>>>();
+  /** Map of incoming messages, mapping from vertex index to list of messages */
   private Map<I, ArrayList<M>> inMessages
                     = new HashMap<I, ArrayList<M>>();
+  /** Map of inbound messages, mapping from vertex index to list of messages.
+    * Transferred to inMessages at beginning of a superstep */
+  private Map<I, ArrayList<M>> transientInMessages
+                    = new HashMap<I, ArrayList<M>>();
+  /** Place holder for an empty message list.
+    * Used for vertices with no inbound messages. */
   private ArrayList<M> emptyMsgList = new ArrayList<M>();
+  /** Cached map of partition to remote socket address */
   private Map<Partition<I>, InetSocketAddress> partitionMap
                     = new HashMap<Partition<I>, InetSocketAddress>();
   
-  class PeerThread extends Thread {
+  // TODO add support for mutating messages
+
+  /** 
+    * Class describing the RPC client thread for every remote RPC server.
+    *
+    */ 
+  private class PeerThread extends Thread {
+    /** Map of outbound messages going to a particular remote server,
+      * mapping from vertex index to list of messages */
   	Map<I, MsgArrayList<M>> outMessagesPerPeer;
+    /** Client interface: RPC proxy for remote server, this class for local */
   	CommunicationsInterface<I, M> peer;
+    /** Maximum size of cached message list, before sending it out */
+    // TODO: add support
   	int maxSize;
+    /** Boolean, set to false when local client, trueotherwise */
     private boolean isProxy;
+    /** Boolean, set to true when all messages should be flushed */
     private boolean flush = false;
+    /** Boolean, set to true when client should terminate */
     private boolean notDone = true;
+    /** Synchronization object */
     private Object waitingInPeer = new Object();
   	
     PeerThread(Map<I, MsgArrayList<M>> m,
@@ -120,28 +158,32 @@ public class RPCCommunications<I extends Writable, M extends Writable>
                			  // TODO: apply combiner
                			  MsgArrayList<M> msgList = e.getValue();
                			  synchronized(msgList) {
-                        peer.put(e.getKey(), msgList);
-                        for (M msg : msgList) {
-               				    LOG.debug(peer.getName() + " putting " + 
-               							        msg + " to " + e.getKey());
-               				  }
-               				  msgList.clear();
+               			      if (msgList.size() > 1) {
+               			          peer.put(e.getKey(), msgList);
+               			      } else {
+               			          for (M msg : msgList) {
+               			              LOG.debug(peer.getName() + " putting " + 
+               			                        msg + " to " + e.getKey());
+               			              peer.put(e.getKey(), msg);
+               			          }
+               			      }
+               			      msgList.clear();
                			  }
-               		  }
+                    }
                     LOG.info(peer.getName() + ": all messages flushed");
                     synchronized (waitingInMain) {
                         synchronized (waitingInPeer) {
-    			                  flush = false;
+                            flush = false;
                         }
                         waitingInMain.notify();
                     }
                 	
-    			      }
+               	}
     		    }
-            LOG.info(peer.getName() + " RPC client thread terminating");
-            if (isProxy) {
-              RPC.stopProxy(peer);
-            }
+    		    LOG.info(peer.getName() + " RPC client thread terminating");
+    		    if (isProxy) {
+    		        RPC.stopProxy(peer);
+    		    }
     	  } catch (IOException e) {
     		    LOG.error(e);  
             synchronized(waitingInMain) {
@@ -159,10 +201,18 @@ public class RPCCommunications<I extends Writable, M extends Writable>
   }
   
 	
-	public RPCCommunications(Configuration conf, CentralizedService<I> service) 
+	public RPCCommunications(Configuration config, CentralizedService<I> service) 
 		throws IOException, UnknownHostException {
-		this.conf = conf;
 		this.service = service;
+		/* for secure hadoop
+		if (Server.CURRENT_VERSION >= 4) {
+		    this.conf = new Configuration(config);
+		    conf.set(HADOOP_SECURITY_AUTHENTICATION, "simple");
+		    conf.setBoolean(HADOOP_SECURITY_AUTHORIZATION, false);
+		    UserGroupInformation.setConfiguration(conf);
+		} else */ {
+		    this.conf = config;
+		}
 
 		this.localHostname = InetAddress.getLocalHost().getHostName();
 		int taskId = conf.getInt("mapred.task.partition", 0);
@@ -177,7 +227,7 @@ public class RPCCommunications<I extends Writable, M extends Writable>
 		server.start();
 
 		this.myName = myAddress.toString();
-		LOG.info("Started RPC communication server: " + myName);
+		LOG.info("RPCCommunications: Started RPC communication server: " + myName);
     
 		Set<Partition<I>> partitions = service.getPartitionSet();
 		for (Partition<I> partition : partitions) {
@@ -186,10 +236,16 @@ public class RPCCommunications<I extends Writable, M extends Writable>
 					 partition.getPort() + ", max index = " + 
 					 partition.getMaxIndex());  
 			startPeerConnectionThread(partition);
-		}	
+		}
+		/* for secure hadoop
+		if (Server.CURRENT_VERSION >= 4) {
+		    UserGroupInformation.setConfiguration(config);
+		}
+		*/
 	}		
 	
   /**
+   * Starts a client.
    * 
    * @param partition
    * @throws IOException
@@ -234,7 +290,7 @@ public class RPCCommunications<I extends Writable, M extends Writable>
 		return versionID;
 	}
 
-	public void close() throws IOException {
+	public void closeConnections() throws IOException {
     for (PeerThread pt : peerThreads) {
     	pt.close();
     }
@@ -246,47 +302,46 @@ public class RPCCommunications<I extends Writable, M extends Writable>
     	  LOG.info(e.getStackTrace());
     	}
     }
-    LOG.info("shutting down RPC server");
+    }
+
+	public void close() {
+		LOG.info("close: shutting down RPC server");
 		server.stop();
 	}
 
 	public void put(I vertex, M msg) throws IOException {
-    ArrayList<M> msgs = inMessages.get(vertex);
-    if (msgs == null) {
-      synchronized(inMessages) {
-        msgs = inMessages.get(vertex);
-        if (msgs == null) {
-          msgs = new ArrayList<M>();
-	        inMessages.put(vertex, msgs);
-        }
-      }
-		}
-    synchronized(msgs) {
-		  msgs.add(msg);
-    }
-  }
+	    ArrayList<M> msgs = null;
+	    synchronized(transientInMessages) {
+	        msgs = transientInMessages.get(vertex);
+	        if (msgs == null) {
+	            msgs = new ArrayList<M>();
+	            transientInMessages.put(vertex, msgs);
+	        }
+	    }
+	    synchronized(msgs) {
+	        msgs.add(msg);
+	    }
+	}
 
 	public void put(I vertex, MsgArrayList<M> msgList) throws IOException {
-    ArrayList<M> msgs = inMessages.get(vertex);
-    if (msgs == null) {
-      synchronized(inMessages) {
-        msgs = inMessages.get(vertex);
-        if (msgs == null) {
-          msgs = new ArrayList<M>();
-	        inMessages.put(vertex, msgs);
-        }
-      }
-		}
-    synchronized(msgs) {
-		  msgs.addAll(msgList);
-    }
-  }
+	    ArrayList<M> msgs = null;
+	    synchronized(transientInMessages) {
+	        msgs = transientInMessages.get(vertex);
+	        if (msgs == null) {
+	            msgs = new ArrayList<M>();
+	            transientInMessages.put(vertex, msgs);
+	        }
+	    }
+	    synchronized(msgs) {
+	        msgs.addAll(msgList);
+	    }
+	}
 
 	public void sendMessage(I destVertex, M msg) {
-		LOG.debug("Send bytes (" + msg.toString() + ") to " + destVertex);
+		LOG.debug("sendMessage: Send bytes (" + msg.toString() + ") to " + destVertex);
 		Partition<I> destPartition = service.getPartition(destVertex);
     if (destPartition == null) {
-		   LOG.error("No partition found for " + destVertex);
+		   LOG.error("sendMessage: No partition found for " + destVertex);
     }
     InetSocketAddress addr = partitionMap.get(destPartition);
     if (addr == null) {
@@ -295,7 +350,7 @@ public class RPCCommunications<I extends Writable, M extends Writable>
                     destPartition.getPort());
       partitionMap.put(destPartition, addr);
     }
-		LOG.debug("Send bytes (" + msg.toString() + ") to " + destVertex +
+		LOG.debug("sendMessage: Send bytes (" + msg.toString() + ") to " + destVertex +
                 " on " + destPartition.getHostname() + ":" + destPartition.getPort());
 		HashMap<I, MsgArrayList<M>> msgMap = outMessages.get(addr);
 		if (msgMap == null) { // should never happen after constructor
@@ -311,27 +366,25 @@ public class RPCCommunications<I extends Writable, M extends Writable>
 		}
 		synchronized(msgList) {
 			msgList.add(msg);
-			LOG.debug("added msg, size=" + msgList.size());
+			LOG.debug("sendMessage: added msg, size=" + msgList.size());
 
 		}
 	}
 	
 	public void flush() throws IOException {
-    synchronized(inMessages) {
-      for (ArrayList<M> msgList : inMessages.values()) {
-        msgList.clear();
-      }
-    }
-    for (PeerThread pt : peerThreads) {
-    	pt.flush();
-    }
-    while (true) {
-      synchronized (waitingInMain) {
+	    for (ArrayList<M> msgList : inMessages.values()) {
+	        msgList.clear();
+	    }
+	    for (PeerThread pt : peerThreads) {
+	        pt.flush();
+	    }
+	    while (true) {
+	    synchronized (waitingInMain) {
         for (PeerThread pt : peerThreads) {
     	    if (pt.getNotDoneState() && pt.getFlushState()) {
             try {
               waitingInMain.wait(2000);
-              LOG.debug("main waking up");
+              LOG.debug("flush: main waking up");
             } catch (InterruptedException e) {
               // continue;
             }
@@ -350,8 +403,26 @@ public class RPCCommunications<I extends Writable, M extends Writable>
           break;
         }
       }
+      }
     }
-	}
+
+    public void prepareSuperstep() {
+      synchronized(transientInMessages) {
+        for (Entry<I, ArrayList<M>> e :
+                        transientInMessages.entrySet()) {
+            ArrayList<M> msgs = null;
+            msgs = inMessages.get(e.getKey());
+            if (msgs == null) {
+                  msgs = new ArrayList<M>();
+	              inMessages.put(e.getKey(), msgs);
+            }
+		    msgs.addAll(e.getValue());
+        }
+        for (ArrayList<M> msgList : transientInMessages.values()) {
+          msgList.clear();
+        }
+      }
+    }
 
 	public Iterator<Entry<I, ArrayList<M>>> getMessageIterator()
 			throws IOException {

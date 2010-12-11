@@ -2,6 +2,7 @@ package com.yahoo.hadoop_bsp;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.ConcurrentModificationException;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -145,7 +146,7 @@ public class BspJob<V, E, M> extends Job {
 		/**
 		 * Load the vertices from the user-defined VertexReader into our 
 		 * vertexArray.  As per the VertexInputFormat, determine the partitions
-		 * based on the split.
+		 * based on the split (assumes that the vertices are sorted)
 		 * @throws IllegalAccessException 
 		 * @throws InstantiationException 
 		 * @throws InterruptedException 
@@ -173,34 +174,40 @@ public class BspJob<V, E, M> extends Job {
 			Map<I, E> destVertexIdEdgeValueMap = new TreeMap<I, E>();
 	        I vertexId = vertexReader.createVertexId();
 	        V vertexValue = vertexReader.createVertexValue();
-			I vertexIdMax = vertexReader.createVertexId();
-			while (vertexReader.next(
-			       vertexId, vertexValue, destVertexIdEdgeValueMap)) {
-				@SuppressWarnings("unchecked")
-				HadoopVertex<I, V, E, M> vertex = 
-					vertexClass.newInstance();
-				vertex.setBspMapper(this);
-				vertex.setId(vertexId);
-				vertex.setVertexValue(vertexValue);
-				for (Map.Entry<I, E> destVertexIdEdgeValue : 
-				     destVertexIdEdgeValueMap.entrySet()) {
-					vertex.addEdge(destVertexIdEdgeValue.getKey(),
-					               destVertexIdEdgeValue.getValue());
-				}
-				m_vertexList.add(vertex);
-				destVertexIdEdgeValueMap.clear();
-				@SuppressWarnings("unchecked")
-				Comparable<I> comparable =
-						(Comparable<I>) vertexId;
-				if (comparable.compareTo(vertexIdMax) > 0) {
-					vertexIdMax = vertexId;
-				}
-	      vertexId = vertexReader.createVertexId();
-	      vertexValue = vertexReader.createVertexValue();
-			}
-      vertexReader.close();
-			m_service.setPartitionMax(vertexIdMax);
-		}
+	        I vertexIdMax = vertexReader.createVertexId();
+	        while (vertexReader.next(
+	            vertexId, vertexValue, destVertexIdEdgeValueMap)) {
+                    @SuppressWarnings("unchecked")
+                    Comparable<I> comparable = (Comparable<I>) vertexId;
+
+                    HadoopVertex<I, V, E, M> vertex = null;
+                    if (m_vertexList.size() > 0) {
+                        // check last vertex in case vertices are read in RDF format
+                        vertex = m_vertexList.get(m_vertexList.size()-1);
+                    }
+                    if (vertex == null || comparable.compareTo(vertex.id()) != 0) {
+                        // new vertex
+                        vertex = vertexClass.newInstance();
+                        vertex.setBspMapper(this);
+                        vertex.setId(vertexId);
+                        vertex.setVertexValue(vertexValue);
+                        m_vertexList.add(vertex);
+                        if (comparable.compareTo(vertexIdMax) > 0) {
+                            vertexIdMax = vertexId;
+                        }
+                    }
+                    for (Map.Entry<I, E> destVertexIdEdgeValue :
+                            destVertexIdEdgeValueMap.entrySet()) {
+                        vertex.addEdge(destVertexIdEdgeValue.getKey(),
+                        destVertexIdEdgeValue.getValue());
+				    }
+	                destVertexIdEdgeValueMap.clear();
+                    vertexId = vertexReader.createVertexId();
+                    vertexValue = vertexReader.createVertexValue();
+	       }
+           vertexReader.close();
+	       m_service.setPartitionMax(vertexIdMax);
+       }
 			
 		/**
 		 * Save the vertices using the user-defined OutputFormat from our 
@@ -280,7 +287,7 @@ public class BspJob<V, E, M> extends Job {
 					m_service = new BspService<I>(
 						serverPortList, sessionMsecTimeout, m_conf);
 					LOG.info("Registering health of this process...");
-					m_service.setup();
+					m_service.setup(context);
 					LOG.info("Loading the vertices...");
 					loadVertices(context);
 				} catch (Exception e) {
@@ -328,8 +335,10 @@ public class BspJob<V, E, M> extends Job {
 			            LOG.info("Starting communication service...");
 			            m_commService = new RPCCommunications<I, M>(
 							m_conf, m_service);
+			        } else {
+			            m_commService.prepareSuperstep();
 			        }
-              context.progress();
+			        context.progress();
 			        verticesDone = 0;
 			        HadoopVertex.setSuperstep(superStep);
 			        HadoopVertex.setNumVertices(m_service.getTotalVertices());
@@ -344,7 +353,7 @@ public class BspJob<V, E, M> extends Job {
 			                ++verticesDone;
 			            }
 			        }
-              context.progress();
+			        context.progress();
 			        LOG.info("totalMem=" + Runtime.getRuntime().totalMemory() +
                              " maxMem=" + Runtime.getRuntime().maxMemory() +
                              " freeMem=" + Runtime.getRuntime().freeMemory());
@@ -380,12 +389,16 @@ public class BspJob<V, E, M> extends Job {
 			    return;
 			}
 			
-	        m_commService.close();
-	        int totalPartitions = m_service.getPartitionSet().size();
+			m_commService.closeConnections();
+			int totalPartitions = m_service.getPartitionSet().size();
 			m_service.cleanup();
 			if (m_manager != null) {
-				m_manager.offlineZooKeeperServers(totalPartitions);
+			    m_manager.offlineZooKeeperServers(totalPartitions);
 			}
+			// preferably would shut down the service only after
+			// all clients have disconnected (or the exceptions on the
+			// client side ignored).
+			m_commService.close();
 		}
 	}
 	

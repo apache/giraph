@@ -6,10 +6,14 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
 
+import org.apache.log4j.Logger;
+
 import org.apache.hadoop.io.Writable;
 
 public abstract class HadoopVertex<I extends Writable, V, E, M extends Writable>
               implements Vertex<I, V, E, M> {
+	/** Class logger */
+	private static final Logger LOG = Logger.getLogger(HadoopVertex.class);
 	private static long m_superstep = 0;
 	private static long m_numVertices = -1;
 	private BspJob.BspMapper<I, V, E, M> m_bspMapper;
@@ -21,8 +25,8 @@ public abstract class HadoopVertex<I extends Writable, V, E, M extends Writable>
 	public final void addEdge(I destVertexId, E edgeValue) {
 	    E value = m_destEdgeMap.get(destVertexId);
 	    if (value != null) {
-	        throw new RuntimeException("addEdge: Already added an edge " + 
-	                                   "value for vertex " + destVertexId);
+	        LOG.warn("addEdge: Vertex=" + m_id + ": already added an edge " + 
+	                                   "value for destination vertex " + destVertexId);
 	    }
 		m_destEdgeMap.put(destVertexId, edgeValue);
 	}

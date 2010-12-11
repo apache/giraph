@@ -1,7 +1,6 @@
 package com.yahoo.hadoop_bsp.lib;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -9,24 +8,23 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DoubleWritable;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobID;
-import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 
-import com.yahoo.hadoop_bsp.BspInputSplit;
 import com.yahoo.hadoop_bsp.VertexInputFormat;
-import com.yahoo.hadoop_bsp.VertexReader;
 
 /**
  * This VertexInputFormat is meant for reading a VIS graph,
  * which lists vertices with their edges on single lines.
  *
+ * This class is abstract as it does not specify the type
+ * of VerrexReader.
+ *
  */
-public class VISVertexInputFormat extends TextInputFormat implements 
-	VertexInputFormat<Text, DoubleWritable, Float> {
+public abstract class VISVertexInputFormat<I> extends TextInputFormat implements 
+	VertexInputFormat<I, DoubleWritable, Float> {
 
   protected long splitSize = 1;
 
@@ -69,10 +67,4 @@ public class VISVertexInputFormat extends TextInputFormat implements
       return inputSplitList;
 	}
 	
-	public VertexReader<Text, DoubleWritable, Float> createVertexReader(
-		    InputSplit split, TaskAttemptContext context) 
-		    throws IOException {
-		  return new VISVertexReader();
-	}
-
 }

@@ -277,11 +277,15 @@ public class ZooKeeperManager {
 		try {
 			String serverListFile = 
 				new String(ZOOKEEPER_SERVER_LIST_FILE_PREFIX);
+			int numServers = 0;
 			for (Map.Entry<String, Integer> hostnameTask : 
 				 hostnameTaskMap.entrySet()) {
 				serverListFile += hostnameTask.getKey() +
 					HOSTNAME_TASK_SEPARATOR + hostnameTask.getValue() + 
 					HOSTNAME_TASK_SEPARATOR;
+				if (++numServers == m_serverCount) {
+				    break;
+				}
 			}
 			Path serverListPath = new Path(m_baseDirectory, serverListFile); 
 			LOG.info("createZooKeeperServerList: Creating the final " +

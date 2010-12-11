@@ -24,12 +24,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.Watcher.Event.EventType;
+import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.ZooDefs.Ids;
 
@@ -333,6 +335,11 @@ public class BspService<I> implements
 			throw new RuntimeException(e);
 		}
 		List<InputSplit> splitArray = generateInputSplits(healthyProcs);
+		if (healthyProcs > splitArray.size()) {
+		    LOG.warn("Number of inputSplits=" + splitArray.size() +
+		             " < " + healthyProcs + "=number of healthy processes");
+		    healthyProcs = splitArray.size();
+		}
 		for (int i = 0; i < healthyProcs; ++i) {
 			try {
 				ByteArrayOutputStream byteArrayOutputStream = 
@@ -379,7 +386,7 @@ public class BspService<I> implements
 			LOG.info("masterCreatePartitions: Created partition count path " + 
 					 PARTITION_COUNT_PATH + " with count = " + healthyProcs);
 		} catch (KeeperException.NodeExistsException e) {
-			LOG.info("Node " + PARTITION_COUNT_PATH + " already exists.");	
+			LOG.info("masterCreatePartitions: Node " + PARTITION_COUNT_PATH + " already exists.");	
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
@@ -387,7 +394,7 @@ public class BspService<I> implements
 		return healthyProcs;
 	}
 	
-	public void setup() {
+	public void setup(Context context) {
 		/*
 		 * Determine the virtual id of every process.
 		 * *
@@ -460,7 +467,7 @@ public class BspService<I> implements
 		    			m_myVirtualId = virtualId;
 		    			break;
 		    		} catch (KeeperException.NodeExistsException e) {
-		    			LOG.info("Failed to reserve " + virtualId);
+		    			LOG.info("setup: Failed to reserve " + virtualId);
 		    		}
 		    	}
 		    	if (reservedNode) {
@@ -482,6 +489,7 @@ public class BspService<I> implements
 		    	Thread.sleep(
 		    		m_conf.getInt(BspJob.BSP_POLL_MSECS, 
 		    				      BspJob.DEFAULT_BSP_POLL_MSECS));
+		    	context.progress();
 			}
 		} catch (Exception e) {
 			LOG.error(e.getMessage());
@@ -621,7 +629,7 @@ public class BspService<I> implements
 							new String(m_zk.getData(barrierChildrenNode + "/" + child, false, null)));
 						verticesDone += jsonArray.getLong(0);
 						verticesTotal += jsonArray.getLong(1);
-						LOG.info("masterBarrier Got " + jsonArray.getLong(0) + 
+						LOG.info("masterBarrier: Got " + jsonArray.getLong(0) + 
 								 " of " + jsonArray.getLong(1) + 
 								 " vertices done for " + barrierChildrenNode + "/" 
 								 + child);
@@ -733,21 +741,24 @@ public class BspService<I> implements
 			LOG.info("cleanup: Couldn't create finished node '" +
 					FINISHED_PATH + "/" + m_taskPartition + "'");
 		} catch (Exception e) {
-			throw new RuntimeException(e);
+		    // cleanup phase -- just log the error
+		    LOG.error(e.getMessage());
 		}
-        m_masterThreadGiveUpLeaderLock.lock();
-        m_masterThreadGiveUpLeader = true;
-        m_masterThreadGiveUpLeaderLock.unlock();
-        m_masterChildrenChanged.signal();
-	    try {
-	        m_masterThread.join();
-        } catch (InterruptedException e) {
-            throw new RuntimeException("Master thread couldn't join");
-        }
+		m_masterThreadGiveUpLeaderLock.lock();
+		m_masterThreadGiveUpLeader = true;
+		m_masterThreadGiveUpLeaderLock.unlock();
+		m_masterChildrenChanged.signal();
 		try {
-			m_zk.close();
+		    m_masterThread.join();
 		} catch (InterruptedException e) {
-			throw new RuntimeException("Zookeeper failed to close");
+		    // cleanup phase -- just log the error
+		    LOG.error("cleanup: Master thread couldn't join");
+		}
+		try {
+		    m_zk.close();
+		} catch (InterruptedException e) {
+		    // cleanup phase -- just log the error
+		    LOG.error("cleanup: Zookeeper failed to close");
 		}
 	}
 	
@@ -770,7 +781,9 @@ public class BspService<I> implements
 						 childrenList.size() + " nodes.");
 			} 
 			catch (Exception e) {
-				throw new RuntimeException(e);
+			    // we are in the cleanup phase -- just log the error
+			    LOG.error(e.getMessage());
+			    return;
 			}
 
 			m_finishedChildrenChanged.waitForever();
@@ -794,8 +807,16 @@ public class BspService<I> implements
 		LOG.info("process: Got a new event, path = " + event.getPath() + 
 				 ", type = " + event.getType() + ", state = " + 
 				 event.getState());
-		/* Nothing to do */
+		/* Nothing to do unless it is a disconnet */
 		if (event.getPath() == null) {
+		    if (event.getType() == EventType.None &&
+		            event.getState() == KeeperState.Disconnected) {
+		        m_partitionCountSet.signal();
+			    m_barrierDone.signal();
+		        m_barrierChildrenChanged.signal();
+		        m_finishedChildrenChanged.signal();
+		        m_masterChildrenChanged.signal();
+		    }
 			return;
 		}
 		
@@ -809,7 +830,7 @@ public class BspService<I> implements
 					    new String(m_zk.getData(event.getPath(), true, null)));					
 				}
 			} catch (KeeperException.NoNodeException e) {
-				LOG.error(JOB_STATE_PATH + " was unusually removed.");
+				LOG.error("process: " + JOB_STATE_PATH + " was unusually removed.");
 			} catch (Exception e) {
 				// Shouldn't ever happen
 				m_currentState = State.FAILED;
@@ -836,7 +857,7 @@ public class BspService<I> implements
            m_masterChildrenChanged.signal();
        }
 		else {
-			LOG.error("process; Unknown event");
+			LOG.error("process: Unknown event");
 		}
 	}
 
@@ -855,7 +876,7 @@ public class BspService<I> implements
 			         " to " + reservedPath + ", maxIndex=" + max);
 			m_zk.setData(reservedPath, hostnamePort.toString().getBytes("UTF-8"), -1);
 		} catch (Exception e) {
-			LOG.error("setPartition: Failed to set the partition of node " + 
+			LOG.error("setPartitionMax: Failed to set the partition of node " + 
 					  reservedPath + " to " + hostnamePort.toString());
 		}
 	}
@@ -890,7 +911,7 @@ public class BspService<I> implements
 						new Partition<I>(jsonArray.getString(0), 
 										 jsonArray.getInt(1), 
 										 index));
-          LOG.info("Partition split point: " + index);
+          LOG.info("getPartitionSet: Partition split point: " + index);
 				}
 			} catch (Exception e) {
 				throw new RuntimeException(e);
@@ -903,7 +924,13 @@ public class BspService<I> implements
 		if (m_partitionSet == null) {
 			getPartitionSet();
 		}
-    comparePartition.setMaxIndex(index);
-		return m_partitionSet.ceiling(comparePartition);
+		comparePartition.setMaxIndex(index);
+		Partition<I> result = m_partitionSet.ceiling(comparePartition);
+		if (result == null) {
+		    LOG.warn("getPartition: no partition for destination vertex " + index +
+		             " -- returning last partition");
+		    result = m_partitionSet.last();
+		}
+		return result;
 	}
 }
