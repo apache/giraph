@@ -25,6 +25,6 @@ public interface VertexWriter<I, V, E> {
      * @param context the context of the task
 	 * @throws IOException
 	 */ 
-	void close(TaskAttemptContext context
-              ) throws IOException, InterruptedException;
+	void close(TaskAttemptContext context) 
+	    throws IOException, InterruptedException;
 }

@@ -39,7 +39,7 @@ public class VISBspMainTest {
 	 * VIS vertex
 	 * 
 	 */
-	public static class VISVertex<I extends Writable> extends 
+	public static class VISVertex<I extends WritableComparable> extends 
             HadoopVertex<I, DoubleWritable, Float, DoubleWritable> {
       public void compute(Iterator<DoubleWritable> msgIterator) {
           if (getSuperstep() >= 1) {

@@ -1,12 +1,12 @@
 package com.yahoo.hadoop_bsp;
 
 import java.io.IOException;
-import java.util.Map;
 
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
-public interface VertexReader<I, V, E> {
+public interface VertexReader<I extends WritableComparable, V, E> {
 	/**
 	 * Use the input split and context to setup reading the vertices.
 	 * Guaranteed to be called prior to any other function.
@@ -22,13 +22,10 @@ public interface VertexReader<I, V, E> {
 	/** 
 	 * Reads the next vertex and associated data
 	 *
-	 * @param vertexId vertex id that is read into
-	 * @param vertexValue vertex value that is read into
-	 * @param destVertexIdEdgeValueMap destination vertex id - edge value pairs
+	 * @param vertex set the properties of this vertex
 	 * @return true iff a vertex and associated data was read, false if at EOF
 	 */      
-	boolean next(I vertexId, V vertexValue, Map<I, E> destVertexIdEdgeValueMap) 
-		throws IOException;
+	boolean next(MutableVertex<I, V, E, ?> vertex) throws IOException;
 	  
 	/**
 	 * Creates a new vertex id

@@ -1,7 +1,6 @@
 package com.yahoo.hadoop_bsp.examples;
 
 import java.io.IOException;
-import java.util.Map;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IntWritable;
@@ -12,6 +11,7 @@ import org.apache.log4j.Logger;
 
 import com.yahoo.hadoop_bsp.BspInputSplit;
 import com.yahoo.hadoop_bsp.VertexReader;
+import com.yahoo.hadoop_bsp.MutableVertex;
 import com.yahoo.hadoop_bsp.BspJob.BspMapper;
 
 /**
@@ -47,23 +47,24 @@ public class TestVertexReader implements
 			m_inputSplit = (BspInputSplit) inputSplit;
 	}
 	
-	public boolean next(LongWritable vertexId, 
-						IntWritable vertexValue,
-						Map<LongWritable, Float> destVertexIdEdgeValueMap) 
+	public boolean next(
+	    MutableVertex<LongWritable, IntWritable, Float, ?> vertex) 
 	    throws IOException {
 		if (m_totalRecords <= m_recordsRead) {
 			return false;
 		}
-		vertexId.set(
-			(m_inputSplit.getNumSplits() * m_totalRecords) + m_recordsRead);
-		vertexValue.set((int) (vertexId.get() * 10));
-		destVertexIdEdgeValueMap.put(
-		    new LongWritable((vertexId.get() + 1) % m_totalRecords), (float) vertexId.get() * 100);
+		vertex.setVertexId(new LongWritable(
+		    (m_inputSplit.getNumSplits() * m_totalRecords) + m_recordsRead));
+		vertex.setVertexValue(
+		    new IntWritable(((int) (vertex.getVertexId().get() * 10))));
+		vertex.addEdge(
+		    new LongWritable((vertex.getVertexId().get() + 1) % m_totalRecords), 
+		    new Float((float) vertex.getVertexId().get() * 100));
 		++m_recordsRead;
-		LOG.info("next: Return vertexId=" + vertexId + ", vertexValue=" + 
-				 vertexValue + ", destVertexIdEdgeValueSet=" + 
-				 destVertexIdEdgeValueMap.toString());
-		
+		LOG.info("next: Return vertexId=" + vertex.getVertexId().get() + 
+		    ", vertexValue=" + vertex.getVertexValue() + ", destinationId=" +
+		    (vertex.getVertexId().get() + 1) % m_totalRecords + 
+		    ", edgeValue=" + ((float) vertex.getVertexId().get() * 100));
 		return true;
 	}
 

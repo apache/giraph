@@ -9,34 +9,43 @@ import java.util.TreeMap;
 import org.apache.log4j.Logger;
 
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 
-public abstract class HadoopVertex<I extends Writable, V, E, M extends Writable>
-              implements Vertex<I, V, E, M> {
+public abstract class 
+    HadoopVertex<I extends WritableComparable, V, E, M extends Writable>
+        implements MutableVertex<I, V, E, M> {
 	/** Class logger */
 	private static final Logger LOG = Logger.getLogger(HadoopVertex.class);
+	/** Class-wide superstep */
 	private static long m_superstep = 0;
+	/** Class-wide number of vertices */
 	private static long m_numVertices = -1;
+	/** BSP Mapper for this Vertex */
 	private BspJob.BspMapper<I, V, E, M> m_bspMapper;
-	private I m_id;
+	/** Vertex id */
+	private I m_vertexId;
+	/** Vertex value */
 	private V m_vertexValue;
+	/** Map of destination vertices and their edge values */
 	private Map<I, E> m_destEdgeMap = new TreeMap<I, E>();
+	/** If true, do not do anymore computation on this vertex. */
 	private boolean m_halt = false;
 	
 	public final void addEdge(I destVertexId, E edgeValue) {
 	    E value = m_destEdgeMap.get(destVertexId);
 	    if (value != null) {
-	        LOG.warn("addEdge: Vertex=" + m_id + ": already added an edge " + 
-	                                   "value for destination vertex " + destVertexId);
+	        LOG.warn("addEdge: Vertex=" + m_vertexId + ": already added an edge " + 
+	                 "value for destination vertex " + destVertexId);
 	    }
 		m_destEdgeMap.put(destVertexId, edgeValue);
 	}
 	
-	public final void setId(I id) {
-		m_id = id;
+	public final void setVertexId(I vertexId) {
+		m_vertexId = vertexId;
 	}
 	
-	public final I id() {
-		return m_id;
+	public final I getVertexId() {
+		return m_vertexId;
 	}
 	
 	public final void setBspMapper(BspJob.BspMapper<I, V, E, M> bspMapper) {
@@ -65,9 +74,9 @@ public abstract class HadoopVertex<I extends Writable, V, E, M extends Writable>
 	    return m_numVertices;
 	}
 
-  public long getNumEdges() {
-      return m_destEdgeMap.size();
-  }
+    public long getNumEdges() {
+        return m_destEdgeMap.size();
+    }
 	
 	/**
 	 * Implements the {@link OutEdgeIterator} for {@link HadoopVertex}
@@ -82,7 +91,7 @@ public abstract class HadoopVertex<I extends Writable, V, E, M extends Writable>
 	    private final Map<I, E> m_destEdgeMap;
 	    /** Set of map entries*/
 	    private Set<Map.Entry<I, E>> m_destEdgeMapSet;
-	    /** */
+	    /** Map of the destination vertices and their edge values */
 	    private Iterator<Map.Entry<I, E>> m_destEdgeMapSetIt;
 	    
 	    public HadoopVertexOutEdgeIterator(Map<I, E> destEdgeMap) {
@@ -116,11 +125,11 @@ public abstract class HadoopVertex<I extends Writable, V, E, M extends Writable>
        m_bspMapper.sendMsg(id, msg);
 	}
 	
-  public final void sentMsgToAllEdges(M msg) {
+    public final void sentMsgToAllEdges(M msg) {
       for (Entry<I, E> destEdge : m_destEdgeMap.entrySet()) {
           sendMsg(destEdge.getKey(), msg);
       }
-  }
+    }
 	
 	public final void voteToHalt() {
 		m_halt = true;

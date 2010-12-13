@@ -25,7 +25,8 @@ public class TestPageRankVertex extends
             
             if (getSuperstep() < 30) {
                 long edges = getOutEdgeIterator().size();
-                sentMsgToAllEdges(new DoubleWritable(getVertexValue().get() / edges));
+                sentMsgToAllEdges(
+                    new DoubleWritable(getVertexValue().get() / edges));
             } else {
                 voteToHalt();  
             }

@@ -2,8 +2,10 @@ package com.yahoo.hadoop_bsp;
 
 import java.util.Iterator;
 
+import org.apache.hadoop.io.WritableComparable;
+
 /**
- * Basic interface for writing a BSP application.
+ * Basic interface for writing a BSP application for computation.
  * 
  * @author aching
  *
@@ -12,7 +14,7 @@ import java.util.Iterator;
  * @param <E> edge data
  * @param <M> message data
  */
-public interface Vertex<I, V, E, M> {
+public interface Vertex<I extends WritableComparable, V, E, M> {
 	/**
 	 * Must be defined by user to do computation on a single Vertex.
 	 */
@@ -27,7 +29,7 @@ public interface Vertex<I, V, E, M> {
 	/**
 	 * Get the vertex id
 	 */
-	public I id();
+	public I getVertexId();
 	
 	/**
 	 * Get the vertex data

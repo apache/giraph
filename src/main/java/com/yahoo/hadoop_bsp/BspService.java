@@ -42,7 +42,7 @@ import org.apache.zookeeper.ZooDefs.Ids;
  */
 public class BspService<I> implements 
 	CentralizedService<I>, CentralizedServiceMaster<I>, Watcher {
-	/** Private Zookeeper instance that implements the service */
+	/** Private ZooKeeper instance that implements the service */
 	private ZooKeeperExt m_zk = null;
 	/** My virtual identity in the group */
 	private String m_myVirtualId = null;
@@ -56,12 +56,14 @@ public class BspService<I> implements
 	private BspEvent m_barrierChildrenChanged = new PredicateLock();
 	/** Finished children synchronization */
 	private BspEvent m_finishedChildrenChanged= new PredicateLock();
-  /** Master children synchronization */
-  private BspEvent m_masterChildrenChanged= new PredicateLock();
+    /** Master children synchronization */
+    private BspEvent m_masterChildrenChanged= new PredicateLock();
 	/** Partition count */
 	private Integer m_partitionCount;
 	/** Configuration of the job*/
 	private Configuration m_conf;
+	/** Job context (mainly for progress) */
+    private Context m_context;
 	/** The partition map */
 	private NavigableSet<Partition<I>> m_partitionSet = null;
 	/** Cached superstep */
@@ -76,23 +78,23 @@ public class BspService<I> implements
 	String m_myHealthZnode;
 	/** Master thread */
 	Thread m_masterThread;
-  /** Partition to compare with */
-  Partition<I> comparePartition = new Partition<I>("", -1, null);
+    /** Partition to compare with */
+    Partition<I> comparePartition = new Partition<I>("", -1, null);
 	/** Master should stop trying to become the leader? */
 	boolean m_masterThreadGiveUpLeader = false;
 	/** Lock to protect m_masterThreadGiveUpLeader */
-  Lock m_masterThreadGiveUpLeaderLock = new ReentrantLock();
+    Lock m_masterThreadGiveUpLeaderLock = new ReentrantLock();
 	/** Class logger */
-  private static final Logger LOG = Logger.getLogger(BspService.class);
-  /** State of the service? */
-  public enum State {
+    private static final Logger LOG = Logger.getLogger(BspService.class);
+    /** State of the service? */
+    public enum State {
     	INIT, 
     	RUNNING, 
     	FAILED, 
     	FINISHED
-  }
-  /** Current state */
-  private State m_currentState = State.INIT;
+    }
+    /** Current state */
+    private State m_currentState = State.INIT;
         
 	public static final String BASE_DIR = "/_hadoopBsp";
 	public static final String BARRIER_DIR = "/_barrier";
@@ -119,11 +121,12 @@ public class BspService<I> implements
 	private final String FINISHED_PATH;
 	
 	public BspService(String serverPortList, int sessionMsecTimeout, 
-		Configuration conf) throws IOException, KeeperException, InterruptedException, 
+		Context context) throws IOException, KeeperException, InterruptedException, 
 		JSONException {
-		m_conf = conf;
-		m_jobId = conf.get("mapred.job.id", "Unknown Job");
-		m_taskPartition = conf.getInt("mapred.task.partition", -1);
+	    m_context = context;
+		m_conf = context.getConfiguration();
+		m_jobId = m_conf.get("mapred.job.id", "Unknown Job");
+		m_taskPartition = m_conf.getInt("mapred.task.partition", -1);
 
 		BASE_PATH = BASE_DIR + "/" + m_jobId;
 		BARRIER_PATH = BASE_PATH + BARRIER_DIR;
@@ -144,7 +147,7 @@ public class BspService<I> implements
 
 	/** 
 	 * Intended to check the health of the node.  For instance, can it ssh, 
-	 * dmesg, etc. 
+	 * dmesg, etc. For now, does nothing.
 	 */
 	public boolean isHealthy() {
 		return true;
@@ -152,7 +155,6 @@ public class BspService<I> implements
 	
 	/**
 	 * Calculate the input split and write it to zookeeper.
-	 * @param context
 	 * @param numSplits
 	 * @throws InstantiationException
 	 * @throws IllegalAccessException
@@ -394,7 +396,7 @@ public class BspService<I> implements
 		return healthyProcs;
 	}
 	
-	public void setup(Context context) {
+	public void setup() {
 		/*
 		 * Determine the virtual id of every process.
 		 * *
@@ -489,7 +491,7 @@ public class BspService<I> implements
 		    	Thread.sleep(
 		    		m_conf.getInt(BspJob.BSP_POLL_MSECS, 
 		    				      BspJob.DEFAULT_BSP_POLL_MSECS));
-		    	context.progress();
+		    	m_context.progress();
 			}
 		} catch (Exception e) {
 			LOG.error(e.getMessage());

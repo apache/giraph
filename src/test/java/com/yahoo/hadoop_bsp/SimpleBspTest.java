@@ -193,33 +193,35 @@ public class SimpleBspTest extends TestCase implements Watcher {
         /* GeneratedInputSplit will generate 5 vertices */
         conf.setLong(TestVertexReader.READER_VERTICES, 5);
         FileSystem hdfs = FileSystem.get(conf);
-    	  conf.setClass("bsp.vertexClass", 
+    	conf.setClass("bsp.vertexClass", 
     				  TestSuperstepVertex.class, 
     				  HadoopVertex.class);
-    	  conf.setClass("bsp.msgValueClass", 
+    	conf.setClass("bsp.msgValueClass", 
     				  IntWritable.class, 
     				  Writable.class);
-    	  conf.setClass("bsp.inputSplitClass", 
+    	conf.setClass("bsp.inputSplitClass", 
     				  BspInputSplit.class, 
     				  InputSplit.class);
-    	  conf.setClass("bsp.vertexInputFormatClass", 
+    	conf.setClass("bsp.vertexInputFormatClass", 
     				  TestVertexInputFormat.class,
     				  VertexInputFormat.class);
         conf.setClass("bsp.vertexWriterClass",
-              TestVertexWriter.class,
-              VertexWriter.class);
+                      TestVertexWriter.class,
+                      VertexWriter.class);
         conf.setClass("bsp.indexClass",
-              LongWritable.class,
-              WritableComparable.class);
-    	  BspJob<Integer, String, String> bspJob = 
+                      LongWritable.class,
+                      WritableComparable.class);
+    	BspJob<Integer, String, String> bspJob = 
     		new BspJob<Integer, String, String>(conf, "testBspSuperStep");
        	Path outputPath = new Path("/tmp/testBspSuperStepOutput");    	
-    	  hdfs.delete(outputPath, true);
-    	  FileOutputFormat.setOutputPath(bspJob, outputPath);
-    	  assertTrue(bspJob.run()); 
-        FileStatus [] fileStatusArr = hdfs.listStatus(outputPath);
-        assertTrue(fileStatusArr.length == 1);
-        assertTrue(fileStatusArr[0].getLen() == 24);
+    	hdfs.delete(outputPath, true);
+    	FileOutputFormat.setOutputPath(bspJob, outputPath);
+    	assertTrue(bspJob.run());
+    	if (m_jobTracker == null) {
+    	    FileStatus [] fileStatusArr = hdfs.listStatus(outputPath);
+    	    assertTrue(fileStatusArr.length == 1);
+    	    assertTrue(fileStatusArr[0].getLen() == 24);
+    	}
     }
     
     /**
@@ -319,9 +321,9 @@ public class SimpleBspTest extends TestCase implements Watcher {
         conf.setClass("bsp.vertexClass", 
                       TestPageRankVertex.class, 
                       HadoopVertex.class);
-    	  conf.setClass("bsp.msgValueClass", 
-    				          DoubleWritable.class, 
-    				          Writable.class);
+        conf.setClass("bsp.msgValueClass", 
+                      DoubleWritable.class, 
+                      Writable.class);
         conf.setClass("bsp.inputSplitClass", 
                       BspInputSplit.class, 
                       InputSplit.class);

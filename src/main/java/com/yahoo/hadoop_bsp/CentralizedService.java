@@ -2,7 +2,6 @@ package com.yahoo.hadoop_bsp;
 
 import java.util.SortedSet;
 import org.apache.hadoop.mapreduce.InputSplit;
-import org.apache.hadoop.mapreduce.Mapper.Context;
 
 /**
  * All computational tasks should have access to this centralized service to 
@@ -14,7 +13,7 @@ public interface CentralizedService<I> {
 	/**
 	 * Guaranteed to be called prior to any other method.
 	 */
-	void setup(Context context);
+	void setup();
 	
 	/**
 	 * Synchronizes all clients.  All clients should eventually call this, 

@@ -2,14 +2,12 @@ package com.yahoo.hadoop_bsp;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.ConcurrentModificationException;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 import java.util.Iterator;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -123,7 +121,7 @@ public class BspJob<V, E, M> extends Job {
 	 * @param <V>
 	 * @param <V>
 	 */
-	public static class BspMapper<I extends Writable, V, E, M extends Writable>
+	public static class BspMapper<I extends WritableComparable, V, E, M extends Writable>
 		extends Mapper<Object, Object, Object, Object> {
 		/** Logger */
 		private static final Logger LOG = Logger.getLogger(BspMapper.class);
@@ -152,7 +150,7 @@ public class BspJob<V, E, M> extends Job {
 		 * @throws InterruptedException 
 		 * @throws IOException 
 		 */
-		public void loadVertices(Context context) 
+        public void loadVertices(Context context) 
 		    throws InstantiationException, IllegalAccessException, IOException {			
 			InputSplit myInputSplit = m_service.getInputSplit();
 			@SuppressWarnings("unchecked")
@@ -167,43 +165,25 @@ public class BspJob<V, E, M> extends Job {
 								HadoopVertex.class);
 			VertexInputFormat<I, V, E> vertexInputFormat = 
 				vertexInputFormatClass.newInstance();
-			VertexReader<I, V, E> vertexReader = 
+            VertexReader<I, V, E> vertexReader = 
 				vertexInputFormat.createVertexReader(myInputSplit, context);
 			vertexReader.initialize(myInputSplit, context);
-
-			Map<I, E> destVertexIdEdgeValueMap = new TreeMap<I, E>();
-	        I vertexId = vertexReader.createVertexId();
-	        V vertexValue = vertexReader.createVertexValue();
-	        I vertexIdMax = vertexReader.createVertexId();
-	        while (vertexReader.next(
-	            vertexId, vertexValue, destVertexIdEdgeValueMap)) {
-                    @SuppressWarnings("unchecked")
-                    Comparable<I> comparable = (Comparable<I>) vertexId;
-
-                    HadoopVertex<I, V, E, M> vertex = null;
-                    if (m_vertexList.size() > 0) {
-                        // check last vertex in case vertices are read in RDF format
-                        vertex = m_vertexList.get(m_vertexList.size()-1);
-                    }
-                    if (vertex == null || comparable.compareTo(vertex.id()) != 0) {
-                        // new vertex
-                        vertex = vertexClass.newInstance();
-                        vertex.setBspMapper(this);
-                        vertex.setId(vertexId);
-                        vertex.setVertexValue(vertexValue);
-                        m_vertexList.add(vertex);
-                        if (comparable.compareTo(vertexIdMax) > 0) {
-                            vertexIdMax = vertexId;
-                        }
-                    }
-                    for (Map.Entry<I, E> destVertexIdEdgeValue :
-                            destVertexIdEdgeValueMap.entrySet()) {
-                        vertex.addEdge(destVertexIdEdgeValue.getKey(),
-                        destVertexIdEdgeValue.getValue());
-				    }
-	                destVertexIdEdgeValueMap.clear();
-                    vertexId = vertexReader.createVertexId();
-                    vertexValue = vertexReader.createVertexValue();
+			I vertexIdMax = null;
+	        @SuppressWarnings("unchecked")
+            HadoopVertex<I, V, E, M> vertex = vertexClass.newInstance();
+	        while (vertexReader.next(vertex)) {
+	            vertex.setBspMapper(this);
+	            m_vertexList.add(vertex);
+	            if (vertexIdMax == null) {
+	                vertexIdMax = vertex.getVertexId();
+	            }
+	            else if (vertex.getVertexId().compareTo(vertexIdMax) > 0) {
+	                vertexIdMax = vertex.getVertexId();
+	            }
+	            @SuppressWarnings("unchecked")
+                HadoopVertex<I, V, E, M> newInstance =
+                        vertexClass.newInstance();
+                vertex = newInstance;
 	       }
            vertexReader.close();
 	       m_service.setPartitionMax(vertexIdMax);
@@ -234,10 +214,11 @@ public class BspJob<V, E, M> extends Job {
 							            VertexWriter.class);
 			VertexWriter<I, V, E> vertexWriter = 
 				  vertexWriterClass.newInstance();
-      for (HadoopVertex<I, V, E, M> vertex : m_vertexList) {
-        vertexWriter.write(context, vertex.id(),
-                           vertex.getVertexValue(),
-                           vertex.getOutEdgeIterator());
+			for (HadoopVertex<I, V, E, M> vertex : m_vertexList) {
+			    vertexWriter.write(context, 
+			                       vertex.getVertexId(),
+                                   vertex.getVertexValue(),
+                                   vertex.getOutEdgeIterator());
       }
       vertexWriter.close(context);
     }
@@ -285,9 +266,9 @@ public class BspJob<V, E, M> extends Job {
 				try {
 					LOG.info("Starting up BspService...");
 					m_service = new BspService<I>(
-						serverPortList, sessionMsecTimeout, m_conf);
+						serverPortList, sessionMsecTimeout, context);
 					LOG.info("Registering health of this process...");
-					m_service.setup(context);
+					m_service.setup();
 					LOG.info("Loading the vertices...");
 					loadVertices(context);
 				} catch (Exception e) {
@@ -345,7 +326,8 @@ public class BspJob<V, E, M> extends Job {
 			        for (HadoopVertex<I, V, E, M> vertex : m_vertexList) {
 			            if (!vertex.isHalted()) { 
 			                Iterator<M> vertexMsgIt = 
-			                    m_commService.getVertexMessageIterator(vertex.id());
+			                    m_commService.getVertexMessageIterator(
+			                        vertex.getVertexId());
                             context.progress();
 			                vertex.compute(vertexMsgIt);
 			            }

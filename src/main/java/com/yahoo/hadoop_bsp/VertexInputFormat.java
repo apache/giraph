@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
@@ -19,7 +20,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  * @param <V>
  * @param <E>
  */
-public interface VertexInputFormat<I, V, E> {
+public interface VertexInputFormat<I extends WritableComparable, V, E> {
 	/** 
 	 * Logically split the vertices for a BSP application.  
 	 * 

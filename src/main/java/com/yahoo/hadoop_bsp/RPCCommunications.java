@@ -20,7 +20,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RPC.Server;
-import org.apache.hadoop.security.UserGroupInformation;
+//import org.apache.hadoop.security.UserGroupInformation;
 
 //needed for secure hadoop
 //import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION;
@@ -82,7 +82,7 @@ public class RPCCommunications<I extends Writable, M extends Writable>
   	CommunicationsInterface<I, M> peer;
     /** Maximum size of cached message list, before sending it out */
     // TODO: add support
-  	int maxSize;
+  	//int maxSize;
     /** Boolean, set to false when local client, trueotherwise */
     private boolean isProxy;
     /** Boolean, set to true when all messages should be flushed */
@@ -98,7 +98,7 @@ public class RPCCommunications<I extends Writable, M extends Writable>
                boolean isProxy) {
       this.outMessagesPerPeer = m;
       this.peer = i;
-      this.maxSize = maxSize;
+      //this.maxSize = maxSize;
       this.isProxy = isProxy;
     }
     

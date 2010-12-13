@@ -8,6 +8,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.JobID;
@@ -23,8 +24,9 @@ import com.yahoo.hadoop_bsp.VertexInputFormat;
  * of VerrexReader.
  *
  */
-public abstract class VISVertexInputFormat<I> extends TextInputFormat implements 
-	VertexInputFormat<I, DoubleWritable, Float> {
+public abstract class VISVertexInputFormat<I extends WritableComparable> 
+    extends TextInputFormat 
+	implements VertexInputFormat<I, DoubleWritable, Float> {
 
   protected long splitSize = 1;
 

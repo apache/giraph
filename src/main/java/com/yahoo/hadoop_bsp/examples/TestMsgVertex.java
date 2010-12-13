@@ -15,12 +15,12 @@ import com.yahoo.hadoop_bsp.HadoopVertex;
 public class TestMsgVertex extends 
     HadoopVertex<LongWritable, IntWritable, Float, IntWritable> {
     public void compute(Iterator<IntWritable> msgIterator) {
-        if (id().equals(new LongWritable(2))) {
+        if (getVertexId().equals(new LongWritable(2))) {
             sendMsg(new LongWritable(1), new IntWritable(101));
             sendMsg(new LongWritable(1), new IntWritable(102));
             sendMsg(new LongWritable(1), new IntWritable(103));
         }
-        if (!id().equals(new LongWritable(1))) {
+        if (!getVertexId().equals(new LongWritable(1))) {
             voteToHalt();
         }
         else {

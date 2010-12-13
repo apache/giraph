@@ -1,7 +1,6 @@
 package com.yahoo.hadoop_bsp.lib;
 
 import java.io.IOException;
-import java.util.Map;
 
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.IntWritable;
@@ -9,6 +8,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.lib.input.LineRecordReader;
 import org.apache.log4j.Logger;
 
+import com.yahoo.hadoop_bsp.MutableVertex;
 import com.yahoo.hadoop_bsp.VertexReader;
 
 /**
@@ -19,38 +19,35 @@ import com.yahoo.hadoop_bsp.VertexReader;
  * @param <E>
  */
 public class VISIntVertexReader extends LineRecordReader implements 
-	VertexReader<IntWritable, DoubleWritable, Float> {
-	/** Logger */
+   VertexReader<IntWritable, DoubleWritable, Float> {
+	    /** Logger */
     private static final Logger LOG = Logger.getLogger(VISVertexReader.class);
     /** Records read so far */
 	long m_recordsRead = 0;
 	
-	public boolean next(IntWritable vertexId, 
-						DoubleWritable vertexValue,
-						Map<IntWritable, Float> destVertexIdEdgeValueMap) 
+	public boolean next(
+	    MutableVertex<IntWritable, DoubleWritable, Float, ?> vertex)  
 	    throws IOException {
-           
-      if (nextKeyValue() == false) {
-        return false;
-		  }
-      Text val = getCurrentValue();
-      String[] s = val.toString().split("\t");
-      try {
-        vertexId.set(Integer.parseInt(s[0]));
-        vertexValue.set(0.0);
-        for (int i=1; i < s.length; i++) {
-          destVertexIdEdgeValueMap.put(
-                  new IntWritable(Integer.parseInt(s[i])), 1.0f);
-        }
-      } catch (NumberFormatException e) {
-          throw new RuntimeException(e);
-      }
-		  ++m_recordsRead;
-		  LOG.debug("next: Return vertexId=" + vertexId + ", vertexValue=" + 
-				 vertexValue + ", destVertexIdEdgeValueSet=" + 
-				 destVertexIdEdgeValueMap.toString());
+	    if (nextKeyValue() == false) {
+	        return false;
+	    }
+	    Text val = getCurrentValue();
+	    String[] s = val.toString().split("\t");
+	    try {
+	        vertex.setVertexId(new IntWritable(Integer.parseInt(s[0])));
+	        vertex.setVertexValue(new DoubleWritable(0.0f));
+	        for (int i=1; i < s.length; i++) {
+	            vertex.addEdge(new IntWritable(Integer.parseInt(s[i])), 
+	                           new Float(1.0f));
+	        }
+	    } catch (NumberFormatException e) {
+	        throw new RuntimeException(e);
+	    }
+	    ++m_recordsRead;
+		      LOG.debug("next: Return vertexId=" + vertex.getVertexId() + 
+		                ", vertexValue=" + vertex.getVertexValue());
 		
-		  return true;
+	    return true;
 	}
 
 	public long getPos() throws IOException {

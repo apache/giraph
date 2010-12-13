@@ -1,7 +1,6 @@
 package com.yahoo.hadoop_bsp.lib;
 
 import java.io.IOException;
-import java.util.Map;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
@@ -10,6 +9,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.lib.input.LineRecordReader;
 import org.apache.log4j.Logger;
 
+import com.yahoo.hadoop_bsp.MutableVertex;
 import com.yahoo.hadoop_bsp.VertexReader;
 
 /**
@@ -52,23 +52,21 @@ public class VISVertexReader extends LineRecordReader implements
       return conf;
     }
 
-	public boolean next(Text vertexId, 
-						DoubleWritable vertexValue,
-						Map<Text, Float> destVertexIdEdgeValueMap) 
-	    throws IOException {
-           
+    public boolean next(
+      MutableVertex<Text, DoubleWritable, Float, ?> vertex)  
+      throws IOException {
       if (nextKeyValue() == false) {
         return false;
-		  }
-		  ++m_recordsRead;
-      if (!isRdf) {
-      Text val = getCurrentValue();
-      String[] s = val.toString().split("\t");
-      vertexId.set(s[0]);
-      vertexValue.set(0.0);
-      for (int i=1; i < s.length; i++) {
-        destVertexIdEdgeValueMap.put(new Text(s[i]), 1.0f);
       }
+	  ++m_recordsRead;
+      if (!isRdf) {
+        Text val = getCurrentValue();
+        String[] s = val.toString().split("\t");
+        vertex.setVertexId(new Text(s[0]));
+        vertex.setVertexValue(new DoubleWritable(0.0f));
+        for (int i=1; i < s.length; i++) {
+          vertex.addEdge(new Text(s[i]), new Float(1.0f));
+        }
       } else { // unfiltered and unprepared, RDF format:
                //(subject id and name, target id and name, predicate, and more
         boolean skip = true;
@@ -93,16 +91,15 @@ public class VISVertexReader extends LineRecordReader implements
             }
           }
           skip = false;
-          vertexId.set(s[0]);
-          vertexValue.set(0.0);
-          destVertexIdEdgeValueMap.put(new Text(s[2]), 1.0f); // single edge
+          vertex.setVertexId(new Text(s[0]));
+          vertex.setVertexValue(new DoubleWritable(0.0f));
+          vertex.addEdge(new Text(s[2]), new Float(1.0f)); // single edge
         }
       }
       if (m_recordsRead % 1000 == 0) {
 		  LOG.info("next: recordsRead=" + m_recordsRead + " skipped=" + m_skipped +
-                 " vertexId=" + vertexId + ", vertexValue=" + 
-				 vertexValue + ", destVertexIdEdgeValueSet=" + 
-				 destVertexIdEdgeValueMap.toString());
+                 " vertexId=" + vertex.getVertexId() + ", vertexValue=" + 
+				 vertex.getVertexValue());
       }
 		
 		  return true;
