@@ -137,11 +137,5 @@
       <artifactId>contentassembly_common</artifactId>
       <version>1.1.2</version>
     </dependency>
-    <dependency>
-      <!-- woosr (nextgen gridfaces) -->
-      <groupId>com.yahoo.gf</groupId>
-      <artifactId>nextgen</artifactId>
-      <version>1.0.0</version>
-    </dependency>
   </dependencies>
 </project>
