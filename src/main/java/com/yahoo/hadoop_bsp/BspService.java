@@ -24,8 +24,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.Mapper.Context;
+import org.apache.hadoop.mapred.JobClient;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.security.UserGroupInformation;
 
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
@@ -95,6 +100,9 @@ public class BspService<I> implements
     }
     /** Current state */
     private State m_currentState = State.INIT;
+    /** Boolean, true when disconnected from Zookeeper */
+    private boolean m_disconnected = false;
+    private boolean m_masterChildrenChangeEvent = false;
         
 	public static final String BASE_DIR = "/_hadoopBsp";
 	public static final String BARRIER_DIR = "/_barrier";
@@ -189,6 +197,9 @@ public class BspService<I> implements
 	 * @throws KeeperException 
 	 */
 	public synchronized void masterSetJobState(State state) { 
+		if (state == State.FAILED) {
+		    killJob();
+		}
 		m_currentState = state;
 		try {
 			m_zk.createExt(JOB_STATE_PATH, 
@@ -208,6 +219,21 @@ public class BspService<I> implements
 	}
 	
 	public synchronized State getJobState() {
+		if (m_currentState == State.INIT) { // add a watcher
+		    try {
+		        m_currentState = State.valueOf(
+		            new String(m_zk.getData(JOB_STATE_PATH, true, null)));
+			} catch (KeeperException.NoNodeException e) {
+				LOG.error("getJobState: " + JOB_STATE_PATH +
+				          " does not exist yet or was unusually removed.");
+			} catch (Exception e) {
+				// Shouldn't ever happen
+				m_currentState = State.FAILED;
+			}
+		}
+		if (m_currentState == State.FAILED) {
+		    throw new RuntimeException("Job failed -- exiting.");
+		}
 		return m_currentState;
 	}
 	
@@ -229,6 +255,7 @@ public class BspService<I> implements
 			if (m_zk.exists(PARTITION_COUNT_PATH, false) != null) {
 				LOG.info(PARTITION_COUNT_PATH + 
 						 " already exists, no need to create");
+				m_masterChildrenChangeEvent = false;
 				return Integer.parseInt(
 					new String(m_zk.getData(PARTITION_COUNT_PATH, false, null)));
 			}
@@ -393,10 +420,11 @@ public class BspService<I> implements
 			throw new RuntimeException(e);
 		}
 		
+		m_masterChildrenChangeEvent = false;
 		return healthyProcs;
 	}
 	
-	public void setup() {
+	public boolean setup() {
 		/*
 		 * Determine the virtual id of every process.
 		 * *
@@ -406,6 +434,7 @@ public class BspService<I> implements
 		 * 5) Everyone checks their own node to see the virtual id "suggested"
 		 *    by the master. (Future work)
 		 * 6) Try the suggested virtual id, otherwise, scan for a free one.
+		 * Returns true when jobState is FINISHED.
 		 */
 		try {
 			m_myHealthZnode =
@@ -425,7 +454,9 @@ public class BspService<I> implements
 					m_zk.getData(PARTITION_COUNT_PATH, true, null);
 			}
 			catch (KeeperException.NoNodeException e) {
-				m_partitionCountSet.waitForever();
+				if (waitForever(m_partitionCountSet)) { // done
+				    return true;
+				}
 				partitionCountByteArr = 
 					m_zk.getData(PARTITION_COUNT_PATH, true, null);
 			}
@@ -452,8 +483,7 @@ public class BspService<I> implements
 		    finalRpcPort += m_taskPartition;
 		    LOG.info("setup: Using port " + finalRpcPort);
 		    hostnamePort.put(finalRpcPort);
-		    while ((getJobState() != State.FAILED) &&
-		    	   (getJobState() != State.FINISHED)) {
+		    while ((getJobState() != State.FINISHED)) {
 		    	virtualIdList = m_zk.getChildren(VIRTUAL_ID_PATH, false);
 		    	for (String virtualId : virtualIdList) {
 		    		try {
@@ -486,13 +516,14 @@ public class BspService<I> implements
 				    	new ByteArrayInputStream(splitArray);
 					((Writable) m_myInputSplit).readFields(
 						new DataInputStream(input));
-		    		return;
+		    		return false;
 		    	}
 		    	Thread.sleep(
 		    		m_conf.getInt(BspJob.BSP_POLL_MSECS, 
 		    				      BspJob.DEFAULT_BSP_POLL_MSECS));
 		    	m_context.progress();
 			}
+			return done();
 		} catch (Exception e) {
 			LOG.error(e.getMessage());
 			throw new RuntimeException(e);
@@ -523,7 +554,9 @@ public class BspService<I> implements
 								 Long.toString(m_cachedSuperstep) + 
 								 "/" + BARRIER_NODE; 
 			if (m_zk.exists(barrierNode, true) == null) {
-				m_barrierDone.waitForever();
+				if (waitForever(m_barrierDone)) { // done
+				    return true;
+				}
 				m_barrierDone.reset();
 			}
 			JSONObject infoObject = new JSONObject(
@@ -576,7 +609,9 @@ public class BspService<I> implements
 	                return true;
 	            }
 	            LOG.info("becomeMaster: Waiting to become the master...");
-	            m_masterChildrenChanged.waitForever();
+	            if (waitForever(m_masterChildrenChanged)) { // done
+	                return false; // did not become master
+	            }
 	            m_masterChildrenChanged.reset();
 	        } catch (Exception e) {
 	            throw new RuntimeException(e);
@@ -614,6 +649,17 @@ public class BspService<I> implements
 		long verticesDone = -1;
 		long verticesTotal = -1;
 		while (true) {
+			// till we have checkpointing, lets fail the job when one child disappears
+			try {
+				childrenList = m_zk.getChildren(MASTER_PATH, true);
+				if (childrenList.size() < partitions || m_masterChildrenChangeEvent) {
+				    masterSetJobState(State.FAILED);
+				    throw new RuntimeException(
+				              "Job failed because one of the tasks failed.");
+				}
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
 			try {
 				childrenList = m_zk.getChildren(barrierChildrenNode, true);
 			} catch (Exception e) {
@@ -621,7 +667,7 @@ public class BspService<I> implements
 			}
 			LOG.info("masterBarrier: Got " + childrenList.size() + " of " +
 					 partitions + " children from " + barrierChildrenNode);
-			if (childrenList.size() == partitions) {
+			if (childrenList.size() >= partitions) {
 				boolean allReachedBarrier = true;
 				verticesDone = 0;
 				verticesTotal = 0;
@@ -652,7 +698,9 @@ public class BspService<I> implements
 			LOG.info("masterBarrier: Waiting for the children of " + 
 					 barrierChildrenNode + " to change since only got " +
 					 childrenList.size() + " nodes.");
-			m_barrierChildrenChanged.waitForever();
+			if (waitForever(m_barrierChildrenChanged)) { // done, can only be Zookeeper disconnect
+			    throw new RuntimeException("Zookeeper disconnected");
+			}
 			m_barrierChildrenChanged.reset();
 		}
 
@@ -775,7 +823,7 @@ public class BspService<I> implements
 				childrenList = m_zk.getChildren(FINISHED_PATH, true);
 				LOG.info("masterCleanup: Got " + childrenList.size() + " of " +
 						 partitions + " children from " + FINISHED_PATH);
-				if (childrenList.size() == partitions) {
+				if (childrenList.size() >= partitions) {
 					break;	
 				}
 				LOG.info("masterCleanup: Waiting for the children of " + 
@@ -788,7 +836,12 @@ public class BspService<I> implements
 			    return;
 			}
 
-			m_finishedChildrenChanged.waitForever();
+			waitForever(m_finishedChildrenChanged);
+			if (m_disconnected) {
+			    // we are in the cleanup phase -- just log the error
+			    LOG.warn("masterCleanup: early disconnect from Zookeeper");
+			    return;
+			}
 			m_finishedChildrenChanged.reset();
 		}
 		
@@ -811,13 +864,11 @@ public class BspService<I> implements
 				 event.getState());
 		/* Nothing to do unless it is a disconnet */
 		if (event.getPath() == null) {
+		    m_disconnected = true;
 		    if (event.getType() == EventType.None &&
-		            event.getState() == KeeperState.Disconnected) {
-		        m_partitionCountSet.signal();
-			    m_barrierDone.signal();
-		        m_barrierChildrenChanged.signal();
-		        m_finishedChildrenChanged.signal();
-		        m_masterChildrenChanged.signal();
+		            event.getState() == KeeperState.Disconnected &&
+		            m_currentState != State.FINISHED) {
+		        m_currentState = State.FAILED;
 		    }
 			return;
 		}
@@ -838,6 +889,13 @@ public class BspService<I> implements
 				m_currentState = State.FAILED;
 			}
 		}
+		// should come before BARRIER_PATH because MASTER_PATH includes BARRIER_PATH
+		else if (event.getPath().contains(MASTER_PATH) &&
+		        event.getType() == EventType.NodeChildrenChanged) {
+			LOG.info("process: m_masterChildrenChanged signaled");
+			m_masterChildrenChanged.signal();
+			m_masterChildrenChangeEvent = true;
+		}
 		else if (event.getPath().contains(BARRIER_PATH) &&
 				 event.getType() == EventType.NodeCreated) {
 			LOG.info("process: m_barrierDone signaled");
@@ -852,11 +910,6 @@ public class BspService<I> implements
                 event.getType() == EventType.NodeChildrenChanged) {
            LOG.info("process: m_finishedChildrenChanged signaled");
            m_finishedChildrenChanged.signal();
-       }
-        else if (event.getPath().contains(MASTER_PATH) &&
-                event.getType() == EventType.NodeChildrenChanged) {
-           LOG.info("process: m_masterChildrenChanged signaled");
-           m_masterChildrenChanged.signal();
        }
 		else {
 			LOG.error("process: Unknown event");
@@ -879,7 +932,8 @@ public class BspService<I> implements
 			m_zk.setData(reservedPath, hostnamePort.toString().getBytes("UTF-8"), -1);
 		} catch (Exception e) {
 			LOG.error("setPartitionMax: Failed to set the partition of node " + 
-					  reservedPath + " to " + hostnamePort.toString());
+					  reservedPath + " to " + hostnamePort.toString() + ": " +
+			e.getMessage());
 		}
 	}
 
@@ -934,5 +988,50 @@ public class BspService<I> implements
 		    result = m_partitionSet.last();
 		}
 		return result;
+	}
+	
+	private boolean done() {
+	    return (getJobState() == State.FINISHED);
+	}
+
+	/** 
+	 * Waits forever for an event to occur.
+     * Checks every 2 seconds whether job is finished
+     * and also sends progress report to ensure that the
+     * task does not timeout.
+     *
+	 * @param lock
+	 * @return true if job is in state FINISHED.
+	 */
+	private boolean waitForever(BspEvent lock) {
+	    while (lock.waitMsecs(2000) == false) {
+	        m_context.progress();
+	        if (done()) {
+	            return true;
+	        }
+	    }
+	    return done();
+	}
+
+	/** 
+	 * Kills the job.
+	 * Only useful till checkpointing is implemented.
+	 */
+	private void killJob() {
+	    try {
+	        Configuration conf = m_context.getConfiguration();
+	        JobClient jobClient = new JobClient(new JobConf(conf));
+	        org.apache.hadoop.mapred.JobID jobid =
+	            org.apache.hadoop.mapred.JobID.downgrade(m_context.getJobID());
+	        RunningJob job = jobClient.getJob(jobid);
+	        if (job == null) {
+	            LOG.error("Could not find job " + jobid);
+	        } else {
+	            job.killJob();
+	            LOG.warn("Killed job " + jobid);
+	        }
+	    } catch (IOException e) {
+	        throw new RuntimeException(e);
+	    }
 	}
 }

@@ -11,10 +11,11 @@ import org.apache.hadoop.mapreduce.TaskInputOutputContext;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.log4j.Logger;
 
+import com.yahoo.cawoo.woo.ranking.WOOSR;
+
 import com.yahoo.ccm.CCMObject;
 import com.yahoo.ccm.Facet;
 import com.yahoo.ccm.serialization.json.CCMObjectJSONSerializer;
-import com.yahoo.ccm.util.Type3UUIDGenerator;
 
 import com.yahoo.hadoop_bsp.OutEdgeIterator;
 import com.yahoo.hadoop_bsp.VertexWriter;
@@ -28,8 +29,6 @@ public class VISCCMVertexWriter extends TextOutputFormat<NullWritable, Text> imp
 	/** Logger */
     private static final Logger LOG = Logger.getLogger(VISCCMVertexWriter.class);
     private final String facetName = "pop_rank_graph_feature";
-    private final UUID ccmContext = Type3UUIDGenerator.generateNameBasedUUIDFromURL("vis_graph");
-    private final UUID ccmWriter = Type3UUIDGenerator.generateNameBasedUUIDFromURL("ckunz");
     private final CCMObjectJSONSerializer serializer = new CCMObjectJSONSerializer();
 	
 	public <KEYOUT, VALUEOUT> void write(
@@ -41,10 +40,10 @@ public class VISCCMVertexWriter extends TextOutputFormat<NullWritable, Text> imp
 	          throws IOException, InterruptedException {
            
       try {
-        CCMObject obj = new CCMObject(UUID.randomUUID()); // should be the UUID of the vertex
-        Facet newFacet = obj.addFacet(facetName, ccmContext, ccmWriter);
+        CCMObject obj = new CCMObject(UUID.fromString(vertexId.toString()));
+        Facet newFacet = obj.addFacet(facetName, WOOSR.context, WOOSR.writer);
 
-        newFacet.append("user_id", vertexId.toString()); // should be a UUID
+        //newFacet.append("user_id", vertexId.toString());
         newFacet.append("pop_rank", vertexValue.toString());
         context.write((KEYOUT)new Text(serializer.serialize(obj)), (VALUEOUT)null);
       } catch (Exception e) {

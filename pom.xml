@@ -7,8 +7,48 @@
   <version>1.0-SNAPSHOT</version>
   <name>hadoop_bsp</name>
   <url>http://maven.apache.org</url>
+
+  <properties>
+      <ccm.version>1.1.6</ccm.version>
+      <hadoop.version>0.20.2</hadoop.version>
+  </properties>
+
   <build>
   	<plugins>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-antrun-plugin</artifactId>
+            <version>1.6</version>
+            <executions>
+                <execution>
+                    <phase>generate-sources</phase>
+                    <configuration> 
+                        <target name="mvn-init" unless="compile.classpath">
+                            <echo message="Executing ant task..."/>
+                            <condition property="ifdef.token" value="/*">
+                                <equals arg1="${hadoop.version}" arg2="0.20.2"/>
+                            </condition>
+                            <condition property="enddef.token" value="*/">
+                                <equals arg1="${hadoop.version}" arg2="0.20.2"/>
+                            </condition>
+                            <!-- If not set already make sure that they are defined but empty -->
+                            <property name="ifdef.token" value=""/>
+                            <property name="enddef.token" value=""/>
+                            <copy file="src/main/java/com/yahoo/hadoop_bsp/CommunicationsInterface.java.in"
+                                  tofile="src/main/java/com/yahoo/hadoop_bsp/CommunicationsInterface.java">
+                                <filterset begintoken="//[" endtoken="]">
+                                    <filter token="ifdef" value="${ifdef.token}"/>
+                                    <filter token="enddef" value="${enddef.token}"/>
+                                </filterset>
+                            </copy>
+                        </target> 
+                    </configuration>
+                    <goals>
+                        <goal>run</goal>
+                    </goals>
+                </execution>
+            </executions>
+        </plugin>
   	  	<plugin>
   			<groupId>org.apache.maven.plugins</groupId>
   			<artifactId>maven-assembly-plugin</artifactId>
@@ -51,9 +91,6 @@
   		</plugin>
   	</plugins>
   </build>
-  <properties>
-    <ccm.version>1.1.6</ccm.version>
-  </properties>
 
   <dependencies>
     <dependency>
@@ -65,7 +102,7 @@
     <dependency>
       <groupId>org.apache.hadoop</groupId>
       <artifactId>hadoop-core</artifactId>
-      <version>0.20.2</version>
+      <version>${hadoop.version}</version>
     </dependency>
     <dependency>
       <groupId>org.apache.zookeeper</groupId>
@@ -99,6 +136,12 @@
       <groupId>yahoo.yinst.contentassembly_common</groupId>
       <artifactId>contentassembly_common</artifactId>
       <version>1.1.2</version>
+    </dependency>
+    <dependency>
+      <!-- woosr (nextgen gridfaces) -->
+      <groupId>com.yahoo.gf</groupId>
+      <artifactId>nextgen</artifactId>
+      <version>1.0.0</version>
     </dependency>
   </dependencies>
 </project>

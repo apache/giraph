@@ -15,8 +15,9 @@ import com.yahoo.hadoop_bsp.VertexReader;
  * for the vertex index type of IntWritable.
  *
  */
-public class VISIntVertexInputFormat extends VISVertexInputFormat<IntWritable> implements 
-	VertexInputFormat<IntWritable, DoubleWritable, Float> {
+public class VISIntVertexInputFormat
+	extends VISVertexInputFormat<IntWritable, DoubleWritable, Float>
+    implements VertexInputFormat<IntWritable, DoubleWritable, Float> {
 
 	public VertexReader<IntWritable, DoubleWritable, Float> createVertexReader(
 		    InputSplit split, TaskAttemptContext context) 

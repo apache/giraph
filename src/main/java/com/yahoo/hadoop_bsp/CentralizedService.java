@@ -12,8 +12,9 @@ import org.apache.hadoop.mapreduce.InputSplit;
 public interface CentralizedService<I> {
 	/**
 	 * Guaranteed to be called prior to any other method.
+	 * @return true if jobState is FINISHED.
 	 */
-	void setup();
+	boolean setup();
 	
 	/**
 	 * Synchronizes all clients.  All clients should eventually call this, 

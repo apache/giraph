@@ -4,9 +4,9 @@ import java.io.IOException;
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.ipc.VersionedProtocol;
-/*
+//[ifdef]
 import org.apache.hadoop.security.token.TokenInfo;
-*/
+//[enddef]
 
 /**
  * Basic interface for communication between workers.
@@ -16,9 +16,9 @@ import org.apache.hadoop.security.token.TokenInfo;
  * @param <M extends Writable> message data
  *
  **/
-/*
+//[ifdef]
 @TokenInfo(BspTokenSelector.class)
-*/
+//[enddef]
 public interface CommunicationsInterface
       <I extends Writable, M extends Writable>
       extends VersionedProtocol {

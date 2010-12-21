@@ -14,9 +14,6 @@ import com.yahoo.hadoop_bsp.VertexReader;
 /**
  * Used by VISVertexInputFormat to read VIS graph
  *
- * @param <I>
- * @param <V>
- * @param <E>
  */
 public class VISIntVertexReader extends LineRecordReader implements 
    VertexReader<IntWritable, DoubleWritable, Float> {

@@ -1,6 +1,7 @@
 package com.yahoo.hadoop_bsp.examples;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
 
 import org.apache.hadoop.conf.Configuration;
@@ -21,6 +22,8 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.GenericOptionsParser;
 
 import com.yahoo.hadoop_bsp.BspJob;
+import com.yahoo.hadoop_bsp.Combiner;
+import com.yahoo.hadoop_bsp.CommunicationsInterface;
 import com.yahoo.hadoop_bsp.HadoopVertex;
 import com.yahoo.hadoop_bsp.VertexInputFormat;
 import com.yahoo.hadoop_bsp.VertexWriter;
@@ -29,6 +32,7 @@ import com.yahoo.hadoop_bsp.lib.VISIntVertexInputFormat;
 import com.yahoo.hadoop_bsp.lib.VISIntVertexWriter;
 import com.yahoo.hadoop_bsp.lib.VISTextVertexInputFormat;
 import com.yahoo.hadoop_bsp.lib.VISIntVertexWriter;
+
 
 /**
  * test for simple App.
@@ -66,6 +70,31 @@ public class VISBspMainTest {
 	public static final class VISIntVertex extends 
             VISVertex<IntWritable> {
     }
+
+	/**
+	 * VIS combiner
+	 * 
+	 */
+	public static class VISCombiner<I extends Writable>
+	        implements Combiner<I, DoubleWritable> {
+	    public void combine(CommunicationsInterface<I, DoubleWritable> comm,
+	            I vertex, ArrayList<DoubleWritable> msgList)
+	            throws IOException {
+            double sum = 0;
+	        for (DoubleWritable msg : msgList) {
+	            sum += msg.get();
+	        }
+	        comm.put(vertex, new DoubleWritable(sum));
+	    }
+	}
+	
+	public static final class VISTextCombiner extends 
+            VISCombiner<Text> {
+	}
+
+	public static final class VISIntCombiner extends 
+            VISCombiner<IntWritable> {
+	}
 
   /**
    * Run a sample BSP job.
@@ -120,6 +149,9 @@ public class VISBspMainTest {
                   conf.setClass("bsp.indexClass",
                       IntWritable.class,
                       WritableComparable.class);
+    	          conf.setClass("bsp.combinerClass",
+                      VISIntCombiner.class,
+                      Combiner.class);
                   vertexTextType = false;
                 } else if (type.equals("text")) {
                   throw new RuntimeException("type=" + type + " not supported.");
@@ -166,6 +198,9 @@ public class VISBspMainTest {
         conf.setClass("bsp.indexClass",
                       Text.class,
                       WritableComparable.class);
+    	conf.setClass("bsp.combinerClass",
+                      VISTextCombiner.class,
+                      Combiner.class);
       }
 
       //conf.set("keep.failed.task.files", "true");

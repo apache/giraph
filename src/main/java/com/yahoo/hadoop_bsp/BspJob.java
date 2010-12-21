@@ -54,6 +54,10 @@ public class BspJob<V, E, M> extends Job {
 	public static final String BSP_RPC_INITIAL_PORT = "bsp.rpcInitialPort";
 	/** Default port to start using for the RPC communication */
 	public static final int BSP_RPC_DEFAULT_PORT = 61000;
+	/** Maximum number of RPC handlers */
+	public static final String BSP_RPC_NUM_HANDLERS = "bsp.rpcNumHandlers";
+	/** Default maximum number of RPC handlers */
+	public static int BSP_RPC_DEFAULT_HANDLERS = 20;
 	/** Maximum number of messages per peer before flush */
 	public static final String BSP_MSG_SIZE = "bsp.msgSize";
 	/** Default maximum number of messages per peer before flush */
@@ -91,6 +95,10 @@ public class BspJob<V, E, M> extends Job {
 	 */
 	public static final String DEFAULT_ZOOKEEPER_MANAGER_DIRECTORY =
 		"/tmp/_defaultZkManagerDir";
+	public static final String BSP_ZOOKEEPER_JAVA_OPTS = 
+		"bsp.zkJavaOpts";
+	public static final String DEFAULT_BSP_ZOOKEEPER_JAVA_OPTS = 
+		"-Xmx512m";
 	
 	/**
 	 *  Constructor.
@@ -121,7 +129,8 @@ public class BspJob<V, E, M> extends Job {
 	 * @param <V>
 	 * @param <V>
 	 */
-	public static class BspMapper<I extends WritableComparable, V, E, M extends Writable>
+	public static class BspMapper<I
+        extends WritableComparable, V, E, M extends Writable>
 		extends Mapper<Object, Object, Object, Object> {
 		/** Logger */
 		private static final Logger LOG = Logger.getLogger(BspMapper.class);
@@ -184,6 +193,10 @@ public class BspJob<V, E, M> extends Job {
                 HadoopVertex<I, V, E, M> newInstance =
                         vertexClass.newInstance();
                 vertex = newInstance;
+                context.progress();
+	       }
+	       if (vertexIdMax == null) {
+	           vertexIdMax = vertexReader.createVertexId();
 	       }
            vertexReader.close();
 	       m_service.setPartitionMax(vertexIdMax);
@@ -219,6 +232,7 @@ public class BspJob<V, E, M> extends Job {
 			                       vertex.getVertexId(),
                                    vertex.getVertexValue(),
                                    vertex.getOutEdgeIterator());
+			    context.progress();
       }
       vertexWriter.close(context);
     }
@@ -250,7 +264,7 @@ public class BspJob<V, E, M> extends Job {
 			String serverPortList = 
 				m_conf.get(BspJob.BSP_ZOOKEEPER_LIST, "");
 			if (serverPortList == "") {
-				m_manager = new ZooKeeperManager(m_conf);
+				m_manager = new ZooKeeperManager(context);
 				m_manager.setup();
 				if (m_manager.computationDone()) {
 				    m_done = false;
@@ -268,9 +282,11 @@ public class BspJob<V, E, M> extends Job {
 					m_service = new BspService<I>(
 						serverPortList, sessionMsecTimeout, context);
 					LOG.info("Registering health of this process...");
-					m_service.setup();
-					LOG.info("Loading the vertices...");
-					loadVertices(context);
+					m_done = m_service.setup();
+					if (!m_done) {
+					    LOG.info("Loading the vertices...");
+					    loadVertices(context);
+					}
 				} catch (Exception e) {
 					LOG.error(e.getMessage());
 					if (m_manager != null ) {
@@ -315,7 +331,7 @@ public class BspJob<V, E, M> extends Job {
 			        if (m_service.getSuperStep() == 0) {
 			            LOG.info("Starting communication service...");
 			            m_commService = new RPCCommunications<I, M>(
-							m_conf, m_service);
+							context, m_service);
 			        } else {
 			            m_commService.prepareSuperstep();
 			        }
@@ -339,7 +355,7 @@ public class BspJob<V, E, M> extends Job {
 			        LOG.info("totalMem=" + Runtime.getRuntime().totalMemory() +
                              " maxMem=" + Runtime.getRuntime().maxMemory() +
                              " freeMem=" + Runtime.getRuntime().freeMemory());
-			        m_commService.flush();
+			        m_commService.flush(context);
 			        LOG.info("All " + m_vertexList.size() + 
 						           " vertices finished superstep " + 
 						           m_service.getSuperStep() + " (" + verticesDone + 
@@ -371,7 +387,9 @@ public class BspJob<V, E, M> extends Job {
 			    return;
 			}
 			
-			m_commService.closeConnections();
+			if (m_commService != null) {
+			    m_commService.closeConnections();
+            }
 			int totalPartitions = m_service.getPartitionSet().size();
 			m_service.cleanup();
 			if (m_manager != null) {
@@ -380,7 +398,9 @@ public class BspJob<V, E, M> extends Job {
 			// preferably would shut down the service only after
 			// all clients have disconnected (or the exceptions on the
 			// client side ignored).
-			m_commService.close();
+			if (m_commService != null) {
+			    m_commService.close();
+			}
 		}
 	}
 	

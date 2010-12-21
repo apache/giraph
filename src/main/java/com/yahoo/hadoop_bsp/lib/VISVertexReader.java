@@ -4,7 +4,6 @@ import java.io.IOException;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.lib.input.LineRecordReader;
 import org.apache.log4j.Logger;
@@ -19,8 +18,8 @@ import com.yahoo.hadoop_bsp.VertexReader;
  * @param <V>
  * @param <E>
  */
-public class VISVertexReader extends LineRecordReader implements 
-	VertexReader<Text, DoubleWritable, Float>, Configurable {
+public abstract class VISVertexReader<V, E>  extends LineRecordReader implements 
+	VertexReader<Text, V, E>, Configurable {
 	/** Logger */
     private static final Logger LOG = Logger.getLogger(VISVertexReader.class);
     /** Hadoop configuration */
@@ -53,53 +52,74 @@ public class VISVertexReader extends LineRecordReader implements
     }
 
     public boolean next(
-      MutableVertex<Text, DoubleWritable, Float, ?> vertex)  
+      MutableVertex<Text, V, E, ?> vertex)  
       throws IOException {
-      if (nextKeyValue() == false) {
-        return false;
-      }
-	  ++m_recordsRead;
       if (!isRdf) {
+        if (nextKeyValue() == false) {
+          return false;
+        }
+	    ++m_recordsRead;
         Text val = getCurrentValue();
         String[] s = val.toString().split("\t");
         vertex.setVertexId(new Text(s[0]));
-        vertex.setVertexValue(new DoubleWritable(0.0f));
         for (int i=1; i < s.length; i++) {
-          vertex.addEdge(new Text(s[i]), new Float(1.0f));
+          vertex.addEdge(new Text(s[i]), createEdgeValue());
         }
       } else { // unfiltered and unprepared, RDF format:
                //(subject id and name, target id and name, predicate, and more
-        boolean skip = true;
-        while (skip) {
-          Text val = getCurrentValue();
-          String[] s = val.toString().split("\t");
-          if (predicates != null && predicates.length > 0) {
-            String predicate = s[4]; // predicate is the 4th field
-            for (int i = 0; i < predicates.length; i++) {
-              if (predicates[i].length() > 0 && predicate.contains(predicates[i])) {
-                skip = false;
-                break;
+        Text val = getCurrentValue();
+        boolean sameVertex = true;
+        while (sameVertex) {
+          if (val == null) {
+            if (nextKeyValue() == false) {
+              if (vertex.getVertexId() != null) {
+                return true;
+              }
+              return false;
+            }
+	        ++m_recordsRead;
+	        val = getCurrentValue();
+          }
+          boolean skip = true;
+          while (skip) {
+            String[] s = val.toString().split("\t");
+            if (vertex.getVertexId() != null &&
+                    vertex.getVertexId().toString().equals(s[0]) == false) {
+              sameVertex = false;
+              break;
+            }
+            if (predicates != null && predicates.length > 0) {
+              String predicate = s[4]; // predicate is the 4th field
+              for (int i = 0; i < predicates.length; i++) {
+                if (predicates[i].length() > 0 && predicate.contains(predicates[i])) {
+                  skip = false;
+                  break;
+                }
+              }
+              if (skip) {
+		        ++m_skipped;
+                if (nextKeyValue() == false) {
+                  if (vertex.getVertexId() == null) {
+                    return false;
+                  }
+                  sameVertex = false;
+		        } else {
+		          ++m_recordsRead;
+	              val = getCurrentValue();
+                  continue;
+                }
               }
             }
-            if (skip) {
-		      ++m_skipped;
-              if (nextKeyValue() == false) {
-                return false;
-		      }
-		      ++m_recordsRead;
-              continue;
-            }
+            skip = false;
+            vertex.setVertexId(new Text(s[0]));
+            vertex.addEdge(new Text(s[2]), createEdgeValue()); // single edge
+            val = null;
           }
-          skip = false;
-          vertex.setVertexId(new Text(s[0]));
-          vertex.setVertexValue(new DoubleWritable(0.0f));
-          vertex.addEdge(new Text(s[2]), new Float(1.0f)); // single edge
         }
       }
       if (m_recordsRead % 1000 == 0) {
 		  LOG.info("next: recordsRead=" + m_recordsRead + " skipped=" + m_skipped +
-                 " vertexId=" + vertex.getVertexId() + ", vertexValue=" + 
-				 vertex.getVertexValue());
+                 " vertexId=" + vertex.getVertexId());
       }
 		
 		  return true;
@@ -113,11 +133,4 @@ public class VISVertexReader extends LineRecordReader implements
 		return new Text();
 	}
 
-	public DoubleWritable createVertexValue() {
-		return new DoubleWritable(0.0);
-	}
-
-	public Float createEdgeValue() {
-		return new Float(0.0);
-	}
 }

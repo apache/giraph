@@ -24,9 +24,9 @@ import com.yahoo.hadoop_bsp.VertexInputFormat;
  * of VerrexReader.
  *
  */
-public abstract class VISVertexInputFormat<I extends WritableComparable> 
+public abstract class VISVertexInputFormat<I extends WritableComparable, V, E> 
     extends TextInputFormat 
-	implements VertexInputFormat<I, DoubleWritable, Float> {
+	implements VertexInputFormat<I, V, E> {
 
   protected long splitSize = 1;
 

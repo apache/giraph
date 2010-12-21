@@ -34,7 +34,7 @@ public abstract class
 	public final void addEdge(I destVertexId, E edgeValue) {
 	    E value = m_destEdgeMap.get(destVertexId);
 	    if (value != null) {
-	        LOG.warn("addEdge: Vertex=" + m_vertexId + ": already added an edge " + 
+	        LOG.debug("addEdge: Vertex=" + m_vertexId + ": already added an edge " + 
 	                 "value for destination vertex " + destVertexId);
 	    }
 		m_destEdgeMap.put(destVertexId, edgeValue);

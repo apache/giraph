@@ -30,6 +30,7 @@ public class MasterThread<I> extends Thread {
 		    if (m_bspService.becomeMaster() == false) {
 		        return;
 		    }
+			m_bspService.masterSetJobState(BspService.State.RUNNING);
 			int partitions = m_bspService.masterCreatePartitions();
 			long superStep = m_bspService.getSuperStep();
 			while (m_bspService.masterBarrier(superStep, partitions) == false) {

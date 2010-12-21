@@ -15,13 +15,14 @@ import com.yahoo.hadoop_bsp.VertexReader;
  * for the vertex index type of Text.
  *
  */
-public class VISTextVertexInputFormat extends VISVertexInputFormat<Text> implements 
-	VertexInputFormat<Text, DoubleWritable, Float> {
+public class VISTextVertexInputFormat
+	extends VISVertexInputFormat<Text, DoubleWritable, Float>
+	implements VertexInputFormat<Text, DoubleWritable, Float> {
 
 	public VertexReader<Text, DoubleWritable, Float> createVertexReader(
 		    InputSplit split, TaskAttemptContext context) 
 		    throws IOException {
-          VISVertexReader reader = new VISVertexReader();
+          VISTextVertexReader reader = new VISTextVertexReader();
           reader.setConf(context.getConfiguration());
 		  return reader;
 	}

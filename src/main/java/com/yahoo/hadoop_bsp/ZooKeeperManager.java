@@ -24,6 +24,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.log4j.Logger;
 
 /**
@@ -33,6 +34,8 @@ import org.apache.log4j.Logger;
  *
  */
 public class ZooKeeperManager {
+	/** Job context (mainly for progress) */
+	private Context m_context;
 	/** Hadoop configuration */
 	private Configuration m_conf;
 	/** Class logger */
@@ -117,8 +120,9 @@ public class ZooKeeperManager {
         }
     }
     
-	public ZooKeeperManager(Configuration configuration) {
-		m_conf = configuration;
+	public ZooKeeperManager(Context context) {
+		m_context = context;
+		m_conf = context.getConfiguration();
 		m_taskPartition = m_conf.getInt("mapred.task.partition", -1);
 		m_baseDirectory = 
 			new Path(m_conf.get(
@@ -141,7 +145,7 @@ public class ZooKeeperManager {
 		m_zkDir = m_conf.get(
 			BspJob.BSP_ZOOKEEPER_DIR, BspJob.DEFAULT_BSP_ZOOKEEPER_DIR);
 		m_configFilePath = new String(m_zkDir + "/zoo.cfg");
-		m_zkBasePort = configuration.getInt(
+		m_zkBasePort = m_conf.getInt(
 			BspJob.BSP_ZOOKEEPER_SERVER_PORT, 
 			BspJob.DEFAULT_BSP_ZOOKEEPER_SERVER_PORT);
 		
@@ -448,6 +452,8 @@ public class ZooKeeperManager {
 			    throw new RuntimeException("java.home is not set!");
 			}
 			commandList.add(javaHome + "/bin/java");
+			commandList.add(m_conf.get(BspJob.BSP_ZOOKEEPER_JAVA_OPTS,
+                        BspJob.DEFAULT_BSP_ZOOKEEPER_JAVA_OPTS));
 			commandList.add("-cp");
 			Path fullJarPath = new Path(m_conf.get(BspJob.BSP_ZOOKEEPER_JAR));
 			commandList.add(fullJarPath.toString());
@@ -595,6 +601,7 @@ public class ZooKeeperManager {
                }
                ++attempt;
                Thread.sleep(m_pollMsecs);
+               m_context.progress();
 	        } catch (IOException e) {
 	            throw new RuntimeException(e);
             } catch (InterruptedException e) {

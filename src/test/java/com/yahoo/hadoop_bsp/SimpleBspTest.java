@@ -21,6 +21,8 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 
+import com.yahoo.hadoop_bsp.examples.TestCombiner;
+import com.yahoo.hadoop_bsp.examples.TestCombinerVertex;
 import com.yahoo.hadoop_bsp.examples.TestMsgVertex;
 import com.yahoo.hadoop_bsp.examples.TestPageRankVertex;
 import com.yahoo.hadoop_bsp.examples.TestSuperstepVertex;
@@ -278,6 +280,68 @@ public class SimpleBspTest extends TestCase implements Watcher {
         BspJob<Integer, String, String> bspJob = 
             new BspJob<Integer, String, String>(conf, "testBspMsg");
         Path outputPath = new Path("/tmp/testBspMsgOutput");        
+        hdfs.delete(outputPath, true);
+        FileOutputFormat.setOutputPath(bspJob, outputPath);
+        assertTrue(bspJob.run());
+    }
+    
+    /**
+     * Run a sample BSP job locally with combiner and checkout output value.
+     * @throws IOException
+     * @throws ClassNotFoundException 
+     * @throws InterruptedException 
+     */
+    public void testBspCombiner() 
+        throws IOException, InterruptedException, ClassNotFoundException {
+        Configuration conf = new Configuration();
+        conf.set("mapred.jar", m_jarLocation);
+        /* Allow this test to be run on a real Hadoop setup */
+        if (m_jobTracker != null) {
+            System.out.println("testBspMsg: Sending job to job tracker " +
+                       m_jobTracker + " with jar path " + m_jarLocation);
+            conf.set("mapred.job.tracker", m_jobTracker);
+            conf.setInt(BspJob.BSP_INITIAL_PROCESSES, m_numProcs);
+            conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
+            conf.setInt(BspJob.BSP_MIN_PROCESSES, m_numProcs);
+        }
+        else {
+            System.out.println("testBspMsg: Using local job runner with " + 
+                               "location " + m_jarLocation + "...");
+            conf.setInt(BspJob.BSP_INITIAL_PROCESSES, 1);
+            conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
+            conf.setInt(BspJob.BSP_MIN_PROCESSES, 1);
+        }
+
+        conf.setInt(BspJob.BSP_POLL_ATTEMPTS, 5);
+        conf.setInt(BspJob.BSP_POLL_MSECS, 3*1000);
+        if (m_zkList != null) {
+            conf.set(BspJob.BSP_ZOOKEEPER_LIST, m_zkList);    
+        }
+        conf.setInt(BspJob.BSP_RPC_INITIAL_PORT, BspJob.BSP_RPC_DEFAULT_PORT);
+        /* GeneratedInputSplit will generate 5 vertices */
+        conf.setLong(TestVertexReader.READER_VERTICES, 5);
+        FileSystem hdfs = FileSystem.get(conf);
+        conf.setClass("bsp.vertexClass", 
+                      TestCombinerVertex.class, 
+                      HadoopVertex.class);
+        conf.setClass("bsp.combinerClass", 
+                      TestCombiner.class, 
+                      Combiner.class);
+        conf.setClass("bsp.bsp.msgValueClass", 
+                      IntWritable.class, 
+                      Writable.class);
+        conf.setClass("bsp.inputSplitClass", 
+                      BspInputSplit.class, 
+                      InputSplit.class);
+        conf.setClass("bsp.vertexInputFormatClass", 
+                      TestVertexInputFormat.class,
+                      VertexInputFormat.class);
+        conf.setClass("bsp.indexClass",
+                      LongWritable.class,
+                      WritableComparable.class);
+        BspJob<Integer, String, String> bspJob = 
+            new BspJob<Integer, String, String>(conf, "testBspCombiner");
+        Path outputPath = new Path("/tmp/testBspCombinerOutput");        
         hdfs.delete(outputPath, true);
         FileOutputFormat.setOutputPath(bspJob, outputPath);
         assertTrue(bspJob.run());
