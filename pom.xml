@@ -9,8 +9,8 @@
   <url>http://maven.apache.org</url>
 
   <properties>
-      <ccm.version>1.1.6</ccm.version>
       <hadoop.version>0.20.2</hadoop.version>
+      <export-target.dir>export/target</export-target.dir>
   </properties>
 
   <build>
@@ -41,7 +41,61 @@
                                     <filter token="enddef" value="${enddef.token}"/>
                                 </filterset>
                             </copy>
+                            <copy file="src/main/java/com/yahoo/hadoop_bsp/BspTokenSelector.java.in"
+                                  tofile="src/main/java/com/yahoo/hadoop_bsp/BspTokenSelector.java">
+                                <filterset begintoken="//[" endtoken="]">
+                                    <filter token="ifdef" value="${ifdef.token}"/>
+                                    <filter token="enddef" value="${enddef.token}"/>
+                                </filterset>
+                            </copy>
                         </target> 
+                    </configuration>
+                    <goals>
+                        <goal>run</goal>
+                    </goals>
+                </execution>
+                <execution>
+                    <id>clean</id>
+                    <phase>clean</phase>
+                    <configuration> 
+                        <target name="mvn-clean" unless="compile.classpath">
+                            <delete dir="${export-target.dir}"/>
+                        </target>
+                    </configuration>
+                    <goals>
+                        <goal>run</goal>
+                    </goals>
+                </execution>
+                <execution>
+                    <id>compile</id>
+                    <phase>compile</phase>
+                    <configuration> 
+                        <target name="mvn-export" unless="compile.classpath">
+                            <property name="compile_classpath" refid="maven.compile.classpath"/>
+                            <echo message="compile_classpath = ${compile_classpath}"/>
+                            <mkdir dir="${export-target.dir}/classes"/>
+                            <mkdir dir="${export-target.dir}/src"/>
+                            <copy includeemptydirs="false" todir="${export-target.dir}/src">
+                                <fileset dir="src/main/java" excludes="**/*.launch,**/*.svn,.svn/**" />
+                            </copy>
+                            <copy file="${export-target.dir}/src/com/yahoo/hadoop_bsp/CommunicationsInterface.java.in"
+                                  tofile="${export-target.dir}/src/com/yahoo/hadoop_bsp/CommunicationsInterface.java"
+                                  overwrite="true">
+                            </copy>
+                            <copy file="${export-target.dir}/src/com/yahoo/hadoop_bsp/BspTokenSelector.java.in"
+                                  tofile="${export-target.dir}/src/com/yahoo/hadoop_bsp/BspTokenSelector.java"
+                                  overwrite="true">
+                            </copy>
+                            <javac fork="true" srcdir="${export-target.dir}/src" destdir="${export-target.dir}/classes"
+                                   optimize="on" source="1.6" target="1.6" excludes="**/RPCCommunications.java"
+                                   classpath="${user.home}/.m2/repository/yahoo/yinst/hadoop/hadoop-core/0.20.104.4.1007272234/hadoop-core-0.20.104.4.1007272234.jar:${compile_classpath}">
+                            </javac>
+                            <jar destfile="${export-target.dir}/${name}-${version}.jar">
+                                <fileset dir="${export-target.dir}/classes"
+                                         includes="**/*.class"
+                                         excludes="**/Test*.class,.svn/**" />
+                            </jar>
+                        </target>
                     </configuration>
                     <goals>
                         <goal>run</goal>
@@ -113,29 +167,6 @@
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-io</artifactId>
       <version>1.3.2</version>
-    </dependency>
-    <dependency>
-      <groupId>yahoo.yinst.commoncontentmodel</groupId>
-      <artifactId>ccm_lib</artifactId>
-      <version>${ccm.version}</version>
-    </dependency>
-    <dependency>
-      <!-- ccm_lib extensions for mapreduce and pig -->
-      <groupId>yahoo.yinst.commoncontentmodel</groupId>
-      <artifactId>ccm_gridlib</artifactId>
-      <version>${ccm.version}</version>
-    </dependency>
-    <dependency>
-      <!-- serializers for ccm  -->
-      <groupId>yahoo.yinst.commoncontentmodel</groupId>
-      <artifactId>ccm_serializerlib</artifactId>
-      <version>${ccm.version}</version>
-    </dependency>
-    <dependency>
-      <!-- assembly for ccm  -->
-      <groupId>yahoo.yinst.contentassembly_common</groupId>
-      <artifactId>contentassembly_common</artifactId>
-      <version>1.1.2</version>
     </dependency>
   </dependencies>
 </project>
