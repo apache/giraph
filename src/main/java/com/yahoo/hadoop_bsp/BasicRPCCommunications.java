@@ -172,7 +172,7 @@ public abstract class BasicRPCCommunications<I extends Writable, M extends Writa
                     notDoneValue = notDone;
                 }
                 if (!notDoneValue) {
-                    LOG.info(peer.getName() + ": notDone " + notDone + " flush=" + flush);
+                    LOG.info("NotDone " + notDone + " flush=" + flush);
                     break;
                 }
 
@@ -229,7 +229,7 @@ public abstract class BasicRPCCommunications<I extends Writable, M extends Writa
                     }
                 }
             }
-            LOG.info(peer.getName() + " RPC client thread terminating");
+            LOG.info("RPC client thread terminating");
             if (isProxy) {
                 RPC.stopProxy(peer);
             }
