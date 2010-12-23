@@ -321,6 +321,12 @@ public class BspServiceWorker<
                     }
                 }
             }
+            
+            if (vertexIdMax == null) {
+                throw new RuntimeException("loadVertices: Encountered " +
+                                           "impossible null vertexIdMax.");
+            }
+            
             m_maxIndexVertexMap.put(vertexIdMax,
                                     new ArrayList<Vertex<I,V,E,M>>());
             Iterator<I> maxIndexVertexMapIt =

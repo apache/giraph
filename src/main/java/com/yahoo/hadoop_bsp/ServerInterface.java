@@ -18,7 +18,7 @@ import org.apache.hadoop.mapreduce.Mapper.Context;
  *
  **/
 public interface ServerInterface <I extends Writable, M extends Writable>
-        extends Closeable {
+extends Closeable {
 
     /**
      * Prepare next superstep.
@@ -36,41 +36,40 @@ public interface ServerInterface <I extends Writable, M extends Writable>
      */
     void sendMessage(I destVertex, M msg);
 
-  /**
-   * Flush all outgoing messages.
-   *
-   * @throws IOException
-   */
-  void flush(Context context)
-      throws IOException;
+    /**
+     * Flush all outgoing messages.
+     *
+     * @throws IOException
+     */
+    void flush(Context context)
+    throws IOException;
 
-  /**
-   * Closes all connections.
-   *
-   * @throws IOException
-   */
-  void closeConnections()
-      throws IOException;
+    /**
+     * Closes all connections.
+     *
+     * @throws IOException
+     */
+    void closeConnections()
+    throws IOException;
 
-  /**
-   * @return A message iterator for the Worker's received message queue,
-   * @throws IOException
-   */
-  Iterator<Entry<I, ArrayList<M>>> getMessageIterator() throws IOException;
+    /**
+     * @return A message iterator for the Worker's received message queue,
+     * @throws IOException
+     */
+    Iterator<Entry<I, ArrayList<M>>> getMessageIterator() throws IOException;
 
-  /**
-   * Get the message iterator for a particular vertex
-   */
-  Iterator<M> getVertexMessageIterator(I vertex);
+    /**
+     * Get the message iterator for a particular vertex
+     */
+    Iterator<M> getVertexMessageIterator(I vertex);
 
-  /**
-   * @return The number of messages in the received message queue.
-   */
-  int getNumCurrentMessages() throws IOException;
+    /**
+     * @return The number of messages in the received message queue.
+     */
+    int getNumCurrentMessages() throws IOException;
 
-  /**
-   * Shuts down.
-   */
-  void close();
-
+    /**
+     * Shuts down.
+     */
+    void close();
 }

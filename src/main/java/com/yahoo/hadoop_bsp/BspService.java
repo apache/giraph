@@ -31,23 +31,23 @@ import com.yahoo.hadoop_bsp.BspJob.BspMapper;
 public class BspService <
     I extends WritableComparable, V, E, M extends Writable> implements Watcher {
     /** Private ZooKeeper instance that implements the service */
-    private ZooKeeperExt m_zk = null;
+    private final ZooKeeperExt m_zk;
     /** Has worker registration changed (either healthy or unhealthy) */
-    private BspEvent m_workerHealthRegistrationChanged = new PredicateLock();
+    private final BspEvent m_workerHealthRegistrationChanged;
     /** InputSplits are ready for consumption by workers */
-    private BspEvent m_inputSplitsAllReadyChanged = new PredicateLock();
+    private final BspEvent m_inputSplitsAllReadyChanged;
     /** InputSplit reservation or finished notification and synchronization */
-    private BspEvent m_inputSplitsStateChanged = new PredicateLock();
+    private final BspEvent m_inputSplitsStateChanged;
     /** Are the worker assignments of partitions ready? */
-    private BspEvent m_workerPartitionsAllReadyChanged = new PredicateLock();
+    private final BspEvent m_workerPartitionsAllReadyChanged;
     /** Superstep finished synchronization */
-    private BspEvent m_superstepFinished = new PredicateLock();
+    private final BspEvent m_superstepFinished;
     /** Superstep workers finished changed synchronization */
-    private BspEvent m_superstepWorkersFinishedChanged = new PredicateLock();
+    private final BspEvent m_superstepWorkersFinishedChanged;
     /** Master election changed for any waited on attempt */
-    private BspEvent m_masterElectionChildrenChanged = new PredicateLock();
+    private final BspEvent m_masterElectionChildrenChanged;
     /** Cleaned up directory children changed*/
-    private BspEvent m_cleanedUpChildrenChanged = new PredicateLock();
+    private final BspEvent m_cleanedUpChildrenChanged;
     /** Total mappers for this job */
     private final int m_totalMappers;
     /** Configuration of the job*/
@@ -345,6 +345,15 @@ public class BspService <
         m_jobId = m_conf.get("mapred.job.id", "Unknown Job");
         m_taskPartition = m_conf.getInt("mapred.task.partition", -1);
         m_totalMappers = m_conf.getInt("mapred.map.tasks", -1);
+        m_workerHealthRegistrationChanged = new ContextLock(m_context);
+        m_inputSplitsAllReadyChanged = new ContextLock(m_context);
+        m_inputSplitsStateChanged = new ContextLock(m_context);
+        m_workerPartitionsAllReadyChanged = new ContextLock(m_context);
+        m_superstepFinished = new ContextLock(m_context);
+        m_superstepWorkersFinishedChanged = new ContextLock(m_context);
+        m_masterElectionChildrenChanged = new ContextLock(m_context);
+        m_cleanedUpChildrenChanged = new ContextLock(m_context);
+        
         try {
             m_hostname = InetAddress.getLocalHost().getHostName();
         } catch (UnknownHostException e) {
