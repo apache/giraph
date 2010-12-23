@@ -68,7 +68,7 @@
                 </execution>
                 <execution>
                     <id>compile</id>
-                    <phase>compile</phase>
+                    <phase>export</phase>
                     <configuration> 
                         <target name="mvn-export" unless="compile.classpath">
                             <property name="compile_classpath" refid="maven.compile.classpath"/>
