@@ -12,7 +12,7 @@ import com.yahoo.hadoop_bsp.HadoopVertex;
  * @author aching
  *
  */
-public class TestPageRankVertex extends 
+public class TestPageRankVertex extends
     HadoopVertex<LongWritable, DoubleWritable, Float, DoubleWritable> {
     public void compute(Iterator<DoubleWritable> msgIterator) {
         if (getSuperstep() >= 1) {
@@ -22,13 +22,13 @@ public class TestPageRankVertex extends
             }
             setVertexValue(
                 new DoubleWritable((0.15f / getNumVertices()) + 0.85f * sum));
-            
+
             if (getSuperstep() < 30) {
                 long edges = getOutEdgeIterator().size();
                 sentMsgToAllEdges(
                     new DoubleWritable(getVertexValue().get() / edges));
             } else {
-                voteToHalt();  
+                voteToHalt();
             }
         }
     }

@@ -12,7 +12,7 @@ import com.yahoo.hadoop_bsp.HadoopVertex;
  * @author aching
  *
  */
-public class TestMsgVertex extends 
+public class TestMsgVertex extends
     HadoopVertex<LongWritable, IntWritable, Float, IntWritable> {
     public void compute(Iterator<IntWritable> msgIterator) {
         if (getVertexId().equals(new LongWritable(2))) {
@@ -29,7 +29,7 @@ public class TestMsgVertex extends
             while (msgIterator != null && msgIterator.hasNext()) {
                 sum += msgIterator.next().get();
             }
-            System.out.println("TestMsgVertex: Received a sum of " + sum + 
+            System.out.println("TestMsgVertex: Received a sum of " + sum +
             " (should have 306)");
 
             if (sum == 306) {
@@ -37,7 +37,7 @@ public class TestMsgVertex extends
             }
         }
         if (getSuperstep() > 3) {
-            System.err.println("TestMsgVertex: Vertex 1 failed to receive " + 
+            System.err.println("TestMsgVertex: Vertex 1 failed to receive " +
                                "messages in time");
             voteToHalt();
         }

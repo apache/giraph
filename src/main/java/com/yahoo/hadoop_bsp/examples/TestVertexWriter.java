@@ -20,10 +20,10 @@ public class TestVertexWriter implements
 
     public <KEYOUT, VALUEOUT> void write(
         TaskInputOutputContext<Object, Object, KEYOUT, VALUEOUT> context,
-        LongWritable vertexId, 
+        LongWritable vertexId,
         IntWritable vertexValue,
-		OutEdgeIterator<LongWritable, Float> destEdgeIt) 
-	    throws IOException, InterruptedException {
+        OutEdgeIterator<LongWritable, Float> destEdgeIt)
+        throws IOException, InterruptedException {
         StringBuilder sb = new StringBuilder();
         sb.append(vertexId.toString());
         sb.append('\t');
@@ -31,9 +31,9 @@ public class TestVertexWriter implements
         @SuppressWarnings("unchecked")
         KEYOUT keyout = (KEYOUT) new Text(sb.toString());
         context.write(keyout, (VALUEOUT) null);
-	}
+    }
 
-    public void close(TaskAttemptContext context) 
+    public void close(TaskAttemptContext context)
         throws IOException, InterruptedException {
     }
 }

@@ -96,24 +96,24 @@ public class XML {
         }
         return sb.toString();
     }
-    
+
     /**
-     * Throw an exception if the string contains whitespace. 
+     * Throw an exception if the string contains whitespace.
      * Whitespace is not allowed in tagNames and attributes.
      * @param string
      * @throws JSONException
      */
     public static void noSpace(String string) throws JSONException {
-    	int i, length = string.length();
-    	if (length == 0) {
-    		throw new JSONException("Empty string.");
-    	}
-    	for (i = 0; i < length; i += 1) {
-		    if (Character.isWhitespace(string.charAt(i))) {
-		    	throw new JSONException("'" + string + 
-		    			"' contains a space character.");
-		    }
-		}
+        int i, length = string.length();
+        if (length == 0) {
+            throw new JSONException("Empty string.");
+        }
+        for (i = 0; i < length; i += 1) {
+            if (Character.isWhitespace(string.charAt(i))) {
+                throw new JSONException("'" + string +
+                        "' contains a space character.");
+            }
+        }
     }
 
     /**
@@ -190,10 +190,10 @@ public class XML {
 
 // Close tag </
 
-        	t = x.nextToken();
+            t = x.nextToken();
             if (name == null) {
                 throw x.syntaxError("Mismatched close tag" + t);
-            }            
+            }
             if (!t.equals(name)) {
                 throw x.syntaxError("Mismatched " + name + " and " + t);
             }
@@ -241,7 +241,7 @@ public class XML {
                     if (o.length() > 0) {
                         context.accumulate(n, o);
                     } else {
-                    	context.accumulate(n, "");
+                        context.accumulate(n, "");
                     }
                     return false;
 
@@ -356,7 +356,7 @@ public class XML {
                 k = keys.next().toString();
                 v = jo.opt(k);
                 if (v == null) {
-                	v = "";
+                    v = "";
                 }
                 if (v instanceof String) {
                     s = (String)v;
@@ -386,18 +386,18 @@ public class XML {
                     ja = (JSONArray)v;
                     len = ja.length();
                     for (i = 0; i < len; i += 1) {
-                    	v = ja.get(i);
-                    	if (v instanceof JSONArray) {
+                        v = ja.get(i);
+                        if (v instanceof JSONArray) {
                             b.append('<');
                             b.append(k);
                             b.append('>');
-                    		b.append(toString(v));
+                            b.append(toString(v));
                             b.append("</");
                             b.append(k);
                             b.append('>');
-                    	} else {
-                    		b.append(toString(v, k));
-                    	}
+                        } else {
+                            b.append(toString(v, k));
+                        }
                     }
                 } else if (v.equals("")) {
                     b.append('<');
@@ -427,7 +427,7 @@ public class XML {
             ja = (JSONArray)o;
             len = ja.length();
             for (i = 0; i < len; ++i) {
-            	v = ja.opt(i);
+                v = ja.opt(i);
                 b.append(toString(v, (tagName == null) ? "array" : tagName));
             }
             return b.toString();

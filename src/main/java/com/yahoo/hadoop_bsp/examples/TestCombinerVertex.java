@@ -11,7 +11,7 @@ import com.yahoo.hadoop_bsp.HadoopVertex;
  * Test whether messages can go through a combiner.
  *
  */
-public class TestCombinerVertex extends 
+public class TestCombinerVertex extends
     HadoopVertex<LongWritable, IntWritable, Float, IntWritable> {
     public void compute(Iterator<IntWritable> msgIterator) {
         if (getVertexId().equals(new LongWritable(2))) {
@@ -30,7 +30,7 @@ public class TestCombinerVertex extends
                 sum += msgIterator.next().get();
                 num++;
             }
-            System.out.println("TestCombinerVertex: Received a sum of " + sum + 
+            System.out.println("TestCombinerVertex: Received a sum of " + sum +
             " (should have 306 with a single message value)");
 
             if (num == 1 && sum == 306) {
@@ -38,7 +38,7 @@ public class TestCombinerVertex extends
             }
         }
         if (getSuperstep() > 3) {
-            System.err.println("TestCombinerVertex: Vertex 1 failed to receive " + 
+            System.err.println("TestCombinerVertex: Vertex 1 failed to receive " +
                                "messages in time");
             voteToHalt();
         }

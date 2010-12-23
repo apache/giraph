@@ -10,7 +10,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.ReflectionUtils;
 
-/** 
+/**
  * A Writable for ListArray containing instances of a class.
  */
 public class MsgArrayList<M extends Writable> extends ArrayList<M>

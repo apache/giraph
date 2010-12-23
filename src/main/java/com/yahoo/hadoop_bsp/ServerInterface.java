@@ -11,7 +11,7 @@ import org.apache.hadoop.mapreduce.Mapper.Context;
 
 /**
  * Public interface for message communication server
- * 
+ *
  *
  * @param <I extends Writable> vertex id
  * @param <M extends Writable> message data
@@ -20,22 +20,22 @@ import org.apache.hadoop.mapreduce.Mapper.Context;
 public interface ServerInterface <I extends Writable, M extends Writable>
         extends Closeable {
 
-	/**
-	 * Prepare next superstep.
-	 * In particular, move transient inMessages
-	 * to the inMessages used for next superstep.
-	 * 
-	 */
-	void prepareSuperstep();
-  
-	/**
-	 * Sends a message to destination vertex.
-	 * 
-	 * @param destVertex
-	 * @param msg
-	 */
-	void sendMessage(I destVertex, M msg);
-  
+    /**
+     * Prepare next superstep.
+     * In particular, move transient inMessages
+     * to the inMessages used for next superstep.
+     *
+     */
+    void prepareSuperstep();
+
+    /**
+     * Sends a message to destination vertex.
+     *
+     * @param destVertex
+     * @param msg
+     */
+    void sendMessage(I destVertex, M msg);
+
   /**
    * Flush all outgoing messages.
    *
@@ -43,7 +43,7 @@ public interface ServerInterface <I extends Writable, M extends Writable>
    */
   void flush(Context context)
       throws IOException;
-  
+
   /**
    * Closes all connections.
    *
@@ -62,12 +62,12 @@ public interface ServerInterface <I extends Writable, M extends Writable>
    * Get the message iterator for a particular vertex
    */
   Iterator<M> getVertexMessageIterator(I vertex);
-  
+
   /**
    * @return The number of messages in the received message queue.
    */
   int getNumCurrentMessages() throws IOException;
-  
+
   /**
    * Shuts down.
    */

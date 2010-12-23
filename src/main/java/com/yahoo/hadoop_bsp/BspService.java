@@ -1,36 +1,17 @@
 package com.yahoo.hadoop_bsp;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutput;
-import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
-import java.util.NavigableSet;
-import java.util.TreeSet;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.net.InetAddress;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
+import java.net.UnknownHostException;
 
 import org.apache.log4j.Logger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.mapreduce.InputSplit;
-import org.apache.hadoop.mapreduce.JobID;
+
 import org.apache.hadoop.mapreduce.Mapper.Context;
-import org.apache.hadoop.mapred.JobClient;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.RunningJob;
-import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.hadoop.security.UserGroupInformation;
 
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
@@ -40,998 +21,536 @@ import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.ZooDefs.Ids;
 
+import com.yahoo.hadoop_bsp.BspJob.BspMapper;
+
 /**
  * Zookeeper-based implementation of {@link CentralizedService}.
  * @author aching
  *
  */
-public class BspService<I> implements 
-	CentralizedService<I>, CentralizedServiceMaster<I>, Watcher {
-	/** Private ZooKeeper instance that implements the service */
-	private ZooKeeperExt m_zk = null;
-	/** My virtual identity in the group */
-	private String m_myVirtualId = null;
-	/** My input split */
-	private InputSplit m_myInputSplit = null;
-	/** Registration synchronization */
-	private BspEvent m_partitionCountSet = new PredicateLock();
-	/** Barrier synchronization */
-	private BspEvent m_barrierDone = new PredicateLock();
-	/** Barrier children synchronization */
-	private BspEvent m_barrierChildrenChanged = new PredicateLock();
-	/** Finished children synchronization */
-	private BspEvent m_finishedChildrenChanged= new PredicateLock();
-    /** Master children synchronization */
-    private BspEvent m_masterChildrenChanged= new PredicateLock();
-	/** Partition count */
-	private Integer m_partitionCount;
-	/** Configuration of the job*/
-	private Configuration m_conf;
-	/** Job context (mainly for progress) */
-    private Context m_context;
-	/** The partition map */
-	private NavigableSet<Partition<I>> m_partitionSet = null;
-	/** Cached superstep */
-	long m_cachedSuperstep = -1;
-	/** Cached aggregate number of vertices in the entire application */
-	long m_totalVertices = -1;
-	/** Job id, to ensure uniqueness */
-	String m_jobId;
-	/** Task partition, to ensure uniqueness */
-	int m_taskPartition;
-	/** My process health znode */
-	String m_myHealthZnode;
-	/** Master thread */
-	Thread m_masterThread;
-    /** Partition to compare with */
-    Partition<I> comparePartition = new Partition<I>("", -1, null);
-	/** Master should stop trying to become the leader? */
-	boolean m_masterThreadGiveUpLeader = false;
-	/** Lock to protect m_masterThreadGiveUpLeader */
-    Lock m_masterThreadGiveUpLeaderLock = new ReentrantLock();
-	/** Class logger */
+public class BspService <
+    I extends WritableComparable, V, E, M extends Writable> implements Watcher {
+    /** Private ZooKeeper instance that implements the service */
+    private ZooKeeperExt m_zk = null;
+    /** Has worker registration changed (either healthy or unhealthy) */
+    private BspEvent m_workerHealthRegistrationChanged = new PredicateLock();
+    /** InputSplits are ready for consumption by workers */
+    private BspEvent m_inputSplitsAllReadyChanged = new PredicateLock();
+    /** InputSplit reservation or finished notification and synchronization */
+    private BspEvent m_inputSplitsStateChanged = new PredicateLock();
+    /** Are the worker assignments of partitions ready? */
+    private BspEvent m_workerPartitionsAllReadyChanged = new PredicateLock();
+    /** Superstep finished synchronization */
+    private BspEvent m_superstepFinished = new PredicateLock();
+    /** Superstep workers finished changed synchronization */
+    private BspEvent m_superstepWorkersFinishedChanged = new PredicateLock();
+    /** Master election changed for any waited on attempt */
+    private BspEvent m_masterElectionChildrenChanged = new PredicateLock();
+    /** Cleaned up directory children changed*/
+    private BspEvent m_cleanedUpChildrenChanged = new PredicateLock();
+    /** Total mappers for this job */
+    private final int m_totalMappers;
+    /** Configuration of the job*/
+    private final Configuration m_conf;
+    /** Job context (mainly for progress) */
+    @SuppressWarnings("rawtypes")
+    private final Context m_context;
+    /** Cached superstep (from ZooKeeper) */
+    private long m_cachedSuperstep = -1;
+    /** Cached application attempt (from ZooKeeper) */
+    private long m_cachedApplicationAttempt = -1;
+    /** Job id, to ensure uniqueness */
+    private final String m_jobId;
+    /** Task partition, to ensure uniqueness */
+    private final int m_taskPartition;
+    /** My hostname */
+    private final String m_hostname;
+    /** Combination of hostname '_' partition (unique id) */
+    private final String m_hostnamePartitionId;
+    /** Mapper that will do computation */
+    private final BspJob.BspMapper<I, V, E, M> m_bspMapper;
+    /** Class logger */
     private static final Logger LOG = Logger.getLogger(BspService.class);
-    /** State of the service? */
+    /** The current known job state */
+    private State m_currentJobState = State.UNKNOWN;
+
+    /** State of the application */
     public enum State {
-    	INIT, 
-    	RUNNING, 
-    	FAILED, 
-    	FINISHED
+        UNKNOWN,
+        INIT,
+        RUNNING,
+        FAILED,
+        FINISHED
     }
-    /** Current state */
-    private State m_currentState = State.INIT;
-    /** Boolean, true when disconnected from Zookeeper */
-    private boolean m_disconnected = false;
-    private boolean m_masterChildrenChangeEvent = false;
-        
-	public static final String BASE_DIR = "/_hadoopBsp";
-	public static final String BARRIER_DIR = "/_barrier";
-	public static final String BARRIER_NODE = "_barrierDone";
-	public static final String SUPERSTEP_NODE = "/_superstep";
-	public static final String PROCESS_HEALTH_DIR = "/_processHealth";
-	public static final String MASTER_DIR = "/_master";
-	public static final String PARTITION_COUNT_NODE = "/_partitionCount";
-	public static final String VIRTUAL_ID_DIR = "/_virtualIdDir";
-	public static final String JOB_STATE_NODE = "/_jobState";
-	public static final String FINISHED_NODE = "/_finished";
 
-	public static final String INFO_DONE_KEY = "done_key";
-	public static final String INFO_NUM_VERTICES = "numVertices_key";
-	
-	private final String BASE_PATH;
-	private final String BARRIER_PATH;
-	private final String SUPERSTEP_PATH;
-	private final String PROCESS_HEALTH_PATH;
-	private final String MASTER_PATH;
-	private final String PARTITION_COUNT_PATH;
-	private final String VIRTUAL_ID_PATH;
-	private final String JOB_STATE_PATH;
-	private final String FINISHED_PATH;
-	
-	public BspService(String serverPortList, int sessionMsecTimeout, 
-		Context context) throws IOException, KeeperException, InterruptedException, 
-		JSONException {
-	    m_context = context;
-		m_conf = context.getConfiguration();
-		m_jobId = m_conf.get("mapred.job.id", "Unknown Job");
-		m_taskPartition = m_conf.getInt("mapred.task.partition", -1);
+    public static final String BASE_DIR = "/_hadoopBsp";
+    public static final String MASTER_JOB_STATE_NODE = "/_masterJobState";
+    public static final String INPUT_SPLIT_DIR = "/_inputSplitsDir";
+    public static final String INPUT_SPLIT_RESERVED_NODE =
+        "/_inputSplitReserved";
+    public static final String INPUT_SPLIT_FINISHED_NODE =
+        "/_inputSplitFinished";
+    public static final String INPUT_SPLITS_ALL_READY_NODE =
+        "/_inputSplitsAllReady";
+    public static final String APPLICATION_ATTEMPTS_DIR =
+        "/_applicationAttemptsDir";
+    public static final String MASTER_ELECTION_DIR = "/_masterElectionDir";
+    public static final String SUPERSTEP_DIR = "/_superstepDir";
+    public static final String VERTEX_RANGE_STATS_DIR = "/_vertexRangesStatsDir";
+    public static final String WORKER_HEALTHY_DIR = "/_workerHealthyDir";
+    public static final String WORKER_UNHEALTHY_DIR = "/_workerUnhealthyDir";
+    public static final String WORKER_SELECTED_DIR = "/_workerSelectedDir";
+    public static final String WORKER_SELECTION_FINISHED_NODE =
+        "/_workerSelectionFinished";
+    public static final String WORKER_FINISHED_DIR = "/_workerFinishedDir";
+    public static final String SUPERSTEP_FINISHED_NODE = "/_superstepFinished";
+    public static final String CLEANED_UP_DIR = "/_cleanedUpDir";
+    public static final String STAT_FINISHED_VERTICES_KEY =
+        "_verticesFinishedKey";
+    public static final String STAT_NUM_VERTICES_KEY = "_numVerticesKey";
+    public static final String STAT_HOSTNAME_ID_KEY = "_hostnameIdKey";
+    public static final String STAT_MAX_INDEX_KEY = "_maxIndexKey";
+    public static final String WORKER_SUFFIX = "_worker";
+    public static final String MASTER_SUFFIX = "_master";
 
-		BASE_PATH = BASE_DIR + "/" + m_jobId;
-		BARRIER_PATH = BASE_PATH + BARRIER_DIR;
-		SUPERSTEP_PATH = BASE_PATH + SUPERSTEP_NODE;
-		PROCESS_HEALTH_PATH = BASE_PATH + PROCESS_HEALTH_DIR;
-		MASTER_PATH = BARRIER_PATH + MASTER_DIR;
-		PARTITION_COUNT_PATH = BASE_PATH + PARTITION_COUNT_NODE;
-		VIRTUAL_ID_PATH = BASE_PATH + VIRTUAL_ID_DIR;
-		JOB_STATE_PATH = BASE_PATH + JOB_STATE_NODE;
-		FINISHED_PATH = BASE_PATH + FINISHED_NODE;	
-		
-		LOG.info("BspService: Connecting to ZooKeeper with " + m_jobId + ", " +
-		         m_taskPartition + " on " + serverPortList);
-	    m_zk = new ZooKeeperExt(serverPortList, sessionMsecTimeout, this);
-	    m_masterThread = new MasterThread<I>(this);
-	    m_masterThread.start();
-	}
+    /** Path to the job's root */
+    public final String BASE_PATH;
+    /** Path to the job state determined by the master (informative only) */
+    public final String MASTER_JOB_STATE_PATH;
+    /** Path to the input splits written by the master */
+    public final String INPUT_SPLIT_PATH;
+    /** Path to the input splits all ready to be processed by workers */
+    public final String INPUT_SPLITS_ALL_READY_PATH;
+    /** Path to the application attempts) */
+    public final String APPLICATION_ATTEMPTS_PATH;
+    /** Path to the cleaned up notifications */
+    public final String CLEANED_UP_PATH;
 
-	/** 
-	 * Intended to check the health of the node.  For instance, can it ssh, 
-	 * dmesg, etc. For now, does nothing.
-	 */
-	public boolean isHealthy() {
-		return true;
-	}
-	
-	/**
-	 * Calculate the input split and write it to zookeeper.
-	 * @param numSplits
-	 * @throws InstantiationException
-	 * @throws IllegalAccessException
-	 * @throws IOException
-	 * @throws InterruptedException
-	 */
-	public List<InputSplit> generateInputSplits(int numSplits) { 
-		try {
-			@SuppressWarnings({
-					"rawtypes", "unchecked" })
-			Class<VertexInputFormat> vertexInputFormatClass = 
-				(Class<VertexInputFormat>) 
-				 m_conf.getClass("bsp.vertexInputFormatClass", 
-						  	 	 VertexInputFormat.class);
-			@SuppressWarnings("unchecked")
-			List<InputSplit> splits =
-					vertexInputFormatClass.newInstance().getSplits(m_conf, numSplits);
-			return splits;
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
-	}
-	
-	public InputSplit getInputSplit() {
-		return m_myInputSplit;
-	}
-		
-	/**
-	 * If the master decides that this job doesn't have the resources to 
-	 * continue, it can fail the job.
-	 * @throws InterruptedException 
-	 * @throws KeeperException 
-	 */
-	public synchronized void masterSetJobState(State state) { 
-		if (state == State.FAILED) {
-		    killJob();
-		}
-		m_currentState = state;
-		try {
-			m_zk.createExt(JOB_STATE_PATH, 
-						   state.toString().getBytes(),
-						   Ids.OPEN_ACL_UNSAFE, 
-						   CreateMode.PERSISTENT,
-						   true);
-		} catch (KeeperException.NodeExistsException e) {
-			try {
-				m_zk.setData(JOB_STATE_PATH, state.toString().getBytes(), -1);
-			} catch (Exception e1) {
-				throw new RuntimeException(e1);
-			}
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
-	}
-	
-	public synchronized State getJobState() {
-		if (m_currentState == State.INIT) { // add a watcher
-		    try {
-		        m_currentState = State.valueOf(
-		            new String(m_zk.getData(JOB_STATE_PATH, true, null)));
-			} catch (KeeperException.NoNodeException e) {
-				LOG.error("getJobState: " + JOB_STATE_PATH +
-				          " does not exist yet or was unusually removed.");
-			} catch (Exception e) {
-				// Shouldn't ever happen
-				m_currentState = State.FAILED;
-			}
-		}
-		if (m_currentState == State.FAILED) {
-		    throw new RuntimeException("Job failed -- exiting.");
-		}
-		return m_currentState;
-	}
-	
-	/**
-	 * Only the 'master' should be doing this.  Wait until the number of
-	 * processes that have reported health exceeds the minimum percentage.
-	 * If the minimum percentage is not met, fail the job.  Otherwise, create 
-	 * the virtual process ids, assign them to the processes, and then create
-	 * the PARTITION_COUNT znode. 
-	 * @throws InterruptedException 
-	 * @throws KeeperException 
-	 * @throws JSONException 
-	 * @throws IOException 
-	 * @throws IllegalAccessException 
-	 * @throws InstantiationException 
-	 */
-	public int masterCreatePartitions() {
-		try {
-			if (m_zk.exists(PARTITION_COUNT_PATH, false) != null) {
-				LOG.info(PARTITION_COUNT_PATH + 
-						 " already exists, no need to create");
-				m_masterChildrenChangeEvent = false;
-				return Integer.parseInt(
-					new String(m_zk.getData(PARTITION_COUNT_PATH, false, null)));
-			}
-		} catch (KeeperException.NoNodeException e) {
-			LOG.info("masterCreatePartitions: Need to create the " + 
-					 "partitions at " + PARTITION_COUNT_PATH);
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
-		int maxPollAttempts = m_conf.getInt(BspJob.BSP_POLL_ATTEMPTS, 
-											BspJob.DEFAULT_BSP_POLL_ATTEMPTS);
-		int initialProcs = m_conf.getInt(BspJob.BSP_INITIAL_PROCESSES, -1);
-		int minProcs = m_conf.getInt(BspJob.BSP_MIN_PROCESSES, -1);
-		float minPercentResponded = 
-			m_conf.getFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 0.0f);
-		List<String> procsReported = new ArrayList<String>();
-		int msecsPollPeriod = m_conf.getInt(BspJob.BSP_POLL_MSECS, 
-											BspJob.DEFAULT_BSP_POLL_MSECS);
-		boolean failJob = true;
-		int pollAttempt = 0;
-		while (pollAttempt < maxPollAttempts) {
-			try {
-				procsReported = m_zk.getChildren(PROCESS_HEALTH_PATH, false);
-				if ((procsReported.size() * 100.0f / initialProcs) >= 
-					minPercentResponded) {
-					failJob = false;
-					break;
-				}
-			} catch (KeeperException.NoNodeException e) {
-				LOG.info("masterCreatePartitions: No node " + 
-						 PROCESS_HEALTH_PATH + " exists: " + 
-						 e.getMessage());
-			} catch (Exception e) {
-				throw new RuntimeException(e);
-			}
-			LOG.info("masterCreatePartitions: Sleeping for " + 
-					 msecsPollPeriod + " msecs and used " + pollAttempt + 
-					 " of " + maxPollAttempts + " attempts.");
-			try {
-				Thread.sleep(msecsPollPeriod);
-			} catch (InterruptedException e) {
-				LOG.error("masterCreatePartitions: Sleep interrupted!");
-			}
-			++pollAttempt;
-		}
-		if (failJob) {
-			masterSetJobState(State.FAILED);
-			throw new RuntimeException(
-			    "Did not receive enough processes in time (only " + 
-			    procsReported.size() + " of " + minProcs + " required)");
-		}
-		
-		int healthyProcs = 0;
-		for (String proc : procsReported) {
-			try {
-				String jsonObject = 
-					new String(m_zk.getData(PROCESS_HEALTH_PATH + "/" + proc, 
-							   false, 
-							   null));
-				LOG.info("masterCreatePartitions: Health of " + proc + " = "
-						 + jsonObject);
-				Boolean processHealth = 
-					(Boolean) JSONObject.stringToValue(jsonObject);
-				if (processHealth.booleanValue()) {
-					++healthyProcs;
-				}
-			} catch (KeeperException.NoNodeException e) {
-				LOG.error("masterCreatePartitions: Process at " + proc + 
-						  " between retrieving children and getting znode");
-			} catch (Exception e) {
-				throw new RuntimeException(e);
-			}
-		}
-		if (healthyProcs < minProcs) {
-			masterSetJobState(State.FAILED);
-			throw new RuntimeException(
-				"Only " + Integer.toString(healthyProcs) + " available when " + 
-				Integer.toString(minProcs) + " are required.");
-		}
-
-		/*
-		 *  When creating znodes, in case the master has already run, resume 
-		 *  where it left off.
-		 */
-		try {
-		    m_zk.create(FINISHED_PATH, 
-		                null, 
-		                Ids.OPEN_ACL_UNSAFE, 
-		                CreateMode.PERSISTENT);
-		} catch (KeeperException.NodeExistsException e) {
-		    LOG.info("masterCreatePartitions: Finished path " + FINISHED_PATH + 
-		             " already exists.");
-		} catch (Exception e) {
-		    throw new RuntimeException(e);
-		}
-		
-		try {
-			m_zk.create(VIRTUAL_ID_PATH, 
-						null,
-						Ids.OPEN_ACL_UNSAFE, 
-						CreateMode.PERSISTENT);
-		} catch (KeeperException.NodeExistsException e) {
-			LOG.info("masterCreatePartitions: Node " + VIRTUAL_ID_PATH + 
-					 " already exists.");
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
-		List<InputSplit> splitArray = generateInputSplits(healthyProcs);
-		if (healthyProcs > splitArray.size()) {
-		    LOG.warn("Number of inputSplits=" + splitArray.size() +
-		             " < " + healthyProcs + "=number of healthy processes");
-		    healthyProcs = splitArray.size();
-		}
-		for (int i = 0; i < healthyProcs; ++i) {
-			try {
-				ByteArrayOutputStream byteArrayOutputStream = 
-					new ByteArrayOutputStream();
-				DataOutput outputStream = 
-					new DataOutputStream(byteArrayOutputStream);
-				((Writable) splitArray.get(i)).write(outputStream);
-				m_zk.create(VIRTUAL_ID_PATH + "/" + Integer.toString(i), 
-							byteArrayOutputStream.toByteArray(),
-					  		Ids.OPEN_ACL_UNSAFE, 
-					  		CreateMode.PERSISTENT);
-				LOG.info("masterCreatePartitions: Created virtual id " + 
-						 VIRTUAL_ID_PATH + "/" + 
-						 Integer.toString(i) + " with split " + 
-						 byteArrayOutputStream.toString());
-			} catch (KeeperException.NodeExistsException e) {
-				LOG.info("masterCreatePartitions: Node " + 
-						 VIRTUAL_ID_PATH + "/" + 
-						 Integer.toString(i) +" already exists.");
-			} catch (Exception e) {
-				throw new RuntimeException(e);
-			}
-		}
-		try {
-			/* 
-			 * The first superstep is -1, this is so that it can be used 
-			 * as a barrier so that the communications service can be started. 
-			 */
-			m_zk.create(SUPERSTEP_PATH,
-						Integer.toString(-1).getBytes(),
-						Ids.OPEN_ACL_UNSAFE, 
-						CreateMode.PERSISTENT);
-		} catch (KeeperException.NodeExistsException e) {
-			LOG.info("masterCreatePartitions: Node " + SUPERSTEP_PATH + 
-					 " already exists.");
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
-		try {
-			m_zk.create(PARTITION_COUNT_PATH, 
-						Integer.toString(healthyProcs).getBytes(),
-						Ids.OPEN_ACL_UNSAFE, 
-						CreateMode.PERSISTENT);
-			LOG.info("masterCreatePartitions: Created partition count path " + 
-					 PARTITION_COUNT_PATH + " with count = " + healthyProcs);
-		} catch (KeeperException.NodeExistsException e) {
-			LOG.info("masterCreatePartitions: Node " + PARTITION_COUNT_PATH + " already exists.");	
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
-		
-		m_masterChildrenChangeEvent = false;
-		return healthyProcs;
-	}
-	
-	public boolean setup() {
-		/*
-		 * Determine the virtual id of every process.
-		 * *
-		 * 1) Everyone creates their health node
-		 * 2) If PARTITION_COUNT exists, goto 5)
-		 * 3) Wait for on PARTITION_COUNT node to be created
-		 * 5) Everyone checks their own node to see the virtual id "suggested"
-		 *    by the master. (Future work)
-		 * 6) Try the suggested virtual id, otherwise, scan for a free one.
-		 * Returns true when jobState is FINISHED.
-		 */
-		try {
-			m_myHealthZnode =
-				m_zk.createExt(
-					PROCESS_HEALTH_PATH + "/" 
-					+ InetAddress.getLocalHost().getHostName() + "-" + 
-					m_taskPartition, 
-					Boolean.toString(isHealthy()).getBytes(),
-					Ids.OPEN_ACL_UNSAFE,
-					CreateMode.EPHEMERAL_SEQUENTIAL,
-					true);
-			LOG.info("setup: Created my health node: " + m_myHealthZnode);
-			byte[] partitionCountByteArr = null;
-			try {
-				m_zk.exists(PARTITION_COUNT_PATH, true);
-				partitionCountByteArr = 
-					m_zk.getData(PARTITION_COUNT_PATH, true, null);
-			}
-			catch (KeeperException.NoNodeException e) {
-				if (waitForever(m_partitionCountSet)) { // done
-				    return true;
-				}
-				partitionCountByteArr = 
-					m_zk.getData(PARTITION_COUNT_PATH, true, null);
-			}
-			finally {
-				m_partitionCount = (Integer) 
-					JSONObject.stringToValue(new String(partitionCountByteArr));
-			}
-			
-		    m_cachedSuperstep = getSuperStep();
-		    LOG.info("setup: Using super step " + m_cachedSuperstep + 
-		    		 " with partition count "+ m_partitionCount);
-		    
-		    /*
-		     *  Try to claim a virtual id in a polling period (use it to store
-		     *  your hostname and port number for the messaging service.
-		     */
-		    List<String> virtualIdList = null;
-		    boolean reservedNode = false;
-		    JSONArray hostnamePort = new JSONArray();
-		    hostnamePort.put(InetAddress.getLocalHost().getHostName());
-		    int randomRpcPort = (int) (30000 * Math.random()) + 30000;
-		    int finalRpcPort = m_conf.getInt(BspJob.BSP_RPC_INITIAL_PORT, 
-		    								 randomRpcPort);
-		    finalRpcPort += m_taskPartition;
-		    LOG.info("setup: Using port " + finalRpcPort);
-		    hostnamePort.put(finalRpcPort);
-		    while ((getJobState() != State.FINISHED)) {
-		    	virtualIdList = m_zk.getChildren(VIRTUAL_ID_PATH, false);
-		    	for (String virtualId : virtualIdList) {
-		    		try {
-		    			m_zk.create(VIRTUAL_ID_PATH + "/" + virtualId + 
-		    					    "/reserved", 
-		    					    hostnamePort.toString().getBytes(),
-		    					    Ids.OPEN_ACL_UNSAFE, 
-		    					    CreateMode.EPHEMERAL);
-			    		LOG.info("setup: Reserved virtual id " + virtualId +
-			    				 " with hostname port = " + 
-			    				 hostnamePort.toString());
-		    			reservedNode = true;
-		    			m_myVirtualId = virtualId;
-		    			break;
-		    		} catch (KeeperException.NodeExistsException e) {
-		    			LOG.info("setup: Failed to reserve " + virtualId);
-		    		}
-		    	}
-		    	if (reservedNode) {
-					@SuppressWarnings("unchecked")
-					Class<? extends Writable> inputSplitClass = 
-						(Class<Writable>) m_conf.getClass("bsp.inputSplitClass", 
-									    				  InputSplit.class);
-					m_myInputSplit = (InputSplit) ReflectionUtils.newInstance(inputSplitClass, m_conf);
-					byte [] splitArray = m_zk.getData(
-				    		VIRTUAL_ID_PATH + "/" + m_myVirtualId, false, null);
-					LOG.info("setup: For " + VIRTUAL_ID_PATH + "/" + 
-							 m_myVirtualId + ", got '" + splitArray + "'");
-				  InputStream input = 
-				    	new ByteArrayInputStream(splitArray);
-					((Writable) m_myInputSplit).readFields(
-						new DataInputStream(input));
-		    		return false;
-		    	}
-		    	Thread.sleep(
-		    		m_conf.getInt(BspJob.BSP_POLL_MSECS, 
-		    				      BspJob.DEFAULT_BSP_POLL_MSECS));
-		    	m_context.progress();
-			}
-			return done();
-		} catch (Exception e) {
-			LOG.error(e.getMessage());
-			throw new RuntimeException(e);
-		}
-	}
-	public boolean barrier(long verticesDone, long verticesTotal) {
-		/* Note that this barrier blocks until success.  It would be best if 
-		 * it were interruptible if for instance there was a failure. */
-		
-		/*
-		 * Master will coordinate the barriers and aggregate "doneness".
-		 * Each process writes its virtual id to the barrier superstep and 
-		 * encodes the number of done vertices and total vertices.  
-		 * Then it waits for the master to say whether to stop or not.
-		 */
-		try {
-			JSONArray doneTotalArray = new JSONArray();
-			doneTotalArray.put(verticesDone);
-			doneTotalArray.put(verticesTotal);
-			m_zk.createExt(BARRIER_PATH + "/" + 
-					       Long.toString(m_cachedSuperstep) + "/" +
-					       m_myVirtualId, 
-					       doneTotalArray.toString().getBytes(),
-						   Ids.OPEN_ACL_UNSAFE, 
-						   CreateMode.EPHEMERAL,
-						   true);
-			String barrierNode = BARRIER_PATH + "/" + 
-								 Long.toString(m_cachedSuperstep) + 
-								 "/" + BARRIER_NODE; 
-			if (m_zk.exists(barrierNode, true) == null) {
-				if (waitForever(m_barrierDone)) { // done
-				    return true;
-				}
-				m_barrierDone.reset();
-			}
-			JSONObject infoObject = new JSONObject(
-			    new String(m_zk.getData(barrierNode, false, null)));
-			boolean done = infoObject.optBoolean(INFO_DONE_KEY);
-			m_totalVertices = infoObject.optLong(INFO_NUM_VERTICES);
-			LOG.info("barrier: Completed superstep " + 
-					 m_cachedSuperstep + " with done=" + done + 
-					 ", numVertices=" + m_totalVertices);
-			++m_cachedSuperstep;
-			return done;
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
-	}
-
-	public boolean becomeMaster() {
-	    /*
-	     * Create my bid to become the master, then try to become the worker 
-	     * or return false.
-	     */
-	    String myBid = null;
-	    try {
-	        myBid = 
-	            m_zk.createExt(
-	                MASTER_PATH + "/" + Integer.toString(m_taskPartition), 
-	                null,
-	                Ids.OPEN_ACL_UNSAFE, 
-	                CreateMode.EPHEMERAL_SEQUENTIAL, 
-	                true);
-	    } catch (Exception e) {
-	        throw new RuntimeException(e);
-	    }
-	    while (true) {
-	        try {
-	            m_masterThreadGiveUpLeaderLock.lock();
-	            if (m_masterThreadGiveUpLeader == true) {
-	                m_masterThreadGiveUpLeaderLock.unlock();
-                    LOG.info("becomeMaster: Give up trying to be the master!");
-	                return false;
-	            }
-                m_masterThreadGiveUpLeaderLock.unlock();
-	            List<String> masterChildArr = 
-	                m_zk.getChildrenExt(MASTER_PATH, true, true, true);
-	            LOG.info("becomeMaster: First child is '" + 
-	                     masterChildArr.get(0) + "' and my bid is '" +
-	                     myBid + "'");
-	            if (masterChildArr.get(0).equals(myBid)) {
-	                LOG.info("becomeMaster: Became the master!");
-	                return true;
-	            }
-	            LOG.info("becomeMaster: Waiting to become the master...");
-	            if (waitForever(m_masterChildrenChanged)) { // done
-	                return false; // did not become master
-	            }
-	            m_masterChildrenChanged.reset();
-	        } catch (Exception e) {
-	            throw new RuntimeException(e);
-	        }
-	    }
-	}
-	
-	/**
-	 * Master will watch the children until the number of children is the same
-	 * as the number of partitions.  Then it will determine whether to finish 
-	 * the application or not.
-	 * @return true if done with application
-	 * @throws InterruptedException 
-	 * @throws KeeperException 
-	 * @throws JSONException 
-	 */
-	public boolean masterBarrier(long superstep, int partitions) {
-		String barrierChildrenNode = 
-			BARRIER_PATH + "/" + Long.toString(superstep); 
-
-		try {
-			m_zk.createExt(barrierChildrenNode, 
-						   null, 
-					       Ids.OPEN_ACL_UNSAFE, 
-					       CreateMode.PERSISTENT,
-					       true);
-		} catch (KeeperException.NodeExistsException e) {
-			LOG.info("masterBarrier: Node " + barrierChildrenNode + 
-					 " already exists, no need to create");
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
-		
-		List<String> childrenList = null;
-		long verticesDone = -1;
-		long verticesTotal = -1;
-		while (true) {
-			// till we have checkpointing, lets fail the job when one child disappears
-			try {
-				childrenList = m_zk.getChildren(MASTER_PATH, true);
-				if (childrenList.size() < partitions || m_masterChildrenChangeEvent) {
-				    masterSetJobState(State.FAILED);
-				    throw new RuntimeException(
-				              "Job failed because one of the tasks failed.");
-				}
-			} catch (Exception e) {
-				throw new RuntimeException(e);
-			}
-			try {
-				childrenList = m_zk.getChildren(barrierChildrenNode, true);
-			} catch (Exception e) {
-				throw new RuntimeException(e);
-			}
-			LOG.info("masterBarrier: Got " + childrenList.size() + " of " +
-					 partitions + " children from " + barrierChildrenNode);
-			if (childrenList.size() >= partitions) {
-				boolean allReachedBarrier = true;
-				verticesDone = 0;
-				verticesTotal = 0;
-				for (String child : childrenList) {
-					try {
-						JSONArray jsonArray = new JSONArray(
-							new String(m_zk.getData(barrierChildrenNode + "/" + child, false, null)));
-						verticesDone += jsonArray.getLong(0);
-						verticesTotal += jsonArray.getLong(1);
-						LOG.info("masterBarrier: Got " + jsonArray.getLong(0) + 
-								 " of " + jsonArray.getLong(1) + 
-								 " vertices done for " + barrierChildrenNode + "/" 
-								 + child);
-					} catch (KeeperException.NoNodeException e) {
-						allReachedBarrier = false;
-						LOG.info("masterBarrier: Node " + barrierChildrenNode + 
-								 "/" + child + " was good, but died.");
-						break;
-					} catch (Exception e) {
-						throw new RuntimeException(e);
-					}
-					continue;
-				}
-				if (allReachedBarrier) {
-					break;	
-				}
-			}
-			LOG.info("masterBarrier: Waiting for the children of " + 
-					 barrierChildrenNode + " to change since only got " +
-					 childrenList.size() + " nodes.");
-			if (waitForever(m_barrierChildrenChanged)) { // done, can only be Zookeeper disconnect
-			    throw new RuntimeException("Zookeeper disconnected");
-			}
-			m_barrierChildrenChanged.reset();
-		}
-
-		boolean applicationDone = false;
-		if (verticesDone == verticesTotal) {
-			applicationDone = true;
-		}
-		LOG.info("masterBarrier: Aggregate got " + verticesDone + " of " + 
-				 verticesTotal + " halted on superstep = " + superstep + 
-				 " (application done = " + applicationDone + ")");
-		setSuperStep(superstep + 1);
-		String barrierNode = BARRIER_PATH + "/" + Long.toString(superstep) + 
-		 					 "/" + BARRIER_NODE;
-		/* Let everyone know the overall application state through the barrier */
-		try {
-		    JSONObject globalInfoObject = new JSONObject();
-		    globalInfoObject.put(INFO_DONE_KEY, applicationDone);
-		    globalInfoObject.put(INFO_NUM_VERTICES, verticesTotal);
-			m_zk.create(barrierNode,
-			            globalInfoObject.toString().getBytes(),
-						Ids.OPEN_ACL_UNSAFE, 
-						CreateMode.PERSISTENT);
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
-		
-		/* Clean up the old barriers */
-		if ((superstep - 1) >= 0) {
-			try {
-				LOG.info("masterBarrier: Cleaning up old barrier " + 
-						BARRIER_PATH + "/" + Long.toString(superstep - 1));
-				m_zk.deleteExt(BARRIER_PATH + "/" + 
-						       Long.toString(superstep - 1),
-						       -1, 
-						       true);
-			} catch (KeeperException.NoNodeException e) {
-				LOG.warn("masterBarrier: Already cleaned up " + 
-						 BARRIER_PATH + "/" + Long.toString(superstep - 1));
-			} catch (Exception e) {
-				throw new RuntimeException(e);
-			}
-		}
-		
-		return applicationDone;
-	}
-	
-	public long getSuperStep() {
-	    try {
-			return (Integer) JSONObject.stringToValue(
-			    	new String(m_zk.getData(SUPERSTEP_PATH, false, null)));
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
-	}
-	
-	public long getTotalVertices() {
-	    return m_totalVertices;
-	}
-	
-	public void setSuperStep(long superStep) {
-	    try {
-	    	m_zk.setData(SUPERSTEP_PATH, 
-	    				 Long.toString(superStep).getBytes(),
-	    			     -1);
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}		
-	}
-	
-	public void cleanup() {
-		/*
-		 * All processes should denote they are done by adding special
-		 * znode.  Once the number of znodes equals the number of partitions,
-		 * the master will clean up the ZooKeeper znodes associated with this
-		 * job.
-		 */
-		try {
-			String finalFinishedPath = 
-				m_zk.createExt(
-					FINISHED_PATH + "/" + m_taskPartition, 
-					null, 
-					Ids.OPEN_ACL_UNSAFE, 
-					CreateMode.PERSISTENT, 
-					true);
-	         LOG.info("cleanup: Notifying master its okay to cleanup with " +
-                     finalFinishedPath);
-		} catch (KeeperException.NodeExistsException e) { 
-			LOG.info("cleanup: Couldn't create finished node '" +
-					FINISHED_PATH + "/" + m_taskPartition + "'");
-		} catch (Exception e) {
-		    // cleanup phase -- just log the error
-		    LOG.error(e.getMessage());
-		}
-		m_masterThreadGiveUpLeaderLock.lock();
-		m_masterThreadGiveUpLeader = true;
-		m_masterThreadGiveUpLeaderLock.unlock();
-		m_masterChildrenChanged.signal();
-		try {
-		    m_masterThread.join();
-		} catch (InterruptedException e) {
-		    // cleanup phase -- just log the error
-		    LOG.error("cleanup: Master thread couldn't join");
-		}
-		try {
-		    m_zk.close();
-		} catch (InterruptedException e) {
-		    // cleanup phase -- just log the error
-		    LOG.error("cleanup: Zookeeper failed to close");
-		}
-	}
-	
-	public void masterCleanup(int partitions) {
-		List<String> childrenList = null;
-		while (true) {
-			try {
-			    /*
-			     * FINISHED_PATH already exists from masterCreatePartitions()
-			     * so there should be no Exceptions.
-			     */
-				childrenList = m_zk.getChildren(FINISHED_PATH, true);
-				LOG.info("masterCleanup: Got " + childrenList.size() + " of " +
-						 partitions + " children from " + FINISHED_PATH);
-				if (childrenList.size() >= partitions) {
-					break;	
-				}
-				LOG.info("masterCleanup: Waiting for the children of " + 
-						 FINISHED_PATH + " to change since only got " +
-						 childrenList.size() + " nodes.");
-			} 
-			catch (Exception e) {
-			    // we are in the cleanup phase -- just log the error
-			    LOG.error(e.getMessage());
-			    return;
-			}
-
-			waitForever(m_finishedChildrenChanged);
-			if (m_disconnected) {
-			    // we are in the cleanup phase -- just log the error
-			    LOG.warn("masterCleanup: early disconnect from Zookeeper");
-			    return;
-			}
-			m_finishedChildrenChanged.reset();
-		}
-		
-		/* 
-		 * At this point, all processes have acknowledged the cleanup, 
-		 * and the master can do any final cleanup 
-		 */
-		try {
-			LOG.info("masterCleanup: Removing the following path and all " + 
-					 "children - " + BASE_PATH);
-			m_zk.deleteExt(BASE_PATH, -1, true);
-		} catch (Exception e) {
-			LOG.error("masterCleanup: Failed to do cleanup of " + BASE_PATH);
-		}
-	}
-	
-	public void process(WatchedEvent event) {
-		LOG.info("process: Got a new event, path = " + event.getPath() + 
-				 ", type = " + event.getType() + ", state = " + 
-				 event.getState());
-		/* Nothing to do unless it is a disconnet */
-		if (event.getPath() == null) {
-		    m_disconnected = true;
-		    if (event.getType() == EventType.None &&
-		            event.getState() == KeeperState.Disconnected &&
-		            m_currentState != State.FINISHED) {
-		        m_currentState = State.FAILED;
-		    }
-			return;
-		}
-		
-		if (event.getPath().equals(PARTITION_COUNT_PATH)) {
-			m_partitionCountSet.signal();
-		}
-		else if (event.getPath().equals(JOB_STATE_PATH)) {
-			try {
-				synchronized (this) {
-					m_currentState = State.valueOf(
-					    new String(m_zk.getData(event.getPath(), true, null)));					
-				}
-			} catch (KeeperException.NoNodeException e) {
-				LOG.error("process: " + JOB_STATE_PATH + " was unusually removed.");
-			} catch (Exception e) {
-				// Shouldn't ever happen
-				m_currentState = State.FAILED;
-			}
-		}
-		// should come before BARRIER_PATH because MASTER_PATH includes BARRIER_PATH
-		else if (event.getPath().contains(MASTER_PATH) &&
-		        event.getType() == EventType.NodeChildrenChanged) {
-			LOG.info("process: m_masterChildrenChanged signaled");
-			m_masterChildrenChanged.signal();
-			m_masterChildrenChangeEvent = true;
-		}
-		else if (event.getPath().contains(BARRIER_PATH) &&
-				 event.getType() == EventType.NodeCreated) {
-			LOG.info("process: m_barrierDone signaled");
-			m_barrierDone.signal();
-		}
-		else if (event.getPath().contains(BARRIER_PATH) &&
-				 event.getType() == EventType.NodeChildrenChanged) {
-			LOG.info("process: m_barrierChildrenChanged signaled");
-			m_barrierChildrenChanged.signal();
-		}
-        else if (event.getPath().contains(FINISHED_PATH) &&
-                event.getType() == EventType.NodeChildrenChanged) {
-           LOG.info("process: m_finishedChildrenChanged signaled");
-           m_finishedChildrenChanged.signal();
-       }
-		else {
-			LOG.error("process: Unknown event");
-		}
-	}
-
-	public void setPartitionMax(I max) {
-		String reservedPath = VIRTUAL_ID_PATH + "/" + m_myVirtualId + 
-			      "/reserved";
-		JSONArray hostnamePort = null;
-		try {
-			hostnamePort = new JSONArray(new String
-				(m_zk.getData(reservedPath, false, null)));
-			ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-			DataOutput output = new DataOutputStream(outputStream);
-			((Writable) max).write(output);
-			hostnamePort.put(outputStream.toString("UTF-8"));
-			LOG.info("setPartitionMax: Wrote JSON Array " + hostnamePort + 
-			         " to " + reservedPath + ", maxIndex=" + max);
-			m_zk.setData(reservedPath, hostnamePort.toString().getBytes("UTF-8"), -1);
-		} catch (Exception e) {
-			LOG.error("setPartitionMax: Failed to set the partition of node " + 
-					  reservedPath + " to " + hostnamePort.toString() + ": " +
-			e.getMessage());
-		}
-	}
-
-	public NavigableSet<Partition<I>> getPartitionSet() {
-		if (m_partitionSet == null) {
-			m_partitionSet = new TreeSet<Partition<I>>();
-			try {
-				for (int i = 0; i < m_partitionCount; ++i) {
-					String tmpPath = VIRTUAL_ID_PATH + "/" + i + "/reserved";
-					JSONArray jsonArray = new JSONArray(new String(
-						m_zk.getData(tmpPath, false, null)));
-					LOG.info("getPartitionSet: Got partition " + 
-							 jsonArray.toString() + " from " + tmpPath);
-					if (jsonArray.length() != 3) {
-						throw new RuntimeException(
-							"getPartitionSet: Impossible that znode " + 
-							tmpPath + " has jsonArray " + jsonArray);
-					}
-					@SuppressWarnings({"rawtypes", "unchecked" })
-			    Class<? extends WritableComparable> indexClass =
-			            (Class<? extends WritableComparable>) 
-			            m_conf.getClass("bsp.indexClass", 
-			                                WritableComparable.class);
-          @SuppressWarnings("unchecked")
-          I index = (I) indexClass.newInstance();
-		      InputStream input = 
-		                new ByteArrayInputStream(jsonArray.get(2).toString().getBytes("UTF-8"));
-	                 ((Writable) index).readFields(
-	                         new DataInputStream(input));
-					m_partitionSet.add(
-						new Partition<I>(jsonArray.getString(0), 
-										 jsonArray.getInt(1), 
-										 index));
-          LOG.info("getPartitionSet: Partition split point: " + index);
-				}
-			} catch (Exception e) {
-				throw new RuntimeException(e);
-			}
-		}		
-		return m_partitionSet;
-	}
-	
-	public Partition<I> getPartition(I index) {
-		if (m_partitionSet == null) {
-			getPartitionSet();
-		}
-		comparePartition.setMaxIndex(index);
-		Partition<I> result = m_partitionSet.ceiling(comparePartition);
-		if (result == null) {
-		    LOG.warn("getPartition: no partition for destination vertex " + index +
-		             " -- returning last partition");
-		    result = m_partitionSet.last();
-		}
-		return result;
-	}
-	
-	private boolean done() {
-	    return (getJobState() == State.FINISHED);
-	}
-
-	/** 
-	 * Waits forever for an event to occur.
-     * Checks every 2 seconds whether job is finished
-     * and also sends progress report to ensure that the
-     * task does not timeout.
+    /**
+     * Generate the base master election directory path for a given application
+     * attempt
      *
-	 * @param lock
-	 * @return true if job is in state FINISHED.
-	 */
-	private boolean waitForever(BspEvent lock) {
-	    while (lock.waitMsecs(2000) == false) {
-	        m_context.progress();
-	        if (done()) {
-	            return true;
-	        }
-	    }
-	    return done();
-	}
+     * @param attempt application attempt number
+     * @return directory path based on the an attempt
+     */
+    final public String getMasterElectionPath(long attempt) {
+        return APPLICATION_ATTEMPTS_PATH + "/" + attempt + MASTER_ELECTION_DIR;
+    }
 
-	/** 
-	 * Kills the job.
-	 * Only useful till checkpointing is implemented.
-	 */
-	private void killJob() {
-	    try {
-	        Configuration conf = m_context.getConfiguration();
-	        JobClient jobClient = new JobClient(new JobConf(conf));
-	        org.apache.hadoop.mapred.JobID jobid =
-	            org.apache.hadoop.mapred.JobID.downgrade(m_context.getJobID());
-	        RunningJob job = jobClient.getJob(jobid);
-	        if (job == null) {
-	            LOG.error("Could not find job " + jobid);
-	        } else {
-	            job.killJob();
-	            LOG.warn("Killed job " + jobid);
-	        }
-	    } catch (IOException e) {
-	        throw new RuntimeException(e);
-	    }
-	}
+    /**
+     * Generate the base superstep directory path for a given application
+     * attempt
+     *
+     * @param attempt application attempt number
+     * @return directory path based on the an attempt
+     */
+    final public String getSuperstepPath(long attempt) {
+        return APPLICATION_ATTEMPTS_PATH + "/" + attempt + SUPERSTEP_DIR;
+    }
+
+    /**
+     * Generate the worker "healthy" directory path for a superstep
+     *
+     * @param attempt application attempt number
+     * @param superstep superstep to use
+     * @return directory path based on the a superstep
+     */
+    final public String getWorkerHealthyPath(long attempt, long superstep) {
+        return APPLICATION_ATTEMPTS_PATH + "/" + attempt +
+            SUPERSTEP_DIR + "/" + superstep + WORKER_HEALTHY_DIR;
+    }
+
+    /**
+     * Generate the worker "unhealthy" directory path for a superstep
+     *
+     * @param attempt application attempt number
+     * @param superstep superstep to use
+     * @return directory path based on the a superstep
+     */
+    final public String getWorkerUnhealthyPath(long attempt, long superstep) {
+        return APPLICATION_ATTEMPTS_PATH + "/" + attempt +
+            SUPERSTEP_DIR + "/" + superstep + WORKER_UNHEALTHY_DIR;
+    }
+
+    /**
+     * Generate the worker "selected" directory path for a superstep
+     *
+     * @param attempt application attempt number
+     * @param superstep superstep to use
+     * @return directory path based on the a superstep
+     */
+    final public String getWorkerSelectedPath(long attempt, long superstep) {
+        return APPLICATION_ATTEMPTS_PATH + "/" + attempt +
+            SUPERSTEP_DIR + "/" + superstep + WORKER_SELECTED_DIR;
+    }
+
+    /**
+     * Generate the worker "selection finished" directory path for a superstep
+     *
+     * @param attempt application attempt number
+     * @param superstep superstep to use
+     * @return directory path based on the a superstep
+     */
+    final public String getWorkerSelectionFinishedPath(long attempt,
+                                                       long superstep) {
+        return APPLICATION_ATTEMPTS_PATH + "/" + attempt +
+            SUPERSTEP_DIR + "/" + superstep + WORKER_SELECTION_FINISHED_NODE;
+    }
+
+    /**
+     * Generate the worker "finished" directory path for a superstep
+     *
+     * @param attempt application attempt number
+     * @param superstep superstep to use
+     * @return directory path based on the a superstep
+     */
+    final public String getWorkerFinishedPath(long attempt, long superstep) {
+        return APPLICATION_ATTEMPTS_PATH + "/" + attempt +
+            SUPERSTEP_DIR + "/" + superstep + WORKER_FINISHED_DIR;
+    }
+
+    /**
+     * Generate the "vertex range stats" directory path for a chosen worker
+     *
+     * @param attempt application attempt number
+     * @param superstep superstep to use
+     * @return directory path based on the a superstep
+     */
+    final public String getVertexRangeStatsPath(long attempt, long superstep) {
+        return APPLICATION_ATTEMPTS_PATH + "/" + attempt +
+            SUPERSTEP_DIR + "/" + superstep + WORKER_SELECTED_DIR + "/" +
+            getHostnamePartitionId() + VERTEX_RANGE_STATS_DIR;
+    }
+
+    /**
+     * Generate the "superstep finished" directory path for a superstep
+     *
+     * @param attempt application attempt number
+     * @param superstep superstep to use
+     * @return directory path based on the a superstep
+     */
+    final public String getSuperstepFinishedPath(long attempt, long superstep) {
+        return APPLICATION_ATTEMPTS_PATH + "/" + attempt +
+            SUPERSTEP_DIR + "/" + superstep + SUPERSTEP_FINISHED_NODE;
+    }
+
+    /**
+     * Get the ZooKeeperExt instance.
+     *
+     * @return ZooKeeperExt instance.
+     */
+    final public ZooKeeperExt getZkExt() {
+        return m_zk;
+    }
+
+    final public Configuration getConfiguration() {
+        return m_conf;
+    }
+
+    @SuppressWarnings("rawtypes")
+    final public Context getContext() {
+        return m_context;
+    }
+
+    final public String getHostname() {
+        return m_hostname;
+    }
+
+    final public String getHostnamePartitionId() {
+        return m_hostnamePartitionId;
+    }
+
+    final public int getTaskPartition() {
+        return m_taskPartition;
+    }
+
+    final public BspMapper<I, V, E, M> getBspMapper() {
+        return m_bspMapper;
+    }
+
+    final public int getTotalMappers() {
+        return m_totalMappers;
+    }
+
+    final public BspEvent getWorkerHealthRegistrationChangedEvent() {
+        return m_workerHealthRegistrationChanged;
+    }
+
+    final public BspEvent getInputSplitsAllReadyEvent() {
+        return m_inputSplitsAllReadyChanged;
+    }
+
+    final public BspEvent getInputSplitsStateChangedEvent() {
+        return m_inputSplitsStateChanged;
+    }
+
+    final public BspEvent getWorkerPartitionsAllReadyChangedEvent() {
+        return m_workerPartitionsAllReadyChanged;
+    }
+
+    final public BspEvent getSuperstepFinishedEvent() {
+        return m_superstepFinished;
+    }
+
+    final public BspEvent getSuperstepWorkersFinishedChangedEvent() {
+        return m_superstepWorkersFinishedChanged;
+    }
+
+    final public BspEvent getMasterElectionChildrenChangedEvent() {
+        return m_masterElectionChildrenChanged;
+    }
+
+    final public BspEvent getCleanedUpChildrenChangedEvent() {
+        return m_cleanedUpChildrenChanged;
+    }
+
+    final public State getJobState() {
+        synchronized(this) {
+            if (m_currentJobState == State.UNKNOWN) {
+                try {
+                    getZkExt().createExt(MASTER_JOB_STATE_PATH,
+                                         State.UNKNOWN.toString().getBytes(),
+                                         Ids.OPEN_ACL_UNSAFE,
+                                         CreateMode.PERSISTENT,
+                                         true);
+                } catch (KeeperException.NodeExistsException e) {
+                    LOG.info("getJobState: Job state already exists (" +
+                             MASTER_JOB_STATE_PATH + ")");
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            try {
+                String jobState = new String(
+                    m_zk.getData(MASTER_JOB_STATE_PATH, true, null));
+                m_currentJobState = State.valueOf(jobState);
+            } catch (KeeperException.NoNodeException e) {
+                LOG.info("getJobState: Job state path is empty! - " +
+                         MASTER_JOB_STATE_PATH);
+                m_currentJobState = State.UNKNOWN;
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            return m_currentJobState;
+        }
+    }
+
+    public BspService(String serverPortList,
+                      int sessionMsecTimeout,
+                      @SuppressWarnings("rawtypes") Context context,
+                      BspJob.BspMapper<I, V, E, M> bspMapper) {
+        m_context = context;
+        m_bspMapper = bspMapper;
+        m_conf = context.getConfiguration();
+        m_jobId = m_conf.get("mapred.job.id", "Unknown Job");
+        m_taskPartition = m_conf.getInt("mapred.task.partition", -1);
+        m_totalMappers = m_conf.getInt("mapred.map.tasks", -1);
+        try {
+            m_hostname = InetAddress.getLocalHost().getHostName();
+        } catch (UnknownHostException e) {
+            throw new RuntimeException(e);
+        }
+        m_hostnamePartitionId = m_hostname + "_" + getTaskPartition();
+
+        BASE_PATH = BASE_DIR + "/" + m_jobId;
+        MASTER_JOB_STATE_PATH = BASE_PATH + MASTER_JOB_STATE_NODE;
+        INPUT_SPLIT_PATH = BASE_PATH + INPUT_SPLIT_DIR;
+        INPUT_SPLITS_ALL_READY_PATH = BASE_PATH + INPUT_SPLITS_ALL_READY_NODE;
+        APPLICATION_ATTEMPTS_PATH = BASE_PATH + APPLICATION_ATTEMPTS_DIR;
+        CLEANED_UP_PATH = BASE_PATH + CLEANED_UP_DIR;
+
+        LOG.info("BspService: Connecting to ZooKeeper with job " + m_jobId +
+                 ", " + getTaskPartition() + " on " + serverPortList);
+        try {
+            m_zk = new ZooKeeperExt(serverPortList, sessionMsecTimeout, this);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Get the job id
+     *
+     * @return job id
+     */
+    final public String getJobId() {
+        return m_jobId;
+    }
+
+    /**
+     * Get the latest application attempt and cache it.
+     *
+     * @return the latest application attempt
+     */
+    final public long getApplicationAttempt() {
+        if (m_cachedApplicationAttempt != -1) {
+            return m_cachedApplicationAttempt;
+        }
+        try {
+            m_zk.createExt(APPLICATION_ATTEMPTS_PATH,
+                           null,
+                           Ids.OPEN_ACL_UNSAFE,
+                           CreateMode.PERSISTENT,
+                           true);
+        } catch (KeeperException.NodeExistsException e) {
+            LOG.info("getApplicationAttempt: Node " +
+                     APPLICATION_ATTEMPTS_PATH + " already exists!");
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        try {
+            List<String> attemptList =
+                m_zk.getChildrenExt(
+                    APPLICATION_ATTEMPTS_PATH, true, false, false);
+            if (attemptList.isEmpty()) {
+                m_cachedApplicationAttempt = 0;
+            }
+            else {
+                m_cachedApplicationAttempt =
+                    Long.parseLong(Collections.max(attemptList));
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        return m_cachedApplicationAttempt;
+    }
+
+    /**
+     * Get the latest superstep and cache it.
+     *
+     * @return the latest superstep
+     */
+     final public long getSuperstep() {
+        if (m_cachedSuperstep != -1) {
+            return m_cachedSuperstep;
+        }
+        String superstepPath = getSuperstepPath(getApplicationAttempt());
+        try {
+            m_zk.createExt(superstepPath,
+                           null,
+                           Ids.OPEN_ACL_UNSAFE,
+                           CreateMode.PERSISTENT,
+                           true);
+        } catch (KeeperException.NodeExistsException e) {
+            LOG.info("getApplicationAttempt: Node " +
+                     APPLICATION_ATTEMPTS_PATH + " already exists!");
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        try {
+            List<String> superstepList =
+                m_zk.getChildrenExt(superstepPath, true, false, false);
+            if (superstepList.isEmpty()) {
+                m_cachedSuperstep = 0;
+            }
+            else {
+                m_cachedSuperstep =
+                    Long.parseLong(Collections.max(superstepList));
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        return m_cachedSuperstep;
+    }
+
+    /**
+     * Increment the superstep.
+     */
+     final public void incrSuperstep() {
+         if (m_cachedSuperstep == -1) {
+             throw new RuntimeException("incrSuperstep: Invalid -1 superstep.");
+         }
+         ++m_cachedSuperstep;
+     }
+
+    final public void process(WatchedEvent event) {
+        LOG.info("process: Got a new event, path = " + event.getPath() +
+                 ", type = " + event.getType() + ", state = " +
+                 event.getState());
+
+        /* Nothing to do unless it is a disconnect */
+        if (event.getPath() == null) {
+            if ((event.getType() == EventType.None) &&
+                (event.getState() == KeeperState.Disconnected)) {
+                m_inputSplitsAllReadyChanged.signal();
+                m_inputSplitsStateChanged.signal();
+                m_superstepFinished.signal();
+                m_superstepWorkersFinishedChanged.signal();
+                m_masterElectionChildrenChanged.signal();
+            }
+            return;
+        }
+
+        if (event.getPath().equals(MASTER_JOB_STATE_PATH)) {
+            synchronized (this) {
+                try {
+                    String jobState =
+                        new String(
+                            m_zk.getData(MASTER_JOB_STATE_PATH, true, null));
+                    m_currentJobState = State.valueOf(jobState);
+                } catch (KeeperException.NoNodeException e) {
+                    LOG.info("process: Job state path is empty! - " +
+                             MASTER_JOB_STATE_PATH);
+                    m_currentJobState = State.UNKNOWN;
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            // This will cause all becomeMaster() MasterThreads to notice the
+            // change in job state and quit trying to become the master.
+            m_masterElectionChildrenChanged.signal();
+        }
+        else if ((event.getPath().contains(WORKER_HEALTHY_DIR) ||
+                 event.getPath().contains(WORKER_UNHEALTHY_DIR)) &&
+                 (event.getType() == EventType.NodeChildrenChanged)) {
+            LOG.info("process: m_workerHealthRegistrationChanged " +
+                     "(worker health reported)");
+            m_workerHealthRegistrationChanged.signal();
+        }
+        else if (event.getPath().equals(INPUT_SPLITS_ALL_READY_PATH) &&
+                (event.getType() == EventType.NodeCreated)) {
+           LOG.info("process: m_inputSplitsReadyChanged (input splits ready)");
+           m_inputSplitsAllReadyChanged.signal();
+        }
+        else if (event.getPath().endsWith(INPUT_SPLIT_RESERVED_NODE) &&
+                (event.getType() == EventType.NodeDeleted)) {
+           LOG.info("process: m_inputSplitsStateChanged (lost a reservation)");
+           m_inputSplitsStateChanged.signal();
+        }
+        else if (event.getPath().endsWith(INPUT_SPLIT_FINISHED_NODE) &&
+                (event.getType() == EventType.NodeCreated)) {
+           LOG.info("process: m_inputSplitsStateChanged (finished inputsplit)");
+           m_inputSplitsStateChanged.signal();
+        }
+        else if (event.getPath().contains(WORKER_SELECTION_FINISHED_NODE) &&
+                event.getType() == EventType.NodeCreated) {
+           LOG.info("process: m_workerPartitionsAllReadyChanged signaled");
+           m_workerPartitionsAllReadyChanged.signal();
+       }
+        else if (event.getPath().contains(SUPERSTEP_FINISHED_NODE) &&
+                event.getType() == EventType.NodeCreated) {
+           LOG.info("process: m_superstepFinished signaled");
+           m_superstepFinished.signal();
+       }
+        else if (event.getPath().contains(WORKER_FINISHED_DIR) &&
+                 event.getType() == EventType.NodeChildrenChanged) {
+           LOG.info("process: m_superstepWorkersFinished signaled");
+           m_superstepWorkersFinishedChanged.signal();
+       }
+        else if (event.getPath().contains(MASTER_ELECTION_DIR) &&
+                 event.getType() == EventType.NodeChildrenChanged) {
+            LOG.info("process: m_masterElectionChildrenChanged signaled");
+            m_masterElectionChildrenChanged.signal();
+        }
+        else if (event.getPath().equals(CLEANED_UP_PATH) &&
+                 event.getType() == EventType.NodeChildrenChanged) {
+            LOG.info("process: m_cleanedUpChildrenChanged signaled");
+            m_cleanedUpChildrenChanged.signal();
+        }
+        else {
+            LOG.warn("process: Unknown event");
+        }
+    }
 }

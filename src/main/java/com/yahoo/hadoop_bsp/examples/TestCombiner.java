@@ -10,13 +10,13 @@ import com.yahoo.hadoop_bsp.CommunicationsInterface;
 import com.yahoo.hadoop_bsp.Combiner;
 
 /**
- * Test whether combiner is called. 
+ * Test whether combiner is called.
  *
  */
-public class TestCombiner implements Combiner<LongWritable, IntWritable> { 
+public class TestCombiner implements Combiner<LongWritable, IntWritable> {
     public void combine(CommunicationsInterface<LongWritable, IntWritable> comm,
                         LongWritable vertex, ArrayList<IntWritable> msgList)
-                throws IOException { 
+                throws IOException {
         int sum = 0;
         for (IntWritable msg : msgList) {
             sum += msg.get();

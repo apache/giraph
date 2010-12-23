@@ -55,8 +55,8 @@ public class SimpleBspTest extends TestCase implements Watcher {
     public SimpleBspTest(String testName) {
         super(testName);
         if (m_jobTracker != null) {
-            System.out.println(
-                "Setting tasks to 3 since JobTracker exists...");
+            System.out.println("Setting tasks to 3 for " + testName +
+                               " since JobTracker exists...");
             setNumProcs(3);
         }
     }
@@ -67,7 +67,7 @@ public class SimpleBspTest extends TestCase implements Watcher {
     public static Test suite() {
         return new TestSuite(SimpleBspTest.class);
     }
-    
+
     /**
      * Set the number of processes to use in the BSP application
      * @param numProcs number of processes to use
@@ -75,112 +75,112 @@ public class SimpleBspTest extends TestCase implements Watcher {
     public static void setNumProcs(int numProcs) {
         m_numProcs = numProcs;
     }
-    
+
     @Override
     public void setUp() {
-    	  try {
+          try {
             Configuration conf = new Configuration();
             FileSystem hdfs = FileSystem.get(conf);
             /* Since local jobs always use the same paths, remove them */
             Path oldLocalJobPaths = new Path(
-                BspJob.DEFAULT_ZOOKEEPER_MANAGER_DIRECTORY); 
+                BspJob.DEFAULT_ZOOKEEPER_MANAGER_DIRECTORY);
             FileStatus [] fileStatusArr = hdfs.listStatus(oldLocalJobPaths);
             for (FileStatus fileStatus : fileStatusArr) {
-                if (fileStatus.isDir() && 
+                if (fileStatus.isDir() &&
                     fileStatus.getPath().getName().contains("job_local")) {
-                    System.out.println("Cleaning up local job path " + 
+                    System.out.println("Cleaning up local job path " +
                                        fileStatus.getPath().getName());
                     hdfs.delete(oldLocalJobPaths, true);
                 }
             }
             if (m_zkList == null) {
-            	return;
+                return;
             }
-			      ZooKeeperExt zooKeeperExt = 
-				      new ZooKeeperExt(m_zkList, 30*1000, this);
-			      List<String> rootChildren = zooKeeperExt.getChildren("/", false);
-			      for (String rootChild : rootChildren) {
-				      if (rootChild.startsWith("_hadoopBsp")) {
-					      List<String> children = 
-						      zooKeeperExt.getChildren("/" + rootChild, false);
-					      for (String child: children) {
-						      if (child.contains("job_local_")) {
-							      System.out.println("Cleaning up /_hadoopBs/" +
-									           child);
-							      zooKeeperExt.deleteExt(
-								             "/_hadoopBsp/" + child, -1, true);
-						      }
-					      }
-				      }
-			      }
-			      zooKeeperExt.close();
-		    } catch (Exception e) {
-			      throw new RuntimeException(e);
-		    }
+                  ZooKeeperExt zooKeeperExt =
+                      new ZooKeeperExt(m_zkList, 30*1000, this);
+                  List<String> rootChildren = zooKeeperExt.getChildren("/", false);
+                  for (String rootChild : rootChildren) {
+                      if (rootChild.startsWith("_hadoopBsp")) {
+                          List<String> children =
+                              zooKeeperExt.getChildren("/" + rootChild, false);
+                          for (String child: children) {
+                              if (child.contains("job_local_")) {
+                                  System.out.println("Cleaning up /_hadoopBs/" +
+                                               child);
+                                  zooKeeperExt.deleteExt(
+                                             "/_hadoopBsp/" + child, -1, true);
+                              }
+                          }
+                      }
+                  }
+                  zooKeeperExt.close();
+            } catch (Exception e) {
+                  throw new RuntimeException(e);
+            }
     }
-    
+
     /**
-     * Just instantiate the vertex (all functions are implemented) and the 
+     * Just instantiate the vertex (all functions are implemented) and the
      * VertexInputFormat using reflection.
-     * 
-     * @throws IllegalAccessException 
-     * @throws InstantiationException 
-     * @throws InterruptedException 
-     * @throws IOException 
-     * @throws InvocationTargetException 
-     * @throws IllegalArgumentException 
-     * @throws NoSuchMethodException 
-     * @throws SecurityException 
+     *
+     * @throws IllegalAccessException
+     * @throws InstantiationException
+     * @throws InterruptedException
+     * @throws IOException
+     * @throws InvocationTargetException
+     * @throws IllegalArgumentException
+     * @throws NoSuchMethodException
+     * @throws SecurityException
      */
-    public void testInstantiateVertex() 
-    	throws InstantiationException, IllegalAccessException, 
-    	IOException, InterruptedException, IllegalArgumentException, 
-    	InvocationTargetException, SecurityException, NoSuchMethodException {
-    	System.out.println("testInstantiateVertex: java.class.path=" + 
-    			           System.getProperty("java.class.path"));
-    	java.lang.reflect.Constructor<?> ctor = 
-    		TestSuperstepVertex.class.getConstructor();
-    	assertNotNull(ctor);
-    	TestSuperstepVertex test = 
-    		(TestSuperstepVertex) ctor.newInstance();
-      System.out.println("testInstantiateVertex: superstep=" + 
-        		           test.getSuperstep());
-      TestVertexInputFormat inputFormat = 
-        	TestVertexInputFormat.class.newInstance();
+    public void testInstantiateVertex()
+        throws InstantiationException, IllegalAccessException,
+        IOException, InterruptedException, IllegalArgumentException,
+        InvocationTargetException, SecurityException, NoSuchMethodException {
+        System.out.println("testInstantiateVertex: java.class.path=" +
+                           System.getProperty("java.class.path"));
+        java.lang.reflect.Constructor<?> ctor =
+            TestSuperstepVertex.class.getConstructor();
+        assertNotNull(ctor);
+        TestSuperstepVertex test =
+            (TestSuperstepVertex) ctor.newInstance();
+      System.out.println("testInstantiateVertex: superstep=" +
+                           test.getSuperstep());
+      TestVertexInputFormat inputFormat =
+            TestVertexInputFormat.class.newInstance();
       Configuration conf = new Configuration();
       List<InputSplit> splitArray = inputFormat.getSplits(conf, 1);
-      ByteArrayOutputStream byteArrayOutputStream = 
-        	new ByteArrayOutputStream();
-      DataOutputStream outputStream = 
-        	new DataOutputStream(byteArrayOutputStream);
+      ByteArrayOutputStream byteArrayOutputStream =
+            new ByteArrayOutputStream();
+      DataOutputStream outputStream =
+            new DataOutputStream(byteArrayOutputStream);
       ((Writable) splitArray.get(0)).write(outputStream);
-      System.out.println("testInstantiateVertex: Example output split = " + 
-        	byteArrayOutputStream.toString());
+      System.out.println("testInstantiateVertex: Example output split = " +
+            byteArrayOutputStream.toString());
     }
-    
+
     /**
      * Run a sample BSP job locally and test supersteps.
      * @throws IOException
-     * @throws ClassNotFoundException 
-     * @throws InterruptedException 
+     * @throws ClassNotFoundException
+     * @throws InterruptedException
      */
-    public void testBspSuperStep() 
-    	throws IOException, InterruptedException, ClassNotFoundException {
+    public void testBspSuperStep()
+        throws IOException, InterruptedException, ClassNotFoundException {
         Configuration conf = new Configuration();
         /* Allow this test to be run on a real Hadoop setup */
         conf.set("mapred.jar", m_jarLocation);
 
         if (m_jobTracker != null) {
-        	  System.out.println("testBspSuperstep: Sending job to job tracker " +
-			           m_jobTracker + " with jar path " + m_jarLocation);
+              System.out.println("testBspSuperstep: Sending job to job tracker " +
+                       m_jobTracker + " with jar path " + m_jarLocation);
             conf.set("mapred.job.tracker", m_jobTracker);
             conf.setInt(BspJob.BSP_INITIAL_PROCESSES, m_numProcs);
             conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
             conf.setInt(BspJob.BSP_MIN_PROCESSES, m_numProcs);
         }
         else {
-        	  System.out.println("testBspSuperStep: Using local job runner with " + 
-        			           "location " + m_jarLocation + "...");
+              System.out.println("testBspSuperStep: Using local job runner with " +
+                               "location " + m_jarLocation + "...");
             conf.setInt(BspJob.BSP_INITIAL_PROCESSES, 1);
             conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
             conf.setInt(BspJob.BSP_MIN_PROCESSES, 1);
@@ -189,50 +189,50 @@ public class SimpleBspTest extends TestCase implements Watcher {
         conf.setInt(BspJob.BSP_POLL_ATTEMPTS, 5);
         conf.setInt(BspJob.BSP_POLL_MSECS, 3*1000);
         if (m_zkList != null) {
-        	  conf.set(BspJob.BSP_ZOOKEEPER_LIST, m_zkList);	
+              conf.set(BspJob.BSP_ZOOKEEPER_LIST, m_zkList);
         }
         conf.setInt(BspJob.BSP_RPC_INITIAL_PORT, BspJob.BSP_RPC_DEFAULT_PORT);
         /* GeneratedInputSplit will generate 5 vertices */
         conf.setLong(TestVertexReader.READER_VERTICES, 5);
         FileSystem hdfs = FileSystem.get(conf);
-    	conf.setClass("bsp.vertexClass", 
-    				  TestSuperstepVertex.class, 
-    				  HadoopVertex.class);
-    	conf.setClass("bsp.msgValueClass", 
-    				  IntWritable.class, 
-    				  Writable.class);
-    	conf.setClass("bsp.inputSplitClass", 
-    				  BspInputSplit.class, 
-    				  InputSplit.class);
-    	conf.setClass("bsp.vertexInputFormatClass", 
-    				  TestVertexInputFormat.class,
-    				  VertexInputFormat.class);
+        conf.setClass("bsp.vertexClass",
+                      TestSuperstepVertex.class,
+                      HadoopVertex.class);
+        conf.setClass("bsp.msgValueClass",
+                      IntWritable.class,
+                      Writable.class);
+        conf.setClass("bsp.inputSplitClass",
+                      BspInputSplit.class,
+                      InputSplit.class);
+        conf.setClass("bsp.vertexInputFormatClass",
+                      TestVertexInputFormat.class,
+                      VertexInputFormat.class);
         conf.setClass("bsp.vertexWriterClass",
                       TestVertexWriter.class,
                       VertexWriter.class);
         conf.setClass("bsp.indexClass",
                       LongWritable.class,
                       WritableComparable.class);
-    	BspJob<Integer, String, String> bspJob = 
-    		new BspJob<Integer, String, String>(conf, "testBspSuperStep");
-       	Path outputPath = new Path("/tmp/testBspSuperStepOutput");    	
-    	hdfs.delete(outputPath, true);
-    	FileOutputFormat.setOutputPath(bspJob, outputPath);
-    	assertTrue(bspJob.run());
-    	if (m_jobTracker == null) {
-    	    FileStatus [] fileStatusArr = hdfs.listStatus(outputPath);
-    	    assertTrue(fileStatusArr.length == 1);
-    	    assertTrue(fileStatusArr[0].getLen() == 24);
-    	}
+        BspJob<Integer, String, String> bspJob =
+            new BspJob<Integer, String, String>(conf, "testBspSuperStep");
+           Path outputPath = new Path("/tmp/testBspSuperStepOutput");
+        hdfs.delete(outputPath, true);
+        FileOutputFormat.setOutputPath(bspJob, outputPath);
+        assertTrue(bspJob.run());
+        if (m_jobTracker == null) {
+            FileStatus [] fileStatusArr = hdfs.listStatus(outputPath);
+            assertTrue(fileStatusArr.length == 1);
+            assertTrue(fileStatusArr[0].getLen() == 24);
+        }
     }
-    
+
     /**
      * Run a sample BSP job locally and test messages.
      * @throws IOException
-     * @throws ClassNotFoundException 
-     * @throws InterruptedException 
+     * @throws ClassNotFoundException
+     * @throws InterruptedException
      */
-    public void testBspMsg() 
+    public void testBspMsg()
         throws IOException, InterruptedException, ClassNotFoundException {
         Configuration conf = new Configuration();
         conf.set("mapred.jar", m_jarLocation);
@@ -246,7 +246,7 @@ public class SimpleBspTest extends TestCase implements Watcher {
             conf.setInt(BspJob.BSP_MIN_PROCESSES, m_numProcs);
         }
         else {
-            System.out.println("testBspMsg: Using local job runner with " + 
+            System.out.println("testBspMsg: Using local job runner with " +
                                "location " + m_jarLocation + "...");
             conf.setInt(BspJob.BSP_INITIAL_PROCESSES, 1);
             conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
@@ -256,42 +256,42 @@ public class SimpleBspTest extends TestCase implements Watcher {
         conf.setInt(BspJob.BSP_POLL_ATTEMPTS, 5);
         conf.setInt(BspJob.BSP_POLL_MSECS, 3*1000);
         if (m_zkList != null) {
-            conf.set(BspJob.BSP_ZOOKEEPER_LIST, m_zkList);    
+            conf.set(BspJob.BSP_ZOOKEEPER_LIST, m_zkList);
         }
         conf.setInt(BspJob.BSP_RPC_INITIAL_PORT, BspJob.BSP_RPC_DEFAULT_PORT);
         /* GeneratedInputSplit will generate 5 vertices */
         conf.setLong(TestVertexReader.READER_VERTICES, 5);
         FileSystem hdfs = FileSystem.get(conf);
-        conf.setClass("bsp.vertexClass", 
-                      TestMsgVertex.class, 
+        conf.setClass("bsp.vertexClass",
+                      TestMsgVertex.class,
                       HadoopVertex.class);
-    	  conf.setClass("bsp.msgValueClass", 
-    				          IntWritable.class, 
-    				          Writable.class);
-        conf.setClass("bsp.inputSplitClass", 
-                      BspInputSplit.class, 
+          conf.setClass("bsp.msgValueClass",
+                              IntWritable.class,
+                              Writable.class);
+        conf.setClass("bsp.inputSplitClass",
+                      BspInputSplit.class,
                       InputSplit.class);
-        conf.setClass("bsp.vertexInputFormatClass", 
+        conf.setClass("bsp.vertexInputFormatClass",
                       TestVertexInputFormat.class,
                       VertexInputFormat.class);
         conf.setClass("bsp.indexClass",
                       LongWritable.class,
                       WritableComparable.class);
-        BspJob<Integer, String, String> bspJob = 
+        BspJob<Integer, String, String> bspJob =
             new BspJob<Integer, String, String>(conf, "testBspMsg");
-        Path outputPath = new Path("/tmp/testBspMsgOutput");        
+        Path outputPath = new Path("/tmp/testBspMsgOutput");
         hdfs.delete(outputPath, true);
         FileOutputFormat.setOutputPath(bspJob, outputPath);
         assertTrue(bspJob.run());
     }
-    
+
     /**
      * Run a sample BSP job locally with combiner and checkout output value.
      * @throws IOException
-     * @throws ClassNotFoundException 
-     * @throws InterruptedException 
+     * @throws ClassNotFoundException
+     * @throws InterruptedException
      */
-    public void testBspCombiner() 
+    public void testBspCombiner()
         throws IOException, InterruptedException, ClassNotFoundException {
         Configuration conf = new Configuration();
         conf.set("mapred.jar", m_jarLocation);
@@ -305,7 +305,7 @@ public class SimpleBspTest extends TestCase implements Watcher {
             conf.setInt(BspJob.BSP_MIN_PROCESSES, m_numProcs);
         }
         else {
-            System.out.println("testBspMsg: Using local job runner with " + 
+            System.out.println("testBspMsg: Using local job runner with " +
                                "location " + m_jarLocation + "...");
             conf.setInt(BspJob.BSP_INITIAL_PROCESSES, 1);
             conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
@@ -315,45 +315,45 @@ public class SimpleBspTest extends TestCase implements Watcher {
         conf.setInt(BspJob.BSP_POLL_ATTEMPTS, 5);
         conf.setInt(BspJob.BSP_POLL_MSECS, 3*1000);
         if (m_zkList != null) {
-            conf.set(BspJob.BSP_ZOOKEEPER_LIST, m_zkList);    
+            conf.set(BspJob.BSP_ZOOKEEPER_LIST, m_zkList);
         }
         conf.setInt(BspJob.BSP_RPC_INITIAL_PORT, BspJob.BSP_RPC_DEFAULT_PORT);
         /* GeneratedInputSplit will generate 5 vertices */
         conf.setLong(TestVertexReader.READER_VERTICES, 5);
         FileSystem hdfs = FileSystem.get(conf);
-        conf.setClass("bsp.vertexClass", 
-                      TestCombinerVertex.class, 
+        conf.setClass("bsp.vertexClass",
+                      TestCombinerVertex.class,
                       HadoopVertex.class);
-        conf.setClass("bsp.combinerClass", 
-                      TestCombiner.class, 
+        conf.setClass("bsp.combinerClass",
+                      TestCombiner.class,
                       Combiner.class);
-        conf.setClass("bsp.bsp.msgValueClass", 
-                      IntWritable.class, 
+        conf.setClass("bsp.bsp.msgValueClass",
+                      IntWritable.class,
                       Writable.class);
-        conf.setClass("bsp.inputSplitClass", 
-                      BspInputSplit.class, 
+        conf.setClass("bsp.inputSplitClass",
+                      BspInputSplit.class,
                       InputSplit.class);
-        conf.setClass("bsp.vertexInputFormatClass", 
+        conf.setClass("bsp.vertexInputFormatClass",
                       TestVertexInputFormat.class,
                       VertexInputFormat.class);
         conf.setClass("bsp.indexClass",
                       LongWritable.class,
                       WritableComparable.class);
-        BspJob<Integer, String, String> bspJob = 
+        BspJob<Integer, String, String> bspJob =
             new BspJob<Integer, String, String>(conf, "testBspCombiner");
-        Path outputPath = new Path("/tmp/testBspCombinerOutput");        
+        Path outputPath = new Path("/tmp/testBspCombinerOutput");
         hdfs.delete(outputPath, true);
         FileOutputFormat.setOutputPath(bspJob, outputPath);
         assertTrue(bspJob.run());
     }
-    
+
     /**
      * Run a sample BSP job locally and test PageRank.
      * @throws IOException
-     * @throws ClassNotFoundException 
-     * @throws InterruptedException 
+     * @throws ClassNotFoundException
+     * @throws InterruptedException
      */
-    public void testBspPageRank() 
+    public void testBspPageRank()
         throws IOException, InterruptedException, ClassNotFoundException {
         Configuration conf = new Configuration();
         conf.set("mapred.jar", m_jarLocation);
@@ -367,7 +367,7 @@ public class SimpleBspTest extends TestCase implements Watcher {
             conf.setInt(BspJob.BSP_MIN_PROCESSES, m_numProcs);
         }
         else {
-            System.out.println("testBspPageRank: Using local job runner with " + 
+            System.out.println("testBspPageRank: Using local job runner with " +
                                "location " + m_jarLocation + "...");
             conf.setInt(BspJob.BSP_INITIAL_PROCESSES, 1);
             conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
@@ -376,36 +376,36 @@ public class SimpleBspTest extends TestCase implements Watcher {
         conf.setInt(BspJob.BSP_POLL_ATTEMPTS, 5);
         conf.setInt(BspJob.BSP_POLL_MSECS, 3*1000);
         if (m_zkList != null) {
-            conf.set(BspJob.BSP_ZOOKEEPER_LIST, m_zkList);    
+            conf.set(BspJob.BSP_ZOOKEEPER_LIST, m_zkList);
         }
         conf.setInt(BspJob.BSP_RPC_INITIAL_PORT, BspJob.BSP_RPC_DEFAULT_PORT);
         /* GeneratedInputSplit will generate 5 vertices */
         conf.setLong(TestVertexReader.READER_VERTICES, 5);
         FileSystem hdfs = FileSystem.get(conf);
-        conf.setClass("bsp.vertexClass", 
-                      TestPageRankVertex.class, 
+        conf.setClass("bsp.vertexClass",
+                      TestPageRankVertex.class,
                       HadoopVertex.class);
-        conf.setClass("bsp.msgValueClass", 
-                      DoubleWritable.class, 
+        conf.setClass("bsp.msgValueClass",
+                      DoubleWritable.class,
                       Writable.class);
-        conf.setClass("bsp.inputSplitClass", 
-                      BspInputSplit.class, 
+        conf.setClass("bsp.inputSplitClass",
+                      BspInputSplit.class,
                       InputSplit.class);
-        conf.setClass("bsp.vertexInputFormatClass", 
+        conf.setClass("bsp.vertexInputFormatClass",
                       TestVertexInputFormat.class,
                       VertexInputFormat.class);
         conf.setClass("bsp.indexClass",
                       LongWritable.class,
                       WritableComparable.class);
-        BspJob<Integer, String, String> bspJob = 
+        BspJob<Integer, String, String> bspJob =
             new BspJob<Integer, String, String>(conf, "testBspPageRank");
-        Path outputPath = new Path("/tmp/testBspPageRankOutput");        
+        Path outputPath = new Path("/tmp/testBspPageRankOutput");
         hdfs.delete(outputPath, true);
         FileOutputFormat.setOutputPath(bspJob, outputPath);
         assertTrue(bspJob.run());
-    } 
-    
-	public void process(WatchedEvent event) {
-		return;
-	}
+    }
+
+    public void process(WatchedEvent event) {
+        return;
+    }
 }

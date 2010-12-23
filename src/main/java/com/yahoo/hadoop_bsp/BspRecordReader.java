@@ -13,47 +13,47 @@ import org.apache.hadoop.io.Text;
  *
  */
 public class BspRecordReader extends RecordReader<Text, Text> {
-	/** Has the one record been seen? */
-	private boolean m_seenRecord = false;
-	
-	@Override
-	public void close() throws IOException {
-		return;
-	}
+    /** Has the one record been seen? */
+    private boolean m_seenRecord = false;
 
-	@Override
-	public float getProgress() throws IOException {
-		if (m_seenRecord == true) {
-			return 1f;
-		}
-		else {
-			return 0f;
-		}
-	}
+    @Override
+    public void close() throws IOException {
+        return;
+    }
 
-	@Override
-	public Text getCurrentKey() throws IOException, InterruptedException {
-		return new Text("only key");	
-	}
+    @Override
+    public float getProgress() throws IOException {
+        if (m_seenRecord == true) {
+            return 1f;
+        }
+        else {
+            return 0f;
+        }
+    }
 
-	@Override
-	public Text getCurrentValue() throws IOException, InterruptedException {
-		return new Text("only value");
-	}
+    @Override
+    public Text getCurrentKey() throws IOException, InterruptedException {
+        return new Text("only key");
+    }
 
-	@Override
-	public void initialize(InputSplit inputSplit, TaskAttemptContext context)
-		throws IOException, InterruptedException {
-	}
+    @Override
+    public Text getCurrentValue() throws IOException, InterruptedException {
+        return new Text("only value");
+    }
 
-	@Override
-	public boolean nextKeyValue() throws IOException, InterruptedException {
-		if (m_seenRecord == false) {
-			m_seenRecord = true;
-			return true;
-		}
-		else {
-			return false;
-		}
-	}
+    @Override
+    public void initialize(InputSplit inputSplit, TaskAttemptContext context)
+        throws IOException, InterruptedException {
+    }
+
+    @Override
+    public boolean nextKeyValue() throws IOException, InterruptedException {
+        if (m_seenRecord == false) {
+            m_seenRecord = true;
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
 }

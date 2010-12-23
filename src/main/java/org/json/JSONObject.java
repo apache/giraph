@@ -154,16 +154,16 @@ public class JSONObject {
      * Missing keys are ignored.
      * @param jo A JSONObject.
      * @param names An array of strings.
-     * @throws JSONException 
+     * @throws JSONException
      * @exception JSONException If a value is a non-finite number or if a name is duplicated.
      */
     public JSONObject(JSONObject jo, String[] names) {
         this();
         for (int i = 0; i < names.length; i += 1) {
-        	try {
-        		putOnce(names[i], jo.opt(names[i]));
-        	} catch (Exception ignore) {
-        	}
+            try {
+                putOnce(names[i], jo.opt(names[i]));
+            } catch (Exception ignore) {
+            }
         }
     }
 
@@ -234,7 +234,7 @@ public class JSONObject {
      *
      * @param map A map object that can be used to initialize the contents of
      *  the JSONObject.
-     * @throws JSONException 
+     * @throws JSONException
      */
     public JSONObject(Map map) {
         this.map = new HashMap();
@@ -454,7 +454,7 @@ public class JSONObject {
 
 
     /**
-     * Get the int value associated with a key. 
+     * Get the int value associated with a key.
      *
      * @param key   A key string.
      * @return      The integer value.
@@ -511,7 +511,7 @@ public class JSONObject {
 
 
     /**
-     * Get the long value associated with a key. 
+     * Get the long value associated with a key.
      *
      * @param key   A key string.
      * @return      The long value.
@@ -595,8 +595,8 @@ public class JSONObject {
     public boolean has(String key) {
         return this.map.containsKey(key);
     }
-    
-    
+
+
     /**
      * Increment a property of a JSONObject. If there is no such property,
      * create one with a value of 1. If there is such a property, and if
@@ -607,23 +607,23 @@ public class JSONObject {
      * that is not an Integer, Long, Double, or Float.
      */
     public JSONObject increment(String key) throws JSONException {
-    	Object value = opt(key);
-    	if (value == null) {
-    		put(key, 1);
-    	} else {
-    		if (value instanceof Integer) {
-    			put(key, ((Integer)value).intValue() + 1);
-    		} else if (value instanceof Long) {
-    			put(key, ((Long)value).longValue() + 1);    			
-    		} else if (value instanceof Double) {
-	    		put(key, ((Double)value).doubleValue() + 1);    			
-    		} else if (value instanceof Float) {
-	    		put(key, ((Float)value).floatValue() + 1);    			
-		    } else {
-		    	throw new JSONException("Unable to increment [" + key + "].");
-		    }
-	    }
-    	return this;
+        Object value = opt(key);
+        if (value == null) {
+            put(key, 1);
+        } else {
+            if (value instanceof Integer) {
+                put(key, ((Integer)value).intValue() + 1);
+            } else if (value instanceof Long) {
+                put(key, ((Long)value).longValue() + 1);
+            } else if (value instanceof Double) {
+                put(key, ((Double)value).doubleValue() + 1);
+            } else if (value instanceof Float) {
+                put(key, ((Float)value).floatValue() + 1);
+            } else {
+                throw new JSONException("Unable to increment [" + key + "].");
+            }
+        }
+        return this;
     }
 
 
@@ -902,7 +902,7 @@ public class JSONObject {
     private void populateMap(Object bean) {
         Class klass = bean.getClass();
 
-// If klass is a System class then set includeSuperClass to false. 
+// If klass is a System class then set includeSuperClass to false.
 
         boolean includeSuperClass = klass.getClassLoader() != null;
 
@@ -915,12 +915,12 @@ public class JSONObject {
                     String name = method.getName();
                     String key = "";
                     if (name.startsWith("get")) {
-                    	if (name.equals("getClass") || 
-                    			name.equals("getDeclaringClass")) {
-                    		key = "";
-                    	} else {
-                    		key = name.substring(3);
-                    	}
+                        if (name.equals("getClass") ||
+                                name.equals("getDeclaringClass")) {
+                            key = "";
+                        } else {
+                            key = name.substring(3);
+                        }
                     } else if (name.startsWith("is")) {
                         key = name.substring(2);
                     }
@@ -1198,8 +1198,8 @@ public class JSONObject {
         }
 
         /*
-         * If it might be a number, try converting it. 
-         * We support the non-standard 0x- convention. 
+         * If it might be a number, try converting it.
+         * We support the non-standard 0x- convention.
          * If a number cannot be produced, then the value will just
          * be a string. Note that the 0x-, plus, and implied string
          * conventions are non-standard. A JSON parser may accept
@@ -1216,8 +1216,8 @@ public class JSONObject {
                 }
             }
             try {
-                if (s.indexOf('.') > -1 || 
-                		s.indexOf('e') > -1 || s.indexOf('E') > -1) {
+                if (s.indexOf('.') > -1 ||
+                        s.indexOf('e') > -1 || s.indexOf('E') > -1) {
                     return Double.valueOf(s);
                 } else {
                     Long myLong = new Long(s);
@@ -1494,11 +1494,11 @@ public class JSONObject {
 
 
      /**
-      * Wrap an object, if necessary. If the object is null, return the NULL 
-      * object. If it is an array or collection, wrap it in a JSONArray. If 
-      * it is a map, wrap it in a JSONObject. If it is a standard property 
-      * (Double, String, et al) then it is already wrapped. Otherwise, if it 
-      * comes from one of the java packages, turn it into a string. And if 
+      * Wrap an object, if necessary. If the object is null, return the NULL
+      * object. If it is an array or collection, wrap it in a JSONArray. If
+      * it is a map, wrap it in a JSONObject. If it is a standard property
+      * (Double, String, et al) then it is already wrapped. Otherwise, if it
+      * comes from one of the java packages, turn it into a string. And if
       * it doesn't, try to wrap it in a JSONObject. If the wrapping fails,
       * then null is returned.
       *
@@ -1510,16 +1510,16 @@ public class JSONObject {
              if (object == null) {
                  return NULL;
              }
-             if (object instanceof JSONObject || object instanceof JSONArray || 
-            		 NULL.equals(object)      || object instanceof JSONString || 
-            		 object instanceof Byte   || object instanceof Character ||
+             if (object instanceof JSONObject || object instanceof JSONArray ||
+                     NULL.equals(object)      || object instanceof JSONString ||
+                     object instanceof Byte   || object instanceof Character ||
                      object instanceof Short  || object instanceof Integer   ||
-                     object instanceof Long   || object instanceof Boolean   || 
+                     object instanceof Long   || object instanceof Boolean   ||
                      object instanceof Float  || object instanceof Double    ||
                      object instanceof String) {
                  return object;
              }
-             
+
              if (object instanceof Collection) {
                  return new JSONArray((Collection)object);
              }
@@ -1532,8 +1532,8 @@ public class JSONObject {
              Package objectPackage = object.getClass().getPackage();
              String objectPackageName = ( objectPackage != null ? objectPackage.getName() : "" );
              if (objectPackageName.startsWith("java.") ||
-            		 objectPackageName.startsWith("javax.") ||
-            		 object.getClass().getClassLoader() == null) {
+                     objectPackageName.startsWith("javax.") ||
+                     object.getClass().getClassLoader() == null) {
                  return object.toString();
              }
              return new JSONObject(object);
@@ -1542,7 +1542,7 @@ public class JSONObject {
          }
      }
 
-     
+
      /**
       * Write the contents of the JSONObject as JSON text to a writer.
       * For compactness, no whitespace is added.

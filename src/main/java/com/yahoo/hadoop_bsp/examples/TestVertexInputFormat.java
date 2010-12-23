@@ -20,26 +20,26 @@ import com.yahoo.hadoop_bsp.VertexReader;
  * @author aching
  *
  */
-public class TestVertexInputFormat implements 
-	VertexInputFormat<LongWritable, IntWritable, Float> {
-	
-	public List<InputSplit> getSplits(Configuration conf, int numSplits)
-		throws IOException, InterruptedException {
-		/*
-		 * This is meaningless, the VertexReader will generate all the test
-		 * data.
-		 */
+public class TestVertexInputFormat implements
+    VertexInputFormat<LongWritable, IntWritable, Float> {
+
+    public List<InputSplit> getSplits(Configuration conf, int numSplits)
+        throws IOException, InterruptedException {
+        /*
+         * This is meaningless, the VertexReader will generate all the test
+         * data.
+         */
     List<InputSplit> inputSplitList = new ArrayList<InputSplit>();
     for (int i = 0; i < numSplits; ++i) {
       inputSplitList.add(new BspInputSplit(i, numSplits));
     }
     return inputSplitList;
-	}
-	
-	public VertexReader<LongWritable, IntWritable, Float> createVertexReader(
-		InputSplit split, TaskAttemptContext context) 
-		throws IOException {
-		return new TestVertexReader();
-	}
+    }
+
+    public VertexReader<LongWritable, IntWritable, Float> createVertexReader(
+        InputSplit split, TaskAttemptContext context)
+        throws IOException {
+        return new TestVertexReader();
+    }
 
 }

@@ -25,7 +25,7 @@ public interface Combiner <I extends Writable,
    * Combines message values.
    * Combined message msg should be put out by calling
    * comm.put(vertex, msg).
-   * 
+   *
    * @param comm
    * @param vertex
    * @param msgs
@@ -33,5 +33,5 @@ public interface Combiner <I extends Writable,
    */
   void combine(CommunicationsInterface<I, M> comm, I vertex, ArrayList<M> msgList)
       throws IOException;
-  
+
 }

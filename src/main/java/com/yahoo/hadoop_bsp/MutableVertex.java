@@ -11,14 +11,14 @@ import org.apache.hadoop.io.WritableComparable;
  * @param <E>
  * @param <M>
  */
-public interface MutableVertex<I extends WritableComparable, V, E, M> 
+public interface MutableVertex<I extends WritableComparable, V, E, M>
     extends Vertex<I, V, E, M> {
     /**
-     * Set the vertex id 
+     * Set the vertex id
      * @param id vertex id is set to this (instantiated by the user)
      */
     public void setVertexId(I id);
-    
+
     /**
      * Add an edge for this vertex
      * @param destVertexId destination vertex

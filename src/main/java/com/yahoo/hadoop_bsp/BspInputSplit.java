@@ -15,43 +15,43 @@ import org.apache.hadoop.mapreduce.InputSplit;
  *
  */
 public class BspInputSplit extends InputSplit implements Writable {
-	/** Number of splits */
-	int m_numSplits = -1;
-	/** Split index */
-	int m_splitIndex = -1;
-	
-	public BspInputSplit() {}
+    /** Number of splits */
+    int m_numSplits = -1;
+    /** Split index */
+    int m_splitIndex = -1;
 
-	public BspInputSplit(int splitIndex, int numSplits) {
-		m_splitIndex = splitIndex;
-		m_numSplits = numSplits;
-	}
-	
-	@Override
-	public long getLength() throws IOException, InterruptedException {
-		return 0;
-	}
+    public BspInputSplit() {}
 
-	@Override
-	public String[] getLocations() throws IOException, InterruptedException {
-		return new String[]{};
-	}
+    public BspInputSplit(int splitIndex, int numSplits) {
+        m_splitIndex = splitIndex;
+        m_numSplits = numSplits;
+    }
 
-	public void readFields(DataInput in) throws IOException {
-	    m_numSplits = in.readInt();
-	    m_splitIndex = in.readInt();
-	}
+    @Override
+    public long getLength() throws IOException, InterruptedException {
+        return 0;
+    }
 
-	public void write(DataOutput out) throws IOException {
-		out.writeInt(m_splitIndex);
-	    out.writeInt(m_numSplits);
-	}
-	
-	public int getSplitIndex() {
-		return m_splitIndex;
-	}
-	
-	public int getNumSplits() {
-		return m_numSplits;
-	}
+    @Override
+    public String[] getLocations() throws IOException, InterruptedException {
+        return new String[]{};
+    }
+
+    public void readFields(DataInput in) throws IOException {
+        m_numSplits = in.readInt();
+        m_splitIndex = in.readInt();
+    }
+
+    public void write(DataOutput out) throws IOException {
+        out.writeInt(m_splitIndex);
+        out.writeInt(m_numSplits);
+    }
+
+    public int getSplitIndex() {
+        return m_splitIndex;
+    }
+
+    public int getNumSplits() {
+        return m_numSplits;
+    }
 }

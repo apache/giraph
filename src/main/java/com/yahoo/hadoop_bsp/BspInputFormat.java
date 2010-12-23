@@ -20,24 +20,24 @@ import org.apache.hadoop.mapreduce.InputSplit;
  *
  */
 public class BspInputFormat extends InputFormat<Text, Text> {
-	public List<InputSplit> getSplits(JobContext context) 
-    	throws IOException, InterruptedException {
-		Configuration conf = context.getConfiguration();
-		int initialTasks = conf.getInt(BspJob.BSP_INITIAL_PROCESSES, 0);
-		if (initialTasks <= 0) {
-			throw new InterruptedException(
-				"Set " + BspJob.BSP_INITIAL_PROCESSES + " > 0");
-		}
+    public List<InputSplit> getSplits(JobContext context)
+        throws IOException, InterruptedException {
+        Configuration conf = context.getConfiguration();
+        int initialTasks = conf.getInt(BspJob.BSP_INITIAL_PROCESSES, 0);
+        if (initialTasks <= 0) {
+            throw new InterruptedException(
+                "Set " + BspJob.BSP_INITIAL_PROCESSES + " > 0");
+        }
         List<InputSplit> inputSplitList = new ArrayList<InputSplit>();
         for (int i = 0; i < initialTasks; ++i) {
-        	inputSplitList.add(new BspInputSplit());
+            inputSplitList.add(new BspInputSplit());
         }
         return inputSplitList;
-	}
-    
-	public RecordReader<Text, Text> 
-		createRecordReader(InputSplit split, TaskAttemptContext context) 
-		throws IOException, InterruptedException {
-		return new BspRecordReader();
-	}
+    }
+
+    public RecordReader<Text, Text>
+        createRecordReader(InputSplit split, TaskAttemptContext context)
+        throws IOException, InterruptedException {
+        return new BspRecordReader();
+    }
 }

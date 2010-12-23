@@ -15,7 +15,7 @@ public class VertexData<V, E> {
     private V m_userData;
     /** Done? */
     private boolean m_done = false;
-	
+
     public void setEdgeList(ArrayList<E> edgeList) {
         m_edgeList = edgeList;
     }

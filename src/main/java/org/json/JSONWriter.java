@@ -157,8 +157,8 @@ public class JSONWriter {
      */
     private JSONWriter end(char m, char c) throws JSONException {
         if (this.mode != m) {
-            throw new JSONException(m == 'a' ? "Misplaced endArray." : 
-            		"Misplaced endObject.");
+            throw new JSONException(m == 'a' ? "Misplaced endArray." :
+                    "Misplaced endObject.");
         }
         this.pop(m);
         try {

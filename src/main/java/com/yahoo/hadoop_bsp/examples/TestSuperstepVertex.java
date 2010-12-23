@@ -13,11 +13,11 @@ import com.yahoo.hadoop_bsp.HadoopVertex;
  * @author aching
  *
  */
-public class TestSuperstepVertex extends 
-	HadoopVertex<LongWritable, IntWritable, Float, IntWritable> {
+public class TestSuperstepVertex extends
+    HadoopVertex<LongWritable, IntWritable, Float, IntWritable> {
     public void compute(Iterator<IntWritable> msgIterator) {
-    	if (getSuperstep() > 3) {
-    		voteToHalt();
+        if (getSuperstep() > 3) {
+            voteToHalt();
         }
     }
 }
