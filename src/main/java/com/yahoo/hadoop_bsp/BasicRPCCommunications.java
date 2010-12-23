@@ -319,8 +319,8 @@ public abstract class BasicRPCCommunications<
     }
 
     protected abstract CommunicationsInterface<I, M> getRPCProxy(
-                                                                 final InetSocketAddress addr, String jobId, J jt)
-                                                                 throws IOException, InterruptedException;
+                               final InetSocketAddress addr, String jobId, J jt)
+                               throws IOException, InterruptedException;
 
     /**
      * Starts a client.
@@ -332,12 +332,19 @@ public abstract class BasicRPCCommunications<
                                            String jobId, J jt)
     throws IOException, InterruptedException {
 
-        CommunicationsInterface<I, M> peer;
-
         final InetSocketAddress addr = new InetSocketAddress(
-                                                             partition.getHostname(),
-                                                             partition.getPort());
+                                           partition.getHostname(),
+                                           partition.getPort());
+
+        InetSocketAddress addrUnresolved = InetSocketAddress.createUnresolved(
+                                           addr.getHostName(), addr.getPort());
+        HashMap<I, MsgArrayList<M>> outMsgMap = outMessages.get(addrUnresolved);
+        if (outMsgMap != null) { // this host has already been added
+            return;
+        }
+
         boolean isProxy = true;
+        CommunicationsInterface<I, M> peer;
 
         if (myName.equals(addr.toString())) {
             peer = this;
@@ -346,13 +353,8 @@ public abstract class BasicRPCCommunications<
             peer = getRPCProxy(addr, jobId, jt);
         }
 
-        InetSocketAddress addrUnresolved = InetSocketAddress.createUnresolved(
-                                                                              addr.getHostName(), addr.getPort());
-        HashMap<I, MsgArrayList<M>> outMsgMap = outMessages.get(addrUnresolved);
-        if (outMsgMap == null) { // at this stage always true
-            outMsgMap = new HashMap<I, MsgArrayList<M>>();
-            outMessages.put(addrUnresolved, outMsgMap);
-        }
+        outMsgMap = new HashMap<I, MsgArrayList<M>>();
+        outMessages.put(addrUnresolved, outMsgMap);
 
         PeerThread th = new PeerThread(outMsgMap, peer, maxSize, isProxy, combiner);
         th.start();
