@@ -1,14 +1,10 @@
 package com.yahoo.hadoop_bsp;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.Map.Entry;
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.ipc.VersionedProtocol;
 
 /**
  * Interface for Combiner
@@ -18,7 +14,7 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  *
  **/
 
-public interface Combiner <I extends Writable,
+public interface Combiner <I extends WritableComparable,
                            M extends Writable> {
 
   /**
