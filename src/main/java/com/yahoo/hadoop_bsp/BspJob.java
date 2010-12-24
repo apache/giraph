@@ -68,6 +68,15 @@ public class BspJob<V, E, M> extends Job {
     /** Number of minimum vertices in each vertex range */
     public static final String BSP_MIN_VERTICES_PER_RANGE =
         "bsp.minVerticesPerRange";
+    /**
+     * Set the multiplicative factor of how many partitions to create from
+     * a single InputSplit based on the number of total InputSplits.  For
+     * example, if there are 10 total InputSplits and this is set to 0.5, then
+     * you will get 0.5 * 10 = 5 partitions for every InputSplit (given that the
+     * minimum size is met).
+     */
+    public static final String BSP_TOTAL_INPUT_SPLIT_MULTIPLIER =
+        "bsp.totalInputSplitMultiplier";
     /** Java opts passed to ZooKeeper startup */
     public static final String BSP_ZOOKEEPER_JAVA_OPTS =
         "bsp.zkJavaOpts";
@@ -106,6 +115,8 @@ public class BspJob<V, E, M> extends Job {
     public static final int DEFAULT_BSP_POLL_ATTEMPTS = 5;
     /** Default number of minimum vertices in each vertex range */
     public static final long DEFAULT_BSP_MIN_VERTICES_PER_RANGE = 3;
+    /** Default total input split multiplier */
+    public static final float DEFAULT_BSP_TOTAL_INPUT_SPLIT_MULTIPLIER = 0.5f;
     /** Default java opts passed to ZooKeeper startup */
     public static final String DEFAULT_BSP_ZOOKEEPER_JAVA_OPTS =
         "-Xmx512m";

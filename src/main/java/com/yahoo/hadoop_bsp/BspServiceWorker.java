@@ -292,18 +292,24 @@ public class BspServiceWorker<
             // available workers and must reach a minimum size.  Then two passes
             // over the vertexList.  First, find the maximum vertex ranges.
             // Then fill them in.
-            long vertexRangeSize = vertexList.size() * 2 / m_inputSplitCount;
-            if (vertexRangeSize <
-                    getConfiguration().getLong(BspJob.BSP_MIN_VERTICES_PER_RANGE,
-                                   BspJob.DEFAULT_BSP_MIN_VERTICES_PER_RANGE)) {
-                vertexRangeSize =
-                    getConfiguration().getLong(BspJob.BSP_MIN_VERTICES_PER_RANGE,
-                                   BspJob.DEFAULT_BSP_MIN_VERTICES_PER_RANGE);
+            long partitionsPerInputSplit = (long) (m_inputSplitCount *
+                getConfiguration().getFloat(
+                    BspJob.BSP_TOTAL_INPUT_SPLIT_MULTIPLIER,
+                    BspJob.DEFAULT_BSP_TOTAL_INPUT_SPLIT_MULTIPLIER));
+            if (partitionsPerInputSplit == 0) {
+                partitionsPerInputSplit = 1;
+            }
+            long vertexRangeSize = vertexList.size() / partitionsPerInputSplit;
+            long minPerVertexRange =
+                getConfiguration().getLong(
+                    BspJob.BSP_MIN_VERTICES_PER_RANGE,
+                    BspJob.DEFAULT_BSP_MIN_VERTICES_PER_RANGE);
+            if (vertexRangeSize < minPerVertexRange) {
+                vertexRangeSize = minPerVertexRange;
             }
             I vertexIdMax = null;
             for (int i = 0; i < vertexList.size(); ++i) {
-                if ((vertexIdMax != null) &&
-                    (((i + 1) % vertexRangeSize) == 0)) {
+                if ((vertexIdMax != null) && ((i % vertexRangeSize) == 0)) {
                     m_maxIndexVertexMap.put(
                         vertexIdMax,
                         new ArrayList<Vertex<I, V, E, M>>());
@@ -321,14 +327,13 @@ public class BspServiceWorker<
                     }
                 }
             }
-            
             if (vertexIdMax == null) {
                 throw new RuntimeException("loadVertices: Encountered " +
                                            "impossible null vertexIdMax.");
             }
-            
             m_maxIndexVertexMap.put(vertexIdMax,
                                     new ArrayList<Vertex<I,V,E,M>>());
+
             Iterator<I> maxIndexVertexMapIt =
                 m_maxIndexVertexMap.keySet().iterator();
             I currentMaxIndex = maxIndexVertexMapIt.next();
@@ -336,13 +341,7 @@ public class BspServiceWorker<
                 @SuppressWarnings("unchecked")
                 int compareTo =
                     vertex.getVertexId().compareTo(currentMaxIndex);
-                if (compareTo <= 0) {
-                    LOG.debug("loadVertices: Adding vertex with index=" +
-                              vertex.getVertexId() + " to vertex range max=" +
-                              currentMaxIndex);
-                    m_maxIndexVertexMap.get(currentMaxIndex).add(vertex);
-                }
-                else {
+                if (compareTo > 0) {
                     if (!maxIndexVertexMapIt.hasNext()) {
                         throw new RuntimeException(
                             "loadVertices: Impossible that vertex " +
@@ -350,6 +349,10 @@ public class BspServiceWorker<
                     }
                     currentMaxIndex = maxIndexVertexMapIt.next();
                 }
+                LOG.debug("loadVertices: Adding vertex with index = " +
+                          vertex.getVertexId() + " to vertex range max = " +
+                          currentMaxIndex);
+                m_maxIndexVertexMap.get(currentMaxIndex).add(vertex);
             }
             Map<I, Long> maxIndexCountMap = new TreeMap<I, Long>();
             for (Map.Entry<I, List<Vertex<I, V, E, M>>> entry :
