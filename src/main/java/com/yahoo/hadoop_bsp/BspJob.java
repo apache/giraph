@@ -179,6 +179,38 @@ public class BspJob<V, E, M> extends Job {
             m_commService.sendMessage(indx, msg);
         }
 
+        /**
+         * Passes aggregator registration on to service worker.
+         *
+         * @param name
+         * @param aggregator
+         * @return boolean (false when aggregator already registered)
+         */
+        public static <A extends Writable> boolean registerAggregator(String name,
+                                    Aggregator<A> aggregator) {
+             return BspServiceWorker.registerAggregator(name, aggregator);
+        }
+
+        /**
+         * Get aggregator from service worker.
+         *
+         * @param name
+         * @return Aggregator<A> (null when not registered)
+         */
+        public static <A extends Writable> Aggregator<A> getAggregator(String name) {
+             return BspServiceWorker.getAggregator(name);
+        }
+
+        /**
+         * Tell service worker to use an aggregator in this superstep.
+         *
+         * @param name
+         * @return boolean (false when aggregator not registered)
+         */
+        public static boolean useAggregator(String name) {
+             return BspServiceWorker.useAggregator(name);
+        }
+
         @Override
         public void setup(Context context)
             throws IOException, InterruptedException {

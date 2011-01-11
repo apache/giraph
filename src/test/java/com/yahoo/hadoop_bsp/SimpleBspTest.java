@@ -404,6 +404,18 @@ public class SimpleBspTest extends TestCase implements Watcher {
         hdfs.delete(outputPath, true);
         FileOutputFormat.setOutputPath(bspJob, outputPath);
         assertTrue(bspJob.run());
+        double maxPageRank = ((DoubleWritable)BspJob.BspMapper.
+                getAggregator("max").getAggregatedValue()).get();
+        double minPageRank = ((DoubleWritable)BspJob.BspMapper.
+                getAggregator("min").getAggregatedValue()).get();
+        long numVertices = ((LongWritable)BspJob.BspMapper.
+                getAggregator("sum").getAggregatedValue()).get();
+        System.out.println("testBspPageRank: maxPageRank=" + maxPageRank +
+                           " minPageRank=" + minPageRank +
+                           " numVertices=" + numVertices);
+        assertTrue(maxPageRank > 0.19847 && maxPageRank < 0.19848);
+        assertTrue(minPageRank > 0.03 && minPageRank < 0.03001);
+        assertTrue(numVertices == 5);
     }
 
     public void process(WatchedEvent event) {

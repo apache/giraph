@@ -97,6 +97,7 @@ public class BspService <
     public static final String MASTER_ELECTION_DIR = "/_masterElectionDir";
     public static final String SUPERSTEP_DIR = "/_superstepDir";
     public static final String VERTEX_RANGE_STATS_DIR = "/_vertexRangesStatsDir";
+    public static final String AGGREGATOR_DIR = "/_aggregatorDir";
     public static final String WORKER_HEALTHY_DIR = "/_workerHealthyDir";
     public static final String WORKER_UNHEALTHY_DIR = "/_workerUnhealthyDir";
     public static final String WORKER_SELECTED_DIR = "/_workerSelectedDir";
@@ -110,6 +111,8 @@ public class BspService <
     public static final String STAT_NUM_VERTICES_KEY = "_numVerticesKey";
     public static final String STAT_HOSTNAME_ID_KEY = "_hostnameIdKey";
     public static final String STAT_MAX_INDEX_KEY = "_maxIndexKey";
+    public static final String AGGREGATOR_NAME_KEY = "_aggregatorNameKey";
+    public static final String AGGREGATOR_VALUE_KEY = "_aggregatorValueKey";
     public static final String WORKER_SUFFIX = "_worker";
     public static final String MASTER_SUFFIX = "_master";
 
@@ -220,6 +223,31 @@ public class BspService <
         return APPLICATION_ATTEMPTS_PATH + "/" + attempt +
             SUPERSTEP_DIR + "/" + superstep + WORKER_SELECTED_DIR + "/" +
             getHostnamePartitionId() + VERTEX_RANGE_STATS_DIR;
+    }
+
+    /**
+     * Generate the aggregator directory path for a chosen worker
+     *
+     * @param attempt application attempt number
+     * @param superstep superstep to use
+     * @return directory path based on the a superstep
+     */
+    final public String getAggregatorWorkerPath(long attempt, long superstep) {
+        return APPLICATION_ATTEMPTS_PATH + "/" + attempt +
+            SUPERSTEP_DIR + "/" + superstep + WORKER_SELECTED_DIR + "/" +
+            getHostnamePartitionId() + AGGREGATOR_DIR;
+    }
+
+    /**
+     * Generate the aggregator directory path for a superstep
+     *
+     * @param attempt application attempt number
+     * @param superstep superstep to use
+     * @return directory path based on the a superstep
+     */
+    final public String getAggregatorPath(long attempt, long superstep) {
+        return APPLICATION_ATTEMPTS_PATH + "/" + attempt +
+            SUPERSTEP_DIR + "/" + superstep + AGGREGATOR_DIR;
     }
 
     /**

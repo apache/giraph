@@ -70,11 +70,11 @@ public abstract class
         m_numVertices = numVertices;
     }
 
-    public long getNumVertices() {
+    public final long getNumVertices() {
         return m_numVertices;
     }
 
-    public long getNumEdges() {
+    public final long getNumEdges() {
         return m_destEdgeMap.size();
     }
 
@@ -138,5 +138,42 @@ public abstract class
     public final boolean isHalted() {
         return m_halt;
     }
+
+    /**
+     * Register an aggregator.
+     *
+     * @param name of aggregator
+     * @param aggregator
+     * @return boolean (false when already registered)
+     */
+    public final static <A extends Writable> boolean registerAggregator(
+                                      String name, Aggregator<A> aggregator) {
+       return BspJob.BspMapper.registerAggregator(name, aggregator);
+    }
+
+    /**
+     * Get a registered aggregator.
+     *
+     * @param name of aggregator
+     * @return Aggregator<A> (null when not registered)
+     */
+    public final static <A extends Writable> Aggregator<A> getAggregator(
+                                      String name) {
+       return BspJob.BspMapper.getAggregator(name);
+    }
+
+    /**
+     * Use a registered aggregator in current superstep.
+     * Even when the same aggregator should be used in the next
+     * superstep, useAggregator needs to be called at the beginning
+     * of that superstep.
+     *
+     * @param name of aggregator
+     * @return boolean (false when not registered)
+     */
+    public final static boolean useAggregator(String name) {
+       return BspJob.BspMapper.useAggregator(name);
+    }
+
 }
 

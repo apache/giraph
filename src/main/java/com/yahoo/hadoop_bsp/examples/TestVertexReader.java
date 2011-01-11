@@ -25,7 +25,7 @@ import com.yahoo.hadoop_bsp.BspJob.BspMapper;
 public class TestVertexReader implements
     VertexReader<LongWritable, IntWritable, Float> {
     /** Logger */
-    private static final Logger LOG = Logger.getLogger(BspMapper.class);
+    private static final Logger LOG = Logger.getLogger(TestVertexReader.class);
     /** Records read so far */
     long m_recordsRead = 0;
     /** Total records to read */

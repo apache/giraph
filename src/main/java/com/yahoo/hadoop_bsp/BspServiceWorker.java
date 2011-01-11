@@ -12,8 +12,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+
+import org.apache.commons.codec.binary.Base64;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -53,6 +56,12 @@ public class BspServiceWorker<
     /** Data structure or storing each range and associated vertices */
     private Map<I, List<Vertex<I, V, E, M>>> m_maxIndexVertexMap =
         new TreeMap<I, List<Vertex<I, V, E, M>>>();
+    /** Map of aggregators */
+    private static Map<String, Aggregator<Writable>> m_aggregatorMap =
+        new TreeMap<String, Aggregator<Writable>>();
+    /** List of aggregators currently in use */
+    private static Set<String> m_aggregatorInUse =
+        new TreeSet<String>();
     /** Class logger */
     private static final Logger LOG = Logger.getLogger(BspServiceWorker.class);
 
@@ -406,6 +415,111 @@ public class BspServiceWorker<
         finishSuperstep(maxIndexStatsMap);
     }
 
+    /**
+     * Save values of aggregators in use to be aggregated by master.
+     *
+     * @param superstep
+     */
+    private void sendAggregatorValues(long superstep) {
+        if (superstep == 0 || m_aggregatorInUse.size() == 0) {
+            return;
+        }
+        String aggregatorWorkerPath =
+            getAggregatorWorkerPath(getApplicationAttempt(), superstep);
+        byte [] zkData = null;
+        JSONArray aggregatorArray = new JSONArray();
+        Base64 base64 = new Base64();
+        for (String name : m_aggregatorInUse) {
+            try {
+                Aggregator<Writable> aggregator = m_aggregatorMap.get(name);
+                ByteArrayOutputStream outputStream =
+                    new ByteArrayOutputStream();
+                DataOutput output = new DataOutputStream(outputStream);
+                aggregator.getAggregatedValue().write(output);
+
+                JSONObject aggregatorObj = new JSONObject();
+                aggregatorObj.put(AGGREGATOR_NAME_KEY, name);
+                aggregatorObj.put(AGGREGATOR_VALUE_KEY,
+                       base64.encodeToString(outputStream.toByteArray()));
+                aggregatorArray.put(aggregatorObj);
+                LOG.info("sendAggregatorValues: " +
+                         "Trying to add aggregatorObj " +
+                         aggregatorObj + "(" + 
+                         aggregator.getAggregatedValue() + ") to aggregator path " +
+                         aggregatorWorkerPath);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+        zkData = aggregatorArray.toString().getBytes();
+        try {
+            getZkExt().createExt(aggregatorWorkerPath,
+                                 zkData,
+                                 Ids.OPEN_ACL_UNSAFE,
+                                 CreateMode.PERSISTENT,
+                                 true);
+        } catch (KeeperException.NodeExistsException e) {
+            LOG.warn("sendAggregatorValues: " + aggregatorWorkerPath +
+                     " already exists!");
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        LOG.info("sendAggregatorValues: Finished loading " +
+                 aggregatorWorkerPath + " with aggregator values " + aggregatorArray);
+        m_aggregatorInUse.clear();
+    }
+
+    /**
+     * Get values of aggregators aggregated by master in previous superstep.
+     *
+     * @param superstep
+     */
+    private void getAggregatorValues(long superstep) {
+        if (superstep <= 1) {
+            return;
+        }
+        String aggregatorPath =
+            getAggregatorPath(getApplicationAttempt(), superstep-1);
+        JSONArray aggregatorArray = null;
+        try {
+            byte [] zkData =
+                getZkExt().getData(aggregatorPath, false, null);
+            aggregatorArray = new JSONArray(new String(zkData));
+        } catch (KeeperException.NoNodeException e) {
+            LOG.info("getAggregatorValues: no aggregators in " +
+                     aggregatorPath);
+            return;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        Base64 base64 = new Base64();
+        for (int i = 0; i < aggregatorArray.length(); ++i) {
+            try {
+                LOG.info("getAggregatorValues: " +
+                         "Getting aggregators from " +
+                         aggregatorArray.getJSONObject(i));
+                String aggregatorName = aggregatorArray.getJSONObject(i).
+                    getString(AGGREGATOR_NAME_KEY);
+                Aggregator<Writable> aggregator = m_aggregatorMap.get(aggregatorName);
+                Writable aggregatorValue = aggregator.getAggregatedValue();
+                InputStream input =
+                    new ByteArrayInputStream(
+                        base64.decode(aggregatorArray.getJSONObject(i).
+                            getString(AGGREGATOR_VALUE_KEY)));
+                aggregatorValue.readFields(
+                    new DataInputStream(input));
+                aggregator.setAggregatedValue(aggregatorValue);
+                LOG.info("getAggregatorValues: " +
+                         "Got aggregator=" + aggregatorName + " value=" +
+                         aggregatorValue);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+        LOG.info("getAggregatorValues: Finished loading " +
+                 aggregatorPath + " with aggregator values " + aggregatorArray);
+    }
+
     public Map<I, List<Vertex<I, V, E, M>>> getMaxIndexVertexLists() {
         return m_maxIndexVertexMap;
     }
@@ -464,6 +578,7 @@ public class BspServiceWorker<
         LOG.info("startSuperstep: Ready for computation (got " +
                  workerSelectionFinishedNode + ")");
 
+        getAggregatorValues(getSuperstep());
         return true;
     }
 
@@ -473,10 +588,13 @@ public class BspServiceWorker<
 
         // Master will coordinate the barriers and aggregate "doneness" of all
         // the vertices.  Each worker will:
-        // 1. Report the number of vertices in each partition on this worker
+        // 1. Save aggregator values that are in use.
+        // 2. Report the number of vertices in each partition on this worker
         //    and the number completed.
-        // 2. Let the master know it is finished.
-        // 3. Then it waits for the master to say whether to stop or not.
+        // 3. Let the master know it is finished.
+        // 4. Then it waits for the master to say whether to stop or not.
+
+        sendAggregatorValues(getSuperstep());
         String myVertexRangeStatPath =
             getVertexRangeStatsPath(getApplicationAttempt(), getSuperstep());
         JSONArray allStatArray = new JSONArray();
@@ -754,4 +872,47 @@ public class BspServiceWorker<
         }
         return result;
     }
+
+    /**
+     * Register an aggregator with name.
+     *
+     * @param name
+     * @param aggregator
+     * @return boolean (false when aggregator already registered)
+     */
+    public static <A extends Writable> boolean registerAggregator(String name,
+                                Aggregator<A> aggregator) {
+        if (m_aggregatorMap.get(name) != null) {
+            return false;
+        }
+        m_aggregatorMap.put(name, (Aggregator<Writable>)aggregator);
+        LOG.info("registered aggregator=" + name);
+        return true;
+    }
+
+    /**
+     * Get aggregator by name.
+     *
+     * @param name
+     * @return Aggregator<A> (null when not registered)
+     */
+    public static <A extends Writable> Aggregator<A> getAggregator(String name) {
+        return (Aggregator<A>)m_aggregatorMap.get(name);
+    }
+
+    /**
+     * Use an aggregator in this superstep.
+     *
+     * @param name
+     * @return boolean (false when aggregator not registered)
+     */
+    public static boolean useAggregator(String name) {
+        if (m_aggregatorMap.get(name) == null) {
+            LOG.error("Aggregator=" + name + " not registered");
+            return false;
+        }
+        m_aggregatorInUse.add(name);
+        return true;
+    }   
+
 }

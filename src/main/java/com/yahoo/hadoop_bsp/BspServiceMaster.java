@@ -16,6 +16,8 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import org.apache.commons.codec.binary.Base64;
+
 import org.apache.log4j.Logger;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -513,6 +515,127 @@ public class BspServiceMaster<I extends WritableComparable, V, E, M extends Writ
     }
 
     /**
+     * Get the aggregator values for a particular superstep,
+     * aggregate and save them.
+     *
+     * @param superstep superstep to check
+     */
+    private void collectAndProcessAggregatorValues(long superstep) {
+        if (superstep == 0) {
+            return;
+        }
+        Map<String, Aggregator<Writable>> aggregatorMap =
+            new TreeMap<String, Aggregator<Writable>>();
+        String workerSelectedPath =
+            getWorkerSelectedPath(getApplicationAttempt(), superstep);
+        List<String> hostnameIdPathList = null;
+        try {
+            hostnameIdPathList =
+                getZkExt().getChildrenExt(
+                    workerSelectedPath, false, false, true);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        Base64 base64 = new Base64();
+        for (String hostnameIdPath : hostnameIdPathList) {
+            String aggregatorPath =
+                hostnameIdPath + AGGREGATOR_DIR;
+            JSONArray aggregatorArray = null;
+            try {
+                byte [] zkData =
+                    getZkExt().getData(aggregatorPath, false, null);
+                aggregatorArray = new JSONArray(new String(zkData));
+            } catch (KeeperException.NoNodeException e) {
+              LOG.info("collectAndProcessAggregatorValues: no aggregators in " +
+                       aggregatorPath);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            if (aggregatorArray == null) {
+                continue;
+            }
+            for (int i = 0; i < aggregatorArray.length(); ++i) {
+                try {
+                    LOG.debug("collectAndProcessAggregatorValues: " +
+                             "Getting aggregators from " +
+                              aggregatorArray.getJSONObject(i));
+                    String aggregatorName = aggregatorArray.getJSONObject(i).
+                        getString(AGGREGATOR_NAME_KEY);
+                    Aggregator<Writable> aggregator = aggregatorMap.get(aggregatorName);
+                    boolean firstTime = false;
+                    if (aggregator == null) {
+                        aggregator =
+                            getBspMapper().getAggregator(aggregatorName);
+                        aggregatorMap.put(aggregatorName, aggregator);
+                        firstTime = true;
+                    }
+                    Writable aggregatorValue = aggregator.createAggregatedValue();
+                    InputStream input =
+                        new ByteArrayInputStream(
+                            base64.decode(aggregatorArray.getJSONObject(i).
+                                getString(AGGREGATOR_VALUE_KEY)));
+                    aggregatorValue.readFields(new DataInputStream(input));
+                    LOG.info("collectAndProcessAggregatorValues: aggregator value size=" +
+                            input.available() + " for aggregator=" + aggregatorName +
+                            " value=" + aggregatorValue);
+                    if (firstTime) {
+                        aggregator.setAggregatedValue(aggregatorValue);
+                    } else {
+                        aggregator.aggregate(aggregatorValue);
+                    }
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
+        if (aggregatorMap.size() > 0) {
+            String aggregatorPath =
+                getAggregatorPath(getApplicationAttempt(), superstep);
+            byte [] zkData = null;
+            JSONArray aggregatorArray = new JSONArray();
+            for (Map.Entry<String, Aggregator<Writable>> entry :
+                    aggregatorMap.entrySet()) {
+                try {
+                    ByteArrayOutputStream outputStream =
+                        new ByteArrayOutputStream();
+                    DataOutput output = new DataOutputStream(outputStream);
+                    entry.getValue().getAggregatedValue().write(output);
+
+                    JSONObject aggregatorObj = new JSONObject();
+                    aggregatorObj.put(AGGREGATOR_NAME_KEY,
+                                       entry.getKey());
+                    aggregatorObj.put(AGGREGATOR_VALUE_KEY,
+                            base64.encodeToString(outputStream.toByteArray()));
+                    aggregatorArray.put(aggregatorObj);
+                    LOG.info("collectAndProcessAggregatorValues: " +
+                             "Trying to add aggregatorObj " +
+                             aggregatorObj + "(" +
+                             entry.getValue().getAggregatedValue() +
+                             ") to aggregator path " + aggregatorPath);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }
+            try {
+                zkData = aggregatorArray.toString().getBytes();
+                getZkExt().createExt(aggregatorPath,
+                                     zkData,
+                                     Ids.OPEN_ACL_UNSAFE,
+                                     CreateMode.PERSISTENT,
+                                     true);
+            } catch (KeeperException.NodeExistsException e) {
+                LOG.warn("collectAndProcessAggregatorValues: " + aggregatorPath +
+                         " already exists!");
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            LOG.info("collectAndProcessAggregatorValues: Finished loading " +
+                     aggregatorPath + " with aggregator values " + aggregatorArray);
+        }
+    }
+
+    /**
      * Assign vertex ranges to the workers.
      *
      * @param chosenWorkerList selected workers that are healthy
@@ -592,7 +715,8 @@ public class BspServiceMaster<I extends WritableComparable, V, E, M extends Writ
         // 1. Get chosen workers.
         // 2. Assign partitions to the workers
         // 3. Wait for all workers to complete
-        // 4. Create superstep finished node
+        // 4. Collect and process aggregators
+        // 5. Create superstep finished node
 
         List<String> chosenWorkerList = checkWorkers();
         if (chosenWorkerList == null) {
@@ -657,6 +781,7 @@ public class BspServiceMaster<I extends WritableComparable, V, E, M extends Writ
             getSuperstepWorkersFinishedChangedEvent().waitForever();
             getSuperstepWorkersFinishedChangedEvent().reset();
         }
+        collectAndProcessAggregatorValues(getSuperstep());
         Map<I, JSONObject> maxIndexStatsMap =
             collectVertexRangeStats(getSuperstep());
         long verticesFinished = 0;
