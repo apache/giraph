@@ -377,6 +377,9 @@ public class ZooKeeperManager {
         }
         m_zkServerPortString = new String();
         for (String server : m_zkServerPortMap.keySet()) {
+            if (m_zkServerPortString.length() > 0) {
+                m_zkServerPortString += ",";
+            }
             m_zkServerPortString += server + ":" + m_zkBasePort;
         }
     }
@@ -418,6 +421,12 @@ public class ZooKeeperManager {
                     writer.write("server." + i + "=" + serverList.get(i) +
                                  ":" + (m_zkBasePort + 1) +
                                  ":" + (m_zkBasePort + 2) + "\n");
+                    if (m_myHostname.equals(serverList.get(i))) {
+                        OutputStreamWriter myidWriter = new FileWriter(
+                                                            m_zkDir + "/myid");
+                        myidWriter.write(i + "\n");
+                        myidWriter.close();
+                    }
                 }
             }
             writer.flush();

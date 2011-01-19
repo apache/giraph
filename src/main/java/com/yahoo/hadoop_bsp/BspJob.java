@@ -119,7 +119,7 @@ public class BspJob<V, E, M> extends Job {
     public static final float DEFAULT_BSP_TOTAL_INPUT_SPLIT_MULTIPLIER = 0.5f;
     /** Default java opts passed to ZooKeeper startup */
     public static final String DEFAULT_BSP_ZOOKEEPER_JAVA_OPTS =
-        "-Xmx512m";
+        "-Xmx128m";
     /**
      *  Constructor.
      * @param conf user-defined configuration
