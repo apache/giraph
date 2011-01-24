@@ -8,6 +8,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -19,10 +20,11 @@ import java.util.TreeSet;
 import org.apache.commons.codec.binary.Base64;
 
 import org.json.JSONArray;
-import org.json.JSONException;
 import org.json.JSONObject;
 
 import org.apache.log4j.Logger;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -39,8 +41,10 @@ import org.apache.zookeeper.data.Stat;
  * ZooKeeper-based implementation of {@link CentralizedServiceWorker}.
  * @author aching
  */
+@SuppressWarnings("rawtypes")
 public class BspServiceWorker<
-    I extends WritableComparable, V, E, M extends Writable>
+    I extends WritableComparable, V extends Writable, E extends Writable,
+    M extends Writable>
     extends BspService<I, V, E, M> implements
     CentralizedServiceWorker<I, V, E, M> {
     /** The partition map */
@@ -60,14 +64,14 @@ public class BspServiceWorker<
     private static Map<String, Aggregator<Writable>> m_aggregatorMap =
         new TreeMap<String, Aggregator<Writable>>();
     /** List of aggregators currently in use */
-    private static Set<String> m_aggregatorInUse =
-        new TreeSet<String>();
+    private static Set<String> m_aggregatorInUse = new TreeSet<String>();
     /** Class logger */
     private static final Logger LOG = Logger.getLogger(BspServiceWorker.class);
 
+
     public BspServiceWorker(String serverPortList,
                             int sessionMsecTimeout,
-                            @SuppressWarnings("rawtypes") Context context,
+                            Context context,
                             BspJob.BspMapper<I, V, E, M> bspMapper) {
         super(serverPortList, sessionMsecTimeout, context, bspMapper);
     }
@@ -228,8 +232,9 @@ public class BspServiceWorker<
         while ((inputSplitPath = reserveInputSplit()) != null) {
             @SuppressWarnings("unchecked")
             Class<? extends Writable> inputSplitClass =
-                (Class<Writable>) getConfiguration().getClass("bsp.inputSplitClass",
-                                                  InputSplit.class);
+                (Class<Writable>) getConfiguration().getClass(
+                    BspJob.BSP_INPUT_SPLIT_CLASS,
+                    InputSplit.class);
             InputSplit inputSplit = (InputSplit)
                 ReflectionUtils.newInstance(inputSplitClass, getConfiguration());
             byte[] splitList;
@@ -253,13 +258,9 @@ public class BspServiceWorker<
             @SuppressWarnings("unchecked")
             Class<? extends VertexInputFormat<I, V, E>> vertexInputFormatClass =
                 (Class<? extends VertexInputFormat<I, V, E>>)
-                getConfiguration().getClass("bsp.vertexInputFormatClass",
-                                VertexInputFormat.class);
-            @SuppressWarnings("rawtypes")
-            Class<? extends HadoopVertex> vertexClass =
-                getConfiguration().getClass("bsp.vertexClass",
-                                HadoopVertex.class,
-                                HadoopVertex.class);
+                    getConfiguration().getClass(
+                        BspJob.BSP_VERTEX_INPUT_FORMAT_CLASS,
+                        VertexInputFormat.class);
             VertexInputFormat<I, V, E> vertexInputFormat = null;
             VertexReader<I, V, E> vertexReader = null;
             try {
@@ -273,15 +274,11 @@ public class BspServiceWorker<
 
             vertexList.clear();
             try {
-                @SuppressWarnings("unchecked")
-                HadoopVertex<I, V, E, M> vertex = vertexClass.newInstance();
+                HadoopVertex<I, V, E, M> vertex = getHadoopVertexClass().newInstance();
                 while (vertexReader.next(vertex)) {
                     vertex.setBspMapper(getBspMapper());
                     vertexList.add(vertex);
-                    @SuppressWarnings("unchecked")
-                    HadoopVertex<I, V, E, M> newInstance =
-                        vertexClass.newInstance();
-                    vertex = newInstance;
+                    vertex = getHadoopVertexClass().newInstance();
                     getContext().progress();
                 }
                 vertexReader.close();
@@ -369,18 +366,25 @@ public class BspServiceWorker<
                 maxIndexCountMap.put(entry.getKey(),
                                      new Long(entry.getValue().size()));
             }
-            // TODO: Add checkpoint
             setInputSplitVertexRanges(inputSplitPath, maxIndexCountMap);
         }
     }
 
     public void setup() {
-        //
-        // Prepare for computation:
+        // Unless doing a restart, prepare for computation:
         // 1. Start superstep 0 (no computation)
         // 2. Wait for the INPUT_SPLIT_READY_PATH node has been created
         // 3. Process input splits until there are no more.
         // 4. Wait for superstep 0 to complete.
+        if (getManualRestartSuperstep() < -1) {
+            throw new RuntimeException(
+                "setup: Invalid superstep to restart - " +
+                getManualRestartSuperstep());
+        }
+        else if (getManualRestartSuperstep() > 0) {
+            setCachedSuperstep(getManualRestartSuperstep());
+            return;
+        }
 
         startSuperstep();
 
@@ -439,12 +443,14 @@ public class BspServiceWorker<
 
                 JSONObject aggregatorObj = new JSONObject();
                 aggregatorObj.put(AGGREGATOR_NAME_KEY, name);
-                aggregatorObj.put(AGGREGATOR_VALUE_KEY,
-                       base64.encodeToString(outputStream.toByteArray()));
+                aggregatorObj.put(
+                    AGGREGATOR_VALUE_KEY,
+                    base64.encodeToString(outputStream.toByteArray()));
+
                 aggregatorArray.put(aggregatorObj);
                 LOG.info("sendAggregatorValues: " +
                          "Trying to add aggregatorObj " +
-                         aggregatorObj + "(" + 
+                         aggregatorObj + "(" +
                          aggregator.getAggregatedValue() + ") to aggregator path " +
                          aggregatorWorkerPath);
             } catch (Exception e) {
@@ -504,7 +510,7 @@ public class BspServiceWorker<
                 Writable aggregatorValue = aggregator.getAggregatedValue();
                 InputStream input =
                     new ByteArrayInputStream(
-                        base64.decode(aggregatorArray.getJSONObject(i).
+                        (byte[]) base64.decode(aggregatorArray.getJSONObject(i).
                             getString(AGGREGATOR_VALUE_KEY)));
                 aggregatorValue.readFields(
                     new DataInputStream(input));
@@ -524,9 +530,46 @@ public class BspServiceWorker<
         return m_maxIndexVertexMap;
     }
 
+    /**
+     * Retrieve the assignment vertex ranges for this superstep
+     *
+     * @return set of vertex ranges for this worker
+     */
+    private Set<I> getAssignedVertexRanges() {
+        String assignedVertexRangesPath =
+            getWorkerSelectedPath(getApplicationAttempt(),
+                                  getSuperstep()) +
+                                  "/" + getHostnamePartitionId();
+        Set<I> vertexRangeSet = new HashSet<I>();
+        try {
+            if (getZkExt().exists(assignedVertexRangesPath, false) == null) {
+                LOG.info("getAssignedVertexRanges: Nothing assigned to me");
+                return vertexRangeSet;
+            }
+            byte [] vertexRanges =
+                getZkExt().getData(assignedVertexRangesPath, false, null);
+            JSONArray vertexRangeArray =
+                new JSONArray(new String(vertexRanges));
+            for (int i = 0; i < vertexRangeArray.length(); ++i) {
+                I maxVertex = createVertexIndex();
+                InputStream input =
+                    new ByteArrayInputStream(
+                        vertexRangeArray.get(i).toString().getBytes(
+                            "UTF-8"));
+                maxVertex.readFields(new DataInputStream(input));
+                vertexRangeSet.add(maxVertex);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        return vertexRangeSet;
+    }
+
     public boolean startSuperstep() {
-        // Register my health for the next superstep and wait until the worker
-        // selection is complete
+        // Algorithm:
+        // 1. Register my health for the next superstep.
+        // 2. Wait until the worker selection is complete.
         JSONArray hostnamePort = new JSONArray();
         hostnamePort.put(getHostname());
         int finalRpcPort =
@@ -667,7 +710,7 @@ public class BspServiceWorker<
         LOG.info("finishSuperstep: Completed superstep " + getSuperstep() +
                  " with finishedVertices=" + finishedVertices +
                  ", numVertices=" + m_totalVertices);
-        incrSuperstep();
+        incrCachedSuperstep();
         return (finishedVertices == m_totalVertices);
     }
 
@@ -679,17 +722,17 @@ public class BspServiceWorker<
      * Save the vertices using the user-defined OutputFormat from our
      * vertexArray based on the split.
      */
+    @SuppressWarnings("unchecked")
     public void saveVertices() {
-        if (getConfiguration().get("bsp.vertexWriterClass") == null) {
-            LOG.warn("saveVertices: bsp.vertexWriterClass not specified" +
+        if (getConfiguration().get(BspJob.BSP_VERTEX_WRITER_CLASS) == null) {
+            LOG.warn("saveVertices: BSP_VERTEX_WRITER_CLASS not specified" +
             " -- there will be no saved output");
             return;
         }
 
-        @SuppressWarnings("unchecked")
         Class<? extends VertexWriter<I, V, E>> vertexWriterClass =
             (Class<? extends VertexWriter<I, V, E>>)
-            getConfiguration().getClass("bsp.vertexWriterClass",
+            getConfiguration().getClass(BspJob.BSP_VERTEX_WRITER_CLASS,
                                         VertexWriter.class);
         VertexWriter<I, V, E> vertexWriter = null;
         try {
@@ -813,11 +856,6 @@ public class BspServiceWorker<
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        @SuppressWarnings({"rawtypes", "unchecked" })
-        Class<? extends WritableComparable> indexClass =
-            (Class<? extends WritableComparable>)
-            getConfiguration().getClass("bsp.indexClass",
-                                        WritableComparable.class);
         for (String worker : workerSelectedList) {
             try {
                 JSONArray maxIndexArray =
@@ -835,8 +873,7 @@ public class BspServiceWorker<
                             worker);
                     }
                     JSONArray hostPortArray = workerHostPortMap.get(worker);
-                    @SuppressWarnings("unchecked")
-                    I index = (I) indexClass.newInstance();
+                    I index = (I) createVertexIndex();
                     LOG.info("getPartitionSet: Getting max index from " +
                              maxIndexArray.getString(i));
                     InputStream input =
@@ -849,7 +886,7 @@ public class BspServiceWorker<
                             index));
                     LOG.info("getPartitionSet: Found partition: " +
                              hostPortArray.getString(0) + ":" +
-                             hostPortArray.getInt(1) + "withMaxIndex=" +
+                             hostPortArray.getInt(1) + " with maxIndex=" +
                              index);
                 }
             } catch (Exception e) {
@@ -880,12 +917,16 @@ public class BspServiceWorker<
      * @param aggregator
      * @return boolean (false when aggregator already registered)
      */
-    public static <A extends Writable> boolean registerAggregator(String name,
-                                Aggregator<A> aggregator) {
+    public static <A extends Writable> boolean registerAggregator(
+        String name,
+        Aggregator<A> aggregator) {
         if (m_aggregatorMap.get(name) != null) {
             return false;
         }
-        m_aggregatorMap.put(name, (Aggregator<Writable>)aggregator);
+        @SuppressWarnings("unchecked")
+        Aggregator<Writable> castedAggregator =
+            (Aggregator<Writable>) aggregator;
+        m_aggregatorMap.put(name, castedAggregator);
         LOG.info("registered aggregator=" + name);
         return true;
     }
@@ -896,8 +937,12 @@ public class BspServiceWorker<
      * @param name
      * @return Aggregator<A> (null when not registered)
      */
-    public static <A extends Writable> Aggregator<A> getAggregator(String name) {
-        return (Aggregator<A>)m_aggregatorMap.get(name);
+    public static <A extends Writable> Aggregator<A> getAggregator(
+        String name) {
+        @SuppressWarnings("unchecked")
+        Aggregator<A> castedAggregator =
+            (Aggregator<A>) m_aggregatorMap.get(name);
+        return castedAggregator;
     }
 
     /**
@@ -913,6 +958,227 @@ public class BspServiceWorker<
         }
         m_aggregatorInUse.add(name);
         return true;
-    }   
+    }
+
+    public void storeCheckpoint() throws IOException {
+        // Algorithm:
+        // For each partition, dump vertices and messages
+        Map<I, List<Vertex<I, V, E, M>>> maxIndexVertexListMap =
+            getMaxIndexVertexLists();
+        Path metadataFilePath =
+            new Path(getCheckpointBasePath(getSuperstep()) + "." +
+                     getHostnamePartitionId() +
+                     CHECKPOINT_METADATA_POSTFIX);
+        Path verticesFilePath =
+            new Path(getCheckpointBasePath(getSuperstep()) + "." +
+                     getHostnamePartitionId() +
+                     CHECKPOINT_VERTICES_POSTFIX);
+        Path validFilePath =
+            new Path(getCheckpointBasePath(getSuperstep()) + "." +
+                     getHostnamePartitionId() +
+                     CHECKPOINT_VALID_POSTFIX);
+
+        // Remove these files if they already exist
+        try {
+            getFs().delete(validFilePath, false);
+            LOG.warn("storeCheckpoint: Removed file " + validFilePath);
+        } catch (IOException e) {
+        }
+        try {
+            getFs().delete(metadataFilePath, false);
+            LOG.warn("storeCheckpoint: Removed file " + metadataFilePath);
+        } catch (IOException e) {
+        }
+        try {
+            getFs().delete(verticesFilePath, false);
+            LOG.warn("storeCheckpoint: Removed file " + verticesFilePath);
+        } catch (IOException e) {
+        }
+
+        FSDataOutputStream metadataOutputStream =
+            getFs().create(metadataFilePath);
+        FSDataOutputStream verticesOutputStream =
+            getFs().create(verticesFilePath);
+        metadataOutputStream.writeLong(maxIndexVertexListMap.entrySet().size());
+        for (Map.Entry<I, List<Vertex<I, V, E, M>>> entry :
+            maxIndexVertexListMap.entrySet()) {
+            long startPos = verticesOutputStream.getPos();
+
+            // Write the vertices (index, data, edges and messages)
+            // Format:
+            // <vertex count>
+            //   <v0 id><v0 value>
+            //     <v0 num edges>
+            //       <v0 edge 0 dest><v0 edge 0 value>
+            //       <v0 edge 1 dest><v0 edge 1 value>...
+            //     <v0 message count>
+            //       <v0 msg 0><v0 msg 1>...
+            verticesOutputStream.writeLong(entry.getValue().size());
+            for (Vertex<I, V, E, M> vertex : entry.getValue()) {
+                ByteArrayOutputStream vertexByteStream =
+                    new ByteArrayOutputStream();
+                DataOutput vertexOutput =
+                    new DataOutputStream(vertexByteStream);
+                vertex.getVertexId().write(vertexOutput);
+                vertex.getVertexValue().write(vertexOutput);
+                OutEdgeIterator<I, E> outEdgeIterator =
+                    vertex.getOutEdgeIterator();
+                vertexOutput.writeLong(outEdgeIterator.size());
+                while (outEdgeIterator.hasNext()) {
+                    Map.Entry<I, E> outEdgeEntry = outEdgeIterator.next();
+                    outEdgeEntry.getKey().write(vertexOutput);
+                    outEdgeEntry.getValue().write(vertexOutput);
+                }
+                List<M> messageList = getBspMapper().getVertexMessageList(
+                    vertex.getVertexId());
+                if (messageList == null) {
+                    messageList = new ArrayList<M>();
+                }
+                vertexOutput.writeLong(messageList.size());
+                for (M message : messageList) {
+                    message.write(vertexOutput);
+                }
+                verticesOutputStream.write(vertexByteStream.toByteArray());
+
+                LOG.debug("storeCheckpoint: Wrote vertex id = " +
+                          vertex.getVertexId() + " with " +
+                          outEdgeIterator.size() + " edges and " +
+                          messageList.size() + " messages (" +
+                          vertexByteStream.size() + " total bytes)");
+            }
+            // Write the metadata for this vertex range
+            // Format:
+            // <index count>
+            //   <index 0 start pos><# vertices for range 0><max index 0>
+            //   <index 1 start pos><# vertices for range 1><max index 1>...
+            ByteArrayOutputStream metadataByteStream =
+                new ByteArrayOutputStream();
+            DataOutput metadataOutput =
+                new DataOutputStream(metadataByteStream);
+            metadataOutput.writeLong(startPos);
+            metadataOutput.writeLong(entry.getValue().size());
+            entry.getKey().write(metadataOutput);
+            LOG.debug("storeCheckpoint: Vertex file starting " +
+                      "offset = " + startPos + ", length = " +
+                      (verticesOutputStream.getPos() - startPos) +
+                      ", max index of vertex range = " + entry.getKey());
+            metadataOutputStream.write(metadataByteStream.toByteArray());
+        }
+        metadataOutputStream.close();
+        verticesOutputStream.close();
+        LOG.info("storeCheckpoint: Finished metadata (" +
+                 metadataFilePath + ") and vertices (" + verticesFilePath
+                 + ").");
+
+        getFs().createNewFile(validFilePath);
+    }
+
+    /**
+     * Load a single vertex range.
+     *
+     * @param maxIndex denotes the vertex range
+     * @param dataFileName name of the data file
+     * @param startPos position to start from in data file
+     * @throws IOException
+     * @throws IllegalAccessException
+     * @throws InstantiationException
+     */
+    private void loadVertexRange(I maxIndex,
+                                 String dataFileName,
+                                 long startPos)
+        throws IOException, InstantiationException, IllegalAccessException {
+        // Read in the reverse order from storeCheckpoint()
+        DataInputStream dataStream = getFs().open(new Path(dataFileName));
+        dataStream.skip(startPos);
+        long vertexCount = dataStream.readLong();
+        m_maxIndexVertexMap.put(maxIndex,
+                                new ArrayList<Vertex<I, V, E, M>>());
+        List<Vertex<I, V, E,M>> vertexList =
+            m_maxIndexVertexMap.get(maxIndex);
+        for (int i = 0; i < vertexCount; ++i) {
+            HadoopVertex<I, V, E, M> vertex =
+                getHadoopVertexClass().newInstance();
+            I vertexId = createVertexIndex();
+            V vertexValue = createVertexValue();
+            vertexId.readFields(dataStream);
+            vertexValue.readFields(dataStream);
+            vertex.setVertexId(vertexId);
+            vertex.setVertexValue(vertexValue);
+            long numEdges = dataStream.readLong();
+            for (long j = 0; j < numEdges; ++j) {
+                I destVertexId = createVertexIndex();
+                E edgeValue = createEdgeValue();
+                destVertexId.readFields(dataStream);
+                edgeValue.readFields(dataStream);
+                vertex.addEdge(destVertexId, edgeValue);
+            }
+            long msgCount = dataStream.readLong();
+            List<M> msgList = new ArrayList<M>();
+            for (long j = 0; j < msgCount; ++j) {
+                M msg = createMsgValue();
+                msg.readFields(dataStream);
+                msgList.add(msg);
+            }
+            vertex.setBspMapper(getBspMapper());
+
+            // Add the vertex and associated messages
+            vertexList.add(vertex);
+            getBspMapper().setVertexMessageList(vertexId, msgList);
+        }
+        LOG.info("loadVertexRange: " + vertexCount + " vertices in " +
+                 dataFileName);
+        dataStream.close();
+    }
+
+    public void loadCheckpoint(long superstep) {
+        // Algorithm:
+        // 1. Find the appropriate metadata files (from master)
+        // 2. Get the vertex ranges for this partition.
+        // 3. Load the vertex ranges into memory from the assigned vertex ranges
+        String checkpointFilesPath =
+            getCheckpointFilesPath(getApplicationAttempt(),
+                                   superstep,
+                                   getHostnamePartitionId());
+
+        Set<I> vertexRangeSet = getAssignedVertexRanges();
+
+        byte [] zkFilesPath = null;
+        JSONArray metadataFileArray = null;
+        String dataFilePath = null;
+        try {
+            I maxIndex = createVertexIndex();
+            if (getZkExt().exists(checkpointFilesPath, null) == null) {
+                LOG.info("loadCheckpoint: Nothing to load, " +
+                         "not assigned anything");
+                return;
+            }
+            zkFilesPath = getZkExt().getData(checkpointFilesPath, false, null);
+            metadataFileArray= new JSONArray(new String(zkFilesPath));
+            for (int i = 0; i < metadataFileArray.length(); ++i) {
+                dataFilePath = metadataFileArray.getString(i);
+                dataFilePath =
+                    dataFilePath.replace(CHECKPOINT_METADATA_POSTFIX,
+                                         CHECKPOINT_VERTICES_POSTFIX);
+                DataInputStream metadataStream =
+                    getFs().open(new Path(metadataFileArray.getString(i)));
+                long vertexRanges = metadataStream.readLong();
+                for (long j = 0; j < vertexRanges; ++j) {
+                    long startPos = metadataStream.readLong();
+                    long vertexCount = metadataStream.readLong();
+                    maxIndex.readFields(metadataStream);
+                    LOG.info("loadCheckpoint: Got vertex range with " +
+                             "max index " + maxIndex + ", dataFilePath " +
+                             dataFilePath + ", starting offset " +
+                             startPos + ", vertexCount " + vertexCount);
+                    if (vertexRangeSet.contains(maxIndex)) {
+                        loadVertexRange(maxIndex, dataFilePath, startPos);
+                    }
+                }
+                metadataStream.close();
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
 
 }

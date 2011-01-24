@@ -10,6 +10,7 @@ import java.util.TreeMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
@@ -17,14 +18,26 @@ import org.apache.log4j.Logger;
 /**
  * Limits the functions that can be called by the user.  Job is too flexible
  * for our needs.  For instance, our job should not have any reduce tasks.
- *
- * @author aching
- * @param <E>
- * @param <M>
- * @param <V>
  */
-public class BspJob<V, E, M> extends Job {
-    /** Minimum number of simultaneous processes before this job can run (int) */
+public class BspJob extends Job {
+    /** Vertex class - required */
+    public static final String BSP_VERTEX_CLASS = "bsp.vertexClass";
+    /** InputSplit class - required */
+    public static final String BSP_INPUT_SPLIT_CLASS = "bsp.inputSplitClass";
+    /** InputFormat class - required */
+    public static final String BSP_VERTEX_INPUT_FORMAT_CLASS =
+        "bsp.vertexInputFormatClass";
+
+    /** Combiner class - optional */
+    public static final String BSP_COMBINER_CLASS =
+        "bsp.combinerClass";
+    /** Vertex writer class - optional */
+    public static final String BSP_VERTEX_WRITER_CLASS =
+        "bsp.vertexWriterClass";
+
+    /**
+     * Minimum number of simultaneous processes before this job can run (int)
+     */
     public static final String BSP_MIN_PROCESSES = "bsp.minProcs";
     /** Initial number of simultaneous tasks started by this job (int) */
     public static final String BSP_INITIAL_PROCESSES = "bsp.maxProcs";
@@ -80,6 +93,18 @@ public class BspJob<V, E, M> extends Job {
     /** Java opts passed to ZooKeeper startup */
     public static final String BSP_ZOOKEEPER_JAVA_OPTS =
         "bsp.zkJavaOpts";
+    /** How often to checkpoint (i.e. 1 means every superstep, 2 is every
+     *  two supersteps, etc.).
+     */
+    public static final String BSP_CHECKPOINT_FREQUENCY =
+        "bsp.checkpointFrequency";
+
+    /**
+     * An application can be restarted manually by selecting a superstep.  The
+     * corresponding checkpoint must exist for this to work.  The user should
+     * set a long value.
+     */
+    public static final String BSP_RESTART_SUPERSTEP = "bsp.restartSuperstep";
 
     /**
      * If BSP_ZOOKEEPER_LIST is not set, then use this directory to manage
@@ -87,6 +112,12 @@ public class BspJob<V, E, M> extends Job {
      */
     public static final String BSP_ZOOKEEPER_MANAGER_DIRECTORY =
         "bsp.zkManagerDirectory";
+    /** This directory has/stores the available checkpoint files in HDFS. */
+    public static final String BSP_CHECKPOINT_DIRECTORY =
+        "bsp.checkpointDirectory";
+    /** Keep the zookeeper output for debugging? Default is to remove it. */
+    public static final String BSP_KEEP_ZOOKEEPER_DATA =
+        "bsp.keepZooKeeperData";
     /** Default poll msecs (30 seconds) */
     public static final int DEFAULT_BSP_POLL_MSECS = 30*1000;
     /** Default Zookeeper session millisecond timeout */
@@ -101,16 +132,25 @@ public class BspJob<V, E, M> extends Job {
     /** Default port to start using for the RPC communication */
     public static final int DEFAULT_BSP_RPC_INITIAL_PORT = 30000;
     /**
-     * Default local ZooKeeper directory to use (where ZooKeeper server
+     * Default local ZooKeeper prefix directory to use (where ZooKeeper server
      * files will go)
      */
     public static final String DEFAULT_BSP_ZOOKEEPER_DIR = "/tmp/bspZooKeeper";
     /**
      * Default ZooKeeper manager directory (where determining the servers in
-     * HDFS files will go)
+     * HDFS files will go).  Final directory path will also have job number
+     * for uniqueness.
      */
-    public static final String DEFAULT_ZOOKEEPER_MANAGER_DIRECTORY =
-        "/tmp/_defaultZkManagerDir";
+    public static final String DEFAULT_ZOOKEEPER_MANAGER_DIR =
+        "/tmp/_bsp/_defaultZkManagerDir";
+    /**
+     * Default checkpoint directory (where checkpoing files go in HDFS).  Final
+     * directory path will also have the job number for uniqueness
+     */
+    public static final String DEFAULT_BSP_CHECKPOINT_DIRECTORY =
+        "/tmp/_bsp/_checkpoints/";
+    /** Default is to remove ZooKeeper data. */
+    public static final Boolean DEFAULT_BSP_KEEP_ZOOKEEPER_DATA = false;
     /** Default poll attempts */
     public static final int DEFAULT_BSP_POLL_ATTEMPTS = 5;
     /** Default number of minimum vertices in each vertex range */
@@ -120,6 +160,9 @@ public class BspJob<V, E, M> extends Job {
     /** Default java opts passed to ZooKeeper startup */
     public static final String DEFAULT_BSP_ZOOKEEPER_JAVA_OPTS =
         "-Xmx128m";
+    /** Default checkpointing frequency of every 2 supersteps. */
+    public static final int DEFAULT_BSP_CHECKPOINT_FREQUENCY = 2;
+
     /**
      *  Constructor.
      * @param conf user-defined configuration
@@ -130,13 +173,29 @@ public class BspJob<V, E, M> extends Job {
         Configuration conf, String jobName) throws IOException {
         super(conf, jobName);
         if (conf.getInt(BSP_INITIAL_PROCESSES, -1) < 0) {
-            throw new IOException("No valid " + BSP_INITIAL_PROCESSES);
+            throw new RuntimeException("No valid " + BSP_INITIAL_PROCESSES);
         }
         if (conf.getFloat(BSP_MIN_PERCENT_RESPONDED, 0.0f) <= 0) {
-            throw new IOException("No valid " + BSP_MIN_PERCENT_RESPONDED);
+            throw new RuntimeException("No valid " + BSP_MIN_PERCENT_RESPONDED);
         }
         if (conf.getInt(BSP_MIN_PROCESSES, -1) < 0) {
-            throw new IOException("No valid " + BSP_MIN_PROCESSES);
+            throw new RuntimeException("No valid " + BSP_MIN_PROCESSES);
+        }
+        if (conf.getClass(BSP_VERTEX_CLASS,
+                          HadoopVertex.class,
+                          HadoopVertex.class) == null) {
+            throw new RuntimeException("BspJob: Null BSP_VERTEX_CLASS");
+        }
+        if (conf.getClass(BSP_INPUT_SPLIT_CLASS,
+                          InputSplit.class,
+                          InputSplit.class) == null) {
+            throw new RuntimeException("BspJob: Null BSP_INPUT_SPLIT_CLASS");
+        }
+        if (conf.getClass(BSP_VERTEX_INPUT_FORMAT_CLASS,
+                          VertexInputFormat.class,
+                          VertexInputFormat.class) == null) {
+            throw new RuntimeException(
+                "BspJob: Null BSP_VERTEX_INPUT_FORMAT_CLASS");
         }
     }
 
@@ -149,8 +208,10 @@ public class BspJob<V, E, M> extends Job {
      * @param <V>
      * @param <V>
      */
+    @SuppressWarnings("rawtypes")
     public static class BspMapper<I
-        extends WritableComparable, V, E, M extends Writable>
+        extends WritableComparable, V extends Writable, E
+        extends Writable, M extends Writable>
         extends Mapper<Object, Object, Object, Object> {
         /** Logger */
         private static final Logger LOG = Logger.getLogger(BspMapper.class);
@@ -159,7 +220,7 @@ public class BspJob<V, E, M> extends Job {
         /** Coordination service master thread */
         Thread m_masterThread = null;
         /** Communication service */
-        private RPCCommunications<I, V, E, M> m_commService;
+        private RPCCommunications<I, V, E, M> m_commService = null;
         /** The map should be run exactly once, or else there is a problem. */
         boolean m_mapAlreadyRun = false;
         /** Manages the ZooKeeper servers if necessary (dynamic startup) */
@@ -170,13 +231,34 @@ public class BspJob<V, E, M> extends Job {
         boolean m_done = false;
 
         /**
+         * Gets a vertex's message list.  Used for storing checkpoints and for
+         * vertex computation.
+         *
+         * @param vertex Vertex to get the message list for.
+         * @return messgage list for this vertex (might be empty if no messages)
+         */
+        final public List<M> getVertexMessageList(final I vertex) {
+            return m_commService.getVertexMessageList(vertex);
+        }
+
+        /**
          * Passes message on to communication service.
          *
          * @param indx
          * @param msg
          */
-        public void sendMsg(I indx, M msg) {
+        final public void sendMsg(I indx, M msg) {
             m_commService.sendMessage(indx, msg);
+        }
+
+        /**
+         * Set the vertex message list when restarting from a checkpoint
+         *
+         * @param vertexId vertex id
+         * @param msgList list of messages
+         */
+        final public void setVertexMessageList(I vertexId, List<M> msgList) {
+            m_commService.setVertexMessageList(vertexId, msgList);
         }
 
         /**
@@ -186,9 +268,10 @@ public class BspJob<V, E, M> extends Job {
          * @param aggregator
          * @return boolean (false when aggregator already registered)
          */
-        public static <A extends Writable> boolean registerAggregator(String name,
-                                    Aggregator<A> aggregator) {
-             return BspServiceWorker.registerAggregator(name, aggregator);
+        public static <A extends Writable> boolean registerAggregator(
+            String name,
+            Aggregator<A> aggregator) {
+            return BspServiceWorker.registerAggregator(name, aggregator);
         }
 
         /**
@@ -197,8 +280,9 @@ public class BspJob<V, E, M> extends Job {
          * @param name
          * @return Aggregator<A> (null when not registered)
          */
-        public static <A extends Writable> Aggregator<A> getAggregator(String name) {
-             return BspServiceWorker.getAggregator(name);
+        public static <A extends Writable> Aggregator<A> getAggregator(
+            String name) {
+            return BspServiceWorker.getAggregator(name);
         }
 
         /**
@@ -215,11 +299,9 @@ public class BspJob<V, E, M> extends Job {
         public void setup(Context context)
             throws IOException, InterruptedException {
             m_conf = context.getConfiguration();
-            /*
-             * Do some initial setup (possibly starting up a Zookeeper service),
-             * but mainly decide whether to load data
-             * from a checkpoint or from the InputFormat.
-             */
+            // Do some initial setup (possibly starting up a Zookeeper service),
+            // but mainly decide whether to load data
+            // from a checkpoint or from the InputFormat.
             String jarFile = context.getJar();
             String trimmedJarFile = jarFile.replaceFirst("file:", "");
             LOG.info("setup: jar file @ " + jarFile +
@@ -252,7 +334,7 @@ public class BspJob<V, E, M> extends Job {
                 m_masterThread.start();
                 LOG.info("Starting up BspServiceWorker...");
                 m_serviceWorker = new BspServiceWorker<I, V, E, M>(
-                        serverPortList, sessionMsecTimeout, context, this);
+                    serverPortList, sessionMsecTimeout, context, this);
                 LOG.info("Registering health of this process...");
                 m_serviceWorker.setup();
             } catch (Exception e) {
@@ -285,24 +367,35 @@ public class BspJob<V, E, M> extends Job {
             long verticesFinished = 0;
             Map<I, long []> maxIndexStatsMap = new TreeMap<I, long []>();
             do {
-                 m_serviceWorker.startSuperstep();
+                long superstep = m_serviceWorker.getSuperstep();
 
-                 long superStep = m_serviceWorker.getSuperstep();
-                 LOG.info("map: superstep = " + superStep);
-                 LOG.info("map: totalMem=" + Runtime.getRuntime().totalMemory() +
+                m_serviceWorker.startSuperstep();
+
+                LOG.info("map: superstep = " + superstep);
+                LOG.debug("map: totalMem=" + Runtime.getRuntime().totalMemory() +
                           " maxMem=" + Runtime.getRuntime().maxMemory() +
                           " freeMem=" + Runtime.getRuntime().freeMemory());
-                 if (m_serviceWorker.getSuperstep() == 1) {
-                     LOG.info("map: Starting communication service...");
-                     m_commService = new RPCCommunications<I, V, E, M>(
-                         context, m_serviceWorker);
-                 } else {
-                     m_commService.prepareSuperstep();
-                 }
-                 context.progress();
+                if ((m_serviceWorker.getSuperstep() >= 1) &&
+                    (m_commService == null)) {
+                    LOG.info("map: Starting communication service...");
+                    m_commService = new RPCCommunications<I, V, E, M>(
+                            context, m_serviceWorker);
+                } else {
+                    m_commService.prepareSuperstep();
+                }
+                context.progress();
+
+                // Might need to restart from another superstep (manually), or
+                // store a checkpoint
+                if (m_serviceWorker.getManualRestartSuperstep() == superstep) {
+                    m_serviceWorker.loadCheckpoint(
+                        m_serviceWorker.getManualRestartSuperstep());
+                } else if (m_serviceWorker.checkpointFrequencyMet(superstep)) {
+                    m_serviceWorker.storeCheckpoint();
+                }
 
                 maxIndexStatsMap.clear();
-                HadoopVertex.setSuperstep(superStep);
+                HadoopVertex.setSuperstep(superstep);
                 HadoopVertex.setNumVertices(m_serviceWorker.getTotalVertices());
                 Map<I, List<Vertex<I, V, E, M>>> maxIndexVertexListMap =
                     m_serviceWorker.getMaxIndexVertexLists();
@@ -312,8 +405,8 @@ public class BspJob<V, E, M> extends Job {
                     for (Vertex<I, V, E, M> vertex : entry.getValue()) {
                         if (!vertex.isHalted()) {
                         Iterator<M> vertexMsgIt =
-                            m_commService.getVertexMessageIterator(
-                                vertex.getVertexId());
+                            getVertexMessageList(
+                                vertex.getVertexId()).iterator();
                             context.progress();
                             vertex.compute(vertexMsgIt);
                         }
@@ -365,7 +458,7 @@ public class BspJob<V, E, M> extends Job {
             if (m_manager != null) {
                 m_manager.offlineZooKeeperServers();
             }
-            // preferably would shut down the service only after
+            // Preferably would shut down the service only after
             // all clients have disconnected (or the exceptions on the
             // client side ignored).
             if (m_commService != null) {
@@ -380,7 +473,7 @@ public class BspJob<V, E, M> extends Job {
      * @throws InterruptedException
      * @throws IOException
      */
-    public boolean run() throws IOException, InterruptedException,
+    final public boolean run() throws IOException, InterruptedException,
         ClassNotFoundException {
         setNumReduceTasks(0);
         setJarByClass(BspJob.class);

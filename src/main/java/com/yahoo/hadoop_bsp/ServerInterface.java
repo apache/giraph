@@ -7,6 +7,7 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper.Context;
 
 /**
@@ -17,8 +18,10 @@ import org.apache.hadoop.mapreduce.Mapper.Context;
  * @param <M extends Writable> message data
  *
  **/
-public interface ServerInterface <I extends Writable, M extends Writable>
-extends Closeable {
+@SuppressWarnings("rawtypes")
+public interface ServerInterface <I extends WritableComparable,
+                                  M extends Writable>
+                                  extends Closeable {
 
     /**
      * Prepare next superstep.

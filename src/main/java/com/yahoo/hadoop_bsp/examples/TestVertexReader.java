@@ -3,6 +3,7 @@ package com.yahoo.hadoop_bsp.examples;
 import java.io.IOException;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -12,7 +13,6 @@ import org.apache.log4j.Logger;
 import com.yahoo.hadoop_bsp.BspInputSplit;
 import com.yahoo.hadoop_bsp.VertexReader;
 import com.yahoo.hadoop_bsp.MutableVertex;
-import com.yahoo.hadoop_bsp.BspJob.BspMapper;
 
 /**
  * Used by TestVertexInputFormat to read some generated data
@@ -23,7 +23,7 @@ import com.yahoo.hadoop_bsp.BspJob.BspMapper;
  * @param <E>
  */
 public class TestVertexReader implements
-    VertexReader<LongWritable, IntWritable, Float> {
+    VertexReader<LongWritable, IntWritable, FloatWritable> {
     /** Logger */
     private static final Logger LOG = Logger.getLogger(TestVertexReader.class);
     /** Records read so far */
@@ -48,7 +48,7 @@ public class TestVertexReader implements
     }
 
     public boolean next(
-        MutableVertex<LongWritable, IntWritable, Float, ?> vertex)
+        MutableVertex<LongWritable, IntWritable, FloatWritable, ?> vertex)
         throws IOException {
         if (m_totalRecords <= m_recordsRead) {
             return false;
@@ -57,9 +57,10 @@ public class TestVertexReader implements
             (m_inputSplit.getNumSplits() * m_totalRecords) + m_recordsRead));
         vertex.setVertexValue(
             new IntWritable(((int) (vertex.getVertexId().get() * 10))));
+        // Adds an edge to the neighbor vertex
         vertex.addEdge(
             new LongWritable((vertex.getVertexId().get() + 1) % m_totalRecords),
-            new Float((float) vertex.getVertexId().get() * 100));
+            new FloatWritable((float) vertex.getVertexId().get() * 100));
         ++m_recordsRead;
         LOG.info("next: Return vertexId=" + vertex.getVertexId().get() +
             ", vertexValue=" + vertex.getVertexValue() + ", destinationId=" +
@@ -87,7 +88,7 @@ public class TestVertexReader implements
         return new IntWritable(-1);
     }
 
-    public Float createEdgeValue() {
-        return new Float(0.0);
+    public FloatWritable createEdgeValue() {
+        return new FloatWritable(0.0f);
     }
 }

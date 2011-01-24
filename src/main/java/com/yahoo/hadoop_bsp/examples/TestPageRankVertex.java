@@ -3,6 +3,7 @@ package com.yahoo.hadoop_bsp.examples;
 import java.util.Iterator;
 
 import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
 
 import org.apache.log4j.Logger;
@@ -18,7 +19,7 @@ import com.yahoo.hadoop_bsp.lib.LongSumAggregator;
  *
  */
 public class TestPageRankVertex extends
-    HadoopVertex<LongWritable, DoubleWritable, Float, DoubleWritable> {
+    HadoopVertex<LongWritable, DoubleWritable, FloatWritable, DoubleWritable> {
     private static LongSumAggregator sumAggreg = null;
     private static MinAggregator minAggreg = null;
     private static MaxAggregator maxAggreg = null;
@@ -41,7 +42,7 @@ public class TestPageRankVertex extends
         }
         if (currentSuperstep >= 2) {
             LOG.info("aggregatedNumVertices=" +
-                    sumAggreg.getAggregatedValue() + 
+                    sumAggreg.getAggregatedValue() +
                     " NumVertices=" + numVertices);
             if (sumAggreg.getAggregatedValue().get() != numVertices) {
                 throw new RuntimeException("wrong value of SumAggreg: " +
@@ -92,5 +93,9 @@ public class TestPageRankVertex extends
                 voteToHalt();
             }
         }
+    }
+
+    public DoubleWritable createMsgValue() {
+        return new DoubleWritable(0f);
     }
 }

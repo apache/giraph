@@ -11,8 +11,10 @@ import org.apache.log4j.Logger;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
+@SuppressWarnings("rawtypes")
 public abstract class
-    HadoopVertex<I extends WritableComparable, V, E, M extends Writable>
+    HadoopVertex<I extends WritableComparable, V extends Writable,
+    E extends Writable, M extends Writable>
         implements MutableVertex<I, V, E, M> {
     /** Class logger */
     private static final Logger LOG = Logger.getLogger(HadoopVertex.class);
@@ -34,8 +36,9 @@ public abstract class
     public final void addEdge(I destVertexId, E edgeValue) {
         E value = m_destEdgeMap.get(destVertexId);
         if (value != null) {
-            LOG.debug("addEdge: Vertex=" + m_vertexId + ": already added an edge " +
-                     "value for destination vertex " + destVertexId);
+            LOG.debug("addEdge: Vertex=" + m_vertexId +
+                      ": already added an edge " +
+                      "value for destination vertex " + destVertexId);
         }
         m_destEdgeMap.put(destVertexId, edgeValue);
     }
@@ -159,7 +162,7 @@ public abstract class
      */
     public final static <A extends Writable> Aggregator<A> getAggregator(
                                       String name) {
-       return BspJob.BspMapper.getAggregator(name);
+        return BspJob.BspMapper.getAggregator(name);
     }
 
     /**
@@ -172,8 +175,7 @@ public abstract class
      * @return boolean (false when not registered)
      */
     public final static boolean useAggregator(String name) {
-       return BspJob.BspMapper.useAggregator(name);
+        return BspJob.BspMapper.useAggregator(name);
     }
-
 }
 

@@ -8,8 +8,11 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 
 import org.json.JSONArray;
@@ -19,6 +22,9 @@ import org.json.JSONObject;
 import org.apache.commons.codec.binary.Base64;
 
 import org.apache.log4j.Logger;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.JobClient;
@@ -39,7 +45,9 @@ import org.apache.zookeeper.data.Stat;
  * @author aching
  *
  */
-public class BspServiceMaster<I extends WritableComparable, V, E, M extends Writable>
+@SuppressWarnings({ "deprecation", "rawtypes" })
+public class BspServiceMaster<I extends WritableComparable, V extends Writable,
+    E extends Writable, M extends Writable>
     extends BspService<I, V, E, M>
     implements CentralizedServiceMaster<I, V, E, M> {
     /** Class logger */
@@ -47,10 +55,11 @@ public class BspServiceMaster<I extends WritableComparable, V, E, M extends Writ
     /** Am I the master? */
     boolean m_isMaster = false;
 
+
     public BspServiceMaster(
         String serverPortList,
         int sessionMsecTimeout,
-        @SuppressWarnings("rawtypes") Context context,
+        Context context,
         BspJob.BspMapper<I, V, E, M> bspMapper) {
         super(serverPortList, sessionMsecTimeout, context, bspMapper);
     }
@@ -95,7 +104,7 @@ public class BspServiceMaster<I extends WritableComparable, V, E, M extends Writ
      */
     private List<InputSplit> generateInputSplits(int numSplits) {
         try {
-            @SuppressWarnings({"rawtypes", "unchecked" })
+            @SuppressWarnings({"unchecked" })
             Class<VertexInputFormat> vertexInputFormatClass =
                 (Class<VertexInputFormat>)
                  getConfiguration().getClass("bsp.vertexInputFormatClass",
@@ -117,9 +126,7 @@ public class BspServiceMaster<I extends WritableComparable, V, E, M extends Writ
      */
     private void failJob() {
         try {
-            @SuppressWarnings("deprecation")
             JobClient jobClient = new JobClient((JobConf) getConfiguration());
-            @SuppressWarnings("deprecation")
             JobID jobId = JobID.forName(getJobId());
             RunningJob job = jobClient.getJob(jobId);
             LOG.fatal("failJob: Killing job " + jobId);
@@ -203,8 +210,6 @@ public class BspServiceMaster<I extends WritableComparable, V, E, M extends Writ
      * Check the workers to ensure that a minimum number of good workers exists
      * out of the total that have reported.
      *
-     * @param healthyWorkers healthy worker list
-     * @param unhealthyWorkers unhealthy worker list
      * @return healthy worker list (in order)
      */
     private List<String> checkWorkers() {
@@ -346,15 +351,199 @@ public class BspServiceMaster<I extends WritableComparable, V, E, M extends Writ
         return splitList.size();
     }
 
+    /**
+     * Read the metadata files for the checkpoint, determine the worker
+     * assignments for vertex ranges, and assign the metadata files.  Remove
+     * any unused chosen workers (this is safe since it wasn't finalized).
+     * The workers can then find the vertex ranges within the files.  It is an
+     * optimization to prevent all workers from searching all the files.
+     * Finally, also read in the aggregator data from the finalized checkpoint
+     * file.
+     *
+     * @param superstep checkpoint set to examine.
+     * @throws IOException
+     * @throws InterruptedException
+     * @throws KeeperException
+     */
+    private void mapFilesToWorkers(
+        long superstep,
+        List<String> chosenWorkerList)
+        throws IOException, KeeperException, InterruptedException {
+        FileSystem fs = getFs();
+        List<Path> validMetadataPathList = new ArrayList<Path>();
+        String finalizedCheckpointPath =
+            getCheckpointBasePath(superstep) + CHECKPOINT_FINALIZED_POSTFIX;
+        DataInputStream finalizedStream =
+            fs.open(new Path(finalizedCheckpointPath));
+        int prefixCount = finalizedStream.readInt();
+        for (int i = 0; i < prefixCount; ++i) {
+            String metadataFilePath =
+                finalizedStream.readUTF() + CHECKPOINT_METADATA_POSTFIX;
+            validMetadataPathList.add(new Path(metadataFilePath));
+        }
+
+        // Set the aggregator data if it exists.
+        int aggregatorDataSize = finalizedStream.readInt();
+        if (aggregatorDataSize > 0) {
+            byte [] aggregatorZkData = new byte[aggregatorDataSize];
+            int actualDataRead =
+                finalizedStream.read(aggregatorZkData, 0, aggregatorDataSize);
+            if (actualDataRead != aggregatorDataSize) {
+                throw new RuntimeException(
+                    "mapFilesToWorkers: Only read " + actualDataRead + " of " +
+                    aggregatorDataSize + " aggregator bytes from " +
+                    finalizedCheckpointPath);
+            }
+            String aggregatorPath =
+                getAggregatorPath(getApplicationAttempt(), superstep);
+            LOG.info("mapFilesToWorkers: Reloading aggregator data '" +
+                     aggregatorZkData + "' to " + aggregatorPath);
+            if (getZkExt().exists(aggregatorPath, false) == null) {
+                getZkExt().createExt(aggregatorPath,
+                                     aggregatorZkData,
+                                     Ids.OPEN_ACL_UNSAFE,
+                                     CreateMode.PERSISTENT,
+                                     true);
+            }
+            else {
+                getZkExt().setData(aggregatorPath, aggregatorZkData, -1);
+            }
+        }
+
+        finalizedStream.close();
+
+        I maxIndex;
+        try {
+            maxIndex = createVertexIndex();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        Map<String, Set<String>> workerFileSetMap =
+            new HashMap<String, Set<String>>();
+        // Reading the metadata files.  For now, implement simple algorithm:
+        // 1. Every file is set an input split and the partitions are mapped
+        //    accordingly
+        // 2. Every worker gets a hint about which files to look in to find
+        //    the input splits
+        int chosenWorkerListIndex = 0;
+        int inputSplitIndex = 0;
+        for (Path metadataPath : validMetadataPathList) {
+            DataInputStream metadataStream = fs.open(metadataPath);
+            long entries = metadataStream.readLong();
+            JSONArray vertexRangeMetaArray = new JSONArray();
+            JSONArray vertexRangeArray = new JSONArray();
+            String chosenWorker =
+                chosenWorkerList.get(chosenWorkerListIndex);
+            for (long i = 0; i < entries; ++i) {
+                long dataPos = metadataStream.readLong();
+                Long vertexCount = metadataStream.readLong();
+                maxIndex.readFields(metadataStream);
+                LOG.debug("mapFileToWorkers: File " + metadataPath +
+                          " with position " + dataPos + ", vertex count " +
+                          vertexCount + " assigned to " + chosenWorker);
+                ByteArrayOutputStream outputStream =
+                    new ByteArrayOutputStream();
+                DataOutput output = new DataOutputStream(outputStream);
+                maxIndex.write(output);
+
+                JSONObject vertexRangeObj = new JSONObject();
+                try {
+                    vertexRangeObj.put(STAT_NUM_VERTICES_KEY,
+                                       vertexCount);
+                    vertexRangeObj.put(STAT_HOSTNAME_ID_KEY,
+                                       chosenWorker);
+                    vertexRangeObj.put(STAT_MAX_INDEX_KEY,
+                                       outputStream.toString("UTF-8"));
+                    vertexRangeMetaArray.put(vertexRangeObj);
+                    vertexRangeArray.put(outputStream.toString("UTF-8"));
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+
+                if (!workerFileSetMap.containsKey(chosenWorker)) {
+                    workerFileSetMap.put(chosenWorker, new HashSet<String>());
+                }
+                Set<String> fileSet = workerFileSetMap.get(chosenWorker);
+                fileSet.add(metadataPath.toString());
+            }
+            metadataStream.close();
+
+            String inputSplitPathFinishedPath =
+                INPUT_SPLIT_PATH + "/" + inputSplitIndex +
+                INPUT_SPLIT_FINISHED_NODE;
+            String workerSelectedPath =
+                getWorkerSelectedPath(getApplicationAttempt(), superstep) +
+                "/" + chosenWorker;
+            LOG.info("mapFilesToWorkers: Assigning (if not empty)" +
+                     workerSelectedPath + " the following vertexRanges: " +
+                     vertexRangeArray.toString());
+
+            // Assign the input splits and the vertex ranges if there
+            // is at least one vertex range
+            if (vertexRangeArray.length() == 0) {
+                continue;
+            }
+            try {
+                 getZkExt().createExt(inputSplitPathFinishedPath,
+                                     vertexRangeMetaArray.toString().getBytes(),
+                                     Ids.OPEN_ACL_UNSAFE,
+                                     CreateMode.PERSISTENT,
+                                     true);
+                getZkExt().createExt(workerSelectedPath,
+                                     vertexRangeArray.toString().getBytes(),
+                                     Ids.OPEN_ACL_UNSAFE,
+                                     CreateMode.PERSISTENT,
+                                     true);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            ++inputSplitIndex;
+            ++chosenWorkerListIndex;
+            if (chosenWorkerListIndex == chosenWorkerList.size()) {
+                chosenWorkerListIndex = 0;
+            }
+        }
+
+        // Dump the file mapping information into ZooKeeper
+        String workerPath = null;
+        for (Map.Entry<String, Set<String>> entry :
+             workerFileSetMap.entrySet()) {
+            workerPath = getCheckpointFilesPath(getApplicationAttempt(),
+                                                getSuperstep(),
+                                                entry.getKey());
+            JSONArray fileArray = new JSONArray(entry.getValue());
+            try {
+                getZkExt().createExt(workerPath,
+                                     fileArray.toString().getBytes(),
+                                     Ids.OPEN_ACL_UNSAFE,
+                                     CreateMode.PERSISTENT,
+                                     true);
+            } catch (KeeperException.NodeExistsException e) {
+                LOG.warn("mapFileToWorkers: Already existing - " + workerPath);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
     public void setup() {
-        // Nothing to do
+        // Might have to manually load a checkpoint.
+        // In that case, the input splits are not set, they will be faked by
+        // the checkpoint files.  Each checkpoint file will be an input split
+        // and the input split
+        if (getManualRestartSuperstep() == -1) {
+            return;
+        }
+        else if (getManualRestartSuperstep() < -1) {
+            LOG.fatal("setup: Impossible to restart superstep " +
+                      getManualRestartSuperstep());
+            setJobState(BspService.State.FAILED);
+        }
     }
 
     public boolean becomeMaster() {
-        /*
-         * Create my bid to become the master, then try to become the worker
-         * or return false.
-         */
+        // Create my bid to become the master, then try to become the worker
+        // or return false.
         String myBid = null;
         try {
             myBid =
@@ -408,11 +597,7 @@ public class BspServiceMaster<I extends WritableComparable, V, E, M extends Writ
     private Map<I, JSONObject> collectVertexRangeStats(long superstep) {
         Map<I, JSONObject> vertexRangeStatArrayMap =
             new TreeMap<I, JSONObject>();
-        @SuppressWarnings({"rawtypes", "unchecked" })
-        Class<? extends WritableComparable> indexClass =
-            (Class<? extends WritableComparable>)
-            getConfiguration().getClass("bsp.indexClass",
-                                        WritableComparable.class);
+
         // Superstep 0 is special since there is no computation, just get
         // the stats from the input splits finished nodes.  Otherwise, get the
         // stats from the all the worker selected nodes
@@ -442,8 +627,7 @@ public class BspServiceMaster<I extends WritableComparable, V, E, M extends Writ
                 }
                 for (int i = 0; i < statArray.length(); ++i) {
                     try {
-                        @SuppressWarnings("unchecked")
-                        I maxIndex = (I) indexClass.newInstance();
+                        I maxIndex = createVertexIndex();
                         LOG.info("collectVertexRangeStats: " +
                                  "Getting max index from " +
                                  statArray.getJSONObject(i).get(
@@ -490,8 +674,7 @@ public class BspServiceMaster<I extends WritableComparable, V, E, M extends Writ
                 }
                 for (int i = 0; i < statArray.length(); ++i) {
                     try {
-                        @SuppressWarnings("unchecked")
-                        I maxIndex = (I) indexClass.newInstance();
+                        I maxIndex = createVertexIndex();
                         LOG.info("collectVertexRangeStats: " +
                                  "Getting max index from " +
                                  statArray.getJSONObject(i).get(
@@ -566,14 +749,14 @@ public class BspServiceMaster<I extends WritableComparable, V, E, M extends Writ
                     boolean firstTime = false;
                     if (aggregator == null) {
                         aggregator =
-                            getBspMapper().getAggregator(aggregatorName);
+                            BspJob.BspMapper.getAggregator(aggregatorName);
                         aggregatorMap.put(aggregatorName, aggregator);
                         firstTime = true;
                     }
                     Writable aggregatorValue = aggregator.createAggregatedValue();
                     InputStream input =
                         new ByteArrayInputStream(
-                            base64.decode(aggregatorArray.getJSONObject(i).
+                            (byte[]) base64.decode(aggregatorArray.getJSONObject(i).
                                 getString(AGGREGATOR_VALUE_KEY)));
                     aggregatorValue.readFields(new DataInputStream(input));
                     LOG.info("collectAndProcessAggregatorValues: aggregator value size=" +
@@ -604,9 +787,10 @@ public class BspServiceMaster<I extends WritableComparable, V, E, M extends Writ
 
                     JSONObject aggregatorObj = new JSONObject();
                     aggregatorObj.put(AGGREGATOR_NAME_KEY,
-                                       entry.getKey());
-                    aggregatorObj.put(AGGREGATOR_VALUE_KEY,
-                            base64.encodeToString(outputStream.toByteArray()));
+                                      entry.getKey());
+                    aggregatorObj.put(
+                        AGGREGATOR_VALUE_KEY,
+                        base64.encodeToString(outputStream.toByteArray()));
                     aggregatorArray.put(aggregatorObj);
                     LOG.info("collectAndProcessAggregatorValues: " +
                              "Trying to add aggregatorObj " +
@@ -636,14 +820,16 @@ public class BspServiceMaster<I extends WritableComparable, V, E, M extends Writ
     }
 
     /**
-     * Assign vertex ranges to the workers.
+     * Assign vertex ranges to the workers.  Also filled in
+     * m_vertexRangeMaxWorkerMap with the assignment of vertex ranges to
+     * workers.
      *
      * @param chosenWorkerList selected workers that are healthy
      */
     private void assignWorkersVertexRanges(List<String> chosenWorkerList) {
         // TODO: Actually pass vertex ranges around
         //
-        // Current algorithm: Take the assign the original owners of every
+        // Current algorithm: Assign the original owners of every
         // partition to that partition.  If the original owner no longer
         // exists, fail!
         List<String> inputSplitList = null;
@@ -711,12 +897,64 @@ public class BspServiceMaster<I extends WritableComparable, V, E, M extends Writ
         }
     }
 
+    /**
+     * Finalize the checkpoint file prefixes by taking the chosen workers and
+     * writing them to a finalized file.  Also write out the aggregators.
+     *
+     * @param superstep superstep to finalize
+     * @param chosenWorkerList list of chosen workers that will be finalized
+     * @throws IOException
+     * @throws InterruptedException
+     * @throws KeeperException
+     */
+    private void finalizeCheckpoint(
+        long superstep,
+        List<String> chosenWorkerList)
+        throws IOException, KeeperException, InterruptedException {
+        Path finalizedCheckpointPath =
+            new Path(getCheckpointBasePath(superstep) +
+                     CHECKPOINT_FINALIZED_POSTFIX);
+        try {
+            getFs().delete(finalizedCheckpointPath, false);
+        } catch (IOException e) {
+            LOG.warn("finalizedValidCheckpointPrefixes: Removed old file " +
+                     finalizedCheckpointPath);
+        }
+
+        // Format:
+        // <number of files>
+        // <used file prefix 0><used file prefix 1>...
+        // <aggregator data length><aggregators as a serialized JSON byte array>
+        FSDataOutputStream finalizedOutputStream =
+            getFs().create(finalizedCheckpointPath);
+        finalizedOutputStream.writeInt(chosenWorkerList.size());
+        for (String chosenWorker : chosenWorkerList) {
+            String chosenWorkerPrefix =
+                getCheckpointBasePath(superstep) + "." + chosenWorker;
+            finalizedOutputStream.writeUTF(chosenWorkerPrefix);
+        }
+        String aggregatorPath =
+            getAggregatorPath(getApplicationAttempt(), superstep);
+        if (getZkExt().exists(aggregatorPath, false) != null) {
+            byte [] aggregatorZkData =
+                getZkExt().getData(aggregatorPath, false, null);
+            finalizedOutputStream.writeInt(aggregatorZkData.length);
+            finalizedOutputStream.write(aggregatorZkData);
+        }
+        else {
+            finalizedOutputStream.writeInt(0);
+        }
+        finalizedOutputStream.close();
+    }
+
     public boolean coordinateSuperstep() {
         // 1. Get chosen workers.
         // 2. Assign partitions to the workers
+        //    or possibly reload from a superstep
         // 3. Wait for all workers to complete
         // 4. Collect and process aggregators
         // 5. Create superstep finished node
+        // 6. If the checkpoint frequency is met, finalize the checkpoint
 
         List<String> chosenWorkerList = checkWorkers();
         if (chosenWorkerList == null) {
@@ -725,8 +963,19 @@ public class BspServiceMaster<I extends WritableComparable, V, E, M extends Writ
             setJobState(State.FAILED);
         }
 
-        if (getSuperstep() != 0) {
-            assignWorkersVertexRanges(chosenWorkerList);
+        if (getManualRestartSuperstep() == getSuperstep()) {
+            try {
+                LOG.info("coordinateSuperstep: Reloading from superstep " +
+                         getSuperstep());
+
+                mapFilesToWorkers(getManualRestartSuperstep(), chosenWorkerList);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        } else {
+            if (getSuperstep() != 0) {
+                assignWorkersVertexRanges(chosenWorkerList);
+            }
         }
 
         String workerSelectionFinishedPath =
@@ -816,8 +1065,21 @@ public class BspServiceMaster<I extends WritableComparable, V, E, M extends Writ
             throw new RuntimeException(e);
         }
 
+        // Finalize the valid checkpoint file prefixes and possibly
+        // the aggregators.
+        if (checkpointFrequencyMet(getSuperstep())) {
+            try {
+                finalizeCheckpoint(getSuperstep(), chosenWorkerList);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+
         // Clean up the old supersteps
-        if ((getSuperstep() - 1) >= 0) {
+        if ((getConfiguration().getBoolean(
+                BspJob.BSP_KEEP_ZOOKEEPER_DATA,
+                BspJob.DEFAULT_BSP_KEEP_ZOOKEEPER_DATA) == false) &&
+            ((getSuperstep() - 1) >= 0)) {
             String oldSuperstepPath =
                 getSuperstepPath(getApplicationAttempt()) + "/" +
                 (getSuperstep() - 1);
@@ -835,7 +1097,7 @@ public class BspServiceMaster<I extends WritableComparable, V, E, M extends Writ
             }
         }
 
-        incrSuperstep();
+        incrCachedSuperstep();
         return (verticesFinished == verticesTotal);
     }
 
@@ -879,14 +1141,16 @@ public class BspServiceMaster<I extends WritableComparable, V, E, M extends Writ
             getCleanedUpChildrenChangedEvent().reset();
         }
 
-        /*
-         * At this point, all processes have acknowledged the cleanup,
-         * and the master can do any final cleanup
-         */
+         // At this point, all processes have acknowledged the cleanup,
+         // and the master can do any final cleanup
         try {
-            LOG.info("cleanupZooKeeper: Removing the following path and all " +
-                     "children - " + BASE_PATH);
-            getZkExt().deleteExt(BASE_PATH, -1, true);
+            if (getConfiguration().getBoolean(
+                BspJob.BSP_KEEP_ZOOKEEPER_DATA,
+                BspJob.DEFAULT_BSP_KEEP_ZOOKEEPER_DATA) == false) {
+                LOG.info("cleanupZooKeeper: Removing the following path " +
+                         "and all children - " + BASE_PATH);
+                getZkExt().deleteExt(BASE_PATH, -1, true);
+            }
         } catch (Exception e) {
             LOG.error("cleanupZooKeeper: Failed to do cleanup of " + BASE_PATH);
         }

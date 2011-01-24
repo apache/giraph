@@ -2,6 +2,7 @@ package com.yahoo.hadoop_bsp.examples;
 
 import java.util.Iterator;
 
+import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 
@@ -13,7 +14,7 @@ import com.yahoo.hadoop_bsp.HadoopVertex;
  *
  */
 public class TestMsgVertex extends
-    HadoopVertex<LongWritable, IntWritable, Float, IntWritable> {
+    HadoopVertex<LongWritable, IntWritable, FloatWritable, IntWritable> {
     public void compute(Iterator<IntWritable> msgIterator) {
         if (getVertexId().equals(new LongWritable(2))) {
             sendMsg(new LongWritable(1), new IntWritable(101));
@@ -41,5 +42,9 @@ public class TestMsgVertex extends
                                "messages in time");
             voteToHalt();
         }
+    }
+
+    public IntWritable createMsgValue() {
+        return new IntWritable(0);
     }
 }

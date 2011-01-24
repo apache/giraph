@@ -1,7 +1,7 @@
 package com.yahoo.hadoop_bsp.examples;
 
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -15,7 +15,7 @@ import com.yahoo.hadoop_bsp.Combiner;
  */
 public class TestCombiner implements Combiner<LongWritable, IntWritable> {
     public void combine(CommunicationsInterface<LongWritable, IntWritable> comm,
-                        LongWritable vertex, ArrayList<IntWritable> msgList)
+                        LongWritable vertex, List<IntWritable> msgList)
                 throws IOException {
         int sum = 0;
         for (IntWritable msg : msgList) {

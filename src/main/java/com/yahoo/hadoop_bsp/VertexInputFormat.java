@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -16,11 +17,13 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  * getSplits().
  * @author aching
  *
- * @param <I>
- * @param <V>
- * @param <E>
+ * @param <I> vertex id
+ * @param <V> vertex value
+ * @param <E> edge value
  */
-public interface VertexInputFormat<I extends WritableComparable, V, E> {
+@SuppressWarnings("rawtypes")
+public interface VertexInputFormat<I extends WritableComparable,
+    V extends Writable, E extends Writable> {
     /**
      * Logically split the vertices for a BSP application.
      *

@@ -1,5 +1,6 @@
 package com.yahoo.hadoop_bsp;
 
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
@@ -11,8 +12,12 @@ import org.apache.hadoop.io.WritableComparable;
  * @param <E>
  * @param <M>
  */
-public interface MutableVertex<I extends WritableComparable, V, E, M>
-    extends Vertex<I, V, E, M> {
+@SuppressWarnings("rawtypes")
+public interface MutableVertex<I extends WritableComparable,
+                               V extends Writable,
+                               E extends Writable,
+                               M extends Writable>
+                               extends Vertex<I, V, E, M> {
     /**
      * Set the vertex id
      * @param id vertex id is set to this (instantiated by the user)

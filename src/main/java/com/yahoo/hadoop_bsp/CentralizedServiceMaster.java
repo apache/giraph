@@ -13,16 +13,12 @@ import com.yahoo.hadoop_bsp.BspService.State;
  *
  * @param <I>
  */
+@SuppressWarnings("rawtypes")
 public interface CentralizedServiceMaster<I extends WritableComparable,
-                                          V,
-                                          E,
-                                          M extends Writable> {
-
-    /**
-     * Setup (must be called prior to any other function)
-     */
-    public void setup();
-
+                                          V extends Writable,
+                                          E extends Writable,
+                                          M extends Writable>
+                                          extends CentralizedService {
     /**
      * Become the master.
      * @return true if became the master, false if the application is done.
@@ -39,12 +35,6 @@ public interface CentralizedServiceMaster<I extends WritableComparable,
     public int createInputSplits();
 
     /**
-     * Get the current superstep (check for the last good superstep)
-     * @return
-     */
-    public long getSuperstep();
-
-    /**
      * Master coordinates the superstep
      *
      * @return true if this is the last barrier (application done)
@@ -56,10 +46,4 @@ public interface CentralizedServiceMaster<I extends WritableComparable,
      * @param state state of the job
      */
     public void setJobState(State state);
-
-    /**
-     * Master does special singular cleanup procedures (i.e. cleanup files,
-     * znodes, etc.)
-     */
-    public void cleanup();
 }

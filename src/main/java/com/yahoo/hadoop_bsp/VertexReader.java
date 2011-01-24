@@ -2,11 +2,14 @@ package com.yahoo.hadoop_bsp;
 
 import java.io.IOException;
 
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
-public interface VertexReader<I extends WritableComparable, V, E> {
+@SuppressWarnings("rawtypes")
+public interface VertexReader<I extends WritableComparable,
+    V extends Writable, E extends Writable> {
     /**
      * Use the input split and context to setup reading the vertices.
      * Guaranteed to be called prior to any other function.
@@ -29,18 +32,21 @@ public interface VertexReader<I extends WritableComparable, V, E> {
 
     /**
      * Creates a new vertex id
+     *
      * @return new vertex id
      */
     I createVertexId();
 
     /**
      * Creates a new vertex value
+     *
      * @return new vertex value
      */
     V createVertexValue();
 
     /**
      * Creates a new edge value
+     *
      * @return new edge value
      */
     E createEdgeValue();

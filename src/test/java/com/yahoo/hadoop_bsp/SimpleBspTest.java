@@ -8,10 +8,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 
 import org.apache.hadoop.io.DoubleWritable;
-import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -39,7 +37,8 @@ import junit.framework.TestSuite;
  */
 public class SimpleBspTest extends TestCase implements Watcher {
     /** JobTracker system property */
-    private static String m_jobTracker = System.getProperty("prop.mapred.job.tracker");
+    private static String m_jobTracker =
+        System.getProperty("prop.mapred.job.tracker");
     /** Jar location system property */
     private String m_jarLocation = System.getProperty("prop.jarLocation", "");
     /** Number of actual processes for the BSP application */
@@ -81,9 +80,9 @@ public class SimpleBspTest extends TestCase implements Watcher {
         try {
             Configuration conf = new Configuration();
             FileSystem hdfs = FileSystem.get(conf);
-            /* Since local jobs always use the same paths, remove them */
+            // Since local jobs always use the same paths, remove them
             Path oldLocalJobPaths = new Path(
-                BspJob.DEFAULT_ZOOKEEPER_MANAGER_DIRECTORY);
+                BspJob.DEFAULT_ZOOKEEPER_MANAGER_DIR);
             FileStatus [] fileStatusArr = hdfs.listStatus(oldLocalJobPaths);
             for (FileStatus fileStatus : fileStatusArr) {
                 if (fileStatus.isDir() &&
@@ -167,7 +166,7 @@ public class SimpleBspTest extends TestCase implements Watcher {
     public void testBspSuperStep()
         throws IOException, InterruptedException, ClassNotFoundException {
         Configuration conf = new Configuration();
-        /* Allow this test to be run on a real Hadoop setup */
+        // Allow this test to be run on a real Hadoop setup
         conf.set("mapred.jar", m_jarLocation);
 
         if (m_jobTracker != null) {
@@ -193,29 +192,22 @@ public class SimpleBspTest extends TestCase implements Watcher {
         }
         conf.setInt(BspJob.BSP_RPC_INITIAL_PORT, BspJob.BSP_RPC_DEFAULT_PORT);
         conf.setFloat(BspJob.BSP_TOTAL_INPUT_SPLIT_MULTIPLIER, 2.0f);
-        /* GeneratedInputSplit will generate 10 vertices */
+        // GeneratedInputSplit will generate 10 vertices
         conf.setLong(TestVertexReader.READER_VERTICES, 10);
         FileSystem hdfs = FileSystem.get(conf);
-        conf.setClass("bsp.vertexClass",
+        conf.setClass(BspJob.BSP_VERTEX_CLASS,
                       TestSuperstepVertex.class,
                       HadoopVertex.class);
-        conf.setClass("bsp.msgValueClass",
-                      IntWritable.class,
-                      Writable.class);
-        conf.setClass("bsp.inputSplitClass",
+        conf.setClass(BspJob.BSP_INPUT_SPLIT_CLASS,
                       BspInputSplit.class,
                       InputSplit.class);
-        conf.setClass("bsp.vertexInputFormatClass",
+        conf.setClass(BspJob.BSP_VERTEX_INPUT_FORMAT_CLASS,
                       TestVertexInputFormat.class,
                       VertexInputFormat.class);
-        conf.setClass("bsp.vertexWriterClass",
+        conf.setClass(BspJob.BSP_VERTEX_WRITER_CLASS,
                       TestVertexWriter.class,
                       VertexWriter.class);
-        conf.setClass("bsp.indexClass",
-                      LongWritable.class,
-                      WritableComparable.class);
-        BspJob<Integer, String, String> bspJob =
-            new BspJob<Integer, String, String>(conf, "testBspSuperStep");
+        BspJob bspJob = new BspJob(conf, "testBspSuperStep");
            Path outputPath = new Path("/tmp/testBspSuperStepOutput");
         hdfs.delete(outputPath, true);
         FileOutputFormat.setOutputPath(bspJob, outputPath);
@@ -237,7 +229,7 @@ public class SimpleBspTest extends TestCase implements Watcher {
         throws IOException, InterruptedException, ClassNotFoundException {
         Configuration conf = new Configuration();
         conf.set("mapred.jar", m_jarLocation);
-        /* Allow this test to be run on a real Hadoop setup */
+        // Allow this test to be run on a real Hadoop setup
         if (m_jobTracker != null) {
             System.out.println("testBspMsg: Sending job to job tracker " +
                        m_jobTracker + " with jar path " + m_jarLocation);
@@ -260,26 +252,19 @@ public class SimpleBspTest extends TestCase implements Watcher {
             conf.set(BspJob.BSP_ZOOKEEPER_LIST, m_zkList);
         }
         conf.setInt(BspJob.BSP_RPC_INITIAL_PORT, BspJob.BSP_RPC_DEFAULT_PORT);
-        /* GeneratedInputSplit will generate 5 vertices */
+        // GeneratedInputSplit will generate 5 vertices
         conf.setLong(TestVertexReader.READER_VERTICES, 5);
         FileSystem hdfs = FileSystem.get(conf);
-        conf.setClass("bsp.vertexClass",
+        conf.setClass(BspJob.BSP_VERTEX_CLASS,
                       TestMsgVertex.class,
                       HadoopVertex.class);
-        conf.setClass("bsp.msgValueClass",
-                      IntWritable.class,
-                      Writable.class);
-        conf.setClass("bsp.inputSplitClass",
+        conf.setClass(BspJob.BSP_INPUT_SPLIT_CLASS,
                       BspInputSplit.class,
                       InputSplit.class);
-        conf.setClass("bsp.vertexInputFormatClass",
+        conf.setClass(BspJob.BSP_VERTEX_INPUT_FORMAT_CLASS,
                       TestVertexInputFormat.class,
                       VertexInputFormat.class);
-        conf.setClass("bsp.indexClass",
-                      LongWritable.class,
-                      WritableComparable.class);
-        BspJob<Integer, String, String> bspJob =
-            new BspJob<Integer, String, String>(conf, "testBspMsg");
+        BspJob bspJob = new BspJob(conf, "testBspMsg");
         Path outputPath = new Path("/tmp/testBspMsgOutput");
         hdfs.delete(outputPath, true);
         FileOutputFormat.setOutputPath(bspJob, outputPath);
@@ -296,7 +281,7 @@ public class SimpleBspTest extends TestCase implements Watcher {
         throws IOException, InterruptedException, ClassNotFoundException {
         Configuration conf = new Configuration();
         conf.set("mapred.jar", m_jarLocation);
-        /* Allow this test to be run on a real Hadoop setup */
+        // Allow this test to be run on a real Hadoop setup
         if (m_jobTracker != null) {
             System.out.println("testBspMsg: Sending job to job tracker " +
                        m_jobTracker + " with jar path " + m_jarLocation);
@@ -319,29 +304,22 @@ public class SimpleBspTest extends TestCase implements Watcher {
             conf.set(BspJob.BSP_ZOOKEEPER_LIST, m_zkList);
         }
         conf.setInt(BspJob.BSP_RPC_INITIAL_PORT, BspJob.BSP_RPC_DEFAULT_PORT);
-        /* GeneratedInputSplit will generate 5 vertices */
+        // GeneratedInputSplit will generate 5 vertices
         conf.setLong(TestVertexReader.READER_VERTICES, 5);
         FileSystem hdfs = FileSystem.get(conf);
-        conf.setClass("bsp.vertexClass",
+        conf.setClass(BspJob.BSP_VERTEX_CLASS,
                       TestCombinerVertex.class,
                       HadoopVertex.class);
-        conf.setClass("bsp.combinerClass",
-                      TestCombiner.class,
-                      Combiner.class);
-        conf.setClass("bsp.bsp.msgValueClass",
-                      IntWritable.class,
-                      Writable.class);
-        conf.setClass("bsp.inputSplitClass",
+        conf.setClass(BspJob.BSP_INPUT_SPLIT_CLASS,
                       BspInputSplit.class,
                       InputSplit.class);
-        conf.setClass("bsp.vertexInputFormatClass",
+        conf.setClass(BspJob.BSP_VERTEX_INPUT_FORMAT_CLASS,
                       TestVertexInputFormat.class,
                       VertexInputFormat.class);
-        conf.setClass("bsp.indexClass",
-                      LongWritable.class,
-                      WritableComparable.class);
-        BspJob<Integer, String, String> bspJob =
-            new BspJob<Integer, String, String>(conf, "testBspCombiner");
+        conf.setClass(BspJob.BSP_COMBINER_CLASS,
+                      TestCombiner.class,
+                      Combiner.class);
+        BspJob bspJob = new BspJob(conf, "testBspCombiner");
         Path outputPath = new Path("/tmp/testBspCombinerOutput");
         hdfs.delete(outputPath, true);
         FileOutputFormat.setOutputPath(bspJob, outputPath);
@@ -358,7 +336,7 @@ public class SimpleBspTest extends TestCase implements Watcher {
         throws IOException, InterruptedException, ClassNotFoundException {
         Configuration conf = new Configuration();
         conf.set("mapred.jar", m_jarLocation);
-        /* Allow this test to be run on a real Hadoop setup */
+        // Allow this test to be run on a real Hadoop setup
         if (m_jobTracker != null) {
             System.out.println("testBspJob: Sending job to job tracker " +
                        m_jobTracker + " with jar path " + m_jarLocation);
@@ -380,26 +358,19 @@ public class SimpleBspTest extends TestCase implements Watcher {
             conf.set(BspJob.BSP_ZOOKEEPER_LIST, m_zkList);
         }
         conf.setInt(BspJob.BSP_RPC_INITIAL_PORT, BspJob.BSP_RPC_DEFAULT_PORT);
-        /* GeneratedInputSplit will generate 5 vertices */
+        // GeneratedInputSplit will generate 5 vertices
         conf.setLong(TestVertexReader.READER_VERTICES, 5);
         FileSystem hdfs = FileSystem.get(conf);
-        conf.setClass("bsp.vertexClass",
+        conf.setClass(BspJob.BSP_VERTEX_CLASS,
                       TestPageRankVertex.class,
                       HadoopVertex.class);
-        conf.setClass("bsp.msgValueClass",
-                      DoubleWritable.class,
-                      Writable.class);
-        conf.setClass("bsp.inputSplitClass",
+        conf.setClass(BspJob.BSP_INPUT_SPLIT_CLASS,
                       BspInputSplit.class,
                       InputSplit.class);
-        conf.setClass("bsp.vertexInputFormatClass",
+        conf.setClass(BspJob.BSP_VERTEX_INPUT_FORMAT_CLASS,
                       TestVertexInputFormat.class,
                       VertexInputFormat.class);
-        conf.setClass("bsp.indexClass",
-                      LongWritable.class,
-                      WritableComparable.class);
-        BspJob<Integer, String, String> bspJob =
-            new BspJob<Integer, String, String>(conf, "testBspPageRank");
+        BspJob bspJob = new BspJob(conf, "testBspPageRank");
         Path outputPath = new Path("/tmp/testBspPageRankOutput");
         hdfs.delete(outputPath, true);
         FileOutputFormat.setOutputPath(bspJob, outputPath);

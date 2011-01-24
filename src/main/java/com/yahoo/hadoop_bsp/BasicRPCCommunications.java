@@ -9,6 +9,7 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -23,8 +24,12 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RPC.Server;
 import org.apache.hadoop.mapreduce.Mapper.Context;
 
+@SuppressWarnings("rawtypes")
 public abstract class BasicRPCCommunications<
-    I extends WritableComparable, V, E, M extends Writable, J>
+    I extends WritableComparable,
+    V extends Writable,
+    E extends Writable,
+    M extends Writable, J>
     implements CommunicationsInterface<I, M> {
 
     /** Class logger */
@@ -48,6 +53,8 @@ public abstract class BasicRPCCommunications<
     protected Configuration conf;
     /** Combiner instance, can be null */
     protected Combiner<I, M> combiner;
+    /** Used to instantiate the message */
+    protected final Vertex<I, V, E, M> instantiableVertex;
 
     /** Address of RPC server */
     private InetSocketAddress myAddress;
@@ -61,17 +68,17 @@ public abstract class BasicRPCCommunications<
     private Map<InetSocketAddress, HashMap<I, MsgArrayList<M>>> outMessages =
         new HashMap<InetSocketAddress, HashMap<I, MsgArrayList<M>>>();
     /** Map of incoming messages, mapping from vertex index to list of messages */
-    private Map<I, ArrayList<M>> inMessages =
-        new HashMap<I, ArrayList<M>>();
+    private Map<I, List<M>> inMessages =
+        new HashMap<I, List<M>>();
     /**
      * Map of inbound messages, mapping from vertex index to list of messages.
      * Transferred to inMessages at beginning of a superstep
      */
-    private Map<I, ArrayList<M>> transientInMessages =
-        new HashMap<I, ArrayList<M>>();
+    private Map<I, List<M>> transientInMessages =
+        new HashMap<I, List<M>>();
     /** Place holder for an empty message list.
      * Used for vertices with no inbound messages. */
-    private ArrayList<M> emptyMsgList = new ArrayList<M>();
+    private List<M> emptyMsgList = new ArrayList<M>();
     /** Cached map of partition to remote socket address */
     private Map<Partition<I>, InetSocketAddress> partitionMap =
         new HashMap<Partition<I>, InetSocketAddress>();
@@ -263,7 +270,7 @@ public abstract class BasicRPCCommunications<
     protected abstract Server getRPCServer(InetSocketAddress addr,
                                            int numHandlers, String jobId, J jt) throws IOException;
 
-    public BasicRPCCommunications(@SuppressWarnings("rawtypes") Context context,
+    public BasicRPCCommunications(Context context,
                                   CentralizedServiceWorker<I, V, E, M> service)
     throws IOException, UnknownHostException, InterruptedException {
         this.service = service;
@@ -271,18 +278,31 @@ public abstract class BasicRPCCommunications<
         this.maxSize = conf.getInt(BspJob.BSP_MSG_SIZE, BspJob.BSP_MSG_DEFAULT_SIZE);
 
         combiner = null;
-        if (conf.get("bsp.combinerClass") != null)  {
+        if (conf.get(BspJob.BSP_COMBINER_CLASS) != null)  {
             try {
                 @SuppressWarnings("unchecked")
                 Class<? extends Combiner<I, M>> combinerClass =
                     (Class<? extends Combiner<I, M>>)conf.getClass(
-                                                                   "bsp.combinerClass", Combiner.class);
+                        BspJob.BSP_COMBINER_CLASS, Combiner.class);
                 combiner = combinerClass.newInstance();
             } catch (InstantiationException e) {
                 throw new RuntimeException(e);
             } catch (IllegalAccessException e) {
                 throw new RuntimeException(e);
             }
+        }
+
+        @SuppressWarnings({ "unchecked" })
+        Class<? extends HadoopVertex<I, V, E, M>> hadoopVertexClass =
+            (Class<? extends HadoopVertex<I, V, E, M>>)
+                conf.getClass(BspJob.BSP_VERTEX_CLASS,
+                                            HadoopVertex.class,
+                                            HadoopVertex.class);
+        try {
+            this.instantiableVertex = hadoopVertexClass.newInstance();
+        } catch (Exception e) {
+            throw new RuntimeException(
+                "BasicRPCCommunications: Couldn't instantiate vertex");
         }
 
         inPrepareSuperstep = false;
@@ -386,7 +406,7 @@ public abstract class BasicRPCCommunications<
     }
 
     public void put(I vertex, M msg) throws IOException {
-        ArrayList<M> msgs = null;
+        List<M> msgs = null;
         synchronized(transientInMessages) {
             if (inPrepareSuperstep) { // when called by combiner
                 msgs = inMessages.get(vertex);
@@ -410,7 +430,7 @@ public abstract class BasicRPCCommunications<
     }
 
     public void put(I vertex, MsgArrayList<M> msgList) throws IOException {
-        ArrayList<M> msgs = null;
+        List<M> msgs = null;
         synchronized(transientInMessages) {
             msgs = transientInMessages.get(vertex);
             if (msgs == null) {
@@ -448,7 +468,7 @@ public abstract class BasicRPCCommunications<
         synchronized(msgMap) {
             msgList = msgMap.get(destVertex);
             if (msgList == null) { // should only happen once
-                msgList = new MsgArrayList<M>();
+                msgList = new MsgArrayList<M>(this.instantiableVertex);
                 msgList.setConf(conf);
                 msgMap.put(destVertex, msgList);
             }
@@ -463,7 +483,7 @@ public abstract class BasicRPCCommunications<
     }
 
     public void flush(Context context) throws IOException {
-        for (ArrayList<M> msgList : inMessages.values()) {
+        for (List<M> msgList : inMessages.values()) {
             msgList.clear();
         }
         for (PeerThread pt : peerThreads.values()) {
@@ -498,10 +518,13 @@ public abstract class BasicRPCCommunications<
         }
     }
 
+    /**
+     * Move the in transition messages to the in messages for every vertex.
+     */
     public void prepareSuperstep() {
         synchronized(transientInMessages) {
             inPrepareSuperstep = true;
-            for (Entry<I, ArrayList<M>> entry :
+            for (Entry<I, List<M>> entry :
                 transientInMessages.entrySet()) {
                 if (combiner != null) {
                     try {
@@ -510,7 +533,7 @@ public abstract class BasicRPCCommunications<
                         throw new RuntimeException(e);
                     }
                 } else {
-                    ArrayList<M> msgs = inMessages.get(entry.getKey());
+                    List<M> msgs = inMessages.get(entry.getKey());
                     if (msgs == null) {
                         msgs = new ArrayList<M>();
                         inMessages.put(entry.getKey(), msgs);
@@ -523,22 +546,40 @@ public abstract class BasicRPCCommunications<
         }
     }
 
-    public Iterator<Entry<I, ArrayList<M>>> getMessageIterator()
-    throws IOException {
+    public Iterator<Entry<I, List<M>>> getMessageIterator()
+        throws IOException {
         return inMessages.entrySet().iterator();
     }
 
-    public Iterator<M> getVertexMessageIterator(I vertex) {
-        ArrayList<M> msgList = inMessages.get(vertex);
+    public List<M> getVertexMessageList(I vertex) {
+        List<M> msgList = inMessages.get(vertex);
         if (msgList == null) {
-            return emptyMsgList.iterator();
+            return emptyMsgList;
         }
-        return msgList.iterator();
+        else {
+            return msgList;
+        }
+    }
+
+    /**
+     * Set the vertex message list for this vertex.  This should only be
+     * used by the checkpoint loading mechanism.  The msgList should not
+     * exist for this vertex and will die if it does.
+     *
+     * @param vertexId id of vertex
+     * @param msgList list of messages to be associated with vertexId
+     */
+    public void setVertexMessageList(I vertexId, List<M> msgList) {
+        if (inMessages.containsKey(vertexId)) {
+            throw new RuntimeException("setVertexMessageList: Vertex id " +
+                                       vertexId + " already exists!");
+        }
+        inMessages.put(vertexId, msgList);
     }
 
     public int getNumCurrentMessages()
-    throws IOException {
-        Iterator<Entry<I, ArrayList<M>>> it = getMessageIterator();
+        throws IOException {
+        Iterator<Entry<I, List<M>>> it = getMessageIterator();
         int numMessages = 0;
         while (it.hasNext()) {
             numMessages += it.next().getValue().size();

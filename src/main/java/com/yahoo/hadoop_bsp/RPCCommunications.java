@@ -13,12 +13,16 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RPC.Server;
 import org.apache.hadoop.mapreduce.Mapper.Context;
 
-public class RPCCommunications<I extends WritableComparable, V, E, M extends Writable>
-    extends BasicRPCCommunications<I, V, E, M, Object> {
+@SuppressWarnings("rawtypes")
+public class RPCCommunications<
+    I extends WritableComparable,
+    V extends Writable,
+    E extends Writable,
+    M extends Writable> extends BasicRPCCommunications<I, V, E, M, Object> {
     /** Class logger */
     public static final Logger LOG = Logger.getLogger(RPCCommunications.class);
 
-    public RPCCommunications(@SuppressWarnings("rawtypes") Context context,
+    public RPCCommunications(Context context,
                              CentralizedServiceWorker<I, V, E, M> service)
             throws IOException, UnknownHostException, InterruptedException {
         super(context, service);

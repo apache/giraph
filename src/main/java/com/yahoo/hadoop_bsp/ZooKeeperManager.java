@@ -35,6 +35,7 @@ import org.apache.log4j.Logger;
  */
 public class ZooKeeperManager {
     /** Job context (mainly for progress) */
+    @SuppressWarnings("rawtypes")
     private Context m_context;
     /** Hadoop configuration */
     private final Configuration m_conf;
@@ -79,6 +80,8 @@ public class ZooKeeperManager {
     private String m_zkServerPortString = null;
     /** My hostname */
     private String m_myHostname = null;
+    /** Job id, to ensure uniqueness */
+    private final String m_jobId;
 
     /** Separates the hostname and task in the candidate stamp */
     private static final String HOSTNAME_TASK_SEPARATOR = " ";
@@ -87,6 +90,15 @@ public class ZooKeeperManager {
         "zkServerList_";
     /** Denotes that the computation is done for a partition */
     private static final String COMPUTATION_DONE_SUFFIX = ".COMPUTATION_DONE";
+
+    /**
+     * Generate the final ZooKeeper coordination directory
+     *
+     * @return directory path with job id
+     */
+    final public String getFinalZooKeeperPath() {
+        return BspJob.DEFAULT_ZOOKEEPER_MANAGER_DIR + "/" + m_jobId;
+    }
 
     /**
      * Collects the output of a stream and dumps it to the log.
@@ -120,15 +132,15 @@ public class ZooKeeperManager {
         }
     }
 
-    public ZooKeeperManager(Context context) {
+    public ZooKeeperManager(@SuppressWarnings("rawtypes") Context context) {
         m_context = context;
         m_conf = context.getConfiguration();
         m_taskPartition = m_conf.getInt("mapred.task.partition", -1);
+        m_jobId = m_conf.get("mapred.job.id", "Unknown Job");
         m_baseDirectory =
             new Path(m_conf.get(
                 BspJob.BSP_ZOOKEEPER_MANAGER_DIRECTORY,
-                BspJob.DEFAULT_ZOOKEEPER_MANAGER_DIRECTORY) +
-                "/" + m_conf.get("mapred.job.id", "Unknown Job"));
+                getFinalZooKeeperPath()));
         m_taskDirectory = new Path(m_baseDirectory,
                                    "_task");
         m_serverDirectory = new Path(m_baseDirectory,

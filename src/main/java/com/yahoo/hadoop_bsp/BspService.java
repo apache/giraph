@@ -8,6 +8,7 @@ import java.net.UnknownHostException;
 
 import org.apache.log4j.Logger;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -28,8 +29,10 @@ import com.yahoo.hadoop_bsp.BspJob.BspMapper;
  * @author aching
  *
  */
+@SuppressWarnings("rawtypes")
 public class BspService <
-    I extends WritableComparable, V, E, M extends Writable> implements Watcher {
+    I extends WritableComparable, V extends Writable, E extends Writable,
+    M extends Writable> implements Watcher {
     /** Private ZooKeeper instance that implements the service */
     private final ZooKeeperExt m_zk;
     /** Has worker registration changed (either healthy or unhealthy) */
@@ -53,7 +56,6 @@ public class BspService <
     /** Configuration of the job*/
     private final Configuration m_conf;
     /** Job context (mainly for progress) */
-    @SuppressWarnings("rawtypes")
     private final Context m_context;
     /** Cached superstep (from ZooKeeper) */
     private long m_cachedSuperstep = -1;
@@ -73,6 +75,18 @@ public class BspService <
     private static final Logger LOG = Logger.getLogger(BspService.class);
     /** The current known job state */
     private State m_currentJobState = State.UNKNOWN;
+    /** File system */
+    private final FileSystem m_fs;
+    /** Restarted manually from a checkpoint? */
+    private long m_manualRestartSuperstep = -1;
+    /** Vertex class */
+    private final Class<? extends HadoopVertex<I, V, E, M>> m_hadoopVertexClass;
+    /** Used to instantiate messages */
+    private final HadoopVertex<I, V, E, M> m_instantiableHadoopVertex;
+    /** Used to instantiate vertex ids, vertex values, and edge values */
+    private final VertexReader<I, V, E> m_instantiableVertexReader;
+    /** Checkpoint frequency */
+    int m_checkpointFrequency = -1;
 
     /** State of the application */
     public enum State {
@@ -97,6 +111,7 @@ public class BspService <
     public static final String MASTER_ELECTION_DIR = "/_masterElectionDir";
     public static final String SUPERSTEP_DIR = "/_superstepDir";
     public static final String VERTEX_RANGE_STATS_DIR = "/_vertexRangesStatsDir";
+    public static final String CHECKPOINT_FILES_DIR = "/_checkpointFilesDir";
     public static final String AGGREGATOR_DIR = "/_aggregatorDir";
     public static final String WORKER_HEALTHY_DIR = "/_workerHealthyDir";
     public static final String WORKER_UNHEALTHY_DIR = "/_workerUnhealthyDir";
@@ -128,6 +143,8 @@ public class BspService <
     public final String APPLICATION_ATTEMPTS_PATH;
     /** Path to the cleaned up notifications */
     public final String CLEANED_UP_PATH;
+    /** Path to the checkpoint's root (including job id) */
+    public final String CHECKPOINT_BASE_PATH;
 
     /**
      * Generate the base master election directory path for a given application
@@ -226,6 +243,22 @@ public class BspService <
     }
 
     /**
+     * Generate the "checkpoint files" directory path for a chosen worker
+     *
+     * @param attempt application attempt number
+     * @param superstep superstep to use
+     * @param hostnamePartitionId hostname and partition id of chosen worker
+     * @return directory path based on the a superstep
+     */
+    final public String getCheckpointFilesPath(long attempt,
+                                               long superstep,
+                                               String hostnamePartitionId) {
+        return APPLICATION_ATTEMPTS_PATH + "/" + attempt +
+            SUPERSTEP_DIR + "/" + superstep + WORKER_SELECTED_DIR + "/" +
+            hostnamePartitionId + CHECKPOINT_FILES_DIR;
+    }
+
+    /**
      * Generate the aggregator directory path for a chosen worker
      *
      * @param attempt application attempt number
@@ -263,6 +296,38 @@ public class BspService <
     }
 
     /**
+     * Generate the base superstep directory path for a given application
+     * attempt
+     *
+     * @param attempt application attempt number
+     * @return directory path based on the an attempt
+     */
+    final public String getCheckpointBasePath(long superstep) {
+        return CHECKPOINT_BASE_PATH + "/" + superstep;
+    }
+
+    /** If at the end of a checkpoint file, indicates metadata */
+    public final String CHECKPOINT_METADATA_POSTFIX = ".metadata";
+
+    /**
+     * If at the end of a checkpoint file, indicates vertices, edges,
+     * messages, etc.
+     */
+    public final String CHECKPOINT_VERTICES_POSTFIX = ".vertices";
+
+    /**
+     * If at the end of a checkpoint file, indicates metadata and data is valid
+     * for the same filenames without .valid
+     */
+    public final String CHECKPOINT_VALID_POSTFIX = ".valid";
+
+    /**
+     * If at the end of a checkpoint file, indicates the stitched checkpoint
+     * file prefixes.  A checkpoint is not valid if this file does not exist.
+     */
+    public final String CHECKPOINT_FINALIZED_POSTFIX = ".finalized";
+
+    /**
      * Get the ZooKeeperExt instance.
      *
      * @return ZooKeeperExt instance.
@@ -271,11 +336,38 @@ public class BspService <
         return m_zk;
     }
 
+    /**
+     * Get the manually restart superstep
+     *
+     * @return -1 if not manually restarted, otherwise the superstep id
+     */
+    final public long getManualRestartSuperstep() {
+        return m_manualRestartSuperstep;
+    }
+
+    final public boolean checkpointFrequencyMet(long superstep) {
+        if ((superstep == 1) ||
+            (((superstep + 1) % m_checkpointFrequency) == 0)) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
+    /**
+     * Get the file system
+     *
+     * @return file system
+     */
+    final public FileSystem getFs() {
+        return m_fs;
+    }
+
     final public Configuration getConfiguration() {
         return m_conf;
     }
 
-    @SuppressWarnings("rawtypes")
     final public Context getContext() {
         return m_context;
     }
@@ -365,7 +457,7 @@ public class BspService <
 
     public BspService(String serverPortList,
                       int sessionMsecTimeout,
-                      @SuppressWarnings("rawtypes") Context context,
+                      Context context,
                       BspJob.BspMapper<I, V, E, M> bspMapper) {
         m_context = context;
         m_bspMapper = bspMapper;
@@ -381,7 +473,9 @@ public class BspService <
         m_superstepWorkersFinishedChanged = new ContextLock(m_context);
         m_masterElectionChildrenChanged = new ContextLock(m_context);
         m_cleanedUpChildrenChanged = new ContextLock(m_context);
-        
+        m_manualRestartSuperstep =
+            m_conf.getLong(BspJob.BSP_RESTART_SUPERSTEP, -1);
+        m_cachedSuperstep = m_manualRestartSuperstep;
         try {
             m_hostname = InetAddress.getLocalHost().getHostName();
         } catch (UnknownHostException e) {
@@ -389,17 +483,55 @@ public class BspService <
         }
         m_hostnamePartitionId = m_hostname + "_" + getTaskPartition();
 
+        @SuppressWarnings({ "unchecked" })
+        Class<? extends HadoopVertex<I, V, E, M>> hadoopVertexClass =
+            (Class<? extends HadoopVertex<I, V, E, M>>)
+                getConfiguration().getClass(BspJob.BSP_VERTEX_CLASS,
+                                            HadoopVertex.class,
+                                            HadoopVertex.class);
+        m_hadoopVertexClass = hadoopVertexClass;
+        @SuppressWarnings({ "unchecked" })
+        Class<? extends VertexInputFormat<I, V, E>> vertexInputFormatClass =
+                (Class<? extends VertexInputFormat<I, V, E>>)
+                    getConfiguration().getClass(
+                        BspJob.BSP_VERTEX_INPUT_FORMAT_CLASS,
+                        VertexInputFormat.class,
+                        VertexInputFormat.class);
+        try {
+            m_instantiableHadoopVertex =
+                hadoopVertexClass.newInstance();
+        } catch (Exception e) {
+            throw new RuntimeException(
+                "BspService: Couldn't instantiate vertex");
+        }
+        try {
+            m_instantiableVertexReader =
+                vertexInputFormatClass.newInstance().createVertexReader(
+                    null, getContext());
+        } catch (Exception e) {
+            throw new RuntimeException(
+                "BspService: Couldn't instantiate vertex input format");
+        }
+
+        m_checkpointFrequency =
+            m_conf.getInt(BspJob.BSP_CHECKPOINT_FREQUENCY,
+                          BspJob.DEFAULT_BSP_CHECKPOINT_FREQUENCY);
+
         BASE_PATH = BASE_DIR + "/" + m_jobId;
         MASTER_JOB_STATE_PATH = BASE_PATH + MASTER_JOB_STATE_NODE;
         INPUT_SPLIT_PATH = BASE_PATH + INPUT_SPLIT_DIR;
         INPUT_SPLITS_ALL_READY_PATH = BASE_PATH + INPUT_SPLITS_ALL_READY_NODE;
         APPLICATION_ATTEMPTS_PATH = BASE_PATH + APPLICATION_ATTEMPTS_DIR;
         CLEANED_UP_PATH = BASE_PATH + CLEANED_UP_DIR;
-
+        CHECKPOINT_BASE_PATH =
+            getConfiguration().get(
+                BspJob.BSP_CHECKPOINT_DIRECTORY,
+                BspJob.DEFAULT_BSP_CHECKPOINT_DIRECTORY + "/" + getJobId());
         LOG.info("BspService: Connecting to ZooKeeper with job " + m_jobId +
                  ", " + getTaskPartition() + " on " + serverPortList);
         try {
             m_zk = new ZooKeeperExt(serverPortList, sessionMsecTimeout, this);
+            m_fs = FileSystem.get(getConfiguration());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -412,6 +544,51 @@ public class BspService <
      */
     final public String getJobId() {
         return m_jobId;
+    }
+
+    /**
+     * Get the hadoop vertex class (mainly for instantiation)
+     *
+     * @return the hadoop vertex class
+     */
+    final public Class<? extends HadoopVertex<I, V, E, M>> getHadoopVertexClass() {
+        return m_hadoopVertexClass;
+    }
+
+    /**
+     * Instantiate a vertex index
+     *
+     * @return new vertex index
+     */
+    final public I createVertexIndex() {
+        return m_instantiableVertexReader.createVertexId();
+    }
+
+    /**
+     * Instantiate a vertex value
+     *
+     * @return new vertex value
+     */
+    final public V createVertexValue() {
+        return m_instantiableVertexReader.createVertexValue();
+    }
+
+    /**
+     * Instantiate an edge value
+     *
+     * @return new edge value
+     */
+    final public E createEdgeValue() {
+        return m_instantiableVertexReader.createEdgeValue();
+    }
+
+    /**
+     * Instantiate an message value
+     *
+     * @return new message value
+     */
+    final public M createMsgValue() {
+        return m_instantiableHadoopVertex.createMsgValue();
     }
 
     /**
@@ -493,13 +670,23 @@ public class BspService <
     }
 
     /**
-     * Increment the superstep.
+     * Increment the cached superstep.
      */
-     final public void incrSuperstep() {
+     final public void incrCachedSuperstep() {
          if (m_cachedSuperstep == -1) {
              throw new RuntimeException("incrSuperstep: Invalid -1 superstep.");
          }
          ++m_cachedSuperstep;
+     }
+
+     /**
+      * Set the cached superstep (should only be used for loading checkpoints
+      * or recovering from failure).
+      *
+      * @param superstep will be used as the next superstep iteration
+      */
+     final public void setCachedSuperstep(long superstep) {
+         m_cachedSuperstep = superstep;
      }
 
     final public void process(WatchedEvent event) {
@@ -507,8 +694,8 @@ public class BspService <
                  ", type = " + event.getType() + ", state = " +
                  event.getState());
 
-        /* Nothing to do unless it is a disconnect */
         if (event.getPath() == null) {
+            // No way to recover from a disconnect event
             if ((event.getType() == EventType.None) &&
                 (event.getState() == KeeperState.Disconnected)) {
                 m_inputSplitsAllReadyChanged.signal();
@@ -516,6 +703,8 @@ public class BspService <
                 m_superstepFinished.signal();
                 m_superstepWorkersFinishedChanged.signal();
                 m_masterElectionChildrenChanged.signal();
+                throw new RuntimeException(
+                    "process: Disconnected from ZooKeeper, cannot recover.");
             }
             return;
         }

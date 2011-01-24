@@ -61,7 +61,7 @@ public class ZooKeeperExt extends ZooKeeper {
         try {
             return create(path, data, acl, createMode);
         } catch (KeeperException.NoNodeException e) {
-            LOG.debug("Cannot directly create node " + path);
+            LOG.debug("createExt: Cannot directly create node " + path);
         }
 
         int pos = path.indexOf("/", 1);
@@ -70,7 +70,7 @@ public class ZooKeeperExt extends ZooKeeper {
                 create(
                     path.substring(0, pos), null, acl, CreateMode.PERSISTENT);
             } catch (KeeperException.NodeExistsException e) {
-                LOG.debug("Znode " + path.substring(0, pos) +
+                LOG.debug("createExt: Znode " + path.substring(0, pos) +
                           " already exists");
             }
         }
@@ -98,7 +98,7 @@ public class ZooKeeperExt extends ZooKeeper {
             delete(path, version);
             return;
         } catch (KeeperException.NotEmptyException e) {
-            LOG.debug("Cannot directly removenode " + path);
+            LOG.debug("deleteExt: Cannot directly removenode " + path);
         }
 
         List<String> childList = getChildren(path, false);

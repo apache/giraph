@@ -11,8 +11,10 @@ import org.apache.log4j.Logger;
  * @author aching
  *
  */
+@SuppressWarnings("rawtypes")
 public class MasterThread<
-    I extends WritableComparable, V, E, M extends Writable> extends Thread {
+    I extends WritableComparable, V extends Writable, E extends Writable,
+    M extends Writable> extends Thread {
     /** Class logger */
     private static final Logger LOG = Logger.getLogger(MasterThread.class);
     /** Reference to shared BspService */
@@ -33,7 +35,12 @@ public class MasterThread<
         try {
             m_bspServiceMaster.setup();
             if (m_bspServiceMaster.becomeMaster() == true) {
-                m_bspServiceMaster.createInputSplits();
+                if (m_bspServiceMaster.getManualRestartSuperstep() == -1) {
+                    m_bspServiceMaster.createInputSplits();
+                }
+                // TODO: When one becomes a master, might need to "watch" the
+                // selected workers of the current superstep to insure they
+                // are alive.
                 while (m_bspServiceMaster.coordinateSuperstep() != true) {
                     LOG.info("masterThread: Finished superstep " +
                              (m_bspServiceMaster.getSuperstep() - 1));

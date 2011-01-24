@@ -1,7 +1,7 @@
 package com.yahoo.hadoop_bsp;
 
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.List;
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -14,6 +14,7 @@ import org.apache.hadoop.io.WritableComparable;
  *
  **/
 
+@SuppressWarnings("rawtypes")
 public interface Combiner <I extends WritableComparable,
                            M extends Writable> {
 
@@ -27,7 +28,7 @@ public interface Combiner <I extends WritableComparable,
    * @param msgs
    * @throws IOException
    */
-  void combine(CommunicationsInterface<I, M> comm, I vertex, ArrayList<M> msgList)
+  void combine(CommunicationsInterface<I, M> comm, I vertex, List<M> msgList)
       throws IOException;
 
 }

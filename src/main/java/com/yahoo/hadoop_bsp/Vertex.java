@@ -2,6 +2,7 @@ package com.yahoo.hadoop_bsp;
 
 import java.util.Iterator;
 
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
@@ -14,7 +15,16 @@ import org.apache.hadoop.io.WritableComparable;
  * @param <E> edge data
  * @param <M> message data
  */
-public interface Vertex<I extends WritableComparable, V, E, M> {
+@SuppressWarnings("rawtypes")
+public interface Vertex<I extends WritableComparable,
+                        V extends Writable,
+                        E extends Writable,
+                        M extends Writable> {
+    /**
+     * Must be defined by user to create a message value.
+     */
+    public M createMsgValue();
+
     /**
      * Must be defined by user to do computation on a single Vertex.
      */

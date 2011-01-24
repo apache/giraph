@@ -2,10 +2,14 @@ package com.yahoo.hadoop_bsp;
 
 import java.io.IOException;
 
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskInputOutputContext;
 
-public interface VertexWriter<I, V, E> {
+@SuppressWarnings("rawtypes")
+public interface VertexWriter<I extends WritableComparable,
+    V extends Writable, E extends Writable> {
 
     /**
      * Writes the argument vertex and associated data

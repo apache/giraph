@@ -9,6 +9,7 @@ import org.apache.hadoop.io.WritableComparable;
  *
  * @param <I> vertex index type
  */
+@SuppressWarnings("rawtypes")
 public class Partition<I extends WritableComparable>
     implements Comparable<Partition<I>> {
     /** Host that is responsible for this partition */
