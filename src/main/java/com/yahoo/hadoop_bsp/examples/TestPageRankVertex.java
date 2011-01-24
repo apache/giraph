@@ -23,7 +23,6 @@ public class TestPageRankVertex extends
     private static LongSumAggregator sumAggreg = null;
     private static MinAggregator minAggreg = null;
     private static MaxAggregator maxAggreg = null;
-    private static long superstep = 0;
     /** Logger */
     private static final Logger LOG = Logger.getLogger(TestPageRankVertex.class);
 
@@ -36,18 +35,21 @@ public class TestPageRankVertex extends
         registerAggregator("max", maxAggreg);
     }
 
-    private static void initAggregators(long currentSuperstep, long numVertices) {
-        if (superstep == currentSuperstep) {
-            return;
-        }
-        if (currentSuperstep >= 2) {
+    @Override
+    public void preApplication() {
+        registerAggregators();
+    }
+
+    @Override
+    public void preSuperstep() {
+        if (getSuperstep() >= 2) {
             LOG.info("aggregatedNumVertices=" +
                     sumAggreg.getAggregatedValue() +
-                    " NumVertices=" + numVertices);
-            if (sumAggreg.getAggregatedValue().get() != numVertices) {
+                    " NumVertices=" + getNumVertices());
+            if (sumAggreg.getAggregatedValue().get() != getNumVertices()) {
                 throw new RuntimeException("wrong value of SumAggreg: " +
                         sumAggreg.getAggregatedValue() + ", should be: " +
-                        numVertices);
+                        getNumVertices());
             }
             DoubleWritable maxPagerank =
                     (DoubleWritable)maxAggreg.getAggregatedValue();
@@ -60,17 +62,10 @@ public class TestPageRankVertex extends
         useAggregator("min");
         useAggregator("max");
         sumAggreg.setAggregatedValue(new LongWritable(0L));
-        superstep = currentSuperstep;
     }
 
     public void compute(Iterator<DoubleWritable> msgIterator) {
-        if (getSuperstep() == 1 && sumAggreg == null)  {
-            registerAggregators();
-        }
         if (getSuperstep() >= 1) {
-            if (superstep < getSuperstep()) {
-                initAggregators(getSuperstep(), getNumVertices());
-            }
             double sum = 0;
             while (msgIterator.hasNext()) {
                 sum += msgIterator.next().get();

@@ -365,6 +365,8 @@ public class BspJob extends Job {
             m_mapAlreadyRun = true;
             long verticesFinished = 0;
             Map<I, long []> maxIndexStatsMap = new TreeMap<I, long []>();
+            Vertex<I, V, E, M> lastVertex = null;
+            boolean firstApplicationVertexDone = false;
             do {
                 long superstep = m_serviceWorker.getSuperstep();
 
@@ -386,9 +388,11 @@ public class BspJob extends Job {
 
                 // Might need to restart from another superstep (manually), or
                 // store a checkpoint
+                boolean manuallyRestarted = false;
                 if (m_serviceWorker.getManualRestartSuperstep() == superstep) {
                     m_serviceWorker.loadCheckpoint(
                         m_serviceWorker.getManualRestartSuperstep());
+                    manuallyRestarted = true;
                 } else if (m_serviceWorker.checkpointFrequencyMet(superstep)) {
                     m_serviceWorker.storeCheckpoint();
                 }
@@ -398,14 +402,29 @@ public class BspJob extends Job {
                 HadoopVertex.setNumVertices(m_serviceWorker.getTotalVertices());
                 Map<I, List<Vertex<I, V, E, M>>> maxIndexVertexListMap =
                     m_serviceWorker.getMaxIndexVertexLists();
+                boolean firstSuperstepVertexDone = false;
+                lastVertex = null;
                 for (Map.Entry<I, List<Vertex<I, V, E, M>>> entry :
                     maxIndexVertexListMap.entrySet()) {
                     verticesFinished = 0;
                     for (Vertex<I, V, E, M> vertex : entry.getValue()) {
+                        lastVertex = vertex;
+                        if (!firstApplicationVertexDone) {
+                            firstApplicationVertexDone = true;
+                            if (!manuallyRestarted) {
+                                vertex.preApplication();
+                                context.progress();
+                            }
+                        }
+                        if (!firstSuperstepVertexDone) {
+                            firstSuperstepVertexDone = true;
+                            vertex.preSuperstep();
+                            context.progress();
+                        }
                         if (!vertex.isHalted()) {
-                        Iterator<M> vertexMsgIt =
-                            getVertexMessageList(
-                                vertex.getVertexId()).iterator();
+                            Iterator<M> vertexMsgIt =
+                                getVertexMessageList(
+                                    vertex.getVertexId()).iterator();
                             context.progress();
                             vertex.compute(vertexMsgIt);
                         }
@@ -423,6 +442,9 @@ public class BspJob extends Job {
                              ", finished superstep " +
                              m_serviceWorker.getSuperstep());
                 }
+                if (lastVertex != null) {
+                    lastVertex.postSuperstep();
+                }
 
                 context.progress();
                 LOG.info("map: totalMem=" + Runtime.getRuntime().totalMemory() +
@@ -433,6 +455,9 @@ public class BspJob extends Job {
 
             LOG.info("map: BSP application done (global vertices marked done)");
 
+            if (lastVertex != null) {
+                lastVertex.postApplication();
+            }
             context.progress();
         }
 

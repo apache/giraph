@@ -10,7 +10,6 @@ import org.apache.hadoop.io.LongWritable;
 import com.yahoo.hadoop_bsp.HadoopVertex;
 import com.yahoo.hadoop_bsp.OutEdgeIterator;
 import com.yahoo.hadoop_bsp.lib.LongSumAggregator;
-import com.yahoo.hadoop_bsp.lib.SumAggregator;
 
 /**
  * An example that simply uses its id, value, and edges to compute new data
@@ -22,11 +21,6 @@ public class TestCheckpointVertex extends
     HadoopVertex<LongWritable, IntWritable, FloatWritable, FloatWritable> {
     /** Simple test to keep adding the vertex ids together. */
     private static LongSumAggregator sumAggregator = null;
-    /**
-     * Used to detect whether {@link SumAggregator} should be invoked
-     * (should only be once per superstep)
-     */
-    private static long superstep = 0;
 
     /** Setup the sum aggregator for use in this application */
     private static void registerAggregators() {
@@ -35,23 +29,17 @@ public class TestCheckpointVertex extends
         sumAggregator.setAggregatedValue(new LongWritable(0));
     }
 
-    private static void initAggregators(long currentSuperstep, long vertexId) {
-        if (superstep == currentSuperstep) {
-            return;
-        }
+    @Override
+    public void preApplication() {
+        registerAggregators();
+    }
+
+    @Override
+    public void preSuperstep() {
         useAggregator(LongSumAggregator.class.getName());
-        superstep = currentSuperstep;
     }
 
     public void compute(Iterator<FloatWritable> msgIterator) {
-        if ((getSuperstep() == 1) && (sumAggregator == null)) {
-            registerAggregators();
-        }
-        if (getSuperstep() >= 1) {
-            if (superstep < getSuperstep()) {
-                initAggregators(getSuperstep(), getVertexId().get());
-            }
-        }
         if (getSuperstep() > 6) {
             voteToHalt();
         }

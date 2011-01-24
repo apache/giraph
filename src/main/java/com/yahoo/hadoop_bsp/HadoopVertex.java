@@ -33,6 +33,22 @@ public abstract class
     /** If true, do not do anymore computation on this vertex. */
     private boolean m_halt = false;
 
+    public void preApplication() {
+        // Do nothing, might be overrided by the user
+    }
+
+    public void postApplication() {
+        // Do nothing, might be overrided by the user
+    }
+
+    public void preSuperstep() {
+        // Do nothing, might be overrided by the user
+    }
+
+    public void postSuperstep() {
+        // Do nothing, might be overrided by the user
+    }
+
     public final void addEdge(I destVertexId, E edgeValue) {
         E value = m_destEdgeMap.get(destVertexId);
         if (value != null) {

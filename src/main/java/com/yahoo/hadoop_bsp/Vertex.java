@@ -21,6 +21,30 @@ public interface Vertex<I extends WritableComparable,
                         E extends Writable,
                         M extends Writable> {
     /**
+     * Optionally defined by the user to be executed once on all workers
+     * before application has started.
+     */
+    public void preApplication();
+
+    /**
+     * Optionally defined by the user to be executed once on all workers
+     * after the application has completed.
+     */
+    public void postApplication();
+
+    /**
+     * Optionally defined by the user to be executed once prior to vertex
+     * processing on a worker for the current superstep.
+     */
+    public void preSuperstep();
+
+    /**
+     * Optionally defined by the user to be executed once after all vertex
+     * processing on a worker for the current superstep.
+     */
+    public void postSuperstep();
+
+    /**
      * Must be defined by user to create a message value.
      */
     public M createMsgValue();
