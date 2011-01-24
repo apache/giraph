@@ -1,7 +1,6 @@
 package com.yahoo.hadoop_bsp;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Iterator;
 import java.util.Map;

@@ -22,7 +22,7 @@
             <executions>
                 <execution>
                     <phase>generate-sources</phase>
-                    <configuration> 
+                    <configuration>
                         <target name="mvn-init" unless="compile.classpath">
                             <echo message="Executing ant task..."/>
                             <condition property="ifdef.token" value="/*">
@@ -48,7 +48,7 @@
                                     <filter token="enddef" value="${enddef.token}"/>
                                 </filterset>
                             </copy>
-                        </target> 
+                        </target>
                     </configuration>
                     <goals>
                         <goal>run</goal>
@@ -57,7 +57,7 @@
                 <execution>
                     <id>clean</id>
                     <phase>clean</phase>
-                    <configuration> 
+                    <configuration>
                         <target name="mvn-clean" unless="compile.classpath">
                             <delete dir="${export-target.dir}"/>
                         </target>
@@ -69,7 +69,7 @@
                 <execution>
                     <id>compile</id>
                     <phase>export</phase>
-                    <configuration> 
+                    <configuration>
                         <target name="mvn-export" unless="compile.classpath">
                             <property name="compile_classpath" refid="maven.compile.classpath"/>
                             <echo message="compile_classpath = ${compile_classpath}"/>
@@ -172,6 +172,11 @@
       <groupId>commons-codec</groupId>
       <artifactId>commons-codec</artifactId>
       <version>1.4</version>
+    </dependency>
+    	<dependency>
+      <groupId>org.json</groupId>
+      <artifactId>json</artifactId>
+      <version>20090211</version>
     </dependency>
   </dependencies>
 </project>
