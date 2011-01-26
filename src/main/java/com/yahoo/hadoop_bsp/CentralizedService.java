@@ -1,16 +1,31 @@
 package com.yahoo.hadoop_bsp;
 
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
+
 /**
  * Basic service interface shared by both {@link CentralizedServiceMaster} and
  * {@link CentralizedServiceWorker}.
  *
  * @author aching
  */
-public interface CentralizedService {
+@SuppressWarnings("rawtypes")
+public interface CentralizedService<I extends WritableComparable,
+                                    V extends Writable,
+                                    E extends Writable,
+                                    M extends Writable> {
     /**
      * Setup (must be called prior to any other function)
      */
     public void setup();
+
+    /**
+     * Get the representative Vertex for this worker.  It can used to
+     * call pre/post application/superstep methods defined by the user.
+     *
+     * @return representation vertex
+     */
+    public Vertex<I, V, E, M> getRepresentativeVertex();
 
     /**
      * Get the current global superstep of the application to work on.

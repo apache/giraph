@@ -142,6 +142,7 @@ public class ManualCheckpointTest extends TestCase implements Watcher {
         }
         conf.setInt(BspJob.BSP_POLL_ATTEMPTS, 5);
         conf.setInt(BspJob.BSP_POLL_MSECS, 3*1000);
+        conf.setBoolean(BspJob.BSP_KEEP_ZOOKEEPER_DATA, true);
         if (m_zkList != null) {
             conf.set(BspJob.BSP_ZOOKEEPER_LIST, m_zkList);
         }

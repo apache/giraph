@@ -357,7 +357,7 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
      * any unused chosen workers (this is safe since it wasn't finalized).
      * The workers can then find the vertex ranges within the files.  It is an
      * optimization to prevent all workers from searching all the files.
-     * Finally, also read in the aggregator data from the finalized checkpoint
+     * Also read in the aggregator data from the finalized checkpoint
      * file.
      *
      * @param superstep checkpoint set to examine.
@@ -395,9 +395,10 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                     finalizedCheckpointPath);
             }
             String aggregatorPath =
-                getAggregatorPath(getApplicationAttempt(), superstep);
+                getAggregatorPath(getApplicationAttempt(), superstep - 1);
             LOG.info("mapFilesToWorkers: Reloading aggregator data '" +
-                     aggregatorZkData + "' to " + aggregatorPath);
+                     aggregatorZkData + "' to previous checkopint " +
+                     aggregatorPath);
             if (getZkExt().exists(aggregatorPath, false) == null) {
                 getZkExt().createExt(aggregatorPath,
                                      aggregatorZkData,
@@ -759,9 +760,10 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                             (byte[]) base64.decode(aggregatorArray.getJSONObject(i).
                                 getString(AGGREGATOR_VALUE_KEY)));
                     aggregatorValue.readFields(new DataInputStream(input));
-                    LOG.info("collectAndProcessAggregatorValues: aggregator value size=" +
-                            input.available() + " for aggregator=" + aggregatorName +
-                            " value=" + aggregatorValue);
+                    LOG.debug("collectAndProcessAggregatorValues: aggregator " +
+                              "value size=" + input.available() +
+                              " for aggregator=" + aggregatorName +
+                              " value=" + aggregatorValue);
                     if (firstTime) {
                         aggregator.setAggregatedValue(aggregatorValue);
                     } else {
@@ -899,7 +901,8 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
 
     /**
      * Finalize the checkpoint file prefixes by taking the chosen workers and
-     * writing them to a finalized file.  Also write out the aggregators.
+     * writing them to a finalized file.  Also write out the master
+     * aggregated aggregator array from the previous superstep.
      *
      * @param superstep superstep to finalize
      * @param chosenWorkerList list of chosen workers that will be finalized
@@ -934,7 +937,7 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
             finalizedOutputStream.writeUTF(chosenWorkerPrefix);
         }
         String aggregatorPath =
-            getAggregatorPath(getApplicationAttempt(), superstep);
+            getAggregatorPath(getApplicationAttempt(), superstep - 1);
         if (getZkExt().exists(aggregatorPath, false) != null) {
             byte [] aggregatorZkData =
                 getZkExt().getData(aggregatorPath, false, null);

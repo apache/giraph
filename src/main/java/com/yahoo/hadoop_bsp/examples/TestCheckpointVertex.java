@@ -31,7 +31,9 @@ public class TestCheckpointVertex extends
 
     @Override
     public void preApplication() {
-        registerAggregators();
+        if (sumAggregator == null) {
+            registerAggregators();
+        }
     }
 
     @Override
@@ -44,6 +46,7 @@ public class TestCheckpointVertex extends
             voteToHalt();
         }
         sumAggregator.aggregate(getVertexId().get());
+        System.out.println("sum = " + sumAggregator.getAggregatedValue().get());
         int vertexValue = getVertexValue().get();
         float msgValue = 0.0f;
         while (msgIterator.hasNext()) {

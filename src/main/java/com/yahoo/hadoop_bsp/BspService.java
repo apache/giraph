@@ -81,7 +81,10 @@ public class BspService <
     private long m_manualRestartSuperstep = -1;
     /** Vertex class */
     private final Class<? extends HadoopVertex<I, V, E, M>> m_hadoopVertexClass;
-    /** Used to instantiate messages */
+    /**
+     * Used to instantiate messages and call pre/post application/superstep
+     * methods
+     */
     private final HadoopVertex<I, V, E, M> m_instantiableHadoopVertex;
     /** Used to instantiate vertex ids, vertex values, and edge values */
     private final VertexReader<I, V, E> m_instantiableVertexReader;
@@ -553,6 +556,10 @@ public class BspService <
      */
     final public Class<? extends HadoopVertex<I, V, E, M>> getHadoopVertexClass() {
         return m_hadoopVertexClass;
+    }
+
+    final public Vertex<I, V, E, M> getRepresentativeVertex() {
+        return m_instantiableHadoopVertex;
     }
 
     /**

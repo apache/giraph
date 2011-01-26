@@ -466,7 +466,7 @@ public class BspServiceWorker<
                                  true);
         } catch (KeeperException.NodeExistsException e) {
             LOG.warn("sendAggregatorValues: " + aggregatorWorkerPath +
-                     " already exists!");
+                     " already exists (likely from a previous failure)!");
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -485,7 +485,7 @@ public class BspServiceWorker<
             return;
         }
         String aggregatorPath =
-            getAggregatorPath(getApplicationAttempt(), superstep-1);
+            getAggregatorPath(getApplicationAttempt(), superstep - 1);
         JSONArray aggregatorArray = null;
         try {
             byte [] zkData =
@@ -493,7 +493,7 @@ public class BspServiceWorker<
             aggregatorArray = new JSONArray(new String(zkData));
         } catch (KeeperException.NoNodeException e) {
             LOG.info("getAggregatorValues: no aggregators in " +
-                     aggregatorPath);
+                     aggregatorPath + " on superstep " + superstep);
             return;
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -636,7 +636,6 @@ public class BspServiceWorker<
         //    and the number completed.
         // 3. Let the master know it is finished.
         // 4. Then it waits for the master to say whether to stop or not.
-
         sendAggregatorValues(getSuperstep());
         String myVertexRangeStatPath =
             getVertexRangeStatsPath(getApplicationAttempt(), getSuperstep());
@@ -953,7 +952,7 @@ public class BspServiceWorker<
      */
     public static boolean useAggregator(String name) {
         if (m_aggregatorMap.get(name) == null) {
-            LOG.error("Aggregator=" + name + " not registered");
+            LOG.error("userAggregator: Aggregator=" + name + " not registered");
             return false;
         }
         m_aggregatorInUse.add(name);
@@ -1139,7 +1138,6 @@ public class BspServiceWorker<
             getCheckpointFilesPath(getApplicationAttempt(),
                                    superstep,
                                    getHostnamePartitionId());
-
         Set<I> vertexRangeSet = getAssignedVertexRanges();
 
         byte [] zkFilesPath = null;

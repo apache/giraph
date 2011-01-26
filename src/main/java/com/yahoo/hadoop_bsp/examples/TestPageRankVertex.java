@@ -37,7 +37,9 @@ public class TestPageRankVertex extends
 
     @Override
     public void preApplication() {
-        registerAggregators();
+        if (sumAggreg == null) {
+            registerAggregators();
+        }
     }
 
     @Override
