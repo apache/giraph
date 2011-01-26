@@ -47,7 +47,7 @@ public interface CommunicationsInterface
    * @param msg
    * @throws IOException
    */
-  void put(I vertex, MsgArrayList<M> msgList)
+  void put(I vertex, ArrayListWritable<M> msgList)
       throws IOException;
   
   /**

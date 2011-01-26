@@ -65,8 +65,8 @@ public abstract class BasicRPCCommunications<
      * Map of outbound messages, mapping from remote server to
      * destination vertex index to list of messages
      */
-    private Map<InetSocketAddress, HashMap<I, MsgArrayList<M>>> outMessages =
-        new HashMap<InetSocketAddress, HashMap<I, MsgArrayList<M>>>();
+    private Map<InetSocketAddress, HashMap<I, ArrayListWritable<M>>> outMessages =
+        new HashMap<InetSocketAddress, HashMap<I, ArrayListWritable<M>>>();
     /** Map of incoming messages, mapping from vertex index to list of messages */
     private Map<I, List<M>> inMessages =
         new HashMap<I, List<M>>();
@@ -96,7 +96,7 @@ public abstract class BasicRPCCommunications<
          * Map of outbound messages going to a particular remote server,
          * mapping from vertex index to list of messages
          */
-        Map<I, MsgArrayList<M>> outMessagesPerPeer;
+        Map<I, ArrayListWritable<M>> outMessagesPerPeer;
         /** Client interface: RPC proxy for remote server, this class for local */
         CommunicationsInterface<I, M> peer;
         /** Maximum size of cached message list, before sending it out */
@@ -116,7 +116,7 @@ public abstract class BasicRPCCommunications<
         /** Boolean, set to true when there is a large message list to flush */
         private boolean flushLargeMsgLists = false;
 
-        PeerThread(Map<I, MsgArrayList<M>> m,
+        PeerThread(Map<I, ArrayListWritable<M>> m,
                    CommunicationsInterface<I, M> i,
                    int maxSize,
                    boolean isProxy,
@@ -193,10 +193,10 @@ public abstract class BasicRPCCommunications<
                     }
 
                     if (flushValue) {
-                        LOG.info(peer.getName() + ": flushing messages");
-                        for (Entry<I, MsgArrayList<M>> e :
+                        LOG.debug(peer.getName() + ": flushing messages");
+                        for (Entry<I, ArrayListWritable<M>> e :
                             outMessagesPerPeer.entrySet()) {
-                            MsgArrayList<M> msgList = e.getValue();
+                            ArrayListWritable<M> msgList = e.getValue();
                             synchronized(msgList) {
                                 if (msgList.size() > 0) {
                                     if (msgList.size() > 1) {
@@ -217,7 +217,7 @@ public abstract class BasicRPCCommunications<
                                 }
                             }
                         }
-                        LOG.info(peer.getName() + ": all messages flushed");
+                        LOG.debug(peer.getName() + ": all messages flushed");
                         synchronized (waitingInMain) {
                             synchronized (waitingInPeer) {
                                 flush = false;
@@ -227,7 +227,7 @@ public abstract class BasicRPCCommunications<
                         }
                     } else if (largeMsgListKeysValue != null && largeMsgListKeysValue.size() > 0) {
                         for (I destVertex : largeMsgListKeysValue) {
-                            MsgArrayList<M> msgList = null;
+                            ArrayListWritable<M> msgList = null;
                             synchronized(outMessagesPerPeer) {
                                 msgList = outMessagesPerPeer.get(destVertex);
                                 if (msgList == null || msgList.size() <= maxSize) {
@@ -358,7 +358,7 @@ public abstract class BasicRPCCommunications<
 
         InetSocketAddress addrUnresolved = InetSocketAddress.createUnresolved(
                                            addr.getHostName(), addr.getPort());
-        HashMap<I, MsgArrayList<M>> outMsgMap = outMessages.get(addrUnresolved);
+        HashMap<I, ArrayListWritable<M>> outMsgMap = outMessages.get(addrUnresolved);
         if (outMsgMap != null) { // this host has already been added
             return;
         }
@@ -373,7 +373,7 @@ public abstract class BasicRPCCommunications<
             peer = getRPCProxy(addr, jobId, jt);
         }
 
-        outMsgMap = new HashMap<I, MsgArrayList<M>>();
+        outMsgMap = new HashMap<I, ArrayListWritable<M>>();
         outMessages.put(addrUnresolved, outMsgMap);
 
         PeerThread th = new PeerThread(outMsgMap, peer, maxSize, isProxy, combiner);
@@ -429,7 +429,7 @@ public abstract class BasicRPCCommunications<
         }
     }
 
-    public void put(I vertex, MsgArrayList<M> msgList) throws IOException {
+    public void put(I vertex, ArrayListWritable<M> msgList) throws IOException {
         List<M> msgs = null;
         synchronized(transientInMessages) {
             msgs = transientInMessages.get(vertex);
@@ -458,24 +458,24 @@ public abstract class BasicRPCCommunications<
         }
         LOG.debug("sendMessage: Send bytes (" + msg.toString() + ") to " + destVertex +
                   " on " + destPartition.getHostname() + ":" + destPartition.getPort());
-        HashMap<I, MsgArrayList<M>> msgMap = outMessages.get(addr);
+        HashMap<I, ArrayListWritable<M>> msgMap = outMessages.get(addr);
         if (msgMap == null) { // should never happen after constructor
             throw new RuntimeException("msgMap did not exist for "
                                        + destPartition.getHostname() + ":" + destPartition.getPort());
         }
 
-        MsgArrayList<M> msgList = null;
+        ArrayListWritable<M> msgList = null;
         synchronized(msgMap) {
             msgList = msgMap.get(destVertex);
             if (msgList == null) { // should only happen once
-                msgList = new MsgArrayList<M>(this.instantiableVertex);
-                msgList.setConf(conf);
+                msgList = new ArrayListWritable<M>((Class<M>)
+                        this.instantiableVertex.createMsgValue().getClass());
                 msgMap.put(destVertex, msgList);
             }
         }
         synchronized(msgList) {
             msgList.add(msg);
-            LOG.debug("sendMessage: added msg, size=" + msgList.size());
+            LOG.debug("sendMessage: added msg=" + msg + ", size=" + msgList.size());
             if (msgList.size() > maxSize) {
                 peerThreads.get(addr).flushLargeMsgList(destVertex);
             }

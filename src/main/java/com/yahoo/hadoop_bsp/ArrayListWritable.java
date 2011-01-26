@@ -12,34 +12,31 @@ import org.apache.hadoop.io.Writable;
 /**
  * A Writable for ListArray containing instances of a class.
  */
-public class MsgArrayList<M extends Writable> extends ArrayList<M>
-          implements Writable, Configurable {
+public class ArrayListWritable<M extends Writable> extends ArrayList<M>
+          implements Writable {
     /** Used for instantiation */
-    private final Vertex<?, ?, ?, M> instantiableVertex;
+    private final Class<M> refClass;
     /** Defining a layout version for a serializable class. */
     private static final long serialVersionUID = 1L;
-    private Configuration conf;
 
-    MsgArrayList(Vertex<?, ?, ?, M> instantiableVertex) {
+    public ArrayListWritable(Class<M> refClass) {
         super();
-        this.instantiableVertex = instantiableVertex;
-    }
-
-    public void setConf(Configuration conf) {
-        this.conf = conf;
-    }
-
-    public Configuration getConf() {
-        return conf;
+        this.refClass = refClass;
     }
 
     public void readFields(DataInput in) throws IOException {
         int numValues = in.readInt();            // read number of values
         ensureCapacity(numValues);
-        for (int i = 0; i < numValues; i++) {
-            M value = instantiableVertex.createMsgValue();
-            value.readFields(in);                // read a value
-            add(value);                          // store it in values
+        try {
+            for (int i = 0; i < numValues; i++) {
+                M value = refClass.newInstance();
+                value.readFields(in);                // read a value
+                add(value);                          // store it in values
+            }
+        } catch (InstantiationException e) {
+            throw new RuntimeException(e);
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException(e);
         }
     }
 
