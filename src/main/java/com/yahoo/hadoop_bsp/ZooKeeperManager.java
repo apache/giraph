@@ -418,15 +418,15 @@ public class ZooKeeperManager {
             File configFile = new File(m_configFilePath);
             configFile.createNewFile();
             OutputStreamWriter writer = new FileWriter(m_configFilePath);
-            writer.write("tickTime=2000\n");
+            writer.write("tickTime=" + BspJob.DEFAULT_ZOOKEEPER_TICK_TIME + "\n");
             writer.write("dataDir=" + m_zkDir + "\n");
             writer.write("clientPort=" + m_zkBasePort + "\n");
-            writer.write("maxClientCnxns=10000\n");
-            writer.write("minSessionTimeout=10000\n");
-            writer.write("maxSessionTimeout=100000\n");
-            writer.write("initLimit=10\n");
-            writer.write("syncLimit=5\n");
-            writer.write("snapCount=5000\n");
+            writer.write("maxClientCnxns=" + BspJob.DEFAULT_ZOOKEEPER_MAX_CLIENT_CNXNS +"\n");
+            writer.write("minSessionTimeout=" + BspJob.DEFAULT_ZOOKEEPER_MIN_SESSION_TIMEOUT +"\n");
+            writer.write("maxSessionTimeout=" + BspJob.DEFAULT_ZOOKEEPER_MAX_SESSION_TIMEOUT +"\n");
+            writer.write("initLimit=" + BspJob.DEFAULT_ZOOKEEPER_INIT_LIMIT + "\n");
+            writer.write("syncLimit=" + BspJob.DEFAULT_ZOOKEEPER_SYNC_LIMIT + "\n");
+            writer.write("snapCount=" + BspJob.DEFAULT_ZOOKEEPER_SNAP_COUNT + "\n");
             if (serverList.size() != 1) {
                 writer.write("electionAlg=0\n");
                 for (int i = 0; i < serverList.size(); ++i) {

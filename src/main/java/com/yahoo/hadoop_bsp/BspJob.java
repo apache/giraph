@@ -161,6 +161,20 @@ public class BspJob extends Job {
         "-Xmx128m";
     /** Default checkpointing frequency of every 2 supersteps. */
     public static final int DEFAULT_BSP_CHECKPOINT_FREQUENCY = 2;
+    /** Default ZooKeeper tick time. */
+    public static final int DEFAULT_ZOOKEEPER_TICK_TIME = 2000;
+    /** Default ZooKeeper init limit (in ticks). */
+    public static final int DEFAULT_ZOOKEEPER_INIT_LIMIT = 10;
+    /** Default ZooKeeper sync limit (in ticks). */
+    public static final int DEFAULT_ZOOKEEPER_SYNC_LIMIT = 5;
+    /** Default ZooKeeper snap count. */
+    public static final int DEFAULT_ZOOKEEPER_SNAP_COUNT = 5000;
+    /** Default ZooKeeper maximum client connections. */
+    public static final int DEFAULT_ZOOKEEPER_MAX_CLIENT_CNXNS = 10000;
+    /** Default ZooKeeper minimum session timeout (in msecs). */
+    public static final int DEFAULT_ZOOKEEPER_MIN_SESSION_TIMEOUT = 10000;
+    /** Default ZooKeeper maximum session timeout (in msecs). */
+    public static final int DEFAULT_ZOOKEEPER_MAX_SESSION_TIMEOUT = 100000;
 
     /**
      *  Constructor.
@@ -317,6 +331,11 @@ public class BspJob extends Job {
                 }
                 m_manager.onlineZooKeeperServers();
                 serverPortList = m_manager.getZooKeeperServerPortString();
+            }
+            if (m_conf.getInt(BspJob.BSP_ZOOKEEPER_SERVER_COUNT,
+                        BspJob.DEFAULT_BSP_ZOOKEEPER_SERVER_COUNT) > 1) {
+                Thread.sleep(BspJob.DEFAULT_ZOOKEEPER_INIT_LIMIT *
+                             BspJob.DEFAULT_ZOOKEEPER_TICK_TIME);
             }
             int sessionMsecTimeout =
                 m_conf.getInt(

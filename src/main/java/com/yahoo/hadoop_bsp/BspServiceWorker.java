@@ -277,6 +277,9 @@ public class BspServiceWorker<
                 HadoopVertex<I, V, E, M> vertex = getHadoopVertexClass().newInstance();
                 while (vertexReader.next(vertex)) {
                     vertex.setBspMapper(getBspMapper());
+                    if (vertex.getVertexValue() == null) {
+                        vertex.setVertexValue(createVertexValue());
+                    }
                     vertexList.add(vertex);
                     vertex = getHadoopVertexClass().newInstance();
                     getContext().progress();
@@ -507,6 +510,9 @@ public class BspServiceWorker<
                 String aggregatorName = aggregatorArray.getJSONObject(i).
                     getString(AGGREGATOR_NAME_KEY);
                 Aggregator<Writable> aggregator = m_aggregatorMap.get(aggregatorName);
+                if (aggregator == null) {
+                    continue;
+                }
                 Writable aggregatorValue = aggregator.getAggregatedValue();
                 InputStream input =
                     new ByteArrayInputStream(

@@ -76,6 +76,7 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                failJob();
         }
         try {
+            LOG.info("setJobState: " + state);
             getZkExt().createExt(MASTER_JOB_STATE_PATH,
                                  state.toString().getBytes(),
                                  Ids.OPEN_ACL_UNSAFE,
@@ -125,11 +126,11 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
      * @throws IOException
      */
     private void failJob() {
+        LOG.fatal("failJob: Killing job " + getJobId());
         try {
             JobClient jobClient = new JobClient((JobConf) getConfiguration());
             JobID jobId = JobID.forName(getJobId());
             RunningJob job = jobClient.getJob(jobId);
-            LOG.fatal("failJob: Killing job " + jobId);
             job.killJob();
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -705,7 +706,7 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
      * @param superstep superstep to check
      */
     private void collectAndProcessAggregatorValues(long superstep) {
-        if (superstep == 0) {
+        if (superstep <= 1) {
             return;
         }
         Map<String, Aggregator<Writable>> aggregatorMap =
@@ -731,22 +732,26 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                     getZkExt().getData(aggregatorPath, false, null);
                 aggregatorArray = new JSONArray(new String(zkData));
             } catch (KeeperException.NoNodeException e) {
-              LOG.info("collectAndProcessAggregatorValues: no aggregators in " +
-                       aggregatorPath);
+                LOG.info("collectAndProcessAggregatorValues: " + 
+                         "no aggregators in " + aggregatorPath);
             } catch (Exception e) {
-                throw new RuntimeException(e);
+               throw new RuntimeException(
+                         "collectAndProcessAggregatorValues: " +
+                         "exception when fetching data from " +
+                         aggregatorPath, e);
             }
             if (aggregatorArray == null) {
                 continue;
             }
             for (int i = 0; i < aggregatorArray.length(); ++i) {
                 try {
-                    LOG.debug("collectAndProcessAggregatorValues: " +
+                    LOG.info("collectAndProcessAggregatorValues: " +
                              "Getting aggregators from " +
                               aggregatorArray.getJSONObject(i));
                     String aggregatorName = aggregatorArray.getJSONObject(i).
                         getString(AGGREGATOR_NAME_KEY);
-                    Aggregator<Writable> aggregator = aggregatorMap.get(aggregatorName);
+                    Aggregator<Writable> aggregator = aggregatorMap.get(
+                                                               aggregatorName);
                     boolean firstTime = false;
                     if (aggregator == null) {
                         aggregator =
@@ -754,10 +759,12 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                         aggregatorMap.put(aggregatorName, aggregator);
                         firstTime = true;
                     }
-                    Writable aggregatorValue = aggregator.createAggregatedValue();
+                    Writable aggregatorValue =
+                                            aggregator.createAggregatedValue();
                     InputStream input =
                         new ByteArrayInputStream(
-                            (byte[]) base64.decode(aggregatorArray.getJSONObject(i).
+                            (byte[]) base64.decode(
+                                aggregatorArray.getJSONObject(i).
                                 getString(AGGREGATOR_VALUE_KEY)));
                     aggregatorValue.readFields(new DataInputStream(input));
                     LOG.debug("collectAndProcessAggregatorValues: aggregator " +
@@ -770,7 +777,10 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                         aggregator.aggregate(aggregatorValue);
                     }
                 } catch (Exception e) {
-                    throw new RuntimeException(e);
+                    throw new RuntimeException(
+                             "collectAndProcessAggregatorValues: " +
+                             "exception when reading aggregator data " +
+                             aggregatorArray, e);
                 }
             }
         }
@@ -811,13 +821,15 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                                      CreateMode.PERSISTENT,
                                      true);
             } catch (KeeperException.NodeExistsException e) {
-                LOG.warn("collectAndProcessAggregatorValues: " + aggregatorPath +
+                LOG.warn("collectAndProcessAggregatorValues: " +
+                         aggregatorPath +
                          " already exists!");
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
             LOG.info("collectAndProcessAggregatorValues: Finished loading " +
-                     aggregatorPath + " with aggregator values " + aggregatorArray);
+                     aggregatorPath + " with aggregator values " +
+                     aggregatorArray);
         }
     }
 
