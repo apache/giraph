@@ -90,6 +90,11 @@ public class ZooKeeperManager {
         "zkServerList_";
     /** Denotes that the computation is done for a partition */
     private static final String COMPUTATION_DONE_SUFFIX = ".COMPUTATION_DONE";
+    /** State of the application */
+    public enum State {
+        FAILED,
+        FINISHED
+    }   
 
     /**
      * Generate the final ZooKeeper coordination directory
@@ -124,7 +129,7 @@ public class ZooKeeperManager {
             String line = null;
             try {
                 while ((line = bufferedReader.readLine()) != null) {
-                    LOG.info(line);
+                    LOG.debug(line);
                 }
             } catch (IOException e) {
                 LOG.error(e);
@@ -492,6 +497,13 @@ public class ZooKeeperManager {
                 m_zkProcessCollector =
                     new StreamCollector(m_zkProcess.getInputStream());
                 m_zkProcessCollector.start();
+                Runnable runnable = new Runnable() {
+                    public void run() {
+                        LOG.warn("onlineZooKeeperServers: addShutdownHook called.");
+                        m_zkProcess.destroy();
+                    }
+                };
+                Runtime.getRuntime().addShutdownHook(new Thread(runnable));
             } catch (IOException e) {
                 LOG.error("onlineZooKeeperServers: Failed to start " +
                           "ZooKeeper process");
@@ -637,9 +649,13 @@ public class ZooKeeperManager {
      * ZooKeeper communication.  If this task is running a ZooKeeper server,
      * kill it when all partitions are done and wait for
      * completion.  Clean up the ZooKeeper local directory as well.
+     *
+     * @param success when true, call @createZooKeeperClosedStamp
      */
-    public void offlineZooKeeperServers() {
-        createZooKeeperClosedStamp();
+    public void offlineZooKeeperServers(State state) {
+        if (state == State.FINISHED) {
+            createZooKeeperClosedStamp();
+        }
         if (m_zkProcess != null) {
             int totalMapTasks = m_conf.getInt("mapred.map.tasks", -1);
             waitUntilAllTasksDone(totalMapTasks);

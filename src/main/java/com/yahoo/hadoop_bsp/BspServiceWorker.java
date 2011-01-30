@@ -869,7 +869,7 @@ public class BspServiceWorker<
                             getZkExt().getData(workerSelectedPath + "/" + worker,
                                          false,
                                          null)));
-                LOG.info("getPartitionSet: Got partitions " +
+                LOG.debug("getPartitionSet: Got partitions " +
                          maxIndexArray + " from " + worker);
                 for (int i = 0; i < maxIndexArray.length(); ++i) {
                     if (!workerHostPortMap.containsKey(worker)) {
@@ -879,7 +879,7 @@ public class BspServiceWorker<
                     }
                     JSONArray hostPortArray = workerHostPortMap.get(worker);
                     I index = (I) createVertexIndex();
-                    LOG.info("getPartitionSet: Getting max index from " +
+                    LOG.debug("getPartitionSet: Getting max index from " +
                              maxIndexArray.getString(i));
                     InputStream input =
                         new ByteArrayInputStream(
@@ -889,7 +889,7 @@ public class BspServiceWorker<
                             hostPortArray.getString(0),
                             hostPortArray.getInt(1),
                             index));
-                    LOG.info("getPartitionSet: Found partition: " +
+                    LOG.debug("getPartitionSet: Found partition: " +
                              hostPortArray.getString(0) + ":" +
                              hostPortArray.getInt(1) + " with maxIndex=" +
                              index);

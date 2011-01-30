@@ -696,6 +696,13 @@ public class BspService <
          m_cachedSuperstep = superstep;
      }
 
+     /**
+      * Default reaction to a change event in workerHealthRegistration.
+      */
+     protected void workerHealthRegistrationChanged(String Path) {
+         m_workerHealthRegistrationChanged.signal();
+     }
+
     final public void process(WatchedEvent event) {
         LOG.info("process: Got a new event, path = " + event.getPath() +
                  ", type = " + event.getType() + ", state = " +
@@ -740,7 +747,7 @@ public class BspService <
                  (event.getType() == EventType.NodeChildrenChanged)) {
             LOG.info("process: m_workerHealthRegistrationChanged " +
                      "(worker health reported)");
-            m_workerHealthRegistrationChanged.signal();
+            workerHealthRegistrationChanged(event.getPath());
         }
         else if (event.getPath().equals(INPUT_SPLITS_ALL_READY_PATH) &&
                 (event.getType() == EventType.NodeCreated)) {

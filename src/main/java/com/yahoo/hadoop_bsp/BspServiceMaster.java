@@ -52,6 +52,10 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
     implements CentralizedServiceMaster<I, V, E, M> {
     /** Class logger */
     private static final Logger LOG = Logger.getLogger(BspServiceMaster.class);
+    /** the chosen list of healthy nodes */
+    List<String> m_chosenWorkerList = null;
+    /** the superstep when the chosen worker list was initially selected */
+    Long m_chosenSuperstep = new Long(-1);
     /** Am I the master? */
     boolean m_isMaster = false;
 
@@ -72,8 +76,12 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
      * @throws KeeperException
      */
     public void setJobState(State state) {
-        if (state == BspService.State.FAILED) {
-               failJob();
+        if (state == BspService.State.FINISHED) {
+            // check no longer necessary
+            synchronized(m_chosenSuperstep) {
+                m_chosenWorkerList = null;
+                m_chosenSuperstep = new Long(-1);
+            }
         }
         try {
             LOG.info("setJobState: " + state);
@@ -91,6 +99,9 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
+        }
+        if (state == BspService.State.FAILED) {
+            failJob();
         }
     }
 
@@ -208,6 +219,35 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
     }
 
     /**
+     * Reaction to a change event in workHealthRegistration.
+     */
+    protected void workerHealthRegistrationChanged(String path) {
+        synchronized(m_chosenSuperstep) {
+            if (m_chosenWorkerList != null &&
+                    m_chosenSuperstep.longValue() == getSuperstep() &&
+                    getWorkerHealthyPath(getApplicationAttempt(),
+                                         m_chosenSuperstep).equals(path)) {
+                LOG.info("workerHealthRegistrationChanged: " +
+                         "change in healthy workers - " +
+                         "checking against chosen workers.");
+                // let's check whether an additional node registered
+                // or one node went down
+                List<String> healthyWorkerList = new ArrayList<String>();
+                List<String> unhealthyWorkerList = new ArrayList<String>();
+                getWorkers(m_chosenSuperstep.longValue(), healthyWorkerList,
+                           unhealthyWorkerList);
+                if (!healthyWorkerList.containsAll(m_chosenWorkerList)) {
+                    LOG.fatal("workerHealthRegistrationChanged: " + 
+                              "at least one healthy worker went down " +
+                              "for superstep " + getSuperstep());
+                    setJobState(State.FAILED);
+                }
+            }
+        }
+        getWorkerHealthRegistrationChangedEvent().signal();
+    }
+
+    /**
      * Check the workers to ensure that a minimum number of good workers exists
      * out of the total that have reported.
      *
@@ -298,6 +338,10 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
             setJobState(State.FAILED);
         }
 
+        synchronized(m_chosenSuperstep) {
+            m_chosenWorkerList = healthyWorkerList;
+            m_chosenSuperstep = new Long(getSuperstep());
+        }
         List<InputSplit> splitList =
             generateInputSplits(healthyWorkerList.size());
         if (healthyWorkerList.size() > splitList.size()) {
@@ -621,7 +665,7 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                     if (zkData == null || zkData.length == 0) {
                         continue;
                     }
-                    LOG.info("collectVertexRangeStats: input split path " +
+                    LOG.debug("collectVertexRangeStats: input split path " +
                              inputSplitPath + " got " + zkData);
                     statArray = new JSONArray(new String(zkData));
                 } catch (Exception e) {
@@ -630,7 +674,7 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                 for (int i = 0; i < statArray.length(); ++i) {
                     try {
                         I maxIndex = createVertexIndex();
-                        LOG.info("collectVertexRangeStats: " +
+                        LOG.debug("collectVertexRangeStats: " +
                                  "Getting max index from " +
                                  statArray.getJSONObject(i).get(
                                      STAT_MAX_INDEX_KEY));
@@ -977,6 +1021,12 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                       "superstep " + getSuperstep());
             setJobState(State.FAILED);
         }
+        synchronized(m_chosenSuperstep) {
+            if (m_chosenWorkerList == null) { // must have been a checkpoint
+                m_chosenWorkerList = chosenWorkerList;
+            }
+            m_chosenSuperstep = new Long(getSuperstep());
+        }
 
         if (getManualRestartSuperstep() == getSuperstep()) {
             try {
@@ -1063,6 +1113,13 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
         LOG.info("coordinateSuperstep: Aggregate got " + verticesFinished +
                  " of " + verticesTotal + " vertices finished on superstep = " +
                  getSuperstep());
+        if (verticesFinished == verticesTotal) {
+            // BspServiceWorkers will start cleaning up
+            synchronized(m_chosenSuperstep) {
+                m_chosenSuperstep = new Long(-1);
+                m_chosenWorkerList = null;
+            }
+        }
         String superstepFinishedNode =
             getSuperstepFinishedPath(getApplicationAttempt(), getSuperstep());
         // Let everyone know the aggregated application state through the

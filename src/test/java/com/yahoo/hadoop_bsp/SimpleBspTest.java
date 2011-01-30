@@ -21,6 +21,7 @@ import org.apache.zookeeper.Watcher;
 
 import com.yahoo.hadoop_bsp.examples.TestCombiner;
 import com.yahoo.hadoop_bsp.examples.TestCombinerVertex;
+import com.yahoo.hadoop_bsp.examples.TestFailVertex;
 import com.yahoo.hadoop_bsp.examples.TestMsgVertex;
 import com.yahoo.hadoop_bsp.examples.TestPageRankVertex;
 import com.yahoo.hadoop_bsp.examples.TestSuperstepVertex;
@@ -158,6 +159,52 @@ public class SimpleBspTest extends TestCase implements Watcher {
     }
 
     /**
+     * Run a sample BSP job in JobTracker, kill a task, and make sure the job fails.
+     * @throws IOException
+     * @throws ClassNotFoundException
+     * @throws InterruptedException
+     */
+    public void testBspFail()
+        throws IOException, InterruptedException, ClassNotFoundException {
+        Configuration conf = new Configuration();
+        conf.set("mapred.jar", m_jarLocation);
+        // Allow this test only to be run on a real Hadoop setup
+        if (m_jobTracker == null) {
+            System.out.println("testBspFail: not executed for local setup.");
+            return;
+        }
+        System.out.println("testBspFail: Sending job to job tracker " +
+                       m_jobTracker + " with jar path " + m_jarLocation);
+        conf.set("mapred.job.tracker", m_jobTracker);
+        conf.setInt(BspJob.BSP_INITIAL_PROCESSES, m_numProcs);
+        conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
+        conf.setInt(BspJob.BSP_MIN_PROCESSES, m_numProcs);
+        conf.setInt(BspJob.BSP_POLL_ATTEMPTS, 5);
+        conf.setInt(BspJob.BSP_POLL_MSECS, 3*1000);
+        if (m_zkList != null) {
+            conf.set(BspJob.BSP_ZOOKEEPER_LIST, m_zkList);
+        }
+        conf.setInt(BspJob.BSP_RPC_INITIAL_PORT, BspJob.BSP_RPC_DEFAULT_PORT);
+        // GeneratedInputSplit will generate 5 vertices
+        conf.setLong(TestVertexReader.READER_VERTICES, 15);
+        FileSystem hdfs = FileSystem.get(conf);
+        conf.setClass(BspJob.BSP_VERTEX_CLASS,
+                      TestFailVertex.class,
+                      HadoopVertex.class);
+        conf.setClass(BspJob.BSP_INPUT_SPLIT_CLASS,
+                      BspInputSplit.class,
+                      InputSplit.class);
+        conf.setClass(BspJob.BSP_VERTEX_INPUT_FORMAT_CLASS,
+                      TestVertexInputFormat.class,
+                      VertexInputFormat.class);
+        BspJob bspJob = new BspJob(conf, "testBspFail");
+        Path outputPath = new Path("/tmp/testBspFailOutput");
+        hdfs.delete(outputPath, true);
+        FileOutputFormat.setOutputPath(bspJob, outputPath);
+        assertTrue(!bspJob.run());
+    }
+
+    /**
      * Run a sample BSP job locally and test supersteps.
      * @throws IOException
      * @throws ClassNotFoundException
@@ -208,7 +255,7 @@ public class SimpleBspTest extends TestCase implements Watcher {
                       TestVertexWriter.class,
                       VertexWriter.class);
         BspJob bspJob = new BspJob(conf, "testBspSuperStep");
-           Path outputPath = new Path("/tmp/testBspSuperStepOutput");
+        Path outputPath = new Path("/tmp/testBspSuperStepOutput");
         hdfs.delete(outputPath, true);
         FileOutputFormat.setOutputPath(bspJob, outputPath);
         assertTrue(bspJob.run());

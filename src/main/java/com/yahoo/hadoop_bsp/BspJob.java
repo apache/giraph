@@ -308,9 +308,25 @@ public class BspJob extends Job {
              return BspServiceWorker.useAggregator(name);
         }
 
+        /**
+         * Default handler for uncaught exceptions.
+         *
+         */
+        class OverrideExceptionHandler implements Thread.UncaughtExceptionHandler {
+            public void uncaughtException(Thread t, Throwable e) {
+                System.err.println("BspMapper: uncaughtException.");
+                e.printStackTrace();
+                System.exit(1);
+            }
+        }
+
         @Override
         public void setup(Context context)
             throws IOException, InterruptedException {
+
+            // setting the default handler for uncaught exceptions.
+            Thread.setDefaultUncaughtExceptionHandler(new OverrideExceptionHandler());
+
             m_conf = context.getConfiguration();
             // Do some initial setup (possibly starting up a Zookeeper service),
             // but mainly decide whether to load data
@@ -358,7 +374,7 @@ public class BspJob extends Job {
             } catch (Exception e) {
                 LOG.error(e.getMessage());
                 if (m_manager != null ) {
-                    m_manager.offlineZooKeeperServers();
+                    m_manager.offlineZooKeeperServers(ZooKeeperManager.State.FAILED);
                 }
                 throw new RuntimeException(e);
             }
@@ -483,7 +499,7 @@ public class BspJob extends Job {
                 LOG.error("cleanup: Master thread couldn't join");
             }
             if (m_manager != null) {
-                m_manager.offlineZooKeeperServers();
+                m_manager.offlineZooKeeperServers(ZooKeeperManager.State.FINISHED);
             }
             // Preferably would shut down the service only after
             // all clients have disconnected (or the exceptions on the
