@@ -64,15 +64,17 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
     public boolean finishSuperstep(final Map<I, long []> maxIndexStatsMap);
 
     /**
-     * Get the partition set.
-     * @return partition set
+     * Get the vertex range set.
+     *
+     * @param superstep use this superstep's vertex range
+     * @return vertex range set
      */
-    public SortedSet<Partition<I>> getPartitionSet();
+    public SortedSet<VertexRange<I>> getVertexRangeSet(long superstep);
 
     /**
-     * Every client will need to get a partition for an index
+     * Every client will need to get a vertex range for a vertex id
      */
-    public Partition<I> getPartition(I index);
+    public VertexRange<I> getVertexRange(I index);
 
     /**
      * Get the total vertices in the entire application during a given

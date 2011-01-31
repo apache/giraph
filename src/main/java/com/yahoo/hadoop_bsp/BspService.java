@@ -3,6 +3,8 @@ package com.yahoo.hadoop_bsp;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.NavigableSet;
+import java.util.TreeSet;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
@@ -21,6 +23,8 @@ import org.apache.zookeeper.Watcher.Event.EventType;
 import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.ZooDefs.Ids;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import com.yahoo.hadoop_bsp.BspJob.BspMapper;
 
@@ -41,8 +45,8 @@ public class BspService <
     private final BspEvent m_inputSplitsAllReadyChanged;
     /** InputSplit reservation or finished notification and synchronization */
     private final BspEvent m_inputSplitsStateChanged;
-    /** Are the worker assignments of partitions ready? */
-    private final BspEvent m_workerPartitionsAllReadyChanged;
+    /** Are the worker assignments of vertex ranges ready? */
+    private final BspEvent m_vertexRangeAssignmentsReadyChanged;
     /** Superstep finished synchronization */
     private final BspEvent m_superstepFinished;
     /** Superstep workers finished changed synchronization */
@@ -90,6 +94,10 @@ public class BspService <
     private final VertexReader<I, V, E> m_instantiableVertexReader;
     /** Checkpoint frequency */
     int m_checkpointFrequency = -1;
+    /** Vertex range set based on the superstep below */
+    private NavigableSet<VertexRange<I>> m_vertexRangeSet = null;
+    /** Vertex range set is based on this superstep */
+    private long m_vertexRangeSuperstep = -1;
 
     /** State of the application */
     public enum State {
@@ -113,24 +121,34 @@ public class BspService <
         "/_applicationAttemptsDir";
     public static final String MASTER_ELECTION_DIR = "/_masterElectionDir";
     public static final String SUPERSTEP_DIR = "/_superstepDir";
-    public static final String VERTEX_RANGE_STATS_DIR = "/_vertexRangesStatsDir";
-    public static final String CHECKPOINT_FILES_DIR = "/_checkpointFilesDir";
-    public static final String AGGREGATOR_DIR = "/_aggregatorDir";
+    public static final String MERGED_AGGREGATOR_DIR =
+        "/_mergedAggregatorDir";
     public static final String WORKER_HEALTHY_DIR = "/_workerHealthyDir";
     public static final String WORKER_UNHEALTHY_DIR = "/_workerUnhealthyDir";
-    public static final String WORKER_SELECTED_DIR = "/_workerSelectedDir";
-    public static final String WORKER_SELECTION_FINISHED_NODE =
-        "/_workerSelectionFinished";
     public static final String WORKER_FINISHED_DIR = "/_workerFinishedDir";
+    public static final String VERTEX_RANGE_ASSIGNMENTS_DIR =
+        "/_vertexRangeAssignments";
     public static final String SUPERSTEP_FINISHED_NODE = "/_superstepFinished";
     public static final String CLEANED_UP_DIR = "/_cleanedUpDir";
-    public static final String STAT_FINISHED_VERTICES_KEY =
+
+    public static final String JSONOBJ_AGGREGATOR_VALUE_ARRAY_KEY =
+        "_aggregatorValueArrayKey";
+    public static final String JSONOBJ_VERTEX_RANGE_STAT_ARRAY_KEY =
+        "_vertexRangeStatArrayKey";
+    public static final String JSONOBJ_FINISHED_VERTICES_KEY =
         "_verticesFinishedKey";
-    public static final String STAT_NUM_VERTICES_KEY = "_numVerticesKey";
-    public static final String STAT_HOSTNAME_ID_KEY = "_hostnameIdKey";
-    public static final String STAT_MAX_INDEX_KEY = "_maxIndexKey";
+    public static final String JSONOBJ_NUM_VERTICES_KEY = "_numVerticesKey";
+    public static final String JSONOBJ_NUM_EDGES_KEY = "_numEdgesKey";
+    public static final String JSONOBJ_HOSTNAME_ID_KEY = "_hostnameIdKey";
+    public static final String JSONOBJ_MAX_VERTEX_INDEX_KEY =
+        "_maxVertexIndexKey";
+    public static final String JSONOBJ_HOSTNAME_KEY = "_hostnameKey";
+    public static final String JSONOBJ_PORT_KEY = "_portKey";
+    public static final String JSONOBJ_CHECKPOINT_FILE_PREFIX_KEY =
+        "_checkpointFilePrefixKey";
     public static final String AGGREGATOR_NAME_KEY = "_aggregatorNameKey";
     public static final String AGGREGATOR_VALUE_KEY = "_aggregatorValueKey";
+
     public static final String WORKER_SUFFIX = "_worker";
     public static final String MASTER_SUFFIX = "_master";
 
@@ -196,31 +214,6 @@ public class BspService <
     }
 
     /**
-     * Generate the worker "selected" directory path for a superstep
-     *
-     * @param attempt application attempt number
-     * @param superstep superstep to use
-     * @return directory path based on the a superstep
-     */
-    final public String getWorkerSelectedPath(long attempt, long superstep) {
-        return APPLICATION_ATTEMPTS_PATH + "/" + attempt +
-            SUPERSTEP_DIR + "/" + superstep + WORKER_SELECTED_DIR;
-    }
-
-    /**
-     * Generate the worker "selection finished" directory path for a superstep
-     *
-     * @param attempt application attempt number
-     * @param superstep superstep to use
-     * @return directory path based on the a superstep
-     */
-    final public String getWorkerSelectionFinishedPath(long attempt,
-                                                       long superstep) {
-        return APPLICATION_ATTEMPTS_PATH + "/" + attempt +
-            SUPERSTEP_DIR + "/" + superstep + WORKER_SELECTION_FINISHED_NODE;
-    }
-
-    /**
      * Generate the worker "finished" directory path for a superstep
      *
      * @param attempt application attempt number
@@ -233,57 +226,28 @@ public class BspService <
     }
 
     /**
-     * Generate the "vertex range stats" directory path for a chosen worker
+     * Generate the "vertex range assignments" directory path for a superstep
      *
      * @param attempt application attempt number
      * @param superstep superstep to use
      * @return directory path based on the a superstep
      */
-    final public String getVertexRangeStatsPath(long attempt, long superstep) {
+    final public String getVertexRangeAssignmentsPath(long attempt,
+                                                      long superstep) {
         return APPLICATION_ATTEMPTS_PATH + "/" + attempt +
-            SUPERSTEP_DIR + "/" + superstep + WORKER_SELECTED_DIR + "/" +
-            getHostnamePartitionId() + VERTEX_RANGE_STATS_DIR;
+            SUPERSTEP_DIR + "/" + superstep + VERTEX_RANGE_ASSIGNMENTS_DIR;
     }
 
     /**
-     * Generate the "checkpoint files" directory path for a chosen worker
-     *
-     * @param attempt application attempt number
-     * @param superstep superstep to use
-     * @param hostnamePartitionId hostname and partition id of chosen worker
-     * @return directory path based on the a superstep
-     */
-    final public String getCheckpointFilesPath(long attempt,
-                                               long superstep,
-                                               String hostnamePartitionId) {
-        return APPLICATION_ATTEMPTS_PATH + "/" + attempt +
-            SUPERSTEP_DIR + "/" + superstep + WORKER_SELECTED_DIR + "/" +
-            hostnamePartitionId + CHECKPOINT_FILES_DIR;
-    }
-
-    /**
-     * Generate the aggregator directory path for a chosen worker
+     * Generate the merged aggregator directory path for a superstep
      *
      * @param attempt application attempt number
      * @param superstep superstep to use
      * @return directory path based on the a superstep
      */
-    final public String getAggregatorWorkerPath(long attempt, long superstep) {
+    final public String getMergedAggregatorPath(long attempt, long superstep) {
         return APPLICATION_ATTEMPTS_PATH + "/" + attempt +
-            SUPERSTEP_DIR + "/" + superstep + WORKER_SELECTED_DIR + "/" +
-            getHostnamePartitionId() + AGGREGATOR_DIR;
-    }
-
-    /**
-     * Generate the aggregator directory path for a superstep
-     *
-     * @param attempt application attempt number
-     * @param superstep superstep to use
-     * @return directory path based on the a superstep
-     */
-    final public String getAggregatorPath(long attempt, long superstep) {
-        return APPLICATION_ATTEMPTS_PATH + "/" + attempt +
-            SUPERSTEP_DIR + "/" + superstep + AGGREGATOR_DIR;
+            SUPERSTEP_DIR + "/" + superstep + MERGED_AGGREGATOR_DIR;
     }
 
     /**
@@ -407,8 +371,8 @@ public class BspService <
         return m_inputSplitsStateChanged;
     }
 
-    final public BspEvent getWorkerPartitionsAllReadyChangedEvent() {
-        return m_workerPartitionsAllReadyChanged;
+    final public BspEvent getVertexRangeAssignmentsReadyChangedEvent() {
+        return m_vertexRangeAssignmentsReadyChanged;
     }
 
     final public BspEvent getSuperstepFinishedEvent() {
@@ -471,7 +435,7 @@ public class BspService <
         m_workerHealthRegistrationChanged = new ContextLock(m_context);
         m_inputSplitsAllReadyChanged = new ContextLock(m_context);
         m_inputSplitsStateChanged = new ContextLock(m_context);
-        m_workerPartitionsAllReadyChanged = new ContextLock(m_context);
+        m_vertexRangeAssignmentsReadyChanged = new ContextLock(m_context);
         m_superstepFinished = new ContextLock(m_context);
         m_superstepWorkersFinishedChanged = new ContextLock(m_context);
         m_masterElectionChildrenChanged = new ContextLock(m_context);
@@ -696,6 +660,40 @@ public class BspService <
          m_cachedSuperstep = superstep;
      }
 
+     public NavigableSet<VertexRange<I>> getVertexRangeSet(long superstep) {
+         if (m_vertexRangeSuperstep == superstep) {
+             return m_vertexRangeSet;
+         }
+
+         m_vertexRangeSet = new TreeSet<VertexRange<I>>();
+         String vertexRangeAssignmentsPath =
+             getVertexRangeAssignmentsPath(getApplicationAttempt(),
+                                           superstep);
+         try {
+             JSONArray vertexRangeAssignmentsArray =
+                 new JSONArray(
+                     new String(
+                         getZkExt().getData(vertexRangeAssignmentsPath,
+                                            false,
+                                            null)));
+             LOG.debug("getVertexRangeSet: Found vertex ranges " +
+                       vertexRangeAssignmentsArray.toString() +
+                       " on superstep " + superstep);
+             for (int i = 0; i < vertexRangeAssignmentsArray.length(); ++i) {
+                 JSONObject vertexRangeObj =
+                     vertexRangeAssignmentsArray.getJSONObject(i);
+                 I maxVertexIndex = createVertexIndex();
+                 VertexRange<I> vertexRange =
+                     new VertexRange<I>(maxVertexIndex, vertexRangeObj);
+                 m_vertexRangeSet.add(vertexRange);
+             }
+         } catch (Exception e) {
+             throw new RuntimeException(e);
+         }
+
+         return m_vertexRangeSet;
+     }
+
      /**
       * Default reaction to a change event in workerHealthRegistration.
       */
@@ -764,10 +762,10 @@ public class BspService <
            LOG.info("process: m_inputSplitsStateChanged (finished inputsplit)");
            m_inputSplitsStateChanged.signal();
         }
-        else if (event.getPath().contains(WORKER_SELECTION_FINISHED_NODE) &&
+        else if (event.getPath().contains(VERTEX_RANGE_ASSIGNMENTS_DIR) &&
                 event.getType() == EventType.NodeCreated) {
-           LOG.info("process: m_workerPartitionsAllReadyChanged signaled");
-           m_workerPartitionsAllReadyChanged.signal();
+           LOG.info("process: m_vertexRangeAssignmentsReadyChanged signaled");
+           m_vertexRangeAssignmentsReadyChanged.signal();
        }
         else if (event.getPath().contains(SUPERSTEP_FINISHED_NODE) &&
                 event.getType() == EventType.NodeCreated) {

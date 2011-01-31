@@ -38,7 +38,6 @@ import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.ZooDefs.Ids;
-import org.apache.zookeeper.data.Stat;
 
 /**
  * Zookeeper-based implementation of {@link CentralizedService}.
@@ -57,8 +56,9 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
     /** the superstep when the chosen worker list was initially selected */
     Long m_chosenSuperstep = new Long(-1);
     /** Am I the master? */
-    boolean m_isMaster = false;
-
+    private boolean m_isMaster = false;
+    /** Vertex range balancer class */
+    private Class<? extends VertexRangeBalancer<I>> m_vertexRangeBalancerClass;
 
     public BspServiceMaster(
         String serverPortList,
@@ -66,6 +66,13 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
         Context context,
         BspJob.BspMapper<I, V, E, M> bspMapper) {
         super(serverPortList, sessionMsecTimeout, context, bspMapper);
+        @SuppressWarnings("unchecked")
+        Class<? extends VertexRangeBalancer<I>> vertexRangeBalancer =
+            (Class<? extends VertexRangeBalancer<I>>)
+            getConfiguration().getClass(BspJob.BSP_VERTEX_RANGE_BALANCER_CLASS,
+                                        StaticBalancer.class,
+                                        VertexRangeBalancer.class);
+        m_vertexRangeBalancerClass = vertexRangeBalancer;
     }
 
     /**
@@ -237,7 +244,7 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                 getWorkers(m_chosenSuperstep.longValue(), healthyWorkerList,
                            unhealthyWorkerList);
                 if (!healthyWorkerList.containsAll(m_chosenWorkerList)) {
-                    LOG.fatal("workerHealthRegistrationChanged: " + 
+                    LOG.fatal("workerHealthRegistrationChanged: " +
                               "at least one healthy worker went down " +
                               "for superstep " + getSuperstep());
                     setJobState(State.FAILED);
@@ -251,9 +258,9 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
      * Check the workers to ensure that a minimum number of good workers exists
      * out of the total that have reported.
      *
-     * @return healthy worker list (in order)
+     * @return map of healthy worker list to JSONArray(hostname, port)
      */
-    private List<String> checkWorkers() {
+    private Map<String, JSONArray> checkWorkers() {
         int maxPollAttempts =
             getConfiguration().getInt(BspJob.BSP_POLL_ATTEMPTS,
                                       BspJob.DEFAULT_BSP_POLL_ATTEMPTS);
@@ -308,7 +315,27 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
             return null;
         }
 
-        return healthyWorkerList;
+        Map<String, JSONArray> workerHostnamePortMap =
+            new HashMap<String, JSONArray>();
+        for (String healthyWorker: healthyWorkerList) {
+            String healthyWorkerPath = null;
+            try {
+                healthyWorkerPath =
+                    getWorkerHealthyPath(getApplicationAttempt(),
+                                         getSuperstep()) + "/" +  healthyWorker;
+                JSONArray hostnamePortArray =
+                    new JSONArray(
+                        new String(getZkExt().getData(healthyWorkerPath,
+                                                      false,
+                                                      null)));
+                workerHostnamePortMap.put(healthyWorker, hostnamePortArray);
+            } catch (Exception e) {
+                throw new RuntimeException(
+                    "checkWorkers: Problem fetching hostname and port for " +
+                    healthyWorker + " in " + healthyWorkerPath);
+            }
+        }
+        return workerHostnamePortMap;
     }
 
     public int createInputSplits() {
@@ -333,25 +360,28 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
 
         // When creating znodes, in case the master has already run, resume
         // where it left off.
-        List<String> healthyWorkerList = checkWorkers();
-        if (healthyWorkerList == null) {
+        Map<String, JSONArray> healthyWorkerHostnamePortMap = checkWorkers();
+        if (healthyWorkerHostnamePortMap == null) {
             setJobState(State.FAILED);
         }
 
         synchronized(m_chosenSuperstep) {
-            m_chosenWorkerList = healthyWorkerList;
+            m_chosenWorkerList =
+                new ArrayList<String>(healthyWorkerHostnamePortMap.keySet());
             m_chosenSuperstep = new Long(getSuperstep());
         }
         List<InputSplit> splitList =
-            generateInputSplits(healthyWorkerList.size());
-        if (healthyWorkerList.size() > splitList.size()) {
-            LOG.warn("masterGenerateInputSplits: Number of inputSplits="
-                     + splitList.size() + " < " + healthyWorkerList.size() +
+            generateInputSplits(healthyWorkerHostnamePortMap.size());
+        if (healthyWorkerHostnamePortMap.size() > splitList.size()) {
+            LOG.warn("createInputSplits: Number of inputSplits="
+                     + splitList.size() + " < " +
+                     healthyWorkerHostnamePortMap.size() +
                      "=number of healthy processes");
         }
-        else if (healthyWorkerList.size() < splitList.size()) {
+        else if (healthyWorkerHostnamePortMap.size() < splitList.size()) {
             LOG.fatal("masterGenerateInputSplits: Number of inputSplits="
-                      + splitList.size() + " > " + healthyWorkerList.size() +
+                      + splitList.size() + " > " +
+                      healthyWorkerHostnamePortMap.size() +
                       "=number of healthy processes");
             setJobState(State.FAILED);
         }
@@ -397,10 +427,11 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
     }
 
     /**
-     * Read the metadata files for the checkpoint, determine the worker
-     * assignments for vertex ranges, and assign the metadata files.  Remove
-     * any unused chosen workers (this is safe since it wasn't finalized).
-     * The workers can then find the vertex ranges within the files.  It is an
+     * Read the finalized checkpoint file and associated metadata files for the
+     * checkpoint.  Assign one worker per checkpoint point (and associated
+     * vertex ranges).  Remove any unused chosen workers
+     * (this is safe since it wasn't finalized).  The workers can then
+     * find the vertex ranges within the files.  It is an
      * optimization to prevent all workers from searching all the files.
      * Also read in the aggregator data from the finalized checkpoint
      * file.
@@ -410,24 +441,23 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
      * @throws InterruptedException
      * @throws KeeperException
      */
-    private void mapFilesToWorkers(
-        long superstep,
-        List<String> chosenWorkerList)
-        throws IOException, KeeperException, InterruptedException {
+    private void mapFilesToWorkers(long superstep,
+                                   List<String> chosenWorkerList)
+            throws IOException, KeeperException, InterruptedException {
         FileSystem fs = getFs();
         List<Path> validMetadataPathList = new ArrayList<Path>();
         String finalizedCheckpointPath =
             getCheckpointBasePath(superstep) + CHECKPOINT_FINALIZED_POSTFIX;
         DataInputStream finalizedStream =
             fs.open(new Path(finalizedCheckpointPath));
-        int prefixCount = finalizedStream.readInt();
-        for (int i = 0; i < prefixCount; ++i) {
+        int prefixFileCount = finalizedStream.readInt();
+        for (int i = 0; i < prefixFileCount; ++i) {
             String metadataFilePath =
                 finalizedStream.readUTF() + CHECKPOINT_METADATA_POSTFIX;
             validMetadataPathList.add(new Path(metadataFilePath));
         }
 
-        // Set the aggregator data if it exists.
+        // Set the merged aggregator data if it exists.
         int aggregatorDataSize = finalizedStream.readInt();
         if (aggregatorDataSize > 0) {
             byte [] aggregatorZkData = new byte[aggregatorDataSize];
@@ -439,31 +469,24 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                     aggregatorDataSize + " aggregator bytes from " +
                     finalizedCheckpointPath);
             }
-            String aggregatorPath =
-                getAggregatorPath(getApplicationAttempt(), superstep - 1);
-            LOG.info("mapFilesToWorkers: Reloading aggregator data '" +
-                     aggregatorZkData + "' to previous checkopint " +
-                     aggregatorPath);
-            if (getZkExt().exists(aggregatorPath, false) == null) {
-                getZkExt().createExt(aggregatorPath,
+            String mergedAggregatorPath =
+                getMergedAggregatorPath(getApplicationAttempt(), superstep - 1);
+            LOG.info("mapFilesToWorkers: Reloading merged aggregator data '" +
+                     aggregatorZkData + "' to previous checkpoint in path " +
+                     mergedAggregatorPath);
+            if (getZkExt().exists(mergedAggregatorPath, false) == null) {
+                getZkExt().createExt(mergedAggregatorPath,
                                      aggregatorZkData,
                                      Ids.OPEN_ACL_UNSAFE,
                                      CreateMode.PERSISTENT,
                                      true);
             }
             else {
-                getZkExt().setData(aggregatorPath, aggregatorZkData, -1);
+                getZkExt().setData(mergedAggregatorPath, aggregatorZkData, -1);
             }
         }
-
         finalizedStream.close();
 
-        I maxIndex;
-        try {
-            maxIndex = createVertexIndex();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
         Map<String, Set<String>> workerFileSetMap =
             new HashMap<String, Set<String>>();
         // Reading the metadata files.  For now, implement simple algorithm:
@@ -473,7 +496,14 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
         //    the input splits
         int chosenWorkerListIndex = 0;
         int inputSplitIndex = 0;
+        I maxVertexIndex = createVertexIndex();
         for (Path metadataPath : validMetadataPathList) {
+            String checkpointFilePrefix = metadataPath.toString();
+            checkpointFilePrefix =
+                checkpointFilePrefix.substring(
+                0,
+                checkpointFilePrefix.length() -
+                CHECKPOINT_METADATA_POSTFIX.length());
             DataInputStream metadataStream = fs.open(metadataPath);
             long entries = metadataStream.readLong();
             JSONArray vertexRangeMetaArray = new JSONArray();
@@ -483,22 +513,27 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
             for (long i = 0; i < entries; ++i) {
                 long dataPos = metadataStream.readLong();
                 Long vertexCount = metadataStream.readLong();
-                maxIndex.readFields(metadataStream);
+                Long edgeCount = metadataStream.readLong();
+                maxVertexIndex.readFields(metadataStream);
                 LOG.debug("mapFileToWorkers: File " + metadataPath +
                           " with position " + dataPos + ", vertex count " +
                           vertexCount + " assigned to " + chosenWorker);
                 ByteArrayOutputStream outputStream =
                     new ByteArrayOutputStream();
                 DataOutput output = new DataOutputStream(outputStream);
-                maxIndex.write(output);
+                maxVertexIndex.write(output);
 
                 JSONObject vertexRangeObj = new JSONObject();
                 try {
-                    vertexRangeObj.put(STAT_NUM_VERTICES_KEY,
+                    vertexRangeObj.put(JSONOBJ_NUM_VERTICES_KEY,
                                        vertexCount);
-                    vertexRangeObj.put(STAT_HOSTNAME_ID_KEY,
+                    vertexRangeObj.put(JSONOBJ_NUM_EDGES_KEY,
+                                       edgeCount);
+                    vertexRangeObj.put(JSONOBJ_HOSTNAME_ID_KEY,
                                        chosenWorker);
-                    vertexRangeObj.put(STAT_MAX_INDEX_KEY,
+                    vertexRangeObj.put(JSONOBJ_CHECKPOINT_FILE_PREFIX_KEY,
+                                       checkpointFilePrefix);
+                    vertexRangeObj.put(JSONOBJ_MAX_VERTEX_INDEX_KEY,
                                        outputStream.toString("UTF-8"));
                     vertexRangeMetaArray.put(vertexRangeObj);
                     vertexRangeArray.put(outputStream.toString("UTF-8"));
@@ -517,26 +552,17 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
             String inputSplitPathFinishedPath =
                 INPUT_SPLIT_PATH + "/" + inputSplitIndex +
                 INPUT_SPLIT_FINISHED_NODE;
-            String workerSelectedPath =
-                getWorkerSelectedPath(getApplicationAttempt(), superstep) +
-                "/" + chosenWorker;
-            LOG.info("mapFilesToWorkers: Assigning (if not empty)" +
-                     workerSelectedPath + " the following vertexRanges: " +
+            LOG.info("mapFilesToWorkers: Assigning (if not empty) " +
+                     chosenWorker + " the following vertexRanges: " +
                      vertexRangeArray.toString());
 
-            // Assign the input splits and the vertex ranges if there
-            // is at least one vertex range
+            // Assign the input splits if there is at least one vertex range
             if (vertexRangeArray.length() == 0) {
                 continue;
             }
             try {
                  getZkExt().createExt(inputSplitPathFinishedPath,
                                      vertexRangeMetaArray.toString().getBytes(),
-                                     Ids.OPEN_ACL_UNSAFE,
-                                     CreateMode.PERSISTENT,
-                                     true);
-                getZkExt().createExt(workerSelectedPath,
-                                     vertexRangeArray.toString().getBytes(),
                                      Ids.OPEN_ACL_UNSAFE,
                                      CreateMode.PERSISTENT,
                                      true);
@@ -547,27 +573,6 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
             ++chosenWorkerListIndex;
             if (chosenWorkerListIndex == chosenWorkerList.size()) {
                 chosenWorkerListIndex = 0;
-            }
-        }
-
-        // Dump the file mapping information into ZooKeeper
-        String workerPath = null;
-        for (Map.Entry<String, Set<String>> entry :
-             workerFileSetMap.entrySet()) {
-            workerPath = getCheckpointFilesPath(getApplicationAttempt(),
-                                                getSuperstep(),
-                                                entry.getKey());
-            JSONArray fileArray = new JSONArray(entry.getValue());
-            try {
-                getZkExt().createExt(workerPath,
-                                     fileArray.toString().getBytes(),
-                                     Ids.OPEN_ACL_UNSAFE,
-                                     CreateMode.PERSISTENT,
-                                     true);
-            } catch (KeeperException.NodeExistsException e) {
-                LOG.warn("mapFileToWorkers: Already existing - " + workerPath);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
             }
         }
     }
@@ -673,21 +678,21 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                 }
                 for (int i = 0; i < statArray.length(); ++i) {
                     try {
-                        I maxIndex = createVertexIndex();
+                        I maxVertexIndex = createVertexIndex();
                         LOG.debug("collectVertexRangeStats: " +
                                  "Getting max index from " +
                                  statArray.getJSONObject(i).get(
-                                     STAT_MAX_INDEX_KEY));
+                                     JSONOBJ_MAX_VERTEX_INDEX_KEY));
                         InputStream input =
                             new ByteArrayInputStream(
                                 statArray.getJSONObject(i).getString(
-                                    STAT_MAX_INDEX_KEY).getBytes("UTF-8"));
-                        ((Writable) maxIndex).readFields(
+                                    JSONOBJ_MAX_VERTEX_INDEX_KEY).getBytes("UTF-8"));
+                        ((Writable) maxVertexIndex).readFields(
                             new DataInputStream(input));
                         statArray.getJSONObject(i).put(
-                            STAT_FINISHED_VERTICES_KEY,
+                            JSONOBJ_FINISHED_VERTICES_KEY,
                             0);
-                        vertexRangeStatArrayMap.put(maxIndex,
+                        vertexRangeStatArrayMap.put(maxVertexIndex,
                                                     statArray.getJSONObject(i));
                     } catch (Exception e) {
                         throw new RuntimeException(e);
@@ -696,46 +701,45 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
             }
         }
         else {
-            String workerSelectedPath =
-                getWorkerSelectedPath(getApplicationAttempt(), superstep);
-            List<String> hostnameIdPathList = null;
+            String workerFinishedPath =
+                getWorkerFinishedPath(getApplicationAttempt(), superstep);
+            List<String> workerFinishedPathList = null;
             try {
-                hostnameIdPathList =
+                workerFinishedPathList =
                     getZkExt().getChildrenExt(
-                        workerSelectedPath, false, false, true);
+                        workerFinishedPath, false, false, true);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
 
-            for (String hostnameIdPath : hostnameIdPathList) {
-                String vertexRangeStatsPath =
-                    hostnameIdPath + VERTEX_RANGE_STATS_DIR;
-                JSONArray statArray = null;
+            for (String finishedPath : workerFinishedPathList) {
+                JSONObject aggregatorStatObj= null;
                 try {
                     byte [] zkData =
-                        getZkExt().getData(vertexRangeStatsPath, false, null);
-                    statArray = new JSONArray(new String(zkData));
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-                for (int i = 0; i < statArray.length(); ++i) {
-                    try {
-                        I maxIndex = createVertexIndex();
+                        getZkExt().getData(finishedPath, false, null);
+                    aggregatorStatObj = new JSONObject(new String(zkData));
+
+                    JSONArray statArray =
+                        aggregatorStatObj.getJSONArray(
+                            JSONOBJ_VERTEX_RANGE_STAT_ARRAY_KEY);
+                    for (int i = 0; i < statArray.length(); ++i) {
+                        I maxVertexIndex = createVertexIndex();
                         LOG.info("collectVertexRangeStats: " +
-                                 "Getting max index from " +
+                                 "Getting max vertex index from " +
                                  statArray.getJSONObject(i).get(
-                                     STAT_MAX_INDEX_KEY));
+                                     JSONOBJ_MAX_VERTEX_INDEX_KEY));
                         InputStream input =
                             new ByteArrayInputStream(
                                 statArray.getJSONObject(i).getString(
-                                    STAT_MAX_INDEX_KEY).getBytes("UTF-8"));
-                        ((Writable) maxIndex).readFields(
+                                    JSONOBJ_MAX_VERTEX_INDEX_KEY).getBytes(
+                                        "UTF-8"));
+                        ((Writable) maxVertexIndex).readFields(
                             new DataInputStream(input));
-                        vertexRangeStatArrayMap.put(maxIndex,
+                        vertexRangeStatArrayMap.put(maxVertexIndex,
                                                     statArray.getJSONObject(i));
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
                     }
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
                 }
             }
          }
@@ -755,36 +759,37 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
         }
         Map<String, Aggregator<Writable>> aggregatorMap =
             new TreeMap<String, Aggregator<Writable>>();
-        String workerSelectedPath =
-            getWorkerSelectedPath(getApplicationAttempt(), superstep);
+        String workerFinishedPath =
+            getWorkerFinishedPath(getApplicationAttempt(), superstep);
         List<String> hostnameIdPathList = null;
         try {
             hostnameIdPathList =
                 getZkExt().getChildrenExt(
-                    workerSelectedPath, false, false, true);
+                    workerFinishedPath, false, false, true);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
 
         Base64 base64 = new Base64();
         for (String hostnameIdPath : hostnameIdPathList) {
-            String aggregatorPath =
-                hostnameIdPath + AGGREGATOR_DIR;
+            JSONObject aggregatorsStatObj = null;
             JSONArray aggregatorArray = null;
             try {
                 byte [] zkData =
-                    getZkExt().getData(aggregatorPath, false, null);
-                aggregatorArray = new JSONArray(new String(zkData));
-            } catch (KeeperException.NoNodeException e) {
-                LOG.info("collectAndProcessAggregatorValues: " + 
-                         "no aggregators in " + aggregatorPath);
+                    getZkExt().getData(hostnameIdPath, false, null);
+                aggregatorsStatObj = new JSONObject(new String(zkData));
             } catch (Exception e) {
                throw new RuntimeException(
                          "collectAndProcessAggregatorValues: " +
                          "exception when fetching data from " +
-                         aggregatorPath, e);
+                         hostnameIdPath, e);
             }
-            if (aggregatorArray == null) {
+            try {
+                aggregatorArray = aggregatorsStatObj.getJSONArray(
+                    JSONOBJ_AGGREGATOR_VALUE_ARRAY_KEY);
+            } catch (JSONException e) {
+                LOG.debug("collectAndProcessAggregatorValues: No aggregators" +
+                          " for " + hostnameIdPath);
                 continue;
             }
             for (int i = 0; i < aggregatorArray.length(); ++i) {
@@ -794,8 +799,8 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                               aggregatorArray.getJSONObject(i));
                     String aggregatorName = aggregatorArray.getJSONObject(i).
                         getString(AGGREGATOR_NAME_KEY);
-                    Aggregator<Writable> aggregator = aggregatorMap.get(
-                                                               aggregatorName);
+                    Aggregator<Writable> aggregator =
+                        aggregatorMap.get(aggregatorName);
                     boolean firstTime = false;
                     if (aggregator == null) {
                         aggregator =
@@ -804,7 +809,7 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                         firstTime = true;
                     }
                     Writable aggregatorValue =
-                                            aggregator.createAggregatedValue();
+                        aggregator.createAggregatedValue();
                     InputStream input =
                         new ByteArrayInputStream(
                             (byte[]) base64.decode(
@@ -829,8 +834,8 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
             }
         }
         if (aggregatorMap.size() > 0) {
-            String aggregatorPath =
-                getAggregatorPath(getApplicationAttempt(), superstep);
+            String mergedAggregatorPath =
+                getMergedAggregatorPath(getApplicationAttempt(), superstep);
             byte [] zkData = null;
             JSONArray aggregatorArray = new JSONArray();
             for (Map.Entry<String, Aggregator<Writable>> entry :
@@ -852,106 +857,29 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                              "Trying to add aggregatorObj " +
                              aggregatorObj + "(" +
                              entry.getValue().getAggregatedValue() +
-                             ") to aggregator path " + aggregatorPath);
+                             ") to merged aggregator path " +
+                             mergedAggregatorPath);
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
             }
             try {
                 zkData = aggregatorArray.toString().getBytes();
-                getZkExt().createExt(aggregatorPath,
+                getZkExt().createExt(mergedAggregatorPath,
                                      zkData,
                                      Ids.OPEN_ACL_UNSAFE,
                                      CreateMode.PERSISTENT,
                                      true);
             } catch (KeeperException.NodeExistsException e) {
                 LOG.warn("collectAndProcessAggregatorValues: " +
-                         aggregatorPath +
+                         mergedAggregatorPath+
                          " already exists!");
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
             LOG.info("collectAndProcessAggregatorValues: Finished loading " +
-                     aggregatorPath + " with aggregator values " +
+                     mergedAggregatorPath+ " with aggregator values " +
                      aggregatorArray);
-        }
-    }
-
-    /**
-     * Assign vertex ranges to the workers.  Also filled in
-     * m_vertexRangeMaxWorkerMap with the assignment of vertex ranges to
-     * workers.
-     *
-     * @param chosenWorkerList selected workers that are healthy
-     */
-    private void assignWorkersVertexRanges(List<String> chosenWorkerList) {
-        // TODO: Actually pass vertex ranges around
-        //
-        // Current algorithm: Assign the original owners of every
-        // partition to that partition.  If the original owner no longer
-        // exists, fail!
-        List<String> inputSplitList = null;
-        try {
-            inputSplitList = getZkExt().getChildrenExt(INPUT_SPLIT_PATH,
-                                                       false,
-                                                       false,
-                                                       true);
-            for (String inputSplitPath : inputSplitList) {
-                String inputSplitFinishedPath = inputSplitPath +
-                    INPUT_SPLIT_FINISHED_NODE;
-                byte [] zkData =
-                    getZkExt().getData(inputSplitFinishedPath, false, null);
-                if (zkData == null || zkData.length == 0) {
-                    LOG.info("assignWorkersVertexRanges: No vertex ranges " +
-                             "in " + inputSplitFinishedPath);
-                    continue;
-                }
-                JSONArray statArray = new JSONArray(new String(zkData));
-                JSONArray vertexRangeArray = new JSONArray();
-                JSONObject stat = null;
-                for (int i = 0; i < statArray.length(); ++i) {
-                    stat = statArray.getJSONObject(i);
-                    vertexRangeArray.put(stat.get(STAT_MAX_INDEX_KEY));
-                }
-                String hostnamePartitionId =
-                    stat.getString(STAT_HOSTNAME_ID_KEY);
-                if (!chosenWorkerList.contains(hostnamePartitionId)) {
-                    LOG.fatal("assignWorkersVertexRanges: Worker " +
-                              hostnamePartitionId + " died, failing.");
-                    setJobState(State.FAILED);
-                }
-                String workerSelectedPath =
-                        getWorkerSelectedPath(getApplicationAttempt(),
-                                              getSuperstep()) +
-                                              "/" + hostnamePartitionId;
-                LOG.info("assignWorkersVertexRanges: Assigning " +
-                         workerSelectedPath + " = " +
-                         vertexRangeArray.toString());
-                // Worker may have possibly already processed one input split
-                if (getZkExt().exists(workerSelectedPath, null) != null) {
-                    Stat initialStat = new Stat();
-                    byte [] initialZkData =
-                        getZkExt().getData(
-                            workerSelectedPath, false, initialStat);
-                    JSONArray initialVertexRangeArray =
-                        new JSONArray(new String(initialZkData));
-                    for (int i = 0; i < vertexRangeArray.length(); ++i) {
-                        initialVertexRangeArray.put(vertexRangeArray.get(i));
-                    }
-                    getZkExt().setData(workerSelectedPath,
-                                       initialVertexRangeArray.toString().getBytes(),
-                                       initialStat.getVersion());
-                }
-                else {
-                    getZkExt().createExt(workerSelectedPath,
-                                         vertexRangeArray.toString().getBytes(),
-                                         Ids.OPEN_ACL_UNSAFE,
-                                         CreateMode.PERSISTENT,
-                                         true);
-                }
-            }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
         }
     }
 
@@ -992,11 +920,11 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                 getCheckpointBasePath(superstep) + "." + chosenWorker;
             finalizedOutputStream.writeUTF(chosenWorkerPrefix);
         }
-        String aggregatorPath =
-            getAggregatorPath(getApplicationAttempt(), superstep - 1);
-        if (getZkExt().exists(aggregatorPath, false) != null) {
+        String mergedAggregatorPath =
+            getMergedAggregatorPath(getApplicationAttempt(), superstep - 1);
+        if (getZkExt().exists(mergedAggregatorPath, false) != null) {
             byte [] aggregatorZkData =
-                getZkExt().getData(aggregatorPath, false, null);
+                getZkExt().getData(mergedAggregatorPath, false, null);
             finalizedOutputStream.writeInt(aggregatorZkData.length);
             finalizedOutputStream.write(aggregatorZkData);
         }
@@ -1004,6 +932,79 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
             finalizedOutputStream.writeInt(0);
         }
         finalizedOutputStream.close();
+    }
+
+    /**
+     * Convert the processed input split data into vertex range assignments
+     * that can be used on the next superstep.
+     *
+     * @param chosenWorkerHostnamePortMap map of chosen workers to
+     *        a hostname and port array
+     */
+    private void inputSplitsToVertexRanges(
+        Map<String, JSONArray> chosenWorkerHostnamePortMap) {
+        List<String> inputSplitPathList = null;
+        Set<VertexRange<I>> vertexRangeSet = new HashSet<VertexRange<I>>();
+        try {
+            inputSplitPathList = getZkExt().getChildrenExt(INPUT_SPLIT_PATH,
+                                                           false,
+                                                           false,
+                                                           true);
+            for (String inputSplitPath : inputSplitPathList) {
+                String inputSplitFinishedPath = inputSplitPath +
+                    INPUT_SPLIT_FINISHED_NODE;
+                byte [] zkData =
+                    getZkExt().getData(inputSplitFinishedPath, false, null);
+                if (zkData == null || zkData.length == 0) {
+                    LOG.info("inputSplitsToVertexRanges: No vertex ranges " +
+                             "in " + inputSplitFinishedPath);
+                    continue;
+                }
+                JSONArray statArray = new JSONArray(new String(zkData));
+                JSONObject vertexRangeObj = null;
+                for (int i = 0; i < statArray.length(); ++i) {
+                    vertexRangeObj = statArray.getJSONObject(i);
+                    String hostnamePartitionId =
+                        vertexRangeObj.getString(JSONOBJ_HOSTNAME_ID_KEY);
+                    if (!chosenWorkerHostnamePortMap.containsKey(
+                        hostnamePartitionId)) {
+                        LOG.fatal("inputSplitsToVertexRanges: Worker " +
+                              hostnamePartitionId + " died, failing.");
+                        setJobState(State.FAILED);
+                    }
+                   JSONArray hostnamePortArray =
+                       chosenWorkerHostnamePortMap.get(hostnamePartitionId);
+                   vertexRangeObj.put(JSONOBJ_HOSTNAME_KEY,
+                                      hostnamePortArray.getString(0));
+                   vertexRangeObj.put(JSONOBJ_PORT_KEY,
+                                      hostnamePortArray.getString(1));
+                    I maxVertexIndex = createVertexIndex();
+                    VertexRange<I> vertexRange =
+                        new VertexRange<I>(maxVertexIndex, vertexRangeObj);
+
+                    vertexRangeSet.add(vertexRange);
+                }
+            }
+
+            JSONArray vertexRangeAssignmentArray =
+                new JSONArray();
+            for (VertexRange<I> vertexRange : vertexRangeSet) {
+                vertexRangeAssignmentArray.put(vertexRange.toJSONObject());
+            }
+            String vertexRangeAssignmentsPath =
+                getVertexRangeAssignmentsPath(getApplicationAttempt(),
+                                              getSuperstep());
+            LOG.info("inputSplitsToVertexWorkers: Assigning vertex ranges " +
+                     vertexRangeAssignmentArray.toString() + " to path" +
+                     vertexRangeAssignmentsPath);
+            getZkExt().createExt(vertexRangeAssignmentsPath,
+                                 vertexRangeAssignmentArray.toString().getBytes(),
+                                 Ids.OPEN_ACL_UNSAFE,
+                                 CreateMode.PERSISTENT,
+                                 true);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public boolean coordinateSuperstep() {
@@ -1015,15 +1016,16 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
         // 5. Create superstep finished node
         // 6. If the checkpoint frequency is met, finalize the checkpoint
 
-        List<String> chosenWorkerList = checkWorkers();
-        if (chosenWorkerList == null) {
+        Map<String, JSONArray> chosenWorkerHostnamePortMap = checkWorkers();
+        if (chosenWorkerHostnamePortMap == null) {
             LOG.fatal("coordinateSuperstep: Not enough healthy workers for " +
                       "superstep " + getSuperstep());
             setJobState(State.FAILED);
         }
         synchronized(m_chosenSuperstep) {
             if (m_chosenWorkerList == null) { // must have been a checkpoint
-                m_chosenWorkerList = chosenWorkerList;
+                m_chosenWorkerList =
+                    new ArrayList<String>(chosenWorkerHostnamePortMap.keySet());
             }
             m_chosenSuperstep = new Long(getSuperstep());
         }
@@ -1032,31 +1034,58 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
             try {
                 LOG.info("coordinateSuperstep: Reloading from superstep " +
                          getSuperstep());
-
-                mapFilesToWorkers(getManualRestartSuperstep(), chosenWorkerList);
+                mapFilesToWorkers(
+                    getManualRestartSuperstep(),
+                    new ArrayList<String>(
+                        chosenWorkerHostnamePortMap.keySet()));
+                inputSplitsToVertexRanges(chosenWorkerHostnamePortMap);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         } else {
-            if (getSuperstep() != 0) {
-                assignWorkersVertexRanges(chosenWorkerList);
+            if (getSuperstep() > 0) {
+                VertexRangeBalancer<I> vertexRangeBalancer = null;
+                try {
+                    vertexRangeBalancer =
+                        m_vertexRangeBalancerClass.newInstance();
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+                vertexRangeBalancer.setHostnameIdList(
+                    new ArrayList<String>(chosenWorkerHostnamePortMap.keySet()));
+                Set<VertexRange<I>> vertexRangeSet =
+                    getVertexRangeSet(getSuperstep() - 1);
+                vertexRangeBalancer.setLastVertexRangeList(
+                    new ArrayList<VertexRange<I>>(vertexRangeSet));
+                vertexRangeBalancer.rebalance();
+                List<VertexRange<I>> vertexRangeList =
+                    vertexRangeBalancer.getNextVertexRangeList();
+                if (vertexRangeList == null) {
+                    vertexRangeList = new ArrayList<VertexRange<I>>();
+                }
+                JSONArray vertexRangeAssignmentArray = new JSONArray();
+                for (VertexRange<I> vertexRange : vertexRangeList) {
+                    try {
+                        vertexRangeAssignmentArray.put(
+                            vertexRange.toJSONObject());
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+                try {
+                    String vertexRangeAssignmentsPath =
+                        getVertexRangeAssignmentsPath(getApplicationAttempt(),
+                                                      getSuperstep());
+                    getZkExt().createExt(
+                        vertexRangeAssignmentsPath,
+                        vertexRangeAssignmentArray.toString().getBytes("UTF-8"),
+                        Ids.OPEN_ACL_UNSAFE,
+                        CreateMode.PERSISTENT,
+                        true);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
             }
-        }
-
-        String workerSelectionFinishedPath =
-            getWorkerSelectionFinishedPath(getApplicationAttempt(),
-                                           getSuperstep());
-        try {
-            getZkExt().createExt(workerSelectionFinishedPath,
-                                 null,
-                                 Ids.OPEN_ACL_UNSAFE,
-                                 CreateMode.PERSISTENT,
-                                 true);
-        } catch (KeeperException.NodeExistsException e) {
-            LOG.warn("coordinateSuperstep: Node " +
-                     workerSelectionFinishedPath + " already exists!");
-        } catch (Exception e) {
-            throw new RuntimeException(e);
         }
 
         String finishedWorkerPath =
@@ -1087,9 +1116,11 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
             LOG.info("coordinateSuperstep: Got finished worker list = " +
                      finishedWorkerList + ", size = " +
                      finishedWorkerList.size() + ", chosen worker list = " +
-                     chosenWorkerList + ", size = " + chosenWorkerList.size() +
+                     chosenWorkerHostnamePortMap.keySet() + ", size = " +
+                     chosenWorkerHostnamePortMap.size() +
                      " from " + finishedWorkerPath);
-            if (finishedWorkerList.containsAll(chosenWorkerList)) {
+            if (finishedWorkerList.containsAll(
+                chosenWorkerHostnamePortMap.keySet())) {
                 break;
             }
             getSuperstepWorkersFinishedChangedEvent().waitForever();
@@ -1103,9 +1134,9 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
         for (Map.Entry<I, JSONObject> entry : maxIndexStatsMap.entrySet()) {
             try {
                 verticesFinished +=
-                    entry.getValue().getLong(STAT_FINISHED_VERTICES_KEY);
+                    entry.getValue().getLong(JSONOBJ_FINISHED_VERTICES_KEY);
                 verticesTotal +=
-                    entry.getValue().getLong(STAT_NUM_VERTICES_KEY);
+                    entry.getValue().getLong(JSONOBJ_NUM_VERTICES_KEY);
             } catch (JSONException e) {
                 throw new RuntimeException(e);
             }
@@ -1120,14 +1151,20 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                 m_chosenWorkerList = null;
             }
         }
-        String superstepFinishedNode =
-            getSuperstepFinishedPath(getApplicationAttempt(), getSuperstep());
+
+        // Convert the input split stats to vertex ranges in superstep 0
+        if (getSuperstep() == 0) {
+            inputSplitsToVertexRanges(chosenWorkerHostnamePortMap);
+        }
+
         // Let everyone know the aggregated application state through the
         // superstep
+        String superstepFinishedNode =
+            getSuperstepFinishedPath(getApplicationAttempt(), getSuperstep());
         try {
             JSONObject globalInfoObject = new JSONObject();
-            globalInfoObject.put(STAT_FINISHED_VERTICES_KEY, verticesFinished);
-            globalInfoObject.put(STAT_NUM_VERTICES_KEY, verticesTotal);
+            globalInfoObject.put(JSONOBJ_FINISHED_VERTICES_KEY, verticesFinished);
+            globalInfoObject.put(JSONOBJ_NUM_VERTICES_KEY, verticesTotal);
             getZkExt().createExt(superstepFinishedNode,
                                  globalInfoObject.toString().getBytes(),
                                  Ids.OPEN_ACL_UNSAFE,
@@ -1141,7 +1178,9 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
         // the aggregators.
         if (checkpointFrequencyMet(getSuperstep())) {
             try {
-                finalizeCheckpoint(getSuperstep(), chosenWorkerList);
+                finalizeCheckpoint(
+                    getSuperstep(),
+                    new ArrayList<String>(chosenWorkerHostnamePortMap.keySet()));
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }

@@ -8,11 +8,9 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -20,6 +18,7 @@ import java.util.TreeSet;
 import org.apache.commons.codec.binary.Base64;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import org.apache.log4j.Logger;
@@ -47,8 +46,6 @@ public class BspServiceWorker<
     M extends Writable>
     extends BspService<I, V, E, M> implements
     CentralizedServiceWorker<I, V, E, M> {
-    /** The partition map */
-    private NavigableSet<Partition<I>> m_partitionSet = null;
     /** Number of input splits */
     private int m_inputSplitCount = -1;
     /** Cached aggregate number of vertices in the entire application */
@@ -56,7 +53,8 @@ public class BspServiceWorker<
     /** My process health znode */
     private String m_myHealthZnode;
     /** Partition to compare with (saved local variable to reduce allocation) */
-    private Partition<I> comparePartition = new Partition<I>("", -1, null);
+    private VertexRange<I> compareVertexRange =
+        new VertexRange<I>("", -1, "", null, -1, -1, null);
     /** Data structure or storing each range and associated vertices */
     private Map<I, List<Vertex<I, V, E, M>>> m_maxIndexVertexMap =
         new TreeMap<I, List<Vertex<I, V, E, M>>>();
@@ -167,17 +165,19 @@ public class BspServiceWorker<
      * InputSplit. After this, the InputSplit is considered finished.
      *
      * @param inputSplitPath path to the input split znode
-     * @param maxIndexCoundMap maps max vertex indexes to the number of vertices
+     * @param maxIndexStatMap maps max vertex indexes to a list countaing
+     *        the number of vertices (index 0) and the number of edges (index 1)
      *        in each partition (can be null, where nothing is written)
      */
-    private void setInputSplitVertexRanges(String inputSplitPath,
-                                           Map<I, Long> maxIndexCountMap) {
+    private void setInputSplitVertexRanges(
+        String inputSplitPath,
+        Map<I, List<Long>> maxIndexStatMap) {
         String inputSplitFinishedPath =
             inputSplitPath + INPUT_SPLIT_FINISHED_NODE;
         byte [] zkData = null;
         JSONArray statArray = new JSONArray();
-        if (maxIndexCountMap != null) {
-            for (Map.Entry<I, Long> entry : maxIndexCountMap.entrySet()) {
+        if (maxIndexStatMap != null) {
+            for (Map.Entry<I, List<Long>> entry : maxIndexStatMap.entrySet()) {
                 try {
                     ByteArrayOutputStream outputStream =
                         new ByteArrayOutputStream();
@@ -185,11 +185,13 @@ public class BspServiceWorker<
                     ((Writable) entry.getKey()).write(output);
 
                     JSONObject vertexRangeObj = new JSONObject();
-                    vertexRangeObj.put(STAT_NUM_VERTICES_KEY,
-                                       entry.getValue());
-                    vertexRangeObj.put(STAT_HOSTNAME_ID_KEY,
+                    vertexRangeObj.put(JSONOBJ_NUM_VERTICES_KEY,
+                                       entry.getValue().get(0));
+                    vertexRangeObj.put(JSONOBJ_NUM_EDGES_KEY,
+                                       entry.getValue().get(1));
+                    vertexRangeObj.put(JSONOBJ_HOSTNAME_ID_KEY,
                                        getHostnamePartitionId());
-                    vertexRangeObj.put(STAT_MAX_INDEX_KEY,
+                    vertexRangeObj.put(JSONOBJ_MAX_VERTEX_INDEX_KEY,
                                        outputStream.toString("UTF-8"));
                     statArray.put(vertexRangeObj);
                     LOG.info("setInputSplitVertexRanges: " +
@@ -274,7 +276,8 @@ public class BspServiceWorker<
 
             vertexList.clear();
             try {
-                HadoopVertex<I, V, E, M> vertex = getHadoopVertexClass().newInstance();
+                HadoopVertex<I, V, E, M> vertex =
+                    getHadoopVertexClass().newInstance();
                 while (vertexReader.next(vertex)) {
                     vertex.setBspMapper(getBspMapper());
                     if (vertex.getVertexValue() == null) {
@@ -363,13 +366,19 @@ public class BspServiceWorker<
                           currentMaxIndex);
                 m_maxIndexVertexMap.get(currentMaxIndex).add(vertex);
             }
-            Map<I, Long> maxIndexCountMap = new TreeMap<I, Long>();
+            Map<I, List<Long>> maxIndexStatMap = new TreeMap<I, List<Long>>();
             for (Map.Entry<I, List<Vertex<I, V, E, M>>> entry :
                 m_maxIndexVertexMap.entrySet()) {
-                maxIndexCountMap.put(entry.getKey(),
-                                     new Long(entry.getValue().size()));
+                List<Long> statList = new ArrayList<Long>();
+                long vertexRangeEdgeCount = 0;
+                for (Vertex<I, V, E, M> vertex : entry.getValue()) {
+                    vertexRangeEdgeCount += vertex.getOutEdgeIterator().size();
+                }
+                statList.add(new Long(entry.getValue().size()));
+                statList.add(new Long(vertexRangeEdgeCount));
+                maxIndexStatMap.put(entry.getKey(), statList);
             }
-            setInputSplitVertexRanges(inputSplitPath, maxIndexCountMap);
+            setInputSplitVertexRanges(inputSplitPath, maxIndexStatMap);
         }
     }
 
@@ -423,18 +432,18 @@ public class BspServiceWorker<
     }
 
     /**
-     * Save values of aggregators in use to be aggregated by master.
+     *  Marshal the aggregator values of to a JSONArray that will later be
+     *  aggregated by master.  Reset the 'use' of aggregators in the next
+     *  superstep
      *
      * @param superstep
      */
-    private void sendAggregatorValues(long superstep) {
-        if (superstep == 0 || m_aggregatorInUse.size() == 0) {
-            return;
-        }
-        String aggregatorWorkerPath =
-            getAggregatorWorkerPath(getApplicationAttempt(), superstep);
-        byte [] zkData = null;
+    private JSONArray marshalAggregatorValues(long superstep) {
         JSONArray aggregatorArray = new JSONArray();
+        if (superstep == 0 || m_aggregatorInUse.size() == 0) {
+            return aggregatorArray;
+        }
+
         Base64 base64 = new Base64();
         for (String name : m_aggregatorInUse) {
             try {
@@ -449,33 +458,20 @@ public class BspServiceWorker<
                 aggregatorObj.put(
                     AGGREGATOR_VALUE_KEY,
                     base64.encodeToString(outputStream.toByteArray()));
-
                 aggregatorArray.put(aggregatorObj);
-                LOG.info("sendAggregatorValues: " +
-                         "Trying to add aggregatorObj " +
-                         aggregatorObj + "(" +
-                         aggregator.getAggregatedValue() + ") to aggregator path " +
-                         aggregatorWorkerPath);
+                LOG.info("marshalAggregatorValues: " +
+                         "Found aggregatorObj " +
+                         aggregatorObj + ", value (" +
+                         aggregator.getAggregatedValue() + ")");
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         }
-        zkData = aggregatorArray.toString().getBytes();
-        try {
-            getZkExt().createExt(aggregatorWorkerPath,
-                                 zkData,
-                                 Ids.OPEN_ACL_UNSAFE,
-                                 CreateMode.PERSISTENT,
-                                 true);
-        } catch (KeeperException.NodeExistsException e) {
-            LOG.warn("sendAggregatorValues: " + aggregatorWorkerPath +
-                     " already exists (likely from a previous failure)!");
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-        LOG.info("sendAggregatorValues: Finished loading " +
-                 aggregatorWorkerPath + " with aggregator values " + aggregatorArray);
+
+        LOG.info("marshalAggregatorValues: Finished assembling " +
+                 "aggregator values in JSONArray - " + aggregatorArray);
         m_aggregatorInUse.clear();
+        return aggregatorArray;
     }
 
     /**
@@ -487,16 +483,16 @@ public class BspServiceWorker<
         if (superstep <= 1) {
             return;
         }
-        String aggregatorPath =
-            getAggregatorPath(getApplicationAttempt(), superstep - 1);
+        String mergedAggregatorPath =
+            getMergedAggregatorPath(getApplicationAttempt(), superstep - 1);
         JSONArray aggregatorArray = null;
         try {
             byte [] zkData =
-                getZkExt().getData(aggregatorPath, false, null);
+                getZkExt().getData(mergedAggregatorPath, false, null);
             aggregatorArray = new JSONArray(new String(zkData));
         } catch (KeeperException.NoNodeException e) {
             LOG.info("getAggregatorValues: no aggregators in " +
-                     aggregatorPath + " on superstep " + superstep);
+                     mergedAggregatorPath + " on superstep " + superstep);
             return;
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -509,7 +505,8 @@ public class BspServiceWorker<
                          aggregatorArray.getJSONObject(i));
                 String aggregatorName = aggregatorArray.getJSONObject(i).
                     getString(AGGREGATOR_NAME_KEY);
-                Aggregator<Writable> aggregator = m_aggregatorMap.get(aggregatorName);
+                Aggregator<Writable> aggregator =
+                    m_aggregatorMap.get(aggregatorName);
                 if (aggregator == null) {
                     continue;
                 }
@@ -529,7 +526,8 @@ public class BspServiceWorker<
             }
         }
         LOG.info("getAggregatorValues: Finished loading " +
-                 aggregatorPath + " with aggregator values " + aggregatorArray);
+                 mergedAggregatorPath + " with aggregator values " +
+                 aggregatorArray);
     }
 
     public Map<I, List<Vertex<I, V, E, M>>> getMaxIndexVertexLists() {
@@ -537,45 +535,11 @@ public class BspServiceWorker<
     }
 
     /**
-     * Retrieve the assignment vertex ranges for this superstep
+     * Register the health of this worker for a given superstep
      *
-     * @return set of vertex ranges for this worker
+     * @param superstep superstep to register health on
      */
-    private Set<I> getAssignedVertexRanges() {
-        String assignedVertexRangesPath =
-            getWorkerSelectedPath(getApplicationAttempt(),
-                                  getSuperstep()) +
-                                  "/" + getHostnamePartitionId();
-        Set<I> vertexRangeSet = new HashSet<I>();
-        try {
-            if (getZkExt().exists(assignedVertexRangesPath, false) == null) {
-                LOG.info("getAssignedVertexRanges: Nothing assigned to me");
-                return vertexRangeSet;
-            }
-            byte [] vertexRanges =
-                getZkExt().getData(assignedVertexRangesPath, false, null);
-            JSONArray vertexRangeArray =
-                new JSONArray(new String(vertexRanges));
-            for (int i = 0; i < vertexRangeArray.length(); ++i) {
-                I maxVertex = createVertexIndex();
-                InputStream input =
-                    new ByteArrayInputStream(
-                        vertexRangeArray.get(i).toString().getBytes(
-                            "UTF-8"));
-                maxVertex.readFields(new DataInputStream(input));
-                vertexRangeSet.add(maxVertex);
-            }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-
-        return vertexRangeSet;
-    }
-
-    public boolean startSuperstep() {
-        // Algorithm:
-        // 1. Register my health for the next superstep.
-        // 2. Wait until the worker selection is complete.
+    private void registerHealth(long superstep) {
         JSONArray hostnamePort = new JSONArray();
         hostnamePort.put(getHostname());
         int finalRpcPort =
@@ -602,30 +566,42 @@ public class BspServiceWorker<
                                      CreateMode.EPHEMERAL,
                                      true);
         } catch (KeeperException.NodeExistsException e) {
-            LOG.info("startSuperstep: myHealthPath already exists (likely from " +
-                     "previous failure): " + myHealthPath);
+            LOG.info("registerHealth: myHealthPath already exists (likely " +
+                     "from previous failure): " + myHealthPath);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        LOG.info("startSuperstep: Created my health node for attempt=" +
+        LOG.info("registerHealth: Created my health node for attempt=" +
                  getApplicationAttempt() + ", superstep=" +
                  getSuperstep() + " with " + m_myHealthZnode +
                  " and hostnamePort = " + hostnamePort.toString());
+    }
 
-        String workerSelectionFinishedNode =
-            getWorkerSelectionFinishedPath(getApplicationAttempt(),
-                                           getSuperstep());
-        try {
-            while (getZkExt().exists(workerSelectionFinishedNode, true) ==
-                   null) {
-                getWorkerPartitionsAllReadyChangedEvent().waitForever();
-                getWorkerPartitionsAllReadyChangedEvent().reset();
+    public boolean startSuperstep() {
+        // Algorithm:
+        // 1. Register my health for the next superstep.
+        // 2. Wait until the vertex range assignment is complete (unless
+        //    superstep 0).
+        registerHealth(getSuperstep());
+
+        String vertexRangeAssignmentsNode = null;
+        if (getSuperstep() > 0) {
+            vertexRangeAssignmentsNode =
+                getVertexRangeAssignmentsPath(getApplicationAttempt(),
+                                              getSuperstep());
+            try {
+                while (getZkExt().exists(vertexRangeAssignmentsNode, true) ==
+                    null) {
+                    getVertexRangeAssignmentsReadyChangedEvent().waitForever();
+                    getVertexRangeAssignmentsReadyChangedEvent().reset();
+                }
+            } catch (Exception e) {
+                throw new RuntimeException(e);
             }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
         }
-        LOG.info("startSuperstep: Ready for computation (got " +
-                 workerSelectionFinishedNode + ")");
+        LOG.info("startSuperstep: Ready for computation since worker " +
+                 "selection and vertex range assignments are done in " +
+                 vertexRangeAssignmentsNode);
 
         getAggregatorValues(getSuperstep());
         return true;
@@ -642,10 +618,9 @@ public class BspServiceWorker<
         //    and the number completed.
         // 3. Let the master know it is finished.
         // 4. Then it waits for the master to say whether to stop or not.
-        sendAggregatorValues(getSuperstep());
-        String myVertexRangeStatPath =
-            getVertexRangeStatsPath(getApplicationAttempt(), getSuperstep());
-        JSONArray allStatArray = new JSONArray();
+        JSONArray aggregatorValueArray =
+            marshalAggregatorValues(getSuperstep());
+        JSONArray vertexRangeStatArray = new JSONArray();
         for (Map.Entry<I, long []> entry :
             maxIndexStatsMap.entrySet()) {
             JSONObject statObject = new JSONObject();
@@ -655,36 +630,33 @@ public class BspServiceWorker<
                 DataOutput output = new DataOutputStream(outputStream);
                 ((Writable) entry.getKey()).write(output);
 
-                statObject.put(STAT_MAX_INDEX_KEY,
+                statObject.put(JSONOBJ_MAX_VERTEX_INDEX_KEY,
                                outputStream.toString("UTF-8"));
-                statObject.put(STAT_FINISHED_VERTICES_KEY,
+                statObject.put(JSONOBJ_FINISHED_VERTICES_KEY,
                                entry.getValue()[0]);
-                statObject.put(STAT_NUM_VERTICES_KEY,
+                statObject.put(JSONOBJ_NUM_VERTICES_KEY,
                                entry.getValue()[1]);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
-            allStatArray.put(statObject);
-        }
-        try {
-            getZkExt().createExt(myVertexRangeStatPath,
-                                 allStatArray.toString().getBytes(),
-                                 Ids.OPEN_ACL_UNSAFE,
-                                 CreateMode.PERSISTENT,
-                                 true);
-        } catch (KeeperException.NodeExistsException e) {
-            LOG.warn("finishSuperstep: Failed to write stats " + allStatArray +
-                     " into " + myVertexRangeStatPath);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+            vertexRangeStatArray.put(statObject);
         }
 
+        JSONObject workerFinishedInfoObj = new JSONObject();
+        try {
+            workerFinishedInfoObj.put(JSONOBJ_AGGREGATOR_VALUE_ARRAY_KEY,
+                                      aggregatorValueArray);
+            workerFinishedInfoObj.put(JSONOBJ_VERTEX_RANGE_STAT_ARRAY_KEY,
+                                      vertexRangeStatArray);
+        } catch (JSONException e) {
+            throw new RuntimeException(e);
+        }
         String finishedWorkerPath =
             getWorkerFinishedPath(getApplicationAttempt(), getSuperstep()) +
             "/" + getHostnamePartitionId();
         try {
             getZkExt().createExt(finishedWorkerPath,
-                                 null,
+                                 workerFinishedInfoObj.toString().getBytes(),
                                  Ids.OPEN_ACL_UNSAFE,
                                  CreateMode.PERSISTENT,
                                  true);
@@ -709,9 +681,9 @@ public class BspServiceWorker<
             throw new RuntimeException(e);
         }
         long finishedVertices =
-            globalStatsObject.optLong(STAT_FINISHED_VERTICES_KEY);
+            globalStatsObject.optLong(JSONOBJ_FINISHED_VERTICES_KEY);
         m_totalVertices =
-            globalStatsObject.optLong(STAT_NUM_VERTICES_KEY);
+            globalStatsObject.optLong(JSONOBJ_NUM_VERTICES_KEY);
         LOG.info("finishSuperstep: Completed superstep " + getSuperstep() +
                  " with finishedVertices=" + finishedVertices +
                  ", numVertices=" + m_totalVertices);
@@ -790,127 +762,15 @@ public class BspServiceWorker<
         }
     }
 
-    /**
-     * Parse the good workers in this superstep and get the mapping of hostname +
-     * partition to hostname and port.
-     *
-     * @return
-     */
-    private Map<String, JSONArray> getWorkerHostPortMap() {
-        List<String> healthyWorkerList = null;
-        String workerHealthyPath =
-            getWorkerHealthyPath(getApplicationAttempt(),
-                                 getSuperstep());
-        try {
-            getZkExt().createExt(workerHealthyPath,
-                                 null,
-                                 Ids.OPEN_ACL_UNSAFE,
-                                 CreateMode.PERSISTENT,
-                                 true);
-        } catch (KeeperException.NodeExistsException e) {
-            LOG.info("getWorkerHostPortMap: Node " + workerHealthyPath +
-                     " already exists, not creating");
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-        try {
-            healthyWorkerList =
-                getZkExt().getChildrenExt(
-                    workerHealthyPath, false, false, false);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-        Map<String, JSONArray> workerHostPortMap =
-            new TreeMap<String, JSONArray>();
-        for (String healthyWorker : healthyWorkerList) {
-            JSONArray hostnamePortArray = null;
-            try {
-                String hostnamePortString =
-                    new String(getZkExt().getData(
-                        workerHealthyPath + "/" + healthyWorker, false, null));
-                LOG.info("getWorkerHostPortMap: Got " + hostnamePortString +
-                         " from " + healthyWorker);
-                hostnamePortArray = new JSONArray(hostnamePortString);
-                if (hostnamePortArray.length() != 2) {
-                    throw new RuntimeException(
-                        "getWorkerHostPortMap: Impossible that znode " +
-                        healthyWorker + " has jsonArray " + hostnamePortArray);
-                }
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-            workerHostPortMap.put(healthyWorker, hostnamePortArray);
-        }
-        return workerHostPortMap;
-    }
+    public VertexRange<I> getVertexRange(I index) {
+        compareVertexRange.setMaxIndex(index);
+        VertexRange<I> result =
+            getVertexRangeSet(getSuperstep()).ceiling(compareVertexRange);
 
-    public NavigableSet<Partition<I>> getPartitionSet() {
-        if (m_partitionSet != null) {
-            return m_partitionSet;
-        }
-
-        m_partitionSet = new TreeSet<Partition<I>>();
-        Map<String, JSONArray> workerHostPortMap = getWorkerHostPortMap();
-        String workerSelectedPath =
-            getWorkerSelectedPath(getApplicationAttempt(),
-                                  getSuperstep());
-        List<String> workerSelectedList = null;
-        try {
-            workerSelectedList =
-                getZkExt().getChildrenExt(workerSelectedPath, false, false, false);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-        for (String worker : workerSelectedList) {
-            try {
-                JSONArray maxIndexArray =
-                    new JSONArray(
-                        new String(
-                            getZkExt().getData(workerSelectedPath + "/" + worker,
-                                         false,
-                                         null)));
-                LOG.debug("getPartitionSet: Got partitions " +
-                         maxIndexArray + " from " + worker);
-                for (int i = 0; i < maxIndexArray.length(); ++i) {
-                    if (!workerHostPortMap.containsKey(worker)) {
-                        throw new RuntimeException(
-                            "getPartitionSet:  Couldn't find worker " +
-                            worker);
-                    }
-                    JSONArray hostPortArray = workerHostPortMap.get(worker);
-                    I index = (I) createVertexIndex();
-                    LOG.debug("getPartitionSet: Getting max index from " +
-                             maxIndexArray.getString(i));
-                    InputStream input =
-                        new ByteArrayInputStream(
-                            maxIndexArray.getString(i).getBytes("UTF-8"));
-                    ((Writable) index).readFields(new DataInputStream(input));
-                    m_partitionSet.add(new Partition<I>(
-                            hostPortArray.getString(0),
-                            hostPortArray.getInt(1),
-                            index));
-                    LOG.debug("getPartitionSet: Found partition: " +
-                             hostPortArray.getString(0) + ":" +
-                             hostPortArray.getInt(1) + " with maxIndex=" +
-                             index);
-                }
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        }
-        return m_partitionSet;
-    }
-
-    public Partition<I> getPartition(I index) {
-        if (m_partitionSet == null) {
-            getPartitionSet();
-        }
-        comparePartition.setMaxIndex(index);
-        Partition<I> result = m_partitionSet.ceiling(comparePartition);
         if (result == null) {
-            LOG.warn("getPartition: no partition for destination vertex " +
-                     index + " -- returning last partition");
-            result = m_partitionSet.last();
+            LOG.debug("getVertexRange: no partition for destination vertex " +
+                       index + " -- returning last partition");
+            result = getVertexRangeSet(getSuperstep()).last();
         }
         return result;
     }
@@ -1054,14 +914,19 @@ public class BspServiceWorker<
             // Write the metadata for this vertex range
             // Format:
             // <index count>
-            //   <index 0 start pos><# vertices for range 0><max index 0>
-            //   <index 1 start pos><# vertices for range 1><max index 1>...
+            //   <index 0 start pos><# vertices><# edges><max index 0>
+            //   <index 1 start pos><# vertices><# edges><max index 1>...
             ByteArrayOutputStream metadataByteStream =
                 new ByteArrayOutputStream();
             DataOutput metadataOutput =
                 new DataOutputStream(metadataByteStream);
             metadataOutput.writeLong(startPos);
             metadataOutput.writeLong(entry.getValue().size());
+            long edgeCount = 0;
+            for (Vertex<I, V, E, M> vertex : entry.getValue()) {
+                edgeCount += vertex.getOutEdgeIterator().size();
+            }
+            metadataOutput.writeLong(edgeCount);
             entry.getKey().write(metadataOutput);
             LOG.debug("storeCheckpoint: Vertex file starting " +
                       "offset = " + startPos + ", length = " +
@@ -1137,51 +1002,47 @@ public class BspServiceWorker<
 
     public void loadCheckpoint(long superstep) {
         // Algorithm:
-        // 1. Find the appropriate metadata files (from master)
-        // 2. Get the vertex ranges for this partition.
-        // 3. Load the vertex ranges into memory from the assigned vertex ranges
-        String checkpointFilesPath =
-            getCheckpointFilesPath(getApplicationAttempt(),
-                                   superstep,
-                                   getHostnamePartitionId());
-        Set<I> vertexRangeSet = getAssignedVertexRanges();
-
-        byte [] zkFilesPath = null;
-        JSONArray metadataFileArray = null;
-        String dataFilePath = null;
-        try {
-            I maxIndex = createVertexIndex();
-            if (getZkExt().exists(checkpointFilesPath, null) == null) {
-                LOG.info("loadCheckpoint: Nothing to load, " +
-                         "not assigned anything");
-                return;
-            }
-            zkFilesPath = getZkExt().getData(checkpointFilesPath, false, null);
-            metadataFileArray= new JSONArray(new String(zkFilesPath));
-            for (int i = 0; i < metadataFileArray.length(); ++i) {
-                dataFilePath = metadataFileArray.getString(i);
-                dataFilePath =
-                    dataFilePath.replace(CHECKPOINT_METADATA_POSTFIX,
-                                         CHECKPOINT_VERTICES_POSTFIX);
-                DataInputStream metadataStream =
-                    getFs().open(new Path(metadataFileArray.getString(i)));
-                long vertexRanges = metadataStream.readLong();
-                for (long j = 0; j < vertexRanges; ++j) {
-                    long startPos = metadataStream.readLong();
-                    long vertexCount = metadataStream.readLong();
-                    maxIndex.readFields(metadataStream);
-                    LOG.info("loadCheckpoint: Got vertex range with " +
-                             "max index " + maxIndex + ", dataFilePath " +
-                             dataFilePath + ", starting offset " +
-                             startPos + ", vertexCount " + vertexCount);
-                    if (vertexRangeSet.contains(maxIndex)) {
-                        loadVertexRange(maxIndex, dataFilePath, startPos);
+        // Check all the vertex ranges for this worker and load the ones
+        // that match my hostname and id.
+        I maxVertexIndex = createVertexIndex();
+        long startPos = -1;
+        long vertexRangeCount = -1;
+        for (VertexRange<I> vertexRange : getVertexRangeSet(getSuperstep())) {
+            if (vertexRange.getHostnameId().compareTo(
+                    getHostnamePartitionId()) == 0) {
+                String metadataFile =
+                    vertexRange.getCheckpointFilePrefix() +
+                    CHECKPOINT_METADATA_POSTFIX;
+                try {
+                    DataInputStream metadataStream =
+                        getFs().open(new Path(metadataFile));
+                    vertexRangeCount = metadataStream.readLong();
+                    for (int i = 0; i < vertexRangeCount; ++i) {
+                        startPos = metadataStream.readLong();
+                        // Skip the vertex count
+                        metadataStream.readLong();
+                        // Skip the edge count
+                        metadataStream.readLong();
+                        maxVertexIndex.readFields(metadataStream);
+                        @SuppressWarnings("unchecked")
+                        int compareTo =
+                            vertexRange.getMaxIndex().compareTo(maxVertexIndex);
+                        LOG.debug("loadCheckpoint: Comparing " +
+                                  vertexRange.getMaxIndex() + " and " +
+                                  maxVertexIndex + " = " + compareTo);
+                        if (compareTo == 0) {
+                            loadVertexRange(
+                                vertexRange.getMaxIndex(),
+                                vertexRange.getCheckpointFilePrefix() +
+                                    CHECKPOINT_VERTICES_POSTFIX,
+                                startPos);
+                        }
                     }
+                    metadataStream.close();
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
                 }
-                metadataStream.close();
             }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
         }
     }
 

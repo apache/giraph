@@ -33,6 +33,9 @@ public class BspJob extends Job {
     /** Vertex writer class - optional */
     public static final String BSP_VERTEX_WRITER_CLASS =
         "bsp.vertexWriterClass";
+    /** Vertex range balancer class - optional */
+    public static final String BSP_VERTEX_RANGE_BALANCER_CLASS =
+        "bsp.vertexRangeBalancerClass";
 
     /**
      * Minimum number of simultaneous processes before this job can run (int)

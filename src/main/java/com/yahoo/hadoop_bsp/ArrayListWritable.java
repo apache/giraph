@@ -5,8 +5,6 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
 
-import org.apache.hadoop.conf.Configurable;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 
 /**

@@ -47,7 +47,7 @@ public abstract class BasicRPCCommunications<
     protected String myName;
     /** Name of RPC server, == myAddress.toString() */
     protected Server server;
-    /** Centralized service, needed to get partitions */
+    /** Centralized service, needed to get vertex ranges */
     protected CentralizedServiceWorker<I, V, E, M> service;
     /** Hadoop configuration */
     protected Configuration conf;
@@ -58,7 +58,9 @@ public abstract class BasicRPCCommunications<
 
     /** Address of RPC server */
     private InetSocketAddress myAddress;
-    /** Map of threads mapping from remote socket address to RPC client threads */
+    /**
+     * Map of threads mapping from remote socket address to RPC client threads
+     */
     private Map<InetSocketAddress, PeerThread> peerThreads =
         new HashMap<InetSocketAddress, PeerThread>();
     /**
@@ -67,7 +69,9 @@ public abstract class BasicRPCCommunications<
      */
     private Map<InetSocketAddress, HashMap<I, ArrayListWritable<M>>> outMessages =
         new HashMap<InetSocketAddress, HashMap<I, ArrayListWritable<M>>>();
-    /** Map of incoming messages, mapping from vertex index to list of messages */
+    /**
+     * Map of incoming messages, mapping from vertex index to list of messages
+     */
     private Map<I, List<M>> inMessages =
         new HashMap<I, List<M>>();
     /**
@@ -79,9 +83,9 @@ public abstract class BasicRPCCommunications<
     /** Place holder for an empty message list.
      * Used for vertices with no inbound messages. */
     private List<M> emptyMsgList = new ArrayList<M>();
-    /** Cached map of partition to remote socket address */
-    private Map<Partition<I>, InetSocketAddress> partitionMap =
-        new HashMap<Partition<I>, InetSocketAddress>();
+    /** Cached map of vertex ranges to remote socket address */
+    private Map<VertexRange<I>, InetSocketAddress> vertexRangeMap =
+        new HashMap<VertexRange<I>, InetSocketAddress>();
     /** Maximum size of cached message list, before sending it out */
     int maxSize;
 
@@ -97,7 +101,9 @@ public abstract class BasicRPCCommunications<
          * mapping from vertex index to list of messages
          */
         Map<I, ArrayListWritable<M>> outMessagesPerPeer;
-        /** Client interface: RPC proxy for remote server, this class for local */
+        /**
+         * Client interface: RPC proxy for remote server, this class for local
+         */
         CommunicationsInterface<I, M> peer;
         /** Maximum size of cached message list, before sending it out */
         int maxSize;
@@ -178,7 +184,8 @@ public abstract class BasicRPCCommunications<
                                 // continue;
                             }
                             if (flushLargeMsgLists) {
-                                largeMsgListKeysValue = new TreeSet<I>(largeMsgListKeys);
+                                largeMsgListKeysValue =
+                                    new TreeSet<I>(largeMsgListKeys);
                                 flushLargeMsgLists = false;
                                 LOG.info(peer.getName() + ": flushLargeMsgLists " + largeMsgListKeysValue.size());
                                 break;
@@ -275,7 +282,8 @@ public abstract class BasicRPCCommunications<
     throws IOException, UnknownHostException, InterruptedException {
         this.service = service;
         this.conf = context.getConfiguration();
-        this.maxSize = conf.getInt(BspJob.BSP_MSG_SIZE, BspJob.BSP_MSG_DEFAULT_SIZE);
+        this.maxSize = conf.getInt(BspJob.BSP_MSG_SIZE,
+                                   BspJob.BSP_MSG_DEFAULT_SIZE);
 
         combiner = null;
         if (conf.get(BspJob.BSP_COMBINER_CLASS) != null)  {
@@ -326,15 +334,17 @@ public abstract class BasicRPCCommunications<
         server.start();
 
         this.myName = myAddress.toString();
-        LOG.info("BasicRPCCommunications: Started RPC communication server: " + myName);
+        LOG.info("BasicRPCCommunications: Started RPC communication server: " +
+                 myName);
 
-        Set<Partition<I>> partitions = service.getPartitionSet();
-        for (Partition<I> partition : partitions) {
+        Set<VertexRange<I>> vertexRangeSet =
+            service.getVertexRangeSet(service.getSuperstep());
+        for (VertexRange<I> vertexRange : vertexRangeSet) {
             LOG.info("BasicRPCCommunications: Connecting to " +
-                     partition.getHostname() + ", port = " +
-                     partition.getPort() + ", max index = " +
-                     partition.getMaxIndex());
-            startPeerConnectionThread(partition, jobId, jt);
+                     vertexRange.getHostname() + ", port = " +
+                     vertexRange.getPort() + ", max index = " +
+                     vertexRange.getMaxIndex());
+            startPeerConnectionThread(vertexRange, jobId, jt);
         }
     }
 
@@ -345,16 +355,16 @@ public abstract class BasicRPCCommunications<
     /**
      * Starts a client.
      *
-     * @param partition
+     * @param vertexRange
      * @throws IOException
      */
-    private void startPeerConnectionThread(Partition<I> partition,
+    private void startPeerConnectionThread(VertexRange<I> vertexRange,
                                            String jobId, J jt)
     throws IOException, InterruptedException {
 
         final InetSocketAddress addr = new InetSocketAddress(
-                                           partition.getHostname(),
-                                           partition.getPort());
+                                           vertexRange.getHostname(),
+                                           vertexRange.getPort());
 
         InetSocketAddress addrUnresolved = InetSocketAddress.createUnresolved(
                                            addr.getHostName(), addr.getPort());
@@ -376,7 +386,8 @@ public abstract class BasicRPCCommunications<
         outMsgMap = new HashMap<I, ArrayListWritable<M>>();
         outMessages.put(addrUnresolved, outMsgMap);
 
-        PeerThread th = new PeerThread(outMsgMap, peer, maxSize, isProxy, combiner);
+        PeerThread th =
+            new PeerThread(outMsgMap, peer, maxSize, isProxy, combiner);
         th.start();
         peerThreads.put(addrUnresolved, th);
     }
@@ -445,31 +456,33 @@ public abstract class BasicRPCCommunications<
 
     public void sendMessage(I destVertex, M msg) {
         LOG.debug("sendMessage: Send bytes (" + msg.toString() + ") to " + destVertex);
-        Partition<I> destPartition = service.getPartition(destVertex);
-        if (destPartition == null) {
-            LOG.error("sendMessage: No partition found for " + destVertex);
+        VertexRange<I> destVertexRange = service.getVertexRange(destVertex);
+        if (destVertexRange == null) {
+            LOG.error("sendMessage: No vertexRange found for " + destVertex);
         }
-        InetSocketAddress addr = partitionMap.get(destPartition);
+        InetSocketAddress addr = vertexRangeMap.get(destVertexRange);
         if (addr == null) {
             addr = InetSocketAddress.createUnresolved(
-                                                      destPartition.getHostname(),
-                                                      destPartition.getPort());
-            partitionMap.put(destPartition, addr);
+                                                      destVertexRange.getHostname(),
+                                                      destVertexRange.getPort());
+            vertexRangeMap.put(destVertexRange, addr);
         }
         LOG.debug("sendMessage: Send bytes (" + msg.toString() + ") to " + destVertex +
-                  " on " + destPartition.getHostname() + ":" + destPartition.getPort());
+                  " on " + destVertexRange.getHostname() + ":" + destVertexRange.getPort());
         HashMap<I, ArrayListWritable<M>> msgMap = outMessages.get(addr);
         if (msgMap == null) { // should never happen after constructor
             throw new RuntimeException("msgMap did not exist for "
-                                       + destPartition.getHostname() + ":" + destPartition.getPort());
+                                       + destVertexRange.getHostname() + ":" + destVertexRange.getPort());
         }
 
         ArrayListWritable<M> msgList = null;
         synchronized(msgMap) {
             msgList = msgMap.get(destVertex);
             if (msgList == null) { // should only happen once
-                msgList = new ArrayListWritable<M>((Class<M>)
-                        this.instantiableVertex.createMsgValue().getClass());
+                @SuppressWarnings("unchecked")
+                Class<M> msgClass = (Class<M>)
+                    this.instantiableVertex.createMsgValue().getClass();
+                msgList = new ArrayListWritable<M>(msgClass);
                 msgMap.put(destVertex, msgList);
             }
         }
