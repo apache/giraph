@@ -6,8 +6,6 @@ import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
 
-import org.apache.log4j.Logger;
-
 import com.yahoo.hadoop_bsp.HadoopVertex;
 
 /**
@@ -16,8 +14,6 @@ import com.yahoo.hadoop_bsp.HadoopVertex;
  */
 public class TestFailVertex extends
     HadoopVertex<LongWritable, DoubleWritable, FloatWritable, DoubleWritable> {
-    /** Logger */
-    private static final Logger LOG = Logger.getLogger(TestFailVertex.class);
 
     static long superstep = 0;
 

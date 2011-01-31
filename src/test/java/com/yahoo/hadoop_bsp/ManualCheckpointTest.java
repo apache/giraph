@@ -173,12 +173,13 @@ public class ManualCheckpointTest extends TestCase implements Watcher {
             FileStatus [] fileStatusArr = hdfs.listStatus(outputPath);
             assertTrue(fileStatusArr.length == 1);
             assertTrue(fileStatusArr[0].getLen() == 34);
+            long idSum =
+                ((LongWritable) BspJob.BspMapper.getAggregator(
+                    LongSumAggregator.class.getName()).
+                        getAggregatedValue()).get();
+            System.out.println("testBspCheckpoint: idSum = " + idSum);
+            assertTrue(idSum == (4*5/2)*7);
         }
-        long idSum = ((LongWritable) BspJob.BspMapper.
-            getAggregator(
-                LongSumAggregator.class.getName()).getAggregatedValue()).get();
-        System.out.println("testBspCheckpoint: idSum = " + idSum);
-        assertTrue(idSum == (4*5/2)*7);
 
         // Restart the test from superstep 3
         conf.setLong(BspJob.BSP_RESTART_SUPERSTEP, 3);
@@ -194,12 +195,13 @@ public class ManualCheckpointTest extends TestCase implements Watcher {
             FileStatus [] fileStatusArr = hdfs.listStatus(outputPath);
             assertTrue(fileStatusArr.length == 1);
             assertTrue(fileStatusArr[0].getLen() == 34);
+            long idSum =
+                ((LongWritable) BspJob.BspMapper.getAggregator(
+                    LongSumAggregator.class.getName()).
+                        getAggregatedValue()).get();
+            System.out.println("testBspCheckpoint: idSum = " + idSum);
+            assertTrue(idSum == (4*5/2)*7);
         }
-        idSum = ((LongWritable) BspJob.BspMapper.
-            getAggregator(
-                LongSumAggregator.class.getName()).getAggregatedValue()).get();
-        System.out.println("testBspCheckpoint: idSum = " + idSum);
-        assertTrue(idSum == (4*5/2)*7);
     }
 
     public void process(WatchedEvent event) {

@@ -754,7 +754,7 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
      * @param superstep superstep to check
      */
     private void collectAndProcessAggregatorValues(long superstep) {
-        if (superstep <= 1) {
+        if (superstep <= 0) {
             return;
         }
         Map<String, Aggregator<Writable>> aggregatorMap =
