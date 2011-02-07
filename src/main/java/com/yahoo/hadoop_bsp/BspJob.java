@@ -522,7 +522,9 @@ public class BspJob extends Job {
     final public boolean run() throws IOException, InterruptedException,
         ClassNotFoundException {
         setNumReduceTasks(0);
-        setJarByClass(BspJob.class);
+        if (getJar() == null) {
+            setJarByClass(BspJob.class);
+        }
         setMapperClass(BspMapper.class);
         setInputFormatClass(BspInputFormat.class);
         return waitForCompletion(true);
