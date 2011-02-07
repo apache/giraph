@@ -176,6 +176,7 @@ public class SimpleBspTest extends TestCase implements Watcher {
         System.out.println("testBspFail: Sending job to job tracker " +
                        m_jobTracker + " with jar path " + m_jarLocation);
         conf.set("mapred.job.tracker", m_jobTracker);
+        conf.setInt("mapred.map.max.attempts", 2);
         conf.setInt(BspJob.BSP_INITIAL_PROCESSES, m_numProcs);
         conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
         conf.setInt(BspJob.BSP_MIN_PROCESSES, m_numProcs);

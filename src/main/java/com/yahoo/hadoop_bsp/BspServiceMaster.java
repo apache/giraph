@@ -30,9 +30,10 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.JobClient;
 
 import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.RunningJob;
-import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapred.JobID;
+import org.apache.hadoop.mapred.RunningJob;
+import org.apache.hadoop.mapreduce.Counter;
+import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Mapper.Context;
 
 import org.apache.zookeeper.KeeperException;
@@ -55,6 +56,8 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
     List<String> m_chosenWorkerList = null;
     /** the superstep when the chosen worker list was initially selected */
     Long m_chosenSuperstep = new Long(-1);
+    /** Superstep counter */
+    private Counter m_superstepCounter = null;
     /** Am I the master? */
     private boolean m_isMaster = false;
     /** Vertex range balancer class */
@@ -582,6 +585,7 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
         // In that case, the input splits are not set, they will be faked by
         // the checkpoint files.  Each checkpoint file will be an input split
         // and the input split
+        m_superstepCounter = getContext().getCounter("BspJob", "Superstep");
         if (getManualRestartSuperstep() == -1) {
             return;
         }
@@ -589,7 +593,10 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
             LOG.fatal("setup: Impossible to restart superstep " +
                       getManualRestartSuperstep());
             setJobState(BspService.State.FAILED);
+        } else {
+            m_superstepCounter.increment(getManualRestartSuperstep());
         }
+
     }
 
     public boolean becomeMaster() {
@@ -1209,6 +1216,7 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
         }
 
         incrCachedSuperstep();
+        m_superstepCounter.increment(1);
         return (verticesFinished == verticesTotal);
     }
 

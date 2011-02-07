@@ -688,6 +688,7 @@ public class BspServiceWorker<
                  " with finishedVertices=" + finishedVertices +
                  ", numVertices=" + m_totalVertices);
         incrCachedSuperstep();
+        getContext().setStatus("Superstep " + getSuperstep());
         return (finishedVertices == m_totalVertices);
     }
 
