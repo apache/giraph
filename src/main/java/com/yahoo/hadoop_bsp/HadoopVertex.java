@@ -1,6 +1,11 @@
 package com.yahoo.hadoop_bsp;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -8,20 +13,24 @@ import java.util.TreeMap;
 
 import org.apache.log4j.Logger;
 
+import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 @SuppressWarnings("rawtypes")
-public abstract class
-    HadoopVertex<I extends WritableComparable, V extends Writable,
-    E extends Writable, M extends Writable>
-        implements MutableVertex<I, V, E, M> {
+public abstract class HadoopVertex<
+        I extends WritableComparable, V extends Writable,
+        E extends Writable, M extends Writable>
+        implements MutableVertex<I, V, E, M>, Writable, Configurable {
     /** Class logger */
     private static final Logger LOG = Logger.getLogger(HadoopVertex.class);
     /** Class-wide superstep */
     private static long m_superstep = 0;
     /** Class-wide number of vertices */
     private static long m_numVertices = -1;
+    /** Instantiatable vertex reader */
+    private VertexReader m_instantiableVertexReader;
     /** BSP Mapper for this Vertex */
     private BspJob.BspMapper<I, V, E, M> m_bspMapper;
     /** Vertex id */
@@ -29,9 +38,13 @@ public abstract class
     /** Vertex value */
     private V m_vertexValue;
     /** Map of destination vertices and their edge values */
-    private Map<I, E> m_destEdgeMap = new TreeMap<I, E>();
+    private final Map<I, E> m_destEdgeMap = new TreeMap<I, E>();
     /** If true, do not do anymore computation on this vertex. */
     private boolean m_halt = false;
+    /** List of incoming messages from the previous superstep */
+    private final List<M> m_msgList = new ArrayList<M>();
+    /** Configuration */
+    private Configuration conf;
 
     public void preApplication() {
         // Do nothing, might be overrided by the user
@@ -141,7 +154,7 @@ public abstract class
     }
 
     public final void sendMsg(I id, M msg) {
-       m_bspMapper.sendMsg(id, msg);
+       m_bspMapper.getWorkerCommunications().sendMessage(id, msg);
     }
 
     public final void sentMsgToAllEdges(M msg) {
@@ -158,6 +171,61 @@ public abstract class
         return m_halt;
     }
 
+    @SuppressWarnings("unchecked")
+    final public void readFields(DataInput in) throws IOException {
+        if (m_instantiableVertexReader == null) {
+            Class<? extends VertexInputFormat<I, V, E>> vertexInputFormatClass =
+                (Class<? extends VertexInputFormat<I, V, E>>)
+                    getConf().getClass(
+                        BspJob.BSP_VERTEX_INPUT_FORMAT_CLASS,
+                        VertexInputFormat.class,
+                        VertexInputFormat.class);
+            try {
+                m_instantiableVertexReader =
+                    vertexInputFormatClass.newInstance().createVertexReader(
+                        null, null);
+            } catch (Exception e) {
+                throw new RuntimeException(
+                    "readFields: Couldn't instantiate vertex reader");
+            }
+        }
+
+        m_vertexId = (I) m_instantiableVertexReader.createVertexId();
+        m_vertexId.readFields(in);
+        m_vertexValue = (V) m_instantiableVertexReader.createVertexValue();
+        m_vertexValue.readFields(in);
+        long edgeMapSize = in.readLong();
+        for (long i = 0; i < edgeMapSize; ++i) {
+            I destVertexId = (I) m_instantiableVertexReader.createVertexId();
+            destVertexId.readFields(in);
+            E edgeValue = (E) m_instantiableVertexReader.createEdgeValue();
+            edgeValue.readFields(in);
+            addEdge(destVertexId, edgeValue);
+        }
+        long msgListSize = in.readLong();
+        for (long i = 0; i < msgListSize; ++i) {
+            M msg = createMsgValue();
+            msg.readFields(in);
+            m_msgList.add(msg);
+        }
+        m_halt = in.readBoolean();
+    }
+
+    final public void write(DataOutput out) throws IOException {
+        m_vertexId.write(out);
+        m_vertexValue.write(out);
+        out.writeLong(m_destEdgeMap.size());
+        for (Entry<I, E> entry : m_destEdgeMap.entrySet()) {
+            entry.getKey().write(out);
+            entry.getValue().write(out);
+        }
+        out.writeLong(m_msgList.size());
+        for (M msg : m_msgList) {
+            msg.write(out);
+        }
+        out.writeBoolean(m_halt);
+    }
+
     /**
      * Register an aggregator.
      *
@@ -166,8 +234,8 @@ public abstract class
      * @return boolean (false when already registered)
      */
     public final static <A extends Writable> boolean registerAggregator(
-                                      String name, Aggregator<A> aggregator) {
-       return BspJob.BspMapper.registerAggregator(name, aggregator);
+            String name, Aggregator<A> aggregator) {
+        return BspJob.BspMapper.registerAggregator(name, aggregator);
     }
 
     /**
@@ -177,7 +245,7 @@ public abstract class
      * @return Aggregator<A> (null when not registered)
      */
     public final static <A extends Writable> Aggregator<A> getAggregator(
-                                      String name) {
+            String name) {
         return BspJob.BspMapper.getAggregator(name);
     }
 
@@ -192,6 +260,18 @@ public abstract class
      */
     public final static boolean useAggregator(String name) {
         return BspJob.BspMapper.useAggregator(name);
+    }
+
+    public List<M> getMsgList() {
+        return m_msgList;
+    }
+
+    public final Configuration getConf() {
+        return conf;
+    }
+
+    public final void setConf(Configuration conf) {
+        this.conf = conf;
     }
 }
 

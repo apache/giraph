@@ -19,7 +19,7 @@ public interface VertexReader<I extends WritableComparable,
      * @throws IOException
      * @throws InterruptedException
      */
-    public void initialize(InputSplit inputSplit, TaskAttemptContext context)
+    void initialize(InputSplit inputSplit, TaskAttemptContext context)
         throws IOException;
 
     /**
@@ -64,7 +64,7 @@ public interface VertexReader<I extends WritableComparable,
      *
      * @throws IOException
      */
-    public void close() throws IOException;
+    void close() throws IOException;
 
     /**
      * How much of the input has the {@link VertexReader} consumed i.e.

@@ -17,7 +17,7 @@ public interface CentralizedService<I extends WritableComparable,
     /**
      * Setup (must be called prior to any other function)
      */
-    public void setup();
+    void setup();
 
     /**
      * Get the representative Vertex for this worker.  It can used to
@@ -25,21 +25,21 @@ public interface CentralizedService<I extends WritableComparable,
      *
      * @return representation vertex
      */
-    public Vertex<I, V, E, M> getRepresentativeVertex();
+    Vertex<I, V, E, M> getRepresentativeVertex();
 
     /**
      * Get the current global superstep of the application to work on.
      *
      * @return global superstep (begins at -1)
      */
-    public long getSuperstep();
+    long getSuperstep();
 
     /**
      * Get the manually restart superstep
      *
      * @return -1 if not manually restarted, otherwise the superstep id
      */
-    public long getManualRestartSuperstep();
+    long getManualRestartSuperstep();
 
     /**
      * Given a superstep, should it be checkpointed based on the
@@ -48,7 +48,7 @@ public interface CentralizedService<I extends WritableComparable,
      * @param superstep superstep to check against frequency
      * @return true if checkpoint frequency met or superstep is 1.
      */
-    public boolean checkpointFrequencyMet(long superstep);
+    boolean checkpointFrequencyMet(long superstep);
 
     /**
      * Clean up the service (no calls may be issued after this)

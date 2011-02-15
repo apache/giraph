@@ -22,6 +22,7 @@ public class MasterThread<
 
     /** Constructor */
     MasterThread(BspServiceMaster<I, V, E, M> bspServiceMaster) {
+        super(MasterThread.class.getName());
         m_bspServiceMaster = bspServiceMaster;
     }
 

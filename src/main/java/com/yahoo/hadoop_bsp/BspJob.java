@@ -1,7 +1,6 @@
 package com.yahoo.hadoop_bsp;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeMap;
@@ -236,45 +235,24 @@ public class BspJob extends Job {
         /** Coordination service master thread */
         Thread m_masterThread = null;
         /** Communication service */
-        private RPCCommunications<I, V, E, M> m_commService = null;
+        private ServerInterface<I, V, E, M> m_commService = null;
         /** The map should be run exactly once, or else there is a problem. */
         boolean m_mapAlreadyRun = false;
         /** Manages the ZooKeeper servers if necessary (dynamic startup) */
-        ZooKeeperManager m_manager;
+        private ZooKeeperManager m_manager;
         /** Configuration */
-        Configuration m_conf = null;
+        private Configuration m_conf = null;
         /** Already complete? */
-        boolean m_done = false;
+        private boolean m_done = false;
 
         /**
-         * Gets a vertex's message list.  Used for storing checkpoints and for
-         * vertex computation.
+         * Get the worker communications, a subset of the functionality.
          *
-         * @param vertex Vertex to get the message list for.
-         * @return messgage list for this vertex (might be empty if no messages)
+         * @return worker communication object
          */
-        final public List<M> getVertexMessageList(final I vertex) {
-            return m_commService.getVertexMessageList(vertex);
-        }
-
-        /**
-         * Passes message on to communication service.
-         *
-         * @param indx
-         * @param msg
-         */
-        final public void sendMsg(I indx, M msg) {
-            m_commService.sendMessage(indx, msg);
-        }
-
-        /**
-         * Set the vertex message list when restarting from a checkpoint
-         *
-         * @param vertexId vertex id
-         * @param msgList list of messages
-         */
-        final public void setVertexMessageList(I vertexId, List<M> msgList) {
-            m_commService.setVertexMessageList(vertexId, msgList);
+        final public WorkerCommunications<I, V, E, M>
+                getWorkerCommunications() {
+            return m_commService;
         }
 
         /**
@@ -315,9 +293,13 @@ public class BspJob extends Job {
          * Default handler for uncaught exceptions.
          *
          */
-        class OverrideExceptionHandler implements Thread.UncaughtExceptionHandler {
+        class OverrideExceptionHandler
+                implements Thread.UncaughtExceptionHandler {
             public void uncaughtException(Thread t, Throwable e) {
-                System.err.println("BspMapper: uncaughtException.");
+                System.err.println(
+                    "uncaughtException: OverrideExceptionHandler on thread " +
+                    t.getName() + ", msg = " +  e.getMessage() +
+                    ", exiting...");
                 e.printStackTrace();
                 System.exit(1);
             }
@@ -328,7 +310,8 @@ public class BspJob extends Job {
             throws IOException, InterruptedException {
 
             // setting the default handler for uncaught exceptions.
-            Thread.setDefaultUncaughtExceptionHandler(new OverrideExceptionHandler());
+            Thread.setDefaultUncaughtExceptionHandler(
+                new OverrideExceptionHandler());
 
             m_conf = context.getConfiguration();
             // Do some initial setup (possibly starting up a Zookeeper service),
@@ -377,7 +360,8 @@ public class BspJob extends Job {
             } catch (Exception e) {
                 LOG.error(e.getMessage());
                 if (m_manager != null ) {
-                    m_manager.offlineZooKeeperServers(ZooKeeperManager.State.FAILED);
+                    m_manager.offlineZooKeeperServers(
+                    ZooKeeperManager.State.FAILED);
                 }
                 throw new RuntimeException(e);
             }
@@ -418,8 +402,9 @@ public class BspJob extends Job {
                           " freeMem=" + Runtime.getRuntime().freeMemory());
                 if ((superstep >= 1) && (m_commService == null)) {
                     LOG.info("map: Starting communication service...");
-                    m_commService = new RPCCommunications<I, V, E, M>(
-                            context, m_serviceWorker);
+                    m_commService =
+                        new RPCCommunications<I, V, E, M>(context,
+                                                          m_serviceWorker);
                 } else {
                     m_commService.prepareSuperstep();
                 }
@@ -434,6 +419,9 @@ public class BspJob extends Job {
                     m_serviceWorker.storeCheckpoint();
                 }
 
+                m_serviceWorker.exchangeVertexRanges();
+                context.progress();
+
                 maxIndexStatsMap.clear();
                 HadoopVertex.setSuperstep(superstep);
                 HadoopVertex.setNumVertices(m_serviceWorker.getTotalVertices());
@@ -441,16 +429,22 @@ public class BspJob extends Job {
                 m_serviceWorker.getRepresentativeVertex().preSuperstep();
                 context.progress();
 
-                Map<I, List<Vertex<I, V, E, M>>> maxIndexVertexListMap =
-                    m_serviceWorker.getMaxIndexVertexLists();
-                for (Map.Entry<I, List<Vertex<I, V, E, M>>> entry :
-                    maxIndexVertexListMap.entrySet()) {
+                for (Map.Entry<I, VertexRange<I, V, E, M>> entry :
+                    m_serviceWorker.getVertexRangeMap().entrySet()) {
+                    // Only report my own vertex range stats
+                    if (!entry.getValue().getHostname().equals(
+                            m_serviceWorker.getHostname()) ||
+                            (entry.getValue().getPort() !=
+                            m_serviceWorker.getPort())) {
+                        continue;
+                    }
+
                     verticesFinished = 0;
-                    for (Vertex<I, V, E, M> vertex : entry.getValue()) {
+                    for (Vertex<I, V, E, M> vertex :
+                            entry.getValue().getVertexList()) {
                         if (!vertex.isHalted()) {
                             Iterator<M> vertexMsgIt =
-                                getVertexMessageList(
-                                    vertex.getVertexId()).iterator();
+                                vertex.getMsgList().iterator();
                             context.progress();
                             vertex.compute(vertexMsgIt);
                         }
@@ -460,8 +454,9 @@ public class BspJob extends Job {
                     }
                     long [] statArray = new long [2];
                     statArray[0] = verticesFinished;
-                    statArray[1] = entry.getValue().size();
-                    maxIndexStatsMap.put(entry.getKey(), statArray);
+                    statArray[1] = entry.getValue().getVertexList().size();
+                    maxIndexStatsMap.put(entry.getKey(),
+                                         statArray);
                     LOG.info("map: " + statArray[0] + " of " + statArray[1] +
                              " vertices finished for vertex range max " +
                              "index = " + entry.getKey() +

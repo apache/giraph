@@ -5,8 +5,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 
-import org.apache.log4j.Logger;
-
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.ipc.RPC;
@@ -15,12 +13,11 @@ import org.apache.hadoop.mapreduce.Mapper.Context;
 
 @SuppressWarnings("rawtypes")
 public class RPCCommunications<
-    I extends WritableComparable,
-    V extends Writable,
-    E extends Writable,
-    M extends Writable> extends BasicRPCCommunications<I, V, E, M, Object> {
-    /** Class logger */
-    public static final Logger LOG = Logger.getLogger(RPCCommunications.class);
+        I extends WritableComparable,
+        V extends Writable,
+        E extends Writable,
+        M extends Writable>
+        extends BasicRPCCommunications<I, V, E, M, Object> {
 
     public RPCCommunications(Context context,
                              CentralizedServiceWorker<I, V, E, M> service)
@@ -28,10 +25,12 @@ public class RPCCommunications<
         super(context, service);
     }
 
+    @Override
     protected Object createJobToken() throws IOException {
         return null;
     }
 
+    @Override
     protected Server getRPCServer(
             InetSocketAddress myAddress, int numHandlers, String jobId,
             Object jt) throws IOException {
@@ -39,13 +38,15 @@ public class RPCCommunications<
                 myAddress.getPort(), numHandlers, false, conf);
     }
 
-    protected CommunicationsInterface<I, M> getRPCProxy(
+    @Override
+    protected CommunicationsInterface<I, V, E, M> getRPCProxy(
             final InetSocketAddress addr, String jobId, Object jt)
             throws IOException, InterruptedException {
         @SuppressWarnings("unchecked")
-        CommunicationsInterface<I, M> proxy =
-            (CommunicationsInterface<I, M>) RPC.getProxy(CommunicationsInterface.class,
-                                                         versionID, addr, conf);
+        CommunicationsInterface<I, V, E, M> proxy =
+            (CommunicationsInterface<I, V, E, M>) RPC.getProxy(
+                CommunicationsInterface.class,
+                versionID, addr, conf);
         return proxy;
     }
 }

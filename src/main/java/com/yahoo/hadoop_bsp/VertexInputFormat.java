@@ -39,7 +39,7 @@ public interface VertexInputFormat<I extends WritableComparable,
      * @param numSplits number of splits for the input
      * @return an array of {@link InputSplit}s for the job.
      */
-    public List<InputSplit> getSplits(Configuration conf, int numSplits)
+    List<InputSplit> getSplits(Configuration conf, int numSplits)
         throws IOException, InterruptedException;
 
     /**
@@ -52,6 +52,7 @@ public interface VertexInputFormat<I extends WritableComparable,
      * @throws IOException
      * @throws InterruptedException
      */
-    public VertexReader<I, V, E> createVertexReader(InputSplit split,
-        TaskAttemptContext context) throws IOException;
+    VertexReader<I, V, E> createVertexReader(InputSplit split,
+                                             TaskAttemptContext context)
+                                             throws IOException;
 }

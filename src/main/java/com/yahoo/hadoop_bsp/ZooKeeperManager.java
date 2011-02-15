@@ -94,7 +94,7 @@ public class ZooKeeperManager {
     public enum State {
         FAILED,
         FINISHED
-    }   
+    }
 
     /**
      * Generate the final ZooKeeper coordination directory
@@ -119,6 +119,7 @@ public class ZooKeeperManager {
          * @param is InputStream to dump to LOG.info
          */
         public StreamCollector(final InputStream is) {
+            super(StreamCollector.class.getName());
             m_is = is;
         }
 

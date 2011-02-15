@@ -46,17 +46,31 @@ public class TestCheckpointVertex extends
             voteToHalt();
         }
         sumAggregator.aggregate(getVertexId().get());
-        System.out.println("sum = " + sumAggregator.getAggregatedValue().get());
-        int vertexValue = getVertexValue().get();
+        System.out.println("compute: sum = " +
+                           sumAggregator.getAggregatedValue().get() +
+                           " for vertex " + getVertexId());
         float msgValue = 0.0f;
         while (msgIterator.hasNext()) {
-            msgValue += msgIterator.next().get();
+            float curMsgValue = msgIterator.next().get();
+            msgValue += curMsgValue;
+            System.out.println("compute: got msgValue = " + curMsgValue +
+                               " for vertex " + getVertexId() +
+                               " on superstep " + getSuperstep());
         }
+        int vertexValue = getVertexValue().get();
         setVertexValue(new IntWritable(vertexValue + (int) msgValue));
+        System.out.println("compute: vertex " + getVertexId() + " has value " +
+                           getVertexValue() + " on superstep " + getSuperstep());
         OutEdgeIterator<LongWritable, FloatWritable> it = getOutEdgeIterator();
         while (it.hasNext()) {
             Map.Entry<LongWritable, FloatWritable> entry = it.next();
             float edgeValue = entry.getValue().get();
+            System.out.println("compute: vertex " + getVertexId() +
+                               " sending edgeValue " + edgeValue +
+                               " vertexValue " + vertexValue +
+                               " total " + (edgeValue + (float) vertexValue) +
+                               " to vertex " + entry.getKey() +
+                               " on superstep " + getSuperstep());
             entry.getValue().set(edgeValue + (float) vertexValue);
             sendMsg(entry.getKey(), new FloatWritable(edgeValue));
         }

@@ -23,7 +23,7 @@ public interface CentralizedServiceMaster<I extends WritableComparable,
      * Become the master.
      * @return true if became the master, false if the application is done.
      */
-    public boolean becomeMaster();
+    boolean becomeMaster();
 
     /**
      * Create the InputSplits from the index range based on the user-defined
@@ -32,18 +32,18 @@ public interface CentralizedServiceMaster<I extends WritableComparable,
      *
      * @return number of partitions
      */
-    public int createInputSplits();
+    int createInputSplits();
 
     /**
      * Master coordinates the superstep
      *
      * @return true if this is the last barrier (application done)
      */
-    public boolean coordinateSuperstep();
+    boolean coordinateSuperstep();
 
     /**
      * Master determines the job state.
      * @param state state of the job
      */
-    public void setJobState(State state);
+    void setJobState(State state);
 }

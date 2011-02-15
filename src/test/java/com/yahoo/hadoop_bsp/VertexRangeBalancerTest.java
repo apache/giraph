@@ -6,15 +6,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 import com.yahoo.hadoop_bsp.examples.TestCheckpointVertex;
+import com.yahoo.hadoop_bsp.examples.TestSuperstepBalancer;
 import com.yahoo.hadoop_bsp.examples.TestVertexInputFormat;
 import com.yahoo.hadoop_bsp.examples.TestVertexReader;
 import com.yahoo.hadoop_bsp.examples.TestVertexWriter;
-import com.yahoo.hadoop_bsp.lib.LongSumAggregator;
 
 import junit.framework.Test;
 import junit.framework.TestSuite;
@@ -22,17 +21,14 @@ import junit.framework.TestSuite;
 /**
  * Unit test for manual checkpoint restarting
  */
-public class ManualCheckpointTest extends BspJobTestCase {
-    /** Where the checkpoints will be stored and restarted */
-    private final String HDFS_CHECKPOINT_DIR =
-        "/tmp/testBspCheckpoints";
+public class VertexRangeBalancerTest extends BspJobTestCase {
 
     /**
      * Create the test case
      *
      * @param testName name of the test case
      */
-    public ManualCheckpointTest(String testName) {
+    public VertexRangeBalancerTest(String testName) {
         super(testName);
     }
 
@@ -40,31 +36,35 @@ public class ManualCheckpointTest extends BspJobTestCase {
      * @return the suite of tests being tested
      */
     public static Test suite() {
-        return new TestSuite(ManualCheckpointTest.class);
+        return new TestSuite(VertexRangeBalancerTest.class);
     }
 
     /**
-     * Run a sample BSP job locally and test checkpointing.
+     * Run a sample BSP job locally and test how the vertex ranges are sent
+     * from one worker to another.
+     *
      * @throws IOException
      * @throws ClassNotFoundException
      * @throws InterruptedException
      */
-    public void testBspCheckpoint()
+    public void testSuperstepBalancer()
         throws IOException, InterruptedException, ClassNotFoundException {
         Configuration conf = new Configuration();
         conf.set("mapred.jar", getJarLocation());
         // Allow this test to be run on a real Hadoop setup
         if (getJobTracker() != null) {
-            System.out.println("testBspCheckpoint: Sending job to job tracker " +
-                       getJarLocation() + " with jar path " + getJobTracker());
+            System.out.println("testSuperstepBalancer: Sending job to " +
+                               "job tracker " + getJarLocation() +
+                               " with jar path " + getJobTracker());
             conf.set("mapred.job.tracker", getJobTracker());
             conf.setInt(BspJob.BSP_INITIAL_PROCESSES, getNumWorkers());
             conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
             conf.setInt(BspJob.BSP_MIN_PROCESSES, getNumWorkers());
         }
         else {
-            System.out.println("testBspCheckpoint: Using local job runner with " +
-                               "location " + getJarLocation() + "...");
+            System.out.println("testSuperstepBalancer: Using local job " +
+                               "runner with " + "location " +
+                               getJarLocation() + "...");
             conf.setInt(BspJob.BSP_INITIAL_PROCESSES, 1);
             conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
             conf.setInt(BspJob.BSP_MIN_PROCESSES, 1);
@@ -91,45 +91,39 @@ public class ManualCheckpointTest extends BspJobTestCase {
         conf.setClass(BspJob.BSP_VERTEX_WRITER_CLASS,
                       TestVertexWriter.class,
                       VertexWriter.class);
-        conf.set(BspJob.BSP_CHECKPOINT_DIRECTORY,
-                 HDFS_CHECKPOINT_DIR);
-        BspJob bspJob = new BspJob(conf, "testBspCheckpoint");
-        Path outputPath = new Path("/tmp/testBspCheckpointOutput");
+        BspJob bspJob = new BspJob(conf, "testStaticBalancer");
+        Path outputPath = new Path("/tmp/testStaticBalancer");
         hdfs.delete(outputPath, true);
         FileOutputFormat.setOutputPath(bspJob, outputPath);
         assertTrue(bspJob.run());
-        if (getJobTracker() == null) {
+        if (getJobTracker() != null) {
             FileStatus [] fileStatusArr = hdfs.listStatus(outputPath);
-            assertTrue(fileStatusArr.length == 1);
-            assertTrue(fileStatusArr[0].getLen() == 34);
-            long idSum =
-                ((LongWritable) BspJob.BspMapper.getAggregator(
-                    LongSumAggregator.class.getName()).
-                        getAggregatedValue()).get();
-            System.out.println("testBspCheckpoint: idSum = " + idSum);
-            assertTrue(idSum == (4*5/2)*7);
+            int totalLen = 0;
+            for (FileStatus fileStatus : fileStatusArr) {
+                if (fileStatus.getPath().toString().contains("/part-m-")) {
+                    totalLen += fileStatus.getLen();
+                }
+            }
+            assertTrue(totalLen == 100);
         }
 
-        // Restart the test from superstep 3
-        conf.setLong(BspJob.BSP_RESTART_SUPERSTEP, 3);
-        System.out.println(
-            "testBspCheckpoint: Restarting from superstep 3" +
-            " with checkpoint path = " + HDFS_CHECKPOINT_DIR);
-        BspJob bspRestartedJob = new BspJob(conf, "testBspCheckpointRestarted");
-        outputPath = new Path("/tmp/testBspCheckpointRestartedOutput");
+        conf.setClass(BspJob.BSP_VERTEX_RANGE_BALANCER_CLASS,
+                      TestSuperstepBalancer.class,
+                      VertexRangeBalancer.class);
+        BspJob bspJob2 = new BspJob(conf, "testSuperstepBalancer");
+        outputPath = new Path("/tmp/testSuperstepBalancer");
         hdfs.delete(outputPath, true);
-        FileOutputFormat.setOutputPath(bspRestartedJob, outputPath);
-        assertTrue(bspRestartedJob.run());
-        if (getJobTracker() == null) {
+        FileOutputFormat.setOutputPath(bspJob2, outputPath);
+        assertTrue(bspJob2.run());
+        if (getJobTracker() != null) {
             FileStatus [] fileStatusArr = hdfs.listStatus(outputPath);
-            assertTrue(fileStatusArr.length == 1);
-            assertTrue(fileStatusArr[0].getLen() == 34);
-            long idSum =
-                ((LongWritable) BspJob.BspMapper.getAggregator(
-                    LongSumAggregator.class.getName()).
-                        getAggregatedValue()).get();
-            System.out.println("testBspCheckpoint: idSum = " + idSum);
-            assertTrue(idSum == (4*5/2)*7);
+            int totalLen = 0;
+            for (FileStatus fileStatus : fileStatusArr) {
+                if (fileStatus.getPath().toString().contains("/part-m-")) {
+                    totalLen += fileStatus.getLen();
+                }
+            }
+            assertTrue(totalLen == 100);
         }
     }
 }

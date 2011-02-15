@@ -1,5 +1,6 @@
 package com.yahoo.hadoop_bsp;
 
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
@@ -12,10 +13,13 @@ import org.apache.hadoop.io.WritableComparable;
  * @param <I> vertex id type
  */
 @SuppressWarnings("rawtypes")
-public final class StaticBalancer<I extends WritableComparable>
-    extends BspBalancer<I> implements VertexRangeBalancer<I> {
+public final class StaticBalancer<I extends WritableComparable,
+                                  V extends Writable,
+                                  E extends Writable,
+                                  M extends Writable>
+    extends BspBalancer<I, V, E, M> implements VertexRangeBalancer<I, V, E, M> {
 
     public final void rebalance() {
-        setNextVertexRangeList(getLastVertexRangeList());
+        setNextVertexRangeMap(getPrevVertexRangeMap());
     }
 }

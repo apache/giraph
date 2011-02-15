@@ -16,5 +16,5 @@ public interface OutEdgeIterator<I, E> extends Iterator<Map.Entry<I, E>> {
      * Get the number of edges for this vertex
      * @return number of edges for this vertex
      */
-    public long size();
+    long size();
 }

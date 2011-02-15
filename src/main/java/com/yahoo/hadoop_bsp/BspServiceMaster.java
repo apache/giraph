@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.Set;
 import java.util.TreeMap;
 
@@ -61,7 +62,8 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
     /** Am I the master? */
     private boolean m_isMaster = false;
     /** Vertex range balancer class */
-    private Class<? extends VertexRangeBalancer<I>> m_vertexRangeBalancerClass;
+    private Class<? extends VertexRangeBalancer<I, V, E, M>>
+        m_vertexRangeBalancerClass;
 
     public BspServiceMaster(
         String serverPortList,
@@ -70,8 +72,8 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
         BspJob.BspMapper<I, V, E, M> bspMapper) {
         super(serverPortList, sessionMsecTimeout, context, bspMapper);
         @SuppressWarnings("unchecked")
-        Class<? extends VertexRangeBalancer<I>> vertexRangeBalancer =
-            (Class<? extends VertexRangeBalancer<I>>)
+        Class<? extends VertexRangeBalancer<I, V, E, M>> vertexRangeBalancer =
+            (Class<? extends VertexRangeBalancer<I, V, E, M>>)
             getConfiguration().getClass(BspJob.BSP_VERTEX_RANGE_BALANCER_CLASS,
                                         StaticBalancer.class,
                                         VertexRangeBalancer.class);
@@ -949,9 +951,10 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
      *        a hostname and port array
      */
     private void inputSplitsToVertexRanges(
-        Map<String, JSONArray> chosenWorkerHostnamePortMap) {
+            Map<String, JSONArray> chosenWorkerHostnamePortMap) {
         List<String> inputSplitPathList = null;
-        Set<VertexRange<I>> vertexRangeSet = new HashSet<VertexRange<I>>();
+        List<VertexRange<I, V, E, M>> vertexRangeList =
+            new ArrayList<VertexRange<I, V, E, M>>();
         try {
             inputSplitPathList = getZkExt().getChildrenExt(INPUT_SPLIT_PATH,
                                                            false,
@@ -985,27 +988,132 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                                       hostnamePortArray.getString(0));
                    vertexRangeObj.put(JSONOBJ_PORT_KEY,
                                       hostnamePortArray.getString(1));
-                    I maxVertexIndex = createVertexIndex();
-                    VertexRange<I> vertexRange =
-                        new VertexRange<I>(maxVertexIndex, vertexRangeObj);
-
-                    vertexRangeSet.add(vertexRange);
+                   @SuppressWarnings("unchecked")
+                   Class<I> indexClass =
+                       (Class<I>) createVertexIndex().getClass();
+                    VertexRange<I, V, E, M> vertexRange =
+                        new VertexRange<I, V, E, M>(indexClass, vertexRangeObj);
+                    vertexRangeList.add(vertexRange);
                 }
             }
 
             JSONArray vertexRangeAssignmentArray =
                 new JSONArray();
-            for (VertexRange<I> vertexRange : vertexRangeSet) {
+            for (VertexRange<I, V, E, M> vertexRange : vertexRangeList) {
                 vertexRangeAssignmentArray.put(vertexRange.toJSONObject());
             }
             String vertexRangeAssignmentsPath =
                 getVertexRangeAssignmentsPath(getApplicationAttempt(),
                                               getSuperstep());
-            LOG.info("inputSplitsToVertexWorkers: Assigning vertex ranges " +
+            LOG.info("inputSplitsToVertexRanges: Assigning vertex ranges " +
                      vertexRangeAssignmentArray.toString() + " to path" +
                      vertexRangeAssignmentsPath);
             getZkExt().createExt(vertexRangeAssignmentsPath,
                                  vertexRangeAssignmentArray.toString().getBytes(),
+                                 Ids.OPEN_ACL_UNSAFE,
+                                 CreateMode.PERSISTENT,
+                                 true);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Balance the vertex ranges before the next superstep computation begins.
+     * Wait until the vertex ranges have been moved prior to continuing.
+     *
+     * @param vertexRangeBalancer balancer to use
+     * @param chosenWorkerHostnamePortMap workers available
+     */
+    private void balanceVertexRanges(
+            BspBalancer<I, V, E, M> vertexRangeBalancer,
+            Map<String, JSONArray> chosenWorkerHostnamePortMap) {
+        vertexRangeBalancer.setSuperstep(getSuperstep());
+        vertexRangeBalancer.setWorkerHostnamePortMap(
+            chosenWorkerHostnamePortMap);
+        NavigableMap<I, VertexRange<I, V, E, M>> vertexRangeMap =
+            getVertexRangeMap(getSuperstep() - 1);
+        vertexRangeBalancer.setPrevVertexRangeMap(vertexRangeMap);
+        vertexRangeBalancer.rebalance();
+        vertexRangeBalancer.setPreviousHostnamePort();
+        NavigableMap<I, VertexRange<I, V, E, M>> nextVertexRangeMap =
+            vertexRangeBalancer.getNextVertexRangeMap();
+        if (nextVertexRangeMap.size() != vertexRangeMap.size()) {
+            throw new RuntimeException(
+                "balanceVertexRanges: Next vertex range count " +
+                nextVertexRangeMap.size() + " != " + vertexRangeMap.size());
+        }
+        JSONArray vertexRangeAssignmentArray = new JSONArray();
+        for (VertexRange<I, V, E, M> vertexRange :
+                nextVertexRangeMap.values()) {
+            try {
+                vertexRangeAssignmentArray.put(
+                    vertexRange.toJSONObject());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
+        if (vertexRangeAssignmentArray.length() == 0) {
+            throw new RuntimeException(
+                "balanceVertexRanges: Impossible there are no vertex ranges ");
+        }
+        try {
+            String vertexRangeAssignmentsPath =
+                getVertexRangeAssignmentsPath(getApplicationAttempt(),
+                                              getSuperstep());
+            getZkExt().createExt(
+                vertexRangeAssignmentsPath,
+                vertexRangeAssignmentArray.toString().getBytes("UTF-8"),
+                Ids.OPEN_ACL_UNSAFE,
+                CreateMode.PERSISTENT,
+                true);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        long changes = vertexRangeBalancer.getVertexRangeChanges();
+        LOG.info("balanceVertexRanges: Waiting on " + changes + " changes");
+        if (changes == 0) {
+            return;
+        }
+
+        String vertexRangeExchangePath =
+            getVertexRangeExchangePath(getApplicationAttempt(), getSuperstep());
+        List<String> workerExchangeList = null;
+        try {
+            getZkExt().createExt(vertexRangeExchangePath,
+                                 null,
+                                 Ids.OPEN_ACL_UNSAFE,
+                                 CreateMode.PERSISTENT,
+                                 true);
+        } catch (KeeperException.NodeExistsException e) {
+            LOG.info("balanceVertexRanges: " + vertexRangeExchangePath +
+                     "exists");
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        while (true) {
+            try {
+                workerExchangeList =
+                    getZkExt().getChildrenExt(
+                        vertexRangeExchangePath, true, false, false);
+            } catch (KeeperException e) {
+                throw new RuntimeException(e);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            if (workerExchangeList.size() == changes) {
+                break;
+            }
+            getVertexRangeExchangeChildrenChangedEvent().waitForever();
+            getVertexRangeExchangeChildrenChangedEvent().reset();
+        }
+        String vertexRangeExchangeFinishedPath =
+            getVertexRangeExchangeFinishedPath(getApplicationAttempt(),
+                                               getSuperstep());
+        try {
+            getZkExt().createExt(vertexRangeExchangeFinishedPath,
+                                 null,
                                  Ids.OPEN_ACL_UNSAFE,
                                  CreateMode.PERSISTENT,
                                  true);
@@ -1022,7 +1130,6 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
         // 4. Collect and process aggregators
         // 5. Create superstep finished node
         // 6. If the checkpoint frequency is met, finalize the checkpoint
-
         Map<String, JSONArray> chosenWorkerHostnamePortMap = checkWorkers();
         if (chosenWorkerHostnamePortMap == null) {
             LOG.fatal("coordinateSuperstep: Not enough healthy workers for " +
@@ -1051,49 +1158,18 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
             }
         } else {
             if (getSuperstep() > 0) {
-                VertexRangeBalancer<I> vertexRangeBalancer = null;
+                BspBalancer<I, V, E, M> vertexRangeBalancer = null;
                 try {
-                    vertexRangeBalancer =
+                    vertexRangeBalancer = (BspBalancer<I, V, E, M>)
                         m_vertexRangeBalancerClass.newInstance();
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
-                vertexRangeBalancer.setHostnameIdList(
-                    new ArrayList<String>(chosenWorkerHostnamePortMap.keySet()));
-                Set<VertexRange<I>> vertexRangeSet =
-                    getVertexRangeSet(getSuperstep() - 1);
-                vertexRangeBalancer.setLastVertexRangeList(
-                    new ArrayList<VertexRange<I>>(vertexRangeSet));
-                vertexRangeBalancer.rebalance();
-                List<VertexRange<I>> vertexRangeList =
-                    vertexRangeBalancer.getNextVertexRangeList();
-                if (vertexRangeList == null) {
-                    vertexRangeList = new ArrayList<VertexRange<I>>();
-                }
-                JSONArray vertexRangeAssignmentArray = new JSONArray();
-                for (VertexRange<I> vertexRange : vertexRangeList) {
-                    try {
-                        vertexRangeAssignmentArray.put(
-                            vertexRange.toJSONObject());
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
-                }
-                try {
-                    String vertexRangeAssignmentsPath =
-                        getVertexRangeAssignmentsPath(getApplicationAttempt(),
-                                                      getSuperstep());
-                    getZkExt().createExt(
-                        vertexRangeAssignmentsPath,
-                        vertexRangeAssignmentArray.toString().getBytes("UTF-8"),
-                        Ids.OPEN_ACL_UNSAFE,
-                        CreateMode.PERSISTENT,
-                        true);
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
+                balanceVertexRanges(vertexRangeBalancer,
+                                    chosenWorkerHostnamePortMap);
             }
         }
+
 
         String finishedWorkerPath =
             getWorkerFinishedPath(getApplicationAttempt(), getSuperstep());

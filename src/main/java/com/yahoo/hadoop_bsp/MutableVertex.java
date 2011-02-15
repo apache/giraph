@@ -22,12 +22,12 @@ public interface MutableVertex<I extends WritableComparable,
      * Set the vertex id
      * @param id vertex id is set to this (instantiated by the user)
      */
-    public void setVertexId(I id);
+    void setVertexId(I id);
 
     /**
      * Add an edge for this vertex
      * @param destVertexId destination vertex
      * @param edgeValue edge value
      */
-    public void addEdge(I destVertexId, E edgeValue);
+    void addEdge(I destVertexId, E edgeValue);
 }

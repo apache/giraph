@@ -1,8 +1,11 @@
 package com.yahoo.hadoop_bsp;
 
-import java.util.List;
+import java.util.Map;
+import java.util.NavigableMap;
 
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.json.JSONArray;
 
 /**
  * Implement this interface to determine your own balancing of vertex ranges
@@ -12,28 +15,39 @@ import org.apache.hadoop.io.WritableComparable;
  * @param <I> index type
  */
 @SuppressWarnings("rawtypes")
-public interface VertexRangeBalancer<I extends WritableComparable> {
+public interface VertexRangeBalancer<I extends WritableComparable,
+                                     V extends Writable,
+                                     E extends Writable,
+                                     M extends Writable> {
     /**
-     * Do not override.  This will be used to set the last vertex range list
-     * @param lastVertexRangeList list of vertex ranges from the last superstep
+     * Do not override.  This will be used to set the previous vertex range map
+     * @param lastVertexRangeMap map of vertex ranges from the last superstep
      */
-    public void setLastVertexRangeList(
-        final List<VertexRange<I>> lastVertexRangeList);
+    void setPrevVertexRangeMap(
+        final NavigableMap<I, VertexRange<I, V, E, M>> lastVertexRangeMap);
+
+    /**
+     * Get the upcoming superstep number (since this happens prior to the
+     * computation of the superstep
+     *
+     * @return the upcoming superstep
+     */
+    long getSuperstep();
 
     /**
      * Get the last determined VertexRanges for the index type for the previous
      * superstep.  If this is the first superstep, then it was last determined
      * by the loading.
      *
-     * @return list containing last superstep's vertex ranges determination
+     * @return map containing last superstep's vertex ranges determination
      */
-    public List<VertexRange<I>> getLastVertexRangeList();
+    NavigableMap<I, VertexRange<I, V, E, M>> getPrevVertexRangeMap();
 
     /**
      * Set the vertex ranges in rebalance() for the upcoming superstep.
      */
-    public void setNextVertexRangeList(
-        List<VertexRange<I>> nextVertexRangeList);
+    void setNextVertexRangeMap(
+        NavigableMap<I, VertexRange<I, V, E, M>> nextVertexRangeMap);
 
     /**
      * Get the vertex range list set (must be called in rebalance() at least
@@ -41,27 +55,36 @@ public interface VertexRangeBalancer<I extends WritableComparable> {
      *
      * @return list containing current superstep's vertex ranges determination
      */
-    public List<VertexRange<I>> getNextVertexRangeList();
+    NavigableMap<I, VertexRange<I, V, E, M>> getNextVertexRangeMap();
 
     /**
-     * Do not override.  This will be used to set the available workers for the
+     * Do not override.  This will be used to set the available workers and
+     * associated hostname and port information for the
      * rebalance() method.
      *
      * @param hostnameIdList list of available workers
      */
-    public void setHostnameIdList(List<String> hostnameIdList);
+    void setWorkerHostnamePortMap(Map<String, JSONArray> workerHostnamePortMap);
 
     /**
-     * Get a list of available workers.  This list can be used to assign the
+     * Do not override.  This will be used to set the previous hostname and
+     * port information for the next vertex range list based on the last
+     * vertex range list information.
+     */
+    void setPreviousHostnamePort();
+
+    /**
+     * Get a list of available workers and associated hostname and port
+     * information.  This list can be used to assign the
      * vertices in rebalance().
      *
      * @return
      */
-    public List<String> getHostnameIdList();
+    Map<String, JSONArray> getWorkerHostnamePortMap();
 
     /**
      * User needs to implement this function and ensure that setVertexRange
      * was called once.
      */
-    public void rebalance();
+    void rebalance();
 }

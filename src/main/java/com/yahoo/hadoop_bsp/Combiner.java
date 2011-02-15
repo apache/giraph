@@ -16,6 +16,8 @@ import org.apache.hadoop.io.WritableComparable;
 
 @SuppressWarnings("rawtypes")
 public interface Combiner <I extends WritableComparable,
+                           V extends Writable,
+                           E extends Writable,
                            M extends Writable> {
 
   /**
@@ -28,7 +30,7 @@ public interface Combiner <I extends WritableComparable,
    * @param msgs
    * @throws IOException
    */
-  void combine(CommunicationsInterface<I, M> comm, I vertex, List<M> msgList)
-      throws IOException;
-
+  void combine(CommunicationsInterface<I, V, E, M> comm,
+               I vertex,
+               List<M> msgList) throws IOException;
 }

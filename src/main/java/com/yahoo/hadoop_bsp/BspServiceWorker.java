@@ -11,6 +11,8 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.NavigableMap;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -42,22 +44,18 @@ import org.apache.zookeeper.data.Stat;
  */
 @SuppressWarnings("rawtypes")
 public class BspServiceWorker<
-    I extends WritableComparable, V extends Writable, E extends Writable,
-    M extends Writable>
-    extends BspService<I, V, E, M> implements
-    CentralizedServiceWorker<I, V, E, M> {
+        I extends WritableComparable, V extends Writable,
+        E extends Writable, M extends Writable>
+        extends BspService<I, V, E, M> implements
+        CentralizedServiceWorker<I, V, E, M> {
     /** Number of input splits */
     private int m_inputSplitCount = -1;
     /** Cached aggregate number of vertices in the entire application */
     long m_totalVertices = -1;
     /** My process health znode */
     private String m_myHealthZnode;
-    /** Partition to compare with (saved local variable to reduce allocation) */
-    private VertexRange<I> compareVertexRange =
-        new VertexRange<I>("", -1, "", null, -1, -1, null);
-    /** Data structure or storing each range and associated vertices */
-    private Map<I, List<Vertex<I, V, E, M>>> m_maxIndexVertexMap =
-        new TreeMap<I, List<Vertex<I, V, E, M>>>();
+    /** Final server RPC port */
+    private final int m_finalRpcPort;
     /** Map of aggregators */
     private static Map<String, Aggregator<Writable>> m_aggregatorMap =
         new TreeMap<String, Aggregator<Writable>>();
@@ -66,12 +64,19 @@ public class BspServiceWorker<
     /** Class logger */
     private static final Logger LOG = Logger.getLogger(BspServiceWorker.class);
 
-
     public BspServiceWorker(String serverPortList,
                             int sessionMsecTimeout,
                             Context context,
                             BspJob.BspMapper<I, V, E, M> bspMapper) {
         super(serverPortList, sessionMsecTimeout, context, bspMapper);
+        m_finalRpcPort =
+            getConfiguration().getInt(BspJob.BSP_RPC_INITIAL_PORT,
+                          BspJob.DEFAULT_BSP_RPC_INITIAL_PORT) +
+                          getTaskPartition();
+    }
+
+    public int getPort() {
+        return m_finalRpcPort;
     }
 
     /**
@@ -161,11 +166,11 @@ public class BspServiceWorker<
     }
 
     /**
-     * Each worker will set the partitions that it has found for a given
+     * Each worker will set the vertex ranges that it has found for a given
      * InputSplit. After this, the InputSplit is considered finished.
      *
      * @param inputSplitPath path to the input split znode
-     * @param maxIndexStatMap maps max vertex indexes to a list countaing
+     * @param maxIndexStatMap maps max vertex indexes to a list containing
      *        the number of vertices (index 0) and the number of edges (index 1)
      *        in each partition (can be null, where nothing is written)
      */
@@ -226,8 +231,13 @@ public class BspServiceWorker<
      * All workers will try to do as many InputSplits as they can.  The master
      * will monitor progress and stop this once all the InputSplits have been
      * loaded and check-pointed.  The InputSplits must be sorted.
+     *
+     * @throws IOException
+     * @throws IllegalAccessException
+     * @throws InstantiationException
      */
-    private void loadVertices() {
+    private void loadVertices() throws
+            InstantiationException, IllegalAccessException, IOException {
         List<HadoopVertex<I, V, E, M>> vertexList =
             new ArrayList<HadoopVertex<I, V, E, M>>();
         String inputSplitPath = null;
@@ -304,6 +314,8 @@ public class BspServiceWorker<
             // available workers and must reach a minimum size.  Then two passes
             // over the vertexList.  First, find the maximum vertex ranges.
             // Then fill them in.
+            NavigableMap<I, VertexRange<I, V, E, M>> vertexRangeMap =
+                new TreeMap<I, VertexRange<I, V, E, M>>();
             long partitionsPerInputSplit = (long) (m_inputSplitCount *
                 getConfiguration().getFloat(
                     BspJob.BSP_TOTAL_INPUT_SPLIT_MULTIPLIER,
@@ -322,9 +334,10 @@ public class BspServiceWorker<
             I vertexIdMax = null;
             for (int i = 0; i < vertexList.size(); ++i) {
                 if ((vertexIdMax != null) && ((i % vertexRangeSize) == 0)) {
-                    m_maxIndexVertexMap.put(
-                        vertexIdMax,
-                        new ArrayList<Vertex<I, V, E, M>>());
+                    VertexRange<I, V, E, M> vertexRange =
+                        new VertexRange<I, V, E, M>(
+                            null, -1, null, vertexIdMax, 0, 0, null);
+                    vertexRangeMap.put(vertexIdMax, vertexRange);
                     vertexIdMax = null;
                 }
 
@@ -343,40 +356,49 @@ public class BspServiceWorker<
                 throw new RuntimeException("loadVertices: Encountered " +
                                            "impossible null vertexIdMax.");
             }
-            m_maxIndexVertexMap.put(vertexIdMax,
-                                    new ArrayList<Vertex<I,V,E,M>>());
+            VertexRange<I, V, E, M> vertexRange =
+                new VertexRange<I, V, E, M>(
+                    null, -1, null, vertexIdMax, 0, 0, null);
+            vertexRangeMap.put(vertexIdMax, vertexRange);
 
             Iterator<I> maxIndexVertexMapIt =
-                m_maxIndexVertexMap.keySet().iterator();
-            I currentMaxIndex = maxIndexVertexMapIt.next();
+                vertexRangeMap.keySet().iterator();
+            I currentVertexIndexMax = maxIndexVertexMapIt.next();
             for (HadoopVertex<I, V, E, M> vertex : vertexList) {
                 @SuppressWarnings("unchecked")
                 int compareTo =
-                    vertex.getVertexId().compareTo(currentMaxIndex);
+                    vertex.getVertexId().compareTo(
+                        currentVertexIndexMax);
                 if (compareTo > 0) {
                     if (!maxIndexVertexMapIt.hasNext()) {
                         throw new RuntimeException(
                             "loadVertices: Impossible that vertex " +
-                            vertex.getVertexId() + " > " + currentMaxIndex);
+                            vertex.getVertexId() + " > " +
+                            currentVertexIndexMax);
                     }
-                    currentMaxIndex = maxIndexVertexMapIt.next();
+                    currentVertexIndexMax = maxIndexVertexMapIt.next();
                 }
                 LOG.debug("loadVertices: Adding vertex with index = " +
                           vertex.getVertexId() + " to vertex range max = " +
-                          currentMaxIndex);
-                m_maxIndexVertexMap.get(currentMaxIndex).add(vertex);
+                          currentVertexIndexMax);
+                vertexRangeMap.get(currentVertexIndexMax).
+                    getVertexList().add(vertex);
             }
             Map<I, List<Long>> maxIndexStatMap = new TreeMap<I, List<Long>>();
-            for (Map.Entry<I, List<Vertex<I, V, E, M>>> entry :
-                m_maxIndexVertexMap.entrySet()) {
+            for (Entry<I, VertexRange<I, V, E, M>> entry :
+                    vertexRangeMap.entrySet()) {
                 List<Long> statList = new ArrayList<Long>();
                 long vertexRangeEdgeCount = 0;
-                for (Vertex<I, V, E, M> vertex : entry.getValue()) {
+                for (Vertex<I, V, E, M> vertex :
+                        entry.getValue().getVertexList()) {
                     vertexRangeEdgeCount += vertex.getOutEdgeIterator().size();
                 }
-                statList.add(new Long(entry.getValue().size()));
+                statList.add(new Long(entry.getValue().getVertexList().size()));
                 statList.add(new Long(vertexRangeEdgeCount));
                 maxIndexStatMap.put(entry.getKey(), statList);
+
+                // Add the local vertex ranges to the stored vertex ranges
+                getVertexRangeMap().put(entry.getKey(), entry.getValue());
             }
             setInputSplitVertexRanges(inputSplitPath, maxIndexStatMap);
         }
@@ -417,15 +439,20 @@ public class BspServiceWorker<
         }
 
         getContext().progress();
-        loadVertices();
+        try {
+            loadVertices();
+        } catch (Exception e) {
+            LOG.error("setup: loadVertices failed - " + e.getMessage());
+            throw new RuntimeException(e);
+        }
 
         Map<I, long []> maxIndexStatsMap = new TreeMap<I, long []>();
-        for (Map.Entry<I, List<Vertex<I, V, E, M>>> entry :
-             getMaxIndexVertexLists().entrySet()) {
+        for (Map.Entry<I, VertexRange<I, V, E, M>> entry :
+             getVertexRangeMap().entrySet()) {
             long [] statArray = new long[2];
             statArray[0] = 0;
-            statArray[1] = entry.getValue().size();
-            maxIndexStatsMap.put(entry.getKey(), statArray);
+            statArray[1] = entry.getValue().getVertexList().size();
+            maxIndexStatsMap.put(entry.getKey(),statArray);
         }
 
         finishSuperstep(maxIndexStatsMap);
@@ -530,10 +557,6 @@ public class BspServiceWorker<
                  aggregatorArray);
     }
 
-    public Map<I, List<Vertex<I, V, E, M>>> getMaxIndexVertexLists() {
-        return m_maxIndexVertexMap;
-    }
-
     /**
      * Register the health of this worker for a given superstep
      *
@@ -542,11 +565,8 @@ public class BspServiceWorker<
     private void registerHealth(long superstep) {
         JSONArray hostnamePort = new JSONArray();
         hostnamePort.put(getHostname());
-        int finalRpcPort =
-            getConfiguration().getInt(BspJob.BSP_RPC_INITIAL_PORT,
-                          BspJob.DEFAULT_BSP_RPC_INITIAL_PORT) +
-                          getTaskPartition();
-        hostnamePort.put(finalRpcPort);
+
+        hostnamePort.put(m_finalRpcPort);
 
         String myHealthPath = null;
         if (isHealthy()) {
@@ -715,9 +735,10 @@ public class BspServiceWorker<
         VertexWriter<I, V, E> vertexWriter = null;
         try {
             vertexWriter = vertexWriterClass.newInstance();
-            for (Map.Entry<I, List<Vertex<I, V, E, M>>> entry :
-                getMaxIndexVertexLists().entrySet()) {
-                for (Vertex<I, V, E, M> vertex : entry.getValue()) {
+            for (Map.Entry<I, VertexRange<I, V, E, M>> entry :
+                    getVertexRangeMap().entrySet()) {
+                for (Vertex<I, V, E, M> vertex :
+                        entry.getValue().getVertexList()) {
                     vertexWriter.write(getContext(),
                                        vertex.getVertexId(),
                                        vertex.getVertexValue(),
@@ -732,6 +753,7 @@ public class BspServiceWorker<
     }
 
     public void cleanup() {
+        setCachedSuperstep(getSuperstep() - 1);
         saveVertices();
          // All worker processes should denote they are done by adding special
          // znode.  Once the number of znodes equals the number of partitions
@@ -763,17 +785,17 @@ public class BspServiceWorker<
         }
     }
 
-    public VertexRange<I> getVertexRange(I index) {
-        compareVertexRange.setMaxIndex(index);
-        VertexRange<I> result =
-            getVertexRangeSet(getSuperstep()).ceiling(compareVertexRange);
+    public VertexRange<I, V, E, M> getVertexRange(I index) {
+        I maxVertexIndex = getVertexRangeMap(getSuperstep()).ceilingKey(index);
 
-        if (result == null) {
+        if (maxVertexIndex == null) {
             LOG.debug("getVertexRange: no partition for destination vertex " +
                        index + " -- returning last partition");
-            result = getVertexRangeSet(getSuperstep()).last();
+            return getVertexRangeMap(getSuperstep()).lastEntry().getValue();
         }
-        return result;
+        else {
+            return getVertexRangeMap(getSuperstep()).get(maxVertexIndex);
+        }
     }
 
     /**
@@ -829,8 +851,6 @@ public class BspServiceWorker<
     public void storeCheckpoint() throws IOException {
         // Algorithm:
         // For each partition, dump vertices and messages
-        Map<I, List<Vertex<I, V, E, M>>> maxIndexVertexListMap =
-            getMaxIndexVertexLists();
         Path metadataFilePath =
             new Path(getCheckpointBasePath(getSuperstep()) + "." +
                      getHostnamePartitionId() +
@@ -861,15 +881,20 @@ public class BspServiceWorker<
         } catch (IOException e) {
         }
 
-        FSDataOutputStream metadataOutputStream =
-            getFs().create(metadataFilePath);
         FSDataOutputStream verticesOutputStream =
             getFs().create(verticesFilePath);
-        metadataOutputStream.writeLong(maxIndexVertexListMap.entrySet().size());
-        for (Map.Entry<I, List<Vertex<I, V, E, M>>> entry :
-            maxIndexVertexListMap.entrySet()) {
-            long startPos = verticesOutputStream.getPos();
+        ByteArrayOutputStream metadataByteStream = new ByteArrayOutputStream();
+        DataOutput metadataOutput = new DataOutputStream(metadataByteStream);
+        long workerVertexRanges = 0;
+        for (Map.Entry<I, VertexRange<I, V, E, M>> entry :
+                getVertexRangeMap().entrySet()) {
+            // Only write out the partitions the worker is responsible for
+            if (!entry.getValue().getHostnameId().equals(
+                    getHostnamePartitionId())) {
+                continue;
+            }
 
+            ++workerVertexRanges;
             // Write the vertices (index, data, edges and messages)
             // Format:
             // <vertex count>
@@ -879,8 +904,10 @@ public class BspServiceWorker<
             //       <v0 edge 1 dest><v0 edge 1 value>...
             //     <v0 message count>
             //       <v0 msg 0><v0 msg 1>...
-            verticesOutputStream.writeLong(entry.getValue().size());
-            for (Vertex<I, V, E, M> vertex : entry.getValue()) {
+            long startPos = verticesOutputStream.getPos();
+            verticesOutputStream.writeLong(
+                entry.getValue().getVertexList().size());
+            for (Vertex<I, V, E, M> vertex : entry.getValue().getVertexList()) {
                 ByteArrayOutputStream vertexByteStream =
                     new ByteArrayOutputStream();
                 DataOutput vertexOutput =
@@ -895,8 +922,7 @@ public class BspServiceWorker<
                     outEdgeEntry.getKey().write(vertexOutput);
                     outEdgeEntry.getValue().write(vertexOutput);
                 }
-                List<M> messageList = getBspMapper().getVertexMessageList(
-                    vertex.getVertexId());
+                List<M> messageList = vertex.getMsgList();
                 if (messageList == null) {
                     messageList = new ArrayList<M>();
                 }
@@ -917,14 +943,10 @@ public class BspServiceWorker<
             // <index count>
             //   <index 0 start pos><# vertices><# edges><max index 0>
             //   <index 1 start pos><# vertices><# edges><max index 1>...
-            ByteArrayOutputStream metadataByteStream =
-                new ByteArrayOutputStream();
-            DataOutput metadataOutput =
-                new DataOutputStream(metadataByteStream);
             metadataOutput.writeLong(startPos);
-            metadataOutput.writeLong(entry.getValue().size());
+            metadataOutput.writeLong(entry.getValue().getVertexList().size());
             long edgeCount = 0;
-            for (Vertex<I, V, E, M> vertex : entry.getValue()) {
+            for (Vertex<I, V, E, M> vertex : entry.getValue().getVertexList()) {
                 edgeCount += vertex.getOutEdgeIterator().size();
             }
             metadataOutput.writeLong(edgeCount);
@@ -933,8 +955,13 @@ public class BspServiceWorker<
                       "offset = " + startPos + ", length = " +
                       (verticesOutputStream.getPos() - startPos) +
                       ", max index of vertex range = " + entry.getKey());
-            metadataOutputStream.write(metadataByteStream.toByteArray());
         }
+        // Metadata is buffered and written at the end since it's small and
+        // needs to know how many vertex ranges this worker owns
+        FSDataOutputStream metadataOutputStream =
+            getFs().create(metadataFilePath);
+        metadataOutputStream.writeLong(workerVertexRanges);
+        metadataOutputStream.write(metadataByteStream.toByteArray());
         metadataOutputStream.close();
         verticesOutputStream.close();
         LOG.info("storeCheckpoint: Finished metadata (" +
@@ -945,7 +972,7 @@ public class BspServiceWorker<
     }
 
     /**
-     * Load a single vertex range.
+     * Load a single vertex range from checkpoint files.
      *
      * @param maxIndex denotes the vertex range
      * @param dataFileName name of the data file
@@ -962,10 +989,7 @@ public class BspServiceWorker<
         DataInputStream dataStream = getFs().open(new Path(dataFileName));
         dataStream.skip(startPos);
         long vertexCount = dataStream.readLong();
-        m_maxIndexVertexMap.put(maxIndex,
-                                new ArrayList<Vertex<I, V, E, M>>());
-        List<Vertex<I, V, E,M>> vertexList =
-            m_maxIndexVertexMap.get(maxIndex);
+        VertexRange<I, V, E, M> vertexRange = getVertexRangeMap().get(maxIndex);
         for (int i = 0; i < vertexCount; ++i) {
             HadoopVertex<I, V, E, M> vertex =
                 getHadoopVertexClass().newInstance();
@@ -984,17 +1008,15 @@ public class BspServiceWorker<
                 vertex.addEdge(destVertexId, edgeValue);
             }
             long msgCount = dataStream.readLong();
-            List<M> msgList = new ArrayList<M>();
             for (long j = 0; j < msgCount; ++j) {
                 M msg = createMsgValue();
                 msg.readFields(dataStream);
-                msgList.add(msg);
+                vertex.getMsgList().add(msg);
             }
             vertex.setBspMapper(getBspMapper());
 
-            // Add the vertex and associated messages
-            vertexList.add(vertex);
-            getBspMapper().setVertexMessageList(vertexId, msgList);
+            // Add the vertex
+            vertexRange.getVertexList().add(vertex);
         }
         LOG.info("loadVertexRange: " + vertexCount + " vertices in " +
                  dataFileName);
@@ -1008,7 +1030,8 @@ public class BspServiceWorker<
         I maxVertexIndex = createVertexIndex();
         long startPos = -1;
         long vertexRangeCount = -1;
-        for (VertexRange<I> vertexRange : getVertexRangeSet(getSuperstep())) {
+        for (VertexRange<I, V, E, M> vertexRange :
+                getVertexRangeMap().values()) {
             if (vertexRange.getHostnameId().compareTo(
                     getHostnamePartitionId()) == 0) {
                 String metadataFile =
@@ -1047,4 +1070,128 @@ public class BspServiceWorker<
         }
     }
 
+    public final void exchangeVertexRanges() {
+        boolean syncRequired = false;
+        for (Entry<I, VertexRange<I, V, E, M>> entry :
+                getVertexRangeMap().entrySet()) {
+            final int previousPort = entry.getValue().getPreviousPort();
+            final String previousHostname =
+                entry.getValue().getPreviousHostname();
+            final int port = entry.getValue().getPort();
+            final String hostname = entry.getValue().getHostname();
+            LOG.info("exchangeVertexRanges: For max index " +
+                     entry.getKey() + ", count " +
+                     entry.getValue().getVertexList().size() +
+                     ", has previous port " +
+                     previousPort + ", previous hostname " + previousHostname +
+                     ", port " + port + ", hostname " + hostname);
+            if (previousPort == -1) {
+                continue;
+            }
+
+            if ((previousPort == m_finalRpcPort) &&
+                    getHostname().equals(previousHostname) &&
+                    ((port != m_finalRpcPort) ||
+                            !(getHostname().equals(hostname)))) {
+                List<Vertex<I, V, E, M>> vertexList =
+                    entry.getValue().getVertexList();
+                if (vertexList != null) {
+                    LOG.info("exchangeVertexRanges: Sending vertex range " +
+                             entry.getKey() + " with " +
+                             vertexList.size() + " elements to " + hostname +
+                             ":" + port);
+                    getBspMapper().getWorkerCommunications().sendVertexList(
+                        entry.getKey(), vertexList);
+                    vertexList.clear();
+                    entry.getValue().getVertexList().clear();
+                    LOG.info("exchangeVertexRanges: Sent vertex range " +
+                             entry.getKey() + " with " +
+                             vertexList.size() + " elements to " + hostname +
+                             ":" + port + " " + vertexList.size() + " " +
+                             entry.getValue().getVertexList().size());
+                }
+                syncRequired = true;
+            }
+            else if ((port == m_finalRpcPort) &&
+                    getHostname().equals(hostname) &&
+                    ((previousPort != m_finalRpcPort) ||
+                            !(getHostname().equals(previousHostname)))) {
+                LOG.info("exchangeVertexRanges: Receiving " +
+                         entry.getKey() + " from " +
+                         previousHostname + ":" + previousPort);
+                VertexRange<I, V, E, M> destVertexRange =
+                    getVertexRangeMap().get(entry.getKey());
+                if ((destVertexRange.getVertexList() != null) &&
+                        !destVertexRange.getVertexList().isEmpty()) {
+                    throw new RuntimeException(
+                        "exchangeVertexRanges: Cannot receive max index " +
+                        entry.getKey() + " since already have " +
+                        destVertexRange.getVertexList().size() + " elements.");
+                }
+                syncRequired = true;
+            }
+        }
+
+        // All senders and receivers must agree they are finished
+        if (syncRequired) {
+            String myVertexRangeExchangePath =
+                getVertexRangeExchangePath(getApplicationAttempt(),
+                                           getSuperstep()) +
+                                           "/" + getHostnamePartitionId();
+            String vertexRangeExchangeFinishedPath =
+                getVertexRangeExchangeFinishedPath(getApplicationAttempt(),
+                                                   getSuperstep());
+            LOG.info("exchangeVertexRanges: Ready with path " +
+                     myVertexRangeExchangePath);
+            try {
+                getZkExt().createExt(myVertexRangeExchangePath,
+                                     null,
+                                     Ids.OPEN_ACL_UNSAFE,
+                                     CreateMode.PERSISTENT,
+                                     true);
+                LOG.info("exchangeVertexRanges: Waiting on change to " +
+                         vertexRangeExchangeFinishedPath);
+                while (getZkExt().exists(vertexRangeExchangeFinishedPath, true)
+                        == null) {
+                    getVertexRangeExchangeFinishedChangedEvent().waitForever();
+                    getVertexRangeExchangeFinishedChangedEvent().reset();
+                }
+            } catch (KeeperException e) {
+                throw new RuntimeException(e);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        // Add the vertices that were sent earlier.
+        Map<I, List<HadoopVertex<I, V, E, M>>> inVertexRangeMap =
+            getBspMapper().getWorkerCommunications().getInVertexRangeMap();
+        synchronized (inVertexRangeMap) {
+            for (Entry<I, List<HadoopVertex<I, V, E, M>>> entry :
+                    inVertexRangeMap.entrySet()) {
+                if (entry.getValue() == null || entry.getValue().isEmpty()) {
+                    continue;
+                }
+
+                List<Vertex<I, V, E, M>> vertexList =
+                    getVertexRangeMap().get(entry.getKey()).getVertexList();
+                if (vertexList.size() != 0) {
+                    throw new RuntimeException(
+                        "exchangeVertexRanges: Failed to import vertex range " +
+                        entry.getKey() + " of size " + entry.getValue().size() +
+                        " since it is already of size " + vertexList.size() +
+                        " but should be empty!");
+                }
+                LOG.info("exchangeVertexRanges: Adding " +
+                         entry.getValue().size() + " vertices for max index " +
+                         entry.getKey());
+                vertexList.addAll(entry.getValue());
+                entry.getValue().clear();
+            }
+        }
+    }
+
+    public NavigableMap<I, VertexRange<I, V, E, M>> getVertexRangeMap() {
+        return getVertexRangeMap(getSuperstep());
+    }
 }

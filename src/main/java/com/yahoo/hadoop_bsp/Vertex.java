@@ -1,6 +1,7 @@
 package com.yahoo.hadoop_bsp;
 
 import java.util.Iterator;
+import java.util.List;
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -24,83 +25,83 @@ public interface Vertex<I extends WritableComparable,
      * Optionally defined by the user to be executed once on all workers
      * before application has started.
      */
-    public void preApplication();
+    void preApplication();
 
     /**
      * Optionally defined by the user to be executed once on all workers
      * after the application has completed.
      */
-    public void postApplication();
+    void postApplication();
 
     /**
      * Optionally defined by the user to be executed once prior to vertex
      * processing on a worker for the current superstep.
      */
-    public void preSuperstep();
+    void preSuperstep();
 
     /**
      * Optionally defined by the user to be executed once after all vertex
      * processing on a worker for the current superstep.
      */
-    public void postSuperstep();
+    void postSuperstep();
 
     /**
      * Must be defined by user to create a message value.
      */
-    public M createMsgValue();
+    M createMsgValue();
 
     /**
      * Must be defined by user to do computation on a single Vertex.
      */
-    public void compute(Iterator<M> msgIterator);
+    void compute(Iterator<M> msgIterator);
 
     /**
      * Retrieves the BSP superstep.
      * @return BSP superstep
      */
-    public long getSuperstep();
+    long getSuperstep();
 
     /**
      * Get the vertex id
      */
-    public I getVertexId();
+    I getVertexId();
 
     /**
      * Get the vertex data
      * @return vertex data
      */
-    public V getVertexValue();
+    V getVertexValue();
 
     /**
      * Set the vertex data (immediately visible in the computation)
      * @param vertexValue Vertex data to be set
      */
-    public void setVertexValue(V vertexValue);
+    void setVertexValue(V vertexValue);
 
     /**
      * Get the total number of vertices
      * @return total number of vertices
      */
-    public long getNumVertices();
+    long getNumVertices();
 
     /**
      * Every vertex has edges to other vertices.  Get a handle to the outward
      * edges and their vertices.
      * @return iterator to the outward edges and their destination vertices
      */
-    public OutEdgeIterator<I, E> getOutEdgeIterator();
+    OutEdgeIterator<I, E> getOutEdgeIterator();
 
     /**
      * Send a message to a vertex id.
      * @param id vertex id to send the message to
      * @param msg message data to send
      */
-    public void sendMsg(I id, M msg);
+    void sendMsg(I id, M msg);
 
     /**
      * Send a message to all edges.
      */
-    public void sentMsgToAllEdges(M msg);
+    void sentMsgToAllEdges(M msg);
 
     /**
      * After this is called, the compute() code will no longer be called for
@@ -108,10 +109,15 @@ public interface Vertex<I extends WritableComparable,
      * will be called once again until this function is called.  The application
      * finishes only when all vertices vote to halt.
      */
-    public void voteToHalt();
+    void voteToHalt();
 
     /**
      * Is this vertex done?
      */
-    public boolean isHalted();
+    boolean isHalted();
+
+    /**
+     *  Get the list of incoming messages from the previous superstep.
+     */
+    List<M> getMsgList();
 }

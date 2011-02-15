@@ -3,8 +3,9 @@ package com.yahoo.hadoop_bsp;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-import java.util.NavigableSet;
-import java.util.TreeSet;
+import java.util.Map.Entry;
+import java.util.NavigableMap;
+import java.util.TreeMap;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
@@ -47,6 +48,10 @@ public class BspService <
     private final BspEvent m_inputSplitsStateChanged;
     /** Are the worker assignments of vertex ranges ready? */
     private final BspEvent m_vertexRangeAssignmentsReadyChanged;
+    /** Have the vertex range exchange children changed? */
+    private final BspEvent m_vertexRangeExchangeChildrenChanged;
+    /** Are the vertex range exchanges done? */
+    private final BspEvent m_vertexRangeExchangeFinishedChanged;
     /** Superstep finished synchronization */
     private final BspEvent m_superstepFinished;
     /** Superstep workers finished changed synchronization */
@@ -94,8 +99,9 @@ public class BspService <
     private final VertexReader<I, V, E> m_instantiableVertexReader;
     /** Checkpoint frequency */
     int m_checkpointFrequency = -1;
-    /** Vertex range set based on the superstep below */
-    private NavigableSet<VertexRange<I>> m_vertexRangeSet = null;
+    /** Vertex range map based on the superstep below */
+    private NavigableMap<I, VertexRange<I, V, E, M>> m_vertexRangeMap =
+        new TreeMap<I, VertexRange<I, V, E, M>>();
     /** Vertex range set is based on this superstep */
     private long m_vertexRangeSuperstep = -1;
 
@@ -128,6 +134,10 @@ public class BspService <
     public static final String WORKER_FINISHED_DIR = "/_workerFinishedDir";
     public static final String VERTEX_RANGE_ASSIGNMENTS_DIR =
         "/_vertexRangeAssignments";
+    public static final String VERTEX_RANGE_EXCHANGE_DIR =
+        "/_vertexRangeExchangeDir";
+    public static final String VERTEX_RANGE_EXCHANGED_FINISHED_NODE =
+        "/_vertexRangeExchangeFinished";
     public static final String SUPERSTEP_FINISHED_NODE = "/_superstepFinished";
     public static final String CLEANED_UP_DIR = "/_cleanedUpDir";
 
@@ -146,6 +156,9 @@ public class BspService <
     public static final String JSONOBJ_PORT_KEY = "_portKey";
     public static final String JSONOBJ_CHECKPOINT_FILE_PREFIX_KEY =
         "_checkpointFilePrefixKey";
+    public static final String JSONOBJ_PREVIOUS_HOSTNAME_KEY =
+        "_previousHostnameKey";
+    public static final String JSONOBJ_PREVIOUS_PORT_KEY = "_previousPortKey";
     public static final String AGGREGATOR_NAME_KEY = "_aggregatorNameKey";
     public static final String AGGREGATOR_VALUE_KEY = "_aggregatorValueKey";
 
@@ -236,6 +249,34 @@ public class BspService <
                                                       long superstep) {
         return APPLICATION_ATTEMPTS_PATH + "/" + attempt +
             SUPERSTEP_DIR + "/" + superstep + VERTEX_RANGE_ASSIGNMENTS_DIR;
+    }
+
+    /**
+     * Generate the "vertex range exchange" directory path for a superstep
+     *
+     * @param attempt application attempt number
+     * @param superstep superstep to use
+     * @return directory path based on the a superstep
+     */
+    final public String getVertexRangeExchangePath(long attempt,
+                                                   long superstep) {
+        return APPLICATION_ATTEMPTS_PATH + "/" + attempt +
+            SUPERSTEP_DIR + "/" + superstep + VERTEX_RANGE_EXCHANGE_DIR;
+    }
+
+    /**
+     * Generate the "vertex range exchange finished" directory path for
+     * a superstep
+     *
+     * @param attempt application attempt number
+     * @param superstep superstep to use
+     * @return directory path based on the a superstep
+     */
+    final public String getVertexRangeExchangeFinishedPath(long attempt,
+                                                           long superstep) {
+        return APPLICATION_ATTEMPTS_PATH + "/" + attempt +
+            SUPERSTEP_DIR + "/" + superstep +
+            VERTEX_RANGE_EXCHANGED_FINISHED_NODE;
     }
 
     /**
@@ -375,6 +416,14 @@ public class BspService <
         return m_vertexRangeAssignmentsReadyChanged;
     }
 
+    final public BspEvent getVertexRangeExchangeChildrenChangedEvent() {
+        return m_vertexRangeExchangeChildrenChanged;
+    }
+
+    final public BspEvent getVertexRangeExchangeFinishedChangedEvent() {
+        return m_vertexRangeExchangeFinishedChanged;
+    }
+
     final public BspEvent getSuperstepFinishedEvent() {
         return m_superstepFinished;
     }
@@ -436,6 +485,8 @@ public class BspService <
         m_inputSplitsAllReadyChanged = new ContextLock(m_context);
         m_inputSplitsStateChanged = new ContextLock(m_context);
         m_vertexRangeAssignmentsReadyChanged = new ContextLock(m_context);
+        m_vertexRangeExchangeChildrenChanged = new ContextLock(m_context);
+        m_vertexRangeExchangeFinishedChanged = new ContextLock(m_context);
         m_superstepFinished = new ContextLock(m_context);
         m_superstepWorkersFinishedChanged = new ContextLock(m_context);
         m_masterElectionChildrenChanged = new ContextLock(m_context);
@@ -660,12 +711,28 @@ public class BspService <
          m_cachedSuperstep = superstep;
      }
 
-     public NavigableSet<VertexRange<I>> getVertexRangeSet(long superstep) {
-         if (m_vertexRangeSuperstep == superstep) {
-             return m_vertexRangeSet;
+     public NavigableMap<I, VertexRange<I, V, E, M>> getVertexRangeMap(
+             long superstep) {
+         LOG.debug("getVertexRangeMap: Current superstep = " + getSuperstep() +
+                   ", desired superstep = " + superstep);
+         // The master will try to get superstep 0 and need to be refreshed
+         // The worker will try to get superstep 0 and needs to get its value
+         if (superstep == 0) {
+             if (getSuperstep() == 1) {
+                 // Master should refresh
+             }
+             else if (getSuperstep() == 0) {
+                 // Worker will populate
+                 return m_vertexRangeMap;
+             }
+         }
+         else if (m_vertexRangeSuperstep == superstep) {
+             return m_vertexRangeMap;
          }
 
-         m_vertexRangeSet = new TreeSet<VertexRange<I>>();
+         m_vertexRangeSuperstep = superstep;
+         NavigableMap<I, VertexRange<I, V, E, M>> vertexRangeMap =
+             new TreeMap<I, VertexRange<I, V, E, M>>();
          String vertexRangeAssignmentsPath =
              getVertexRangeAssignmentsPath(getApplicationAttempt(),
                                            superstep);
@@ -682,16 +749,36 @@ public class BspService <
              for (int i = 0; i < vertexRangeAssignmentsArray.length(); ++i) {
                  JSONObject vertexRangeObj =
                      vertexRangeAssignmentsArray.getJSONObject(i);
-                 I maxVertexIndex = createVertexIndex();
-                 VertexRange<I> vertexRange =
-                     new VertexRange<I>(maxVertexIndex, vertexRangeObj);
-                 m_vertexRangeSet.add(vertexRange);
+                 @SuppressWarnings("unchecked")
+                Class<I> indexClass = (Class<I>) createVertexIndex().getClass();
+                 VertexRange<I, V, E, M> vertexRange =
+                     new VertexRange<I, V, E, M>(indexClass,
+                                                 vertexRangeObj);
+                 if (vertexRangeMap.containsKey(vertexRange.getMaxIndex())) {
+                     throw new RuntimeException(
+                         "getVertexRangeMap: Impossible that vertex range " +
+                         "max " + vertexRange.getMaxIndex() +
+                         " already exists!");
+                 }
+                 vertexRangeMap.put(vertexRange.getMaxIndex(), vertexRange);
              }
          } catch (Exception e) {
              throw new RuntimeException(e);
          }
 
-         return m_vertexRangeSet;
+         // Copy over the vertex lists
+         for (Entry<I, VertexRange<I, V, E, M>> entry :
+                 vertexRangeMap.entrySet()) {
+             if (!m_vertexRangeMap.containsKey(entry.getKey())) {
+                 continue;
+             }
+             VertexRange<I, V, E, M> vertexRange =
+                 m_vertexRangeMap.get(entry.getKey());
+             entry.getValue().getVertexList().addAll(
+                 vertexRange.getVertexList());
+         }
+         m_vertexRangeMap = vertexRangeMap;
+         return m_vertexRangeMap;
      }
 
      /**
@@ -766,7 +853,18 @@ public class BspService <
                 event.getType() == EventType.NodeCreated) {
            LOG.info("process: m_vertexRangeAssignmentsReadyChanged signaled");
            m_vertexRangeAssignmentsReadyChanged.signal();
-       }
+        }
+        else if (event.getPath().contains(VERTEX_RANGE_EXCHANGE_DIR) &&
+                event.getType() == EventType.NodeChildrenChanged) {
+           LOG.info("process: m_vertexRangeExchangeChildrenChanged signaled");
+           m_vertexRangeExchangeChildrenChanged.signal();
+        }
+        else if (event.getPath().contains(
+                 VERTEX_RANGE_EXCHANGED_FINISHED_NODE) &&
+                 event.getType() == EventType.NodeCreated) {
+           LOG.info("process: m_vertexRangeExchangeFinishedChanged signaled");
+           m_vertexRangeExchangeFinishedChanged.signal();
+        }
         else if (event.getPath().contains(SUPERSTEP_FINISHED_NODE) &&
                 event.getType() == EventType.NodeCreated) {
            LOG.info("process: m_superstepFinished signaled");

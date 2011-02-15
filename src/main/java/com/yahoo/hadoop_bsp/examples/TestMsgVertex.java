@@ -31,7 +31,7 @@ public class TestMsgVertex extends
                 sum += msgIterator.next().get();
             }
             System.out.println("TestMsgVertex: Received a sum of " + sum +
-            " (should have 306)");
+            " (will stop on 306)");
 
             if (sum == 306) {
                 voteToHalt();

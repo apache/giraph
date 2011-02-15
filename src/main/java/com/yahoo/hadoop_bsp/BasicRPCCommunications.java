@@ -8,11 +8,11 @@ import java.net.UnknownHostException;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.TreeSet;
 
 import org.apache.log4j.Logger;
@@ -26,38 +26,33 @@ import org.apache.hadoop.mapreduce.Mapper.Context;
 
 @SuppressWarnings("rawtypes")
 public abstract class BasicRPCCommunications<
-    I extends WritableComparable,
-    V extends Writable,
-    E extends Writable,
-    M extends Writable, J>
-    implements CommunicationsInterface<I, M> {
-
+        I extends WritableComparable,
+        V extends Writable,
+        E extends Writable,
+        M extends Writable, J>
+        implements CommunicationsInterface<I, V, E, M>,
+        ServerInterface<I, V, E, M> {
     /** Class logger */
-    public static final Logger LOG =
+    private static final Logger LOG =
         Logger.getLogger(BasicRPCCommunications.class);
-
-    /** Synchronization object */
+    /** Synchronization object (Between this object and peer threads) */
     private Object waitingInMain = new Object();
-
+    /** Indicates whether in superstep preparation (self synchronized) */
+    private Boolean inPrepareSuperstep = false;
     /** Local hostname */
-    private String localHostname;
-    /** Indicates whether in superstep preparation */
-    private boolean inPrepareSuperstep;
+    private final String localHostname;
     /** Name of RPC server, == myAddress.toString() */
-    protected String myName;
-    /** Name of RPC server, == myAddress.toString() */
-    protected Server server;
+    private final String myName;
+    /** RPC server */
+    private final Server server;
     /** Centralized service, needed to get vertex ranges */
-    protected CentralizedServiceWorker<I, V, E, M> service;
+    private final CentralizedServiceWorker<I, V, E, M> service;
     /** Hadoop configuration */
-    protected Configuration conf;
+    protected final Configuration conf;
     /** Combiner instance, can be null */
-    protected Combiner<I, M> combiner;
-    /** Used to instantiate the message */
-    protected final Vertex<I, V, E, M> instantiableVertex;
-
+    private final Combiner<I, V, E, M> combiner;
     /** Address of RPC server */
-    private InetSocketAddress myAddress;
+    private final InetSocketAddress myAddress;
     /**
      * Map of threads mapping from remote socket address to RPC client threads
      */
@@ -66,67 +61,99 @@ public abstract class BasicRPCCommunications<
     /**
      * Map of outbound messages, mapping from remote server to
      * destination vertex index to list of messages
+     * (Synchronized between peer threads and main thread for each internal
+     *  map)
      */
-    private Map<InetSocketAddress, HashMap<I, ArrayListWritable<M>>> outMessages =
-        new HashMap<InetSocketAddress, HashMap<I, ArrayListWritable<M>>>();
+    private Map<InetSocketAddress, Map<I, MsgList<M>>> outMessages =
+        new HashMap<InetSocketAddress, Map<I, MsgList<M>>>();
     /**
-     * Map of incoming messages, mapping from vertex index to list of messages
+     * Map of incoming messages, mapping from vertex index to list of messages.
+     * Only accessed by the main thread (no need to synchronize).
      */
-    private Map<I, List<M>> inMessages =
-        new HashMap<I, List<M>>();
+    private final Map<I, List<M>> inMessages = new HashMap<I, List<M>>();
     /**
      * Map of inbound messages, mapping from vertex index to list of messages.
-     * Transferred to inMessages at beginning of a superstep
+     * Transferred to inMessages at beginning of a superstep.  This
+     * intermediary step exists so that the combiner will run not only at the
+     * client, but also at the server. Also, allows the sending of large messge
+     * lists during the superstep computation. (Synchronized)
      */
-    private Map<I, List<M>> transientInMessages =
+    private final Map<I, List<M>> transientInMessages =
         new HashMap<I, List<M>>();
-    /** Place holder for an empty message list.
-     * Used for vertices with no inbound messages. */
-    private List<M> emptyMsgList = new ArrayList<M>();
-    /** Cached map of vertex ranges to remote socket address */
-    private Map<VertexRange<I>, InetSocketAddress> vertexRangeMap =
-        new HashMap<VertexRange<I>, InetSocketAddress>();
+    /**
+     * Map of vertex ranges to any incoming vertices from other workers.
+     * (Synchronized)
+     */
+    private final Map<I, List<HadoopVertex<I, V, E, M>>>
+        inVertexRangeMap =
+            new TreeMap<I, List<HadoopVertex<I, V, E, M>>>();
+    /**
+     * Cached map of vertex ranges to remote socket address.  Needs to be
+     * synchronized.
+     */
+    private final Map<I, InetSocketAddress> vertexIndexMapAddressMap =
+        new HashMap<I, InetSocketAddress>();
     /** Maximum size of cached message list, before sending it out */
-    int maxSize;
+    private final int maxSize;
+    /** Maximum msecs to hold messages before checking again */
+    static final private int MAX_MESSAGE_HOLDING_MSECS = 2000;
+    /** Cached job id */
+    private final String jobId;
+    /** cached job token */
+    private final J jobToken;
+    /** maximum number of vertices sent in a single RPC */
+    private static final int MAX_VERTICES_PER_RPC = 1024;
 
     // TODO add support for mutating messages
 
     /**
      * Class describing the RPC client thread for every remote RPC server.
-     *
+     * It actually marshals and ships the RPC call to the remote RPC server
+     * for actual execution.
      */
     private class PeerThread extends Thread {
         /**
          * Map of outbound messages going to a particular remote server,
-         * mapping from vertex index to list of messages
+         * mapping from vertex range (max vertex index) to list of messages.
+         * (Synchronized with itself).
          */
-        Map<I, ArrayListWritable<M>> outMessagesPerPeer;
+        private final Map<I, MsgList<M>> outMessagesPerPeer;
         /**
          * Client interface: RPC proxy for remote server, this class for local
          */
-        CommunicationsInterface<I, M> peer;
+        private final CommunicationsInterface<I, V, E, M> peer;
         /** Maximum size of cached message list, before sending it out */
-        int maxSize;
-        /** Boolean, set to false when local client, trueotherwise */
-        private boolean isProxy;
-        /** Boolean, set to true when all messages should be flushed */
-        private boolean flush = false;
-        /** Boolean, set to true when client should terminate */
-        private boolean notDone = true;
+        private final int maxSize;
+        /** Boolean, set to false when local client (self), true otherwise */
+        private final boolean isProxy;
+        /**
+         * Boolean, set to true when all messages should be flushed
+         * (Self-Synchronized)
+         */
+        private Boolean flush = false;
+        /**
+         * Boolean, set to true when client should terminate
+         * (Self-Synchronized)
+         */
+        private Boolean notDone = true;
+        /**
+         * Boolean, set to true when there is a large message list to flush
+         * (Self-Synchronized)
+         */
+        private Boolean flushLargeMsgLists = false;
         /** Synchronization object */
-        private Object waitingInPeer = new Object();
+        private final Object waitingInPeer = new Object();
         /** Combiner instance, can be null */
-        private Combiner<I, M> combiner;
-        /** set of keys of large message list */
-        private Set<I> largeMsgListKeys = new TreeSet<I>();
-        /** Boolean, set to true when there is a large message list to flush */
-        private boolean flushLargeMsgLists = false;
+        private final Combiner<I, V, E, M> combiner;
+        /** set of keys of large message list (synchronized with itself) */
+        private final Set<I> largeMsgListKeys = new TreeSet<I>();
 
-        PeerThread(Map<I, ArrayListWritable<M>> m,
-                   CommunicationsInterface<I, M> i,
+        PeerThread(Map<I, MsgList<M>> m,
+                   CommunicationsInterface<I, V, E, M> i,
                    int maxSize,
                    boolean isProxy,
-                   Combiner<I, M> combiner) {
+                   Combiner<I, V, E, M> combiner) {
+            super(PeerThread.class.getName());
             this.outMessagesPerPeer = m;
             this.peer = i;
             this.maxSize = maxSize;
@@ -135,133 +162,185 @@ public abstract class BasicRPCCommunications<
         }
 
         public void flushLargeMsgList(I key) {
-            synchronized (waitingInPeer) {
-                flushLargeMsgLists = true;
+            synchronized (largeMsgListKeys) {
                 largeMsgListKeys.add(key);
+            }
+            synchronized (flushLargeMsgLists) {
+                flushLargeMsgLists = true;
+            }
+            synchronized (waitingInPeer) {
                 waitingInPeer.notify();
             }
         }
 
+        /**
+         * Notify this thread to send issue the put() RPCs.
+         */
         public void flush() {
-            synchronized (waitingInPeer) {
+            synchronized (flush) {
                 flush = true;
+            }
+            synchronized (waitingInPeer) {
                 waitingInPeer.notify();
             }
         }
 
         public boolean getFlushState() {
-            synchronized(waitingInPeer) {
+            synchronized(flush) {
                 return flush;
             }
         }
 
         public boolean getNotDoneState() {
-            synchronized(waitingInPeer) {
+            synchronized(notDone) {
                 return notDone;
+            }
+        }
+
+        private boolean getFlushMsgListsState() {
+            synchronized (flushLargeMsgLists) {
+                return flushLargeMsgLists;
             }
         }
 
         public void close() {
             LOG.info("close: Done");
-            synchronized (waitingInPeer) {
+            synchronized (notDone) {
                 notDone = false;
+            }
+            synchronized (waitingInPeer) {
                 waitingInPeer.notify();
             }
-
         }
 
+        public CommunicationsInterface<I, V, E, M> getRPCProxy() {
+            return peer;
+        }
+
+        /**
+         * Issue all the RPC put() to the peer (local or remote) for normal
+         * messages.
+         *
+         * @throws IOException
+         */
+        private void putAllMessages() throws IOException {
+            LOG.debug("putAllMessages: " + peer.getName() + ": issuing RPCs");
+            synchronized (outMessagesPerPeer) {
+                for (Entry<I, MsgList<M>> e :
+                        outMessagesPerPeer.entrySet()) {
+                    MsgList<M> msgList = e.getValue();
+                    if (msgList.size() > 0) {
+                        if (msgList.size() > 1) {
+                            if (combiner != null) {
+                                combiner.combine(peer,
+                                                 e.getKey(),
+                                                 msgList);
+                            } else {
+                                LOG.debug("putAllMessages: " + peer.getName() +
+                                          " putting (list) " + msgList + " to " +
+                                          e.getKey() + ", proxy = " + isProxy);
+                                peer.putMsgList(e.getKey(), msgList);
+                            }
+                            msgList.clear();
+                        } else {
+                            for (M msg : msgList) {
+                                LOG.debug("putAllMessages: " + peer.getName() +
+                                          " putting " + msg + " to " +
+                                          e.getKey() + ", proxy = " + isProxy);
+                                peer.putMsg(e.getKey(), msg);
+                            }
+                            msgList.clear();
+                        }
+                    }
+                }
+            }
+        }
+
+        @Override
         public void run() {
             try {
                 while (true) {
-                    boolean flushValue = false;
-                    boolean notDoneValue = true;
                     Set<I> largeMsgListKeysValue = null;
-                    synchronized (waitingInPeer) {
-                        while (notDone && !flush) {
-                            try {
-                                waitingInPeer.wait(2000);
-                            } catch (InterruptedException e) {
-                                // continue;
+                    boolean flushValue = getFlushState();
+                    boolean notDoneValue = getNotDoneState();
+                    boolean flushLargeMsgListsValues = getFlushMsgListsState();
+                    while (notDoneValue && !flushValue) {
+                        try {
+                            synchronized (waitingInPeer) {
+                                waitingInPeer.wait(MAX_MESSAGE_HOLDING_MSECS);
                             }
-                            if (flushLargeMsgLists) {
+                        } catch (InterruptedException e) {
+                            // continue;
+                        }
+                        if (flushLargeMsgListsValues) {
+                            synchronized (largeMsgListKeys) {
                                 largeMsgListKeysValue =
                                     new TreeSet<I>(largeMsgListKeys);
-                                flushLargeMsgLists = false;
-                                LOG.info(peer.getName() + ": flushLargeMsgLists " + largeMsgListKeysValue.size());
-                                break;
+                                largeMsgListKeys.clear();
                             }
+                            synchronized (flushLargeMsgLists) {
+                                flushLargeMsgLists = false;
+                            }
+                            LOG.info("run: " + peer.getName() +
+                                     ": flushLargeMsgLists " +
+                                     largeMsgListKeysValue.size());
+                            break;
                         }
-                        flushValue = flush;
-                        notDoneValue = notDone;
+                        flushValue = getFlushState();
+                        notDoneValue = getNotDoneState();
+                        flushLargeMsgLists = getFlushMsgListsState();
                     }
                     if (!notDoneValue) {
-                        LOG.info("NotDone " + notDone + " flush=" + flush);
+                        LOG.info("run: NotDone=" + notDone +
+                                 ", flush=" + flush);
                         break;
                     }
 
                     if (flushValue) {
-                        LOG.debug(peer.getName() + ": flushing messages");
-                        for (Entry<I, ArrayListWritable<M>> e :
-                            outMessagesPerPeer.entrySet()) {
-                            ArrayListWritable<M> msgList = e.getValue();
-                            synchronized(msgList) {
-                                if (msgList.size() > 0) {
-                                    if (msgList.size() > 1) {
-                                        if (combiner != null) {
-                                            combiner.combine(peer, e.getKey(), msgList);
-                                        } else {
-                                            peer.put(e.getKey(), msgList);
-                                        }
-                                        msgList.clear();
-                                    } else {
-                                        for (M msg : msgList) {
-                                            LOG.debug(peer.getName() + " putting " +
-                                                      msg + " to " + e.getKey());
-                                            peer.put(e.getKey(), msg);
-                                        }
-                                        msgList.clear();
-                                    }
-                                }
-                            }
+                        putAllMessages();
+                        LOG.debug("run: " + peer.getName() +
+                                  ": all messages flushed");
+                        synchronized (flush) {
+                            flush = false;
                         }
-                        LOG.debug(peer.getName() + ": all messages flushed");
+                        synchronized (flushLargeMsgLists) {
+                            flushLargeMsgLists = false;
+                        }
                         synchronized (waitingInMain) {
-                            synchronized (waitingInPeer) {
-                                flush = false;
-                                flushLargeMsgLists = false;
-                            }
                             waitingInMain.notify();
                         }
-                    } else if (largeMsgListKeysValue != null && largeMsgListKeysValue.size() > 0) {
+                    }
+                    else if (largeMsgListKeysValue != null &&
+                            largeMsgListKeysValue.size() > 0) {
                         for (I destVertex : largeMsgListKeysValue) {
-                            ArrayListWritable<M> msgList = null;
+                            MsgList<M> msgList = null;
                             synchronized(outMessagesPerPeer) {
                                 msgList = outMessagesPerPeer.get(destVertex);
-                                if (msgList == null || msgList.size() <= maxSize) {
+                                if (msgList == null ||
+                                        msgList.size() <= maxSize) {
                                     continue;
                                 }
-                            }
-                            synchronized(msgList) {
                                 if (combiner != null) {
                                     combiner.combine(peer, destVertex, msgList);
                                 } else {
-                                    peer.put(destVertex, msgList);
+                                    peer.putMsgList(destVertex, msgList);
                                 }
                                 msgList.clear();
                             }
                         }
                     }
                 }
-                LOG.info("RPC client thread terminating");
+                LOG.info("run: RPC client thread terminating if is proxy (" +
+                         isProxy + ")");
                 if (isProxy) {
                     RPC.stopProxy(peer);
                 }
             } catch (IOException e) {
                 LOG.error(e);
-                synchronized(waitingInMain) {
-                    synchronized (waitingInPeer) {
-                        notDone = false;
-                    }
+                synchronized (notDone) {
+                    notDone = false;
+                }
+                synchronized (waitingInMain) {
                     waitingInMain.notify();
                 }
                 if (isProxy) {
@@ -274,23 +353,23 @@ public abstract class BasicRPCCommunications<
 
     protected abstract J createJobToken() throws IOException;
 
-    protected abstract Server getRPCServer(InetSocketAddress addr,
-                                           int numHandlers, String jobId, J jt) throws IOException;
+    protected abstract Server getRPCServer(
+        InetSocketAddress addr,
+        int numHandlers, String jobId, J jobToken) throws IOException;
 
     public BasicRPCCommunications(Context context,
                                   CentralizedServiceWorker<I, V, E, M> service)
-    throws IOException, UnknownHostException, InterruptedException {
+            throws IOException, UnknownHostException, InterruptedException {
         this.service = service;
         this.conf = context.getConfiguration();
         this.maxSize = conf.getInt(BspJob.BSP_MSG_SIZE,
                                    BspJob.BSP_MSG_DEFAULT_SIZE);
 
-        combiner = null;
         if (conf.get(BspJob.BSP_COMBINER_CLASS) != null)  {
             try {
                 @SuppressWarnings("unchecked")
-                Class<? extends Combiner<I, M>> combinerClass =
-                    (Class<? extends Combiner<I, M>>)conf.getClass(
+                Class<? extends Combiner<I, V, E, M>> combinerClass =
+                    (Class<? extends Combiner<I, V, E, M>>)conf.getClass(
                         BspJob.BSP_COMBINER_CLASS, Combiner.class);
                 combiner = combinerClass.newInstance();
             } catch (InstantiationException e) {
@@ -299,21 +378,10 @@ public abstract class BasicRPCCommunications<
                 throw new RuntimeException(e);
             }
         }
-
-        @SuppressWarnings({ "unchecked" })
-        Class<? extends HadoopVertex<I, V, E, M>> hadoopVertexClass =
-            (Class<? extends HadoopVertex<I, V, E, M>>)
-                conf.getClass(BspJob.BSP_VERTEX_CLASS,
-                                            HadoopVertex.class,
-                                            HadoopVertex.class);
-        try {
-            this.instantiableVertex = hadoopVertexClass.newInstance();
-        } catch (Exception e) {
-            throw new RuntimeException(
-                "BasicRPCCommunications: Couldn't instantiate vertex");
+        else {
+            combiner = null;
         }
 
-        inPrepareSuperstep = false;
         this.localHostname = InetAddress.getLocalHost().getHostName();
         int taskId = conf.getInt("mapred.task.partition", 0);
         int numTasks = conf.getInt("mapred.map.tasks", 1);
@@ -328,63 +396,83 @@ public abstract class BasicRPCCommunications<
         if (numTasks < numHandlers) {
             numHandlers = numTasks;
         }
-        J jt = createJobToken();
-        String jobId = context.getJobID().toString();
-        server = getRPCServer(myAddress, numHandlers, jobId, jt);
-        server.start();
+        this.jobToken = createJobToken();
+        this.jobId = context.getJobID().toString();
+        this.server =
+            getRPCServer(myAddress, numHandlers, this.jobId, this.jobToken);
+        this.server.start();
 
         this.myName = myAddress.toString();
         LOG.info("BasicRPCCommunications: Started RPC communication server: " +
                  myName);
+        connectAllRPCProxys(this.jobId, this.jobToken);
+    }
 
-        Set<VertexRange<I>> vertexRangeSet =
-            service.getVertexRangeSet(service.getSuperstep());
-        for (VertexRange<I> vertexRange : vertexRangeSet) {
-            LOG.info("BasicRPCCommunications: Connecting to " +
-                     vertexRange.getHostname() + ", port = " +
-                     vertexRange.getPort() + ", max index = " +
-                     vertexRange.getMaxIndex());
-            startPeerConnectionThread(vertexRange, jobId, jt);
+    protected abstract CommunicationsInterface<I, V, E, M> getRPCProxy(
+        final InetSocketAddress addr, String jobId, J jobToken)
+        throws IOException, InterruptedException;
+
+    /**
+     * Establish connections to every RPC proxy server that will be used in
+     * the upcoming messaging.  This method is idempotent.
+     *
+     * @param jobId Stringified job id
+     * @param jobToken used for
+     * @throws InterruptedException
+     * @throws IOException
+     */
+    private void connectAllRPCProxys(String jobId, J jobToken)
+            throws IOException, InterruptedException {
+        for (VertexRange<I, V, E, M> vertexRange :
+                service.getVertexRangeMap().values()) {
+            startPeerConnectionThread(vertexRange, jobId, jobToken);
         }
     }
 
-    protected abstract CommunicationsInterface<I, M> getRPCProxy(
-                               final InetSocketAddress addr, String jobId, J jt)
-                               throws IOException, InterruptedException;
-
     /**
-     * Starts a client.
+     * Starts a thread for a vertex range if any only if the inet socket
+     * address doesn't already exist.
      *
      * @param vertexRange
      * @throws IOException
      */
-    private void startPeerConnectionThread(VertexRange<I> vertexRange,
-                                           String jobId, J jt)
-    throws IOException, InterruptedException {
-
+    private void startPeerConnectionThread(VertexRange<I, V, E, M> vertexRange,
+                                           String jobId,
+                                           J jobToken)
+            throws IOException, InterruptedException {
+        LOG.info("startPeerConnectionThread: hostname " +
+                 vertexRange.getHostname() + ", port " + vertexRange.getPort());
         final InetSocketAddress addr = new InetSocketAddress(
                                            vertexRange.getHostname(),
                                            vertexRange.getPort());
-
-        InetSocketAddress addrUnresolved = InetSocketAddress.createUnresolved(
-                                           addr.getHostName(), addr.getPort());
-        HashMap<I, ArrayListWritable<M>> outMsgMap = outMessages.get(addrUnresolved);
-        if (outMsgMap != null) { // this host has already been added
-            return;
-        }
-
+        // Cheap way to hold both the hostname and port (rather than
+        // make a class)
+        InetSocketAddress addrUnresolved =
+            InetSocketAddress.createUnresolved(addr.getHostName(),
+                                               addr.getPort());
+        Map<I, MsgList<M>> outMsgMap = null;
         boolean isProxy = true;
-        CommunicationsInterface<I, M> peer;
+        CommunicationsInterface<I, V, E, M> peer = this;
+        synchronized (outMessages) {
+            outMsgMap = outMessages.get(addrUnresolved);
+            LOG.info("startPeerConnectionThread: Connecting to " +
+                     vertexRange.getHostname() + ", port = " +
+                     vertexRange.getPort() + ", max index = " +
+                     vertexRange.getMaxIndex() + ", addr = " + addr +
+                     " if outMsgMap (" + outMsgMap + ") == null ");
+            if (outMsgMap != null) { // this host has already been added
+                return;
+            }
 
-        if (myName.equals(addr.toString())) {
-            peer = this;
-            isProxy = false;
-        } else {
-            peer = getRPCProxy(addr, jobId, jt);
+            if (myName.equals(addr.toString())) {
+                isProxy = false;
+            } else {
+                peer = getRPCProxy(addr, jobId, jobToken);
+            }
+
+            outMsgMap = new HashMap<I, MsgList<M>>();
+            outMessages.put(addrUnresolved, outMsgMap);
         }
-
-        outMsgMap = new HashMap<I, ArrayListWritable<M>>();
-        outMessages.put(addrUnresolved, outMsgMap);
 
         PeerThread th =
             new PeerThread(outMsgMap, peer, maxSize, isProxy, combiner);
@@ -392,7 +480,7 @@ public abstract class BasicRPCCommunications<
         peerThreads.put(addrUnresolved, th);
     }
 
-    public long getProtocolVersion(String protocol, long clientVersion)
+    public final long getProtocolVersion(String protocol, long clientVersion)
     throws IOException {
         return versionID;
     }
@@ -406,42 +494,51 @@ public abstract class BasicRPCCommunications<
             try {
                 pt.join();
             } catch (InterruptedException e) {
-                LOG.info(e.getStackTrace());
+                LOG.warn(e.getStackTrace());
             }
         }
     }
 
-    public void close() {
+    public final void close() {
         LOG.info("close: shutting down RPC server");
         server.stop();
     }
 
-    public void put(I vertex, M msg) throws IOException {
+    public final void putMsg(I vertex, M msg) throws IOException {
         List<M> msgs = null;
-        synchronized(transientInMessages) {
-            if (inPrepareSuperstep) { // when called by combiner
-                msgs = inMessages.get(vertex);
-                if (msgs == null) {
-                    msgs = new ArrayList<M>();
-                    inMessages.put(vertex, msgs);
-                }
-                msgs.add(msg);
-                return;
-            } else {
+        LOG.debug("putMsg: Adding msg " + msg + " on vertex " + vertex);
+        boolean inPrepareSuperstepValue;
+        synchronized (inPrepareSuperstep) {
+            inPrepareSuperstepValue = inPrepareSuperstep;
+        }
+        if (inPrepareSuperstepValue) {
+            // Called by combiner (main thread) during superstep preparation
+            msgs = inMessages.get(vertex);
+            if (msgs == null) {
+                msgs = new ArrayList<M>();
+                inMessages.put(vertex, msgs);
+            }
+            msgs.add(msg);
+        }
+        else {
+            synchronized(transientInMessages) {
                 msgs = transientInMessages.get(vertex);
                 if (msgs == null) {
                     msgs = new ArrayList<M>();
                     transientInMessages.put(vertex, msgs);
                 }
             }
-        }
-        synchronized(msgs) {
-            msgs.add(msg);
+            synchronized (msgs) {
+                msgs.add(msg);
+            }
         }
     }
 
-    public void put(I vertex, ArrayListWritable<M> msgList) throws IOException {
+    public final void putMsgList(I vertex,
+                                 MsgList<M> msgList) throws IOException {
         List<M> msgs = null;
+        LOG.debug("putMsgList: Adding msgList " + msgList +
+                  " on vertex " + vertex);
         synchronized(transientInMessages) {
             msgs = transientInMessages.get(vertex);
             if (msgs == null) {
@@ -449,53 +546,131 @@ public abstract class BasicRPCCommunications<
                 transientInMessages.put(vertex, msgs);
             }
         }
-        synchronized(msgs) {
+        synchronized (msgs) {
             msgs.addAll(msgList);
         }
     }
 
-    public void sendMessage(I destVertex, M msg) {
-        LOG.debug("sendMessage: Send bytes (" + msg.toString() + ") to " + destVertex);
-        VertexRange<I> destVertexRange = service.getVertexRange(destVertex);
-        if (destVertexRange == null) {
-            LOG.error("sendMessage: No vertexRange found for " + destVertex);
-        }
-        InetSocketAddress addr = vertexRangeMap.get(destVertexRange);
-        if (addr == null) {
-            addr = InetSocketAddress.createUnresolved(
-                                                      destVertexRange.getHostname(),
-                                                      destVertexRange.getPort());
-            vertexRangeMap.put(destVertexRange, addr);
-        }
-        LOG.debug("sendMessage: Send bytes (" + msg.toString() + ") to " + destVertex +
-                  " on " + destVertexRange.getHostname() + ":" + destVertexRange.getPort());
-        HashMap<I, ArrayListWritable<M>> msgMap = outMessages.get(addr);
-        if (msgMap == null) { // should never happen after constructor
-            throw new RuntimeException("msgMap did not exist for "
-                                       + destVertexRange.getHostname() + ":" + destVertexRange.getPort());
-        }
-
-        ArrayListWritable<M> msgList = null;
-        synchronized(msgMap) {
-            msgList = msgMap.get(destVertex);
-            if (msgList == null) { // should only happen once
-                @SuppressWarnings("unchecked")
-                Class<M> msgClass = (Class<M>)
-                    this.instantiableVertex.createMsgValue().getClass();
-                msgList = new ArrayListWritable<M>(msgClass);
-                msgMap.put(destVertex, msgList);
+    public final void putVertexList(I vertexIndexMax,
+                                    HadoopVertexList<I, V, E, M> vertexList)
+            throws IOException {
+        LOG.debug("putVertexList: On vertex range " + vertexIndexMax +
+                  " adding vertex list of size " + vertexList.size());
+        synchronized (inVertexRangeMap) {
+            if (vertexList.size() == 0) {
+                return;
+            }
+            if (!inVertexRangeMap.containsKey(vertexIndexMax)) {
+                inVertexRangeMap.put(vertexIndexMax,
+                                     new ArrayList<HadoopVertex<I, V, E, M>>());
+            }
+            List<HadoopVertex<I, V, E, M>> tmpVertexList =
+                inVertexRangeMap.get(vertexIndexMax);
+            for (HadoopVertex<I, V, E, M> hadoopVertex : vertexList) {
+                hadoopVertex.setBspMapper(service.getBspMapper());
+                tmpVertexList.add(hadoopVertex);
             }
         }
-        synchronized(msgList) {
+    }
+
+    public final void sendVertexList(I vertexIndexMax,
+                                     List<Vertex<I, V, E, M>> vertexList) {
+        // Internally, break up the sending so that the list doesn't get too
+        // big.
+        HadoopVertexList<I, V, E, M> hadoopVertexList =
+            new HadoopVertexList<I, V, E, M>();
+        InetSocketAddress addr = getInetSocketAddress(vertexIndexMax);
+        CommunicationsInterface<I, V, E, M> rpcProxy =
+            peerThreads.get(addr).getRPCProxy();
+        LOG.info("sendVertexList: Sending to " + rpcProxy + " " + addr +
+                 ", with vertex index " + vertexIndexMax + ", list " +
+                 vertexList);
+        if (peerThreads.get(addr).isProxy == false) {
+            throw new RuntimeException("sendVertexList: Impossible to send " +
+                "to self for vertex index max " + vertexIndexMax);
+        }
+        for (long i = 0; i < vertexList.size(); ++i) {
+            hadoopVertexList.add(
+                (HadoopVertex<I, V, E, M>) vertexList.get((int) i));
+            if (hadoopVertexList.size() >= MAX_VERTICES_PER_RPC) {
+                try {
+                    rpcProxy.putVertexList(vertexIndexMax, hadoopVertexList);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+                hadoopVertexList.clear();
+            }
+        }
+        if (hadoopVertexList.size() > 0) {
+            try {
+                rpcProxy.putVertexList(vertexIndexMax, hadoopVertexList);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+    /**
+     * Fill the socket address cache for the vertex range
+     *
+     * @param destVertex vertex
+     * @return address of the vertex range server containing this vertex
+     */
+    private InetSocketAddress getInetSocketAddress(I destVertex) {
+        VertexRange<I, V, E, M> destVertexRange =
+            service.getVertexRange(destVertex);
+        if (destVertexRange == null) {
+            LOG.error("getInetSocketAddress: No vertexRange found for " +
+                      destVertex);
+            throw new RuntimeException("getInetSocketAddress: Dest vertex " +
+                                       destVertex);
+        }
+
+        synchronized(vertexIndexMapAddressMap) {
+            InetSocketAddress address =
+                vertexIndexMapAddressMap.get(destVertexRange.getMaxIndex());
+            if (address == null) {
+                address = InetSocketAddress.createUnresolved(
+                    destVertexRange.getHostname(),
+                    destVertexRange.getPort());
+                vertexIndexMapAddressMap.put(destVertexRange.getMaxIndex(),
+                                             address);
+            }
+            return address;
+        }
+    }
+
+    public final void sendMessage(I destVertex, M msg) {
+        InetSocketAddress addr = getInetSocketAddress(destVertex);
+        LOG.debug("sendMessage: Send bytes (" + msg.toString() + ") to " +
+                   destVertex + " with address " + addr);
+        Map<I, MsgList<M>> msgMap = null;
+        synchronized (outMessages) {
+            msgMap = outMessages.get(addr);
+        }
+        if (msgMap == null) { // should never happen after constructor
+            throw new RuntimeException(
+                "sendMessage: msgMap did not exist for " + addr +
+                " for vertex " + destVertex);
+        }
+
+        synchronized(msgMap) {
+            MsgList<M> msgList = msgMap.get(destVertex);
+            if (msgList == null) { // should only happen once
+                msgList = new MsgList<M>();
+                msgMap.put(destVertex, msgList);
+            }
             msgList.add(msg);
-            LOG.debug("sendMessage: added msg=" + msg + ", size=" + msgList.size());
+            LOG.debug("sendMessage: added msg=" + msg + ", size=" +
+                      msgList.size());
             if (msgList.size() > maxSize) {
                 peerThreads.get(addr).flushLargeMsgList(destVertex);
             }
         }
     }
 
-    public void flush(Context context) throws IOException {
+    public final void flush(Context context) throws IOException {
+        LOG.info("flush");
         for (List<M> msgList : inMessages.values()) {
             msgList.clear();
         }
@@ -507,7 +682,7 @@ public abstract class BasicRPCCommunications<
                 for (PeerThread pt : peerThreads.values()) {
                     if (pt.getNotDoneState() && pt.getFlushState()) {
                         try {
-                            waitingInMain.wait(2000);
+                            waitingInMain.wait(MAX_MESSAGE_HOLDING_MSECS);
                             LOG.debug("flush: main waking up");
                             context.progress();
                         } catch (InterruptedException e) {
@@ -515,34 +690,44 @@ public abstract class BasicRPCCommunications<
                         }
                     }
                 }
-                boolean flush = false;
-                for (PeerThread pt : peerThreads.values()) {
-                    if (!pt.getNotDoneState()) {
-                        throw new RuntimeException("peer thread disappeared");
+                boolean stillFlushing = false;
+                for (Map.Entry<InetSocketAddress, PeerThread> entry :
+                        peerThreads.entrySet()) {
+                    if (!entry.getValue().getNotDoneState()) {
+                        throw new RuntimeException(
+                            "flush: peer thread " + entry.getKey() +
+                            " disappeared");
                     }
-                    if (pt.getFlushState()) {
-                        flush = true; // still flushing
+                    if (entry.getValue().getFlushState()) {
+                        stillFlushing = true; // still flushing
                     }
                 }
-                if (!flush) {
+                if (!stillFlushing) {
                     break;
                 }
             }
         }
     }
 
-    /**
-     * Move the in transition messages to the in messages for every vertex.
-     */
     public void prepareSuperstep() {
-        synchronized(transientInMessages) {
+        LOG.info("prepareSuperstep");
+        synchronized (inPrepareSuperstep) {
+            if (inPrepareSuperstep != false) {
+                throw new RuntimeException("prepareSuperstep: Impossible " +
+                                           "to be already in preparation");
+            }
             inPrepareSuperstep = true;
+        }
+        synchronized(transientInMessages) {
             for (Entry<I, List<M>> entry :
                 transientInMessages.entrySet()) {
                 if (combiner != null) {
                     try {
-                        combiner.combine(this, entry.getKey(), entry.getValue());
-                    } catch (IOException e) { // no actual IO -- should never happen
+                        combiner.combine(this,
+                                         entry.getKey(),
+                                         entry.getValue());
+                    } catch (IOException e) {
+                        // no actual IO -- should never happen
                         throw new RuntimeException(e);
                     }
                 } else {
@@ -555,54 +740,61 @@ public abstract class BasicRPCCommunications<
                 }
                 entry.getValue().clear();
             }
+        }
+        // Fix all the cached inet addresses (remove all changed entries)
+        synchronized (vertexIndexMapAddressMap) {
+            for (Entry<I, VertexRange<I, V, E, M>> entry :
+                service.getVertexRangeMap().entrySet()) {
+               if (vertexIndexMapAddressMap.containsKey(entry.getKey())) {
+                   InetSocketAddress address =
+                       vertexIndexMapAddressMap.get(entry.getKey());
+                   if (!address.getHostName().equals(
+                           entry.getValue().getHostname()) ||
+                           address.getPort() !=
+                           entry.getValue().getPort()) {
+                       LOG.info("prepareSuperstep: Vertex range " +
+                                entry.getKey() + " changed from " +
+                                address + " to " +
+                                entry.getValue().getHostname() + ":" +
+                                entry.getValue().getPort());
+                       vertexIndexMapAddressMap.remove(entry.getKey());
+                   }
+               }
+            }
+        }
+        // Assign the appropriate messages to each vertex
+        for (VertexRange<I, V, E, M> vertexRange :
+                service.getVertexRangeMap().values()) {
+            for (Vertex<I, V, E, M> vertex : vertexRange.getVertexList()) {
+                vertex.getMsgList().clear();
+                List<M> msgList = inMessages.get(vertex.getVertexId());
+                if (msgList != null) {
+                    LOG.debug("prepareSuperstep: Assigning " + msgList.size() +
+                              " mgs to vertex index " + vertex);
+                    vertex.getMsgList().addAll(msgList);
+                    msgList.clear();
+                }
+            }
+        }
+
+        synchronized (inPrepareSuperstep) {
             inPrepareSuperstep = false;
         }
-    }
-
-    public Iterator<Entry<I, List<M>>> getMessageIterator()
-        throws IOException {
-        return inMessages.entrySet().iterator();
-    }
-
-    public List<M> getVertexMessageList(I vertex) {
-        List<M> msgList = inMessages.get(vertex);
-        if (msgList == null) {
-            return emptyMsgList;
+        try {
+            connectAllRPCProxys(this.jobId, this.jobToken);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
-        else {
-            return msgList;
-        }
-    }
-
-    /**
-     * Set the vertex message list for this vertex.  This should only be
-     * used by the checkpoint loading mechanism.  The msgList should not
-     * exist for this vertex and will die if it does.
-     *
-     * @param vertexId id of vertex
-     * @param msgList list of messages to be associated with vertexId
-     */
-    public void setVertexMessageList(I vertexId, List<M> msgList) {
-        if (inMessages.containsKey(vertexId)) {
-            throw new RuntimeException("setVertexMessageList: Vertex id " +
-                                       vertexId + " already exists!");
-        }
-        inMessages.put(vertexId, msgList);
-    }
-
-    public int getNumCurrentMessages()
-        throws IOException {
-        Iterator<Entry<I, List<M>>> it = getMessageIterator();
-        int numMessages = 0;
-        while (it.hasNext()) {
-            numMessages += it.next().getValue().size();
-        }
-        return numMessages;
     }
 
     public String getName() {
         return myName;
     }
 
+    public Map<I, List<HadoopVertex<I, V, E, M>>> getInVertexRangeMap() {
+        return inVertexRangeMap;
+    }
 
 }

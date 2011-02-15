@@ -1,12 +1,12 @@
 package com.yahoo.hadoop_bsp;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Map;
-import java.util.SortedSet;
-
+import java.util.NavigableMap;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+
+import com.yahoo.hadoop_bsp.BspJob.BspMapper;
 
 /**
  * All workers should have access to this centralized service to
@@ -21,19 +21,33 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
                                           M extends Writable> extends
                                           CentralizedService {
     /**
+     * Get the hostname of this worker
+     *
+     * @return hostname of this worker
+     */
+    String getHostname();
+
+    /**
+     * Get the port of the RPC server on this worker.
+     *
+     * @return RPC server of this worker
+     */
+    int getPort();
+
+    /**
      * Get a synchronized map to the partitions and their sorted vertex lists.
      * This could be used to run compute for the vertices or checkpointing.
      *
      * @return map of max vertex index to list of vertices on that vertex range
      */
-    public Map<I, List<Vertex<I, V, E, M>>> getMaxIndexVertexLists();
+    NavigableMap<I, VertexRange<I, V, E, M>> getVertexRangeMap();
 
     /**
      *  Both the vertices and the messages need to be checkpointed in order
      *  for them to be used.  This is done after all messages have been
      *  delivered, but prior to a superstep starting.
      */
-    public void storeCheckpoint() throws IOException;
+    void storeCheckpoint() throws IOException;
 
     /**
      * Load the vertices, edges, messages from the beginning of a superstep.
@@ -43,7 +57,7 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
      * @param superstep which checkpoint to use
      * @throws IOException
      */
-    public void loadCheckpoint(long superstep) throws IOException;
+    void loadCheckpoint(long superstep) throws IOException;
 
     /**
      * Take all steps prior to actually beginning the computation of a
@@ -51,7 +65,7 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
      *
      * @return true if part of this superstep, false otherwise
      */
-    public boolean startSuperstep();
+    boolean startSuperstep();
 
     /**
      * Report the statistics of each vertex range after the completion of
@@ -61,20 +75,12 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
      *        (# finished, # total)
      * @return true if this is the last superstep, false otherwise
      */
-    public boolean finishSuperstep(final Map<I, long []> maxIndexStatsMap);
-
-    /**
-     * Get the vertex range set.
-     *
-     * @param superstep use this superstep's vertex range
-     * @return vertex range set
-     */
-    public SortedSet<VertexRange<I>> getVertexRangeSet(long superstep);
+    boolean finishSuperstep(final Map<I, long []> maxIndexStatsMap);
 
     /**
      * Every client will need to get a vertex range for a vertex id
      */
-    public VertexRange<I> getVertexRange(I index);
+    VertexRange<I, V, E, M> getVertexRange(I index);
 
     /**
      * Get the total vertices in the entire application during a given
@@ -83,5 +89,19 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
      *
      * @return count of all the vertices (local and non-local together)
      */
-    public long getTotalVertices();
+    long getTotalVertices();
+
+    /**
+     * If desired by the user, vertex ranges are redistributed among workers
+     * according to the chosen {@link VertexRangeBalancer}.
+     */
+    void exchangeVertexRanges();
+
+    /**
+     * Get the BspMapper that this service is using.  Vertices need to know
+     * this.
+     *
+     * @return BspMapper
+     */
+    BspMapper<I, V, E, M> getBspMapper();
 }
