@@ -3,6 +3,7 @@ package com.yahoo.hadoop_bsp;
 import java.io.IOException;
 
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.ipc.VersionedProtocol;
 //[ifdef]
 import org.apache.hadoop.security.token.TokenInfo;
@@ -19,6 +20,7 @@ import org.apache.hadoop.security.token.TokenInfo;
 //[ifdef]
 @TokenInfo(BspTokenSelector.class)
 //[enddef]
+@SuppressWarnings("rawtypes")
 public interface CommunicationsInterface<
         I extends WritableComparable,
         V extends Writable,
