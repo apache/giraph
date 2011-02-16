@@ -1117,7 +1117,7 @@ public class BspServiceWorker<
                     getHostname().equals(hostname) &&
                     ((previousPort != m_finalRpcPort) ||
                             !(getHostname().equals(previousHostname)))) {
-                LOG.info("exchangeVertexRanges: ReceivingÊ" +
+                LOG.info("exchangeVertexRanges: Receiving " +
                          entry.getKey() + " from " +
                          previousHostname + ":" + previousPort);
                 VertexRange<I, V, E, M> destVertexRange =
