@@ -1202,6 +1202,9 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                      chosenWorkerHostnamePortMap.keySet() + ", size = " +
                      chosenWorkerHostnamePortMap.size() +
                      " from " + finishedWorkerPath);
+            getContext().setStatus(finishedWorkerList.size() +
+                                   " finished out of " +
+                                   chosenWorkerHostnamePortMap.size());
             if (finishedWorkerList.containsAll(
                 chosenWorkerHostnamePortMap.keySet())) {
                 break;

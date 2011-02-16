@@ -286,15 +286,16 @@ public class BspServiceWorker<
 
             vertexList.clear();
             try {
-                HadoopVertex<I, V, E, M> vertex =
-                    getHadoopVertexClass().newInstance();
+                HadoopVertex<I, V, E, M> vertex = ReflectionUtils.newInstance(
+                        getHadoopVertexClass(), getConfiguration());
                 while (vertexReader.next(vertex)) {
                     vertex.setBspMapper(getBspMapper());
                     if (vertex.getVertexValue() == null) {
                         vertex.setVertexValue(createVertexValue());
                     }
                     vertexList.add(vertex);
-                    vertex = getHadoopVertexClass().newInstance();
+                    vertex = ReflectionUtils.newInstance(
+                                  getHadoopVertexClass(), getConfiguration());
                     getContext().progress();
                 }
                 vertexReader.close();
@@ -991,8 +992,8 @@ public class BspServiceWorker<
         long vertexCount = dataStream.readLong();
         VertexRange<I, V, E, M> vertexRange = getVertexRangeMap().get(maxIndex);
         for (int i = 0; i < vertexCount; ++i) {
-            HadoopVertex<I, V, E, M> vertex =
-                getHadoopVertexClass().newInstance();
+            HadoopVertex<I, V, E, M> vertex = ReflectionUtils.newInstance(
+                getHadoopVertexClass(), getConfiguration());
             I vertexId = createVertexIndex();
             V vertexValue = createVertexValue();
             vertexId.readFields(dataStream);

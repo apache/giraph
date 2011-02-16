@@ -1,6 +1,7 @@
 package com.yahoo.hadoop_bsp;
 
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * Wrapper around {@link ArrayListWritable} that allows the message class to
@@ -27,8 +28,8 @@ public class MsgList<M extends Writable>
                                    HadoopVertex.class);
         try {
             @SuppressWarnings("unchecked")
-            Class<M> refClass = (Class<M>)
-                hadoopVertexClass.newInstance().createMsgValue().getClass();
+            Class<M> refClass = (Class<M>)ReflectionUtils.newInstance(
+                    hadoopVertexClass, getConf()).createMsgValue().getClass();
             setClass(refClass);
         } catch (Exception e) {
             throw new RuntimeException(

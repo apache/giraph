@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * A Writable for ListArray containing instances of a class.
@@ -65,16 +66,10 @@ public class ArrayListWritable<M extends Writable> extends ArrayList<M>
         }
         int numValues = in.readInt();            // read number of values
         ensureCapacity(numValues);
-        try {
-            for (int i = 0; i < numValues; i++) {
-                M value = refClass.newInstance();
-                value.readFields(in);                // read a value
-                add(value);                          // store it in values
-            }
-        } catch (InstantiationException e) {
-            throw new RuntimeException(e);
-        } catch (IllegalAccessException e) {
-            throw new RuntimeException(e);
+        for (int i = 0; i < numValues; i++) {
+            M value = ReflectionUtils.newInstance(refClass, conf);
+            value.readFields(in);                // read a value
+            add(value);                          // store it in values
         }
     }
 

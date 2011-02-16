@@ -678,6 +678,10 @@ public class ZooKeeperManager {
         }
     }
 
+    public boolean runsZooKeeper() {
+        return m_zkProcess != null;
+    }
+
     public void cleanup() {
 
     }

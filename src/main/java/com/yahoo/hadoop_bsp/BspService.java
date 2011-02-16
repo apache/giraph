@@ -14,8 +14,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-
 import org.apache.hadoop.mapreduce.Mapper.Context;
+import org.apache.hadoop.util.ReflectionUtils;
 
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
@@ -517,7 +517,7 @@ public class BspService <
                         VertexInputFormat.class);
         try {
             m_instantiableHadoopVertex =
-                hadoopVertexClass.newInstance();
+                ReflectionUtils.newInstance(hadoopVertexClass, m_conf);
         } catch (Exception e) {
             throw new RuntimeException(
                 "BspService: Couldn't instantiate vertex");

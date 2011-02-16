@@ -395,6 +395,9 @@ public class BspJob extends Job {
                 long superstep = m_serviceWorker.getSuperstep();
 
                 m_serviceWorker.startSuperstep();
+                if (m_manager != null && m_manager.runsZooKeeper()) {
+                    context.setStatus("Running Zookeeper Server");
+                }
 
                 LOG.info("map: superstep = " + superstep);
                 LOG.debug("map: totalMem=" + Runtime.getRuntime().totalMemory() +
