@@ -15,15 +15,15 @@ import com.yahoo.hadoop_bsp.VertexRange;
 import com.yahoo.hadoop_bsp.VertexRangeBalancer;
 
 @SuppressWarnings("rawtypes")
-public class TestSuperstepBalancer<I extends WritableComparable,
-                                   V extends Writable,
-                                   E extends Writable,
-                                   M extends Writable>
-                                   extends BspBalancer<I, V, E, M>
-                                   implements VertexRangeBalancer<I, V, E, M> {
+public class SuperstepBalancer<I extends WritableComparable,
+                               V extends Writable,
+                               E extends Writable,
+                               M extends Writable>
+                               extends BspBalancer<I, V, E, M>
+                               implements VertexRangeBalancer<I, V, E, M> {
     /** Class logger */
     private static final Logger LOG =
-        Logger.getLogger(TestSuperstepBalancer.class);
+        Logger.getLogger(SuperstepBalancer.class);
 
     public void rebalance() {
         // Simple test to put all the vertex ranges on the superstep worker

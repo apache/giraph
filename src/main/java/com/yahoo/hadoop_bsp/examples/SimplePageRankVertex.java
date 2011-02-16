@@ -18,13 +18,14 @@ import com.yahoo.hadoop_bsp.lib.LongSumAggregator;
  * @author aching
  *
  */
-public class TestPageRankVertex extends
+public class SimplePageRankVertex extends
     HadoopVertex<LongWritable, DoubleWritable, FloatWritable, DoubleWritable> {
     private static LongSumAggregator sumAggreg = null;
     private static MinAggregator minAggreg = null;
     private static MaxAggregator maxAggreg = null;
     /** Logger */
-    private static final Logger LOG = Logger.getLogger(TestPageRankVertex.class);
+    private static final Logger LOG =
+        Logger.getLogger(SimplePageRankVertex.class);
 
     private static void registerAggregators() {
         sumAggreg = new LongSumAggregator();

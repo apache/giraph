@@ -9,11 +9,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
-import com.yahoo.hadoop_bsp.examples.TestCheckpointVertex;
-import com.yahoo.hadoop_bsp.examples.TestSuperstepBalancer;
-import com.yahoo.hadoop_bsp.examples.TestVertexInputFormat;
-import com.yahoo.hadoop_bsp.examples.TestVertexReader;
-import com.yahoo.hadoop_bsp.examples.TestVertexWriter;
+import com.yahoo.hadoop_bsp.examples.GeneratedVertexInputFormat;
+import com.yahoo.hadoop_bsp.examples.GeneratedVertexReader;
+import com.yahoo.hadoop_bsp.examples.SimpleCheckpointVertex;
+import com.yahoo.hadoop_bsp.examples.SimpleVertexWriter;
+import com.yahoo.hadoop_bsp.examples.SuperstepBalancer;
 
 import junit.framework.Test;
 import junit.framework.TestSuite;
@@ -21,14 +21,14 @@ import junit.framework.TestSuite;
 /**
  * Unit test for manual checkpoint restarting
  */
-public class VertexRangeBalancerTest extends BspJobTestCase {
+public class TestVertexRangeBalancer extends BspCase {
 
     /**
      * Create the test case
      *
      * @param testName name of the test case
      */
-    public VertexRangeBalancerTest(String testName) {
+    public TestVertexRangeBalancer(String testName) {
         super(testName);
     }
 
@@ -36,7 +36,7 @@ public class VertexRangeBalancerTest extends BspJobTestCase {
      * @return the suite of tests being tested
      */
     public static Test suite() {
-        return new TestSuite(VertexRangeBalancerTest.class);
+        return new TestSuite(TestVertexRangeBalancer.class);
     }
 
     /**
@@ -77,19 +77,19 @@ public class VertexRangeBalancerTest extends BspJobTestCase {
         }
         conf.setInt(BspJob.BSP_RPC_INITIAL_PORT, BspJob.BSP_RPC_DEFAULT_PORT);
         // GeneratedInputSplit will generate 5 vertices
-        conf.setLong(TestVertexReader.READER_VERTICES, 5);
+        conf.setLong(GeneratedVertexReader.READER_VERTICES, 5);
         FileSystem hdfs = FileSystem.get(conf);
         conf.setClass(BspJob.BSP_VERTEX_CLASS,
-                      TestCheckpointVertex.class,
+                      SimpleCheckpointVertex.class,
                       HadoopVertex.class);
         conf.setClass(BspJob.BSP_INPUT_SPLIT_CLASS,
                       BspInputSplit.class,
                       InputSplit.class);
         conf.setClass(BspJob.BSP_VERTEX_INPUT_FORMAT_CLASS,
-                      TestVertexInputFormat.class,
+                      GeneratedVertexInputFormat.class,
                       VertexInputFormat.class);
         conf.setClass(BspJob.BSP_VERTEX_WRITER_CLASS,
-                      TestVertexWriter.class,
+                      SimpleVertexWriter.class,
                       VertexWriter.class);
         BspJob bspJob = new BspJob(conf, "testStaticBalancer");
         Path outputPath = new Path("/tmp/testStaticBalancer");
@@ -104,11 +104,11 @@ public class VertexRangeBalancerTest extends BspJobTestCase {
                     totalLen += fileStatus.getLen();
                 }
             }
-            assertTrue(totalLen == 100);
+           assertTrue(totalLen == 118);
         }
 
         conf.setClass(BspJob.BSP_VERTEX_RANGE_BALANCER_CLASS,
-                      TestSuperstepBalancer.class,
+                      SuperstepBalancer.class,
                       VertexRangeBalancer.class);
         BspJob bspJob2 = new BspJob(conf, "testSuperstepBalancer");
         outputPath = new Path("/tmp/testSuperstepBalancer");
@@ -123,7 +123,7 @@ public class VertexRangeBalancerTest extends BspJobTestCase {
                     totalLen += fileStatus.getLen();
                 }
             }
-            assertTrue(totalLen == 100);
+            assertTrue(totalLen == 118);
         }
     }
 }

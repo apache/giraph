@@ -10,9 +10,8 @@ import com.yahoo.hadoop_bsp.HadoopVertex;
 
 /**
  * Vertex to allow unit testing of failure detection
- *
  */
-public class TestFailVertex extends
+public class SimpleFailVertex extends
     HadoopVertex<LongWritable, DoubleWritable, FloatWritable, DoubleWritable> {
 
     static long superstep = 0;

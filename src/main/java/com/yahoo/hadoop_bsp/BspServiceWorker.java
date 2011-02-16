@@ -238,15 +238,19 @@ public class BspServiceWorker<
      */
     private void loadVertices() throws
             InstantiationException, IllegalAccessException, IOException {
+        @SuppressWarnings("unchecked")
+        Class<? extends Writable> inputSplitClass =
+            (Class<Writable>) getConfiguration().getClass(
+                BspJob.BSP_INPUT_SPLIT_CLASS,
+                InputSplit.class);
         List<HadoopVertex<I, V, E, M>> vertexList =
             new ArrayList<HadoopVertex<I, V, E, M>>();
+        // ZooKeeper has a limit of the data in a single znode of 1 MB and
+        // each entry is about 200 bytes
+        final long maxVertexRangesPerInputSplit =
+            1024 * 1024 / 200 / m_inputSplitCount;
         String inputSplitPath = null;
         while ((inputSplitPath = reserveInputSplit()) != null) {
-            @SuppressWarnings("unchecked")
-            Class<? extends Writable> inputSplitClass =
-                (Class<Writable>) getConfiguration().getClass(
-                    BspJob.BSP_INPUT_SPLIT_CLASS,
-                    InputSplit.class);
             InputSplit inputSplit = (InputSplit)
                 ReflectionUtils.newInstance(inputSplitClass, getConfiguration());
             byte[] splitList;
@@ -317,14 +321,22 @@ public class BspServiceWorker<
             // Then fill them in.
             NavigableMap<I, VertexRange<I, V, E, M>> vertexRangeMap =
                 new TreeMap<I, VertexRange<I, V, E, M>>();
-            long partitionsPerInputSplit = (long) (m_inputSplitCount *
+            long vertexRangesPerInputSplit = (long) (m_inputSplitCount *
                 getConfiguration().getFloat(
                     BspJob.BSP_TOTAL_INPUT_SPLIT_MULTIPLIER,
                     BspJob.DEFAULT_BSP_TOTAL_INPUT_SPLIT_MULTIPLIER));
-            if (partitionsPerInputSplit == 0) {
-                partitionsPerInputSplit = 1;
+            if (vertexRangesPerInputSplit == 0) {
+                vertexRangesPerInputSplit = 1;
             }
-            long vertexRangeSize = vertexList.size() / partitionsPerInputSplit;
+            else if (vertexRangesPerInputSplit > maxVertexRangesPerInputSplit) {
+                LOG.warn("loadVertices: Using " + maxVertexRangesPerInputSplit +
+                         " instead of " + vertexRangesPerInputSplit +
+                         " vertex ranges on input split " + inputSplit);
+                vertexRangesPerInputSplit = maxVertexRangesPerInputSplit;
+            }
+
+            long vertexRangeSize =
+                vertexList.size() / vertexRangesPerInputSplit;
             long minPerVertexRange =
                 getConfiguration().getLong(
                     BspJob.BSP_MIN_VERTICES_PER_RANGE,

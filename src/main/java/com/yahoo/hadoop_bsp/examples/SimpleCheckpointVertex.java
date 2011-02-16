@@ -17,7 +17,7 @@ import com.yahoo.hadoop_bsp.lib.LongSumAggregator;
  *
  * @author aching
  */
-public class TestCheckpointVertex extends
+public class SimpleCheckpointVertex extends
     HadoopVertex<LongWritable, IntWritable, FloatWritable, FloatWritable> {
     /** Simple test to keep adding the vertex ids together. */
     private static LongSumAggregator sumAggregator = null;
@@ -26,7 +26,6 @@ public class TestCheckpointVertex extends
     private static void registerAggregators() {
         sumAggregator = new LongSumAggregator();
         registerAggregator(LongSumAggregator.class.getName(), sumAggregator);
-        sumAggregator.setAggregatedValue(new LongWritable(0));
     }
 
     @Override
@@ -34,6 +33,7 @@ public class TestCheckpointVertex extends
         if (sumAggregator == null) {
             registerAggregators();
         }
+        sumAggregator.setAggregatedValue(new LongWritable(0));
     }
 
     @Override

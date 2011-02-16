@@ -10,10 +10,8 @@ import com.yahoo.hadoop_bsp.HadoopVertex;
 
 /**
  * Test whether messages can be sent and received by vertices.
- * @author aching
- *
  */
-public class TestMsgVertex extends
+public class SimpleMsgVertex extends
     HadoopVertex<LongWritable, IntWritable, FloatWritable, IntWritable> {
     public void compute(Iterator<IntWritable> msgIterator) {
         if (getVertexId().equals(new LongWritable(2))) {

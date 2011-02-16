@@ -17,29 +17,29 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
-import com.yahoo.hadoop_bsp.examples.TestCombiner;
-import com.yahoo.hadoop_bsp.examples.TestCombinerVertex;
-import com.yahoo.hadoop_bsp.examples.TestFailVertex;
-import com.yahoo.hadoop_bsp.examples.TestMsgVertex;
-import com.yahoo.hadoop_bsp.examples.TestPageRankVertex;
-import com.yahoo.hadoop_bsp.examples.TestSuperstepVertex;
-import com.yahoo.hadoop_bsp.examples.TestVertexInputFormat;
-import com.yahoo.hadoop_bsp.examples.TestVertexReader;
-import com.yahoo.hadoop_bsp.examples.TestVertexWriter;
+import com.yahoo.hadoop_bsp.examples.GeneratedVertexInputFormat;
+import com.yahoo.hadoop_bsp.examples.GeneratedVertexReader;
+import com.yahoo.hadoop_bsp.examples.SimpleCombinerVertex;
+import com.yahoo.hadoop_bsp.examples.SimpleFailVertex;
+import com.yahoo.hadoop_bsp.examples.SimpleMsgVertex;
+import com.yahoo.hadoop_bsp.examples.SimplePageRankVertex;
+import com.yahoo.hadoop_bsp.examples.SimpleSumCombiner;
+import com.yahoo.hadoop_bsp.examples.SimpleSuperstepVertex;
+import com.yahoo.hadoop_bsp.examples.SimpleVertexWriter;
 
 import junit.framework.Test;
 import junit.framework.TestSuite;
 
 /**
- * Unit test for simple BSP applications.
+ * Unit test for many simple BSP applications.
  */
-public class SimpleBspTest extends BspJobTestCase {
+public class TestBspBasic extends BspCase {
     /**
      * Create the test case
      *
      * @param testName name of the test case
      */
-    public SimpleBspTest(String testName) {
+    public TestBspBasic(String testName) {
         super(testName);
     }
 
@@ -47,7 +47,7 @@ public class SimpleBspTest extends BspJobTestCase {
      * @return the suite of tests being tested
      */
     public static Test suite() {
-        return new TestSuite(SimpleBspTest.class);
+        return new TestSuite(TestBspBasic.class);
     }
 
     /**
@@ -70,14 +70,14 @@ public class SimpleBspTest extends BspJobTestCase {
         System.out.println("testInstantiateVertex: java.class.path=" +
                            System.getProperty("java.class.path"));
         java.lang.reflect.Constructor<?> ctor =
-            TestSuperstepVertex.class.getConstructor();
+            SimpleSuperstepVertex.class.getConstructor();
         assertNotNull(ctor);
-        TestSuperstepVertex test =
-            (TestSuperstepVertex) ctor.newInstance();
+        SimpleSuperstepVertex test =
+            (SimpleSuperstepVertex) ctor.newInstance();
         System.out.println("testInstantiateVertex: superstep=" +
                            test.getSuperstep());
-        TestVertexInputFormat inputFormat =
-            TestVertexInputFormat.class.newInstance();
+        GeneratedVertexInputFormat inputFormat =
+            GeneratedVertexInputFormat.class.newInstance();
         Configuration conf = new Configuration();
         List<InputSplit> splitArray = inputFormat.getSplits(conf, 1);
         ByteArrayOutputStream byteArrayOutputStream =
@@ -118,16 +118,16 @@ public class SimpleBspTest extends BspJobTestCase {
         }
         conf.setInt(BspJob.BSP_RPC_INITIAL_PORT, BspJob.BSP_RPC_DEFAULT_PORT);
         // GeneratedInputSplit will generate 5 vertices
-        conf.setLong(TestVertexReader.READER_VERTICES, 15);
+        conf.setLong(GeneratedVertexReader.READER_VERTICES, 15);
         FileSystem hdfs = FileSystem.get(conf);
         conf.setClass(BspJob.BSP_VERTEX_CLASS,
-                      TestFailVertex.class,
+                      SimpleFailVertex.class,
                       HadoopVertex.class);
         conf.setClass(BspJob.BSP_INPUT_SPLIT_CLASS,
                       BspInputSplit.class,
                       InputSplit.class);
         conf.setClass(BspJob.BSP_VERTEX_INPUT_FORMAT_CLASS,
-                      TestVertexInputFormat.class,
+                      GeneratedVertexInputFormat.class,
                       VertexInputFormat.class);
         BspJob bspJob = new BspJob(conf, "testBspFail");
         Path outputPath = new Path("/tmp/testBspFailOutput");
@@ -173,19 +173,19 @@ public class SimpleBspTest extends BspJobTestCase {
         conf.setInt(BspJob.BSP_RPC_INITIAL_PORT, BspJob.BSP_RPC_DEFAULT_PORT);
         conf.setFloat(BspJob.BSP_TOTAL_INPUT_SPLIT_MULTIPLIER, 2.0f);
         // GeneratedInputSplit will generate 10 vertices
-        conf.setLong(TestVertexReader.READER_VERTICES, 10);
+        conf.setLong(GeneratedVertexReader.READER_VERTICES, 10);
         FileSystem hdfs = FileSystem.get(conf);
         conf.setClass(BspJob.BSP_VERTEX_CLASS,
-                      TestSuperstepVertex.class,
+                      SimpleSuperstepVertex.class,
                       HadoopVertex.class);
         conf.setClass(BspJob.BSP_INPUT_SPLIT_CLASS,
                       BspInputSplit.class,
                       InputSplit.class);
         conf.setClass(BspJob.BSP_VERTEX_INPUT_FORMAT_CLASS,
-                      TestVertexInputFormat.class,
+                      GeneratedVertexInputFormat.class,
                       VertexInputFormat.class);
         conf.setClass(BspJob.BSP_VERTEX_WRITER_CLASS,
-                      TestVertexWriter.class,
+                      SimpleVertexWriter.class,
                       VertexWriter.class);
         BspJob bspJob = new BspJob(conf, "testBspSuperStep");
         Path outputPath = new Path("/tmp/testBspSuperStepOutput");
@@ -234,16 +234,16 @@ public class SimpleBspTest extends BspJobTestCase {
         }
         conf.setInt(BspJob.BSP_RPC_INITIAL_PORT, BspJob.BSP_RPC_DEFAULT_PORT);
         // GeneratedInputSplit will generate 5 vertices
-        conf.setLong(TestVertexReader.READER_VERTICES, 5);
+        conf.setLong(GeneratedVertexReader.READER_VERTICES, 5);
         FileSystem hdfs = FileSystem.get(conf);
         conf.setClass(BspJob.BSP_VERTEX_CLASS,
-                      TestMsgVertex.class,
+                      SimpleMsgVertex.class,
                       HadoopVertex.class);
         conf.setClass(BspJob.BSP_INPUT_SPLIT_CLASS,
                       BspInputSplit.class,
                       InputSplit.class);
         conf.setClass(BspJob.BSP_VERTEX_INPUT_FORMAT_CLASS,
-                      TestVertexInputFormat.class,
+                      GeneratedVertexInputFormat.class,
                       VertexInputFormat.class);
         BspJob bspJob = new BspJob(conf, "testBspMsg");
         Path outputPath = new Path("/tmp/testBspMsgOutput");
@@ -286,19 +286,19 @@ public class SimpleBspTest extends BspJobTestCase {
         }
         conf.setInt(BspJob.BSP_RPC_INITIAL_PORT, BspJob.BSP_RPC_DEFAULT_PORT);
         // GeneratedInputSplit will generate 5 vertices
-        conf.setLong(TestVertexReader.READER_VERTICES, 5);
+        conf.setLong(GeneratedVertexReader.READER_VERTICES, 5);
         FileSystem hdfs = FileSystem.get(conf);
         conf.setClass(BspJob.BSP_VERTEX_CLASS,
-                      TestCombinerVertex.class,
+                      SimpleCombinerVertex.class,
                       HadoopVertex.class);
         conf.setClass(BspJob.BSP_INPUT_SPLIT_CLASS,
                       BspInputSplit.class,
                       InputSplit.class);
         conf.setClass(BspJob.BSP_VERTEX_INPUT_FORMAT_CLASS,
-                      TestVertexInputFormat.class,
+                      GeneratedVertexInputFormat.class,
                       VertexInputFormat.class);
         conf.setClass(BspJob.BSP_COMBINER_CLASS,
-                      TestCombiner.class,
+                      SimpleSumCombiner.class,
                       Combiner.class);
         BspJob bspJob = new BspJob(conf, "testBspCombiner");
         Path outputPath = new Path("/tmp/testBspCombinerOutput");
@@ -340,16 +340,16 @@ public class SimpleBspTest extends BspJobTestCase {
         }
         conf.setInt(BspJob.BSP_RPC_INITIAL_PORT, BspJob.BSP_RPC_DEFAULT_PORT);
         // GeneratedInputSplit will generate 5 vertices
-        conf.setLong(TestVertexReader.READER_VERTICES, 5);
+        conf.setLong(GeneratedVertexReader.READER_VERTICES, 5);
         FileSystem hdfs = FileSystem.get(conf);
         conf.setClass(BspJob.BSP_VERTEX_CLASS,
-                      TestPageRankVertex.class,
+                      SimplePageRankVertex.class,
                       HadoopVertex.class);
         conf.setClass(BspJob.BSP_INPUT_SPLIT_CLASS,
                       BspInputSplit.class,
                       InputSplit.class);
         conf.setClass(BspJob.BSP_VERTEX_INPUT_FORMAT_CLASS,
-                      TestVertexInputFormat.class,
+                      GeneratedVertexInputFormat.class,
                       VertexInputFormat.class);
         BspJob bspJob = new BspJob(conf, "testBspPageRank");
         Path outputPath = new Path("/tmp/testBspPageRankOutput");

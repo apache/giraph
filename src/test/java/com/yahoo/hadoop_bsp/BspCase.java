@@ -12,9 +12,9 @@ import org.apache.zookeeper.Watcher;
 import junit.framework.TestCase;
 
 /**
- * Unit test for simple BSP applications.
+ * Extended TestCase for making setting up Bsp testing.
  */
-public class BspJobTestCase extends TestCase implements Watcher {
+public class BspCase extends TestCase implements Watcher {
     /** JobTracker system property */
     private final String m_jobTracker =
         System.getProperty("prop.mapred.job.tracker");
@@ -31,7 +31,7 @@ public class BspJobTestCase extends TestCase implements Watcher {
      *
      * @param testName name of the test case
      */
-    public BspJobTestCase(String testName) {
+    public BspCase(String testName) {
         super(testName);
 
     }

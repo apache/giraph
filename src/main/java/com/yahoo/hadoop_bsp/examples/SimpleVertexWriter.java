@@ -13,10 +13,9 @@ import com.yahoo.hadoop_bsp.OutEdgeIterator;
 import com.yahoo.hadoop_bsp.VertexWriter;
 
 /**
- * Writes out VIS graph in text format.
- *
+ * Simple vertex writer.
  */
-public class TestVertexWriter implements
+public class SimpleVertexWriter implements
          VertexWriter<LongWritable, IntWritable, FloatWritable> {
 
     public <KEYOUT, VALUEOUT> void write(

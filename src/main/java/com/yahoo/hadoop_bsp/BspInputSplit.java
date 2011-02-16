@@ -38,8 +38,8 @@ public class BspInputSplit extends InputSplit implements Writable {
     }
 
     public void readFields(DataInput in) throws IOException {
-        m_numSplits = in.readInt();
         m_splitIndex = in.readInt();
+        m_numSplits = in.readInt();
     }
 
     public void write(DataOutput out) throws IOException {

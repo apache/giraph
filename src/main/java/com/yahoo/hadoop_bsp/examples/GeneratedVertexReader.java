@@ -16,19 +16,19 @@ import com.yahoo.hadoop_bsp.MutableVertex;
 
 /**
  * Used by TestVertexInputFormat to read some generated data
- * @author aching
  *
  * @param <I>
  * @param <V>
  * @param <E>
  */
-public class TestVertexReader implements
+public class GeneratedVertexReader implements
     VertexReader<LongWritable, IntWritable, FloatWritable> {
     /** Logger */
-    private static final Logger LOG = Logger.getLogger(TestVertexReader.class);
+    private static final Logger LOG =
+        Logger.getLogger(GeneratedVertexReader.class);
     /** Records read so far */
     long m_recordsRead = 0;
-    /** Total records to read */
+    /** Total records to read (on this split alone) */
     long m_totalRecords = 0;
     /** The input split from initialize(). */
     BspInputSplit m_inputSplit = null;
@@ -42,8 +42,8 @@ public class TestVertexReader implements
         throws IOException {
         Configuration configuration = context.getConfiguration();
             m_totalRecords = configuration.getLong(
-                TestVertexReader.READER_VERTICES,
-                TestVertexReader.DEFAULT_READER_VERTICES);
+                GeneratedVertexReader.READER_VERTICES,
+                GeneratedVertexReader.DEFAULT_READER_VERTICES);
             m_inputSplit = (BspInputSplit) inputSplit;
     }
 
@@ -54,18 +54,20 @@ public class TestVertexReader implements
             return false;
         }
         vertex.setVertexId(new LongWritable(
-            (m_inputSplit.getNumSplits() * m_totalRecords) + m_recordsRead));
+            (m_inputSplit.getSplitIndex() * m_totalRecords) + m_recordsRead));
         vertex.setVertexValue(
             new IntWritable(((int) (vertex.getVertexId().get() * 10))));
+        long destVertexId =
+            (vertex.getVertexId().get() + 1) %
+            (m_inputSplit.getNumSplits() * m_totalRecords);
+        float edgeValue = (float) vertex.getVertexId().get() * 100;
         // Adds an edge to the neighbor vertex
-        vertex.addEdge(
-            new LongWritable((vertex.getVertexId().get() + 1) % m_totalRecords),
-            new FloatWritable((float) vertex.getVertexId().get() * 100));
+        vertex.addEdge(new LongWritable(destVertexId),
+                       new FloatWritable(edgeValue));
         ++m_recordsRead;
         LOG.info("next: Return vertexId=" + vertex.getVertexId().get() +
             ", vertexValue=" + vertex.getVertexValue() + ", destinationId=" +
-            (vertex.getVertexId().get() + 1) % m_totalRecords +
-            ", edgeValue=" + ((float) vertex.getVertexId().get() * 100));
+            destVertexId + ", edgeValue=" + edgeValue);
         return true;
     }
 

@@ -11,10 +11,9 @@ import com.yahoo.hadoop_bsp.CommunicationsInterface;
 import com.yahoo.hadoop_bsp.Combiner;
 
 /**
- * Test whether combiner is called.
- *
+ * Test whether combiner is called by summing up the messages.
  */
-public class TestCombiner
+public class SimpleSumCombiner
         implements Combiner<LongWritable, IntWritable,
         FloatWritable, IntWritable> {
 

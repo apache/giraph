@@ -21,7 +21,7 @@ import com.yahoo.hadoop_bsp.VertexReader;
  * @author aching
  *
  */
-public class TestVertexInputFormat implements
+public class GeneratedVertexInputFormat implements
     VertexInputFormat<LongWritable, IntWritable, FloatWritable> {
 
     public List<InputSplit> getSplits(Configuration conf, int numSplits)
@@ -30,17 +30,17 @@ public class TestVertexInputFormat implements
          * This is meaningless, the VertexReader will generate all the test
          * data.
          */
-    List<InputSplit> inputSplitList = new ArrayList<InputSplit>();
-    for (int i = 0; i < numSplits; ++i) {
-      inputSplitList.add(new BspInputSplit(i, numSplits));
-    }
-    return inputSplitList;
+        List<InputSplit> inputSplitList = new ArrayList<InputSplit>();
+        for (int i = 0; i < numSplits; ++i) {
+            inputSplitList.add(new BspInputSplit(i, numSplits));
+        }
+        return inputSplitList;
     }
 
     public VertexReader<LongWritable, IntWritable, FloatWritable>
-        createVertexReader(InputSplit split, TaskAttemptContext context)
-        throws IOException {
-        return new TestVertexReader();
+            createVertexReader(InputSplit split, TaskAttemptContext context)
+            throws IOException {
+        return new GeneratedVertexReader();
     }
 
 }

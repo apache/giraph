@@ -12,7 +12,7 @@ import com.yahoo.hadoop_bsp.HadoopVertex;
  * Test whether messages can go through a combiner.
  *
  */
-public class TestCombinerVertex extends
+public class SimpleCombinerVertex extends
     HadoopVertex<LongWritable, IntWritable, FloatWritable, IntWritable> {
     public void compute(Iterator<IntWritable> msgIterator) {
         if (getVertexId().equals(new LongWritable(2))) {

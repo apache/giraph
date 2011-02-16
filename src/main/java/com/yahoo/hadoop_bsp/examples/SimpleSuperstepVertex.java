@@ -11,10 +11,8 @@ import com.yahoo.hadoop_bsp.HadoopVertex;
 /**
  * Just a simple Vertex compute implementation that executes 3 supersteps, then
  * finishes.
- * @author aching
- *
  */
-public class TestSuperstepVertex extends
+public class SimpleSuperstepVertex extends
     HadoopVertex<LongWritable, IntWritable, FloatWritable, IntWritable> {
     public void compute(Iterator<IntWritable> msgIterator) {
         if (getSuperstep() > 3) {

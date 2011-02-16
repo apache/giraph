@@ -10,7 +10,7 @@ import org.apache.zookeeper.ZooDefs.Ids;
 
 import junit.framework.TestCase;
 
-public class ZooKeeperExtTest
+public class TestZooKeeperExt
         extends TestCase implements Watcher {
     /** ZooKeeperExt instance */
     ZooKeeperExt m_zooKeeperExt = null;
