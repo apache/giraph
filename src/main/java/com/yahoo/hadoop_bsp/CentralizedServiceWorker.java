@@ -15,11 +15,12 @@ import com.yahoo.hadoop_bsp.BspJob.BspMapper;
  * @author aching
  */
 @SuppressWarnings("rawtypes")
-public interface CentralizedServiceWorker<I extends WritableComparable,
-                                          V extends Writable,
-                                          E extends Writable,
-                                          M extends Writable> extends
-                                          CentralizedService {
+public interface CentralizedServiceWorker<
+        I extends WritableComparable,
+        V extends Writable,
+        E extends Writable,
+        M extends Writable>
+        extends CentralizedService, AggregatorUsage {
     /**
      * Get the hostname of this worker
      *

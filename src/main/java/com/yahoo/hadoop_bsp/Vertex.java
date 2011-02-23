@@ -20,7 +20,8 @@ import org.apache.hadoop.io.WritableComparable;
 public interface Vertex<I extends WritableComparable,
                         V extends Writable,
                         E extends Writable,
-                        M extends Writable> {
+                        M extends Writable>
+                        extends AggregatorUsage {
     /**
      * Optionally defined by the user to be executed once on all workers
      * before application has started.

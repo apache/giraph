@@ -20,31 +20,40 @@ import com.yahoo.hadoop_bsp.lib.LongSumAggregator;
  */
 public class SimplePageRankVertex extends
     HadoopVertex<LongWritable, DoubleWritable, FloatWritable, DoubleWritable> {
-    private static LongSumAggregator sumAggreg = null;
-    private static MinAggregator minAggreg = null;
-    private static MaxAggregator maxAggreg = null;
+    /** User can access this sum after the application finishes if local */
+    public static long finalSum;
+    /** User can access this min after the application finishes if local */
+    public static double finalMin;
+    /** User can access this max after the application finishes if local */
+    public static double finalMax;
     /** Logger */
     private static final Logger LOG =
         Logger.getLogger(SimplePageRankVertex.class);
 
-    private static void registerAggregators() {
-        sumAggreg = new LongSumAggregator();
-        minAggreg = new MinAggregator();
-        maxAggreg = new MaxAggregator();
-        registerAggregator("sum", sumAggreg);
-        registerAggregator("min", minAggreg);
-        registerAggregator("max", maxAggreg);
+    @Override
+    public void preApplication() {
+        registerAggregator("sum", LongSumAggregator.class);
+        registerAggregator("min", MinAggregator.class);
+        registerAggregator("max", MaxAggregator.class);
     }
 
     @Override
-    public void preApplication() {
-        if (sumAggreg == null) {
-            registerAggregators();
-        }
+    public void postApplication() {
+        LongSumAggregator sumAggreg = (LongSumAggregator) getAggregator("sum");
+        MinAggregator minAggreg = (MinAggregator) getAggregator("min");
+        MaxAggregator maxAggreg = (MaxAggregator) getAggregator("max");
+        finalSum = sumAggreg.getAggregatedValue().get();
+        finalMin = minAggreg.getAggregatedValue().get();
+        finalMax = maxAggreg.getAggregatedValue().get();
+
     }
+
 
     @Override
     public void preSuperstep() {
+        LongSumAggregator sumAggreg = (LongSumAggregator) getAggregator("sum");
+        MinAggregator minAggreg = (MinAggregator) getAggregator("min");
+        MaxAggregator maxAggreg = (MaxAggregator) getAggregator("max");
         if (getSuperstep() >= 2) {
             LOG.info("aggregatedNumVertices=" +
                     sumAggreg.getAggregatedValue() +
@@ -68,6 +77,9 @@ public class SimplePageRankVertex extends
     }
 
     public void compute(Iterator<DoubleWritable> msgIterator) {
+        LongSumAggregator sumAggreg = (LongSumAggregator) getAggregator("sum");
+        MinAggregator minAggreg = (MinAggregator) getAggregator("min");
+        MaxAggregator maxAggreg = (MaxAggregator) getAggregator("max");
         if (getSuperstep() >= 1) {
             double sum = 0;
             while (msgIterator.hasNext()) {

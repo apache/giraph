@@ -3,6 +3,7 @@ package com.yahoo.hadoop_bsp;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.TreeMap;
@@ -60,8 +61,6 @@ public class BspService <
     private final BspEvent m_masterElectionChildrenChanged;
     /** Cleaned up directory children changed*/
     private final BspEvent m_cleanedUpChildrenChanged;
-    /** Total mappers for this job */
-    private final int m_totalMappers;
     /** Configuration of the job*/
     private final Configuration m_conf;
     /** Job context (mainly for progress) */
@@ -104,6 +103,9 @@ public class BspService <
         new TreeMap<I, VertexRange<I, V, E, M>>();
     /** Vertex range set is based on this superstep */
     private long m_vertexRangeSuperstep = -1;
+    /** Map of aggregators */
+    private Map<String, Aggregator<Writable>> m_aggregatorMap =
+        new TreeMap<String, Aggregator<Writable>>();
 
     /** State of the application */
     public enum State {
@@ -160,6 +162,8 @@ public class BspService <
         "_previousHostnameKey";
     public static final String JSONOBJ_PREVIOUS_PORT_KEY = "_previousPortKey";
     public static final String AGGREGATOR_NAME_KEY = "_aggregatorNameKey";
+    public static final String AGGREGATOR_CLASS_NAME_KEY =
+        "_aggregatorClassNameKey";
     public static final String AGGREGATOR_VALUE_KEY = "_aggregatorValueKey";
 
     public static final String WORKER_SUFFIX = "_worker";
@@ -179,17 +183,8 @@ public class BspService <
     public final String CLEANED_UP_PATH;
     /** Path to the checkpoint's root (including job id) */
     public final String CHECKPOINT_BASE_PATH;
-
-    /**
-     * Generate the base master election directory path for a given application
-     * attempt
-     *
-     * @param attempt application attempt number
-     * @return directory path based on the an attempt
-     */
-    final public String getMasterElectionPath(long attempt) {
-        return APPLICATION_ATTEMPTS_PATH + "/" + attempt + MASTER_ELECTION_DIR;
-    }
+    /** Path to the master election path */
+    public final String MASTER_ELECTION_PATH;
 
     /**
      * Generate the base superstep directory path for a given application
@@ -396,9 +391,7 @@ public class BspService <
         return m_bspMapper;
     }
 
-    final public int getTotalMappers() {
-        return m_totalMappers;
-    }
+
 
     final public BspEvent getWorkerHealthRegistrationChangedEvent() {
         return m_workerHealthRegistrationChanged;
@@ -480,7 +473,6 @@ public class BspService <
         m_conf = context.getConfiguration();
         m_jobId = m_conf.get("mapred.job.id", "Unknown Job");
         m_taskPartition = m_conf.getInt("mapred.task.partition", -1);
-        m_totalMappers = m_conf.getInt("mapred.map.tasks", -1);
         m_workerHealthRegistrationChanged = new ContextLock(m_context);
         m_inputSplitsAllReadyChanged = new ContextLock(m_context);
         m_inputSplitsStateChanged = new ContextLock(m_context);
@@ -518,6 +510,7 @@ public class BspService <
         try {
             m_instantiableHadoopVertex =
                 ReflectionUtils.newInstance(hadoopVertexClass, m_conf);
+            m_instantiableHadoopVertex.setBspMapper(bspMapper);
         } catch (Exception e) {
             throw new RuntimeException(
                 "BspService: Couldn't instantiate vertex");
@@ -545,6 +538,7 @@ public class BspService <
             getConfiguration().get(
                 BspJob.BSP_CHECKPOINT_DIRECTORY,
                 BspJob.DEFAULT_BSP_CHECKPOINT_DIRECTORY + "/" + getJobId());
+        MASTER_ELECTION_PATH = BASE_PATH + MASTER_ELECTION_DIR;
         LOG.info("BspService: Connecting to ZooKeeper with job " + m_jobId +
                  ", " + getTaskPartition() + " on " + serverPortList);
         try {
@@ -784,6 +778,52 @@ public class BspService <
      public NavigableMap<I, VertexRange<I, V, E, M>> getCurrentVertexRangeMap()
      {
          return m_vertexRangeMap;
+     }
+
+     /**
+      * Register an aggregator with name.
+      *
+      * @param name
+      * @param aggregator
+      * @return boolean (false when aggregator already registered)
+      */
+     public final <A extends Writable> Aggregator<A> registerAggregator(
+             String name,
+             Class<? extends Aggregator<A>> aggregatorClass) {
+         if (m_aggregatorMap.get(name) != null) {
+             return null;
+         }
+         Aggregator<A> aggregator;
+         try {
+             aggregator = (Aggregator<A>) aggregatorClass.newInstance();
+         } catch (Exception e) {
+             throw new RuntimeException(
+                 "registerAggregator: Couldn't instantiate class " +
+                 aggregatorClass);
+         }
+         @SuppressWarnings("unchecked")
+         Aggregator<Writable> writableAggregator =
+             (Aggregator<Writable>) aggregator;
+         m_aggregatorMap.put(name, writableAggregator);
+         LOG.info("registered aggregator=" + name);
+         return aggregator;
+     }
+
+     /**
+      * Get aggregator by name.
+      *
+      * @param name
+      * @return Aggregator<A> (null when not registered)
+      */
+     public final Aggregator<? extends Writable> getAggregator(String name) {
+        return m_aggregatorMap.get(name);
+     }
+
+     /**
+      * Get the aggregator map.
+      */
+     public Map<String, Aggregator<Writable>> getAggregatorMap() {
+         return m_aggregatorMap;
      }
 
      /**

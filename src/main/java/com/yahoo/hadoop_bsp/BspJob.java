@@ -37,12 +37,23 @@ public class BspJob extends Job {
         "bsp.vertexRangeBalancerClass";
 
     /**
-     * Minimum number of simultaneous processes before this job can run (int)
+     * Minimum number of simultaneous workers before this job can run (int)
      */
-    public static final String BSP_MIN_PROCESSES = "bsp.minProcs";
-    /** Initial number of simultaneous tasks started by this job (int) */
-    public static final String BSP_INITIAL_PROCESSES = "bsp.maxProcs";
-    /** Minimum percent of initial processes that have responded (float) */
+    public static final String BSP_MIN_WORKERS = "bsp.minWorkers";
+    /**
+     * Maximum number of simultaneous worker tasks started by this job (int).
+     */
+    public static final String BSP_MAX_WORKERS = "bsp.maxWorkers";
+    /**
+     * Separate the workers and the master tasks.  This is required
+     * to support dynamic recovery. (boolean)
+     */
+    public static final String BSP_SPLIT_MASTER_WORKER =
+        "bsp.SplitMasterWorker";
+    /**
+     * Minimum percent of the maximum number of workers that have responded
+     * in order to continue progressing. (float)
+     */
     public static final String BSP_MIN_PERCENT_RESPONDED =
         "bsp.minPercentResponded";
     /** Polling timeout to check on the number of responded tasks (int) */
@@ -55,7 +66,7 @@ public class BspJob extends Job {
     /** Polling interval to check for the final ZooKeeper server data */
     public static final String BSP_ZOOKEEPER_SERVERLIST_POLL_MSECS =
         "bsp.zkServerlistPollMsecs";
-    /** Number of nodes to run Zookeeper on */
+    /** Number of nodes (not tasks) to run Zookeeper on */
     public static final String BSP_ZOOKEEPER_SERVER_COUNT =
         "bsp.zkServerCount";
     /** ZooKeeper port to use */
@@ -119,6 +130,12 @@ public class BspJob extends Job {
     /** Keep the zookeeper output for debugging? Default is to remove it. */
     public static final String BSP_KEEP_ZOOKEEPER_DATA =
         "bsp.keepZooKeeperData";
+
+    /**
+     * Default on whether to separate the workers and the master tasks.
+     * This is required to support dynamic recovery.
+     */
+    public static final Boolean DEFAULT_BSP_SPLIT_MASTER_WORKER = true;
     /** Default poll msecs (30 seconds) */
     public static final int DEFAULT_BSP_POLL_MSECS = 30*1000;
     /** Default Zookeeper session millisecond timeout */
@@ -187,14 +204,14 @@ public class BspJob extends Job {
     public BspJob(
         Configuration conf, String jobName) throws IOException {
         super(conf, jobName);
-        if (conf.getInt(BSP_INITIAL_PROCESSES, -1) < 0) {
-            throw new RuntimeException("No valid " + BSP_INITIAL_PROCESSES);
+        if (conf.getInt(BSP_MAX_WORKERS, -1) < 0) {
+            throw new RuntimeException("No valid " + BSP_MAX_WORKERS);
         }
         if (conf.getFloat(BSP_MIN_PERCENT_RESPONDED, 0.0f) <= 0) {
             throw new RuntimeException("No valid " + BSP_MIN_PERCENT_RESPONDED);
         }
-        if (conf.getInt(BSP_MIN_PROCESSES, -1) < 0) {
-            throw new RuntimeException("No valid " + BSP_MIN_PROCESSES);
+        if (conf.getInt(BSP_MIN_WORKERS, -1) < 0) {
+            throw new RuntimeException("No valid " + BSP_MIN_WORKERS);
         }
         if (conf.getClass(BSP_VERTEX_CLASS,
                           HadoopVertex.class,
@@ -224,10 +241,11 @@ public class BspJob extends Job {
      * @param <V>
      */
     @SuppressWarnings("rawtypes")
-    public static class BspMapper<I
-        extends WritableComparable, V extends Writable, E
-        extends Writable, M extends Writable>
-        extends Mapper<Object, Object, Object, Object> {
+    public static class BspMapper<I extends WritableComparable,
+                                  V extends Writable,
+                                  E extends Writable,
+                                  M extends Writable>
+            extends Mapper<Object, Object, Object, Object> {
         /** Logger */
         private static final Logger LOG = Logger.getLogger(BspMapper.class);
         /** Coordination service worker */
@@ -241,52 +259,45 @@ public class BspJob extends Job {
         /** Manages the ZooKeeper servers if necessary (dynamic startup) */
         private ZooKeeperManager m_manager;
         /** Configuration */
-        private Configuration m_conf = null;
+        private Configuration m_conf;
         /** Already complete? */
         private boolean m_done = false;
+        /** What kind of functions is this mapper doing? */
+        private MapFunctions m_mapFunctions = MapFunctions.UNKNOWN;
+
+        /** What kinds of functions to run on this mapper */
+        public enum MapFunctions {
+            UNKNOWN,
+            MASTER_ONLY,
+            MASTER_ZOOKEEPER_ONLY,
+            WORKER_ONLY,
+            ALL
+        }
+
+        /**
+         * Get the map function enum
+         */
+        MapFunctions getMapFunctions() {
+            return m_mapFunctions;
+        }
 
         /**
          * Get the worker communications, a subset of the functionality.
          *
          * @return worker communication object
          */
-        final public WorkerCommunications<I, V, E, M>
+        public final WorkerCommunications<I, V, E, M>
                 getWorkerCommunications() {
             return m_commService;
         }
 
         /**
-         * Passes aggregator registration on to service worker.
+         * Get the aggregator usage, a subset of the functionality
          *
-         * @param name
-         * @param aggregator
-         * @return boolean (false when aggregator already registered)
+         * @return
          */
-        public static <A extends Writable> boolean registerAggregator(
-            String name,
-            Aggregator<A> aggregator) {
-            return BspServiceWorker.registerAggregator(name, aggregator);
-        }
-
-        /**
-         * Get aggregator from service worker.
-         *
-         * @param name
-         * @return Aggregator<A> (null when not registered)
-         */
-        public static <A extends Writable> Aggregator<A> getAggregator(
-            String name) {
-            return BspServiceWorker.getAggregator(name);
-        }
-
-        /**
-         * Tell service worker to use an aggregator in this superstep.
-         *
-         * @param name
-         * @return boolean (false when aggregator not registered)
-         */
-        public static boolean useAggregator(String name) {
-             return BspServiceWorker.useAggregator(name);
+        public final AggregatorUsage getAggregatorUsage() {
+            return m_serviceWorker;
         }
 
         /**
@@ -309,11 +320,9 @@ public class BspJob extends Job {
         public void setup(Context context)
             throws IOException, InterruptedException {
 
-            // setting the default handler for uncaught exceptions.
+            // Setting the default handler for uncaught exceptions.
             Thread.setDefaultUncaughtExceptionHandler(
                 new OverrideExceptionHandler());
-
-            m_conf = context.getConfiguration();
             // Do some initial setup (possibly starting up a Zookeeper service),
             // but mainly decide whether to load data
             // from a checkpoint or from the InputFormat.
@@ -321,6 +330,7 @@ public class BspJob extends Job {
             String trimmedJarFile = jarFile.replaceFirst("file:", "");
             LOG.info("setup: jar file @ " + jarFile +
                      ", using " + trimmedJarFile);
+            m_conf = context.getConfiguration();
             m_conf.set(BSP_ZOOKEEPER_JAR, trimmedJarFile);
             String serverPortList =
                 m_conf.get(BspJob.BSP_ZOOKEEPER_LIST, "");
@@ -340,23 +350,61 @@ public class BspJob extends Job {
                              BspJob.DEFAULT_ZOOKEEPER_TICK_TIME);
             }
             int sessionMsecTimeout =
-                m_conf.getInt(
-                              BspJob.BSP_ZOOKEEPER_SESSION_TIMEOUT,
+                m_conf.getInt(BspJob.BSP_ZOOKEEPER_SESSION_TIMEOUT,
                               BspJob.DEFAULT_BSP_ZOOKEEPER_SESSION_TIMEOUT);
+            boolean splitMasterWorker =
+                m_conf.getBoolean(BspJob.BSP_SPLIT_MASTER_WORKER,
+                                  BspJob.DEFAULT_BSP_SPLIT_MASTER_WORKER);
+            int taskPartition = m_conf.getInt("mapred.task.partition", -1);
+
+            // What functions should this mapper do?
+            if (!splitMasterWorker) {
+                m_mapFunctions = MapFunctions.ALL;
+            }
+            else {
+                if (serverPortList != "") {
+                    int masterCount =
+                        m_conf.getInt(
+                            BspJob.BSP_ZOOKEEPER_SERVER_COUNT,
+                            BspJob.DEFAULT_BSP_ZOOKEEPER_SERVER_COUNT);
+                    if (taskPartition < masterCount) {
+                        m_mapFunctions = MapFunctions.MASTER_ONLY;
+                    }
+                    else {
+                        m_mapFunctions = MapFunctions.WORKER_ONLY;
+                    }
+                }
+                else {
+                    if (m_manager.runsZooKeeper()) {
+                        m_mapFunctions = MapFunctions.MASTER_ZOOKEEPER_ONLY;
+                    }
+                    else {
+                        m_mapFunctions = MapFunctions.WORKER_ONLY;
+                    }
+                }
+            }
             try {
-                LOG.info("Starting up BspServiceMaster (master thread)...");
-                m_masterThread =
-                    new MasterThread<I, V, E, M>(
-                        new BspServiceMaster<I, V, E, M>(serverPortList,
-                                                         sessionMsecTimeout,
-                                                         context,
-                                                         this));
-                m_masterThread.start();
-                LOG.info("Starting up BspServiceWorker...");
-                m_serviceWorker = new BspServiceWorker<I, V, E, M>(
-                    serverPortList, sessionMsecTimeout, context, this);
-                LOG.info("Registering health of this process...");
-                m_serviceWorker.setup();
+                if ((m_mapFunctions == MapFunctions.MASTER_ZOOKEEPER_ONLY) ||
+                        (m_mapFunctions == MapFunctions.MASTER_ONLY) ||
+                        (m_mapFunctions == MapFunctions.ALL)) {
+                    LOG.info("setup: Starting up BspServiceMaster " +
+                             "(master thread)...");
+                    m_masterThread =
+                        new MasterThread<I, V, E, M>(
+                            new BspServiceMaster<I, V, E, M>(serverPortList,
+                                                             sessionMsecTimeout,
+                                                             context,
+                                                             this));
+                    m_masterThread.start();
+                }
+                if ((m_mapFunctions == MapFunctions.WORKER_ONLY) ||
+                        (m_mapFunctions == MapFunctions.ALL)) {
+                    LOG.info("setup: Starting up BspServiceWorker...");
+                    m_serviceWorker = new BspServiceWorker<I, V, E, M>(
+                        serverPortList, sessionMsecTimeout, context, this);
+                    LOG.info("setup: Registering health of this worker...");
+                    m_serviceWorker.setup();
+                }
             } catch (Exception e) {
                 LOG.error(e.getMessage());
                 if (m_manager != null ) {
@@ -365,6 +413,8 @@ public class BspJob extends Job {
                 }
                 throw new RuntimeException(e);
             }
+
+            context.setStatus(getMapFunctions().toString() + " starting...");
         }
 
         @Override
@@ -377,6 +427,12 @@ public class BspJob extends Job {
             // 4) Check if all vertices are done.  If not goto 2).
             // 5) Dump output.
             if (m_done == true) {
+                return;
+            }
+
+            if ((m_mapFunctions == MapFunctions.MASTER_ZOOKEEPER_ONLY) ||
+                    (m_mapFunctions == MapFunctions.MASTER_ONLY)) {
+                LOG.info("map: No need to do anything when not a worker");
                 return;
             }
 
@@ -493,15 +549,20 @@ public class BspJob extends Job {
             if (m_commService != null) {
                 m_commService.closeConnections();
             }
-            m_serviceWorker.cleanup();
+            if (m_serviceWorker != null) {
+                m_serviceWorker.cleanup();
+            }
             try {
-                m_masterThread.join();
+                if (m_masterThread != null) {
+                    m_masterThread.join();
+                }
             } catch (InterruptedException e) {
                 // cleanup phase -- just log the error
                 LOG.error("cleanup: Master thread couldn't join");
             }
             if (m_manager != null) {
-                m_manager.offlineZooKeeperServers(ZooKeeperManager.State.FINISHED);
+                m_manager.offlineZooKeeperServers(
+                    ZooKeeperManager.State.FINISHED);
             }
             // Preferably would shut down the service only after
             // all clients have disconnected (or the exceptions on the

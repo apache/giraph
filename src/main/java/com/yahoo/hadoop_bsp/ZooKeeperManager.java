@@ -30,8 +30,6 @@ import org.apache.log4j.Logger;
 /**
  * Manages the election of ZooKeeper servers, starting/stopping the services,
  * etc.
- * @author aching
- *
  */
 public class ZooKeeperManager {
     /** Job context (mainly for progress) */
@@ -72,7 +70,7 @@ public class ZooKeeperManager {
     /** ZooKeeper config file path */
     private String m_configFilePath = null;
     /** ZooKeeper server list */
-    private Map<String, Integer> m_zkServerPortMap =
+    private final Map<String, Integer> m_zkServerPortMap =
         new TreeMap<String, Integer>();
     /** ZooKeeper base port */
     private int m_zkBasePort = -1;
@@ -678,6 +676,12 @@ public class ZooKeeperManager {
         }
     }
 
+    /**
+     *  Is this task running a ZooKeeper server?  Only could be true if called
+     *  after onlineZooKeeperServers().
+     *
+     *  @return true if running a ZooKeeper server, false otherwise
+     */
     public boolean runsZooKeeper() {
         return m_zkProcess != null;
     }

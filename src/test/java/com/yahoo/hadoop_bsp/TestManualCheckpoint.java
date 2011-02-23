@@ -6,15 +6,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 import com.yahoo.hadoop_bsp.examples.GeneratedVertexInputFormat;
-import com.yahoo.hadoop_bsp.examples.GeneratedVertexReader;
 import com.yahoo.hadoop_bsp.examples.SimpleCheckpointVertex;
 import com.yahoo.hadoop_bsp.examples.SimpleVertexWriter;
-import com.yahoo.hadoop_bsp.lib.LongSumAggregator;
 
 import junit.framework.Test;
 import junit.framework.TestSuite;
@@ -53,31 +50,7 @@ public class TestManualCheckpoint extends BspCase {
         throws IOException, InterruptedException, ClassNotFoundException {
         Configuration conf = new Configuration();
         conf.set("mapred.jar", getJarLocation());
-        // Allow this test to be run on a real Hadoop setup
-        if (getJobTracker() != null) {
-            System.out.println("testBspCheckpoint: Sending job to job tracker " +
-                       getJarLocation() + " with jar path " + getJobTracker());
-            conf.set("mapred.job.tracker", getJobTracker());
-            conf.setInt(BspJob.BSP_INITIAL_PROCESSES, getNumWorkers());
-            conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
-            conf.setInt(BspJob.BSP_MIN_PROCESSES, getNumWorkers());
-        }
-        else {
-            System.out.println("testBspCheckpoint: Using local job runner with " +
-                               "location " + getJarLocation() + "...");
-            conf.setInt(BspJob.BSP_INITIAL_PROCESSES, 1);
-            conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
-            conf.setInt(BspJob.BSP_MIN_PROCESSES, 1);
-        }
-        conf.setInt(BspJob.BSP_POLL_ATTEMPTS, 5);
-        conf.setInt(BspJob.BSP_POLL_MSECS, 3*1000);
-        conf.setBoolean(BspJob.BSP_KEEP_ZOOKEEPER_DATA, true);
-        if (getZooKeeperList() != null) {
-            conf.set(BspJob.BSP_ZOOKEEPER_LIST, getZooKeeperList());
-        }
-        conf.setInt(BspJob.BSP_RPC_INITIAL_PORT, BspJob.BSP_RPC_DEFAULT_PORT);
-        // GeneratedInputSplit will generate 5 vertices
-        conf.setLong(GeneratedVertexReader.READER_VERTICES, 5);
+        setupConfiguration(conf);
         FileSystem hdfs = FileSystem.get(conf);
         conf.setClass(BspJob.BSP_VERTEX_CLASS,
                       SimpleCheckpointVertex.class,
@@ -104,10 +77,7 @@ public class TestManualCheckpoint extends BspCase {
             FileStatus [] fileStatusArr = hdfs.listStatus(outputPath);
             assertTrue(fileStatusArr.length == 1);
             fileLen = fileStatusArr[0].getLen();
-            idSum =
-                ((LongWritable) BspJob.BspMapper.getAggregator(
-                    LongSumAggregator.class.getName()).
-                        getAggregatedValue()).get();
+            idSum = SimpleCheckpointVertex.finalSum;
             System.out.println("testBspCheckpoint: idSum = " + idSum +
                                " fileLen = " + fileLen);
         }
@@ -126,10 +96,7 @@ public class TestManualCheckpoint extends BspCase {
             FileStatus [] fileStatusArr = hdfs.listStatus(outputPath);
             assertTrue(fileStatusArr.length == 1);
             assertTrue(fileStatusArr[0].getLen() == fileLen);
-            long idSumRestarted =
-                ((LongWritable) BspJob.BspMapper.getAggregator(
-                    LongSumAggregator.class.getName()).
-                        getAggregatedValue()).get();
+            long idSumRestarted = SimpleCheckpointVertex.finalSum;
             System.out.println("testBspCheckpoint: idSumRestarted = " +
                                idSumRestarted);
             assertTrue(idSum == idSumRestarted);

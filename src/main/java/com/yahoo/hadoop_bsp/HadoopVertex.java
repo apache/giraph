@@ -20,8 +20,10 @@ import org.apache.hadoop.io.WritableComparable;
 
 @SuppressWarnings("rawtypes")
 public abstract class HadoopVertex<
-        I extends WritableComparable, V extends Writable,
-        E extends Writable, M extends Writable>
+        I extends WritableComparable,
+        V extends Writable,
+        E extends Writable,
+        M extends Writable>
         implements MutableVertex<I, V, E, M>, Writable, Configurable {
     /** Class logger */
     private static final Logger LOG = Logger.getLogger(HadoopVertex.class);
@@ -227,15 +229,17 @@ public abstract class HadoopVertex<
     }
 
     /**
-     * Register an aggregator.
+     * Register an aggregator in preSuperstep() and/or preApplication().
      *
      * @param name of aggregator
      * @param aggregator
      * @return boolean (false when already registered)
      */
-    public final static <A extends Writable> boolean registerAggregator(
-            String name, Aggregator<A> aggregator) {
-        return BspJob.BspMapper.registerAggregator(name, aggregator);
+    public final <A extends Writable> Aggregator<A> registerAggregator(
+            String name,
+            Class<? extends Aggregator<A>> aggregatorClass) {
+        return m_bspMapper.getAggregatorUsage().registerAggregator(
+            name, aggregatorClass);
     }
 
     /**
@@ -244,22 +248,21 @@ public abstract class HadoopVertex<
      * @param name of aggregator
      * @return Aggregator<A> (null when not registered)
      */
-    public final static <A extends Writable> Aggregator<A> getAggregator(
-            String name) {
-        return BspJob.BspMapper.getAggregator(name);
+    public final Aggregator<? extends Writable> getAggregator(String name) {
+        return m_bspMapper.getAggregatorUsage().getAggregator(name);
     }
 
     /**
      * Use a registered aggregator in current superstep.
      * Even when the same aggregator should be used in the next
      * superstep, useAggregator needs to be called at the beginning
-     * of that superstep.
+     * of that superstep in preSuperstep().
      *
      * @param name of aggregator
      * @return boolean (false when not registered)
      */
-    public final static boolean useAggregator(String name) {
-        return BspJob.BspMapper.useAggregator(name);
+    public final boolean useAggregator(String name) {
+        return m_bspMapper.getAggregatorUsage().useAggregator(name);
     }
 
     public List<M> getMsgList() {

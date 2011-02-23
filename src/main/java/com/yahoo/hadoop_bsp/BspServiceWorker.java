@@ -44,10 +44,12 @@ import org.apache.zookeeper.data.Stat;
  */
 @SuppressWarnings("rawtypes")
 public class BspServiceWorker<
-        I extends WritableComparable, V extends Writable,
-        E extends Writable, M extends Writable>
-        extends BspService<I, V, E, M> implements
-        CentralizedServiceWorker<I, V, E, M> {
+        I extends WritableComparable,
+        V extends Writable,
+        E extends Writable,
+        M extends Writable>
+        extends BspService<I, V, E, M>
+        implements CentralizedServiceWorker<I, V, E, M> {
     /** Number of input splits */
     private int m_inputSplitCount = -1;
     /** Cached aggregate number of vertices in the entire application */
@@ -56,11 +58,8 @@ public class BspServiceWorker<
     private String m_myHealthZnode;
     /** Final server RPC port */
     private final int m_finalRpcPort;
-    /** Map of aggregators */
-    private static Map<String, Aggregator<Writable>> m_aggregatorMap =
-        new TreeMap<String, Aggregator<Writable>>();
     /** List of aggregators currently in use */
-    private static Set<String> m_aggregatorInUse = new TreeSet<String>();
+    private Set<String> m_aggregatorInUse = new TreeSet<String>();
     /** Class logger */
     private static final Logger LOG = Logger.getLogger(BspServiceWorker.class);
 
@@ -84,6 +83,21 @@ public class BspServiceWorker<
      * dmesg, etc. For now, does nothing.
      */
     public boolean isHealthy() {
+        return true;
+    }
+
+    /**
+     * Use an aggregator in this superstep.
+     *
+     * @param name
+     * @return boolean (false when aggregator not registered)
+     */
+    public boolean useAggregator(String name) {
+        if (getAggregatorMap().get(name) == null) {
+            LOG.error("userAggregator: Aggregator=" + name + " not registered");
+            return false;
+        }
+        m_aggregatorInUse.add(name);
         return true;
     }
 
@@ -488,7 +502,7 @@ public class BspServiceWorker<
         Base64 base64 = new Base64();
         for (String name : m_aggregatorInUse) {
             try {
-                Aggregator<Writable> aggregator = m_aggregatorMap.get(name);
+                Aggregator<Writable> aggregator = getAggregatorMap().get(name);
                 ByteArrayOutputStream outputStream =
                     new ByteArrayOutputStream();
                 DataOutput output = new DataOutputStream(outputStream);
@@ -496,6 +510,8 @@ public class BspServiceWorker<
 
                 JSONObject aggregatorObj = new JSONObject();
                 aggregatorObj.put(AGGREGATOR_NAME_KEY, name);
+                aggregatorObj.put(AGGREGATOR_CLASS_NAME_KEY,
+                                  aggregator.getClass().getName());
                 aggregatorObj.put(
                     AGGREGATOR_VALUE_KEY,
                     base64.encodeToString(outputStream.toByteArray()));
@@ -547,7 +563,7 @@ public class BspServiceWorker<
                 String aggregatorName = aggregatorArray.getJSONObject(i).
                     getString(AGGREGATOR_NAME_KEY);
                 Aggregator<Writable> aggregator =
-                    m_aggregatorMap.get(aggregatorName);
+                    getAggregatorMap().get(aggregatorName);
                 if (aggregator == null) {
                     continue;
                 }
@@ -722,7 +738,8 @@ public class BspServiceWorker<
                  " with finishedVertices=" + finishedVertices +
                  ", numVertices=" + m_totalVertices);
         incrCachedSuperstep();
-        getContext().setStatus("Superstep " + getSuperstep());
+        getContext().setStatus(getBspMapper().getMapFunctions().toString() +
+                               " - Superstep " + getSuperstep());
         return (finishedVertices == m_totalVertices);
     }
 
@@ -812,55 +829,6 @@ public class BspServiceWorker<
         }
     }
 
-    /**
-     * Register an aggregator with name.
-     *
-     * @param name
-     * @param aggregator
-     * @return boolean (false when aggregator already registered)
-     */
-    public static <A extends Writable> boolean registerAggregator(
-        String name,
-        Aggregator<A> aggregator) {
-        if (m_aggregatorMap.get(name) != null) {
-            return false;
-        }
-        @SuppressWarnings("unchecked")
-        Aggregator<Writable> castedAggregator =
-            (Aggregator<Writable>) aggregator;
-        m_aggregatorMap.put(name, castedAggregator);
-        LOG.info("registered aggregator=" + name);
-        return true;
-    }
-
-    /**
-     * Get aggregator by name.
-     *
-     * @param name
-     * @return Aggregator<A> (null when not registered)
-     */
-    public static <A extends Writable> Aggregator<A> getAggregator(
-        String name) {
-        @SuppressWarnings("unchecked")
-        Aggregator<A> castedAggregator =
-            (Aggregator<A>) m_aggregatorMap.get(name);
-        return castedAggregator;
-    }
-
-    /**
-     * Use an aggregator in this superstep.
-     *
-     * @param name
-     * @return boolean (false when aggregator not registered)
-     */
-    public static boolean useAggregator(String name) {
-        if (m_aggregatorMap.get(name) == null) {
-            LOG.error("userAggregator: Aggregator=" + name + " not registered");
-            return false;
-        }
-        m_aggregatorInUse.add(name);
-        return true;
-    }
 
     public void storeCheckpoint() throws IOException {
         // Algorithm:

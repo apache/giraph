@@ -7,8 +7,6 @@ import java.lang.reflect.InvocationTargetException;
 
 import java.util.List;
 
-import org.apache.hadoop.io.DoubleWritable;
-import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -96,29 +94,16 @@ public class TestBspBasic extends BspCase {
      * @throws InterruptedException
      */
     public void testBspFail()
-        throws IOException, InterruptedException, ClassNotFoundException {
-        Configuration conf = new Configuration();
-        conf.set("mapred.jar", getJarLocation());
+            throws IOException, InterruptedException, ClassNotFoundException {
         // Allow this test only to be run on a real Hadoop setup
         if (getJobTracker() == null) {
             System.out.println("testBspFail: not executed for local setup.");
             return;
         }
-        System.out.println("testBspFail: Sending job to job tracker " +
-                       getJobTracker() + " with jar path " + getJarLocation());
-        conf.set("mapred.job.tracker", getJobTracker());
+        Configuration conf = new Configuration();
+        conf.set("mapred.jar", getJarLocation());
+        setupConfiguration(conf);
         conf.setInt("mapred.map.max.attempts", 2);
-        conf.setInt(BspJob.BSP_INITIAL_PROCESSES, getNumWorkers());
-        conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
-        conf.setInt(BspJob.BSP_MIN_PROCESSES, getNumWorkers());
-        conf.setInt(BspJob.BSP_POLL_ATTEMPTS, 5);
-        conf.setInt(BspJob.BSP_POLL_MSECS, 3*1000);
-        if (getZooKeeperList() != null) {
-            conf.set(BspJob.BSP_ZOOKEEPER_LIST, getZooKeeperList());
-        }
-        conf.setInt(BspJob.BSP_RPC_INITIAL_PORT, BspJob.BSP_RPC_DEFAULT_PORT);
-        // GeneratedInputSplit will generate 5 vertices
-        conf.setLong(GeneratedVertexReader.READER_VERTICES, 15);
         FileSystem hdfs = FileSystem.get(conf);
         conf.setClass(BspJob.BSP_VERTEX_CLASS,
                       SimpleFailVertex.class,
@@ -145,32 +130,7 @@ public class TestBspBasic extends BspCase {
     public void testBspSuperStep()
         throws IOException, InterruptedException, ClassNotFoundException {
         Configuration conf = new Configuration();
-        // Allow this test to be run on a real Hadoop setup
-        conf.set("mapred.jar", getJarLocation());
-
-        if (getJobTracker() != null) {
-            System.out.println("testBspSuperstep: Sending job to job tracker " +
-                               getJobTracker() + " with jar path " +
-                               getJarLocation());
-            conf.set("mapred.job.tracker", getJobTracker());
-            conf.setInt(BspJob.BSP_INITIAL_PROCESSES, getNumWorkers());
-            conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
-            conf.setInt(BspJob.BSP_MIN_PROCESSES, getNumWorkers());
-        }
-        else {
-            System.out.println("testBspSuperStep: Using local job runner with " +
-                               "location " + getJarLocation() + "...");
-            conf.setInt(BspJob.BSP_INITIAL_PROCESSES, 1);
-            conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
-            conf.setInt(BspJob.BSP_MIN_PROCESSES, 1);
-        }
-
-        conf.setInt(BspJob.BSP_POLL_ATTEMPTS, 5);
-        conf.setInt(BspJob.BSP_POLL_MSECS, 3*1000);
-        if (getZooKeeperList() != null) {
-              conf.set(BspJob.BSP_ZOOKEEPER_LIST, getZooKeeperList());
-        }
-        conf.setInt(BspJob.BSP_RPC_INITIAL_PORT, BspJob.BSP_RPC_DEFAULT_PORT);
+        setupConfiguration(conf);
         conf.setFloat(BspJob.BSP_TOTAL_INPUT_SPLIT_MULTIPLIER, 2.0f);
         // GeneratedInputSplit will generate 10 vertices
         conf.setLong(GeneratedVertexReader.READER_VERTICES, 10);
@@ -209,32 +169,7 @@ public class TestBspBasic extends BspCase {
         throws IOException, InterruptedException, ClassNotFoundException {
         Configuration conf = new Configuration();
         conf.set("mapred.jar", getJarLocation());
-        // Allow this test to be run on a real Hadoop setup
-        if (getJobTracker() != null) {
-            System.out.println("testBspMsg: Sending job to job tracker " +
-                               getJobTracker() + " with jar path " +
-                               getJarLocation());
-            conf.set("mapred.job.tracker", getJobTracker());
-            conf.setInt(BspJob.BSP_INITIAL_PROCESSES, getNumWorkers());
-            conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
-            conf.setInt(BspJob.BSP_MIN_PROCESSES, getNumWorkers());
-        }
-        else {
-            System.out.println("testBspMsg: Using local job runner with " +
-                               "location " + getJarLocation() + "...");
-            conf.setInt(BspJob.BSP_INITIAL_PROCESSES, 1);
-            conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
-            conf.setInt(BspJob.BSP_MIN_PROCESSES, 1);
-        }
-
-        conf.setInt(BspJob.BSP_POLL_ATTEMPTS, 5);
-        conf.setInt(BspJob.BSP_POLL_MSECS, 3*1000);
-        if (getZooKeeperList() != null) {
-            conf.set(BspJob.BSP_ZOOKEEPER_LIST, getZooKeeperList());
-        }
-        conf.setInt(BspJob.BSP_RPC_INITIAL_PORT, BspJob.BSP_RPC_DEFAULT_PORT);
-        // GeneratedInputSplit will generate 5 vertices
-        conf.setLong(GeneratedVertexReader.READER_VERTICES, 5);
+        setupConfiguration(conf);
         FileSystem hdfs = FileSystem.get(conf);
         conf.setClass(BspJob.BSP_VERTEX_CLASS,
                       SimpleMsgVertex.class,
@@ -262,31 +197,7 @@ public class TestBspBasic extends BspCase {
         throws IOException, InterruptedException, ClassNotFoundException {
         Configuration conf = new Configuration();
         conf.set("mapred.jar", getJarLocation());
-        // Allow this test to be run on a real Hadoop setup
-        if (getJobTracker() != null) {
-            System.out.println("testBspMsg: Sending job to job tracker " +
-                       getJobTracker() + " with jar path " + getJarLocation());
-            conf.set("mapred.job.tracker", getJobTracker());
-            conf.setInt(BspJob.BSP_INITIAL_PROCESSES, getNumWorkers());
-            conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
-            conf.setInt(BspJob.BSP_MIN_PROCESSES, getNumWorkers());
-        }
-        else {
-            System.out.println("testBspMsg: Using local job runner with " +
-                               "location " + getJarLocation() + "...");
-            conf.setInt(BspJob.BSP_INITIAL_PROCESSES, 1);
-            conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
-            conf.setInt(BspJob.BSP_MIN_PROCESSES, 1);
-        }
-
-        conf.setInt(BspJob.BSP_POLL_ATTEMPTS, 5);
-        conf.setInt(BspJob.BSP_POLL_MSECS, 3*1000);
-        if (getZooKeeperList() != null) {
-            conf.set(BspJob.BSP_ZOOKEEPER_LIST, getZooKeeperList());
-        }
-        conf.setInt(BspJob.BSP_RPC_INITIAL_PORT, BspJob.BSP_RPC_DEFAULT_PORT);
-        // GeneratedInputSplit will generate 5 vertices
-        conf.setLong(GeneratedVertexReader.READER_VERTICES, 5);
+        setupConfiguration(conf);
         FileSystem hdfs = FileSystem.get(conf);
         conf.setClass(BspJob.BSP_VERTEX_CLASS,
                       SimpleCombinerVertex.class,
@@ -316,31 +227,7 @@ public class TestBspBasic extends BspCase {
     public void testBspPageRank()
         throws IOException, InterruptedException, ClassNotFoundException {
         Configuration conf = new Configuration();
-        conf.set("mapred.jar", getJarLocation());
-        // Allow this test to be run on a real Hadoop setup
-        if (getJobTracker() != null) {
-            System.out.println("testBspJob: Sending job to job tracker " +
-                       getJobTracker() + " with jar path " + getJarLocation());
-            conf.set("mapred.job.tracker", getJobTracker());
-            conf.setInt(BspJob.BSP_INITIAL_PROCESSES, getNumWorkers());
-            conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
-            conf.setInt(BspJob.BSP_MIN_PROCESSES, getNumWorkers());
-        }
-        else {
-            System.out.println("testBspPageRank: Using local job runner with " +
-                               "location " + getJarLocation() + "...");
-            conf.setInt(BspJob.BSP_INITIAL_PROCESSES, 1);
-            conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
-            conf.setInt(BspJob.BSP_MIN_PROCESSES, 1);
-        }
-        conf.setInt(BspJob.BSP_POLL_ATTEMPTS, 5);
-        conf.setInt(BspJob.BSP_POLL_MSECS, 3*1000);
-        if (getZooKeeperList() != null) {
-            conf.set(BspJob.BSP_ZOOKEEPER_LIST, getZooKeeperList());
-        }
-        conf.setInt(BspJob.BSP_RPC_INITIAL_PORT, BspJob.BSP_RPC_DEFAULT_PORT);
-        // GeneratedInputSplit will generate 5 vertices
-        conf.setLong(GeneratedVertexReader.READER_VERTICES, 5);
+        setupConfiguration(conf);
         FileSystem hdfs = FileSystem.get(conf);
         conf.setClass(BspJob.BSP_VERTEX_CLASS,
                       SimplePageRankVertex.class,
@@ -357,12 +244,9 @@ public class TestBspBasic extends BspCase {
         FileOutputFormat.setOutputPath(bspJob, outputPath);
         assertTrue(bspJob.run());
         if (getJobTracker() == null) {
-            double maxPageRank = ((DoubleWritable)BspJob.BspMapper.
-                    getAggregator("max").getAggregatedValue()).get();
-            double minPageRank = ((DoubleWritable)BspJob.BspMapper.
-                    getAggregator("min").getAggregatedValue()).get();
-            long numVertices = ((LongWritable)BspJob.BspMapper.
-                    getAggregator("sum").getAggregatedValue()).get();
+            double maxPageRank = SimplePageRankVertex.finalMax;
+            double minPageRank = SimplePageRankVertex.finalMin;
+            long numVertices = SimplePageRankVertex.finalSum;
             System.out.println("testBspPageRank: maxPageRank=" + maxPageRank +
                                " minPageRank=" + minPageRank +
                                " numVertices=" + numVertices);

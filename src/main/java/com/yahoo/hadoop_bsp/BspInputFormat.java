@@ -11,25 +11,53 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.log4j.Logger;
 
 /**
  * This InputFormat supports the BSP model by ensuring that the user specifies
- * how many splits (number of mappers) should be started simultaneously.  It is
- * not meant to do any meaningful split of user-data.
+ * how many splits (number of mappers) should be started simultaneously.
+ * The number of splits depends on whether the master and worker processes are
+ * separate.  It is not meant to do any meaningful split of user-data.
  * @author aching
  *
  */
 public class BspInputFormat extends InputFormat<Text, Text> {
+    /** Logger */
+    private static final Logger LOG = Logger.getLogger(BspInputFormat.class);
+
+    /**
+     * Get the correct number of mappers based on the configuration
+     *
+     * @param conf Configuration to determine the number of mappers
+     */
+    public static int getMaxTasks(Configuration conf) {
+        int maxWorkers = conf.getInt(BspJob.BSP_MAX_WORKERS, 0);
+        boolean splitMasterWorker =
+            conf.getBoolean(BspJob.BSP_SPLIT_MASTER_WORKER,
+                            BspJob.DEFAULT_BSP_SPLIT_MASTER_WORKER);
+        int maxTasks = maxWorkers;
+        if (splitMasterWorker) {
+            int zkServers =
+                conf.getInt(BspJob.BSP_ZOOKEEPER_SERVER_COUNT,
+                            BspJob.DEFAULT_BSP_ZOOKEEPER_SERVER_COUNT);
+            maxTasks += zkServers;
+        }
+        LOG.info("getMaxTasks: Max workers = " + maxWorkers +
+                 ", split master/worker = " + splitMasterWorker +
+                 ", total max tasks = " + maxTasks);
+        return maxTasks;
+    }
+
     public List<InputSplit> getSplits(JobContext context)
         throws IOException, InterruptedException {
         Configuration conf = context.getConfiguration();
-        int initialTasks = conf.getInt(BspJob.BSP_INITIAL_PROCESSES, 0);
-        if (initialTasks <= 0) {
+        int maxTasks = getMaxTasks(conf);
+        if (maxTasks <= 0) {
             throw new InterruptedException(
-                "Set " + BspJob.BSP_INITIAL_PROCESSES + " > 0");
+                "getSplits: Cannot have maxTasks <= 0 - " + maxTasks);
         }
         List<InputSplit> inputSplitList = new ArrayList<InputSplit>();
-        for (int i = 0; i < initialTasks; ++i) {
+        for (int i = 0; i < maxTasks; ++i) {
             inputSplitList.add(new BspInputSplit());
         }
         return inputSplitList;

@@ -10,7 +10,6 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 import com.yahoo.hadoop_bsp.examples.GeneratedVertexInputFormat;
-import com.yahoo.hadoop_bsp.examples.GeneratedVertexReader;
 import com.yahoo.hadoop_bsp.examples.SimpleCheckpointVertex;
 import com.yahoo.hadoop_bsp.examples.SimpleVertexWriter;
 import com.yahoo.hadoop_bsp.examples.SuperstepBalancer;
@@ -22,7 +21,6 @@ import junit.framework.TestSuite;
  * Unit test for manual checkpoint restarting
  */
 public class TestVertexRangeBalancer extends BspCase {
-
     /**
      * Create the test case
      *
@@ -51,33 +49,7 @@ public class TestVertexRangeBalancer extends BspCase {
         throws IOException, InterruptedException, ClassNotFoundException {
         Configuration conf = new Configuration();
         conf.set("mapred.jar", getJarLocation());
-        // Allow this test to be run on a real Hadoop setup
-        if (getJobTracker() != null) {
-            System.out.println("testSuperstepBalancer: Sending job to " +
-                               "job tracker " + getJarLocation() +
-                               " with jar path " + getJobTracker());
-            conf.set("mapred.job.tracker", getJobTracker());
-            conf.setInt(BspJob.BSP_INITIAL_PROCESSES, getNumWorkers());
-            conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
-            conf.setInt(BspJob.BSP_MIN_PROCESSES, getNumWorkers());
-        }
-        else {
-            System.out.println("testSuperstepBalancer: Using local job " +
-                               "runner with " + "location " +
-                               getJarLocation() + "...");
-            conf.setInt(BspJob.BSP_INITIAL_PROCESSES, 1);
-            conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
-            conf.setInt(BspJob.BSP_MIN_PROCESSES, 1);
-        }
-        conf.setInt(BspJob.BSP_POLL_ATTEMPTS, 5);
-        conf.setInt(BspJob.BSP_POLL_MSECS, 3*1000);
-        conf.setBoolean(BspJob.BSP_KEEP_ZOOKEEPER_DATA, true);
-        if (getZooKeeperList() != null) {
-            conf.set(BspJob.BSP_ZOOKEEPER_LIST, getZooKeeperList());
-        }
-        conf.setInt(BspJob.BSP_RPC_INITIAL_PORT, BspJob.BSP_RPC_DEFAULT_PORT);
-        // GeneratedInputSplit will generate 5 vertices
-        conf.setLong(GeneratedVertexReader.READER_VERTICES, 5);
+        setupConfiguration(conf);
         FileSystem hdfs = FileSystem.get(conf);
         conf.setClass(BspJob.BSP_VERTEX_CLASS,
                       SimpleCheckpointVertex.class,

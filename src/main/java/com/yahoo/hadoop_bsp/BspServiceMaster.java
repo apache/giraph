@@ -41,6 +41,8 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.ZooDefs.Ids;
 
+import com.yahoo.hadoop_bsp.BspJob.BspMapper.MapFunctions;
+
 /**
  * Zookeeper-based implementation of {@link CentralizedService}.
  * @author aching
@@ -64,6 +66,16 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
     /** Vertex range balancer class */
     private Class<? extends VertexRangeBalancer<I, V, E, M>>
         m_vertexRangeBalancerClass;
+    /** Max number of workers */
+    private final int m_maxWorkers;
+    /** Min number of workers */
+    private final int m_minWorkers;
+    /** Min % responded workers */
+    private final float m_minPercentResponded;
+    /** Poll period in msecs */
+    private final int m_msecsPollPeriod;
+    /** Max number of poll attempts */
+    private final int m_maxPollAttempts;
 
     public BspServiceMaster(
         String serverPortList,
@@ -78,6 +90,19 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                                         StaticBalancer.class,
                                         VertexRangeBalancer.class);
         m_vertexRangeBalancerClass = vertexRangeBalancer;
+
+        m_maxWorkers =
+            getConfiguration().getInt(BspJob.BSP_MAX_WORKERS, -1);
+        m_minWorkers =
+            getConfiguration().getInt(BspJob.BSP_MIN_WORKERS, -1);
+        m_minPercentResponded =
+            getConfiguration().getFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 0.0f);
+        m_msecsPollPeriod =
+            getConfiguration().getInt(BspJob.BSP_POLL_MSECS,
+                                      BspJob.DEFAULT_BSP_POLL_MSECS);
+        m_maxPollAttempts =
+            getConfiguration().getInt(BspJob.BSP_POLL_ATTEMPTS,
+                                      BspJob.DEFAULT_BSP_POLL_ATTEMPTS);
     }
 
     /**
@@ -266,40 +291,28 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
      * @return map of healthy worker list to JSONArray(hostname, port)
      */
     private Map<String, JSONArray> checkWorkers() {
-        int maxPollAttempts =
-            getConfiguration().getInt(BspJob.BSP_POLL_ATTEMPTS,
-                                      BspJob.DEFAULT_BSP_POLL_ATTEMPTS);
-        int initialProcs =
-            getConfiguration().getInt(BspJob.BSP_INITIAL_PROCESSES, -1);
-        int minProcs =
-            getConfiguration().getInt(BspJob.BSP_MIN_PROCESSES, -1);
-        float minPercentResponded =
-            getConfiguration().getFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 0.0f);
-        int msecsPollPeriod =
-            getConfiguration().getInt(BspJob.BSP_POLL_MSECS,
-                                      BspJob.DEFAULT_BSP_POLL_MSECS);
         boolean failJob = true;
         int pollAttempt = 0;
         List<String> healthyWorkerList = new ArrayList<String>();
         List<String> unhealthyWorkerList = new ArrayList<String>();
         int totalResponses = -1;
-        while (pollAttempt < maxPollAttempts) {
+        while (pollAttempt < m_maxPollAttempts) {
             getWorkers(
                 getSuperstep(), healthyWorkerList, unhealthyWorkerList);
             totalResponses = healthyWorkerList.size() +
                 unhealthyWorkerList.size();
-            if ((totalResponses * 100.0f / initialProcs) >=
-                minPercentResponded) {
+            if ((totalResponses * 100.0f / m_maxWorkers) >=
+                m_minPercentResponded) {
                 failJob = false;
                 break;
             }
             LOG.info("checkWorkers: Only found " + totalResponses +
-                     " responses of " + initialProcs + " for superstep " +
+                     " responses of " + m_maxWorkers + " for superstep " +
                      getSuperstep() + ".  Sleeping for " +
-                     msecsPollPeriod + " msecs and used " + pollAttempt +
-                     " of " + maxPollAttempts + " attempts.");
+                     m_msecsPollPeriod + " msecs and used " + pollAttempt +
+                     " of " + m_maxPollAttempts + " attempts.");
             if (getWorkerHealthRegistrationChangedEvent().waitMsecs(
-                    msecsPollPeriod)) {
+                    m_msecsPollPeriod)) {
                 LOG.info("checkWorkers: Got event that health " +
                          "registration changed, not using poll attempt");
                 getWorkerHealthRegistrationChangedEvent().reset();
@@ -310,13 +323,13 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
         if (failJob) {
             LOG.warn("checkWorkers: Did not receive enough processes in " +
                      "time (only " + totalResponses + " of " +
-                     minProcs + " required)");
+                     m_minWorkers + " required)");
             return null;
         }
 
-        if (healthyWorkerList.size() < minProcs) {
+        if (healthyWorkerList.size() < m_minWorkers) {
             LOG.warn("checkWorkers: Only " + healthyWorkerList.size() +
-                     " available when " + minProcs + " are required.");
+                     " available when " + m_minWorkers + " are required.");
             return null;
         }
 
@@ -607,8 +620,7 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
         String myBid = null;
         try {
             myBid =
-                getZkExt().createExt(
-                    getMasterElectionPath(getApplicationAttempt()) +
+                getZkExt().createExt(MASTER_ELECTION_PATH +
                     "/" + getHostnamePartitionId(),
                     null,
                     Ids.OPEN_ACL_UNSAFE,
@@ -627,8 +639,7 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
             try {
                 List<String> masterChildArr =
                     getZkExt().getChildrenExt(
-                        getMasterElectionPath(getApplicationAttempt()),
-                        true, true, true);
+                        MASTER_ELECTION_PATH, true, true, true);
                 LOG.info("becomeMaster: First child is '" +
                          masterChildArr.get(0) + "' and my bid is '" +
                          myBid + "'");
@@ -766,8 +777,8 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
         if (superstep <= 0) {
             return;
         }
-        Map<String, Aggregator<Writable>> aggregatorMap =
-            new TreeMap<String, Aggregator<Writable>>();
+        Map<String, Aggregator<? extends Writable>> aggregatorMap =
+            new TreeMap<String, Aggregator<? extends Writable>>();
         String workerFinishedPath =
             getWorkerFinishedPath(getApplicationAttempt(), superstep);
         List<String> hostnameIdPathList = null;
@@ -806,14 +817,30 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                     LOG.info("collectAndProcessAggregatorValues: " +
                              "Getting aggregators from " +
                               aggregatorArray.getJSONObject(i));
-                    String aggregatorName = aggregatorArray.getJSONObject(i).
-                        getString(AGGREGATOR_NAME_KEY);
+                    String aggregatorName =
+                        aggregatorArray.getJSONObject(i).getString(
+                            AGGREGATOR_NAME_KEY);
+                    String aggregatorClassName =
+                        aggregatorArray.getJSONObject(i).getString(
+                            AGGREGATOR_CLASS_NAME_KEY);
+                    @SuppressWarnings("unchecked")
                     Aggregator<Writable> aggregator =
-                        aggregatorMap.get(aggregatorName);
+                        (Aggregator<Writable>) aggregatorMap.get(aggregatorName);
                     boolean firstTime = false;
                     if (aggregator == null) {
-                        aggregator =
-                            BspJob.BspMapper.getAggregator(aggregatorName);
+                        @SuppressWarnings("unchecked")
+                        Aggregator<Writable> aggregatorWritable =
+                            (Aggregator<Writable>) getAggregator(aggregatorName);
+                        aggregator = aggregatorWritable;
+                        if (aggregator == null) {
+                            @SuppressWarnings("unchecked")
+                            Class<? extends Aggregator<Writable>> aggregatorClass =
+                                (Class<? extends Aggregator<Writable>>)
+                                    Class.forName(aggregatorClassName);
+                            aggregator = registerAggregator(
+                                aggregatorName,
+                                aggregatorClass);
+                        }
                         aggregatorMap.put(aggregatorName, aggregator);
                         firstTime = true;
                     }
@@ -847,7 +874,7 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                 getMergedAggregatorPath(getApplicationAttempt(), superstep);
             byte [] zkData = null;
             JSONArray aggregatorArray = new JSONArray();
-            for (Map.Entry<String, Aggregator<Writable>> entry :
+            for (Map.Entry<String, Aggregator<? extends Writable>> entry :
                     aggregatorMap.entrySet()) {
                 try {
                     ByteArrayOutputStream outputStream =
@@ -1217,9 +1244,11 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                      chosenWorkerHostnamePortMap.keySet() + ", size = " +
                      chosenWorkerHostnamePortMap.size() +
                      " from " + finishedWorkerPath);
+
             LOG.info("coordinateSuperstep: " + finishedWorkerList.size() +
                      " finished out of " + chosenWorkerHostnamePortMap.size());
-            getContext().setStatus(finishedWorkerList.size() +
+            getContext().setStatus(getBspMapper().getMapFunctions() + " " +
+                                   finishedWorkerList.size() +
                                    " finished out of " +
                                    chosenWorkerHostnamePortMap.size());
             if (finishedWorkerList.containsAll(
@@ -1329,7 +1358,11 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        // Note that need to wait for 2 * the partitions (worker and master)
+        // Need to wait for the number of workers and masters to complete
+        int maxTasks = BspInputFormat.getMaxTasks(getConfiguration());
+        if (getBspMapper().getMapFunctions() == MapFunctions.ALL) {
+            maxTasks *= 2;
+        }
         List<String> cleanedUpChildrenList = null;
         while (true) {
             try {
@@ -1337,9 +1370,9 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                     getZkExt().getChildrenExt(CLEANED_UP_PATH, true, false, true);
                 LOG.info("cleanUpZooKeeper: Got " +
                          cleanedUpChildrenList.size() + " of " +
-                         2 * getTotalMappers() +  " desired children from " +
+                         maxTasks  +  " desired children from " +
                          CLEANED_UP_PATH);
-                if (cleanedUpChildrenList.size() == 2 * getTotalMappers()) {
+                if (cleanedUpChildrenList.size() == maxTasks) {
                     break;
                 }
                 LOG.info("cleanedUpZooKeeper: Waiting for the children of " +

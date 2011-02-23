@@ -19,21 +19,23 @@ import com.yahoo.hadoop_bsp.lib.LongSumAggregator;
  */
 public class SimpleCheckpointVertex extends
     HadoopVertex<LongWritable, IntWritable, FloatWritable, FloatWritable> {
-    /** Simple test to keep adding the vertex ids together. */
-    private static LongSumAggregator sumAggregator = null;
-
-    /** Setup the sum aggregator for use in this application */
-    private static void registerAggregators() {
-        sumAggregator = new LongSumAggregator();
-        registerAggregator(LongSumAggregator.class.getName(), sumAggregator);
-    }
+    /** User can access this after the application finishes if local */
+    public static long finalSum;
 
     @Override
     public void preApplication() {
-        if (sumAggregator == null) {
-            registerAggregators();
-        }
+        registerAggregator(LongSumAggregator.class.getName(),
+                           LongSumAggregator.class);
+        LongSumAggregator sumAggregator = (LongSumAggregator)
+            getAggregator(LongSumAggregator.class.getName());
         sumAggregator.setAggregatedValue(new LongWritable(0));
+    }
+
+    @Override
+    public void postApplication() {
+        LongSumAggregator sumAggregator = (LongSumAggregator)
+            getAggregator(LongSumAggregator.class.getName());
+        finalSum = sumAggregator.getAggregatedValue().get();
     }
 
     @Override
@@ -42,9 +44,12 @@ public class SimpleCheckpointVertex extends
     }
 
     public void compute(Iterator<FloatWritable> msgIterator) {
+        LongSumAggregator sumAggregator = (LongSumAggregator)
+            getAggregator(LongSumAggregator.class.getName());
         if (getSuperstep() > 6) {
             voteToHalt();
         }
+        System.out.println("compute: " + sumAggregator);
         sumAggregator.aggregate(getVertexId().get());
         System.out.println("compute: sum = " +
                            sumAggregator.getAggregatedValue().get() +

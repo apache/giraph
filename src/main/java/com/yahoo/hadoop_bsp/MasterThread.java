@@ -12,15 +12,21 @@ import org.apache.log4j.Logger;
  *
  */
 @SuppressWarnings("rawtypes")
-public class MasterThread<
-    I extends WritableComparable, V extends Writable, E extends Writable,
-    M extends Writable> extends Thread {
+public class MasterThread<I extends WritableComparable,
+                          V extends Writable,
+                          E extends Writable,
+                          M extends Writable> extends Thread {
     /** Class logger */
     private static final Logger LOG = Logger.getLogger(MasterThread.class);
     /** Reference to shared BspService */
     private CentralizedServiceMaster<I, V, E, M> m_bspServiceMaster = null;
 
-    /** Constructor */
+    /**
+     *  Constructor.
+     *
+     *  @param bspServiceMaster Master that already exists and setup() has
+     *         been called.
+     */
     MasterThread(BspServiceMaster<I, V, E, M> bspServiceMaster) {
         super(MasterThread.class.getName());
         m_bspServiceMaster = bspServiceMaster;

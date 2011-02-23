@@ -9,6 +9,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 
+import com.yahoo.hadoop_bsp.examples.GeneratedVertexReader;
+
 import junit.framework.TestCase;
 
 /**
@@ -25,6 +27,41 @@ public class BspCase extends TestCase implements Watcher {
     private int m_numWorkers = 1;
     /** ZooKeeper list system property */
     private final String m_zkList = System.getProperty("prop.zookeeper.list");
+
+    /**
+     * Adjust the configuration to the basic test case
+     */
+    public final void setupConfiguration(Configuration conf) {
+        conf.set("mapred.jar", getJarLocation());
+        // Allow this test to be run on a real Hadoop setup
+        if (getJobTracker() != null) {
+            System.out.println("setup: Sending job to job tracker " +
+                       getJobTracker() + " with jar path " + getJarLocation()
+                       + " for " + getName());
+            conf.set("mapred.job.tracker", getJobTracker());
+            conf.setInt(BspJob.BSP_MAX_WORKERS, getNumWorkers());
+            conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
+            conf.setInt(BspJob.BSP_MIN_WORKERS, getNumWorkers());
+        }
+        else {
+            System.out.println("setup: Using local job runner with " +
+                               "location " + getJarLocation() + " for "
+                               + getName());
+            conf.setInt(BspJob.BSP_MAX_WORKERS, 1);
+            conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
+            conf.setInt(BspJob.BSP_MIN_WORKERS, 1);
+            // Single node testing
+            conf.setBoolean(BspJob.BSP_SPLIT_MASTER_WORKER, false);
+        }
+        conf.setInt(BspJob.BSP_POLL_ATTEMPTS, 5);
+        conf.setInt(BspJob.BSP_POLL_MSECS, 3*1000);
+        if (getZooKeeperList() != null) {
+            conf.set(BspJob.BSP_ZOOKEEPER_LIST, getZooKeeperList());
+        }
+        conf.setInt(BspJob.BSP_RPC_INITIAL_PORT, BspJob.BSP_RPC_DEFAULT_PORT);
+        // GeneratedInputSplit will generate 5 vertices
+        conf.setLong(GeneratedVertexReader.READER_VERTICES, 5);
+    }
 
     /**
      * Create the test case
