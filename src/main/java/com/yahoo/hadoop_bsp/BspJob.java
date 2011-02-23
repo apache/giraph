@@ -394,6 +394,9 @@ public class BspJob extends Job {
             do {
                 long superstep = m_serviceWorker.getSuperstep();
 
+                if (m_commService != null) {
+                    m_commService.prepareSuperstep();
+                }
                 m_serviceWorker.startSuperstep();
                 if (m_manager != null && m_manager.runsZooKeeper()) {
                     context.setStatus("Running Zookeeper Server");
@@ -408,8 +411,6 @@ public class BspJob extends Job {
                     m_commService =
                         new RPCCommunications<I, V, E, M>(context,
                                                           m_serviceWorker);
-                } else {
-                    m_commService.prepareSuperstep();
                 }
                 context.progress();
 

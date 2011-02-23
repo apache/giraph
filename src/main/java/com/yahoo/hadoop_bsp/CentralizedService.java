@@ -1,5 +1,7 @@
 package com.yahoo.hadoop_bsp;
 
+import java.util.NavigableMap;
+
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -54,4 +56,5 @@ public interface CentralizedService<I extends WritableComparable,
      * Clean up the service (no calls may be issued after this)
      */
     void cleanup();
+
 }

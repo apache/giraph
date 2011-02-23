@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.NavigableMap;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -38,7 +39,7 @@ public abstract class BasicRPCCommunications<
     /** Synchronization object (Between this object and peer threads) */
     private Object waitingInMain = new Object();
     /** Indicates whether in superstep preparation (self synchronized) */
-    private Boolean inPrepareSuperstep = false;
+    private boolean inPrepareSuperstep = false;
     /** Local hostname */
     private final String localHostname;
     /** Name of RPC server, == myAddress.toString() */
@@ -440,7 +441,7 @@ public abstract class BasicRPCCommunications<
                                            String jobId,
                                            J jobToken)
             throws IOException, InterruptedException {
-        LOG.info("startPeerConnectionThread: hostname " +
+        LOG.debug("startPeerConnectionThread: hostname " +
                  vertexRange.getHostname() + ", port " + vertexRange.getPort());
         final InetSocketAddress addr = new InetSocketAddress(
                                            vertexRange.getHostname(),
@@ -455,7 +456,7 @@ public abstract class BasicRPCCommunications<
         CommunicationsInterface<I, V, E, M> peer = this;
         synchronized (outMessages) {
             outMsgMap = outMessages.get(addrUnresolved);
-            LOG.info("startPeerConnectionThread: Connecting to " +
+            LOG.debug("startPeerConnectionThread: Connecting to " +
                      vertexRange.getHostname() + ", port = " +
                      vertexRange.getPort() + ", max index = " +
                      vertexRange.getMaxIndex() + ", addr = " + addr +
@@ -507,11 +508,7 @@ public abstract class BasicRPCCommunications<
     public final void putMsg(I vertex, M msg) throws IOException {
         List<M> msgs = null;
         LOG.debug("putMsg: Adding msg " + msg + " on vertex " + vertex);
-        boolean inPrepareSuperstepValue;
-        synchronized (inPrepareSuperstep) {
-            inPrepareSuperstepValue = inPrepareSuperstep;
-        }
-        if (inPrepareSuperstepValue) {
+        if (inPrepareSuperstep) {
             // Called by combiner (main thread) during superstep preparation
             msgs = inMessages.get(vertex);
             if (msgs == null) {
@@ -711,13 +708,8 @@ public abstract class BasicRPCCommunications<
 
     public void prepareSuperstep() {
         LOG.info("prepareSuperstep");
-        synchronized (inPrepareSuperstep) {
-            if (inPrepareSuperstep != false) {
-                throw new RuntimeException("prepareSuperstep: Impossible " +
-                                           "to be already in preparation");
-            }
-            inPrepareSuperstep = true;
-        }
+        inPrepareSuperstep = true;
+
         synchronized(transientInMessages) {
             for (Entry<I, List<M>> entry :
                 transientInMessages.entrySet()) {
@@ -741,6 +733,36 @@ public abstract class BasicRPCCommunications<
                 entry.getValue().clear();
             }
         }
+
+        if (inMessages.size() > 0) {
+            // Assign the appropriate messages to each vertex
+            NavigableMap<I, VertexRange<I, V, E, M>> vertexRangeMap =
+                service.getCurrentVertexRangeMap();
+            for (VertexRange<I, V, E, M> vertexRange :
+                    vertexRangeMap.values()) {
+                for (Vertex<I, V, E, M> vertex : vertexRange.getVertexList()) {
+                    vertex.getMsgList().clear();
+                    List<M> msgList = inMessages.get(vertex.getVertexId());
+                    if (msgList != null) {
+                        LOG.debug("prepareSuperstep: Assigning " +
+                                  msgList.size() +
+                                  " mgs to vertex index " + vertex);
+                        for (M msg : msgList) {
+                            if (msg == null) {
+                                LOG.warn("null message in inMessages");
+                            }
+                        }
+                        vertex.getMsgList().addAll(msgList);
+                        msgList.clear();
+                    }
+                }
+            }
+        }
+    
+        inPrepareSuperstep = false;
+    }
+
+    public void cleanCachedVertexAddressMap() {
         // Fix all the cached inet addresses (remove all changed entries)
         synchronized (vertexIndexMapAddressMap) {
             for (Entry<I, VertexRange<I, V, E, M>> entry :
@@ -761,24 +783,6 @@ public abstract class BasicRPCCommunications<
                    }
                }
             }
-        }
-        // Assign the appropriate messages to each vertex
-        for (VertexRange<I, V, E, M> vertexRange :
-                service.getVertexRangeMap().values()) {
-            for (Vertex<I, V, E, M> vertex : vertexRange.getVertexList()) {
-                vertex.getMsgList().clear();
-                List<M> msgList = inMessages.get(vertex.getVertexId());
-                if (msgList != null) {
-                    LOG.debug("prepareSuperstep: Assigning " + msgList.size() +
-                              " mgs to vertex index " + vertex);
-                    vertex.getMsgList().addAll(msgList);
-                    msgList.clear();
-                }
-            }
-        }
-
-        synchronized (inPrepareSuperstep) {
-            inPrepareSuperstep = false;
         }
         try {
             connectAllRPCProxys(this.jobId, this.jobToken);

@@ -245,12 +245,13 @@ public class BspServiceWorker<
                 InputSplit.class);
         List<HadoopVertex<I, V, E, M>> vertexList =
             new ArrayList<HadoopVertex<I, V, E, M>>();
-        // ZooKeeper has a limit of the data in a single znode of 1 MB and
-        // each entry is about 200 bytes
-        final long maxVertexRangesPerInputSplit =
-            1024 * 1024 / 200 / m_inputSplitCount;
         String inputSplitPath = null;
         while ((inputSplitPath = reserveInputSplit()) != null) {
+            // ZooKeeper has a limit of the data in a single znode of 1 MB and
+            // each entry is about 200 bytes
+            final long maxVertexRangesPerInputSplit =
+                1024 * 1024 / 300 / m_inputSplitCount;
+
             InputSplit inputSplit = (InputSplit)
                 ReflectionUtils.newInstance(inputSplitClass, getConfiguration());
             byte[] splitList;
@@ -1092,7 +1093,7 @@ public class BspServiceWorker<
                 entry.getValue().getPreviousHostname();
             final int port = entry.getValue().getPort();
             final String hostname = entry.getValue().getHostname();
-            LOG.info("exchangeVertexRanges: For max index " +
+            LOG.debug("exchangeVertexRanges: For max index " +
                      entry.getKey() + ", count " +
                      entry.getValue().getVertexList().size() +
                      ", has previous port " +
@@ -1106,6 +1107,10 @@ public class BspServiceWorker<
                     getHostname().equals(previousHostname) &&
                     ((port != m_finalRpcPort) ||
                             !(getHostname().equals(hostname)))) {
+                if (!syncRequired) {
+                    getBspMapper().getWorkerCommunications().
+                        cleanCachedVertexAddressMap();
+                }
                 List<Vertex<I, V, E, M>> vertexList =
                     entry.getValue().getVertexList();
                 if (vertexList != null) {
@@ -1132,6 +1137,10 @@ public class BspServiceWorker<
                 LOG.info("exchangeVertexRanges: Receiving " +
                          entry.getKey() + " from " +
                          previousHostname + ":" + previousPort);
+                if (!syncRequired) {
+                    getBspMapper().getWorkerCommunications().
+                        cleanCachedVertexAddressMap();
+                }
                 VertexRange<I, V, E, M> destVertexRange =
                     getVertexRangeMap().get(entry.getKey());
                 if ((destVertexRange.getVertexList() != null) &&

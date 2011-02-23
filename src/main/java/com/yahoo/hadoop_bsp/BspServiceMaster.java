@@ -960,6 +960,7 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                                                            false,
                                                            false,
                                                            true);
+            int numRanges = 0;
             for (String inputSplitPath : inputSplitPathList) {
                 String inputSplitFinishedPath = inputSplitPath +
                     INPUT_SPLIT_FINISHED_NODE;
@@ -994,6 +995,7 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                     VertexRange<I, V, E, M> vertexRange =
                         new VertexRange<I, V, E, M>(indexClass, vertexRangeObj);
                     vertexRangeList.add(vertexRange);
+                    numRanges++;
                 }
             }
 
@@ -1005,9 +1007,10 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
             String vertexRangeAssignmentsPath =
                 getVertexRangeAssignmentsPath(getApplicationAttempt(),
                                               getSuperstep());
-            LOG.info("inputSplitsToVertexRanges: Assigning vertex ranges " +
-                     vertexRangeAssignmentArray.toString() + " to path" +
-                     vertexRangeAssignmentsPath);
+            LOG.info("inputSplitsToVertexRanges: Assigning " + numRanges +
+                     " vertex ranges of total length " +
+                     vertexRangeAssignmentArray.toString().length() +
+                     " to path " + vertexRangeAssignmentsPath);
             getZkExt().createExt(vertexRangeAssignmentsPath,
                                  vertexRangeAssignmentArray.toString().getBytes(),
                                  Ids.OPEN_ACL_UNSAFE,
@@ -1044,11 +1047,17 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                 nextVertexRangeMap.size() + " != " + vertexRangeMap.size());
         }
         JSONArray vertexRangeAssignmentArray = new JSONArray();
+        VertexRange<I, V, E, M> maxVertexRange = null; // TODO: delete after Bug 4340282 fixed.
         for (VertexRange<I, V, E, M> vertexRange :
                 nextVertexRangeMap.values()) {
             try {
                 vertexRangeAssignmentArray.put(
                     vertexRange.toJSONObject());
+                if (maxVertexRange == null || // TODO: delete after Bug 4340282 fixed.
+                        vertexRange.toJSONObject().toString().length() <
+                        maxVertexRange.toJSONObject().toString().length()) {
+                    maxVertexRange = vertexRange;
+                }
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -1058,6 +1067,12 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                 "balanceVertexRanges: Impossible there are no vertex ranges ");
         }
         try {
+            LOG.info("balanceVertexRanges: numVertexRanges=" + // TODO: delete after Bug 4340282 fixed.
+                 nextVertexRangeMap.values().size() +
+                 " lengthVertexRanges=" +
+                 vertexRangeAssignmentArray.toString().getBytes("UTF-8").length +
+                 " maxVertexRangeLength=" +
+                 maxVertexRange.toJSONObject().toString().length());
             String vertexRangeAssignmentsPath =
                 getVertexRangeAssignmentsPath(getApplicationAttempt(),
                                               getSuperstep());
@@ -1196,12 +1211,14 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
-            LOG.info("coordinateSuperstep: Got finished worker list = " +
+            LOG.debug("coordinateSuperstep: Got finished worker list = " +
                      finishedWorkerList + ", size = " +
                      finishedWorkerList.size() + ", chosen worker list = " +
                      chosenWorkerHostnamePortMap.keySet() + ", size = " +
                      chosenWorkerHostnamePortMap.size() +
                      " from " + finishedWorkerPath);
+            LOG.info("coordinateSuperstep: " + finishedWorkerList.size() +
+                     " finished out of " + chosenWorkerHostnamePortMap.size());
             getContext().setStatus(finishedWorkerList.size() +
                                    " finished out of " +
                                    chosenWorkerHostnamePortMap.size());

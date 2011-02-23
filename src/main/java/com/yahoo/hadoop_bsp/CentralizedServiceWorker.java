@@ -43,6 +43,15 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
     NavigableMap<I, VertexRange<I, V, E, M>> getVertexRangeMap();
 
     /**
+     * Get the current map to the partitions and their sorted vertex lists.
+     * This is needed by the communication service to shift incoming messages
+     * to the vertex lists before the new map gets synchronized.
+     *
+     * @return map of max vertex index to list of vertices on that vertex range
+     */
+    NavigableMap<I, VertexRange<I, V, E, M>> getCurrentVertexRangeMap();
+
+    /**
      *  Both the vertices and the messages need to be checkpointed in order
      *  for them to be used.  This is done after all messages have been
      *  delivered, but prior to a superstep starting.

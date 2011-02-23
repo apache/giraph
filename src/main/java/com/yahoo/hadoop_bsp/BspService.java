@@ -781,6 +781,11 @@ public class BspService <
          return m_vertexRangeMap;
      }
 
+     public NavigableMap<I, VertexRange<I, V, E, M>> getCurrentVertexRangeMap()
+     {
+         return m_vertexRangeMap;
+     }
+
      /**
       * Default reaction to a change event in workerHealthRegistration.
       */

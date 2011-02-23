@@ -21,6 +21,13 @@ public interface WorkerCommunications<I extends WritableComparable,
                                       E extends Writable,
                                       M extends Writable> {
     /**
+     * Clean the cached map of vertex addresses that have changed
+     * because of rebalancing. 
+     * 
+     */
+    void cleanCachedVertexAddressMap();
+
+    /**
      * Sends a message to destination vertex.
      *
      * @param destVertex
