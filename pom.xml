@@ -1,149 +1,183 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>com.yahoo.hadoop_bsp</groupId>
+
+  <groupId>yahoo.yinst.hadoop_bsp</groupId>
   <artifactId>hadoop_bsp</artifactId>
   <packaging>jar</packaging>
-  <version>1.0-SNAPSHOT</version>
-  <name>hadoop_bsp</name>
+  <version>1.0</version>
+
+  <name>Hadoop BSP</name>
   <url>http://maven.apache.org</url>
 
   <properties>
-      <hadoop.version>0.20.2</hadoop.version>
-      <export-target.dir>export/target</export-target.dir>
+    <hadoop.version>0.20.2</hadoop.version>
+    <export-target.dir>export/target</export-target.dir>
+    <buildtype>test</buildtype>
   </properties>
 
   <build>
-  	<plugins>
-        <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-antrun-plugin</artifactId>
-            <version>1.6</version>
-            <executions>
-                <execution>
-                    <phase>generate-sources</phase>
-                    <configuration>
-                        <target name="mvn-init" unless="compile.classpath">
-                            <echo message="Executing ant task..."/>
-                            <condition property="ifdef.token" value="/*">
-                                <equals arg1="${hadoop.version}" arg2="0.20.2"/>
-                            </condition>
-                            <condition property="enddef.token" value="*/">
-                                <equals arg1="${hadoop.version}" arg2="0.20.2"/>
-                            </condition>
-                            <!-- If not set already make sure that they are defined but empty -->
-                            <property name="ifdef.token" value=""/>
-                            <property name="enddef.token" value=""/>
-                            <copy file="src/main/java/com/yahoo/hadoop_bsp/CommunicationsInterface.java.in"
-                                  tofile="src/main/java/com/yahoo/hadoop_bsp/CommunicationsInterface.java">
-                                <filterset begintoken="//[" endtoken="]">
-                                    <filter token="ifdef" value="${ifdef.token}"/>
-                                    <filter token="enddef" value="${enddef.token}"/>
-                                </filterset>
-                            </copy>
-                            <copy file="src/main/java/com/yahoo/hadoop_bsp/BspTokenSelector.java.in"
-                                  tofile="src/main/java/com/yahoo/hadoop_bsp/BspTokenSelector.java">
-                                <filterset begintoken="//[" endtoken="]">
-                                    <filter token="ifdef" value="${ifdef.token}"/>
-                                    <filter token="enddef" value="${enddef.token}"/>
-                                </filterset>
-                            </copy>
-                        </target>
-                    </configuration>
-                    <goals>
-                        <goal>run</goal>
-                    </goals>
-                </execution>
-                <execution>
-                    <id>clean</id>
-                    <phase>clean</phase>
-                    <configuration>
-                        <target name="mvn-clean" unless="compile.classpath">
-                            <delete dir="${export-target.dir}"/>
-                        </target>
-                    </configuration>
-                    <goals>
-                        <goal>run</goal>
-                    </goals>
-                </execution>
-                <execution>
-                    <id>compile</id>
-                    <phase>export</phase>
-                    <configuration>
-                        <target name="mvn-export" unless="compile.classpath">
-                            <property name="compile_classpath" refid="maven.compile.classpath"/>
-                            <echo message="compile_classpath = ${compile_classpath}"/>
-                            <mkdir dir="${export-target.dir}/classes"/>
-                            <mkdir dir="${export-target.dir}/src"/>
-                            <copy includeemptydirs="false" todir="${export-target.dir}/src">
-                                <fileset dir="src/main/java" excludes="**/*.launch,**/*.svn,.svn/**" />
-                            </copy>
-                            <copy file="${export-target.dir}/src/com/yahoo/hadoop_bsp/CommunicationsInterface.java.in"
-                                  tofile="${export-target.dir}/src/com/yahoo/hadoop_bsp/CommunicationsInterface.java"
-                                  overwrite="true">
-                            </copy>
-                            <copy file="${export-target.dir}/src/com/yahoo/hadoop_bsp/BspTokenSelector.java.in"
-                                  tofile="${export-target.dir}/src/com/yahoo/hadoop_bsp/BspTokenSelector.java"
-                                  overwrite="true">
-                            </copy>
-                            <javac fork="true" srcdir="${export-target.dir}/src" destdir="${export-target.dir}/classes"
-                                   optimize="on" source="1.6" target="1.6" excludes="**/RPCCommunications.java"
-                                   classpath="${user.home}/.m2/repository/yahoo/yinst/hadoop/hadoop-core/0.20.104.4.1007272234/hadoop-core-0.20.104.4.1007272234.jar:${compile_classpath}">
-                            </javac>
-                            <jar destfile="${export-target.dir}/${name}-${version}.jar">
-                                <fileset dir="${export-target.dir}/classes"
-                                         includes="**/*.class"
-                                         excludes="**/Test*.class,.svn/**" />
-                            </jar>
-                        </target>
-                    </configuration>
-                    <goals>
-                        <goal>run</goal>
-                    </goals>
-                </execution>
-            </executions>
-        </plugin>
-  	  	<plugin>
-  			<groupId>org.apache.maven.plugins</groupId>
-  			<artifactId>maven-assembly-plugin</artifactId>
-  			<version>2.2</version>
-  			<configuration>
-	            <descriptorRefs>
-    	        	<descriptorRef>jar-with-dependencies</descriptorRef>
-        	  	</descriptorRefs>
-  			</configuration>
-  			<executions>
-          		<execution>
-            		<id>make-assembly</id> <!-- this is used for inheritance merges -->
-            		<phase>compile</phase> <!-- append to the packaging phase. -->
-            		<goals>
-              			<goal>single</goal> <!-- goals == mojos -->
-            		</goals>
-          		</execution>
-        	</executions>
-  		</plugin>
-  		<plugin>
-        	<groupId>org.apache.maven.plugins</groupId>
-        	<artifactId>maven-surefire-plugin</artifactId>
-        	<version>2.6</version>
-        	<configuration>
-	        	<systemProperties>
-            		<property>
-            			<name>prop.jarLocation</name>
-            			<value>target/hadoop_bsp-1.0-SNAPSHOT-jar-with-dependencies.jar</value>
-            		</property>
-	          	</systemProperties>
-        	</configuration>
-      	</plugin>
-  		<plugin>
-  			<groupId>org.apache.maven.plugins</groupId>
-  			<artifactId>maven-compiler-plugin</artifactId>
-  			<configuration>
-				<source>1.5</source>
-				<target>1.5</target>
-			</configuration>
-  		</plugin>
-  	</plugins>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>1.6</version>
+        <executions>
+          <execution>
+            <phase>generate-sources</phase>
+            <configuration>
+              <target name="mvn-init" unless="compile.classpath">
+                <echo message="Executing ant task..."/>
+                <condition property="ifdef.token" value="/*">
+                  <equals arg1="${hadoop.version}" arg2="0.20.2"/>
+                </condition>
+                <condition property="enddef.token" value="*/">
+                  <equals arg1="${hadoop.version}" arg2="0.20.2"/>
+                </condition>
+                <!-- If not set already make sure that they are defined but empty -->
+                <property name="ifdef.token" value=""/>
+                <property name="enddef.token" value=""/>
+                <copy file="src/main/java/com/yahoo/hadoop_bsp/CommunicationsInterface.java.in"
+                      tofile="src/main/java/com/yahoo/hadoop_bsp/CommunicationsInterface.java">
+                  <filterset begintoken="//[" endtoken="]">
+                    <filter token="ifdef" value="${ifdef.token}"/>
+                    <filter token="enddef" value="${enddef.token}"/>
+                  </filterset>
+                </copy>
+                <copy file="src/main/java/com/yahoo/hadoop_bsp/BspTokenSelector.java.in"
+                      tofile="src/main/java/com/yahoo/hadoop_bsp/BspTokenSelector.java">
+                  <filterset begintoken="//[" endtoken="]">
+                    <filter token="ifdef" value="${ifdef.token}"/>
+                    <filter token="enddef" value="${enddef.token}"/>
+                  </filterset>
+                </copy>
+              </target>
+            </configuration>
+            <goals>
+              <goal>run</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>clean</id>
+            <phase>clean</phase>
+            <configuration>
+              <target name="mvn-clean" unless="compile.classpath">
+                <delete dir="${export-target.dir}"/>
+              </target>
+            </configuration>
+            <goals>
+              <goal>run</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>compile</id>
+            <phase>export</phase>
+            <configuration>
+              <target name="mvn-export" unless="compile.classpath">
+                <property name="compile_classpath" refid="maven.compile.classpath"/>
+                <echo message="compile_classpath = ${compile_classpath}"/>
+                <mkdir dir="${export-target.dir}/classes"/>
+                <mkdir dir="${export-target.dir}/src"/>
+                <copy includeemptydirs="false" todir="${export-target.dir}/src">
+                  <fileset dir="src/main/java" excludes="**/*.launch,**/*.svn,.svn/**" />
+                </copy>
+                <copy file="${export-target.dir}/src/com/yahoo/hadoop_bsp/CommunicationsInterface.java.in"
+                      tofile="${export-target.dir}/src/com/yahoo/hadoop_bsp/CommunicationsInterface.java"
+                      overwrite="true">
+                </copy>
+                <copy file="${export-target.dir}/src/com/yahoo/hadoop_bsp/BspTokenSelector.java.in"
+                      tofile="${export-target.dir}/src/com/yahoo/hadoop_bsp/BspTokenSelector.java"
+                      overwrite="true">
+                </copy>
+                <javac fork="true" srcdir="${export-target.dir}/src" destdir="${export-target.dir}/classes"
+                       optimize="on" source="1.6" target="1.6" excludes="**/RPCCommunications.java"
+                       classpath="${user.home}/.m2/repository/yahoo/yinst/hadoop/hadoop-core/0.20.104.4.1007272234/hadoop-core-0.20.104.4.1007272234.jar:${compile_classpath}">
+                </javac>
+                <jar destfile="${export-target.dir}/${name}-${version}.jar">
+                  <fileset dir="${export-target.dir}/classes"
+                           includes="**/*.class"
+                           excludes="**/Test*.class,.svn/**" />
+                </jar>
+              </target>
+            </configuration>
+            <goals>
+              <goal>run</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <version>2.2</version>
+        <configuration>
+          <descriptorRefs>
+            <descriptorRef>jar-with-dependencies</descriptorRef>
+          </descriptorRefs>
+        </configuration>
+        <executions>
+          <execution>
+            <id>make-assembly</id> <!-- this is used for inheritance merges -->
+            <phase>compile</phase> <!-- append to the packaging phase. -->
+            <goals>
+              <goal>single</goal> <!-- goals == mojos -->
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>2.6</version>
+        <configuration>
+          <systemProperties>
+            <property>
+              <name>prop.jarLocation</name>
+              <value>target/hadoop_bsp-${version}-jar-with-dependencies.jar</value>
+            </property>
+          </systemProperties>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>1.5</source>
+          <target>1.5</target>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>2.6</version>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>findbugs-maven-plugin</artifactId>
+        <version>2.1</version>
+      </plugin>
+
+      <plugin>
+        <groupId>com.atlassian.maven.plugins</groupId>
+        <artifactId>maven-clover2-plugin</artifactId>
+        <version>2.6.1</version>
+        <configuration>
+          <licenseLocation>/home/y/conf/clover/clover.license</licenseLocation>
+          <generateXml>true</generateXml>
+          <generateHtml>true</generateHtml>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>yahoo.yinst.maven_plugins</groupId>
+        <artifactId>yjava_maven_plugins_yinst</artifactId>
+        <configuration>
+          <buildtype>${buildtype}</buildtype>
+          <sourceDirectory>${basedir}/src/main/pkg/yicf</sourceDirectory>
+          <target_dir>${basedir}/target</target_dir>
+          <chdir>${basedir}/src/main/pkg/yicf</chdir>
+        </configuration>
+      </plugin>
+    </plugins>
   </build>
 
   <dependencies>
