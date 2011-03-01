@@ -13,3 +13,5 @@ mvn --batch-mode -Dbuildtype=release package \
     yinst:create
 
 [ $distflag = dist ] &&  bb_dist_push src/ci/build.bim
+
+exit 0
