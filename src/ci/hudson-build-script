@@ -1,0 +1,10 @@
+#!/bin/sh -eux
+
+export PATH=/home/y/bin:/sbin:/usr/sbin:/bin:/usr/bin:/usr/local/bin
+export MAVEN_OPTS=-Xmx384M
+
+mvn --batch-mode -Dbuildtype=release clean package \
+    javadoc:jar findbugs:findbugs checkstyle:checkstyle jxr:jxr \
+    clover2:instrument clover2:clover \
+    yinst:create
+
