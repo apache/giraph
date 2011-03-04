@@ -7,5 +7,5 @@ yroot_remove: false
 yroot_copy_files: /home/y/conf/clover/clover.license
 
 dist_key_file: /home/appre/.ssh/appre_dist_key_dsa
-dist_push_pkg_globs: ../../../target/*.tgz
+dist_push_pkg_globs: ../../target/*.tgz
 dist_group: cawoo
