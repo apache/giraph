@@ -38,7 +38,7 @@ public abstract class BasicRPCCommunications<
         Logger.getLogger(BasicRPCCommunications.class);
     /** Synchronization object (Between this object and peer threads) */
     private Object waitingInMain = new Object();
-    /** Indicates whether in superstep preparation (self synchronized) */
+    /** Indicates whether in superstep preparation */
     private boolean inPrepareSuperstep = false;
     /** Local hostname */
     private final String localHostname;
@@ -127,21 +127,18 @@ public abstract class BasicRPCCommunications<
         private final int maxSize;
         /** Boolean, set to false when local client (self), true otherwise */
         private final boolean isProxy;
-        /**
-         * Boolean, set to true when all messages should be flushed
-         * (Self-Synchronized)
-         */
-        private Boolean flush = false;
-        /**
-         * Boolean, set to true when client should terminate
-         * (Self-Synchronized)
-         */
-        private Boolean notDone = true;
-        /**
-         * Boolean, set to true when there is a large message list to flush
-         * (Self-Synchronized)
-         */
-        private Boolean flushLargeMsgLists = false;
+        /** Boolean, set to true when all messages should be flushed */
+        private boolean flush = false;
+        /** associated synchronization object */
+        private final Object flushObject = new Object();
+        /** Boolean, set to true when client should terminate */
+        private boolean notDone = true;
+        /** associated synchronization object */
+        private final Object notDoneObject = new Object();
+        /** Boolean, set to true when there is a large message list to flush */
+        private boolean flushLargeMsgLists = false;
+        /** associated synchronization object */
+        private final Object flushLargeMsgListsObject = new Object();
         /** Synchronization object */
         private final Object waitingInPeer = new Object();
         /** Combiner instance, can be null */
@@ -166,7 +163,7 @@ public abstract class BasicRPCCommunications<
             synchronized (largeMsgListKeys) {
                 largeMsgListKeys.add(key);
             }
-            synchronized (flushLargeMsgLists) {
+            synchronized (flushLargeMsgListsObject) {
                 flushLargeMsgLists = true;
             }
             synchronized (waitingInPeer) {
@@ -178,7 +175,7 @@ public abstract class BasicRPCCommunications<
          * Notify this thread to send issue the put() RPCs.
          */
         public void flush() {
-            synchronized (flush) {
+            synchronized (flushObject) {
                 flush = true;
             }
             synchronized (waitingInPeer) {
@@ -187,26 +184,26 @@ public abstract class BasicRPCCommunications<
         }
 
         public boolean getFlushState() {
-            synchronized(flush) {
+            synchronized(flushObject) {
                 return flush;
             }
         }
 
         public boolean getNotDoneState() {
-            synchronized(notDone) {
+            synchronized(notDoneObject) {
                 return notDone;
             }
         }
 
         private boolean getFlushMsgListsState() {
-            synchronized (flushLargeMsgLists) {
+            synchronized (flushLargeMsgListsObject) {
                 return flushLargeMsgLists;
             }
         }
 
         public void close() {
             LOG.info("close: Done");
-            synchronized (notDone) {
+            synchronized (notDoneObject) {
                 notDone = false;
             }
             synchronized (waitingInPeer) {
@@ -279,7 +276,7 @@ public abstract class BasicRPCCommunications<
                                     new TreeSet<I>(largeMsgListKeys);
                                 largeMsgListKeys.clear();
                             }
-                            synchronized (flushLargeMsgLists) {
+                            synchronized (flushLargeMsgListsObject) {
                                 flushLargeMsgLists = false;
                             }
                             LOG.info("run: " + peer.getName() +
@@ -301,10 +298,10 @@ public abstract class BasicRPCCommunications<
                         putAllMessages();
                         LOG.debug("run: " + peer.getName() +
                                   ": all messages flushed");
-                        synchronized (flush) {
+                        synchronized (flushObject) {
                             flush = false;
                         }
-                        synchronized (flushLargeMsgLists) {
+                        synchronized (flushLargeMsgListsObject) {
                             flushLargeMsgLists = false;
                         }
                         synchronized (waitingInMain) {
@@ -338,7 +335,7 @@ public abstract class BasicRPCCommunications<
                 }
             } catch (IOException e) {
                 LOG.error(e);
-                synchronized (notDone) {
+                synchronized (notDoneObject) {
                     notDone = false;
                 }
                 synchronized (waitingInMain) {

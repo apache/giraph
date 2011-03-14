@@ -59,6 +59,8 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
     List<String> m_chosenWorkerList = null;
     /** the superstep when the chosen worker list was initially selected */
     Long m_chosenSuperstep = new Long(-1);
+    /** associated synchronization object */
+    Object m_chosenSuperstepObject = new Object();
     /** Superstep counter */
     private Counter m_superstepCounter = null;
     /** Am I the master? */
@@ -115,7 +117,7 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
     public void setJobState(State state) {
         if (state == BspService.State.FINISHED) {
             // check no longer necessary
-            synchronized(m_chosenSuperstep) {
+            synchronized(m_chosenSuperstepObject) {
                 m_chosenWorkerList = null;
                 m_chosenSuperstep = new Long(-1);
             }
@@ -259,7 +261,7 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
      * Reaction to a change event in workHealthRegistration.
      */
     protected void workerHealthRegistrationChanged(String path) {
-        synchronized(m_chosenSuperstep) {
+        synchronized(m_chosenSuperstepObject) {
             if (m_chosenWorkerList != null &&
                     m_chosenSuperstep.longValue() == getSuperstep() &&
                     getWorkerHealthyPath(getApplicationAttempt(),
@@ -383,7 +385,7 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
             setJobState(State.FAILED);
         }
 
-        synchronized(m_chosenSuperstep) {
+        synchronized(m_chosenSuperstepObject) {
             m_chosenWorkerList =
                 new ArrayList<String>(healthyWorkerHostnamePortMap.keySet());
             m_chosenSuperstep = new Long(getSuperstep());
@@ -417,7 +419,7 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                                      Ids.OPEN_ACL_UNSAFE,
                                      CreateMode.PERSISTENT,
                                      true);
-                LOG.info("createInputSplits: Created input split with index " +
+                LOG.debug("createInputSplits: Created input split with index " +
                          i + " serialized as " +
                          byteArrayOutputStream.toString());
             } catch (KeeperException.NodeExistsException e) {
@@ -570,7 +572,7 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
             String inputSplitPathFinishedPath =
                 INPUT_SPLIT_PATH + "/" + inputSplitIndex +
                 INPUT_SPLIT_FINISHED_NODE;
-            LOG.info("mapFilesToWorkers: Assigning (if not empty) " +
+            LOG.debug("mapFilesToWorkers: Assigning (if not empty) " +
                      chosenWorker + " the following vertexRanges: " +
                      vertexRangeArray.toString());
 
@@ -579,6 +581,8 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                 continue;
             }
             try {
+                LOG.info("mapFilesToWorkers: vertexRangeMetaArray size=" +
+                         vertexRangeMetaArray.toString().length());
                  getZkExt().createExt(inputSplitPathFinishedPath,
                                      vertexRangeMetaArray.toString().getBytes(),
                                      Ids.OPEN_ACL_UNSAFE,
@@ -1178,7 +1182,7 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                       "superstep " + getSuperstep());
             setJobState(State.FAILED);
         }
-        synchronized(m_chosenSuperstep) {
+        synchronized(m_chosenSuperstepObject) {
             if (m_chosenWorkerList == null) { // must have been a checkpoint
                 m_chosenWorkerList =
                     new ArrayList<String>(chosenWorkerHostnamePortMap.keySet());
@@ -1278,7 +1282,7 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                  getSuperstep());
         if (verticesFinished == verticesTotal) {
             // BspServiceWorkers will start cleaning up
-            synchronized(m_chosenSuperstep) {
+            synchronized(m_chosenSuperstepObject) {
                 m_chosenSuperstep = new Long(-1);
                 m_chosenWorkerList = null;
             }

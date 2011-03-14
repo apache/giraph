@@ -420,7 +420,9 @@ public class ZooKeeperManager {
             File zkDir = new File(m_zkDir);
             zkDir.mkdirs();
             File configFile = new File(m_configFilePath);
+            configFile.delete();
             configFile.createNewFile();
+            configFile.setWritable(true, false); // writable by everybody
             OutputStreamWriter writer = new FileWriter(m_configFilePath);
             writer.write("tickTime=" + BspJob.DEFAULT_ZOOKEEPER_TICK_TIME + "\n");
             writer.write("dataDir=" + m_zkDir + "\n");

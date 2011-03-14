@@ -83,11 +83,11 @@ public class BspJob extends Job {
     /** Maximum number of RPC handlers */
     public static final String BSP_RPC_NUM_HANDLERS = "bsp.rpcNumHandlers";
     /** Default maximum number of RPC handlers */
-    public static int BSP_RPC_DEFAULT_HANDLERS = 20;
+    public static final int BSP_RPC_DEFAULT_HANDLERS = 20;
     /** Maximum number of messages per peer before flush */
     public static final String BSP_MSG_SIZE = "bsp.msgSize";
     /** Default maximum number of messages per peer before flush */
-    public static int BSP_MSG_DEFAULT_SIZE = 1000;
+    public static final int BSP_MSG_DEFAULT_SIZE = 1000;
     /** Number of poll attempts prior to failing the job (int) */
     public static final String BSP_POLL_ATTEMPTS = "bsp.pollAttempts";
     /** Number of minimum vertices in each vertex range */
