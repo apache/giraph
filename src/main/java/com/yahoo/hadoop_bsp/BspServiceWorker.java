@@ -262,7 +262,7 @@ public class BspServiceWorker<
         String inputSplitPath = null;
         while ((inputSplitPath = reserveInputSplit()) != null) {
             // ZooKeeper has a limit of the data in a single znode of 1 MB and
-            // each entry is about 200 bytes
+            // each entry can go be on the average somewhat more than 300 bytes
             final long maxVertexRangesPerInputSplit =
                 1024 * 1024 / 350 / m_inputSplitCount;
 
