@@ -187,7 +187,7 @@ public class BspJob extends Job {
     /** Default ZooKeeper sync limit (in ticks). */
     public static final int DEFAULT_ZOOKEEPER_SYNC_LIMIT = 5;
     /** Default ZooKeeper snap count. */
-    public static final int DEFAULT_ZOOKEEPER_SNAP_COUNT = 5000;
+    public static final int DEFAULT_ZOOKEEPER_SNAP_COUNT = 50000;
     /** Default ZooKeeper maximum client connections. */
     public static final int DEFAULT_ZOOKEEPER_MAX_CLIENT_CNXNS = 10000;
     /** Default ZooKeeper minimum session timeout (in msecs). */
