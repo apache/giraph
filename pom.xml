@@ -96,7 +96,7 @@
                 <jar destfile="${export-target.dir}/${name}-${version}.jar">
                   <fileset dir="${export-target.dir}/classes"
                            includes="**/*.class"
-                           excludes="**/Test*.class,.svn/**" />
+                           excludes="**/Test*.class,**/RPCCommunications.class,.svn/**" />
                 </jar>
               </target>
             </configuration>
