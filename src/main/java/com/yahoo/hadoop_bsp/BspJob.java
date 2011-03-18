@@ -153,21 +153,21 @@ public class BspJob extends Job {
      * Default local ZooKeeper prefix directory to use (where ZooKeeper server
      * files will go)
      */
-    public static final String DEFAULT_BSP_ZOOKEEPER_DIR =
-        System.getProperty("user.dir") + "/bspZooKeeper";
+    public static String DEFAULT_BSP_ZOOKEEPER_DIR =
+        System.getProperty("user.dir") + "/_bspZooKeeper";
     /**
      * Default ZooKeeper manager directory (where determining the servers in
      * HDFS files will go).  Final directory path will also have job number
      * for uniqueness.
      */
     public static final String DEFAULT_ZOOKEEPER_MANAGER_DIR =
-        System.getProperty("user.dir") + "/_bsp/_defaultZkManagerDir";
+        "_bsp/_defaultZkManagerDir";
     /**
      * Default checkpoint directory (where checkpoing files go in HDFS).  Final
      * directory path will also have the job number for uniqueness
      */
     public static final String DEFAULT_BSP_CHECKPOINT_DIRECTORY =
-        System.getProperty("user.dir") + "/_bsp/_checkpoints/";
+        "_bsp/_checkpoints/";
     /** Default is to remove ZooKeeper data. */
     public static final Boolean DEFAULT_BSP_KEEP_ZOOKEEPER_DATA = false;
     /** Default poll attempts */
@@ -229,6 +229,11 @@ public class BspJob extends Job {
                           VertexInputFormat.class) == null) {
             throw new RuntimeException(
                 "BspJob: Null BSP_VERTEX_INPUT_FORMAT_CLASS");
+        }
+        String jobLocalDir = conf.get("job.local.dir");
+        if (jobLocalDir != null) { // for non-local jobs
+            DEFAULT_BSP_ZOOKEEPER_DIR = jobLocalDir +
+                "/_bspZooKeeper";
         }
     }
 
