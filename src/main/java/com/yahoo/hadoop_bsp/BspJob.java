@@ -153,20 +153,21 @@ public class BspJob extends Job {
      * Default local ZooKeeper prefix directory to use (where ZooKeeper server
      * files will go)
      */
-    public static final String DEFAULT_BSP_ZOOKEEPER_DIR = "/tmp/bspZooKeeper";
+    public static final String DEFAULT_BSP_ZOOKEEPER_DIR =
+        System.getProperty("user.dir") + "/bspZooKeeper";
     /**
      * Default ZooKeeper manager directory (where determining the servers in
      * HDFS files will go).  Final directory path will also have job number
      * for uniqueness.
      */
     public static final String DEFAULT_ZOOKEEPER_MANAGER_DIR =
-        "/tmp/_bsp/_defaultZkManagerDir";
+        System.getProperty("user.dir") + "/_bsp/_defaultZkManagerDir";
     /**
      * Default checkpoint directory (where checkpoing files go in HDFS).  Final
      * directory path will also have the job number for uniqueness
      */
     public static final String DEFAULT_BSP_CHECKPOINT_DIRECTORY =
-        "/tmp/_bsp/_checkpoints/";
+        System.getProperty("user.dir") + "/_bsp/_checkpoints/";
     /** Default is to remove ZooKeeper data. */
     public static final Boolean DEFAULT_BSP_KEEP_ZOOKEEPER_DATA = false;
     /** Default poll attempts */
