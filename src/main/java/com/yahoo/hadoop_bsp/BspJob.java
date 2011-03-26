@@ -235,6 +235,11 @@ public class BspJob extends Job {
             DEFAULT_BSP_ZOOKEEPER_DIR = jobLocalDir +
                 "/_bspZooKeeper";
         }
+        // Hadoop security need this property to be set
+        if (System.getenv("HADOOP_TOKEN_FILE_LOCATION") != null) {
+            conf.set("mapreduce.job.credentials.binary",
+                    System.getenv("HADOOP_TOKEN_FILE_LOCATION"));
+        }
     }
 
     /**

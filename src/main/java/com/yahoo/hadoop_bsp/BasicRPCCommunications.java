@@ -576,8 +576,8 @@ public abstract class BasicRPCCommunications<
         InetSocketAddress addr = getInetSocketAddress(vertexIndexMax);
         CommunicationsInterface<I, V, E, M> rpcProxy =
             peerThreads.get(addr).getRPCProxy();
-        LOG.info("sendVertexList: Sending to " + rpcProxy + " " + addr +
-                 ", with vertex index " + vertexIndexMax + ", list " +
+        LOG.info("sendVertexList: Sending to " + rpcProxy.getName() + " " +
+                 addr + ", with vertex index " + vertexIndexMax + ", list " +
                  vertexList);
         if (peerThreads.get(addr).isProxy == false) {
             throw new RuntimeException("sendVertexList: Impossible to send " +

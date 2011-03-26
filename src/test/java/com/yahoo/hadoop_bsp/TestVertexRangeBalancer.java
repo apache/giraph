@@ -97,5 +97,24 @@ public class TestVertexRangeBalancer extends BspCase {
             }
             assertTrue(totalLen == 118);
         }
+
+        conf.setClass(BspJob.BSP_VERTEX_RANGE_BALANCER_CLASS,
+                      AutoBalancer.class,
+                      VertexRangeBalancer.class);
+        BspJob bspJob3 = new BspJob(conf, "testAutoBalancer");
+        outputPath = new Path("/tmp/testAutoBalancer");
+        hdfs.delete(outputPath, true);
+        FileOutputFormat.setOutputPath(bspJob3, outputPath);
+        assertTrue(bspJob3.run());
+        if (getJobTracker() != null) {
+            FileStatus [] fileStatusArr = hdfs.listStatus(outputPath);
+            int totalLen = 0;
+            for (FileStatus fileStatus : fileStatusArr) {
+                if (fileStatus.getPath().toString().contains("/part-m-")) {
+                    totalLen += fileStatus.getLen();
+                }
+            }
+            assertTrue(totalLen == 118);
+        }
     }
 }
