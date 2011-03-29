@@ -235,11 +235,6 @@ public class BspJob extends Job {
             DEFAULT_BSP_ZOOKEEPER_DIR = jobLocalDir +
                 "/_bspZooKeeper";
         }
-        // Hadoop security need this property to be set
-        if (System.getenv("HADOOP_TOKEN_FILE_LOCATION") != null) {
-            conf.set("mapreduce.job.credentials.binary",
-                    System.getenv("HADOOP_TOKEN_FILE_LOCATION"));
-        }
     }
 
     /**
@@ -334,6 +329,12 @@ public class BspJob extends Job {
             // Setting the default handler for uncaught exceptions.
             Thread.setDefaultUncaughtExceptionHandler(
                 new OverrideExceptionHandler());
+            // Hadoop security needs this property to be set
+            m_conf = context.getConfiguration();
+            if (System.getenv("HADOOP_TOKEN_FILE_LOCATION") != null) {
+                m_conf.set("mapreduce.job.credentials.binary",
+                        System.getenv("HADOOP_TOKEN_FILE_LOCATION"));
+            }
             // Do some initial setup (possibly starting up a Zookeeper service),
             // but mainly decide whether to load data
             // from a checkpoint or from the InputFormat.
@@ -341,7 +342,6 @@ public class BspJob extends Job {
             String trimmedJarFile = jarFile.replaceFirst("file:", "");
             LOG.info("setup: jar file @ " + jarFile +
                      ", using " + trimmedJarFile);
-            m_conf = context.getConfiguration();
             m_conf.set(BSP_ZOOKEEPER_JAR, trimmedJarFile);
             String serverPortList =
                 m_conf.get(BspJob.BSP_ZOOKEEPER_LIST, "");

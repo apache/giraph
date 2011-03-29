@@ -63,6 +63,7 @@
             <configuration>
               <target name="mvn-clean" unless="compile.classpath">
                 <delete dir="${export-target.dir}"/>
+                <delete dir="_bsp"/>
               </target>
             </configuration>
             <goals>
@@ -70,8 +71,8 @@
             </goals>
           </execution>
           <execution>
-            <id>compile</id>
-            <phase>export</phase>
+            <id>export</id>
+            <phase>compile</phase>
             <configuration>
               <target name="mvn-export" unless="compile.classpath">
                 <property name="compile_classpath" refid="maven.compile.classpath"/>
