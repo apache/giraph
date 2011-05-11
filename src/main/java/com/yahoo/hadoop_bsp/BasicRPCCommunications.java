@@ -386,7 +386,8 @@ public abstract class BasicRPCCommunications<
 
         String bindAddress = localHostname;
         int bindPort = conf.getInt(BspJob.BSP_RPC_INITIAL_PORT,
-                                   BspJob.BSP_RPC_DEFAULT_PORT) + taskId;
+                                   BspJob.DEFAULT_BSP_RPC_INITIAL_PORT) +
+                                   taskId;
 
         this.myAddress = new InetSocketAddress(bindAddress, bindPort);
         int numHandlers = conf.getInt(BspJob.BSP_RPC_NUM_HANDLERS,
@@ -755,7 +756,7 @@ public abstract class BasicRPCCommunications<
                 }
             }
         }
-    
+
         inPrepareSuperstep = false;
     }
 

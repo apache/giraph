@@ -78,8 +78,6 @@ public class BspJob extends Job {
     public static final String BSP_ZOOKEEPER_DIR = "bsp.zkDir";
     /** Initial port to start using for the RPC communication */
     public static final String BSP_RPC_INITIAL_PORT = "bsp.rpcInitialPort";
-    /** Default port to start using for the RPC communication */
-    public static final int BSP_RPC_DEFAULT_PORT = 61000;
     /** Maximum number of RPC handlers */
     public static final String BSP_RPC_NUM_HANDLERS = "bsp.rpcNumHandlers";
     /** Default maximum number of RPC handlers */
@@ -148,7 +146,8 @@ public class BspJob extends Job {
     /** Default ZooKeeper port to use */
     public static final int DEFAULT_BSP_ZOOKEEPER_SERVER_PORT = 22181;
     /** Default port to start using for the RPC communication */
-    public static final int DEFAULT_BSP_RPC_INITIAL_PORT = 30000;
+    public static final int DEFAULT_BSP_RPC_INITIAL_PORT = 61000;
+
     /**
      * Default local ZooKeeper prefix directory to use (where ZooKeeper server
      * files will go)
@@ -202,14 +201,17 @@ public class BspJob extends Job {
      * @param jobName user-defined job name
      * @throws IOException
      */
-    public BspJob(
-        Configuration conf, String jobName) throws IOException {
+    public BspJob(Configuration conf, String jobName) throws IOException {
         super(conf, jobName);
         if (conf.getInt(BSP_MAX_WORKERS, -1) < 0) {
             throw new RuntimeException("No valid " + BSP_MAX_WORKERS);
         }
-        if (conf.getFloat(BSP_MIN_PERCENT_RESPONDED, 0.0f) <= 0) {
-            throw new RuntimeException("No valid " + BSP_MIN_PERCENT_RESPONDED);
+        if (conf.getFloat(BSP_MIN_PERCENT_RESPONDED, 100.0f) <= 0.0f ||
+                conf.getFloat(BSP_MIN_PERCENT_RESPONDED, 100.0f) > 100.0) {
+            throw new RuntimeException(
+                "Invalid " +
+                conf.getFloat(BSP_MIN_PERCENT_RESPONDED, 100.0f) + " for " +
+                BSP_MIN_PERCENT_RESPONDED);
         }
         if (conf.getInt(BSP_MIN_WORKERS, -1) < 0) {
             throw new RuntimeException("No valid " + BSP_MIN_WORKERS);
@@ -218,11 +220,6 @@ public class BspJob extends Job {
                           HadoopVertex.class,
                           HadoopVertex.class) == null) {
             throw new RuntimeException("BspJob: Null BSP_VERTEX_CLASS");
-        }
-        if (conf.getClass(BSP_INPUT_SPLIT_CLASS,
-                          InputSplit.class,
-                          InputSplit.class) == null) {
-            throw new RuntimeException("BspJob: Null BSP_INPUT_SPLIT_CLASS");
         }
         if (conf.getClass(BSP_VERTEX_INPUT_FORMAT_CLASS,
                           VertexInputFormat.class,
@@ -340,8 +337,10 @@ public class BspJob extends Job {
             // from a checkpoint or from the InputFormat.
             String jarFile = context.getJar();
             String trimmedJarFile = jarFile.replaceFirst("file:", "");
-            LOG.info("setup: jar file @ " + jarFile +
-                     ", using " + trimmedJarFile);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("setup: jar file @ " + jarFile +
+                          ", using " + trimmedJarFile);
+            }
             m_conf.set(BSP_ZOOKEEPER_JAR, trimmedJarFile);
             String serverPortList =
                 m_conf.get(BspJob.BSP_ZOOKEEPER_LIST, "");
@@ -586,18 +585,23 @@ public class BspJob extends Job {
 
     /**
      * Runs the actual BSPJob through Hadoop.
+     *
+     * @param verbose If true, provide verbose output, false otherwise
      * @throws ClassNotFoundException
      * @throws InterruptedException
      * @throws IOException
      */
-    final public boolean run() throws IOException, InterruptedException,
-        ClassNotFoundException {
+    final public boolean run(boolean verbose)
+            throws IOException, InterruptedException, ClassNotFoundException {
         setNumReduceTasks(0);
         if (getJar() == null) {
             setJarByClass(BspJob.class);
         }
+        conf.setClass(BspJob.BSP_INPUT_SPLIT_CLASS,
+                      BspInputSplit.class,
+                      InputSplit.class);
         setMapperClass(BspMapper.class);
         setInputFormatClass(BspInputFormat.class);
-        return waitForCompletion(true);
+        return waitForCompletion(verbose);
     }
 }

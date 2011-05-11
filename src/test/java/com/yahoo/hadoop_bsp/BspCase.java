@@ -58,7 +58,8 @@ public class BspCase extends TestCase implements Watcher {
         if (getZooKeeperList() != null) {
             conf.set(BspJob.BSP_ZOOKEEPER_LIST, getZooKeeperList());
         }
-        conf.setInt(BspJob.BSP_RPC_INITIAL_PORT, BspJob.BSP_RPC_DEFAULT_PORT);
+        conf.setInt(BspJob.BSP_RPC_INITIAL_PORT,
+                    BspJob.DEFAULT_BSP_RPC_INITIAL_PORT);
         // GeneratedInputSplit will generate 5 vertices
         conf.setLong(GeneratedVertexReader.READER_VERTICES, 5);
     }
@@ -141,7 +142,7 @@ public class BspCase extends TestCase implements Watcher {
                         zooKeeperExt.getChildren("/" + rootChild, false);
                     for (String child: children) {
                         if (child.contains("job_local_")) {
-                            System.out.println("Cleaning up /_hadoopBs/" +
+                            System.out.println("Cleaning up /_hadoopBsp/" +
                                                child);
                             zooKeeperExt.deleteExt(
                                 "/_hadoopBsp/" + child, -1, true);

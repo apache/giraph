@@ -47,7 +47,7 @@ public interface Vertex<I extends WritableComparable,
     void postSuperstep();
 
     /**
-     * Must be defined by user to create a message value.
+     * Creates and initializes a message value.
      */
     M createMsgValue();
 

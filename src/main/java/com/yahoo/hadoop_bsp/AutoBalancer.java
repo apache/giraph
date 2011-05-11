@@ -45,10 +45,10 @@ public final class AutoBalancer<I extends WritableComparable,
 
     /** boolean: decides whether to balance number of vertices or edges */
     private static BalCriterium balanceOn =
-        BalCriterium.BAL_NUM_VERTICES_AND_EDGES;  
+        BalCriterium.BAL_NUM_VERTICES_AND_EDGES;
 
     public void setBalCriterium(BalCriterium balanceOn) {
-        this.balanceOn = balanceOn;
+        AutoBalancer.balanceOn = balanceOn;
     }
 
     private long getVertexRangeEntries(VertexRange<I,V,E,M> v)
@@ -70,6 +70,7 @@ public final class AutoBalancer<I extends WritableComparable,
        /**
         * Compares the number of entities based on balanceOn.
         */
+       @SuppressWarnings("unchecked")
        public int compare(VertexRange<I,V,E,M> v1, VertexRange<I,V,E,M> v2) {
            long numEntries1 = getVertexRangeEntries(v1);
            long numEntries2 = getVertexRangeEntries(v2);
@@ -79,7 +80,6 @@ public final class AutoBalancer<I extends WritableComparable,
            return (int)(numEntries2 - numEntries1);
        }
     }
-
 
     @Override
     public final void rebalance() {
@@ -145,7 +145,7 @@ public final class AutoBalancer<I extends WritableComparable,
                         "All VertexRanges should be different");
             }
         }
-        LOG.info("rebalance: numTotalEntries=" + numTotalEntries + 
+        LOG.info("rebalance: numTotalEntries=" + numTotalEntries +
                  " numVertexRanges=" + numVertexRanges +
                  " hostToVertexRangeMap size=" + hostToVertexRangeMap.size() +
                  " hostToNumEntriesMap size=" + hostToNumEntriesMap.size());
@@ -181,7 +181,7 @@ public final class AutoBalancer<I extends WritableComparable,
                 }
             }
         }
-        LOG.info("rebalance: Initial squareDeviation=" + squareDeviation + 
+        LOG.info("rebalance: Initial squareDeviation=" + squareDeviation +
                  " numTotalEntries=" + numTotalEntries +
                  " numVertexRanges=" + numVertexRanges);
 

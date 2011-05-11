@@ -17,6 +17,7 @@ public class SimpleSumCombiner
         implements Combiner<LongWritable, IntWritable,
         FloatWritable, IntWritable> {
 
+    @Override
     public void combine(
             CommunicationsInterface<LongWritable, IntWritable,
                                     FloatWritable, IntWritable> comm,

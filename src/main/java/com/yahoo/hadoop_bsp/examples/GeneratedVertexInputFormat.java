@@ -17,9 +17,7 @@ import com.yahoo.hadoop_bsp.VertexReader;
 
 /**
  * This VertexInputFormat is meant for testing/debugging.  It simply generates
- * some vertex data that can be consumed by test applications.
- * @author aching
- *
+ * some vertex data that can be consumed by test applications. *
  */
 public class GeneratedVertexInputFormat implements
     VertexInputFormat<LongWritable, IntWritable, FloatWritable> {

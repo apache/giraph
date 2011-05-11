@@ -98,7 +98,8 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
         m_minWorkers =
             getConfiguration().getInt(BspJob.BSP_MIN_WORKERS, -1);
         m_minPercentResponded =
-            getConfiguration().getFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 0.0f);
+            getConfiguration().getFloat(BspJob.BSP_MIN_PERCENT_RESPONDED,
+                                        100.0f);
         m_msecsPollPeriod =
             getConfiguration().getInt(BspJob.BSP_POLL_MSECS,
                                       BspJob.DEFAULT_BSP_POLL_MSECS);

@@ -6,7 +6,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 import com.yahoo.hadoop_bsp.examples.GeneratedVertexInputFormat;
@@ -54,9 +53,6 @@ public class TestVertexRangeBalancer extends BspCase {
         conf.setClass(BspJob.BSP_VERTEX_CLASS,
                       SimpleCheckpointVertex.class,
                       HadoopVertex.class);
-        conf.setClass(BspJob.BSP_INPUT_SPLIT_CLASS,
-                      BspInputSplit.class,
-                      InputSplit.class);
         conf.setClass(BspJob.BSP_VERTEX_INPUT_FORMAT_CLASS,
                       GeneratedVertexInputFormat.class,
                       VertexInputFormat.class);
@@ -67,7 +63,7 @@ public class TestVertexRangeBalancer extends BspCase {
         Path outputPath = new Path("/tmp/testStaticBalancer");
         hdfs.delete(outputPath, true);
         FileOutputFormat.setOutputPath(bspJob, outputPath);
-        assertTrue(bspJob.run());
+        assertTrue(bspJob.run(true));
         if (getJobTracker() != null) {
             FileStatus [] fileStatusArr = hdfs.listStatus(outputPath);
             int totalLen = 0;
@@ -86,7 +82,7 @@ public class TestVertexRangeBalancer extends BspCase {
         outputPath = new Path("/tmp/testSuperstepBalancer");
         hdfs.delete(outputPath, true);
         FileOutputFormat.setOutputPath(bspJob2, outputPath);
-        assertTrue(bspJob2.run());
+        assertTrue(bspJob2.run(true));
         if (getJobTracker() != null) {
             FileStatus [] fileStatusArr = hdfs.listStatus(outputPath);
             int totalLen = 0;
@@ -105,7 +101,7 @@ public class TestVertexRangeBalancer extends BspCase {
         outputPath = new Path("/tmp/testAutoBalancer");
         hdfs.delete(outputPath, true);
         FileOutputFormat.setOutputPath(bspJob3, outputPath);
-        assertTrue(bspJob3.run());
+        assertTrue(bspJob3.run(true));
         if (getJobTracker() != null) {
             FileStatus [] fileStatusArr = hdfs.listStatus(outputPath);
             int totalLen = 0;

@@ -15,8 +15,6 @@ import com.yahoo.hadoop_bsp.lib.LongSumAggregator;
 
 /**
  * Demonstrates the basic Pregel PageRank implementation.
- * @author aching
- *
  */
 public class SimplePageRankVertex extends
     HadoopVertex<LongWritable, DoubleWritable, FloatWritable, DoubleWritable> {
@@ -48,7 +46,6 @@ public class SimplePageRankVertex extends
 
     }
 
-
     @Override
     public void preSuperstep() {
         LongSumAggregator sumAggreg = (LongSumAggregator) getAggregator("sum");
@@ -76,6 +73,7 @@ public class SimplePageRankVertex extends
         sumAggreg.setAggregatedValue(new LongWritable(0L));
     }
 
+    @Override
     public void compute(Iterator<DoubleWritable> msgIterator) {
         LongSumAggregator sumAggreg = (LongSumAggregator) getAggregator("sum");
         MinAggregator minAggreg = (MinAggregator) getAggregator("min");
@@ -105,6 +103,7 @@ public class SimplePageRankVertex extends
         }
     }
 
+    @Override
     public DoubleWritable createMsgValue() {
         return new DoubleWritable(0f);
     }

@@ -108,9 +108,6 @@ public class TestBspBasic extends BspCase {
         conf.setClass(BspJob.BSP_VERTEX_CLASS,
                       SimpleFailVertex.class,
                       HadoopVertex.class);
-        conf.setClass(BspJob.BSP_INPUT_SPLIT_CLASS,
-                      BspInputSplit.class,
-                      InputSplit.class);
         conf.setClass(BspJob.BSP_VERTEX_INPUT_FORMAT_CLASS,
                       GeneratedVertexInputFormat.class,
                       VertexInputFormat.class);
@@ -118,7 +115,7 @@ public class TestBspBasic extends BspCase {
         Path outputPath = new Path("/tmp/testBspFailOutput");
         hdfs.delete(outputPath, true);
         FileOutputFormat.setOutputPath(bspJob, outputPath);
-        assertTrue(!bspJob.run());
+        assertTrue(!bspJob.run(true));
     }
 
     /**
@@ -138,9 +135,6 @@ public class TestBspBasic extends BspCase {
         conf.setClass(BspJob.BSP_VERTEX_CLASS,
                       SimpleSuperstepVertex.class,
                       HadoopVertex.class);
-        conf.setClass(BspJob.BSP_INPUT_SPLIT_CLASS,
-                      BspInputSplit.class,
-                      InputSplit.class);
         conf.setClass(BspJob.BSP_VERTEX_INPUT_FORMAT_CLASS,
                       GeneratedVertexInputFormat.class,
                       VertexInputFormat.class);
@@ -151,7 +145,7 @@ public class TestBspBasic extends BspCase {
         Path outputPath = new Path("/tmp/testBspSuperStepOutput");
         hdfs.delete(outputPath, true);
         FileOutputFormat.setOutputPath(bspJob, outputPath);
-        assertTrue(bspJob.run());
+        assertTrue(bspJob.run(true));
         if (getJobTracker() == null) {
             FileStatus [] fileStatusArr = hdfs.listStatus(outputPath);
             assertTrue(fileStatusArr.length == 1);
@@ -174,9 +168,6 @@ public class TestBspBasic extends BspCase {
         conf.setClass(BspJob.BSP_VERTEX_CLASS,
                       SimpleMsgVertex.class,
                       HadoopVertex.class);
-        conf.setClass(BspJob.BSP_INPUT_SPLIT_CLASS,
-                      BspInputSplit.class,
-                      InputSplit.class);
         conf.setClass(BspJob.BSP_VERTEX_INPUT_FORMAT_CLASS,
                       GeneratedVertexInputFormat.class,
                       VertexInputFormat.class);
@@ -184,7 +175,7 @@ public class TestBspBasic extends BspCase {
         Path outputPath = new Path("/tmp/testBspMsgOutput");
         hdfs.delete(outputPath, true);
         FileOutputFormat.setOutputPath(bspJob, outputPath);
-        assertTrue(bspJob.run());
+        assertTrue(bspJob.run(true));
     }
 
     /**
@@ -202,9 +193,6 @@ public class TestBspBasic extends BspCase {
         conf.setClass(BspJob.BSP_VERTEX_CLASS,
                       SimpleCombinerVertex.class,
                       HadoopVertex.class);
-        conf.setClass(BspJob.BSP_INPUT_SPLIT_CLASS,
-                      BspInputSplit.class,
-                      InputSplit.class);
         conf.setClass(BspJob.BSP_VERTEX_INPUT_FORMAT_CLASS,
                       GeneratedVertexInputFormat.class,
                       VertexInputFormat.class);
@@ -215,7 +203,7 @@ public class TestBspBasic extends BspCase {
         Path outputPath = new Path("/tmp/testBspCombinerOutput");
         hdfs.delete(outputPath, true);
         FileOutputFormat.setOutputPath(bspJob, outputPath);
-        assertTrue(bspJob.run());
+        assertTrue(bspJob.run(true));
     }
 
     /**
@@ -232,9 +220,6 @@ public class TestBspBasic extends BspCase {
         conf.setClass(BspJob.BSP_VERTEX_CLASS,
                       SimplePageRankVertex.class,
                       HadoopVertex.class);
-        conf.setClass(BspJob.BSP_INPUT_SPLIT_CLASS,
-                      BspInputSplit.class,
-                      InputSplit.class);
         conf.setClass(BspJob.BSP_VERTEX_INPUT_FORMAT_CLASS,
                       GeneratedVertexInputFormat.class,
                       VertexInputFormat.class);
@@ -242,7 +227,7 @@ public class TestBspBasic extends BspCase {
         Path outputPath = new Path("/tmp/testBspPageRankOutput");
         hdfs.delete(outputPath, true);
         FileOutputFormat.setOutputPath(bspJob, outputPath);
-        assertTrue(bspJob.run());
+        assertTrue(bspJob.run(true));
         if (getJobTracker() == null) {
             double maxPageRank = SimplePageRankVertex.finalMax;
             double minPageRank = SimplePageRankVertex.finalMin;

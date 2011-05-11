@@ -18,8 +18,6 @@ import org.apache.log4j.Logger;
  * how many splits (number of mappers) should be started simultaneously.
  * The number of splits depends on whether the master and worker processes are
  * separate.  It is not meant to do any meaningful split of user-data.
- * @author aching
- *
  */
 public class BspInputFormat extends InputFormat<Text, Text> {
     /** Logger */
@@ -42,9 +40,11 @@ public class BspInputFormat extends InputFormat<Text, Text> {
                             BspJob.DEFAULT_BSP_ZOOKEEPER_SERVER_COUNT);
             maxTasks += zkServers;
         }
-        LOG.info("getMaxTasks: Max workers = " + maxWorkers +
-                 ", split master/worker = " + splitMasterWorker +
-                 ", total max tasks = " + maxTasks);
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("getMaxTasks: Max workers = " + maxWorkers +
+                      ", split master/worker = " + splitMasterWorker +
+                      ", total max tasks = " + maxTasks);
+        }
         return maxTasks;
     }
 

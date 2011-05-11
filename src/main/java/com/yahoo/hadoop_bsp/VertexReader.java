@@ -31,21 +31,21 @@ public interface VertexReader<I extends WritableComparable,
     boolean next(MutableVertex<I, V, E, ?> vertex) throws IOException;
 
     /**
-     * Creates a new vertex id
+     * Creates and initializes a new vertex id
      *
      * @return new vertex id
      */
     I createVertexId();
 
     /**
-     * Creates a new vertex value
+     * Creates and initializes a new vertex value
      *
      * @return new vertex value
      */
     V createVertexValue();
 
     /**
-     * Creates a new edge value
+     * Creates and initializes a new edge value
      *
      * @return new edge value
      */

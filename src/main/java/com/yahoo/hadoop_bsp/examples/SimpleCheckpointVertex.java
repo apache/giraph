@@ -3,12 +3,23 @@ package com.yahoo.hadoop_bsp.examples;
 import java.util.Iterator;
 import java.util.Map;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.PosixParser;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
 
+import com.yahoo.hadoop_bsp.BspJob;
 import com.yahoo.hadoop_bsp.HadoopVertex;
 import com.yahoo.hadoop_bsp.OutEdgeIterator;
+import com.yahoo.hadoop_bsp.VertexInputFormat;
 import com.yahoo.hadoop_bsp.lib.LongSumAggregator;
 
 /**
@@ -18,7 +29,8 @@ import com.yahoo.hadoop_bsp.lib.LongSumAggregator;
  * @author aching
  */
 public class SimpleCheckpointVertex extends
-    HadoopVertex<LongWritable, IntWritable, FloatWritable, FloatWritable> {
+        HadoopVertex<LongWritable, IntWritable, FloatWritable, FloatWritable>
+        implements Tool {
     /** User can access this after the application finishes if local */
     public static long finalSum;
 
@@ -83,5 +95,68 @@ public class SimpleCheckpointVertex extends
 
     public FloatWritable createMsgValue() {
         return new FloatWritable(0);
+    }
+
+    @Override
+    public int run(String[] args) throws Exception {
+        Options options = new Options();
+        options.addOption("h", "help", false, "Help");
+        options.addOption("v", "verbose", false, "Verbose");
+        options.addOption("w",
+                          "workers",
+                          true,
+                          "Number of workers");
+        options.addOption("w",
+                          "workers",
+                          true,
+                          "Minimum number of workers");
+        options.addOption("o",
+                          "output directory",
+                          true,
+                          "Output directory");
+        HelpFormatter formatter = new HelpFormatter();
+        if (args.length == 0) {
+            formatter.printHelp(getClass().getName(), options, true);
+            System.exit(0);
+        }
+        CommandLineParser parser = new PosixParser();
+        CommandLine cmd = parser.parse(options, args);
+        if (cmd.hasOption('h')) {
+            formatter.printHelp(getClass().getName(), options, true);
+            System.exit(0);
+        }
+        if (!cmd.hasOption('w')) {
+            System.out.println("Need to choose the number of workers (-w)");
+            System.exit(-1);
+        }
+        if (!cmd.hasOption('o')) {
+            System.out.println("Need to set the output directory (-o)");
+            System.exit(-1);
+        }
+
+        getConf().setClass(BspJob.BSP_VERTEX_CLASS, getClass(), HadoopVertex.class);
+        getConf().setClass(BspJob.BSP_VERTEX_INPUT_FORMAT_CLASS,
+                           GeneratedVertexInputFormat.class,
+                           VertexInputFormat.class);
+        getConf().setInt(BspJob.BSP_MIN_WORKERS,
+                         Integer.parseInt(cmd.getOptionValue('w')));
+        getConf().setInt(BspJob.BSP_MAX_WORKERS,
+                         Integer.parseInt(cmd.getOptionValue('w')));
+        BspJob bspJob = new BspJob(getConf(), getClass().getName());
+        FileOutputFormat.setOutputPath(bspJob,
+                                       new Path(cmd.getOptionValue('o')));
+        boolean verbose = false;
+        if (cmd.hasOption('v')) {
+            verbose = true;
+        }
+        if (bspJob.run(verbose) == true) {
+            return 0;
+        } else {
+            return -1;
+        }
+    }
+
+    public static void main(String[] args) throws Exception {
+        System.exit(ToolRunner.run(new SimpleCheckpointVertex(), args));
     }
 }

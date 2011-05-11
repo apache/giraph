@@ -6,7 +6,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 import com.yahoo.hadoop_bsp.examples.GeneratedVertexInputFormat;
@@ -55,9 +54,6 @@ public class TestManualCheckpoint extends BspCase {
         conf.setClass(BspJob.BSP_VERTEX_CLASS,
                       SimpleCheckpointVertex.class,
                       HadoopVertex.class);
-        conf.setClass(BspJob.BSP_INPUT_SPLIT_CLASS,
-                      BspInputSplit.class,
-                      InputSplit.class);
         conf.setClass(BspJob.BSP_VERTEX_INPUT_FORMAT_CLASS,
                       GeneratedVertexInputFormat.class,
                       VertexInputFormat.class);
@@ -70,7 +66,7 @@ public class TestManualCheckpoint extends BspCase {
         Path outputPath = new Path("/tmp/testBspCheckpointOutput");
         hdfs.delete(outputPath, true);
         FileOutputFormat.setOutputPath(bspJob, outputPath);
-        assertTrue(bspJob.run());
+        assertTrue(bspJob.run(true));
         long fileLen = 0;
         long idSum = 0;
         if (getJobTracker() == null) {
@@ -91,7 +87,7 @@ public class TestManualCheckpoint extends BspCase {
         outputPath = new Path("/tmp/testBspCheckpointRestartedOutput");
         hdfs.delete(outputPath, true);
         FileOutputFormat.setOutputPath(bspRestartedJob, outputPath);
-        assertTrue(bspRestartedJob.run());
+        assertTrue(bspRestartedJob.run(true));
         if (getJobTracker() == null) {
             FileStatus [] fileStatusArr = hdfs.listStatus(outputPath);
             assertTrue(fileStatusArr.length == 1);

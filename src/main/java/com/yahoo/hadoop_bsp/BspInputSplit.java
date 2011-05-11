@@ -8,9 +8,10 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputSplit;
 
 /**
- * This InputSplit will not give any ordering or location data.  It is meant to
- * do almost nothing.  It is used internally by BspInputFormat (which determines
- * how many tasks to run the application on).
+ * This InputSplit will not give any ordering or location data.
+ * It is used internally by BspInputFormat (which determines
+ * how many tasks to run the application on).  Users need not use this
+ * directly.
  */
 public class BspInputSplit extends InputSplit implements Writable {
     /** Number of splits */
