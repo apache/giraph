@@ -19,7 +19,7 @@ public class SimpleVertexWriter implements
          VertexWriter<LongWritable, IntWritable, FloatWritable> {
 
     public <KEYOUT, VALUEOUT> void write(
-        TaskInputOutputContext<Object, Object, KEYOUT, VALUEOUT> context,
+        TaskInputOutputContext<?, ?, KEYOUT, VALUEOUT> context,
         LongWritable vertexId,
         IntWritable vertexValue,
         OutEdgeIterator<LongWritable, FloatWritable> destEdgeIt)

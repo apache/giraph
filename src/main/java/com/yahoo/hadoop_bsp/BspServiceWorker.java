@@ -26,6 +26,7 @@ import org.json.JSONObject;
 import org.apache.log4j.Logger;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -249,14 +250,10 @@ public class BspServiceWorker<
      * @throws IOException
      * @throws IllegalAccessException
      * @throws InstantiationException
+     * @throws ClassNotFoundException
      */
     private void loadVertices() throws
-            InstantiationException, IllegalAccessException, IOException {
-        @SuppressWarnings("unchecked")
-        Class<? extends Writable> inputSplitClass =
-            (Class<Writable>) getConfiguration().getClass(
-                BspJob.BSP_INPUT_SPLIT_CLASS,
-                InputSplit.class);
+            InstantiationException, IllegalAccessException, IOException, ClassNotFoundException {
         List<HadoopVertex<I, V, E, M>> vertexList =
             new ArrayList<HadoopVertex<I, V, E, M>>();
         String inputSplitPath = null;
@@ -266,8 +263,6 @@ public class BspServiceWorker<
             final long maxVertexRangesPerInputSplit =
                 1024 * 1024 / 350 / m_inputSplitCount;
 
-            InputSplit inputSplit = (InputSplit)
-                ReflectionUtils.newInstance(inputSplitClass, getConfiguration());
             byte[] splitList;
             try {
                 splitList = getZkExt().getData(inputSplitPath, false, null);
@@ -275,16 +270,17 @@ public class BspServiceWorker<
                 throw new RuntimeException(e);
             }
             LOG.info("loadVertices: Reserved " + inputSplitPath +
-                     " and got '" + splitList + "'");
+                     " from ZooKeeper and got '" + splitList + "'");
             getContext().progress();
 
-            InputStream input =
-                new ByteArrayInputStream(splitList);
-            try {
-                ((Writable) inputSplit).readFields(new DataInputStream(input));
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
+            DataInputStream inputStream =
+                new DataInputStream(new ByteArrayInputStream(splitList));
+            String inputSplitClass = Text.readString(inputStream);
+            InputSplit inputSplit = (InputSplit)
+                ReflectionUtils.newInstance(
+                    getConfiguration().getClassByName(inputSplitClass),
+                    getConfiguration());
+            ((Writable) inputSplit).readFields(inputStream);
 
             @SuppressWarnings("unchecked")
             Class<? extends VertexInputFormat<I, V, E>> vertexInputFormatClass =

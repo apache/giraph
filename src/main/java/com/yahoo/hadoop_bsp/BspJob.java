@@ -8,7 +8,6 @@ import java.util.TreeMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
@@ -20,8 +19,6 @@ import org.apache.log4j.Logger;
 public class BspJob extends Job {
     /** Vertex class - required */
     public static final String BSP_VERTEX_CLASS = "bsp.vertexClass";
-    /** InputSplit class - required */
-    public static final String BSP_INPUT_SPLIT_CLASS = "bsp.inputSplitClass";
     /** InputFormat class - required */
     public static final String BSP_VERTEX_INPUT_FORMAT_CLASS =
         "bsp.vertexInputFormatClass";
@@ -597,9 +594,6 @@ public class BspJob extends Job {
         if (getJar() == null) {
             setJarByClass(BspJob.class);
         }
-        conf.setClass(BspJob.BSP_INPUT_SPLIT_CLASS,
-                      BspInputSplit.class,
-                      InputSplit.class);
         setMapperClass(BspMapper.class);
         setInputFormatClass(BspInputFormat.class);
         return waitForCompletion(verbose);

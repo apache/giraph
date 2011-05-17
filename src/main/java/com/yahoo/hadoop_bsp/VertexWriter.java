@@ -20,7 +20,7 @@ public interface VertexWriter<I extends WritableComparable,
      * @param destEdgeIt iterator over vertex edges written out
      */
     <KEYOUT,VALUEOUT> void write(
-        TaskInputOutputContext<Object, Object, KEYOUT, VALUEOUT> context,
+        TaskInputOutputContext<?, ?, KEYOUT, VALUEOUT> context,
             I vertexId, V vertexValue, OutEdgeIterator<I, E> destEdgeIt)
         throws IOException, InterruptedException;
 

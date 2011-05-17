@@ -26,6 +26,7 @@ import org.apache.log4j.Logger;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.JobClient;
@@ -146,7 +147,8 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
     }
 
     /**
-     * Master uses this to calculate the input split and write it to ZooKeeper.
+     * Master uses this to calculate the {@link VertexInputFormat}
+     * input splits and write it to ZooKeeper.
      *
      * @param numSplits
      * @throws InstantiationException
@@ -413,7 +415,10 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                     new ByteArrayOutputStream();
                 DataOutput outputStream =
                     new DataOutputStream(byteArrayOutputStream);
-                ((Writable) splitList.get(i)).write(outputStream);
+                InputSplit inputSplit = splitList.get(i);
+                Text.writeString(outputStream,
+                                 inputSplit.getClass().getName());
+                ((Writable) inputSplit).write(outputStream);
                 inputSplitPath = INPUT_SPLIT_PATH + "/" + i;
                 getZkExt().createExt(inputSplitPath,
                                      byteArrayOutputStream.toByteArray(),
