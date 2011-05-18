@@ -101,7 +101,6 @@ public class TestBspBasic extends BspCase {
             return;
         }
         Configuration conf = new Configuration();
-        conf.set("mapred.jar", getJarLocation());
         setupConfiguration(conf);
         conf.setInt("mapred.map.max.attempts", 2);
         FileSystem hdfs = FileSystem.get(conf);
@@ -147,9 +146,8 @@ public class TestBspBasic extends BspCase {
         FileOutputFormat.setOutputPath(bspJob, outputPath);
         assertTrue(bspJob.run(true));
         if (getJobTracker() == null) {
-            FileStatus [] fileStatusArr = hdfs.listStatus(outputPath);
-            assertTrue(fileStatusArr.length == 1);
-            assertTrue(fileStatusArr[0].getLen() == 49);
+            FileStatus fileStatus = getSinglePartFileStatus(hdfs, outputPath);
+            assertTrue(fileStatus.getLen() == 49);
         }
     }
 
@@ -178,6 +176,33 @@ public class TestBspBasic extends BspCase {
         assertTrue(bspJob.run(true));
     }
 
+
+    /**
+     * Run a sample BSP job locally with no vertices and make sure
+     * it completes.
+     * @throws IOException
+     * @throws ClassNotFoundException
+     * @throws InterruptedException
+     */
+    public void testEmptyVertexInputFormat()
+        throws IOException, InterruptedException, ClassNotFoundException {
+        Configuration conf = new Configuration();
+        setupConfiguration(conf);
+        FileSystem hdfs = FileSystem.get(conf);
+        conf.setClass(BspJob.BSP_VERTEX_CLASS,
+                      SimpleMsgVertex.class,
+                      HadoopVertex.class);
+        conf.setClass(BspJob.BSP_VERTEX_INPUT_FORMAT_CLASS,
+                      GeneratedVertexInputFormat.class,
+                      VertexInputFormat.class);
+        conf.setLong(GeneratedVertexReader.READER_VERTICES, 0);
+        BspJob bspJob = new BspJob(conf, "testEmptyVertexInputFormat");
+        Path outputPath = new Path("/tmp/testEmptyVertexInputFormat");
+        hdfs.delete(outputPath, true);
+        FileOutputFormat.setOutputPath(bspJob, outputPath);
+        assertTrue(bspJob.run(true));
+    }
+
     /**
      * Run a sample BSP job locally with combiner and checkout output value.
      * @throws IOException
@@ -187,7 +212,6 @@ public class TestBspBasic extends BspCase {
     public void testBspCombiner()
         throws IOException, InterruptedException, ClassNotFoundException {
         Configuration conf = new Configuration();
-        conf.set("mapred.jar", getJarLocation());
         setupConfiguration(conf);
         FileSystem hdfs = FileSystem.get(conf);
         conf.setClass(BspJob.BSP_VERTEX_CLASS,

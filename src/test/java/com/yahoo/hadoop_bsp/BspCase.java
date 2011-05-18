@@ -1,5 +1,6 @@
 package com.yahoo.hadoop_bsp;
 
+import java.io.IOException;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -106,6 +107,36 @@ public class BspCase extends TestCase implements Watcher {
      */
     String getJobTracker() {
         return m_jobTracker;
+    }
+
+    /**
+     * Get the single part file status and make sure there is only one part
+     *
+     * @param fs Filesystem to look for the part file
+     * @param partDirPath Directory where the single part file should exist
+     * @return Single part file status
+     * @throws IOException
+     */
+    public static FileStatus getSinglePartFileStatus(FileSystem fs,
+                                                     Path partDirPath)
+            throws IOException {
+        FileStatus[] statusArray = fs.listStatus(partDirPath);
+        FileStatus singlePartFileStatus = null;
+        int partFiles = 0;
+        for (FileStatus fileStatus : statusArray) {
+            if (fileStatus.getPath().getName().equals("part-m-00000")) {
+                singlePartFileStatus = fileStatus;
+            }
+            if (fileStatus.getPath().getName().startsWith("part-m-")) {
+                ++partFiles;
+            }
+        }
+        if (partFiles != 1) {
+            throw new ArithmeticException(
+                "getSinglePartFile: Part file count should be 1, but is " +
+                partFiles);
+        }
+        return singlePartFileStatus;
     }
 
     @Override

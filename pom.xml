@@ -11,7 +11,8 @@
   <url>http://maven.apache.org</url>
 
   <properties>
-    <hadoop.version>0.20.2</hadoop.version>
+    <hadoop.version>0.20.203.0</hadoop.version>
+    <jackson.version>1.8.0</jackson.version>
     <export-target.dir>export/target</export-target.dir>
     <buildtype>test</buildtype>
   </properties>
@@ -194,6 +195,16 @@
       <version>${hadoop.version}</version>
     </dependency>
     <dependency>
+      <groupId>org.codehaus.jackson</groupId>
+      <artifactId>jackson-core-asl</artifactId>
+      <version>${jackson.version}</version>
+	</dependency>
+	<dependency>
+      <groupId>org.codehaus.jackson</groupId>
+      <artifactId>jackson-mapper-asl</artifactId>
+      <version>${jackson.version}</version>
+    </dependency>
+    <dependency>
       <groupId>org.apache.zookeeper</groupId>
       <artifactId>zookeeper</artifactId>
       <version>3.3.1</version>
@@ -221,7 +232,7 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-project-info-reports-plugin</artifactId>
       </plugin>
-      
+
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-report-plugin</artifactId>

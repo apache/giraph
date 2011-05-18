@@ -12,7 +12,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -131,12 +130,13 @@ public class ZooKeeperManager {
                     LOG.debug(line);
                 }
             } catch (IOException e) {
-                LOG.error(e);
+                LOG.error("run: Ignoring IOException", e);
             }
         }
     }
 
-    public ZooKeeperManager(@SuppressWarnings("rawtypes") Context context) {
+    public ZooKeeperManager(@SuppressWarnings("rawtypes") Context context)
+            throws IOException {
         m_context = context;
         m_conf = context.getConfiguration();
         m_taskPartition = m_conf.getInt("mapred.task.partition", -1);
@@ -165,24 +165,17 @@ public class ZooKeeperManager {
             BspJob.BSP_ZOOKEEPER_SERVER_PORT,
             BspJob.DEFAULT_BSP_ZOOKEEPER_SERVER_PORT);
 
-        try {
-            m_myHostname = InetAddress.getLocalHost().getCanonicalHostName();
-        } catch (UnknownHostException e) {
-            throw new RuntimeException(e);
-        }
-        try {
-            m_fs = FileSystem.get(m_conf);
-        } catch (IOException e) {
-            LOG.error("ZooKeeperManager: Failed to get the filesystem!");
-            throw new RuntimeException(e);
-        }
+        m_myHostname = InetAddress.getLocalHost().getCanonicalHostName();
+        m_fs = FileSystem.get(m_conf);
     }
 
     /**
      * Create the candidate stamps and decide on the servers to start if
      * you are partition 0.
+     * @throws IOException
+     * @throws InterruptedException
      */
-    public void setup() {
+    public void setup() throws IOException, InterruptedException {
         createCandidateStamp();
         getZooKeeperServerList();
     }
@@ -246,74 +239,64 @@ public class ZooKeeperManager {
     /**
      * Task 0 will call this to create the ZooKeeper server list.  The result is
      * a file that describes the ZooKeeper servers through the filename.
+     * @throws IOException
+     * @throws InterruptedException
      */
-    private void createZooKeeperServerList() {
+    private void createZooKeeperServerList()
+            throws IOException, InterruptedException {
         int candidateRetrievalAttempt = 0;
         Map<String, Integer> hostnameTaskMap =
             new TreeMap<String, Integer>();
         while (true) {
-            try {
-                FileStatus [] fileStatusArray =
-                    m_fs.listStatus(m_taskDirectory);
-                hostnameTaskMap.clear();
-                if (fileStatusArray.length > 0) {
-                    for (int i = 0; i < fileStatusArray.length; ++i) {
-                        String[] hostnameTaskArray =
-                            fileStatusArray[i].getPath().getName().split(
-                                HOSTNAME_TASK_SEPARATOR);
-                        if (hostnameTaskArray.length != 2) {
-                            throw new RuntimeException(
-                                "getZooKeeperServerList: Task 0 failed " +
-                                "to parse " +
-                                fileStatusArray[i].getPath().getName());
-                        }
-                        if (!hostnameTaskMap.containsKey(
-                            hostnameTaskArray[0])) {
-                            hostnameTaskMap.put(
-                                hostnameTaskArray[0],
-                                new Integer(hostnameTaskArray[1]));
-                        }
+            FileStatus [] fileStatusArray =
+                m_fs.listStatus(m_taskDirectory);
+            hostnameTaskMap.clear();
+            if (fileStatusArray.length > 0) {
+                for (int i = 0; i < fileStatusArray.length; ++i) {
+                    String[] hostnameTaskArray =
+                        fileStatusArray[i].getPath().getName().split(
+                            HOSTNAME_TASK_SEPARATOR);
+                    if (hostnameTaskArray.length != 2) {
+                        throw new RuntimeException(
+                            "getZooKeeperServerList: Task 0 failed " +
+                            "to parse " +
+                            fileStatusArray[i].getPath().getName());
                     }
-                    LOG.info("getZooKeeperServerList: Got " +
-                             hostnameTaskMap.keySet() + " " +
-                             hostnameTaskMap.size() + " hosts from " +
-                             fileStatusArray.length + " candidates when " +
-                             m_serverCount + " required (polling period is " +
-                             m_pollMsecs + ") on attempt " +
-                             candidateRetrievalAttempt);
-                    if (hostnameTaskMap.size() >= m_serverCount) {
-                        break;
+                    if (!hostnameTaskMap.containsKey(hostnameTaskArray[0])) {
+                        hostnameTaskMap.put(hostnameTaskArray[0],
+                                            new Integer(hostnameTaskArray[1]));
                     }
-                    ++candidateRetrievalAttempt;
-                    Thread.sleep(m_pollMsecs);
                 }
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            } catch (InterruptedException e) {
-                LOG.warn("createZooKeeperServerList: Strange interrupt from " +
-                         e.getMessage());
-            }
-        }
-        try {
-            String serverListFile =
-                new String(ZOOKEEPER_SERVER_LIST_FILE_PREFIX);
-            int numServers = 0;
-            for (Map.Entry<String, Integer> hostnameTask :
-                 hostnameTaskMap.entrySet()) {
-                serverListFile += hostnameTask.getKey() +
-                    HOSTNAME_TASK_SEPARATOR + hostnameTask.getValue() +
-                    HOSTNAME_TASK_SEPARATOR;
-                if (++numServers == m_serverCount) {
+                LOG.info("getZooKeeperServerList: Got " +
+                         hostnameTaskMap.keySet() + " " +
+                         hostnameTaskMap.size() + " hosts from " +
+                         fileStatusArray.length + " candidates when " +
+                         m_serverCount + " required (polling period is " +
+                         m_pollMsecs + ") on attempt " +
+                         candidateRetrievalAttempt);
+                if (hostnameTaskMap.size() >= m_serverCount) {
                     break;
                 }
+                ++candidateRetrievalAttempt;
+                Thread.sleep(m_pollMsecs);
             }
-            Path serverListPath = new Path(m_baseDirectory, serverListFile);
-            LOG.info("createZooKeeperServerList: Creating the final " +
-                     "ZooKeeper file '" + serverListPath + "'");
-            m_fs.createNewFile(serverListPath);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
         }
+        String serverListFile =
+            new String(ZOOKEEPER_SERVER_LIST_FILE_PREFIX);
+        int numServers = 0;
+        for (Map.Entry<String, Integer> hostnameTask :
+            hostnameTaskMap.entrySet()) {
+            serverListFile += hostnameTask.getKey() +
+            HOSTNAME_TASK_SEPARATOR + hostnameTask.getValue() +
+            HOSTNAME_TASK_SEPARATOR;
+            if (++numServers == m_serverCount) {
+                break;
+            }
+        }
+        Path serverListPath = new Path(m_baseDirectory, serverListFile);
+        LOG.info("createZooKeeperServerList: Creating the final " +
+                 "ZooKeeper file '" + serverListPath + "'");
+        m_fs.createNewFile(serverListPath);
     }
 
     /**
@@ -321,31 +304,31 @@ public class ZooKeeperManager {
      * the appropriate directory with the prefix
      * ZOOKEEPER_SERVER_LIST_FILE_PREFIX.
      * @return null if not found or the filename if found
+     * @throws IOException
      */
-    private String getServerListFile() {
+    private String getServerListFile() throws IOException {
         String serverListFile = null;
-        try {
-            FileStatus [] fileStatusArray =
-                m_fs.listStatus(m_baseDirectory);
-            for (FileStatus fileStatus : fileStatusArray) {
-                if (fileStatus.getPath().getName().startsWith(
+        FileStatus [] fileStatusArray =
+            m_fs.listStatus(m_baseDirectory);
+        for (FileStatus fileStatus : fileStatusArray) {
+            if (fileStatus.getPath().getName().startsWith(
                     ZOOKEEPER_SERVER_LIST_FILE_PREFIX)) {
-                    serverListFile = fileStatus.getPath().getName();
-                    break;
-                }
+                serverListFile = fileStatus.getPath().getName();
+                break;
             }
-            return serverListFile;
-        } catch (IOException e) {
-            throw new RuntimeException(e);
         }
+        return serverListFile;
     }
 
     /**
      * Task 0 is the designated master and will generate the server list
      * (unless it has already done so).  Other
      * tasks will consume the file after it is created (just the filename).
+     * @throws IOException
+     * @throws InterruptedException
      */
-    private void getZooKeeperServerList() {
+    private void getZooKeeperServerList()
+            throws IOException, InterruptedException {
         int serverListFileAttempt = 0;
         String serverListFile = null;
 
@@ -494,14 +477,22 @@ public class ZooKeeperManager {
             LOG.info("onlineZooKeeperServers: Attempting to start ZooKeeper " +
                 "server with command " + commandList);
             try {
-                m_zkProcess = processBuilder.start();
+                synchronized (this) {
+                    m_zkProcess = processBuilder.start();
+                }
                 m_zkProcessCollector =
                     new StreamCollector(m_zkProcess.getInputStream());
                 m_zkProcessCollector.start();
                 Runnable runnable = new Runnable() {
                     public void run() {
-                        LOG.warn("onlineZooKeeperServers: addShutdownHook called.");
-                        m_zkProcess.destroy();
+                        synchronized (this) {
+                            if (m_zkProcess != null) {
+                                LOG.warn("onlineZooKeeperServers: "+
+                                    "Forced a shutdown hook kill of the " +
+                                    "ZooKeeper process.");
+                                m_zkProcess.destroy();
+                            }
+                        }
                     }
                 };
                 Runtime.getRuntime().addShutdownHook(new Thread(runnable));
@@ -607,8 +598,9 @@ public class ZooKeeperManager {
     }
 
     /**
-     * Wait for partitions to complete
-     * @param totalMapTasks
+     * Wait for all map tasks to signal completion.
+     *
+     * @param totalMapTasks Number of map tasks to wait for
      */
     private void waitUntilAllTasksDone(int totalMapTasks) {
         int attempt = 0;
@@ -637,10 +629,9 @@ public class ZooKeeperManager {
                 Thread.sleep(m_pollMsecs);
                m_context.progress();
             } catch (IOException e) {
-                throw new RuntimeException(e);
+                LOG.warn("waitUntilAllTasksDone: Got IOException.", e);
             } catch (InterruptedException e) {
-                LOG.warn("waitUntilAllTasksDone: Strange interrupt from " +
-                         e.getMessage());
+                LOG.warn("waitUntilAllTasksDone: Got InterruptedException" + e);
             }
         }
     }
@@ -657,24 +648,33 @@ public class ZooKeeperManager {
         if (state == State.FINISHED) {
             createZooKeeperClosedStamp();
         }
-        if (m_zkProcess != null) {
-            int totalMapTasks = m_conf.getInt("mapred.map.tasks", -1);
-            waitUntilAllTasksDone(totalMapTasks);
-            m_zkProcess.destroy();
-            int exitValue = -1;
-            File zkDir = null;
-            try {
-                m_zkProcessCollector.join();
-                exitValue = m_zkProcess.waitFor();
-                zkDir = new File(m_zkDir);
-                FileUtils.deleteDirectory(zkDir);
-            } catch (InterruptedException e) {
-                LOG.warn("offlineZooKeeperServers: " + e.getMessage());
-            } catch (IOException e) {
-                LOG.warn("offlineZooKeeperSevers: " + e.getMessage());
+        synchronized (this) {
+            if (m_zkProcess != null) {
+                int totalMapTasks = m_conf.getInt("mapred.map.tasks", -1);
+                waitUntilAllTasksDone(totalMapTasks);
+                m_zkProcess.destroy();
+                int exitValue = -1;
+                File zkDir = null;
+                try {
+                    m_zkProcessCollector.join();
+                    exitValue = m_zkProcess.waitFor();
+                    zkDir = new File(m_zkDir);
+                    FileUtils.deleteDirectory(zkDir);
+                } catch (InterruptedException e) {
+                    LOG.warn("offlineZooKeeperServers: " +
+                             "InterruptedException, but continuing ",
+                             e);
+                } catch (IOException e) {
+                    LOG.warn("offlineZooKeeperSevers: " +
+                             "IOException, but continuing",
+                             e);
+                }
+                if (LOG.isInfoEnabled()) {
+                    LOG.info("offlineZooKeeperServers: waitFor returned " +
+                             exitValue + " and deleted directory " + zkDir);
+                }
+                m_zkProcess = null;
             }
-            LOG.info("offlineZooKeeperServers: waitFor returned " + exitValue +
-                     " and deleted directory " + zkDir);
         }
     }
 
@@ -685,10 +685,8 @@ public class ZooKeeperManager {
      *  @return true if running a ZooKeeper server, false otherwise
      */
     public boolean runsZooKeeper() {
-        return m_zkProcess != null;
-    }
-
-    public void cleanup() {
-
+        synchronized (this) {
+            return m_zkProcess != null;
+        }
     }
 }

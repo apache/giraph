@@ -48,7 +48,7 @@ public class MasterThread<I extends WritableComparable,
                 // TODO: When one becomes a master, might need to "watch" the
                 // selected workers of the current superstep to insure they
                 // are alive.
-                while (m_bspServiceMaster.coordinateSuperstep() != true) {
+                while (!m_bspServiceMaster.coordinateSuperstep()) {
                     LOG.info("masterThread: Finished superstep " +
                              (m_bspServiceMaster.getSuperstep() - 1));
                 }
@@ -56,8 +56,7 @@ public class MasterThread<I extends WritableComparable,
             }
             m_bspServiceMaster.cleanup();
         } catch (Exception e) {
-            LOG.error("masterThread: Master algorithm failed: " +
-                      e.getMessage());
+            LOG.error("masterThread: Master algorithm failed: ", e);
             throw new RuntimeException(e);
         }
     }

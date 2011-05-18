@@ -70,9 +70,8 @@ public class TestManualCheckpoint extends BspCase {
         long fileLen = 0;
         long idSum = 0;
         if (getJobTracker() == null) {
-            FileStatus [] fileStatusArr = hdfs.listStatus(outputPath);
-            assertTrue(fileStatusArr.length == 1);
-            fileLen = fileStatusArr[0].getLen();
+            FileStatus fileStatus = getSinglePartFileStatus(hdfs, outputPath);
+            fileLen = fileStatus.getLen();
             idSum = SimpleCheckpointVertex.finalSum;
             System.out.println("testBspCheckpoint: idSum = " + idSum +
                                " fileLen = " + fileLen);
@@ -89,9 +88,9 @@ public class TestManualCheckpoint extends BspCase {
         FileOutputFormat.setOutputPath(bspRestartedJob, outputPath);
         assertTrue(bspRestartedJob.run(true));
         if (getJobTracker() == null) {
-            FileStatus [] fileStatusArr = hdfs.listStatus(outputPath);
-            assertTrue(fileStatusArr.length == 1);
-            assertTrue(fileStatusArr[0].getLen() == fileLen);
+            FileStatus fileStatus = getSinglePartFileStatus(hdfs, outputPath);
+            fileLen = fileStatus.getLen();
+            assertTrue(fileStatus.getLen() == fileLen);
             long idSumRestarted = SimpleCheckpointVertex.finalSum;
             System.out.println("testBspCheckpoint: idSumRestarted = " +
                                idSumRestarted);

@@ -428,6 +428,7 @@ public class BspServiceWorker<
         }
     }
 
+    @Override
     public void setup() {
         // Unless doing a restart, prepare for computation:
         // 1. Start superstep 0 (no computation)
@@ -653,6 +654,7 @@ public class BspServiceWorker<
         return true;
     }
 
+    @Override
     public boolean finishSuperstep(final Map<I, long []> maxIndexStatsMap) {
         // TODO: Note that this barrier blocks until success.  It would be
         // best if it were interruptible if for instance there was a failure.

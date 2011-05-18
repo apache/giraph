@@ -433,7 +433,8 @@ public class BspJob extends Job {
             // 3) Wait until all messaging is done.
             // 4) Check if all vertices are done.  If not goto 2).
             // 5) Dump output.
-            if (m_done == true) {
+            if ((m_done == true) ||
+                    (m_serviceWorker.getTotalVertices() == 0)) {
                 return;
             }
 

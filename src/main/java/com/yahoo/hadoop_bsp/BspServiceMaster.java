@@ -125,7 +125,8 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
             }
         }
         try {
-            LOG.info("setJobState: " + state);
+            LOG.info("setJobState: " + state + " on superstep " +
+                     getSuperstep());
             getZkExt().createExt(MASTER_JOB_STATE_PATH,
                                  state.toString().getBytes(),
                                  Ids.OPEN_ACL_UNSAFE,
