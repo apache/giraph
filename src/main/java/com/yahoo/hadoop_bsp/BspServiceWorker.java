@@ -1059,12 +1059,15 @@ public class BspServiceWorker<
                 entry.getValue().getPreviousHostname();
             final int port = entry.getValue().getPort();
             final String hostname = entry.getValue().getHostname();
-            LOG.debug("exchangeVertexRanges: For max index " +
-                     entry.getKey() + ", count " +
-                     entry.getValue().getVertexList().size() +
-                     ", has previous port " +
-                     previousPort + ", previous hostname " + previousHostname +
-                     ", port " + port + ", hostname " + hostname);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("exchangeVertexRanges: For max index " +
+                          entry.getKey() + ", count " +
+                          entry.getValue().getVertexList().size() +
+                          ", has previous port " +
+                          previousPort + ", previous hostname "
+                          + previousHostname +
+                          ", port " + port + ", hostname " + hostname);
+            }
             if (previousPort == -1) {
                 continue;
             }
@@ -1100,9 +1103,11 @@ public class BspServiceWorker<
                     getHostname().equals(hostname) &&
                     ((previousPort != m_finalRpcPort) ||
                             !(getHostname().equals(previousHostname)))) {
-                LOG.info("exchangeVertexRanges: Receiving " +
-                         entry.getKey() + " from " +
-                         previousHostname + ":" + previousPort);
+                if (LOG.isInfoEnabled()) {
+                    LOG.info("exchangeVertexRanges: Receiving " +
+                             entry.getKey() + " from " +
+                             previousHostname + ":" + previousPort);
+                }
                 if (!syncRequired) {
                     getBspMapper().getWorkerCommunications().
                         cleanCachedVertexAddressMap();

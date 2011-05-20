@@ -1,6 +1,9 @@
 package com.yahoo.hadoop_bsp;
 
 import java.io.IOException;
+import java.net.URL;
+import java.net.URLDecoder;
+import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeMap;
@@ -130,7 +133,7 @@ public class BspJob extends Job {
      * Default on whether to separate the workers and the master tasks.
      * This is required to support dynamic recovery.
      */
-    public static final Boolean DEFAULT_BSP_SPLIT_MASTER_WORKER = true;
+    public static final boolean DEFAULT_BSP_SPLIT_MASTER_WORKER = true;
     /** Default poll msecs (30 seconds) */
     public static final int DEFAULT_BSP_POLL_MSECS = 30*1000;
     /** Default Zookeeper session millisecond timeout */
@@ -143,7 +146,7 @@ public class BspJob extends Job {
     /** Default ZooKeeper port to use */
     public static final int DEFAULT_BSP_ZOOKEEPER_SERVER_PORT = 22181;
     /** Default port to start using for the RPC communication */
-    public static final int DEFAULT_BSP_RPC_INITIAL_PORT = 61000;
+    public static final int DEFAULT_BSP_RPC_INITIAL_PORT = 30000;
 
     /**
      * Default local ZooKeeper prefix directory to use (where ZooKeeper server
@@ -316,6 +319,37 @@ public class BspJob extends Job {
             }
         }
 
+        /**
+         * Copied from JobConf to get the location of this jar.  Workaround for
+         * things like Oozie map-reduce jobs.
+         *
+         * @param my_class Class to search the class loader path for to locate
+         *        the relevant jar file
+         * @return Location of the jar file containing my_class
+         */
+        private static String findContainingJar(Class my_class) {
+            ClassLoader loader = my_class.getClassLoader();
+            String class_file =
+                my_class.getName().replaceAll("\\.", "/") + ".class";
+            try {
+                for(Enumeration itr = loader.getResources(class_file);
+                itr.hasMoreElements();) {
+                    URL url = (URL) itr.nextElement();
+                    if ("jar".equals(url.getProtocol())) {
+                        String toReturn = url.getPath();
+                        if (toReturn.startsWith("file:")) {
+                            toReturn = toReturn.substring("file:".length());
+                        }
+                        toReturn = URLDecoder.decode(toReturn, "UTF-8");
+                        return toReturn.replaceAll("!.*$", "");
+                    }
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            return null;
+        }
+
         @Override
         public void setup(Context context)
             throws IOException, InterruptedException {
@@ -333,10 +367,13 @@ public class BspJob extends Job {
             // but mainly decide whether to load data
             // from a checkpoint or from the InputFormat.
             String jarFile = context.getJar();
+            if (jarFile == null) {
+                jarFile = findContainingJar(getClass());
+            }
             String trimmedJarFile = jarFile.replaceFirst("file:", "");
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("setup: jar file @ " + jarFile +
-                          ", using " + trimmedJarFile);
+            if (LOG.isInfoEnabled()) {
+                LOG.info("setup: jar file @ " + jarFile +
+                         ", using " + trimmedJarFile);
             }
             m_conf.set(BSP_ZOOKEEPER_JAR, trimmedJarFile);
             String serverPortList =
@@ -413,12 +450,13 @@ public class BspJob extends Job {
                     m_serviceWorker.setup();
                 }
             } catch (Exception e) {
-                LOG.error(e.getMessage());
+                LOG.error("setup: Caught exception just before end of setup", e);
                 if (m_manager != null ) {
                     m_manager.offlineZooKeeperServers(
                     ZooKeeperManager.State.FAILED);
                 }
-                throw new RuntimeException(e);
+                throw new RuntimeException(
+                    "setup: Offlining servers due to exception...");
             }
 
             context.setStatus(getMapFunctions().toString() + " starting...");
@@ -433,7 +471,10 @@ public class BspJob extends Job {
             // 3) Wait until all messaging is done.
             // 4) Check if all vertices are done.  If not goto 2).
             // 5) Dump output.
-            if ((m_done == true) ||
+            if (m_done == true) {
+                return;
+            }
+            if ((m_serviceWorker != null) &&
                     (m_serviceWorker.getTotalVertices() == 0)) {
                 return;
             }

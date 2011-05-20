@@ -381,7 +381,7 @@ public abstract class BasicRPCCommunications<
         }
 
         this.localHostname = InetAddress.getLocalHost().getHostName();
-        int taskId = conf.getInt("mapred.task.partition", 0);
+        int taskId = conf.getInt("mapred.task.partition", -1);
         int numTasks = conf.getInt("mapred.map.tasks", 1);
 
         String bindAddress = localHostname;

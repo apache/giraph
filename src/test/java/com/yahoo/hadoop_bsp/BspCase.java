@@ -59,8 +59,6 @@ public class BspCase extends TestCase implements Watcher {
         if (getZooKeeperList() != null) {
             conf.set(BspJob.BSP_ZOOKEEPER_LIST, getZooKeeperList());
         }
-        conf.setInt(BspJob.BSP_RPC_INITIAL_PORT,
-                    BspJob.DEFAULT_BSP_RPC_INITIAL_PORT);
         // GeneratedInputSplit will generate 5 vertices
         conf.setLong(GeneratedVertexReader.READER_VERTICES, 5);
     }
