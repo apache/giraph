@@ -51,17 +51,18 @@ public class TestManualCheckpoint extends BspCase {
         conf.set("mapred.jar", getJarLocation());
         setupConfiguration(conf);
         FileSystem hdfs = FileSystem.get(conf);
-        conf.setClass(BspJob.BSP_VERTEX_CLASS,
+        conf.setClass(BspJob.VERTEX_CLASS,
                       SimpleCheckpointVertex.class,
                       HadoopVertex.class);
-        conf.setClass(BspJob.BSP_VERTEX_INPUT_FORMAT_CLASS,
+        conf.setClass(BspJob.VERTEX_INPUT_FORMAT_CLASS,
                       GeneratedVertexInputFormat.class,
                       VertexInputFormat.class);
-        conf.setClass(BspJob.BSP_VERTEX_WRITER_CLASS,
+        conf.setClass(BspJob.VERTEX_WRITER_CLASS,
                       SimpleVertexWriter.class,
                       VertexWriter.class);
-        conf.set(BspJob.BSP_CHECKPOINT_DIRECTORY,
+        conf.set(BspJob.CHECKPOINT_DIRECTORY,
                  HDFS_CHECKPOINT_DIR);
+        conf.setBoolean(BspJob.CLEANUP_CHECKPOINTS_AFTER_SUCCESS, false);
         BspJob bspJob = new BspJob(conf, "testBspCheckpoint");
         Path outputPath = new Path("/tmp/testBspCheckpointOutput");
         hdfs.delete(outputPath, true);
@@ -78,7 +79,7 @@ public class TestManualCheckpoint extends BspCase {
         }
 
         // Restart the test from superstep 3
-        conf.setLong(BspJob.BSP_RESTART_SUPERSTEP, 3);
+        conf.setLong(BspJob.RESTART_SUPERSTEP, 3);
         System.out.println(
             "testBspCheckpoint: Restarting from superstep 3" +
             " with checkpoint path = " + HDFS_CHECKPOINT_DIR);

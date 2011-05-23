@@ -70,8 +70,8 @@ public class BspServiceWorker<
                             BspJob.BspMapper<I, V, E, M> bspMapper) {
         super(serverPortList, sessionMsecTimeout, context, bspMapper);
         m_finalRpcPort =
-            getConfiguration().getInt(BspJob.BSP_RPC_INITIAL_PORT,
-                          BspJob.DEFAULT_BSP_RPC_INITIAL_PORT) +
+            getConfiguration().getInt(BspJob.RPC_INITIAL_PORT,
+                          BspJob.RPC_INITIAL_PORT_DEFAULT) +
                           getTaskPartition();
     }
 
@@ -286,7 +286,7 @@ public class BspServiceWorker<
             Class<? extends VertexInputFormat<I, V, E>> vertexInputFormatClass =
                 (Class<? extends VertexInputFormat<I, V, E>>)
                     getConfiguration().getClass(
-                        BspJob.BSP_VERTEX_INPUT_FORMAT_CLASS,
+                        BspJob.VERTEX_INPUT_FORMAT_CLASS,
                         VertexInputFormat.class);
             VertexInputFormat<I, V, E> vertexInputFormat = null;
             VertexReader<I, V, E> vertexReader = null;
@@ -334,8 +334,8 @@ public class BspServiceWorker<
                 new TreeMap<I, VertexRange<I, V, E, M>>();
             long vertexRangesPerInputSplit = (long) (m_inputSplitCount *
                 getConfiguration().getFloat(
-                    BspJob.BSP_TOTAL_INPUT_SPLIT_MULTIPLIER,
-                    BspJob.DEFAULT_BSP_TOTAL_INPUT_SPLIT_MULTIPLIER));
+                    BspJob.TOTAL_INPUT_SPLIT_MULTIPLIER,
+                    BspJob.TOTAL_INPUT_SPLIT_MULTIPLIER_DEFAULT));
             if (vertexRangesPerInputSplit == 0) {
                 vertexRangesPerInputSplit = 1;
             }
@@ -350,8 +350,8 @@ public class BspServiceWorker<
                 vertexList.size() / vertexRangesPerInputSplit;
             long minPerVertexRange =
                 getConfiguration().getLong(
-                    BspJob.BSP_MIN_VERTICES_PER_RANGE,
-                    BspJob.DEFAULT_BSP_MIN_VERTICES_PER_RANGE);
+                    BspJob.MIN_VERTICES_PER_RANGE,
+                    BspJob.MIN_VERTICES_PER_RANGE_DEFAULT);
             if (vertexRangeSize < minPerVertexRange) {
                 vertexRangeSize = minPerVertexRange;
             }
@@ -751,15 +751,15 @@ public class BspServiceWorker<
      */
     @SuppressWarnings("unchecked")
     public void saveVertices() {
-        if (getConfiguration().get(BspJob.BSP_VERTEX_WRITER_CLASS) == null) {
-            LOG.warn("saveVertices: BSP_VERTEX_WRITER_CLASS not specified" +
+        if (getConfiguration().get(BspJob.VERTEX_WRITER_CLASS) == null) {
+            LOG.warn("saveVertices: VERTEX_WRITER_CLASS not specified" +
             " -- there will be no saved output");
             return;
         }
 
         Class<? extends VertexWriter<I, V, E>> vertexWriterClass =
             (Class<? extends VertexWriter<I, V, E>>)
-            getConfiguration().getClass(BspJob.BSP_VERTEX_WRITER_CLASS,
+            getConfiguration().getClass(BspJob.VERTEX_WRITER_CLASS,
                                         VertexWriter.class);
         VertexWriter<I, V, E> vertexWriter = null;
         try {

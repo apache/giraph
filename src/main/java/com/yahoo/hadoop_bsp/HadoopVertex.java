@@ -179,7 +179,7 @@ public abstract class HadoopVertex<
             Class<? extends VertexInputFormat<I, V, E>> vertexInputFormatClass =
                 (Class<? extends VertexInputFormat<I, V, E>>)
                     getConf().getClass(
-                        BspJob.BSP_VERTEX_INPUT_FORMAT_CLASS,
+                        BspJob.VERTEX_INPUT_FORMAT_CLASS,
                         VertexInputFormat.class,
                         VertexInputFormat.class);
             try {

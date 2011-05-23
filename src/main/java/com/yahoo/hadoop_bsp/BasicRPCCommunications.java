@@ -360,15 +360,15 @@ public abstract class BasicRPCCommunications<
             throws IOException, UnknownHostException, InterruptedException {
         this.service = service;
         this.conf = context.getConfiguration();
-        this.maxSize = conf.getInt(BspJob.BSP_MSG_SIZE,
-                                   BspJob.BSP_MSG_DEFAULT_SIZE);
+        this.maxSize = conf.getInt(BspJob.MSG_SIZE,
+                                   BspJob.MSG_SIZE_DEFAULT);
 
-        if (conf.get(BspJob.BSP_COMBINER_CLASS) != null)  {
+        if (conf.get(BspJob.COMBINER_CLASS) != null)  {
             try {
                 @SuppressWarnings("unchecked")
                 Class<? extends Combiner<I, V, E, M>> combinerClass =
                     (Class<? extends Combiner<I, V, E, M>>)conf.getClass(
-                        BspJob.BSP_COMBINER_CLASS, Combiner.class);
+                        BspJob.COMBINER_CLASS, Combiner.class);
                 combiner = combinerClass.newInstance();
             } catch (InstantiationException e) {
                 throw new RuntimeException(e);
@@ -385,13 +385,13 @@ public abstract class BasicRPCCommunications<
         int numTasks = conf.getInt("mapred.map.tasks", 1);
 
         String bindAddress = localHostname;
-        int bindPort = conf.getInt(BspJob.BSP_RPC_INITIAL_PORT,
-                                   BspJob.DEFAULT_BSP_RPC_INITIAL_PORT) +
+        int bindPort = conf.getInt(BspJob.RPC_INITIAL_PORT,
+                                   BspJob.RPC_INITIAL_PORT_DEFAULT) +
                                    taskId;
 
         this.myAddress = new InetSocketAddress(bindAddress, bindPort);
-        int numHandlers = conf.getInt(BspJob.BSP_RPC_NUM_HANDLERS,
-                                      BspJob.BSP_RPC_DEFAULT_HANDLERS);
+        int numHandlers = conf.getInt(BspJob.RPC_NUM_HANDLERS,
+                                      BspJob.RPC_NUM_HANDLERS_DEFAULT);
         if (numTasks < numHandlers) {
             numHandlers = numTasks;
         }

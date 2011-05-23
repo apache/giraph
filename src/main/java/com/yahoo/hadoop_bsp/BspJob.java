@@ -21,76 +21,125 @@ import org.apache.log4j.Logger;
  */
 public class BspJob extends Job {
     /** Vertex class - required */
-    public static final String BSP_VERTEX_CLASS = "bsp.vertexClass";
+    public static final String VERTEX_CLASS = "giraph.vertexClass";
     /** InputFormat class - required */
-    public static final String BSP_VERTEX_INPUT_FORMAT_CLASS =
-        "bsp.vertexInputFormatClass";
+    public static final String VERTEX_INPUT_FORMAT_CLASS =
+        "giraph.vertexInputFormatClass";
 
     /** Combiner class - optional */
-    public static final String BSP_COMBINER_CLASS =
-        "bsp.combinerClass";
+    public static final String COMBINER_CLASS =
+        "giraph.combinerClass";
     /** Vertex writer class - optional */
-    public static final String BSP_VERTEX_WRITER_CLASS =
-        "bsp.vertexWriterClass";
+    public static final String VERTEX_WRITER_CLASS =
+        "giraph.vertexWriterClass";
     /** Vertex range balancer class - optional */
-    public static final String BSP_VERTEX_RANGE_BALANCER_CLASS =
-        "bsp.vertexRangeBalancerClass";
+    public static final String VERTEX_RANGE_BALANCER_CLASS =
+        "giraph.vertexRangeBalancerClass";
 
     /**
      * Minimum number of simultaneous workers before this job can run (int)
      */
-    public static final String BSP_MIN_WORKERS = "bsp.minWorkers";
+    public static final String MIN_WORKERS = "giraph.minWorkers";
     /**
      * Maximum number of simultaneous worker tasks started by this job (int).
      */
-    public static final String BSP_MAX_WORKERS = "bsp.maxWorkers";
+    public static final String MAX_WORKERS = "giraph.maxWorkers";
+
     /**
      * Separate the workers and the master tasks.  This is required
      * to support dynamic recovery. (boolean)
      */
-    public static final String BSP_SPLIT_MASTER_WORKER =
-        "bsp.SplitMasterWorker";
+    public static final String SPLIT_MASTER_WORKER =
+        "giraph.SplitMasterWorker";
+    /**
+     * Default on whether to separate the workers and the master tasks.
+     * Needs to be "true" to support dynamic recovery.
+     */
+    public static final boolean SPLIT_MASTER_WORKER_DEFAULT = true;
+
     /**
      * Minimum percent of the maximum number of workers that have responded
      * in order to continue progressing. (float)
      */
-    public static final String BSP_MIN_PERCENT_RESPONDED =
-        "bsp.minPercentResponded";
+    public static final String MIN_PERCENT_RESPONDED =
+        "giraph.minPercentResponded";
+    /** Default 100% response rate for workers */
+    public static final float MIN_PERCENT_RESPONDED_DEFAULT = 100.0f;
+
     /** Polling timeout to check on the number of responded tasks (int) */
-    public static final String BSP_POLL_MSECS = "bsp.pollMsecs";
-    /** ZooKeeper list (empty for start up ZooKeeper locally) */
-    public static final String BSP_ZOOKEEPER_LIST = "bsp.zkList";
+    public static final String POLL_MSECS = "giraph.pollMsecs";
+    /** Default poll msecs (30 seconds) */
+    public static final int POLL_MSECS_DEFAULT = 30*1000;
+
+    /**
+     *  ZooKeeper comma-separated list (if not set,
+     *  will start up ZooKeeper locally)
+     */
+    public static final String ZOOKEEPER_LIST = "giraph.zkList";
+
     /** ZooKeeper session millisecond timeout */
-    public static final String BSP_ZOOKEEPER_SESSION_TIMEOUT =
-        "bsp.zkSessionMsecTimeout";
+    public static final String ZOOKEEPER_SESSION_TIMEOUT =
+        "giraph.zkSessionMsecTimeout";
+    /** Default Zookeeper session millisecond timeout */
+    public static final int ZOOKEEPER_SESSION_TIMEOUT_DEFAULT = 60*1000;
+
     /** Polling interval to check for the final ZooKeeper server data */
-    public static final String BSP_ZOOKEEPER_SERVERLIST_POLL_MSECS =
-        "bsp.zkServerlistPollMsecs";
+    public static final String ZOOKEEPER_SERVERLIST_POLL_MSECS =
+        "giraph.zkServerlistPollMsecs";
+    /** Default polling interval to check for the final ZooKeeper server data */
+    public static final int ZOOKEEPER_SERVERLIST_POLL_MSECS_DEFAULT =
+        3*1000;
+
     /** Number of nodes (not tasks) to run Zookeeper on */
-    public static final String BSP_ZOOKEEPER_SERVER_COUNT =
-        "bsp.zkServerCount";
+    public static final String ZOOKEEPER_SERVER_COUNT =
+        "giraph.zkServerCount";
+    /** Default number of nodes to run Zookeeper on */
+    public static final int ZOOKEEPER_SERVER_COUNT_DEFAULT = 1;
+
     /** ZooKeeper port to use */
-    public static final String BSP_ZOOKEEPER_SERVER_PORT =
-        "bsp.zkServerPort";
+    public static final String ZOOKEEPER_SERVER_PORT =
+        "giraph.zkServerPort";
+    /** Default ZooKeeper port to use */
+    public static final int ZOOKEEPER_SERVER_PORT_DEFAULT = 22181;
+
     /** Location of the ZooKeeper jar - Used internally, not meant for users */
-    public static final String BSP_ZOOKEEPER_JAR = "bsp.zkJar";
+    public static final String ZOOKEEPER_JAR = "giraph.zkJar";
+
     /** Local ZooKeeper directory to use */
-    public static final String BSP_ZOOKEEPER_DIR = "bsp.zkDir";
+    public static final String ZOOKEEPER_DIR = "giraph.zkDir";
+    /**
+     * Default local ZooKeeper prefix directory to use (where ZooKeeper server
+     * files will go)
+     */
+    public static String ZOOKEEPER_DIR_DEFAULT =
+        System.getProperty("user.dir") + "/_bspZooKeeper";
+
     /** Initial port to start using for the RPC communication */
-    public static final String BSP_RPC_INITIAL_PORT = "bsp.rpcInitialPort";
+    public static final String RPC_INITIAL_PORT = "giraph.rpcInitialPort";
+    /** Default port to start using for the RPC communication */
+    public static final int RPC_INITIAL_PORT_DEFAULT = 30000;
+
     /** Maximum number of RPC handlers */
-    public static final String BSP_RPC_NUM_HANDLERS = "bsp.rpcNumHandlers";
+    public static final String RPC_NUM_HANDLERS = "giraph.rpcNumHandlers";
     /** Default maximum number of RPC handlers */
-    public static final int BSP_RPC_DEFAULT_HANDLERS = 20;
+    public static final int RPC_NUM_HANDLERS_DEFAULT = 20;
+
     /** Maximum number of messages per peer before flush */
-    public static final String BSP_MSG_SIZE = "bsp.msgSize";
+    public static final String MSG_SIZE = "giraph.msgSize";
     /** Default maximum number of messages per peer before flush */
-    public static final int BSP_MSG_DEFAULT_SIZE = 1000;
+    public static final int MSG_SIZE_DEFAULT = 1000;
+
     /** Number of poll attempts prior to failing the job (int) */
-    public static final String BSP_POLL_ATTEMPTS = "bsp.pollAttempts";
+    public static final String POLL_ATTEMPTS = "giraph.pollAttempts";
+    /** Default poll attempts */
+    public static final int POLL_ATTEMPTS_DEFAULT = 5;
+
     /** Number of minimum vertices in each vertex range */
-    public static final String BSP_MIN_VERTICES_PER_RANGE =
-        "bsp.minVerticesPerRange";
+    public static final String MIN_VERTICES_PER_RANGE =
+        "giraph.minVerticesPerRange";
+    /** Default number of minimum vertices in each vertex range */
+    public static final long MIN_VERTICES_PER_RANGE_DEFAULT = 3;
+
     /**
      * Set the multiplicative factor of how many partitions to create from
      * a single InputSplit based on the number of total InputSplits.  For
@@ -98,88 +147,74 @@ public class BspJob extends Job {
      * you will get 0.5 * 10 = 5 partitions for every InputSplit (given that the
      * minimum size is met).
      */
-    public static final String BSP_TOTAL_INPUT_SPLIT_MULTIPLIER =
-        "bsp.totalInputSplitMultiplier";
+    public static final String TOTAL_INPUT_SPLIT_MULTIPLIER =
+        "giraph.totalInputSplitMultiplier";
+    /** Default total input split multiplier */
+    public static final float TOTAL_INPUT_SPLIT_MULTIPLIER_DEFAULT = 0.5f;
+
     /** Java opts passed to ZooKeeper startup */
-    public static final String BSP_ZOOKEEPER_JAVA_OPTS =
-        "bsp.zkJavaOpts";
-    /** How often to checkpoint (i.e. 1 means every superstep, 2 is every
+    public static final String ZOOKEEPER_JAVA_OPTS =
+        "giraph.zkJavaOpts";
+    /** Default java opts passed to ZooKeeper startup */
+    public static final String ZOOKEEPER_JAVA_OPTS_DEFAULT =
+        "-Xmx128m";
+
+    /**
+     *  How often to checkpoint (i.e. 1 means every superstep, 2 is every
      *  two supersteps, etc.).
      */
-    public static final String BSP_CHECKPOINT_FREQUENCY =
-        "bsp.checkpointFrequency";
+    public static final String CHECKPOINT_FREQUENCY =
+        "giraph.checkpointFrequency";
+
+    /** Default checkpointing frequency of every 2 supersteps. */
+    public static final int CHECKPOINT_FREQUENCY_DEFAULT = 2;
+
+    /**
+     * Delete checkpoints after a successful job run?
+     */
+    public static final String CLEANUP_CHECKPOINTS_AFTER_SUCCESS =
+        "giraph.cleanupCheckpointsAfterSuccess";
+    /** Default is to clean up the checkponts after a successful job */
+    public static final boolean CLEANUP_CHECKPOINTS_AFTER_SUCCESS_DEFAULT =
+        true;
 
     /**
      * An application can be restarted manually by selecting a superstep.  The
      * corresponding checkpoint must exist for this to work.  The user should
-     * set a long value.
+     * set a long value.  Default is start from scratch.
      */
-    public static final String BSP_RESTART_SUPERSTEP = "bsp.restartSuperstep";
+    public static final String RESTART_SUPERSTEP = "giraph.restartSuperstep";
 
     /**
-     * If BSP_ZOOKEEPER_LIST is not set, then use this directory to manage
+     * If ZOOKEEPER_LIST is not set, then use this directory to manage
      * ZooKeeper
      */
-    public static final String BSP_ZOOKEEPER_MANAGER_DIRECTORY =
-        "bsp.zkManagerDirectory";
-    /** This directory has/stores the available checkpoint files in HDFS. */
-    public static final String BSP_CHECKPOINT_DIRECTORY =
-        "bsp.checkpointDirectory";
-    /** Keep the zookeeper output for debugging? Default is to remove it. */
-    public static final String BSP_KEEP_ZOOKEEPER_DATA =
-        "bsp.keepZooKeeperData";
-
-    /**
-     * Default on whether to separate the workers and the master tasks.
-     * This is required to support dynamic recovery.
-     */
-    public static final boolean DEFAULT_BSP_SPLIT_MASTER_WORKER = true;
-    /** Default poll msecs (30 seconds) */
-    public static final int DEFAULT_BSP_POLL_MSECS = 30*1000;
-    /** Default Zookeeper session millisecond timeout */
-    public static final int DEFAULT_BSP_ZOOKEEPER_SESSION_TIMEOUT = 60*1000;
-    /** Default polling interval to check for the final ZooKeeper server data */
-    public static final int DEFAULT_BSP_ZOOKEEPER_SERVERLIST_POLL_MSECS =
-        3*1000;
-    /** Default number of nodes to run Zookeeper on */
-    public static final int DEFAULT_BSP_ZOOKEEPER_SERVER_COUNT = 1;
-    /** Default ZooKeeper port to use */
-    public static final int DEFAULT_BSP_ZOOKEEPER_SERVER_PORT = 22181;
-    /** Default port to start using for the RPC communication */
-    public static final int DEFAULT_BSP_RPC_INITIAL_PORT = 30000;
-
-    /**
-     * Default local ZooKeeper prefix directory to use (where ZooKeeper server
-     * files will go)
-     */
-    public static String DEFAULT_BSP_ZOOKEEPER_DIR =
-        System.getProperty("user.dir") + "/_bspZooKeeper";
+    public static final String ZOOKEEPER_MANAGER_DIRECTORY =
+        "giraph.zkManagerDirectory";
     /**
      * Default ZooKeeper manager directory (where determining the servers in
      * HDFS files will go).  Final directory path will also have job number
      * for uniqueness.
      */
-    public static final String DEFAULT_ZOOKEEPER_MANAGER_DIR =
+    public static final String ZOOKEEPER_MANAGER_DIR_DEFAULT =
         "_bsp/_defaultZkManagerDir";
+
+    /** This directory has/stores the available checkpoint files in HDFS. */
+    public static final String CHECKPOINT_DIRECTORY =
+        "giraph.checkpointDirectory";
     /**
      * Default checkpoint directory (where checkpoing files go in HDFS).  Final
      * directory path will also have the job number for uniqueness
      */
-    public static final String DEFAULT_BSP_CHECKPOINT_DIRECTORY =
+    public static final String CHECKPOINT_DIRECTORY_DEFAULT =
         "_bsp/_checkpoints/";
+
+    /** Keep the zookeeper output for debugging? Default is to remove it. */
+    public static final String KEEP_ZOOKEEPER_DATA =
+        "giraph.keepZooKeeperData";
     /** Default is to remove ZooKeeper data. */
-    public static final Boolean DEFAULT_BSP_KEEP_ZOOKEEPER_DATA = false;
-    /** Default poll attempts */
-    public static final int DEFAULT_BSP_POLL_ATTEMPTS = 5;
-    /** Default number of minimum vertices in each vertex range */
-    public static final long DEFAULT_BSP_MIN_VERTICES_PER_RANGE = 3;
-    /** Default total input split multiplier */
-    public static final float DEFAULT_BSP_TOTAL_INPUT_SPLIT_MULTIPLIER = 0.5f;
-    /** Default java opts passed to ZooKeeper startup */
-    public static final String DEFAULT_BSP_ZOOKEEPER_JAVA_OPTS =
-        "-Xmx128m";
-    /** Default checkpointing frequency of every 2 supersteps. */
-    public static final int DEFAULT_BSP_CHECKPOINT_FREQUENCY = 2;
+    public static final Boolean KEEP_ZOOKEEPER_DATA_DEFAULT = false;
+
     /** Default ZooKeeper tick time. */
     public static final int DEFAULT_ZOOKEEPER_TICK_TIME = 2000;
     /** Default ZooKeeper init limit (in ticks). */
@@ -203,33 +238,36 @@ public class BspJob extends Job {
      */
     public BspJob(Configuration conf, String jobName) throws IOException {
         super(conf, jobName);
-        if (conf.getInt(BSP_MAX_WORKERS, -1) < 0) {
-            throw new RuntimeException("No valid " + BSP_MAX_WORKERS);
+        if (conf.getInt(MAX_WORKERS, -1) < 0) {
+            throw new RuntimeException("No valid " + MAX_WORKERS);
         }
-        if (conf.getFloat(BSP_MIN_PERCENT_RESPONDED, 100.0f) <= 0.0f ||
-                conf.getFloat(BSP_MIN_PERCENT_RESPONDED, 100.0f) > 100.0) {
+        if (conf.getFloat(MIN_PERCENT_RESPONDED,
+                          MIN_PERCENT_RESPONDED_DEFAULT) <= 0.0f ||
+                conf.getFloat(MIN_PERCENT_RESPONDED,
+                              MIN_PERCENT_RESPONDED_DEFAULT) > 100.0f) {
             throw new RuntimeException(
                 "Invalid " +
-                conf.getFloat(BSP_MIN_PERCENT_RESPONDED, 100.0f) + " for " +
-                BSP_MIN_PERCENT_RESPONDED);
+                conf.getFloat(MIN_PERCENT_RESPONDED,
+                              MIN_PERCENT_RESPONDED_DEFAULT) + " for " +
+                MIN_PERCENT_RESPONDED);
         }
-        if (conf.getInt(BSP_MIN_WORKERS, -1) < 0) {
-            throw new RuntimeException("No valid " + BSP_MIN_WORKERS);
+        if (conf.getInt(MIN_WORKERS, -1) < 0) {
+            throw new RuntimeException("No valid " + MIN_WORKERS);
         }
-        if (conf.getClass(BSP_VERTEX_CLASS,
+        if (conf.getClass(VERTEX_CLASS,
                           HadoopVertex.class,
                           HadoopVertex.class) == null) {
-            throw new RuntimeException("BspJob: Null BSP_VERTEX_CLASS");
+            throw new RuntimeException("BspJob: Null VERTEX_CLASS");
         }
-        if (conf.getClass(BSP_VERTEX_INPUT_FORMAT_CLASS,
+        if (conf.getClass(VERTEX_INPUT_FORMAT_CLASS,
                           VertexInputFormat.class,
                           VertexInputFormat.class) == null) {
             throw new RuntimeException(
-                "BspJob: Null BSP_VERTEX_INPUT_FORMAT_CLASS");
+                "BspJob: Null VERTEX_INPUT_FORMAT_CLASS");
         }
         String jobLocalDir = conf.get("job.local.dir");
         if (jobLocalDir != null) { // for non-local jobs
-            DEFAULT_BSP_ZOOKEEPER_DIR = jobLocalDir +
+            ZOOKEEPER_DIR_DEFAULT = jobLocalDir +
                 "/_bspZooKeeper";
         }
     }
@@ -375,9 +413,9 @@ public class BspJob extends Job {
                 LOG.info("setup: jar file @ " + jarFile +
                          ", using " + trimmedJarFile);
             }
-            m_conf.set(BSP_ZOOKEEPER_JAR, trimmedJarFile);
+            m_conf.set(ZOOKEEPER_JAR, trimmedJarFile);
             String serverPortList =
-                m_conf.get(BspJob.BSP_ZOOKEEPER_LIST, "");
+                m_conf.get(BspJob.ZOOKEEPER_LIST, "");
             if (serverPortList == "") {
                 m_manager = new ZooKeeperManager(context);
                 m_manager.setup();
@@ -388,17 +426,17 @@ public class BspJob extends Job {
                 m_manager.onlineZooKeeperServers();
                 serverPortList = m_manager.getZooKeeperServerPortString();
             }
-            if (m_conf.getInt(BspJob.BSP_ZOOKEEPER_SERVER_COUNT,
-                        BspJob.DEFAULT_BSP_ZOOKEEPER_SERVER_COUNT) > 1) {
+            if (m_conf.getInt(BspJob.ZOOKEEPER_SERVER_COUNT,
+                        BspJob.ZOOKEEPER_SERVER_COUNT_DEFAULT) > 1) {
                 Thread.sleep(BspJob.DEFAULT_ZOOKEEPER_INIT_LIMIT *
                              BspJob.DEFAULT_ZOOKEEPER_TICK_TIME);
             }
             int sessionMsecTimeout =
-                m_conf.getInt(BspJob.BSP_ZOOKEEPER_SESSION_TIMEOUT,
-                              BspJob.DEFAULT_BSP_ZOOKEEPER_SESSION_TIMEOUT);
+                m_conf.getInt(BspJob.ZOOKEEPER_SESSION_TIMEOUT,
+                              BspJob.ZOOKEEPER_SESSION_TIMEOUT_DEFAULT);
             boolean splitMasterWorker =
-                m_conf.getBoolean(BspJob.BSP_SPLIT_MASTER_WORKER,
-                                  BspJob.DEFAULT_BSP_SPLIT_MASTER_WORKER);
+                m_conf.getBoolean(BspJob.SPLIT_MASTER_WORKER,
+                                  BspJob.SPLIT_MASTER_WORKER_DEFAULT);
             int taskPartition = m_conf.getInt("mapred.task.partition", -1);
 
             // What functions should this mapper do?
@@ -409,8 +447,8 @@ public class BspJob extends Job {
                 if (serverPortList != "") {
                     int masterCount =
                         m_conf.getInt(
-                            BspJob.BSP_ZOOKEEPER_SERVER_COUNT,
-                            BspJob.DEFAULT_BSP_ZOOKEEPER_SERVER_COUNT);
+                            BspJob.ZOOKEEPER_SERVER_COUNT,
+                            BspJob.ZOOKEEPER_SERVER_COUNT_DEFAULT);
                     if (taskPartition < masterCount) {
                         m_mapFunctions = MapFunctions.MASTER_ONLY;
                     }

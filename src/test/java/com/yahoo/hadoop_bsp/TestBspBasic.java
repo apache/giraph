@@ -104,10 +104,10 @@ public class TestBspBasic extends BspCase {
         setupConfiguration(conf);
         conf.setInt("mapred.map.max.attempts", 2);
         FileSystem hdfs = FileSystem.get(conf);
-        conf.setClass(BspJob.BSP_VERTEX_CLASS,
+        conf.setClass(BspJob.VERTEX_CLASS,
                       SimpleFailVertex.class,
                       HadoopVertex.class);
-        conf.setClass(BspJob.BSP_VERTEX_INPUT_FORMAT_CLASS,
+        conf.setClass(BspJob.VERTEX_INPUT_FORMAT_CLASS,
                       GeneratedVertexInputFormat.class,
                       VertexInputFormat.class);
         BspJob bspJob = new BspJob(conf, "testBspFail");
@@ -127,17 +127,17 @@ public class TestBspBasic extends BspCase {
         throws IOException, InterruptedException, ClassNotFoundException {
         Configuration conf = new Configuration();
         setupConfiguration(conf);
-        conf.setFloat(BspJob.BSP_TOTAL_INPUT_SPLIT_MULTIPLIER, 2.0f);
+        conf.setFloat(BspJob.TOTAL_INPUT_SPLIT_MULTIPLIER, 2.0f);
         // GeneratedInputSplit will generate 10 vertices
         conf.setLong(GeneratedVertexReader.READER_VERTICES, 10);
         FileSystem hdfs = FileSystem.get(conf);
-        conf.setClass(BspJob.BSP_VERTEX_CLASS,
+        conf.setClass(BspJob.VERTEX_CLASS,
                       SimpleSuperstepVertex.class,
                       HadoopVertex.class);
-        conf.setClass(BspJob.BSP_VERTEX_INPUT_FORMAT_CLASS,
+        conf.setClass(BspJob.VERTEX_INPUT_FORMAT_CLASS,
                       GeneratedVertexInputFormat.class,
                       VertexInputFormat.class);
-        conf.setClass(BspJob.BSP_VERTEX_WRITER_CLASS,
+        conf.setClass(BspJob.VERTEX_WRITER_CLASS,
                       SimpleVertexWriter.class,
                       VertexWriter.class);
         BspJob bspJob = new BspJob(conf, "testBspSuperStep");
@@ -163,10 +163,10 @@ public class TestBspBasic extends BspCase {
         conf.set("mapred.jar", getJarLocation());
         setupConfiguration(conf);
         FileSystem hdfs = FileSystem.get(conf);
-        conf.setClass(BspJob.BSP_VERTEX_CLASS,
+        conf.setClass(BspJob.VERTEX_CLASS,
                       SimpleMsgVertex.class,
                       HadoopVertex.class);
-        conf.setClass(BspJob.BSP_VERTEX_INPUT_FORMAT_CLASS,
+        conf.setClass(BspJob.VERTEX_INPUT_FORMAT_CLASS,
                       GeneratedVertexInputFormat.class,
                       VertexInputFormat.class);
         BspJob bspJob = new BspJob(conf, "testBspMsg");
@@ -189,10 +189,10 @@ public class TestBspBasic extends BspCase {
         Configuration conf = new Configuration();
         setupConfiguration(conf);
         FileSystem hdfs = FileSystem.get(conf);
-        conf.setClass(BspJob.BSP_VERTEX_CLASS,
+        conf.setClass(BspJob.VERTEX_CLASS,
                       SimpleMsgVertex.class,
                       HadoopVertex.class);
-        conf.setClass(BspJob.BSP_VERTEX_INPUT_FORMAT_CLASS,
+        conf.setClass(BspJob.VERTEX_INPUT_FORMAT_CLASS,
                       GeneratedVertexInputFormat.class,
                       VertexInputFormat.class);
         conf.setLong(GeneratedVertexReader.READER_VERTICES, 0);
@@ -214,13 +214,13 @@ public class TestBspBasic extends BspCase {
         Configuration conf = new Configuration();
         setupConfiguration(conf);
         FileSystem hdfs = FileSystem.get(conf);
-        conf.setClass(BspJob.BSP_VERTEX_CLASS,
+        conf.setClass(BspJob.VERTEX_CLASS,
                       SimpleCombinerVertex.class,
                       HadoopVertex.class);
-        conf.setClass(BspJob.BSP_VERTEX_INPUT_FORMAT_CLASS,
+        conf.setClass(BspJob.VERTEX_INPUT_FORMAT_CLASS,
                       GeneratedVertexInputFormat.class,
                       VertexInputFormat.class);
-        conf.setClass(BspJob.BSP_COMBINER_CLASS,
+        conf.setClass(BspJob.COMBINER_CLASS,
                       SimpleSumCombiner.class,
                       Combiner.class);
         BspJob bspJob = new BspJob(conf, "testBspCombiner");
@@ -241,10 +241,10 @@ public class TestBspBasic extends BspCase {
         Configuration conf = new Configuration();
         setupConfiguration(conf);
         FileSystem hdfs = FileSystem.get(conf);
-        conf.setClass(BspJob.BSP_VERTEX_CLASS,
+        conf.setClass(BspJob.VERTEX_CLASS,
                       SimplePageRankVertex.class,
                       HadoopVertex.class);
-        conf.setClass(BspJob.BSP_VERTEX_INPUT_FORMAT_CLASS,
+        conf.setClass(BspJob.VERTEX_INPUT_FORMAT_CLASS,
                       GeneratedVertexInputFormat.class,
                       VertexInputFormat.class);
         BspJob bspJob = new BspJob(conf, "testBspPageRank");

@@ -29,15 +29,15 @@ public class BspInputFormat extends InputFormat<Text, Text> {
      * @param conf Configuration to determine the number of mappers
      */
     public static int getMaxTasks(Configuration conf) {
-        int maxWorkers = conf.getInt(BspJob.BSP_MAX_WORKERS, 0);
+        int maxWorkers = conf.getInt(BspJob.MAX_WORKERS, 0);
         boolean splitMasterWorker =
-            conf.getBoolean(BspJob.BSP_SPLIT_MASTER_WORKER,
-                            BspJob.DEFAULT_BSP_SPLIT_MASTER_WORKER);
+            conf.getBoolean(BspJob.SPLIT_MASTER_WORKER,
+                            BspJob.SPLIT_MASTER_WORKER_DEFAULT);
         int maxTasks = maxWorkers;
         if (splitMasterWorker) {
             int zkServers =
-                conf.getInt(BspJob.BSP_ZOOKEEPER_SERVER_COUNT,
-                            BspJob.DEFAULT_BSP_ZOOKEEPER_SERVER_COUNT);
+                conf.getInt(BspJob.ZOOKEEPER_SERVER_COUNT,
+                            BspJob.ZOOKEEPER_SERVER_COUNT_DEFAULT);
             maxTasks += zkServers;
         }
         if (LOG.isDebugEnabled()) {

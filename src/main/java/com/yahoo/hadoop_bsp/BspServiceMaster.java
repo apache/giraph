@@ -89,24 +89,24 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
         @SuppressWarnings("unchecked")
         Class<? extends VertexRangeBalancer<I, V, E, M>> vertexRangeBalancer =
             (Class<? extends VertexRangeBalancer<I, V, E, M>>)
-            getConfiguration().getClass(BspJob.BSP_VERTEX_RANGE_BALANCER_CLASS,
+            getConfiguration().getClass(BspJob.VERTEX_RANGE_BALANCER_CLASS,
                                         StaticBalancer.class,
                                         VertexRangeBalancer.class);
         m_vertexRangeBalancerClass = vertexRangeBalancer;
 
         m_maxWorkers =
-            getConfiguration().getInt(BspJob.BSP_MAX_WORKERS, -1);
+            getConfiguration().getInt(BspJob.MAX_WORKERS, -1);
         m_minWorkers =
-            getConfiguration().getInt(BspJob.BSP_MIN_WORKERS, -1);
+            getConfiguration().getInt(BspJob.MIN_WORKERS, -1);
         m_minPercentResponded =
-            getConfiguration().getFloat(BspJob.BSP_MIN_PERCENT_RESPONDED,
+            getConfiguration().getFloat(BspJob.MIN_PERCENT_RESPONDED,
                                         100.0f);
         m_msecsPollPeriod =
-            getConfiguration().getInt(BspJob.BSP_POLL_MSECS,
-                                      BspJob.DEFAULT_BSP_POLL_MSECS);
+            getConfiguration().getInt(BspJob.POLL_MSECS,
+                                      BspJob.POLL_MSECS_DEFAULT);
         m_maxPollAttempts =
-            getConfiguration().getInt(BspJob.BSP_POLL_ATTEMPTS,
-                                      BspJob.DEFAULT_BSP_POLL_ATTEMPTS);
+            getConfiguration().getInt(BspJob.POLL_ATTEMPTS,
+                                      BspJob.POLL_ATTEMPTS_DEFAULT);
     }
 
     /**
@@ -942,9 +942,9 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
      * @throws KeeperException
      */
     private void finalizeCheckpoint(
-        long superstep,
-        List<String> chosenWorkerList)
-        throws IOException, KeeperException, InterruptedException {
+            long superstep,
+            List<String> chosenWorkerList)
+            throws IOException, KeeperException, InterruptedException {
         Path finalizedCheckpointPath =
             new Path(getCheckpointBasePath(superstep) +
                      CHECKPOINT_FINALIZED_POSTFIX);
@@ -1331,8 +1331,8 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
 
         // Clean up the old supersteps
         if ((getConfiguration().getBoolean(
-                BspJob.BSP_KEEP_ZOOKEEPER_DATA,
-                BspJob.DEFAULT_BSP_KEEP_ZOOKEEPER_DATA) == false) &&
+                BspJob.KEEP_ZOOKEEPER_DATA,
+                BspJob.KEEP_ZOOKEEPER_DATA_DEFAULT) == false) &&
             ((getSuperstep() - 1) >= 0)) {
             String oldSuperstepPath =
                 getSuperstepPath(getApplicationAttempt()) + "/" +
@@ -1404,8 +1404,8 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
          // and the master can do any final cleanup
         try {
             if (getConfiguration().getBoolean(
-                BspJob.BSP_KEEP_ZOOKEEPER_DATA,
-                BspJob.DEFAULT_BSP_KEEP_ZOOKEEPER_DATA) == false) {
+                BspJob.KEEP_ZOOKEEPER_DATA,
+                BspJob.KEEP_ZOOKEEPER_DATA_DEFAULT) == false) {
                 LOG.info("cleanupZooKeeper: Removing the following path " +
                          "and all children - " + BASE_PATH);
                 getZkExt().deleteExt(BASE_PATH, -1, true);
@@ -1415,7 +1415,8 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
         }
     }
 
-    public void cleanup() {
+    @Override
+    public void cleanup() throws IOException {
         // All master processes should denote they are done by adding special
         // znode.  Once the number of znodes equals the number of partitions
         // for workers and masters, the master will clean up the ZooKeeper
@@ -1441,6 +1442,16 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
 
        if (m_isMaster) {
            cleanUpZooKeeper();
+           // If desired, cleanup the checkpoint directory
+           if (getConfiguration().getBoolean(
+                   BspJob.CLEANUP_CHECKPOINTS_AFTER_SUCCESS,
+                   BspJob.CLEANUP_CHECKPOINTS_AFTER_SUCCESS_DEFAULT)) {
+               boolean success =
+                   getFs().delete(new Path(CHECKPOINT_BASE_PATH), true);
+               LOG.info("cleanup: Removed HDFS checkpoint directory (" +
+                        CHECKPOINT_BASE_PATH + ") with return = " + success +
+                        " since this job succeeded ");
+           }
        }
 
        try {

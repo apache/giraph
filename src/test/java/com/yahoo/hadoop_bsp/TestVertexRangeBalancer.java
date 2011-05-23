@@ -50,13 +50,13 @@ public class TestVertexRangeBalancer extends BspCase {
         conf.set("mapred.jar", getJarLocation());
         setupConfiguration(conf);
         FileSystem hdfs = FileSystem.get(conf);
-        conf.setClass(BspJob.BSP_VERTEX_CLASS,
+        conf.setClass(BspJob.VERTEX_CLASS,
                       SimpleCheckpointVertex.class,
                       HadoopVertex.class);
-        conf.setClass(BspJob.BSP_VERTEX_INPUT_FORMAT_CLASS,
+        conf.setClass(BspJob.VERTEX_INPUT_FORMAT_CLASS,
                       GeneratedVertexInputFormat.class,
                       VertexInputFormat.class);
-        conf.setClass(BspJob.BSP_VERTEX_WRITER_CLASS,
+        conf.setClass(BspJob.VERTEX_WRITER_CLASS,
                       SimpleVertexWriter.class,
                       VertexWriter.class);
         BspJob bspJob = new BspJob(conf, "testStaticBalancer");
@@ -75,7 +75,7 @@ public class TestVertexRangeBalancer extends BspCase {
            assertTrue(totalLen == 118);
         }
 
-        conf.setClass(BspJob.BSP_VERTEX_RANGE_BALANCER_CLASS,
+        conf.setClass(BspJob.VERTEX_RANGE_BALANCER_CLASS,
                       SuperstepBalancer.class,
                       VertexRangeBalancer.class);
         BspJob bspJob2 = new BspJob(conf, "testSuperstepBalancer");
@@ -94,7 +94,7 @@ public class TestVertexRangeBalancer extends BspCase {
             assertTrue(totalLen == 118);
         }
 
-        conf.setClass(BspJob.BSP_VERTEX_RANGE_BALANCER_CLASS,
+        conf.setClass(BspJob.VERTEX_RANGE_BALANCER_CLASS,
                       AutoBalancer.class,
                       VertexRangeBalancer.class);
         BspJob bspJob3 = new BspJob(conf, "testAutoBalancer");

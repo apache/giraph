@@ -484,7 +484,7 @@ public class BspService <
         m_masterElectionChildrenChanged = new ContextLock(m_context);
         m_cleanedUpChildrenChanged = new ContextLock(m_context);
         m_manualRestartSuperstep =
-            m_conf.getLong(BspJob.BSP_RESTART_SUPERSTEP, -1);
+            m_conf.getLong(BspJob.RESTART_SUPERSTEP, -1);
         m_cachedSuperstep = m_manualRestartSuperstep;
         try {
             m_hostname = InetAddress.getLocalHost().getHostName();
@@ -496,7 +496,7 @@ public class BspService <
         @SuppressWarnings({ "unchecked" })
         Class<? extends HadoopVertex<I, V, E, M>> hadoopVertexClass =
             (Class<? extends HadoopVertex<I, V, E, M>>)
-                getConfiguration().getClass(BspJob.BSP_VERTEX_CLASS,
+                getConfiguration().getClass(BspJob.VERTEX_CLASS,
                                             HadoopVertex.class,
                                             HadoopVertex.class);
         m_hadoopVertexClass = hadoopVertexClass;
@@ -504,7 +504,7 @@ public class BspService <
         Class<? extends VertexInputFormat<I, V, E>> vertexInputFormatClass =
                 (Class<? extends VertexInputFormat<I, V, E>>)
                     getConfiguration().getClass(
-                        BspJob.BSP_VERTEX_INPUT_FORMAT_CLASS,
+                        BspJob.VERTEX_INPUT_FORMAT_CLASS,
                         VertexInputFormat.class,
                         VertexInputFormat.class);
         try {
@@ -525,8 +525,8 @@ public class BspService <
         }
 
         m_checkpointFrequency =
-            m_conf.getInt(BspJob.BSP_CHECKPOINT_FREQUENCY,
-                          BspJob.DEFAULT_BSP_CHECKPOINT_FREQUENCY);
+            m_conf.getInt(BspJob.CHECKPOINT_FREQUENCY,
+                          BspJob.CHECKPOINT_FREQUENCY_DEFAULT);
 
         BASE_PATH = BASE_DIR + "/" + m_jobId;
         MASTER_JOB_STATE_PATH = BASE_PATH + MASTER_JOB_STATE_NODE;
@@ -536,8 +536,8 @@ public class BspService <
         CLEANED_UP_PATH = BASE_PATH + CLEANED_UP_DIR;
         CHECKPOINT_BASE_PATH =
             getConfiguration().get(
-                BspJob.BSP_CHECKPOINT_DIRECTORY,
-                BspJob.DEFAULT_BSP_CHECKPOINT_DIRECTORY + "/" + getJobId());
+                BspJob.CHECKPOINT_DIRECTORY,
+                BspJob.CHECKPOINT_DIRECTORY_DEFAULT + "/" + getJobId());
         MASTER_ELECTION_PATH = BASE_PATH + MASTER_ELECTION_DIR;
         LOG.info("BspService: Connecting to ZooKeeper with job " + m_jobId +
                  ", " + getTaskPartition() + " on " + serverPortList);

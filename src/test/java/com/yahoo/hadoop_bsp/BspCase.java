@@ -40,24 +40,24 @@ public class BspCase extends TestCase implements Watcher {
                        getJobTracker() + " with jar path " + getJarLocation()
                        + " for " + getName());
             conf.set("mapred.job.tracker", getJobTracker());
-            conf.setInt(BspJob.BSP_MAX_WORKERS, getNumWorkers());
-            conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
-            conf.setInt(BspJob.BSP_MIN_WORKERS, getNumWorkers());
+            conf.setInt(BspJob.MAX_WORKERS, getNumWorkers());
+            conf.setFloat(BspJob.MIN_PERCENT_RESPONDED, 100.0f);
+            conf.setInt(BspJob.MIN_WORKERS, getNumWorkers());
         }
         else {
             System.out.println("setup: Using local job runner with " +
                                "location " + getJarLocation() + " for "
                                + getName());
-            conf.setInt(BspJob.BSP_MAX_WORKERS, 1);
-            conf.setFloat(BspJob.BSP_MIN_PERCENT_RESPONDED, 100.0f);
-            conf.setInt(BspJob.BSP_MIN_WORKERS, 1);
+            conf.setInt(BspJob.MAX_WORKERS, 1);
+            conf.setFloat(BspJob.MIN_PERCENT_RESPONDED, 100.0f);
+            conf.setInt(BspJob.MIN_WORKERS, 1);
             // Single node testing
-            conf.setBoolean(BspJob.BSP_SPLIT_MASTER_WORKER, false);
+            conf.setBoolean(BspJob.SPLIT_MASTER_WORKER, false);
         }
-        conf.setInt(BspJob.BSP_POLL_ATTEMPTS, 5);
-        conf.setInt(BspJob.BSP_POLL_MSECS, 3*1000);
+        conf.setInt(BspJob.POLL_ATTEMPTS, 5);
+        conf.setInt(BspJob.POLL_MSECS, 3*1000);
         if (getZooKeeperList() != null) {
-            conf.set(BspJob.BSP_ZOOKEEPER_LIST, getZooKeeperList());
+            conf.set(BspJob.ZOOKEEPER_LIST, getZooKeeperList());
         }
         // GeneratedInputSplit will generate 5 vertices
         conf.setLong(GeneratedVertexReader.READER_VERTICES, 5);
@@ -149,7 +149,7 @@ public class BspCase extends TestCase implements Watcher {
             FileSystem hdfs = FileSystem.get(conf);
             // Since local jobs always use the same paths, remove them
             Path oldLocalJobPaths = new Path(
-                BspJob.DEFAULT_ZOOKEEPER_MANAGER_DIR);
+                BspJob.ZOOKEEPER_MANAGER_DIR_DEFAULT);
             FileStatus [] fileStatusArr = hdfs.listStatus(oldLocalJobPaths);
             for (FileStatus fileStatus : fileStatusArr) {
                 if (fileStatus.isDir() &&

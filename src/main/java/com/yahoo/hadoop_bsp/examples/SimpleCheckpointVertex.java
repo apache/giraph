@@ -134,13 +134,13 @@ public class SimpleCheckpointVertex extends
             System.exit(-1);
         }
 
-        getConf().setClass(BspJob.BSP_VERTEX_CLASS, getClass(), HadoopVertex.class);
-        getConf().setClass(BspJob.BSP_VERTEX_INPUT_FORMAT_CLASS,
+        getConf().setClass(BspJob.VERTEX_CLASS, getClass(), HadoopVertex.class);
+        getConf().setClass(BspJob.VERTEX_INPUT_FORMAT_CLASS,
                            GeneratedVertexInputFormat.class,
                            VertexInputFormat.class);
-        getConf().setInt(BspJob.BSP_MIN_WORKERS,
+        getConf().setInt(BspJob.MIN_WORKERS,
                          Integer.parseInt(cmd.getOptionValue('w')));
-        getConf().setInt(BspJob.BSP_MAX_WORKERS,
+        getConf().setInt(BspJob.MAX_WORKERS,
                          Integer.parseInt(cmd.getOptionValue('w')));
         BspJob bspJob = new BspJob(getConf(), getClass().getName());
         FileOutputFormat.setOutputPath(bspJob,

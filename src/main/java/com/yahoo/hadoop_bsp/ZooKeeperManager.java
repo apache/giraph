@@ -94,12 +94,12 @@ public class ZooKeeperManager {
     }
 
     /**
-     * Generate the final ZooKeeper coordination directory
+     * Generate the final ZooKeeper coordination directory on HDFS
      *
      * @return directory path with job id
      */
-    final public String getFinalZooKeeperPath() {
-        return BspJob.DEFAULT_ZOOKEEPER_MANAGER_DIR + "/" + m_jobId;
+    final private String getFinalZooKeeperPath() {
+        return BspJob.ZOOKEEPER_MANAGER_DIR_DEFAULT + "/" + m_jobId;
     }
 
     /**
@@ -142,9 +142,8 @@ public class ZooKeeperManager {
         m_taskPartition = m_conf.getInt("mapred.task.partition", -1);
         m_jobId = m_conf.get("mapred.job.id", "Unknown Job");
         m_baseDirectory =
-            new Path(m_conf.get(
-                BspJob.BSP_ZOOKEEPER_MANAGER_DIRECTORY,
-                getFinalZooKeeperPath()));
+            new Path(m_conf.get(BspJob.ZOOKEEPER_MANAGER_DIRECTORY,
+                                getFinalZooKeeperPath()));
         m_taskDirectory = new Path(m_baseDirectory,
                                    "_task");
         m_serverDirectory = new Path(m_baseDirectory,
@@ -153,17 +152,17 @@ public class ZooKeeperManager {
                                   Integer.toString(m_taskPartition) +
                                   COMPUTATION_DONE_SUFFIX);
         m_pollMsecs = m_conf.getInt(
-            BspJob.BSP_ZOOKEEPER_SERVERLIST_POLL_MSECS,
-            BspJob.DEFAULT_BSP_ZOOKEEPER_SERVERLIST_POLL_MSECS);
+            BspJob.ZOOKEEPER_SERVERLIST_POLL_MSECS,
+            BspJob.ZOOKEEPER_SERVERLIST_POLL_MSECS_DEFAULT);
         m_serverCount = m_conf.getInt(
-            BspJob.BSP_ZOOKEEPER_SERVER_COUNT,
-            BspJob.DEFAULT_BSP_ZOOKEEPER_SERVER_COUNT);
+            BspJob.ZOOKEEPER_SERVER_COUNT,
+            BspJob.ZOOKEEPER_SERVER_COUNT_DEFAULT);
         m_zkDir = m_conf.get(
-            BspJob.BSP_ZOOKEEPER_DIR, BspJob.DEFAULT_BSP_ZOOKEEPER_DIR);
+            BspJob.ZOOKEEPER_DIR, BspJob.ZOOKEEPER_DIR_DEFAULT);
         m_configFilePath = new String(m_zkDir + "/zoo.cfg");
         m_zkBasePort = m_conf.getInt(
-            BspJob.BSP_ZOOKEEPER_SERVER_PORT,
-            BspJob.DEFAULT_BSP_ZOOKEEPER_SERVER_PORT);
+            BspJob.ZOOKEEPER_SERVER_PORT,
+            BspJob.ZOOKEEPER_SERVER_PORT_DEFAULT);
 
         m_myHostname = InetAddress.getLocalHost().getCanonicalHostName();
         m_fs = FileSystem.get(m_conf);
@@ -462,16 +461,16 @@ public class ZooKeeperManager {
                 throw new RuntimeException("java.home is not set!");
             }
             commandList.add(javaHome + "/bin/java");
-            commandList.add(m_conf.get(BspJob.BSP_ZOOKEEPER_JAVA_OPTS,
-                        BspJob.DEFAULT_BSP_ZOOKEEPER_JAVA_OPTS));
+            commandList.add(m_conf.get(BspJob.ZOOKEEPER_JAVA_OPTS,
+                        BspJob.ZOOKEEPER_JAVA_OPTS_DEFAULT));
             commandList.add("-cp");
-            Path fullJarPath = new Path(m_conf.get(BspJob.BSP_ZOOKEEPER_JAR));
+            Path fullJarPath = new Path(m_conf.get(BspJob.ZOOKEEPER_JAR));
             commandList.add(fullJarPath.toString());
             commandList.add("org.apache.zookeeper.server.quorum.QuorumPeerMain");
             commandList.add(m_configFilePath);
             processBuilder.command(commandList);
             File execDirectory = new File(m_conf.get(
-                BspJob.BSP_ZOOKEEPER_DIR, BspJob.DEFAULT_BSP_ZOOKEEPER_DIR));
+                BspJob.ZOOKEEPER_DIR, BspJob.ZOOKEEPER_DIR_DEFAULT));
             processBuilder.directory(execDirectory);
             processBuilder.redirectErrorStream(true);
             LOG.info("onlineZooKeeperServers: Attempting to start ZooKeeper " +

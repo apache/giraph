@@ -27,7 +27,7 @@ public class HadoopVertexList<
         @SuppressWarnings({ "unchecked" })
         Class<HadoopVertex<I, V, E, M>> hadoopVertexClass =
             (Class<HadoopVertex<I, V, E, M>>)
-                getConf().getClass(BspJob.BSP_VERTEX_CLASS,
+                getConf().getClass(BspJob.VERTEX_CLASS,
                                    HadoopVertex.class,
                                    HadoopVertex.class);
         try {

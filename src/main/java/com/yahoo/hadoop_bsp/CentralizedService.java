@@ -1,5 +1,7 @@
 package com.yahoo.hadoop_bsp;
 
+import java.io.IOException;
+
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -53,5 +55,5 @@ public interface CentralizedService<I extends WritableComparable,
     /**
      * Clean up the service (no calls may be issued after this)
      */
-    void cleanup();
+    void cleanup() throws IOException;
 }

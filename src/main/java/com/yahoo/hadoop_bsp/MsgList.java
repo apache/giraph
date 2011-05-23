@@ -23,7 +23,7 @@ public class MsgList<M extends Writable>
         @SuppressWarnings({ "unchecked" })
         Class<? extends HadoopVertex<?, ?, ?, M>> hadoopVertexClass =
             (Class<? extends HadoopVertex<?, ?, ?, M>>)
-                getConf().getClass(BspJob.BSP_VERTEX_CLASS,
+                getConf().getClass(BspJob.VERTEX_CLASS,
                                    HadoopVertex.class,
                                    HadoopVertex.class);
         try {
