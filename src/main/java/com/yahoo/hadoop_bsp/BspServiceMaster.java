@@ -162,8 +162,8 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
             @SuppressWarnings({"unchecked" })
             Class<VertexInputFormat> vertexInputFormatClass =
                 (Class<VertexInputFormat>)
-                 getConfiguration().getClass("bsp.vertexInputFormatClass",
-                                 VertexInputFormat.class);
+                 getConfiguration().getClass(BspJob.VERTEX_INPUT_FORMAT_CLASS,
+                                             VertexInputFormat.class);
             @SuppressWarnings("unchecked")
             List<InputSplit> splits =
                 vertexInputFormatClass.newInstance().getSplits(
