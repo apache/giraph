@@ -5,19 +5,36 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 
+import java.security.PrivilegedExceptionAction;
+
+import org.apache.log4j.Logger;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RPC.Server;
 import org.apache.hadoop.mapreduce.Mapper.Context;
 
+import org.apache.hadoop.mapreduce.security.TokenCache;
+import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
+import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
+import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
+import org.apache.hadoop.security.token.Token;
+
 @SuppressWarnings("rawtypes")
 public class RPCCommunications<
-        I extends WritableComparable,
-        V extends Writable,
-        E extends Writable,
-        M extends Writable>
-        extends BasicRPCCommunications<I, V, E, M, Object> {
+    I extends WritableComparable,
+    V extends Writable,
+    E extends Writable,
+    M extends Writable>
+        extends BasicRPCCommunications<I, V, E, M, Token<JobTokenIdentifier>> {
+
+    /** Class logger */
+    public static final Logger LOG = Logger.getLogger(RPCCommunications.class);
 
     public RPCCommunications(Context context,
                              CentralizedServiceWorker<I, V, E, M> service)
@@ -25,28 +42,69 @@ public class RPCCommunications<
         super(context, service);
     }
 
-    @Override
-    protected Object createJobToken() throws IOException {
+    protected Token<JobTokenIdentifier> createJobToken() throws IOException {
+        String localJobTokenFile = System.getenv().get(
+                UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION);
+        if (localJobTokenFile != null) {
+            Credentials credentials =
+                TokenCache.loadTokens(localJobTokenFile, conf);
+            return TokenCache.getJobToken(credentials);
+        }
         return null;
     }
 
-    @Override
     protected Server getRPCServer(
             InetSocketAddress myAddress, int numHandlers, String jobId,
-            Object jt) throws IOException {
-        return RPC.getServer(this, myAddress.getHostName(),
-                myAddress.getPort(), numHandlers, false, conf);
+            Token<JobTokenIdentifier> jt) throws IOException {
+        @SuppressWarnings("deprecation")
+        String hadoopSecurityAuthorization =
+            ServiceAuthorizationManager.SERVICE_AUTHORIZATION_CONFIG;
+        if (conf.getBoolean(
+                    hadoopSecurityAuthorization,
+		            false)) {
+            ServiceAuthorizationManager.refresh(conf, new BspPolicyProvider());
+        }
+        JobTokenSecretManager jobTokenSecretManager =
+            new JobTokenSecretManager();
+        if (jt != null) { //could be null in the case of some unit tests
+            jobTokenSecretManager.addTokenForJob(jobId, jt);
+            LOG.info("Added jobToken " + jt);
+        }
+        return RPC.getServer(this, myAddress.getHostName(), myAddress.getPort(),
+                numHandlers, false, conf, jobTokenSecretManager);
     }
 
-    @Override
     protected CommunicationsInterface<I, V, E, M> getRPCProxy(
-            final InetSocketAddress addr, String jobId, Object jt)
+            final InetSocketAddress addr,
+            String jobId,
+            Token<JobTokenIdentifier> jt)
             throws IOException, InterruptedException {
+        final Configuration config = new Configuration(conf);
+
+        if (jt == null) {
+            @SuppressWarnings("unchecked")
+            CommunicationsInterface<I, V, E, M> proxy =
+                (CommunicationsInterface<I, V, E, M>)RPC.getProxy(
+                     CommunicationsInterface.class, versionID, addr, config);
+            return proxy;
+        }
+        jt.setService(new Text(addr.getAddress().getHostAddress() + ":"
+                               + addr.getPort()));
+        UserGroupInformation current = UserGroupInformation.getCurrentUser();
+        current.addToken(jt);
+        UserGroupInformation owner =
+            UserGroupInformation.createRemoteUser(jobId);
+        owner.addToken(jt);
         @SuppressWarnings("unchecked")
         CommunicationsInterface<I, V, E, M> proxy =
-            (CommunicationsInterface<I, V, E, M>) RPC.getProxy(
-                CommunicationsInterface.class,
-                versionID, addr, conf);
-        return proxy;
+                      owner.doAs(new PrivilegedExceptionAction<
+                              CommunicationsInterface<I, V, E, M>>() {
+            @Override
+            public CommunicationsInterface<I, V, E, M>  run() throws Exception {
+                return (CommunicationsInterface<I, V, E, M> )RPC.getProxy(
+                    CommunicationsInterface.class, versionID, addr, config);
+            }
+        });
+		return proxy;
     }
 }
