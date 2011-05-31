@@ -24,12 +24,12 @@ public interface CommunicationsInterface<
         M extends Writable>
         extends VersionedProtocol {
 
-	/**
-	 * Interface Version History
-	 *
-	 * 0 - First Version
-	 */
-	static final long versionID = 0L;
+    /**
+     * Interface Version History
+     *
+     * 0 - First Version
+     */
+    static final long versionID = 0L;
 
     /**
      * Adds incoming message.
@@ -62,5 +62,4 @@ public interface CommunicationsInterface<
      * @return The name of this worker in the format "hostname:port".
      */
     String getName();
-
 }
