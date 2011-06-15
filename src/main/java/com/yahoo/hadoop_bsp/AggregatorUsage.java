@@ -17,7 +17,8 @@ public interface AggregatorUsage {
      */
     public <A extends Writable> Aggregator<A> registerAggregator(
         String name,
-        Class<? extends Aggregator<A>> aggregatorClass);
+        Class<? extends Aggregator<A>> aggregatorClass)
+        throws InstantiationException, IllegalAccessException;
 
     /**
      * Get a registered aggregator.

@@ -96,6 +96,8 @@ public abstract class BspBalancer<I extends WritableComparable,
                 m_nextVertexRangeMap.get(prevVertexRange.getMaxIndex());
             nextVertexRange.setPreviousHostname(prevVertexRange.getHostname());
             nextVertexRange.setPreviousPort(prevVertexRange.getPort());
+            nextVertexRange.setPreviousHostnameId(
+                prevVertexRange.getHostnameId());
         }
     }
 

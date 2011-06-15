@@ -39,20 +39,44 @@ public class MasterThread<I extends WritableComparable,
      */
     @Override
     public void run() {
+        // Algorithm:
+        // 1. Become the master
+        // 2. If desired, restart from a manual checkpoint
+        // 3. Run all supersteps until complete
         try {
             m_bspServiceMaster.setup();
             if (m_bspServiceMaster.becomeMaster() == true) {
-                if (m_bspServiceMaster.getManualRestartSuperstep() == -1) {
+                if (m_bspServiceMaster.getRestartedSuperstep() == -1) {
                     m_bspServiceMaster.createInputSplits();
                 }
-                // TODO: When one becomes a master, might need to "watch" the
-                // selected workers of the current superstep to insure they
-                // are alive.
-                while (!m_bspServiceMaster.coordinateSuperstep()) {
-                    LOG.info("masterThread: Finished superstep " +
-                             (m_bspServiceMaster.getSuperstep() - 1));
+                CentralizedServiceMaster.SuperstepState superstepState =
+                    CentralizedServiceMaster.SuperstepState.INITIAL;
+                long cachedSuperstep = -1;
+                while (superstepState !=
+                        CentralizedServiceMaster.SuperstepState.
+                        ALL_SUPERSTEPS_DONE) {
+                    cachedSuperstep = m_bspServiceMaster.getSuperstep();
+                    superstepState = m_bspServiceMaster.coordinateSuperstep();
+                    if (LOG.isInfoEnabled()) {
+                        LOG.info("masterThread: Coordination of superstep " +
+                                 cachedSuperstep +
+                                 " ended with state " + superstepState +
+                                 " and is now on superstep " +
+                                 m_bspServiceMaster.getSuperstep());
+                    }
+
+                    // If a worker failed, restart from a known good superstep
+                    if (superstepState ==
+                            CentralizedServiceMaster.
+                                SuperstepState.WORKER_FAILURE) {
+                        m_bspServiceMaster.restartFromCheckpoint(
+                            m_bspServiceMaster.getLastGoodCheckpoint());
+                    }
+
                 }
-                m_bspServiceMaster.setJobState(BspService.State.FINISHED);
+                m_bspServiceMaster.setJobState(BspService.State.FINISHED,
+                                               -1,
+                                               -1);
             }
             m_bspServiceMaster.cleanup();
         } catch (Exception e) {

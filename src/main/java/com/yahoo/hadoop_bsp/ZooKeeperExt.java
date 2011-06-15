@@ -18,8 +18,6 @@ import org.apache.zookeeper.ZooKeeper;
 /**
  * ZooKeeper provides only atomic operations.  ZooKeeperExt provides additional
  * non-atomic operations that are useful.
- * @author aching
- *
  */
 public class ZooKeeperExt extends ZooKeeper {
     /** Internal logger */
@@ -39,12 +37,13 @@ public class ZooKeeperExt extends ZooKeeper {
      * Provides a possibility of a creating a path consisting of more than one
      * znode (not atomic).  If recursive is false, operates exactly the
      * same as create().
+     *
      * @param path path to create
      * @param data data to set on the final znode
      * @param acl acls on each znode created
      * @param createMode only affects the final znode
      * @param recursive if true, creates all ancestors
-     * @return
+     * @return Actual created path
      * @throws KeeperException
      * @throws InterruptedException
      */
@@ -54,6 +53,10 @@ public class ZooKeeperExt extends ZooKeeper {
         List<ACL> acl,
         CreateMode createMode,
         boolean recursive) throws KeeperException, InterruptedException {
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("createExt: Creating path " + path);
+        }
+
         if (recursive == false) {
             return create(path, data, acl, createMode);
         }
@@ -61,7 +64,9 @@ public class ZooKeeperExt extends ZooKeeper {
         try {
             return create(path, data, acl, createMode);
         } catch (KeeperException.NoNodeException e) {
-            LOG.debug("createExt: Cannot directly create node " + path);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("createExt: Cannot directly create node " + path);
+            }
         }
 
         int pos = path.indexOf("/", 1);
@@ -70,8 +75,10 @@ public class ZooKeeperExt extends ZooKeeper {
                 create(
                     path.substring(0, pos), null, acl, CreateMode.PERSISTENT);
             } catch (KeeperException.NodeExistsException e) {
-                LOG.debug("createExt: Znode " + path.substring(0, pos) +
-                          " already exists");
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("createExt: Znode " + path.substring(0, pos) +
+                              " already exists");
+                }
             }
         }
         return create(path, data, acl, createMode);
@@ -98,7 +105,9 @@ public class ZooKeeperExt extends ZooKeeper {
             delete(path, version);
             return;
         } catch (KeeperException.NotEmptyException e) {
-            LOG.debug("deleteExt: Cannot directly removenode " + path);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("deleteExt: Cannot directly remove node " + path);
+            }
         }
 
         List<String> childList = getChildren(path, false);

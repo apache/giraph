@@ -83,6 +83,7 @@
       <plugin>
         <groupId>yahoo.yinst.maven_plugins</groupId>
         <artifactId>yjava_maven_plugins_yinst</artifactId>
+        <version>0.2.5</version>
         <configuration>
           <buildtype>${buildtype}</buildtype>
           <sourceDirectory>${basedir}/src/main/pkg/yicf</sourceDirectory>

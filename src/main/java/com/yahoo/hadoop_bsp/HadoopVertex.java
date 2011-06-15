@@ -17,6 +17,7 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapreduce.Mapper.Context;
 
 @SuppressWarnings("rawtypes")
 public abstract class HadoopVertex<
@@ -31,6 +32,8 @@ public abstract class HadoopVertex<
     private static long m_superstep = 0;
     /** Class-wide number of vertices */
     private static long m_numVertices = -1;
+    /** Class-wide map context */
+    private static Context context = null;
     /** Instantiatable vertex reader */
     private VertexReader m_instantiableVertexReader;
     /** BSP Mapper for this Vertex */
@@ -48,36 +51,46 @@ public abstract class HadoopVertex<
     /** Configuration */
     private Configuration conf;
 
-    public void preApplication() {
+    @Override
+    public void preApplication()
+            throws InstantiationException, IllegalAccessException {
         // Do nothing, might be overrided by the user
     }
 
+    @Override
     public void postApplication() {
         // Do nothing, might be overrided by the user
     }
 
+    @Override
     public void preSuperstep() {
         // Do nothing, might be overrided by the user
     }
 
+    @Override
     public void postSuperstep() {
         // Do nothing, might be overrided by the user
     }
 
+    @Override
     public final void addEdge(I destVertexId, E edgeValue) {
         E value = m_destEdgeMap.get(destVertexId);
         if (value != null) {
-            LOG.debug("addEdge: Vertex=" + m_vertexId +
-                      ": already added an edge " +
-                      "value for destination vertex " + destVertexId);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("addEdge: Vertex=" + m_vertexId +
+                          ": already added an edge " +
+                          "value for destination vertex " + destVertexId);
+            }
         }
         m_destEdgeMap.put(destVertexId, edgeValue);
     }
 
+    @Override
     public final void setVertexId(I vertexId) {
         m_vertexId = vertexId;
     }
 
+    @Override
     public final I getVertexId() {
         return m_vertexId;
     }
@@ -90,12 +103,17 @@ public abstract class HadoopVertex<
         m_superstep = superstep;
     }
 
+    @Override
     public final long getSuperstep() {
         return m_superstep;
     }
+
+    @Override
     public final V getVertexValue() {
         return m_vertexValue;
     }
+
+    @Override
     public final void setVertexValue(V vertexValue) {
         m_vertexValue = vertexValue;
     }
@@ -104,6 +122,7 @@ public abstract class HadoopVertex<
         m_numVertices = numVertices;
     }
 
+    @Override
     public final long getNumVertices() {
         return m_numVertices;
     }
@@ -151,24 +170,29 @@ public abstract class HadoopVertex<
         }
     }
 
+    @Override
     public final OutEdgeIterator<I, E> getOutEdgeIterator() {
         return new HadoopVertexOutEdgeIterator<I, E>(m_destEdgeMap);
     }
 
+    @Override
     public final void sendMsg(I id, M msg) {
        m_bspMapper.getWorkerCommunications().sendMessage(id, msg);
     }
 
+    @Override
     public final void sentMsgToAllEdges(M msg) {
       for (Entry<I, E> destEdge : m_destEdgeMap.entrySet()) {
           sendMsg(destEdge.getKey(), msg);
       }
     }
 
+    @Override
     public final void voteToHalt() {
         m_halt = true;
     }
 
+    @Override
     public final boolean isHalted() {
         return m_halt;
     }
@@ -237,7 +261,8 @@ public abstract class HadoopVertex<
      */
     public final <A extends Writable> Aggregator<A> registerAggregator(
             String name,
-            Class<? extends Aggregator<A>> aggregatorClass) {
+            Class<? extends Aggregator<A>> aggregatorClass)
+            throws InstantiationException, IllegalAccessException {
         return m_bspMapper.getAggregatorUsage().registerAggregator(
             name, aggregatorClass);
     }
@@ -275,6 +300,14 @@ public abstract class HadoopVertex<
 
     public final void setConf(Configuration conf) {
         this.conf = conf;
+    }
+
+    public final Context getContext() {
+        return context;
+    }
+
+    public static void setContext(Context context) {
+        HadoopVertex.context = context;
     }
 }
 

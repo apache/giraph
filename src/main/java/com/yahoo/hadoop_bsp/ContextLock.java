@@ -12,7 +12,7 @@ public class ContextLock extends PredicateLock {
     @SuppressWarnings("rawtypes")
     private final Context m_context;
     /** Msecs to refresh the progress meter */
-    private final int m_msecPeriod = 10000;
+    private static final int m_msecPeriod = 10000;
 
     /**
      * Constructor.

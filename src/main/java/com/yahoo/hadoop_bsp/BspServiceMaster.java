@@ -7,11 +7,14 @@ import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.Set;
 import java.util.TreeMap;
@@ -24,8 +27,10 @@ import org.apache.commons.codec.binary.Base64;
 
 import org.apache.log4j.Logger;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -40,28 +45,24 @@ import org.apache.hadoop.mapreduce.Mapper.Context;
 
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.WatchedEvent;
+import org.apache.zookeeper.Watcher.Event.EventType;
 import org.apache.zookeeper.ZooDefs.Ids;
 
 import com.yahoo.hadoop_bsp.BspJob.BspMapper.MapFunctions;
 
 /**
  * Zookeeper-based implementation of {@link CentralizedService}.
- * @author aching
- *
  */
 @SuppressWarnings({ "deprecation", "rawtypes" })
 public class BspServiceMaster<I extends WritableComparable, V extends Writable,
-    E extends Writable, M extends Writable>
-    extends BspService<I, V, E, M>
-    implements CentralizedServiceMaster<I, V, E, M> {
+        E extends Writable, M extends Writable>
+        extends BspService<I, V, E, M>
+        implements CentralizedServiceMaster<I, V, E, M> {
     /** Class logger */
     private static final Logger LOG = Logger.getLogger(BspServiceMaster.class);
-    /** the chosen list of healthy nodes */
-    List<String> m_chosenWorkerList = null;
-    /** the superstep when the chosen worker list was initially selected */
-    Long m_chosenSuperstep = new Long(-1);
-    /** associated synchronization object */
-    Object m_chosenSuperstepObject = new Object();
+    /** Synchronizes vertex ranges */
+    private Object m_vertexRangeSynchronization = new Object();
     /** Superstep counter */
     private Counter m_superstepCounter = null;
     /** Am I the master? */
@@ -79,13 +80,19 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
     private final int m_msecsPollPeriod;
     /** Max number of poll attempts */
     private final int m_maxPollAttempts;
+    /** Last finalized checkpoint */
+    private long m_lastCheckpointedSuperstep = -1;
+    /** State of the superstep changed */
+    private final BspEvent m_superstepStateChanged =
+        new PredicateLock();
 
     public BspServiceMaster(
-        String serverPortList,
-        int sessionMsecTimeout,
-        Context context,
-        BspJob.BspMapper<I, V, E, M> bspMapper) {
+            String serverPortList,
+            int sessionMsecTimeout,
+            Context context,
+            BspJob.BspMapper<I, V, E, M> bspMapper) {
         super(serverPortList, sessionMsecTimeout, context, bspMapper);
+        registerBspEvent(m_superstepStateChanged);
         @SuppressWarnings("unchecked")
         Class<? extends VertexRangeBalancer<I, V, E, M>> vertexRangeBalancer =
             (Class<? extends VertexRangeBalancer<I, V, E, M>>)
@@ -109,39 +116,43 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                                       BspJob.POLL_ATTEMPTS_DEFAULT);
     }
 
-    /**
-     * If the master decides that this job doesn't have the resources to
-     * continue, it can fail the job.  Typically this is mainly informative.
-     *
-     * @throws InterruptedException
-     * @throws KeeperException
-     */
-    public void setJobState(State state) {
-        if (state == BspService.State.FINISHED) {
-            // check no longer necessary
-            synchronized(m_chosenSuperstepObject) {
-                m_chosenWorkerList = null;
-                m_chosenSuperstep = new Long(-1);
-            }
+    @Override
+    public void setJobState(State state,
+                            long applicationAttempt,
+                            long desiredSuperstep) {
+        JSONObject jobState = new JSONObject();
+        try {
+            jobState.put(JSONOBJ_STATE_KEY, state.toString());
+            jobState.put(JSONOBJ_APPLICATION_ATTEMPT_KEY, applicationAttempt);
+            jobState.put(JSONOBJ_SUPERSTEP_KEY, desiredSuperstep);
+        } catch (JSONException e) {
+            throw new RuntimeException("setJobState: Coudn't put " +
+                                       state.toString());
+        }
+        if (LOG.isInfoEnabled()) {
+            LOG.info("setJobState: " + jobState.toString() + " on superstep " +
+                     getSuperstep());
         }
         try {
-            LOG.info("setJobState: " + state + " on superstep " +
-                     getSuperstep());
-            getZkExt().createExt(MASTER_JOB_STATE_PATH,
-                                 state.toString().getBytes(),
+            getZkExt().createExt(MASTER_JOB_STATE_PATH + "/jobState",
+                                 jobState.toString().getBytes(),
                                  Ids.OPEN_ACL_UNSAFE,
-                                 CreateMode.PERSISTENT,
+                                 CreateMode.PERSISTENT_SEQUENTIAL,
                                  true);
         } catch (KeeperException.NodeExistsException e) {
-            try {
-                getZkExt().setData(
-                    MASTER_JOB_STATE_PATH, state.toString().getBytes(), -1);
-            } catch (Exception e1) {
-                throw new RuntimeException(e1);
-            }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException(
+                "setJobState: Imposible that " +
+                MASTER_JOB_STATE_PATH + " already exists!", e);
+        } catch (KeeperException e) {
+            throw new RuntimeException(
+                "setJobState: Unknown KeeperException for " +
+                MASTER_JOB_STATE_PATH, e);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(
+                "setJobState: Unknown InterruptedException for " +
+                MASTER_JOB_STATE_PATH, e);
         }
+
         if (state == BspService.State.FAILED) {
             failJob();
         }
@@ -262,35 +273,6 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
     }
 
     /**
-     * Reaction to a change event in workHealthRegistration.
-     */
-    protected void workerHealthRegistrationChanged(String path) {
-        synchronized(m_chosenSuperstepObject) {
-            if (m_chosenWorkerList != null &&
-                    m_chosenSuperstep.longValue() == getSuperstep() &&
-                    getWorkerHealthyPath(getApplicationAttempt(),
-                                         m_chosenSuperstep).equals(path)) {
-                LOG.info("workerHealthRegistrationChanged: " +
-                         "change in healthy workers - " +
-                         "checking against chosen workers.");
-                // let's check whether an additional node registered
-                // or one node went down
-                List<String> healthyWorkerList = new ArrayList<String>();
-                List<String> unhealthyWorkerList = new ArrayList<String>();
-                getWorkers(m_chosenSuperstep.longValue(), healthyWorkerList,
-                           unhealthyWorkerList);
-                if (!healthyWorkerList.containsAll(m_chosenWorkerList)) {
-                    LOG.fatal("workerHealthRegistrationChanged: " +
-                              "at least one healthy worker went down " +
-                              "for superstep " + getSuperstep());
-                    setJobState(State.FAILED);
-                }
-            }
-        }
-        getWorkerHealthRegistrationChangedEvent().signal();
-    }
-
-    /**
      * Check the workers to ensure that a minimum number of good workers exists
      * out of the total that have reported.
      *
@@ -359,6 +341,7 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                     healthyWorker + " in " + healthyWorkerPath);
             }
         }
+
         return workerHostnamePortMap;
     }
 
@@ -386,14 +369,9 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
         // where it left off.
         Map<String, JSONArray> healthyWorkerHostnamePortMap = checkWorkers();
         if (healthyWorkerHostnamePortMap == null) {
-            setJobState(State.FAILED);
+            setJobState(State.FAILED, -1, -1);
         }
 
-        synchronized(m_chosenSuperstepObject) {
-            m_chosenWorkerList =
-                new ArrayList<String>(healthyWorkerHostnamePortMap.keySet());
-            m_chosenSuperstep = new Long(getSuperstep());
-        }
         List<InputSplit> splitList =
             generateInputSplits(healthyWorkerHostnamePortMap.size());
         if (healthyWorkerHostnamePortMap.size() > splitList.size()) {
@@ -407,7 +385,7 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                       + splitList.size() + " > " +
                       healthyWorkerHostnamePortMap.size() +
                       "=number of healthy processes");
-            setJobState(State.FAILED);
+            setJobState(State.FAILED, -1, -1);
         }
         String inputSplitPath = null;
         for (int i = 0; i< splitList.size(); ++i) {
@@ -498,9 +476,12 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
             }
             String mergedAggregatorPath =
                 getMergedAggregatorPath(getApplicationAttempt(), superstep - 1);
-            LOG.info("mapFilesToWorkers: Reloading merged aggregator data '" +
-                     aggregatorZkData + "' to previous checkpoint in path " +
-                     mergedAggregatorPath);
+            if (LOG.isInfoEnabled()) {
+                LOG.info("mapFilesToWorkers: Reloading merged aggregator " +
+                         "data '" + aggregatorZkData +
+                         "' to previous checkpoint in path " +
+                         mergedAggregatorPath);
+            }
             if (getZkExt().exists(mergedAggregatorPath, false) == null) {
                 getZkExt().createExt(mergedAggregatorPath,
                                      aggregatorZkData,
@@ -612,15 +593,15 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
         // the checkpoint files.  Each checkpoint file will be an input split
         // and the input split
         m_superstepCounter = getContext().getCounter("BspJob", "Superstep");
-        if (getManualRestartSuperstep() == -1) {
+        if (getRestartedSuperstep() == -1) {
             return;
         }
-        else if (getManualRestartSuperstep() < -1) {
+        else if (getRestartedSuperstep() < -1) {
             LOG.fatal("setup: Impossible to restart superstep " +
-                      getManualRestartSuperstep());
-            setJobState(BspService.State.FAILED);
+                      getRestartedSuperstep());
+            setJobState(BspService.State.FAILED, -1, -1);
         } else {
-            m_superstepCounter.increment(getManualRestartSuperstep());
+            m_superstepCounter.increment(getRestartedSuperstep());
         }
 
     }
@@ -641,11 +622,19 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
             throw new RuntimeException(e);
         }
         while (true) {
-            if (getJobState() == State.FINISHED) {
-                LOG.info("becomeMaster: Job is finished, " +
-                "give up trying to be the master!");
-                m_isMaster = false;
-                return m_isMaster;
+            JSONObject jobState = getJobState();
+            try {
+                if ((jobState != null) &&
+                    State.valueOf(jobState.getString(JSONOBJ_STATE_KEY)) ==
+                        State.FINISHED) {
+                    LOG.info("becomeMaster: Job is finished, " +
+                             "give up trying to be the master!");
+                    m_isMaster = false;
+                    return m_isMaster;
+                }
+            } catch (JSONException e) {
+                throw new RuntimeException(
+                    "becomeMaster: Couldn't get state from " + jobState, e);
             }
             try {
                 List<String> masterChildArr =
@@ -656,7 +645,6 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                          myBid + "'");
                 if (masterChildArr.get(0).equals(myBid)) {
                     LOG.info("becomeMaster: I am now the master!");
-                    setJobState(State.RUNNING);
                     m_isMaster = true;
                     return m_isMaster;
                 }
@@ -979,6 +967,7 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
             finalizedOutputStream.writeInt(0);
         }
         finalizedOutputStream.close();
+        m_lastCheckpointedSuperstep = superstep;
     }
 
     /**
@@ -1019,7 +1008,7 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                         hostnamePartitionId)) {
                         LOG.fatal("inputSplitsToVertexRanges: Worker " +
                               hostnamePartitionId + " died, failing.");
-                        setJobState(State.FAILED);
+                        setJobState(State.FAILED, -1, -1);
                     }
                    JSONArray hostnamePortArray =
                        chosenWorkerHostnamePortMap.get(hostnamePartitionId);
@@ -1061,10 +1050,14 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
 
     /**
      * Balance the vertex ranges before the next superstep computation begins.
-     * Wait until the vertex ranges have been moved prior to continuing.
+     * Wait until the vertex ranges data has been moved to the correct
+     * worker prior to continuing.
      *
      * @param vertexRangeBalancer balancer to use
      * @param chosenWorkerHostnamePortMap workers available
+     * @throws JSONException
+     * @throws IOException
+     * @throws UnsupportedEncodingException
      */
     private void balanceVertexRanges(
             BspBalancer<I, V, E, M> vertexRangeBalancer,
@@ -1104,28 +1097,62 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
             throw new RuntimeException(
                 "balanceVertexRanges: Impossible there are no vertex ranges ");
         }
+
+        byte[] vertexAssignmentBytes = null;
         try {
-            LOG.info("balanceVertexRanges: numVertexRanges=" + // TODO: delete after Bug 4340282 fixed.
-                 nextVertexRangeMap.values().size() +
-                 " lengthVertexRanges=" +
-                 vertexRangeAssignmentArray.toString().getBytes("UTF-8").length +
-                 " maxVertexRangeLength=" +
-                 maxVertexRange.toJSONObject().toString().length());
-            String vertexRangeAssignmentsPath =
-                getVertexRangeAssignmentsPath(getApplicationAttempt(),
-                                              getSuperstep());
+            vertexAssignmentBytes =
+                vertexRangeAssignmentArray.toString().getBytes("UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            throw new RuntimeException(
+                "balanceVertexranges: Cannot get bytes from " +
+                vertexRangeAssignmentArray.toString(), e);
+        }
+
+        // TODO: delete after Bug 4340282 fixed.
+        if (LOG.isInfoEnabled()) {
+            try {
+                LOG.info("balanceVertexRanges: numVertexRanges=" +
+                         nextVertexRangeMap.values().size() +
+                         " lengthVertexRanges=" + vertexAssignmentBytes +
+                         " maxVertexRangeLength=" +
+                         maxVertexRange.toJSONObject().toString().length());
+            } catch (IOException e) {
+                throw new RuntimeException(
+                    "balanceVertexRanges: IOException fetching " +
+                    maxVertexRange.toString(), e);
+            } catch (JSONException e) {
+                throw new RuntimeException(
+                    "balanceVertexRanges: JSONException fetching " +
+                    maxVertexRange.toString(), e);
+            }
+        }
+
+        String vertexRangeAssignmentsPath =
+            getVertexRangeAssignmentsPath(getApplicationAttempt(),
+                                          getSuperstep());
+        try {
             getZkExt().createExt(
-                vertexRangeAssignmentsPath,
-                vertexRangeAssignmentArray.toString().getBytes("UTF-8"),
-                Ids.OPEN_ACL_UNSAFE,
-                CreateMode.PERSISTENT,
-                true);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+                                 vertexRangeAssignmentsPath,
+                                 vertexAssignmentBytes,
+                                 Ids.OPEN_ACL_UNSAFE,
+                                 CreateMode.PERSISTENT,
+                                 true);
+        } catch (KeeperException.NodeExistsException e) {
+            LOG.info("balanceVertexRanges: Node " +
+                     vertexRangeAssignmentsPath + " already exists", e);
+        } catch (KeeperException e) {
+            LOG.fatal("balanceVertexRanges: Got KeeperException", e);
+            throw new RuntimeException(
+                "balanceVertexRanges: Got KeeperException", e);
+        } catch (InterruptedException e) {
+            LOG.fatal("balanceVertexRanges: Got KeeperException", e);
+            throw new RuntimeException(
+                "balanceVertexRanges: Got InterruptedException", e);
         }
 
         long changes = vertexRangeBalancer.getVertexRangeChanges();
-        LOG.info("balanceVertexRanges: Waiting on " + changes + " changes");
+        LOG.info("balanceVertexRanges: Waiting on " + changes +
+                 " vertex range changes");
         if (changes == 0) {
             return;
         }
@@ -1175,8 +1202,101 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
         }
     }
 
-    public boolean coordinateSuperstep() {
-        // 1. Get chosen workers.
+    /**
+     * Check whether the workers chosen for this superstep are still alive
+     *
+     * @param chosenWorkerHealthPath Path to the healthy workers in ZooKeeper
+     * @param chosenWorkerSet Set of the healthy workers
+     * @return true if they are all alive, false otherwise.
+     * @throws InterruptedException
+     * @throws KeeperException
+     */
+    private boolean superstepChosenWorkerAlive(
+            String chosenWorkerHealthPath,
+            Set<String> chosenWorkerSet)
+            throws KeeperException, InterruptedException {
+        List<String> chosenWorkerHealthyList =
+            getZkExt().getChildrenExt(chosenWorkerHealthPath,
+                                      true,
+                                      false,
+                                      false);
+        Set<String> chosenWorkerHealthySet =
+            new HashSet<String>(chosenWorkerHealthyList);
+        boolean allChosenWorkersHealthy = true;
+        for (String chosenWorker : chosenWorkerSet) {
+            if (!chosenWorkerHealthySet.contains(chosenWorker)) {
+                allChosenWorkersHealthy = false;
+                LOG.warn("superstepChosenWorkerAlive: Missing chosen worker " +
+                         chosenWorker + " on superstep " + getSuperstep());
+            }
+        }
+        return allChosenWorkersHealthy;
+    }
+
+    @Override
+    public void restartFromCheckpoint(long checkpoint) {
+        // Process:
+        // 1. Remove all old input split data
+        // 2. Increase the application attempt and set to the correct checkpoint
+        // 3. Send command to all workers to restart their tasks
+        try {
+            getZkExt().deleteExt(INPUT_SPLIT_PATH, -1, true);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(
+                "retartFromCheckpoint: InterruptedException", e);
+        } catch (KeeperException e) {
+            throw new RuntimeException(
+                "retartFromCheckpoint: KeeperException", e);
+        }
+        setApplicationAttempt(getApplicationAttempt() + 1);
+        setCachedSuperstep(checkpoint);
+        setRestartedSuperstep(checkpoint);
+        setJobState(BspService.State.START_SUPERSTEP,
+                    getApplicationAttempt(),
+                    checkpoint);
+    }
+
+    /**
+     * Only get the finalized checkpoint files
+     */
+    public static class FinalizedCheckpointPathFilter implements PathFilter {
+        @Override
+        public boolean accept(Path path) {
+            if (path.getName().endsWith(
+                    BspService.CHECKPOINT_FINALIZED_POSTFIX)) {
+                return true;
+            } else {
+                return false;
+            }
+        }
+    }
+
+    @Override
+    public long getLastGoodCheckpoint() throws IOException {
+        // Find the last good checkpoint if none have been written to the
+        // knowledge of this master
+        if (m_lastCheckpointedSuperstep == -1) {
+            FileStatus[] fileStatusArray =
+                getFs().listStatus(new Path(CHECKPOINT_BASE_PATH),
+                                   new FinalizedCheckpointPathFilter());
+            if (fileStatusArray == null) {
+                return -1;
+            }
+            Arrays.sort(fileStatusArray);
+            m_lastCheckpointedSuperstep = getCheckpoint(
+                fileStatusArray[fileStatusArray.length - 1].getPath());
+            LOG.info("getLastGoodCheckpoint: Found last good checkpoint " +
+                     m_lastCheckpointedSuperstep + " from " +
+                     fileStatusArray[fileStatusArray.length - 1].
+                     getPath().toString());
+        }
+        return m_lastCheckpointedSuperstep;
+    }
+
+    @Override
+    public SuperstepState coordinateSuperstep() throws
+            KeeperException, InterruptedException {
+        // 1. Get chosen workers and set up watches on them.
         // 2. Assign partitions to the workers
         //    or possibly reload from a superstep
         // 3. Wait for all workers to complete
@@ -1187,27 +1307,33 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
         if (chosenWorkerHostnamePortMap == null) {
             LOG.fatal("coordinateSuperstep: Not enough healthy workers for " +
                       "superstep " + getSuperstep());
-            setJobState(State.FAILED);
-        }
-        synchronized(m_chosenSuperstepObject) {
-            if (m_chosenWorkerList == null) { // must have been a checkpoint
-                m_chosenWorkerList =
-                    new ArrayList<String>(chosenWorkerHostnamePortMap.keySet());
+            setJobState(State.FAILED, -1, -1);
+        } else {
+            for (Entry<String, JSONArray> entry :
+                    chosenWorkerHostnamePortMap.entrySet()) {
+                String workerHealthyPath =
+                    getWorkerHealthyPath(getApplicationAttempt(),
+                                         getSuperstep()) + "/" + entry.getKey();
+                if (getZkExt().exists(workerHealthyPath, true) == null) {
+                    LOG.warn("coordinateSuperstep: Chosen worker " +
+                             workerHealthyPath +
+                             " is no longer valid, failing superstep");
+                }
             }
-            m_chosenSuperstep = new Long(getSuperstep());
         }
 
-        if (getManualRestartSuperstep() == getSuperstep()) {
+        if (getRestartedSuperstep() == getSuperstep()) {
             try {
                 LOG.info("coordinateSuperstep: Reloading from superstep " +
                          getSuperstep());
                 mapFilesToWorkers(
-                    getManualRestartSuperstep(),
+                    getRestartedSuperstep(),
                     new ArrayList<String>(
                         chosenWorkerHostnamePortMap.keySet()));
                 inputSplitsToVertexRanges(chosenWorkerHostnamePortMap);
             } catch (Exception e) {
-                throw new RuntimeException(e);
+                throw new RuntimeException(
+                    "coordinateSuperstep: Failed to reload", e);
             }
         } else {
             if (getSuperstep() > 0) {
@@ -1218,11 +1344,12 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
-                balanceVertexRanges(vertexRangeBalancer,
-                                    chosenWorkerHostnamePortMap);
+                synchronized (m_vertexRangeSynchronization) {
+                    balanceVertexRanges(vertexRangeBalancer,
+                                        chosenWorkerHostnamePortMap);
+                }
             }
         }
-
 
         String finishedWorkerPath =
             getWorkerFinishedPath(getApplicationAttempt(), getSuperstep());
@@ -1233,13 +1360,15 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                                  CreateMode.PERSISTENT,
                                  true);
         } catch (KeeperException.NodeExistsException e) {
-            LOG.info("coordinateBarrier: finishedWorkers " +
+            LOG.info("coordinateSuperstep: finishedWorkers " +
                      finishedWorkerPath + " already exists, no need to create");
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+        String workerHealthyPath =
+            getWorkerHealthyPath(getApplicationAttempt(), getSuperstep());
+        List<String> finishedWorkerList = null;
         while (true) {
-            List<String> finishedWorkerList = null;
             try {
                 finishedWorkerList =
                     getZkExt().getChildrenExt(finishedWorkerPath,
@@ -1249,15 +1378,23 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
-            LOG.debug("coordinateSuperstep: Got finished worker list = " +
-                     finishedWorkerList + ", size = " +
-                     finishedWorkerList.size() + ", chosen worker list = " +
-                     chosenWorkerHostnamePortMap.keySet() + ", size = " +
-                     chosenWorkerHostnamePortMap.size() +
-                     " from " + finishedWorkerPath);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("coordinateSuperstep: Got finished worker list = " +
+                          finishedWorkerList + ", size = " +
+                          finishedWorkerList.size() +
+                          ", chosen worker list = " +
+                          chosenWorkerHostnamePortMap.keySet() + ", size = " +
+                          chosenWorkerHostnamePortMap.size() +
+                          " from " + finishedWorkerPath);
+            }
 
-            LOG.info("coordinateSuperstep: " + finishedWorkerList.size() +
-                     " finished out of " + chosenWorkerHostnamePortMap.size());
+            if (LOG.isInfoEnabled()) {
+                LOG.info("coordinateSuperstep: " + finishedWorkerList.size() +
+                         " out of " +
+                         chosenWorkerHostnamePortMap.size() +
+                         " chosen workers finished on superstep " +
+                         getSuperstep());
+            }
             getContext().setStatus(getBspMapper().getMapFunctions() + " " +
                                    finishedWorkerList.size() +
                                    " finished out of " +
@@ -1266,8 +1403,16 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                 chosenWorkerHostnamePortMap.keySet())) {
                 break;
             }
-            getSuperstepWorkersFinishedChangedEvent().waitForever();
-            getSuperstepWorkersFinishedChangedEvent().reset();
+            getSuperstepStateChangedEvent().waitForever();
+            getSuperstepStateChangedEvent().reset();
+
+            // Did a worker die?
+            if ((getSuperstep() > 0) &&
+                    !superstepChosenWorkerAlive(
+                        workerHealthyPath,
+                        chosenWorkerHostnamePortMap.keySet())) {
+                return SuperstepState.WORKER_FAILURE;
+            }
         }
         collectAndProcessAggregatorValues(getSuperstep());
         Map<I, JSONObject> maxIndexStatsMap =
@@ -1284,16 +1429,9 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
                 throw new RuntimeException(e);
             }
         }
-        LOG.info("coordinateSuperstep: Aggregate got " + verticesFinished +
+        LOG.info("coordinateSuperstep: Aggregation found " + verticesFinished +
                  " of " + verticesTotal + " vertices finished on superstep = " +
                  getSuperstep());
-        if (verticesFinished == verticesTotal) {
-            // BspServiceWorkers will start cleaning up
-            synchronized(m_chosenSuperstepObject) {
-                m_chosenSuperstep = new Long(-1);
-                m_chosenWorkerList = null;
-            }
-        }
 
         // Convert the input split stats to vertex ranges in superstep 0
         if (getSuperstep() == 0) {
@@ -1329,14 +1467,15 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
             }
         }
 
-        // Clean up the old supersteps
+        // Clean up the old supersteps (always keep this one)
+        long removeableSuperstep = getSuperstep() - 1;
         if ((getConfiguration().getBoolean(
                 BspJob.KEEP_ZOOKEEPER_DATA,
                 BspJob.KEEP_ZOOKEEPER_DATA_DEFAULT) == false) &&
-            ((getSuperstep() - 1) >= 0)) {
+            (removeableSuperstep >= 0)) {
             String oldSuperstepPath =
                 getSuperstepPath(getApplicationAttempt()) + "/" +
-                (getSuperstep() - 1);
+                (removeableSuperstep);
             try {
                 LOG.info("coordinateSuperstep: Cleaning up old Superstep " +
                          oldSuperstepPath);
@@ -1353,7 +1492,9 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
 
         incrCachedSuperstep();
         m_superstepCounter.increment(1);
-        return (verticesFinished == verticesTotal);
+        return (verticesFinished == verticesTotal) ?
+            SuperstepState.ALL_SUPERSTEPS_DONE :
+            SuperstepState.THIS_SUPERSTEP_DONE;
     }
 
     private void cleanUpZooKeeper() {
@@ -1421,44 +1562,113 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
         // znode.  Once the number of znodes equals the number of partitions
         // for workers and masters, the master will clean up the ZooKeeper
         // znodes associated with this job.
-       String cleanedUpPath = CLEANED_UP_PATH  + "/" +
-           getTaskPartition() + MASTER_SUFFIX;
-       try {
-           String finalFinishedPath =
-               getZkExt().createExt(cleanedUpPath,
-                                    null,
-                                    Ids.OPEN_ACL_UNSAFE,
-                                    CreateMode.PERSISTENT,
-                                    true);
+        String cleanedUpPath = CLEANED_UP_PATH  + "/" +
+            getTaskPartition() + MASTER_SUFFIX;
+        try {
+            String finalFinishedPath =
+                getZkExt().createExt(cleanedUpPath,
+                                     null,
+                                     Ids.OPEN_ACL_UNSAFE,
+                                     CreateMode.PERSISTENT,
+                                     true);
             LOG.info("cleanup: Notifying master its okay to cleanup with " +
-                    finalFinishedPath);
-       } catch (KeeperException.NodeExistsException e) {
-           LOG.info("cleanup: Couldn't create finished node '" +
-                    cleanedUpPath);
-       } catch (Exception e) {
-           // cleanup phase -- just log the error
-           LOG.error(e.getMessage());
-       }
+                     finalFinishedPath);
+        } catch (KeeperException.NodeExistsException e) {
+            LOG.info("cleanup: Couldn't create finished node '" +
+                     cleanedUpPath);
+        } catch (Exception e) {
+            // cleanup phase -- just log the error
+            LOG.error(e.getMessage());
+        }
 
-       if (m_isMaster) {
-           cleanUpZooKeeper();
-           // If desired, cleanup the checkpoint directory
-           if (getConfiguration().getBoolean(
-                   BspJob.CLEANUP_CHECKPOINTS_AFTER_SUCCESS,
-                   BspJob.CLEANUP_CHECKPOINTS_AFTER_SUCCESS_DEFAULT)) {
-               boolean success =
-                   getFs().delete(new Path(CHECKPOINT_BASE_PATH), true);
-               LOG.info("cleanup: Removed HDFS checkpoint directory (" +
-                        CHECKPOINT_BASE_PATH + ") with return = " + success +
-                        " since this job succeeded ");
-           }
-       }
+        if (m_isMaster) {
+            cleanUpZooKeeper();
+            // If desired, cleanup the checkpoint directory
+            if (getConfiguration().getBoolean(
+                    BspJob.CLEANUP_CHECKPOINTS_AFTER_SUCCESS,
+                    BspJob.CLEANUP_CHECKPOINTS_AFTER_SUCCESS_DEFAULT)) {
+                boolean success =
+                    getFs().delete(new Path(CHECKPOINT_BASE_PATH), true);
+                LOG.info("cleanup: Removed HDFS checkpoint directory (" +
+                         CHECKPOINT_BASE_PATH + ") with return = " + success +
+                " since this job succeeded ");
+            }
+        }
 
-       try {
-           getZkExt().close();
-       } catch (InterruptedException e) {
-           // cleanup phase -- just log the error
-           LOG.error("cleanup: Zookeeper failed to close with " + e);
-       }
-   }
+        try {
+            getZkExt().close();
+        } catch (InterruptedException e) {
+            // cleanup phase -- just log the error
+            LOG.error("cleanup: Zookeeper failed to close with " + e);
+        }
+    }
+
+    /**
+     * Event that the master watches that denotes if a worker has done something
+     * that changes the state of a superstep (either a worker completed or died)
+     *
+     * @return Event that denotes a superstep state change
+     */
+    final public BspEvent getSuperstepStateChangedEvent() {
+        return m_superstepStateChanged;
+    }
+
+    /**
+     * Should this worker failure cause the current superstep to fail?
+     *
+     * @param failedWorkerPath Full path to the failed worker
+     */
+    final private void checkHealthyWorkerFailure(String failedWorkerPath) {
+        synchronized(m_vertexRangeSynchronization) {
+            if (getSuperstepFromPath(failedWorkerPath) < getSuperstep()) {
+                return;
+            }
+
+            // Check all the workers used in this superstep
+            NavigableMap<I, VertexRange<I, V, E, M>> vertexRangeMap =
+                getVertexRangeMap(getSuperstep());
+            String hostnameId =
+                getHealthyHostnameIdFromPath(failedWorkerPath);
+            for (VertexRange<I, V, E, M> vertexRange :
+                    vertexRangeMap.values()) {
+                if (vertexRange.getHostnameId().equals(hostnameId) ||
+                        ((vertexRange.getPreviousHostnameId() != null) &&
+                                vertexRange.getPreviousHostnameId().equals(
+                                    hostnameId))) {
+                    LOG.warn("checkHealthyWorkerFailure: " +
+                             "at least one healthy worker went down " +
+                             "for superstep " + getSuperstep() + " - " +
+                             hostnameId + ", will try to restart from " +
+                             "checkpointed superstep " +
+                             m_lastCheckpointedSuperstep);
+                    m_superstepStateChanged.signal();
+                }
+            }
+        }
+    }
+
+    @Override
+    public boolean processEvent(WatchedEvent event) {
+        boolean foundEvent = false;
+        if (event.getPath().contains(WORKER_HEALTHY_DIR) &&
+                (event.getType() == EventType.NodeDeleted)) {
+            if (LOG.isInfoEnabled()) {
+                LOG.info("processEvent: Healthy worker died (node deleted) " +
+                         "in " + event.getPath());
+            }
+            checkHealthyWorkerFailure(event.getPath());
+            m_superstepStateChanged.signal();
+            foundEvent = true;
+        } else if (event.getPath().contains(WORKER_FINISHED_DIR) &&
+                event.getType() == EventType.NodeChildrenChanged) {
+            if (LOG.isInfoEnabled()) {
+                LOG.info("processEvent: Worker finished (node change) event - " +
+                "m_superstepStateChanged signaled");
+            }
+            m_superstepStateChanged.signal();
+            foundEvent = true;
+        }
+
+        return foundEvent;
+    }
 }

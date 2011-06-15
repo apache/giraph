@@ -36,6 +36,8 @@ import org.apache.hadoop.util.ReflectionUtils;
 
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.WatchedEvent;
+import org.apache.zookeeper.Watcher.Event.EventType;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.data.Stat;
 
@@ -253,7 +255,8 @@ public class BspServiceWorker<
      * @throws ClassNotFoundException
      */
     private void loadVertices() throws
-            InstantiationException, IllegalAccessException, IOException, ClassNotFoundException {
+            InstantiationException, IllegalAccessException,
+            IOException, ClassNotFoundException {
         List<HadoopVertex<I, V, E, M>> vertexList =
             new ArrayList<HadoopVertex<I, V, E, M>>();
         String inputSplitPath = null;
@@ -435,14 +438,35 @@ public class BspServiceWorker<
         // 2. Wait for the INPUT_SPLIT_READY_PATH node has been created
         // 3. Process input splits until there are no more.
         // 4. Wait for superstep 0 to complete.
-        if (getManualRestartSuperstep() < -1) {
+        if (getRestartedSuperstep() < -1) {
             throw new RuntimeException(
                 "setup: Invalid superstep to restart - " +
-                getManualRestartSuperstep());
+                getRestartedSuperstep());
         }
-        else if (getManualRestartSuperstep() > 0) {
-            setCachedSuperstep(getManualRestartSuperstep());
+        else if (getRestartedSuperstep() > 0) {
+            setCachedSuperstep(getRestartedSuperstep());
             return;
+        }
+
+        JSONObject jobState = getJobState();
+        if (jobState != null) {
+            try {
+                if ((State.valueOf(jobState.getString(JSONOBJ_STATE_KEY)) ==
+                        State.START_SUPERSTEP) &&
+                        jobState.getLong(JSONOBJ_SUPERSTEP_KEY) ==
+                            getSuperstep()) {
+                    LOG.info("setup: Restarting from an automated " +
+                             "checkpointed superstep " +
+                             getSuperstep() + ", attempt " +
+                             getApplicationAttempt());
+                    setRestartedSuperstep(getSuperstep());
+                    return;
+                }
+            } catch (JSONException e) {
+                throw new RuntimeException(
+                    "setup: Failed to get key-values from " +
+                    jobState.toString(), e);
+            }
         }
 
         startSuperstep();
@@ -613,15 +637,27 @@ public class BspServiceWorker<
                                      CreateMode.EPHEMERAL,
                                      true);
         } catch (KeeperException.NodeExistsException e) {
-            LOG.info("registerHealth: myHealthPath already exists (likely " +
-                     "from previous failure): " + myHealthPath);
+            LOG.warn("registerHealth: myHealthPath already exists (likely " +
+                     "from previous failure): " + myHealthPath +
+                     ".  Waiting for change in attempts " +
+                     "to re-join the application");
+            getApplicationAttemptChangedEvent().waitForever();
+            if (LOG.isInfoEnabled()) {
+                LOG.info("registerHealth: Got application " +
+                         "attempt changed event, killing self");
+            }
+            throw new RuntimeException(
+                "registerHealth: Trying " +
+                "to get the new application attempt by killing self", e);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        LOG.info("registerHealth: Created my health node for attempt=" +
-                 getApplicationAttempt() + ", superstep=" +
-                 getSuperstep() + " with " + m_myHealthZnode +
-                 " and hostnamePort = " + hostnamePort.toString());
+        if (LOG.isInfoEnabled()) {
+            LOG.info("registerHealth: Created my health node for attempt=" +
+                     getApplicationAttempt() + ", superstep=" +
+                     getSuperstep() + " with " + m_myHealthZnode +
+                     " and hostnamePort = " + hostnamePort.toString());
+        }
     }
 
     public boolean startSuperstep() {
@@ -656,9 +692,9 @@ public class BspServiceWorker<
 
     @Override
     public boolean finishSuperstep(final Map<I, long []> maxIndexStatsMap) {
-        // TODO: Note that this barrier blocks until success.  It would be
-        // best if it were interruptible if for instance there was a failure.
-
+        // This barrier blocks until success (or the master signals it to
+        // restart).
+        //
         // Master will coordinate the barriers and aggregate "doneness" of all
         // the vertices.  Each worker will:
         // 1. Save aggregator values that are in use.
@@ -737,7 +773,8 @@ public class BspServiceWorker<
                  ", numVertices=" + m_totalVertices);
         incrCachedSuperstep();
         getContext().setStatus(getBspMapper().getMapFunctions().toString() +
-                               " - Superstep " + getSuperstep());
+                               " - Attempt=" + getApplicationAttempt() +
+                               ", Superstep=" + getSuperstep());
         return (finishedVertices == m_totalVertices);
     }
 
@@ -1184,7 +1221,38 @@ public class BspServiceWorker<
         }
     }
 
+    @Override
     public NavigableMap<I, VertexRange<I, V, E, M>> getVertexRangeMap() {
         return getVertexRangeMap(getSuperstep());
+    }
+
+    @Override
+    protected boolean processEvent(WatchedEvent event) {
+        boolean foundEvent = false;
+        if (event.getPath().startsWith(MASTER_JOB_STATE_PATH) &&
+                (event.getType() == EventType.NodeChildrenChanged)) {
+            if (LOG.isInfoEnabled()) {
+                LOG.info("processEvent: Job state changed, checking " +
+                         "to see if it needs to restart");
+            }
+            JSONObject jsonObj = getJobState();
+            try {
+                if ((State.valueOf(jsonObj.getString(JSONOBJ_STATE_KEY)) ==
+                        State.START_SUPERSTEP) &&
+                        jsonObj.getLong(JSONOBJ_APPLICATION_ATTEMPT_KEY) !=
+                        getApplicationAttempt() &&
+                        getSuperstep() > 0) {
+                    LOG.fatal("processEvent: Worker will restart from command - " +
+                              jsonObj.toString());
+                    System.exit(-1);
+                }
+            } catch (JSONException e) {
+                throw new RuntimeException(
+                    "processEvent: Couldn't properly get job state from " +
+                    jsonObj.toString());
+            }
+            return true;
+        }
+        return foundEvent;
     }
 }

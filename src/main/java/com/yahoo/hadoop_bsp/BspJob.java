@@ -426,6 +426,9 @@ public class BspJob extends Job {
                 m_manager.onlineZooKeeperServers();
                 serverPortList = m_manager.getZooKeeperServerPortString();
             }
+            context.setStatus("setup: Connected to Zookeeper service " +
+                              serverPortList);
+
             if (m_conf.getInt(BspJob.ZOOKEEPER_SERVER_COUNT,
                         BspJob.ZOOKEEPER_SERVER_COUNT_DEFAULT) > 1) {
                 Thread.sleep(BspJob.DEFAULT_ZOOKEEPER_INIT_LIMIT *
@@ -529,7 +532,18 @@ public class BspJob extends Job {
             }
             m_mapAlreadyRun = true;
 
-            m_serviceWorker.getRepresentativeVertex().preApplication();
+            HadoopVertex.setContext(context);
+            try {
+                m_serviceWorker.getRepresentativeVertex().preApplication();
+            } catch (InstantiationException e) {
+                LOG.fatal("map: preApplication failed in instantiation", e);
+                throw new RuntimeException(
+                    "map: preApplication failed in instantiation", e);
+            } catch (IllegalAccessException e) {
+                LOG.fatal("map: preApplication failed in access", e);
+                throw new RuntimeException(
+                    "map: preApplication failed in access",e );
+            }
             context.progress();
 
             long verticesFinished = 0;
@@ -557,11 +571,12 @@ public class BspJob extends Job {
                 }
                 context.progress();
 
-                // Might need to restart from another superstep (manually), or
-                // store a checkpoint
-                if (m_serviceWorker.getManualRestartSuperstep() == superstep) {
+                // Might need to restart from another superstep
+                // (manually or automatic), or store a checkpoint
+                if (m_serviceWorker.getRestartedSuperstep() == superstep) {
+                    LOG.info("map: Loading from checkpoint " + superstep);
                     m_serviceWorker.loadCheckpoint(
-                        m_serviceWorker.getManualRestartSuperstep());
+                        m_serviceWorker.getRestartedSuperstep());
                 } else if (m_serviceWorker.checkpointFrequencyMet(superstep)) {
                     m_serviceWorker.storeCheckpoint();
                 }

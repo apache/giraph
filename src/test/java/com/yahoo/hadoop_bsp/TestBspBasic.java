@@ -88,7 +88,9 @@ public class TestBspBasic extends BspCase {
     }
 
     /**
-     * Run a sample BSP job in JobTracker, kill a task, and make sure the job fails.
+     * Run a sample BSP job in JobTracker, kill a task, and make sure
+     * the job fails (not enough attempts to restart)
+     *
      * @throws IOException
      * @throws ClassNotFoundException
      * @throws InterruptedException
@@ -102,7 +104,7 @@ public class TestBspBasic extends BspCase {
         }
         Configuration conf = new Configuration();
         setupConfiguration(conf);
-        conf.setInt("mapred.map.max.attempts", 2);
+        conf.setInt("mapred.map.max.attempts", 1);
         FileSystem hdfs = FileSystem.get(conf);
         conf.setClass(BspJob.VERTEX_CLASS,
                       SimpleFailVertex.class,

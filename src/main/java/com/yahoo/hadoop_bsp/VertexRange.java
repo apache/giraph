@@ -36,6 +36,8 @@ public class VertexRange<I extends WritableComparable,
     private String m_previousHostname = null;
     /** Previous port (correlates to previous host), -1 if not used */
     private int m_previousPort = -1;
+    /** Previous hostname and partition id */
+    private String m_previousHostnameId = null;
     /** Max vertex index */
     private I m_maxVertexIndex = null;
     /** Hostname and partition id */
@@ -57,8 +59,8 @@ public class VertexRange<I extends WritableComparable,
         String retString = new String();
         retString += "[hostname=" + getHostname() + ",port=" + getPort() +
             ",prevHostname=" + getPreviousHostname() + ",prevPort=" +
-            getPreviousPort() + ",vertexCount" +
-            getVertexCount() + ",edgeCount=" + getEdgeCount() +
+            getPreviousPort() + ",prevHostnameId=" + getPreviousHostnameId() +
+            ",vertexCount" + getVertexCount() + ",edgeCount=" + getEdgeCount() +
             ",checkpointFile=" + getCheckpointFilePrefix() + ",hostnameId" +
             getHostnameId() + "]";
         return retString;
@@ -230,8 +232,16 @@ public class VertexRange<I extends WritableComparable,
         m_previousHostname = previousHostname;
     }
 
-    public int getPreviousPort() {
+    public final int getPreviousPort() {
         return m_previousPort;
+    }
+
+    public final void setPreviousHostnameId(String previousHostnameId) {
+        m_previousHostnameId = previousHostnameId;
+    }
+
+    public final String getPreviousHostnameId() {
+        return m_previousHostnameId;
     }
 
     public void setPreviousPort(int previousPort) {

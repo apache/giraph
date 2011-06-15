@@ -29,7 +29,8 @@ public class SimplePageRankVertex extends
         Logger.getLogger(SimplePageRankVertex.class);
 
     @Override
-    public void preApplication() {
+    public void preApplication()
+            throws InstantiationException, IllegalAccessException {
         registerAggregator("sum", LongSumAggregator.class);
         registerAggregator("min", MinAggregator.class);
         registerAggregator("max", MaxAggregator.class);
@@ -78,28 +79,25 @@ public class SimplePageRankVertex extends
         LongSumAggregator sumAggreg = (LongSumAggregator) getAggregator("sum");
         MinAggregator minAggreg = (MinAggregator) getAggregator("min");
         MaxAggregator maxAggreg = (MaxAggregator) getAggregator("max");
-        if (getSuperstep() >= 1) {
-            double sum = 0;
-            while (msgIterator.hasNext()) {
-                sum += msgIterator.next().get();
-            }
-            DoubleWritable vertexValue =
-                new DoubleWritable((0.15f / getNumVertices()) + 0.85f * sum);
-            setVertexValue(vertexValue);
-            maxAggreg.aggregate(vertexValue);
-            minAggreg.aggregate(vertexValue);
-            sumAggreg.aggregate(1L);
-            LOG.info(getVertexId() + ": PageRank=" + vertexValue +
-                    " max=" + maxAggreg.getAggregatedValue() +
-                    " min=" + minAggreg.getAggregatedValue());
-
-            if (getSuperstep() < 30) {
-                long edges = getOutEdgeIterator().size();
-                sentMsgToAllEdges(
-                    new DoubleWritable(getVertexValue().get() / edges));
-            } else {
-                voteToHalt();
-            }
+        double sum = 0;
+        while (msgIterator.hasNext()) {
+            sum += msgIterator.next().get();
+        }
+        DoubleWritable vertexValue =
+            new DoubleWritable((0.15f / getNumVertices()) + 0.85f * sum);
+        setVertexValue(vertexValue);
+        maxAggreg.aggregate(vertexValue);
+        minAggreg.aggregate(vertexValue);
+        sumAggreg.aggregate(1L);
+        LOG.info(getVertexId() + ": PageRank=" + vertexValue +
+                 " max=" + maxAggreg.getAggregatedValue() +
+                 " min=" + minAggreg.getAggregatedValue());
+        if (getSuperstep() < 30) {
+            long edges = getOutEdgeIterator().size();
+            sentMsgToAllEdges(
+                new DoubleWritable(getVertexValue().get() / edges));
+        } else {
+            voteToHalt();
         }
     }
 

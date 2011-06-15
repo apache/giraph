@@ -25,6 +25,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.log4j.Logger;
+import org.apache.zookeeper.server.quorum.QuorumPeerMain;
 
 /**
  * Manages the election of ZooKeeper servers, starting/stopping the services,
@@ -203,7 +204,7 @@ public class ZooKeeperManager {
             m_fs.createNewFile(myCandidacyPath);
         } catch (IOException e) {
             LOG.error("createCandidateStamp: Failed (maybe previous task " +
-                      "failed) to create filestamp " + myCandidacyPath);
+                      "failed) to create filestamp " + myCandidacyPath, e);
         }
     }
 
@@ -359,9 +360,11 @@ public class ZooKeeperManager {
         List<String> serverHostList = Arrays.asList(serverListFile.substring(
             ZOOKEEPER_SERVER_LIST_FILE_PREFIX.length()).split(
                 HOSTNAME_TASK_SEPARATOR));
-        LOG.info("getZooKeeperServerList: Found " + serverHostList + " " +
-                 serverHostList.size() +
-                 " hosts in filename '" + serverListFile + "'");
+        if (LOG.isInfoEnabled()) {
+            LOG.info("getZooKeeperServerList: Found " + serverHostList + " " +
+                     serverHostList.size() +
+                     " hosts in filename '" + serverListFile + "'");
+        }
         if (serverHostList.size() != m_serverCount * 2) {
             throw new RuntimeException("getZooKeeperServerList: Impossible " +
                                        " that " + serverHostList.size() +
@@ -458,7 +461,8 @@ public class ZooKeeperManager {
             List<String> commandList = new ArrayList<String>();
             String javaHome = System.getProperty("java.home");
             if (javaHome == null) {
-                throw new RuntimeException("java.home is not set!");
+                throw new RuntimeException(
+                    "onlineZooKeeperServers: java.home is not set!");
             }
             commandList.add(javaHome + "/bin/java");
             commandList.add(m_conf.get(BspJob.ZOOKEEPER_JAVA_OPTS,
@@ -466,7 +470,7 @@ public class ZooKeeperManager {
             commandList.add("-cp");
             Path fullJarPath = new Path(m_conf.get(BspJob.ZOOKEEPER_JAR));
             commandList.add(fullJarPath.toString());
-            commandList.add("org.apache.zookeeper.server.quorum.QuorumPeerMain");
+            commandList.add(QuorumPeerMain.class.getName());
             commandList.add(m_configFilePath);
             processBuilder.command(commandList);
             File execDirectory = new File(m_conf.get(
@@ -520,13 +524,15 @@ public class ZooKeeperManager {
                     break;
                 } catch (SocketTimeoutException e) {
                     LOG.warn("onlineZooKeeperServers: Got " +
-                             "SocketTimeoutException - " + e.getMessage());
+                             "SocketTimeoutException", e);
                 } catch (ConnectException e) {
                     LOG.warn("onlineZooKeeperServers: Got " +
-                             "ConnectException - " + e.getMessage());
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
+                             "ConnectException", e);
+                } catch (IOException e) {
+                    LOG.warn("onlineZooKeeperServers: Got " +
+                             "IOException", e);
                 }
+
                 ++connectAttempts;
                 try {
                     Thread.sleep(m_pollMsecs);
@@ -547,8 +553,8 @@ public class ZooKeeperManager {
                         myReadyPath);
                 m_fs.createNewFile(myReadyPath);
             } catch (IOException e) {
-                LOG.error("createCandidateStamp: Failed (maybe previous task " +
-                          "failed) to create filestamp " + myReadyPath);
+                LOG.error("onlineZooKeeperServers: Failed (maybe previous " +
+                          "task failed) to create filestamp " + myReadyPath);
             }
         }
         else {
@@ -573,19 +579,29 @@ public class ZooKeeperManager {
                             }
                             foundList.add(hostnameTaskArray[0]);
                         }
-                        LOG.info("onlineZooKeeperServers: Got " +
-                                 foundList + " " +
-                                 foundList.size() + " hosts from " +
-                                 fileStatusArray.length + " ready servers when " +
-                                 m_serverCount + " required (polling period is " +
-                                 m_pollMsecs + ") on attempt " +
-                                 readyRetrievalAttempt);
+                        if (LOG.isInfoEnabled()) {
+                            LOG.info("onlineZooKeeperServers: Got " +
+                                     foundList + " " +
+                                     foundList.size() + " hosts from " +
+                                     fileStatusArray.length +
+                                     " ready servers when " +
+                                     m_serverCount +
+                                     " required (polling period is " +
+                                     m_pollMsecs + ") on attempt " +
+                                     readyRetrievalAttempt);
+                        }
                         if (foundList.containsAll(m_zkServerPortMap.keySet())) {
                             break;
                         }
-                        Thread.sleep(m_pollMsecs);
-                        ++readyRetrievalAttempt;
+                    } else {
+                        if (LOG.isInfoEnabled()) {
+                            LOG.info("onlineZooKeeperSErvers: Empty " +
+                                     "directory " + m_serverDirectory +
+                                     ", waiting " + m_pollMsecs + " msecs.");
+                        }
                     }
+                    Thread.sleep(m_pollMsecs);
+                    ++readyRetrievalAttempt;
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 } catch (InterruptedException e) {

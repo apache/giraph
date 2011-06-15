@@ -48,7 +48,6 @@ public class TestManualCheckpoint extends BspCase {
     public void testBspCheckpoint()
         throws IOException, InterruptedException, ClassNotFoundException {
         Configuration conf = new Configuration();
-        conf.set("mapred.jar", getJarLocation());
         setupConfiguration(conf);
         FileSystem hdfs = FileSystem.get(conf);
         conf.setClass(BspJob.VERTEX_CLASS,

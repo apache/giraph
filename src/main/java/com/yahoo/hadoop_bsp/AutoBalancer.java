@@ -47,7 +47,7 @@ public final class AutoBalancer<I extends WritableComparable,
     private static BalCriterium balanceOn =
         BalCriterium.BAL_NUM_VERTICES_AND_EDGES;
 
-    public void setBalCriterium(BalCriterium balanceOn) {
+    public static void setBalCriterium(BalCriterium balanceOn) {
         AutoBalancer.balanceOn = balanceOn;
     }
 

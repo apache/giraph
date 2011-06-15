@@ -1,6 +1,8 @@
 package com.yahoo.hadoop_bsp;
 
 import java.io.IOException;
+import java.security.InvalidParameterException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -13,6 +15,7 @@ import java.net.UnknownHostException;
 import org.apache.log4j.Logger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper.Context;
@@ -26,6 +29,7 @@ import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.yahoo.hadoop_bsp.BspJob.BspMapper;
@@ -36,31 +40,44 @@ import com.yahoo.hadoop_bsp.BspJob.BspMapper;
  *
  */
 @SuppressWarnings("rawtypes")
-public class BspService <
-    I extends WritableComparable, V extends Writable, E extends Writable,
-    M extends Writable> implements Watcher {
+public abstract class BspService <
+        I extends WritableComparable, V extends Writable, E extends Writable,
+        M extends Writable> implements Watcher, CentralizedService<I, V, E, M> {
     /** Private ZooKeeper instance that implements the service */
     private final ZooKeeperExt m_zk;
     /** Has worker registration changed (either healthy or unhealthy) */
-    private final BspEvent m_workerHealthRegistrationChanged;
+    private final BspEvent m_workerHealthRegistrationChanged =
+        new PredicateLock();
     /** InputSplits are ready for consumption by workers */
-    private final BspEvent m_inputSplitsAllReadyChanged;
+    private final BspEvent m_inputSplitsAllReadyChanged =
+        new PredicateLock();
     /** InputSplit reservation or finished notification and synchronization */
-    private final BspEvent m_inputSplitsStateChanged;
+    private final BspEvent m_inputSplitsStateChanged =
+        new PredicateLock();
     /** Are the worker assignments of vertex ranges ready? */
-    private final BspEvent m_vertexRangeAssignmentsReadyChanged;
+    private final BspEvent m_vertexRangeAssignmentsReadyChanged =
+        new PredicateLock();
     /** Have the vertex range exchange children changed? */
-    private final BspEvent m_vertexRangeExchangeChildrenChanged;
+    private final BspEvent m_vertexRangeExchangeChildrenChanged =
+        new PredicateLock();
     /** Are the vertex range exchanges done? */
-    private final BspEvent m_vertexRangeExchangeFinishedChanged;
+    private final BspEvent m_vertexRangeExchangeFinishedChanged =
+        new PredicateLock();
+    /** Application attempt changed */
+    private final BspEvent m_applicationAttemptChanged =
+        new PredicateLock();
     /** Superstep finished synchronization */
-    private final BspEvent m_superstepFinished;
-    /** Superstep workers finished changed synchronization */
-    private final BspEvent m_superstepWorkersFinishedChanged;
+    private final BspEvent m_superstepFinished =
+        new PredicateLock();
     /** Master election changed for any waited on attempt */
-    private final BspEvent m_masterElectionChildrenChanged;
+    private final BspEvent m_masterElectionChildrenChanged =
+        new PredicateLock();
     /** Cleaned up directory children changed*/
-    private final BspEvent m_cleanedUpChildrenChanged;
+    private final BspEvent m_cleanedUpChildrenChanged =
+        new PredicateLock();
+    /** Registered list of BspEvents */
+    private final List<BspEvent> m_registeredBspEvents =
+        new ArrayList<BspEvent>();
     /** Configuration of the job*/
     private final Configuration m_conf;
     /** Job context (mainly for progress) */
@@ -81,12 +98,10 @@ public class BspService <
     private final BspJob.BspMapper<I, V, E, M> m_bspMapper;
     /** Class logger */
     private static final Logger LOG = Logger.getLogger(BspService.class);
-    /** The current known job state */
-    private State m_currentJobState = State.UNKNOWN;
     /** File system */
     private final FileSystem m_fs;
-    /** Restarted manually from a checkpoint? */
-    private long m_manualRestartSuperstep = -1;
+    /** Restarted from a checkpoint (manual or automatic) */
+    private long m_restartedSuperstep = -1;
     /** Vertex class */
     private final Class<? extends HadoopVertex<I, V, E, M>> m_hadoopVertexClass;
     /**
@@ -109,11 +124,10 @@ public class BspService <
 
     /** State of the application */
     public enum State {
-        UNKNOWN,
-        INIT,
-        RUNNING,
-        FAILED,
-        FINISHED
+        UNKNOWN, ///< Shouldn't be seen, just an initial state
+        START_SUPERSTEP, ///< Start from a desired superstep
+        FAILED, ///< Unrecoverable
+        FINISHED ///< Successful completion
     }
 
     public static final String BASE_DIR = "/_hadoopBsp";
@@ -161,6 +175,11 @@ public class BspService <
     public static final String JSONOBJ_PREVIOUS_HOSTNAME_KEY =
         "_previousHostnameKey";
     public static final String JSONOBJ_PREVIOUS_PORT_KEY = "_previousPortKey";
+    public static final String JSONOBJ_STATE_KEY = "_stateKey";
+    public static final String JSONOBJ_APPLICATION_ATTEMPT_KEY =
+        "_applicationAttemptKey";
+    public static final String JSONOBJ_SUPERSTEP_KEY =
+        "_superstepKey";
     public static final String AGGREGATOR_NAME_KEY = "_aggregatorNameKey";
     public static final String AGGREGATOR_CLASS_NAME_KEY =
         "_aggregatorClassNameKey";
@@ -185,6 +204,47 @@ public class BspService <
     public final String CHECKPOINT_BASE_PATH;
     /** Path to the master election path */
     public final String MASTER_ELECTION_PATH;
+
+    /**
+     * Get the superstep from a ZooKeeper path
+     *
+     * @param path Path to parse for the superstep
+     */
+    public static long getSuperstepFromPath(String path) {
+        int foundSuperstepStart = path.indexOf(SUPERSTEP_DIR);
+        if (foundSuperstepStart == -1) {
+            throw new IllegalArgumentException(
+                "getSuperstepFromPath: Cannot find " + SUPERSTEP_DIR +
+                "from " + path);
+        }
+        foundSuperstepStart += SUPERSTEP_DIR.length() + 1;
+        int endIndex = foundSuperstepStart +
+            path.substring(foundSuperstepStart).indexOf("/");
+        if (endIndex == -1) {
+            throw new IllegalArgumentException(
+                "getSuperstepFromPath: Cannot find end of superstep from " +
+                path);
+        }
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("getSuperstepFromPath: Got path=" + path +
+                      ", start=" + foundSuperstepStart + ", end=" + endIndex);
+        }
+        return Long.parseLong(path.substring(foundSuperstepStart, endIndex));
+    }
+
+    /**
+     * Get the hostname and id from a "healthy" worker path
+     */
+    public static String getHealthyHostnameIdFromPath(String path) {
+        int foundWorkerHealthyStart = path.indexOf(WORKER_HEALTHY_DIR);
+        if (foundWorkerHealthyStart == -1) {
+            throw new IllegalArgumentException(
+                "getHealthyHostnameidFromPath: Couldn't find " +
+                WORKER_HEALTHY_DIR + " from " + path);
+        }
+        foundWorkerHealthyStart += WORKER_HEALTHY_DIR.length();
+        return path.substring(foundWorkerHealthyStart);
+    }
 
     /**
      * Generate the base superstep directory path for a given application
@@ -328,7 +388,24 @@ public class BspService <
      * If at the end of a checkpoint file, indicates the stitched checkpoint
      * file prefixes.  A checkpoint is not valid if this file does not exist.
      */
-    public final String CHECKPOINT_FINALIZED_POSTFIX = ".finalized";
+    public static final String CHECKPOINT_FINALIZED_POSTFIX = ".finalized";
+
+    /**
+     * Get the checkpoint from a finalized checkpoint path
+     *
+     * @param path Path contain
+     * @return checkpoint of the finalized path
+     */
+    public static long getCheckpoint(Path finalizedPath) {
+        if (!finalizedPath.getName().endsWith(CHECKPOINT_FINALIZED_POSTFIX)) {
+            throw new InvalidParameterException(
+                "getCheckpoint: " + finalizedPath + "Doesn't end in " +
+                CHECKPOINT_FINALIZED_POSTFIX);
+        }
+        String checkpointString =
+            finalizedPath.getName().replace(CHECKPOINT_FINALIZED_POSTFIX, "");
+        return Long.parseLong(checkpointString);
+    }
 
     /**
      * Get the ZooKeeperExt instance.
@@ -339,13 +416,18 @@ public class BspService <
         return m_zk;
     }
 
+    @Override
+    final public long getRestartedSuperstep() {
+        return m_restartedSuperstep;
+    }
+
     /**
-     * Get the manually restart superstep
+     * Set the restarted superstep
      *
-     * @return -1 if not manually restarted, otherwise the superstep id
+     * @param superstep Set the manually restarted superstep
      */
-    final public long getManualRestartSuperstep() {
-        return m_manualRestartSuperstep;
+    final public void setRestartedSuperstep(long superstep) {
+        m_restartedSuperstep= superstep;
     }
 
     final public boolean checkpointFrequencyMet(long superstep) {
@@ -391,8 +473,6 @@ public class BspService <
         return m_bspMapper;
     }
 
-
-
     final public BspEvent getWorkerHealthRegistrationChangedEvent() {
         return m_workerHealthRegistrationChanged;
     }
@@ -417,13 +497,14 @@ public class BspService <
         return m_vertexRangeExchangeFinishedChanged;
     }
 
+    final public BspEvent getApplicationAttemptChangedEvent() {
+        return m_applicationAttemptChanged;
+    }
+
     final public BspEvent getSuperstepFinishedEvent() {
         return m_superstepFinished;
     }
 
-    final public BspEvent getSuperstepWorkersFinishedChangedEvent() {
-        return m_superstepWorkersFinishedChanged;
-    }
 
     final public BspEvent getMasterElectionChildrenChangedEvent() {
         return m_masterElectionChildrenChanged;
@@ -433,34 +514,45 @@ public class BspService <
         return m_cleanedUpChildrenChanged;
     }
 
-    final public State getJobState() {
-        synchronized(this) {
-            if (m_currentJobState == State.UNKNOWN) {
-                try {
-                    getZkExt().createExt(MASTER_JOB_STATE_PATH,
-                                         State.UNKNOWN.toString().getBytes(),
-                                         Ids.OPEN_ACL_UNSAFE,
-                                         CreateMode.PERSISTENT,
-                                         true);
-                } catch (KeeperException.NodeExistsException e) {
-                    LOG.info("getJobState: Job state already exists (" +
-                             MASTER_JOB_STATE_PATH + ")");
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
+    /**
+     * Get the master commanded job state as a JSONObject.  Also sets the
+     * watches to see if the master commanded job state changes.
+     *
+     * @return Last job state or null if none
+     */
+    final public JSONObject getJobState() {
+        try {
+            getZkExt().createExt(MASTER_JOB_STATE_PATH,
+                                 null,
+                                 Ids.OPEN_ACL_UNSAFE,
+                                 CreateMode.PERSISTENT,
+                                 true);
+        } catch (KeeperException.NodeExistsException e) {
+            LOG.info("getJobState: Job state already exists (" +
+                     MASTER_JOB_STATE_PATH + ")");
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        String jobState = null;
+        try {
+            List<String> childList =
+                m_zk.getChildrenExt(MASTER_JOB_STATE_PATH, true, true, true);
+            if (childList.isEmpty()) {
+                return null;
             }
-            try {
-                String jobState = new String(
-                    m_zk.getData(MASTER_JOB_STATE_PATH, true, null));
-                m_currentJobState = State.valueOf(jobState);
-            } catch (KeeperException.NoNodeException e) {
-                LOG.info("getJobState: Job state path is empty! - " +
-                         MASTER_JOB_STATE_PATH);
-                m_currentJobState = State.UNKNOWN;
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-            return m_currentJobState;
+            jobState =
+                new String(m_zk.getData(childList.get(childList.size() - 1), true, null));
+        } catch (KeeperException.NoNodeException e) {
+            LOG.info("getJobState: Job state path is empty! - " +
+                     MASTER_JOB_STATE_PATH);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        try {
+            return new JSONObject(jobState);
+        } catch (JSONException e) {
+            throw new RuntimeException(
+                "getJobState: Failed to parse job state " + jobState);
         }
     }
 
@@ -468,24 +560,25 @@ public class BspService <
                       int sessionMsecTimeout,
                       Context context,
                       BspJob.BspMapper<I, V, E, M> bspMapper) {
+        registerBspEvent(m_workerHealthRegistrationChanged);
+        registerBspEvent(m_inputSplitsAllReadyChanged);
+        registerBspEvent(m_inputSplitsStateChanged);
+        registerBspEvent(m_vertexRangeAssignmentsReadyChanged);
+        registerBspEvent(m_vertexRangeExchangeChildrenChanged);
+        registerBspEvent(m_vertexRangeExchangeFinishedChanged);
+        registerBspEvent(m_applicationAttemptChanged);
+        registerBspEvent(m_superstepFinished);
+        registerBspEvent(m_masterElectionChildrenChanged);
+        registerBspEvent(m_cleanedUpChildrenChanged);
+
         m_context = context;
         m_bspMapper = bspMapper;
         m_conf = context.getConfiguration();
         m_jobId = m_conf.get("mapred.job.id", "Unknown Job");
         m_taskPartition = m_conf.getInt("mapred.task.partition", -1);
-        m_workerHealthRegistrationChanged = new ContextLock(m_context);
-        m_inputSplitsAllReadyChanged = new ContextLock(m_context);
-        m_inputSplitsStateChanged = new ContextLock(m_context);
-        m_vertexRangeAssignmentsReadyChanged = new ContextLock(m_context);
-        m_vertexRangeExchangeChildrenChanged = new ContextLock(m_context);
-        m_vertexRangeExchangeFinishedChanged = new ContextLock(m_context);
-        m_superstepFinished = new ContextLock(m_context);
-        m_superstepWorkersFinishedChanged = new ContextLock(m_context);
-        m_masterElectionChildrenChanged = new ContextLock(m_context);
-        m_cleanedUpChildrenChanged = new ContextLock(m_context);
-        m_manualRestartSuperstep =
+        m_restartedSuperstep =
             m_conf.getLong(BspJob.RESTART_SUPERSTEP, -1);
-        m_cachedSuperstep = m_manualRestartSuperstep;
+        m_cachedSuperstep = m_restartedSuperstep;
         try {
             m_hostname = InetAddress.getLocalHost().getHostName();
         } catch (UnknownHostException e) {
@@ -651,7 +744,7 @@ public class BspService <
      *
      * @return the latest superstep
      */
-     final public long getSuperstep() {
+    final public long getSuperstep() {
         if (m_cachedSuperstep != -1) {
             return m_cachedSuperstep;
         }
@@ -688,250 +781,274 @@ public class BspService <
     /**
      * Increment the cached superstep.
      */
-     final public void incrCachedSuperstep() {
-         if (m_cachedSuperstep == -1) {
-             throw new RuntimeException("incrSuperstep: Invalid -1 superstep.");
-         }
-         ++m_cachedSuperstep;
-     }
+    final public void incrCachedSuperstep() {
+        if (m_cachedSuperstep == -1) {
+            throw new RuntimeException("incrSuperstep: Invalid -1 superstep.");
+        }
+        ++m_cachedSuperstep;
+    }
 
-     /**
-      * Set the cached superstep (should only be used for loading checkpoints
-      * or recovering from failure).
-      *
-      * @param superstep will be used as the next superstep iteration
-      */
-     final public void setCachedSuperstep(long superstep) {
-         m_cachedSuperstep = superstep;
-     }
+    /**
+     * Set the cached superstep (should only be used for loading checkpoints
+     * or recovering from failure).
+     *
+     * @param superstep will be used as the next superstep iteration
+     */
+    final public void setCachedSuperstep(long superstep) {
+        m_cachedSuperstep = superstep;
+    }
 
-     public NavigableMap<I, VertexRange<I, V, E, M>> getVertexRangeMap(
-             long superstep) {
-         LOG.debug("getVertexRangeMap: Current superstep = " + getSuperstep() +
-                   ", desired superstep = " + superstep);
-         // The master will try to get superstep 0 and need to be refreshed
-         // The worker will try to get superstep 0 and needs to get its value
-         if (superstep == 0) {
-             if (getSuperstep() == 1) {
-                 // Master should refresh
-             }
-             else if (getSuperstep() == 0) {
-                 // Worker will populate
-                 return m_vertexRangeMap;
-             }
-         }
-         else if (m_vertexRangeSuperstep == superstep) {
-             return m_vertexRangeMap;
-         }
+    /**
+     * Set the cached application attempt (should only be used for restart from
+     * failure by the master)
+     *
+     * @param applicationAttempt Will denote the new application attempt
+     */
+    final public void setApplicationAttempt(long applicationAttempt) {
+        m_cachedApplicationAttempt = applicationAttempt;
+        String superstepPath = getSuperstepPath(m_cachedApplicationAttempt);
+        try {
+            getZkExt().createExt(superstepPath,
+                                 null,
+                                 Ids.OPEN_ACL_UNSAFE,
+                                 CreateMode.PERSISTENT,
+                                 true);
+        } catch (KeeperException.NodeExistsException e) {
+            throw new IllegalArgumentException(
+                "setApplicationAttempt: Attempt already exists! - " +
+                superstepPath, e);
+        } catch (KeeperException e) {
+            throw new RuntimeException(
+                "setApplicationAttempt: KeeperException - " +
+                superstepPath, e);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(
+                "setApplicationAttempt: InterruptedException - " +
+                superstepPath, e);
+        }
+    }
 
-         m_vertexRangeSuperstep = superstep;
-         NavigableMap<I, VertexRange<I, V, E, M>> vertexRangeMap =
-             new TreeMap<I, VertexRange<I, V, E, M>>();
-         String vertexRangeAssignmentsPath =
-             getVertexRangeAssignmentsPath(getApplicationAttempt(),
-                                           superstep);
-         try {
-             JSONArray vertexRangeAssignmentsArray =
-                 new JSONArray(
-                     new String(
-                         getZkExt().getData(vertexRangeAssignmentsPath,
-                                            false,
-                                            null)));
-             LOG.debug("getVertexRangeSet: Found vertex ranges " +
-                       vertexRangeAssignmentsArray.toString() +
-                       " on superstep " + superstep);
-             for (int i = 0; i < vertexRangeAssignmentsArray.length(); ++i) {
-                 JSONObject vertexRangeObj =
-                     vertexRangeAssignmentsArray.getJSONObject(i);
-                 @SuppressWarnings("unchecked")
+    public NavigableMap<I, VertexRange<I, V, E, M>> getVertexRangeMap(
+            long superstep) {
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("getVertexRangeMap: Current superstep = " + getSuperstep() +
+                      ", desired superstep = " + superstep);
+        }
+        // The master will try to get superstep 0 and need to be refreshed
+        // The worker will try to get superstep 0 and needs to get its value
+        if (superstep == 0) {
+            if (getSuperstep() == 1) {
+                // Master should refresh
+            }
+            else if (getSuperstep() == 0) {
+                // Worker will populate
+                return m_vertexRangeMap;
+            }
+        }
+        else if (m_vertexRangeSuperstep == superstep) {
+            return m_vertexRangeMap;
+        }
+
+        m_vertexRangeSuperstep = superstep;
+        NavigableMap<I, VertexRange<I, V, E, M>> vertexRangeMap =
+            new TreeMap<I, VertexRange<I, V, E, M>>();
+        String vertexRangeAssignmentsPath =
+            getVertexRangeAssignmentsPath(getApplicationAttempt(),
+                                          superstep);
+        try {
+            JSONArray vertexRangeAssignmentsArray =
+                new JSONArray(
+                    new String(getZkExt().getData(vertexRangeAssignmentsPath,
+                                                  false,
+                                                  null)));
+            LOG.debug("getVertexRangeSet: Found vertex ranges " +
+                      vertexRangeAssignmentsArray.toString() +
+                      " on superstep " + superstep);
+            for (int i = 0; i < vertexRangeAssignmentsArray.length(); ++i) {
+                JSONObject vertexRangeObj =
+                    vertexRangeAssignmentsArray.getJSONObject(i);
+                @SuppressWarnings("unchecked")
                 Class<I> indexClass = (Class<I>) createVertexIndex().getClass();
-                 VertexRange<I, V, E, M> vertexRange =
-                     new VertexRange<I, V, E, M>(indexClass,
-                                                 vertexRangeObj);
-                 if (vertexRangeMap.containsKey(vertexRange.getMaxIndex())) {
-                     throw new RuntimeException(
-                         "getVertexRangeMap: Impossible that vertex range " +
-                         "max " + vertexRange.getMaxIndex() +
-                         " already exists!");
-                 }
-                 vertexRangeMap.put(vertexRange.getMaxIndex(), vertexRange);
-             }
-         } catch (Exception e) {
-             throw new RuntimeException(e);
-         }
+                VertexRange<I, V, E, M> vertexRange =
+                    new VertexRange<I, V, E, M>(indexClass,
+                            vertexRangeObj);
+                if (vertexRangeMap.containsKey(vertexRange.getMaxIndex())) {
+                    throw new RuntimeException(
+                                               "getVertexRangeMap: Impossible that vertex range " +
+                                               "max " + vertexRange.getMaxIndex() +
+                    " already exists!");
+                }
+                vertexRangeMap.put(vertexRange.getMaxIndex(), vertexRange);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
 
-         // Copy over the vertex lists
-         for (Entry<I, VertexRange<I, V, E, M>> entry :
-                 vertexRangeMap.entrySet()) {
-             if (!m_vertexRangeMap.containsKey(entry.getKey())) {
-                 continue;
-             }
-             VertexRange<I, V, E, M> vertexRange =
-                 m_vertexRangeMap.get(entry.getKey());
-             entry.getValue().getVertexList().addAll(
-                 vertexRange.getVertexList());
-         }
-         m_vertexRangeMap = vertexRangeMap;
-         return m_vertexRangeMap;
-     }
+        // Copy over the vertex lists
+        for (Entry<I, VertexRange<I, V, E, M>> entry :
+            vertexRangeMap.entrySet()) {
+            if (!m_vertexRangeMap.containsKey(entry.getKey())) {
+                continue;
+            }
+            VertexRange<I, V, E, M> vertexRange =
+                m_vertexRangeMap.get(entry.getKey());
+            entry.getValue().getVertexList().addAll(
+                vertexRange.getVertexList());
+        }
+        m_vertexRangeMap = vertexRangeMap;
+        return m_vertexRangeMap;
+    }
 
-     public NavigableMap<I, VertexRange<I, V, E, M>> getCurrentVertexRangeMap()
-     {
-         return m_vertexRangeMap;
-     }
+    public NavigableMap<I, VertexRange<I, V, E, M>> getCurrentVertexRangeMap()
+    {
+        return m_vertexRangeMap;
+    }
 
-     /**
-      * Register an aggregator with name.
-      *
-      * @param name
-      * @param aggregator
-      * @return boolean (false when aggregator already registered)
-      */
-     public final <A extends Writable> Aggregator<A> registerAggregator(
-             String name,
-             Class<? extends Aggregator<A>> aggregatorClass) {
-         if (m_aggregatorMap.get(name) != null) {
-             return null;
-         }
-         Aggregator<A> aggregator;
-         try {
-             aggregator = (Aggregator<A>) aggregatorClass.newInstance();
-         } catch (Exception e) {
-             throw new RuntimeException(
-                 "registerAggregator: Couldn't instantiate class " +
-                 aggregatorClass);
-         }
-         @SuppressWarnings("unchecked")
-         Aggregator<Writable> writableAggregator =
-             (Aggregator<Writable>) aggregator;
-         m_aggregatorMap.put(name, writableAggregator);
-         LOG.info("registered aggregator=" + name);
-         return aggregator;
-     }
+    /**
+     * Register an aggregator with name.
+     *
+     * @param name
+     * @param aggregator
+     * @return boolean (false when aggregator already registered)
+     * @throws IllegalAccessException
+     * @throws InstantiationException
+     */
+    public final <A extends Writable> Aggregator<A> registerAggregator(
+            String name,
+            Class<? extends Aggregator<A>> aggregatorClass)
+            throws InstantiationException, IllegalAccessException {
+        if (m_aggregatorMap.get(name) != null) {
+            return null;
+        }
+        Aggregator<A> aggregator =
+            (Aggregator<A>) aggregatorClass.newInstance();
+        @SuppressWarnings("unchecked")
+        Aggregator<Writable> writableAggregator =
+            (Aggregator<Writable>) aggregator;
+        m_aggregatorMap.put(name, writableAggregator);
+        LOG.info("registered aggregator=" + name);
+        return aggregator;
+    }
 
-     /**
-      * Get aggregator by name.
-      *
-      * @param name
-      * @return Aggregator<A> (null when not registered)
-      */
-     public final Aggregator<? extends Writable> getAggregator(String name) {
+    /**
+     * Get aggregator by name.
+     *
+     * @param name
+     * @return Aggregator<A> (null when not registered)
+     */
+    public final Aggregator<? extends Writable> getAggregator(String name) {
         return m_aggregatorMap.get(name);
-     }
+    }
 
-     /**
-      * Get the aggregator map.
-      */
-     public Map<String, Aggregator<Writable>> getAggregatorMap() {
-         return m_aggregatorMap;
-     }
+    /**
+     * Get the aggregator map.
+     */
+    public Map<String, Aggregator<Writable>> getAggregatorMap() {
+        return m_aggregatorMap;
+    }
 
-     /**
-      * Default reaction to a change event in workerHealthRegistration.
-      */
-     protected void workerHealthRegistrationChanged(String Path) {
-         m_workerHealthRegistrationChanged.signal();
-     }
+    /**
+     * Register a BspEvent.  Ensure that it will be signaled
+     * by catastrophic failure so that threads waiting on an event signal
+     * will be unblocked.
+     */
+    public void registerBspEvent(BspEvent event) {
+        m_registeredBspEvents.add(event);
+    }
 
+    /**
+     * Derived classes that want additional ZooKeeper events to take action
+     * should override this.
+     *
+     * @param event Event that occurred
+     * @return true if the event was processed here, false otherwise
+     */
+    protected boolean processEvent(WatchedEvent event) {
+        return false;
+    }
+
+    @Override
     final public void process(WatchedEvent event) {
-        LOG.info("process: Got a new event, path = " + event.getPath() +
-                 ", type = " + event.getType() + ", state = " +
-                 event.getState());
+        // 1. Process all shared events
+        // 2. Process specific derived class events
+
+        if (LOG.isInfoEnabled()) {
+            LOG.info("process: Got a new event, path = " + event.getPath() +
+                     ", type = " + event.getType() + ", state = " +
+                     event.getState());
+        }
 
         if (event.getPath() == null) {
-            // No way to recover from a disconnect event
+            // No way to recover from a disconnect event, signal all BspEvents
             if ((event.getType() == EventType.None) &&
-                (event.getState() == KeeperState.Disconnected)) {
-                m_inputSplitsAllReadyChanged.signal();
-                m_inputSplitsStateChanged.signal();
-                m_superstepFinished.signal();
-                m_superstepWorkersFinishedChanged.signal();
-                m_masterElectionChildrenChanged.signal();
+                    (event.getState() == KeeperState.Disconnected)) {
+                for (BspEvent bspEvent : m_registeredBspEvents) {
+                    bspEvent.signal();
+                }
                 throw new RuntimeException(
                     "process: Disconnected from ZooKeeper, cannot recover.");
             }
             return;
         }
 
-        if (event.getPath().equals(MASTER_JOB_STATE_PATH)) {
-            synchronized (this) {
-                try {
-                    String jobState =
-                        new String(
-                            m_zk.getData(MASTER_JOB_STATE_PATH, true, null));
-                    m_currentJobState = State.valueOf(jobState);
-                } catch (KeeperException.NoNodeException e) {
-                    LOG.info("process: Job state path is empty! - " +
-                             MASTER_JOB_STATE_PATH);
-                    m_currentJobState = State.UNKNOWN;
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-            }
+        boolean eventProcessed = false;
+        if (event.getPath().startsWith(MASTER_JOB_STATE_PATH)) {
             // This will cause all becomeMaster() MasterThreads to notice the
             // change in job state and quit trying to become the master.
             m_masterElectionChildrenChanged.signal();
-        }
-        else if ((event.getPath().contains(WORKER_HEALTHY_DIR) ||
-                 event.getPath().contains(WORKER_UNHEALTHY_DIR)) &&
-                 (event.getType() == EventType.NodeChildrenChanged)) {
+
+        } else if ((event.getPath().contains(WORKER_HEALTHY_DIR) ||
+                event.getPath().contains(WORKER_UNHEALTHY_DIR)) &&
+                (event.getType() == EventType.NodeChildrenChanged)) {
             LOG.info("process: m_workerHealthRegistrationChanged " +
-                     "(worker health reported)");
-            workerHealthRegistrationChanged(event.getPath());
-        }
-        else if (event.getPath().equals(INPUT_SPLITS_ALL_READY_PATH) &&
+            "(worker health reported - healthy/unhealthy )");
+            m_workerHealthRegistrationChanged.signal();
+        } else if (event.getPath().equals(INPUT_SPLITS_ALL_READY_PATH) &&
                 (event.getType() == EventType.NodeCreated)) {
-           LOG.info("process: m_inputSplitsReadyChanged (input splits ready)");
-           m_inputSplitsAllReadyChanged.signal();
-        }
-        else if (event.getPath().endsWith(INPUT_SPLIT_RESERVED_NODE) &&
+            LOG.info("process: m_inputSplitsReadyChanged (input splits ready)");
+            m_inputSplitsAllReadyChanged.signal();
+        } else if (event.getPath().endsWith(INPUT_SPLIT_RESERVED_NODE) &&
                 (event.getType() == EventType.NodeDeleted)) {
-           LOG.info("process: m_inputSplitsStateChanged (lost a reservation)");
-           m_inputSplitsStateChanged.signal();
-        }
-        else if (event.getPath().endsWith(INPUT_SPLIT_FINISHED_NODE) &&
+            LOG.info("process: m_inputSplitsStateChanged (lost a reservation)");
+            m_inputSplitsStateChanged.signal();
+        } else if (event.getPath().endsWith(INPUT_SPLIT_FINISHED_NODE) &&
                 (event.getType() == EventType.NodeCreated)) {
-           LOG.info("process: m_inputSplitsStateChanged (finished inputsplit)");
-           m_inputSplitsStateChanged.signal();
-        }
-        else if (event.getPath().contains(VERTEX_RANGE_ASSIGNMENTS_DIR) &&
+            LOG.info("process: m_inputSplitsStateChanged (finished inputsplit)");
+            m_inputSplitsStateChanged.signal();
+        } else if (event.getPath().contains(VERTEX_RANGE_ASSIGNMENTS_DIR) &&
                 event.getType() == EventType.NodeCreated) {
-           LOG.info("process: m_vertexRangeAssignmentsReadyChanged signaled");
-           m_vertexRangeAssignmentsReadyChanged.signal();
-        }
-        else if (event.getPath().contains(VERTEX_RANGE_EXCHANGE_DIR) &&
+            LOG.info("process: m_vertexRangeAssignmentsReadyChanged signaled");
+            m_vertexRangeAssignmentsReadyChanged.signal();
+        } else if (event.getPath().contains(VERTEX_RANGE_EXCHANGE_DIR) &&
                 event.getType() == EventType.NodeChildrenChanged) {
-           LOG.info("process: m_vertexRangeExchangeChildrenChanged signaled");
-           m_vertexRangeExchangeChildrenChanged.signal();
-        }
-        else if (event.getPath().contains(
-                 VERTEX_RANGE_EXCHANGED_FINISHED_NODE) &&
-                 event.getType() == EventType.NodeCreated) {
-           LOG.info("process: m_vertexRangeExchangeFinishedChanged signaled");
-           m_vertexRangeExchangeFinishedChanged.signal();
-        }
-        else if (event.getPath().contains(SUPERSTEP_FINISHED_NODE) &&
+            LOG.info("process: m_vertexRangeExchangeChildrenChanged signaled");
+            m_vertexRangeExchangeChildrenChanged.signal();
+        } else if (event.getPath().contains(
+                VERTEX_RANGE_EXCHANGED_FINISHED_NODE) &&
                 event.getType() == EventType.NodeCreated) {
-           LOG.info("process: m_superstepFinished signaled");
-           m_superstepFinished.signal();
-       }
-        else if (event.getPath().contains(WORKER_FINISHED_DIR) &&
-                 event.getType() == EventType.NodeChildrenChanged) {
-           LOG.info("process: m_superstepWorkersFinished signaled");
-           m_superstepWorkersFinishedChanged.signal();
-       }
-        else if (event.getPath().contains(MASTER_ELECTION_DIR) &&
-                 event.getType() == EventType.NodeChildrenChanged) {
+            LOG.info("process: m_vertexRangeExchangeFinishedChanged signaled");
+            m_vertexRangeExchangeFinishedChanged.signal();
+        } else if (event.getPath().contains(SUPERSTEP_FINISHED_NODE) &&
+                event.getType() == EventType.NodeCreated) {
+            LOG.info("process: m_superstepFinished signaled");
+            m_superstepFinished.signal();
+        } else if (event.getPath().endsWith(APPLICATION_ATTEMPTS_PATH) &&
+                event.getType() == EventType.NodeChildrenChanged) {
+            LOG.info("process: m_applicationAttempChanged signaled");
+            m_applicationAttemptChanged.signal();
+        } else if (event.getPath().contains(MASTER_ELECTION_DIR) &&
+                event.getType() == EventType.NodeChildrenChanged) {
             LOG.info("process: m_masterElectionChildrenChanged signaled");
             m_masterElectionChildrenChanged.signal();
-        }
-        else if (event.getPath().equals(CLEANED_UP_PATH) &&
-                 event.getType() == EventType.NodeChildrenChanged) {
+        } else if (event.getPath().equals(CLEANED_UP_PATH) &&
+                event.getType() == EventType.NodeChildrenChanged) {
             LOG.info("process: m_cleanedUpChildrenChanged signaled");
             m_cleanedUpChildrenChanged.signal();
         }
-        else {
-            LOG.warn("process: Unknown event");
+        if ((processEvent(event) == false) && (eventProcessed == false)) {
+            LOG.warn("process: Unknown and unprocessed event (path=" +
+                     event.getPath() + ", type=" + event.getType() +
+                     ", state=" + event.getState() + ")");
         }
     }
 }

@@ -1,7 +1,10 @@
 package com.yahoo.hadoop_bsp;
 
+import java.io.IOException;
+
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.zookeeper.KeeperException;
 
 import com.yahoo.hadoop_bsp.BspService.State;
 
@@ -14,11 +17,22 @@ import com.yahoo.hadoop_bsp.BspService.State;
  * @param <I>
  */
 @SuppressWarnings("rawtypes")
-public interface CentralizedServiceMaster<I extends WritableComparable,
-                                          V extends Writable,
-                                          E extends Writable,
-                                          M extends Writable>
-                                          extends CentralizedService {
+public interface CentralizedServiceMaster<
+        I extends WritableComparable,
+        V extends Writable,
+        E extends Writable,
+        M extends Writable>
+        extends CentralizedService<I, V, E, M> {
+    /**
+     * State of a coordinated superstep
+     */
+    public enum SuperstepState {
+        INITIAL, ///< Nothing happened yet
+        WORKER_FAILURE, ///< A worker died during this superstep
+        THIS_SUPERSTEP_DONE, ///< This superstep completed correctly
+        ALL_SUPERSTEPS_DONE, ///< All supersteps are complete
+    }
+
     /**
      * Become the master.
      * @return true if became the master, false if the application is done.
@@ -37,13 +51,37 @@ public interface CentralizedServiceMaster<I extends WritableComparable,
     /**
      * Master coordinates the superstep
      *
-     * @return true if this is the last barrier (application done)
+     * @return State of the application as a result of this superstep
+     * @throws InterruptedException
+     * @throws KeeperException
      */
-    boolean coordinateSuperstep();
+    SuperstepState coordinateSuperstep()
+        throws KeeperException, InterruptedException;
 
     /**
-     * Master determines the job state.
-     * @param state state of the job
+     * Master can decide to restart from the last good checkpoint if a
+     * worker fails during a superstep.
+     *
+     * @param checkpoint Checkpoint to restart from
      */
-    void setJobState(State state);
+    void restartFromCheckpoint(long checkpoint);
+
+    /**
+     * Get the last known good checkpoint
+     * @throws IOException
+     */
+    long getLastGoodCheckpoint() throws IOException;
+
+    /**
+     * If the master decides that this job doesn't have the resources to
+     * continue, it can fail the job.  It can also designate what to do next.
+     * Typically this is mainly informative.
+     *
+     * @param state
+     * @param applicationAttempt attempt to start on
+     * @param desiredSuperstep Superstep to restart from (if applicable)
+     */
+    void setJobState(State state,
+                     long applicationAttempt,
+                     long desiredSuperstep);
 }

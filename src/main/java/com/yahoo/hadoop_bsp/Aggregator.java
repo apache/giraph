@@ -3,7 +3,8 @@ package com.yahoo.hadoop_bsp;
 import org.apache.hadoop.io.Writable;
 
 /**
- * Interface for Aggregator
+ * Interface for Aggregator.  Allows aggregate operations for all vertices
+ * in a given superstep.
  *
  * @param <A extends Writable> aggregated value
  */

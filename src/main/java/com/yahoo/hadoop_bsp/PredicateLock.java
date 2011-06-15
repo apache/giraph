@@ -13,6 +13,7 @@ public class PredicateLock implements BspEvent {
     /** Predicate */
     boolean m_eventOccurred = false;
 
+    @Override
     public void reset() {
         m_lock.lock();
         try {
@@ -22,6 +23,7 @@ public class PredicateLock implements BspEvent {
         }
     }
 
+    @Override
     public void signal() {
         m_lock.lock();
         try {
@@ -32,6 +34,7 @@ public class PredicateLock implements BspEvent {
         }
     }
 
+    @Override
     public boolean waitMsecs(int msecs) {
         if (msecs < -1) {
             throw new RuntimeException("msecs < -1");
@@ -63,6 +66,7 @@ public class PredicateLock implements BspEvent {
         return true;
     }
 
+    @Override
     public void waitForever() {
         waitMsecs(-1);
     }

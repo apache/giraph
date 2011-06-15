@@ -25,8 +25,11 @@ public interface Vertex<I extends WritableComparable,
     /**
      * Optionally defined by the user to be executed once on all workers
      * before application has started.
+     *
+     * @throws IllegalAccessException
+     * @throws InstantiationException
      */
-    void preApplication();
+    void preApplication() throws InstantiationException, IllegalAccessException;
 
     /**
      * Optionally defined by the user to be executed once on all workers

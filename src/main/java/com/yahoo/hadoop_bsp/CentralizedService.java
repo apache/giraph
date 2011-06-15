@@ -37,11 +37,11 @@ public interface CentralizedService<I extends WritableComparable,
     long getSuperstep();
 
     /**
-     * Get the manually restart superstep
+     * Get the restarted superstep
      *
      * @return -1 if not manually restarted, otherwise the superstep id
      */
-    long getManualRestartSuperstep();
+    long getRestartedSuperstep();
 
     /**
      * Given a superstep, should it be checkpointed based on the

@@ -20,7 +20,7 @@ public interface CentralizedServiceWorker<
         V extends Writable,
         E extends Writable,
         M extends Writable>
-        extends CentralizedService, AggregatorUsage {
+        extends CentralizedService<I, V, E, M>, AggregatorUsage {
     /**
      * Get the hostname of this worker
      *

@@ -24,23 +24,41 @@ import com.yahoo.hadoop_bsp.lib.LongSumAggregator;
 
 /**
  * An example that simply uses its id, value, and edges to compute new data
- * every iteration to verify that checkpoint restarting works.
- *
- * @author aching
+ * every iteration to verify that checkpoint restarting works.  Fault injection
+ * can also test automated checkpoint restarts.
  */
 public class SimpleCheckpointVertex extends
         HadoopVertex<LongWritable, IntWritable, FloatWritable, FloatWritable>
         implements Tool {
     /** User can access this after the application finishes if local */
     public static long finalSum;
+    /** Number of supersteps to run (6 by default) */
+    public static int supersteps = 6;
+    /** Filename to indicate whether a fault was found */
+    public final String faultFile = "/tmp/faultFile";
+    /** Which superstep to cause the worker to fail */
+    public final int faultingSuperstep = 4;
+    /** Vertex id to fault on */
+    public final long faultingVertexId = 1;
+    /** Enable the fault at the particular vertex id and superstep? */
+    public static boolean enableFault = false;
+
+    /** Dynamically set number of supersteps */
+    public static String SUPERSTEP_COUNT =
+        "simpleCheckpointVertex.superstepCount";
+    /** Should fault? */
+    public static String ENABLE_FAULT=
+        "simpleCheckpointVertex.enableFault";
 
     @Override
-    public void preApplication() {
+    public void preApplication() throws InstantiationException, IllegalAccessException {
         registerAggregator(LongSumAggregator.class.getName(),
                            LongSumAggregator.class);
         LongSumAggregator sumAggregator = (LongSumAggregator)
             getAggregator(LongSumAggregator.class.getName());
         sumAggregator.setAggregatedValue(new LongWritable(0));
+        supersteps = getConf().getInt(SUPERSTEP_COUNT, supersteps);
+        enableFault = getConf().getBoolean(ENABLE_FAULT, false);
     }
 
     @Override
@@ -58,7 +76,16 @@ public class SimpleCheckpointVertex extends
     public void compute(Iterator<FloatWritable> msgIterator) {
         LongSumAggregator sumAggregator = (LongSumAggregator)
             getAggregator(LongSumAggregator.class.getName());
-        if (getSuperstep() > 6) {
+        if (enableFault && (getSuperstep() == faultingSuperstep) &&
+                (getContext().getTaskAttemptID().getId() == 0) &&
+                (getVertexId().get() == faultingVertexId)) {
+            System.out.println("compute: Forced a fault on the first " +
+                               "attempt of superstep " +
+                               faultingSuperstep + " and vertex id " +
+                               faultingVertexId);
+            System.exit(-1);
+        }
+        if (getSuperstep() > supersteps) {
             voteToHalt();
         }
         System.out.println("compute: " + sumAggregator);
@@ -106,12 +133,16 @@ public class SimpleCheckpointVertex extends
                           "workers",
                           true,
                           "Number of workers");
+        options.addOption("s",
+                          "supersteps",
+                          true,
+                          "Supersteps to execute before finishing");
         options.addOption("w",
                           "workers",
                           true,
                           "Minimum number of workers");
         options.addOption("o",
-                          "output directory",
+                          "outputDirectory",
                           true,
                           "Output directory");
         HelpFormatter formatter = new HelpFormatter();
@@ -148,6 +179,10 @@ public class SimpleCheckpointVertex extends
         boolean verbose = false;
         if (cmd.hasOption('v')) {
             verbose = true;
+        }
+        if (cmd.hasOption('s')) {
+            getConf().setInt(SUPERSTEP_COUNT,
+                             Integer.parseInt(cmd.getOptionValue('s')));
         }
         if (bspJob.run(verbose) == true) {
             return 0;
