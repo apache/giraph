@@ -8,8 +8,6 @@ import org.apache.log4j.Logger;
  * Master thread that will coordinate the activities of the tasks.  It runs
  * on all task processes, however, will only execute its algorithm if it knows
  * it is the "leader" from ZooKeeper.
- * @author aching
- *
  */
 @SuppressWarnings("rawtypes")
 public class MasterThread<I extends WritableComparable,

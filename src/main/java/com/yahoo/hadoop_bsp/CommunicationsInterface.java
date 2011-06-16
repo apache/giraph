@@ -15,8 +15,8 @@ import org.apache.hadoop.security.token.TokenInfo;
  * @param <M extends Writable> message data
  *
  **/
-@TokenInfo(BspTokenSelector.class)
 @SuppressWarnings("rawtypes")
+@TokenInfo(BspTokenSelector.class)
 public interface CommunicationsInterface<
         I extends WritableComparable,
         V extends Writable,

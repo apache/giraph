@@ -13,16 +13,14 @@ import org.json.JSONArray;
 /**
  * This is the basic implementation for all of the {@link VertexRangeBalancer}
  * methods except the rebalance() method.  That is up to the user to implement.
- * @author aching
- *
- * @param <I> vertex id
  */
 @SuppressWarnings("rawtypes")
-public abstract class BspBalancer<I extends WritableComparable,
-                                  V extends Writable,
-                                  E extends Writable,
-                                  M extends Writable>
-                                  implements VertexRangeBalancer<I, V, E, M> {
+public abstract class BspBalancer<
+        I extends WritableComparable,
+        V extends Writable,
+        E extends Writable,
+        M extends Writable>
+        implements VertexRangeBalancer<I, V, E, M> {
     /** map of prev vertex ranges, in order */
     private NavigableMap<I, VertexRange<I, V, E, M>>
         m_prevVertexRangeMap = null;

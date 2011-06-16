@@ -29,10 +29,10 @@ public interface WorkerCommunications<I extends WritableComparable,
     /**
      * Sends a message to destination vertex.
      *
-     * @param destVertex
+     * @param id
      * @param msg
      */
-    void sendMessage(I destVertex, M msg);
+    void sendMessage(I id, M msg);
 
     /**
      * Sends a list of vertices to the appropriate vertex range owner

@@ -4,8 +4,6 @@ import org.apache.hadoop.mapreduce.Mapper.Context;
 
 /**
  * A lock that will keep the job context updated while waiting.
- *
- * @author aching
  */
 public class ContextLock extends PredicateLock {
     /** Job context (for progress) */

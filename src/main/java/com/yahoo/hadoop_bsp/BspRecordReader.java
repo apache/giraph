@@ -9,8 +9,6 @@ import org.apache.hadoop.io.Text;
 
 /**
  * Only returns a single key-value pair so that the map() can run.
- * @author aching
- *
  */
 public class BspRecordReader extends RecordReader<Text, Text> {
     /** Has the one record been seen? */

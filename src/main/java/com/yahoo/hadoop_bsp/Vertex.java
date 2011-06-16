@@ -29,7 +29,8 @@ public interface Vertex<I extends WritableComparable,
      * @throws IllegalAccessException
      * @throws InstantiationException
      */
-    void preApplication() throws InstantiationException, IllegalAccessException;
+    void preApplication()
+        throws InstantiationException, IllegalAccessException;
 
     /**
      * Optionally defined by the user to be executed once on all workers
@@ -60,7 +61,8 @@ public interface Vertex<I extends WritableComparable,
     void compute(Iterator<M> msgIterator);
 
     /**
-     * Retrieves the BSP superstep.
+     * Retrieves the current superstep.
+     *
      * @return BSP superstep
      */
     long getSuperstep();
@@ -78,25 +80,38 @@ public interface Vertex<I extends WritableComparable,
 
     /**
      * Set the vertex data (immediately visible in the computation)
+     *
      * @param vertexValue Vertex data to be set
      */
     void setVertexValue(V vertexValue);
 
     /**
-     * Get the total number of vertices
-     * @return total number of vertices
+     * Get the total (all workers) number of vertices that
+     * existed in the previous superstep.
+     *
+     * @return Total number of vertices (-1 if first superstep)
      */
     long getNumVertices();
 
     /**
+     * Get the total (all workers) number of edges that
+     * existed in the previous superstep.
+     *
+     * @return Total number of edges (-1 if first superstep)
+     */
+    long getNumEdges();
+
+    /**
      * Every vertex has edges to other vertices.  Get a handle to the outward
      * edges and their vertices.
+     *
      * @return iterator to the outward edges and their destination vertices
      */
     OutEdgeIterator<I, E> getOutEdgeIterator();
 
     /**
      * Send a message to a vertex id.
+     *
      * @param id vertex id to send the message to
      * @param msg message data to send
      */

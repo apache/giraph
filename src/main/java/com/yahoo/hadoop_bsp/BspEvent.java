@@ -3,8 +3,6 @@ package com.yahoo.hadoop_bsp;
 /**
  * Synchronize on waiting for an event to have happened.  This is a one-time
  * event.
- * @author aching
- *
  */
 public interface BspEvent {
     /**

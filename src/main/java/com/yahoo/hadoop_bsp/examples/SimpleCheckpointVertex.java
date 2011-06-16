@@ -8,6 +8,7 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
@@ -30,6 +31,8 @@ import com.yahoo.hadoop_bsp.lib.LongSumAggregator;
 public class SimpleCheckpointVertex extends
         HadoopVertex<LongWritable, IntWritable, FloatWritable, FloatWritable>
         implements Tool {
+    /** Configuration */
+    private static Configuration conf;
     /** User can access this after the application finishes if local */
     public static long finalSum;
     /** Number of supersteps to run (6 by default) */
@@ -193,5 +196,15 @@ public class SimpleCheckpointVertex extends
 
     public static void main(String[] args) throws Exception {
         System.exit(ToolRunner.run(new SimpleCheckpointVertex(), args));
+    }
+
+    @Override
+    public Configuration getConf() {
+        return conf;
+    }
+
+    @Override
+    public void setConf(Configuration conf) {
+        SimpleCheckpointVertex.conf = conf;
     }
 }

@@ -8,8 +8,10 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 @SuppressWarnings("rawtypes")
-public interface VertexReader<I extends WritableComparable,
-    V extends Writable, E extends Writable> {
+public interface VertexReader<
+        I extends WritableComparable,
+        V extends Writable,
+        E extends Writable> {
     /**
      * Use the input split and context to setup reading the vertices.
      * Guaranteed to be called prior to any other function.

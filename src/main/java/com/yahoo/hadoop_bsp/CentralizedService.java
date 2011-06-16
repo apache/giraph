@@ -8,8 +8,6 @@ import org.apache.hadoop.io.WritableComparable;
 /**
  * Basic service interface shared by both {@link CentralizedServiceMaster} and
  * {@link CentralizedServiceWorker}.
- *
- * @author aching
  */
 @SuppressWarnings("rawtypes")
 public interface CentralizedService<I extends WritableComparable,

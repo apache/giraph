@@ -5,12 +5,6 @@ import org.apache.hadoop.io.WritableComparable;
 
 /**
  * Interface used by VertexReader to set the properties of a new vertex.
- * @author aching
- *
- * @param <I>
- * @param <V>
- * @param <E>
- * @param <M>
  */
 @SuppressWarnings("rawtypes")
 public interface MutableVertex<I extends WritableComparable,

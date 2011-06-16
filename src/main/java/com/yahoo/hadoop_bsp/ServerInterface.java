@@ -5,15 +5,11 @@ import java.io.IOException;
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.mapreduce.Mapper.Context;
+import org.apache.hadoop.mapreduce.Mapper;
 
 /**
- * interface for message communication server
- *
- * @param <I extends Writable> vertex id
- * @param <M extends Writable> message data
- *
- **/
+ * Interface for message communication server
+ */
 @SuppressWarnings("rawtypes")
 public interface ServerInterface<I extends WritableComparable,
                                  V extends Writable,
@@ -34,7 +30,7 @@ public interface ServerInterface<I extends WritableComparable,
      *
      * @throws IOException
      */
-    void flush(Context context) throws IOException;
+    void flush(Mapper<?, ?, ?, ?>.Context context) throws IOException;
 
     /**
      * Closes all connections.

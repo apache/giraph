@@ -34,14 +34,11 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.mapred.JobClient;
 
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.JobID;
 import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.InputSplit;
-import org.apache.hadoop.mapreduce.Mapper.Context;
+import org.apache.hadoop.mapreduce.Mapper;
 
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.CreateMode;
@@ -54,8 +51,10 @@ import com.yahoo.hadoop_bsp.BspJob.BspMapper.MapFunctions;
 /**
  * Zookeeper-based implementation of {@link CentralizedService}.
  */
-@SuppressWarnings({ "deprecation", "rawtypes" })
-public class BspServiceMaster<I extends WritableComparable, V extends Writable,
+@SuppressWarnings("rawtypes")
+public class BspServiceMaster<
+        I extends WritableComparable,
+        V extends Writable,
         E extends Writable, M extends Writable>
         extends BspService<I, V, E, M>
         implements CentralizedServiceMaster<I, V, E, M> {
@@ -89,7 +88,7 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
     public BspServiceMaster(
             String serverPortList,
             int sessionMsecTimeout,
-            Context context,
+            Mapper<?, ?, ?, ?>.Context context,
             BspJob.BspMapper<I, V, E, M> bspMapper) {
         super(serverPortList, sessionMsecTimeout, context, bspMapper);
         registerBspEvent(m_superstepStateChanged);
@@ -171,11 +170,10 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
     private List<InputSplit> generateInputSplits(int numSplits) {
         try {
             @SuppressWarnings({"unchecked" })
-            Class<VertexInputFormat> vertexInputFormatClass =
-                (Class<VertexInputFormat>)
+            Class<VertexInputFormat<I, V, E>> vertexInputFormatClass =
+                (Class<VertexInputFormat<I, V, E>>)
                  getConfiguration().getClass(BspJob.VERTEX_INPUT_FORMAT_CLASS,
                                              VertexInputFormat.class);
-            @SuppressWarnings("unchecked")
             List<InputSplit> splits =
                 vertexInputFormatClass.newInstance().getSplits(
                     getConfiguration(), numSplits);
@@ -193,8 +191,14 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
     private void failJob() {
         LOG.fatal("failJob: Killing job " + getJobId());
         try {
-            JobClient jobClient = new JobClient((JobConf) getConfiguration());
-            JobID jobId = JobID.forName(getJobId());
+            @SuppressWarnings("deprecation")
+            org.apache.hadoop.mapred.JobClient jobClient =
+                new org.apache.hadoop.mapred.JobClient(
+                    (org.apache.hadoop.mapred.JobConf)
+                    getConfiguration());
+            @SuppressWarnings("deprecation")
+            org.apache.hadoop.mapred.JobID jobId =
+                org.apache.hadoop.mapred.JobID.forName(getJobId());
             RunningJob job = jobClient.getJob(jobId);
             job.killJob();
         } catch (IOException e) {
@@ -1419,14 +1423,19 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
             collectVertexRangeStats(getSuperstep());
         long verticesFinished = 0;
         long verticesTotal = 0;
+        long edgesTotal = 0;
         for (Map.Entry<I, JSONObject> entry : maxIndexStatsMap.entrySet()) {
             try {
                 verticesFinished +=
                     entry.getValue().getLong(JSONOBJ_FINISHED_VERTICES_KEY);
                 verticesTotal +=
                     entry.getValue().getLong(JSONOBJ_NUM_VERTICES_KEY);
+                edgesTotal +=
+                    entry.getValue().getLong(JSONOBJ_NUM_EDGES_KEY);
             } catch (JSONException e) {
-                throw new RuntimeException(e);
+                throw new RuntimeException(
+                    "coordinateSuperstep: Failed to parse out "+
+                    "the number range stats", e);
             }
         }
         LOG.info("coordinateSuperstep: Aggregation found " + verticesFinished +
@@ -1446,6 +1455,7 @@ public class BspServiceMaster<I extends WritableComparable, V extends Writable,
             JSONObject globalInfoObject = new JSONObject();
             globalInfoObject.put(JSONOBJ_FINISHED_VERTICES_KEY, verticesFinished);
             globalInfoObject.put(JSONOBJ_NUM_VERTICES_KEY, verticesTotal);
+            globalInfoObject.put(JSONOBJ_NUM_EDGES_KEY, edgesTotal);
             getZkExt().createExt(superstepFinishedNode,
                                  globalInfoObject.toString().getBytes(),
                                  Ids.OPEN_ACL_UNSAFE,

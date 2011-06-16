@@ -15,7 +15,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RPC.Server;
-import org.apache.hadoop.mapreduce.Mapper.Context;
+import org.apache.hadoop.mapreduce.Mapper;
 
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
@@ -27,16 +27,16 @@ import org.apache.hadoop.security.token.Token;
 
 @SuppressWarnings("rawtypes")
 public class RPCCommunications<
-    I extends WritableComparable,
-    V extends Writable,
-    E extends Writable,
-    M extends Writable>
+        I extends WritableComparable,
+        V extends Writable,
+        E extends Writable,
+        M extends Writable>
         extends BasicRPCCommunications<I, V, E, M, Token<JobTokenIdentifier>> {
 
     /** Class logger */
     public static final Logger LOG = Logger.getLogger(RPCCommunications.class);
 
-    public RPCCommunications(Context context,
+    public RPCCommunications(Mapper<?, ?, ?, ?>.Context context,
                              CentralizedServiceWorker<I, V, E, M> service)
             throws IOException, UnknownHostException, InterruptedException {
         super(context, service);

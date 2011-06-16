@@ -31,7 +31,8 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 import org.apache.hadoop.mapreduce.InputSplit;
-import org.apache.hadoop.mapreduce.Mapper.Context;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.TaskInputOutputContext;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import org.apache.zookeeper.KeeperException;
@@ -43,7 +44,6 @@ import org.apache.zookeeper.data.Stat;
 
 /**
  * ZooKeeper-based implementation of {@link CentralizedServiceWorker}.
- * @author aching
  */
 @SuppressWarnings("rawtypes")
 public class BspServiceWorker<
@@ -56,7 +56,9 @@ public class BspServiceWorker<
     /** Number of input splits */
     private int m_inputSplitCount = -1;
     /** Cached aggregate number of vertices in the entire application */
-    long m_totalVertices = -1;
+    private long m_totalVertices = -1;
+    /** Cached aggregate number of edges in the entire application */
+    private long m_totalEdges = -1;
     /** My process health znode */
     private String m_myHealthZnode;
     /** Final server RPC port */
@@ -68,7 +70,7 @@ public class BspServiceWorker<
 
     public BspServiceWorker(String serverPortList,
                             int sessionMsecTimeout,
-                            Context context,
+                            Mapper<?, ?, ?, ?>.Context context,
                             BspJob.BspMapper<I, V, E, M> bspMapper) {
         super(serverPortList, sessionMsecTimeout, context, bspMapper);
         m_finalRpcPort =
@@ -498,10 +500,11 @@ public class BspServiceWorker<
         Map<I, long []> maxIndexStatsMap = new TreeMap<I, long []>();
         for (Map.Entry<I, VertexRange<I, V, E, M>> entry :
              getVertexRangeMap().entrySet()) {
-            long [] statArray = new long[2];
+            long [] statArray = new long[3];
             statArray[0] = 0;
             statArray[1] = entry.getValue().getVertexList().size();
-            maxIndexStatsMap.put(entry.getKey(),statArray);
+            statArray[2] = entry.getValue().getEdgeCount();
+            maxIndexStatsMap.put(entry.getKey(), statArray);
         }
 
         finishSuperstep(maxIndexStatsMap);
@@ -720,6 +723,8 @@ public class BspServiceWorker<
                                entry.getValue()[0]);
                 statObject.put(JSONOBJ_NUM_VERTICES_KEY,
                                entry.getValue()[1]);
+                statObject.put(JSONOBJ_NUM_EDGES_KEY,
+                               entry.getValue()[2]);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -760,7 +765,9 @@ public class BspServiceWorker<
                 getSuperstepFinishedEvent().reset();
             }
             globalStatsObject = new JSONObject(
-                new String(getZkExt().getData(superstepFinishedNode, false, null)));
+                new String(getZkExt().getData(superstepFinishedNode,
+                                              false,
+                                              null)));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -768,9 +775,12 @@ public class BspServiceWorker<
             globalStatsObject.optLong(JSONOBJ_FINISHED_VERTICES_KEY);
         m_totalVertices =
             globalStatsObject.optLong(JSONOBJ_NUM_VERTICES_KEY);
+        m_totalEdges =
+            globalStatsObject.optLong(JSONOBJ_NUM_EDGES_KEY);
         LOG.info("finishSuperstep: Completed superstep " + getSuperstep() +
-                 " with finishedVertices=" + finishedVertices +
-                 ", numVertices=" + m_totalVertices);
+                 " with total finished vertices =" + finishedVertices +
+                 " of out total vertices =" + m_totalVertices +
+                 ", total edges = " + m_totalEdges);
         incrCachedSuperstep();
         getContext().setStatus(getBspMapper().getMapFunctions().toString() +
                                " - Attempt=" + getApplicationAttempt() +
@@ -778,15 +788,20 @@ public class BspServiceWorker<
         return (finishedVertices == m_totalVertices);
     }
 
+    @Override
     public long getTotalVertices() {
         return m_totalVertices;
+    }
+
+    @Override
+    public long getTotalEdges() {
+        return m_totalEdges;
     }
 
     /**
      * Save the vertices using the user-defined OutputFormat from our
      * vertexArray based on the split.
      */
-    @SuppressWarnings("unchecked")
     public void saveVertices() {
         if (getConfiguration().get(BspJob.VERTEX_WRITER_CLASS) == null) {
             LOG.warn("saveVertices: VERTEX_WRITER_CLASS not specified" +
@@ -794,10 +809,11 @@ public class BspServiceWorker<
             return;
         }
 
-        Class<? extends VertexWriter<I, V, E>> vertexWriterClass =
-            (Class<? extends VertexWriter<I, V, E>>)
-            getConfiguration().getClass(BspJob.VERTEX_WRITER_CLASS,
-                                        VertexWriter.class);
+        @SuppressWarnings("unchecked")
+        Class<VertexWriter<I, V, E>> vertexWriterClass =
+            (Class<VertexWriter<I, V, E>>) getConfiguration().getClass(
+                BspJob.VERTEX_WRITER_CLASS,
+                VertexWriter.class);
         VertexWriter<I, V, E> vertexWriter = null;
         try {
             vertexWriter = vertexWriterClass.newInstance();
@@ -805,7 +821,7 @@ public class BspServiceWorker<
                     getVertexRangeMap().entrySet()) {
                 for (Vertex<I, V, E, M> vertex :
                         entry.getValue().getVertexList()) {
-                    vertexWriter.write(getContext(),
+                    vertexWriter.write((TaskInputOutputContext<?, ?, ?, ?>) getContext(),
                                        vertex.getVertexId(),
                                        vertex.getVertexValue(),
                                        vertex.getOutEdgeIterator());

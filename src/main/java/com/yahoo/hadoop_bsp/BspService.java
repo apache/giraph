@@ -18,7 +18,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.mapreduce.Mapper.Context;
+import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import org.apache.zookeeper.KeeperException;
@@ -36,13 +36,14 @@ import com.yahoo.hadoop_bsp.BspJob.BspMapper;
 
 /**
  * Zookeeper-based implementation of {@link CentralizedService}.
- * @author aching
- *
  */
 @SuppressWarnings("rawtypes")
 public abstract class BspService <
-        I extends WritableComparable, V extends Writable, E extends Writable,
-        M extends Writable> implements Watcher, CentralizedService<I, V, E, M> {
+        I extends WritableComparable,
+        V extends Writable,
+        E extends Writable,
+        M extends Writable>
+        implements Watcher, CentralizedService<I, V, E, M> {
     /** Private ZooKeeper instance that implements the service */
     private final ZooKeeperExt m_zk;
     /** Has worker registration changed (either healthy or unhealthy) */
@@ -81,7 +82,7 @@ public abstract class BspService <
     /** Configuration of the job*/
     private final Configuration m_conf;
     /** Job context (mainly for progress) */
-    private final Context m_context;
+    private final Mapper<?, ?, ?, ?>.Context m_context;
     /** Cached superstep (from ZooKeeper) */
     private long m_cachedSuperstep = -1;
     /** Cached application attempt (from ZooKeeper) */
@@ -453,7 +454,7 @@ public abstract class BspService <
         return m_conf;
     }
 
-    final public Context getContext() {
+    final public Mapper<?, ?, ?, ?>.Context getContext() {
         return m_context;
     }
 
@@ -558,7 +559,7 @@ public abstract class BspService <
 
     public BspService(String serverPortList,
                       int sessionMsecTimeout,
-                      Context context,
+                      Mapper<?, ?, ?, ?>.Context context,
                       BspJob.BspMapper<I, V, E, M> bspMapper) {
         registerBspEvent(m_workerHealthRegistrationChanged);
         registerBspEvent(m_inputSplitsAllReadyChanged);

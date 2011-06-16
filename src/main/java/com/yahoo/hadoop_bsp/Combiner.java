@@ -13,7 +13,6 @@ import org.apache.hadoop.io.WritableComparable;
  * @param <M extends Writable> message data
  *
  **/
-
 @SuppressWarnings("rawtypes")
 public interface Combiner <I extends WritableComparable,
                            V extends Writable,

@@ -26,11 +26,13 @@ import org.json.JSONException;
  * @param <I> vertex id type
  */
 @SuppressWarnings("rawtypes")
-public final class AutoBalancer<I extends WritableComparable,
-                                  V extends Writable,
-                                  E extends Writable,
-                                  M extends Writable>
-    extends BspBalancer<I, V, E, M> implements VertexRangeBalancer<I, V, E, M> {
+public final class AutoBalancer<
+        I extends WritableComparable,
+        V extends Writable,
+        E extends Writable,
+        M extends Writable>
+        extends BspBalancer<I, V, E, M>
+        implements VertexRangeBalancer<I, V, E, M> {
 
     /** Class logger */
     private static final Logger LOG = Logger.getLogger(AutoBalancer.class);
@@ -67,18 +69,18 @@ public final class AutoBalancer<I extends WritableComparable,
 
     public class VertexRangeComparator
             implements Comparator<VertexRange<I,V,E,M>> {
-       /**
-        * Compares the number of entities based on balanceOn.
-        */
-       @SuppressWarnings("unchecked")
-       public int compare(VertexRange<I,V,E,M> v1, VertexRange<I,V,E,M> v2) {
-           long numEntries1 = getVertexRangeEntries(v1);
-           long numEntries2 = getVertexRangeEntries(v2);
-           if (numEntries1 == numEntries2) {
-               return v1.getMaxIndex().compareTo(v2.getMaxIndex());
-           }
-           return (int)(numEntries2 - numEntries1);
-       }
+        /**
+         * Compares the number of entities based on balanceOn.
+         */
+        @SuppressWarnings("unchecked")
+        public int compare(VertexRange<I,V,E,M> v1, VertexRange<I,V,E,M> v2) {
+            long numEntries1 = getVertexRangeEntries(v1);
+            long numEntries2 = getVertexRangeEntries(v2);
+            if (numEntries1 == numEntries2) {
+                return v1.getMaxIndex().compareTo(v2.getMaxIndex());
+            }
+            return (int)(numEntries2 - numEntries1);
+        }
     }
 
     @Override

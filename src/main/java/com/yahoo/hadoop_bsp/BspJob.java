@@ -276,10 +276,6 @@ public class BspJob extends Job {
      * The mapper that will execute the BSP tasks.  Since this mapper will
      * not be passing data by key-value pairs through the MR framework, the
      * types are irrelevant.
-     *
-     * @author aching
-     * @param <V>
-     * @param <V>
      */
     @SuppressWarnings("rawtypes")
     public static class BspMapper<I extends WritableComparable,
@@ -365,12 +361,12 @@ public class BspJob extends Job {
          *        the relevant jar file
          * @return Location of the jar file containing my_class
          */
-        private static String findContainingJar(Class my_class) {
+        private static String findContainingJar(Class<?> my_class) {
             ClassLoader loader = my_class.getClassLoader();
             String class_file =
                 my_class.getName().replaceAll("\\.", "/") + ".class";
             try {
-                for(Enumeration itr = loader.getResources(class_file);
+                for(Enumeration<?> itr = loader.getResources(class_file);
                 itr.hasMoreElements();) {
                     URL url = (URL) itr.nextElement();
                     if ("jar".equals(url.getProtocol())) {
@@ -547,6 +543,7 @@ public class BspJob extends Job {
             context.progress();
 
             long verticesFinished = 0;
+            long edges = 0;
             Map<I, long []> maxIndexStatsMap = new TreeMap<I, long []>();
             do {
                 long superstep = m_serviceWorker.getSuperstep();
@@ -587,6 +584,7 @@ public class BspJob extends Job {
                 maxIndexStatsMap.clear();
                 HadoopVertex.setSuperstep(superstep);
                 HadoopVertex.setNumVertices(m_serviceWorker.getTotalVertices());
+                HadoopVertex.setNumEdges(m_serviceWorker.getTotalEdges());
 
                 m_serviceWorker.getRepresentativeVertex().preSuperstep();
                 context.progress();
@@ -613,10 +611,12 @@ public class BspJob extends Job {
                         if (vertex.isHalted()) {
                             ++verticesFinished;
                         }
+                        edges += vertex.getOutEdgeIterator().size();
                     }
-                    long [] statArray = new long [2];
+                    long [] statArray = new long [3];
                     statArray[0] = verticesFinished;
                     statArray[1] = entry.getValue().getVertexList().size();
+                    statArray[2] = edges;
                     maxIndexStatsMap.put(entry.getKey(),
                                          statArray);
                     LOG.info("map: " + statArray[0] + " of " + statArray[1] +

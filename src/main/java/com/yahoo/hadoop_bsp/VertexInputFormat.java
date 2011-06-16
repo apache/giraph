@@ -14,7 +14,6 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  * also implement Writable.  The InputSplits will determine the partitioning of
  * vertices across the mappers, so keep that in consideration when implementing
  * getSplits().
- * @author aching
  *
  * @param <I> vertex id
  * @param <V> vertex value
@@ -22,7 +21,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  */
 @SuppressWarnings("rawtypes")
 public interface VertexInputFormat<I extends WritableComparable,
-    V extends Writable, E extends Writable> {
+        V extends Writable, E extends Writable> {
     /**
      * Logically split the vertices for a BSP application.
      *

@@ -7,9 +7,18 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskInputOutputContext;
 
+/**
+ * Implement to output the graph after the computation
+ *
+ * @param <I>
+ * @param <V>
+ * @param <E>
+ */
 @SuppressWarnings("rawtypes")
-public interface VertexWriter<I extends WritableComparable,
-    V extends Writable, E extends Writable> {
+public interface VertexWriter<
+        I extends WritableComparable,
+        V extends Writable,
+        E extends Writable> {
 
     /**
      * Writes the argument vertex and associated data

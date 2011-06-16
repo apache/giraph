@@ -23,7 +23,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RPC.Server;
-import org.apache.hadoop.mapreduce.Mapper.Context;
+import org.apache.hadoop.mapreduce.Mapper;
 
 @SuppressWarnings("rawtypes")
 public abstract class BasicRPCCommunications<
@@ -355,7 +355,7 @@ public abstract class BasicRPCCommunications<
         InetSocketAddress addr,
         int numHandlers, String jobId, J jobToken) throws IOException;
 
-    public BasicRPCCommunications(Context context,
+    public BasicRPCCommunications(Mapper<?, ?, ?, ?>.Context context,
                                   CentralizedServiceWorker<I, V, E, M> service)
             throws IOException, UnknownHostException, InterruptedException {
         this.service = service;
@@ -635,6 +635,7 @@ public abstract class BasicRPCCommunications<
         }
     }
 
+    @Override
     public final void sendMessage(I destVertex, M msg) {
         InetSocketAddress addr = getInetSocketAddress(destVertex);
         LOG.debug("sendMessage: Send bytes (" + msg.toString() + ") to " +
@@ -664,7 +665,7 @@ public abstract class BasicRPCCommunications<
         }
     }
 
-    public final void flush(Context context) throws IOException {
+    public final void flush(Mapper<?, ?, ?, ?>.Context context) throws IOException {
         LOG.info("flush");
         for (List<M> msgList : inMessages.values()) {
             msgList.clear();

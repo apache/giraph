@@ -13,31 +13,42 @@ import java.util.TreeMap;
 
 import org.apache.log4j.Logger;
 
-import org.apache.hadoop.conf.Configurable;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.mapreduce.Mapper.Context;
+import org.apache.hadoop.mapreduce.Mapper;
 
+import com.yahoo.hadoop_bsp.BspJob.BspMapper;
+
+/**
+ * User applications should all subclass {@link HadoopVertex}.  Package access
+ * should prevent users from accessing internal methods.
+ *
+ * @param <I> Vertex Index value
+ * @param <V> Vertex value
+ * @param <E> Edge value
+ * @param <M> Message value
+ */
 @SuppressWarnings("rawtypes")
 public abstract class HadoopVertex<
         I extends WritableComparable,
         V extends Writable,
         E extends Writable,
         M extends Writable>
-        implements MutableVertex<I, V, E, M>, Writable, Configurable {
+        implements MutableVertex<I, V, E, M>, Writable {
     /** Class logger */
     private static final Logger LOG = Logger.getLogger(HadoopVertex.class);
     /** Class-wide superstep */
     private static long m_superstep = 0;
     /** Class-wide number of vertices */
     private static long m_numVertices = -1;
+    /** Class-wide number of edges */
+    private static long m_numEdges = -1;
     /** Class-wide map context */
-    private static Context context = null;
-    /** Instantiatable vertex reader */
-    private VertexReader m_instantiableVertexReader;
-    /** BSP Mapper for this Vertex */
-    private BspJob.BspMapper<I, V, E, M> m_bspMapper;
+    private static Mapper<?, ?, ?, ?>.Context context = null;
+    /** Instantiable vertex reader */
+    private VertexReader<I, V, E> m_instantiableVertexReader = null;
+    /** Class-wide BSP Mapper for this Vertex */
+    private BspJob.BspMapper<I, V, E, M> m_bspMapper = null;
     /** Vertex id */
     private I m_vertexId;
     /** Vertex value */
@@ -48,8 +59,6 @@ public abstract class HadoopVertex<
     private boolean m_halt = false;
     /** List of incoming messages from the previous superstep */
     private final List<M> m_msgList = new ArrayList<M>();
-    /** Configuration */
-    private Configuration conf;
 
     @Override
     public void preApplication()
@@ -95,11 +104,21 @@ public abstract class HadoopVertex<
         return m_vertexId;
     }
 
-    public final void setBspMapper(BspJob.BspMapper<I, V, E, M> bspMapper) {
+    /**
+     * Set the BspMapper for this vertex (internal use).
+     *
+     * @param bspMapper Mapper to use for communication
+     */
+    final void setBspMapper(BspMapper<I, V, E ,M> bspMapper) {
         m_bspMapper = bspMapper;
     }
 
-    public static void setSuperstep(long superstep) {
+    /**
+     * Set the global superstep for all the vertices (internal use)
+     *
+     * @param superstep New superstep
+     */
+    static void setSuperstep(long superstep) {
         m_superstep = superstep;
     }
 
@@ -118,7 +137,12 @@ public abstract class HadoopVertex<
         m_vertexValue = vertexValue;
     }
 
-    public static void setNumVertices(long numVertices) {
+    /**
+     * Set the total number of vertices from the last superstep.
+     *
+     * @param numVertices Aggregate vertices in the last superstep
+     */
+    static void setNumVertices(long numVertices) {
         m_numVertices = numVertices;
     }
 
@@ -127,16 +151,22 @@ public abstract class HadoopVertex<
         return m_numVertices;
     }
 
+    /**
+     * Set the total number of edges from the last superstep.
+     *
+     * @param numEdges Aggregate edges in the last superstep
+     */
+    static void setNumEdges(long numEdges) {
+        m_numEdges = numEdges;
+    }
+
+    @Override
     public final long getNumEdges() {
-        return m_destEdgeMap.size();
+        return m_numEdges;
     }
 
     /**
      * Implements the {@link OutEdgeIterator} for {@link HadoopVertex}
-     * @author aching
-     *
-     * @param <I>
-     * @param <E>
      */
     public final static class HadoopVertexOutEdgeIterator<I, E>
         implements OutEdgeIterator<I, E> {
@@ -182,9 +212,9 @@ public abstract class HadoopVertex<
 
     @Override
     public final void sentMsgToAllEdges(M msg) {
-      for (Entry<I, E> destEdge : m_destEdgeMap.entrySet()) {
-          sendMsg(destEdge.getKey(), msg);
-      }
+        for (Entry<I, E> destEdge : m_destEdgeMap.entrySet()) {
+            sendMsg(destEdge.getKey(), msg);
+        }
     }
 
     @Override
@@ -202,7 +232,7 @@ public abstract class HadoopVertex<
         if (m_instantiableVertexReader == null) {
             Class<? extends VertexInputFormat<I, V, E>> vertexInputFormatClass =
                 (Class<? extends VertexInputFormat<I, V, E>>)
-                    getConf().getClass(
+                    getContext().getConfiguration().getClass(
                         BspJob.VERTEX_INPUT_FORMAT_CLASS,
                         VertexInputFormat.class,
                         VertexInputFormat.class);
@@ -237,6 +267,7 @@ public abstract class HadoopVertex<
         m_halt = in.readBoolean();
     }
 
+    @Override
     final public void write(DataOutput out) throws IOException {
         m_vertexId.write(out);
         m_vertexValue.write(out);
@@ -252,13 +283,7 @@ public abstract class HadoopVertex<
         out.writeBoolean(m_halt);
     }
 
-    /**
-     * Register an aggregator in preSuperstep() and/or preApplication().
-     *
-     * @param name of aggregator
-     * @param aggregator
-     * @return boolean (false when already registered)
-     */
+    @Override
     public final <A extends Writable> Aggregator<A> registerAggregator(
             String name,
             Class<? extends Aggregator<A>> aggregatorClass)
@@ -267,46 +292,26 @@ public abstract class HadoopVertex<
             name, aggregatorClass);
     }
 
-    /**
-     * Get a registered aggregator.
-     *
-     * @param name of aggregator
-     * @return Aggregator<A> (null when not registered)
-     */
+    @Override
     public final Aggregator<? extends Writable> getAggregator(String name) {
         return m_bspMapper.getAggregatorUsage().getAggregator(name);
     }
 
-    /**
-     * Use a registered aggregator in current superstep.
-     * Even when the same aggregator should be used in the next
-     * superstep, useAggregator needs to be called at the beginning
-     * of that superstep in preSuperstep().
-     *
-     * @param name of aggregator
-     * @return boolean (false when not registered)
-     */
+    @Override
     public final boolean useAggregator(String name) {
         return m_bspMapper.getAggregatorUsage().useAggregator(name);
     }
 
+    @Override
     public List<M> getMsgList() {
         return m_msgList;
     }
 
-    public final Configuration getConf() {
-        return conf;
-    }
-
-    public final void setConf(Configuration conf) {
-        this.conf = conf;
-    }
-
-    public final Context getContext() {
+    public final Mapper<?, ?, ?, ?>.Context getContext() {
         return context;
     }
 
-    public static void setContext(Context context) {
+    static void setContext(Mapper<?, ?, ?, ?>.Context context) {
         HadoopVertex.context = context;
     }
 }

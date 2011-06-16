@@ -11,10 +11,6 @@ import com.yahoo.hadoop_bsp.BspService.State;
 /**
  * All workers will try to be the master as well. The master can execute the
  * following methods.
- *
- * @author aching
- *
- * @param <I>
  */
 @SuppressWarnings("rawtypes")
 public interface CentralizedServiceMaster<

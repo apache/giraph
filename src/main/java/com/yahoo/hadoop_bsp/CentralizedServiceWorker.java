@@ -11,8 +11,6 @@ import com.yahoo.hadoop_bsp.BspJob.BspMapper;
 /**
  * All workers should have access to this centralized service to
  * execute the following methods.
- *
- * @author aching
  */
 @SuppressWarnings("rawtypes")
 public interface CentralizedServiceWorker<
@@ -100,6 +98,15 @@ public interface CentralizedServiceWorker<
      * @return count of all the vertices (local and non-local together)
      */
     long getTotalVertices();
+
+    /**
+     * Get the total edges in the entire application during a given
+     * superstep.  Note that this is the number of edges prior to the
+     * superstep starting and does not change during the superstep.
+     *
+     * @return count of all the edges (local and non-local together)
+     */
+    long getTotalEdges();
 
     /**
      * If desired by the user, vertex ranges are redistributed among workers
