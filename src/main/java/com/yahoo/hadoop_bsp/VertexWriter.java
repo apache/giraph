@@ -1,6 +1,7 @@
 package com.yahoo.hadoop_bsp;
 
 import java.io.IOException;
+import java.util.SortedMap;
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -30,7 +31,7 @@ public interface VertexWriter<
      */
     <KEYOUT,VALUEOUT> void write(
         TaskInputOutputContext<?, ?, KEYOUT, VALUEOUT> context,
-            I vertexId, V vertexValue, OutEdgeIterator<I, E> destEdgeIt)
+            I vertexId, V vertexValue, SortedMap<I, Edge<I, E>> outEdgeMap)
         throws IOException, InterruptedException;
 
     /**

@@ -35,6 +35,18 @@ public class BspJob extends Job {
     /** Vertex range balancer class - optional */
     public static final String VERTEX_RANGE_BALANCER_CLASS =
         "giraph.vertexRangeBalancerClass";
+    /** Vertex resolver class - optional */
+    public static final String VERTEX_RESOLVER_CLASS =
+        "giraph.vertexResolverClass";
+
+    /** Vertex index class */
+    public static final String VERTEX_INDEX_CLASS = "giraph.vertexIndexClass";
+    /** Vertex value class */
+    public static final String VERTEX_VALUE_CLASS = "giraph.vertexValueClass";
+    /** Edge value class */
+    public static final String EDGE_VALUE_CLASS = "giraph.edgeValueClass";
+    /** Message value class */
+    public static final String MESSAGE_VALUE_CLASS = "giraph.messageValueClass";
 
     /**
      * Minimum number of simultaneous workers before this job can run (int)
@@ -230,6 +242,9 @@ public class BspJob extends Job {
     /** Default ZooKeeper maximum session timeout (in msecs). */
     public static final int DEFAULT_ZOOKEEPER_MAX_SESSION_TIMEOUT = 100000;
 
+    /** Class logger */
+    private static final Logger LOG = Logger.getLogger(BspJob.class);
+
     /**
      *  Constructor.
      * @param conf user-defined configuration
@@ -254,16 +269,22 @@ public class BspJob extends Job {
         if (conf.getInt(MIN_WORKERS, -1) < 0) {
             throw new RuntimeException("No valid " + MIN_WORKERS);
         }
-        if (conf.getClass(VERTEX_CLASS,
-                          HadoopVertex.class,
-                          HadoopVertex.class) == null) {
+        if (BspUtils.getVertexClass(getConfiguration()) == null) {
             throw new RuntimeException("BspJob: Null VERTEX_CLASS");
         }
-        if (conf.getClass(VERTEX_INPUT_FORMAT_CLASS,
-                          VertexInputFormat.class,
-                          VertexInputFormat.class) == null) {
+        if (BspUtils.getVertexInputFormatClass(getConfiguration()) == null) {
             throw new RuntimeException(
                 "BspJob: Null VERTEX_INPUT_FORMAT_CLASS");
+        }
+        if (BspUtils.getVertexResolverClass(getConfiguration()) == null) {
+            conf.setClass(VERTEX_RESOLVER_CLASS,
+                          BspResolver.class,
+                          BspResolver.class);
+            if (LOG.isInfoEnabled()) {
+                LOG.info("BspJob: No class found for " + VERTEX_RESOLVER_CLASS +
+                         ", defaulting to " +
+                         BspResolver.class.getCanonicalName());
+            }
         }
         String jobLocalDir = conf.get("job.local.dir");
         if (jobLocalDir != null) { // for non-local jobs
@@ -386,17 +407,62 @@ public class BspJob extends Job {
 
         @Override
         public void setup(Context context)
-            throws IOException, InterruptedException {
-
+                throws IOException, InterruptedException {
             // Setting the default handler for uncaught exceptions.
             Thread.setDefaultUncaughtExceptionHandler(
                 new OverrideExceptionHandler());
-            // Hadoop security needs this property to be set
             m_conf = context.getConfiguration();
+            // Hadoop security needs this property to be set
             if (System.getenv("HADOOP_TOKEN_FILE_LOCATION") != null) {
                 m_conf.set("mapreduce.job.credentials.binary",
                         System.getenv("HADOOP_TOKEN_FILE_LOCATION"));
             }
+            // Set the configuration classes
+            @SuppressWarnings({ "unchecked" })
+            Class<? extends HadoopVertex<I, V, E, M>> hadoopVertexClass =
+                (Class<? extends HadoopVertex<I, V, E, M>>)
+                    m_conf.getClass(BspJob.VERTEX_CLASS,
+                                    HadoopVertex.class,
+                                    HadoopVertex.class);
+            try {
+                @SuppressWarnings("unchecked")
+                Class<? extends VertexInputFormat<I, V, E>>
+                    vertexInputFormatClass =
+                        (Class<? extends VertexInputFormat<I, V, E>>)
+                        m_conf.getClass(BspJob.VERTEX_INPUT_FORMAT_CLASS,
+                                        VertexInputFormat.class,
+                                        VertexInputFormat.class);
+                VertexReader<I, V, E> vertexReader =
+                    vertexInputFormatClass.newInstance().createVertexReader(
+                    null, context);
+                m_conf.setClass(BspJob.VERTEX_INDEX_CLASS,
+                                vertexReader.createVertexId().getClass(),
+                                WritableComparable.class);
+                m_conf.setClass(BspJob.VERTEX_VALUE_CLASS,
+                                vertexReader.createVertexValue().getClass(),
+                                Writable.class);
+                m_conf.setClass(BspJob.EDGE_VALUE_CLASS,
+                                vertexReader.createEdgeValue().getClass(),
+                                Writable.class);
+                HadoopVertex<I, V, E, M> vertex =
+                    hadoopVertexClass.newInstance();
+                m_conf.setClass(BspJob.MESSAGE_VALUE_CLASS,
+                                vertex.createMsgValue().getClass(),
+                                Writable.class);
+            } catch (InstantiationException e) {
+                throw new IllegalArgumentException(
+                    "setup: Either " +
+                    BspJob.VERTEX_INPUT_FORMAT_CLASS + " or " +
+                    BspJob.VERTEX_CLASS + " failed to instantiate.", e);
+            } catch (IllegalAccessException e) {
+                 throw new IllegalArgumentException(
+                     "setup: Either " +
+                     BspJob.VERTEX_INPUT_FORMAT_CLASS + " or " +
+                     BspJob.VERTEX_CLASS + " were illegally accessed.", e);
+            }
+            HadoopVertex.setBspMapper(this);
+            HadoopVertex.setContext(context);
+
             // Do some initial setup (possibly starting up a Zookeeper service),
             // but mainly decide whether to load data
             // from a checkpoint or from the InputFormat.
@@ -528,7 +594,6 @@ public class BspJob extends Job {
             }
             m_mapAlreadyRun = true;
 
-            HadoopVertex.setContext(context);
             try {
                 m_serviceWorker.getRepresentativeVertex().preApplication();
             } catch (InstantiationException e) {
@@ -556,12 +621,16 @@ public class BspJob extends Job {
                     context.setStatus("Running Zookeeper Server");
                 }
 
-                LOG.info("map: superstep = " + superstep);
-                LOG.debug("map: totalMem=" + Runtime.getRuntime().totalMemory() +
-                          " maxMem=" + Runtime.getRuntime().maxMemory() +
-                          " freeMem=" + Runtime.getRuntime().freeMemory());
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("map: totalMem=" +
+                              Runtime.getRuntime().totalMemory() +
+                              " maxMem=" + Runtime.getRuntime().maxMemory() +
+                              " freeMem=" + Runtime.getRuntime().freeMemory());
+                }
                 if ((superstep >= 1) && (m_commService == null)) {
-                    LOG.info("map: Starting communication service...");
+                    if (LOG.isInfoEnabled()) {
+                        LOG.info("map: Starting communication service...");
+                    }
                     m_commService =
                         new RPCCommunications<I, V, E, M>(context,
                                                           m_serviceWorker);
@@ -571,7 +640,9 @@ public class BspJob extends Job {
                 // Might need to restart from another superstep
                 // (manually or automatic), or store a checkpoint
                 if (m_serviceWorker.getRestartedSuperstep() == superstep) {
-                    LOG.info("map: Loading from checkpoint " + superstep);
+                    if (LOG.isInfoEnabled()) {
+                        LOG.info("map: Loading from checkpoint " + superstep);
+                    }
                     m_serviceWorker.loadCheckpoint(
                         m_serviceWorker.getRestartedSuperstep());
                 } else if (m_serviceWorker.checkpointFrequencyMet(superstep)) {
@@ -599,9 +670,10 @@ public class BspJob extends Job {
                         continue;
                     }
 
+                    edges = 0;
                     verticesFinished = 0;
                     for (Vertex<I, V, E, M> vertex :
-                            entry.getValue().getVertexList()) {
+                            entry.getValue().getVertexMap().values()) {
                         if (!vertex.isHalted()) {
                             Iterator<M> vertexMsgIt =
                                 vertex.getMsgList().iterator();
@@ -611,30 +683,39 @@ public class BspJob extends Job {
                         if (vertex.isHalted()) {
                             ++verticesFinished;
                         }
-                        edges += vertex.getOutEdgeIterator().size();
+                        edges += vertex.getOutEdgeMap().size();
                     }
                     long [] statArray = new long [3];
                     statArray[0] = verticesFinished;
-                    statArray[1] = entry.getValue().getVertexList().size();
+                    statArray[1] = entry.getValue().getVertexMap().size();
                     statArray[2] = edges;
                     maxIndexStatsMap.put(entry.getKey(),
                                          statArray);
-                    LOG.info("map: " + statArray[0] + " of " + statArray[1] +
-                             " vertices finished for vertex range max " +
-                             "index = " + entry.getKey() +
-                             ", finished superstep " +
-                             m_serviceWorker.getSuperstep());
+                    if (LOG.isInfoEnabled()) {
+                        LOG.info("map: " + statArray[0] + " of " +
+                                 statArray[1] +
+                                 " vertices finished for vertex range max " +
+                                 "index = " + entry.getKey() +
+                                 ", finished superstep " +
+                                 m_serviceWorker.getSuperstep());
+                    }
                 }
 
                 m_serviceWorker.getRepresentativeVertex().postSuperstep();
                 context.progress();
-                LOG.info("map: totalMem=" + Runtime.getRuntime().totalMemory() +
-                         " maxMem=" + Runtime.getRuntime().maxMemory() +
-                         " freeMem=" + Runtime.getRuntime().freeMemory());
+                if (LOG.isInfoEnabled()) {
+                    LOG.info("map: totalMem="
+                             + Runtime.getRuntime().totalMemory() +
+                             " maxMem=" + Runtime.getRuntime().maxMemory() +
+                             " freeMem=" + Runtime.getRuntime().freeMemory());
+                }
                 m_commService.flush(context);
             } while (!m_serviceWorker.finishSuperstep(maxIndexStatsMap));
 
-            LOG.info("map: BSP application done (global vertices marked done)");
+            if (LOG.isInfoEnabled()) {
+                LOG.info("map: BSP application done " +
+                         "(global vertices marked done)");
+            }
 
             m_serviceWorker.getRepresentativeVertex().postApplication();
             context.progress();

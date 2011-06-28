@@ -11,6 +11,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.log4j.Logger;
 
 import com.yahoo.hadoop_bsp.BspInputSplit;
+import com.yahoo.hadoop_bsp.Edge;
 import com.yahoo.hadoop_bsp.VertexReader;
 import com.yahoo.hadoop_bsp.MutableVertex;
 
@@ -48,8 +49,8 @@ public class GeneratedVertexReader implements
     }
 
     public boolean next(
-        MutableVertex<LongWritable, IntWritable, FloatWritable, ?> vertex)
-        throws IOException {
+            MutableVertex<LongWritable, IntWritable, FloatWritable, ?> vertex)
+            throws IOException {
         if (m_totalRecords <= m_recordsRead) {
             return false;
         }
@@ -62,8 +63,10 @@ public class GeneratedVertexReader implements
             (m_inputSplit.getNumSplits() * m_totalRecords);
         float edgeValue = (float) vertex.getVertexId().get() * 100;
         // Adds an edge to the neighbor vertex
-        vertex.addEdge(new LongWritable(destVertexId),
-                       new FloatWritable(edgeValue));
+
+        vertex.addEdge(new Edge<LongWritable, FloatWritable>(
+            new LongWritable(destVertexId),
+            new FloatWritable(edgeValue)));
         ++m_recordsRead;
         LOG.info("next: Return vertexId=" + vertex.getVertexId().get() +
             ", vertexValue=" + vertex.getVertexValue() + ", destinationId=" +

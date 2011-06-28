@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.SortedMap;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
@@ -23,7 +24,7 @@ import com.yahoo.hadoop_bsp.BspJob.BspMapper;
  * User applications should all subclass {@link HadoopVertex}.  Package access
  * should prevent users from accessing internal methods.
  *
- * @param <I> Vertex Index value
+ * @param <I> Vertex index value
  * @param <V> Vertex value
  * @param <E> Edge value
  * @param <M> Message value
@@ -34,7 +35,7 @@ public abstract class HadoopVertex<
         V extends Writable,
         E extends Writable,
         M extends Writable>
-        implements MutableVertex<I, V, E, M>, Writable {
+        implements MutableVertex<I, V, E, M> {
     /** Class logger */
     private static final Logger LOG = Logger.getLogger(HadoopVertex.class);
     /** Class-wide superstep */
@@ -44,17 +45,16 @@ public abstract class HadoopVertex<
     /** Class-wide number of edges */
     private static long m_numEdges = -1;
     /** Class-wide map context */
-    private static Mapper<?, ?, ?, ?>.Context context = null;
-    /** Instantiable vertex reader */
-    private VertexReader<I, V, E> m_instantiableVertexReader = null;
+    private static Mapper.Context context = null;
     /** Class-wide BSP Mapper for this Vertex */
-    private BspJob.BspMapper<I, V, E, M> m_bspMapper = null;
+    private static BspJob.BspMapper<?, ? ,?, ?> m_bspMapper = null;
     /** Vertex id */
-    private I m_vertexId;
+    private I m_vertexId = null;
     /** Vertex value */
-    private V m_vertexValue;
+    private V m_vertexValue = null;
     /** Map of destination vertices and their edge values */
-    private final Map<I, E> m_destEdgeMap = new TreeMap<I, E>();
+    private final SortedMap<I, Edge<I, E>> m_destEdgeMap =
+        new TreeMap<I, Edge<I, E>>();
     /** If true, do not do anymore computation on this vertex. */
     private boolean m_halt = false;
     /** List of incoming messages from the previous superstep */
@@ -63,35 +63,38 @@ public abstract class HadoopVertex<
     @Override
     public void preApplication()
             throws InstantiationException, IllegalAccessException {
-        // Do nothing, might be overrided by the user
+        // Do nothing, might be overriden by the user
     }
 
     @Override
     public void postApplication() {
-        // Do nothing, might be overrided by the user
+        // Do nothing, might be overriden by the user
     }
 
     @Override
     public void preSuperstep() {
-        // Do nothing, might be overrided by the user
+        // Do nothing, might be overriden by the user
     }
 
     @Override
     public void postSuperstep() {
-        // Do nothing, might be overrided by the user
+        // Do nothing, might be overriden by the user
     }
 
     @Override
-    public final void addEdge(I destVertexId, E edgeValue) {
-        E value = m_destEdgeMap.get(destVertexId);
-        if (value != null) {
+    public final boolean addEdge(Edge<I, E> edge) {
+        edge.setConf(getContext().getConfiguration());
+        if (m_destEdgeMap.put(edge.getDestinationVertexIndex(), edge) != null) {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("addEdge: Vertex=" + m_vertexId +
                           ": already added an edge " +
-                          "value for destination vertex " + destVertexId);
+                          "value for destination vertex " +
+                          edge.getDestinationVertexIndex());
             }
+            return false;
+        } else {
+            return true;
         }
-        m_destEdgeMap.put(destVertexId, edgeValue);
     }
 
     @Override
@@ -109,7 +112,10 @@ public abstract class HadoopVertex<
      *
      * @param bspMapper Mapper to use for communication
      */
-    final void setBspMapper(BspMapper<I, V, E ,M> bspMapper) {
+    final static <I extends WritableComparable,
+            V extends Writable, E extends Writable,
+            M extends Writable> void
+            setBspMapper(BspMapper<I, V, E, M> bspMapper) {
         m_bspMapper = bspMapper;
     }
 
@@ -201,20 +207,61 @@ public abstract class HadoopVertex<
     }
 
     @Override
-    public final OutEdgeIterator<I, E> getOutEdgeIterator() {
-        return new HadoopVertexOutEdgeIterator<I, E>(m_destEdgeMap);
+    public final SortedMap<I, Edge<I, E>> getOutEdgeMap() {
+        return m_destEdgeMap;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public final void sendMsg(I id, M msg) {
-       m_bspMapper.getWorkerCommunications().sendMessage(id, msg);
+        ((BspMapper<I, V, E, M>) m_bspMapper).
+            getWorkerCommunications().sendMessageReq(id, msg);
     }
 
     @Override
     public final void sentMsgToAllEdges(M msg) {
-        for (Entry<I, E> destEdge : m_destEdgeMap.entrySet()) {
-            sendMsg(destEdge.getKey(), msg);
+        for (Edge<I, E> edge : m_destEdgeMap.values()) {
+            sendMsg(edge.getDestinationVertexIndex(), msg);
         }
+    }
+
+    @Override
+    public MutableVertex<I, V, E, M> instantiateVertex() {
+        HadoopVertex<I, V, E, M> mutableVertex =
+            BspUtils.createVertex(getContext().getConfiguration());
+        return mutableVertex;
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public void addVertexRequest(MutableVertex<I, V, E, M> vertex)
+            throws IOException {
+        ((BspMapper<I, V, E, M>) m_bspMapper).
+            getWorkerCommunications().addVertexReq(vertex);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public void removeVertexRequest(I vertexId) throws IOException {
+        ((BspMapper<I, V, E, M>) m_bspMapper).
+            getWorkerCommunications().removeVertexReq(vertexId);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public void addEdgeRequest(I vertexIndex,
+                               Edge<I, E> edge) throws IOException {
+        ((BspMapper<I, V, E, M>) m_bspMapper).
+            getWorkerCommunications().addEdgeReq(vertexIndex, edge);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public void removeEdgeRequest(I sourceVertexId,
+                                  I destVertexId) throws IOException {
+        ((BspMapper<I, V, E, M>) m_bspMapper).
+            getWorkerCommunications().removeEdgeReq(sourceVertexId,
+                                                    destVertexId);
     }
 
     @Override
@@ -227,36 +274,21 @@ public abstract class HadoopVertex<
         return m_halt;
     }
 
-    @SuppressWarnings("unchecked")
     final public void readFields(DataInput in) throws IOException {
-        if (m_instantiableVertexReader == null) {
-            Class<? extends VertexInputFormat<I, V, E>> vertexInputFormatClass =
-                (Class<? extends VertexInputFormat<I, V, E>>)
-                    getContext().getConfiguration().getClass(
-                        BspJob.VERTEX_INPUT_FORMAT_CLASS,
-                        VertexInputFormat.class,
-                        VertexInputFormat.class);
-            try {
-                m_instantiableVertexReader =
-                    vertexInputFormatClass.newInstance().createVertexReader(
-                        null, null);
-            } catch (Exception e) {
-                throw new RuntimeException(
-                    "readFields: Couldn't instantiate vertex reader");
-            }
-        }
-
-        m_vertexId = (I) m_instantiableVertexReader.createVertexId();
+        m_vertexId = BspUtils.createVertexIndex(getContext().getConfiguration());
         m_vertexId.readFields(in);
-        m_vertexValue = (V) m_instantiableVertexReader.createVertexValue();
-        m_vertexValue.readFields(in);
+        boolean hasVertexValue = in.readBoolean();
+        if (hasVertexValue) {
+            m_vertexValue =
+                BspUtils.createVertexValue(getContext().getConfiguration());
+            m_vertexValue.readFields(in);
+        }
         long edgeMapSize = in.readLong();
         for (long i = 0; i < edgeMapSize; ++i) {
-            I destVertexId = (I) m_instantiableVertexReader.createVertexId();
-            destVertexId.readFields(in);
-            E edgeValue = (E) m_instantiableVertexReader.createEdgeValue();
-            edgeValue.readFields(in);
-            addEdge(destVertexId, edgeValue);
+            Edge<I, E> edge = new Edge<I, E>();
+            edge.setConf(getContext().getConfiguration());
+            edge.readFields(in);
+            addEdge(edge);
         }
         long msgListSize = in.readLong();
         for (long i = 0; i < msgListSize; ++i) {
@@ -270,11 +302,13 @@ public abstract class HadoopVertex<
     @Override
     final public void write(DataOutput out) throws IOException {
         m_vertexId.write(out);
-        m_vertexValue.write(out);
+        out.writeBoolean(m_vertexValue != null);
+        if (m_vertexValue != null) {
+            m_vertexValue.write(out);
+        }
         out.writeLong(m_destEdgeMap.size());
-        for (Entry<I, E> entry : m_destEdgeMap.entrySet()) {
-            entry.getKey().write(out);
-            entry.getValue().write(out);
+        for (Edge<I, E> edge : m_destEdgeMap.values()) {
+            edge.write(out);
         }
         out.writeLong(m_msgList.size());
         for (M msg : m_msgList) {
@@ -311,8 +345,14 @@ public abstract class HadoopVertex<
         return context;
     }
 
-    static void setContext(Mapper<?, ?, ?, ?>.Context context) {
+    final static void setContext(Mapper<?, ?, ?, ?>.Context context) {
         HadoopVertex.context = context;
+    }
+
+    @Override
+    public String toString() {
+        return "Vertex(id=" + getVertexId() + ",value=" + getVertexValue() +
+            ",#edges=" + getOutEdgeMap().size() + ")";
     }
 }
 

@@ -13,7 +13,7 @@ import org.apache.hadoop.util.ReflectionUtils;
 /**
  * A Writable for ListArray containing instances of a class.
  */
-public class ArrayListWritable<M extends Writable> extends ArrayList<M>
+public abstract class ArrayListWritable<M extends Writable> extends ArrayList<M>
           implements Writable, Configurable {
     /** Used for instantiation */
     private Class<M> refClass = null;
@@ -55,10 +55,10 @@ public class ArrayListWritable<M extends Writable> extends ArrayList<M>
     }
 
     /**
-     * Meant to be overriden by subclasses to set the class type
+     * Subclasses must set the class type appropriately and can use
+     * setClass(Class<M> refClass) to do it.
      */
-    public void setClass() {
-    }
+    public abstract void setClass();
 
     public void readFields(DataInput in) throws IOException {
         if (this.refClass == null) {

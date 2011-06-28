@@ -37,7 +37,7 @@ public class SimpleFailVertex extends
                         return;
                     }
                 }
-                long edges = getOutEdgeIterator().size();
+                long edges = getOutEdgeMap().size();
                 sentMsgToAllEdges(
                     new DoubleWritable(getVertexValue().get() / edges));
             } else {

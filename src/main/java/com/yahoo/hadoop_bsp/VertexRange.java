@@ -8,8 +8,8 @@ import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -42,15 +42,11 @@ public class VertexRange<I extends WritableComparable,
     private I m_maxVertexIndex = null;
     /** Hostname and partition id */
     private String m_hostnameId = new String();
-    /** Number of vertices in this VertexRange (from the previous superstep) */
-    private long m_vertexCount = -1;
-    /** Number of edges in this VertexRange (from the previous superstep) */
-    private long m_edgeCount = -1;
     /** Checkpoint file prefix (null if not recovering from a checkpoint) */
     private String m_checkpointfilePrefix = null;
-    /** Vertices (sorted) for this range */
-    private final List<Vertex<I, V, E, M>> m_vertexList =
-        new ArrayList<Vertex<I, V, E, M>>();
+    /** Vertex map for this range (keyed by index) */
+    private final SortedMap<I, Vertex<I, V, E, M>> m_vertexMap =
+        new TreeMap<I, Vertex<I, V, E, M>>();
     /** Class logger */
     private static final Logger LOG = Logger.getLogger(VertexRange.class);
 
@@ -70,8 +66,6 @@ public class VertexRange<I extends WritableComparable,
                 int port,
                 String hostnameId,
                 I maxVertexIndex,
-                long vertexCount,
-                long edgeCount,
                 String checkpointFilePrefix)
             throws InstantiationException, IllegalAccessException, IOException {
         m_hostname = hostname;
@@ -88,8 +82,6 @@ public class VertexRange<I extends WritableComparable,
                 new DataInputStream(
                     new ByteArrayInputStream(byteOutputStream.toByteArray())));
         }
-        m_vertexCount = vertexCount;
-        m_edgeCount = edgeCount;
         m_checkpointfilePrefix = checkpointFilePrefix;
     }
 
@@ -132,9 +124,6 @@ public class VertexRange<I extends WritableComparable,
 
         m_hostnameId =
             vertexRangeObj.getString(BspService.JSONOBJ_HOSTNAME_ID_KEY);
-        m_vertexCount =
-            vertexRangeObj.getLong(BspService.JSONOBJ_NUM_VERTICES_KEY);
-        m_edgeCount = vertexRangeObj.getLong(BspService.JSONOBJ_NUM_EDGES_KEY);
         try {
             m_checkpointfilePrefix =
                 vertexRangeObj.getString(
@@ -174,16 +163,19 @@ public class VertexRange<I extends WritableComparable,
         m_maxVertexIndex.readFields(
             new DataInputStream(
                 new ByteArrayInputStream(byteOutputStream.toByteArray())));;
-        m_vertexCount = vertexRange.getVertexCount();
-        m_edgeCount = vertexRange.getEdgeCount();
         if (vertexRange.getCheckpointFilePrefix() != null) {
             m_checkpointfilePrefix =
                 new String(vertexRange.getCheckpointFilePrefix());
         }
     }
 
-    public List<Vertex<I, V, E, M>> getVertexList() {
-        return m_vertexList;
+    /**
+     * Get the map of vertices for this {@link VertexRange}.
+     *
+     * @return Map of vertices (keyed by index)
+     */
+    public SortedMap<I, Vertex<I, V, E, M>> getVertexMap() {
+        return m_vertexMap;
     }
 
     public JSONObject toJSONObject() throws IOException, JSONException {
@@ -201,8 +193,6 @@ public class VertexRange<I extends WritableComparable,
         vertexRangeObj.put(BspService.JSONOBJ_PREVIOUS_PORT_KEY,
                            m_previousPort);
         vertexRangeObj.put(BspService.JSONOBJ_HOSTNAME_ID_KEY, m_hostnameId);
-        vertexRangeObj.put(BspService.JSONOBJ_NUM_VERTICES_KEY, m_vertexCount);
-        vertexRangeObj.put(BspService.JSONOBJ_NUM_EDGES_KEY, m_edgeCount);
         vertexRangeObj.put(BspService.JSONOBJ_CHECKPOINT_FILE_PREFIX_KEY,
                            m_checkpointfilePrefix);
         return vertexRangeObj;
@@ -264,20 +254,16 @@ public class VertexRange<I extends WritableComparable,
         m_maxVertexIndex = index;
     }
 
-    long getVertexCount() {
-        return m_vertexCount;
+    public long getVertexCount() {
+        return m_vertexMap.size();
     }
 
-    void resetVertexCount() {
-        m_vertexCount = 0;
-    }
-
-    long getEdgeCount() {
-        return m_edgeCount;
-    }
-
-    void resetEdgeCount() {
-        m_edgeCount = 0;
+    public long getEdgeCount() {
+        long edgeCount = 0;
+        for (Vertex<I, V, E, M> vertex : m_vertexMap.values()) {
+            edgeCount += vertex.getOutEdgeMap().size();
+        }
+        return edgeCount;
     }
 
     String getCheckpointFilePrefix() {
@@ -291,8 +277,6 @@ public class VertexRange<I extends WritableComparable,
         m_previousPort = input.readInt();
         m_hostnameId = input.readUTF();
         m_maxVertexIndex.readFields(input);
-        m_vertexCount = input.readLong();
-        m_edgeCount = input.readLong();
         m_checkpointfilePrefix = input.readUTF();
     }
 
@@ -316,8 +300,6 @@ public class VertexRange<I extends WritableComparable,
         output.writeInt(m_previousPort);
         output.writeUTF(m_hostnameId);
         m_maxVertexIndex.write(output);
-        output.writeLong(m_vertexCount);
-        output.writeLong(m_edgeCount);
         output.writeUTF(m_checkpointfilePrefix);
     }
 }

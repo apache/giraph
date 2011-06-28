@@ -508,7 +508,7 @@ public class BspServiceMaster<
         //    the input splits
         int chosenWorkerListIndex = 0;
         int inputSplitIndex = 0;
-        I maxVertexIndex = createVertexIndex();
+        I maxVertexIndex = BspUtils.createVertexIndex(getConfiguration());
         for (Path metadataPath : validMetadataPathList) {
             String checkpointFilePrefix = metadataPath.toString();
             checkpointFilePrefix =
@@ -693,19 +693,18 @@ public class BspServiceMaster<
                     if (zkData == null || zkData.length == 0) {
                         continue;
                     }
-                    LOG.debug("collectVertexRangeStats: input split path " +
-                             inputSplitPath + " got " + zkData);
+                    if (LOG.isInfoEnabled()) {
+                        LOG.info("collectVertexRangeStats: input split path " +
+                                 inputSplitPath + " got " + zkData);
+                    }
                     statArray = new JSONArray(new String(zkData));
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
                 for (int i = 0; i < statArray.length(); ++i) {
                     try {
-                        I maxVertexIndex = createVertexIndex();
-                        LOG.debug("collectVertexRangeStats: " +
-                                 "Getting max index from " +
-                                 statArray.getJSONObject(i).get(
-                                     JSONOBJ_MAX_VERTEX_INDEX_KEY));
+                        I maxVertexIndex =
+                            BspUtils.createVertexIndex(getConfiguration());
                         InputStream input =
                             new ByteArrayInputStream(
                                 statArray.getJSONObject(i).getString(
@@ -746,11 +745,8 @@ public class BspServiceMaster<
                         aggregatorStatObj.getJSONArray(
                             JSONOBJ_VERTEX_RANGE_STAT_ARRAY_KEY);
                     for (int i = 0; i < statArray.length(); ++i) {
-                        I maxVertexIndex = createVertexIndex();
-                        LOG.info("collectVertexRangeStats: " +
-                                 "Getting max vertex index from " +
-                                 statArray.getJSONObject(i).get(
-                                     JSONOBJ_MAX_VERTEX_INDEX_KEY));
+                        I maxVertexIndex =
+                            BspUtils.createVertexIndex(getConfiguration());
                         InputStream input =
                             new ByteArrayInputStream(
                                 statArray.getJSONObject(i).getString(
@@ -1020,9 +1016,8 @@ public class BspServiceMaster<
                                       hostnamePortArray.getString(0));
                    vertexRangeObj.put(JSONOBJ_PORT_KEY,
                                       hostnamePortArray.getString(1));
-                   @SuppressWarnings("unchecked")
                    Class<I> indexClass =
-                       (Class<I>) createVertexIndex().getClass();
+                       BspUtils.getVertexIndexClass(getConfiguration());
                     VertexRange<I, V, E, M> vertexRange =
                         new VertexRange<I, V, E, M>(indexClass, vertexRangeObj);
                     vertexRangeList.add(vertexRange);
@@ -1117,7 +1112,7 @@ public class BspServiceMaster<
             try {
                 LOG.info("balanceVertexRanges: numVertexRanges=" +
                          nextVertexRangeMap.values().size() +
-                         " lengthVertexRanges=" + vertexAssignmentBytes +
+                         " lengthVertexRanges=" + vertexAssignmentBytes.length +
                          " maxVertexRangeLength=" +
                          maxVertexRange.toJSONObject().toString().length());
             } catch (IOException e) {
@@ -1335,8 +1330,8 @@ public class BspServiceMaster<
                     new ArrayList<String>(
                         chosenWorkerHostnamePortMap.keySet()));
                 inputSplitsToVertexRanges(chosenWorkerHostnamePortMap);
-            } catch (Exception e) {
-                throw new RuntimeException(
+            } catch (IOException e) {
+                throw new IllegalStateException(
                     "coordinateSuperstep: Failed to reload", e);
             }
         } else {
@@ -1438,9 +1433,12 @@ public class BspServiceMaster<
                     "the number range stats", e);
             }
         }
-        LOG.info("coordinateSuperstep: Aggregation found " + verticesFinished +
-                 " of " + verticesTotal + " vertices finished on superstep = " +
-                 getSuperstep());
+        if (LOG.isInfoEnabled()) {
+            LOG.info("coordinateSuperstep: Aggregation found "
+                     + verticesFinished + " of " + verticesTotal +
+                     " vertices finished, " + edgesTotal +
+                     " edges on superstep = " + getSuperstep());
+        }
 
         // Convert the input split stats to vertex ranges in superstep 0
         if (getSuperstep() == 0) {

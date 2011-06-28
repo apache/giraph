@@ -86,9 +86,14 @@ public interface CentralizedServiceWorker<
     boolean finishSuperstep(final Map<I, long []> maxIndexStatsMap);
 
     /**
-     * Every client will need to get a vertex range for a vertex id
+     * Every client will need to get a vertex range for a vertex id so that
+     * they know where to sent the request.
+     *
+     * @param superstep Superstep to look for
+     * @param vertexIndex Vertex index to look for
+     * @return VertexRange that should contain this vertex if it exists
      */
-    VertexRange<I, V, E, M> getVertexRange(I index);
+    VertexRange<I, V, E, M> getVertexRange(long superstep, I vertexIndex);
 
     /**
      * Get the total vertices in the entire application during a given

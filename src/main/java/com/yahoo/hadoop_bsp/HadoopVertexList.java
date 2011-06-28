@@ -19,8 +19,10 @@ public class HadoopVertexList<
     /** Defining a layout version for a serializable class. */
     private static final long serialVersionUID = 1000L;
 
-    public HadoopVertexList() {
-    }
+    /**
+     * Default constructor for reflection
+     */
+    public HadoopVertexList() {}
 
     @Override
     public void setClass() {

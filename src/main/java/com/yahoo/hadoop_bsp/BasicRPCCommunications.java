@@ -57,7 +57,7 @@ public abstract class BasicRPCCommunications<
     /**
      * Map of threads mapping from remote socket address to RPC client threads
      */
-    private Map<InetSocketAddress, PeerThread> peerThreads =
+    private final Map<InetSocketAddress, PeerThread> peerThreads =
         new HashMap<InetSocketAddress, PeerThread>();
     /**
      * Map of outbound messages, mapping from remote server to
@@ -65,7 +65,7 @@ public abstract class BasicRPCCommunications<
      * (Synchronized between peer threads and main thread for each internal
      *  map)
      */
-    private Map<InetSocketAddress, Map<I, MsgList<M>>> outMessages =
+    private final Map<InetSocketAddress, Map<I, MsgList<M>>> outMessages =
         new HashMap<InetSocketAddress, Map<I, MsgList<M>>>();
     /**
      * Map of incoming messages, mapping from vertex index to list of messages.
@@ -76,8 +76,8 @@ public abstract class BasicRPCCommunications<
      * Map of inbound messages, mapping from vertex index to list of messages.
      * Transferred to inMessages at beginning of a superstep.  This
      * intermediary step exists so that the combiner will run not only at the
-     * client, but also at the server. Also, allows the sending of large messge
-     * lists during the superstep computation. (Synchronized)
+     * client, but also at the server. Also, allows the sending of large
+     * message lists during the superstep computation. (Synchronized)
      */
     private final Map<I, List<M>> transientInMessages =
         new HashMap<I, List<M>>();
@@ -89,6 +89,12 @@ public abstract class BasicRPCCommunications<
         inVertexRangeMap =
             new TreeMap<I, List<HadoopVertex<I, V, E, M>>>();
     /**
+     * Map from vertex index to all vertex mutations
+     */
+    private final Map<I, VertexMutations<I, V, E, M>>
+        inVertexMutationsMap =
+            new TreeMap<I, VertexMutations<I, V, E, M>>();
+    /**
      * Cached map of vertex ranges to remote socket address.  Needs to be
      * synchronized.
      */
@@ -97,7 +103,7 @@ public abstract class BasicRPCCommunications<
     /** Maximum size of cached message list, before sending it out */
     private final int maxSize;
     /** Maximum msecs to hold messages before checking again */
-    static final private int MAX_MESSAGE_HOLDING_MSECS = 2000;
+    private static final int MAX_MESSAGE_HOLDING_MSECS = 2000;
     /** Cached job id */
     private final String jobId;
     /** cached job token */
@@ -479,11 +485,13 @@ public abstract class BasicRPCCommunications<
         peerThreads.put(addrUnresolved, th);
     }
 
+    @Override
     public final long getProtocolVersion(String protocol, long clientVersion)
     throws IOException {
         return versionID;
     }
 
+    @Override
     public void closeConnections() throws IOException {
         for (PeerThread pt : peerThreads.values()) {
             pt.close();
@@ -498,11 +506,13 @@ public abstract class BasicRPCCommunications<
         }
     }
 
+    @Override
     public final void close() {
         LOG.info("close: shutting down RPC server");
         server.stop();
     }
 
+    @Override
     public final void putMsg(I vertex, M msg) throws IOException {
         List<M> msgs = null;
         LOG.debug("putMsg: Adding msg " + msg + " on vertex " + vertex);
@@ -529,6 +539,7 @@ public abstract class BasicRPCCommunications<
         }
     }
 
+    @Override
     public final void putMsgList(I vertex,
                                  MsgList<M> msgList) throws IOException {
         List<M> msgs = null;
@@ -546,11 +557,14 @@ public abstract class BasicRPCCommunications<
         }
     }
 
+    @Override
     public final void putVertexList(I vertexIndexMax,
                                     HadoopVertexList<I, V, E, M> vertexList)
             throws IOException {
-        LOG.debug("putVertexList: On vertex range " + vertexIndexMax +
-                  " adding vertex list of size " + vertexList.size());
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("putVertexList: On vertex range " + vertexIndexMax +
+                      " adding vertex list of size " + vertexList.size());
+        }
         synchronized (inVertexRangeMap) {
             if (vertexList.size() == 0) {
                 return;
@@ -562,14 +576,83 @@ public abstract class BasicRPCCommunications<
             List<HadoopVertex<I, V, E, M>> tmpVertexList =
                 inVertexRangeMap.get(vertexIndexMax);
             for (HadoopVertex<I, V, E, M> hadoopVertex : vertexList) {
-                hadoopVertex.setBspMapper(service.getBspMapper());
                 tmpVertexList.add(hadoopVertex);
             }
         }
     }
 
-    public final void sendVertexList(I vertexIndexMax,
-                                     List<Vertex<I, V, E, M>> vertexList) {
+    @Override
+    public final void addEdge(I vertexIndex, Edge<I, E> edge) {
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("addEdge: Adding edge " + edge);
+        }
+        synchronized (inVertexMutationsMap) {
+            VertexMutations<I, V, E, M> vertexMutations = null;
+            if (!inVertexMutationsMap.containsKey(vertexIndex)) {
+                vertexMutations = new VertexMutations<I, V, E, M>();
+                inVertexMutationsMap.put(vertexIndex, vertexMutations);
+            } else {
+                vertexMutations = inVertexMutationsMap.get(vertexIndex);
+            }
+            vertexMutations.addEdge(edge);
+        }
+    }
+
+    @Override
+    public void removeEdge(I vertexIndex, I destinationVertexIndex) {
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("removeEdge: Removing edge on destination " +
+                      destinationVertexIndex);
+        }
+        synchronized (inVertexMutationsMap) {
+            VertexMutations<I, V, E, M> vertexMutations = null;
+            if (!inVertexMutationsMap.containsKey(vertexIndex)) {
+                vertexMutations = new VertexMutations<I, V, E, M>();
+                inVertexMutationsMap.put(vertexIndex, vertexMutations);
+            } else {
+                vertexMutations = inVertexMutationsMap.get(vertexIndex);
+            }
+            vertexMutations.removeEdge(destinationVertexIndex);
+        }
+    }
+
+    @Override
+    public final void addVertex(MutableVertex<I, V, E, M> vertex) {
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("addVertex: Adding vertex " + vertex);
+        }
+        synchronized (inVertexMutationsMap) {
+            VertexMutations<I, V, E, M> vertexMutations = null;
+            if (!inVertexMutationsMap.containsKey(vertex.getVertexId())) {
+                vertexMutations = new VertexMutations<I, V, E, M>();
+                inVertexMutationsMap.put(vertex.getVertexId(), vertexMutations);
+            } else {
+                vertexMutations = inVertexMutationsMap.get(vertex.getVertexId());
+            }
+            vertexMutations.addVertex(vertex);
+        }
+    }
+
+    @Override
+    public void removeVertex(I vertexIndex) {
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("removeVertex: Removing vertex " + vertexIndex);
+        }
+        synchronized (inVertexMutationsMap) {
+            VertexMutations<I, V, E, M> vertexMutations = null;
+            if (!inVertexMutationsMap.containsKey(vertexIndex)) {
+                vertexMutations = new VertexMutations<I, V, E, M>();
+                inVertexMutationsMap.put(vertexIndex, vertexMutations);
+            } else {
+                vertexMutations = inVertexMutationsMap.get(vertexIndex);
+            }
+            vertexMutations.removeVertex();
+        }
+    }
+
+    @Override
+    public final void sendVertexListReq(I vertexIndexMax,
+                                        List<Vertex<I, V, E, M>> vertexList) {
         // Internally, break up the sending so that the list doesn't get too
         // big.
         HadoopVertexList<I, V, E, M> hadoopVertexList =
@@ -577,9 +660,11 @@ public abstract class BasicRPCCommunications<
         InetSocketAddress addr = getInetSocketAddress(vertexIndexMax);
         CommunicationsInterface<I, V, E, M> rpcProxy =
             peerThreads.get(addr).getRPCProxy();
-        LOG.info("sendVertexList: Sending to " + rpcProxy.getName() + " " +
-                 addr + ", with vertex index " + vertexIndexMax + ", list " +
-                 vertexList);
+        if (LOG.isInfoEnabled()) {
+            LOG.info("sendVertexList: Sending to " + rpcProxy.getName() + " " +
+                     addr + ", with vertex index " + vertexIndexMax +
+                     ", list " + vertexList);
+        }
         if (peerThreads.get(addr).isProxy == false) {
             throw new RuntimeException("sendVertexList: Impossible to send " +
                 "to self for vertex index max " + vertexIndexMax);
@@ -613,7 +698,7 @@ public abstract class BasicRPCCommunications<
      */
     private InetSocketAddress getInetSocketAddress(I destVertex) {
         VertexRange<I, V, E, M> destVertexRange =
-            service.getVertexRange(destVertex);
+            service.getVertexRange(service.getSuperstep(), destVertex);
         if (destVertexRange == null) {
             LOG.error("getInetSocketAddress: No vertexRange found for " +
                       destVertex);
@@ -636,10 +721,12 @@ public abstract class BasicRPCCommunications<
     }
 
     @Override
-    public final void sendMessage(I destVertex, M msg) {
+    public final void sendMessageReq(I destVertex, M msg) {
         InetSocketAddress addr = getInetSocketAddress(destVertex);
-        LOG.debug("sendMessage: Send bytes (" + msg.toString() + ") to " +
-                   destVertex + " with address " + addr);
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("sendMessage: Send bytes (" + msg.toString() + ") to " +
+                      destVertex + " with address " + addr);
+        }
         Map<I, MsgList<M>> msgMap = null;
         synchronized (outMessages) {
             msgMap = outMessages.get(addr);
@@ -665,8 +752,64 @@ public abstract class BasicRPCCommunications<
         }
     }
 
-    public final void flush(Mapper<?, ?, ?, ?>.Context context) throws IOException {
-        LOG.info("flush");
+    @Override
+    public final void addEdgeReq(I destVertex, Edge<I, E> edge)
+            throws IOException {
+        InetSocketAddress addr = getInetSocketAddress(destVertex);
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("addEdgeReq: Add edge (" + edge.toString() + ") to " +
+                      destVertex + " with address " + addr);
+        }
+        CommunicationsInterface<I, V, E, M> rpcProxy =
+            peerThreads.get(addr).getRPCProxy();
+        rpcProxy.addEdge(destVertex, edge);
+    }
+
+    @Override
+    public final void removeEdgeReq(I vertexIndex, I destVertexIndex)
+            throws IOException {
+        InetSocketAddress addr = getInetSocketAddress(vertexIndex);
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("removeEdgeReq: remove edge (" + destVertexIndex +
+                      ") from" + vertexIndex + " with address " + addr);
+        }
+        CommunicationsInterface<I, V, E, M> rpcProxy =
+            peerThreads.get(addr).getRPCProxy();
+        rpcProxy.removeEdge(vertexIndex, destVertexIndex);
+    }
+
+    @Override
+    public final void addVertexReq(MutableVertex<I, V, E, M> vertex)
+            throws IOException {
+        InetSocketAddress addr = getInetSocketAddress(vertex.getVertexId());
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("addVertexReq: Add vertex (" + vertex + ") " +
+                      " with address " + addr);
+        }
+        CommunicationsInterface<I, V, E, M> rpcProxy =
+            peerThreads.get(addr).getRPCProxy();
+        rpcProxy.addVertex(vertex);
+    }
+
+    @Override
+    public void removeVertexReq(I vertexIndex) throws IOException {
+        InetSocketAddress addr =
+            getInetSocketAddress(vertexIndex);
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("removeVertexReq: Remove vertex index ("
+                      + vertexIndex + ")  with address " + addr);
+        }
+        CommunicationsInterface<I, V, E, M> rpcProxy =
+            peerThreads.get(addr).getRPCProxy();
+        rpcProxy.removeVertex(vertexIndex);
+    }
+
+    @Override
+    public final void flush(Mapper<?, ?, ?, ?>.Context context)
+            throws IOException {
+        if (LOG.isInfoEnabled()) {
+            LOG.info("flush: starting...");
+        }
         for (List<M> msgList : inMessages.values()) {
             msgList.clear();
         }
@@ -705,6 +848,7 @@ public abstract class BasicRPCCommunications<
         }
     }
 
+    @Override
     public void prepareSuperstep() {
         LOG.info("prepareSuperstep");
         inPrepareSuperstep = true;
@@ -739,7 +883,8 @@ public abstract class BasicRPCCommunications<
                 service.getCurrentVertexRangeMap();
             for (VertexRange<I, V, E, M> vertexRange :
                     vertexRangeMap.values()) {
-                for (Vertex<I, V, E, M> vertex : vertexRange.getVertexList()) {
+                for (Vertex<I, V, E, M> vertex :
+                        vertexRange.getVertexMap().values()) {
                     vertex.getMsgList().clear();
                     List<M> msgList = inMessages.get(vertex.getVertexId());
                     if (msgList != null) {
@@ -759,8 +904,65 @@ public abstract class BasicRPCCommunications<
         }
 
         inPrepareSuperstep = false;
+
+        // Resolve what happens when messages are sent to non-existent vertices
+        // and vertices that have mutations
+        Set<I> resolveVertexIndexSet = new TreeSet<I>();
+        if (inMessages.size() > 0) {
+            for (Entry<I, List<M>> entry : inMessages.entrySet()) {
+                if (entry.getValue().isEmpty()) {
+                    continue;
+                } else {
+                    resolveVertexIndexSet.add(entry.getKey());
+                }
+            }
+        }
+        synchronized (inVertexMutationsMap) {
+            for (I vertexIndex : inVertexMutationsMap.keySet()) {
+                resolveVertexIndexSet.add(vertexIndex);
+            }
+        }
+
+        // Resolve all graph mutations
+        for (I vertexIndex : resolveVertexIndexSet) {
+            BspResolver<I, V, E, M> vertexResolver =
+                BspUtils.createVertexResolver(conf);
+            VertexRange<I, V, E, M> vertexRange =
+                service.getVertexRange(service.getSuperstep() - 1, vertexIndex);
+            Vertex<I, V, E, M> originalVertex =
+                vertexRange.getVertexMap().get(vertexIndex);
+            List<M> msgList = inMessages.get(vertexIndex);
+            if (originalVertex != null) {
+                msgList = originalVertex.getMsgList();
+            }
+            VertexMutations<I, V, E, M> vertexMutations =
+                inVertexMutationsMap.get(vertexIndex);
+            Vertex<I, V, E, M> vertex =
+                vertexResolver.resolve(originalVertex,
+                                       vertexMutations,
+                                       msgList);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("prepareSuperstep: Resolved vertex index " +
+                          vertexIndex + " with original vertex " +
+                          originalVertex + ", returned vertex " + vertex +
+                          " on superstep " + service.getSuperstep() +
+                          " with mutations " +
+                          vertexMutations);
+            }
+
+            if (vertex != null) {
+                ((MutableVertex<I, V, E, M>) vertex).setVertexId(vertexIndex);
+                vertexRange.getVertexMap().put(vertex.getVertexId(), vertex);
+            } else if ((vertex == null) && (originalVertex != null)) {
+                vertexRange.getVertexMap().remove(originalVertex.getVertexId());
+            }
+        }
+        synchronized (inVertexMutationsMap) {
+            inVertexMutationsMap.clear();
+        }
     }
 
+    @Override
     public void cleanCachedVertexAddressMap() {
         // Fix all the cached inet addresses (remove all changed entries)
         synchronized (vertexIndexMapAddressMap) {
@@ -792,10 +994,12 @@ public abstract class BasicRPCCommunications<
         }
     }
 
+    @Override
     public String getName() {
         return myName;
     }
 
+    @Override
     public Map<I, List<HadoopVertex<I, V, E, M>>> getInVertexRangeMap() {
         return inVertexRangeMap;
     }

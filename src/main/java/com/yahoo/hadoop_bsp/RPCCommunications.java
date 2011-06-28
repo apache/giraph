@@ -68,7 +68,9 @@ public class RPCCommunications<
             new JobTokenSecretManager();
         if (jt != null) { //could be null in the case of some unit tests
             jobTokenSecretManager.addTokenForJob(jobId, jt);
-            LOG.info("Added jobToken " + jt);
+            if (LOG.isInfoEnabled()) {
+                LOG.info("getRPCServer: Added jobToken " + jt);
+            }
         }
         return RPC.getServer(this, myAddress.getHostName(), myAddress.getPort(),
                 numHandlers, false, conf, jobTokenSecretManager);
@@ -100,7 +102,8 @@ public class RPCCommunications<
                       owner.doAs(new PrivilegedExceptionAction<
                               CommunicationsInterface<I, V, E, M>>() {
             @Override
-            public CommunicationsInterface<I, V, E, M>  run() throws Exception {
+            public CommunicationsInterface<I, V, E, M> run() throws Exception {
+                // All methods in CommunicationsInterface will be used for RPC
                 return (CommunicationsInterface<I, V, E, M> )RPC.getProxy(
                     CommunicationsInterface.class, versionID, addr, config);
             }

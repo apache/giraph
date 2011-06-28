@@ -6,9 +6,7 @@ import com.yahoo.hadoop_bsp.Aggregator;
 
 /**
  * Aggregator for summing up values.
- *
  */
-
 public class LongSumAggregator implements Aggregator<LongWritable> {
 
   private long sum = 0;
@@ -32,5 +30,5 @@ public class LongSumAggregator implements Aggregator<LongWritable> {
   public LongWritable createAggregatedValue() {
       return new LongWritable();
   }
-  
+
 }

@@ -1,7 +1,9 @@
 package com.yahoo.hadoop_bsp;
 
+import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.SortedMap;
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -57,13 +59,17 @@ public interface Vertex<I extends WritableComparable,
 
     /**
      * Must be defined by user to do computation on a single Vertex.
+     *
+     * @param msgIterator Iterator to the messages that were sent to this
+     *        vertex in the previous superstep
+     * @throws IOException
      */
-    void compute(Iterator<M> msgIterator);
+    void compute(Iterator<M> msgIterator) throws IOException;
 
     /**
      * Retrieves the current superstep.
      *
-     * @return BSP superstep
+     * @return Current superstep
      */
     long getSuperstep();
 
@@ -73,8 +79,9 @@ public interface Vertex<I extends WritableComparable,
     I getVertexId();
 
     /**
-     * Get the vertex data
-     * @return vertex data
+     * Get the vertex value (data stored with vertex)
+     *
+     * @return Vertex value
      */
     V getVertexValue();
 
@@ -103,11 +110,11 @@ public interface Vertex<I extends WritableComparable,
 
     /**
      * Every vertex has edges to other vertices.  Get a handle to the outward
-     * edges and their vertices.
+     * edge set.
      *
-     * @return iterator to the outward edges and their destination vertices
+     * @return Map of the destination vertex index to the {@link Edge}
      */
-    OutEdgeIterator<I, E> getOutEdgeIterator();
+    SortedMap<I, Edge<I, E>> getOutEdgeMap();
 
     /**
      * Send a message to a vertex id.
@@ -136,7 +143,8 @@ public interface Vertex<I extends WritableComparable,
     boolean isHalted();
 
     /**
-     *  Get the list of incoming messages from the previous superstep.
+     *  Get the list of incoming messages from the previous superstep.  Same as
+     *  the message iterator passed to compute().
      */
     List<M> getMsgList();
 }

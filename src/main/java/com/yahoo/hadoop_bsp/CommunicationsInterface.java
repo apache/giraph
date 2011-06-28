@@ -43,7 +43,7 @@ public interface CommunicationsInterface<
     /**
      * Adds incoming message list.
      *
-     * @param vertexIndex
+     * @param vertexIndex Vertex index where the message are added
      * @param msgList messages added
      * @throws IOException
      */
@@ -57,6 +57,40 @@ public interface CommunicationsInterface<
     void putVertexList(I vertexIndexMax,
                        HadoopVertexList<I, V, E, M> vertexList)
         throws IOException;
+
+    /**
+     * Add an edge to a remote vertex
+     *
+     * @param vertexIndex Vertex index where the edge is added
+     * @param edge Edge to be added
+     * @throws IOException
+     */
+    void addEdge(I vertexIndex, Edge<I, E> edge) throws IOException;
+
+    /**
+     * Remove an edge on a remote vertex
+     *
+     * @param vertexIndex Vertex index where the edge is added
+     * @param destinationVertexIndex Edge vertex index to be removed
+     * @throws IOException
+     */
+    void removeEdge(I vertexIndex, I destinationVertexIndex) throws IOException;
+
+    /**
+     * Add a remote vertex
+     *
+     * @param vertex Vertex that will be added
+     * @throws IOException
+     */
+    void addVertex(MutableVertex<I, V, E, M> vertex) throws IOException;
+
+    /**
+     * Removed a remote vertex
+     *
+     * @param vertexIndex Vertex index representing vertex to be removed
+     * @throws IOException
+     */
+    void removeVertex(I vertexIndex) throws IOException;
 
     /**
      * @return The name of this worker in the format "hostname:port".

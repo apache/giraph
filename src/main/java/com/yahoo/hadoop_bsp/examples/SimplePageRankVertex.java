@@ -93,7 +93,7 @@ public class SimplePageRankVertex extends
                  " max=" + maxAggreg.getAggregatedValue() +
                  " min=" + minAggreg.getAggregatedValue());
         if (getSuperstep() < 30) {
-            long edges = getOutEdgeIterator().size();
+            long edges = getOutEdgeMap().size();
             sentMsgToAllEdges(
                 new DoubleWritable(getVertexValue().get() / edges));
         } else {

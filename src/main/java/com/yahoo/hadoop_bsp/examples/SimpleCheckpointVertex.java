@@ -1,7 +1,6 @@
 package com.yahoo.hadoop_bsp.examples;
 
 import java.util.Iterator;
-import java.util.Map;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -18,8 +17,8 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 import com.yahoo.hadoop_bsp.BspJob;
+import com.yahoo.hadoop_bsp.Edge;
 import com.yahoo.hadoop_bsp.HadoopVertex;
-import com.yahoo.hadoop_bsp.OutEdgeIterator;
 import com.yahoo.hadoop_bsp.VertexInputFormat;
 import com.yahoo.hadoop_bsp.lib.LongSumAggregator;
 
@@ -106,20 +105,20 @@ public class SimpleCheckpointVertex extends
         }
         int vertexValue = getVertexValue().get();
         setVertexValue(new IntWritable(vertexValue + (int) msgValue));
-        System.out.println("compute: vertex " + getVertexId() + " has value " +
-                           getVertexValue() + " on superstep " + getSuperstep());
-        OutEdgeIterator<LongWritable, FloatWritable> it = getOutEdgeIterator();
-        while (it.hasNext()) {
-            Map.Entry<LongWritable, FloatWritable> entry = it.next();
-            float edgeValue = entry.getValue().get();
+        System.out.println("compute: vertex " + getVertexId() +
+                           " has value " + getVertexValue() +
+                           " on superstep " + getSuperstep());
+        for (Edge<LongWritable, FloatWritable> edge : getOutEdgeMap().values()) {
+            float edgeValue = edge.getEdgeValue().get();
             System.out.println("compute: vertex " + getVertexId() +
                                " sending edgeValue " + edgeValue +
                                " vertexValue " + vertexValue +
                                " total " + (edgeValue + (float) vertexValue) +
-                               " to vertex " + entry.getKey() +
+                               " to vertex " + edge.getDestinationVertexIndex() +
                                " on superstep " + getSuperstep());
-            entry.getValue().set(edgeValue + (float) vertexValue);
-            sendMsg(entry.getKey(), new FloatWritable(edgeValue));
+            edge.getEdgeValue().set(edgeValue + (float) vertexValue);
+            sendMsg(edge.getDestinationVertexIndex(),
+                    new FloatWritable(edgeValue));
         }
     }
 

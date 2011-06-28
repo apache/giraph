@@ -19,7 +19,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.util.ReflectionUtils;
 
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
@@ -110,10 +109,8 @@ public abstract class BspService <
      * methods
      */
     private final HadoopVertex<I, V, E, M> m_instantiableHadoopVertex;
-    /** Used to instantiate vertex ids, vertex values, and edge values */
-    private final VertexReader<I, V, E> m_instantiableVertexReader;
     /** Checkpoint frequency */
-    int m_checkpointFrequency = -1;
+    private int m_checkpointFrequency = -1;
     /** Vertex range map based on the superstep below */
     private NavigableMap<I, VertexRange<I, V, E, M>> m_vertexRangeMap =
         new TreeMap<I, VertexRange<I, V, E, M>>();
@@ -587,36 +584,9 @@ public abstract class BspService <
         }
         m_hostnamePartitionId = m_hostname + "_" + getTaskPartition();
 
-        @SuppressWarnings({ "unchecked" })
-        Class<? extends HadoopVertex<I, V, E, M>> hadoopVertexClass =
-            (Class<? extends HadoopVertex<I, V, E, M>>)
-                getConfiguration().getClass(BspJob.VERTEX_CLASS,
-                                            HadoopVertex.class,
-                                            HadoopVertex.class);
-        m_hadoopVertexClass = hadoopVertexClass;
-        @SuppressWarnings({ "unchecked" })
-        Class<? extends VertexInputFormat<I, V, E>> vertexInputFormatClass =
-                (Class<? extends VertexInputFormat<I, V, E>>)
-                    getConfiguration().getClass(
-                        BspJob.VERTEX_INPUT_FORMAT_CLASS,
-                        VertexInputFormat.class,
-                        VertexInputFormat.class);
-        try {
-            m_instantiableHadoopVertex =
-                ReflectionUtils.newInstance(hadoopVertexClass, m_conf);
-            m_instantiableHadoopVertex.setBspMapper(bspMapper);
-        } catch (Exception e) {
-            throw new RuntimeException(
-                "BspService: Couldn't instantiate vertex");
-        }
-        try {
-            m_instantiableVertexReader =
-                vertexInputFormatClass.newInstance().createVertexReader(
-                    null, getContext());
-        } catch (Exception e) {
-            throw new RuntimeException(
-                "BspService: Couldn't instantiate vertex input format");
-        }
+        m_hadoopVertexClass = BspUtils.getVertexClass(getConfiguration());
+        m_instantiableHadoopVertex =
+            BspUtils.createVertex(getConfiguration());
 
         m_checkpointFrequency =
             m_conf.getInt(BspJob.CHECKPOINT_FREQUENCY,
@@ -633,8 +603,10 @@ public abstract class BspService <
                 BspJob.CHECKPOINT_DIRECTORY,
                 BspJob.CHECKPOINT_DIRECTORY_DEFAULT + "/" + getJobId());
         MASTER_ELECTION_PATH = BASE_PATH + MASTER_ELECTION_DIR;
-        LOG.info("BspService: Connecting to ZooKeeper with job " + m_jobId +
-                 ", " + getTaskPartition() + " on " + serverPortList);
+        if (LOG.isInfoEnabled()) {
+            LOG.info("BspService: Connecting to ZooKeeper with job " + m_jobId +
+                     ", " + getTaskPartition() + " on " + serverPortList);
+        }
         try {
             m_zk = new ZooKeeperExt(serverPortList, sessionMsecTimeout, this);
             m_fs = FileSystem.get(getConfiguration());
@@ -663,42 +635,6 @@ public abstract class BspService <
 
     final public Vertex<I, V, E, M> getRepresentativeVertex() {
         return m_instantiableHadoopVertex;
-    }
-
-    /**
-     * Instantiate a vertex index
-     *
-     * @return new vertex index
-     */
-    final public I createVertexIndex() {
-        return m_instantiableVertexReader.createVertexId();
-    }
-
-    /**
-     * Instantiate a vertex value
-     *
-     * @return new vertex value
-     */
-    final public V createVertexValue() {
-        return m_instantiableVertexReader.createVertexValue();
-    }
-
-    /**
-     * Instantiate an edge value
-     *
-     * @return new edge value
-     */
-    final public E createEdgeValue() {
-        return m_instantiableVertexReader.createEdgeValue();
-    }
-
-    /**
-     * Instantiate an message value
-     *
-     * @return new message value
-     */
-    final public M createMsgValue() {
-        return m_instantiableHadoopVertex.createMsgValue();
     }
 
     /**
@@ -832,8 +768,8 @@ public abstract class BspService <
     public NavigableMap<I, VertexRange<I, V, E, M>> getVertexRangeMap(
             long superstep) {
         if (LOG.isDebugEnabled()) {
-            LOG.debug("getVertexRangeMap: Current superstep = " + getSuperstep() +
-                      ", desired superstep = " + superstep);
+            LOG.debug("getVertexRangeMap: Current superstep = " +
+                      getSuperstep() + ", desired superstep = " + superstep);
         }
         // The master will try to get superstep 0 and need to be refreshed
         // The worker will try to get superstep 0 and needs to get its value
@@ -868,16 +804,16 @@ public abstract class BspService <
             for (int i = 0; i < vertexRangeAssignmentsArray.length(); ++i) {
                 JSONObject vertexRangeObj =
                     vertexRangeAssignmentsArray.getJSONObject(i);
-                @SuppressWarnings("unchecked")
-                Class<I> indexClass = (Class<I>) createVertexIndex().getClass();
+                Class<I> indexClass =
+                    BspUtils.getVertexIndexClass(getConfiguration());
                 VertexRange<I, V, E, M> vertexRange =
                     new VertexRange<I, V, E, M>(indexClass,
                             vertexRangeObj);
                 if (vertexRangeMap.containsKey(vertexRange.getMaxIndex())) {
                     throw new RuntimeException(
-                                               "getVertexRangeMap: Impossible that vertex range " +
-                                               "max " + vertexRange.getMaxIndex() +
-                    " already exists!");
+                        "getVertexRangeMap: Impossible that vertex range " +
+                        "max " + vertexRange.getMaxIndex() +
+                        " already exists!");
                 }
                 vertexRangeMap.put(vertexRange.getMaxIndex(), vertexRange);
             }
@@ -885,7 +821,7 @@ public abstract class BspService <
             throw new RuntimeException(e);
         }
 
-        // Copy over the vertex lists
+        // Copy over the vertices to the vertex ranges
         for (Entry<I, VertexRange<I, V, E, M>> entry :
             vertexRangeMap.entrySet()) {
             if (!m_vertexRangeMap.containsKey(entry.getKey())) {
@@ -893,8 +829,8 @@ public abstract class BspService <
             }
             VertexRange<I, V, E, M> vertexRange =
                 m_vertexRangeMap.get(entry.getKey());
-            entry.getValue().getVertexList().addAll(
-                vertexRange.getVertexList());
+            entry.getValue().getVertexMap().putAll(
+                vertexRange.getVertexMap());
         }
         m_vertexRangeMap = vertexRangeMap;
         return m_vertexRangeMap;

@@ -23,7 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapreduce.Mapper.Context;
+import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.server.quorum.QuorumPeerMain;
 
@@ -33,8 +33,7 @@ import org.apache.zookeeper.server.quorum.QuorumPeerMain;
  */
 public class ZooKeeperManager {
     /** Job context (mainly for progress) */
-    @SuppressWarnings("rawtypes")
-    private Context m_context;
+    private Mapper<?, ?, ?, ?>.Context m_context;
     /** Hadoop configuration */
     private final Configuration m_conf;
     /** Class logger */
@@ -136,7 +135,7 @@ public class ZooKeeperManager {
         }
     }
 
-    public ZooKeeperManager(@SuppressWarnings("rawtypes") Context context)
+    public ZooKeeperManager(Mapper<?, ?, ?, ?>.Context context)
             throws IOException {
         m_context = context;
         m_conf = context.getConfiguration();
