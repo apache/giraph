@@ -64,7 +64,7 @@ public class BspResolver<
             }
             if ((vertex == null) && (msgList != null) && (!msgList.isEmpty())) {
                 vertex = instantiateVertex();
-                V vertexValue = BspUtils.createVertexValue(getConf());
+                V vertexValue = BspUtils.<V>createVertexValue(getConf());
                 vertex.setVertexValue(vertexValue);
             }
         }

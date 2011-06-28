@@ -311,9 +311,8 @@ public class BspServiceWorker<
                         getHadoopVertexClass(), getConfiguration());
                 while (vertexReader.next(vertex)) {
                     if (vertex.getVertexValue() == null) {
-                        V vertexValue =
-                            BspUtils.createVertexValue(getConfiguration());
-                        vertex.setVertexValue(vertexValue);
+                        vertex.setVertexValue(
+                            BspUtils.<V>createVertexValue(getConfiguration()));
                     }
                     vertexList.add(vertex);
                     vertex = ReflectionUtils.newInstance(
@@ -1046,7 +1045,7 @@ public class BspServiceWorker<
         // Algorithm:
         // Check all the vertex ranges for this worker and load the ones
         // that match my hostname and id.
-        I maxVertexIndex = BspUtils.createVertexIndex(getConfiguration());
+        I maxVertexIndex = BspUtils.<I>createVertexIndex(getConfiguration());
         long startPos = -1;
         long vertexRangeCount = -1;
         for (VertexRange<I, V, E, M> vertexRange :

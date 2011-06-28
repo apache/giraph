@@ -418,20 +418,10 @@ public class BspJob extends Job {
                         System.getenv("HADOOP_TOKEN_FILE_LOCATION"));
             }
             // Set the configuration classes
-            @SuppressWarnings({ "unchecked" })
-            Class<? extends HadoopVertex<I, V, E, M>> hadoopVertexClass =
-                (Class<? extends HadoopVertex<I, V, E, M>>)
-                    m_conf.getClass(BspJob.VERTEX_CLASS,
-                                    HadoopVertex.class,
-                                    HadoopVertex.class);
             try {
-                @SuppressWarnings("unchecked")
                 Class<? extends VertexInputFormat<I, V, E>>
                     vertexInputFormatClass =
-                        (Class<? extends VertexInputFormat<I, V, E>>)
-                        m_conf.getClass(BspJob.VERTEX_INPUT_FORMAT_CLASS,
-                                        VertexInputFormat.class,
-                                        VertexInputFormat.class);
+                        BspUtils.getVertexInputFormatClass(m_conf);
                 VertexReader<I, V, E> vertexReader =
                     vertexInputFormatClass.newInstance().createVertexReader(
                     null, context);
@@ -445,7 +435,7 @@ public class BspJob extends Job {
                                 vertexReader.createEdgeValue().getClass(),
                                 Writable.class);
                 HadoopVertex<I, V, E, M> vertex =
-                    hadoopVertexClass.newInstance();
+                    BspUtils.createVertex(m_conf);
                 m_conf.setClass(BspJob.MESSAGE_VALUE_CLASS,
                                 vertex.createMsgValue().getClass(),
                                 Writable.class);

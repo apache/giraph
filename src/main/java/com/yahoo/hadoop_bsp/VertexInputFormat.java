@@ -15,9 +15,9 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  * vertices across the mappers, so keep that in consideration when implementing
  * getSplits().
  *
- * @param <I> vertex id
- * @param <V> vertex value
- * @param <E> edge value
+ * @param <I> Vertex id
+ * @param <V> Vertex value
+ * @param <E> Edge value
  */
 @SuppressWarnings("rawtypes")
 public interface VertexInputFormat<I extends WritableComparable,

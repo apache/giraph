@@ -53,11 +53,10 @@ public class BspUtils {
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public static <I extends WritableComparable,
                    V extends Writable,
-                   E extends Writable,
-                   M extends Writable>
-            Class<? extends HadoopVertex<I, V, E, M>>
+                   E extends Writable>
+        Class<? extends VertexInputFormat<I, V, E>>
             getVertexInputFormatClass(Configuration conf) {
-        return (Class<? extends HadoopVertex<I, V, E, M>>)
+        return (Class<? extends VertexInputFormat<I, V, E>>)
                 conf.getClass(BspJob.VERTEX_INPUT_FORMAT_CLASS,
                               VertexInputFormat.class,
                               VertexInputFormat.class);
@@ -117,8 +116,8 @@ public class BspUtils {
      * @return Instantiated user vertex index
      */
     @SuppressWarnings("rawtypes")
-    public static <I extends WritableComparable> I
-            createVertexIndex(Configuration conf) {
+    public static <I extends WritableComparable>
+            I createVertexIndex(Configuration conf) {
         Class<I> vertexClass = getVertexIndexClass(conf);
         try {
             return vertexClass.newInstance();

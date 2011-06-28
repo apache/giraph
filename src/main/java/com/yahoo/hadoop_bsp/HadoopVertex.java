@@ -4,12 +4,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.SortedMap;
-import java.util.Map.Entry;
-import java.util.Set;
 import java.util.TreeMap;
 
 import org.apache.log4j.Logger;
@@ -171,41 +167,6 @@ public abstract class HadoopVertex<
         return m_numEdges;
     }
 
-    /**
-     * Implements the {@link OutEdgeIterator} for {@link HadoopVertex}
-     */
-    public final static class HadoopVertexOutEdgeIterator<I, E>
-        implements OutEdgeIterator<I, E> {
-        /** Reference to the original map */
-        private final Map<I, E> m_destEdgeMap;
-        /** Set of map entries*/
-        private Set<Map.Entry<I, E>> m_destEdgeMapSet;
-        /** Map of the destination vertices and their edge values */
-        private Iterator<Map.Entry<I, E>> m_destEdgeMapSetIt;
-
-        public HadoopVertexOutEdgeIterator(Map<I, E> destEdgeMap) {
-            m_destEdgeMap = destEdgeMap;
-            m_destEdgeMapSet = m_destEdgeMap.entrySet();
-            m_destEdgeMapSetIt = m_destEdgeMapSet.iterator();
-        }
-
-        public boolean hasNext() {
-            return m_destEdgeMapSetIt.hasNext();
-        }
-
-        public Entry<I, E> next() {
-            return m_destEdgeMapSetIt.next();
-        }
-
-        public void remove() {
-            m_destEdgeMapSetIt.remove();
-        }
-
-        public long size() {
-            return m_destEdgeMapSet.size();
-        }
-    }
-
     @Override
     public final SortedMap<I, Edge<I, E>> getOutEdgeMap() {
         return m_destEdgeMap;
@@ -274,13 +235,15 @@ public abstract class HadoopVertex<
         return m_halt;
     }
 
+    @Override
     final public void readFields(DataInput in) throws IOException {
-        m_vertexId = BspUtils.createVertexIndex(getContext().getConfiguration());
+        m_vertexId =
+            BspUtils.<I>createVertexIndex(getContext().getConfiguration());
         m_vertexId.readFields(in);
         boolean hasVertexValue = in.readBoolean();
         if (hasVertexValue) {
             m_vertexValue =
-                BspUtils.createVertexValue(getContext().getConfiguration());
+                BspUtils.<V>createVertexValue(getContext().getConfiguration());
             m_vertexValue.readFields(in);
         }
         long edgeMapSize = in.readLong();

@@ -508,7 +508,7 @@ public class BspServiceMaster<
         //    the input splits
         int chosenWorkerListIndex = 0;
         int inputSplitIndex = 0;
-        I maxVertexIndex = BspUtils.createVertexIndex(getConfiguration());
+        I maxVertexIndex = BspUtils.<I>createVertexIndex(getConfiguration());
         for (Path metadataPath : validMetadataPathList) {
             String checkpointFilePrefix = metadataPath.toString();
             checkpointFilePrefix =
@@ -704,7 +704,7 @@ public class BspServiceMaster<
                 for (int i = 0; i < statArray.length(); ++i) {
                     try {
                         I maxVertexIndex =
-                            BspUtils.createVertexIndex(getConfiguration());
+                            BspUtils.<I>createVertexIndex(getConfiguration());
                         InputStream input =
                             new ByteArrayInputStream(
                                 statArray.getJSONObject(i).getString(
@@ -746,7 +746,7 @@ public class BspServiceMaster<
                             JSONOBJ_VERTEX_RANGE_STAT_ARRAY_KEY);
                     for (int i = 0; i < statArray.length(); ++i) {
                         I maxVertexIndex =
-                            BspUtils.createVertexIndex(getConfiguration());
+                            BspUtils.<I>createVertexIndex(getConfiguration());
                         InputStream input =
                             new ByteArrayInputStream(
                                 statArray.getJSONObject(i).getString(
