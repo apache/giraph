@@ -2,12 +2,12 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>yahoo.yinst.hadoop_bsp</groupId>
-  <artifactId>hadoop_bsp</artifactId>
+  <groupId>yahoo.yinst.giraph</groupId>
+  <artifactId>giraph</artifactId>
   <packaging>jar</packaging>
   <version>1.0</version>
 
-  <name>Hadoop BSP</name>
+  <name>Giraph</name>
   <url>http://maven.apache.org</url>
 
   <properties>
@@ -46,7 +46,7 @@
           <systemProperties>
             <property>
               <name>prop.jarLocation</name>
-              <value>target/hadoop_bsp-${version}-jar-with-dependencies.jar</value>
+              <value>target/giraph-${version}-jar-with-dependencies.jar</value>
             </property>
           </systemProperties>
         </configuration>
