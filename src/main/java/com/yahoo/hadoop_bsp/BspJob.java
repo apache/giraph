@@ -119,12 +119,6 @@ public class BspJob extends Job {
 
     /** Local ZooKeeper directory to use */
     public static final String ZOOKEEPER_DIR = "giraph.zkDir";
-    /**
-     * Default local ZooKeeper prefix directory to use (where ZooKeeper server
-     * files will go)
-     */
-    public static String ZOOKEEPER_DIR_DEFAULT =
-        System.getProperty("user.dir") + "/_bspZooKeeper";
 
     /** Initial port to start using for the RPC communication */
     public static final String RPC_INITIAL_PORT = "giraph.rpcInitialPort";
@@ -286,11 +280,6 @@ public class BspJob extends Job {
                          BspResolver.class.getCanonicalName());
             }
         }
-        String jobLocalDir = conf.get("job.local.dir");
-        if (jobLocalDir != null) { // for non-local jobs
-            ZOOKEEPER_DIR_DEFAULT = jobLocalDir +
-                "/_bspZooKeeper";
-        }
     }
 
     /**
@@ -360,16 +349,14 @@ public class BspJob extends Job {
 
         /**
          * Default handler for uncaught exceptions.
-         *
          */
         class OverrideExceptionHandler
                 implements Thread.UncaughtExceptionHandler {
             public void uncaughtException(Thread t, Throwable e) {
-                System.err.println(
+                LOG.fatal(
                     "uncaughtException: OverrideExceptionHandler on thread " +
                     t.getName() + ", msg = " +  e.getMessage() +
-                    ", exiting...");
-                e.printStackTrace();
+                    ", exiting...", e);
                 System.exit(1);
             }
         }
@@ -435,7 +422,7 @@ public class BspJob extends Job {
                                 vertexReader.createEdgeValue().getClass(),
                                 Writable.class);
                 HadoopVertex<I, V, E, M> vertex =
-                    BspUtils.createVertex(m_conf);
+                    BspUtils.<I, V, E, M>createVertex(m_conf);
                 m_conf.setClass(BspJob.MESSAGE_VALUE_CLASS,
                                 vertex.createMsgValue().getClass(),
                                 Writable.class);

@@ -586,7 +586,7 @@ public abstract class BspService <
 
         m_hadoopVertexClass = BspUtils.getVertexClass(getConfiguration());
         m_instantiableHadoopVertex =
-            BspUtils.createVertex(getConfiguration());
+            BspUtils.<I, V, E, M>createVertex(getConfiguration());
 
         m_checkpointFrequency =
             m_conf.getInt(BspJob.CHECKPOINT_FREQUENCY,
@@ -680,6 +680,8 @@ public abstract class BspService <
      * Get the latest superstep and cache it.
      *
      * @return the latest superstep
+     * @throws InterruptedException
+     * @throws KeeperException
      */
     final public long getSuperstep() {
         if (m_cachedSuperstep != -1) {
@@ -693,23 +695,34 @@ public abstract class BspService <
                            CreateMode.PERSISTENT,
                            true);
         } catch (KeeperException.NodeExistsException e) {
-            LOG.info("getApplicationAttempt: Node " +
-                     APPLICATION_ATTEMPTS_PATH + " already exists!");
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+            if (LOG.isInfoEnabled()) {
+                LOG.info("getApplicationAttempt: Node " +
+                         APPLICATION_ATTEMPTS_PATH + " already exists!");
+            }
+        } catch (KeeperException e) {
+            throw new IllegalStateException(
+                "getSuperstep: KeeperException", e);
+        } catch (InterruptedException e) {
+            throw new IllegalStateException(
+                "getSuperstep: InterruptedException", e);
         }
+
+        List<String> superstepList;
         try {
-            List<String> superstepList =
-                m_zk.getChildrenExt(superstepPath, true, false, false);
-            if (superstepList.isEmpty()) {
-                m_cachedSuperstep = 0;
-            }
-            else {
-                m_cachedSuperstep =
-                    Long.parseLong(Collections.max(superstepList));
-            }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+            superstepList = m_zk.getChildrenExt(superstepPath, true, false, false);
+        } catch (KeeperException e) {
+            throw new IllegalStateException(
+                "getSuperstep: KeeperException", e);
+        } catch (InterruptedException e) {
+            throw new IllegalStateException(
+                "getSuperstep: InterruptedException", e);
+        }
+        if (superstepList.isEmpty()) {
+            m_cachedSuperstep = 0;
+        }
+        else {
+            m_cachedSuperstep =
+                Long.parseLong(Collections.max(superstepList));
         }
 
         return m_cachedSuperstep;

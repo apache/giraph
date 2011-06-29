@@ -84,7 +84,7 @@ public class BspResolver<
 
     @Override
     public Vertex<I, V, E, M> instantiateVertex() {
-        return BspUtils.createVertex(getConf());
+        return BspUtils.<I, V, E, M>createVertex(getConf());
     }
 
     @Override

@@ -953,7 +953,7 @@ public abstract class BasicRPCCommunications<
             if (vertex != null) {
                 ((MutableVertex<I, V, E, M>) vertex).setVertexId(vertexIndex);
                 vertexRange.getVertexMap().put(vertex.getVertexId(), vertex);
-            } else if ((vertex == null) && (originalVertex != null)) {
+            } else if (originalVertex != null) {
                 vertexRange.getVertexMap().remove(originalVertex.getVertexId());
             }
         }

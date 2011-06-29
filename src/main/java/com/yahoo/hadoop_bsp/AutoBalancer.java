@@ -31,8 +31,7 @@ public final class AutoBalancer<
         V extends Writable,
         E extends Writable,
         M extends Writable>
-        extends BspBalancer<I, V, E, M>
-        implements VertexRangeBalancer<I, V, E, M> {
+        extends BspBalancer<I, V, E, M> {
 
     /** Class logger */
     private static final Logger LOG = Logger.getLogger(AutoBalancer.class);

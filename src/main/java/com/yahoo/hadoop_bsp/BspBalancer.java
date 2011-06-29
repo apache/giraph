@@ -106,7 +106,7 @@ public abstract class BspBalancer<
             if (!vertexRange.getHostname().equals(
                     vertexRange.getPreviousHostname()) ||
                     (vertexRange.getPort() != vertexRange.getPreviousPort())) {
-                String hostnamePort = new String();
+                String hostnamePort = "";
                 hostnamePort += vertexRange.getHostname();
                 hostnamePort += Integer.toString(vertexRange.getPort());
                 hostnamePortSet.add(hostnamePort);

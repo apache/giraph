@@ -141,15 +141,15 @@ public class VertexRange<I extends WritableComparable,
     public VertexRange(VertexRange vertexRange)
             throws InstantiationException, IllegalAccessException, IOException {
         if (vertexRange.getHostname() != null) {
-            m_hostname = new String(vertexRange.getHostname());
+            m_hostname = vertexRange.getHostname();
         }
         m_port = vertexRange.getPort();
         if (vertexRange.getPreviousHostname() != null) {
-            m_previousHostname = new String(vertexRange.getPreviousHostname());
+            m_previousHostname = vertexRange.getPreviousHostname();
         }
         m_previousPort = vertexRange.getPreviousPort();
         if (vertexRange.getHostnameId() != null) {
-            m_hostnameId = new String(vertexRange.getHostnameId());
+            m_hostnameId = vertexRange.getHostnameId();
         }
         else {
             m_hostnameId = null;
@@ -270,6 +270,7 @@ public class VertexRange<I extends WritableComparable,
         return m_checkpointfilePrefix;
     }
 
+    @Override
     public void readFields(DataInput input) throws IOException {
         m_hostname = input.readUTF();
         m_port = input.readInt();
@@ -280,18 +281,19 @@ public class VertexRange<I extends WritableComparable,
         m_checkpointfilePrefix = input.readUTF();
     }
 
+    @Override
     public void write(DataOutput output) throws IOException {
         if (m_hostname == null) {
-            m_hostname = new String();
+            m_hostname = "";
         }
         if (m_previousHostname == null) {
-            m_previousHostname = new String();
+            m_previousHostname = "";
         }
         if (m_hostnameId == null) {
-            m_hostnameId = new String();
+            m_hostnameId = "";
         }
         if (m_checkpointfilePrefix == null) {
-            m_checkpointfilePrefix = new String();
+            m_checkpointfilePrefix = "";
         }
 
         output.writeUTF(m_hostname);

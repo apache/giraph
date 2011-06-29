@@ -189,7 +189,7 @@ public abstract class HadoopVertex<
     @Override
     public MutableVertex<I, V, E, M> instantiateVertex() {
         HadoopVertex<I, V, E, M> mutableVertex =
-            BspUtils.createVertex(getContext().getConfiguration());
+            BspUtils.<I, V, E, M>createVertex(getContext().getConfiguration());
         return mutableVertex;
     }
 

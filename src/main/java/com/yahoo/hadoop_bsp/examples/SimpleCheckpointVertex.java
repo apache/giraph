@@ -46,10 +46,10 @@ public class SimpleCheckpointVertex extends
     public static boolean enableFault = false;
 
     /** Dynamically set number of supersteps */
-    public static String SUPERSTEP_COUNT =
+    public static final String SUPERSTEP_COUNT =
         "simpleCheckpointVertex.superstepCount";
     /** Should fault? */
-    public static String ENABLE_FAULT=
+    public static final String ENABLE_FAULT=
         "simpleCheckpointVertex.enableFault";
 
     @Override

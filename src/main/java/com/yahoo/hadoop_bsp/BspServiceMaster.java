@@ -66,9 +66,6 @@ public class BspServiceMaster<
     private Counter m_superstepCounter = null;
     /** Am I the master? */
     private boolean m_isMaster = false;
-    /** Vertex range balancer class */
-    private Class<? extends VertexRangeBalancer<I, V, E, M>>
-        m_vertexRangeBalancerClass;
     /** Max number of workers */
     private final int m_maxWorkers;
     /** Min number of workers */
@@ -92,13 +89,6 @@ public class BspServiceMaster<
             BspJob.BspMapper<I, V, E, M> bspMapper) {
         super(serverPortList, sessionMsecTimeout, context, bspMapper);
         registerBspEvent(m_superstepStateChanged);
-        @SuppressWarnings("unchecked")
-        Class<? extends VertexRangeBalancer<I, V, E, M>> vertexRangeBalancer =
-            (Class<? extends VertexRangeBalancer<I, V, E, M>>)
-            getConfiguration().getClass(BspJob.VERTEX_RANGE_BALANCER_CLASS,
-                                        StaticBalancer.class,
-                                        VertexRangeBalancer.class);
-        m_vertexRangeBalancerClass = vertexRangeBalancer;
 
         m_maxWorkers =
             getConfiguration().getInt(BspJob.MAX_WORKERS, -1);
@@ -139,15 +129,15 @@ public class BspServiceMaster<
                                  CreateMode.PERSISTENT_SEQUENTIAL,
                                  true);
         } catch (KeeperException.NodeExistsException e) {
-            throw new RuntimeException(
+            throw new IllegalStateException(
                 "setJobState: Imposible that " +
                 MASTER_JOB_STATE_PATH + " already exists!", e);
         } catch (KeeperException e) {
-            throw new RuntimeException(
+            throw new IllegalStateException(
                 "setJobState: Unknown KeeperException for " +
                 MASTER_JOB_STATE_PATH, e);
         } catch (InterruptedException e) {
-            throw new RuntimeException(
+            throw new IllegalStateException(
                 "setJobState: Unknown InterruptedException for " +
                 MASTER_JOB_STATE_PATH, e);
         }
@@ -168,18 +158,18 @@ public class BspServiceMaster<
      * @throws InterruptedException
      */
     private List<InputSplit> generateInputSplits(int numSplits) {
+        VertexInputFormat<I, V, E> vertexInputFormat =
+            BspUtils.<I, V, E>createVertexInputFormat(getConfiguration());
+        List<InputSplit> splits;
         try {
-            @SuppressWarnings({"unchecked" })
-            Class<VertexInputFormat<I, V, E>> vertexInputFormatClass =
-                (Class<VertexInputFormat<I, V, E>>)
-                 getConfiguration().getClass(BspJob.VERTEX_INPUT_FORMAT_CLASS,
-                                             VertexInputFormat.class);
-            List<InputSplit> splits =
-                vertexInputFormatClass.newInstance().getSplits(
-                    getConfiguration(), numSplits);
+            splits = vertexInputFormat.getSplits(getConfiguration(), numSplits);
             return splits;
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+        } catch (IOException e) {
+            throw new IllegalStateException(
+                "generateInputSplits: Got IOException", e);
+        } catch (InterruptedException e) {
+            throw new IllegalStateException(
+                "generateInputSplits: Got InterruptedException", e);
         }
     }
 
@@ -228,11 +218,17 @@ public class BspServiceMaster<
                                  CreateMode.PERSISTENT,
                                  true);
         } catch (KeeperException.NodeExistsException e) {
-            LOG.debug("getWorkers: " + healthyWorkerPath +
-                      " already exists, no need to create.");
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("getWorkers: " + healthyWorkerPath +
+                          " already exists, no need to create.");
+            }
+        } catch (KeeperException e) {
+            throw new IllegalStateException("getWorkers: KeeperException", e);
+        } catch (InterruptedException e) {
+            throw new IllegalStateException("getWorkers: IllegalStateException"
+                                            , e);
         }
+
         try {
             getZkExt().createExt(unhealthyWorkerPath,
                                  null,
@@ -240,10 +236,15 @@ public class BspServiceMaster<
                                  CreateMode.PERSISTENT,
                                  true);
         } catch (KeeperException.NodeExistsException e) {
-            LOG.info("getWorkers: " + healthyWorkerPath +
-                     " already exists, no need to create.");
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+            if (LOG.isInfoEnabled()) {
+                LOG.info("getWorkers: " + healthyWorkerPath +
+                         " already exists, no need to create.");
+            }
+        } catch (KeeperException e) {
+            throw new IllegalStateException("getWorkers: KeeperException", e);
+        } catch (InterruptedException e) {
+            throw new IllegalStateException("getWorkers: IllegalStateException"
+                                            , e);
         }
 
         List<String> currentHealthyWorkerList = null;
@@ -253,26 +254,37 @@ public class BspServiceMaster<
                 getZkExt().getChildrenExt(healthyWorkerPath, true, false, false);
         } catch (KeeperException.NoNodeException e) {
             LOG.info("getWorkers: No node for " + healthyWorkerPath);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+        } catch (KeeperException e) {
+            throw new IllegalStateException("getWorkers: KeeperException", e);
+        } catch (InterruptedException e) {
+            throw new IllegalStateException("getWorkers: IllegalStateException"
+                                            , e);
         }
+
         try {
             currentUnhealthyWorkerList =
                 getZkExt().getChildrenExt(unhealthyWorkerPath, true, false, false);
         } catch (KeeperException.NoNodeException e) {
             LOG.info("getWorkers: No node for " + unhealthyWorkerPath);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+        } catch (KeeperException e) {
+            throw new IllegalStateException("getWorkers: KeeperException", e);
+        } catch (InterruptedException e) {
+            throw new IllegalStateException("getWorkers: IllegalStateException"
+                                            , e);
         }
 
         healthyWorkerList.clear();
-        for (String healthyWorker : currentHealthyWorkerList) {
-            healthyWorkerList.add(healthyWorker);
+        if (currentHealthyWorkerList != null) {
+            for (String healthyWorker : currentHealthyWorkerList) {
+                healthyWorkerList.add(healthyWorker);
+            }
         }
 
         unhealthyWorkerList.clear();
-        for (String unhealthyWorker : currentUnhealthyWorkerList) {
-            unhealthyWorkerList.add(unhealthyWorker);
+        if (currentUnhealthyWorkerList != null) {
+            for (String unhealthyWorker : currentUnhealthyWorkerList) {
+                unhealthyWorkerList.add(unhealthyWorker);
+            }
         }
     }
 
@@ -298,15 +310,19 @@ public class BspServiceMaster<
                 failJob = false;
                 break;
             }
-            LOG.info("checkWorkers: Only found " + totalResponses +
-                     " responses of " + m_maxWorkers + " for superstep " +
-                     getSuperstep() + ".  Sleeping for " +
-                     m_msecsPollPeriod + " msecs and used " + pollAttempt +
-                     " of " + m_maxPollAttempts + " attempts.");
+            if (LOG.isInfoEnabled()) {
+                LOG.info("checkWorkers: Only found " + totalResponses +
+                         " responses of " + m_maxWorkers + " for superstep " +
+                         getSuperstep() + ".  Sleeping for " +
+                         m_msecsPollPeriod + " msecs and used " + pollAttempt +
+                         " of " + m_maxPollAttempts + " attempts.");
+            }
             if (getWorkerHealthRegistrationChangedEvent().waitMsecs(
                     m_msecsPollPeriod)) {
-                LOG.info("checkWorkers: Got event that health " +
-                         "registration changed, not using poll attempt");
+                if (LOG.isInfoEnabled()) {
+                    LOG.info("checkWorkers: Got event that health " +
+                        "registration changed, not using poll attempt");
+                }
                 getWorkerHealthRegistrationChangedEvent().reset();
                 continue;
             }
@@ -339,10 +355,16 @@ public class BspServiceMaster<
                                                       false,
                                                       null)));
                 workerHostnamePortMap.put(healthyWorker, hostnamePortArray);
-            } catch (Exception e) {
+            } catch (JSONException e) {
                 throw new RuntimeException(
                     "checkWorkers: Problem fetching hostname and port for " +
                     healthyWorker + " in " + healthyWorkerPath);
+            } catch (KeeperException e) {
+                throw new IllegalStateException(
+                    "checkWorkers: KeeperException", e);
+            } catch (InterruptedException e) {
+                throw new IllegalStateException(
+                    "checkWorkers: IllegalStateException", e);
             }
         }
 
@@ -363,10 +385,16 @@ public class BspServiceMaster<
                         getZkExt().getData(INPUT_SPLIT_PATH, false, null)));
             }
         } catch (KeeperException.NoNodeException e) {
-            LOG.info("createInputSplits: Need to create the " +
-                     "input splits at " + INPUT_SPLIT_PATH);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+            if (LOG.isInfoEnabled()) {
+                LOG.info("createInputSplits: Need to create the " +
+                         "input splits at " + INPUT_SPLIT_PATH);
+            }
+        } catch (KeeperException e) {
+            throw new IllegalStateException(
+                "createInputSplits: KeeperException", e);
+        } catch (InterruptedException e) {
+            throw new IllegalStateException(
+                "createInputSplits: IllegalStateException", e);
         }
 
         // When creating znodes, in case the master has already run, resume
@@ -412,10 +440,19 @@ public class BspServiceMaster<
                          i + " serialized as " +
                          byteArrayOutputStream.toString());
             } catch (KeeperException.NodeExistsException e) {
-                LOG.info("createInputSplits: Node " +
-                         inputSplitPath + " already exists.");
-            } catch (Exception e) {
-                throw new RuntimeException(e);
+                if (LOG.isInfoEnabled()) {
+                    LOG.info("createInputSplits: Node " +
+                             inputSplitPath + " already exists.");
+                }
+            } catch (KeeperException e) {
+                throw new IllegalStateException(
+                    "createInputSplits: KeeperException", e);
+            } catch (InterruptedException e) {
+                throw new IllegalStateException(
+                    "createInputSplits: IllegalStateException", e);
+            } catch (IOException e) {
+                throw new IllegalStateException(
+                    "createInputSplits: IOException", e);
             }
         }
 
@@ -428,8 +465,12 @@ public class BspServiceMaster<
         } catch (KeeperException.NodeExistsException e) {
             LOG.info("createInputSplits: Node " +
                      INPUT_SPLITS_ALL_READY_PATH + " already exists.");
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+        } catch (KeeperException e) {
+            throw new IllegalStateException(
+                "createInputSplits: KeeperException", e);
+        } catch (InterruptedException e) {
+            throw new IllegalStateException(
+                "createInputSplits: IllegalStateException", e);
         }
 
         return splitList.size();
@@ -482,7 +523,7 @@ public class BspServiceMaster<
                 getMergedAggregatorPath(getApplicationAttempt(), superstep - 1);
             if (LOG.isInfoEnabled()) {
                 LOG.info("mapFilesToWorkers: Reloading merged aggregator " +
-                         "data '" + aggregatorZkData +
+                         "data '" + Arrays.toString(aggregatorZkData) +
                          "' to previous checkpoint in path " +
                          mergedAggregatorPath);
             }
@@ -536,6 +577,7 @@ public class BspServiceMaster<
                 maxVertexIndex.write(output);
 
                 JSONObject vertexRangeObj = new JSONObject();
+
                 try {
                     vertexRangeObj.put(JSONOBJ_NUM_VERTICES_KEY,
                                        vertexCount);
@@ -549,8 +591,9 @@ public class BspServiceMaster<
                                        outputStream.toString("UTF-8"));
                     vertexRangeMetaArray.put(vertexRangeObj);
                     vertexRangeArray.put(outputStream.toString("UTF-8"));
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
+                } catch (JSONException e) {
+                    throw new IllegalStateException(
+                        "mapFilesToWorkers: JSONException ", e);
                 }
 
                 if (!workerFileSetMap.containsKey(chosenWorker)) {
@@ -573,15 +616,21 @@ public class BspServiceMaster<
                 continue;
             }
             try {
-                LOG.info("mapFilesToWorkers: vertexRangeMetaArray size=" +
-                         vertexRangeMetaArray.toString().length());
-                 getZkExt().createExt(inputSplitPathFinishedPath,
+                if (LOG.isInfoEnabled()) {
+                    LOG.info("mapFilesToWorkers: vertexRangeMetaArray size=" +
+                             vertexRangeMetaArray.toString().length());
+                }
+                getZkExt().createExt(inputSplitPathFinishedPath,
                                      vertexRangeMetaArray.toString().getBytes(),
                                      Ids.OPEN_ACL_UNSAFE,
                                      CreateMode.PERSISTENT,
                                      true);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
+            } catch (KeeperException e) {
+                throw new IllegalStateException(
+                    "mapFilesToWorkers: KeeperException", e);
+            } catch (InterruptedException e) {
+                throw new IllegalStateException(
+                    "mapFilesToWorkers: IllegalStateException", e);
             }
             ++inputSplitIndex;
             ++chosenWorkerListIndex;
@@ -622,8 +671,12 @@ public class BspServiceMaster<
                     Ids.OPEN_ACL_UNSAFE,
                     CreateMode.EPHEMERAL_SEQUENTIAL,
                     true);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+        } catch (KeeperException e) {
+            throw new IllegalStateException(
+                "becomeMaster: KeeperException", e);
+        } catch (InterruptedException e) {
+            throw new IllegalStateException(
+                "becomeMaster: IllegalStateException", e);
         }
         while (true) {
             JSONObject jobState = getJobState();
@@ -631,22 +684,26 @@ public class BspServiceMaster<
                 if ((jobState != null) &&
                     State.valueOf(jobState.getString(JSONOBJ_STATE_KEY)) ==
                         State.FINISHED) {
-                    LOG.info("becomeMaster: Job is finished, " +
-                             "give up trying to be the master!");
+                    if (LOG.isInfoEnabled()) {
+                        LOG.info("becomeMaster: Job is finished, " +
+                                 "give up trying to be the master!");
+                    }
                     m_isMaster = false;
                     return m_isMaster;
                 }
             } catch (JSONException e) {
-                throw new RuntimeException(
+                throw new IllegalStateException(
                     "becomeMaster: Couldn't get state from " + jobState, e);
             }
             try {
                 List<String> masterChildArr =
                     getZkExt().getChildrenExt(
                         MASTER_ELECTION_PATH, true, true, true);
-                LOG.info("becomeMaster: First child is '" +
-                         masterChildArr.get(0) + "' and my bid is '" +
-                         myBid + "'");
+                if (LOG.isInfoEnabled()) {
+                    LOG.info("becomeMaster: First child is '" +
+                             masterChildArr.get(0) + "' and my bid is '" +
+                             myBid + "'");
+                }
                 if (masterChildArr.get(0).equals(myBid)) {
                     LOG.info("becomeMaster: I am now the master!");
                     m_isMaster = true;
@@ -655,8 +712,12 @@ public class BspServiceMaster<
                 LOG.info("becomeMaster: Waiting to become the master...");
                 getMasterElectionChildrenChangedEvent().waitForever();
                 getMasterElectionChildrenChangedEvent().reset();
-            } catch (Exception e) {
-                throw new RuntimeException(e);
+            } catch (KeeperException e) {
+                throw new IllegalStateException(
+                    "becomeMaster: KeeperException", e);
+            } catch (InterruptedException e) {
+                throw new IllegalStateException(
+                    "becomeMaster: IllegalStateException", e);
             }
         }
     }
@@ -680,8 +741,12 @@ public class BspServiceMaster<
             try {
                 inputSplitList = getZkExt().getChildrenExt(
                     INPUT_SPLIT_PATH, false, false, true);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
+            } catch (KeeperException e) {
+                throw new IllegalStateException(
+                    "collectVertexRangeStats: KeeperException", e);
+            } catch (InterruptedException e) {
+                throw new IllegalStateException(
+                    "collectVertexRangeStats: IllegalStateException", e);
             }
             for (String inputSplitPath : inputSplitList) {
                 JSONArray statArray = null;
@@ -695,11 +760,19 @@ public class BspServiceMaster<
                     }
                     if (LOG.isInfoEnabled()) {
                         LOG.info("collectVertexRangeStats: input split path " +
-                                 inputSplitPath + " got " + zkData);
+                                 inputSplitPath + " got " +
+                                 Arrays.toString(zkData));
                     }
                     statArray = new JSONArray(new String(zkData));
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
+                } catch (JSONException e) {
+                    throw new IllegalStateException(
+                        "collectVertexRangeStats: JSONException", e);
+                } catch (KeeperException e) {
+                    throw new IllegalStateException(
+                        "collectVertexRangeStats: KeeperException", e);
+                } catch (InterruptedException e) {
+                    throw new IllegalStateException(
+                        "collectVertexRangeStats: InterruptedException", e);
                 }
                 for (int i = 0; i < statArray.length(); ++i) {
                     try {
@@ -716,8 +789,16 @@ public class BspServiceMaster<
                             0);
                         vertexRangeStatArrayMap.put(maxVertexIndex,
                                                     statArray.getJSONObject(i));
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
+                    } catch (JSONException e) {
+                        throw new IllegalStateException(
+                            "collectVertexRangeStats: JSONException", e);
+                    } catch (UnsupportedEncodingException e) {
+                        throw new IllegalStateException(
+                            "collectVertexRangeStats: " +
+                            "UnsupportedEncodingException", e);
+                    } catch (IOException e) {
+                        throw new IllegalStateException(
+                            "collectVertexRangeStats: IOException", e);
                     }
                 }
             }
@@ -730,8 +811,12 @@ public class BspServiceMaster<
                 workerFinishedPathList =
                     getZkExt().getChildrenExt(
                         workerFinishedPath, false, false, true);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
+            } catch (KeeperException e) {
+                throw new IllegalStateException(
+                    "collectVertexRangeStats: KeeperException", e);
+            } catch (InterruptedException e) {
+                throw new IllegalStateException(
+                    "collectVertexRangeStats: InterruptedException", e);
             }
 
             for (String finishedPath : workerFinishedPathList) {
@@ -757,8 +842,22 @@ public class BspServiceMaster<
                         vertexRangeStatArrayMap.put(maxVertexIndex,
                                                     statArray.getJSONObject(i));
                     }
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
+                } catch (JSONException e) {
+                    throw new IllegalStateException(
+                        "collectVertexRangeStats: JSONException", e);
+                } catch (UnsupportedEncodingException e) {
+                    throw new IllegalStateException(
+                        "collectVertexRangeStats: " +
+                        "UnsupportedEncodingException", e);
+                } catch (IOException e) {
+                    throw new IllegalStateException(
+                        "collectVertexRangeStats: IOException", e);
+                } catch (KeeperException e) {
+                    throw new IllegalStateException(
+                        "collectVertexRangeStats: KeeperException", e);
+                } catch (InterruptedException e) {
+                    throw new IllegalStateException(
+                        "collectVertexRangeStats: InterruptedException", e);
                 }
             }
          }
@@ -785,8 +884,12 @@ public class BspServiceMaster<
             hostnameIdPathList =
                 getZkExt().getChildrenExt(
                     workerFinishedPath, false, false, true);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+        } catch (KeeperException e) {
+            throw new IllegalStateException(
+                "collectAndProcessAggregatorValues: KeeperException", e);
+        } catch (InterruptedException e) {
+            throw new IllegalStateException(
+                "collectAndProcessAggregatorValues: InterruptedException", e);
         }
 
         Base64 base64 = new Base64();
@@ -797,25 +900,34 @@ public class BspServiceMaster<
                 byte [] zkData =
                     getZkExt().getData(hostnameIdPath, false, null);
                 aggregatorsStatObj = new JSONObject(new String(zkData));
-            } catch (Exception e) {
-               throw new RuntimeException(
-                         "collectAndProcessAggregatorValues: " +
-                         "exception when fetching data from " +
-                         hostnameIdPath, e);
+            } catch (KeeperException e) {
+                throw new IllegalStateException(
+                    "collectAndProcessAggregatorValues: KeeperException", e);
+            } catch (InterruptedException e) {
+                throw new IllegalStateException(
+                    "collectAndProcessAggregatorValues: InterruptedException",
+                    e);
+            } catch (JSONException e) {
+                throw new IllegalStateException(
+                    "collectAndProcessAggregatorValues: JSONException", e);
             }
             try {
                 aggregatorArray = aggregatorsStatObj.getJSONArray(
                     JSONOBJ_AGGREGATOR_VALUE_ARRAY_KEY);
             } catch (JSONException e) {
-                LOG.debug("collectAndProcessAggregatorValues: No aggregators" +
-                          " for " + hostnameIdPath);
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("collectAndProcessAggregatorValues: " +
+                              "No aggregators" + " for " + hostnameIdPath);
+                }
                 continue;
             }
             for (int i = 0; i < aggregatorArray.length(); ++i) {
                 try {
-                    LOG.info("collectAndProcessAggregatorValues: " +
-                             "Getting aggregators from " +
-                              aggregatorArray.getJSONObject(i));
+                    if (LOG.isInfoEnabled()) {
+                        LOG.info("collectAndProcessAggregatorValues: " +
+                                 "Getting aggregators from " +
+                                 aggregatorArray.getJSONObject(i));
+                    }
                     String aggregatorName =
                         aggregatorArray.getJSONObject(i).getString(
                             AGGREGATOR_NAME_KEY);
@@ -851,20 +963,42 @@ public class BspServiceMaster<
                                 aggregatorArray.getJSONObject(i).
                                 getString(AGGREGATOR_VALUE_KEY)));
                     aggregatorValue.readFields(new DataInputStream(input));
-                    LOG.debug("collectAndProcessAggregatorValues: aggregator " +
-                              "value size=" + input.available() +
-                              " for aggregator=" + aggregatorName +
-                              " value=" + aggregatorValue);
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("collectAndProcessAggregatorValues: " +
+                                  "aggregator value size=" + input.available() +
+                                  " for aggregator=" + aggregatorName +
+                                  " value=" + aggregatorValue);
+                    }
                     if (firstTime) {
                         aggregator.setAggregatedValue(aggregatorValue);
                     } else {
                         aggregator.aggregate(aggregatorValue);
                     }
-                } catch (Exception e) {
-                    throw new RuntimeException(
-                             "collectAndProcessAggregatorValues: " +
-                             "exception when reading aggregator data " +
-                             aggregatorArray, e);
+                } catch (IOException e) {
+                    throw new IllegalStateException(
+                        "collectAndProcessAggregatorValues: " +
+                        "IOException when reading aggregator data " +
+                        aggregatorArray, e);
+                } catch (JSONException e) {
+                    throw new IllegalStateException(
+                        "collectAndProcessAggregatorValues: " +
+                        "JSONException when reading aggregator data " +
+                        aggregatorArray, e);
+                } catch (ClassNotFoundException e) {
+                    throw new IllegalStateException(
+                        "collectAndProcessAggregatorValues: " +
+                        "ClassNotFoundException when reading aggregator data " +
+                        aggregatorArray, e);
+                } catch (InstantiationException e) {
+                    throw new IllegalStateException(
+                        "collectAndProcessAggregatorValues: " +
+                        "InstantiationException when reading aggregator data " +
+                        aggregatorArray, e);
+                } catch (IllegalAccessException e) {
+                    throw new IllegalStateException(
+                        "collectAndProcessAggregatorValues: " +
+                        "IOException when reading aggregator data " +
+                        aggregatorArray, e);
                 }
             }
         }
@@ -888,14 +1022,21 @@ public class BspServiceMaster<
                         AGGREGATOR_VALUE_KEY,
                         base64.encodeToString(outputStream.toByteArray()));
                     aggregatorArray.put(aggregatorObj);
-                    LOG.info("collectAndProcessAggregatorValues: " +
-                             "Trying to add aggregatorObj " +
-                             aggregatorObj + "(" +
-                             entry.getValue().getAggregatedValue() +
-                             ") to merged aggregator path " +
-                             mergedAggregatorPath);
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
+                    if (LOG.isInfoEnabled()) {
+                        LOG.info("collectAndProcessAggregatorValues: " +
+                                 "Trying to add aggregatorObj " +
+                                 aggregatorObj + "(" +
+                                 entry.getValue().getAggregatedValue() +
+                                 ") to merged aggregator path " +
+                                 mergedAggregatorPath);
+                    }
+                } catch (IOException e) {
+                    throw new IllegalStateException(
+                        "collectAndProcessAggregatorValues: " +
+                        "IllegalStateException", e);
+                } catch (JSONException e) {
+                    throw new IllegalStateException(
+                        "collectAndProcessAggregatorValues: JSONException", e);
                 }
             }
             try {
@@ -909,12 +1050,20 @@ public class BspServiceMaster<
                 LOG.warn("collectAndProcessAggregatorValues: " +
                          mergedAggregatorPath+
                          " already exists!");
-            } catch (Exception e) {
-                throw new RuntimeException(e);
+            } catch (KeeperException e) {
+                throw new IllegalStateException(
+                    "collectAndProcessAggregatorValues: KeeperException", e);
+            } catch (InterruptedException e) {
+                throw new IllegalStateException(
+                    "collectAndProcessAggregatorValues: IllegalStateException",
+                    e);
             }
-            LOG.info("collectAndProcessAggregatorValues: Finished loading " +
-                     mergedAggregatorPath+ " with aggregator values " +
-                     aggregatorArray);
+            if (LOG.isInfoEnabled()) {
+                LOG.info("collectAndProcessAggregatorValues: Finished " +
+                         "loading " +
+                         mergedAggregatorPath+ " with aggregator values " +
+                         aggregatorArray);
+            }
         }
     }
 
@@ -1033,17 +1182,35 @@ public class BspServiceMaster<
             String vertexRangeAssignmentsPath =
                 getVertexRangeAssignmentsPath(getApplicationAttempt(),
                                               getSuperstep());
-            LOG.info("inputSplitsToVertexRanges: Assigning " + numRanges +
-                     " vertex ranges of total length " +
-                     vertexRangeAssignmentArray.toString().length() +
-                     " to path " + vertexRangeAssignmentsPath);
+            if (LOG.isInfoEnabled()) {
+                LOG.info("inputSplitsToVertexRanges: Assigning " + numRanges +
+                         " vertex ranges of total length " +
+                         vertexRangeAssignmentArray.toString().length() +
+                         " to path " + vertexRangeAssignmentsPath);
+            }
             getZkExt().createExt(vertexRangeAssignmentsPath,
                                  vertexRangeAssignmentArray.toString().getBytes(),
                                  Ids.OPEN_ACL_UNSAFE,
                                  CreateMode.PERSISTENT,
                                  true);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+        } catch (KeeperException e) {
+            throw new IllegalStateException(
+                "inputSplitsToVertexRanges: KeeperException", e);
+        } catch (InterruptedException e) {
+            throw new IllegalStateException(
+                "inputSplitsToVertexRanges: IllegalStateException", e);
+        } catch (JSONException e) {
+            throw new IllegalStateException(
+                "inputSplitsToVertexRanges: JSONException", e);
+        } catch (IOException e) {
+            throw new IllegalStateException(
+                "inputSplitsToVertexRanges: IOException", e);
+        } catch (InstantiationException e) {
+            throw new IllegalStateException(
+                "inputSplitsToVertexRanges: InstantiationException", e);
+        } catch (IllegalAccessException e) {
+            throw new IllegalStateException(
+                "inputSplitsToVertexRanges: IllegalAccessException", e);
         }
     }
 
@@ -1072,7 +1239,7 @@ public class BspServiceMaster<
         NavigableMap<I, VertexRange<I, V, E, M>> nextVertexRangeMap =
             vertexRangeBalancer.getNextVertexRangeMap();
         if (nextVertexRangeMap.size() != vertexRangeMap.size()) {
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                 "balanceVertexRanges: Next vertex range count " +
                 nextVertexRangeMap.size() + " != " + vertexRangeMap.size());
         }
@@ -1088,8 +1255,12 @@ public class BspServiceMaster<
                         maxVertexRange.toJSONObject().toString().length()) {
                     maxVertexRange = vertexRange;
                 }
-            } catch (Exception e) {
-                throw new RuntimeException(e);
+            } catch (IOException e) {
+                throw new IllegalStateException(
+                    "balanceVertexRanges: IOException", e);
+            } catch (JSONException e) {
+                throw new IllegalStateException(
+                    "balanceVertexRanges: JSONException", e);
             }
         }
         if (vertexRangeAssignmentArray.length() == 0) {
@@ -1130,28 +1301,31 @@ public class BspServiceMaster<
             getVertexRangeAssignmentsPath(getApplicationAttempt(),
                                           getSuperstep());
         try {
-            getZkExt().createExt(
-                                 vertexRangeAssignmentsPath,
+            getZkExt().createExt(vertexRangeAssignmentsPath,
                                  vertexAssignmentBytes,
                                  Ids.OPEN_ACL_UNSAFE,
                                  CreateMode.PERSISTENT,
                                  true);
         } catch (KeeperException.NodeExistsException e) {
-            LOG.info("balanceVertexRanges: Node " +
+            if (LOG.isInfoEnabled()) {
+                LOG.info("balanceVertexRanges: Node " +
                      vertexRangeAssignmentsPath + " already exists", e);
+            }
         } catch (KeeperException e) {
             LOG.fatal("balanceVertexRanges: Got KeeperException", e);
-            throw new RuntimeException(
+            throw new IllegalStateException(
                 "balanceVertexRanges: Got KeeperException", e);
         } catch (InterruptedException e) {
-            LOG.fatal("balanceVertexRanges: Got KeeperException", e);
-            throw new RuntimeException(
+            LOG.fatal("balanceVertexRanges: Got InterruptedException", e);
+            throw new IllegalStateException(
                 "balanceVertexRanges: Got InterruptedException", e);
         }
 
         long changes = vertexRangeBalancer.getVertexRangeChanges();
-        LOG.info("balanceVertexRanges: Waiting on " + changes +
-                 " vertex range changes");
+        if (LOG.isInfoEnabled()) {
+            LOG.info("balanceVertexRanges: Waiting on " + changes +
+                     " vertex range changes");
+        }
         if (changes == 0) {
             return;
         }
@@ -1166,10 +1340,16 @@ public class BspServiceMaster<
                                  CreateMode.PERSISTENT,
                                  true);
         } catch (KeeperException.NodeExistsException e) {
-            LOG.info("balanceVertexRanges: " + vertexRangeExchangePath +
-                     "exists");
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+            if (LOG.isInfoEnabled()) {
+                LOG.info("balanceVertexRanges: " + vertexRangeExchangePath +
+                         "exists");
+            }
+        } catch (KeeperException e) {
+            throw new IllegalStateException(
+                "balanceVertexRanges: Got KeeperException", e);
+        } catch (InterruptedException e) {
+            throw new IllegalStateException(
+                "balanceVertexRanges: Got InterruptedException", e);
         }
         while (true) {
             try {
@@ -1177,9 +1357,11 @@ public class BspServiceMaster<
                     getZkExt().getChildrenExt(
                         vertexRangeExchangePath, true, false, false);
             } catch (KeeperException e) {
-                throw new RuntimeException(e);
+                throw new IllegalStateException(
+                    "balanceVertexRanges: Got KeeperException", e);
             } catch (InterruptedException e) {
-                throw new RuntimeException(e);
+                throw new IllegalStateException(
+                    "balanceVertexRanges: Got InterruptedException", e);
             }
             if (workerExchangeList.size() == changes) {
                 break;
@@ -1196,8 +1378,12 @@ public class BspServiceMaster<
                                  Ids.OPEN_ACL_UNSAFE,
                                  CreateMode.PERSISTENT,
                                  true);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+        } catch (KeeperException e) {
+            throw new IllegalStateException(
+                "balanceVertexRanges: Got KeeperException", e);
+        } catch (InterruptedException e) {
+            throw new IllegalStateException(
+                "balanceVertexRanges: Got InterruptedException", e);
         }
     }
 
@@ -1323,8 +1509,10 @@ public class BspServiceMaster<
 
         if (getRestartedSuperstep() == getSuperstep()) {
             try {
-                LOG.info("coordinateSuperstep: Reloading from superstep " +
-                         getSuperstep());
+                if (LOG.isInfoEnabled()) {
+                    LOG.info("coordinateSuperstep: Reloading from superstep " +
+                             getSuperstep());
+                }
                 mapFilesToWorkers(
                     getRestartedSuperstep(),
                     new ArrayList<String>(
@@ -1336,13 +1524,9 @@ public class BspServiceMaster<
             }
         } else {
             if (getSuperstep() > 0) {
-                BspBalancer<I, V, E, M> vertexRangeBalancer = null;
-                try {
-                    vertexRangeBalancer = (BspBalancer<I, V, E, M>)
-                        m_vertexRangeBalancerClass.newInstance();
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
+                BspBalancer<I, V, E, M> vertexRangeBalancer =
+                    BspUtils.<I, V, E, M>createVertexRangeBalancer(
+                        getConfiguration());
                 synchronized (m_vertexRangeSynchronization) {
                     balanceVertexRanges(vertexRangeBalancer,
                                         chosenWorkerHostnamePortMap);
@@ -1359,10 +1543,11 @@ public class BspServiceMaster<
                                  CreateMode.PERSISTENT,
                                  true);
         } catch (KeeperException.NodeExistsException e) {
-            LOG.info("coordinateSuperstep: finishedWorkers " +
-                     finishedWorkerPath + " already exists, no need to create");
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+            if (LOG.isInfoEnabled()) {
+                LOG.info("coordinateSuperstep: finishedWorkers " +
+                         finishedWorkerPath +
+                         " already exists, no need to create");
+            }
         }
         String workerHealthyPath =
             getWorkerHealthyPath(getApplicationAttempt(), getSuperstep());
@@ -1374,8 +1559,10 @@ public class BspServiceMaster<
                                               true,
                                               false,
                                               false);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
+            } catch (KeeperException e) {
+                throw new IllegalStateException(
+                    "coordinateSuperstep: Couldn't get children of " +
+                    finishedWorkerPath, e);
             }
             if (LOG.isDebugEnabled()) {
                 LOG.debug("coordinateSuperstep: Got finished worker list = " +
@@ -1428,7 +1615,7 @@ public class BspServiceMaster<
                 edgesTotal +=
                     entry.getValue().getLong(JSONOBJ_NUM_EDGES_KEY);
             } catch (JSONException e) {
-                throw new RuntimeException(
+                throw new IllegalStateException(
                     "coordinateSuperstep: Failed to parse out "+
                     "the number range stats", e);
             }
@@ -1451,7 +1638,8 @@ public class BspServiceMaster<
             getSuperstepFinishedPath(getApplicationAttempt(), getSuperstep());
         try {
             JSONObject globalInfoObject = new JSONObject();
-            globalInfoObject.put(JSONOBJ_FINISHED_VERTICES_KEY, verticesFinished);
+            globalInfoObject.put(JSONOBJ_FINISHED_VERTICES_KEY,
+                                 verticesFinished);
             globalInfoObject.put(JSONOBJ_NUM_VERTICES_KEY, verticesTotal);
             globalInfoObject.put(JSONOBJ_NUM_EDGES_KEY, edgesTotal);
             getZkExt().createExt(superstepFinishedNode,
@@ -1459,8 +1647,9 @@ public class BspServiceMaster<
                                  Ids.OPEN_ACL_UNSAFE,
                                  CreateMode.PERSISTENT,
                                  true);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+        } catch (JSONException e) {
+            throw new IllegalStateException("coordinateSuperstep: " +
+                                            "JSONException", e);
         }
 
         // Finalize the valid checkpoint file prefixes and possibly
@@ -1470,8 +1659,10 @@ public class BspServiceMaster<
                 finalizeCheckpoint(
                     getSuperstep(),
                     new ArrayList<String>(chosenWorkerHostnamePortMap.keySet()));
-            } catch (Exception e) {
-                throw new RuntimeException(e);
+            } catch (IOException e) {
+                throw new IllegalStateException(
+                    "coordinateSuperstep: IOException on finalizing checkpoint",
+                    e);
             }
         }
 
@@ -1493,8 +1684,10 @@ public class BspServiceMaster<
             } catch (KeeperException.NoNodeException e) {
                 LOG.warn("coordinateBarrier: Already cleaned up " +
                          oldSuperstepPath);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
+            } catch (KeeperException e) {
+                throw new IllegalStateException(
+                    "coordinateSuperstep: KeeperException on " +
+                    "finalizing checkpoint", e);
             }
         }
 
@@ -1505,6 +1698,10 @@ public class BspServiceMaster<
             SuperstepState.THIS_SUPERSTEP_DONE;
     }
 
+    /**
+     * Need to clean up ZooKeeper nicely.  Make sure all the masters and workers
+     * have reported ending their ZooKeeper connections.
+     */
     private void cleanUpZooKeeper() {
         try {
             getZkExt().createExt(CLEANED_UP_PATH,
@@ -1513,10 +1710,16 @@ public class BspServiceMaster<
                                  CreateMode.PERSISTENT,
                                  true);
         } catch (KeeperException.NodeExistsException e) {
-            LOG.info("cleanUpZooKeeper: Node " + CLEANED_UP_PATH +
-                      " already exists, no need to create.");
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+            if (LOG.isInfoEnabled()) {
+                LOG.info("cleanUpZooKeeper: Node " + CLEANED_UP_PATH +
+                " already exists, no need to create.");
+            }
+        } catch (KeeperException e) {
+            throw new IllegalStateException(
+                "cleanupZooKeeper: Got KeeperException", e);
+        } catch (InterruptedException e) {
+            throw new IllegalStateException(
+                "cleanupZooKeeper: Got IllegalStateException", e);
         }
         // Need to wait for the number of workers and masters to complete
         int maxTasks = BspInputFormat.getMaxTasks(getConfiguration());
@@ -1527,21 +1730,28 @@ public class BspServiceMaster<
         while (true) {
             try {
                 cleanedUpChildrenList =
-                    getZkExt().getChildrenExt(CLEANED_UP_PATH, true, false, true);
-                LOG.info("cleanUpZooKeeper: Got " +
-                         cleanedUpChildrenList.size() + " of " +
-                         maxTasks  +  " desired children from " +
-                         CLEANED_UP_PATH);
+                    getZkExt().getChildrenExt(
+                        CLEANED_UP_PATH, true, false, true);
+                if (LOG.isInfoEnabled()) {
+                    LOG.info("cleanUpZooKeeper: Got " +
+                             cleanedUpChildrenList.size() + " of " +
+                             maxTasks  +  " desired children from " +
+                             CLEANED_UP_PATH);
+                }
                 if (cleanedUpChildrenList.size() == maxTasks) {
                     break;
                 }
-                LOG.info("cleanedUpZooKeeper: Waiting for the children of " +
-                         CLEANED_UP_PATH + " to change since only got " +
-                         cleanedUpChildrenList.size() + " nodes.");
+                if (LOG.isInfoEnabled()) {
+                    LOG.info("cleanedUpZooKeeper: Waiting for the " +
+                             "children of " + CLEANED_UP_PATH +
+                             " to change since only got " +
+                             cleanedUpChildrenList.size() + " nodes.");
+                }
             }
             catch (Exception e) {
                 // We are in the cleanup phase -- just log the error
-                LOG.error(e.getMessage());
+                LOG.error("cleanUpZooKeeper: Got exception, but will continue",
+                          e);
                 return;
             }
 
@@ -1560,7 +1770,8 @@ public class BspServiceMaster<
                 getZkExt().deleteExt(BASE_PATH, -1, true);
             }
         } catch (Exception e) {
-            LOG.error("cleanupZooKeeper: Failed to do cleanup of " + BASE_PATH);
+            LOG.error("cleanupZooKeeper: Failed to do cleanup of " +
+                      BASE_PATH, e);
         }
     }
 
@@ -1582,11 +1793,14 @@ public class BspServiceMaster<
             LOG.info("cleanup: Notifying master its okay to cleanup with " +
                      finalFinishedPath);
         } catch (KeeperException.NodeExistsException e) {
-            LOG.info("cleanup: Couldn't create finished node '" +
-                     cleanedUpPath);
-        } catch (Exception e) {
-            // cleanup phase -- just log the error
-            LOG.error(e.getMessage());
+            if (LOG.isInfoEnabled()) {
+                LOG.info("cleanup: Couldn't create finished node '" +
+                         cleanedUpPath);
+            }
+        } catch (KeeperException e) {
+            LOG.error("cleanup: Got KeeperException, continuing", e);
+        } catch (InterruptedException e) {
+            LOG.error("cleanup: Got InterruptedException, continuing", e);
         }
 
         if (m_isMaster) {
@@ -1597,9 +1811,11 @@ public class BspServiceMaster<
                     BspJob.CLEANUP_CHECKPOINTS_AFTER_SUCCESS_DEFAULT)) {
                 boolean success =
                     getFs().delete(new Path(CHECKPOINT_BASE_PATH), true);
-                LOG.info("cleanup: Removed HDFS checkpoint directory (" +
-                         CHECKPOINT_BASE_PATH + ") with return = " + success +
-                " since this job succeeded ");
+                if (LOG.isInfoEnabled()) {
+                    LOG.info("cleanup: Removed HDFS checkpoint directory (" +
+                             CHECKPOINT_BASE_PATH + ") with return = " +
+                             success + " since this job succeeded ");
+                }
             }
         }
 
@@ -1607,7 +1823,7 @@ public class BspServiceMaster<
             getZkExt().close();
         } catch (InterruptedException e) {
             // cleanup phase -- just log the error
-            LOG.error("cleanup: Zookeeper failed to close with " + e);
+            LOG.error("cleanup: Zookeeper failed to close", e);
         }
     }
 

@@ -12,6 +12,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Arrays;
 import java.util.NavigableMap;
 import java.util.Set;
 import java.util.SortedMap;
@@ -171,10 +172,12 @@ public class BspServiceWorker<
                     }
                 }
             }
-            LOG.info("reserveInputSplit: reservedPath = " +
-                     reservedInputSplitPath + ", " + finishedInputSplits +
-                     " of " + inputSplitPathList.size() +
-                     " InputSplits are finished.");
+            if (LOG.isInfoEnabled()) {
+                LOG.info("reserveInputSplit: reservedPath = " +
+                         reservedInputSplitPath + ", " + finishedInputSplits +
+                         " of " + inputSplitPathList.size() +
+                         " InputSplits are finished.");
+            }
             if (finishedInputSplits == inputSplitPathList.size()) {
                 return null;
             }
@@ -272,11 +275,19 @@ public class BspServiceWorker<
             byte[] splitList;
             try {
                 splitList = getZkExt().getData(inputSplitPath, false, null);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
+            } catch (KeeperException e) {
+                throw new IllegalStateException(
+                    "loadVertices: KeeperException on " + inputSplitPath, e);
+            } catch (InterruptedException e) {
+                throw new IllegalStateException(
+                    "loadVertices: IllegalStateException on " +
+                    inputSplitPath, e);
             }
-            LOG.info("loadVertices: Reserved " + inputSplitPath +
-                     " from ZooKeeper and got '" + splitList + "'");
+            if (LOG.isInfoEnabled()) {
+                LOG.info("loadVertices: Reserved " + inputSplitPath +
+                         " from ZooKeeper and got '" +
+                         Arrays.toString(splitList) + "'");
+            }
             getContext().progress();
 
             DataInputStream inputStream =
@@ -428,8 +439,9 @@ public class BspServiceWorker<
                         entry.getValue().getVertexMap().values()) {
                     vertexRangeEdgeCount += vertex.getOutEdgeMap().size();
                 }
-                statList.add(new Long(entry.getValue().getVertexMap().size()));
-                statList.add(new Long(vertexRangeEdgeCount));
+                statList.add(Long.valueOf
+                                 (entry.getValue().getVertexMap().size()));
+                statList.add(Long.valueOf(vertexRangeEdgeCount));
                 maxIndexStatMap.put(entry.getKey(), statList);
 
                 // Add the local vertex ranges to the stored vertex ranges
@@ -447,7 +459,7 @@ public class BspServiceWorker<
         // 3. Process input splits until there are no more.
         // 4. Wait for superstep 0 to complete.
         if (getRestartedSuperstep() < -1) {
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                 "setup: Invalid superstep to restart - " +
                 getRestartedSuperstep());
         }
@@ -1021,12 +1033,15 @@ public class BspServiceWorker<
         throws IOException, InstantiationException, IllegalAccessException {
         // Read in the reverse order from storeCheckpoint()
         DataInputStream dataStream = getFs().open(new Path(dataFileName));
-        dataStream.skip(startPos);
+        if (dataStream.skip(startPos) != startPos) {
+            throw new IllegalStateException(
+                "loadVertexRange: Failed to skip " + startPos);
+        }
         long vertexCount = dataStream.readLong();
         VertexRange<I, V, E, M> vertexRange = getVertexRangeMap().get(maxIndex);
         for (int i = 0; i < vertexCount; ++i) {
             HadoopVertex<I, V, E, M> vertex =
-                BspUtils.createVertex(getConfiguration());
+                BspUtils.<I, V, E, M>createVertex(getConfiguration());
             vertex.readFields(dataStream);
             // Add the vertex
             if (vertexRange.getVertexMap().put(vertex.getVertexId(), vertex)
@@ -1035,8 +1050,10 @@ public class BspServiceWorker<
                     "loadVertexRange: Vertex "  + vertex + " already exists");
             }
         }
-        LOG.info("loadVertexRange: " + vertexCount + " vertices in " +
-                 dataFileName);
+        if (LOG.isInfoEnabled()) {
+            LOG.info("loadVertexRange: " + vertexCount + " vertices in " +
+                     dataFileName);
+        }
         dataStream.close();
     }
 
@@ -1256,8 +1273,8 @@ public class BspServiceWorker<
                         jsonObj.getLong(JSONOBJ_APPLICATION_ATTEMPT_KEY) !=
                         getApplicationAttempt() &&
                         getSuperstep() > 0) {
-                    LOG.fatal("processEvent: Worker will restart from command - " +
-                              jsonObj.toString());
+                    LOG.fatal("processEvent: Worker will restart " +
+                              "from command - " + jsonObj.toString());
                     System.exit(-1);
                 }
             } catch (JSONException e) {

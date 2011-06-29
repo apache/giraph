@@ -74,11 +74,17 @@ public class ZooKeeperManager {
     /** ZooKeeper base port */
     private int m_zkBasePort = -1;
     /** Final ZooKeeper server port list (for clients) */
-    private String m_zkServerPortString = null;
+    private String m_zkServerPortString;
     /** My hostname */
     private String m_myHostname = null;
     /** Job id, to ensure uniqueness */
     private final String m_jobId;
+    /**
+     * Default local ZooKeeper prefix directory to use (where ZooKeeper server
+     * files will go)
+     */
+    private final String m_zkDirDefault;
+
 
     /** Separates the hostname and task in the candidate stamp */
     private static final String HOSTNAME_TASK_SEPARATOR = " ";
@@ -157,12 +163,19 @@ public class ZooKeeperManager {
         m_serverCount = m_conf.getInt(
             BspJob.ZOOKEEPER_SERVER_COUNT,
             BspJob.ZOOKEEPER_SERVER_COUNT_DEFAULT);
-        m_zkDir = m_conf.get(
-            BspJob.ZOOKEEPER_DIR, BspJob.ZOOKEEPER_DIR_DEFAULT);
-        m_configFilePath = new String(m_zkDir + "/zoo.cfg");
+        String jobLocalDir = m_conf.get("job.local.dir");
+        if (jobLocalDir != null) { // for non-local jobs
+            m_zkDirDefault = jobLocalDir +
+                "/_bspZooKeeper";
+        } else {
+            m_zkDirDefault = System.getProperty("user.dir") + "/_bspZooKeeper";
+        }
+        m_zkDir = m_conf.get(BspJob.ZOOKEEPER_DIR, m_zkDirDefault);
+        m_configFilePath = m_zkDir + "/zoo.cfg";
         m_zkBasePort = m_conf.getInt(
             BspJob.ZOOKEEPER_SERVER_PORT,
             BspJob.ZOOKEEPER_SERVER_PORT_DEFAULT);
+
 
         m_myHostname = InetAddress.getLocalHost().getCanonicalHostName();
         m_fs = FileSystem.get(m_conf);
@@ -198,8 +211,10 @@ public class ZooKeeperManager {
             m_taskDirectory, m_myHostname +
             HOSTNAME_TASK_SEPARATOR + m_taskPartition);
         try {
-            LOG.info("createCandidateStamp: Creating my filestamp " +
-                     myCandidacyPath);
+            if (LOG.isInfoEnabled()) {
+                LOG.info("createCandidateStamp: Creating my filestamp " +
+                         myCandidacyPath);
+            }
             m_fs.createNewFile(myCandidacyPath);
         } catch (IOException e) {
             LOG.error("createCandidateStamp: Failed (maybe previous task " +
@@ -266,13 +281,15 @@ public class ZooKeeperManager {
                                             new Integer(hostnameTaskArray[1]));
                     }
                 }
-                LOG.info("getZooKeeperServerList: Got " +
-                         hostnameTaskMap.keySet() + " " +
-                         hostnameTaskMap.size() + " hosts from " +
-                         fileStatusArray.length + " candidates when " +
-                         m_serverCount + " required (polling period is " +
-                         m_pollMsecs + ") on attempt " +
-                         candidateRetrievalAttempt);
+                if (LOG.isInfoEnabled()) {
+                    LOG.info("getZooKeeperServerList: Got " +
+                             hostnameTaskMap.keySet() + " " +
+                             hostnameTaskMap.size() + " hosts from " +
+                             fileStatusArray.length + " candidates when " +
+                             m_serverCount + " required (polling period is " +
+                             m_pollMsecs + ") on attempt " +
+                             candidateRetrievalAttempt);
+                }
                 if (hostnameTaskMap.size() >= m_serverCount) {
                     break;
                 }
@@ -280,21 +297,24 @@ public class ZooKeeperManager {
                 Thread.sleep(m_pollMsecs);
             }
         }
-        String serverListFile =
-            new String(ZOOKEEPER_SERVER_LIST_FILE_PREFIX);
+        StringBuffer serverListFile =
+            new StringBuffer(ZOOKEEPER_SERVER_LIST_FILE_PREFIX);
         int numServers = 0;
         for (Map.Entry<String, Integer> hostnameTask :
             hostnameTaskMap.entrySet()) {
-            serverListFile += hostnameTask.getKey() +
+            serverListFile.append(hostnameTask.getKey() +
             HOSTNAME_TASK_SEPARATOR + hostnameTask.getValue() +
-            HOSTNAME_TASK_SEPARATOR;
+            HOSTNAME_TASK_SEPARATOR);
             if (++numServers == m_serverCount) {
                 break;
             }
         }
-        Path serverListPath = new Path(m_baseDirectory, serverListFile);
-        LOG.info("createZooKeeperServerList: Creating the final " +
-                 "ZooKeeper file '" + serverListPath + "'");
+        Path serverListPath =
+            new Path(m_baseDirectory, serverListFile.toString());
+        if (LOG.isInfoEnabled()) {
+            LOG.info("createZooKeeperServerList: Creating the final " +
+                     "ZooKeeper file '" + serverListPath + "'");
+        }
         m_fs.createNewFile(serverListPath);
     }
 
@@ -340,9 +360,12 @@ public class ZooKeeperManager {
 
         while (true) {
             serverListFile = getServerListFile();
-            LOG.info("getZooKeeperServerList: For task " + m_taskPartition +
-                     ", got file '" + serverListFile + "' (polling period is " +
-                     m_pollMsecs + ")");
+            if (LOG.isInfoEnabled()) {
+                LOG.info("getZooKeeperServerList: For task " + m_taskPartition +
+                         ", got file '" + serverListFile +
+                         "' (polling period is " +
+                         m_pollMsecs + ")");
+            }
             if (serverListFile != null) {
                 break;
             }
@@ -365,17 +388,18 @@ public class ZooKeeperManager {
                      " hosts in filename '" + serverListFile + "'");
         }
         if (serverHostList.size() != m_serverCount * 2) {
-            throw new RuntimeException("getZooKeeperServerList: Impossible " +
-                                       " that " + serverHostList.size() +
-                                       " != 2 * " +
-                                       m_serverCount + " asked for.");
+            throw new IllegalStateException(
+                "getZooKeeperServerList: Impossible " +
+                " that " + serverHostList.size() +
+                " != 2 * " +
+                m_serverCount + " asked for.");
         }
 
         for (int i = 0; i < serverHostList.size(); i += 2) {
             m_zkServerPortMap.put(serverHostList.get(i),
                                   Integer.parseInt(serverHostList.get(i+1)));
         }
-        m_zkServerPortString = new String();
+        m_zkServerPortString = "";
         for (String server : m_zkServerPortMap.keySet()) {
             if (m_zkServerPortString.length() > 0) {
                 m_zkServerPortString += ",";
@@ -397,9 +421,11 @@ public class ZooKeeperManager {
      * locally.
      */
     private void generateZooKeeperConfigFile(List<String> serverList) {
-        LOG.info("generateZooKeeperConfigFile: Creating file " +
-                 m_configFilePath + " in " + m_zkDir + " with base port " +
-                 m_zkBasePort);
+        if (LOG.isInfoEnabled()) {
+            LOG.info("generateZooKeeperConfigFile: Creating file " +
+                     m_configFilePath + " in " + m_zkDir + " with base port " +
+                     m_zkBasePort);
+        }
         try {
             File zkDir = new File(m_zkDir);
             zkDir.mkdirs();
@@ -411,12 +437,18 @@ public class ZooKeeperManager {
             writer.write("tickTime=" + BspJob.DEFAULT_ZOOKEEPER_TICK_TIME + "\n");
             writer.write("dataDir=" + m_zkDir + "\n");
             writer.write("clientPort=" + m_zkBasePort + "\n");
-            writer.write("maxClientCnxns=" + BspJob.DEFAULT_ZOOKEEPER_MAX_CLIENT_CNXNS +"\n");
-            writer.write("minSessionTimeout=" + BspJob.DEFAULT_ZOOKEEPER_MIN_SESSION_TIMEOUT +"\n");
-            writer.write("maxSessionTimeout=" + BspJob.DEFAULT_ZOOKEEPER_MAX_SESSION_TIMEOUT +"\n");
-            writer.write("initLimit=" + BspJob.DEFAULT_ZOOKEEPER_INIT_LIMIT + "\n");
-            writer.write("syncLimit=" + BspJob.DEFAULT_ZOOKEEPER_SYNC_LIMIT + "\n");
-            writer.write("snapCount=" + BspJob.DEFAULT_ZOOKEEPER_SNAP_COUNT + "\n");
+            writer.write("maxClientCnxns=" +
+                         BspJob.DEFAULT_ZOOKEEPER_MAX_CLIENT_CNXNS +"\n");
+            writer.write("minSessionTimeout=" +
+                         BspJob.DEFAULT_ZOOKEEPER_MIN_SESSION_TIMEOUT +"\n");
+            writer.write("maxSessionTimeout=" +
+                         BspJob.DEFAULT_ZOOKEEPER_MAX_SESSION_TIMEOUT +"\n");
+            writer.write("initLimit=" +
+                         BspJob.DEFAULT_ZOOKEEPER_INIT_LIMIT + "\n");
+            writer.write("syncLimit=" +
+                         BspJob.DEFAULT_ZOOKEEPER_SYNC_LIMIT + "\n");
+            writer.write("snapCount=" +
+                         BspJob.DEFAULT_ZOOKEEPER_SNAP_COUNT + "\n");
             if (serverList.size() != 1) {
                 writer.write("electionAlg=0\n");
                 for (int i = 0; i < serverList.size(); ++i) {
@@ -434,7 +466,8 @@ public class ZooKeeperManager {
             writer.flush();
             writer.close();
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new IllegalStateException(
+                "generateZooKeeperConfigFile: Failed to write file", e);
         }
     }
 
@@ -447,8 +480,10 @@ public class ZooKeeperManager {
         if ((taskId != null) && (taskId.intValue() == m_taskPartition)) {
             File zkDir = new File(m_zkDir);
             try {
-                LOG.info("onlineZooKeeperServers: Trying to delete old " +
-                         "directory " + zkDir);
+                if (LOG.isInfoEnabled()) {
+                    LOG.info("onlineZooKeeperServers: Trying to delete old " +
+                             "directory " + zkDir);
+                }
                 FileUtils.deleteDirectory(zkDir);
             } catch (IOException e) {
                 LOG.warn("onlineZooKeeperServers: Failed to delete " +
@@ -460,7 +495,7 @@ public class ZooKeeperManager {
             List<String> commandList = new ArrayList<String>();
             String javaHome = System.getProperty("java.home");
             if (javaHome == null) {
-                throw new RuntimeException(
+                throw new IllegalArgumentException(
                     "onlineZooKeeperServers: java.home is not set!");
             }
             commandList.add(javaHome + "/bin/java");
@@ -472,8 +507,7 @@ public class ZooKeeperManager {
             commandList.add(QuorumPeerMain.class.getName());
             commandList.add(m_configFilePath);
             processBuilder.command(commandList);
-            File execDirectory = new File(m_conf.get(
-                BspJob.ZOOKEEPER_DIR, BspJob.ZOOKEEPER_DIR_DEFAULT));
+            File execDirectory = new File(m_zkDir);
             processBuilder.directory(execDirectory);
             processBuilder.redirectErrorStream(true);
             LOG.info("onlineZooKeeperServers: Attempting to start ZooKeeper " +
@@ -511,10 +545,12 @@ public class ZooKeeperManager {
             int connectAttempts = 0;
             while (connectAttempts < 5) {
                 try {
-                    LOG.info("onlineZooKeeperServers: Connect attempt " +
-                             connectAttempts + " trying to connect to " +
-                             m_myHostname + ":" + m_zkBasePort +
-                             " with poll msecs = " + m_pollMsecs);
+                    if (LOG.isInfoEnabled()) {
+                        LOG.info("onlineZooKeeperServers: Connect attempt " +
+                                 connectAttempts + " trying to connect to " +
+                                 m_myHostname + ":" + m_zkBasePort +
+                                 " with poll msecs = " + m_pollMsecs);
+                    }
                     InetSocketAddress zkServerAddress =
                         new InetSocketAddress(m_myHostname, m_zkBasePort);
                     Socket testServerSock = new Socket();
@@ -541,15 +577,17 @@ public class ZooKeeperManager {
                 }
             }
             if (connectAttempts == 5) {
-                throw new RuntimeException(
+                throw new IllegalStateException(
                     "onlineZooKeeperServers: Failed to connect in 5 tries!");
             }
             Path myReadyPath = new Path(
                     m_serverDirectory, m_myHostname +
                     HOSTNAME_TASK_SEPARATOR + m_taskPartition);
             try {
-                LOG.info("onlineZooKeeperServers: Creating my filestamp " +
-                        myReadyPath);
+                if (LOG.isInfoEnabled()) {
+                    LOG.info("onlineZooKeeperServers: Creating my filestamp " +
+                             myReadyPath);
+                }
                 m_fs.createNewFile(myReadyPath);
             } catch (IOException e) {
                 LOG.error("onlineZooKeeperServers: Failed (maybe previous " +

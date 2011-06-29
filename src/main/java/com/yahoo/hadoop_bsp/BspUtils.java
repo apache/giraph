@@ -11,40 +11,6 @@ import org.apache.hadoop.util.ReflectionUtils;
  */
 public class BspUtils {
     /**
-     * Get the user's subclassed HadoopVertex.
-     *
-     * @param conf Configuration to check
-     * @return User's vertex class
-     */
-    @SuppressWarnings({ "rawtypes", "unchecked" })
-    public static <I extends WritableComparable,
-                   V extends Writable,
-                   E extends Writable,
-                   M extends Writable>
-            Class<? extends HadoopVertex<I, V, E, M>>
-            getVertexClass(Configuration conf) {
-        return (Class<? extends HadoopVertex<I, V, E, M>>)
-                conf.getClass(BspJob.VERTEX_CLASS,
-                              HadoopVertex.class,
-                              HadoopVertex.class);
-    }
-
-    /**
-     * Create a user vertex
-     *
-     * @param conf Configuration to check
-     * @return Instantiated user vertex
-     */
-    @SuppressWarnings("rawtypes")
-    public static <I extends WritableComparable, V extends Writable,
-            E extends Writable, M extends Writable> HadoopVertex<I, V, E, M>
-            createVertex(Configuration conf) {
-        Class<? extends HadoopVertex<I, V, E, M>> vertexClass =
-            getVertexClass(conf);
-        return ReflectionUtils.newInstance(vertexClass, conf);
-    }
-
-    /**
      * Get the user's subclassed {@link VertexInputFormat}.
      *
      * @param conf Configuration to check
@@ -60,6 +26,55 @@ public class BspUtils {
                 conf.getClass(BspJob.VERTEX_INPUT_FORMAT_CLASS,
                               VertexInputFormat.class,
                               VertexInputFormat.class);
+    }
+
+    /**
+     * Create a user vertex input format class
+     *
+     * @param conf Configuration to check
+     * @return Instantiated user vertex input format class
+     */
+    @SuppressWarnings("rawtypes")
+    public static <I extends WritableComparable, V extends Writable,
+            E extends Writable> VertexInputFormat<I, V, E>
+            createVertexInputFormat(Configuration conf) {
+        Class<? extends VertexInputFormat<I, V, E>> vertexInputFormatClass =
+            getVertexInputFormatClass(conf);
+        return ReflectionUtils.newInstance(vertexInputFormatClass, conf);
+    }
+
+    /**
+     * Get the user's subclassed vertex range balancer
+     *
+     * @param conf Configuration to check
+     * @return User's vertex range balancer class
+     */
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    public static <I extends WritableComparable,
+                   V extends Writable,
+                   E extends Writable,
+                   M extends Writable>
+        Class<? extends BspBalancer<I, V, E, M>>
+            getVertexRangeBalancerClass(Configuration conf) {
+        return (Class<? extends BspBalancer<I, V, E, M>>)
+                conf.getClass(BspJob.VERTEX_RANGE_BALANCER_CLASS,
+                              StaticBalancer.class,
+                              VertexRangeBalancer.class);
+    }
+
+    /**
+     * Create a user vertex range balancer class
+     *
+     * @param conf Configuration to check
+     * @return Instantiated user vertex input format class
+     */
+    @SuppressWarnings("rawtypes")
+    public static <I extends WritableComparable, V extends Writable,
+            E extends Writable, M extends Writable> BspBalancer<I, V, E, M>
+            createVertexRangeBalancer(Configuration conf) {
+        Class<? extends BspBalancer<I, V, E, M>>
+            vertexRangeBalancerClass = getVertexRangeBalancerClass(conf);
+        return ReflectionUtils.newInstance(vertexRangeBalancerClass, conf);
     }
 
     /**
@@ -95,6 +110,41 @@ public class BspUtils {
             getVertexResolverClass(conf);
         return ReflectionUtils.newInstance(vertexResolverClass, conf);
     }
+
+    /**
+     * Get the user's subclassed HadoopVertex.
+     *
+     * @param conf Configuration to check
+     * @return User's vertex class
+     */
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    public static <I extends WritableComparable,
+                   V extends Writable,
+                   E extends Writable,
+                   M extends Writable>
+            Class<? extends HadoopVertex<I, V, E, M>>
+            getVertexClass(Configuration conf) {
+        return (Class<? extends HadoopVertex<I, V, E, M>>)
+                conf.getClass(BspJob.VERTEX_CLASS,
+                              HadoopVertex.class,
+                              HadoopVertex.class);
+    }
+
+    /**
+     * Create a user vertex
+     *
+     * @param conf Configuration to check
+     * @return Instantiated user vertex
+     */
+    @SuppressWarnings("rawtypes")
+    public static <I extends WritableComparable, V extends Writable,
+            E extends Writable, M extends Writable> HadoopVertex<I, V, E, M>
+            createVertex(Configuration conf) {
+        Class<? extends HadoopVertex<I, V, E, M>> vertexClass =
+            getVertexClass(conf);
+        return ReflectionUtils.newInstance(vertexClass, conf);
+    }
+
 
     /**
      * Get the user's subclassed vertex index class.
