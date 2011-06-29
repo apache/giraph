@@ -1,0 +1,54 @@
+Giraph : Large-scale graph processing on Hadoop
+
+Web and online social graphs have been rapidly growing in size and
+scale during the past decade.  In 2008, Google estimated that the
+number of web pages reached over a trillion.  Online social networking
+and email sites, including Yahoo!, Google, Microsoft, Facebook,
+LinkedIn, and Twitter, have hundreds of millions of users and are
+expected to grow much more in the future.  Processing these graphs
+plays a big role in relevant and personalized information for users,
+such as results from a search engine or news in an online social
+networking site.
+
+Graph processing platforms to run large-scale algorithms (such as page
+rank, shared connections, personalization-based popularity, etc.) have
+become quite popular.  Some recent examples include Pregel and HaLoop.
+For general-purpose big data computation, the map-reduce computing
+model has been well adopted and the most deployed map-reduce
+infrastructure is Apache Hadoop.  We have implemented a
+graph-processing framework that is launched as a typical Hadoop job to
+leverage existing Hadoop infrastructure, such as Amazon’s EC2.  Giraph
+builds upon the graph-oriented nature of Pregel but additionally adds
+fault-tolerance to the coordinator process with the use of ZooKeeper
+as its centralized coordination service and is in the process of being
+open-sourced.
+
+Giraph follows the bulk-synchronous parallel model relative to graphs
+where vertices can send messages to other vertices during a given
+superstep.  Checkpoints are initiated by the Giraph infrastructure at
+user-defined intervals and are used for automatic application restarts
+when any worker in the application fails.  Any worker in the
+application can act as the application coordinator and one will
+automatically take over if the current application coordinator fails.
+
+-------------------------------
+
+Building and testing:
+
+You will need the following:
+- Java 1.6
+- Maven 2 or higher
+
+Use the maven commands to:
+- compile (i.e mvn compile)
+- package (i.e. mvn package)
+- test (i.e. mvn test)
+-- For testing, one can submit the test to a running Hadoop instance
+   (i.e. mvn test -Dprop.mapred.job.tracker=localhost:50300)
+
+-------------------------------
+
+Running:
+
+You will need the following:
+- Hadoop 0.20.203 supported, other versions may work as well
