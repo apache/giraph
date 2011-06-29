@@ -48,77 +48,75 @@ public abstract class BspService <
         M extends Writable>
         implements Watcher, CentralizedService<I, V, E, M> {
     /** Private ZooKeeper instance that implements the service */
-    private final ZooKeeperExt m_zk;
+    private final ZooKeeperExt zk;
     /** Has worker registration changed (either healthy or unhealthy) */
-    private final BspEvent m_workerHealthRegistrationChanged =
+    private final BspEvent workerHealthRegistrationChanged =
         new PredicateLock();
     /** InputSplits are ready for consumption by workers */
-    private final BspEvent m_inputSplitsAllReadyChanged =
+    private final BspEvent inputSplitsAllReadyChanged =
         new PredicateLock();
     /** InputSplit reservation or finished notification and synchronization */
-    private final BspEvent m_inputSplitsStateChanged =
+    private final BspEvent inputSplitsStateChanged =
         new PredicateLock();
     /** Are the worker assignments of vertex ranges ready? */
-    private final BspEvent m_vertexRangeAssignmentsReadyChanged =
+    private final BspEvent vertexRangeAssignmentsReadyChanged =
         new PredicateLock();
     /** Have the vertex range exchange children changed? */
-    private final BspEvent m_vertexRangeExchangeChildrenChanged =
+    private final BspEvent vertexRangeExchangeChildrenChanged =
         new PredicateLock();
     /** Are the vertex range exchanges done? */
-    private final BspEvent m_vertexRangeExchangeFinishedChanged =
+    private final BspEvent vertexRangeExchangeFinishedChanged =
         new PredicateLock();
     /** Application attempt changed */
-    private final BspEvent m_applicationAttemptChanged =
+    private final BspEvent applicationAttemptChanged =
         new PredicateLock();
     /** Superstep finished synchronization */
-    private final BspEvent m_superstepFinished =
+    private final BspEvent superstepFinished =
         new PredicateLock();
     /** Master election changed for any waited on attempt */
-    private final BspEvent m_masterElectionChildrenChanged =
+    private final BspEvent masterElectionChildrenChanged =
         new PredicateLock();
     /** Cleaned up directory children changed*/
-    private final BspEvent m_cleanedUpChildrenChanged =
+    private final BspEvent cleanedUpChildrenChanged =
         new PredicateLock();
     /** Registered list of BspEvents */
-    private final List<BspEvent> m_registeredBspEvents =
+    private final List<BspEvent> registeredBspEvents =
         new ArrayList<BspEvent>();
     /** Configuration of the job*/
-    private final Configuration m_conf;
+    private final Configuration conf;
     /** Job context (mainly for progress) */
-    private final Mapper<?, ?, ?, ?>.Context m_context;
+    private final Mapper<?, ?, ?, ?>.Context context;
     /** Cached superstep (from ZooKeeper) */
-    private long m_cachedSuperstep = -1;
+    private long cachedSuperstep = -1;
     /** Cached application attempt (from ZooKeeper) */
-    private long m_cachedApplicationAttempt = -1;
+    private long cachedApplicationAttempt = -1;
     /** Job id, to ensure uniqueness */
-    private final String m_jobId;
+    private final String jobId;
     /** Task partition, to ensure uniqueness */
-    private final int m_taskPartition;
+    private final int taskPartition;
     /** My hostname */
-    private final String m_hostname;
+    private final String hostname;
     /** Combination of hostname '_' partition (unique id) */
-    private final String m_hostnamePartitionId;
+    private final String hostnamePartitionId;
     /** Mapper that will do computation */
-    private final GiraphJob.BspMapper<I, V, E, M> m_bspMapper;
+    private final GiraphJob.BspMapper<I, V, E, M> bspMapper;
     /** Class logger */
     private static final Logger LOG = Logger.getLogger(BspService.class);
     /** File system */
-    private final FileSystem m_fs;
+    private final FileSystem fs;
     /** Restarted from a checkpoint (manual or automatic) */
-    private long m_restartedSuperstep = -1;
-    /** Vertex class */
-    private final Class<? extends Vertex<I, V, E, M>> m_hadoopVertexClass;
+    private long restartedSuperstep = -1;
     /** Used to call pre/post application/superstep methods */
-    private final Vertex<I, V, E, M> m_representativeVertex;
+    private final Vertex<I, V, E, M> representativeVertex;
     /** Checkpoint frequency */
-    private int m_checkpointFrequency = -1;
+    private int checkpointFrequency = -1;
     /** Vertex range map based on the superstep below */
-    private NavigableMap<I, VertexRange<I, V, E, M>> m_vertexRangeMap =
+    private NavigableMap<I, VertexRange<I, V, E, M>> vertexRangeMap =
         new TreeMap<I, VertexRange<I, V, E, M>>();
     /** Vertex range set is based on this superstep */
-    private long m_vertexRangeSuperstep = -1;
+    private long vertexRangeSuperstep = -1;
     /** Map of aggregators */
-    private Map<String, Aggregator<Writable>> m_aggregatorMap =
+    private Map<String, Aggregator<Writable>> aggregatorMap =
         new TreeMap<String, Aggregator<Writable>>();
 
     /** State of the application */
@@ -412,12 +410,12 @@ public abstract class BspService <
      * @return ZooKeeperExt instance.
      */
     final public ZooKeeperExt getZkExt() {
-        return m_zk;
+        return zk;
     }
 
     @Override
     final public long getRestartedSuperstep() {
-        return m_restartedSuperstep;
+        return restartedSuperstep;
     }
 
     /**
@@ -426,12 +424,12 @@ public abstract class BspService <
      * @param superstep Set the manually restarted superstep
      */
     final public void setRestartedSuperstep(long superstep) {
-        m_restartedSuperstep= superstep;
+        restartedSuperstep= superstep;
     }
 
     final public boolean checkpointFrequencyMet(long superstep) {
         if ((superstep == 1) ||
-            (((superstep + 1) % m_checkpointFrequency) == 0)) {
+            (((superstep + 1) % checkpointFrequency) == 0)) {
             return true;
         }
         else {
@@ -445,72 +443,72 @@ public abstract class BspService <
      * @return file system
      */
     final public FileSystem getFs() {
-        return m_fs;
+        return fs;
     }
 
     final public Configuration getConfiguration() {
-        return m_conf;
+        return conf;
     }
 
     final public Mapper<?, ?, ?, ?>.Context getContext() {
-        return m_context;
+        return context;
     }
 
     final public String getHostname() {
-        return m_hostname;
+        return hostname;
     }
 
     final public String getHostnamePartitionId() {
-        return m_hostnamePartitionId;
+        return hostnamePartitionId;
     }
 
     final public int getTaskPartition() {
-        return m_taskPartition;
+        return taskPartition;
     }
 
     final public BspMapper<I, V, E, M> getBspMapper() {
-        return m_bspMapper;
+        return bspMapper;
     }
 
     final public BspEvent getWorkerHealthRegistrationChangedEvent() {
-        return m_workerHealthRegistrationChanged;
+        return workerHealthRegistrationChanged;
     }
 
     final public BspEvent getInputSplitsAllReadyEvent() {
-        return m_inputSplitsAllReadyChanged;
+        return inputSplitsAllReadyChanged;
     }
 
     final public BspEvent getInputSplitsStateChangedEvent() {
-        return m_inputSplitsStateChanged;
+        return inputSplitsStateChanged;
     }
 
     final public BspEvent getVertexRangeAssignmentsReadyChangedEvent() {
-        return m_vertexRangeAssignmentsReadyChanged;
+        return vertexRangeAssignmentsReadyChanged;
     }
 
     final public BspEvent getVertexRangeExchangeChildrenChangedEvent() {
-        return m_vertexRangeExchangeChildrenChanged;
+        return vertexRangeExchangeChildrenChanged;
     }
 
     final public BspEvent getVertexRangeExchangeFinishedChangedEvent() {
-        return m_vertexRangeExchangeFinishedChanged;
+        return vertexRangeExchangeFinishedChanged;
     }
 
     final public BspEvent getApplicationAttemptChangedEvent() {
-        return m_applicationAttemptChanged;
+        return applicationAttemptChanged;
     }
 
     final public BspEvent getSuperstepFinishedEvent() {
-        return m_superstepFinished;
+        return superstepFinished;
     }
 
 
     final public BspEvent getMasterElectionChildrenChangedEvent() {
-        return m_masterElectionChildrenChanged;
+        return masterElectionChildrenChanged;
     }
 
     final public BspEvent getCleanedUpChildrenChangedEvent() {
-        return m_cleanedUpChildrenChanged;
+        return cleanedUpChildrenChanged;
     }
 
     /**
@@ -535,12 +533,14 @@ public abstract class BspService <
         String jobState = null;
         try {
             List<String> childList =
-                m_zk.getChildrenExt(MASTER_JOB_STATE_PATH, true, true, true);
+                getZkExt().getChildrenExt(
+                    MASTER_JOB_STATE_PATH, true, true, true);
             if (childList.isEmpty()) {
                 return null;
             }
             jobState =
-                new String(m_zk.getData(childList.get(childList.size() - 1), true, null));
+                new String(getZkExt().getData(
+                    childList.get(childList.size() - 1), true, null));
         } catch (KeeperException.NoNodeException e) {
             LOG.info("getJobState: Job state path is empty! - " +
                      MASTER_JOB_STATE_PATH);
@@ -559,41 +559,40 @@ public abstract class BspService <
                       int sessionMsecTimeout,
                       Mapper<?, ?, ?, ?>.Context context,
                       GiraphJob.BspMapper<I, V, E, M> bspMapper) {
-        registerBspEvent(m_workerHealthRegistrationChanged);
-        registerBspEvent(m_inputSplitsAllReadyChanged);
-        registerBspEvent(m_inputSplitsStateChanged);
-        registerBspEvent(m_vertexRangeAssignmentsReadyChanged);
-        registerBspEvent(m_vertexRangeExchangeChildrenChanged);
-        registerBspEvent(m_vertexRangeExchangeFinishedChanged);
-        registerBspEvent(m_applicationAttemptChanged);
-        registerBspEvent(m_superstepFinished);
-        registerBspEvent(m_masterElectionChildrenChanged);
-        registerBspEvent(m_cleanedUpChildrenChanged);
+        registerBspEvent(workerHealthRegistrationChanged);
+        registerBspEvent(inputSplitsAllReadyChanged);
+        registerBspEvent(inputSplitsStateChanged);
+        registerBspEvent(vertexRangeAssignmentsReadyChanged);
+        registerBspEvent(vertexRangeExchangeChildrenChanged);
+        registerBspEvent(vertexRangeExchangeFinishedChanged);
+        registerBspEvent(applicationAttemptChanged);
+        registerBspEvent(superstepFinished);
+        registerBspEvent(masterElectionChildrenChanged);
+        registerBspEvent(cleanedUpChildrenChanged);
 
-        m_context = context;
-        m_bspMapper = bspMapper;
-        m_conf = context.getConfiguration();
-        m_jobId = m_conf.get("mapred.job.id", "Unknown Job");
-        m_taskPartition = m_conf.getInt("mapred.task.partition", -1);
-        m_restartedSuperstep =
-            m_conf.getLong(GiraphJob.RESTART_SUPERSTEP, -1);
-        m_cachedSuperstep = m_restartedSuperstep;
+        this.context = context;
+        this.bspMapper = bspMapper;
+        this.conf = context.getConfiguration();
+        this.jobId = conf.get("mapred.job.id", "Unknown Job");
+        this.taskPartition = conf.getInt("mapred.task.partition", -1);
+        this.restartedSuperstep =
+            conf.getLong(GiraphJob.RESTART_SUPERSTEP, -1);
+        this.cachedSuperstep = restartedSuperstep;
         try {
-            m_hostname = InetAddress.getLocalHost().getHostName();
+            this.hostname = InetAddress.getLocalHost().getHostName();
         } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         }
-        m_hostnamePartitionId = m_hostname + "_" + getTaskPartition();
+        this.hostnamePartitionId = hostname + "_" + getTaskPartition();
 
-        m_hadoopVertexClass = BspUtils.getVertexClass(getConfiguration());
-        m_representativeVertex =
+        this.representativeVertex =
             BspUtils.<I, V, E, M>createVertex(getConfiguration());
 
-        m_checkpointFrequency =
-            m_conf.getInt(GiraphJob.CHECKPOINT_FREQUENCY,
+        this.checkpointFrequency =
+            conf.getInt(GiraphJob.CHECKPOINT_FREQUENCY,
                           GiraphJob.CHECKPOINT_FREQUENCY_DEFAULT);
 
-        BASE_PATH = BASE_DIR + "/" + m_jobId;
+        BASE_PATH = BASE_DIR + "/" + jobId;
         MASTER_JOB_STATE_PATH = BASE_PATH + MASTER_JOB_STATE_NODE;
         INPUT_SPLIT_PATH = BASE_PATH + INPUT_SPLIT_DIR;
         INPUT_SPLITS_ALL_READY_PATH = BASE_PATH + INPUT_SPLITS_ALL_READY_NODE;
@@ -605,12 +604,12 @@ public abstract class BspService <
                 GiraphJob.CHECKPOINT_DIRECTORY_DEFAULT + "/" + getJobId());
         MASTER_ELECTION_PATH = BASE_PATH + MASTER_ELECTION_DIR;
         if (LOG.isInfoEnabled()) {
-            LOG.info("BspService: Connecting to ZooKeeper with job " + m_jobId +
+            LOG.info("BspService: Connecting to ZooKeeper with job " + jobId +
                      ", " + getTaskPartition() + " on " + serverPortList);
         }
         try {
-            m_zk = new ZooKeeperExt(serverPortList, sessionMsecTimeout, this);
-            m_fs = FileSystem.get(getConfiguration());
+            this.zk = new ZooKeeperExt(serverPortList, sessionMsecTimeout, this);
+            this.fs = FileSystem.get(getConfiguration());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -622,20 +621,11 @@ public abstract class BspService <
      * @return job id
      */
     final public String getJobId() {
-        return m_jobId;
-    }
-
-    /**
-     * Get the hadoop vertex class (mainly for instantiation)
-     *
-     * @return the hadoop vertex class
-     */
-    final public Class<? extends Vertex<I, V, E, M>> getVertexClass() {
-        return m_hadoopVertexClass;
+        return jobId;
     }
 
     final public BasicVertex<I, V, E, M> getRepresentativeVertex() {
-        return m_representativeVertex;
+        return representativeVertex;
     }
 
     /**
@@ -644,15 +634,15 @@ public abstract class BspService <
      * @return the latest application attempt
      */
     final public long getApplicationAttempt() {
-        if (m_cachedApplicationAttempt != -1) {
-            return m_cachedApplicationAttempt;
+        if (cachedApplicationAttempt != -1) {
+            return cachedApplicationAttempt;
         }
         try {
-            m_zk.createExt(APPLICATION_ATTEMPTS_PATH,
-                           null,
-                           Ids.OPEN_ACL_UNSAFE,
-                           CreateMode.PERSISTENT,
-                           true);
+            getZkExt().createExt(APPLICATION_ATTEMPTS_PATH,
+                                 null,
+                                 Ids.OPEN_ACL_UNSAFE,
+                                 CreateMode.PERSISTENT,
+                                 true);
         } catch (KeeperException.NodeExistsException e) {
             LOG.info("getApplicationAttempt: Node " +
                      APPLICATION_ATTEMPTS_PATH + " already exists!");
@@ -661,20 +651,20 @@ public abstract class BspService <
         }
         try {
             List<String> attemptList =
-                m_zk.getChildrenExt(
+                getZkExt().getChildrenExt(
                     APPLICATION_ATTEMPTS_PATH, true, false, false);
             if (attemptList.isEmpty()) {
-                m_cachedApplicationAttempt = 0;
+                cachedApplicationAttempt = 0;
             }
             else {
-                m_cachedApplicationAttempt =
+                cachedApplicationAttempt =
                     Long.parseLong(Collections.max(attemptList));
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
 
-        return m_cachedApplicationAttempt;
+        return cachedApplicationAttempt;
     }
 
     /**
@@ -685,16 +675,16 @@ public abstract class BspService <
      * @throws KeeperException
      */
     final public long getSuperstep() {
-        if (m_cachedSuperstep != -1) {
-            return m_cachedSuperstep;
+        if (cachedSuperstep != -1) {
+            return cachedSuperstep;
         }
         String superstepPath = getSuperstepPath(getApplicationAttempt());
         try {
-            m_zk.createExt(superstepPath,
-                           null,
-                           Ids.OPEN_ACL_UNSAFE,
-                           CreateMode.PERSISTENT,
-                           true);
+            getZkExt().createExt(superstepPath,
+                                 null,
+                                 Ids.OPEN_ACL_UNSAFE,
+                                 CreateMode.PERSISTENT,
+                                 true);
         } catch (KeeperException.NodeExistsException e) {
             if (LOG.isInfoEnabled()) {
                 LOG.info("getApplicationAttempt: Node " +
@@ -710,7 +700,8 @@ public abstract class BspService <
 
         List<String> superstepList;
         try {
-            superstepList = m_zk.getChildrenExt(superstepPath, true, false, false);
+            superstepList =
+                getZkExt().getChildrenExt(superstepPath, true, false, false);
         } catch (KeeperException e) {
             throw new IllegalStateException(
                 "getSuperstep: KeeperException", e);
@@ -719,24 +710,24 @@ public abstract class BspService <
                 "getSuperstep: InterruptedException", e);
         }
         if (superstepList.isEmpty()) {
-            m_cachedSuperstep = 0;
+            cachedSuperstep = 0;
         }
         else {
-            m_cachedSuperstep =
+            cachedSuperstep =
                 Long.parseLong(Collections.max(superstepList));
         }
 
-        return m_cachedSuperstep;
+        return cachedSuperstep;
     }
 
     /**
      * Increment the cached superstep.
      */
     final public void incrCachedSuperstep() {
-        if (m_cachedSuperstep == -1) {
+        if (cachedSuperstep == -1) {
             throw new RuntimeException("incrSuperstep: Invalid -1 superstep.");
         }
-        ++m_cachedSuperstep;
+        ++cachedSuperstep;
     }
 
     /**
@@ -746,7 +737,7 @@ public abstract class BspService <
      * @param superstep will be used as the next superstep iteration
      */
     final public void setCachedSuperstep(long superstep) {
-        m_cachedSuperstep = superstep;
+        cachedSuperstep = superstep;
     }
 
     /**
@@ -756,8 +747,8 @@ public abstract class BspService <
      * @param applicationAttempt Will denote the new application attempt
      */
     final public void setApplicationAttempt(long applicationAttempt) {
-        m_cachedApplicationAttempt = applicationAttempt;
-        String superstepPath = getSuperstepPath(m_cachedApplicationAttempt);
+        cachedApplicationAttempt = applicationAttempt;
+        String superstepPath = getSuperstepPath(cachedApplicationAttempt);
         try {
             getZkExt().createExt(superstepPath,
                                  null,
@@ -793,15 +784,15 @@ public abstract class BspService <
             }
             else if (getSuperstep() == 0) {
                 // Worker will populate
-                return m_vertexRangeMap;
+                return vertexRangeMap;
             }
         }
-        else if (m_vertexRangeSuperstep == superstep) {
-            return m_vertexRangeMap;
+        else if (vertexRangeSuperstep == superstep) {
+            return vertexRangeMap;
         }
 
-        m_vertexRangeSuperstep = superstep;
-        NavigableMap<I, VertexRange<I, V, E, M>> vertexRangeMap =
+        vertexRangeSuperstep = superstep;
+        NavigableMap<I, VertexRange<I, V, E, M>> nextVertexRangeMap =
             new TreeMap<I, VertexRange<I, V, E, M>>();
         String vertexRangeAssignmentsPath =
             getVertexRangeAssignmentsPath(getApplicationAttempt(),
@@ -823,13 +814,13 @@ public abstract class BspService <
                 VertexRange<I, V, E, M> vertexRange =
                     new VertexRange<I, V, E, M>(indexClass,
                             vertexRangeObj);
-                if (vertexRangeMap.containsKey(vertexRange.getMaxIndex())) {
+                if (nextVertexRangeMap.containsKey(vertexRange.getMaxIndex())) {
                     throw new RuntimeException(
                         "getVertexRangeMap: Impossible that vertex range " +
                         "max " + vertexRange.getMaxIndex() +
                         " already exists!");
                 }
-                vertexRangeMap.put(vertexRange.getMaxIndex(), vertexRange);
+                nextVertexRangeMap.put(vertexRange.getMaxIndex(), vertexRange);
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -837,22 +828,22 @@ public abstract class BspService <
 
         // Copy over the vertices to the vertex ranges
         for (Entry<I, VertexRange<I, V, E, M>> entry :
-            vertexRangeMap.entrySet()) {
-            if (!m_vertexRangeMap.containsKey(entry.getKey())) {
+            nextVertexRangeMap.entrySet()) {
+            if (!vertexRangeMap.containsKey(entry.getKey())) {
                 continue;
             }
             VertexRange<I, V, E, M> vertexRange =
-                m_vertexRangeMap.get(entry.getKey());
+                vertexRangeMap.get(entry.getKey());
             entry.getValue().getVertexMap().putAll(
                 vertexRange.getVertexMap());
         }
-        m_vertexRangeMap = vertexRangeMap;
-        return m_vertexRangeMap;
+        vertexRangeMap = nextVertexRangeMap;
+        return vertexRangeMap;
     }
 
     public NavigableMap<I, VertexRange<I, V, E, M>> getCurrentVertexRangeMap()
     {
-        return m_vertexRangeMap;
+        return vertexRangeMap;
     }
 
     /**
@@ -868,7 +859,7 @@ public abstract class BspService <
             String name,
             Class<? extends Aggregator<A>> aggregatorClass)
             throws InstantiationException, IllegalAccessException {
-        if (m_aggregatorMap.get(name) != null) {
+        if (aggregatorMap.get(name) != null) {
             return null;
         }
         Aggregator<A> aggregator =
@@ -876,7 +867,7 @@ public abstract class BspService <
         @SuppressWarnings("unchecked")
         Aggregator<Writable> writableAggregator =
             (Aggregator<Writable>) aggregator;
-        m_aggregatorMap.put(name, writableAggregator);
+        aggregatorMap.put(name, writableAggregator);
         LOG.info("registered aggregator=" + name);
         return aggregator;
     }
@@ -888,14 +879,14 @@ public abstract class BspService <
      * @return Aggregator<A> (null when not registered)
      */
     public final Aggregator<? extends Writable> getAggregator(String name) {
-        return m_aggregatorMap.get(name);
+        return aggregatorMap.get(name);
     }
 
     /**
      * Get the aggregator map.
      */
     public Map<String, Aggregator<Writable>> getAggregatorMap() {
-        return m_aggregatorMap;
+        return aggregatorMap;
     }
 
     /**
@@ -904,7 +895,7 @@ public abstract class BspService <
      * will be unblocked.
      */
     public void registerBspEvent(BspEvent event) {
-        m_registeredBspEvents.add(event);
+        registeredBspEvents.add(event);
     }
 
     /**
@@ -933,7 +924,7 @@ public abstract class BspService <
             // No way to recover from a disconnect event, signal all BspEvents
             if ((event.getType() == EventType.None) &&
                     (event.getState() == KeeperState.Disconnected)) {
-                for (BspEvent bspEvent : m_registeredBspEvents) {
+                for (BspEvent bspEvent : registeredBspEvents) {
                     bspEvent.signal();
                 }
                 throw new RuntimeException(
@@ -946,55 +937,55 @@ public abstract class BspService <
         if (event.getPath().startsWith(MASTER_JOB_STATE_PATH)) {
             // This will cause all becomeMaster() MasterThreads to notice the
             // change in job state and quit trying to become the master.
-            m_masterElectionChildrenChanged.signal();
+            masterElectionChildrenChanged.signal();
 
         } else if ((event.getPath().contains(WORKER_HEALTHY_DIR) ||
                 event.getPath().contains(WORKER_UNHEALTHY_DIR)) &&
                 (event.getType() == EventType.NodeChildrenChanged)) {
-            LOG.info("process: m_workerHealthRegistrationChanged " +
+            LOG.info("process: workerHealthRegistrationChanged " +
             "(worker health reported - healthy/unhealthy )");
-            m_workerHealthRegistrationChanged.signal();
+            workerHealthRegistrationChanged.signal();
         } else if (event.getPath().equals(INPUT_SPLITS_ALL_READY_PATH) &&
                 (event.getType() == EventType.NodeCreated)) {
-            LOG.info("process: m_inputSplitsReadyChanged (input splits ready)");
-            m_inputSplitsAllReadyChanged.signal();
+            LOG.info("process: inputSplitsReadyChanged (input splits ready)");
+            inputSplitsAllReadyChanged.signal();
         } else if (event.getPath().endsWith(INPUT_SPLIT_RESERVED_NODE) &&
                 (event.getType() == EventType.NodeDeleted)) {
-            LOG.info("process: m_inputSplitsStateChanged (lost a reservation)");
-            m_inputSplitsStateChanged.signal();
+            LOG.info("process: inputSplitsStateChanged (lost a reservation)");
+            inputSplitsStateChanged.signal();
         } else if (event.getPath().endsWith(INPUT_SPLIT_FINISHED_NODE) &&
                 (event.getType() == EventType.NodeCreated)) {
-            LOG.info("process: m_inputSplitsStateChanged (finished inputsplit)");
-            m_inputSplitsStateChanged.signal();
+            LOG.info("process: inputSplitsStateChanged (finished inputsplit)");
+            inputSplitsStateChanged.signal();
         } else if (event.getPath().contains(VERTEX_RANGE_ASSIGNMENTS_DIR) &&
                 event.getType() == EventType.NodeCreated) {
-            LOG.info("process: m_vertexRangeAssignmentsReadyChanged signaled");
-            m_vertexRangeAssignmentsReadyChanged.signal();
+            LOG.info("process: vertexRangeAssignmentsReadyChanged signaled");
+            vertexRangeAssignmentsReadyChanged.signal();
         } else if (event.getPath().contains(VERTEX_RANGE_EXCHANGE_DIR) &&
                 event.getType() == EventType.NodeChildrenChanged) {
-            LOG.info("process: m_vertexRangeExchangeChildrenChanged signaled");
-            m_vertexRangeExchangeChildrenChanged.signal();
+            LOG.info("process: vertexRangeExchangeChildrenChanged signaled");
+            vertexRangeExchangeChildrenChanged.signal();
         } else if (event.getPath().contains(
                 VERTEX_RANGE_EXCHANGED_FINISHED_NODE) &&
                 event.getType() == EventType.NodeCreated) {
-            LOG.info("process: m_vertexRangeExchangeFinishedChanged signaled");
-            m_vertexRangeExchangeFinishedChanged.signal();
+            LOG.info("process: vertexRangeExchangeFinishedChanged signaled");
+            vertexRangeExchangeFinishedChanged.signal();
         } else if (event.getPath().contains(SUPERSTEP_FINISHED_NODE) &&
                 event.getType() == EventType.NodeCreated) {
-            LOG.info("process: m_superstepFinished signaled");
-            m_superstepFinished.signal();
+            LOG.info("process: superstepFinished signaled");
+            superstepFinished.signal();
         } else if (event.getPath().endsWith(APPLICATION_ATTEMPTS_PATH) &&
                 event.getType() == EventType.NodeChildrenChanged) {
-            LOG.info("process: m_applicationAttempChanged signaled");
-            m_applicationAttemptChanged.signal();
+            LOG.info("process: applicationAttempChanged signaled");
+            applicationAttemptChanged.signal();
         } else if (event.getPath().contains(MASTER_ELECTION_DIR) &&
                 event.getType() == EventType.NodeChildrenChanged) {
-            LOG.info("process: m_masterElectionChildrenChanged signaled");
-            m_masterElectionChildrenChanged.signal();
+            LOG.info("process: masterElectionChildrenChanged signaled");
+            masterElectionChildrenChanged.signal();
         } else if (event.getPath().equals(CLEANED_UP_PATH) &&
                 event.getType() == EventType.NodeChildrenChanged) {
-            LOG.info("process: m_cleanedUpChildrenChanged signaled");
-            m_cleanedUpChildrenChanged.signal();
+            LOG.info("process: cleanedUpChildrenChanged signaled");
+            cleanedUpChildrenChanged.signal();
         }
         if ((processEvent(event) == false) && (eventProcessed == false)) {
             LOG.warn("process: Unknown and unprocessed event (path=" +

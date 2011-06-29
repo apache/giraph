@@ -18,7 +18,7 @@ public class MasterThread<I extends WritableComparable,
     /** Class logger */
     private static final Logger LOG = Logger.getLogger(MasterThread.class);
     /** Reference to shared BspService */
-    private CentralizedServiceMaster<I, V, E, M> m_bspServiceMaster = null;
+    private CentralizedServiceMaster<I, V, E, M> bspServiceMaster = null;
 
     /**
      *  Constructor.
@@ -28,7 +28,7 @@ public class MasterThread<I extends WritableComparable,
      */
     MasterThread(BspServiceMaster<I, V, E, M> bspServiceMaster) {
         super(MasterThread.class.getName());
-        m_bspServiceMaster = bspServiceMaster;
+        this.bspServiceMaster = bspServiceMaster;
     }
 
     /**
@@ -43,10 +43,10 @@ public class MasterThread<I extends WritableComparable,
         // 2. If desired, restart from a manual checkpoint
         // 3. Run all supersteps until complete
         try {
-            m_bspServiceMaster.setup();
-            if (m_bspServiceMaster.becomeMaster() == true) {
-                if (m_bspServiceMaster.getRestartedSuperstep() == -1) {
-                    m_bspServiceMaster.createInputSplits();
+            bspServiceMaster.setup();
+            if (bspServiceMaster.becomeMaster() == true) {
+                if (bspServiceMaster.getRestartedSuperstep() == -1) {
+                    bspServiceMaster.createInputSplits();
                 }
                 CentralizedServiceMaster.SuperstepState superstepState =
                     CentralizedServiceMaster.SuperstepState.INITIAL;
@@ -54,30 +54,30 @@ public class MasterThread<I extends WritableComparable,
                 while (superstepState !=
                         CentralizedServiceMaster.SuperstepState.
                         ALL_SUPERSTEPS_DONE) {
-                    cachedSuperstep = m_bspServiceMaster.getSuperstep();
-                    superstepState = m_bspServiceMaster.coordinateSuperstep();
+                    cachedSuperstep = bspServiceMaster.getSuperstep();
+                    superstepState = bspServiceMaster.coordinateSuperstep();
                     if (LOG.isInfoEnabled()) {
                         LOG.info("masterThread: Coordination of superstep " +
                                  cachedSuperstep +
                                  " ended with state " + superstepState +
                                  " and is now on superstep " +
-                                 m_bspServiceMaster.getSuperstep());
+                                 bspServiceMaster.getSuperstep());
                     }
 
                     // If a worker failed, restart from a known good superstep
                     if (superstepState ==
                             CentralizedServiceMaster.
                                 SuperstepState.WORKER_FAILURE) {
-                        m_bspServiceMaster.restartFromCheckpoint(
-                            m_bspServiceMaster.getLastGoodCheckpoint());
+                        bspServiceMaster.restartFromCheckpoint(
+                            bspServiceMaster.getLastGoodCheckpoint());
                     }
 
                 }
-                m_bspServiceMaster.setJobState(BspService.State.FINISHED,
+                bspServiceMaster.setJobState(BspService.State.FINISHED,
                                                -1,
                                                -1);
             }
-            m_bspServiceMaster.cleanup();
+            bspServiceMaster.cleanup();
         } catch (Exception e) {
             LOG.error("masterThread: Master algorithm failed: ", e);
             throw new RuntimeException(e);

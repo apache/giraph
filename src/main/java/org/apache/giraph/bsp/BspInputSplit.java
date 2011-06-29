@@ -15,15 +15,15 @@ import org.apache.hadoop.mapreduce.InputSplit;
  */
 public class BspInputSplit extends InputSplit implements Writable {
     /** Number of splits */
-    int m_numSplits = -1;
+    private int numSplits = -1;
     /** Split index */
-    int m_splitIndex = -1;
+    private int splitIndex = -1;
 
     public BspInputSplit() {}
 
     public BspInputSplit(int splitIndex, int numSplits) {
-        m_splitIndex = splitIndex;
-        m_numSplits = numSplits;
+        this.splitIndex = splitIndex;
+        this.numSplits = numSplits;
     }
 
     @Override
@@ -37,20 +37,20 @@ public class BspInputSplit extends InputSplit implements Writable {
     }
 
     public void readFields(DataInput in) throws IOException {
-        m_splitIndex = in.readInt();
-        m_numSplits = in.readInt();
+        splitIndex = in.readInt();
+        numSplits = in.readInt();
     }
 
     public void write(DataOutput out) throws IOException {
-        out.writeInt(m_splitIndex);
-        out.writeInt(m_numSplits);
+        out.writeInt(splitIndex);
+        out.writeInt(numSplits);
     }
 
     public int getSplitIndex() {
-        return m_splitIndex;
+        return splitIndex;
     }
 
     public int getNumSplits() {
-        return m_numSplits;
+        return numSplits;
     }
 }

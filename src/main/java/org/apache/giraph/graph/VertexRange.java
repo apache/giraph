@@ -29,23 +29,23 @@ public class VertexRange<I extends WritableComparable,
                          E extends Writable,
                          M extends Writable> implements Writable {
     /** Current host that is responsible for this VertexRange */
-    private String m_hostname = null;
+    private String hostname = null;
     /** Port that the current host is using */
-    private int m_port = -1;
+    private int port = -1;
     /** Previous host responsible for this {@link VertexRange} (none if empty) */
-    private String m_previousHostname = null;
+    private String previousHostname = null;
     /** Previous port (correlates to previous host), -1 if not used */
-    private int m_previousPort = -1;
+    private int previousPort = -1;
     /** Previous hostname and partition id */
-    private String m_previousHostnameId = null;
+    private String previousHostnameId = null;
     /** Max vertex index */
-    private I m_maxVertexIndex = null;
+    private I maxVertexIndex = null;
     /** Hostname and partition id */
-    private String m_hostnameId = new String();
+    private String hostnameId = new String();
     /** Checkpoint file prefix (null if not recovering from a checkpoint) */
-    private String m_checkpointfilePrefix = null;
+    private String checkpointfilePrefix = null;
     /** Vertex map for this range (keyed by index) */
-    private final SortedMap<I, BasicVertex<I, V, E, M>> m_vertexMap =
+    private final SortedMap<I, BasicVertex<I, V, E, M>> vertexMap =
         new TreeMap<I, BasicVertex<I, V, E, M>>();
     /** Class logger */
     private static final Logger LOG = Logger.getLogger(VertexRange.class);
@@ -68,47 +68,47 @@ public class VertexRange<I extends WritableComparable,
                        I maxVertexIndex,
                        String checkpointFilePrefix)
             throws InstantiationException, IllegalAccessException, IOException {
-        m_hostname = hostname;
-        m_port = port;
-        m_hostnameId = hostnameId;
+        this.hostname = hostname;
+        this.port = port;
+        this.hostnameId = hostnameId;
         if (maxVertexIndex != null) {
             @SuppressWarnings("unchecked")
             I newInstance = (I) maxVertexIndex.getClass().newInstance();
-            m_maxVertexIndex = newInstance;
+            maxVertexIndex = newInstance;
             ByteArrayOutputStream byteOutputStream = new ByteArrayOutputStream();
             DataOutput output = new DataOutputStream(byteOutputStream);
             maxVertexIndex.write(output);
-            m_maxVertexIndex.readFields(
+            maxVertexIndex.readFields(
                 new DataInputStream(
                     new ByteArrayInputStream(byteOutputStream.toByteArray())));
         }
-        m_checkpointfilePrefix = checkpointFilePrefix;
+        checkpointfilePrefix = checkpointFilePrefix;
     }
 
     public VertexRange(Class<I> indexClass, JSONObject vertexRangeObj)
             throws JSONException, IOException, InstantiationException,
             IllegalAccessException {
         I newInstance = indexClass.newInstance();
-        m_maxVertexIndex = newInstance;
+        maxVertexIndex = newInstance;
         InputStream input =
             new ByteArrayInputStream(
                 vertexRangeObj.getString(
                     BspService.JSONOBJ_MAX_VERTEX_INDEX_KEY).getBytes("UTF-8"));
-        m_maxVertexIndex.readFields(new DataInputStream(input));
+        maxVertexIndex.readFields(new DataInputStream(input));
         try {
-            m_hostname =
+            hostname =
                 vertexRangeObj.getString(BspService.JSONOBJ_HOSTNAME_KEY);
         } catch (JSONException e) {
             LOG.debug("VertexRange: No hostname for " + vertexRangeObj);
         }
         try {
-            m_port = vertexRangeObj.getInt(BspService.JSONOBJ_PORT_KEY);
+            port = vertexRangeObj.getInt(BspService.JSONOBJ_PORT_KEY);
         } catch (JSONException e) {
             LOG.debug("VertexRange: No port for " + vertexRangeObj);
         }
 
         try {
-            m_previousHostname =
+            previousHostname =
                 vertexRangeObj.getString(
                     BspService.JSONOBJ_PREVIOUS_HOSTNAME_KEY);
         } catch (JSONException e) {
@@ -116,16 +116,16 @@ public class VertexRange<I extends WritableComparable,
                       vertexRangeObj);
         }
         try {
-            m_previousPort =
+            previousPort =
                 vertexRangeObj.getInt(BspService.JSONOBJ_PREVIOUS_PORT_KEY);
         } catch (JSONException e) {
             LOG.debug("VertexRange: No previous port for " + vertexRangeObj);
         }
 
-        m_hostnameId =
+        hostnameId =
             vertexRangeObj.getString(BspService.JSONOBJ_HOSTNAME_ID_KEY);
         try {
-            m_checkpointfilePrefix =
+            checkpointfilePrefix =
                 vertexRangeObj.getString(
                     BspService.JSONOBJ_CHECKPOINT_FILE_PREFIX_KEY);
         } catch (JSONException e) {
@@ -141,30 +141,30 @@ public class VertexRange<I extends WritableComparable,
     public VertexRange(VertexRange vertexRange)
             throws InstantiationException, IllegalAccessException, IOException {
         if (vertexRange.getHostname() != null) {
-            m_hostname = vertexRange.getHostname();
+            hostname = vertexRange.getHostname();
         }
-        m_port = vertexRange.getPort();
+        port = vertexRange.getPort();
         if (vertexRange.getPreviousHostname() != null) {
-            m_previousHostname = vertexRange.getPreviousHostname();
+            previousHostname = vertexRange.getPreviousHostname();
         }
-        m_previousPort = vertexRange.getPreviousPort();
+        previousPort = vertexRange.getPreviousPort();
         if (vertexRange.getHostnameId() != null) {
-            m_hostnameId = vertexRange.getHostnameId();
+            hostnameId = vertexRange.getHostnameId();
         }
         else {
-            m_hostnameId = null;
+            hostnameId = null;
         }
         @SuppressWarnings("unchecked")
         I newInstance = (I) vertexRange.getMaxIndex().getClass().newInstance();
-        m_maxVertexIndex = newInstance;
+        maxVertexIndex = newInstance;
         ByteArrayOutputStream byteOutputStream = new ByteArrayOutputStream();
         DataOutput output = new DataOutputStream(byteOutputStream);
         vertexRange.getMaxIndex().write(output);
-        m_maxVertexIndex.readFields(
+        maxVertexIndex.readFields(
             new DataInputStream(
                 new ByteArrayInputStream(byteOutputStream.toByteArray())));;
         if (vertexRange.getCheckpointFilePrefix() != null) {
-            m_checkpointfilePrefix =
+            checkpointfilePrefix =
                 new String(vertexRange.getCheckpointFilePrefix());
         }
     }
@@ -175,7 +175,7 @@ public class VertexRange<I extends WritableComparable,
      * @return Map of vertices (keyed by index)
      */
     public SortedMap<I, BasicVertex<I, V, E, M>> getVertexMap() {
-        return m_vertexMap;
+        return vertexMap;
     }
 
     public JSONObject toJSONObject() throws IOException, JSONException {
@@ -183,125 +183,125 @@ public class VertexRange<I extends WritableComparable,
         ByteArrayOutputStream outputStream =
             new ByteArrayOutputStream();
         DataOutput output = new DataOutputStream(outputStream);
-        m_maxVertexIndex.write(output);
+        maxVertexIndex.write(output);
         vertexRangeObj.put(BspService.JSONOBJ_MAX_VERTEX_INDEX_KEY,
                            outputStream.toString("UTF-8"));
-        vertexRangeObj.put(BspService.JSONOBJ_HOSTNAME_KEY, m_hostname);
-        vertexRangeObj.put(BspService.JSONOBJ_PORT_KEY, m_port);
+        vertexRangeObj.put(BspService.JSONOBJ_HOSTNAME_KEY, hostname);
+        vertexRangeObj.put(BspService.JSONOBJ_PORT_KEY, port);
         vertexRangeObj.put(BspService.JSONOBJ_PREVIOUS_HOSTNAME_KEY,
-                           m_previousHostname);
+                           previousHostname);
         vertexRangeObj.put(BspService.JSONOBJ_PREVIOUS_PORT_KEY,
-                           m_previousPort);
-        vertexRangeObj.put(BspService.JSONOBJ_HOSTNAME_ID_KEY, m_hostnameId);
+                           previousPort);
+        vertexRangeObj.put(BspService.JSONOBJ_HOSTNAME_ID_KEY, hostnameId);
         vertexRangeObj.put(BspService.JSONOBJ_CHECKPOINT_FILE_PREFIX_KEY,
-                           m_checkpointfilePrefix);
+                           checkpointfilePrefix);
         return vertexRangeObj;
     }
 
     public final String getHostname() {
-        return m_hostname;
+        return hostname;
     }
 
     public final void setHostname(String hostname) {
-        m_hostname = hostname;
+        this.hostname = hostname;
     }
 
     public int getPort() {
-        return m_port;
+        return port;
     }
 
     public void setPort(int port) {
-        m_port = port;
+        this.port = port;
     }
 
     public final String getPreviousHostname() {
-        return m_previousHostname;
+        return previousHostname;
     }
 
     public final void setPreviousHostname(String previousHostname) {
-        m_previousHostname = previousHostname;
+        this.previousHostname = previousHostname;
     }
 
     public final int getPreviousPort() {
-        return m_previousPort;
+        return previousPort;
     }
 
     public final void setPreviousHostnameId(String previousHostnameId) {
-        m_previousHostnameId = previousHostnameId;
+        this.previousHostnameId = previousHostnameId;
     }
 
     public final String getPreviousHostnameId() {
-        return m_previousHostnameId;
+        return previousHostnameId;
     }
 
     public void setPreviousPort(int previousPort) {
-        m_previousPort = previousPort;
+        this.previousPort = previousPort;
     }
 
     public final String getHostnameId() {
-        return m_hostnameId;
+        return hostnameId;
     }
 
     public final void setHostnameId(String hostnameId) {
-        m_hostnameId = hostnameId;
+        this.hostnameId = hostnameId;
     }
 
     public I getMaxIndex() {
-        return m_maxVertexIndex;
+        return maxVertexIndex;
     }
 
     public void setMaxIndex(I index) {
-        m_maxVertexIndex = index;
+        maxVertexIndex = index;
     }
 
     public long getVertexCount() {
-        return m_vertexMap.size();
+        return vertexMap.size();
     }
 
     public long getEdgeCount() {
         long edgeCount = 0;
-        for (BasicVertex<I, V, E, M> vertex : m_vertexMap.values()) {
+        for (BasicVertex<I, V, E, M> vertex : vertexMap.values()) {
             edgeCount += vertex.getOutEdgeMap().size();
         }
         return edgeCount;
     }
 
     public String getCheckpointFilePrefix() {
-        return m_checkpointfilePrefix;
+        return checkpointfilePrefix;
     }
 
     @Override
     public void readFields(DataInput input) throws IOException {
-        m_hostname = input.readUTF();
-        m_port = input.readInt();
-        m_previousHostname = input.readUTF();
-        m_previousPort = input.readInt();
-        m_hostnameId = input.readUTF();
-        m_maxVertexIndex.readFields(input);
-        m_checkpointfilePrefix = input.readUTF();
+        hostname = input.readUTF();
+        port = input.readInt();
+        previousHostname = input.readUTF();
+        previousPort = input.readInt();
+        hostnameId = input.readUTF();
+        maxVertexIndex.readFields(input);
+        checkpointfilePrefix = input.readUTF();
     }
 
     @Override
     public void write(DataOutput output) throws IOException {
-        if (m_hostname == null) {
-            m_hostname = "";
+        if (hostname == null) {
+            hostname = "";
         }
-        if (m_previousHostname == null) {
-            m_previousHostname = "";
+        if (previousHostname == null) {
+            previousHostname = "";
         }
-        if (m_hostnameId == null) {
-            m_hostnameId = "";
+        if (hostnameId == null) {
+            hostnameId = "";
         }
-        if (m_checkpointfilePrefix == null) {
-            m_checkpointfilePrefix = "";
+        if (checkpointfilePrefix == null) {
+            checkpointfilePrefix = "";
         }
 
-        output.writeUTF(m_hostname);
-        output.writeInt(m_port);
-        output.writeUTF(m_previousHostname);
-        output.writeInt(m_previousPort);
-        output.writeUTF(m_hostnameId);
-        m_maxVertexIndex.write(output);
-        output.writeUTF(m_checkpointfilePrefix);
+        output.writeUTF(hostname);
+        output.writeInt(port);
+        output.writeUTF(previousHostname);
+        output.writeInt(previousPort);
+        output.writeUTF(hostnameId);
+        maxVertexIndex.write(output);
+        output.writeUTF(checkpointfilePrefix);
     }
 }

@@ -8,30 +8,30 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class PredicateLock implements BspEvent {
     /** Lock */
-    Lock m_lock = new ReentrantLock();
-    /** Condition associated with m_lock */
-    Condition m_cond = m_lock.newCondition();
+    Lock lock = new ReentrantLock();
+    /** Condition associated with lock */
+    Condition cond = lock.newCondition();
     /** Predicate */
-    boolean m_eventOccurred = false;
+    boolean eventOccurred = false;
 
     @Override
     public void reset() {
-        m_lock.lock();
+        lock.lock();
         try {
-            m_eventOccurred = false;
+            eventOccurred = false;
         } finally {
-            m_lock.unlock();
+            lock.unlock();
         }
     }
 
     @Override
     public void signal() {
-        m_lock.lock();
+        lock.lock();
         try {
-            m_eventOccurred = true;
-            m_cond.signal();
+            eventOccurred = true;
+            cond.signal();
         } finally {
-            m_lock.unlock();
+            lock.unlock();
         }
     }
 
@@ -43,17 +43,17 @@ public class PredicateLock implements BspEvent {
 
         long maxMsecs = System.currentTimeMillis() + msecs;
         long curMsecTimeout = 0;
-        m_lock.lock();
+        lock.lock();
         try {
-            while (m_eventOccurred == false) {
+            while (eventOccurred == false) {
                 if (msecs == -1) {
-                    m_cond.await();
+                    cond.await();
                 }
                 else {
                     // Keep the wait non-negative
                     curMsecTimeout = Math.max(
                         maxMsecs - System.currentTimeMillis(), 0);
-                    m_cond.await(curMsecTimeout, TimeUnit.MILLISECONDS);
+                    cond.await(curMsecTimeout, TimeUnit.MILLISECONDS);
                     if (System.currentTimeMillis() > maxMsecs) {
                         return false;
                     }
@@ -62,7 +62,7 @@ public class PredicateLock implements BspEvent {
         } catch (InterruptedException e) {
             e.printStackTrace();
         } finally {
-            m_lock.unlock();
+            lock.unlock();
         }
         return true;
     }

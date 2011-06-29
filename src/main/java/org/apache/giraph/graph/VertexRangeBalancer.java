@@ -28,20 +28,21 @@ public abstract class VertexRangeBalancer<
         implements BasicVertexRangeBalancer<I, V, E, M> {
     /** map of prev vertex ranges, in order */
     private NavigableMap<I, VertexRange<I, V, E, M>>
-        m_prevVertexRangeMap = null;
+        prevVertexRangeMap = null;
     /** map of next vertex ranges, in order */
     private NavigableMap<I, VertexRange<I, V, E, M>>
-        m_nextVertexRangeMap = null;
+        nextVertexRangeMap = null;
     /** map of available workers to JSONArray(hostname + partition id) */
-    private Map<String, JSONArray> m_workerHostnameIdMap = null;
+    private Map<String, JSONArray> workerHostnameIdMap = null;
     /** Current superstep */
-    private long m_superstep;
+    private long superstep;
     /** Class logger */
-    private static final Logger LOG = Logger.getLogger(VertexRangeBalancer.class);
+    private static final Logger LOG =
+        Logger.getLogger(VertexRangeBalancer.class);
 
     @Override
     final public long getSuperstep() {
-        return m_superstep;
+        return superstep;
     }
 
     /**
@@ -50,14 +51,14 @@ public abstract class VertexRangeBalancer<
      * @param lastVertexRangeMap map of vertex ranges from the last superstep
      */
     final public void setPrevVertexRangeMap(
-        final NavigableMap<I, VertexRange<I, V, E, M>> prevVertexRangeMap) {
-        m_prevVertexRangeMap = prevVertexRangeMap;
+            NavigableMap<I, VertexRange<I, V, E, M>> prevVertexRangeMap) {
+        this.prevVertexRangeMap = prevVertexRangeMap;
     }
 
     @Override
     final public NavigableMap<I, VertexRange<I, V, E, M>>
             getPrevVertexRangeMap() {
-        return m_prevVertexRangeMap;
+        return prevVertexRangeMap;
     }
 
     /**
@@ -65,7 +66,7 @@ public abstract class VertexRangeBalancer<
      */
     final void setNextVertexRangeMap(
             NavigableMap<I, VertexRange<I, V, E, M>> vertexRangeMap) {
-        m_nextVertexRangeMap = vertexRangeMap;
+        nextVertexRangeMap = vertexRangeMap;
     }
 
     /**
@@ -74,7 +75,7 @@ public abstract class VertexRangeBalancer<
      * @return
      */
     final NavigableMap<I, VertexRange<I, V, E, M>> getNextVertexRangeMap() {
-        return m_nextVertexRangeMap;
+        return nextVertexRangeMap;
     }
 
     /**
@@ -86,7 +87,7 @@ public abstract class VertexRangeBalancer<
      */
     final public void setWorkerHostnamePortMap(
             Map<String, JSONArray> workerHostnamePortMap) {
-        m_workerHostnameIdMap = workerHostnamePortMap;
+        workerHostnameIdMap = workerHostnamePortMap;
     }
 
     /**
@@ -105,8 +106,8 @@ public abstract class VertexRangeBalancer<
         }
 
         for (VertexRange<I, V, E, M> prevVertexRange :
-                m_prevVertexRangeMap.values()) {
-            if (!m_nextVertexRangeMap.containsKey(
+                prevVertexRangeMap.values()) {
+            if (!nextVertexRangeMap.containsKey(
                     prevVertexRange.getMaxIndex())) {
                 throw new RuntimeException(
                     "setPreviousHostnamePort: Prev vertex range " +
@@ -114,7 +115,7 @@ public abstract class VertexRangeBalancer<
                     " doesn't exist in new vertex range map.");
             }
             VertexRange<I, V, E, M> nextVertexRange =
-                m_nextVertexRangeMap.get(prevVertexRange.getMaxIndex());
+                nextVertexRangeMap.get(prevVertexRange.getMaxIndex());
             nextVertexRange.setPreviousHostname(prevVertexRange.getHostname());
             nextVertexRange.setPreviousPort(prevVertexRange.getPort());
             nextVertexRange.setPreviousHostnameId(
@@ -124,7 +125,7 @@ public abstract class VertexRangeBalancer<
 
     @Override
     final public Map<String, JSONArray> getWorkerHostnamePortMap() {
-        return m_workerHostnameIdMap;
+        return workerHostnameIdMap;
     }
 
     /**
@@ -132,7 +133,7 @@ public abstract class VertexRangeBalancer<
      * the infrastructure)
      */
     final void setSuperstep(long superstep) {
-        m_superstep = superstep;
+        this.superstep = superstep;
     }
 
     /**

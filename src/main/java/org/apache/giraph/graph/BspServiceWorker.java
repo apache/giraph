@@ -57,17 +57,17 @@ public class BspServiceWorker<
         extends BspService<I, V, E, M>
         implements CentralizedServiceWorker<I, V, E, M> {
     /** Number of input splits */
-    private int m_inputSplitCount = -1;
+    private int inputSplitCount = -1;
     /** Cached aggregate number of vertices in the entire application */
-    private long m_totalVertices = -1;
+    private long totalVertices = -1;
     /** Cached aggregate number of edges in the entire application */
-    private long m_totalEdges = -1;
+    private long totalEdges = -1;
     /** My process health znode */
-    private String m_myHealthZnode;
+    private String myHealthZnode;
     /** Final server RPC port */
-    private final int m_finalRpcPort;
+    private final int finalRpcPort;
     /** List of aggregators currently in use */
-    private Set<String> m_aggregatorInUse = new TreeSet<String>();
+    private Set<String> aggregatorInUse = new TreeSet<String>();
     /** Class logger */
     private static final Logger LOG = Logger.getLogger(BspServiceWorker.class);
 
@@ -76,14 +76,14 @@ public class BspServiceWorker<
                             Mapper<?, ?, ?, ?>.Context context,
                             GiraphJob.BspMapper<I, V, E, M> bspMapper) {
         super(serverPortList, sessionMsecTimeout, context, bspMapper);
-        m_finalRpcPort =
+        this.finalRpcPort =
             getConfiguration().getInt(GiraphJob.RPC_INITIAL_PORT,
                           GiraphJob.RPC_INITIAL_PORT_DEFAULT) +
                           getTaskPartition();
     }
 
     public int getPort() {
-        return m_finalRpcPort;
+        return finalRpcPort;
     }
 
     /**
@@ -105,7 +105,7 @@ public class BspServiceWorker<
             LOG.error("userAggregator: Aggregator=" + name + " not registered");
             return false;
         }
-        m_aggregatorInUse.add(name);
+        aggregatorInUse.add(name);
         return true;
     }
 
@@ -120,8 +120,8 @@ public class BspServiceWorker<
         try {
             inputSplitPathList =
                 getZkExt().getChildrenExt(INPUT_SPLIT_PATH, false, false, true);
-            if (m_inputSplitCount == -1) {
-                m_inputSplitCount = inputSplitPathList.size();
+            if (inputSplitCount == -1) {
+                inputSplitCount = inputSplitPathList.size();
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -271,7 +271,7 @@ public class BspServiceWorker<
             // ZooKeeper has a limit of the data in a single znode of 1 MB and
             // each entry can go be on the average somewhat more than 300 bytes
             final long maxVertexRangesPerInputSplit =
-                1024 * 1024 / 350 / m_inputSplitCount;
+                1024 * 1024 / 350 / inputSplitCount;
 
             byte[] splitList;
             try {
@@ -319,16 +319,16 @@ public class BspServiceWorker<
 
             vertexList.clear();
             try {
-                Vertex<I, V, E, M> vertex = ReflectionUtils.newInstance(
-                        getVertexClass(), getConfiguration());
+                Vertex<I, V, E, M> vertex =
+                    BspUtils.<I, V, E, M>createVertex(getConfiguration());
                 while (vertexReader.next(vertex)) {
                     if (vertex.getVertexValue() == null) {
                         vertex.setVertexValue(
                             BspUtils.<V>createVertexValue(getConfiguration()));
                     }
                     vertexList.add(vertex);
-                    vertex = ReflectionUtils.newInstance(
-                                  getVertexClass(), getConfiguration());
+                    vertex =
+                        BspUtils.<I, V, E, M>createVertex(getConfiguration());
                     getContext().progress();
                 }
                 vertexReader.close();
@@ -350,7 +350,7 @@ public class BspServiceWorker<
             // Then fill them in.
             NavigableMap<I, VertexRange<I, V, E, M>> vertexRangeMap =
                 new TreeMap<I, VertexRange<I, V, E, M>>();
-            long vertexRangesPerInputSplit = (long) (m_inputSplitCount *
+            long vertexRangesPerInputSplit = (long) (inputSplitCount *
                 getConfiguration().getFloat(
                     GiraphJob.TOTAL_INPUT_SPLIT_MULTIPLIER,
                     GiraphJob.TOTAL_INPUT_SPLIT_MULTIPLIER_DEFAULT));
@@ -420,9 +420,11 @@ public class BspServiceWorker<
                     }
                     currentVertexIndexMax = maxIndexVertexMapIt.next();
                 }
-                LOG.debug("loadVertices: Adding vertex with index = " +
-                          vertex.getVertexId() + " to vertex range max = " +
-                          currentVertexIndexMax);
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("loadVertices: Adding vertex with index = " +
+                              vertex.getVertexId() + " to vertex range max = " +
+                              currentVertexIndexMax);
+                }
                 if (vertexRangeMap.get(currentVertexIndexMax).
                         getVertexMap().put(vertex.getVertexId(),
                                            vertex) != null) {
@@ -443,6 +445,12 @@ public class BspServiceWorker<
                 statList.add(Long.valueOf
                                  (entry.getValue().getVertexMap().size()));
                 statList.add(Long.valueOf(vertexRangeEdgeCount));
+                if (LOG.isInfoEnabled()) {
+                    LOG.info("loadVertices: Got " + statList.get(0) +
+                             " vertices and " + statList.get(1) +
+                             " edges from vertex range max index " +
+                             entry.getKey());
+                }
                 maxIndexStatMap.put(entry.getKey(), statList);
 
                 // Add the local vertex ranges to the stored vertex ranges
@@ -538,12 +546,12 @@ public class BspServiceWorker<
      */
     private JSONArray marshalAggregatorValues(long superstep) {
         JSONArray aggregatorArray = new JSONArray();
-        if (superstep == 0 || m_aggregatorInUse.size() == 0) {
+        if (superstep == 0 || aggregatorInUse.size() == 0) {
             return aggregatorArray;
         }
 
         Base64 base64 = new Base64();
-        for (String name : m_aggregatorInUse) {
+        for (String name : aggregatorInUse) {
             try {
                 Aggregator<Writable> aggregator = getAggregatorMap().get(name);
                 ByteArrayOutputStream outputStream =
@@ -570,7 +578,7 @@ public class BspServiceWorker<
 
         LOG.info("marshalAggregatorValues: Finished assembling " +
                  "aggregator values in JSONArray - " + aggregatorArray);
-        m_aggregatorInUse.clear();
+        aggregatorInUse.clear();
         return aggregatorArray;
     }
 
@@ -639,7 +647,7 @@ public class BspServiceWorker<
         JSONArray hostnamePort = new JSONArray();
         hostnamePort.put(getHostname());
 
-        hostnamePort.put(m_finalRpcPort);
+        hostnamePort.put(finalRpcPort);
 
         String myHealthPath = null;
         if (isHealthy()) {
@@ -652,7 +660,7 @@ public class BspServiceWorker<
         }
         myHealthPath = myHealthPath + "/" + getHostnamePartitionId();
         try {
-            m_myHealthZnode =
+            myHealthZnode =
                 getZkExt().createExt(myHealthPath,
                                      hostnamePort.toString().getBytes(),
                                      Ids.OPEN_ACL_UNSAFE,
@@ -677,7 +685,7 @@ public class BspServiceWorker<
         if (LOG.isInfoEnabled()) {
             LOG.info("registerHealth: Created my health node for attempt=" +
                      getApplicationAttempt() + ", superstep=" +
-                     getSuperstep() + " with " + m_myHealthZnode +
+                     getSuperstep() + " with " + myHealthZnode +
                      " and hostnamePort = " + hostnamePort.toString());
         }
     }
@@ -792,31 +800,31 @@ public class BspServiceWorker<
         }
         long finishedVertices =
             globalStatsObject.optLong(JSONOBJ_FINISHED_VERTICES_KEY);
-        m_totalVertices =
+        totalVertices =
             globalStatsObject.optLong(JSONOBJ_NUM_VERTICES_KEY);
-        m_totalEdges =
+        totalEdges =
             globalStatsObject.optLong(JSONOBJ_NUM_EDGES_KEY);
         if (LOG.isInfoEnabled()) {
             LOG.info("finishSuperstep: Completed superstep " + getSuperstep() +
                      " with total finished vertices = " + finishedVertices +
-                     " of out total vertices = " + m_totalVertices +
-                     ", total edges = " + m_totalEdges);
+                     " of out total vertices = " + totalVertices +
+                     ", total edges = " + totalEdges);
         }
         incrCachedSuperstep();
         getContext().setStatus(getBspMapper().getMapFunctions().toString() +
                                " - Attempt=" + getApplicationAttempt() +
                                ", Superstep=" + getSuperstep());
-        return (finishedVertices == m_totalVertices);
+        return (finishedVertices == totalVertices);
     }
 
     @Override
     public long getTotalVertices() {
-        return m_totalVertices;
+        return totalVertices;
     }
 
     @Override
     public long getTotalEdges() {
-        return m_totalEdges;
+        return totalEdges;
     }
 
     /**
@@ -1129,9 +1137,9 @@ public class BspServiceWorker<
                 continue;
             }
 
-            if ((previousPort == m_finalRpcPort) &&
+            if ((previousPort == finalRpcPort) &&
                     getHostname().equals(previousHostname) &&
-                    ((port != m_finalRpcPort) ||
+                    ((port != finalRpcPort) ||
                             !(getHostname().equals(hostname)))) {
                 if (!syncRequired) {
                     getBspMapper().getWorkerCommunications().
@@ -1160,9 +1168,9 @@ public class BspServiceWorker<
                 }
                 syncRequired = true;
             }
-            else if ((port == m_finalRpcPort) &&
+            else if ((port == finalRpcPort) &&
                     getHostname().equals(hostname) &&
-                    ((previousPort != m_finalRpcPort) ||
+                    ((previousPort != finalRpcPort) ||
                             !(getHostname().equals(previousHostname)))) {
                 if (LOG.isInfoEnabled()) {
                     LOG.info("exchangeVertexRanges: Receiving " +

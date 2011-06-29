@@ -23,16 +23,16 @@ import org.apache.giraph.graph.VertexReader;
  * @param <E>
  */
 public class GeneratedVertexReader implements
-    VertexReader<LongWritable, IntWritable, FloatWritable> {
+        VertexReader<LongWritable, IntWritable, FloatWritable> {
     /** Logger */
     private static final Logger LOG =
         Logger.getLogger(GeneratedVertexReader.class);
     /** Records read so far */
-    long m_recordsRead = 0;
+    private long recordsRead = 0;
     /** Total records to read (on this split alone) */
-    long m_totalRecords = 0;
+    private long totalRecords = 0;
     /** The input split from initialize(). */
-    BspInputSplit m_inputSplit = null;
+    private BspInputSplit inputSplit = null;
 
     public static final String READER_VERTICES =
         "TestVertexReader.reader_vertices";
@@ -42,32 +42,32 @@ public class GeneratedVertexReader implements
         InputSplit inputSplit, TaskAttemptContext context)
         throws IOException {
         Configuration configuration = context.getConfiguration();
-            m_totalRecords = configuration.getLong(
+            totalRecords = configuration.getLong(
                 GeneratedVertexReader.READER_VERTICES,
                 GeneratedVertexReader.DEFAULT_READER_VERTICES);
-            m_inputSplit = (BspInputSplit) inputSplit;
+            this.inputSplit = (BspInputSplit) inputSplit;
     }
 
     public boolean next(
             MutableVertex<LongWritable, IntWritable, FloatWritable, ?> vertex)
             throws IOException {
-        if (m_totalRecords <= m_recordsRead) {
+        if (totalRecords <= recordsRead) {
             return false;
         }
         vertex.setVertexId(new LongWritable(
-            (m_inputSplit.getSplitIndex() * m_totalRecords) + m_recordsRead));
+            (inputSplit.getSplitIndex() * totalRecords) + recordsRead));
         vertex.setVertexValue(
             new IntWritable(((int) (vertex.getVertexId().get() * 10))));
         long destVertexId =
             (vertex.getVertexId().get() + 1) %
-            (m_inputSplit.getNumSplits() * m_totalRecords);
+            (inputSplit.getNumSplits() * totalRecords);
         float edgeValue = (float) vertex.getVertexId().get() * 100;
         // Adds an edge to the neighbor vertex
 
         vertex.addEdge(new Edge<LongWritable, FloatWritable>(
             new LongWritable(destVertexId),
             new FloatWritable(edgeValue)));
-        ++m_recordsRead;
+        ++recordsRead;
         LOG.info("next: Return vertexId=" + vertex.getVertexId().get() +
             ", vertexValue=" + vertex.getVertexValue() + ", destinationId=" +
             destVertexId + ", edgeValue=" + edgeValue);
@@ -75,14 +75,14 @@ public class GeneratedVertexReader implements
     }
 
     public long getPos() throws IOException {
-        return m_recordsRead;
+        return recordsRead;
     }
 
     public void close() throws IOException {
     }
 
     public float getProgress() throws IOException {
-        return m_recordsRead * 100.0f / m_totalRecords;
+        return recordsRead * 100.0f / totalRecords;
     }
 
     public LongWritable createVertexId() {

@@ -303,21 +303,21 @@ public class GiraphJob extends Job {
         /** Logger */
         private static final Logger LOG = Logger.getLogger(BspMapper.class);
         /** Coordination service worker */
-        CentralizedServiceWorker<I, V, E, M> m_serviceWorker;
+        CentralizedServiceWorker<I, V, E, M> serviceWorker;
         /** Coordination service master thread */
-        Thread m_masterThread = null;
+        Thread masterThread = null;
         /** Communication service */
-        private ServerInterface<I, V, E, M> m_commService = null;
+        private ServerInterface<I, V, E, M> commService = null;
         /** The map should be run exactly once, or else there is a problem. */
-        boolean m_mapAlreadyRun = false;
+        boolean mapAlreadyRun = false;
         /** Manages the ZooKeeper servers if necessary (dynamic startup) */
-        private ZooKeeperManager m_manager;
+        private ZooKeeperManager manager;
         /** Configuration */
-        private Configuration m_conf;
+        private Configuration conf;
         /** Already complete? */
-        private boolean m_done = false;
+        private boolean done = false;
         /** What kind of functions is this mapper doing? */
-        private MapFunctions m_mapFunctions = MapFunctions.UNKNOWN;
+        private MapFunctions mapFunctions = MapFunctions.UNKNOWN;
 
         /** What kinds of functions to run on this mapper */
         public enum MapFunctions {
@@ -332,7 +332,7 @@ public class GiraphJob extends Job {
          * Get the map function enum
          */
         public MapFunctions getMapFunctions() {
-            return m_mapFunctions;
+            return mapFunctions;
         }
 
         /**
@@ -342,7 +342,7 @@ public class GiraphJob extends Job {
          */
         public final WorkerCommunications<I, V, E, M>
                 getWorkerCommunications() {
-            return m_commService;
+            return commService;
         }
 
         /**
@@ -351,7 +351,7 @@ public class GiraphJob extends Job {
          * @return
          */
         public final AggregatorUsage getAggregatorUsage() {
-            return m_serviceWorker;
+            return serviceWorker;
         }
 
         /**
@@ -405,32 +405,32 @@ public class GiraphJob extends Job {
             // Setting the default handler for uncaught exceptions.
             Thread.setDefaultUncaughtExceptionHandler(
                 new OverrideExceptionHandler());
-            m_conf = context.getConfiguration();
+            conf = context.getConfiguration();
             // Hadoop security needs this property to be set
             if (System.getenv("HADOOP_TOKEN_FILE_LOCATION") != null) {
-                m_conf.set("mapreduce.job.credentials.binary",
+                conf.set("mapreduce.job.credentials.binary",
                         System.getenv("HADOOP_TOKEN_FILE_LOCATION"));
             }
             // Set the configuration classes
             try {
                 Class<? extends VertexInputFormat<I, V, E>>
                     vertexInputFormatClass =
-                        BspUtils.getVertexInputFormatClass(m_conf);
+                        BspUtils.getVertexInputFormatClass(conf);
                 VertexReader<I, V, E> vertexReader =
                     vertexInputFormatClass.newInstance().createVertexReader(
                     null, context);
-                m_conf.setClass(GiraphJob.VERTEX_INDEX_CLASS,
+                conf.setClass(GiraphJob.VERTEX_INDEX_CLASS,
                                 vertexReader.createVertexId().getClass(),
                                 WritableComparable.class);
-                m_conf.setClass(GiraphJob.VERTEX_VALUE_CLASS,
+                conf.setClass(GiraphJob.VERTEX_VALUE_CLASS,
                                 vertexReader.createVertexValue().getClass(),
                                 Writable.class);
-                m_conf.setClass(GiraphJob.EDGE_VALUE_CLASS,
+                conf.setClass(GiraphJob.EDGE_VALUE_CLASS,
                                 vertexReader.createEdgeValue().getClass(),
                                 Writable.class);
                 Vertex<I, V, E, M> vertex =
-                    BspUtils.<I, V, E, M>createVertex(m_conf);
-                m_conf.setClass(GiraphJob.MESSAGE_VALUE_CLASS,
+                    BspUtils.<I, V, E, M>createVertex(conf);
+                conf.setClass(GiraphJob.MESSAGE_VALUE_CLASS,
                                 vertex.createMsgValue().getClass(),
                                 Writable.class);
             } catch (InstantiationException e) {
@@ -459,87 +459,87 @@ public class GiraphJob extends Job {
                 LOG.info("setup: jar file @ " + jarFile +
                          ", using " + trimmedJarFile);
             }
-            m_conf.set(ZOOKEEPER_JAR, trimmedJarFile);
+            conf.set(ZOOKEEPER_JAR, trimmedJarFile);
             String serverPortList =
-                m_conf.get(GiraphJob.ZOOKEEPER_LIST, "");
+                conf.get(GiraphJob.ZOOKEEPER_LIST, "");
             if (serverPortList == "") {
-                m_manager = new ZooKeeperManager(context);
-                m_manager.setup();
-                if (m_manager.computationDone()) {
-                    m_done = true;
+                manager = new ZooKeeperManager(context);
+                manager.setup();
+                if (manager.computationDone()) {
+                    done = true;
                     return;
                 }
-                m_manager.onlineZooKeeperServers();
-                serverPortList = m_manager.getZooKeeperServerPortString();
+                manager.onlineZooKeeperServers();
+                serverPortList = manager.getZooKeeperServerPortString();
             }
             context.setStatus("setup: Connected to Zookeeper service " +
                               serverPortList);
 
-            if (m_conf.getInt(GiraphJob.ZOOKEEPER_SERVER_COUNT,
+            if (conf.getInt(GiraphJob.ZOOKEEPER_SERVER_COUNT,
                         GiraphJob.ZOOKEEPER_SERVER_COUNT_DEFAULT) > 1) {
                 Thread.sleep(GiraphJob.DEFAULT_ZOOKEEPER_INIT_LIMIT *
                              GiraphJob.DEFAULT_ZOOKEEPER_TICK_TIME);
             }
             int sessionMsecTimeout =
-                m_conf.getInt(GiraphJob.ZOOKEEPER_SESSION_TIMEOUT,
+                conf.getInt(GiraphJob.ZOOKEEPER_SESSION_TIMEOUT,
                               GiraphJob.ZOOKEEPER_SESSION_TIMEOUT_DEFAULT);
             boolean splitMasterWorker =
-                m_conf.getBoolean(GiraphJob.SPLIT_MASTER_WORKER,
+                conf.getBoolean(GiraphJob.SPLIT_MASTER_WORKER,
                                   GiraphJob.SPLIT_MASTER_WORKER_DEFAULT);
-            int taskPartition = m_conf.getInt("mapred.task.partition", -1);
+            int taskPartition = conf.getInt("mapred.task.partition", -1);
 
             // What functions should this mapper do?
             if (!splitMasterWorker) {
-                m_mapFunctions = MapFunctions.ALL;
+                mapFunctions = MapFunctions.ALL;
             }
             else {
                 if (serverPortList != "") {
                     int masterCount =
-                        m_conf.getInt(
+                        conf.getInt(
                             GiraphJob.ZOOKEEPER_SERVER_COUNT,
                             GiraphJob.ZOOKEEPER_SERVER_COUNT_DEFAULT);
                     if (taskPartition < masterCount) {
-                        m_mapFunctions = MapFunctions.MASTER_ONLY;
+                        mapFunctions = MapFunctions.MASTER_ONLY;
                     }
                     else {
-                        m_mapFunctions = MapFunctions.WORKER_ONLY;
+                        mapFunctions = MapFunctions.WORKER_ONLY;
                     }
                 }
                 else {
-                    if (m_manager.runsZooKeeper()) {
-                        m_mapFunctions = MapFunctions.MASTER_ZOOKEEPER_ONLY;
+                    if (manager.runsZooKeeper()) {
+                        mapFunctions = MapFunctions.MASTER_ZOOKEEPER_ONLY;
                     }
                     else {
-                        m_mapFunctions = MapFunctions.WORKER_ONLY;
+                        mapFunctions = MapFunctions.WORKER_ONLY;
                     }
                 }
             }
             try {
-                if ((m_mapFunctions == MapFunctions.MASTER_ZOOKEEPER_ONLY) ||
-                        (m_mapFunctions == MapFunctions.MASTER_ONLY) ||
-                        (m_mapFunctions == MapFunctions.ALL)) {
+                if ((mapFunctions == MapFunctions.MASTER_ZOOKEEPER_ONLY) ||
+                        (mapFunctions == MapFunctions.MASTER_ONLY) ||
+                        (mapFunctions == MapFunctions.ALL)) {
                     LOG.info("setup: Starting up BspServiceMaster " +
                              "(master thread)...");
-                    m_masterThread =
+                    masterThread =
                         new MasterThread<I, V, E, M>(
                             new BspServiceMaster<I, V, E, M>(serverPortList,
                                                              sessionMsecTimeout,
                                                              context,
                                                              this));
-                    m_masterThread.start();
+                    masterThread.start();
                 }
-                if ((m_mapFunctions == MapFunctions.WORKER_ONLY) ||
-                        (m_mapFunctions == MapFunctions.ALL)) {
+                if ((mapFunctions == MapFunctions.WORKER_ONLY) ||
+                        (mapFunctions == MapFunctions.ALL)) {
                     LOG.info("setup: Starting up BspServiceWorker...");
-                    m_serviceWorker = new BspServiceWorker<I, V, E, M>(
+                    serviceWorker = new BspServiceWorker<I, V, E, M>(
                         serverPortList, sessionMsecTimeout, context, this);
                     LOG.info("setup: Registering health of this worker...");
-                    m_serviceWorker.setup();
+                    serviceWorker.setup();
                 }
             } catch (Exception e) {
                 LOG.error("setup: Caught exception just before end of setup", e);
-                if (m_manager != null ) {
-                    m_manager.offlineZooKeeperServers(
+                if (manager != null ) {
+                    manager.offlineZooKeeperServers(
                     ZooKeeperManager.State.FAILED);
                 }
                 throw new RuntimeException(
@@ -558,28 +558,28 @@ public class GiraphJob extends Job {
             // 3) Wait until all messaging is done.
             // 4) Check if all vertices are done.  If not goto 2).
             // 5) Dump output.
-            if (m_done == true) {
+            if (done == true) {
                 return;
             }
-            if ((m_serviceWorker != null) &&
-                    (m_serviceWorker.getTotalVertices() == 0)) {
+            if ((serviceWorker != null) &&
+                    (serviceWorker.getTotalVertices() == 0)) {
                 return;
             }
 
-            if ((m_mapFunctions == MapFunctions.MASTER_ZOOKEEPER_ONLY) ||
-                    (m_mapFunctions == MapFunctions.MASTER_ONLY)) {
+            if ((mapFunctions == MapFunctions.MASTER_ZOOKEEPER_ONLY) ||
+                    (mapFunctions == MapFunctions.MASTER_ONLY)) {
                 LOG.info("map: No need to do anything when not a worker");
                 return;
             }
 
-            if (m_mapAlreadyRun) {
+            if (mapAlreadyRun) {
                 throw new RuntimeException("In BSP, map should have only been" +
                                            " run exactly once, (already run)");
             }
-            m_mapAlreadyRun = true;
+            mapAlreadyRun = true;
 
             try {
-                m_serviceWorker.getRepresentativeVertex().preApplication();
+                serviceWorker.getRepresentativeVertex().preApplication();
             } catch (InstantiationException e) {
                 LOG.fatal("map: preApplication failed in instantiation", e);
                 throw new RuntimeException(
@@ -595,13 +595,13 @@ public class GiraphJob extends Job {
             long edges = 0;
             Map<I, long []> maxIndexStatsMap = new TreeMap<I, long []>();
             do {
-                long superstep = m_serviceWorker.getSuperstep();
+                long superstep = serviceWorker.getSuperstep();
 
-                if (m_commService != null) {
-                    m_commService.prepareSuperstep();
+                if (commService != null) {
+                    commService.prepareSuperstep();
                 }
-                m_serviceWorker.startSuperstep();
-                if (m_manager != null && m_manager.runsZooKeeper()) {
+                serviceWorker.startSuperstep();
+                if (manager != null && manager.runsZooKeeper()) {
                     context.setStatus("Running Zookeeper Server");
                 }
 
@@ -611,46 +611,46 @@ public class GiraphJob extends Job {
                               " maxMem=" + Runtime.getRuntime().maxMemory() +
                               " freeMem=" + Runtime.getRuntime().freeMemory());
                 }
-                if ((superstep >= 1) && (m_commService == null)) {
+                if ((superstep >= 1) && (commService == null)) {
                     if (LOG.isInfoEnabled()) {
                         LOG.info("map: Starting communication service...");
                     }
-                    m_commService =
+                    commService =
                         new RPCCommunications<I, V, E, M>(context,
-                                                          m_serviceWorker);
+                                                          serviceWorker);
                 }
                 context.progress();
 
                 // Might need to restart from another superstep
                 // (manually or automatic), or store a checkpoint
-                if (m_serviceWorker.getRestartedSuperstep() == superstep) {
+                if (serviceWorker.getRestartedSuperstep() == superstep) {
                     if (LOG.isInfoEnabled()) {
                         LOG.info("map: Loading from checkpoint " + superstep);
                     }
-                    m_serviceWorker.loadCheckpoint(
-                        m_serviceWorker.getRestartedSuperstep());
-                } else if (m_serviceWorker.checkpointFrequencyMet(superstep)) {
-                    m_serviceWorker.storeCheckpoint();
+                    serviceWorker.loadCheckpoint(
+                        serviceWorker.getRestartedSuperstep());
+                } else if (serviceWorker.checkpointFrequencyMet(superstep)) {
+                    serviceWorker.storeCheckpoint();
                 }
 
-                m_serviceWorker.exchangeVertexRanges();
+                serviceWorker.exchangeVertexRanges();
                 context.progress();
 
                 maxIndexStatsMap.clear();
                 Vertex.setSuperstep(superstep);
-                Vertex.setNumVertices(m_serviceWorker.getTotalVertices());
-                Vertex.setNumEdges(m_serviceWorker.getTotalEdges());
+                Vertex.setNumVertices(serviceWorker.getTotalVertices());
+                Vertex.setNumEdges(serviceWorker.getTotalEdges());
 
-                m_serviceWorker.getRepresentativeVertex().preSuperstep();
+                serviceWorker.getRepresentativeVertex().preSuperstep();
                 context.progress();
 
                 for (Map.Entry<I, VertexRange<I, V, E, M>> entry :
-                    m_serviceWorker.getVertexRangeMap().entrySet()) {
+                    serviceWorker.getVertexRangeMap().entrySet()) {
                     // Only report my own vertex range stats
                     if (!entry.getValue().getHostname().equals(
-                            m_serviceWorker.getHostname()) ||
+                            serviceWorker.getHostname()) ||
                             (entry.getValue().getPort() !=
-                            m_serviceWorker.getPort())) {
+                            serviceWorker.getPort())) {
                         continue;
                     }
 
@@ -681,11 +681,11 @@ public class GiraphJob extends Job {
                                  " vertices finished for vertex range max " +
                                  "index = " + entry.getKey() +
                                  ", finished superstep " +
-                                 m_serviceWorker.getSuperstep());
+                                 serviceWorker.getSuperstep());
                     }
                 }
 
-                m_serviceWorker.getRepresentativeVertex().postSuperstep();
+                serviceWorker.getRepresentativeVertex().postSuperstep();
                 context.progress();
                 if (LOG.isInfoEnabled()) {
                     LOG.info("map: totalMem="
@@ -693,15 +693,15 @@ public class GiraphJob extends Job {
                              " maxMem=" + Runtime.getRuntime().maxMemory() +
                              " freeMem=" + Runtime.getRuntime().freeMemory());
                 }
-                m_commService.flush(context);
-            } while (!m_serviceWorker.finishSuperstep(maxIndexStatsMap));
+                commService.flush(context);
+            } while (!serviceWorker.finishSuperstep(maxIndexStatsMap));
 
             if (LOG.isInfoEnabled()) {
                 LOG.info("map: BSP application done " +
                          "(global vertices marked done)");
             }
 
-            m_serviceWorker.getRepresentativeVertex().postApplication();
+            serviceWorker.getRepresentativeVertex().postApplication();
             context.progress();
         }
 
@@ -709,33 +709,33 @@ public class GiraphJob extends Job {
         public void cleanup(Context context)
             throws IOException, InterruptedException {
             LOG.info("cleanup: Client done.");
-            if (m_done) {
+            if (done) {
                 return;
             }
 
-            if (m_commService != null) {
-                m_commService.closeConnections();
+            if (commService != null) {
+                commService.closeConnections();
             }
-            if (m_serviceWorker != null) {
-                m_serviceWorker.cleanup();
+            if (serviceWorker != null) {
+                serviceWorker.cleanup();
             }
             try {
-                if (m_masterThread != null) {
-                    m_masterThread.join();
+                if (masterThread != null) {
+                    masterThread.join();
                 }
             } catch (InterruptedException e) {
                 // cleanup phase -- just log the error
                 LOG.error("cleanup: Master thread couldn't join");
             }
-            if (m_manager != null) {
-                m_manager.offlineZooKeeperServers(
+            if (manager != null) {
+                manager.offlineZooKeeperServers(
                     ZooKeeperManager.State.FINISHED);
             }
             // Preferably would shut down the service only after
             // all clients have disconnected (or the exceptions on the
             // client side ignored).
-            if (m_commService != null) {
-                m_commService.close();
+            if (commService != null) {
+                commService.close();
             }
         }
     }

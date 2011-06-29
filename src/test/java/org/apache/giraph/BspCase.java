@@ -21,15 +21,15 @@ import junit.framework.TestCase;
  */
 public class BspCase extends TestCase implements Watcher {
     /** JobTracker system property */
-    private final String m_jobTracker =
+    private final String jobTracker =
         System.getProperty("prop.mapred.job.tracker");
     /** Jar location system property */
-    private final String m_jarLocation =
+    private final String jarLocation =
         System.getProperty("prop.jarLocation", "");
     /** Number of actual processes for the BSP application */
-    private int m_numWorkers = 1;
+    private int numWorkers = 1;
     /** ZooKeeper list system property */
-    private final String m_zkList = System.getProperty("prop.zookeeper.list");
+    private final String zkList = System.getProperty("prop.zookeeper.list");
 
     /**
      * Adjust the configuration to the basic test case
@@ -81,14 +81,14 @@ public class BspCase extends TestCase implements Watcher {
      * @param numProcs number of processes to use
      */
     public int getNumWorkers() {
-        return m_numWorkers;
+        return numWorkers;
     }
 
     /**
      * Get the ZooKeeper list
      */
     public String getZooKeeperList() {
-        return m_zkList;
+        return zkList;
     }
 
     /**
@@ -97,7 +97,7 @@ public class BspCase extends TestCase implements Watcher {
      * @return location of the jar file
      */
     String getJarLocation() {
-        return m_jarLocation;
+        return jarLocation;
     }
 
     /**
@@ -106,7 +106,7 @@ public class BspCase extends TestCase implements Watcher {
      * @return job tracker location as a string
      */
     String getJobTracker() {
-        return m_jobTracker;
+        return jobTracker;
     }
 
     /**
@@ -141,10 +141,10 @@ public class BspCase extends TestCase implements Watcher {
 
     @Override
     public void setUp() {
-        if (m_jobTracker != null) {
+        if (jobTracker != null) {
             System.out.println("Setting tasks to 3 for " + getName() +
                                " since JobTracker exists...");
-            m_numWorkers = 3;
+            numWorkers = 3;
         }
         try {
             Configuration conf = new Configuration();
@@ -161,11 +161,11 @@ public class BspCase extends TestCase implements Watcher {
                     hdfs.delete(oldLocalJobPaths, true);
                 }
             }
-            if (m_zkList == null) {
+            if (zkList == null) {
                 return;
             }
             ZooKeeperExt zooKeeperExt =
-                new ZooKeeperExt(m_zkList, 30*1000, this);
+                new ZooKeeperExt(zkList, 30*1000, this);
             List<String> rootChildren = zooKeeperExt.getChildren("/", false);
             for (String rootChild : rootChildren) {
                 if (rootChild.startsWith("_hadoopBsp")) {

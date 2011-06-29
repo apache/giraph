@@ -66,25 +66,25 @@ public class BspServiceMaster<
     /** Class logger */
     private static final Logger LOG = Logger.getLogger(BspServiceMaster.class);
     /** Synchronizes vertex ranges */
-    private Object m_vertexRangeSynchronization = new Object();
+    private Object vertexRangeSynchronization = new Object();
     /** Superstep counter */
-    private Counter m_superstepCounter = null;
+    private Counter superstepCounter = null;
     /** Am I the master? */
-    private boolean m_isMaster = false;
+    private boolean isMaster = false;
     /** Max number of workers */
-    private final int m_maxWorkers;
+    private final int maxWorkers;
     /** Min number of workers */
-    private final int m_minWorkers;
+    private final int minWorkers;
     /** Min % responded workers */
-    private final float m_minPercentResponded;
+    private final float minPercentResponded;
     /** Poll period in msecs */
-    private final int m_msecsPollPeriod;
+    private final int msecsPollPeriod;
     /** Max number of poll attempts */
-    private final int m_maxPollAttempts;
+    private final int maxPollAttempts;
     /** Last finalized checkpoint */
-    private long m_lastCheckpointedSuperstep = -1;
+    private long lastCheckpointedSuperstep = -1;
     /** State of the superstep changed */
-    private final BspEvent m_superstepStateChanged =
+    private final BspEvent superstepStateChanged =
         new PredicateLock();
 
     public BspServiceMaster(
@@ -93,19 +93,19 @@ public class BspServiceMaster<
             Mapper<?, ?, ?, ?>.Context context,
             GiraphJob.BspMapper<I, V, E, M> bspMapper) {
         super(serverPortList, sessionMsecTimeout, context, bspMapper);
-        registerBspEvent(m_superstepStateChanged);
+        registerBspEvent(superstepStateChanged);
 
-        m_maxWorkers =
+        maxWorkers =
             getConfiguration().getInt(GiraphJob.MAX_WORKERS, -1);
-        m_minWorkers =
+        minWorkers =
             getConfiguration().getInt(GiraphJob.MIN_WORKERS, -1);
-        m_minPercentResponded =
+        minPercentResponded =
             getConfiguration().getFloat(GiraphJob.MIN_PERCENT_RESPONDED,
                                         100.0f);
-        m_msecsPollPeriod =
+        msecsPollPeriod =
             getConfiguration().getInt(GiraphJob.POLL_MSECS,
                                       GiraphJob.POLL_MSECS_DEFAULT);
-        m_maxPollAttempts =
+        maxPollAttempts =
             getConfiguration().getInt(GiraphJob.POLL_ATTEMPTS,
                                       GiraphJob.POLL_ATTEMPTS_DEFAULT);
     }
@@ -305,25 +305,25 @@ public class BspServiceMaster<
         List<String> healthyWorkerList = new ArrayList<String>();
         List<String> unhealthyWorkerList = new ArrayList<String>();
         int totalResponses = -1;
-        while (pollAttempt < m_maxPollAttempts) {
+        while (pollAttempt < maxPollAttempts) {
             getWorkers(
                 getSuperstep(), healthyWorkerList, unhealthyWorkerList);
             totalResponses = healthyWorkerList.size() +
                 unhealthyWorkerList.size();
-            if ((totalResponses * 100.0f / m_maxWorkers) >=
-                m_minPercentResponded) {
+            if ((totalResponses * 100.0f / maxWorkers) >=
+                minPercentResponded) {
                 failJob = false;
                 break;
             }
             if (LOG.isInfoEnabled()) {
                 LOG.info("checkWorkers: Only found " + totalResponses +
-                         " responses of " + m_maxWorkers + " for superstep " +
+                         " responses of " + maxWorkers + " for superstep " +
                          getSuperstep() + ".  Sleeping for " +
-                         m_msecsPollPeriod + " msecs and used " + pollAttempt +
-                         " of " + m_maxPollAttempts + " attempts.");
+                         msecsPollPeriod + " msecs and used " + pollAttempt +
+                         " of " + maxPollAttempts + " attempts.");
             }
             if (getWorkerHealthRegistrationChangedEvent().waitMsecs(
-                    m_msecsPollPeriod)) {
+                    msecsPollPeriod)) {
                 if (LOG.isInfoEnabled()) {
                     LOG.info("checkWorkers: Got event that health " +
                         "registration changed, not using poll attempt");
@@ -336,13 +336,13 @@ public class BspServiceMaster<
         if (failJob) {
             LOG.warn("checkWorkers: Did not receive enough processes in " +
                      "time (only " + totalResponses + " of " +
-                     m_minWorkers + " required)");
+                     minWorkers + " required)");
             return null;
         }
 
-        if (healthyWorkerList.size() < m_minWorkers) {
+        if (healthyWorkerList.size() < minWorkers) {
             LOG.warn("checkWorkers: Only " + healthyWorkerList.size() +
-                     " available when " + m_minWorkers + " are required.");
+                     " available when " + minWorkers + " are required.");
             return null;
         }
 
@@ -650,7 +650,7 @@ public class BspServiceMaster<
         // In that case, the input splits are not set, they will be faked by
         // the checkpoint files.  Each checkpoint file will be an input split
         // and the input split
-        m_superstepCounter = getContext().getCounter("GiraphJob", "Superstep");
+        superstepCounter = getContext().getCounter("GiraphJob", "Superstep");
         if (getRestartedSuperstep() == -1) {
             return;
         }
@@ -659,7 +659,7 @@ public class BspServiceMaster<
                       getRestartedSuperstep());
             setJobState(BspService.State.FAILED, -1, -1);
         } else {
-            m_superstepCounter.increment(getRestartedSuperstep());
+            superstepCounter.increment(getRestartedSuperstep());
         }
 
     }
@@ -693,8 +693,8 @@ public class BspServiceMaster<
                         LOG.info("becomeMaster: Job is finished, " +
                                  "give up trying to be the master!");
                     }
-                    m_isMaster = false;
-                    return m_isMaster;
+                    isMaster = false;
+                    return isMaster;
                 }
             } catch (JSONException e) {
                 throw new IllegalStateException(
@@ -711,8 +711,8 @@ public class BspServiceMaster<
                 }
                 if (masterChildArr.get(0).equals(myBid)) {
                     LOG.info("becomeMaster: I am now the master!");
-                    m_isMaster = true;
-                    return m_isMaster;
+                    isMaster = true;
+                    return isMaster;
                 }
                 LOG.info("becomeMaster: Waiting to become the master...");
                 getMasterElectionChildrenChangedEvent().waitForever();
@@ -1121,7 +1121,7 @@ public class BspServiceMaster<
             finalizedOutputStream.writeInt(0);
         }
         finalizedOutputStream.close();
-        m_lastCheckpointedSuperstep = superstep;
+        lastCheckpointedSuperstep = superstep;
     }
 
     /**
@@ -1466,7 +1466,7 @@ public class BspServiceMaster<
     public long getLastGoodCheckpoint() throws IOException {
         // Find the last good checkpoint if none have been written to the
         // knowledge of this master
-        if (m_lastCheckpointedSuperstep == -1) {
+        if (lastCheckpointedSuperstep == -1) {
             FileStatus[] fileStatusArray =
                 getFs().listStatus(new Path(CHECKPOINT_BASE_PATH),
                                    new FinalizedCheckpointPathFilter());
@@ -1474,14 +1474,14 @@ public class BspServiceMaster<
                 return -1;
             }
             Arrays.sort(fileStatusArray);
-            m_lastCheckpointedSuperstep = getCheckpoint(
+            lastCheckpointedSuperstep = getCheckpoint(
                 fileStatusArray[fileStatusArray.length - 1].getPath());
             LOG.info("getLastGoodCheckpoint: Found last good checkpoint " +
-                     m_lastCheckpointedSuperstep + " from " +
+                     lastCheckpointedSuperstep + " from " +
                      fileStatusArray[fileStatusArray.length - 1].
                      getPath().toString());
         }
-        return m_lastCheckpointedSuperstep;
+        return lastCheckpointedSuperstep;
     }
 
     @Override
@@ -1533,7 +1533,7 @@ public class BspServiceMaster<
                 VertexRangeBalancer<I, V, E, M> vertexRangeBalancer =
                     BspUtils.<I, V, E, M>createBasicVertexRangeBalancer(
                         getConfiguration());
-                synchronized (m_vertexRangeSynchronization) {
+                synchronized (vertexRangeSynchronization) {
                     balanceVertexRanges(vertexRangeBalancer,
                                         chosenWorkerHostnamePortMap);
                 }
@@ -1698,7 +1698,7 @@ public class BspServiceMaster<
         }
 
         incrCachedSuperstep();
-        m_superstepCounter.increment(1);
+        superstepCounter.increment(1);
         return (verticesFinished == verticesTotal) ?
             SuperstepState.ALL_SUPERSTEPS_DONE :
             SuperstepState.THIS_SUPERSTEP_DONE;
@@ -1809,7 +1809,7 @@ public class BspServiceMaster<
             LOG.error("cleanup: Got InterruptedException, continuing", e);
         }
 
-        if (m_isMaster) {
+        if (isMaster) {
             cleanUpZooKeeper();
             // If desired, cleanup the checkpoint directory
             if (getConfiguration().getBoolean(
@@ -1840,7 +1840,7 @@ public class BspServiceMaster<
      * @return Event that denotes a superstep state change
      */
     final public BspEvent getSuperstepStateChangedEvent() {
-        return m_superstepStateChanged;
+        return superstepStateChanged;
     }
 
     /**
@@ -1849,7 +1849,7 @@ public class BspServiceMaster<
      * @param failedWorkerPath Full path to the failed worker
      */
     final private void checkHealthyWorkerFailure(String failedWorkerPath) {
-        synchronized(m_vertexRangeSynchronization) {
+        synchronized(vertexRangeSynchronization) {
             if (getSuperstepFromPath(failedWorkerPath) < getSuperstep()) {
                 return;
             }
@@ -1870,8 +1870,8 @@ public class BspServiceMaster<
                              "for superstep " + getSuperstep() + " - " +
                              hostnameId + ", will try to restart from " +
                              "checkpointed superstep " +
-                             m_lastCheckpointedSuperstep);
-                    m_superstepStateChanged.signal();
+                             lastCheckpointedSuperstep);
+                    superstepStateChanged.signal();
                 }
             }
         }
@@ -1887,15 +1887,15 @@ public class BspServiceMaster<
                          "in " + event.getPath());
             }
             checkHealthyWorkerFailure(event.getPath());
-            m_superstepStateChanged.signal();
+            superstepStateChanged.signal();
             foundEvent = true;
         } else if (event.getPath().contains(WORKER_FINISHED_DIR) &&
                 event.getType() == EventType.NodeChildrenChanged) {
             if (LOG.isInfoEnabled()) {
                 LOG.info("processEvent: Worker finished (node change) event - " +
-                "m_superstepStateChanged signaled");
+                "superstepStateChanged signaled");
             }
-            m_superstepStateChanged.signal();
+            superstepStateChanged.signal();
             foundEvent = true;
         }
 

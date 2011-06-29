@@ -8,9 +8,9 @@ import org.apache.hadoop.mapreduce.Mapper.Context;
 public class ContextLock extends PredicateLock {
     /** Job context (for progress) */
     @SuppressWarnings("rawtypes")
-    private final Context m_context;
+    private final Context context;
     /** Msecs to refresh the progress meter */
-    private static final int m_msecPeriod = 10000;
+    private static final int msecPeriod = 10000;
 
     /**
      * Constructor.
@@ -18,7 +18,7 @@ public class ContextLock extends PredicateLock {
      * @param context used to call progress()
      */
     ContextLock(@SuppressWarnings("rawtypes") Context context) {
-        m_context = context;
+        this.context = context;
     }
 
     /**
@@ -27,8 +27,8 @@ public class ContextLock extends PredicateLock {
      */
     @Override
     public void waitForever() {
-        while (waitMsecs(m_msecPeriod) == false) {
-            m_context.progress();
+        while (waitMsecs(msecPeriod) == false) {
+            context.progress();
         }
     }
 }

@@ -9,8 +9,8 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.giraph.graph.BspService.State;
 
 /**
- * All workers will try to be the master as well. The master can execute the
- * following methods.
+ * At most, there will be one active master at a time, but many threads can
+ * be trying to be the active master.
  */
 @SuppressWarnings("rawtypes")
 public interface CentralizedServiceMaster<

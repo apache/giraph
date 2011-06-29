@@ -12,7 +12,7 @@ import org.apache.hadoop.io.Text;
  */
 public class BspRecordReader extends RecordReader<Text, Text> {
     /** Has the one record been seen? */
-    private boolean m_seenRecord = false;
+    private boolean seenRecord = false;
 
     @Override
     public void close() throws IOException {
@@ -21,7 +21,7 @@ public class BspRecordReader extends RecordReader<Text, Text> {
 
     @Override
     public float getProgress() throws IOException {
-        if (m_seenRecord == true) {
+        if (seenRecord == true) {
             return 1f;
         }
         else {
@@ -46,8 +46,8 @@ public class BspRecordReader extends RecordReader<Text, Text> {
 
     @Override
     public boolean nextKeyValue() throws IOException, InterruptedException {
-        if (m_seenRecord == false) {
-            m_seenRecord = true;
+        if (seenRecord == false) {
+            seenRecord = true;
             return true;
         }
         else {
