@@ -11,6 +11,10 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.giraph.examples.GeneratedVertexInputFormat;
 import org.apache.giraph.examples.SimpleCheckpointVertex;
 import org.apache.giraph.examples.SimpleVertexWriter;
+import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.graph.VertexInputFormat;
+import org.apache.giraph.graph.VertexWriter;
 
 import junit.framework.Test;
 import junit.framework.TestSuite;
@@ -50,19 +54,19 @@ public class TestManualCheckpoint extends BspCase {
         Configuration conf = new Configuration();
         setupConfiguration(conf);
         FileSystem hdfs = FileSystem.get(conf);
-        conf.setClass(BspJob.VERTEX_CLASS,
+        conf.setClass(GiraphJob.VERTEX_CLASS,
                       SimpleCheckpointVertex.class,
-                      HadoopVertex.class);
-        conf.setClass(BspJob.VERTEX_INPUT_FORMAT_CLASS,
+                      Vertex.class);
+        conf.setClass(GiraphJob.VERTEX_INPUT_FORMAT_CLASS,
                       GeneratedVertexInputFormat.class,
                       VertexInputFormat.class);
-        conf.setClass(BspJob.VERTEX_WRITER_CLASS,
+        conf.setClass(GiraphJob.VERTEX_WRITER_CLASS,
                       SimpleVertexWriter.class,
                       VertexWriter.class);
-        conf.set(BspJob.CHECKPOINT_DIRECTORY,
+        conf.set(GiraphJob.CHECKPOINT_DIRECTORY,
                  HDFS_CHECKPOINT_DIR);
-        conf.setBoolean(BspJob.CLEANUP_CHECKPOINTS_AFTER_SUCCESS, false);
-        BspJob bspJob = new BspJob(conf, "testBspCheckpoint");
+        conf.setBoolean(GiraphJob.CLEANUP_CHECKPOINTS_AFTER_SUCCESS, false);
+        GiraphJob bspJob = new GiraphJob(conf, "testBspCheckpoint");
         Path outputPath = new Path("/tmp/testBspCheckpointOutput");
         hdfs.delete(outputPath, true);
         FileOutputFormat.setOutputPath(bspJob, outputPath);
@@ -78,11 +82,11 @@ public class TestManualCheckpoint extends BspCase {
         }
 
         // Restart the test from superstep 3
-        conf.setLong(BspJob.RESTART_SUPERSTEP, 3);
+        conf.setLong(GiraphJob.RESTART_SUPERSTEP, 3);
         System.out.println(
             "testBspCheckpoint: Restarting from superstep 3" +
             " with checkpoint path = " + HDFS_CHECKPOINT_DIR);
-        BspJob bspRestartedJob = new BspJob(conf, "testBspCheckpointRestarted");
+        GiraphJob bspRestartedJob = new GiraphJob(conf, "testBspCheckpointRestarted");
         outputPath = new Path("/tmp/testBspCheckpointRestartedOutput");
         hdfs.delete(outputPath, true);
         FileOutputFormat.setOutputPath(bspRestartedJob, outputPath);

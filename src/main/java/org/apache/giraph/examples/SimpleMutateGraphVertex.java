@@ -8,15 +8,15 @@ import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.log4j.Logger;
 
-import org.apache.giraph.Edge;
-import org.apache.giraph.HadoopVertex;
-import org.apache.giraph.MutableVertex;
+import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.graph.MutableVertex;
 
 /**
  * Vertex to allow unit testing of graph mutations.
  */
 public class SimpleMutateGraphVertex extends
-        HadoopVertex<LongWritable, DoubleWritable,
+        Vertex<LongWritable, DoubleWritable,
         FloatWritable, DoubleWritable> {
     private static int edgesRemoved = 0;
 

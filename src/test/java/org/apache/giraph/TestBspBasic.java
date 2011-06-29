@@ -24,6 +24,11 @@ import org.apache.giraph.examples.SimplePageRankVertex;
 import org.apache.giraph.examples.SimpleSumCombiner;
 import org.apache.giraph.examples.SimpleSuperstepVertex;
 import org.apache.giraph.examples.SimpleVertexWriter;
+import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.graph.Combiner;
+import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.graph.VertexInputFormat;
+import org.apache.giraph.graph.VertexWriter;
 
 import junit.framework.Test;
 import junit.framework.TestSuite;
@@ -106,13 +111,13 @@ public class TestBspBasic extends BspCase {
         setupConfiguration(conf);
         conf.setInt("mapred.map.max.attempts", 1);
         FileSystem hdfs = FileSystem.get(conf);
-        conf.setClass(BspJob.VERTEX_CLASS,
+        conf.setClass(GiraphJob.VERTEX_CLASS,
                       SimpleFailVertex.class,
-                      HadoopVertex.class);
-        conf.setClass(BspJob.VERTEX_INPUT_FORMAT_CLASS,
+                      Vertex.class);
+        conf.setClass(GiraphJob.VERTEX_INPUT_FORMAT_CLASS,
                       GeneratedVertexInputFormat.class,
                       VertexInputFormat.class);
-        BspJob bspJob = new BspJob(conf, "testBspFail");
+        GiraphJob bspJob = new GiraphJob(conf, "testBspFail");
         Path outputPath = new Path("/tmp/testBspFailOutput");
         hdfs.delete(outputPath, true);
         FileOutputFormat.setOutputPath(bspJob, outputPath);
@@ -129,20 +134,20 @@ public class TestBspBasic extends BspCase {
         throws IOException, InterruptedException, ClassNotFoundException {
         Configuration conf = new Configuration();
         setupConfiguration(conf);
-        conf.setFloat(BspJob.TOTAL_INPUT_SPLIT_MULTIPLIER, 2.0f);
+        conf.setFloat(GiraphJob.TOTAL_INPUT_SPLIT_MULTIPLIER, 2.0f);
         // GeneratedInputSplit will generate 10 vertices
         conf.setLong(GeneratedVertexReader.READER_VERTICES, 10);
         FileSystem hdfs = FileSystem.get(conf);
-        conf.setClass(BspJob.VERTEX_CLASS,
+        conf.setClass(GiraphJob.VERTEX_CLASS,
                       SimpleSuperstepVertex.class,
-                      HadoopVertex.class);
-        conf.setClass(BspJob.VERTEX_INPUT_FORMAT_CLASS,
+                      Vertex.class);
+        conf.setClass(GiraphJob.VERTEX_INPUT_FORMAT_CLASS,
                       GeneratedVertexInputFormat.class,
                       VertexInputFormat.class);
-        conf.setClass(BspJob.VERTEX_WRITER_CLASS,
+        conf.setClass(GiraphJob.VERTEX_WRITER_CLASS,
                       SimpleVertexWriter.class,
                       VertexWriter.class);
-        BspJob bspJob = new BspJob(conf, "testBspSuperStep");
+        GiraphJob bspJob = new GiraphJob(conf, "testBspSuperStep");
         Path outputPath = new Path("/tmp/testBspSuperStepOutput");
         hdfs.delete(outputPath, true);
         FileOutputFormat.setOutputPath(bspJob, outputPath);
@@ -165,13 +170,13 @@ public class TestBspBasic extends BspCase {
         conf.set("mapred.jar", getJarLocation());
         setupConfiguration(conf);
         FileSystem hdfs = FileSystem.get(conf);
-        conf.setClass(BspJob.VERTEX_CLASS,
+        conf.setClass(GiraphJob.VERTEX_CLASS,
                       SimpleMsgVertex.class,
-                      HadoopVertex.class);
-        conf.setClass(BspJob.VERTEX_INPUT_FORMAT_CLASS,
+                      Vertex.class);
+        conf.setClass(GiraphJob.VERTEX_INPUT_FORMAT_CLASS,
                       GeneratedVertexInputFormat.class,
                       VertexInputFormat.class);
-        BspJob bspJob = new BspJob(conf, "testBspMsg");
+        GiraphJob bspJob = new GiraphJob(conf, "testBspMsg");
         Path outputPath = new Path("/tmp/testBspMsgOutput");
         hdfs.delete(outputPath, true);
         FileOutputFormat.setOutputPath(bspJob, outputPath);
@@ -191,14 +196,14 @@ public class TestBspBasic extends BspCase {
         Configuration conf = new Configuration();
         setupConfiguration(conf);
         FileSystem hdfs = FileSystem.get(conf);
-        conf.setClass(BspJob.VERTEX_CLASS,
+        conf.setClass(GiraphJob.VERTEX_CLASS,
                       SimpleMsgVertex.class,
-                      HadoopVertex.class);
-        conf.setClass(BspJob.VERTEX_INPUT_FORMAT_CLASS,
+                      Vertex.class);
+        conf.setClass(GiraphJob.VERTEX_INPUT_FORMAT_CLASS,
                       GeneratedVertexInputFormat.class,
                       VertexInputFormat.class);
         conf.setLong(GeneratedVertexReader.READER_VERTICES, 0);
-        BspJob bspJob = new BspJob(conf, "testEmptyVertexInputFormat");
+        GiraphJob bspJob = new GiraphJob(conf, "testEmptyVertexInputFormat");
         Path outputPath = new Path("/tmp/testEmptyVertexInputFormat");
         hdfs.delete(outputPath, true);
         FileOutputFormat.setOutputPath(bspJob, outputPath);
@@ -216,16 +221,16 @@ public class TestBspBasic extends BspCase {
         Configuration conf = new Configuration();
         setupConfiguration(conf);
         FileSystem hdfs = FileSystem.get(conf);
-        conf.setClass(BspJob.VERTEX_CLASS,
+        conf.setClass(GiraphJob.VERTEX_CLASS,
                       SimpleCombinerVertex.class,
-                      HadoopVertex.class);
-        conf.setClass(BspJob.VERTEX_INPUT_FORMAT_CLASS,
+                      Vertex.class);
+        conf.setClass(GiraphJob.VERTEX_INPUT_FORMAT_CLASS,
                       GeneratedVertexInputFormat.class,
                       VertexInputFormat.class);
-        conf.setClass(BspJob.COMBINER_CLASS,
+        conf.setClass(GiraphJob.COMBINER_CLASS,
                       SimpleSumCombiner.class,
                       Combiner.class);
-        BspJob bspJob = new BspJob(conf, "testBspCombiner");
+        GiraphJob bspJob = new GiraphJob(conf, "testBspCombiner");
         Path outputPath = new Path("/tmp/testBspCombinerOutput");
         hdfs.delete(outputPath, true);
         FileOutputFormat.setOutputPath(bspJob, outputPath);
@@ -243,13 +248,13 @@ public class TestBspBasic extends BspCase {
         Configuration conf = new Configuration();
         setupConfiguration(conf);
         FileSystem hdfs = FileSystem.get(conf);
-        conf.setClass(BspJob.VERTEX_CLASS,
+        conf.setClass(GiraphJob.VERTEX_CLASS,
                       SimplePageRankVertex.class,
-                      HadoopVertex.class);
-        conf.setClass(BspJob.VERTEX_INPUT_FORMAT_CLASS,
+                      Vertex.class);
+        conf.setClass(GiraphJob.VERTEX_INPUT_FORMAT_CLASS,
                       GeneratedVertexInputFormat.class,
                       VertexInputFormat.class);
-        BspJob bspJob = new BspJob(conf, "testBspPageRank");
+        GiraphJob bspJob = new GiraphJob(conf, "testBspPageRank");
         Path outputPath = new Path("/tmp/testBspPageRankOutput");
         hdfs.delete(outputPath, true);
         FileOutputFormat.setOutputPath(bspJob, outputPath);

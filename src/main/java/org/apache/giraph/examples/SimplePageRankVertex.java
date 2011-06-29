@@ -8,16 +8,13 @@ import org.apache.hadoop.io.LongWritable;
 
 import org.apache.log4j.Logger;
 
-import org.apache.giraph.HadoopVertex;
-import org.apache.giraph.lib.MaxAggregator;
-import org.apache.giraph.lib.MinAggregator;
-import org.apache.giraph.lib.LongSumAggregator;
+import org.apache.giraph.graph.Vertex;
 
 /**
  * Demonstrates the basic Pregel PageRank implementation.
  */
 public class SimplePageRankVertex extends
-    HadoopVertex<LongWritable, DoubleWritable, FloatWritable, DoubleWritable> {
+    Vertex<LongWritable, DoubleWritable, FloatWritable, DoubleWritable> {
     /** User can access this sum after the application finishes if local */
     public static long finalSum;
     /** User can access this min after the application finishes if local */

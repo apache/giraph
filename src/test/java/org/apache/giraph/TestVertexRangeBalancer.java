@@ -12,6 +12,12 @@ import org.apache.giraph.examples.GeneratedVertexInputFormat;
 import org.apache.giraph.examples.SimpleCheckpointVertex;
 import org.apache.giraph.examples.SimpleVertexWriter;
 import org.apache.giraph.examples.SuperstepBalancer;
+import org.apache.giraph.graph.AutoBalancer;
+import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.graph.VertexInputFormat;
+import org.apache.giraph.graph.BasicVertexRangeBalancer;
+import org.apache.giraph.graph.VertexWriter;
 
 import junit.framework.Test;
 import junit.framework.TestSuite;
@@ -49,16 +55,16 @@ public class TestVertexRangeBalancer extends BspCase {
         Configuration conf = new Configuration();
         setupConfiguration(conf);
         FileSystem hdfs = FileSystem.get(conf);
-        conf.setClass(BspJob.VERTEX_CLASS,
+        conf.setClass(GiraphJob.VERTEX_CLASS,
                       SimpleCheckpointVertex.class,
-                      HadoopVertex.class);
-        conf.setClass(BspJob.VERTEX_INPUT_FORMAT_CLASS,
+                      Vertex.class);
+        conf.setClass(GiraphJob.VERTEX_INPUT_FORMAT_CLASS,
                       GeneratedVertexInputFormat.class,
                       VertexInputFormat.class);
-        conf.setClass(BspJob.VERTEX_WRITER_CLASS,
+        conf.setClass(GiraphJob.VERTEX_WRITER_CLASS,
                       SimpleVertexWriter.class,
                       VertexWriter.class);
-        BspJob bspJob = new BspJob(conf, "testStaticBalancer");
+        GiraphJob bspJob = new GiraphJob(conf, "testStaticBalancer");
         Path outputPath = new Path("/tmp/testStaticBalancer");
         hdfs.delete(outputPath, true);
         FileOutputFormat.setOutputPath(bspJob, outputPath);
@@ -74,10 +80,10 @@ public class TestVertexRangeBalancer extends BspCase {
            assertTrue(totalLen == 118);
         }
 
-        conf.setClass(BspJob.VERTEX_RANGE_BALANCER_CLASS,
+        conf.setClass(GiraphJob.VERTEX_RANGE_BALANCER_CLASS,
                       SuperstepBalancer.class,
-                      VertexRangeBalancer.class);
-        BspJob bspJob2 = new BspJob(conf, "testSuperstepBalancer");
+                      BasicVertexRangeBalancer.class);
+        GiraphJob bspJob2 = new GiraphJob(conf, "testSuperstepBalancer");
         outputPath = new Path("/tmp/testSuperstepBalancer");
         hdfs.delete(outputPath, true);
         FileOutputFormat.setOutputPath(bspJob2, outputPath);
@@ -93,10 +99,10 @@ public class TestVertexRangeBalancer extends BspCase {
             assertTrue(totalLen == 118);
         }
 
-        conf.setClass(BspJob.VERTEX_RANGE_BALANCER_CLASS,
+        conf.setClass(GiraphJob.VERTEX_RANGE_BALANCER_CLASS,
                       AutoBalancer.class,
-                      VertexRangeBalancer.class);
-        BspJob bspJob3 = new BspJob(conf, "testAutoBalancer");
+                      BasicVertexRangeBalancer.class);
+        GiraphJob bspJob3 = new GiraphJob(conf, "testAutoBalancer");
         outputPath = new Path("/tmp/testAutoBalancer");
         hdfs.delete(outputPath, true);
         FileOutputFormat.setOutputPath(bspJob3, outputPath);

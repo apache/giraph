@@ -10,22 +10,20 @@ import org.apache.log4j.Logger;
 import org.json.JSONArray;
 import org.json.JSONException;
 
-import org.apache.giraph.BspBalancer;
-import org.apache.giraph.VertexRange;
-import org.apache.giraph.VertexRangeBalancer;
+import org.apache.giraph.graph.VertexRangeBalancer;
+import org.apache.giraph.graph.VertexRange;
 
 @SuppressWarnings("rawtypes")
 public class SuperstepBalancer<I extends WritableComparable,
                                V extends Writable,
                                E extends Writable,
                                M extends Writable>
-                               extends BspBalancer<I, V, E, M>
-                               implements VertexRangeBalancer<I, V, E, M> {
+                               extends VertexRangeBalancer<I, V, E, M> {
     /** Class logger */
     private static final Logger LOG =
         Logger.getLogger(SuperstepBalancer.class);
 
-    public void rebalance() {
+    public NavigableMap<I, VertexRange<I, V, E, M>> rebalance() {
         // Simple test to put all the vertex ranges on the superstep worker
         Map<String, JSONArray> workerHostnameIdMap = getWorkerHostnamePortMap();
         long hostnameIdListIndex = getSuperstep() % workerHostnameIdMap.size();
@@ -59,7 +57,6 @@ public class SuperstepBalancer<I extends WritableComparable,
             nextVertexRangeMap.put(replacedVertexRange.getMaxIndex(),
                                    replacedVertexRange);
         }
-        setNextVertexRangeMap(nextVertexRangeMap);
+        return nextVertexRangeMap;
     }
-
 }

@@ -10,6 +10,10 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.giraph.examples.GeneratedVertexInputFormat;
 import org.apache.giraph.examples.SimpleMutateGraphVertex;
 import org.apache.giraph.examples.SimpleVertexWriter;
+import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.graph.VertexInputFormat;
+import org.apache.giraph.graph.VertexWriter;
 
 import junit.framework.Test;
 import junit.framework.TestSuite;
@@ -50,18 +54,18 @@ public class TestMutateGraphVertex extends BspCase {
         Configuration conf = new Configuration();
         setupConfiguration(conf);
         FileSystem hdfs = FileSystem.get(conf);
-        conf.setClass(BspJob.VERTEX_CLASS,
+        conf.setClass(GiraphJob.VERTEX_CLASS,
                       SimpleMutateGraphVertex.class,
-                      HadoopVertex.class);
-        conf.setClass(BspJob.VERTEX_INPUT_FORMAT_CLASS,
+                      Vertex.class);
+        conf.setClass(GiraphJob.VERTEX_INPUT_FORMAT_CLASS,
                       GeneratedVertexInputFormat.class,
                       VertexInputFormat.class);
-        conf.setClass(BspJob.VERTEX_WRITER_CLASS,
+        conf.setClass(GiraphJob.VERTEX_WRITER_CLASS,
                       SimpleVertexWriter.class,
                       VertexWriter.class);
-        conf.set(BspJob.CHECKPOINT_DIRECTORY,
+        conf.set(GiraphJob.CHECKPOINT_DIRECTORY,
                  HDFS_CHECKPOINT_DIR);
-        BspJob bspJob = new BspJob(conf, "testMutateGraph");
+        GiraphJob bspJob = new GiraphJob(conf, "testMutateGraph");
         Path outputPath = new Path("/tmp/testMutateGraph");
         hdfs.delete(outputPath, true);
         FileOutputFormat.setOutputPath(bspJob, outputPath);

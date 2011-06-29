@@ -11,9 +11,9 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
-import org.apache.giraph.BspInputSplit;
-import org.apache.giraph.VertexInputFormat;
-import org.apache.giraph.VertexReader;
+import org.apache.giraph.bsp.BspInputSplit;
+import org.apache.giraph.graph.VertexInputFormat;
+import org.apache.giraph.graph.VertexReader;
 
 /**
  * This VertexInputFormat is meant for testing/debugging.  It simply generates

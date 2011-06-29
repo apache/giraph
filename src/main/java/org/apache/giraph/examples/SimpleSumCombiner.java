@@ -7,8 +7,8 @@ import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 
-import org.apache.giraph.CommunicationsInterface;
-import org.apache.giraph.Combiner;
+import org.apache.giraph.comm.CommunicationsInterface;
+import org.apache.giraph.graph.Combiner;
 
 /**
  * Test whether combiner is called by summing up the messages.

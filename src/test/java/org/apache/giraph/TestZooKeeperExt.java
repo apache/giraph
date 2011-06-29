@@ -2,6 +2,7 @@ package org.apache.giraph;
 
 import java.util.List;
 
+import org.apache.giraph.zk.ZooKeeperExt;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;

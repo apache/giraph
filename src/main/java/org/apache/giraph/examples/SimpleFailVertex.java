@@ -6,13 +6,13 @@ import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
 
-import org.apache.giraph.HadoopVertex;
+import org.apache.giraph.graph.Vertex;
 
 /**
  * Vertex to allow unit testing of failure detection
  */
 public class SimpleFailVertex extends
-    HadoopVertex<LongWritable, DoubleWritable, FloatWritable, DoubleWritable> {
+    Vertex<LongWritable, DoubleWritable, FloatWritable, DoubleWritable> {
 
     static long superstep = 0;
 

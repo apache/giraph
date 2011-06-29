@@ -11,6 +11,8 @@ import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 
 import org.apache.giraph.examples.GeneratedVertexReader;
+import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.zk.ZooKeeperExt;
 
 import junit.framework.TestCase;
 
@@ -40,24 +42,24 @@ public class BspCase extends TestCase implements Watcher {
                        getJobTracker() + " with jar path " + getJarLocation()
                        + " for " + getName());
             conf.set("mapred.job.tracker", getJobTracker());
-            conf.setInt(BspJob.MAX_WORKERS, getNumWorkers());
-            conf.setFloat(BspJob.MIN_PERCENT_RESPONDED, 100.0f);
-            conf.setInt(BspJob.MIN_WORKERS, getNumWorkers());
+            conf.setInt(GiraphJob.MAX_WORKERS, getNumWorkers());
+            conf.setFloat(GiraphJob.MIN_PERCENT_RESPONDED, 100.0f);
+            conf.setInt(GiraphJob.MIN_WORKERS, getNumWorkers());
         }
         else {
             System.out.println("setup: Using local job runner with " +
                                "location " + getJarLocation() + " for "
                                + getName());
-            conf.setInt(BspJob.MAX_WORKERS, 1);
-            conf.setFloat(BspJob.MIN_PERCENT_RESPONDED, 100.0f);
-            conf.setInt(BspJob.MIN_WORKERS, 1);
+            conf.setInt(GiraphJob.MAX_WORKERS, 1);
+            conf.setFloat(GiraphJob.MIN_PERCENT_RESPONDED, 100.0f);
+            conf.setInt(GiraphJob.MIN_WORKERS, 1);
             // Single node testing
-            conf.setBoolean(BspJob.SPLIT_MASTER_WORKER, false);
+            conf.setBoolean(GiraphJob.SPLIT_MASTER_WORKER, false);
         }
-        conf.setInt(BspJob.POLL_ATTEMPTS, 5);
-        conf.setInt(BspJob.POLL_MSECS, 3*1000);
+        conf.setInt(GiraphJob.POLL_ATTEMPTS, 5);
+        conf.setInt(GiraphJob.POLL_MSECS, 3*1000);
         if (getZooKeeperList() != null) {
-            conf.set(BspJob.ZOOKEEPER_LIST, getZooKeeperList());
+            conf.set(GiraphJob.ZOOKEEPER_LIST, getZooKeeperList());
         }
         // GeneratedInputSplit will generate 5 vertices
         conf.setLong(GeneratedVertexReader.READER_VERTICES, 5);
@@ -149,7 +151,7 @@ public class BspCase extends TestCase implements Watcher {
             FileSystem hdfs = FileSystem.get(conf);
             // Since local jobs always use the same paths, remove them
             Path oldLocalJobPaths = new Path(
-                BspJob.ZOOKEEPER_MANAGER_DIR_DEFAULT);
+                GiraphJob.ZOOKEEPER_MANAGER_DIR_DEFAULT);
             FileStatus [] fileStatusArr = hdfs.listStatus(oldLocalJobPaths);
             for (FileStatus fileStatus : fileStatusArr) {
                 if (fileStatus.isDir() &&

@@ -10,8 +10,8 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskInputOutputContext;
 
-import org.apache.giraph.Edge;
-import org.apache.giraph.VertexWriter;
+import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.VertexWriter;
 
 /**
  * Simple vertex writer.

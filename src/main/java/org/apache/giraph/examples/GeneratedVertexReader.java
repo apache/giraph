@@ -10,10 +10,10 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.log4j.Logger;
 
-import org.apache.giraph.BspInputSplit;
-import org.apache.giraph.Edge;
-import org.apache.giraph.VertexReader;
-import org.apache.giraph.MutableVertex;
+import org.apache.giraph.bsp.BspInputSplit;
+import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.MutableVertex;
+import org.apache.giraph.graph.VertexReader;
 
 /**
  * Used by TestVertexInputFormat to read some generated data

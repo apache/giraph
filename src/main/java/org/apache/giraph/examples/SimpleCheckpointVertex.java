@@ -16,11 +16,10 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-import org.apache.giraph.BspJob;
-import org.apache.giraph.Edge;
-import org.apache.giraph.HadoopVertex;
-import org.apache.giraph.VertexInputFormat;
-import org.apache.giraph.lib.LongSumAggregator;
+import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.graph.VertexInputFormat;
 
 /**
  * An example that simply uses its id, value, and edges to compute new data
@@ -28,7 +27,7 @@ import org.apache.giraph.lib.LongSumAggregator;
  * can also test automated checkpoint restarts.
  */
 public class SimpleCheckpointVertex extends
-        HadoopVertex<LongWritable, IntWritable, FloatWritable, FloatWritable>
+        Vertex<LongWritable, IntWritable, FloatWritable, FloatWritable>
         implements Tool {
     /** Configuration */
     private static Configuration conf;
@@ -167,15 +166,15 @@ public class SimpleCheckpointVertex extends
             System.exit(-1);
         }
 
-        getConf().setClass(BspJob.VERTEX_CLASS, getClass(), HadoopVertex.class);
-        getConf().setClass(BspJob.VERTEX_INPUT_FORMAT_CLASS,
+        getConf().setClass(GiraphJob.VERTEX_CLASS, getClass(), Vertex.class);
+        getConf().setClass(GiraphJob.VERTEX_INPUT_FORMAT_CLASS,
                            GeneratedVertexInputFormat.class,
                            VertexInputFormat.class);
-        getConf().setInt(BspJob.MIN_WORKERS,
+        getConf().setInt(GiraphJob.MIN_WORKERS,
                          Integer.parseInt(cmd.getOptionValue('w')));
-        getConf().setInt(BspJob.MAX_WORKERS,
+        getConf().setInt(GiraphJob.MAX_WORKERS,
                          Integer.parseInt(cmd.getOptionValue('w')));
-        BspJob bspJob = new BspJob(getConf(), getClass().getName());
+        GiraphJob bspJob = new GiraphJob(getConf(), getClass().getName());
         FileOutputFormat.setOutputPath(bspJob,
                                        new Path(cmd.getOptionValue('o')));
         boolean verbose = false;
