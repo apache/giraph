@@ -144,8 +144,7 @@ public class BspUtils {
             getVertexClass(conf);
         return ReflectionUtils.newInstance(vertexClass, conf);
     }
-
-
+    
     /**
      * Get the user's subclassed vertex index class.
      *
