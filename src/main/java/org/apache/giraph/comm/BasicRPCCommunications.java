@@ -1,3 +1,21 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.giraph.comm;
 
 import java.io.IOException;
@@ -22,7 +40,7 @@ import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.BspResolver;
 import org.apache.giraph.graph.BspUtils;
-import org.apache.giraph.graph.Combiner;
+import org.apache.giraph.graph.VertexCombiner;
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.MutableVertex;
@@ -62,7 +80,7 @@ public abstract class BasicRPCCommunications<
     /** Hadoop configuration */
     protected final Configuration conf;
     /** Combiner instance, can be null */
-    private final Combiner<I, V, E, M> combiner;
+    private final VertexCombiner<I, V, E, M> combiner;
     /** Address of RPC server */
     private final InetSocketAddress myAddress;
     /**
@@ -159,7 +177,7 @@ public abstract class BasicRPCCommunications<
         /** Synchronization object */
         private final Object waitingInPeer = new Object();
         /** Combiner instance, can be null */
-        private final Combiner<I, V, E, M> combiner;
+        private final VertexCombiner<I, V, E, M> combiner;
         /** set of keys of large message list (synchronized with itself) */
         private final Set<I> largeMsgListKeys = new TreeSet<I>();
 
@@ -167,7 +185,7 @@ public abstract class BasicRPCCommunications<
                    CommunicationsInterface<I, V, E, M> i,
                    int maxSize,
                    boolean isProxy,
-                   Combiner<I, V, E, M> combiner) {
+                   VertexCombiner<I, V, E, M> combiner) {
             super(PeerThread.class.getName());
             this.outMessagesPerPeer = m;
             this.peer = i;
@@ -247,9 +265,9 @@ public abstract class BasicRPCCommunications<
                     if (msgList.size() > 0) {
                         if (msgList.size() > 1) {
                             if (combiner != null) {
-                                combiner.combine(peer,
-                                                 e.getKey(),
-                                                 msgList);
+                                M combinedMsg = combiner.combine(e.getKey(),
+                                                                 msgList);
+                                peer.putMsg(e.getKey(), combinedMsg);
                             } else {
                                 LOG.debug("putAllMessages: " + peer.getName() +
                                           " putting (list) " + msgList + " to " +
@@ -336,7 +354,9 @@ public abstract class BasicRPCCommunications<
                                     continue;
                                 }
                                 if (combiner != null) {
-                                    combiner.combine(peer, destVertex, msgList);
+                                    M combinedMsg = combiner.combine(destVertex,
+                                                                     msgList);
+                                    peer.putMsg(destVertex, combinedMsg);
                                 } else {
                                     peer.putMsgList(destVertex, msgList);
                                 }
@@ -379,22 +399,10 @@ public abstract class BasicRPCCommunications<
         this.conf = context.getConfiguration();
         this.maxSize = conf.getInt(GiraphJob.MSG_SIZE,
                                    GiraphJob.MSG_SIZE_DEFAULT);
-
-        if (conf.get(GiraphJob.COMBINER_CLASS) != null)  {
-            try {
-                @SuppressWarnings("unchecked")
-                Class<? extends Combiner<I, V, E, M>> combinerClass =
-                    (Class<? extends Combiner<I, V, E, M>>)conf.getClass(
-                        GiraphJob.COMBINER_CLASS, Combiner.class);
-                combiner = combinerClass.newInstance();
-            } catch (InstantiationException e) {
-                throw new RuntimeException(e);
-            } catch (IllegalAccessException e) {
-                throw new RuntimeException(e);
-            }
-        }
-        else {
-            combiner = null;
+        if (BspUtils.getVertexCombinerClass(conf) == null) {
+            this.combiner = null;
+        } else {
+            this.combiner = BspUtils.createVertexCombiner(conf);
         }
 
         this.localHostname = InetAddress.getLocalHost().getHostName();
@@ -471,11 +479,13 @@ public abstract class BasicRPCCommunications<
         CommunicationsInterface<I, V, E, M> peer = this;
         synchronized (outMessages) {
             outMsgMap = outMessages.get(addrUnresolved);
-            LOG.debug("startPeerConnectionThread: Connecting to " +
-                     vertexRange.getHostname() + ", port = " +
-                     vertexRange.getPort() + ", max index = " +
-                     vertexRange.getMaxIndex() + ", addr = " + addr +
-                     " if outMsgMap (" + outMsgMap + ") == null ");
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("startPeerConnectionThread: Connecting to " +
+                          vertexRange.getHostname() + ", port = " +
+                          vertexRange.getPort() + ", max index = " +
+                          vertexRange.getMaxIndex() + ", addr = " + addr +
+                          " if outMsgMap (" + outMsgMap + ") == null ");
+            }
             if (outMsgMap != null) { // this host has already been added
                 return;
             }
@@ -498,7 +508,7 @@ public abstract class BasicRPCCommunications<
 
     @Override
     public final long getProtocolVersion(String protocol, long clientVersion)
-    throws IOException {
+            throws IOException {
         return versionID;
     }
 
@@ -869,9 +879,9 @@ public abstract class BasicRPCCommunications<
                 transientInMessages.entrySet()) {
                 if (combiner != null) {
                     try {
-                        combiner.combine(this,
-                                         entry.getKey(),
-                                         entry.getValue());
+                        M combinedMsg = combiner.combine(entry.getKey(),
+                                                         entry.getValue());
+                        putMsg(entry.getKey(), combinedMsg);
                     } catch (IOException e) {
                         // no actual IO -- should never happen
                         throw new RuntimeException(e);

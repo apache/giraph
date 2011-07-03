@@ -1,3 +1,21 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.giraph.graph;
 
 import java.io.IOException;
@@ -33,12 +51,12 @@ public class GiraphJob extends Job {
     public static final String VERTEX_INPUT_FORMAT_CLASS =
         "giraph.vertexInputFormatClass";
 
-    /** Combiner class - optional */
-    public static final String COMBINER_CLASS =
-        "giraph.combinerClass";
     /** VertexOutputFormat class - optional */
     public static final String VERTEX_OUTPUT_FORMAT_CLASS =
         "giraph.vertexOutputFormatClass";
+    /** Vertex combiner class - optional */
+    public static final String VERTEX_COMBINER_CLASS =
+        "giraph.combinerClass";
     /** Vertex range balancer class - optional */
     public static final String VERTEX_RANGE_BALANCER_CLASS =
         "giraph.vertexRangeBalancerClass";
@@ -247,14 +265,30 @@ public class GiraphJob extends Job {
     private static final Logger LOG = Logger.getLogger(GiraphJob.class);
 
     /**
+     * Constructor that will instantiate the configuration
+     *
+     * @param jobName User-defined job name
+     * @throws IOException
+     */
+    public GiraphJob(String jobName) throws IOException {
+        super(new Configuration(), jobName);
+    }
+
+    /**
      * Constructor.
      *
-     * @param conf user-defined configuration
-     * @param jobName user-defined job name
+     * @param conf User-defined configuration
+     * @param jobName User-defined job name
      * @throws IOException
      */
     public GiraphJob(Configuration conf, String jobName) throws IOException {
         super(conf, jobName);
+    }
+
+    /**
+     * Make sure the configuration is set properly.
+     */
+    private void checkConfiguration() {
         if (conf.getInt(MAX_WORKERS, -1) < 0) {
             throw new RuntimeException("No valid " + MAX_WORKERS);
         }
@@ -262,29 +296,27 @@ public class GiraphJob extends Job {
                           MIN_PERCENT_RESPONDED_DEFAULT) <= 0.0f ||
                 conf.getFloat(MIN_PERCENT_RESPONDED,
                               MIN_PERCENT_RESPONDED_DEFAULT) > 100.0f) {
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                 "Invalid " +
                 conf.getFloat(MIN_PERCENT_RESPONDED,
                               MIN_PERCENT_RESPONDED_DEFAULT) + " for " +
                 MIN_PERCENT_RESPONDED);
         }
         if (conf.getInt(MIN_WORKERS, -1) < 0) {
-            throw new RuntimeException("No valid " + MIN_WORKERS);
+            throw new IllegalArgumentException("No valid " + MIN_WORKERS);
         }
         if (BspUtils.getVertexClass(getConfiguration()) == null) {
-            throw new RuntimeException("GiraphJob: Null VERTEX_CLASS");
+            throw new IllegalArgumentException("GiraphJob: Null VERTEX_CLASS");
         }
         if (BspUtils.getVertexInputFormatClass(getConfiguration()) == null) {
-            throw new RuntimeException(
+            throw new IllegalArgumentException(
                 "GiraphJob: Null VERTEX_INPUT_FORMAT_CLASS");
         }
         if (BspUtils.getVertexResolverClass(getConfiguration()) == null) {
-            conf.setClass(VERTEX_RESOLVER_CLASS,
-                          BspResolver.class,
-                          BspResolver.class);
+            setVertexResolverClass(BspResolver.class);
             if (LOG.isInfoEnabled()) {
-                LOG.info("GiraphJob: No class found for " + VERTEX_RESOLVER_CLASS +
-                         ", defaulting to " +
+                LOG.info("GiraphJob: No class found for " +
+                         VERTEX_RESOLVER_CLASS + ", defaulting to " +
                          BspResolver.class.getCanonicalName());
             }
         }
@@ -744,6 +776,103 @@ public class GiraphJob extends Job {
     }
 
     /**
+     * Set the vertex class (required)
+     *
+     * @param vertexClass Runs vertex computation
+     */
+    final public void setVertexClass(Class<?> vertexClass) {
+        getConfiguration().setClass(VERTEX_CLASS, vertexClass, Vertex.class);
+    }
+
+    /**
+     * Set the vertex input format class (required)
+     *
+     * @param vertexInputFormatClass Determines how graph is input
+     */
+    final public void setVertexInputFormatClass(
+            Class<?> vertexInputFormatClass) {
+        getConfiguration().setClass(VERTEX_INPUT_FORMAT_CLASS,
+                                    vertexInputFormatClass,
+                                    VertexInputFormat.class);
+    }
+
+    /**
+     * Set the vertex output format class (optional)
+     *
+     * @param vertexOutputFormatClass Determines how graph is output
+     */
+    final public void setVertexOutputFormatClass(
+            Class<?> vertexOutputFormatClass) {
+        getConfiguration().setClass(VERTEX_OUTPUT_FORMAT_CLASS,
+                                    vertexOutputFormatClass,
+                                    VertexOutputFormat.class);
+    }
+
+    /**
+     * Set the vertex combiner class (optional)
+     *
+     * @param vertexCombinerClass Determines how vertex messages are combined
+     */
+    final public void setVertexCombinerClass(Class<?> vertexCombinerClass) {
+        getConfiguration().setClass(VERTEX_COMBINER_CLASS,
+                                    vertexCombinerClass,
+                                    VertexCombiner.class);
+    }
+
+    /**
+     * Set the vertex range balancer class (optional)
+     *
+     * @param vertexRangeBalancerClass Determines how vertex
+     *        ranges are balanced prior to each superstep
+     */
+    final public void setVertexRangeBalancerClass(
+            Class<?> vertexRangeBalancerClass) {
+        getConfiguration().setClass(VERTEX_RANGE_BALANCER_CLASS,
+                                    vertexRangeBalancerClass,
+                                    VertexRangeBalancer.class);
+    }
+
+    /**
+     * Set the vertex resolver class (optional)
+     *
+     * @param vertexResolverClass Determines how vertex mutations are resolved
+     */
+    final public void setVertexResolverClass(Class<?> vertexResolverClass) {
+        getConfiguration().setClass(VERTEX_RESOLVER_CLASS,
+                                    vertexResolverClass,
+                                    VertexResolver.class);
+    }
+
+    /**
+     * Set worker configuration for determining what is required for
+     * a superstep.
+     *
+     * @param minWorkers Minimum workers to do a superstep
+     * @param maxWorkers Maximum workers to do a superstep
+     *        (max map tasks in job)
+     * @param minPercentResponded 0 - 100 % of the workers required to
+     *        have responded before continuing the superstep
+     */
+    final public void setWorkerConfiguration(int minWorkers,
+                                             int maxWorkers,
+                                             float minPercentResponded) {
+        conf.setInt(MIN_WORKERS, minWorkers);
+        conf.setInt(MAX_WORKERS, maxWorkers);
+        conf.setFloat(MIN_PERCENT_RESPONDED, minPercentResponded);
+    }
+
+    /**
+     * Utilize an existing ZooKeeper service.  If this is not set, ZooKeeper
+     * will be dynamically started by Giraph for this job.
+     *
+     * @param serverList Comma separated list of servers and ports
+     *        (i.e. zk1:2221,zk2:2221)
+     */
+    final public void setZooKeeperConfiguration(String serverList) {
+        conf.set(ZOOKEEPER_LIST, serverList);
+    }
+
+    /**
      * Runs the actual graph application through Hadoop Map-Reduce.
      *
      * @param verbose If true, provide verbose output, false otherwise
@@ -753,6 +882,7 @@ public class GiraphJob extends Job {
      */
     final public boolean run(boolean verbose)
             throws IOException, InterruptedException, ClassNotFoundException {
+        checkConfiguration();
         setNumReduceTasks(0);
         if (getJar() == null) {
             setJarByClass(GiraphJob.class);

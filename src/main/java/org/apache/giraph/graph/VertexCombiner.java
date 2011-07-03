@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -16,38 +16,36 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.comm;
+package org.apache.giraph.graph;
 
-import org.apache.giraph.graph.BspUtils;
-import org.apache.giraph.graph.Vertex;
+import java.io.IOException;
+import java.util.List;
+
+import org.apache.giraph.comm.MsgList;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
- * Wrapper around {@link ArrayListWritable} that allows the vertex
- * class to be set prior to calling the default constructor.
+ * Interface for Vertex combiner (messages)
  *
- * @param <H> Hadoop Vertex type
- */
+ * @param <I extends Writable> index
+ * @param <M extends Writable> message data
+ *
+ **/
 @SuppressWarnings("rawtypes")
-public class VertexList<
-        I extends WritableComparable,
-        V extends Writable,
-        E extends Writable,
-        M extends Writable>
-        extends ArrayListWritable<Vertex<I, V, E, M>> {
-    /** Defining a layout version for a serializable class. */
-    private static final long serialVersionUID = 1000L;
+public interface VertexCombiner<I extends WritableComparable,
+                                V extends Writable,
+                                E extends Writable,
+                                M extends Writable> {
 
-    /**
-     * Default constructor for reflection
-     */
-    public VertexList() {}
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public void setClass() {
-        setClass((Class<Vertex<I, V, E, M>>)
-                 BspUtils.<I, V, E, M>getVertexClass(getConf()));
-    }
+  /**
+   * Combines message values for a particular vertex index.
+   *
+   * @param vertexIndex Index of the vertex getting these messages
+   * @param msgList List of the messages to be combined
+   * @return Message that is combined from {@link MsgList}
+   * @throws IOException
+   */
+   M combine(I vertexIndex,
+             List<M> msgList) throws IOException;
 }

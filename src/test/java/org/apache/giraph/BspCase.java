@@ -1,3 +1,21 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.giraph;
 
 import java.io.IOException;
@@ -7,6 +25,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 
@@ -34,32 +54,32 @@ public class BspCase extends TestCase implements Watcher {
     /**
      * Adjust the configuration to the basic test case
      */
-    public final void setupConfiguration(Configuration conf) {
+    public final void setupConfiguration(GiraphJob job) {
+        Configuration conf = job.getConfiguration();
         conf.set("mapred.jar", getJarLocation());
+
         // Allow this test to be run on a real Hadoop setup
         if (getJobTracker() != null) {
             System.out.println("setup: Sending job to job tracker " +
                        getJobTracker() + " with jar path " + getJarLocation()
                        + " for " + getName());
             conf.set("mapred.job.tracker", getJobTracker());
-            conf.setInt(GiraphJob.MAX_WORKERS, getNumWorkers());
-            conf.setFloat(GiraphJob.MIN_PERCENT_RESPONDED, 100.0f);
-            conf.setInt(GiraphJob.MIN_WORKERS, getNumWorkers());
+            job.setWorkerConfiguration(getNumWorkers(),
+                                       getNumWorkers(),
+                                       100.0f);
         }
         else {
             System.out.println("setup: Using local job runner with " +
                                "location " + getJarLocation() + " for "
                                + getName());
-            conf.setInt(GiraphJob.MAX_WORKERS, 1);
-            conf.setFloat(GiraphJob.MIN_PERCENT_RESPONDED, 100.0f);
-            conf.setInt(GiraphJob.MIN_WORKERS, 1);
+            job.setWorkerConfiguration(1, 1, 100.0f);
             // Single node testing
             conf.setBoolean(GiraphJob.SPLIT_MASTER_WORKER, false);
         }
         conf.setInt(GiraphJob.POLL_ATTEMPTS, 5);
         conf.setInt(GiraphJob.POLL_MSECS, 3*1000);
         if (getZooKeeperList() != null) {
-            conf.set(GiraphJob.ZOOKEEPER_LIST, getZooKeeperList());
+            job.setZooKeeperConfiguration(getZooKeeperList());
         }
         // GeneratedInputSplit will generate 5 vertices
         conf.setLong(GeneratedVertexReader.READER_VERTICES, 5);
@@ -117,9 +137,10 @@ public class BspCase extends TestCase implements Watcher {
      * @return Single part file status
      * @throws IOException
      */
-    public static FileStatus getSinglePartFileStatus(FileSystem fs,
+    public static FileStatus getSinglePartFileStatus(Job job,
                                                      Path partDirPath)
             throws IOException {
+        FileSystem fs = FileSystem.get(job.getConfiguration());
         FileStatus[] statusArray = fs.listStatus(partDirPath);
         FileStatus singlePartFileStatus = null;
         int partFiles = 0;
@@ -187,7 +208,29 @@ public class BspCase extends TestCase implements Watcher {
         }
     }
 
+    @Override
     public void process(WatchedEvent event) {
         // Do nothing
+    }
+
+    /**
+     * Helper method to remove an old output directory if it exists,
+     * and set the output path for any VertexOutputFormat that uses
+     * FileOutputFormat.
+     *
+     * @param job Job to set the output path for
+     * @param outputPathString Path to output as a string
+     * @throws IOException
+     */
+    public static void removeAndSetOutput(GiraphJob job,
+                                          Path outputPath)
+            throws IOException {
+        FileSystem hdfs = FileSystem.get(job.getConfiguration());
+        hdfs.delete(outputPath, true);
+        FileOutputFormat.setOutputPath(job, outputPath);
+    }
+
+    public static String getCallingMethodName() {
+        return Thread.currentThread().getStackTrace()[2].getMethodName();
     }
 }

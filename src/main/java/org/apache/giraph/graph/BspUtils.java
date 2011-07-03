@@ -1,3 +1,21 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.giraph.graph;
 
 import org.apache.hadoop.conf.Configuration;
@@ -20,11 +38,11 @@ public class BspUtils {
     public static <I extends WritableComparable,
                    V extends Writable,
                    E extends Writable>
-        Class<? extends VertexInputFormat<I, V, E>>
+            Class<? extends VertexInputFormat<I, V, E>>
             getVertexInputFormatClass(Configuration conf) {
         return (Class<? extends VertexInputFormat<I, V, E>>)
                 conf.getClass(GiraphJob.VERTEX_INPUT_FORMAT_CLASS,
-                              VertexInputFormat.class,
+                              null,
                               VertexInputFormat.class);
     }
 
@@ -53,7 +71,7 @@ public class BspUtils {
     public static <I extends WritableComparable,
                    V extends Writable,
                    E extends Writable>
-        Class<? extends VertexOutputFormat<I, V, E>>
+            Class<? extends VertexOutputFormat<I, V, E>>
             getVertexOutputFormatClass(Configuration conf) {
         return (Class<? extends VertexOutputFormat<I, V, E>>)
                 conf.getClass(GiraphJob.VERTEX_OUTPUT_FORMAT_CLASS,
@@ -77,6 +95,40 @@ public class BspUtils {
     }
 
     /**
+     * Get the user's subclassed {@link VertexCombiner}.
+     *
+     * @param conf Configuration to check
+     * @return User's vertex combiner class
+     */
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    public static <I extends WritableComparable,
+                   V extends Writable,
+                   E extends Writable,
+                   M extends Writable>
+            Class<? extends VertexCombiner<I, V, E, M>>
+            getVertexCombinerClass(Configuration conf) {
+        return (Class<? extends VertexCombiner<I, V, E, M>>)
+                conf.getClass(GiraphJob.VERTEX_COMBINER_CLASS,
+                              null,
+                              VertexCombiner.class);
+    }
+
+    /**
+     * Create a user vertex combiner class
+     *
+     * @param conf Configuration to check
+     * @return Instantiated user vertex combiner class
+     */
+    @SuppressWarnings("rawtypes")
+    public static <I extends WritableComparable, V extends Writable,
+            E extends Writable, M extends Writable> VertexCombiner<I, V, E, M>
+            createVertexCombiner(Configuration conf) {
+        Class<? extends VertexCombiner<I, V, E, M>> vertexCombinerClass =
+            getVertexCombinerClass(conf);
+        return ReflectionUtils.newInstance(vertexCombinerClass, conf);
+    }
+
+    /**
      * Get the user's subclassed vertex range balancer
      *
      * @param conf Configuration to check
@@ -87,7 +139,7 @@ public class BspUtils {
                    V extends Writable,
                    E extends Writable,
                    M extends Writable>
-        Class<? extends VertexRangeBalancer<I, V, E, M>>
+            Class<? extends VertexRangeBalancer<I, V, E, M>>
             getBasicVertexRangeBalancerClass(Configuration conf) {
         return (Class<? extends VertexRangeBalancer<I, V, E, M>>)
                 conf.getClass(GiraphJob.VERTEX_RANGE_BALANCER_CLASS,
@@ -159,7 +211,7 @@ public class BspUtils {
             getVertexClass(Configuration conf) {
         return (Class<? extends Vertex<I, V, E, M>>)
                 conf.getClass(GiraphJob.VERTEX_CLASS,
-                              Vertex.class,
+                              null,
                               Vertex.class);
     }
 

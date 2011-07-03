@@ -1,21 +1,31 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.giraph;
 
 import java.io.IOException;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 import org.apache.giraph.examples.GeneratedVertexInputFormat;
 import org.apache.giraph.examples.SimpleCheckpointVertex;
 import org.apache.giraph.examples.SimpleTextVertexOutputFormat;
 import org.apache.giraph.graph.GiraphJob;
-import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.graph.VertexInputFormat;
-import org.apache.giraph.graph.VertexOutputFormat;
-
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
 import junit.framework.Test;
 import junit.framework.TestSuite;
 
@@ -50,31 +60,23 @@ public class TestManualCheckpoint extends BspCase {
      * @throws InterruptedException
      */
     public void testBspCheckpoint()
-        throws IOException, InterruptedException, ClassNotFoundException {
-        Configuration conf = new Configuration();
-        setupConfiguration(conf);
-        FileSystem hdfs = FileSystem.get(conf);
-        conf.setClass(GiraphJob.VERTEX_CLASS,
-                      SimpleCheckpointVertex.class,
-                      Vertex.class);
-        conf.setClass(GiraphJob.VERTEX_INPUT_FORMAT_CLASS,
-                      GeneratedVertexInputFormat.class,
-                      VertexInputFormat.class);
-        conf.setClass(GiraphJob.VERTEX_OUTPUT_FORMAT_CLASS,
-                      SimpleTextVertexOutputFormat.class,
-                      VertexOutputFormat.class);
-        conf.set(GiraphJob.CHECKPOINT_DIRECTORY,
-                 HDFS_CHECKPOINT_DIR);
-        conf.setBoolean(GiraphJob.CLEANUP_CHECKPOINTS_AFTER_SUCCESS, false);
-        GiraphJob bspJob = new GiraphJob(conf, "testBspCheckpoint");
-        Path outputPath = new Path("/tmp/testBspCheckpointOutput");
-        hdfs.delete(outputPath, true);
-        FileOutputFormat.setOutputPath(bspJob, outputPath);
-        assertTrue(bspJob.run(true));
+            throws IOException, InterruptedException, ClassNotFoundException {
+        GiraphJob job = new GiraphJob(getCallingMethodName());
+        setupConfiguration(job);
+        job.getConfiguration().set(GiraphJob.CHECKPOINT_DIRECTORY,
+                                   HDFS_CHECKPOINT_DIR);
+        job.getConfiguration().setBoolean(
+            GiraphJob.CLEANUP_CHECKPOINTS_AFTER_SUCCESS, false);
+        job.setVertexClass(SimpleCheckpointVertex.class);
+        job.setVertexInputFormatClass(GeneratedVertexInputFormat.class);
+        job.setVertexOutputFormatClass(SimpleTextVertexOutputFormat.class);
+        Path outputPath = new Path("/tmp/" + getCallingMethodName());
+        removeAndSetOutput(job, outputPath);
+        assertTrue(job.run(true));
         long fileLen = 0;
         long idSum = 0;
         if (getJobTracker() == null) {
-            FileStatus fileStatus = getSinglePartFileStatus(hdfs, outputPath);
+            FileStatus fileStatus = getSinglePartFileStatus(job, outputPath);
             fileLen = fileStatus.getLen();
             idSum = SimpleCheckpointVertex.finalSum;
             System.out.println("testBspCheckpoint: idSum = " + idSum +
@@ -82,17 +84,24 @@ public class TestManualCheckpoint extends BspCase {
         }
 
         // Restart the test from superstep 3
-        conf.setLong(GiraphJob.RESTART_SUPERSTEP, 3);
         System.out.println(
             "testBspCheckpoint: Restarting from superstep 3" +
             " with checkpoint path = " + HDFS_CHECKPOINT_DIR);
-        GiraphJob bspRestartedJob = new GiraphJob(conf, "testBspCheckpointRestarted");
-        outputPath = new Path("/tmp/testBspCheckpointRestartedOutput");
-        hdfs.delete(outputPath, true);
-        FileOutputFormat.setOutputPath(bspRestartedJob, outputPath);
-        assertTrue(bspRestartedJob.run(true));
+        GiraphJob restartedJob = new GiraphJob(getCallingMethodName() +
+                                               "Restarted");
+        setupConfiguration(restartedJob);
+        restartedJob.getConfiguration().set(GiraphJob.CHECKPOINT_DIRECTORY,
+                                            HDFS_CHECKPOINT_DIR);
+        restartedJob.getConfiguration().setLong(GiraphJob.RESTART_SUPERSTEP, 3);
+        restartedJob.setVertexClass(SimpleCheckpointVertex.class);
+        restartedJob.setVertexInputFormatClass(GeneratedVertexInputFormat.class);
+        restartedJob.setVertexOutputFormatClass(
+            SimpleTextVertexOutputFormat.class);
+        outputPath = new Path("/tmp/" + getCallingMethodName() + "Restarted");
+        removeAndSetOutput(restartedJob, outputPath);
+        assertTrue(restartedJob.run(true));
         if (getJobTracker() == null) {
-            FileStatus fileStatus = getSinglePartFileStatus(hdfs, outputPath);
+            FileStatus fileStatus = getSinglePartFileStatus(job, outputPath);
             fileLen = fileStatus.getLen();
             assertTrue(fileStatus.getLen() == fileLen);
             long idSumRestarted = SimpleCheckpointVertex.finalSum;
