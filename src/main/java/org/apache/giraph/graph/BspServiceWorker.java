@@ -35,7 +35,6 @@ import org.apache.hadoop.io.WritableComparable;
 
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.mapreduce.TaskInputOutputContext;
 import org.apache.hadoop.util.ReflectionUtils;
 
 import org.apache.zookeeper.KeeperException;
@@ -300,23 +299,11 @@ public class BspServiceWorker<
                     getConfiguration());
             ((Writable) inputSplit).readFields(inputStream);
 
-            @SuppressWarnings("unchecked")
-            Class<? extends VertexInputFormat<I, V, E>> vertexInputFormatClass =
-                (Class<? extends VertexInputFormat<I, V, E>>)
-                    getConfiguration().getClass(
-                        GiraphJob.VERTEX_INPUT_FORMAT_CLASS,
-                        VertexInputFormat.class);
-            VertexInputFormat<I, V, E> vertexInputFormat = null;
-            VertexReader<I, V, E> vertexReader = null;
-            try {
-                vertexInputFormat = vertexInputFormatClass.newInstance();
-                vertexReader =
-                    vertexInputFormat.createVertexReader(inputSplit, getContext());
-                vertexReader.initialize(inputSplit, getContext());
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-
+            VertexInputFormat<I, V, E> vertexInputFormat =
+                BspUtils.<I, V, E>createVertexInputFormat(getConfiguration());
+            VertexReader<I, V, E> vertexReader =
+                vertexInputFormat.createVertexReader(inputSplit, getContext());
+            vertexReader.initialize(inputSplit, getContext());
             vertexList.clear();
             try {
                 Vertex<I, V, E, M> vertex =
@@ -336,8 +323,10 @@ public class BspServiceWorker<
                 throw new RuntimeException(e);
             }
             if (vertexList.isEmpty()) {
-                LOG.info("loadVertices: No vertices in input split " +
-                         inputSplit);
+                if (LOG.isInfoEnabled()) {
+                    LOG.info("loadVertices: No vertices in input split " +
+                             inputSplit);
+                }
                 // TODO: Need to add checkpoints
                 setInputSplitVertexRanges(inputSplitPath, null);
                 continue;
@@ -828,44 +817,34 @@ public class BspServiceWorker<
     }
 
     /**
-     * Save the vertices using the user-defined OutputFormat from our
+     * Save the vertices using the user-defined VertexOutputFormat from our
      * vertexArray based on the split.
      */
-    public void saveVertices() {
-        if (getConfiguration().get(GiraphJob.VERTEX_WRITER_CLASS) == null) {
-            LOG.warn("saveVertices: VERTEX_WRITER_CLASS not specified" +
-            " -- there will be no saved output");
+    private void saveVertices() throws IOException {
+        if (getConfiguration().get(GiraphJob.VERTEX_OUTPUT_FORMAT_CLASS)
+                == null) {
+            LOG.warn("saveVertices: " + GiraphJob.VERTEX_OUTPUT_FORMAT_CLASS +
+                     " not specified -- there will be no saved output");
             return;
         }
 
-        @SuppressWarnings("unchecked")
-        Class<VertexWriter<I, V, E>> vertexWriterClass =
-            (Class<VertexWriter<I, V, E>>) getConfiguration().getClass(
-                GiraphJob.VERTEX_WRITER_CLASS,
-                VertexWriter.class);
-        VertexWriter<I, V, E> vertexWriter = null;
-        try {
-            vertexWriter = vertexWriterClass.newInstance();
-            for (Map.Entry<I, VertexRange<I, V, E, M>> entry :
-                    getVertexRangeMap().entrySet()) {
-                for (BasicVertex<I, V, E, M> vertex :
-                        entry.getValue().getVertexMap().values()) {
-                    vertexWriter.write(
-                        (TaskInputOutputContext<?, ?, ?, ?>) getContext(),
-                        vertex.getVertexId(),
-                        vertex.getVertexValue(),
-                        vertex.getOutEdgeMap());
-                }
+        VertexOutputFormat<I, V, E> vertexOutputFormat =
+            BspUtils.<I, V, E>createVertexOutputFormat(getConfiguration());
+        VertexWriter<I, V, E> vertexWriter =
+            vertexOutputFormat.createVertexWriter(getContext());
+        vertexWriter.initialize(getContext());
+        for (Map.Entry<I, VertexRange<I, V, E, M>> entry :
+            getVertexRangeMap().entrySet()) {
+            for (BasicVertex<I, V, E, M> vertex :
+                entry.getValue().getVertexMap().values()) {
+                vertexWriter.writeVertex(vertex);
             }
-            vertexWriter.close(getContext());
-        } catch (Exception e) {
-            throw new RuntimeException(e);
         }
-
+        vertexWriter.close(getContext());
     }
 
     @Override
-    public void cleanup() {
+    public void cleanup() throws IOException {
         setCachedSuperstep(getSuperstep() - 1);
         saveVertices();
          // All worker processes should denote they are done by adding special
@@ -881,14 +860,23 @@ public class BspServiceWorker<
                                      Ids.OPEN_ACL_UNSAFE,
                                      CreateMode.PERSISTENT,
                                      true);
-             LOG.info("cleanup: Notifying master its okay to cleanup with " +
+            if (LOG.isInfoEnabled()) {
+                LOG.info("cleanup: Notifying master its okay to cleanup with " +
                      finalFinishedPath);
+            }
         } catch (KeeperException.NodeExistsException e) {
-            LOG.info("cleanup: Couldn't create finished node '" +
-                     cleanedUpPath);
-        } catch (Exception e) {
-            // cleanup phase -- just log the error
-            LOG.error(e.getMessage());
+            if (LOG.isInfoEnabled()) {
+                LOG.info("cleanup: Couldn't create finished node '" +
+                         cleanedUpPath);
+            }
+        } catch (KeeperException e) {
+            // Cleaning up, it's okay to fail after cleanup is successful
+            LOG.error("cleanup: Got KeeperException on notifcation " +
+                      "to master about cleanup", e);
+        } catch (InterruptedException e) {
+            // Cleaning up, it's okay to fail after cleanup is successful
+            LOG.error("cleanup: Got InterruptedException on notifcation " +
+                      "to master about cleanup", e);
         }
         try {
             getZkExt().close();
@@ -983,12 +971,13 @@ public class BspServiceWorker<
                     new DataOutputStream(vertexByteStream);
                 ((MutableVertex<I, V, E, M>) vertex).write(vertexOutput);
                 verticesOutputStream.write(vertexByteStream.toByteArray());
-
-                LOG.debug("storeCheckpoint: Wrote vertex id = " +
-                          vertex.getVertexId() + " with " +
-                          vertex.getOutEdgeMap().size() + " edges and " +
-                          vertex.getMsgList().size() + " messages (" +
-                          vertexByteStream.size() + " total bytes)");
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("storeCheckpoint: Wrote vertex id = " +
+                              vertex.getVertexId() + " with " +
+                              vertex.getOutEdgeMap().size() + " edges and " +
+                              vertex.getMsgList().size() + " messages (" +
+                              vertexByteStream.size() + " total bytes)");
+                }
             }
             // Write the metadata for this vertex range
             // Format:
@@ -1019,9 +1008,11 @@ public class BspServiceWorker<
         metadataOutputStream.write(metadataByteStream.toByteArray());
         metadataOutputStream.close();
         verticesOutputStream.close();
-        LOG.info("storeCheckpoint: Finished metadata (" +
-                 metadataFilePath + ") and vertices (" + verticesFilePath
-                 + ").");
+        if (LOG.isInfoEnabled()) {
+            LOG.info("storeCheckpoint: Finished metadata (" +
+                     metadataFilePath + ") and vertices (" + verticesFilePath
+                     + ").");
+        }
 
         getFs().createNewFile(validFilePath);
     }

@@ -44,6 +44,39 @@ public class BspUtils {
     }
 
     /**
+     * Get the user's subclassed {@link VertexOutputFormat}.
+     *
+     * @param conf Configuration to check
+     * @return User's vertex output format class
+     */
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    public static <I extends WritableComparable,
+                   V extends Writable,
+                   E extends Writable>
+        Class<? extends VertexOutputFormat<I, V, E>>
+            getVertexOutputFormatClass(Configuration conf) {
+        return (Class<? extends VertexOutputFormat<I, V, E>>)
+                conf.getClass(GiraphJob.VERTEX_OUTPUT_FORMAT_CLASS,
+                              null,
+                              VertexOutputFormat.class);
+    }
+
+    /**
+     * Create a user vertex output format class
+     *
+     * @param conf Configuration to check
+     * @return Instantiated user vertex output format class
+     */
+    @SuppressWarnings("rawtypes")
+    public static <I extends WritableComparable, V extends Writable,
+            E extends Writable> VertexOutputFormat<I, V, E>
+            createVertexOutputFormat(Configuration conf) {
+        Class<? extends VertexOutputFormat<I, V, E>> vertexOutputFormatClass =
+            getVertexOutputFormatClass(conf);
+        return ReflectionUtils.newInstance(vertexOutputFormatClass, conf);
+    }
+
+    /**
      * Get the user's subclassed vertex range balancer
      *
      * @param conf Configuration to check
@@ -144,7 +177,7 @@ public class BspUtils {
             getVertexClass(conf);
         return ReflectionUtils.newInstance(vertexClass, conf);
     }
-    
+
     /**
      * Get the user's subclassed vertex index class.
      *

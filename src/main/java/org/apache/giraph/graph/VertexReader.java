@@ -19,7 +19,6 @@ public interface VertexReader<
      * @param inputSplit
      * @param context
      * @throws IOException
-     * @throws InterruptedException
      */
     void initialize(InputSplit inputSplit, TaskAttemptContext context)
         throws IOException;

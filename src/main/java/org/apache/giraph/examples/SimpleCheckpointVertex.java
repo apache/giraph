@@ -20,6 +20,7 @@ import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexInputFormat;
+import org.apache.giraph.graph.VertexOutputFormat;
 
 /**
  * An example that simply uses its id, value, and edges to compute new data
@@ -170,6 +171,9 @@ public class SimpleCheckpointVertex extends
         getConf().setClass(GiraphJob.VERTEX_INPUT_FORMAT_CLASS,
                            GeneratedVertexInputFormat.class,
                            VertexInputFormat.class);
+        getConf().setClass(GiraphJob.VERTEX_OUTPUT_FORMAT_CLASS,
+                           SimpleTextVertexOutputFormat.class,
+                           VertexOutputFormat.class);
         getConf().setInt(GiraphJob.MIN_WORKERS,
                          Integer.parseInt(cmd.getOptionValue('w')));
         getConf().setInt(GiraphJob.MAX_WORKERS,

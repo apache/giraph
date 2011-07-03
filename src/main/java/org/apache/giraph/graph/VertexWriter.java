@@ -1,38 +1,39 @@
 package org.apache.giraph.graph;
 
 import java.io.IOException;
-import java.util.SortedMap;
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.apache.hadoop.mapreduce.TaskInputOutputContext;
 
 /**
- * Implement to output the graph after the computation
+ * Implement to output a vertex range of the graph after the computation
  *
- * @param <I>
- * @param <V>
- * @param <E>
+ * @param <I> Vertex id
+ * @param <V> Vertex value
+ * @param <E> Edge value
  */
 @SuppressWarnings("rawtypes")
 public interface VertexWriter<
         I extends WritableComparable,
         V extends Writable,
         E extends Writable> {
+    /**
+     * Use the context to setup writing the vertices.
+     * Guaranteed to be called prior to any other function.
+     *
+     * @param context
+     * @throws IOException
+     */
+    void initialize(TaskAttemptContext context) throws IOException;
 
     /**
-     * Writes the argument vertex and associated data
+     * Writes the next vertex and associated data
      *
-     * @param context output context
-     * @param vertexId vertex id that is written out
-     * @param vertexValue vertex value that is written out
-     * @param destEdgeIt iterator over vertex edges written out
+     * @param vertex set the properties of this vertex
+     * @throws IOException
      */
-    <KEYOUT,VALUEOUT> void write(
-        TaskInputOutputContext<?, ?, KEYOUT, VALUEOUT> context,
-            I vertexId, V vertexValue, SortedMap<I, Edge<I, E>> outEdgeMap)
-        throws IOException, InterruptedException;
+    void writeVertex(BasicVertex<I, V, E, ?> vertex) throws IOException;
 
     /**
      * Close this {@link VertexWriter} to future operations.
@@ -41,5 +42,5 @@ public interface VertexWriter<
      * @throws IOException
      */
     void close(TaskAttemptContext context)
-        throws IOException, InterruptedException;
+        throws IOException;
 }

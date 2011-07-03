@@ -23,12 +23,12 @@ import org.apache.giraph.examples.SimpleMsgVertex;
 import org.apache.giraph.examples.SimplePageRankVertex;
 import org.apache.giraph.examples.SimpleSumCombiner;
 import org.apache.giraph.examples.SimpleSuperstepVertex;
-import org.apache.giraph.examples.SimpleVertexWriter;
+import org.apache.giraph.examples.SimpleTextVertexOutputFormat;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.Combiner;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexInputFormat;
-import org.apache.giraph.graph.VertexWriter;
+import org.apache.giraph.graph.VertexOutputFormat;
 
 import junit.framework.Test;
 import junit.framework.TestSuite;
@@ -67,8 +67,8 @@ public class TestBspBasic extends BspCase {
      * @throws SecurityException
      */
     public void testInstantiateVertex()
-        throws InstantiationException, IllegalAccessException,
-        IOException, InterruptedException, IllegalArgumentException,
+            throws InstantiationException, IllegalAccessException,
+            IOException, InterruptedException, IllegalArgumentException,
         InvocationTargetException, SecurityException, NoSuchMethodException {
         System.out.println("testInstantiateVertex: java.class.path=" +
                            System.getProperty("java.class.path"));
@@ -131,7 +131,7 @@ public class TestBspBasic extends BspCase {
      * @throws InterruptedException
      */
     public void testBspSuperStep()
-        throws IOException, InterruptedException, ClassNotFoundException {
+            throws IOException, InterruptedException, ClassNotFoundException {
         Configuration conf = new Configuration();
         setupConfiguration(conf);
         conf.setFloat(GiraphJob.TOTAL_INPUT_SPLIT_MULTIPLIER, 2.0f);
@@ -144,9 +144,9 @@ public class TestBspBasic extends BspCase {
         conf.setClass(GiraphJob.VERTEX_INPUT_FORMAT_CLASS,
                       GeneratedVertexInputFormat.class,
                       VertexInputFormat.class);
-        conf.setClass(GiraphJob.VERTEX_WRITER_CLASS,
-                      SimpleVertexWriter.class,
-                      VertexWriter.class);
+        conf.setClass(GiraphJob.VERTEX_OUTPUT_FORMAT_CLASS,
+                      SimpleTextVertexOutputFormat.class,
+                      VertexOutputFormat.class);
         GiraphJob bspJob = new GiraphJob(conf, "testBspSuperStep");
         Path outputPath = new Path("/tmp/testBspSuperStepOutput");
         hdfs.delete(outputPath, true);
@@ -165,11 +165,9 @@ public class TestBspBasic extends BspCase {
      * @throws InterruptedException
      */
     public void testBspMsg()
-        throws IOException, InterruptedException, ClassNotFoundException {
+            throws IOException, InterruptedException, ClassNotFoundException {
         Configuration conf = new Configuration();
-        conf.set("mapred.jar", getJarLocation());
         setupConfiguration(conf);
-        FileSystem hdfs = FileSystem.get(conf);
         conf.setClass(GiraphJob.VERTEX_CLASS,
                       SimpleMsgVertex.class,
                       Vertex.class);
@@ -177,9 +175,6 @@ public class TestBspBasic extends BspCase {
                       GeneratedVertexInputFormat.class,
                       VertexInputFormat.class);
         GiraphJob bspJob = new GiraphJob(conf, "testBspMsg");
-        Path outputPath = new Path("/tmp/testBspMsgOutput");
-        hdfs.delete(outputPath, true);
-        FileOutputFormat.setOutputPath(bspJob, outputPath);
         assertTrue(bspJob.run(true));
     }
 
@@ -192,10 +187,9 @@ public class TestBspBasic extends BspCase {
      * @throws InterruptedException
      */
     public void testEmptyVertexInputFormat()
-        throws IOException, InterruptedException, ClassNotFoundException {
+            throws IOException, InterruptedException, ClassNotFoundException {
         Configuration conf = new Configuration();
         setupConfiguration(conf);
-        FileSystem hdfs = FileSystem.get(conf);
         conf.setClass(GiraphJob.VERTEX_CLASS,
                       SimpleMsgVertex.class,
                       Vertex.class);
@@ -204,9 +198,6 @@ public class TestBspBasic extends BspCase {
                       VertexInputFormat.class);
         conf.setLong(GeneratedVertexReader.READER_VERTICES, 0);
         GiraphJob bspJob = new GiraphJob(conf, "testEmptyVertexInputFormat");
-        Path outputPath = new Path("/tmp/testEmptyVertexInputFormat");
-        hdfs.delete(outputPath, true);
-        FileOutputFormat.setOutputPath(bspJob, outputPath);
         assertTrue(bspJob.run(true));
     }
 
@@ -217,10 +208,9 @@ public class TestBspBasic extends BspCase {
      * @throws InterruptedException
      */
     public void testBspCombiner()
-        throws IOException, InterruptedException, ClassNotFoundException {
+            throws IOException, InterruptedException, ClassNotFoundException {
         Configuration conf = new Configuration();
         setupConfiguration(conf);
-        FileSystem hdfs = FileSystem.get(conf);
         conf.setClass(GiraphJob.VERTEX_CLASS,
                       SimpleCombinerVertex.class,
                       Vertex.class);
@@ -231,9 +221,6 @@ public class TestBspBasic extends BspCase {
                       SimpleSumCombiner.class,
                       Combiner.class);
         GiraphJob bspJob = new GiraphJob(conf, "testBspCombiner");
-        Path outputPath = new Path("/tmp/testBspCombinerOutput");
-        hdfs.delete(outputPath, true);
-        FileOutputFormat.setOutputPath(bspJob, outputPath);
         assertTrue(bspJob.run(true));
     }
 
@@ -244,10 +231,9 @@ public class TestBspBasic extends BspCase {
      * @throws InterruptedException
      */
     public void testBspPageRank()
-        throws IOException, InterruptedException, ClassNotFoundException {
+            throws IOException, InterruptedException, ClassNotFoundException {
         Configuration conf = new Configuration();
         setupConfiguration(conf);
-        FileSystem hdfs = FileSystem.get(conf);
         conf.setClass(GiraphJob.VERTEX_CLASS,
                       SimplePageRankVertex.class,
                       Vertex.class);
@@ -255,9 +241,6 @@ public class TestBspBasic extends BspCase {
                       GeneratedVertexInputFormat.class,
                       VertexInputFormat.class);
         GiraphJob bspJob = new GiraphJob(conf, "testBspPageRank");
-        Path outputPath = new Path("/tmp/testBspPageRankOutput");
-        hdfs.delete(outputPath, true);
-        FileOutputFormat.setOutputPath(bspJob, outputPath);
         assertTrue(bspJob.run(true));
         if (getJobTracker() == null) {
             double maxPageRank = SimplePageRankVertex.finalMax;

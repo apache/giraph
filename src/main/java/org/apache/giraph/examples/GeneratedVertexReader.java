@@ -18,9 +18,9 @@ import org.apache.giraph.graph.VertexReader;
 /**
  * Used by TestVertexInputFormat to read some generated data
  *
- * @param <I>
- * @param <V>
- * @param <E>
+ * @param <I> Vertex index value
+ * @param <V> Vertex value
+ * @param <E> Edge value
  */
 public class GeneratedVertexReader implements
         VertexReader<LongWritable, IntWritable, FloatWritable> {
@@ -38,6 +38,7 @@ public class GeneratedVertexReader implements
         "TestVertexReader.reader_vertices";
     public static final long DEFAULT_READER_VERTICES = 10;
 
+    @Override
     public void initialize(
         InputSplit inputSplit, TaskAttemptContext context)
         throws IOException {
@@ -48,6 +49,7 @@ public class GeneratedVertexReader implements
             this.inputSplit = (BspInputSplit) inputSplit;
     }
 
+    @Override
     public boolean next(
             MutableVertex<LongWritable, IntWritable, FloatWritable, ?> vertex)
             throws IOException {
@@ -74,25 +76,31 @@ public class GeneratedVertexReader implements
         return true;
     }
 
+    @Override
     public long getPos() throws IOException {
         return recordsRead;
     }
 
+    @Override
     public void close() throws IOException {
     }
 
+    @Override
     public float getProgress() throws IOException {
         return recordsRead * 100.0f / totalRecords;
     }
 
+    @Override
     public LongWritable createVertexId() {
         return new LongWritable(-1);
     }
 
+    @Override
     public IntWritable createVertexValue() {
         return new IntWritable(-1);
     }
 
+    @Override
     public FloatWritable createEdgeValue() {
         return new FloatWritable(0.0f);
     }

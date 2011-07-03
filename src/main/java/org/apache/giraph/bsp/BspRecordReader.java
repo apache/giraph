@@ -1,4 +1,4 @@
-package org.apache.giraph.graph;
+package org.apache.giraph.bsp;
 
 import java.io.IOException;
 
@@ -10,7 +10,7 @@ import org.apache.hadoop.io.Text;
 /**
  * Only returns a single key-value pair so that the map() can run.
  */
-public class BspRecordReader extends RecordReader<Text, Text> {
+class BspRecordReader extends RecordReader<Text, Text> {
     /** Has the one record been seen? */
     private boolean seenRecord = false;
 

@@ -24,7 +24,7 @@ public class SimpleCombinerVertex extends
             voteToHalt();
         }
         else {
-            /* Check the messages */
+            // Check the messages
             int sum = 0;
             int num = 0;
             while (msgIterator != null && msgIterator.hasNext()) {
@@ -39,9 +39,9 @@ public class SimpleCombinerVertex extends
             }
         }
         if (getSuperstep() > 3) {
-            System.err.println("TestCombinerVertex: Vertex 1 failed to receive " +
-                               "messages in time");
-            voteToHalt();
+            throw new IllegalStateException(
+                "TestCombinerVertex: Vertex 1 failed to receive " +
+                "messages in time");
         }
     }
 

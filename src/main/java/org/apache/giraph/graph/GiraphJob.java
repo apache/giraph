@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.TreeMap;
 
 import org.apache.giraph.bsp.BspInputFormat;
+import org.apache.giraph.bsp.BspOutputFormat;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.RPCCommunications;
 import org.apache.giraph.comm.ServerInterface;
@@ -28,16 +29,16 @@ import org.apache.log4j.Logger;
 public class GiraphJob extends Job {
     /** Vertex class - required */
     public static final String VERTEX_CLASS = "giraph.vertexClass";
-    /** InputFormat class - required */
+    /** VertexInputFormat class - required */
     public static final String VERTEX_INPUT_FORMAT_CLASS =
         "giraph.vertexInputFormatClass";
 
     /** Combiner class - optional */
     public static final String COMBINER_CLASS =
         "giraph.combinerClass";
-    /** Vertex writer class - optional */
-    public static final String VERTEX_WRITER_CLASS =
-        "giraph.vertexWriterClass";
+    /** VertexOutputFormat class - optional */
+    public static final String VERTEX_OUTPUT_FORMAT_CLASS =
+        "giraph.vertexOutputFormatClass";
     /** Vertex range balancer class - optional */
     public static final String VERTEX_RANGE_BALANCER_CLASS =
         "giraph.vertexRangeBalancerClass";
@@ -707,8 +708,10 @@ public class GiraphJob extends Job {
 
         @Override
         public void cleanup(Context context)
-            throws IOException, InterruptedException {
-            LOG.info("cleanup: Client done.");
+                throws IOException, InterruptedException {
+            if (LOG.isInfoEnabled()) {
+                LOG.info("cleanup: Client done.");
+            }
             if (done) {
                 return;
             }
@@ -741,7 +744,7 @@ public class GiraphJob extends Job {
     }
 
     /**
-     * Runs the actual BSPJob through Hadoop.
+     * Runs the actual graph application through Hadoop Map-Reduce.
      *
      * @param verbose If true, provide verbose output, false otherwise
      * @throws ClassNotFoundException
@@ -756,6 +759,7 @@ public class GiraphJob extends Job {
         }
         setMapperClass(BspMapper.class);
         setInputFormatClass(BspInputFormat.class);
+        setOutputFormatClass(BspOutputFormat.class);
         return waitForCompletion(verbose);
     }
 }

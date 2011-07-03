@@ -10,14 +10,14 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 
 import org.apache.giraph.examples.GeneratedVertexInputFormat;
 import org.apache.giraph.examples.SimpleCheckpointVertex;
-import org.apache.giraph.examples.SimpleVertexWriter;
+import org.apache.giraph.examples.SimpleTextVertexOutputFormat;
 import org.apache.giraph.examples.SuperstepBalancer;
 import org.apache.giraph.graph.AutoBalancer;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexInputFormat;
 import org.apache.giraph.graph.BasicVertexRangeBalancer;
-import org.apache.giraph.graph.VertexWriter;
+import org.apache.giraph.graph.VertexOutputFormat;
 
 import junit.framework.Test;
 import junit.framework.TestSuite;
@@ -61,9 +61,9 @@ public class TestVertexRangeBalancer extends BspCase {
         conf.setClass(GiraphJob.VERTEX_INPUT_FORMAT_CLASS,
                       GeneratedVertexInputFormat.class,
                       VertexInputFormat.class);
-        conf.setClass(GiraphJob.VERTEX_WRITER_CLASS,
-                      SimpleVertexWriter.class,
-                      VertexWriter.class);
+        conf.setClass(GiraphJob.VERTEX_OUTPUT_FORMAT_CLASS,
+                      SimpleTextVertexOutputFormat.class,
+                      VertexOutputFormat.class);
         GiraphJob bspJob = new GiraphJob(conf, "testStaticBalancer");
         Path outputPath = new Path("/tmp/testStaticBalancer");
         hdfs.delete(outputPath, true);
