@@ -1,8 +1,8 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
+ * Licensed to Yahoo! under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
+ * regarding copyright ownership.  Yahoo! licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
@@ -49,11 +49,11 @@ public class SimpleCheckpointVertex extends
         Vertex<LongWritable, IntWritable, FloatWritable, FloatWritable>
         implements Tool {
     /** Configuration */
-    private static Configuration conf;
+    private Configuration conf;
     /** User can access this after the application finishes if local */
     public static long finalSum;
     /** Number of supersteps to run (6 by default) */
-    public static int supersteps = 6;
+    private static int supersteps = 6;
     /** Filename to indicate whether a fault was found */
     public final String faultFile = "/tmp/faultFile";
     /** Which superstep to cause the worker to fail */
@@ -61,7 +61,7 @@ public class SimpleCheckpointVertex extends
     /** Vertex id to fault on */
     public final long faultingVertexId = 1;
     /** Enable the fault at the particular vertex id and superstep? */
-    public static boolean enableFault = false;
+    private static boolean enableFault = false;
 
     /** Dynamically set number of supersteps */
     public static final String SUPERSTEP_COUNT =
@@ -168,21 +168,21 @@ public class SimpleCheckpointVertex extends
         HelpFormatter formatter = new HelpFormatter();
         if (args.length == 0) {
             formatter.printHelp(getClass().getName(), options, true);
-            System.exit(0);
+            return 0;
         }
         CommandLineParser parser = new PosixParser();
         CommandLine cmd = parser.parse(options, args);
         if (cmd.hasOption('h')) {
             formatter.printHelp(getClass().getName(), options, true);
-            System.exit(0);
+            return 0;
         }
         if (!cmd.hasOption('w')) {
             System.out.println("Need to choose the number of workers (-w)");
-            System.exit(-1);
+            return -1;
         }
         if (!cmd.hasOption('o')) {
             System.out.println("Need to set the output directory (-o)");
-            System.exit(-1);
+            return -1;
         }
 
         getConf().setClass(GiraphJob.VERTEX_CLASS, getClass(), Vertex.class);
@@ -225,6 +225,6 @@ public class SimpleCheckpointVertex extends
 
     @Override
     public void setConf(Configuration conf) {
-        SimpleCheckpointVertex.conf = conf;
+        this.conf = conf;
     }
 }

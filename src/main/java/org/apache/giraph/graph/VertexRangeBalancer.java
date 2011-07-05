@@ -1,8 +1,8 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
+ * Licensed to Yahoo! under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
+ * regarding copyright ownership.  Yahoo! licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
@@ -170,8 +170,7 @@ public abstract class VertexRangeBalancer<
                 hostnamePort += vertexRange.getHostname();
                 hostnamePort += Integer.toString(vertexRange.getPort());
                 hostnamePortSet.add(hostnamePort);
-                String prevHostnamePort = new String();
-                prevHostnamePort += vertexRange.getPreviousHostname();
+                String prevHostnamePort = vertexRange.getPreviousHostname();
                 prevHostnamePort +=
                     Integer.toString(vertexRange.getPreviousPort());
                 hostnamePortSet.add(prevHostnamePort);

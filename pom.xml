@@ -1,14 +1,14 @@
 <!--
-  Licensed to the Apache Software Foundation (ASF) under one
+  Licensed to Yahoo! under one
   or more contributor license agreements.  See the NOTICE file
   distributed with this work for additional information
-  regarding copyright ownership.  The ASF licenses this file
+  regarding copyright ownership.  Yahoo! licenses this file
   to you under the Apache License, Version 2.0 (the
   "License"); you may not use this file except in compliance
   with the License.  You may obtain a copy of the License at
-
+  
        http://www.apache.org/licenses/LICENSE-2.0
-
+  
   Unless required by applicable law or agreed to in writing, software
   distributed under the License is distributed on an "AS IS" BASIS,
   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -63,7 +63,7 @@
           <systemProperties>
             <property>
               <name>prop.jarLocation</name>
-              <value>target/giraph-${version}-jar-with-dependencies.jar</value>
+              <value>target/giraph-${project.version}-jar-with-dependencies.jar</value>
             </property>
           </systemProperties>
         </configuration>
@@ -85,9 +85,8 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>findbugs-maven-plugin</artifactId>
-        <version>2.1</version>
+        <version>2.3.2</version>
       </plugin>
-
       <plugin>
         <groupId>com.atlassian.maven.plugins</groupId>
         <artifactId>maven-clover2-plugin</artifactId>
@@ -175,14 +174,17 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-project-info-reports-plugin</artifactId>
+        <version>2.4</version>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-report-plugin</artifactId>
+        <version>2.9</version>
       </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>findbugs-maven-plugin</artifactId>
+        <version>2.3.2</version>
         <configuration>
           <xmlOutput>true</xmlOutput>
           <findbugsXmlOutput>true</findbugsXmlOutput>
@@ -193,6 +195,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jxr-plugin</artifactId>
+        <version>2.2</version>
         <configuration>
           <destDir>${project.reporting.outputDirectory}/xref</destDir>
           <linkJavadoc>true</linkJavadoc>
@@ -202,6 +205,7 @@
      <plugin>
        <groupId>org.apache.maven.plugins</groupId>
        <artifactId>maven-checkstyle-plugin</artifactId>
+       <version>2.6</version>
        <configuration>
          <suppressionsLocation>${checkstyle.suppressions}</suppressionsLocation>
          <suppressionsFileExpression>${checkstyle.suppressions}</suppressionsFileExpression>

@@ -1,8 +1,8 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
+ * Licensed to Yahoo! under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
+ * regarding copyright ownership.  Yahoo! licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
@@ -59,7 +59,7 @@ public class VertexRange<I extends WritableComparable,
     /** Max vertex index */
     private I maxVertexIndex = null;
     /** Hostname and partition id */
-    private String hostnameId = new String();
+    private String hostnameId;
     /** Checkpoint file prefix (null if not recovering from a checkpoint) */
     private String checkpointfilePrefix = null;
     /** Vertex map for this range (keyed by index) */
@@ -70,14 +70,12 @@ public class VertexRange<I extends WritableComparable,
 
     @Override
     public String toString() {
-        String retString = new String();
-        retString += "[hostname=" + getHostname() + ",port=" + getPort() +
+        return "[hostname=" + getHostname() + ",port=" + getPort() +
             ",prevHostname=" + getPreviousHostname() + ",prevPort=" +
             getPreviousPort() + ",prevHostnameId=" + getPreviousHostnameId() +
             ",vertexCount" + getVertexCount() + ",edgeCount=" + getEdgeCount() +
             ",checkpointFile=" + getCheckpointFilePrefix() + ",hostnameId" +
             getHostnameId() + "]";
-        return retString;
     }
 
     public VertexRange(String hostname,
@@ -182,8 +180,7 @@ public class VertexRange<I extends WritableComparable,
             new DataInputStream(
                 new ByteArrayInputStream(byteOutputStream.toByteArray())));;
         if (vertexRange.getCheckpointFilePrefix() != null) {
-            checkpointfilePrefix =
-                new String(vertexRange.getCheckpointFilePrefix());
+            checkpointfilePrefix = vertexRange.getCheckpointFilePrefix();
         }
     }
 

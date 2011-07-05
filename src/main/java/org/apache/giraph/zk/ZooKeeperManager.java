@@ -1,8 +1,8 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
+ * Licensed to Yahoo! under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
+ * regarding copyright ownership.  Yahoo! licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
@@ -445,11 +445,28 @@ public class ZooKeeperManager {
         }
         try {
             File zkDirFile = new File(this.zkDir);
-            zkDirFile.mkdirs();
+            boolean mkDirRet = zkDirFile.mkdirs();
+            if (LOG.isInfoEnabled()) {
+                LOG.info("generateZooKeeperConfigFile: Make directory of " +
+                         zkDirFile.getName() + " = " + mkDirRet);
+            }
             File configFile = new File(configFilePath);
-            configFile.delete();
-            configFile.createNewFile();
-            configFile.setWritable(true, false); // writable by everybody
+            boolean deletedRet = configFile.delete();
+            if (LOG.isInfoEnabled()) {
+                LOG.info("generateZooKeeperConfigFile: Delete of " +
+                         configFile.getName() + " = " + deletedRet);
+            }
+            if (configFile.createNewFile() == false) {
+                throw new IllegalStateException(
+                    "generateZooKeeperConfigFile: Failed to " +
+                    "create config file " + configFile.getName());
+            }
+            // Make writable by everybody
+            if (!configFile.setWritable(true, false)) {
+                throw new IllegalStateException(
+                    "generateZooKeeperConfigFile: Failed to make writable " +
+                    configFile.getName());
+            }
             OutputStreamWriter writer = new FileWriter(configFilePath);
             writer.write("tickTime=" + GiraphJob.DEFAULT_ZOOKEEPER_TICK_TIME + "\n");
             writer.write("dataDir=" + this.zkDir + "\n");
@@ -532,10 +549,10 @@ public class ZooKeeperManager {
             try {
                 synchronized (this) {
                     zkProcess = processBuilder.start();
+                    zkProcessCollector =
+                        new StreamCollector(zkProcess.getInputStream());
+                    zkProcessCollector.start();
                 }
-                zkProcessCollector =
-                    new StreamCollector(zkProcess.getInputStream());
-                zkProcessCollector.start();
                 Runnable runnable = new Runnable() {
                     public void run() {
                         synchronized (this) {

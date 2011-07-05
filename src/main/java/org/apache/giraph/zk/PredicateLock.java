@@ -1,14 +1,14 @@
 /*
- * Licensed to the Apache Software Foundation (ASF) under one
+ * Licensed to Yahoo! under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
+ * regarding copyright ownership.  Yahoo! licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -23,14 +23,20 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.apache.log4j.Logger;
 
+/**
+ * A lock with a predicate that was be used to synchronize events.
+ */
 public class PredicateLock implements BspEvent {
     /** Lock */
-    Lock lock = new ReentrantLock();
+    private Lock lock = new ReentrantLock();
     /** Condition associated with lock */
-    Condition cond = lock.newCondition();
+    private Condition cond = lock.newCondition();
     /** Predicate */
-    boolean eventOccurred = false;
+    private boolean eventOccurred = false;
+    /** Class logger */
+    private Logger LOG = Logger.getLogger(PredicateLock.class);
 
     @Override
     public void reset() {
@@ -47,7 +53,7 @@ public class PredicateLock implements BspEvent {
         lock.lock();
         try {
             eventOccurred = true;
-            cond.signal();
+            cond.signalAll();
         } finally {
             lock.unlock();
         }
@@ -65,20 +71,37 @@ public class PredicateLock implements BspEvent {
         try {
             while (eventOccurred == false) {
                 if (msecs == -1) {
-                    cond.await();
+                    try {
+                        cond.await();
+                    } catch (InterruptedException e) {
+                        throw new IllegalStateException(
+                            "waitMsecs: Caught interrupted " +
+                            "exception on cond.await()", e);
+                    }
                 }
                 else {
                     // Keep the wait non-negative
-                    curMsecTimeout = Math.max(
-                        maxMsecs - System.currentTimeMillis(), 0);
-                    cond.await(curMsecTimeout, TimeUnit.MILLISECONDS);
+                    curMsecTimeout =
+                        Math.max(maxMsecs - System.currentTimeMillis(), 0);
+                    LOG.info("waitMsecs: Wait for " + curMsecTimeout);
+                    try {
+                        boolean signaled =
+                            cond.await(curMsecTimeout, TimeUnit.MILLISECONDS);
+                        if (LOG.isDebugEnabled()) {
+                            LOG.debug("waitMsecs: Got timed signaled of " +
+                                      signaled);
+                        }
+                    } catch (InterruptedException e) {
+                        throw new IllegalStateException(
+                            "waitMsecs: Caught interrupted " +
+                            "exception on cond.await() " +
+                            curMsecTimeout, e);
+                    }
                     if (System.currentTimeMillis() > maxMsecs) {
                         return false;
                     }
                 }
             }
-        } catch (InterruptedException e) {
-            e.printStackTrace();
         } finally {
             lock.unlock();
         }
