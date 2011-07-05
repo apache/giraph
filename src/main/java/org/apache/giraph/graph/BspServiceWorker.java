@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -30,7 +30,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Arrays;
 import java.util.NavigableMap;
 import java.util.Set;
 import java.util.SortedMap;
@@ -301,11 +300,6 @@ public class BspServiceWorker<
                     "loadVertices: IllegalStateException on " +
                     inputSplitPath, e);
             }
-            if (LOG.isInfoEnabled()) {
-                LOG.info("loadVertices: Reserved " + inputSplitPath +
-                         " from ZooKeeper and got '" +
-                         Arrays.toString(splitList) + "'");
-            }
             getContext().progress();
 
             DataInputStream inputStream =
@@ -316,7 +310,11 @@ public class BspServiceWorker<
                     getConfiguration().getClassByName(inputSplitClass),
                     getConfiguration());
             ((Writable) inputSplit).readFields(inputStream);
-
+            if (LOG.isInfoEnabled()) {
+                LOG.info("loadVertices: Reserved " + inputSplitPath +
+                         " from ZooKeeper and got input split '" +
+                         inputSplit.toString() + "'");
+            }
             VertexInputFormat<I, V, E> vertexInputFormat =
                 BspUtils.<I, V, E>createVertexInputFormat(getConfiguration());
             VertexReader<I, V, E> vertexReader =
