@@ -460,9 +460,11 @@ public class BspServiceMaster<
                                      Ids.OPEN_ACL_UNSAFE,
                                      CreateMode.PERSISTENT,
                                      true);
-                LOG.debug("createInputSplits: Created input split with index " +
-                         i + " serialized as " +
-                         byteArrayOutputStream.toString());
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("createInputSplits: Created input split " +
+                              "with index " + i + " serialized as " +
+                              byteArrayOutputStream.toString());
+                }
             } catch (KeeperException.NodeExistsException e) {
                 if (LOG.isInfoEnabled()) {
                     LOG.info("createInputSplits: Node " +
@@ -592,9 +594,11 @@ public class BspServiceMaster<
                 Long vertexCount = metadataStream.readLong();
                 Long edgeCount = metadataStream.readLong();
                 maxVertexIndex.readFields(metadataStream);
-                LOG.debug("mapFileToWorkers: File " + metadataPath +
-                          " with position " + dataPos + ", vertex count " +
-                          vertexCount + " assigned to " + chosenWorker);
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("mapFileToWorkers: File " + metadataPath +
+                              " with position " + dataPos + ", vertex count " +
+                              vertexCount + " assigned to " + chosenWorker);
+                }
                 ByteArrayOutputStream outputStream =
                     new ByteArrayOutputStream();
                 DataOutput output = new DataOutputStream(outputStream);
@@ -612,7 +616,8 @@ public class BspServiceMaster<
                     vertexRangeObj.put(JSONOBJ_CHECKPOINT_FILE_PREFIX_KEY,
                                        checkpointFilePrefix);
                     vertexRangeObj.put(JSONOBJ_MAX_VERTEX_INDEX_KEY,
-                                       outputStream.toString("UTF-8"));
+                                       Base64.encodeBase64String(
+                                           outputStream.toByteArray()));
                     vertexRangeMetaArray.put(vertexRangeObj);
                     vertexRangeArray.put(outputStream.toString("UTF-8"));
                 } catch (JSONException e) {
@@ -783,9 +788,9 @@ public class BspServiceMaster<
                         continue;
                     }
                     statArray = new JSONArray(new String(zkData));
-                    if (LOG.isInfoEnabled()) {
-                        LOG.info("collectVertexRangeStats: input split path " +
-                                 inputSplitPath + " got " + statArray);
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("collectVertexRangeStats: input split path " +
+                                  inputSplitPath + " got " + statArray);
                     }
                 } catch (JSONException e) {
                     throw new IllegalStateException(
@@ -801,16 +806,31 @@ public class BspServiceMaster<
                     try {
                         I maxVertexIndex =
                             BspUtils.<I>createVertexIndex(getConfiguration());
-                        InputStream input =
-                            new ByteArrayInputStream(
+                        byte[] maxVertexIndexByteArray =
+                            Base64.decodeBase64(
                                 statArray.getJSONObject(i).getString(
-                                    JSONOBJ_MAX_VERTEX_INDEX_KEY).
-                                    getBytes("UTF-8"));
+                                    BspService.JSONOBJ_MAX_VERTEX_INDEX_KEY));
+                        InputStream input =
+                            new ByteArrayInputStream(maxVertexIndexByteArray);
                         ((Writable) maxVertexIndex).readFields(
                             new DataInputStream(input));
                         statArray.getJSONObject(i).put(
                             JSONOBJ_FINISHED_VERTICES_KEY,
                             0);
+
+                        if (LOG.isDebugEnabled()) {
+                            LOG.debug("collectVertexRangeStats: "+
+                                      "On input split path " +
+                                      inputSplitPath + ", maxVertexIndex = "
+                                      + maxVertexIndex +
+                                      ", vertex range stats = " +
+                                      statArray.getJSONObject(i));
+                        }
+                        if (vertexRangeStatArrayMap.containsKey(maxVertexIndex)) {
+                            throw new IllegalStateException(
+                                "collectVertexRangeStats: Already got stats " +
+                                "for max vertex index " + maxVertexIndex + " (");
+                        }
                         vertexRangeStatArrayMap.put(maxVertexIndex,
                                                     statArray.getJSONObject(i));
                     } catch (JSONException e) {
@@ -856,11 +876,12 @@ public class BspServiceMaster<
                     for (int i = 0; i < statArray.length(); ++i) {
                         I maxVertexIndex =
                             BspUtils.<I>createVertexIndex(getConfiguration());
-                        InputStream input =
-                            new ByteArrayInputStream(
+                        byte[] maxVertexIndexByteArray =
+                            Base64.decodeBase64(
                                 statArray.getJSONObject(i).getString(
-                                    JSONOBJ_MAX_VERTEX_INDEX_KEY).getBytes(
-                                        "UTF-8"));
+                                    BspService.JSONOBJ_MAX_VERTEX_INDEX_KEY));
+                        InputStream input =
+                            new ByteArrayInputStream(maxVertexIndexByteArray);
                         ((Writable) maxVertexIndex).readFields(
                             new DataInputStream(input));
                         vertexRangeStatArrayMap.put(maxVertexIndex,
@@ -916,7 +937,6 @@ public class BspServiceMaster<
                 "collectAndProcessAggregatorValues: InterruptedException", e);
         }
 
-        Base64 base64 = new Base64();
         for (String hostnameIdPath : hostnameIdPathList) {
             JSONObject aggregatorsStatObj = null;
             JSONArray aggregatorArray = null;
@@ -983,7 +1003,7 @@ public class BspServiceMaster<
                         aggregator.createAggregatedValue();
                     InputStream input =
                         new ByteArrayInputStream(
-                            (byte[]) base64.decode(
+                            Base64.decodeBase64(
                                 aggregatorArray.getJSONObject(i).
                                 getString(AGGREGATOR_VALUE_KEY)));
                     aggregatorValue.readFields(new DataInputStream(input));
@@ -1044,7 +1064,7 @@ public class BspServiceMaster<
                                       entry.getKey());
                     aggregatorObj.put(
                         AGGREGATOR_VALUE_KEY,
-                        base64.encodeToString(outputStream.toByteArray()));
+                        Base64.encodeBase64String(outputStream.toByteArray()));
                     aggregatorArray.put(aggregatorObj);
                     if (LOG.isInfoEnabled()) {
                         LOG.info("collectAndProcessAggregatorValues: " +
@@ -1194,7 +1214,7 @@ public class BspServiceMaster<
                     VertexRange<I, V, E, M> vertexRange =
                         new VertexRange<I, V, E, M>(indexClass, vertexRangeObj);
                     vertexRangeList.add(vertexRange);
-                    numRanges++;
+                    ++numRanges;
                 }
             }
 
@@ -1609,7 +1629,8 @@ public class BspServiceMaster<
             getContext().setStatus(getBspMapper().getMapFunctions() + " " +
                                    finishedWorkerList.size() +
                                    " finished out of " +
-                                   chosenWorkerHostnamePortMap.size());
+                                   chosenWorkerHostnamePortMap.size() +
+                                   " on superstep " + getSuperstep());
             if (finishedWorkerList.containsAll(
                 chosenWorkerHostnamePortMap.keySet())) {
                 break;

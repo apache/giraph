@@ -835,10 +835,12 @@ public abstract class BspService <
                     new VertexRange<I, V, E, M>(indexClass,
                             vertexRangeObj);
                 if (nextVertexRangeMap.containsKey(vertexRange.getMaxIndex())) {
-                    throw new RuntimeException(
+                    throw new IllegalStateException(
                         "getVertexRangeMap: Impossible that vertex range " +
                         "max " + vertexRange.getMaxIndex() +
-                        " already exists!");
+                        " already exists!  Duplicate vertex ranges include " +
+                        nextVertexRangeMap.get(vertexRange.getMaxIndex()) +
+                        " and " + vertexRange);
                 }
                 nextVertexRangeMap.put(vertexRange.getMaxIndex(), vertexRange);
             }

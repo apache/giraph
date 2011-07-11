@@ -237,12 +237,16 @@ public class BspServiceWorker<
                     vertexRangeObj.put(JSONOBJ_HOSTNAME_ID_KEY,
                                        getHostnamePartitionId());
                     vertexRangeObj.put(JSONOBJ_MAX_VERTEX_INDEX_KEY,
-                                       outputStream.toString("UTF-8"));
+                                       Base64.encodeBase64String(
+                                           outputStream.toByteArray()));
                     statArray.put(vertexRangeObj);
-                    LOG.info("setInputSplitVertexRanges: " +
-                             "Trying to add vertexRangeObj " +
-                             vertexRangeObj + " to InputSplit path " +
-                             inputSplitPath);
+                    if (LOG.isInfoEnabled()) {
+                        LOG.info("setInputSplitVertexRanges: " +
+                                 "Trying to add vertexRangeObj " +
+                                 "(max vertex index = " + entry.getKey() + " " +
+                                 vertexRangeObj + " to InputSplit path " +
+                                 inputSplitPath);
+                    }
                 } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
@@ -615,7 +619,7 @@ public class BspServiceWorker<
             getMergedAggregatorPath(getApplicationAttempt(), superstep - 1);
         JSONArray aggregatorArray = null;
         try {
-            byte [] zkData =
+            byte[] zkData =
                 getZkExt().getData(mergedAggregatorPath, false, null);
             aggregatorArray = new JSONArray(new String(zkData));
         } catch (KeeperException.NoNodeException e) {
@@ -625,12 +629,13 @@ public class BspServiceWorker<
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        Base64 base64 = new Base64();
         for (int i = 0; i < aggregatorArray.length(); ++i) {
             try {
-                LOG.info("getAggregatorValues: " +
-                         "Getting aggregators from " +
-                         aggregatorArray.getJSONObject(i));
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("getAggregatorValues: " +
+                              "Getting aggregators from " +
+                              aggregatorArray.getJSONObject(i));
+                }
                 String aggregatorName = aggregatorArray.getJSONObject(i).
                     getString(AGGREGATOR_NAME_KEY);
                 Aggregator<Writable> aggregator =
@@ -641,21 +646,25 @@ public class BspServiceWorker<
                 Writable aggregatorValue = aggregator.getAggregatedValue();
                 InputStream input =
                     new ByteArrayInputStream(
-                        (byte[]) base64.decode(aggregatorArray.getJSONObject(i).
+                        Base64.decodeBase64(aggregatorArray.getJSONObject(i).
                             getString(AGGREGATOR_VALUE_KEY)));
                 aggregatorValue.readFields(
                     new DataInputStream(input));
                 aggregator.setAggregatedValue(aggregatorValue);
-                LOG.info("getAggregatorValues: " +
-                         "Got aggregator=" + aggregatorName + " value=" +
-                         aggregatorValue);
+                if (LOG.isDebugEnabled()) {
+                    LOG.info("getAggregatorValues: " +
+                             "Got aggregator=" + aggregatorName + " value=" +
+                             aggregatorValue);
+                }
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         }
-        LOG.info("getAggregatorValues: Finished loading " +
-                 mergedAggregatorPath + " with aggregator values " +
-                 aggregatorArray);
+        if (LOG.isInfoEnabled()) {
+            LOG.info("getAggregatorValues: Finished loading " +
+                     mergedAggregatorPath + " with aggregator values " +
+                     aggregatorArray);
+        }
     }
 
     /**
@@ -765,7 +774,8 @@ public class BspServiceWorker<
                 ((Writable) entry.getKey()).write(output);
 
                 statObject.put(JSONOBJ_MAX_VERTEX_INDEX_KEY,
-                               outputStream.toString("UTF-8"));
+                               Base64.encodeBase64String(
+                                   outputStream.toByteArray()));
                 statObject.put(JSONOBJ_FINISHED_VERTICES_KEY,
                                entry.getValue()[0]);
                 statObject.put(JSONOBJ_NUM_VERTICES_KEY,

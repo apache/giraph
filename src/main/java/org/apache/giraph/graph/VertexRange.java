@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -29,6 +29,7 @@ import java.io.InputStream;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
+import org.apache.commons.codec.binary.Base64;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
@@ -70,10 +71,11 @@ public class VertexRange<I extends WritableComparable,
 
     @Override
     public String toString() {
-        return "[hostname=" + getHostname() + ",port=" + getPort() +
+        return "[maxVertexId=" + getMaxIndex() +
+            ",hostname=" + getHostname() + ",port=" + getPort() +
             ",prevHostname=" + getPreviousHostname() + ",prevPort=" +
             getPreviousPort() + ",prevHostnameId=" + getPreviousHostnameId() +
-            ",vertexCount" + getVertexCount() + ",edgeCount=" + getEdgeCount() +
+            ",vertexCount=" + getVertexCount() + ",edgeCount=" + getEdgeCount() +
             ",checkpointFile=" + getCheckpointFilePrefix() + ",hostnameId" +
             getHostnameId() + "]";
     }
@@ -104,23 +106,27 @@ public class VertexRange<I extends WritableComparable,
     public VertexRange(Class<I> indexClass, JSONObject vertexRangeObj)
             throws JSONException, IOException, InstantiationException,
             IllegalAccessException {
-        I newInstance = indexClass.newInstance();
-        maxVertexIndex = newInstance;
-        InputStream input =
-            new ByteArrayInputStream(
+        maxVertexIndex = indexClass.newInstance();
+        byte[] maxVertexIndexByteArray =
+            Base64.decodeBase64(
                 vertexRangeObj.getString(
-                    BspService.JSONOBJ_MAX_VERTEX_INDEX_KEY).getBytes("UTF-8"));
+                    BspService.JSONOBJ_MAX_VERTEX_INDEX_KEY));
+        InputStream input = new ByteArrayInputStream(maxVertexIndexByteArray);
         maxVertexIndex.readFields(new DataInputStream(input));
         try {
             hostname =
                 vertexRangeObj.getString(BspService.JSONOBJ_HOSTNAME_KEY);
         } catch (JSONException e) {
-            LOG.debug("VertexRange: No hostname for " + vertexRangeObj);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("VertexRange: No hostname for " + vertexRangeObj);
+            }
         }
         try {
             port = vertexRangeObj.getInt(BspService.JSONOBJ_PORT_KEY);
         } catch (JSONException e) {
-            LOG.debug("VertexRange: No port for " + vertexRangeObj);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("VertexRange: No port for " + vertexRangeObj);
+            }
         }
 
         try {
@@ -128,14 +134,19 @@ public class VertexRange<I extends WritableComparable,
                 vertexRangeObj.getString(
                     BspService.JSONOBJ_PREVIOUS_HOSTNAME_KEY);
         } catch (JSONException e) {
-            LOG.debug("VertexRange: No previous hostname for " +
-                      vertexRangeObj);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("VertexRange: No previous hostname for " +
+                          vertexRangeObj);
+            }
         }
         try {
             previousPort =
                 vertexRangeObj.getInt(BspService.JSONOBJ_PREVIOUS_PORT_KEY);
         } catch (JSONException e) {
-            LOG.debug("VertexRange: No previous port for " + vertexRangeObj);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("VertexRange: No previous port for " +
+                          vertexRangeObj);
+            }
         }
 
         hostnameId =
@@ -145,7 +156,10 @@ public class VertexRange<I extends WritableComparable,
                 vertexRangeObj.getString(
                     BspService.JSONOBJ_CHECKPOINT_FILE_PREFIX_KEY);
         } catch (JSONException e) {
-            LOG.debug("VertexRange: No checkpoint file for " + vertexRangeObj);
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("VertexRange: No checkpoint file for " +
+                          vertexRangeObj);
+            }
         }
     }
 
@@ -200,7 +214,8 @@ public class VertexRange<I extends WritableComparable,
         DataOutput output = new DataOutputStream(outputStream);
         maxVertexIndex.write(output);
         vertexRangeObj.put(BspService.JSONOBJ_MAX_VERTEX_INDEX_KEY,
-                           outputStream.toString("UTF-8"));
+                           Base64.encodeBase64String(
+                               outputStream.toByteArray()));
         vertexRangeObj.put(BspService.JSONOBJ_HOSTNAME_KEY, hostname);
         vertexRangeObj.put(BspService.JSONOBJ_PORT_KEY, port);
         vertexRangeObj.put(BspService.JSONOBJ_PREVIOUS_HOSTNAME_KEY,
