@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -37,7 +37,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  * @param <E> Edge value
  */
 @SuppressWarnings("rawtypes")
-public interface VertexOutputFormat<
+public abstract class VertexOutputFormat<
         I extends WritableComparable, V extends Writable, E extends Writable> {
     /**
      * Create a vertex writer for a given split. The framework will call
@@ -47,9 +47,10 @@ public interface VertexOutputFormat<
      * @param context the information about the task
      * @return a new vertex writer
      * @throws IOException
+     * @throws InterruptedException
      */
-    VertexWriter<I, V, E> createVertexWriter(TaskAttemptContext context)
-        throws IOException;
+    public abstract VertexWriter<I, V, E> createVertexWriter(TaskAttemptContext context)
+        throws IOException, InterruptedException;
 
     /**
      * Check for validity of the output-specification for the job.
@@ -63,7 +64,7 @@ public interface VertexOutputFormat<
      * @param context information about the job
      * @throws IOException when output should not be attempted
      */
-    void checkOutputSpecs(JobContext context)
+    public abstract void checkOutputSpecs(JobContext context)
         throws IOException, InterruptedException;
 
     /**
@@ -76,6 +77,6 @@ public interface VertexOutputFormat<
      * @throws IOException
      * @throws InterruptedException
      */
-    OutputCommitter getOutputCommitter(TaskAttemptContext context)
+    public abstract OutputCommitter getOutputCommitter(TaskAttemptContext context)
         throws IOException, InterruptedException;
 }

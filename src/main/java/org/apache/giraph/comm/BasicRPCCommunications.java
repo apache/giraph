@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -38,7 +38,6 @@ import org.apache.log4j.Logger;
 
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.graph.GiraphJob;
-import org.apache.giraph.graph.BspResolver;
 import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.VertexCombiner;
 import org.apache.giraph.graph.Edge;
@@ -47,6 +46,7 @@ import org.apache.giraph.graph.MutableVertex;
 import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.VertexMutations;
 import org.apache.giraph.graph.VertexRange;
+import org.apache.giraph.graph.VertexResolver;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -80,7 +80,7 @@ public abstract class BasicRPCCommunications<
     /** Hadoop configuration */
     protected final Configuration conf;
     /** Combiner instance, can be null */
-    private final VertexCombiner<I, V, E, M> combiner;
+    private final VertexCombiner<I, M> combiner;
     /** Address of RPC server */
     private final InetSocketAddress myAddress;
     /**
@@ -177,7 +177,7 @@ public abstract class BasicRPCCommunications<
         /** Synchronization object */
         private final Object waitingInPeer = new Object();
         /** Combiner instance, can be null */
-        private final VertexCombiner<I, V, E, M> combiner;
+        private final VertexCombiner<I, M> combiner;
         /** set of keys of large message list (synchronized with itself) */
         private final Set<I> largeMsgListKeys = new TreeSet<I>();
 
@@ -185,7 +185,7 @@ public abstract class BasicRPCCommunications<
                    CommunicationsInterface<I, V, E, M> i,
                    int maxSize,
                    boolean isProxy,
-                   VertexCombiner<I, V, E, M> combiner) {
+                   VertexCombiner<I, M> combiner) {
             super(PeerThread.class.getName());
             this.outMessagesPerPeer = m;
             this.peer = i;
@@ -427,8 +427,10 @@ public abstract class BasicRPCCommunications<
         this.server.start();
 
         this.myName = myAddress.toString();
-        LOG.info("BasicRPCCommunications: Started RPC communication server: " +
-                 myName);
+        if (LOG.isInfoEnabled()) {
+            LOG.info("BasicRPCCommunications: Started RPC " +
+                     "communication server: " + myName);
+        }
         connectAllRPCProxys(this.jobId, this.jobToken);
     }
 
@@ -946,7 +948,7 @@ public abstract class BasicRPCCommunications<
 
         // Resolve all graph mutations
         for (I vertexIndex : resolveVertexIndexSet) {
-            BspResolver<I, V, E, M> vertexResolver =
+            VertexResolver<I, V, E, M> vertexResolver =
                 BspUtils.createVertexResolver(conf);
             VertexRange<I, V, E, M> vertexRange =
                 service.getVertexRange(service.getSuperstep() - 1, vertexIndex);

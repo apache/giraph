@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -36,11 +36,12 @@ import org.apache.giraph.examples.SimpleCombinerVertex;
 import org.apache.giraph.examples.SimpleFailVertex;
 import org.apache.giraph.examples.SimpleMsgVertex;
 import org.apache.giraph.examples.SimplePageRankVertex;
+import org.apache.giraph.examples.SimplePageRankVertex.SimplePageRankVertexInputFormat;
 import org.apache.giraph.examples.SimpleSumCombiner;
 import org.apache.giraph.examples.SimpleSuperstepVertex;
-import org.apache.giraph.examples.SimpleTextVertexOutputFormat;
+import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat;
+import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexOutputFormat;
 import org.apache.giraph.graph.GiraphJob;
-import org.apache.giraph.graph.VertexInputFormat;
 import junit.framework.Test;
 import junit.framework.TestSuite;
 
@@ -90,8 +91,9 @@ public class TestBspBasic extends BspCase {
             (SimpleSuperstepVertex) ctor.newInstance();
         System.out.println("testInstantiateVertex: superstep=" +
                            test.getSuperstep());
-        GeneratedVertexInputFormat inputFormat =
-            GeneratedVertexInputFormat.class.newInstance();
+        SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat inputFormat =
+            SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat
+            .class.newInstance();
         Configuration conf = new Configuration();
         List<InputSplit> splitArray = inputFormat.getSplits(conf, 1);
         ByteArrayOutputStream byteArrayOutputStream =
@@ -123,7 +125,7 @@ public class TestBspBasic extends BspCase {
         setupConfiguration(job);
         job.getConfiguration().setInt("mapred.map.max.attempts", 1);
         job.setVertexClass(SimpleFailVertex.class);
-        job.setVertexInputFormatClass(VertexInputFormat.class);
+        job.setVertexInputFormatClass(SimplePageRankVertexInputFormat.class);
         Path outputPath = new Path("/tmp/" + getCallingMethodName());
         removeAndSetOutput(job, outputPath);
         assertTrue(!job.run(true));
@@ -131,6 +133,7 @@ public class TestBspBasic extends BspCase {
 
     /**
      * Run a sample BSP job locally and test supersteps.
+     *
      * @throws IOException
      * @throws ClassNotFoundException
      * @throws InterruptedException
@@ -145,8 +148,8 @@ public class TestBspBasic extends BspCase {
         job.getConfiguration().setLong(GeneratedVertexReader.READER_VERTICES,
                                        10);
         job.setVertexClass(SimpleSuperstepVertex.class);
-        job.setVertexInputFormatClass(GeneratedVertexInputFormat.class);
-        job.setVertexOutputFormatClass(SimpleTextVertexOutputFormat.class);
+        job.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
+        job.setVertexOutputFormatClass(SimpleSuperstepVertexOutputFormat.class);
         Path outputPath = new Path("/tmp/" + getCallingMethodName());
         removeAndSetOutput(job, outputPath);
         assertTrue(job.run(true));
@@ -158,6 +161,7 @@ public class TestBspBasic extends BspCase {
 
     /**
      * Run a sample BSP job locally and test messages.
+     *
      * @throws IOException
      * @throws ClassNotFoundException
      * @throws InterruptedException
@@ -167,7 +171,7 @@ public class TestBspBasic extends BspCase {
         GiraphJob job = new GiraphJob(getCallingMethodName());
         setupConfiguration(job);
         job.setVertexClass(SimpleMsgVertex.class);
-        job.setVertexInputFormatClass(GeneratedVertexInputFormat.class);
+        job.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
         assertTrue(job.run(true));
     }
 
@@ -175,6 +179,7 @@ public class TestBspBasic extends BspCase {
     /**
      * Run a sample BSP job locally with no vertices and make sure
      * it completes.
+     *
      * @throws IOException
      * @throws ClassNotFoundException
      * @throws InterruptedException
@@ -186,12 +191,13 @@ public class TestBspBasic extends BspCase {
         job.getConfiguration().setLong(GeneratedVertexReader.READER_VERTICES,
                                        0);
         job.setVertexClass(SimpleMsgVertex.class);
-        job.setVertexInputFormatClass(GeneratedVertexInputFormat.class);
+        job.setVertexInputFormatClass(SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat.class);
         assertTrue(job.run(true));
     }
 
     /**
      * Run a sample BSP job locally with combiner and checkout output value.
+     *
      * @throws IOException
      * @throws ClassNotFoundException
      * @throws InterruptedException
@@ -202,12 +208,14 @@ public class TestBspBasic extends BspCase {
         setupConfiguration(job);
         job.setVertexClass(SimpleCombinerVertex.class);
         job.setVertexInputFormatClass(GeneratedVertexInputFormat.class);
+        job.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
         job.setVertexCombinerClass(SimpleSumCombiner.class);
         assertTrue(job.run(true));
     }
 
     /**
      * Run a sample BSP job locally and test PageRank.
+     *
      * @throws IOException
      * @throws ClassNotFoundException
      * @throws InterruptedException
@@ -217,7 +225,7 @@ public class TestBspBasic extends BspCase {
         GiraphJob job = new GiraphJob(getCallingMethodName());
         setupConfiguration(job);
         job.setVertexClass(SimplePageRankVertex.class);
-        job.setVertexInputFormatClass(GeneratedVertexInputFormat.class);
+        job.setVertexInputFormatClass(SimplePageRankVertexInputFormat.class);
         assertTrue(job.run(true));
         if (getJobTracker() == null) {
             double maxPageRank = SimplePageRankVertex.finalMax;
@@ -226,7 +234,7 @@ public class TestBspBasic extends BspCase {
             System.out.println("testBspPageRank: maxPageRank=" + maxPageRank +
                                " minPageRank=" + minPageRank +
                                " numVertices=" + numVertices);
-            assertTrue(maxPageRank > 0.19847 && maxPageRank < 0.19848);
+            assertTrue(maxPageRank > 34.030 && maxPageRank < 34.0301);
             assertTrue(minPageRank > 0.03 && minPageRank < 0.03001);
             assertTrue(numVertices == 5);
         }

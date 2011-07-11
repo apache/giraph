@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -48,27 +48,6 @@ public interface VertexReader<
      * @return true iff a vertex and associated data was read, false if at EOF
      */
     boolean next(MutableVertex<I, V, E, ?> vertex) throws IOException;
-
-    /**
-     * Creates and initializes a new vertex id
-     *
-     * @return new vertex id
-     */
-    I createVertexId();
-
-    /**
-     * Creates and initializes a new vertex value
-     *
-     * @return new vertex value
-     */
-    V createVertexValue();
-
-    /**
-     * Creates and initializes a new edge value
-     *
-     * @return new edge value
-     */
-    E createEdgeValue();
 
     /**
      * Returns the current position in the input.

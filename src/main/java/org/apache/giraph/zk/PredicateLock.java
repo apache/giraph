@@ -83,7 +83,9 @@ public class PredicateLock implements BspEvent {
                     // Keep the wait non-negative
                     curMsecTimeout =
                         Math.max(maxMsecs - System.currentTimeMillis(), 0);
-                    LOG.info("waitMsecs: Wait for " + curMsecTimeout);
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("waitMsecs: Wait for " + curMsecTimeout);
+                    }
                     try {
                         boolean signaled =
                             cond.await(curMsecTimeout, TimeUnit.MILLISECONDS);

@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -19,10 +19,12 @@
 package org.apache.giraph.graph;
 
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.util.Enumeration;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -32,6 +34,7 @@ import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.RPCCommunications;
 import org.apache.giraph.comm.ServerInterface;
 import org.apache.giraph.comm.WorkerCommunications;
+import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.giraph.zk.ZooKeeperManager;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
@@ -286,7 +289,8 @@ public class GiraphJob extends Job {
     }
 
     /**
-     * Make sure the configuration is set properly.
+     * Make sure the configuration is set properly by the user prior to
+     * submitting the job.
      */
     private void checkConfiguration() {
         if (conf.getInt(MAX_WORKERS, -1) < 0) {
@@ -313,11 +317,11 @@ public class GiraphJob extends Job {
                 "GiraphJob: Null VERTEX_INPUT_FORMAT_CLASS");
         }
         if (BspUtils.getVertexResolverClass(getConfiguration()) == null) {
-            setVertexResolverClass(BspResolver.class);
+            setVertexResolverClass(VertexResolver.class);
             if (LOG.isInfoEnabled()) {
                 LOG.info("GiraphJob: No class found for " +
                          VERTEX_RESOLVER_CLASS + ", defaulting to " +
-                         BspResolver.class.getCanonicalName());
+                         VertexResolver.class.getCanonicalName());
             }
         }
     }
@@ -432,6 +436,173 @@ public class GiraphJob extends Job {
             return null;
         }
 
+        /**
+         * Make sure that all registered classes have matching types.  This
+         * is a little tricky due to type erasure, cannot simply get them from
+         * the class type arguments.  Also, set the vertex index, vertex value,
+         * edge value and message value classes.
+         *
+         * @param conf Configuration to get the various classes
+         */
+        public void checkClassTypes(Configuration conf) {
+            Class<? extends Vertex<I, V, E, M>> vertexClass =
+                BspUtils.<I, V, E, M>getVertexClass(conf);
+            List<Class<?>> classList = ReflectionUtils.<Vertex>getTypeArguments(
+                Vertex.class, vertexClass);
+            Type vertexIndexType = classList.get(0);
+            Type vertexValueType = classList.get(1);
+            Type edgeValueType = classList.get(2);
+            Type messageValueType = classList.get(3);
+
+            Class<? extends VertexInputFormat<I, V, E>> vertexInputFormatClass =
+                BspUtils.<I, V, E>getVertexInputFormatClass(conf);
+            classList = ReflectionUtils.<VertexInputFormat>getTypeArguments(
+                VertexInputFormat.class, vertexInputFormatClass);
+            if (!vertexIndexType.equals(classList.get(0))) {
+                throw new IllegalArgumentException(
+                    "checkClassTypes: Vertex index types don't match, " +
+                    "vertex - " + vertexIndexType +
+                    ", vertex input format - " + classList.get(0));
+            }
+            if (!vertexValueType.equals(classList.get(1))) {
+                throw new IllegalArgumentException(
+                    "checkClassTypes: Vertex value types don't match, " +
+                    "vertex - " + vertexValueType +
+                    ", vertex input format - " + classList.get(1));
+            }
+            if (!edgeValueType.equals(classList.get(2))) {
+                throw new IllegalArgumentException(
+                    "checkClassTypes: Edge value types don't match, " +
+                    "vertex - " + edgeValueType +
+                    ", vertex input format - " + classList.get(2));
+            }
+            // If has vertex combiner class, check
+            if (BspUtils.<I, M>getVertexCombinerClass(conf) != null) {
+                Class<? extends VertexCombiner<I, M>> vertexCombinerClass =
+                    BspUtils.<I, M>getVertexCombinerClass(conf);
+                classList = ReflectionUtils.<VertexCombiner>getTypeArguments(
+                    VertexCombiner.class, vertexCombinerClass);
+                if (!vertexIndexType.equals(classList.get(0))) {
+                    throw new IllegalArgumentException(
+                        "checkClassTypes: Vertex index types don't match, " +
+                        "vertex - " + vertexIndexType +
+                        ", vertex combiner - " + classList.get(0));
+                }
+                if (!messageValueType.equals(classList.get(1))) {
+                    throw new IllegalArgumentException(
+                        "checkClassTypes: Message value types don't match, " +
+                        "vertex - " + vertexValueType +
+                        ", vertex combiner - " + classList.get(1));
+                }
+            }
+            // If has vertex output format class, check
+            if (BspUtils.<I, V, E>getVertexOutputFormatClass(conf) != null) {
+                Class<? extends VertexOutputFormat<I, V, E>>
+                    vertexOutputFormatClass =
+                        BspUtils.<I, V, E>getVertexOutputFormatClass(conf);
+                classList = ReflectionUtils.<VertexOutputFormat>getTypeArguments(
+                    VertexOutputFormat.class, vertexOutputFormatClass);
+                if (!vertexIndexType.equals(classList.get(0))) {
+                    throw new IllegalArgumentException(
+                        "checkClassTypes: Vertex index types don't match, " +
+                        "vertex - " + vertexIndexType +
+                        ", vertex output format - " + classList.get(0));
+                }
+                if (!vertexValueType.equals(classList.get(1))) {
+                    throw new IllegalArgumentException(
+                        "checkClassTypes: Vertex value types don't match, " +
+                        "vertex - " + vertexValueType +
+                        ", vertex output format - " + classList.get(1));
+                }
+                if (!edgeValueType.equals(classList.get(2))) {
+                    throw new IllegalArgumentException(
+                        "checkClassTypes: Edge value types don't match, " +
+                        "vertex - " + vertexIndexType +
+                        ", vertex output format - " + classList.get(2));
+                }
+            }
+            // Vertex range balancer might never select the types
+            Class<? extends VertexRangeBalancer<I, V, E, M>>
+                vertexRangeBalancerClass =
+                    BspUtils.<I, V, E, M>getVertexRangeBalancerClass(conf);
+            classList = ReflectionUtils.<VertexRangeBalancer>getTypeArguments(
+                VertexRangeBalancer.class, vertexRangeBalancerClass);
+            if (classList.get(0) != null &&
+                    !vertexIndexType.equals(classList.get(0))) {
+                throw new IllegalArgumentException(
+                    "checkClassTypes: Vertex index types don't match, " +
+                    "vertex - " + vertexIndexType +
+                    ", vertex range balancer - " + classList.get(0));
+            }
+            if (classList.get(1) != null &&
+                    !vertexValueType.equals(classList.get(1))) {
+                throw new IllegalArgumentException(
+                    "checkClassTypes: Vertex value types don't match, " +
+                    "vertex - " + vertexValueType +
+                    ", vertex range balancer - " + classList.get(1));
+            }
+            if (classList.get(2) != null &&
+                    !edgeValueType.equals(classList.get(2))) {
+                throw new IllegalArgumentException(
+                    "checkClassTypes: Edge value types don't match, " +
+                    "vertex - " + edgeValueType +
+                    ", vertex range balancer - " + classList.get(2));
+            }
+            if (classList.get(3) != null &&
+                    !messageValueType.equals(classList.get(3))) {
+                throw new IllegalArgumentException(
+                    "checkClassTypes: Message value types don't match, " +
+                    "vertex - " + edgeValueType +
+                    ", vertex range balancer - " + classList.get(3));
+            }
+            // Vertex resolver might never select the types
+            Class<? extends VertexResolver<I, V, E, M>>
+                vertexResolverClass =
+                    BspUtils.<I, V, E, M>getVertexResolverClass(conf);
+            classList = ReflectionUtils.<VertexResolver>getTypeArguments(
+                VertexResolver.class, vertexResolverClass);
+            if (classList.get(0) != null &&
+                    !vertexIndexType.equals(classList.get(0))) {
+                throw new IllegalArgumentException(
+                    "checkClassTypes: Vertex index types don't match, " +
+                    "vertex - " + vertexIndexType +
+                    ", vertex resolver - " + classList.get(0));
+            }
+            if (classList.get(1) != null &&
+                    !vertexValueType.equals(classList.get(1))) {
+                throw new IllegalArgumentException(
+                    "checkClassTypes: Vertex value types don't match, " +
+                    "vertex - " + vertexValueType +
+                    ", vertex resolver - " + classList.get(1));
+            }
+            if (classList.get(2) != null &&
+                    !edgeValueType.equals(classList.get(2))) {
+                throw new IllegalArgumentException(
+                    "checkClassTypes: Edge value types don't match, " +
+                    "vertex - " + edgeValueType +
+                    ", vertex resolver - " + classList.get(2));
+            }
+            if (classList.get(3) != null &&
+                    !messageValueType.equals(classList.get(3))) {
+                throw new IllegalArgumentException(
+                    "checkClassTypes: Message value types don't match, " +
+                    "vertex - " + edgeValueType +
+                    ", vertex resolver - " + classList.get(3));
+            }
+            conf.setClass(GiraphJob.VERTEX_INDEX_CLASS,
+                          (Class<?>) vertexIndexType,
+                          WritableComparable.class);
+            conf.setClass(GiraphJob.VERTEX_VALUE_CLASS,
+                          (Class<?>) vertexValueType,
+                          Writable.class);
+            conf.setClass(GiraphJob.EDGE_VALUE_CLASS,
+                          (Class<?>) edgeValueType,
+                          Writable.class);
+            conf.setClass(GiraphJob.MESSAGE_VALUE_CLASS,
+                          (Class<?>) messageValueType,
+                          Writable.class);
+        }
+
         @Override
         public void setup(Context context)
                 throws IOException, InterruptedException {
@@ -444,39 +615,8 @@ public class GiraphJob extends Job {
                 conf.set("mapreduce.job.credentials.binary",
                         System.getenv("HADOOP_TOKEN_FILE_LOCATION"));
             }
-            // Set the configuration classes
-            try {
-                Class<? extends VertexInputFormat<I, V, E>>
-                    vertexInputFormatClass =
-                        BspUtils.getVertexInputFormatClass(conf);
-                VertexReader<I, V, E> vertexReader =
-                    vertexInputFormatClass.newInstance().createVertexReader(
-                    null, context);
-                conf.setClass(GiraphJob.VERTEX_INDEX_CLASS,
-                                vertexReader.createVertexId().getClass(),
-                                WritableComparable.class);
-                conf.setClass(GiraphJob.VERTEX_VALUE_CLASS,
-                                vertexReader.createVertexValue().getClass(),
-                                Writable.class);
-                conf.setClass(GiraphJob.EDGE_VALUE_CLASS,
-                                vertexReader.createEdgeValue().getClass(),
-                                Writable.class);
-                Vertex<I, V, E, M> vertex =
-                    BspUtils.<I, V, E, M>createVertex(conf);
-                conf.setClass(GiraphJob.MESSAGE_VALUE_CLASS,
-                                vertex.createMsgValue().getClass(),
-                                Writable.class);
-            } catch (InstantiationException e) {
-                throw new IllegalArgumentException(
-                    "setup: Either " +
-                    GiraphJob.VERTEX_INPUT_FORMAT_CLASS + " or " +
-                    GiraphJob.VERTEX_CLASS + " failed to instantiate.", e);
-            } catch (IllegalAccessException e) {
-                 throw new IllegalArgumentException(
-                     "setup: Either " +
-                     GiraphJob.VERTEX_INPUT_FORMAT_CLASS + " or " +
-                     GiraphJob.VERTEX_CLASS + " were illegally accessed.", e);
-            }
+            // Ensure the user classes have matching types and figure them out
+            checkClassTypes(conf);
             Vertex.setBspMapper(this);
             Vertex.setContext(context);
 

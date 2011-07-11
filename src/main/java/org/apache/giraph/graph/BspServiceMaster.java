@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -782,12 +782,11 @@ public class BspServiceMaster<
                     if (zkData == null || zkData.length == 0) {
                         continue;
                     }
+                    statArray = new JSONArray(new String(zkData));
                     if (LOG.isInfoEnabled()) {
                         LOG.info("collectVertexRangeStats: input split path " +
-                                 inputSplitPath + " got " +
-                                 Arrays.toString(zkData));
+                                 inputSplitPath + " got " + statArray);
                     }
-                    statArray = new JSONArray(new String(zkData));
                 } catch (JSONException e) {
                     throw new IllegalStateException(
                         "collectVertexRangeStats: JSONException", e);
@@ -805,7 +804,8 @@ public class BspServiceMaster<
                         InputStream input =
                             new ByteArrayInputStream(
                                 statArray.getJSONObject(i).getString(
-                                    JSONOBJ_MAX_VERTEX_INDEX_KEY).getBytes("UTF-8"));
+                                    JSONOBJ_MAX_VERTEX_INDEX_KEY).
+                                    getBytes("UTF-8"));
                         ((Writable) maxVertexIndex).readFields(
                             new DataInputStream(input));
                         statArray.getJSONObject(i).put(
@@ -1550,7 +1550,7 @@ public class BspServiceMaster<
         } else {
             if (getSuperstep() > 0) {
                 VertexRangeBalancer<I, V, E, M> vertexRangeBalancer =
-                    BspUtils.<I, V, E, M>createBasicVertexRangeBalancer(
+                    BspUtils.<I, V, E, M>createVertexRangeBalancer(
                         getConfiguration());
                 synchronized (vertexRangeSynchronization) {
                     balanceVertexRanges(vertexRangeBalancer,

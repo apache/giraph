@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -102,12 +102,10 @@ public class BspUtils {
      */
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public static <I extends WritableComparable,
-                   V extends Writable,
-                   E extends Writable,
                    M extends Writable>
-            Class<? extends VertexCombiner<I, V, E, M>>
+            Class<? extends VertexCombiner<I, M>>
             getVertexCombinerClass(Configuration conf) {
-        return (Class<? extends VertexCombiner<I, V, E, M>>)
+        return (Class<? extends VertexCombiner<I, M>>)
                 conf.getClass(GiraphJob.VERTEX_COMBINER_CLASS,
                               null,
                               VertexCombiner.class);
@@ -120,10 +118,9 @@ public class BspUtils {
      * @return Instantiated user vertex combiner class
      */
     @SuppressWarnings("rawtypes")
-    public static <I extends WritableComparable, V extends Writable,
-            E extends Writable, M extends Writable> VertexCombiner<I, V, E, M>
-            createVertexCombiner(Configuration conf) {
-        Class<? extends VertexCombiner<I, V, E, M>> vertexCombinerClass =
+    public static <I extends WritableComparable, M extends Writable>
+            VertexCombiner<I, M> createVertexCombiner(Configuration conf) {
+        Class<? extends VertexCombiner<I, M>> vertexCombinerClass =
             getVertexCombinerClass(conf);
         return ReflectionUtils.newInstance(vertexCombinerClass, conf);
     }
@@ -140,7 +137,7 @@ public class BspUtils {
                    E extends Writable,
                    M extends Writable>
             Class<? extends VertexRangeBalancer<I, V, E, M>>
-            getBasicVertexRangeBalancerClass(Configuration conf) {
+            getVertexRangeBalancerClass(Configuration conf) {
         return (Class<? extends VertexRangeBalancer<I, V, E, M>>)
                 conf.getClass(GiraphJob.VERTEX_RANGE_BALANCER_CLASS,
                               StaticBalancer.class,
@@ -156,9 +153,9 @@ public class BspUtils {
     @SuppressWarnings("rawtypes")
     public static <I extends WritableComparable, V extends Writable,
             E extends Writable, M extends Writable> VertexRangeBalancer<I, V, E, M>
-            createBasicVertexRangeBalancer(Configuration conf) {
+            createVertexRangeBalancer(Configuration conf) {
         Class<? extends VertexRangeBalancer<I, V, E, M>>
-            vertexRangeBalancerClass = getBasicVertexRangeBalancerClass(conf);
+            vertexRangeBalancerClass = getVertexRangeBalancerClass(conf);
         return ReflectionUtils.newInstance(vertexRangeBalancerClass, conf);
     }
 
@@ -173,12 +170,12 @@ public class BspUtils {
                    V extends Writable,
                    E extends Writable,
                    M extends Writable>
-            Class<? extends BspResolver<I, V, E, M>>
+            Class<? extends VertexResolver<I, V, E, M>>
             getVertexResolverClass(Configuration conf) {
-        return (Class<? extends BspResolver<I, V, E, M>>)
+        return (Class<? extends VertexResolver<I, V, E, M>>)
                 conf.getClass(GiraphJob.VERTEX_RESOLVER_CLASS,
-                              BspResolver.class,
-                              BspResolver.class);
+                              VertexResolver.class,
+                              VertexResolver.class);
     }
 
     /**
@@ -189,9 +186,9 @@ public class BspUtils {
      */
     @SuppressWarnings("rawtypes")
     public static <I extends WritableComparable, V extends Writable,
-            E extends Writable, M extends Writable> BspResolver<I, V, E, M>
+            E extends Writable, M extends Writable> VertexResolver<I, V, E, M>
             createVertexResolver(Configuration conf) {
-        Class<? extends BspResolver<I, V, E, M>> vertexResolverClass =
+        Class<? extends VertexResolver<I, V, E, M>> vertexResolverClass =
             getVertexResolverClass(conf);
         return ReflectionUtils.newInstance(vertexResolverClass, conf);
     }

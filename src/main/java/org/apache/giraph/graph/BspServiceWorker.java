@@ -321,28 +321,43 @@ public class BspServiceWorker<
                 vertexInputFormat.createVertexReader(inputSplit, getContext());
             vertexReader.initialize(inputSplit, getContext());
             vertexList.clear();
-            try {
-                Vertex<I, V, E, M> vertex =
-                    BspUtils.<I, V, E, M>createVertex(getConfiguration());
-                while (vertexReader.next(vertex)) {
-                    if (vertex.getVertexValue() == null) {
-                        vertex.setVertexValue(
-                            BspUtils.<V>createVertexValue(getConfiguration()));
-                    }
-                    vertexList.add(vertex);
-                    vertex =
-                        BspUtils.<I, V, E, M>createVertex(getConfiguration());
-                    getContext().progress();
+            Vertex<I, V, E, M> readerVertex =
+                BspUtils.<I, V, E, M>createVertex(getConfiguration());
+            while (vertexReader.next(readerVertex)) {
+                if (readerVertex.getVertexId() == null) {
+                    throw new IllegalArgumentException(
+                        "loadVertices: Vertex reader returned a vertex " +
+                        "without an id!  - " + readerVertex);
                 }
-                vertexReader.close();
-            } catch (Exception e) {
-                throw new RuntimeException(e);
+                if (readerVertex.getVertexValue() == null) {
+                    readerVertex.setVertexValue(
+                        BspUtils.<V>createVertexValue(getConfiguration()));
+                }
+                // Vertices must be ordered
+                if (!vertexList.isEmpty()) {
+                    @SuppressWarnings("unchecked")
+                    int compareTo =
+                        vertexList.get(vertexList.size() - 1).
+                        getVertexId().compareTo(readerVertex.getVertexId());
+                    if (compareTo > 0) {
+                        throw new IllegalArgumentException(
+                            "loadVertices: Illegal out of order vertices " +
+                            "from vertex reader previous vertex = " +
+                            vertexList.get(vertexList.size() - 1) +
+                            ", next vertex = " + readerVertex);
+                    }
+                }
+                vertexList.add(readerVertex);
+                readerVertex =
+                    BspUtils.<I, V, E, M>createVertex(getConfiguration());
+                getContext().progress();
+            }
+            vertexReader.close();
+            if (LOG.isInfoEnabled()) {
+                LOG.info("loadVertices: Got " + vertexList.size() +
+                         " vertices from input split " + inputSplit);
             }
             if (vertexList.isEmpty()) {
-                if (LOG.isInfoEnabled()) {
-                    LOG.info("loadVertices: No vertices in input split " +
-                             inputSplit);
-                }
                 // TODO: Need to add checkpoints
                 setInputSplitVertexRanges(inputSplitPath, null);
                 continue;
@@ -835,8 +850,9 @@ public class BspServiceWorker<
     /**
      * Save the vertices using the user-defined VertexOutputFormat from our
      * vertexArray based on the split.
+     * @throws InterruptedException
      */
-    private void saveVertices() throws IOException {
+    private void saveVertices() throws IOException, InterruptedException {
         if (getConfiguration().get(GiraphJob.VERTEX_OUTPUT_FORMAT_CLASS)
                 == null) {
             LOG.warn("saveVertices: " + GiraphJob.VERTEX_OUTPUT_FORMAT_CLASS +
@@ -860,7 +876,7 @@ public class BspServiceWorker<
     }
 
     @Override
-    public void cleanup() throws IOException {
+    public void cleanup() throws IOException, InterruptedException {
         setCachedSuperstep(getSuperstep() - 1);
         saveVertices();
          // All worker processes should denote they are done by adding special

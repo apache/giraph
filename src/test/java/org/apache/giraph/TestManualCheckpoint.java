@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,9 +20,9 @@ package org.apache.giraph;
 
 import java.io.IOException;
 
-import org.apache.giraph.examples.GeneratedVertexInputFormat;
 import org.apache.giraph.examples.SimpleCheckpointVertex;
-import org.apache.giraph.examples.SimpleTextVertexOutputFormat;
+import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexOutputFormat;
+import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -68,8 +68,8 @@ public class TestManualCheckpoint extends BspCase {
         job.getConfiguration().setBoolean(
             GiraphJob.CLEANUP_CHECKPOINTS_AFTER_SUCCESS, false);
         job.setVertexClass(SimpleCheckpointVertex.class);
-        job.setVertexInputFormatClass(GeneratedVertexInputFormat.class);
-        job.setVertexOutputFormatClass(SimpleTextVertexOutputFormat.class);
+        job.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
+        job.setVertexOutputFormatClass(SimpleSuperstepVertexOutputFormat.class);
         Path outputPath = new Path("/tmp/" + getCallingMethodName());
         removeAndSetOutput(job, outputPath);
         assertTrue(job.run(true));
@@ -94,9 +94,10 @@ public class TestManualCheckpoint extends BspCase {
                                             HDFS_CHECKPOINT_DIR);
         restartedJob.getConfiguration().setLong(GiraphJob.RESTART_SUPERSTEP, 3);
         restartedJob.setVertexClass(SimpleCheckpointVertex.class);
-        restartedJob.setVertexInputFormatClass(GeneratedVertexInputFormat.class);
+        restartedJob.setVertexInputFormatClass(
+            SimpleSuperstepVertexInputFormat.class);
         restartedJob.setVertexOutputFormatClass(
-            SimpleTextVertexOutputFormat.class);
+            SimpleSuperstepVertexOutputFormat.class);
         outputPath = new Path("/tmp/" + getCallingMethodName() + "Restarted");
         removeAndSetOutput(restartedJob, outputPath);
         assertTrue(restartedJob.run(true));

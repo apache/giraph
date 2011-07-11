@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -33,10 +33,8 @@ import org.apache.hadoop.io.WritableComparable;
  *
  **/
 @SuppressWarnings("rawtypes")
-public interface VertexCombiner<I extends WritableComparable,
-                                V extends Writable,
-                                E extends Writable,
-                                M extends Writable> {
+public abstract class VertexCombiner<I extends WritableComparable,
+                                     M extends Writable> {
 
   /**
    * Combines message values for a particular vertex index.
@@ -46,6 +44,6 @@ public interface VertexCombiner<I extends WritableComparable,
    * @return Message that is combined from {@link MsgList}
    * @throws IOException
    */
-   M combine(I vertexIndex,
-             List<M> msgList) throws IOException;
+   public abstract M combine(I vertexIndex,
+                             List<M> msgList) throws IOException;
 }

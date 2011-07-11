@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -821,9 +821,11 @@ public abstract class BspService <
                     new String(getZkExt().getData(vertexRangeAssignmentsPath,
                                                   false,
                                                   null)));
-            LOG.debug("getVertexRangeSet: Found vertex ranges " +
-                      vertexRangeAssignmentsArray.toString() +
-                      " on superstep " + superstep);
+            if (LOG.isInfoEnabled()) {
+                LOG.info("getVertexRangeSet: Found vertex ranges " +
+                          vertexRangeAssignmentsArray.toString() +
+                          " on superstep " + superstep);
+            }
             for (int i = 0; i < vertexRangeAssignmentsArray.length(); ++i) {
                 JSONObject vertexRangeObj =
                     vertexRangeAssignmentsArray.getJSONObject(i);
