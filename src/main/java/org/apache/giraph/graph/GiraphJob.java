@@ -477,9 +477,9 @@ public class GiraphJob extends Job {
                     ", vertex input format - " + classList.get(2));
             }
             // If has vertex combiner class, check
-            if (BspUtils.<I, M>getVertexCombinerClass(conf) != null) {
-                Class<? extends VertexCombiner<I, M>> vertexCombinerClass =
-                    BspUtils.<I, M>getVertexCombinerClass(conf);
+            Class<? extends VertexCombiner<I, M>> vertexCombinerClass =
+                BspUtils.<I, M>getVertexCombinerClass(conf);
+            if (vertexCombinerClass != null) {
                 classList = ReflectionUtils.<VertexCombiner>getTypeArguments(
                     VertexCombiner.class, vertexCombinerClass);
                 if (!vertexIndexType.equals(classList.get(0))) {
@@ -496,12 +496,13 @@ public class GiraphJob extends Job {
                 }
             }
             // If has vertex output format class, check
-            if (BspUtils.<I, V, E>getVertexOutputFormatClass(conf) != null) {
-                Class<? extends VertexOutputFormat<I, V, E>>
-                    vertexOutputFormatClass =
-                        BspUtils.<I, V, E>getVertexOutputFormatClass(conf);
-                classList = ReflectionUtils.<VertexOutputFormat>getTypeArguments(
-                    VertexOutputFormat.class, vertexOutputFormatClass);
+            Class<? extends VertexOutputFormat<I, V, E>>
+                vertexOutputFormatClass =
+                    BspUtils.<I, V, E>getVertexOutputFormatClass(conf);
+            if (vertexOutputFormatClass != null) {
+                classList =
+                    ReflectionUtils.<VertexOutputFormat>getTypeArguments(
+                        VertexOutputFormat.class, vertexOutputFormatClass);
                 if (!vertexIndexType.equals(classList.get(0))) {
                     throw new IllegalArgumentException(
                         "checkClassTypes: Vertex index types don't match, " +
