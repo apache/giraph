@@ -445,7 +445,16 @@ public abstract class BspService <
         restartedSuperstep= superstep;
     }
 
+    /**
+     * Should checkpoint on this superstep?  If checkpointing, always checkpoint
+     * the first superstep.
+     *
+     * @param superstep Superstep to check on
+     */
     final public boolean checkpointFrequencyMet(long superstep) {
+        if (checkpointFrequency == 0) {
+            return false;
+        }
         if ((superstep == 1) ||
             (((superstep + 1) % checkpointFrequency) == 0)) {
             return true;
@@ -821,8 +830,8 @@ public abstract class BspService <
                     new String(getZkExt().getData(vertexRangeAssignmentsPath,
                                                   false,
                                                   null)));
-            if (LOG.isInfoEnabled()) {
-                LOG.info("getVertexRangeSet: Found vertex ranges " +
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("getVertexRangeSet: Found vertex ranges " +
                           vertexRangeAssignmentsArray.toString() +
                           " on superstep " + superstep);
             }
@@ -936,16 +945,17 @@ public abstract class BspService <
         // 1. Process all shared events
         // 2. Process specific derived class events
 
-        if (LOG.isInfoEnabled()) {
-            LOG.info("process: Got a new event, path = " + event.getPath() +
-                     ", type = " + event.getType() + ", state = " +
-                     event.getState());
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("process: Got a new event, path = " + event.getPath() +
+                      ", type = " + event.getType() + ", state = " +
+                      event.getState());
         }
 
         if (event.getPath() == null) {
             // No way to recover from a disconnect event, signal all BspEvents
             if ((event.getType() == EventType.None) &&
                     (event.getState() == KeeperState.Disconnected)) {
+
                 for (BspEvent bspEvent : registeredBspEvents) {
                     bspEvent.signal();
                 }
@@ -960,55 +970,95 @@ public abstract class BspService <
             // This will cause all becomeMaster() MasterThreads to notice the
             // change in job state and quit trying to become the master.
             masterElectionChildrenChanged.signal();
-
+            eventProcessed = true;
         } else if ((event.getPath().contains(WORKER_HEALTHY_DIR) ||
                 event.getPath().contains(WORKER_UNHEALTHY_DIR)) &&
                 (event.getType() == EventType.NodeChildrenChanged)) {
-            LOG.info("process: workerHealthRegistrationChanged " +
-            "(worker health reported - healthy/unhealthy )");
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("process: workerHealthRegistrationChanged " +
+                          "(worker health reported - healthy/unhealthy )");
+            }
             workerHealthRegistrationChanged.signal();
+            eventProcessed = true;
         } else if (event.getPath().equals(INPUT_SPLITS_ALL_READY_PATH) &&
                 (event.getType() == EventType.NodeCreated)) {
-            LOG.info("process: inputSplitsReadyChanged (input splits ready)");
+            if (LOG.isInfoEnabled()) {
+                LOG.info("process: inputSplitsReadyChanged " +
+                         "(input splits ready)");
+            }
             inputSplitsAllReadyChanged.signal();
+            eventProcessed = true;
         } else if (event.getPath().endsWith(INPUT_SPLIT_RESERVED_NODE) &&
                 (event.getType() == EventType.NodeDeleted)) {
-            LOG.info("process: inputSplitsStateChanged (lost a reservation)");
+            if (LOG.isInfoEnabled()) {
+                LOG.info("process: inputSplitsStateChanged "+
+                         "(lost a reservation)");
+            }
             inputSplitsStateChanged.signal();
+            eventProcessed = true;
         } else if (event.getPath().endsWith(INPUT_SPLIT_FINISHED_NODE) &&
                 (event.getType() == EventType.NodeCreated)) {
-            LOG.info("process: inputSplitsStateChanged (finished inputsplit)");
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("process: inputSplitsStateChanged " +
+                          "(finished inputsplit)");
+            }
             inputSplitsStateChanged.signal();
+            eventProcessed = true;
         } else if (event.getPath().contains(VERTEX_RANGE_ASSIGNMENTS_DIR) &&
                 event.getType() == EventType.NodeCreated) {
-            LOG.info("process: vertexRangeAssignmentsReadyChanged signaled");
+            if (LOG.isInfoEnabled()) {
+                LOG.info("process: vertexRangeAssignmentsReadyChanged " +
+                         "(vertex ranges are assigned)");
+            }
             vertexRangeAssignmentsReadyChanged.signal();
+            eventProcessed = true;
         } else if (event.getPath().contains(VERTEX_RANGE_EXCHANGE_DIR) &&
                 event.getType() == EventType.NodeChildrenChanged) {
-            LOG.info("process: vertexRangeExchangeChildrenChanged signaled");
+            if (LOG.isInfoEnabled()) {
+                LOG.info("process: vertexRangeExchangeChildrenChanged " +
+                         "(ready to exchanged vertex ranges)");
+            }
             vertexRangeExchangeChildrenChanged.signal();
+            eventProcessed = true;
         } else if (event.getPath().contains(
                 VERTEX_RANGE_EXCHANGED_FINISHED_NODE) &&
                 event.getType() == EventType.NodeCreated) {
-            LOG.info("process: vertexRangeExchangeFinishedChanged signaled");
+            if (LOG.isInfoEnabled()) {
+                LOG.info("process: vertexRangeExchangeFinishedChanged " +
+                         "(vertex range exchange done)");
+            }
             vertexRangeExchangeFinishedChanged.signal();
+            eventProcessed = true;
         } else if (event.getPath().contains(SUPERSTEP_FINISHED_NODE) &&
                 event.getType() == EventType.NodeCreated) {
-            LOG.info("process: superstepFinished signaled");
+            if (LOG.isInfoEnabled()) {
+                LOG.info("process: superstepFinished signaled");
+            }
             superstepFinished.signal();
+            eventProcessed = true;
         } else if (event.getPath().endsWith(APPLICATION_ATTEMPTS_PATH) &&
                 event.getType() == EventType.NodeChildrenChanged) {
-            LOG.info("process: applicationAttempChanged signaled");
+            if (LOG.isInfoEnabled()) {
+                LOG.info("process: applicationAttemptChanged signaled");
+            }
             applicationAttemptChanged.signal();
+            eventProcessed = true;
         } else if (event.getPath().contains(MASTER_ELECTION_DIR) &&
                 event.getType() == EventType.NodeChildrenChanged) {
-            LOG.info("process: masterElectionChildrenChanged signaled");
+            if (LOG.isInfoEnabled()) {
+                LOG.info("process: masterElectionChildrenChanged signaled");
+            }
             masterElectionChildrenChanged.signal();
+            eventProcessed = true;
         } else if (event.getPath().equals(CLEANED_UP_PATH) &&
                 event.getType() == EventType.NodeChildrenChanged) {
-            LOG.info("process: cleanedUpChildrenChanged signaled");
+            if (LOG.isInfoEnabled()) {
+                LOG.info("process: cleanedUpChildrenChanged signaled");
+            }
             cleanedUpChildrenChanged.signal();
+            eventProcessed = true;
         }
+
         if ((processEvent(event) == false) && (eventProcessed == false)) {
             LOG.warn("process: Unknown and unprocessed event (path=" +
                      event.getPath() + ", type=" + event.getType() +

@@ -741,11 +741,17 @@ public class BspServiceWorker<
                 throw new RuntimeException(e);
             }
         }
-        LOG.info("startSuperstep: Ready for computation since worker " +
-                 "selection and vertex range assignments are done in " +
-                 vertexRangeAssignmentsNode);
+        if (LOG.isInfoEnabled()) {
+            LOG.info("startSuperstep: Ready for computation since worker " +
+                     "selection and vertex range assignments are done in " +
+                     vertexRangeAssignmentsNode);
+        }
 
         getAggregatorValues(getSuperstep());
+        getContext().setStatus("startSuperstep: " +
+                               getBspMapper().getMapFunctions().toString() +
+                               " - Attempt=" + getApplicationAttempt() +
+                               ", Superstep=" + getSuperstep());
         return true;
     }
 
@@ -841,7 +847,8 @@ public class BspServiceWorker<
                      ", total edges = " + totalEdges);
         }
         incrCachedSuperstep();
-        getContext().setStatus(getBspMapper().getMapFunctions().toString() +
+        getContext().setStatus("finishSuperstep: " +
+                               getBspMapper().getMapFunctions().toString() +
                                " - Attempt=" + getApplicationAttempt() +
                                ", Superstep=" + getSuperstep());
         return (finishedVertices == totalVertices);

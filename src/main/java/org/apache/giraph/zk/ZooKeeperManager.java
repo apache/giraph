@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -136,6 +136,7 @@ public class ZooKeeperManager {
 
         /**
          * Constructor.
+         *
          * @param is InputStream to dump to LOG.info
          */
         public StreamCollector(final InputStream is) {
@@ -150,7 +151,9 @@ public class ZooKeeperManager {
             String line = null;
             try {
                 while ((line = bufferedReader.readLine()) != null) {
-                    LOG.debug(line);
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug(line);
+                    }
                 }
             } catch (IOException e) {
                 LOG.error("run: Ignoring IOException", e);
@@ -201,6 +204,7 @@ public class ZooKeeperManager {
     /**
      * Create the candidate stamps and decide on the servers to start if
      * you are partition 0.
+     *
      * @throws IOException
      * @throws InterruptedException
      */
@@ -270,6 +274,7 @@ public class ZooKeeperManager {
     /**
      * Task 0 will call this to create the ZooKeeper server list.  The result is
      * a file that describes the ZooKeeper servers through the filename.
+     *
      * @throws IOException
      * @throws InterruptedException
      */
@@ -307,6 +312,7 @@ public class ZooKeeperManager {
                              pollMsecs + ") on attempt " +
                              candidateRetrievalAttempt);
                 }
+
                 if (hostnameTaskMap.size() >= serverCount) {
                     break;
                 }
@@ -318,7 +324,7 @@ public class ZooKeeperManager {
             new StringBuffer(ZOOKEEPER_SERVER_LIST_FILE_PREFIX);
         int numServers = 0;
         for (Map.Entry<String, Integer> hostnameTask :
-            hostnameTaskMap.entrySet()) {
+                hostnameTaskMap.entrySet()) {
             serverListFile.append(hostnameTask.getKey() +
             HOSTNAME_TASK_SEPARATOR + hostnameTask.getValue() +
             HOSTNAME_TASK_SEPARATOR);
@@ -533,8 +539,15 @@ public class ZooKeeperManager {
                     "onlineZooKeeperServers: java.home is not set!");
             }
             commandList.add(javaHome + "/bin/java");
-            commandList.add(conf.get(GiraphJob.ZOOKEEPER_JAVA_OPTS,
-                        GiraphJob.ZOOKEEPER_JAVA_OPTS_DEFAULT));
+            String zkJavaOptsString =
+                conf.get(GiraphJob.ZOOKEEPER_JAVA_OPTS,
+                         GiraphJob.ZOOKEEPER_JAVA_OPTS_DEFAULT);
+            String[] zkJavaOptsArray = zkJavaOptsString.split(" ");
+            if (zkJavaOptsArray != null) {
+                for (String javaOpt : zkJavaOptsArray) {
+                    commandList.add(javaOpt);
+                }
+            }
             commandList.add("-cp");
             Path fullJarPath = new Path(conf.get(GiraphJob.ZOOKEEPER_JAR));
             commandList.add(fullJarPath.toString());
@@ -544,8 +557,10 @@ public class ZooKeeperManager {
             File execDirectory = new File(zkDir);
             processBuilder.directory(execDirectory);
             processBuilder.redirectErrorStream(true);
-            LOG.info("onlineZooKeeperServers: Attempting to start ZooKeeper " +
-                "server with command " + commandList);
+            if (LOG.isInfoEnabled()) {
+                LOG.info("onlineZooKeeperServers: Attempting to " +
+                         "start ZooKeeper server with command " + commandList);
+            }
             try {
                 synchronized (this) {
                     zkProcess = processBuilder.start();
@@ -703,11 +718,13 @@ public class ZooKeeperManager {
                         }
                     }
                 }
-                LOG.info("waitUntilAllTasksDone: Got " + totalDone +
-                         " and " + totalMapTasks +
-                         " desired (polling period is " +
-                         pollMsecs + ") on attempt " +
-                         attempt);
+                if (LOG.isInfoEnabled()) {
+                    LOG.info("waitUntilAllTasksDone: Got " + totalDone +
+                             " and " + totalMapTasks +
+                             " desired (polling period is " +
+                             pollMsecs + ") on attempt " +
+                             attempt);
+                }
                 if (totalDone >= totalMapTasks) {
                     break;
                 }

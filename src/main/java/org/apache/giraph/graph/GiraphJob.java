@@ -156,7 +156,7 @@ public class GiraphJob extends Job {
     /** Maximum number of RPC handlers */
     public static final String RPC_NUM_HANDLERS = "giraph.rpcNumHandlers";
     /** Default maximum number of RPC handlers */
-    public static final int RPC_NUM_HANDLERS_DEFAULT = 20;
+    public static final int RPC_NUM_HANDLERS_DEFAULT = 100;
 
     /** Maximum number of messages per peer before flush */
     public static final String MSG_SIZE = "giraph.msgSize";
@@ -166,13 +166,25 @@ public class GiraphJob extends Job {
     /** Number of poll attempts prior to failing the job (int) */
     public static final String POLL_ATTEMPTS = "giraph.pollAttempts";
     /** Default poll attempts */
-    public static final int POLL_ATTEMPTS_DEFAULT = 5;
+    public static final int POLL_ATTEMPTS_DEFAULT = 10;
 
     /** Number of minimum vertices in each vertex range */
     public static final String MIN_VERTICES_PER_RANGE =
         "giraph.minVerticesPerRange";
     /** Default number of minimum vertices in each vertex range */
     public static final long MIN_VERTICES_PER_RANGE_DEFAULT = 3;
+
+    /** Minimum stragglers of the superstep before printing them out */
+    public static final String PARTITION_LONG_TAIL_MIN_PRINT =
+        "giraph.partitionLongTailMinPrint";
+    /** Only print stragglers with one as a default */
+    public static final int PARTITION_LONG_TAIL_MIN_PRINT_DEFAULT = 1;
+
+    /** Use superstep counters? (boolean) */
+    public static final String USE_SUPERSTEP_COUNTERS =
+        "giraph.useSuperstepCounters";
+    /** Default is to use the superstep counters */
+    public static final boolean USE_SUPERSTEP_COUNTERS_DEFAULT = true;
 
     /**
      * Set the multiplicative factor of how many partitions to create from
@@ -191,11 +203,12 @@ public class GiraphJob extends Job {
         "giraph.zkJavaOpts";
     /** Default java opts passed to ZooKeeper startup */
     public static final String ZOOKEEPER_JAVA_OPTS_DEFAULT =
-        "-Xmx128m";
+        "-Xmx256m -XX:ParallelGCThreads=4 -XX:+UseConcMarkSweepGC " +
+        "-XX:CMSInitiatingOccupancyFraction=70 -XX:MaxGCPauseMillis=100";
 
     /**
-     *  How often to checkpoint (i.e. 1 means every superstep, 2 is every
-     *  two supersteps, etc.).
+     *  How often to checkpoint (i.e. 0, means no checkpoint,
+     *  1 means every superstep, 2 is every two supersteps, etc.).
      */
     public static final String CHECKPOINT_FREQUENCY =
         "giraph.checkpointFrequency";
@@ -348,7 +361,7 @@ public class GiraphJob extends Job {
         /** The map should be run exactly once, or else there is a problem. */
         boolean mapAlreadyRun = false;
         /** Manages the ZooKeeper servers if necessary (dynamic startup) */
-        private ZooKeeperManager manager;
+        private ZooKeeperManager zkManager;
         /** Configuration */
         private Configuration conf;
         /** Already complete? */
@@ -362,7 +375,8 @@ public class GiraphJob extends Job {
             MASTER_ONLY,
             MASTER_ZOOKEEPER_ONLY,
             WORKER_ONLY,
-            ALL
+            ALL,
+            ALL_EXCEPT_ZOOKEEPER
         }
 
         /**
@@ -604,6 +618,55 @@ public class GiraphJob extends Job {
                           Writable.class);
         }
 
+        /**
+         * Figure out what functions this mapper should do.  Basic logic is as
+         * follows:
+         * 1) If not split master, everyone does the everything and/or running
+         *    ZooKeeper.
+         * 2) If split master/worker, masters also run ZooKeeper (if it's not
+         *    given to us).  Therefore, check to
+         *
+         * @param conf Configuration to use
+         * @return Functions that this mapper should do.
+         */
+        private static MapFunctions determineMapFunctions(
+                Configuration conf,
+                ZooKeeperManager zkManager) {
+            boolean splitMasterWorker =
+                conf.getBoolean(GiraphJob.SPLIT_MASTER_WORKER,
+                                GiraphJob.SPLIT_MASTER_WORKER_DEFAULT);
+            int taskPartition = conf.getInt("mapred.task.partition", -1);
+            boolean zkAlreadyProvided =
+                conf.get(GiraphJob.ZOOKEEPER_LIST) != null;
+            MapFunctions functions = MapFunctions.UNKNOWN;
+            // What functions should this mapper do?
+            if (!splitMasterWorker) {
+                if (zkManager.runsZooKeeper()) {
+                    functions = MapFunctions.ALL;
+                } else {
+                    functions = MapFunctions.ALL_EXCEPT_ZOOKEEPER;
+                }
+            } else {
+                if (zkAlreadyProvided) {
+                    int masterCount =
+                        conf.getInt(GiraphJob.ZOOKEEPER_SERVER_COUNT,
+                                    GiraphJob.ZOOKEEPER_SERVER_COUNT_DEFAULT);
+                    if (taskPartition < masterCount) {
+                        functions = MapFunctions.MASTER_ONLY;
+                    } else {
+                        functions = MapFunctions.MASTER_ZOOKEEPER_ONLY;
+                    }
+                } else {
+                    if (zkManager.runsZooKeeper()) {
+                        functions = MapFunctions.MASTER_ZOOKEEPER_ONLY;
+                    } else {
+                        functions = MapFunctions.WORKER_ONLY;
+                    }
+                }
+            }
+            return functions;
+        }
+
         @Override
         public void setup(Context context)
                 throws IOException, InterruptedException {
@@ -637,15 +700,16 @@ public class GiraphJob extends Job {
             String serverPortList =
                 conf.get(GiraphJob.ZOOKEEPER_LIST, "");
             if (serverPortList == "") {
-                manager = new ZooKeeperManager(context);
-                manager.setup();
-                if (manager.computationDone()) {
+                zkManager = new ZooKeeperManager(context);
+                zkManager.setup();
+                if (zkManager.computationDone()) {
                     done = true;
                     return;
                 }
-                manager.onlineZooKeeperServers();
-                serverPortList = manager.getZooKeeperServerPortString();
+                zkManager.onlineZooKeeperServers();
+                serverPortList = zkManager.getZooKeeperServerPortString();
             }
+            this.mapFunctions = determineMapFunctions(conf, zkManager);
             context.setStatus("setup: Connected to Zookeeper service " +
                               serverPortList);
 
@@ -657,63 +721,41 @@ public class GiraphJob extends Job {
             int sessionMsecTimeout =
                 conf.getInt(GiraphJob.ZOOKEEPER_SESSION_TIMEOUT,
                               GiraphJob.ZOOKEEPER_SESSION_TIMEOUT_DEFAULT);
-            boolean splitMasterWorker =
-                conf.getBoolean(GiraphJob.SPLIT_MASTER_WORKER,
-                                  GiraphJob.SPLIT_MASTER_WORKER_DEFAULT);
-            int taskPartition = conf.getInt("mapred.task.partition", -1);
-
-            // What functions should this mapper do?
-            if (!splitMasterWorker) {
-                mapFunctions = MapFunctions.ALL;
-            }
-            else {
-                if (serverPortList != "") {
-                    int masterCount =
-                        conf.getInt(
-                            GiraphJob.ZOOKEEPER_SERVER_COUNT,
-                            GiraphJob.ZOOKEEPER_SERVER_COUNT_DEFAULT);
-                    if (taskPartition < masterCount) {
-                        mapFunctions = MapFunctions.MASTER_ONLY;
-                    }
-                    else {
-                        mapFunctions = MapFunctions.WORKER_ONLY;
-                    }
-                }
-                else {
-                    if (manager.runsZooKeeper()) {
-                        mapFunctions = MapFunctions.MASTER_ZOOKEEPER_ONLY;
-                    }
-                    else {
-                        mapFunctions = MapFunctions.WORKER_ONLY;
-                    }
-                }
-            }
             try {
                 if ((mapFunctions == MapFunctions.MASTER_ZOOKEEPER_ONLY) ||
                         (mapFunctions == MapFunctions.MASTER_ONLY) ||
-                        (mapFunctions == MapFunctions.ALL)) {
-                    LOG.info("setup: Starting up BspServiceMaster " +
-                             "(master thread)...");
+                        (mapFunctions == MapFunctions.ALL) ||
+                        (mapFunctions == MapFunctions.ALL_EXCEPT_ZOOKEEPER)) {
+                    if (LOG.isInfoEnabled()) {
+                        LOG.info("setup: Starting up BspServiceMaster " +
+                                 "(master thread)...");
+                    }
                     masterThread =
                         new MasterThread<I, V, E, M>(
                             new BspServiceMaster<I, V, E, M>(serverPortList,
                                                              sessionMsecTimeout,
                                                              context,
-                                                             this));
+                                                             this),
+                                                             context);
                     masterThread.start();
                 }
                 if ((mapFunctions == MapFunctions.WORKER_ONLY) ||
-                        (mapFunctions == MapFunctions.ALL)) {
-                    LOG.info("setup: Starting up BspServiceWorker...");
+                        (mapFunctions == MapFunctions.ALL) ||
+                        (mapFunctions == MapFunctions.ALL_EXCEPT_ZOOKEEPER)) {
+                    if (LOG.isInfoEnabled()) {
+                        LOG.info("setup: Starting up BspServiceWorker...");
+                    }
                     serviceWorker = new BspServiceWorker<I, V, E, M>(
                         serverPortList, sessionMsecTimeout, context, this);
-                    LOG.info("setup: Registering health of this worker...");
+                    if (LOG.isInfoEnabled()) {
+                        LOG.info("setup: Registering health of this worker...");
+                    }
                     serviceWorker.setup();
                 }
             } catch (Exception e) {
                 LOG.error("setup: Caught exception just before end of setup", e);
-                if (manager != null ) {
-                    manager.offlineZooKeeperServers(
+                if (zkManager != null ) {
+                    zkManager.offlineZooKeeperServers(
                     ZooKeeperManager.State.FAILED);
                 }
                 throw new RuntimeException(
@@ -742,7 +784,9 @@ public class GiraphJob extends Job {
 
             if ((mapFunctions == MapFunctions.MASTER_ZOOKEEPER_ONLY) ||
                     (mapFunctions == MapFunctions.MASTER_ONLY)) {
-                LOG.info("map: No need to do anything when not a worker");
+                if (LOG.isInfoEnabled()) {
+                    LOG.info("map: No need to do anything when not a worker");
+                }
                 return;
             }
 
@@ -775,8 +819,11 @@ public class GiraphJob extends Job {
                     commService.prepareSuperstep();
                 }
                 serviceWorker.startSuperstep();
-                if (manager != null && manager.runsZooKeeper()) {
-                    context.setStatus("Running Zookeeper Server");
+                if (zkManager != null && zkManager.runsZooKeeper()) {
+                    if (LOG.isInfoEnabled()) {
+                        LOG.info("map: Chosen to run ZooKeeper...");
+                    }
+                    context.setStatus("map: Running Zookeeper Server");
                 }
 
                 if (LOG.isDebugEnabled()) {
@@ -832,6 +879,12 @@ public class GiraphJob extends Job {
                     verticesFinished = 0;
                     for (BasicVertex<I, V, E, M> vertex :
                             entry.getValue().getVertexMap().values()) {
+                        if (vertex.isHalted() &&
+                                !vertex.getMsgList().isEmpty()) {
+                            Vertex<I, V, E, M> activatedVertex =
+                                (Vertex<I, V, E, M>) vertex;
+                            activatedVertex.halt = false;
+                        }
                         if (!vertex.isHalted()) {
                             Iterator<M> vertexMsgIt =
                                 vertex.getMsgList().iterator();
@@ -903,8 +956,8 @@ public class GiraphJob extends Job {
                 // cleanup phase -- just log the error
                 LOG.error("cleanup: Master thread couldn't join");
             }
-            if (manager != null) {
-                manager.offlineZooKeeperServers(
+            if (zkManager != null) {
+                zkManager.offlineZooKeeperServers(
                     ZooKeeperManager.State.FINISHED);
             }
             // Preferably would shut down the service only after
@@ -1028,6 +1081,9 @@ public class GiraphJob extends Job {
         if (getJar() == null) {
             setJarByClass(GiraphJob.class);
         }
+        // Should work in MAPREDUCE-1938 to let the user jars/classes
+        // get loaded first
+        conf.setBoolean("mapreduce.user.classpath.first", true);
         setMapperClass(BspMapper.class);
         setInputFormatClass(BspInputFormat.class);
         setOutputFormatClass(BspOutputFormat.class);

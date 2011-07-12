@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -43,10 +43,9 @@ public class ZooKeeperExt extends ZooKeeper {
     /** Length of the ZK sequence number */
     private static final int SEQUENCE_NUMBER_LENGTH = 10;
 
-    public ZooKeeperExt(
-        String connectString,
-        int sessionTimeout,
-        Watcher watcher) throws IOException {
+    public ZooKeeperExt(String connectString,
+                        int sessionTimeout,
+                        Watcher watcher) throws IOException {
         super(connectString, sessionTimeout, watcher);
     }
 
@@ -66,11 +65,11 @@ public class ZooKeeperExt extends ZooKeeper {
      * @throws InterruptedException
      */
     public String createExt(
-        final String path,
-        byte data[],
-        List<ACL> acl,
-        CreateMode createMode,
-        boolean recursive) throws KeeperException, InterruptedException {
+            final String path,
+            byte data[],
+            List<ACL> acl,
+            CreateMode createMode,
+            boolean recursive) throws KeeperException, InterruptedException {
         if (LOG.isDebugEnabled()) {
             LOG.debug("createExt: Creating path " + path);
         }
@@ -113,7 +112,7 @@ public class ZooKeeperExt extends ZooKeeper {
      * @throws KeeperException
      */
     public void deleteExt(final String path, int version, boolean recursive)
-        throws InterruptedException, KeeperException {
+            throws InterruptedException, KeeperException {
         if (recursive == false) {
             delete(path, version);
             return;
@@ -149,11 +148,12 @@ public class ZooKeeperExt extends ZooKeeper {
      * @throws InterruptedException
      * @throws KeeperException
      */
-    public List<String> getChildrenExt(final String path,
-                                       boolean watch,
-                                       boolean sequenceSorted,
-                                       boolean fullPath)
-        throws KeeperException, InterruptedException {
+    public List<String> getChildrenExt(
+            final String path,
+            boolean watch,
+            boolean sequenceSorted,
+            boolean fullPath)
+            throws KeeperException, InterruptedException {
         List<String> childList = getChildren(path, watch);
         /* Sort children according to the sequence number, if desired */
         if (sequenceSorted) {

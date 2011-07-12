@@ -70,7 +70,7 @@ public abstract class Vertex<
     private final SortedMap<I, Edge<I, E>> destEdgeMap =
         new TreeMap<I, Edge<I, E>>();
     /** If true, do not do anymore computation on this vertex. */
-    private boolean halt = false;
+    boolean halt = false;
     /** List of incoming messages from the previous superstep */
     private final List<M> msgList = new ArrayList<M>();
 

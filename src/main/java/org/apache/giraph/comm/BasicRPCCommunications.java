@@ -257,7 +257,10 @@ public abstract class BasicRPCCommunications<
          * @throws IOException
          */
         private void putAllMessages() throws IOException {
-            LOG.debug("putAllMessages: " + peer.getName() + ": issuing RPCs");
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("putAllMessages: " + peer.getName() +
+                          ": issuing RPCs");
+            }
             synchronized (outMessagesPerPeer) {
                 for (Entry<I, MsgList<M>> e :
                         outMessagesPerPeer.entrySet()) {
@@ -365,8 +368,10 @@ public abstract class BasicRPCCommunications<
                         }
                     }
                 }
-                LOG.info("run: RPC client thread terminating if is proxy (" +
-                         isProxy + ")");
+                if (LOG.isInfoEnabled()) {
+                    LOG.info("run: RPC client thread terminating if is proxy (" +
+                             isProxy + ")");
+                }
                 if (isProxy) {
                     RPC.stopProxy(peer);
                 }
@@ -429,7 +434,8 @@ public abstract class BasicRPCCommunications<
         this.myName = myAddress.toString();
         if (LOG.isInfoEnabled()) {
             LOG.info("BasicRPCCommunications: Started RPC " +
-                     "communication server: " + myName);
+                     "communication server: " + myName + " with " +
+                     numHandlers + " handlers");
         }
         connectAllRPCProxys(this.jobId, this.jobToken);
     }
@@ -449,9 +455,21 @@ public abstract class BasicRPCCommunications<
      */
     private void connectAllRPCProxys(String jobId, J jobToken)
             throws IOException, InterruptedException {
+        final int maxTries = 5;
         for (VertexRange<I, V, E, M> vertexRange :
                 service.getVertexRangeMap().values()) {
-            startPeerConnectionThread(vertexRange, jobId, jobToken);
+            int tries = 0;
+            while (tries < maxTries) {
+                try {
+                    startPeerConnectionThread(vertexRange, jobId, jobToken);
+                    break;
+                } catch (IOException e) {
+                    LOG.warn("connectAllRPCProxys: Failed on attempt " +
+                             tries + " of " + maxTries +
+                             " to connect to " + vertexRange.toString());
+                    ++tries;
+                }
+            }
         }
     }
 
@@ -466,11 +484,14 @@ public abstract class BasicRPCCommunications<
                                            String jobId,
                                            J jobToken)
             throws IOException, InterruptedException {
-        LOG.debug("startPeerConnectionThread: hostname " +
-                 vertexRange.getHostname() + ", port " + vertexRange.getPort());
-        final InetSocketAddress addr = new InetSocketAddress(
-                                           vertexRange.getHostname(),
-                                           vertexRange.getPort());
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("startPeerConnectionThread: hostname " +
+                      vertexRange.getHostname() + ", port " +
+                      vertexRange.getPort());
+        }
+        final InetSocketAddress addr =
+            new InetSocketAddress(vertexRange.getHostname(),
+                                  vertexRange.getPort());
         // Cheap way to hold both the hostname and port (rather than
         // make a class)
         InetSocketAddress addrUnresolved =
@@ -502,10 +523,10 @@ public abstract class BasicRPCCommunications<
             outMessages.put(addrUnresolved, outMsgMap);
         }
 
-        PeerThread th =
+        PeerThread peerThread =
             new PeerThread(outMsgMap, peer, maxSize, isProxy, combiner);
-        th.start();
-        peerThreads.put(addrUnresolved, th);
+        peerThread.start();
+        peerThreads.put(addrUnresolved, peerThread);
     }
 
     @Override
@@ -873,7 +894,9 @@ public abstract class BasicRPCCommunications<
 
     @Override
     public void prepareSuperstep() {
-        LOG.info("prepareSuperstep");
+        if (LOG.isInfoEnabled()) {
+            LOG.info("prepareSuperstep");
+        }
         inPrepareSuperstep = true;
 
         synchronized(transientInMessages) {
@@ -911,9 +934,11 @@ public abstract class BasicRPCCommunications<
                     vertex.getMsgList().clear();
                     List<M> msgList = inMessages.get(vertex.getVertexId());
                     if (msgList != null) {
-                        LOG.debug("prepareSuperstep: Assigning " +
-                                  msgList.size() +
-                                  " mgs to vertex index " + vertex);
+                        if (LOG.isDebugEnabled()) {
+                            LOG.debug("prepareSuperstep: Assigning " +
+                                      msgList.size() +
+                                      " mgs to vertex index " + vertex);
+                        }
                         for (M msg : msgList) {
                             if (msg == null) {
                                 LOG.warn("null message in inMessages");

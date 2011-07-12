@@ -36,6 +36,7 @@ import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -88,6 +89,12 @@ public class BspServiceMaster<
     private Object vertexRangeSynchronization = new Object();
     /** Superstep counter */
     private Counter superstepCounter = null;
+    /** Vertex counter */
+    private Counter vertexCounter = null;
+    /** Finished vertex counter */
+    private Counter finishedVertexCounter = null;
+    /** Edge counter */
+    private Counter edgeCounter = null;
     /** Am I the master? */
     private boolean isMaster = false;
     /** Max number of workers */
@@ -100,6 +107,8 @@ public class BspServiceMaster<
     private final int msecsPollPeriod;
     /** Max number of poll attempts */
     private final int maxPollAttempts;
+    /** Min number of long tails before printing */
+    private final int partitionLongTailMinPrint;
     /** Last finalized checkpoint */
     private long lastCheckpointedSuperstep = -1;
     /** State of the superstep changed */
@@ -127,6 +136,9 @@ public class BspServiceMaster<
         maxPollAttempts =
             getConfiguration().getInt(GiraphJob.POLL_ATTEMPTS,
                                       GiraphJob.POLL_ATTEMPTS_DEFAULT);
+        partitionLongTailMinPrint = getConfiguration().getInt(
+            GiraphJob.PARTITION_LONG_TAIL_MIN_PRINT,
+            GiraphJob.PARTITION_LONG_TAIL_MIN_PRINT_DEFAULT);
     }
 
     @Override
@@ -260,9 +272,9 @@ public class BspServiceMaster<
                                  CreateMode.PERSISTENT,
                                  true);
         } catch (KeeperException.NodeExistsException e) {
-            if (LOG.isInfoEnabled()) {
-                LOG.info("getWorkers: " + healthyWorkerPath +
-                         " already exists, no need to create.");
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("getWorkers: " + healthyWorkerPath +
+                          " already exists, no need to create.");
             }
         } catch (KeeperException e) {
             throw new IllegalStateException("getWorkers: KeeperException", e);
@@ -330,25 +342,55 @@ public class BspServiceMaster<
             totalResponses = healthyWorkerList.size() +
                 unhealthyWorkerList.size();
             if ((totalResponses * 100.0f / maxWorkers) >=
-                minPercentResponded) {
+                    minPercentResponded) {
                 failJob = false;
                 break;
             }
-            if (LOG.isInfoEnabled()) {
-                LOG.info("checkWorkers: Only found " + totalResponses +
-                         " responses of " + maxWorkers + " for superstep " +
-                         getSuperstep() + ".  Sleeping for " +
-                         msecsPollPeriod + " msecs and used " + pollAttempt +
-                         " of " + maxPollAttempts + " attempts.");
-            }
+            getContext().setStatus(getBspMapper().getMapFunctions() + " " +
+                                   "checkWorkers: Only found " + totalResponses +
+                                   " responses of " + maxWorkers +
+                                   " needed to start superstep " +
+                                   getSuperstep());
             if (getWorkerHealthRegistrationChangedEvent().waitMsecs(
                     msecsPollPeriod)) {
-                if (LOG.isInfoEnabled()) {
-                    LOG.info("checkWorkers: Got event that health " +
-                        "registration changed, not using poll attempt");
+                if (LOG.isDebugEnabled()) {
+                    LOG.debug("checkWorkers: Got event that health " +
+                              "registration changed, not using poll attempt");
                 }
                 getWorkerHealthRegistrationChangedEvent().reset();
                 continue;
+            }
+            if (LOG.isInfoEnabled()) {
+                LOG.info("checkWorkers: Only found " + totalResponses +
+                         " responses of " + maxWorkers +
+                         " needed to start superstep " +
+                         getSuperstep() + ".  Sleeping for " +
+                         msecsPollPeriod + " msecs and used " + pollAttempt +
+                         " of " + maxPollAttempts + " attempts.");
+                // Find the missing workers if there are only a few
+                if ((maxWorkers - totalResponses) <= partitionLongTailMinPrint) {
+                    Set<Integer> partitionSet = new TreeSet<Integer>();
+                    for (String hostnamePartitionId : healthyWorkerList) {
+                        int lastIndex = hostnamePartitionId.lastIndexOf("_");
+                        Integer partition = Integer.parseInt(
+                            hostnamePartitionId.substring(lastIndex + 1));
+                        partitionSet.add(partition);
+                    }
+                    for (String hostnamePartitionId : unhealthyWorkerList) {
+                        int lastIndex = hostnamePartitionId.lastIndexOf("_");
+                        Integer partition = Integer.parseInt(
+                            hostnamePartitionId.substring(lastIndex + 1));
+                        partitionSet.add(partition);
+                    }
+                    for (int i = 1; i <= maxWorkers; ++i) {
+                        if (partitionSet.contains(new Integer(i))) {
+                            continue;
+                        } else {
+                            LOG.info("checkWorkers: No response from "+
+                                     "partition " + i);
+                        }
+                    }
+                }
             }
             ++pollAttempt;
         }
@@ -674,7 +716,12 @@ public class BspServiceMaster<
         // In that case, the input splits are not set, they will be faked by
         // the checkpoint files.  Each checkpoint file will be an input split
         // and the input split
-        superstepCounter = getContext().getCounter("GiraphJob", "Superstep");
+        superstepCounter = getContext().getCounter("Giraph Stats", "Superstep");
+        vertexCounter = getContext().getCounter(
+            "Giraph Stats", "Aggregate vertices");
+        finishedVertexCounter = getContext().getCounter(
+            "Giraph Stats", "Aggregate finished vertices");
+        edgeCounter = getContext().getCounter("Giraph Stats", "Aggregate edges");
         if (getRestartedSuperstep() == -1) {
             return;
         }
@@ -1187,8 +1234,10 @@ public class BspServiceMaster<
                 byte [] zkData =
                     getZkExt().getData(inputSplitFinishedPath, false, null);
                 if (zkData == null || zkData.length == 0) {
-                    LOG.info("inputSplitsToVertexRanges: No vertex ranges " +
-                             "in " + inputSplitFinishedPath);
+                    if (LOG.isInfoEnabled()) {
+                        LOG.info("inputSplitsToVertexRanges: No vertex ranges " +
+                                 "in " + inputSplitFinishedPath);
+                    }
                     continue;
                 }
                 JSONArray statArray = new JSONArray(new String(zkData));
@@ -1588,15 +1637,16 @@ public class BspServiceMaster<
                                  CreateMode.PERSISTENT,
                                  true);
         } catch (KeeperException.NodeExistsException e) {
-            if (LOG.isInfoEnabled()) {
-                LOG.info("coordinateSuperstep: finishedWorkers " +
-                         finishedWorkerPath +
-                         " already exists, no need to create");
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("coordinateSuperstep: finishedWorkers " +
+                          finishedWorkerPath +
+                          " already exists, no need to create");
             }
         }
         String workerHealthyPath =
             getWorkerHealthyPath(getApplicationAttempt(), getSuperstep());
         List<String> finishedWorkerList = null;
+        long nextInfoMillis = System.currentTimeMillis();
         while (true) {
             try {
                 finishedWorkerList =
@@ -1619,7 +1669,9 @@ public class BspServiceMaster<
                           " from " + finishedWorkerPath);
             }
 
-            if (LOG.isInfoEnabled()) {
+            if (LOG.isInfoEnabled() &&
+                    (System.currentTimeMillis() > nextInfoMillis)) {
+                nextInfoMillis = System.currentTimeMillis() + 30000;
                 LOG.info("coordinateSuperstep: " + finishedWorkerList.size() +
                          " out of " +
                          chosenWorkerHostnamePortMap.size() +
@@ -1697,6 +1749,11 @@ public class BspServiceMaster<
             throw new IllegalStateException("coordinateSuperstep: " +
                                             "JSONException", e);
         }
+        vertexCounter.increment(verticesTotal -
+                                vertexCounter.getValue());
+        finishedVertexCounter.increment(verticesFinished -
+                                        finishedVertexCounter.getValue());
+        edgeCounter.increment(edgesTotal - edgeCounter.getValue());
 
         // Finalize the valid checkpoint file prefixes and possibly
         // the aggregators.
@@ -1722,8 +1779,10 @@ public class BspServiceMaster<
                 getSuperstepPath(getApplicationAttempt()) + "/" +
                 (removeableSuperstep);
             try {
-                LOG.info("coordinateSuperstep: Cleaning up old Superstep " +
-                         oldSuperstepPath);
+                if (LOG.isInfoEnabled()) {
+                    LOG.info("coordinateSuperstep: Cleaning up old Superstep " +
+                             oldSuperstepPath);
+                }
                 getZkExt().deleteExt(oldSuperstepPath,
                                      -1,
                                      true);
@@ -1736,8 +1795,7 @@ public class BspServiceMaster<
                     "finalizing checkpoint", e);
             }
         }
-
-        incrCachedSuperstep();
+     incrCachedSuperstep();
         superstepCounter.increment(1);
         return (verticesFinished == verticesTotal) ?
             SuperstepState.ALL_SUPERSTEPS_DONE :
@@ -1811,8 +1869,10 @@ public class BspServiceMaster<
             if (getConfiguration().getBoolean(
                 GiraphJob.KEEP_ZOOKEEPER_DATA,
                 GiraphJob.KEEP_ZOOKEEPER_DATA_DEFAULT) == false) {
-                LOG.info("cleanupZooKeeper: Removing the following path " +
-                         "and all children - " + BASE_PATH);
+                if (LOG.isInfoEnabled()) {
+                    LOG.info("cleanupZooKeeper: Removing the following path " +
+                             "and all children - " + BASE_PATH);
+                }
                 getZkExt().deleteExt(BASE_PATH, -1, true);
             }
         } catch (Exception e) {
@@ -1836,8 +1896,10 @@ public class BspServiceMaster<
                                      Ids.OPEN_ACL_UNSAFE,
                                      CreateMode.PERSISTENT,
                                      true);
-            LOG.info("cleanup: Notifying master its okay to cleanup with " +
-                     finalFinishedPath);
+            if (LOG.isInfoEnabled()) {
+                LOG.info("cleanup: Notifying master its okay to cleanup with " +
+                         finalFinishedPath);
+            }
         } catch (KeeperException.NodeExistsException e) {
             if (LOG.isInfoEnabled()) {
                 LOG.info("cleanup: Couldn't create finished node '" +
@@ -1922,18 +1984,18 @@ public class BspServiceMaster<
         boolean foundEvent = false;
         if (event.getPath().contains(WORKER_HEALTHY_DIR) &&
                 (event.getType() == EventType.NodeDeleted)) {
-            if (LOG.isInfoEnabled()) {
-                LOG.info("processEvent: Healthy worker died (node deleted) " +
-                         "in " + event.getPath());
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("processEvent: Healthy worker died (node deleted) " +
+                          "in " + event.getPath());
             }
             checkHealthyWorkerFailure(event.getPath());
             superstepStateChanged.signal();
             foundEvent = true;
         } else if (event.getPath().contains(WORKER_FINISHED_DIR) &&
                 event.getType() == EventType.NodeChildrenChanged) {
-            if (LOG.isInfoEnabled()) {
-                LOG.info("processEvent: Worker finished (node change) event - " +
-                "superstepStateChanged signaled");
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("processEvent: Worker finished (node change) " +
+                          "event - superstepStateChanged signaled");
             }
             superstepStateChanged.signal();
             foundEvent = true;
