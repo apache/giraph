@@ -95,6 +95,8 @@ public class BspServiceMaster<
     private Counter finishedVertexCounter = null;
     /** Edge counter */
     private Counter edgeCounter = null;
+    /** Workers on this superstep */
+    private Counter currentWorkersCounter = null;
     /** Am I the master? */
     private boolean isMaster = false;
     /** Max number of workers */
@@ -187,18 +189,18 @@ public class BspServiceMaster<
      * Master uses this to calculate the {@link VertexInputFormat}
      * input splits and write it to ZooKeeper.
      *
-     * @param numSplits
+     * @param numWorkers Number of available workers
      * @throws InstantiationException
      * @throws IllegalAccessException
      * @throws IOException
      * @throws InterruptedException
      */
-    private List<InputSplit> generateInputSplits(int numSplits) {
+    private List<InputSplit> generateInputSplits(int numWorkers) {
         VertexInputFormat<I, V, E> vertexInputFormat =
             BspUtils.<I, V, E>createVertexInputFormat(getConfiguration());
         List<InputSplit> splits;
         try {
-            splits = vertexInputFormat.getSplits(getConfiguration(), numSplits);
+            splits = vertexInputFormat.getSplits(getContext(), numWorkers);
             return splits;
         } catch (IOException e) {
             throw new IllegalStateException(
@@ -385,9 +387,11 @@ public class BspServiceMaster<
                     for (int i = 1; i <= maxWorkers; ++i) {
                         if (partitionSet.contains(new Integer(i))) {
                             continue;
+                        } else if (i == getTaskPartition()) {
+                            continue;
                         } else {
                             LOG.info("checkWorkers: No response from "+
-                                     "partition " + i);
+                                     "partition " + i + " (could be master)");
                         }
                     }
                 }
@@ -716,12 +720,16 @@ public class BspServiceMaster<
         // In that case, the input splits are not set, they will be faked by
         // the checkpoint files.  Each checkpoint file will be an input split
         // and the input split
-        superstepCounter = getContext().getCounter("Giraph Stats", "Superstep");
+        superstepCounter = getContext().getCounter(
+            "Giraph Stats", "Superstep");
         vertexCounter = getContext().getCounter(
             "Giraph Stats", "Aggregate vertices");
         finishedVertexCounter = getContext().getCounter(
             "Giraph Stats", "Aggregate finished vertices");
-        edgeCounter = getContext().getCounter("Giraph Stats", "Aggregate edges");
+        edgeCounter = getContext().getCounter(
+            "Giraph Stats", "Aggregate edges");
+        currentWorkersCounter = getContext().getCounter(
+            "Giraph Stats", "Current workers");
         if (getRestartedSuperstep() == -1) {
             return;
         }
@@ -1601,6 +1609,8 @@ public class BspServiceMaster<
             }
         }
 
+        currentWorkersCounter.increment(chosenWorkerHostnamePortMap.size() -
+                                        currentWorkersCounter.getValue());
         if (getRestartedSuperstep() == getSuperstep()) {
             try {
                 if (LOG.isInfoEnabled()) {

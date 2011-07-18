@@ -21,9 +21,9 @@ package org.apache.giraph.graph;
 import java.io.IOException;
 import java.util.List;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
@@ -41,7 +41,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 public abstract class VertexInputFormat<I extends WritableComparable,
         V extends Writable, E extends Writable> {
     /**
-     * Logically split the vertices for a BSP application.
+     * Logically split the vertices for a graph processing application.
      *
      * Each {@link InputSplit} is then assigned to a worker for processing.
      *
@@ -50,18 +50,23 @@ public abstract class VertexInputFormat<I extends WritableComparable,
      * be <i>&lt;input-file-path, start, offset&gt;</i> tuple. The InputFormat
      * also creates the {@link VertexReader} to read the {@link InputSplit}.
      *
+     * Also, the number of workers is a hint given to the developer to try to
+     * intelligently determine how many splits to create (if this is
+     * adjustable) at runtime.
+     *
      * @param conf configuration
-     * @param numSplits number of splits for the input
+     * @param numWorkers Number of workers used for this job
      * @return an array of {@link InputSplit}s for the job.
      */
     public abstract List<InputSplit> getSplits(
-        Configuration conf,
-        int numSplits) throws IOException, InterruptedException;
+        JobContext context, int numWorkers)
+        throws IOException, InterruptedException;
 
     /**
      * Create a vertex reader for a given split. The framework will call
      * {@link VertexReader#initialize(InputSplit, TaskAttemptContext)} before
      * the split is used.
+     *
      * @param split the split to be read
      * @param context the information about the task
      * @return a new record reader

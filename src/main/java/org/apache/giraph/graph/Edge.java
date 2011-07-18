@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -37,8 +37,8 @@ import org.apache.hadoop.io.WritableComparable;
 @SuppressWarnings("rawtypes")
 public class Edge<I extends WritableComparable, E extends Writable>
         implements Writable, Configurable {
-    /** Destination vertex index */
-    private I destinationVertexIndex = null;
+    /** Destination vertex id */
+    private I destVertexId = null;
     /** Edge value */
     private E edgeValue = null;
     /** Configuration - Used to instiantiate classes */
@@ -52,11 +52,11 @@ public class Edge<I extends WritableComparable, E extends Writable>
     /**
      * Create the edge with final values
      *
-     * @param destinationVertexIndex
+     * @param destVertexId
      * @param edgeValue
      */
-    public Edge(I destinationVertexIndex, E edgeValue) {
-        this.destinationVertexIndex = destinationVertexIndex;
+    public Edge(I destVertexId, E edgeValue) {
+        this.destVertexId = destVertexId;
         this.edgeValue = edgeValue;
     }
 
@@ -65,8 +65,8 @@ public class Edge<I extends WritableComparable, E extends Writable>
      *
      * @return Destination vertex index of this edge
      */
-    public I getDestinationVertexIndex() {
-        return destinationVertexIndex;
+    public I getDestVertexId() {
+        return destVertexId;
     }
 
     /**
@@ -80,22 +80,22 @@ public class Edge<I extends WritableComparable, E extends Writable>
 
     @Override
     public String toString() {
-        return "(DestVertexIndex = " + destinationVertexIndex +
+        return "(DestVertexIndex = " + destVertexId +
             ", edgeValue = " + edgeValue  + ")";
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public void readFields(DataInput input) throws IOException {
-        destinationVertexIndex = (I) BspUtils.createVertexIndex(getConf());
-        destinationVertexIndex.readFields(input);
+        destVertexId = (I) BspUtils.createVertexIndex(getConf());
+        destVertexId.readFields(input);
         edgeValue = (E) BspUtils.createEdgeValue(getConf());
         edgeValue.readFields(input);
     }
 
     @Override
     public void write(DataOutput output) throws IOException {
-        if (destinationVertexIndex == null) {
+        if (destVertexId == null) {
             throw new IllegalStateException(
                 "write: Null destination vertex index");
         }
@@ -103,7 +103,7 @@ public class Edge<I extends WritableComparable, E extends Writable>
             throw new IllegalStateException(
                 "write: Null edge value");
         }
-        destinationVertexIndex.write(output);
+        destVertexId.write(output);
         edgeValue.write(output);
     }
 

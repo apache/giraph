@@ -37,25 +37,20 @@ public interface VertexReader<
      * @param inputSplit
      * @param context
      * @throws IOException
+     * @throws InterruptedException
      */
     void initialize(InputSplit inputSplit, TaskAttemptContext context)
-        throws IOException;
+        throws IOException, InterruptedException;
 
     /**
      * Reads the next vertex and associated data
      *
      * @param vertex set the properties of this vertex
      * @return true iff a vertex and associated data was read, false if at EOF
+     * @throws InterruptedException
      */
-    boolean next(MutableVertex<I, V, E, ?> vertex) throws IOException;
-
-    /**
-     * Returns the current position in the input.
-     *
-     * @return the current position in the input.
-     * @throws IOException
-     */
-    long getPos() throws IOException;
+    boolean next(MutableVertex<I, V, E, ?> vertex)
+        throws IOException, InterruptedException;
 
     /**
      * Close this {@link VertexReader} to future operations.
@@ -68,8 +63,9 @@ public interface VertexReader<
      * How much of the input has the {@link VertexReader} consumed i.e.
      * has been processed by?
      *
-     * @return progress from <code>0.0</code> to <code>1.0</code>.
+     * @return Progress from <code>0.0</code> to <code>1.0</code>.
      * @throws IOException
+     * @throws InterruptedException
      */
-    float getProgress() throws IOException;
+    float getProgress() throws IOException, InterruptedException;
 }

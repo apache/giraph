@@ -280,10 +280,11 @@ public class BspServiceWorker<
      * @throws IllegalAccessException
      * @throws InstantiationException
      * @throws ClassNotFoundException
+     * @throws InterruptedException
      */
-    private void loadVertices() throws
-            InstantiationException, IllegalAccessException,
-            IOException, ClassNotFoundException {
+    private void loadVertices() throws IOException, ClassNotFoundException,
+            InterruptedException, InstantiationException,
+            IllegalAccessException {
         List<Vertex<I, V, E, M>> vertexList =
             new ArrayList<Vertex<I, V, E, M>>();
         String inputSplitPath = null;
@@ -454,7 +455,8 @@ public class BspServiceWorker<
                                            vertex) != null) {
                     throw new IllegalStateException(
                         "loadVertices: Already contains vertex " +
-                        vertex.toString());
+                        vertex.toString() + " in vertex range max " +
+                        currentVertexIndexMax);
                 }
             }
             Map<I, List<Long>> maxIndexStatMap = new TreeMap<I, List<Long>>();
@@ -544,8 +546,8 @@ public class BspServiceWorker<
         try {
             loadVertices();
         } catch (Exception e) {
-            LOG.error("setup: loadVertices failed - " + e.getMessage());
-            throw new RuntimeException(e);
+            LOG.error("setup: loadVertices failed - ", e);
+            throw new IllegalStateException("setup: loadVertices failed", e);
         }
 
         Map<I, long []> maxIndexStatsMap = new TreeMap<I, long []>();

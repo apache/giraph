@@ -98,12 +98,11 @@ public abstract class Vertex<
     @Override
     public final boolean addEdge(Edge<I, E> edge) {
         edge.setConf(getContext().getConfiguration());
-        if (destEdgeMap.put(edge.getDestinationVertexIndex(), edge) != null) {
+        if (destEdgeMap.put(edge.getDestVertexId(), edge) != null) {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("addEdge: Vertex=" + vertexId +
-                          ": already added an edge " +
-                          "value for destination vertex " +
-                          edge.getDestinationVertexIndex());
+                          ": already added an edge value for dest vertex id " +
+                          edge.getDestVertexId());
             }
             return false;
         } else {
@@ -193,14 +192,22 @@ public abstract class Vertex<
     @SuppressWarnings("unchecked")
     @Override
     public final void sendMsg(I id, M msg) {
+        if (msg == null) {
+            throw new IllegalArgumentException(
+                "sendMsg: Cannot send null message to " + id);
+        }
         ((BspMapper<I, V, E, M>) bspMapper).
             getWorkerCommunications().sendMessageReq(id, msg);
     }
 
     @Override
     public final void sentMsgToAllEdges(M msg) {
+        if (msg == null) {
+            throw new IllegalArgumentException(
+                "sendMsgToAllEdges: Cannot send null message to all edges");
+        }
         for (Edge<I, E> edge : destEdgeMap.values()) {
-            sendMsg(edge.getDestinationVertexIndex(), msg);
+            sendMsg(edge.getDestVertexId(), msg);
         }
     }
 

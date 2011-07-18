@@ -28,3 +28,4 @@ if (LOG.isInfoEnabled()) {
 }
 
 * Class members should not begin with 'm_' or '_'.
+* No warnings allowed, but be as specific as possible with warning suppression

@@ -1,3 +1,21 @@
+/*
+ * Licensed to Yahoo! under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  Yahoo! licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package org.apache.giraph;
 
 import java.io.IOException;
@@ -13,6 +31,9 @@ import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexCombiner;
 import org.apache.giraph.graph.VertexInputFormat;
 import org.apache.giraph.graph.GiraphJob.BspMapper;
+import org.apache.giraph.graph.VertexOutputFormat;
+import org.apache.giraph.lib.JsonBase64VertexInputFormat;
+import org.apache.giraph.lib.JsonBase64VertexOutputFormat;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
@@ -79,7 +100,8 @@ public class TestVertexTypes
         }
     }
 
-    public void testMatchingType() throws SecurityException, NoSuchMethodException, NoSuchFieldException {
+    public void testMatchingType() throws SecurityException,
+            NoSuchMethodException, NoSuchFieldException {
         @SuppressWarnings("rawtypes")
         BspMapper<?, ?, ?, ?> mapper = new BspMapper();
         Configuration conf = new Configuration();
@@ -92,10 +114,11 @@ public class TestVertexTypes
         conf.setClass(GiraphJob.VERTEX_COMBINER_CLASS,
                       GeneratedVertexMatchCombiner.class,
                       VertexCombiner.class);
-        mapper.checkClassTypes(conf);
+        mapper.determineClassTypes(conf);
     }
 
-    public void testDerivedMatchingType() throws SecurityException, NoSuchMethodException, NoSuchFieldException {
+    public void testDerivedMatchingType() throws SecurityException,
+            NoSuchMethodException, NoSuchFieldException {
         @SuppressWarnings("rawtypes")
         BspMapper<?, ?, ?, ?> mapper = new BspMapper();
         Configuration conf = new Configuration();
@@ -105,10 +128,11 @@ public class TestVertexTypes
         conf.setClass(GiraphJob.VERTEX_INPUT_FORMAT_CLASS,
                       SimpleSuperstepVertexInputFormat.class,
                       VertexInputFormat.class);
-        mapper.checkClassTypes(conf);
+        mapper.determineClassTypes(conf);
     }
 
-    public void testDerivedInputFormatType() throws SecurityException, NoSuchMethodException, NoSuchFieldException {
+    public void testDerivedInputFormatType() throws SecurityException,
+            NoSuchMethodException, NoSuchFieldException {
         @SuppressWarnings("rawtypes")
         BspMapper<?, ?, ?, ?> mapper = new BspMapper();
         Configuration conf = new Configuration();
@@ -118,10 +142,11 @@ public class TestVertexTypes
         conf.setClass(GiraphJob.VERTEX_INPUT_FORMAT_CLASS,
                       SimpleSuperstepVertexInputFormat.class,
                       VertexInputFormat.class);
-        mapper.checkClassTypes(conf);
+        mapper.determineClassTypes(conf);
     }
 
-    public void testMismatchingVertex() throws SecurityException, NoSuchMethodException, NoSuchFieldException {
+    public void testMismatchingVertex() throws SecurityException,
+            NoSuchMethodException, NoSuchFieldException {
         @SuppressWarnings("rawtypes")
         BspMapper<?, ?, ?, ?> mapper = new BspMapper();
         Configuration conf = new Configuration();
@@ -132,14 +157,15 @@ public class TestVertexTypes
                       SimpleSuperstepVertexInputFormat.class,
                       VertexInputFormat.class);
         try {
-            mapper.checkClassTypes(conf);
+            mapper.determineClassTypes(conf);
             throw new RuntimeException(
                 "testMismatchingVertex: Should have caught an exception!");
         } catch (IllegalArgumentException e) {
         }
     }
 
-    public void testMismatchingCombiner() throws SecurityException, NoSuchMethodException, NoSuchFieldException {
+    public void testMismatchingCombiner() throws SecurityException,
+            NoSuchMethodException, NoSuchFieldException {
         @SuppressWarnings("rawtypes")
         BspMapper<?, ?, ?, ?> mapper = new BspMapper();
         Configuration conf = new Configuration();
@@ -153,10 +179,27 @@ public class TestVertexTypes
                       GeneratedVertexMismatchCombiner.class,
                       VertexCombiner.class);
         try {
-            mapper.checkClassTypes(conf);
+            mapper.determineClassTypes(conf);
             throw new RuntimeException(
                 "testMismatchingCombiner: Should have caught an exception!");
         } catch (IllegalArgumentException e) {
         }
+    }
+
+    public void testJsonBase64FormatType() throws SecurityException,
+            NoSuchMethodException, NoSuchFieldException {
+        @SuppressWarnings("rawtypes")
+        BspMapper<?, ?, ?, ?> mapper = new BspMapper();
+        Configuration conf = new Configuration();
+        conf.setClass(GiraphJob.VERTEX_CLASS,
+                      GeneratedVertexMatch.class,
+                      Vertex.class);
+        conf.setClass(GiraphJob.VERTEX_INPUT_FORMAT_CLASS,
+                      JsonBase64VertexInputFormat.class,
+                      VertexInputFormat.class);
+        conf.setClass(GiraphJob.VERTEX_OUTPUT_FORMAT_CLASS,
+                      JsonBase64VertexOutputFormat.class,
+                      VertexOutputFormat.class);
+        mapper.determineClassTypes(conf);
     }
 }

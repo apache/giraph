@@ -169,7 +169,7 @@ public class ZooKeeperManager {
         jobId = conf.get("mapred.job.id", "Unknown Job");
         baseDirectory =
             new Path(conf.get(GiraphJob.ZOOKEEPER_MANAGER_DIRECTORY,
-                                getFinalZooKeeperPath()));
+                              getFinalZooKeeperPath()));
         taskDirectory = new Path(baseDirectory,
                                    "_task");
         serverDirectory = new Path(baseDirectory,

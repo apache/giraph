@@ -132,10 +132,10 @@ public class SimpleCheckpointVertex extends
                                " sending edgeValue " + edgeValue +
                                " vertexValue " + vertexValue +
                                " total " + (edgeValue + (float) vertexValue) +
-                               " to vertex " + edge.getDestinationVertexIndex() +
+                               " to vertex " + edge.getDestVertexId() +
                                " on superstep " + getSuperstep());
             edge.getEdgeValue().set(edgeValue + (float) vertexValue);
-            sendMsg(edge.getDestinationVertexIndex(),
+            sendMsg(edge.getDestVertexId(),
                     new FloatWritable(edgeValue));
         }
     }

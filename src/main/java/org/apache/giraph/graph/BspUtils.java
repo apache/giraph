@@ -348,9 +348,9 @@ public class BspUtils {
      */
     public static <M extends Writable> M
             createMessageValue(Configuration conf) {
-        Class<M> MessageValueClass = getMessageValueClass(conf);
+        Class<M> messageValueClass = getMessageValueClass(conf);
         try {
-            return MessageValueClass.newInstance();
+            return messageValueClass.newInstance();
         } catch (InstantiationException e) {
             throw new IllegalArgumentException(
                 "createMessageValue: Failed to instantiate", e);

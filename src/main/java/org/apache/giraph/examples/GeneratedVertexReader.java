@@ -63,11 +63,6 @@ public abstract class GeneratedVertexReader<
     }
 
     @Override
-    public final long getPos() throws IOException {
-        return recordsRead;
-    }
-
-    @Override
     public void close() throws IOException {
     }
 

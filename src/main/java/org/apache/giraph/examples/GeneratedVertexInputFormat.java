@@ -22,10 +22,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.JobContext;
 
 import org.apache.giraph.bsp.BspInputSplit;
 import org.apache.giraph.graph.VertexInputFormat;
@@ -40,15 +40,15 @@ public abstract class GeneratedVertexInputFormat<
         extends VertexInputFormat<I, V, E> {
 
     @Override
-    public List<InputSplit> getSplits(Configuration conf, int numSplits)
+    public List<InputSplit> getSplits(JobContext context, int numWorkers)
         throws IOException, InterruptedException {
         /*
          * This is meaningless, the VertexReader will generate all the test
          * data.
          */
         List<InputSplit> inputSplitList = new ArrayList<InputSplit>();
-        for (int i = 0; i < numSplits; ++i) {
-            inputSplitList.add(new BspInputSplit(i, numSplits));
+        for (int i = 0; i < numWorkers; ++i) {
+            inputSplitList.add(new BspInputSplit(i, numWorkers));
         }
         return inputSplitList;
     }

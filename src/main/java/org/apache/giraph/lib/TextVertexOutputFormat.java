@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.examples;
+package org.apache.giraph.lib;
 
 import java.io.IOException;
 
@@ -59,7 +59,9 @@ public abstract class TextVertexOutputFormat<
     public static abstract class TextVertexWriter<I extends WritableComparable,
             V extends Writable, E extends Writable>
             implements VertexWriter<I, V, E> {
-        /** Internal line record reader */
+        /** Context passed to initialize */
+        private TaskAttemptContext context;
+        /** Internal line record writer */
         private final RecordWriter<Text, Text> lineRecordWriter;
 
         /**
@@ -73,6 +75,7 @@ public abstract class TextVertexOutputFormat<
 
         @Override
         public void initialize(TaskAttemptContext context) throws IOException {
+            this.context = context;
         }
 
         @Override
@@ -82,12 +85,21 @@ public abstract class TextVertexOutputFormat<
         }
 
         /**
-         * Get the record writer.
+         * Get the line record writer.
          *
          * @return Record writer to be used for writing.
          */
         public RecordWriter<Text, Text> getRecordWriter() {
             return lineRecordWriter;
+        }
+
+        /**
+         * Get the context.
+         *
+         * @return Context passed to initialize.
+         */
+        public TaskAttemptContext getContext() {
+            return context;
         }
     }
 

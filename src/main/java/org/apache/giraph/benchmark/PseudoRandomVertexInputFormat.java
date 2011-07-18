@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.log4j.Logger;
 
@@ -52,13 +53,13 @@ public class PseudoRandomVertexInputFormat extends
         "pseduoRandomVertexReader.edgesPerVertex";
 
     @Override
-    public List<InputSplit> getSplits(Configuration conf, int numSplits)
+    public List<InputSplit> getSplits(JobContext context, int numWorkers)
             throws IOException, InterruptedException {
         // This is meaningless, the PseudoRandomVertexReader will generate
         // all the test data
         List<InputSplit> inputSplitList = new ArrayList<InputSplit>();
-        for (int i = 0; i < numSplits; ++i) {
-            inputSplitList.add(new BspInputSplit(i, numSplits));
+        for (int i = 0; i < numWorkers; ++i) {
+            inputSplitList.add(new BspInputSplit(i, numWorkers));
         }
         return inputSplitList;
     }
@@ -171,11 +172,6 @@ public class PseudoRandomVertexInputFormat extends
                           ", edgeMap=" + vertex.getOutEdgeMap());
             }
             return true;
-        }
-
-        @Override
-        public long getPos() throws IOException {
-            return verticesRead;
         }
 
         @Override

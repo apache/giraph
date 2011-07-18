@@ -458,7 +458,7 @@ public class GiraphJob extends Job {
          *
          * @param conf Configuration to get the various classes
          */
-        public void checkClassTypes(Configuration conf) {
+        public void determineClassTypes(Configuration conf) {
             Class<? extends Vertex<I, V, E, M>> vertexClass =
                 BspUtils.<I, V, E, M>getVertexClass(conf);
             List<Class<?>> classList = ReflectionUtils.<Vertex>getTypeArguments(
@@ -472,19 +472,25 @@ public class GiraphJob extends Job {
                 BspUtils.<I, V, E>getVertexInputFormatClass(conf);
             classList = ReflectionUtils.<VertexInputFormat>getTypeArguments(
                 VertexInputFormat.class, vertexInputFormatClass);
-            if (!vertexIndexType.equals(classList.get(0))) {
+            if (classList.get(0) == null) {
+                LOG.warn("Input format vertex index type is not known");
+            } else if (!vertexIndexType.equals(classList.get(0))) {
                 throw new IllegalArgumentException(
                     "checkClassTypes: Vertex index types don't match, " +
                     "vertex - " + vertexIndexType +
                     ", vertex input format - " + classList.get(0));
             }
-            if (!vertexValueType.equals(classList.get(1))) {
+            if (classList.get(1) == null) {
+                LOG.warn("Input format vertex value type is not known");
+            } else if (!vertexValueType.equals(classList.get(1))) {
                 throw new IllegalArgumentException(
                     "checkClassTypes: Vertex value types don't match, " +
                     "vertex - " + vertexValueType +
                     ", vertex input format - " + classList.get(1));
             }
-            if (!edgeValueType.equals(classList.get(2))) {
+            if (classList.get(2) == null) {
+                LOG.warn("Input format edge value type is not known");
+            } else if (!edgeValueType.equals(classList.get(2))) {
                 throw new IllegalArgumentException(
                     "checkClassTypes: Edge value types don't match, " +
                     "vertex - " + edgeValueType +
@@ -517,19 +523,24 @@ public class GiraphJob extends Job {
                 classList =
                     ReflectionUtils.<VertexOutputFormat>getTypeArguments(
                         VertexOutputFormat.class, vertexOutputFormatClass);
-                if (!vertexIndexType.equals(classList.get(0))) {
+                if (classList.get(0) == null) {
+                    LOG.warn("Output format vertex index type is not known");
+                } else if (!vertexIndexType.equals(classList.get(0))) {
                     throw new IllegalArgumentException(
                         "checkClassTypes: Vertex index types don't match, " +
                         "vertex - " + vertexIndexType +
                         ", vertex output format - " + classList.get(0));
                 }
-                if (!vertexValueType.equals(classList.get(1))) {
+                if (classList.get(1) == null) {
+                    LOG.warn("Output format vertex value type is not known");
+                } else if (!vertexValueType.equals(classList.get(1))) {
                     throw new IllegalArgumentException(
                         "checkClassTypes: Vertex value types don't match, " +
                         "vertex - " + vertexValueType +
                         ", vertex output format - " + classList.get(1));
-                }
-                if (!edgeValueType.equals(classList.get(2))) {
+                } if (classList.get(2) == null) {
+                    LOG.warn("Output format edge value type is not known");
+                } else if (!edgeValueType.equals(classList.get(2))) {
                     throw new IllegalArgumentException(
                         "checkClassTypes: Edge value types don't match, " +
                         "vertex - " + vertexIndexType +
@@ -667,6 +678,8 @@ public class GiraphJob extends Job {
             return functions;
         }
 
+
+
         @Override
         public void setup(Context context)
                 throws IOException, InterruptedException {
@@ -680,13 +693,11 @@ public class GiraphJob extends Job {
                         System.getenv("HADOOP_TOKEN_FILE_LOCATION"));
             }
             // Ensure the user classes have matching types and figure them out
-            checkClassTypes(conf);
+            determineClassTypes(conf);
             Vertex.setBspMapper(this);
             Vertex.setContext(context);
 
-            // Do some initial setup (possibly starting up a Zookeeper service),
-            // but mainly decide whether to load data
-            // from a checkpoint or from the InputFormat.
+            // Do some initial setup (possibly starting up a Zookeeper service)
             String jarFile = context.getJar();
             if (jarFile == null) {
                 jarFile = findContainingJar(getClass());
@@ -709,10 +720,11 @@ public class GiraphJob extends Job {
                 zkManager.onlineZooKeeperServers();
                 serverPortList = zkManager.getZooKeeperServerPortString();
             }
-            this.mapFunctions = determineMapFunctions(conf, zkManager);
             context.setStatus("setup: Connected to Zookeeper service " +
                               serverPortList);
+            this.mapFunctions = determineMapFunctions(conf, zkManager);
 
+            // Sometimes it takes a while to get multiple ZooKeeper servers up
             if (conf.getInt(GiraphJob.ZOOKEEPER_SERVER_COUNT,
                         GiraphJob.ZOOKEEPER_SERVER_COUNT_DEFAULT) > 1) {
                 Thread.sleep(GiraphJob.DEFAULT_ZOOKEEPER_INIT_LIMIT *
@@ -1067,6 +1079,36 @@ public class GiraphJob extends Job {
     }
 
     /**
+     * Check if the configuration is local.  If it is local, do additional
+     * checks due to the restrictions of LocalJobRunner.
+     *
+     * @param conf Configuration
+     */
+    private static void checkLocalJobRunnerConfiguration(
+            Configuration conf) {
+        String jobTracker = conf.get("mapred.job.tracker", null);
+        if (!jobTracker.equals("local")) {
+            // Nothing to check
+            return;
+        }
+
+        int maxWorkers = conf.getInt(MAX_WORKERS, -1);
+        if (maxWorkers != 1) {
+            throw new IllegalArgumentException(
+                "checkLocalJobRunnerConfiguration: When using " +
+                "LocalJobRunner, must have only one worker since " +
+                "only 1 task at a time!");
+        }
+        if (conf.getBoolean(SPLIT_MASTER_WORKER,
+                            SPLIT_MASTER_WORKER_DEFAULT)) {
+            throw new IllegalArgumentException(
+                "checkLocalJobRunnerConfiguration: When using " +
+                "LocalJobRunner, you cannot run in split master / worker " +
+                "mode since there is only 1 task at a time!");
+        }
+    }
+
+    /**
      * Runs the actual graph application through Hadoop Map-Reduce.
      *
      * @param verbose If true, provide verbose output, false otherwise
@@ -1077,6 +1119,7 @@ public class GiraphJob extends Job {
     final public boolean run(boolean verbose)
             throws IOException, InterruptedException, ClassNotFoundException {
         checkConfiguration();
+        checkLocalJobRunnerConfiguration(conf);
         setNumReduceTasks(0);
         if (getJar() == null) {
             setJarByClass(GiraphJob.class);

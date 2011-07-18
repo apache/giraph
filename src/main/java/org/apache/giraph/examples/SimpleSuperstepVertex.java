@@ -30,13 +30,14 @@ import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.log4j.Logger;
 
-import org.apache.giraph.examples.TextVertexOutputFormat.TextVertexWriter;
 import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.MutableVertex;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexReader;
 import org.apache.giraph.graph.VertexWriter;
+import org.apache.giraph.lib.TextVertexOutputFormat;
+import org.apache.giraph.lib.TextVertexOutputFormat.TextVertexWriter;
 
 /**
  * Just a simple Vertex compute implementation that executes 3 supersteps, then

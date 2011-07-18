@@ -27,9 +27,10 @@ import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.VertexWriter;
+import org.apache.giraph.lib.TextVertexOutputFormat;
 
 /**
- * Simple text based vertex output format example .
+ * Simple text based vertex output format example.
  */
 public class SimpleTextVertexOutputFormat extends
          TextVertexOutputFormat<LongWritable, IntWritable, FloatWritable> {
@@ -61,13 +62,10 @@ public class SimpleTextVertexOutputFormat extends
 
     @Override
     public VertexWriter<LongWritable, IntWritable, FloatWritable>
-            createVertexWriter(TaskAttemptContext context)
+        createVertexWriter(TaskAttemptContext context)
             throws IOException, InterruptedException {
         RecordWriter<Text, Text> recordWriter =
             textOutputFormat.getRecordWriter(context);
         return new SimpleTextVertexWriter(recordWriter);
     }
-
-
-
 }

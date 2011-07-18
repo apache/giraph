@@ -270,19 +270,37 @@ public abstract class BasicRPCCommunications<
                             if (combiner != null) {
                                 M combinedMsg = combiner.combine(e.getKey(),
                                                                  msgList);
+                                if (combinedMsg == null) {
+                                    throw new IllegalArgumentException(
+                                        "putAllMessages: Cannot put combined " +
+                                        "null message on " + e.getKey());
+                                }
                                 peer.putMsg(e.getKey(), combinedMsg);
                             } else {
-                                LOG.debug("putAllMessages: " + peer.getName() +
-                                          " putting (list) " + msgList + " to " +
-                                          e.getKey() + ", proxy = " + isProxy);
+                                if (LOG.isDebugEnabled()) {
+                                    LOG.debug("putAllMessages: " +
+                                              peer.getName() +
+                                              " putting (list) " + msgList +
+                                              " to " + e.getKey() +
+                                              ", proxy = " + isProxy);
+                                }
                                 peer.putMsgList(e.getKey(), msgList);
                             }
                             msgList.clear();
                         } else {
                             for (M msg : msgList) {
-                                LOG.debug("putAllMessages: " + peer.getName() +
-                                          " putting " + msg + " to " +
-                                          e.getKey() + ", proxy = " + isProxy);
+                                if (LOG.isDebugEnabled()) {
+                                    LOG.debug("putAllMessages: "
+                                              + peer.getName() +
+                                              " putting " + msg +
+                                              " to " + e.getKey() +
+                                              ", proxy = " + isProxy);
+                                }
+                                if (msg == null) {
+                                    throw new IllegalArgumentException(
+                                        "putAllMessages: Cannot put " +
+                                        "null message on " + e.getKey());
+                                }
                                 peer.putMsg(e.getKey(), msg);
                             }
                             msgList.clear();

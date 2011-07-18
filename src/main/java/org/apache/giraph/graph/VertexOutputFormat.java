@@ -49,8 +49,8 @@ public abstract class VertexOutputFormat<
      * @throws IOException
      * @throws InterruptedException
      */
-    public abstract VertexWriter<I, V, E> createVertexWriter(TaskAttemptContext context)
-        throws IOException, InterruptedException;
+    public abstract VertexWriter<I, V, E> createVertexWriter(
+        TaskAttemptContext context) throws IOException, InterruptedException;
 
     /**
      * Check for validity of the output-specification for the job.
@@ -77,6 +77,6 @@ public abstract class VertexOutputFormat<
      * @throws IOException
      * @throws InterruptedException
      */
-    public abstract OutputCommitter getOutputCommitter(TaskAttemptContext context)
-        throws IOException, InterruptedException;
+    public abstract OutputCommitter getOutputCommitter(
+        TaskAttemptContext context) throws IOException, InterruptedException;
 }

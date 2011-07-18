@@ -30,12 +30,15 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.InputSplit;
-import org.apache.giraph.examples.GeneratedVertexInputFormat;
+import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.JobID;
 import org.apache.giraph.examples.GeneratedVertexReader;
 import org.apache.giraph.examples.SimpleCombinerVertex;
 import org.apache.giraph.examples.SimpleFailVertex;
 import org.apache.giraph.examples.SimpleMsgVertex;
 import org.apache.giraph.examples.SimplePageRankVertex;
+import org.apache.giraph.examples.SimplePageRankVertex.SimplePageRankVertexOutputFormat;
+import org.apache.giraph.examples.SimpleShortestPathsVertex;
 import org.apache.giraph.examples.SimplePageRankVertex.SimplePageRankVertexInputFormat;
 import org.apache.giraph.examples.SimpleSumCombiner;
 import org.apache.giraph.examples.SimpleSuperstepVertex;
@@ -94,8 +97,9 @@ public class TestBspBasic extends BspCase {
         SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat inputFormat =
             SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat
             .class.newInstance();
-        Configuration conf = new Configuration();
-        List<InputSplit> splitArray = inputFormat.getSplits(conf, 1);
+        List<InputSplit> splitArray =
+            inputFormat.getSplits(
+                new JobContext(new Configuration(), new JobID()), 1);
         ByteArrayOutputStream byteArrayOutputStream =
             new ByteArrayOutputStream();
         DataOutputStream outputStream =
@@ -103,6 +107,42 @@ public class TestBspBasic extends BspCase {
         ((Writable) splitArray.get(0)).write(outputStream);
         System.out.println("testInstantiateVertex: Example output split = " +
                            byteArrayOutputStream.toString());
+    }
+
+    /**
+     * Do some checks for local job runner.
+     *
+     * @throws IOException
+     * @throws ClassNotFoundException
+     * @throws InterruptedException
+     */
+    public void testLocalJobRunnerConfig()
+            throws IOException, InterruptedException, ClassNotFoundException {
+        if (getJobTracker() != null) {
+            System.out.println("testLocalJobRunnerConfig: Skipping for " +
+                               "non-local");
+            return;
+        }
+        GiraphJob job = new GiraphJob(getCallingMethodName());
+        setupConfiguration(job);
+        job.setWorkerConfiguration(5, 5, 100.0f);
+        job.getConfiguration().setBoolean(GiraphJob.SPLIT_MASTER_WORKER, true);
+        job.setVertexClass(SimpleSuperstepVertex.class);
+        job.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
+        try {
+            job.run(true);
+            assertTrue(false);
+        } catch (IllegalArgumentException e) {
+        }
+
+        job.getConfiguration().setBoolean(GiraphJob.SPLIT_MASTER_WORKER, false);
+        try {
+            job.run(true);
+            assertTrue(false);
+        } catch (IllegalArgumentException e) {
+        }
+        job.setWorkerConfiguration(1, 1, 100.0f);
+        job.run(true);
     }
 
     /**
@@ -191,7 +231,7 @@ public class TestBspBasic extends BspCase {
         job.getConfiguration().setLong(GeneratedVertexReader.READER_VERTICES,
                                        0);
         job.setVertexClass(SimpleMsgVertex.class);
-        job.setVertexInputFormatClass(SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat.class);
+        job.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
         assertTrue(job.run(true));
     }
 
@@ -207,7 +247,6 @@ public class TestBspBasic extends BspCase {
         GiraphJob job = new GiraphJob(getCallingMethodName());
         setupConfiguration(job);
         job.setVertexClass(SimpleCombinerVertex.class);
-        job.setVertexInputFormatClass(GeneratedVertexInputFormat.class);
         job.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
         job.setVertexCombinerClass(SimpleSumCombiner.class);
         assertTrue(job.run(true));
@@ -238,5 +277,24 @@ public class TestBspBasic extends BspCase {
             assertTrue(minPageRank > 0.03 && minPageRank < 0.03001);
             assertTrue(numVertices == 5);
         }
+    }
+
+    /**
+     * Run a sample BSP job locally and test shortest paths.
+     *
+     * @throws IOException
+     * @throws ClassNotFoundException
+     * @throws InterruptedException
+     */
+    public void testBspShortestPaths()
+            throws IOException, InterruptedException, ClassNotFoundException {
+        GiraphJob job = new GiraphJob(getCallingMethodName());
+        setupConfiguration(job);
+        job.setVertexClass(SimpleShortestPathsVertex.class);
+        job.setVertexInputFormatClass(SimplePageRankVertexInputFormat.class);
+        job.setVertexOutputFormatClass(SimplePageRankVertexOutputFormat.class);
+        Path outputPath = new Path("/tmp/" + getCallingMethodName());
+        removeAndSetOutput(job, outputPath);
+        assertTrue(job.run(true));
     }
 }
