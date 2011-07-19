@@ -83,6 +83,13 @@ public class VertexResolver<I extends WritableComparable, V extends Writable,
                 V vertexValue = BspUtils.<V>createVertexValue(getConf());
                 vertex.setVertexValue(vertexValue);
             }
+        } else {
+            if ((vertexChanges != null) &&
+                    (!vertexChanges.getAddedVertexList().isEmpty())) {
+                LOG.warn("resolve: Tried to add a vertex with id = " +
+                         vertex.getVertexId() + " when one already " +
+                "exists.  Ignoring the add vertex request.");
+            }
         }
 
         if (vertexChanges != null &&
