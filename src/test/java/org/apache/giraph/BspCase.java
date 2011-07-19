@@ -76,7 +76,7 @@ public class BspCase extends TestCase implements Watcher {
             // Single node testing
             conf.setBoolean(GiraphJob.SPLIT_MASTER_WORKER, false);
         }
-        conf.setInt(GiraphJob.POLL_ATTEMPTS, 5);
+        conf.setInt(GiraphJob.POLL_ATTEMPTS, 10);
         conf.setInt(GiraphJob.POLL_MSECS, 3*1000);
         conf.setInt(GiraphJob.ZOOKEEPER_SERVERLIST_POLL_MSECS, 500);
         if (getZooKeeperList() != null) {
