@@ -71,6 +71,7 @@ public class TestVertexRangeBalancer extends BspCase {
         removeAndSetOutput(job, outputPath);
         assertTrue(job.run(true));
         FileSystem hdfs = FileSystem.get(job.getConfiguration());
+        final int correctLen = 113;
         if (getJobTracker() != null) {
             FileStatus [] fileStatusArr = hdfs.listStatus(outputPath);
             int totalLen = 0;
@@ -79,7 +80,7 @@ public class TestVertexRangeBalancer extends BspCase {
                     totalLen += fileStatus.getLen();
                 }
             }
-            assertTrue(totalLen == 118);
+            assertTrue(totalLen == correctLen);
         }
 
         job = new GiraphJob("testSuperstepBalancer");
@@ -99,7 +100,7 @@ public class TestVertexRangeBalancer extends BspCase {
                     totalLen += fileStatus.getLen();
                 }
             }
-            assertTrue(totalLen == 118);
+            assertTrue(totalLen == correctLen);
         }
 
         job = new GiraphJob("testAutoBalancer");
@@ -119,7 +120,7 @@ public class TestVertexRangeBalancer extends BspCase {
                     totalLen += fileStatus.getLen();
                 }
             }
-            assertTrue(totalLen == 118);
+            assertTrue(totalLen == correctLen);
         }
     }
 }

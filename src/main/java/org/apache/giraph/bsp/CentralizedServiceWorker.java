@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -19,15 +19,14 @@
 package org.apache.giraph.bsp;
 
 import java.io.IOException;
-import java.util.Map;
 import java.util.NavigableMap;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 import org.apache.giraph.graph.AggregatorUsage;
+import org.apache.giraph.graph.GraphMapper;
 import org.apache.giraph.graph.VertexRange;
 import org.apache.giraph.graph.BasicVertexRangeBalancer;
-import org.apache.giraph.graph.GiraphJob.BspMapper;
 
 /**
  * All workers should have access to this centralized service to
@@ -97,14 +96,19 @@ public interface CentralizedServiceWorker<
     boolean startSuperstep();
 
     /**
-     * Report the statistics of each vertex range after the completion of
-     * computation.
+     * Worker is done with its portion of the superstep.  Report the
+     * worker level statistics after the computation.
      *
-     * @param maxIndexStatsMap maps max indexes (vertex ranges) to their stats
-     *        (# finished, # total)
+     * @param workerFinishedVertices Number of finished vertices on this worker
+     * @param workerVertices Number of vertices on this worker
+     * @param workerEdges Number of edges on this worker
+     * @param workersSentMessages Number of messages sent on this worker
      * @return true if this is the last superstep, false otherwise
      */
-    boolean finishSuperstep(final Map<I, long []> maxIndexStatsMap);
+    boolean finishSuperstep(long workerFinishedVertices,
+                            long workerVertices,
+                            long workerEdges,
+                            long workersSentMessages);
 
     /**
      * Every client will need to get a vertex range for a vertex id so that
@@ -141,10 +145,10 @@ public interface CentralizedServiceWorker<
     void exchangeVertexRanges();
 
     /**
-     * Get the BspMapper that this service is using.  Vertices need to know
+     * Get the GraphMapper that this service is using.  Vertices need to know
      * this.
      *
      * @return BspMapper
      */
-    BspMapper<I, V, E, M> getBspMapper();
+    GraphMapper<I, V, E, M> getGraphMapper();
 }

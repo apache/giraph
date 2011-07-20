@@ -66,9 +66,6 @@ public class SimpleShortestPathsVertex extends
 
     @Override
     public void compute(Iterator<DoubleWritable> msgIterator) {
-        if ((getSuperstep() > 1) && (msgIterator.hasNext() == false)) {
-            voteToHalt();
-        }
         double minDist = isSource() ? 0d : Double.MAX_VALUE;
         while (msgIterator.hasNext()) {
             minDist = Math.min(minDist, msgIterator.next().get());
@@ -89,5 +86,6 @@ public class SimpleShortestPathsVertex extends
                         new DoubleWritable(minDist + edge.getEdgeValue().get()));
             }
         }
+        voteToHalt();
     }
 }

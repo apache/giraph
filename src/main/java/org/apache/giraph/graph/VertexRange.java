@@ -40,7 +40,10 @@ import org.json.JSONObject;
  * Defines a vertex index range and assigns responsibility to a particular
  * host and port.
  *
- * @param <I> vertex index type
+ * @param <I> Vertex index value
+ * @param <V> Vertex value
+ * @param <E> Edge value
+ * @param <M> Message value
  */
 @SuppressWarnings("rawtypes")
 public class VertexRange<I extends WritableComparable,
@@ -286,6 +289,16 @@ public class VertexRange<I extends WritableComparable,
 
     public long getVertexCount() {
         return vertexMap.size();
+    }
+
+    public long getFinishedVertexCount() {
+        long finishedVertexCount = 0;
+        for (BasicVertex<I, V, E, M> vertex : vertexMap.values()) {
+            if (vertex.isHalted()) {
+                ++finishedVertexCount;
+            }
+        }
+        return finishedVertexCount;
     }
 
     public long getEdgeCount() {

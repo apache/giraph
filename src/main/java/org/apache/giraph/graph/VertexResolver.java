@@ -88,7 +88,7 @@ public class VertexResolver<I extends WritableComparable, V extends Writable,
                     (!vertexChanges.getAddedVertexList().isEmpty())) {
                 LOG.warn("resolve: Tried to add a vertex with id = " +
                          vertex.getVertexId() + " when one already " +
-                "exists.  Ignoring the add vertex request.");
+                        "exists.  Ignoring the add vertex request.");
             }
         }
 

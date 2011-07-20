@@ -83,6 +83,8 @@ public abstract class BasicRPCCommunications<
     private final VertexCombiner<I, M> combiner;
     /** Address of RPC server */
     private final InetSocketAddress myAddress;
+    /** Messages sent during the last superstep */
+    private long totalMsgsSentInSuperstep = 0;
     /**
      * Map of threads mapping from remote socket address to RPC client threads
      */
@@ -139,8 +141,6 @@ public abstract class BasicRPCCommunications<
     private final J jobToken;
     /** maximum number of vertices sent in a single RPC */
     private static final int MAX_VERTICES_PER_RPC = 1024;
-
-    // TODO add support for mutating messages
 
     /**
      * Class describing the RPC client thread for every remote RPC server.
@@ -789,6 +789,7 @@ public abstract class BasicRPCCommunications<
             LOG.debug("sendMessage: Send bytes (" + msg.toString() + ") to " +
                       destVertex + " with address " + addr);
         }
+        ++totalMsgsSentInSuperstep;
         Map<I, MsgList<M>> msgMap = null;
         synchronized (outMessages) {
             msgMap = outMessages.get(addr);
@@ -867,8 +868,7 @@ public abstract class BasicRPCCommunications<
     }
 
     @Override
-    public final void flush(Mapper<?, ?, ?, ?>.Context context)
-            throws IOException {
+    public long flush(Mapper<?, ?, ?, ?>.Context context) throws IOException {
         if (LOG.isInfoEnabled()) {
             LOG.info("flush: starting...");
         }
@@ -884,7 +884,9 @@ public abstract class BasicRPCCommunications<
                     if (pt.getNotDoneState() && pt.getFlushState()) {
                         try {
                             waitingInMain.wait(MAX_MESSAGE_HOLDING_MSECS);
-                            LOG.debug("flush: main waking up");
+                            if (LOG.isDebugEnabled()) {
+                                LOG.debug("flush: main waking up");
+                            }
                             context.progress();
                         } catch (InterruptedException e) {
                             // continue;
@@ -908,6 +910,9 @@ public abstract class BasicRPCCommunications<
                 }
             }
         }
+        long msgs = totalMsgsSentInSuperstep;
+        totalMsgsSentInSuperstep = 0;
+        return msgs;
     }
 
     @Override

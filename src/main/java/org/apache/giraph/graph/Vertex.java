@@ -28,7 +28,6 @@ import java.util.TreeMap;
 
 import org.apache.log4j.Logger;
 
-import org.apache.giraph.graph.GiraphJob.BspMapper;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -61,7 +60,7 @@ public abstract class Vertex<
     /** Class-wide map context */
     private static Mapper.Context context = null;
     /** Class-wide BSP Mapper for this Vertex */
-    private static GiraphJob.BspMapper<?, ? ,?, ?> bspMapper = null;
+    private static GraphMapper<?, ? ,?, ?> graphMapper = null;
     /** Vertex id */
     private I vertexId = null;
     /** Vertex value */
@@ -121,15 +120,15 @@ public abstract class Vertex<
     }
 
     /**
-     * Set the BspMapper for this vertex (internal use).
+     * Set the GraphMapper for this vertex (internal use).
      *
-     * @param bspMapper Mapper to use for communication
+     * @param graphMapper Mapper to use for communication
      */
     final static <I extends WritableComparable,
             V extends Writable, E extends Writable,
             M extends Writable> void
-            setBspMapper(BspMapper<I, V, E, M> bspMapper) {
-        Vertex.bspMapper = bspMapper;
+            setGraphMapper(GraphMapper<I, V, E, M> graphMapper) {
+        Vertex.graphMapper = graphMapper;
     }
 
     /**
@@ -196,7 +195,7 @@ public abstract class Vertex<
             throw new IllegalArgumentException(
                 "sendMsg: Cannot send null message to " + id);
         }
-        ((BspMapper<I, V, E, M>) bspMapper).
+        ((GraphMapper<I, V, E, M>) graphMapper).
             getWorkerCommunications().sendMessageReq(id, msg);
     }
 
@@ -222,14 +221,14 @@ public abstract class Vertex<
     @Override
     public void addVertexRequest(MutableVertex<I, V, E, M> vertex)
             throws IOException {
-        ((BspMapper<I, V, E, M>) bspMapper).
+        ((GraphMapper<I, V, E, M>) graphMapper).
             getWorkerCommunications().addVertexReq(vertex);
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public void removeVertexRequest(I vertexId) throws IOException {
-        ((BspMapper<I, V, E, M>) bspMapper).
+        ((GraphMapper<I, V, E, M>) graphMapper).
             getWorkerCommunications().removeVertexReq(vertexId);
     }
 
@@ -237,7 +236,7 @@ public abstract class Vertex<
     @Override
     public void addEdgeRequest(I vertexIndex,
                                Edge<I, E> edge) throws IOException {
-        ((BspMapper<I, V, E, M>) bspMapper).
+        ((GraphMapper<I, V, E, M>) graphMapper).
             getWorkerCommunications().addEdgeReq(vertexIndex, edge);
     }
 
@@ -245,7 +244,7 @@ public abstract class Vertex<
     @Override
     public void removeEdgeRequest(I sourceVertexId,
                                   I destVertexId) throws IOException {
-        ((BspMapper<I, V, E, M>) bspMapper).
+        ((GraphMapper<I, V, E, M>) graphMapper).
             getWorkerCommunications().removeEdgeReq(sourceVertexId,
                                                     destVertexId);
     }
@@ -311,18 +310,18 @@ public abstract class Vertex<
             String name,
             Class<? extends Aggregator<A>> aggregatorClass)
             throws InstantiationException, IllegalAccessException {
-        return bspMapper.getAggregatorUsage().registerAggregator(
+        return graphMapper.getAggregatorUsage().registerAggregator(
             name, aggregatorClass);
     }
 
     @Override
     public final Aggregator<? extends Writable> getAggregator(String name) {
-        return bspMapper.getAggregatorUsage().getAggregator(name);
+        return graphMapper.getAggregatorUsage().getAggregator(name);
     }
 
     @Override
     public final boolean useAggregator(String name) {
-        return bspMapper.getAggregatorUsage().useAggregator(name);
+        return graphMapper.getAggregatorUsage().useAggregator(name);
     }
 
     @Override

@@ -90,8 +90,8 @@ public class BspServiceWorker<
     public BspServiceWorker(String serverPortList,
                             int sessionMsecTimeout,
                             Mapper<?, ?, ?, ?>.Context context,
-                            GiraphJob.BspMapper<I, V, E, M> bspMapper) {
-        super(serverPortList, sessionMsecTimeout, context, bspMapper);
+                            GraphMapper<I, V, E, M> graphMapper) {
+        super(serverPortList, sessionMsecTimeout, context, graphMapper);
         this.finalRpcPort =
             getConfiguration().getInt(GiraphJob.RPC_INITIAL_PORT,
                           GiraphJob.RPC_INITIAL_PORT_DEFAULT) +
@@ -215,8 +215,8 @@ public class BspServiceWorker<
      *        in each partition (can be null, where nothing is written)
      */
     private void setInputSplitVertexRanges(
-        String inputSplitPath,
-        Map<I, List<Long>> maxIndexStatMap) {
+            String inputSplitPath,
+            Map<I, List<Long>> maxIndexStatMap) {
         String inputSplitFinishedPath =
             inputSplitPath + INPUT_SPLIT_FINISHED_NODE;
         byte [] zkData = null;
@@ -239,6 +239,7 @@ public class BspServiceWorker<
                     vertexRangeObj.put(JSONOBJ_MAX_VERTEX_INDEX_KEY,
                                        Base64.encodeBase64String(
                                            outputStream.toByteArray()));
+                    vertexRangeObj.put(JSONOBJ_NUM_MESSAGES_KEY, 0L);
                     statArray.put(vertexRangeObj);
                     if (LOG.isInfoEnabled()) {
                         LOG.info("setInputSplitVertexRanges: " +
@@ -248,7 +249,9 @@ public class BspServiceWorker<
                                  inputSplitPath);
                     }
                 } catch (Exception e) {
-                    throw new RuntimeException(e);
+                    throw new RuntimeException(
+                        "setInputSplitVertexRanges: Failed to add " +
+                        "vertex range " + entry.getKey(), e);
                 }
             }
             zkData = statArray.toString().getBytes();
@@ -265,8 +268,10 @@ public class BspServiceWorker<
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        LOG.info("setInputSplitVertexRanges: Finished loading " +
-                 inputSplitPath + " with vertexRanges - " + statArray);
+        if (LOG.isInfoEnabled()) {
+            LOG.info("setInputSplitVertexRanges: Finished loading " +
+                     inputSplitPath + " with vertexRanges - " + statArray);
+        }
     }
 
     /**
@@ -550,17 +555,15 @@ public class BspServiceWorker<
             throw new IllegalStateException("setup: loadVertices failed", e);
         }
 
-        Map<I, long []> maxIndexStatsMap = new TreeMap<I, long []>();
-        for (Map.Entry<I, VertexRange<I, V, E, M>> entry :
-             getVertexRangeMap().entrySet()) {
-            long [] statArray = new long[3];
-            statArray[0] = 0;
-            statArray[1] = entry.getValue().getVertexMap().size();
-            statArray[2] = entry.getValue().getEdgeCount();
-            maxIndexStatsMap.put(entry.getKey(), statArray);
+        long workerVertices = 0;
+        long workerEdges = 0;
+        for (VertexRange<I, V, E, M> vertexRange :
+                getVertexRangeMap().values()) {
+            workerVertices += vertexRange.getVertexCount();
+            workerEdges += vertexRange.getEdgeCount();
         }
 
-        finishSuperstep(maxIndexStatsMap);
+        finishSuperstep(0, workerVertices, workerEdges, 0);
     }
 
     /**
@@ -751,57 +754,41 @@ public class BspServiceWorker<
 
         getAggregatorValues(getSuperstep());
         getContext().setStatus("startSuperstep: " +
-                               getBspMapper().getMapFunctions().toString() +
+                               getGraphMapper().getMapFunctions().toString() +
                                " - Attempt=" + getApplicationAttempt() +
                                ", Superstep=" + getSuperstep());
         return true;
     }
 
     @Override
-    public boolean finishSuperstep(final Map<I, long []> maxIndexStatsMap) {
+    public boolean finishSuperstep(long workerFinishedVertices,
+                                   long workerVertices,
+                                   long workerEdges,
+                                   long workersSentMessages) {
         // This barrier blocks until success (or the master signals it to
         // restart).
         //
         // Master will coordinate the barriers and aggregate "doneness" of all
         // the vertices.  Each worker will:
         // 1. Save aggregator values that are in use.
-        // 2. Report the number of vertices in each partition on this worker
-        //    and the number completed.
+        // 2. Report the statistiscs (vertices, edges, messages, etc.)
+        // of this worker
         // 3. Let the master know it is finished.
         // 4. Then it waits for the master to say whether to stop or not.
         JSONArray aggregatorValueArray =
             marshalAggregatorValues(getSuperstep());
-        JSONArray vertexRangeStatArray = new JSONArray();
-        for (Map.Entry<I, long []> entry :
-            maxIndexStatsMap.entrySet()) {
-            JSONObject statObject = new JSONObject();
-            try {
-                ByteArrayOutputStream outputStream =
-                    new ByteArrayOutputStream();
-                DataOutput output = new DataOutputStream(outputStream);
-                ((Writable) entry.getKey()).write(output);
-
-                statObject.put(JSONOBJ_MAX_VERTEX_INDEX_KEY,
-                               Base64.encodeBase64String(
-                                   outputStream.toByteArray()));
-                statObject.put(JSONOBJ_FINISHED_VERTICES_KEY,
-                               entry.getValue()[0]);
-                statObject.put(JSONOBJ_NUM_VERTICES_KEY,
-                               entry.getValue()[1]);
-                statObject.put(JSONOBJ_NUM_EDGES_KEY,
-                               entry.getValue()[2]);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-            vertexRangeStatArray.put(statObject);
-        }
-
         JSONObject workerFinishedInfoObj = new JSONObject();
         try {
             workerFinishedInfoObj.put(JSONOBJ_AGGREGATOR_VALUE_ARRAY_KEY,
                                       aggregatorValueArray);
-            workerFinishedInfoObj.put(JSONOBJ_VERTEX_RANGE_STAT_ARRAY_KEY,
-                                      vertexRangeStatArray);
+            workerFinishedInfoObj.put(JSONOBJ_FINISHED_VERTICES_KEY,
+                                      workerFinishedVertices);
+            workerFinishedInfoObj.put(JSONOBJ_NUM_VERTICES_KEY,
+                                      workerVertices);
+            workerFinishedInfoObj.put(JSONOBJ_NUM_EDGES_KEY,
+                                      workerEdges);
+            workerFinishedInfoObj.put(JSONOBJ_NUM_MESSAGES_KEY,
+                                      workersSentMessages);
         } catch (JSONException e) {
             throw new RuntimeException(e);
         }
@@ -834,7 +821,9 @@ public class BspServiceWorker<
                                               false,
                                               null)));
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException(
+                "finishSuperstep: Failed while waiting for master to " +
+                "signal completion of superstep " + getSuperstep(), e);
         }
         long finishedVertices =
             globalStatsObject.optLong(JSONOBJ_FINISHED_VERTICES_KEY);
@@ -842,18 +831,21 @@ public class BspServiceWorker<
             globalStatsObject.optLong(JSONOBJ_NUM_VERTICES_KEY);
         totalEdges =
             globalStatsObject.optLong(JSONOBJ_NUM_EDGES_KEY);
+        long sentMessages =
+            globalStatsObject.optLong(JSONOBJ_NUM_MESSAGES_KEY);
         if (LOG.isInfoEnabled()) {
             LOG.info("finishSuperstep: Completed superstep " + getSuperstep() +
                      " with total finished vertices = " + finishedVertices +
                      " of out total vertices = " + totalVertices +
-                     ", total edges = " + totalEdges);
+                     ", total edges = " + totalEdges + ", sent messages = " +
+                     sentMessages);
         }
         incrCachedSuperstep();
         getContext().setStatus("finishSuperstep: " +
-                               getBspMapper().getMapFunctions().toString() +
+                               getGraphMapper().getMapFunctions().toString() +
                                " - Attempt=" + getApplicationAttempt() +
                                ", Superstep=" + getSuperstep());
-        return (finishedVertices == totalVertices);
+        return (finishedVertices == totalVertices) && (sentMessages == 0);
     }
 
     @Override
@@ -1184,7 +1176,7 @@ public class BspServiceWorker<
                     ((port != finalRpcPort) ||
                             !(getHostname().equals(hostname)))) {
                 if (!syncRequired) {
-                    getBspMapper().getWorkerCommunications().
+                    getGraphMapper().getWorkerCommunications().
                         cleanCachedVertexAddressMap();
                 }
                 List<BasicVertex<I, V, E, M>> vertexList =
@@ -1195,7 +1187,7 @@ public class BspServiceWorker<
                              entry.getKey() + " with " +
                              vertexList.size() + " elements to " + hostname +
                              ":" + port);
-                    getBspMapper().getWorkerCommunications().sendVertexListReq(
+                    getGraphMapper().getWorkerCommunications().sendVertexListReq(
                         entry.getKey(), vertexList);
                     vertexList.clear();
                     entry.getValue().getVertexMap().clear();
@@ -1220,7 +1212,7 @@ public class BspServiceWorker<
                              previousHostname + ":" + previousPort);
                 }
                 if (!syncRequired) {
-                    getBspMapper().getWorkerCommunications().
+                    getGraphMapper().getWorkerCommunications().
                         cleanCachedVertexAddressMap();
                 }
                 VertexRange<I, V, E, M> destVertexRange =
@@ -1269,7 +1261,7 @@ public class BspServiceWorker<
 
         // Add the vertices that were sent earlier.
         Map<I, List<Vertex<I, V, E, M>>> inVertexRangeMap =
-            getBspMapper().getWorkerCommunications().getInVertexRangeMap();
+            getGraphMapper().getWorkerCommunications().getInVertexRangeMap();
         synchronized (inVertexRangeMap) {
             for (Entry<I, List<Vertex<I, V, E, M>>> entry :
                     inVertexRangeMap.entrySet()) {

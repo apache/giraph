@@ -24,6 +24,7 @@ import org.apache.log4j.Logger;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.data.ACL;
+import org.apache.zookeeper.data.Stat;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -43,6 +44,23 @@ public class ZooKeeperExt extends ZooKeeper {
     /** Length of the ZK sequence number */
     private static final int SEQUENCE_NUMBER_LENGTH = 10;
 
+    /**
+     * Constructor to connect to ZooKeeper
+     *
+     * @param connectString Comma separated host:port pairs, each corresponding
+     *        to a zk server. e.g.
+     *        "127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002" If the optional
+     *        chroot suffix is used the example would look
+     *        like: "127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002/app/a"
+     *        where the client would be rooted at "/app/a" and all paths
+     *        would be relative to this root - ie getting/setting/etc...
+     *        "/foo/bar" would result in operations being run on
+     *        "/app/a/foo/bar" (from the server perspective).
+     * @param sessionTimeout Session timeout in milliseconds
+     * @param watcher A watcher object which will be notified of state changes,
+     *        may also be notified for node events
+     * @throws IOException
+     */
     public ZooKeeperExt(String connectString,
                         int sessionTimeout,
                         Watcher watcher) throws IOException {
@@ -50,7 +68,6 @@ public class ZooKeeperExt extends ZooKeeper {
     }
 
     /**
-     *
      * Provides a possibility of a creating a path consisting of more than one
      * znode (not atomic).  If recursive is false, operates exactly the
      * same as create().
@@ -99,6 +116,75 @@ public class ZooKeeperExt extends ZooKeeper {
             }
         }
         return create(path, data, acl, createMode);
+    }
+
+    /**
+     * Data structure for handling the output of createOrSet()
+     */
+    public class PathStat {
+        private String path;
+        private Stat stat;
+        
+        /**
+         * Put in results from createOrSet()
+         * 
+         * @param path Path to created znode (or null)
+         * @param stat Stat from set znode (if set)
+         */
+        public PathStat(String path, Stat stat) {
+            this.path = path;
+            this.stat = stat;
+        }
+        
+        /**
+         * Get the path of the created znode if it was created.
+         * 
+         * @return Path of created znode or null if not created
+         */
+        public String getPath() {
+            return path;
+        }
+        
+        /**
+         * Get the stat of the set znode if set
+         * 
+         * @return Stat of set znode or null if not set
+         */
+        public Stat getStat() {
+            return stat;
+        }
+    }
+    
+    /**
+     * Create a znode.  Set the znode if the created znode already exists.
+     * 
+     * @param path path to create
+     * @param data data to set on the final znode
+     * @param acl acls on each znode created
+     * @param createMode only affects the final znode
+     * @param recursive if true, creates all ancestors
+     * @return Path of created znode or Stat of set znode
+     * @throws InterruptedException 
+     * @throws KeeperException 
+     */
+    public PathStat createOrSetExt(final String path,
+                                   byte data[],
+                                   List<ACL> acl,
+                                   CreateMode createMode,
+                                   boolean recursive,
+                                   int version) 
+            throws KeeperException, InterruptedException {
+        String createdPath = null;
+        Stat setStat = null;
+        try {
+            createdPath = createExt(path, data, acl, createMode, recursive);
+        } catch (KeeperException.NodeExistsException e) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("createOrSet: Node exists on path " + path);
+            }
+            setStat = setData(path, data, version);
+        }
+        return new PathStat(createdPath, setStat);
     }
 
     /**

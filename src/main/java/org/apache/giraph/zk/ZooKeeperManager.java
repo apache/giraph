@@ -133,6 +133,9 @@ public class ZooKeeperManager {
     private static class StreamCollector extends Thread {
         /** Input stream to dump */
         private final InputStream is;
+        /** Class logger */
+        private static final Logger LOG =
+            Logger.getLogger(StreamCollector.class);
 
         /**
          * Constructor.
@@ -152,7 +155,7 @@ public class ZooKeeperManager {
             try {
                 while ((line = bufferedReader.readLine()) != null) {
                     if (LOG.isDebugEnabled()) {
-                        LOG.debug(line);
+                        LOG.debug("run: " + line);
                     }
                 }
             } catch (IOException e) {
@@ -559,7 +562,8 @@ public class ZooKeeperManager {
             processBuilder.redirectErrorStream(true);
             if (LOG.isInfoEnabled()) {
                 LOG.info("onlineZooKeeperServers: Attempting to " +
-                         "start ZooKeeper server with command " + commandList);
+                         "start ZooKeeper server with command " + commandList +
+                         " in directory " + execDirectory.toString());
             }
             try {
                 synchronized (this) {

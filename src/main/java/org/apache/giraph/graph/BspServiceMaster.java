@@ -68,7 +68,7 @@ import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.giraph.bsp.BspInputFormat;
 import org.apache.giraph.bsp.CentralizedService;
 import org.apache.giraph.bsp.CentralizedServiceMaster;
-import org.apache.giraph.graph.GiraphJob.BspMapper.MapFunctions;
+import org.apache.giraph.graph.GraphMapper.MapFunctions;
 import org.apache.giraph.zk.BspEvent;
 import org.apache.giraph.zk.PredicateLock;
 
@@ -95,6 +95,8 @@ public class BspServiceMaster<
     private Counter finishedVertexCounter = null;
     /** Edge counter */
     private Counter edgeCounter = null;
+    /** Sent messages counter */
+    private Counter sentMessagesCounter = null;
     /** Workers on this superstep */
     private Counter currentWorkersCounter = null;
     /** Am I the master? */
@@ -121,8 +123,8 @@ public class BspServiceMaster<
             String serverPortList,
             int sessionMsecTimeout,
             Mapper<?, ?, ?, ?>.Context context,
-            GiraphJob.BspMapper<I, V, E, M> bspMapper) {
-        super(serverPortList, sessionMsecTimeout, context, bspMapper);
+            GraphMapper<I, V, E, M> graphMapper) {
+        super(serverPortList, sessionMsecTimeout, context, graphMapper);
         registerBspEvent(superstepStateChanged);
 
         maxWorkers =
@@ -348,8 +350,9 @@ public class BspServiceMaster<
                 failJob = false;
                 break;
             }
-            getContext().setStatus(getBspMapper().getMapFunctions() + " " +
-                                   "checkWorkers: Only found " + totalResponses +
+            getContext().setStatus(getGraphMapper().getMapFunctions() + " " +
+                                   "checkWorkers: Only found " +
+                                   totalResponses +
                                    " responses of " + maxWorkers +
                                    " needed to start superstep " +
                                    getSuperstep());
@@ -682,9 +685,11 @@ public class BspServiceMaster<
             String inputSplitPathFinishedPath =
                 INPUT_SPLIT_PATH + "/" + inputSplitIndex +
                 INPUT_SPLIT_FINISHED_NODE;
-            LOG.debug("mapFilesToWorkers: Assigning (if not empty) " +
-                     chosenWorker + " the following vertexRanges: " +
-                     vertexRangeArray.toString());
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("mapFilesToWorkers: Assigning (if not empty) " +
+                          chosenWorker + " the following vertexRanges: " +
+                          vertexRangeArray.toString());
+            }
 
             // Assign the input splits if there is at least one vertex range
             if (vertexRangeArray.length() == 0) {
@@ -728,6 +733,8 @@ public class BspServiceMaster<
             "Giraph Stats", "Aggregate finished vertices");
         edgeCounter = getContext().getCounter(
             "Giraph Stats", "Aggregate edges");
+        sentMessagesCounter = getContext().getCounter(
+            "Giraph Stats", "Sent messages");
         currentWorkersCounter = getContext().getCounter(
             "Giraph Stats", "Current workers");
         if (getRestartedSuperstep() == -1) {
@@ -807,16 +814,16 @@ public class BspServiceMaster<
     }
 
     /**
-     * Get the vertex range statistics for a particular superstep.
+     * Collect and aggregate the worker statistics for a particular superstep.
      *
-     * @param superstep superstep to check
-     * @return mapping of max index (vertex range) to JSONObject
-     *         (# done, # total)
+     * @param superstep Superstep to aggregate on
+     * @return JSONObject with all the aggregated fields
      */
-    private Map<I, JSONObject> collectVertexRangeStats(long superstep) {
-        Map<I, JSONObject> vertexRangeStatArrayMap =
-            new TreeMap<I, JSONObject>();
-
+    private JSONObject aggregateWorkerStats(long superstep) {
+        long aggregateFinishedVertices = 0;
+        long aggregateVertices = 0;
+        long aggregateEdges = 0;
+        long aggregateSentMessages = 0;
         // Superstep 0 is special since there is no computation, just get
         // the stats from the input splits finished nodes.  Otherwise, get the
         // stats from the all the worker selected nodes
@@ -827,10 +834,10 @@ public class BspServiceMaster<
                     INPUT_SPLIT_PATH, false, false, true);
             } catch (KeeperException e) {
                 throw new IllegalStateException(
-                    "collectVertexRangeStats: KeeperException", e);
+                    "aggregateWorkerStats: KeeperException", e);
             } catch (InterruptedException e) {
                 throw new IllegalStateException(
-                    "collectVertexRangeStats: IllegalStateException", e);
+                    "aggregateWorkerStats: IllegalStateException", e);
             }
             for (String inputSplitPath : inputSplitList) {
                 JSONArray statArray = null;
@@ -844,60 +851,30 @@ public class BspServiceMaster<
                     }
                     statArray = new JSONArray(new String(zkData));
                     if (LOG.isDebugEnabled()) {
-                        LOG.debug("collectVertexRangeStats: input split path " +
+                        LOG.debug("aggregateWorkerStats: input split path " +
                                   inputSplitPath + " got " + statArray);
                     }
                 } catch (JSONException e) {
                     throw new IllegalStateException(
-                        "collectVertexRangeStats: JSONException", e);
+                        "aggregateWorkerStats: JSONException", e);
                 } catch (KeeperException e) {
                     throw new IllegalStateException(
-                        "collectVertexRangeStats: KeeperException", e);
+                        "aggregateWorkerStats: KeeperException", e);
                 } catch (InterruptedException e) {
                     throw new IllegalStateException(
-                        "collectVertexRangeStats: InterruptedException", e);
+                        "aggregateWorkerStats: InterruptedException", e);
                 }
                 for (int i = 0; i < statArray.length(); ++i) {
                     try {
-                        I maxVertexIndex =
-                            BspUtils.<I>createVertexIndex(getConfiguration());
-                        byte[] maxVertexIndexByteArray =
-                            Base64.decodeBase64(
-                                statArray.getJSONObject(i).getString(
-                                    BspService.JSONOBJ_MAX_VERTEX_INDEX_KEY));
-                        InputStream input =
-                            new ByteArrayInputStream(maxVertexIndexByteArray);
-                        ((Writable) maxVertexIndex).readFields(
-                            new DataInputStream(input));
-                        statArray.getJSONObject(i).put(
-                            JSONOBJ_FINISHED_VERTICES_KEY,
-                            0);
-
-                        if (LOG.isDebugEnabled()) {
-                            LOG.debug("collectVertexRangeStats: "+
-                                      "On input split path " +
-                                      inputSplitPath + ", maxVertexIndex = "
-                                      + maxVertexIndex +
-                                      ", vertex range stats = " +
-                                      statArray.getJSONObject(i));
-                        }
-                        if (vertexRangeStatArrayMap.containsKey(maxVertexIndex)) {
-                            throw new IllegalStateException(
-                                "collectVertexRangeStats: Already got stats " +
-                                "for max vertex index " + maxVertexIndex + " (");
-                        }
-                        vertexRangeStatArrayMap.put(maxVertexIndex,
-                                                    statArray.getJSONObject(i));
+                        aggregateVertices +=
+                            statArray.getJSONObject(i).getLong(
+                                JSONOBJ_NUM_VERTICES_KEY);
+                        aggregateEdges +=
+                            statArray.getJSONObject(i).getLong(
+                                JSONOBJ_NUM_EDGES_KEY);
                     } catch (JSONException e) {
                         throw new IllegalStateException(
-                            "collectVertexRangeStats: JSONException", e);
-                    } catch (UnsupportedEncodingException e) {
-                        throw new IllegalStateException(
-                            "collectVertexRangeStats: " +
-                            "UnsupportedEncodingException", e);
-                    } catch (IOException e) {
-                        throw new IllegalStateException(
-                            "collectVertexRangeStats: IOException", e);
+                            "aggregateWorkerStats: JSONException", e);
                     }
                 }
             }
@@ -912,10 +889,10 @@ public class BspServiceMaster<
                         workerFinishedPath, false, false, true);
             } catch (KeeperException e) {
                 throw new IllegalStateException(
-                    "collectVertexRangeStats: KeeperException", e);
+                    "aggregateWorkerStats: KeeperException", e);
             } catch (InterruptedException e) {
                 throw new IllegalStateException(
-                    "collectVertexRangeStats: InterruptedException", e);
+                    "aggregateWorkerStats: InterruptedException", e);
             }
 
             for (String finishedPath : workerFinishedPathList) {
@@ -924,45 +901,51 @@ public class BspServiceMaster<
                     byte [] zkData =
                         getZkExt().getData(finishedPath, false, null);
                     aggregatorStatObj = new JSONObject(new String(zkData));
-
-                    JSONArray statArray =
-                        aggregatorStatObj.getJSONArray(
-                            JSONOBJ_VERTEX_RANGE_STAT_ARRAY_KEY);
-                    for (int i = 0; i < statArray.length(); ++i) {
-                        I maxVertexIndex =
-                            BspUtils.<I>createVertexIndex(getConfiguration());
-                        byte[] maxVertexIndexByteArray =
-                            Base64.decodeBase64(
-                                statArray.getJSONObject(i).getString(
-                                    BspService.JSONOBJ_MAX_VERTEX_INDEX_KEY));
-                        InputStream input =
-                            new ByteArrayInputStream(maxVertexIndexByteArray);
-                        ((Writable) maxVertexIndex).readFields(
-                            new DataInputStream(input));
-                        vertexRangeStatArrayMap.put(maxVertexIndex,
-                                                    statArray.getJSONObject(i));
-                    }
+                    aggregateFinishedVertices +=
+                        aggregatorStatObj.getLong(JSONOBJ_FINISHED_VERTICES_KEY);
+                    aggregateVertices +=
+                        aggregatorStatObj.getLong(JSONOBJ_NUM_VERTICES_KEY);
+                    aggregateEdges +=
+                        aggregatorStatObj.getLong(JSONOBJ_NUM_EDGES_KEY);
+                    aggregateSentMessages +=
+                        aggregatorStatObj.getLong(JSONOBJ_NUM_MESSAGES_KEY);
                 } catch (JSONException e) {
                     throw new IllegalStateException(
-                        "collectVertexRangeStats: JSONException", e);
-                } catch (UnsupportedEncodingException e) {
-                    throw new IllegalStateException(
-                        "collectVertexRangeStats: " +
-                        "UnsupportedEncodingException", e);
-                } catch (IOException e) {
-                    throw new IllegalStateException(
-                        "collectVertexRangeStats: IOException", e);
+                        "aggregateWorkerStats: JSONException", e);
                 } catch (KeeperException e) {
                     throw new IllegalStateException(
-                        "collectVertexRangeStats: KeeperException", e);
+                        "aggregateWorkerStats: KeeperException", e);
                 } catch (InterruptedException e) {
                     throw new IllegalStateException(
-                        "collectVertexRangeStats: InterruptedException", e);
+                        "aggregateWorkerStats: InterruptedException", e);
                 }
             }
          }
 
-        return vertexRangeStatArrayMap;
+        JSONObject aggregateStats = new JSONObject();
+        try {
+            aggregateStats.put(JSONOBJ_FINISHED_VERTICES_KEY,
+                               aggregateFinishedVertices);
+            aggregateStats.put(JSONOBJ_NUM_VERTICES_KEY,
+                               aggregateVertices);
+            aggregateStats.put(JSONOBJ_NUM_EDGES_KEY,
+                               aggregateEdges);
+            aggregateStats.put(JSONOBJ_NUM_MESSAGES_KEY,
+                               aggregateSentMessages);
+        } catch (JSONException e) {
+            throw new IllegalStateException(
+                "aggregateWorkerStats: Failed to put the aggregator " +
+                "stats together", e);
+        }
+        if (LOG.isInfoEnabled()) {
+            LOG.info("aggregateWorkerStats: Aggregation found " +
+                     aggregateFinishedVertices + " of " +
+                     aggregateVertices +
+                     " vertices finished, " + aggregateEdges +
+                     " edges, " + aggregateSentMessages +
+                     " messages sent on superstep = " + getSuperstep());
+        }
+        return aggregateStats;
     }
 
     /**
@@ -1688,7 +1671,7 @@ public class BspServiceMaster<
                          " chosen workers finished on superstep " +
                          getSuperstep());
             }
-            getContext().setStatus(getBspMapper().getMapFunctions() + " " +
+            getContext().setStatus(getGraphMapper().getMapFunctions() + " " +
                                    finishedWorkerList.size() +
                                    " finished out of " +
                                    chosenWorkerHostnamePortMap.size() +
@@ -1709,31 +1692,7 @@ public class BspServiceMaster<
             }
         }
         collectAndProcessAggregatorValues(getSuperstep());
-        Map<I, JSONObject> maxIndexStatsMap =
-            collectVertexRangeStats(getSuperstep());
-        long verticesFinished = 0;
-        long verticesTotal = 0;
-        long edgesTotal = 0;
-        for (Map.Entry<I, JSONObject> entry : maxIndexStatsMap.entrySet()) {
-            try {
-                verticesFinished +=
-                    entry.getValue().getLong(JSONOBJ_FINISHED_VERTICES_KEY);
-                verticesTotal +=
-                    entry.getValue().getLong(JSONOBJ_NUM_VERTICES_KEY);
-                edgesTotal +=
-                    entry.getValue().getLong(JSONOBJ_NUM_EDGES_KEY);
-            } catch (JSONException e) {
-                throw new IllegalStateException(
-                    "coordinateSuperstep: Failed to parse out "+
-                    "the number range stats", e);
-            }
-        }
-        if (LOG.isInfoEnabled()) {
-            LOG.info("coordinateSuperstep: Aggregation found "
-                     + verticesFinished + " of " + verticesTotal +
-                     " vertices finished, " + edgesTotal +
-                     " edges on superstep = " + getSuperstep());
-        }
+        JSONObject globalInfoObject = aggregateWorkerStats(getSuperstep());
 
         // Convert the input split stats to vertex ranges in superstep 0
         if (getSuperstep() == 0) {
@@ -1745,25 +1704,28 @@ public class BspServiceMaster<
         String superstepFinishedNode =
             getSuperstepFinishedPath(getApplicationAttempt(), getSuperstep());
         try {
-            JSONObject globalInfoObject = new JSONObject();
-            globalInfoObject.put(JSONOBJ_FINISHED_VERTICES_KEY,
-                                 verticesFinished);
-            globalInfoObject.put(JSONOBJ_NUM_VERTICES_KEY, verticesTotal);
-            globalInfoObject.put(JSONOBJ_NUM_EDGES_KEY, edgesTotal);
             getZkExt().createExt(superstepFinishedNode,
                                  globalInfoObject.toString().getBytes(),
                                  Ids.OPEN_ACL_UNSAFE,
                                  CreateMode.PERSISTENT,
                                  true);
+            vertexCounter.increment(
+                globalInfoObject.getLong(JSONOBJ_NUM_VERTICES_KEY) -
+                vertexCounter.getValue());
+            finishedVertexCounter.increment(
+                globalInfoObject.getLong(JSONOBJ_FINISHED_VERTICES_KEY) -
+                finishedVertexCounter.getValue());
+            edgeCounter.increment(
+                globalInfoObject.getLong(JSONOBJ_NUM_EDGES_KEY) -
+                edgeCounter.getValue());
+            sentMessagesCounter.increment(
+                globalInfoObject.getLong(JSONOBJ_NUM_MESSAGES_KEY) -
+                sentMessagesCounter.getValue());
         } catch (JSONException e) {
             throw new IllegalStateException("coordinateSuperstep: " +
                                             "JSONException", e);
         }
-        vertexCounter.increment(verticesTotal -
-                                vertexCounter.getValue());
-        finishedVertexCounter.increment(verticesFinished -
-                                        finishedVertexCounter.getValue());
-        edgeCounter.increment(edgesTotal - edgeCounter.getValue());
+
 
         // Finalize the valid checkpoint file prefixes and possibly
         // the aggregators.
@@ -1805,11 +1767,21 @@ public class BspServiceMaster<
                     "finalizing checkpoint", e);
             }
         }
-     incrCachedSuperstep();
+        incrCachedSuperstep();
         superstepCounter.increment(1);
-        return (verticesFinished == verticesTotal) ?
-            SuperstepState.ALL_SUPERSTEPS_DONE :
-            SuperstepState.THIS_SUPERSTEP_DONE;
+        try {
+            if ((globalInfoObject.getLong(JSONOBJ_FINISHED_VERTICES_KEY) ==
+                    globalInfoObject.getLong(JSONOBJ_NUM_VERTICES_KEY)) &&
+                    (globalInfoObject.getLong(JSONOBJ_NUM_MESSAGES_KEY)) == 0) {
+                return SuperstepState.ALL_SUPERSTEPS_DONE;
+            } else {
+                return SuperstepState.THIS_SUPERSTEP_DONE;
+            }
+        } catch (JSONException e) {
+            throw new IllegalStateException(
+                "coordinateSuperstep: JSONException on checking if " +
+                "the application is done", e);
+        }
     }
 
     /**
@@ -1837,7 +1809,9 @@ public class BspServiceMaster<
         }
         // Need to wait for the number of workers and masters to complete
         int maxTasks = BspInputFormat.getMaxTasks(getConfiguration());
-        if (getBspMapper().getMapFunctions() == MapFunctions.ALL) {
+        if ((getGraphMapper().getMapFunctions() == MapFunctions.ALL) ||
+                (getGraphMapper().getMapFunctions() ==
+                    MapFunctions.ALL_EXCEPT_ZOOKEEPER)) {
             maxTasks *= 2;
         }
         List<String> cleanedUpChildrenList = null;

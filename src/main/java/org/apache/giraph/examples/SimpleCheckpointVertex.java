@@ -107,6 +107,7 @@ public class SimpleCheckpointVertex extends
         }
         if (getSuperstep() > supersteps) {
             voteToHalt();
+            return;
         }
         System.out.println("compute: " + sumAggregator);
         sumAggregator.aggregate(getVertexId().get());

@@ -50,7 +50,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import org.apache.giraph.bsp.CentralizedService;
-import org.apache.giraph.graph.GiraphJob.BspMapper;
 import org.apache.giraph.zk.BspEvent;
 import org.apache.giraph.zk.PredicateLock;
 import org.apache.giraph.zk.ZooKeeperExt;
@@ -67,6 +66,8 @@ public abstract class BspService <
         implements Watcher, CentralizedService<I, V, E, M> {
     /** Private ZooKeeper instance that implements the service */
     private final ZooKeeperExt zk;
+    /** Has the Connection occurred? */
+    private final BspEvent connectedEvent = new PredicateLock();
     /** Has worker registration changed (either healthy or unhealthy) */
     private final BspEvent workerHealthRegistrationChanged =
         new PredicateLock();
@@ -116,8 +117,8 @@ public abstract class BspService <
     private final String hostname;
     /** Combination of hostname '_' partition (unique id) */
     private final String hostnamePartitionId;
-    /** Mapper that will do computation */
-    private final GiraphJob.BspMapper<I, V, E, M> bspMapper;
+    /** Mapper that will do the graph computation */
+    private final GraphMapper<I, V, E, M> graphMapper;
     /** Class logger */
     private static final Logger LOG = Logger.getLogger(BspService.class);
     /** File system */
@@ -180,6 +181,7 @@ public abstract class BspService <
         "_verticesFinishedKey";
     public static final String JSONOBJ_NUM_VERTICES_KEY = "_numVerticesKey";
     public static final String JSONOBJ_NUM_EDGES_KEY = "_numEdgesKey";
+    public static final String JSONOBJ_NUM_MESSAGES_KEY = "_numMsgsKey";
     public static final String JSONOBJ_HOSTNAME_ID_KEY = "_hostnameIdKey";
     public static final String JSONOBJ_MAX_VERTEX_INDEX_KEY =
         "_maxVertexIndexKey";
@@ -493,8 +495,8 @@ public abstract class BspService <
         return taskPartition;
     }
 
-    final public BspMapper<I, V, E, M> getBspMapper() {
-        return bspMapper;
+    final public GraphMapper<I, V, E, M> getGraphMapper() {
+        return graphMapper;
     }
 
     final public BspEvent getWorkerHealthRegistrationChangedEvent() {
@@ -585,7 +587,8 @@ public abstract class BspService <
     public BspService(String serverPortList,
                       int sessionMsecTimeout,
                       Mapper<?, ?, ?, ?>.Context context,
-                      GiraphJob.BspMapper<I, V, E, M> bspMapper) {
+                      GraphMapper<I, V, E, M> graphMapper) {
+        registerBspEvent(connectedEvent);
         registerBspEvent(workerHealthRegistrationChanged);
         registerBspEvent(inputSplitsAllReadyChanged);
         registerBspEvent(inputSplitsStateChanged);
@@ -598,7 +601,7 @@ public abstract class BspService <
         registerBspEvent(cleanedUpChildrenChanged);
 
         this.context = context;
-        this.bspMapper = bspMapper;
+        this.graphMapper = graphMapper;
         this.conf = context.getConfiguration();
         this.jobId = conf.get("mapred.job.id", "Unknown Job");
         this.taskPartition = conf.getInt("mapred.task.partition", -1);
@@ -636,6 +639,7 @@ public abstract class BspService <
         }
         try {
             this.zk = new ZooKeeperExt(serverPortList, sessionMsecTimeout, this);
+            connectedEvent.waitForever();
             this.fs = FileSystem.get(getConfiguration());
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -951,16 +955,19 @@ public abstract class BspService <
                       event.getState());
         }
 
-        if (event.getPath() == null) {
-            // No way to recover from a disconnect event, signal all BspEvents
-            if ((event.getType() == EventType.None) &&
-                    (event.getState() == KeeperState.Disconnected)) {
-
+        if ((event.getPath() == null) && (event.getType() == EventType.None)) {
+            if (event.getState() == KeeperState.Disconnected) {
+                // No way to recover from a disconnect event, signal all BspEvents
                 for (BspEvent bspEvent : registeredBspEvents) {
                     bspEvent.signal();
                 }
                 throw new RuntimeException(
                     "process: Disconnected from ZooKeeper, cannot recover.");
+            } else if (event.getState() == KeeperState.SyncConnected) {
+                if (LOG.isInfoEnabled()) {
+                    LOG.info("process: Asynchronous connection complete.");
+                }
+                connectedEvent.signal();
             }
             return;
         }
