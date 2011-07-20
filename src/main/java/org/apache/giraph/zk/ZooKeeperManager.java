@@ -596,11 +596,14 @@ public class ZooKeeperManager {
              * and running by dropping a ready stamp.
              */
             int connectAttempts = 0;
-            while (connectAttempts < 5) {
+            final int maxConnectAttempts = 10;
+            while (connectAttempts < maxConnectAttempts) {
                 try {
                     if (LOG.isInfoEnabled()) {
                         LOG.info("onlineZooKeeperServers: Connect attempt " +
-                                 connectAttempts + " trying to connect to " +
+                                 connectAttempts + " of " +
+                                 maxConnectAttempts +
+                                 " max trying to connect to " +
                                  myHostname + ":" + zkBasePort +
                                  " with poll msecs = " + pollMsecs);
                     }
