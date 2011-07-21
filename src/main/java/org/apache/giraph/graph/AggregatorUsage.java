@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,8 +22,6 @@ import org.apache.hadoop.io.Writable;
 
 /**
  * Vertex classes can use this interface to register and use aggregators
- *
- * @param <A> Aggregator type must extend Writable
  */
 public interface AggregatorUsage {
     /**
@@ -41,7 +39,7 @@ public interface AggregatorUsage {
     /**
      * Get a registered aggregator.
      *
-     * @param name of aggregator
+     * @param name Name of aggregator
      * @return Aggregator<A> (null when not registered)
      */
     public Aggregator<? extends Writable> getAggregator(String name);
@@ -52,7 +50,7 @@ public interface AggregatorUsage {
      * superstep, useAggregator needs to be called at the beginning
      * of that superstep in preSuperstep().
      *
-     * @param name of aggregator
+     * @param name Name of aggregator
      * @return boolean (false when not registered)
      */
     public boolean useAggregator(String name);

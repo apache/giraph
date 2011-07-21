@@ -79,7 +79,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
     /**
      * Get the aggregator usage, a subset of the functionality
      *
-     * @return
+     * @return Aggregator usage interface
      */
     public final AggregatorUsage getAggregatorUsage() {
         return serviceWorker;

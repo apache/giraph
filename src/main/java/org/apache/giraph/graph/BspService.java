@@ -379,8 +379,8 @@ public abstract class BspService <
      * Generate the base superstep directory path for a given application
      * attempt
      *
-     * @param attempt application attempt number
-     * @return directory path based on the an attempt
+     * @param superstep Superstep to use
+     * @return Directory path based on the a superstep
      */
     final public String getCheckpointBasePath(long superstep) {
         return CHECKPOINT_BASE_PATH + "/" + superstep;
@@ -410,8 +410,8 @@ public abstract class BspService <
     /**
      * Get the checkpoint from a finalized checkpoint path
      *
-     * @param path Path contain
-     * @return checkpoint of the finalized path
+     * @param finalizedPath Path of the finalized checkpoint
+     * @return Superstep referring to a checkpoint of the finalized path
      */
     public static long getCheckpoint(Path finalizedPath) {
         if (!finalizedPath.getName().endsWith(CHECKPOINT_FINALIZED_POSTFIX)) {
@@ -884,9 +884,9 @@ public abstract class BspService <
     /**
      * Register an aggregator with name.
      *
-     * @param name
-     * @param aggregator
-     * @return boolean (false when aggregator already registered)
+     * @param name Name of the aggregator
+     * @param aggregatorClass Class of the aggregator
+     * @return Aggregator
      * @throws IllegalAccessException
      * @throws InstantiationException
      */
@@ -903,7 +903,9 @@ public abstract class BspService <
         Aggregator<Writable> writableAggregator =
             (Aggregator<Writable>) aggregator;
         aggregatorMap.put(name, writableAggregator);
-        LOG.info("registered aggregator=" + name);
+        if (LOG.isInfoEnabled()) {
+            LOG.info("registerAggregator: registered " + name);
+        }
         return aggregator;
     }
 

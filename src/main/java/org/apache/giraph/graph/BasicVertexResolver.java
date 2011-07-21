@@ -39,7 +39,7 @@ public interface BasicVertexResolver<
      * excluding the normal case (a vertex already exists and has zero or more
      * messages sent it to).
      *
-     * @param originalVertex Original vertex or null if none
+     * @param vertex Original vertex or null if none
      * @param vertexChanges Changes that happened to this vertex or null if none
      * @param msgList List of messages received in the last superstep or null
      *        if none

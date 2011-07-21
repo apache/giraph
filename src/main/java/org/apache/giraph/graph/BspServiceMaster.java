@@ -72,7 +72,6 @@ import org.apache.giraph.graph.GraphMapper.MapFunctions;
 import org.apache.giraph.zk.BspEvent;
 import org.apache.giraph.zk.PredicateLock;
 
-
 /**
  * Zookeeper-based implementation of {@link CentralizedService}.
  */

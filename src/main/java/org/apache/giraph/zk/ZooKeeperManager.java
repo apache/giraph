@@ -219,7 +219,6 @@ public class ZooKeeperManager {
     /**
      * Create a HDFS stamp for this task.  If another task already
      * created it, then this one will fail, which is fine.
-     * @return true if create, false otherwise
      */
     public void createCandidateStamp() {
         try {
@@ -752,7 +751,7 @@ public class ZooKeeperManager {
      * kill it when all partitions are done and wait for
      * completion.  Clean up the ZooKeeper local directory as well.
      *
-     * @param success when true, call @createZooKeeperClosedStamp
+     * @param state State of the application
      */
     public void offlineZooKeeperServers(State state) {
         if (state == State.FINISHED) {

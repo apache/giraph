@@ -237,7 +237,9 @@ public abstract class BasicRPCCommunications<
         }
 
         public void close() {
-            LOG.info("close: Done");
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("close: Done");
+            }
             synchronized (notDoneObject) {
                 notDone = false;
             }
@@ -345,15 +347,19 @@ public abstract class BasicRPCCommunications<
                         flushLargeMsgLists = getFlushMsgListsState();
                     }
                     if (!notDoneValue) {
-                        LOG.info("run: NotDone=" + notDone +
-                                 ", flush=" + flush);
+                        if (LOG.isDebugEnabled()) {
+                            LOG.debug("run: NotDone=" + notDone +
+                                      ", flush=" + flush);
+                        }
                         break;
                     }
 
                     if (flushValue) {
                         putAllMessages();
-                        LOG.debug("run: " + peer.getName() +
-                                  ": all messages flushed");
+                        if (LOG.isDebugEnabled()) {
+                            LOG.debug("run: " + peer.getName() +
+                                      ": all messages flushed");
+                        }
                         synchronized (flushObject) {
                             flush = false;
                         }
@@ -386,11 +392,10 @@ public abstract class BasicRPCCommunications<
                         }
                     }
                 }
-                if (LOG.isInfoEnabled()) {
-                    LOG.info("run: RPC client thread terminating if is proxy (" +
-                             isProxy + ")");
-                }
                 if (isProxy) {
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("run: RPC client thread terminating...");
+                    }
                     RPC.stopProxy(peer);
                 }
             } catch (IOException e) {

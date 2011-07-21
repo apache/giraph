@@ -46,7 +46,7 @@ public interface ServerInterface<I extends WritableComparable,
      * Flush all outgoing messages.  This will synchronously ensure that all
      * messages have been send and delivered prior to returning.
      *
-     * @context Context used to signal process
+     * @param context Context used to signal process
      * @return Number of messages sent during the last superstep
      * @throws IOException
      */

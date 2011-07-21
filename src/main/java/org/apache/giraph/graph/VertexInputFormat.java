@@ -54,7 +54,7 @@ public abstract class VertexInputFormat<I extends WritableComparable,
      * intelligently determine how many splits to create (if this is
      * adjustable) at runtime.
      *
-     * @param conf configuration
+     * @param context Context of the job
      * @param numWorkers Number of workers used for this job
      * @return an array of {@link InputSplit}s for the job.
      */
