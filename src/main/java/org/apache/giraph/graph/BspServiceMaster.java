@@ -66,8 +66,10 @@ import org.apache.zookeeper.Watcher.Event.EventType;
 import org.apache.zookeeper.ZooDefs.Ids;
 
 import org.apache.giraph.bsp.BspInputFormat;
+import org.apache.giraph.bsp.ApplicationState;
 import org.apache.giraph.bsp.CentralizedService;
 import org.apache.giraph.bsp.CentralizedServiceMaster;
+import org.apache.giraph.bsp.SuperstepState;
 import org.apache.giraph.graph.GraphMapper.MapFunctions;
 import org.apache.giraph.zk.BspEvent;
 import org.apache.giraph.zk.PredicateLock;
@@ -145,7 +147,7 @@ public class BspServiceMaster<
     }
 
     @Override
-    public void setJobState(State state,
+    public void setJobState(ApplicationState state,
                             long applicationAttempt,
                             long desiredSuperstep) {
         JSONObject jobState = new JSONObject();
@@ -181,7 +183,7 @@ public class BspServiceMaster<
                 MASTER_JOB_STATE_PATH, e);
         }
 
-        if (state == BspService.State.FAILED) {
+        if (state == ApplicationState.FAILED) {
             failJob();
         }
     }
@@ -473,7 +475,7 @@ public class BspServiceMaster<
         // where it left off.
         Map<String, JSONArray> healthyWorkerHostnamePortMap = checkWorkers();
         if (healthyWorkerHostnamePortMap == null) {
-            setJobState(State.FAILED, -1, -1);
+            setJobState(ApplicationState.FAILED, -1, -1);
         }
 
         List<InputSplit> splitList =
@@ -489,7 +491,7 @@ public class BspServiceMaster<
                       + splitList.size() + " > " +
                       healthyWorkerHostnamePortMap.size() +
                       "=number of healthy processes");
-            setJobState(State.FAILED, -1, -1);
+            setJobState(ApplicationState.FAILED, -1, -1);
         }
         String inputSplitPath = null;
         for (int i = 0; i< splitList.size(); ++i) {
@@ -736,17 +738,9 @@ public class BspServiceMaster<
             "Giraph Stats", "Sent messages");
         currentWorkersCounter = getContext().getCounter(
             "Giraph Stats", "Current workers");
-        if (getRestartedSuperstep() == -1) {
-            return;
-        }
-        else if (getRestartedSuperstep() < -1) {
-            LOG.fatal("setup: Impossible to restart superstep " +
-                      getRestartedSuperstep());
-            setJobState(BspService.State.FAILED, -1, -1);
-        } else {
+        if (getRestartedSuperstep() != UNSET_SUPERSTEP) {
             superstepCounter.increment(getRestartedSuperstep());
         }
-
     }
 
     public boolean becomeMaster() {
@@ -772,8 +766,8 @@ public class BspServiceMaster<
             JSONObject jobState = getJobState();
             try {
                 if ((jobState != null) &&
-                    State.valueOf(jobState.getString(JSONOBJ_STATE_KEY)) ==
-                        State.FINISHED) {
+                    ApplicationState.valueOf(jobState.getString(JSONOBJ_STATE_KEY)) ==
+                        ApplicationState.FINISHED) {
                     if (LOG.isInfoEnabled()) {
                         LOG.info("becomeMaster: Job is finished, " +
                                  "give up trying to be the master!");
@@ -823,10 +817,10 @@ public class BspServiceMaster<
         long aggregateVertices = 0;
         long aggregateEdges = 0;
         long aggregateSentMessages = 0;
-        // Superstep 0 is special since there is no computation, just get
+        // INPUT_SUPERSTEP is special since there is no computation, just get
         // the stats from the input splits finished nodes.  Otherwise, get the
         // stats from the all the worker selected nodes
-        if (superstep == 0) {
+        if (superstep == INPUT_SUPERSTEP) {
             List<String> inputSplitList = null;
             try {
                 inputSplitList = getZkExt().getChildrenExt(
@@ -954,7 +948,7 @@ public class BspServiceMaster<
      * @param superstep superstep to check
      */
     private void collectAndProcessAggregatorValues(long superstep) {
-        if (superstep <= 0) {
+        if (superstep <= INPUT_SUPERSTEP) {
             return;
         }
         Map<String, Aggregator<? extends Writable>> aggregatorMap =
@@ -1240,7 +1234,7 @@ public class BspServiceMaster<
                         hostnamePartitionId)) {
                         LOG.fatal("inputSplitsToVertexRanges: Worker " +
                               hostnamePartitionId + " died, failing.");
-                        setJobState(State.FAILED, -1, -1);
+                        setJobState(ApplicationState.FAILED, -1, -1);
                     }
                    JSONArray hostnamePortArray =
                        chosenWorkerHostnamePortMap.get(hostnamePartitionId);
@@ -1271,11 +1265,12 @@ public class BspServiceMaster<
                          vertexRangeAssignmentArray.toString().length() +
                          " to path " + vertexRangeAssignmentsPath);
             }
-            getZkExt().createExt(vertexRangeAssignmentsPath,
-                                 vertexRangeAssignmentArray.toString().getBytes(),
-                                 Ids.OPEN_ACL_UNSAFE,
-                                 CreateMode.PERSISTENT,
-                                 true);
+            getZkExt().createExt(
+                vertexRangeAssignmentsPath,
+                vertexRangeAssignmentArray.toString().getBytes(),
+                Ids.OPEN_ACL_UNSAFE,
+                CreateMode.PERSISTENT,
+                true);
         } catch (KeeperException e) {
             throw new IllegalStateException(
                 "inputSplitsToVertexRanges: KeeperException", e);
@@ -1316,6 +1311,12 @@ public class BspServiceMaster<
             chosenWorkerHostnamePortMap);
         NavigableMap<I, VertexRange<I, V, E, M>> vertexRangeMap =
             getVertexRangeMap(getSuperstep() - 1);
+        if (vertexRangeMap.isEmpty()) {
+            throw new IllegalStateException(
+                "balanceVertexRanges: Couldn't get the " +
+                "previous vertex range map (superstep " +
+                (getSuperstep() - 1) + ")");
+        }
         vertexRangeBalancer.setPrevVertexRangeMap(vertexRangeMap);
         NavigableMap<I, VertexRange<I, V, E, M>> nextVertexRangeMap =
             vertexRangeBalancer.rebalance();
@@ -1349,7 +1350,8 @@ public class BspServiceMaster<
         }
         if (vertexRangeAssignmentArray.length() == 0) {
             throw new RuntimeException(
-                "balanceVertexRanges: Impossible there are no vertex ranges ");
+                "balanceVertexRanges: Impossible there are no " +
+                "vertex ranges on superstep " + getSuperstep());
         }
 
         byte[] vertexAssignmentBytes = null;
@@ -1358,7 +1360,7 @@ public class BspServiceMaster<
                 vertexRangeAssignmentArray.toString().getBytes("UTF-8");
         } catch (UnsupportedEncodingException e) {
             throw new RuntimeException(
-                "balanceVertexranges: Cannot get bytes from " +
+                "balanceVertexRanges: Cannot get bytes from " +
                 vertexRangeAssignmentArray.toString(), e);
         }
 
@@ -1520,7 +1522,7 @@ public class BspServiceMaster<
         setApplicationAttempt(getApplicationAttempt() + 1);
         setCachedSuperstep(checkpoint);
         setRestartedSuperstep(checkpoint);
-        setJobState(BspService.State.START_SUPERSTEP,
+        setJobState(ApplicationState.START_SUPERSTEP,
                     getApplicationAttempt(),
                     checkpoint);
     }
@@ -1576,7 +1578,7 @@ public class BspServiceMaster<
         if (chosenWorkerHostnamePortMap == null) {
             LOG.fatal("coordinateSuperstep: Not enough healthy workers for " +
                       "superstep " + getSuperstep());
-            setJobState(State.FAILED, -1, -1);
+            setJobState(ApplicationState.FAILED, -1, -1);
         } else {
             for (Entry<String, JSONArray> entry :
                     chosenWorkerHostnamePortMap.entrySet()) {
@@ -1609,7 +1611,7 @@ public class BspServiceMaster<
                     "coordinateSuperstep: Failed to reload", e);
             }
         } else {
-            if (getSuperstep() > 0) {
+            if (getSuperstep() > INPUT_SUPERSTEP) {
                 VertexRangeBalancer<I, V, E, M> vertexRangeBalancer =
                     BspUtils.<I, V, E, M>createVertexRangeBalancer(
                         getConfiguration());
@@ -1670,7 +1672,7 @@ public class BspServiceMaster<
                          " chosen workers finished on superstep " +
                          getSuperstep());
             }
-            getContext().setStatus(getGraphMapper().getMapFunctions() + " " +
+            getContext().setStatus(getGraphMapper().getMapFunctions() + " - " +
                                    finishedWorkerList.size() +
                                    " finished out of " +
                                    chosenWorkerHostnamePortMap.size() +
@@ -1693,8 +1695,8 @@ public class BspServiceMaster<
         collectAndProcessAggregatorValues(getSuperstep());
         JSONObject globalInfoObject = aggregateWorkerStats(getSuperstep());
 
-        // Convert the input split stats to vertex ranges in superstep 0
-        if (getSuperstep() == 0) {
+        // Convert the input split stats to vertex ranges in INPUT_SUPERSTEP
+        if (getSuperstep() == INPUT_SUPERSTEP) {
             inputSplitsToVertexRanges(chosenWorkerHostnamePortMap);
         }
 

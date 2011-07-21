@@ -61,7 +61,7 @@ public class PageRankBenchmark extends
 
     @Override
     public void compute(Iterator<DoubleWritable> msgIterator) {
-        if (getSuperstep() > 1) {
+        if (getSuperstep() >= 1) {
             double sum = 0;
             while (msgIterator.hasNext()) {
                 sum += msgIterator.next().get();

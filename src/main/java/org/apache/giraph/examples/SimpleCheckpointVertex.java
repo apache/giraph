@@ -93,6 +93,7 @@ public class SimpleCheckpointVertex extends
         useAggregator(LongSumAggregator.class.getName());
     }
 
+    @Override
     public void compute(Iterator<FloatWritable> msgIterator) {
         LongSumAggregator sumAggregator = (LongSumAggregator)
             getAggregator(LongSumAggregator.class.getName());

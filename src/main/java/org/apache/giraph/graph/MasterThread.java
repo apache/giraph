@@ -18,11 +18,13 @@
 
 package org.apache.giraph.graph;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.TreeMap;
 
+import org.apache.giraph.bsp.ApplicationState;
 import org.apache.giraph.bsp.CentralizedServiceMaster;
+import org.apache.giraph.bsp.SuperstepState;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper.Context;
@@ -50,7 +52,7 @@ public class MasterThread<I extends WritableComparable,
     private double setupSecs = 0d;
     /** Superstep timer (in seconds) map */
     private final Map<Long, Double> superstepSecsMap =
-        new HashMap<Long, Double>();
+        new TreeMap<Long, Double>();
     /**
      *  Constructor.
      *
@@ -83,19 +85,17 @@ public class MasterThread<I extends WritableComparable,
             long endMillis = 0;
             bspServiceMaster.setup();
             if (bspServiceMaster.becomeMaster() == true) {
-                if (bspServiceMaster.getRestartedSuperstep() == -1) {
+                if (bspServiceMaster.getRestartedSuperstep() ==
+                        BspService.UNSET_SUPERSTEP) {
                     bspServiceMaster.createInputSplits();
                 }
                 long setupMillis = (System.currentTimeMillis() - startMillis);
                 context.getCounter("Giraph Timers", "Setup (milliseconds)").
                     increment(setupMillis);
                 setupSecs = setupMillis / 1000.0d;
-                CentralizedServiceMaster.SuperstepState superstepState =
-                    CentralizedServiceMaster.SuperstepState.INITIAL;
-                long cachedSuperstep = -1;
-                while (superstepState !=
-                        CentralizedServiceMaster.SuperstepState.
-                        ALL_SUPERSTEPS_DONE) {
+                SuperstepState superstepState = SuperstepState.INITIAL;
+                long cachedSuperstep = BspService.UNSET_SUPERSTEP;
+                while (superstepState != SuperstepState.ALL_SUPERSTEPS_DONE) {
                     long startSuperstepMillis = System.currentTimeMillis();
                     cachedSuperstep = bspServiceMaster.getSuperstep();
                     superstepState = bspServiceMaster.coordinateSuperstep();
@@ -112,23 +112,25 @@ public class MasterThread<I extends WritableComparable,
                                  bspServiceMaster.getSuperstep());
                     }
                     if (superstepCounterOn) {
-                        context.getCounter("Giraph Timers", "Superstep " +
-                                           cachedSuperstep + " (milliseconds)").
+                        String counterPrefix;
+                        if (cachedSuperstep == -1) {
+                            counterPrefix = "Vertex input superstep";
+                        } else {
+                            counterPrefix = "Superstep " + cachedSuperstep;
+                        }
+                        context.getCounter("Giraph Timers", counterPrefix +
+                                           " (milliseconds)").
                                            increment(superstepMillis);
                     }
 
                     // If a worker failed, restart from a known good superstep
-                    if (superstepState ==
-                            CentralizedServiceMaster.
-                                SuperstepState.WORKER_FAILURE) {
+                    if (superstepState == SuperstepState.WORKER_FAILURE) {
                         bspServiceMaster.restartFromCheckpoint(
                             bspServiceMaster.getLastGoodCheckpoint());
                     }
                     endMillis = System.currentTimeMillis();
                 }
-                bspServiceMaster.setJobState(BspService.State.FINISHED,
-                                             -1,
-                                             -1);
+                bspServiceMaster.setJobState(ApplicationState.FINISHED, -1, -1);
             }
             bspServiceMaster.cleanup();
             if (!superstepSecsMap.isEmpty()) {
@@ -139,8 +141,14 @@ public class MasterThread<I extends WritableComparable,
                 }
                 for (Entry<Long, Double> entry : superstepSecsMap.entrySet()) {
                     if (LOG.isInfoEnabled()) {
-                        LOG.info("superstep " + entry.getKey() + ": Took " +
-                                 entry.getValue() + " seconds.");
+                        if (entry.getKey().longValue() ==
+                                BspService.INPUT_SUPERSTEP) {
+                            LOG.info("vertex input superstep: Took " +
+                                     entry.getValue() + " seconds.");
+                        } else {
+                            LOG.info("superstep " + entry.getKey() + ": Took " +
+                                     entry.getValue() + " seconds.");
+                        }
                     }
                 }
                 if (LOG.isInfoEnabled()) {

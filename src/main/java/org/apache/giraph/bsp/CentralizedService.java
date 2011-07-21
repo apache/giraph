@@ -49,7 +49,7 @@ public interface CentralizedService<I extends WritableComparable,
     /**
      * Get the current global superstep of the application to work on.
      *
-     * @return global superstep (begins at -1)
+     * @return global superstep (begins at INPUT_SUPERSTEP)
      */
     long getSuperstep();
 

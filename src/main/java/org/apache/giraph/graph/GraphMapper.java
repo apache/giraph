@@ -523,9 +523,11 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
                           " maxMem=" + Runtime.getRuntime().maxMemory() +
                           " freeMem=" + Runtime.getRuntime().freeMemory());
             }
-            if ((superstep >= 1) && (commService == null)) {
+            if ((superstep > BspService.INPUT_SUPERSTEP) &&
+                    (commService == null)) {
                 if (LOG.isInfoEnabled()) {
-                    LOG.info("map: Starting communication service...");
+                    LOG.info("map: Starting communication service on " +
+                             "superstep " + superstep);
                 }
                 commService =
                     new RPCCommunications<I, V, E, M>(context,

@@ -71,7 +71,7 @@ public class TestVertexRangeBalancer extends BspCase {
         removeAndSetOutput(job, outputPath);
         assertTrue(job.run(true));
         FileSystem hdfs = FileSystem.get(job.getConfiguration());
-        final int correctLen = 113;
+        final int correctLen = 118;
         if (getJobTracker() != null) {
             FileStatus [] fileStatusArr = hdfs.listStatus(outputPath);
             int totalLen = 0;

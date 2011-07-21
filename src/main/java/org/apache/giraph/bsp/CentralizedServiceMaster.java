@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -24,8 +24,6 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.zookeeper.KeeperException;
 
-import org.apache.giraph.graph.BspService.State;
-
 /**
  * At most, there will be one active master at a time, but many threads can
  * be trying to be the active master.
@@ -37,16 +35,6 @@ public interface CentralizedServiceMaster<
         E extends Writable,
         M extends Writable>
         extends CentralizedService<I, V, E, M> {
-    /**
-     * State of a coordinated superstep
-     */
-    public enum SuperstepState {
-        INITIAL, ///< Nothing happened yet
-        WORKER_FAILURE, ///< A worker died during this superstep
-        THIS_SUPERSTEP_DONE, ///< This superstep completed correctly
-        ALL_SUPERSTEPS_DONE, ///< All supersteps are complete
-    }
-
     /**
      * Become the master.
      * @return true if became the master, false if the application is done.
@@ -95,7 +83,7 @@ public interface CentralizedServiceMaster<
      * @param applicationAttempt attempt to start on
      * @param desiredSuperstep Superstep to restart from (if applicable)
      */
-    void setJobState(State state,
+    void setJobState(ApplicationState state,
                      long applicationAttempt,
                      long desiredSuperstep);
 }

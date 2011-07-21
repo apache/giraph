@@ -61,6 +61,8 @@ import org.apache.zookeeper.Watcher.Event.EventType;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.data.Stat;
 
+import org.apache.giraph.bsp.ApplicationState;
+
 /**
  * ZooKeeper-based implementation of {@link CentralizedServiceWorker}.
  */
@@ -368,7 +370,6 @@ public class BspServiceWorker<
                          " vertices from input split " + inputSplit);
             }
             if (vertexList.isEmpty()) {
-                // TODO: Need to add checkpoints
                 setInputSplitVertexRanges(inputSplitPath, null);
                 continue;
             }
@@ -485,7 +486,8 @@ public class BspServiceWorker<
                 maxIndexStatMap.put(entry.getKey(), statList);
 
                 // Add the local vertex ranges to the stored vertex ranges
-                getVertexRangeMap().put(entry.getKey(), entry.getValue());
+                getStorableVertexRangeMap().put(entry.getKey(),
+                                                entry.getValue());
             }
             setInputSplitVertexRanges(inputSplitPath, maxIndexStatMap);
         }
@@ -494,16 +496,11 @@ public class BspServiceWorker<
     @Override
     public void setup() {
         // Unless doing a restart, prepare for computation:
-        // 1. Start superstep 0 (no computation)
+        // 1. Start superstep INPUT_SUPERSTEP (no computation)
         // 2. Wait for the INPUT_SPLIT_READY_PATH node has been created
         // 3. Process input splits until there are no more.
         // 4. Wait for superstep 0 to complete.
-        if (getRestartedSuperstep() < -1) {
-            throw new IllegalArgumentException(
-                "setup: Invalid superstep to restart - " +
-                getRestartedSuperstep());
-        }
-        else if (getRestartedSuperstep() > 0) {
+        if (getRestartedSuperstep() != UNSET_SUPERSTEP) {
             setCachedSuperstep(getRestartedSuperstep());
             return;
         }
@@ -511,14 +508,16 @@ public class BspServiceWorker<
         JSONObject jobState = getJobState();
         if (jobState != null) {
             try {
-                if ((State.valueOf(jobState.getString(JSONOBJ_STATE_KEY)) ==
-                        State.START_SUPERSTEP) &&
+                if ((ApplicationState.valueOf(jobState.getString(JSONOBJ_STATE_KEY)) ==
+                        ApplicationState.START_SUPERSTEP) &&
                         jobState.getLong(JSONOBJ_SUPERSTEP_KEY) ==
-                            getSuperstep()) {
-                    LOG.info("setup: Restarting from an automated " +
-                             "checkpointed superstep " +
-                             getSuperstep() + ", attempt " +
-                             getApplicationAttempt());
+                        getSuperstep()) {
+                    if (LOG.isInfoEnabled()) {
+                        LOG.info("setup: Restarting from an automated " +
+                                 "checkpointed superstep " +
+                                 getSuperstep() + ", attempt " +
+                                 getApplicationAttempt());
+                    }
                     setRestartedSuperstep(getSuperstep());
                     return;
                 }
@@ -537,8 +536,12 @@ public class BspServiceWorker<
             try {
                 inputSplitsReadyStat =
                     getZkExt().exists(INPUT_SPLITS_ALL_READY_PATH, true);
-            } catch (Exception e) {
-                throw new RuntimeException(e);
+            } catch (KeeperException e) {
+                throw new IllegalStateException(
+                    "setup: KeeperException waiting on input splits", e);
+            } catch (InterruptedException e) {
+                throw new IllegalStateException(
+                    "setup: InterrupteException waiting on input splits", e);
             }
             if (inputSplitsReadyStat != null) {
                 break;
@@ -558,7 +561,7 @@ public class BspServiceWorker<
         long workerVertices = 0;
         long workerEdges = 0;
         for (VertexRange<I, V, E, M> vertexRange :
-                getVertexRangeMap().values()) {
+                getStorableVertexRangeMap().values()) {
             workerVertices += vertexRange.getVertexCount();
             workerEdges += vertexRange.getEdgeCount();
         }
@@ -575,7 +578,7 @@ public class BspServiceWorker<
      */
     private JSONArray marshalAggregatorValues(long superstep) {
         JSONArray aggregatorArray = new JSONArray();
-        if (superstep == 0 || aggregatorInUse.size() == 0) {
+        if ((superstep == INPUT_SUPERSTEP) || (aggregatorInUse.size() == 0)) {
             return aggregatorArray;
         }
 
@@ -614,10 +617,10 @@ public class BspServiceWorker<
     /**
      * Get values of aggregators aggregated by master in previous superstep.
      *
-     * @param superstep
+     * @param superstep Superstep to get the aggregated values from
      */
     private void getAggregatorValues(long superstep) {
-        if (superstep <= 1) {
+        if (superstep <= (INPUT_SUPERSTEP + 1)) {
             return;
         }
         String mergedAggregatorPath =
@@ -732,7 +735,7 @@ public class BspServiceWorker<
         registerHealth(getSuperstep());
 
         String vertexRangeAssignmentsNode = null;
-        if (getSuperstep() > 0) {
+        if (getSuperstep() > INPUT_SUPERSTEP) {
             vertexRangeAssignmentsNode =
                 getVertexRangeAssignmentsPath(getApplicationAttempt(),
                                               getSuperstep());
@@ -745,11 +748,12 @@ public class BspServiceWorker<
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
-        }
-        if (LOG.isInfoEnabled()) {
-            LOG.info("startSuperstep: Ready for computation since worker " +
-                     "selection and vertex range assignments are done in " +
-                     vertexRangeAssignmentsNode);
+            if (LOG.isInfoEnabled()) {
+                LOG.info("startSuperstep: Ready for computation on superstep " +
+                         getSuperstep() + " since worker " +
+                         "selection and vertex range assignments are done in " +
+                         vertexRangeAssignmentsNode);
+            }
         }
 
         getAggregatorValues(getSuperstep());
@@ -771,7 +775,7 @@ public class BspServiceWorker<
         // Master will coordinate the barriers and aggregate "doneness" of all
         // the vertices.  Each worker will:
         // 1. Save aggregator values that are in use.
-        // 2. Report the statistiscs (vertices, edges, messages, etc.)
+        // 2. Report the statistiss (vertices, edges, messages, etc.)
         // of this worker
         // 3. Let the master know it is finished.
         // 4. Then it waits for the master to say whether to stop or not.
@@ -845,7 +849,7 @@ public class BspServiceWorker<
                                getGraphMapper().getMapFunctions().toString() +
                                " - Attempt=" + getApplicationAttempt() +
                                ", Superstep=" + getSuperstep());
-        return (finishedVertices == totalVertices) && (sentMessages == 0);
+        return ((finishedVertices == totalVertices) && (sentMessages == 0));
     }
 
     @Override
@@ -1311,11 +1315,10 @@ public class BspServiceWorker<
             }
             JSONObject jsonObj = getJobState();
             try {
-                if ((State.valueOf(jsonObj.getString(JSONOBJ_STATE_KEY)) ==
-                        State.START_SUPERSTEP) &&
+                if ((ApplicationState.valueOf(jsonObj.getString(JSONOBJ_STATE_KEY)) ==
+                        ApplicationState.START_SUPERSTEP) &&
                         jsonObj.getLong(JSONOBJ_APPLICATION_ATTEMPT_KEY) !=
-                        getApplicationAttempt() &&
-                        getSuperstep() > 0) {
+                        getApplicationAttempt()) {
                     LOG.fatal("processEvent: Worker will restart " +
                               "from command - " + jsonObj.toString());
                     System.exit(-1);

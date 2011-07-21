@@ -106,9 +106,11 @@ public abstract class BspService <
     /** Job context (mainly for progress) */
     private final Mapper<?, ?, ?, ?>.Context context;
     /** Cached superstep (from ZooKeeper) */
-    private long cachedSuperstep = -1;
+    private long cachedSuperstep = UNSET_SUPERSTEP;
+    /** Restarted from a checkpoint (manual or automatic) */
+    private long restartedSuperstep = UNSET_SUPERSTEP;
     /** Cached application attempt (from ZooKeeper) */
-    private long cachedApplicationAttempt = -1;
+    private long cachedApplicationAttempt = UNSET_APPLICATION_ATTEMPT;
     /** Job id, to ensure uniqueness */
     private final String jobId;
     /** Task partition, to ensure uniqueness */
@@ -123,8 +125,6 @@ public abstract class BspService <
     private static final Logger LOG = Logger.getLogger(BspService.class);
     /** File system */
     private final FileSystem fs;
-    /** Restarted from a checkpoint (manual or automatic) */
-    private long restartedSuperstep = -1;
     /** Used to call pre/post application/superstep methods */
     private final Vertex<I, V, E, M> representativeVertex;
     /** Checkpoint frequency */
@@ -133,18 +133,17 @@ public abstract class BspService <
     private NavigableMap<I, VertexRange<I, V, E, M>> vertexRangeMap =
         new TreeMap<I, VertexRange<I, V, E, M>>();
     /** Vertex range set is based on this superstep */
-    private long vertexRangeSuperstep = -1;
+    private long vertexRangeSuperstep = UNSET_SUPERSTEP;
     /** Map of aggregators */
     private Map<String, Aggregator<Writable>> aggregatorMap =
         new TreeMap<String, Aggregator<Writable>>();
 
-    /** State of the application */
-    public enum State {
-        UNKNOWN, ///< Shouldn't be seen, just an initial state
-        START_SUPERSTEP, ///< Start from a desired superstep
-        FAILED, ///< Unrecoverable
-        FINISHED ///< Successful completion
-    }
+    /** Unset superstep */
+    public static long UNSET_SUPERSTEP = Long.MIN_VALUE;
+    /** Input superstep (superstep when loading the vertices happens) */
+    public static long INPUT_SUPERSTEP = -1;
+    /** Unset application attempt */
+    public static long UNSET_APPLICATION_ATTEMPT = Long.MIN_VALUE;
 
     public static final String BASE_DIR = "/_hadoopBsp";
     public static final String MASTER_JOB_STATE_NODE = "/_masterJobState";
@@ -444,7 +443,7 @@ public abstract class BspService <
      * @param superstep Set the manually restarted superstep
      */
     final public void setRestartedSuperstep(long superstep) {
-        restartedSuperstep= superstep;
+        restartedSuperstep = superstep;
     }
 
     /**
@@ -457,7 +456,7 @@ public abstract class BspService <
         if (checkpointFrequency == 0) {
             return false;
         }
-        if ((superstep == 1) ||
+        if ((superstep == (INPUT_SUPERSTEP + 1)) ||
             (((superstep + 1) % checkpointFrequency) == 0)) {
             return true;
         }
@@ -605,9 +604,15 @@ public abstract class BspService <
         this.conf = context.getConfiguration();
         this.jobId = conf.get("mapred.job.id", "Unknown Job");
         this.taskPartition = conf.getInt("mapred.task.partition", -1);
-        this.restartedSuperstep =
-            conf.getLong(GiraphJob.RESTART_SUPERSTEP, -1);
+        this.restartedSuperstep = conf.getLong(GiraphJob.RESTART_SUPERSTEP,
+                                               UNSET_SUPERSTEP);
         this.cachedSuperstep = restartedSuperstep;
+        if ((restartedSuperstep != UNSET_SUPERSTEP) &&
+                (restartedSuperstep < 0)) {
+            throw new IllegalArgumentException(
+                "BspService: Invalid superstep to restart - " +
+                restartedSuperstep);
+        }
         try {
             this.hostname = InetAddress.getLocalHost().getHostName();
         } catch (UnknownHostException e) {
@@ -665,7 +670,7 @@ public abstract class BspService <
      * @return the latest application attempt
      */
     final public long getApplicationAttempt() {
-        if (cachedApplicationAttempt != -1) {
+        if (cachedApplicationAttempt != UNSET_APPLICATION_ATTEMPT) {
             return cachedApplicationAttempt;
         }
         try {
@@ -706,7 +711,7 @@ public abstract class BspService <
      * @throws KeeperException
      */
     final public long getSuperstep() {
-        if (cachedSuperstep != -1) {
+        if (cachedSuperstep != UNSET_SUPERSTEP) {
             return cachedSuperstep;
         }
         String superstepPath = getSuperstepPath(getApplicationAttempt());
@@ -741,7 +746,7 @@ public abstract class BspService <
                 "getSuperstep: InterruptedException", e);
         }
         if (superstepList.isEmpty()) {
-            cachedSuperstep = 0;
+            cachedSuperstep = INPUT_SUPERSTEP;
         }
         else {
             cachedSuperstep =
@@ -752,11 +757,13 @@ public abstract class BspService <
     }
 
     /**
-     * Increment the cached superstep.
+     * Increment the cached superstep.  Shouldn't be the initial value anymore.
      */
     final public void incrCachedSuperstep() {
-        if (cachedSuperstep == -1) {
-            throw new RuntimeException("incrSuperstep: Invalid -1 superstep.");
+        if (cachedSuperstep == UNSET_SUPERSTEP) {
+            throw new IllegalStateException(
+                "incrSuperstep: Invalid unset cached superstep " +
+                UNSET_SUPERSTEP);
         }
         ++cachedSuperstep;
     }
@@ -801,27 +808,34 @@ public abstract class BspService <
         }
     }
 
+    /**
+     * Gets the storable vertex range map, bypasses the cache.  Used by workers
+     * to dump the vertices into.
+     *
+     * @return Actual map of max vertex range indices to vertex ranges
+     */
+    public NavigableMap<I, VertexRange<I, V, E, M>>
+            getStorableVertexRangeMap() {
+        return vertexRangeMap;
+    }
+
+    /**
+     * Based on a superstep, get the mapping of vertex range maxes to vertex
+     * ranges.  This can be used to look up a particular vertex.
+     *
+     * @param superstep Superstep to get the vertex ranges for
+     * @return Cached map of max vertex range indices to vertex ranges
+     */
     public NavigableMap<I, VertexRange<I, V, E, M>> getVertexRangeMap(
             long superstep) {
         if (LOG.isDebugEnabled()) {
             LOG.debug("getVertexRangeMap: Current superstep = " +
                       getSuperstep() + ", desired superstep = " + superstep);
         }
-        // The master will try to get superstep 0 and need to be refreshed
-        // The worker will try to get superstep 0 and needs to get its value
-        if (superstep == 0) {
-            if (getSuperstep() == 1) {
-                // Master should refresh
-            }
-            else if (getSuperstep() == 0) {
-                // Worker will populate
-                return vertexRangeMap;
-            }
-        }
-        else if (vertexRangeSuperstep == superstep) {
+
+        if (vertexRangeSuperstep == superstep) {
             return vertexRangeMap;
         }
-
         vertexRangeSuperstep = superstep;
         NavigableMap<I, VertexRange<I, V, E, M>> nextVertexRangeMap =
             new TreeMap<I, VertexRange<I, V, E, M>>();

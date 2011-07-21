@@ -106,7 +106,7 @@ public class SimplePageRankVertex extends
         LongSumAggregator sumAggreg = (LongSumAggregator) getAggregator("sum");
         MinAggregator minAggreg = (MinAggregator) getAggregator("min");
         MaxAggregator maxAggreg = (MaxAggregator) getAggregator("max");
-        if (getSuperstep() > 1) {
+        if (getSuperstep() >= 1) {
             double sum = 0;
             while (msgIterator.hasNext()) {
                 sum += msgIterator.next().get();
