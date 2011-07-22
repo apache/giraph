@@ -499,7 +499,7 @@ public class BspServiceWorker<
         // 1. Start superstep INPUT_SUPERSTEP (no computation)
         // 2. Wait for the INPUT_SPLIT_READY_PATH node has been created
         // 3. Process input splits until there are no more.
-        // 4. Wait for superstep 0 to complete.
+        // 4. Wait for superstep INPUT_SUPERSTEP to complete.
         if (getRestartedSuperstep() != UNSET_SUPERSTEP) {
             setCachedSuperstep(getRestartedSuperstep());
             return;
@@ -775,7 +775,7 @@ public class BspServiceWorker<
         // Master will coordinate the barriers and aggregate "doneness" of all
         // the vertices.  Each worker will:
         // 1. Save aggregator values that are in use.
-        // 2. Report the statistiss (vertices, edges, messages, etc.)
+        // 2. Report the statistics (vertices, edges, messages, etc.)
         // of this worker
         // 3. Let the master know it is finished.
         // 4. Then it waits for the master to say whether to stop or not.

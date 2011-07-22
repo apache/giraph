@@ -83,16 +83,16 @@ public class TestManualCheckpoint extends BspCase {
                                " fileLen = " + fileLen);
         }
 
-        // Restart the test from superstep 3
+        // Restart the test from superstep 2
         System.out.println(
-            "testBspCheckpoint: Restarting from superstep 3" +
+            "testBspCheckpoint: Restarting from superstep 2" +
             " with checkpoint path = " + HDFS_CHECKPOINT_DIR);
         GiraphJob restartedJob = new GiraphJob(getCallingMethodName() +
                                                "Restarted");
         setupConfiguration(restartedJob);
         restartedJob.getConfiguration().set(GiraphJob.CHECKPOINT_DIRECTORY,
                                             HDFS_CHECKPOINT_DIR);
-        restartedJob.getConfiguration().setLong(GiraphJob.RESTART_SUPERSTEP, 3);
+        restartedJob.getConfiguration().setLong(GiraphJob.RESTART_SUPERSTEP, 2);
         restartedJob.setVertexClass(SimpleCheckpointVertex.class);
         restartedJob.setVertexInputFormatClass(
             SimpleSuperstepVertexInputFormat.class);

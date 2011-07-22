@@ -766,12 +766,11 @@ public class BspServiceMaster<
             JSONObject jobState = getJobState();
             try {
                 if ((jobState != null) &&
-                    ApplicationState.valueOf(jobState.getString(JSONOBJ_STATE_KEY)) ==
-                        ApplicationState.FINISHED) {
-                    if (LOG.isInfoEnabled()) {
-                        LOG.info("becomeMaster: Job is finished, " +
-                                 "give up trying to be the master!");
-                    }
+                    ApplicationState.valueOf(
+                        jobState.getString(JSONOBJ_STATE_KEY)) ==
+                            ApplicationState.FINISHED) {
+                    LOG.info("becomeMaster: Job is finished, " +
+                             "give up trying to be the master!");
                     isMaster = false;
                     return isMaster;
                 }
@@ -943,12 +942,13 @@ public class BspServiceMaster<
 
     /**
      * Get the aggregator values for a particular superstep,
-     * aggregate and save them.
+     * aggregate and save them.  Does nothing on the INPUT_SUPERSTEP.
      *
      * @param superstep superstep to check
      */
     private void collectAndProcessAggregatorValues(long superstep) {
-        if (superstep <= INPUT_SUPERSTEP) {
+        if (superstep == INPUT_SUPERSTEP) {
+            // Nothing to collect on the input superstep
             return;
         }
         Map<String, Aggregator<? extends Writable>> aggregatorMap =

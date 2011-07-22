@@ -139,11 +139,11 @@ public abstract class BspService <
         new TreeMap<String, Aggregator<Writable>>();
 
     /** Unset superstep */
-    public static long UNSET_SUPERSTEP = Long.MIN_VALUE;
+    public static final long UNSET_SUPERSTEP = Long.MIN_VALUE;
     /** Input superstep (superstep when loading the vertices happens) */
-    public static long INPUT_SUPERSTEP = -1;
+    public static final long INPUT_SUPERSTEP = -1;
     /** Unset application attempt */
-    public static long UNSET_APPLICATION_ATTEMPT = Long.MIN_VALUE;
+    public static final long UNSET_APPLICATION_ATTEMPT = Long.MIN_VALUE;
 
     public static final String BASE_DIR = "/_hadoopBsp";
     public static final String MASTER_JOB_STATE_NODE = "/_masterJobState";
@@ -443,24 +443,34 @@ public abstract class BspService <
      * @param superstep Set the manually restarted superstep
      */
     final public void setRestartedSuperstep(long superstep) {
+        if (superstep < INPUT_SUPERSTEP) {
+            throw new IllegalArgumentException(
+                "setRestartedSuperstep: Bad argument " + superstep);
+        }
         restartedSuperstep = superstep;
     }
 
     /**
-     * Should checkpoint on this superstep?  If checkpointing, always checkpoint
-     * the first superstep.
+     * Should checkpoint on this superstep?  If checkpointing, always
+     * checkpoint the first user superstep.  If restarting, the first
+     * checkpoint is after the frequency has been met.
      *
-     * @param superstep Superstep to check on
+     * @param superstep Decide if checkpointing no this superstep
+     * @return True if this superstep should be checkpointed, false otherwise
      */
     final public boolean checkpointFrequencyMet(long superstep) {
         if (checkpointFrequency == 0) {
             return false;
         }
-        if ((superstep == (INPUT_SUPERSTEP + 1)) ||
-            (((superstep + 1) % checkpointFrequency) == 0)) {
-            return true;
+        long firstCheckpoint = INPUT_SUPERSTEP + 1;
+        if (getRestartedSuperstep() != UNSET_SUPERSTEP) {
+            firstCheckpoint = getRestartedSuperstep() + checkpointFrequency;
         }
-        else {
+        if (superstep < firstCheckpoint) {
+            return false;
+        } else if (((superstep - firstCheckpoint) % checkpointFrequency) == 0) {
+            return true;
+        } else {
             return false;
         }
     }
