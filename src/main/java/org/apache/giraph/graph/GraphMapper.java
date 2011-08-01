@@ -22,7 +22,7 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
 
 /**
- * The mapper that will execute the BSP graph tasks.  Since this mapper will
+ * This mapper that will execute the BSP graph tasks.  Since this mapper will
  * not be passing data by key-value pairs through the MR framework, the
  * types are irrelevant.
  */
@@ -361,6 +361,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
     @Override
     public void setup(Context context)
             throws IOException, InterruptedException {
+        context.setStatus("setup: Beginning mapper setup.");
         // Setting the default handler for uncaught exceptions.
         Thread.setDefaultUncaughtExceptionHandler(
             new OverrideExceptionHandler());
@@ -376,6 +377,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
         Vertex.setContext(context);
 
         // Do some initial setup (possibly starting up a Zookeeper service)
+        context.setStatus("setup: Initializing Zookeeper services.");
         String jarFile = context.getJar();
         if (jarFile == null) {
             jarFile = findContainingJar(getClass());
@@ -390,6 +392,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
             conf.get(GiraphJob.ZOOKEEPER_LIST, "");
         if (serverPortList == "") {
             zkManager = new ZooKeeperManager(context);
+            context.setStatus("setup: Setting up Zookeeper manager.");
             zkManager.setup();
             if (zkManager.computationDone()) {
                 done = true;
@@ -451,7 +454,6 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
             throw new RuntimeException(
                 "setup: Offlining servers due to exception...");
         }
-
         context.setStatus(getMapFunctions().toString() + " starting...");
     }
 
