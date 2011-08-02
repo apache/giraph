@@ -449,6 +449,18 @@ public class GiraphJob extends Job {
     }
 
     /**
+     * Check whether a specified int conf value is set and if not, set it.
+     *
+     * @param param Conf value to check
+     * @param defaultValue Assign to value if not set
+     */
+    private void setIntConfIfDefault(String param, int defaultValue) {
+        if (conf.getInt(param, Integer.MIN_VALUE) == Integer.MIN_VALUE) {
+            conf.setInt(param, defaultValue);
+        }
+    }
+
+    /**
      * Runs the actual graph application through Hadoop Map-Reduce.
      *
      * @param verbose If true, provide verbose output, false otherwise
@@ -462,9 +474,13 @@ public class GiraphJob extends Job {
         checkLocalJobRunnerConfiguration(conf);
         setNumReduceTasks(0);
         // Most users won't hit this hopefully and can set it higher if desired
-        if (conf.getInt("mapreduce.job.counters.limit", -1) == -1) {
-            conf.setInt("mapreduce.job.counters.limit", 512);
-        }
+        setIntConfIfDefault("mapreduce.job.counters.limit", 512);
+
+        // Capacity scheduler-specific settings.  These should be enough for
+        // a reasonable Giraph job
+        setIntConfIfDefault("mapred.job.map.memory.mb", 1024);
+        setIntConfIfDefault("mapred.job.reduce.memory.mb", 1024);
+
         if (getJar() == null) {
             setJarByClass(GiraphJob.class);
         }
