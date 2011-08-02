@@ -37,9 +37,9 @@ import org.apache.giraph.examples.SimpleCombinerVertex;
 import org.apache.giraph.examples.SimpleFailVertex;
 import org.apache.giraph.examples.SimpleMsgVertex;
 import org.apache.giraph.examples.SimplePageRankVertex;
-import org.apache.giraph.examples.SimplePageRankVertex.SimplePageRankVertexOutputFormat;
 import org.apache.giraph.examples.SimpleShortestPathsVertex;
 import org.apache.giraph.examples.SimplePageRankVertex.SimplePageRankVertexInputFormat;
+import org.apache.giraph.examples.SimpleShortestPathsVertex.SimpleShortestPathsVertexOutputFormat;
 import org.apache.giraph.examples.SimpleSumCombiner;
 import org.apache.giraph.examples.SimpleSuperstepVertex;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat;
@@ -292,9 +292,27 @@ public class TestBspBasic extends BspCase {
         setupConfiguration(job);
         job.setVertexClass(SimpleShortestPathsVertex.class);
         job.setVertexInputFormatClass(SimplePageRankVertexInputFormat.class);
-        job.setVertexOutputFormatClass(SimplePageRankVertexOutputFormat.class);
+        job.setVertexOutputFormatClass(
+            SimpleShortestPathsVertexOutputFormat.class);
+        job.getConfiguration().setLong(SimpleShortestPathsVertex.SOURCE_ID, 0);
         Path outputPath = new Path("/tmp/" + getCallingMethodName());
         removeAndSetOutput(job, outputPath);
         assertTrue(job.run(true));
+
+        job = new GiraphJob(getCallingMethodName());
+        setupConfiguration(job);
+        job.setVertexClass(SimpleShortestPathsVertex.class);
+        job.setVertexInputFormatClass(SimplePageRankVertexInputFormat.class);
+        job.setVertexOutputFormatClass(
+            SimpleShortestPathsVertexOutputFormat.class);
+        job.getConfiguration().setLong(SimpleShortestPathsVertex.SOURCE_ID, 0);
+        Path outputPath2 = new Path("/tmp/" + getCallingMethodName() + "2");
+        removeAndSetOutput(job, outputPath2);
+        assertTrue(job.run(true));
+        if (getJobTracker() == null) {
+            FileStatus fileStatus = getSinglePartFileStatus(job, outputPath);
+            FileStatus fileStatus2 = getSinglePartFileStatus(job, outputPath2);
+            assertTrue(fileStatus.getLen() == fileStatus2.getLen());
+        }
     }
 }
