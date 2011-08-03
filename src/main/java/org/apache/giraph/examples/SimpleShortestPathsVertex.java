@@ -109,6 +109,21 @@ public class SimpleShortestPathsVertex extends
     }
 
     /**
+     * VertexInputFormat that supports {@link SimpleShortestPathsVertex}
+     */
+    public static class SimpleShortestPathsVertexInputFormat extends
+            TextVertexInputFormat<LongWritable, DoubleWritable, FloatWritable> {
+        @Override
+        public VertexReader<LongWritable, DoubleWritable, FloatWritable>
+                createVertexReader(InputSplit split,
+                                   TaskAttemptContext context)
+                                   throws IOException {
+            return new SimpleShortestPathsVertexReader(
+                textInputFormat.createRecordReader(split, context));
+        }
+    }
+
+    /**
      * VertexReader that supports {@link SimpleShortestPathsVertex}.  In this
      * case, the edge values are not used.  The files should be in the
      * following JSON format:
@@ -160,17 +175,19 @@ public class SimpleShortestPathsVertex extends
     }
 
     /**
-     * VertexInputFormat that supports {@link SimpleShortestPathsVertex}
+     * VertexOutputFormat that supports {@link SimpleShortestPathsVertex}
      */
-    public static class SimpleShortestPathsVertexInputFormat extends
-            TextVertexInputFormat<LongWritable, DoubleWritable, FloatWritable> {
+    public static class SimpleShortestPathsVertexOutputFormat extends
+            TextVertexOutputFormat<LongWritable, DoubleWritable,
+            FloatWritable> {
+
         @Override
-        public VertexReader<LongWritable, DoubleWritable, FloatWritable>
-                createVertexReader(InputSplit split,
-                                   TaskAttemptContext context)
-                                   throws IOException {
-            return new SimpleShortestPathsVertexReader(
-                textInputFormat.createRecordReader(split, context));
+        public VertexWriter<LongWritable, DoubleWritable, FloatWritable>
+                createVertexWriter(TaskAttemptContext context)
+                throws IOException, InterruptedException {
+            RecordWriter<Text, Text> recordWriter =
+                textOutputFormat.getRecordWriter(context);
+            return new SimpleShortestPathsVertexWriter(recordWriter);
         }
     }
 
@@ -206,23 +223,6 @@ public class SimpleShortestPathsVertex extends
                     "writeVertex: Couldn't write vertex " + vertex);
             }
             getRecordWriter().write(new Text(jsonVertex.toString()), null);
-        }
-    }
-
-    /**
-     * VertexOutputFormat that supports {@link SimpleShortestPathsVertex}
-     */
-    public static class SimpleShortestPathsVertexOutputFormat extends
-            TextVertexOutputFormat<LongWritable, DoubleWritable,
-            FloatWritable> {
-
-        @Override
-        public VertexWriter<LongWritable, DoubleWritable, FloatWritable>
-                createVertexWriter(TaskAttemptContext context)
-                throws IOException, InterruptedException {
-            RecordWriter<Text, Text> recordWriter =
-                textOutputFormat.getRecordWriter(context);
-            return new SimpleShortestPathsVertexWriter(recordWriter);
         }
     }
 
