@@ -345,7 +345,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
                 if (taskPartition < masterCount) {
                     functions = MapFunctions.MASTER_ONLY;
                 } else {
-                    functions = MapFunctions.MASTER_ZOOKEEPER_ONLY;
+                    functions = MapFunctions.WORKER_ONLY;
                 }
             } else {
                 if ((zkManager != null) && zkManager.runsZooKeeper()) {
