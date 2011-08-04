@@ -26,12 +26,11 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
- * Interface for Vertex combiner (messages)
+ * Abstract class to extend for combining of messages sent to the same vertex.
  *
  * @param <I extends Writable> index
  * @param <M extends Writable> message data
- *
- **/
+ */
 @SuppressWarnings("rawtypes")
 public abstract class VertexCombiner<I extends WritableComparable,
                                      M extends Writable> {
@@ -41,7 +40,8 @@ public abstract class VertexCombiner<I extends WritableComparable,
    *
    * @param vertexIndex Index of the vertex getting these messages
    * @param msgList List of the messages to be combined
-   * @return Message that is combined from {@link MsgList}
+   * @return Message that is combined from {@link MsgList} or null if no
+   *         message it to be sent
    * @throws IOException
    */
    public abstract M combine(I vertexIndex,

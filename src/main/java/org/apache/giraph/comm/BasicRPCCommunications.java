@@ -272,12 +272,9 @@ public abstract class BasicRPCCommunications<
                             if (combiner != null) {
                                 M combinedMsg = combiner.combine(e.getKey(),
                                                                  msgList);
-                                if (combinedMsg == null) {
-                                    throw new IllegalArgumentException(
-                                        "putAllMessages: Cannot put combined " +
-                                        "null message on " + e.getKey());
+                                if (combinedMsg != null) {
+                                    peer.putMsg(e.getKey(), combinedMsg);
                                 }
-                                peer.putMsg(e.getKey(), combinedMsg);
                             } else {
                                 if (LOG.isDebugEnabled()) {
                                     LOG.debug("putAllMessages: " +
@@ -383,7 +380,9 @@ public abstract class BasicRPCCommunications<
                                 if (combiner != null) {
                                     M combinedMsg = combiner.combine(destVertex,
                                                                      msgList);
-                                    peer.putMsg(destVertex, combinedMsg);
+                                    if (combinedMsg != null) {
+                                        peer.putMsg(destVertex, combinedMsg);
+                                    }
                                 } else {
                                     peer.putMsgList(destVertex, msgList);
                                 }
@@ -934,7 +933,9 @@ public abstract class BasicRPCCommunications<
                     try {
                         M combinedMsg = combiner.combine(entry.getKey(),
                                                          entry.getValue());
-                        putMsg(entry.getKey(), combinedMsg);
+                        if (combinedMsg != null) {
+                            putMsg(entry.getKey(), combinedMsg);
+                        }
                     } catch (IOException e) {
                         // no actual IO -- should never happen
                         throw new RuntimeException(e);
