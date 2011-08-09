@@ -20,8 +20,7 @@ graph-processing framework that is launched as a typical Hadoop job to
 leverage existing Hadoop infrastructure, such as Amazon’s EC2.  Giraph
 builds upon the graph-oriented nature of Pregel but additionally adds
 fault-tolerance to the coordinator process with the use of ZooKeeper
-as its centralized coordination service and is in the process of being
-open-sourced.
+as its centralized coordination service.
 
 Giraph follows the bulk-synchronous parallel model relative to graphs
 where vertices can send messages to other vertices during a given
@@ -33,22 +32,37 @@ automatically take over if the current application coordinator fails.
 
 -------------------------------
 
+Hadoop versions for use with Giraph:
+
+Secure Hadoop versions:
+- Apache Hadoop 0.20.203, 0.20.204, other secure versions may work as well
+-- Other versions reported working include:
+---  Cloudera CDH3u0, CDH3u1
+
+Unsecure Hadoop versions:
+- Apache Hadoop 0.20.1, 0.20.2, 0.20.3
+
+While we provide support for unsecure Hadoop with the maven profile
+'hadoop_non_secure', we have been primarily focusing on secure Hadoop
+releases at this time.
+
+-------------------------------
+
 Building and testing:
 
 You will need the following:
 - Java 1.6
 - Maven 2 or higher
 
-Use the maven commands to:
+Use the maven commands with secure Hadoop to:
 - compile (i.e mvn compile)
 - package (i.e. mvn package)
 - test (i.e. mvn test)
 -- For testing, one can submit the test to a running Hadoop instance
    (i.e. mvn test -Dprop.mapred.job.tracker=localhost:50300)
 
--------------------------------
+For the non-secure versions of Hadoop, run the maven commands with the
+additional argument '-Dhadoop=non_secure' to enable the maven profile
+ 'hadoop_non_secure'.  An example compilation command is
+'mvn -Dhadoop=non_secure compile'.
 
-Running:
-
-You will need the following:
-- Hadoop 0.20.203 supported, other versions may work as well

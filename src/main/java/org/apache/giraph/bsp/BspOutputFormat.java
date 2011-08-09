@@ -66,6 +66,6 @@ public class BspOutputFormat extends OutputFormat<Text, Text> {
     @Override
     public RecordWriter<Text, Text> getRecordWriter(TaskAttemptContext context)
             throws IOException, InterruptedException {
-        return null;
+        return new BspRecordWriter();
     }
 }

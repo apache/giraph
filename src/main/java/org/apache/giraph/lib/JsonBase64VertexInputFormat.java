@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -22,7 +22,9 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.IOException;
-import org.apache.commons.codec.binary.Base64;
+
+import net.iharder.Base64;
+
 import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.MutableVertex;
@@ -93,7 +95,7 @@ public class JsonBase64VertexInputFormat<
             DataInput input = null;
             byte[] decodedWritable = null;
             try {
-                decodedWritable = Base64.decodeBase64(
+                decodedWritable = Base64.decode(
                     vertexObject.getString(VERTEX_ID_KEY));
                 input = new DataInputStream(
                     new ByteArrayInputStream(decodedWritable));
@@ -105,7 +107,7 @@ public class JsonBase64VertexInputFormat<
                     "next: Failed to get vertex id", e);
             }
             try {
-                decodedWritable = Base64.decodeBase64(
+                decodedWritable = Base64.decode(
                     vertexObject.getString(VERTEX_VALUE_KEY));
                 input = new DataInputStream(
                     new ByteArrayInputStream(decodedWritable));
@@ -126,7 +128,7 @@ public class JsonBase64VertexInputFormat<
             for (int i = 0; i < edgeArray.length(); ++i) {
                 try {
                     decodedWritable =
-                        Base64.decodeBase64(edgeArray.getString(i));
+                        Base64.decode(edgeArray.getString(i));
                 } catch (JSONException e) {
                     throw new IllegalArgumentException(
                         "next: Failed to get edge value", e);

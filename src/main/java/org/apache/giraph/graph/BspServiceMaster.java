@@ -38,11 +38,11 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
+import net.iharder.Base64;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-
-import org.apache.commons.codec.binary.Base64;
 
 import org.apache.log4j.Logger;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -666,7 +666,7 @@ public class BspServiceMaster<
                     vertexRangeObj.put(JSONOBJ_CHECKPOINT_FILE_PREFIX_KEY,
                                        checkpointFilePrefix);
                     vertexRangeObj.put(JSONOBJ_MAX_VERTEX_INDEX_KEY,
-                                       Base64.encodeBase64String(
+                                       Base64.encodeBytes(
                                            outputStream.toByteArray()));
                     vertexRangeMetaArray.put(vertexRangeObj);
                     vertexRangeArray.put(outputStream.toString("UTF-8"));
@@ -1034,7 +1034,7 @@ public class BspServiceMaster<
                         aggregator.createAggregatedValue();
                     InputStream input =
                         new ByteArrayInputStream(
-                            Base64.decodeBase64(
+                            Base64.decode(
                                 aggregatorArray.getJSONObject(i).
                                 getString(AGGREGATOR_VALUE_KEY)));
                     aggregatorValue.readFields(new DataInputStream(input));
@@ -1095,7 +1095,7 @@ public class BspServiceMaster<
                                       entry.getKey());
                     aggregatorObj.put(
                         AGGREGATOR_VALUE_KEY,
-                        Base64.encodeBase64String(outputStream.toByteArray()));
+                        Base64.encodeBytes(outputStream.toByteArray()));
                     aggregatorArray.put(aggregatorObj);
                     if (LOG.isInfoEnabled()) {
                         LOG.info("collectAndProcessAggregatorValues: " +

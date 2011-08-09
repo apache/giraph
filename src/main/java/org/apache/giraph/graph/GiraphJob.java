@@ -487,6 +487,7 @@ public class GiraphJob extends Job {
         // Should work in MAPREDUCE-1938 to let the user jars/classes
         // get loaded first
         conf.setBoolean("mapreduce.user.classpath.first", true);
+
         setMapperClass(GraphMapper.class);
         setInputFormatClass(BspInputFormat.class);
         setOutputFormatClass(BspOutputFormat.class);

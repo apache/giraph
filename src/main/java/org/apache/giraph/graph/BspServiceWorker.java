@@ -36,7 +36,7 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
 
-import org.apache.commons.codec.binary.Base64;
+import net.iharder.Base64;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -239,7 +239,7 @@ public class BspServiceWorker<
                     vertexRangeObj.put(JSONOBJ_HOSTNAME_ID_KEY,
                                        getHostnamePartitionId());
                     vertexRangeObj.put(JSONOBJ_MAX_VERTEX_INDEX_KEY,
-                                       Base64.encodeBase64String(
+                                       Base64.encodeBytes(
                                            outputStream.toByteArray()));
                     vertexRangeObj.put(JSONOBJ_NUM_MESSAGES_KEY, 0L);
                     statArray.put(vertexRangeObj);
@@ -582,7 +582,6 @@ public class BspServiceWorker<
             return aggregatorArray;
         }
 
-        Base64 base64 = new Base64();
         for (String name : aggregatorInUse) {
             try {
                 Aggregator<Writable> aggregator = getAggregatorMap().get(name);
@@ -597,7 +596,7 @@ public class BspServiceWorker<
                                   aggregator.getClass().getName());
                 aggregatorObj.put(
                     AGGREGATOR_VALUE_KEY,
-                    base64.encodeToString(outputStream.toByteArray()));
+                    Base64.encodeBytes(outputStream.toByteArray()));
                 aggregatorArray.put(aggregatorObj);
                 LOG.info("marshalAggregatorValues: " +
                          "Found aggregatorObj " +
@@ -654,7 +653,7 @@ public class BspServiceWorker<
                 Writable aggregatorValue = aggregator.getAggregatedValue();
                 InputStream input =
                     new ByteArrayInputStream(
-                        Base64.decodeBase64(aggregatorArray.getJSONObject(i).
+                        Base64.decode(aggregatorArray.getJSONObject(i).
                             getString(AGGREGATOR_VALUE_KEY)));
                 aggregatorValue.readFields(
                     new DataInputStream(input));

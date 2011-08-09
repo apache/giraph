@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *      http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -23,7 +23,17 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 
+/*if[HADOOP_NON_SECURE]
+else[HADOOP_NON_SECURE]*/
 import java.security.PrivilegedExceptionAction;
+import org.apache.hadoop.mapreduce.security.TokenCache;
+import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
+import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
+import org.apache.hadoop.security.Credentials;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
+import org.apache.hadoop.security.token.Token;
+/*end[HADOOP_NON_SECURE]*/
 
 import org.apache.log4j.Logger;
 
@@ -37,21 +47,17 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RPC.Server;
 import org.apache.hadoop.mapreduce.Mapper;
 
-import org.apache.hadoop.mapreduce.security.TokenCache;
-import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
-import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
-import org.apache.hadoop.security.Credentials;
-import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
-import org.apache.hadoop.security.token.Token;
-
 @SuppressWarnings("rawtypes")
 public class RPCCommunications<
         I extends WritableComparable,
         V extends Writable,
         E extends Writable,
         M extends Writable>
+/*if[HADOOP_NON_SECURE]
+extends BasicRPCCommunications<I, V, E, M, Object> {
+else[HADOOP_NON_SECURE]*/
         extends BasicRPCCommunications<I, V, E, M, Token<JobTokenIdentifier>> {
+/*end[HADOOP_NON_SECURE]*/
 
     /** Class logger */
     public static final Logger LOG = Logger.getLogger(RPCCommunications.class);
@@ -62,6 +68,11 @@ public class RPCCommunications<
         super(context, service);
     }
 
+/*if[HADOOP_NON_SECURE]
+    protected Object createJobToken() throws IOException {
+        return null;
+    }
+else[HADOOP_NON_SECURE]*/
     protected Token<JobTokenIdentifier> createJobToken() throws IOException {
         String localJobTokenFile = System.getenv().get(
                 UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION);
@@ -72,9 +83,16 @@ public class RPCCommunications<
         }
         return null;
     }
+/*end[HADOOP_NON_SECURE]*/
 
     protected Server getRPCServer(
             InetSocketAddress myAddress, int numHandlers, String jobId,
+/*if[HADOOP_NON_SECURE]
+            Object jt) throws IOException {
+        return RPC.getServer(this, myAddress.getHostName(), myAddress.getPort(),
+            numHandlers, false, conf);
+    }
+else[HADOOP_NON_SECURE]*/
             Token<JobTokenIdentifier> jt) throws IOException {
         @SuppressWarnings("deprecation")
         String hadoopSecurityAuthorization =
@@ -95,14 +113,26 @@ public class RPCCommunications<
         return RPC.getServer(this, myAddress.getHostName(), myAddress.getPort(),
                 numHandlers, false, conf, jobTokenSecretManager);
     }
+/*end[HADOOP_NON_SECURE]*/
 
     protected CommunicationsInterface<I, V, E, M> getRPCProxy(
             final InetSocketAddress addr,
             String jobId,
+/*if[HADOOP_NON_SECURE]
+            Object jt)
+else[HADOOP_NON_SECURE]*/
             Token<JobTokenIdentifier> jt)
+/*end[HADOOP_NON_SECURE]*/
             throws IOException, InterruptedException {
         final Configuration config = new Configuration(conf);
 
+/*if[HADOOP_NON_SECURE]
+        @SuppressWarnings("unchecked")
+        CommunicationsInterface<I, V, E, M> proxy =
+            (CommunicationsInterface<I, V, E, M>)RPC.getProxy(
+                 CommunicationsInterface.class, versionID, addr, config);
+        return proxy;
+else[HADOOP_NON_SECURE]*/
         if (jt == null) {
             @SuppressWarnings("unchecked")
             CommunicationsInterface<I, V, E, M> proxy =
@@ -129,5 +159,6 @@ public class RPCCommunications<
             }
         });
 		return proxy;
+/*end[HADOOP_NON_SECURE]*/
     }
 }

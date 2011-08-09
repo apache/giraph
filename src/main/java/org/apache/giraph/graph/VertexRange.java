@@ -29,7 +29,8 @@ import java.io.InputStream;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
-import org.apache.commons.codec.binary.Base64;
+import net.iharder.Base64;
+
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
@@ -111,7 +112,7 @@ public class VertexRange<I extends WritableComparable,
             IllegalAccessException {
         maxVertexIndex = indexClass.newInstance();
         byte[] maxVertexIndexByteArray =
-            Base64.decodeBase64(
+            Base64.decode(
                 vertexRangeObj.getString(
                     BspService.JSONOBJ_MAX_VERTEX_INDEX_KEY));
         InputStream input = new ByteArrayInputStream(maxVertexIndexByteArray);
@@ -217,7 +218,7 @@ public class VertexRange<I extends WritableComparable,
         DataOutput output = new DataOutputStream(outputStream);
         maxVertexIndex.write(output);
         vertexRangeObj.put(BspService.JSONOBJ_MAX_VERTEX_INDEX_KEY,
-                           Base64.encodeBase64String(
+                           Base64.encodeBytes(
                                outputStream.toByteArray()));
         vertexRangeObj.put(BspService.JSONOBJ_HOSTNAME_KEY, hostname);
         vertexRangeObj.put(BspService.JSONOBJ_PORT_KEY, port);

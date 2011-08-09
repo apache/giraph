@@ -22,7 +22,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import org.apache.commons.codec.binary.Base64;
+
+import net.iharder.Base64;
+
 import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.VertexWriter;
@@ -81,7 +83,7 @@ public class JsonBase64VertexOutputFormat<
             try {
                 vertexObject.put(
                     VERTEX_ID_KEY,
-                    Base64.encodeBase64String(outputStream.toByteArray()));
+                    Base64.encodeBytes(outputStream.toByteArray()));
             } catch (JSONException e) {
                 throw new IllegalStateException(
                     "writerVertex: Failed to insert vertex id", e);
@@ -91,7 +93,7 @@ public class JsonBase64VertexOutputFormat<
             try {
                 vertexObject.put(
                     VERTEX_VALUE_KEY,
-                    Base64.encodeBase64String(outputStream.toByteArray()));
+                    Base64.encodeBytes(outputStream.toByteArray()));
             } catch (JSONException e) {
                 throw new IllegalStateException(
                     "writerVertex: Failed to insert vertex value", e);
@@ -100,7 +102,7 @@ public class JsonBase64VertexOutputFormat<
             for (Edge<I, E> edge : vertex.getOutEdgeMap().values()) {
                 outputStream.reset();
                 edge.write(output);
-                edgeArray.put(Base64.encodeBase64String(outputStream.toByteArray()));
+                edgeArray.put(Base64.encodeBytes(outputStream.toByteArray()));
             }
             try {
                 vertexObject.put(EDGE_ARRAY_KEY, edgeArray);
