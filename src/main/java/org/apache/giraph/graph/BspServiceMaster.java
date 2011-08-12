@@ -100,6 +100,8 @@ public class BspServiceMaster<
     private Counter sentMessagesCounter = null;
     /** Workers on this superstep */
     private Counter currentWorkersCounter = null;
+    /** Current master task partition */
+    private Counter currentMasterTaskPartitionCounter = null;
     /** Am I the master? */
     private boolean isMaster = false;
     /** Max number of workers */
@@ -119,6 +121,9 @@ public class BspServiceMaster<
     /** State of the superstep changed */
     private final BspEvent superstepStateChanged =
         new PredicateLock();
+
+    /** Counter group name for the Giraph statistics */
+    public String GIRAPH_STATS_COUNTER_GROUP_NAME = "Giraph Stats";
 
     public BspServiceMaster(
             String serverPortList,
@@ -727,17 +732,19 @@ public class BspServiceMaster<
         // the checkpoint files.  Each checkpoint file will be an input split
         // and the input split
         superstepCounter = getContext().getCounter(
-            "Giraph Stats", "Superstep");
+            GIRAPH_STATS_COUNTER_GROUP_NAME, "Superstep");
         vertexCounter = getContext().getCounter(
-            "Giraph Stats", "Aggregate vertices");
+            GIRAPH_STATS_COUNTER_GROUP_NAME, "Aggregate vertices");
         finishedVertexCounter = getContext().getCounter(
-            "Giraph Stats", "Aggregate finished vertices");
+            GIRAPH_STATS_COUNTER_GROUP_NAME, "Aggregate finished vertices");
         edgeCounter = getContext().getCounter(
-            "Giraph Stats", "Aggregate edges");
+            GIRAPH_STATS_COUNTER_GROUP_NAME, "Aggregate edges");
         sentMessagesCounter = getContext().getCounter(
-            "Giraph Stats", "Sent messages");
+            GIRAPH_STATS_COUNTER_GROUP_NAME, "Sent messages");
         currentWorkersCounter = getContext().getCounter(
-            "Giraph Stats", "Current workers");
+            GIRAPH_STATS_COUNTER_GROUP_NAME, "Current workers");
+        currentMasterTaskPartitionCounter = getContext().getCounter(
+            GIRAPH_STATS_COUNTER_GROUP_NAME, "Current master task partition");
         if (getRestartedSuperstep() != UNSET_SUPERSTEP) {
             superstepCounter.increment(getRestartedSuperstep());
         }
@@ -788,6 +795,9 @@ public class BspServiceMaster<
                              myBid + "'");
                 }
                 if (masterChildArr.get(0).equals(myBid)) {
+                    currentMasterTaskPartitionCounter.increment(
+                        getTaskPartition() -
+                        currentMasterTaskPartitionCounter.getValue());
                     LOG.info("becomeMaster: I am now the master!");
                     isMaster = true;
                     return isMaster;

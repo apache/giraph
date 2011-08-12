@@ -452,7 +452,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
                 ZooKeeperManager.State.FAILED);
             }
             throw new RuntimeException(
-                "setup: Offlining servers due to exception...");
+                "setup: Offlining servers due to exception...", e);
         }
         context.setStatus(getMapFunctions().toString() + " starting...");
     }

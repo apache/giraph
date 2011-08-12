@@ -53,6 +53,10 @@ public class MasterThread<I extends WritableComparable,
     /** Superstep timer (in seconds) map */
     private final Map<Long, Double> superstepSecsMap =
         new TreeMap<Long, Double>();
+
+    /** Counter group name for the Giraph timers */
+    public String GIRAPH_TIMERS_COUNTER_GROUP_NAME = "Giraph Timers";
+
     /**
      *  Constructor.
      *
@@ -90,8 +94,9 @@ public class MasterThread<I extends WritableComparable,
                     bspServiceMaster.createInputSplits();
                 }
                 long setupMillis = (System.currentTimeMillis() - startMillis);
-                context.getCounter("Giraph Timers", "Setup (milliseconds)").
-                    increment(setupMillis);
+                context.getCounter(GIRAPH_TIMERS_COUNTER_GROUP_NAME,
+                                   "Setup (milliseconds)").
+                                   increment(setupMillis);
                 setupSecs = setupMillis / 1000.0d;
                 SuperstepState superstepState = SuperstepState.INITIAL;
                 long cachedSuperstep = BspService.UNSET_SUPERSTEP;
@@ -118,7 +123,8 @@ public class MasterThread<I extends WritableComparable,
                         } else {
                             counterPrefix = "Superstep " + cachedSuperstep;
                         }
-                        context.getCounter("Giraph Timers", counterPrefix +
+                        context.getCounter(GIRAPH_TIMERS_COUNTER_GROUP_NAME,
+                                           counterPrefix +
                                            " (milliseconds)").
                                            increment(superstepMillis);
                     }
@@ -134,7 +140,9 @@ public class MasterThread<I extends WritableComparable,
             }
             bspServiceMaster.cleanup();
             if (!superstepSecsMap.isEmpty()) {
-                context.getCounter("Giraph Timers", "Shutdown (milliseconds)").
+                context.getCounter(
+                    GIRAPH_TIMERS_COUNTER_GROUP_NAME,
+                    "Shutdown (milliseconds)").
                     increment(System.currentTimeMillis() - endMillis);
                 if (LOG.isInfoEnabled()) {
                     LOG.info("setup: Took " + setupSecs + " seconds.");
@@ -159,7 +167,9 @@ public class MasterThread<I extends WritableComparable,
                              ((System.currentTimeMillis() / 1000.0d) -
                              setupSecs) + " seconds.");
                 }
-                context.getCounter("Giraph Timers", "Total (milliseconds)").
+                context.getCounter(
+                    GIRAPH_TIMERS_COUNTER_GROUP_NAME,
+                    "Total (milliseconds)").
                     increment(System.currentTimeMillis() - startMillis);
             }
         } catch (Exception e) {
