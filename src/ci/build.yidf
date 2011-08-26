@@ -1,5 +1,0 @@
-add yinst pkg buildenv_ymaven_simple    2.1		*
-add yinst pkg buildyblocks_dist_push	1.11.3.114	*
-add yinst pkg buildyblocks_lib
-add yinst pkg buildyblocks_provision
-add yinst pkg yjava_resource_handler
