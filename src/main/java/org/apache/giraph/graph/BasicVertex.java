@@ -138,7 +138,7 @@ public interface BasicVertex<I extends WritableComparable,
     /**
      * Send a message to all edges.
      */
-    void sentMsgToAllEdges(M msg);
+    void sendMsgToAllEdges(M msg);
 
     /**
      * After this is called, the compute() code will no longer be called for

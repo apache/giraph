@@ -124,7 +124,7 @@ public class SimplePageRankVertex extends
 
         if (getSuperstep() < 30) {
             long edges = getOutEdgeMap().size();
-            sentMsgToAllEdges(
+            sendMsgToAllEdges(
                 new DoubleWritable(getVertexValue().get() / edges));
         } else {
             voteToHalt();

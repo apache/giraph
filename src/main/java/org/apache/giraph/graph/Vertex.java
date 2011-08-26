@@ -200,7 +200,7 @@ public abstract class Vertex<
     }
 
     @Override
-    public final void sentMsgToAllEdges(M msg) {
+    public final void sendMsgToAllEdges(M msg) {
         if (msg == null) {
             throw new IllegalArgumentException(
                 "sendMsgToAllEdges: Cannot send null message to all edges");

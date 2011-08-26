@@ -73,7 +73,7 @@ public class PageRankBenchmark extends
 
         if (getSuperstep() < getConf().getInt(SUPERSTEP_COUNT, -1)) {
             long edges = getOutEdgeMap().size();
-            sentMsgToAllEdges(
+            sendMsgToAllEdges(
                 new DoubleWritable(getVertexValue().get() / edges));
         } else {
             voteToHalt();

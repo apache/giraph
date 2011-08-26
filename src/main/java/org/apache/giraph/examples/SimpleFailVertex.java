@@ -57,7 +57,7 @@ public class SimpleFailVertex extends
                     }
                 }
                 long edges = getOutEdgeMap().size();
-                sentMsgToAllEdges(
+                sendMsgToAllEdges(
                     new DoubleWritable(getVertexValue().get() / edges));
             } else {
                 voteToHalt();
