@@ -19,7 +19,7 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>yahoo.yinst.giraph</groupId>
+  <groupId>org.apache.giraph</groupId>
   <artifactId>giraph</artifactId>
   <packaging>jar</packaging>
   <version>0.70</version>
@@ -88,27 +88,6 @@
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>findbugs-maven-plugin</artifactId>
         <version>2.3.2</version>
-      </plugin>
-      <plugin>
-        <groupId>com.atlassian.maven.plugins</groupId>
-        <artifactId>maven-clover2-plugin</artifactId>
-        <version>2.6.1</version>
-        <configuration>
-          <licenseLocation>/home/y/conf/clover/clover.license</licenseLocation>
-          <generateXml>true</generateXml>
-          <generateHtml>true</generateHtml>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>yahoo.yinst.maven_plugins</groupId>
-        <artifactId>yjava_maven_plugins_yinst</artifactId>
-        <version>0.2.5</version>
-        <configuration>
-          <buildtype>${buildtype}</buildtype>
-          <sourceDirectory>${basedir}/src/main/pkg/yicf</sourceDirectory>
-          <target_dir>${basedir}/target</target_dir>
-          <chdir>${basedir}/src/main/pkg/yicf</chdir>
-        </configuration>
       </plugin>
     </plugins>
   </build>
