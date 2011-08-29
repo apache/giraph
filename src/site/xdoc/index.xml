@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+
+<document xmlns="http://maven.apache.org/XDOC/2.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
+  <properties>
+    <title>Welcome To Apache Incubator Giraph</title>
+  </properties>
+
+  <body>
+    <section name="Welcome To Apache Incubator Giraph">
+        <p>Web and online social graphs have been rapidly growing in size and scale during the past decade. In 2008, Google estimated that the number of web pages reached over a trillion. Online social networking and email sites, including Yahoo!, Google, Microsoft, Facebook, LinkedIn, and Twitter, have hundreds of millions of users and are expected to grow much more in the future. Processing these graphs plays a big role in relevant and personalized information for users, such as results from a search engine or news in an online social networking site.</p>
+
+        <p>Graph processing platforms to run large-scale algorithms (such as page rank, shared connections, personalization-based popularity, etc.) have become quite popular. Some recent examples include Pregel and HaLoop. For general-purpose big data computation, the map-reduce computing model has been well adopted and the most deployed map-reduce infrastructure is Apache Hadoop. We have implemented a graph-processing framework that is launched as a typical Hadoop job to leverage existing Hadoop infrastructure, such as Amazon's EC2. Giraph builds upon the graph-oriented nature of Pregel but additionally adds fault-tolerance to the coordinator process with the use of ZooKeeper as its centralized coordination service.</p>
+
+        <p>Giraph follows the bulk-synchronous parallel model relative to graphs where vertices can send messages to other vertices during a given superstep. Checkpoints are initiated by the Giraph infrastructure at user-defined intervals and are used for automatic application restarts when any worker in the application fails. Any worker in the application can act as the application coordinator and one will automatically take over if the current application coordinator fails.</p>
+
+    </section>
+    <section name="Incubator disclaimer">
+	<p>Apache Giraph is an effort undergoing incubation at The Apache Software Foundation (ASF), sponsored by the name of Apache Incubator. Incubation is required of all newly accepted projects until a further review indicates that the infrastructure, communications, and decision making process have stabilized in a manner consistent with other successful ASF projects. While incubation status is not necessarily a reflection of the completeness or stability of the code, it does indicate that the project has yet to be fully endorsed by the ASF.</p>
+	</section>
+	
+	<section name="Supported versions of Apache Hadoop">
+	<p>	Hadoop versions for use with Giraph:
+		<ul>
+		<li>Secure Hadoop versions: Apache Hadoop 0.20.203, 0.20.204, other secure versions may work as well</li>
+		<li>Unsecure Hadoop versions: Apache Hadoop 0.20.1, 0.20.2, 0.20.3. While we provide support for unsecure Hadoop with the maven profile 'hadoop_non_secure', we have been primarily focusing on secure Hadoop releases at this time.</li>
+		<li>Other distributions that included Apache Hadoop reported to work include: Cloudera CDH3u0, CDH3u1</li>
+	</ul>
+	</p>
+	</section>
+	<section name="Building and testing">
+		<p>You will need the following:
+		<ul>
+		<li>Java 1.6</li>
+		<li>Maven 2 or higher</li>
+	</ul>
+
+		Use the maven commands with secure Hadoop to:
+		<ul>
+		<li>compile (i.e mvn compile)</li>
+		<li>package (i.e. mvn package)</li>
+		<li>test (i.e. mvn test) For testing, one can submit the test to a running Hadoop instance (i.e. mvn test -Dprop.mapred.job.tracker=localhost:50300)</li>
+	    </ul>
+		For the non-secure versions of Hadoop, run the maven commands with the
+		additional argument '-Dhadoop=non_secure' to enable the maven profile
+		 'hadoop_non_secure'.  An example compilation command is
+		'mvn -Dhadoop=non_secure compile'.</p>
+	</section>
+  </body>
+</document>

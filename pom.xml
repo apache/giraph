@@ -26,8 +26,116 @@ under the License.
   <packaging>jar</packaging>
   <version>0.70</version>
 
-  <name>Giraph</name>
-  <url>http://maven.apache.org</url>
+  <name>Apache Incubator Giraph</name>
+  <url>http://incubator.apache.org/giraph/</url>
+  <description>Giraph : Large-scale graph processing on Hadoop</description>
+  <inceptionYear>2011</inceptionYear>
+
+  <scm>
+    <connection>scm:svn:http://svn.apache.org/repos/asf/incubator/giraph</connection>
+    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/incubator/giraph/trunk</developerConnection>
+    <url>https://svn.apache.org/repos/asf/incubator/giraph/</url>
+  </scm>
+
+  <issueManagement>
+    <system>JIRA</system>
+    <url>http://issues.apache.org/jira/browse/GIRAPH</url>
+  </issueManagement>
+
+  <licenses>
+    <license>
+      <name>Apache 2</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+      <comments>A business-friendly OSS license</comments>
+    </license>
+  </licenses>
+
+  <organization>
+    <name>The Apache Software Foundation</name>
+    <url>http://www.apache.org</url>
+  </organization>
+
+  <mailingLists>
+    <mailingList>
+      <name>User List</name>
+      <subscribe>giraph-user-subscribe@incubator.apache.org</subscribe>
+      <unsubscribe>giraph-user-unsubscribe@incubator.apache.org</unsubscribe>
+      <post>giraph-user@incubator.apache.org</post>
+      <archive>http://mail-archives.apache.org/mod_mbox/incubator-giraph-user/</archive>
+    </mailingList>
+    <mailingList>
+      <name>Developer List</name>
+      <subscribe>giraph-dev-subscribe@incubator.apache.org</subscribe>
+      <unsubscribe>giraph-dev-unsubscribe@incubator.apache.org</unsubscribe>
+      <post>giraph-dev@incubator.apache.org</post>
+      <archive>http://mail-archives.apache.org/mod_mbox/incubator-giraph-dev/</archive>
+    </mailingList>
+    <mailingList>
+      <name>Commits List</name>
+      <subscribe>giraph-commits-subscribe@incubator.apache.org</subscribe>
+      <unsubscribe>giraph-commits-unsubscribe@incubator.apache.org</unsubscribe>
+      <post>giraph-commits@incubator.apache.org</post>
+      <archive>http://mail-archives.apache.org/mod_mbox/incubator-giraph-commits/</archive>
+    </mailingList>
+  </mailingLists>
+
+  <developers>
+    <developer>
+      <id>aching</id>
+      <name>Avery Ching</name>
+      <email>aching@yahoo-inc.com</email>
+      <timezone>-8</timezone>
+      <organization>Yahoo!</organization>
+      <organizationUrl>http://www.yahoo.com</organizationUrl>
+    </developer>
+    <developer>
+      <id>hyunsik</id>
+      <name>Hyunsik Choi</name>
+      <email>hyunsik@apache.org</email>
+      <timezone>+9</timezone>
+      <organization>Database Lab, Korea University </organization>
+    </developer>
+    <developer>
+      <id>jghoman</id>
+      <name>Jakob Homan</name>
+      <email>jghoman@apache.org</email>
+      <timezone>-8</timezone>
+      <organization>LinkedIn</organization>
+      <organizationUrl>http://www.linkedin.com</organizationUrl>
+    </developer>
+    <developer>
+      <id>kunzchr</id>
+      <name>Christian Kunz</name>
+      <email>christian@jybe-inc.com</email>
+      <timezone>-8</timezone>
+      <organization>Jybe</organization>
+      <organizationUrl>http://www.jybe-inc.com</organizationUrl>
+    </developer>
+    <developer>
+      <id>omalley</id>
+      <name>Owen O'Malley</name>
+      <email>owen@hortonworks.com</email>
+      <timezone>-8</timezone>
+      <organization>HortonWorks</organization>
+      <organizationUrl>http://www.hortonworks.com</organizationUrl>
+    </developer>
+    <developer>
+      <id>prhodes</id>
+      <name>Phillip Rhodes</name>
+      <email>phrodes@apache.org</email>
+      <timezone>-5</timezone>
+      <organization>Fogbeam Labs</organization>
+      <organizationUrl>http://www.fogbeam.com/</organizationUrl>
+    </developer>
+    <developer>
+      <name>Arun Suresh</name>
+      <email>asuresh@yahoo-inc.com</email>
+      <timezone>-8</timezone>
+      <organization>Yahoo!</organization>
+      <organizationUrl>http://www.yahoo.com/</organizationUrl>
+    </developer>
+  </developers>
 
   <properties>
     <hadoop.version>0.20.203.0</hadoop.version>
@@ -91,6 +199,69 @@ under the License.
         <artifactId>findbugs-maven-plugin</artifactId>
         <version>2.3.2</version>
       </plugin>
+    <plugin>
+      <groupId>org.apache.maven.plugins</groupId>
+      <artifactId>maven-site-plugin</artifactId>
+      <version>3.0</version>
+      <configuration>
+        <reportPlugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-project-info-reports-plugin</artifactId>
+            <version>2.2</version>
+            <reports>
+              <report>index</report>
+              <report>project-team</report>
+              <report>license</report>
+              <report>mailing-list</report>
+              <report>dependencies</report>
+              <report>dependency-convergence</report>
+              <report>plugin-management</report>
+              <report>cim</report>
+              <report>issue-tracking</report>
+              <report>scm</report>
+              <report>summary</report>
+            </reports>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-report-plugin</artifactId>
+            <version>2.6</version>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-javadoc-plugin</artifactId>
+            <version>2.7</version>
+          </plugin>     
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-checkstyle-plugin</artifactId>
+            <version>2.6</version>
+
+          </plugin>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>jdepend-maven-plugin</artifactId>
+            <version>2.0-beta-2</version>
+          </plugin>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>cobertura-maven-plugin</artifactId>
+            <version>2.4</version>
+          </plugin>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>taglist-maven-plugin</artifactId>
+            <version>2.4</version>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-jxr-plugin</artifactId>
+            <version>2.1</version>
+          </plugin>
+       </reportPlugins>
+      </configuration>
+    </plugin>
     </plugins>
   </build>
 
@@ -208,49 +379,4 @@ under the License.
       <version>20090211</version>
     </dependency>
   </dependencies>
-
-  <reporting>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-project-info-reports-plugin</artifactId>
-        <version>2.4</version>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-report-plugin</artifactId>
-        <version>2.9</version>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>findbugs-maven-plugin</artifactId>
-        <version>2.3.2</version>
-        <configuration>
-          <xmlOutput>true</xmlOutput>
-          <findbugsXmlOutput>true</findbugsXmlOutput>
-          <findbugsXmlWithMessages>true</findbugsXmlWithMessages>
-          <xrefLocation>${project.reporting.outputDirectory}/xref</xrefLocation>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-jxr-plugin</artifactId>
-        <version>2.2</version>
-        <configuration>
-          <destDir>${project.reporting.outputDirectory}/xref</destDir>
-          <linkJavadoc>true</linkJavadoc>
-          <javadocDir>${project.reporting.outputDirectory}/apidocs</javadocDir>
-        </configuration>
-      </plugin>
-     <plugin>
-       <groupId>org.apache.maven.plugins</groupId>
-       <artifactId>maven-checkstyle-plugin</artifactId>
-       <version>2.6</version>
-       <configuration>
-         <suppressionsLocation>${checkstyle.suppressions}</suppressionsLocation>
-         <suppressionsFileExpression>${checkstyle.suppressions}</suppressionsFileExpression>
-       </configuration>
-     </plugin>
-    </plugins>
-  </reporting>
 </project>
