@@ -476,7 +476,8 @@ public class ZooKeeperManager {
                     configFile.getName());
             }
             OutputStreamWriter writer = new FileWriter(configFilePath);
-            writer.write("tickTime=" + GiraphJob.DEFAULT_ZOOKEEPER_TICK_TIME + "\n");
+            writer.write("tickTime=" +
+                         GiraphJob.DEFAULT_ZOOKEEPER_TICK_TIME + "\n");
             writer.write("dataDir=" + this.zkDir + "\n");
             writer.write("clientPort=" + zkBasePort + "\n");
             writer.write("maxClientCnxns=" +
@@ -590,10 +591,8 @@ public class ZooKeeperManager {
                 throw new RuntimeException(e);
             }
 
-            /*
-             * Once the server is up and running, notify that this server is up
-             * and running by dropping a ready stamp.
-             */
+            // Once the server is up and running, notify that this server is up
+            // and running by dropping a ready stamp.
             int connectAttempts = 0;
             final int maxConnectAttempts = 10;
             while (connectAttempts < maxConnectAttempts) {
@@ -610,7 +609,10 @@ public class ZooKeeperManager {
                         new InetSocketAddress(myHostname, zkBasePort);
                     Socket testServerSock = new Socket();
                     testServerSock.connect(zkServerAddress, 5000);
-                    LOG.info("onlineZooKeeperServers: Connected!");
+                    if (LOG.isInfoEnabled()) {
+                        LOG.info("onlineZooKeeperServers: Connected to " +
+                                 zkServerAddress + "!");
+                    }
                     break;
                 } catch (SocketTimeoutException e) {
                     LOG.warn("onlineZooKeeperServers: Got " +
@@ -631,9 +633,10 @@ public class ZooKeeperManager {
                              " interrupted - " + e.getMessage());
                 }
             }
-            if (connectAttempts == 5) {
+            if (connectAttempts == maxConnectAttempts) {
                 throw new IllegalStateException(
-                    "onlineZooKeeperServers: Failed to connect in 5 tries!");
+                    "onlineZooKeeperServers: Failed to connect in " +
+                    connectAttempts + " tries!");
             }
             Path myReadyPath = new Path(
                     serverDirectory, myHostname +
