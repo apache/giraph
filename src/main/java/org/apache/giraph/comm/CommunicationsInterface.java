@@ -23,11 +23,11 @@ import java.io.IOException;
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.MutableVertex;
 import org.apache.giraph.graph.VertexRange;
-/*if[HADOOP_NON_SECURE]
- else[HADOOP_NON_SECURE]*/
+/*if_not[HADOOP]
+ else[HADOOP]*/
 import org.apache.giraph.hadoop.BspTokenSelector;
 import org.apache.hadoop.security.token.TokenInfo;
-/*end[HADOOP_NON_SECURE]*/
+/*end[HADOOP]*/
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.ipc.VersionedProtocol;
@@ -41,10 +41,10 @@ import org.apache.hadoop.ipc.VersionedProtocol;
  *
  **/
 @SuppressWarnings("rawtypes")
-/*if[HADOOP_NON_SECURE]
- else[HADOOP_NON_SECURE]*/
+/*if_not[HADOOP]
+ else[HADOOP]*/
 @TokenInfo(BspTokenSelector.class)
-/*end[HADOOP_NON_SECURE]*/
+/*end[HADOOP]*/
 public interface CommunicationsInterface<
         I extends WritableComparable,
         V extends Writable,

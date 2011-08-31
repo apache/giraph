@@ -23,8 +23,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 
-/*if[HADOOP_NON_SECURE]
-else[HADOOP_NON_SECURE]*/
+/*if_not[HADOOP]
+else[HADOOP]*/
 import java.security.PrivilegedExceptionAction;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
@@ -33,7 +33,7 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.ServiceAuthorizationManager;
 import org.apache.hadoop.security.token.Token;
-/*end[HADOOP_NON_SECURE]*/
+/*end[HADOOP]*/
 
 import org.apache.log4j.Logger;
 
@@ -53,11 +53,11 @@ public class RPCCommunications<
         V extends Writable,
         E extends Writable,
         M extends Writable>
-/*if[HADOOP_NON_SECURE]
+/*if_not[HADOOP]
 extends BasicRPCCommunications<I, V, E, M, Object> {
-else[HADOOP_NON_SECURE]*/
+else[HADOOP]*/
         extends BasicRPCCommunications<I, V, E, M, Token<JobTokenIdentifier>> {
-/*end[HADOOP_NON_SECURE]*/
+/*end[HADOOP]*/
 
     /** Class logger */
     public static final Logger LOG = Logger.getLogger(RPCCommunications.class);
@@ -68,11 +68,11 @@ else[HADOOP_NON_SECURE]*/
         super(context, service);
     }
 
-/*if[HADOOP_NON_SECURE]
+/*if_not[HADOOP]
     protected Object createJobToken() throws IOException {
         return null;
     }
-else[HADOOP_NON_SECURE]*/
+else[HADOOP]*/
     protected Token<JobTokenIdentifier> createJobToken() throws IOException {
         String localJobTokenFile = System.getenv().get(
                 UserGroupInformation.HADOOP_TOKEN_FILE_LOCATION);
@@ -83,16 +83,16 @@ else[HADOOP_NON_SECURE]*/
         }
         return null;
     }
-/*end[HADOOP_NON_SECURE]*/
+/*end[HADOOP]*/
 
     protected Server getRPCServer(
             InetSocketAddress myAddress, int numHandlers, String jobId,
-/*if[HADOOP_NON_SECURE]
+/*if_not[HADOOP]
             Object jt) throws IOException {
         return RPC.getServer(this, myAddress.getHostName(), myAddress.getPort(),
             numHandlers, false, conf);
     }
-else[HADOOP_NON_SECURE]*/
+else[HADOOP]*/
             Token<JobTokenIdentifier> jt) throws IOException {
         @SuppressWarnings("deprecation")
         String hadoopSecurityAuthorization =
@@ -113,26 +113,26 @@ else[HADOOP_NON_SECURE]*/
         return RPC.getServer(this, myAddress.getHostName(), myAddress.getPort(),
                 numHandlers, false, conf, jobTokenSecretManager);
     }
-/*end[HADOOP_NON_SECURE]*/
+/*end[HADOOP]*/
 
     protected CommunicationsInterface<I, V, E, M> getRPCProxy(
             final InetSocketAddress addr,
             String jobId,
-/*if[HADOOP_NON_SECURE]
+/*if_not[HADOOP]
             Object jt)
-else[HADOOP_NON_SECURE]*/
+else[HADOOP]*/
             Token<JobTokenIdentifier> jt)
-/*end[HADOOP_NON_SECURE]*/
+/*end[HADOOP]*/
             throws IOException, InterruptedException {
         final Configuration config = new Configuration(conf);
 
-/*if[HADOOP_NON_SECURE]
+/*if_not[HADOOP]
         @SuppressWarnings("unchecked")
         CommunicationsInterface<I, V, E, M> proxy =
             (CommunicationsInterface<I, V, E, M>)RPC.getProxy(
                  CommunicationsInterface.class, versionID, addr, config);
         return proxy;
-else[HADOOP_NON_SECURE]*/
+else[HADOOP]*/
         if (jt == null) {
             @SuppressWarnings("unchecked")
             CommunicationsInterface<I, V, E, M> proxy =
@@ -159,6 +159,6 @@ else[HADOOP_NON_SECURE]*/
             }
         });
 		return proxy;
-/*end[HADOOP_NON_SECURE]*/
+/*end[HADOOP]*/
     }
 }

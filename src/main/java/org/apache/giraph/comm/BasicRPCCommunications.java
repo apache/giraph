@@ -50,6 +50,10 @@ import org.apache.giraph.graph.VertexResolver;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+
+/*if[HADOOP_FACEBOOK]
+import org.apache.hadoop.ipc.ProtocolSignature;
+end[HADOOP_FACEBOOK]*/
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RPC.Server;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -557,6 +561,15 @@ public abstract class BasicRPCCommunications<
         return versionID;
     }
 
+/*if[HADOOP_FACEBOOK]
+    public ProtocolSignature getProtocolSignature(
+            String protocol,
+            long clientVersion,
+            int clientMethodsHash) throws IOException {
+        return new ProtocolSignature(versionID, null);
+    }
+end[HADOOP_FACEBOOK]*/
+
     @Override
     public void closeConnections() throws IOException {
         for (PeerThread pt : peerThreads.values()) {
@@ -571,6 +584,7 @@ public abstract class BasicRPCCommunications<
             }
         }
     }
+
 
     @Override
     public final void close() {

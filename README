@@ -42,9 +42,13 @@ Secure Hadoop versions:
 Unsecure Hadoop versions:
 - Apache Hadoop 0.20.1, 0.20.2, 0.20.3
 
-While we provide support for unsecure Hadoop with the maven profile
-'hadoop_non_secure', we have been primarily focusing on secure Hadoop
-releases at this time.
+Facebook Hadoop release (https://github.com/facebook/hadoop-20-warehouse):
+- GitHub master
+
+While we provide support for the unsecure and Facebook versions of Hadoop
+with the maven profiles 'hadoop_non_secure' and 'hadoop_facebook',
+respectively, we have been primarily focusing on secure Hadoop releases
+at this time.
 
 -------------------------------
 
@@ -63,6 +67,11 @@ Use the maven commands with secure Hadoop to:
 
 For the non-secure versions of Hadoop, run the maven commands with the
 additional argument '-Dhadoop=non_secure' to enable the maven profile
- 'hadoop_non_secure'.  An example compilation command is
+'hadoop_non_secure'.  An example compilation command is
 'mvn -Dhadoop=non_secure compile'.
 
+For the Facebook Hadoop release, run the maven commands with the
+additional arguments '-Dhadoop=facebook' to enable the maven profile
+'hadoop_facebook' as well as a location for the hadoop core jar file.  An
+example compilation command is 'mvn -Dhadoop=facebook
+-Dhadoop.jar.path=/tmp/hadoop-0.20.1-core.jar compile'.
