@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.70.0 - unreleased
+
+  GIRAPH-18. Refactor BspServiceWorker::loadVertices(). (jghoman)
   
   GIRAPH-14. Support for the Facebook Hadoop branch. (aching)
 
