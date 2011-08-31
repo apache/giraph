@@ -3,4 +3,5 @@ Giraph Change Log
 Release 0.70.0 - unreleased
   
   GIRAPH-14. Support for the Facebook Hadoop branch. (aching)
+
   GIRAPH-16. Add Apache RAT to the verify build step. (omalley)
