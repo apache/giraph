@@ -1779,7 +1779,9 @@ public class BspServiceMaster<
             }
         }
         incrCachedSuperstep();
-        superstepCounter.increment(1);
+        if(getSuperstep() > 0) {  // counter starts at zero, so no need to incr
+            superstepCounter.increment(1);
+        }
         try {
             if ((globalInfoObject.getLong(JSONOBJ_FINISHED_VERTICES_KEY) ==
                     globalInfoObject.getLong(JSONOBJ_NUM_VERTICES_KEY)) &&

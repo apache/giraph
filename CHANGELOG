@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.70.0 - unreleased
 
+  GIRAPH-24. Job-level statistics reports one superstep greater than 
+  workers. (jghoman)
+  
   GIRAPH-18. Refactor BspServiceWorker::loadVertices(). (jghoman)
   
   GIRAPH-14. Support for the Facebook Hadoop branch. (aching)
