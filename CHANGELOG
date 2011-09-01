@@ -10,3 +10,16 @@ Release 0.70.0 - unreleased
   GIRAPH-14. Support for the Facebook Hadoop branch. (aching)
 
   GIRAPH-16. Add Apache RAT to the verify build step. (omalley)
+
+  GIRAPH-17 - Giraph doesn't give up properly after the maximum connect
+  attempts to ZooKeeper. (aching)
+
+  GIRAPH-2: Make the project homepage. (jghoman)
+
+  GIRAPH-9: Change Yahoo License Header to Apache License Header (hyunsik)
+
+  GIRAPH-6. Remove Yahoo-specific code from pom.xml. (jghoman)
+
+  GIRAPH-5 Remove Yahoo directories after svn import from Yahoo! (aching)
+
+  GIRAPH-3. Vertex:sentMsgToAllEdges should be sendMsg. (jghoman)
