@@ -89,61 +89,61 @@ public class MasterThread<I extends WritableComparable,
             long endMillis = 0;
             bspServiceMaster.setup();
             if (bspServiceMaster.becomeMaster() == true) {
-                if (bspServiceMaster.getRestartedSuperstep() ==
-                        BspService.UNSET_SUPERSTEP) {
-                    bspServiceMaster.createInputSplits();
-                }
-                long setupMillis = (System.currentTimeMillis() - startMillis);
-                context.getCounter(GIRAPH_TIMERS_COUNTER_GROUP_NAME,
-                                   "Setup (milliseconds)").
-                                   increment(setupMillis);
-                setupSecs = setupMillis / 1000.0d;
-                SuperstepState superstepState = SuperstepState.INITIAL;
-                long cachedSuperstep = BspService.UNSET_SUPERSTEP;
-                while (superstepState != SuperstepState.ALL_SUPERSTEPS_DONE) {
-                    long startSuperstepMillis = System.currentTimeMillis();
-                    cachedSuperstep = bspServiceMaster.getSuperstep();
-                    superstepState = bspServiceMaster.coordinateSuperstep();
-                    long superstepMillis = System.currentTimeMillis() -
-                        startSuperstepMillis;
-                    superstepSecsMap.put(new Long(cachedSuperstep),
-                                           superstepMillis / 1000.0d);
-                    if (LOG.isInfoEnabled()) {
-                        LOG.info("masterThread: Coordination of superstep " +
-                                 cachedSuperstep + " took " +
-                                 superstepMillis / 1000.0d +
-                                 " seconds ended with state " + superstepState +
-                                 " and is now on superstep " +
-                                 bspServiceMaster.getSuperstep());
-                    }
-                    if (superstepCounterOn) {
-                        String counterPrefix;
-                        if (cachedSuperstep == -1) {
-                            counterPrefix = "Vertex input superstep";
-                        } else {
-                            counterPrefix = "Superstep " + cachedSuperstep;
+                // Attempt to create InputSplits if necessary. Bail out if that fails.
+                if (bspServiceMaster.getRestartedSuperstep() != BspService.UNSET_SUPERSTEP
+                        || bspServiceMaster.createInputSplits() != -1) {
+                    long setupMillis = (System.currentTimeMillis() - startMillis);
+                    context.getCounter(GIRAPH_TIMERS_COUNTER_GROUP_NAME,
+                            "Setup (milliseconds)").
+                            increment(setupMillis);
+                    setupSecs = setupMillis / 1000.0d;
+                    SuperstepState superstepState = SuperstepState.INITIAL;
+                    long cachedSuperstep = BspService.UNSET_SUPERSTEP;
+                    while (superstepState != SuperstepState.ALL_SUPERSTEPS_DONE) {
+                        long startSuperstepMillis = System.currentTimeMillis();
+                        cachedSuperstep = bspServiceMaster.getSuperstep();
+                        superstepState = bspServiceMaster.coordinateSuperstep();
+                        long superstepMillis = System.currentTimeMillis() -
+                                startSuperstepMillis;
+                        superstepSecsMap.put(new Long(cachedSuperstep),
+                                superstepMillis / 1000.0d);
+                        if (LOG.isInfoEnabled()) {
+                            LOG.info("masterThread: Coordination of superstep " +
+                                    cachedSuperstep + " took " +
+                                    superstepMillis / 1000.0d +
+                                    " seconds ended with state " + superstepState +
+                                    " and is now on superstep " +
+                                    bspServiceMaster.getSuperstep());
                         }
-                        context.getCounter(GIRAPH_TIMERS_COUNTER_GROUP_NAME,
-                                           counterPrefix +
-                                           " (milliseconds)").
-                                           increment(superstepMillis);
-                    }
+                        if (superstepCounterOn) {
+                            String counterPrefix;
+                            if (cachedSuperstep == -1) {
+                                counterPrefix = "Vertex input superstep";
+                            } else {
+                                counterPrefix = "Superstep " + cachedSuperstep;
+                            }
+                            context.getCounter(GIRAPH_TIMERS_COUNTER_GROUP_NAME,
+                                    counterPrefix +
+                                    " (milliseconds)").
+                                    increment(superstepMillis);
+                        }
 
-                    // If a worker failed, restart from a known good superstep
-                    if (superstepState == SuperstepState.WORKER_FAILURE) {
-                        bspServiceMaster.restartFromCheckpoint(
-                            bspServiceMaster.getLastGoodCheckpoint());
+                        // If a worker failed, restart from a known good superstep
+                        if (superstepState == SuperstepState.WORKER_FAILURE) {
+                            bspServiceMaster.restartFromCheckpoint(
+                                    bspServiceMaster.getLastGoodCheckpoint());
+                        }
+                        endMillis = System.currentTimeMillis();
                     }
-                    endMillis = System.currentTimeMillis();
+                    bspServiceMaster.setJobState(ApplicationState.FINISHED, -1, -1);
                 }
-                bspServiceMaster.setJobState(ApplicationState.FINISHED, -1, -1);
             }
             bspServiceMaster.cleanup();
             if (!superstepSecsMap.isEmpty()) {
                 context.getCounter(
-                    GIRAPH_TIMERS_COUNTER_GROUP_NAME,
-                    "Shutdown (milliseconds)").
-                    increment(System.currentTimeMillis() - endMillis);
+                        GIRAPH_TIMERS_COUNTER_GROUP_NAME,
+                        "Shutdown (milliseconds)").
+                        increment(System.currentTimeMillis() - endMillis);
                 if (LOG.isInfoEnabled()) {
                     LOG.info("setup: Took " + setupSecs + " seconds.");
                 }

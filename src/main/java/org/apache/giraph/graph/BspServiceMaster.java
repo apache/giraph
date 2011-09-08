@@ -408,15 +408,18 @@ public class BspServiceMaster<
             ++pollAttempt;
         }
         if (failJob) {
-            LOG.warn("checkWorkers: Did not receive enough processes in " +
-                     "time (only " + totalResponses + " of " +
-                     minWorkers + " required)");
+            LOG.error("checkWorkers: Did not receive enough processes in " +
+                      "time (only " + totalResponses + " of " +
+                      minWorkers + " required).  This occurs if you do not " +
+                      "have enough map tasks available simultaneously on " +
+                      "your Hadoop instance to fulfill the number of " +
+                      "requested workers.");
             return null;
         }
 
         if (healthyWorkerList.size() < minWorkers) {
-            LOG.warn("checkWorkers: Only " + healthyWorkerList.size() +
-                     " available when " + minWorkers + " are required.");
+            LOG.error("checkWorkers: Only " + healthyWorkerList.size() +
+                      " available when " + minWorkers + " are required.");
             return null;
         }
 
@@ -450,6 +453,7 @@ public class BspServiceMaster<
         return workerHostnamePortMap;
     }
 
+    @Override
     public int createInputSplits() {
         // Only the 'master' should be doing this.  Wait until the number of
         // processes that have reported health exceeds the minimum percentage.
@@ -481,6 +485,7 @@ public class BspServiceMaster<
         Map<String, JSONArray> healthyWorkerHostnamePortMap = checkWorkers();
         if (healthyWorkerHostnamePortMap == null) {
             setJobState(ApplicationState.FAILED, -1, -1);
+            return -1;
         }
 
         List<InputSplit> splitList =
@@ -726,6 +731,7 @@ public class BspServiceMaster<
         }
     }
 
+    @Override
     public void setup() {
         // Might have to manually load a checkpoint.
         // In that case, the input splits are not set, they will be faked by
@@ -750,6 +756,7 @@ public class BspServiceMaster<
         }
     }
 
+    @Override
     public boolean becomeMaster() {
         // Create my bid to become the master, then try to become the worker
         // or return false.

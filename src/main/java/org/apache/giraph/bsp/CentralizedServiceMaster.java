@@ -46,7 +46,7 @@ public interface CentralizedServiceMaster<
      * VertexInputFormat.  These InputSplits will be split further into
      * partitions by the workers.
      *
-     * @return number of partitions
+     * @return number of partitions. Returns -1 on failure to create valid input splits.
      */
     int createInputSplits();
 
