@@ -20,7 +20,7 @@ package org.apache.giraph.bsp;
 
 import java.io.IOException;
 
-import org.apache.giraph.graph.BasicVertex;
+import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -44,7 +44,7 @@ public interface CentralizedService<I extends WritableComparable,
      *
      * @return representation vertex
      */
-    BasicVertex<I, V, E, M> getRepresentativeVertex();
+    Vertex<I, V, E, M> getRepresentativeVertex();
 
     /**
      * Get the current global superstep of the application to work on.

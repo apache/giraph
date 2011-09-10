@@ -28,17 +28,15 @@ import org.apache.hadoop.io.WritableComparable;
  * or mutate the graph.
  */
 @SuppressWarnings("rawtypes")
-public interface MutableVertex<I extends WritableComparable,
-                               V extends Writable,
-                               E extends Writable,
-                               M extends Writable>
-                               extends BasicVertex<I, V, E, M>, Writable {
+public abstract class MutableVertex<I extends WritableComparable,
+        V extends Writable, E extends Writable, M extends Writable>
+        extends BasicVertex<I, V, E, M> implements Writable {
     /**
      * Set the vertex id
      *
      * @param id Vertex id is set to this (instantiated by the user)
      */
-    void setVertexId(I id);
+    public abstract void setVertexId(I id);
 
     /**
      * Add an edge for this vertex (happens immediately)
@@ -46,7 +44,7 @@ public interface MutableVertex<I extends WritableComparable,
      * @param edge Edge to be added
      * @return Return true if succeeded, false otherwise
      */
-    boolean addEdge(Edge<I, E> edge);
+    public abstract boolean addEdge(Edge<I, E> edge);
 
     /**
      * Create a vertex for use in addVertexRequest().  Still need to get the
@@ -54,7 +52,12 @@ public interface MutableVertex<I extends WritableComparable,
      *
      * @return Created vertex for addVertexRequest.
      */
-    MutableVertex<I, V, E, M> instantiateVertex();
+    public MutableVertex<I, V, E, M> instantiateVertex() {
+        Vertex<I, V, E, M> mutableVertex =
+            BspUtils.createVertex(getContext().getConfiguration(),
+                                  getGraphState());
+        return mutableVertex;
+    }
 
     /**
      * Sends a request to create a vertex that will be available during the
@@ -62,7 +65,11 @@ public interface MutableVertex<I extends WritableComparable,
      *
      * @param vertex User created vertex
      */
-    void addVertexRequest(MutableVertex<I, V, E, M> vertex) throws IOException;
+    public void addVertexRequest(MutableVertex<I, V, E, M> vertex)
+            throws IOException {
+        getGraphState().getGraphMapper().getWorkerCommunications().
+        addVertexReq(vertex);
+}
 
     /**
      * Request to remove a vertex from the graph
@@ -70,7 +77,10 @@ public interface MutableVertex<I extends WritableComparable,
      *
      * @param vertexId Id of the vertex to be removed.
      */
-    void removeVertexRequest(I vertexId) throws IOException;
+    public void removeVertexRequest(I vertexId) throws IOException {
+        getGraphState().getGraphMapper().getWorkerCommunications().
+        removeVertexReq(vertexId);
+    }
 
     /**
      * Request to add an edge of a vertex in the graph
@@ -79,7 +89,11 @@ public interface MutableVertex<I extends WritableComparable,
      * @param sourceVertexId Source vertex id of edge
      * @param edge Edge to add
      */
-    void addEdgeRequest(I sourceVertexId, Edge<I, E> edge) throws IOException;
+    public void addEdgeRequest(I sourceVertexId, Edge<I, E> edge)
+            throws IOException {
+        getGraphState().getGraphMapper().getWorkerCommunications().
+            addEdgeReq(sourceVertexId, edge);
+    }
 
     /**
      * Request to remove an edge of a vertex from the graph
@@ -88,5 +102,9 @@ public interface MutableVertex<I extends WritableComparable,
      * @param sourceVertexId Source vertex id of edge
      * @param destVertexId Destination vertex id of edge
      */
-    void removeEdgeRequest(I sourceVertexId, I destVertexId) throws IOException;
+    public void removeEdgeRequest(I sourceVertexId, I destVertexId)
+            throws IOException {
+        getGraphState().getGraphMapper().getWorkerCommunications().
+            removeEdgeReq(sourceVertexId, destVertexId);
+    }
 }

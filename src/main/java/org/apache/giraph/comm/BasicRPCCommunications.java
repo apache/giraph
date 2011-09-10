@@ -1017,10 +1017,11 @@ end[HADOOP_FACEBOOK]*/
         // Resolve all graph mutations
         for (I vertexIndex : resolveVertexIndexSet) {
             VertexResolver<I, V, E, M> vertexResolver =
-                BspUtils.createVertexResolver(conf);
+                BspUtils.createVertexResolver(
+                    conf, service.getGraphMapper().getGraphState());
             VertexRange<I, V, E, M> vertexRange =
                 service.getVertexRange(service.getSuperstep() - 1, vertexIndex);
-            BasicVertex<I, V, E, M> originalVertex =
+            Vertex<I, V, E, M> originalVertex =
                 vertexRange.getVertexMap().get(vertexIndex);
             List<M> msgList = inMessages.get(vertexIndex);
             if (originalVertex != null) {
@@ -1043,7 +1044,8 @@ end[HADOOP_FACEBOOK]*/
 
             if (vertex != null) {
                 ((MutableVertex<I, V, E, M>) vertex).setVertexId(vertexIndex);
-                vertexRange.getVertexMap().put(vertex.getVertexId(), vertex);
+                vertexRange.getVertexMap().put(vertex.getVertexId(),
+                                               (Vertex<I, V, E, M>) vertex);
             } else if (originalVertex != null) {
                 vertexRange.getVertexMap().remove(originalVertex.getVertexId());
             }

@@ -18,15 +18,6 @@
 
 package org.apache.giraph.graph;
 
-import java.io.IOException;
-import java.lang.reflect.Type;
-import java.net.URL;
-import java.net.URLDecoder;
-import java.util.Enumeration;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.RPCCommunications;
 import org.apache.giraph.comm.ServerInterface;
@@ -38,6 +29,15 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
+
+import java.io.IOException;
+import java.lang.reflect.Type;
+import java.net.URL;
+import java.net.URLDecoder;
+import java.util.Enumeration;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 
 /**
  * This mapper that will execute the BSP graph tasks.  Since this mapper will
@@ -66,6 +66,11 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
     private boolean done = false;
     /** What kind of functions is this mapper doing? */
     private MapFunctions mapFunctions = MapFunctions.UNKNOWN;
+    /**
+     * Graph state for all vertices that is used for the duration of
+     * this mapper.
+     */
+    private GraphState<I,V,E,M> graphState = new GraphState<I, V, E, M>();
 
     /** What kinds of functions to run on this mapper */
     public enum MapFunctions {
@@ -101,6 +106,10 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
      */
     public final AggregatorUsage getAggregatorUsage() {
         return serviceWorker;
+    }
+
+    public final GraphState<I,V,E,M> getGraphState() {
+      return graphState;
     }
 
     /**
@@ -380,6 +389,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
     public void setup(Context context)
             throws IOException, InterruptedException {
         context.setStatus("setup: Beginning mapper setup.");
+        graphState.setContext(context);
         // Setting the default handler for uncaught exceptions.
         Thread.setDefaultUncaughtExceptionHandler(
             new OverrideExceptionHandler());
@@ -391,8 +401,6 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
         }
         // Ensure the user classes have matching types and figure them out
         determineClassTypes(conf);
-        Vertex.setGraphMapper(this);
-        Vertex.setContext(context);
 
         // Do some initial setup (possibly starting up a Zookeeper service)
         context.setStatus("setup: Initializing Zookeeper services.");
@@ -506,7 +514,13 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
         }
         mapAlreadyRun = true;
 
+        graphState.setSuperstep(serviceWorker.getSuperstep()).
+            setContext(context).setGraphMapper(this).
+            setNumEdges(serviceWorker.getTotalEdges()).
+            setNumVertices(serviceWorker.getTotalVertices());
+
         try {
+            serviceWorker.getRepresentativeVertex().setGraphState(graphState);
             serviceWorker.getRepresentativeVertex().preApplication();
         } catch (InstantiationException e) {
             LOG.fatal("map: preApplication failed in instantiation", e);
@@ -526,9 +540,14 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
         do {
             long superstep = serviceWorker.getSuperstep();
 
+            graphState.setSuperstep(superstep)
+                      .setNumEdges(serviceWorker.getTotalEdges())
+                      .setNumVertices(serviceWorker.getTotalVertices());
+
             if (commService != null) {
                 commService.prepareSuperstep();
             }
+
             serviceWorker.startSuperstep();
             if (zkManager != null && zkManager.runsZooKeeper()) {
                 if (LOG.isInfoEnabled()) {
@@ -570,10 +589,6 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
             serviceWorker.exchangeVertexRanges();
             context.progress();
 
-            Vertex.setSuperstep(superstep);
-            Vertex.setNumVertices(serviceWorker.getTotalVertices());
-            Vertex.setNumEdges(serviceWorker.getTotalEdges());
-
             serviceWorker.getRepresentativeVertex().preSuperstep();
             context.progress();
 
@@ -591,8 +606,11 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
                     continue;
                 }
 
-                for (BasicVertex<I, V, E, M> vertex :
+                for (Vertex<I, V, E, M> vertex :
                         entry.getValue().getVertexMap().values()) {
+                    // Make sure every vertex has the current
+                    // graphState before computing
+                    vertex.setGraphState(graphState);
                     if (vertex.isHalted() &&
                             !vertex.getMsgList().isEmpty()) {
                         Vertex<I, V, E, M> activatedVertex =

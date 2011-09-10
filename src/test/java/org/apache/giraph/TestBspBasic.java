@@ -18,35 +18,41 @@
 
 package org.apache.giraph;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-
-import java.util.List;
-
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapreduce.InputSplit;
-import org.apache.hadoop.mapreduce.JobContext;
-import org.apache.hadoop.mapreduce.JobID;
+import junit.framework.Test;
+import junit.framework.TestSuite;
 import org.apache.giraph.examples.GeneratedVertexReader;
 import org.apache.giraph.examples.SimpleCombinerVertex;
 import org.apache.giraph.examples.SimpleFailVertex;
 import org.apache.giraph.examples.SimpleMsgVertex;
 import org.apache.giraph.examples.SimplePageRankVertex;
-import org.apache.giraph.examples.SimpleShortestPathsVertex;
 import org.apache.giraph.examples.SimplePageRankVertex.SimplePageRankVertexInputFormat;
+import org.apache.giraph.examples.SimpleShortestPathsVertex;
 import org.apache.giraph.examples.SimpleShortestPathsVertex.SimpleShortestPathsVertexOutputFormat;
 import org.apache.giraph.examples.SimpleSumCombiner;
 import org.apache.giraph.examples.SimpleSuperstepVertex;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexOutputFormat;
+import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.GiraphJob;
-import junit.framework.Test;
-import junit.framework.TestSuite;
+import org.apache.giraph.graph.GraphState;
+import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.graph.VertexInputFormat;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.FloatWritable;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.JobID;
+
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.util.List;
 
 /**
  * Unit test for many simple BSP applications.
@@ -87,16 +93,22 @@ public class TestBspBasic extends BspCase {
         InvocationTargetException, SecurityException, NoSuchMethodException {
         System.out.println("testInstantiateVertex: java.class.path=" +
                            System.getProperty("java.class.path"));
-        java.lang.reflect.Constructor<?> ctor =
-            SimpleSuperstepVertex.class.getConstructor();
-        assertNotNull(ctor);
-        SimpleSuperstepVertex test =
-            (SimpleSuperstepVertex) ctor.newInstance();
+        GiraphJob job = new GiraphJob(getCallingMethodName());
+        job.setVertexClass(SimpleSuperstepVertex.class);
+        job.setVertexInputFormatClass(
+            SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat.class);
+        GraphState<LongWritable, IntWritable, FloatWritable, IntWritable> gs =
+            new GraphState<LongWritable, IntWritable,
+                           FloatWritable, IntWritable>();
+        Vertex<LongWritable, IntWritable, FloatWritable, IntWritable> vertex =
+            BspUtils.<LongWritable, IntWritable, FloatWritable, IntWritable>
+            createVertex(job.getConfiguration(), gs);
         System.out.println("testInstantiateVertex: superstep=" +
-                           test.getSuperstep());
-        SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat inputFormat =
-            SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat
-            .class.newInstance();
+                           vertex.getSuperstep());
+        VertexInputFormat<LongWritable, IntWritable, FloatWritable>
+            inputFormat =
+                BspUtils.<LongWritable, IntWritable, FloatWritable>
+                createVertexInputFormat(job.getConfiguration());
         List<InputSplit> splitArray =
             inputFormat.getSplits(
                 new JobContext(new Configuration(), new JobID()), 1);

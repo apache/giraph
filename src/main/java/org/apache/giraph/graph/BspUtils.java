@@ -152,7 +152,8 @@ public class BspUtils {
      */
     @SuppressWarnings("rawtypes")
     public static <I extends WritableComparable, V extends Writable,
-            E extends Writable, M extends Writable> VertexRangeBalancer<I, V, E, M>
+            E extends Writable, M extends Writable>
+            VertexRangeBalancer<I, V, E, M>
             createVertexRangeBalancer(Configuration conf) {
         Class<? extends VertexRangeBalancer<I, V, E, M>>
             vertexRangeBalancerClass = getVertexRangeBalancerClass(conf);
@@ -187,10 +188,14 @@ public class BspUtils {
     @SuppressWarnings("rawtypes")
     public static <I extends WritableComparable, V extends Writable,
             E extends Writable, M extends Writable> VertexResolver<I, V, E, M>
-            createVertexResolver(Configuration conf) {
+            createVertexResolver(Configuration conf,
+                                 GraphState<I, V, E, M> graphState) {
         Class<? extends VertexResolver<I, V, E, M>> vertexResolverClass =
             getVertexResolverClass(conf);
-        return ReflectionUtils.newInstance(vertexResolverClass, conf);
+        VertexResolver<I, V, E, M> resolver =
+            ReflectionUtils.newInstance(vertexResolverClass, conf);
+        resolver.setGraphState(graphState);
+        return resolver;
     }
 
     /**
@@ -221,10 +226,14 @@ public class BspUtils {
     @SuppressWarnings("rawtypes")
     public static <I extends WritableComparable, V extends Writable,
             E extends Writable, M extends Writable> Vertex<I, V, E, M>
-            createVertex(Configuration conf) {
+            createVertex(Configuration conf,
+            GraphState<I, V, E, M> graphState) {
         Class<? extends Vertex<I, V, E, M>> vertexClass =
             getVertexClass(conf);
-        return ReflectionUtils.newInstance(vertexClass, conf);
+        Vertex<I, V, E, M> vertex =
+            ReflectionUtils.newInstance(vertexClass, conf);
+        vertex.setGraphState(graphState);
+        return vertex;
     }
 
     /**

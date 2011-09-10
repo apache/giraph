@@ -18,7 +18,31 @@
 
 package org.apache.giraph.graph;
 
+import org.apache.giraph.bsp.CentralizedService;
+import org.apache.giraph.zk.BspEvent;
+import org.apache.giraph.zk.PredicateLock;
+import org.apache.giraph.zk.ZooKeeperExt;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.log4j.Logger;
+import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.WatchedEvent;
+import org.apache.zookeeper.Watcher;
+import org.apache.zookeeper.Watcher.Event.EventType;
+import org.apache.zookeeper.Watcher.Event.KeeperState;
+import org.apache.zookeeper.ZooDefs.Ids;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.security.InvalidParameterException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -27,32 +51,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.TreeMap;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-
-import org.apache.log4j.Logger;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.mapreduce.Mapper;
-
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.WatchedEvent;
-import org.apache.zookeeper.Watcher;
-import org.apache.zookeeper.Watcher.Event.EventType;
-import org.apache.zookeeper.Watcher.Event.KeeperState;
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.ZooDefs.Ids;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import org.apache.giraph.bsp.CentralizedService;
-import org.apache.giraph.zk.BspEvent;
-import org.apache.giraph.zk.PredicateLock;
-import org.apache.giraph.zk.ZooKeeperExt;
 
 /**
  * Zookeeper-based implementation of {@link CentralizedService}.
@@ -631,7 +629,9 @@ public abstract class BspService <
         this.hostnamePartitionId = hostname + "_" + getTaskPartition();
 
         this.representativeVertex =
-            BspUtils.<I, V, E, M>createVertex(getConfiguration());
+            BspUtils.<I, V, E, M>createVertex(
+                getConfiguration(),
+                getGraphMapper().getGraphState());
 
         this.checkpointFrequency =
             conf.getInt(GiraphJob.CHECKPOINT_FREQUENCY,
@@ -670,7 +670,12 @@ public abstract class BspService <
         return jobId;
     }
 
-    final public BasicVertex<I, V, E, M> getRepresentativeVertex() {
+    /**
+     * Get the representative vertex
+     *
+     * @return Representative vertex for this service.
+     */
+    final public Vertex<I, V, E, M> getRepresentativeVertex() {
         return representativeVertex;
     }
 

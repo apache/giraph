@@ -18,6 +18,28 @@
 
 package org.apache.giraph.graph;
 
+import net.iharder.Base64;
+import org.apache.giraph.bsp.ApplicationState;
+import org.apache.giraph.bsp.CentralizedServiceWorker;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.log4j.Logger;
+import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.WatchedEvent;
+import org.apache.zookeeper.Watcher.Event.EventType;
+import org.apache.zookeeper.ZooDefs.Ids;
+import org.apache.zookeeper.data.Stat;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -35,33 +57,6 @@ import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
-
-import net.iharder.Base64;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import org.apache.log4j.Logger;
-import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-
-import org.apache.hadoop.mapreduce.InputSplit;
-import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.util.ReflectionUtils;
-
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.WatchedEvent;
-import org.apache.zookeeper.Watcher.Event.EventType;
-import org.apache.zookeeper.ZooDefs.Ids;
-import org.apache.zookeeper.data.Stat;
-
-import org.apache.giraph.bsp.ApplicationState;
 
 /**
  * ZooKeeper-based implementation of {@link CentralizedServiceWorker}.
@@ -387,16 +382,17 @@ public class BspServiceWorker<
      * @throws InterruptedException
      */
     private List<Vertex<I, V, E, M>> readVerticesFromInputSplit(
-        InputSplit inputSplit) throws IOException, InterruptedException {
-        List<Vertex<I, V, E, M>> vertexList = new ArrayList<Vertex<I, V, E, M>>();
+            InputSplit inputSplit) throws IOException, InterruptedException {
+        List<Vertex<I, V, E, M>> vertexList =
+            new ArrayList<Vertex<I, V, E, M>>();
         VertexInputFormat<I, V, E> vertexInputFormat =
             BspUtils.<I, V, E>createVertexInputFormat(getConfiguration());
         VertexReader<I, V, E> vertexReader =
             vertexInputFormat.createVertexReader(inputSplit, getContext());
         vertexReader.initialize(inputSplit, getContext());
         Vertex<I, V, E, M> readerVertex =
-            BspUtils.<I, V, E, M>createVertex(getConfiguration());
-
+            BspUtils.<I, V, E, M>createVertex(
+                getConfiguration(), getGraphMapper().getGraphState());
         while (vertexReader.next(readerVertex)) {
             if (readerVertex.getVertexId() == null) {
                 throw new IllegalArgumentException(
@@ -422,7 +418,8 @@ public class BspServiceWorker<
                 }
             }
             vertexList.add(readerVertex);
-            readerVertex = BspUtils.<I, V, E, M>createVertex(getConfiguration());
+            readerVertex = BspUtils.<I, V, E, M>createVertex(getConfiguration(),
+                getGraphMapper().getGraphState());
             getContext().progress();
         }
         vertexReader.close();
@@ -510,8 +507,7 @@ public class BspServiceWorker<
             }
             VertexRange<I, V, E, M> range =
                 vertexRangeMap.get(currentVertexIndexMax);
-            SortedMap<I, BasicVertex<I, V, E, M>> vertexMap =
-                range.getVertexMap();
+            SortedMap<I, Vertex<I, V, E, M>> vertexMap = range.getVertexMap();
             if (vertexMap.put(vertex.getVertexId(), vertex) != null) {
                 throw new IllegalStateException(
                     "loadVertices: Already contains vertex " +
@@ -1179,7 +1175,9 @@ public class BspServiceWorker<
         VertexRange<I, V, E, M> vertexRange = getVertexRangeMap().get(maxIndex);
         for (int i = 0; i < vertexCount; ++i) {
             Vertex<I, V, E, M> vertex =
-                BspUtils.<I, V, E, M>createVertex(getConfiguration());
+                BspUtils.<I, V, E, M>createVertex(
+                    getConfiguration(),
+                    getGraphMapper().getGraphState());
             vertex.readFields(dataStream);
             // Add the vertex
             if (vertexRange.getVertexMap().put(vertex.getVertexId(), vertex)
@@ -1364,7 +1362,7 @@ public class BspServiceWorker<
                     continue;
                 }
 
-                SortedMap<I, BasicVertex<I, V, E, M>> vertexMap =
+                SortedMap<I, Vertex<I, V, E, M>> vertexMap =
                     getVertexRangeMap().get(entry.getKey()).getVertexMap();
                 if (vertexMap.size() != 0) {
                     throw new RuntimeException(
@@ -1378,7 +1376,7 @@ public class BspServiceWorker<
                              entry.getValue().size() +
                              " vertices for max index " + entry.getKey());
                 }
-                for (BasicVertex<I, V, E, M> vertex : entry.getValue()) {
+                for (Vertex<I, V, E, M> vertex : entry.getValue()) {
                     if (vertexMap.put(vertex.getVertexId(), vertex) != null) {
                         throw new IllegalStateException(
                             "exchangeVertexRanges: Vertex " + vertex +

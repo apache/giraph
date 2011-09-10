@@ -1,4 +1,4 @@
-/*
+ /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -18,13 +18,14 @@
 
 package org.apache.giraph.graph;
 
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapreduce.Mapper;
+
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.SortedMap;
-
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 
 /**
  * Basic interface for writing a BSP application for computation.
@@ -35,11 +36,12 @@ import org.apache.hadoop.io.WritableComparable;
  * @param <M> message data
  */
 @SuppressWarnings("rawtypes")
-public interface BasicVertex<I extends WritableComparable,
-                             V extends Writable,
-                             E extends Writable,
-                             M extends Writable>
-                             extends AggregatorUsage {
+public abstract class BasicVertex<I extends WritableComparable,
+        V extends Writable, E extends Writable, M extends Writable>
+        implements AggregatorUsage {
+    /** Global graph state **/
+    private GraphState<I,V,E,M> graphState;
+
     /**
      * Optionally defined by the user to be executed once on all workers
      * before application has started.
@@ -47,26 +49,26 @@ public interface BasicVertex<I extends WritableComparable,
      * @throws IllegalAccessException
      * @throws InstantiationException
      */
-    void preApplication()
+    public abstract void preApplication()
         throws InstantiationException, IllegalAccessException;
 
     /**
      * Optionally defined by the user to be executed once on all workers
      * after the application has completed.
      */
-    void postApplication();
+    public abstract void postApplication();
 
     /**
      * Optionally defined by the user to be executed once prior to vertex
      * processing on a worker for the current superstep.
      */
-    void preSuperstep();
+    public abstract void preSuperstep();
 
     /**
      * Optionally defined by the user to be executed once after all vertex
      * processing on a worker for the current superstep.
      */
-    void postSuperstep();
+    public abstract void postSuperstep();
 
     /**
      * Must be defined by user to do computation on a single Vertex.
@@ -75,33 +77,35 @@ public interface BasicVertex<I extends WritableComparable,
      *        vertex in the previous superstep
      * @throws IOException
      */
-    void compute(Iterator<M> msgIterator) throws IOException;
+    public abstract void compute(Iterator<M> msgIterator) throws IOException;
 
     /**
      * Retrieves the current superstep.
      *
      * @return Current superstep
      */
-    long getSuperstep();
+    public long getSuperstep() {
+        return getGraphState().getSuperstep();
+    }
 
     /**
      * Get the vertex id
      */
-    I getVertexId();
+    public abstract I getVertexId();
 
     /**
      * Get the vertex value (data stored with vertex)
      *
      * @return Vertex value
      */
-    V getVertexValue();
+    public abstract V getVertexValue();
 
     /**
      * Set the vertex data (immediately visible in the computation)
      *
      * @param vertexValue Vertex data to be set
      */
-    void setVertexValue(V vertexValue);
+    public abstract void setVertexValue(V vertexValue);
 
     /**
      * Get the total (all workers) number of vertices that
@@ -109,7 +113,9 @@ public interface BasicVertex<I extends WritableComparable,
      *
      * @return Total number of vertices (-1 if first superstep)
      */
-    long getNumVertices();
+    public long getNumVertices() {
+        return getGraphState().getNumVertices();
+    }
 
     /**
      * Get the total (all workers) number of edges that
@@ -117,7 +123,9 @@ public interface BasicVertex<I extends WritableComparable,
      *
      * @return Total number of edges (-1 if first superstep)
      */
-    long getNumEdges();
+    public long getNumEdges() {
+        return getGraphState().getNumEdges();
+    }
 
     /**
      * Every vertex has edges to other vertices.  Get a handle to the outward
@@ -125,7 +133,7 @@ public interface BasicVertex<I extends WritableComparable,
      *
      * @return Map of the destination vertex index to the {@link Edge}
      */
-    SortedMap<I, Edge<I, E>> getOutEdgeMap();
+    public abstract SortedMap<I, Edge<I, E>> getOutEdgeMap();
 
     /**
      * Send a message to a vertex id.
@@ -133,12 +141,19 @@ public interface BasicVertex<I extends WritableComparable,
      * @param id vertex id to send the message to
      * @param msg message data to send
      */
-    void sendMsg(I id, M msg);
+    public void sendMsg(I id, M msg) {
+        if (msg == null) {
+            throw new IllegalArgumentException(
+                "sendMsg: Cannot send null message to " + id);
+        }
+        getGraphState().getGraphMapper().getWorkerCommunications().
+            sendMessageReq(id, msg);
+    }
 
     /**
      * Send a message to all edges.
      */
-    void sendMsgToAllEdges(M msg);
+    public abstract void sendMsgToAllEdges(M msg);
 
     /**
      * After this is called, the compute() code will no longer be called for
@@ -146,16 +161,64 @@ public interface BasicVertex<I extends WritableComparable,
      * will be called once again until this function is called.  The application
      * finishes only when all vertices vote to halt.
      */
-    void voteToHalt();
+    public abstract void voteToHalt();
 
     /**
      * Is this vertex done?
      */
-    boolean isHalted();
+    public abstract boolean isHalted();
 
     /**
      *  Get the list of incoming messages from the previous superstep.  Same as
      *  the message iterator passed to compute().
      */
-    List<M> getMsgList();
+    public abstract List<M> getMsgList();
+
+    /**
+     * Get the graph state for all workers.
+     *
+     * @return Graph state for all workers
+     */
+    GraphState<I, V, E, M> getGraphState() {
+        return graphState;
+    }
+
+    /**
+     * Set the graph state for all workers
+     *
+     * @param graphState Graph state for all workers
+     */
+    void setGraphState(GraphState<I, V, E, M> graphState) {
+        this.graphState = graphState;
+    }
+
+    /**
+     * Get the mapper context
+     *
+     * @return Mapper context
+     */
+    public Mapper.Context getContext() {
+        return getGraphState().getContext();
+    }
+
+    @Override
+    public final <A extends Writable> Aggregator<A> registerAggregator(
+            String name,
+            Class<? extends Aggregator<A>> aggregatorClass)
+            throws InstantiationException, IllegalAccessException {
+        return getGraphState().getGraphMapper().getAggregatorUsage().
+            registerAggregator(name, aggregatorClass);
+    }
+
+    @Override
+    public final Aggregator<? extends Writable> getAggregator(String name) {
+        return getGraphState().getGraphMapper().getAggregatorUsage().
+            getAggregator(name);
+    }
+
+    @Override
+    public final boolean useAggregator(String name) {
+        return getGraphState().getGraphMapper().getAggregatorUsage().
+            useAggregator(name);
+    }
 }

@@ -18,13 +18,13 @@
 
 package org.apache.giraph.graph;
 
-import java.util.List;
-
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
+
+import java.util.List;
 
 /**
  * Default implementation of how to resolve vertex creation/removal, messages
@@ -41,6 +41,9 @@ public class VertexResolver<I extends WritableComparable, V extends Writable,
         implements BasicVertexResolver<I, V, E, M>, Configurable {
     /** Configuration */
     private Configuration conf = null;
+
+    private GraphState<I,V,E,M> graphState;
+
     /** Class logger */
     private static final Logger LOG = Logger.getLogger(VertexResolver.class);
 
@@ -107,7 +110,7 @@ public class VertexResolver<I extends WritableComparable, V extends Writable,
 
     @Override
     public MutableVertex<I, V, E, M> instantiateVertex() {
-        return BspUtils.<I, V, E, M>createVertex(getConf());
+        return BspUtils.<I, V, E, M>createVertex(getConf(), graphState);
     }
 
     @Override
@@ -118,5 +121,9 @@ public class VertexResolver<I extends WritableComparable, V extends Writable,
     @Override
     public void setConf(Configuration conf) {
         this.conf = conf;
+    }
+
+    public void setGraphState(GraphState<I, V, E, M> graphState) {
+      this.graphState = graphState;
     }
 }

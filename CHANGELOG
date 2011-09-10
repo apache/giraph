@@ -1,28 +1,31 @@
 Giraph Change Log
 
 Release 0.70.0 - unreleased
- 
-  GIRAPH-25 NPE in BspServiceMaster when failing a job (aching on behalf 
-  of dvryaboy)
 
-  GIRAPH-24 Job-level statistics reports one superstep greater than 
+  GIRAPH-27: Mutable static global state in Vertex.java should be
+  refactored. jake.mannix via aching.
+ 
+  GIRAPH-25: NPE in BspServiceMaster when failing a job. dvryaboy via
+  aching.
+
+  GIRAPH-24: Job-level statistics reports one superstep greater than 
   workers. (jghoman)
   
-  GIRAPH-18 Refactor BspServiceWorker::loadVertices(). (jghoman)
+  GIRAPH-18: Refactor BspServiceWorker::loadVertices(). (jghoman)
   
-  GIRAPH-14 Support for the Facebook Hadoop branch. (aching)
+  GIRAPH-14: Support for the Facebook Hadoop branch. (aching)
 
-  GIRAPH-16 Add Apache RAT to the verify build step. (omalley)
+  GIRAPH-16: Add Apache RAT to the verify build step. (omalley)
 
-  GIRAPH-17 Giraph doesn't give up properly after the maximum connect
+  GIRAPH-17: Giraph doesn't give up properly after the maximum connect
   attempts to ZooKeeper. (aching)
 
-  GIRAPH-2 Make the project homepage. (jghoman)
+  GIRAPH-2: Make the project homepage. (jghoman)
 
-  GIRAPH-9 Change Yahoo License Header to Apache License Header (hyunsik)
+  GIRAPH-9: Change Yahoo License Header to Apache License Header (hyunsik)
 
-  GIRAPH-6 Remove Yahoo-specific code from pom.xml. (jghoman)
+  GIRAPH-6: Remove Yahoo-specific code from pom.xml. (jghoman)
 
-  GIRAPH-5 Remove Yahoo directories after svn import from Yahoo! (aching)
+  GIRAPH-5: Remove Yahoo directories after svn import from Yahoo! (aching)
 
-  GIRAPH-3 Vertex:sentMsgToAllEdges should be sendMsg. (jghoman)
+  GIRAPH-3: Vertex:sentMsgToAllEdges should be sendMsg. (jghoman)
