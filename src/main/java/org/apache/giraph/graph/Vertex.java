@@ -142,12 +142,12 @@ public abstract class Vertex<I extends WritableComparable, V extends Writable,
     @Override
     final public void readFields(DataInput in) throws IOException {
         vertexId =
-            BspUtils.createVertexIndex(getContext().getConfiguration());
+            BspUtils.<I>createVertexIndex(getContext().getConfiguration());
         vertexId.readFields(in);
         boolean hasVertexValue = in.readBoolean();
         if (hasVertexValue) {
             vertexValue =
-                BspUtils.createVertexValue(getContext().getConfiguration());
+                BspUtils.<V>createVertexValue(getContext().getConfiguration());
             vertexValue.readFields(in);
         }
         long edgeMapSize = in.readLong();
@@ -160,7 +160,7 @@ public abstract class Vertex<I extends WritableComparable, V extends Writable,
         long msgListSize = in.readLong();
         for (long i = 0; i < msgListSize; ++i) {
             M msg =
-                BspUtils.createMessageValue(getContext().getConfiguration());
+                BspUtils.<M>createMessageValue(getContext().getConfiguration());
             msg.readFields(in);
             msgList.add(msg);
         }
