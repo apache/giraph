@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.70.0 - unreleased
 
+  GIRAPH-30: NPE in ZooKeeperManager if base directory cannot be
+  created. apurtell via aching.
+
   GIRAPH-27: Mutable static global state in Vertex.java should be
   refactored. jake.mannix via aching.
  

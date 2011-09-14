@@ -229,6 +229,21 @@ public class ZooKeeperManager {
             LOG.error("createCandidateStamp: Failed to mkdirs " +
                       baseDirectory);
         }
+        // Check that the base directory exists and is a directory
+        try {
+            if (!fs.getFileStatus(baseDirectory).isDir()) {
+                throw new IllegalArgumentException(
+                    "createCandidateStamp: " + baseDirectory +
+                    " is not a directory, but should be.");
+            }
+        } catch (IOException e) {
+            throw new IllegalArgumentException(
+                "createCandidateStamp: Couldn't get file status " +
+                "for base directory " + baseDirectory + ".  If there is an " +
+                "issue with this directory, please set an accesible " +
+                "base directory with the Hadoop configuration option " +
+                GiraphJob.ZOOKEEPER_MANAGER_DIRECTORY);
+        }
 
         Path myCandidacyPath = new Path(
             taskDirectory, myHostname +
