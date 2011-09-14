@@ -2,6 +2,8 @@ Giraph Change Log
 
 Release 0.70.0 - unreleased
 
+  GIRAPH-33: Missing license header of GraphState.java (Claudio Martella via hyunsik)
+
   GIRAPH-31: Hide the SortedMap<I, Edge<I,E>> in Vertex from client
   visibility (impl. detail), replace with appropriate accessor
   methods. jake.mannix via aching.
