@@ -62,8 +62,10 @@ public class VertexResolver<I extends WritableComparable, V extends Writable,
             if (vertexChanges != null) {
                 List<I> removedEdgeList = vertexChanges.getRemovedEdgeList();
                 for (I removedDestVertex : removedEdgeList) {
-                    if (vertex.getOutEdgeMap().remove(removedDestVertex) ==
-                            null) {
+                    E removeEdge =
+                        ((MutableVertex<I, V, E, M>) vertex).removeEdge(
+                            removedDestVertex);
+                    if (removeEdge == null) {
                         LOG.warn("resolve: Failed to remove edge with " +
                                  "destination " + removedDestVertex + "on " +
                                  vertex + " since it doesn't exist.");
@@ -101,7 +103,7 @@ public class VertexResolver<I extends WritableComparable, V extends Writable,
                 (MutableVertex<I, V, E, M>) vertex;
             for (Edge<I, E> edge : vertexChanges.getAddedEdgeList()) {
                 edge.setConf(getConf());
-                mutableVertex.addEdge(edge);
+                mutableVertex.addEdge(edge.getDestVertexId(), edge.getEdgeValue());
             }
         }
 

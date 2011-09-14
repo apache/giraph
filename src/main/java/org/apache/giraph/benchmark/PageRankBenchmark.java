@@ -18,14 +18,6 @@
 
 package org.apache.giraph.benchmark;
 
-import java.util.Iterator;
-
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.DoubleWritable;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.util.Tool;
-import org.apache.hadoop.util.ToolRunner;
-
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
@@ -33,6 +25,13 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.Vertex;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.util.Tool;
+import org.apache.hadoop.util.ToolRunner;
+
+import java.util.Iterator;
 
 /**
  * Benchmark based on the basic Pregel PageRank implementation.
@@ -72,7 +71,7 @@ public class PageRankBenchmark extends
         }
 
         if (getSuperstep() < getConf().getInt(SUPERSTEP_COUNT, -1)) {
-            long edges = getOutEdgeMap().size();
+            long edges = getNumOutEdges();
             sendMsgToAllEdges(
                 new DoubleWritable(getVertexValue().get() / edges));
         } else {

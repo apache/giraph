@@ -18,13 +18,7 @@
 
 package org.apache.giraph.lib;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutput;
-import java.io.DataOutputStream;
-import java.io.IOException;
-
 import net.iharder.Base64;
-
 import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.VertexWriter;
@@ -36,6 +30,11 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.io.ByteArrayOutputStream;
+import java.io.DataOutput;
+import java.io.DataOutputStream;
+import java.io.IOException;
 
 /**
  * Simple way to represent the structure of the graph with a JSON object.
@@ -99,7 +98,10 @@ public class JsonBase64VertexOutputFormat<
                     "writerVertex: Failed to insert vertex value", e);
             }
             JSONArray edgeArray = new JSONArray();
-            for (Edge<I, E> edge : vertex.getOutEdgeMap().values()) {
+            for (I targetVertexId : vertex) {
+                Edge<I, E> edge = new Edge<I, E>(
+                    targetVertexId, vertex.getEdgeValue(targetVertexId));
+                edge.setConf(getContext().getConfiguration());
                 outputStream.reset();
                 edge.write(output);
                 edgeArray.put(Base64.encodeBytes(outputStream.toByteArray()));

@@ -25,14 +25,15 @@ import org.apache.log4j.Logger;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.SortedMap;
-import java.util.TreeMap;
+import java.util.*;
 
 /**
- * User applications should all subclass {@link Vertex}.  Package access
- * should prevent users from accessing internal methods.
+ * User applications often subclass {@link Vertex}, which stores the outbound
+ * edges in SortedMap, for both random-access and range operations.
+ * User applications which need to implement their own
+ * in-memory data structures should subclass {@link MutableVertex}.
+ *
+ * Package access will prevent users from accessing internal methods.
  *
  * @param <I> Vertex index value
  * @param <V> Vertex value
@@ -50,7 +51,7 @@ public abstract class Vertex<I extends WritableComparable, V extends Writable,
     /** Vertex value */
     private V vertexValue = null;
     /** Map of destination vertices and their edge values */
-    private final SortedMap<I, Edge<I, E>> destEdgeMap =
+    protected final SortedMap<I, Edge<I, E>> destEdgeMap =
         new TreeMap<I, Edge<I, E>>();
     /** If true, do not do anymore computation on this vertex. */
     boolean halt = false;
@@ -79,13 +80,14 @@ public abstract class Vertex<I extends WritableComparable, V extends Writable,
     }
 
     @Override
-    public final boolean addEdge(Edge<I, E> edge) {
-        edge.setConf(getContext().getConfiguration());
-        if (destEdgeMap.put(edge.getDestVertexId(), edge) != null) {
+    public final boolean addEdge(I targetVertexId, E edgeValue) {
+        if (destEdgeMap.put(
+                targetVertexId,
+                new Edge<I, E>(targetVertexId, edgeValue)) != null) {
             if (LOG.isDebugEnabled()) {
                 LOG.debug("addEdge: Vertex=" + vertexId +
                           ": already added an edge value for dest vertex id " +
-                          edge.getDestVertexId());
+                          targetVertexId);
             }
             return false;
         } else {
@@ -114,8 +116,40 @@ public abstract class Vertex<I extends WritableComparable, V extends Writable,
     }
 
     @Override
-    public final SortedMap<I, Edge<I, E>> getOutEdgeMap() {
-        return destEdgeMap;
+    public E getEdgeValue(I targetVertexId) {
+        Edge<I, E> edge = destEdgeMap.get(targetVertexId);
+        return edge != null ? edge.getEdgeValue() : null;
+    }
+
+    @Override
+    public boolean hasEdge(I targetVertexId) {
+        return destEdgeMap.containsKey(targetVertexId);
+    }
+
+    /**
+     * Get an iterator to the edges on this vertex.
+     *
+     * @return A <em>sorted</em> iterator, as defined by the sort-order
+     *         of the vertex ids
+     */
+    @Override
+    public Iterator<I> iterator() {
+        return destEdgeMap.keySet().iterator();
+    }
+
+    @Override
+    public int getNumOutEdges() {
+        return destEdgeMap.size();
+    }
+
+    @Override
+    public E removeEdge(I targetVertexId) {
+        Edge<I, E> edge = destEdgeMap.remove(targetVertexId);
+        if(edge != null) {
+            return edge.getEdgeValue();
+        } else {
+            return null;
+        }
     }
 
     @Override
@@ -155,7 +189,7 @@ public abstract class Vertex<I extends WritableComparable, V extends Writable,
             Edge<I, E> edge = new Edge<I, E>();
             edge.setConf(getContext().getConfiguration());
             edge.readFields(in);
-            addEdge(edge);
+            addEdge(edge.getDestVertexId(), edge.getEdgeValue());
         }
         long msgListSize = in.readLong();
         for (long i = 0; i < msgListSize; ++i) {
@@ -193,7 +227,7 @@ public abstract class Vertex<I extends WritableComparable, V extends Writable,
     @Override
     public String toString() {
         return "Vertex(id=" + getVertexId() + ",value=" + getVertexValue() +
-            ",#edges=" + getOutEdgeMap().size() + ")";
+            ",#edges=" + destEdgeMap.size() + ")";
     }
 }
 

@@ -18,13 +18,7 @@
 
 package org.apache.giraph.lib;
 
-import java.io.ByteArrayInputStream;
-import java.io.DataInput;
-import java.io.DataInputStream;
-import java.io.IOException;
-
 import net.iharder.Base64;
-
 import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.MutableVertex;
@@ -40,6 +34,11 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.io.ByteArrayInputStream;
+import java.io.DataInput;
+import java.io.DataInputStream;
+import java.io.IOException;
 
 /**
  * Simple way to represent the structure of the graph with a JSON object.
@@ -138,7 +137,7 @@ public class JsonBase64VertexInputFormat<
                 Edge<I, E> edge = new Edge<I, E>();
                 edge.setConf(getContext().getConfiguration());
                 edge.readFields(input);
-                vertex.addEdge(edge);
+                vertex.addEdge(edge.getDestVertexId(), edge.getEdgeValue());
             }
             return true;
         }

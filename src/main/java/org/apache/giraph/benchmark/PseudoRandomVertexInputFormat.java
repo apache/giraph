@@ -18,11 +18,10 @@
 
 package org.apache.giraph.benchmark;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-
+import org.apache.giraph.bsp.BspInputSplit;
+import org.apache.giraph.graph.MutableVertex;
+import org.apache.giraph.graph.VertexInputFormat;
+import org.apache.giraph.graph.VertexReader;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -31,11 +30,10 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.log4j.Logger;
 
-import org.apache.giraph.bsp.BspInputSplit;
-import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.MutableVertex;
-import org.apache.giraph.graph.VertexInputFormat;
-import org.apache.giraph.graph.VertexReader;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
 /**
  * This VertexInputFormat is meant for large scale testing.  It allows the user
@@ -74,10 +72,6 @@ public class PseudoRandomVertexInputFormat extends
     /**
      * Used by {@link PseudoRandomVertexInputFormat} to read
      * pseudo-randomly generated data
-     *
-     * @param <I> Vertex index value
-     * @param <V> Vertex value
-     * @param <E> Edge value
      */
     private static class PseudoRandomVertexReader implements
             VertexReader<LongWritable, DoubleWritable, DoubleWritable> {
@@ -157,11 +151,8 @@ public class PseudoRandomVertexInputFormat extends
                     destVertexId =
                         new LongWritable(Math.abs(rand.nextLong()) %
                                          aggregateVertices);
-                } while (vertex.getOutEdgeMap().containsKey(destVertexId));
-                Edge<LongWritable, DoubleWritable> edge =
-                    new Edge<LongWritable, DoubleWritable>(
-                        destVertexId, new DoubleWritable(rand.nextDouble()));
-                vertex.addEdge(edge);
+                } while (vertex.hasEdge(destVertexId));
+                vertex.addEdge(destVertexId, new DoubleWritable(rand.nextDouble()));
             }
 
             ++verticesRead;
@@ -169,7 +160,7 @@ public class PseudoRandomVertexInputFormat extends
                 LOG.debug("next: Return vertexId=" +
                           vertex.getVertexId().get() +
                           ", vertexValue=" + vertex.getVertexValue() +
-                          ", edgeMap=" + vertex.getOutEdgeMap());
+                          ", edgeMap=" + vertex.iterator());
             }
             return true;
         }

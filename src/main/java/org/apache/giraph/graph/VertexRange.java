@@ -18,24 +18,16 @@
 
 package org.apache.giraph.graph;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataInput;
-import java.io.DataInputStream;
-import java.io.DataOutput;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.SortedMap;
-import java.util.TreeMap;
-
 import net.iharder.Base64;
-
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.io.*;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 /**
  * Defines a vertex index range and assigns responsibility to a particular
@@ -305,7 +297,7 @@ public class VertexRange<I extends WritableComparable,
     public long getEdgeCount() {
         long edgeCount = 0;
         for (BasicVertex<I, V, E, M> vertex : vertexMap.values()) {
-            edgeCount += vertex.getOutEdgeMap().size();
+            edgeCount += vertex.getNumOutEdges();
         }
         return edgeCount;
     }

@@ -18,13 +18,8 @@
 
 package org.apache.giraph.examples;
 
-import java.util.Iterator;
-
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.PosixParser;
+import org.apache.commons.cli.*;
+import org.apache.giraph.graph.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.FloatWritable;
@@ -34,11 +29,7 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
-import org.apache.giraph.graph.GiraphJob;
-import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.graph.VertexInputFormat;
-import org.apache.giraph.graph.VertexOutputFormat;
+import java.util.Iterator;
 
 /**
  * An example that simply uses its id, value, and edges to compute new data
@@ -128,17 +119,17 @@ public class SimpleCheckpointVertex extends
         System.out.println("compute: vertex " + getVertexId() +
                            " has value " + getVertexValue() +
                            " on superstep " + getSuperstep());
-        for (Edge<LongWritable, FloatWritable> edge : getOutEdgeMap().values()) {
-            float edgeValue = edge.getEdgeValue().get();
+        for (LongWritable targetVertexId : this) {
+            FloatWritable edgeValue = getEdgeValue(targetVertexId);
             System.out.println("compute: vertex " + getVertexId() +
                                " sending edgeValue " + edgeValue +
                                " vertexValue " + vertexValue +
-                               " total " + (edgeValue + (float) vertexValue) +
-                               " to vertex " + edge.getDestVertexId() +
+                               " total " + (edgeValue.get() + (float) vertexValue) +
+                               " to vertex " + targetVertexId +
                                " on superstep " + getSuperstep());
-            edge.getEdgeValue().set(edgeValue + (float) vertexValue);
-            sendMsg(edge.getDestVertexId(),
-                    new FloatWritable(edgeValue));
+            edgeValue.set(edgeValue.get() + (float) vertexValue);
+            addEdge(targetVertexId, edgeValue);
+            sendMsg(targetVertexId, edgeValue);
         }
     }
 

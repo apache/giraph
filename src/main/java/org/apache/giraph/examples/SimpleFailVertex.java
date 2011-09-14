@@ -18,13 +18,12 @@
 
 package org.apache.giraph.examples;
 
-import java.util.Iterator;
-
+import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
 
-import org.apache.giraph.graph.Vertex;
+import java.util.Iterator;
 
 /**
  * Vertex to allow unit testing of failure detection
@@ -56,7 +55,7 @@ public class SimpleFailVertex extends
                         return;
                     }
                 }
-                long edges = getOutEdgeMap().size();
+                long edges = getNumOutEdges();
                 sendMsgToAllEdges(
                     new DoubleWritable(getVertexValue().get() / edges));
             } else {

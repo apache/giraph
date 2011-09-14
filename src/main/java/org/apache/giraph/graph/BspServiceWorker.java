@@ -564,7 +564,7 @@ public class BspServiceWorker<
             long vertexRangeEdgeCount = 0;
             for (BasicVertex<I, V, E, M> vertex :
                 entry.getValue().getVertexMap().values()) {
-                vertexRangeEdgeCount += vertex.getOutEdgeMap().size();
+                vertexRangeEdgeCount += vertex.getNumOutEdges();
             }
             statList.add(Long.valueOf(entry.getValue().getVertexMap().size()));
             statList.add(Long.valueOf(vertexRangeEdgeCount));
@@ -1108,7 +1108,7 @@ public class BspServiceWorker<
                 if (LOG.isDebugEnabled()) {
                     LOG.debug("storeCheckpoint: Wrote vertex id = " +
                               vertex.getVertexId() + " with " +
-                              vertex.getOutEdgeMap().size() + " edges and " +
+                              vertex.getNumOutEdges() + " edges and " +
                               vertex.getMsgList().size() + " messages (" +
                               vertexByteStream.size() + " total bytes)");
                 }
@@ -1123,7 +1123,7 @@ public class BspServiceWorker<
             long edgeCount = 0;
             for (BasicVertex<I, V, E, M> vertex :
                     entry.getValue().getVertexMap().values()) {
-                edgeCount += vertex.getOutEdgeMap().size();
+                edgeCount += vertex.getNumOutEdges();
             }
             metadataOutput.writeLong(edgeCount);
             entry.getKey().write(metadataOutput);

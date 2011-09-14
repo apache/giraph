@@ -18,9 +18,13 @@
 
 package org.apache.giraph.examples;
 
-import java.io.IOException;
-import java.util.Iterator;
-
+import org.apache.giraph.graph.BasicVertex;
+import org.apache.giraph.graph.MutableVertex;
+import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.graph.VertexReader;
+import org.apache.giraph.graph.VertexWriter;
+import org.apache.giraph.lib.TextVertexOutputFormat;
+import org.apache.giraph.lib.TextVertexOutputFormat.TextVertexWriter;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -30,14 +34,8 @@ import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.log4j.Logger;
 
-import org.apache.giraph.graph.BasicVertex;
-import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.MutableVertex;
-import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.graph.VertexReader;
-import org.apache.giraph.graph.VertexWriter;
-import org.apache.giraph.lib.TextVertexOutputFormat;
-import org.apache.giraph.lib.TextVertexOutputFormat.TextVertexWriter;
+import java.io.IOException;
+import java.util.Iterator;
 
 /**
  * Just a simple Vertex compute implementation that executes 3 supersteps, then
@@ -75,9 +73,8 @@ public class SimpleSuperstepVertex extends
                 (inputSplit.getNumSplits() * totalRecords);
             float edgeValue = vertex.getVertexId().get() * 100f;
             // Adds an edge to the neighbor vertex
-            vertex.addEdge(new Edge<LongWritable, FloatWritable>(
-                    new LongWritable(destVertexId),
-                    new FloatWritable(edgeValue)));
+            vertex.addEdge(new LongWritable(destVertexId),
+                    new FloatWritable(edgeValue));
             ++recordsRead;
             LOG.info("next: Return vertexId=" + vertex.getVertexId().get() +
                 ", vertexValue=" + vertex.getVertexValue() +

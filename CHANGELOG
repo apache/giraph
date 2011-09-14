@@ -2,6 +2,10 @@ Giraph Change Log
 
 Release 0.70.0 - unreleased
 
+  GIRAPH-31: Hide the SortedMap<I, Edge<I,E>> in Vertex from client
+  visibility (impl. detail), replace with appropriate accessor
+  methods. jake.mannix via aching.
+
   GIRAPH-30: NPE in ZooKeeperManager if base directory cannot be
   created. apurtell via aching.
 

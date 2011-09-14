@@ -25,7 +25,6 @@ import org.apache.hadoop.mapreduce.Mapper;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
-import java.util.SortedMap;
 
 /**
  * Basic interface for writing a BSP application for computation.
@@ -38,7 +37,7 @@ import java.util.SortedMap;
 @SuppressWarnings("rawtypes")
 public abstract class BasicVertex<I extends WritableComparable,
         V extends Writable, E extends Writable, M extends Writable>
-        implements AggregatorUsage {
+        implements AggregatorUsage, Iterable<I> {
     /** Global graph state **/
     private GraphState<I,V,E,M> graphState;
 
@@ -128,12 +127,37 @@ public abstract class BasicVertex<I extends WritableComparable,
     }
 
     /**
-     * Every vertex has edges to other vertices.  Get a handle to the outward
-     * edge set.
+     * Get a read-only view of the out-edges of this vertex.
      *
-     * @return Map of the destination vertex index to the {@link Edge}
+     * @return the out edges (sort order determined by subclass implementation).
      */
-    public abstract SortedMap<I, Edge<I, E>> getOutEdgeMap();
+    @Override
+    public abstract Iterator<I> iterator();
+
+    /**
+     * Get the edge value associated with a target vertex id.
+     *
+     * @param targetVertexId Target vertex id to check
+     *
+     * @return the value of the edge to targetVertexId (or null if there
+     *         is no edge to it)
+     */
+    public abstract E getEdgeValue(I targetVertexId);
+
+    /**
+     * Does an edge with the target vertex id exist?
+     *
+     * @param targetVertexId Target vertex id to check
+     * @return true if there is an edge to the target
+     */
+    public abstract boolean hasEdge(I targetVertexId);
+
+    /**
+     * Get the number of outgoing edges on this vertex.
+     *
+     * @return the total number of outbound edges from this vertex
+     */
+    public abstract int getNumOutEdges();
 
     /**
      * Send a message to a vertex id.
