@@ -18,6 +18,8 @@
 
 package org.apache.giraph.graph;
 
+import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -37,9 +39,11 @@ import java.util.List;
 @SuppressWarnings("rawtypes")
 public abstract class BasicVertex<I extends WritableComparable,
         V extends Writable, E extends Writable, M extends Writable>
-        implements AggregatorUsage, Iterable<I> {
+        implements AggregatorUsage, Iterable<I>, Configurable {
     /** Global graph state **/
     private GraphState<I,V,E,M> graphState;
+    /** Configuration */
+    private Configuration conf;
 
     /**
      * Optionally defined by the user to be executed once on all workers
@@ -160,10 +164,12 @@ public abstract class BasicVertex<I extends WritableComparable,
     public abstract int getNumOutEdges();
 
     /**
-     * Send a message to a vertex id.
+     * Send a message to a vertex id.  The message should not be mutated after
+     * this method returns or else undefined results could occur.
      *
-     * @param id vertex id to send the message to
-     * @param msg message data to send
+     * @param id Vertex id to send the message to
+     * @param msg Message data to send.  Note that after the message is sent,
+     *        the user should not modify the object.
      */
     public void sendMsg(I id, M msg) {
         if (msg == null) {
@@ -182,8 +188,8 @@ public abstract class BasicVertex<I extends WritableComparable,
     /**
      * After this is called, the compute() code will no longer be called for
      * this vertice unless a message is sent to it.  Then the compute() code
-     * will be called once again until this function is called.  The application
-     * finishes only when all vertices vote to halt.
+     * will be called once again until this function is called.  The
+     * application finishes only when all vertices vote to halt.
      */
     public abstract void voteToHalt();
 
@@ -244,5 +250,15 @@ public abstract class BasicVertex<I extends WritableComparable,
     public final boolean useAggregator(String name) {
         return getGraphState().getGraphMapper().getAggregatorUsage().
             useAggregator(name);
+    }
+
+    @Override
+    public Configuration getConf() {
+        return conf;
+    }
+
+    @Override
+    public void setConf(Configuration conf) {
+        this.conf = conf;
     }
 }

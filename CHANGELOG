@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.70.0 - unreleased
 
+  GIRAPH-34: Failure of Vertex reflection for putVertexList from
+  GIRAPH-27. (aching)
+
   GIRAPH-35: Modifying the site to indicate that Jake Mannix and
   Dmitriy Ryaboy are now Giraph committers. (aching)
 

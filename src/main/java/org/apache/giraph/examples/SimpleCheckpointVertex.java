@@ -124,12 +124,13 @@ public class SimpleCheckpointVertex extends
             System.out.println("compute: vertex " + getVertexId() +
                                " sending edgeValue " + edgeValue +
                                " vertexValue " + vertexValue +
-                               " total " + (edgeValue.get() + (float) vertexValue) +
+                               " total " + (edgeValue.get() +
+                               (float) vertexValue) +
                                " to vertex " + targetVertexId +
                                " on superstep " + getSuperstep());
             edgeValue.set(edgeValue.get() + (float) vertexValue);
             addEdge(targetVertexId, edgeValue);
-            sendMsg(targetVertexId, edgeValue);
+            sendMsg(targetVertexId, new FloatWritable(edgeValue.get()));
         }
     }
 

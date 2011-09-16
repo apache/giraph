@@ -145,7 +145,7 @@ public abstract class Vertex<I extends WritableComparable, V extends Writable,
     @Override
     public E removeEdge(I targetVertexId) {
         Edge<I, E> edge = destEdgeMap.remove(targetVertexId);
-        if(edge != null) {
+        if (edge != null) {
             return edge.getEdgeValue();
         } else {
             return null;
@@ -175,26 +175,23 @@ public abstract class Vertex<I extends WritableComparable, V extends Writable,
 
     @Override
     final public void readFields(DataInput in) throws IOException {
-        vertexId =
-            BspUtils.<I>createVertexIndex(getContext().getConfiguration());
+        vertexId = BspUtils.<I>createVertexIndex(getConf());
         vertexId.readFields(in);
         boolean hasVertexValue = in.readBoolean();
         if (hasVertexValue) {
-            vertexValue =
-                BspUtils.<V>createVertexValue(getContext().getConfiguration());
+            vertexValue = BspUtils.<V>createVertexValue(getConf());
             vertexValue.readFields(in);
         }
         long edgeMapSize = in.readLong();
         for (long i = 0; i < edgeMapSize; ++i) {
             Edge<I, E> edge = new Edge<I, E>();
-            edge.setConf(getContext().getConfiguration());
+            edge.setConf(getConf());
             edge.readFields(in);
             addEdge(edge.getDestVertexId(), edge.getEdgeValue());
         }
         long msgListSize = in.readLong();
         for (long i = 0; i < msgListSize; ++i) {
-            M msg =
-                BspUtils.<M>createMessageValue(getContext().getConfiguration());
+            M msg = BspUtils.<M>createMessageValue(getConf());
             msg.readFields(in);
             msgList.add(msg);
         }

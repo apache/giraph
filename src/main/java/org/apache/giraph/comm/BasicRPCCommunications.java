@@ -37,13 +37,13 @@ import java.util.TreeSet;
 import org.apache.log4j.Logger;
 
 import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.graph.GiraphJob;
-import org.apache.giraph.graph.BspUtils;
-import org.apache.giraph.graph.VertexCombiner;
-import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.graph.MutableVertex;
 import org.apache.giraph.graph.BasicVertex;
+import org.apache.giraph.graph.BspUtils;
+import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.graph.MutableVertex;
+import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.graph.VertexCombiner;
 import org.apache.giraph.graph.VertexMutations;
 import org.apache.giraph.graph.VertexRange;
 import org.apache.giraph.graph.VertexResolver;
@@ -423,6 +423,15 @@ public abstract class BasicRPCCommunications<
         InetSocketAddress addr,
         int numHandlers, String jobId, J jobToken) throws IOException;
 
+    /**
+     * Only constructor.
+     *
+     * @param context Context for getting configuration
+     * @param service Service worker to get the vertex ranges
+     * @throws IOException
+     * @throws UnknownHostException
+     * @throws InterruptedException
+     */
     public BasicRPCCommunications(Mapper<?, ?, ?, ?>.Context context,
                                   CentralizedServiceWorker<I, V, E, M> service)
             throws IOException, UnknownHostException, InterruptedException {
@@ -804,8 +813,8 @@ end[HADOOP_FACEBOOK]*/
     public final void sendMessageReq(I destVertex, M msg) {
         InetSocketAddress addr = getInetSocketAddress(destVertex);
         if (LOG.isDebugEnabled()) {
-            LOG.debug("sendMessage: Send bytes (" + msg.toString() + ") to " +
-                      destVertex + " with address " + addr);
+            LOG.debug("sendMessage: Send bytes (" + msg.toString() +
+                      ") to " + destVertex + " with address " + addr);
         }
         ++totalMsgsSentInSuperstep;
         Map<I, MsgList<M>> msgMap = null;
@@ -825,8 +834,10 @@ end[HADOOP_FACEBOOK]*/
                 msgMap.put(destVertex, msgList);
             }
             msgList.add(msg);
-            LOG.debug("sendMessage: added msg=" + msg + ", size=" +
-                      msgList.size());
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("sendMessage: added msg=" + msg + ", size=" +
+                          msgList.size());
+            }
             if (msgList.size() > maxSize) {
                 peerThreads.get(addr).flushLargeMsgList(destVertex);
             }
