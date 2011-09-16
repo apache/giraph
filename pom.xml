@@ -84,7 +84,7 @@ under the License.
     <developer>
       <id>aching</id>
       <name>Avery Ching</name>
-      <email>aching@yahoo-inc.com</email>
+      <email>aching@apache.org</email>
       <timezone>-8</timezone>
       <organization>Yahoo!</organization>
       <organizationUrl>http://www.yahoo.com</organizationUrl>
@@ -134,6 +134,22 @@ under the License.
       <timezone>-8</timezone>
       <organization>Yahoo!</organization>
       <organizationUrl>http://www.yahoo.com/</organizationUrl>
+    </developer>
+    <developer>
+      <id>jake.mannix</id>
+      <name>Jake Mannix</name>
+      <email>jmannix@apache.org</email>
+      <timezone>-8</timezone>
+      <organization>Twitter</organization>
+      <organizationUrl>http://www.twitter.com/</organizationUrl>
+    </developer>
+    <developer>
+      <id>dvryaboy</id>
+      <name>Dmitriy Ryaboy</name>
+      <email>dvryaboy@gmail.com</email>
+      <timezone>-8</timezone>
+      <organization>Twitter</organization>
+      <organizationUrl>http://www.twitter.com/</organizationUrl>
     </developer>
   </developers>
 
