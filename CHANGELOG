@@ -2,6 +2,8 @@ Giraph Change Log
 
 Release 0.70.0 - unreleased
 
+  GIRAPH-21: Revise CODE_CONVENTIONS. (aching via jghoman)
+
   GIRAPH-39: mvn rat doesn't like .git or .idea. (jghoman)
 
   GIRAPH-32: Implement benchmarks to evaluate the performance of message 

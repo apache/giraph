@@ -3,29 +3,79 @@ Programming Language".  See the following link:
 
 http://www.oracle.com/technetwork/java/codeconvtoc-136057.html
 
-In addition, this project has a couple of more specific rules:
+In addition, this project has several rules that are more specific:
 
-* No tabs
-* All indents should be 4 spaces (or 8 when there is confusion)
-* All while/if/else must have brackets, even if there there is only a one
+- No line should use more than 79 characters
+- No tabs, only spaces
+- All indents should be 2 spaces (or 4 when there is confusion)
+
+if (<short expression>) {
+  return true;
+}
+
+if (<very, very, very long expression that continues and wraps around this
+    line, use 4 spaces on this following line>) {
+  return true;
+}
+
+- Given there are many generic types, there will be long class definitions.
+  Wrap the line as follows:
+
+public class BspServiceMaster<I extends WritableComparable, V extends Writable,
+    E extends Writable, M extends Writable> extends BspService<I, V, E, M>
+    implements CentralizedServiceMaster<I, V, E, M> {
+  /** Class logger */
+  private static final Logger LOG = Logger.getLogger(BspServiceMaster.class);
+}
+
+- All while/if/else must have brackets, even if there there is only a one
   line statement following.  'else' and 'else if' are expected to line up
   with the '}'.  For example:
 
 if (condition) {
-    statement;
+  statement;
 }
 
 if (condition) {
-    statement;
+  statement;
 } else {
-    statement;
+  statement;
 }
 
-* Any use of LOG should be enclosed with an is*Enabled() method.  For example:
+- Any use of LOG should be enclosed with an is*Enabled() method.  For example:
 
 if (LOG.isInfoEnabled()) {
-    LOG.info("something happened");
+  LOG.info("something happened");
 }
 
-* Class members should not begin with 'm_' or '_'.
-* No warnings allowed, but be as specific as possible with warning suppression
+- All classes, members, and member methods should have Javadoc in the following
+  style.  C-style comments for javadoc and // comments for non-javadoc.
+
+/**
+ * This is an example class
+ */
+public class Giraffe {
+  /** Number of spots on my giraffe */
+  private int spots;
+  /**
+   * Example horribly long comment that wraps around the line.  If it is very,
+   * very, very long.
+   */
+  private int feet;
+
+  /**
+   * How many seconds to travel a number of steps
+   *
+   * @param steps Steps to travel
+   * @param stepsPerSec Steps a giraffe travels every second
+   * @return Number of seconds
+   */
+  public static int secToTravel(int steps, int stepsPerSec) {
+    // Simple formula to get time to travel
+    return steps / stepsPerSec;
+  }
+}
+
+- Class members should not begin with 'm_' or '_'.
+- No warnings allowed, but be as specific as possible with warning suppression
+- Prefer to avoid abbreviations when reasonable (i.e. 'msg' vs 'message')
