@@ -297,6 +297,9 @@ under the License.
             <!-- generated content -->
             <exclude>**/target/**</exclude>
             <exclude>_bsp/**</exclude>
+            <!-- source control and IDEs -->
+            <exclude>.git/**</exclude>
+            <exclude>.idea/**</exclude>
          </excludes>
       </configuration>
     </plugin>
