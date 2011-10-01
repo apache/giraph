@@ -562,7 +562,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
                           " maxMem=" + Runtime.getRuntime().maxMemory() +
                           " freeMem=" + Runtime.getRuntime().freeMemory());
             }
-            if ((superstep > BspService.INPUT_SUPERSTEP) &&
+            if ((superstep >= BspService.INPUT_SUPERSTEP) &&
                     (commService == null)) {
                 if (LOG.isInfoEnabled()) {
                     LOG.info("map: Starting communication service on " +

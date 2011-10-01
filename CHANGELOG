@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.70.0 - unreleased
 
+  GIRAPH-46: Race condition on superstep 1 with RPC servers not
+  started by the time that requests are sent. (aching)
+
   GIRAPH-21: Revise CODE_CONVENTIONS. (aching via jghoman)
 
   GIRAPH-39: mvn rat doesn't like .git or .idea. (jghoman)
