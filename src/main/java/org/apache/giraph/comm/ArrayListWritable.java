@@ -47,6 +47,10 @@ public abstract class ArrayListWritable<M extends Writable> extends ArrayList<M>
      */
     public ArrayListWritable() {
     }
+    
+    public ArrayListWritable(ArrayListWritable<M> arrayListWritable) {
+        super(arrayListWritable);
+    }
 
     /**
      * This constructor allows setting the refClass during construction.

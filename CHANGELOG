@@ -2,6 +2,8 @@ Giraph Change Log
 
 Release 0.70.0 - unreleased
 
+  GIRAPH-12: Investigate communication improvements. (hyunsik)
+
   GIRAPH-46: Race condition on superstep 1 with RPC servers not
   started by the time that requests are sent. (aching)
 

@@ -144,6 +144,9 @@ public class GiraphJob extends Job {
     public static final String MSG_SIZE = "giraph.msgSize";
     /** Default maximum number of messages per peer before flush */
     public static final int MSG_SIZE_DEFAULT = 1000;
+    
+    /** Number of flush threads per peer */
+    public static final String MSG_NUM_FLUSH_THREADS = "giraph.msgNumFlushThreads";
 
     /** Number of poll attempts prior to failing the job (int) */
     public static final String POLL_ATTEMPTS = "giraph.pollAttempts";

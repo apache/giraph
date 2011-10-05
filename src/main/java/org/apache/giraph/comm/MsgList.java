@@ -35,6 +35,10 @@ public class MsgList<M extends Writable>
     public MsgList() {
         super();
     }
+    
+    public MsgList(MsgList<M> msgList) {
+        super(msgList);
+    }
 
     @SuppressWarnings("unchecked")
     @Override

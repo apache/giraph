@@ -40,7 +40,7 @@ import java.util.Random;
  */
 public class RandomMessageBenchmark extends
         Vertex<LongWritable, DoubleWritable, DoubleWritable, BytesWritable>
-        implements Tool {    
+        implements Tool {
     /** Configuration from Configurable */
     private Configuration conf;
 
@@ -121,6 +121,10 @@ public class RandomMessageBenchmark extends
                 "edgesPerVertex",
                 true,
                 "Edges per vertex");
+        options.addOption("f",
+                "flusher",
+                true,
+                "Number of flush threads");
         
         HelpFormatter formatter = new HelpFormatter();
         if (args.length == 0) {
@@ -160,6 +164,7 @@ public class RandomMessageBenchmark extends
         }
         int workers = Integer.parseInt(cmd.getOptionValue('w'));
         GiraphJob job = new GiraphJob(getConf(), getClass().getName());
+        job.getConfiguration().setInt(GiraphJob.CHECKPOINT_FREQUENCY, 0);
         job.setVertexClass(getClass());
         job.setVertexInputFormatClass(PseudoRandomVertexInputFormat.class);
         job.setWorkerConfiguration(workers, workers, 100.0f);
@@ -186,6 +191,10 @@ public class RandomMessageBenchmark extends
         if (cmd.hasOption('s')) {
             getConf().setInt(SUPERSTEP_COUNT,
                              Integer.parseInt(cmd.getOptionValue('s')));
+        }
+        if (cmd.hasOption('f')) {
+            job.getConfiguration().setInt(GiraphJob.MSG_NUM_FLUSH_THREADS, 
+                Integer.parseInt(cmd.getOptionValue('f')));         
         }
         if (job.run(isVerbose) == true) {
             return 0;
