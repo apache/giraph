@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.70.0 - unreleased
 
+  GIRAPH-44. Add documentation about counter limits in Hadoop 0.203+.
+  (mtiwari via jghoman)
+
   GIRAPH-12: Investigate communication improvements. (hyunsik)
 
   GIRAPH-46: Race condition on superstep 1 with RPC servers not

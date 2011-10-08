@@ -66,5 +66,8 @@ under the License.
 		 'hadoop_non_secure'.  An example compilation command is
 		'mvn -Dhadoop=non_secure compile'.</p>
 	</section>
+  <section name="Notes">
+      Counter limit: In Hadoop 0.20.203.0 onwards, there is a limit on the number of counters one can use, which is set to 120 by default. This limit restricts the number of iterations/supersteps possible in Giraph. This limit can be increased by setting a parameter "mapreduce.job.counters.limit" in job tracker's config file mapred-site.xml.
+  </section>
   </body>
 </document>
