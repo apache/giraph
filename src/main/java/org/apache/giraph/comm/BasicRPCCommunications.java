@@ -507,7 +507,9 @@ end[HADOOP_FACEBOOK]*/
     @Override
     public final void putMsg(I vertex, M msg) throws IOException {
         List<M> msgs = null;
-        LOG.debug("putMsg: Adding msg " + msg + " on vertex " + vertex);
+        if (LOG.isDebugEnabled()) {
+        	LOG.debug("putMsg: Adding msg " + msg + " on vertex " + vertex);
+        }
         if (inPrepareSuperstep) {
             // Called by combiner (main thread) during superstep preparation
             msgs = inMessages.get(vertex);
@@ -535,8 +537,10 @@ end[HADOOP_FACEBOOK]*/
     public final void putMsgList(I vertex,
                                  MsgList<M> msgList) throws IOException {
         List<M> msgs = null;
-        LOG.debug("putMsgList: Adding msgList " + msgList +
-                  " on vertex " + vertex);
+        if (LOG.isDebugEnabled()) {
+        	LOG.debug("putMsgList: Adding msgList " + msgList +
+        			" on vertex " + vertex);
+        }
         synchronized(transientInMessages) {
             msgs = transientInMessages.get(vertex);
             if (msgs == null) {

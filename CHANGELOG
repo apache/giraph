@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.70.0 - unreleased
 
+  GIRAPH-59: Missing some test if debug enabled before LOG.debug() and
+  LOG.info(). (guzhiwei via aching).
+
   GIRAPH-48: numFlushThreads is 0 when doing a single worker 
   unittest. Changing the minimum to 1. (aching)
 

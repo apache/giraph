@@ -76,9 +76,12 @@ public class SimpleSuperstepVertex extends
             vertex.addEdge(new LongWritable(destVertexId),
                     new FloatWritable(edgeValue));
             ++recordsRead;
-            LOG.info("next: Return vertexId=" + vertex.getVertexId().get() +
-                ", vertexValue=" + vertex.getVertexValue() +
-                ", destinationId=" + destVertexId + ", edgeValue=" + edgeValue);
+            if (LOG.isInfoEnabled()) {
+	            LOG.info("next: Return vertexId=" + vertex.getVertexId().get() +
+	                ", vertexValue=" + vertex.getVertexValue() +
+	                ", destinationId=" + destVertexId +
+	                ", edgeValue=" + edgeValue);
+            }
             return true;
         }
     }

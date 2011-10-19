@@ -48,10 +48,12 @@ public class SuperstepBalancer<I extends WritableComparable,
         String superstepWorker =
             (String) workerHostnameIdMap.keySet().toArray()[
                 (int) hostnameIdListIndex];
-        LOG.info("rebalance: Using worker " + superstepWorker + " with index " +
-                 hostnameIdListIndex + " out of " +
-                 workerHostnameIdMap.size() + " workers on superstep " +
-                 getSuperstep());
+        if (LOG.isInfoEnabled()) {
+	        LOG.info("rebalance: Using worker " + superstepWorker +
+	                 " with index " + hostnameIdListIndex + " out of " +
+	                 workerHostnameIdMap.size() + " workers on superstep " +
+	                 getSuperstep());
+        }
         JSONArray hostnamePortArray = workerHostnameIdMap.get(superstepWorker);
         NavigableMap<I, VertexRange<I, V, E, M>> prevVertexRangeMap =
             getPrevVertexRangeMap();
