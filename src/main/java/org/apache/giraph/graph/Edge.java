@@ -41,7 +41,7 @@ public class Edge<I extends WritableComparable, E extends Writable>
     private I destVertexId = null;
     /** Edge value */
     private E edgeValue = null;
-    /** Configuration - Used to instiantiate classes */
+    /** Configuration - Used to instantiate classes */
     private Configuration conf = null;
 
     /**
@@ -76,6 +76,24 @@ public class Edge<I extends WritableComparable, E extends Writable>
      */
     public E getEdgeValue() {
         return edgeValue;
+    }
+
+    /**
+     * Set the destination vertex index of this edge.
+     *
+     * @param destVertexId new destination vertex
+     */
+    public void setDestVertexId(I destVertexId) {
+       this.destVertexId = destVertexId;
+    }
+
+    /**
+     * Set the value for this edge.
+     *
+     * @param edgeValue new edge value
+     */
+    public void setEdgeValue(E edgeValue) {
+       this.edgeValue = edgeValue;
     }
 
     @Override

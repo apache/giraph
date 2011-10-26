@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.70.0 - unreleased
 
+  GIRAPH-62: Provide input format for reading graphs stored as adjacency 
+  lists. (jghoman)
+
   GIRAPH-59: Missing some test if debug enabled before LOG.debug() and
   LOG.info(). (guzhiwei via aching).
 
