@@ -38,7 +38,13 @@ under the License.
     <section name="Incubator disclaimer">
 	<p>Apache Giraph is an effort undergoing incubation at The Apache Software Foundation (ASF), sponsored by the name of Apache Incubator. Incubation is required of all newly accepted projects until a further review indicates that the infrastructure, communications, and decision making process have stabilized in a manner consistent with other successful ASF projects. While incubation status is not necessarily a reflection of the completeness or stability of the code, it does indicate that the project has yet to be fully endorsed by the ASF.</p>
 	</section>
-	
+	<section name="Presentations">
+      We're working hard to build a community of users and developers around Giraph. As part of that outreach, we're giving presentations and talks to help bring people up to speed.
+      <ul>
+          <li>Avery Ching introduced Giraph at Hadoop Summit 2011. <a href="http://www.youtube.com/watch?v=l4nQjAG6fac">Watch the video</a>.</li>
+          <li>An updated slidedeck of the Hadoop Summit talk was presented at HortonWorks. <a href="http://www.slideshare.net/averyching/20111014hortonworks">Read the slides</a>.</li>
+      </ul>
+    </section>
 	<section name="Supported versions of Apache Hadoop">
 	<p>	Hadoop versions for use with Giraph:
 		<ul>
