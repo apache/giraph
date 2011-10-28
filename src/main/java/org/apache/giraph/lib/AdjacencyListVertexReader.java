@@ -45,7 +45,7 @@ abstract class AdjacencyListVertexReader<I extends WritableComparable,
     V extends Writable, E extends Writable> extends
     TextVertexInputFormat.TextVertexReader<I, V, E> {
 
-  public static final String LINE_TOKENIZE_VALUE = "adj.list.input.token";
+  public static final String LINE_TOKENIZE_VALUE = "adj.list.input.delimiter";
   public static final String LINE_TOKENIZE_VALUE_DEFAULT = "\t";
 
   private String splitValue = null;

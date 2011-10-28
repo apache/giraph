@@ -2,6 +2,8 @@ Giraph Change Log
 
 Release 0.70.0 - unreleased
 
+  GIRAPH-56. Create a CSV TextOutputFormat. (jghoman)
+
   GIRAPH-66: Add presentations section to website. (jghoman)
 
   GIRAPH-62: Provide input format for reading graphs stored as adjacency 
