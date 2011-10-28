@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.70.0 - unreleased
 
+  GIRAPH-67. Provide AdjacencyList InputFormat for Ids of Strings and
+  double values. (jghoman)
+
   GIRAPH-56. Create a CSV TextOutputFormat. (jghoman)
 
   GIRAPH-66: Add presentations section to website. (jghoman)
