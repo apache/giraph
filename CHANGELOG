@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.70.0 - unreleased
 
+  GIRAPH-50. Require Maven 3 in order to work with munging plugin.
+  (jghoman)
+  
   GIRAPH-67. Provide AdjacencyList InputFormat for Ids of Strings and
   double values. (jghoman)
 

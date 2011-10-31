@@ -58,7 +58,7 @@ under the License.
 		<p>You will need the following:
 		<ul>
 		<li>Java 1.6</li>
-		<li>Maven 2 or higher</li>
+		<li>Maven 3 or higher. Giraph uses the <a href="http://sonatype.github.com/munge-maven-plugin/">munge plugin</a>, which requires Maven 3, to support multiple versions of Hadoop. Also, the web site plugin requires Maven 3.</li>
 	</ul>
 
 		Use the maven commands with secure Hadoop to:
