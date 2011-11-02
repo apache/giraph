@@ -18,8 +18,9 @@
 
 package org.apache.giraph.examples;
 
+import com.google.common.collect.Maps;
 import org.apache.giraph.graph.BasicVertex;
-import org.apache.giraph.graph.MutableVertex;
+import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexReader;
 import org.apache.giraph.graph.VertexWriter;
@@ -36,6 +37,7 @@ import org.apache.log4j.Logger;
 
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.Map;
 
 /**
  * Just a simple Vertex compute implementation that executes 3 supersteps, then
@@ -54,35 +56,41 @@ public class SimpleSuperstepVertex extends
      * Simple VertexReader that supports {@link SimpleSuperstepVertex}
      */
     public static class SimpleSuperstepVertexReader extends
-            GeneratedVertexReader<LongWritable, IntWritable, FloatWritable> {
+            GeneratedVertexReader<LongWritable, IntWritable, FloatWritable, IntWritable> {
         /** Class logger */
         private static final Logger LOG =
             Logger.getLogger(SimpleSuperstepVertexReader.class);
         @Override
-        public boolean next(MutableVertex<LongWritable, IntWritable,
-                            FloatWritable, ?> vertex) throws IOException {
-            if (totalRecords <= recordsRead) {
-                return false;
-            }
-            vertex.setVertexId(new LongWritable(
-                (inputSplit.getSplitIndex() * totalRecords) + recordsRead));
-            vertex.setVertexValue(
-                new IntWritable((int) (vertex.getVertexId().get() * 10)));
-            long destVertexId =
-                (vertex.getVertexId().get() + 1) %
-                (inputSplit.getNumSplits() * totalRecords);
-            float edgeValue = vertex.getVertexId().get() * 100f;
-            // Adds an edge to the neighbor vertex
-            vertex.addEdge(new LongWritable(destVertexId),
-                    new FloatWritable(edgeValue));
+        public boolean nextVertex() throws IOException, InterruptedException {
+            return totalRecords > recordsRead;
+        }
+
+        public SimpleSuperstepVertexReader() {
+            super();
+        }
+
+        @Override
+        public BasicVertex<LongWritable, IntWritable, FloatWritable, IntWritable> getCurrentVertex()
+            throws IOException, InterruptedException {
+            BasicVertex<LongWritable, IntWritable, FloatWritable, IntWritable> vertex =
+                BspUtils.<LongWritable, IntWritable, FloatWritable, IntWritable>createVertex(
+                    configuration);
+            LongWritable vertexId = new LongWritable(
+                (inputSplit.getSplitIndex() * totalRecords) + recordsRead);
+            IntWritable vertexValue = new IntWritable((int) (vertexId.get() * 10));
+            Map<LongWritable, FloatWritable> edgeMap = Maps.newHashMap();
+            long destVertexId = (vertexId.get() + 1) % (inputSplit.getNumSplits() * totalRecords);
+            float edgeValue = vertexId.get() * 100f;
+            edgeMap.put(new LongWritable(destVertexId), new FloatWritable(edgeValue));
+            vertex.initialize(vertexId, vertexValue, edgeMap, null);
             ++recordsRead;
             if (LOG.isInfoEnabled()) {
-	            LOG.info("next: Return vertexId=" + vertex.getVertexId().get() +
-	                ", vertexValue=" + vertex.getVertexValue() +
-	                ", destinationId=" + destVertexId +
-	                ", edgeValue=" + edgeValue);
+                LOG.info("next: Return vertexId=" + vertex.getVertexId().get() +
+                         ", vertexValue=" + vertex.getVertexValue() +
+                         ", destinationId=" + destVertexId +
+                         ", edgeValue=" + edgeValue);
             }
-            return true;
+            return vertex;
         }
     }
 
@@ -91,9 +99,9 @@ public class SimpleSuperstepVertex extends
      */
     public static class SimpleSuperstepVertexInputFormat extends
             GeneratedVertexInputFormat<LongWritable,
-            IntWritable, FloatWritable> {
+            IntWritable, FloatWritable, IntWritable> {
         @Override
-        public VertexReader<LongWritable, IntWritable, FloatWritable>
+        public VertexReader<LongWritable, IntWritable, FloatWritable, IntWritable>
                 createVertexReader(InputSplit split,
                                    TaskAttemptContext context)
                                    throws IOException {

@@ -18,14 +18,14 @@
 
 package org.apache.giraph.graph;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 
 /**
  * A complete edge, the destination vertex and the edge value.  Can only be one
@@ -36,7 +36,7 @@ import org.apache.hadoop.io.WritableComparable;
  */
 @SuppressWarnings("rawtypes")
 public class Edge<I extends WritableComparable, E extends Writable>
-        implements Writable, Configurable {
+        implements WritableComparable<Edge<I, E>>, Configurable {
     /** Destination vertex id */
     private I destVertexId = null;
     /** Edge value */
@@ -84,7 +84,7 @@ public class Edge<I extends WritableComparable, E extends Writable>
      * @param destVertexId new destination vertex
      */
     public void setDestVertexId(I destVertexId) {
-       this.destVertexId = destVertexId;
+        this.destVertexId = destVertexId;
     }
 
     /**
@@ -93,7 +93,7 @@ public class Edge<I extends WritableComparable, E extends Writable>
      * @param edgeValue new edge value
      */
     public void setEdgeValue(E edgeValue) {
-       this.edgeValue = edgeValue;
+        this.edgeValue = edgeValue;
     }
 
     @Override
@@ -133,5 +133,36 @@ public class Edge<I extends WritableComparable, E extends Writable>
     @Override
     public void setConf(Configuration conf) {
         this.conf = conf;
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public int compareTo(Edge<I, E> edge) {
+        return destVertexId.compareTo(edge.getDestVertexId());
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) { return true; }
+        if (o == null || getClass() != o.getClass()) { return false; }
+
+        Edge edge = (Edge) o;
+
+        if (destVertexId != null ? !destVertexId.equals(edge.destVertexId) :
+            edge.destVertexId != null) {
+            return false;
+        }
+        if (edgeValue != null ? !edgeValue.equals(edge.edgeValue) : edge.edgeValue != null) {
+            return false;
+        }
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = destVertexId != null ? destVertexId.hashCode() : 0;
+        result = 31 * result + (edgeValue != null ? edgeValue.hashCode() : 0);
+        return result;
     }
 }

@@ -60,8 +60,8 @@ public class VertexRange<I extends WritableComparable,
     /** Checkpoint file prefix (null if not recovering from a checkpoint) */
     private String checkpointfilePrefix = null;
     /** Vertex map for this range (keyed by index) */
-    private final SortedMap<I, Vertex<I, V, E, M>> vertexMap =
-        new TreeMap<I, Vertex<I, V, E, M>>();
+    private final SortedMap<I, BasicVertex<I, V, E, M>> vertexMap =
+        new TreeMap<I, BasicVertex<I, V, E, M>>();
     /** Class logger */
     private static final Logger LOG = Logger.getLogger(VertexRange.class);
 
@@ -199,7 +199,7 @@ public class VertexRange<I extends WritableComparable,
      *
      * @return Map of vertices (keyed by index)
      */
-    public SortedMap<I, Vertex<I, V, E, M>> getVertexMap() {
+    public SortedMap<I, BasicVertex<I, V, E, M>> getVertexMap() {
         return vertexMap;
     }
 

@@ -18,7 +18,13 @@
 
 package org.apache.giraph.examples;
 
-import org.apache.giraph.graph.*;
+import com.google.common.collect.Maps;
+import org.apache.giraph.graph.BasicVertex;
+import org.apache.giraph.graph.BspUtils;
+import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.graph.VertexReader;
+import org.apache.giraph.graph.VertexWriter;
 import org.apache.giraph.lib.TextVertexInputFormat;
 import org.apache.giraph.lib.TextVertexInputFormat.TextVertexReader;
 import org.apache.giraph.lib.TextVertexOutputFormat;
@@ -43,6 +49,7 @@ import org.json.JSONException;
 
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.Map;
 
 /**
  * Demonstrates the basic Pregel shortest paths implementation.
@@ -104,9 +111,12 @@ public class SimpleShortestPathsVertex extends
      * VertexInputFormat that supports {@link SimpleShortestPathsVertex}
      */
     public static class SimpleShortestPathsVertexInputFormat extends
-            TextVertexInputFormat<LongWritable, DoubleWritable, FloatWritable> {
+            TextVertexInputFormat<LongWritable,
+                                  DoubleWritable,
+                                  FloatWritable,
+                                  DoubleWritable> {
         @Override
-        public VertexReader<LongWritable, DoubleWritable, FloatWritable>
+        public VertexReader<LongWritable, DoubleWritable, FloatWritable, DoubleWritable>
                 createVertexReader(InputSplit split,
                                    TaskAttemptContext context)
                                    throws IOException {
@@ -127,7 +137,8 @@ public class SimpleShortestPathsVertex extends
      * [1,4.3,[[2,2.1],[3,0.7]]]
      */
     public static class SimpleShortestPathsVertexReader extends
-            TextVertexReader<LongWritable, DoubleWritable, FloatWritable> {
+            TextVertexReader<LongWritable,
+                DoubleWritable, FloatWritable, DoubleWritable> {
 
         public SimpleShortestPathsVertexReader(
                 RecordReader<LongWritable, Text> lineRecordReader) {
@@ -135,31 +146,36 @@ public class SimpleShortestPathsVertex extends
         }
 
         @Override
-        public boolean next(MutableVertex<LongWritable,
-                            DoubleWritable, FloatWritable, ?> vertex)
-                throws IOException, InterruptedException {
-            if (!getRecordReader().nextKeyValue()) {
-                return false;
-            }
+        public BasicVertex<LongWritable, DoubleWritable, FloatWritable,
+                           DoubleWritable> getCurrentVertex()
+            throws IOException, InterruptedException {
+          BasicVertex<LongWritable, DoubleWritable, FloatWritable,
+              DoubleWritable> vertex = BspUtils.<LongWritable, DoubleWritable, FloatWritable,
+                  DoubleWritable>createVertex(getContext().getConfiguration());
 
             Text line = getRecordReader().getCurrentValue();
             try {
                 JSONArray jsonVertex = new JSONArray(line.toString());
-                vertex.setVertexId(
-                    new LongWritable(jsonVertex.getLong(0)));
-                vertex.setVertexValue(
-                    new DoubleWritable(jsonVertex.getDouble(1)));
+                LongWritable vertexId = new LongWritable(jsonVertex.getLong(0));
+                DoubleWritable vertexValue = new DoubleWritable(jsonVertex.getDouble(1));
+                Map<LongWritable, FloatWritable> edges = Maps.newHashMap();
                 JSONArray jsonEdgeArray = jsonVertex.getJSONArray(2);
                 for (int i = 0; i < jsonEdgeArray.length(); ++i) {
                     JSONArray jsonEdge = jsonEdgeArray.getJSONArray(i);
-                    vertex.addEdge(new LongWritable(jsonEdge.getLong(0)),
+                    edges.put(new LongWritable(jsonEdge.getLong(0)),
                             new FloatWritable((float) jsonEdge.getDouble(1)));
                 }
+                vertex.initialize(vertexId, vertexValue, edges, null);
             } catch (JSONException e) {
                 throw new IllegalArgumentException(
                     "next: Couldn't get vertex from line " + line, e);
             }
-            return true;
+            return vertex;
+        }
+
+        @Override
+        public boolean nextVertex() throws IOException, InterruptedException {
+            return getRecordReader().nextKeyValue();
         }
     }
 

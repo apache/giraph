@@ -18,14 +18,14 @@
 
 package org.apache.giraph.graph;
 
-import java.io.IOException;
-import java.util.List;
-
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+
+import java.io.IOException;
+import java.util.List;
 
 /**
  * Use this to load data for a BSP application.  Note that the InputSplit must
@@ -39,7 +39,8 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  */
 @SuppressWarnings("rawtypes")
 public abstract class VertexInputFormat<I extends WritableComparable,
-        V extends Writable, E extends Writable> {
+        V extends Writable, E extends Writable, M extends Writable> {
+
     /**
      * Logically split the vertices for a graph processing application.
      *
@@ -73,7 +74,7 @@ public abstract class VertexInputFormat<I extends WritableComparable,
      * @throws IOException
      * @throws InterruptedException
      */
-    public abstract VertexReader<I, V, E> createVertexReader(
+    public abstract VertexReader<I, V, E, M> createVertexReader(
         InputSplit split,
         TaskAttemptContext context) throws IOException;
 }

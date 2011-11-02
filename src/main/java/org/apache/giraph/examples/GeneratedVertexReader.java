@@ -18,16 +18,15 @@
 
 package org.apache.giraph.examples;
 
-import java.io.IOException;
-
+import org.apache.giraph.bsp.BspInputSplit;
+import org.apache.giraph.graph.VertexReader;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
-import org.apache.giraph.bsp.BspInputSplit;
-import org.apache.giraph.graph.VertexReader;
+import java.io.IOException;
 
 /**
  * Used by GeneratedVertexInputFormat to read some generated data
@@ -38,8 +37,9 @@ import org.apache.giraph.graph.VertexReader;
  */
 @SuppressWarnings("rawtypes")
 public abstract class GeneratedVertexReader<
-        I extends WritableComparable, V extends Writable, E extends Writable>
-        implements VertexReader<I, V, E> {
+        I extends WritableComparable, V extends Writable, E extends Writable,
+        M extends Writable>
+        implements VertexReader<I, V, E, M> {
     /** Records read so far */
     protected long recordsRead = 0;
     /** Total records to read (on this split alone) */
@@ -47,19 +47,24 @@ public abstract class GeneratedVertexReader<
     /** The input split from initialize(). */
     protected BspInputSplit inputSplit = null;
 
+    protected Configuration configuration = null;
+
     public static final String READER_VERTICES =
         "TestVertexReader.reader_vertices";
     public static final long DEFAULT_READER_VERTICES = 10;
+
+    public GeneratedVertexReader() {
+    }
 
     @Override
     final public void initialize(InputSplit inputSplit,
                                  TaskAttemptContext context)
             throws IOException {
-        Configuration configuration = context.getConfiguration();
-            totalRecords = configuration.getLong(
+        configuration = context.getConfiguration();
+        totalRecords = configuration.getLong(
                 GeneratedVertexReader.READER_VERTICES,
                 GeneratedVertexReader.DEFAULT_READER_VERTICES);
-            this.inputSplit = (BspInputSplit) inputSplit;
+        this.inputSplit = (BspInputSplit) inputSplit;
     }
 
     @Override

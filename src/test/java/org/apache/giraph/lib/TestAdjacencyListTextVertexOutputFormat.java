@@ -30,11 +30,8 @@ import org.mockito.Matchers;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Iterator;
-
 import static org.apache.giraph.lib.AdjacencyListTextVertexOutputFormat.AdjacencyListVertexWriter;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -51,7 +48,7 @@ public class TestAdjacencyListTextVertexOutputFormat extends TestCase {
     // Create empty iterator == no edges
     when(vertex.iterator()).thenReturn(new ArrayList<Text>().iterator());
 
-    RecordWriter<Text,Text> tw = mock(RecordWriter.class);
+    RecordWriter<Text, Text> tw = mock(RecordWriter.class);
     AdjacencyListVertexWriter writer = new AdjacencyListVertexWriter(tw);
     writer.initialize(tac);
     writer.writeVertex(vertex);

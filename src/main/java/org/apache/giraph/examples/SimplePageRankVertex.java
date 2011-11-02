@@ -18,7 +18,12 @@
 
 package org.apache.giraph.examples;
 
-import org.apache.giraph.graph.*;
+import com.google.common.collect.Maps;
+import org.apache.giraph.graph.BasicVertex;
+import org.apache.giraph.graph.BspUtils;
+import org.apache.giraph.graph.LongDoubleFloatDoubleVertex;
+import org.apache.giraph.graph.VertexReader;
+import org.apache.giraph.graph.VertexWriter;
 import org.apache.giraph.lib.TextVertexOutputFormat;
 import org.apache.giraph.lib.TextVertexOutputFormat.TextVertexWriter;
 import org.apache.hadoop.io.DoubleWritable;
@@ -32,12 +37,12 @@ import org.apache.log4j.Logger;
 
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.Map;
 
 /**
  * Demonstrates the basic Pregel PageRank implementation.
  */
-public class SimplePageRankVertex extends
-        Vertex<LongWritable, DoubleWritable, FloatWritable, DoubleWritable> {
+public class SimplePageRankVertex extends LongDoubleFloatDoubleVertex {
     /** User can access this sum after the application finishes if local */
     public static long finalSum;
     /** User can access this min after the application finishes if local */
@@ -128,34 +133,44 @@ public class SimplePageRankVertex extends
      * Simple VertexReader that supports {@link SimplePageRankVertex}
      */
     public static class SimplePageRankVertexReader extends
-            GeneratedVertexReader<LongWritable, DoubleWritable, FloatWritable> {
+            GeneratedVertexReader<LongWritable, DoubleWritable, FloatWritable,
+                DoubleWritable> {
         /** Class logger */
         private static final Logger LOG =
             Logger.getLogger(SimplePageRankVertexReader.class);
+
+        public SimplePageRankVertexReader() {
+            super();
+        }
+
         @Override
-        public boolean next(MutableVertex<LongWritable, DoubleWritable,
-                            FloatWritable, ?> vertex) throws IOException {
-            if (totalRecords <= recordsRead) {
-                return false;
-            }
-            vertex.setVertexId(new LongWritable(
-                (inputSplit.getSplitIndex() * totalRecords) + recordsRead));
-            vertex.setVertexValue(
-                new DoubleWritable(vertex.getVertexId().get() * 10d));
+        public boolean nextVertex() {
+            return totalRecords > recordsRead;
+        }
+
+        @Override
+        public BasicVertex<LongWritable, DoubleWritable, FloatWritable, DoubleWritable>
+          getCurrentVertex() throws IOException {
+            BasicVertex<LongWritable, DoubleWritable, FloatWritable, DoubleWritable>
+                vertex = BspUtils.createVertex(configuration);
+
+            LongWritable vertexId = new LongWritable(
+                (inputSplit.getSplitIndex() * totalRecords) + recordsRead);
+            DoubleWritable vertexValue = new DoubleWritable(vertexId.get() * 10d);
             long destVertexId =
-                (vertex.getVertexId().get() + 1) %
+                (vertexId.get() + 1) %
                 (inputSplit.getNumSplits() * totalRecords);
-            float edgeValue = vertex.getVertexId().get() * 100f;
-            // Adds an edge to the neighbor vertex
-            vertex.addEdge(new LongWritable(destVertexId),
-                    new FloatWritable(edgeValue));
+            float edgeValue = vertexId.get() * 100f;
+            Map<LongWritable, FloatWritable> edges = Maps.newHashMap();
+            edges.put(new LongWritable(destVertexId), new FloatWritable(edgeValue));
+            vertex.initialize(vertexId, vertexValue, edges, null);
             ++recordsRead;
             if (LOG.isInfoEnabled()) {
-	            LOG.info("next: Return vertexId=" + vertex.getVertexId().get() +
-	                ", vertexValue=" + vertex.getVertexValue() +
-	                ", destinationId=" + destVertexId + ", edgeValue=" + edgeValue);
+	        LOG.info("next: Return vertexId=" + vertex.getVertexId().get() +
+	                 ", vertexValue=" + vertex.getVertexValue() +
+	                 ", destinationId=" + destVertexId + ", edgeValue=" + edgeValue);
             }
-            return true;
+            return vertex;
         }
     }
 
@@ -164,9 +179,9 @@ public class SimplePageRankVertex extends
      */
     public static class SimplePageRankVertexInputFormat extends
             GeneratedVertexInputFormat<LongWritable,
-            DoubleWritable, FloatWritable> {
+            DoubleWritable, FloatWritable, DoubleWritable> {
         @Override
-        public VertexReader<LongWritable, DoubleWritable, FloatWritable>
+        public VertexReader<LongWritable, DoubleWritable, FloatWritable, DoubleWritable>
                 createVertexReader(InputSplit split,
                                    TaskAttemptContext context)
                                    throws IOException {

@@ -20,23 +20,23 @@ package org.apache.giraph;
 
 import junit.framework.Test;
 import junit.framework.TestSuite;
+import org.apache.giraph.examples.SimplePageRankVertex.SimplePageRankVertexInputFormat;
+import org.apache.giraph.examples.SimpleShortestPathsVertex.SimpleShortestPathsVertexOutputFormat;
+import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat;
+import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexOutputFormat;
 import org.apache.giraph.examples.GeneratedVertexReader;
 import org.apache.giraph.examples.SimpleCombinerVertex;
 import org.apache.giraph.examples.SimpleFailVertex;
 import org.apache.giraph.examples.SimpleMsgVertex;
 import org.apache.giraph.examples.SimplePageRankVertex;
-import org.apache.giraph.examples.SimplePageRankVertex.SimplePageRankVertexInputFormat;
 import org.apache.giraph.examples.SimpleShortestPathsVertex;
-import org.apache.giraph.examples.SimpleShortestPathsVertex.SimpleShortestPathsVertexOutputFormat;
 import org.apache.giraph.examples.SimpleSumCombiner;
 import org.apache.giraph.examples.SimpleSuperstepVertex;
-import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat;
-import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexOutputFormat;
 import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.GraphState;
-import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexInputFormat;
+import org.apache.giraph.graph.BasicVertex;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
@@ -100,15 +100,12 @@ public class TestBspBasic extends BspCase {
         GraphState<LongWritable, IntWritable, FloatWritable, IntWritable> gs =
             new GraphState<LongWritable, IntWritable,
                            FloatWritable, IntWritable>();
-        Vertex<LongWritable, IntWritable, FloatWritable, IntWritable> vertex =
-            BspUtils.<LongWritable, IntWritable, FloatWritable, IntWritable>
-            createVertex(job.getConfiguration(), gs);
-        System.out.println("testInstantiateVertex: superstep=" +
-                           vertex.getSuperstep());
-        VertexInputFormat<LongWritable, IntWritable, FloatWritable>
-            inputFormat =
-                BspUtils.<LongWritable, IntWritable, FloatWritable>
-                createVertexInputFormat(job.getConfiguration());
+        BasicVertex<LongWritable, IntWritable, FloatWritable, IntWritable> vertex =
+            BspUtils.createVertex(job.getConfiguration());
+        System.out.println("testInstantiateVertex: Got vertex " + vertex +
+                           ", graphState" + gs);
+        VertexInputFormat<LongWritable, IntWritable, FloatWritable, IntWritable>
+            inputFormat = BspUtils.createVertexInputFormat(job.getConfiguration());
         List<InputSplit> splitArray =
             inputFormat.getSplits(
                 new JobContext(new Configuration(), new JobID()), 1);
@@ -285,9 +282,11 @@ public class TestBspBasic extends BspCase {
             System.out.println("testBspPageRank: maxPageRank=" + maxPageRank +
                                " minPageRank=" + minPageRank +
                                " numVertices=" + numVertices);
-            assertTrue(maxPageRank > 34.030 && maxPageRank < 34.0301);
-            assertTrue(minPageRank > 0.03 && minPageRank < 0.03001);
-            assertTrue(numVertices == 5);
+            assertTrue("34.030 !< " + maxPageRank + " !< " + " 34.0301",
+                maxPageRank > 34.030 && maxPageRank < 34.0301);
+            assertTrue("0.03 !< " + minPageRank + " !< " + "0.03001",
+                minPageRank > 0.03 && minPageRank < 0.03001);
+            assertTrue("numVertices = " + numVertices + " != 5", numVertices == 5);
         }
     }
 

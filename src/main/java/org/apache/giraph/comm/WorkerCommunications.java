@@ -18,16 +18,15 @@
 
 package org.apache.giraph.comm;
 
+import org.apache.giraph.graph.BasicVertex;
+import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.MutableVertex;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-
-import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.graph.MutableVertex;
-import org.apache.giraph.graph.BasicVertex;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 
 /**
  * Public interface for workers to do message communication
@@ -108,5 +107,5 @@ public interface WorkerCommunications<I extends WritableComparable,
      *
      * @return map of vertex ranges to vertices
      */
-    Map<I, List<Vertex<I, V, E, M>>> getInVertexRangeMap();
+    Map<I, List<BasicVertex<I, V, E, M>>> getInVertexRangeMap();
 }

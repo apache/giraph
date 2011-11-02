@@ -37,6 +37,7 @@ import java.io.IOException;
  * @param <V> Vertex value
  * @param <E> Edge value
  */
+@SuppressWarnings("rawtypes")
 public class AdjacencyListTextVertexOutputFormat <I extends WritableComparable,
     V extends Writable, E extends Writable> extends TextVertexOutputFormat<I, V, E>{
 
@@ -54,7 +55,7 @@ public class AdjacencyListTextVertexOutputFormat <I extends WritableComparable,
     @Override
     public void writeVertex(BasicVertex<I, V, E, ?> vertex) throws IOException,
         InterruptedException {
-      if(delimiter == null) {
+      if (delimiter == null) {
         delimiter = getContext().getConfiguration()
            .get(LINE_TOKENIZE_VALUE, LINE_TOKENIZE_VALUE_DEFAULT);
       }

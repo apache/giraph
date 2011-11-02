@@ -18,6 +18,37 @@
 
 package org.apache.giraph.graph;
 
+import net.iharder.Base64;
+import org.apache.giraph.bsp.ApplicationState;
+import org.apache.giraph.bsp.BspInputFormat;
+import org.apache.giraph.bsp.CentralizedService;
+import org.apache.giraph.bsp.CentralizedServiceMaster;
+import org.apache.giraph.bsp.SuperstepState;
+import org.apache.giraph.graph.GraphMapper.MapFunctions;
+import org.apache.giraph.zk.BspEvent;
+import org.apache.giraph.zk.PredicateLock;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapred.RunningJob;
+import org.apache.hadoop.mapreduce.Counter;
+import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.log4j.Logger;
+import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.KeeperException;
+import org.apache.zookeeper.WatchedEvent;
+import org.apache.zookeeper.Watcher.Event.EventType;
+import org.apache.zookeeper.ZooDefs.Ids;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -37,42 +68,6 @@ import java.util.NavigableMap;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-
-import net.iharder.Base64;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import org.apache.log4j.Logger;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathFilter;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-
-import org.apache.hadoop.mapred.RunningJob;
-import org.apache.hadoop.mapreduce.Counter;
-import org.apache.hadoop.mapreduce.InputSplit;
-import org.apache.hadoop.mapreduce.Mapper;
-
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.WatchedEvent;
-import org.apache.zookeeper.Watcher.Event.EventType;
-import org.apache.zookeeper.ZooDefs.Ids;
-
-import org.apache.giraph.bsp.BspInputFormat;
-import org.apache.giraph.bsp.ApplicationState;
-import org.apache.giraph.bsp.CentralizedService;
-import org.apache.giraph.bsp.CentralizedServiceMaster;
-import org.apache.giraph.bsp.SuperstepState;
-import org.apache.giraph.graph.GraphMapper.MapFunctions;
-import org.apache.giraph.zk.BspEvent;
-import org.apache.giraph.zk.PredicateLock;
 
 /**
  * Zookeeper-based implementation of {@link CentralizedService}.
@@ -204,8 +199,8 @@ public class BspServiceMaster<
      * @throws InterruptedException
      */
     private List<InputSplit> generateInputSplits(int numWorkers) {
-        VertexInputFormat<I, V, E> vertexInputFormat =
-            BspUtils.<I, V, E>createVertexInputFormat(getConfiguration());
+        VertexInputFormat<I, V, E, M> vertexInputFormat =
+            BspUtils.<I, V, E, M>createVertexInputFormat(getConfiguration());
         List<InputSplit> splits;
         try {
             splits = vertexInputFormat.getSplits(getContext(), numWorkers);
@@ -1786,7 +1781,7 @@ public class BspServiceMaster<
             }
         }
         incrCachedSuperstep();
-        if(getSuperstep() > 0) {  // counter starts at zero, so no need to incr
+        if (getSuperstep() > 0) {  // counter starts at zero, so no need to incr
             superstepCounter.increment(1);
         }
         try {

@@ -25,7 +25,12 @@ import org.apache.log4j.Logger;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 /**
  * User applications often subclass {@link Vertex}, which stores the outbound
@@ -57,6 +62,24 @@ public abstract class Vertex<I extends WritableComparable, V extends Writable,
     boolean halt = false;
     /** List of incoming messages from the previous superstep */
     private final List<M> msgList = new ArrayList<M>();
+
+    @Override
+    public void initialize(I vertexId, V vertexValue, Map<I, E> edges, List<M> messages) {
+        if (vertexId != null) {
+            setVertexId(vertexId);
+        }
+        if (vertexValue != null) {
+          setVertexValue(vertexValue);
+        }
+        if (edges != null && !edges.isEmpty()) {
+          for(Map.Entry<I, E> entry : edges.entrySet()) {
+            destEdgeMap.put(entry.getKey(), new Edge<I, E>(entry.getKey(), entry.getValue()));
+          }
+        }
+        if (messages != null && !messages.isEmpty()) {
+            msgList.addAll(messages);
+        }
+    }
 
     @Override
     public void preApplication()
@@ -93,6 +116,11 @@ public abstract class Vertex<I extends WritableComparable, V extends Writable,
         } else {
             return true;
         }
+    }
+
+    @Override
+    public long getSuperstep() {
+        return getGraphState().getSuperstep();
     }
 
     @Override
@@ -161,6 +189,34 @@ public abstract class Vertex<I extends WritableComparable, V extends Writable,
         for (Edge<I, E> edge : destEdgeMap.values()) {
             sendMsg(edge.getDestVertexId(), msg);
         }
+    }
+
+
+    @Override
+    public void addVertexRequest(MutableVertex<I, V, E, M> vertex)
+            throws IOException {
+        getGraphState().getGraphMapper().getWorkerCommunications().
+            addVertexReq(vertex);
+    }
+
+    @Override
+    public void removeVertexRequest(I vertexId) throws IOException {
+        getGraphState().getGraphMapper().getWorkerCommunications().
+            removeVertexReq(vertexId);
+    }
+
+    @Override
+    public void addEdgeRequest(I vertexIndex,
+                               Edge<I, E> edge) throws IOException {
+        getGraphState().getGraphMapper().getWorkerCommunications().
+            addEdgeReq(vertexIndex, edge);
+    }
+
+    @Override
+    public void removeEdgeRequest(I sourceVertexId,
+                                  I destVertexId) throws IOException {
+        getGraphState().getGraphMapper().getWorkerCommunications().
+            removeEdgeReq(sourceVertexId, destVertexId);
     }
 
     @Override

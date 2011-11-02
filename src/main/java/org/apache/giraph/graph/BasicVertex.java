@@ -27,8 +27,9 @@ import org.apache.hadoop.mapreduce.Mapper;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
-/**
+ /**
  * Basic interface for writing a BSP application for computation.
  *
  * @param <I> vertex id
@@ -39,11 +40,13 @@ import java.util.List;
 @SuppressWarnings("rawtypes")
 public abstract class BasicVertex<I extends WritableComparable,
         V extends Writable, E extends Writable, M extends Writable>
-        implements AggregatorUsage, Iterable<I>, Configurable {
+        implements AggregatorUsage, Iterable<I>, Writable, Configurable {
     /** Global graph state **/
     private GraphState<I,V,E,M> graphState;
     /** Configuration */
     private Configuration conf;
+
+    public abstract void initialize(I vertexId, V vertexValue, Map<I, E> edges, List<M> messages);
 
     /**
      * Optionally defined by the user to be executed once on all workers

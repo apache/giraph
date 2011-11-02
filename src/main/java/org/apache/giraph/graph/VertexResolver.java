@@ -111,8 +111,10 @@ public class VertexResolver<I extends WritableComparable, V extends Writable,
     }
 
     @Override
-    public MutableVertex<I, V, E, M> instantiateVertex() {
-        return BspUtils.<I, V, E, M>createVertex(getConf(), graphState);
+    public BasicVertex<I, V, E, M> instantiateVertex() {
+        BasicVertex<I, V, E, M> vertex = BspUtils.<I,V,E,M>createVertex(getConf());
+        vertex.setGraphState(graphState);
+        return vertex;
     }
 
     @Override

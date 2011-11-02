@@ -17,9 +17,10 @@
  */
 package org.apache.giraph.lib;
 
+import com.google.common.collect.Maps;
+import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.MutableVertex;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
@@ -28,6 +29,7 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.RecordReader;
 
 import java.io.IOException;
+import java.util.Map;
 
 /**
  * VertexReader that readers lines of text with vertices encoded as adjacency
@@ -41,9 +43,10 @@ import java.io.IOException;
  * @param <V> Vertex value
  * @param <E> Edge value
  */
+@SuppressWarnings("rawtypes")
 abstract class AdjacencyListVertexReader<I extends WritableComparable,
-    V extends Writable, E extends Writable> extends
-    TextVertexInputFormat.TextVertexReader<I, V, E> {
+    V extends Writable, E extends Writable, M extends Writable> extends
+    TextVertexInputFormat.TextVertexReader<I, V, E, M> {
 
   public static final String LINE_TOKENIZE_VALUE = "adj.list.input.delimiter";
   public static final String LINE_TOKENIZE_VALUE_DEFAULT = "\t";
@@ -94,18 +97,17 @@ abstract class AdjacencyListVertexReader<I extends WritableComparable,
    */
   abstract public void decodeEdge(String id, String value, Edge<I, E> edge);
 
-  /**
-   * {@inheritDoc}
-   */
-  @Override
-  public boolean next(MutableVertex<I, V, E, ?> iveMutableVertex)
-      throws IOException, InterruptedException {
-    if (!getRecordReader().nextKeyValue()) {
-        return false;
-    }
 
+  @Override
+  public boolean nextVertex() throws IOException, InterruptedException {
+    return getRecordReader().nextKeyValue();
+  }
+
+  @Override
+  public BasicVertex<I, V, E, M> getCurrentVertex() throws IOException, InterruptedException {
     Configuration conf = getContext().getConfiguration();
     String line = getRecordReader().getCurrentValue().toString();
+    BasicVertex<I, V, E, M> vertex = BspUtils.createVertex(conf);
 
     if (sanitizer != null) {
       line = sanitizer.sanitize(line);
@@ -123,20 +125,19 @@ abstract class AdjacencyListVertexReader<I extends WritableComparable,
 
     I vertexId = BspUtils.<I>createVertexIndex(conf);
     decodeId(values[0], vertexId);
-    iveMutableVertex.setVertexId(vertexId);
 
     V value = BspUtils.<V>createVertexValue(conf);
     decodeValue(values[1], value);
-    iveMutableVertex.setVertexValue(value);
 
     int i = 2;
+    Map<I, E> edges = Maps.newHashMap();
     Edge<I, E> edge = new Edge<I, E>();
     while(i < values.length) {
       decodeEdge(values[i], values[i + 1], edge);
-      iveMutableVertex.addEdge(edge.getDestVertexId(), edge.getEdgeValue());
+      edges.put(edge.getDestVertexId(), edge.getEdgeValue());
       i += 2;
     }
-
-    return true;
+    vertex.initialize(vertexId, value, edges, null);
+    return vertex;
   }
 }

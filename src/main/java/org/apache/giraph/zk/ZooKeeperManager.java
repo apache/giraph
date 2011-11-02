@@ -388,7 +388,6 @@ public class ZooKeeperManager {
      */
     private void getZooKeeperServerList()
             throws IOException, InterruptedException {
-        int serverListFileAttempt = 0;
         String serverListFile = null;
 
         if (taskPartition == 0) {
@@ -409,7 +408,6 @@ public class ZooKeeperManager {
             if (serverListFile != null) {
                 break;
             }
-            ++serverListFileAttempt;
             try {
                 Thread.sleep(pollMsecs);
             } catch (InterruptedException e) {

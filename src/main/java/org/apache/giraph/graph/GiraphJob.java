@@ -18,12 +18,13 @@
 
 package org.apache.giraph.graph;
 
-import java.io.IOException;
 import org.apache.giraph.bsp.BspInputFormat;
 import org.apache.giraph.bsp.BspOutputFormat;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.log4j.Logger;
+
+import java.io.IOException;
 
 /**
  * Limits the functions that can be called by the user.  Job is too flexible
@@ -330,7 +331,7 @@ public class GiraphJob extends Job {
      * @param vertexClass Runs vertex computation
      */
     final public void setVertexClass(Class<?> vertexClass) {
-        getConfiguration().setClass(VERTEX_CLASS, vertexClass, Vertex.class);
+        getConfiguration().setClass(VERTEX_CLASS, vertexClass, BasicVertex.class);
     }
 
     /**

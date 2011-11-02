@@ -18,10 +18,10 @@
 
 package org.apache.giraph.graph;
 
-import java.util.List;
-
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+
+import java.util.List;
 
 /**
  * Handles all the situations that can arise upon creation/removal of
@@ -55,5 +55,5 @@ public interface BasicVertexResolver<
      *
      * @return Newly instantiated vertex.
      */
-    MutableVertex<I, V, E, M> instantiateVertex();
+    BasicVertex<I, V, E, M> instantiateVertex();
 }

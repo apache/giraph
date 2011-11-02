@@ -18,10 +18,11 @@
 
 package org.apache.giraph.lib;
 
+import com.google.common.collect.Maps;
 import net.iharder.Base64;
+import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.MutableVertex;
 import org.apache.giraph.graph.VertexReader;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.LongWritable;
@@ -39,6 +40,7 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.util.Map;
 
 /**
  * Simple way to represent the structure of the graph with a JSON object.
@@ -52,8 +54,9 @@ import java.io.IOException;
  */
 @SuppressWarnings("rawtypes")
 public class JsonBase64VertexInputFormat<
-        I extends WritableComparable, V extends Writable, E extends Writable>
-        extends TextVertexInputFormat<I, V, E> implements
+        I extends WritableComparable, V extends Writable, E extends Writable,
+        M extends Writable>
+        extends TextVertexInputFormat<I, V, E, M> implements
         JsonBase64VertexFormat {
     /**
      * Simple reader that supports {@link JsonBase64VertexInputFormat}
@@ -64,25 +67,27 @@ public class JsonBase64VertexInputFormat<
      */
     private static class JsonBase64VertexReader<
             I extends WritableComparable, V extends Writable,
-            E extends Writable> extends TextVertexReader<I, V, E> {
+            E extends Writable, M extends Writable> extends TextVertexReader<I, V, E, M> {
         /**
          * Only constructor.  Requires the LineRecordReader
          *
          * @param lineRecordReader Line record reader to read from
          */
-        public JsonBase64VertexReader(
-                RecordReader<LongWritable, Text> lineRecordReader) {
+        public JsonBase64VertexReader(RecordReader<LongWritable, Text> lineRecordReader) {
             super(lineRecordReader);
         }
 
         @Override
-        public boolean next(MutableVertex<I, V, E, ?> vertex)
-                throws IOException, InterruptedException {
-            if (!getRecordReader().nextKeyValue()) {
-                return false;
-            }
+        public boolean nextVertex() throws IOException, InterruptedException {
+            return getRecordReader().nextKeyValue();
+        }
 
+        @Override
+        public BasicVertex<I, V, E, M> getCurrentVertex()
+                throws IOException, InterruptedException {
             Configuration conf = getContext().getConfiguration();
+            BasicVertex<I, V, E, M> vertex = BspUtils.createVertex(conf);
+
             Text line = getRecordReader().getCurrentValue();
             JSONObject vertexObject;
             try {
@@ -93,26 +98,26 @@ public class JsonBase64VertexInputFormat<
             }
             DataInput input = null;
             byte[] decodedWritable = null;
+            I vertexId = null;
             try {
                 decodedWritable = Base64.decode(
                     vertexObject.getString(VERTEX_ID_KEY));
                 input = new DataInputStream(
                     new ByteArrayInputStream(decodedWritable));
-                I vertexId = BspUtils.<I>createVertexIndex(conf);
+                vertexId = BspUtils.<I>createVertexIndex(conf);
                 vertexId.readFields(input);
-                vertex.setVertexId(vertexId);
             } catch (JSONException e) {
                 throw new IllegalArgumentException(
                     "next: Failed to get vertex id", e);
             }
+            V vertexValue = null;
             try {
                 decodedWritable = Base64.decode(
                     vertexObject.getString(VERTEX_VALUE_KEY));
                 input = new DataInputStream(
                     new ByteArrayInputStream(decodedWritable));
-                V vertexValue = BspUtils.<V>createVertexValue(conf);
+                vertexValue = BspUtils.<V>createVertexValue(conf);
                 vertexValue.readFields(input);
-                vertex.setVertexValue(vertexValue);
             } catch (JSONException e) {
                 throw new IllegalArgumentException(
                     "next: Failed to get vertex value", e);
@@ -124,6 +129,7 @@ public class JsonBase64VertexInputFormat<
                 throw new IllegalArgumentException(
                     "next: Failed to get edge array", e);
             }
+            Map<I, E> edgeMap = Maps.newHashMap();
             for (int i = 0; i < edgeArray.length(); ++i) {
                 try {
                     decodedWritable =
@@ -137,17 +143,18 @@ public class JsonBase64VertexInputFormat<
                 Edge<I, E> edge = new Edge<I, E>();
                 edge.setConf(getContext().getConfiguration());
                 edge.readFields(input);
-                vertex.addEdge(edge.getDestVertexId(), edge.getEdgeValue());
+                edgeMap.put(edge.getDestVertexId(), edge.getEdgeValue());
             }
-            return true;
+            vertex.initialize(vertexId, vertexValue, edgeMap, null);
+            return vertex;
         }
     }
 
     @Override
-    public VertexReader<I, V, E> createVertexReader(
+    public VertexReader<I, V, E, M> createVertexReader(
             InputSplit split,
             TaskAttemptContext context) throws IOException {
-        return new JsonBase64VertexReader<I, V, E>(
-            textInputFormat.createRecordReader(split, context));
+        return new JsonBase64VertexReader<I, V, E, M>(textInputFormat.createRecordReader(split,
+            context));
     }
 }

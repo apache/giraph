@@ -37,10 +37,11 @@ public class BspUtils {
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public static <I extends WritableComparable,
                    V extends Writable,
-                   E extends Writable>
-            Class<? extends VertexInputFormat<I, V, E>>
+                   E extends Writable,
+                   M extends Writable>
+            Class<? extends VertexInputFormat<I, V, E, M>>
             getVertexInputFormatClass(Configuration conf) {
-        return (Class<? extends VertexInputFormat<I, V, E>>)
+        return (Class<? extends VertexInputFormat<I, V, E, M>>)
                 conf.getClass(GiraphJob.VERTEX_INPUT_FORMAT_CLASS,
                               null,
                               VertexInputFormat.class);
@@ -53,12 +54,16 @@ public class BspUtils {
      * @return Instantiated user vertex input format class
      */
     @SuppressWarnings("rawtypes")
-    public static <I extends WritableComparable, V extends Writable,
-            E extends Writable> VertexInputFormat<I, V, E>
+    public static <I extends WritableComparable,
+                   V extends Writable,
+                   E extends Writable,
+                   M extends Writable> VertexInputFormat<I, V, E, M>
             createVertexInputFormat(Configuration conf) {
-        Class<? extends VertexInputFormat<I, V, E>> vertexInputFormatClass =
+        Class<? extends VertexInputFormat<I, V, E, M>> vertexInputFormatClass =
             getVertexInputFormatClass(conf);
-        return ReflectionUtils.newInstance(vertexInputFormatClass, conf);
+        VertexInputFormat<I, V, E, M> inputFormat =
+            ReflectionUtils.newInstance(vertexInputFormatClass, conf);
+        return inputFormat;
     }
 
     /**
@@ -209,12 +214,12 @@ public class BspUtils {
                    V extends Writable,
                    E extends Writable,
                    M extends Writable>
-            Class<? extends Vertex<I, V, E, M>>
+            Class<? extends BasicVertex<I, V, E, M>>
             getVertexClass(Configuration conf) {
-        return (Class<? extends Vertex<I, V, E, M>>)
+        return (Class<? extends BasicVertex<I, V, E, M>>)
                 conf.getClass(GiraphJob.VERTEX_CLASS,
                               null,
-                              Vertex.class);
+                              BasicVertex.class);
     }
 
     /**
@@ -225,14 +230,10 @@ public class BspUtils {
      */
     @SuppressWarnings("rawtypes")
     public static <I extends WritableComparable, V extends Writable,
-            E extends Writable, M extends Writable> Vertex<I, V, E, M>
-            createVertex(Configuration conf,
-            GraphState<I, V, E, M> graphState) {
-        Class<? extends Vertex<I, V, E, M>> vertexClass =
-            getVertexClass(conf);
-        Vertex<I, V, E, M> vertex =
-            ReflectionUtils.newInstance(vertexClass, conf);
-        vertex.setGraphState(graphState);
+            E extends Writable, M extends Writable> BasicVertex<I, V, E, M>
+            createVertex(Configuration conf) {
+        Class<? extends BasicVertex<I, V, E, M>> vertexClass = getVertexClass(conf);
+        BasicVertex<I, V, E, M> vertex = ReflectionUtils.newInstance(vertexClass, conf);
         return vertex;
     }
 

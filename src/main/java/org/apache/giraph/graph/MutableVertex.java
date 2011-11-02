@@ -30,7 +30,7 @@ import java.io.IOException;
 @SuppressWarnings("rawtypes")
 public abstract class MutableVertex<I extends WritableComparable,
         V extends Writable, E extends Writable, M extends Writable>
-        extends BasicVertex<I, V, E, M> implements Writable {
+        extends BasicVertex<I, V, E, M> {
     /**
      * Set the vertex id
      *
@@ -57,15 +57,15 @@ public abstract class MutableVertex<I extends WritableComparable,
     public abstract E removeEdge(I targetVertexId);
 
     /**
-     * Create a vertex for use in addVertexRequest().  Still need to get the
-     * vertex id and vertex value.
+     * Create a vertex to add to the graph.
      *
-     * @return Created vertex for addVertexRequest.
+     * @return A new vertex for adding to the graph
      */
     public MutableVertex<I, V, E, M> instantiateVertex() {
-        Vertex<I, V, E, M> mutableVertex =
-            BspUtils.createVertex(getContext().getConfiguration(),
-                                  getGraphState());
+        MutableVertex<I, V, E, M> mutableVertex =
+            (MutableVertex<I, V, E, M>) BspUtils
+               .<I, V, E, M>createVertex(getContext().getConfiguration());
+        mutableVertex.setGraphState(getGraphState());
         return mutableVertex;
     }
 
@@ -79,7 +79,7 @@ public abstract class MutableVertex<I extends WritableComparable,
             throws IOException {
         getGraphState().getGraphMapper().getWorkerCommunications().
         addVertexReq(vertex);
-}
+    }
 
     /**
      * Request to remove a vertex from the graph

@@ -18,18 +18,19 @@
 
 package org.apache.giraph.graph;
 
-import java.io.IOException;
-
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
+import java.io.IOException;
+
 @SuppressWarnings("rawtypes")
 public interface VertexReader<
         I extends WritableComparable,
         V extends Writable,
-        E extends Writable> {
+        E extends Writable,
+        M extends Writable> {
     /**
      * Use the input split and context to setup reading the vertices.
      * Guaranteed to be called prior to any other function.
@@ -43,14 +44,20 @@ public interface VertexReader<
         throws IOException, InterruptedException;
 
     /**
-     * Reads the next vertex and associated data
      *
-     * @param vertex set the properties of this vertex
-     * @return true iff a vertex and associated data was read, false if at EOF
+     * @return false iff there are no more vertices
+     * @throws IOException
      * @throws InterruptedException
      */
-    boolean next(MutableVertex<I, V, E, ?> vertex)
-        throws IOException, InterruptedException;
+    boolean nextVertex() throws IOException, InterruptedException;
+
+    /**
+     *
+     * @return the current vertex which has been read.  nextVertex() should be called first.
+     * @throws IOException
+     * @throws InterruptedException
+     */
+    BasicVertex<I, V, E, M> getCurrentVertex() throws IOException, InterruptedException;
 
     /**
      * Close this {@link VertexReader} to future operations.

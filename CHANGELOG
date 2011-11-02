@@ -2,13 +2,16 @@ Giraph Change Log
 
 Release 0.70.0 - unreleased
 
-  GIRAPH-50. Require Maven 3 in order to work with munging plugin.
+  GIRAPH-36: Ensure that subclassing BasicVertex is possible by user
+  apps. (jake.mannix via aching)
+
+  GIRAPH-50: Require Maven 3 in order to work with munging plugin.
   (jghoman)
   
-  GIRAPH-67. Provide AdjacencyList InputFormat for Ids of Strings and
+  GIRAPH-67: Provide AdjacencyList InputFormat for Ids of Strings and
   double values. (jghoman)
 
-  GIRAPH-56. Create a CSV TextOutputFormat. (jghoman)
+  GIRAPH-56: Create a CSV TextOutputFormat. (jghoman)
 
   GIRAPH-66: Add presentations section to website. (jghoman)
 
@@ -16,7 +19,7 @@ Release 0.70.0 - unreleased
   lists. (jghoman)
 
   GIRAPH-59: Missing some test if debug enabled before LOG.debug() and
-  LOG.info(). (guzhiwei via aching).
+  LOG.info(). (guzhiwei via aching)
 
   GIRAPH-48: numFlushThreads is 0 when doing a single worker 
   unittest. Changing the minimum to 1. (aching)
@@ -47,7 +50,7 @@ Release 0.70.0 - unreleased
 
   GIRAPH-31: Hide the SortedMap<I, Edge<I,E>> in Vertex from client
   visibility (impl. detail), replace with appropriate accessor
-  methods. jake.mannix via aching.
+  methods. (jake.mannix via aching)
 
   GIRAPH-30: NPE in ZooKeeperManager if base directory cannot be
   created. apurtell via aching.

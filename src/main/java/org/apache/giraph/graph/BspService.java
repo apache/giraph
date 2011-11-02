@@ -124,7 +124,7 @@ public abstract class BspService <
     /** File system */
     private final FileSystem fs;
     /** Used to call pre/post application/superstep methods */
-    private final Vertex<I, V, E, M> representativeVertex;
+    private final BasicVertex<I, V, E, M> representativeVertex;
     /** Checkpoint frequency */
     private int checkpointFrequency = -1;
     /** Vertex range map based on the superstep below */
@@ -630,9 +630,8 @@ public abstract class BspService <
 
         this.representativeVertex =
             BspUtils.<I, V, E, M>createVertex(
-                getConfiguration(),
-                getGraphMapper().getGraphState());
-
+                getConfiguration());
+        this.representativeVertex.setGraphState(getGraphMapper().getGraphState());
         this.checkpointFrequency =
             conf.getInt(GiraphJob.CHECKPOINT_FREQUENCY,
                           GiraphJob.CHECKPOINT_FREQUENCY_DEFAULT);
@@ -675,7 +674,7 @@ public abstract class BspService <
      *
      * @return Representative vertex for this service.
      */
-    final public Vertex<I, V, E, M> getRepresentativeVertex() {
+    final public BasicVertex<I, V, E, M> getRepresentativeVertex() {
         return representativeVertex;
     }
 

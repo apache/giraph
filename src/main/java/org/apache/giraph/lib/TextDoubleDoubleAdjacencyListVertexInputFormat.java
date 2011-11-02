@@ -21,6 +21,7 @@ import org.apache.giraph.graph.Edge;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
@@ -32,11 +33,11 @@ import java.io.IOException;
  * Strings and values as doubles.  This is a good inputformat for reading
  * graphs where the id types do not matter and can be stashed in a String.
  */
-public class TextDoubleDoubleAdjacencyListVertexInputFormat
-    extends TextVertexInputFormat<Text, DoubleWritable, DoubleWritable>  {
+public class TextDoubleDoubleAdjacencyListVertexInputFormat<M extends Writable>
+    extends TextVertexInputFormat<Text, DoubleWritable, DoubleWritable, M>  {
 
-  static class VertexReader extends AdjacencyListVertexReader<Text,
-      DoubleWritable, DoubleWritable> {
+  static class VertexReader<M extends Writable> extends AdjacencyListVertexReader<Text,
+      DoubleWritable, DoubleWritable, M> {
 
     VertexReader(RecordReader<LongWritable, Text> lineRecordReader) {
       super(lineRecordReader);
@@ -66,9 +67,12 @@ public class TextDoubleDoubleAdjacencyListVertexInputFormat
   }
 
   @Override
-  public org.apache.giraph.graph.VertexReader createVertexReader(InputSplit split,
-                                 TaskAttemptContext context) throws IOException {
-    return new VertexReader(textInputFormat.createRecordReader(split, context));
+  public org.apache.giraph.graph.VertexReader<Text, DoubleWritable,
+    DoubleWritable, M> createVertexReader(
+      InputSplit split,
+      TaskAttemptContext context) throws IOException {
+    return new VertexReader<M>(textInputFormat.createRecordReader(
+      split, context));
   }
 
 }

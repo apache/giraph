@@ -18,17 +18,16 @@
 
 package org.apache.giraph.examples;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-
+import org.apache.giraph.bsp.BspInputSplit;
+import org.apache.giraph.graph.VertexInputFormat;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
 
-import org.apache.giraph.bsp.BspInputSplit;
-import org.apache.giraph.graph.VertexInputFormat;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * This VertexInputFormat is meant for testing/debugging.  It simply generates
@@ -36,8 +35,9 @@ import org.apache.giraph.graph.VertexInputFormat;
  */
 @SuppressWarnings("rawtypes")
 public abstract class GeneratedVertexInputFormat<
-        I extends WritableComparable, V extends Writable, E extends Writable>
-        extends VertexInputFormat<I, V, E> {
+        I extends WritableComparable, V extends Writable, E extends Writable,
+        M extends Writable>
+        extends VertexInputFormat<I, V, E, M> {
 
     @Override
     public List<InputSplit> getSplits(JobContext context, int numWorkers)
