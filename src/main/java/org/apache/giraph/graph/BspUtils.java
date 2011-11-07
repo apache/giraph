@@ -202,6 +202,42 @@ public class BspUtils {
         resolver.setGraphState(graphState);
         return resolver;
     }
+    
+   /**
+     * Get the user's subclassed WorkerContext.
+     *
+     * @param conf Configuration to check
+     * @return User's worker context class
+     */
+	public static Class<? extends WorkerContext>
+            getWorkerContextClass(Configuration conf) {
+        return (Class<? extends WorkerContext>)
+                conf.getClass(GiraphJob.WORKER_CONTEXT_CLASS,
+                              DefaultWorkerContext.class,
+                              WorkerContext.class);
+    }
+     
+   /**
+     * Create a user worker context
+     *
+     * @param conf Configuration to check
+     * @return Instantiated user worker context
+     */
+    @SuppressWarnings("rawtypes")
+	public static <I extends WritableComparable, 
+    			   V extends Writable,
+    			   E extends Writable, 
+    			   M extends Writable> 
+    		WorkerContext createWorkerContext(Configuration conf,
+            		GraphState<I, V, E, M> graphState) {
+        Class<? extends WorkerContext> workerContextClass =
+            getWorkerContextClass(conf);
+        WorkerContext workerContext =
+             ReflectionUtils.newInstance(workerContextClass, conf);
+        workerContext.setGraphState(graphState);
+        return workerContext;
+    }
+    
 
     /**
      * Get the user's subclassed Vertex.

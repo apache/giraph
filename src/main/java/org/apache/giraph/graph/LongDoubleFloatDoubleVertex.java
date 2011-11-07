@@ -67,28 +67,6 @@ public abstract class LongDoubleFloatDoubleVertex extends
     }
 
     @Override
-    public void preApplication()
-            throws InstantiationException, IllegalAccessException {
-        // Do nothing, might be overriden by the user
-    }
-
-    @Override
-    public void postApplication() {
-        // Do nothing, might be overriden by the user
-    }
-
-    @Override
-    public void preSuperstep() {
-        // Do nothing, might be overriden by the user
-    }
-
-    @Override
-    public void postSuperstep() {
-        // Do nothing, might be overriden by the user
-    }
-
-
-    @Override
     public final boolean addEdge(LongWritable targetId, FloatWritable edgeValue) {
         if (verticesWithEdgeValues.put(targetId.get(), edgeValue.get())) {
             if (LOG.isDebugEnabled()) {

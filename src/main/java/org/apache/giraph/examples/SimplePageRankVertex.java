@@ -19,11 +19,13 @@
 package org.apache.giraph.examples;
 
 import com.google.common.collect.Maps;
+
 import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.LongDoubleFloatDoubleVertex;
 import org.apache.giraph.graph.VertexReader;
 import org.apache.giraph.graph.VertexWriter;
+import org.apache.giraph.graph.WorkerContext;
 import org.apache.giraph.lib.TextVertexOutputFormat;
 import org.apache.giraph.lib.TextVertexOutputFormat.TextVertexWriter;
 import org.apache.hadoop.io.DoubleWritable;
@@ -43,61 +45,9 @@ import java.util.Map;
  * Demonstrates the basic Pregel PageRank implementation.
  */
 public class SimplePageRankVertex extends LongDoubleFloatDoubleVertex {
-    /** User can access this sum after the application finishes if local */
-    public static long finalSum;
-    /** User can access this min after the application finishes if local */
-    public static double finalMin;
-    /** User can access this max after the application finishes if local */
-    public static double finalMax;
-    /** Logger */
+	/** Logger */
     private static final Logger LOG =
         Logger.getLogger(SimplePageRankVertex.class);
-
-    @Override
-    public void preApplication()
-            throws InstantiationException, IllegalAccessException {
-        registerAggregator("sum", LongSumAggregator.class);
-        registerAggregator("min", MinAggregator.class);
-        registerAggregator("max", MaxAggregator.class);
-    }
-
-    @Override
-    public void postApplication() {
-        LongSumAggregator sumAggreg = (LongSumAggregator) getAggregator("sum");
-        MinAggregator minAggreg = (MinAggregator) getAggregator("min");
-        MaxAggregator maxAggreg = (MaxAggregator) getAggregator("max");
-        finalSum = sumAggreg.getAggregatedValue().get();
-        finalMin = minAggreg.getAggregatedValue().get();
-        finalMax = maxAggreg.getAggregatedValue().get();
-
-    }
-
-    @Override
-    public void preSuperstep() {
-        LongSumAggregator sumAggreg = (LongSumAggregator) getAggregator("sum");
-        MinAggregator minAggreg = (MinAggregator) getAggregator("min");
-        MaxAggregator maxAggreg = (MaxAggregator) getAggregator("max");
-        if (getSuperstep() >= 3) {
-            LOG.info("aggregatedNumVertices=" +
-                    sumAggreg.getAggregatedValue() +
-                    " NumVertices=" + getNumVertices());
-            if (sumAggreg.getAggregatedValue().get() != getNumVertices()) {
-                throw new RuntimeException("wrong value of SumAggreg: " +
-                        sumAggreg.getAggregatedValue() + ", should be: " +
-                        getNumVertices());
-            }
-            DoubleWritable maxPagerank =
-                    (DoubleWritable)maxAggreg.getAggregatedValue();
-            LOG.info("aggregatedMaxPageRank=" + maxPagerank.get());
-            DoubleWritable minPagerank =
-                    (DoubleWritable)minAggreg.getAggregatedValue();
-            LOG.info("aggregatedMinPageRank=" + minPagerank.get());
-        }
-        useAggregator("sum");
-        useAggregator("min");
-        useAggregator("max");
-        sumAggreg.setAggregatedValue(new LongWritable(0L));
-    }
 
     @Override
     public void compute(Iterator<DoubleWritable> msgIterator) {
@@ -129,6 +79,76 @@ public class SimplePageRankVertex extends LongDoubleFloatDoubleVertex {
         }
     }
 
+	public static class SimplePageRankVertexWorkerContext extends
+    		WorkerContext {
+
+    	public static double finalMax, finalMin;
+    	public static long finalSum;
+    	
+    	@Override
+    	public void preApplication() 
+    	throws InstantiationException, IllegalAccessException {
+    		
+    		registerAggregator("sum", LongSumAggregator.class);
+    		registerAggregator("min", MinAggregator.class);
+    		registerAggregator("max", MaxAggregator.class);			
+    	}
+
+    	@Override
+    	public void postApplication() {
+
+    		LongSumAggregator sumAggreg = 
+    			(LongSumAggregator) getAggregator("sum");
+    		MinAggregator minAggreg = 
+    			(MinAggregator) getAggregator("min");
+    		MaxAggregator maxAggreg = 
+    			(MaxAggregator) getAggregator("max");
+
+    		finalSum = sumAggreg.getAggregatedValue().get();
+    		finalMax = maxAggreg.getAggregatedValue().get();
+    		finalMin = minAggreg.getAggregatedValue().get();
+    		
+            LOG.info("aggregatedNumVertices=" + finalSum);
+            LOG.info("aggregatedMaxPageRank=" + finalMax);
+            LOG.info("aggregatedMinPageRank=" + finalMin);
+    	}
+
+		@Override
+		public void preSuperstep() {
+    		
+	        LongSumAggregator sumAggreg = 
+	        	(LongSumAggregator) getAggregator("sum");
+	        MinAggregator minAggreg = 
+	        	(MinAggregator) getAggregator("min");
+	        MaxAggregator maxAggreg = 
+	        	(MaxAggregator) getAggregator("max");
+	        
+	        if (getSuperstep() >= 3) {
+	            LOG.info("aggregatedNumVertices=" +
+	                    sumAggreg.getAggregatedValue() +
+	                    " NumVertices=" + getNumVertices());
+	            if (sumAggreg.getAggregatedValue().get() != getNumVertices()) {
+	                throw new RuntimeException("wrong value of SumAggreg: " +
+	                        sumAggreg.getAggregatedValue() + ", should be: " +
+	                        getNumVertices());
+	            }
+	            DoubleWritable maxPagerank =
+	                    (DoubleWritable) maxAggreg.getAggregatedValue();
+	            LOG.info("aggregatedMaxPageRank=" + maxPagerank.get());
+	            DoubleWritable minPagerank =
+	                    (DoubleWritable) minAggreg.getAggregatedValue();
+	            LOG.info("aggregatedMinPageRank=" + minPagerank.get());
+	        }
+	        useAggregator("sum");
+	        useAggregator("min");
+	        useAggregator("max");
+	        sumAggreg.setAggregatedValue(new LongWritable(0L));
+		}
+
+		@Override
+		public void postSuperstep() { }
+    }
+    
     /**
      * Simple VertexReader that supports {@link SimplePageRankVertex}
      */

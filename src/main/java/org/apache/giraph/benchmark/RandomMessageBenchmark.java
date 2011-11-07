@@ -45,28 +45,18 @@ public class RandomMessageBenchmark extends
     private Configuration conf;
 
     /** How many supersteps to run */
-    public static String SUPERSTEP_COUNT = "RandomMessageBenchmark.superstepCount";
-    
+    public static String SUPERSTEP_COUNT =
+        "RandomMessageBenchmark.superstepCount";
+
     /** How many bytes per message */
-    public static String NUM_BYTES_PER_MESSAGE = "RandomMessageBenchmark.numBytesPerMessage";
+    public static String NUM_BYTES_PER_MESSAGE =
+        "RandomMessageBenchmark.numBytesPerMessage";
     /** How many bytes per message */
-    public static String NUM_MESSAGES_PER_VERTEX = "RandomMessageBenchmark.numMessagesPerVertex";
-    
+    public static String NUM_MESSAGES_PER_VERTEX =
+        "RandomMessageBenchmark.numMessagesPerVertex";
+
     /** Random generator for random bytes message */
     private Random rnd = new Random(System.currentTimeMillis());
-
-    @Override
-    public void preApplication()
-        throws InstantiationException, IllegalAccessException {
-    }
-
-    @Override
-    public void postApplication() {
-    }
-
-    @Override
-    public void preSuperstep() {
-    }
 
     @Override
     public void compute(Iterator<BytesWritable> msgIterator) {
@@ -74,9 +64,9 @@ public class RandomMessageBenchmark extends
         int numMessage = getConf().getInt(NUM_MESSAGES_PER_VERTEX, 1);
         if (getSuperstep() < getConf().getInt(SUPERSTEP_COUNT, -1)) {
             for (int i=0; i < numMessage; i++) {
-                rnd.nextBytes(message);         
+                rnd.nextBytes(message);
                 sendMsgToAllEdges(new BytesWritable(message));
-            }                     
+            }
         } else {
             voteToHalt();
         }
@@ -125,7 +115,7 @@ public class RandomMessageBenchmark extends
                 "flusher",
                 true,
                 "Number of flush threads");
-        
+
         HelpFormatter formatter = new HelpFormatter();
         if (args.length == 0) {
             formatter.printHelp(getClass().getName(), options, true);
@@ -178,11 +168,11 @@ public class RandomMessageBenchmark extends
             SUPERSTEP_COUNT,
             Integer.parseInt(cmd.getOptionValue('s')));
         job.getConfiguration().setInt(
-                RandomMessageBenchmark.NUM_BYTES_PER_MESSAGE,
-                Integer.parseInt(cmd.getOptionValue('b')));
+            RandomMessageBenchmark.NUM_BYTES_PER_MESSAGE,
+            Integer.parseInt(cmd.getOptionValue('b')));
         job.getConfiguration().setInt(
-                RandomMessageBenchmark.NUM_MESSAGES_PER_VERTEX,
-                Integer.parseInt(cmd.getOptionValue('n')));
+            RandomMessageBenchmark.NUM_MESSAGES_PER_VERTEX,
+            Integer.parseInt(cmd.getOptionValue('n')));
 
         boolean isVerbose = false;
         if (cmd.hasOption('v')) {
@@ -193,8 +183,8 @@ public class RandomMessageBenchmark extends
                              Integer.parseInt(cmd.getOptionValue('s')));
         }
         if (cmd.hasOption('f')) {
-            job.getConfiguration().setInt(GiraphJob.MSG_NUM_FLUSH_THREADS, 
-                Integer.parseInt(cmd.getOptionValue('f')));         
+            job.getConfiguration().setInt(GiraphJob.MSG_NUM_FLUSH_THREADS,
+                Integer.parseInt(cmd.getOptionValue('f')));
         }
         if (job.run(isVerbose) == true) {
             return 0;

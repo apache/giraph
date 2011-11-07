@@ -49,34 +49,6 @@ public abstract class BasicVertex<I extends WritableComparable,
     public abstract void initialize(I vertexId, V vertexValue, Map<I, E> edges, List<M> messages);
 
     /**
-     * Optionally defined by the user to be executed once on all workers
-     * before application has started.
-     *
-     * @throws IllegalAccessException
-     * @throws InstantiationException
-     */
-    public abstract void preApplication()
-        throws InstantiationException, IllegalAccessException;
-
-    /**
-     * Optionally defined by the user to be executed once on all workers
-     * after the application has completed.
-     */
-    public abstract void postApplication();
-
-    /**
-     * Optionally defined by the user to be executed once prior to vertex
-     * processing on a worker for the current superstep.
-     */
-    public abstract void preSuperstep();
-
-    /**
-     * Optionally defined by the user to be executed once after all vertex
-     * processing on a worker for the current superstep.
-     */
-    public abstract void postSuperstep();
-
-    /**
      * Must be defined by user to do computation on a single Vertex.
      *
      * @param msgIterator Iterator to the messages that were sent to this
@@ -232,6 +204,15 @@ public abstract class BasicVertex<I extends WritableComparable,
      */
     public Mapper.Context getContext() {
         return getGraphState().getContext();
+    }
+    
+    /**
+     * Get the worker context
+     * 
+     * @return WorkerContext context
+     */
+    public WorkerContext getWorkerContext() {
+        return getGraphState().getGraphMapper().getWorkerContext();
     }
 
     @Override

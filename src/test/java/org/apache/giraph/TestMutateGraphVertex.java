@@ -60,6 +60,8 @@ public class TestMutateGraphVertex extends BspCase {
         GiraphJob job = new GiraphJob(getCallingMethodName());
         setupConfiguration(job);
         job.setVertexClass(SimpleMutateGraphVertex.class);
+        job.setWorkerContextClass(
+        		SimpleMutateGraphVertex.SimpleMutateGraphVertexWorkerContext.class);
         job.setVertexInputFormatClass(SimplePageRankVertexInputFormat.class);
         job.setVertexOutputFormatClass(SimplePageRankVertexOutputFormat.class);
         Path outputPath = new Path("/tmp/" + getCallingMethodName());

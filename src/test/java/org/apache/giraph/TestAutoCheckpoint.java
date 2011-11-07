@@ -81,6 +81,8 @@ public class TestAutoCheckpoint extends BspCase {
         job.setVertexClass(SimpleCheckpointVertex.class);
         job.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
         job.setVertexOutputFormatClass(SimpleSuperstepVertexOutputFormat.class);
+        job.setWorkerContextClass(
+            SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.class);
         Path outputPath = new Path("/tmp/" + getCallingMethodName());
         removeAndSetOutput(job, outputPath);
         assertTrue(job.run(true));

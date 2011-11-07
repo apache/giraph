@@ -273,12 +273,17 @@ public class TestBspBasic extends BspCase {
         GiraphJob job = new GiraphJob(getCallingMethodName());
         setupConfiguration(job);
         job.setVertexClass(SimplePageRankVertex.class);
+        job.setWorkerContextClass(
+        	SimplePageRankVertex.SimplePageRankVertexWorkerContext.class);
         job.setVertexInputFormatClass(SimplePageRankVertexInputFormat.class);
         assertTrue(job.run(true));
         if (getJobTracker() == null) {
-            double maxPageRank = SimplePageRankVertex.finalMax;
-            double minPageRank = SimplePageRankVertex.finalMin;
-            long numVertices = SimplePageRankVertex.finalSum;
+            double maxPageRank = 
+            	SimplePageRankVertex.SimplePageRankVertexWorkerContext.finalMax;
+            double minPageRank = 
+            	SimplePageRankVertex.SimplePageRankVertexWorkerContext.finalMin;
+            long numVertices = 
+            	SimplePageRankVertex.SimplePageRankVertexWorkerContext.finalSum;
             System.out.println("testBspPageRank: maxPageRank=" + maxPageRank +
                                " minPageRank=" + minPageRank +
                                " numVertices=" + numVertices);

@@ -107,6 +107,10 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
     public final AggregatorUsage getAggregatorUsage() {
         return serviceWorker;
     }
+    
+    public final WorkerContext getWorkerContext() {
+    	return serviceWorker.getWorkerContext();
+    }
 
     public final GraphState<I,V,E,M> getGraphState() {
       return graphState;
@@ -519,8 +523,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
                   .setNumVertices(serviceWorker.getTotalVertices());
 
         try {
-            serviceWorker.getRepresentativeVertex().setGraphState(graphState);
-            serviceWorker.getRepresentativeVertex().preApplication();
+            serviceWorker.getWorkerContext().preApplication();
         } catch (InstantiationException e) {
             LOG.fatal("map: preApplication failed in instantiation", e);
             throw new RuntimeException(
@@ -588,7 +591,8 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
             serviceWorker.exchangeVertexRanges();
             context.progress();
 
-            serviceWorker.getRepresentativeVertex().preSuperstep();
+            serviceWorker.getWorkerContext().setGraphState(graphState);
+            serviceWorker.getWorkerContext().preSuperstep();
             context.progress();
 
             workerFinishedVertices = 0;
@@ -631,7 +635,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
                 }
             }
 
-            serviceWorker.getRepresentativeVertex().postSuperstep();
+            serviceWorker.getWorkerContext().postSuperstep();
             context.progress();
             if (LOG.isInfoEnabled()) {
                 LOG.info("map: totalMem="
@@ -649,7 +653,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
                      "(global vertices marked done)");
         }
 
-        serviceWorker.getRepresentativeVertex().postApplication();
+        serviceWorker.getWorkerContext().postApplication();
         context.progress();
     }
 

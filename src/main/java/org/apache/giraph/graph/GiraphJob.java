@@ -58,6 +58,8 @@ public class GiraphJob extends Job {
     public static final String EDGE_VALUE_CLASS = "giraph.edgeValueClass";
     /** Message value class */
     public static final String MESSAGE_VALUE_CLASS = "giraph.messageValueClass";
+    /** Worker context class */
+    public static final String WORKER_CONTEXT_CLASS = "giraph.workerContextClass";
 
     /**
      * Minimum number of simultaneous workers before this job can run (int)
@@ -392,7 +394,19 @@ public class GiraphJob extends Job {
                                     vertexResolverClass,
                                     VertexResolver.class);
     }
-
+    
+   /**
+    * Set the worker context class (optional)
+    *
+    * @param workerContextClass Determines what code is executed on a each
+    *        worker before and after each superstep and computation
+    */
+    final public void setWorkerContextClass(Class<?> workerContextClass) {
+        getConfiguration().setClass(WORKER_CONTEXT_CLASS,
+                                    workerContextClass,
+                                    WorkerContext.class);
+    }
+    
     /**
      * Set worker configuration for determining what is required for
      * a superstep.

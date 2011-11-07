@@ -82,27 +82,6 @@ public abstract class Vertex<I extends WritableComparable, V extends Writable,
     }
 
     @Override
-    public void preApplication()
-            throws InstantiationException, IllegalAccessException {
-        // Do nothing, might be overriden by the user
-    }
-
-    @Override
-    public void postApplication() {
-        // Do nothing, might be overriden by the user
-    }
-
-    @Override
-    public void preSuperstep() {
-        // Do nothing, might be overriden by the user
-    }
-
-    @Override
-    public void postSuperstep() {
-        // Do nothing, might be overriden by the user
-    }
-
-    @Override
     public final boolean addEdge(I targetVertexId, E edgeValue) {
         if (destEdgeMap.put(
                 targetVertexId,

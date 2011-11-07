@@ -27,6 +27,7 @@ import org.apache.giraph.graph.AggregatorUsage;
 import org.apache.giraph.graph.GraphMapper;
 import org.apache.giraph.graph.VertexRange;
 import org.apache.giraph.graph.BasicVertexRangeBalancer;
+import org.apache.giraph.graph.WorkerContext;
 
 /**
  * All workers should have access to this centralized service to
@@ -52,6 +53,12 @@ public interface CentralizedServiceWorker<
      * @return RPC server of this worker
      */
     int getPort();
+
+   /**
+    * 
+    * @return worker's WorkerContext
+    */
+    WorkerContext getWorkerContext();
 
     /**
      * Get a synchronized map to the partitions and their sorted vertex lists.

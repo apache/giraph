@@ -68,6 +68,8 @@ public class TestManualCheckpoint extends BspCase {
         job.getConfiguration().setBoolean(
             GiraphJob.CLEANUP_CHECKPOINTS_AFTER_SUCCESS, false);
         job.setVertexClass(SimpleCheckpointVertex.class);
+        job.setWorkerContextClass(
+            SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.class);
         job.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
         job.setVertexOutputFormatClass(SimpleSuperstepVertexOutputFormat.class);
         Path outputPath = new Path("/tmp/" + getCallingMethodName());
@@ -78,7 +80,8 @@ public class TestManualCheckpoint extends BspCase {
         if (getJobTracker() == null) {
             FileStatus fileStatus = getSinglePartFileStatus(job, outputPath);
             fileLen = fileStatus.getLen();
-            idSum = SimpleCheckpointVertex.finalSum;
+            idSum =
+            	SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.finalSum;
             System.out.println("testBspCheckpoint: idSum = " + idSum +
                                " fileLen = " + fileLen);
         }
@@ -94,6 +97,8 @@ public class TestManualCheckpoint extends BspCase {
                                             HDFS_CHECKPOINT_DIR);
         restartedJob.getConfiguration().setLong(GiraphJob.RESTART_SUPERSTEP, 2);
         restartedJob.setVertexClass(SimpleCheckpointVertex.class);
+        restartedJob.setWorkerContextClass(
+        	SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.class);
         restartedJob.setVertexInputFormatClass(
             SimpleSuperstepVertexInputFormat.class);
         restartedJob.setVertexOutputFormatClass(
@@ -105,7 +110,8 @@ public class TestManualCheckpoint extends BspCase {
             FileStatus fileStatus = getSinglePartFileStatus(job, outputPath);
             fileLen = fileStatus.getLen();
             assertTrue(fileStatus.getLen() == fileLen);
-            long idSumRestarted = SimpleCheckpointVertex.finalSum;
+            long idSumRestarted =
+            	SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.finalSum;
             System.out.println("testBspCheckpoint: idSumRestarted = " +
                                idSumRestarted);
             assertTrue(idSum == idSumRestarted);

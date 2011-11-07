@@ -65,6 +65,8 @@ public class TestVertexRangeBalancer extends BspCase {
         GiraphJob job = new GiraphJob("testStaticBalancer");
         setupConfiguration(job);
         job.setVertexClass(SimpleCheckpointVertex.class);
+        job.setWorkerContextClass(
+        		SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.class);
         job.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
         job.setVertexOutputFormatClass(SimpleSuperstepVertexOutputFormat.class);
         Path outputPath = new Path("/tmp/testStaticBalancer");
@@ -86,6 +88,8 @@ public class TestVertexRangeBalancer extends BspCase {
         job = new GiraphJob("testSuperstepBalancer");
         setupConfiguration(job);
         job.setVertexClass(SimpleCheckpointVertex.class);
+        job.setWorkerContextClass(
+        		SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.class);
         job.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
         job.setVertexOutputFormatClass(SimpleSuperstepVertexOutputFormat.class);
         job.setVertexRangeBalancerClass(SuperstepBalancer.class);
@@ -106,6 +110,8 @@ public class TestVertexRangeBalancer extends BspCase {
         job = new GiraphJob("testAutoBalancer");
         setupConfiguration(job);
         job.setVertexClass(SimpleCheckpointVertex.class);
+        job.setWorkerContextClass(
+        		SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.class);
         job.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
         job.setVertexOutputFormatClass(SimpleSuperstepVertexOutputFormat.class);
         job.setVertexRangeBalancerClass(AutoBalancer.class);

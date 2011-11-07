@@ -18,7 +18,6 @@
 
 package org.apache.giraph.bsp;
 
-import org.apache.giraph.graph.BasicVertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -37,14 +36,6 @@ public interface CentralizedService<I extends WritableComparable,
      * Setup (must be called prior to any other function)
      */
     void setup();
-
-    /**
-     * Get the representative Vertex for this worker.  It can used to
-     * call pre/post application/superstep methods defined by the user.
-     *
-     * @return representation vertex
-     */
-    BasicVertex<I, V, E, M> getRepresentativeVertex();
 
     /**
      * Get the current global superstep of the application to work on.

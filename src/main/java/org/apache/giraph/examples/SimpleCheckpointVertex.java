@@ -28,6 +28,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.log4j.Logger;
 
 import java.util.Iterator;
 
@@ -39,21 +40,14 @@ import java.util.Iterator;
 public class SimpleCheckpointVertex extends
         Vertex<LongWritable, IntWritable, FloatWritable, FloatWritable>
         implements Tool {
+    private static Logger LOG =
+        Logger.getLogger(SimpleCheckpointVertex.class);
     /** Configuration */
     private Configuration conf;
-    /** User can access this after the application finishes if local */
-    public static long finalSum;
-    /** Number of supersteps to run (6 by default) */
-    private static int supersteps = 6;
-    /** Filename to indicate whether a fault was found */
-    public final String faultFile = "/tmp/faultFile";
     /** Which superstep to cause the worker to fail */
     public final int faultingSuperstep = 4;
     /** Vertex id to fault on */
     public final long faultingVertexId = 1;
-    /** Enable the fault at the particular vertex id and superstep? */
-    private static boolean enableFault = false;
-
     /** Dynamically set number of supersteps */
     public static final String SUPERSTEP_COUNT =
         "simpleCheckpointVertex.superstepCount";
@@ -62,32 +56,16 @@ public class SimpleCheckpointVertex extends
         "simpleCheckpointVertex.enableFault";
 
     @Override
-    public void preApplication() throws InstantiationException, IllegalAccessException {
-        registerAggregator(LongSumAggregator.class.getName(),
-                           LongSumAggregator.class);
-        LongSumAggregator sumAggregator = (LongSumAggregator)
-            getAggregator(LongSumAggregator.class.getName());
-        sumAggregator.setAggregatedValue(new LongWritable(0));
-        supersteps = getConf().getInt(SUPERSTEP_COUNT, supersteps);
-        enableFault = getConf().getBoolean(ENABLE_FAULT, false);
-    }
-
-    @Override
-    public void postApplication() {
-        LongSumAggregator sumAggregator = (LongSumAggregator)
-            getAggregator(LongSumAggregator.class.getName());
-        finalSum = sumAggregator.getAggregatedValue().get();
-    }
-
-    @Override
-    public void preSuperstep() {
-        useAggregator(LongSumAggregator.class.getName());
-    }
-
-    @Override
     public void compute(Iterator<FloatWritable> msgIterator) {
+    	SimpleCheckpointVertexWorkerContext workerContext = 
+    		(SimpleCheckpointVertexWorkerContext) getWorkerContext();
+    	
         LongSumAggregator sumAggregator = (LongSumAggregator)
             getAggregator(LongSumAggregator.class.getName());
+        
+        boolean enableFault = workerContext.getEnableFault();
+        int supersteps = workerContext.getSupersteps();
+        
         if (enableFault && (getSuperstep() == faultingSuperstep) &&
                 (getContext().getTaskAttemptID().getId() == 0) &&
                 (getVertexId().get() == faultingVertexId)) {
@@ -133,6 +111,56 @@ public class SimpleCheckpointVertex extends
             sendMsg(targetVertexId, new FloatWritable(edgeValue.get()));
         }
     }
+    
+    public static class SimpleCheckpointVertexWorkerContext 
+            extends WorkerContext {
+        /** User can access this after the application finishes if local */
+        public static long finalSum;
+        /** Number of supersteps to run (6 by default) */
+        private int supersteps = 6;
+        /** Filename to indicate whether a fault was found */
+        public final String faultFile = "/tmp/faultFile";
+        /** Enable the fault at the particular vertex id and superstep? */
+        private boolean enableFault = false;
+
+		@Override
+		public void preApplication() 
+		        throws InstantiationException, IllegalAccessException {
+		    registerAggregator(LongSumAggregator.class.getName(),
+					LongSumAggregator.class);
+		    LongSumAggregator sumAggregator = (LongSumAggregator)
+		    getAggregator(LongSumAggregator.class.getName());
+		    sumAggregator.setAggregatedValue(new LongWritable(0));
+		    supersteps = getContext().getConfiguration()
+		        .getInt(SUPERSTEP_COUNT, supersteps);
+		    enableFault = getContext().getConfiguration()
+		        .getBoolean(ENABLE_FAULT, false);
+		}
+
+		@Override
+		public void postApplication() {
+		    LongSumAggregator sumAggregator = (LongSumAggregator)
+		        getAggregator(LongSumAggregator.class.getName());
+		    finalSum = sumAggregator.getAggregatedValue().get();
+		    LOG.info("finalSum="+ finalSum);
+		}
+
+		@Override
+		public void preSuperstep() {
+	        useAggregator(LongSumAggregator.class.getName());
+		}
+
+		@Override
+		public void postSuperstep() { }
+		
+		public int getSupersteps() {
+		    return this.supersteps;
+		}
+
+		public boolean getEnableFault() {
+		    return this.enableFault;
+		}
+    }
 
     @Override
     public int run(String[] args) throws Exception {
@@ -175,18 +203,15 @@ public class SimpleCheckpointVertex extends
             return -1;
         }
 
-        getConf().setClass(GiraphJob.VERTEX_CLASS, getClass(), Vertex.class);
-        getConf().setClass(GiraphJob.VERTEX_INPUT_FORMAT_CLASS,
-                           GeneratedVertexInputFormat.class,
-                           VertexInputFormat.class);
-        getConf().setClass(GiraphJob.VERTEX_OUTPUT_FORMAT_CLASS,
-                           SimpleTextVertexOutputFormat.class,
-                           VertexOutputFormat.class);
-        getConf().setInt(GiraphJob.MIN_WORKERS,
-                         Integer.parseInt(cmd.getOptionValue('w')));
-        getConf().setInt(GiraphJob.MAX_WORKERS,
-                         Integer.parseInt(cmd.getOptionValue('w')));
         GiraphJob bspJob = new GiraphJob(getConf(), getClass().getName());
+        bspJob.setVertexClass(getClass());
+        bspJob.setVertexInputFormatClass(GeneratedVertexInputFormat.class);
+        bspJob.setVertexOutputFormatClass(SimpleTextVertexOutputFormat.class);
+        bspJob.setWorkerContextClass(SimpleCheckpointVertexWorkerContext.class);
+        int minWorkers = Integer.parseInt(cmd.getOptionValue('w'));
+        int maxWorkers = Integer.parseInt(cmd.getOptionValue('w'));
+        bspJob.setWorkerConfiguration(minWorkers, maxWorkers, 100.0f);
+        
         FileOutputFormat.setOutputPath(bspJob,
                                        new Path(cmd.getOptionValue('o')));
         boolean verbose = false;

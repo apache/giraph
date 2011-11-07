@@ -81,6 +81,8 @@ public class BspServiceWorker<
     private final int finalRpcPort;
     /** List of aggregators currently in use */
     private Set<String> aggregatorInUse = new TreeSet<String>();
+    /** Worker Context */
+    private WorkerContext workerContext;
     /** Class logger */
     private static final Logger LOG = Logger.getLogger(BspServiceWorker.class);
 
@@ -93,10 +95,16 @@ public class BspServiceWorker<
             getConfiguration().getInt(GiraphJob.RPC_INITIAL_PORT,
                           GiraphJob.RPC_INITIAL_PORT_DEFAULT) +
                           getTaskPartition();
+        this.workerContext = BspUtils.createWorkerContext(getConfiguration(), 
+            graphMapper.getGraphState());
     }
 
     public int getPort() {
         return finalRpcPort;
+    }
+    
+    public WorkerContext getWorkerContext() {
+    	return workerContext;
     }
 
     /**

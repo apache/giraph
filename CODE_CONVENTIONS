@@ -49,7 +49,9 @@ if (LOG.isInfoEnabled()) {
 }
 
 - All classes, members, and member methods should have Javadoc in the following
-  style.  C-style comments for javadoc and // comments for non-javadoc.
+  style.  C-style comments for javadoc and // comments for non-javadoc.  Also, the comment 
+  block should have a line break that separates the comment section and the @ section.  
+  See below.
 
 /**
  * This is an example class
@@ -76,6 +78,11 @@ public class Giraffe {
   }
 }
 
-- Class members should not begin with 'm_' or '_'.
+- Class members should not begin with 'm_' or '_'
 - No warnings allowed, but be as specific as possible with warning suppression
 - Prefer to avoid abbreviations when reasonable (i.e. 'msg' vs 'message')
+- Static variable names should be entirely capitalized and seperated by '_' 
+  (i.e. private static int FOO_BAR_BAR = 2)
+- Non-static variable and method names should not begin capitalized and should only use
+  alphanumeric characters (i.e. int fooBarBar)
+- All classnames begin capitalized then use lower casing (i.e. class FooBarBar)

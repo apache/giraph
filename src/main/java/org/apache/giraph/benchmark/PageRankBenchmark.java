@@ -46,19 +46,6 @@ public class PageRankBenchmark extends
     public static String SUPERSTEP_COUNT = "PageRankBenchmark.superstepCount";
 
     @Override
-    public void preApplication()
-        throws InstantiationException, IllegalAccessException {
-    }
-
-    @Override
-    public void postApplication() {
-    }
-
-    @Override
-    public void preSuperstep() {
-    }
-
-    @Override
     public void compute(Iterator<DoubleWritable> msgIterator) {
         if (getSuperstep() >= 1) {
             double sum = 0;
