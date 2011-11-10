@@ -9,7 +9,7 @@ Release 0.70.0 - unreleased
   rat fails. (jghoman)
 
   GIRAPH-36: Ensure that subclassing BasicVertex is possible by user
-  apps. (jake.mannix via aching)
+  apps. (jmannix via aching)
 
   GIRAPH-50: Require Maven 3 in order to work with munging plugin.
   (jghoman)
