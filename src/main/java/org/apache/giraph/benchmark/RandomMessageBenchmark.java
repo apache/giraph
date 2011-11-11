@@ -132,7 +132,7 @@ public class RandomMessageBenchmark extends
             return -1;
         }
         if (!cmd.hasOption('s')) {
-            System.out.println("Need to set the number of supesteps (-s)");
+            System.out.println("Need to set the number of supersteps (-s)");
             return -1;
         }
         if (!cmd.hasOption('V')) {

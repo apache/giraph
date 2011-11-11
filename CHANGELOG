@@ -2,6 +2,8 @@ Giraph Change Log
 
 Release 0.70.0 - unreleased
 
+  GIRAPH-63: Typo in PageRankBenchmark. (shaunak via jghoman)
+
   GIRAPH-47: Export Worker's Context/State to vertices through
   pre/post/Application/Superstep. (cmartella via aching)
 
