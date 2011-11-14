@@ -25,6 +25,8 @@ import org.apache.giraph.comm.WorkerCommunications;
 import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.giraph.zk.ZooKeeperManager;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.filecache.DistributedCache;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -408,16 +410,32 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
 
         // Do some initial setup (possibly starting up a Zookeeper service)
         context.setStatus("setup: Initializing Zookeeper services.");
-        String jarFile = context.getJar();
-        if (jarFile == null) {
-            jarFile = findContainingJar(getClass());
+        Path[] fileClassPaths = DistributedCache.getLocalCacheArchives(conf);
+        String zkClasspath = null;
+        if(fileClassPaths == null) {
+            if(LOG.isInfoEnabled()) {
+                LOG.info("Distributed cache is empty. Assuming fatjar.");
+            }
+            String jarFile = context.getJar();
+            if (jarFile == null) {
+               jarFile = findContainingJar(getClass());
+            }
+            zkClasspath = jarFile.replaceFirst("file:", "");
+        } else {
+            StringBuilder sb = new StringBuilder();
+            sb.append(fileClassPaths[0]);
+
+            for (int i = 1; i < fileClassPaths.length; i++) {
+                sb.append(":");
+                sb.append(fileClassPaths[i]);
+            }
+            zkClasspath = sb.toString();
         }
-        String trimmedJarFile = jarFile.replaceFirst("file:", "");
+
         if (LOG.isInfoEnabled()) {
-            LOG.info("setup: jar file @ " + jarFile +
-                     ", using " + trimmedJarFile);
+            LOG.info("setup: classpath @ " + zkClasspath);
         }
-        conf.set(GiraphJob.ZOOKEEPER_JAR, trimmedJarFile);
+        conf.set(GiraphJob.ZOOKEEPER_JAR, zkClasspath);
         String serverPortList =
             conf.get(GiraphJob.ZOOKEEPER_LIST, "");
         if (serverPortList == "") {

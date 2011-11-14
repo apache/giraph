@@ -1,8 +1,11 @@
 Giraph Change Log
 
 Release 0.70.0 - unreleased
-  
-  GIRAPH-79. Change the menu layout of the site. (hyunsik via jghoman)
+ 
+  GIRAPH-64: Create VertexRunner to make it easier to run users'
+  computations. (jghoman)
+ 
+  GIRAPH-79: Change the menu layout of the site. (hyunsik via jghoman)
 
   GIRAPH-75: Create sections on how to get involved and how 
   to generate patches on website. (jghoman)
