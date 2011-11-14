@@ -54,26 +54,47 @@ under the License.
 	</ul>
 	</p>
 	</section>
+	<section name="Getting involved">
+		<p>Giraph is a new project and we're looking to quickly build a community of users and contributors. All types of help is appreciated: contributing patches, writing documentation, posing and answering questions on the mailing list, even <a href="https://issues.apache.org/jira/browse/GIRAPH-4">graphic design</a>. Here's how to get involved with Giraph (or any Apache project):</p>
+		<ul>
+		<li>Subscribe to the <a href="mail-lists.html">mailing lists</a>, particularly the user and dev list, and follow their activity for a while to get a feel for the state of the project and what the community is working on.</li>
+		<li>Browse through <a href="issue-tracking.html">Giraph's JIRA</a>, our issue tracking system, to find issues you may be interested in working on. To help new contributors pitch in quickly, we maintain a <a href="http://bit.ly/newbie_apache_giraph_issues">set of JIRAs</a> that focus on getting new contributors started with the mechanics of generating a patch &#151; downloading the source, changing a couple lines, creating a patch, verifying its correctness, uploading it to JIRA and working with the community &#151; rather that deep technical issues within Giraph itself. These are good issues with which to join the community. See <a href="#Generatingpatches">below</a> for detailed instructions on creating patches.</li>
+		<li>Try out the examples and play with Giraph on your cluster. Be sure to ask questions on the mailing list or open new JIRAs if you run into issues with your particular configuration.</li>
+	</ul>
+	</section>
 	<section name="Building and testing">
-		<p>You will need the following:
+		<p>You will need the following:</p>
 		<ul>
 		<li>Java 1.6</li>
 		<li>Maven 3 or higher. Giraph uses the <a href="http://sonatype.github.com/munge-maven-plugin/">munge plugin</a>, which requires Maven 3, to support multiple versions of Hadoop. Also, the web site plugin requires Maven 3.</li>
 	</ul>
 
-		Use the maven commands with secure Hadoop to:
+		<p>Use the maven commands with secure Hadoop to:
 		<ul>
-		<li>compile (i.e mvn compile)</li>
-		<li>package (i.e. mvn package)</li>
-		<li>test (i.e. mvn test) For testing, one can submit the test to a running Hadoop instance (i.e. mvn test -Dprop.mapred.job.tracker=localhost:50300)</li>
+		<li>compile (i.e <tt>mvn compile</tt>)</li>
+		<li>package (i.e. <tt>mvn package</tt>)</li>
+		<li>test (i.e. <tt>mvn test</tt>) For testing, one can submit the test to a running Hadoop instance (i.e. <tt>mvn test -Dprop.mapred.job.tracker=localhost:50300</tt>)</li>
 	    </ul>
 		For the non-secure versions of Hadoop, run the maven commands with the
-		additional argument '-Dhadoop=non_secure' to enable the maven profile
-		 'hadoop_non_secure'.  An example compilation command is
-		'mvn -Dhadoop=non_secure compile'.</p>
+		additional argument <tt>-Dhadoop=non_secure</tt> to enable the maven profile
+		 <tt>hadoop_non_secure</tt>.  An example compilation command is
+		<tt>mvn -Dhadoop=non_secure compile</tt>.</p>
 	</section>
   <section name="Notes">
-      Counter limit: In Hadoop 0.20.203.0 onwards, there is a limit on the number of counters one can use, which is set to 120 by default. This limit restricts the number of iterations/supersteps possible in Giraph. This limit can be increased by setting a parameter "mapreduce.job.counters.limit" in job tracker's config file mapred-site.xml.
+      Counter limit: In Hadoop 0.20.203.0 onwards, there is a limit on the number of counters one can use, which is set to 120 by default. This limit restricts the number of iterations/supersteps possible in Giraph. This limit can be increased by setting a parameter <tt>mapreduce.job.counters.limit</tt> in job tracker's config file mapred-site.xml.
   </section>
+  <section name="Generating patches" id="Generatingpatches">
+	<p>Follow these steps to generate a patch that can be attached to a JIRA issue for review.</p>
+    <ul>
+	   <li>Check out the Giraph source, either from the <a href="source-repository.html">subversion repository</a> or from a <a href="http://git.apache.org/">git mirror</a>. Note that the git mirrors may lag slightly behind the subversion repos.</li>
+	   <li>Make the changes necessary for your particular issue. Try to avoid unnecessary changes, such as extra whitespace or formatting changes. Include a unit test, or be ready to justify in the JIRA why one isn't necessary.</li>
+	   <li>Verify the new and existing tests continue to pass via <tt>mvn test</tt>. Verify the change works as expected on a real cluster, if possible. If one's not available for testing, mention it on the JIRA so another contributor can verify.</li>
+	   <li>Verify that RAT is ok with the changes that you've made via <tt>mvn rat:check</tt>. Also check that the patch follows Giraph's style guidelines (found in the source root in <tt>CODE_CONVENTIONS</tt>).</li>
+	   <li>Generate a patch either by <tt>svn diff > GIRAPH-{ISSUE-NUMBER}.patch</tt> or <tt>git diff --no-prefix trunk > GIRAPH-{ISSUE_NUMBER}.patch</tt> (the <tt>--no-prefix</tt> option is necessary to make the patch compatible with Apache's subversion repository). For subsequent patches, if necessary, number each version to make it easier for reviewers to track their progress.</li>
+		<li>Attach the patch to the JIRA issue (click <em>More Actions</em> and then <em>Attach File</em> from the top menu) using the comment to briefly explain what changes it contains and what testing was done. Mark the JIRA as <em>Patch Available</em> to let reviewers know it's ripe for evaluation.</li>
+		<li>Optionally, you can open <a href="https://reviews.apache.org/">reviewboard</a> request for the patch, although not all reviewers use this tool.</li>
+	</ul>
+	<p>A committer should review the patch shortly and either provide feedback for a new version, or commit it to the Giraph source.</p>
+	</section>
   </body>
 </document>
