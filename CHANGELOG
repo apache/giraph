@@ -2,6 +2,8 @@ Giraph Change Log
 
 Release 0.70.0 - unreleased
 
+  GIRAPH-58: Update site with Arun's id (asuresh)
+  
   GIRAPH-11: Improve the graph distribution of Giraph. (aching)
   
   GIRAPH-64: Create VertexRunner to make it easier to run users'

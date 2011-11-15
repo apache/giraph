@@ -129,11 +129,12 @@ under the License.
       <organizationUrl>http://www.fogbeam.com/</organizationUrl>
     </developer>
     <developer>
+      <id>asuresh</id>
       <name>Arun Suresh</name>
-      <email>asuresh@yahoo-inc.com</email>
+      <email>asuresh@apache.org</email>
       <timezone>-8</timezone>
-      <organization>Yahoo!</organization>
-      <organizationUrl>http://www.yahoo.com/</organizationUrl>
+      <organization>Informatica</organization>
+      <organizationUrl>http://www.informatica.com/</organizationUrl>
     </developer>
     <developer>
       <id>jake.mannix</id>
