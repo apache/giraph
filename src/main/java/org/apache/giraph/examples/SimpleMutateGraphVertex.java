@@ -54,12 +54,13 @@ public class SimpleMutateGraphVertex extends
     }
 
     @Override
-    public void compute(Iterator<DoubleWritable> msgIterator) throws IOException {
+    public void compute(Iterator<DoubleWritable> msgIterator)
+            throws IOException {
 
     	SimpleMutateGraphVertexWorkerContext workerContext =
     		(SimpleMutateGraphVertexWorkerContext) getWorkerContext();
-
-    	if (getSuperstep() == 1) {
+    	if (getSuperstep() == 0) {
+    	} else if (getSuperstep() == 1) {
             // Send messages to vertices that are sure not to exist
             // (creating them)
             LongWritable destVertexId =
@@ -67,18 +68,18 @@ public class SimpleMutateGraphVertex extends
             sendMsg(destVertexId, new DoubleWritable(0.0));
         } else if (getSuperstep() == 2) {
         } else if (getSuperstep() == 3) {
-        	long vertex_count = workerContext.getVertexCount();
-            if (vertex_count * 2 != getNumVertices()) {
+        	long vertexCount = workerContext.getVertexCount();
+            if (vertexCount * 2 != getNumVertices()) {
                 throw new IllegalStateException(
                     "Impossible to have " + getNumVertices() +
-                    " vertices when should have " + vertex_count * 2 +
+                    " vertices when should have " + vertexCount * 2 +
                     " on superstep " + getSuperstep());
             }
-            long edge_count = workerContext.getEdgeCount();
-            if (edge_count != getNumEdges()) {
+            long edgeCount = workerContext.getEdgeCount();
+            if (edgeCount != getNumEdges()) {
                 throw new IllegalStateException(
                     "Impossible to have " + getNumEdges() +
-                    " edges when should have " + edge_count +
+                    " edges when should have " + edgeCount +
                     " on superstep " + getSuperstep());
             }
             // Create vertices that are sure not to exist (doubling vertices)
@@ -94,18 +95,18 @@ public class SimpleMutateGraphVertex extends
                                getVertexId(), new FloatWritable(0.0f)));
         } else if (getSuperstep() == 4) {
         } else if (getSuperstep() == 5) {
-        	long vertex_count = workerContext.getVertexCount();
-            if (vertex_count * 2 != getNumVertices()) {
+        	long vertexCount = workerContext.getVertexCount();
+            if (vertexCount * 2 != getNumVertices()) {
                 throw new IllegalStateException(
                     "Impossible to have " + getNumVertices() +
-                    " when should have " + vertex_count * 2 +
+                    " when should have " + vertexCount * 2 +
                     " on superstep " + getSuperstep());
             }
-            long edge_count = workerContext.getEdgeCount();
-            if (edge_count + vertex_count != getNumEdges()) {
+            long edgeCount = workerContext.getEdgeCount();
+            if (edgeCount + vertexCount != getNumEdges()) {
                 throw new IllegalStateException(
                     "Impossible to have " + getNumEdges() +
-                    " edges when should have " + edge_count + vertex_count +
+                    " edges when should have " + edgeCount + vertexCount +
                     " on superstep " + getSuperstep());
             }
             // Remove the edges created in superstep 3
@@ -141,7 +142,8 @@ public class SimpleMutateGraphVertex extends
         }
     }
 
-    public static class SimpleMutateGraphVertexWorkerContext extends WorkerContext {
+    public static class SimpleMutateGraphVertexWorkerContext
+            extends WorkerContext {
         /** Cached vertex count */
         private long vertexCount;
         /** Cached edge count */
@@ -158,8 +160,11 @@ public class SimpleMutateGraphVertex extends
 		@Override
 		public void postApplication() { }
 
+        @Override
+        public void preSuperstep() { }
+
 		@Override
-		public void preSuperstep() {
+		public void postSuperstep() {
 			vertexCount = getNumVertices();
 			edgeCount = getNumEdges();
 			if (getSuperstep() == 1) {
@@ -171,9 +176,6 @@ public class SimpleMutateGraphVertex extends
 			LOG.info("Removed " + edgesRemoved);
 			edgesRemoved = 0;
 		}
-
-		@Override
-		public void postSuperstep() { }
 
 		public long getVertexCount() {
 			return vertexCount;

@@ -77,7 +77,7 @@ public abstract class MutableVertex<I extends WritableComparable,
      */
     public void addVertexRequest(MutableVertex<I, V, E, M> vertex)
             throws IOException {
-        getGraphState().getGraphMapper().getWorkerCommunications().
+        getGraphState().getWorkerCommunications().
         addVertexReq(vertex);
     }
 
@@ -88,7 +88,7 @@ public abstract class MutableVertex<I extends WritableComparable,
      * @param vertexId Id of the vertex to be removed.
      */
     public void removeVertexRequest(I vertexId) throws IOException {
-        getGraphState().getGraphMapper().getWorkerCommunications().
+        getGraphState().getWorkerCommunications().
         removeVertexReq(vertexId);
     }
 
@@ -101,7 +101,7 @@ public abstract class MutableVertex<I extends WritableComparable,
      */
     public void addEdgeRequest(I sourceVertexId, Edge<I, E> edge)
             throws IOException {
-        getGraphState().getGraphMapper().getWorkerCommunications().
+        getGraphState().getWorkerCommunications().
             addEdgeReq(sourceVertexId, edge);
     }
 
@@ -114,7 +114,7 @@ public abstract class MutableVertex<I extends WritableComparable,
      */
     public void removeEdgeRequest(I sourceVertexId, I destVertexId)
             throws IOException {
-        getGraphState().getGraphMapper().getWorkerCommunications().
+        getGraphState().getWorkerCommunications().
             removeEdgeReq(sourceVertexId, destVertexId);
     }
 }

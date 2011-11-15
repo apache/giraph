@@ -35,6 +35,10 @@ public interface ServerInterface<I extends WritableComparable,
                                  M extends Writable>
                                  extends Closeable,
                                  WorkerCommunications<I, V, E, M> {
+    /**
+     *  Setup the server.
+     */
+    void setup();
 
     /**
      * Move the in transition messages to the in messages for every vertex and

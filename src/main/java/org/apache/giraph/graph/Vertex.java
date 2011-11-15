@@ -26,11 +26,10 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.SortedMap;
-import java.util.TreeMap;
 
 /**
  * User applications often subclass {@link Vertex}, which stores the outbound
@@ -56,10 +55,8 @@ public abstract class Vertex<I extends WritableComparable, V extends Writable,
     /** Vertex value */
     private V vertexValue = null;
     /** Map of destination vertices and their edge values */
-    protected final SortedMap<I, Edge<I, E>> destEdgeMap =
-        new TreeMap<I, Edge<I, E>>();
-    /** If true, do not do anymore computation on this vertex. */
-    boolean halt = false;
+    protected final Map<I, Edge<I, E>> destEdgeMap =
+        new HashMap<I, Edge<I, E>>();
     /** List of incoming messages from the previous superstep */
     private final List<M> msgList = new ArrayList<M>();
 
@@ -69,12 +66,14 @@ public abstract class Vertex<I extends WritableComparable, V extends Writable,
             setVertexId(vertexId);
         }
         if (vertexValue != null) {
-          setVertexValue(vertexValue);
+            setVertexValue(vertexValue);
         }
         if (edges != null && !edges.isEmpty()) {
-          for(Map.Entry<I, E> entry : edges.entrySet()) {
-            destEdgeMap.put(entry.getKey(), new Edge<I, E>(entry.getKey(), entry.getValue()));
-          }
+            for (Map.Entry<I, E> entry : edges.entrySet()) {
+                destEdgeMap.put(
+                    entry.getKey(),
+                    new Edge<I, E>(entry.getKey(), entry.getValue()));
+            }
         }
         if (messages != null && !messages.isEmpty()) {
             msgList.addAll(messages);
@@ -174,38 +173,28 @@ public abstract class Vertex<I extends WritableComparable, V extends Writable,
     @Override
     public void addVertexRequest(MutableVertex<I, V, E, M> vertex)
             throws IOException {
-        getGraphState().getGraphMapper().getWorkerCommunications().
+        getGraphState().getWorkerCommunications().
             addVertexReq(vertex);
     }
 
     @Override
     public void removeVertexRequest(I vertexId) throws IOException {
-        getGraphState().getGraphMapper().getWorkerCommunications().
+        getGraphState().getWorkerCommunications().
             removeVertexReq(vertexId);
     }
 
     @Override
     public void addEdgeRequest(I vertexIndex,
                                Edge<I, E> edge) throws IOException {
-        getGraphState().getGraphMapper().getWorkerCommunications().
+        getGraphState().getWorkerCommunications().
             addEdgeReq(vertexIndex, edge);
     }
 
     @Override
     public void removeEdgeRequest(I sourceVertexId,
                                   I destVertexId) throws IOException {
-        getGraphState().getGraphMapper().getWorkerCommunications().
+        getGraphState().getWorkerCommunications().
             removeEdgeReq(sourceVertexId, destVertexId);
-    }
-
-    @Override
-    public final void voteToHalt() {
-        halt = true;
-    }
-
-    @Override
-    public final boolean isHalted() {
-        return halt;
     }
 
     @Override

@@ -45,8 +45,11 @@ public abstract class BasicVertex<I extends WritableComparable,
     private GraphState<I,V,E,M> graphState;
     /** Configuration */
     private Configuration conf;
+    /** If true, do not do anymore computation on this vertex. */
+    boolean halt = false;
 
-    public abstract void initialize(I vertexId, V vertexValue, Map<I, E> edges, List<M> messages);
+    public abstract void initialize(
+        I vertexId, V vertexValue, Map<I, E> edges, List<M> messages);
 
     /**
      * Must be defined by user to do computation on a single Vertex.
@@ -151,7 +154,7 @@ public abstract class BasicVertex<I extends WritableComparable,
             throw new IllegalArgumentException(
                 "sendMsg: Cannot send null message to " + id);
         }
-        getGraphState().getGraphMapper().getWorkerCommunications().
+        getGraphState().getWorkerCommunications().
             sendMessageReq(id, msg);
     }
 
@@ -162,16 +165,20 @@ public abstract class BasicVertex<I extends WritableComparable,
 
     /**
      * After this is called, the compute() code will no longer be called for
-     * this vertice unless a message is sent to it.  Then the compute() code
+     * this vertex unless a message is sent to it.  Then the compute() code
      * will be called once again until this function is called.  The
      * application finishes only when all vertices vote to halt.
      */
-    public abstract void voteToHalt();
+    public void voteToHalt() {
+        halt = true;
+    }
 
     /**
      * Is this vertex done?
      */
-    public abstract boolean isHalted();
+    public boolean isHalted() {
+        return halt;
+    }
 
     /**
      *  Get the list of incoming messages from the previous superstep.  Same as
@@ -202,13 +209,13 @@ public abstract class BasicVertex<I extends WritableComparable,
      *
      * @return Mapper context
      */
-    public Mapper.Context getContext() {
-        return getGraphState().getContext();
-    }
-    
+     public Mapper.Context getContext() {
+         return getGraphState().getContext();
+     }
+
     /**
      * Get the worker context
-     * 
+     *
      * @return WorkerContext context
      */
     public WorkerContext getWorkerContext() {

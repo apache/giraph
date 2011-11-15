@@ -16,27 +16,35 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.graph;
-
-import java.util.NavigableMap;
+package org.apache.giraph.graph.partition;
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
- * Simple balancer that maintains the distribution of vertex ranges that are
- * created by the InputSplit processing.  Vertex ranges never change from the
- * initial configuration and are hence, static.
+ * Defines the partitioning framework for this application.
+ *
+ * @param <I> Vertex index value
+ * @param <V> Vertex value
+ * @param <E> Edge value
+ * @param <M> Message value
  */
 @SuppressWarnings("rawtypes")
-public final class StaticBalancer<I extends WritableComparable,
-                                  V extends Writable,
-                                  E extends Writable,
-                                  M extends Writable>
-        extends VertexRangeBalancer<I, V, E, M> {
+public interface GraphPartitionerFactory<I extends WritableComparable,
+        V extends Writable, E extends Writable, M extends Writable> {
+    /**
+     * Create the {@link MasterGraphPartitioner} used by the master.
+     * Instantiated once by the master and reused.
+     *
+     * @return Instantiated master graph partitioner
+     */
+    MasterGraphPartitioner<I, V, E, M> createMasterGraphPartitioner();
 
-    @Override
-    public final NavigableMap<I, VertexRange<I, V, E, M>> rebalance() {
-        return getPrevVertexRangeMap();
-    }
+    /**
+     * Create the {@link WorkerGraphPartitioner} used by the worker.
+     * Instantiated once by every worker and reused.
+     *
+     * @return Instantiated worker graph partitioner
+     */
+    WorkerGraphPartitioner<I, V, E, M> createWorkerGraphPartitioner();
 }

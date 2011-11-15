@@ -21,6 +21,9 @@ package org.apache.giraph.comm;
 import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.MutableVertex;
+import org.apache.giraph.graph.WorkerInfo;
+import org.apache.giraph.graph.partition.Partition;
+
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -35,18 +38,17 @@ import java.util.Map;
  * @param <V extends Writable> vertex value
  * @param <E extends Writable> edge value
  * @param <M extends Writable> message data
- *
- **/
+ */
 @SuppressWarnings("rawtypes")
 public interface WorkerCommunications<I extends WritableComparable,
                                       V extends Writable,
                                       E extends Writable,
                                       M extends Writable> {
     /**
-     * Clean the cached map of vertex addresses that have changed
-     * because of rebalancing.
+     * Fix changes to the workers and the mapping between partitions and
+     * workers.
      */
-    void cleanCachedVertexAddressMap();
+    void fixPartitionIdToSocketAddrMap();
 
     /**
      * Sends a message to destination vertex.
@@ -57,13 +59,13 @@ public interface WorkerCommunications<I extends WritableComparable,
     void sendMessageReq(I id, M msg);
 
     /**
-     * Sends a list of vertices to the appropriate vertex range owner
+     * Sends a partition to the appropriate partition owner
      *
-     * @param vertexIndexMax Vertex range that the vertices belong to
-     * @param vertexList List of vertices assigned to the vertexRangeIndex
+     * @param workerInfo Owner the vertices belong to
+     * @param partition Partition to send
      */
-    void sendVertexListReq(I vertexIndexMax,
-                           List<BasicVertex<I, V, E, M>> vertexList);
+    void sendPartitionReq(WorkerInfo workerInfo,
+                          Partition<I, V, E, M> partition);
 
     /**
      * Sends a request to the appropriate vertex range owner to add an edge
@@ -107,5 +109,5 @@ public interface WorkerCommunications<I extends WritableComparable,
      *
      * @return map of vertex ranges to vertices
      */
-    Map<I, List<BasicVertex<I, V, E, M>>> getInVertexRangeMap();
+    Map<Integer, List<BasicVertex<I, V, E, M>>> getInPartitionVertexMap();
 }

@@ -42,10 +42,8 @@ public abstract class GeneratedVertexInputFormat<
     @Override
     public List<InputSplit> getSplits(JobContext context, int numWorkers)
         throws IOException, InterruptedException {
-        /*
-         * This is meaningless, the VertexReader will generate all the test
-         * data.
-         */
+         // This is meaningless, the VertexReader will generate all the test
+         // data.
         List<InputSplit> inputSplitList = new ArrayList<InputSplit>();
         for (int i = 0; i < numWorkers; ++i) {
             inputSplitList.add(new BspInputSplit(i, numWorkers));

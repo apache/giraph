@@ -19,14 +19,19 @@
 package org.apache.giraph.bsp;
 
 import java.io.IOException;
-import java.util.NavigableMap;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 import org.apache.giraph.graph.AggregatorUsage;
+import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.GraphMapper;
-import org.apache.giraph.graph.VertexRange;
-import org.apache.giraph.graph.BasicVertexRangeBalancer;
+import org.apache.giraph.graph.partition.Partition;
+import org.apache.giraph.graph.partition.PartitionOwner;
+import org.apache.giraph.graph.partition.PartitionStats;
+import org.apache.giraph.graph.WorkerInfo;
 import org.apache.giraph.graph.WorkerContext;
 
 /**
@@ -41,41 +46,34 @@ public interface CentralizedServiceWorker<
         M extends Writable>
         extends CentralizedService<I, V, E, M>, AggregatorUsage {
     /**
-     * Get the hostname of this worker
+     * Get the worker information
      *
-     * @return hostname of this worker
+     * @return Worker information
      */
-    String getHostname();
-
-    /**
-     * Get the port of the RPC server on this worker.
-     *
-     * @return RPC server of this worker
-     */
-    int getPort();
+    WorkerInfo getWorkerInfo();
 
    /**
-    * 
+    *
     * @return worker's WorkerContext
     */
     WorkerContext getWorkerContext();
 
     /**
-     * Get a synchronized map to the partitions and their sorted vertex lists.
-     * This could be used to run compute for the vertices or checkpointing.
+     * Get a map of the partition id to the partition for this worker.
+     * The partitions contain the vertices for
+     * this worker and can be used to run compute() for the vertices or do
+     * checkpointing.
      *
-     * @return map of max vertex index to list of vertices on that vertex range
+     * @return List of partitions that this worker owns.
      */
-    NavigableMap<I, VertexRange<I, V, E, M>> getVertexRangeMap();
+    Map<Integer, Partition<I, V, E, M>> getPartitionMap();
 
     /**
-     * Get the current map to the partitions and their sorted vertex lists.
-     * This is needed by the communication service to shift incoming messages
-     * to the vertex lists before the new map gets synchronized.
+     * Get a collection of all the partition owners.
      *
-     * @return map of max vertex index to list of vertices on that vertex range
+     * @return Collection of all the partition owners.
      */
-    NavigableMap<I, VertexRange<I, V, E, M>> getCurrentVertexRangeMap();
+    Collection<? extends PartitionOwner> getPartitionOwners();
 
     /**
      *  Both the vertices and the messages need to be checkpointed in order
@@ -98,58 +96,57 @@ public interface CentralizedServiceWorker<
      * Take all steps prior to actually beginning the computation of a
      * superstep.
      *
-     * @return true if part of this superstep, false otherwise
+     * @return Collection of all the partition owners from the master for this
+     *         superstep.
      */
-    boolean startSuperstep();
+    Collection<? extends PartitionOwner> startSuperstep();
 
     /**
      * Worker is done with its portion of the superstep.  Report the
      * worker level statistics after the computation.
      *
-     * @param workerFinishedVertices Number of finished vertices on this worker
-     * @param workerVertices Number of vertices on this worker
-     * @param workerEdges Number of edges on this worker
+     * @param partitionStatsList All the partition stats for this worker
      * @param workersSentMessages Number of messages sent on this worker
      * @return true if this is the last superstep, false otherwise
      */
-    boolean finishSuperstep(long workerFinishedVertices,
-                            long workerVertices,
-                            long workerEdges,
+    boolean finishSuperstep(List<PartitionStats> partitionStatsList,
                             long workersSentMessages);
+    /**
+     * Get the partition that a vertex index would belong to
+     *
+     * @param vertexIndex Index of the vertex that is used to find the correct
+     *        partition.
+     * @return Correct partition if exists on this worker, null otherwise.
+     */
+    public Partition<I, V, E, M> getPartition(I vertexIndex);
 
     /**
-     * Every client will need to get a vertex range for a vertex id so that
-     * they know where to sent the request.
+     * Every client will need to get a partition owner from a vertex id so that
+     * they know which worker to sent the request to.
      *
      * @param superstep Superstep to look for
      * @param vertexIndex Vertex index to look for
-     * @return VertexRange that should contain this vertex if it exists
+     * @return PartitionOnwer that should contain this vertex if it exists
      */
-    VertexRange<I, V, E, M> getVertexRange(long superstep, I vertexIndex);
+    PartitionOwner getVertexPartitionOwner(I vertexIndex);
 
     /**
-     * Get the total vertices in the entire application during a given
-     * superstep.  Note that this is the number of vertices prior to the
-     * superstep starting and does not change during the superstep.
+     * Look up a vertex on a worker given its vertex index.
      *
-     * @return count of all the vertices (local and non-local together)
+     * @param vertexIndex Vertex index to look for
+     * @return Vertex if it exists on this worker.
      */
-    long getTotalVertices();
+    BasicVertex<I, V, E, M> getVertex(I vertexIndex);
 
     /**
-     * Get the total edges in the entire application during a given
-     * superstep.  Note that this is the number of edges prior to the
-     * superstep starting and does not change during the superstep.
+     * If desired by the user, vertex partitions are redistributed among
+     * workers according to the chosen {@link GraphPartitioner}.
      *
-     * @return count of all the edges (local and non-local together)
+     * @param masterSetPartitionOwners Partition owner info passed from the
+     *        master.
      */
-    long getTotalEdges();
-
-    /**
-     * If desired by the user, vertex ranges are redistributed among workers
-     * according to the chosen {@link BasicVertexRangeBalancer}.
-     */
-    void exchangeVertexRanges();
+    void exchangeVertexPartitions(
+        Collection<? extends PartitionOwner> masterSetPartitionOwners);
 
     /**
      * Get the GraphMapper that this service is using.  Vertices need to know

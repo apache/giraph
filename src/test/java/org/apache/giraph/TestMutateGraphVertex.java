@@ -25,6 +25,7 @@ import org.apache.giraph.examples.SimpleMutateGraphVertex;
 import org.apache.giraph.examples.SimplePageRankVertex.SimplePageRankVertexInputFormat;
 import org.apache.giraph.examples.SimplePageRankVertex.SimplePageRankVertexOutputFormat;
 import org.apache.giraph.graph.GiraphJob;
+
 import junit.framework.Test;
 import junit.framework.TestSuite;
 
@@ -61,7 +62,7 @@ public class TestMutateGraphVertex extends BspCase {
         setupConfiguration(job);
         job.setVertexClass(SimpleMutateGraphVertex.class);
         job.setWorkerContextClass(
-        		SimpleMutateGraphVertex.SimpleMutateGraphVertexWorkerContext.class);
+            SimpleMutateGraphVertex.SimpleMutateGraphVertexWorkerContext.class);
         job.setVertexInputFormatClass(SimplePageRankVertexInputFormat.class);
         job.setVertexOutputFormatClass(SimplePageRankVertexOutputFormat.class);
         Path outputPath = new Path("/tmp/" + getCallingMethodName());

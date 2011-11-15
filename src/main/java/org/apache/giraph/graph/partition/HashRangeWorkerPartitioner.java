@@ -16,38 +16,27 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.examples;
+package org.apache.giraph.graph.partition;
 
-import org.apache.hadoop.io.DoubleWritable;
-
-import org.apache.giraph.graph.Aggregator;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 
 /**
- * Aggregator for getting min value.
+ * Implements range-based partitioning from the id hash code.
  *
- **/
-
-public class MinAggregator implements Aggregator<DoubleWritable> {
-
-  private double min = Double.MAX_VALUE;
-
-  public void aggregate(DoubleWritable value) {
-      double val = value.get();
-      if (val < min) {
-          min = val;
-      }
-  }
-
-  public void setAggregatedValue(DoubleWritable value) {
-      min = value.get();
-  }
-
-  public DoubleWritable getAggregatedValue() {
-      return new DoubleWritable(min);
-  }
-
-  public DoubleWritable createAggregatedValue() {
-      return new DoubleWritable();
-  }
-
+ * @param <I> Vertex index value
+ * @param <V> Vertex value
+ * @param <E> Edge value
+ * @param <M> Message value
+ */
+@SuppressWarnings("rawtypes")
+public class HashRangeWorkerPartitioner<I extends WritableComparable,
+        V extends Writable, E extends Writable, M extends Writable>
+        extends HashWorkerPartitioner<I, V, E, M> {
+    @Override
+    public PartitionOwner getPartitionOwner(I vertexId) {
+        int rangeSize = Integer.MAX_VALUE / getPartitionOwners().size();
+        int index = Math.abs(vertexId.hashCode()) / rangeSize;
+        return partitionOwnerList.get(index);
+    }
 }

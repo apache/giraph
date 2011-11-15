@@ -1,7 +1,9 @@
 Giraph Change Log
 
 Release 0.70.0 - unreleased
- 
+
+  GIRAPH-11: Improve the graph distribution of Giraph. (aching)
+  
   GIRAPH-64: Create VertexRunner to make it easier to run users'
   computations. (jghoman)
  

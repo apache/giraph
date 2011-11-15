@@ -27,7 +27,6 @@ import org.apache.giraph.graph.MutableVertex;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexCombiner;
 import org.apache.giraph.graph.VertexMutations;
-import org.apache.giraph.graph.VertexRange;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
@@ -48,13 +47,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.NavigableMap;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+
+import org.apache.giraph.graph.WorkerInfo;
+import org.apache.giraph.graph.partition.Partition;
+import org.apache.giraph.graph.partition.PartitionOwner;
 
 /*if[HADOOP_FACEBOOK]
 import org.apache.hadoop.ipc.ProtocolSignature;
@@ -96,6 +98,12 @@ public abstract class BasicRPCCommunications<
     private final Map<InetSocketAddress, PeerConnection> peerConnections =
         new HashMap<InetSocketAddress, PeerConnection>();
     /**
+     * Cached map of partition ids to remote socket address.  Needs to be
+     * synchronized.
+     */
+    private final Map<Integer, InetSocketAddress> partitionIndexAddressMap =
+        new HashMap<Integer, InetSocketAddress>();
+    /**
      * Thread pool for message flush threads
      */
     private final ExecutorService executor;
@@ -122,24 +130,20 @@ public abstract class BasicRPCCommunications<
     private final Map<I, List<M>> transientInMessages =
         new HashMap<I, List<M>>();
     /**
-     * Map of vertex ranges to any incoming vertices from other workers.
+     * Map of partition ids to incoming vertices from other workers.
      * (Synchronized)
      */
-    private final Map<I, List<BasicVertex<I, V, E, M>>>
-        inVertexRangeMap =
-            new TreeMap<I, List<BasicVertex<I, V, E, M>>>();
+    private final Map<Integer, List<BasicVertex<I, V, E, M>>>
+        inPartitionVertexMap =
+            new HashMap<Integer, List<BasicVertex<I, V, E, M>>>();
+
     /**
      * Map from vertex index to all vertex mutations
      */
     private final Map<I, VertexMutations<I, V, E, M>>
         inVertexMutationsMap =
             new TreeMap<I, VertexMutations<I, V, E, M>>();
-    /**
-     * Cached map of vertex ranges to remote socket address.  Needs to be
-     * synchronized.
-     */
-    private final Map<I, InetSocketAddress> vertexIndexMapAddressMap =
-        new HashMap<I, InetSocketAddress>();
+
     /** Maximum size of cached message list, before sending it out */
     private final int maxSize;
     /** Cached job id */
@@ -380,8 +384,18 @@ public abstract class BasicRPCCommunications<
                      numHandlers + " handlers and " + numFlushThreads +
                      " flush threads");
         }
+    }
 
-        connectAllRPCProxys(this.jobId, this.jobToken);
+    @Override
+    public void setup() {
+        try {
+            connectAllRPCProxys(this.jobId, this.jobToken);
+        } catch (IOException e) {
+            throw new IllegalStateException("setup: Got IOException", e);
+        } catch (InterruptedException e) {
+            throw new IllegalStateException("setup: Got InterruptedException",
+                                            e);
+        }
     }
 
     protected abstract CommunicationsInterface<I, V, E, M> getRPCProxy(
@@ -400,17 +414,17 @@ public abstract class BasicRPCCommunications<
     private void connectAllRPCProxys(String jobId, J jobToken)
             throws IOException, InterruptedException {
         final int maxTries = 5;
-        for (VertexRange<I, V, E, M> vertexRange :
-                service.getVertexRangeMap().values()) {
+        for (PartitionOwner partitionOwner : service.getPartitionOwners()) {
             int tries = 0;
             while (tries < maxTries) {
                 try {
-                    startPeerConnectionThread(vertexRange, jobId, jobToken);
+                    startPeerConnectionThread(
+                        partitionOwner.getWorkerInfo(), jobId, jobToken);
                     break;
                 } catch (IOException e) {
                     LOG.warn("connectAllRPCProxys: Failed on attempt " +
                              tries + " of " + maxTries +
-                             " to connect to " + vertexRange.toString());
+                             " to connect to " + partitionOwner.toString(), e);
                     ++tries;
                 }
             }
@@ -418,24 +432,27 @@ public abstract class BasicRPCCommunications<
     }
 
     /**
-     * Starts a thread for a vertex range if any only if the inet socket
+     * Creates the connections to remote RPCs if any only if the inet socket
      * address doesn't already exist.
      *
-     * @param vertexRange
+     * @param workerInfo My worker info
+     * @param jobId Id of the job
+     * @param jobToken Required for secure Hadoop
      * @throws IOException
+     * @throws InterruptedException
      */
-    private void startPeerConnectionThread(VertexRange<I, V, E, M> vertexRange,
+    private void startPeerConnectionThread(WorkerInfo workerInfo,
                                            String jobId,
                                            J jobToken)
             throws IOException, InterruptedException {
         if (LOG.isDebugEnabled()) {
             LOG.debug("startPeerConnectionThread: hostname " +
-                      vertexRange.getHostname() + ", port " +
-                      vertexRange.getPort());
+                      workerInfo.getHostname() + ", port " +
+                      workerInfo.getPort());
         }
         final InetSocketAddress addr =
-            new InetSocketAddress(vertexRange.getHostname(),
-                                  vertexRange.getPort());
+            new InetSocketAddress(workerInfo.getHostname(),
+                                  workerInfo.getPort());
         // Cheap way to hold both the hostname and port (rather than
         // make a class)
         InetSocketAddress addrUnresolved =
@@ -448,9 +465,7 @@ public abstract class BasicRPCCommunications<
             outMsgMap = outMessages.get(addrUnresolved);
             if (LOG.isDebugEnabled()) {
                 LOG.debug("startPeerConnectionThread: Connecting to " +
-                          vertexRange.getHostname() + ", port = " +
-                          vertexRange.getPort() + ", max index = " +
-                          vertexRange.getMaxIndex() + ", addr = " + addr +
+                          workerInfo.toString() + ", addr = " + addr +
                           " if outMsgMap (" + outMsgMap + ") == null ");
             }
             if (outMsgMap != null) { // this host has already been added
@@ -551,25 +566,26 @@ end[HADOOP_FACEBOOK]*/
     }
 
     @Override
-    public final void putVertexList(I vertexIndexMax,
+    public final void putVertexList(int partitionId,
                                     VertexList<I, V, E, M> vertexList)
             throws IOException {
         if (LOG.isDebugEnabled()) {
-            LOG.debug("putVertexList: On vertex range " + vertexIndexMax +
+            LOG.debug("putVertexList: On partition id " + partitionId +
                       " adding vertex list of size " + vertexList.size());
         }
-        synchronized (inVertexRangeMap) {
+        synchronized (inPartitionVertexMap) {
             if (vertexList.size() == 0) {
                 return;
             }
-            if (!inVertexRangeMap.containsKey(vertexIndexMax)) {
-                inVertexRangeMap.put(vertexIndexMax,
-                                     new ArrayList<BasicVertex<I, V, E, M>>());
-            }
-            List<BasicVertex<I, V, E, M>> tmpVertexList =
-                inVertexRangeMap.get(vertexIndexMax);
-            for (BasicVertex<I, V, E, M> hadoopVertex : vertexList) {
-                tmpVertexList.add(hadoopVertex);
+            if (!inPartitionVertexMap.containsKey(partitionId)) {
+                inPartitionVertexMap.put(partitionId,
+                    new ArrayList<BasicVertex<I, V, E, M>>(vertexList));
+            } else {
+                List<BasicVertex<I, V, E, M>> tmpVertexList =
+                    inPartitionVertexMap.get(partitionId);
+                for (BasicVertex<I, V, E, M> hadoopVertex : vertexList) {
+                    tmpVertexList.add(hadoopVertex);
+                }
             }
         }
     }
@@ -644,31 +660,28 @@ end[HADOOP_FACEBOOK]*/
     }
 
     @Override
-    public final void sendVertexListReq(I vertexIndexMax,
-                                        List<BasicVertex<I, V, E, M>> vertexList) {
+    public final void sendPartitionReq(WorkerInfo workerInfo,
+                                       Partition<I, V, E, M> partition) {
         // Internally, break up the sending so that the list doesn't get too
         // big.
         VertexList<I, V, E, M> hadoopVertexList =
             new VertexList<I, V, E, M>();
-        InetSocketAddress addr = getInetSocketAddress(vertexIndexMax);
+        InetSocketAddress addr =
+            getInetSocketAddress(workerInfo, partition.getPartitionId());
         CommunicationsInterface<I, V, E, M> rpcProxy =
             peerConnections.get(addr).getRPCProxy();
 
         if (LOG.isInfoEnabled()) {
-            LOG.info("sendVertexList: Sending to " + rpcProxy.getName() + " " +
-                     addr + ", with vertex index " + vertexIndexMax +
-                     ", list " + vertexList);
+            LOG.info("sendPartitionReq: Sending to " + rpcProxy.getName() +
+                     " " + addr + " from " + workerInfo +
+                     ", with partition " + partition);
         }
-        if (peerConnections.get(addr).isProxy == false) {
-            throw new RuntimeException("sendVertexList: Impossible to send " +
-                "to self for vertex index max " + vertexIndexMax);
-        }
-        for (long i = 0; i < vertexList.size(); ++i) {
-            hadoopVertexList.add(
-                (Vertex<I, V, E, M>) vertexList.get((int) i));
+        for (BasicVertex<I, V, E, M> vertex : partition.getVertices()) {
+            hadoopVertexList.add(vertex);
             if (hadoopVertexList.size() >= MAX_VERTICES_PER_RPC) {
                 try {
-                    rpcProxy.putVertexList(vertexIndexMax, hadoopVertexList);
+                    rpcProxy.putVertexList(partition.getPartitionId(),
+                                           hadoopVertexList);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
@@ -677,7 +690,8 @@ end[HADOOP_FACEBOOK]*/
         }
         if (hadoopVertexList.size() > 0) {
             try {
-                rpcProxy.putVertexList(vertexIndexMax, hadoopVertexList);
+                rpcProxy.putVertexList(partition.getPartitionId(),
+                                       hadoopVertexList);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -685,33 +699,46 @@ end[HADOOP_FACEBOOK]*/
     }
 
     /**
-     * Fill the socket address cache for the vertex range
+     * Fill the socket address cache for the worker info and its partition.
      *
-     * @param destVertex vertex
+     * @param workerInfo Worker information to get the socket address
+     * @param partitionId
+     * @return address of the vertex range server containing this vertex
+     */
+    private InetSocketAddress getInetSocketAddress(WorkerInfo workerInfo,
+                                                   int partitionId) {
+        synchronized(partitionIndexAddressMap) {
+            InetSocketAddress address =
+                partitionIndexAddressMap.get(partitionId);
+            if (address == null) {
+                address = InetSocketAddress.createUnresolved(
+                    workerInfo.getHostname(),
+                    workerInfo.getPort());
+                partitionIndexAddressMap.put(partitionId, address);
+            }
+
+            if (address.getPort() != workerInfo.getPort() ||
+                    !address.getHostName().equals(workerInfo.getHostname())) {
+                throw new IllegalStateException(
+                    "getInetSocketAddress: Impossible that address " +
+                    address + " does not match " + workerInfo);
+            }
+
+            return address;
+        }
+    }
+
+    /**
+     * Fill the socket address cache for the partition owner.
+     *
+     * @param destVertex vertex to be sent
      * @return address of the vertex range server containing this vertex
      */
     private InetSocketAddress getInetSocketAddress(I destVertex) {
-        VertexRange<I, V, E, M> destVertexRange =
-            service.getVertexRange(service.getSuperstep(), destVertex);
-        if (destVertexRange == null) {
-            LOG.error("getInetSocketAddress: No vertexRange found for " +
-                      destVertex);
-            throw new RuntimeException("getInetSocketAddress: Dest vertex " +
-                                       destVertex);
-        }
-
-        synchronized(vertexIndexMapAddressMap) {
-            InetSocketAddress address =
-                vertexIndexMapAddressMap.get(destVertexRange.getMaxIndex());
-            if (address == null) {
-                address = InetSocketAddress.createUnresolved(
-                    destVertexRange.getHostname(),
-                    destVertexRange.getPort());
-                vertexIndexMapAddressMap.put(destVertexRange.getMaxIndex(),
-                                             address);
-            }
-            return address;
-        }
+        PartitionOwner partitionOwner =
+            service.getVertexPartitionOwner(destVertex);
+        return getInetSocketAddress(partitionOwner.getWorkerInfo(),
+                                    partitionOwner.getPartitionId());
     }
 
     @Override
@@ -812,7 +839,8 @@ end[HADOOP_FACEBOOK]*/
         Collection<Future<?>> futures = new ArrayList<Future<?>>();
 
         // randomize peers in order to avoid hotspot on racks
-        List<PeerConnection> peerList = new ArrayList<PeerConnection>(peerConnections.values());
+        List<PeerConnection> peerList =
+            new ArrayList<PeerConnection>(peerConnections.values());
         Collections.shuffle(peerList);
 
         for (PeerConnection pc : peerList) {
@@ -867,13 +895,11 @@ end[HADOOP_FACEBOOK]*/
         }
 
         if (inMessages.size() > 0) {
-            // Assign the appropriate messages to each vertex
-            NavigableMap<I, VertexRange<I, V, E, M>> vertexRangeMap =
-                service.getCurrentVertexRangeMap();
-            for (VertexRange<I, V, E, M> vertexRange :
-                    vertexRangeMap.values()) {
-                for (BasicVertex<I, V, E, M> vertex :
-                        vertexRange.getVertexMap().values()) {
+            // Assign the messages to each destination vertex (getting rid of
+            // the old ones)
+            for (Partition<I, V, E, M> partition :
+                    service.getPartitionMap().values()) {
+                for (BasicVertex<I, V, E, M> vertex : partition.getVertices()) {
                     vertex.getMsgList().clear();
                     List<M> msgList = inMessages.get(vertex.getVertexId());
                     if (msgList != null) {
@@ -884,7 +910,8 @@ end[HADOOP_FACEBOOK]*/
                         }
                         for (M msg : msgList) {
                             if (msg == null) {
-                                LOG.warn("null message in inMessages");
+                                LOG.warn("prepareSuperstep: Null message " +
+                                         "in inMessages");
                             }
                         }
                         vertex.getMsgList().addAll(msgList);
@@ -919,10 +946,8 @@ end[HADOOP_FACEBOOK]*/
             VertexResolver<I, V, E, M> vertexResolver =
                 BspUtils.createVertexResolver(
                     conf, service.getGraphMapper().getGraphState());
-            VertexRange<I, V, E, M> vertexRange =
-                service.getVertexRange(service.getSuperstep() - 1, vertexIndex);
             BasicVertex<I, V, E, M> originalVertex =
-                vertexRange.getVertexMap().get(vertexIndex);
+                service.getVertex(vertexIndex);
             List<M> msgList = inMessages.get(vertexIndex);
             if (originalVertex != null) {
                 msgList = originalVertex.getMsgList();
@@ -942,12 +967,19 @@ end[HADOOP_FACEBOOK]*/
                           vertexMutations);
             }
 
+            Partition<I, V, E, M> partition =
+                service.getPartition(vertexIndex);
+            if (partition == null) {
+                throw new IllegalStateException(
+                    "prepareSuperstep: No partition for index " + vertexIndex +
+                    " in " + service.getPartitionMap() + " should have been " +
+                    service.getVertexPartitionOwner(vertexIndex));
+            }
             if (vertex != null) {
                 ((MutableVertex<I, V, E, M>) vertex).setVertexId(vertexIndex);
-                vertexRange.getVertexMap().put(vertex.getVertexId(),
-                                               (Vertex<I, V, E, M>) vertex);
+                partition.putVertex((Vertex<I, V, E, M>) vertex);
             } else if (originalVertex != null) {
-                vertexRange.getVertexMap().remove(originalVertex.getVertexId());
+                partition.removeVertex(originalVertex.getVertexId());
             }
         }
         synchronized (inVertexMutationsMap) {
@@ -956,25 +988,27 @@ end[HADOOP_FACEBOOK]*/
     }
 
     @Override
-    public void cleanCachedVertexAddressMap() {
-        // Fix all the cached inet addresses (remove all changed entries)
-        synchronized (vertexIndexMapAddressMap) {
-            for (Entry<I, VertexRange<I, V, E, M>> entry :
-                service.getVertexRangeMap().entrySet()) {
-               if (vertexIndexMapAddressMap.containsKey(entry.getKey())) {
-                   InetSocketAddress address =
-                       vertexIndexMapAddressMap.get(entry.getKey());
-                   if (!address.getHostName().equals(
-                           entry.getValue().getHostname()) ||
-                           address.getPort() !=
-                           entry.getValue().getPort()) {
-                       LOG.info("prepareSuperstep: Vertex range " +
-                                entry.getKey() + " changed from " +
-                                address + " to " +
-                                entry.getValue().getHostname() + ":" +
-                                entry.getValue().getPort());
-                       vertexIndexMapAddressMap.remove(entry.getKey());
+    public void fixPartitionIdToSocketAddrMap() {
+        // 1. Fix all the cached inet addresses (remove all changed entries)
+        // 2. Connect to any new RPC servers
+        synchronized (partitionIndexAddressMap) {
+            for (PartitionOwner partitionOwner : service.getPartitionOwners()) {
+                InetSocketAddress address =
+                    partitionIndexAddressMap.get(
+                        partitionOwner.getPartitionId());
+               if (address != null &&
+                       (!address.getHostName().equals(
+                        partitionOwner.getWorkerInfo().getHostname()) ||
+                        address.getPort() !=
+                       partitionOwner.getWorkerInfo().getPort())) {
+                   if (LOG.isInfoEnabled()) {
+                       LOG.info("fixPartitionIdToSocketAddrMap: " +
+                                "Partition owner " +
+                                partitionOwner + " changed from " +
+                                address);
                    }
+                   partitionIndexAddressMap.remove(
+                       partitionOwner.getPartitionId());
                }
             }
         }
@@ -993,8 +1027,7 @@ end[HADOOP_FACEBOOK]*/
     }
 
     @Override
-    public Map<I, List<BasicVertex<I, V, E, M>>> getInVertexRangeMap() {
-        return inVertexRangeMap;
+    public Map<Integer, List<BasicVertex<I, V, E, M>>> getInPartitionVertexMap() {
+        return inPartitionVertexMap;
     }
-
 }

@@ -22,7 +22,6 @@ import java.io.IOException;
 
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.MutableVertex;
-import org.apache.giraph.graph.VertexRange;
 /*if_not[HADOOP]
  else[HADOOP]*/
 import org.apache.giraph.hadoop.BspTokenSelector;
@@ -80,12 +79,11 @@ public interface CommunicationsInterface<
     /**
      * Adds vertex list (index, value, edges, etc.) to the appropriate worker.
      *
-     * @param vertexIndexMax Max vertex index of {@link VertexRange}
+     * @param partitionId Partition id of the vertices to be added.
      * @param vertexList List of vertices to add
      */
-    void putVertexList(I vertexIndexMax,
-                       VertexList<I, V, E, M> vertexList)
-        throws IOException;
+    void putVertexList(int partitionId,
+                       VertexList<I, V, E, M> vertexList) throws IOException;
 
     /**
      * Add an edge to a remote vertex

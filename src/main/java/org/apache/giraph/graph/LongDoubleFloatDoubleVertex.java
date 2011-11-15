@@ -42,8 +42,6 @@ public abstract class LongDoubleFloatDoubleVertex extends
     private double vertexValue;
     private OpenLongFloatHashMap verticesWithEdgeValues = new OpenLongFloatHashMap();
     private DoubleArrayList messageList = new DoubleArrayList();
-    /** If true, do not do anymore computation on this vertex. */
-    boolean halt = false;
 
     @Override
     public void initialize(LongWritable vertexIdW, DoubleWritable vertexValueW,
@@ -118,7 +116,7 @@ public abstract class LongDoubleFloatDoubleVertex extends
             throw new IllegalArgumentException(
                     "sendMsg: Cannot send null message to " + id);
         }
-        getGraphState().getGraphMapper().getWorkerCommunications().sendMessageReq(id, msg);
+        getGraphState().getWorkerCommunications().sendMessageReq(id, msg);
     }
 
     @Override
@@ -133,17 +131,10 @@ public abstract class LongDoubleFloatDoubleVertex extends
             sendMsg(destVertex, msg);
         }
     }
- //   @Override
-  //  public MutableVertex<LongWritable, DoubleWritable, FloatWritable, DoubleWritable> instantiateVertex() {
-  //      LongDoubleFloatDoubleVertex vertex = (LongDoubleFloatDoubleVertex)
-  //          BspUtils.<LongWritable, DoubleWritable, FloatWritable, DoubleWritable>createVertex(
-  //              getGraphState().getContext().getConfiguration());
-  //      return vertex;
-  //  }
 
     @Override
     public long getNumVertices() {
-      System.out.println("in getNumVertices!");
+        System.out.println("in getNumVertices!");
         return getGraphState().getNumVertices();
     }
 
@@ -154,28 +145,30 @@ public abstract class LongDoubleFloatDoubleVertex extends
 
     @Override
     public Iterator<LongWritable> iterator() {
-      final long[] destVertices = verticesWithEdgeValues.keys().elements();
-      final LongWritable lw = new LongWritable();
-      return new Iterator<LongWritable>() {
-        int offset = 0;
-        @Override public boolean hasNext() {
-          return offset < destVertices.length;
-        }
+        final long[] destVertices = verticesWithEdgeValues.keys().elements();
+        final LongWritable lw = new LongWritable();
+        return new Iterator<LongWritable>() {
+            int offset = 0;
+            @Override public boolean hasNext() {
+                return offset < destVertices.length;
+            }
 
-        @Override public LongWritable next() {
-          lw.set(destVertices[offset++]);
-          return lw;
-        }
+            @Override public LongWritable next() {
+                lw.set(destVertices[offset++]);
+                return lw;
+            }
 
-        @Override public void remove() {
-          throw new UnsupportedOperationException("Mutation disallowed for edge list via iterator");
-        }
-      };
+            @Override public void remove() {
+                throw new UnsupportedOperationException(
+                        "Mutation disallowed for edge list via iterator");
+            }
+        };
     }
 
     @Override
     public FloatWritable getEdgeValue(LongWritable targetVertexId) {
-        return new FloatWritable(verticesWithEdgeValues.get(targetVertexId.get()));
+        return new FloatWritable(
+            verticesWithEdgeValues.get(targetVertexId.get()));
     }
 
     @Override
@@ -196,34 +189,26 @@ public abstract class LongDoubleFloatDoubleVertex extends
     @Override
     public void addVertexRequest(MutableVertex<LongWritable, DoubleWritable, FloatWritable, DoubleWritable> vertex)
             throws IOException {
-        getGraphState().getGraphMapper().getWorkerCommunications().addVertexReq(vertex);
+        getGraphState().getWorkerCommunications().addVertexReq(vertex);
     }
 
     @Override
     public void removeVertexRequest(LongWritable vertexId) throws IOException {
-        getGraphState().getGraphMapper().getWorkerCommunications().removeVertexReq(vertexId);
+        getGraphState().getWorkerCommunications().removeVertexReq(vertexId);
     }
 
     @Override
     public void addEdgeRequest(LongWritable vertexIndex,
-                               Edge<LongWritable, FloatWritable> edge) throws IOException {
-        getGraphState().getGraphMapper().getWorkerCommunications().addEdgeReq(vertexIndex, edge);
+                               Edge<LongWritable, FloatWritable> edge)
+                               throws IOException {
+        getGraphState().getWorkerCommunications().addEdgeReq(vertexIndex, edge);
     }
 
     @Override
     public void removeEdgeRequest(LongWritable sourceVertexId,
                                   LongWritable destVertexId) throws IOException {
-        getGraphState().getGraphMapper().getWorkerCommunications().removeEdgeReq(sourceVertexId, destVertexId);
-    }
-
-    @Override
-    public final void voteToHalt() {
-        halt = true;
-    }
-
-    @Override
-    public final boolean isHalted() {
-        return halt;
+        getGraphState().getWorkerCommunications().removeEdgeReq(
+            sourceVertexId, destVertexId);
     }
 
     @Override

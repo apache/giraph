@@ -18,6 +18,9 @@
 
 package org.apache.giraph.graph;
 
+import org.apache.giraph.graph.partition.GraphPartitionerFactory;
+import org.apache.giraph.graph.partition.HashPartitionerFactory;
+import org.apache.giraph.graph.partition.PartitionStats;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -28,6 +31,56 @@ import org.apache.hadoop.util.ReflectionUtils;
  * instantiate them.
  */
 public class BspUtils {
+    /**
+     * Get the user's subclassed {@link GraphPartitionerFactory}.
+     *
+     * @param conf Configuration to check
+     * @return User's graph partitioner
+     */
+    @SuppressWarnings({ "rawtypes", "unchecked" })
+    public static <I extends WritableComparable, V extends Writable,
+                   E extends Writable, M extends Writable>
+            Class<? extends GraphPartitionerFactory<I, V, E, M>>
+            getGraphPartitionerClass(Configuration conf) {
+        return (Class<? extends GraphPartitionerFactory<I, V, E, M>>)
+                conf.getClass(GiraphJob.GRAPH_PARTITIONER_FACTORY_CLASS,
+                              HashPartitionerFactory.class,
+                              GraphPartitionerFactory.class);
+    }
+
+    /**
+     * Create a user graph partitioner class
+     *
+     * @param conf Configuration to check
+     * @return Instantiated user graph partitioner class
+     */
+    @SuppressWarnings("rawtypes")
+    public static <I extends WritableComparable, V extends Writable,
+            E extends Writable, M extends Writable>
+            GraphPartitionerFactory<I, V, E, M>
+            createGraphPartitioner(Configuration conf) {
+        Class<? extends GraphPartitionerFactory<I, V, E, M>>
+            graphPartitionerFactoryClass =
+            getGraphPartitionerClass(conf);
+        return ReflectionUtils.newInstance(graphPartitionerFactoryClass, conf);
+    }
+
+    /**
+     * Create a user graph partitioner partition stats class
+     *
+     * @param conf Configuration to check
+     * @return Instantiated user graph partition stats class
+     */
+    @SuppressWarnings("rawtypes")
+    public static <I extends WritableComparable, V extends Writable,
+            E extends Writable, M extends Writable>
+            PartitionStats createGraphPartitionStats(Configuration conf) {
+        GraphPartitionerFactory<I, V, E, M> graphPartitioner =
+            createGraphPartitioner(conf);
+        return graphPartitioner.createMasterGraphPartitioner().
+            createPartitionStats();
+    }
+
     /**
      * Get the user's subclassed {@link VertexInputFormat}.
      *
@@ -131,41 +184,6 @@ public class BspUtils {
     }
 
     /**
-     * Get the user's subclassed vertex range balancer
-     *
-     * @param conf Configuration to check
-     * @return User's vertex range balancer class
-     */
-    @SuppressWarnings({ "rawtypes", "unchecked" })
-    public static <I extends WritableComparable,
-                   V extends Writable,
-                   E extends Writable,
-                   M extends Writable>
-            Class<? extends VertexRangeBalancer<I, V, E, M>>
-            getVertexRangeBalancerClass(Configuration conf) {
-        return (Class<? extends VertexRangeBalancer<I, V, E, M>>)
-                conf.getClass(GiraphJob.VERTEX_RANGE_BALANCER_CLASS,
-                              StaticBalancer.class,
-                              BasicVertexRangeBalancer.class);
-    }
-
-    /**
-     * Create a user vertex range balancer class
-     *
-     * @param conf Configuration to check
-     * @return Instantiated user vertex input format class
-     */
-    @SuppressWarnings("rawtypes")
-    public static <I extends WritableComparable, V extends Writable,
-            E extends Writable, M extends Writable>
-            VertexRangeBalancer<I, V, E, M>
-            createVertexRangeBalancer(Configuration conf) {
-        Class<? extends VertexRangeBalancer<I, V, E, M>>
-            vertexRangeBalancerClass = getVertexRangeBalancerClass(conf);
-        return ReflectionUtils.newInstance(vertexRangeBalancerClass, conf);
-    }
-
-    /**
      * Get the user's subclassed VertexResolver.
      *
      * @param conf Configuration to check
@@ -202,7 +220,7 @@ public class BspUtils {
         resolver.setGraphState(graphState);
         return resolver;
     }
-    
+
    /**
      * Get the user's subclassed WorkerContext.
      *
@@ -216,7 +234,7 @@ public class BspUtils {
                               DefaultWorkerContext.class,
                               WorkerContext.class);
     }
-     
+
    /**
      * Create a user worker context
      *
@@ -224,12 +242,12 @@ public class BspUtils {
      * @return Instantiated user worker context
      */
     @SuppressWarnings("rawtypes")
-	public static <I extends WritableComparable, 
+	public static <I extends WritableComparable,
     			   V extends Writable,
-    			   E extends Writable, 
-    			   M extends Writable> 
+    			   E extends Writable,
+    			   M extends Writable>
     		WorkerContext createWorkerContext(Configuration conf,
-            		GraphState<I, V, E, M> graphState) {
+                GraphState<I, V, E, M> graphState) {
         Class<? extends WorkerContext> workerContextClass =
             getWorkerContextClass(conf);
         WorkerContext workerContext =
@@ -237,7 +255,7 @@ public class BspUtils {
         workerContext.setGraphState(graphState);
         return workerContext;
     }
-    
+
 
     /**
      * Get the user's subclassed Vertex.
@@ -268,8 +286,10 @@ public class BspUtils {
     public static <I extends WritableComparable, V extends Writable,
             E extends Writable, M extends Writable> BasicVertex<I, V, E, M>
             createVertex(Configuration conf) {
-        Class<? extends BasicVertex<I, V, E, M>> vertexClass = getVertexClass(conf);
-        BasicVertex<I, V, E, M> vertex = ReflectionUtils.newInstance(vertexClass, conf);
+        Class<? extends BasicVertex<I, V, E, M>> vertexClass =
+            getVertexClass(conf);
+        BasicVertex<I, V, E, M> vertex =
+            ReflectionUtils.newInstance(vertexClass, conf);
         return vertex;
     }
 

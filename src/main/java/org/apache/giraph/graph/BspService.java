@@ -19,6 +19,7 @@
 package org.apache.giraph.graph;
 
 import org.apache.giraph.bsp.CentralizedService;
+import org.apache.giraph.graph.partition.GraphPartitionerFactory;
 import org.apache.giraph.zk.BspEvent;
 import org.apache.giraph.zk.PredicateLock;
 import org.apache.giraph.zk.ZooKeeperExt;
@@ -36,7 +37,6 @@ import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.Watcher.Event.EventType;
 import org.apache.zookeeper.Watcher.Event.KeeperState;
 import org.apache.zookeeper.ZooDefs.Ids;
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -48,8 +48,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
-import java.util.NavigableMap;
 import java.util.TreeMap;
 
 /**
@@ -75,15 +73,10 @@ public abstract class BspService <
     /** InputSplit reservation or finished notification and synchronization */
     private final BspEvent inputSplitsStateChanged =
         new PredicateLock();
-    /** Are the worker assignments of vertex ranges ready? */
-    private final BspEvent vertexRangeAssignmentsReadyChanged =
+    /** Are the partition assignments to workers ready? */
+    private final BspEvent partitionAssignmentsReadyChanged =
         new PredicateLock();
-    /** Have the vertex range exchange children changed? */
-    private final BspEvent vertexRangeExchangeChildrenChanged =
-        new PredicateLock();
-    /** Are the vertex range exchanges done? */
-    private final BspEvent vertexRangeExchangeFinishedChanged =
-        new PredicateLock();
+
     /** Application attempt changed */
     private final BspEvent applicationAttemptChanged =
         new PredicateLock();
@@ -117,6 +110,8 @@ public abstract class BspService <
     private final String hostname;
     /** Combination of hostname '_' partition (unique id) */
     private final String hostnamePartitionId;
+    /** Graph partitioner */
+    private final GraphPartitionerFactory<I, V, E, M> graphPartitionerFactory;
     /** Mapper that will do the graph computation */
     private final GraphMapper<I, V, E, M> graphMapper;
     /** Class logger */
@@ -125,11 +120,6 @@ public abstract class BspService <
     private final FileSystem fs;
     /** Checkpoint frequency */
     private int checkpointFrequency = -1;
-    /** Vertex range map based on the superstep below */
-    private NavigableMap<I, VertexRange<I, V, E, M>> vertexRangeMap =
-        new TreeMap<I, VertexRange<I, V, E, M>>();
-    /** Vertex range set is based on this superstep */
-    private long vertexRangeSuperstep = UNSET_SUPERSTEP;
     /** Map of aggregators */
     private Map<String, Aggregator<Writable>> aggregatorMap =
         new TreeMap<String, Aggregator<Writable>>();
@@ -159,19 +149,17 @@ public abstract class BspService <
     public static final String WORKER_HEALTHY_DIR = "/_workerHealthyDir";
     public static final String WORKER_UNHEALTHY_DIR = "/_workerUnhealthyDir";
     public static final String WORKER_FINISHED_DIR = "/_workerFinishedDir";
-    public static final String VERTEX_RANGE_ASSIGNMENTS_DIR =
-        "/_vertexRangeAssignments";
-    public static final String VERTEX_RANGE_EXCHANGE_DIR =
-        "/_vertexRangeExchangeDir";
-    public static final String VERTEX_RANGE_EXCHANGED_FINISHED_NODE =
-        "/_vertexRangeExchangeFinished";
+    public static final String PARTITION_ASSIGNMENTS_DIR =
+        "/_partitionAssignments";
+    public static final String PARTITION_EXCHANGE_DIR =
+        "/_partitionExchangeDir";
     public static final String SUPERSTEP_FINISHED_NODE = "/_superstepFinished";
     public static final String CLEANED_UP_DIR = "/_cleanedUpDir";
 
     public static final String JSONOBJ_AGGREGATOR_VALUE_ARRAY_KEY =
         "_aggregatorValueArrayKey";
-    public static final String JSONOBJ_VERTEX_RANGE_STAT_ARRAY_KEY =
-        "_vertexRangeStatArrayKey";
+    public static final String JSONOBJ_PARTITION_STATS_KEY =
+            "_partitionStatsKey";
     public static final String JSONOBJ_FINISHED_VERTICES_KEY =
         "_verticesFinishedKey";
     public static final String JSONOBJ_NUM_VERTICES_KEY = "_numVerticesKey";
@@ -270,31 +258,36 @@ public abstract class BspService <
     }
 
     /**
-     * Generate the worker "healthy" directory path for a superstep
+     * Generate the worker information "healthy" directory path for a
+     * superstep
      *
      * @param attempt application attempt number
      * @param superstep superstep to use
      * @return directory path based on the a superstep
      */
-    final public String getWorkerHealthyPath(long attempt, long superstep) {
+    final public String getWorkerInfoHealthyPath(long attempt,
+                                                 long superstep) {
         return APPLICATION_ATTEMPTS_PATH + "/" + attempt +
             SUPERSTEP_DIR + "/" + superstep + WORKER_HEALTHY_DIR;
     }
 
     /**
-     * Generate the worker "unhealthy" directory path for a superstep
+     * Generate the worker information "unhealthy" directory path for a
+     * superstep
      *
      * @param attempt application attempt number
      * @param superstep superstep to use
      * @return directory path based on the a superstep
      */
-    final public String getWorkerUnhealthyPath(long attempt, long superstep) {
+    final public String getWorkerInfoUnhealthyPath(long attempt,
+                                                   long superstep) {
         return APPLICATION_ATTEMPTS_PATH + "/" + attempt +
             SUPERSTEP_DIR + "/" + superstep + WORKER_UNHEALTHY_DIR;
     }
 
     /**
-     * Generate the worker "finished" directory path for a superstep
+     * Generate the worker "finished" directory path for a
+     * superstep
      *
      * @param attempt application attempt number
      * @param superstep superstep to use
@@ -306,44 +299,36 @@ public abstract class BspService <
     }
 
     /**
-     * Generate the "vertex range assignments" directory path for a superstep
+     * Generate the "partiton assignments" directory path for a superstep
      *
      * @param attempt application attempt number
      * @param superstep superstep to use
      * @return directory path based on the a superstep
      */
-    final public String getVertexRangeAssignmentsPath(long attempt,
-                                                      long superstep) {
+    final public String getPartitionAssignmentsPath(long attempt,
+                                                    long superstep) {
         return APPLICATION_ATTEMPTS_PATH + "/" + attempt +
-            SUPERSTEP_DIR + "/" + superstep + VERTEX_RANGE_ASSIGNMENTS_DIR;
+            SUPERSTEP_DIR + "/" + superstep + PARTITION_ASSIGNMENTS_DIR;
     }
 
     /**
-     * Generate the "vertex range exchange" directory path for a superstep
+     * Generate the "partition exchange" directory path for a superstep
      *
      * @param attempt application attempt number
      * @param superstep superstep to use
      * @return directory path based on the a superstep
      */
-    final public String getVertexRangeExchangePath(long attempt,
-                                                   long superstep) {
+    final public String getPartitionExchangePath(long attempt,
+                                                 long superstep) {
         return APPLICATION_ATTEMPTS_PATH + "/" + attempt +
-            SUPERSTEP_DIR + "/" + superstep + VERTEX_RANGE_EXCHANGE_DIR;
+            SUPERSTEP_DIR + "/" + superstep + PARTITION_EXCHANGE_DIR;
     }
 
-    /**
-     * Generate the "vertex range exchange finished" directory path for
-     * a superstep
-     *
-     * @param attempt application attempt number
-     * @param superstep superstep to use
-     * @return directory path based on the a superstep
-     */
-    final public String getVertexRangeExchangeFinishedPath(long attempt,
-                                                           long superstep) {
-        return APPLICATION_ATTEMPTS_PATH + "/" + attempt +
-            SUPERSTEP_DIR + "/" + superstep +
-            VERTEX_RANGE_EXCHANGED_FINISHED_NODE;
+    final public String getPartitionExchangeWorkerPath(long attempt,
+                                                       long superstep,
+                                                       WorkerInfo workerInfo) {
+        return getPartitionExchangePath(attempt, superstep) +
+            "/" + workerInfo.getHostnameId();
     }
 
     /**
@@ -516,17 +501,10 @@ public abstract class BspService <
         return inputSplitsStateChanged;
     }
 
-    final public BspEvent getVertexRangeAssignmentsReadyChangedEvent() {
-        return vertexRangeAssignmentsReadyChanged;
+    final public BspEvent getPartitionAssignmentsReadyChangedEvent() {
+        return partitionAssignmentsReadyChanged;
     }
 
-    final public BspEvent getVertexRangeExchangeChildrenChangedEvent() {
-        return vertexRangeExchangeChildrenChanged;
-    }
-
-    final public BspEvent getVertexRangeExchangeFinishedChangedEvent() {
-        return vertexRangeExchangeFinishedChanged;
-    }
 
     final public BspEvent getApplicationAttemptChangedEvent() {
         return applicationAttemptChanged;
@@ -597,9 +575,7 @@ public abstract class BspService <
         registerBspEvent(workerHealthRegistrationChanged);
         registerBspEvent(inputSplitsAllReadyChanged);
         registerBspEvent(inputSplitsStateChanged);
-        registerBspEvent(vertexRangeAssignmentsReadyChanged);
-        registerBspEvent(vertexRangeExchangeChildrenChanged);
-        registerBspEvent(vertexRangeExchangeFinishedChanged);
+        registerBspEvent(partitionAssignmentsReadyChanged);
         registerBspEvent(applicationAttemptChanged);
         registerBspEvent(superstepFinished);
         registerBspEvent(masterElectionChildrenChanged);
@@ -625,6 +601,9 @@ public abstract class BspService <
             throw new RuntimeException(e);
         }
         this.hostnamePartitionId = hostname + "_" + getTaskPartition();
+        this.graphPartitionerFactory =
+            BspUtils.<I, V, E, M>createGraphPartitioner(conf);
+
         this.checkpointFrequency =
             conf.getInt(GiraphJob.CHECKPOINT_FREQUENCY,
                           GiraphJob.CHECKPOINT_FREQUENCY_DEFAULT);
@@ -807,93 +786,6 @@ public abstract class BspService <
     }
 
     /**
-     * Gets the storable vertex range map, bypasses the cache.  Used by workers
-     * to dump the vertices into.
-     *
-     * @return Actual map of max vertex range indices to vertex ranges
-     */
-    public NavigableMap<I, VertexRange<I, V, E, M>>
-            getStorableVertexRangeMap() {
-        return vertexRangeMap;
-    }
-
-    /**
-     * Based on a superstep, get the mapping of vertex range maxes to vertex
-     * ranges.  This can be used to look up a particular vertex.
-     *
-     * @param superstep Superstep to get the vertex ranges for
-     * @return Cached map of max vertex range indices to vertex ranges
-     */
-    public NavigableMap<I, VertexRange<I, V, E, M>> getVertexRangeMap(
-            long superstep) {
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("getVertexRangeMap: Current superstep = " +
-                      getSuperstep() + ", desired superstep = " + superstep);
-        }
-
-        if (vertexRangeSuperstep == superstep) {
-            return vertexRangeMap;
-        }
-        vertexRangeSuperstep = superstep;
-        NavigableMap<I, VertexRange<I, V, E, M>> nextVertexRangeMap =
-            new TreeMap<I, VertexRange<I, V, E, M>>();
-        String vertexRangeAssignmentsPath =
-            getVertexRangeAssignmentsPath(getApplicationAttempt(),
-                                          superstep);
-        try {
-            JSONArray vertexRangeAssignmentsArray =
-                new JSONArray(
-                    new String(getZkExt().getData(vertexRangeAssignmentsPath,
-                                                  false,
-                                                  null)));
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("getVertexRangeSet: Found vertex ranges " +
-                          vertexRangeAssignmentsArray.toString() +
-                          " on superstep " + superstep);
-            }
-            for (int i = 0; i < vertexRangeAssignmentsArray.length(); ++i) {
-                JSONObject vertexRangeObj =
-                    vertexRangeAssignmentsArray.getJSONObject(i);
-                Class<I> indexClass =
-                    BspUtils.getVertexIndexClass(getConfiguration());
-                VertexRange<I, V, E, M> vertexRange =
-                    new VertexRange<I, V, E, M>(indexClass,
-                            vertexRangeObj);
-                if (nextVertexRangeMap.containsKey(vertexRange.getMaxIndex())) {
-                    throw new IllegalStateException(
-                        "getVertexRangeMap: Impossible that vertex range " +
-                        "max " + vertexRange.getMaxIndex() +
-                        " already exists!  Duplicate vertex ranges include " +
-                        nextVertexRangeMap.get(vertexRange.getMaxIndex()) +
-                        " and " + vertexRange);
-                }
-                nextVertexRangeMap.put(vertexRange.getMaxIndex(), vertexRange);
-            }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-
-        // Copy over the vertices to the vertex ranges
-        for (Entry<I, VertexRange<I, V, E, M>> entry :
-            nextVertexRangeMap.entrySet()) {
-            if (!vertexRangeMap.containsKey(entry.getKey())) {
-                continue;
-            }
-            VertexRange<I, V, E, M> vertexRange =
-                vertexRangeMap.get(entry.getKey());
-            entry.getValue().getVertexMap().putAll(
-                vertexRange.getVertexMap());
-        }
-        vertexRangeMap = nextVertexRangeMap;
-        return vertexRangeMap;
-    }
-
-    public NavigableMap<I, VertexRange<I, V, E, M>> getCurrentVertexRangeMap()
-    {
-        return vertexRangeMap;
-    }
-
-    /**
      * Register an aggregator with name.
      *
      * @param name Name of the aggregator
@@ -948,6 +840,15 @@ public abstract class BspService <
     }
 
     /**
+     * Subclasses can use this to instantiate their respective partitioners
+     *
+     * @return Instantiated graph partitioner factory
+     */
+    protected GraphPartitionerFactory<I, V, E, M> getGraphPartitionerFactory() {
+        return graphPartitionerFactory;
+    }
+
+    /**
      * Derived classes that want additional ZooKeeper events to take action
      * should override this.
      *
@@ -982,6 +883,8 @@ public abstract class BspService <
                     LOG.info("process: Asynchronous connection complete.");
                 }
                 connectedEvent.signal();
+            } else {
+                LOG.warn("process: Got unknown null path event " + event);
             }
             return;
         }
@@ -1025,30 +928,13 @@ public abstract class BspService <
             }
             inputSplitsStateChanged.signal();
             eventProcessed = true;
-        } else if (event.getPath().contains(VERTEX_RANGE_ASSIGNMENTS_DIR) &&
+        } else if (event.getPath().contains(PARTITION_ASSIGNMENTS_DIR) &&
                 event.getType() == EventType.NodeCreated) {
             if (LOG.isInfoEnabled()) {
-                LOG.info("process: vertexRangeAssignmentsReadyChanged " +
-                         "(vertex ranges are assigned)");
+                LOG.info("process: partitionAssignmentsReadyChanged " +
+                         "(partitions are assigned)");
             }
-            vertexRangeAssignmentsReadyChanged.signal();
-            eventProcessed = true;
-        } else if (event.getPath().contains(VERTEX_RANGE_EXCHANGE_DIR) &&
-                event.getType() == EventType.NodeChildrenChanged) {
-            if (LOG.isInfoEnabled()) {
-                LOG.info("process: vertexRangeExchangeChildrenChanged " +
-                         "(ready to exchanged vertex ranges)");
-            }
-            vertexRangeExchangeChildrenChanged.signal();
-            eventProcessed = true;
-        } else if (event.getPath().contains(
-                VERTEX_RANGE_EXCHANGED_FINISHED_NODE) &&
-                event.getType() == EventType.NodeCreated) {
-            if (LOG.isInfoEnabled()) {
-                LOG.info("process: vertexRangeExchangeFinishedChanged " +
-                         "(vertex range exchange done)");
-            }
-            vertexRangeExchangeFinishedChanged.signal();
+            partitionAssignmentsReadyChanged.signal();
             eventProcessed = true;
         } else if (event.getPath().contains(SUPERSTEP_FINISHED_NODE) &&
                 event.getType() == EventType.NodeCreated) {

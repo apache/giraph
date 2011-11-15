@@ -46,12 +46,17 @@ public abstract class GeneratedVertexReader<
     protected long totalRecords = 0;
     /** The input split from initialize(). */
     protected BspInputSplit inputSplit = null;
+    /** Reverse the id order? */
+    protected boolean reverseIdOrder;
 
     protected Configuration configuration = null;
 
     public static final String READER_VERTICES =
-        "TestVertexReader.reader_vertices";
+        "GeneratedVertexReader.reader_vertices";
     public static final long DEFAULT_READER_VERTICES = 10;
+    public static final String REVERSE_ID_ORDER =
+        "GeneratedVertexReader.reverseIdOrder";
+    public static final boolean DEAFULT_REVERSE_ID_ORDER = false;
 
     public GeneratedVertexReader() {
     }
@@ -62,8 +67,11 @@ public abstract class GeneratedVertexReader<
             throws IOException {
         configuration = context.getConfiguration();
         totalRecords = configuration.getLong(
-                GeneratedVertexReader.READER_VERTICES,
-                GeneratedVertexReader.DEFAULT_READER_VERTICES);
+            GeneratedVertexReader.READER_VERTICES,
+            GeneratedVertexReader.DEFAULT_READER_VERTICES);
+        reverseIdOrder = configuration.getBoolean(
+            GeneratedVertexReader.REVERSE_ID_ORDER,
+            GeneratedVertexReader.DEAFULT_REVERSE_ID_ORDER);
         this.inputSplit = (BspInputSplit) inputSplit;
     }
 

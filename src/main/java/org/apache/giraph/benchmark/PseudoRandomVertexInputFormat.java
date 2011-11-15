@@ -147,7 +147,7 @@ public class PseudoRandomVertexInputFormat<M extends Writable> extends
 
         @Override
         public BasicVertex<LongWritable, DoubleWritable, DoubleWritable, M> getCurrentVertex()
-            throws IOException, InterruptedException {
+                throws IOException, InterruptedException {
             BasicVertex<LongWritable, DoubleWritable, DoubleWritable, M> vertex =
                 BspUtils.createVertex(configuration);
             long vertexId = startingVertexId + verticesRead;
@@ -163,11 +163,10 @@ public class PseudoRandomVertexInputFormat<M extends Writable> extends
                     destVertexId =
                         new LongWritable(Math.abs(rand.nextLong()) %
                                          aggregateVertices);
-                } while (vertex.hasEdge(destVertexId));
+                } while (edges.containsKey(destVertexId));
                 edges.put(destVertexId, new DoubleWritable(rand.nextDouble()));
             }
             vertex.initialize(new LongWritable(vertexId), vertexValue, edges, null);
-
             ++verticesRead;
             if (LOG.isDebugEnabled()) {
                 LOG.debug("next: Return vertexId=" +

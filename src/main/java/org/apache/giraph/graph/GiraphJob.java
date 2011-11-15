@@ -20,6 +20,7 @@ package org.apache.giraph.graph;
 
 import org.apache.giraph.bsp.BspInputFormat;
 import org.apache.giraph.bsp.BspOutputFormat;
+import org.apache.giraph.graph.partition.GraphPartitionerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.log4j.Logger;
@@ -43,12 +44,12 @@ public class GiraphJob extends Job {
     /** Vertex combiner class - optional */
     public static final String VERTEX_COMBINER_CLASS =
         "giraph.combinerClass";
-    /** Vertex range balancer class - optional */
-    public static final String VERTEX_RANGE_BALANCER_CLASS =
-        "giraph.vertexRangeBalancerClass";
     /** Vertex resolver class - optional */
     public static final String VERTEX_RESOLVER_CLASS =
         "giraph.vertexResolverClass";
+    /** Graph partitioner factory class - optional */
+    public static final String GRAPH_PARTITIONER_FACTORY_CLASS =
+        "giraph.graphPartitionerFactoryClass";
 
     /** Vertex index class */
     public static final String VERTEX_INDEX_CLASS = "giraph.vertexIndexClass";
@@ -143,11 +144,20 @@ public class GiraphJob extends Job {
     /** Default maximum number of RPC handlers */
     public static final int RPC_NUM_HANDLERS_DEFAULT = 100;
 
+    /**
+     *  Maximum number of vertices per partition before sending.
+     *  (input superstep only).
+     */
+    public static final String MAX_VERTICES_PER_PARTITION =
+        "giraph.maxVerticesPerPartition";
+    /** Default maximum number of vertices per partition before sending. */
+    public static final int MAX_VERTICES_PER_PARTITION_DEFAULT = 100000;
+
     /** Maximum number of messages per peer before flush */
     public static final String MSG_SIZE = "giraph.msgSize";
     /** Default maximum number of messages per peer before flush */
     public static final int MSG_SIZE_DEFAULT = 1000;
-    
+
     /** Number of flush threads per peer */
     public static final String MSG_NUM_FLUSH_THREADS = "giraph.msgNumFlushThreads";
 
@@ -191,7 +201,7 @@ public class GiraphJob extends Job {
         "giraph.zkJavaOpts";
     /** Default java opts passed to ZooKeeper startup */
     public static final String ZOOKEEPER_JAVA_OPTS_DEFAULT =
-        "-Xmx256m -XX:ParallelGCThreads=4 -XX:+UseConcMarkSweepGC " +
+        "-Xmx512m -XX:ParallelGCThreads=4 -XX:+UseConcMarkSweepGC " +
         "-XX:CMSInitiatingOccupancyFraction=70 -XX:MaxGCPauseMillis=100";
 
     /**
@@ -372,16 +382,15 @@ public class GiraphJob extends Job {
     }
 
     /**
-     * Set the vertex range balancer class (optional)
+     * Set the graph partitioner class (optional)
      *
-     * @param vertexRangeBalancerClass Determines how vertex
-     *        ranges are balanced prior to each superstep
+     * @param graphPartitionerClass Determines how the graph is partitioned
      */
-    final public void setVertexRangeBalancerClass(
-            Class<?> vertexRangeBalancerClass) {
-        getConfiguration().setClass(VERTEX_RANGE_BALANCER_CLASS,
-                                    vertexRangeBalancerClass,
-                                    VertexRangeBalancer.class);
+    final public void setGraphPartitionerFactoryClass(
+            Class<?> graphPartitionerFactoryClass) {
+        getConfiguration().setClass(GRAPH_PARTITIONER_FACTORY_CLASS,
+                                    graphPartitionerFactoryClass,
+                                    GraphPartitionerFactory.class);
     }
 
     /**
@@ -394,7 +403,7 @@ public class GiraphJob extends Job {
                                     vertexResolverClass,
                                     VertexResolver.class);
     }
-    
+
    /**
     * Set the worker context class (optional)
     *
@@ -406,7 +415,7 @@ public class GiraphJob extends Job {
                                     workerContextClass,
                                     WorkerContext.class);
     }
-    
+
     /**
      * Set worker configuration for determining what is required for
      * a superstep.
@@ -498,6 +507,9 @@ public class GiraphJob extends Job {
         // a reasonable Giraph job
         setIntConfIfDefault("mapred.job.map.memory.mb", 1024);
         setIntConfIfDefault("mapred.job.reduce.memory.mb", 1024);
+
+        // Speculative execution doesn't make sense for Giraph
+        conf.setBoolean("mapred.map.tasks.speculative.execution", false);
 
         if (getJar() == null) {
             setJarByClass(GiraphJob.class);

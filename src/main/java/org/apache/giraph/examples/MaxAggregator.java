@@ -49,5 +49,5 @@ public class MaxAggregator implements Aggregator<DoubleWritable> {
   public DoubleWritable createAggregatedValue() {
       return new DoubleWritable();
   }
-  
+
 }

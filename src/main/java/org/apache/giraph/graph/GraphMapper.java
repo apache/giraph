@@ -19,9 +19,9 @@
 package org.apache.giraph.graph;
 
 import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.comm.RPCCommunications;
-import org.apache.giraph.comm.ServerInterface;
-import org.apache.giraph.comm.WorkerCommunications;
+import org.apache.giraph.graph.partition.Partition;
+import org.apache.giraph.graph.partition.PartitionOwner;
+import org.apache.giraph.graph.partition.PartitionStats;
 import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.giraph.zk.ZooKeeperManager;
 import org.apache.hadoop.conf.Configuration;
@@ -36,10 +36,11 @@ import java.io.IOException;
 import java.lang.reflect.Type;
 import java.net.URL;
 import java.net.URLDecoder;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Enumeration;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 /**
  * This mapper that will execute the BSP graph tasks.  Since this mapper will
@@ -56,8 +57,6 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
     CentralizedServiceWorker<I, V, E, M> serviceWorker;
     /** Coordination service master thread */
     Thread masterThread = null;
-    /** Communication service */
-    private ServerInterface<I, V, E, M> commService = null;
     /** The map should be run exactly once, or else there is a problem. */
     boolean mapAlreadyRun = false;
     /** Manages the ZooKeeper servers if necessary (dynamic startup) */
@@ -92,16 +91,6 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
     }
 
     /**
-     * Get the worker communications, a subset of the functionality.
-     *
-     * @return worker communication object
-     */
-    public final WorkerCommunications<I, V, E, M>
-            getWorkerCommunications() {
-        return commService;
-    }
-
-    /**
      * Get the aggregator usage, a subset of the functionality
      *
      * @return Aggregator usage interface
@@ -109,7 +98,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
     public final AggregatorUsage getAggregatorUsage() {
         return serviceWorker;
     }
-    
+
     public final WorkerContext getWorkerContext() {
     	return serviceWorker.getWorkerContext();
     }
@@ -259,40 +248,6 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
                     "vertex - " + vertexIndexType +
                     ", vertex output format - " + classList.get(2));
             }
-        }
-        // Vertex range balancer might never select the types
-        Class<? extends VertexRangeBalancer<I, V, E, M>>
-            vertexRangeBalancerClass =
-                BspUtils.<I, V, E, M>getVertexRangeBalancerClass(conf);
-        classList = ReflectionUtils.<VertexRangeBalancer>getTypeArguments(
-            VertexRangeBalancer.class, vertexRangeBalancerClass);
-        if (classList.get(0) != null &&
-                !vertexIndexType.equals(classList.get(0))) {
-            throw new IllegalArgumentException(
-                "checkClassTypes: Vertex index types don't match, " +
-                "vertex - " + vertexIndexType +
-                ", vertex range balancer - " + classList.get(0));
-        }
-        if (classList.get(1) != null &&
-                !vertexValueType.equals(classList.get(1))) {
-            throw new IllegalArgumentException(
-                "checkClassTypes: Vertex value types don't match, " +
-                "vertex - " + vertexValueType +
-                ", vertex range balancer - " + classList.get(1));
-        }
-        if (classList.get(2) != null &&
-                !edgeValueType.equals(classList.get(2))) {
-            throw new IllegalArgumentException(
-                "checkClassTypes: Edge value types don't match, " +
-                "vertex - " + edgeValueType +
-                ", vertex range balancer - " + classList.get(2));
-        }
-        if (classList.get(3) != null &&
-                !messageValueType.equals(classList.get(3))) {
-            throw new IllegalArgumentException(
-                "checkClassTypes: Message value types don't match, " +
-                "vertex - " + edgeValueType +
-                ", vertex range balancer - " + classList.get(3));
         }
         // Vertex resolver might never select the types
         Class<? extends VertexResolver<I, V, E, M>>
@@ -487,7 +442,11 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
                     LOG.info("setup: Starting up BspServiceWorker...");
                 }
                 serviceWorker = new BspServiceWorker<I, V, E, M>(
-                    serverPortList, sessionMsecTimeout, context, this);
+                    serverPortList,
+                    sessionMsecTimeout,
+                    context,
+                    this,
+                    graphState);
                 if (LOG.isInfoEnabled()) {
                     LOG.info("setup: Registering health of this worker...");
                 }
@@ -517,8 +476,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
         if (done == true) {
             return;
         }
-        if ((serviceWorker != null) &&
-                (serviceWorker.getTotalVertices() == 0)) {
+        if ((serviceWorker != null) && (graphState.getNumVertices() == 0)) {
             return;
         }
 
@@ -536,9 +494,8 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
         }
         mapAlreadyRun = true;
 
-        graphState.setSuperstep(serviceWorker.getSuperstep()).setContext(context)
-                  .setGraphMapper(this).setNumEdges(serviceWorker.getTotalEdges())
-                  .setNumVertices(serviceWorker.getTotalVertices());
+        graphState.setSuperstep(serviceWorker.getSuperstep()).
+            setContext(context).setGraphMapper(this);
 
         try {
             serviceWorker.getWorkerContext().preApplication();
@@ -553,22 +510,16 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
         }
         context.progress();
 
-        long workerFinishedVertices = 0;
-        long workerVertices = 0;
-        long workerEdges = 0;
+        List<PartitionStats> partitionStatsList =
+            new ArrayList<PartitionStats>();
         long workerSentMessages = 0;
         do {
             long superstep = serviceWorker.getSuperstep();
 
-            graphState.setSuperstep(superstep)
-                      .setNumEdges(serviceWorker.getTotalEdges())
-                      .setNumVertices(serviceWorker.getTotalVertices());
+            graphState.setSuperstep(superstep);
 
-            if (commService != null) {
-                commService.prepareSuperstep();
-            }
-
-            serviceWorker.startSuperstep();
+            Collection<? extends PartitionOwner> masterAssignedPartitionOwners =
+                serviceWorker.startSuperstep();
             if (zkManager != null && zkManager.runsZooKeeper()) {
                 if (LOG.isInfoEnabled()) {
                     LOG.info("map: Chosen to run ZooKeeper...");
@@ -582,16 +533,10 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
                           " maxMem=" + Runtime.getRuntime().maxMemory() +
                           " freeMem=" + Runtime.getRuntime().freeMemory());
             }
-            if ((superstep >= BspService.INPUT_SUPERSTEP) &&
-                    (commService == null)) {
-                if (LOG.isInfoEnabled()) {
-                    LOG.info("map: Starting communication service on " +
-                             "superstep " + superstep);
-                }
-                commService =
-                    new RPCCommunications<I, V, E, M>(context,
-                                                      serviceWorker);
-            }
+            context.progress();
+
+            serviceWorker.exchangeVertexPartitions(
+                masterAssignedPartitionOwners);
             context.progress();
 
             // Might need to restart from another superstep
@@ -606,51 +551,38 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
                 serviceWorker.storeCheckpoint();
             }
 
-            serviceWorker.exchangeVertexRanges();
-            context.progress();
-
             serviceWorker.getWorkerContext().setGraphState(graphState);
             serviceWorker.getWorkerContext().preSuperstep();
             context.progress();
 
-            workerFinishedVertices = 0;
-            workerVertices = 0;
-            workerEdges = 0;
+            partitionStatsList.clear();
             workerSentMessages = 0;
-            for (Map.Entry<I, VertexRange<I, V, E, M>> entry :
-                serviceWorker.getVertexRangeMap().entrySet()) {
-                // Only report my own vertex range stats
-                if (!entry.getValue().getHostname().equals(
-                        serviceWorker.getHostname()) ||
-                        (entry.getValue().getPort() !=
-                        serviceWorker.getPort())) {
-                    continue;
-                }
-
-                for (BasicVertex<I, V, E, M> vertex :
-                        entry.getValue().getVertexMap().values()) {
+            for (Partition<I, V, E, M> partition :
+                    serviceWorker.getPartitionMap().values()) {
+                PartitionStats partitionStats =
+                    new PartitionStats(partition.getPartitionId(), 0, 0, 0);
+                for (BasicVertex<I, V, E, M> basicVertex :
+                        partition.getVertices()) {
                     // Make sure every vertex has the current
                     // graphState before computing
-
-                    vertex.setGraphState(graphState);
-                    if (vertex.isHalted() && !vertex.getMsgList().isEmpty()) {
-                      // TODO FIXME: if this is not a subclass of Vertex, this will blow up!
-                        Vertex<I, V, E, M> activatedVertex =
-                            (Vertex<I, V, E, M>) vertex;
-                        activatedVertex.halt = false;
+                    basicVertex.setGraphState(graphState);
+                    if (basicVertex.isHalted() &&
+                            !basicVertex.getMsgList().isEmpty()) {
+                        basicVertex.halt = false;
                     }
-                    if (!vertex.isHalted()) {
+                    if (!basicVertex.isHalted()) {
                         Iterator<M> vertexMsgIt =
-                            vertex.getMsgList().iterator();
+                            basicVertex.getMsgList().iterator();
                         context.progress();
-                        vertex.compute(vertexMsgIt);
+                        basicVertex.compute(vertexMsgIt);
                     }
-                    if (vertex.isHalted()) {
-                        ++workerFinishedVertices;
+                    if (basicVertex.isHalted()) {
+                        partitionStats.incrFinishedVertexCount();
                     }
-                    ++workerVertices;
-                    workerEdges += vertex.getNumOutEdges();
+                    partitionStats.incrVertexCount();
+                    partitionStats.addEdgeCount(basicVertex.getNumOutEdges());
                 }
+                partitionStatsList.add(partitionStats);
             }
 
             serviceWorker.getWorkerContext().postSuperstep();
@@ -661,10 +593,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
                          " maxMem=" + Runtime.getRuntime().maxMemory() +
                          " freeMem=" + Runtime.getRuntime().freeMemory());
             }
-            workerSentMessages = commService.flush(context);
-        } while (!serviceWorker.finishSuperstep(workerFinishedVertices,
-                                                workerVertices,
-                                                workerEdges,
+        } while (!serviceWorker.finishSuperstep(partitionStatsList,
                                                 workerSentMessages));
         if (LOG.isInfoEnabled()) {
             LOG.info("map: BSP application done " +
@@ -685,9 +614,6 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
             return;
         }
 
-        if (commService != null) {
-            commService.closeConnections();
-        }
         if (serviceWorker != null) {
             serviceWorker.cleanup();
         }
@@ -702,12 +628,6 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
         if (zkManager != null) {
             zkManager.offlineZooKeeperServers(
                 ZooKeeperManager.State.FINISHED);
-        }
-        // Preferably would shut down the service only after
-        // all clients have disconnected (or the exceptions on the
-        // client side ignored).
-        if (commService != null) {
-            commService.close();
         }
     }
 }

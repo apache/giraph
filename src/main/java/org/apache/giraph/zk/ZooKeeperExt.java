@@ -124,10 +124,10 @@ public class ZooKeeperExt extends ZooKeeper {
     public class PathStat {
         private String path;
         private Stat stat;
-        
+
         /**
          * Put in results from createOrSet()
-         * 
+         *
          * @param path Path to created znode (or null)
          * @param stat Stat from set znode (if set)
          */
@@ -135,44 +135,44 @@ public class ZooKeeperExt extends ZooKeeper {
             this.path = path;
             this.stat = stat;
         }
-        
+
         /**
          * Get the path of the created znode if it was created.
-         * 
+         *
          * @return Path of created znode or null if not created
          */
         public String getPath() {
             return path;
         }
-        
+
         /**
          * Get the stat of the set znode if set
-         * 
+         *
          * @return Stat of set znode or null if not set
          */
         public Stat getStat() {
             return stat;
         }
     }
-    
+
     /**
      * Create a znode.  Set the znode if the created znode already exists.
-     * 
+     *
      * @param path path to create
      * @param data data to set on the final znode
      * @param acl acls on each znode created
      * @param createMode only affects the final znode
      * @param recursive if true, creates all ancestors
      * @return Path of created znode or Stat of set znode
-     * @throws InterruptedException 
-     * @throws KeeperException 
+     * @throws InterruptedException
+     * @throws KeeperException
      */
     public PathStat createOrSetExt(final String path,
                                    byte data[],
                                    List<ACL> acl,
                                    CreateMode createMode,
                                    boolean recursive,
-                                   int version) 
+                                   int version)
             throws KeeperException, InterruptedException {
         String createdPath = null;
         Stat setStat = null;
@@ -183,6 +183,36 @@ public class ZooKeeperExt extends ZooKeeper {
                 LOG.debug("createOrSet: Node exists on path " + path);
             }
             setStat = setData(path, data, version);
+        }
+        return new PathStat(createdPath, setStat);
+    }
+
+    /**
+     * Create a znode if there is no other znode there
+     *
+     * @param path path to create
+     * @param data data to set on the final znode
+     * @param acl acls on each znode created
+     * @param createMode only affects the final znode
+     * @param recursive if true, creates all ancestors
+     * @return Path of created znode or Stat of set znode
+     * @throws InterruptedException
+     * @throws KeeperException
+     */
+    public PathStat createOnceExt(final String path,
+                                   byte data[],
+                                   List<ACL> acl,
+                                   CreateMode createMode,
+                                   boolean recursive)
+            throws KeeperException, InterruptedException {
+        String createdPath = null;
+        Stat setStat = null;
+        try {
+            createdPath = createExt(path, data, acl, createMode, recursive);
+        } catch (KeeperException.NodeExistsException e) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("createOnceExt: Node already exists on path " + path);
+            }
         }
         return new PathStat(createdPath, setStat);
     }

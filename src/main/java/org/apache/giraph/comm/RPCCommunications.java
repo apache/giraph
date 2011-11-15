@@ -38,6 +38,7 @@ import org.apache.hadoop.security.token.Token;
 import org.apache.log4j.Logger;
 
 import org.apache.giraph.bsp.CentralizedServiceWorker;
+import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.hadoop.BspPolicyProvider;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
@@ -63,7 +64,8 @@ else[HADOOP]*/
     public static final Logger LOG = Logger.getLogger(RPCCommunications.class);
 
     public RPCCommunications(Mapper<?, ?, ?, ?>.Context context,
-                             CentralizedServiceWorker<I, V, E, M> service)
+                             CentralizedServiceWorker<I, V, E, M> service,
+                             GraphState<I, V, E, M> graphState)
             throws IOException, UnknownHostException, InterruptedException {
         super(context, service);
     }
@@ -99,7 +101,7 @@ else[HADOOP]*/
             ServiceAuthorizationManager.SERVICE_AUTHORIZATION_CONFIG;
         if (conf.getBoolean(
                     hadoopSecurityAuthorization,
-		            false)) {
+                    false)) {
             ServiceAuthorizationManager.refresh(conf, new BspPolicyProvider());
         }
         JobTokenSecretManager jobTokenSecretManager =
@@ -158,7 +160,7 @@ else[HADOOP]*/
                     CommunicationsInterface.class, versionID, addr, config);
             }
         });
-		return proxy;
+        return proxy;
 /*end[HADOOP]*/
     }
 }

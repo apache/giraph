@@ -17,6 +17,7 @@
  */
 package org.apache.giraph.graph;
 
+import org.apache.giraph.comm.WorkerCommunications;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -40,9 +41,11 @@ public class GraphState<I extends WritableComparable, V extends Writable,
     /** Graph-wide number of edges */
     private long numEdges = -1;
     /** Graph-wide map context */
-    private Mapper.Context context = null;
+    private Mapper.Context context;
     /** Graph-wide BSP Mapper for this Vertex */
-    private GraphMapper<I, V, E, M> graphMapper = null;
+    private GraphMapper<I, V, E, M> graphMapper;
+    /** Graph-wide worker communications */
+    private WorkerCommunications<I, V, E, M> workerCommunications;
 
     public long getSuperstep() {
         return superstep;
@@ -75,7 +78,7 @@ public class GraphState<I extends WritableComparable, V extends Writable,
         return context;
     }
 
-    public GraphState<I, V , E ,M> setContext(Mapper.Context context) {
+    public GraphState<I, V, E ,M> setContext(Mapper.Context context) {
         this.context = context;
         return this;
     }
@@ -88,5 +91,15 @@ public class GraphState<I extends WritableComparable, V extends Writable,
             GraphMapper<I, V, E, M> graphMapper) {
         this.graphMapper = graphMapper;
         return this;
+    }
+
+    public GraphState<I, V, E, M> setWorkerCommunications(
+            WorkerCommunications<I, V, E, M> workerCommunications) {
+        this.workerCommunications = workerCommunications;
+        return this;
+    }
+
+    public WorkerCommunications<I, V, E, M> getWorkerCommunications() {
+        return workerCommunications;
     }
 }
