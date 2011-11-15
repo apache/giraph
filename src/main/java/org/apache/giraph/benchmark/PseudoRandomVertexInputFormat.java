@@ -49,10 +49,10 @@ public class PseudoRandomVertexInputFormat<M extends Writable> extends
         VertexInputFormat<LongWritable, DoubleWritable, DoubleWritable, M> {
     /** Set the number of aggregate vertices */
     public static final String AGGREGATE_VERTICES =
-        "pseduoRandomVertexReader.aggregateVertices";
+        "pseudoRandomVertexReader.aggregateVertices";
     /** Set the number of edges per vertex (pseudo-random destination) */
     public static final String EDGES_PER_VERTEX =
-        "pseduoRandomVertexReader.edgesPerVertex";
+        "pseudoRandomVertexReader.edgesPerVertex";
 
     @Override
     public List<InputSplit> getSplits(JobContext context, int numWorkers)

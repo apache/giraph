@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.70.0 - unreleased
 
+  GIRAPH-70: Misspellings in PseudoRandomVertexInputFormat configuration
+  parameters. (attilacsordas via jghoman)
+
   GIRAPH-58: Update site with Arun's id (asuresh)
   
   GIRAPH-11: Improve the graph distribution of Giraph. (aching)
