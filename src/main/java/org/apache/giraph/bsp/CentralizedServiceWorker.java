@@ -106,11 +106,9 @@ public interface CentralizedServiceWorker<
      * worker level statistics after the computation.
      *
      * @param partitionStatsList All the partition stats for this worker
-     * @param workersSentMessages Number of messages sent on this worker
      * @return true if this is the last superstep, false otherwise
      */
-    boolean finishSuperstep(List<PartitionStats> partitionStatsList,
-                            long workersSentMessages);
+    boolean finishSuperstep(List<PartitionStats> partitionStatsList);
     /**
      * Get the partition that a vertex index would belong to
      *

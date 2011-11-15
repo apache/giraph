@@ -32,8 +32,8 @@ import org.apache.hadoop.io.WritableComparable;
  * range partitioning is more susceptible to hot spots if the keys
  * are not randomly distributed.  Another negative is the user must implement
  * some of the functionality around how to split the key range.
- * 
- * Note:  This implementation is incomplete, the developer must implement the 
+ *
+ * Note:  This implementation is incomplete, the developer must implement the
  * various methods based on their index type.
  *
  * @param <I> Vertex index value
@@ -46,7 +46,7 @@ public abstract class RangeWorkerPartitioner<I extends WritableComparable,
         V extends Writable, E extends Writable, M extends Writable> implements
         WorkerGraphPartitioner<I, V, E, M> {
     /** Mapping of the vertex ids to the {@link PartitionOwner} */
-    private NavigableMap<I, RangePartitionOwner<I>> vertexRangeMap =
+    protected NavigableMap<I, RangePartitionOwner<I>> vertexRangeMap =
         new TreeMap<I, RangePartitionOwner<I>>();
 
     @Override

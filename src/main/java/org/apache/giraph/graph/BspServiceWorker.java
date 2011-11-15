@@ -548,7 +548,7 @@ public class BspServiceWorker<
         workerGraphPartitioner.finalizePartitionStats(
             partitionStatsList, workerPartitionMap);
 
-        finishSuperstep(partitionStatsList, 0);
+        finishSuperstep(partitionStatsList);
     }
 
     /**
@@ -773,8 +773,7 @@ public class BspServiceWorker<
     }
 
     @Override
-    public boolean finishSuperstep(List<PartitionStats> partitionStatsList,
-                                   long workersSentMessages) {
+    public boolean finishSuperstep(List<PartitionStats> partitionStatsList) {
         // This barrier blocks until success (or the master signals it to
         // restart).
         //
@@ -785,8 +784,9 @@ public class BspServiceWorker<
         // of this worker
         // 3. Let the master know it is finished.
         // 4. Then it waits for the master to say whether to stop or not.
+        long workerSentMessages = 0;
         try {
-            commService.flush(getContext());
+            workerSentMessages = commService.flush(getContext());
         } catch (IOException e) {
             throw new IllegalStateException(
                 "finishSuperstep: flush failed", e);
@@ -807,7 +807,7 @@ public class BspServiceWorker<
             workerFinishedInfoObj.put(JSONOBJ_PARTITION_STATS_KEY,
                                       Base64.encodeBytes(partitionStatsBytes));
             workerFinishedInfoObj.put(JSONOBJ_NUM_MESSAGES_KEY,
-                                      workersSentMessages);
+                                      workerSentMessages);
         } catch (JSONException e) {
             throw new RuntimeException(e);
         }

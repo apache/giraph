@@ -512,7 +512,6 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
 
         List<PartitionStats> partitionStatsList =
             new ArrayList<PartitionStats>();
-        long workerSentMessages = 0;
         do {
             long superstep = serviceWorker.getSuperstep();
 
@@ -556,7 +555,6 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
             context.progress();
 
             partitionStatsList.clear();
-            workerSentMessages = 0;
             for (Partition<I, V, E, M> partition :
                     serviceWorker.getPartitionMap().values()) {
                 PartitionStats partitionStats =
@@ -593,8 +591,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
                          " maxMem=" + Runtime.getRuntime().maxMemory() +
                          " freeMem=" + Runtime.getRuntime().freeMemory());
             }
-        } while (!serviceWorker.finishSuperstep(partitionStatsList,
-                                                workerSentMessages));
+        } while (!serviceWorker.finishSuperstep(partitionStatsList));
         if (LOG.isInfoEnabled()) {
             LOG.info("map: BSP application done " +
                      "(global vertices marked done)");
