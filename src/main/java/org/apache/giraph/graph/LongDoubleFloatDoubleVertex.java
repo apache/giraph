@@ -134,7 +134,6 @@ public abstract class LongDoubleFloatDoubleVertex extends
 
     @Override
     public long getNumVertices() {
-        System.out.println("in getNumVertices!");
         return getGraphState().getNumVertices();
     }
 

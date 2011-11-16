@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.70.0 - unreleased
 
+  GIRAPH-89: Remove debugging system.out from LongDoubleFloatDoubleVertex. 
+  (shaunak via aching)
+
   GIRAPH-88: Message count not updated properly after GIRAPH-11. (aching)
 
   GIRAPH-70: Misspellings in PseudoRandomVertexInputFormat configuration
