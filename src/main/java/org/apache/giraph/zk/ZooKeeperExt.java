@@ -91,7 +91,7 @@ public class ZooKeeperExt extends ZooKeeper {
             LOG.debug("createExt: Creating path " + path);
         }
 
-        if (recursive == false) {
+        if (!recursive) {
             return create(path, data, acl, createMode);
         }
 
@@ -229,7 +229,7 @@ public class ZooKeeperExt extends ZooKeeper {
      */
     public void deleteExt(final String path, int version, boolean recursive)
             throws InterruptedException, KeeperException {
-        if (recursive == false) {
+        if (!recursive) {
             delete(path, version);
             return;
         }

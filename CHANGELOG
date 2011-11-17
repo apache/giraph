@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.70.0 - unreleased
 
+  GIRAPH-86: Simplify boolean expressions in ZooKeeperExt::createExt.
+  (attilacsordas via jghoman)
+
   GIRAPH-91: Large-memory improvements (Memory reduced vertex
   implementation, fast failure, added settings). (aching)
 
