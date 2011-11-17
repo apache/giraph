@@ -23,6 +23,7 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
+import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.conf.Configuration;
@@ -36,33 +37,60 @@ import java.util.Iterator;
 /**
  * Benchmark based on the basic Pregel PageRank implementation.
  */
-public class PageRankBenchmark extends
-        Vertex<LongWritable, DoubleWritable, DoubleWritable, DoubleWritable>
-        implements Tool {
+public class PageRankBenchmark implements Tool {
     /** Configuration from Configurable */
     private Configuration conf;
 
     /** How many supersteps to run */
     public static String SUPERSTEP_COUNT = "PageRankBenchmark.superstepCount";
 
-    @Override
-    public void compute(Iterator<DoubleWritable> msgIterator) {
-        if (getSuperstep() >= 1) {
-            double sum = 0;
-            while (msgIterator.hasNext()) {
-                sum += msgIterator.next().get();
+    public static class PageRankVertex extends Vertex<
+            LongWritable, DoubleWritable, DoubleWritable, DoubleWritable> {
+        @Override
+        public void compute(Iterator<DoubleWritable> msgIterator) {
+            if (getSuperstep() >= 1) {
+                double sum = 0;
+                while (msgIterator.hasNext()) {
+                    sum += msgIterator.next().get();
+                }
+                DoubleWritable vertexValue =
+                    new DoubleWritable((0.15f / getNumVertices()) + 0.85f *
+                                       sum);
+                setVertexValue(vertexValue);
             }
-            DoubleWritable vertexValue =
-                new DoubleWritable((0.15f / getNumVertices()) + 0.85f * sum);
-            setVertexValue(vertexValue);
-        }
 
-        if (getSuperstep() < getConf().getInt(SUPERSTEP_COUNT, -1)) {
-            long edges = getNumOutEdges();
-            sendMsgToAllEdges(
-                new DoubleWritable(getVertexValue().get() / edges));
-        } else {
-            voteToHalt();
+            if (getSuperstep() < getConf().getInt(SUPERSTEP_COUNT, -1)) {
+                long edges = getNumOutEdges();
+                sendMsgToAllEdges(
+                    new DoubleWritable(getVertexValue().get() / edges));
+            } else {
+                voteToHalt();
+            }
+        }
+    }
+
+    public static class PageRankEdgeListVertex extends EdgeListVertex<
+            LongWritable, DoubleWritable, DoubleWritable, DoubleWritable> {
+        @Override
+        public void compute(Iterator<DoubleWritable> msgIterator) {
+            if (getSuperstep() >= 1) {
+                double sum = 0;
+                while (msgIterator.hasNext()) {
+                    sum += msgIterator.next().get();
+                }
+                DoubleWritable vertexValue =
+                    new DoubleWritable((0.15f / getNumVertices()) + 0.85f *
+                                       sum);
+                setVertexValue(vertexValue);
+            }
+
+            if (getSuperstep() < getConf().getInt(SUPERSTEP_COUNT, -1)) {
+                long edges = getNumOutEdges();
+                sendMsgToAllEdges(
+                        new DoubleWritable(getVertexValue().get() / edges));
+            } else {
+                voteToHalt();
+            }
         }
     }
 
@@ -97,6 +125,10 @@ public class PageRankBenchmark extends
                           "edgesPerVertex",
                           true,
                           "Edges per vertex");
+        options.addOption("c",
+                          "vertexClass",
+                          true,
+                          "Vertex class (0 for Vertex, 1 for EdgeListVertex)");
         HelpFormatter formatter = new HelpFormatter();
         if (args.length == 0) {
             formatter.printHelp(getClass().getName(), options, true);
@@ -125,9 +157,19 @@ public class PageRankBenchmark extends
                                "per vertex (-e)");
             return -1;
         }
+
         int workers = Integer.parseInt(cmd.getOptionValue('w'));
         GiraphJob job = new GiraphJob(getConf(), getClass().getName());
-        job.setVertexClass(getClass());
+        if (!cmd.hasOption('c') ||
+                (Integer.parseInt(cmd.getOptionValue('c')) == 0)) {
+            System.out.println("Using " +
+                                PageRankVertex.class.getName());
+            job.setVertexClass(PageRankVertex.class);
+        } else {
+            System.out.println("Using " +
+                                PageRankEdgeListVertex.class.getName());
+            job.setVertexClass(PageRankEdgeListVertex.class);
+        }
         job.setVertexInputFormatClass(PseudoRandomVertexInputFormat.class);
         job.setWorkerConfiguration(workers, workers, 100.0f);
         job.getConfiguration().setLong(

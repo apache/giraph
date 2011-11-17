@@ -136,8 +136,9 @@ public class BspServiceWorker<
         commService = new RPCCommunications<I, V, E, M>(
             context, this, graphState);
         graphState.setWorkerCommunications(commService);
-        this.workerContext = BspUtils.createWorkerContext(getConfiguration(),
-            graphMapper.getGraphState());
+        this.workerContext =
+            BspUtils.createWorkerContext(getConfiguration(),
+                                         graphMapper.getGraphState());
     }
 
     public WorkerContext getWorkerContext() {
@@ -708,6 +709,30 @@ public class BspServiceWorker<
                      getSuperstep() + " with " + myHealthZnode +
                      " and workerInfo= " + workerInfo);
         }
+    }
+
+    /**
+     * Do this to help notify the master quicker that this worker has failed.
+     */
+    private void unregisterHealth() {
+        LOG.error("unregisterHealth: Got failure, unregistering health on " +
+                  myHealthZnode + " on superstep " + getSuperstep());
+        try {
+            getZkExt().delete(myHealthZnode, -1);
+        } catch (InterruptedException e) {
+            throw new IllegalStateException(
+                "unregisterHealth: InterruptedException - Couldn't delete " +
+                myHealthZnode, e);
+        } catch (KeeperException e) {
+            throw new IllegalStateException(
+                "unregisterHealth: KeeperException - Couldn't delete " +
+                myHealthZnode, e);
+        }
+    }
+
+    @Override
+    public void failureCleanup() {
+        unregisterHealth();
     }
 
     @Override

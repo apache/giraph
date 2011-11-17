@@ -851,6 +851,7 @@ end[HADOOP_FACEBOOK]*/
         for (Future<?> future : futures) {
             try {
                 future.get();
+                context.progress();
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }

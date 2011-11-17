@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.70.0 - unreleased
 
+  GIRAPH-91: Large-memory improvements (Memory reduced vertex
+  implementation, fast failure, added settings). (aching)
+
   GIRAPH-89: Remove debugging system.out from LongDoubleFloatDoubleVertex. 
   (shaunak via aching)
 

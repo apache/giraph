@@ -627,4 +627,25 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
                 ZooKeeperManager.State.FINISHED);
         }
     }
+
+    @Override
+    public void run(Context context) throws IOException, InterruptedException {
+        // Notify the master quicker if there is worker failure rather than
+        // waiting for ZooKeeper to timeout and delete the ephemeral znodes
+        try {
+            setup(context);
+            while (context.nextKeyValue()) {
+                map(context.getCurrentKey(),
+                    context.getCurrentValue(),
+                    context);
+            }
+        cleanup(context);
+        } catch (Exception e) {
+            if (mapFunctions == MapFunctions.WORKER_ONLY) {
+                serviceWorker.failureCleanup();
+            }
+            throw new IllegalStateException(
+                "run: Caught an unrecoverable exception " + e.getMessage(), e);
+        }
+    }
 }

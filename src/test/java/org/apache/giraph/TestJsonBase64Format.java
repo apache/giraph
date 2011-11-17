@@ -65,7 +65,7 @@ public class TestJsonBase64Format extends BspCase {
             throws IOException, InterruptedException, ClassNotFoundException {
         GiraphJob job = new GiraphJob(getCallingMethodName());
         setupConfiguration(job);
-        job.setVertexClass(PageRankBenchmark.class);
+        job.setVertexClass(PageRankBenchmark.PageRankVertex.class);
         job.setVertexInputFormatClass(PseudoRandomVertexInputFormat.class);
         job.setVertexOutputFormatClass(JsonBase64VertexOutputFormat.class);
         job.getConfiguration().setLong(
@@ -79,7 +79,7 @@ public class TestJsonBase64Format extends BspCase {
 
         job = new GiraphJob(getCallingMethodName());
         setupConfiguration(job);
-        job.setVertexClass(PageRankBenchmark.class);
+        job.setVertexClass(PageRankBenchmark.PageRankVertex.class);
         job.setVertexInputFormatClass(JsonBase64VertexInputFormat.class);
         job.setVertexOutputFormatClass(JsonBase64VertexOutputFormat.class);
         job.getConfiguration().setInt(PageRankBenchmark.SUPERSTEP_COUNT, 3);
@@ -95,7 +95,7 @@ public class TestJsonBase64Format extends BspCase {
 
         job = new GiraphJob(getCallingMethodName());
         setupConfiguration(job);
-        job.setVertexClass(PageRankBenchmark.class);
+        job.setVertexClass(PageRankBenchmark.PageRankVertex.class);
         job.setVertexInputFormatClass(PseudoRandomVertexInputFormat.class);
         job.setVertexOutputFormatClass(JsonBase64VertexOutputFormat.class);
         job.getConfiguration().setLong(

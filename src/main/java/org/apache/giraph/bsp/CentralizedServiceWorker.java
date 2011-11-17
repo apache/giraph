@@ -153,4 +153,9 @@ public interface CentralizedServiceWorker<
      * @return BspMapper
      */
     GraphMapper<I, V, E, M> getGraphMapper();
+
+    /**
+     * Operations that will be called if there is a failure by a worker.
+     */
+    void failureCleanup();
 }

@@ -22,6 +22,7 @@ import org.apache.giraph.bsp.BspInputFormat;
 import org.apache.giraph.bsp.BspOutputFormat;
 import org.apache.giraph.graph.partition.GraphPartitionerFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.log4j.Logger;
 
@@ -261,7 +262,7 @@ public class GiraphJob extends Job {
     public static final Boolean KEEP_ZOOKEEPER_DATA_DEFAULT = false;
 
     /** Default ZooKeeper tick time. */
-    public static final int DEFAULT_ZOOKEEPER_TICK_TIME = 2000;
+    public static final int DEFAULT_ZOOKEEPER_TICK_TIME = 6000;
     /** Default ZooKeeper init limit (in ticks). */
     public static final int DEFAULT_ZOOKEEPER_INIT_LIMIT = 10;
     /** Default ZooKeeper sync limit (in ticks). */
@@ -270,10 +271,10 @@ public class GiraphJob extends Job {
     public static final int DEFAULT_ZOOKEEPER_SNAP_COUNT = 50000;
     /** Default ZooKeeper maximum client connections. */
     public static final int DEFAULT_ZOOKEEPER_MAX_CLIENT_CNXNS = 10000;
-    /** Default ZooKeeper minimum session timeout (in msecs). */
-    public static final int DEFAULT_ZOOKEEPER_MIN_SESSION_TIMEOUT = 10000;
-    /** Default ZooKeeper maximum session timeout (in msecs). */
-    public static final int DEFAULT_ZOOKEEPER_MAX_SESSION_TIMEOUT = 100000;
+    /** Default ZooKeeper minimum session timeout of 5 minutes (in msecs). */
+    public static final int DEFAULT_ZOOKEEPER_MIN_SESSION_TIMEOUT = 300*1000;
+    /** Default ZooKeeper maximum session timeout of 10 minutes (in msecs). */
+    public static final int DEFAULT_ZOOKEEPER_MAX_SESSION_TIMEOUT = 600*1000;
 
     /** Class logger */
     private static final Logger LOG = Logger.getLogger(GiraphJob.class);
@@ -510,6 +511,10 @@ public class GiraphJob extends Job {
 
         // Speculative execution doesn't make sense for Giraph
         conf.setBoolean("mapred.map.tasks.speculative.execution", false);
+
+        // Set the ping interval to 5 minutes instead of one minute
+        // (DEFAULT_PING_INTERVAL)
+        Client.setPingInterval(conf, 60000*5);
 
         if (getJar() == null) {
             setJarByClass(GiraphJob.class);
