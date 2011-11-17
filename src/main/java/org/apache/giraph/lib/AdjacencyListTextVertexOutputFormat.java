@@ -43,7 +43,7 @@ public class AdjacencyListTextVertexOutputFormat <I extends WritableComparable,
 
   static class AdjacencyListVertexWriter<I extends WritableComparable, V extends
       Writable, E extends Writable> extends TextVertexWriter<I, V, E> {
-    public static final String LINE_TOKENIZE_VALUE = "adj.list.output.delimiter";
+    public static final String LINE_TOKENIZE_VALUE = "output.delimiter";
     public static final String LINE_TOKENIZE_VALUE_DEFAULT = "\t";
 
     private String delimiter;
