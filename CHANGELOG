@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.70.0 - unreleased
 
+  GIRAPH-97: TestIdWithValueTextOutputFormat.java and 
+  IdWithValueTextOutputFormat.java missing license header (claudio)
+
   GIRAPH-92: Need outputformat for just vertex ID and value. (jghoman)
 
   GIRAPH-86: Simplify boolean expressions in ZooKeeperExt::createExt.
