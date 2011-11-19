@@ -2,6 +2,8 @@ Giraph Change Log
 
 Release 0.70.0 - unreleased
 
+  GIRAPH-98: Add Claudio Martella to site. (claudio)
+
   GIRAPH-97: TestIdWithValueTextOutputFormat.java and 
   IdWithValueTextOutputFormat.java missing license header (claudio)
 
