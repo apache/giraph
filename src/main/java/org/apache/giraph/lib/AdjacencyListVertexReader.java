@@ -44,7 +44,7 @@ import java.util.Map;
  * @param <E> Edge value
  */
 @SuppressWarnings("rawtypes")
-abstract class AdjacencyListVertexReader<I extends WritableComparable,
+public abstract class AdjacencyListVertexReader<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable> extends
     TextVertexInputFormat.TextVertexReader<I, V, E, M> {
 
@@ -65,11 +65,11 @@ abstract class AdjacencyListVertexReader<I extends WritableComparable,
 
   private LineSanitizer sanitizer = null;
 
-  AdjacencyListVertexReader(RecordReader<LongWritable, Text> lineRecordReader) {
+  public AdjacencyListVertexReader(RecordReader<LongWritable, Text> lineRecordReader) {
     super(lineRecordReader);
   }
 
-  AdjacencyListVertexReader(RecordReader<LongWritable, Text> lineRecordReader,
+  public AdjacencyListVertexReader(RecordReader<LongWritable, Text> lineRecordReader,
       LineSanitizer sanitizer) {
     super(lineRecordReader);
     this.sanitizer = sanitizer;
