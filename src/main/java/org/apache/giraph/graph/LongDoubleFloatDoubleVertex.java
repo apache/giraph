@@ -145,7 +145,6 @@ public abstract class LongDoubleFloatDoubleVertex extends
     @Override
     public Iterator<LongWritable> iterator() {
         final long[] destVertices = verticesWithEdgeValues.keys().elements();
-        final LongWritable lw = new LongWritable();
         return new Iterator<LongWritable>() {
             int offset = 0;
             @Override public boolean hasNext() {
@@ -153,8 +152,7 @@ public abstract class LongDoubleFloatDoubleVertex extends
             }
 
             @Override public LongWritable next() {
-                lw.set(destVertices[offset++]);
-                return lw;
+                return new LongWritable(destVertices[offset++]);
             }
 
             @Override public void remove() {
@@ -246,11 +244,9 @@ public abstract class LongDoubleFloatDoubleVertex extends
 
     @Override
     public List<DoubleWritable> getMsgList() {
-        final DoubleWritable message = new DoubleWritable();
         return new AbstractList<DoubleWritable>() {
             @Override public DoubleWritable get(int i) {
-                message.set(messageList.get(i));
-                return message;
+                return new DoubleWritable(messageList.get(i));
             }
             @Override public int size() {
                 return messageList.size();
