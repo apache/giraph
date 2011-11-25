@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.70.0 - unreleased
 
+  GIRAPH-89: Simplify boolean expressions in BspRecordReader.
+  (shaunak via claudio)
+
   GIRAPH-90: LongDoubleFloatDoubleVertex has possibily the iterator() 
   implementation broken (claudio)
 

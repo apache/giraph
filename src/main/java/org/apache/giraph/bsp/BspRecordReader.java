@@ -29,6 +29,10 @@ import org.apache.hadoop.io.Text;
  * Only returns a single key-value pair so that the map() can run.
  */
 class BspRecordReader extends RecordReader<Text, Text> {
+
+    private static final Text ONLY_KEY = new Text("only key");
+    private static final Text ONLY_VALUE = new Text("only value");
+
     /** Has the one record been seen? */
     private boolean seenRecord = false;
 
@@ -39,22 +43,17 @@ class BspRecordReader extends RecordReader<Text, Text> {
 
     @Override
     public float getProgress() throws IOException {
-        if (seenRecord == true) {
-            return 1f;
-        }
-        else {
-            return 0f;
-        }
+        return (seenRecord ? 1f : 0f);
     }
 
     @Override
     public Text getCurrentKey() throws IOException, InterruptedException {
-        return new Text("only key");
+        return ONLY_KEY;
     }
 
     @Override
     public Text getCurrentValue() throws IOException, InterruptedException {
-        return new Text("only value");
+        return ONLY_VALUE;
     }
 
     @Override
@@ -64,12 +63,6 @@ class BspRecordReader extends RecordReader<Text, Text> {
 
     @Override
     public boolean nextKeyValue() throws IOException, InterruptedException {
-        if (seenRecord == false) {
-            seenRecord = true;
-            return true;
-        }
-        else {
-            return false;
-        }
+	return (seenRecord ? false : (seenRecord = true));
     }
 }
