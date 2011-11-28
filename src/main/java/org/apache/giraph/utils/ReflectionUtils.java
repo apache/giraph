@@ -19,6 +19,7 @@
 package org.apache.giraph.utils;
 
 import java.lang.reflect.Array;
+import java.lang.reflect.Field;
 import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -121,5 +122,27 @@ public class ReflectionUtils {
             typeArgumentsAsClasses.add(getClass(baseType));
         }
         return typeArgumentsAsClasses;
+    }
+
+    /** try to directly set a (possibly private) field on an Object */
+    public static void setField(Object target, String fieldname, Object value)
+            throws NoSuchFieldException, IllegalAccessException {
+        Field field = findDeclaredField(target.getClass(), fieldname);
+        field.setAccessible(true);
+        field.set(target, value);
+    }
+
+    /** find a declared field in a class or one of its super classes */
+    private static Field findDeclaredField(Class<?> inClass, String fieldname)
+            throws NoSuchFieldException {
+        while (!Object.class.equals(inClass)) {
+            for (Field field : inClass.getDeclaredFields()) {
+                if (field.getName().equalsIgnoreCase(fieldname)) {
+                    return field;
+                }
+            }
+            inClass = inClass.getSuperclass();
+        }
+        throw new NoSuchFieldException();
     }
 }

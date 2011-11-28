@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.70.0 - unreleased
 
+  GIRAPH-51: Provide unit testing tool for Giraph algorithms.
+  (Sebastian Schelter via jghoman)
+
   GIRAPH-89: Simplify boolean expressions in BspRecordReader.
   (shaunak via claudio)
 

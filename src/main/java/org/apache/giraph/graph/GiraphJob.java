@@ -84,6 +84,13 @@ public class GiraphJob extends Job {
      */
     public static final boolean SPLIT_MASTER_WORKER_DEFAULT = true;
 
+    /** Indicates whether this job is run in an internal unit test */
+    public static final String LOCAL_TEST_MODE =
+        "giraph.localTestMode";
+
+    /** not in local test mode per default */
+    public static final boolean LOCAL_TEST_MODE_DEFAULT = false;
+
     /**
      * Minimum percent of the maximum number of workers that have responded
      * in order to continue progressing. (float)
