@@ -193,10 +193,13 @@ public abstract class BasicRPCCommunications<
     }
 
     private class PeerFlushExecutor implements Runnable {
-        PeerConnection peerConnection;
+        private final PeerConnection peerConnection;
+        private final Mapper<?, ?, ?, ?>.Context context;
 
-        PeerFlushExecutor(PeerConnection peerConnection) {
+        PeerFlushExecutor(PeerConnection peerConnection,
+                          Mapper<?, ?, ?, ?>.Context context) {
             this.peerConnection = peerConnection;
+            this.context = context;
         }
 
         @Override
@@ -246,6 +249,7 @@ public abstract class BasicRPCCommunications<
                                                 "null message on " + e.getKey());
                                     }
                                     proxy.putMsg(e.getKey(), msg);
+                                    context.progress();
                                 }
                                 msgList.clear();
                             }
@@ -583,9 +587,7 @@ end[HADOOP_FACEBOOK]*/
             } else {
                 List<BasicVertex<I, V, E, M>> tmpVertexList =
                     inPartitionVertexMap.get(partitionId);
-                for (BasicVertex<I, V, E, M> hadoopVertex : vertexList) {
-                    tmpVertexList.add(hadoopVertex);
-                }
+                tmpVertexList.addAll(vertexList);
             }
         }
     }
@@ -831,11 +833,13 @@ end[HADOOP_FACEBOOK]*/
     @Override
     public long flush(Mapper<?, ?, ?, ?>.Context context) throws IOException {
         if (LOG.isInfoEnabled()) {
-            LOG.info("flush: starting...");
+            LOG.info("flush: starting for superstep " + service.getSuperstep());
         }
         for (List<M> msgList : inMessages.values()) {
             msgList.clear();
         }
+        inMessages.clear();
+
         Collection<Future<?>> futures = new ArrayList<Future<?>>();
 
         // randomize peers in order to avoid hotspot on racks
@@ -844,7 +848,7 @@ end[HADOOP_FACEBOOK]*/
         Collections.shuffle(peerList);
 
         for (PeerConnection pc : peerList) {
-            futures.add(executor.submit(new PeerFlushExecutor(pc)));
+            futures.add(executor.submit(new PeerFlushExecutor(pc, context)));
         }
 
         // wait for all flushes
@@ -869,9 +873,9 @@ end[HADOOP_FACEBOOK]*/
         }
         inPrepareSuperstep = true;
 
+        // Combine and put the transient messages into the inMessages.
         synchronized(transientInMessages) {
-            for (Entry<I, List<M>> entry :
-                transientInMessages.entrySet()) {
+            for (Entry<I, List<M>> entry : transientInMessages.entrySet()) {
                 if (combiner != null) {
                     try {
                         M combinedMsg = combiner.combine(entry.getKey(),
@@ -893,6 +897,7 @@ end[HADOOP_FACEBOOK]*/
                 }
                 entry.getValue().clear();
             }
+            transientInMessages.clear();
         }
 
         if (inMessages.size() > 0) {
@@ -917,6 +922,11 @@ end[HADOOP_FACEBOOK]*/
                         }
                         vertex.getMsgList().addAll(msgList);
                         msgList.clear();
+                        if (inMessages.remove(vertex.getVertexId()) == null) {
+                            throw new IllegalStateException(
+                                "prepareSuperstep: Impossible to not remove " +
+                                vertex);
+                        }
                     }
                 }
             }
@@ -925,15 +935,24 @@ end[HADOOP_FACEBOOK]*/
         inPrepareSuperstep = false;
 
         // Resolve what happens when messages are sent to non-existent vertices
-        // and vertices that have mutations
+        // and vertices that have mutations.  Also make sure that the messages
+        // are being sent to the correct destination
         Set<I> resolveVertexIndexSet = new TreeSet<I>();
         if (inMessages.size() > 0) {
             for (Entry<I, List<M>> entry : inMessages.entrySet()) {
-                if (entry.getValue().isEmpty()) {
-                    continue;
-                } else {
-                    resolveVertexIndexSet.add(entry.getKey());
+                if (service.getPartition(entry.getKey()) == null) {
+                    throw new IllegalStateException(
+                        "prepareSuperstep: Impossible that this worker " +
+                        service.getWorkerInfo() + " was sent " +
+                        entry.getValue().size() + " message(s) with " +
+                        "vertex id " + entry.getKey() +
+                        " when it does not own this partition.  It should " +
+                        "have gone to partition owner " +
+                        service.getVertexPartitionOwner(entry.getKey()) +
+                        ".  The partition owners are " +
+                        service.getPartitionOwners());
                 }
+                resolveVertexIndexSet.add(entry.getKey());
             }
         }
         synchronized (inVertexMutationsMap) {

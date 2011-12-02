@@ -215,7 +215,24 @@ public class BspServiceMaster<
         List<InputSplit> splits;
         try {
             splits = vertexInputFormat.getSplits(getContext(), numWorkers);
-            return splits;
+            float samplePercent =
+                getConfiguration().getFloat(
+                    GiraphJob.INPUT_SPLIT_SAMPLE_PERCENT,
+                    GiraphJob.INPUT_SPLIT_SAMPLE_PERCENT_DEFAULT);
+            if (samplePercent != GiraphJob.INPUT_SPLIT_SAMPLE_PERCENT_DEFAULT) {
+                int lastIndex = (int) (samplePercent * splits.size() / 100f);
+                List<InputSplit> sampleSplits = splits.subList(0, lastIndex);
+                LOG.warn("generateInputSplits: Using sampling - Processing " +
+                         "only " + sampleSplits.size() + " instead of " +
+                        splits.size() + " expected splits.");
+                return sampleSplits;
+            } else {
+                if (LOG.isInfoEnabled()) {
+                    LOG.info("generateInputSplits: Got " + splits.size() +
+                            " input splits for " + numWorkers + " workers");
+                }
+                return splits;
+            }
         } catch (IOException e) {
             throw new IllegalStateException(
                 "generateInputSplits: Got IOException", e);
@@ -428,6 +445,11 @@ public class BspServiceMaster<
             return null;
         }
 
+        getContext().setStatus(getGraphMapper().getMapFunctions() + " " +
+            "checkWorkers: Done - Found " + totalResponses +
+            " responses of " + maxWorkers + " needed to start superstep " +
+            getSuperstep());
+
         return healthyWorkerInfoList;
     }
 
@@ -466,13 +488,16 @@ public class BspServiceMaster<
             return -1;
         }
 
+        // Note that the input splits may only be a sample if
+        // INPUT_SPLIT_SAMPLE_PERCENT is set to something other than 100
         List<InputSplit> splitList =
             generateInputSplits(healthyWorkerInfoList.size());
         if (healthyWorkerInfoList.size() > splitList.size()) {
             LOG.warn("createInputSplits: Number of inputSplits="
                      + splitList.size() + " < " +
                      healthyWorkerInfoList.size() +
-                     "=number of healthy processes");
+                     "=number of healthy processes, " +
+                     "some workers will be not used");
         }
         String inputSplitPath = null;
         for (int i = 0; i< splitList.size(); ++i) {
@@ -1230,6 +1255,116 @@ public class BspServiceMaster<
         return lastCheckpointedSuperstep;
     }
 
+    /**
+     * Wait for a set of workers to signal that they are done with the
+     * barrier.
+     *
+     * @param finishedWorkerPath Path to where the workers will register their
+     *        hostname and id
+     * @param workerInfoList List of the workers to wait for
+     * @return True if barrier was successful, false if there was a worker
+     *         failure
+     */
+    private boolean barrierOnWorkerList(String finishedWorkerPath,
+                                        List<WorkerInfo> workerInfoList,
+                                        BspEvent event) {
+        try {
+            getZkExt().createOnceExt(finishedWorkerPath,
+                                     null,
+                                     Ids.OPEN_ACL_UNSAFE,
+                                     CreateMode.PERSISTENT,
+                                     true);
+        } catch (KeeperException e) {
+            throw new IllegalStateException(
+                "barrierOnWorkerList: KeeperException - Couldn't create " +
+                finishedWorkerPath, e);
+        } catch (InterruptedException e) {
+            throw new IllegalStateException(
+                "barrierOnWorkerList: InterruptedException - Couldn't create " +
+                finishedWorkerPath, e);
+        }
+        List<String> hostnameIdList =
+            new ArrayList<String>(workerInfoList.size());
+        for (WorkerInfo workerInfo : workerInfoList) {
+            hostnameIdList.add(workerInfo.getHostnameId());
+        }
+        String workerInfoHealthyPath =
+            getWorkerInfoHealthyPath(getApplicationAttempt(), getSuperstep());
+        List<String> finishedHostnameIdList;
+        long nextInfoMillis = System.currentTimeMillis();
+        while (true) {
+            try {
+                finishedHostnameIdList =
+                    getZkExt().getChildrenExt(finishedWorkerPath,
+                                              true,
+                                              false,
+                                              false);
+            } catch (KeeperException e) {
+                throw new IllegalStateException(
+                    "barrierOnWorkerList: KeeperException - Couldn't get " +
+                    "children of " + finishedWorkerPath, e);
+            } catch (InterruptedException e) {
+                throw new IllegalStateException(
+                    "barrierOnWorkerList: IllegalException - Couldn't get " +
+                    "children of " + finishedWorkerPath, e);
+            }
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("barrierOnWorkerList: Got finished worker list = " +
+                          finishedHostnameIdList + ", size = " +
+                          finishedHostnameIdList.size() +
+                          ", worker list = " +
+                          workerInfoList + ", size = " +
+                          workerInfoList.size() +
+                          " from " + finishedWorkerPath);
+            }
+
+            if (LOG.isInfoEnabled() &&
+                    (System.currentTimeMillis() > nextInfoMillis)) {
+                nextInfoMillis = System.currentTimeMillis() + 30000;
+                LOG.info("barrierOnWorkerList: " +
+                         finishedHostnameIdList.size() +
+                         " out of " + workerInfoList.size() +
+                         " workers finished on superstep " +
+                         getSuperstep() + " on path " + finishedWorkerPath);
+            }
+            getContext().setStatus(getGraphMapper().getMapFunctions() + " - " +
+                                   finishedHostnameIdList.size() +
+                                   " finished out of " +
+                                   workerInfoList.size() +
+                                   " on superstep " + getSuperstep());
+            if (finishedHostnameIdList.containsAll(hostnameIdList)) {
+                break;
+            }
+
+            // Wait for a signal or no more than 60 seconds to progress
+            // or else will continue.
+            event.waitMsecs(60*1000);
+            event.reset();
+            getContext().progress();
+
+            // Did a worker die?
+            try {
+                if ((getSuperstep() > 0) &&
+                        !superstepChosenWorkerAlive(
+                            workerInfoHealthyPath,
+                            workerInfoList)) {
+                    return false;
+                }
+            } catch (KeeperException e) {
+                throw new IllegalStateException(
+                    "barrierOnWorkerList: KeeperException - " +
+                    "Couldn't get " + workerInfoHealthyPath, e);
+            } catch (InterruptedException e) {
+                throw new IllegalStateException(
+                    "barrierOnWorkerList: InterruptedException - " +
+                    "Couldn't get " + workerInfoHealthyPath, e);
+            }
+        }
+
+        return true;
+    }
+
+
     @Override
     public SuperstepState coordinateSuperstep() throws
             KeeperException, InterruptedException {
@@ -1265,76 +1400,41 @@ public class BspServiceMaster<
                               chosenWorkerInfoList,
                               masterGraphPartitioner);
 
-        String finishedWorkerPath =
-            getWorkerFinishedPath(getApplicationAttempt(), getSuperstep());
-        getZkExt().createOnceExt(finishedWorkerPath,
-                                 null,
-                                 Ids.OPEN_ACL_UNSAFE,
-                                 CreateMode.PERSISTENT,
-                                 true);
-        String WorkerInfoHealthyPath =
-            getWorkerInfoHealthyPath(getApplicationAttempt(), getSuperstep());
-        List<String> chosenHostnameIdList =
-            new ArrayList<String>(chosenWorkerInfoList.size());
-        for (WorkerInfo chosenWorkerInfo : chosenWorkerInfoList) {
-            chosenHostnameIdList.add(chosenWorkerInfo.getHostnameId());
-        }
-        List<String> finishedHostnameIdList = null;
-        long nextInfoMillis = System.currentTimeMillis();
-        while (true) {
+        if (getSuperstep() == INPUT_SUPERSTEP) {
+            // Coordinate the workers finishing sending their vertices to the
+            // correct workers and signal when everything is done.
+            if (!barrierOnWorkerList(INPUT_SPLIT_DONE_PATH,
+                                     chosenWorkerInfoList,
+                                     getInputSplitsDoneStateChangedEvent())) {
+                throw new IllegalStateException(
+                    "coordinateSuperstep: Worker failed during input split " +
+                    "(currently not supported)");
+            }
             try {
-                finishedHostnameIdList =
-                    getZkExt().getChildrenExt(finishedWorkerPath,
-                                              true,
-                                              false,
-                                              false);
+                getZkExt().create(INPUT_SPLITS_ALL_DONE_PATH,
+                            null,
+                            Ids.OPEN_ACL_UNSAFE,
+                            CreateMode.PERSISTENT);
+            } catch (KeeperException.NodeExistsException e) {
+                LOG.info("coordinateInputSplits: Node " +
+                         INPUT_SPLITS_ALL_DONE_PATH + " already exists.");
             } catch (KeeperException e) {
                 throw new IllegalStateException(
-                    "coordinateSuperstep: Couldn't get children of " +
-                    finishedWorkerPath, e);
-            }
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("coordinateSuperstep: Got finished worker list = " +
-                          finishedHostnameIdList + ", size = " +
-                          finishedHostnameIdList.size() +
-                          ", chosen worker list = " +
-                          chosenWorkerInfoList + ", size = " +
-                          chosenWorkerInfoList.size() +
-                          " from " + finishedWorkerPath);
-            }
-
-            if (LOG.isInfoEnabled() &&
-                    (System.currentTimeMillis() > nextInfoMillis)) {
-                nextInfoMillis = System.currentTimeMillis() + 30000;
-                LOG.info("coordinateSuperstep: " +
-                         finishedHostnameIdList.size() +
-                         " out of " + chosenWorkerInfoList.size() +
-                         " chosen workers finished on superstep " +
-                         getSuperstep());
-            }
-            getContext().setStatus(getGraphMapper().getMapFunctions() + " - " +
-                                   finishedHostnameIdList.size() +
-                                   " finished out of " +
-                                   chosenWorkerInfoList.size() +
-                                   " on superstep " + getSuperstep());
-            if (finishedHostnameIdList.containsAll(chosenHostnameIdList)) {
-                break;
-            }
-
-            // Wait for a signal or no more than 60 seconds to progress
-            // or else will die.
-            getSuperstepStateChangedEvent().waitMsecs(60*1000);
-            getSuperstepStateChangedEvent().reset();
-            getContext().progress();
-
-            // Did a worker die?
-            if ((getSuperstep() > 0) &&
-                    !superstepChosenWorkerAlive(
-                        WorkerInfoHealthyPath,
-                        chosenWorkerInfoList)) {
-                return SuperstepState.WORKER_FAILURE;
+                    "coordinateInputSplits: KeeperException", e);
+            } catch (InterruptedException e) {
+                throw new IllegalStateException(
+                    "coordinateInputSplits: IllegalStateException", e);
             }
         }
+
+        String finishedWorkerPath =
+            getWorkerFinishedPath(getApplicationAttempt(), getSuperstep());
+        if (!barrierOnWorkerList(finishedWorkerPath,
+                                 chosenWorkerInfoList,
+                                 getSuperstepStateChangedEvent())) {
+            return SuperstepState.WORKER_FAILURE;
+        }
+
         collectAndProcessAggregatorValues(getSuperstep());
         GlobalStats globalStats = aggregateWorkerStats(getSuperstep());
 
@@ -1374,7 +1474,7 @@ public class BspServiceMaster<
         if ((getConfiguration().getBoolean(
                 GiraphJob.KEEP_ZOOKEEPER_DATA,
                 GiraphJob.KEEP_ZOOKEEPER_DATA_DEFAULT) == false) &&
-            (removeableSuperstep >= 0)) {
+                (removeableSuperstep >= 0)) {
             String oldSuperstepPath =
                 getSuperstepPath(getApplicationAttempt()) + "/" +
                 (removeableSuperstep);

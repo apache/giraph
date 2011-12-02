@@ -63,7 +63,7 @@ public class HashMasterPartitioner<I extends WritableComparable,
      */
     public static final String PARTITION_COUNT_MULTIPLIER =
         "hash.masterPartitionCountMultipler";
-    public static final float DEFAULT_PARTITION_COUNT_MULTIPLIER = 0.5f;
+    public static final float DEFAULT_PARTITION_COUNT_MULTIPLIER = 1.0f;
 
     /** Overrides default partition count calculation if not -1 */
     public static final String USER_PARTITION_COUNT =
@@ -98,7 +98,7 @@ public class HashMasterPartitioner<I extends WritableComparable,
         }
         if (LOG.isInfoEnabled()) {
             LOG.info("createInitialPartitionOwners: Creating " +
-                     partitionCount + " instead of " +
+                     partitionCount + ", default would have been " +
                      (availableWorkerInfos.size() *
                       availableWorkerInfos.size()) + " partitions.");
         }

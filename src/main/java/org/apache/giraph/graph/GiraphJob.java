@@ -204,6 +204,30 @@ public class GiraphJob extends Job {
     /** Default total input split multiplier */
     public static final float TOTAL_INPUT_SPLIT_MULTIPLIER_DEFAULT = 0.5f;
 
+    /**
+     * Input split sample percent - Used only for sampling and testing, rather
+     * than an actual job.  The idea is that to test, you might only want a
+     * fraction of the actual input splits from your VertexInputFormat to
+     * load (values should be [0, 100]).
+     */
+    public static final String INPUT_SPLIT_SAMPLE_PERCENT =
+        "giraph.inputSplitSamplePercent";
+    /** Default is to use all the input splits */
+    public static final float INPUT_SPLIT_SAMPLE_PERCENT_DEFAULT = 100f;
+
+    /**
+     * To limit outlier input splits from producing too many vertices or to
+     * help with testing, the number of vertices loaded from an input split can
+     * be limited.  By default, everything is loaded.
+     */
+    public static final String INPUT_SPLIT_MAX_VERTICES =
+        "giraph.InputSplitMaxVertices";
+    /**
+     * Default is that all the vertices are to be loaded from the input
+     * split
+     */
+    public static final long INPUT_SPLIT_MAX_VERTICES_DEFAULT = -1;
+
     /** Java opts passed to ZooKeeper startup */
     public static final String ZOOKEEPER_JAVA_OPTS =
         "giraph.zkJavaOpts";

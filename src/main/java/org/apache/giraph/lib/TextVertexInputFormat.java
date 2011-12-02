@@ -40,6 +40,7 @@ import java.util.List;
  * @param <I> Vertex index value
  * @param <V> Vertex value
  * @param <E> Edge value
+ * @param <M> Message value
  */
 @SuppressWarnings("rawtypes")
 public abstract class TextVertexInputFormat<
@@ -101,7 +102,7 @@ public abstract class TextVertexInputFormat<
          *
          * @return Record reader to be used for reading.
          */
-        public RecordReader<LongWritable, Text> getRecordReader() {
+        protected RecordReader<LongWritable, Text> getRecordReader() {
             return lineRecordReader;
         }
 
@@ -110,7 +111,7 @@ public abstract class TextVertexInputFormat<
          *
          * @return Context passed to initialize.
          */
-        public TaskAttemptContext getContext() {
+        protected TaskAttemptContext getContext() {
             return context;
         }
     }

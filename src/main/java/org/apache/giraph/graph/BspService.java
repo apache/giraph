@@ -73,6 +73,12 @@ public abstract class BspService <
     /** InputSplit reservation or finished notification and synchronization */
     private final BspEvent inputSplitsStateChanged =
         new PredicateLock();
+    /** InputSplits are done being processed by workers */
+    private final BspEvent inputSplitsAllDoneChanged =
+        new PredicateLock();
+    /** InputSplit done by a worker finished notification and synchronization */
+    private final BspEvent inputSplitsDoneStateChanged =
+        new PredicateLock();
     /** Are the partition assignments to workers ready? */
     private final BspEvent partitionAssignmentsReadyChanged =
         new PredicateLock();
@@ -133,13 +139,16 @@ public abstract class BspService <
 
     public static final String BASE_DIR = "/_hadoopBsp";
     public static final String MASTER_JOB_STATE_NODE = "/_masterJobState";
-    public static final String INPUT_SPLIT_DIR = "/_inputSplitsDir";
+    public static final String INPUT_SPLIT_DIR = "/_inputSplitDir";
+    public static final String INPUT_SPLIT_DONE_DIR = "/_inputSplitDoneDir";
     public static final String INPUT_SPLIT_RESERVED_NODE =
         "/_inputSplitReserved";
     public static final String INPUT_SPLIT_FINISHED_NODE =
         "/_inputSplitFinished";
     public static final String INPUT_SPLITS_ALL_READY_NODE =
         "/_inputSplitsAllReady";
+    public static final String INPUT_SPLITS_ALL_DONE_NODE =
+        "/_inputSplitsAllDone";
     public static final String APPLICATION_ATTEMPTS_DIR =
         "/_applicationAttemptsDir";
     public static final String MASTER_ELECTION_DIR = "/_masterElectionDir";
@@ -196,6 +205,10 @@ public abstract class BspService <
     public final String INPUT_SPLIT_PATH;
     /** Path to the input splits all ready to be processed by workers */
     public final String INPUT_SPLITS_ALL_READY_PATH;
+    /** Path to the input splits done */
+    public final String INPUT_SPLIT_DONE_PATH;
+    /** Path to the input splits all done to notify the workers to proceed */
+    public final String INPUT_SPLITS_ALL_DONE_PATH;
     /** Path to the application attempts) */
     public final String APPLICATION_ATTEMPTS_PATH;
     /** Path to the cleaned up notifications */
@@ -501,6 +514,14 @@ public abstract class BspService <
         return inputSplitsStateChanged;
     }
 
+    final public BspEvent getInputSplitsAllDoneEvent() {
+        return inputSplitsAllDoneChanged;
+    }
+
+    final public BspEvent getInputSplitsDoneStateChangedEvent() {
+        return inputSplitsDoneStateChanged;
+    }
+
     final public BspEvent getPartitionAssignmentsReadyChangedEvent() {
         return partitionAssignmentsReadyChanged;
     }
@@ -612,6 +633,8 @@ public abstract class BspService <
         MASTER_JOB_STATE_PATH = BASE_PATH + MASTER_JOB_STATE_NODE;
         INPUT_SPLIT_PATH = BASE_PATH + INPUT_SPLIT_DIR;
         INPUT_SPLITS_ALL_READY_PATH = BASE_PATH + INPUT_SPLITS_ALL_READY_NODE;
+        INPUT_SPLIT_DONE_PATH = BASE_PATH + INPUT_SPLIT_DONE_DIR;
+        INPUT_SPLITS_ALL_DONE_PATH = BASE_PATH + INPUT_SPLITS_ALL_DONE_NODE;
         APPLICATION_ATTEMPTS_PATH = BASE_PATH + APPLICATION_ATTEMPTS_DIR;
         CLEANED_UP_PATH = BASE_PATH + CLEANED_UP_DIR;
         CHECKPOINT_BASE_PATH =
@@ -877,7 +900,8 @@ public abstract class BspService <
                     bspEvent.signal();
                 }
                 throw new RuntimeException(
-                    "process: Disconnected from ZooKeeper, cannot recover.");
+                    "process: Disconnected from ZooKeeper, cannot recover - " +
+                    event);
             } else if (event.getState() == KeeperState.SyncConnected) {
                 if (LOG.isInfoEnabled()) {
                     LOG.info("process: Asynchronous connection complete.");
@@ -913,6 +937,14 @@ public abstract class BspService <
             inputSplitsAllReadyChanged.signal();
             eventProcessed = true;
         } else if (event.getPath().endsWith(INPUT_SPLIT_RESERVED_NODE) &&
+                (event.getType() == EventType.NodeCreated)) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("process: inputSplitsStateChanged "+
+                          "(made a reservation)");
+            }
+            inputSplitsStateChanged.signal();
+            eventProcessed = true;
+        } else if (event.getPath().endsWith(INPUT_SPLIT_RESERVED_NODE) &&
                 (event.getType() == EventType.NodeDeleted)) {
             if (LOG.isInfoEnabled()) {
                 LOG.info("process: inputSplitsStateChanged "+
@@ -927,6 +959,22 @@ public abstract class BspService <
                           "(finished inputsplit)");
             }
             inputSplitsStateChanged.signal();
+            eventProcessed = true;
+        } else if (event.getPath().endsWith(INPUT_SPLIT_DONE_DIR) &&
+                (event.getType() == EventType.NodeChildrenChanged)) {
+            if (LOG.isDebugEnabled()) {
+                LOG.debug("process: inputSplitsDoneStateChanged " +
+                          "(worker finished sending)");
+            }
+            inputSplitsDoneStateChanged.signal();
+            eventProcessed = true;
+        }  else if (event.getPath().equals(INPUT_SPLITS_ALL_DONE_PATH) &&
+                (event.getType() == EventType.NodeCreated)) {
+            if (LOG.isInfoEnabled()) {
+                LOG.info("process: inputSplitsAllDoneChanged " +
+                         "(all vertices sent from input splits)");
+            }
+            inputSplitsAllDoneChanged.signal();
             eventProcessed = true;
         } else if (event.getPath().contains(PARTITION_ASSIGNMENTS_DIR) &&
                 event.getType() == EventType.NodeCreated) {

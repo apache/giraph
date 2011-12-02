@@ -22,6 +22,7 @@ import java.io.IOException;
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -42,11 +43,12 @@ public interface CentralizedServiceMaster<
     boolean becomeMaster();
 
     /**
-     * Create the InputSplits from the index range based on the user-defined
-     * VertexInputFormat.  These InputSplits will be split further into
-     * partitions by the workers.
+     * Create the {@link InputSplit} objects from the index range based on the
+     * user-defined VertexInputFormat.  The {@link InputSplit} objects will
+     * processed by the workers later on during the INPUT_SUPERSTEP.
      *
-     * @return number of partitions. Returns -1 on failure to create valid input splits.
+     * @return Number of partitions. Returns -1 on failure to create
+     *         valid input splits.
      */
     int createInputSplits();
 

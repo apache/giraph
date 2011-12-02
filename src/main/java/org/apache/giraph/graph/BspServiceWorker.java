@@ -110,6 +110,8 @@ public class BspServiceWorker<
     private long totalVerticesLoaded = 0;
     /** Total edges loaded */
     private long totalEdgesLoaded = 0;
+    /** Input split max vertices (-1 denotes all) */
+    private final long inputSplitMaxVertices;
     /** Class logger */
     private static final Logger LOG = Logger.getLogger(BspServiceWorker.class);
 
@@ -121,14 +123,19 @@ public class BspServiceWorker<
             GraphState<I, V, E,M> graphState)
             throws UnknownHostException, IOException, InterruptedException {
         super(serverPortList, sessionMsecTimeout, context, graphMapper);
+        registerBspEvent(partitionExchangeChildrenChanged);
         int finalRpcPort =
             getConfiguration().getInt(GiraphJob.RPC_INITIAL_PORT,
                                       GiraphJob.RPC_INITIAL_PORT_DEFAULT) +
                                       getTaskPartition();
-        maxVerticesPerPartition=
+        maxVerticesPerPartition =
             getConfiguration().getInt(
                 GiraphJob.MAX_VERTICES_PER_PARTITION,
                 GiraphJob.MAX_VERTICES_PER_PARTITION_DEFAULT);
+        inputSplitMaxVertices =
+            getConfiguration().getLong(
+                GiraphJob.INPUT_SPLIT_MAX_VERTICES,
+                GiraphJob.INPUT_SPLIT_MAX_VERTICES_DEFAULT);
         workerInfo =
             new WorkerInfo(getHostname(), getTaskPartition(), finalRpcPort);
         workerGraphPartitioner =
@@ -189,9 +196,9 @@ public class BspServiceWorker<
         Stat reservedStat = null;
         while (true) {
             int finishedInputSplits = 0;
-            for (String inputSplitPath : inputSplitPathList) {
+            for (int i = 0; i < inputSplitPathList.size(); ++i) {
                 String tmpInputSplitFinishedPath =
-                    inputSplitPath + INPUT_SPLIT_FINISHED_NODE;
+                    inputSplitPathList.get(i) + INPUT_SPLIT_FINISHED_NODE;
                 try {
                     reservedStat =
                         getZkExt().exists(tmpInputSplitFinishedPath, true);
@@ -204,7 +211,7 @@ public class BspServiceWorker<
                 }
 
                 String tmpInputSplitReservedPath =
-                    inputSplitPath + INPUT_SPLIT_RESERVED_NODE;
+                    inputSplitPathList.get(i) + INPUT_SPLIT_RESERVED_NODE;
                 try {
                     reservedStat =
                         getZkExt().exists(tmpInputSplitReservedPath, true);
@@ -219,18 +226,29 @@ public class BspServiceWorker<
                                        Ids.OPEN_ACL_UNSAFE,
                                        CreateMode.EPHEMERAL,
                                        false);
-                        reservedInputSplitPath = inputSplitPath;
+                        reservedInputSplitPath = inputSplitPathList.get(i);
                         if (LOG.isInfoEnabled()) {
+                            float percentFinished =
+                               finishedInputSplits * 100.0f /
+                               inputSplitPathList.size();
                             LOG.info("reserveInputSplit: Reserved input " +
-                                     "split path " + reservedInputSplitPath);
+                                     "split path " + reservedInputSplitPath +
+                                     ", overall roughly " +
+                                      + percentFinished +
+                                     "% input splits finished");
                         }
                         return reservedInputSplitPath;
                     } catch (KeeperException.NodeExistsException e) {
-                        LOG.info("reserveInputSplit: Couldn't reserve (already " +
-                                 "reserved) inputSplit" +
+                        LOG.info("reserveInputSplit: Couldn't reserve " +
+                                 "(already reserved) inputSplit" +
                                  " at " + tmpInputSplitReservedPath);
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
+                    } catch (KeeperException e) {
+                        throw new IllegalStateException(
+                            "reserveInputSplit: KeeperException on reserve", e);
+                    } catch (InterruptedException e) {
+                        throw new IllegalStateException(
+                            "reserveInputSplit: InterruptedException " +
+                            "on reserve", e);
                     }
                 }
             }
@@ -245,17 +263,21 @@ public class BspServiceWorker<
             }
             // Wait for either a reservation to go away or a notification that
             // an InputSplit has finished.
-            getInputSplitsStateChangedEvent().waitForever();
+            getInputSplitsStateChangedEvent().waitMsecs(60*1000);
             getInputSplitsStateChangedEvent().reset();
         }
     }
+
+
 
     /**
      * Load the vertices from the user-defined VertexReader into our partitions
      * of vertex ranges.  Do this until all the InputSplits have been processed.
      * All workers will try to do as many InputSplits as they can.  The master
      * will monitor progress and stop this once all the InputSplits have been
-     * loaded and check-pointed.
+     * loaded and check-pointed.  Keep track of the last input split path to
+     * ensure the input split cache is flushed prior to marking the last input
+     * split complete.
      *
      * @throws IOException
      * @throws IllegalAccessException
@@ -263,7 +285,8 @@ public class BspServiceWorker<
      * @throws ClassNotFoundException
      * @throws InterruptedException
      */
-    private VertexEdgeCount loadVertices() throws IOException, ClassNotFoundException,
+    private VertexEdgeCount loadVertices() throws IOException,
+            ClassNotFoundException,
             InterruptedException, InstantiationException,
             IllegalAccessException {
         String inputSplitPath = null;
@@ -272,13 +295,56 @@ public class BspServiceWorker<
             vertexEdgeCount = vertexEdgeCount.incrVertexEdgeCount(
                 loadVerticesFromInputSplit(inputSplitPath));
         }
+
+        // Flush the remaining cached vertices
+        for (Entry<PartitionOwner, Partition<I, V, E, M>> entry :
+                inputSplitCache.entrySet()) {
+            if (!entry.getValue().getVertices().isEmpty()) {
+                commService.sendPartitionReq(entry.getKey().getWorkerInfo(),
+                                             entry.getValue());
+                entry.getValue().getVertices().clear();
+            }
+        }
+        inputSplitCache.clear();
+
         return vertexEdgeCount;
+    }
+
+    /**
+     * Mark an input split path as completed by this worker.  This notifies
+     * the master and the other workers that this input split has not only
+     * been reserved, but also marked processed.
+     *
+     * @param inputSplitPath Path to the input split.
+     */
+    private void markInputSplitPathFinished(String inputSplitPath) {
+        String inputSplitFinishedPath =
+            inputSplitPath + INPUT_SPLIT_FINISHED_NODE;
+        try {
+            getZkExt().createExt(inputSplitFinishedPath,
+                    null,
+                    Ids.OPEN_ACL_UNSAFE,
+                    CreateMode.PERSISTENT,
+                    true);
+        } catch (KeeperException.NodeExistsException e) {
+            LOG.warn("loadVertices: " + inputSplitFinishedPath +
+                    " already exists!");
+        } catch (KeeperException e) {
+            throw new IllegalStateException(
+                "loadVertices: KeeperException on " +
+                inputSplitFinishedPath, e);
+        } catch (InterruptedException e) {
+            throw new IllegalStateException(
+                "loadVertices: InterruptedException on " +
+                inputSplitFinishedPath, e);
+        }
     }
 
     /**
      * Extract vertices from input split, saving them into a mini cache of
      * partitions.  Periodically flush the cache of vertices when a limit is
-     * reached.  Mark the input split finished when done.
+     * reached in readVerticeFromInputSplit.
+     * Mark the input split finished when done.
      *
      * @param inputSplitPath ZK location of input split
      * @return Mapping of vertex indices and statistics, or null if no data read
@@ -294,37 +360,11 @@ public class BspServiceWorker<
         InputSplit inputSplit = getInputSplitForVertices(inputSplitPath);
         VertexEdgeCount vertexEdgeCount =
             readVerticesFromInputSplit(inputSplit);
-
-        // Flush the remaining cached vertices
-        for (Entry<PartitionOwner, Partition<I, V, E, M>> entry :
-                inputSplitCache.entrySet()) {
-            if (!entry.getValue().getVertices().isEmpty()) {
-                commService.sendPartitionReq(entry.getKey().getWorkerInfo(),
-                                             entry.getValue());
-                entry.getValue().getVertices().clear();
-            }
-        }
-        inputSplitCache.clear();
-
-        // Mark this input split done to the master
-        String inputSplitFinishedPath =
-            inputSplitPath + INPUT_SPLIT_FINISHED_NODE;
-        try {
-            getZkExt().createExt(inputSplitFinishedPath,
-                                 null,
-                                 Ids.OPEN_ACL_UNSAFE,
-                                 CreateMode.PERSISTENT,
-                                 true);
-        } catch (KeeperException.NodeExistsException e) {
-            LOG.warn("loadVerticesFromInputSplit: " + inputSplitFinishedPath +
-                     " already exists!");
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
         if (LOG.isInfoEnabled()) {
             LOG.info("loadVerticesFromInputSplit: Finished loading " +
                      inputSplitPath + " " + vertexEdgeCount);
         }
+        markInputSplitPathFinished(inputSplitPath);
         return vertexEdgeCount;
     }
 
@@ -338,7 +378,7 @@ public class BspServiceWorker<
      * @throws ClassNotFoundException
      */
     private InputSplit getInputSplitForVertices(String inputSplitPath)
-        throws IOException, ClassNotFoundException {
+            throws IOException, ClassNotFoundException {
         byte[] splitList;
         try {
             splitList = getZkExt().getData(inputSplitPath, false, null);
@@ -369,7 +409,8 @@ public class BspServiceWorker<
     }
 
     /**
-     * Read vertices from input split.
+     * Read vertices from input split.  If testing, the user may request a
+     * maximum number of vertices to be read from an input split.
      *
      * @param inputSplit Input split to process with vertex reader
      * @return List of vertices.
@@ -408,7 +449,12 @@ public class BspServiceWorker<
                     partitionOwner.getPartitionId());
                 inputSplitCache.put(partitionOwner, partition);
             }
-            partition.putVertex(readerVertex);
+            BasicVertex<I, V, E, M> oldVertex =
+                partition.putVertex(readerVertex);
+            if (oldVertex != null) {
+                LOG.warn("readVertices: Replacing vertex " + oldVertex +
+                        " with " + readerVertex);
+            }
             if (partition.getVertices().size() >= maxVerticesPerPartition) {
                 commService.sendPartitionReq(partitionOwner.getWorkerInfo(),
                                              partition);
@@ -436,6 +482,18 @@ public class BspServiceWorker<
                 }
                 getContext().setStatus(status);
             }
+
+            // For sampling, or to limit outlier input splits, the number of
+            // records per input split can be limited
+            if ((inputSplitMaxVertices > 0) &&
+                    (vertexCount >= inputSplitMaxVertices)) {
+                if (LOG.isInfoEnabled()) {
+                    LOG.info("readVerticesFromInputSplit: Leaving the input " +
+                            "split early, reached maximum vertices " +
+                            vertexCount);
+                }
+                break;
+            }
         }
         vertexReader.close();
 
@@ -446,9 +504,10 @@ public class BspServiceWorker<
     public void setup() {
         // Unless doing a restart, prepare for computation:
         // 1. Start superstep INPUT_SUPERSTEP (no computation)
-        // 2. Wait for the INPUT_SPLIT_READY_PATH node has been created
+        // 2. Wait until the INPUT_SPLIT_ALL_READY_PATH node has been created
         // 3. Process input splits until there are no more.
-        // 4. Wait for superstep INPUT_SUPERSTEP to complete.
+        // 4. Wait until the INPUT_SPLIT_ALL_DONE_PATH node has been created
+        // 5. Wait for superstep INPUT_SUPERSTEP to complete.
         if (getRestartedSuperstep() != UNSET_SUPERSTEP) {
             setCachedSuperstep(getRestartedSuperstep());
             return;
@@ -480,9 +539,9 @@ public class BspServiceWorker<
         // Add the partitions for that this worker owns
         Collection<? extends PartitionOwner> masterSetPartitionOwners =
             startSuperstep();
-
         workerGraphPartitioner.updatePartitionOwners(
             getWorkerInfo(), masterSetPartitionOwners, getPartitionMap());
+
         commService.setup();
 
         // Ensure the InputSplits are ready for processing before processing
@@ -496,7 +555,7 @@ public class BspServiceWorker<
                     "setup: KeeperException waiting on input splits", e);
             } catch (InterruptedException e) {
                 throw new IllegalStateException(
-                    "setup: InterrupteException waiting on input splits", e);
+                    "setup: InterruptedException waiting on input splits", e);
             }
             if (inputSplitsReadyStat != null) {
                 break;
@@ -518,6 +577,42 @@ public class BspServiceWorker<
             throw new IllegalStateException("setup: loadVertices failed", e);
         }
         getContext().progress();
+
+        // Workers wait for each other to finish, coordinated by master
+        String workerDonePath =
+            INPUT_SPLIT_DONE_PATH + "/" + getWorkerInfo().getHostnameId();
+        try {
+            getZkExt().createExt(workerDonePath,
+                                 null,
+                                 Ids.OPEN_ACL_UNSAFE,
+                                 CreateMode.PERSISTENT,
+                                 true);
+        } catch (KeeperException e) {
+            throw new IllegalStateException(
+                "setup: KeeperException creating worker done splits", e);
+        } catch (InterruptedException e) {
+            throw new IllegalStateException(
+                "setup: InterruptedException creating worker done splits", e);
+        }
+        while (true) {
+            Stat inputSplitsDoneStat;
+            try {
+                inputSplitsDoneStat =
+                    getZkExt().exists(INPUT_SPLITS_ALL_DONE_PATH, true);
+            } catch (KeeperException e) {
+                throw new IllegalStateException(
+                    "setup: KeeperException waiting on worker done splits", e);
+            } catch (InterruptedException e) {
+                throw new IllegalStateException(
+                    "setup: InterruptedException waiting on worker " +
+                    "done splits", e);
+            }
+            if (inputSplitsDoneStat != null) {
+                break;
+            }
+            getInputSplitsAllDoneEvent().waitForever();
+            getInputSplitsAllDoneEvent().reset();
+        }
 
         // At this point all vertices have been sent to their destinations.
         // Move them to the worker, creating creating the empty partitions
@@ -1165,12 +1260,12 @@ public class BspServiceWorker<
                     true);
         } catch (KeeperException e) {
             throw new IllegalStateException(
-                    "sendWorkerPartitions: KeeperException to create " +
-                    myPartitionExchangeDonePath, e);
+                "sendWorkerPartitions: KeeperException to create " +
+                myPartitionExchangeDonePath, e);
         } catch (InterruptedException e) {
             throw new IllegalStateException(
-                    "sendWorkerPartitions: InterruptedException to create " +
-                    myPartitionExchangeDonePath, e);
+                "sendWorkerPartitions: InterruptedException to create " +
+                myPartitionExchangeDonePath, e);
         }
         if (LOG.isInfoEnabled()) {
             LOG.info("sendWorkerPartitions: Done sending all my partitions.");
@@ -1259,16 +1354,18 @@ public class BspServiceWorker<
                 commService.getInPartitionVertexMap();
         synchronized (inPartitionVertexMap) {
             for (Entry<Integer, List<BasicVertex<I, V, E, M>>> entry :
-                inPartitionVertexMap.entrySet()) {
+                    inPartitionVertexMap.entrySet()) {
                 if (getPartitionMap().containsKey(entry.getKey())) {
                     throw new IllegalStateException(
                         "moveVerticesToWorker: Already has partition " +
-                         entry.getKey());
+                        getPartitionMap().get(entry.getKey()) +
+                        ", cannot receive vertex list of size " +
+                        entry.getValue().size());
                 }
 
-                Partition<I, V, E, M> tmpPartition = new Partition<I, V, E, M>(
-                    getConfiguration(),
-                    entry.getKey());
+                Partition<I, V, E, M> tmpPartition =
+                    new Partition<I, V, E, M>(getConfiguration(),
+                                              entry.getKey());
                 for (BasicVertex<I, V, E, M> vertex : entry.getValue()) {
                     if (tmpPartition.putVertex(vertex) != null) {
                         throw new IllegalStateException(

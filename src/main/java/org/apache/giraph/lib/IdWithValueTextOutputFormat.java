@@ -39,6 +39,7 @@ import java.io.IOException;
  * @param <V> Vertex value
  * @param <E> Edge value
  */
+@SuppressWarnings("rawtypes")
 public class IdWithValueTextOutputFormat <I extends WritableComparable,
     V extends Writable, E extends Writable> extends TextVertexOutputFormat<I, V, E>{
 
