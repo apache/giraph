@@ -61,7 +61,11 @@ public class GiraphJob extends Job {
     /** Message value class */
     public static final String MESSAGE_VALUE_CLASS = "giraph.messageValueClass";
     /** Worker context class */
-    public static final String WORKER_CONTEXT_CLASS = "giraph.workerContextClass";
+    public static final String WORKER_CONTEXT_CLASS = 
+    	"giraph.workerContextClass";
+    /** AggregatorWriter class - optional */
+    public static final String AGGREGATOR_WRITER_CLASS = 
+    	"giraph.aggregatorWriterClass";
 
     /**
      * Minimum number of simultaneous workers before this job can run (int)
@@ -447,7 +451,20 @@ public class GiraphJob extends Job {
                                     workerContextClass,
                                     WorkerContext.class);
     }
-
+    
+    /**
+     * Set the aggregator writer class (optional)
+     *
+     * @param aggregatorWriterClass Determines how the aggregators are
+     * 	      written to file at the end of the job
+     */
+     final public void setAggregatorWriterClass(
+    		 Class<?> aggregatorWriterClass) {
+         getConfiguration().setClass(AGGREGATOR_WRITER_CLASS,
+                                     aggregatorWriterClass,
+                                     AggregatorWriter.class);
+     }
+    
     /**
      * Set worker configuration for determining what is required for
      * a superstep.

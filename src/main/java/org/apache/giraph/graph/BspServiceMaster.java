@@ -125,9 +125,10 @@ public class BspServiceMaster<
     /** All the partition stats from the last superstep */
     private final List<PartitionStats> allPartitionStatsList =
         new ArrayList<PartitionStats>();
-
     /** Counter group name for the Giraph statistics */
     public String GIRAPH_STATS_COUNTER_GROUP_NAME = "Giraph Stats";
+    /** Aggregator writer */
+    public AggregatorWriter aggregatorWriter;
 
     public BspServiceMaster(
             String serverPortList,
@@ -736,6 +737,15 @@ public class BspServiceMaster<
                     currentMasterTaskPartitionCounter.increment(
                         getTaskPartition() -
                         currentMasterTaskPartitionCounter.getValue());
+                    aggregatorWriter = 
+                        BspUtils.createAggregatorWriter(getConfiguration());
+                    try {
+                        aggregatorWriter.initialize(getContext(),
+                                                    getApplicationAttempt());
+                    } catch (IOException e) {
+                        throw new IllegalStateException("becomeMaster: " +
+                            "Couldn't initialize aggregatorWriter", e);
+                    }
                     LOG.info("becomeMaster: I am now the master!");
                     isMaster = true;
                     return isMaster;
@@ -823,7 +833,7 @@ public class BspServiceMaster<
 
     /**
      * Get the aggregator values for a particular superstep,
-     * aggregate and save them.  Does nothing on the INPUT_SUPERSTEP.
+     * aggregate and save them. Does nothing on the INPUT_SUPERSTEP.
      *
      * @param superstep superstep to check
      */
@@ -1500,13 +1510,25 @@ public class BspServiceMaster<
         if (getSuperstep() > 0) {
             superstepCounter.increment(1);
         }
+        SuperstepState superstepState;
         if ((globalStats.getFinishedVertexCount() ==
                 globalStats.getVertexCount()) &&
                 globalStats.getMessageCount() == 0) {
-            return SuperstepState.ALL_SUPERSTEPS_DONE;
+            superstepState = SuperstepState.ALL_SUPERSTEPS_DONE;
         } else {
-            return SuperstepState.THIS_SUPERSTEP_DONE;
+            superstepState = SuperstepState.THIS_SUPERSTEP_DONE;
         }
+        try {
+            aggregatorWriter.writeAggregator(getAggregatorMap(),
+                (superstepState == SuperstepState.ALL_SUPERSTEPS_DONE) ? 
+                    AggregatorWriter.LAST_SUPERSTEP : getSuperstep());
+        } catch (IOException e) {
+            throw new IllegalStateException(
+                "coordinateSuperstep: IOException while " +
+                "writing aggregators data", e);
+        }
+        
+        return superstepState;
     }
 
     /**
@@ -1634,6 +1656,7 @@ public class BspServiceMaster<
                              success + " since this job succeeded ");
                 }
             }
+            aggregatorWriter.close();
         }
 
         try {

@@ -151,6 +151,32 @@ public class BspUtils {
             getVertexOutputFormatClass(conf);
         return ReflectionUtils.newInstance(vertexOutputFormatClass, conf);
     }
+    
+    /**
+     * Get the user's subclassed {@link AggregatorWriter}.
+     *
+     * @param conf Configuration to check
+     * @return User's aggregator writer class
+     */
+    public static Class<? extends AggregatorWriter>
+            getAggregatorWriterClass(Configuration conf) {
+        return conf.getClass(GiraphJob.AGGREGATOR_WRITER_CLASS,
+                             TextAggregatorWriter.class,
+                             AggregatorWriter.class);
+    }
+
+    /**
+     * Create a user aggregator output format class
+     *
+     * @param conf Configuration to check
+     * @return Instantiated user aggregator writer class
+     */
+    public static AggregatorWriter
+            createAggregatorWriter(Configuration conf) {
+        Class<? extends AggregatorWriter> aggregatorWriterClass =
+            getAggregatorWriterClass(conf);
+        return ReflectionUtils.newInstance(aggregatorWriterClass, conf);
+    }
 
     /**
      * Get the user's subclassed {@link VertexCombiner}.

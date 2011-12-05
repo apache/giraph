@@ -2,6 +2,8 @@ Giraph Change Log
 
 Release 0.70.0 - unreleased
 
+  GIRAPH-10: Aggregators are not exported. (claudio)
+
   GIRAPH-100: GIRAPH-100 - Data input sampling and testing
   improvements. (aching)
 

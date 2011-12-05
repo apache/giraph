@@ -45,7 +45,9 @@ import java.util.Map;
  * Demonstrates the basic Pregel PageRank implementation.
  */
 public class SimplePageRankVertex extends LongDoubleFloatDoubleVertex {
-	/** Logger */
+    /** Number of supersteps for this test */
+    public static final int MAX_SUPERSTEPS = 30;
+    /** Logger */
     private static final Logger LOG =
         Logger.getLogger(SimplePageRankVertex.class);
 
@@ -70,7 +72,7 @@ public class SimplePageRankVertex extends LongDoubleFloatDoubleVertex {
                      " min=" + minAggreg.getAggregatedValue());
         }
 
-        if (getSuperstep() < 30) {
+        if (getSuperstep() < MAX_SUPERSTEPS) {
             long edges = getNumOutEdges();
             sendMsgToAllEdges(
                 new DoubleWritable(getVertexValue().get() / edges));

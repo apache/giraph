@@ -226,9 +226,21 @@ public class BspCase extends TestCase implements Watcher {
     public static void removeAndSetOutput(GiraphJob job,
                                           Path outputPath)
             throws IOException {
-        FileSystem hdfs = FileSystem.get(job.getConfiguration());
-        hdfs.delete(outputPath, true);
+        remove(job.getConfiguration(), outputPath);
         FileOutputFormat.setOutputPath(job, outputPath);
+    }
+    
+    /**
+     * Helper method to remove a path if it exists.
+     * 
+     * @param conf Configutation
+     * @param path Path to remove
+     * @throws IOException
+     */
+    public static void remove(Configuration conf, Path path) 
+            throws IOException {
+        FileSystem hdfs = FileSystem.get(conf);
+        hdfs.delete(path, true);
     }
 
     public static String getCallingMethodName() {

@@ -20,6 +20,8 @@ package org.apache.giraph;
 
 import junit.framework.Test;
 import junit.framework.TestSuite;
+
+import org.apache.giraph.examples.SimpleAggregatorWriter;
 import org.apache.giraph.examples.SimplePageRankVertex.SimplePageRankVertexInputFormat;
 import org.apache.giraph.examples.SimpleShortestPathsVertex.SimpleShortestPathsVertexOutputFormat;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat;
@@ -38,8 +40,11 @@ import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.VertexInputFormat;
 import org.apache.giraph.graph.BasicVertex;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -329,6 +334,68 @@ public class TestBspBasic extends BspCase {
             FileStatus fileStatus = getSinglePartFileStatus(job, outputPath);
             FileStatus fileStatus2 = getSinglePartFileStatus(job, outputPath2);
             assertTrue(fileStatus.getLen() == fileStatus2.getLen());
+        }
+    }
+    
+    /**
+     * Run a sample BSP job locally and test PageRank with AggregatorWriter.
+     *
+     * @throws IOException
+     * @throws ClassNotFoundException
+     * @throws InterruptedException
+     */
+    public void testBspPageRankWithAggregatorWriter()
+            throws IOException, InterruptedException, ClassNotFoundException {
+        GiraphJob job = new GiraphJob(getCallingMethodName());
+        setupConfiguration(job);
+        job.setVertexClass(SimplePageRankVertex.class);
+        job.setWorkerContextClass(
+            SimplePageRankVertex.SimplePageRankVertexWorkerContext.class);
+        job.setVertexInputFormatClass(SimplePageRankVertexInputFormat.class);
+        job.setAggregatorWriterClass(SimpleAggregatorWriter.class);
+        Path outputPath = new Path("/tmp/" + getCallingMethodName());
+        removeAndSetOutput(job, outputPath);
+        assertTrue(job.run(true));
+        if (getJobTracker() == null) {
+            double maxPageRank = 
+                SimplePageRankVertex.SimplePageRankVertexWorkerContext.finalMax;
+            double minPageRank = 
+                SimplePageRankVertex.SimplePageRankVertexWorkerContext.finalMin;
+            long numVertices = 
+                SimplePageRankVertex.SimplePageRankVertexWorkerContext.finalSum;
+            System.out.println("testBspPageRank: maxPageRank=" + maxPageRank +
+                               " minPageRank=" + minPageRank +
+                               " numVertices=" + numVertices);
+            FileSystem fs = FileSystem.get(new Configuration());
+            FSDataInputStream input = 
+                fs.open(new Path(SimpleAggregatorWriter.filename));
+            int i, all;
+            for (i = 0; ; i++) {
+                all = 0;
+                try {
+                    DoubleWritable max = new DoubleWritable();
+                    max.readFields(input);
+                    all++;
+                    DoubleWritable min = new DoubleWritable();
+                    min.readFields(input);
+                    all++;
+                    LongWritable sum = new LongWritable();
+                    sum.readFields(input);
+                    all++;
+                    if (i > 0) {
+                        assertTrue(max.get() == maxPageRank);
+                        assertTrue(min.get() == minPageRank);
+                        assertTrue(sum.get() == numVertices);
+                    }
+                } catch (IOException e) {
+                    break;
+                }
+            }
+            input.close();
+            // contained all supersteps
+            assertTrue(i == SimplePageRankVertex.MAX_SUPERSTEPS+1 && all == 0);
+            remove(new Configuration(), 
+                   new Path(SimpleAggregatorWriter.filename));
         }
     }
 }
