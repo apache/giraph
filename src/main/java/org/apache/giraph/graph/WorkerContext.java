@@ -24,7 +24,6 @@ import org.apache.hadoop.mapreduce.Mapper;
 /**
  * WorkerContext allows for the execution of user code
  * on a per-worker basis. There's one WorkerContext per worker.
- *
  */
 @SuppressWarnings("rawtypes")
 public abstract class WorkerContext implements AggregatorUsage {
@@ -34,35 +33,35 @@ public abstract class WorkerContext implements AggregatorUsage {
 	public void setGraphState(GraphState graphState) {
 		this.graphState = graphState;
 	}
-	
+
     /**
      * Initialize the WorkerContext.
-     * This method is executed once on each Worker before the first 
+     * This method is executed once on each Worker before the first
      * superstep starts.
-     * 
-     * @throws IllegalAccessException 
-     * @throws InstantiationException 
+     *
+     * @throws IllegalAccessException
+     * @throws InstantiationException
      */
 	public abstract void preApplication() throws InstantiationException,
 		IllegalAccessException;
-	
+
     /**
      * Finalize the WorkerContext.
-     * This method is executed once on each Worker after the last 
+     * This method is executed once on each Worker after the last
      * superstep ends.
      */
     public abstract void postApplication();
 
     /**
      * Execute user code.
-     * This method is executed once on each Worker before each 
+     * This method is executed once on each Worker before each
      * superstep starts.
      */
     public abstract void preSuperstep();
-    
+
     /**
      * Execute user code.
-     * This method is executed once on each Worker after each 
+     * This method is executed once on each Worker after each
      * superstep ends.
      */
     public abstract void postSuperstep();
@@ -75,7 +74,7 @@ public abstract class WorkerContext implements AggregatorUsage {
     public long getSuperstep() {
         return graphState.getSuperstep();
     }
-    
+
     /**
      * Get the total (all workers) number of vertices that
      * existed in the previous superstep.
@@ -85,7 +84,7 @@ public abstract class WorkerContext implements AggregatorUsage {
     public long getNumVertices() {
     	return graphState.getNumVertices();
     }
-    
+
     /**
      * Get the total (all workers) number of edges that
      * existed in the previous superstep.
@@ -95,7 +94,7 @@ public abstract class WorkerContext implements AggregatorUsage {
     public long getNumEdges() {
     	return graphState.getNumEdges();
     }
-    
+
     /**
      * Get the mapper context
      *
@@ -104,7 +103,7 @@ public abstract class WorkerContext implements AggregatorUsage {
     public Mapper.Context getContext() {
         return graphState.getContext();
     }
-    
+
     @Override
     public final <A extends Writable> Aggregator<A> registerAggregator(
             String name,

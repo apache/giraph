@@ -48,8 +48,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -57,6 +57,7 @@ import java.util.concurrent.Future;
 import org.apache.giraph.graph.WorkerInfo;
 import org.apache.giraph.graph.partition.Partition;
 import org.apache.giraph.graph.partition.PartitionOwner;
+import org.apache.giraph.utils.MemoryUtils;
 
 /*if[HADOOP_FACEBOOK]
 import org.apache.hadoop.ipc.ProtocolSignature;
@@ -142,7 +143,7 @@ public abstract class BasicRPCCommunications<
      */
     private final Map<I, VertexMutations<I, V, E, M>>
         inVertexMutationsMap =
-            new TreeMap<I, VertexMutations<I, V, E, M>>();
+            new HashMap<I, VertexMutations<I, V, E, M>>();
 
     /** Maximum size of cached message list, before sending it out */
     private final int maxSize;
@@ -160,7 +161,7 @@ public abstract class BasicRPCCommunications<
     private class PeerConnection {
         /**
          * Map of outbound messages going to a particular remote server,
-         * mapping from vertex range (max vertex index) to list of messages.
+         * mapping from the destination vertex to a list of messages.
          * (Synchronized with itself).
          */
         private final Map<I, MsgList<M>> outMessagesPerPeer;
@@ -168,7 +169,6 @@ public abstract class BasicRPCCommunications<
          * Client interface: RPC proxy for remote server, this class for local
          */
         private final CommunicationsInterface<I, V, E, M> peer;
-        /** Maximum size of cached message list, before sending it out */
         /** Boolean, set to false when local client (self), true otherwise */
         private final boolean isProxy;
 
@@ -190,11 +190,18 @@ public abstract class BasicRPCCommunications<
         public CommunicationsInterface<I, V, E, M> getRPCProxy() {
             return peer;
         }
+
+        @Override
+        public String toString() {
+            return peer.getName() + ", proxy=" + isProxy;
+        }
     }
 
     private class PeerFlushExecutor implements Runnable {
         private final PeerConnection peerConnection;
         private final Mapper<?, ?, ?, ?>.Context context;
+        // Report on the status of this flusher if this interval was exceeded
+        private static final int REPORTING_INTERVAL_MIN_MILLIS = 60000;
 
         PeerFlushExecutor(PeerConnection peerConnection,
                           Mapper<?, ?, ?, ?>.Context context) {
@@ -206,11 +213,17 @@ public abstract class BasicRPCCommunications<
         public void run() {
             CommunicationsInterface<I, V, E, M> proxy
                 = peerConnection.getRPCProxy();
+            long startMillis = System.currentTimeMillis();
+            long lastReportedMillis = startMillis;
 
             try {
+                int verticesDone = 0;
                 synchronized (peerConnection.outMessagesPerPeer) {
-                    for (Entry<I, MsgList<M>> e :
-                        peerConnection.outMessagesPerPeer.entrySet()) {
+                    final int vertices =
+                        peerConnection.outMessagesPerPeer.size();
+                    while (!peerConnection.outMessagesPerPeer.isEmpty()) {
+                        Entry<I, MsgList<M>> e =
+                            peerConnection.outMessagesPerPeer.entrySet().iterator().next();
                         MsgList<M> msgList = e.getValue();
 
                         if (msgList.size() > 0) {
@@ -222,27 +235,10 @@ public abstract class BasicRPCCommunications<
                                         proxy.putMsg(e.getKey(), combinedMsg);
                                     }
                                 } else {
-                                    if (LOG.isDebugEnabled()) {
-                                        LOG.debug("putAllMessages: " +
-                                            proxy.getName() +
-                                            " putting (list) " + msgList +
-                                            " to " + e.getKey() +
-                                            ", proxy = " +
-                                            peerConnection.isProxy);
-                                    }
                                     proxy.putMsgList(e.getKey(), msgList);
                                 }
-                                msgList.clear();
                             } else {
                                 for (M msg : msgList) {
-                                    if (LOG.isDebugEnabled()) {
-                                        LOG.debug("putAllMessages: "
-                                            + proxy.getName() +
-                                            " putting " + msg +
-                                            " to " + e.getKey() +
-                                            ", proxy = " +
-                                            peerConnection.isProxy);
-                                    }
                                     if (msg == null) {
                                         throw new IllegalArgumentException(
                                             "putAllMessages: Cannot put " +
@@ -251,7 +247,38 @@ public abstract class BasicRPCCommunications<
                                     proxy.putMsg(e.getKey(), msg);
                                     context.progress();
                                 }
-                                msgList.clear();
+                            }
+                            msgList.clear();
+                        }
+
+                        // Clean up the memory with the message list
+                        msgList = null;
+                        peerConnection.outMessagesPerPeer.remove(e.getKey());
+                        e = null;
+
+                        ++verticesDone;
+                        long curMillis = System.currentTimeMillis();
+                        if ((lastReportedMillis +
+                                REPORTING_INTERVAL_MIN_MILLIS) < curMillis) {
+                            lastReportedMillis = curMillis;
+                            if (LOG.isInfoEnabled()) {
+                                float percentDone =
+                                    (100f * verticesDone) /
+                                    vertices;
+                                float minutesUsed =
+                                    (curMillis - startMillis) / 1000f / 60f;
+                                float minutesRemaining =
+                                    (minutesUsed * 100f / percentDone) -
+                                    minutesUsed;
+                                LOG.info("run: " + peerConnection + ", " +
+                                         verticesDone + " out of " +
+                                         vertices  +
+                                         " done in " + minutesUsed +
+                                         " minutes, " +
+                                         percentDone + "% done, ETA " +
+                                         minutesRemaining +
+                                         " minutes remaining, " +
+                                         MemoryUtils.getRuntimeMemoryStats());
                             }
                         }
                     }
@@ -297,14 +324,14 @@ public abstract class BasicRPCCommunications<
                     peerConnection.getRPCProxy();
 
                 if (combiner != null) {
-                        M combinedMsg = combiner.combine(destVertex,
-                                                         outMessage);
-                        if (combinedMsg != null) {
-                            proxy.putMsg(destVertex, combinedMsg);
-                        }
-                    } else {
-                        proxy.putMsgList(destVertex, outMessage);
+                    M combinedMsg = combiner.combine(destVertex,
+                                                     outMessage);
+                    if (combinedMsg != null) {
+                        proxy.putMsg(destVertex, combinedMsg);
                     }
+                } else {
+                    proxy.putMsgList(destVertex, outMessage);
+                }
             } catch (IOException e) {
                 LOG.error(e);
                 if (peerConnection.isProxy) {
@@ -560,7 +587,7 @@ end[HADOOP_FACEBOOK]*/
         synchronized(transientInMessages) {
             msgs = transientInMessages.get(vertex);
             if (msgs == null) {
-                msgs = new ArrayList<M>();
+                msgs = new ArrayList<M>(msgList.size());
                 transientInMessages.put(vertex, msgs);
             }
         }
@@ -833,7 +860,9 @@ end[HADOOP_FACEBOOK]*/
     @Override
     public long flush(Mapper<?, ?, ?, ?>.Context context) throws IOException {
         if (LOG.isInfoEnabled()) {
-            LOG.info("flush: starting for superstep " + service.getSuperstep());
+            LOG.info("flush: starting for superstep " +
+                      service.getSuperstep() + " " +
+                      MemoryUtils.getRuntimeMemoryStats());
         }
         for (List<M> msgList : inMessages.values()) {
             msgList.clear();
@@ -856,9 +885,18 @@ end[HADOOP_FACEBOOK]*/
             try {
                 future.get();
                 context.progress();
-            } catch (Exception e) {
-                throw new RuntimeException(e);
+            } catch (InterruptedException e) {
+                throw new IllegalStateException("flush: Got IOException", e);
+            } catch (ExecutionException e) {
+                throw new IllegalStateException(
+                    "flush: Got ExecutionException", e);
             }
+        }
+
+        if (LOG.isInfoEnabled()) {
+            LOG.info("flush: ended for superstep " +
+                      service.getSuperstep() + " " +
+                      MemoryUtils.getRuntimeMemoryStats());
         }
 
         long msgs = totalMsgsSentInSuperstep;
@@ -869,7 +907,9 @@ end[HADOOP_FACEBOOK]*/
     @Override
     public void prepareSuperstep() {
         if (LOG.isInfoEnabled()) {
-            LOG.info("prepareSuperstep");
+            LOG.info("prepareSuperstep: Superstep " +
+                     service.getSuperstep() + " " +
+                     MemoryUtils.getRuntimeMemoryStats());
         }
         inPrepareSuperstep = true;
 

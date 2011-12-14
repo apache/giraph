@@ -22,6 +22,7 @@ import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.graph.partition.Partition;
 import org.apache.giraph.graph.partition.PartitionOwner;
 import org.apache.giraph.graph.partition.PartitionStats;
+import org.apache.giraph.utils.MemoryUtils;
 import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.giraph.zk.ZooKeeperManager;
 import org.apache.hadoop.conf.Configuration;
@@ -530,10 +531,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
             }
 
             if (LOG.isDebugEnabled()) {
-                LOG.debug("map: totalMem=" +
-                          Runtime.getRuntime().totalMemory() +
-                          " maxMem=" + Runtime.getRuntime().maxMemory() +
-                          " freeMem=" + Runtime.getRuntime().freeMemory());
+                LOG.debug("map: " + MemoryUtils.getRuntimeMemoryStats());
             }
             context.progress();
 
@@ -576,6 +574,8 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
                             basicVertex.getMsgList().iterator();
                         context.progress();
                         basicVertex.compute(vertexMsgIt);
+                        // Hint to GC to free the messages
+                        basicVertex.getMsgList().clear();
                     }
                     if (basicVertex.isHalted()) {
                         partitionStats.incrFinishedVertexCount();
@@ -584,15 +584,6 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
                     partitionStats.addEdgeCount(basicVertex.getNumOutEdges());
                 }
                 partitionStatsList.add(partitionStats);
-            }
-
-            serviceWorker.getWorkerContext().postSuperstep();
-            context.progress();
-            if (LOG.isInfoEnabled()) {
-                LOG.info("map: totalMem="
-                         + Runtime.getRuntime().totalMemory() +
-                         " maxMem=" + Runtime.getRuntime().maxMemory() +
-                         " freeMem=" + Runtime.getRuntime().freeMemory());
             }
         } while (!serviceWorker.finishSuperstep(partitionStatsList));
         if (LOG.isInfoEnabled()) {

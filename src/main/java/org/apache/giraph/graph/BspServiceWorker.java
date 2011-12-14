@@ -29,6 +29,7 @@ import org.apache.giraph.graph.partition.PartitionExchange;
 import org.apache.giraph.graph.partition.PartitionOwner;
 import org.apache.giraph.graph.partition.PartitionStats;
 import org.apache.giraph.graph.partition.WorkerGraphPartitioner;
+import org.apache.giraph.utils.MemoryUtils;
 import org.apache.giraph.utils.WritableUtils;
 import org.apache.giraph.zk.BspEvent;
 import org.apache.giraph.zk.PredicateLock;
@@ -471,9 +472,7 @@ public class BspServiceWorker<
                 String status = "readVerticesFromInputSplit: Loaded " +
                     totalVerticesLoaded + " vertices and " +
                     totalEdgesLoaded + " edges " +
-                    ", totalMem = " + Runtime.getRuntime().totalMemory() +
-                    " maxMem ="  + Runtime.getRuntime().maxMemory() +
-                    " freeMem=" + Runtime.getRuntime().freeMemory() + " " +
+                    MemoryUtils.getRuntimeMemoryStats() + " " +
                     getGraphMapper().getMapFunctions().toString() +
                     " - Attempt=" + getApplicationAttempt() +
                     ", Superstep=" + getSuperstep();
@@ -899,11 +898,13 @@ public class BspServiceWorker<
         //
         // Master will coordinate the barriers and aggregate "doneness" of all
         // the vertices.  Each worker will:
-        // 1. Save aggregator values that are in use.
-        // 2. Report the statistics (vertices, edges, messages, etc.)
-        // of this worker
-        // 3. Let the master know it is finished.
-        // 4. Then it waits for the master to say whether to stop or not.
+        // 1. Flush the unsent messages
+        // 2. Execute user postSuperstep() if necessary.
+        // 3. Save aggregator values that are in use.
+        // 4. Report the statistics (vertices, edges, messages, etc.)
+        //    of this worker
+        // 5. Let the master know it is finished.
+        // 6. Wait for the master's global stats, and check if done
         long workerSentMessages = 0;
         try {
             workerSentMessages = commService.flush(getContext());
@@ -911,6 +912,17 @@ public class BspServiceWorker<
             throw new IllegalStateException(
                 "finishSuperstep: flush failed", e);
         }
+
+        if (getSuperstep() != INPUT_SUPERSTEP) {
+            getWorkerContext().postSuperstep();
+            getContext().progress();
+        }
+
+        if (LOG.isInfoEnabled()) {
+            LOG.info("finishSuperstep: Superstep " + getSuperstep() + " " +
+                      MemoryUtils.getRuntimeMemoryStats());
+        }
+
         JSONArray aggregatorValueArray =
             marshalAggregatorValues(getSuperstep());
         Collection<PartitionStats> finalizedPartitionStats =
