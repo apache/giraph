@@ -77,6 +77,16 @@ public interface CommunicationsInterface<
     void putMsgList(I vertexIndex, MsgList<M> msgList) throws IOException;
 
     /**
+     * Adds a list of vertex ids and their respective message lists.
+     *
+     * @param vertexIndex Vertex index where the message are added
+     * @param msgList messages added
+     * @throws IOException
+     */
+    void putVertexIdMessagesList(
+        VertexIdMessagesList<I, M> vertexIdMessagesList) throws IOException;
+
+    /**
      * Adds vertex list (index, value, edges, etc.) to the appropriate worker.
      *
      * @param partitionId Partition id of the vertices to be added.

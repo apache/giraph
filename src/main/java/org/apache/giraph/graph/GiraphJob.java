@@ -61,10 +61,10 @@ public class GiraphJob extends Job {
     /** Message value class */
     public static final String MESSAGE_VALUE_CLASS = "giraph.messageValueClass";
     /** Worker context class */
-    public static final String WORKER_CONTEXT_CLASS = 
+    public static final String WORKER_CONTEXT_CLASS =
     	"giraph.workerContextClass";
     /** AggregatorWriter class - optional */
-    public static final String AGGREGATOR_WRITER_CLASS = 
+    public static final String AGGREGATOR_WRITER_CLASS =
     	"giraph.aggregatorWriterClass";
 
     /**
@@ -170,8 +170,15 @@ public class GiraphJob extends Job {
     /** Default maximum number of messages per peer before flush */
     public static final int MSG_SIZE_DEFAULT = 1000;
 
+    /** Maximum number of messages that can be bulk sent during a flush */
+    public static final String MAX_MESSAGES_PER_FLUSH_PUT =
+        "giraph.maxMessagesPerFlushPut";
+    /** Default number of messages that can be bulk sent during a flush */
+    public static final int DEFAULT_MAX_MESSAGES_PER_FLUSH_PUT = 5000;
+
     /** Number of flush threads per peer */
-    public static final String MSG_NUM_FLUSH_THREADS = "giraph.msgNumFlushThreads";
+    public static final String MSG_NUM_FLUSH_THREADS =
+        "giraph.msgNumFlushThreads";
 
     /** Number of poll attempts prior to failing the job (int) */
     public static final String POLL_ATTEMPTS = "giraph.pollAttempts";
@@ -451,7 +458,7 @@ public class GiraphJob extends Job {
                                     workerContextClass,
                                     WorkerContext.class);
     }
-    
+
     /**
      * Set the aggregator writer class (optional)
      *
@@ -464,7 +471,7 @@ public class GiraphJob extends Job {
                                      aggregatorWriterClass,
                                      AggregatorWriter.class);
      }
-    
+
     /**
      * Set worker configuration for determining what is required for
      * a superstep.

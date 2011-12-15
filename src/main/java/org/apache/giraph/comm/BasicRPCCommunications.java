@@ -44,6 +44,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -92,6 +93,8 @@ public abstract class BasicRPCCommunications<
     private final InetSocketAddress myAddress;
     /** Messages sent during the last superstep */
     private long totalMsgsSentInSuperstep = 0;
+    /** Maximum messages sent per putVertexIdMessagesList RPC */
+    private final int maxMessagesPerFlushPut;
     /**
      * Map of the peer connections, mapping from remote socket address to client
      * meta data
@@ -215,48 +218,68 @@ public abstract class BasicRPCCommunications<
                 = peerConnection.getRPCProxy();
             long startMillis = System.currentTimeMillis();
             long lastReportedMillis = startMillis;
-
             try {
                 int verticesDone = 0;
-                synchronized (peerConnection.outMessagesPerPeer) {
+                synchronized(peerConnection.outMessagesPerPeer) {
                     final int vertices =
                         peerConnection.outMessagesPerPeer.size();
-                    while (!peerConnection.outMessagesPerPeer.isEmpty()) {
-                        Entry<I, MsgList<M>> e =
-                            peerConnection.outMessagesPerPeer.entrySet().iterator().next();
-                        MsgList<M> msgList = e.getValue();
-
-                        if (msgList.size() > 0) {
-                            if (msgList.size() > 1) {
-                                if (combiner != null) {
-                                    M combinedMsg = combiner.combine(e.getKey(),
-                                        msgList);
-                                    if (combinedMsg != null) {
-                                        proxy.putMsg(e.getKey(), combinedMsg);
-                                    }
-                                } else {
-                                    proxy.putMsgList(e.getKey(), msgList);
-                                }
-                            } else {
-                                for (M msg : msgList) {
-                                    if (msg == null) {
-                                        throw new IllegalArgumentException(
-                                            "putAllMessages: Cannot put " +
-                                                "null message on " + e.getKey());
-                                    }
-                                    proxy.putMsg(e.getKey(), msg);
-                                    context.progress();
-                                }
+                    // 1. Check for null messages and combine if possible
+                    // 2. Send vertex ids and messages in bulk to the
+                    //    destination servers.
+                    for (Entry<I, MsgList<M>> entry :
+                            peerConnection.outMessagesPerPeer.entrySet()) {
+                        for (M msg : entry.getValue()) {
+                            if (msg == null) {
+                                throw new IllegalArgumentException(
+                                    "run: Cannot put null message on " +
+                                    "vertex id " + entry.getKey());
                             }
-                            msgList.clear();
+                        }
+                        if (combiner != null && entry.getValue().size() > 1) {
+                            M combinedMsg = combiner.combine(entry.getKey(),
+                                                             entry.getValue());
+                            entry.getValue().clear();
+                            entry.getValue().add(combinedMsg);
+                        }
+                        if (entry.getValue().isEmpty()) {
+                            throw new IllegalStateException(
+                                "run: Impossible for no messages in " +
+                                entry.getKey());
+                        }
+                    }
+                    while (!peerConnection.outMessagesPerPeer.isEmpty()) {
+                        int bulkedMessages = 0;
+                        Iterator<Entry<I, MsgList<M>>> vertexIdMessagesListIt =
+                            peerConnection.outMessagesPerPeer.entrySet().
+                            iterator();
+                        VertexIdMessagesList<I, M> vertexIdMessagesList =
+                            new VertexIdMessagesList<I, M>();
+                        while (vertexIdMessagesListIt.hasNext()) {
+                            Entry<I, MsgList<M>> entry =
+                                vertexIdMessagesListIt.next();
+                            // Add this entry if the list is empty or we
+                            // haven't reached the maximum number of messages
+                            if (vertexIdMessagesList.isEmpty() ||
+                                    ((bulkedMessages + entry.getValue().size())
+                                     < maxMessagesPerFlushPut)) {
+                                vertexIdMessagesList.add(
+                                    new VertexIdMessages<I, M>(
+                                        entry.getKey(), entry.getValue()));
+                                bulkedMessages += entry.getValue().size();
+                            }
                         }
 
-                        // Clean up the memory with the message list
-                        msgList = null;
-                        peerConnection.outMessagesPerPeer.remove(e.getKey());
-                        e = null;
+                        // Clean up references to the vertex id and messages
+                        for (VertexIdMessages<I, M>vertexIdMessages :
+                                vertexIdMessagesList) {
+                            peerConnection.outMessagesPerPeer.remove(
+                                vertexIdMessages.getVertexId());
+                        }
 
-                        ++verticesDone;
+                        proxy.putVertexIdMessagesList(vertexIdMessagesList);
+                        context.progress();
+
+                        verticesDone += vertexIdMessagesList.size();
                         long curMillis = System.currentTimeMillis();
                         if ((lastReportedMillis +
                                 REPORTING_INTERVAL_MIN_MILLIS) < curMillis) {
@@ -304,16 +327,18 @@ public abstract class BasicRPCCommunications<
      * exceeds <i>maxSize</i>.
      */
     private class LargeMessageFlushExecutor implements Runnable {
-        final I destVertex;
-        final MsgList<M> outMessage;
-        PeerConnection peerConnection;
+        private final I destVertex;
+        private final MsgList<M> outMessageList;
+        private PeerConnection peerConnection;
 
         LargeMessageFlushExecutor(PeerConnection peerConnection, I destVertex) {
             this.peerConnection = peerConnection;
-            synchronized (peerConnection.outMessagesPerPeer) {
+            synchronized(peerConnection.outMessagesPerPeer) {
                 this.destVertex = destVertex;
-                outMessage = peerConnection.outMessagesPerPeer.get(destVertex);
-                peerConnection.outMessagesPerPeer.put(destVertex, new MsgList<M>());
+                outMessageList =
+                    peerConnection.outMessagesPerPeer.get(destVertex);
+                peerConnection.outMessagesPerPeer.put(destVertex,
+                                                      new MsgList<M>());
             }
         }
 
@@ -325,21 +350,21 @@ public abstract class BasicRPCCommunications<
 
                 if (combiner != null) {
                     M combinedMsg = combiner.combine(destVertex,
-                                                     outMessage);
+                                                     outMessageList);
                     if (combinedMsg != null) {
                         proxy.putMsg(destVertex, combinedMsg);
                     }
                 } else {
-                    proxy.putMsgList(destVertex, outMessage);
+                    proxy.putMsgList(destVertex, outMessageList);
                 }
             } catch (IOException e) {
                 LOG.error(e);
                 if (peerConnection.isProxy) {
                     RPC.stopProxy(peerConnection.peer);
                 }
-                throw new RuntimeException(e);
+                throw new RuntimeException("run: Got IOException", e);
             } finally {
-                outMessage.clear();
+                outMessageList.clear();
             }
         }
     }
@@ -371,6 +396,9 @@ public abstract class BasicRPCCommunications<
         this.conf = context.getConfiguration();
         this.maxSize = conf.getInt(GiraphJob.MSG_SIZE,
                                    GiraphJob.MSG_SIZE_DEFAULT);
+        this.maxMessagesPerFlushPut =
+            conf.getInt(GiraphJob.MAX_MESSAGES_PER_FLUSH_PUT,
+                        GiraphJob.DEFAULT_MAX_MESSAGES_PER_FLUSH_PUT);
         if (BspUtils.getVertexCombinerClass(conf) == null) {
             this.combiner = null;
         } else {
@@ -492,7 +520,7 @@ public abstract class BasicRPCCommunications<
         Map<I, MsgList<M>> outMsgMap = null;
         boolean isProxy = true;
         CommunicationsInterface<I, V, E, M> peer = this;
-        synchronized (outMessages) {
+        synchronized(outMessages) {
             outMsgMap = outMessages.get(addrUnresolved);
             if (LOG.isDebugEnabled()) {
                 LOG.debug("startPeerConnectionThread: Connecting to " +
@@ -570,7 +598,7 @@ end[HADOOP_FACEBOOK]*/
                     transientInMessages.put(vertex, msgs);
                 }
             }
-            synchronized (msgs) {
+            synchronized(msgs) {
                 msgs.add(msg);
             }
         }
@@ -591,8 +619,35 @@ end[HADOOP_FACEBOOK]*/
                 transientInMessages.put(vertex, msgs);
             }
         }
-        synchronized (msgs) {
+        synchronized(msgs) {
             msgs.addAll(msgList);
+        }
+    }
+
+    @Override
+    public final void putVertexIdMessagesList(
+            VertexIdMessagesList<I, M> vertexIdMessagesList)
+            throws IOException {
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("putVertexIdMessagesList: Adding msgList " +
+                      vertexIdMessagesList);
+        }
+
+        List<M> messageList = null;
+        for (VertexIdMessages<I, M> vertexIdMessages : vertexIdMessagesList) {
+            synchronized(transientInMessages) {
+                messageList =
+                    transientInMessages.get(vertexIdMessages.getVertexId());
+                if (messageList == null) {
+                    messageList = new ArrayList<M>(
+                        vertexIdMessages.getMessageList().size());
+                    transientInMessages.put(
+                        vertexIdMessages.getVertexId(), messageList);
+                }
+            }
+            synchronized(messageList) {
+                messageList.addAll(vertexIdMessages.getMessageList());
+            }
         }
     }
 
@@ -604,7 +659,7 @@ end[HADOOP_FACEBOOK]*/
             LOG.debug("putVertexList: On partition id " + partitionId +
                       " adding vertex list of size " + vertexList.size());
         }
-        synchronized (inPartitionVertexMap) {
+        synchronized(inPartitionVertexMap) {
             if (vertexList.size() == 0) {
                 return;
             }
@@ -624,7 +679,7 @@ end[HADOOP_FACEBOOK]*/
         if (LOG.isDebugEnabled()) {
             LOG.debug("addEdge: Adding edge " + edge);
         }
-        synchronized (inVertexMutationsMap) {
+        synchronized(inVertexMutationsMap) {
             VertexMutations<I, V, E, M> vertexMutations = null;
             if (!inVertexMutationsMap.containsKey(vertexIndex)) {
                 vertexMutations = new VertexMutations<I, V, E, M>();
@@ -642,7 +697,7 @@ end[HADOOP_FACEBOOK]*/
             LOG.debug("removeEdge: Removing edge on destination " +
                       destinationVertexIndex);
         }
-        synchronized (inVertexMutationsMap) {
+        synchronized(inVertexMutationsMap) {
             VertexMutations<I, V, E, M> vertexMutations = null;
             if (!inVertexMutationsMap.containsKey(vertexIndex)) {
                 vertexMutations = new VertexMutations<I, V, E, M>();
@@ -659,7 +714,7 @@ end[HADOOP_FACEBOOK]*/
         if (LOG.isDebugEnabled()) {
             LOG.debug("addVertex: Adding vertex " + vertex);
         }
-        synchronized (inVertexMutationsMap) {
+        synchronized(inVertexMutationsMap) {
             VertexMutations<I, V, E, M> vertexMutations = null;
             if (!inVertexMutationsMap.containsKey(vertex.getVertexId())) {
                 vertexMutations = new VertexMutations<I, V, E, M>();
@@ -676,7 +731,7 @@ end[HADOOP_FACEBOOK]*/
         if (LOG.isDebugEnabled()) {
             LOG.debug("removeVertex: Removing vertex " + vertexIndex);
         }
-        synchronized (inVertexMutationsMap) {
+        synchronized(inVertexMutationsMap) {
             VertexMutations<I, V, E, M> vertexMutations = null;
             if (!inVertexMutationsMap.containsKey(vertexIndex)) {
                 vertexMutations = new VertexMutations<I, V, E, M>();
@@ -779,7 +834,7 @@ end[HADOOP_FACEBOOK]*/
         }
         ++totalMsgsSentInSuperstep;
         Map<I, MsgList<M>> msgMap = null;
-        synchronized (outMessages) {
+        synchronized(outMessages) {
             msgMap = outMessages.get(addr);
         }
         if (msgMap == null) { // should never happen after constructor
@@ -995,7 +1050,7 @@ end[HADOOP_FACEBOOK]*/
                 resolveVertexIndexSet.add(entry.getKey());
             }
         }
-        synchronized (inVertexMutationsMap) {
+        synchronized(inVertexMutationsMap) {
             for (I vertexIndex : inVertexMutationsMap.keySet()) {
                 resolveVertexIndexSet.add(vertexIndex);
             }
@@ -1042,7 +1097,7 @@ end[HADOOP_FACEBOOK]*/
                 partition.removeVertex(originalVertex.getVertexId());
             }
         }
-        synchronized (inVertexMutationsMap) {
+        synchronized(inVertexMutationsMap) {
             inVertexMutationsMap.clear();
         }
     }
@@ -1051,7 +1106,7 @@ end[HADOOP_FACEBOOK]*/
     public void fixPartitionIdToSocketAddrMap() {
         // 1. Fix all the cached inet addresses (remove all changed entries)
         // 2. Connect to any new RPC servers
-        synchronized (partitionIndexAddressMap) {
+        synchronized(partitionIndexAddressMap) {
             for (PartitionOwner partitionOwner : service.getPartitionOwners()) {
                 InetSocketAddress address =
                     partitionIndexAddressMap.get(

@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.70.0 - unreleased
 
+  GIRAPH-57: Add new RPC call (putVertexIdMessagesList) to batch
+  putMsgList RPCs together. (aching)
+
   GIRAPH-104: Save half of maximum memory used from messaging. (aching)
 
   GIRAPH-10: Aggregators are not exported. (claudio)
