@@ -63,7 +63,7 @@ public class VertexIdMessages<I extends WritableComparable, M extends Writable>
 
     @Override
     public void readFields(DataInput input) throws IOException {
-        vertexId = BspUtils.createVertexIndex(getConf());
+        vertexId = BspUtils.<I>createVertexIndex(getConf());
         vertexId.readFields(input);
         msgList = new MsgList<M>();
         msgList.setConf(getConf());
