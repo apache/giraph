@@ -86,8 +86,8 @@ under the License.
       <name>Avery Ching</name>
       <email>aching@apache.org</email>
       <timezone>-8</timezone>
-      <organization>Yahoo!</organization>
-      <organizationUrl>http://www.yahoo.com</organizationUrl>
+      <organization>Facebook</organization>
+      <organizationUrl>http://www.facebook.com</organizationUrl>
     </developer>
     <developer>
       <id>hyunsik</id>
@@ -162,11 +162,15 @@ under the License.
   </developers>
 
   <properties>
+    <compileSource>1.6</compileSource>
     <hadoop.version>0.20.203.0</hadoop.version>
+    <maven-compiler-plugin.version>2.3.2</maven-compiler-plugin.version>
+    <maven-javadoc-plugin.version>2.6</maven-javadoc-plugin.version>
     <jackson.version>1.8.0</jackson.version>
     <export-target.dir>export/target</export-target.dir>
     <buildtype>test</buildtype>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <munge-maven-plugin.version>1.0</munge-maven-plugin.version>
   </properties>
 
   <build>
@@ -248,16 +252,16 @@ under the License.
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>2.3.2</version>
+        <version>${maven-compiler-plugin.version}</version>
         <configuration>
-          <source>1.6</source>
-          <target>1.6</target>
+          <source>${compileSource}</source>
+          <target>${compileSource}</target>
         </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-javadoc-plugin</artifactId>
-        <version>2.6</version>
+        <version>${maven-javadoc-plugin.version}</version>
       </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
@@ -380,7 +384,7 @@ under the License.
           <plugin>
             <groupId>org.sonatype.plugins</groupId>
             <artifactId>munge-maven-plugin</artifactId>
-            <version>1.0</version>
+            <version>${munge-maven-plugin.version}</version>
             <executions>
               <execution>
                 <id>munge</id>
@@ -397,13 +401,14 @@ under the License.
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-compiler-plugin</artifactId>
-            <version>2.3.2</version>
+            <version>${maven-compiler-plugin.version}</version>
             <configuration>
               <excludes>
                 <exclude>**/BspTokenSelector.java</exclude>
               </excludes>
-              <source>1.6</source>
-              <target>1.6</target>
+              <source>${compileSource}</source>
+              <target>${compileSource}</target>
+              <showWarnings>true</showWarnings>
             </configuration>
           </plugin>
         </plugins>
@@ -440,7 +445,7 @@ under the License.
           <plugin>
             <groupId>org.sonatype.plugins</groupId>
             <artifactId>munge-maven-plugin</artifactId>
-            <version>1.0</version>
+            <version>${munge-maven-plugin.version}</version>
             <executions>
               <execution>
                 <id>munge</id>
@@ -457,13 +462,13 @@ under the License.
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-compiler-plugin</artifactId>
-            <version>2.3.2</version>
+            <version>${maven-compiler-plugin.version}</version>
             <configuration>
               <excludes>
                 <exclude>**/BspTokenSelector.java</exclude>
               </excludes>
-              <source>1.6</source>
-              <target>1.6</target>
+              <source>${compileSource}</source>
+              <target>${compileSource}</target>
             </configuration>
           </plugin>
         </plugins>

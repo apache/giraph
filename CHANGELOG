@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.70.0 - unreleased
 
+  GIRAPH-103: Added properties for commonly used package version to
+  pom.xml. (aching)
+
   GIRAPH-57: Add new RPC call (putVertexIdMessagesList) to batch
   putMsgList RPCs together. (aching)
 
