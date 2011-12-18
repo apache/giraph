@@ -366,7 +366,8 @@ public class BspServiceMaster<
      * Check all the {@link WorkerInfo} objects to ensure that a minimum
      * number of good workers exists out of the total that have reported.
      *
-     * @return List of of healthy workers
+     * @return List of of healthy workers such that the minimum has been
+     *         met, otherwise null
      */
     private List<WorkerInfo> checkWorkers() {
         boolean failJob = true;
@@ -484,7 +485,7 @@ public class BspServiceMaster<
         // When creating znodes, in case the master has already run, resume
         // where it left off.
         List<WorkerInfo> healthyWorkerInfoList = checkWorkers();
-        if (healthyWorkerInfoList.isEmpty()) {
+        if (healthyWorkerInfoList == null) {
             setJobState(ApplicationState.FAILED, -1, -1);
             return -1;
         }
@@ -1386,7 +1387,7 @@ public class BspServiceMaster<
         // 5. Create superstep finished node
         // 6. If the checkpoint frequency is met, finalize the checkpoint
         List<WorkerInfo> chosenWorkerInfoList = checkWorkers();
-        if (chosenWorkerInfoList.isEmpty()) {
+        if (chosenWorkerInfoList == null) {
             LOG.fatal("coordinateSuperstep: Not enough healthy workers for " +
                       "superstep " + getSuperstep());
             setJobState(ApplicationState.FAILED, -1, -1);
