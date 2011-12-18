@@ -17,6 +17,7 @@
  */
 package org.apache.giraph.graph;
 
+import com.google.common.collect.UnmodifiableIterator;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -27,8 +28,6 @@ import org.apache.mahout.math.map.OpenLongFloatHashMap;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.AbstractList;
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -243,36 +242,65 @@ public abstract class LongDoubleFloatDoubleVertex extends
     }
 
     @Override
-    public List<DoubleWritable> getMsgList() {
-        return new AbstractList<DoubleWritable>() {
-            @Override public DoubleWritable get(int i) {
-                return new DoubleWritable(messageList.get(i));
-            }
-            @Override public int size() {
-                return messageList.size();
-            }
-            @Override public boolean add(DoubleWritable dw) {
-                messageList.add(dw.get());
-                return true;
-            }
-            @Override public boolean addAll(Collection<? extends DoubleWritable> collection) {
-                for(DoubleWritable dw : collection) {
-                    messageList.add(dw.get());
-                }
-                return true;
-            }
-            @Override public void clear() {
-                messageList.clear();
-            }
-            @Override public boolean isEmpty() {
-                return messageList.isEmpty();
-            }
-        };
+    public void setMessages(Iterable<DoubleWritable> messages) {
+        messageList.clear();
+        for (DoubleWritable message : messages) {
+            messageList.add(message.get());
+        }
+    }
+
+    @Override
+    void releaseResources() {
+        // Hint to GC to free the messages
+        messageList.clear();
+    }
+
+    @Override
+    public Iterable<DoubleWritable> getMessages() {
+        return new UnmodifiableDoubleWritableIterable(messageList);
     }
 
     @Override
     public String toString() {
         return "Vertex(id=" + getVertexId() + ",value=" + getVertexValue() +
                 ",#edges=" + getNumOutEdges() + ")";
+    }
+
+    private class UnmodifiableDoubleWritableIterable
+            implements Iterable<DoubleWritable> {
+
+        private final DoubleArrayList elementList;
+
+        public UnmodifiableDoubleWritableIterable(DoubleArrayList elementList) {
+            this.elementList = elementList;
+        }
+
+        @Override
+        public Iterator<DoubleWritable> iterator() {
+            return new UnmodifiableDoubleWritableIterator(
+                    elementList.elements());
+        }
+    }
+
+    private class UnmodifiableDoubleWritableIterator
+            extends UnmodifiableIterator<DoubleWritable> {
+
+        private final double[] elements;
+        private int offset;
+
+        UnmodifiableDoubleWritableIterator(double[] elements) {
+            offset = 0;
+            this.elements = elements;
+        }
+
+        @Override
+        public boolean hasNext() {
+            return offset < elements.length;
+        }
+
+        @Override
+        public DoubleWritable next() {
+            return new DoubleWritable(elements[offset++]);
+        }
     }
 }

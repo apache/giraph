@@ -18,6 +18,7 @@
 
 package org.apache.giraph.graph;
 
+import com.google.common.collect.Iterables;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
@@ -51,7 +52,7 @@ public class VertexResolver<I extends WritableComparable, V extends Writable,
     public BasicVertex<I, V, E, M> resolve(
             BasicVertex<I, V, E, M> vertex,
             VertexChanges<I, V, E, M> vertexChanges,
-            List<M> msgList) {
+            Iterable<M> messages) {
         // Default algorithm:
         // 1. If the vertex exists, first prune the edges
         // 2. If vertex removal desired, remove the vertex.
@@ -83,7 +84,8 @@ public class VertexResolver<I extends WritableComparable, V extends Writable,
                     vertex = vertexChanges.getAddedVertexList().get(0);
                 }
             }
-            if ((vertex == null) && (msgList != null) && (!msgList.isEmpty())) {
+            if (vertex == null && messages != null
+                    && !Iterables.isEmpty(messages)) {
                 vertex = instantiateVertex();
                 V vertexValue = BspUtils.<V>createVertexValue(getConf());
                 vertex.setVertexValue(vertexValue);

@@ -18,6 +18,8 @@
 
 package org.apache.giraph.graph;
 
+import com.google.common.collect.Iterables;
+import org.apache.giraph.utils.ComparisonUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
@@ -61,7 +63,7 @@ public abstract class EdgeListVertex<I extends WritableComparable,
     /** Map of destination vertices and their edge values */
     private List<E> destEdgeValueList;
     /** List of incoming messages from the previous superstep */
-    private final List<M> msgList = new ArrayList<M>();
+    private final List<M> msgList = Lists.newArrayList();
 
     @Override
     public void initialize(I vertexId, V vertexValue,
@@ -103,20 +105,11 @@ public abstract class EdgeListVertex<I extends WritableComparable,
             if (!getVertexValue().equals(otherVertex.getVertexValue())) {
                 return false;
             }
-            if (!getMsgList().equals(otherVertex.getMsgList())) {
+            if (!ComparisonUtils.equal(getMessages(),
+                    ((EdgeListVertex) other).getMessages())) {
                 return false;
             }
-            Iterator<I> iterator = iterator();
-            Iterator<I> otherIterator = otherVertex.iterator();
-            while (iterator.hasNext() && otherIterator.hasNext()) {
-                I index = iterator.next();
-                I otherIndex = otherIterator.next();
-                if (!(index == null ? otherIndex == null :
-                        index.equals(otherIndex))) {
-                    return false;
-                }
-            }
-            return !(iterator.hasNext() || otherIterator.hasNext());
+            return ComparisonUtils.equal(iterator(), otherVertex.iterator());
         }
         return false;
     }
@@ -318,8 +311,22 @@ public abstract class EdgeListVertex<I extends WritableComparable,
     }
 
     @Override
-    public List<M> getMsgList() {
-        return msgList;
+    public void setMessages(Iterable<M> messages) {
+        msgList.clear();
+        for (M message : messages) {
+            msgList.add(message);
+        }
+    }
+
+    @Override
+    public Iterable<M> getMessages() {
+        return Iterables.unmodifiableIterable(msgList);
+    }
+
+    @Override
+    void releaseResources() {
+        // Hint to GC to free the messages
+        msgList.clear();
     }
 
     @Override

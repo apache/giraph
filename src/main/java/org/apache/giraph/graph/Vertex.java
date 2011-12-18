@@ -18,6 +18,8 @@
 
 package org.apache.giraph.graph;
 
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
@@ -58,7 +60,7 @@ public abstract class Vertex<I extends WritableComparable, V extends Writable,
     protected final Map<I, Edge<I, E>> destEdgeMap =
         new HashMap<I, Edge<I, E>>();
     /** List of incoming messages from the previous superstep */
-    private final List<M> msgList = new ArrayList<M>();
+    private final List<M> msgList = Lists.newArrayList();
 
     @Override
     public void initialize(I vertexId, V vertexValue, Map<I, E> edges, List<M> messages) {
@@ -241,8 +243,22 @@ public abstract class Vertex<I extends WritableComparable, V extends Writable,
     }
 
     @Override
-    public List<M> getMsgList() {
-        return msgList;
+    public void setMessages(Iterable<M> messages) {
+        msgList.clear();
+        for (M message : messages) {
+            msgList.add(message);
+        }
+    }
+
+    @Override
+    public Iterable<M> getMessages() {
+        return Iterables.unmodifiableIterable(msgList);
+    }
+
+    @Override
+    void releaseResources() {
+        // Hint to GC to free the messages
+        msgList.clear();
     }
 
     @Override

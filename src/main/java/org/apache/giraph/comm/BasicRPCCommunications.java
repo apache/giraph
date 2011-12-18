@@ -1001,7 +1001,6 @@ end[HADOOP_FACEBOOK]*/
             for (Partition<I, V, E, M> partition :
                     service.getPartitionMap().values()) {
                 for (BasicVertex<I, V, E, M> vertex : partition.getVertices()) {
-                    vertex.getMsgList().clear();
                     List<M> msgList = inMessages.get(vertex.getVertexId());
                     if (msgList != null) {
                         if (LOG.isDebugEnabled()) {
@@ -1015,7 +1014,7 @@ end[HADOOP_FACEBOOK]*/
                                          "in inMessages");
                             }
                         }
-                        vertex.getMsgList().addAll(msgList);
+                        vertex.setMessages(msgList);
                         msgList.clear();
                         if (inMessages.remove(vertex.getVertexId()) == null) {
                             throw new IllegalStateException(
@@ -1063,16 +1062,16 @@ end[HADOOP_FACEBOOK]*/
                     conf, service.getGraphMapper().getGraphState());
             BasicVertex<I, V, E, M> originalVertex =
                 service.getVertex(vertexIndex);
-            List<M> msgList = inMessages.get(vertexIndex);
+            Iterable<M> messages = inMessages.get(vertexIndex);
             if (originalVertex != null) {
-                msgList = originalVertex.getMsgList();
+                messages = originalVertex.getMessages();
             }
             VertexMutations<I, V, E, M> vertexMutations =
                 inVertexMutationsMap.get(vertexIndex);
             BasicVertex<I, V, E, M> vertex =
                 vertexResolver.resolve(originalVertex,
                                        vertexMutations,
-                                       msgList);
+                                       messages);
             if (LOG.isDebugEnabled()) {
                 LOG.debug("prepareSuperstep: Resolved vertex index " +
                           vertexIndex + " with original vertex " +

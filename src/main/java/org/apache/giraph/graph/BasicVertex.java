@@ -180,11 +180,23 @@ public abstract class BasicVertex<I extends WritableComparable,
         return halt;
     }
 
+     /**
+      *  Get the list of incoming messages from the previous superstep.  Same as
+      *  the message iterator passed to compute().
+      */
+    public abstract Iterable<M> getMessages();
+
+     /**
+      * Set the messages this vertex should process in the current superstep
+      *
+      * @param messages the messages sent to this vertex in the previous superstep
+      */
+    public abstract void setMessages(Iterable<M> messages);
+
     /**
-     *  Get the list of incoming messages from the previous superstep.  Same as
-     *  the message iterator passed to compute().
-     */
-    public abstract List<M> getMsgList();
+      * Release unnecessary resources (will be called after vertex chose to halt)
+      */
+    abstract void releaseResources();
 
     /**
      * Get the graph state for all workers.

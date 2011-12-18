@@ -18,6 +18,7 @@
 
 package org.apache.giraph.graph;
 
+import com.google.common.collect.Iterables;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.graph.partition.Partition;
 import org.apache.giraph.graph.partition.PartitionOwner;
@@ -565,17 +566,16 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
                     // Make sure every vertex has the current
                     // graphState before computing
                     basicVertex.setGraphState(graphState);
-                    if (basicVertex.isHalted() &&
-                            !basicVertex.getMsgList().isEmpty()) {
+                    if (basicVertex.isHalted()
+                            && !Iterables.isEmpty(basicVertex.getMessages())) {
                         basicVertex.halt = false;
                     }
                     if (!basicVertex.isHalted()) {
                         Iterator<M> vertexMsgIt =
-                            basicVertex.getMsgList().iterator();
+                            basicVertex.getMessages().iterator();
                         context.progress();
                         basicVertex.compute(vertexMsgIt);
-                        // Hint to GC to free the messages
-                        basicVertex.getMsgList().clear();
+                        basicVertex.releaseResources();
                     }
                     if (basicVertex.isHalted()) {
                         partitionStats.incrFinishedVertexCount();

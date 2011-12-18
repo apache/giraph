@@ -41,14 +41,13 @@ public interface BasicVertexResolver<
      *
      * @param vertex Original vertex or null if none
      * @param vertexChanges Changes that happened to this vertex or null if none
-     * @param msgList List of messages received in the last superstep or null
-     *        if none
+     * @param messages messages received in the last superstep or null if none
      * @return Vertex to be returned, if null, and a vertex currently exists
      *         it will be removed
      */
     BasicVertex<I, V, E, M> resolve(BasicVertex<I, V, E, M> vertex,
                                     VertexChanges<I, V, E, M> vertexChanges,
-                                    List<M> msgList);
+                                    Iterable<M> messages);
 
     /**
      * Create a default vertex that can be used to return from resolve().
