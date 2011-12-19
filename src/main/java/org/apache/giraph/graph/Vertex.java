@@ -27,7 +27,6 @@ import org.apache.log4j.Logger;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -243,7 +242,7 @@ public abstract class Vertex<I extends WritableComparable, V extends Writable,
     }
 
     @Override
-    public void setMessages(Iterable<M> messages) {
+    void setMessages(Iterable<M> messages) {
         msgList.clear();
         for (M message : messages) {
             msgList.add(message);

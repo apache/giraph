@@ -500,6 +500,12 @@ public class BspServiceWorker<
     }
 
     @Override
+    public void assignMessagesToVertex(BasicVertex<I, V, E, M> vertex,
+            Iterable<M> messageIterator) {
+        vertex.setMessages(messageIterator);
+    }
+
+    @Override
     public void setup() {
         // Unless doing a restart, prepare for computation:
         // 1. Start superstep INPUT_SUPERSTEP (no computation)

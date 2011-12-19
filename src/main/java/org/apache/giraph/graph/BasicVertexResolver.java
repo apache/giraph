@@ -21,8 +21,6 @@ package org.apache.giraph.graph;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import java.util.List;
-
 /**
  * Handles all the situations that can arise upon creation/removal of
  * vertices and edges.

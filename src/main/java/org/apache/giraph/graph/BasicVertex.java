@@ -186,16 +186,16 @@ public abstract class BasicVertex<I extends WritableComparable,
       */
     public abstract Iterable<M> getMessages();
 
-     /**
-      * Set the messages this vertex should process in the current superstep
-      *
-      * @param messages the messages sent to this vertex in the previous superstep
-      */
-    public abstract void setMessages(Iterable<M> messages);
+    /**
+     * Set the messages this vertex should process in the current superstep
+     *
+     * @param messages the messages sent to this vertex in the previous superstep
+     */
+    abstract void setMessages(Iterable<M> messages);
 
     /**
-      * Release unnecessary resources (will be called after vertex chose to halt)
-      */
+     * Release unnecessary resources (will be called after vertex chose to halt)
+     */
     abstract void releaseResources();
 
     /**

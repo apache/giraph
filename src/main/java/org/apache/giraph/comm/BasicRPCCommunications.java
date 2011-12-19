@@ -1014,7 +1014,7 @@ end[HADOOP_FACEBOOK]*/
                                          "in inMessages");
                             }
                         }
-                        vertex.setMessages(msgList);
+                        service.assignMessagesToVertex(vertex, msgList);
                         msgList.clear();
                         if (inMessages.remove(vertex.getVertexId()) == null) {
                             throw new IllegalStateException(

@@ -106,7 +106,7 @@ public abstract class EdgeListVertex<I extends WritableComparable,
                 return false;
             }
             if (!ComparisonUtils.equal(getMessages(),
-                    ((EdgeListVertex) other).getMessages())) {
+                    otherVertex.getMessages())) {
                 return false;
             }
             return ComparisonUtils.equal(iterator(), otherVertex.iterator());
@@ -311,7 +311,7 @@ public abstract class EdgeListVertex<I extends WritableComparable,
     }
 
     @Override
-    public void setMessages(Iterable<M> messages) {
+    void setMessages(Iterable<M> messages) {
         msgList.clear();
         for (M message : messages) {
             msgList.add(message);

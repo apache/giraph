@@ -147,6 +147,16 @@ public interface CentralizedServiceWorker<
         Collection<? extends PartitionOwner> masterSetPartitionOwners);
 
     /**
+     * Assign messages to a vertex (bypasses package-private access to
+     * setMessages() for internal classes).
+     *
+     * @param vertex Vertex (owned by worker)
+     * @param messageIterator Messages to assign to the vertex
+     */
+    void assignMessagesToVertex(BasicVertex<I, V, E, M> vertex,
+                                Iterable<M> messageIterator);
+
+    /**
      * Get the GraphMapper that this service is using.  Vertices need to know
      * this.
      *

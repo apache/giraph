@@ -34,11 +34,9 @@ import org.apache.hadoop.ipc.VersionedProtocol;
 /**
  * Basic interface for communication between workers.
  *
- *
  * @param <I extends Writable> vertex id
  * @param <M extends Writable> message data
- *
- **/
+ */
 @SuppressWarnings("rawtypes")
 /*if_not[HADOOP]
  else[HADOOP]*/
