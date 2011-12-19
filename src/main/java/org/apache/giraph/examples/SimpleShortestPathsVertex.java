@@ -18,6 +18,7 @@
 
 package org.apache.giraph.examples;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.BspUtils;
@@ -242,11 +243,10 @@ public class SimpleShortestPathsVertex extends
 
     @Override
     public int run(String[] argArray) throws Exception {
-        if (argArray.length != 4) {
-            throw new IllegalArgumentException(
-                "run: Must have 4 arguments <input path> <output path> " +
-                "<source vertex id> <# of workers>");
-        }
+        Preconditions.checkArgument(argArray.length == 4,
+            "run: Must have 4 arguments <input path> <output path> " +
+            "<source vertex id> <# of workers>");
+
         GiraphJob job = new GiraphJob(getConf(), getClass().getName());
         job.setVertexClass(getClass());
         job.setVertexInputFormatClass(
@@ -260,11 +260,8 @@ public class SimpleShortestPathsVertex extends
         job.setWorkerConfiguration(Integer.parseInt(argArray[3]),
                                    Integer.parseInt(argArray[3]),
                                    100.0f);
-        if (job.run(true) == true) {
-            return 0;
-        } else {
-            return -1;
-        }
+
+        return job.run(true) ? 0 : -1;
     }
 
     public static void main(String[] args) throws Exception {
