@@ -56,7 +56,8 @@ Building and testing:
 
 You will need the following:
 - Java 1.6
-- Maven 3 or higher. Giraph uses the munge plugin (http://sonatype.github.com/munge-maven-plugin/),
+- Maven 3 or higher. Giraph uses the munge plugin 
+  (http://sonatype.github.com/munge-maven-plugin/),
   which requires Maven 3, to support multiple versions of Hadoop. Also, the
   web site plugin requires Maven 3.
 
@@ -64,8 +65,6 @@ Use the maven commands with secure Hadoop to:
 - compile (i.e mvn compile)
 - package (i.e. mvn package)
 - test (i.e. mvn test)
--- For testing, one can submit the test to a running Hadoop instance
-   (i.e. mvn test -Dprop.mapred.job.tracker=localhost:50300)
 
 For the non-secure versions of Hadoop, run the maven commands with the
 additional argument '-Dhadoop=non_secure' to enable the maven profile
@@ -77,6 +76,51 @@ additional arguments '-Dhadoop=facebook' to enable the maven profile
 'hadoop_facebook' as well as a location for the hadoop core jar file.  An
 example compilation command is 'mvn -Dhadoop=facebook
 -Dhadoop.jar.path=/tmp/hadoop-0.20.1-core.jar compile'.
+
+
+How to run the unittests on a local pseudo-distributed Hadoop instance:
+
+As mentioned earlier, Giraph supports several versions of Hadoop.  In
+this section, we describe how to run the Giraph unittests against a single
+node instance of Apache Hadoop 0.20.203.
+
+Download Apache Hadoop 0.20.203 (hadoop-0.20.203.0/hadoop-0.20.203.0rc1.tar.gz)
+from a mirror picked at http://www.apache.org/dyn/closer.cgi/hadoop/common/
+and unpack it into a local directory
+
+Follow the guide at 
+http://hadoop.apache.org/common/docs/r0.20.2/quickstart.html#PseudoDistributed
+to setup a pseudo-distributed single node Hadoop cluster.
+
+Giraph’s code assumes that you can run at least 4 mappers at once, 
+unfortunately the default configuration allows only 2. Therefore you need 
+to update conf/mapred-site.xml:
+
+<property>
+  <name>mapred.tasktracker.map.tasks.maximum</name>
+  <value>4</value>
+</property>
+
+<property>
+  <name>mapred.map.tasks</name>
+  <value>4</value>
+</property>
+
+After preparing the local filesystem with:
+
+rm -rf /tmp/hadoop-<username>
+/path/to/hadoop/bin/hadoop namenode -format
+
+you can start the local hadoop instance:
+
+/path/to/hadoop/bin/start-all.sh
+
+and finally run Giraph’s unittests:
+
+mvn clean test -Dprop.mapred.job.tracker=localhost:9001
+
+Now you can open a browser, point it to http://localhost:50030 and watch the
+Giraph jobs from the unittests running on your local Hadoop instance!
 
 
 Notes: 

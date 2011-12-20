@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.70.0 - unreleased
 
+  GIRAPH-110: Add guide to setup the enviroment for running the
+  unittests in a pseudo-distributed hadoop instance. (ssc via aching)
+
   GIRAPH-73: A little refactoring. (ssc via aching)
 
   GIRAPH-106: Change prepareSuperstep() to make
