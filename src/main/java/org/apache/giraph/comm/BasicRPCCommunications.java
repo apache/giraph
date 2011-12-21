@@ -336,8 +336,7 @@ public abstract class BasicRPCCommunications<
                 this.destVertex = destVertex;
                 outMessageList =
                     peerConnection.outMessagesPerPeer.get(destVertex);
-                peerConnection.outMessagesPerPeer.put(destVertex,
-                                                      new MsgList<M>());
+                peerConnection.outMessagesPerPeer.remove(destVertex);
             }
         }
 
