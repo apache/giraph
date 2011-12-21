@@ -24,7 +24,6 @@ import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.MutableVertex;
-import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexCombiner;
 import org.apache.giraph.graph.VertexMutations;
 import org.apache.giraph.graph.VertexResolver;
@@ -1091,7 +1090,7 @@ end[HADOOP_FACEBOOK]*/
             }
             if (vertex != null) {
                 ((MutableVertex<I, V, E, M>) vertex).setVertexId(vertexIndex);
-                partition.putVertex((Vertex<I, V, E, M>) vertex);
+                partition.putVertex((BasicVertex<I, V, E, M>) vertex);
             } else if (originalVertex != null) {
                 partition.removeVertex(originalVertex.getVertexId());
             }

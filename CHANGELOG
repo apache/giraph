@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.70.0 - unreleased
 
+  GIRAPH-113: Change cast to Vertex used in prepareSuperstep() to
+  BasicVertex. (humming80 via aching)
+
   GIRAPH-110: Add guide to setup the enviroment for running the
   unittests in a pseudo-distributed hadoop instance. (ssc via aching)
 
