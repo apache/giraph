@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.70.0 - unreleased
 
+  GIRAPH-109: GiraphRunner should provide support for combiners.
+  (ssc via claudio)
+
   GIRAPH-113: Change cast to Vertex used in prepareSuperstep() to
   BasicVertex. (humming80 via aching)
 

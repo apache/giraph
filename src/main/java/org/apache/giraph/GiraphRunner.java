@@ -48,6 +48,9 @@ public class GiraphRunner implements Tool {
     options.addOption("of", "outputFormat", true, "Graph outputformat");
     options.addOption("ip", "inputPath", true, "Graph input path");
     options.addOption("op", "outputPath", true, "Graph output path");
+    options.addOption("c", "combiner", true, "VertexCombiner class");
+    options.addOption("wc", "workerContext", true, "WorkerContext class");
+    options.addOption("aw", "aggregatorWriter", true, "AggregatorWriter class");
     return options;
   }
 
@@ -95,13 +98,27 @@ public class GiraphRunner implements Tool {
     if(cmd.hasOption("ip")) {
       FileInputFormat.addInputPath(job, new Path(cmd.getOptionValue("ip")));
     } else {
-      LOG.info("No input path specified. Ensure your InputFormat does not require one.");
+      LOG.info("No input path specified. Ensure your InputFormat does not " +
+              "require one.");
     }
 
     if(cmd.hasOption("op")) {
       FileOutputFormat.setOutputPath(job, new Path(cmd.getOptionValue("op")));
     } else {
-      LOG.info("No output path specified. Ensure your OutputFormat does not require one.");
+      LOG.info("No output path specified. Ensure your OutputFormat does not " +
+              "require one.");
+    }
+
+    if (cmd.hasOption("c")) {
+        job.setVertexCombinerClass(Class.forName(cmd.getOptionValue("c")));
+    }
+
+    if (cmd.hasOption("wc")) {
+        job.setWorkerContextClass(Class.forName(cmd.getOptionValue("wc")));
+    }
+
+    if (cmd.hasOption("aw")) {
+        job.setAggregatorWriterClass(Class.forName(cmd.getOptionValue("aw")));
     }
 
     job.setWorkerConfiguration(workers, workers, 100.0f);
