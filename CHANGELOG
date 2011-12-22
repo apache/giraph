@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.70.0 - unreleased
 
+  GIRAPH-112: Use elements() properly in LongDoubleFloatDoubleVertex.
+  (aching)
+
   GIRAPH-114: Inconsistent message map handling in
   BasicRPCCommunications.LargeMessageFlushExecutor. (ssc via aching)
 
