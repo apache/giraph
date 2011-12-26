@@ -40,13 +40,13 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * a base class for running internal tests on a vertex
+ * A base class for running internal tests on a vertex
  *
  * Extending classes only have to invoke the run() method to test their vertex. All data
  * is written to a local tmp directory that is removed afterwards. A local zookeeper
  * instance is started in an extra thread and shutdown at the end.
  *
- * heavily inspired from Apache Mahout's MahoutTestCase
+ * Heavily inspired from Apache Mahout's MahoutTestCase
  */
 public class InternalVertexRunner {
 
@@ -69,24 +69,49 @@ public class InternalVertexRunner {
      */
     public static Iterable<String> run(Class<?> vertexClass,
             Class<?> vertexInputFormatClass, Class<?> vertexOutputFormatClass,
-            Map<String,String> params, String... data) throws Exception {
+            Map<String, String> params, String... data) throws Exception {
+        return run(vertexClass, null, vertexInputFormatClass,
+                vertexOutputFormatClass, params, data);
+    }
+    
+    /**
+     *  Attempts to run the vertex internally in the current JVM, reading from and writing to a
+     *  temporary folder on local disk. Will start an own zookeeper instance.
+     *
+     * @param vertexClass the vertex class to instantiate
+     * @param vertexCombinerClass the vertex combiner to use (or null)
+     * @param vertexInputFormatClass the inputformat to use
+     * @param vertexOutputFormatClass the outputformat to use
+     * @param params a map of parameters to add to the hadoop configuration
+     * @param data linewise input data
+     * @return linewise output data
+     * @throws Exception
+     */
+    public static Iterable<String> run(Class<?> vertexClass,
+            Class<?> vertexCombinerClass, Class<?> vertexInputFormatClass, 
+            Class<?> vertexOutputFormatClass, Map<String, String> params,
+            String... data) throws Exception {
 
         File tmpDir = null;
         try {
-            /* prepare input file, output folder and zookeeper folder */
+            // prepare input file, output folder and zookeeper folder
             tmpDir = createTestDir(vertexClass);
             File inputFile = createTempFile(tmpDir, "graph.txt");
             File outputDir = createTempDir(tmpDir, "output");
             File zkDir = createTempDir(tmpDir, "zooKeeper");
 
-            /* write input data to disk */
+            // write input data to disk
             writeLines(inputFile, data);
 
-            /* create and configure the job to run the vertex */
+            // create and configure the job to run the vertex
             GiraphJob job = new GiraphJob(vertexClass.getName());
             job.setVertexClass(vertexClass);
             job.setVertexInputFormatClass(vertexInputFormatClass);
             job.setVertexOutputFormatClass(vertexOutputFormatClass);
+            
+            if (vertexCombinerClass != null) {
+                job.setVertexCombinerClass(vertexCombinerClass);
+            }
 
             job.setWorkerConfiguration(1, 1, 100.0f);
             Configuration conf = job.getConfiguration();
@@ -102,7 +127,7 @@ public class InternalVertexRunner {
             FileInputFormat.addInputPath(job, new Path(inputFile.toString()));
             FileOutputFormat.setOutputPath(job, new Path(outputDir.toString()));
 
-            /* configure a local zookeeper instance */
+            // configure a local zookeeper instance
             Properties zkProperties = new Properties();
             zkProperties.setProperty("tickTime", "2000");
             zkProperties.setProperty("dataDir", zkDir.getAbsolutePath());
@@ -118,8 +143,8 @@ public class InternalVertexRunner {
             QuorumPeerConfig qpConfig = new QuorumPeerConfig();
             qpConfig.parseProperties(zkProperties);
 
-            /* create and run the zookeeper instance */
-            final ZooKeeperServerMain zookeeper = new ZooKeeperServerMain();
+            // create and run the zookeeper instance
+            final InternalZooKeeper zookeeper = new InternalZooKeeper();
             final ServerConfig zkConfig = new ServerConfig();
             zkConfig.readFrom(qpConfig);
 
@@ -138,6 +163,7 @@ public class InternalVertexRunner {
                 job.run(true);
             } finally {
                 executorService.shutdown();
+                zookeeper.end();
             }
 
             return Files.readLines(new File(outputDir, "part-m-00000"),
@@ -149,7 +175,9 @@ public class InternalVertexRunner {
         }
     }
 
-    /* create a temporary folder that will be removed after the test */
+    /**
+     *  Create a temporary folder that will be removed after the test
+     */
     private static final File createTestDir(Class<?> vertexClass)
             throws IOException {
         String systemTmpDir = System.getProperty("java.io.tmpdir");
@@ -206,6 +234,15 @@ public class InternalVertexRunner {
             }
             f.delete();
             return false;
+        }
+    }
+
+    /**
+     * Extension of {@link ZooKeeperServerMain} that allows programmatic shutdown
+     */
+    private static class InternalZooKeeper extends ZooKeeperServerMain {
+        void end() {
+            shutdown();
         }
     }
 

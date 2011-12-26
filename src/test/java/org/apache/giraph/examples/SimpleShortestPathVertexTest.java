@@ -33,10 +33,14 @@ import org.mockito.Mockito;
 
 import java.util.Map;
 
-/** contains a simple unit test for {@link SimpleShortestPathsVertex} */
+/**
+ * Contains a simple unit test for {@link SimpleShortestPathsVertex}
+ */
 public class SimpleShortestPathVertexTest extends TestCase {
 
-    /** test the behavior when a shorter path to a vertex has been found */
+    /**
+     * Test the behavior when a shorter path to a vertex has been found
+     */
     public void testOnShorterPathFound() throws Exception {
 
         SimpleShortestPathsVertex vertex = new SimpleShortestPathsVertex();
@@ -62,7 +66,9 @@ public class SimpleShortestPathVertexTest extends TestCase {
         env.verifyMessageSent(new LongWritable(20L), new DoubleWritable(2));
     }
 
-    /** test the behavior when a new, but not shorter path to a vertex has been found */
+    /**
+     * Test the behavior when a new, but not shorter path to a vertex has been found
+     */
     public void testOnNoShorterPathFound() throws Exception {
 
         SimpleShortestPathsVertex vertex = new SimpleShortestPathsVertex();
@@ -86,21 +92,23 @@ public class SimpleShortestPathVertexTest extends TestCase {
         env.verifyNoMessageSent();
     }
 
-    /** a local integration test on toy data */
+    /**
+     * A local integration test on toy data
+     */
     public void testToyData() throws Exception {
 
-        /* a small four vertex graph */
+        // a small four vertex graph
         String[] graph = new String[] {
                 "[1,0,[[2,1],[3,3]]]",
                 "[2,0,[[3,1],[4,10]]]",
                 "[3,0,[[4,2]]]",
                 "[4,0,[]]" };
 
-        /* start from vertex 1 */
-        Map<String,String> params = Maps.newHashMap();
+        // start from vertex 1
+        Map<String, String> params = Maps.newHashMap();
         params.put(SimpleShortestPathsVertex.SOURCE_ID, "1");
 
-        /* run internally */
+        // run internally
         Iterable<String> results = InternalVertexRunner.run(
                 SimpleShortestPathsVertex.class,
                 SimpleShortestPathsVertex.
@@ -111,7 +119,7 @@ public class SimpleShortestPathVertexTest extends TestCase {
 
         Map<Long, Double> distances = parseDistances(results);
 
-        /* verify results */
+        // verify results
         assertNotNull(distances);
         assertEquals(4, distances.size());
         assertEquals(0.0, distances.get(1L));
@@ -120,8 +128,8 @@ public class SimpleShortestPathVertexTest extends TestCase {
         assertEquals(4.0, distances.get(4L));
     }
 
-    private Map<Long,Double> parseDistances(Iterable<String> results) {
-        Map<Long,Double> distances =
+    private Map<Long, Double> parseDistances(Iterable<String> results) {
+        Map<Long, Double> distances =
                 Maps.newHashMapWithExpectedSize(Iterables.size(results));
         for (String line : results) {
             try {
