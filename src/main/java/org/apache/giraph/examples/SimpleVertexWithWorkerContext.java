@@ -24,7 +24,7 @@ import java.util.Iterator;
 
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat;
 import org.apache.giraph.graph.GiraphJob;
-import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.WorkerContext;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -38,12 +38,12 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
 /**
- * Fully runnable example of how to 
+ * Fully runnable example of how to
  * emit worker data to HDFS during a graph
  * computation.
  */
 public class SimpleVertexWithWorkerContext extends
-        Vertex<LongWritable, IntWritable, FloatWritable, DoubleWritable> 
+        EdgeListVertex<LongWritable, IntWritable, FloatWritable, DoubleWritable>
         implements Tool {
 
     public static final String OUTPUTDIR = "svwwc.outputdir";
@@ -52,22 +52,22 @@ public class SimpleVertexWithWorkerContext extends
     @Override
     public void compute(Iterator<DoubleWritable> msgIterator)
             throws IOException {
-        
+
         long superstep = getSuperstep();
-        
+
         if (superstep < TESTLENGTH) {
-            EmitterWorkerContext emitter = 
+            EmitterWorkerContext emitter =
                     (EmitterWorkerContext) getWorkerContext();
-            emitter.emit("vertexId=" + getVertexId() + 
+            emitter.emit("vertexId=" + getVertexId() +
                          " superstep=" + superstep + "\n");
         } else {
             voteToHalt();
         }
     }
-    
+
     @SuppressWarnings("rawtypes")
 	public static class EmitterWorkerContext extends WorkerContext {
-        
+
         private static final String FILENAME = "emitter_";
         private DataOutputStream out;
 
@@ -75,7 +75,7 @@ public class SimpleVertexWithWorkerContext extends
         public void preApplication() {
             Context context = getContext();
             FileSystem fs;
-            
+
             try {
                 fs = FileSystem.get(context.getConfiguration());
 
@@ -83,23 +83,23 @@ public class SimpleVertexWithWorkerContext extends
                     .get(SimpleVertexWithWorkerContext.OUTPUTDIR);
                 if (p == null) {
                     throw new IllegalArgumentException(
-                        SimpleVertexWithWorkerContext.OUTPUTDIR + 
+                        SimpleVertexWithWorkerContext.OUTPUTDIR +
                         " undefined!");
                 }
-            
+
                 Path path = new Path(p);
                 if (!fs.exists(path)) {
-                    throw new IllegalArgumentException(path + 
+                    throw new IllegalArgumentException(path +
                             " doesn't exist");
                 }
 
-                Path outF = new Path(path, FILENAME + 
+                Path outF = new Path(path, FILENAME +
                         context.getTaskAttemptID());
                 if (fs.exists(outF)) {
-                    throw new IllegalArgumentException(outF + 
+                    throw new IllegalArgumentException(outF +
                             " aready exists");
                 }
-            
+
                 out = fs.create(outF);
             } catch (IOException e) {
                 throw new RuntimeException(
@@ -126,7 +126,7 @@ public class SimpleVertexWithWorkerContext extends
 
         @Override
         public void postSuperstep() { }
-        
+
         public void emit(String s) {
             try {
                 out.writeUTF(s);
@@ -158,7 +158,7 @@ public class SimpleVertexWithWorkerContext extends
             return -1;
         }
     }
-    
+
     public static void main(String[] args) throws Exception {
         System.exit(ToolRunner.run(new SimpleVertexWithWorkerContext(), args));
     }

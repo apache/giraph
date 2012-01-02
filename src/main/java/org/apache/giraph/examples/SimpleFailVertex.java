@@ -18,7 +18,7 @@
 
 package org.apache.giraph.examples;
 
-import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -29,7 +29,8 @@ import java.util.Iterator;
  * Vertex to allow unit testing of failure detection
  */
 public class SimpleFailVertex extends
-    Vertex<LongWritable, DoubleWritable, FloatWritable, DoubleWritable> {
+        EdgeListVertex<LongWritable, DoubleWritable,
+        FloatWritable, DoubleWritable> {
 
     static long superstep = 0;
 

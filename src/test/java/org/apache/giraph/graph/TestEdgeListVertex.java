@@ -87,7 +87,7 @@ public class TestEdgeListVertex extends TestCase {
     public void testEdges() {
         Map<IntWritable, DoubleWritable> edgeMap = Maps.newHashMap();
         for (int i = 1000; i > 0; --i) {
-            edgeMap.put(new IntWritable(i), new DoubleWritable(i*2.0));
+            edgeMap.put(new IntWritable(i), new DoubleWritable(i * 2.0));
         }
         vertex.initialize(null, null, edgeMap, null);
         assertEquals(vertex.getNumOutEdges(), 1000);
@@ -103,10 +103,63 @@ public class TestEdgeListVertex extends TestCase {
         assertEquals(vertex.getNumOutEdges(), 999);
     }
 
+    public void testGetEdges() {
+        Map<IntWritable, DoubleWritable> edgeMap = Maps.newHashMap();
+        for (int i = 1000; i > 0; --i) {
+            edgeMap.put(new IntWritable(i), new DoubleWritable(i * 3.0));
+        }
+        vertex.initialize(null, null, edgeMap, null);
+        assertEquals(vertex.getNumOutEdges(), 1000);
+        assertEquals(vertex.getEdgeValue(new IntWritable(600)),
+                     new DoubleWritable(600 * 3.0));
+        assertEquals(vertex.removeEdge(new IntWritable(600)),
+                     new DoubleWritable(600 * 3.0));
+        assertEquals(vertex.getNumOutEdges(), 999);
+        assertEquals(vertex.getEdgeValue(new IntWritable(500)),
+                     new DoubleWritable(500 * 3.0));
+        assertEquals(vertex.getEdgeValue(new IntWritable(700)),
+                     new DoubleWritable(700 * 3.0));
+    }
+
+    public void testAddRemoveEdges() {
+        Map<IntWritable, DoubleWritable> edgeMap = Maps.newHashMap();
+        vertex.initialize(null, null, edgeMap, null);
+        assertEquals(vertex.getNumOutEdges(), 0);
+        assertTrue(vertex.addEdge(new IntWritable(2),
+                                  new DoubleWritable(2.0)));
+        assertEquals(vertex.getNumOutEdges(), 1);
+        assertEquals(vertex.getEdgeValue(new IntWritable(2)),
+                                         new DoubleWritable(2.0));
+        assertTrue(vertex.addEdge(new IntWritable(4),
+                                 new DoubleWritable(4.0)));
+        assertTrue(vertex.addEdge(new IntWritable(3),
+                                  new DoubleWritable(3.0)));
+        assertTrue(vertex.addEdge(new IntWritable(1),
+                                  new DoubleWritable(1.0)));
+        assertEquals(vertex.getNumOutEdges(), 4);
+        assertNull(vertex.getEdgeValue(new IntWritable(5)));
+        assertNull(vertex.getEdgeValue(new IntWritable(0)));
+        int i = 1;
+        for (IntWritable edgeDestId : vertex) {
+            assertEquals(i, edgeDestId.get());
+            assertEquals(i * 1.0d, vertex.getEdgeValue(edgeDestId).get());
+            ++i;
+        }
+        assertNotNull(vertex.removeEdge(new IntWritable(1)));
+        assertEquals(vertex.getNumOutEdges(), 3);
+        assertNotNull(vertex.removeEdge(new IntWritable(3)));
+        assertEquals(vertex.getNumOutEdges(), 2);
+        assertNotNull(vertex.removeEdge(new IntWritable(2)));
+        assertEquals(vertex.getNumOutEdges(), 1);
+        assertNotNull(vertex.removeEdge(new IntWritable(4)));
+        assertEquals(vertex.getNumOutEdges(), 0);
+    }
+
+
     public void testSerialize() {
         Map<IntWritable, DoubleWritable> edgeMap = Maps.newHashMap();
         for (int i = 1000; i > 0; --i) {
-            edgeMap.put(new IntWritable(i), new DoubleWritable(i*2.0));
+            edgeMap.put(new IntWritable(i), new DoubleWritable(i * 2.0));
         }
         List<LongWritable> messageList = Lists.newArrayList();
         messageList.add(new LongWritable(4));

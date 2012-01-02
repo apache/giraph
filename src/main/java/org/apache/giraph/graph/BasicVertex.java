@@ -26,7 +26,6 @@ import org.apache.hadoop.mapreduce.Mapper;
 
 import java.io.IOException;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 
  /**
@@ -48,8 +47,17 @@ public abstract class BasicVertex<I extends WritableComparable,
     /** If true, do not do anymore computation on this vertex. */
     boolean halt = false;
 
+    /**
+     * This method must be called after instantiation of a vertex with BspUtils
+     * unless deserialization from readFields() is called.
+     *
+     * @param vertexId Will be the vertex id
+     * @param vertexValue Will be the vertex value
+     * @param edges A map of destination edge ids to edge values (can be null)
+     * @param messages Initial messages for this vertex (can be null)
+     */
     public abstract void initialize(
-        I vertexId, V vertexValue, Map<I, E> edges, List<M> messages);
+        I vertexId, V vertexValue, Map<I, E> edges, Iterable<M> messages);
 
     /**
      * Must be defined by user to do computation on a single Vertex.

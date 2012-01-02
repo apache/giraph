@@ -107,6 +107,7 @@ public class TestBspBasic extends BspCase {
                            FloatWritable, IntWritable>();
         BasicVertex<LongWritable, IntWritable, FloatWritable, IntWritable> vertex =
             BspUtils.createVertex(job.getConfiguration());
+        vertex.initialize(null, null, null, null);
         System.out.println("testInstantiateVertex: Got vertex " + vertex +
                            ", graphState" + gs);
         VertexInputFormat<LongWritable, IntWritable, FloatWritable, IntWritable>
@@ -283,11 +284,11 @@ public class TestBspBasic extends BspCase {
         job.setVertexInputFormatClass(SimplePageRankVertexInputFormat.class);
         assertTrue(job.run(true));
         if (getJobTracker() == null) {
-            double maxPageRank = 
+            double maxPageRank =
             	SimplePageRankVertex.SimplePageRankVertexWorkerContext.finalMax;
-            double minPageRank = 
+            double minPageRank =
             	SimplePageRankVertex.SimplePageRankVertexWorkerContext.finalMin;
-            long numVertices = 
+            long numVertices =
             	SimplePageRankVertex.SimplePageRankVertexWorkerContext.finalSum;
             System.out.println("testBspPageRank: maxPageRank=" + maxPageRank +
                                " minPageRank=" + minPageRank +
@@ -336,7 +337,7 @@ public class TestBspBasic extends BspCase {
             assertTrue(fileStatus.getLen() == fileStatus2.getLen());
         }
     }
-    
+
     /**
      * Run a sample BSP job locally and test PageRank with AggregatorWriter.
      *
@@ -357,17 +358,17 @@ public class TestBspBasic extends BspCase {
         removeAndSetOutput(job, outputPath);
         assertTrue(job.run(true));
         if (getJobTracker() == null) {
-            double maxPageRank = 
+            double maxPageRank =
                 SimplePageRankVertex.SimplePageRankVertexWorkerContext.finalMax;
-            double minPageRank = 
+            double minPageRank =
                 SimplePageRankVertex.SimplePageRankVertexWorkerContext.finalMin;
-            long numVertices = 
+            long numVertices =
                 SimplePageRankVertex.SimplePageRankVertexWorkerContext.finalSum;
             System.out.println("testBspPageRank: maxPageRank=" + maxPageRank +
                                " minPageRank=" + minPageRank +
                                " numVertices=" + numVertices);
             FileSystem fs = FileSystem.get(new Configuration());
-            FSDataInputStream input = 
+            FSDataInputStream input =
                 fs.open(new Path(SimpleAggregatorWriter.filename));
             int i, all;
             for (i = 0; ; i++) {
@@ -394,7 +395,7 @@ public class TestBspBasic extends BspCase {
             input.close();
             // contained all supersteps
             assertTrue(i == SimplePageRankVertex.MAX_SUPERSTEPS+1 && all == 0);
-            remove(new Configuration(), 
+            remove(new Configuration(),
                    new Path(SimpleAggregatorWriter.filename));
         }
     }

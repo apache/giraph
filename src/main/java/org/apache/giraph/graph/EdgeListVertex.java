@@ -63,12 +63,12 @@ public abstract class EdgeListVertex<I extends WritableComparable,
     /** Map of destination vertices and their edge values */
     private List<E> destEdgeValueList;
     /** List of incoming messages from the previous superstep */
-    private final List<M> msgList = Lists.newArrayList();
+    private List<M> msgList;
 
     @Override
     public void initialize(I vertexId, V vertexValue,
                            Map<I, E> edges,
-                           List<M> messages) {
+                           Iterable<M> messages) {
         if (vertexId != null) {
             setVertexId(vertexId);
         }
@@ -86,11 +86,14 @@ public abstract class EdgeListVertex<I extends WritableComparable,
             }
             sortedIndexList.clear();
         } else {
-            destEdgeIndexList = Lists.newArrayList();
-            destEdgeValueList = Lists.newArrayList();
+            destEdgeIndexList = Lists.newArrayListWithCapacity(0);
+            destEdgeValueList = Lists.newArrayListWithCapacity(0);
         }
-        if (messages != null && !messages.isEmpty()) {
-            msgList.addAll(messages);
+        if (messages != null) {
+            msgList = Lists.newArrayListWithCapacity(Iterables.size(messages));
+            Iterables.<M>addAll(msgList, messages);
+        } else {
+            msgList = Lists.newArrayListWithCapacity(0);
         }
     }
 
@@ -127,13 +130,13 @@ public abstract class EdgeListVertex<I extends WritableComparable,
 
     @Override
     public final boolean addEdge(I targetVertexId, E edgeValue) {
+        System.out.println("addEdge: " + targetVertexId + " " + edgeValue + " " + destEdgeIndexList);
         int pos = Collections.binarySearch(destEdgeIndexList,
                                            targetVertexId,
                                            new VertexIdComparator());
-        if (pos == destEdgeIndexList.size() ||
-                !destEdgeIndexList.get(pos).equals(targetVertexId)) {
-            destEdgeIndexList.add(pos, targetVertexId);
-            destEdgeValueList.add(pos, edgeValue);
+        if (pos < 0) {
+            destEdgeIndexList.add(-1 * (pos + 1), targetVertexId);
+            destEdgeValueList.add(-1 * (pos + 1), edgeValue);
             return true;
         } else {
             LOG.warn("addEdge: Vertex=" + vertexId +
@@ -173,8 +176,7 @@ public abstract class EdgeListVertex<I extends WritableComparable,
         int pos = Collections.binarySearch(destEdgeIndexList,
                 targetVertexId,
                 new VertexIdComparator());
-        if (pos == destEdgeIndexList.size() ||
-                !destEdgeIndexList.get(pos).equals(targetVertexId)) {
+        if (pos < 0) {
             return null;
         } else {
             return destEdgeValueList.get(pos);
@@ -186,8 +188,7 @@ public abstract class EdgeListVertex<I extends WritableComparable,
         int pos = Collections.binarySearch(destEdgeIndexList,
                 targetVertexId,
                 new VertexIdComparator());
-        if (pos == destEdgeIndexList.size() ||
-                !destEdgeIndexList.get(pos).equals(targetVertexId)) {
+        if (pos < 0) {
             return false;
         } else {
             return true;
@@ -215,8 +216,7 @@ public abstract class EdgeListVertex<I extends WritableComparable,
         int pos = Collections.binarySearch(destEdgeIndexList,
                 targetVertexId,
                 new VertexIdComparator());
-        if (pos == destEdgeIndexList.size() ||
-                !destEdgeIndexList.get(pos).equals(targetVertexId)) {
+        if (pos < 0) {
             return null;
         } else {
             destEdgeIndexList.remove(pos);
@@ -233,33 +233,6 @@ public abstract class EdgeListVertex<I extends WritableComparable,
         for (I index : destEdgeIndexList) {
             sendMsg(index, msg);
         }
-    }
-
-    @Override
-    public void addVertexRequest(MutableVertex<I, V, E, M> vertex)
-            throws IOException {
-        getGraphState().getWorkerCommunications().
-            addVertexReq(vertex);
-    }
-
-    @Override
-    public void removeVertexRequest(I vertexId) throws IOException {
-        getGraphState().getWorkerCommunications().
-            removeVertexReq(vertexId);
-    }
-
-    @Override
-    public void addEdgeRequest(I vertexIndex,
-                               Edge<I, E> edge) throws IOException {
-        getGraphState().getWorkerCommunications().
-            addEdgeReq(vertexIndex, edge);
-    }
-
-    @Override
-    public void removeEdgeRequest(I sourceVertexId,
-                                  I destVertexId) throws IOException {
-        getGraphState().getWorkerCommunications().
-            removeEdgeReq(sourceVertexId, destVertexId);
     }
 
     @Override
@@ -283,6 +256,7 @@ public abstract class EdgeListVertex<I extends WritableComparable,
             destEdgeValueList.add(edgeValue);
         }
         int msgListSize = in.readInt();
+        msgList = Lists.newArrayListWithCapacity(msgListSize);
         for (int i = 0; i < msgListSize; ++i) {
             M msg = BspUtils.<M>createMessageValue(getConf());
             msg.readFields(in);

@@ -24,13 +24,13 @@ import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 
-import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.graph.EdgeListVertex;
 
 /**
  * Test whether messages can be sent and received by vertices.
  */
 public class SimpleMsgVertex extends
-        Vertex<LongWritable, IntWritable, FloatWritable, IntWritable> {
+        EdgeListVertex<LongWritable, IntWritable, FloatWritable, IntWritable> {
     @Override
     public void compute(Iterator<IntWritable> msgIterator) {
         if (getVertexId().equals(new LongWritable(2))) {

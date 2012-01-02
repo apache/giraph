@@ -21,7 +21,7 @@ package org.apache.giraph.comm;
 import java.io.IOException;
 
 import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.MutableVertex;
+import org.apache.giraph.graph.BasicVertex;
 /*if_not[HADOOP]
  else[HADOOP]*/
 import org.apache.giraph.hadoop.BspTokenSelector;
@@ -117,7 +117,7 @@ public interface CommunicationsInterface<
      * @param vertex Vertex that will be added
      * @throws IOException
      */
-    void addVertex(MutableVertex<I, V, E, M> vertex) throws IOException;
+    void addVertex(BasicVertex<I, V, E, M> vertex) throws IOException;
 
     /**
      * Removed a remote vertex

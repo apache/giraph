@@ -24,14 +24,14 @@ import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 
-import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.graph.EdgeListVertex;
 
 /**
  * Test whether messages can go through a combiner.
- *
  */
 public class SimpleCombinerVertex extends
-    Vertex<LongWritable, IntWritable, FloatWritable, IntWritable> {
+        EdgeListVertex<LongWritable, IntWritable, FloatWritable, IntWritable> {
+    @Override
     public void compute(Iterator<IntWritable> msgIterator) {
         if (getVertexId().equals(new LongWritable(2))) {
             sendMsg(new LongWritable(1), new IntWritable(101));

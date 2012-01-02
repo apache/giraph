@@ -708,7 +708,7 @@ end[HADOOP_FACEBOOK]*/
     }
 
     @Override
-    public final void addVertex(MutableVertex<I, V, E, M> vertex) {
+    public final void addVertex(BasicVertex<I, V, E, M> vertex) {
         if (LOG.isDebugEnabled()) {
             LOG.debug("addVertex: Adding vertex " + vertex);
         }
@@ -885,7 +885,7 @@ end[HADOOP_FACEBOOK]*/
     }
 
     @Override
-    public final void addVertexReq(MutableVertex<I, V, E, M> vertex)
+    public final void addVertexReq(BasicVertex<I, V, E, M> vertex)
             throws IOException {
         InetSocketAddress addr = getInetSocketAddress(vertex.getVertexId());
         if (LOG.isDebugEnabled()) {
@@ -1067,7 +1067,8 @@ end[HADOOP_FACEBOOK]*/
             VertexMutations<I, V, E, M> vertexMutations =
                 inVertexMutationsMap.get(vertexIndex);
             BasicVertex<I, V, E, M> vertex =
-                vertexResolver.resolve(originalVertex,
+                vertexResolver.resolve(vertexIndex,
+                                       originalVertex,
                                        vertexMutations,
                                        messages);
             if (LOG.isDebugEnabled()) {

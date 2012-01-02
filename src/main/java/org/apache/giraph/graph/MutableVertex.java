@@ -22,6 +22,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 import java.io.IOException;
+import java.util.Map;
 
 /**
  * Interface used by VertexReader to set the properties of a new vertex
@@ -57,15 +58,18 @@ public abstract class MutableVertex<I extends WritableComparable,
     public abstract E removeEdge(I targetVertexId);
 
     /**
-     * Create a vertex to add to the graph.
+     * Create a vertex to add to the graph.  Calls initialize() for the vertex
+     * as well.
      *
      * @return A new vertex for adding to the graph
      */
-    public MutableVertex<I, V, E, M> instantiateVertex() {
+    public BasicVertex<I, V, E, M> instantiateVertex(
+        I vertexId, V vertexValue, Map<I, E> edges, Iterable<M> messages) {
         MutableVertex<I, V, E, M> mutableVertex =
             (MutableVertex<I, V, E, M>) BspUtils
                .<I, V, E, M>createVertex(getContext().getConfiguration());
         mutableVertex.setGraphState(getGraphState());
+        mutableVertex.initialize(vertexId, vertexValue, edges, messages);
         return mutableVertex;
     }
 
@@ -75,10 +79,10 @@ public abstract class MutableVertex<I extends WritableComparable,
      *
      * @param vertex User created vertex
      */
-    public void addVertexRequest(MutableVertex<I, V, E, M> vertex)
+    public void addVertexRequest(BasicVertex<I, V, E, M> vertex)
             throws IOException {
         getGraphState().getWorkerCommunications().
-        addVertexReq(vertex);
+            addVertexReq(vertex);
     }
 
     /**

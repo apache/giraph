@@ -27,7 +27,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -45,7 +44,8 @@ public abstract class IntIntNullIntVertex extends
 
     @Override
     public void initialize(IntWritable vertexId, IntWritable vertexValue,
-            Map<IntWritable, NullWritable> edges, List<IntWritable> messages) {
+            Map<IntWritable, NullWritable> edges,
+            Iterable<IntWritable> messages) {
         id = vertexId.get();
         value = vertexValue.get();
         this.neighbors = new int[edges.size()];
@@ -53,7 +53,7 @@ public abstract class IntIntNullIntVertex extends
         for (IntWritable neighbor : edges.keySet()) {
             this.neighbors[n++] = neighbor.get();
         }
-        this.messages = new int[messages.size()];
+        this.messages = new int[Iterables.size(messages)];
         n = 0;
         for (IntWritable message : messages) {
             this.messages[n++] = message.get();

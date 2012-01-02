@@ -32,7 +32,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 
 public abstract class LongDoubleFloatDoubleVertex extends
@@ -51,7 +50,7 @@ public abstract class LongDoubleFloatDoubleVertex extends
     @Override
     public void initialize(LongWritable vertexIdW, DoubleWritable vertexValueW,
                            Map<LongWritable, FloatWritable> edgesW,
-                           List<DoubleWritable> messagesW) {
+                           Iterable<DoubleWritable> messagesW) {
         if (vertexIdW != null ) {
             vertexId = vertexIdW.get();
         }
@@ -198,34 +197,6 @@ public abstract class LongDoubleFloatDoubleVertex extends
     @Override
     public long getSuperstep() {
         return getGraphState().getSuperstep();
-    }
-
-    @Override
-    public void addVertexRequest(MutableVertex<LongWritable, DoubleWritable,
-            FloatWritable, DoubleWritable> vertex)
-            throws IOException {
-        getGraphState().getWorkerCommunications().addVertexReq(vertex);
-    }
-
-    @Override
-    public void removeVertexRequest(LongWritable vertexId) throws IOException {
-        getGraphState().getWorkerCommunications().removeVertexReq(vertexId);
-    }
-
-    @Override
-    public void addEdgeRequest(LongWritable vertexIndex,
-                               Edge<LongWritable, FloatWritable> edge)
-                               throws IOException {
-        getGraphState().getWorkerCommunications().addEdgeReq(vertexIndex,
-                                                             edge);
-    }
-
-    @Override
-    public void removeEdgeRequest(LongWritable sourceVertexId,
-                                  LongWritable destVertexId)
-                                  throws IOException {
-        getGraphState().getWorkerCommunications().removeEdgeReq(
-            sourceVertexId, destVertexId);
     }
 
     @Override

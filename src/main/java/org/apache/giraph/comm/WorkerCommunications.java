@@ -20,7 +20,6 @@ package org.apache.giraph.comm;
 
 import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.MutableVertex;
 import org.apache.giraph.graph.WorkerInfo;
 import org.apache.giraph.graph.partition.Partition;
 
@@ -92,7 +91,7 @@ public interface WorkerCommunications<I extends WritableComparable,
      * @param vertex Vertex to be added
      * @throws IOException
      */
-    void addVertexReq(MutableVertex<I, V, E, M> vertex) throws IOException;
+    void addVertexReq(BasicVertex<I, V, E, M> vertex) throws IOException;
 
     /**
      * Sends a request to the appropriate vertex range owner to remove a vertex

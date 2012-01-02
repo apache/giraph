@@ -50,6 +50,7 @@ public class VertexResolver<I extends WritableComparable, V extends Writable,
 
     @Override
     public BasicVertex<I, V, E, M> resolve(
+            I vertexId,
             BasicVertex<I, V, E, M> vertex,
             VertexChanges<I, V, E, M> vertexChanges,
             Iterable<M> messages) {
@@ -87,8 +88,10 @@ public class VertexResolver<I extends WritableComparable, V extends Writable,
             if (vertex == null && messages != null
                     && !Iterables.isEmpty(messages)) {
                 vertex = instantiateVertex();
-                V vertexValue = BspUtils.<V>createVertexValue(getConf());
-                vertex.setVertexValue(vertexValue);
+                vertex.initialize(vertexId,
+                                  BspUtils.<V>createVertexValue(getConf()),
+                                  null,
+                                  messages);
             }
         } else {
             if ((vertexChanges != null) &&
@@ -105,7 +108,8 @@ public class VertexResolver<I extends WritableComparable, V extends Writable,
                 (MutableVertex<I, V, E, M>) vertex;
             for (Edge<I, E> edge : vertexChanges.getAddedEdgeList()) {
                 edge.setConf(getConf());
-                mutableVertex.addEdge(edge.getDestVertexId(), edge.getEdgeValue());
+                mutableVertex.addEdge(edge.getDestVertexId(),
+                                      edge.getEdgeValue());
             }
         }
 
@@ -114,7 +118,8 @@ public class VertexResolver<I extends WritableComparable, V extends Writable,
 
     @Override
     public BasicVertex<I, V, E, M> instantiateVertex() {
-        BasicVertex<I, V, E, M> vertex = BspUtils.<I,V,E,M>createVertex(getConf());
+        BasicVertex<I, V, E, M> vertex =
+            BspUtils.<I, V, E, M>createVertex(getConf());
         vertex.setGraphState(graphState);
         return vertex;
     }

@@ -38,7 +38,7 @@ import java.util.Iterator;
  * can also test automated checkpoint restarts.
  */
 public class SimpleCheckpointVertex extends
-        Vertex<LongWritable, IntWritable, FloatWritable, FloatWritable>
+        EdgeListVertex<LongWritable, IntWritable, FloatWritable, FloatWritable>
         implements Tool {
     private static Logger LOG =
         Logger.getLogger(SimpleCheckpointVertex.class);
@@ -57,15 +57,15 @@ public class SimpleCheckpointVertex extends
 
     @Override
     public void compute(Iterator<FloatWritable> msgIterator) {
-    	SimpleCheckpointVertexWorkerContext workerContext = 
+    	SimpleCheckpointVertexWorkerContext workerContext =
     		(SimpleCheckpointVertexWorkerContext) getWorkerContext();
-    	
+
         LongSumAggregator sumAggregator = (LongSumAggregator)
             getAggregator(LongSumAggregator.class.getName());
-        
+
         boolean enableFault = workerContext.getEnableFault();
         int supersteps = workerContext.getSupersteps();
-        
+
         if (enableFault && (getSuperstep() == faultingSuperstep) &&
                 (getContext().getTaskAttemptID().getId() == 0) &&
                 (getVertexId().get() == faultingVertexId)) {
@@ -111,8 +111,8 @@ public class SimpleCheckpointVertex extends
             sendMsg(targetVertexId, new FloatWritable(edgeValue.get()));
         }
     }
-    
-    public static class SimpleCheckpointVertexWorkerContext 
+
+    public static class SimpleCheckpointVertexWorkerContext
             extends WorkerContext {
         /** User can access this after the application finishes if local */
         public static long finalSum;
@@ -124,7 +124,7 @@ public class SimpleCheckpointVertex extends
         private boolean enableFault = false;
 
 		@Override
-		public void preApplication() 
+		public void preApplication()
 		        throws InstantiationException, IllegalAccessException {
 		    registerAggregator(LongSumAggregator.class.getName(),
 					LongSumAggregator.class);
@@ -152,7 +152,7 @@ public class SimpleCheckpointVertex extends
 
 		@Override
 		public void postSuperstep() { }
-		
+
 		public int getSupersteps() {
 		    return this.supersteps;
 		}
@@ -211,7 +211,7 @@ public class SimpleCheckpointVertex extends
         int minWorkers = Integer.parseInt(cmd.getOptionValue('w'));
         int maxWorkers = Integer.parseInt(cmd.getOptionValue('w'));
         bspJob.setWorkerConfiguration(minWorkers, maxWorkers, 100.0f);
-        
+
         FileOutputFormat.setOutputPath(bspJob,
                                        new Path(cmd.getOptionValue('o')));
         boolean verbose = false;

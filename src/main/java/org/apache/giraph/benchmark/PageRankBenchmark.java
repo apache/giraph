@@ -25,7 +25,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.GiraphJob;
-import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.graph.HashMapVertex;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -44,7 +44,7 @@ public class PageRankBenchmark implements Tool {
     /** How many supersteps to run */
     public static String SUPERSTEP_COUNT = "PageRankBenchmark.superstepCount";
 
-    public static class PageRankVertex extends Vertex<
+    public static class PageRankHashMapVertex extends HashMapVertex<
             LongWritable, DoubleWritable, DoubleWritable, DoubleWritable> {
         @Override
         public void compute(Iterator<DoubleWritable> msgIterator) {
@@ -163,8 +163,8 @@ public class PageRankBenchmark implements Tool {
         if (!cmd.hasOption('c') ||
                 (Integer.parseInt(cmd.getOptionValue('c')) == 0)) {
             System.out.println("Using " +
-                                PageRankVertex.class.getName());
-            job.setVertexClass(PageRankVertex.class);
+                                PageRankHashMapVertex.class.getName());
+            job.setVertexClass(PageRankHashMapVertex.class);
         } else {
             System.out.println("Using " +
                                 PageRankEdgeListVertex.class.getName());

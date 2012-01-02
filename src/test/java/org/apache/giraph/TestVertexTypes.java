@@ -26,8 +26,9 @@ import junit.framework.TestCase;
 
 import org.apache.giraph.examples.GeneratedVertexInputFormat;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat;
+import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.GiraphJob;
-import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.VertexCombiner;
 import org.apache.giraph.graph.VertexInputFormat;
 import org.apache.giraph.graph.GraphMapper;
@@ -48,7 +49,8 @@ public class TestVertexTypes
      * Matches the {@link GeneratedVertexInputFormat}
      */
     private static class GeneratedVertexMatch extends
-            Vertex<LongWritable, IntWritable, FloatWritable, FloatWritable> {
+            EdgeListVertex<LongWritable, IntWritable, FloatWritable,
+            FloatWritable> {
         @Override
         public void compute(Iterator<FloatWritable> msgIterator)
                 throws IOException {
@@ -65,7 +67,8 @@ public class TestVertexTypes
      * Mismatches the {@link GeneratedVertexInputFormat}
      */
     private static class GeneratedVertexMismatch extends
-            Vertex<LongWritable, FloatWritable, FloatWritable, FloatWritable> {
+            EdgeListVertex<LongWritable, FloatWritable, FloatWritable,
+            FloatWritable> {
         @Override
         public void compute(Iterator<FloatWritable> msgIterator)
                 throws IOException {
@@ -107,7 +110,7 @@ public class TestVertexTypes
         Configuration conf = new Configuration();
         conf.setClass(GiraphJob.VERTEX_CLASS,
                       GeneratedVertexMatch.class,
-                      Vertex.class);
+                      BasicVertex.class);
         conf.setClass(GiraphJob.VERTEX_INPUT_FORMAT_CLASS,
                       SimpleSuperstepVertexInputFormat.class,
                       VertexInputFormat.class);
@@ -124,7 +127,7 @@ public class TestVertexTypes
         Configuration conf = new Configuration();
         conf.setClass(GiraphJob.VERTEX_CLASS,
                       DerivedVertexMatch.class,
-                      Vertex.class);
+                      BasicVertex.class);
         conf.setClass(GiraphJob.VERTEX_INPUT_FORMAT_CLASS,
                       SimpleSuperstepVertexInputFormat.class,
                       VertexInputFormat.class);
@@ -138,7 +141,7 @@ public class TestVertexTypes
         Configuration conf = new Configuration();
         conf.setClass(GiraphJob.VERTEX_CLASS,
                       DerivedVertexMatch.class,
-                      Vertex.class);
+                      BasicVertex.class);
         conf.setClass(GiraphJob.VERTEX_INPUT_FORMAT_CLASS,
                       SimpleSuperstepVertexInputFormat.class,
                       VertexInputFormat.class);
@@ -152,7 +155,7 @@ public class TestVertexTypes
         Configuration conf = new Configuration();
         conf.setClass(GiraphJob.VERTEX_CLASS,
                       GeneratedVertexMismatch.class,
-                      Vertex.class);
+                      BasicVertex.class);
         conf.setClass(GiraphJob.VERTEX_INPUT_FORMAT_CLASS,
                       SimpleSuperstepVertexInputFormat.class,
                       VertexInputFormat.class);
@@ -171,7 +174,7 @@ public class TestVertexTypes
         Configuration conf = new Configuration();
         conf.setClass(GiraphJob.VERTEX_CLASS,
                       GeneratedVertexMatch.class,
-                      Vertex.class);
+                      BasicVertex.class);
         conf.setClass(GiraphJob.VERTEX_INPUT_FORMAT_CLASS,
                       SimpleSuperstepVertexInputFormat.class,
                       VertexInputFormat.class);
@@ -193,7 +196,7 @@ public class TestVertexTypes
         Configuration conf = new Configuration();
         conf.setClass(GiraphJob.VERTEX_CLASS,
                       GeneratedVertexMatch.class,
-                      Vertex.class);
+                      BasicVertex.class);
         conf.setClass(GiraphJob.VERTEX_INPUT_FORMAT_CLASS,
                       JsonBase64VertexInputFormat.class,
                       VertexInputFormat.class);

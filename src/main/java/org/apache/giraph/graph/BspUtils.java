@@ -151,7 +151,7 @@ public class BspUtils {
             getVertexOutputFormatClass(conf);
         return ReflectionUtils.newInstance(vertexOutputFormatClass, conf);
     }
-    
+
     /**
      * Get the user's subclassed {@link AggregatorWriter}.
      *
@@ -284,7 +284,7 @@ public class BspUtils {
 
 
     /**
-     * Get the user's subclassed Vertex.
+     * Get the user's subclassed {@link BasicVertex}
      *
      * @param conf Configuration to check
      * @return User's vertex class

@@ -75,7 +75,8 @@ public class VerifyMessage {
     }
 
     public static class VerifyMessageVertex extends
-            Vertex<LongWritable, IntWritable, FloatWritable, VerifiableMessage> {
+            EdgeListVertex<LongWritable, IntWritable, FloatWritable,
+            VerifiableMessage> {
         /** User can access this after the application finishes if local */
         public static long finalSum;
         /** Number of supersteps to run (6 by default) */

@@ -26,7 +26,7 @@ import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.GraphState;
-import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.BooleanWritable;
 import org.apache.hadoop.io.DoubleWritable;
@@ -212,7 +212,8 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat extends TestCase
   }
 
   public static class DummyVertex
-      extends Vertex<Text, DoubleWritable, DoubleWritable, BooleanWritable> {
+      extends EdgeListVertex<Text, DoubleWritable,
+      DoubleWritable, BooleanWritable> {
     @Override
     public void compute(Iterator<BooleanWritable> msgIterator) throws IOException {
       // ignore

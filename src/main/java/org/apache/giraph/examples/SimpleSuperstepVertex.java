@@ -21,7 +21,7 @@ package org.apache.giraph.examples;
 import com.google.common.collect.Maps;
 import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.BspUtils;
-import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.VertexReader;
 import org.apache.giraph.graph.VertexWriter;
 import org.apache.giraph.lib.TextVertexOutputFormat;
@@ -44,7 +44,7 @@ import java.util.Map;
  * finishes.
  */
 public class SimpleSuperstepVertex extends
-        Vertex<LongWritable, IntWritable, FloatWritable, IntWritable> {
+        EdgeListVertex<LongWritable, IntWritable, FloatWritable, IntWritable> {
     @Override
     public void compute(Iterator<IntWritable> msgIterator) {
         if (getSuperstep() > 3) {

@@ -23,7 +23,7 @@ import com.google.common.collect.Maps;
 import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.GiraphJob;
-import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.VertexReader;
 import org.apache.giraph.graph.VertexWriter;
 import org.apache.giraph.lib.TextVertexInputFormat;
@@ -56,8 +56,8 @@ import java.util.Map;
  * Demonstrates the basic Pregel shortest paths implementation.
  */
 public class SimpleShortestPathsVertex extends
-        Vertex<LongWritable, DoubleWritable, FloatWritable, DoubleWritable>
-        implements Tool {
+        EdgeListVertex<LongWritable, DoubleWritable,
+        FloatWritable, DoubleWritable> implements Tool {
     /** Configuration */
     private Configuration conf;
     /** Class logger */

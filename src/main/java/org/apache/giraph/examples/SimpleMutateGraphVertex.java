@@ -26,16 +26,16 @@ import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.log4j.Logger;
 
+import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.graph.MutableVertex;
+import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.WorkerContext;
 
 /**
  * Vertex to allow unit testing of graph mutations.
  */
 public class SimpleMutateGraphVertex extends
-        Vertex<LongWritable, DoubleWritable,
+        EdgeListVertex<LongWritable, DoubleWritable,
         FloatWritable, DoubleWritable> {
     /** Maximum number of ranges for vertex ids */
     private long maxRanges = 100;
@@ -83,11 +83,11 @@ public class SimpleMutateGraphVertex extends
                     " on superstep " + getSuperstep());
             }
             // Create vertices that are sure not to exist (doubling vertices)
-            MutableVertex<LongWritable, DoubleWritable,
-                FloatWritable, DoubleWritable> vertex = instantiateVertex();
             LongWritable vertexIndex =
                 new LongWritable(rangeVertexIdStart(3) + getVertexId().get());
-            vertex.setVertexId(vertexIndex);
+            BasicVertex<LongWritable, DoubleWritable,
+                FloatWritable, DoubleWritable> vertex =
+                    instantiateVertex(vertexIndex, null, null, null);
             addVertexRequest(vertex);
             // Add edges to those remote vertices as well
             addEdgeRequest(vertexIndex,

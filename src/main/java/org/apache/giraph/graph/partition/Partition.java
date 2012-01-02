@@ -27,7 +27,6 @@ import java.util.Map;
 
 import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.BspUtils;
-import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -128,7 +127,7 @@ public class Partition<I extends WritableComparable,
                 BspUtils.<I, V, E, M>createVertex(conf);
             vertex.readFields(input);
             if (vertexMap.put(vertex.getVertexId(),
-                              (Vertex<I, V, E, M>) vertex) != null) {
+                              (BasicVertex<I, V, E, M>) vertex) != null) {
                 throw new IllegalStateException(
                     "readFields: " + this +
                     " already has same id " + vertex);

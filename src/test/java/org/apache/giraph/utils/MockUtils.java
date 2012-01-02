@@ -20,7 +20,7 @@ package org.apache.giraph.utils;
 
 import org.apache.giraph.comm.WorkerCommunications;
 import org.apache.giraph.graph.GraphState;
-import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.graph.BasicVertex;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -107,7 +107,7 @@ public class MockUtils {
     public static <I extends WritableComparable, V extends Writable,
             E extends Writable, M extends Writable>
             MockedEnvironment<I, V, E, M> prepareVertex(
-            Vertex<I, V, E, M> vertex, long superstep, I vertexId,
+            BasicVertex<I, V, E, M> vertex, long superstep, I vertexId,
             V vertexValue, boolean isHalted) throws Exception {
 
         MockedEnvironment<I, V, E, M>  env =

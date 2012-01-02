@@ -23,7 +23,7 @@ import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.GraphState;
-import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.BooleanWritable;
 import org.apache.hadoop.io.DoubleWritable;
@@ -136,7 +136,8 @@ public class TestLongDoubleDoubleAdjacencyListVertexInputFormat extends TestCase
   }
 
   public static class DummyVertex
-      extends Vertex<LongWritable, DoubleWritable, DoubleWritable, BooleanWritable> {
+      extends EdgeListVertex<LongWritable, DoubleWritable,
+      DoubleWritable, BooleanWritable> {
     @Override
     public void compute(Iterator<BooleanWritable> msgIterator) throws IOException {
       // ignore

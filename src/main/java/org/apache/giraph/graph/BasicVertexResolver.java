@@ -37,13 +37,16 @@ public interface BasicVertexResolver<
      * excluding the normal case (a vertex already exists and has zero or more
      * messages sent it to).
      *
+     * @param vertexId Vertex id (can be used for {@link BasicVertex}'s
+     *        initialize())
      * @param vertex Original vertex or null if none
      * @param vertexChanges Changes that happened to this vertex or null if none
      * @param messages messages received in the last superstep or null if none
      * @return Vertex to be returned, if null, and a vertex currently exists
      *         it will be removed
      */
-    BasicVertex<I, V, E, M> resolve(BasicVertex<I, V, E, M> vertex,
+    BasicVertex<I, V, E, M> resolve(I vertexId,
+                                    BasicVertex<I, V, E, M> vertex,
                                     VertexChanges<I, V, E, M> vertexChanges,
                                     Iterable<M> messages);
 
