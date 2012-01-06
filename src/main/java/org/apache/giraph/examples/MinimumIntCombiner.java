@@ -32,7 +32,7 @@ public class MinimumIntCombiner
 
     @Override
     public IntWritable combine(IntWritable target,
-            List<IntWritable> messages) throws IOException {
+    		Iterable<IntWritable> messages) throws IOException {
         int minimum = Integer.MAX_VALUE;
         for (IntWritable message : messages) {
             if (message.get() < minimum) {

@@ -19,9 +19,7 @@
 package org.apache.giraph.graph;
 
 import java.io.IOException;
-import java.util.List;
 
-import org.apache.giraph.comm.MsgList;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -39,11 +37,11 @@ public abstract class VertexCombiner<I extends WritableComparable,
    * Combines message values for a particular vertex index.
    *
    * @param vertexIndex Index of the vertex getting these messages
-   * @param msgList List of the messages to be combined
-   * @return Message that is combined from {@link MsgList} or null if no
+   * @param messages Iterable of the messages to be combined
+   * @return Message that is combined from {@link messages} or null if no
    *         message it to be sent
    * @throws IOException
    */
    public abstract M combine(I vertexIndex,
-                             List<M> msgList) throws IOException;
+                             Iterable<M> messages) throws IOException;
 }

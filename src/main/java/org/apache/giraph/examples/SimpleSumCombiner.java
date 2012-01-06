@@ -34,10 +34,10 @@ public class SimpleSumCombiner
 
     @Override
     public IntWritable combine(LongWritable vertexIndex,
-                               List<IntWritable> msgList)
+                               Iterable<IntWritable> messages)
             throws IOException {
         int sum = 0;
-        for (IntWritable msg : msgList) {
+        for (IntWritable msg : messages) {
             sum += msg.get();
         }
         return new IntWritable(sum);

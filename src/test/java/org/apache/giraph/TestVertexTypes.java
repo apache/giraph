@@ -83,7 +83,7 @@ public class TestVertexTypes
 
         @Override
         public FloatWritable combine(LongWritable vertexIndex,
-                                  List<FloatWritable> msgList)
+                                  Iterable<FloatWritable> msgList)
                 throws IOException {
             return null;
         }
@@ -97,7 +97,7 @@ public class TestVertexTypes
 
         @Override
         public DoubleWritable combine(LongWritable vertexIndex,
-                                      List<DoubleWritable> msgList)
+                                      Iterable<DoubleWritable> msgList)
                 throws IOException {
             return null;
         }

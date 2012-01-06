@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.70.0 - unreleased
 
+  GIRAPH-119: VertexCombiner should work on Iterable<M> instead of 
+  List<M>. (claudio)
+
   GIRAPH-116: Make EdgeListVertex the default vertex implementation,
   fix bugs related to EdgeListVertex. (aching)
 
