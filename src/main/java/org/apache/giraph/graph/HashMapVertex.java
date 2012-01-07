@@ -216,7 +216,7 @@ public abstract class HashMapVertex<I extends WritableComparable,
     }
 
     @Override
-    void setMessages(Iterable<M> messages) {
+    void putMessages(Iterable<M> messages) {
         msgList.clear();
         for (M message : messages) {
             msgList.add(message);

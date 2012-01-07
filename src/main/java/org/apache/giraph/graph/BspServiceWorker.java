@@ -502,7 +502,7 @@ public class BspServiceWorker<
     @Override
     public void assignMessagesToVertex(BasicVertex<I, V, E, M> vertex,
             Iterable<M> messageIterator) {
-        vertex.setMessages(messageIterator);
+        vertex.putMessages(messageIterator);
     }
 
     @Override

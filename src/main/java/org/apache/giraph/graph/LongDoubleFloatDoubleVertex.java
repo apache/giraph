@@ -251,7 +251,7 @@ public abstract class LongDoubleFloatDoubleVertex extends
     }
 
     @Override
-    void setMessages(Iterable<DoubleWritable> messages) {
+    void putMessages(Iterable<DoubleWritable> messages) {
         messageList.clear();
         for (DoubleWritable message : messages) {
             messageList.add(message.get());

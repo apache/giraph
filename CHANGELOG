@@ -2,6 +2,8 @@ Giraph Change Log
 
 Release 0.70.0 - unreleased
 
+  GIRAPH-118: Clarify messages behavior in BasicVertex (claudio)
+
   GIRAPH-119: VertexCombiner should work on Iterable<M> instead of 
   List<M>. (claudio)
 

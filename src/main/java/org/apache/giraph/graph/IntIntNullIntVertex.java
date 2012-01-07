@@ -118,7 +118,7 @@ public abstract class IntIntNullIntVertex extends
     }
 
     @Override
-    public void setMessages(Iterable<IntWritable> newMessages) {
+    public void putMessages(Iterable<IntWritable> newMessages) {
         messages = new int[Iterables.size(newMessages)];
         int n = 0;
         for (IntWritable message : newMessages) {
