@@ -1,6 +1,8 @@
 Giraph Change Log
 
-Release 0.70.0 - unreleased
+Release 0.1.0 - unreleased
+
+  GIRAPH-122. Roll version back to 0.1. (jghoman)
 
   GIRAPH-118: Clarify messages behavior in BasicVertex (claudio)
 
