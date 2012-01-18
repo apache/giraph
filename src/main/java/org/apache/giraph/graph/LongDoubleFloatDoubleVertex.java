@@ -134,14 +134,12 @@ public abstract class LongDoubleFloatDoubleVertex extends
             throw new IllegalArgumentException(
                 "sendMsgToAllEdges: Cannot send null message to all edges");
         }
-        final LongWritable destVertex = new LongWritable();
         final MutableVertex<LongWritable, DoubleWritable, FloatWritable,
             DoubleWritable> vertex = this;
         verticesWithEdgeValues.forEachKey(new LongProcedure() {
             @Override
             public boolean apply(long destVertexId) {
-                destVertex.set(destVertexId);
-                vertex.sendMsg(destVertex, msg);
+                vertex.sendMsg(new LongWritable(destVertexId), msg);
                 return true;
             }
         });

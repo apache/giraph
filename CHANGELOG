@@ -1,10 +1,13 @@
 Giraph Change Log
 
 Release 0.1.0 - unreleased
+  
+  GIRAPH-125: Bug in LongDoubleFloatDoubleVertex.sendMsgToAllEdges().
+  (humming80 via aching)
 
-  GIRAPH-122. Roll version back to 0.1. (jghoman)
+  GIRAPH-122: Roll version back to 0.1. (jghoman)
 
-  GIRAPH-118: Clarify messages behavior in BasicVertex (claudio)
+  GIRAPH-118: Clarify messages behavior in BasicVertex. (claudio)
 
   GIRAPH-119: VertexCombiner should work on Iterable<M> instead of 
   List<M>. (claudio)
