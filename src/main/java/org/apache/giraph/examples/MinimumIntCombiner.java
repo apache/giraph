@@ -22,6 +22,7 @@ import org.apache.giraph.graph.VertexCombiner;
 import org.apache.hadoop.io.IntWritable;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -31,7 +32,7 @@ public class MinimumIntCombiner
         extends VertexCombiner<IntWritable, IntWritable> {
 
     @Override
-    public IntWritable combine(IntWritable target,
+    public Iterable<IntWritable> combine(IntWritable target,
     		Iterable<IntWritable> messages) throws IOException {
         int minimum = Integer.MAX_VALUE;
         for (IntWritable message : messages) {
@@ -39,6 +40,9 @@ public class MinimumIntCombiner
                 minimum = message.get();
             }
         }
-        return new IntWritable(minimum);
+        List<IntWritable> value = new ArrayList<IntWritable>();
+        value.add(new IntWritable(minimum));
+        
+        return value;
     }
 }

@@ -22,6 +22,9 @@ import junit.framework.TestCase;
 import org.apache.giraph.graph.VertexCombiner;
 import org.apache.hadoop.io.IntWritable;
 
+import com.google.common.collect.Iterables;
+
+import java.io.IOException;
 import java.util.Arrays;
 
 public class MinimumIntCombinerTest extends TestCase {
@@ -31,10 +34,11 @@ public class MinimumIntCombinerTest extends TestCase {
         VertexCombiner<IntWritable, IntWritable> combiner =
                 new MinimumIntCombiner();
 
-        IntWritable result = combiner.combine(new IntWritable(1), Arrays.asList(
+        Iterable<IntWritable> result = combiner.combine(
+                new IntWritable(1), Arrays.asList(
                 new IntWritable(39947466), new IntWritable(199),
                 new IntWritable(19998888), new IntWritable(42)));
-
-        assertEquals(42, result.get());
+        assertTrue(result.iterator().hasNext());
+        assertEquals(42, result.iterator().next().get());
     }
 }

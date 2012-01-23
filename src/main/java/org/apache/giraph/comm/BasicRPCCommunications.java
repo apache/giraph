@@ -59,6 +59,8 @@ import org.apache.giraph.graph.partition.Partition;
 import org.apache.giraph.graph.partition.PartitionOwner;
 import org.apache.giraph.utils.MemoryUtils;
 
+import com.google.common.collect.Iterables;
+
 /*if[HADOOP_FACEBOOK]
 import org.apache.hadoop.ipc.ProtocolSignature;
 end[HADOOP_FACEBOOK]*/
@@ -235,10 +237,23 @@ public abstract class BasicRPCCommunications<
                             }
                         }
                         if (combiner != null && entry.getValue().size() > 1) {
-                            M combinedMsg = combiner.combine(entry.getKey(),
-                                                             entry.getValue());
+                            Iterable<M> messages = combiner.combine(
+                                    entry.getKey(), entry.getValue());
+                            if (messages == null) {
+                                throw new IllegalStateException(
+                                        "run: Combiner cannot return null");
+                            }
+                            if (Iterables.size(entry.getValue()) < 
+                                    Iterables.size(messages)) {
+                                throw new IllegalStateException(
+                                        "run: The number of combined " +
+                                        "messages is required to be <= to " + 
+                                        "number of messages to be combined");
+                            }
                             entry.getValue().clear();
-                            entry.getValue().add(combinedMsg);
+                            for (M msg: messages) {
+                                entry.getValue().add(msg);
+                            }
                         }
                         if (entry.getValue().isEmpty()) {
                             throw new IllegalStateException(
@@ -347,10 +362,21 @@ public abstract class BasicRPCCommunications<
                     peerConnection.getRPCProxy();
 
                 if (combiner != null) {
-                    M combinedMsg = combiner.combine(destVertex,
-                                                     outMessageList);
-                    if (combinedMsg != null) {
-                        proxy.putMsg(destVertex, combinedMsg);
+                    Iterable<M> messages = combiner.combine(destVertex,
+                                                            outMessageList);
+                    if (messages == null) {
+                        throw new IllegalStateException(
+                                "run: Combiner cannot return null");
+                    }
+                    if (Iterables.size(outMessageList) < 
+                            Iterables.size(messages)) {
+                        throw new IllegalStateException(
+                                "run: The number of combined messages is " +
+                                "required to be <= to the number of " +
+                                "messages to be combined");
+                    }
+                    for (M msg: messages) {
+                        proxy.putMsg(destVertex, msg);
                     }
                 } else {
                     proxy.putMsgList(destVertex, outMessageList);
@@ -971,10 +997,24 @@ end[HADOOP_FACEBOOK]*/
             for (Entry<I, List<M>> entry : transientInMessages.entrySet()) {
                 if (combiner != null) {
                     try {
-                        M combinedMsg = combiner.combine(entry.getKey(),
-                                                         entry.getValue());
-                        if (combinedMsg != null) {
-                            putMsg(entry.getKey(), combinedMsg);
+                        Iterable<M> messages = 
+                            combiner.combine(entry.getKey(), 
+                                             entry.getValue());
+                        if (messages == null) {
+                            throw new IllegalStateException(
+                                    "prepareSuperstep: Combiner cannot " +
+                                    "return null");
+                        }
+                        if (Iterables.size(entry.getValue()) < 
+                                Iterables.size(messages)) {
+                            throw new IllegalStateException(
+                                    "prepareSuperstep: The number of " +
+                                    "combined messages is " +
+                                    "required to be <= to the number of " +
+                                    "messages to be combined");
+                        }
+                        for (M msg: messages) {
+                            putMsg(entry.getKey(), msg);
                         }
                     } catch (IOException e) {
                         // no actual IO -- should never happen

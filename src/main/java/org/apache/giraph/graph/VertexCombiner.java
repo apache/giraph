@@ -33,15 +33,16 @@ import org.apache.hadoop.io.WritableComparable;
 public abstract class VertexCombiner<I extends WritableComparable,
                                      M extends Writable> {
 
-  /**
-   * Combines message values for a particular vertex index.
-   *
-   * @param vertexIndex Index of the vertex getting these messages
-   * @param messages Iterable of the messages to be combined
-   * @return Message that is combined from {@link messages} or null if no
-   *         message it to be sent
-   * @throws IOException
-   */
-   public abstract M combine(I vertexIndex,
-                             Iterable<M> messages) throws IOException;
+   /**
+    * Combines message values for a particular vertex index.
+    *
+    * @param vertexIndex Index of the vertex getting these messages
+    * @param messages Iterable of the messages to be combined
+    * @return Iterable of the combined messages. The returned value cannot 
+    *         be null and its size is required to be smaller or equal to 
+    *         the size of {@link messages}.
+    * @throws IOException
+    */
+    public abstract Iterable<M> combine(I vertexIndex,
+            Iterable<M> messages) throws IOException;
 }

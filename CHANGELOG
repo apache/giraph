@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.1.0 - unreleased
   
+  GIRAPH-124: Combiner should return Iterable<M> instead of M or 
+  null. (claudio)
+
   GIRAPH-125: Bug in LongDoubleFloatDoubleVertex.sendMsgToAllEdges().
   (humming80 via aching)
 

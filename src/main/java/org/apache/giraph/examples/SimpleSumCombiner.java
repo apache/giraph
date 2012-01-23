@@ -19,6 +19,7 @@
 package org.apache.giraph.examples;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.io.IntWritable;
@@ -33,13 +34,15 @@ public class SimpleSumCombiner
         extends VertexCombiner<LongWritable, IntWritable> {
 
     @Override
-    public IntWritable combine(LongWritable vertexIndex,
-                               Iterable<IntWritable> messages)
-            throws IOException {
+    public Iterable<IntWritable> combine(LongWritable vertexIndex,
+            Iterable<IntWritable> messages) throws IOException {
         int sum = 0;
         for (IntWritable msg : messages) {
             sum += msg.get();
         }
-        return new IntWritable(sum);
+        List<IntWritable> value = new ArrayList<IntWritable>();
+        value.add(new IntWritable(sum));
+        
+        return value;
     }
 }

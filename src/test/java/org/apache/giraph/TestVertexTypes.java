@@ -35,11 +35,13 @@ import org.apache.giraph.graph.GraphMapper;
 import org.apache.giraph.graph.VertexOutputFormat;
 import org.apache.giraph.lib.JsonBase64VertexInputFormat;
 import org.apache.giraph.lib.JsonBase64VertexOutputFormat;
+import org.apache.giraph.utils.EmptyIterable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Writable;
 
 
 public class TestVertexTypes
@@ -82,10 +84,9 @@ public class TestVertexTypes
             VertexCombiner<LongWritable, FloatWritable> {
 
         @Override
-        public FloatWritable combine(LongWritable vertexIndex,
-                                  Iterable<FloatWritable> msgList)
-                throws IOException {
-            return null;
+        public Iterable<FloatWritable> combine(LongWritable vertexIndex,
+                Iterable<FloatWritable> msgList) throws IOException {
+            return new EmptyIterable<FloatWritable>();
         }
     }
 
@@ -96,10 +97,10 @@ public class TestVertexTypes
             VertexCombiner<LongWritable, DoubleWritable> {
 
         @Override
-        public DoubleWritable combine(LongWritable vertexIndex,
-                                      Iterable<DoubleWritable> msgList)
+        public Iterable<DoubleWritable> combine(LongWritable vertexIndex,
+                Iterable<DoubleWritable> msgList)
                 throws IOException {
-            return null;
+            return new EmptyIterable<DoubleWritable>();
         }
     }
 
