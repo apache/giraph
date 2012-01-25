@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 0.1.0 - unreleased
+
+  GIRAPH-129: Enable creation of javadoc and sources jars.
+  (André Kelpe via jghoman)
   
   GIRAPH-124: Combiner should return Iterable<M> instead of M or 
   null. (claudio)
