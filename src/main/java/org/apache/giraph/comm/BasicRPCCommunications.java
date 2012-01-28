@@ -36,6 +36,7 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
+import java.net.BindException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -83,7 +84,7 @@ public abstract class BasicRPCCommunications<
     /** Name of RPC server, == myAddress.toString() */
     private final String myName;
     /** RPC server */
-    private final Server server;
+    private Server server;
     /** Centralized service, needed to get vertex ranges */
     private final CentralizedServiceWorker<I, V, E, M> service;
     /** Hadoop configuration */
@@ -91,7 +92,7 @@ public abstract class BasicRPCCommunications<
     /** Combiner instance, can be null */
     private final VertexCombiner<I, M> combiner;
     /** Address of RPC server */
-    private final InetSocketAddress myAddress;
+    private InetSocketAddress myAddress;
     /** Messages sent during the last superstep */
     private long totalMsgsSentInSuperstep = 0;
     /** Maximum messages sent per putVertexIdMessagesList RPC */
@@ -153,9 +154,9 @@ public abstract class BasicRPCCommunications<
     private final int maxSize;
     /** Cached job id */
     private final String jobId;
-    /** cached job token */
+    /** Cached job token */
     private final J jobToken;
-    /** maximum number of vertices sent in a single RPC */
+    /** Maximum number of vertices sent in a single RPC */
     private static final int MAX_VERTICES_PER_RPC = 1024;
 
     /**
@@ -243,11 +244,11 @@ public abstract class BasicRPCCommunications<
                                 throw new IllegalStateException(
                                         "run: Combiner cannot return null");
                             }
-                            if (Iterables.size(entry.getValue()) < 
+                            if (Iterables.size(entry.getValue()) <
                                     Iterables.size(messages)) {
                                 throw new IllegalStateException(
                                         "run: The number of combined " +
-                                        "messages is required to be <= to " + 
+                                        "messages is required to be <= to " +
                                         "number of messages to be combined");
                             }
                             entry.getValue().clear();
@@ -368,7 +369,7 @@ public abstract class BasicRPCCommunications<
                         throw new IllegalStateException(
                                 "run: Combiner cannot return null");
                     }
-                    if (Iterables.size(outMessageList) < 
+                    if (Iterables.size(outMessageList) <
                             Iterables.size(messages)) {
                         throw new IllegalStateException(
                                 "run: The number of combined messages is " +
@@ -433,12 +434,8 @@ public abstract class BasicRPCCommunications<
         int taskId = conf.getInt("mapred.task.partition", -1);
         int numTasks = conf.getInt("mapred.map.tasks", 1);
 
-        String bindAddress = localHostname;
-        int bindPort = conf.getInt(GiraphJob.RPC_INITIAL_PORT,
-                                   GiraphJob.RPC_INITIAL_PORT_DEFAULT) +
-                                   taskId;
 
-        this.myAddress = new InetSocketAddress(bindAddress, bindPort);
+
         int numHandlers = conf.getInt(GiraphJob.RPC_NUM_HANDLERS,
                                       GiraphJob.RPC_NUM_HANDLERS_DEFAULT);
         if (numTasks < numHandlers) {
@@ -446,11 +443,6 @@ public abstract class BasicRPCCommunications<
         }
         this.jobToken = createJobToken();
         this.jobId = context.getJobID().toString();
-        this.server =
-            getRPCServer(myAddress, numHandlers, this.jobId, this.jobToken);
-        this.server.start();
-
-        this.myName = myAddress.toString();
 
         int numWorkers = conf.getInt(GiraphJob.MAX_WORKERS, numTasks);
         // If the number of flush threads is unset, it is set to
@@ -461,12 +453,58 @@ public abstract class BasicRPCCommunications<
                       1);
         this.executor = Executors.newFixedThreadPool(numFlushThreads);
 
+        // Simple handling of port collisions on the same machine while
+        // preserving debugability from the port number alone.
+        // Round up the max number of workers to the next power of 10 and use
+        // it as a constant to increase the port number with.
+        int portIncrementConstant =
+            (int) Math.pow(10, Math.ceil(Math.log10(numWorkers)));
+        String bindAddress = localHostname;
+        int bindPort = conf.getInt(GiraphJob.RPC_INITIAL_PORT,
+                                   GiraphJob.RPC_INITIAL_PORT_DEFAULT) +
+                                   taskId;
+        int bindAttempts = 0;
+        final int maxRpcPortBindAttempts =
+            conf.getInt(GiraphJob.MAX_RPC_PORT_BIND_ATTEMPTS,
+                        GiraphJob.MAX_RPC_PORT_BIND_ATTEMPTS_DEFAULT);
+        while (bindAttempts < maxRpcPortBindAttempts) {
+            this.myAddress = new InetSocketAddress(bindAddress, bindPort);
+            try {
+                this.server =
+                    getRPCServer(
+                        myAddress, numHandlers, this.jobId, this.jobToken);
+                break;
+            } catch (BindException e) {
+                LOG.info("BasicRPCCommunications: Failed to bind with port " +
+                         bindPort + " on bind attempt " + bindAttempts);
+                ++bindAttempts;
+                bindPort += portIncrementConstant;
+            }
+        }
+        if (bindAttempts == maxRpcPortBindAttempts) {
+            throw new IllegalStateException(
+                "BasicRPCCommunications: Failed to start RPCServer with " +
+                maxRpcPortBindAttempts + " attempts");
+        }
+
+        this.server.start();
+        this.myName = myAddress.toString();
+
         if (LOG.isInfoEnabled()) {
             LOG.info("BasicRPCCommunications: Started RPC " +
                      "communication server: " + myName + " with " +
                      numHandlers + " handlers and " + numFlushThreads +
-                     " flush threads");
+                     " flush threads on bind attempt " + bindAttempts);
         }
+    }
+
+    /**
+     * Get the final port of the RPC server that it bound to.
+     *
+     * @return Port that RPC server was bound to.
+     */
+    public int getPort() {
+        return myAddress.getPort();
     }
 
     @Override
@@ -997,15 +1035,15 @@ end[HADOOP_FACEBOOK]*/
             for (Entry<I, List<M>> entry : transientInMessages.entrySet()) {
                 if (combiner != null) {
                     try {
-                        Iterable<M> messages = 
-                            combiner.combine(entry.getKey(), 
+                        Iterable<M> messages =
+                            combiner.combine(entry.getKey(),
                                              entry.getValue());
                         if (messages == null) {
                             throw new IllegalStateException(
                                     "prepareSuperstep: Combiner cannot " +
                                     "return null");
                         }
-                        if (Iterables.size(entry.getValue()) < 
+                        if (Iterables.size(entry.getValue()) <
                                 Iterables.size(messages)) {
                             throw new IllegalStateException(
                                     "prepareSuperstep: The number of " +

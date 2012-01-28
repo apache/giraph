@@ -2,8 +2,11 @@ Giraph Change Log
 
 Release 0.1.0 - unreleased
 
+  GIRAPH-128: RPC port from BasicRPCCommunications should be only a
+  starting port, and retried. (aching)
+
   GIRAPH-131: Enable creation of test-jars to simplify testing in 
-  downstream projects.  (André Kelpe via jghoman)
+  downstream projects. (André Kelpe via jghoman)
   
   GIRAPH-129: Enable creation of javadoc and sources jars.
   (André Kelpe via jghoman)
