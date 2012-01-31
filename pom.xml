@@ -24,7 +24,7 @@ under the License.
   <groupId>org.apache.giraph</groupId>
   <artifactId>giraph</artifactId>
   <packaging>jar</packaging>
-  <version>0.1-SNAPSHOT</version>
+  <version>0.1</version>
 
   <name>Apache Incubator Giraph</name>
   <url>http://incubator.apache.org/giraph/</url>
