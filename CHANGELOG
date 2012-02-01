@@ -2,6 +2,8 @@ Giraph Change Log
 
 Release 0.1.0 - unreleased
 
+  GIRAPH-117: DefaultWorkerContext should preserve the method signatures of WorkerContext. (ssc)
+
   GIRAPH-135: Need DISCLAIMER for incubator. (jghoman)
 
   GIRAPH-134: Fix NOTICE file for release. (jghoman)
