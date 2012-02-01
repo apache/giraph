@@ -159,6 +159,14 @@ under the License.
       <timezone>+1</timezone>
       <organization>LSDS group, VU Amsterdam</organization>
     </developer>
+    <developer>
+      <id>ssc</id>
+      <name>Sebastian Schelter</name>
+      <email>ssc@apache.org</email>
+      <timezone>+1</timezone>
+      <organization>Database Systems and Information Management group (DIMA), TU Berlin</organization>
+      <organizationUrl>http://www.dima.tu-berlin.de/</organizationUrl>
+    </developer>
   </developers>
 
   <properties>
