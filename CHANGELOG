@@ -1,6 +1,10 @@
 Giraph Change Log
 
-Release 0.1.0 - unreleased
+Release 0.2.0 - unreleased
+  
+  GIRAPH-136: Error message for bin/graph could be improved. (jghoman)
+
+Release 0.1.0 - 2012-01-31
 
   GIRAPH-120: Add Sebastian Schelter to site. (ssc)
 
