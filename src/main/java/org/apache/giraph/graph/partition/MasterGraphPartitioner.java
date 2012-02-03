@@ -50,10 +50,10 @@ public interface MasterGraphPartitioner<I extends WritableComparable,
      * After the worker stats have been merged to a single list, the master can
      * use this information to send commands to the workers for any
      * {@link Partition} changes. This protocol is specific to the
-     * {@link GraphPartitioner} implementation.
+     * {@link MasterGraphPartitioner} implementation.
      *
      * @param allPartitionStatsList All partition stats from all workers.
-     * @param availableWorkerInfos Workers available for partition assignment
+     * @param availableWorkers Workers available for partition assignment
      * @param maxWorkers Maximum number of workers
      * @param superstep Partition owners will be set for this superstep
      * @return Collection of {@link PartitionOwner} objects that changed from

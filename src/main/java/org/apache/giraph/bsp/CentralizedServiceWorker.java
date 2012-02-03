@@ -31,6 +31,7 @@ import org.apache.giraph.graph.GraphMapper;
 import org.apache.giraph.graph.partition.Partition;
 import org.apache.giraph.graph.partition.PartitionOwner;
 import org.apache.giraph.graph.partition.PartitionStats;
+import org.apache.giraph.graph.partition.WorkerGraphPartitioner;
 import org.apache.giraph.graph.WorkerInfo;
 import org.apache.giraph.graph.WorkerContext;
 
@@ -122,7 +123,6 @@ public interface CentralizedServiceWorker<
      * Every client will need to get a partition owner from a vertex id so that
      * they know which worker to sent the request to.
      *
-     * @param superstep Superstep to look for
      * @param vertexIndex Vertex index to look for
      * @return PartitionOnwer that should contain this vertex if it exists
      */
@@ -138,7 +138,7 @@ public interface CentralizedServiceWorker<
 
     /**
      * If desired by the user, vertex partitions are redistributed among
-     * workers according to the chosen {@link GraphPartitioner}.
+     * workers according to the chosen {@link WorkerGraphPartitioner}.
      *
      * @param masterSetPartitionOwners Partition owner info passed from the
      *        master.

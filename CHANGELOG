@@ -2,6 +2,8 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-130: Fix Javadoc warnings. (Harsh J. Chouraria via jghoman)
+
   GIRAPH-137: De-duplicate pagerank implementation in PageRankBenchmark.
   (Harsh J. Chouraria via jghoman) 
  

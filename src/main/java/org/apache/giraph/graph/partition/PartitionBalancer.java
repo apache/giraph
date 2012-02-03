@@ -169,7 +169,7 @@ public class PartitionBalancer {
      * Balance the partitions with an algorithm based on a value.
      *
      * @param conf Configuration to find the algorithm
-     * @param allPartitionStatsList All the partition stats
+     * @param allPartitionStats All the partition stats
      * @param availableWorkerInfos All the available workers
      * @return Balanced partition owners
      */

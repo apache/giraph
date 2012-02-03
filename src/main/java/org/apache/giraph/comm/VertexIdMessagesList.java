@@ -23,7 +23,7 @@ import org.apache.hadoop.io.WritableComparable;
 
 /**
  * Wrapper around {@link ArrayListWritable} that provides the list for
- * {@link VertexIdMessage}.
+ * {@link VertexIdMessages}.
  *
  * @param <I extends Writable> vertex id
  * @param <M extends Writable> message data

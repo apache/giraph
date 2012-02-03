@@ -53,7 +53,7 @@ public interface AggregatorWriter {
      * whether to write the aggregators values for the current superstep. For 
      * the last superstep, {@link AggregatorWriter#LAST_SUPERSTEP} is passed.
      * 
-     * @param map Map of aggregators to write
+     * @param aggregatorMap Map of aggregators to write
      * @param superstep Current superstep
      * @throws IOException
      */

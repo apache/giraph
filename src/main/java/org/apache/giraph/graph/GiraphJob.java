@@ -433,7 +433,7 @@ public class GiraphJob extends Job {
     /**
      * Set the graph partitioner class (optional)
      *
-     * @param graphPartitionerClass Determines how the graph is partitioned
+     * @param graphPartitionerFactoryClass Determines how the graph is partitioned
      */
     final public void setGraphPartitionerFactoryClass(
             Class<?> graphPartitionerFactoryClass) {

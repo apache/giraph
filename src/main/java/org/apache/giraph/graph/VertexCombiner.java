@@ -40,7 +40,7 @@ public abstract class VertexCombiner<I extends WritableComparable,
     * @param messages Iterable of the messages to be combined
     * @return Iterable of the combined messages. The returned value cannot 
     *         be null and its size is required to be smaller or equal to 
-    *         the size of {@link messages}.
+    *         the size of the messages list.
     * @throws IOException
     */
     public abstract Iterable<M> combine(I vertexIndex,
