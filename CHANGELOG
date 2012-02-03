@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+ 
+  GIRAPH-133: Typo in JavaDoc in BspCase::remove().
+  (Harsh J. Chouraria via jghoman) 
   
   GIRAPH-136: Error message for bin/graph could be improved. (jghoman)
 

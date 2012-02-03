@@ -233,7 +233,7 @@ public class BspCase extends TestCase implements Watcher {
     /**
      * Helper method to remove a path if it exists.
      * 
-     * @param conf Configutation
+     * @param conf Configuration to load FileSystem from
      * @param path Path to remove
      * @throws IOException
      */
