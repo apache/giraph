@@ -26,6 +26,7 @@ import org.apache.commons.cli.PosixParser;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.HashMapVertex;
+import org.apache.giraph.graph.MutableVertex;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -44,28 +45,36 @@ public class PageRankBenchmark implements Tool {
     /** How many supersteps to run */
     public static String SUPERSTEP_COUNT = "PageRankBenchmark.superstepCount";
 
+    private static void computePageRank(
+            MutableVertex
+              <LongWritable, DoubleWritable, DoubleWritable, DoubleWritable>
+                vertex,
+            Iterator<DoubleWritable> msgIterator) {
+        if (vertex.getSuperstep() >= 1) {
+            double sum = 0;
+            while (msgIterator.hasNext()) {
+                sum += msgIterator.next().get();
+            }
+            DoubleWritable vertexValue =
+                new DoubleWritable((0.15f / vertex.getNumVertices()) + 0.85f *
+                                   sum);
+            vertex.setVertexValue(vertexValue);
+        }
+
+        if (vertex.getSuperstep() < vertex.getConf().getInt(SUPERSTEP_COUNT, -1)) {
+            long edges = vertex.getNumOutEdges();
+            vertex.sendMsgToAllEdges(
+                new DoubleWritable(vertex.getVertexValue().get() / edges));
+        } else {
+            vertex.voteToHalt();
+        }
+    }
+
     public static class PageRankHashMapVertex extends HashMapVertex<
             LongWritable, DoubleWritable, DoubleWritable, DoubleWritable> {
         @Override
         public void compute(Iterator<DoubleWritable> msgIterator) {
-            if (getSuperstep() >= 1) {
-                double sum = 0;
-                while (msgIterator.hasNext()) {
-                    sum += msgIterator.next().get();
-                }
-                DoubleWritable vertexValue =
-                    new DoubleWritable((0.15f / getNumVertices()) + 0.85f *
-                                       sum);
-                setVertexValue(vertexValue);
-            }
-
-            if (getSuperstep() < getConf().getInt(SUPERSTEP_COUNT, -1)) {
-                long edges = getNumOutEdges();
-                sendMsgToAllEdges(
-                    new DoubleWritable(getVertexValue().get() / edges));
-            } else {
-                voteToHalt();
-            }
+            PageRankBenchmark.computePageRank(this, msgIterator);
         }
     }
 
@@ -73,24 +82,7 @@ public class PageRankBenchmark implements Tool {
             LongWritable, DoubleWritable, DoubleWritable, DoubleWritable> {
         @Override
         public void compute(Iterator<DoubleWritable> msgIterator) {
-            if (getSuperstep() >= 1) {
-                double sum = 0;
-                while (msgIterator.hasNext()) {
-                    sum += msgIterator.next().get();
-                }
-                DoubleWritable vertexValue =
-                    new DoubleWritable((0.15f / getNumVertices()) + 0.85f *
-                                       sum);
-                setVertexValue(vertexValue);
-            }
-
-            if (getSuperstep() < getConf().getInt(SUPERSTEP_COUNT, -1)) {
-                long edges = getNumOutEdges();
-                sendMsgToAllEdges(
-                        new DoubleWritable(getVertexValue().get() / edges));
-            } else {
-                voteToHalt();
-            }
+            PageRankBenchmark.computePageRank(this, msgIterator);
         }
     }
 

@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+
+  GIRAPH-137: De-duplicate pagerank implementation in PageRankBenchmark.
+  (Harsh J. Chouraria via jghoman) 
  
   GIRAPH-133: Typo in JavaDoc in BspCase::remove().
   (Harsh J. Chouraria via jghoman) 
