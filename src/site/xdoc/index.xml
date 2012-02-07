@@ -38,6 +38,9 @@ under the License.
     <section name="Incubator disclaimer">
 	<p>Apache Giraph is an effort undergoing incubation at The Apache Software Foundation (ASF), sponsored by the name of Apache Incubator. Incubation is required of all newly accepted projects until a further review indicates that the infrastructure, communications, and decision making process have stabilized in a manner consistent with other successful ASF projects. While incubation status is not necessarily a reflection of the completeness or stability of the code, it does indicate that the project has yet to be fully endorsed by the ASF.</p>
 	</section>
+	<section name="News">
+		<ul><li><strong>February 6, 2012: Giraph 0.1-incubating released.</strong> The Giraph PPMC is excited to announce that version 0.1 has been released. Grab a copy of the release <a href="http://www.apache.org/dyn/closer.cgi/incubator/giraph/">here</a>.</li></ul>
+	</section>
 	<section name="Presentations">
       We're working hard to build a community of users and developers around Giraph. As part of that outreach, we're giving presentations and talks to help bring people up to speed.
       <ul>
@@ -61,6 +64,9 @@ under the License.
 		<li>Browse through <a href="issue-tracking.html">Giraph's JIRA</a>, our issue tracking system, to find issues you may be interested in working on. To help new contributors pitch in quickly, we maintain a <a href="http://bit.ly/newbie_apache_giraph_issues">set of JIRAs</a> that focus on getting new contributors started with the mechanics of generating a patch &#151; downloading the source, changing a couple lines, creating a patch, verifying its correctness, uploading it to JIRA and working with the community &#151; rather that deep technical issues within Giraph itself. These are good issues with which to join the community. See <a href="#Generatingpatches">below</a> for detailed instructions on creating patches.</li>
 		<li>Try out the examples and play with Giraph on your cluster. Be sure to ask questions on the mailing list or open new JIRAs if you run into issues with your particular configuration.</li>
 	</ul>
+	</section>
+	<section name="Releases">
+		<p>Official releases of Giraph may be downloaded from an <a href="http://www.apache.org/dyn/closer.cgi/incubator/giraph/">Apache mirror</a>. Soon we will also publish our release artifacts to Apache's Maven repositories to make it easier to include Giraph in your projects.</p>
 	</section>
 	<section name="Building and testing">
 		<p>You will need the following:</p>
