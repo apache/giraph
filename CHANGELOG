@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-145. Change partition request log level to debug rather than info.
+  (jghoman)
+
   GIRAPH-130: Fix Javadoc warnings. (Harsh J. Chouraria via jghoman)
 
   GIRAPH-137: De-duplicate pagerank implementation in PageRankBenchmark.

@@ -817,8 +817,8 @@ end[HADOOP_FACEBOOK]*/
         CommunicationsInterface<I, V, E, M> rpcProxy =
             peerConnections.get(addr).getRPCProxy();
 
-        if (LOG.isInfoEnabled()) {
-            LOG.info("sendPartitionReq: Sending to " + rpcProxy.getName() +
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("sendPartitionReq: Sending to " + rpcProxy.getName() +
                      " " + addr + " from " + workerInfo +
                      ", with partition " + partition);
         }
