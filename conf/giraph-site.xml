@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+
+<!-- This configuration is for Giraph-specific configs that should be set across runs -->
+
+<configuration>
+
+</configuration>

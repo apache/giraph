@@ -57,6 +57,9 @@ fi
 # add user jar to classpath
 CLASSPATH=${USER_JAR}
 
+# add Giraph conf dir to classpath
+CLASSPATH=$CLASSPATH:$GIRAPH_HOME/conf
+
 CLASS=org.apache.giraph.GiraphRunner
 
 # so that filenames w/ spaces are handled correctly in loops below

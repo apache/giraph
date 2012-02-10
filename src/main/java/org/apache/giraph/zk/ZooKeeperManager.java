@@ -141,7 +141,7 @@ public class ZooKeeperManager {
    */
     public static String getBasePath(Configuration conf) {
         String result = conf.get(BASE_ZNODE_KEY, "");
-        if(!result.equals("") && !result.startsWith("/")) {
+        if (!result.equals("") && !result.startsWith("/")) {
             throw new IllegalArgumentException("Value for " +
                 BASE_ZNODE_KEY + " must start with /: " + result);
         }

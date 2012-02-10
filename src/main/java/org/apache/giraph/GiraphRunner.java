@@ -32,6 +32,10 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
 
 public class GiraphRunner implements Tool {
+  static {
+    Configuration.addDefaultResource("giraph-site.xml");
+  }
+
   private static final Logger LOG = Logger.getLogger(GiraphRunner.class);
   private Configuration conf;
 

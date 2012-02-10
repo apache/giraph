@@ -74,6 +74,9 @@
       <outputDirectory>docs</outputDirectory>
     </fileSet>
 
+    <fileSet>
+      <directory>conf</directory>
+    </fileSet>
   </fileSets>
   <dependencySets>
     <dependencySet>

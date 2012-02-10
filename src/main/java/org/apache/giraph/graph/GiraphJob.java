@@ -33,6 +33,10 @@ import java.io.IOException;
  * for our needs.  For instance, our job should not have any reduce tasks.
  */
 public class GiraphJob extends Job {
+    static {
+        Configuration.addDefaultResource("giraph-site.xml");
+    }
+
     /** Vertex class - required */
     public static final String VERTEX_CLASS = "giraph.vertexClass";
     /** VertexInputFormat class - required */

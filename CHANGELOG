@@ -2,6 +2,8 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-143: Add support for giraph to have a conf file. (jghoman)
+
   GIRAPH-142: _hadoopBsp should be prefixable via configuration. (jghoman)
 
   GIRAPH-145. Change partition request log level to debug rather than info.
