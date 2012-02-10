@@ -18,6 +18,19 @@
 
 package org.apache.giraph.zk;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.io.Closeables;
+import org.apache.commons.io.FileUtils;
+import org.apache.giraph.graph.GiraphJob;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.log4j.Logger;
+import org.apache.zookeeper.server.quorum.QuorumPeerMain;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileWriter;
@@ -35,18 +48,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.io.Closeables;
-import org.apache.commons.io.FileUtils;
-import org.apache.giraph.graph.GiraphJob;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.log4j.Logger;
-import org.apache.zookeeper.server.quorum.QuorumPeerMain;
+import static org.apache.giraph.graph.GiraphJob.BASE_ZNODE_KEY;
+
 
 /**
  * Manages the election of ZooKeeper servers, starting/stopping the services,
@@ -126,6 +129,24 @@ public class ZooKeeperManager {
      */
     final private String getFinalZooKeeperPath() {
         return GiraphJob.ZOOKEEPER_MANAGER_DIR_DEFAULT + "/" + jobId;
+    }
+
+  /**
+   * Return the base ZooKeeper ZNode from which all other ZNodes Giraph creates
+   * should be sited, for instance in a multi-tenant ZooKeeper, the znode
+   * reserved for Giraph
+   *
+   * @param conf  Necessary to access user-provided values
+   * @return  String of path without trailing slash
+   */
+    public static String getBasePath(Configuration conf) {
+        String result = conf.get(BASE_ZNODE_KEY, "");
+        if(!result.equals("") && !result.startsWith("/")) {
+            throw new IllegalArgumentException("Value for " +
+                BASE_ZNODE_KEY + " must start with /: " + result);
+        }
+
+        return result;
     }
 
     /**

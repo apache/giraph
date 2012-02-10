@@ -23,6 +23,7 @@ import org.apache.giraph.graph.partition.GraphPartitionerFactory;
 import org.apache.giraph.zk.BspEvent;
 import org.apache.giraph.zk.PredicateLock;
 import org.apache.giraph.zk.ZooKeeperExt;
+import org.apache.giraph.zk.ZooKeeperManager;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -137,7 +138,7 @@ public abstract class BspService <
     /** Unset application attempt */
     public static final long UNSET_APPLICATION_ATTEMPT = Long.MIN_VALUE;
 
-    public static final String BASE_DIR = "/_hadoopBsp";
+    private static final String BASE_DIR = "/_hadoopBsp";
     public static final String MASTER_JOB_STATE_NODE = "/_masterJobState";
     public static final String INPUT_SPLIT_DIR = "/_inputSplitDir";
     public static final String INPUT_SPLIT_DONE_DIR = "/_inputSplitDoneDir";
@@ -629,7 +630,7 @@ public abstract class BspService <
             conf.getInt(GiraphJob.CHECKPOINT_FREQUENCY,
                           GiraphJob.CHECKPOINT_FREQUENCY_DEFAULT);
 
-        BASE_PATH = BASE_DIR + "/" + jobId;
+        BASE_PATH = ZooKeeperManager.getBasePath(conf) + BASE_DIR + "/" + jobId;
         MASTER_JOB_STATE_PATH = BASE_PATH + MASTER_JOB_STATE_NODE;
         INPUT_SPLIT_PATH = BASE_PATH + INPUT_SPLIT_DIR;
         INPUT_SPLITS_ALL_READY_PATH = BASE_PATH + INPUT_SPLITS_ALL_READY_NODE;

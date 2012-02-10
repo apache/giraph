@@ -280,6 +280,12 @@ public class GiraphJob extends Job {
     public static final String RESTART_SUPERSTEP = "giraph.restartSuperstep";
 
     /**
+     * Base ZNode for Giraph's state in the ZooKeeper cluster.  Must be a root
+     * znode on the cluster beginning with "/"
+     */
+    public static final String BASE_ZNODE_KEY = "giraph.zkBaseZNode";
+
+    /**
      * If ZOOKEEPER_LIST is not set, then use this directory to manage
      * ZooKeeper
      */
