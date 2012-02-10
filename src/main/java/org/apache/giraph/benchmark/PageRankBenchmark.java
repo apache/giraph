@@ -25,65 +25,28 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.GiraphJob;
-import org.apache.giraph.graph.HashMapVertex;
-import org.apache.giraph.graph.MutableVertex;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 
+import java.io.IOException;
 import java.util.Iterator;
 
 /**
- * Benchmark based on the basic Pregel PageRank implementation.
+ * Default Pregel-style PageRank computation using a {@link EdgeListVertex}.
  */
-public class PageRankBenchmark implements Tool {
+public class PageRankBenchmark extends EdgeListVertex<
+    LongWritable, DoubleWritable, DoubleWritable, DoubleWritable> implements Tool {
+    public final static String SUPERSTEP_COUNT = PageRankComputation.SUPERSTEP_COUNT;
+
     /** Configuration from Configurable */
     private Configuration conf;
 
-    /** How many supersteps to run */
-    public static String SUPERSTEP_COUNT = "PageRankBenchmark.superstepCount";
-
-    private static void computePageRank(
-            MutableVertex
-              <LongWritable, DoubleWritable, DoubleWritable, DoubleWritable>
-                vertex,
-            Iterator<DoubleWritable> msgIterator) {
-        if (vertex.getSuperstep() >= 1) {
-            double sum = 0;
-            while (msgIterator.hasNext()) {
-                sum += msgIterator.next().get();
-            }
-            DoubleWritable vertexValue =
-                new DoubleWritable((0.15f / vertex.getNumVertices()) + 0.85f *
-                                   sum);
-            vertex.setVertexValue(vertexValue);
-        }
-
-        if (vertex.getSuperstep() < vertex.getConf().getInt(SUPERSTEP_COUNT, -1)) {
-            long edges = vertex.getNumOutEdges();
-            vertex.sendMsgToAllEdges(
-                new DoubleWritable(vertex.getVertexValue().get() / edges));
-        } else {
-            vertex.voteToHalt();
-        }
-    }
-
-    public static class PageRankHashMapVertex extends HashMapVertex<
-            LongWritable, DoubleWritable, DoubleWritable, DoubleWritable> {
-        @Override
-        public void compute(Iterator<DoubleWritable> msgIterator) {
-            PageRankBenchmark.computePageRank(this, msgIterator);
-        }
-    }
-
-    public static class PageRankEdgeListVertex extends EdgeListVertex<
-            LongWritable, DoubleWritable, DoubleWritable, DoubleWritable> {
-        @Override
-        public void compute(Iterator<DoubleWritable> msgIterator) {
-            PageRankBenchmark.computePageRank(this, msgIterator);
-        }
+    @Override
+    public void compute(Iterator<DoubleWritable> msgIterator) throws IOException {
+      PageRankComputation.computePageRank(this, msgIterator);
     }
 
     @Override
@@ -120,7 +83,7 @@ public class PageRankBenchmark implements Tool {
         options.addOption("c",
                           "vertexClass",
                           true,
-                          "Vertex class (0 for Vertex, 1 for EdgeListVertex)");
+                          "Vertex class (0 for HashMapVertex, 1 for EdgeListVertex)");
         HelpFormatter formatter = new HelpFormatter();
         if (args.length == 0) {
             formatter.printHelp(getClass().getName(), options, true);
@@ -155,12 +118,12 @@ public class PageRankBenchmark implements Tool {
         if (!cmd.hasOption('c') ||
                 (Integer.parseInt(cmd.getOptionValue('c')) == 0)) {
             System.out.println("Using " +
-                                PageRankHashMapVertex.class.getName());
-            job.setVertexClass(PageRankHashMapVertex.class);
+                                HashMapVertexPageRankBenchmark.class.getName());
+            job.setVertexClass(HashMapVertexPageRankBenchmark.class);
         } else {
             System.out.println("Using " +
-                                PageRankEdgeListVertex.class.getName());
-            job.setVertexClass(PageRankEdgeListVertex.class);
+                                PageRankBenchmark.class.getName());
+            job.setVertexClass(PageRankBenchmark.class);
         }
         job.setVertexInputFormatClass(PseudoRandomVertexInputFormat.class);
         job.setWorkerConfiguration(workers, workers, 100.0f);
