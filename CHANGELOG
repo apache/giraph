@@ -2,6 +2,8 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-148: giraph-site.xml needs Apache header. (jghoman)
+  
   GIRAPH-139: Change PageRankBenchmark to be accessible via bin/giraph. 
   (jghoman)
   
