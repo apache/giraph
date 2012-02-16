@@ -33,39 +33,38 @@ import org.apache.giraph.lib.TextVertexOutputFormat;
  * Simple text based vertex output format example.
  */
 public class SimpleTextVertexOutputFormat extends
-         TextVertexOutputFormat<LongWritable, IntWritable, FloatWritable> {
+    TextVertexOutputFormat<LongWritable, IntWritable, FloatWritable> {
+  /**
+   * Simple text based vertex writer
+   */
+  private static class SimpleTextVertexWriter
+    extends TextVertexWriter<LongWritable, IntWritable, FloatWritable> {
     /**
-     * Simple text based vertex writer
+     * Initialize with the LineRecordWriter.
+     *
+     * @param lineRecordWriter Line record writer from TextOutputFormat
      */
-    private static class SimpleTextVertexWriter
-            extends TextVertexWriter<LongWritable, IntWritable, FloatWritable> {
-
-        /**
-         * Initialize with the LineRecordWriter.
-         *
-         * @param lineRecordWriter Line record writer from TextOutputFormat
-         */
-        public SimpleTextVertexWriter(
-                RecordWriter<Text, Text> lineRecordWriter) {
-            super(lineRecordWriter);
-        }
-
-        @Override
-        public void writeVertex(
-                BasicVertex<LongWritable, IntWritable, FloatWritable, ?> vertex)
-                throws IOException, InterruptedException {
-            getRecordWriter().write(
-                new Text(vertex.getVertexId().toString()),
-                new Text(vertex.getVertexValue().toString()));
-        }
+    public SimpleTextVertexWriter(
+        RecordWriter<Text, Text> lineRecordWriter) {
+      super(lineRecordWriter);
     }
 
     @Override
-    public VertexWriter<LongWritable, IntWritable, FloatWritable>
-        createVertexWriter(TaskAttemptContext context)
-            throws IOException, InterruptedException {
-        RecordWriter<Text, Text> recordWriter =
-            textOutputFormat.getRecordWriter(context);
-        return new SimpleTextVertexWriter(recordWriter);
+    public void writeVertex(
+      BasicVertex<LongWritable, IntWritable, FloatWritable, ?> vertex)
+      throws IOException, InterruptedException {
+      getRecordWriter().write(
+          new Text(vertex.getVertexId().toString()),
+          new Text(vertex.getVertexValue().toString()));
     }
+  }
+
+  @Override
+  public VertexWriter<LongWritable, IntWritable, FloatWritable>
+  createVertexWriter(TaskAttemptContext context)
+    throws IOException, InterruptedException {
+    RecordWriter<Text, Text> recordWriter =
+        textOutputFormat.getRecordWriter(context);
+    return new SimpleTextVertexWriter(recordWriter);
+  }
 }

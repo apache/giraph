@@ -43,36 +43,36 @@ import org.apache.hadoop.io.WritableComparable;
  */
 @SuppressWarnings("rawtypes")
 public abstract class RangeWorkerPartitioner<I extends WritableComparable,
-        V extends Writable, E extends Writable, M extends Writable> implements
-        WorkerGraphPartitioner<I, V, E, M> {
-    /** Mapping of the vertex ids to the {@link PartitionOwner} */
-    protected NavigableMap<I, RangePartitionOwner<I>> vertexRangeMap =
-        new TreeMap<I, RangePartitionOwner<I>>();
+    V extends Writable, E extends Writable, M extends Writable> implements
+    WorkerGraphPartitioner<I, V, E, M> {
+  /** Mapping of the vertex ids to the {@link PartitionOwner} */
+  protected NavigableMap<I, RangePartitionOwner<I>> vertexRangeMap =
+      new TreeMap<I, RangePartitionOwner<I>>();
 
-    @Override
-    public PartitionOwner createPartitionOwner() {
-        return new RangePartitionOwner<I>();
-    }
+  @Override
+  public PartitionOwner createPartitionOwner() {
+    return new RangePartitionOwner<I>();
+  }
 
-    @Override
-    public PartitionOwner getPartitionOwner(I vertexId) {
-        // Find the partition owner based on the maximum partition id.
-        // If the vertex id exceeds any of the maximum partition ids, give
-        // it to the last one
-        if (vertexId == null) {
-            throw new IllegalArgumentException(
-                "getPartitionOwner: Illegal null vertex id");
-        }
-        I maxVertexIndex = vertexRangeMap.ceilingKey(vertexId);
-        if (maxVertexIndex == null) {
-            return vertexRangeMap.lastEntry().getValue();
-        } else {
-            return vertexRangeMap.get(vertexId);
-        }
+  @Override
+  public PartitionOwner getPartitionOwner(I vertexId) {
+    // Find the partition owner based on the maximum partition id.
+    // If the vertex id exceeds any of the maximum partition ids, give
+    // it to the last one
+    if (vertexId == null) {
+      throw new IllegalArgumentException(
+          "getPartitionOwner: Illegal null vertex id");
     }
+    I maxVertexIndex = vertexRangeMap.ceilingKey(vertexId);
+    if (maxVertexIndex == null) {
+      return vertexRangeMap.lastEntry().getValue();
+    } else {
+      return vertexRangeMap.get(vertexId);
+    }
+  }
 
-    @Override
-    public Collection<? extends PartitionOwner> getPartitionOwners() {
-        return vertexRangeMap.values();
-    }
+  @Override
+  public Collection<? extends PartitionOwner> getPartitionOwners() {
+    return vertexRangeMap.values();
+  }
 }

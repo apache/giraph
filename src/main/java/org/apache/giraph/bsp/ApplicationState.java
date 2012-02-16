@@ -22,8 +22,12 @@ package org.apache.giraph.bsp;
  *  State of the BSP application
  */
 public enum ApplicationState {
-    UNKNOWN, ///< Shouldn't be seen, just an initial state
-    START_SUPERSTEP, ///< Start from a desired superstep
-    FAILED, ///< Unrecoverable
-    FINISHED ///< Successful completion
+  /** Shouldn't be seen, just an initial state */
+  UNKNOWN,
+  /** Start from a desired superstep */
+  START_SUPERSTEP,
+  /** Unrecoverable */
+  FAILED,
+  /** Successful completion */
+  FINISHED,
 }

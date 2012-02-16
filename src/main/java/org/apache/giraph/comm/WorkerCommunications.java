@@ -33,80 +33,78 @@ import java.util.Map;
 /**
  * Public interface for workers to do message communication
  *
- * @param <I extends Writable> vertex id
- * @param <V extends Writable> vertex value
- * @param <E extends Writable> edge value
- * @param <M extends Writable> message data
+ * @param <I> Vertex id
+ * @param <V> Vertex value
+ * @param <E> Edge value
+ * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public interface WorkerCommunications<I extends WritableComparable,
-                                      V extends Writable,
-                                      E extends Writable,
-                                      M extends Writable> {
-    /**
-     * Fix changes to the workers and the mapping between partitions and
-     * workers.
-     */
-    void fixPartitionIdToSocketAddrMap();
+    V extends Writable, E extends Writable, M extends Writable> {
+  /**
+   * Fix changes to the workers and the mapping between partitions and
+   * workers.
+   */
+  void fixPartitionIdToSocketAddrMap();
 
-    /**
-     * Sends a message to destination vertex.
-     *
-     * @param id
-     * @param msg
-     */
-    void sendMessageReq(I id, M msg);
+  /**
+   * Sends a message to destination vertex.
+   *
+   * @param destVertexId Destination vertex id.
+   * @param message Message to send.
+   */
+  void sendMessageReq(I destVertexId, M message);
 
-    /**
-     * Sends a partition to the appropriate partition owner
-     *
-     * @param workerInfo Owner the vertices belong to
-     * @param partition Partition to send
-     */
-    void sendPartitionReq(WorkerInfo workerInfo,
-                          Partition<I, V, E, M> partition);
+  /**
+   * Sends a partition to the appropriate partition owner
+   *
+   * @param workerInfo Owner the vertices belong to
+   * @param partition Partition to send
+   */
+  void sendPartitionReq(WorkerInfo workerInfo,
+      Partition<I, V, E, M> partition);
 
-    /**
-     * Sends a request to the appropriate vertex range owner to add an edge
-     *
-     * @param vertexIndex Index of the vertex to get the request
-     * @param edge Edge to be added
-     * @throws IOException
-     */
-    void addEdgeReq(I vertexIndex, Edge<I, E> edge) throws IOException;
+  /**
+   * Sends a request to the appropriate vertex range owner to add an edge
+   *
+   * @param vertexIndex Index of the vertex to get the request
+   * @param edge Edge to be added
+   * @throws IOException
+   */
+  void addEdgeReq(I vertexIndex, Edge<I, E> edge) throws IOException;
 
-    /**
-     * Sends a request to the appropriate vertex range owner to remove an edge
-     *
-     * @param vertexIndex Index of the vertex to get the request
-     * @param destinationVertexIndex Index of the edge to be removed
-     * @throws IOException
-     */
-    void removeEdgeReq(I vertexIndex, I destinationVertexIndex)
-        throws IOException;
+  /**
+   * Sends a request to the appropriate vertex range owner to remove an edge
+   *
+   * @param vertexIndex Index of the vertex to get the request
+   * @param destinationVertexIndex Index of the edge to be removed
+   * @throws IOException
+   */
+  void removeEdgeReq(I vertexIndex, I destinationVertexIndex)
+    throws IOException;
 
-    /**
-     * Sends a request to the appropriate vertex range owner to add a vertex
-     *
-     * @param vertex Vertex to be added
-     * @throws IOException
-     */
-    void addVertexReq(BasicVertex<I, V, E, M> vertex) throws IOException;
+  /**
+   * Sends a request to the appropriate vertex range owner to add a vertex
+   *
+   * @param vertex Vertex to be added
+   * @throws IOException
+   */
+  void addVertexReq(BasicVertex<I, V, E, M> vertex) throws IOException;
 
-    /**
-     * Sends a request to the appropriate vertex range owner to remove a vertex
-     *
-     * @param vertexIndex Index of the vertex to be removed
-     * @throws IOException
-     */
-    void removeVertexReq(I vertexIndex) throws IOException;
+  /**
+   * Sends a request to the appropriate vertex range owner to remove a vertex
+   *
+   * @param vertexIndex Index of the vertex to be removed
+   * @throws IOException
+   */
+  void removeVertexReq(I vertexIndex) throws IOException;
 
-    /**
-     * Get the vertices that were sent in the last iteration.  After getting
-     * the map, the user should synchronize with it to insure it
-     * is thread-safe.
-     *
-     * @return map of vertex ranges to vertices
-     */
-    Map<Integer, List<BasicVertex<I, V, E, M>>> getInPartitionVertexMap();
+  /**
+   * Get the vertices that were sent in the last iteration.  After getting
+   * the map, the user should synchronize with it to insure it
+   * is thread-safe.
+   *
+   * @return map of vertex ranges to vertices
+   */
+  Map<Integer, List<BasicVertex<I, V, E, M>>> getInPartitionVertexMap();
 }

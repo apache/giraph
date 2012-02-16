@@ -63,340 +63,340 @@ import java.util.List;
  * Unit test for many simple BSP applications.
  */
 public class TestBspBasic extends BspCase {
-    /**
-     * Create the test case
-     *
-     * @param testName name of the test case
-     */
-    public TestBspBasic(String testName) {
-        super(testName);
+  /**
+   * Create the test case
+   *
+   * @param testName name of the test case
+   */
+  public TestBspBasic(String testName) {
+    super(testName);
+  }
+
+  /**
+   * @return the suite of tests being tested
+   */
+  public static Test suite() {
+    return new TestSuite(TestBspBasic.class);
+  }
+
+  /**
+   * Just instantiate the vertex (all functions are implemented) and the
+   * VertexInputFormat using reflection.
+   *
+   * @throws IllegalAccessException
+   * @throws InstantiationException
+   * @throws InterruptedException
+   * @throws IOException
+   * @throws InvocationTargetException
+   * @throws IllegalArgumentException
+   * @throws NoSuchMethodException
+   * @throws SecurityException
+   */
+  public void testInstantiateVertex()
+      throws InstantiationException, IllegalAccessException,
+      IOException, InterruptedException, IllegalArgumentException,
+      InvocationTargetException, SecurityException, NoSuchMethodException {
+    System.out.println("testInstantiateVertex: java.class.path=" +
+        System.getProperty("java.class.path"));
+    GiraphJob job = new GiraphJob(getCallingMethodName());
+    job.setVertexClass(SimpleSuperstepVertex.class);
+    job.setVertexInputFormatClass(
+        SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat.class);
+    GraphState<LongWritable, IntWritable, FloatWritable, IntWritable> gs =
+        new GraphState<LongWritable, IntWritable,
+        FloatWritable, IntWritable>();
+    BasicVertex<LongWritable, IntWritable, FloatWritable, IntWritable> vertex =
+        BspUtils.createVertex(job.getConfiguration());
+    vertex.initialize(null, null, null, null);
+    System.out.println("testInstantiateVertex: Got vertex " + vertex +
+        ", graphState" + gs);
+    VertexInputFormat<LongWritable, IntWritable, FloatWritable, IntWritable>
+    inputFormat = BspUtils.createVertexInputFormat(job.getConfiguration());
+    List<InputSplit> splitArray =
+        inputFormat.getSplits(
+            new JobContext(new Configuration(), new JobID()), 1);
+    ByteArrayOutputStream byteArrayOutputStream =
+        new ByteArrayOutputStream();
+    DataOutputStream outputStream =
+        new DataOutputStream(byteArrayOutputStream);
+    ((Writable) splitArray.get(0)).write(outputStream);
+    System.out.println("testInstantiateVertex: Example output split = " +
+        byteArrayOutputStream.toString());
+  }
+
+  /**
+   * Do some checks for local job runner.
+   *
+   * @throws IOException
+   * @throws ClassNotFoundException
+   * @throws InterruptedException
+   */
+  public void testLocalJobRunnerConfig()
+      throws IOException, InterruptedException, ClassNotFoundException {
+    if (getJobTracker() != null) {
+      System.out.println("testLocalJobRunnerConfig: Skipping for " +
+          "non-local");
+      return;
+    }
+    GiraphJob job = new GiraphJob(getCallingMethodName());
+    setupConfiguration(job);
+    job.setWorkerConfiguration(5, 5, 100.0f);
+    job.getConfiguration().setBoolean(GiraphJob.SPLIT_MASTER_WORKER, true);
+    job.setVertexClass(SimpleSuperstepVertex.class);
+    job.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
+    try {
+      job.run(true);
+      assertTrue(false);
+    } catch (IllegalArgumentException e) {
     }
 
-    /**
-     * @return the suite of tests being tested
-     */
-    public static Test suite() {
-        return new TestSuite(TestBspBasic.class);
+    job.getConfiguration().setBoolean(GiraphJob.SPLIT_MASTER_WORKER, false);
+    try {
+      job.run(true);
+      assertTrue(false);
+    } catch (IllegalArgumentException e) {
+    }
+    job.setWorkerConfiguration(1, 1, 100.0f);
+    job.run(true);
+  }
+
+  /**
+   * Run a sample BSP job in JobTracker, kill a task, and make sure
+   * the job fails (not enough attempts to restart)
+   *
+   * @throws IOException
+   * @throws ClassNotFoundException
+   * @throws InterruptedException
+   */
+  public void testBspFail()
+      throws IOException, InterruptedException, ClassNotFoundException {
+    // Allow this test only to be run on a real Hadoop setup
+    if (getJobTracker() == null) {
+      System.out.println("testBspFail: not executed for local setup.");
+      return;
     }
 
-    /**
-     * Just instantiate the vertex (all functions are implemented) and the
-     * VertexInputFormat using reflection.
-     *
-     * @throws IllegalAccessException
-     * @throws InstantiationException
-     * @throws InterruptedException
-     * @throws IOException
-     * @throws InvocationTargetException
-     * @throws IllegalArgumentException
-     * @throws NoSuchMethodException
-     * @throws SecurityException
-     */
-    public void testInstantiateVertex()
-            throws InstantiationException, IllegalAccessException,
-            IOException, InterruptedException, IllegalArgumentException,
-        InvocationTargetException, SecurityException, NoSuchMethodException {
-        System.out.println("testInstantiateVertex: java.class.path=" +
-                           System.getProperty("java.class.path"));
-        GiraphJob job = new GiraphJob(getCallingMethodName());
-        job.setVertexClass(SimpleSuperstepVertex.class);
-        job.setVertexInputFormatClass(
-            SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat.class);
-        GraphState<LongWritable, IntWritable, FloatWritable, IntWritable> gs =
-            new GraphState<LongWritable, IntWritable,
-                           FloatWritable, IntWritable>();
-        BasicVertex<LongWritable, IntWritable, FloatWritable, IntWritable> vertex =
-            BspUtils.createVertex(job.getConfiguration());
-        vertex.initialize(null, null, null, null);
-        System.out.println("testInstantiateVertex: Got vertex " + vertex +
-                           ", graphState" + gs);
-        VertexInputFormat<LongWritable, IntWritable, FloatWritable, IntWritable>
-            inputFormat = BspUtils.createVertexInputFormat(job.getConfiguration());
-        List<InputSplit> splitArray =
-            inputFormat.getSplits(
-                new JobContext(new Configuration(), new JobID()), 1);
-        ByteArrayOutputStream byteArrayOutputStream =
-            new ByteArrayOutputStream();
-        DataOutputStream outputStream =
-            new DataOutputStream(byteArrayOutputStream);
-        ((Writable) splitArray.get(0)).write(outputStream);
-        System.out.println("testInstantiateVertex: Example output split = " +
-                           byteArrayOutputStream.toString());
-    }
+    GiraphJob job = new GiraphJob(getCallingMethodName());
+    setupConfiguration(job);
+    job.getConfiguration().setInt("mapred.map.max.attempts", 1);
+    job.setVertexClass(SimpleFailVertex.class);
+    job.setVertexInputFormatClass(SimplePageRankVertexInputFormat.class);
+    Path outputPath = new Path("/tmp/" + getCallingMethodName());
+    removeAndSetOutput(job, outputPath);
+    assertTrue(!job.run(true));
+  }
 
-    /**
-     * Do some checks for local job runner.
-     *
-     * @throws IOException
-     * @throws ClassNotFoundException
-     * @throws InterruptedException
-     */
-    public void testLocalJobRunnerConfig()
-            throws IOException, InterruptedException, ClassNotFoundException {
-        if (getJobTracker() != null) {
-            System.out.println("testLocalJobRunnerConfig: Skipping for " +
-                               "non-local");
-            return;
-        }
-        GiraphJob job = new GiraphJob(getCallingMethodName());
-        setupConfiguration(job);
-        job.setWorkerConfiguration(5, 5, 100.0f);
-        job.getConfiguration().setBoolean(GiraphJob.SPLIT_MASTER_WORKER, true);
-        job.setVertexClass(SimpleSuperstepVertex.class);
-        job.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
+  /**
+   * Run a sample BSP job locally and test supersteps.
+   *
+   * @throws IOException
+   * @throws ClassNotFoundException
+   * @throws InterruptedException
+   */
+  public void testBspSuperStep()
+      throws IOException, InterruptedException, ClassNotFoundException {
+    GiraphJob job = new GiraphJob(getCallingMethodName());
+    setupConfiguration(job);
+    job.getConfiguration().setFloat(GiraphJob.TOTAL_INPUT_SPLIT_MULTIPLIER,
+        2.0f);
+    // GeneratedInputSplit will generate 10 vertices
+    job.getConfiguration().setLong(GeneratedVertexReader.READER_VERTICES,
+        10);
+    job.setVertexClass(SimpleSuperstepVertex.class);
+    job.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
+    job.setVertexOutputFormatClass(SimpleSuperstepVertexOutputFormat.class);
+    Path outputPath = new Path("/tmp/" + getCallingMethodName());
+    removeAndSetOutput(job, outputPath);
+    assertTrue(job.run(true));
+    if (getJobTracker() == null) {
+      FileStatus fileStatus = getSinglePartFileStatus(job, outputPath);
+      assertTrue(fileStatus.getLen() == 49);
+    }
+  }
+
+  /**
+   * Run a sample BSP job locally and test messages.
+   *
+   * @throws IOException
+   * @throws ClassNotFoundException
+   * @throws InterruptedException
+   */
+  public void testBspMsg()
+      throws IOException, InterruptedException, ClassNotFoundException {
+    GiraphJob job = new GiraphJob(getCallingMethodName());
+    setupConfiguration(job);
+    job.setVertexClass(SimpleMsgVertex.class);
+    job.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
+    assertTrue(job.run(true));
+  }
+
+
+  /**
+   * Run a sample BSP job locally with no vertices and make sure
+   * it completes.
+   *
+   * @throws IOException
+   * @throws ClassNotFoundException
+   * @throws InterruptedException
+   */
+  public void testEmptyVertexInputFormat()
+      throws IOException, InterruptedException, ClassNotFoundException {
+    GiraphJob job = new GiraphJob(getCallingMethodName());
+    setupConfiguration(job);
+    job.getConfiguration().setLong(GeneratedVertexReader.READER_VERTICES,
+        0);
+    job.setVertexClass(SimpleMsgVertex.class);
+    job.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
+    assertTrue(job.run(true));
+  }
+
+  /**
+   * Run a sample BSP job locally with combiner and checkout output value.
+   *
+   * @throws IOException
+   * @throws ClassNotFoundException
+   * @throws InterruptedException
+   */
+  public void testBspCombiner()
+      throws IOException, InterruptedException, ClassNotFoundException {
+    GiraphJob job = new GiraphJob(getCallingMethodName());
+    setupConfiguration(job);
+    job.setVertexClass(SimpleCombinerVertex.class);
+    job.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
+    job.setVertexCombinerClass(SimpleSumCombiner.class);
+    assertTrue(job.run(true));
+  }
+
+  /**
+   * Run a sample BSP job locally and test PageRank.
+   *
+   * @throws IOException
+   * @throws ClassNotFoundException
+   * @throws InterruptedException
+   */
+  public void testBspPageRank()
+      throws IOException, InterruptedException, ClassNotFoundException {
+    GiraphJob job = new GiraphJob(getCallingMethodName());
+    setupConfiguration(job);
+    job.setVertexClass(SimplePageRankVertex.class);
+    job.setWorkerContextClass(
+        SimplePageRankVertex.SimplePageRankVertexWorkerContext.class);
+    job.setVertexInputFormatClass(SimplePageRankVertexInputFormat.class);
+    assertTrue(job.run(true));
+    if (getJobTracker() == null) {
+      double maxPageRank =
+          SimplePageRankVertex.SimplePageRankVertexWorkerContext.getFinalMax();
+      double minPageRank =
+          SimplePageRankVertex.SimplePageRankVertexWorkerContext.getFinalMin();
+      long numVertices =
+          SimplePageRankVertex.SimplePageRankVertexWorkerContext.getFinalSum();
+      System.out.println("testBspPageRank: maxPageRank=" + maxPageRank +
+          " minPageRank=" + minPageRank +
+          " numVertices=" + numVertices);
+      assertTrue("34.030 !< " + maxPageRank + " !< " + " 34.0301",
+          maxPageRank > 34.030 && maxPageRank < 34.0301);
+      assertTrue("0.03 !< " + minPageRank + " !< " + "0.03001",
+          minPageRank > 0.03 && minPageRank < 0.03001);
+      assertTrue("numVertices = " + numVertices + " != 5", numVertices == 5);
+    }
+  }
+
+  /**
+   * Run a sample BSP job locally and test shortest paths.
+   *
+   * @throws IOException
+   * @throws ClassNotFoundException
+   * @throws InterruptedException
+   */
+  public void testBspShortestPaths()
+      throws IOException, InterruptedException, ClassNotFoundException {
+    GiraphJob job = new GiraphJob(getCallingMethodName());
+    setupConfiguration(job);
+    job.setVertexClass(SimpleShortestPathsVertex.class);
+    job.setVertexInputFormatClass(SimplePageRankVertexInputFormat.class);
+    job.setVertexOutputFormatClass(
+        SimpleShortestPathsVertexOutputFormat.class);
+    job.getConfiguration().setLong(SimpleShortestPathsVertex.SOURCE_ID, 0);
+    Path outputPath = new Path("/tmp/" + getCallingMethodName());
+    removeAndSetOutput(job, outputPath);
+    assertTrue(job.run(true));
+
+    job = new GiraphJob(getCallingMethodName());
+    setupConfiguration(job);
+    job.setVertexClass(SimpleShortestPathsVertex.class);
+    job.setVertexInputFormatClass(SimplePageRankVertexInputFormat.class);
+    job.setVertexOutputFormatClass(
+        SimpleShortestPathsVertexOutputFormat.class);
+    job.getConfiguration().setLong(SimpleShortestPathsVertex.SOURCE_ID, 0);
+    Path outputPath2 = new Path("/tmp/" + getCallingMethodName() + "2");
+    removeAndSetOutput(job, outputPath2);
+    assertTrue(job.run(true));
+    if (getJobTracker() == null) {
+      FileStatus fileStatus = getSinglePartFileStatus(job, outputPath);
+      FileStatus fileStatus2 = getSinglePartFileStatus(job, outputPath2);
+      assertTrue(fileStatus.getLen() == fileStatus2.getLen());
+    }
+  }
+
+  /**
+   * Run a sample BSP job locally and test PageRank with AggregatorWriter.
+   *
+   * @throws IOException
+   * @throws ClassNotFoundException
+   * @throws InterruptedException
+   */
+  public void testBspPageRankWithAggregatorWriter()
+      throws IOException, InterruptedException, ClassNotFoundException {
+    GiraphJob job = new GiraphJob(getCallingMethodName());
+    setupConfiguration(job);
+    job.setVertexClass(SimplePageRankVertex.class);
+    job.setWorkerContextClass(
+        SimplePageRankVertex.SimplePageRankVertexWorkerContext.class);
+    job.setVertexInputFormatClass(SimplePageRankVertexInputFormat.class);
+    job.setAggregatorWriterClass(SimpleAggregatorWriter.class);
+    Path outputPath = new Path("/tmp/" + getCallingMethodName());
+    removeAndSetOutput(job, outputPath);
+    assertTrue(job.run(true));
+    if (getJobTracker() == null) {
+      double maxPageRank =
+          SimplePageRankVertex.SimplePageRankVertexWorkerContext.getFinalMax();
+      double minPageRank =
+          SimplePageRankVertex.SimplePageRankVertexWorkerContext.getFinalMin();
+      long numVertices =
+          SimplePageRankVertex.SimplePageRankVertexWorkerContext.getFinalSum();
+      System.out.println("testBspPageRank: maxPageRank=" + maxPageRank +
+          " minPageRank=" + minPageRank +
+          " numVertices=" + numVertices);
+      FileSystem fs = FileSystem.get(new Configuration());
+      FSDataInputStream input =
+          fs.open(new Path(SimpleAggregatorWriter.getFilename()));
+      int i, all;
+      for (i = 0; ; i++) {
+        all = 0;
         try {
-            job.run(true);
-            assertTrue(false);
-        } catch (IllegalArgumentException e) {
+          DoubleWritable max = new DoubleWritable();
+          max.readFields(input);
+          all++;
+          DoubleWritable min = new DoubleWritable();
+          min.readFields(input);
+          all++;
+          LongWritable sum = new LongWritable();
+          sum.readFields(input);
+          all++;
+          if (i > 0) {
+            assertTrue(max.get() == maxPageRank);
+            assertTrue(min.get() == minPageRank);
+            assertTrue(sum.get() == numVertices);
+          }
+        } catch (IOException e) {
+          break;
         }
-
-        job.getConfiguration().setBoolean(GiraphJob.SPLIT_MASTER_WORKER, false);
-        try {
-            job.run(true);
-            assertTrue(false);
-        } catch (IllegalArgumentException e) {
-        }
-        job.setWorkerConfiguration(1, 1, 100.0f);
-        job.run(true);
+      }
+      input.close();
+      // contained all supersteps
+      assertTrue(i == SimplePageRankVertex.MAX_SUPERSTEPS+1 && all == 0);
+      remove(new Configuration(),
+          new Path(SimpleAggregatorWriter.getFilename()));
     }
-
-    /**
-     * Run a sample BSP job in JobTracker, kill a task, and make sure
-     * the job fails (not enough attempts to restart)
-     *
-     * @throws IOException
-     * @throws ClassNotFoundException
-     * @throws InterruptedException
-     */
-    public void testBspFail()
-            throws IOException, InterruptedException, ClassNotFoundException {
-        // Allow this test only to be run on a real Hadoop setup
-        if (getJobTracker() == null) {
-            System.out.println("testBspFail: not executed for local setup.");
-            return;
-        }
-
-        GiraphJob job = new GiraphJob(getCallingMethodName());
-        setupConfiguration(job);
-        job.getConfiguration().setInt("mapred.map.max.attempts", 1);
-        job.setVertexClass(SimpleFailVertex.class);
-        job.setVertexInputFormatClass(SimplePageRankVertexInputFormat.class);
-        Path outputPath = new Path("/tmp/" + getCallingMethodName());
-        removeAndSetOutput(job, outputPath);
-        assertTrue(!job.run(true));
-    }
-
-    /**
-     * Run a sample BSP job locally and test supersteps.
-     *
-     * @throws IOException
-     * @throws ClassNotFoundException
-     * @throws InterruptedException
-     */
-    public void testBspSuperStep()
-            throws IOException, InterruptedException, ClassNotFoundException {
-        GiraphJob job = new GiraphJob(getCallingMethodName());
-        setupConfiguration(job);
-        job.getConfiguration().setFloat(GiraphJob.TOTAL_INPUT_SPLIT_MULTIPLIER,
-                                        2.0f);
-        // GeneratedInputSplit will generate 10 vertices
-        job.getConfiguration().setLong(GeneratedVertexReader.READER_VERTICES,
-                                       10);
-        job.setVertexClass(SimpleSuperstepVertex.class);
-        job.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
-        job.setVertexOutputFormatClass(SimpleSuperstepVertexOutputFormat.class);
-        Path outputPath = new Path("/tmp/" + getCallingMethodName());
-        removeAndSetOutput(job, outputPath);
-        assertTrue(job.run(true));
-        if (getJobTracker() == null) {
-            FileStatus fileStatus = getSinglePartFileStatus(job, outputPath);
-            assertTrue(fileStatus.getLen() == 49);
-        }
-    }
-
-    /**
-     * Run a sample BSP job locally and test messages.
-     *
-     * @throws IOException
-     * @throws ClassNotFoundException
-     * @throws InterruptedException
-     */
-    public void testBspMsg()
-            throws IOException, InterruptedException, ClassNotFoundException {
-        GiraphJob job = new GiraphJob(getCallingMethodName());
-        setupConfiguration(job);
-        job.setVertexClass(SimpleMsgVertex.class);
-        job.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
-        assertTrue(job.run(true));
-    }
-
-
-    /**
-     * Run a sample BSP job locally with no vertices and make sure
-     * it completes.
-     *
-     * @throws IOException
-     * @throws ClassNotFoundException
-     * @throws InterruptedException
-     */
-    public void testEmptyVertexInputFormat()
-            throws IOException, InterruptedException, ClassNotFoundException {
-        GiraphJob job = new GiraphJob(getCallingMethodName());
-        setupConfiguration(job);
-        job.getConfiguration().setLong(GeneratedVertexReader.READER_VERTICES,
-                                       0);
-        job.setVertexClass(SimpleMsgVertex.class);
-        job.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
-        assertTrue(job.run(true));
-    }
-
-    /**
-     * Run a sample BSP job locally with combiner and checkout output value.
-     *
-     * @throws IOException
-     * @throws ClassNotFoundException
-     * @throws InterruptedException
-     */
-    public void testBspCombiner()
-            throws IOException, InterruptedException, ClassNotFoundException {
-        GiraphJob job = new GiraphJob(getCallingMethodName());
-        setupConfiguration(job);
-        job.setVertexClass(SimpleCombinerVertex.class);
-        job.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
-        job.setVertexCombinerClass(SimpleSumCombiner.class);
-        assertTrue(job.run(true));
-    }
-
-    /**
-     * Run a sample BSP job locally and test PageRank.
-     *
-     * @throws IOException
-     * @throws ClassNotFoundException
-     * @throws InterruptedException
-     */
-    public void testBspPageRank()
-            throws IOException, InterruptedException, ClassNotFoundException {
-        GiraphJob job = new GiraphJob(getCallingMethodName());
-        setupConfiguration(job);
-        job.setVertexClass(SimplePageRankVertex.class);
-        job.setWorkerContextClass(
-        	SimplePageRankVertex.SimplePageRankVertexWorkerContext.class);
-        job.setVertexInputFormatClass(SimplePageRankVertexInputFormat.class);
-        assertTrue(job.run(true));
-        if (getJobTracker() == null) {
-            double maxPageRank =
-            	SimplePageRankVertex.SimplePageRankVertexWorkerContext.finalMax;
-            double minPageRank =
-            	SimplePageRankVertex.SimplePageRankVertexWorkerContext.finalMin;
-            long numVertices =
-            	SimplePageRankVertex.SimplePageRankVertexWorkerContext.finalSum;
-            System.out.println("testBspPageRank: maxPageRank=" + maxPageRank +
-                               " minPageRank=" + minPageRank +
-                               " numVertices=" + numVertices);
-            assertTrue("34.030 !< " + maxPageRank + " !< " + " 34.0301",
-                maxPageRank > 34.030 && maxPageRank < 34.0301);
-            assertTrue("0.03 !< " + minPageRank + " !< " + "0.03001",
-                minPageRank > 0.03 && minPageRank < 0.03001);
-            assertTrue("numVertices = " + numVertices + " != 5", numVertices == 5);
-        }
-    }
-
-    /**
-     * Run a sample BSP job locally and test shortest paths.
-     *
-     * @throws IOException
-     * @throws ClassNotFoundException
-     * @throws InterruptedException
-     */
-    public void testBspShortestPaths()
-            throws IOException, InterruptedException, ClassNotFoundException {
-        GiraphJob job = new GiraphJob(getCallingMethodName());
-        setupConfiguration(job);
-        job.setVertexClass(SimpleShortestPathsVertex.class);
-        job.setVertexInputFormatClass(SimplePageRankVertexInputFormat.class);
-        job.setVertexOutputFormatClass(
-            SimpleShortestPathsVertexOutputFormat.class);
-        job.getConfiguration().setLong(SimpleShortestPathsVertex.SOURCE_ID, 0);
-        Path outputPath = new Path("/tmp/" + getCallingMethodName());
-        removeAndSetOutput(job, outputPath);
-        assertTrue(job.run(true));
-
-        job = new GiraphJob(getCallingMethodName());
-        setupConfiguration(job);
-        job.setVertexClass(SimpleShortestPathsVertex.class);
-        job.setVertexInputFormatClass(SimplePageRankVertexInputFormat.class);
-        job.setVertexOutputFormatClass(
-            SimpleShortestPathsVertexOutputFormat.class);
-        job.getConfiguration().setLong(SimpleShortestPathsVertex.SOURCE_ID, 0);
-        Path outputPath2 = new Path("/tmp/" + getCallingMethodName() + "2");
-        removeAndSetOutput(job, outputPath2);
-        assertTrue(job.run(true));
-        if (getJobTracker() == null) {
-            FileStatus fileStatus = getSinglePartFileStatus(job, outputPath);
-            FileStatus fileStatus2 = getSinglePartFileStatus(job, outputPath2);
-            assertTrue(fileStatus.getLen() == fileStatus2.getLen());
-        }
-    }
-
-    /**
-     * Run a sample BSP job locally and test PageRank with AggregatorWriter.
-     *
-     * @throws IOException
-     * @throws ClassNotFoundException
-     * @throws InterruptedException
-     */
-    public void testBspPageRankWithAggregatorWriter()
-            throws IOException, InterruptedException, ClassNotFoundException {
-        GiraphJob job = new GiraphJob(getCallingMethodName());
-        setupConfiguration(job);
-        job.setVertexClass(SimplePageRankVertex.class);
-        job.setWorkerContextClass(
-            SimplePageRankVertex.SimplePageRankVertexWorkerContext.class);
-        job.setVertexInputFormatClass(SimplePageRankVertexInputFormat.class);
-        job.setAggregatorWriterClass(SimpleAggregatorWriter.class);
-        Path outputPath = new Path("/tmp/" + getCallingMethodName());
-        removeAndSetOutput(job, outputPath);
-        assertTrue(job.run(true));
-        if (getJobTracker() == null) {
-            double maxPageRank =
-                SimplePageRankVertex.SimplePageRankVertexWorkerContext.finalMax;
-            double minPageRank =
-                SimplePageRankVertex.SimplePageRankVertexWorkerContext.finalMin;
-            long numVertices =
-                SimplePageRankVertex.SimplePageRankVertexWorkerContext.finalSum;
-            System.out.println("testBspPageRank: maxPageRank=" + maxPageRank +
-                               " minPageRank=" + minPageRank +
-                               " numVertices=" + numVertices);
-            FileSystem fs = FileSystem.get(new Configuration());
-            FSDataInputStream input =
-                fs.open(new Path(SimpleAggregatorWriter.filename));
-            int i, all;
-            for (i = 0; ; i++) {
-                all = 0;
-                try {
-                    DoubleWritable max = new DoubleWritable();
-                    max.readFields(input);
-                    all++;
-                    DoubleWritable min = new DoubleWritable();
-                    min.readFields(input);
-                    all++;
-                    LongWritable sum = new LongWritable();
-                    sum.readFields(input);
-                    all++;
-                    if (i > 0) {
-                        assertTrue(max.get() == maxPageRank);
-                        assertTrue(min.get() == minPageRank);
-                        assertTrue(sum.get() == numVertices);
-                    }
-                } catch (IOException e) {
-                    break;
-                }
-            }
-            input.close();
-            // contained all supersteps
-            assertTrue(i == SimplePageRankVertex.MAX_SUPERSTEPS+1 && all == 0);
-            remove(new Configuration(),
-                   new Path(SimpleAggregatorWriter.filename));
-        }
-    }
+  }
 }

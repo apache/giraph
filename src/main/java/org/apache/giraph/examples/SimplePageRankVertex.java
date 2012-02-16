@@ -45,205 +45,230 @@ import java.util.Map;
  * Demonstrates the basic Pregel PageRank implementation.
  */
 public class SimplePageRankVertex extends LongDoubleFloatDoubleVertex {
-    /** Number of supersteps for this test */
-    public static final int MAX_SUPERSTEPS = 30;
-    /** Logger */
-    private static final Logger LOG =
-        Logger.getLogger(SimplePageRankVertex.class);
+  /** Number of supersteps for this test */
+  public static final int MAX_SUPERSTEPS = 30;
+  /** Logger */
+  private static final Logger LOG =
+      Logger.getLogger(SimplePageRankVertex.class);
+
+  @Override
+  public void compute(Iterator<DoubleWritable> msgIterator) {
+    LongSumAggregator sumAggreg = (LongSumAggregator) getAggregator("sum");
+    MinAggregator minAggreg = (MinAggregator) getAggregator("min");
+    MaxAggregator maxAggreg = (MaxAggregator) getAggregator("max");
+    if (getSuperstep() >= 1) {
+      double sum = 0;
+      while (msgIterator.hasNext()) {
+        sum += msgIterator.next().get();
+      }
+      DoubleWritable vertexValue =
+          new DoubleWritable((0.15f / getNumVertices()) + 0.85f * sum);
+      setVertexValue(vertexValue);
+      maxAggreg.aggregate(vertexValue);
+      minAggreg.aggregate(vertexValue);
+      sumAggreg.aggregate(1L);
+      LOG.info(getVertexId() + ": PageRank=" + vertexValue +
+          " max=" + maxAggreg.getAggregatedValue() +
+          " min=" + minAggreg.getAggregatedValue());
+    }
+
+    if (getSuperstep() < MAX_SUPERSTEPS) {
+      long edges = getNumOutEdges();
+      sendMsgToAllEdges(
+          new DoubleWritable(getVertexValue().get() / edges));
+    } else {
+      voteToHalt();
+    }
+  }
+
+  /**
+   * Worker context used with {@link SimplePageRankVertex}.
+   */
+  public static class SimplePageRankVertexWorkerContext extends
+      WorkerContext {
+    /** Final max value for verification for local jobs */
+    private static double FINAL_MAX;
+    /** Final min value for verification for local jobs */
+    private static double FINAL_MIN;
+    /** Final sum value for verification for local jobs */
+    private static long FINAL_SUM;
+
+    public static double getFinalMax() {
+      return FINAL_MAX;
+    }
+
+    public static double getFinalMin() {
+      return FINAL_MIN;
+    }
+
+    public static long getFinalSum() {
+      return FINAL_SUM;
+    }
 
     @Override
-    public void compute(Iterator<DoubleWritable> msgIterator) {
-        LongSumAggregator sumAggreg = (LongSumAggregator) getAggregator("sum");
-        MinAggregator minAggreg = (MinAggregator) getAggregator("min");
-        MaxAggregator maxAggreg = (MaxAggregator) getAggregator("max");
-        if (getSuperstep() >= 1) {
-            double sum = 0;
-            while (msgIterator.hasNext()) {
-                sum += msgIterator.next().get();
-            }
-            DoubleWritable vertexValue =
-                new DoubleWritable((0.15f / getNumVertices()) + 0.85f * sum);
-            setVertexValue(vertexValue);
-            maxAggreg.aggregate(vertexValue);
-            minAggreg.aggregate(vertexValue);
-            sumAggreg.aggregate(1L);
-            LOG.info(getVertexId() + ": PageRank=" + vertexValue +
-                     " max=" + maxAggreg.getAggregatedValue() +
-                     " min=" + minAggreg.getAggregatedValue());
-        }
-
-        if (getSuperstep() < MAX_SUPERSTEPS) {
-            long edges = getNumOutEdges();
-            sendMsgToAllEdges(
-                new DoubleWritable(getVertexValue().get() / edges));
-        } else {
-            voteToHalt();
-        }
+    public void preApplication()
+      throws InstantiationException, IllegalAccessException {
+      registerAggregator("sum", LongSumAggregator.class);
+      registerAggregator("min", MinAggregator.class);
+      registerAggregator("max", MaxAggregator.class);
     }
 
-	public static class SimplePageRankVertexWorkerContext extends
-    		WorkerContext {
+    @Override
+    public void postApplication() {
 
-    	public static double finalMax, finalMin;
-    	public static long finalSum;
-    	
-    	@Override
-    	public void preApplication() 
-    	throws InstantiationException, IllegalAccessException {
-    		
-    		registerAggregator("sum", LongSumAggregator.class);
-    		registerAggregator("min", MinAggregator.class);
-    		registerAggregator("max", MaxAggregator.class);			
-    	}
+      LongSumAggregator sumAggreg =
+          (LongSumAggregator) getAggregator("sum");
+      MinAggregator minAggreg =
+          (MinAggregator) getAggregator("min");
+      MaxAggregator maxAggreg =
+          (MaxAggregator) getAggregator("max");
 
-    	@Override
-    	public void postApplication() {
+      FINAL_SUM = sumAggreg.getAggregatedValue().get();
+      FINAL_MAX = maxAggreg.getAggregatedValue().get();
+      FINAL_MIN = minAggreg.getAggregatedValue().get();
 
-    		LongSumAggregator sumAggreg = 
-    			(LongSumAggregator) getAggregator("sum");
-    		MinAggregator minAggreg = 
-    			(MinAggregator) getAggregator("min");
-    		MaxAggregator maxAggreg = 
-    			(MaxAggregator) getAggregator("max");
-
-    		finalSum = sumAggreg.getAggregatedValue().get();
-    		finalMax = maxAggreg.getAggregatedValue().get();
-    		finalMin = minAggreg.getAggregatedValue().get();
-    		
-            LOG.info("aggregatedNumVertices=" + finalSum);
-            LOG.info("aggregatedMaxPageRank=" + finalMax);
-            LOG.info("aggregatedMinPageRank=" + finalMin);
-    	}
-
-		@Override
-		public void preSuperstep() {
-    		
-	        LongSumAggregator sumAggreg = 
-	        	(LongSumAggregator) getAggregator("sum");
-	        MinAggregator minAggreg = 
-	        	(MinAggregator) getAggregator("min");
-	        MaxAggregator maxAggreg = 
-	        	(MaxAggregator) getAggregator("max");
-	        
-	        if (getSuperstep() >= 3) {
-	            LOG.info("aggregatedNumVertices=" +
-	                    sumAggreg.getAggregatedValue() +
-	                    " NumVertices=" + getNumVertices());
-	            if (sumAggreg.getAggregatedValue().get() != getNumVertices()) {
-	                throw new RuntimeException("wrong value of SumAggreg: " +
-	                        sumAggreg.getAggregatedValue() + ", should be: " +
-	                        getNumVertices());
-	            }
-	            DoubleWritable maxPagerank =
-	                    (DoubleWritable) maxAggreg.getAggregatedValue();
-	            LOG.info("aggregatedMaxPageRank=" + maxPagerank.get());
-	            DoubleWritable minPagerank =
-	                    (DoubleWritable) minAggreg.getAggregatedValue();
-	            LOG.info("aggregatedMinPageRank=" + minPagerank.get());
-	        }
-	        useAggregator("sum");
-	        useAggregator("min");
-	        useAggregator("max");
-	        sumAggreg.setAggregatedValue(new LongWritable(0L));
-		}
-
-		@Override
-		public void postSuperstep() { }
+      LOG.info("aggregatedNumVertices=" + FINAL_SUM);
+      LOG.info("aggregatedMaxPageRank=" + FINAL_MAX);
+      LOG.info("aggregatedMinPageRank=" + FINAL_MIN);
     }
-    
-    /**
-     * Simple VertexReader that supports {@link SimplePageRankVertex}
-     */
-    public static class SimplePageRankVertexReader extends
-            GeneratedVertexReader<LongWritable, DoubleWritable, FloatWritable,
-                DoubleWritable> {
-        /** Class logger */
-        private static final Logger LOG =
-            Logger.getLogger(SimplePageRankVertexReader.class);
 
-        public SimplePageRankVertexReader() {
-            super();
+    @Override
+    public void preSuperstep() {
+
+      LongSumAggregator sumAggreg =
+          (LongSumAggregator) getAggregator("sum");
+      MinAggregator minAggreg =
+          (MinAggregator) getAggregator("min");
+      MaxAggregator maxAggreg =
+          (MaxAggregator) getAggregator("max");
+
+      if (getSuperstep() >= 3) {
+        LOG.info("aggregatedNumVertices=" +
+            sumAggreg.getAggregatedValue() +
+            " NumVertices=" + getNumVertices());
+        if (sumAggreg.getAggregatedValue().get() != getNumVertices()) {
+          throw new RuntimeException("wrong value of SumAggreg: " +
+              sumAggreg.getAggregatedValue() + ", should be: " +
+              getNumVertices());
         }
-
-        @Override
-        public boolean nextVertex() {
-            return totalRecords > recordsRead;
-        }
-
-        @Override
-        public BasicVertex<LongWritable, DoubleWritable, FloatWritable, DoubleWritable>
-          getCurrentVertex() throws IOException {
-            BasicVertex<LongWritable, DoubleWritable, FloatWritable, DoubleWritable>
-                vertex = BspUtils.createVertex(configuration);
-
-            LongWritable vertexId = new LongWritable(
-                (inputSplit.getSplitIndex() * totalRecords) + recordsRead);
-            DoubleWritable vertexValue = new DoubleWritable(vertexId.get() * 10d);
-            long destVertexId =
-                (vertexId.get() + 1) %
-                (inputSplit.getNumSplits() * totalRecords);
-            float edgeValue = vertexId.get() * 100f;
-            Map<LongWritable, FloatWritable> edges = Maps.newHashMap();
-            edges.put(new LongWritable(destVertexId), new FloatWritable(edgeValue));
-            vertex.initialize(vertexId, vertexValue, edges, null);
-            ++recordsRead;
-            if (LOG.isInfoEnabled()) {
-	        LOG.info("next: Return vertexId=" + vertex.getVertexId().get() +
-	                 ", vertexValue=" + vertex.getVertexValue() +
-	                 ", destinationId=" + destVertexId + ", edgeValue=" + edgeValue);
-            }
-            return vertex;
-        }
+        DoubleWritable maxPagerank =
+            (DoubleWritable) maxAggreg.getAggregatedValue();
+        LOG.info("aggregatedMaxPageRank=" + maxPagerank.get());
+        DoubleWritable minPagerank =
+            (DoubleWritable) minAggreg.getAggregatedValue();
+        LOG.info("aggregatedMinPageRank=" + minPagerank.get());
+      }
+      useAggregator("sum");
+      useAggregator("min");
+      useAggregator("max");
+      sumAggreg.setAggregatedValue(new LongWritable(0L));
     }
+
+    @Override
+    public void postSuperstep() { }
+  }
+
+  /**
+   * Simple VertexReader that supports {@link SimplePageRankVertex}
+   */
+  public static class SimplePageRankVertexReader extends
+      GeneratedVertexReader<LongWritable, DoubleWritable, FloatWritable,
+      DoubleWritable> {
+    /** Class logger */
+    private static final Logger LOG =
+        Logger.getLogger(SimplePageRankVertexReader.class);
 
     /**
-     * Simple VertexInputFormat that supports {@link SimplePageRankVertex}
+     * Constructor.
      */
-    public static class SimplePageRankVertexInputFormat extends
-            GeneratedVertexInputFormat<LongWritable,
-            DoubleWritable, FloatWritable, DoubleWritable> {
-        @Override
-        public VertexReader<LongWritable, DoubleWritable, FloatWritable, DoubleWritable>
-                createVertexReader(InputSplit split,
-                                   TaskAttemptContext context)
-                                   throws IOException {
-            return new SimplePageRankVertexReader();
-        }
+    public SimplePageRankVertexReader() {
+      super();
     }
 
+    @Override
+    public boolean nextVertex() {
+      return totalRecords > recordsRead;
+    }
+
+    @Override
+    public BasicVertex<LongWritable, DoubleWritable,
+    FloatWritable, DoubleWritable>
+    getCurrentVertex() throws IOException {
+      BasicVertex<LongWritable, DoubleWritable, FloatWritable, DoubleWritable>
+      vertex = BspUtils.createVertex(configuration);
+
+      LongWritable vertexId = new LongWritable(
+          (inputSplit.getSplitIndex() * totalRecords) + recordsRead);
+      DoubleWritable vertexValue = new DoubleWritable(vertexId.get() * 10d);
+      long destVertexId =
+          (vertexId.get() + 1) %
+          (inputSplit.getNumSplits() * totalRecords);
+      float edgeValue = vertexId.get() * 100f;
+      Map<LongWritable, FloatWritable> edges = Maps.newHashMap();
+      edges.put(new LongWritable(destVertexId), new FloatWritable(edgeValue));
+      vertex.initialize(vertexId, vertexValue, edges, null);
+      ++recordsRead;
+      if (LOG.isInfoEnabled()) {
+        LOG.info("next: Return vertexId=" + vertex.getVertexId().get() +
+            ", vertexValue=" + vertex.getVertexValue() +
+            ", destinationId=" + destVertexId + ", edgeValue=" + edgeValue);
+      }
+      return vertex;
+    }
+  }
+
+  /**
+   * Simple VertexInputFormat that supports {@link SimplePageRankVertex}
+   */
+  public static class SimplePageRankVertexInputFormat extends
+      GeneratedVertexInputFormat<LongWritable,
+        DoubleWritable, FloatWritable, DoubleWritable> {
+    @Override
+    public VertexReader<LongWritable, DoubleWritable,
+    FloatWritable, DoubleWritable> createVertexReader(InputSplit split,
+      TaskAttemptContext context)
+      throws IOException {
+      return new SimplePageRankVertexReader();
+    }
+  }
+
+  /**
+   * Simple VertexWriter that supports {@link SimplePageRankVertex}
+   */
+  public static class SimplePageRankVertexWriter extends
+      TextVertexWriter<LongWritable, DoubleWritable, FloatWritable> {
     /**
-     * Simple VertexWriter that supports {@link SimplePageRankVertex}
+     * Constructor with line writer.
+     *
+     * @param lineRecordWriter Line writer that will do the writing.
      */
-    public static class SimplePageRankVertexWriter extends
-            TextVertexWriter<LongWritable, DoubleWritable, FloatWritable> {
-        public SimplePageRankVertexWriter(
-                RecordWriter<Text, Text> lineRecordWriter) {
-            super(lineRecordWriter);
-        }
-
-        @Override
-        public void writeVertex(
-                BasicVertex<LongWritable, DoubleWritable, FloatWritable, ?> vertex)
-                throws IOException, InterruptedException {
-            getRecordWriter().write(
-                new Text(vertex.getVertexId().toString()),
-                new Text(vertex.getVertexValue().toString()));
-        }
+    public SimplePageRankVertexWriter(
+        RecordWriter<Text, Text> lineRecordWriter) {
+      super(lineRecordWriter);
     }
 
-    /**
-     * Simple VertexOutputFormat that supports {@link SimplePageRankVertex}
-     */
-    public static class SimplePageRankVertexOutputFormat extends
-            TextVertexOutputFormat<LongWritable, DoubleWritable, FloatWritable> {
-
-        @Override
-        public VertexWriter<LongWritable, DoubleWritable, FloatWritable>
-            createVertexWriter(TaskAttemptContext context)
-                throws IOException, InterruptedException {
-            RecordWriter<Text, Text> recordWriter =
-                textOutputFormat.getRecordWriter(context);
-            return new SimplePageRankVertexWriter(recordWriter);
-        }
+    @Override
+    public void writeVertex(
+      BasicVertex<LongWritable, DoubleWritable, FloatWritable, ?> vertex)
+      throws IOException, InterruptedException {
+      getRecordWriter().write(
+          new Text(vertex.getVertexId().toString()),
+          new Text(vertex.getVertexValue().toString()));
     }
+  }
+
+  /**
+   * Simple VertexOutputFormat that supports {@link SimplePageRankVertex}
+   */
+  public static class SimplePageRankVertexOutputFormat extends
+      TextVertexOutputFormat<LongWritable, DoubleWritable, FloatWritable> {
+    @Override
+    public VertexWriter<LongWritable, DoubleWritable, FloatWritable>
+    createVertexWriter(TaskAttemptContext context)
+      throws IOException, InterruptedException {
+      RecordWriter<Text, Text> recordWriter =
+          textOutputFormat.getRecordWriter(context);
+      return new SimplePageRankVertexWriter(recordWriter);
+    }
+  }
 }

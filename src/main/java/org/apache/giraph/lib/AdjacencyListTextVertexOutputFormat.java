@@ -38,26 +38,41 @@ import java.io.IOException;
  * @param <E> Edge value
  */
 @SuppressWarnings("rawtypes")
-public class AdjacencyListTextVertexOutputFormat <I extends WritableComparable,
-    V extends Writable, E extends Writable> extends TextVertexOutputFormat<I, V, E>{
+public class AdjacencyListTextVertexOutputFormat<I extends WritableComparable,
+    V extends Writable, E extends Writable>
+    extends TextVertexOutputFormat<I, V, E> {
 
+  /**
+   * Vertex writer associated wtih {@link AdjacencyListTextVertexOutputFormat}.
+   *
+   * @param <I> Vertex id
+   * @param <V> Vertex data
+   * @param <E> Edge data
+   */
   static class AdjacencyListVertexWriter<I extends WritableComparable, V extends
       Writable, E extends Writable> extends TextVertexWriter<I, V, E> {
+    /** Split delimiter */
     public static final String LINE_TOKENIZE_VALUE = "output.delimiter";
+    /** Default split delimiter */
     public static final String LINE_TOKENIZE_VALUE_DEFAULT = "\t";
-
+    /** Cached split delimeter */
     private String delimiter;
 
-    public AdjacencyListVertexWriter(RecordWriter<Text,Text> recordWriter) {
+    /**
+     * Constructor with writer.
+     *
+     * @param recordWriter Record writer used for writing.
+     */
+    public AdjacencyListVertexWriter(RecordWriter<Text, Text> recordWriter) {
       super(recordWriter);
     }
 
     @Override
     public void writeVertex(BasicVertex<I, V, E, ?> vertex) throws IOException,
-        InterruptedException {
+    InterruptedException {
       if (delimiter == null) {
         delimiter = getContext().getConfiguration()
-           .get(LINE_TOKENIZE_VALUE, LINE_TOKENIZE_VALUE_DEFAULT);
+            .get(LINE_TOKENIZE_VALUE, LINE_TOKENIZE_VALUE_DEFAULT);
       }
 
       StringBuffer sb = new StringBuffer(vertex.getVertexId().toString());
@@ -75,9 +90,8 @@ public class AdjacencyListTextVertexOutputFormat <I extends WritableComparable,
 
   @Override
   public VertexWriter<I, V, E> createVertexWriter(TaskAttemptContext context)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     return new AdjacencyListVertexWriter<I, V, E>
-        (textOutputFormat.getRecordWriter(context));
+    (textOutputFormat.getRecordWriter(context));
   }
-
 }

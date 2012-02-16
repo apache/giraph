@@ -43,85 +43,80 @@ import java.util.List;
  * @param <M> Message value
  */
 @SuppressWarnings("rawtypes")
-public abstract class TextVertexInputFormat<
-        I extends WritableComparable,
-        V extends Writable,
-        E extends Writable,
-        M extends Writable>
-        extends VertexInputFormat<I, V, E, M> {
-    /** Uses the TextInputFormat to do everything */
-    protected TextInputFormat textInputFormat = new TextInputFormat();
+public abstract class TextVertexInputFormat<I extends WritableComparable,
+    V extends Writable, E extends Writable, M extends Writable>
+    extends VertexInputFormat<I, V, E, M> {
+  /** Uses the TextInputFormat to do everything */
+  protected TextInputFormat textInputFormat = new TextInputFormat();
+
+  /**
+   * Abstract class to be implemented by the user based on their specific
+   * vertex input.  Easiest to ignore the key value separator and only use
+   * key instead.
+   *
+   * @param <I> Vertex index value
+   * @param <V> Vertex value
+   * @param <E> Edge value
+   */
+  public abstract static class TextVertexReader<I extends WritableComparable,
+      V extends Writable, E extends Writable, M extends Writable>
+      implements VertexReader<I, V, E, M> {
+    /** Internal line record reader */
+    private final RecordReader<LongWritable, Text> lineRecordReader;
+    /** Context passed to initialize */
+    private TaskAttemptContext context;
 
     /**
-     * Abstract class to be implemented by the user based on their specific
-     * vertex input.  Easiest to ignore the key value separator and only use
-     * key instead.
+     * Initialize with the LineRecordReader.
      *
-     * @param <I> Vertex index value
-     * @param <V> Vertex value
-     * @param <E> Edge value
+     * @param lineRecordReader Line record reader from TextInputFormat
      */
-    public static abstract class TextVertexReader<I extends WritableComparable,
-            V extends Writable, E extends Writable, M extends Writable>
-            implements VertexReader<I, V, E, M> {
-        /** Internal line record reader */
-        private final RecordReader<LongWritable, Text> lineRecordReader;
-        /** Context passed to initialize */
-        private TaskAttemptContext context;
-
-        /**
-         * Initialize with the LineRecordReader.
-         *
-         * @param lineRecordReader Line record reader from TextInputFormat
-         */
-        public TextVertexReader(
-                RecordReader<LongWritable, Text> lineRecordReader) {
-            this.lineRecordReader = lineRecordReader;
-        }
-
-        @Override
-        public void initialize(InputSplit inputSplit,
-                               TaskAttemptContext context)
-                               throws IOException, InterruptedException {
-            lineRecordReader.initialize(inputSplit, context);
-            this.context = context;
-        }
-
-        @Override
-        public void close() throws IOException {
-            lineRecordReader.close();
-        }
-
-        @Override
-        public float getProgress() throws IOException, InterruptedException {
-            return lineRecordReader.getProgress();
-        }
-
-        /**
-         * Get the line record reader.
-         *
-         * @return Record reader to be used for reading.
-         */
-        protected RecordReader<LongWritable, Text> getRecordReader() {
-            return lineRecordReader;
-        }
-
-        /**
-         * Get the context.
-         *
-         * @return Context passed to initialize.
-         */
-        protected TaskAttemptContext getContext() {
-            return context;
-        }
+    public TextVertexReader(
+        RecordReader<LongWritable, Text> lineRecordReader) {
+      this.lineRecordReader = lineRecordReader;
     }
 
     @Override
-    public List<InputSplit> getSplits(
-            JobContext context, int numWorkers)
-            throws IOException, InterruptedException {
-        // Ignore the hint of numWorkers here since we are using TextInputFormat
-        // to do this for us
-        return textInputFormat.getSplits(context);
+    public void initialize(InputSplit inputSplit, TaskAttemptContext context)
+      throws IOException, InterruptedException {
+      lineRecordReader.initialize(inputSplit, context);
+      this.context = context;
     }
+
+    @Override
+    public void close() throws IOException {
+      lineRecordReader.close();
+    }
+
+    @Override
+    public float getProgress() throws IOException, InterruptedException {
+      return lineRecordReader.getProgress();
+    }
+
+    /**
+     * Get the line record reader.
+     *
+     * @return Record reader to be used for reading.
+     */
+    protected RecordReader<LongWritable, Text> getRecordReader() {
+      return lineRecordReader;
+    }
+
+    /**
+     * Get the context.
+     *
+     * @return Context passed to initialize.
+     */
+    protected TaskAttemptContext getContext() {
+      return context;
+    }
+  }
+
+  @Override
+  public List<InputSplit> getSplits(JobContext context, int numWorkers)
+    throws IOException, InterruptedException {
+    // Ignore the hint of numWorkers here since we are using TextInputFormat
+    // to do this for us
+    return textInputFormat.getSplits(context);
+  }
 }

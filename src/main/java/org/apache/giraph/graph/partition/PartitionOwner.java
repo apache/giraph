@@ -25,57 +25,57 @@ import org.apache.hadoop.io.Writable;
  * Metadata about ownership of a partition.
  */
 public interface PartitionOwner extends Writable {
-    /**
-     * Get the partition id that maps to the relevant {@link Partition} object
-     *
-     * @return Partition id
-     */
-    int getPartitionId();
+  /**
+   * Get the partition id that maps to the relevant {@link Partition} object
+   *
+   * @return Partition id
+   */
+  int getPartitionId();
 
-    /**
-     * Get the worker information that is currently responsible for
-     * the partition id.
-     *
-     * @return Owning worker information.
-     */
-    WorkerInfo getWorkerInfo();
+  /**
+   * Get the worker information that is currently responsible for
+   * the partition id.
+   *
+   * @return Owning worker information.
+   */
+  WorkerInfo getWorkerInfo();
 
-    /**
-     * Set the current worker info.
-     *
-     * @param workerInfo Worker info responsible for partition
-     */
-    void setWorkerInfo(WorkerInfo workerInfo);
+  /**
+   * Set the current worker info.
+   *
+   * @param workerInfo Worker info responsible for partition
+   */
+  void setWorkerInfo(WorkerInfo workerInfo);
 
-    /**
-     * Get the worker information that was previously responsible for the
-     * partition id.
-     *
-     * @return Owning worker information or null if no previous worker info.
-     */
-    WorkerInfo getPreviousWorkerInfo();
+  /**
+   * Get the worker information that was previously responsible for the
+   * partition id.
+   *
+   * @return Owning worker information or null if no previous worker info.
+   */
+  WorkerInfo getPreviousWorkerInfo();
 
-    /**
-     * Set the previous worker info.
-     *
-     * @param workerInfo Worker info that was previously responsible for the
-     *        partition.
-     */
-    void setPreviousWorkerInfo(WorkerInfo workerInfo);
+  /**
+   * Set the previous worker info.
+   *
+   * @param workerInfo Worker info that was previously responsible for the
+   *        partition.
+   */
+  void setPreviousWorkerInfo(WorkerInfo workerInfo);
 
-    /**
-     * If this is a restarted checkpoint, the worker will use this information
-     * to determine where the checkpointed partition was stored on HDFS.
-     *
-     * @return Prefix of the checkpoint HDFS files for this partition, null if
-     *         this is not a restarted superstep.
-     */
-    String getCheckpointFilesPrefix();
+  /**
+   * If this is a restarted checkpoint, the worker will use this information
+   * to determine where the checkpointed partition was stored on HDFS.
+   *
+   * @return Prefix of the checkpoint HDFS files for this partition, null if
+   *         this is not a restarted superstep.
+   */
+  String getCheckpointFilesPrefix();
 
-    /**
-     * Set the checkpoint files prefix.  Master uses this.
-     *
-     * @param checkpointFilesPrefix HDFS checkpoint file prefix
-     */
-    void setCheckpointFilesPrefix(String checkpointFilesPrefix);
+  /**
+   * Set the checkpoint files prefix.  Master uses this.
+   *
+   * @param checkpointFilesPrefix HDFS checkpoint file prefix
+   */
+  void setCheckpointFilesPrefix(String checkpointFilesPrefix);
 }

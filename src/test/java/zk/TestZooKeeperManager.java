@@ -31,7 +31,8 @@ public class TestZooKeeperManager extends TestCase {
         "", ZooKeeperManager.getBasePath(conf));
 
     conf.set(GiraphJob.BASE_ZNODE_KEY, "/howdy");
-    assertEquals("Base path should reflect value of " + GiraphJob.BASE_ZNODE_KEY,
+    assertEquals("Base path should reflect value of " +
+        GiraphJob.BASE_ZNODE_KEY,
         "/howdy", ZooKeeperManager.getBasePath(conf));
 
     conf.set(GiraphJob.BASE_ZNODE_KEY, "no_slash");

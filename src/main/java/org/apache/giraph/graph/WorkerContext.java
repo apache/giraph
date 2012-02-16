@@ -27,101 +27,106 @@ import org.apache.hadoop.mapreduce.Mapper;
  */
 @SuppressWarnings("rawtypes")
 public abstract class WorkerContext implements AggregatorUsage {
-    /** Global graph state */
-	private GraphState graphState;
+  /** Global graph state */
+  private GraphState graphState;
 
-	public void setGraphState(GraphState graphState) {
-		this.graphState = graphState;
-	}
+  /**
+   * Set the graph state.
+   *
+   *  @param graphState Used to set the graph state.
+   */
+  public void setGraphState(GraphState graphState) {
+    this.graphState = graphState;
+  }
 
-    /**
-     * Initialize the WorkerContext.
-     * This method is executed once on each Worker before the first
-     * superstep starts.
-     *
-     * @throws IllegalAccessException
-     * @throws InstantiationException
-     */
-	public abstract void preApplication() throws InstantiationException,
-		IllegalAccessException;
+  /**
+   * Initialize the WorkerContext.
+   * This method is executed once on each Worker before the first
+   * superstep starts.
+   *
+   * @throws IllegalAccessException Thrown for getting the class
+   * @throws InstantiationException Expected instantiation in this method.
+   */
+  public abstract void preApplication() throws InstantiationException,
+    IllegalAccessException;
 
-    /**
-     * Finalize the WorkerContext.
-     * This method is executed once on each Worker after the last
-     * superstep ends.
-     */
-    public abstract void postApplication();
+  /**
+   * Finalize the WorkerContext.
+   * This method is executed once on each Worker after the last
+   * superstep ends.
+   */
+  public abstract void postApplication();
 
-    /**
-     * Execute user code.
-     * This method is executed once on each Worker before each
-     * superstep starts.
-     */
-    public abstract void preSuperstep();
+  /**
+   * Execute user code.
+   * This method is executed once on each Worker before each
+   * superstep starts.
+   */
+  public abstract void preSuperstep();
 
-    /**
-     * Execute user code.
-     * This method is executed once on each Worker after each
-     * superstep ends.
-     */
-    public abstract void postSuperstep();
+  /**
+   * Execute user code.
+   * This method is executed once on each Worker after each
+   * superstep ends.
+   */
+  public abstract void postSuperstep();
 
-    /**
-     * Retrieves the current superstep.
-     *
-     * @return Current superstep
-     */
-    public long getSuperstep() {
-        return graphState.getSuperstep();
-    }
+  /**
+   * Retrieves the current superstep.
+   *
+   * @return Current superstep
+   */
+  public long getSuperstep() {
+    return graphState.getSuperstep();
+  }
 
-    /**
-     * Get the total (all workers) number of vertices that
-     * existed in the previous superstep.
-     *
-     * @return Total number of vertices (-1 if first superstep)
-     */
-    public long getNumVertices() {
-    	return graphState.getNumVertices();
-    }
+  /**
+   * Get the total (all workers) number of vertices that
+   * existed in the previous superstep.
+   *
+   * @return Total number of vertices (-1 if first superstep)
+   */
+  public long getNumVertices() {
+    return graphState.getNumVertices();
+  }
 
-    /**
-     * Get the total (all workers) number of edges that
-     * existed in the previous superstep.
-     *
-     * @return Total number of edges (-1 if first superstep)
-     */
-    public long getNumEdges() {
-    	return graphState.getNumEdges();
-    }
+  /**
+   * Get the total (all workers) number of edges that
+   * existed in the previous superstep.
+   *
+   * @return Total number of edges (-1 if first superstep)
+   */
+  public long getNumEdges() {
+    return graphState.getNumEdges();
+  }
 
-    /**
-     * Get the mapper context
-     *
-     * @return Mapper context
-     */
-    public Mapper.Context getContext() {
-        return graphState.getContext();
-    }
+  /**
+   * Get the mapper context
+   *
+   * @return Mapper context
+   */
+  public Mapper.Context getContext() {
+    return graphState.getContext();
+  }
 
-    @Override
-    public final <A extends Writable> Aggregator<A> registerAggregator(
-            String name,
-            Class<? extends Aggregator<A>> aggregatorClass)
-            throws InstantiationException, IllegalAccessException {
-        return graphState.getGraphMapper().getAggregatorUsage().
-            registerAggregator(name, aggregatorClass);
-    }
+  @Override
+  public final <A extends Writable> Aggregator<A> registerAggregator(
+    String name,
+    Class<? extends Aggregator<A>> aggregatorClass)
+    throws InstantiationException, IllegalAccessException {
+    return graphState.getGraphMapper().getAggregatorUsage().
+        registerAggregator(name, aggregatorClass);
+  }
 
-    @Override
-    public final Aggregator<? extends Writable> getAggregator(String name) {
-        return graphState.getGraphMapper().getAggregatorUsage().
-            getAggregator(name);
-    }
+  @Override
+  public final Aggregator<? extends Writable> getAggregator(String name) {
+    return graphState.getGraphMapper().getAggregatorUsage().
+        getAggregator(name);
+  }
 
-    @Override
-    public final boolean useAggregator(String name) {
-        return graphState.getGraphMapper().getAggregatorUsage().
-            useAggregator(name);
-    }
+  @Override
+  public final boolean useAggregator(String name) {
+    return graphState.getGraphMapper().getAggregatorUsage().
+        useAggregator(name);
+  }
 }

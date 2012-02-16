@@ -36,45 +36,45 @@ import java.util.List;
  * @param <I> Vertex id
  * @param <V> Vertex value
  * @param <E> Edge value
+ * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public abstract class VertexInputFormat<I extends WritableComparable,
-        V extends Writable, E extends Writable, M extends Writable> {
+    V extends Writable, E extends Writable, M extends Writable> {
+  /**
+   * Logically split the vertices for a graph processing application.
+   *
+   * Each {@link InputSplit} is then assigned to a worker for processing.
+   *
+   * <p><i>Note</i>: The split is a <i>logical</i> split of the inputs and the
+   * input files are not physically split into chunks. For e.g. a split could
+   * be <i>&lt;input-file-path, start, offset&gt;</i> tuple. The InputFormat
+   * also creates the {@link VertexReader} to read the {@link InputSplit}.
+   *
+   * Also, the number of workers is a hint given to the developer to try to
+   * intelligently determine how many splits to create (if this is
+   * adjustable) at runtime.
+   *
+   * @param context Context of the job
+   * @param numWorkers Number of workers used for this job
+   * @return an array of {@link InputSplit}s for the job.
+   */
+  public abstract List<InputSplit> getSplits(
+    JobContext context, int numWorkers)
+    throws IOException, InterruptedException;
 
-    /**
-     * Logically split the vertices for a graph processing application.
-     *
-     * Each {@link InputSplit} is then assigned to a worker for processing.
-     *
-     * <p><i>Note</i>: The split is a <i>logical</i> split of the inputs and the
-     * input files are not physically split into chunks. For e.g. a split could
-     * be <i>&lt;input-file-path, start, offset&gt;</i> tuple. The InputFormat
-     * also creates the {@link VertexReader} to read the {@link InputSplit}.
-     *
-     * Also, the number of workers is a hint given to the developer to try to
-     * intelligently determine how many splits to create (if this is
-     * adjustable) at runtime.
-     *
-     * @param context Context of the job
-     * @param numWorkers Number of workers used for this job
-     * @return an array of {@link InputSplit}s for the job.
-     */
-    public abstract List<InputSplit> getSplits(
-        JobContext context, int numWorkers)
-        throws IOException, InterruptedException;
-
-    /**
-     * Create a vertex reader for a given split. The framework will call
-     * {@link VertexReader#initialize(InputSplit, TaskAttemptContext)} before
-     * the split is used.
-     *
-     * @param split the split to be read
-     * @param context the information about the task
-     * @return a new record reader
-     * @throws IOException
-     * @throws InterruptedException
-     */
-    public abstract VertexReader<I, V, E, M> createVertexReader(
-        InputSplit split,
-        TaskAttemptContext context) throws IOException;
+  /**
+   * Create a vertex reader for a given split. The framework will call
+   * {@link VertexReader#initialize(InputSplit, TaskAttemptContext)} before
+   * the split is used.
+   *
+   * @param split the split to be read
+   * @param context the information about the task
+   * @return a new record reader
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  public abstract VertexReader<I, V, E, M> createVertexReader(
+      InputSplit split,
+      TaskAttemptContext context) throws IOException;
 }

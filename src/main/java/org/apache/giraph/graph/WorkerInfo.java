@@ -28,84 +28,91 @@ import org.apache.hadoop.io.Writable;
  * Information about a worker that is sent to the master and other workers.
  */
 public class WorkerInfo implements Writable {
-    /** Worker hostname */
-    private String hostname;
-    /** Partition id of this worker */
-    private int partitionId = -1;
-    /** Port that the RPC server is using */
-    private int port = -1;
-    /** Hostname + "_" + id for easier debugging */
-    private String hostnameId;
+  /** Worker hostname */
+  private String hostname;
+  /** Partition id of this worker */
+  private int partitionId = -1;
+  /** Port that the RPC server is using */
+  private int port = -1;
+  /** Hostname + "_" + id for easier debugging */
+  private String hostnameId;
 
-    /**
-     * Constructor for reflection
-     */
-    public WorkerInfo() {
-    }
+  /**
+   * Constructor for reflection
+   */
+  public WorkerInfo() {
+  }
 
-    public WorkerInfo(String hostname, int partitionId, int port) {
-        this.hostname = hostname;
-        this.partitionId = partitionId;
-        this.port = port;
-        this.hostnameId = hostname + "_" + partitionId;
-    }
+  /**
+   * Constructor with paramters.
+   *
+   * @param hostname Hostname of this worker.
+   * @param partitionId partition id of this particular object.
+   * @param port Port of the service.
+   */
+  public WorkerInfo(String hostname, int partitionId, int port) {
+    this.hostname = hostname;
+    this.partitionId = partitionId;
+    this.port = port;
+    this.hostnameId = hostname + "_" + partitionId;
+  }
 
-    public String getHostname() {
-        return hostname;
-    }
+  public String getHostname() {
+    return hostname;
+  }
 
-    public int getPartitionId() {
-        return partitionId;
-    }
+  public int getPartitionId() {
+    return partitionId;
+  }
 
-    public String getHostnameId() {
-        return hostnameId;
-    }
+  public String getHostnameId() {
+    return hostnameId;
+  }
 
-    public int getPort() {
-        return port;
-    }
+  public int getPort() {
+    return port;
+  }
 
-    @Override
-    public boolean equals(Object other) {
-        if (other instanceof WorkerInfo) {
-            WorkerInfo workerInfo = (WorkerInfo) other;
-            if (hostname.equals(workerInfo.getHostname()) &&
-                    (partitionId == workerInfo.getPartitionId()) &&
-                    (port == workerInfo.getPort())) {
-                return true;
-            }
-        }
-        return false;
+  @Override
+  public boolean equals(Object other) {
+    if (other instanceof WorkerInfo) {
+      WorkerInfo workerInfo = (WorkerInfo) other;
+      if (hostname.equals(workerInfo.getHostname()) &&
+          (partitionId == workerInfo.getPartitionId()) &&
+          (port == workerInfo.getPort())) {
+        return true;
+      }
     }
+    return false;
+  }
 
-    @Override
-    public int hashCode() {
-        int result = 17;
-        result = 37 * result + port;
-        result = 37 * result + hostname.hashCode();
-        result = 37 * result + partitionId;
-        return result;
-    }
+  @Override
+  public int hashCode() {
+    int result = 17;
+    result = 37 * result + port;
+    result = 37 * result + hostname.hashCode();
+    result = 37 * result + partitionId;
+    return result;
+  }
 
-    @Override
-    public String toString() {
-        return "Worker(hostname=" + hostname + ", MRpartition=" +
-            partitionId + ", port=" + port + ")";
-    }
+  @Override
+  public String toString() {
+    return "Worker(hostname=" + hostname + ", MRpartition=" +
+        partitionId + ", port=" + port + ")";
+  }
 
-    @Override
-    public void readFields(DataInput input) throws IOException {
-        hostname = input.readUTF();
-        partitionId = input.readInt();
-        port = input.readInt();
-        hostnameId = hostname + "_" + partitionId;
-    }
+  @Override
+  public void readFields(DataInput input) throws IOException {
+    hostname = input.readUTF();
+    partitionId = input.readInt();
+    port = input.readInt();
+    hostnameId = hostname + "_" + partitionId;
+  }
 
-    @Override
-    public void write(DataOutput output) throws IOException {
-        output.writeUTF(hostname);
-        output.writeInt(partitionId);
-        output.writeInt(port);
-    }
+  @Override
+  public void write(DataOutput output) throws IOException {
+    output.writeUTF(hostname);
+    output.writeInt(partitionId);
+    output.writeInt(port);
+  }
 }

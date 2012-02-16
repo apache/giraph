@@ -23,6 +23,7 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
+import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.hadoop.conf.Configuration;
@@ -30,6 +31,7 @@ import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.log4j.Logger;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -38,121 +40,125 @@ import java.util.Iterator;
  * Default Pregel-style PageRank computation using a {@link EdgeListVertex}.
  */
 public class PageRankBenchmark extends EdgeListVertex<
-    LongWritable, DoubleWritable, DoubleWritable, DoubleWritable> implements Tool {
-    public final static String SUPERSTEP_COUNT = PageRankComputation.SUPERSTEP_COUNT;
+    LongWritable, DoubleWritable, DoubleWritable, DoubleWritable>
+    implements Tool {
+  /** Class logger */
+  private static final Logger LOG = Logger.getLogger(PageRankBenchmark.class);
+  /** Configuration from Configurable */
+  private Configuration conf;
 
-    /** Configuration from Configurable */
-    private Configuration conf;
+  @Override
+  public void compute(Iterator<DoubleWritable> msgIterator) throws IOException {
+    PageRankComputation.computePageRank(this, msgIterator);
+  }
 
-    @Override
-    public void compute(Iterator<DoubleWritable> msgIterator) throws IOException {
-      PageRankComputation.computePageRank(this, msgIterator);
+  @Override
+  public Configuration getConf() {
+    return conf;
+  }
+
+  @Override
+  public void setConf(Configuration conf) {
+    this.conf = conf;
+  }
+
+  @Override
+  public final int run(final String[] args) throws Exception {
+    Options options = new Options();
+    options.addOption("h", "help", false, "Help");
+    options.addOption("v", "verbose", false, "Verbose");
+    options.addOption("w",
+        "workers",
+        true,
+        "Number of workers");
+    options.addOption("s",
+        "supersteps",
+        true,
+        "Supersteps to execute before finishing");
+    options.addOption("V",
+        "aggregateVertices",
+        true,
+        "Aggregate vertices");
+    options.addOption("e",
+        "edgesPerVertex",
+        true,
+        "Edges per vertex");
+    options.addOption("c",
+        "vertexClass",
+        true,
+        "Vertex class (0 for Vertex, 1 for EdgeListVertex)");
+    HelpFormatter formatter = new HelpFormatter();
+    if (args.length == 0) {
+      formatter.printHelp(getClass().getName(), options, true);
+      return 0;
+    }
+    CommandLineParser parser = new PosixParser();
+    CommandLine cmd = parser.parse(options, args);
+    if (cmd.hasOption('h')) {
+      formatter.printHelp(getClass().getName(), options, true);
+      return 0;
+    }
+    if (!cmd.hasOption('w')) {
+      LOG.info("Need to choose the number of workers (-w)");
+      return -1;
+    }
+    if (!cmd.hasOption('s')) {
+      LOG.info("Need to set the number of supersteps (-s)");
+      return -1;
+    }
+    if (!cmd.hasOption('V')) {
+      LOG.info("Need to set the aggregate vertices (-V)");
+      return -1;
+    }
+    if (!cmd.hasOption('e')) {
+      LOG.info("Need to set the number of edges " +
+          "per vertex (-e)");
+      return -1;
     }
 
-    @Override
-    public Configuration getConf() {
-        return conf;
+    int workers = Integer.parseInt(cmd.getOptionValue('w'));
+    GiraphJob job = new GiraphJob(getConf(), getClass().getName());
+    if (!cmd.hasOption('c') ||
+        (Integer.parseInt(cmd.getOptionValue('c')) == 0)) {
+      job.setVertexClass(HashMapVertexPageRankBenchmark.class);
+    } else {
+      job.setVertexClass(PageRankBenchmark.class);
     }
+    LOG.info("Using class " + BspUtils.getVertexClass(getConf()).getName());
+    job.setVertexInputFormatClass(PseudoRandomVertexInputFormat.class);
+    job.setWorkerConfiguration(workers, workers, 100.0f);
+    job.getConfiguration().setLong(
+        PseudoRandomVertexInputFormat.AGGREGATE_VERTICES,
+        Long.parseLong(cmd.getOptionValue('V')));
+    job.getConfiguration().setLong(
+        PseudoRandomVertexInputFormat.EDGES_PER_VERTEX,
+        Long.parseLong(cmd.getOptionValue('e')));
+    job.getConfiguration().setInt(
+        PageRankComputation.SUPERSTEP_COUNT,
+        Integer.parseInt(cmd.getOptionValue('s')));
 
-    @Override
-    public void setConf(Configuration conf) {
-        this.conf = conf;
+    boolean isVerbose = false;
+    if (cmd.hasOption('v')) {
+      isVerbose = true;
     }
-
-    @Override
-    public int run(String[] args) throws Exception {
-        Options options = new Options();
-        options.addOption("h", "help", false, "Help");
-        options.addOption("v", "verbose", false, "Verbose");
-        options.addOption("w",
-                          "workers",
-                          true,
-                          "Number of workers");
-        options.addOption("s",
-                          "supersteps",
-                          true,
-                          "Supersteps to execute before finishing");
-        options.addOption("V",
-                          "aggregateVertices",
-                          true,
-                          "Aggregate vertices");
-        options.addOption("e",
-                          "edgesPerVertex",
-                          true,
-                          "Edges per vertex");
-        options.addOption("c",
-                          "vertexClass",
-                          true,
-                          "Vertex class (0 for HashMapVertex, 1 for EdgeListVertex)");
-        HelpFormatter formatter = new HelpFormatter();
-        if (args.length == 0) {
-            formatter.printHelp(getClass().getName(), options, true);
-            return 0;
-        }
-        CommandLineParser parser = new PosixParser();
-        CommandLine cmd = parser.parse(options, args);
-        if (cmd.hasOption('h')) {
-            formatter.printHelp(getClass().getName(), options, true);
-            return 0;
-        }
-        if (!cmd.hasOption('w')) {
-            System.out.println("Need to choose the number of workers (-w)");
-            return -1;
-        }
-        if (!cmd.hasOption('s')) {
-            System.out.println("Need to set the number of supersteps (-s)");
-            return -1;
-        }
-        if (!cmd.hasOption('V')) {
-            System.out.println("Need to set the aggregate vertices (-V)");
-            return -1;
-        }
-        if (!cmd.hasOption('e')) {
-            System.out.println("Need to set the number of edges " +
-                               "per vertex (-e)");
-            return -1;
-        }
-
-        int workers = Integer.parseInt(cmd.getOptionValue('w'));
-        GiraphJob job = new GiraphJob(getConf(), getClass().getName());
-        if (!cmd.hasOption('c') ||
-                (Integer.parseInt(cmd.getOptionValue('c')) == 0)) {
-            System.out.println("Using " +
-                                HashMapVertexPageRankBenchmark.class.getName());
-            job.setVertexClass(HashMapVertexPageRankBenchmark.class);
-        } else {
-            System.out.println("Using " +
-                                PageRankBenchmark.class.getName());
-            job.setVertexClass(PageRankBenchmark.class);
-        }
-        job.setVertexInputFormatClass(PseudoRandomVertexInputFormat.class);
-        job.setWorkerConfiguration(workers, workers, 100.0f);
-        job.getConfiguration().setLong(
-            PseudoRandomVertexInputFormat.AGGREGATE_VERTICES,
-            Long.parseLong(cmd.getOptionValue('V')));
-        job.getConfiguration().setLong(
-            PseudoRandomVertexInputFormat.EDGES_PER_VERTEX,
-            Long.parseLong(cmd.getOptionValue('e')));
-        job.getConfiguration().setInt(
-            SUPERSTEP_COUNT,
-            Integer.parseInt(cmd.getOptionValue('s')));
-
-        boolean isVerbose = false;
-        if (cmd.hasOption('v')) {
-            isVerbose = true;
-        }
-        if (cmd.hasOption('s')) {
-            getConf().setInt(SUPERSTEP_COUNT,
-                             Integer.parseInt(cmd.getOptionValue('s')));
-        }
-        if (job.run(isVerbose) == true) {
-            return 0;
-        } else {
-            return -1;
-        }
+    if (cmd.hasOption('s')) {
+      getConf().setInt(PageRankComputation.SUPERSTEP_COUNT,
+                       Integer.parseInt(cmd.getOptionValue('s')));
     }
-
-    public static void main(String[] args) throws Exception {
-        System.exit(ToolRunner.run(new PageRankBenchmark(), args));
+    if (job.run(isVerbose)) {
+      return 0;
+    } else {
+      return -1;
     }
+  }
+
+  /**
+   * Execute the benchmark.
+   *
+   * @param args Typically the command line arguments.
+   * @throws Exception Any exception from the computation.
+   */
+  public static void main(final String[] args) throws Exception {
+    System.exit(ToolRunner.run(new PageRankBenchmark(), args));
+  }
 }

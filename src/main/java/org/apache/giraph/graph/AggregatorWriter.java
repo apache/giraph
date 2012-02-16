@@ -25,49 +25,49 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.Mapper.Context;
 
 /**
- *  An AggregatorWriter is used to export Aggregators during or at the end of 
+ *  An AggregatorWriter is used to export Aggregators during or at the end of
  *  each computation. It runs on the master and it's called at the end of each
- *  superstep. The special signal {@link AggregatorWriter#LAST_SUPERSTEP} is 
- *  passed to {@link AggregatorWriter#writeAggregator(Map, long)} as the 
+ *  superstep. The special signal {@link AggregatorWriter#LAST_SUPERSTEP} is
+ *  passed to {@link AggregatorWriter#writeAggregator(Map, long)} as the
  *  superstep value to signal the end of computation.
  */
 public interface AggregatorWriter {
-    /** Signal for last superstep */
-    public static final int LAST_SUPERSTEP = -1;
+  /** Signal for last superstep */
+  int LAST_SUPERSTEP = -1;
 
-    /**
-     * The method is called at the initialization of the AggregatorWriter.
-     * More precisely, the aggregatorWriter is initialized each time a new
-     * master is elected.
-     * 
-     * @param context Mapper Context where the master is running on
-     * @param applicationAttempt ID of the applicationAttempt, used to
-     *        disambiguate aggregator writes for different attempts
-     * @throws IOException
-     */
-    @SuppressWarnings("rawtypes")
-    void initialize(Context context, long applicationAttempt) throws IOException;
+  /**
+   * The method is called at the initialization of the AggregatorWriter.
+   * More precisely, the aggregatorWriter is initialized each time a new
+   * master is elected.
+   *
+   * @param context Mapper Context where the master is running on
+   * @param applicationAttempt ID of the applicationAttempt, used to
+   *        disambiguate aggregator writes for different attempts
+   * @throws IOException
+   */
+  @SuppressWarnings("rawtypes")
+  void initialize(Context context, long applicationAttempt) throws IOException;
 
-    /**
-     * The method is called at the end of each superstep. The user might decide
-     * whether to write the aggregators values for the current superstep. For 
-     * the last superstep, {@link AggregatorWriter#LAST_SUPERSTEP} is passed.
-     * 
-     * @param aggregatorMap Map of aggregators to write
-     * @param superstep Current superstep
-     * @throws IOException
-     */
-    void writeAggregator(
-            Map<String, Aggregator<Writable>> aggregatorMap, 
-            long superstep) throws IOException;
+  /**
+   * The method is called at the end of each superstep. The user might decide
+   * whether to write the aggregators values for the current superstep. For
+   * the last superstep, {@link AggregatorWriter#LAST_SUPERSTEP} is passed.
+   *
+   * @param aggregatorMap Map of aggregators to write
+   * @param superstep Current superstep
+   * @throws IOException
+   */
+  void writeAggregator(
+      Map<String, Aggregator<Writable>> aggregatorMap,
+      long superstep) throws IOException;
 
-    /**
-     * The method is called at the end of a successful computation. The method
-     * is not called when the job fails and a new master is elected. For this
-     * reason it's advised to flush data at the end of 
-     * {@link AggregatorWriter#writeAggregator(Map, long)}.
-     * 
-     * @throws IOException
-     */
-    void close() throws IOException;
+  /**
+   * The method is called at the end of a successful computation. The method
+   * is not called when the job fails and a new master is elected. For this
+   * reason it's advised to flush data at the end of
+   * {@link AggregatorWriter#writeAggregator(Map, long)}.
+   *
+   * @throws IOException
+   */
+  void close() throws IOException;
 }

@@ -25,29 +25,31 @@ import org.apache.giraph.graph.Aggregator;
 /**
  * Aggregator for getting max value.
  *
- **/
-
+ */
 public class MaxAggregator implements Aggregator<DoubleWritable> {
-
+  /** Saved maximum value */
   private double max = Double.MIN_VALUE;
 
+  @Override
   public void aggregate(DoubleWritable value) {
-      double val = value.get();
-      if (val > max) {
-          max = val;
-      }
+    double val = value.get();
+    if (val > max) {
+      max = val;
+    }
   }
 
+  @Override
   public void setAggregatedValue(DoubleWritable value) {
-      max = value.get();
+    max = value.get();
   }
 
+  @Override
   public DoubleWritable getAggregatedValue() {
-      return new DoubleWritable(max);
+    return new DoubleWritable(max);
   }
 
+  @Override
   public DoubleWritable createAggregatedValue() {
-      return new DoubleWritable();
+    return new DoubleWritable();
   }
-
 }

@@ -41,136 +41,134 @@ import java.util.Map;
  * Tests {@link EdgeListVertex}.
  */
 public class TestEdgeListVertex extends TestCase {
-    /** Instantiated vertex filled in from setup() */
-    private IFDLEdgeListVertex vertex;
-    /** Job filled in by setup() */
-    private GiraphJob job;
+  /** Instantiated vertex filled in from setup() */
+  private IFDLEdgeListVertex vertex;
+  /** Job filled in by setup() */
+  private GiraphJob job;
 
-    /**
-     * Simple instantiable class that extends {@link EdgeArrayVertex}.
-     */
-    private static class IFDLEdgeListVertex extends
-            EdgeListVertex<IntWritable, FloatWritable, DoubleWritable,
-            LongWritable> {
-
-        @Override
-        public void compute(Iterator<LongWritable> msgIterator)
-                throws IOException {
-        }
-    }
-
+  /**
+   * Simple instantiable class that extends {@link EdgeArrayVertex}.
+   */
+  private static class IFDLEdgeListVertex extends
+      EdgeListVertex<IntWritable, FloatWritable, DoubleWritable,
+      LongWritable> {
     @Override
-    public void setUp() {
-        try {
-            job = new GiraphJob("TestEdgeArrayVertex");
-        } catch (IOException e) {
-            throw new RuntimeException("setUp: Failed", e);
-        }
-        job.setVertexClass(IFDLEdgeListVertex.class);
-        job.getConfiguration().setClass(GiraphJob.VERTEX_INDEX_CLASS,
-            IntWritable.class, WritableComparable.class);
-        job.getConfiguration().setClass(GiraphJob.VERTEX_VALUE_CLASS,
-            FloatWritable.class, Writable.class);
-        job.getConfiguration().setClass(GiraphJob.EDGE_VALUE_CLASS,
-            DoubleWritable.class, Writable.class);
-        job.getConfiguration().setClass(GiraphJob.MESSAGE_VALUE_CLASS,
-            LongWritable.class, Writable.class);
-        vertex = (IFDLEdgeListVertex)
-            BspUtils.<IntWritable, FloatWritable, DoubleWritable, LongWritable>
-            createVertex(job.getConfiguration());
+    public void compute(Iterator<LongWritable> msgIterator)
+      throws IOException {
     }
+  }
 
-    public void testInstantiate() throws IOException {
-        assertNotNull(vertex);
+  @Override
+  public void setUp() {
+    try {
+      job = new GiraphJob("TestEdgeArrayVertex");
+    } catch (IOException e) {
+      throw new RuntimeException("setUp: Failed", e);
     }
+    job.setVertexClass(IFDLEdgeListVertex.class);
+    job.getConfiguration().setClass(GiraphJob.VERTEX_INDEX_CLASS,
+        IntWritable.class, WritableComparable.class);
+    job.getConfiguration().setClass(GiraphJob.VERTEX_VALUE_CLASS,
+        FloatWritable.class, Writable.class);
+    job.getConfiguration().setClass(GiraphJob.EDGE_VALUE_CLASS,
+        DoubleWritable.class, Writable.class);
+    job.getConfiguration().setClass(GiraphJob.MESSAGE_VALUE_CLASS,
+        LongWritable.class, Writable.class);
+    vertex = (IFDLEdgeListVertex)
+      BspUtils.<IntWritable, FloatWritable, DoubleWritable, LongWritable>
+      createVertex(job.getConfiguration());
+  }
 
-    public void testEdges() {
-        Map<IntWritable, DoubleWritable> edgeMap = Maps.newHashMap();
-        for (int i = 1000; i > 0; --i) {
-            edgeMap.put(new IntWritable(i), new DoubleWritable(i * 2.0));
-        }
-        vertex.initialize(null, null, edgeMap, null);
-        assertEquals(vertex.getNumOutEdges(), 1000);
-        int expectedIndex = 1;
-        for (IntWritable index : vertex) {
-            assertEquals(index.get(), expectedIndex);
-            assertEquals(vertex.getEdgeValue(index).get(),
-                         expectedIndex * 2.0d);
-            ++expectedIndex;
-        }
-        assertEquals(vertex.removeEdge(new IntWritable(500)),
-                     new DoubleWritable(1000));
-        assertEquals(vertex.getNumOutEdges(), 999);
+  public void testInstantiate() throws IOException {
+    assertNotNull(vertex);
+  }
+
+  public void testEdges() {
+    Map<IntWritable, DoubleWritable> edgeMap = Maps.newHashMap();
+    for (int i = 1000; i > 0; --i) {
+      edgeMap.put(new IntWritable(i), new DoubleWritable(i * 2.0));
     }
-
-    public void testGetEdges() {
-        Map<IntWritable, DoubleWritable> edgeMap = Maps.newHashMap();
-        for (int i = 1000; i > 0; --i) {
-            edgeMap.put(new IntWritable(i), new DoubleWritable(i * 3.0));
-        }
-        vertex.initialize(null, null, edgeMap, null);
-        assertEquals(vertex.getNumOutEdges(), 1000);
-        assertEquals(vertex.getEdgeValue(new IntWritable(600)),
-                     new DoubleWritable(600 * 3.0));
-        assertEquals(vertex.removeEdge(new IntWritable(600)),
-                     new DoubleWritable(600 * 3.0));
-        assertEquals(vertex.getNumOutEdges(), 999);
-        assertEquals(vertex.getEdgeValue(new IntWritable(500)),
-                     new DoubleWritable(500 * 3.0));
-        assertEquals(vertex.getEdgeValue(new IntWritable(700)),
-                     new DoubleWritable(700 * 3.0));
+    vertex.initialize(null, null, edgeMap, null);
+    assertEquals(vertex.getNumOutEdges(), 1000);
+    int expectedIndex = 1;
+    for (IntWritable index : vertex) {
+      assertEquals(index.get(), expectedIndex);
+      assertEquals(vertex.getEdgeValue(index).get(),
+          expectedIndex * 2.0d);
+      ++expectedIndex;
     }
+    assertEquals(vertex.removeEdge(new IntWritable(500)),
+        new DoubleWritable(1000));
+    assertEquals(vertex.getNumOutEdges(), 999);
+  }
 
-    public void testAddRemoveEdges() {
-        Map<IntWritable, DoubleWritable> edgeMap = Maps.newHashMap();
-        vertex.initialize(null, null, edgeMap, null);
-        assertEquals(vertex.getNumOutEdges(), 0);
-        assertTrue(vertex.addEdge(new IntWritable(2),
-                                  new DoubleWritable(2.0)));
-        assertEquals(vertex.getNumOutEdges(), 1);
-        assertEquals(vertex.getEdgeValue(new IntWritable(2)),
-                                         new DoubleWritable(2.0));
-        assertTrue(vertex.addEdge(new IntWritable(4),
-                                 new DoubleWritable(4.0)));
-        assertTrue(vertex.addEdge(new IntWritable(3),
-                                  new DoubleWritable(3.0)));
-        assertTrue(vertex.addEdge(new IntWritable(1),
-                                  new DoubleWritable(1.0)));
-        assertEquals(vertex.getNumOutEdges(), 4);
-        assertNull(vertex.getEdgeValue(new IntWritable(5)));
-        assertNull(vertex.getEdgeValue(new IntWritable(0)));
-        int i = 1;
-        for (IntWritable edgeDestId : vertex) {
-            assertEquals(i, edgeDestId.get());
-            assertEquals(i * 1.0d, vertex.getEdgeValue(edgeDestId).get());
-            ++i;
-        }
-        assertNotNull(vertex.removeEdge(new IntWritable(1)));
-        assertEquals(vertex.getNumOutEdges(), 3);
-        assertNotNull(vertex.removeEdge(new IntWritable(3)));
-        assertEquals(vertex.getNumOutEdges(), 2);
-        assertNotNull(vertex.removeEdge(new IntWritable(2)));
-        assertEquals(vertex.getNumOutEdges(), 1);
-        assertNotNull(vertex.removeEdge(new IntWritable(4)));
-        assertEquals(vertex.getNumOutEdges(), 0);
+  public void testGetEdges() {
+    Map<IntWritable, DoubleWritable> edgeMap = Maps.newHashMap();
+    for (int i = 1000; i > 0; --i) {
+      edgeMap.put(new IntWritable(i), new DoubleWritable(i * 3.0));
     }
+    vertex.initialize(null, null, edgeMap, null);
+    assertEquals(vertex.getNumOutEdges(), 1000);
+    assertEquals(vertex.getEdgeValue(new IntWritable(600)),
+        new DoubleWritable(600 * 3.0));
+    assertEquals(vertex.removeEdge(new IntWritable(600)),
+        new DoubleWritable(600 * 3.0));
+    assertEquals(vertex.getNumOutEdges(), 999);
+    assertEquals(vertex.getEdgeValue(new IntWritable(500)),
+        new DoubleWritable(500 * 3.0));
+    assertEquals(vertex.getEdgeValue(new IntWritable(700)),
+        new DoubleWritable(700 * 3.0));
+  }
 
-
-    public void testSerialize() {
-        Map<IntWritable, DoubleWritable> edgeMap = Maps.newHashMap();
-        for (int i = 1000; i > 0; --i) {
-            edgeMap.put(new IntWritable(i), new DoubleWritable(i * 2.0));
-        }
-        List<LongWritable> messageList = Lists.newArrayList();
-        messageList.add(new LongWritable(4));
-        messageList.add(new LongWritable(5));
-        vertex.initialize(
-            new IntWritable(2), new FloatWritable(3.0f), edgeMap, messageList);
-        byte[] byteArray = WritableUtils.writeToByteArray(vertex);
-        IFDLEdgeListVertex readVertex = (IFDLEdgeListVertex)
-            BspUtils.<IntWritable, FloatWritable, DoubleWritable, LongWritable>
-            createVertex(job.getConfiguration());
-        WritableUtils.readFieldsFromByteArray(byteArray, readVertex);
-        assertEquals(vertex, readVertex);
+  public void testAddRemoveEdges() {
+    Map<IntWritable, DoubleWritable> edgeMap = Maps.newHashMap();
+    vertex.initialize(null, null, edgeMap, null);
+    assertEquals(vertex.getNumOutEdges(), 0);
+    assertTrue(vertex.addEdge(new IntWritable(2),
+        new DoubleWritable(2.0)));
+    assertEquals(vertex.getNumOutEdges(), 1);
+    assertEquals(vertex.getEdgeValue(new IntWritable(2)),
+        new DoubleWritable(2.0));
+    assertTrue(vertex.addEdge(new IntWritable(4),
+        new DoubleWritable(4.0)));
+    assertTrue(vertex.addEdge(new IntWritable(3),
+        new DoubleWritable(3.0)));
+    assertTrue(vertex.addEdge(new IntWritable(1),
+        new DoubleWritable(1.0)));
+    assertEquals(vertex.getNumOutEdges(), 4);
+    assertNull(vertex.getEdgeValue(new IntWritable(5)));
+    assertNull(vertex.getEdgeValue(new IntWritable(0)));
+    int i = 1;
+    for (IntWritable edgeDestId : vertex) {
+      assertEquals(i, edgeDestId.get());
+      assertEquals(i * 1.0d, vertex.getEdgeValue(edgeDestId).get());
+      ++i;
     }
+    assertNotNull(vertex.removeEdge(new IntWritable(1)));
+    assertEquals(vertex.getNumOutEdges(), 3);
+    assertNotNull(vertex.removeEdge(new IntWritable(3)));
+    assertEquals(vertex.getNumOutEdges(), 2);
+    assertNotNull(vertex.removeEdge(new IntWritable(2)));
+    assertEquals(vertex.getNumOutEdges(), 1);
+    assertNotNull(vertex.removeEdge(new IntWritable(4)));
+    assertEquals(vertex.getNumOutEdges(), 0);
+  }
+
+  public void testSerialize() {
+    Map<IntWritable, DoubleWritable> edgeMap = Maps.newHashMap();
+    for (int i = 1000; i > 0; --i) {
+      edgeMap.put(new IntWritable(i), new DoubleWritable(i * 2.0));
+    }
+    List<LongWritable> messageList = Lists.newArrayList();
+    messageList.add(new LongWritable(4));
+    messageList.add(new LongWritable(5));
+    vertex.initialize(
+        new IntWritable(2), new FloatWritable(3.0f), edgeMap, messageList);
+    byte[] byteArray = WritableUtils.writeToByteArray(vertex);
+    IFDLEdgeListVertex readVertex = (IFDLEdgeListVertex)
+      BspUtils.<IntWritable, FloatWritable, DoubleWritable, LongWritable>
+      createVertex(job.getConfiguration());
+    WritableUtils.readFieldsFromByteArray(byteArray, readVertex);
+    assertEquals(vertex, readVertex);
+  }
 }

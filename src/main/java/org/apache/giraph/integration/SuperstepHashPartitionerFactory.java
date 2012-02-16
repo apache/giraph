@@ -38,84 +38,90 @@ import org.apache.log4j.Logger;
  * Example graph partitioner that builds on {@link HashMasterPartitioner} to
  * send the partitions to the worker that matches the superstep.  It is for
  * testing only and should never be used in practice.
+ *
+ * @param <I> Vertex id
+ * @param <V> Vertex value
+ * @param <E> Edge value
+ * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
-public class SuperstepHashPartitionerFactory<
-        I extends WritableComparable,
-        V extends Writable, E extends Writable, M extends Writable>
-        extends HashPartitionerFactory<I, V, E, M> {
+public class SuperstepHashPartitionerFactory<I extends WritableComparable,
+    V extends Writable, E extends Writable, M extends Writable>
+    extends HashPartitionerFactory<I, V, E, M> {
+  /**
+   * Changes the {@link HashMasterPartitioner} to make ownership of the
+   * partitions based on a superstep.  For testing only as it is totally
+   * unbalanced.
+   *
+   * @param <I> vertex id
+   * @param <V> vertex data
+   * @param <E> edge data
+   * @param <M> message data
+   */
+  private static class SuperstepMasterPartition<I extends WritableComparable,
+      V extends Writable, E extends Writable, M extends Writable>
+      extends HashMasterPartitioner<I, V, E, M> {
+    /** Class logger */
+    private static Logger LOG =
+        Logger.getLogger(SuperstepMasterPartition.class);
 
     /**
-     * Changes the {@link HashMasterPartitioner} to make ownership of the
-     * partitions based on a superstep.  For testing only as it is totally
-     * unbalanced.
+     * Construction with configuration.
      *
-     * @param <I> vertex id
-     * @param <V> vertex data
-     * @param <E> edge data
-     * @param <M> message data
+     * @param conf Configuration to be stored.
      */
-    private static class SuperstepMasterPartition<
-            I extends WritableComparable,
-            V extends Writable, E extends Writable, M extends Writable>
-            extends HashMasterPartitioner<I, V, E, M> {
-        /** Class logger */
-        private static Logger LOG =
-            Logger.getLogger(SuperstepMasterPartition.class);
-
-        public SuperstepMasterPartition(Configuration conf) {
-            super(conf);
-        }
-
-        @Override
-        public Collection<PartitionOwner> generateChangedPartitionOwners(
-                Collection<PartitionStats> allPartitionStatsList,
-                Collection<WorkerInfo> availableWorkerInfos,
-                int maxWorkers,
-                long superstep) {
-            // Assign all the partitions to
-            // superstep mod availableWorkerInfos
-            // Guaranteed to be different if the workers (and their order)
-            // do not change
-            long workerIndex = superstep % availableWorkerInfos.size();
-            int i = 0;
-            WorkerInfo chosenWorkerInfo = null;
-            for (WorkerInfo workerInfo : availableWorkerInfos) {
-                if (workerIndex == i) {
-                    chosenWorkerInfo = workerInfo;
-                }
-                ++i;
-            }
-            if (LOG.isInfoEnabled()) {
-                LOG.info("generateChangedPartitionOwners: Chosen worker " +
-                         "for superstep " + superstep + " is " +
-                         chosenWorkerInfo);
-            }
-
-            List<PartitionOwner> partitionOwnerList =
-                new ArrayList<PartitionOwner>();
-            for (PartitionOwner partitionOwner :
-                    getCurrentPartitionOwners()) {
-                WorkerInfo prevWorkerinfo =
-                    partitionOwner.getWorkerInfo().equals(chosenWorkerInfo) ?
-                        null : partitionOwner.getWorkerInfo();
-                PartitionOwner tmpPartitionOwner =
-                    new BasicPartitionOwner(partitionOwner.getPartitionId(),
-                                            chosenWorkerInfo,
-                                            prevWorkerinfo,
-                                            null);
-                partitionOwnerList.add(tmpPartitionOwner);
-                LOG.info("partition owner was " + partitionOwner +
-                         ", new " + tmpPartitionOwner);
-            }
-            setPartitionOwnerList(partitionOwnerList);
-            return partitionOwnerList;
-        }
+    public SuperstepMasterPartition(Configuration conf) {
+      super(conf);
     }
 
     @Override
-    public MasterGraphPartitioner<I, V, E, M>
-            createMasterGraphPartitioner() {
-        return new SuperstepMasterPartition<I, V, E, M>(getConf());
+    public Collection<PartitionOwner> generateChangedPartitionOwners(
+        Collection<PartitionStats> allPartitionStatsList,
+        Collection<WorkerInfo> availableWorkerInfos,
+        int maxWorkers,
+        long superstep) {
+      // Assign all the partitions to
+      // superstep mod availableWorkerInfos
+      // Guaranteed to be different if the workers (and their order)
+      // do not change
+      long workerIndex = superstep % availableWorkerInfos.size();
+      int i = 0;
+      WorkerInfo chosenWorkerInfo = null;
+      for (WorkerInfo workerInfo : availableWorkerInfos) {
+        if (workerIndex == i) {
+          chosenWorkerInfo = workerInfo;
+        }
+        ++i;
+      }
+      if (LOG.isInfoEnabled()) {
+        LOG.info("generateChangedPartitionOwners: Chosen worker " +
+                 "for superstep " + superstep + " is " +
+                 chosenWorkerInfo);
+      }
+
+      List<PartitionOwner> partitionOwnerList = new ArrayList<PartitionOwner>();
+      for (PartitionOwner partitionOwner :
+        getCurrentPartitionOwners()) {
+        WorkerInfo prevWorkerinfo =
+          partitionOwner.getWorkerInfo().equals(chosenWorkerInfo) ?
+            null : partitionOwner.getWorkerInfo();
+        PartitionOwner tmpPartitionOwner =
+          new BasicPartitionOwner(partitionOwner.getPartitionId(),
+                                  chosenWorkerInfo,
+                                  prevWorkerinfo,
+                                  null);
+        partitionOwnerList.add(tmpPartitionOwner);
+        LOG.info("partition owner was " + partitionOwner +
+            ", new " + tmpPartitionOwner);
+      }
+      setPartitionOwnerList(partitionOwnerList);
+      return partitionOwnerList;
     }
+  }
+
+  @Override
+  public MasterGraphPartitioner<I, V, E, M>
+  createMasterGraphPartitioner() {
+    return new SuperstepMasterPartition<I, V, E, M>(getConf());
+  }
 }

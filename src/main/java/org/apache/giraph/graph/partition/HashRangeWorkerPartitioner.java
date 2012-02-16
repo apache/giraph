@@ -31,12 +31,12 @@ import org.apache.hadoop.io.WritableComparable;
  */
 @SuppressWarnings("rawtypes")
 public class HashRangeWorkerPartitioner<I extends WritableComparable,
-        V extends Writable, E extends Writable, M extends Writable>
-        extends HashWorkerPartitioner<I, V, E, M> {
-    @Override
-    public PartitionOwner getPartitionOwner(I vertexId) {
-        int rangeSize = Integer.MAX_VALUE / getPartitionOwners().size();
-        int index = Math.abs(vertexId.hashCode()) / rangeSize;
-        return partitionOwnerList.get(index);
-    }
+    V extends Writable, E extends Writable, M extends Writable>
+    extends HashWorkerPartitioner<I, V, E, M> {
+  @Override
+  public PartitionOwner getPartitionOwner(I vertexId) {
+    int rangeSize = Integer.MAX_VALUE / getPartitionOwners().size();
+    int index = Math.abs(vertexId.hashCode()) / rangeSize;
+    return partitionOwnerList.get(index);
+  }
 }

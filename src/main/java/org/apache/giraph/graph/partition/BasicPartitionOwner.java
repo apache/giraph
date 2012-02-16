@@ -31,116 +31,132 @@ import org.apache.hadoop.conf.Configuration;
  * owner implementations.
  */
 public class BasicPartitionOwner implements PartitionOwner, Configurable {
-    /** Configuration */
-    private Configuration conf;
-    /** Partition id */
-    private int partitionId = -1;
-    /** Owning worker information */
-    private WorkerInfo workerInfo;
-    /** Previous (if any) worker info */
-    private WorkerInfo previousWorkerInfo;
-    /** Checkpoint files prefix for this partition */
-    private String checkpointFilesPrefix;
+  /** Configuration */
+  private Configuration conf;
+  /** Partition id */
+  private int partitionId = -1;
+  /** Owning worker information */
+  private WorkerInfo workerInfo;
+  /** Previous (if any) worker info */
+  private WorkerInfo previousWorkerInfo;
+  /** Checkpoint files prefix for this partition */
+  private String checkpointFilesPrefix;
 
-    public BasicPartitionOwner() {
-    }
+  /**
+   * Default constructor.
+   */
+  public BasicPartitionOwner() { }
 
-    public BasicPartitionOwner(int partitionId, WorkerInfo workerInfo) {
-        this(partitionId, workerInfo, null, null);
-    }
+  /**
+   * Constructor with partition id and worker info.
+   *
+   * @param partitionId Partition id of this partition.
+   * @param workerInfo Owner of the partition.
+   */
+  public BasicPartitionOwner(int partitionId, WorkerInfo workerInfo) {
+    this(partitionId, workerInfo, null, null);
+  }
 
-    public BasicPartitionOwner(int partitionId,
-                               WorkerInfo workerInfo,
-                               WorkerInfo previousWorkerInfo,
-                               String checkpointFilesPrefix) {
-        this.partitionId = partitionId;
-        this.workerInfo = workerInfo;
-        this.previousWorkerInfo = previousWorkerInfo;
-        this.checkpointFilesPrefix = checkpointFilesPrefix;
-    }
+  /**
+   * Constructor with partition id and worker info.
+   *
+   * @param partitionId Partition id of this partition.
+   * @param workerInfo Owner of the partition.
+   * @param previousWorkerInfo Previous owner of this partition.
+   * @param checkpointFilesPrefix Prefix of the checkpoint files.
+   */
+  public BasicPartitionOwner(int partitionId,
+                             WorkerInfo workerInfo,
+                             WorkerInfo previousWorkerInfo,
+                             String checkpointFilesPrefix) {
+    this.partitionId = partitionId;
+    this.workerInfo = workerInfo;
+    this.previousWorkerInfo = previousWorkerInfo;
+    this.checkpointFilesPrefix = checkpointFilesPrefix;
+  }
 
-    @Override
-    public int getPartitionId() {
-        return partitionId;
-    }
+  @Override
+  public int getPartitionId() {
+    return partitionId;
+  }
 
-    @Override
-    public WorkerInfo getWorkerInfo() {
-        return workerInfo;
-    }
+  @Override
+  public WorkerInfo getWorkerInfo() {
+    return workerInfo;
+  }
 
-    @Override
-    public void setWorkerInfo(WorkerInfo workerInfo) {
-        this.workerInfo = workerInfo;
-    }
+  @Override
+  public void setWorkerInfo(WorkerInfo workerInfo) {
+    this.workerInfo = workerInfo;
+  }
 
-    @Override
-    public WorkerInfo getPreviousWorkerInfo() {
-        return previousWorkerInfo;
-    }
+  @Override
+  public WorkerInfo getPreviousWorkerInfo() {
+    return previousWorkerInfo;
+  }
 
-    @Override
-    public void setPreviousWorkerInfo(WorkerInfo workerInfo) {
-        this.previousWorkerInfo = workerInfo;
-    }
+  @Override
+  public void setPreviousWorkerInfo(WorkerInfo workerInfo) {
+    this.previousWorkerInfo = workerInfo;
+  }
 
-    @Override
-    public String getCheckpointFilesPrefix() {
-        return checkpointFilesPrefix;
-    }
+  @Override
+  public String getCheckpointFilesPrefix() {
+    return checkpointFilesPrefix;
+  }
 
-    @Override
-    public void setCheckpointFilesPrefix(String checkpointFilesPrefix) {
-        this.checkpointFilesPrefix = checkpointFilesPrefix;
-    }
+  @Override
+  public void setCheckpointFilesPrefix(String checkpointFilesPrefix) {
+    this.checkpointFilesPrefix = checkpointFilesPrefix;
+  }
 
-    @Override
-    public void readFields(DataInput input) throws IOException {
-        partitionId = input.readInt();
-        workerInfo = new WorkerInfo();
-        workerInfo.readFields(input);
-        boolean hasPreviousWorkerInfo = input.readBoolean();
-        if (hasPreviousWorkerInfo) {
-            previousWorkerInfo = new WorkerInfo();
-            previousWorkerInfo.readFields(input);
-        }
-        boolean hasCheckpointFilePrefix = input.readBoolean();
-        if (hasCheckpointFilePrefix) {
-            checkpointFilesPrefix = input.readUTF();
-        }
+  @Override
+  public void readFields(DataInput input) throws IOException {
+    partitionId = input.readInt();
+    workerInfo = new WorkerInfo();
+    workerInfo.readFields(input);
+    boolean hasPreviousWorkerInfo = input.readBoolean();
+    if (hasPreviousWorkerInfo) {
+      previousWorkerInfo = new WorkerInfo();
+      previousWorkerInfo.readFields(input);
     }
+    boolean hasCheckpointFilePrefix = input.readBoolean();
+    if (hasCheckpointFilePrefix) {
+      checkpointFilesPrefix = input.readUTF();
+    }
+  }
 
-    @Override
-    public void write(DataOutput output) throws IOException {
-        output.writeInt(partitionId);
-        workerInfo.write(output);
-        if (previousWorkerInfo != null) {
-            output.writeBoolean(true);
-            previousWorkerInfo.write(output);
-        } else {
-            output.writeBoolean(false);
-        }
-        if (checkpointFilesPrefix != null) {
-            output.writeBoolean(true);
-            output.writeUTF(checkpointFilesPrefix);
-        } else {
-            output.writeBoolean(false);
-        }
+  @Override
+  public void write(DataOutput output) throws IOException {
+    output.writeInt(partitionId);
+    workerInfo.write(output);
+    if (previousWorkerInfo != null) {
+      output.writeBoolean(true);
+      previousWorkerInfo.write(output);
+    } else {
+      output.writeBoolean(false);
     }
+    if (checkpointFilesPrefix != null) {
+      output.writeBoolean(true);
+      output.writeUTF(checkpointFilesPrefix);
+    } else {
+      output.writeBoolean(false);
+    }
+  }
 
-    @Override
-    public Configuration getConf() {
-        return conf;
-    }
+  @Override
+  public Configuration getConf() {
+    return conf;
+  }
 
-    @Override
-    public void setConf(Configuration conf) {
-        this.conf = conf;
-    }
+  @Override
+  public void setConf(Configuration conf) {
+    this.conf = conf;
+  }
 
-    @Override
-    public String toString() {
-        return "(id=" + partitionId + ",cur=" + workerInfo + ",prev=" +
-               previousWorkerInfo + ",ckpt_file=" + checkpointFilesPrefix + ")";
-    }
+  @Override
+  public String toString() {
+    return "(id=" + partitionId + ",cur=" + workerInfo + ",prev=" +
+        previousWorkerInfo + ",ckpt_file=" + checkpointFilesPrefix + ")";
+  }
 }

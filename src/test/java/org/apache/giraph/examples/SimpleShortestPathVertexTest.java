@@ -38,110 +38,111 @@ import java.util.Map;
  */
 public class SimpleShortestPathVertexTest extends TestCase {
 
-    /**
-     * Test the behavior when a shorter path to a vertex has been found
-     */
-    public void testOnShorterPathFound() throws Exception {
+  /**
+   * Test the behavior when a shorter path to a vertex has been found
+   */
+  public void testOnShorterPathFound() throws Exception {
 
-        SimpleShortestPathsVertex vertex = new SimpleShortestPathsVertex();
-        vertex.initialize(null, null, null, null);
-        vertex.addEdge(new LongWritable(10L), new FloatWritable(2.5f));
-        vertex.addEdge(new LongWritable(20L), new FloatWritable(0.5f));
+    SimpleShortestPathsVertex vertex = new SimpleShortestPathsVertex();
+    vertex.initialize(null, null, null, null);
+    vertex.addEdge(new LongWritable(10L), new FloatWritable(2.5f));
+    vertex.addEdge(new LongWritable(20L), new FloatWritable(0.5f));
 
-        MockUtils.MockedEnvironment<LongWritable, DoubleWritable, FloatWritable,
-                DoubleWritable> env = MockUtils.prepareVertex(vertex, 1L,
-                new LongWritable(7L), new DoubleWritable(Double.MAX_VALUE),
-                false);
+    MockUtils.MockedEnvironment<LongWritable, DoubleWritable, FloatWritable,
+    DoubleWritable> env = MockUtils.prepareVertex(vertex, 1L,
+        new LongWritable(7L), new DoubleWritable(Double.MAX_VALUE),
+        false);
 
-        Mockito.when(env.getConfiguration().getLong(
-                SimpleShortestPathsVertex.SOURCE_ID,
-                SimpleShortestPathsVertex.SOURCE_ID_DEFAULT)).thenReturn(2L);
+    Mockito.when(env.getConfiguration().getLong(
+        SimpleShortestPathsVertex.SOURCE_ID,
+        SimpleShortestPathsVertex.SOURCE_ID_DEFAULT)).thenReturn(2L);
 
-        vertex.compute(Lists.newArrayList(new DoubleWritable(2),
-                new DoubleWritable(1.5)).iterator());
+    vertex.compute(Lists.newArrayList(new DoubleWritable(2),
+        new DoubleWritable(1.5)).iterator());
 
-        assertTrue(vertex.isHalted());
-        assertEquals(1.5, vertex.getVertexValue().get());
+    assertTrue(vertex.isHalted());
+    assertEquals(1.5, vertex.getVertexValue().get());
 
-        env.verifyMessageSent(new LongWritable(10L), new DoubleWritable(4));
-        env.verifyMessageSent(new LongWritable(20L), new DoubleWritable(2));
+    env.verifyMessageSent(new LongWritable(10L), new DoubleWritable(4));
+    env.verifyMessageSent(new LongWritable(20L), new DoubleWritable(2));
+  }
+
+  /**
+   * Test the behavior when a new, but not shorter path to a vertex has been
+   * found.
+   */
+  public void testOnNoShorterPathFound() throws Exception {
+
+    SimpleShortestPathsVertex vertex = new SimpleShortestPathsVertex();
+    vertex.initialize(null, null, null, null);
+    vertex.addEdge(new LongWritable(10L), new FloatWritable(2.5f));
+    vertex.addEdge(new LongWritable(20L), new FloatWritable(0.5f));
+
+    MockUtils.MockedEnvironment<LongWritable, DoubleWritable, FloatWritable,
+    DoubleWritable> env = MockUtils.prepareVertex(vertex, 1L,
+        new LongWritable(7L), new DoubleWritable(0.5), false);
+
+    Mockito.when(env.getConfiguration().getLong(
+        SimpleShortestPathsVertex.SOURCE_ID,
+        SimpleShortestPathsVertex.SOURCE_ID_DEFAULT)).thenReturn(2L);
+
+    vertex.compute(Lists.newArrayList(new DoubleWritable(2),
+        new DoubleWritable(1.5)).iterator());
+
+    assertTrue(vertex.isHalted());
+    assertEquals(0.5, vertex.getVertexValue().get());
+
+    env.verifyNoMessageSent();
+  }
+
+  /**
+   * A local integration test on toy data
+   */
+  public void testToyData() throws Exception {
+
+    // a small four vertex graph
+    String[] graph = new String[] {
+        "[1,0,[[2,1],[3,3]]]",
+        "[2,0,[[3,1],[4,10]]]",
+        "[3,0,[[4,2]]]",
+    "[4,0,[]]" };
+
+    // start from vertex 1
+    Map<String, String> params = Maps.newHashMap();
+    params.put(SimpleShortestPathsVertex.SOURCE_ID, "1");
+
+    // run internally
+    Iterable<String> results = InternalVertexRunner.run(
+        SimpleShortestPathsVertex.class,
+        SimpleShortestPathsVertex.
+        SimpleShortestPathsVertexInputFormat.class,
+        SimpleShortestPathsVertex.
+        SimpleShortestPathsVertexOutputFormat.class,
+        params, graph);
+
+    Map<Long, Double> distances = parseDistances(results);
+
+    // verify results
+    assertNotNull(distances);
+    assertEquals(4, distances.size());
+    assertEquals(0.0, distances.get(1L));
+    assertEquals(1.0, distances.get(2L));
+    assertEquals(2.0, distances.get(3L));
+    assertEquals(4.0, distances.get(4L));
+  }
+
+  private Map<Long, Double> parseDistances(Iterable<String> results) {
+    Map<Long, Double> distances =
+        Maps.newHashMapWithExpectedSize(Iterables.size(results));
+    for (String line : results) {
+      try {
+        JSONArray jsonVertex = new JSONArray(line);
+        distances.put(jsonVertex.getLong(0), jsonVertex.getDouble(1));
+      } catch (JSONException e) {
+        throw new IllegalArgumentException(
+            "Couldn't get vertex from line " + line, e);
+      }
     }
-
-    /**
-     * Test the behavior when a new, but not shorter path to a vertex has been found
-     */
-    public void testOnNoShorterPathFound() throws Exception {
-
-        SimpleShortestPathsVertex vertex = new SimpleShortestPathsVertex();
-        vertex.initialize(null, null, null, null);
-        vertex.addEdge(new LongWritable(10L), new FloatWritable(2.5f));
-        vertex.addEdge(new LongWritable(20L), new FloatWritable(0.5f));
-
-        MockUtils.MockedEnvironment<LongWritable, DoubleWritable, FloatWritable,
-                DoubleWritable> env = MockUtils.prepareVertex(vertex, 1L,
-                new LongWritable(7L), new DoubleWritable(0.5), false);
-
-        Mockito.when(env.getConfiguration().getLong(
-                SimpleShortestPathsVertex.SOURCE_ID,
-                SimpleShortestPathsVertex.SOURCE_ID_DEFAULT)).thenReturn(2L);
-
-        vertex.compute(Lists.newArrayList(new DoubleWritable(2),
-                new DoubleWritable(1.5)).iterator());
-
-        assertTrue(vertex.isHalted());
-        assertEquals(0.5, vertex.getVertexValue().get());
-
-        env.verifyNoMessageSent();
-    }
-
-    /**
-     * A local integration test on toy data
-     */
-    public void testToyData() throws Exception {
-
-        // a small four vertex graph
-        String[] graph = new String[] {
-                "[1,0,[[2,1],[3,3]]]",
-                "[2,0,[[3,1],[4,10]]]",
-                "[3,0,[[4,2]]]",
-                "[4,0,[]]" };
-
-        // start from vertex 1
-        Map<String, String> params = Maps.newHashMap();
-        params.put(SimpleShortestPathsVertex.SOURCE_ID, "1");
-
-        // run internally
-        Iterable<String> results = InternalVertexRunner.run(
-                SimpleShortestPathsVertex.class,
-                SimpleShortestPathsVertex.
-                        SimpleShortestPathsVertexInputFormat.class,
-                SimpleShortestPathsVertex.
-                        SimpleShortestPathsVertexOutputFormat.class,
-                params, graph);
-
-        Map<Long, Double> distances = parseDistances(results);
-
-        // verify results
-        assertNotNull(distances);
-        assertEquals(4, distances.size());
-        assertEquals(0.0, distances.get(1L));
-        assertEquals(1.0, distances.get(2L));
-        assertEquals(2.0, distances.get(3L));
-        assertEquals(4.0, distances.get(4L));
-    }
-
-    private Map<Long, Double> parseDistances(Iterable<String> results) {
-        Map<Long, Double> distances =
-                Maps.newHashMapWithExpectedSize(Iterables.size(results));
-        for (String line : results) {
-            try {
-                JSONArray jsonVertex = new JSONArray(line);
-                distances.put(jsonVertex.getLong(0), jsonVertex.getDouble(1));
-            } catch (JSONException e) {
-                throw new IllegalArgumentException(
-                    "Couldn't get vertex from line " + line, e);
-            }
-        }
-        return distances;
-    }
+    return distances;
+  }
 }

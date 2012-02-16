@@ -23,18 +23,21 @@ import org.apache.hadoop.security.authorize.PolicyProvider;
 import org.apache.hadoop.security.authorize.Service;
 
 /**
-  * {@link PolicyProvider} for Map-Reduce protocols.
-  */
+ * {@link PolicyProvider} for Map-Reduce protocols.
+ */
 public class BspPolicyProvider extends PolicyProvider {
-    private static final Service[] bspCommunicationsServices =
-        new Service[] {
-            new Service("security.bsp.communications.protocol.acl",
-                        CommunicationsInterface.class),
+  /**
+   * Communication services array.
+   */
+  private static final Service[] BSP_COMMUNICATION_SERVICES =
+    new Service[] {
+      new Service("security.bsp.communications.protocol.acl",
+                  CommunicationsInterface.class),
     };
 
-    @Override
-    public Service[] getServices() {
-        return bspCommunicationsServices;
-    }
+  @Override
+  public Service[] getServices() {
+    return BSP_COMMUNICATION_SERVICES;
+  }
 }
 

@@ -26,23 +26,22 @@ import org.apache.hadoop.io.WritableComparable;
 /**
  * Abstract class to extend for combining of messages sent to the same vertex.
  *
- * @param <I extends Writable> index
- * @param <M extends Writable> message data
+ * @param <I> Vertex id
+ * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public abstract class VertexCombiner<I extends WritableComparable,
-                                     M extends Writable> {
-
-   /**
-    * Combines message values for a particular vertex index.
-    *
-    * @param vertexIndex Index of the vertex getting these messages
-    * @param messages Iterable of the messages to be combined
-    * @return Iterable of the combined messages. The returned value cannot 
-    *         be null and its size is required to be smaller or equal to 
-    *         the size of the messages list.
-    * @throws IOException
-    */
-    public abstract Iterable<M> combine(I vertexIndex,
-            Iterable<M> messages) throws IOException;
+    M extends Writable> {
+  /**
+   * Combines message values for a particular vertex index.
+   *
+   * @param vertexIndex Index of the vertex getting these messages
+   * @param messages Iterable of the messages to be combined
+   * @return Iterable of the combined messages. The returned value cannot
+   *         be null and its size is required to be smaller or equal to
+   *         the size of the messages list.
+   * @throws IOException
+   */
+  public abstract Iterable<M> combine(I vertexIndex,
+      Iterable<M> messages) throws IOException;
 }

@@ -44,115 +44,119 @@ import java.util.Map;
  * finishes.
  */
 public class SimpleSuperstepVertex extends
-        EdgeListVertex<LongWritable, IntWritable, FloatWritable, IntWritable> {
+    EdgeListVertex<LongWritable, IntWritable, FloatWritable, IntWritable> {
+  @Override
+  public void compute(Iterator<IntWritable> msgIterator) {
+    if (getSuperstep() > 3) {
+      voteToHalt();
+    }
+  }
+
+  /**
+   * Simple VertexReader that supports {@link SimpleSuperstepVertex}
+   */
+  public static class SimpleSuperstepVertexReader extends
+      GeneratedVertexReader<LongWritable, IntWritable,
+        FloatWritable, IntWritable> {
+    /** Class logger */
+    private static final Logger LOG =
+        Logger.getLogger(SimpleSuperstepVertexReader.class);
+    /**
+     * Constructor.
+     */
+    public SimpleSuperstepVertexReader() {
+      super();
+    }
+
     @Override
-    public void compute(Iterator<IntWritable> msgIterator) {
-        if (getSuperstep() > 3) {
-            voteToHalt();
-        }
+    public boolean nextVertex() throws IOException, InterruptedException {
+      return totalRecords > recordsRead;
     }
 
+    @Override
+    public BasicVertex<LongWritable, IntWritable, FloatWritable,
+    IntWritable> getCurrentVertex()
+      throws IOException, InterruptedException {
+      BasicVertex<LongWritable, IntWritable,
+      FloatWritable, IntWritable> vertex =
+        BspUtils.<LongWritable, IntWritable, FloatWritable,
+        IntWritable>createVertex(configuration);
+      long tmpId = reverseIdOrder ?
+          ((inputSplit.getSplitIndex() + 1) * totalRecords) -
+          recordsRead - 1 :
+            (inputSplit.getSplitIndex() * totalRecords) + recordsRead;
+      LongWritable vertexId = new LongWritable(tmpId);
+      IntWritable vertexValue =
+          new IntWritable((int) (vertexId.get() * 10));
+      Map<LongWritable, FloatWritable> edgeMap = Maps.newHashMap();
+      long destVertexId =
+          (vertexId.get() + 1) %
+          (inputSplit.getNumSplits() * totalRecords);
+      float edgeValue = vertexId.get() * 100f;
+      edgeMap.put(new LongWritable(destVertexId),
+          new FloatWritable(edgeValue));
+      vertex.initialize(vertexId, vertexValue, edgeMap, null);
+      ++recordsRead;
+      if (LOG.isInfoEnabled()) {
+        LOG.info("next: Return vertexId=" + vertex.getVertexId().get() +
+            ", vertexValue=" + vertex.getVertexValue() +
+            ", destinationId=" + destVertexId +
+            ", edgeValue=" + edgeValue);
+      }
+      return vertex;
+    }
+  }
+
+  /**
+   * Simple VertexInputFormat that supports {@link SimpleSuperstepVertex}
+   */
+  public static class SimpleSuperstepVertexInputFormat extends
+      GeneratedVertexInputFormat<LongWritable,
+      IntWritable, FloatWritable, IntWritable> {
+    @Override
+    public VertexReader<LongWritable, IntWritable, FloatWritable, IntWritable>
+    createVertexReader(InputSplit split, TaskAttemptContext context)
+      throws IOException {
+      return new SimpleSuperstepVertexReader();
+    }
+  }
+
+  /**
+   * Simple VertexWriter that supports {@link SimpleSuperstepVertex}
+   */
+  public static class SimpleSuperstepVertexWriter extends
+      TextVertexWriter<LongWritable, IntWritable, FloatWritable> {
     /**
-     * Simple VertexReader that supports {@link SimpleSuperstepVertex}
+     * Constructor with the line record writer.
+     *
+     * @param lineRecordWriter Writer to write to.
      */
-    public static class SimpleSuperstepVertexReader extends
-            GeneratedVertexReader<LongWritable, IntWritable,
-            FloatWritable, IntWritable> {
-        /** Class logger */
-        private static final Logger LOG =
-            Logger.getLogger(SimpleSuperstepVertexReader.class);
-        @Override
-        public boolean nextVertex() throws IOException, InterruptedException {
-            return totalRecords > recordsRead;
-        }
-
-        public SimpleSuperstepVertexReader() {
-            super();
-        }
-
-        @Override
-        public BasicVertex<LongWritable, IntWritable, FloatWritable,
-                IntWritable> getCurrentVertex()
-                throws IOException, InterruptedException {
-            BasicVertex<LongWritable, IntWritable,
-                        FloatWritable, IntWritable> vertex =
-                BspUtils.<LongWritable, IntWritable,
-                          FloatWritable, IntWritable>createVertex(
-                    configuration);
-            long tmpId = reverseIdOrder ?
-                ((inputSplit.getSplitIndex() + 1) * totalRecords) -
-                    recordsRead - 1 :
-                (inputSplit.getSplitIndex() * totalRecords) + recordsRead;
-            LongWritable vertexId = new LongWritable(tmpId);
-            IntWritable vertexValue =
-                new IntWritable((int) (vertexId.get() * 10));
-            Map<LongWritable, FloatWritable> edgeMap = Maps.newHashMap();
-            long destVertexId =
-                (vertexId.get() + 1) %
-                    (inputSplit.getNumSplits() * totalRecords);
-            float edgeValue = vertexId.get() * 100f;
-            edgeMap.put(new LongWritable(destVertexId),
-                        new FloatWritable(edgeValue));
-            vertex.initialize(vertexId, vertexValue, edgeMap, null);
-            ++recordsRead;
-            if (LOG.isInfoEnabled()) {
-                LOG.info("next: Return vertexId=" + vertex.getVertexId().get() +
-                         ", vertexValue=" + vertex.getVertexValue() +
-                         ", destinationId=" + destVertexId +
-                         ", edgeValue=" + edgeValue);
-            }
-            return vertex;
-        }
+    public SimpleSuperstepVertexWriter(
+        RecordWriter<Text, Text> lineRecordWriter) {
+      super(lineRecordWriter);
     }
 
-    /**
-     * Simple VertexInputFormat that supports {@link SimpleSuperstepVertex}
-     */
-    public static class SimpleSuperstepVertexInputFormat extends
-            GeneratedVertexInputFormat<LongWritable,
-            IntWritable, FloatWritable, IntWritable> {
-        @Override
-        public VertexReader<LongWritable, IntWritable, FloatWritable, IntWritable>
-                createVertexReader(InputSplit split,
-                                   TaskAttemptContext context)
-                                   throws IOException {
-            return new SimpleSuperstepVertexReader();
-        }
+    @Override
+    public void writeVertex(BasicVertex<LongWritable, IntWritable,
+        FloatWritable, ?> vertex) throws IOException, InterruptedException {
+      getRecordWriter().write(
+          new Text(vertex.getVertexId().toString()),
+          new Text(vertex.getVertexValue().toString()));
     }
+  }
 
-    /**
-     * Simple VertexWriter that supports {@link SimpleSuperstepVertex}
-     */
-    public static class SimpleSuperstepVertexWriter extends
-            TextVertexWriter<LongWritable, IntWritable, FloatWritable> {
-        public SimpleSuperstepVertexWriter(
-                RecordWriter<Text, Text> lineRecordWriter) {
-            super(lineRecordWriter);
-        }
-
-        @Override
-        public void writeVertex(
-                BasicVertex<LongWritable, IntWritable, FloatWritable, ?> vertex)
-                throws IOException, InterruptedException {
-            getRecordWriter().write(
-                new Text(vertex.getVertexId().toString()),
-                new Text(vertex.getVertexValue().toString()));
-        }
+  /**
+   * Simple VertexOutputFormat that supports {@link SimpleSuperstepVertex}
+   */
+  public static class SimpleSuperstepVertexOutputFormat extends
+      TextVertexOutputFormat<LongWritable, IntWritable, FloatWritable> {
+    @Override
+    public VertexWriter<LongWritable, IntWritable, FloatWritable>
+    createVertexWriter(TaskAttemptContext context)
+      throws IOException, InterruptedException {
+      RecordWriter<Text, Text> recordWriter =
+          textOutputFormat.getRecordWriter(context);
+      return new SimpleSuperstepVertexWriter(recordWriter);
     }
-
-    /**
-     * Simple VertexOutputFormat that supports {@link SimpleSuperstepVertex}
-     */
-    public static class SimpleSuperstepVertexOutputFormat extends
-            TextVertexOutputFormat<LongWritable, IntWritable, FloatWritable> {
-
-        @Override
-        public VertexWriter<LongWritable, IntWritable, FloatWritable>
-            createVertexWriter(TaskAttemptContext context)
-                throws IOException, InterruptedException {
-            RecordWriter<Text, Text> recordWriter =
-                textOutputFormat.getRecordWriter(context);
-            return new SimpleSuperstepVertexWriter(recordWriter);
-        }
-    }
+  }
 }

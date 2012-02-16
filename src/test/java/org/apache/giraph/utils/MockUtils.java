@@ -44,7 +44,7 @@ public class MockUtils {
     public static class MockedEnvironment<I extends WritableComparable,
             V extends Writable, E extends Writable, M extends Writable> {
 
-        private final GraphState graphState;
+        private final GraphState<I, V, E, M> graphState;
         private final Mapper.Context context;
         private final Configuration conf;
         private final WorkerCommunications communications;

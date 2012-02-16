@@ -22,8 +22,12 @@ package org.apache.giraph.bsp;
  * State of a coordinated superstep
  */
 public enum SuperstepState {
-    INITIAL, ///< Nothing happened yet
-    WORKER_FAILURE, ///< A worker died during this superstep
-    THIS_SUPERSTEP_DONE, ///< This superstep completed correctly
-    ALL_SUPERSTEPS_DONE, ///< All supersteps are complete
+  /** Nothing happened yet */
+  INITIAL,
+  /** A worker died during this superstep */
+  WORKER_FAILURE,
+  /** This superstep completed correctly */
+  THIS_SUPERSTEP_DONE,
+  /** All supersteps are complete */
+  ALL_SUPERSTEPS_DONE,
 }

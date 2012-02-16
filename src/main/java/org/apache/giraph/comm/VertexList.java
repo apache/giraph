@@ -33,24 +33,22 @@ import org.apache.hadoop.io.WritableComparable;
  * @param <M> Message value
  */
 @SuppressWarnings("rawtypes")
-public class VertexList<
-        I extends WritableComparable,
-        V extends Writable,
-        E extends Writable,
-        M extends Writable>
-        extends ArrayListWritable<BasicVertex<I, V, E, M>> {
-    /** Defining a layout version for a serializable class. */
-    private static final long serialVersionUID = 1000L;
+public class VertexList<I extends WritableComparable,
+    V extends Writable, E extends Writable,
+    M extends Writable>
+    extends ArrayListWritable<BasicVertex<I, V, E, M>> {
+  /** Defining a layout version for a serializable class. */
+  private static final long serialVersionUID = 1000L;
 
-    /**
-     * Default constructor for reflection
-     */
-    public VertexList() {}
+  /**
+   * Default constructor for reflection
+   */
+  public VertexList() { }
 
-    @SuppressWarnings("unchecked")
-    @Override
-    public void setClass() {
-        setClass((Class<BasicVertex<I, V, E, M>>)
-                 BspUtils.<I, V, E, M>getVertexClass(getConf()));
-    }
+  @SuppressWarnings("unchecked")
+  @Override
+  public void setClass() {
+    setClass((Class<BasicVertex<I, V, E, M>>)
+        BspUtils.<I, V, E, M>getVertexClass(getConf()));
+  }
 }

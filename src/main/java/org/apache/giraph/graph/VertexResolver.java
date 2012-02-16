@@ -31,110 +31,113 @@ import java.util.List;
  * Default implementation of how to resolve vertex creation/removal, messages
  * to nonexistent vertices, etc.
  *
- * @param <I>
- * @param <V>
- * @param <E>
- * @param <M>
+ * @param <I> Vertex id
+ * @param <V> Vertex data
+ * @param <E> Edge data
+ * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public class VertexResolver<I extends WritableComparable, V extends Writable,
-        E extends Writable, M extends Writable>
-        implements BasicVertexResolver<I, V, E, M>, Configurable {
-    /** Configuration */
-    private Configuration conf = null;
+    E extends Writable, M extends Writable>
+    implements BasicVertexResolver<I, V, E, M>, Configurable {
+  /** Class logger */
+  private static final Logger LOG = Logger.getLogger(VertexResolver.class);
+  /** Configuration */
+  private Configuration conf = null;
+  /** Stored graph state */
+  private GraphState<I, V, E, M> graphState;
 
-    private GraphState<I,V,E,M> graphState;
-
-    /** Class logger */
-    private static final Logger LOG = Logger.getLogger(VertexResolver.class);
-
-    @Override
-    public BasicVertex<I, V, E, M> resolve(
-            I vertexId,
-            BasicVertex<I, V, E, M> vertex,
-            VertexChanges<I, V, E, M> vertexChanges,
-            Iterable<M> messages) {
-        // Default algorithm:
-        // 1. If the vertex exists, first prune the edges
-        // 2. If vertex removal desired, remove the vertex.
-        // 3. If creation of vertex desired, pick first vertex
-        // 4. If vertex doesn't exist, but got messages, create
-        // 5. If edge addition, add the edges
-        if (vertex != null) {
-            if (vertexChanges != null) {
-                List<I> removedEdgeList = vertexChanges.getRemovedEdgeList();
-                for (I removedDestVertex : removedEdgeList) {
-                    E removeEdge =
-                        ((MutableVertex<I, V, E, M>) vertex).removeEdge(
-                            removedDestVertex);
-                    if (removeEdge == null) {
-                        LOG.warn("resolve: Failed to remove edge with " +
-                                 "destination " + removedDestVertex + "on " +
-                                 vertex + " since it doesn't exist.");
-                    }
-                }
-                if (vertexChanges.getRemovedVertexCount() > 0) {
-                    vertex = null;
-                }
-            }
+  @Override
+  public BasicVertex<I, V, E, M> resolve(
+      I vertexId,
+      BasicVertex<I, V, E, M> vertex,
+      VertexChanges<I, V, E, M> vertexChanges,
+      Iterable<M> messages) {
+    // Default algorithm:
+      // 1. If the vertex exists, first prune the edges
+    // 2. If vertex removal desired, remove the vertex.
+    // 3. If creation of vertex desired, pick first vertex
+    // 4. If vertex doesn't exist, but got messages, create
+    // 5. If edge addition, add the edges
+    if (vertex != null) {
+      if (vertexChanges != null) {
+        List<I> removedEdgeList = vertexChanges.getRemovedEdgeList();
+        for (I removedDestVertex : removedEdgeList) {
+          E removeEdge =
+              ((MutableVertex<I, V, E, M>) vertex).removeEdge(
+                  removedDestVertex);
+          if (removeEdge == null) {
+            LOG.warn("resolve: Failed to remove edge with " +
+                "destination " + removedDestVertex + "on " +
+                vertex + " since it doesn't exist.");
+          }
         }
-
-        if (vertex == null) {
-            if (vertexChanges != null) {
-                if (!vertexChanges.getAddedVertexList().isEmpty()) {
-                    vertex = vertexChanges.getAddedVertexList().get(0);
-                }
-            }
-            if (vertex == null && messages != null
-                    && !Iterables.isEmpty(messages)) {
-                vertex = instantiateVertex();
-                vertex.initialize(vertexId,
-                                  BspUtils.<V>createVertexValue(getConf()),
-                                  null,
-                                  messages);
-            }
-        } else {
-            if ((vertexChanges != null) &&
-                    (!vertexChanges.getAddedVertexList().isEmpty())) {
-                LOG.warn("resolve: Tried to add a vertex with id = " +
-                         vertex.getVertexId() + " when one already " +
-                        "exists.  Ignoring the add vertex request.");
-            }
+        if (vertexChanges.getRemovedVertexCount() > 0) {
+          vertex = null;
         }
+      }
+    }
 
-        if (vertexChanges != null &&
-                !vertexChanges.getAddedEdgeList().isEmpty()) {
-            MutableVertex<I, V, E, M> mutableVertex =
-                (MutableVertex<I, V, E, M>) vertex;
-            for (Edge<I, E> edge : vertexChanges.getAddedEdgeList()) {
-                edge.setConf(getConf());
-                mutableVertex.addEdge(edge.getDestVertexId(),
-                                      edge.getEdgeValue());
-            }
+    if (vertex == null) {
+      if (vertexChanges != null) {
+        if (!vertexChanges.getAddedVertexList().isEmpty()) {
+          vertex = vertexChanges.getAddedVertexList().get(0);
         }
-
-        return vertex;
+      }
+      if (vertex == null && messages != null && !Iterables.isEmpty(messages)) {
+        vertex = instantiateVertex();
+        vertex.initialize(vertexId,
+            BspUtils.<V>createVertexValue(getConf()),
+            null,
+            messages);
+      }
+    } else {
+      if ((vertexChanges != null) &&
+          (!vertexChanges.getAddedVertexList().isEmpty())) {
+        LOG.warn("resolve: Tried to add a vertex with id = " +
+            vertex.getVertexId() + " when one already " +
+            "exists.  Ignoring the add vertex request.");
+      }
     }
 
-    @Override
-    public BasicVertex<I, V, E, M> instantiateVertex() {
-        BasicVertex<I, V, E, M> vertex =
-            BspUtils.<I, V, E, M>createVertex(getConf());
-        vertex.setGraphState(graphState);
-        return vertex;
+    if (vertexChanges != null &&
+        !vertexChanges.getAddedEdgeList().isEmpty()) {
+      MutableVertex<I, V, E, M> mutableVertex =
+          (MutableVertex<I, V, E, M>) vertex;
+      for (Edge<I, E> edge : vertexChanges.getAddedEdgeList()) {
+        edge.setConf(getConf());
+        mutableVertex.addEdge(edge.getDestVertexId(),
+            edge.getEdgeValue());
+      }
     }
 
-    @Override
-    public Configuration getConf() {
-        return conf;
-    }
+    return vertex;
+  }
 
-    @Override
-    public void setConf(Configuration conf) {
-        this.conf = conf;
-    }
+  @Override
+  public BasicVertex<I, V, E, M> instantiateVertex() {
+    BasicVertex<I, V, E, M> vertex =
+        BspUtils.<I, V, E, M>createVertex(getConf());
+    vertex.setGraphState(graphState);
+    return vertex;
+  }
 
-    public void setGraphState(GraphState<I, V, E, M> graphState) {
-      this.graphState = graphState;
-    }
+  @Override
+  public Configuration getConf() {
+    return conf;
+  }
+
+  @Override
+  public void setConf(Configuration conf) {
+    this.conf = conf;
+  }
+
+  /**
+   * Set the graph state.
+   *
+   * @param graphState Graph state saved.
+   */
+  public void setGraphState(GraphState<I, V, E, M> graphState) {
+    this.graphState = graphState;
+  }
 }

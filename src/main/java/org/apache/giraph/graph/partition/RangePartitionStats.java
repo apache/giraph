@@ -32,37 +32,37 @@ import org.apache.hadoop.io.WritableComparable;
  */
 @SuppressWarnings("rawtypes")
 public class RangePartitionStats<I extends WritableComparable>
-        extends PartitionStats {
-    /** Can be null if no hint, otherwise a splitting hint */
-    private RangeSplitHint<I> hint;
+    extends PartitionStats {
+  /** Can be null if no hint, otherwise a splitting hint */
+  private RangeSplitHint<I> hint;
 
-    /**
-     * Get the range split hint (if any)
-     *
-     * @return Hint of how to split the range if desired, null otherwise
-     */
-    public RangeSplitHint<I> getRangeSplitHint() {
-        return hint;
-    }
+  /**
+   * Get the range split hint (if any)
+   *
+   * @return Hint of how to split the range if desired, null otherwise
+   */
+  public RangeSplitHint<I> getRangeSplitHint() {
+    return hint;
+  }
 
-    @Override
-    public void readFields(DataInput input) throws IOException {
-        super.readFields(input);
-        boolean hintExists = input.readBoolean();
-        if (hintExists) {
-            hint = new RangeSplitHint<I>();
-            hint.readFields(input);
-        } else {
-            hint = null;
-        }
+  @Override
+  public void readFields(DataInput input) throws IOException {
+    super.readFields(input);
+    boolean hintExists = input.readBoolean();
+    if (hintExists) {
+      hint = new RangeSplitHint<I>();
+      hint.readFields(input);
+    } else {
+      hint = null;
     }
+  }
 
-    @Override
-    public void write(DataOutput output) throws IOException {
-        super.write(output);
-        output.writeBoolean(hint != null);
-        if (hint != null) {
-            hint.write(output);
-        }
+  @Override
+  public void write(DataOutput output) throws IOException {
+    super.write(output);
+    output.writeBoolean(hint != null);
+    if (hint != null) {
+      hint.write(output);
     }
+  }
 }

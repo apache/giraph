@@ -32,22 +32,25 @@ import java.util.List;
 /**
  * This VertexInputFormat is meant for testing/debugging.  It simply generates
  * some vertex data that can be consumed by test applications.
+ *
+ * @param <I> Vertex id
+ * @param <V> Vertex data
+ * @param <E> Edge data
+ * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public abstract class GeneratedVertexInputFormat<
-        I extends WritableComparable, V extends Writable, E extends Writable,
-        M extends Writable>
-        extends VertexInputFormat<I, V, E, M> {
-
-    @Override
-    public List<InputSplit> getSplits(JobContext context, int numWorkers)
-        throws IOException, InterruptedException {
-         // This is meaningless, the VertexReader will generate all the test
-         // data.
-        List<InputSplit> inputSplitList = new ArrayList<InputSplit>();
-        for (int i = 0; i < numWorkers; ++i) {
-            inputSplitList.add(new BspInputSplit(i, numWorkers));
-        }
-        return inputSplitList;
+    I extends WritableComparable, V extends Writable, E extends Writable,
+    M extends Writable> extends VertexInputFormat<I, V, E, M> {
+  @Override
+  public List<InputSplit> getSplits(JobContext context, int numWorkers)
+    throws IOException, InterruptedException {
+    // This is meaningless, the VertexReader will generate all the test
+    // data.
+    List<InputSplit> inputSplitList = new ArrayList<InputSplit>();
+    for (int i = 0; i < numWorkers; ++i) {
+      inputSplitList.add(new BspInputSplit(i, numWorkers));
     }
+    return inputSplitList;
+  }
 }

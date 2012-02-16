@@ -31,20 +31,20 @@ import org.apache.hadoop.io.WritableComparable;
  */
 @SuppressWarnings("rawtypes")
 public interface GraphPartitionerFactory<I extends WritableComparable,
-        V extends Writable, E extends Writable, M extends Writable> {
-    /**
-     * Create the {@link MasterGraphPartitioner} used by the master.
-     * Instantiated once by the master and reused.
-     *
-     * @return Instantiated master graph partitioner
-     */
-    MasterGraphPartitioner<I, V, E, M> createMasterGraphPartitioner();
+    V extends Writable, E extends Writable, M extends Writable> {
+  /**
+   * Create the {@link MasterGraphPartitioner} used by the master.
+   * Instantiated once by the master and reused.
+   *
+   * @return Instantiated master graph partitioner
+   */
+  MasterGraphPartitioner<I, V, E, M> createMasterGraphPartitioner();
 
-    /**
-     * Create the {@link WorkerGraphPartitioner} used by the worker.
-     * Instantiated once by every worker and reused.
-     *
-     * @return Instantiated worker graph partitioner
-     */
-    WorkerGraphPartitioner<I, V, E, M> createWorkerGraphPartitioner();
+  /**
+   * Create the {@link WorkerGraphPartitioner} used by the worker.
+   * Instantiated once by every worker and reused.
+   *
+   * @return Instantiated worker graph partitioner
+   */
+  WorkerGraphPartitioner<I, V, E, M> createWorkerGraphPartitioner();
 }

@@ -31,17 +31,17 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  */
 public class BspRecordWriter extends RecordWriter<Text, Text> {
 
-    @Override
-    public void close(TaskAttemptContext context)
-            throws IOException, InterruptedException {
-        // Do nothing
-    }
+  @Override
+  public void close(TaskAttemptContext context)
+    throws IOException, InterruptedException {
+    // Do nothing
+  }
 
-    @Override
-    public void write(Text key, Text value)
-            throws IOException, InterruptedException {
-        throw new IOException("write: Cannot write with " +
-                              getClass().getName() +
-                              ".  Should never be called");
-    }
+  @Override
+  public void write(Text key, Text value)
+    throws IOException, InterruptedException {
+    throw new IOException("write: Cannot write with " +
+        getClass().getName() +
+        ".  Should never be called");
+  }
 }

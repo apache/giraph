@@ -25,13 +25,12 @@ import java.io.IOException;
 import java.util.Iterator;
 
 /**
- * Same benchmark code as {@link PageRankBenchmark}, but uses Hashmap-backed Vertex
- * implementation rather than {@link org.apache.giraph.graph.EdgeListVertex}
+ * Same benchmark code as {@link PageRankBenchmark}, but uses
+ * Hashmap-backed Vertex implementation rather than
+ * {@link org.apache.giraph.graph.EdgeListVertex}
  */
 public class HashMapVertexPageRankBenchmark extends HashMapVertex<
     LongWritable, DoubleWritable, DoubleWritable, DoubleWritable> {
-  public final static String SUPERSTEP_COUNT = PageRankComputation.SUPERSTEP_COUNT;
-
   @Override
   public void compute(Iterator<DoubleWritable> msgIterator) throws IOException {
     PageRankComputation.computePageRank(this, msgIterator);

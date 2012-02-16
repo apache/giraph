@@ -28,11 +28,24 @@ import java.util.Iterator;
  * classes.
  */
 public class PageRankComputation {
-  public final static String SUPERSTEP_COUNT = "PageRankBenchmark.superstepCount";
+  /** Number of supersteps */
+  public static final String SUPERSTEP_COUNT =
+      "PageRankBenchmark.superstepCount";
 
+  /**
+   * Do not construct.
+   */
+  private PageRankComputation() { }
+
+  /**
+   * Generic page rank algorithm.
+   *
+   * @param vertex Vertex to compute on.
+   * @param msgIterator Iterator of messages from previous superstep.
+   */
   public static void computePageRank(
-      MutableVertex<LongWritable, DoubleWritable, DoubleWritable, DoubleWritable>
-      vertex, Iterator<DoubleWritable> msgIterator) {
+      MutableVertex<LongWritable, DoubleWritable, DoubleWritable,
+      DoubleWritable> vertex, Iterator<DoubleWritable> msgIterator) {
     if (vertex.getSuperstep() >= 1) {
       double sum = 0;
       while (msgIterator.hasNext()) {

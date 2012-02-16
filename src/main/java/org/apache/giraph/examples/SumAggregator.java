@@ -24,30 +24,38 @@ import org.apache.giraph.graph.Aggregator;
 
 /**
  * Aggregator for summing up values.
- *
  */
 public class SumAggregator implements Aggregator<DoubleWritable> {
-
+  /** Aggregated sum */
   private double sum = 0;
 
+  /**
+   * Aggregate a double.
+   *
+   * @param value Value to aggregate.
+   */
   public void aggregate(double value) {
-      sum += value;
+    sum += value;
   }
 
+  @Override
   public void aggregate(DoubleWritable value) {
-      sum += value.get();
+    sum += value.get();
   }
 
+  @Override
   public void setAggregatedValue(DoubleWritable value) {
-      sum = value.get();
+    sum = value.get();
   }
 
+  @Override
   public DoubleWritable getAggregatedValue() {
-      return new DoubleWritable(sum);
+    return new DoubleWritable(sum);
   }
 
+  @Override
   public DoubleWritable createAggregatedValue() {
-      return new DoubleWritable();
+    return new DoubleWritable();
   }
 
 }

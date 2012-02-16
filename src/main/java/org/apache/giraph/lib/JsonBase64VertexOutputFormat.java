@@ -47,80 +47,80 @@ import java.io.IOException;
  * @param <E> Edge value
  */
 @SuppressWarnings("rawtypes")
-public class JsonBase64VertexOutputFormat<
-        I extends WritableComparable, V extends Writable, E extends Writable>
-        extends TextVertexOutputFormat<I, V, E>
-        implements JsonBase64VertexFormat {
+public class JsonBase64VertexOutputFormat<I extends WritableComparable,
+    V extends Writable, E extends Writable> extends
+    TextVertexOutputFormat<I, V, E> {
+  /**
+   * Simple writer that supports {@link JsonBase64VertexOutputFormat}
+   *
+   * @param <I> Vertex index value
+   * @param <V> Vertex value
+   * @param <E> Edge value
+   */
+  private static class JsonBase64VertexWriter<I extends WritableComparable,
+      V extends Writable, E extends Writable> extends
+      TextVertexWriter<I, V, E> {
     /**
-     * Simple writer that supports {@link JsonBase64VertexOutputFormat}
+     * Only constructor.  Requires the LineRecordWriter
      *
-     * @param <I> Vertex index value
-     * @param <V> Vertex value
-     * @param <E> Edge value
+     * @param lineRecordWriter Line record writer to write to
      */
-    private static class JsonBase64VertexWriter<
-            I extends WritableComparable, V extends Writable,
-            E extends Writable> extends TextVertexWriter<I, V, E> {
-        /**
-         * Only constructor.  Requires the LineRecordWriter
-         *
-         * @param lineRecordWriter Line record writer to write to
-         */
-        public JsonBase64VertexWriter(
-                RecordWriter<Text, Text> lineRecordWriter) {
-            super(lineRecordWriter);
-        }
-
-        @Override
-        public void writeVertex(BasicVertex<I, V, E, ?> vertex)
-                throws IOException, InterruptedException {
-            ByteArrayOutputStream outputStream =
-                new ByteArrayOutputStream();
-            DataOutput output = new DataOutputStream(outputStream);
-            JSONObject vertexObject = new JSONObject();
-            vertex.getVertexId().write(output);
-            try {
-                vertexObject.put(
-                    VERTEX_ID_KEY,
-                    Base64.encodeBytes(outputStream.toByteArray()));
-            } catch (JSONException e) {
-                throw new IllegalStateException(
-                    "writerVertex: Failed to insert vertex id", e);
-            }
-            outputStream.reset();
-            vertex.getVertexValue().write(output);
-            try {
-                vertexObject.put(
-                    VERTEX_VALUE_KEY,
-                    Base64.encodeBytes(outputStream.toByteArray()));
-            } catch (JSONException e) {
-                throw new IllegalStateException(
-                    "writerVertex: Failed to insert vertex value", e);
-            }
-            JSONArray edgeArray = new JSONArray();
-            for (I targetVertexId : vertex) {
-                Edge<I, E> edge = new Edge<I, E>(
-                    targetVertexId, vertex.getEdgeValue(targetVertexId));
-                edge.setConf(getContext().getConfiguration());
-                outputStream.reset();
-                edge.write(output);
-                edgeArray.put(Base64.encodeBytes(outputStream.toByteArray()));
-            }
-            try {
-                vertexObject.put(EDGE_ARRAY_KEY, edgeArray);
-            } catch (JSONException e) {
-                throw new IllegalStateException(
-                    "writerVertex: Failed to insert edge array", e);
-            }
-            getRecordWriter().write(new Text(vertexObject.toString()), null);
-        }
+    public JsonBase64VertexWriter(
+        RecordWriter<Text, Text> lineRecordWriter) {
+      super(lineRecordWriter);
     }
 
     @Override
-    public VertexWriter<I, V, E> createVertexWriter(TaskAttemptContext context)
-            throws IOException, InterruptedException {
-        return new JsonBase64VertexWriter<I, V, E>(
-            textOutputFormat.getRecordWriter(context));
+    public void writeVertex(BasicVertex<I, V, E, ?> vertex)
+      throws IOException, InterruptedException {
+      ByteArrayOutputStream outputStream =
+          new ByteArrayOutputStream();
+      DataOutput output = new DataOutputStream(outputStream);
+      JSONObject vertexObject = new JSONObject();
+      vertex.getVertexId().write(output);
+      try {
+        vertexObject.put(
+          JsonBase64VertexFormat.VERTEX_ID_KEY,
+          Base64.encodeBytes(outputStream.toByteArray()));
+      } catch (JSONException e) {
+        throw new IllegalStateException(
+            "writerVertex: Failed to insert vertex id", e);
+      }
+      outputStream.reset();
+      vertex.getVertexValue().write(output);
+      try {
+        vertexObject.put(
+          JsonBase64VertexFormat.VERTEX_VALUE_KEY,
+          Base64.encodeBytes(outputStream.toByteArray()));
+      } catch (JSONException e) {
+        throw new IllegalStateException(
+            "writerVertex: Failed to insert vertex value", e);
+      }
+      JSONArray edgeArray = new JSONArray();
+      for (I targetVertexId : vertex) {
+        Edge<I, E> edge = new Edge<I, E>(
+            targetVertexId, vertex.getEdgeValue(targetVertexId));
+        edge.setConf(getContext().getConfiguration());
+        outputStream.reset();
+        edge.write(output);
+        edgeArray.put(Base64.encodeBytes(outputStream.toByteArray()));
+      }
+      try {
+        vertexObject.put(
+          JsonBase64VertexFormat.EDGE_ARRAY_KEY,
+          edgeArray);
+      } catch (JSONException e) {
+        throw new IllegalStateException(
+            "writerVertex: Failed to insert edge array", e);
+      }
+      getRecordWriter().write(new Text(vertexObject.toString()), null);
     }
+  }
 
+  @Override
+  public VertexWriter<I, V, E> createVertexWriter(TaskAttemptContext context)
+    throws IOException, InterruptedException {
+    return new JsonBase64VertexWriter<I, V, E>(
+        textOutputFormat.getRecordWriter(context));
+  }
 }

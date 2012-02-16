@@ -34,27 +34,28 @@ import org.apache.hadoop.io.WritableComparable;
  */
 @SuppressWarnings("rawtypes")
 public class HashRangePartitionerFactory<I extends WritableComparable,
-        V extends Writable, E extends Writable, M extends Writable>
-        implements Configurable, GraphPartitionerFactory<I, V, E, M> {
-    private Configuration conf;
+    V extends Writable, E extends Writable, M extends Writable>
+    implements Configurable, GraphPartitionerFactory<I, V, E, M> {
+  /** Saved configuration */
+  private Configuration conf;
 
-    @Override
-    public MasterGraphPartitioner<I, V, E, M> createMasterGraphPartitioner() {
-        return new HashMasterPartitioner<I, V, E, M>(getConf());
-    }
+  @Override
+  public MasterGraphPartitioner<I, V, E, M> createMasterGraphPartitioner() {
+    return new HashMasterPartitioner<I, V, E, M>(getConf());
+  }
 
-    @Override
-    public WorkerGraphPartitioner<I, V, E, M> createWorkerGraphPartitioner() {
-        return new HashRangeWorkerPartitioner<I, V, E, M>();
-    }
+  @Override
+  public WorkerGraphPartitioner<I, V, E, M> createWorkerGraphPartitioner() {
+    return new HashRangeWorkerPartitioner<I, V, E, M>();
+  }
 
-    @Override
-    public Configuration getConf() {
-        return conf;
-    }
+  @Override
+  public Configuration getConf() {
+    return conf;
+  }
 
-    @Override
-    public void setConf(Configuration conf) {
-        this.conf = conf;
-    }
+  @Override
+  public void setConf(Configuration conf) {
+    this.conf = conf;
+  }
 }

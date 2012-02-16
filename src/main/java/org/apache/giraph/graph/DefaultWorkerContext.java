@@ -25,17 +25,17 @@ package org.apache.giraph.graph;
  */
 public class DefaultWorkerContext extends WorkerContext {
 
-	@Override
-	public void preApplication() throws InstantiationException,
-            IllegalAccessException {
-    }
+  @Override
+  public void preApplication()
+    throws InstantiationException, IllegalAccessException {
+  }
 
-    @Override
-    public void postApplication() { }
+  @Override
+  public void postApplication() { }
 
-    @Override
-    public void preSuperstep() { }
+  @Override
+  public void preSuperstep() { }
 
-    @Override
-    public void postSuperstep() { }
+  @Override
+  public void postSuperstep() { }
 }

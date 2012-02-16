@@ -32,19 +32,38 @@ import java.io.IOException;
  * Class to read graphs stored as adjacency lists with ids represented by
  * Strings and values as doubles.  This is a good inputformat for reading
  * graphs where the id types do not matter and can be stashed in a String.
+ *
+ * @param <M> Message type.
  */
 public class TextDoubleDoubleAdjacencyListVertexInputFormat<M extends Writable>
     extends TextVertexInputFormat<Text, DoubleWritable, DoubleWritable, M>  {
 
-  static class VertexReader<M extends Writable> extends AdjacencyListVertexReader<Text,
-      DoubleWritable, DoubleWritable, M> {
 
+  /**
+   * Vertex reader used with
+   * {@link TextDoubleDoubleAdjacencyListVertexInputFormat}
+   *
+   * @param <M> Message type.
+   */
+  static class VertexReader<M extends Writable> extends
+      AdjacencyListVertexReader<Text, DoubleWritable, DoubleWritable, M> {
+    /**
+     * Constructor without sanitzer.
+     *
+     * @param lineRecordReader Internal reader.
+     */
     VertexReader(RecordReader<LongWritable, Text> lineRecordReader) {
       super(lineRecordReader);
     }
 
+    /**
+     * Constructor with {@link LineRecordReader}
+     *
+     * @param lineRecordReader Internal reader.
+     * @param sanitizer Sanitizer of the lines.
+     */
     VertexReader(RecordReader<LongWritable, Text> lineRecordReader,
-                 LineSanitizer sanitizer) {
+        LineSanitizer sanitizer) {
       super(lineRecordReader, sanitizer);
     }
 
@@ -59,8 +78,8 @@ public class TextDoubleDoubleAdjacencyListVertexInputFormat<M extends Writable>
     }
 
     @Override
-    public void decodeEdge(String s1, String s2, Edge<Text, DoubleWritable>
-            textIntWritableEdge) {
+    public void decodeEdge(String s1, String s2,
+                           Edge<Text, DoubleWritable> textIntWritableEdge) {
       textIntWritableEdge.setDestVertexId(new Text(s1));
       textIntWritableEdge.setEdgeValue(new DoubleWritable(Double.valueOf(s2)));
     }
@@ -68,11 +87,9 @@ public class TextDoubleDoubleAdjacencyListVertexInputFormat<M extends Writable>
 
   @Override
   public org.apache.giraph.graph.VertexReader<Text, DoubleWritable,
-    DoubleWritable, M> createVertexReader(
-      InputSplit split,
+      DoubleWritable, M> createVertexReader(InputSplit split,
       TaskAttemptContext context) throws IOException {
     return new VertexReader<M>(textInputFormat.createRecordReader(
-      split, context));
+        split, context));
   }
-
 }

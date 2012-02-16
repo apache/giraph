@@ -183,7 +183,26 @@ under the License.
 
   <build>
     <plugins>
-
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-checkstyle-plugin</artifactId>
+        <version>2.9</version>
+        <configuration>
+          <configLocation>checkstyle.xml</configLocation>
+          <enableRulesSummary>false</enableRulesSummary>
+          <headerLocation>license-header.txt</headerLocation>
+	      <failOnError>true</failOnError>
+	      <includeTestSourceDirectory>false</includeTestSourceDirectory>
+        </configuration>
+        <executions>
+          <execution>
+            <phase>verify</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
@@ -346,7 +365,7 @@ under the License.
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-checkstyle-plugin</artifactId>
-            <version>2.6</version>
+            <version>2.9</version>
           </plugin>
           <plugin>
             <groupId>org.codehaus.mojo</groupId>
@@ -391,6 +410,7 @@ under the License.
             <!-- generated content -->
             <exclude>**/target/**</exclude>
             <exclude>_bsp/**</exclude>
+            <exclude>.checkstyle</exclude>
             <!-- source control and IDEs -->
             <exclude>.git/**</exclude>
             <exclude>.idea/**</exclude>
@@ -398,6 +418,39 @@ under the License.
       </configuration>
     </plugin>
     </plugins>
+    <pluginManagement>
+    	<plugins>
+    		<!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
+    		<plugin>
+    			<groupId>org.eclipse.m2e</groupId>
+    			<artifactId>lifecycle-mapping</artifactId>
+    			<version>1.0.0</version>
+    			<configuration>
+    				<lifecycleMappingMetadata>
+    					<pluginExecutions>
+    						<pluginExecution>
+    							<pluginExecutionFilter>
+    								<groupId>
+    									org.apache.maven.plugins
+    								</groupId>
+    								<artifactId>
+    									maven-assembly-plugin
+    								</artifactId>
+    								<versionRange>[2.2,)</versionRange>
+    								<goals>
+    									<goal>single</goal>
+    								</goals>
+    							</pluginExecutionFilter>
+    							<action>
+    								<ignore></ignore>
+    							</action>
+    						</pluginExecution>
+    					</pluginExecutions>
+    				</lifecycleMappingMetadata>
+    			</configuration>
+    		</plugin>
+    	</plugins>
+    </pluginManagement>
   </build>
 
   <profiles>

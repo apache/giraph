@@ -30,84 +30,96 @@ import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * A Writable for ListArray containing instances of a class.
+ *
+ * @param <M> Message data
  */
 public abstract class ArrayListWritable<M extends Writable> extends ArrayList<M>
-          implements Writable, Configurable {
-    /** Used for instantiation */
-    private Class<M> refClass = null;
-    /** Defining a layout version for a serializable class. */
-    private static final long serialVersionUID = 1L;
-    /** Configuration */
-    private Configuration conf;
+  implements Writable, Configurable {
+  /** Defining a layout version for a serializable class. */
+  private static final long serialVersionUID = 1L;
+  /** Used for instantiation */
+  private Class<M> refClass = null;
 
-    /**
-     * Using the default constructor requires that the user implement
-     * setClass(), guaranteed to be invoked prior to instantiation in
-     * readFields()
-     */
-    public ArrayListWritable() {
+  /** Configuration */
+  private Configuration conf;
+
+  /**
+   * Using the default constructor requires that the user implement
+   * setClass(), guaranteed to be invoked prior to instantiation in
+   * readFields()
+   */
+  public ArrayListWritable() {
+  }
+
+  /**
+   * Constructor with another {@link ArrayListWritable}.
+   *
+   * @param arrayListWritable Array list to be used internally.
+   */
+  public ArrayListWritable(ArrayListWritable<M> arrayListWritable) {
+    super(arrayListWritable);
+  }
+
+  /**
+   * This constructor allows setting the refClass during construction.
+   *
+   * @param refClass internal type class
+   */
+  public ArrayListWritable(Class<M> refClass) {
+    super();
+    this.refClass = refClass;
+  }
+
+  /**
+   * This is a one-time operation to set the class type
+   *
+   * @param refClass internal type class
+   */
+  public void setClass(Class<M> refClass) {
+    if (this.refClass != null) {
+      throw new RuntimeException(
+          "setClass: refClass is already set to " +
+              this.refClass.getName());
     }
+    this.refClass = refClass;
+  }
 
-    public ArrayListWritable(ArrayListWritable<M> arrayListWritable) {
-        super(arrayListWritable);
+  /**
+   * Subclasses must set the class type appropriately and can use
+   * setClass(Class<M> refClass) to do it.
+   */
+  public abstract void setClass();
+
+  @Override
+  public void readFields(DataInput in) throws IOException {
+    if (this.refClass == null) {
+      setClass();
     }
-
-    /**
-     * This constructor allows setting the refClass during construction.
-     *
-     * @param refClass internal type class
-     */
-    public ArrayListWritable(Class<M> refClass) {
-        super();
-        this.refClass = refClass;
+    int numValues = in.readInt();            // read number of values
+    ensureCapacity(numValues);
+    for (int i = 0; i < numValues; i++) {
+      M value = ReflectionUtils.newInstance(refClass, conf);
+      value.readFields(in);                // read a value
+      add(value);                          // store it in values
     }
+  }
 
-    /**
-     * This is a one-time operation to set the class type
-     *
-     * @param refClass internal type class
-     */
-    public void setClass(Class<M> refClass) {
-        if (this.refClass != null) {
-            throw new RuntimeException(
-                "setClass: refClass is already set to " +
-                this.refClass.getName());
-        }
-        this.refClass = refClass;
+  @Override
+  public void write(DataOutput out) throws IOException {
+    int numValues = size();
+    out.writeInt(numValues);                 // write number of values
+    for (int i = 0; i < numValues; i++) {
+      get(i).write(out);
     }
+  }
 
-    /**
-     * Subclasses must set the class type appropriately and can use
-     * setClass(Class<M> refClass) to do it.
-     */
-    public abstract void setClass();
+  @Override
+  public final Configuration getConf() {
+    return conf;
+  }
 
-    public void readFields(DataInput in) throws IOException {
-        if (this.refClass == null) {
-            setClass();
-        }
-        int numValues = in.readInt();            // read number of values
-        ensureCapacity(numValues);
-        for (int i = 0; i < numValues; i++) {
-            M value = ReflectionUtils.newInstance(refClass, conf);
-            value.readFields(in);                // read a value
-            add(value);                          // store it in values
-        }
-    }
-
-    public void write(DataOutput out) throws IOException {
-        int numValues = size();
-        out.writeInt(numValues);                 // write number of values
-        for (int i = 0; i < numValues; i++) {
-            get(i).write(out);
-        }
-    }
-
-    public final Configuration getConf() {
-        return conf;
-    }
-
-    public final void setConf(Configuration conf) {
-        this.conf = conf;
-    }
+  @Override
+  public final void setConf(Configuration conf) {
+    this.conf = conf;
+  }
 }

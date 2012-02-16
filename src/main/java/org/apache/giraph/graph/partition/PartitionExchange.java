@@ -29,49 +29,49 @@ import org.apache.giraph.graph.WorkerInfo;
  * exchange between workers.
  */
 public class PartitionExchange {
-    /** Workers that I am dependent on before I can continue */
-    private final Set<WorkerInfo> myDependencyWorkerSet;
-    /** Workers that I need to sent partitions to */
-    private final Map<WorkerInfo, List<Integer>> sendWorkerPartitionMap;
+  /** Workers that I am dependent on before I can continue */
+  private final Set<WorkerInfo> myDependencyWorkerSet;
+  /** Workers that I need to sent partitions to */
+  private final Map<WorkerInfo, List<Integer>> sendWorkerPartitionMap;
 
-    /**
-     * Only constructor.
-     *
-     * @param myDependencyWorkerSet All the workers I must wait for
-     * @param sendWorkerPartitionMap Partitions I need to send to other workers
-     */
-    public PartitionExchange(
-            Set<WorkerInfo> myDependencyWorkerSet,
-            Map<WorkerInfo, List<Integer>> sendWorkerPartitionMap) {
-        this.myDependencyWorkerSet = myDependencyWorkerSet;
-        this.sendWorkerPartitionMap = sendWorkerPartitionMap;
-    }
+  /**
+   * Only constructor.
+   *
+   * @param myDependencyWorkerSet All the workers I must wait for
+   * @param sendWorkerPartitionMap Partitions I need to send to other workers
+   */
+  public PartitionExchange(
+      Set<WorkerInfo> myDependencyWorkerSet,
+      Map<WorkerInfo, List<Integer>> sendWorkerPartitionMap) {
+    this.myDependencyWorkerSet = myDependencyWorkerSet;
+    this.sendWorkerPartitionMap = sendWorkerPartitionMap;
+  }
 
-    /**
-     * Get the workers that I must wait for
-     *
-     * @return Set of workers I must wait for
-     */
-    public Set<WorkerInfo> getMyDependencyWorkerSet() {
-        return myDependencyWorkerSet;
-    }
+  /**
+   * Get the workers that I must wait for
+   *
+   * @return Set of workers I must wait for
+   */
+  public Set<WorkerInfo> getMyDependencyWorkerSet() {
+    return myDependencyWorkerSet;
+  }
 
-    /**
-     * Get a mapping of worker to list of partition ids I need to send to.
-     *
-     * @return Mapping of worker to partition id list I will send to.
-     */
-    public Map<WorkerInfo, List<Integer>> getSendWorkerPartitionMap() {
-        return sendWorkerPartitionMap;
-    }
+  /**
+   * Get a mapping of worker to list of partition ids I need to send to.
+   *
+   * @return Mapping of worker to partition id list I will send to.
+   */
+  public Map<WorkerInfo, List<Integer>> getSendWorkerPartitionMap() {
+    return sendWorkerPartitionMap;
+  }
 
-    /**
-     * Is this worker involved in a partition exchange?  Receiving or sending?
-     *
-     * @return True if needs to be involved in the exchange, false otherwise.
-     */
-    public boolean doExchange() {
-        return !myDependencyWorkerSet.isEmpty() ||
-               !sendWorkerPartitionMap.isEmpty();
-    }
+  /**
+   * Is this worker involved in a partition exchange?  Receiving or sending?
+   *
+   * @return True if needs to be involved in the exchange, false otherwise.
+   */
+  public boolean doExchange() {
+    return !myDependencyWorkerSet.isEmpty() ||
+        !sendWorkerPartitionMap.isEmpty();
+  }
 }

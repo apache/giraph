@@ -25,27 +25,35 @@ import org.apache.hadoop.io.WritableComparable;
  * Wrapper around {@link ArrayListWritable} that provides the list for
  * {@link VertexIdMessages}.
  *
- * @param <I extends Writable> vertex id
- * @param <M extends Writable> message data
+ * @param <I> Vertex id
+ * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public class VertexIdMessagesList<I extends WritableComparable,
-        M extends Writable> extends ArrayListWritable<VertexIdMessages<I, M>> {
-    /** Defining a layout version for a serializable class. */
-    private static final long serialVersionUID = 100L;
+    M extends Writable> extends ArrayListWritable<VertexIdMessages<I, M>> {
+  /** Defining a layout version for a serializable class. */
+  private static final long serialVersionUID = 100L;
 
-    public VertexIdMessagesList() {
-        super();
-    }
+  /**
+   * Default constructor.
+   */
+  public VertexIdMessagesList() {
+    super();
+  }
 
-    public VertexIdMessagesList(VertexIdMessagesList<I, M> vertexIdMessagesList) {
-        super(vertexIdMessagesList);
-    }
+  /**
+   * Copy constructor.
+   *
+   * @param vertexIdMessagesList List to be copied.
+   */
+  public VertexIdMessagesList(VertexIdMessagesList<I, M> vertexIdMessagesList) {
+    super(vertexIdMessagesList);
+  }
 
-    @SuppressWarnings("unchecked")
-    @Override
-    public void setClass() {
-        setClass((Class<VertexIdMessages<I, M>>)
-                 (new VertexIdMessages<I, M>()).getClass());
-    }
+  @SuppressWarnings("unchecked")
+  @Override
+  public void setClass() {
+    setClass((Class<VertexIdMessages<I, M>>)
+      (new VertexIdMessages<I, M>()).getClass());
+  }
 }

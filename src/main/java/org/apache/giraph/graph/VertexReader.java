@@ -25,54 +25,63 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 import java.io.IOException;
 
+/**
+ * Analogous to {@link RecordReader} for vertices.  Will read the vertices
+ * from an input split.
+ *
+ * @param <I> Vertex id
+ * @param <V> Vertex data
+ * @param <E> Edge data
+ * @param <M> Message data
+ */
 @SuppressWarnings("rawtypes")
-public interface VertexReader<
-        I extends WritableComparable,
-        V extends Writable,
-        E extends Writable,
-        M extends Writable> {
-    /**
-     * Use the input split and context to setup reading the vertices.
-     * Guaranteed to be called prior to any other function.
-     *
-     * @param inputSplit
-     * @param context
-     * @throws IOException
-     * @throws InterruptedException
-     */
-    void initialize(InputSplit inputSplit, TaskAttemptContext context)
-        throws IOException, InterruptedException;
+public interface VertexReader<I extends WritableComparable,
+    V extends Writable, E extends Writable, M extends Writable> {
+  /**
+   * Use the input split and context to setup reading the vertices.
+   * Guaranteed to be called prior to any other function.
+   *
+   * @param inputSplit Input split to be used for reading vertices.
+   * @param context Context from the task.
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  void initialize(InputSplit inputSplit, TaskAttemptContext context)
+    throws IOException, InterruptedException;
 
-    /**
-     *
-     * @return false iff there are no more vertices
-     * @throws IOException
-     * @throws InterruptedException
-     */
-    boolean nextVertex() throws IOException, InterruptedException;
+  /**
+   *
+   * @return false iff there are no more vertices
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  boolean nextVertex() throws IOException, InterruptedException;
 
-    /**
-     *
-     * @return the current vertex which has been read.  nextVertex() should be called first.
-     * @throws IOException
-     * @throws InterruptedException
-     */
-    BasicVertex<I, V, E, M> getCurrentVertex() throws IOException, InterruptedException;
+  /**
+   * Get the current vertex.
+   *
+   * @return the current vertex which has been read.
+   *         nextVertex() should be called first.
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  BasicVertex<I, V, E, M> getCurrentVertex()
+    throws IOException, InterruptedException;
 
-    /**
-     * Close this {@link VertexReader} to future operations.
-     *
-     * @throws IOException
-     */
-    void close() throws IOException;
+  /**
+   * Close this {@link VertexReader} to future operations.
+   *
+   * @throws IOException
+   */
+  void close() throws IOException;
 
-    /**
-     * How much of the input has the {@link VertexReader} consumed i.e.
-     * has been processed by?
-     *
-     * @return Progress from <code>0.0</code> to <code>1.0</code>.
-     * @throws IOException
-     * @throws InterruptedException
-     */
-    float getProgress() throws IOException, InterruptedException;
+  /**
+   * How much of the input has the {@link VertexReader} consumed i.e.
+   * has been processed by?
+   *
+   * @return Progress from <code>0.0</code> to <code>1.0</code>.
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  float getProgress() throws IOException, InterruptedException;
 }

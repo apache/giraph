@@ -29,40 +29,45 @@ import org.apache.hadoop.io.Text;
  * Only returns a single key-value pair so that the map() can run.
  */
 class BspRecordReader extends RecordReader<Text, Text> {
+  /** Singular key object */
+  private static final Text ONLY_KEY = new Text("only key");
+  /** Single value object */
+  private static final Text ONLY_VALUE = new Text("only value");
 
-    private static final Text ONLY_KEY = new Text("only key");
-    private static final Text ONLY_VALUE = new Text("only value");
+  /** Has the one record been seen? */
+  private boolean seenRecord = false;
 
-    /** Has the one record been seen? */
-    private boolean seenRecord = false;
+  @Override
+  public void close() throws IOException {
+    return;
+  }
 
-    @Override
-    public void close() throws IOException {
-        return;
+  @Override
+  public float getProgress() throws IOException {
+    return seenRecord ? 1f : 0f;
+  }
+
+  @Override
+  public Text getCurrentKey() throws IOException, InterruptedException {
+    return ONLY_KEY;
+  }
+
+  @Override
+  public Text getCurrentValue() throws IOException, InterruptedException {
+    return ONLY_VALUE;
+  }
+
+  @Override
+  public void initialize(InputSplit inputSplit, TaskAttemptContext context)
+    throws IOException, InterruptedException {
+  }
+
+  @Override
+  public boolean nextKeyValue() throws IOException, InterruptedException {
+    if (!seenRecord) {
+      seenRecord = true;
+      return true;
     }
-
-    @Override
-    public float getProgress() throws IOException {
-        return (seenRecord ? 1f : 0f);
-    }
-
-    @Override
-    public Text getCurrentKey() throws IOException, InterruptedException {
-        return ONLY_KEY;
-    }
-
-    @Override
-    public Text getCurrentValue() throws IOException, InterruptedException {
-        return ONLY_VALUE;
-    }
-
-    @Override
-    public void initialize(InputSplit inputSplit, TaskAttemptContext context)
-        throws IOException, InterruptedException {
-    }
-
-    @Override
-    public boolean nextKeyValue() throws IOException, InterruptedException {
-	return (seenRecord ? false : (seenRecord = true));
-    }
+    return false;
+  }
 }

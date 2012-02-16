@@ -31,19 +31,33 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
 
+/**
+ * Helper class to run Giraph applications by specifying the actual class name
+ * to use (i.e. vertex, vertex input/output format, combiner, etc.).
+ */
 public class GiraphRunner implements Tool {
   static {
     Configuration.addDefaultResource("giraph-site.xml");
   }
 
+  /** Class logger */
   private static final Logger LOG = Logger.getLogger(GiraphRunner.class);
+  /** Writable conf */
   private Configuration conf;
 
-  final String [][] requiredOptions =
-      {{"w", "Need to choose the number of workers (-w)"},
-       {"if", "Need to set inputformat (-if)"}};
+  /**
+   * Required options.
+   */
+  private final String [][] requiredOptions =
+  {{"w", "Need to choose the number of workers (-w)"},
+   {"if", "Need to set inputformat (-if)"}};
 
-  private Options getOptions() {
+  /**
+   * Get the options available.
+   *
+   * @return Options available.
+   */
+  private static Options getOptions() {
     Options options = new Options();
     options.addOption("h", "help", false, "Help");
     options.addOption("q", "quiet", false, "Quiet output");
@@ -78,7 +92,7 @@ public class GiraphRunner implements Tool {
     }
 
     String vertexClassName = args[0];
-    if(LOG.isDebugEnabled()) {
+    if (LOG.isDebugEnabled()) {
       LOG.debug("Attempting to run Vertex: " + vertexClassName);
     }
 
@@ -87,8 +101,8 @@ public class GiraphRunner implements Tool {
 
     // Verify all the options have been provided
     for (String[] requiredOption : requiredOptions) {
-      if(!cmd.hasOption(requiredOption[0])) {
-        System.out.println(requiredOption[1]);
+      if (!cmd.hasOption(requiredOption[0])) {
+        LOG.info(requiredOption[1]);
         return -1;
       }
     }
@@ -99,30 +113,30 @@ public class GiraphRunner implements Tool {
     job.setVertexInputFormatClass(Class.forName(cmd.getOptionValue("if")));
     job.setVertexOutputFormatClass(Class.forName(cmd.getOptionValue("of")));
 
-    if(cmd.hasOption("ip")) {
+    if (cmd.hasOption("ip")) {
       FileInputFormat.addInputPath(job, new Path(cmd.getOptionValue("ip")));
     } else {
       LOG.info("No input path specified. Ensure your InputFormat does not " +
-              "require one.");
+          "require one.");
     }
 
-    if(cmd.hasOption("op")) {
+    if (cmd.hasOption("op")) {
       FileOutputFormat.setOutputPath(job, new Path(cmd.getOptionValue("op")));
     } else {
       LOG.info("No output path specified. Ensure your OutputFormat does not " +
-              "require one.");
+          "require one.");
     }
 
     if (cmd.hasOption("c")) {
-        job.setVertexCombinerClass(Class.forName(cmd.getOptionValue("c")));
+      job.setVertexCombinerClass(Class.forName(cmd.getOptionValue("c")));
     }
 
     if (cmd.hasOption("wc")) {
-        job.setWorkerContextClass(Class.forName(cmd.getOptionValue("wc")));
+      job.setWorkerContextClass(Class.forName(cmd.getOptionValue("wc")));
     }
 
     if (cmd.hasOption("aw")) {
-        job.setAggregatorWriterClass(Class.forName(cmd.getOptionValue("aw")));
+      job.setAggregatorWriterClass(Class.forName(cmd.getOptionValue("aw")));
     }
 
     job.setWorkerConfiguration(workers, workers, 100.0f);
@@ -132,6 +146,12 @@ public class GiraphRunner implements Tool {
     return job.run(isQuiet) ? 0 : -1;
   }
 
+  /**
+   * Execute GiraphRunner.
+   *
+   * @param args Typically command line arguments.
+   * @throws Exception Any exceptions thrown.
+   */
   public static void main(String[] args) throws Exception {
     System.exit(ToolRunner.run(new GiraphRunner(), args));
   }

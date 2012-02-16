@@ -22,45 +22,67 @@ package org.apache.giraph.graph;
  * Simple immutable structure for storing a final vertex and edge count.
  */
 public class VertexEdgeCount {
-    /** Immutable vertices */
-    private final long vertexCount;
-    /** Immutable edges */
-    private final long edgeCount;
+  /** Immutable vertices */
+  private final long vertexCount;
+  /** Immutable edges */
+  private final long edgeCount;
 
-    public VertexEdgeCount() {
-        vertexCount = 0;
-        edgeCount = 0;
-    }
+  /**
+   * Default constructor.
+   */
+  public VertexEdgeCount() {
+    vertexCount = 0;
+    edgeCount = 0;
+  }
 
-    public VertexEdgeCount(long vertexCount, long edgeCount) {
-        this.vertexCount = vertexCount;
-        this.edgeCount = edgeCount;
-    }
+  /**
+   * Constructor with initial values.
+   *
+   * @param vertexCount Final number of vertices.
+   * @param edgeCount Final number of edges.
+   */
+  public VertexEdgeCount(long vertexCount, long edgeCount) {
+    this.vertexCount = vertexCount;
+    this.edgeCount = edgeCount;
+  }
 
-    public long getVertexCount() {
-        return vertexCount;
-    }
+  public long getVertexCount() {
+    return vertexCount;
+  }
 
-    public long getEdgeCount() {
-        return edgeCount;
-    }
+  public long getEdgeCount() {
+    return edgeCount;
+  }
 
-    public VertexEdgeCount incrVertexEdgeCount(
-            VertexEdgeCount vertexEdgeCount) {
-        return new VertexEdgeCount(
-            vertexCount + vertexEdgeCount.getVertexCount(),
-            edgeCount + vertexEdgeCount.getEdgeCount());
-    }
+  /**
+   * Increment the both the vertex edge count with a {@link VertexEdgeCount}.
+   *
+   * @param vertexEdgeCount add both the vertices and edges of this object.
+   * @return New immutable object with the new vertex and edge counts.
+   */
+  public VertexEdgeCount incrVertexEdgeCount(
+      VertexEdgeCount vertexEdgeCount) {
+    return new VertexEdgeCount(
+        vertexCount + vertexEdgeCount.getVertexCount(),
+        edgeCount + vertexEdgeCount.getEdgeCount());
+  }
 
-    public VertexEdgeCount incrVertexEdgeCount(
-            long vertexCount, long edgeCount) {
-        return new VertexEdgeCount(
-            this.vertexCount + vertexCount,
-            this.edgeCount + edgeCount);
-    }
+  /**
+   * Increment the both the vertex edge count with primitives.
+   *
+   * @param vertexCount Add this many vertices.
+   * @param edgeCount Add this many edges.
+   * @return New immutable object with the new vertex and edge counts.
+   */
+  public VertexEdgeCount incrVertexEdgeCount(
+      long vertexCount, long edgeCount) {
+    return new VertexEdgeCount(
+        this.vertexCount + vertexCount,
+        this.edgeCount + edgeCount);
+  }
 
-    @Override
-    public String toString() {
-        return "(v=" + getVertexCount() + ", e=" + getEdgeCount() + ")";
-    }
+  @Override
+  public String toString() {
+    return "(v=" + getVertexCount() + ", e=" + getEdgeCount() + ")";
+  }
 }

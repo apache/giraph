@@ -24,39 +24,39 @@ import org.apache.hadoop.io.Writable;
  * Interface for Aggregator.  Allows aggregate operations for all vertices
  * in a given superstep.
  *
- * @param <A extends Writable> Aggregated value
+ * @param <A> Aggregated value
  */
 public interface Aggregator<A extends Writable> {
-    /**
-     * Add a new value.
-     * Needs to be commutative and associative
-     *
-     * @param value
-     */
-    void aggregate(A value);
+  /**
+   * Add a new value.
+   * Needs to be commutative and associative
+   *
+   * @param value Value to be aggregated.
+   */
+  void aggregate(A value);
 
-    /**
-     * Set aggregated value.
-     * Can be used for initialization or reset.
-     *
-     * @param value
-     */
-    void setAggregatedValue(A value);
+  /**
+   * Set aggregated value.
+   * Can be used for initialization or reset.
+   *
+   * @param value Value to be set.
+   */
+  void setAggregatedValue(A value);
 
-    /**
-     * Return current aggregated value.
-     * Needs to be initialized if aggregate or setAggregatedValue
-     * have not been called before.
-     *
-     * @return A
-     */
-    A getAggregatedValue();
+  /**
+   * Return current aggregated value.
+   * Needs to be initialized if aggregate or setAggregatedValue
+   * have not been called before.
+   *
+   * @return Aggregated
+   */
+  A getAggregatedValue();
 
-    /**
-     * Return new aggregated value.
-     * Must be changeable without affecting internals of Aggregator
-     *
-     * @return Writable
-     */
-    A createAggregatedValue();
+  /**
+   * Return new aggregated value.
+   * Must be changeable without affecting internals of Aggregator
+   *
+   * @return Writable
+   */
+  A createAggregatedValue();
 }

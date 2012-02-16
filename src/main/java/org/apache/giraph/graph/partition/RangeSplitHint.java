@@ -36,38 +36,38 @@ import org.apache.hadoop.io.WritableComparable;
  */
 @SuppressWarnings("rawtypes")
 public class RangeSplitHint<I extends WritableComparable>
-        implements Writable, Configurable {
-    /** Hinted split index */
-    private I splitIndex;
-    /** Number of vertices in this range before the split */
-    private long preSplitVertexCount;
-    /** Number of vertices in this range after the split */
-    private long postSplitVertexCount;
-    /** Configuration */
-    private Configuration conf;
+    implements Writable, Configurable {
+  /** Hinted split index */
+  private I splitIndex;
+  /** Number of vertices in this range before the split */
+  private long preSplitVertexCount;
+  /** Number of vertices in this range after the split */
+  private long postSplitVertexCount;
+  /** Configuration */
+  private Configuration conf;
 
-    @Override
-    public void readFields(DataInput input) throws IOException {
-        splitIndex = BspUtils.<I>createVertexIndex(conf);
-        splitIndex.readFields(input);
-        preSplitVertexCount = input.readLong();
-        postSplitVertexCount = input.readLong();
-    }
+  @Override
+  public void readFields(DataInput input) throws IOException {
+    splitIndex = BspUtils.<I>createVertexIndex(conf);
+    splitIndex.readFields(input);
+    preSplitVertexCount = input.readLong();
+    postSplitVertexCount = input.readLong();
+  }
 
-    @Override
-    public void write(DataOutput output) throws IOException {
-        splitIndex.write(output);
-        output.writeLong(preSplitVertexCount);
-        output.writeLong(postSplitVertexCount);
-    }
+  @Override
+  public void write(DataOutput output) throws IOException {
+    splitIndex.write(output);
+    output.writeLong(preSplitVertexCount);
+    output.writeLong(postSplitVertexCount);
+  }
 
-    @Override
-    public Configuration getConf() {
-        return conf;
-    }
+  @Override
+  public Configuration getConf() {
+    return conf;
+  }
 
-    @Override
-    public void setConf(Configuration conf) {
-        this.conf = conf;
-    }
+  @Override
+  public void setConf(Configuration conf) {
+    this.conf = conf;
+  }
 }

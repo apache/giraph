@@ -24,24 +24,30 @@ import org.apache.hadoop.io.IntWritable;
 /**
  * {@link UnmodifiableIterator} over a primitive int array
  */
-public class UnmodifiableIntArrayIterator
-        extends UnmodifiableIterator<IntWritable> {
+public class UnmodifiableIntArrayIterator extends
+    UnmodifiableIterator<IntWritable> {
+  /** Array to iterate over */
+  private final int[] intArray;
+  /** Offset to array */
+  private int offset;
 
-    private final int[] arr;
-    private int offset;
+  /**
+   * Constructor with array to iterate over.
+   *
+   * @param intArray Array to iterate over.
+   */
+  public UnmodifiableIntArrayIterator(int[] intArray) {
+    this.intArray = intArray;
+    offset = 0;
+  }
 
-    public UnmodifiableIntArrayIterator(int[] arr) {
-        this.arr = arr;
-        offset = 0;
-    }
+  @Override
+  public boolean hasNext() {
+    return offset < intArray.length;
+  }
 
-    @Override
-    public boolean hasNext() {
-        return offset < arr.length;
-    }
-
-    @Override
-    public IntWritable next() {
-        return new IntWritable(arr[offset++]);
-    }
+  @Override
+  public IntWritable next() {
+    return new IntWritable(intArray[offset++]);
+  }
 }

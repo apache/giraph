@@ -29,74 +29,125 @@ import org.apache.hadoop.io.Writable;
  * actual partition data, only the statistics.
  */
 public class PartitionStats implements Writable {
-    private int partitionId = -1;
-    private long vertexCount = 0;
-    private long finishedVertexCount = 0;
-    private long edgeCount = 0;
+  /** Id of partition to keep stats for */
+  private int partitionId = -1;
+  /** Vertices in this partition */
+  private long vertexCount = 0;
+  /** Finished vertices in this partition */
+  private long finishedVertexCount = 0;
+  /** Edges in this partition */
+  private long edgeCount = 0;
 
-    public PartitionStats() {}
+  /**
+   * Default constructor for reflection.
+   */
+  public PartitionStats() { }
 
-    public PartitionStats(int partitionId,
-                          long vertexCount,
-                          long finishedVertexCount,
-                          long edgeCount) {
-        this.partitionId = partitionId;
-        this.vertexCount = vertexCount;
-        this.finishedVertexCount = finishedVertexCount;
-        this.edgeCount = edgeCount;
-    }
+  /**
+   * Constructor with the initial stats.
+   *
+   * @param partitionId Partition count.
+   * @param vertexCount Vertex count.
+   * @param finishedVertexCount Finished vertex count.
+   * @param edgeCount Edge count.
+   */
+  public PartitionStats(int partitionId,
+      long vertexCount,
+      long finishedVertexCount,
+      long edgeCount) {
+    this.partitionId = partitionId;
+    this.vertexCount = vertexCount;
+    this.finishedVertexCount = finishedVertexCount;
+    this.edgeCount = edgeCount;
+  }
 
-    public void setPartitionId(int partitionId) {
-        this.partitionId = partitionId;
-    }
+  /**
+   * Set the partition id.
+   *
+   * @param partitionId New partition id.
+   */
+  public void setPartitionId(int partitionId) {
+    this.partitionId = partitionId;
+  }
 
-    public int getPartitionId() {
-        return partitionId;
-    }
+  /**
+   * Get partition id.
+   *
+   * @return Partition id.
+   */
+  public int getPartitionId() {
+    return partitionId;
+  }
 
-    public void incrVertexCount() {
-        ++vertexCount;
-    }
+  /**
+   * Increment the vertex count by one.
+   */
+  public void incrVertexCount() {
+    ++vertexCount;
+  }
 
-    public long getVertexCount() {
-        return vertexCount;
-    }
+  /**
+   * Get the vertex count.
+   *
+   * @return Vertex count.
+   */
+  public long getVertexCount() {
+    return vertexCount;
+  }
 
-    public void incrFinishedVertexCount() {
-        ++finishedVertexCount;
-    }
+  /**
+   * Increment the finished vertex count by one.
+   */
+  public void incrFinishedVertexCount() {
+    ++finishedVertexCount;
+  }
 
-    public long getFinishedVertexCount() {
-        return finishedVertexCount;
-    }
+  /**
+   * Get the finished vertex count.
+   *
+   * @return Finished vertex count.
+   */
+  public long getFinishedVertexCount() {
+    return finishedVertexCount;
+  }
 
-    public void addEdgeCount(long edgeCount) {
-        this.edgeCount += edgeCount;
-    }
+  /**
+   * Add edges to the edge count.
+   *
+   * @param edgeCount Number of edges to add.
+   */
+  public void addEdgeCount(long edgeCount) {
+    this.edgeCount += edgeCount;
+  }
 
-    public long getEdgeCount() {
-        return edgeCount;
-    }
+  /**
+   * Get the edge count.
+   *
+   * @return Edge count.
+   */
+  public long getEdgeCount() {
+    return edgeCount;
+  }
 
-    @Override
-    public void readFields(DataInput input) throws IOException {
-        partitionId = input.readInt();
-        vertexCount = input.readLong();
-        finishedVertexCount = input.readLong();
-        edgeCount = input.readLong();
-    }
+  @Override
+  public void readFields(DataInput input) throws IOException {
+    partitionId = input.readInt();
+    vertexCount = input.readLong();
+    finishedVertexCount = input.readLong();
+    edgeCount = input.readLong();
+  }
 
-    @Override
-    public void write(DataOutput output) throws IOException {
-        output.writeInt(partitionId);
-        output.writeLong(vertexCount);
-        output.writeLong(finishedVertexCount);
-        output.writeLong(edgeCount);
-    }
+  @Override
+  public void write(DataOutput output) throws IOException {
+    output.writeInt(partitionId);
+    output.writeLong(vertexCount);
+    output.writeLong(finishedVertexCount);
+    output.writeLong(edgeCount);
+  }
 
-    @Override
-    public String toString() {
-        return "(id=" + partitionId + ",vtx=" + vertexCount + ",finVtx=" +
-               finishedVertexCount + ",edges=" + edgeCount + ")";
-    }
+  @Override
+  public String toString() {
+    return "(id=" + partitionId + ",vtx=" + vertexCount + ",finVtx=" +
+        finishedVertexCount + ",edges=" + edgeCount + ")";
+  }
 }

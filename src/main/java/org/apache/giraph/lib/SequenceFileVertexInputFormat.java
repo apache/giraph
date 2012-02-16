@@ -31,49 +31,73 @@ import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
 import java.io.IOException;
 import java.util.List;
 
+/**
+ * Sequence file vertex input format based on {@link SequenceFileInputFormat}.
+ *
+ * @param <I> Vertex id
+ * @param <V> Vertex data
+ * @param <E> Edge data
+ * @param <M> Message data
+ * @param <X> Value type
+ */
 public class SequenceFileVertexInputFormat<I extends WritableComparable<I>,
-                                           V extends Writable,
-                                           E extends Writable,
-                                           M extends Writable,
-                                           X extends BasicVertex<I, V, E, M>>
+    V extends Writable, E extends Writable, M extends Writable,
+    X extends BasicVertex<I, V, E, M>>
     extends VertexInputFormat<I, V, E, M> {
-  protected SequenceFileInputFormat<I, X> sequenceFileInputFormat
-      = new SequenceFileInputFormat<I, X>();
+  /** Internal input format */
+  protected SequenceFileInputFormat<I, X> sequenceFileInputFormat =
+    new SequenceFileInputFormat<I, X>();
 
-  @Override public List<InputSplit> getSplits(JobContext context, int numWorkers)
-      throws IOException, InterruptedException {
+  @Override
+  public List<InputSplit> getSplits(JobContext context, int numWorkers)
+    throws IOException, InterruptedException {
     return sequenceFileInputFormat.getSplits(context);
   }
 
   @Override
   public VertexReader<I, V, E, M> createVertexReader(InputSplit split,
-      TaskAttemptContext context)
-      throws IOException {
+      TaskAttemptContext context) throws IOException {
     return new SequenceFileVertexReader<I, V, E, M, X>(
         sequenceFileInputFormat.createRecordReader(split, context));
   }
 
+  /**
+   * Vertex reader used with {@link SequenceFileVertexInputFormat}.
+   *
+   * @param <I> Vertex id
+   * @param <V> Vertex data
+   * @param <E> Edge data
+   * @param <M> Message data
+   * @param <X> Value type
+   */
   public static class SequenceFileVertexReader<I extends WritableComparable<I>,
       V extends Writable, E extends Writable, M extends Writable,
       X extends BasicVertex<I, V, E, M>>
       implements VertexReader<I, V, E, M> {
+    /** Internal record reader from {@link SequenceFileInputFormat} */
     private final RecordReader<I, X> recordReader;
 
+    /**
+     * Constructor with record reader.
+     *
+     * @param recordReader Reader from {@link SequenceFileInputFormat}.
+     */
     public SequenceFileVertexReader(RecordReader<I, X> recordReader) {
       this.recordReader = recordReader;
     }
 
-    @Override public void initialize(InputSplit inputSplit, TaskAttemptContext context)
-        throws IOException, InterruptedException {
+    @Override public void initialize(InputSplit inputSplit,
+        TaskAttemptContext context) throws IOException, InterruptedException {
       recordReader.initialize(inputSplit, context);
     }
 
-    @Override public boolean nextVertex() throws IOException, InterruptedException {
+    @Override public boolean nextVertex() throws IOException,
+        InterruptedException {
       return recordReader.nextKeyValue();
     }
 
     @Override public BasicVertex<I, V, E, M> getCurrentVertex()
-        throws IOException, InterruptedException {
+      throws IOException, InterruptedException {
       return recordReader.getCurrentValue();
     }
 
@@ -82,7 +106,8 @@ public class SequenceFileVertexInputFormat<I extends WritableComparable<I>,
       recordReader.close();
     }
 
-    @Override public float getProgress() throws IOException, InterruptedException {
+    @Override public float getProgress() throws IOException,
+        InterruptedException {
       return recordReader.getProgress();
     }
   }

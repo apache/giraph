@@ -32,51 +32,70 @@ import org.apache.hadoop.mapreduce.InputSplit;
  * directly.
  */
 public class BspInputSplit extends InputSplit implements Writable {
-    /** Number of splits */
-    private int numSplits = -1;
-    /** Split index */
-    private int splitIndex = -1;
+  /** Number of splits */
+  private int numSplits = -1;
+  /** Split index */
+  private int splitIndex = -1;
 
-    public BspInputSplit() {}
+  /**
+   * Reflection constructor.
+   */
+  public BspInputSplit() { }
 
-    public BspInputSplit(int splitIndex, int numSplits) {
-        this.splitIndex = splitIndex;
-        this.numSplits = numSplits;
-    }
+  /**
+   * Constructor used by {@link BspInputFormat}.
+   *
+   * @param splitIndex Index of this split.
+   * @param numSplits Total number of splits.
+   */
+  public BspInputSplit(int splitIndex, int numSplits) {
+    this.splitIndex = splitIndex;
+    this.numSplits = numSplits;
+  }
 
-    @Override
-    public long getLength() throws IOException, InterruptedException {
-        return 0;
-    }
+  @Override
+  public long getLength() throws IOException, InterruptedException {
+    return 0;
+  }
 
-    @Override
-    public String[] getLocations() throws IOException, InterruptedException {
-        return new String[]{};
-    }
+  @Override
+  public String[] getLocations() throws IOException, InterruptedException {
+    return new String[]{};
+  }
 
-    @Override
-    public void readFields(DataInput in) throws IOException {
-        splitIndex = in.readInt();
-        numSplits = in.readInt();
-    }
+  @Override
+  public void readFields(DataInput in) throws IOException {
+    splitIndex = in.readInt();
+    numSplits = in.readInt();
+  }
 
-    @Override
-    public void write(DataOutput out) throws IOException {
-        out.writeInt(splitIndex);
-        out.writeInt(numSplits);
-    }
+  @Override
+  public void write(DataOutput out) throws IOException {
+    out.writeInt(splitIndex);
+    out.writeInt(numSplits);
+  }
 
-    public int getSplitIndex() {
-        return splitIndex;
-    }
+  /**
+   * Get the index of this split.
+   *
+   * @return Index of this split.
+   */
+  public int getSplitIndex() {
+    return splitIndex;
+  }
 
-    public int getNumSplits() {
-        return numSplits;
-    }
+  /**
+   * Get the number of splits for this application.
+   *
+   * @return Total number of splits.
+   */
+  public int getNumSplits() {
+    return numSplits;
+  }
 
-    @Override
-    public String toString() {
-        return "'" + getClass().getCanonicalName() +
-            ", index=" + getSplitIndex() + ", num=" + getNumSplits();
-    }
+  @Override
+  public String toString() {
+    return "'" + getClass().getCanonicalName() +
+      ", index=" + getSplitIndex() + ", num=" + getNumSplits();
+  }
 }

@@ -20,26 +20,30 @@ package org.apache.giraph.utils;
 
 import java.util.Iterator;
 
+/**
+ * Helper empty iterable when there are no messages.
+ *
+ * @param <M> Message data
+ */
 public class EmptyIterable<M> implements Iterable<M>, Iterator<M> {
+  @Override
+  public Iterator<M> iterator() {
+    return this;
+  }
 
-    @Override
-    public Iterator<M> iterator() {
-        return this;
-    }
+  @Override
+  public boolean hasNext() {
+    return false;
+  }
 
-    @Override
-    public boolean hasNext() {
-        return false;
-    }
+  @Override
+  public M next() {
+    return null;
+  }
 
-    @Override
-    public M next() {
-        return null;
-    }
-
-    @Override
-    public void remove() {
-        throw new UnsupportedOperationException();
-    }
+  @Override
+  public void remove() {
+    throw new UnsupportedOperationException();
+  }
 }
 

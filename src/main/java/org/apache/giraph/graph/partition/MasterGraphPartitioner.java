@@ -35,48 +35,49 @@ import org.apache.giraph.graph.WorkerInfo;
  */
 @SuppressWarnings("rawtypes")
 public interface MasterGraphPartitioner<I extends WritableComparable,
-        V extends Writable, E extends Writable, M extends Writable> {
-    /**
-     * Set some initial partition owners for the graph. Guaranteed to be called
-     * prior to the graph being loaded (initial or restart).
-     *
-     * @param availableWorkerInfos Workers available for partition assignment
-     * @param maxWorkers Maximum number of workers
-     */
-    Collection<PartitionOwner> createInitialPartitionOwners(
-            Collection<WorkerInfo> availableWorkerInfos, int maxWorkers);
+    V extends Writable, E extends Writable, M extends Writable> {
+  /**
+   * Set some initial partition owners for the graph. Guaranteed to be called
+   * prior to the graph being loaded (initial or restart).
+   *
+   * @param availableWorkerInfos Workers available for partition assignment
+   * @param maxWorkers Maximum number of workers
+   * @return Collection of generated partition owners.
+   */
+  Collection<PartitionOwner> createInitialPartitionOwners(
+      Collection<WorkerInfo> availableWorkerInfos, int maxWorkers);
 
-    /**
-     * After the worker stats have been merged to a single list, the master can
-     * use this information to send commands to the workers for any
-     * {@link Partition} changes. This protocol is specific to the
-     * {@link MasterGraphPartitioner} implementation.
-     *
-     * @param allPartitionStatsList All partition stats from all workers.
-     * @param availableWorkers Workers available for partition assignment
-     * @param maxWorkers Maximum number of workers
-     * @param superstep Partition owners will be set for this superstep
-     * @return Collection of {@link PartitionOwner} objects that changed from
-     *         the previous superstep, empty list if no change.
-     */
-    Collection<PartitionOwner> generateChangedPartitionOwners(
-            Collection<PartitionStats> allPartitionStatsList,
-            Collection<WorkerInfo> availableWorkers,
-            int maxWorkers,
-            long superstep);
+  /**
+   * After the worker stats have been merged to a single list, the master can
+   * use this information to send commands to the workers for any
+   * {@link Partition} changes. This protocol is specific to the
+   * {@link MasterGraphPartitioner} implementation.
+   *
+   * @param allPartitionStatsList All partition stats from all workers.
+   * @param availableWorkers Workers available for partition assignment
+   * @param maxWorkers Maximum number of workers
+   * @param superstep Partition owners will be set for this superstep
+   * @return Collection of {@link PartitionOwner} objects that changed from
+   *         the previous superstep, empty list if no change.
+   */
+  Collection<PartitionOwner> generateChangedPartitionOwners(
+      Collection<PartitionStats> allPartitionStatsList,
+      Collection<WorkerInfo> availableWorkers,
+      int maxWorkers,
+      long superstep);
 
-    /**
-     * Get current partition owners at this time.
-     *
-     * @return Collection of current {@link PartitionOwner} objects
-     */
-    Collection<PartitionOwner> getCurrentPartitionOwners();
+  /**
+   * Get current partition owners at this time.
+   *
+   * @return Collection of current {@link PartitionOwner} objects
+   */
+  Collection<PartitionOwner> getCurrentPartitionOwners();
 
-    /**
-     * Instantiate the {@link PartitionStats} implementation used to read the
-     * worker stats
-     *
-     * @return Instantiated {@link PartitionStats} object
-     */
-    PartitionStats createPartitionStats();
+  /**
+   * Instantiate the {@link PartitionStats} implementation used to read the
+   * worker stats
+   *
+   * @return Instantiated {@link PartitionStats} object
+   */
+  PartitionStats createPartitionStats();
 }

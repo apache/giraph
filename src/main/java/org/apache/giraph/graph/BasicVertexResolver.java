@@ -24,36 +24,38 @@ import org.apache.hadoop.io.WritableComparable;
 /**
  * Handles all the situations that can arise upon creation/removal of
  * vertices and edges.
+ *
+ * @param <I> Vertex id
+ * @param <V> Vertex data
+ * @param <E> Edge data
+ * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
-public interface BasicVertexResolver<
-        I extends WritableComparable,
-        V extends Writable,
-        E extends Writable,
-        M extends Writable> {
-    /**
-     * A vertex may have been removed, created zero or more times and had
-     * zero or more messages sent to it.  This method will handle all situations
-     * excluding the normal case (a vertex already exists and has zero or more
-     * messages sent it to).
-     *
-     * @param vertexId Vertex id (can be used for {@link BasicVertex}'s
-     *        initialize())
-     * @param vertex Original vertex or null if none
-     * @param vertexChanges Changes that happened to this vertex or null if none
-     * @param messages messages received in the last superstep or null if none
-     * @return Vertex to be returned, if null, and a vertex currently exists
-     *         it will be removed
-     */
-    BasicVertex<I, V, E, M> resolve(I vertexId,
-                                    BasicVertex<I, V, E, M> vertex,
-                                    VertexChanges<I, V, E, M> vertexChanges,
-                                    Iterable<M> messages);
+public interface BasicVertexResolver<I extends WritableComparable,
+    V extends Writable, E extends Writable, M extends Writable> {
+  /**
+   * A vertex may have been removed, created zero or more times and had
+   * zero or more messages sent to it.  This method will handle all situations
+   * excluding the normal case (a vertex already exists and has zero or more
+   * messages sent it to).
+   *
+   * @param vertexId Vertex id (can be used for {@link BasicVertex}'s
+   *        initialize())
+   * @param vertex Original vertex or null if none
+   * @param vertexChanges Changes that happened to this vertex or null if none
+   * @param messages messages received in the last superstep or null if none
+   * @return Vertex to be returned, if null, and a vertex currently exists
+   *         it will be removed
+   */
+  BasicVertex<I, V, E, M> resolve(I vertexId,
+      BasicVertex<I, V, E, M> vertex,
+      VertexChanges<I, V, E, M> vertexChanges,
+      Iterable<M> messages);
 
-    /**
-     * Create a default vertex that can be used to return from resolve().
-     *
-     * @return Newly instantiated vertex.
-     */
-    BasicVertex<I, V, E, M> instantiateVertex();
+  /**
+   * Create a default vertex that can be used to return from resolve().
+   *
+   * @return Newly instantiated vertex.
+   */
+  BasicVertex<I, V, E, M> instantiateVertex();
 }

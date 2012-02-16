@@ -34,53 +34,58 @@ import java.io.IOException;
  * @param <I> Vertex index value
  * @param <V> Vertex value
  * @param <E> Edge value
+ * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public abstract class GeneratedVertexReader<
-        I extends WritableComparable, V extends Writable, E extends Writable,
-        M extends Writable>
-        implements VertexReader<I, V, E, M> {
-    /** Records read so far */
-    protected long recordsRead = 0;
-    /** Total records to read (on this split alone) */
-    protected long totalRecords = 0;
-    /** The input split from initialize(). */
-    protected BspInputSplit inputSplit = null;
-    /** Reverse the id order? */
-    protected boolean reverseIdOrder;
+    I extends WritableComparable, V extends Writable, E extends Writable,
+    M extends Writable> implements VertexReader<I, V, E, M> {
+  /** Vertices produced by this reader */
+  public static final String READER_VERTICES =
+    "GeneratedVertexReader.reader_vertices";
+  /** Default vertices produced by this reader */
+  public static final long DEFAULT_READER_VERTICES = 10;
+  /** Reverse the order of the vertices? */
+  public static final String REVERSE_ID_ORDER =
+    "GeneratedVertexReader.reverseIdOrder";
+  /** Default ordering is not reversed */
+  public static final boolean DEAFULT_REVERSE_ID_ORDER = false;
+  /** Records read so far */
+  protected long recordsRead = 0;
+  /** Total records to read (on this split alone) */
+  protected long totalRecords = 0;
+  /** The input split from initialize(). */
+  protected BspInputSplit inputSplit = null;
+  /** Reverse the id order? */
+  protected boolean reverseIdOrder;
+  /** Saved configuration */
+  protected Configuration configuration = null;
 
-    protected Configuration configuration = null;
+  /**
+   * Default constructor for reflection.
+   */
+  public GeneratedVertexReader() {
+  }
 
-    public static final String READER_VERTICES =
-        "GeneratedVertexReader.reader_vertices";
-    public static final long DEFAULT_READER_VERTICES = 10;
-    public static final String REVERSE_ID_ORDER =
-        "GeneratedVertexReader.reverseIdOrder";
-    public static final boolean DEAFULT_REVERSE_ID_ORDER = false;
+  @Override
+  public final void initialize(InputSplit inputSplit,
+      TaskAttemptContext context) throws IOException {
+    configuration = context.getConfiguration();
+    totalRecords = configuration.getLong(
+        GeneratedVertexReader.READER_VERTICES,
+        GeneratedVertexReader.DEFAULT_READER_VERTICES);
+    reverseIdOrder = configuration.getBoolean(
+        GeneratedVertexReader.REVERSE_ID_ORDER,
+        GeneratedVertexReader.DEAFULT_REVERSE_ID_ORDER);
+    this.inputSplit = (BspInputSplit) inputSplit;
+  }
 
-    public GeneratedVertexReader() {
-    }
+  @Override
+  public void close() throws IOException {
+  }
 
-    @Override
-    final public void initialize(InputSplit inputSplit,
-                                 TaskAttemptContext context)
-            throws IOException {
-        configuration = context.getConfiguration();
-        totalRecords = configuration.getLong(
-            GeneratedVertexReader.READER_VERTICES,
-            GeneratedVertexReader.DEFAULT_READER_VERTICES);
-        reverseIdOrder = configuration.getBoolean(
-            GeneratedVertexReader.REVERSE_ID_ORDER,
-            GeneratedVertexReader.DEAFULT_REVERSE_ID_ORDER);
-        this.inputSplit = (BspInputSplit) inputSplit;
-    }
-
-    @Override
-    public void close() throws IOException {
-    }
-
-    @Override
-    final public float getProgress() throws IOException {
-        return recordsRead * 100.0f / totalRecords;
-    }
+  @Override
+  public final float getProgress() throws IOException {
+    return recordsRead * 100.0f / totalRecords;
+  }
 }

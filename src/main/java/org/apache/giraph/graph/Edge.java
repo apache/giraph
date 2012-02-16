@@ -36,133 +36,138 @@ import java.io.IOException;
  */
 @SuppressWarnings("rawtypes")
 public class Edge<I extends WritableComparable, E extends Writable>
-        implements WritableComparable<Edge<I, E>>, Configurable {
-    /** Destination vertex id */
-    private I destVertexId = null;
-    /** Edge value */
-    private E edgeValue = null;
-    /** Configuration - Used to instantiate classes */
-    private Configuration conf = null;
+    implements WritableComparable<Edge<I, E>>, Configurable {
+  /** Destination vertex id */
+  private I destVertexId = null;
+  /** Edge value */
+  private E edgeValue = null;
+  /** Configuration - Used to instantiate classes */
+  private Configuration conf = null;
 
-    /**
-     * Constructor for reflection
-     */
-    public Edge() {}
+  /**
+   * Constructor for reflection
+   */
+  public Edge() { }
 
-    /**
-     * Create the edge with final values
-     *
-     * @param destVertexId
-     * @param edgeValue
-     */
-    public Edge(I destVertexId, E edgeValue) {
-        this.destVertexId = destVertexId;
-        this.edgeValue = edgeValue;
+  /**
+   * Create the edge with final values
+   *
+   * @param destVertexId Desination vertex id.
+   * @param edgeValue Value of the edge.
+   */
+  public Edge(I destVertexId, E edgeValue) {
+    this.destVertexId = destVertexId;
+    this.edgeValue = edgeValue;
+  }
+
+  /**
+   * Get the destination vertex index of this edge
+   *
+   * @return Destination vertex index of this edge
+   */
+  public I getDestVertexId() {
+    return destVertexId;
+  }
+
+  /**
+   * Get the edge value of the edge
+   *
+   * @return Edge value of this edge
+   */
+  public E getEdgeValue() {
+    return edgeValue;
+  }
+
+  /**
+   * Set the destination vertex index of this edge.
+   *
+   * @param destVertexId new destination vertex
+   */
+  public void setDestVertexId(I destVertexId) {
+    this.destVertexId = destVertexId;
+  }
+
+  /**
+   * Set the value for this edge.
+   *
+   * @param edgeValue new edge value
+   */
+  public void setEdgeValue(E edgeValue) {
+    this.edgeValue = edgeValue;
+  }
+
+  @Override
+  public String toString() {
+    return "(DestVertexIndex = " + destVertexId +
+        ", edgeValue = " + edgeValue  + ")";
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public void readFields(DataInput input) throws IOException {
+    destVertexId = (I) BspUtils.createVertexIndex(getConf());
+    destVertexId.readFields(input);
+    edgeValue = (E) BspUtils.createEdgeValue(getConf());
+    edgeValue.readFields(input);
+  }
+
+  @Override
+  public void write(DataOutput output) throws IOException {
+    if (destVertexId == null) {
+      throw new IllegalStateException(
+          "write: Null destination vertex index");
+    }
+    if (edgeValue == null) {
+      throw new IllegalStateException(
+          "write: Null edge value");
+    }
+    destVertexId.write(output);
+    edgeValue.write(output);
+  }
+
+  @Override
+  public Configuration getConf() {
+    return conf;
+  }
+
+  @Override
+  public void setConf(Configuration conf) {
+    this.conf = conf;
+  }
+
+  @SuppressWarnings("unchecked")
+  @Override
+  public int compareTo(Edge<I, E> edge) {
+    return destVertexId.compareTo(edge.getDestVertexId());
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
     }
 
-    /**
-     * Get the destination vertex index of this edge
-     *
-     * @return Destination vertex index of this edge
-     */
-    public I getDestVertexId() {
-        return destVertexId;
+    Edge edge = (Edge) o;
+
+    if (destVertexId != null ? !destVertexId.equals(edge.destVertexId) :
+      edge.destVertexId != null) {
+      return false;
+    }
+    if (edgeValue != null ?
+        !edgeValue.equals(edge.edgeValue) : edge.edgeValue != null) {
+      return false;
     }
 
-    /**
-     * Get the edge value of the edge
-     *
-     * @return Edge value of this edge
-     */
-    public E getEdgeValue() {
-        return edgeValue;
-    }
+    return true;
+  }
 
-    /**
-     * Set the destination vertex index of this edge.
-     *
-     * @param destVertexId new destination vertex
-     */
-    public void setDestVertexId(I destVertexId) {
-        this.destVertexId = destVertexId;
-    }
-
-    /**
-     * Set the value for this edge.
-     *
-     * @param edgeValue new edge value
-     */
-    public void setEdgeValue(E edgeValue) {
-        this.edgeValue = edgeValue;
-    }
-
-    @Override
-    public String toString() {
-        return "(DestVertexIndex = " + destVertexId +
-            ", edgeValue = " + edgeValue  + ")";
-    }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public void readFields(DataInput input) throws IOException {
-        destVertexId = (I) BspUtils.createVertexIndex(getConf());
-        destVertexId.readFields(input);
-        edgeValue = (E) BspUtils.createEdgeValue(getConf());
-        edgeValue.readFields(input);
-    }
-
-    @Override
-    public void write(DataOutput output) throws IOException {
-        if (destVertexId == null) {
-            throw new IllegalStateException(
-                "write: Null destination vertex index");
-        }
-        if (edgeValue == null) {
-            throw new IllegalStateException(
-                "write: Null edge value");
-        }
-        destVertexId.write(output);
-        edgeValue.write(output);
-    }
-
-    @Override
-    public Configuration getConf() {
-        return conf;
-    }
-
-    @Override
-    public void setConf(Configuration conf) {
-        this.conf = conf;
-    }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public int compareTo(Edge<I, E> edge) {
-        return destVertexId.compareTo(edge.getDestVertexId());
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) { return true; }
-        if (o == null || getClass() != o.getClass()) { return false; }
-
-        Edge edge = (Edge) o;
-
-        if (destVertexId != null ? !destVertexId.equals(edge.destVertexId) :
-            edge.destVertexId != null) {
-            return false;
-        }
-        if (edgeValue != null ? !edgeValue.equals(edge.edgeValue) : edge.edgeValue != null) {
-            return false;
-        }
-
-        return true;
-    }
-
-    @Override
-    public int hashCode() {
-        int result = destVertexId != null ? destVertexId.hashCode() : 0;
-        result = 31 * result + (edgeValue != null ? edgeValue.hashCode() : 0);
-        return result;
-    }
+  @Override
+  public int hashCode() {
+    int result = destVertexId != null ? destVertexId.hashCode() : 0;
+    result = 31 * result + (edgeValue != null ? edgeValue.hashCode() : 0);
+    return result;
+  }
 }

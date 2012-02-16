@@ -29,57 +29,71 @@ import org.apache.hadoop.io.Writable;
  * Aggregated stats by the master.
  */
 public class GlobalStats implements Writable {
-    private long vertexCount = 0;
-    private long finishedVertexCount = 0;
-    private long edgeCount = 0;
-    private long messageCount = 0;
+  /** All vertices in the application */
+  private long vertexCount = 0;
+  /** All finished vertices in the last superstep */
+  private long finishedVertexCount = 0;
+  /** All edges in the last superstep */
+  private long edgeCount = 0;
+  /** All messages sent in the last superstep */
+  private long messageCount = 0;
 
-    public void addPartitionStats(PartitionStats partitionStats) {
-        this.vertexCount += partitionStats.getVertexCount();
-        this.finishedVertexCount += partitionStats.getFinishedVertexCount();
-        this.edgeCount += partitionStats.getEdgeCount();
-    }
+  /**
+   * Add the stats of a partition to the global stats.
+   *
+   * @param partitionStats Partition stats to be added.
+   */
+  public void addPartitionStats(PartitionStats partitionStats) {
+    this.vertexCount += partitionStats.getVertexCount();
+    this.finishedVertexCount += partitionStats.getFinishedVertexCount();
+    this.edgeCount += partitionStats.getEdgeCount();
+  }
 
-    public long getVertexCount() {
-        return vertexCount;
-    }
+  public long getVertexCount() {
+    return vertexCount;
+  }
 
-    public long getFinishedVertexCount() {
-        return finishedVertexCount;
-    }
+  public long getFinishedVertexCount() {
+    return finishedVertexCount;
+  }
 
-    public long getEdgeCount() {
-        return edgeCount;
-    }
+  public long getEdgeCount() {
+    return edgeCount;
+  }
 
-    public long getMessageCount() {
-        return messageCount;
-    }
+  public long getMessageCount() {
+    return messageCount;
+  }
 
-    public void addMessageCount(long messageCount) {
-        this.messageCount += messageCount;
-    }
+  /**
+   * Add messages to the global stats.
+   *
+   * @param messageCount Number of messages to be added.
+   */
+  public void addMessageCount(long messageCount) {
+    this.messageCount += messageCount;
+  }
 
-    @Override
-    public void readFields(DataInput input) throws IOException {
-        vertexCount = input.readLong();
-        finishedVertexCount = input.readLong();
-        edgeCount = input.readLong();
-        messageCount = input.readLong();
-    }
+  @Override
+  public void readFields(DataInput input) throws IOException {
+    vertexCount = input.readLong();
+    finishedVertexCount = input.readLong();
+    edgeCount = input.readLong();
+    messageCount = input.readLong();
+  }
 
-    @Override
-    public void write(DataOutput output) throws IOException {
-        output.writeLong(vertexCount);
-        output.writeLong(finishedVertexCount);
-        output.writeLong(edgeCount);
-        output.writeLong(messageCount);
-    }
+  @Override
+  public void write(DataOutput output) throws IOException {
+    output.writeLong(vertexCount);
+    output.writeLong(finishedVertexCount);
+    output.writeLong(edgeCount);
+    output.writeLong(messageCount);
+  }
 
-    @Override
-    public String toString() {
-        return "(vtx=" + vertexCount + ",finVtx=" +
-               finishedVertexCount + ",edges=" + edgeCount + ",msgCount=" +
-               messageCount + ")";
-    }
+  @Override
+  public String toString() {
+    return "(vtx=" + vertexCount + ",finVtx=" +
+        finishedVertexCount + ",edges=" + edgeCount + ",msgCount=" +
+        messageCount + ")";
+  }
 }

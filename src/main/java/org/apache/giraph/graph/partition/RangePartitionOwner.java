@@ -33,31 +33,43 @@ import org.apache.hadoop.io.WritableComparable;
  */
 @SuppressWarnings("rawtypes")
 public class RangePartitionOwner<I extends WritableComparable>
-        extends BasicPartitionOwner {
-    /** Max index for this partition */
-    private I maxIndex;
+    extends BasicPartitionOwner {
+  /** Max index for this partition */
+  private I maxIndex;
 
-    public RangePartitionOwner() {
-    }
+  /**
+   * Default constructor.
+   */
+  public RangePartitionOwner() { }
 
-    public RangePartitionOwner(I maxIndex) {
-        this.maxIndex = maxIndex;
-    }
+  /**
+   * Constructor with the max index.
+   *
+   * @param maxIndex Max index of this partition.
+   */
+  public RangePartitionOwner(I maxIndex) {
+    this.maxIndex = maxIndex;
+  }
 
-    public I getMaxIndex() {
-        return maxIndex;
-    }
+  /**
+   * Get the maximum index of this partition owner.
+   *
+   * @return Maximum index.
+   */
+  public I getMaxIndex() {
+    return maxIndex;
+  }
 
-    @Override
-    public void readFields(DataInput input) throws IOException {
-        super.readFields(input);
-        maxIndex = BspUtils.<I>createVertexIndex(getConf());
-        maxIndex.readFields(input);
-    }
+  @Override
+  public void readFields(DataInput input) throws IOException {
+    super.readFields(input);
+    maxIndex = BspUtils.<I>createVertexIndex(getConf());
+    maxIndex.readFields(input);
+  }
 
-    @Override
-    public void write(DataOutput output) throws IOException {
-        super.write(output);
-        maxIndex.write(output);
-    }
+  @Override
+  public void write(DataOutput output) throws IOException {
+    super.write(output);
+    maxIndex.write(output);
+  }
 }

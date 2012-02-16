@@ -31,115 +31,126 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-
 /**
  * A generic container that stores vertices.  Vertex ids will map to exactly
  * one partition.
+ *
+ * @param <I> Vertex id
+ * @param <V> Vertex data
+ * @param <E> Edge data
+ * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public class Partition<I extends WritableComparable,
-        V extends Writable, E extends Writable, M extends Writable>
-        implements Writable {
-    /** Configuration from the worker */
-    private final Configuration conf;
-    /** Partition id */
-    private final int partitionId;
-    /** Vertex map for this range (keyed by index) */
-    private final Map<I, BasicVertex<I, V, E, M>> vertexMap =
-        new HashMap<I, BasicVertex<I, V, E, M>>();
+    V extends Writable, E extends Writable, M extends Writable>
+    implements Writable {
+  /** Configuration from the worker */
+  private final Configuration conf;
+  /** Partition id */
+  private final int partitionId;
+  /** Vertex map for this range (keyed by index) */
+  private final Map<I, BasicVertex<I, V, E, M>> vertexMap =
+      new HashMap<I, BasicVertex<I, V, E, M>>();
 
-    public Partition(Configuration conf, int partitionId) {
-        this.conf = conf;
-        this.partitionId = partitionId;
-    }
+  /**
+   * Constructor.
+   *
+   * @param conf Configuration.
+   * @param partitionId Partition id.
+   */
+  public Partition(Configuration conf, int partitionId) {
+    this.conf = conf;
+    this.partitionId = partitionId;
+  }
 
-    /**
-     * Get the vertex for this vertex index.
-     *
-     * @param vertexIndex Vertex index to search for
-     * @return Vertex if it exists, null otherwise
-     */
-    public BasicVertex<I, V, E, M> getVertex(I vertexIndex) {
-        return vertexMap.get(vertexIndex);
-    }
+  /**
+   * Get the vertex for this vertex index.
+   *
+   * @param vertexIndex Vertex index to search for
+   * @return Vertex if it exists, null otherwise
+   */
+  public BasicVertex<I, V, E, M> getVertex(I vertexIndex) {
+    return vertexMap.get(vertexIndex);
+  }
 
-    /**
-     * Put a vertex into the Partition
-     *
-     * @param vertex Vertex to put in the Partition
-     * @return old vertex value (i.e. null if none existed prior)
-     */
-    public BasicVertex<I, V, E, M> putVertex(BasicVertex<I, V, E, M> vertex) {
-        return vertexMap.put(vertex.getVertexId(), vertex);
-    }
+  /**
+   * Put a vertex into the Partition
+   *
+   * @param vertex Vertex to put in the Partition
+   * @return old vertex value (i.e. null if none existed prior)
+   */
+  public BasicVertex<I, V, E, M> putVertex(BasicVertex<I, V, E, M> vertex) {
+    return vertexMap.put(vertex.getVertexId(), vertex);
+  }
 
-    /**
-     * Remove a vertex from the Partition
-     *
-     * @param vertexIndex Vertex index to remove
-     */
-    public BasicVertex<I, V, E, M> removeVertex(I vertexIndex) {
-        return vertexMap.remove(vertexIndex);
-    }
+  /**
+   * Remove a vertex from the Partition
+   *
+   * @param vertexIndex Vertex index to remove
+   * @return The removed vertex.
+   */
+  public BasicVertex<I, V, E, M> removeVertex(I vertexIndex) {
+    return vertexMap.remove(vertexIndex);
+  }
 
-    /**
-     * Get a collection of the vertices.
-     *
-     * @return Collection of the vertices
-     */
-    public Collection<BasicVertex<I, V, E , M>> getVertices() {
-        return vertexMap.values();
-    }
+  /**
+   * Get a collection of the vertices.
+   *
+   * @return Collection of the vertices
+   */
+  public Collection<BasicVertex<I, V, E , M>> getVertices() {
+    return vertexMap.values();
+  }
 
-    /**
-     * Get the number of edges in this partition.  Computed on the fly.
-     *
-     * @return Number of edges.
-     */
-    public long getEdgeCount() {
-        long edges = 0;
-        for (BasicVertex<I, V, E, M> vertex : vertexMap.values()) {
-            edges += vertex.getNumOutEdges();
-        }
-        return edges;
+  /**
+   * Get the number of edges in this partition.  Computed on the fly.
+   *
+   * @return Number of edges.
+   */
+  public long getEdgeCount() {
+    long edges = 0;
+    for (BasicVertex<I, V, E, M> vertex : vertexMap.values()) {
+      edges += vertex.getNumOutEdges();
     }
+    return edges;
+  }
 
-    /**
-     * Get the partition id.
-     *
-     * @return Partition id of this partition.
-     */
-    public int getPartitionId() {
-        return partitionId;
-    }
+  /**
+   * Get the partition id.
+   *
+   * @return Partition id of this partition.
+   */
+  public int getPartitionId() {
+    return partitionId;
+  }
 
-    @Override
-    public String toString() {
-        return "(id=" + getPartitionId() + ",V=" + vertexMap.size() +
-            ",E=" + getEdgeCount() + ")";
-    }
+  @Override
+  public String toString() {
+    return "(id=" + getPartitionId() + ",V=" + vertexMap.size() +
+        ",E=" + getEdgeCount() + ")";
+  }
 
-    @Override
-    public void readFields(DataInput input) throws IOException {
-        int vertices = input.readInt();
-        for (int i = 0; i < vertices; ++i) {
-            BasicVertex<I, V, E, M> vertex =
-                BspUtils.<I, V, E, M>createVertex(conf);
-            vertex.readFields(input);
-            if (vertexMap.put(vertex.getVertexId(),
-                              (BasicVertex<I, V, E, M>) vertex) != null) {
-                throw new IllegalStateException(
-                    "readFields: " + this +
-                    " already has same id " + vertex);
-            }
-        }
+  @Override
+  public void readFields(DataInput input) throws IOException {
+    int vertices = input.readInt();
+    for (int i = 0; i < vertices; ++i) {
+      BasicVertex<I, V, E, M> vertex =
+        BspUtils.<I, V, E, M>createVertex(conf);
+      vertex.readFields(input);
+      if (vertexMap.put(vertex.getVertexId(),
+          (BasicVertex<I, V, E, M>) vertex) != null) {
+        throw new IllegalStateException(
+            "readFields: " + this +
+            " already has same id " + vertex);
+      }
     }
+  }
 
-    @Override
-    public void write(DataOutput output) throws IOException {
-        output.writeInt(vertexMap.size());
-        for (BasicVertex vertex : vertexMap.values()) {
-            vertex.write(output);
-        }
+  @Override
+  public void write(DataOutput output) throws IOException {
+    output.writeInt(vertexMap.size());
+    for (BasicVertex vertex : vertexMap.values()) {
+      vertex.write(output);
     }
+  }
 }

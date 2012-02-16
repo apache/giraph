@@ -24,30 +24,32 @@ import org.apache.giraph.graph.Aggregator;
 
 /**
  * Aggregator for getting min value.
- *
- **/
-
+ */
 public class MinAggregator implements Aggregator<DoubleWritable> {
-
+  /** Internal aggregator */
   private double min = Double.MAX_VALUE;
 
+  @Override
   public void aggregate(DoubleWritable value) {
-      double val = value.get();
-      if (val < min) {
-          min = val;
-      }
+    double val = value.get();
+    if (val < min) {
+      min = val;
+    }
   }
 
+  @Override
   public void setAggregatedValue(DoubleWritable value) {
-      min = value.get();
+    min = value.get();
   }
 
+  @Override
   public DoubleWritable getAggregatedValue() {
-      return new DoubleWritable(min);
+    return new DoubleWritable(min);
   }
 
+  @Override
   public DoubleWritable createAggregatedValue() {
-      return new DoubleWritable();
+    return new DoubleWritable();
   }
 
 }

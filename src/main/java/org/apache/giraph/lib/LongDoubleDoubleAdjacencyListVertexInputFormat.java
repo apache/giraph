@@ -35,19 +35,40 @@ import java.io.IOException;
  * 22 0.1 45 0.3 99 0.44
  * to repesent a vertex with id 22, value of 0.1 and edges to nodes 45 and 99,
  * with values of 0.3 and 0.44, respectively.
+ *
+ * @param <M> Message data
  */
-public class LongDoubleDoubleAdjacencyListVertexInputFormat<M extends Writable> extends
-    TextVertexInputFormat<LongWritable, DoubleWritable, DoubleWritable, M>  {
+public class LongDoubleDoubleAdjacencyListVertexInputFormat<M extends Writable>
+    extends TextVertexInputFormat<LongWritable, DoubleWritable,
+    DoubleWritable, M> {
 
+  /**
+   * VertexReader associated with
+   * {@link LongDoubleDoubleAdjacencyListVertexInputFormat}.
+   *
+   * @param <M> Message data.
+   */
   static class VertexReader<M extends Writable> extends
-      AdjacencyListVertexReader<LongWritable, DoubleWritable, DoubleWritable, M> {
+      AdjacencyListVertexReader<LongWritable, DoubleWritable,
+      DoubleWritable, M> {
 
+    /**
+     * Constructor with Line record reader.
+     *
+     * @param lineRecordReader Reader to internally use.
+     */
     VertexReader(RecordReader<LongWritable, Text> lineRecordReader) {
       super(lineRecordReader);
     }
 
+    /**
+     * Constructor with Line record reader and sanitizer.
+     *
+     * @param lineRecordReader Reader to internally use.
+     * @param sanitizer Line sanitizer.
+     */
     VertexReader(RecordReader<LongWritable, Text> lineRecordReader,
-                 LineSanitizer sanitizer) {
+        LineSanitizer sanitizer) {
       super(lineRecordReader, sanitizer);
     }
 
@@ -62,8 +83,10 @@ public class LongDoubleDoubleAdjacencyListVertexInputFormat<M extends Writable> 
     }
 
     @Override
-    public void decodeEdge(String s1, String s2, Edge<LongWritable, DoubleWritable>
-        textIntWritableEdge) {
+    public void decodeEdge(
+        String s1,
+        String s2,
+        Edge<LongWritable, DoubleWritable> textIntWritableEdge) {
       textIntWritableEdge.setDestVertexId(new LongWritable(Long.valueOf(s1)));
       textIntWritableEdge.setEdgeValue(new DoubleWritable(Double.valueOf(s2)));
     }
@@ -71,10 +94,10 @@ public class LongDoubleDoubleAdjacencyListVertexInputFormat<M extends Writable> 
 
   @Override
   public org.apache.giraph.graph.VertexReader<LongWritable,
-    DoubleWritable, DoubleWritable, M> createVertexReader(
+  DoubleWritable, DoubleWritable, M> createVertexReader(
       InputSplit split,
       TaskAttemptContext context) throws IOException {
     return new VertexReader<M>(textInputFormat.createRecordReader(
-      split, context));
+        split, context));
   }
 }

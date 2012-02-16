@@ -40,78 +40,77 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
  * @param <E> Edge value
  */
 @SuppressWarnings("rawtypes")
-public abstract class TextVertexOutputFormat<
-        I extends WritableComparable, V extends Writable, E extends Writable>
-        extends VertexOutputFormat<I, V, E> {
-    /** Uses the TextOutputFormat to do everything */
-    protected TextOutputFormat<Text, Text> textOutputFormat =
-        new TextOutputFormat<Text, Text>();
+public abstract class TextVertexOutputFormat<I extends WritableComparable,
+    V extends Writable, E extends Writable>
+    extends VertexOutputFormat<I, V, E> {
+  /** Uses the TextOutputFormat to do everything */
+  protected TextOutputFormat<Text, Text> textOutputFormat =
+      new TextOutputFormat<Text, Text>();
+
+  /**
+   * Abstract class to be implemented by the user based on their specific
+   * vertex output.  Easiest to ignore the key value separator and only use
+   * key instead.
+   *
+   * @param <I> Vertex index value
+   * @param <V> Vertex value
+   * @param <E> Edge value
+   */
+  public abstract static class TextVertexWriter<I extends WritableComparable,
+      V extends Writable, E extends Writable> implements VertexWriter<I, V, E> {
+    /** Context passed to initialize */
+    private TaskAttemptContext context;
+    /** Internal line record writer */
+    private final RecordWriter<Text, Text> lineRecordWriter;
 
     /**
-     * Abstract class to be implemented by the user based on their specific
-     * vertex output.  Easiest to ignore the key value separator and only use
-     * key instead.
+     * Initialize with the LineRecordWriter.
      *
-     * @param <I> Vertex index value
-     * @param <V> Vertex value
-     * @param <E> Edge value
+     * @param lineRecordWriter Line record writer from TextOutputFormat
      */
-    public static abstract class TextVertexWriter<I extends WritableComparable,
-            V extends Writable, E extends Writable>
-            implements VertexWriter<I, V, E> {
-        /** Context passed to initialize */
-        private TaskAttemptContext context;
-        /** Internal line record writer */
-        private final RecordWriter<Text, Text> lineRecordWriter;
-
-        /**
-         * Initialize with the LineRecordWriter.
-         *
-         * @param lineRecordWriter Line record writer from TextOutputFormat
-         */
-        public TextVertexWriter(RecordWriter<Text, Text> lineRecordWriter) {
-            this.lineRecordWriter = lineRecordWriter;
-        }
-
-        @Override
-        public void initialize(TaskAttemptContext context) throws IOException {
-            this.context = context;
-        }
-
-        @Override
-        public void close(TaskAttemptContext context)
-                throws IOException, InterruptedException {
-            lineRecordWriter.close(context);
-        }
-
-        /**
-         * Get the line record writer.
-         *
-         * @return Record writer to be used for writing.
-         */
-        public RecordWriter<Text, Text> getRecordWriter() {
-            return lineRecordWriter;
-        }
-
-        /**
-         * Get the context.
-         *
-         * @return Context passed to initialize.
-         */
-        public TaskAttemptContext getContext() {
-            return context;
-        }
+    public TextVertexWriter(RecordWriter<Text, Text> lineRecordWriter) {
+      this.lineRecordWriter = lineRecordWriter;
     }
 
     @Override
-    public void checkOutputSpecs(JobContext context)
-            throws IOException, InterruptedException {
-        textOutputFormat.checkOutputSpecs(context);
+    public void initialize(TaskAttemptContext context) throws IOException {
+      this.context = context;
     }
 
     @Override
-    public OutputCommitter getOutputCommitter(TaskAttemptContext context)
-            throws IOException, InterruptedException {
-        return textOutputFormat.getOutputCommitter(context);
+    public void close(TaskAttemptContext context) throws IOException,
+        InterruptedException {
+      lineRecordWriter.close(context);
     }
+
+    /**
+     * Get the line record writer.
+     *
+     * @return Record writer to be used for writing.
+     */
+    public RecordWriter<Text, Text> getRecordWriter() {
+      return lineRecordWriter;
+    }
+
+    /**
+     * Get the context.
+     *
+     * @return Context passed to initialize.
+     */
+    public TaskAttemptContext getContext() {
+      return context;
+    }
+  }
+
+  @Override
+  public void checkOutputSpecs(JobContext context)
+    throws IOException, InterruptedException {
+    textOutputFormat.checkOutputSpecs(context);
+  }
+
+  @Override
+  public OutputCommitter getOutputCommitter(TaskAttemptContext context)
+    throws IOException, InterruptedException {
+    return textOutputFormat.getOutputCommitter(context);
+  }
 }

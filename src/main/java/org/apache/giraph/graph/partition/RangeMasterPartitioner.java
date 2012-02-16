@@ -34,11 +34,10 @@ import org.apache.hadoop.io.WritableComparable;
  */
 @SuppressWarnings("rawtypes")
 public abstract class RangeMasterPartitioner<I extends WritableComparable,
-        V extends Writable, E extends Writable, M extends Writable> implements
-        MasterGraphPartitioner<I, V, E, M> {
-
-    @Override
-    public PartitionStats createPartitionStats() {
-        return new RangePartitionStats<I>();
-    }
+    V extends Writable, E extends Writable, M extends Writable> implements
+    MasterGraphPartitioner<I, V, E, M> {
+  @Override
+  public PartitionStats createPartitionStats() {
+    return new RangePartitionStats<I>();
+  }
 }

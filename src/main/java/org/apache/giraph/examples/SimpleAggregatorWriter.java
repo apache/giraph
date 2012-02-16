@@ -37,32 +37,37 @@ import org.apache.hadoop.mapreduce.Mapper.Context;
  * directory.
  */
 public class SimpleAggregatorWriter implements AggregatorWriter {
-    /** the name of the file we wrote to */
-    public static String filename;
-    private FSDataOutputStream output;
-    
-    @SuppressWarnings("rawtypes")
-    @Override
-    public void initialize(Context context, long applicationAttempt)
-            throws IOException {
-        filename = "aggregatedValues_"+applicationAttempt;
-        Path p = new Path(filename);
-        FileSystem fs = FileSystem.get(context.getConfiguration());
-        output = fs.create(p, true);
-    }
+  /** Name of the file we wrote to */
+  private static String FILENAME;
+  /** Saved output stream to write to */
+  private FSDataOutputStream output;
 
-    @Override
-    public void writeAggregator(Map<String, Aggregator<Writable>> map,
-            long superstep) throws IOException {
+  public static String getFilename() {
+    return FILENAME;
+  }
 
-        for (Entry<String, Aggregator<Writable>> aggregator: map.entrySet()) {
-            aggregator.getValue().getAggregatedValue().write(output);
-        }
-        output.flush();
-    }
+  @SuppressWarnings("rawtypes")
+  @Override
+  public void initialize(Context context, long applicationAttempt)
+    throws IOException {
+    FILENAME = "aggregatedValues_" + applicationAttempt;
+    Path p = new Path(FILENAME);
+    FileSystem fs = FileSystem.get(context.getConfiguration());
+    output = fs.create(p, true);
+  }
 
-    @Override
-    public void close() throws IOException {
-        output.close();
+  @Override
+  public void writeAggregator(Map<String, Aggregator<Writable>> map,
+      long superstep) throws IOException {
+
+    for (Entry<String, Aggregator<Writable>> aggregator: map.entrySet()) {
+      aggregator.getValue().getAggregatedValue().write(output);
     }
+    output.flush();
+  }
+
+  @Override
+  public void close() throws IOException {
+    output.close();
+  }
 }

@@ -40,30 +40,45 @@ import java.io.IOException;
  * @param <E> Edge value
  */
 @SuppressWarnings("rawtypes")
-public class IdWithValueTextOutputFormat <I extends WritableComparable,
-    V extends Writable, E extends Writable> extends TextVertexOutputFormat<I, V, E>{
+public class IdWithValueTextOutputFormat<I extends WritableComparable,
+    V extends Writable, E extends Writable>
+    extends TextVertexOutputFormat<I, V, E> {
 
+  /**
+   * Vertex writer used with {@link IdWithValueTextOutputFormat}.
+   *
+   * @param <I> Vertex id
+   * @param <V> Vertex data
+   * @param <E> Edge data
+   */
   static class IdWithValueVertexWriter<I extends WritableComparable, V extends
       Writable, E extends Writable> extends TextVertexWriter<I, V, E> {
-
+    /** Specify the output delimiter */
     public static final String LINE_TOKENIZE_VALUE = "output.delimiter";
+    /** Default output delimiter */
     public static final String LINE_TOKENIZE_VALUE_DEFAULT = "\t";
-
+    /** Reverse id and value order? */
     public static final String REVERSE_ID_AND_VALUE = "reverse.id.and.value";
+    /** Default is to not reverse id and value order. */
     public static final boolean REVERSE_ID_AND_VALUE_DEFAULT = false;
-
+    /** Saved delimiter */
     private String delimiter;
 
+    /**
+     * Constructor with record writer.
+     *
+     * @param recordWriter Writer from LineRecordWriter.
+     */
     public IdWithValueVertexWriter(RecordWriter<Text, Text> recordWriter) {
       super(recordWriter);
     }
 
     @Override
     public void writeVertex(BasicVertex<I, V, E, ?> vertex) throws IOException,
-        InterruptedException {
+    InterruptedException {
       if (delimiter == null) {
         delimiter = getContext().getConfiguration()
-           .get(LINE_TOKENIZE_VALUE, LINE_TOKENIZE_VALUE_DEFAULT);
+            .get(LINE_TOKENIZE_VALUE, LINE_TOKENIZE_VALUE_DEFAULT);
       }
 
       String first;
@@ -87,9 +102,8 @@ public class IdWithValueTextOutputFormat <I extends WritableComparable,
 
   @Override
   public VertexWriter<I, V, E> createVertexWriter(TaskAttemptContext context)
-      throws IOException, InterruptedException {
+    throws IOException, InterruptedException {
     return new IdWithValueVertexWriter<I, V, E>
-        (textOutputFormat.getRecordWriter(context));
+    (textOutputFormat.getRecordWriter(context));
   }
-
 }

@@ -21,6 +21,7 @@ import com.google.common.collect.Maps;
 import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.Edge;
+import org.apache.giraph.lib.TextVertexInputFormat.TextVertexReader;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
@@ -42,15 +43,17 @@ import java.util.Map;
  * @param <I> Vertex index value
  * @param <V> Vertex value
  * @param <E> Edge value
+ * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public abstract class AdjacencyListVertexReader<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable> extends
     TextVertexInputFormat.TextVertexReader<I, V, E, M> {
-
+  /** Delimiter for split */
   public static final String LINE_TOKENIZE_VALUE = "adj.list.input.delimiter";
+  /** Default delimiter for split */
   public static final String LINE_TOKENIZE_VALUE_DEFAULT = "\t";
-
+  /** Cached delimiter used for split */
   private String splitValue = null;
 
   /**
@@ -59,17 +62,37 @@ public abstract class AdjacencyListVertexReader<I extends WritableComparable,
   public interface LineSanitizer {
     /**
      * Clean string s before attempting to tokenize it.
+     *
+     * @param s String to be cleaned.
+     * @return Sanitized string.
      */
-    public String sanitize(String s);
+    String sanitize(String s);
   }
 
-  private LineSanitizer sanitizer = null;
+  /**
+   * Sanitizer from constructor.
+   */
+  private final LineSanitizer sanitizer;
 
-  public AdjacencyListVertexReader(RecordReader<LongWritable, Text> lineRecordReader) {
+  /**
+   * Constructor with line record reader.
+   *
+   * @param lineRecordReader Reader from {@link TextVertexReader}.
+   */
+  public AdjacencyListVertexReader(
+      RecordReader<LongWritable, Text> lineRecordReader) {
     super(lineRecordReader);
+    sanitizer = null;
   }
 
-  public AdjacencyListVertexReader(RecordReader<LongWritable, Text> lineRecordReader,
+  /**
+   * Constructor with line record reader.
+   *
+   * @param lineRecordReader Reader from {@link TextVertexReader}.
+   * @param sanitizer Sanitizer to be used.
+   */
+  public AdjacencyListVertexReader(
+      RecordReader<LongWritable, Text> lineRecordReader,
       LineSanitizer sanitizer) {
     super(lineRecordReader);
     this.sanitizer = sanitizer;
@@ -77,17 +100,18 @@ public abstract class AdjacencyListVertexReader<I extends WritableComparable,
 
   /**
    * Store the Id for this line in an instance of its correct type.
+   *
    * @param s Id of vertex from line
    * @param id Instance of Id's type, in which to store its value
    */
-  abstract public void decodeId(String s, I id);
+  public abstract void decodeId(String s, I id);
 
   /**
    * Store the value for this line in an instance of its correct type.
    * @param s Value from line
    * @param value Instance of value's type, in which to store its value
    */
-  abstract public void decodeValue(String s, V value);
+  public abstract void decodeValue(String s, V value);
 
   /**
    * Store an edge from the line into an instance of a correctly typed Edge
@@ -95,7 +119,7 @@ public abstract class AdjacencyListVertexReader<I extends WritableComparable,
    * @param value The edge's value from the line
    * @param edge Instance of edge in which to store the id and value
    */
-  abstract public void decodeEdge(String id, String value, Edge<I, E> edge);
+  public abstract void decodeEdge(String id, String value, Edge<I, E> edge);
 
 
   @Override
@@ -104,7 +128,8 @@ public abstract class AdjacencyListVertexReader<I extends WritableComparable,
   }
 
   @Override
-  public BasicVertex<I, V, E, M> getCurrentVertex() throws IOException, InterruptedException {
+  public BasicVertex<I, V, E, M> getCurrentVertex()
+    throws IOException, InterruptedException {
     Configuration conf = getContext().getConfiguration();
     String line = getRecordReader().getCurrentValue().toString();
     BasicVertex<I, V, E, M> vertex = BspUtils.createVertex(conf);
@@ -120,7 +145,8 @@ public abstract class AdjacencyListVertexReader<I extends WritableComparable,
     String [] values = line.split(splitValue);
 
     if ((values.length < 2) || (values.length % 2 != 0)) {
-      throw new IllegalArgumentException("Line did not split correctly: " + line);
+      throw new IllegalArgumentException(
+        "Line did not split correctly: " + line);
     }
 
     I vertexId = BspUtils.<I>createVertexIndex(conf);
@@ -132,7 +158,7 @@ public abstract class AdjacencyListVertexReader<I extends WritableComparable,
     int i = 2;
     Map<I, E> edges = Maps.newHashMap();
     Edge<I, E> edge = new Edge<I, E>();
-    while(i < values.length) {
+    while (i < values.length) {
       decodeEdge(values[i], values[i + 1], edge);
       edges.put(edge.getDestVertexId(), edge.getEdgeValue());
       i += 2;

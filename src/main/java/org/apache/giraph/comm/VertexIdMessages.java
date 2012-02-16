@@ -32,65 +32,75 @@ import org.apache.hadoop.io.WritableComparable;
  * This object is only used for transporting list of vertices and their
  * respective messages to a destination RPC server.
  *
- * @param <I extends Writable> vertex id
- * @param <M extends Writable> message data
+ * @param <I> Vertex id
+ * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public class VertexIdMessages<I extends WritableComparable, M extends Writable>
-        implements Writable, Configurable {
-    /** Vertex id */
-    private I vertexId;
-    /** Message list corresponding to vertex id */
-    private MsgList<M> msgList;
-    /** Configuration from Configurable */
-    private Configuration conf;
+    implements Writable, Configurable {
+  /** Vertex id */
+  private I vertexId;
+  /** Message list corresponding to vertex id */
+  private MsgList<M> msgList;
+  /** Configuration from Configurable */
+  private Configuration conf;
 
-    /**
-     * Reflective constructor.
-     */
-    public VertexIdMessages() {}
+  /**
+   * Reflective constructor.
+   */
+  public VertexIdMessages() { }
 
-    /**
-     * Constructor used with creating initial values.
-     *
-     * @param vertexId Vertex id to be sent
-     * @param msgList Mesage list for the vertex id to be sent
-     */
-    public VertexIdMessages(I vertexId, MsgList<M> msgList) {
-        this.vertexId = vertexId;
-        this.msgList = msgList;
-    }
+  /**
+   * Constructor used with creating initial values.
+   *
+   * @param vertexId Vertex id to be sent
+   * @param msgList Mesage list for the vertex id to be sent
+   */
+  public VertexIdMessages(I vertexId, MsgList<M> msgList) {
+    this.vertexId = vertexId;
+    this.msgList = msgList;
+  }
 
-    @Override
-    public void readFields(DataInput input) throws IOException {
-        vertexId = BspUtils.<I>createVertexIndex(getConf());
-        vertexId.readFields(input);
-        msgList = new MsgList<M>();
-        msgList.setConf(getConf());
-        msgList.readFields(input);
-    }
+  @Override
+  public void readFields(DataInput input) throws IOException {
+    vertexId = BspUtils.<I>createVertexIndex(getConf());
+    vertexId.readFields(input);
+    msgList = new MsgList<M>();
+    msgList.setConf(getConf());
+    msgList.readFields(input);
+  }
 
-    @Override
-    public void write(DataOutput output) throws IOException {
-        vertexId.write(output);
-        msgList.write(output);
-    }
+  @Override
+  public void write(DataOutput output) throws IOException {
+    vertexId.write(output);
+    msgList.write(output);
+  }
 
-    @Override
-    public Configuration getConf() {
-        return conf;
-    }
+  @Override
+  public Configuration getConf() {
+    return conf;
+  }
 
-    @Override
-    public void setConf(Configuration conf) {
-        this.conf = conf;
-    }
+  @Override
+  public void setConf(Configuration conf) {
+    this.conf = conf;
+  }
 
-    public I getVertexId() {
-        return vertexId;
-    }
+  /**
+   * Get the vertex id.
+   *
+   * @return Vertex id.
+   */
+  public I getVertexId() {
+    return vertexId;
+  }
 
-    public MsgList<M> getMessageList() {
-        return msgList;
-    }
- }
+  /**
+   * Get the message list.
+   *
+   * @return Message list.
+   */
+  public MsgList<M> getMessageList() {
+    return msgList;
+  }
+}

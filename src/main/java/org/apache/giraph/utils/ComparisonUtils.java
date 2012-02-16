@@ -20,29 +20,43 @@ package org.apache.giraph.utils;
 
 import java.util.Iterator;
 
-/** simple helper class for comparisons and equality checking */
+/** Simple helper class for comparisons and equality checking */
 public class ComparisonUtils {
 
-    private ComparisonUtils() {
-    }
+  /** Do not construct this object */
+  private ComparisonUtils() { }
 
-    /** compare elements, sort order and length */
-    public static <T> boolean equal(Iterable<T> first, Iterable<T> second) {
-        return equal(first.iterator(), second.iterator());
-    }
+  /**
+   * Compare elements, sort order and length
+   *
+   * @param <T> Type of iterable to compare.
+   * @param first First iterable to compare.
+   * @param second Second iterable to compare.
+   * @return True if equal, false otherwise.
+   */
+  public static <T> boolean equal(Iterable<T> first, Iterable<T> second) {
+    return equal(first.iterator(), second.iterator());
+  }
 
-    /** compare elements, sort order and length */
-    public static <T> boolean equal(Iterator<T> first, Iterator<T> second) {
-        while (first.hasNext() && second.hasNext()) {
-            T message = first.next();
-            T otherMessage = second.next();
-            /* element-wise equality */
-            if (!(message == null ? otherMessage == null :
-                    message.equals(otherMessage))) {
-                return false;
-            }
-        }
-        /* length must also be equal */
-        return !(first.hasNext() || second.hasNext());
+  /**
+   * Compare elements, sort order and length
+   *
+   * @param <T> Type of iterable to compare.
+   * @param first First iterable to compare.
+   * @param second Second iterable to compare.
+   * @return True if equal, false otherwise.
+   */
+  public static <T> boolean equal(Iterator<T> first, Iterator<T> second) {
+    while (first.hasNext() && second.hasNext()) {
+      T message = first.next();
+      T otherMessage = second.next();
+      /* element-wise equality */
+      if (!(message == null ? otherMessage == null :
+        message.equals(otherMessage))) {
+        return false;
+      }
     }
+    /* length must also be equal */
+    return !(first.hasNext() || second.hasNext());
+  }
 }

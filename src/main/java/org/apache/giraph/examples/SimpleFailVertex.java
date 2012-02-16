@@ -22,47 +22,50 @@ import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.log4j.Logger;
 
 import java.util.Iterator;
 
 /**
  * Vertex to allow unit testing of failure detection
  */
-public class SimpleFailVertex extends
-        EdgeListVertex<LongWritable, DoubleWritable,
-        FloatWritable, DoubleWritable> {
+public class SimpleFailVertex extends EdgeListVertex<
+    LongWritable, DoubleWritable, FloatWritable, DoubleWritable> {
+  /** Class logger */
+  private static Logger LOG = Logger.getLogger(SimpleFailVertex.class);
+  /** TODO: Change this behavior to WorkerContext */
+  private static long SUPERSTEP = 0;
 
-    static long superstep = 0;
-
-    @Override
-    public void compute(Iterator<DoubleWritable> msgIterator) {
-        if (getSuperstep() >= 1) {
-            double sum = 0;
-            while (msgIterator.hasNext()) {
-                sum += msgIterator.next().get();
+  @Override
+  public void compute(Iterator<DoubleWritable> msgIterator) {
+    if (getSuperstep() >= 1) {
+      double sum = 0;
+      while (msgIterator.hasNext()) {
+        sum += msgIterator.next().get();
+      }
+      DoubleWritable vertexValue =
+          new DoubleWritable((0.15f / getNumVertices()) + 0.85f * sum);
+      setVertexValue(vertexValue);
+      if (getSuperstep() < 30) {
+        if (getSuperstep() == 20) {
+          if (getVertexId().get() == 10L) {
+            try {
+              Thread.sleep(2000);
+            } catch (InterruptedException e) {
+              LOG.info("Sleep interrupted ", e);
             }
-            DoubleWritable vertexValue =
-                new DoubleWritable((0.15f / getNumVertices()) + 0.85f * sum);
-            setVertexValue(vertexValue);
-            if (getSuperstep() < 30) {
-                if (getSuperstep() == 20) {
-                    if (getVertexId().get() == 10L) {
-                        try {
-                            Thread.sleep(2000);
-                        } catch (InterruptedException e) {
-                        }
-                        System.exit(1);
-                    } else if (getSuperstep() - superstep > 10) {
-                        return;
-                    }
-                }
-                long edges = getNumOutEdges();
-                sendMsgToAllEdges(
-                    new DoubleWritable(getVertexValue().get() / edges));
-            } else {
-                voteToHalt();
-            }
-            superstep = getSuperstep();
+            System.exit(1);
+          } else if (getSuperstep() - SUPERSTEP > 10) {
+            return;
+          }
         }
+        long edges = getNumOutEdges();
+        sendMsgToAllEdges(
+            new DoubleWritable(getVertexValue().get() / edges));
+      } else {
+        voteToHalt();
+      }
+      SUPERSTEP = getSuperstep();
     }
+  }
 }
