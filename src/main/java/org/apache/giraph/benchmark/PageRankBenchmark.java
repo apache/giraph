@@ -124,7 +124,8 @@ public class PageRankBenchmark extends EdgeListVertex<
     } else {
       job.setVertexClass(PageRankBenchmark.class);
     }
-    LOG.info("Using class " + BspUtils.getVertexClass(getConf()).getName());
+    LOG.info("Using class " +
+        BspUtils.getVertexClass(job.getConfiguration()).getName());
     job.setVertexInputFormatClass(PseudoRandomVertexInputFormat.class);
     job.setWorkerConfiguration(workers, workers, 100.0f);
     job.getConfiguration().setLong(
@@ -142,8 +143,9 @@ public class PageRankBenchmark extends EdgeListVertex<
       isVerbose = true;
     }
     if (cmd.hasOption('s')) {
-      getConf().setInt(PageRankComputation.SUPERSTEP_COUNT,
-                       Integer.parseInt(cmd.getOptionValue('s')));
+      job.getConfiguration().setInt(
+          PageRankComputation.SUPERSTEP_COUNT,
+          Integer.parseInt(cmd.getOptionValue('s')));
     }
     if (job.run(isVerbose)) {
       return 0;

@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+
+  GIRAPH-150: PageRankBenchmark accesses wrong conf after GiraphJob is
+  created (aching).
  
   GIRAPH-40: Added checkstyle for enforcement of code conventions.
   All Giraph source files now pass checkstyle. (aching)
