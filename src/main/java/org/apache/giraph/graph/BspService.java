@@ -584,10 +584,8 @@ public abstract class BspService<I extends WritableComparable,
     }
     if (superstep < firstCheckpoint) {
       return false;
-    } else if (((superstep - firstCheckpoint) % checkpointFrequency) == 0) {
-      return true;
     }
-    return false;
+    return ((superstep - firstCheckpoint) % checkpointFrequency) == 0;
   }
 
   /**
