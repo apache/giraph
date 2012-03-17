@@ -494,8 +494,20 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
     final int maxRpcPortBindAttempts =
         conf.getInt(GiraphJob.MAX_RPC_PORT_BIND_ATTEMPTS,
             GiraphJob.MAX_RPC_PORT_BIND_ATTEMPTS_DEFAULT);
+    final boolean failFirstPortBindingAttempt =
+        conf.getBoolean(GiraphJob.FAIL_FIRST_RPC_PORT_BIND_ATTEMPT,
+            GiraphJob.FAIL_FIRST_RPC_PORT_BIND_ATTEMPT_DEFAULT);
     while (bindAttempts < maxRpcPortBindAttempts) {
       this.myAddress = new InetSocketAddress(bindAddress, bindPort);
+      if (failFirstPortBindingAttempt && bindAttempts == 0) {
+        LOG.info("BasicRPCCommunications: Intentionally fail first " +
+            "binding attempt as giraph.failFirstRpcPortBindAttempt " +
+            "is true, port " + bindPort);
+        ++bindAttempts;
+        bindPort += portIncrementConstant;
+        continue;
+      }
+
       try {
         this.server =
             getRPCServer(
@@ -508,7 +520,7 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
         bindPort += portIncrementConstant;
       }
     }
-    if (bindAttempts == maxRpcPortBindAttempts) {
+    if (bindAttempts == maxRpcPortBindAttempts || this.server == null) {
       throw new IllegalStateException(
           "BasicRPCCommunications: Failed to start RPCServer with " +
               maxRpcPortBindAttempts + " attempts");

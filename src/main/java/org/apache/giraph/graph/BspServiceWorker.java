@@ -138,10 +138,6 @@ public class BspServiceWorker<I extends WritableComparable,
     throws IOException, InterruptedException {
     super(serverPortList, sessionMsecTimeout, context, graphMapper);
     registerBspEvent(partitionExchangeChildrenChanged);
-    int finalRpcPort =
-        getConfiguration().getInt(GiraphJob.RPC_INITIAL_PORT,
-            GiraphJob.RPC_INITIAL_PORT_DEFAULT) +
-            getTaskPartition();
     maxVerticesPerPartition =
         getConfiguration().getInt(
             GiraphJob.MAX_VERTICES_PER_PARTITION,
@@ -150,12 +146,13 @@ public class BspServiceWorker<I extends WritableComparable,
         getConfiguration().getLong(
             GiraphJob.INPUT_SPLIT_MAX_VERTICES,
             GiraphJob.INPUT_SPLIT_MAX_VERTICES_DEFAULT);
-    workerInfo =
-        new WorkerInfo(getHostname(), getTaskPartition(), finalRpcPort);
     workerGraphPartitioner =
         getGraphPartitionerFactory().createWorkerGraphPartitioner();
-    commService = new RPCCommunications<I, V, E, M>(
-        context, this, graphState);
+    RPCCommunications<I, V, E, M> rpcCommService =
+        new RPCCommunications<I, V, E, M>(context, this, graphState);
+    workerInfo = new WorkerInfo(
+        getHostname(), getTaskPartition(), rpcCommService.getPort());
+    commService = rpcCommService;
     graphState.setWorkerCommunications(commService);
     this.workerContext =
         BspUtils.createWorkerContext(getConfiguration(),

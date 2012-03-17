@@ -160,6 +160,14 @@ public class GiraphJob extends Job {
       "giraph.maxRpcPortBindAttempts";
   /** Default maximum bind attempts for different RPC ports */
   public static final int MAX_RPC_PORT_BIND_ATTEMPTS_DEFAULT = 20;
+  /**
+   * Fail first RPC port binding attempt, simulate binding failure
+   * on real grid testing
+   */
+  public static final String FAIL_FIRST_RPC_PORT_BIND_ATTEMPT =
+      "giraph.failFirstRpcPortBindAttempt";
+  /** Default fail first RPC port binding attempt flag */
+  public static final boolean FAIL_FIRST_RPC_PORT_BIND_ATTEMPT_DEFAULT = false;
 
   /** Maximum number of RPC handlers */
   public static final String RPC_NUM_HANDLERS = "giraph.rpcNumHandlers";

@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-154: Worker ports are not synched properly with its peers
+  (Zhiwei Gu via aching).
+
   GIRAPH-87: Simplify boolean expression in
   BspService::checkpointFrequencyMet (Eli Reisman via aching).
 
