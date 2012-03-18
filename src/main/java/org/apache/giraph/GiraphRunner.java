@@ -17,6 +17,8 @@
  */
 package org.apache.giraph;
 
+import com.google.common.base.Splitter;
+import com.google.common.collect.Iterables;
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -69,6 +71,9 @@ public class GiraphRunner implements Tool {
     options.addOption("c", "combiner", true, "VertexCombiner class");
     options.addOption("wc", "workerContext", true, "WorkerContext class");
     options.addOption("aw", "aggregatorWriter", true, "AggregatorWriter class");
+    options.addOption("ca", "customArguments", true, "provide custom" +
+        " arguments for the job configuration in the form:" +
+        " <param1>=<value1>,<param2>=<value2> etc.");
     return options;
   }
 
@@ -102,7 +107,9 @@ public class GiraphRunner implements Tool {
     // Verify all the options have been provided
     for (String[] requiredOption : requiredOptions) {
       if (!cmd.hasOption(requiredOption[0])) {
-        LOG.info(requiredOption[1]);
+        if (LOG.isInfoEnabled()) {
+          LOG.info(requiredOption[1]);
+        }
         return -1;
       }
     }
@@ -116,15 +123,19 @@ public class GiraphRunner implements Tool {
     if (cmd.hasOption("ip")) {
       FileInputFormat.addInputPath(job, new Path(cmd.getOptionValue("ip")));
     } else {
-      LOG.info("No input path specified. Ensure your InputFormat does not " +
-          "require one.");
+      if (LOG.isInfoEnabled()) {
+        LOG.info("No input path specified. Ensure your InputFormat does" +
+            " not require one.");
+      }
     }
 
     if (cmd.hasOption("op")) {
       FileOutputFormat.setOutputPath(job, new Path(cmd.getOptionValue("op")));
     } else {
-      LOG.info("No output path specified. Ensure your OutputFormat does not " +
-          "require one.");
+      if (LOG.isInfoEnabled()) {
+        LOG.info("No output path specified. Ensure your OutputFormat does" +
+            " not require one.");
+      }
     }
 
     if (cmd.hasOption("c")) {
@@ -137,6 +148,20 @@ public class GiraphRunner implements Tool {
 
     if (cmd.hasOption("aw")) {
       job.setAggregatorWriterClass(Class.forName(cmd.getOptionValue("aw")));
+    }
+
+    if (cmd.hasOption("ca")) {
+      Configuration conf = job.getConfiguration();
+      for (String paramValue : Splitter.on(',').split(cmd.getOptionValue("ca"))) {
+        String[] parts = Iterables.toArray(Splitter.on('=').split(paramValue), String.class);
+        if (parts.length != 2) {
+          throw new IllegalArgumentException("Unable to parse custom argument: " + paramValue);
+        }
+        if (LOG.isInfoEnabled()) {
+          LOG.info("Setting custom argument [" + parts[0] + "] to [" + parts[1] + "]");
+        }
+        conf.set(parts[0], parts[1]);
+      }
     }
 
     job.setWorkerConfiguration(workers, workers, 100.0f);

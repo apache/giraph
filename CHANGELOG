@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-156: Users should be able to set simple 'custom arguments'
+  via org.apache.giraph.GiraphRunner (ssc)
+
   GIRAPH-154: Worker ports are not synched properly with its peers
   (Zhiwei Gu via aching).
 
