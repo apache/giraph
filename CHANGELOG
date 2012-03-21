@@ -2,7 +2,11 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
-  GIRAPH-161 - Handling null messages and edges when initializing
+  GIRAPH-162: BspCase.setup() should catch FileNotFoundException
+  thrown from org.apache.hadoop.fs.FileSystem.listStatus() (ekoontz
+  via aching).
+
+  GIRAPH-161: Handling null messages and edges when initializing
   IntIntNullIntVertex (dlogothetis via aching).
 
   GIRAPH-156: Users should be able to set simple 'custom arguments'
