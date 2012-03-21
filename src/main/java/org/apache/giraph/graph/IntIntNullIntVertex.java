@@ -51,15 +51,19 @@ public abstract class IntIntNullIntVertex extends
       Iterable<IntWritable> messages) {
     id = vertexId.get();
     value = vertexValue.get();
-    this.neighbors = new int[edges.size()];
+    this.neighbors = new int[(edges != null) ? edges.size() : 0];
     int n = 0;
-    for (IntWritable neighbor : edges.keySet()) {
-      this.neighbors[n++] = neighbor.get();
+    if (edges != null) {
+      for (IntWritable neighbor : edges.keySet()) {
+        this.neighbors[n++] = neighbor.get();
+      }
     }
-    this.messages = new int[Iterables.size(messages)];
-    n = 0;
-    for (IntWritable message : messages) {
-      this.messages[n++] = message.get();
+    this.messages = new int[(messages != null) ? Iterables.size(messages) : 0];
+    if (messages != null) {
+      n = 0;
+      for (IntWritable message : messages) {
+        this.messages[n++] = message.get();
+      }
     }
   }
 
