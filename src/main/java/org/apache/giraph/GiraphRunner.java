@@ -152,13 +152,17 @@ public class GiraphRunner implements Tool {
 
     if (cmd.hasOption("ca")) {
       Configuration conf = job.getConfiguration();
-      for (String paramValue : Splitter.on(',').split(cmd.getOptionValue("ca"))) {
-        String[] parts = Iterables.toArray(Splitter.on('=').split(paramValue), String.class);
+      for (String paramValue :
+          Splitter.on(',').split(cmd.getOptionValue("ca"))) {
+        String[] parts = Iterables.toArray(Splitter.on('=').split(paramValue),
+            String.class);
         if (parts.length != 2) {
-          throw new IllegalArgumentException("Unable to parse custom argument: " + paramValue);
+          throw new IllegalArgumentException("Unable to parse custom " +
+              " argument: " + paramValue);
         }
         if (LOG.isInfoEnabled()) {
-          LOG.info("Setting custom argument [" + parts[0] + "] to [" + parts[1] + "]");
+          LOG.info("Setting custom argument [" + parts[0] + "] to [" +
+              parts[1] + "]");
         }
         conf.set(parts[0], parts[1]);
       }

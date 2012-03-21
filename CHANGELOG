@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-164: fix 5 "Line is longer than 80 characters" style errors
+  in GiraphRunner (ekoontz via aching).
+
   GIRAPH-162: BspCase.setup() should catch FileNotFoundException
   thrown from org.apache.hadoop.fs.FileSystem.listStatus() (ekoontz
   via aching).
