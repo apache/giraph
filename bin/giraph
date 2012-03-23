@@ -84,8 +84,9 @@ else
 		exit 1
 	fi
 	
-	CLASSPATH=`mvn dependency:build-classpath | grep -v "[INFO]"`
-	
+	CLASSPATH2=`mvn dependency:build-classpath | grep -v "[INFO]"`
+	CLASSPATH=$CLASSPATH:$CLASSPATH2	
+
 	for f in $GIRAPH_HOME/target/giraph*.jar ; do
 	  if [ -e "$f" ]; then
 	    JAR=$f

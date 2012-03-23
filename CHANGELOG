@@ -2,6 +2,10 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-163: bin/giraph script overwrites CLASSPATH if "dev
+  environment" detected (this also removes USER_JAR from CLASSPATH)
+  (metaman via aching).
+
   GIRAPH-164: fix 5 "Line is longer than 80 characters" style errors
   in GiraphRunner (ekoontz via aching).
 
