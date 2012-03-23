@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-166: add '*.patch' to list of files that Apache Rat ignores
+  (ekoontz via aching).
+
   GIRAPH-167: mvn -Phadoop_non_secure clean verify fails (ekoontz via
   aching).
 

@@ -414,6 +414,7 @@ under the License.
             <!-- source control and IDEs -->
             <exclude>.git/**</exclude>
             <exclude>.idea/**</exclude>
+            <exclude>*.patch</exclude>
          </excludes>
       </configuration>
     </plugin>
