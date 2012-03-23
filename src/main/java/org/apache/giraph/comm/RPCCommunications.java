@@ -167,7 +167,7 @@ public class RPCCommunications<I extends WritableComparable,
         @SuppressWarnings("unchecked")
         CommunicationsInterface<I, V, E, M> proxy =
             (CommunicationsInterface<I, V, E, M>)RPC.getProxy(
-                 CommunicationsInterface.class, versionID, addr, config);
+                 CommunicationsInterface.class, VERSION_ID, addr, config);
         return proxy;
       else[HADOOP]*/
     if (jt == null) {
