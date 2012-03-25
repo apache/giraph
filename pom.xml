@@ -234,9 +234,8 @@ under the License.
             <phase>compile</phase>
             <!-- append to the packaging phase. -->
             <configuration>
-              <descriptorRefs>
-                <descriptorRef>jar-with-dependencies</descriptorRef>
-              </descriptorRefs>
+              <descriptor>${basedir}/src/main/assembly/compile.xml</descriptor>
+              <outputDirectory>target</outputDirectory>
             </configuration>
             <goals>
               <goal>single</goal>

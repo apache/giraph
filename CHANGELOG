@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-159: Case insensitive file/directory name matching will
+  produce errors on M/R jar unpack (bfem via aching).
+
   GIRAPH-166: add '*.patch' to list of files that Apache Rat ignores
   (ekoontz via aching).
 
