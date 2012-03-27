@@ -29,10 +29,11 @@ import org.apache.log4j.Logger;
 import java.io.IOException;
 
 /**
- * Limits the functions that can be called by the user.  Job is too flexible
- * for our needs.  For instance, our job should not have any reduce tasks.
+ * Generates an appropriate internal {@link Job} for using Giraph in Hadoop.
+ * Uses composition to avoid unwanted {@link Job} methods from exposure
+ * to the user.
  */
-public class GiraphJob extends Job {
+public class GiraphJob {
   static {
     Configuration.addDefaultResource("giraph-site.xml");
   }
@@ -345,6 +346,12 @@ public class GiraphJob extends Job {
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(GiraphJob.class);
 
+  /** Internal job that actually is submitted */
+  private final Job job;
+  /** Helper configuration from the job */
+  private final Configuration conf;
+
+
   /**
    * Constructor that will instantiate the configuration
    *
@@ -352,7 +359,7 @@ public class GiraphJob extends Job {
    * @throws IOException
    */
   public GiraphJob(String jobName) throws IOException {
-    super(new Configuration(), jobName);
+    this(new Configuration(), jobName);
   }
 
   /**
@@ -363,9 +370,29 @@ public class GiraphJob extends Job {
    * @throws IOException
    */
   public GiraphJob(Configuration conf, String jobName) throws IOException {
-    super(conf, jobName);
+    job = new Job(conf, jobName);
+    this.conf = job.getConfiguration();
   }
 
+  /**
+   * Get the configuration from the internal job.
+   *
+   * @return Configuration used by the job.
+   */
+  public Configuration getConfiguration() {
+    return conf;
+  }
+
+  /**
+   * Be very cautious when using this method as it returns the internal job
+   * of {@link GiraphJob}.  This should only be used for methods that require
+   * access to the actual {@link Job}, i.e. FileInputFormat#addInputPath().
+   *
+   * @return Internal job that will actually be submitted to Hadoop.
+   */
+  public Job getInternalJob() {
+    return job;
+  }
   /**
    * Make sure the configuration is set properly by the user prior to
    * submitting the job.
@@ -580,7 +607,7 @@ public class GiraphJob extends Job {
     throws IOException, InterruptedException, ClassNotFoundException {
     checkConfiguration();
     checkLocalJobRunnerConfiguration(conf);
-    setNumReduceTasks(0);
+    job.setNumReduceTasks(0);
     // Most users won't hit this hopefully and can set it higher if desired
     setIntConfIfDefault("mapreduce.job.counters.limit", 512);
 
@@ -596,16 +623,16 @@ public class GiraphJob extends Job {
     // (DEFAULT_PING_INTERVAL)
     Client.setPingInterval(conf, 60000 * 5);
 
-    if (getJar() == null) {
-      setJarByClass(GiraphJob.class);
+    if (job.getJar() == null) {
+      job.setJarByClass(GiraphJob.class);
     }
     // Should work in MAPREDUCE-1938 to let the user jars/classes
     // get loaded first
     conf.setBoolean("mapreduce.user.classpath.first", true);
 
-    setMapperClass(GraphMapper.class);
-    setInputFormatClass(BspInputFormat.class);
-    setOutputFormatClass(BspOutputFormat.class);
-    return waitForCompletion(verbose);
+    job.setMapperClass(GraphMapper.class);
+    job.setInputFormatClass(BspInputFormat.class);
+    job.setOutputFormatClass(BspOutputFormat.class);
+    return job.waitForCompletion(verbose);
   }
 }

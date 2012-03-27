@@ -129,8 +129,10 @@ public class InternalVertexRunner {
         conf.set(param.getKey(), param.getValue());
       }
 
-      FileInputFormat.addInputPath(job, new Path(inputFile.toString()));
-      FileOutputFormat.setOutputPath(job, new Path(outputDir.toString()));
+      FileInputFormat.addInputPath(job.getInternalJob(),
+                                   new Path(inputFile.toString()));
+      FileOutputFormat.setOutputPath(job.getInternalJob(),
+                                     new Path(outputDir.toString()));
 
       // configure a local zookeeper instance
       Properties zkProperties = new Properties();

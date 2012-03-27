@@ -121,7 +121,8 @@ public class GiraphRunner implements Tool {
     job.setVertexOutputFormatClass(Class.forName(cmd.getOptionValue("of")));
 
     if (cmd.hasOption("ip")) {
-      FileInputFormat.addInputPath(job, new Path(cmd.getOptionValue("ip")));
+      FileInputFormat.addInputPath(job.getInternalJob(),
+                                   new Path(cmd.getOptionValue("ip")));
     } else {
       if (LOG.isInfoEnabled()) {
         LOG.info("No input path specified. Ensure your InputFormat does" +
@@ -130,7 +131,8 @@ public class GiraphRunner implements Tool {
     }
 
     if (cmd.hasOption("op")) {
-      FileOutputFormat.setOutputPath(job, new Path(cmd.getOptionValue("op")));
+      FileOutputFormat.setOutputPath(job.getInternalJob(),
+                                     new Path(cmd.getOptionValue("op")));
     } else {
       if (LOG.isInfoEnabled()) {
         LOG.info("No output path specified. Ensure your OutputFormat does" +

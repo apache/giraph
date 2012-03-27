@@ -262,8 +262,10 @@ public class SimpleShortestPathsVertex extends
         SimpleShortestPathsVertexInputFormat.class);
     job.setVertexOutputFormatClass(
         SimpleShortestPathsVertexOutputFormat.class);
-    FileInputFormat.addInputPath(job, new Path(argArray[0]));
-    FileOutputFormat.setOutputPath(job, new Path(argArray[1]));
+    FileInputFormat.addInputPath(job.getInternalJob(),
+                                 new Path(argArray[0]));
+    FileOutputFormat.setOutputPath(job.getInternalJob(),
+                                   new Path(argArray[1]));
     job.getConfiguration().setLong(SimpleShortestPathsVertex.SOURCE_ID,
         Long.parseLong(argArray[2]));
     job.setWorkerConfiguration(Integer.parseInt(argArray[3]),

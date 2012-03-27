@@ -2,6 +2,10 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-144: GiraphJob should not extend Job (users should not be
+  able to call Job methods like waitForCompletion or setMapper..etc)
+  (aching).
+
   GIRAPH-159: Case insensitive file/directory name matching will
   produce errors on M/R jar unpack (bfem via aching).
 

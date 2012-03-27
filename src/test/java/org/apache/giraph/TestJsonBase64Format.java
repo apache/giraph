@@ -84,7 +84,7 @@ public class TestJsonBase64Format extends BspCase {
     job.setVertexInputFormatClass(JsonBase64VertexInputFormat.class);
     job.setVertexOutputFormatClass(JsonBase64VertexOutputFormat.class);
     job.getConfiguration().setInt(PageRankComputation.SUPERSTEP_COUNT, 3);
-    FileInputFormat.setInputPaths(job, outputPath);
+    FileInputFormat.setInputPaths(job.getInternalJob(), outputPath);
     Path outputPath2 = new Path("/tmp/" + getCallingMethodName() + "2");
     removeAndSetOutput(job, outputPath2);
     assertTrue(job.run(true));

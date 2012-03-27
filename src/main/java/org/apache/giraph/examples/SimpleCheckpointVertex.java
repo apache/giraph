@@ -226,8 +226,8 @@ public class SimpleCheckpointVertex extends
     int maxWorkers = Integer.parseInt(cmd.getOptionValue('w'));
     bspJob.setWorkerConfiguration(minWorkers, maxWorkers, 100.0f);
 
-    FileOutputFormat.setOutputPath(bspJob,
-        new Path(cmd.getOptionValue('o')));
+    FileOutputFormat.setOutputPath(bspJob.getInternalJob(),
+                                   new Path(cmd.getOptionValue('o')));
     boolean verbose = false;
     if (cmd.hasOption('v')) {
       verbose = true;
