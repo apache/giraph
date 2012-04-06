@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-171: Total time in MasterThread.run() is calculated
+  incorrectly (ekoontz via aching).
+
   GIRAPH-144: GiraphJob should not extend Job (users should not be
   able to call Job methods like waitForCompletion or setMapper..etc)
   (aching).

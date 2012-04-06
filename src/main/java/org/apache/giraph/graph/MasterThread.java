@@ -170,8 +170,8 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
               (System.currentTimeMillis() - endMillis) /
               1000.0d + " seconds.");
           LOG.info("total: Took " +
-              ((System.currentTimeMillis() / 1000.0d) -
-                  setupSecs) + " seconds.");
+              ((System.currentTimeMillis() - startMillis) /
+              1000.0d) + " seconds.");
         }
         context.getCounter(
             GIRAPH_TIMERS_COUNTER_GROUP_NAME,
