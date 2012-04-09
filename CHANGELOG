@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-85: Simplify return expression in 
+  RPCCommunications::getRPCProxy (Eli Reisman via jghoman)
+
   GIRAPH-171: Total time in MasterThread.run() is calculated
   incorrectly (ekoontz via aching).
 

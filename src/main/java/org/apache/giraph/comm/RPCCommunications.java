@@ -153,6 +153,7 @@ public class RPCCommunications<I extends WritableComparable,
    * @param jt Job token.
    * @return Proxy of the RPC server.
    */
+  @SuppressWarnings("unchecked")
   protected CommunicationsInterface<I, V, E, M> getRPCProxy(
     final InetSocketAddress addr,
     String jobId,
@@ -164,18 +165,12 @@ public class RPCCommunications<I extends WritableComparable,
     throws IOException, InterruptedException {
     final Configuration config = new Configuration(conf);
     /*if_not[HADOOP]
-        @SuppressWarnings("unchecked")
-        CommunicationsInterface<I, V, E, M> proxy =
-            (CommunicationsInterface<I, V, E, M>)RPC.getProxy(
+        return (CommunicationsInterface<I, V, E, M>)RPC.getProxy(
                  CommunicationsInterface.class, VERSION_ID, addr, config);
-        return proxy;
       else[HADOOP]*/
     if (jt == null) {
-      @SuppressWarnings("unchecked")
-      CommunicationsInterface<I, V, E, M> proxy =
-        (CommunicationsInterface<I, V, E, M>) RPC.getProxy(
+      return (CommunicationsInterface<I, V, E, M>) RPC.getProxy(
           CommunicationsInterface.class, VERSION_ID, addr, config);
-      return proxy;
     }
     jt.setService(new Text(addr.getAddress().getHostAddress() + ":" +
         addr.getPort()));
@@ -184,18 +179,17 @@ public class RPCCommunications<I extends WritableComparable,
     UserGroupInformation owner =
         UserGroupInformation.createRemoteUser(jobId);
     owner.addToken(jt);
-    @SuppressWarnings("unchecked")
-    CommunicationsInterface<I, V, E, M> proxy =
+    return
       owner.doAs(new PrivilegedExceptionAction<
         CommunicationsInterface<I, V, E, M>>() {
         @Override
+        @SuppressWarnings("unchecked")
         public CommunicationsInterface<I, V, E, M> run() throws Exception {
           // All methods in CommunicationsInterface will be used for RPC
           return (CommunicationsInterface<I, V, E, M>) RPC.getProxy(
             CommunicationsInterface.class, VERSION_ID, addr, config);
         }
       });
-    return proxy;
     /*end[HADOOP]*/
   }
 }
