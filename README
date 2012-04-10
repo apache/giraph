@@ -35,17 +35,37 @@ automatically take over if the current application coordinator fails.
 Hadoop versions for use with Giraph:
 
 Secure Hadoop versions:
-- Apache Hadoop 0.20.203, 0.20.204, other secure versions may work as well
+
+- Apache Hadoop 0.20.203.0
+
+  This is the default version used by Giraph: if you do not specify a
+profile with the -P flag, maven will use this version. You may also
+explicitly specify it with "mvn -Phadoop_0.20.203 <goals>".
+
+-Apache Hadoop 0.23.1
+
+  You may tell maven to use this version with "mvn -Phadoop_0.23 <goals>".
+
+-Apache Hadoop 3.0.0-SNAPSHOT
+
+  You may tell maven to use this version with "mvn -Phadoop_trunk <goals>".
+
+Unsecure Hadoop versions:
+
+- Apache Hadoop 0.20.1, 0.20.2, 0.20.3
+
+  You may tell maven to use 0.20.2 with "mvn -Phadoop_non_secure <goals>".
+
+- Facebook Hadoop releases: https://github.com/facebook/hadoop-20, Master branch
+
+  You may tell maven to use this version with:
+
+mvn -Phadoop_facebook -Dhadoop.jar.path=/path/to/repo/build/hadoop-0.20.1-dev-core.jar <goals>
+
 -- Other versions reported working include:
 ---  Cloudera CDH3u0, CDH3u1
 
-Unsecure Hadoop versions:
-- Apache Hadoop 0.20.1, 0.20.2, 0.20.3
-
-Facebook Hadoop release (https://github.com/facebook/hadoop-20-warehouse):
-- GitHub master
-
-While we provide support for the unsecure and Facebook versions of Hadoop
+While we provide support for unsecure and Facebook versions of Hadoop
 with the maven profiles 'hadoop_non_secure' and 'hadoop_facebook',
 respectively, we have been primarily focusing on secure Hadoop releases
 at this time.
@@ -67,14 +87,15 @@ Use the maven commands with secure Hadoop to:
 - test (i.e. mvn test)
 
 For the non-secure versions of Hadoop, run the maven commands with the
-additional argument '-Dhadoop=non_secure' to enable the maven profile
-'hadoop_non_secure'.  An example compilation command is
-'mvn -Dhadoop=non_secure compile'.
+additional argument '-Dhadoop=non_secure' or '-Phadoop_non_secure' to enable
+ the maven profile 'hadoop_non_secure'.  Example compilation commands are
+'mvn -Dhadoop=non_secure compile' and 'mvn -Phadoop_non_secure compile'.
 
 For the Facebook Hadoop release, run the maven commands with the
-additional arguments '-Dhadoop=facebook' to enable the maven profile
-'hadoop_facebook' as well as a location for the hadoop core jar file.  An
-example compilation command is 'mvn -Dhadoop=facebook
+additional arguments '-Dhadoop=facebook' or '-Phadoop_facebook' to enable 
+the maven profile 'hadoop_facebook' as well as a location for the hadoop
+core jar file.  Example compilation commands are 'mvn -Dhadoop=facebook
+-Dhadoop.jar.path=/tmp/hadoop-0.20.1-core.jar compile' or 'mvn -Phadoop_facebook 
 -Dhadoop.jar.path=/tmp/hadoop-0.20.1-core.jar compile'.
 
 

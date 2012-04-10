@@ -2,6 +2,10 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-168: Simplify munge directive usage with new munge flag
+  HADOOP_SECURE (rather than HADOOP_FACEBOOK) and remove usage of
+  HADOOP (ekoontz via aching).
+
   GIRAPH-85: Simplify return expression in 
   RPCCommunications::getRPCProxy (Eli Reisman via jghoman)
 
