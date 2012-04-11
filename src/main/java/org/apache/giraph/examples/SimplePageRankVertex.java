@@ -151,11 +151,9 @@ public class SimplePageRankVertex extends LongDoubleFloatDoubleVertex {
               sumAggreg.getAggregatedValue() + ", should be: " +
               getNumVertices());
         }
-        DoubleWritable maxPagerank =
-            (DoubleWritable) maxAggreg.getAggregatedValue();
+        DoubleWritable maxPagerank = maxAggreg.getAggregatedValue();
         LOG.info("aggregatedMaxPageRank=" + maxPagerank.get());
-        DoubleWritable minPagerank =
-            (DoubleWritable) minAggreg.getAggregatedValue();
+        DoubleWritable minPagerank = minAggreg.getAggregatedValue();
         LOG.info("aggregatedMinPageRank=" + minPagerank.get());
       }
       useAggregator("sum");

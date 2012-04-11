@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-177: SimplePageRankVertex has two redundant casts.
+  (Devaraj K via jghoman)
+
   GIRAPH-168: Simplify munge directive usage with new munge flag
   HADOOP_SECURE (rather than HADOOP_FACEBOOK) and remove usage of
   HADOOP (ekoontz via aching).
