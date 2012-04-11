@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-179: BspServiceMaster's PathFilter can be simplified.
+  (Devaraj K via jghoman)
+
   GIRAPH-177: SimplePageRankVertex has two redundant casts.
   (Devaraj K via jghoman)
 

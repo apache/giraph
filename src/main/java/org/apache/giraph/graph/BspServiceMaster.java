@@ -1240,11 +1240,7 @@ public class BspServiceMaster<I extends WritableComparable,
   public static class FinalizedCheckpointPathFilter implements PathFilter {
     @Override
     public boolean accept(Path path) {
-      if (path.getName().endsWith(
-          BspService.CHECKPOINT_FINALIZED_POSTFIX)) {
-        return true;
-      }
-      return false;
+      return path.getName().endsWith(BspService.CHECKPOINT_FINALIZED_POSTFIX);
     }
   }
 
