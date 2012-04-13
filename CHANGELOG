@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-183: Add Claudio's FOSDEM presentation (slides and video) 
+  to the site. (claudio)
 
   GIRAPH-179: BspServiceMaster's PathFilter can be simplified.
   (Devaraj K via jghoman)

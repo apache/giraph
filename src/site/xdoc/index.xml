@@ -46,6 +46,8 @@ under the License.
       <ul>
           <li>Avery Ching introduced Giraph at Hadoop Summit 2011. <a href="http://www.youtube.com/watch?v=l4nQjAG6fac">Watch the video</a>.</li>
           <li>An updated slidedeck of the Hadoop Summit talk was presented at HortonWorks. <a href="http://www.slideshare.net/averyching/20111014hortonworks">Read the slides</a>.</li>
+          <li>Claudio Martella gave a talk about Giraph at FOSDEM 2012. Watch <a href="http://www.youtube.com/watch?v=3ZrqPEIPRe4">part 1</a> and <a href="http://www.youtube.com/watch?v=BmRaejKGeDM">part 2</a>.</li>
+          <li>The presentation slides can be found <a href="http://prezi.com/9ake_klzwrga/apache-giraph-distributed-graph-processing-in-the-cloud/">here</a>.</li>
       </ul>
     </section>
 	<section name="Supported versions of Apache Hadoop">
