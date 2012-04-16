@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+
+  GIRAPH-181: Add Hadoop 1.0 profile to pom.xml. (ekoontz via aching)
+
   GIRAPH-183: Add Claudio's FOSDEM presentation (slides and video) 
   to the site. (claudio)
 

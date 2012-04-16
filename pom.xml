@@ -491,6 +491,42 @@ under the License.
       </build>
     </profile>
     <profile>
+      <id>hadoop_1.0</id>
+      <properties>
+        <hadoop.version>1.0.2</hadoop.version>
+      </properties>
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-core</artifactId>
+          <version>${hadoop.version}</version>
+	  <scope>provided</scope>
+        </dependency>
+      </dependencies>
+
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.sonatype.plugins</groupId>
+            <artifactId>munge-maven-plugin</artifactId>
+            <version>${munge-maven-plugin.version}</version>
+            <executions>
+              <execution>
+                <id>munge</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>munge</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <symbols>HADOOP_NON_SASL_RPC,HADOOP_NON_INTERVERSIONED_RPC</symbols>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
       <id>hadoop_non_secure</id>
        <activation>
         <property>
