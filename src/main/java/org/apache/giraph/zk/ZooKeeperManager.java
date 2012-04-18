@@ -597,9 +597,7 @@ public class ZooKeeperManager {
               GiraphJob.ZOOKEEPER_JAVA_OPTS_DEFAULT);
       String[] zkJavaOptsArray = zkJavaOptsString.split(" ");
       if (zkJavaOptsArray != null) {
-        for (String javaOpt : zkJavaOptsArray) {
-          commandList.add(javaOpt);
-        }
+        commandList.addAll(Arrays.asList(zkJavaOptsArray));
       }
       commandList.add("-cp");
       Path fullJarPath = new Path(conf.get(GiraphJob.ZOOKEEPER_JAR));
