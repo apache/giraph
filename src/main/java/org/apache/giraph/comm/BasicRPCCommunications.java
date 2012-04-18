@@ -1256,7 +1256,7 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
       }
       if (vertex != null) {
         ((MutableVertex<I, V, E, M>) vertex).setVertexId(vertexIndex);
-        partition.putVertex((BasicVertex<I, V, E, M>) vertex);
+        partition.putVertex(vertex);
       } else if (originalVertex != null) {
         partition.removeVertex(originalVertex.getVertexId());
       }

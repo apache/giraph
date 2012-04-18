@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-176. BasicRPCCommunications has unnecessary cast of Vertex.
+  (Devaraj K via jghoman)
+
   GIRAPH-175. Replace manual array copy to utility method call.
   (Devaraj K via jghoman)
 
