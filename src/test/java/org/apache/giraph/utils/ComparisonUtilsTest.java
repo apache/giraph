@@ -18,11 +18,16 @@
 
 package org.apache.giraph.utils;
 
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+import org.junit.Test;
+
 import com.google.common.collect.Lists;
-import junit.framework.TestCase;
 
-public class ComparisonUtilsTest extends TestCase {
+public class ComparisonUtilsTest {
 
+    @Test
     public void testEquality() {
         Iterable<String> one = Lists.newArrayList("one", "two", "three");
         Iterable<String> two = Lists.newArrayList("one", "two", "three");
@@ -33,6 +38,7 @@ public class ComparisonUtilsTest extends TestCase {
         assertTrue(ComparisonUtils.equal(two, one));
     }
 
+    @Test
     public void testEqualityEmpty() {
         Iterable<String> one = Lists.newArrayList();
         Iterable<String> two = Lists.newArrayList();
@@ -43,6 +49,7 @@ public class ComparisonUtilsTest extends TestCase {
         assertTrue(ComparisonUtils.equal(two, one));
     }
 
+    @Test
     public void testInEquality() {
         Iterable<String> one = Lists.newArrayList("one", "two", "three");
         Iterable<String> two = Lists.newArrayList("two", "three", "four");
@@ -56,6 +63,7 @@ public class ComparisonUtilsTest extends TestCase {
         assertFalse(ComparisonUtils.equal(three, two));
     }
 
+    @Test
     public void testInEqualityDifferentLengths() {
         Iterable<String> one = Lists.newArrayList("one", "two", "three");
         Iterable<String> two = Lists.newArrayList("one", "two", "three", "four");

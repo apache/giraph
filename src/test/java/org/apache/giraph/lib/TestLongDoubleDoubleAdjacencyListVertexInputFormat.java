@@ -18,12 +18,22 @@
 package org.apache.giraph.lib;
 
 
-import junit.framework.TestCase;
+import static org.apache.giraph.lib.TestTextDoubleDoubleAdjacencyListVertexInputFormat.assertValidVertex;
+import static org.apache.giraph.lib.TestTextDoubleDoubleAdjacencyListVertexInputFormat.setGraphState;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import java.io.IOException;
+import java.util.Iterator;
+
 import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.GraphState;
-import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.BooleanWritable;
 import org.apache.hadoop.io.DoubleWritable;
@@ -32,22 +42,17 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.junit.Before;
+import org.junit.Test;
 
-import java.io.IOException;
-import java.util.Iterator;
-
-import static org.apache.giraph.lib.TestTextDoubleDoubleAdjacencyListVertexInputFormat.assertValidVertex;
-import static org.apache.giraph.lib.TestTextDoubleDoubleAdjacencyListVertexInputFormat.setGraphState;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
-public class TestLongDoubleDoubleAdjacencyListVertexInputFormat extends TestCase {
+public class TestLongDoubleDoubleAdjacencyListVertexInputFormat {
 
   private RecordReader<LongWritable, Text> rr;
   private Configuration conf;
   private TaskAttemptContext tac;
   private GraphState<LongWritable, DoubleWritable, DoubleWritable, BooleanWritable> graphState;
 
+  @Before
   public void setUp() throws IOException, InterruptedException {
     rr = mock(RecordReader.class);
     when(rr.nextKeyValue()).thenReturn(true);
@@ -60,6 +65,7 @@ public class TestLongDoubleDoubleAdjacencyListVertexInputFormat extends TestCase
     when(tac.getConfiguration()).thenReturn(conf);
   }
 
+  @Test
   public void testIndexMustHaveValue() throws IOException, InterruptedException {
     String input = "123";
 
@@ -78,6 +84,7 @@ public class TestLongDoubleDoubleAdjacencyListVertexInputFormat extends TestCase
     }
   }
 
+  @Test
   public void testEdgesMustHaveValues() throws IOException, InterruptedException {
     String input = "99\t55.2\t100";
 
@@ -96,6 +103,7 @@ public class TestLongDoubleDoubleAdjacencyListVertexInputFormat extends TestCase
     }
   }
 
+  @Test
   public void testHappyPath() throws Exception {
     String input = "42\t0.1\t99\t0.2\t2000\t0.3\t4000\t0.4";
 
@@ -117,6 +125,7 @@ public class TestLongDoubleDoubleAdjacencyListVertexInputFormat extends TestCase
     assertEquals(vertex.getNumOutEdges(), 3);
   }
 
+  @Test
   public void testDifferentSeparators() throws Exception {
     String input = "12345:42.42:9999999:99.9";
 

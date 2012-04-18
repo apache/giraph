@@ -18,20 +18,6 @@
 
 package org.apache.giraph.lib;
 
-import junit.framework.TestCase;
-import org.apache.giraph.graph.BasicVertex;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.DoubleWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.mapreduce.RecordWriter;
-import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.mockito.Matchers;
-
-import java.io.IOException;
-import java.util.ArrayList;
-
-import static org.apache.giraph.lib.IdWithValueTextOutputFormat.IdWithValueVertexWriter;
 import static org.apache.giraph.lib.IdWithValueTextOutputFormat.IdWithValueVertexWriter.LINE_TOKENIZE_VALUE;
 import static org.apache.giraph.lib.IdWithValueTextOutputFormat.IdWithValueVertexWriter.REVERSE_ID_AND_VALUE;
 import static org.mockito.Mockito.mock;
@@ -39,7 +25,22 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-public class TestIdWithValueTextOutputFormat extends TestCase {
+import java.io.IOException;
+import java.util.ArrayList;
+
+import org.apache.giraph.graph.BasicVertex;
+import org.apache.giraph.lib.IdWithValueTextOutputFormat.IdWithValueVertexWriter;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapreduce.RecordWriter;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.junit.Test;
+import org.mockito.Matchers;
+
+public class TestIdWithValueTextOutputFormat {
+  @Test
   public void testHappyPath() throws IOException, InterruptedException {
     Configuration conf = new Configuration();
     Text expected = new Text("Four Tops\t4.0");
@@ -47,6 +48,7 @@ public class TestIdWithValueTextOutputFormat extends TestCase {
     IdWithValueTestWorker(conf, expected);
   }
 
+  @Test
   public void testReverseIdAndValue() throws IOException, InterruptedException {
     Configuration conf = new Configuration();
     conf.setBoolean(REVERSE_ID_AND_VALUE, true);
@@ -55,6 +57,7 @@ public class TestIdWithValueTextOutputFormat extends TestCase {
     IdWithValueTestWorker(conf, expected);
   }
 
+  @Test
   public void testWithDifferentDelimiter()  throws IOException,
       InterruptedException {
     Configuration conf = new Configuration();

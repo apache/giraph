@@ -17,16 +17,25 @@
  */
 package org.apache.giraph.lib;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import junit.framework.TestCase;
+import java.io.IOException;
+import java.lang.reflect.Method;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+
 import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.GraphState;
-import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.BooleanWritable;
 import org.apache.hadoop.io.DoubleWritable;
@@ -36,24 +45,20 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.junit.Before;
+import org.junit.Test;
 
-import java.io.IOException;
-import java.lang.reflect.Method;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
-public class TestTextDoubleDoubleAdjacencyListVertexInputFormat extends TestCase {
+public class TestTextDoubleDoubleAdjacencyListVertexInputFormat {
 
   private RecordReader<LongWritable, Text> rr;
   private Configuration conf;
   private TaskAttemptContext tac;
   private GraphState<Text, DoubleWritable, DoubleWritable, BooleanWritable> graphState;
 
+  @Before
   public void setUp() throws IOException, InterruptedException {
     rr = mock(RecordReader.class);
     when(rr.nextKeyValue()).thenReturn(true).thenReturn(false);
@@ -66,6 +71,7 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat extends TestCase
     when(tac.getConfiguration()).thenReturn(conf);
   }
 
+  @Test
   public void testIndexMustHaveValue() throws IOException, InterruptedException {
     String input = "hi";
 
@@ -84,6 +90,7 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat extends TestCase
     }
   }
 
+  @Test
   public void testEdgesMustHaveValues() throws IOException, InterruptedException {
     String input = "index\t55.66\tindex2";
 
@@ -145,6 +152,7 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat extends TestCase
     }
   }
 
+  @Test
   public void testHappyPath() throws Exception {
     String input = "Hi\t0\tCiao\t1.123\tBomdia\t2.234\tOla\t3.345";
 
@@ -164,6 +172,7 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat extends TestCase
     assertEquals(vertex.getNumOutEdges(), 3);
   }
 
+  @Test
   public void testLineSanitizer() throws Exception {
     String input = "Bye\t0.01\tCiao\t1.001\tTchau\t2.0001\tAdios\t3.00001";
 
@@ -193,6 +202,7 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat extends TestCase
     assertEquals(vertex.getNumOutEdges(), 3);
   }
 
+  @Test
   public void testDifferentSeparators() throws Exception {
     String input = "alpha:42:beta:99";
 

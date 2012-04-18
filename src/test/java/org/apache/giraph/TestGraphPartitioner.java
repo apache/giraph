@@ -18,10 +18,10 @@
 
 package org.apache.giraph;
 
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
+
 import org.apache.giraph.examples.GeneratedVertexReader;
 import org.apache.giraph.examples.SimpleCheckpointVertex;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat;
@@ -30,9 +30,10 @@ import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.partition.HashRangePartitionerFactory;
 import org.apache.giraph.graph.partition.PartitionBalancer;
 import org.apache.giraph.integration.SuperstepHashPartitionerFactory;
-
-import junit.framework.Test;
-import junit.framework.TestSuite;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.junit.Test;
 
 /**
  * Unit test for manual checkpoint restarting
@@ -46,15 +47,10 @@ public class TestGraphPartitioner extends BspCase {
     public TestGraphPartitioner(String testName) {
         super(testName);
     }
-
-    /**
-     * @return the suite of tests being tested
-     */
-    public static Test suite() {
-        return new TestSuite(TestGraphPartitioner.class);
+    
+    public TestGraphPartitioner() {
+        super(TestGraphPartitioner.class.getName());
     }
-
-
 
     /**
      * Run a sample BSP job locally and test various partitioners and
@@ -64,6 +60,7 @@ public class TestGraphPartitioner extends BspCase {
      * @throws ClassNotFoundException
      * @throws InterruptedException
      */
+    @Test
     public void testPartitioners()
             throws IOException, InterruptedException, ClassNotFoundException {
         final int correctLen = 123;

@@ -17,17 +17,17 @@
  */
 
 package org.apache.giraph;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 
 import org.apache.giraph.examples.SimpleCheckpointVertex;
-import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexOutputFormat;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat;
+import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexOutputFormat;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
-import junit.framework.Test;
-import junit.framework.TestSuite;
+import org.junit.Test;
 
 /**
  * Unit test for manual checkpoint restarting
@@ -45,12 +45,9 @@ public class TestManualCheckpoint extends BspCase {
   public TestManualCheckpoint(String testName) {
     super(testName);
   }
-
-  /**
-   * @return the suite of tests being tested
-   */
-  public static Test suite() {
-    return new TestSuite(TestManualCheckpoint.class);
+  
+  public TestManualCheckpoint() {
+    super(TestManualCheckpoint.class.getName());
   }
 
   /**
@@ -59,6 +56,7 @@ public class TestManualCheckpoint extends BspCase {
    * @throws ClassNotFoundException
    * @throws InterruptedException
    */
+  @Test
   public void testBspCheckpoint()
       throws IOException, InterruptedException, ClassNotFoundException {
     GiraphJob job = new GiraphJob(getCallingMethodName());

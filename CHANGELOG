@@ -2,6 +2,8 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-184. Upgrade to junit4. (Devaraj K via jghoman)
+
   GIRAPH-176. BasicRPCCommunications has unnecessary cast of Vertex.
   (Devaraj K via jghoman)
 

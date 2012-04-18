@@ -18,8 +18,9 @@
 
 package org.apache.giraph;
 
-import junit.framework.Test;
-import junit.framework.TestSuite;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 
 import org.apache.giraph.examples.SimpleAggregatorWriter;
 import org.apache.giraph.examples.SimplePageRankVertex.SimplePageRankVertexInputFormat;
@@ -61,6 +62,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
+import org.junit.Test;
 
 /**
  * Unit test for many simple BSP applications.
@@ -75,11 +77,8 @@ public class TestBspBasic extends BspCase {
     super(testName);
   }
 
-  /**
-   * @return the suite of tests being tested
-   */
-  public static Test suite() {
-    return new TestSuite(TestBspBasic.class);
+  public TestBspBasic() {
+    super(TestBspBasic.class.getName());
   }
 
   /**
@@ -95,6 +94,7 @@ public class TestBspBasic extends BspCase {
    * @throws NoSuchMethodException
    * @throws SecurityException
    */
+  @Test
   public void testInstantiateVertex()
       throws InstantiationException, IllegalAccessException,
       IOException, InterruptedException, IllegalArgumentException,
@@ -140,6 +140,7 @@ public class TestBspBasic extends BspCase {
    * @throws ClassNotFoundException
    * @throws InterruptedException
    */
+  @Test
   public void testLocalJobRunnerConfig()
       throws IOException, InterruptedException, ClassNotFoundException {
     if (getJobTracker() != null) {
@@ -177,6 +178,7 @@ public class TestBspBasic extends BspCase {
    * @throws ClassNotFoundException
    * @throws InterruptedException
    */
+  @Test
   public void testBspFail()
       throws IOException, InterruptedException, ClassNotFoundException {
     // Allow this test only to be run on a real Hadoop setup
@@ -202,6 +204,7 @@ public class TestBspBasic extends BspCase {
    * @throws ClassNotFoundException
    * @throws InterruptedException
    */
+  @Test
   public void testBspSuperStep()
       throws IOException, InterruptedException, ClassNotFoundException {
     GiraphJob job = new GiraphJob(getCallingMethodName());
@@ -230,6 +233,7 @@ public class TestBspBasic extends BspCase {
    * @throws ClassNotFoundException
    * @throws InterruptedException
    */
+  @Test
   public void testBspMsg()
       throws IOException, InterruptedException, ClassNotFoundException {
     GiraphJob job = new GiraphJob(getCallingMethodName());
@@ -248,6 +252,7 @@ public class TestBspBasic extends BspCase {
    * @throws ClassNotFoundException
    * @throws InterruptedException
    */
+  @Test
   public void testEmptyVertexInputFormat()
       throws IOException, InterruptedException, ClassNotFoundException {
     GiraphJob job = new GiraphJob(getCallingMethodName());
@@ -266,6 +271,7 @@ public class TestBspBasic extends BspCase {
    * @throws ClassNotFoundException
    * @throws InterruptedException
    */
+  @Test
   public void testBspCombiner()
       throws IOException, InterruptedException, ClassNotFoundException {
     GiraphJob job = new GiraphJob(getCallingMethodName());
@@ -283,6 +289,7 @@ public class TestBspBasic extends BspCase {
    * @throws ClassNotFoundException
    * @throws InterruptedException
    */
+  @Test
   public void testBspPageRank()
       throws IOException, InterruptedException, ClassNotFoundException {
     GiraphJob job = new GiraphJob(getCallingMethodName());
@@ -317,6 +324,7 @@ public class TestBspBasic extends BspCase {
    * @throws ClassNotFoundException
    * @throws InterruptedException
    */
+  @Test
   public void testBspShortestPaths()
       throws IOException, InterruptedException, ClassNotFoundException {
     GiraphJob job = new GiraphJob(getCallingMethodName());
@@ -354,6 +362,7 @@ public class TestBspBasic extends BspCase {
    * @throws ClassNotFoundException
    * @throws InterruptedException
    */
+  @Test
   public void testBspPageRankWithAggregatorWriter()
       throws IOException, InterruptedException, ClassNotFoundException {
     GiraphJob job = new GiraphJob(getCallingMethodName());

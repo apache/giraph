@@ -18,10 +18,12 @@
 
 package org.apache.giraph.examples;
 
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import junit.framework.TestCase;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
+import java.util.Map;
+
 import org.apache.giraph.utils.InternalVertexRunner;
 import org.apache.giraph.utils.MockUtils;
 import org.apache.hadoop.io.DoubleWritable;
@@ -29,18 +31,22 @@ import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.json.JSONArray;
 import org.json.JSONException;
+import org.junit.Test;
 import org.mockito.Mockito;
 
-import java.util.Map;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 /**
  * Contains a simple unit test for {@link SimpleShortestPathsVertex}
  */
-public class SimpleShortestPathVertexTest extends TestCase {
+public class SimpleShortestPathVertexTest {
 
   /**
    * Test the behavior when a shorter path to a vertex has been found
    */
+  @Test
   public void testOnShorterPathFound() throws Exception {
 
     SimpleShortestPathsVertex vertex = new SimpleShortestPathsVertex();
@@ -71,6 +77,7 @@ public class SimpleShortestPathVertexTest extends TestCase {
    * Test the behavior when a new, but not shorter path to a vertex has been
    * found.
    */
+  @Test
   public void testOnNoShorterPathFound() throws Exception {
 
     SimpleShortestPathsVertex vertex = new SimpleShortestPathsVertex();
@@ -98,6 +105,7 @@ public class SimpleShortestPathVertexTest extends TestCase {
   /**
    * A local integration test on toy data
    */
+  @Test
   public void testToyData() throws Exception {
 
     // a small four vertex graph

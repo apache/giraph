@@ -18,25 +18,29 @@
 
 package org.apache.giraph.examples;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
+import java.util.Set;
+
+import org.apache.giraph.utils.InternalVertexRunner;
+import org.junit.Test;
+
 import com.google.common.base.Splitter;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.SetMultimap;
-import junit.framework.TestCase;
-
-import org.apache.giraph.utils.InternalVertexRunner;
-
-import java.util.Set;
 
 /**
  *  Tests for {@link ConnectedComponentsVertex}
  */
-public class ConnectedComponentsVertexTest extends TestCase {
+public class ConnectedComponentsVertexTest {
 
     /**
      * A local integration test on toy data
      */
+    @Test
     public void testToyData() throws Exception {
 
         // a small graph with three components

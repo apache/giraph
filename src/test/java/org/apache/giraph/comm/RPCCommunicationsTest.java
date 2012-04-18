@@ -18,19 +18,20 @@
 
 package org.apache.giraph.comm;
 
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
-import junit.framework.TestCase;
 
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.Mapper.Context;
+import org.junit.Test;
 
-public class RPCCommunicationsTest extends TestCase {
+public class RPCCommunicationsTest {
 
+    @Test
     public void testDuplicateRpcPort() throws Exception {
         @SuppressWarnings("rawtypes")
         Context context = mock(Context.class);

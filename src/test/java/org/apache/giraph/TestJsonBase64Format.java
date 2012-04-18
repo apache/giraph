@@ -17,6 +17,7 @@
  */
 
 package org.apache.giraph;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 
@@ -29,9 +30,7 @@ import org.apache.giraph.lib.JsonBase64VertexOutputFormat;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-
-import junit.framework.Test;
-import junit.framework.TestSuite;
+import org.junit.Test;
 
 /**
  * Test out the JsonBase64 format.
@@ -45,12 +44,9 @@ public class TestJsonBase64Format extends BspCase {
   public TestJsonBase64Format(String testName) {
     super(testName);
   }
-
-  /**
-   * @return the suite of tests being tested
-   */
-  public static Test suite() {
-    return new TestSuite(TestJsonBase64Format.class);
+  
+  public TestJsonBase64Format() {
+    super(TestJsonBase64Format.class.getName());
   }
 
   /**
@@ -62,6 +58,7 @@ public class TestJsonBase64Format extends BspCase {
    * @throws ClassNotFoundException
    * @throws InterruptedException
    */
+  @Test
   public void testContinue()
     throws IOException, InterruptedException, ClassNotFoundException {
     GiraphJob job = new GiraphJob(getCallingMethodName());

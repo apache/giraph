@@ -20,18 +20,15 @@ package org.apache.giraph;
 
 import java.io.IOException;
 import java.util.Iterator;
-import java.util.List;
-
-import junit.framework.TestCase;
 
 import org.apache.giraph.examples.GeneratedVertexInputFormat;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat;
 import org.apache.giraph.graph.BasicVertex;
-import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.EdgeListVertex;
+import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.graph.GraphMapper;
 import org.apache.giraph.graph.VertexCombiner;
 import org.apache.giraph.graph.VertexInputFormat;
-import org.apache.giraph.graph.GraphMapper;
 import org.apache.giraph.graph.VertexOutputFormat;
 import org.apache.giraph.lib.JsonBase64VertexInputFormat;
 import org.apache.giraph.lib.JsonBase64VertexOutputFormat;
@@ -41,11 +38,10 @@ import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Writable;
+import org.junit.Test;
 
 
-public class TestVertexTypes
-    extends TestCase {
+public class TestVertexTypes {
 
     /**
      * Matches the {@link GeneratedVertexInputFormat}
@@ -104,6 +100,7 @@ public class TestVertexTypes
         }
     }
 
+    @Test
     public void testMatchingType() throws SecurityException,
             NoSuchMethodException, NoSuchFieldException {
         @SuppressWarnings("rawtypes")
@@ -121,6 +118,7 @@ public class TestVertexTypes
         mapper.determineClassTypes(conf);
     }
 
+    @Test
     public void testDerivedMatchingType() throws SecurityException,
             NoSuchMethodException, NoSuchFieldException {
         @SuppressWarnings("rawtypes")
@@ -135,6 +133,7 @@ public class TestVertexTypes
         mapper.determineClassTypes(conf);
     }
 
+    @Test
     public void testDerivedInputFormatType() throws SecurityException,
             NoSuchMethodException, NoSuchFieldException {
         @SuppressWarnings("rawtypes")
@@ -149,6 +148,7 @@ public class TestVertexTypes
         mapper.determineClassTypes(conf);
     }
 
+    @Test
     public void testMismatchingVertex() throws SecurityException,
             NoSuchMethodException, NoSuchFieldException {
         @SuppressWarnings("rawtypes")
@@ -167,7 +167,8 @@ public class TestVertexTypes
         } catch (IllegalArgumentException e) {
         }
     }
-
+    
+    @Test
     public void testMismatchingCombiner() throws SecurityException,
             NoSuchMethodException, NoSuchFieldException {
         @SuppressWarnings("rawtypes")
@@ -190,6 +191,7 @@ public class TestVertexTypes
         }
     }
 
+    @Test
     public void testJsonBase64FormatType() throws SecurityException,
             NoSuchMethodException, NoSuchFieldException {
         @SuppressWarnings("rawtypes")

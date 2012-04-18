@@ -22,6 +22,9 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
 
+import org.apache.giraph.examples.GeneratedVertexReader;
+import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.zk.ZooKeeperExt;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -29,17 +32,12 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
-
-import org.apache.giraph.examples.GeneratedVertexReader;
-import org.apache.giraph.graph.GiraphJob;
-import org.apache.giraph.zk.ZooKeeperExt;
-
-import junit.framework.TestCase;
+import org.junit.Before;
 
 /**
  * Extended TestCase for making setting up Bsp testing.
  */
-public class BspCase extends TestCase implements Watcher {
+public class BspCase implements Watcher {
   /** JobTracker system property */
   private final String jobTracker =
       System.getProperty("prop.mapred.job.tracker");
@@ -50,6 +48,7 @@ public class BspCase extends TestCase implements Watcher {
   private int numWorkers = 1;
   /** ZooKeeper list system property */
   private final String zkList = System.getProperty("prop.zookeeper.list");
+  private String testName;
 
   /**
    * Adjust the configuration to the basic test case
@@ -86,13 +85,17 @@ public class BspCase extends TestCase implements Watcher {
     conf.setLong(GeneratedVertexReader.READER_VERTICES, 5);
   }
 
+  private String getName() {
+    return testName;
+  }
+
   /**
    * Create the test case
    *
    * @param testName name of the test case
    */
   public BspCase(String testName) {
-    super(testName);
+    this.testName = testName;
 
   }
 
@@ -160,7 +163,7 @@ public class BspCase extends TestCase implements Watcher {
     return singlePartFileStatus;
   }
 
-  @Override
+  @Before
   public void setUp() {
     if (jobTracker != null) {
       System.out.println("Setting tasks to 3 for " + getName() +

@@ -17,30 +17,33 @@
  */
 package org.apache.giraph.graph;
 
-
-import junit.framework.TestCase;
-import org.apache.giraph.graph.GiraphJob;
-import org.apache.giraph.utils.WritableUtils;
-
-import org.apache.hadoop.io.DoubleWritable;
-import org.apache.hadoop.io.FloatWritable;
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.giraph.utils.WritableUtils;
+import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.FloatWritable;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
+import org.junit.Before;
+import org.junit.Test;
+
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+
 /**
  * Tests {@link EdgeListVertex}.
  */
-public class TestEdgeListVertex extends TestCase {
+public class TestEdgeListVertex {
   /** Instantiated vertex filled in from setup() */
   private IFDLEdgeListVertex vertex;
   /** Job filled in by setup() */
@@ -58,7 +61,7 @@ public class TestEdgeListVertex extends TestCase {
     }
   }
 
-  @Override
+  @Before
   public void setUp() {
     try {
       job = new GiraphJob("TestEdgeArrayVertex");
@@ -79,10 +82,12 @@ public class TestEdgeListVertex extends TestCase {
       createVertex(job.getConfiguration());
   }
 
+  @Test
   public void testInstantiate() throws IOException {
     assertNotNull(vertex);
   }
 
+  @Test
   public void testEdges() {
     Map<IntWritable, DoubleWritable> edgeMap = Maps.newHashMap();
     for (int i = 1000; i > 0; --i) {
@@ -102,6 +107,7 @@ public class TestEdgeListVertex extends TestCase {
     assertEquals(vertex.getNumOutEdges(), 999);
   }
 
+  @Test
   public void testGetEdges() {
     Map<IntWritable, DoubleWritable> edgeMap = Maps.newHashMap();
     for (int i = 1000; i > 0; --i) {
@@ -120,6 +126,7 @@ public class TestEdgeListVertex extends TestCase {
         new DoubleWritable(700 * 3.0));
   }
 
+  @Test
   public void testAddRemoveEdges() {
     Map<IntWritable, DoubleWritable> edgeMap = Maps.newHashMap();
     vertex.initialize(null, null, edgeMap, null);
@@ -154,6 +161,7 @@ public class TestEdgeListVertex extends TestCase {
     assertEquals(vertex.getNumOutEdges(), 0);
   }
 
+  @Test
   public void testSerialize() {
     Map<IntWritable, DoubleWritable> edgeMap = Maps.newHashMap();
     for (int i = 1000; i > 0; --i) {

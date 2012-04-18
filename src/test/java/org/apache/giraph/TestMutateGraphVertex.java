@@ -18,16 +18,16 @@
 
 package org.apache.giraph;
 
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 
-import org.apache.hadoop.fs.Path;
 import org.apache.giraph.examples.SimpleMutateGraphVertex;
 import org.apache.giraph.examples.SimplePageRankVertex.SimplePageRankVertexInputFormat;
 import org.apache.giraph.examples.SimplePageRankVertex.SimplePageRankVertexOutputFormat;
 import org.apache.giraph.graph.GiraphJob;
-
-import junit.framework.Test;
-import junit.framework.TestSuite;
+import org.apache.hadoop.fs.Path;
+import org.junit.Test;
 
 /**
  * Unit test for graph mutation
@@ -41,12 +41,9 @@ public class TestMutateGraphVertex extends BspCase {
     public TestMutateGraphVertex(String testName) {
         super(testName);
     }
-
-    /**
-     * @return the suite of tests being tested
-     */
-    public static Test suite() {
-        return new TestSuite(TestMutateGraphVertex.class);
+    
+    public TestMutateGraphVertex() {
+        super(TestMutateGraphVertex.class.getName());
     }
 
     /**
@@ -56,6 +53,7 @@ public class TestMutateGraphVertex extends BspCase {
      * @throws ClassNotFoundException
      * @throws InterruptedException
      */
+    @Test
     public void testMutateGraph()
             throws IOException, InterruptedException, ClassNotFoundException {
         GiraphJob job = new GiraphJob(getCallingMethodName());

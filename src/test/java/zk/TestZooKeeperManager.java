@@ -17,12 +17,17 @@
  */
 package zk;
 
-import junit.framework.TestCase;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.zk.ZooKeeperManager;
 import org.apache.hadoop.conf.Configuration;
+import org.junit.Test;
 
-public class TestZooKeeperManager extends TestCase {
+public class TestZooKeeperManager {
+  @Test
   public void testGetBasePath() {
     Configuration conf = new Configuration();
 

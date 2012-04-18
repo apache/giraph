@@ -18,15 +18,16 @@
 
 package org.apache.giraph;
 
+import static org.junit.Assert.assertFalse;
+
 import java.io.IOException;
 
 import org.apache.giraph.examples.SimpleCheckpointVertex;
-import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexOutputFormat;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat;
+import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexOutputFormat;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.hadoop.fs.Path;
-import junit.framework.Test;
-import junit.framework.TestSuite;
+import org.junit.Test;
 
 /**
  * Unit test for not enough map tasks
@@ -40,12 +41,9 @@ public class TestNotEnoughMapTasks extends BspCase {
     public TestNotEnoughMapTasks(String testName) {
         super(testName);
     }
-
-    /**
-     * @return the suite of tests being tested
-     */
-    public static Test suite() {
-        return new TestSuite(TestNotEnoughMapTasks.class);
+    
+    public TestNotEnoughMapTasks() {
+        super(TestNotEnoughMapTasks.class.getName());
     }
 
     /**
@@ -55,6 +53,7 @@ public class TestNotEnoughMapTasks extends BspCase {
      * @throws ClassNotFoundException
      * @throws InterruptedException
      */
+    @Test
     public void testNotEnoughMapTasks()
             throws IOException, InterruptedException, ClassNotFoundException {
         if (getJobTracker() == null) {

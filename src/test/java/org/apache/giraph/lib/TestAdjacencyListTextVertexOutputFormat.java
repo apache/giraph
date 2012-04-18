@@ -17,26 +17,29 @@
  */
 package org.apache.giraph.lib;
 
-import junit.framework.TestCase;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+
 import org.apache.giraph.graph.BasicVertex;
+import org.apache.giraph.lib.AdjacencyListTextVertexOutputFormat.AdjacencyListVertexWriter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.junit.Test;
 import org.mockito.Matchers;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import static org.apache.giraph.lib.AdjacencyListTextVertexOutputFormat.AdjacencyListVertexWriter;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+public class TestAdjacencyListTextVertexOutputFormat {
 
-public class TestAdjacencyListTextVertexOutputFormat extends TestCase {
+  @Test
   public void testVertexWithNoEdges() throws IOException, InterruptedException {
     Configuration conf = new Configuration();
     TaskAttemptContext tac = mock(TaskAttemptContext.class);
@@ -59,6 +62,7 @@ public class TestAdjacencyListTextVertexOutputFormat extends TestCase {
     verify(vertex, times(0)).getEdgeValue(Matchers.<WritableComparable>any());
   }
 
+  @Test
   public void testVertexWithEdges() throws IOException, InterruptedException {
     Configuration conf = new Configuration();
     TaskAttemptContext tac = mock(TaskAttemptContext.class);
@@ -87,6 +91,7 @@ public class TestAdjacencyListTextVertexOutputFormat extends TestCase {
     verify(vertex, times(2)).getEdgeValue(Matchers.<WritableComparable>any());
   }
 
+  @Test
   public void testWithDifferentDelimiter() throws IOException, InterruptedException {
     Configuration conf = new Configuration();
     conf.set(AdjacencyListVertexWriter.LINE_TOKENIZE_VALUE, ":::");

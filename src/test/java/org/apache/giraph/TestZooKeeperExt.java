@@ -18,6 +18,8 @@
 
 package org.apache.giraph;
 
+import static org.junit.Assert.assertTrue;
+
 import java.util.List;
 
 import org.apache.giraph.zk.ZooKeeperExt;
@@ -26,11 +28,11 @@ import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooDefs.Ids;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
-import junit.framework.TestCase;
-
-public class TestZooKeeperExt
-        extends TestCase implements Watcher {
+public class TestZooKeeperExt implements Watcher {
     /** ZooKeeperExt instance */
     private ZooKeeperExt zooKeeperExt = null;
     /** ZooKeeper server list */
@@ -43,7 +45,7 @@ public class TestZooKeeperExt
         return;
     }
 
-    @Override
+    @Before
     public void setUp() {
         try {
             if (zkList == null) {
@@ -59,7 +61,7 @@ public class TestZooKeeperExt
         }
     }
 
-    @Override
+    @After
     public void tearDown() {
         if (zooKeeperExt == null) {
             return;
@@ -71,6 +73,7 @@ public class TestZooKeeperExt
         }
     }
 
+    @Test
     public void testCreateExt() throws KeeperException, InterruptedException {
         if (zooKeeperExt == null) {
             System.out.println(
@@ -88,6 +91,7 @@ public class TestZooKeeperExt
         zooKeeperExt.delete(BASE_PATH, -1);
     }
 
+    @Test
     public void testDeleteExt() throws KeeperException, InterruptedException {
         if (zooKeeperExt == null) {
             System.out.println(
@@ -111,6 +115,7 @@ public class TestZooKeeperExt
         zooKeeperExt.deleteExt(BASE_PATH, -1, true);
     }
 
+    @Test
     public void testGetChildrenExt()
         throws KeeperException, InterruptedException {
         if (zooKeeperExt == null) {

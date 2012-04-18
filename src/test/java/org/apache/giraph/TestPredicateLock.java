@@ -18,15 +18,17 @@
 
 package org.apache.giraph;
 
-import junit.framework.TestCase;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.giraph.zk.BspEvent;
 import org.apache.giraph.zk.PredicateLock;
+import org.junit.Test;
 
 /**
  * Ensure that PredicateLock objects work correctly.
  */
-public class TestPredicateLock extends TestCase {
+public class TestPredicateLock {
     private static class SignalThread extends Thread {
         private final BspEvent event;
         public SignalThread(BspEvent event) {
@@ -44,41 +46,44 @@ public class TestPredicateLock extends TestCase {
     /**
      * Make sure the the event is not signaled.
      */
+  @Test
     public void testWaitMsecsNoEvent() {
         BspEvent event = new PredicateLock();
         boolean gotPredicate = event.waitMsecs(50);
-        assertTrue(gotPredicate == false);
+        assertFalse(gotPredicate);
     }
 
     /**
      * Single threaded case
      */
+  @Test
     public void testEvent() {
         BspEvent event = new PredicateLock();
         event.signal();
         boolean gotPredicate = event.waitMsecs(-1);
-        assertTrue(gotPredicate == true);
+        assertTrue(gotPredicate );
         event.reset();
         gotPredicate = event.waitMsecs(0);
-        assertTrue(gotPredicate == false);
+        assertFalse(gotPredicate);
     }
 
     /**
      * Make sure the the event is signaled correctly
      * @throws InterruptedException
      */
+  @Test
     public void testWaitMsecs() {
         System.out.println("testWaitMsecs:");
         BspEvent event = new PredicateLock();
         Thread signalThread = new SignalThread(event);
         signalThread.start();
         boolean gotPredicate = event.waitMsecs(2000);
-        assertTrue(gotPredicate == true);
+        assertTrue(gotPredicate);
         try {
             signalThread.join();
         } catch (InterruptedException e) {
         }
         gotPredicate = event.waitMsecs(0);
-        assertTrue(gotPredicate == true);
+        assertTrue(gotPredicate);
     }
 }

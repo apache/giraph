@@ -18,17 +18,18 @@
 
 package org.apache.giraph.examples;
 
-import junit.framework.TestCase;
-import org.apache.giraph.graph.VertexCombiner;
-import org.apache.hadoop.io.IntWritable;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
-import com.google.common.collect.Iterables;
-
-import java.io.IOException;
 import java.util.Arrays;
 
-public class MinimumIntCombinerTest extends TestCase {
+import org.apache.giraph.graph.VertexCombiner;
+import org.apache.hadoop.io.IntWritable;
+import org.junit.Test;
 
+public class MinimumIntCombinerTest {
+
+    @Test
     public void testCombiner() throws Exception {
 
         VertexCombiner<IntWritable, IntWritable> combiner =
