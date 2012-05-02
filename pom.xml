@@ -167,6 +167,14 @@ under the License.
       <organization>Database Systems and Information Management group (DIMA), TU Berlin</organization>
       <organizationUrl>http://www.dima.tu-berlin.de/</organizationUrl>
     </developer>
+    <developer>
+      <id>ekoontz</id>
+      <name>Eugene Koontz</name>
+      <email>ekoontz@apache.org</email>
+      <timezone>-8</timezone>
+      <organization>Trend Micro</organization>
+      <organizationUrl>http://www.trendmicro.com</organizationUrl>
+    </developer>
   </developers>
 
   <properties>
