@@ -92,15 +92,15 @@ public class VertexMutations<I extends WritableComparable,
     removedVertexCount = input.readInt();
     int addedEdgeListSize = input.readInt();
     for (int i = 0; i < addedEdgeListSize; ++i) {
-      I destVertex = BspUtils.createVertexIndex(conf);
+      I destVertex = BspUtils.<I>createVertexIndex(conf);
       destVertex.readFields(input);
-      E edgeValue = BspUtils.createEdgeValue(conf);
+      E edgeValue = BspUtils.<E>createEdgeValue(conf);
       edgeValue.readFields(input);
       addedEdgeList.add(new Edge<I, E>(destVertex, edgeValue));
     }
     int removedEdgeListSize = input.readInt();
     for (int i = 0; i < removedEdgeListSize; ++i) {
-      I removedEdge = BspUtils.createVertexIndex(conf);
+      I removedEdge = BspUtils.<I>createVertexIndex(conf);
       removedEdge.readFields(input);
       removedEdgeList.add(removedEdge);
     }

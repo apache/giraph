@@ -80,7 +80,7 @@ public class SendPartitionMutationsRequest<I extends WritableComparable,
     int vertexIdMutationsSize = input.readInt();
     vertexIdMutations = Maps.newHashMapWithExpectedSize(vertexIdMutationsSize);
     for (int i = 0; i < vertexIdMutationsSize; ++i) {
-      I vertexId = BspUtils.createVertexIndex(conf);
+      I vertexId = BspUtils.<I>createVertexIndex(conf);
       vertexId.readFields(input);
       VertexMutations<I, V, E, M> vertexMutations =
           new VertexMutations<I, V, E, M>();

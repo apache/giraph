@@ -82,12 +82,12 @@ public class SendPartitionMessagesRequest<I extends WritableComparable,
     int vertexIdMessagesSize = input.readInt();
     vertexIdMessages = Maps.newHashMapWithExpectedSize(vertexIdMessagesSize);
     for (int i = 0; i < vertexIdMessagesSize; ++i) {
-      I vertexId = BspUtils.createVertexIndex(conf);
+      I vertexId = BspUtils.<I>createVertexIndex(conf);
       vertexId.readFields(input);
       int messageCount = input.readInt();
       List<M> messageList = Lists.newArrayListWithCapacity(messageCount);
       for (int j = 0; j < messageCount; ++j) {
-        M message = BspUtils.createMessageValue(conf);
+        M message = BspUtils.<M>createMessageValue(conf);
         message.readFields(input);
         messageList.add(message);
       }

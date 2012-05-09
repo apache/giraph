@@ -102,12 +102,11 @@ public class Edge<I extends WritableComparable, E extends Writable>
         ", edgeValue = " + edgeValue  + ")";
   }
 
-  @SuppressWarnings("unchecked")
   @Override
   public void readFields(DataInput input) throws IOException {
-    destVertexId = (I) BspUtils.createVertexIndex(getConf());
+    destVertexId = BspUtils.<I>createVertexIndex(getConf());
     destVertexId.readFields(input);
-    edgeValue = (E) BspUtils.createEdgeValue(getConf());
+    edgeValue = BspUtils.<E>createEdgeValue(getConf());
     edgeValue.readFields(input);
   }
 
