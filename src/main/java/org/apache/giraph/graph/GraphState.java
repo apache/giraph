@@ -17,7 +17,7 @@
  */
 package org.apache.giraph.graph;
 
-import org.apache.giraph.comm.WorkerCommunications;
+import org.apache.giraph.comm.WorkerClientServer;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -45,7 +45,7 @@ E extends Writable, M extends Writable> {
   /** Graph-wide BSP Mapper for this Vertex */
   private GraphMapper<I, V, E, M> graphMapper;
   /** Graph-wide worker communications */
-  private WorkerCommunications<I, V, E, M> workerCommunications;
+  private WorkerClientServer<I, V, E, M> workerCommunications;
 
   public long getSuperstep() {
     return superstep;
@@ -130,12 +130,12 @@ E extends Writable, M extends Writable> {
    * @return Returns this object.
    */
   public GraphState<I, V, E, M> setWorkerCommunications(
-      WorkerCommunications<I, V, E, M> workerCommunications) {
+      WorkerClientServer<I, V, E, M> workerCommunications) {
     this.workerCommunications = workerCommunications;
     return this;
   }
 
-  public WorkerCommunications<I, V, E, M> getWorkerCommunications() {
+  public WorkerClientServer<I, V, E, M> getWorkerCommunications() {
     return workerCommunications;
   }
 }

@@ -21,6 +21,7 @@ package org.apache.giraph.graph;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 
 import org.apache.hadoop.io.Writable;
 
@@ -67,6 +68,10 @@ public class WorkerInfo implements Writable {
 
   public String getHostnameId() {
     return hostnameId;
+  }
+
+  public InetSocketAddress getHostnamePort() {
+    return new InetSocketAddress(hostname, port);
   }
 
   public int getPort() {

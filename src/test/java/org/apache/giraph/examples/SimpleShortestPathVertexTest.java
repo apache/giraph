@@ -113,7 +113,8 @@ public class SimpleShortestPathVertexTest {
         "[1,0,[[2,1],[3,3]]]",
         "[2,0,[[3,1],[4,10]]]",
         "[3,0,[[4,2]]]",
-    "[4,0,[]]" };
+        "[4,0,[]]"
+    };
 
     // start from vertex 1
     Map<String, String> params = Maps.newHashMap();

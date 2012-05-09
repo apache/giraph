@@ -267,7 +267,7 @@ public abstract class BspService<I extends WritableComparable,
   /** File system */
   private final FileSystem fs;
   /** Checkpoint frequency */
-  private int checkpointFrequency = -1;
+  private final int checkpointFrequency;
   /** Map of aggregators */
   private Map<String, Aggregator<Writable>> aggregatorMap =
       new TreeMap<String, Aggregator<Writable>>();

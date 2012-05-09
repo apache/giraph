@@ -27,8 +27,6 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.Map;
 
 /**
  * Public interface for workers to do message communication
@@ -39,8 +37,13 @@ import java.util.Map;
  * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
-public interface WorkerCommunications<I extends WritableComparable,
+public interface WorkerClient<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable> {
+  /**
+   *  Setup the client.
+   */
+  void setup();
+
   /**
    * Fix changes to the workers and the mapping between partitions and
    * workers.
@@ -100,11 +103,24 @@ public interface WorkerCommunications<I extends WritableComparable,
   void removeVertexReq(I vertexIndex) throws IOException;
 
   /**
-   * Get the vertices that were sent in the last iteration.  After getting
-   * the map, the user should synchronize with it to insure it
-   * is thread-safe.
+   * Flush all outgoing messages.  This will synchronously ensure that all
+   * messages have been send and delivered prior to returning.
    *
-   * @return map of vertex ranges to vertices
+   * @throws IOException
    */
-  Map<Integer, List<BasicVertex<I, V, E, M>>> getInPartitionVertexMap();
+  void flush() throws IOException;
+
+  /**
+   * Get the messages sent during this superstep and clear them.
+   *
+   * @return Number of messages sent before the reset.
+   */
+  long resetMessageCount();
+
+  /**
+   * Closes all connections.
+   *
+   * @throws IOException
+   */
+  void closeConnections() throws IOException;
 }

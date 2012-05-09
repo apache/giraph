@@ -1,0 +1,200 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.giraph.comm;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import org.apache.giraph.graph.BasicVertex;
+import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.VertexMutations;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
+
+/**
+ * Aggregates the mutations to be sent to partitions so they can be sent in
+ * bulk.
+ *
+ * @param <I> Vertex id
+ * @param <V> Vertex data
+ * @param <E> Edge data
+ * @param <M> Message data
+ */
+@SuppressWarnings("rawtypes")
+public class SendMutationsCache<I extends WritableComparable,
+    V extends Writable, E extends Writable, M extends Writable> {
+  /** Internal cache */
+  private Map<Integer, Map<I, VertexMutations<I, V, E, M>>> mutationCache =
+      new HashMap<Integer, Map<I, VertexMutations<I, V, E, M>>>();
+  /** Number of mutations in each partition */
+  private final Map<Integer, Integer> mutationCountMap =
+      new HashMap<Integer, Integer>();
+
+  /**
+   * Get the mutations for a partition and destination vertex (creating if
+   * it doesn't exist).
+   *
+   * @param partitionId Partition id
+   * @param destVertexId Destination vertex id
+   * @return Mutations for the vertex
+   */
+  private VertexMutations<I, V, E, M> getVertexMutations(
+      Integer partitionId, I destVertexId) {
+    Map<I, VertexMutations<I, V, E, M>> idMutations =
+        mutationCache.get(partitionId);
+    if (idMutations == null) {
+      idMutations = new HashMap<I, VertexMutations<I, V, E, M>>();
+      mutationCache.put(partitionId, idMutations);
+    }
+    VertexMutations<I, V, E, M> mutations = idMutations.get(destVertexId);
+    if (mutations == null) {
+      mutations = new VertexMutations<I, V, E, M>();
+      idMutations.put(destVertexId, mutations);
+    }
+    return mutations;
+  }
+
+  /**
+   * Increment the number of mutations in a partition.
+   *
+   * @param partitionId Partition id
+   * @return Number of mutations in a partition after the increment
+   */
+  private int incrementPartitionMutationCount(int partitionId) {
+    Integer currentPartitionMutationCount = mutationCountMap.get(partitionId);
+    if (currentPartitionMutationCount == null) {
+      currentPartitionMutationCount = 0;
+    }
+    Integer updatedPartitionMutationCount =
+        currentPartitionMutationCount + 1;
+    mutationCountMap.put(partitionId, updatedPartitionMutationCount);
+    return updatedPartitionMutationCount;
+  }
+
+  /**
+   * Add an add edge mutation to the cache.
+   *
+   * @param partitionId Partition id
+   * @param destVertexId Destination vertex id
+   * @param edge Edge to be added
+   * @return Number of mutations in the partition.
+   */
+  public int addEdgeMutation(
+      Integer partitionId, I destVertexId, Edge<I, E> edge) {
+    // Get the mutations for this partition
+    VertexMutations<I, V, E, M> mutations =
+        getVertexMutations(partitionId, destVertexId);
+
+    // Add the edge
+    mutations.addEdge(edge);
+
+    // Update the number of mutations per partition
+    return incrementPartitionMutationCount(partitionId);
+  }
+
+  /**
+   * Add a remove edge mutation to the cache.
+   *
+   * @param partitionId Partition id
+   * @param vertexIndex Destination vertex id
+   * @param destinationVertexIndex Edge vertex index to be removed
+   * @return Number of mutations in the partition.
+   */
+  public int removeEdgeMutation(
+      Integer partitionId, I vertexIndex, I destinationVertexIndex) {
+    // Get the mutations for this partition
+    VertexMutations<I, V, E, M> mutations =
+        getVertexMutations(partitionId, vertexIndex);
+
+    // Remove the edge
+    mutations.removeEdge(destinationVertexIndex);
+
+    // Update the number of mutations per partition
+    return incrementPartitionMutationCount(partitionId);
+  }
+
+  /**
+   * Add a add vertex mutation to the cache.
+   *
+   * @param partitionId Partition id
+   * @param vertex Vertex to be added
+   * @return Number of mutations in the partition.
+   */
+  public int addVertexMutation(
+      Integer partitionId, BasicVertex<I, V, E, M> vertex) {
+    // Get the mutations for this partition
+    VertexMutations<I, V, E, M> mutations =
+        getVertexMutations(partitionId, vertex.getVertexId());
+
+    // Add the vertex
+    mutations.addVertex(vertex);
+
+    // Update the number of mutations per partition
+    return incrementPartitionMutationCount(partitionId);
+  }
+
+  /**
+   * Add a remove vertex mutation to the cache.
+   *
+   * @param partitionId Partition id
+   * @param destVertexId Vertex index to be removed
+   * @return Number of mutations in the partition.
+   */
+  public int removeVertexMutation(
+      Integer partitionId, I destVertexId) {
+    // Get the mutations for this partition
+    VertexMutations<I, V, E, M> mutations =
+        getVertexMutations(partitionId, destVertexId);
+
+    // Remove the vertex
+    mutations.removeVertex();
+
+    // Update the number of mutations per partition
+    return incrementPartitionMutationCount(partitionId);
+  }
+
+  /**
+   * Gets the mutations for a partition and removes it from the cache.
+   *
+   * @param partitionId Partition id
+   * @return Removed partition mutations
+   */
+  public Map<I, VertexMutations<I, V, E, M>> removePartitionMutations(
+      int partitionId) {
+    Map<I, VertexMutations<I, V, E, M>> idMutations =
+        mutationCache.remove(partitionId);
+    mutationCountMap.put(partitionId, 0);
+    return idMutations;
+  }
+
+  /**
+   * Gets all the mutations and removes them from the cache.
+   *
+   * @return All vertex mutations for all partitions
+   */
+  public Map<Integer, Map<I, VertexMutations<I, V, E, M>>>
+  removeAllPartitionMutations() {
+    Map<Integer, Map<I, VertexMutations<I, V, E, M>>> allMutations =
+        mutationCache;
+    mutationCache =
+        new HashMap<Integer, Map<I, VertexMutations<I, V, E, M>>>();
+    mutationCountMap.clear();
+    return allMutations;
+  }
+}

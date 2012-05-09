@@ -151,6 +151,11 @@ public class GiraphJob {
   /** Local ZooKeeper directory to use */
   public static final String ZOOKEEPER_DIR = "giraph.zkDir";
 
+  /** Use the RPC communication or netty communication */
+  public static final String USE_NETTY = "giraph.useNetty";
+  /** Default is to use RPC, not netty */
+  public static final boolean USE_NETTY_DEFAULT = false;
+
   /** Initial port to start using for the RPC communication */
   public static final String RPC_INITIAL_PORT = "giraph.rpcInitialPort";
   /** Default port to start using for the RPC communication */
@@ -182,18 +187,24 @@ public class GiraphJob {
   public static final String MAX_VERTICES_PER_PARTITION =
       "giraph.maxVerticesPerPartition";
   /** Default maximum number of vertices per partition before sending. */
-  public static final int MAX_VERTICES_PER_PARTITION_DEFAULT = 100000;
+  public static final int MAX_VERTICES_PER_PARTITION_DEFAULT = 10000;
 
   /** Maximum number of messages per peer before flush */
   public static final String MSG_SIZE = "giraph.msgSize";
   /** Default maximum number of messages per peer before flush */
-  public static final int MSG_SIZE_DEFAULT = 1000;
+  public static final int MSG_SIZE_DEFAULT = 2000;
+
+  /** Maximum number of mutations per partition before flush */
+  public static final String MAX_MUTATIONS_PER_REQUEST =
+      "giraph.maxMutationsPerRequest";
+  /** Default maximum number of mutations per partition before flush */
+  public static final int MAX_MUTATIONS_PER_REQUEST_DEFAULT = 100;
 
   /** Maximum number of messages that can be bulk sent during a flush */
   public static final String MAX_MESSAGES_PER_FLUSH_PUT =
       "giraph.maxMessagesPerFlushPut";
   /** Default number of messages that can be bulk sent during a flush */
-  public static final int DEFAULT_MAX_MESSAGES_PER_FLUSH_PUT = 5000;
+  public static final int DEFAULT_MAX_MESSAGES_PER_FLUSH_PUT = 2000;
 
   /** Number of flush threads per peer */
   public static final String MSG_NUM_FLUSH_THREADS =
@@ -273,8 +284,8 @@ public class GiraphJob {
   public static final String CHECKPOINT_FREQUENCY =
       "giraph.checkpointFrequency";
 
-  /** Default checkpointing frequency of every 2 supersteps. */
-  public static final int CHECKPOINT_FREQUENCY_DEFAULT = 2;
+  /** Default checkpointing frequency of none. */
+  public static final int CHECKPOINT_FREQUENCY_DEFAULT = 0;
 
   /**
    * Delete checkpoints after a successful job run?

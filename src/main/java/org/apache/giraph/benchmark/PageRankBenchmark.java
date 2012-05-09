@@ -119,10 +119,10 @@ public class PageRankBenchmark extends EdgeListVertex<
     int workers = Integer.parseInt(cmd.getOptionValue('w'));
     GiraphJob job = new GiraphJob(getConf(), getClass().getName());
     if (!cmd.hasOption('c') ||
-        (Integer.parseInt(cmd.getOptionValue('c')) == 0)) {
-      job.setVertexClass(HashMapVertexPageRankBenchmark.class);
-    } else {
+        (Integer.parseInt(cmd.getOptionValue('c')) == 1)) {
       job.setVertexClass(PageRankBenchmark.class);
+    } else {
+      job.setVertexClass(HashMapVertexPageRankBenchmark.class);
     }
     LOG.info("Using class " +
         BspUtils.getVertexClass(job.getConfiguration()).getName());

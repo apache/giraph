@@ -80,7 +80,7 @@ import org.apache.hadoop.ipc.ProtocolSignature;
 public abstract class BasicRPCCommunications<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable, J>
     implements CommunicationsInterface<I, V, E, M>,
-  ServerInterface<I, V, E, M> {
+    WorkerClientServer<I, V, E, M> {
   /** Class logger */
   private static final Logger LOG =
     Logger.getLogger(BasicRPCCommunications.class);
@@ -88,6 +88,8 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
   private static final int MAX_VERTICES_PER_RPC = 1024;
   /** Hadoop configuration */
   protected final Configuration conf;
+  /** Saved context for progress */
+  private final Mapper<?, ?, ?, ?>.Context context;
   /** Indicates whether in superstep preparation */
   private boolean inPrepareSuperstep = false;
   /** Local hostname */
@@ -148,8 +150,9 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
    * Map of partition ids to incoming vertices from other workers.
    * (Synchronized)
    */
-  private final Map<Integer, List<BasicVertex<I, V, E, M>>>
-  inPartitionVertexMap = new HashMap<Integer, List<BasicVertex<I, V, E, M>>>();
+  private final Map<Integer, Collection<BasicVertex<I, V, E, M>>>
+  inPartitionVertexMap =
+      new HashMap<Integer, Collection<BasicVertex<I, V, E, M>>>();
 
   /**
    * Map from vertex index to all vertex mutations
@@ -446,6 +449,7 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
     CentralizedServiceWorker<I, V, E, M> service)
     throws IOException, InterruptedException {
     this.service = service;
+    this.context = context;
     this.conf = context.getConfiguration();
     this.maxSize = conf.getInt(GiraphJob.MSG_SIZE,
         GiraphJob.MSG_SIZE_DEFAULT);
@@ -817,9 +821,9 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
         inPartitionVertexMap.put(partitionId,
             new ArrayList<BasicVertex<I, V, E, M>>(vertexList));
       } else {
-        List<BasicVertex<I, V, E, M>> tmpVertexList =
+        Collection<BasicVertex<I, V, E, M>> tmpVertices =
             inPartitionVertexMap.get(partitionId);
-        tmpVertexList.addAll(vertexList);
+        tmpVertices.addAll(vertexList);
       }
     }
   }
@@ -1063,7 +1067,7 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
   }
 
   @Override
-  public long flush(Mapper<?, ?, ?, ?>.Context context) throws IOException {
+  public void flush() throws IOException {
     if (LOG.isInfoEnabled()) {
       LOG.info("flush: starting for superstep " +
           service.getSuperstep() + " " +
@@ -1103,7 +1107,10 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
           service.getSuperstep() + " " +
           MemoryUtils.getRuntimeMemoryStats());
     }
+  }
 
+  @Override
+  public long resetMessageCount() {
     long msgs = totalMsgsSentInSuperstep;
     totalMsgsSentInSuperstep = 0;
     return msgs;
@@ -1306,7 +1313,8 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
   }
 
   @Override
-  public Map<Integer, List<BasicVertex<I, V, E, M>>> getInPartitionVertexMap() {
+  public Map<Integer, Collection<BasicVertex<I, V, E, M>>>
+  getInPartitionVertexMap() {
     return inPartitionVertexMap;
   }
 }

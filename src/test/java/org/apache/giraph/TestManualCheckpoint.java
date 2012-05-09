@@ -45,7 +45,7 @@ public class TestManualCheckpoint extends BspCase {
   public TestManualCheckpoint(String testName) {
     super(testName);
   }
-  
+
   public TestManualCheckpoint() {
     super(TestManualCheckpoint.class.getName());
   }
@@ -65,6 +65,7 @@ public class TestManualCheckpoint extends BspCase {
         HDFS_CHECKPOINT_DIR);
     job.getConfiguration().setBoolean(
         GiraphJob.CLEANUP_CHECKPOINTS_AFTER_SUCCESS, false);
+    job.getConfiguration().setInt(GiraphJob.CHECKPOINT_FREQUENCY, 2);
     job.setVertexClass(SimpleCheckpointVertex.class);
     job.setWorkerContextClass(
         SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.class);

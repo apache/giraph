@@ -22,8 +22,10 @@ import net.iharder.Base64;
 
 import org.apache.giraph.bsp.ApplicationState;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
+import org.apache.giraph.comm.NettyWorkerClientServer;
 import org.apache.giraph.comm.RPCCommunications;
-import org.apache.giraph.comm.ServerInterface;
+import org.apache.giraph.comm.WorkerServer;
+import org.apache.giraph.comm.WorkerClientServer;
 import org.apache.giraph.graph.partition.Partition;
 import org.apache.giraph.graph.partition.PartitionExchange;
 import org.apache.giraph.graph.partition.PartitionOwner;
@@ -99,7 +101,7 @@ public class BspServiceWorker<I extends WritableComparable,
   private final Map<PartitionOwner, Partition<I, V, E, M>>
   inputSplitCache = new HashMap<PartitionOwner, Partition<I, V, E, M>>();
   /** Communication service */
-  private final ServerInterface<I, V, E, M> commService;
+  private final WorkerClientServer<I, V, E, M> commService;
   /** Structure to store the partitions on this worker */
   private final Map<Integer, Partition<I, V, E, M>> workerPartitionMap =
       new HashMap<Integer, Partition<I, V, E, M>>();
@@ -148,11 +150,22 @@ public class BspServiceWorker<I extends WritableComparable,
             GiraphJob.INPUT_SPLIT_MAX_VERTICES_DEFAULT);
     workerGraphPartitioner =
         getGraphPartitionerFactory().createWorkerGraphPartitioner();
-    RPCCommunications<I, V, E, M> rpcCommService =
-        new RPCCommunications<I, V, E, M>(context, this, graphState);
+    boolean useNetty = getConfiguration().getBoolean(GiraphJob.USE_NETTY,
+        GiraphJob.USE_NETTY_DEFAULT);
+    if (useNetty) {
+      commService =  new NettyWorkerClientServer<I, V, E, M>(context, this);
+    } else {
+      commService =
+          new RPCCommunications<I, V, E, M>(context, this, graphState);
+    }
+    if (LOG.isInfoEnabled()) {
+      LOG.info("BspServiceWorker: maxVerticesPerPartition = " +
+          maxVerticesPerPartition + " useNetty = " + useNetty);
+    }
+
     workerInfo = new WorkerInfo(
-        getHostname(), getTaskPartition(), rpcCommService.getPort());
-    commService = rpcCommService;
+        getHostname(), getTaskPartition(), commService.getPort());
+
     graphState.setWorkerCommunications(commService);
     this.workerContext =
         BspUtils.createWorkerContext(getConfiguration(),
@@ -311,6 +324,7 @@ public class BspServiceWorker<I extends WritableComparable,
         entry.getValue().getVertices().clear();
       }
     }
+    commService.flush();
     inputSplitCache.clear();
 
     return vertexEdgeCount;
@@ -954,7 +968,8 @@ public class BspServiceWorker<I extends WritableComparable,
     // 6. Wait for the master's global stats, and check if done
     long workerSentMessages = 0;
     try {
-      workerSentMessages = commService.flush(getContext());
+      commService.flush();
+      workerSentMessages = commService.resetMessageCount();
     } catch (IOException e) {
       throw new IllegalStateException(
           "finishSuperstep: flush failed", e);
@@ -1310,6 +1325,11 @@ public class BspServiceWorker<I extends WritableComparable,
       }
     }
 
+    try {
+      getGraphMapper().getGraphState().getWorkerCommunications().flush();
+    } catch (IOException e) {
+      throw new IllegalStateException("sendWorkerPartitions: Flush failed", e);
+    }
     String myPartitionExchangeDonePath =
         getPartitionExchangeWorkerPath(
             getApplicationAttempt(), getSuperstep(), getWorkerInfo());
@@ -1410,11 +1430,11 @@ public class BspServiceWorker<I extends WritableComparable,
    *        temporarily stored.
    */
   private void movePartitionsToWorker(
-      ServerInterface<I, V, E, M> commService) {
-    Map<Integer, List<BasicVertex<I, V, E, M>>> inPartitionVertexMap =
+      WorkerServer<I, V, E, M> commService) {
+    Map<Integer, Collection<BasicVertex<I, V, E, M>>> inPartitionVertexMap =
         commService.getInPartitionVertexMap();
     synchronized (inPartitionVertexMap) {
-      for (Entry<Integer, List<BasicVertex<I, V, E, M>>> entry :
+      for (Entry<Integer, Collection<BasicVertex<I, V, E, M>>> entry :
         inPartitionVertexMap.entrySet()) {
         if (getPartitionMap().containsKey(entry.getKey())) {
           throw new IllegalStateException(
@@ -1427,21 +1447,23 @@ public class BspServiceWorker<I extends WritableComparable,
         Partition<I, V, E, M> tmpPartition =
             new Partition<I, V, E, M>(getConfiguration(),
                 entry.getKey());
-        for (BasicVertex<I, V, E, M> vertex : entry.getValue()) {
-          if (tmpPartition.putVertex(vertex) != null) {
-            throw new IllegalStateException(
-                "moveVerticesToWorker: Vertex " + vertex +
-                " already exists!");
+        synchronized (entry.getValue()) {
+          for (BasicVertex<I, V, E, M> vertex : entry.getValue()) {
+            if (tmpPartition.putVertex(vertex) != null) {
+              throw new IllegalStateException(
+                  "moveVerticesToWorker: Vertex " + vertex +
+                  " already exists!");
+            }
           }
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("movePartitionsToWorker: Adding " +
+                entry.getValue().size() +
+                " vertices for partition id " + entry.getKey());
+          }
+          getPartitionMap().put(tmpPartition.getPartitionId(),
+              tmpPartition);
+          entry.getValue().clear();
         }
-        if (LOG.isInfoEnabled()) {
-          LOG.info("moveVerticesToWorker: Adding " +
-              entry.getValue().size() +
-              " vertices for partition id " + entry.getKey());
-        }
-        getPartitionMap().put(tmpPartition.getPartitionId(),
-            tmpPartition);
-        entry.getValue().clear();
       }
       inPartitionVertexMap.clear();
     }

@@ -44,7 +44,7 @@ public class TestJsonBase64Format extends BspCase {
   public TestJsonBase64Format(String testName) {
     super(testName);
   }
-  
+
   public TestJsonBase64Format() {
     super(TestJsonBase64Format.class.getName());
   }

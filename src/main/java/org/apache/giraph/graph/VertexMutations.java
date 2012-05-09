@@ -18,9 +18,14 @@
 
 package org.apache.giraph.graph;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.json.JSONException;
@@ -38,7 +43,8 @@ import org.json.JSONObject;
 @SuppressWarnings("rawtypes")
 public class VertexMutations<I extends WritableComparable,
     V extends Writable, E extends Writable,
-    M extends Writable> implements VertexChanges<I, V, E, M> {
+    M extends Writable> implements VertexChanges<I, V, E, M>,
+    Writable, Configurable {
   /** List of added vertices during the last superstep */
   private final List<BasicVertex<I, V, E, M>> addedVertexList =
       new ArrayList<BasicVertex<I, V, E, M>>();
@@ -48,10 +54,74 @@ public class VertexMutations<I extends WritableComparable,
   private final List<Edge<I, E>> addedEdgeList = new ArrayList<Edge<I, E>>();
   /** List of removed edges */
   private final List<I> removedEdgeList = new ArrayList<I>();
+  /** Configuration */
+  private Configuration conf;
+
+  /**
+   * Copy the vertex mutations.
+   *
+   * @return Copied vertex mutations
+   */
+  public VertexMutations<I, V, E, M> copy() {
+    VertexMutations<I, V, E, M> copied = new VertexMutations<I, V, E, M>();
+    copied.addedVertexList.addAll(this.addedVertexList);
+    copied.removedVertexCount = this.removedVertexCount;
+    copied.addedEdgeList.addAll(this.addedEdgeList);
+    copied.removedEdgeList.addAll(this.removedEdgeList);
+    copied.conf = this.conf;
+    return copied;
+  }
 
   @Override
   public List<BasicVertex<I, V, E, M>> getAddedVertexList() {
     return addedVertexList;
+  }
+
+  @Override
+  public void readFields(DataInput input) throws IOException {
+    addedVertexList.clear();
+    addedEdgeList.clear();
+    removedEdgeList.clear();
+
+    int addedVertexListSize = input.readInt();
+    for (int i = 0; i < addedVertexListSize; ++i) {
+      BasicVertex<I, V, E, M> vertex = BspUtils.createVertex(conf);
+      vertex.readFields(input);
+      addedVertexList.add(vertex);
+    }
+    removedVertexCount = input.readInt();
+    int addedEdgeListSize = input.readInt();
+    for (int i = 0; i < addedEdgeListSize; ++i) {
+      I destVertex = BspUtils.createVertexIndex(conf);
+      destVertex.readFields(input);
+      E edgeValue = BspUtils.createEdgeValue(conf);
+      edgeValue.readFields(input);
+      addedEdgeList.add(new Edge<I, E>(destVertex, edgeValue));
+    }
+    int removedEdgeListSize = input.readInt();
+    for (int i = 0; i < removedEdgeListSize; ++i) {
+      I removedEdge = BspUtils.createVertexIndex(conf);
+      removedEdge.readFields(input);
+      removedEdgeList.add(removedEdge);
+    }
+  }
+
+  @Override
+  public void write(DataOutput output) throws IOException {
+    output.writeInt(addedVertexList.size());
+    for (BasicVertex<I, V, E, M> vertex : addedVertexList) {
+      vertex.write(output);
+    }
+    output.writeInt(removedVertexCount);
+    output.writeInt(addedEdgeList.size());
+    for (Edge<I, E> edge : addedEdgeList) {
+      edge.getDestVertexId().write(output);
+      edge.getEdgeValue().write(output);
+    }
+    output.writeInt(removedEdgeList.size());
+    for (I removedEdge : removedEdgeList) {
+      removedEdge.write(output);
+    }
   }
 
   /**
@@ -103,6 +173,18 @@ public class VertexMutations<I extends WritableComparable,
     removedEdgeList.add(destinationVertexId);
   }
 
+  /**
+   * Add one vertex mutations to another
+   *
+   * @param vertexMutations Object to be added
+   */
+  public void addVertexMutations(VertexMutations<I, V, E, M> vertexMutations) {
+    addedVertexList.addAll(vertexMutations.getAddedVertexList());
+    removedVertexCount += vertexMutations.getRemovedVertexCount();
+    addedEdgeList.addAll(vertexMutations.getAddedEdgeList());
+    removedEdgeList.addAll(vertexMutations.getRemovedEdgeList());
+  }
+
   @Override
   public String toString() {
     JSONObject jsonObject = new JSONObject();
@@ -116,5 +198,15 @@ public class VertexMutations<I extends WritableComparable,
       throw new IllegalStateException("toString: Got a JSON exception",
           e);
     }
+  }
+
+  @Override
+  public Configuration getConf() {
+    return conf;
+  }
+
+  @Override
+  public void setConf(Configuration conf) {
+    this.conf = conf;
   }
 }

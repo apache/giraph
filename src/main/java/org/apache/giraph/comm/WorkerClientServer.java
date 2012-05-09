@@ -18,55 +18,19 @@
 
 package org.apache.giraph.comm;
 
-import java.io.Closeable;
-import java.io.IOException;
-
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.mapreduce.Mapper;
 
 /**
- * Interface for message communication server.
+ * Interface for both the client and the server
  *
  * @param <I> Vertex id
- * @param <V> Vertex value
- * @param <E> Edge value
+ * @param <V> Vertex data
+ * @param <E> Edge data
  * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
-public interface ServerInterface<I extends WritableComparable,
+public interface WorkerClientServer<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
-    extends Closeable, WorkerCommunications<I, V, E, M> {
-  /**
-   *  Setup the server.
-   */
-  void setup();
-
-  /**
-   * Move the in transition messages to the in messages for every vertex and
-   * add new connections to any newly appearing RPC proxies.
-   */
-  void prepareSuperstep();
-
-  /**
-   * Flush all outgoing messages.  This will synchronously ensure that all
-   * messages have been send and delivered prior to returning.
-   *
-   * @param context Context used to signal process
-   * @return Number of messages sent during the last superstep
-   * @throws IOException
-   */
-  long flush(Mapper<?, ?, ?, ?>.Context context) throws IOException;
-
-  /**
-   * Closes all connections.
-   *
-   * @throws IOException
-   */
-  void closeConnections() throws IOException;
-
-  /**
-   * Shuts down.
-   */
-  void close();
+    extends WorkerClient<I, V, E, M>, WorkerServer<I, V, E, M> {
 }

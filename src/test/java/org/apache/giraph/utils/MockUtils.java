@@ -18,7 +18,7 @@
 
 package org.apache.giraph.utils;
 
-import org.apache.giraph.comm.WorkerCommunications;
+import org.apache.giraph.comm.WorkerClientServer;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.BasicVertex;
 import org.apache.hadoop.conf.Configuration;
@@ -47,13 +47,13 @@ public class MockUtils {
         private final GraphState<I, V, E, M> graphState;
         private final Mapper.Context context;
         private final Configuration conf;
-        private final WorkerCommunications communications;
+        private final WorkerClientServer communications;
 
         public MockedEnvironment() {
             graphState = Mockito.mock(GraphState.class);
             context = Mockito.mock(Mapper.Context.class);
             conf = Mockito.mock(Configuration.class);
-            communications = Mockito.mock(WorkerCommunications.class);
+            communications = Mockito.mock(WorkerClientServer.class);
         }
 
         /** the injected graph state */
@@ -72,7 +72,7 @@ public class MockUtils {
         }
 
         /** the injected worker communications */
-        public WorkerCommunications getCommunications() {
+        public WorkerClientServer getCommunications() {
             return communications;
         }
 
