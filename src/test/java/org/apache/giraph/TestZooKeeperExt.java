@@ -18,6 +18,7 @@
 
 package org.apache.giraph;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.util.List;
@@ -52,7 +53,7 @@ public class TestZooKeeperExt implements Watcher {
                 return;
             }
             zooKeeperExt =
-                new ZooKeeperExt(zkList, 30*1000, this);
+                new ZooKeeperExt(zkList, 30 * 1000, this);
             zooKeeperExt.deleteExt(BASE_PATH, -1, true);
         } catch (KeeperException.NoNodeException e) {
             System.out.println("Clean start: No node " + BASE_PATH);
@@ -153,7 +154,7 @@ public class TestZooKeeperExt implements Watcher {
         for (String fullPath : sequenceOrderedList) {
             assertTrue(fullPath.contains(BASE_PATH + "/"));
         }
-        assertTrue(sequenceOrderedList.size() == 4);
+        assertEquals(4, sequenceOrderedList.size());
         assertTrue(sequenceOrderedList.get(0).contains("/b"));
         assertTrue(sequenceOrderedList.get(1).contains("/a"));
         assertTrue(sequenceOrderedList.get(2).contains("/d"));

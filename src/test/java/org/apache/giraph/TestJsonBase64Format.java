@@ -17,6 +17,7 @@
  */
 
 package org.apache.giraph;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -27,6 +28,7 @@ import org.apache.giraph.benchmark.PseudoRandomVertexInputFormat;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.lib.JsonBase64VertexInputFormat;
 import org.apache.giraph.lib.JsonBase64VertexOutputFormat;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
@@ -60,54 +62,43 @@ public class TestJsonBase64Format extends BspCase {
    */
   @Test
   public void testContinue()
-    throws IOException, InterruptedException, ClassNotFoundException {
-    GiraphJob job = new GiraphJob(getCallingMethodName());
-    setupConfiguration(job);
-    job.setVertexClass(PageRankBenchmark.class);
-    job.setVertexInputFormatClass(PseudoRandomVertexInputFormat.class);
-    job.setVertexOutputFormatClass(JsonBase64VertexOutputFormat.class);
+      throws IOException, InterruptedException, ClassNotFoundException {
+
+    Path outputPath = getTempPath(getCallingMethodName());
+    GiraphJob job = prepareJob(getCallingMethodName(), PageRankBenchmark.class,
+        PseudoRandomVertexInputFormat.class,
+        JsonBase64VertexOutputFormat.class, outputPath);
     job.getConfiguration().setLong(
         PseudoRandomVertexInputFormat.AGGREGATE_VERTICES, 101);
     job.getConfiguration().setLong(
         PseudoRandomVertexInputFormat.EDGES_PER_VERTEX, 2);
     job.getConfiguration().setInt(PageRankComputation.SUPERSTEP_COUNT, 2);
-    Path outputPath = new Path("/tmp/" + getCallingMethodName());
-    removeAndSetOutput(job, outputPath);
+
     assertTrue(job.run(true));
 
-    job = new GiraphJob(getCallingMethodName());
-    setupConfiguration(job);
-    job.setVertexClass(PageRankBenchmark.class);
-    job.setVertexInputFormatClass(JsonBase64VertexInputFormat.class);
-    job.setVertexOutputFormatClass(JsonBase64VertexOutputFormat.class);
+    Path outputPath2 = getTempPath(getCallingMethodName() + "2");
+    job = prepareJob(getCallingMethodName(), PageRankBenchmark.class,
+        JsonBase64VertexInputFormat.class, JsonBase64VertexOutputFormat.class,
+        outputPath2);
     job.getConfiguration().setInt(PageRankComputation.SUPERSTEP_COUNT, 3);
     FileInputFormat.setInputPaths(job.getInternalJob(), outputPath);
-    Path outputPath2 = new Path("/tmp/" + getCallingMethodName() + "2");
-    removeAndSetOutput(job, outputPath2);
     assertTrue(job.run(true));
 
-    FileStatus twoJobsFile = null;
-    if (getJobTracker() == null) {
-      twoJobsFile = getSinglePartFileStatus(job, outputPath);
-    }
-
-    job = new GiraphJob(getCallingMethodName());
-    setupConfiguration(job);
-    job.setVertexClass(PageRankBenchmark.class);
-    job.setVertexInputFormatClass(PseudoRandomVertexInputFormat.class);
-    job.setVertexOutputFormatClass(JsonBase64VertexOutputFormat.class);
+    Path outputPath3 = getTempPath(getCallingMethodName() + "3");
+    job = prepareJob(getCallingMethodName(), PageRankBenchmark.class,
+        PseudoRandomVertexInputFormat.class,
+        JsonBase64VertexOutputFormat.class, outputPath3);
     job.getConfiguration().setLong(
         PseudoRandomVertexInputFormat.AGGREGATE_VERTICES, 101);
     job.getConfiguration().setLong(
         PseudoRandomVertexInputFormat.EDGES_PER_VERTEX, 2);
     job.getConfiguration().setInt(PageRankComputation.SUPERSTEP_COUNT, 5);
-    Path outputPath3 = new Path("/tmp/" + getCallingMethodName() + "3");
-    removeAndSetOutput(job, outputPath3);
     assertTrue(job.run(true));
 
-    if (getJobTracker() == null) {
-      FileStatus oneJobFile = getSinglePartFileStatus(job, outputPath3);
-      assertTrue(twoJobsFile.getLen() == oneJobFile.getLen());
-    }
+    Configuration conf = job.getConfiguration();
+
+    assertEquals(101, getNumResults(conf, outputPath));
+    assertEquals(101, getNumResults(conf, outputPath2));
+    assertEquals(101, getNumResults(conf, outputPath3));
   }
 }

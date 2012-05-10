@@ -135,12 +135,9 @@ public class SimplePageRankVertex extends LongDoubleFloatDoubleVertex {
     @Override
     public void preSuperstep() {
 
-      LongSumAggregator sumAggreg =
-          (LongSumAggregator) getAggregator("sum");
-      MinAggregator minAggreg =
-          (MinAggregator) getAggregator("min");
-      MaxAggregator maxAggreg =
-          (MaxAggregator) getAggregator("max");
+      LongSumAggregator sumAggreg = (LongSumAggregator) getAggregator("sum");
+      MinAggregator minAggreg = (MinAggregator) getAggregator("min");
+      MaxAggregator maxAggreg = (MaxAggregator) getAggregator("max");
 
       if (getSuperstep() >= 3) {
         LOG.info("aggregatedNumVertices=" +

@@ -19,7 +19,6 @@
 package org.apache.giraph.utils;
 
 import com.google.common.base.Charsets;
-import com.google.common.io.Closeables;
 import com.google.common.io.Files;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.hadoop.conf.Configuration;
@@ -31,9 +30,7 @@ import org.apache.zookeeper.server.ZooKeeperServerMain;
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig;
 
 import java.io.File;
-import java.io.FileFilter;
 import java.io.IOException;
-import java.io.Writer;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
@@ -99,16 +96,18 @@ public class InternalVertexRunner {
 
     File tmpDir = null;
     try {
-      // prepare input file, output folder and zookeeper folder
-      tmpDir = createTestDir(vertexClass);
-      File inputFile = createTempFile(tmpDir, "graph.txt");
-      File outputDir = createTempDir(tmpDir, "output");
-      File zkDir = createTempDir(tmpDir, "zooKeeper");
+      // Prepare input file, output folder and temporary folders
+      tmpDir = FileUtils.createTestDir(vertexClass);
+      File inputFile = FileUtils.createTempFile(tmpDir, "graph.txt");
+      File outputDir = FileUtils.createTempDir(tmpDir, "output");
+      File zkDir = FileUtils.createTempDir(tmpDir, "_bspZooKeeper");
+      File zkMgrDir = FileUtils.createTempDir(tmpDir, "_defaultZkManagerDir");
+      File checkpointsDir = FileUtils.createTempDir(tmpDir, "_checkpoints");
 
-      // write input data to disk
-      writeLines(inputFile, data);
+      // Write input data to disk
+      FileUtils.writeLines(inputFile, data);
 
-      // create and configure the job to run the vertex
+      // Create and configure the job to run the vertex
       GiraphJob job = new GiraphJob(vertexClass.getName());
       job.setVertexClass(vertexClass);
       job.setVertexInputFormatClass(vertexInputFormatClass);
@@ -125,6 +124,11 @@ public class InternalVertexRunner {
       conf.set(GiraphJob.ZOOKEEPER_LIST, "localhost:" +
           String.valueOf(LOCAL_ZOOKEEPER_PORT));
 
+      conf.set(GiraphJob.ZOOKEEPER_DIR, zkDir.toString());
+      conf.set(GiraphJob.ZOOKEEPER_MANAGER_DIRECTORY,
+          zkMgrDir.toString());
+      conf.set(GiraphJob.CHECKPOINT_DIRECTORY, checkpointsDir.toString());
+
       for (Map.Entry<String, String> param : params.entrySet()) {
         conf.set(param.getKey(), param.getValue());
       }
@@ -134,7 +138,7 @@ public class InternalVertexRunner {
       FileOutputFormat.setOutputPath(job.getInternalJob(),
                                      new Path(outputDir.toString()));
 
-      // configure a local zookeeper instance
+      // Configure a local zookeeper instance
       Properties zkProperties = new Properties();
       zkProperties.setProperty("tickTime", "2000");
       zkProperties.setProperty("dataDir", zkDir.getAbsolutePath());
@@ -150,7 +154,7 @@ public class InternalVertexRunner {
       QuorumPeerConfig qpConfig = new QuorumPeerConfig();
       qpConfig.parseProperties(zkProperties);
 
-      // create and run the zookeeper instance
+      // Create and run the zookeeper instance
       final InternalZooKeeper zookeeper = new InternalZooKeeper();
       final ServerConfig zkConfig = new ServerConfig();
       zkConfig.readFrom(qpConfig);
@@ -176,111 +180,11 @@ public class InternalVertexRunner {
       return Files.readLines(new File(outputDir, "part-m-00000"),
           Charsets.UTF_8);
     } finally {
-      if (tmpDir != null) {
-        new DeletingVisitor().accept(tmpDir);
-      }
+      FileUtils.delete(tmpDir);
     }
   }
 
-  /**
-   * Create a temporary folder that will be removed after the test.
-   *
-   * @param vertexClass Used for generating the folder name.
-   * @return File object for the directory.
-   */
-  private static File createTestDir(Class<?> vertexClass)
-    throws IOException {
-    String systemTmpDir = System.getProperty("java.io.tmpdir");
-    long simpleRandomLong = (long) (Long.MAX_VALUE * Math.random());
-    File testTempDir = new File(systemTmpDir, "giraph-" +
-        vertexClass.getSimpleName() + '-' + simpleRandomLong);
-    if (!testTempDir.mkdir()) {
-      throw new IOException("Could not create " + testTempDir);
-    }
-    testTempDir.deleteOnExit();
-    return testTempDir;
-  }
 
-  /**
-   * Make a temporary file.
-   *
-   * @param parent Parent directory.
-   * @param name File name.
-   * @return File object to temporary file.
-   * @throws IOException
-   */
-  private static File createTempFile(File parent, String name)
-    throws IOException {
-    return createTestTempFileOrDir(parent, name, false);
-  }
-
-  /**
-   * Make a temporary directory.
-   *
-   * @param parent Parent directory.
-   * @param name Directory name.
-   * @return File object to temporary file.
-   * @throws IOException
-   */
-  private static File createTempDir(File parent, String name)
-    throws IOException {
-    File dir = createTestTempFileOrDir(parent, name, true);
-    dir.delete();
-    return dir;
-  }
-
-  /**
-   * Creae a test temp file or directory.
-   *
-   * @param parent Parent directory
-   * @param name Name of file
-   * @param dir Is directory?
-   * @return File object
-   * @throws IOException
-   */
-  private static File createTestTempFileOrDir(File parent, String name,
-      boolean dir) throws IOException {
-    File f = new File(parent, name);
-    f.deleteOnExit();
-    if (dir && !f.mkdirs()) {
-      throw new IOException("Could not make directory " + f);
-    }
-    return f;
-  }
-
-  /**
-   * Write lines to a file.
-   *
-   * @param file File to write lines to
-   * @param lines Strings written to the file
-   * @throws IOException
-   */
-  private static void writeLines(File file, String... lines)
-    throws IOException {
-    Writer writer = Files.newWriter(file, Charsets.UTF_8);
-    try {
-      for (String line : lines) {
-        writer.write(line);
-        writer.write('\n');
-      }
-    } finally {
-      Closeables.closeQuietly(writer);
-    }
-  }
-
-  /**
-   * Deletes files.
-   */
-  private static class DeletingVisitor implements FileFilter {
-    @Override
-    public boolean accept(File f) {
-      if (!f.isFile()) {
-        f.listFiles(this);
-      }
-      f.delete();
-      return false;
-    }
-  }
 
   /**
    * Extension of {@link ZooKeeperServerMain} that allows programmatic shutdown

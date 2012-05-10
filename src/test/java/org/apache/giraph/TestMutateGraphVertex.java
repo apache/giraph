@@ -33,15 +33,7 @@ import org.junit.Test;
  * Unit test for graph mutation
  */
 public class TestMutateGraphVertex extends BspCase {
-    /**
-     * Create the test case
-     *
-     * @param testName name of the test case
-     */
-    public TestMutateGraphVertex(String testName) {
-        super(testName);
-    }
-    
+
     public TestMutateGraphVertex() {
         super(TestMutateGraphVertex.class.getName());
     }
@@ -56,15 +48,12 @@ public class TestMutateGraphVertex extends BspCase {
     @Test
     public void testMutateGraph()
             throws IOException, InterruptedException, ClassNotFoundException {
-        GiraphJob job = new GiraphJob(getCallingMethodName());
-        setupConfiguration(job);
-        job.setVertexClass(SimpleMutateGraphVertex.class);
-        job.setWorkerContextClass(
-            SimpleMutateGraphVertex.SimpleMutateGraphVertexWorkerContext.class);
-        job.setVertexInputFormatClass(SimplePageRankVertexInputFormat.class);
-        job.setVertexOutputFormatClass(SimplePageRankVertexOutputFormat.class);
-        Path outputPath = new Path("/tmp/" + getCallingMethodName());
-        removeAndSetOutput(job, outputPath);
+        GiraphJob job = prepareJob(getCallingMethodName(),
+            SimpleMutateGraphVertex.class,
+            SimpleMutateGraphVertex.SimpleMutateGraphVertexWorkerContext.class,
+            SimplePageRankVertexInputFormat.class,
+            SimplePageRankVertexOutputFormat.class,
+            getTempPath(getCallingMethodName()));
         assertTrue(job.run(true));
     }
 }

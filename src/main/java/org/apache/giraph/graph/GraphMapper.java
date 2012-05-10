@@ -130,8 +130,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
     public void uncaughtException(Thread t, Throwable e) {
       LOG.fatal(
           "uncaughtException: OverrideExceptionHandler on thread " +
-              t.getName() + ", msg = " +  e.getMessage() +
-              ", exiting...", e);
+              t.getName() + ", msg = " +  e.getMessage() + ", exiting...", e);
       System.exit(1);
     }
   }

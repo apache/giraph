@@ -33,15 +33,7 @@ import org.junit.Test;
  * Unit test for not enough map tasks
  */
 public class TestNotEnoughMapTasks extends BspCase {
-    /**
-     * Create the test case
-     *
-     * @param testName name of the test case
-     */
-    public TestNotEnoughMapTasks(String testName) {
-        super(testName);
-    }
-    
+
     public TestNotEnoughMapTasks() {
         super(TestNotEnoughMapTasks.class.getName());
     }
@@ -56,25 +48,23 @@ public class TestNotEnoughMapTasks extends BspCase {
     @Test
     public void testNotEnoughMapTasks()
             throws IOException, InterruptedException, ClassNotFoundException {
-        if (getJobTracker() == null) {
+        if (!runningInDistributedMode()) {
             System.out.println(
                 "testNotEnoughMapTasks: Ignore this test in local mode.");
             return;
         }
-        GiraphJob job = new GiraphJob(getCallingMethodName());
-        setupConfiguration(job);
+        Path outputPath = getTempPath(getCallingMethodName());
+        GiraphJob job = prepareJob(getCallingMethodName(),
+            SimpleCheckpointVertex.class,
+            SimpleSuperstepVertexInputFormat.class,
+            SimpleSuperstepVertexOutputFormat.class, outputPath);
+
         // An unlikely impossible number of workers to achieve
         final int unlikelyWorkers = Short.MAX_VALUE;
-        job.setWorkerConfiguration(
-            unlikelyWorkers, unlikelyWorkers, 100.0f);
+        job.setWorkerConfiguration(unlikelyWorkers, unlikelyWorkers, 100.0f);
         // Only one poll attempt of one second to make failure faster
         job.getConfiguration().setInt(GiraphJob.POLL_ATTEMPTS, 1);
         job.getConfiguration().setInt(GiraphJob.POLL_MSECS, 1);
-        job.setVertexClass(SimpleCheckpointVertex.class);
-        job.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
-        job.setVertexOutputFormatClass(SimpleSuperstepVertexOutputFormat.class);
-        Path outputPath = new Path("/tmp/" + getCallingMethodName());
-        removeAndSetOutput(job, outputPath);
         assertFalse(job.run(false));
     }
 }

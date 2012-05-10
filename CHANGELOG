@@ -2,6 +2,8 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-20. Move temporary test files from the project directory. (ssc)
+
   GIRAPH-37. Implement Netty-backed IPC. (aching)
 
   GIRAPH-184. Upgrade to junit4. (Devaraj K via jghoman)

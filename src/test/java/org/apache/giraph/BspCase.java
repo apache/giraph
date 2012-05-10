@@ -18,20 +18,24 @@
 
 package org.apache.giraph;
 
-import java.io.FileNotFoundException;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.List;
 
+import com.google.common.base.Charsets;
+import com.google.common.base.Preconditions;
+import com.google.common.io.Closeables;
 import org.apache.giraph.examples.GeneratedVertexReader;
 import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.utils.FileUtils;
 import org.apache.giraph.zk.ZooKeeperExt;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.*;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
+import org.junit.After;
 import org.junit.Before;
 
 /**
@@ -50,39 +54,142 @@ public class BspCase implements Watcher {
   private final String zkList = System.getProperty("prop.zookeeper.list");
   private String testName;
 
+  /** Default path for temporary files */
+  static final Path DEFAULT_TEMP_DIR =
+      new Path(System.getProperty("java.io.tmpdir"), "_giraphTests");
+
+  /** A filter for listing parts files */
+  static final PathFilter PARTS_FILTER = new PathFilter() {
+    @Override
+    public boolean accept(Path path) {
+      return path.getName().startsWith("part-");
+    }
+  };
+
   /**
    * Adjust the configuration to the basic test case
    */
-  public final void setupConfiguration(GiraphJob job) {
+  public final Configuration setupConfiguration(GiraphJob job)
+      throws IOException {
     Configuration conf = job.getConfiguration();
     conf.set("mapred.jar", getJarLocation());
 
     // Allow this test to be run on a real Hadoop setup
-    if (getJobTracker() != null) {
+    if (runningInDistributedMode()) {
       System.out.println("setup: Sending job to job tracker " +
-          getJobTracker() + " with jar path " + getJarLocation()
+          jobTracker + " with jar path " + getJarLocation()
           + " for " + getName());
-      conf.set("mapred.job.tracker", getJobTracker());
-      job.setWorkerConfiguration(getNumWorkers(),
-          getNumWorkers(),
-          100.0f);
+      conf.set("mapred.job.tracker", jobTracker);
+      job.setWorkerConfiguration(getNumWorkers(), getNumWorkers(), 100.0f);
     }
     else {
       System.out.println("setup: Using local job runner with " +
-          "location " + getJarLocation() + " for "
-          + getName());
+          "location " + getJarLocation() + " for " + getName());
       job.setWorkerConfiguration(1, 1, 100.0f);
       // Single node testing
       conf.setBoolean(GiraphJob.SPLIT_MASTER_WORKER, false);
     }
     conf.setInt(GiraphJob.POLL_ATTEMPTS, 10);
-    conf.setInt(GiraphJob.POLL_MSECS, 3*1000);
+    conf.setInt(GiraphJob.POLL_MSECS, 3 * 1000);
     conf.setInt(GiraphJob.ZOOKEEPER_SERVERLIST_POLL_MSECS, 500);
     if (getZooKeeperList() != null) {
       job.setZooKeeperConfiguration(getZooKeeperList());
     }
     // GeneratedInputSplit will generate 5 vertices
     conf.setLong(GeneratedVertexReader.READER_VERTICES, 5);
+
+    // Setup pathes for temporary files
+    Path zookeeperDir = getTempPath("_bspZooKeeper");
+    Path zkManagerDir = getTempPath("_defaultZkManagerDir");
+    Path checkPointDir = getTempPath("_checkpoints");
+
+    // We might start several jobs per test, so we need to clean up here
+    FileUtils.deletePath(conf, zookeeperDir);
+    FileUtils.deletePath(conf, zkManagerDir);
+    FileUtils.deletePath(conf, checkPointDir);
+
+    conf.set(GiraphJob.ZOOKEEPER_DIR, zookeeperDir.toString());
+    conf.set(GiraphJob.ZOOKEEPER_MANAGER_DIRECTORY,
+        zkManagerDir.toString());
+    conf.set(GiraphJob.CHECKPOINT_DIRECTORY, checkPointDir.toString());
+
+    return conf;
+  }
+
+  /**
+   * Create a temporary path
+   *
+   * @param name  name of the file to create in the temporary folder
+   * @return  newly created temporary path
+   */
+  protected Path getTempPath(String name) {
+    return new Path(DEFAULT_TEMP_DIR, name);
+  }
+
+  /**
+   * Prepare a GiraphJob for test purposes
+   *
+   * @param name  identifying name for the job
+   * @param vertexClass class of the vertex to run
+   * @param vertexInputFormatClass  inputformat to use
+   * @return  fully configured job instance
+   * @throws IOException
+   */
+  protected GiraphJob prepareJob(String name, Class<?> vertexClass,
+      Class<?> vertexInputFormatClass) throws IOException {
+    return prepareJob(name, vertexClass, vertexInputFormatClass, null,
+        null);
+  }
+
+  /**
+   * Prepare a GiraphJob for test purposes
+   *
+   * @param name  identifying name for the job
+   * @param vertexClass class of the vertex to run
+   * @param vertexInputFormatClass  inputformat to use
+   * @param vertexOutputFormatClass outputformat to use
+   * @param outputPath  destination path for the output
+   * @return  fully configured job instance
+   * @throws IOException
+   */
+  protected GiraphJob prepareJob(String name, Class<?> vertexClass,
+      Class<?> vertexInputFormatClass, Class<?> vertexOutputFormatClass,
+      Path outputPath) throws IOException {
+    return prepareJob(name, vertexClass, null, vertexInputFormatClass,
+        vertexOutputFormatClass, outputPath);
+  }
+
+  /**
+   * Prepare a GiraphJob for test purposes
+   *
+   * @param name  identifying name for the job
+   * @param vertexClass class of the vertex to run
+   * @param workerContextClass class of the workercontext to use
+   * @param vertexInputFormatClass  inputformat to use
+   * @param vertexOutputFormatClass outputformat to use
+   * @param outputPath  destination path for the output
+   * @return  fully configured job instance
+   * @throws IOException
+   */
+  protected GiraphJob prepareJob(String name, Class<?> vertexClass,
+      Class<?> workerContextClass, Class<?> vertexInputFormatClass,
+      Class<?> vertexOutputFormatClass, Path outputPath) throws IOException {
+    GiraphJob job = new GiraphJob(name);
+    setupConfiguration(job);
+    job.setVertexClass(vertexClass);
+    job.setVertexInputFormatClass(vertexInputFormatClass);
+
+    if (workerContextClass != null) {
+      job.setWorkerContextClass(workerContextClass);
+    }
+    if (vertexOutputFormatClass != null) {
+      job.setVertexOutputFormatClass(vertexOutputFormatClass);
+    }
+    if (outputPath != null) {
+      removeAndSetOutput(job, outputPath);
+    }
+
+    return job;
   }
 
   private String getName() {
@@ -102,7 +209,7 @@ public class BspCase implements Watcher {
   /**
    * Get the number of workers used in the BSP application
    *
-   * @param numProcs number of processes to use
+   * @return number of workers
    */
   public int getNumWorkers() {
     return numWorkers;
@@ -125,29 +232,28 @@ public class BspCase implements Watcher {
   }
 
   /**
-   * Get the job tracker location
+   *  Are the tests executed on a real hadoop instance?
    *
-   * @return job tracker location as a string
+   *  @return whether we use a real hadoop instance or not
    */
-  String getJobTracker() {
-    return jobTracker;
+  boolean runningInDistributedMode() {
+    return jobTracker != null;
   }
 
   /**
    * Get the single part file status and make sure there is only one part
    *
-   * @param job Job to get the file system from
+   * @param conf Configuration to get the file system from
    * @param partDirPath Directory where the single part file should exist
    * @return Single part file status
    * @throws IOException
    */
-  public static FileStatus getSinglePartFileStatus(GiraphJob job,
+  public static FileStatus getSinglePartFileStatus(Configuration conf,
       Path partDirPath) throws IOException {
-    FileSystem fs = FileSystem.get(job.getConfiguration());
-    FileStatus[] statusArray = fs.listStatus(partDirPath);
+    FileSystem fs = FileSystem.get(conf);
     FileStatus singlePartFileStatus = null;
     int partFiles = 0;
-    for (FileStatus fileStatus : statusArray) {
+    for (FileStatus fileStatus : fs.listStatus(partDirPath)) {
       if (fileStatus.getPath().getName().equals("part-m-00000")) {
         singlePartFileStatus = fileStatus;
       }
@@ -155,46 +261,58 @@ public class BspCase implements Watcher {
         ++partFiles;
       }
     }
-    if (partFiles != 1) {
-      throw new ArithmeticException(
-          "getSinglePartFile: Part file count should be 1, but is " +
-              partFiles);
-    }
+
+    Preconditions.checkState(partFiles == 1, "getSinglePartFile: Part file " +
+        "count should be 1, but is " + partFiles);
+
     return singlePartFileStatus;
+  }
+
+  /**
+   * Read all parts- files in the output and count their lines. This works only for textual output!
+   *
+   * @param conf
+   * @param outputPath
+   * @return
+   * @throws IOException
+   */
+  public int getNumResults(Configuration conf, Path outputPath)
+      throws IOException {
+    FileSystem fs = FileSystem.get(conf);
+    int numResults = 0;
+    for (FileStatus status : fs.listStatus(outputPath, PARTS_FILTER)) {
+      FSDataInputStream in = null;
+      BufferedReader reader = null;
+      try {
+        in = fs.open(status.getPath());
+        reader = new BufferedReader(new InputStreamReader(in, Charsets.UTF_8));
+        while (reader.readLine() != null) {
+          numResults++;
+        }
+      } finally {
+        Closeables.closeQuietly(in);
+        Closeables.closeQuietly(reader);
+      }
+    }
+    return numResults;
   }
 
   @Before
   public void setUp() {
-    if (jobTracker != null) {
+    if (runningInDistributedMode()) {
       System.out.println("Setting tasks to 3 for " + getName() +
           " since JobTracker exists...");
       numWorkers = 3;
     }
     try {
-      Configuration conf = new Configuration();
-      FileSystem hdfs = FileSystem.get(conf);
-      // Since local jobs always use the same paths, remove them
-      Path oldLocalJobPaths = new Path(
-          GiraphJob.ZOOKEEPER_MANAGER_DIR_DEFAULT);
-      FileStatus[] fileStatusArr;
-      try {
-        fileStatusArr = hdfs.listStatus(oldLocalJobPaths);
-        for (FileStatus fileStatus : fileStatusArr) {
-          if (fileStatus.isDir() &&
-              fileStatus.getPath().getName().contains("job_local")) {
-            System.out.println("Cleaning up local job path " +
-                fileStatus.getPath().getName());
-            hdfs.delete(oldLocalJobPaths, true);
-          }
-        }
-      } catch (FileNotFoundException e) {
-        // ignore this FileNotFound exception and continue.
-      }
+
+      cleanupTemporaryFiles();
+
       if (zkList == null) {
         return;
       }
       ZooKeeperExt zooKeeperExt =
-          new ZooKeeperExt(zkList, 30*1000, this);
+          new ZooKeeperExt(zkList, 30 * 1000, this);
       List<String> rootChildren = zooKeeperExt.getChildren("/", false);
       for (String rootChild : rootChildren) {
         if (rootChild.startsWith("_hadoopBsp")) {
@@ -216,6 +334,18 @@ public class BspCase implements Watcher {
     }
   }
 
+  @After
+  public void tearDown() throws IOException {
+    cleanupTemporaryFiles();
+  }
+
+  /**
+   * Remove temporary files
+   */
+  private void cleanupTemporaryFiles() throws IOException {
+    FileUtils.deletePath(new Configuration(), DEFAULT_TEMP_DIR);
+  }
+
   @Override
   public void process(WatchedEvent event) {
     // Do nothing
@@ -227,26 +357,13 @@ public class BspCase implements Watcher {
    * FileOutputFormat.
    *
    * @param job Job to set the output path for
-   * @param outputPathString Path to output as a string
+   * @param outputPath Path to output
    * @throws IOException
    */
   public static void removeAndSetOutput(GiraphJob job,
       Path outputPath) throws IOException {
-    remove(job.getConfiguration(), outputPath);
+    FileUtils.deletePath(job.getConfiguration(), outputPath);
     FileOutputFormat.setOutputPath(job.getInternalJob(), outputPath);
-  }
-
-  /**
-   * Helper method to remove a path if it exists.
-   *
-   * @param conf Configuration to load FileSystem from
-   * @param path Path to remove
-   * @throws IOException
-   */
-  public static void remove(Configuration conf, Path path)
-      throws IOException {
-    FileSystem hdfs = FileSystem.get(conf);
-    hdfs.delete(path, true);
   }
 
   public static String getCallingMethodName() {

@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import com.google.common.base.Charsets;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -42,6 +43,8 @@ public class TextAggregatorWriter implements AggregatorWriter {
   public static final int NEVER = 0;
   /** Signal for "write only the final values" frequency */
   public static final int AT_THE_END = -1;
+  /** Signal for "write values in every superstep" frequency */
+  public static final int ALWAYS = -1;
   /** The frequency of writing:
    *  - NEVER: never write, files aren't created at all
    *  - AT_THE_END: aggregators are written only when the computation is over
@@ -78,11 +81,10 @@ public class TextAggregatorWriter implements AggregatorWriter {
       Map<String, Aggregator<Writable>> aggregators,
       long superstep) throws IOException {
     if (shouldWrite(superstep)) {
-      for (Entry<String, Aggregator<Writable>> a:
-        aggregators.entrySet()) {
-        output.writeUTF(aggregatorToString(a.getKey(),
-            a.getValue(),
-            superstep));
+      for (Entry<String, Aggregator<Writable>> a: aggregators.entrySet()) {
+        byte[] bytes = aggregatorToString(a.getKey(), a.getValue(), superstep)
+            .getBytes(Charsets.UTF_8);
+        output.write(bytes, 0, bytes.length);
       }
       output.flush();
     }

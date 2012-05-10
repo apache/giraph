@@ -26,6 +26,7 @@ import org.apache.giraph.examples.SimpleCheckpointVertex;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexOutputFormat;
 import org.apache.giraph.graph.GiraphJob;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.junit.Test;
 
@@ -33,19 +34,6 @@ import org.junit.Test;
  * Unit test for automated checkpoint restarting
  */
 public class TestAutoCheckpoint extends BspCase {
-  /** Where the checkpoints will be stored and restarted */
-  private final String HDFS_CHECKPOINT_DIR =
-      "/tmp/testBspCheckpoints";
-
-  /**
-   * Create the test case
-   *
-   * @param testName name of the test case
-   */
-  public TestAutoCheckpoint(String testName) {
-    super(testName);
-  }
-
 
   public TestAutoCheckpoint() {
     super(TestAutoCheckpoint.class.getName());
@@ -62,31 +50,30 @@ public class TestAutoCheckpoint extends BspCase {
   @Test
   public void testSingleFault()
     throws IOException, InterruptedException, ClassNotFoundException {
-    if (getJobTracker() == null) {
+    if (!runningInDistributedMode()) {
       System.out.println(
           "testSingleFault: Ignore this test in local mode.");
       return;
     }
-    GiraphJob job = new GiraphJob(getCallingMethodName());
-    setupConfiguration(job);
-    job.getConfiguration().setBoolean(SimpleCheckpointVertex.ENABLE_FAULT,
-        true);
-    job.getConfiguration().setInt("mapred.map.max.attempts", 4);
+    Path outputPath = getTempPath(getCallingMethodName());
+    GiraphJob job = prepareJob(getCallingMethodName(),
+        SimpleCheckpointVertex.class,
+        SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.class,
+        SimpleSuperstepVertexInputFormat.class,
+        SimpleSuperstepVertexOutputFormat.class,
+        outputPath);
+
+    Configuration conf = job.getConfiguration();
+    conf.setBoolean(SimpleCheckpointVertex.ENABLE_FAULT, true);
+    conf.setInt("mapred.map.max.attempts", 4);
     // Trigger failure faster
-    job.getConfiguration().setInt("mapred.task.timeout", 30000);
-    job.getConfiguration().setInt(GiraphJob.POLL_MSECS, 5000);
-    job.getConfiguration().setInt(GiraphJob.CHECKPOINT_FREQUENCY, 2);
-    job.getConfiguration().set(GiraphJob.CHECKPOINT_DIRECTORY,
-        HDFS_CHECKPOINT_DIR);
-    job.getConfiguration().setBoolean(
-        GiraphJob.CLEANUP_CHECKPOINTS_AFTER_SUCCESS, false);
-    job.setVertexClass(SimpleCheckpointVertex.class);
-    job.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
-    job.setVertexOutputFormatClass(SimpleSuperstepVertexOutputFormat.class);
-    job.setWorkerContextClass(
-        SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.class);
-    Path outputPath = new Path("/tmp/" + getCallingMethodName());
-    removeAndSetOutput(job, outputPath);
+    conf.setInt("mapred.task.timeout", 30000);
+    conf.setInt(GiraphJob.POLL_MSECS, 5000);
+    conf.setInt(GiraphJob.CHECKPOINT_FREQUENCY, 2);
+    conf.set(GiraphJob.CHECKPOINT_DIRECTORY,
+        getTempPath("_singleFaultCheckpoints").toString());
+    conf.setBoolean(GiraphJob.CLEANUP_CHECKPOINTS_AFTER_SUCCESS, false);
+
     assertTrue(job.run(true));
   }
 }

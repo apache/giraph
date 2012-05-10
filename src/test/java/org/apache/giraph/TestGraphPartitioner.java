@@ -18,6 +18,7 @@
 
 package org.apache.giraph;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -39,17 +40,24 @@ import org.junit.Test;
  * Unit test for manual checkpoint restarting
  */
 public class TestGraphPartitioner extends BspCase {
-    /**
-     * Create the test case
-     *
-     * @param testName name of the test case
-     */
-    public TestGraphPartitioner(String testName) {
-        super(testName);
-    }
-    
+
     public TestGraphPartitioner() {
         super(TestGraphPartitioner.class.getName());
+    }
+
+    private void verifyOutput(FileSystem fs, Path outputPath)
+        throws IOException {
+      final int correctLen = 123;
+      if (runningInDistributedMode()) {
+        FileStatus [] fileStatusArr = fs.listStatus(outputPath);
+        int totalLen = 0;
+        for (FileStatus fileStatus : fileStatusArr) {
+          if (fileStatus.getPath().toString().contains("/part-m-")) {
+            totalLen += fileStatus.getLen();
+          }
+        }
+        assertEquals(correctLen, totalLen);
+      }
     }
 
     /**
@@ -63,76 +71,43 @@ public class TestGraphPartitioner extends BspCase {
     @Test
     public void testPartitioners()
             throws IOException, InterruptedException, ClassNotFoundException {
-        final int correctLen = 123;
 
-        GiraphJob job = new GiraphJob("testVertexBalancer");
-        setupConfiguration(job);
-        job.setVertexClass(SimpleCheckpointVertex.class);
-        job.setWorkerContextClass(
-            SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.class);
-        job.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
-        job.setVertexOutputFormatClass(SimpleSuperstepVertexOutputFormat.class);
+        Path outputPath = getTempPath("testVertexBalancer");
+        GiraphJob job = prepareJob("testVertexBalancer",
+            SimpleCheckpointVertex.class,
+            SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.class,
+            SimpleSuperstepVertexInputFormat.class,
+            SimpleSuperstepVertexOutputFormat.class, outputPath);
+
         job.getConfiguration().set(
             PartitionBalancer.PARTITION_BALANCE_ALGORITHM,
             PartitionBalancer.VERTICES_BALANCE_ALGORITHM);
-        Path outputPath = new Path("/tmp/testVertexBalancer");
-        removeAndSetOutput(job, outputPath);
+
         assertTrue(job.run(true));
         FileSystem hdfs = FileSystem.get(job.getConfiguration());
-        if (getJobTracker() != null) {
-            FileStatus [] fileStatusArr = hdfs.listStatus(outputPath);
-            int totalLen = 0;
-            for (FileStatus fileStatus : fileStatusArr) {
-                if (fileStatus.getPath().toString().contains("/part-m-")) {
-                    totalLen += fileStatus.getLen();
-                }
-            }
-            assertTrue(totalLen == correctLen);
-        }
 
-        job = new GiraphJob("testHashPartitioner");
-        setupConfiguration(job);
-        job.setVertexClass(SimpleCheckpointVertex.class);
-        job.setWorkerContextClass(
-            SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.class);
-        job.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
-        job.setVertexOutputFormatClass(SimpleSuperstepVertexOutputFormat.class);
-        outputPath = new Path("/tmp/testHashPartitioner");
-        removeAndSetOutput(job, outputPath);
+
+        outputPath = getTempPath("testHashPartitioner");
+        job = prepareJob("testHashPartitioner", SimpleCheckpointVertex.class,
+            SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.class,
+            SimpleSuperstepVertexInputFormat.class,
+            SimpleSuperstepVertexOutputFormat.class, outputPath);
         assertTrue(job.run(true));
-        if (getJobTracker() != null) {
-            FileStatus [] fileStatusArr = hdfs.listStatus(outputPath);
-            int totalLen = 0;
-            for (FileStatus fileStatus : fileStatusArr) {
-                if (fileStatus.getPath().toString().contains("/part-m-")) {
-                    totalLen += fileStatus.getLen();
-                }
-            }
-            assertTrue(totalLen == correctLen);
-        }
+        verifyOutput(hdfs, outputPath);
 
-        job = new GiraphJob("testSuperstepHashPartitioner");
-        setupConfiguration(job);
-        job.setVertexClass(SimpleCheckpointVertex.class);
-        job.setWorkerContextClass(
-            SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.class);
-        job.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
-        job.setVertexOutputFormatClass(SimpleSuperstepVertexOutputFormat.class);
+        outputPath = getTempPath("testSuperstepHashPartitioner");
+        job = prepareJob("testSuperstepHashPartitioner",
+            SimpleCheckpointVertex.class,
+            SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.class,
+            SimpleSuperstepVertexInputFormat.class,
+            SimpleSuperstepVertexOutputFormat.class,
+            outputPath);
+
         job.setGraphPartitionerFactoryClass(
             SuperstepHashPartitionerFactory.class);
-        outputPath = new Path("/tmp/testSuperstepHashPartitioner");
-        removeAndSetOutput(job, outputPath);
+
         assertTrue(job.run(true));
-        if (getJobTracker() != null) {
-            FileStatus [] fileStatusArr = hdfs.listStatus(outputPath);
-            int totalLen = 0;
-            for (FileStatus fileStatus : fileStatusArr) {
-                if (fileStatus.getPath().toString().contains("/part-m-")) {
-                    totalLen += fileStatus.getLen();
-                }
-            }
-            assertTrue(totalLen == correctLen);
-        }
+        verifyOutput(hdfs, outputPath);
 
         job = new GiraphJob("testHashRangePartitioner");
         setupConfiguration(job);
@@ -146,41 +121,19 @@ public class TestGraphPartitioner extends BspCase {
         outputPath = new Path("/tmp/testHashRangePartitioner");
         removeAndSetOutput(job, outputPath);
         assertTrue(job.run(true));
-        if (getJobTracker() != null) {
-            FileStatus [] fileStatusArr = hdfs.listStatus(outputPath);
-            int totalLen = 0;
-            for (FileStatus fileStatus : fileStatusArr) {
-                if (fileStatus.getPath().toString().contains("/part-m-")) {
-                    totalLen += fileStatus.getLen();
-                }
-            }
-            assertTrue(totalLen == correctLen);
-        }
+        verifyOutput(hdfs, outputPath);
 
-        job = new GiraphJob("testReverseIdSuperstepHashPartitioner");
-        setupConfiguration(job);
-        job.setVertexClass(SimpleCheckpointVertex.class);
-        job.setWorkerContextClass(
-            SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.class);
-        job.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
-        job.setVertexOutputFormatClass(SimpleSuperstepVertexOutputFormat.class);
+        outputPath = getTempPath("testReverseIdSuperstepHashPartitioner");
+        job = prepareJob("testReverseIdSuperstepHashPartitioner",
+            SimpleCheckpointVertex.class,
+            SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.class,
+            SimpleSuperstepVertexInputFormat.class,
+            SimpleSuperstepVertexOutputFormat.class, outputPath);
         job.setGraphPartitionerFactoryClass(
             SuperstepHashPartitionerFactory.class);
         job.getConfiguration().setBoolean(
-            GeneratedVertexReader.REVERSE_ID_ORDER,
-            true);
-        outputPath = new Path("/tmp/testReverseIdSuperstepHashPartitioner");
-        removeAndSetOutput(job, outputPath);
+            GeneratedVertexReader.REVERSE_ID_ORDER, true);
         assertTrue(job.run(true));
-        if (getJobTracker() != null) {
-            FileStatus [] fileStatusArr = hdfs.listStatus(outputPath);
-            int totalLen = 0;
-            for (FileStatus fileStatus : fileStatusArr) {
-                if (fileStatus.getPath().toString().contains("/part-m-")) {
-                    totalLen += fileStatus.getLen();
-                }
-            }
-            assertTrue(totalLen == correctLen);
-        }
+        verifyOutput(hdfs, outputPath);
     }
 }
