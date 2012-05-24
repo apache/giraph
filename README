@@ -1,0 +1,132 @@
+Giraph : Large-scale graph processing on Hadoop
+
+Web and online social graphs have been rapidly growing in size and
+scale during the past decade.  In 2008, Google estimated that the
+number of web pages reached over a trillion.  Online social networking
+and email sites, including Yahoo!, Google, Microsoft, Facebook,
+LinkedIn, and Twitter, have hundreds of millions of users and are
+expected to grow much more in the future.  Processing these graphs
+plays a big role in relevant and personalized information for users,
+such as results from a search engine or news in an online social
+networking site.
+
+Graph processing platforms to run large-scale algorithms (such as page
+rank, shared connections, personalization-based popularity, etc.) have
+become quite popular.  Some recent examples include Pregel and HaLoop.
+For general-purpose big data computation, the map-reduce computing
+model has been well adopted and the most deployed map-reduce
+infrastructure is Apache Hadoop.  We have implemented a
+graph-processing framework that is launched as a typical Hadoop job to
+leverage existing Hadoop infrastructure, such as Amazon’s EC2.  Giraph
+builds upon the graph-oriented nature of Pregel but additionally adds
+fault-tolerance to the coordinator process with the use of ZooKeeper
+as its centralized coordination service.
+
+Giraph follows the bulk-synchronous parallel model relative to graphs
+where vertices can send messages to other vertices during a given
+superstep.  Checkpoints are initiated by the Giraph infrastructure at
+user-defined intervals and are used for automatic application restarts
+when any worker in the application fails.  Any worker in the
+application can act as the application coordinator and one will
+automatically take over if the current application coordinator fails.
+
+-------------------------------
+
+Hadoop versions for use with Giraph:
+
+Secure Hadoop versions:
+- Apache Hadoop 0.20.203, 0.20.204, other secure versions may work as well
+-- Other versions reported working include:
+---  Cloudera CDH3u0, CDH3u1
+
+Unsecure Hadoop versions:
+- Apache Hadoop 0.20.1, 0.20.2, 0.20.3
+
+Facebook Hadoop release (https://github.com/facebook/hadoop-20-warehouse):
+- GitHub master
+
+While we provide support for the unsecure and Facebook versions of Hadoop
+with the maven profiles 'hadoop_non_secure' and 'hadoop_facebook',
+respectively, we have been primarily focusing on secure Hadoop releases
+at this time.
+
+-------------------------------
+
+Building and testing:
+
+You will need the following:
+- Java 1.6
+- Maven 3 or higher. Giraph uses the munge plugin 
+  (http://sonatype.github.com/munge-maven-plugin/),
+  which requires Maven 3, to support multiple versions of Hadoop. Also, the
+  web site plugin requires Maven 3.
+
+Use the maven commands with secure Hadoop to:
+- compile (i.e mvn compile)
+- package (i.e. mvn package)
+- test (i.e. mvn test)
+
+For the non-secure versions of Hadoop, run the maven commands with the
+additional argument '-Dhadoop=non_secure' to enable the maven profile
+'hadoop_non_secure'.  An example compilation command is
+'mvn -Dhadoop=non_secure compile'.
+
+For the Facebook Hadoop release, run the maven commands with the
+additional arguments '-Dhadoop=facebook' to enable the maven profile
+'hadoop_facebook' as well as a location for the hadoop core jar file.  An
+example compilation command is 'mvn -Dhadoop=facebook
+-Dhadoop.jar.path=/tmp/hadoop-0.20.1-core.jar compile'.
+
+
+How to run the unittests on a local pseudo-distributed Hadoop instance:
+
+As mentioned earlier, Giraph supports several versions of Hadoop.  In
+this section, we describe how to run the Giraph unittests against a single
+node instance of Apache Hadoop 0.20.203.
+
+Download Apache Hadoop 0.20.203 (hadoop-0.20.203.0/hadoop-0.20.203.0rc1.tar.gz)
+from a mirror picked at http://www.apache.org/dyn/closer.cgi/hadoop/common/
+and unpack it into a local directory
+
+Follow the guide at 
+http://hadoop.apache.org/common/docs/r0.20.2/quickstart.html#PseudoDistributed
+to setup a pseudo-distributed single node Hadoop cluster.
+
+Giraph’s code assumes that you can run at least 4 mappers at once, 
+unfortunately the default configuration allows only 2. Therefore you need 
+to update conf/mapred-site.xml:
+
+<property>
+  <name>mapred.tasktracker.map.tasks.maximum</name>
+  <value>4</value>
+</property>
+
+<property>
+  <name>mapred.map.tasks</name>
+  <value>4</value>
+</property>
+
+After preparing the local filesystem with:
+
+rm -rf /tmp/hadoop-<username>
+/path/to/hadoop/bin/hadoop namenode -format
+
+you can start the local hadoop instance:
+
+/path/to/hadoop/bin/start-all.sh
+
+and finally run Giraph’s unittests:
+
+mvn clean test -Dprop.mapred.job.tracker=localhost:9001
+
+Now you can open a browser, point it to http://localhost:50030 and watch the
+Giraph jobs from the unittests running on your local Hadoop instance!
+
+
+Notes: 
+Counter limit: In Hadoop 0.20.203.0 onwards, there is a limit on the number of
+counters one can use, which is set to 120 by default. This limit restricts the
+number of iterations/supersteps possible in Giraph. This limit can be increased
+by setting a parameter "mapreduce.job.counters.limit" in job tracker's config
+file mapred-site.xml.
+

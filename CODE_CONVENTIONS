@@ -1,0 +1,96 @@
+This codebase follows the Oracle "Code Conventions for the Java
+Programming Language".  See the following link:
+
+http://www.oracle.com/technetwork/java/codeconvtoc-136057.html
+
+In addition, this project has several rules that are more specific:
+
+- No line should use more than 79 characters
+- No tabs, only spaces
+- All indents should be 2 spaces (or 4 when there is confusion)
+
+if (<short expression>) {
+  return true;
+}
+
+if (<very, very, very long expression that continues and wraps around this
+    line, use 4 spaces on this following line>) {
+  return true;
+}
+
+- Given there are many generic types, there will be long class definitions.
+  Wrap the line as follows:
+
+public class BspServiceMaster<I extends WritableComparable, V extends Writable,
+    E extends Writable, M extends Writable> extends BspService<I, V, E, M>
+    implements CentralizedServiceMaster<I, V, E, M> {
+  /** Class logger */
+  private static final Logger LOG = Logger.getLogger(BspServiceMaster.class);
+}
+
+- All while/if/else must have brackets, even if there there is only a one
+  line statement following.  'else' and 'else if' are expected to line up
+  with the '}'.  For example:
+
+if (condition) {
+  statement;
+}
+
+if (condition) {
+  statement;
+} else {
+  statement;
+}
+
+- Any use of LOG should be enclosed with an is*Enabled() method.  For example:
+
+if (LOG.isInfoEnabled()) {
+  LOG.info("something happened");
+}
+
+- All classes, members, and member methods should have Javadoc in the following
+  style.  C-style comments for javadoc and // comments for non-javadoc.  Also,
+  the comment block should have a line break that separates the comment
+  section and the @ section.  See below.
+
+/**
+ * This is an example class
+ */
+public class Giraffe {
+  /** Number of spots on my giraffe */
+  private int spots;
+  /**
+   * Example horribly long comment that wraps around the line.  If it is very,
+   * very, very long.
+   */
+  private int feet;
+
+  /**
+   * How many seconds to travel a number of steps
+   *
+   * @param steps Steps to travel
+   * @param stepsPerSec Steps a giraffe travels every second
+   * @return Number of seconds
+   */
+  public static int secToTravel(int steps, int stepsPerSec) {
+    // Simple formula to get time to travel
+    return steps / stepsPerSec;
+  }
+}
+
+- When using synchronized statements, there should not be a space between
+  'synchronized' and '('.  For example:
+
+public foo() {
+  synchronized(bar) {
+  }
+}
+
+- Class members should not begin with 'm_' or '_'
+- No warnings allowed, but be as specific as possible with warning suppression
+- Prefer to avoid abbreviations when reasonable (i.e. 'msg' vs 'message')
+- Static variable names should be entirely capitalized and seperated by '_'
+  (i.e. private static int FOO_BAR_BAR = 2)
+- Non-static variable and method names should not begin capitalized and should only use
+  alphanumeric characters (i.e. int fooBarBar)
+- All classnames begin capitalized then use lower casing (i.e. class FooBarBar)

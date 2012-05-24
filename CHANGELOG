@@ -1,0 +1,208 @@
+Giraph Change Log
+
+Release 0.1.0 - 2012-01-31 
+
+  GIRAPH-135: Need DISCLAIMER for incubator. (jghoman) 
+
+  GIRAPH-134: Fix NOTICE file for release. (jghoman)
+
+  GIRAPH-128: RPC port from BasicRPCCommunications should be only a
+  starting port, and retried. (aching)
+
+  GIRAPH-131: Enable creation of test-jars to simplify testing in 
+  downstream projects. (André Kelpe via jghoman)
+  
+  GIRAPH-129: Enable creation of javadoc and sources jars.
+  (André Kelpe via jghoman)
+  
+  GIRAPH-124: Combiner should return Iterable<M> instead of M or 
+  null. (claudio)
+
+  GIRAPH-125: Bug in LongDoubleFloatDoubleVertex.sendMsgToAllEdges().
+  (humming80 via aching)
+
+  GIRAPH-122: Roll version back to 0.1. (jghoman)
+
+  GIRAPH-118: Clarify messages behavior in BasicVertex. (claudio)
+
+  GIRAPH-119: VertexCombiner should work on Iterable<M> instead of 
+  List<M>. (claudio)
+
+  GIRAPH-116: Make EdgeListVertex the default vertex implementation,
+  fix bugs related to EdgeListVertex. (aching)
+
+  GIRAPH-115: Port of the HCC algorithm for identifying all connected
+  components of a graph. (ssc via aching)
+
+  GIRAPH-112: Use elements() properly in LongDoubleFloatDoubleVertex.
+  (aching)
+
+  GIRAPH-114: Inconsistent message map handling in
+  BasicRPCCommunications.LargeMessageFlushExecutor. (ssc via aching)
+
+  GIRAPH-109: GiraphRunner should provide support for combiners.
+  (ssc via claudio)
+
+  GIRAPH-113: Change cast to Vertex used in prepareSuperstep() to
+  BasicVertex. (humming80 via aching)
+
+  GIRAPH-110: Add guide to setup the enviroment for running the
+  unittests in a pseudo-distributed hadoop instance. (ssc via aching)
+
+  GIRAPH-73: A little refactoring. (ssc via aching)
+
+  GIRAPH-106: Change prepareSuperstep() to make
+  setMessages(Iterable<M> messages) package-private. (aching)
+ 
+  GIRAPH-105: BspServiceMaster.checkWorkers() should return empty
+  lists instead of null. (ssc via aching)
+
+  GIRAPH-80: Don't expose the list holding the messages in
+  BasicVertex. (ssc via aching)
+
+  GIRAPH-103: Added properties for commonly used package version to
+  pom.xml. (aching)
+
+  GIRAPH-57: Add new RPC call (putVertexIdMessagesList) to batch
+  putMsgList RPCs together. (aching)
+
+  GIRAPH-104: Save half of maximum memory used from messaging. (aching)
+
+  GIRAPH-10: Aggregators are not exported. (claudio)
+
+  GIRAPH-100: GIRAPH-100 - Data input sampling and testing
+  improvements. (aching)
+
+  GIRAPH-51: Provide unit testing tool for Giraph algorithms.
+  (Sebastian Schelter via jghoman)
+
+  GIRAPH-89: Simplify boolean expressions in BspRecordReader.
+  (shaunak via claudio)
+
+  GIRAPH-90: LongDoubleFloatDoubleVertex has possibily the iterator() 
+  implementation broken (claudio)
+
+  GIRAPH-99: Make AdjacencyListVertexReader and its constructor public.
+  (Kohei Ozaki via jghoman)
+
+  GIRAPH-98: Add Claudio Martella to site. (claudio)
+
+  GIRAPH-97: TestIdWithValueTextOutputFormat.java and 
+  IdWithValueTextOutputFormat.java missing license header (claudio)
+
+  GIRAPH-92: Need outputformat for just vertex ID and value. (jghoman)
+
+  GIRAPH-86: Simplify boolean expressions in ZooKeeperExt::createExt.
+  (attilacsordas via jghoman)
+
+  GIRAPH-91: Large-memory improvements (Memory reduced vertex
+  implementation, fast failure, added settings). (aching)
+
+  GIRAPH-89: Remove debugging system.out from LongDoubleFloatDoubleVertex. 
+  (shaunak via aching)
+
+  GIRAPH-88: Message count not updated properly after GIRAPH-11. (aching)
+
+  GIRAPH-70: Misspellings in PseudoRandomVertexInputFormat configuration
+  parameters. (attilacsordas via jghoman)
+
+  GIRAPH-58: Update site with Arun's id (asuresh)
+  
+  GIRAPH-11: Improve the graph distribution of Giraph. (aching)
+  
+  GIRAPH-64: Create VertexRunner to make it easier to run users'
+  computations. (jghoman)
+ 
+  GIRAPH-79: Change the menu layout of the site. (hyunsik via jghoman)
+
+  GIRAPH-75: Create sections on how to get involved and how 
+  to generate patches on website. (jghoman)
+
+  GIRAPH-63: Typo in PageRankBenchmark. (shaunak via jghoman)
+
+  GIRAPH-47: Export Worker's Context/State to vertices through
+  pre/post/Application/Superstep. (cmartella via aching)
+
+  GIRAPH-71: SequenceFileVertexInputFormat missing license header; 
+  rat fails. (jghoman)
+
+  GIRAPH-36: Ensure that subclassing BasicVertex is possible by user
+  apps. (jmannix via aching)
+
+  GIRAPH-50: Require Maven 3 in order to work with munging plugin.
+  (jghoman)
+  
+  GIRAPH-67: Provide AdjacencyList InputFormat for Ids of Strings and
+  double values. (jghoman)
+
+  GIRAPH-56: Create a CSV TextOutputFormat. (jghoman)
+
+  GIRAPH-66: Add presentations section to website. (jghoman)
+
+  GIRAPH-62: Provide input format for reading graphs stored as adjacency 
+  lists. (jghoman)
+
+  GIRAPH-59: Missing some test if debug enabled before LOG.debug() and
+  LOG.info(). (guzhiwei via aching)
+
+  GIRAPH-48: numFlushThreads is 0 when doing a single worker 
+  unittest. Changing the minimum to 1. (aching)
+
+  GIRAPH-44: Add documentation about counter limits in Hadoop 0.203+.
+  (mtiwari via jghoman)
+
+  GIRAPH-12: Investigate communication improvements. (hyunsik)
+
+  GIRAPH-46: Race condition on superstep 1 with RPC servers not
+  started by the time that requests are sent. (aching)
+
+  GIRAPH-21: Revise CODE_CONVENTIONS. (aching via jghoman)
+
+  GIRAPH-39: mvn rat doesn't like .git or .idea. (jghoman)
+
+  GIRAPH-32: Implement benchmarks to evaluate the performance of message 
+  passing. (hyunsik)
+
+  GIRAPH-34: Failure of Vertex reflection for putVertexList from
+  GIRAPH-27. (aching)
+
+  GIRAPH-35: Modifying the site to indicate that Jake Mannix and
+  Dmitriy Ryaboy are now Giraph committers. (aching)
+
+  GIRAPH-33: Missing license header of GraphState.java (Claudio
+  Martella via hyunsik)
+
+  GIRAPH-31: Hide the SortedMap<I, Edge<I,E>> in Vertex from client
+  visibility (impl. detail), replace with appropriate accessor
+  methods. (jake.mannix via aching)
+
+  GIRAPH-30: NPE in ZooKeeperManager if base directory cannot be
+  created. apurtell via aching.
+
+  GIRAPH-27: Mutable static global state in Vertex.java should be
+  refactored. jake.mannix via aching.
+ 
+  GIRAPH-25: NPE in BspServiceMaster when failing a job. dvryaboy via
+  aching.
+
+  GIRAPH-24: Job-level statistics reports one superstep greater than 
+  workers. (jghoman)
+  
+  GIRAPH-18: Refactor BspServiceWorker::loadVertices(). (jghoman)
+  
+  GIRAPH-14: Support for the Facebook Hadoop branch. (aching)
+
+  GIRAPH-16: Add Apache RAT to the verify build step. (omalley)
+
+  GIRAPH-17: Giraph doesn't give up properly after the maximum connect
+  attempts to ZooKeeper. (aching)
+
+  GIRAPH-2: Make the project homepage. (jghoman)
+
+  GIRAPH-9: Change Yahoo License Header to Apache License Header (hyunsik)
+
+  GIRAPH-6: Remove Yahoo-specific code from pom.xml. (jghoman)
+
+  GIRAPH-5: Remove Yahoo directories after svn import from Yahoo! (aching)
+
+  GIRAPH-3: Vertex:sentMsgToAllEdges should be sendMsg. (jghoman)
