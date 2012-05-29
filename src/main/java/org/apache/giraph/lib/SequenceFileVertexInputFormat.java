@@ -40,7 +40,8 @@ import java.util.List;
  * @param <M> Message data
  * @param <X> Value type
  */
-public class SequenceFileVertexInputFormat<I extends WritableComparable<I>,
+@SuppressWarnings("rawtypes")
+public class SequenceFileVertexInputFormat<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable,
     X extends BasicVertex<I, V, E, M>>
     extends VertexInputFormat<I, V, E, M> {
@@ -70,7 +71,7 @@ public class SequenceFileVertexInputFormat<I extends WritableComparable<I>,
    * @param <M> Message data
    * @param <X> Value type
    */
-  public static class SequenceFileVertexReader<I extends WritableComparable<I>,
+  public static class SequenceFileVertexReader<I extends WritableComparable,
       V extends Writable, E extends Writable, M extends Writable,
       X extends BasicVertex<I, V, E, M>>
       implements VertexReader<I, V, E, M> {

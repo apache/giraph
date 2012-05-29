@@ -2,16 +2,19 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
-  GIRAPH-20. Move temporary test files from the project directory. (ssc)
+  GIRAPH-187: SequenceFileVertexInputFormat has WritableComparable<I>
+  as a bounded type for I. (roman4asf via aching)
 
-  GIRAPH-37. Implement Netty-backed IPC. (aching)
+  GIRAPH-20: Move temporary test files from the project directory. (ssc)
 
-  GIRAPH-184. Upgrade to junit4. (Devaraj K via jghoman)
+  GIRAPH-37: Implement Netty-backed IPC. (aching)
 
-  GIRAPH-176. BasicRPCCommunications has unnecessary cast of Vertex.
+  GIRAPH-184: Upgrade to junit4. (Devaraj K via jghoman)
+
+  GIRAPH-176: BasicRPCCommunications has unnecessary cast of Vertex.
   (Devaraj K via jghoman)
 
-  GIRAPH-175. Replace manual array copy to utility method call.
+  GIRAPH-175: Replace manual array copy to utility method call.
   (Devaraj K via jghoman)
 
   GIRAPH-181: Add Hadoop 1.0 profile to pom.xml. (ekoontz via aching)
