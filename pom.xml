@@ -688,6 +688,39 @@ under the License.
 	</dependency>
       </dependencies>
     </profile>
+
+    <profile>
+      <id>hadoop_2.0.0</id>
+       <activation>
+        <property>
+          <name>hadoop</name>
+          <value>2.0.0</value>
+        </property>
+      </activation>
+      <properties>
+        <hadoop.version>2.0.0-alpha</hadoop.version>
+      </properties>
+      <dependencies>
+	<dependency>
+	  <groupId>org.apache.hadoop</groupId>
+	  <artifactId>hadoop-common</artifactId>
+	  <version>${hadoop.version}</version>
+	  <scope>provided</scope>
+	</dependency>
+	<dependency>
+	  <groupId>org.apache.hadoop</groupId>
+	  <artifactId>hadoop-mapreduce-client-core</artifactId>
+	  <version>${hadoop.version}</version>
+	  <scope>provided</scope>
+	</dependency>
+	<dependency>
+	  <groupId>org.apache.hadoop</groupId>
+	  <artifactId>hadoop-mapreduce-client-common</artifactId>
+	  <version>${hadoop.version}</version>
+	</dependency>
+      </dependencies>
+    </profile>
+
     <profile>
       <id>hadoop_trunk</id>
        <activation>
