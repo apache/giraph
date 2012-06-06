@@ -2,6 +2,8 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-194: Fix up URLs in the pom. (omalley)
+
   GIRAPH-153: HBase/Accumulo Input and Output formats. (bfem via aching)
 
   GIRAPH-187: SequenceFileVertexInputFormat has WritableComparable<I>

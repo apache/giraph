@@ -26,15 +26,15 @@ under the License.
   <packaging>jar</packaging>
   <version>0.2-SNAPSHOT</version>
 
-  <name>Apache Incubator Giraph</name>
+  <name>Apache Giraph</name>
   <url>http://incubator.apache.org/giraph/</url>
   <description>Giraph : Large-scale graph processing on Hadoop</description>
   <inceptionYear>2011</inceptionYear>
 
   <scm>
-    <connection>scm:svn:http://svn.apache.org/repos/asf/incubator/giraph</connection>
-    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/incubator/giraph/trunk</developerConnection>
-    <url>https://svn.apache.org/repos/asf/incubator/giraph/</url>
+    <connection>scm:svn:http://svn.apache.org/repos/asf/giraph</connection>
+    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/giraph/trunk</developerConnection>
+    <url>https://svn.apache.org/repos/asf/giraph/</url>
   </scm>
 
   <issueManagement>
@@ -59,24 +59,24 @@ under the License.
   <mailingLists>
     <mailingList>
       <name>User List</name>
-      <subscribe>giraph-user-subscribe@incubator.apache.org</subscribe>
-      <unsubscribe>giraph-user-unsubscribe@incubator.apache.org</unsubscribe>
-      <post>giraph-user@incubator.apache.org</post>
-      <archive>http://mail-archives.apache.org/mod_mbox/incubator-giraph-user/</archive>
+      <subscribe>user-subscribe@giraph.apache.org</subscribe>
+      <unsubscribe>user-unsubscribe@giraph.apache.org</unsubscribe>
+      <post>user@giraph.apache.org</post>
+      <archive>http://mail-archives.apache.org/mod_mbox/giraph-user/</archive>
     </mailingList>
     <mailingList>
       <name>Developer List</name>
-      <subscribe>giraph-dev-subscribe@incubator.apache.org</subscribe>
-      <unsubscribe>giraph-dev-unsubscribe@incubator.apache.org</unsubscribe>
-      <post>giraph-dev@incubator.apache.org</post>
-      <archive>http://mail-archives.apache.org/mod_mbox/incubator-giraph-dev/</archive>
+      <subscribe>dev-subscribe@giraph.apache.org</subscribe>
+      <unsubscribe>dev-unsubscribe@giraph.apache.org</unsubscribe>
+      <post>dev@giraph.apache.org</post>
+      <archive>http://mail-archives.apache.org/mod_mbox/giraph-dev/</archive>
     </mailingList>
     <mailingList>
       <name>Commits List</name>
-      <subscribe>giraph-commits-subscribe@incubator.apache.org</subscribe>
-      <unsubscribe>giraph-commits-unsubscribe@incubator.apache.org</unsubscribe>
-      <post>giraph-commits@incubator.apache.org</post>
-      <archive>http://mail-archives.apache.org/mod_mbox/incubator-giraph-commits/</archive>
+      <subscribe>commits-subscribe@giraph.apache.org</subscribe>
+      <unsubscribe>commits-unsubscribe@giraph.apache.org</unsubscribe>
+      <post>commits@giraph.apache.org</post>
+      <archive>http://mail-archives.apache.org/mod_mbox/giraph-commits/</archive>
     </mailingList>
   </mailingLists>
 
@@ -119,22 +119,6 @@ under the License.
       <timezone>-8</timezone>
       <organization>HortonWorks</organization>
       <organizationUrl>http://www.hortonworks.com</organizationUrl>
-    </developer>
-    <developer>
-      <id>prhodes</id>
-      <name>Phillip Rhodes</name>
-      <email>phrodes@apache.org</email>
-      <timezone>-5</timezone>
-      <organization>Fogbeam Labs</organization>
-      <organizationUrl>http://www.fogbeam.com/</organizationUrl>
-    </developer>
-    <developer>
-      <id>asuresh</id>
-      <name>Arun Suresh</name>
-      <email>asuresh@apache.org</email>
-      <timezone>-8</timezone>
-      <organization>Informatica</organization>
-      <organizationUrl>http://www.informatica.com/</organizationUrl>
     </developer>
     <developer>
       <id>jake.mannix</id>
