@@ -156,7 +156,8 @@ public class ZooKeeperManager {
       zkDirDefault = jobLocalDir +
           "/_bspZooKeeper";
     } else {
-      zkDirDefault = System.getProperty("user.dir") + "/_bspZooKeeper";
+      zkDirDefault = System.getProperty("user.dir") + "/" +
+              GiraphJob.ZOOKEEPER_MANAGER_DIR_DEFAULT;
     }
     zkDir = conf.get(GiraphJob.ZOOKEEPER_DIR, zkDirDefault);
     configFilePath = zkDir + "/zoo.cfg";
