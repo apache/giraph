@@ -16,46 +16,54 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.examples;
+package org.apache.giraph.aggregators;
 
-import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.LongWritable;
 
 import org.apache.giraph.graph.Aggregator;
 
 /**
- * Aggregator for summing up values.
+ * Aggregator for summing up long values.
  */
-public class SumAggregator implements Aggregator<DoubleWritable> {
-  /** Aggregated sum */
-  private double sum = 0;
+public class LongSumAggregator implements Aggregator<LongWritable> {
+  /** Internal sum */
+  private long sum = 0;
 
   /**
-   * Aggregate a double.
+   * Aggregate a primitive long.
    *
-   * @param value Value to aggregate.
+   * @param value Long value to aggregate.
    */
-  public void aggregate(double value) {
+  public void aggregate(long value) {
     sum += value;
   }
 
   @Override
-  public void aggregate(DoubleWritable value) {
+  public void aggregate(LongWritable value) {
     sum += value.get();
   }
 
+  /**
+   * Set aggregated value using a primitive long.
+   *
+   * @param value Long value to set.
+   */
+  public void setAggregatedValue(long value) {
+    sum = value;
+  }
+
   @Override
-  public void setAggregatedValue(DoubleWritable value) {
+  public void setAggregatedValue(LongWritable value) {
     sum = value.get();
   }
 
   @Override
-  public DoubleWritable getAggregatedValue() {
-    return new DoubleWritable(sum);
+  public LongWritable getAggregatedValue() {
+    return new LongWritable(sum);
   }
 
   @Override
-  public DoubleWritable createAggregatedValue() {
-    return new DoubleWritable();
+  public LongWritable createAggregatedValue() {
+    return new LongWritable();
   }
-
 }

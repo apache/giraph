@@ -16,18 +16,30 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.examples;
+package org.apache.giraph.aggregators;
 
 import org.apache.hadoop.io.DoubleWritable;
 
 import org.apache.giraph.graph.Aggregator;
 
 /**
- * Aggregator for getting min value.
+ * Aggregator for getting min double value.
  */
-public class MinAggregator implements Aggregator<DoubleWritable> {
+public class DoubleMinAggregator implements Aggregator<DoubleWritable> {
   /** Internal aggregator */
   private double min = Double.MAX_VALUE;
+
+  /**
+   * Aggregate with a primitive double.
+   *
+   * @param value Double value to aggregate.
+   */
+  public void aggregate(double value) {
+    double val = value;
+    if (val < min) {
+      min = val;
+    }
+  }
 
   @Override
   public void aggregate(DoubleWritable value) {
@@ -35,6 +47,15 @@ public class MinAggregator implements Aggregator<DoubleWritable> {
     if (val < min) {
       min = val;
     }
+  }
+
+  /**
+   * Set aggregated value using a primitive double.
+   *
+   * @param value Double value to set.
+   */
+  public void setAggregatedValue(double value) {
+    min = value;
   }
 
   @Override

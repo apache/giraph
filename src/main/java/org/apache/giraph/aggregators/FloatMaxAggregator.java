@@ -16,40 +16,61 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.examples;
+package org.apache.giraph.aggregators;
 
-import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.FloatWritable;
 
 import org.apache.giraph.graph.Aggregator;
 
 /**
- * Aggregator for getting max value.
+ * Aggregator for getting max float value.
  *
  */
-public class MaxAggregator implements Aggregator<DoubleWritable> {
+public class FloatMaxAggregator implements Aggregator<FloatWritable> {
   /** Saved maximum value */
-  private double max = Double.MIN_VALUE;
+  private float max = Float.MIN_VALUE;
 
-  @Override
-  public void aggregate(DoubleWritable value) {
-    double val = value.get();
+  /**
+   * Aggregate with a primitive float.
+   *
+   * @param value Float value to aggregate.
+   */
+  public void aggregate(float value) {
+    float val = value;
     if (val > max) {
       max = val;
     }
   }
 
   @Override
-  public void setAggregatedValue(DoubleWritable value) {
+  public void aggregate(FloatWritable value) {
+    float val = value.get();
+    if (val > max) {
+      max = val;
+    }
+  }
+
+  /**
+   * Set aggregated value using a primitive float.
+   *
+   * @param value Float value to set.
+   */
+  public void setAggregatedValue(float value) {
+    max = value;
+  }
+
+  @Override
+  public void setAggregatedValue(FloatWritable value) {
     max = value.get();
   }
 
   @Override
-  public DoubleWritable getAggregatedValue() {
-    return new DoubleWritable(max);
+  public FloatWritable getAggregatedValue() {
+    return new FloatWritable(max);
   }
 
   @Override
-  public DoubleWritable createAggregatedValue() {
-    return new DoubleWritable();
+  public FloatWritable createAggregatedValue() {
+    return new FloatWritable();
   }
 }

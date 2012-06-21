@@ -20,6 +20,9 @@ package org.apache.giraph.examples;
 
 import com.google.common.collect.Maps;
 
+import org.apache.giraph.aggregators.DoubleMaxAggregator;
+import org.apache.giraph.aggregators.DoubleMinAggregator;
+import org.apache.giraph.aggregators.LongSumAggregator;
 import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.LongDoubleFloatDoubleVertex;
@@ -54,8 +57,8 @@ public class SimplePageRankVertex extends LongDoubleFloatDoubleVertex {
   @Override
   public void compute(Iterator<DoubleWritable> msgIterator) {
     LongSumAggregator sumAggreg = (LongSumAggregator) getAggregator("sum");
-    MinAggregator minAggreg = (MinAggregator) getAggregator("min");
-    MaxAggregator maxAggreg = (MaxAggregator) getAggregator("max");
+    DoubleMinAggregator minAggreg = (DoubleMinAggregator) getAggregator("min");
+    DoubleMaxAggregator maxAggreg = (DoubleMaxAggregator) getAggregator("max");
     if (getSuperstep() >= 1) {
       double sum = 0;
       while (msgIterator.hasNext()) {
@@ -109,8 +112,8 @@ public class SimplePageRankVertex extends LongDoubleFloatDoubleVertex {
     public void preApplication()
       throws InstantiationException, IllegalAccessException {
       registerAggregator("sum", LongSumAggregator.class);
-      registerAggregator("min", MinAggregator.class);
-      registerAggregator("max", MaxAggregator.class);
+      registerAggregator("min", DoubleMinAggregator.class);
+      registerAggregator("max", DoubleMaxAggregator.class);
     }
 
     @Override
@@ -118,10 +121,10 @@ public class SimplePageRankVertex extends LongDoubleFloatDoubleVertex {
 
       LongSumAggregator sumAggreg =
           (LongSumAggregator) getAggregator("sum");
-      MinAggregator minAggreg =
-          (MinAggregator) getAggregator("min");
-      MaxAggregator maxAggreg =
-          (MaxAggregator) getAggregator("max");
+      DoubleMinAggregator minAggreg =
+          (DoubleMinAggregator) getAggregator("min");
+      DoubleMaxAggregator maxAggreg =
+          (DoubleMaxAggregator) getAggregator("max");
 
       FINAL_SUM = sumAggreg.getAggregatedValue().get();
       FINAL_MAX = maxAggreg.getAggregatedValue().get();
@@ -136,8 +139,10 @@ public class SimplePageRankVertex extends LongDoubleFloatDoubleVertex {
     public void preSuperstep() {
 
       LongSumAggregator sumAggreg = (LongSumAggregator) getAggregator("sum");
-      MinAggregator minAggreg = (MinAggregator) getAggregator("min");
-      MaxAggregator maxAggreg = (MaxAggregator) getAggregator("max");
+      DoubleMinAggregator minAggreg =
+          (DoubleMinAggregator) getAggregator("min");
+      DoubleMaxAggregator maxAggreg =
+          (DoubleMaxAggregator) getAggregator("max");
 
       if (getSuperstep() >= 3) {
         LOG.info("aggregatedNumVertices=" +
@@ -156,7 +161,7 @@ public class SimplePageRankVertex extends LongDoubleFloatDoubleVertex {
       useAggregator("sum");
       useAggregator("min");
       useAggregator("max");
-      sumAggreg.setAggregatedValue(new LongWritable(0L));
+      sumAggreg.setAggregatedValue(0L);
     }
 
     @Override

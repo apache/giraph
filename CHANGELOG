@@ -2,7 +2,11 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
-  GIRAPH-208: LocalTestMode's zookeeper directory is not being cleaned up after job runs (ekoontz)
+  GIRAPH-192: Move aggregators to a separate sub-package. 
+  (Jan van der Lugt via jghoman)
+  
+  GIRAPH-208: LocalTestMode's zookeeper directory is not being cleaned up 
+  after job runs (ekoontz)
 
   GIRAPH-194: Fix up URLs in the pom. (omalley)
 

@@ -18,6 +18,7 @@
 
 package org.apache.giraph.examples;
 
+import org.apache.giraph.aggregators.LongSumAggregator;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.WorkerContext;
 import org.apache.hadoop.io.FloatWritable;
@@ -119,7 +120,7 @@ public class VerifyMessage {
             LongSumAggregator.class);
         LongSumAggregator sumAggregator = (LongSumAggregator)
             getAggregator(LongSumAggregator.class.getName());
-        sumAggregator.setAggregatedValue(new LongWritable(0));
+        sumAggregator.setAggregatedValue(0);
         SUPERSTEPS = getContext().getConfiguration().getInt(
             SUPERSTEP_COUNT, SUPERSTEPS);
       }

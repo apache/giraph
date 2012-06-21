@@ -25,10 +25,11 @@ import static org.junit.Assert.fail;
 import com.google.common.base.Charsets;
 import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
+
+import org.apache.giraph.aggregators.DoubleMaxAggregator;
+import org.apache.giraph.aggregators.DoubleMinAggregator;
+import org.apache.giraph.aggregators.LongSumAggregator;
 import org.apache.giraph.examples.GeneratedVertexReader;
-import org.apache.giraph.examples.LongSumAggregator;
-import org.apache.giraph.examples.MaxAggregator;
-import org.apache.giraph.examples.MinAggregator;
 import org.apache.giraph.examples.SimpleCombinerVertex;
 import org.apache.giraph.examples.SimpleFailVertex;
 import org.apache.giraph.examples.SimpleMsgVertex;
@@ -382,10 +383,10 @@ public class TestBspBasic extends BspCase {
             String value = (tokens[1].split("=")[1]);
             String aggregatorName = tokens[2];
 
-            if (MinAggregator.class.getName().equals(aggregatorName)) {
+            if (DoubleMinAggregator.class.getName().equals(aggregatorName)) {
               minValues.put(superstep, Double.parseDouble(value));
             }
-            if (MaxAggregator.class.getName().equals(aggregatorName)) {
+            if (DoubleMaxAggregator.class.getName().equals(aggregatorName)) {
               maxValues.put(superstep, Double.parseDouble(value));
             }
             if (LongSumAggregator.class.getName().equals(aggregatorName)) {

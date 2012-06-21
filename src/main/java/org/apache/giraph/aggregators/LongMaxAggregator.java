@@ -16,18 +16,19 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.examples;
+package org.apache.giraph.aggregators;
 
 import org.apache.hadoop.io.LongWritable;
 
 import org.apache.giraph.graph.Aggregator;
 
 /**
- * Aggregator for summing up values.
+ * Aggregator for getting max long value.
+ *
  */
-public class LongSumAggregator implements Aggregator<LongWritable> {
-  /** Internal sum */
-  private long sum = 0;
+public class LongMaxAggregator implements Aggregator<LongWritable> {
+  /** Saved maximum value */
+  private long max = Long.MIN_VALUE;
 
   /**
    * Aggregate with a primitive long.
@@ -35,22 +36,37 @@ public class LongSumAggregator implements Aggregator<LongWritable> {
    * @param value Long value to aggregate.
    */
   public void aggregate(long value) {
-    sum += value;
+    long val = value;
+    if (val > max) {
+      max = val;
+    }
   }
 
   @Override
   public void aggregate(LongWritable value) {
-    sum += value.get();
+    long val = value.get();
+    if (val > max) {
+      max = val;
+    }
+  }
+
+  /**
+   * Set aggregated value using a primitive long.
+   *
+   * @param value Long value to set.
+   */
+  public void setAggregatedValue(long value) {
+    max = value;
   }
 
   @Override
   public void setAggregatedValue(LongWritable value) {
-    sum = value.get();
+    max = value.get();
   }
 
   @Override
   public LongWritable getAggregatedValue() {
-    return new LongWritable(sum);
+    return new LongWritable(max);
   }
 
   @Override
