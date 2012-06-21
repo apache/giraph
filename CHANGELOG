@@ -2,6 +2,8 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-210: Hadoop 1.0 profile has no activation. (jghoman)
+ 
   GIRAPH-192: Move aggregators to a separate sub-package. 
   (Jan van der Lugt via jghoman)
   

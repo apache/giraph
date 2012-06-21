@@ -484,6 +484,12 @@ under the License.
     </profile>
     <profile>
       <id>hadoop_1.0</id>
+      <activation>
+        <property>
+           <name>hadoop</name>
+           <value>1.0</value>
+        </property>
+      </activation>
       <properties>
         <hadoop.version>1.0.2</hadoop.version>
       </properties>
