@@ -29,6 +29,8 @@ import org.apache.giraph.utils.MockUtils;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.giraph.lib.JsonLongDoubleFloatDoubleVertexInputFormat;
+import org.apache.giraph.lib.JsonLongDoubleFloatDoubleVertexOutputFormat;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.junit.Test;
@@ -41,7 +43,7 @@ import com.google.common.collect.Maps;
 /**
  * Contains a simple unit test for {@link SimpleShortestPathsVertex}
  */
-public class SimpleShortestPathVertexTest {
+public class SimpleShortestPathsVertexTest {
 
   /**
    * Test the behavior when a shorter path to a vertex has been found
@@ -123,10 +125,8 @@ public class SimpleShortestPathVertexTest {
     // run internally
     Iterable<String> results = InternalVertexRunner.run(
         SimpleShortestPathsVertex.class,
-        SimpleShortestPathsVertex.
-        SimpleShortestPathsVertexInputFormat.class,
-        SimpleShortestPathsVertex.
-        SimpleShortestPathsVertexOutputFormat.class,
+        JsonLongDoubleFloatDoubleVertexInputFormat.class,
+        JsonLongDoubleFloatDoubleVertexOutputFormat.class,
         params, graph);
 
     Map<Long, Double> distances = parseDistances(results);

@@ -36,7 +36,7 @@ import org.apache.giraph.examples.SimpleMsgVertex;
 import org.apache.giraph.examples.SimplePageRankVertex;
 import org.apache.giraph.examples.SimplePageRankVertex.SimplePageRankVertexInputFormat;
 import org.apache.giraph.examples.SimpleShortestPathsVertex;
-import org.apache.giraph.examples.SimpleShortestPathsVertex.SimpleShortestPathsVertexOutputFormat;
+import org.apache.giraph.lib.JsonLongDoubleFloatDoubleVertexOutputFormat;
 import org.apache.giraph.examples.SimpleSumCombiner;
 import org.apache.giraph.examples.SimpleSuperstepVertex;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat;
@@ -311,7 +311,7 @@ public class TestBspBasic extends BspCase {
     GiraphJob job = prepareJob(getCallingMethodName(),
         SimpleShortestPathsVertex.class,
         SimplePageRankVertex.SimplePageRankVertexInputFormat.class,
-        SimpleShortestPathsVertex.SimpleShortestPathsVertexOutputFormat.class,
+        JsonLongDoubleFloatDoubleVertexOutputFormat.class,
         outputPath);
     Configuration conf = job.getConfiguration();
     conf.setLong(SimpleShortestPathsVertex.SOURCE_ID, 0);
