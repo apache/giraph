@@ -23,11 +23,11 @@ under the License.
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
   <properties>
-    <title>Welcome To Apache Incubator Giraph</title>
+    <title>Welcome To Apache Giraph</title>
   </properties>
 
   <body>
-    <section name="Welcome To Apache Incubator Giraph">
+    <section name="Welcome To Apache Giraph">
         <p>Web and online social graphs have been rapidly growing in size and scale during the past decade. In 2008, Google estimated that the number of web pages reached over a trillion. Online social networking and email sites, including Yahoo!, Google, Microsoft, Facebook, LinkedIn, and Twitter, have hundreds of millions of users and are expected to grow much more in the future. Processing these graphs plays a big role in relevant and personalized information for users, such as results from a search engine or news in an online social networking site.</p>
 
         <p>Graph processing platforms to run large-scale algorithms (such as page rank, shared connections, personalization-based popularity, etc.) have become quite popular. Some recent examples include Pregel and HaLoop. For general-purpose big data computation, the map-reduce computing model has been well adopted and the most deployed map-reduce infrastructure is Apache Hadoop. We have implemented a graph-processing framework that is launched as a typical Hadoop job to leverage existing Hadoop infrastructure, such as Amazon's EC2. Giraph builds upon the graph-oriented nature of Pregel but additionally adds fault-tolerance to the coordinator process with the use of ZooKeeper as its centralized coordination service.</p>
@@ -35,10 +35,8 @@ under the License.
         <p>Giraph follows the bulk-synchronous parallel model relative to graphs where vertices can send messages to other vertices during a given superstep. Checkpoints are initiated by the Giraph infrastructure at user-defined intervals and are used for automatic application restarts when any worker in the application fails. Any worker in the application can act as the application coordinator and one will automatically take over if the current application coordinator fails.</p>
 
     </section>
-    <section name="Incubator disclaimer">
-	<p>Apache Giraph is an effort undergoing incubation at The Apache Software Foundation (ASF), sponsored by the name of Apache Incubator. Incubation is required of all newly accepted projects until a further review indicates that the infrastructure, communications, and decision making process have stabilized in a manner consistent with other successful ASF projects. While incubation status is not necessarily a reflection of the completeness or stability of the code, it does indicate that the project has yet to be fully endorsed by the ASF.</p>
-	</section>
 	<section name="News">
+	  <!-- TODO: remove 'incubator/' from URL when Apache distribution supports it. -->
 		<ul><li><strong>February 6, 2012: Giraph 0.1-incubating released.</strong> The Giraph PPMC is excited to announce that version 0.1 has been released. Grab a copy of the release <a href="http://www.apache.org/dyn/closer.cgi/incubator/giraph/">here</a>.</li></ul>
 	</section>
 	<section name="Presentations">
@@ -69,6 +67,7 @@ under the License.
 	</ul>
 	</section>
 	<section name="Releases">
+	  <!-- TODO: remove 'incubator/' from URL when Apache distribution supports it. -->
 		<p>Official releases of Giraph may be downloaded from an <a href="http://www.apache.org/dyn/closer.cgi/incubator/giraph/">Apache mirror</a>. Soon we will also publish our release artifacts to Apache's Maven repositories to make it easier to include Giraph in your projects.</p>
 	</section>
 	<section name="Building and testing">

@@ -17,8 +17,8 @@
 -->
 <project name="Giraph">
   <bannerRight>
-    <src>http://incubator.apache.org/images/apache-incubator-logo.png</src>
-    <href>http://incubator.apache.org/</href>
+    <src>images/ApacheGiraph.svg</src>
+    <href>http://giraph.apache.org/</href>
   </bannerRight>
 
   <publishDate position="right"/>
@@ -28,36 +28,35 @@
     <links position="left">
       <item name="Wiki" href="https://cwiki.apache.org/confluence/display/GIRAPH" />
       <item name="JIRA" href="https://issues.apache.org/jira/browse/GIRAPH" />
-      <item name="SVN" href="https://svn.apache.org/repos/asf/incubator/giraph/" />
+      <item name="SVN" href="https://svn.apache.org/repos/asf/giraph/" />
     </links>
 
     <breadcrumbs position="left">
       <item name="Apache" href="http://www.apache.org/" />
-      <item name="Apache Incubator" href="http://incubator.apache.org/" />
-      <item name="Giraph" href="http://incubator.apache.org/giraph/"/>
+      <item name="Giraph" href="http://giraph.apache.org/"/>
     </breadcrumbs>
     
     <menu name="Giraph">
-      <item name="About" href="http://incubator.apache.org/giraph/index.html"/>
+      <item name="About" href="http://giraph.apache.org/index.html"/>
       <item name="Wiki" href="https://cwiki.apache.org/confluence/display/GIRAPH" />
     </menu>
 
     <menu name="Project Information" inherit="top">
       <item name="Summary" href="http://incubator.apache.org/giraph/project-summary.html" />
       <item name="Team" href="http://incubator.apache.org/giraph/team-list.html" />
-      <item name="Mailing Lists" href="http://incubator.apache.org/giraph/mail-lists.html" />
+      <item name="Mailing Lists" href="http://giraph.apache.org/mail-lists.html" />
       <item name="License" href="http://www.apache.org/licenses/" />
-      <item name="Issue Tracking" href="http://incubator.apache.org/giraph/issue-tracking.html" />
-      <item name="Source Repository" href="http://incubator.apache.org/giraph/source-repository.html" />
-      <item name="Dependencies" href="http://incubator.apache.org/giraph/dependencies.html" />
-      <item name="Reports" href="http://incubator.apache.org/giraph/project-reports.html" collapse="true">
-        <item name="Surefire Report" href="http://incubator.apache.org/giraph/surefire-report.html" />
-        <item name="Checkstyle Results" href="http://incubator.apache.org/giraph/checkstyle.html" />
-        <item name="Jdepend" href="http://incubator.apache.org/giraph/jdepend-report.html" />
-        <item name="Cobertura Test Coverage" href="http://incubator.apache.org/giraph/cobertura/index.html" />
-        <item name="Tag List" href="http://incubator.apache.org/giraph/taglist.html" />
-        <item name="Source Xref" href="http://incubator.apache.org/giraph/xref/index.html" />
-        <item name="Test Source Xref" href="http://incubator.apache.org/giraph/xref-test/index.html" />
+      <item name="Issue Tracking" href="http://giraph.apache.org/issue-tracking.html" />
+      <item name="Source Repository" href="http://giraph.apache.org/source-repository.html" />
+      <item name="Dependencies" href="http://giraph.apache.org/dependencies.html" />
+      <item name="Reports" href="http://giraph.apache.org/project-reports.html" collapse="true">
+        <item name="Surefire Report" href="http://giraph.apache.org/surefire-report.html" />
+        <item name="Checkstyle Results" href="http://giraph.apache.org/checkstyle.html" />
+        <item name="Jdepend" href="http://giraph.apache.org/jdepend-report.html" />
+        <item name="Cobertura Test Coverage" href="http://giraph.apache.org/cobertura/index.html" />
+        <item name="Tag List" href="http://giraph.apache.org/taglist.html" />
+        <item name="Source Xref" href="http://giraph.apache.org/xref/index.html" />
+        <item name="Test Source Xref" href="http://giraph.apache.org/xref-test/index.html" />
       </item>
     </menu>
     
