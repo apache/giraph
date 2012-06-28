@@ -1,7 +1,10 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
-  
+
+  GIRAPH-217: Add SimpleTriangleClosingVertex to Giraph examples. 
+  (Eli Reisman via jghoman)  
+
   GIRAPH-219: pom in giraph-formats-contrib should have groupId 'org.apache.giraph'.
   (Brian Femiano via jghoman)
 
