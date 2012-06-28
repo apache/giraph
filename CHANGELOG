@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-220: Default implementation of BasicVertex#sendMsgToAllEdges().
+  (Alessandro Presta via jghoman)
+
   GIRAPH-217: Add SimpleTriangleClosingVertex to Giraph examples. 
   (Eli Reisman via jghoman)  
 

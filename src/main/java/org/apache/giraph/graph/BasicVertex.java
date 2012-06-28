@@ -174,7 +174,11 @@ public abstract class BasicVertex<I extends WritableComparable,
    *
    * @param msg Message sent to all edges.
    */
-  public abstract void sendMsgToAllEdges(M msg);
+  public void sendMsgToAllEdges(M msg) {
+    for (Iterator<I> edges = iterator(); edges.hasNext();) {
+      sendMsg(edges.next(), msg);
+    }
+  }
 
   /**
    * After this is called, the compute() code will no longer be called for
