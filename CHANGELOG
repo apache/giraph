@@ -1,6 +1,10 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  
+  GIRAPH-219: pom in giraph-formats-contrib should have groupId 'org.apache.giraph'.
+  (Brian Femiano via jghoman)
+
   GIRAPH-215: Update site to use Giraph logo and remove 'incubator' text (ekoontz)
 
   GIRAPH-205: Move Giraph jar to root level of tar.gz. 
