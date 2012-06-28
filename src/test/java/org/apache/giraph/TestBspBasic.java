@@ -32,6 +32,7 @@ import org.apache.giraph.aggregators.LongSumAggregator;
 import org.apache.giraph.examples.GeneratedVertexReader;
 import org.apache.giraph.examples.SimpleCombinerVertex;
 import org.apache.giraph.examples.SimpleFailVertex;
+import org.apache.giraph.examples.SimpleMasterComputeVertex;
 import org.apache.giraph.examples.SimpleMsgVertex;
 import org.apache.giraph.examples.SimplePageRankVertex;
 import org.apache.giraph.examples.SimplePageRankVertex.SimplePageRankVertexInputFormat;
@@ -410,6 +411,30 @@ public class TestBspBasic extends BspCase {
       }
     } finally {
       fs.delete(valuesFile, false);
+    }
+  }
+  
+  /**
+   * Run a sample BSP job locally and test MasterCompute.
+   *
+   * @throws IOException
+   * @throws ClassNotFoundException
+   * @throws InterruptedException
+   */
+  @Test
+  public void testBspMasterCompute()
+      throws IOException, InterruptedException, ClassNotFoundException {
+    GiraphJob job = prepareJob(getCallingMethodName(),
+        SimpleMasterComputeVertex.class, SimplePageRankVertexInputFormat.class);
+    job.setWorkerContextClass(
+        SimpleMasterComputeVertex.SimpleMasterComputeWorkerContext.class);
+    job.setMasterComputeClass(SimpleMasterComputeVertex.SimpleMasterCompute.class);
+    assertTrue(job.run(true));
+    if (!runningInDistributedMode()) {
+      double finalSum =
+          SimpleMasterComputeVertex.SimpleMasterComputeWorkerContext.getFinalSum();
+      System.out.println("testBspMasterCompute: finalSum=" + finalSum);
+      assertEquals(32.5, finalSum);
     }
   }
 }

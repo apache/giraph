@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-127: Extending the API with a master.compute() function.
+  (Jan van der Lugt via jghoman)
+
   GIRAPH-220: Default implementation of BasicVertex#sendMsgToAllEdges().
   (Alessandro Presta via jghoman)
 

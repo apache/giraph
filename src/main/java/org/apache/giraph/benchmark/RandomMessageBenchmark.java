@@ -101,7 +101,6 @@ public class RandomMessageBenchmark implements Tool {
     private long totalMessages = 0;
     /** Total millis */
     private long totalMillis = 0;
-    /** Class logger */
 
     @Override
     public void preApplication()

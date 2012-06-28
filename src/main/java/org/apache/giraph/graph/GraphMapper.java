@@ -19,6 +19,8 @@
 package org.apache.giraph.graph;
 
 import com.google.common.collect.Iterables;
+
+import org.apache.giraph.bsp.CentralizedServiceMaster;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.graph.partition.Partition;
 import org.apache.giraph.graph.partition.PartitionOwner;
@@ -62,6 +64,8 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
   private static final Logger LOG = Logger.getLogger(GraphMapper.class);
   /** Coordination service worker */
   private CentralizedServiceWorker<I, V, E, M> serviceWorker;
+  /** Coordination service master */
+  private CentralizedServiceMaster<I, V, E, M> serviceMaster;
   /** Coordination service master thread */
   private Thread masterThread = null;
   /** The map should be run exactly once, or else there is a problem. */
@@ -111,7 +115,14 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
    * @return Aggregator usage interface
    */
   public final AggregatorUsage getAggregatorUsage() {
-    return serviceWorker;
+    AggregatorUsage result = null;
+    if (serviceWorker != null) {
+      result = serviceWorker;
+    }
+    if (serviceMaster != null) {
+      result = serviceMaster;
+    }
+    return result;
   }
 
   public final WorkerContext getWorkerContext() {
@@ -446,13 +457,12 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
           LOG.info("setup: Starting up BspServiceMaster " +
               "(master thread)...");
         }
-        masterThread =
-            new MasterThread<I, V, E, M>(
-                new BspServiceMaster<I, V, E, M>(serverPortList,
-                    sessionMsecTimeout,
-                    context,
-                    this),
-                    context);
+        serviceMaster = new BspServiceMaster<I, V, E, M>(serverPortList,
+                sessionMsecTimeout,
+                context,
+                this);
+        masterThread = new MasterThread<I, V, E, M>(
+                (BspServiceMaster<I, V, E, M>) serviceMaster, context);
         masterThread.start();
       }
       if ((mapFunctions == MapFunctions.WORKER_ONLY) ||

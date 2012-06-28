@@ -63,7 +63,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 import java.util.TreeSet;
 
 import org.apache.giraph.graph.partition.MasterGraphPartitioner;
@@ -131,6 +130,8 @@ public class BspServiceMaster<I extends WritableComparable,
       new ArrayList<PartitionStats>();
   /** Aggregator writer */
   private AggregatorWriter aggregatorWriter;
+  /** Master class */
+  private MasterCompute masterCompute;
 
   /**
    * Constructor for setting up the master.
@@ -429,7 +430,7 @@ public class BspServiceMaster<I extends WritableComparable,
             partitionSet.add(workerInfo.getPartitionId());
           }
           for (int i = 1; i <= maxWorkers; ++i) {
-            if (partitionSet.contains(new Integer(i))) {
+            if (partitionSet.contains(Integer.valueOf(i))) {
               continue;
             } else if (i == getTaskPartition()) {
               continue;
@@ -633,6 +634,7 @@ public class BspServiceMaster<I extends WritableComparable,
         getZkExt().setData(mergedAggregatorPath, aggregatorZkData, -1);
       }
     }
+    masterCompute.readFields(finalizedStream);
     finalizedStream.close();
 
     Map<Integer, PartitionOwner> idOwnerMap =
@@ -748,6 +750,8 @@ public class BspServiceMaster<I extends WritableComparable,
           currentMasterTaskPartitionCounter.increment(
               getTaskPartition() -
               currentMasterTaskPartitionCounter.getValue());
+          masterCompute =
+              BspUtils.createMasterCompute(getConfiguration());
           aggregatorWriter =
               BspUtils.createAggregatorWriter(getConfiguration());
           try {
@@ -843,18 +847,11 @@ public class BspServiceMaster<I extends WritableComparable,
   }
 
   /**
-   * Get the aggregator values for a particular superstep,
-   * aggregate and save them. Does nothing on the INPUT_SUPERSTEP.
+   * Get the aggregator values for a particular superstep and aggregate them.
    *
    * @param superstep superstep to check
    */
   private void collectAndProcessAggregatorValues(long superstep) {
-    if (superstep == INPUT_SUPERSTEP) {
-      // Nothing to collect on the input superstep
-      return;
-    }
-    Map<String, Aggregator<? extends Writable>> aggregatorMap =
-        new TreeMap<String, Aggregator<? extends Writable>>();
     String workerFinishedPath =
         getWorkerFinishedPath(getApplicationAttempt(), superstep);
     List<String> hostnameIdPathList = null;
@@ -913,23 +910,16 @@ public class BspServiceMaster<I extends WritableComparable,
                   AGGREGATOR_CLASS_NAME_KEY);
           @SuppressWarnings("unchecked")
           Aggregator<Writable> aggregator =
-            (Aggregator<Writable>) aggregatorMap.get(aggregatorName);
+            (Aggregator<Writable>) getAggregator(aggregatorName);
           boolean firstTime = false;
           if (aggregator == null) {
             @SuppressWarnings("unchecked")
-            Aggregator<Writable> aggregatorWritable =
-              (Aggregator<Writable>) getAggregator(aggregatorName);
-            aggregator = aggregatorWritable;
-            if (aggregator == null) {
-              @SuppressWarnings("unchecked")
-              Class<? extends Aggregator<Writable>> aggregatorClass =
-                (Class<? extends Aggregator<Writable>>)
-                Class.forName(aggregatorClassName);
-              aggregator = registerAggregator(
-                  aggregatorName,
-                  aggregatorClass);
-            }
-            aggregatorMap.put(aggregatorName, aggregator);
+            Class<? extends Aggregator<Writable>> aggregatorClass =
+              (Class<? extends Aggregator<Writable>>)
+              Class.forName(aggregatorClassName);
+            aggregator = registerAggregator(
+                aggregatorName,
+                aggregatorClass);
             firstTime = true;
           }
           Writable aggregatorValue =
@@ -979,12 +969,21 @@ public class BspServiceMaster<I extends WritableComparable,
         }
       }
     }
+  }
+
+  /**
+   * Save the supplied aggregator values.
+   *
+   * @param superstep superstep for which to save values
+   */
+  private void saveAggregatorValues(long superstep) {
+    Map<String, Aggregator<Writable>> aggregatorMap = getAggregatorMap();
     if (aggregatorMap.size() > 0) {
       String mergedAggregatorPath =
           getMergedAggregatorPath(getApplicationAttempt(), superstep);
       byte [] zkData = null;
       JSONArray aggregatorArray = new JSONArray();
-      for (Map.Entry<String, Aggregator<? extends Writable>> entry :
+      for (Map.Entry<String, Aggregator<Writable>> entry :
         aggregatorMap.entrySet()) {
         try {
           ByteArrayOutputStream outputStream =
@@ -1000,7 +999,7 @@ public class BspServiceMaster<I extends WritableComparable,
               Base64.encodeBytes(outputStream.toByteArray()));
           aggregatorArray.put(aggregatorObj);
           if (LOG.isInfoEnabled()) {
-            LOG.info("collectAndProcessAggregatorValues: " +
+            LOG.info("saveAggregatorValues: " +
                 "Trying to add aggregatorObj " +
                 aggregatorObj + "(" +
                     entry.getValue().getAggregatedValue() +
@@ -1009,11 +1008,11 @@ public class BspServiceMaster<I extends WritableComparable,
           }
         } catch (IOException e) {
           throw new IllegalStateException(
-              "collectAndProcessAggregatorValues: " +
+              "saveAggregatorValues: " +
                   "IllegalStateException", e);
         } catch (JSONException e) {
           throw new IllegalStateException(
-              "collectAndProcessAggregatorValues: JSONException", e);
+              "saveAggregatorValues: JSONException", e);
         }
       }
       try {
@@ -1024,18 +1023,18 @@ public class BspServiceMaster<I extends WritableComparable,
             CreateMode.PERSISTENT,
             true);
       } catch (KeeperException.NodeExistsException e) {
-        LOG.warn("collectAndProcessAggregatorValues: " +
+        LOG.warn("saveAggregatorValues: " +
             mergedAggregatorPath + " already exists!");
       } catch (KeeperException e) {
         throw new IllegalStateException(
-            "collectAndProcessAggregatorValues: KeeperException", e);
+            "saveAggregatorValues: KeeperException", e);
       } catch (InterruptedException e) {
         throw new IllegalStateException(
-            "collectAndProcessAggregatorValues: IllegalStateException",
+            "saveAggregatorValues: IllegalStateException",
             e);
       }
       if (LOG.isInfoEnabled()) {
-        LOG.info("collectAndProcessAggregatorValues: Finished " +
+        LOG.info("saveAggregatorValues: Finished " +
             "loading " +
             mergedAggregatorPath + " with aggregator values " +
             aggregatorArray);
@@ -1090,6 +1089,7 @@ public class BspServiceMaster<I extends WritableComparable,
     } else {
       finalizedOutputStream.writeInt(0);
     }
+    masterCompute.write(finalizedOutputStream);
     finalizedOutputStream.close();
     lastCheckpointedSuperstep = superstep;
     lastCheckpointedSuperstepCounter.increment(superstep -
@@ -1221,10 +1221,10 @@ public class BspServiceMaster<I extends WritableComparable,
       getZkExt().deleteExt(inputSplitsPath, -1, true);
     } catch (InterruptedException e) {
       throw new RuntimeException(
-          "retartFromCheckpoint: InterruptedException", e);
+          "restartFromCheckpoint: InterruptedException", e);
     } catch (KeeperException e) {
       throw new RuntimeException(
-          "retartFromCheckpoint: KeeperException", e);
+          "restartFromCheckpoint: KeeperException", e);
     }
     setApplicationAttempt(getApplicationAttempt() + 1);
     setCachedSuperstep(checkpoint);
@@ -1378,7 +1378,6 @@ public class BspServiceMaster<I extends WritableComparable,
     return true;
   }
 
-
   @Override
   public SuperstepState coordinateSuperstep() throws
   KeeperException, InterruptedException {
@@ -1389,6 +1388,7 @@ public class BspServiceMaster<I extends WritableComparable,
     // 4. Collect and process aggregators
     // 5. Create superstep finished node
     // 6. If the checkpoint frequency is met, finalize the checkpoint
+
     List<WorkerInfo> chosenWorkerInfoList = checkWorkers();
     if (chosenWorkerInfoList == null) {
       LOG.fatal("coordinateSuperstep: Not enough healthy workers for " +
@@ -1449,8 +1449,21 @@ public class BspServiceMaster<I extends WritableComparable,
       return SuperstepState.WORKER_FAILURE;
     }
 
+    // Collect aggregator values, then run the master.compute() and
+    // finally save the aggregator values
     collectAndProcessAggregatorValues(getSuperstep());
+    runMasterCompute(getSuperstep());
+    saveAggregatorValues(getSuperstep());
+
+    // If the master is halted or all the vertices voted to halt and there
+    // are no more messages in the system, stop the computation
     GlobalStats globalStats = aggregateWorkerStats(getSuperstep());
+    if (masterCompute.isHalted() ||
+        (globalStats.getFinishedVertexCount() ==
+        globalStats.getVertexCount() &&
+        globalStats.getMessageCount() == 0)) {
+      globalStats.setHaltComputation(true);
+    }
 
     // Let everyone know the aggregated application state through the
     // superstep finishing znode.
@@ -1515,9 +1528,7 @@ public class BspServiceMaster<I extends WritableComparable,
       superstepCounter.increment(1);
     }
     SuperstepState superstepState;
-    if ((globalStats.getFinishedVertexCount() ==
-        globalStats.getVertexCount()) &&
-        globalStats.getMessageCount() == 0) {
+    if (globalStats.getHaltComputation()) {
       superstepState = SuperstepState.ALL_SUPERSTEPS_DONE;
     } else {
       superstepState = SuperstepState.THIS_SUPERSTEP_DONE;
@@ -1533,6 +1544,37 @@ public class BspServiceMaster<I extends WritableComparable,
     }
 
     return superstepState;
+  }
+
+  /**
+   * Run the master.compute() class
+   *
+   * @param superstep superstep for which to run the master.compute()
+   */
+  private void runMasterCompute(long superstep) {
+    GraphState<I, V, E, M> graphState = getGraphMapper().getGraphState();
+    // The master.compute() should run logically before the workers, so
+    // increase the superstep counter it uses by one
+    graphState.setSuperstep(superstep + 1);
+    graphState.setNumVertices(vertexCounter.getValue());
+    graphState.setNumEdges(edgeCounter.getValue());
+    graphState.setContext(getContext());
+    graphState.setGraphMapper(getGraphMapper());
+    masterCompute.setGraphState(graphState);
+    if (superstep == INPUT_SUPERSTEP) {
+      try {
+        masterCompute.initialize();
+      } catch (InstantiationException e) {
+        LOG.fatal("map: MasterCompute.initialize failed in instantiation", e);
+        throw new RuntimeException(
+            "map: MasterCompute.initialize failed in instantiation", e);
+      } catch (IllegalAccessException e) {
+        LOG.fatal("map: MasterCompute.initialize failed in access", e);
+        throw new RuntimeException(
+            "map: MasterCompute.initialize failed in access", e);
+      }
+    }
+    masterCompute.compute();
   }
 
   /**
@@ -1743,5 +1785,16 @@ public class BspServiceMaster<I extends WritableComparable,
     }
 
     return foundEvent;
+  }
+
+  /**
+   * Use an aggregator in this superstep. Note that the master uses all
+   * aggregators by default, so calling this function is not neccessary.
+   *
+   * @param name Name of aggregator (should be unique)
+   * @return boolean (always true)
+   */
+  public boolean useAggregator(String name) {
+    return true;
   }
 }

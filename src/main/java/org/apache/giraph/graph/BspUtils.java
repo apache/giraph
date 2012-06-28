@@ -325,6 +325,34 @@ public class BspUtils {
     return workerContext;
   }
 
+  /**
+   * Get the user's subclassed {@link MasterCompute}
+   *
+   * @param conf Configuration to check
+   * @return User's master class
+   */
+  public static Class<? extends MasterCompute>
+  getMasterComputeClass(Configuration conf) {
+    return (Class<? extends MasterCompute>)
+      conf.getClass(GiraphJob.MASTER_COMPUTE_CLASS,
+        DefaultMasterCompute.class,
+        MasterCompute.class);
+  }
+
+  /**
+   * Create a user master
+   *
+   * @param conf Configuration to check
+   * @return Instantiated user master
+   */
+  public static MasterCompute
+  createMasterCompute(Configuration conf) {
+    Class<? extends MasterCompute> masterComputeClass =
+        getMasterComputeClass(conf);
+    MasterCompute masterCompute =
+        ReflectionUtils.newInstance(masterComputeClass, conf);
+    return masterCompute;
+  }
 
   /**
    * Get the user's subclassed {@link BasicVertex}

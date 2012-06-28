@@ -111,7 +111,7 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
             superstepState = bspServiceMaster.coordinateSuperstep();
             long superstepMillis = System.currentTimeMillis() -
                 startSuperstepMillis;
-            superstepSecsMap.put(new Long(cachedSuperstep),
+            superstepSecsMap.put(Long.valueOf(cachedSuperstep),
                 superstepMillis / 1000.0d);
             if (LOG.isInfoEnabled()) {
               LOG.info("masterThread: Coordination of superstep " +

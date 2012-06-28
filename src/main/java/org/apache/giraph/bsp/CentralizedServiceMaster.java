@@ -20,6 +20,7 @@ package org.apache.giraph.bsp;
 
 import java.io.IOException;
 
+import org.apache.giraph.graph.AggregatorUsage;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.zookeeper.KeeperException;
@@ -36,7 +37,7 @@ import org.apache.zookeeper.KeeperException;
 @SuppressWarnings("rawtypes")
 public interface CentralizedServiceMaster<
   I extends WritableComparable, V extends Writable, E extends Writable,
-  M extends Writable> extends CentralizedService<I, V, E, M> {
+  M extends Writable> extends CentralizedService<I, V, E, M>, AggregatorUsage {
   /**
    * Become the master.
    * @return true if became the master, false if the application is done.

@@ -37,6 +37,8 @@ public class GlobalStats implements Writable {
   private long edgeCount = 0;
   /** All messages sent in the last superstep */
   private long messageCount = 0;
+  /** Whether the computation should be halted */
+  private boolean haltComputation = false;
 
   /**
    * Add the stats of a partition to the global stats.
@@ -65,6 +67,14 @@ public class GlobalStats implements Writable {
     return messageCount;
   }
 
+  public boolean getHaltComputation() {
+    return haltComputation;
+  }
+
+  public void setHaltComputation(boolean value) {
+    haltComputation = value;
+  }
+
   /**
    * Add messages to the global stats.
    *
@@ -80,6 +90,7 @@ public class GlobalStats implements Writable {
     finishedVertexCount = input.readLong();
     edgeCount = input.readLong();
     messageCount = input.readLong();
+    haltComputation = input.readBoolean();
   }
 
   @Override
@@ -88,12 +99,13 @@ public class GlobalStats implements Writable {
     output.writeLong(finishedVertexCount);
     output.writeLong(edgeCount);
     output.writeLong(messageCount);
+    output.writeBoolean(haltComputation);
   }
 
   @Override
   public String toString() {
     return "(vtx=" + vertexCount + ",finVtx=" +
         finishedVertexCount + ",edges=" + edgeCount + ",msgCount=" +
-        messageCount + ")";
+        messageCount + ",haltComputation=" + haltComputation + ")";
   }
 }

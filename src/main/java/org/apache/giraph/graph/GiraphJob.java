@@ -44,6 +44,9 @@ public class GiraphJob {
   public static final String VERTEX_INPUT_FORMAT_CLASS =
       "giraph.vertexInputFormatClass";
 
+  /** Class for Master - optional */
+  public static final String MASTER_COMPUTE_CLASS = "giraph.masterComputeClass";
+
   /** VertexOutputFormat class - optional */
   public static final String VERTEX_OUTPUT_FORMAT_CLASS =
       "giraph.vertexOutputFormatClass";
@@ -461,6 +464,16 @@ public class GiraphJob {
     getConfiguration().setClass(VERTEX_INPUT_FORMAT_CLASS,
         vertexInputFormatClass,
         VertexInputFormat.class);
+  }
+
+  /**
+   * Set the master class (optional)
+   *
+   * @param masterComputeClass Runs master computation
+   */
+  public final void setMasterComputeClass(Class<?> masterComputeClass) {
+    getConfiguration().setClass(MASTER_COMPUTE_CLASS, masterComputeClass,
+        MasterCompute.class);
   }
 
   /**
