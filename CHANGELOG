@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-213: NettyClient.stop() could deadlock according to netty.io docs.
+  (Eli Reisman via jghoman)
+
   GIRAPH-127: Extending the API with a master.compute() function.
   (Jan van der Lugt via jghoman)
 

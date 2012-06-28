@@ -34,6 +34,7 @@ import org.apache.log4j.Logger;
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
@@ -127,25 +128,27 @@ public class NettyClient<I extends WritableComparable,
    * Stop the client.
    */
   public void stop() {
-    // Close all the connections.  Make sure the close operation ends because
-    // all I/O operations are asynchronous in Netty.
-    List<ChannelFuture> waitingCloseList =
-        new ArrayList<ChannelFuture>(addressChannelMap.size());
+    // close connections asyncronously, in a Netty-approved
+    // way, without cleaning up thread pools until all channels
+    // in addressChannelMap are closed (success or failure)
+    final int done = addressChannelMap.size();
+    final AtomicInteger count = new AtomicInteger(0);
     for (Channel channel : addressChannelMap.values()) {
-      waitingCloseList.add(channel.close());
+      ChannelFuture result = channel.close();
+      result.addListener(new ChannelFutureListener() {
+        @Override
+        public void operationComplete(ChannelFuture cf) {
+          if (count.incrementAndGet() == done) {
+            if (LOG.isInfoEnabled()) {
+              LOG.info("stop: reached wait threshold, " +
+                done + " connections closed, releasing " +
+                "NettyClient.bootstrap resources now.");
+            }
+            bootstrap.releaseExternalResources();
+          }
+        }
+      });
     }
-
-    // Wait for all the closes to succeed
-    for (ChannelFuture waitingClose : waitingCloseList) {
-      waitingClose.awaitUninterruptibly().getChannel();
-      if (LOG.isInfoEnabled()) {
-        LOG.info("stop: Closed connection to " +
-            waitingClose.getChannel().getRemoteAddress());
-      }
-    }
-
-    // Shut down all thread pools to exit.
-    bootstrap.releaseExternalResources();
   }
 
   /**
@@ -155,7 +158,7 @@ public class NettyClient<I extends WritableComparable,
    * @param request Request to send
    */
   public void sendWritableRequest(InetSocketAddress remoteServer,
-                                  WritableRequest<I, V, E, M> request) {
+    WritableRequest<I, V, E, M> request) {
     waitingRequestCount.incrementAndGet();
     Channel channel = addressChannelMap.get(remoteServer);
     if (channel == null) {
