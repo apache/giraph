@@ -68,12 +68,13 @@ IFS=
 # add release dependencies to CLASSPATH
 if [ -d "$GIRAPH_HOME/lib" ]; then
 	for f in $GIRAPH_HOME/lib/*.jar; do
-	  CLASSPATH=${CLASSPATH}:$f;
+	  CLASSPATH=${CLASSPATH}:$f
 	done
 
 	for f in $GIRAPH_HOME/giraph*.jar ; do
 	  if [ -e "$f" ]; then
 	    JAR=$f
+           CLASSPATH=${CLASSPATH}:$f
 	    break
 	  fi
 	done
