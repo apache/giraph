@@ -799,7 +799,7 @@ under the License.
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
-      <version>r09</version>
+      <version>12.0</version>
     </dependency>
     <dependency>
       <groupId>org.codehaus.jackson</groupId>
