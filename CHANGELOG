@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-225: Guava version in POM.XML is really old. Updated to version 12.0.
+  (Eli Reisman via hyunsik)
+
   GIRAPH-223: Need to put Giraph jar on classpath, post-GIRAPH-205.
   (Eli Reisman via jghoman)
 
