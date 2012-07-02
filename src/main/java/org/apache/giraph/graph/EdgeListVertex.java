@@ -115,7 +115,8 @@ public abstract class EdgeListVertex<I extends WritableComparable,
           otherVertex.getMessages())) {
         return false;
       }
-      return ComparisonUtils.equal(iterator(), otherVertex.iterator());
+      return ComparisonUtils.equal(getOutEdgesIterator(),
+          otherVertex.getOutEdgesIterator());
     }
     return false;
   }
@@ -203,7 +204,7 @@ public abstract class EdgeListVertex<I extends WritableComparable,
    *         of the vertex ids
    */
   @Override
-  public Iterator<I> iterator() {
+  public Iterator<I> getOutEdgesIterator() {
     return destEdgeIndexList.iterator();
   }
 

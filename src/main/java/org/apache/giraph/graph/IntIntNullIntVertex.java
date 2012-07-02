@@ -83,7 +83,7 @@ public abstract class IntIntNullIntVertex extends
   }
 
   @Override
-  public Iterator<IntWritable> iterator() {
+  public Iterator<IntWritable> getOutEdgesIterator() {
     return new UnmodifiableIntArrayIterator(neighbors);
   }
 

@@ -189,7 +189,9 @@ public class VerifyMessage {
             " has value " + getVertexValue() +
             " on superstep " + getSuperstep());
       }
-      for (LongWritable targetVertexId : this) {
+      for (Iterator<LongWritable> edges = getOutEdgesIterator();
+           edges.hasNext();) {
+        LongWritable targetVertexId = edges.next();
         FloatWritable edgeValue = getEdgeValue(targetVertexId);
         if (LOG.isDebugEnabled()) {
           LOG.debug("compute: vertex " + getVertexId() +

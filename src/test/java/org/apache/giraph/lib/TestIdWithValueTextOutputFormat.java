@@ -77,7 +77,7 @@ public class TestIdWithValueTextOutputFormat {
     when(vertex.getVertexValue()).thenReturn(new DoubleWritable(4d));
 
     // Create empty iterator == no edges
-    when(vertex.iterator()).thenReturn(new ArrayList<Text>().iterator());
+    when(vertex.getOutEdgesIterator()).thenReturn(new ArrayList<Text>().iterator());
 
     RecordWriter<Text, Text> tw = mock(RecordWriter.class);
     IdWithValueVertexWriter writer = new IdWithValueVertexWriter(tw);
@@ -85,7 +85,7 @@ public class TestIdWithValueTextOutputFormat {
     writer.writeVertex(vertex);
 
     verify(tw).write(expected, null);
-    verify(vertex, times(0)).iterator();
+    verify(vertex, times(0)).getOutEdgesIterator();
     verify(vertex, times(0)).getEdgeValue(Matchers.<WritableComparable>any());
   }
 }

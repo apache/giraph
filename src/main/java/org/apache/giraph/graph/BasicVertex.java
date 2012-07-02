@@ -39,7 +39,7 @@ import java.util.Map;
 @SuppressWarnings("rawtypes")
 public abstract class BasicVertex<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
-    implements AggregatorUsage, Iterable<I>, Writable, Configurable {
+    implements AggregatorUsage, Writable, Configurable {
   /** If true, do not do anymore computation on this vertex. */
   protected boolean halt = false;
   /** Global graph state **/
@@ -124,8 +124,7 @@ public abstract class BasicVertex<I extends WritableComparable,
    *
    * @return the out edges (sort order determined by subclass implementation).
    */
-  @Override
-  public abstract Iterator<I> iterator();
+  public abstract Iterator<I> getOutEdgesIterator();
 
   /**
    * Get the edge value associated with a target vertex id.
@@ -175,7 +174,7 @@ public abstract class BasicVertex<I extends WritableComparable,
    * @param msg Message sent to all edges.
    */
   public void sendMsgToAllEdges(M msg) {
-    for (Iterator<I> edges = iterator(); edges.hasNext();) {
+    for (Iterator<I> edges = getOutEdgesIterator(); edges.hasNext();) {
       sendMsg(edges.next(), msg);
     }
   }

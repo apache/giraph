@@ -66,7 +66,9 @@ public class SimpleShortestPathsVertex extends
     }
     if (minDist < getVertexValue().get()) {
       setVertexValue(new DoubleWritable(minDist));
-      for (LongWritable targetVertexId : this) {
+      for (Iterator<LongWritable> edges = getOutEdgesIterator();
+           edges.hasNext();) {
+        LongWritable targetVertexId = edges.next();
         FloatWritable edgeValue = getEdgeValue(targetVertexId);
         if (LOG.isDebugEnabled()) {
           LOG.debug("Vertex " + getVertexId() + " sent to " +

@@ -49,7 +49,7 @@ public class TestAdjacencyListTextVertexOutputFormat {
     when(vertex.getVertexId()).thenReturn(new Text("The Beautiful South"));
     when(vertex.getVertexValue()).thenReturn(new DoubleWritable(32.2d));
     // Create empty iterator == no edges
-    when(vertex.iterator()).thenReturn(new ArrayList<Text>().iterator());
+    when(vertex.getOutEdgesIterator()).thenReturn(new ArrayList<Text>().iterator());
 
     RecordWriter<Text, Text> tw = mock(RecordWriter.class);
     AdjacencyListVertexWriter writer = new AdjacencyListVertexWriter(tw);
@@ -58,7 +58,7 @@ public class TestAdjacencyListTextVertexOutputFormat {
 
     Text expected = new Text("The Beautiful South\t32.2");
     verify(tw).write(expected, null);
-    verify(vertex, times(1)).iterator();
+    verify(vertex, times(1)).getOutEdgesIterator();
     verify(vertex, times(0)).getEdgeValue(Matchers.<WritableComparable>any());
   }
 
@@ -75,7 +75,7 @@ public class TestAdjacencyListTextVertexOutputFormat {
     ArrayList<Text> cities = new ArrayList<Text>();
     Collections.addAll(cities, new Text("Los Angeles"), new Text("Phoenix"));
 
-    when(vertex.iterator()).thenReturn(cities.iterator());
+    when(vertex.getOutEdgesIterator()).thenReturn(cities.iterator());
     mockEdgeValue(vertex, "Los Angeles", 347.16);
     mockEdgeValue(vertex, "Phoenix", 652.48);
 
@@ -87,7 +87,7 @@ public class TestAdjacencyListTextVertexOutputFormat {
     Text expected = new Text("San Francisco\t0.0\tLos Angeles\t347.16\t" +
             "Phoenix\t652.48");
     verify(tw).write(expected, null);
-    verify(vertex, times(1)).iterator();
+    verify(vertex, times(1)).getOutEdgesIterator();
     verify(vertex, times(2)).getEdgeValue(Matchers.<WritableComparable>any());
   }
 
@@ -105,7 +105,7 @@ public class TestAdjacencyListTextVertexOutputFormat {
     ArrayList<Text> cities = new ArrayList<Text>();
     Collections.addAll(cities, new Text("Los Angeles"), new Text("Phoenix"));
 
-    when(vertex.iterator()).thenReturn(cities.iterator());
+    when(vertex.getOutEdgesIterator()).thenReturn(cities.iterator());
     mockEdgeValue(vertex, "Los Angeles", 347.16);
     mockEdgeValue(vertex, "Phoenix", 652.48);
 
@@ -117,7 +117,7 @@ public class TestAdjacencyListTextVertexOutputFormat {
     Text expected = new Text("San Francisco:::0.0:::Los Angeles:::347.16:::" +
             "Phoenix:::652.48");
     verify(tw).write(expected, null);
-    verify(vertex, times(1)).iterator();
+    verify(vertex, times(1)).getOutEdgesIterator();
     verify(vertex, times(2)).getEdgeValue(Matchers.<WritableComparable>any());
   }
 

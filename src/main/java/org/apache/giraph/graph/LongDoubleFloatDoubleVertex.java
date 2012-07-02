@@ -163,7 +163,7 @@ public abstract class LongDoubleFloatDoubleVertex extends
   }
 
   @Override
-  public Iterator<LongWritable> iterator() {
+  public Iterator<LongWritable> getOutEdgesIterator() {
     final long[] destVertices = verticesWithEdgeValues.keys().elements();
     final int destVerticesSize = verticesWithEdgeValues.size();
     return new Iterator<LongWritable>() {

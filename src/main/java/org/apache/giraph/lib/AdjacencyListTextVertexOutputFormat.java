@@ -26,6 +26,7 @@ import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 import java.io.IOException;
+import java.util.Iterator;
 
 /**
  * OutputFormat to write out the graph nodes as text, value-separated (by
@@ -79,7 +80,8 @@ public class AdjacencyListTextVertexOutputFormat<I extends WritableComparable,
       sb.append(delimiter);
       sb.append(vertex.getVertexValue().toString());
 
-      for (I edge : vertex) {
+      for (Iterator<I> edges = vertex.getOutEdgesIterator(); edges.hasNext();) {
+        I edge = edges.next();
         sb.append(delimiter).append(edge);
         sb.append(delimiter).append(vertex.getEdgeValue(edge));
       }

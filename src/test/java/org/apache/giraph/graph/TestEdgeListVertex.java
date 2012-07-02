@@ -17,29 +17,20 @@
  */
 package org.apache.giraph.graph;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import org.apache.giraph.utils.WritableUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.*;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.giraph.utils.WritableUtils;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.DoubleWritable;
-import org.apache.hadoop.io.FloatWritable;
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-import org.junit.Before;
-import org.junit.Test;
-
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import static org.junit.Assert.*;
 
 /**
  * Tests {@link EdgeListVertex}.
@@ -98,7 +89,9 @@ public class TestEdgeListVertex {
     vertex.initialize(null, null, edgeMap, null);
     assertEquals(vertex.getNumOutEdges(), 1000);
     int expectedIndex = 1;
-    for (IntWritable index : vertex) {
+    for (Iterator<IntWritable> edges = vertex.getOutEdgesIterator();
+         edges.hasNext();) {
+      IntWritable index = edges.next();
       assertEquals(index.get(), expectedIndex);
       assertEquals(vertex.getEdgeValue(index).get(),
           expectedIndex * 2.0d);
@@ -148,7 +141,9 @@ public class TestEdgeListVertex {
     assertNull(vertex.getEdgeValue(new IntWritable(5)));
     assertNull(vertex.getEdgeValue(new IntWritable(0)));
     int i = 1;
-    for (IntWritable edgeDestId : vertex) {
+    for (Iterator<IntWritable> edges = vertex.getOutEdgesIterator();
+        edges.hasNext();) {
+      IntWritable edgeDestId = edges.next();
       assertEquals(i, edgeDestId.get());
       assertEquals(i * 1.0d, vertex.getEdgeValue(edgeDestId).get());
       ++i;

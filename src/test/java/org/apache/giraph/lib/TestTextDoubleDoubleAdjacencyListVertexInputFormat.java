@@ -17,11 +17,15 @@
  */
 package org.apache.giraph.lib;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import org.apache.giraph.graph.*;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.*;
+import org.apache.hadoop.mapreduce.RecordReader;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.junit.Before;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -30,26 +34,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.giraph.graph.BasicVertex;
-import org.apache.giraph.graph.BspUtils;
-import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.EdgeListVertex;
-import org.apache.giraph.graph.GiraphJob;
-import org.apache.giraph.graph.GraphState;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.BooleanWritable;
-import org.apache.hadoop.io.DoubleWritable;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.mapreduce.RecordReader;
-import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.junit.Before;
-import org.junit.Test;
-
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class TestTextDoubleDoubleAdjacencyListVertexInputFormat {
 
@@ -139,10 +126,12 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat {
     assertEquals(expected.getNumEdges(), actual.getNumEdges());
     List<Edge<I, E>> expectedEdges = Lists.newArrayList();
     List<Edge<I, E>> actualEdges = Lists.newArrayList();
-    for(I actualDestId : actual) {
+    for (Iterator<I> edges = actual.getOutEdgesIterator(); edges.hasNext();) {
+      I actualDestId = edges.next();
       actualEdges.add(new Edge<I, E>(actualDestId, actual.getEdgeValue(actualDestId)));
     }
-    for(I expectedDestId : expected) {
+    for (Iterator<I> edges = expected.getOutEdgesIterator(); edges.hasNext();) {
+      I expectedDestId = edges.next();
       expectedEdges.add(new Edge<I, E>(expectedDestId, expected.getEdgeValue(expectedDestId)));
     }
     Collections.sort(expectedEdges);

@@ -23,7 +23,6 @@ import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.ArrayWritable;
 import org.apache.giraph.graph.EdgeListVertex;
-import org.apache.giraph.examples.SimpleTriangleClosingVertex.IntArrayWritable;
 
 import java.util.Iterator;
 import java.util.Map;
@@ -75,7 +74,7 @@ public class SimpleTriangleClosingVertex extends EdgeListVertex<
   public void compute(Iterator<IntWritable> msgIterator) {
     if (getSuperstep() == 0) {
       // obtain list of all out-edges from THIS vertex
-      Iterator<IntWritable> iterator = iterator();
+      Iterator<IntWritable> iterator = getOutEdgesIterator();
       while (iterator.hasNext()) {
         sendMsgToAllEdges(iterator.next());
       }

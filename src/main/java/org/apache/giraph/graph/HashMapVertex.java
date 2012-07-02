@@ -142,7 +142,7 @@ public abstract class HashMapVertex<I extends WritableComparable,
    *         of the vertex ids
    */
   @Override
-  public Iterator<I> iterator() {
+  public Iterator<I> getOutEdgesIterator() {
     return destEdgeMap.keySet().iterator();
   }
 

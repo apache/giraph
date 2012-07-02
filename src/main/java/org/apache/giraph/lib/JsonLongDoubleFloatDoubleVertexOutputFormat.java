@@ -18,17 +18,19 @@
 
 package org.apache.giraph.lib;
 
+import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.VertexWriter;
-import org.json.JSONArray;
-import org.json.JSONException;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.apache.giraph.graph.BasicVertex;
+import org.json.JSONArray;
+import org.json.JSONException;
+
 import java.io.IOException;
+import java.util.Iterator;
 
 /**
  * VertexOutputFormat that supports JSON encoded vertices featuring
@@ -71,7 +73,9 @@ public class JsonLongDoubleFloatDoubleVertexOutputFormat extends
         jsonVertex.put(vertex.getVertexId().get());
         jsonVertex.put(vertex.getVertexValue().get());
         JSONArray jsonEdgeArray = new JSONArray();
-        for (LongWritable targetVertexId : vertex) {
+        for (Iterator<LongWritable> edges = vertex.getOutEdgesIterator();
+             edges.hasNext();) {
+          LongWritable targetVertexId = edges.next();
           JSONArray jsonEdge = new JSONArray();
           jsonEdge.put(targetVertexId.get());
           jsonEdge.put(vertex.getEdgeValue(targetVertexId).get());

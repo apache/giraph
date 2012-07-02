@@ -54,7 +54,8 @@ public class ConnectedComponentsVertex extends IntIntNullIntVertex {
 
     // First superstep is special, because we can simply look at the neighbors
     if (getSuperstep() == 0) {
-      for (Iterator<IntWritable> edges = iterator(); edges.hasNext();) {
+      for (Iterator<IntWritable> edges = getOutEdgesIterator();
+           edges.hasNext();) {
         int neighbor = edges.next().get();
         if (neighbor < currentComponent) {
           currentComponent = neighbor;
@@ -63,7 +64,7 @@ public class ConnectedComponentsVertex extends IntIntNullIntVertex {
       // Only need to send value if it is not the own id
       if (currentComponent != getVertexValue().get()) {
         setVertexValue(new IntWritable(currentComponent));
-        for (Iterator<IntWritable> edges = iterator();
+        for (Iterator<IntWritable> edges = getOutEdgesIterator();
             edges.hasNext();) {
           int neighbor = edges.next().get();
           if (neighbor > currentComponent) {

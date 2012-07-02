@@ -174,7 +174,7 @@ public class PseudoRandomVertexInputFormat<M extends Writable> extends
         LOG.debug("next: Return vertexId=" +
                   vertex.getVertexId().get() +
                   ", vertexValue=" + vertex.getVertexValue() +
-                  ", edgeMap=" + vertex.iterator());
+                  ", edgeMap=" + vertex.getOutEdgesIterator());
       }
       return vertex;
     }

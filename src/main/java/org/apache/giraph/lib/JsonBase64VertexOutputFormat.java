@@ -35,6 +35,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.Iterator;
 
 /**
  * Simple way to represent the structure of the graph with a JSON object.
@@ -97,7 +98,9 @@ public class JsonBase64VertexOutputFormat<I extends WritableComparable,
             "writerVertex: Failed to insert vertex value", e);
       }
       JSONArray edgeArray = new JSONArray();
-      for (I targetVertexId : vertex) {
+      for (Iterator<I> edges = vertex.getOutEdgesIterator();
+           edges.hasNext();) {
+        I targetVertexId = edges.next();
         Edge<I, E> edge = new Edge<I, E>(
             targetVertexId, vertex.getEdgeValue(targetVertexId));
         edge.setConf(getContext().getConfiguration());
