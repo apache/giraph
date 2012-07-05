@@ -22,6 +22,7 @@ import org.apache.giraph.graph.partition.GraphPartitionerFactory;
 import org.apache.giraph.graph.partition.HashPartitionerFactory;
 import org.apache.giraph.graph.partition.PartitionStats;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.util.ReflectionUtils;
@@ -451,17 +452,22 @@ public class BspUtils {
    * @param conf Configuration to check
    * @return Instantiated user vertex value
    */
+  @SuppressWarnings("unchecked")
   public static <V extends Writable> V
   createVertexValue(Configuration conf) {
     Class<V> vertexValueClass = getVertexValueClass(conf);
-    try {
-      return vertexValueClass.newInstance();
-    } catch (InstantiationException e) {
-      throw new IllegalArgumentException(
-        "createVertexValue: Failed to instantiate", e);
-    } catch (IllegalAccessException e) {
-      throw new IllegalArgumentException(
-        "createVertexValue: Illegally accessed", e);
+    if (vertexValueClass == NullWritable.class) {
+      return (V) NullWritable.get();
+    } else {
+      try {
+        return vertexValueClass.newInstance();
+      } catch (InstantiationException e) {
+        throw new IllegalArgumentException(
+          "createVertexValue: Failed to instantiate", e);
+      } catch (IllegalAccessException e) {
+        throw new IllegalArgumentException(
+          "createVertexValue: Illegally accessed", e);
+      }
     }
   }
 
@@ -486,17 +492,22 @@ public class BspUtils {
    * @param conf Configuration to check
    * @return Instantiated user edge value
    */
+  @SuppressWarnings("unchecked")
   public static <E extends Writable> E
   createEdgeValue(Configuration conf) {
     Class<E> edgeValueClass = getEdgeValueClass(conf);
-    try {
-      return edgeValueClass.newInstance();
-    } catch (InstantiationException e) {
-      throw new IllegalArgumentException(
-        "createEdgeValue: Failed to instantiate", e);
-    } catch (IllegalAccessException e) {
-      throw new IllegalArgumentException(
-        "createEdgeValue: Illegally accessed", e);
+    if (edgeValueClass == NullWritable.class) {
+      return (E) NullWritable.get();
+    } else {
+      try {
+        return edgeValueClass.newInstance();
+      } catch (InstantiationException e) {
+        throw new IllegalArgumentException(
+          "createEdgeValue: Failed to instantiate", e);
+      } catch (IllegalAccessException e) {
+        throw new IllegalArgumentException(
+          "createEdgeValue: Illegally accessed", e);
+      }
     }
   }
 
@@ -521,17 +532,22 @@ public class BspUtils {
    * @param conf Configuration to check
    * @return Instantiated user vertex message value
    */
+  @SuppressWarnings("unchecked")
   public static <M extends Writable> M
   createMessageValue(Configuration conf) {
     Class<M> messageValueClass = getMessageValueClass(conf);
-    try {
-      return messageValueClass.newInstance();
-    } catch (InstantiationException e) {
-      throw new IllegalArgumentException(
-        "createMessageValue: Failed to instantiate", e);
-    } catch (IllegalAccessException e) {
-      throw new IllegalArgumentException(
-        "createMessageValue: Illegally accessed", e);
+    if (messageValueClass == NullWritable.class) {
+      return (M) NullWritable.get();
+    } else {
+      try {
+        return messageValueClass.newInstance();
+      } catch (InstantiationException e) {
+        throw new IllegalArgumentException(
+          "createMessageValue: Failed to instantiate", e);
+      } catch (IllegalAccessException e) {
+        throw new IllegalArgumentException(
+          "createMessageValue: Illegally accessed", e);
+      }
     }
   }
 }

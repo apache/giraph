@@ -19,6 +19,7 @@
 package org.apache.giraph;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -56,6 +57,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobID;
@@ -132,6 +134,23 @@ public class TestBspBasic extends BspCase {
     ((Writable) splitArray.get(0)).write(outputStream);
     System.out.println("testInstantiateVertex: Example output split = " +
         byteArrayOutputStream.toString());
+  }
+
+  /**
+   * Test whether vertices with NullWritable for vertex value type, edge value
+   * type and message value type can be instantiated.
+   */
+  @Test
+  public void testInstantiateNullVertex() throws IOException {
+    Configuration nullConf = new Configuration();
+    nullConf.setClass(GiraphJob.VERTEX_VALUE_CLASS, NullWritable.class, Writable.class);
+    nullConf.setClass(GiraphJob.EDGE_VALUE_CLASS, NullWritable.class, Writable.class);
+    nullConf.setClass(GiraphJob.MESSAGE_VALUE_CLASS, NullWritable.class, Writable.class);
+    NullWritable vertexValue = BspUtils.createVertexValue(nullConf);
+    NullWritable edgeValue = BspUtils.createEdgeValue(nullConf);
+    NullWritable messageValue = BspUtils.createMessageValue(nullConf);
+    assertSame(vertexValue, edgeValue);
+    assertSame(edgeValue, messageValue);
   }
 
   /**

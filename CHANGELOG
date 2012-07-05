@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-216: NullWritable as VertexData, EdgeData or MessageData should be allowed.
+  (Jan van der Lugt via jghoman)
+
   GIRAPH-221: Make iteration over edges more explicit (apresta via aching).
 
   GIRAPH-225: Guava version in POM.XML is really old. Updated to version 12.0.
