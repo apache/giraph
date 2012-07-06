@@ -57,15 +57,24 @@ public class ResponseClientHandler extends SimpleChannelUpstreamHandler {
     ChannelBuffer buffer = (ChannelBuffer) event.getMessage();
     ChannelBufferInputStream inputStream = new ChannelBufferInputStream(buffer);
     int response = -1;
-    for (int i = 0; i < buffer.capacity(); ++i) {
+    try {
+      for (int i = 0; i < buffer.capacity(); ++i) {
+        try {
+          response = inputStream.readByte();
+        } catch (IOException e) {
+          throw new IllegalStateException(
+              "messageReceived: Got IOException ", e);
+        }
+        if (response != 0) {
+          throw new IllegalStateException(
+              "messageReceived: Got illegal response " + response);
+        }
+      }
+    } finally {
       try {
-        response = inputStream.readByte();
+        inputStream.close();
       } catch (IOException e) {
         throw new IllegalStateException("messageReceived: Got IOException ", e);
-      }
-      if (response != 0) {
-        throw new IllegalStateException(
-            "messageReceived: Got illegal response " + response);
       }
     }
 

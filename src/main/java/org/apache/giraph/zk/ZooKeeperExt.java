@@ -121,7 +121,7 @@ public class ZooKeeperExt extends ZooKeeper {
   /**
    * Data structure for handling the output of createOrSet()
    */
-  public class PathStat {
+  public static class PathStat {
     /** Path to created znode (if any) */
     private String path;
     /** Stat from set znode (if any) */

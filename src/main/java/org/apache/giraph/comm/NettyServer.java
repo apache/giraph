@@ -97,7 +97,7 @@ public class NettyServer<I extends WritableComparable,
         new SendPartitionMessagesRequest<I, V, E, M>());
     requestRegistry.registerClass(
         new SendPartitionMutationsRequest<I, V, E, M>());
-    requestRegistry.finalize();
+    requestRegistry.shutdown();
 
     ThreadFactory bossFactory = new ThreadFactoryBuilder()
       .setNameFormat("Giraph Netty Boss #%d")

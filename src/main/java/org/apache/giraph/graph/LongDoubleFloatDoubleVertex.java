@@ -283,7 +283,7 @@ public abstract class LongDoubleFloatDoubleVertex extends
   /**
    * Helper iterable over the messages.
    */
-  private class UnmodifiableDoubleWritableIterable
+  private static class UnmodifiableDoubleWritableIterable
     implements Iterable<DoubleWritable> {
     /** Backing store of messages */
     private final DoubleArrayList elementList;
@@ -308,7 +308,7 @@ public abstract class LongDoubleFloatDoubleVertex extends
   /**
    * Iterator over the messages.
    */
-  private class UnmodifiableDoubleWritableIterator
+  private static class UnmodifiableDoubleWritableIterator
       extends UnmodifiableIterator<DoubleWritable> {
     /** Double backing list */
     private final DoubleArrayList elementList;

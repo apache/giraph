@@ -19,6 +19,7 @@
 package org.apache.giraph.utils;
 
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 
 /**
  * Helper empty iterable when there are no messages.
@@ -38,7 +39,7 @@ public class EmptyIterable<M> implements Iterable<M>, Iterator<M> {
 
   @Override
   public M next() {
-    return null;
+    throw new NoSuchElementException();
   }
 
   @Override

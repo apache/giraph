@@ -39,8 +39,8 @@ public class TestZooKeeperExt implements Watcher {
     /** ZooKeeper server list */
     private String zkList = System.getProperty("prop.zookeeper.list");
 
-    public final String BASE_PATH = "/_zooKeeperExtTest";
-    public final String FIRST_PATH = "/_first";
+    public static final String BASE_PATH = "/_zooKeeperExtTest";
+    public static final String FIRST_PATH = "/_first";
 
     public void process(WatchedEvent event) {
         return;

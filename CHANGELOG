@@ -2,6 +2,8 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-233: Small errors found by FindBugs (Jan van der Lugt via hyunsik)
+  
   GIRAPH-216: NullWritable as VertexData, EdgeData or MessageData should be allowed.
   (Jan van der Lugt via jghoman)
 
