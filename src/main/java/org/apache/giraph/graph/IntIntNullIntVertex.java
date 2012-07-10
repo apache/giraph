@@ -18,11 +18,10 @@
 
 package org.apache.giraph.graph;
 
+import com.google.common.collect.Iterables;
 import org.apache.giraph.utils.UnmodifiableIntArrayIterator;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
-
-import com.google.common.collect.Iterables;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -156,6 +155,7 @@ public abstract class IntIntNullIntVertex extends
     for (int n = 0; n < messages.length; n++) {
       out.writeInt(messages[n]);
     }
+    out.writeBoolean(halt);
   }
 
   @Override
@@ -172,6 +172,7 @@ public abstract class IntIntNullIntVertex extends
     for (int n = 0; n < numMessages; n++) {
       messages[n] = in.readInt();
     }
+    halt = in.readBoolean();
   }
 
 }
