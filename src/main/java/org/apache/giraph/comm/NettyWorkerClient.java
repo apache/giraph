@@ -313,12 +313,12 @@ public class NettyWorkerClient<I extends WritableComparable,
         sendMessageCache.removeAllPartitionMessages();
     for (Entry<Integer, Map<I, Collection<M>>> entry :
         remainingMessageCache.entrySet()) {
-      WritableRequest<I, V, E, M> writableReauest =
+      WritableRequest<I, V, E, M> writableRequest =
           new SendPartitionMessagesRequest<I, V, E, M>(
               entry.getKey(), entry.getValue());
       InetSocketAddress remoteServerAddress =
           getInetSocketAddress(entry.getValue().keySet().iterator().next());
-      nettyClient.sendWritableRequest(remoteServerAddress, writableReauest);
+      nettyClient.sendWritableRequest(remoteServerAddress, writableRequest);
     }
 
     // Execute the remaining sends mutations (if any)
@@ -326,12 +326,12 @@ public class NettyWorkerClient<I extends WritableComparable,
         sendMutationsCache.removeAllPartitionMutations();
     for (Entry<Integer, Map<I, VertexMutations<I, V, E, M>>> entry :
         remainingMutationsCache.entrySet()) {
-      WritableRequest<I, V, E, M> writableReauest =
+      WritableRequest<I, V, E, M> writableRequest =
           new SendPartitionMutationsRequest<I, V, E, M>(
               entry.getKey(), entry.getValue());
       InetSocketAddress remoteServerAddress =
           getInetSocketAddress(entry.getValue().keySet().iterator().next());
-      nettyClient.sendWritableRequest(remoteServerAddress, writableReauest);
+      nettyClient.sendWritableRequest(remoteServerAddress, writableRequest);
     }
 
     nettyClient.waitAllRequests();

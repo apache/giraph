@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-241: Small typos in var names in NettyWorkerClient.java 
+  (Eli Reisman via hyunsik)
+
   GIRAPH-239: IntIntNullIntVertex doesn't save halted state (apresta
   via aching)
 
