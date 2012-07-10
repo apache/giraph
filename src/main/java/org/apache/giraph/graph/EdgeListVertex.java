@@ -18,12 +18,12 @@
 
 package org.apache.giraph.graph;
 
-import com.google.common.collect.Iterables;
 import org.apache.giraph.utils.ComparisonUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
 
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 import java.io.DataInput;
@@ -297,6 +297,11 @@ public abstract class EdgeListVertex<I extends WritableComparable,
   @Override
   public Iterable<M> getMessages() {
     return Iterables.unmodifiableIterable(msgList);
+  }
+
+  @Override
+  public int getNumMessages() {
+    return msgList.size();
   }
 
   @Override

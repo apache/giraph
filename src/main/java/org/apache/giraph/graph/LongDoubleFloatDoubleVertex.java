@@ -17,7 +17,6 @@
  */
 package org.apache.giraph.graph;
 
-import com.google.common.collect.UnmodifiableIterator;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -27,6 +26,8 @@ import org.apache.mahout.math.function.LongFloatProcedure;
 import org.apache.mahout.math.function.LongProcedure;
 import org.apache.mahout.math.list.DoubleArrayList;
 import org.apache.mahout.math.map.OpenLongFloatHashMap;
+
+import com.google.common.collect.UnmodifiableIterator;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -272,6 +273,11 @@ public abstract class LongDoubleFloatDoubleVertex extends
   @Override
   public Iterable<DoubleWritable> getMessages() {
     return new UnmodifiableDoubleWritableIterable(messageList);
+  }
+
+  @Override
+  public int getNumMessages() {
+    return messageList.size();
   }
 
   @Override

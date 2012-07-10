@@ -24,8 +24,13 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -214,6 +219,12 @@ public abstract class BasicVertex<I extends WritableComparable,
   abstract void putMessages(Iterable<M> messages);
 
   /**
+   * Get the number of incoming messages.
+   * @return the number of messages.
+   */
+  abstract int getNumMessages();
+
+  /**
    * Release unnecessary resources (will be called after vertex returns from
    * {@link #compute()})
    */
@@ -283,5 +294,55 @@ public abstract class BasicVertex<I extends WritableComparable,
   @Override
   public void setConf(Configuration conf) {
     this.conf = conf;
+  }
+
+  @Override
+  public void readFields(DataInput in) throws IOException {
+    I vertexId = BspUtils.<I>createVertexIndex(getConf());
+    vertexId.readFields(in);
+    V vertexValue = BspUtils.<V>createVertexValue(getConf());
+    vertexValue.readFields(in);
+
+    int numEdges = in.readInt();
+    Map<I, E> edges = new HashMap<I, E>(numEdges);
+    for (int i = 0; i < numEdges; ++i) {
+      I targetVertexId = BspUtils.<I>createVertexIndex(getConf());
+      targetVertexId.readFields(in);
+      E edgeValue = BspUtils.<E>createEdgeValue(getConf());
+      edgeValue.readFields(in);
+      edges.put(targetVertexId, edgeValue);
+    }
+
+    int numMessages = in.readInt();
+    List<M> messages = new ArrayList<M>(numMessages);
+    for (int i = 0; i < numMessages; ++i) {
+      M message = BspUtils.<M>createMessageValue(getConf());
+      message.readFields(in);
+      messages.add(message);
+    }
+
+    initialize(vertexId, vertexValue, edges, messages);
+
+    halt = in.readBoolean();
+  }
+
+  @Override
+  public void write(DataOutput out) throws IOException {
+    getVertexId().write(out);
+    getVertexValue().write(out);
+
+    out.writeInt(getNumOutEdges());
+    for (Iterator<I> edges = getOutEdgesIterator(); edges.hasNext();) {
+      I targetVertexId = edges.next();
+      targetVertexId.write(out);
+      getEdgeValue(targetVertexId).write(out);
+    }
+
+    out.writeInt(getNumMessages());
+    for (M message : getMessages()) {
+      message.write(out);
+    }
+
+    out.writeBoolean(halt);
   }
 }
