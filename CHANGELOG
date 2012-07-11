@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-242: HashMapVertex stores neighbor ids twice.
+  (Alessandro Presta via hyunsik)
+
   GIRAPH-241: Small typos in var names in NettyWorkerClient.java 
   (Eli Reisman via hyunsik)
 

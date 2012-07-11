@@ -54,8 +54,8 @@ public abstract class HashMapVertex<I extends WritableComparable,
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(HashMapVertex.class);
   /** Map of destination vertices and their edge values */
-  protected final Map<I, Edge<I, E>> destEdgeMap =
-      new HashMap<I, Edge<I, E>>();
+  protected final Map<I, E> destEdgeMap =
+      new HashMap<I, E>();
   /** Vertex id */
   private I vertexId = null;
   /** Vertex value */
@@ -72,12 +72,8 @@ public abstract class HashMapVertex<I extends WritableComparable,
     if (vertexValue != null) {
       setVertexValue(vertexValue);
     }
-    if (edges != null && !edges.isEmpty()) {
-      for (Map.Entry<I, E> entry : edges.entrySet()) {
-        destEdgeMap.put(
-            entry.getKey(),
-            new Edge<I, E>(entry.getKey(), entry.getValue()));
-      }
+    if (edges != null) {
+      destEdgeMap.putAll(edges);
     }
     if (messages != null) {
       Iterables.<M>addAll(msgList, messages);
@@ -86,9 +82,7 @@ public abstract class HashMapVertex<I extends WritableComparable,
 
   @Override
   public final boolean addEdge(I targetVertexId, E edgeValue) {
-    if (destEdgeMap.put(
-        targetVertexId,
-        new Edge<I, E>(targetVertexId, edgeValue)) != null) {
+    if (destEdgeMap.put(targetVertexId, edgeValue) != null) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("addEdge: Vertex=" + vertexId +
             ": already added an edge value for dest vertex id " +
@@ -127,8 +121,7 @@ public abstract class HashMapVertex<I extends WritableComparable,
 
   @Override
   public E getEdgeValue(I targetVertexId) {
-    Edge<I, E> edge = destEdgeMap.get(targetVertexId);
-    return edge != null ? edge.getEdgeValue() : null;
+    return destEdgeMap.get(targetVertexId);
   }
 
   @Override
@@ -154,12 +147,7 @@ public abstract class HashMapVertex<I extends WritableComparable,
 
   @Override
   public E removeEdge(I targetVertexId) {
-    Edge<I, E> edge = destEdgeMap.remove(targetVertexId);
-    if (edge != null) {
-      return edge.getEdgeValue();
-    } else {
-      return null;
-    }
+    return destEdgeMap.remove(targetVertexId);
   }
 
   @Override
@@ -168,8 +156,8 @@ public abstract class HashMapVertex<I extends WritableComparable,
       throw new IllegalArgumentException(
           "sendMsgToAllEdges: Cannot send null message to all edges");
     }
-    for (Edge<I, E> edge : destEdgeMap.values()) {
-      sendMsg(edge.getDestVertexId(), msg);
+    for (I targetVertexId : destEdgeMap.keySet()) {
+      sendMsg(targetVertexId, msg);
     }
   }
 
@@ -184,10 +172,11 @@ public abstract class HashMapVertex<I extends WritableComparable,
     }
     long edgeMapSize = in.readLong();
     for (long i = 0; i < edgeMapSize; ++i) {
-      Edge<I, E> edge = new Edge<I, E>();
-      edge.setConf(getConf());
-      edge.readFields(in);
-      addEdge(edge.getDestVertexId(), edge.getEdgeValue());
+      I targetVertexId = BspUtils.<I>createVertexIndex(getConf());
+      targetVertexId.readFields(in);
+      E edgeValue = BspUtils.<E>createEdgeValue(getConf());
+      edgeValue.readFields(in);
+      addEdge(targetVertexId, edgeValue);
     }
     long msgListSize = in.readLong();
     for (long i = 0; i < msgListSize; ++i) {
@@ -206,8 +195,9 @@ public abstract class HashMapVertex<I extends WritableComparable,
       vertexValue.write(out);
     }
     out.writeLong(destEdgeMap.size());
-    for (Edge<I, E> edge : destEdgeMap.values()) {
-      edge.write(out);
+    for (Map.Entry<I, E> edge : destEdgeMap.entrySet()) {
+      edge.getKey().write(out);
+      edge.getValue().write(out);
     }
     out.writeLong(msgList.size());
     for (M msg : msgList) {
