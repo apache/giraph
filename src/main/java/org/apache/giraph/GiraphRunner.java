@@ -210,9 +210,9 @@ public class GiraphRunner implements Tool {
 
     job.setWorkerConfiguration(workers, workers, 100.0f);
 
-    boolean isQuiet = !cmd.hasOption('q');
+    boolean verbose = !cmd.hasOption('q');
 
-    return job.run(isQuiet) ? 0 : -1;
+    return job.run(verbose) ? 0 : -1;
   }
 
   /**
