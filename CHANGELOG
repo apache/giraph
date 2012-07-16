@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-81: Create annotations on provided algorithms for cli
+  (majakabiljo via aching).
+
   GIRAPH-242: HashMapVertex stores neighbor ids twice.
   (Alessandro Presta via hyunsik)
 

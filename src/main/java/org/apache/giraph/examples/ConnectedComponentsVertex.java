@@ -40,6 +40,10 @@ import java.util.Iterator;
  *
  * http://www.cs.cmu.edu/~ukang/papers/PegasusKAIS.pdf
  */
+@Algorithm(
+    name = "Connected components",
+    description = "Finds connected components of the graph"
+)
 public class ConnectedComponentsVertex extends IntIntNullIntVertex {
   /**
    * Propagates the smallest vertex id to all neighbors. Will always choose to

@@ -24,14 +24,21 @@ import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
+import org.apache.giraph.examples.Algorithm;
+import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.utils.AnnotationUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.apache.zookeeper.ZooKeeper;
+
+import java.util.List;
 
 /**
  * Helper class to run Giraph applications by specifying the actual class name
@@ -62,6 +69,8 @@ public class GiraphRunner implements Tool {
   private static Options getOptions() {
     Options options = new Options();
     options.addOption("h", "help", false, "Help");
+    options.addOption("la", "listAlgorithms", false, "List supported " +
+        "algorithms");
     options.addOption("q", "quiet", false, "Quiet output");
     options.addOption("w", "workers", true, "Number of workers");
     options.addOption("if", "inputFormat", true, "Graph inputformat");
@@ -87,12 +96,44 @@ public class GiraphRunner implements Tool {
     this.conf = conf;
   }
 
+  /**
+   * Prints description of algorithms annotated with {@link Algorithm}
+   */
+  private void printSupportedAlgorithms() {
+    Logger.getLogger(ZooKeeper.class).setLevel(Level.OFF);
+
+    List<Class<?>> classes = AnnotationUtils.getAnnotatedClasses(
+        Algorithm.class, "org.apache.giraph");
+    System.out.print("  Supported algorithms:\n");
+    for (Class<?> clazz : classes) {
+      if (BasicVertex.class.isAssignableFrom(clazz)) {
+        Algorithm algorithm = clazz.getAnnotation(Algorithm.class);
+        StringBuilder sb = new StringBuilder();
+        sb.append(algorithm.name()).append(" - ").append(clazz.getName())
+            .append("\n");
+        if (!algorithm.description().equals("")) {
+          sb.append("    ").append(algorithm.description()).append("\n");
+        }
+        System.out.print(sb.toString());
+      }
+    }
+  }
+
   @Override
   public int run(String[] args) throws Exception {
     Options options = getOptions();
-    HelpFormatter formatter = new HelpFormatter();
-    if (args.length == 0) {
+
+    CommandLineParser parser = new BasicParser();
+    CommandLine cmd = parser.parse(options, args);
+
+    if (args.length == 0 || cmd.hasOption("h")) {
+      HelpFormatter formatter = new HelpFormatter();
       formatter.printHelp(getClass().getName(), options, true);
+      return 0;
+    }
+
+    if (cmd.hasOption("la")) {
+      printSupportedAlgorithms();
       return 0;
     }
 
@@ -100,9 +141,6 @@ public class GiraphRunner implements Tool {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Attempting to run Vertex: " + vertexClassName);
     }
-
-    CommandLineParser parser = new BasicParser();
-    CommandLine cmd = parser.parse(options, args);
 
     // Verify all the options have been provided
     for (String[] requiredOption : requiredOptions) {

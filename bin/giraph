@@ -88,7 +88,7 @@ else
 	CLASSPATH2=`mvn dependency:build-classpath | grep -v "[INFO]"`
 	CLASSPATH=$CLASSPATH:$CLASSPATH2	
 
-	for f in `find $GIRAPH_HOME/target -name giraph\*.jar` ; do
+	for f in for f in $GIRAPH_HOME/target/giraph*.jar; do
 	  if [ -e "$f" ]; then
 	    JAR=$f
 	    break

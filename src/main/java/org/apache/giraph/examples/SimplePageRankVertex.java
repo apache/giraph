@@ -47,6 +47,9 @@ import java.util.Map;
 /**
  * Demonstrates the basic Pregel PageRank implementation.
  */
+@Algorithm(
+    name = "Page rank"
+)
 public class SimplePageRankVertex extends LongDoubleFloatDoubleVertex {
   /** Number of supersteps for this test */
   public static final int MAX_SUPERSTEPS = 30;

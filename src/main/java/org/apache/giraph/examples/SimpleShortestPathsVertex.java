@@ -29,6 +29,10 @@ import java.util.Iterator;
 /**
  * Demonstrates the basic Pregel shortest paths implementation.
  */
+@Algorithm(
+    name = "Shortest paths",
+    description = "Finds all shortest paths from a selected vertex"
+)
 public class SimpleShortestPathsVertex extends
     EdgeListVertex<LongWritable, DoubleWritable,
     FloatWritable, DoubleWritable> {
