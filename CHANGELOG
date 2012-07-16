@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-248: Generic IdentityVertex for IO testing (Sean Choi via
+  aching).
+
   GIRAPH-222: GIRAPH-222 giraph-formats-contrib needs a README (bfem
   via aching).
 
