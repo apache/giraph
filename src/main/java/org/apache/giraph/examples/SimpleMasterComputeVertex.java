@@ -19,7 +19,6 @@
 package org.apache.giraph.examples;
 
 import org.apache.giraph.aggregators.DoubleOverwriteAggregator;
-import org.apache.giraph.aggregators.IntOverwriteAggregator;
 import org.apache.giraph.graph.LongDoubleFloatDoubleVertex;
 import org.apache.giraph.graph.MasterCompute;
 import org.apache.giraph.graph.WorkerContext;
@@ -67,7 +66,7 @@ public class SimpleMasterComputeVertex extends LongDoubleFloatDoubleVertex {
     @Override
     public void preApplication()
       throws InstantiationException, IllegalAccessException {
-      registerAggregator(SMC_AGG, IntOverwriteAggregator.class);
+      registerAggregator(SMC_AGG, DoubleOverwriteAggregator.class);
     }
 
     @Override

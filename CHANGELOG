@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-257: TestBspBasic.testBspMasterCompute is broken (majakabiljo
+  via aching).
+
   GIRAPH-81: Create annotations on provided algorithms for cli
   (majakabiljo via aching).
 
