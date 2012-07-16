@@ -18,18 +18,6 @@
 
 package org.apache.giraph.comm;
 
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.mock;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.EdgeListVertex;
@@ -43,8 +31,21 @@ import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.junit.Before;
 import org.junit.Test;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Test all the different netty requests.
@@ -91,7 +92,7 @@ public class RequestTest {
 
     // Start the service
     serverData =
-        new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>();
+        new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>(conf);
     server =
         new NettyServer<IntWritable, IntWritable, IntWritable, IntWritable>(
             conf, serverData);

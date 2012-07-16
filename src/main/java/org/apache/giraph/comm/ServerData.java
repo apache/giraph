@@ -18,13 +18,16 @@
 
 package org.apache.giraph.comm;
 
-import java.util.Collection;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.apache.giraph.graph.BasicVertex;
+import org.apache.giraph.graph.BspUtils;
+import org.apache.giraph.graph.VertexCombiner;
 import org.apache.giraph.graph.VertexMutations;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+
+import java.util.Collection;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Anything that the server stores
@@ -37,6 +40,8 @@ import org.apache.hadoop.io.WritableComparable;
 @SuppressWarnings("rawtypes")
 public class ServerData<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable> {
+  /** Combiner instance, can be null */
+  private VertexCombiner<I, M> combiner;
   /**
    * Map of partition ids to incoming vertices from other workers.
    * (Synchronized on values)
@@ -59,6 +64,18 @@ public class ServerData<I extends WritableComparable,
    */
   private final ConcurrentHashMap<I, VertexMutations<I, V, E, M>>
   vertexMutations = new ConcurrentHashMap<I, VertexMutations<I, V, E, M>>();
+
+  /**
+   * Constructor.
+   * @param conf Configuration (used to instantiate the combiner).
+   */
+  public ServerData(Configuration conf) {
+    if (BspUtils.getVertexCombinerClass(conf) == null) {
+      combiner = null;
+    } else {
+      combiner = BspUtils.createVertexCombiner(conf);
+    }
+  }
 
   /**
    * Get the partition vertices (synchronize on the values)
@@ -87,5 +104,13 @@ public class ServerData<I extends WritableComparable,
   public ConcurrentHashMap<I, VertexMutations<I, V, E, M>>
   getVertexMutations() {
     return vertexMutations;
+  }
+
+  /**
+   * Get the combiner instance.
+   * @return The combiner.
+   */
+  public VertexCombiner<I, M> getCombiner() {
+    return combiner;
   }
 }

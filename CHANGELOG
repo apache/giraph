@@ -2,6 +2,8 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-224: Netty server-side combiner (apresta via aching).
+
   GIRAPH-251: Allow to access the distributed cache from Vertexes and
   WorkerContext (Gianmarco De Francisci Morales via aching).
 

@@ -18,15 +18,6 @@
 
 package org.apache.giraph.comm;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.apache.giraph.comm.RequestRegistry.Type;
 import org.apache.giraph.graph.BspUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -36,6 +27,15 @@ import org.apache.log4j.Logger;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Send a collection of vertex messages for a partition.
@@ -132,6 +132,17 @@ public class SendPartitionMessagesRequest<I extends WritableComparable,
       }
       synchronized (messages) {
         messages.addAll(entry.getValue());
+        if (serverData.getCombiner() != null) {
+          try {
+            messages = Lists.newArrayList(
+                serverData.getCombiner().combine(entry.getKey(), messages));
+          } catch (IOException e) {
+            throw new IllegalStateException(
+                "doRequest: Combiner failed to combine messages " + messages,
+                e);
+          }
+          transientMessages.put(entry.getKey(), messages);
+        }
       }
     }
   }

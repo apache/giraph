@@ -18,11 +18,6 @@
 
 package org.apache.giraph.comm;
 
-import java.util.Collection;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Set;
-
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.BspUtils;
@@ -37,6 +32,11 @@ import org.apache.log4j.Logger;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+
+import java.util.Collection;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 
 /**
  * Netty worker server that implement {@link WorkerServer} and contains
@@ -61,8 +61,7 @@ public class NettyWorkerServer<I extends WritableComparable,
   /** Netty server that does that actual I/O */
   private final NettyServer<I, V, E, M> nettyServer;
   /** Server data storage */
-  private final ServerData<I, V, E, M> serverData =
-      new ServerData<I, V, E, M>();
+  private final ServerData<I, V, E, M> serverData;
 
   /**
    * Constructor to start the server.
@@ -74,6 +73,7 @@ public class NettyWorkerServer<I extends WritableComparable,
       CentralizedServiceWorker<I, V, E, M> service) {
     this.conf = conf;
     this.service = service;
+    serverData = new ServerData<I, V, E, M>(conf);
     nettyServer = new NettyServer<I, V, E, M>(conf, serverData);
     nettyServer.start();
   }
