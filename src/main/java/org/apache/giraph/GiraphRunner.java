@@ -17,8 +17,8 @@
  */
 package org.apache.giraph;
 
-import com.google.common.base.Splitter;
-import com.google.common.collect.Iterables;
+import java.net.URI;
+
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -29,6 +29,7 @@ import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.utils.AnnotationUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
@@ -39,6 +40,9 @@ import org.apache.log4j.Logger;
 import org.apache.zookeeper.ZooKeeper;
 
 import java.util.List;
+
+import com.google.common.base.Splitter;
+import com.google.common.collect.Iterables;
 
 /**
  * Helper class to run Giraph applications by specifying the actual class name
@@ -80,6 +84,7 @@ public class GiraphRunner implements Tool {
     options.addOption("c", "combiner", true, "VertexCombiner class");
     options.addOption("wc", "workerContext", true, "WorkerContext class");
     options.addOption("aw", "aggregatorWriter", true, "AggregatorWriter class");
+    options.addOption("cf", "cacheFile", true, "Files for distributed cache");
     options.addOption("ca", "customArguments", true, "provide custom" +
         " arguments for the job configuration in the form:" +
         " <param1>=<value1>,<param2>=<value2> etc.");
@@ -188,6 +193,11 @@ public class GiraphRunner implements Tool {
 
     if (cmd.hasOption("aw")) {
       job.setAggregatorWriterClass(Class.forName(cmd.getOptionValue("aw")));
+    }
+
+    if (cmd.hasOption("cf")) {
+      DistributedCache.addCacheFile(new URI(cmd.getOptionValue("cf")),
+          job.getConfiguration());
     }
 
     if (cmd.hasOption("ca")) {
