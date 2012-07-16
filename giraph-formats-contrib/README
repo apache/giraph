@@ -1,0 +1,16 @@
+giraph-formats-contrib hosts additional custom input/output formats that contain bulky or heavy-weight dependencies, and
+can't be bundled directly in the main giraph jar.
+
+In order to build, the following prerequisite conditions must be met.
+
+1) You must 'mvn install' the latest giraph maven artificat in your local m2 repo. In future releases this will
+be not be required in favor of a maven central artifact available for download.
+
+2) A build of core giraph jar with the following absolute path must be available:
+    ${giraph.trunk.base}/target/giraph-${project.version}-jar-with-dependencies.jar
+
+Default checkout has ${giraph.trunk.base} set to the parent directory '..'. This is a relative path to the trunk directory
+
+Once these conditions have been met, you will be able to compile and test giraph-formats-contrib.jar
+
+See https://cwiki.apache.org/confluence/display/GIRAPH/Giraph+formats+contrib for usage information.
