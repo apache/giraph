@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-236: Add FindBugs to maven build (Jan van der Lugt via
+  aching).
+
   GIRAPH-224: Netty server-side combiner (apresta via aching).
 
   GIRAPH-251: Allow to access the distributed cache from Vertexes and
