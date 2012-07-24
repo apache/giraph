@@ -18,13 +18,12 @@
 
 package org.apache.giraph.examples;
 
+import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.log4j.Logger;
-
-import java.util.Iterator;
 
 /**
  * Demonstrates the basic Pregel shortest paths implementation.
@@ -50,37 +49,33 @@ public class SimpleShortestPathsVertex extends
    * @return True if the source id
    */
   private boolean isSource() {
-    return getVertexId().get() ==
+    return getId().get() ==
         getContext().getConfiguration().getLong(SOURCE_ID,
             SOURCE_ID_DEFAULT);
   }
 
   @Override
-  public void compute(Iterator<DoubleWritable> msgIterator) {
+  public void compute(Iterable<DoubleWritable> messages) {
     if (getSuperstep() == 0) {
-      setVertexValue(new DoubleWritable(Double.MAX_VALUE));
+      setValue(new DoubleWritable(Double.MAX_VALUE));
     }
     double minDist = isSource() ? 0d : Double.MAX_VALUE;
-    while (msgIterator.hasNext()) {
-      minDist = Math.min(minDist, msgIterator.next().get());
+    for (DoubleWritable message : messages) {
+      minDist = Math.min(minDist, message.get());
     }
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Vertex " + getVertexId() + " got minDist = " + minDist +
-          " vertex value = " + getVertexValue());
+      LOG.debug("Vertex " + getId() + " got minDist = " + minDist +
+          " vertex value = " + getValue());
     }
-    if (minDist < getVertexValue().get()) {
-      setVertexValue(new DoubleWritable(minDist));
-      for (Iterator<LongWritable> edges = getOutEdgesIterator();
-           edges.hasNext();) {
-        LongWritable targetVertexId = edges.next();
-        FloatWritable edgeValue = getEdgeValue(targetVertexId);
+    if (minDist < getValue().get()) {
+      setValue(new DoubleWritable(minDist));
+      for (Edge<LongWritable, FloatWritable> edge : getEdges()) {
+        double distance = minDist + edge.getValue().get();
         if (LOG.isDebugEnabled()) {
-          LOG.debug("Vertex " + getVertexId() + " sent to " +
-              targetVertexId + " = " +
-              (minDist + edgeValue.get()));
+          LOG.debug("Vertex " + getId() + " sent to " +
+              edge.getTargetVertexId() + " = " + distance);
         }
-        sendMsg(targetVertexId,
-            new DoubleWritable(minDist + edgeValue.get()));
+        sendMessage(edge.getTargetVertexId(), new DoubleWritable(distance));
       }
     }
     voteToHalt();

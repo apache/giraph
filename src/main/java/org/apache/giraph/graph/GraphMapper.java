@@ -18,8 +18,6 @@
 
 package org.apache.giraph.graph;
 
-import com.google.common.collect.Iterables;
-
 import org.apache.giraph.bsp.CentralizedServiceMaster;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.graph.partition.Partition;
@@ -36,6 +34,8 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
 
+import com.google.common.collect.Iterables;
+
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.net.URL;
@@ -43,7 +43,6 @@ import java.net.URLDecoder;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Enumeration;
-import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -186,10 +185,10 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
    * @param conf Configuration to get the various classes
    */
   public void determineClassTypes(Configuration conf) {
-    Class<? extends BasicVertex<I, V, E, M>> vertexClass =
+    Class<? extends Vertex<I, V, E, M>> vertexClass =
         BspUtils.<I, V, E, M>getVertexClass(conf);
-    List<Class<?>> classList = ReflectionUtils.<BasicVertex>getTypeArguments(
-        BasicVertex.class, vertexClass);
+    List<Class<?>> classList = ReflectionUtils.<Vertex>getTypeArguments(
+        Vertex.class, vertexClass);
     Type vertexIndexType = classList.get(0);
     Type vertexValueType = classList.get(1);
     Type edgeValueType = classList.get(2);
@@ -309,7 +308,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
               "vertex - " + edgeValueType +
               ", vertex resolver - " + classList.get(3));
     }
-    conf.setClass(GiraphJob.VERTEX_INDEX_CLASS,
+    conf.setClass(GiraphJob.VERTEX_ID_CLASS,
         (Class<?>) vertexIndexType,
         WritableComparable.class);
     conf.setClass(GiraphJob.VERTEX_VALUE_CLASS,
@@ -506,7 +505,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
     if (done) {
       return;
     }
-    if ((serviceWorker != null) && (graphState.getNumVertices() == 0)) {
+    if ((serviceWorker != null) && (graphState.getTotalNumVertices() == 0)) {
       return;
     }
 
@@ -585,28 +584,26 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
       for (Partition<I, V, E, M> partition :
         serviceWorker.getPartitionMap().values()) {
         PartitionStats partitionStats =
-            new PartitionStats(partition.getPartitionId(), 0, 0, 0);
-        for (BasicVertex<I, V, E, M> basicVertex :
+            new PartitionStats(partition.getId(), 0, 0, 0);
+        for (Vertex<I, V, E, M> vertex :
           partition.getVertices()) {
           // Make sure every vertex has the current
           // graphState before computing
-          basicVertex.setGraphState(graphState);
-          if (basicVertex.isHalted() &
-              !Iterables.isEmpty(basicVertex.getMessages())) {
-            basicVertex.halt = false;
+          vertex.setGraphState(graphState);
+          if (vertex.isHalted() &
+              !Iterables.isEmpty(vertex.getMessages())) {
+            vertex.wakeUp();
           }
-          if (!basicVertex.isHalted()) {
-            Iterator<M> vertexMsgIt =
-                basicVertex.getMessages().iterator();
+          if (!vertex.isHalted()) {
             context.progress();
-            basicVertex.compute(vertexMsgIt);
-            basicVertex.releaseResources();
+            vertex.compute(vertex.getMessages());
+            vertex.releaseResources();
           }
-          if (basicVertex.isHalted()) {
+          if (vertex.isHalted()) {
             partitionStats.incrFinishedVertexCount();
           }
           partitionStats.incrVertexCount();
-          partitionStats.addEdgeCount(basicVertex.getNumOutEdges());
+          partitionStats.addEdgeCount(vertex.getNumEdges());
         }
         partitionStatsList.add(partitionStats);
       }

@@ -18,7 +18,7 @@
 package org.apache.giraph.format.hbase.edgemarker;
 
 import org.apache.giraph.format.hbase.HBaseVertexOutputFormat;
-import org.apache.giraph.graph.BasicVertex;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexWriter;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -62,12 +62,12 @@ public class TableEdgeOutputFormat
          Record the vertex value as a the value for a new qualifier 'parent'.
          */
         public void writeVertex(
-                BasicVertex<Text, Text, Text, ?> vertex)
+                Vertex<Text, Text, Text, ?> vertex)
                 throws IOException, InterruptedException {
               RecordWriter<ImmutableBytesWritable, Writable> writer = getRecordWriter();
-              byte[] rowBytes = vertex.getVertexId().getBytes();
+              byte[] rowBytes = vertex.getId().getBytes();
               Put put = new Put(rowBytes);
-              Text value = vertex.getVertexValue();
+              Text value = vertex.getValue();
               if(value.toString().length() > 0)   {
                  put.add(CF, PARENT, value.getBytes());
                  writer.write(new ImmutableBytesWritable(rowBytes), put);

@@ -36,22 +36,15 @@ import java.util.Map;
 @SuppressWarnings("rawtypes")
 public abstract class MutableVertex<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
-    extends BasicVertex<I, V, E, M> {
-  /**
-   * Set the vertex id
-   *
-   * @param id Vertex id is set to this (instantiated by the user)
-   */
-  public abstract void setVertexId(I id);
-
+    extends Vertex<I, V, E, M> {
   /**
    * Add an edge for this vertex (happens immediately)
    *
    * @param targetVertexId target vertex
-   * @param edgeValue value of the edge
+   * @param value value of the edge
    * @return Return true if succeeded, false otherwise
    */
-  public abstract boolean addEdge(I targetVertexId, E edgeValue);
+  public abstract boolean addEdge(I targetVertexId, E value);
 
   /**
    * Removes an edge for this vertex (happens immediately).
@@ -72,7 +65,7 @@ public abstract class MutableVertex<I extends WritableComparable,
    * @param messages Messages to be added to the vertex (typically empty)
    * @return A new vertex for adding to the graph
    */
-  public BasicVertex<I, V, E, M> instantiateVertex(
+  public Vertex<I, V, E, M> instantiateVertex(
       I vertexId, V vertexValue, Map<I, E> edges, Iterable<M> messages) {
     MutableVertex<I, V, E, M> mutableVertex =
         (MutableVertex<I, V, E, M>) BspUtils
@@ -88,10 +81,10 @@ public abstract class MutableVertex<I extends WritableComparable,
    *
    * @param vertex User created vertex
    */
-  public void addVertexRequest(BasicVertex<I, V, E, M> vertex)
+  public void addVertexRequest(Vertex<I, V, E, M> vertex)
     throws IOException {
     getGraphState().getWorkerCommunications().
-    addVertexReq(vertex);
+        addVertexRequest(vertex);
   }
 
   /**
@@ -102,7 +95,7 @@ public abstract class MutableVertex<I extends WritableComparable,
    */
   public void removeVertexRequest(I vertexId) throws IOException {
     getGraphState().getWorkerCommunications().
-    removeVertexReq(vertexId);
+        removeVertexRequest(vertexId);
   }
 
   /**
@@ -115,7 +108,7 @@ public abstract class MutableVertex<I extends WritableComparable,
   public void addEdgeRequest(I sourceVertexId, Edge<I, E> edge)
     throws IOException {
     getGraphState().getWorkerCommunications().
-    addEdgeReq(sourceVertexId, edge);
+        addEdgeRequest(sourceVertexId, edge);
   }
 
   /**
@@ -123,11 +116,11 @@ public abstract class MutableVertex<I extends WritableComparable,
    * (processed just prior to the next superstep).
    *
    * @param sourceVertexId Source vertex id of edge
-   * @param destVertexId Destination vertex id of edge
+   * @param targetVertexId Destination vertex id of edge
    */
-  public void removeEdgeRequest(I sourceVertexId, I destVertexId)
+  public void removeEdgeRequest(I sourceVertexId, I targetVertexId)
     throws IOException {
     getGraphState().getWorkerCommunications().
-    removeEdgeReq(sourceVertexId, destVertexId);
+        removeEdgeRequest(sourceVertexId, targetVertexId);
   }
 }

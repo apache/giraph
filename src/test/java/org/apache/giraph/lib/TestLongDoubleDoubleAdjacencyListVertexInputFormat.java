@@ -18,22 +18,11 @@
 package org.apache.giraph.lib;
 
 
-import static org.apache.giraph.lib.TestTextDoubleDoubleAdjacencyListVertexInputFormat.assertValidVertex;
-import static org.apache.giraph.lib.TestTextDoubleDoubleAdjacencyListVertexInputFormat.setGraphState;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
-import java.io.IOException;
-import java.util.Iterator;
-
-import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.GraphState;
+import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.BooleanWritable;
 import org.apache.hadoop.io.DoubleWritable;
@@ -44,6 +33,16 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.junit.Before;
 import org.junit.Test;
+
+import static org.apache.giraph.lib.TestTextDoubleDoubleAdjacencyListVertexInputFormat.assertValidVertex;
+import static org.apache.giraph.lib.TestTextDoubleDoubleAdjacencyListVertexInputFormat.setGraphState;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import java.io.IOException;
 
 public class TestLongDoubleDoubleAdjacencyListVertexInputFormat {
 
@@ -57,8 +56,8 @@ public class TestLongDoubleDoubleAdjacencyListVertexInputFormat {
     rr = mock(RecordReader.class);
     when(rr.nextKeyValue()).thenReturn(true);
     conf = new Configuration();
-    conf.setClass(GiraphJob.VERTEX_CLASS, DummyVertex.class, BasicVertex.class);
-    conf.setClass(GiraphJob.VERTEX_INDEX_CLASS, LongWritable.class, Writable.class);
+    conf.setClass(GiraphJob.VERTEX_CLASS, DummyVertex.class, Vertex.class);
+    conf.setClass(GiraphJob.VERTEX_ID_CLASS, LongWritable.class, Writable.class);
     conf.setClass(GiraphJob.VERTEX_VALUE_CLASS, DoubleWritable.class, Writable.class);
     graphState = mock(GraphState.class);
     tac = mock(TaskAttemptContext.class);
@@ -114,7 +113,7 @@ public class TestLongDoubleDoubleAdjacencyListVertexInputFormat {
     vr.initialize(null, tac);
 
     assertTrue("Should have been able to read vertex", vr.nextVertex());
-    BasicVertex<LongWritable, DoubleWritable, DoubleWritable, BooleanWritable>
+    Vertex<LongWritable, DoubleWritable, DoubleWritable, BooleanWritable>
         vertex = vr.getCurrentVertex();
     setGraphState(vertex, graphState);
     assertValidVertex(conf, graphState, vertex,
@@ -122,7 +121,7 @@ public class TestLongDoubleDoubleAdjacencyListVertexInputFormat {
         new Edge<LongWritable, DoubleWritable>(new LongWritable(99), new DoubleWritable(0.2)),
         new Edge<LongWritable, DoubleWritable>(new LongWritable(2000), new DoubleWritable(0.3)),
         new Edge<LongWritable, DoubleWritable>(new LongWritable(4000), new DoubleWritable(0.4)));
-    assertEquals(vertex.getNumOutEdges(), 3);
+    assertEquals(vertex.getNumEdges(), 3);
   }
 
   @Test
@@ -136,19 +135,19 @@ public class TestLongDoubleDoubleAdjacencyListVertexInputFormat {
 
     vr.initialize(null, tac);
     assertTrue("Should have been able to read vertex", vr.nextVertex());
-    BasicVertex<LongWritable, DoubleWritable, DoubleWritable, BooleanWritable>
+    Vertex<LongWritable, DoubleWritable, DoubleWritable, BooleanWritable>
         vertex = vr.getCurrentVertex();
     setGraphState(vertex, graphState);
     assertValidVertex(conf, graphState, vertex, new LongWritable(12345), new DoubleWritable(42.42),
        new Edge<LongWritable, DoubleWritable>(new LongWritable(9999999), new DoubleWritable(99.9)));
-    assertEquals(vertex.getNumOutEdges(), 1);
+    assertEquals(vertex.getNumEdges(), 1);
   }
 
   public static class DummyVertex
       extends EdgeListVertex<LongWritable, DoubleWritable,
       DoubleWritable, BooleanWritable> {
     @Override
-    public void compute(Iterator<BooleanWritable> msgIterator) throws IOException {
+    public void compute(Iterable<BooleanWritable> messages) throws IOException {
       // ignore
     }
   }

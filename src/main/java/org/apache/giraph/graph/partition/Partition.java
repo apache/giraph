@@ -18,18 +18,19 @@
 
 package org.apache.giraph.graph.partition;
 
+import org.apache.giraph.graph.BspUtils;
+import org.apache.giraph.graph.Vertex;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
+
+import com.google.common.collect.Maps;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Map;
-
-import org.apache.giraph.graph.BasicVertex;
-import org.apache.giraph.graph.BspUtils;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 
 /**
  * A generic container that stores vertices.  Vertex ids will map to exactly
@@ -47,20 +48,19 @@ public class Partition<I extends WritableComparable,
   /** Configuration from the worker */
   private final Configuration conf;
   /** Partition id */
-  private final int partitionId;
+  private final int id;
   /** Vertex map for this range (keyed by index) */
-  private final Map<I, BasicVertex<I, V, E, M>> vertexMap =
-      new HashMap<I, BasicVertex<I, V, E, M>>();
+  private final Map<I, Vertex<I, V, E, M>> vertexMap = Maps.newHashMap();
 
   /**
    * Constructor.
    *
    * @param conf Configuration.
-   * @param partitionId Partition id.
+   * @param id Partition id.
    */
-  public Partition(Configuration conf, int partitionId) {
+  public Partition(Configuration conf, int id) {
     this.conf = conf;
-    this.partitionId = partitionId;
+    this.id = id;
   }
 
   /**
@@ -69,7 +69,7 @@ public class Partition<I extends WritableComparable,
    * @param vertexIndex Vertex index to search for
    * @return Vertex if it exists, null otherwise
    */
-  public BasicVertex<I, V, E, M> getVertex(I vertexIndex) {
+  public Vertex<I, V, E, M> getVertex(I vertexIndex) {
     return vertexMap.get(vertexIndex);
   }
 
@@ -79,8 +79,8 @@ public class Partition<I extends WritableComparable,
    * @param vertex Vertex to put in the Partition
    * @return old vertex value (i.e. null if none existed prior)
    */
-  public BasicVertex<I, V, E, M> putVertex(BasicVertex<I, V, E, M> vertex) {
-    return vertexMap.put(vertex.getVertexId(), vertex);
+  public Vertex<I, V, E, M> putVertex(Vertex<I, V, E, M> vertex) {
+    return vertexMap.put(vertex.getId(), vertex);
   }
 
   /**
@@ -89,7 +89,7 @@ public class Partition<I extends WritableComparable,
    * @param vertexIndex Vertex index to remove
    * @return The removed vertex.
    */
-  public BasicVertex<I, V, E, M> removeVertex(I vertexIndex) {
+  public Vertex<I, V, E, M> removeVertex(I vertexIndex) {
     return vertexMap.remove(vertexIndex);
   }
 
@@ -98,7 +98,7 @@ public class Partition<I extends WritableComparable,
    *
    * @return Collection of the vertices
    */
-  public Collection<BasicVertex<I, V, E , M>> getVertices() {
+  public Collection<Vertex<I, V, E , M>> getVertices() {
     return vertexMap.values();
   }
 
@@ -109,8 +109,8 @@ public class Partition<I extends WritableComparable,
    */
   public long getEdgeCount() {
     long edges = 0;
-    for (BasicVertex<I, V, E, M> vertex : vertexMap.values()) {
-      edges += vertex.getNumOutEdges();
+    for (Vertex<I, V, E, M> vertex : vertexMap.values()) {
+      edges += vertex.getNumEdges();
     }
     return edges;
   }
@@ -118,15 +118,15 @@ public class Partition<I extends WritableComparable,
   /**
    * Get the partition id.
    *
-   * @return Partition id of this partition.
+   * @return Id of this partition.
    */
-  public int getPartitionId() {
-    return partitionId;
+  public int getId() {
+    return id;
   }
 
   @Override
   public String toString() {
-    return "(id=" + getPartitionId() + ",V=" + vertexMap.size() +
+    return "(id=" + getId() + ",V=" + vertexMap.size() +
         ",E=" + getEdgeCount() + ")";
   }
 
@@ -134,11 +134,11 @@ public class Partition<I extends WritableComparable,
   public void readFields(DataInput input) throws IOException {
     int vertices = input.readInt();
     for (int i = 0; i < vertices; ++i) {
-      BasicVertex<I, V, E, M> vertex =
+      Vertex<I, V, E, M> vertex =
         BspUtils.<I, V, E, M>createVertex(conf);
       vertex.readFields(input);
-      if (vertexMap.put(vertex.getVertexId(),
-          (BasicVertex<I, V, E, M>) vertex) != null) {
+      if (vertexMap.put(vertex.getId(),
+          (Vertex<I, V, E, M>) vertex) != null) {
         throw new IllegalStateException(
             "readFields: " + this +
             " already has same id " + vertex);
@@ -149,7 +149,7 @@ public class Partition<I extends WritableComparable,
   @Override
   public void write(DataOutput output) throws IOException {
     output.writeInt(vertexMap.size());
-    for (BasicVertex vertex : vertexMap.values()) {
+    for (Vertex vertex : vertexMap.values()) {
       vertex.write(output);
     }
   }

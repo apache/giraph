@@ -18,11 +18,8 @@
 
 package org.apache.giraph.lib;
 
-import com.google.common.collect.Maps;
-import net.iharder.Base64;
-import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.BspUtils;
-import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexReader;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.LongWritable;
@@ -35,6 +32,10 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import com.google.common.collect.Maps;
+
+import net.iharder.Base64;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInput;
@@ -84,10 +85,10 @@ public class JsonBase64VertexInputFormat<I extends WritableComparable,
     }
 
     @Override
-    public BasicVertex<I, V, E, M> getCurrentVertex()
+    public Vertex<I, V, E, M> getCurrentVertex()
       throws IOException, InterruptedException {
       Configuration conf = getContext().getConfiguration();
-      BasicVertex<I, V, E, M> vertex = BspUtils.createVertex(conf);
+      Vertex<I, V, E, M> vertex = BspUtils.createVertex(conf);
 
       Text line = getRecordReader().getCurrentValue();
       JSONObject vertexObject;
@@ -105,7 +106,7 @@ public class JsonBase64VertexInputFormat<I extends WritableComparable,
           vertexObject.getString(JsonBase64VertexFormat.VERTEX_ID_KEY));
         input = new DataInputStream(
           new ByteArrayInputStream(decodedWritable));
-        vertexId = BspUtils.<I>createVertexIndex(conf);
+        vertexId = BspUtils.<I>createVertexId(conf);
         vertexId.readFields(input);
       } catch (JSONException e) {
         throw new IllegalArgumentException(
@@ -141,10 +142,13 @@ public class JsonBase64VertexInputFormat<I extends WritableComparable,
         }
         input = new DataInputStream(
             new ByteArrayInputStream(decodedWritable));
-        Edge<I, E> edge = new Edge<I, E>();
-        edge.setConf(getContext().getConfiguration());
-        edge.readFields(input);
-        edgeMap.put(edge.getDestVertexId(), edge.getEdgeValue());
+        I targetVertexId =
+            BspUtils.<I>createVertexId(getContext().getConfiguration());
+        targetVertexId.readFields(input);
+        E edgeValue =
+            BspUtils.<E>createEdgeValue(getContext().getConfiguration());
+        edgeValue.readFields(input);
+        edgeMap.put(targetVertexId, edgeValue);
       }
       vertex.initialize(vertexId, vertexValue, edgeMap, null);
       return vertex;

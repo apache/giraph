@@ -18,7 +18,7 @@
 
 package org.apache.giraph.comm;
 
-import org.apache.giraph.graph.BasicVertex;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.BspUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -36,7 +36,7 @@ import org.apache.hadoop.io.WritableComparable;
 public class VertexList<I extends WritableComparable,
     V extends Writable, E extends Writable,
     M extends Writable>
-    extends ArrayListWritable<BasicVertex<I, V, E, M>> {
+    extends ArrayListWritable<Vertex<I, V, E, M>> {
   /** Defining a layout version for a serializable class. */
   private static final long serialVersionUID = 1000L;
 
@@ -48,7 +48,7 @@ public class VertexList<I extends WritableComparable,
   @SuppressWarnings("unchecked")
   @Override
   public void setClass() {
-    setClass((Class<BasicVertex<I, V, E, M>>)
+    setClass((Class<Vertex<I, V, E, M>>)
         BspUtils.<I, V, E, M>getVertexClass(getConf()));
   }
 }

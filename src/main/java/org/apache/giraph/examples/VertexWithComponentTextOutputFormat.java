@@ -18,7 +18,7 @@
 
 package org.apache.giraph.examples;
 
-import org.apache.giraph.graph.BasicVertex;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexWriter;
 import org.apache.giraph.lib.TextVertexOutputFormat;
 import org.apache.hadoop.io.IntWritable;
@@ -63,13 +63,13 @@ public class VertexWithComponentTextOutputFormat extends
     }
 
     @Override
-    public void writeVertex(BasicVertex<IntWritable, IntWritable,
-        NullWritable, ?> vertex) throws IOException,
+    public void writeVertex(Vertex<IntWritable, IntWritable,
+            NullWritable, ?> vertex) throws IOException,
         InterruptedException {
       StringBuilder output = new StringBuilder();
-      output.append(vertex.getVertexId().get());
+      output.append(vertex.getId().get());
       output.append('\t');
-      output.append(vertex.getVertexValue().get());
+      output.append(vertex.getValue().get());
       getRecordWriter().write(new Text(output.toString()), null);
     }
   }

@@ -18,17 +18,11 @@
 
 package org.apache.giraph.graph;
 
-import org.apache.hadoop.conf.Configurable;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-
 /**
- * A complete edge, the destination vertex and the edge value.  Can only be one
+ * A complete edge, the target vertex and the edge value.  Can only be one
  * edge with a destination vertex id per edge map.
  *
  * @param <I> Vertex index
@@ -36,13 +30,11 @@ import java.io.IOException;
  */
 @SuppressWarnings("rawtypes")
 public class Edge<I extends WritableComparable, E extends Writable>
-    implements WritableComparable<Edge<I, E>>, Configurable {
-  /** Destination vertex id */
-  private I destVertexId = null;
+    implements Comparable<Edge<I, E>> {
+  /** Target vertex id */
+  private I targetVertexId = null;
   /** Edge value */
-  private E edgeValue = null;
-  /** Configuration - Used to instantiate classes */
-  private Configuration conf = null;
+  private E value = null;
 
   /**
    * Constructor for reflection
@@ -52,21 +44,21 @@ public class Edge<I extends WritableComparable, E extends Writable>
   /**
    * Create the edge with final values
    *
-   * @param destVertexId Desination vertex id.
-   * @param edgeValue Value of the edge.
+   * @param targetVertexId Desination vertex id.
+   * @param value Value of the edge.
    */
-  public Edge(I destVertexId, E edgeValue) {
-    this.destVertexId = destVertexId;
-    this.edgeValue = edgeValue;
+  public Edge(I targetVertexId, E value) {
+    this.targetVertexId = targetVertexId;
+    this.value = value;
   }
 
   /**
-   * Get the destination vertex index of this edge
+   * Get the target vertex index of this edge
    *
-   * @return Destination vertex index of this edge
+   * @return Target vertex index of this edge
    */
-  public I getDestVertexId() {
-    return destVertexId;
+  public I getTargetVertexId() {
+    return targetVertexId;
   }
 
   /**
@@ -74,70 +66,38 @@ public class Edge<I extends WritableComparable, E extends Writable>
    *
    * @return Edge value of this edge
    */
-  public E getEdgeValue() {
-    return edgeValue;
+  public E getValue() {
+    return value;
   }
 
   /**
    * Set the destination vertex index of this edge.
    *
-   * @param destVertexId new destination vertex
+   * @param targetVertexId new destination vertex
    */
-  public void setDestVertexId(I destVertexId) {
-    this.destVertexId = destVertexId;
+  public void setTargetVertexId(I targetVertexId) {
+    this.targetVertexId = targetVertexId;
   }
 
   /**
    * Set the value for this edge.
    *
-   * @param edgeValue new edge value
+   * @param value new edge value
    */
-  public void setEdgeValue(E edgeValue) {
-    this.edgeValue = edgeValue;
+  public void setValue(E value) {
+    this.value = value;
   }
 
   @Override
   public String toString() {
-    return "(DestVertexIndex = " + destVertexId +
-        ", edgeValue = " + edgeValue  + ")";
-  }
-
-  @Override
-  public void readFields(DataInput input) throws IOException {
-    destVertexId = BspUtils.<I>createVertexIndex(getConf());
-    destVertexId.readFields(input);
-    edgeValue = BspUtils.<E>createEdgeValue(getConf());
-    edgeValue.readFields(input);
-  }
-
-  @Override
-  public void write(DataOutput output) throws IOException {
-    if (destVertexId == null) {
-      throw new IllegalStateException(
-          "write: Null destination vertex index");
-    }
-    if (edgeValue == null) {
-      throw new IllegalStateException(
-          "write: Null edge value");
-    }
-    destVertexId.write(output);
-    edgeValue.write(output);
-  }
-
-  @Override
-  public Configuration getConf() {
-    return conf;
-  }
-
-  @Override
-  public void setConf(Configuration conf) {
-    this.conf = conf;
+    return "(TargetVertexId = " + targetVertexId + ", " +
+        "value = " + value + ")";
   }
 
   @SuppressWarnings("unchecked")
   @Override
   public int compareTo(Edge<I, E> edge) {
-    return destVertexId.compareTo(edge.getDestVertexId());
+    return targetVertexId.compareTo(edge.getTargetVertexId());
   }
 
   @Override
@@ -151,12 +111,11 @@ public class Edge<I extends WritableComparable, E extends Writable>
 
     Edge edge = (Edge) o;
 
-    if (destVertexId != null ? !destVertexId.equals(edge.destVertexId) :
-      edge.destVertexId != null) {
+    if (targetVertexId != null ? !targetVertexId.equals(edge.targetVertexId) :
+      edge.targetVertexId != null) {
       return false;
     }
-    if (edgeValue != null ?
-        !edgeValue.equals(edge.edgeValue) : edge.edgeValue != null) {
+    if (value != null ? !value.equals(edge.value) : edge.value != null) {
       return false;
     }
 
@@ -165,8 +124,8 @@ public class Edge<I extends WritableComparable, E extends Writable>
 
   @Override
   public int hashCode() {
-    int result = destVertexId != null ? destVertexId.hashCode() : 0;
-    result = 31 * result + (edgeValue != null ? edgeValue.hashCode() : 0);
+    int result = targetVertexId != null ? targetVertexId.hashCode() : 0;
+    result = 31 * result + (value != null ? value.hashCode() : 0);
     return result;
   }
 }

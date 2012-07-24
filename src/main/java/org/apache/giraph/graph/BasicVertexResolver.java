@@ -39,7 +39,7 @@ public interface BasicVertexResolver<I extends WritableComparable,
    * excluding the normal case (a vertex already exists and has zero or more
    * messages sent it to).
    *
-   * @param vertexId Vertex id (can be used for {@link BasicVertex}'s
+   * @param vertexId Vertex id (can be used for {@link Vertex}'s
    *        initialize())
    * @param vertex Original vertex or null if none
    * @param vertexChanges Changes that happened to this vertex or null if none
@@ -47,8 +47,8 @@ public interface BasicVertexResolver<I extends WritableComparable,
    * @return Vertex to be returned, if null, and a vertex currently exists
    *         it will be removed
    */
-  BasicVertex<I, V, E, M> resolve(I vertexId,
-      BasicVertex<I, V, E, M> vertex,
+  Vertex<I, V, E, M> resolve(I vertexId,
+      Vertex<I, V, E, M> vertex,
       VertexChanges<I, V, E, M> vertexChanges,
       Iterable<M> messages);
 
@@ -57,5 +57,5 @@ public interface BasicVertexResolver<I extends WritableComparable,
    *
    * @return Newly instantiated vertex.
    */
-  BasicVertex<I, V, E, M> instantiateVertex();
+  Vertex<I, V, E, M> instantiateVertex();
 }

@@ -22,7 +22,6 @@ import org.apache.giraph.graph.IntIntNullIntVertex;
 import org.apache.hadoop.io.IntWritable;
 
 import java.io.IOException;
-import java.util.Iterator;
 
 /**
  * Implementation of the HCC algorithm that identifies connected components and
@@ -53,26 +52,22 @@ public class ConnectedComponentsVertex extends IntIntNullIntVertex {
    * @throws IOException
    */
   @Override
-  public void compute(Iterator<IntWritable> messages) throws IOException {
-    int currentComponent = getVertexValue().get();
+  public void compute(Iterable<IntWritable> messages) throws IOException {
+    int currentComponent = getValue().get();
 
     // First superstep is special, because we can simply look at the neighbors
     if (getSuperstep() == 0) {
-      for (Iterator<IntWritable> edges = getOutEdgesIterator();
-           edges.hasNext();) {
-        int neighbor = edges.next().get();
-        if (neighbor < currentComponent) {
-          currentComponent = neighbor;
+      for (IntWritable neighbor : getNeighbors()) {
+        if (neighbor.get() < currentComponent) {
+          currentComponent = neighbor.get();
         }
       }
       // Only need to send value if it is not the own id
-      if (currentComponent != getVertexValue().get()) {
-        setVertexValue(new IntWritable(currentComponent));
-        for (Iterator<IntWritable> edges = getOutEdgesIterator();
-            edges.hasNext();) {
-          int neighbor = edges.next().get();
-          if (neighbor > currentComponent) {
-            sendMsg(new IntWritable(neighbor), getVertexValue());
+      if (currentComponent != getValue().get()) {
+        setValue(new IntWritable(currentComponent));
+        for (IntWritable neighbor : getNeighbors()) {
+          if (neighbor.get() > currentComponent) {
+            sendMessage(new IntWritable(neighbor.get()), getValue());
           }
         }
       }
@@ -83,8 +78,8 @@ public class ConnectedComponentsVertex extends IntIntNullIntVertex {
 
     boolean changed = false;
     // did we get a smaller id ?
-    while (messages.hasNext()) {
-      int candidateComponent = messages.next().get();
+    for (IntWritable message : messages) {
+      int candidateComponent = message.get();
       if (candidateComponent < currentComponent) {
         currentComponent = candidateComponent;
         changed = true;
@@ -93,8 +88,8 @@ public class ConnectedComponentsVertex extends IntIntNullIntVertex {
 
     // propagate new component id to the neighbors
     if (changed) {
-      setVertexValue(new IntWritable(currentComponent));
-      sendMsgToAllEdges(getVertexValue());
+      setValue(new IntWritable(currentComponent));
+      sendMessageToAllEdges(getValue());
     }
     voteToHalt();
   }

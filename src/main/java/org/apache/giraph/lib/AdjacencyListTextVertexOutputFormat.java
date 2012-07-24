@@ -17,7 +17,8 @@
  */
 package org.apache.giraph.lib;
 
-import org.apache.giraph.graph.BasicVertex;
+import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexWriter;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
@@ -26,7 +27,6 @@ import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 import java.io.IOException;
-import java.util.Iterator;
 
 /**
  * OutputFormat to write out the graph nodes as text, value-separated (by
@@ -69,21 +69,20 @@ public class AdjacencyListTextVertexOutputFormat<I extends WritableComparable,
     }
 
     @Override
-    public void writeVertex(BasicVertex<I, V, E, ?> vertex) throws IOException,
+    public void writeVertex(Vertex<I, V, E, ?> vertex) throws IOException,
     InterruptedException {
       if (delimiter == null) {
         delimiter = getContext().getConfiguration()
             .get(LINE_TOKENIZE_VALUE, LINE_TOKENIZE_VALUE_DEFAULT);
       }
 
-      StringBuffer sb = new StringBuffer(vertex.getVertexId().toString());
+      StringBuffer sb = new StringBuffer(vertex.getId().toString());
       sb.append(delimiter);
-      sb.append(vertex.getVertexValue().toString());
+      sb.append(vertex.getValue());
 
-      for (Iterator<I> edges = vertex.getOutEdgesIterator(); edges.hasNext();) {
-        I edge = edges.next();
-        sb.append(delimiter).append(edge);
-        sb.append(delimiter).append(vertex.getEdgeValue(edge));
+      for (Edge<I, E> edge : vertex.getEdges()) {
+        sb.append(delimiter).append(edge.getTargetVertexId());
+        sb.append(delimiter).append(edge.getValue());
       }
 
       getRecordWriter().write(new Text(sb.toString()), null);

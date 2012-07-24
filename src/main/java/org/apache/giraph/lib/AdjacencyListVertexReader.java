@@ -17,10 +17,9 @@
  */
 package org.apache.giraph.lib;
 
-import com.google.common.collect.Maps;
-import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.lib.TextVertexInputFormat.TextVertexReader;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.LongWritable;
@@ -28,6 +27,8 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.RecordReader;
+
+import com.google.common.collect.Maps;
 
 import java.io.IOException;
 import java.util.Map;
@@ -128,11 +129,11 @@ public abstract class AdjacencyListVertexReader<I extends WritableComparable,
   }
 
   @Override
-  public BasicVertex<I, V, E, M> getCurrentVertex()
+  public Vertex<I, V, E, M> getCurrentVertex()
     throws IOException, InterruptedException {
     Configuration conf = getContext().getConfiguration();
     String line = getRecordReader().getCurrentValue().toString();
-    BasicVertex<I, V, E, M> vertex = BspUtils.createVertex(conf);
+    Vertex<I, V, E, M> vertex = BspUtils.createVertex(conf);
 
     if (sanitizer != null) {
       line = sanitizer.sanitize(line);
@@ -149,7 +150,7 @@ public abstract class AdjacencyListVertexReader<I extends WritableComparable,
         "Line did not split correctly: " + line);
     }
 
-    I vertexId = BspUtils.<I>createVertexIndex(conf);
+    I vertexId = BspUtils.<I>createVertexId(conf);
     decodeId(values[0], vertexId);
 
     V value = BspUtils.<V>createVertexValue(conf);
@@ -160,7 +161,7 @@ public abstract class AdjacencyListVertexReader<I extends WritableComparable,
     Edge<I, E> edge = new Edge<I, E>();
     while (i < values.length) {
       decodeEdge(values[i], values[i + 1], edge);
-      edges.put(edge.getDestVertexId(), edge.getEdgeValue());
+      edges.put(edge.getTargetVertexId(), edge.getValue());
       i += 2;
     }
     vertex.initialize(vertexId, value, edges, null);

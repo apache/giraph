@@ -27,6 +27,6 @@ import org.apache.hadoop.io.LongWritable;
  * lib.LongDoubleDoubleAdjacencyListVertexInputFormat
  */
 
-public class SimpleLongDoubleDoubleDoubleIdentityVertex extends
+public abstract class SimpleLongDoubleDoubleDoubleIdentityVertex extends
   IdentityVertex<LongWritable, DoubleWritable,
   DoubleWritable, DoubleWritable> { }

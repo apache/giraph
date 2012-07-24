@@ -19,14 +19,17 @@
 package org.apache.giraph.comm;
 
 import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.GiraphJob;
-import org.apache.giraph.graph.MutableVertex;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexCombiner;
 import org.apache.giraph.graph.VertexMutations;
 import org.apache.giraph.graph.VertexResolver;
+import org.apache.giraph.graph.WorkerInfo;
+import org.apache.giraph.graph.partition.Partition;
+import org.apache.giraph.graph.partition.PartitionOwner;
+import org.apache.giraph.utils.MemoryUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -34,6 +37,10 @@ import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.RPC.Server;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
+
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 import java.io.IOException;
 import java.net.BindException;
@@ -53,13 +60,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-
-import org.apache.giraph.graph.WorkerInfo;
-import org.apache.giraph.graph.partition.Partition;
-import org.apache.giraph.graph.partition.PartitionOwner;
-import org.apache.giraph.utils.MemoryUtils;
-
-import com.google.common.collect.Iterables;
 
 /*if[HADOOP_NON_INTERVERSIONED_RPC]
 else[HADOOP_NON_INTERVERSIONED_RPC]*/
@@ -150,9 +150,8 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
    * Map of partition ids to incoming vertices from other workers.
    * (Synchronized)
    */
-  private final Map<Integer, Collection<BasicVertex<I, V, E, M>>>
-  inPartitionVertexMap =
-      new HashMap<Integer, Collection<BasicVertex<I, V, E, M>>>();
+  private final Map<Integer, Collection<Vertex<I, V, E, M>>>
+  inPartitionVertexMap = Maps.newHashMap();
 
   /**
    * Map from vertex index to all vertex mutations
@@ -819,9 +818,9 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
       }
       if (!inPartitionVertexMap.containsKey(partitionId)) {
         inPartitionVertexMap.put(partitionId,
-            new ArrayList<BasicVertex<I, V, E, M>>(vertexList));
+            Lists.newArrayList(vertexList));
       } else {
-        Collection<BasicVertex<I, V, E, M>> tmpVertices =
+        Collection<Vertex<I, V, E, M>> tmpVertices =
             inPartitionVertexMap.get(partitionId);
         tmpVertices.addAll(vertexList);
       }
@@ -864,17 +863,17 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
   }
 
   @Override
-  public final void addVertex(BasicVertex<I, V, E, M> vertex) {
+  public final void addVertex(Vertex<I, V, E, M> vertex) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("addVertex: Adding vertex " + vertex);
     }
     synchronized (inVertexMutationsMap) {
       VertexMutations<I, V, E, M> vertexMutations = null;
-      if (!inVertexMutationsMap.containsKey(vertex.getVertexId())) {
+      if (!inVertexMutationsMap.containsKey(vertex.getId())) {
         vertexMutations = new VertexMutations<I, V, E, M>();
-        inVertexMutationsMap.put(vertex.getVertexId(), vertexMutations);
+        inVertexMutationsMap.put(vertex.getId(), vertexMutations);
       } else {
-        vertexMutations = inVertexMutationsMap.get(vertex.getVertexId());
+        vertexMutations = inVertexMutationsMap.get(vertex.getId());
       }
       vertexMutations.addVertex(vertex);
     }
@@ -898,27 +897,27 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
   }
 
   @Override
-  public final void sendPartitionReq(WorkerInfo workerInfo,
-      Partition<I, V, E, M> partition) {
+  public final void sendPartitionRequest(WorkerInfo workerInfo,
+                                         Partition<I, V, E, M> partition) {
     // Internally, break up the sending so that the list doesn't get too
     // big.
     VertexList<I, V, E, M> hadoopVertexList =
         new VertexList<I, V, E, M>();
     InetSocketAddress addr =
-        getInetSocketAddress(workerInfo, partition.getPartitionId());
+        getInetSocketAddress(workerInfo, partition.getId());
     CommunicationsInterface<I, V, E, M> rpcProxy =
         peerConnections.get(addr).getRPCProxy();
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug("sendPartitionReq: Sending to " + rpcProxy.getName() +
+      LOG.debug("sendPartitionRequest: Sending to " + rpcProxy.getName() +
           " " + addr + " from " + workerInfo +
           ", with partition " + partition);
     }
-    for (BasicVertex<I, V, E, M> vertex : partition.getVertices()) {
+    for (Vertex<I, V, E, M> vertex : partition.getVertices()) {
       hadoopVertexList.add(vertex);
       if (hadoopVertexList.size() >= MAX_VERTICES_PER_RPC) {
         try {
-          rpcProxy.putVertexList(partition.getPartitionId(),
+          rpcProxy.putVertexList(partition.getId(),
               hadoopVertexList);
         } catch (IOException e) {
           throw new RuntimeException(e);
@@ -928,7 +927,7 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
     }
     if (hadoopVertexList.size() > 0) {
       try {
-        rpcProxy.putVertexList(partition.getPartitionId(),
+        rpcProxy.putVertexList(partition.getId(),
             hadoopVertexList);
       } catch (IOException e) {
         throw new RuntimeException(e);
@@ -980,7 +979,7 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
   }
 
   @Override
-  public final void sendMessageReq(I destVertex, M msg) {
+  public final void sendMessageRequest(I destVertex, M msg) {
     InetSocketAddress addr = getInetSocketAddress(destVertex);
     if (LOG.isDebugEnabled()) {
       LOG.debug("sendMessage: Send bytes (" + msg.toString() +
@@ -1015,11 +1014,11 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
   }
 
   @Override
-  public final void addEdgeReq(I destVertex, Edge<I, E> edge)
+  public final void addEdgeRequest(I destVertex, Edge<I, E> edge)
     throws IOException {
     InetSocketAddress addr = getInetSocketAddress(destVertex);
     if (LOG.isDebugEnabled()) {
-      LOG.debug("addEdgeReq: Add edge (" + edge.toString() + ") to " +
+      LOG.debug("addEdgeRequest: Add edge (" + edge.toString() + ") to " +
           destVertex + " with address " + addr);
     }
     CommunicationsInterface<I, V, E, M> rpcProxy =
@@ -1028,11 +1027,11 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
   }
 
   @Override
-  public final void removeEdgeReq(I vertexIndex, I destVertexIndex)
+  public final void removeEdgeRequest(I vertexIndex, I destVertexIndex)
     throws IOException {
     InetSocketAddress addr = getInetSocketAddress(vertexIndex);
     if (LOG.isDebugEnabled()) {
-      LOG.debug("removeEdgeReq: remove edge (" + destVertexIndex +
+      LOG.debug("removeEdgeRequest: remove edge (" + destVertexIndex +
                 ") from" + vertexIndex + " with address " + addr);
     }
     CommunicationsInterface<I, V, E, M> rpcProxy =
@@ -1041,11 +1040,11 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
   }
 
   @Override
-  public final void addVertexReq(BasicVertex<I, V, E, M> vertex)
+  public final void addVertexRequest(Vertex<I, V, E, M> vertex)
     throws IOException {
-    InetSocketAddress addr = getInetSocketAddress(vertex.getVertexId());
+    InetSocketAddress addr = getInetSocketAddress(vertex.getId());
     if (LOG.isDebugEnabled()) {
-      LOG.debug("addVertexReq: Add vertex (" + vertex + ") " +
+      LOG.debug("addVertexRequest: Add vertex (" + vertex + ") " +
                 " with address " + addr);
     }
     CommunicationsInterface<I, V, E, M> rpcProxy =
@@ -1054,11 +1053,11 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
   }
 
   @Override
-  public void removeVertexReq(I vertexIndex) throws IOException {
+  public void removeVertexRequest(I vertexIndex) throws IOException {
     InetSocketAddress addr =
         getInetSocketAddress(vertexIndex);
     if (LOG.isDebugEnabled()) {
-      LOG.debug("removeVertexReq: Remove vertex index (" +
+      LOG.debug("removeVertexRequest: Remove vertex index (" +
                 vertexIndex + ")  with address " + addr);
     }
     CommunicationsInterface<I, V, E, M> rpcProxy =
@@ -1171,8 +1170,8 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
       // the old ones)
       for (Partition<I, V, E, M> partition :
         service.getPartitionMap().values()) {
-        for (BasicVertex<I, V, E, M> vertex : partition.getVertices()) {
-          List<M> msgList = inMessages.get(vertex.getVertexId());
+        for (Vertex<I, V, E, M> vertex : partition.getVertices()) {
+          List<M> msgList = inMessages.get(vertex.getId());
           if (msgList != null) {
             if (LOG.isDebugEnabled()) {
               LOG.debug("prepareSuperstep: Assigning " +
@@ -1187,7 +1186,7 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
             }
             service.assignMessagesToVertex(vertex, msgList);
             msgList.clear();
-            if (inMessages.remove(vertex.getVertexId()) == null) {
+            if (inMessages.remove(vertex.getId()) == null) {
               throw new IllegalStateException(
                   "prepareSuperstep: Impossible to not remove " +
                       vertex);
@@ -1231,7 +1230,7 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
       VertexResolver<I, V, E, M> vertexResolver =
           BspUtils.createVertexResolver(
               conf, service.getGraphMapper().getGraphState());
-      BasicVertex<I, V, E, M> originalVertex =
+      Vertex<I, V, E, M> originalVertex =
           service.getVertex(vertexIndex);
       Iterable<M> messages = inMessages.get(vertexIndex);
       if (originalVertex != null) {
@@ -1239,7 +1238,7 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
       }
       VertexMutations<I, V, E, M> vertexMutations =
           inVertexMutationsMap.get(vertexIndex);
-      BasicVertex<I, V, E, M> vertex =
+      Vertex<I, V, E, M> vertex =
           vertexResolver.resolve(vertexIndex,
               originalVertex,
               vertexMutations,
@@ -1262,10 +1261,9 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
             service.getVertexPartitionOwner(vertexIndex));
       }
       if (vertex != null) {
-        ((MutableVertex<I, V, E, M>) vertex).setVertexId(vertexIndex);
         partition.putVertex(vertex);
       } else if (originalVertex != null) {
-        partition.removeVertex(originalVertex.getVertexId());
+        partition.removeVertex(originalVertex.getId());
       }
     }
     synchronized (inVertexMutationsMap) {
@@ -1313,7 +1311,7 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
   }
 
   @Override
-  public Map<Integer, Collection<BasicVertex<I, V, E, M>>>
+  public Map<Integer, Collection<Vertex<I, V, E, M>>>
   getInPartitionVertexMap() {
     return inPartitionVertexMap;
   }

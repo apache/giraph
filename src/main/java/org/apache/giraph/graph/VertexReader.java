@@ -65,7 +65,7 @@ public interface VertexReader<I extends WritableComparable,
    * @throws IOException
    * @throws InterruptedException
    */
-  BasicVertex<I, V, E, M> getCurrentVertex()
+  Vertex<I, V, E, M> getCurrentVertex()
     throws IOException, InterruptedException;
 
   /**

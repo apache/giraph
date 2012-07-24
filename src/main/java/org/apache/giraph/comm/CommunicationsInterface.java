@@ -18,18 +18,19 @@
 
 package org.apache.giraph.comm;
 
-import java.io.IOException;
-
 import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.BasicVertex;
-/*if[HADOOP_NON_SECURE]
- else[HADOOP_NON_SECURE]*/
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.hadoop.BspTokenSelector;
-import org.apache.hadoop.security.token.TokenInfo;
-/*end[HADOOP_NON_SECURE]*/
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.ipc.VersionedProtocol;
+import org.apache.hadoop.security.token.TokenInfo;
+
+import java.io.IOException;
+
+/*if[HADOOP_NON_SECURE]
+ else[HADOOP_NON_SECURE]*/
+/*end[HADOOP_NON_SECURE]*/
 
 /**
  * Basic interface for communication between workers.
@@ -114,7 +115,7 @@ public interface CommunicationsInterface<I extends WritableComparable,
    * @param vertex Vertex that will be added
    * @throws IOException
    */
-  void addVertex(BasicVertex<I, V, E, M> vertex) throws IOException;
+  void addVertex(Vertex<I, V, E, M> vertex) throws IOException;
 
   /**
    * Removed a remote vertex

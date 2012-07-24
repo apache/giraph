@@ -18,10 +18,9 @@
 
 package org.apache.giraph.benchmark;
 
-import com.google.common.collect.Maps;
 import org.apache.giraph.bsp.BspInputSplit;
-import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.BspUtils;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexInputFormat;
 import org.apache.giraph.graph.VertexReader;
 import org.apache.hadoop.conf.Configuration;
@@ -32,6 +31,8 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.log4j.Logger;
+
+import com.google.common.collect.Maps;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -148,9 +149,9 @@ public class PseudoRandomVertexInputFormat<M extends Writable> extends
     }
 
     @Override
-    public BasicVertex<LongWritable, DoubleWritable, DoubleWritable, M>
+    public Vertex<LongWritable, DoubleWritable, DoubleWritable, M>
     getCurrentVertex() throws IOException, InterruptedException {
-      BasicVertex<LongWritable, DoubleWritable, DoubleWritable, M>
+      Vertex<LongWritable, DoubleWritable, DoubleWritable, M>
       vertex = BspUtils.createVertex(configuration);
       long vertexId = startingVertexId + verticesRead;
       // Seed on the vertex id to keep the vertex data the same when
@@ -172,9 +173,9 @@ public class PseudoRandomVertexInputFormat<M extends Writable> extends
       ++verticesRead;
       if (LOG.isDebugEnabled()) {
         LOG.debug("next: Return vertexId=" +
-                  vertex.getVertexId().get() +
-                  ", vertexValue=" + vertex.getVertexValue() +
-                  ", edgeMap=" + vertex.getOutEdgesIterator());
+                  vertex.getId().get() +
+                  ", vertexValue=" + vertex.getValue() +
+                  ", edges=" + vertex.getEdges());
       }
       return vertex;
     }

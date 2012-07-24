@@ -18,7 +18,8 @@
 
 package org.apache.giraph.lib;
 
-import org.apache.giraph.graph.BasicVertex;
+import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexWriter;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
@@ -30,7 +31,6 @@ import org.json.JSONArray;
 import org.json.JSONException;
 
 import java.io.IOException;
-import java.util.Iterator;
 
 /**
  * VertexOutputFormat that supports JSON encoded vertices featuring
@@ -66,19 +66,17 @@ public class JsonLongDoubleFloatDoubleVertexOutputFormat extends
     }
 
     @Override
-    public void writeVertex(BasicVertex<LongWritable, DoubleWritable,
-      FloatWritable, ?> vertex) throws IOException, InterruptedException {
+    public void writeVertex(Vertex<LongWritable, DoubleWritable,
+          FloatWritable, ?> vertex) throws IOException, InterruptedException {
       JSONArray jsonVertex = new JSONArray();
       try {
-        jsonVertex.put(vertex.getVertexId().get());
-        jsonVertex.put(vertex.getVertexValue().get());
+        jsonVertex.put(vertex.getId().get());
+        jsonVertex.put(vertex.getValue().get());
         JSONArray jsonEdgeArray = new JSONArray();
-        for (Iterator<LongWritable> edges = vertex.getOutEdgesIterator();
-             edges.hasNext();) {
-          LongWritable targetVertexId = edges.next();
+        for (Edge<LongWritable, FloatWritable> edge : vertex.getEdges()) {
           JSONArray jsonEdge = new JSONArray();
-          jsonEdge.put(targetVertexId.get());
-          jsonEdge.put(vertex.getEdgeValue(targetVertexId).get());
+          jsonEdge.put(edge.getTargetVertexId().get());
+          jsonEdge.put(edge.getValue().get());
           jsonEdgeArray.put(jsonEdge);
         }
         jsonVertex.put(jsonEdgeArray);

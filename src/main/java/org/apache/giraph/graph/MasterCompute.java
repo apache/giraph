@@ -43,7 +43,7 @@ import org.apache.hadoop.mapreduce.Mapper;
 public abstract class MasterCompute implements AggregatorUsage, Writable,
     Configurable {
   /** If true, do not do anymore computation on this vertex. */
-  protected boolean halt = false;
+  private boolean halt = false;
   /** Global graph state **/
   private GraphState graphState;
   /** Configuration */
@@ -76,8 +76,8 @@ public abstract class MasterCompute implements AggregatorUsage, Writable,
    *
    * @return Total number of vertices (-1 if first superstep)
    */
-  public long getNumVertices() {
-    return getGraphState().getNumVertices();
+  public long getTotalNumVertices() {
+    return getGraphState().getTotalNumVertices();
   }
 
   /**
@@ -86,8 +86,8 @@ public abstract class MasterCompute implements AggregatorUsage, Writable,
    *
    * @return Total number of edges (-1 if first superstep)
    */
-  public long getNumEdges() {
-    return getGraphState().getNumEdges();
+  public long getTotalNumEdges() {
+    return getGraphState().getTotalNumEdges();
   }
 
   /**

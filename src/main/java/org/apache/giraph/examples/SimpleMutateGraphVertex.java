@@ -18,18 +18,16 @@
 
 package org.apache.giraph.examples;
 
-import java.io.IOException;
-import java.util.Iterator;
-
+import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.EdgeListVertex;
+import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.graph.WorkerContext;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.log4j.Logger;
 
-import org.apache.giraph.graph.BasicVertex;
-import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.EdgeListVertex;
-import org.apache.giraph.graph.WorkerContext;
+import java.io.IOException;
 
 /**
  * Vertex to allow unit testing of graph mutations.
@@ -55,7 +53,7 @@ public class SimpleMutateGraphVertex extends EdgeListVertex<
   }
 
   @Override
-  public void compute(Iterator<DoubleWritable> msgIterator)
+  public void compute(Iterable<DoubleWritable> messages)
     throws IOException {
     SimpleMutateGraphVertexWorkerContext workerContext =
         (SimpleMutateGraphVertexWorkerContext) getWorkerContext();
@@ -65,77 +63,77 @@ public class SimpleMutateGraphVertex extends EdgeListVertex<
       // Send messages to vertices that are sure not to exist
       // (creating them)
       LongWritable destVertexId =
-          new LongWritable(rangeVertexIdStart(1) + getVertexId().get());
-      sendMsg(destVertexId, new DoubleWritable(0.0));
+          new LongWritable(rangeVertexIdStart(1) + getId().get());
+      sendMessage(destVertexId, new DoubleWritable(0.0));
     } else if (getSuperstep() == 2) {
       LOG.debug("Reached superstep " + getSuperstep());
     } else if (getSuperstep() == 3) {
       long vertexCount = workerContext.getVertexCount();
-      if (vertexCount * 2 != getNumVertices()) {
+      if (vertexCount * 2 != getTotalNumVertices()) {
         throw new IllegalStateException(
-            "Impossible to have " + getNumVertices() +
+            "Impossible to have " + getTotalNumVertices() +
             " vertices when should have " + vertexCount * 2 +
             " on superstep " + getSuperstep());
       }
       long edgeCount = workerContext.getEdgeCount();
-      if (edgeCount != getNumEdges()) {
+      if (edgeCount != getTotalNumEdges()) {
         throw new IllegalStateException(
-            "Impossible to have " + getNumEdges() +
+            "Impossible to have " + getTotalNumEdges() +
             " edges when should have " + edgeCount +
             " on superstep " + getSuperstep());
       }
       // Create vertices that are sure not to exist (doubling vertices)
       LongWritable vertexIndex =
-          new LongWritable(rangeVertexIdStart(3) + getVertexId().get());
-      BasicVertex<LongWritable, DoubleWritable,
-      FloatWritable, DoubleWritable> vertex =
-        instantiateVertex(vertexIndex, null, null, null);
+          new LongWritable(rangeVertexIdStart(3) + getId().get());
+      Vertex<LongWritable, DoubleWritable,
+            FloatWritable, DoubleWritable> vertex =
+        instantiateVertex(vertexIndex, new DoubleWritable(0.0), null, null);
       addVertexRequest(vertex);
       // Add edges to those remote vertices as well
       addEdgeRequest(vertexIndex,
           new Edge<LongWritable, FloatWritable>(
-              getVertexId(), new FloatWritable(0.0f)));
+              getId(), new FloatWritable(0.0f)));
     } else if (getSuperstep() == 4) {
       LOG.debug("Reached superstep " + getSuperstep());
     } else if (getSuperstep() == 5) {
       long vertexCount = workerContext.getVertexCount();
-      if (vertexCount * 2 != getNumVertices()) {
+      if (vertexCount * 2 != getTotalNumVertices()) {
         throw new IllegalStateException(
-            "Impossible to have " + getNumVertices() +
+            "Impossible to have " + getTotalNumVertices() +
             " when should have " + vertexCount * 2 +
             " on superstep " + getSuperstep());
       }
       long edgeCount = workerContext.getEdgeCount();
-      if (edgeCount + vertexCount != getNumEdges()) {
+      if (edgeCount + vertexCount != getTotalNumEdges()) {
         throw new IllegalStateException(
-            "Impossible to have " + getNumEdges() +
+            "Impossible to have " + getTotalNumEdges() +
             " edges when should have " + edgeCount + vertexCount +
             " on superstep " + getSuperstep());
       }
       // Remove the edges created in superstep 3
       LongWritable vertexIndex =
-          new LongWritable(rangeVertexIdStart(3) + getVertexId().get());
+          new LongWritable(rangeVertexIdStart(3) + getId().get());
       workerContext.increaseEdgesRemoved();
-      removeEdgeRequest(vertexIndex, getVertexId());
+      removeEdgeRequest(vertexIndex, getId());
     } else if (getSuperstep() == 6) {
       // Remove all the vertices created in superstep 3
-      if (getVertexId().compareTo(
+      if (getId().compareTo(
           new LongWritable(rangeVertexIdStart(3))) >= 0) {
-        removeVertexRequest(getVertexId());
+        removeVertexRequest(getId());
       }
     } else if (getSuperstep() == 7) {
       long origEdgeCount = workerContext.getOrigEdgeCount();
-      if (origEdgeCount != getNumEdges()) {
+      if (origEdgeCount != getTotalNumEdges()) {
         throw new IllegalStateException(
-            "Impossible to have " + getNumEdges() +
+            "Impossible to have " + getTotalNumEdges() +
             " edges when should have " + origEdgeCount +
             " on superstep " + getSuperstep());
       }
     } else if (getSuperstep() == 8) {
       long vertexCount = workerContext.getVertexCount();
-      if (vertexCount / 2 != getNumVertices()) {
+      if (vertexCount / 2 != getTotalNumVertices()) {
         throw new IllegalStateException(
-            "Impossible to have " + getNumVertices() +
+            "Impossible to have " + getTotalNumVertices() +
             " vertices when should have " + vertexCount / 2 +
             " on superstep " + getSuperstep());
       }
@@ -170,8 +168,8 @@ public class SimpleMutateGraphVertex extends EdgeListVertex<
 
     @Override
     public void postSuperstep() {
-      vertexCount = getNumVertices();
-      edgeCount = getNumEdges();
+      vertexCount = getTotalNumVertices();
+      edgeCount = getTotalNumEdges();
       if (getSuperstep() == 1) {
         origEdgeCount = edgeCount;
       }

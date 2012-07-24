@@ -41,7 +41,7 @@ public interface VertexChanges<I extends WritableComparable,
    *
    * @return List of vertices for this vertex index.
    */
-  List<BasicVertex<I, V, E, M>> getAddedVertexList();
+  List<Vertex<I, V, E, M>> getAddedVertexList();
 
   /**
    * Get the number of times this vertex was removed in the previous

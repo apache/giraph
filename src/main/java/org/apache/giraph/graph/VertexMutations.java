@@ -46,8 +46,8 @@ public class VertexMutations<I extends WritableComparable,
     M extends Writable> implements VertexChanges<I, V, E, M>,
     Writable, Configurable {
   /** List of added vertices during the last superstep */
-  private final List<BasicVertex<I, V, E, M>> addedVertexList =
-      new ArrayList<BasicVertex<I, V, E, M>>();
+  private final List<Vertex<I, V, E, M>> addedVertexList =
+      new ArrayList<Vertex<I, V, E, M>>();
   /** Count of remove vertex requests */
   private int removedVertexCount = 0;
   /** List of added edges */
@@ -73,7 +73,7 @@ public class VertexMutations<I extends WritableComparable,
   }
 
   @Override
-  public List<BasicVertex<I, V, E, M>> getAddedVertexList() {
+  public List<Vertex<I, V, E, M>> getAddedVertexList() {
     return addedVertexList;
   }
 
@@ -85,14 +85,14 @@ public class VertexMutations<I extends WritableComparable,
 
     int addedVertexListSize = input.readInt();
     for (int i = 0; i < addedVertexListSize; ++i) {
-      BasicVertex<I, V, E, M> vertex = BspUtils.createVertex(conf);
+      Vertex<I, V, E, M> vertex = BspUtils.createVertex(conf);
       vertex.readFields(input);
       addedVertexList.add(vertex);
     }
     removedVertexCount = input.readInt();
     int addedEdgeListSize = input.readInt();
     for (int i = 0; i < addedEdgeListSize; ++i) {
-      I destVertex = BspUtils.<I>createVertexIndex(conf);
+      I destVertex = BspUtils.<I>createVertexId(conf);
       destVertex.readFields(input);
       E edgeValue = BspUtils.<E>createEdgeValue(conf);
       edgeValue.readFields(input);
@@ -100,7 +100,7 @@ public class VertexMutations<I extends WritableComparable,
     }
     int removedEdgeListSize = input.readInt();
     for (int i = 0; i < removedEdgeListSize; ++i) {
-      I removedEdge = BspUtils.<I>createVertexIndex(conf);
+      I removedEdge = BspUtils.<I>createVertexId(conf);
       removedEdge.readFields(input);
       removedEdgeList.add(removedEdge);
     }
@@ -109,14 +109,14 @@ public class VertexMutations<I extends WritableComparable,
   @Override
   public void write(DataOutput output) throws IOException {
     output.writeInt(addedVertexList.size());
-    for (BasicVertex<I, V, E, M> vertex : addedVertexList) {
+    for (Vertex<I, V, E, M> vertex : addedVertexList) {
       vertex.write(output);
     }
     output.writeInt(removedVertexCount);
     output.writeInt(addedEdgeList.size());
     for (Edge<I, E> edge : addedEdgeList) {
-      edge.getDestVertexId().write(output);
-      edge.getEdgeValue().write(output);
+      edge.getTargetVertexId().write(output);
+      edge.getValue().write(output);
     }
     output.writeInt(removedEdgeList.size());
     for (I removedEdge : removedEdgeList) {
@@ -129,7 +129,7 @@ public class VertexMutations<I extends WritableComparable,
    *
    * @param vertex Vertex to be added
    */
-  public void addVertex(BasicVertex<I, V, E, M> vertex) {
+  public void addVertex(Vertex<I, V, E, M> vertex) {
     addedVertexList.add(vertex);
   }
 

@@ -18,15 +18,6 @@
 
 package org.apache.giraph;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import com.google.common.base.Charsets;
-import com.google.common.collect.Maps;
-import com.google.common.io.Closeables;
-
 import org.apache.giraph.aggregators.DoubleMaxAggregator;
 import org.apache.giraph.aggregators.DoubleMinAggregator;
 import org.apache.giraph.aggregators.LongSumAggregator;
@@ -38,17 +29,17 @@ import org.apache.giraph.examples.SimpleMsgVertex;
 import org.apache.giraph.examples.SimplePageRankVertex;
 import org.apache.giraph.examples.SimplePageRankVertex.SimplePageRankVertexInputFormat;
 import org.apache.giraph.examples.SimpleShortestPathsVertex;
-import org.apache.giraph.lib.JsonLongDoubleFloatDoubleVertexOutputFormat;
 import org.apache.giraph.examples.SimpleSumCombiner;
 import org.apache.giraph.examples.SimpleSuperstepVertex;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexOutputFormat;
-import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.TextAggregatorWriter;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexInputFormat;
+import org.apache.giraph.lib.JsonLongDoubleFloatDoubleVertexOutputFormat;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -66,6 +57,17 @@ import org.apache.hadoop.mapreduce.JobContext;
 else[HADOOP_NON_SASL_RPC]*/
 import org.apache.hadoop.mapreduce.task.JobContextImpl;
 /*end[HADOOP_NON_SASL_RPC]*/
+import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import com.google.common.base.Charsets;
+import com.google.common.collect.Maps;
+import com.google.common.io.Closeables;
+
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
@@ -74,8 +76,6 @@ import java.io.InputStreamReader;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.Map;
-
-import org.junit.Test;
 
 /**
  * Unit test for many simple BSP applications.
@@ -112,7 +112,7 @@ public class TestBspBasic extends BspCase {
     GraphState<LongWritable, IntWritable, FloatWritable, IntWritable> gs =
         new GraphState<LongWritable, IntWritable,
         FloatWritable, IntWritable>();
-    BasicVertex<LongWritable, IntWritable, FloatWritable, IntWritable> vertex =
+    Vertex<LongWritable, IntWritable, FloatWritable, IntWritable> vertex =
         BspUtils.createVertex(job.getConfiguration());
     vertex.initialize(null, null, null, null);
     System.out.println("testInstantiateVertex: Got vertex " + vertex +
@@ -432,7 +432,7 @@ public class TestBspBasic extends BspCase {
       fs.delete(valuesFile, false);
     }
   }
-  
+
   /**
    * Run a sample BSP job locally and test MasterCompute.
    *

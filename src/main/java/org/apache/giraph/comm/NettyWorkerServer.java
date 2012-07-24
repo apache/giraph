@@ -19,9 +19,8 @@
 package org.apache.giraph.comm;
 
 import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.BspUtils;
-import org.apache.giraph.graph.MutableVertex;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexMutations;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.graph.partition.Partition;
@@ -95,7 +94,7 @@ public class NettyWorkerServer<I extends WritableComparable,
         if (entry.getValue().isEmpty()) {
           continue;
         }
-        BasicVertex<I, V, E, M> vertex = service.getVertex(entry.getKey());
+        Vertex<I, V, E, M> vertex = service.getVertex(entry.getKey());
         if (vertex == null) {
           if (service.getPartition(entry.getKey()) == null) {
             throw new IllegalStateException("prepareSuperstep: No partition " +
@@ -127,7 +126,7 @@ public class NettyWorkerServer<I extends WritableComparable,
       VertexResolver<I, V, E, M> vertexResolver =
           BspUtils.createVertexResolver(
               conf, service.getGraphMapper().getGraphState());
-      BasicVertex<I, V, E, M> originalVertex =
+      Vertex<I, V, E, M> originalVertex =
           service.getVertex(vertexIndex);
       Iterable<M> messages = null;
       if (originalVertex != null) {
@@ -152,7 +151,7 @@ public class NettyWorkerServer<I extends WritableComparable,
         }
         serverData.getVertexMutations().remove(vertexIndex);
       }
-      BasicVertex<I, V, E, M> vertex = vertexResolver.resolve(
+      Vertex<I, V, E, M> vertex = vertexResolver.resolve(
           vertexIndex, originalVertex, mutations, messages);
       if (LOG.isDebugEnabled()) {
         LOG.debug("prepareSuperstep: Resolved vertex index " +
@@ -172,10 +171,9 @@ public class NettyWorkerServer<I extends WritableComparable,
             service.getVertexPartitionOwner(vertexIndex));
       }
       if (vertex != null) {
-        ((MutableVertex<I, V, E, M>) vertex).setVertexId(vertexIndex);
         partition.putVertex(vertex);
       } else if (originalVertex != null) {
-        partition.removeVertex(originalVertex.getVertexId());
+        partition.removeVertex(originalVertex.getId());
       }
     }
 
@@ -189,7 +187,7 @@ public class NettyWorkerServer<I extends WritableComparable,
   }
 
   @Override
-  public Map<Integer, Collection<BasicVertex<I, V, E, M>>>
+  public Map<Integer, Collection<Vertex<I, V, E, M>>>
   getInPartitionVertexMap() {
     return serverData.getPartitionVertexMap();
   }

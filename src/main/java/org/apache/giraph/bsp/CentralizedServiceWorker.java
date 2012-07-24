@@ -26,7 +26,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 import org.apache.giraph.graph.AggregatorUsage;
-import org.apache.giraph.graph.BasicVertex;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.GraphMapper;
 import org.apache.giraph.graph.partition.Partition;
 import org.apache.giraph.graph.partition.PartitionOwner;
@@ -115,28 +115,28 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
   /**
    * Get the partition that a vertex index would belong to
    *
-   * @param vertexIndex Index of the vertex that is used to find the correct
+   * @param vertexId Index of the vertex that is used to find the correct
    *        partition.
    * @return Correct partition if exists on this worker, null otherwise.
    */
-  Partition<I, V, E, M> getPartition(I vertexIndex);
+  Partition<I, V, E, M> getPartition(I vertexId);
 
   /**
    * Every client will need to get a partition owner from a vertex id so that
    * they know which worker to sent the request to.
    *
-   * @param vertexIndex Vertex index to look for
+   * @param vertexId Vertex index to look for
    * @return PartitionOnwer that should contain this vertex if it exists
    */
-  PartitionOwner getVertexPartitionOwner(I vertexIndex);
+  PartitionOwner getVertexPartitionOwner(I vertexId);
 
   /**
    * Look up a vertex on a worker given its vertex index.
    *
-   * @param vertexIndex Vertex index to look for
+   * @param vertexId Vertex index to look for
    * @return Vertex if it exists on this worker.
    */
-  BasicVertex<I, V, E, M> getVertex(I vertexIndex);
+  Vertex<I, V, E, M> getVertex(I vertexId);
 
   /**
    * If desired by the user, vertex partitions are redistributed among
@@ -153,10 +153,9 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
    * setMessages() for internal classes).
    *
    * @param vertex Vertex (owned by worker)
-   * @param messageIterator Messages to assign to the vertex
+   * @param messages Messages to assign to the vertex
    */
-  void assignMessagesToVertex(BasicVertex<I, V, E, M> vertex,
-      Iterable<M> messageIterator);
+  void assignMessagesToVertex(Vertex<I, V, E, M> vertex, Iterable<M> messages);
 
   /**
    * Get the GraphMapper that this service is using.  Vertices need to know

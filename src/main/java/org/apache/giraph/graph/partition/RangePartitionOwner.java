@@ -63,7 +63,7 @@ public class RangePartitionOwner<I extends WritableComparable>
   @Override
   public void readFields(DataInput input) throws IOException {
     super.readFields(input);
-    maxIndex = BspUtils.<I>createVertexIndex(getConf());
+    maxIndex = BspUtils.<I>createVertexId(getConf());
     maxIndex.readFields(input);
   }
 

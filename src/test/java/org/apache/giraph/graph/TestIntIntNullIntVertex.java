@@ -34,7 +34,6 @@ import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -47,7 +46,7 @@ public class TestIntIntNullIntVertex {
    */
   private static class MyIntIntNullVertex extends IntIntNullIntVertex {
     @Override
-    public void compute(Iterator<IntWritable> msgIterator) throws IOException {
+    public void compute(Iterable<IntWritable> messages) throws IOException {
     }
   }
 
@@ -78,7 +77,7 @@ public class TestIntIntNullIntVertex {
     DataInput in = new DataInputStream(inStream);
     vertex1.readFields(in);
 
-    assertEquals(2, vertex1.getNumOutEdges());
+    assertEquals(2, vertex1.getNumEdges());
     assertEquals(Lists.newArrayList(new IntWritable(943),
         new IntWritable(571)), Lists.newArrayList(vertex1.getMessages()));
     assertEquals(true, vertex1.isHalted());

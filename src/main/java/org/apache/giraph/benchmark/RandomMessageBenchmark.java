@@ -34,7 +34,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
-import java.util.Iterator;
+
 import java.util.Random;
 
 /**
@@ -268,7 +268,7 @@ public class RandomMessageBenchmark implements Tool {
   public static class RandomMessageVertex extends EdgeListVertex<
       LongWritable, DoubleWritable, DoubleWritable, BytesWritable> {
     @Override
-    public void compute(Iterator<BytesWritable> msgIterator) {
+    public void compute(Iterable<BytesWritable> messages) {
       RandomMessageBenchmarkWorkerContext workerContext =
           (RandomMessageBenchmarkWorkerContext) getWorkerContext();
       LongSumAggregator superstepBytesAggregator =
@@ -278,12 +278,12 @@ public class RandomMessageBenchmark implements Tool {
       if (getSuperstep() < workerContext.getNumSupersteps()) {
         for (int i = 0; i < workerContext.getNumMessagePerEdge(); i++) {
           workerContext.randomizeMessageBytes();
-          sendMsgToAllEdges(
+          sendMessageToAllEdges(
               new BytesWritable(workerContext.getMessageBytes()));
           long bytesSent = workerContext.getMessageBytes().length *
-              getNumOutEdges();
+              getNumEdges();
           superstepBytesAggregator.aggregate(bytesSent);
-          superstepMessagesAggregator.aggregate(getNumOutEdges());
+          superstepMessagesAggregator.aggregate(getNumEdges());
         }
       } else {
         voteToHalt();

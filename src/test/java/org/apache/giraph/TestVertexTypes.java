@@ -18,15 +18,12 @@
 
 package org.apache.giraph;
 
-import java.io.IOException;
-import java.util.Iterator;
-
 import org.apache.giraph.examples.GeneratedVertexInputFormat;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat;
-import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.GraphMapper;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexCombiner;
 import org.apache.giraph.graph.VertexInputFormat;
 import org.apache.giraph.graph.VertexOutputFormat;
@@ -40,6 +37,8 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.junit.Test;
 
+import java.io.IOException;
+
 
 public class TestVertexTypes {
 
@@ -50,8 +49,8 @@ public class TestVertexTypes {
             EdgeListVertex<LongWritable, IntWritable, FloatWritable,
             FloatWritable> {
         @Override
-        public void compute(Iterator<FloatWritable> msgIterator)
-                throws IOException {
+        public void compute(Iterable<FloatWritable> messages)
+            throws IOException {
         }
     }
 
@@ -68,7 +67,7 @@ public class TestVertexTypes {
             EdgeListVertex<LongWritable, FloatWritable, FloatWritable,
             FloatWritable> {
         @Override
-        public void compute(Iterator<FloatWritable> msgIterator)
+        public void compute(Iterable<FloatWritable> messages)
                 throws IOException {
         }
     }
@@ -108,7 +107,7 @@ public class TestVertexTypes {
         Configuration conf = new Configuration();
         conf.setClass(GiraphJob.VERTEX_CLASS,
                       GeneratedVertexMatch.class,
-                      BasicVertex.class);
+                      Vertex.class);
         conf.setClass(GiraphJob.VERTEX_INPUT_FORMAT_CLASS,
                       SimpleSuperstepVertexInputFormat.class,
                       VertexInputFormat.class);
@@ -126,7 +125,7 @@ public class TestVertexTypes {
         Configuration conf = new Configuration();
         conf.setClass(GiraphJob.VERTEX_CLASS,
                       DerivedVertexMatch.class,
-                      BasicVertex.class);
+                      Vertex.class);
         conf.setClass(GiraphJob.VERTEX_INPUT_FORMAT_CLASS,
                       SimpleSuperstepVertexInputFormat.class,
                       VertexInputFormat.class);
@@ -141,7 +140,7 @@ public class TestVertexTypes {
         Configuration conf = new Configuration();
         conf.setClass(GiraphJob.VERTEX_CLASS,
                       DerivedVertexMatch.class,
-                      BasicVertex.class);
+                      Vertex.class);
         conf.setClass(GiraphJob.VERTEX_INPUT_FORMAT_CLASS,
                       SimpleSuperstepVertexInputFormat.class,
                       VertexInputFormat.class);
@@ -156,7 +155,7 @@ public class TestVertexTypes {
         Configuration conf = new Configuration();
         conf.setClass(GiraphJob.VERTEX_CLASS,
                       GeneratedVertexMismatch.class,
-                      BasicVertex.class);
+                      Vertex.class);
         conf.setClass(GiraphJob.VERTEX_INPUT_FORMAT_CLASS,
                       SimpleSuperstepVertexInputFormat.class,
                       VertexInputFormat.class);
@@ -176,7 +175,7 @@ public class TestVertexTypes {
         Configuration conf = new Configuration();
         conf.setClass(GiraphJob.VERTEX_CLASS,
                       GeneratedVertexMatch.class,
-                      BasicVertex.class);
+                      Vertex.class);
         conf.setClass(GiraphJob.VERTEX_INPUT_FORMAT_CLASS,
                       SimpleSuperstepVertexInputFormat.class,
                       VertexInputFormat.class);
@@ -199,7 +198,7 @@ public class TestVertexTypes {
         Configuration conf = new Configuration();
         conf.setClass(GiraphJob.VERTEX_CLASS,
                       GeneratedVertexMatch.class,
-                      BasicVertex.class);
+                      Vertex.class);
         conf.setClass(GiraphJob.VERTEX_INPUT_FORMAT_CLASS,
                       JsonBase64VertexInputFormat.class,
                       VertexInputFormat.class);

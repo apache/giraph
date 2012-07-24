@@ -82,7 +82,7 @@ public class SendPartitionMessagesRequest<I extends WritableComparable,
     int vertexIdMessagesSize = input.readInt();
     vertexIdMessages = Maps.newHashMapWithExpectedSize(vertexIdMessagesSize);
     for (int i = 0; i < vertexIdMessagesSize; ++i) {
-      I vertexId = BspUtils.<I>createVertexIndex(conf);
+      I vertexId = BspUtils.<I>createVertexId(conf);
       vertexId.readFields(input);
       int messageCount = input.readInt();
       List<M> messageList = Lists.newArrayListWithCapacity(messageCount);

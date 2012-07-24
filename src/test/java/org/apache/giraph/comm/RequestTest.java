@@ -18,10 +18,10 @@
 
 package org.apache.giraph.comm;
 
-import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexMutations;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IntWritable;
@@ -42,7 +42,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
@@ -69,7 +68,7 @@ public class RequestTest {
   public static class TestVertex extends EdgeListVertex<IntWritable,
       IntWritable, IntWritable, IntWritable> {
     @Override
-    public void compute(Iterator<IntWritable> msgIterator) throws IOException {
+    public void compute(Iterable<IntWritable> messages) throws IOException {
     }
   }
 
@@ -80,8 +79,8 @@ public class RequestTest {
 
     // Setup the conf
     conf = new Configuration();
-    conf.setClass(GiraphJob.VERTEX_CLASS, TestVertex.class, BasicVertex.class);
-    conf.setClass(GiraphJob.VERTEX_INDEX_CLASS,
+    conf.setClass(GiraphJob.VERTEX_CLASS, TestVertex.class, Vertex.class);
+    conf.setClass(GiraphJob.VERTEX_ID_CLASS,
         IntWritable.class, WritableComparable.class);
     conf.setClass(GiraphJob.VERTEX_VALUE_CLASS,
         IntWritable.class, Writable.class);
@@ -92,7 +91,8 @@ public class RequestTest {
 
     // Start the service
     serverData =
-        new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>(conf);
+        new ServerData<IntWritable, IntWritable, IntWritable,
+            IntWritable>(conf);
     server =
         new NettyServer<IntWritable, IntWritable, IntWritable, IntWritable>(
             conf, serverData);
@@ -107,9 +107,9 @@ public class RequestTest {
   public void sendVertexPartition() throws IOException {
     // Data to send
     int partitionId = 13;
-    Collection<BasicVertex<IntWritable, IntWritable, IntWritable,
-    IntWritable>> vertices =
-        new ArrayList<BasicVertex<IntWritable, IntWritable,
+    Collection<Vertex<IntWritable, IntWritable, IntWritable,
+        IntWritable>> vertices =
+        new ArrayList<Vertex<IntWritable, IntWritable,
         IntWritable, IntWritable>>();
     for (int i = 0; i < 10; ++i) {
       TestVertex vertex = new TestVertex();
@@ -130,16 +130,16 @@ public class RequestTest {
     server.stop();
 
     // Check the output
-    Map<Integer, Collection<BasicVertex<IntWritable, IntWritable,
+    Map<Integer, Collection<Vertex<IntWritable, IntWritable,
     IntWritable, IntWritable>>> partitionVertexMap =
         serverData.getPartitionVertexMap();
     synchronized (partitionVertexMap) {
       assertTrue(partitionVertexMap.containsKey(partitionId));
       int total = 0;
-      for (BasicVertex<IntWritable, IntWritable,
+      for (Vertex<IntWritable, IntWritable,
           IntWritable, IntWritable> vertex :
             (partitionVertexMap.get(partitionId))) {
-        total += vertex.getVertexId().get();
+        total += vertex.getId().get();
       }
       assertEquals(total, 45);
     }
@@ -245,16 +245,16 @@ public class RequestTest {
       synchronized (entry.getValue()) {
         keySum += entry.getKey().get();
         int vertexValueSum = 0;
-        for (BasicVertex<IntWritable, IntWritable, IntWritable, IntWritable>
+        for (Vertex<IntWritable, IntWritable, IntWritable, IntWritable>
         vertex : entry.getValue().getAddedVertexList()) {
-          vertexValueSum += vertex.getVertexValue().get();
+          vertexValueSum += vertex.getValue().get();
         }
         assertEquals(3, vertexValueSum);
         assertEquals(2, entry.getValue().getRemovedVertexCount());
         int removeEdgeValueSum = 0;
         for (Edge<IntWritable, IntWritable> edge :
           entry.getValue().getAddedEdgeList()) {
-          removeEdgeValueSum += edge.getEdgeValue().get();
+          removeEdgeValueSum += edge.getValue().get();
         }
         assertEquals(20, removeEdgeValueSum);
       }

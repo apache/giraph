@@ -50,7 +50,7 @@ public interface VertexWriter<I extends WritableComparable, V extends Writable,
    * @throws IOException
    * @throws InterruptedException
    */
-  void writeVertex(BasicVertex<I, V, E, ?> vertex)
+  void writeVertex(Vertex<I, V, E, ?> vertex)
     throws IOException, InterruptedException;
 
   /**

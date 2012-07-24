@@ -61,7 +61,7 @@ public class GiraphJob {
       "giraph.graphPartitionerFactoryClass";
 
   /** Vertex index class */
-  public static final String VERTEX_INDEX_CLASS = "giraph.vertexIndexClass";
+  public static final String VERTEX_ID_CLASS = "giraph.vertexIdClass";
   /** Vertex value class */
   public static final String VERTEX_VALUE_CLASS = "giraph.vertexValueClass";
   /** Edge value class */
@@ -451,7 +451,7 @@ public class GiraphJob {
    * @param vertexClass Runs vertex computation
    */
   public final void setVertexClass(Class<?> vertexClass) {
-    getConfiguration().setClass(VERTEX_CLASS, vertexClass, BasicVertex.class);
+    getConfiguration().setClass(VERTEX_CLASS, vertexClass, Vertex.class);
   }
 
   /**

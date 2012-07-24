@@ -25,7 +25,7 @@ import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.giraph.comm.RequestRegistry.Type;
-import org.apache.giraph.graph.BasicVertex;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.BspUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
@@ -52,7 +52,7 @@ public class SendVertexRequest<I extends WritableComparable,
   /** Partition id */
   private int partitionId;
   /** List of vertices to be stored on this partition */
-  private Collection<BasicVertex<I, V, E, M>> vertices;
+  private Collection<Vertex<I, V, E, M>> vertices;
   /** Configuration */
   private Configuration conf;
 
@@ -68,7 +68,7 @@ public class SendVertexRequest<I extends WritableComparable,
    * @param vertices Vertices to send
    */
   public SendVertexRequest(
-      int partitionId, Collection<BasicVertex<I, V, E, M>> vertices) {
+      int partitionId, Collection<Vertex<I, V, E, M>> vertices) {
     this.partitionId = partitionId;
     this.vertices = vertices;
   }
@@ -79,7 +79,7 @@ public class SendVertexRequest<I extends WritableComparable,
     int verticesCount = input.readInt();
     vertices = Lists.newArrayListWithCapacity(verticesCount);
     for (int i = 0; i < verticesCount; ++i) {
-      BasicVertex<I, V, E, M> vertex = BspUtils.createVertex(conf);
+      Vertex<I, V, E, M> vertex = BspUtils.createVertex(conf);
       vertex.readFields(input);
       vertices.add(vertex);
     }
@@ -89,7 +89,7 @@ public class SendVertexRequest<I extends WritableComparable,
   public void write(DataOutput output) throws IOException {
     output.writeInt(partitionId);
     output.writeInt(vertices.size());
-    for (BasicVertex<I, V, E, M> vertex : vertices) {
+    for (Vertex<I, V, E, M> vertex : vertices) {
       vertex.write(output);
     }
   }
@@ -101,13 +101,13 @@ public class SendVertexRequest<I extends WritableComparable,
 
   @Override
   public void doRequest(ServerData<I, V, E, M> serverData) {
-    ConcurrentHashMap<Integer, Collection<BasicVertex<I, V, E, M>>>
+    ConcurrentHashMap<Integer, Collection<Vertex<I, V, E, M>>>
     partitionVertexMap = serverData.getPartitionVertexMap();
     if (vertices.isEmpty()) {
       LOG.warn("doRequest: Got an empty request!");
       return;
     }
-    Collection<BasicVertex<I, V, E, M>> vertexMap =
+    Collection<Vertex<I, V, E, M>> vertexMap =
         partitionVertexMap.get(partitionId);
     if (vertexMap == null) {
       vertexMap = partitionVertexMap.putIfAbsent(partitionId, vertices);

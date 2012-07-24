@@ -18,18 +18,18 @@
 
 package org.apache.giraph.comm;
 
-import java.io.IOException;
-import java.util.Collection;
-import java.util.Map;
-
 import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.WorkerInfo;
 import org.apache.giraph.graph.partition.Partition;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
+
+import java.io.IOException;
+import java.util.Collection;
+import java.util.Map;
 
 /**
  * Netty based implementation of the {@link WorkerClientServer} interface.
@@ -67,35 +67,36 @@ public class NettyWorkerClientServer<I extends WritableComparable,
   }
 
   @Override
-  public void sendMessageReq(I destVertexId, M message) {
-    client.sendMessageReq(destVertexId, message);
+  public void sendMessageRequest(I destVertexId, M message) {
+    client.sendMessageRequest(destVertexId, message);
   }
 
   @Override
-  public void sendPartitionReq(WorkerInfo workerInfo,
-      Partition<I, V, E, M> partition) {
-    client.sendPartitionReq(workerInfo, partition);
+  public void sendPartitionRequest(WorkerInfo workerInfo,
+                                   Partition<I, V, E, M> partition) {
+    client.sendPartitionRequest(workerInfo, partition);
   }
 
   @Override
-  public void addEdgeReq(I vertexIndex, Edge<I, E> edge) throws IOException {
-    client.addEdgeReq(vertexIndex, edge);
+  public void addEdgeRequest(I vertexIndex, Edge<I, E> edge) throws
+      IOException {
+    client.addEdgeRequest(vertexIndex, edge);
   }
 
   @Override
-  public void removeEdgeReq(I vertexIndex,
-                            I destinationVertexIndex) throws IOException {
-    client.removeEdgeReq(vertexIndex, destinationVertexIndex);
+  public void removeEdgeRequest(I vertexIndex,
+                                I destinationVertexIndex) throws IOException {
+    client.removeEdgeRequest(vertexIndex, destinationVertexIndex);
   }
 
   @Override
-  public void addVertexReq(BasicVertex<I, V, E, M> vertex) throws IOException {
-    client.addVertexReq(vertex);
+  public void addVertexRequest(Vertex<I, V, E, M> vertex) throws IOException {
+    client.addVertexRequest(vertex);
   }
 
   @Override
-  public void removeVertexReq(I vertexIndex) throws IOException {
-    client.removeVertexReq(vertexIndex);
+  public void removeVertexRequest(I vertexIndex) throws IOException {
+    client.removeVertexRequest(vertexIndex);
   }
 
   @Override
@@ -124,7 +125,7 @@ public class NettyWorkerClientServer<I extends WritableComparable,
   }
 
   @Override
-  public Map<Integer, Collection<BasicVertex<I, V, E, M>>>
+  public Map<Integer, Collection<Vertex<I, V, E, M>>>
   getInPartitionVertexMap() {
     return server.getInPartitionVertexMap();
   }

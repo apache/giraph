@@ -17,7 +17,7 @@
  */
 package org.apache.giraph.lib;
 
-import org.apache.giraph.graph.BasicVertex;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexInputFormat;
 import org.apache.giraph.graph.VertexReader;
 import org.apache.hadoop.io.Writable;
@@ -43,7 +43,7 @@ import java.util.List;
 @SuppressWarnings("rawtypes")
 public class SequenceFileVertexInputFormat<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable,
-    X extends BasicVertex<I, V, E, M>>
+    X extends Vertex<I, V, E, M>>
     extends VertexInputFormat<I, V, E, M> {
   /** Internal input format */
   protected SequenceFileInputFormat<I, X> sequenceFileInputFormat =
@@ -73,7 +73,7 @@ public class SequenceFileVertexInputFormat<I extends WritableComparable,
    */
   public static class SequenceFileVertexReader<I extends WritableComparable,
       V extends Writable, E extends Writable, M extends Writable,
-      X extends BasicVertex<I, V, E, M>>
+      X extends Vertex<I, V, E, M>>
       implements VertexReader<I, V, E, M> {
     /** Internal record reader from {@link SequenceFileInputFormat} */
     private final RecordReader<I, X> recordReader;
@@ -97,7 +97,7 @@ public class SequenceFileVertexInputFormat<I extends WritableComparable,
       return recordReader.nextKeyValue();
     }
 
-    @Override public BasicVertex<I, V, E, M> getCurrentVertex()
+    @Override public Vertex<I, V, E, M> getCurrentVertex()
       throws IOException, InterruptedException {
       return recordReader.getCurrentValue();
     }

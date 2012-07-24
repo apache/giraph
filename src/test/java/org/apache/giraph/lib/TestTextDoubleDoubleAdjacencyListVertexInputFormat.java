@@ -17,26 +17,39 @@
  */
 package org.apache.giraph.lib;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import org.apache.giraph.graph.*;
+import org.apache.giraph.graph.BspUtils;
+import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.EdgeListVertex;
+import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.graph.GraphState;
+import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.*;
+import org.apache.hadoop.io.BooleanWritable;
+import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.junit.Before;
 import org.junit.Test;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.Collections;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 public class TestTextDoubleDoubleAdjacencyListVertexInputFormat {
 
@@ -50,8 +63,8 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat {
     rr = mock(RecordReader.class);
     when(rr.nextKeyValue()).thenReturn(true).thenReturn(false);
     conf = new Configuration();
-    conf.setClass(GiraphJob.VERTEX_CLASS, DummyVertex.class, BasicVertex.class);
-    conf.setClass(GiraphJob.VERTEX_INDEX_CLASS, Text.class, Writable.class);
+    conf.setClass(GiraphJob.VERTEX_CLASS, DummyVertex.class, Vertex.class);
+    conf.setClass(GiraphJob.VERTEX_ID_CLASS, Text.class, Writable.class);
     conf.setClass(GiraphJob.VERTEX_VALUE_CLASS, DoubleWritable.class, Writable.class);
     graphState = mock(GraphState.class);
     tac = mock(TaskAttemptContext.class);
@@ -94,8 +107,8 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat {
     }
   }
 
-  public static void setGraphState(BasicVertex vertex, GraphState graphState) throws Exception {
-    Class<? extends BasicVertex> c = BasicVertex.class;
+  public static void setGraphState(Vertex vertex, GraphState graphState) throws Exception {
+    Class<? extends Vertex> c = Vertex.class;
     Method m = c.getDeclaredMethod("setGraphState", GraphState.class);
     m.setAccessible(true);
     m.invoke(vertex, graphState);
@@ -103,16 +116,16 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat {
 
   public static <I extends WritableComparable, V extends Writable,
       E extends Writable, M extends Writable> void assertValidVertex(Configuration conf,
-      GraphState<I, V, E, M> graphState, BasicVertex<I, V, E, M> actual,
+      GraphState<I, V, E, M> graphState, Vertex<I, V, E, M> actual,
       I expectedId, V expectedValue, Edge<I, E>... edges)
       throws Exception {
-    BasicVertex<I, V, E, M> expected = BspUtils.createVertex(conf);
+    Vertex<I, V, E, M> expected = BspUtils.createVertex(conf);
     setGraphState(expected, graphState);
 
     // FIXME! maybe can't work if not instantiated properly
     Map<I, E> edgeMap = Maps.newHashMap();
     for(Edge<I, E> edge : edges) {
-      edgeMap.put(edge.getDestVertexId(), edge.getEdgeValue());
+      edgeMap.put(edge.getTargetVertexId(), edge.getValue());
     }
     expected.initialize(expectedId, expectedValue, edgeMap, null);
     assertValid(expected, actual);
@@ -120,20 +133,14 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat {
 
   public static
   <I extends WritableComparable, V extends Writable, E extends Writable, M extends Writable> void
-  assertValid(BasicVertex<I, V, E, M> expected, BasicVertex<I, V, E, M> actual) {
-    assertEquals(expected.getVertexId(), actual.getVertexId());
-    assertEquals(expected.getVertexValue(), actual.getVertexValue());
-    assertEquals(expected.getNumEdges(), actual.getNumEdges());
+  assertValid(Vertex<I, V, E, M> expected, Vertex<I, V, E, M> actual) {
+    assertEquals(expected.getId(), actual.getId());
+    assertEquals(expected.getValue(), actual.getValue());
+    assertEquals(expected.getTotalNumEdges(), actual.getTotalNumEdges());
     List<Edge<I, E>> expectedEdges = Lists.newArrayList();
     List<Edge<I, E>> actualEdges = Lists.newArrayList();
-    for (Iterator<I> edges = actual.getOutEdgesIterator(); edges.hasNext();) {
-      I actualDestId = edges.next();
-      actualEdges.add(new Edge<I, E>(actualDestId, actual.getEdgeValue(actualDestId)));
-    }
-    for (Iterator<I> edges = expected.getOutEdgesIterator(); edges.hasNext();) {
-      I expectedDestId = edges.next();
-      expectedEdges.add(new Edge<I, E>(expectedDestId, expected.getEdgeValue(expectedDestId)));
-    }
+    Iterables.addAll(actualEdges, actual.getEdges());
+    Iterables.addAll(expectedEdges, expected.getEdges());
     Collections.sort(expectedEdges);
     Collections.sort(actualEdges);
     for(int i = 0; i < expectedEdges.size(); i++) {
@@ -151,14 +158,14 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat {
 
     vr.initialize(null, tac);
     assertTrue("Should have been able to add a vertex", vr.nextVertex());
-    BasicVertex<Text, DoubleWritable, DoubleWritable, BooleanWritable> vertex =
+    Vertex<Text, DoubleWritable, DoubleWritable, BooleanWritable> vertex =
         vr.getCurrentVertex();
     setGraphState(vertex, graphState);
     assertValidVertex(conf, graphState, vertex, new Text("Hi"), new DoubleWritable(0),
         new Edge<Text, DoubleWritable>(new Text("Ciao"), new DoubleWritable(1.123d)),
         new Edge<Text, DoubleWritable>(new Text("Bomdia"), new DoubleWritable(2.234d)),
         new Edge<Text, DoubleWritable>(new Text("Ola"), new DoubleWritable(3.345d)));
-    assertEquals(vertex.getNumOutEdges(), 3);
+    assertEquals(vertex.getNumEdges(), 3);
   }
 
   @Test
@@ -179,7 +186,7 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat {
 
     vr.initialize(null, tac);
     assertTrue("Should have been able to read vertex", vr.nextVertex());
-    BasicVertex<Text, DoubleWritable, DoubleWritable, BooleanWritable> vertex =
+    Vertex<Text, DoubleWritable, DoubleWritable, BooleanWritable> vertex =
         vr.getCurrentVertex();
     setGraphState(vertex, graphState);
     assertValidVertex(conf, graphState, vertex,
@@ -188,7 +195,7 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat {
         new Edge<Text, DoubleWritable>(new Text("TCHAU"), new DoubleWritable(2.0001d)),
         new Edge<Text, DoubleWritable>(new Text("ADIOS"), new DoubleWritable(3.00001d)));
 
-    assertEquals(vertex.getNumOutEdges(), 3);
+    assertEquals(vertex.getNumEdges(), 3);
   }
 
   @Test
@@ -202,19 +209,19 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat {
 
     vr.initialize(null, tac);
     assertTrue("Should have been able to read vertex", vr.nextVertex());
-    BasicVertex<Text, DoubleWritable, DoubleWritable, BooleanWritable> vertex =
+    Vertex<Text, DoubleWritable, DoubleWritable, BooleanWritable> vertex =
         vr.getCurrentVertex();
     setGraphState(vertex, graphState);
     assertValidVertex(conf, graphState, vertex, new Text("alpha"), new DoubleWritable(42d),
         new Edge<Text, DoubleWritable>(new Text("beta"), new DoubleWritable(99d)));
-    assertEquals(vertex.getNumOutEdges(), 1);
+    assertEquals(vertex.getNumEdges(), 1);
   }
 
   public static class DummyVertex
       extends EdgeListVertex<Text, DoubleWritable,
       DoubleWritable, BooleanWritable> {
     @Override
-    public void compute(Iterator<BooleanWritable> msgIterator) throws IOException {
+    public void compute(Iterable<BooleanWritable> messages) throws IOException {
       // ignore
     }
   }

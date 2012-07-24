@@ -18,17 +18,17 @@
 
 package org.apache.giraph.examples;
 
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.NullWritable;
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.ArrayWritable;
+import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.EdgeListVertex;
+import org.apache.hadoop.io.ArrayWritable;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.Writable;
 
-import java.util.Iterator;
-import java.util.Map;
-import java.util.TreeMap;
-import java.util.Set;
 import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 
 /**
  * Demonstrates triangle closing in simple,
@@ -71,22 +71,20 @@ public class SimpleTriangleClosingVertex extends EdgeListVertex<
   private Set<Integer> recvSet = new HashSet<Integer>();
 
   @Override
-  public void compute(Iterator<IntWritable> msgIterator) {
+  public void compute(Iterable<IntWritable> messages) {
     if (getSuperstep() == 0) {
       // obtain list of all out-edges from THIS vertex
-      Iterator<IntWritable> iterator = getOutEdgesIterator();
-      while (iterator.hasNext()) {
-        sendMsgToAllEdges(iterator.next());
+      for (Edge<IntWritable, NullWritable> edge : getEdges()) {
+        sendMessageToAllEdges(edge.getTargetVertexId());
       }
     } else {
-      while (msgIterator.hasNext()) {
-        IntWritable iw = msgIterator.next();
-        int inId = iw.get();
+      for (IntWritable message : messages) {
+        int inId = message.get();
         if (recvSet.contains(inId)) {
-          int current = closeMap.get(iw) == null ? 0 : inId;
-          closeMap.put(iw, current + 1);
+          int current = closeMap.get(message) == null ? 0 : inId;
+          closeMap.put(message, current + 1);
         }
-        if (inId != getVertexId().get()) {
+        if (inId != getId().get()) {
           recvSet.add(inId);
         }
       }
@@ -97,7 +95,7 @@ public class SimpleTriangleClosingVertex extends EdgeListVertex<
       }
       IntArrayWritable result = new IntArrayWritable();
       result.set(temp);
-      setVertexValue(result);
+      setValue(result);
     }
     voteToHalt();
   }

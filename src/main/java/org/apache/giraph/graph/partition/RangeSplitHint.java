@@ -48,7 +48,7 @@ public class RangeSplitHint<I extends WritableComparable>
 
   @Override
   public void readFields(DataInput input) throws IOException {
-    splitIndex = BspUtils.<I>createVertexIndex(conf);
+    splitIndex = BspUtils.<I>createVertexId(conf);
     splitIndex.readFields(input);
     preSplitVertexCount = input.readLong();
     postSplitVertexCount = input.readLong();

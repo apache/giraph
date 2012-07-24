@@ -15,24 +15,35 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.benchmark;
 
-import org.apache.giraph.graph.HashMapVertex;
+package org.apache.giraph.examples;
+
+import org.apache.giraph.graph.VertexCombiner;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
- * Same benchmark code as {@link PageRankBenchmark}, but uses
- * {@link HashMapVertex} implementation rather than
- * {@link org.apache.giraph.graph.EdgeListVertex}
+ * {@link VertexCombiner} that finds the minimum {@link DoubleWritable}
  */
-public class HashMapVertexPageRankBenchmark extends HashMapVertex<
-    LongWritable, DoubleWritable, DoubleWritable, DoubleWritable> {
+public class MinimumDoubleCombiner extends
+    VertexCombiner<LongWritable, DoubleWritable> {
   @Override
-  public void compute(Iterable<DoubleWritable> messages) throws
-      IOException {
-    PageRankComputation.computePageRank(this, messages);
+  public Iterable<DoubleWritable> combine(
+      LongWritable target,
+      Iterable<DoubleWritable> messages) throws IOException {
+    double minimum = Double.MAX_VALUE;
+    for (DoubleWritable message : messages) {
+      if (message.get() < minimum) {
+        minimum = message.get();
+      }
+    }
+    List<DoubleWritable> value = new ArrayList<DoubleWritable>();
+    value.add(new DoubleWritable(minimum));
+
+    return value;
   }
 }

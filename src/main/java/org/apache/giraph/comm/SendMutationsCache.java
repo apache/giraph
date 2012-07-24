@@ -21,7 +21,7 @@ package org.apache.giraph.comm;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.giraph.graph.BasicVertex;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.VertexMutations;
 import org.apache.hadoop.io.Writable;
@@ -137,10 +137,10 @@ public class SendMutationsCache<I extends WritableComparable,
    * @return Number of mutations in the partition.
    */
   public int addVertexMutation(
-      Integer partitionId, BasicVertex<I, V, E, M> vertex) {
+      Integer partitionId, Vertex<I, V, E, M> vertex) {
     // Get the mutations for this partition
     VertexMutations<I, V, E, M> mutations =
-        getVertexMutations(partitionId, vertex.getVertexId());
+        getVertexMutations(partitionId, vertex.getId());
 
     // Add the vertex
     mutations.addVertex(vertex);

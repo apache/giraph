@@ -18,14 +18,12 @@
 
 package org.apache.giraph.graph;
 
-import net.iharder.Base64;
-
 import org.apache.giraph.bsp.ApplicationState;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.NettyWorkerClientServer;
 import org.apache.giraph.comm.RPCCommunications;
-import org.apache.giraph.comm.WorkerServer;
 import org.apache.giraph.comm.WorkerClientServer;
+import org.apache.giraph.comm.WorkerServer;
 import org.apache.giraph.graph.partition.Partition;
 import org.apache.giraph.graph.partition.PartitionExchange;
 import org.apache.giraph.graph.partition.PartitionOwner;
@@ -53,6 +51,8 @@ import org.apache.zookeeper.data.Stat;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import net.iharder.Base64;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -319,7 +319,7 @@ public class BspServiceWorker<I extends WritableComparable,
     for (Entry<PartitionOwner, Partition<I, V, E, M>> entry :
       inputSplitCache.entrySet()) {
       if (!entry.getValue().getVertices().isEmpty()) {
-        commService.sendPartitionReq(entry.getKey().getWorkerInfo(),
+        commService.sendPartitionRequest(entry.getKey().getWorkerInfo(),
             entry.getValue());
         entry.getValue().getVertices().clear();
       }
@@ -447,20 +447,20 @@ public class BspServiceWorker<I extends WritableComparable,
     long vertexCount = 0;
     long edgeCount = 0;
     while (vertexReader.nextVertex()) {
-      BasicVertex<I, V, E, M> readerVertex =
+      Vertex<I, V, E, M> readerVertex =
           vertexReader.getCurrentVertex();
-      if (readerVertex.getVertexId() == null) {
+      if (readerVertex.getId() == null) {
         throw new IllegalArgumentException(
             "loadVertices: Vertex reader returned a vertex " +
                 "without an id!  - " + readerVertex);
       }
-      if (readerVertex.getVertexValue() == null) {
-        readerVertex.setVertexValue(
+      if (readerVertex.getValue() == null) {
+        readerVertex.setValue(
             BspUtils.<V>createVertexValue(getConfiguration()));
       }
       PartitionOwner partitionOwner =
           workerGraphPartitioner.getPartitionOwner(
-              readerVertex.getVertexId());
+              readerVertex.getId());
       Partition<I, V, E, M> partition =
           inputSplitCache.get(partitionOwner);
       if (partition == null) {
@@ -469,23 +469,23 @@ public class BspServiceWorker<I extends WritableComparable,
             partitionOwner.getPartitionId());
         inputSplitCache.put(partitionOwner, partition);
       }
-      BasicVertex<I, V, E, M> oldVertex =
+      Vertex<I, V, E, M> oldVertex =
           partition.putVertex(readerVertex);
       if (oldVertex != null) {
         LOG.warn("readVertices: Replacing vertex " + oldVertex +
             " with " + readerVertex);
       }
       if (partition.getVertices().size() >= maxVerticesPerPartition) {
-        commService.sendPartitionReq(partitionOwner.getWorkerInfo(),
+        commService.sendPartitionRequest(partitionOwner.getWorkerInfo(),
             partition);
         partition.getVertices().clear();
       }
       ++vertexCount;
-      edgeCount += readerVertex.getNumOutEdges();
+      edgeCount += readerVertex.getNumEdges();
       getContext().progress();
 
       ++totalVerticesLoaded;
-      totalEdgesLoaded += readerVertex.getNumOutEdges();
+      totalEdgesLoaded += readerVertex.getNumEdges();
       // Update status every half a million vertices
       if ((totalVerticesLoaded % 500000) == 0) {
         String status = "readVerticesFromInputSplit: Loaded " +
@@ -519,9 +519,9 @@ public class BspServiceWorker<I extends WritableComparable,
   }
 
   @Override
-  public void assignMessagesToVertex(BasicVertex<I, V, E, M> vertex,
-      Iterable<M> messageIterator) {
-    vertex.putMessages(messageIterator);
+  public void assignMessagesToVertex(Vertex<I, V, E, M> vertex,
+      Iterable<M> messages) {
+    vertex.putMessages(messages);
   }
 
   @Override
@@ -674,7 +674,7 @@ public class BspServiceWorker<I extends WritableComparable,
         new ArrayList<PartitionStats>();
     for (Partition<I, V, E, M> partition : getPartitionMap().values()) {
       PartitionStats partitionStats =
-          new PartitionStats(partition.getPartitionId(),
+          new PartitionStats(partition.getId(),
               partition.getVertices().size(),
               0,
               partition.getEdgeCount());
@@ -1056,8 +1056,8 @@ public class BspServiceWorker<I extends WritableComparable,
         " - Attempt=" + getApplicationAttempt() +
         ", Superstep=" + getSuperstep());
     getGraphMapper().getGraphState().
-    setNumEdges(globalStats.getEdgeCount()).
-    setNumVertices(globalStats.getVertexCount());
+        setTotalNumEdges(globalStats.getEdgeCount()).
+        setTotalNumVertices(globalStats.getVertexCount());
     return globalStats.getHaltComputation();
   }
 
@@ -1080,7 +1080,7 @@ public class BspServiceWorker<I extends WritableComparable,
         vertexOutputFormat.createVertexWriter(getContext());
     vertexWriter.initialize(getContext());
     for (Partition<I, V, E, M> partition : workerPartitionMap.values()) {
-      for (BasicVertex<I, V, E, M> vertex : partition.getVertices()) {
+      for (Vertex<I, V, E, M> vertex : partition.getVertices()) {
         vertexWriter.writeVertex(vertex);
       }
     }
@@ -1185,7 +1185,7 @@ public class BspServiceWorker<I extends WritableComparable,
       //   <index 0 start pos><partition id>
       //   <index 1 start pos><partition id>
       metadataOutput.writeLong(startPos);
-      metadataOutput.writeInt(partition.getPartitionId());
+      metadataOutput.writeInt(partition.getId());
       if (LOG.isDebugEnabled()) {
         LOG.debug("storeCheckpoint: Vertex file starting " +
             "offset = " + startPos + ", length = " +
@@ -1314,8 +1314,8 @@ public class BspServiceWorker<I extends WritableComparable,
               partitionId);
         }
         getGraphMapper().getGraphState().getWorkerCommunications().
-        sendPartitionReq(workerPartitionList.getKey(),
-            partition);
+            sendPartitionRequest(workerPartitionList.getKey(),
+                partition);
         getPartitionMap().remove(partitionId);
       }
     }
@@ -1426,10 +1426,10 @@ public class BspServiceWorker<I extends WritableComparable,
    */
   private void movePartitionsToWorker(
       WorkerServer<I, V, E, M> commService) {
-    Map<Integer, Collection<BasicVertex<I, V, E, M>>> inPartitionVertexMap =
+    Map<Integer, Collection<Vertex<I, V, E, M>>> inPartitionVertexMap =
         commService.getInPartitionVertexMap();
     synchronized (inPartitionVertexMap) {
-      for (Entry<Integer, Collection<BasicVertex<I, V, E, M>>> entry :
+      for (Entry<Integer, Collection<Vertex<I, V, E, M>>> entry :
         inPartitionVertexMap.entrySet()) {
         if (getPartitionMap().containsKey(entry.getKey())) {
           throw new IllegalStateException(
@@ -1443,7 +1443,7 @@ public class BspServiceWorker<I extends WritableComparable,
             new Partition<I, V, E, M>(getConfiguration(),
                 entry.getKey());
         synchronized (entry.getValue()) {
-          for (BasicVertex<I, V, E, M> vertex : entry.getValue()) {
+          for (Vertex<I, V, E, M> vertex : entry.getValue()) {
             if (tmpPartition.putVertex(vertex) != null) {
               throw new IllegalStateException(
                   "moveVerticesToWorker: Vertex " + vertex +
@@ -1455,7 +1455,7 @@ public class BspServiceWorker<I extends WritableComparable,
                 entry.getValue().size() +
                 " vertices for partition id " + entry.getKey());
           }
-          getPartitionMap().put(tmpPartition.getPartitionId(),
+          getPartitionMap().put(tmpPartition.getId(),
               tmpPartition);
           entry.getValue().clear();
         }
@@ -1527,27 +1527,27 @@ public class BspServiceWorker<I extends WritableComparable,
   }
 
   @Override
-  public PartitionOwner getVertexPartitionOwner(I vertexIndex) {
-    return workerGraphPartitioner.getPartitionOwner(vertexIndex);
+  public PartitionOwner getVertexPartitionOwner(I vertexId) {
+    return workerGraphPartitioner.getPartitionOwner(vertexId);
   }
 
   /**
    * Get the partition for a vertex index.
    *
-   * @param vertexIndex Vertex index to search for the partition.
+   * @param vertexId Vertex index to search for the partition.
    * @return Partition that owns this vertex.
    */
-  public Partition<I, V, E, M> getPartition(I vertexIndex) {
-    PartitionOwner partitionOwner = getVertexPartitionOwner(vertexIndex);
+  public Partition<I, V, E, M> getPartition(I vertexId) {
+    PartitionOwner partitionOwner = getVertexPartitionOwner(vertexId);
     return workerPartitionMap.get(partitionOwner.getPartitionId());
   }
 
   @Override
-  public BasicVertex<I, V, E, M> getVertex(I vertexIndex) {
-    PartitionOwner partitionOwner = getVertexPartitionOwner(vertexIndex);
+  public Vertex<I, V, E, M> getVertex(I vertexId) {
+    PartitionOwner partitionOwner = getVertexPartitionOwner(vertexId);
     if (workerPartitionMap.containsKey(partitionOwner.getPartitionId())) {
       return workerPartitionMap.get(
-          partitionOwner.getPartitionId()).getVertex(vertexIndex);
+          partitionOwner.getPartitionId()).getVertex(vertexId);
     } else {
       return null;
     }

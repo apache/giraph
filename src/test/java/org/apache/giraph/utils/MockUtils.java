@@ -20,7 +20,7 @@ package org.apache.giraph.utils;
 
 import org.apache.giraph.comm.WorkerClientServer;
 import org.apache.giraph.graph.GraphState;
-import org.apache.giraph.graph.BasicVertex;
+import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -78,8 +78,8 @@ public class MockUtils {
 
         /** assert that the test vertex message has been sent to a particular vertex */
         public void verifyMessageSent(I targetVertexId, M message) {
-            Mockito.verify(communications).sendMessageReq(targetVertexId,
-                    message);
+            Mockito.verify(communications).sendMessageRequest(targetVertexId,
+                message);
         }
 
         /** assert that the test vertex has sent no message to a particular vertex */
@@ -107,7 +107,7 @@ public class MockUtils {
     public static <I extends WritableComparable, V extends Writable,
             E extends Writable, M extends Writable>
             MockedEnvironment<I, V, E, M> prepareVertex(
-            BasicVertex<I, V, E, M> vertex, long superstep, I vertexId,
+            Vertex<I, V, E, M> vertex, long superstep, I vertexId,
             V vertexValue, boolean isHalted) throws Exception {
 
         MockedEnvironment<I, V, E, M>  env =
@@ -121,8 +121,8 @@ public class MockUtils {
         Mockito.when(env.getGraphState().getWorkerCommunications())
                 .thenReturn(env.getCommunications());
 
-        ReflectionUtils.setField(vertex, "vertexId", vertexId);
-        ReflectionUtils.setField(vertex, "vertexValue", vertexValue);
+        ReflectionUtils.setField(vertex, "id", vertexId);
+        ReflectionUtils.setField(vertex, "value", vertexValue);
         ReflectionUtils.setField(vertex, "graphState", env.getGraphState());
         ReflectionUtils.setField(vertex, "halt", isHalted);
 

@@ -19,6 +19,7 @@
 package org.apache.giraph.examples;
 
 import org.apache.giraph.aggregators.LongSumAggregator;
+import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.WorkerContext;
 import org.apache.hadoop.io.FloatWritable;
@@ -30,7 +31,6 @@ import org.apache.log4j.Logger;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Iterator;
 
 /**
  * An example that simply uses its id, value, and edges to compute new data
@@ -142,7 +142,7 @@ public class VerifyMessage {
     }
 
     @Override
-    public void compute(Iterator<VerifiableMessage> msgIterator) {
+    public void compute(Iterable<VerifiableMessage> messages) {
       LongSumAggregator sumAggregator = (LongSumAggregator)
           getAggregator(LongSumAggregator.class.getName());
       if (getSuperstep() > SUPERSTEPS) {
@@ -152,61 +152,57 @@ public class VerifyMessage {
       if (LOG.isDebugEnabled()) {
         LOG.debug("compute: " + sumAggregator);
       }
-      sumAggregator.aggregate(getVertexId().get());
+      sumAggregator.aggregate(getId().get());
       if (LOG.isDebugEnabled()) {
         LOG.debug("compute: sum = " +
             sumAggregator.getAggregatedValue().get() +
-            " for vertex " + getVertexId());
+            " for vertex " + getId());
       }
       float msgValue = 0.0f;
-      while (msgIterator.hasNext()) {
-        VerifiableMessage msg = msgIterator.next();
-        msgValue += msg.value;
+      for (VerifiableMessage message : messages) {
+        msgValue += message.value;
         if (LOG.isDebugEnabled()) {
-          LOG.debug("compute: got msg = " + msg +
-              " for vertex id " + getVertexId() +
-              ", vertex value " + getVertexValue() +
+          LOG.debug("compute: got msg = " + message +
+              " for vertex id " + getId() +
+              ", vertex value " + getValue() +
               " on superstep " + getSuperstep());
         }
-        if (msg.superstep != getSuperstep() - 1) {
+        if (message.superstep != getSuperstep() - 1) {
           throw new IllegalStateException(
               "compute: Impossible to not get a messsage from " +
                   "the previous superstep, current superstep = " +
                   getSuperstep());
         }
-        if ((msg.sourceVertexId != getVertexId().get() - 1) &&
-            (getVertexId().get() != 0)) {
+        if ((message.sourceVertexId != getId().get() - 1) &&
+            (getId().get() != 0)) {
           throw new IllegalStateException(
               "compute: Impossible that this message didn't come " +
                   "from the previous vertex and came from " +
-                  msg.sourceVertexId);
+                  message.sourceVertexId);
         }
       }
-      int vertexValue = getVertexValue().get();
-      setVertexValue(new IntWritable(vertexValue + (int) msgValue));
+      int vertexValue = getValue().get();
+      setValue(new IntWritable(vertexValue + (int) msgValue));
       if (LOG.isDebugEnabled()) {
-        LOG.debug("compute: vertex " + getVertexId() +
-            " has value " + getVertexValue() +
+        LOG.debug("compute: vertex " + getId() +
+            " has value " + getValue() +
             " on superstep " + getSuperstep());
       }
-      for (Iterator<LongWritable> edges = getOutEdgesIterator();
-           edges.hasNext();) {
-        LongWritable targetVertexId = edges.next();
-        FloatWritable edgeValue = getEdgeValue(targetVertexId);
+      for (Edge<LongWritable, FloatWritable> edge : getEdges()) {
+        FloatWritable newEdgeValue = new FloatWritable(
+            edge.getValue().get() + (float) vertexValue);
         if (LOG.isDebugEnabled()) {
-          LOG.debug("compute: vertex " + getVertexId() +
-              " sending edgeValue " + edgeValue +
+          LOG.debug("compute: vertex " + getId() +
+              " sending edgeValue " + edge.getValue() +
               " vertexValue " + vertexValue +
-              " total " +
-              (edgeValue.get() + (float) vertexValue) +
-              " to vertex " + targetVertexId +
+              " total " + newEdgeValue +
+              " to vertex " + edge.getTargetVertexId() +
               " on superstep " + getSuperstep());
         }
-        edgeValue.set(edgeValue.get() + (float) vertexValue);
-        addEdge(targetVertexId, edgeValue);
-        sendMsg(targetVertexId,
+        addEdge(edge.getTargetVertexId(), newEdgeValue);
+        sendMessage(edge.getTargetVertexId(),
             new VerifiableMessage(
-                getSuperstep(), getVertexId().get(), edgeValue.get()));
+                getSuperstep(), getId().get(), newEdgeValue.get()));
       }
     }
   }

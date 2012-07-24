@@ -18,10 +18,8 @@
 
 package org.apache.giraph.examples;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.BspUtils;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexReader;
 import org.apache.giraph.lib.TextVertexInputFormat;
 import org.apache.hadoop.io.IntWritable;
@@ -31,6 +29,9 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 import java.io.IOException;
 import java.util.Map;
@@ -74,9 +75,9 @@ public class IntIntNullIntTextInputFormat extends
     }
 
     @Override
-    public BasicVertex<IntWritable, IntWritable, NullWritable, IntWritable>
+    public Vertex<IntWritable, IntWritable, NullWritable, IntWritable>
     getCurrentVertex() throws IOException, InterruptedException {
-      BasicVertex<IntWritable, IntWritable, NullWritable, IntWritable>
+      Vertex<IntWritable, IntWritable, NullWritable, IntWritable>
       vertex = BspUtils.<IntWritable, IntWritable, NullWritable,
       IntWritable>createVertex(getContext().getConfiguration());
 

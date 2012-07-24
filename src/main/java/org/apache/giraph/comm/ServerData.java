@@ -18,8 +18,8 @@
 
 package org.apache.giraph.comm;
 
-import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.BspUtils;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexCombiner;
 import org.apache.giraph.graph.VertexMutations;
 import org.apache.hadoop.conf.Configuration;
@@ -46,9 +46,9 @@ public class ServerData<I extends WritableComparable,
    * Map of partition ids to incoming vertices from other workers.
    * (Synchronized on values)
    */
-  private final ConcurrentHashMap<Integer, Collection<BasicVertex<I, V, E, M>>>
+  private final ConcurrentHashMap<Integer, Collection<Vertex<I, V, E, M>>>
   inPartitionVertexMap =
-      new ConcurrentHashMap<Integer, Collection<BasicVertex<I, V, E, M>>>();
+      new ConcurrentHashMap<Integer, Collection<Vertex<I, V, E, M>>>();
   /**
    * Map of inbound messages, mapping from vertex index to list of messages.
    * Transferred to inMessages at beginning of a superstep.  This
@@ -82,7 +82,7 @@ public class ServerData<I extends WritableComparable,
    *
    * @return Partition vertices
    */
-  public ConcurrentHashMap<Integer, Collection<BasicVertex<I, V, E, M>>>
+  public ConcurrentHashMap<Integer, Collection<Vertex<I, V, E, M>>>
   getPartitionVertexMap() {
     return inPartitionVertexMap;
   }

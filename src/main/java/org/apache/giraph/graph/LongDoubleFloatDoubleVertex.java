@@ -23,7 +23,6 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.log4j.Logger;
 import org.apache.mahout.math.function.DoubleProcedure;
 import org.apache.mahout.math.function.LongFloatProcedure;
-import org.apache.mahout.math.function.LongProcedure;
 import org.apache.mahout.math.list.DoubleArrayList;
 import org.apache.mahout.math.map.OpenLongFloatHashMap;
 
@@ -41,39 +40,30 @@ import java.util.Map;
  */
 public abstract class LongDoubleFloatDoubleVertex extends
     MutableVertex<LongWritable, DoubleWritable, FloatWritable,
-    DoubleWritable> {
+        DoubleWritable> {
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(LongDoubleFloatDoubleVertex.class);
-  /** Long vertex id */
-  private long vertexId;
-  /** Double vertex value */
-  private double vertexValue;
   /** Stores the edges */
-  private OpenLongFloatHashMap verticesWithEdgeValues =
+  private OpenLongFloatHashMap edgeMap =
       new OpenLongFloatHashMap();
   /** Message list storage */
   private DoubleArrayList messageList = new DoubleArrayList();
 
   @Override
-  public void initialize(LongWritable vertexIdW, DoubleWritable vertexValueW,
-      Map<LongWritable, FloatWritable> edgesW,
-      Iterable<DoubleWritable> messagesW) {
-    if (vertexIdW != null) {
-      vertexId = vertexIdW.get();
-    }
-    if (vertexValueW != null) {
-      vertexValue = vertexValueW.get();
-    }
-    if (edgesW != null) {
-      for (Map.Entry<LongWritable, FloatWritable> entry :
-        edgesW.entrySet()) {
-        verticesWithEdgeValues.put(entry.getKey().get(),
-            entry.getValue().get());
+  public void initialize(LongWritable id, DoubleWritable value,
+                         Map<LongWritable, FloatWritable> edges,
+                         Iterable<DoubleWritable> messages) {
+    super.initialize(id, value);
+    if (edges != null) {
+      for (Map.Entry<LongWritable, FloatWritable> edge :
+        edges.entrySet()) {
+        edgeMap.put(edge.getKey().get(),
+            edge.getValue().get());
       }
     }
-    if (messagesW != null) {
-      for (DoubleWritable m : messagesW) {
+    if (messages != null) {
+      for (DoubleWritable m : messages) {
         messageList.add(m.get());
       }
     }
@@ -82,9 +72,9 @@ public abstract class LongDoubleFloatDoubleVertex extends
   @Override
   public final boolean addEdge(LongWritable targetId,
       FloatWritable edgeValue) {
-    if (verticesWithEdgeValues.put(targetId.get(), edgeValue.get())) {
+    if (edgeMap.put(targetId.get(), edgeValue.get())) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("addEdge: Vertex=" + vertexId +
+        LOG.debug("addEdge: Vertex=" + getId() +
             ": already added an edge value for dest vertex id " +
             targetId.get());
       }
@@ -97,9 +87,9 @@ public abstract class LongDoubleFloatDoubleVertex extends
   @Override
   public FloatWritable removeEdge(LongWritable targetVertexId) {
     long target = targetVertexId.get();
-    if (verticesWithEdgeValues.containsKey(target)) {
-      float value = verticesWithEdgeValues.get(target);
-      verticesWithEdgeValues.removeKey(target);
+    if (edgeMap.containsKey(target)) {
+      float value = edgeMap.get(target);
+      edgeMap.removeKey(target);
       return new FloatWritable(value);
     } else {
       return null;
@@ -107,127 +97,78 @@ public abstract class LongDoubleFloatDoubleVertex extends
   }
 
   @Override
-  public final void setVertexId(LongWritable vertexId) {
-    this.vertexId = vertexId.get();
-  }
+  public Iterable<Edge<LongWritable, FloatWritable>> getEdges() {
+    final long[] targetVertices = edgeMap.keys().elements();
+    final int numEdges = edgeMap.size();
 
-  @Override
-  public final LongWritable getVertexId() {
-    // TODO: possibly not make new objects every time?
-    return new LongWritable(vertexId);
-  }
-
-  @Override
-  public final DoubleWritable getVertexValue() {
-    return new DoubleWritable(vertexValue);
-  }
-
-  @Override
-  public final void setVertexValue(DoubleWritable vertexValue) {
-    this.vertexValue = vertexValue.get();
-  }
-
-  @Override
-  public final void sendMsg(LongWritable id, DoubleWritable msg) {
-    if (msg == null) {
-      throw new IllegalArgumentException(
-          "sendMsg: Cannot send null message to " + id);
-    }
-    getGraphState().getWorkerCommunications().sendMessageReq(id, msg);
-  }
-
-  @Override
-  public final void sendMsgToAllEdges(final DoubleWritable msg) {
-    if (msg == null) {
-      throw new IllegalArgumentException(
-          "sendMsgToAllEdges: Cannot send null message to all edges");
-    }
-    final MutableVertex<LongWritable, DoubleWritable, FloatWritable,
-    DoubleWritable> vertex = this;
-    verticesWithEdgeValues.forEachKey(new LongProcedure() {
+    return new Iterable<Edge<LongWritable, FloatWritable>>() {
       @Override
-      public boolean apply(long destVertexId) {
-        vertex.sendMsg(new LongWritable(destVertexId), msg);
-        return true;
-      }
-    });
-  }
+      public Iterator<Edge<LongWritable, FloatWritable>> iterator() {
+        return new Iterator<Edge<LongWritable, FloatWritable>>() {
+          private int offset = 0;
 
-  @Override
-  public long getNumVertices() {
-    return getGraphState().getNumVertices();
-  }
+          @Override
+          public boolean hasNext() {
+            return offset < numEdges;
+          }
 
-  @Override
-  public long getNumEdges() {
-    return getGraphState().getNumEdges();
-  }
+          @Override
+          public Edge<LongWritable, FloatWritable> next() {
+            long targetVertex = targetVertices[offset++];
+            return new Edge<LongWritable, FloatWritable>(
+                new LongWritable(targetVertex),
+                new FloatWritable(targetVertex));
+          }
 
-  @Override
-  public Iterator<LongWritable> getOutEdgesIterator() {
-    final long[] destVertices = verticesWithEdgeValues.keys().elements();
-    final int destVerticesSize = verticesWithEdgeValues.size();
-    return new Iterator<LongWritable>() {
-      private int offset = 0;
-      @Override public boolean hasNext() {
-        return offset < destVerticesSize;
-      }
-
-      @Override public LongWritable next() {
-        return new LongWritable(destVertices[offset++]);
-      }
-
-      @Override public void remove() {
-        throw new UnsupportedOperationException(
-            "Mutation disallowed for edge list via iterator");
+          @Override
+          public void remove() {
+            throw new UnsupportedOperationException(
+                "Mutation disallowed for edge list via iterator");
+          }
+        };
       }
     };
   }
 
   @Override
-  public FloatWritable getEdgeValue(LongWritable targetVertexId) {
-    return new FloatWritable(
-        verticesWithEdgeValues.get(targetVertexId.get()));
-  }
-
-  @Override
   public boolean hasEdge(LongWritable targetVertexId) {
-    return verticesWithEdgeValues.containsKey(targetVertexId.get());
+    return edgeMap.containsKey(targetVertexId.get());
   }
 
   @Override
-  public int getNumOutEdges() {
-    return verticesWithEdgeValues.size();
-  }
-
-  @Override
-  public long getSuperstep() {
-    return getGraphState().getSuperstep();
+  public int getNumEdges() {
+    return edgeMap.size();
   }
 
   @Override
   public final void readFields(DataInput in) throws IOException {
-    vertexId = in.readLong();
-    vertexValue = in.readDouble();
+    long id = in.readLong();
+    double value = in.readDouble();
+    super.initialize(new LongWritable(id), new DoubleWritable(value));
     long edgeMapSize = in.readLong();
     for (long i = 0; i < edgeMapSize; ++i) {
-      long destVertexId = in.readLong();
+      long targetVertexId = in.readLong();
       float edgeValue = in.readFloat();
-      verticesWithEdgeValues.put(destVertexId, edgeValue);
+      edgeMap.put(targetVertexId, edgeValue);
     }
-    long msgListSize = in.readLong();
-    for (long i = 0; i < msgListSize; ++i) {
+    long messageListSize = in.readLong();
+    for (long i = 0; i < messageListSize; ++i) {
       messageList.add(in.readDouble());
     }
-    halt = in.readBoolean();
+    boolean halt = in.readBoolean();
+    if (halt) {
+      voteToHalt();
+    } else {
+      wakeUp();
+    }
   }
 
   @Override
   public final void write(final DataOutput out) throws IOException {
-    out.writeLong(vertexId);
-    out.writeDouble(vertexValue);
-    out.writeLong(verticesWithEdgeValues.size());
-    verticesWithEdgeValues.forEachPair(new LongFloatProcedure() {
+    out.writeLong(getId().get());
+    out.writeDouble(getValue().get());
+    out.writeLong(edgeMap.size());
+    edgeMap.forEachPair(new LongFloatProcedure() {
       @Override
       public boolean apply(long destVertexId, float edgeValue) {
         try {
@@ -253,7 +194,7 @@ public abstract class LongDoubleFloatDoubleVertex extends
         return true;
       }
     });
-    out.writeBoolean(halt);
+    out.writeBoolean(isHalted());
   }
 
   @Override
@@ -271,19 +212,13 @@ public abstract class LongDoubleFloatDoubleVertex extends
   }
 
   @Override
-  public Iterable<DoubleWritable> getMessages() {
-    return new UnmodifiableDoubleWritableIterable(messageList);
-  }
-
-  @Override
   public int getNumMessages() {
     return messageList.size();
   }
 
   @Override
-  public String toString() {
-    return "Vertex(id=" + getVertexId() + ",value=" + getVertexValue() +
-        ",#edges=" + getNumOutEdges() + ")";
+  public Iterable<DoubleWritable> getMessages() {
+    return new UnmodifiableDoubleWritableIterable(messageList);
   }
 
   /**

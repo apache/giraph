@@ -18,7 +18,6 @@
 
 package org.apache.giraph.graph;
 
-import org.apache.giraph.utils.ComparisonUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
@@ -29,9 +28,6 @@ import com.google.common.collect.Lists;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -39,7 +35,7 @@ import java.util.Map;
 /**
  * User applications can subclass {@link EdgeListVertex}, which stores
  * the outbound edges in an ArrayList (less memory as the cost of expensive
- * sorting and random-access lookup).  Good for static graphs.
+ * random-access lookup).  Good for static graphs.
  *
  * @param <I> Vertex index value
  * @param <V> Vertex value
@@ -52,268 +48,134 @@ public abstract class EdgeListVertex<I extends WritableComparable,
     extends MutableVertex<I, V, E, M> {
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(EdgeListVertex.class);
-  /** Vertex id */
-  private I vertexId = null;
-  /** Vertex value */
-  private V vertexValue = null;
-  /** List of the dest edge indices */
-  private List<I> destEdgeIndexList;
-  /** List of the dest edge values */
-  private List<E> destEdgeValueList;
+  /** List of edges */
+  private List<Edge<I, E>> edgeList = Lists.newArrayList();
   /** List of incoming messages from the previous superstep */
-  private List<M> msgList;
+  private List<M> messageList = Lists.newArrayList();
 
   @Override
-  public void initialize(I vertexId, V vertexValue,
-      Map<I, E> edges,
-      Iterable<M> messages) {
-    if (vertexId != null) {
-      setVertexId(vertexId);
-    }
-    if (vertexValue != null) {
-      setVertexValue(vertexValue);
-    }
-    if (edges != null && !edges.isEmpty()) {
-      destEdgeIndexList = Lists.newArrayListWithCapacity(edges.size());
-      destEdgeValueList = Lists.newArrayListWithCapacity(edges.size());
-      List<I> sortedIndexList = new ArrayList<I>(edges.keySet());
-      Collections.sort(sortedIndexList, new VertexIdComparator());
-      for (I index : sortedIndexList) {
-        destEdgeIndexList.add(index);
-        destEdgeValueList.add(edges.get(index));
+  public void initialize(I id, V value, Map<I, E> edges, Iterable<M> messages) {
+    super.initialize(id, value);
+    if (edges != null) {
+      for (Map.Entry<I, E> edge : edges.entrySet()) {
+        edgeList.add(new Edge<I, E>(edge.getKey(), edge.getValue()));
       }
-      sortedIndexList.clear();
-    } else {
-      destEdgeIndexList = Lists.newArrayListWithCapacity(0);
-      destEdgeValueList = Lists.newArrayListWithCapacity(0);
     }
     if (messages != null) {
-      msgList = Lists.newArrayListWithCapacity(Iterables.size(messages));
-      Iterables.<M>addAll(msgList, messages);
-    } else {
-      msgList = Lists.newArrayListWithCapacity(0);
+      Iterables.<M>addAll(messageList, messages);
     }
   }
 
   @Override
-  public int hashCode() {
-    return vertexId.hashCode() * 37 + vertexValue.hashCode();
+  public Iterable<Edge<I, E>> getEdges() {
+    return edgeList;
   }
 
   @Override
-  public boolean equals(Object other) {
-    if (other instanceof EdgeListVertex) {
-      @SuppressWarnings("unchecked")
-      EdgeListVertex<I, V, E, M> otherVertex = (EdgeListVertex) other;
-      if (!getVertexId().equals(otherVertex.getVertexId())) {
+  public final boolean addEdge(I targetVertexId, E value) {
+    for (Edge<I, E> edge : getEdges()) {
+      if (edge.getTargetVertexId().equals(targetVertexId)) {
+        LOG.warn("addEdge: Vertex=" + getId() +
+            ": already added an edge value for target vertex id " +
+            targetVertexId);
         return false;
       }
-      if (!getVertexValue().equals(otherVertex.getVertexValue())) {
-        return false;
-      }
-      if (!ComparisonUtils.equal(getMessages(),
-          otherVertex.getMessages())) {
-        return false;
-      }
-      return ComparisonUtils.equal(getOutEdgesIterator(),
-          otherVertex.getOutEdgesIterator());
     }
-    return false;
-  }
-
-  /**
-   * Comparator for the vertex id
-   */
-  private class VertexIdComparator implements Comparator<I> {
-    @SuppressWarnings("unchecked")
-    @Override
-    public int compare(I index1, I index2) {
-      return index1.compareTo(index2);
-    }
-  }
-
-  @Override
-  public final boolean addEdge(I targetVertexId, E edgeValue) {
-    int pos = Collections.binarySearch(destEdgeIndexList,
-        targetVertexId,
-        new VertexIdComparator());
-    if (pos < 0) {
-      destEdgeIndexList.add(-1 * (pos + 1), targetVertexId);
-      destEdgeValueList.add(-1 * (pos + 1), edgeValue);
-      return true;
-    } else {
-      LOG.warn("addEdge: Vertex=" + vertexId +
-          ": already added an edge value for dest vertex id " +
-          targetVertexId);
-      return false;
-    }
-  }
-
-  @Override
-  public long getSuperstep() {
-    return getGraphState().getSuperstep();
-  }
-
-  @Override
-  public final void setVertexId(I vertexId) {
-    this.vertexId = vertexId;
-  }
-
-  @Override
-  public final I getVertexId() {
-    return vertexId;
-  }
-
-  @Override
-  public final V getVertexValue() {
-    return vertexValue;
-  }
-
-  @Override
-  public final void setVertexValue(V vertexValue) {
-    this.vertexValue = vertexValue;
-  }
-
-  @Override
-  public E getEdgeValue(I targetVertexId) {
-    int pos = Collections.binarySearch(destEdgeIndexList,
-        targetVertexId,
-        new VertexIdComparator());
-    if (pos < 0) {
-      return null;
-    } else {
-      return destEdgeValueList.get(pos);
-    }
-  }
-
-  @Override
-  public boolean hasEdge(I targetVertexId) {
-    int pos = Collections.binarySearch(destEdgeIndexList,
-        targetVertexId,
-        new VertexIdComparator());
-    if (pos < 0) {
-      return false;
-    }
+    edgeList.add(new Edge<I, E>(targetVertexId, value));
     return true;
   }
 
-  /**
-   * Get an iterator to the edges on this vertex.
-   *
-   * @return A <em>sorted</em> iterator, as defined by the sort-order
-   *         of the vertex ids
-   */
   @Override
-  public Iterator<I> getOutEdgesIterator() {
-    return destEdgeIndexList.iterator();
-  }
-
-  @Override
-  public int getNumOutEdges() {
-    return destEdgeIndexList.size();
+  public int getNumEdges() {
+    return edgeList.size();
   }
 
   @Override
   public E removeEdge(I targetVertexId) {
-    int pos = Collections.binarySearch(destEdgeIndexList,
-        targetVertexId,
-        new VertexIdComparator());
-    if (pos < 0) {
-      return null;
-    } else {
-      destEdgeIndexList.remove(pos);
-      return destEdgeValueList.remove(pos);
+    for (Iterator<Edge<I, E>> edges = edgeList.iterator(); edges.hasNext();) {
+      Edge<I, E> edge = edges.next();
+      if (edge.getTargetVertexId().equals(targetVertexId)) {
+        E edgeValue = edge.getValue();
+        edges.remove();
+        return edgeValue;
+      }
     }
-  }
-
-  @Override
-  public final void sendMsgToAllEdges(M msg) {
-    if (msg == null) {
-      throw new IllegalArgumentException(
-          "sendMsgToAllEdges: Cannot send null message to all edges");
-    }
-    for (I index : destEdgeIndexList) {
-      sendMsg(index, msg);
-    }
-  }
-
-  @Override
-  public final void readFields(DataInput in) throws IOException {
-    vertexId = BspUtils.<I>createVertexIndex(getConf());
-    vertexId.readFields(in);
-    boolean hasVertexValue = in.readBoolean();
-    if (hasVertexValue) {
-      vertexValue = BspUtils.<V>createVertexValue(getConf());
-      vertexValue.readFields(in);
-    }
-    int edgeListCount = in.readInt();
-    destEdgeIndexList = Lists.newArrayListWithCapacity(edgeListCount);
-    destEdgeValueList = Lists.newArrayListWithCapacity(edgeListCount);
-    for (int i = 0; i < edgeListCount; ++i) {
-      I destVertexId = BspUtils.<I>createVertexIndex(getConf());
-      E edgeValue = BspUtils.<E>createEdgeValue(getConf());
-      destVertexId.readFields(in);
-      edgeValue.readFields(in);
-      destEdgeIndexList.add(destVertexId);
-      destEdgeValueList.add(edgeValue);
-    }
-    int msgListSize = in.readInt();
-    msgList = Lists.newArrayListWithCapacity(msgListSize);
-    for (int i = 0; i < msgListSize; ++i) {
-      M msg = BspUtils.<M>createMessageValue(getConf());
-      msg.readFields(in);
-      msgList.add(msg);
-    }
-    halt = in.readBoolean();
-  }
-
-  @Override
-  public final void write(DataOutput out) throws IOException {
-    vertexId.write(out);
-    out.writeBoolean(vertexValue != null);
-    if (vertexValue != null) {
-      vertexValue.write(out);
-    }
-    out.writeInt(destEdgeIndexList.size());
-    for (int i = 0; i < destEdgeIndexList.size(); ++i) {
-      destEdgeIndexList.get(i).write(out);
-      destEdgeValueList.get(i).write(out);
-    }
-    out.writeInt(msgList.size());
-    for (M msg : msgList) {
-      msg.write(out);
-    }
-    out.writeBoolean(halt);
+    return null;
   }
 
   @Override
   void putMessages(Iterable<M> messages) {
-    msgList.clear();
-    for (M message : messages) {
-      msgList.add(message);
-    }
+    messageList.clear();
+    Iterables.addAll(messageList, messages);
   }
 
   @Override
   public Iterable<M> getMessages() {
-    return Iterables.unmodifiableIterable(msgList);
+    return Iterables.unmodifiableIterable(messageList);
   }
 
   @Override
   public int getNumMessages() {
-    return msgList.size();
+    return messageList.size();
+  }
+
+  @Override
+  public final void readFields(DataInput in) throws IOException {
+    I vertexId = BspUtils.<I>createVertexId(getConf());
+    vertexId.readFields(in);
+    V vertexValue = BspUtils.<V>createVertexValue(getConf());
+    vertexValue.readFields(in);
+    super.initialize(vertexId, vertexValue);
+
+    int numEdges = in.readInt();
+    edgeList = Lists.newArrayListWithCapacity(numEdges);
+    for (int i = 0; i < numEdges; ++i) {
+      I targetVertexId = BspUtils.<I>createVertexId(getConf());
+      targetVertexId.readFields(in);
+      E edgeValue = BspUtils.<E>createEdgeValue(getConf());
+      edgeValue.readFields(in);
+      edgeList.add(new Edge<I, E>(targetVertexId, edgeValue));
+    }
+
+    int numMessages = in.readInt();
+    messageList = Lists.newArrayListWithCapacity(numMessages);
+    for (int i = 0; i < numMessages; ++i) {
+      M message = BspUtils.<M>createMessageValue(getConf());
+      message.readFields(in);
+      messageList.add(message);
+    }
+
+    boolean halt = in.readBoolean();
+    if (halt) {
+      voteToHalt();
+    } else {
+      wakeUp();
+    }
+  }
+
+  @Override
+  public final void write(DataOutput out) throws IOException {
+    getId().write(out);
+    getValue().write(out);
+
+    out.writeInt(edgeList.size());
+    for (Edge<I, E> edge : edgeList) {
+      edge.getTargetVertexId().write(out);
+      edge.getValue().write(out);
+    }
+
+    out.writeInt(messageList.size());
+    for (M message : messageList) {
+      message.write(out);
+    }
+
+    out.writeBoolean(isHalted());
   }
 
   @Override
   void releaseResources() {
     // Hint to GC to free the messages
-    msgList.clear();
-  }
-
-  @Override
-  public String toString() {
-    return "Vertex(id=" + getVertexId() + ",value=" + getVertexValue() +
-        ",#edges=" + getNumOutEdges() + ")";
+    messageList.clear();
   }
 }
 

@@ -80,8 +80,8 @@ public class TextDoubleDoubleAdjacencyListVertexInputFormat<M extends Writable>
     @Override
     public void decodeEdge(String s1, String s2,
                            Edge<Text, DoubleWritable> textIntWritableEdge) {
-      textIntWritableEdge.setDestVertexId(new Text(s1));
-      textIntWritableEdge.setEdgeValue(new DoubleWritable(Double.valueOf(s2)));
+      textIntWritableEdge.setTargetVertexId(new Text(s1));
+      textIntWritableEdge.setValue(new DoubleWritable(Double.valueOf(s2)));
     }
   }
 

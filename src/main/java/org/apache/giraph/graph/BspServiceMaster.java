@@ -18,12 +18,16 @@
 
 package org.apache.giraph.graph;
 
-import net.iharder.Base64;
 import org.apache.giraph.bsp.ApplicationState;
 import org.apache.giraph.bsp.BspInputFormat;
 import org.apache.giraph.bsp.CentralizedServiceMaster;
 import org.apache.giraph.bsp.SuperstepState;
 import org.apache.giraph.graph.GraphMapper.MapFunctions;
+import org.apache.giraph.graph.partition.MasterGraphPartitioner;
+import org.apache.giraph.graph.partition.PartitionOwner;
+import org.apache.giraph.graph.partition.PartitionStats;
+import org.apache.giraph.graph.partition.PartitionUtils;
+import org.apache.giraph.utils.WritableUtils;
 import org.apache.giraph.zk.BspEvent;
 import org.apache.giraph.zk.PredicateLock;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -48,6 +52,8 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import net.iharder.Base64;
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -64,12 +70,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
-
-import org.apache.giraph.graph.partition.MasterGraphPartitioner;
-import org.apache.giraph.graph.partition.PartitionOwner;
-import org.apache.giraph.graph.partition.PartitionStats;
-import org.apache.giraph.graph.partition.PartitionUtils;
-import org.apache.giraph.utils.WritableUtils;
 
 /**
  * ZooKeeper-based implementation of {@link CentralizedService}.
@@ -1556,8 +1556,8 @@ public class BspServiceMaster<I extends WritableComparable,
     // The master.compute() should run logically before the workers, so
     // increase the superstep counter it uses by one
     graphState.setSuperstep(superstep + 1);
-    graphState.setNumVertices(vertexCounter.getValue());
-    graphState.setNumEdges(edgeCounter.getValue());
+    graphState.setTotalNumVertices(vertexCounter.getValue());
+    graphState.setTotalNumEdges(edgeCounter.getValue());
     graphState.setContext(getContext());
     graphState.setGraphMapper(getGraphMapper());
     masterCompute.setGraphState(graphState);

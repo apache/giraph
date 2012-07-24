@@ -18,9 +18,8 @@
 
 package org.apache.giraph.lib;
 
-import net.iharder.Base64;
-import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexWriter;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
@@ -31,11 +30,12 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import net.iharder.Base64;
+
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.util.Iterator;
 
 /**
  * Simple way to represent the structure of the graph with a JSON object.
@@ -72,13 +72,13 @@ public class JsonBase64VertexOutputFormat<I extends WritableComparable,
     }
 
     @Override
-    public void writeVertex(BasicVertex<I, V, E, ?> vertex)
+    public void writeVertex(Vertex<I, V, E, ?> vertex)
       throws IOException, InterruptedException {
       ByteArrayOutputStream outputStream =
           new ByteArrayOutputStream();
       DataOutput output = new DataOutputStream(outputStream);
       JSONObject vertexObject = new JSONObject();
-      vertex.getVertexId().write(output);
+      vertex.getId().write(output);
       try {
         vertexObject.put(
           JsonBase64VertexFormat.VERTEX_ID_KEY,
@@ -88,7 +88,7 @@ public class JsonBase64VertexOutputFormat<I extends WritableComparable,
             "writerVertex: Failed to insert vertex id", e);
       }
       outputStream.reset();
-      vertex.getVertexValue().write(output);
+      vertex.getValue().write(output);
       try {
         vertexObject.put(
           JsonBase64VertexFormat.VERTEX_VALUE_KEY,
@@ -98,14 +98,10 @@ public class JsonBase64VertexOutputFormat<I extends WritableComparable,
             "writerVertex: Failed to insert vertex value", e);
       }
       JSONArray edgeArray = new JSONArray();
-      for (Iterator<I> edges = vertex.getOutEdgesIterator();
-           edges.hasNext();) {
-        I targetVertexId = edges.next();
-        Edge<I, E> edge = new Edge<I, E>(
-            targetVertexId, vertex.getEdgeValue(targetVertexId));
-        edge.setConf(getContext().getConfiguration());
+      for (Edge<I, E> edge : vertex.getEdges()) {
         outputStream.reset();
-        edge.write(output);
+        edge.getTargetVertexId().write(output);
+        edge.getValue().write(output);
         edgeArray.put(Base64.encodeBytes(outputStream.toByteArray()));
       }
       try {

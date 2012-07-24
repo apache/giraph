@@ -18,10 +18,9 @@
 
 package org.apache.giraph.examples;
 
-import com.google.common.collect.Maps;
-import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.EdgeListVertex;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexReader;
 import org.apache.giraph.graph.VertexWriter;
 import org.apache.giraph.lib.TextVertexOutputFormat;
@@ -35,8 +34,9 @@ import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.log4j.Logger;
 
+import com.google.common.collect.Maps;
+
 import java.io.IOException;
-import java.util.Iterator;
 import java.util.Map;
 
 /**
@@ -46,7 +46,7 @@ import java.util.Map;
 public class SimpleSuperstepVertex extends
     EdgeListVertex<LongWritable, IntWritable, FloatWritable, IntWritable> {
   @Override
-  public void compute(Iterator<IntWritable> msgIterator) {
+  public void compute(Iterable<IntWritable> messages) {
     if (getSuperstep() > 3) {
       voteToHalt();
     }
@@ -74,11 +74,10 @@ public class SimpleSuperstepVertex extends
     }
 
     @Override
-    public BasicVertex<LongWritable, IntWritable, FloatWritable,
-    IntWritable> getCurrentVertex()
+    public Vertex<LongWritable, IntWritable, FloatWritable,
+        IntWritable> getCurrentVertex()
       throws IOException, InterruptedException {
-      BasicVertex<LongWritable, IntWritable,
-      FloatWritable, IntWritable> vertex =
+      Vertex<LongWritable, IntWritable, FloatWritable, IntWritable> vertex =
         BspUtils.<LongWritable, IntWritable, FloatWritable,
         IntWritable>createVertex(configuration);
       long tmpId = reverseIdOrder ?
@@ -89,18 +88,18 @@ public class SimpleSuperstepVertex extends
       IntWritable vertexValue =
           new IntWritable((int) (vertexId.get() * 10));
       Map<LongWritable, FloatWritable> edgeMap = Maps.newHashMap();
-      long destVertexId =
+      long targetVertexId =
           (vertexId.get() + 1) %
           (inputSplit.getNumSplits() * totalRecords);
       float edgeValue = vertexId.get() * 100f;
-      edgeMap.put(new LongWritable(destVertexId),
+      edgeMap.put(new LongWritable(targetVertexId),
           new FloatWritable(edgeValue));
       vertex.initialize(vertexId, vertexValue, edgeMap, null);
       ++recordsRead;
       if (LOG.isInfoEnabled()) {
-        LOG.info("next: Return vertexId=" + vertex.getVertexId().get() +
-            ", vertexValue=" + vertex.getVertexValue() +
-            ", destinationId=" + destVertexId +
+        LOG.info("next: Return vertexId=" + vertex.getId().get() +
+            ", vertexValue=" + vertex.getValue() +
+            ", targetVertexId=" + targetVertexId +
             ", edgeValue=" + edgeValue);
       }
       return vertex;
@@ -137,11 +136,11 @@ public class SimpleSuperstepVertex extends
     }
 
     @Override
-    public void writeVertex(BasicVertex<LongWritable, IntWritable,
-        FloatWritable, ?> vertex) throws IOException, InterruptedException {
+    public void writeVertex(Vertex<LongWritable, IntWritable,
+            FloatWritable, ?> vertex) throws IOException, InterruptedException {
       getRecordWriter().write(
-          new Text(vertex.getVertexId().toString()),
-          new Text(vertex.getVertexValue().toString()));
+          new Text(vertex.getId().toString()),
+          new Text(vertex.getValue().toString()));
     }
   }
 

@@ -23,6 +23,7 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
+import org.apache.giraph.examples.MinimumDoubleCombiner;
 import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.GiraphJob;
@@ -36,19 +37,19 @@ import org.apache.log4j.Logger;
 import java.io.IOException;
 
 /**
- * Default Pregel-style PageRank computation using a {@link EdgeListVertex}.
+ * Single-source shortest paths benchmark.
  */
-public class PageRankBenchmark extends EdgeListVertex<
-    LongWritable, DoubleWritable, DoubleWritable, DoubleWritable>
-    implements Tool {
+public class ShortestPathsBenchmark extends EdgeListVertex<LongWritable,
+    DoubleWritable, DoubleWritable, DoubleWritable> implements Tool {
   /** Class logger */
-  private static final Logger LOG = Logger.getLogger(PageRankBenchmark.class);
-  /** Configuration from Configurable */
+  private static final Logger LOG =
+      Logger.getLogger(ShortestPathsBenchmark.class);
+  /** Configuration */
   private Configuration conf;
 
   @Override
   public void compute(Iterable<DoubleWritable> messages) throws IOException {
-    PageRankComputation.computePageRank(this, messages);
+    ShortestPathsComputation.computeShortestPaths(this, messages);
   }
 
   @Override
@@ -70,10 +71,6 @@ public class PageRankBenchmark extends EdgeListVertex<
         "workers",
         true,
         "Number of workers");
-    options.addOption("s",
-        "supersteps",
-        true,
-        "Supersteps to execute before finishing");
     options.addOption("V",
         "aggregateVertices",
         true,
@@ -101,10 +98,6 @@ public class PageRankBenchmark extends EdgeListVertex<
       LOG.info("Need to choose the number of workers (-w)");
       return -1;
     }
-    if (!cmd.hasOption('s')) {
-      LOG.info("Need to set the number of supersteps (-s)");
-      return -1;
-    }
     if (!cmd.hasOption('V')) {
       LOG.info("Need to set the aggregate vertices (-V)");
       return -1;
@@ -119,13 +112,14 @@ public class PageRankBenchmark extends EdgeListVertex<
     GiraphJob job = new GiraphJob(getConf(), getClass().getName());
     if (!cmd.hasOption('c') ||
         (Integer.parseInt(cmd.getOptionValue('c')) == 1)) {
-      job.setVertexClass(PageRankBenchmark.class);
+      job.setVertexClass(ShortestPathsBenchmark.class);
     } else {
-      job.setVertexClass(HashMapVertexPageRankBenchmark.class);
+      job.setVertexClass(HashMapVertexShortestPathsBenchmark.class);
     }
     LOG.info("Using class " +
         BspUtils.getVertexClass(job.getConfiguration()).getName());
     job.setVertexInputFormatClass(PseudoRandomVertexInputFormat.class);
+    job.setVertexCombinerClass(MinimumDoubleCombiner.class);
     job.setWorkerConfiguration(workers, workers, 100.0f);
     job.getConfiguration().setLong(
         PseudoRandomVertexInputFormat.AGGREGATE_VERTICES,
@@ -133,18 +127,10 @@ public class PageRankBenchmark extends EdgeListVertex<
     job.getConfiguration().setLong(
         PseudoRandomVertexInputFormat.EDGES_PER_VERTEX,
         Long.parseLong(cmd.getOptionValue('e')));
-    job.getConfiguration().setInt(
-        PageRankComputation.SUPERSTEP_COUNT,
-        Integer.parseInt(cmd.getOptionValue('s')));
 
     boolean isVerbose = false;
     if (cmd.hasOption('v')) {
       isVerbose = true;
-    }
-    if (cmd.hasOption('s')) {
-      job.getConfiguration().setInt(
-          PageRankComputation.SUPERSTEP_COUNT,
-          Integer.parseInt(cmd.getOptionValue('s')));
     }
     if (job.run(isVerbose)) {
       return 0;
@@ -160,6 +146,6 @@ public class PageRankBenchmark extends EdgeListVertex<
    * @throws Exception Any exception from the computation.
    */
   public static void main(final String[] args) throws Exception {
-    System.exit(ToolRunner.run(new PageRankBenchmark(), args));
+    System.exit(ToolRunner.run(new ShortestPathsBenchmark(), args));
   }
 }

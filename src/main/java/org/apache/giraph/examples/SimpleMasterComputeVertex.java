@@ -28,7 +28,6 @@ import org.apache.log4j.Logger;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Iterator;
 
 /**
  * Demonstrates a computation with a centralized part implemented via a
@@ -42,13 +41,13 @@ public class SimpleMasterComputeVertex extends LongDoubleFloatDoubleVertex {
       Logger.getLogger(SimpleMasterComputeVertex.class);
 
   @Override
-  public void compute(Iterator<DoubleWritable> msgIterator) {
+  public void compute(Iterable<DoubleWritable> messages) {
     DoubleOverwriteAggregator agg =
         (DoubleOverwriteAggregator) getAggregator(SMC_AGG);
-    double oldSum = getSuperstep() == 0 ? 0 : getVertexValue().get();
+    double oldSum = getSuperstep() == 0 ? 0 : getValue().get();
     double newValue = agg.getAggregatedValue().get();
     double newSum = oldSum + newValue;
-    setVertexValue(new DoubleWritable(newSum));
+    setValue(new DoubleWritable(newSum));
     SimpleMasterComputeWorkerContext workerContext =
         (SimpleMasterComputeWorkerContext) getWorkerContext();
     workerContext.setFinalSum(newSum);

@@ -18,7 +18,7 @@
 
 package org.apache.giraph.comm;
 
-import org.apache.giraph.graph.BasicVertex;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.WorkerInfo;
 import org.apache.giraph.graph.partition.Partition;
@@ -56,7 +56,7 @@ public interface WorkerClient<I extends WritableComparable,
    * @param destVertexId Destination vertex id.
    * @param message Message to send.
    */
-  void sendMessageReq(I destVertexId, M message);
+  void sendMessageRequest(I destVertexId, M message);
 
   /**
    * Sends a partition to the appropriate partition owner
@@ -64,8 +64,8 @@ public interface WorkerClient<I extends WritableComparable,
    * @param workerInfo Owner the vertices belong to
    * @param partition Partition to send
    */
-  void sendPartitionReq(WorkerInfo workerInfo,
-      Partition<I, V, E, M> partition);
+  void sendPartitionRequest(WorkerInfo workerInfo,
+                            Partition<I, V, E, M> partition);
 
   /**
    * Sends a request to the appropriate vertex range owner to add an edge
@@ -74,7 +74,7 @@ public interface WorkerClient<I extends WritableComparable,
    * @param edge Edge to be added
    * @throws IOException
    */
-  void addEdgeReq(I vertexIndex, Edge<I, E> edge) throws IOException;
+  void addEdgeRequest(I vertexIndex, Edge<I, E> edge) throws IOException;
 
   /**
    * Sends a request to the appropriate vertex range owner to remove an edge
@@ -83,7 +83,7 @@ public interface WorkerClient<I extends WritableComparable,
    * @param destinationVertexIndex Index of the edge to be removed
    * @throws IOException
    */
-  void removeEdgeReq(I vertexIndex, I destinationVertexIndex)
+  void removeEdgeRequest(I vertexIndex, I destinationVertexIndex)
     throws IOException;
 
   /**
@@ -92,7 +92,7 @@ public interface WorkerClient<I extends WritableComparable,
    * @param vertex Vertex to be added
    * @throws IOException
    */
-  void addVertexReq(BasicVertex<I, V, E, M> vertex) throws IOException;
+  void addVertexRequest(Vertex<I, V, E, M> vertex) throws IOException;
 
   /**
    * Sends a request to the appropriate vertex range owner to remove a vertex
@@ -100,7 +100,7 @@ public interface WorkerClient<I extends WritableComparable,
    * @param vertexIndex Index of the vertex to be removed
    * @throws IOException
    */
-  void removeVertexReq(I vertexIndex) throws IOException;
+  void removeVertexRequest(I vertexIndex) throws IOException;
 
   /**
    * Flush all outgoing messages.  This will synchronously ensure that all

@@ -25,7 +25,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.apache.giraph.graph.BasicVertex;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexWriter;
 import org.apache.giraph.lib.TextVertexOutputFormat;
 
@@ -51,11 +51,11 @@ public class SimpleTextVertexOutputFormat extends
 
     @Override
     public void writeVertex(
-      BasicVertex<LongWritable, IntWritable, FloatWritable, ?> vertex)
+      Vertex<LongWritable, IntWritable, FloatWritable, ?> vertex)
       throws IOException, InterruptedException {
       getRecordWriter().write(
-          new Text(vertex.getVertexId().toString()),
-          new Text(vertex.getVertexValue().toString()));
+          new Text(vertex.getId().toString()),
+          new Text(vertex.getValue().toString()));
     }
   }
 

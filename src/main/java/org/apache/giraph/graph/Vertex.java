@@ -24,12 +24,13 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 
+import com.google.common.collect.Iterables;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -42,11 +43,15 @@ import java.util.Map;
  * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
-public abstract class BasicVertex<I extends WritableComparable,
+public abstract class Vertex<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
     implements AggregatorUsage, Writable, Configurable {
+  /** Vertex id. */
+  private I id;
+  /** Vertex value. */
+  private V value;
   /** If true, do not do anymore computation on this vertex. */
-  protected boolean halt = false;
+  private boolean halt;
   /** Global graph state **/
   private GraphState<I, V, E, M> graphState;
   /** Configuration */
@@ -57,22 +62,34 @@ public abstract class BasicVertex<I extends WritableComparable,
    * This method must be called after instantiation of a vertex with BspUtils
    * unless deserialization from readFields() is called.
    *
-   * @param vertexId Will be the vertex id
-   * @param vertexValue Will be the vertex value
+   * @param id Will be the vertex id
+   * @param value Will be the vertex value
    * @param edges A map of destination edge ids to edge values (can be null)
    * @param messages Initial messages for this vertex (can be null)
    */
   public abstract void initialize(
-      I vertexId, V vertexValue, Map<I, E> edges, Iterable<M> messages);
+      I id, V value, Map<I, E> edges, Iterable<M> messages);
+
+  /**
+   * This method must be called once by the subclass's initialize() or by
+   * readFields() in order to set id and value.
+   *
+   * @param id Vertex id
+   * @param value Vertex value
+   */
+  public void initialize(I id, V value) {
+    this.id = id;
+    this.value = value;
+  }
 
   /**
    * Must be defined by user to do computation on a single Vertex.
    *
-   * @param msgIterator Iterator to the messages that were sent to this
-   *        vertex in the previous superstep
+   * @param messages Messages that were sent to this vertex in the previous
+   *                 superstep
    * @throws IOException
    */
-  public abstract void compute(Iterator<M> msgIterator) throws IOException;
+  public abstract void compute(Iterable<M> messages) throws IOException;
 
   /**
    * Retrieves the current superstep.
@@ -88,21 +105,27 @@ public abstract class BasicVertex<I extends WritableComparable,
    *
    * @return My vertex id.
    */
-  public abstract I getVertexId();
+  public I getId() {
+    return id;
+  }
 
   /**
    * Get the vertex value (data stored with vertex)
    *
    * @return Vertex value
    */
-  public abstract V getVertexValue();
+  public V getValue() {
+    return value;
+  }
 
   /**
    * Set the vertex data (immediately visible in the computation)
    *
-   * @param vertexValue Vertex data to be set
+   * @param value Vertex data to be set
    */
-  public abstract void setVertexValue(V vertexValue);
+  public void setValue(V value) {
+    this.value = value;
+  }
 
   /**
    * Get the total (all workers) number of vertices that
@@ -110,8 +133,8 @@ public abstract class BasicVertex<I extends WritableComparable,
    *
    * @return Total number of vertices (-1 if first superstep)
    */
-  public long getNumVertices() {
-    return getGraphState().getNumVertices();
+  public long getTotalNumVertices() {
+    return getGraphState().getTotalNumVertices();
   }
 
   /**
@@ -120,8 +143,8 @@ public abstract class BasicVertex<I extends WritableComparable,
    *
    * @return Total number of edges (-1 if first superstep)
    */
-  public long getNumEdges() {
-    return getGraphState().getNumEdges();
+  public long getTotalNumEdges() {
+    return getGraphState().getTotalNumEdges();
   }
 
   /**
@@ -129,7 +152,22 @@ public abstract class BasicVertex<I extends WritableComparable,
    *
    * @return the out edges (sort order determined by subclass implementation).
    */
-  public abstract Iterator<I> getOutEdgesIterator();
+  public abstract Iterable<Edge<I, E>> getEdges();
+
+  /**
+   * Does an edge with the target vertex id exist?
+   *
+   * @param targetVertexId Target vertex id to check
+   * @return true if there is an edge to the target
+   */
+  public boolean hasEdge(I targetVertexId) {
+    for (Edge<I, E> edge : getEdges()) {
+      if (edge.getTargetVertexId().equals(targetVertexId)) {
+        return true;
+      }
+    }
+    return false;
+  }
 
   /**
    * Get the edge value associated with a target vertex id.
@@ -139,48 +177,49 @@ public abstract class BasicVertex<I extends WritableComparable,
    * @return the value of the edge to targetVertexId (or null if there
    *         is no edge to it)
    */
-  public abstract E getEdgeValue(I targetVertexId);
-
-  /**
-   * Does an edge with the target vertex id exist?
-   *
-   * @param targetVertexId Target vertex id to check
-   * @return true if there is an edge to the target
-   */
-  public abstract boolean hasEdge(I targetVertexId);
+  public E getEdgeValue(I targetVertexId) {
+    for (Edge<I, E> edge : getEdges()) {
+      if (edge.getTargetVertexId().equals(targetVertexId)) {
+        return edge.getValue();
+      }
+    }
+    return null;
+  }
 
   /**
    * Get the number of outgoing edges on this vertex.
    *
    * @return the total number of outbound edges from this vertex
    */
-  public abstract int getNumOutEdges();
+  public int getNumEdges() {
+    return Iterables.size(getEdges());
+  }
 
   /**
    * Send a message to a vertex id.  The message should not be mutated after
    * this method returns or else undefined results could occur.
    *
    * @param id Vertex id to send the message to
-   * @param msg Message data to send.  Note that after the message is sent,
+   * @param message Message data to send.  Note that after the message is sent,
    *        the user should not modify the object.
    */
-  public void sendMsg(I id, M msg) {
-    if (msg == null) {
+  public void sendMessage(I id, M message) {
+    if (message == null) {
       throw new IllegalArgumentException(
-          "sendMsg: Cannot send null message to " + id);
+          "sendMessage: Cannot send null message to " + id);
     }
     getGraphState().getWorkerCommunications().
-    sendMessageReq(id, msg);
+        sendMessageRequest(id, message);
   }
 
   /**
    * Send a message to all edges.
    *
-   * @param msg Message sent to all edges.
+   * @param message Message sent to all edges.
    */
-  public void sendMsgToAllEdges(M msg) {
-    for (Iterator<I> edges = getOutEdgesIterator(); edges.hasNext();) {
-      sendMsg(edges.next(), msg);
+  public void sendMessageToAllEdges(M message) {
+    for (Edge<I, E> edge : getEdges()) {
+      sendMessage(edge.getTargetVertexId(), message);
     }
   }
 
@@ -192,6 +231,13 @@ public abstract class BasicVertex<I extends WritableComparable,
    */
   public void voteToHalt() {
     halt = true;
+  }
+
+  /**
+   * Re-activate vertex if halted.
+   */
+  public void wakeUp() {
+    halt = false;
   }
 
   /**
@@ -207,9 +253,17 @@ public abstract class BasicVertex<I extends WritableComparable,
    *  Get the list of incoming messages from the previous superstep.  Same as
    *  the message iterator passed to compute().
    *
-   *  @return Iterator of messages.
+   *  @return Messages received.
    */
   public abstract Iterable<M> getMessages();
+
+  /**
+   * Get the number of messages from the previous superstep.
+   * @return Number of messages received.
+   */
+  public int getNumMessages() {
+    return Iterables.size(getMessages());
+  }
 
   /**
    * Copy the messages this vertex should process in the current superstep
@@ -219,14 +273,8 @@ public abstract class BasicVertex<I extends WritableComparable,
   abstract void putMessages(Iterable<M> messages);
 
   /**
-   * Get the number of incoming messages.
-   * @return the number of messages.
-   */
-  abstract int getNumMessages();
-
-  /**
    * Release unnecessary resources (will be called after vertex returns from
-   * {@link #compute()})
+   * {@link #compute(Iterable)})
    */
   abstract void releaseResources();
 
@@ -287,18 +335,8 @@ public abstract class BasicVertex<I extends WritableComparable,
   }
 
   @Override
-  public Configuration getConf() {
-    return conf;
-  }
-
-  @Override
-  public void setConf(Configuration conf) {
-    this.conf = conf;
-  }
-
-  @Override
   public void readFields(DataInput in) throws IOException {
-    I vertexId = BspUtils.<I>createVertexIndex(getConf());
+    I vertexId = BspUtils.<I>createVertexId(getConf());
     vertexId.readFields(in);
     V vertexValue = BspUtils.<V>createVertexValue(getConf());
     vertexValue.readFields(in);
@@ -306,7 +344,7 @@ public abstract class BasicVertex<I extends WritableComparable,
     int numEdges = in.readInt();
     Map<I, E> edges = new HashMap<I, E>(numEdges);
     for (int i = 0; i < numEdges; ++i) {
-      I targetVertexId = BspUtils.<I>createVertexIndex(getConf());
+      I targetVertexId = BspUtils.<I>createVertexId(getConf());
       targetVertexId.readFields(in);
       E edgeValue = BspUtils.<E>createEdgeValue(getConf());
       edgeValue.readFields(in);
@@ -320,7 +358,6 @@ public abstract class BasicVertex<I extends WritableComparable,
       message.readFields(in);
       messages.add(message);
     }
-
     initialize(vertexId, vertexValue, edges, messages);
 
     halt = in.readBoolean();
@@ -328,14 +365,13 @@ public abstract class BasicVertex<I extends WritableComparable,
 
   @Override
   public void write(DataOutput out) throws IOException {
-    getVertexId().write(out);
-    getVertexValue().write(out);
+    getId().write(out);
+    getValue().write(out);
 
-    out.writeInt(getNumOutEdges());
-    for (Iterator<I> edges = getOutEdgesIterator(); edges.hasNext();) {
-      I targetVertexId = edges.next();
-      targetVertexId.write(out);
-      getEdgeValue(targetVertexId).write(out);
+    out.writeInt(getNumEdges());
+    for (Edge<I, E> edge : getEdges()) {
+      edge.getTargetVertexId().write(out);
+      edge.getValue().write(out);
     }
 
     out.writeInt(getNumMessages());
@@ -344,5 +380,21 @@ public abstract class BasicVertex<I extends WritableComparable,
     }
 
     out.writeBoolean(halt);
+  }
+
+  @Override
+  public Configuration getConf() {
+    return conf;
+  }
+
+  @Override
+  public void setConf(Configuration conf) {
+    this.conf = conf;
+  }
+
+  @Override
+  public String toString() {
+    return "Vertex(id=" + getId() + ",value=" + getValue() +
+        ",#edges=" + getNumEdges() + ")";
   }
 }

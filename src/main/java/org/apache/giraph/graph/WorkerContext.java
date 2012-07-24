@@ -86,8 +86,8 @@ public abstract class WorkerContext implements AggregatorUsage {
    *
    * @return Total number of vertices (-1 if first superstep)
    */
-  public long getNumVertices() {
-    return graphState.getNumVertices();
+  public long getTotalNumVertices() {
+    return graphState.getTotalNumVertices();
   }
 
   /**
@@ -96,8 +96,8 @@ public abstract class WorkerContext implements AggregatorUsage {
    *
    * @return Total number of edges (-1 if first superstep)
    */
-  public long getNumEdges() {
-    return graphState.getNumEdges();
+  public long getTotalNumEdges() {
+    return graphState.getTotalNumEdges();
   }
 
   /**

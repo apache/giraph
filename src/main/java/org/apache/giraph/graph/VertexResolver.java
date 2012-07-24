@@ -18,12 +18,13 @@
 
 package org.apache.giraph.graph;
 
-import com.google.common.collect.Iterables;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
+
+import com.google.common.collect.Iterables;
 
 import java.util.List;
 
@@ -48,13 +49,13 @@ public class VertexResolver<I extends WritableComparable, V extends Writable,
   private GraphState<I, V, E, M> graphState;
 
   @Override
-  public BasicVertex<I, V, E, M> resolve(
+  public Vertex<I, V, E, M> resolve(
       I vertexId,
-      BasicVertex<I, V, E, M> vertex,
+      Vertex<I, V, E, M> vertex,
       VertexChanges<I, V, E, M> vertexChanges,
       Iterable<M> messages) {
     // Default algorithm:
-      // 1. If the vertex exists, first prune the edges
+    // 1. If the vertex exists, first prune the edges
     // 2. If vertex removal desired, remove the vertex.
     // 3. If creation of vertex desired, pick first vertex
     // 4. If vertex doesn't exist, but got messages, create
@@ -95,7 +96,7 @@ public class VertexResolver<I extends WritableComparable, V extends Writable,
       if ((vertexChanges != null) &&
           (!vertexChanges.getAddedVertexList().isEmpty())) {
         LOG.warn("resolve: Tried to add a vertex with id = " +
-            vertex.getVertexId() + " when one already " +
+            vertex.getId() + " when one already " +
             "exists.  Ignoring the add vertex request.");
       }
     }
@@ -105,9 +106,8 @@ public class VertexResolver<I extends WritableComparable, V extends Writable,
       MutableVertex<I, V, E, M> mutableVertex =
           (MutableVertex<I, V, E, M>) vertex;
       for (Edge<I, E> edge : vertexChanges.getAddedEdgeList()) {
-        edge.setConf(getConf());
-        mutableVertex.addEdge(edge.getDestVertexId(),
-            edge.getEdgeValue());
+        mutableVertex.addEdge(edge.getTargetVertexId(),
+            edge.getValue());
       }
     }
 
@@ -115,8 +115,8 @@ public class VertexResolver<I extends WritableComparable, V extends Writable,
   }
 
   @Override
-  public BasicVertex<I, V, E, M> instantiateVertex() {
-    BasicVertex<I, V, E, M> vertex =
+  public Vertex<I, V, E, M> instantiateVertex() {
+    Vertex<I, V, E, M> vertex =
         BspUtils.<I, V, E, M>createVertex(getConf());
     vertex.setGraphState(graphState);
     return vertex;

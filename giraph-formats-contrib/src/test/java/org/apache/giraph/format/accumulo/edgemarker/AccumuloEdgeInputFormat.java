@@ -21,7 +21,7 @@ import com.google.common.collect.Maps;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Value;
 import org.apache.giraph.format.accumulo.AccumuloVertexInputFormat;
-import org.apache.giraph.graph.BasicVertex;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.VertexReader;
 import org.apache.hadoop.conf.Configuration;
@@ -75,13 +75,13 @@ public class AccumuloEdgeInputFormat
         /*
        Each Key/Value contains the information needed to construct the vertices.
          */
-        public BasicVertex<Text, Text, Text, Text> getCurrentVertex()
+        public Vertex<Text, Text, Text, Text> getCurrentVertex()
                 throws IOException, InterruptedException {
               Key key = getRecordReader().getCurrentKey();
               Value value = getRecordReader().getCurrentValue();
-              BasicVertex<Text, Text, Text,
-                      Text> vertex = BspUtils.<Text, Text, Text,
-                      Text>createVertex(getContext().getConfiguration());
+              Vertex<Text, Text, Text, Text> vertex =
+                  BspUtils.<Text, Text, Text, Text>createVertex(
+                      getContext().getConfiguration());
               Text vertexId = key.getRow();
               Map<Text, Text> edges = Maps.newHashMap();
               String edge = new String(value.get());

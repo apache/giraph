@@ -20,7 +20,7 @@ package org.apache.giraph.format.accumulo.edgemarker;
 import org.apache.accumulo.core.data.Mutation;
 import org.apache.accumulo.core.data.Value;
 import org.apache.giraph.format.accumulo.AccumuloVertexOutputFormat;
-import org.apache.giraph.graph.BasicVertex;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexWriter;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.RecordWriter;
@@ -65,13 +65,12 @@ public class AccumuloEdgeOutputFormat
          Write back a mutation that adds a qualifier for 'parent' containing the vertex value
          as the cell value. Assume the vertex ID corresponds to a key.
          */
-        public void writeVertex
-        (BasicVertex<Text, Text, Text, ?> vertex)
+        public void writeVertex(Vertex<Text, Text, Text, ?> vertex)
                 throws IOException, InterruptedException {
               RecordWriter<Text, Mutation> writer = getRecordWriter();
-              Mutation mt = new Mutation(vertex.getVertexId());
+              Mutation mt = new Mutation(vertex.getId());
               mt.put(CF, PARENT, new Value(
-                      vertex.getVertexValue().toString().getBytes()));
+                  vertex.getValue().toString().getBytes()));
               writer.write(tableName, mt);
         }
     }

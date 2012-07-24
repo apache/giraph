@@ -18,27 +18,27 @@
 
 package org.apache.giraph.examples;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
-import java.util.Map;
-
+import org.apache.giraph.lib.JsonLongDoubleFloatDoubleVertexInputFormat;
+import org.apache.giraph.lib.JsonLongDoubleFloatDoubleVertexOutputFormat;
 import org.apache.giraph.utils.InternalVertexRunner;
 import org.apache.giraph.utils.MockUtils;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.giraph.lib.JsonLongDoubleFloatDoubleVertexInputFormat;
-import org.apache.giraph.lib.JsonLongDoubleFloatDoubleVertexOutputFormat;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+
+import java.util.Map;
 
 /**
  * Contains a simple unit test for {@link SimpleShortestPathsVertex}
@@ -66,10 +66,10 @@ public class SimpleShortestPathsVertexTest {
         SimpleShortestPathsVertex.SOURCE_ID_DEFAULT)).thenReturn(2L);
 
     vertex.compute(Lists.newArrayList(new DoubleWritable(2),
-        new DoubleWritable(1.5)).iterator());
+        new DoubleWritable(1.5)));
 
     assertTrue(vertex.isHalted());
-    assertEquals(1.5, vertex.getVertexValue().get());
+    assertEquals(1.5, vertex.getValue().get());
 
     env.verifyMessageSent(new LongWritable(10L), new DoubleWritable(4));
     env.verifyMessageSent(new LongWritable(20L), new DoubleWritable(2));
@@ -96,10 +96,10 @@ public class SimpleShortestPathsVertexTest {
         SimpleShortestPathsVertex.SOURCE_ID_DEFAULT)).thenReturn(2L);
 
     vertex.compute(Lists.newArrayList(new DoubleWritable(2),
-        new DoubleWritable(1.5)).iterator());
+        new DoubleWritable(1.5)));
 
     assertTrue(vertex.isHalted());
-    assertEquals(0.5, vertex.getVertexValue().get());
+    assertEquals(0.5, vertex.getValue().get());
 
     env.verifyNoMessageSent();
   }

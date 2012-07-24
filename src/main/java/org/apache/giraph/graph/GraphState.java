@@ -62,7 +62,7 @@ E extends Writable, M extends Writable> {
     return this;
   }
 
-  public long getNumVertices() {
+  public long getTotalNumVertices() {
     return numVertices;
   }
 
@@ -72,12 +72,12 @@ E extends Writable, M extends Writable> {
    * @param numVertices Current number of vertices.
    * @return Returns this object.
    */
-  public GraphState<I, V, E, M> setNumVertices(long numVertices) {
+  public GraphState<I, V, E, M> setTotalNumVertices(long numVertices) {
     this.numVertices = numVertices;
     return this;
   }
 
-  public long getNumEdges() {
+  public long getTotalNumEdges() {
     return numEdges;
   }
 
@@ -87,7 +87,7 @@ E extends Writable, M extends Writable> {
    * @param numEdges Current number of edges.
    * @return Returns this object.
    */
-  public GraphState<I, V, E, M> setNumEdges(long numEdges) {
+  public GraphState<I, V, E, M> setTotalNumEdges(long numEdges) {
     this.numEdges = numEdges;
     return this;
   }

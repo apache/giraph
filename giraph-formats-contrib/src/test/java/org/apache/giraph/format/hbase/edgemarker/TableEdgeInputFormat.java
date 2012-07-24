@@ -19,7 +19,7 @@ package org.apache.giraph.format.hbase.edgemarker;
 
 import com.google.common.collect.Maps;
 import org.apache.giraph.format.hbase.HBaseVertexInputFormat;
-import org.apache.giraph.graph.BasicVertex;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.VertexReader;
 import org.apache.hadoop.conf.Configuration;
@@ -80,11 +80,11 @@ public class TableEdgeInputFormat extends
          For each row, create a vertex with the row ID as a text,
          and it's 'children' qualifier as a single edge.
          */
-        public BasicVertex<Text, Text, Text, Text>
+        public Vertex<Text, Text, Text, Text>
                     getCurrentVertex()
                 throws IOException, InterruptedException {
             Result row = getRecordReader().getCurrentValue();
-            BasicVertex<Text, Text, Text, Text> vertex =
+            Vertex<Text, Text, Text, Text> vertex =
                     BspUtils.<Text, Text, Text, Text>
                             createVertex(getContext().getConfiguration());
             Text vertexId = new Text(Bytes.toString(row.getRow()));

@@ -24,8 +24,6 @@ import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.log4j.Logger;
 
-import java.util.Iterator;
-
 /**
  * Vertex to allow unit testing of failure detection
  */
@@ -37,18 +35,18 @@ public class SimpleFailVertex extends EdgeListVertex<
   private static long SUPERSTEP = 0;
 
   @Override
-  public void compute(Iterator<DoubleWritable> msgIterator) {
+  public void compute(Iterable<DoubleWritable> messages) {
     if (getSuperstep() >= 1) {
       double sum = 0;
-      while (msgIterator.hasNext()) {
-        sum += msgIterator.next().get();
+      for (DoubleWritable message : messages) {
+        sum += message.get();
       }
       DoubleWritable vertexValue =
-          new DoubleWritable((0.15f / getNumVertices()) + 0.85f * sum);
-      setVertexValue(vertexValue);
+          new DoubleWritable((0.15f / getTotalNumVertices()) + 0.85f * sum);
+      setValue(vertexValue);
       if (getSuperstep() < 30) {
         if (getSuperstep() == 20) {
-          if (getVertexId().get() == 10L) {
+          if (getId().get() == 10L) {
             try {
               Thread.sleep(2000);
             } catch (InterruptedException e) {
@@ -59,9 +57,9 @@ public class SimpleFailVertex extends EdgeListVertex<
             return;
           }
         }
-        long edges = getNumOutEdges();
-        sendMsgToAllEdges(
-            new DoubleWritable(getVertexValue().get() / edges));
+        long edges = getNumEdges();
+        sendMessageToAllEdges(
+            new DoubleWritable(getValue().get() / edges));
       } else {
         voteToHalt();
       }

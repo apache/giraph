@@ -19,7 +19,7 @@
 package org.apache.giraph.lib;
 
 
-import org.apache.giraph.graph.BasicVertex;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexWriter;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
@@ -74,7 +74,7 @@ public class IdWithValueTextOutputFormat<I extends WritableComparable,
     }
 
     @Override
-    public void writeVertex(BasicVertex<I, V, E, ?> vertex) throws IOException,
+    public void writeVertex(Vertex<I, V, E, ?> vertex) throws IOException,
     InterruptedException {
       if (delimiter == null) {
         delimiter = getContext().getConfiguration()
@@ -87,11 +87,11 @@ public class IdWithValueTextOutputFormat<I extends WritableComparable,
           .getBoolean(REVERSE_ID_AND_VALUE, REVERSE_ID_AND_VALUE_DEFAULT);
 
       if (reverseOutput) {
-        first = vertex.getVertexValue().toString();
-        second = vertex.getVertexId().toString();
+        first = vertex.getValue().toString();
+        second = vertex.getId().toString();
       } else {
-        first = vertex.getVertexId().toString();
-        second = vertex.getVertexValue().toString();
+        first = vertex.getId().toString();
+        second = vertex.getValue().toString();
       }
 
       Text line = new Text(first + delimiter + second);

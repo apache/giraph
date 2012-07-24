@@ -17,16 +17,14 @@
  */
 package org.apache.giraph;
 
-import java.net.URI;
-
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.giraph.examples.Algorithm;
-import org.apache.giraph.graph.BasicVertex;
 import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.utils.AnnotationUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.filecache.DistributedCache;
@@ -39,10 +37,11 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.ZooKeeper;
 
-import java.util.List;
-
 import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
+
+import java.net.URI;
+import java.util.List;
 
 /**
  * Helper class to run Giraph applications by specifying the actual class name
@@ -111,7 +110,7 @@ public class GiraphRunner implements Tool {
         Algorithm.class, "org.apache.giraph");
     System.out.print("  Supported algorithms:\n");
     for (Class<?> clazz : classes) {
-      if (BasicVertex.class.isAssignableFrom(clazz)) {
+      if (Vertex.class.isAssignableFrom(clazz)) {
         Algorithm algorithm = clazz.getAnnotation(Algorithm.class);
         StringBuilder sb = new StringBuilder();
         sb.append(algorithm.name()).append(" - ").append(clazz.getName())

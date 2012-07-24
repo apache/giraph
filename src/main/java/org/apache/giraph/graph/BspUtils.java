@@ -356,7 +356,7 @@ public class BspUtils {
   }
 
   /**
-   * Get the user's subclassed {@link BasicVertex}
+   * Get the user's subclassed {@link Vertex}
    *
    * @param <I> Vertex id
    * @param <V> Vertex data
@@ -368,11 +368,11 @@ public class BspUtils {
   @SuppressWarnings({ "rawtypes", "unchecked" })
   public static <I extends WritableComparable, V extends Writable,
   E extends Writable, M extends Writable>
-  Class<? extends BasicVertex<I, V, E, M>> getVertexClass(Configuration conf) {
-    return (Class<? extends BasicVertex<I, V, E, M>>)
+  Class<? extends Vertex<I, V, E, M>> getVertexClass(Configuration conf) {
+    return (Class<? extends Vertex<I, V, E, M>>)
       conf.getClass(GiraphJob.VERTEX_CLASS,
         null,
-        BasicVertex.class);
+        Vertex.class);
   }
 
   /**
@@ -387,10 +387,10 @@ public class BspUtils {
    */
   @SuppressWarnings("rawtypes")
   public static <I extends WritableComparable, V extends Writable,
-  E extends Writable, M extends Writable> BasicVertex<I, V, E, M>
+  E extends Writable, M extends Writable> Vertex<I, V, E, M>
   createVertex(Configuration conf) {
-    Class<? extends BasicVertex<I, V, E, M>> vertexClass = getVertexClass(conf);
-    BasicVertex<I, V, E, M> vertex =
+    Class<? extends Vertex<I, V, E, M>> vertexClass = getVertexClass(conf);
+    Vertex<I, V, E, M> vertex =
       ReflectionUtils.newInstance(vertexClass, conf);
     return vertex;
   }
@@ -404,8 +404,8 @@ public class BspUtils {
    */
   @SuppressWarnings("unchecked")
   public static <I extends Writable> Class<I>
-  getVertexIndexClass(Configuration conf) {
-    return (Class<I>) conf.getClass(GiraphJob.VERTEX_INDEX_CLASS,
+  getVertexIdClass(Configuration conf) {
+    return (Class<I>) conf.getClass(GiraphJob.VERTEX_ID_CLASS,
       WritableComparable.class);
   }
 
@@ -418,16 +418,16 @@ public class BspUtils {
    */
   @SuppressWarnings("rawtypes")
   public static <I extends WritableComparable>
-  I createVertexIndex(Configuration conf) {
-    Class<I> vertexClass = getVertexIndexClass(conf);
+  I createVertexId(Configuration conf) {
+    Class<I> vertexIdClass = getVertexIdClass(conf);
     try {
-      return vertexClass.newInstance();
+      return vertexIdClass.newInstance();
     } catch (InstantiationException e) {
       throw new IllegalArgumentException(
-        "createVertexIndex: Failed to instantiate", e);
+        "createVertexId: Failed to instantiate", e);
     } catch (IllegalAccessException e) {
       throw new IllegalArgumentException(
-        "createVertexIndex: Illegally accessed", e);
+        "createVertexId: Illegally accessed", e);
     }
   }
 

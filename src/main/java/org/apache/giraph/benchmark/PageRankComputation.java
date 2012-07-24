@@ -21,8 +21,6 @@ import org.apache.giraph.graph.MutableVertex;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 
-import java.util.Iterator;
-
 /**
  * Shared computation of class Pregel-style PageRank computation for benchmark
  * classes.
@@ -41,25 +39,25 @@ public class PageRankComputation {
    * Generic page rank algorithm.
    *
    * @param vertex Vertex to compute on.
-   * @param msgIterator Iterator of messages from previous superstep.
+   * @param messages Iterator of messages from previous superstep.
    */
   public static void computePageRank(
       MutableVertex<LongWritable, DoubleWritable, DoubleWritable,
-      DoubleWritable> vertex, Iterator<DoubleWritable> msgIterator) {
+      DoubleWritable> vertex, Iterable<DoubleWritable> messages) {
     if (vertex.getSuperstep() >= 1) {
       double sum = 0;
-      while (msgIterator.hasNext()) {
-        sum += msgIterator.next().get();
+      for (DoubleWritable message : messages) {
+        sum += message.get();
       }
-      DoubleWritable vertexValue =
-          new DoubleWritable((0.15f / vertex.getNumVertices()) + 0.85f * sum);
-      vertex.setVertexValue(vertexValue);
+      DoubleWritable vertexValue = new DoubleWritable(
+          (0.15f / vertex.getTotalNumVertices()) + 0.85f * sum);
+      vertex.setValue(vertexValue);
     }
 
     if (vertex.getSuperstep() < vertex.getConf().getInt(SUPERSTEP_COUNT, -1)) {
-      long edges = vertex.getNumOutEdges();
-      vertex.sendMsgToAllEdges(
-          new DoubleWritable(vertex.getVertexValue().get() / edges));
+      long edges = vertex.getNumEdges();
+      vertex.sendMessageToAllEdges(
+          new DoubleWritable(vertex.getValue().get() / edges));
     } else {
       vertex.voteToHalt();
     }

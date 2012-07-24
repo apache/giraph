@@ -70,7 +70,7 @@ public class SimpleTriangleClosingVertexTest {
         iaw, false);
 
     vertex.compute(Lists.<IntWritable>newArrayList(
-      new IntWritable(83), new IntWritable(42)).iterator());
+      new IntWritable(83), new IntWritable(42)));
 
     env.verifyMessageSent(new IntWritable(5), new IntWritable(5));
     env.verifyMessageSent(new IntWritable(5), new IntWritable(7));

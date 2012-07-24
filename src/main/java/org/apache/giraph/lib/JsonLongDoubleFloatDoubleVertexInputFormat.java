@@ -17,9 +17,9 @@
  */
 package org.apache.giraph.lib;
 
+import org.apache.giraph.graph.BspUtils;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexReader;
-import org.json.JSONArray;
-import org.json.JSONException;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -27,9 +27,11 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.json.JSONArray;
+import org.json.JSONException;
+
 import com.google.common.collect.Maps;
-import org.apache.giraph.graph.BasicVertex;
-import org.apache.giraph.graph.BspUtils;
+
 import java.io.IOException;
 import java.util.Map;
 
@@ -77,12 +79,11 @@ public class JsonLongDoubleFloatDoubleVertexInputFormat extends
     }
 
     @Override
-    public BasicVertex<LongWritable, DoubleWritable, FloatWritable,
-      DoubleWritable> getCurrentVertex()
+    public Vertex<LongWritable, DoubleWritable, FloatWritable,
+          DoubleWritable> getCurrentVertex()
       throws IOException, InterruptedException {
-      BasicVertex<LongWritable, DoubleWritable, FloatWritable,
-      DoubleWritable> vertex =
-        BspUtils.<LongWritable, DoubleWritable, FloatWritable,
+      Vertex<LongWritable, DoubleWritable, FloatWritable, DoubleWritable>
+          vertex = BspUtils.<LongWritable, DoubleWritable, FloatWritable,
           DoubleWritable>createVertex(getContext().getConfiguration());
 
       Text line = getRecordReader().getCurrentValue();

@@ -87,8 +87,8 @@ public class LongDoubleDoubleAdjacencyListVertexInputFormat<M extends Writable>
         String s1,
         String s2,
         Edge<LongWritable, DoubleWritable> textIntWritableEdge) {
-      textIntWritableEdge.setDestVertexId(new LongWritable(Long.valueOf(s1)));
-      textIntWritableEdge.setEdgeValue(new DoubleWritable(Double.valueOf(s2)));
+      textIntWritableEdge.setTargetVertexId(new LongWritable(Long.valueOf(s1)));
+      textIntWritableEdge.setValue(new DoubleWritable(Double.valueOf(s2)));
     }
   }
 

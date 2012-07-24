@@ -18,14 +18,10 @@
 
 package org.apache.giraph.examples;
 
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.util.Iterator;
-
 import org.apache.giraph.examples.SimpleSuperstepVertex.
-  SimpleSuperstepVertexInputFormat;
-import org.apache.giraph.graph.GiraphJob;
+    SimpleSuperstepVertexInputFormat;
 import org.apache.giraph.graph.EdgeListVertex;
+import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.WorkerContext;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -37,6 +33,9 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
+
+import java.io.DataOutputStream;
+import java.io.IOException;
 
 /**
  * Fully runnable example of how to
@@ -52,15 +51,14 @@ public class SimpleVertexWithWorkerContext extends
   private static final int TESTLENGTH = 30;
 
   @Override
-  public void compute(Iterator<DoubleWritable> msgIterator)
-    throws IOException {
+  public void compute(Iterable<DoubleWritable> messages) throws IOException {
 
     long superstep = getSuperstep();
 
     if (superstep < TESTLENGTH) {
       EmitterWorkerContext emitter =
           (EmitterWorkerContext) getWorkerContext();
-      emitter.emit("vertexId=" + getVertexId() +
+      emitter.emit("vertexId=" + getId() +
           " superstep=" + superstep + "\n");
     } else {
       voteToHalt();

@@ -2,6 +2,8 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-244: Vertex API redesign (apresta via aching).
+
   GIRAPH-236: Add FindBugs to maven build (Jan van der Lugt via
   aching).
 

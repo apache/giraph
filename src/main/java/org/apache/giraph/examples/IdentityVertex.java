@@ -18,11 +18,9 @@
 
 package org.apache.giraph.examples;
 
+import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.giraph.graph.EdgeListVertex;
-
-import java.util.Iterator;
 
 /**
  * User applications can subclass IdentityVertex, which
@@ -41,7 +39,7 @@ public abstract class IdentityVertex<I extends WritableComparable,
   extends EdgeListVertex<I, V, E, M> {
 
   @Override
-  public void compute(Iterator<M> msgIterator) {
+  public void compute(Iterable<M> messages) {
     voteToHalt();
   }
 }

@@ -176,14 +176,14 @@ public class TestHBaseRootMarkerVertextFormat extends BspCase {
     public static class EdgeNotification
             extends EdgeListVertex<Text, Text, Text, Text> {
         @Override
-        public void compute(Iterator<Text> msgIterator) throws IOException {
-            while (msgIterator.hasNext()) {
-                getVertexValue().set(msgIterator.next());
-            }
-            if(getSuperstep() == 0) {
-                sendMsgToAllEdges(getVertexId());
-            }
-            voteToHalt();
+        public void compute(Iterable<Text> messages) throws IOException {
+          for (Text message : messages) {
+            getValue().set(message);
+          }
+          if(getSuperstep() == 0) {
+            sendMessageToAllEdges(getId());
+          }
+          voteToHalt();
         }
     }
 }

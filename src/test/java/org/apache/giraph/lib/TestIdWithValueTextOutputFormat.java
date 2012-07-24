@@ -18,17 +18,7 @@
 
 package org.apache.giraph.lib;
 
-import static org.apache.giraph.lib.IdWithValueTextOutputFormat.IdWithValueVertexWriter.LINE_TOKENIZE_VALUE;
-import static org.apache.giraph.lib.IdWithValueTextOutputFormat.IdWithValueVertexWriter.REVERSE_ID_AND_VALUE;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
-import java.io.IOException;
-import java.util.ArrayList;
-
-import org.apache.giraph.graph.BasicVertex;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.lib.IdWithValueTextOutputFormat.IdWithValueVertexWriter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DoubleWritable;
@@ -38,6 +28,16 @@ import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.junit.Test;
 import org.mockito.Matchers;
+
+import static org.apache.giraph.lib.IdWithValueTextOutputFormat.IdWithValueVertexWriter.LINE_TOKENIZE_VALUE;
+import static org.apache.giraph.lib.IdWithValueTextOutputFormat.IdWithValueVertexWriter.REVERSE_ID_AND_VALUE;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.io.IOException;
+import java.util.ArrayList;
 
 public class TestIdWithValueTextOutputFormat {
   @Test
@@ -72,12 +72,12 @@ public class TestIdWithValueTextOutputFormat {
     TaskAttemptContext tac = mock(TaskAttemptContext.class);
     when(tac.getConfiguration()).thenReturn(conf);
 
-    BasicVertex vertex = mock(BasicVertex.class);
-    when(vertex.getVertexId()).thenReturn(new Text("Four Tops"));
-    when(vertex.getVertexValue()).thenReturn(new DoubleWritable(4d));
+    Vertex vertex = mock(Vertex.class);
+    when(vertex.getId()).thenReturn(new Text("Four Tops"));
+    when(vertex.getValue()).thenReturn(new DoubleWritable(4d));
 
     // Create empty iterator == no edges
-    when(vertex.getOutEdgesIterator()).thenReturn(new ArrayList<Text>().iterator());
+    when(vertex.getEdges()).thenReturn(new ArrayList<Text>());
 
     RecordWriter<Text, Text> tw = mock(RecordWriter.class);
     IdWithValueVertexWriter writer = new IdWithValueVertexWriter(tw);
@@ -85,7 +85,7 @@ public class TestIdWithValueTextOutputFormat {
     writer.writeVertex(vertex);
 
     verify(tw).write(expected, null);
-    verify(vertex, times(0)).getOutEdgesIterator();
+    verify(vertex, times(0)).getEdges();
     verify(vertex, times(0)).getEdgeValue(Matchers.<WritableComparable>any());
   }
 }
