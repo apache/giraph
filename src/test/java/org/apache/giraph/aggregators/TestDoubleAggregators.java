@@ -26,18 +26,6 @@ import org.junit.Test;
 public class TestDoubleAggregators {
 
   @Test
-  public void testAverageAggregator() {
-    DoubleAverageAggregator max = new DoubleAverageAggregator();
-    max.aggregate(1.0);
-    max.aggregate(new DoubleWritable(3.0));
-    assertEquals(2.0, max.getAggregatedValue().get());
-    max.resetAggregatedValue();
-    assertEquals(0.0, max.getAggregatedValue().get());
-    DoubleWritable dw = max.createAggregatedValue();
-    assertNotNull(dw);
-  }
-  
-  @Test
   public void testMaxAggregator() {
     DoubleMaxAggregator max = new DoubleMaxAggregator();
     max.aggregate(2.0);

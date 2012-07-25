@@ -26,18 +26,6 @@ import org.junit.Test;
 public class TestFloatAggregators {
 
   @Test
-  public void testAverageAggregator() {
-    FloatAverageAggregator max = new FloatAverageAggregator();
-    max.aggregate(1.0f);
-    max.aggregate(new FloatWritable(3.0f));
-    assertEquals(2.0f, max.getAggregatedValue().get());
-    max.resetAggregatedValue();
-    assertEquals(0.0f, max.getAggregatedValue().get());
-    FloatWritable fw = max.createAggregatedValue();
-    assertNotNull(fw);
-  }
-  
-  @Test
   public void testMaxAggregator() {
     FloatMaxAggregator max = new FloatMaxAggregator();
     max.aggregate(2.0f);
