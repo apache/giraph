@@ -121,8 +121,7 @@ public class BspServiceMaster<I extends WritableComparable,
   /** Last finalized checkpoint */
   private long lastCheckpointedSuperstep = -1;
   /** State of the superstep changed */
-  private final BspEvent superstepStateChanged =
-      new PredicateLock();
+  private final BspEvent superstepStateChanged;
   /** Master graph partitioner */
   private final MasterGraphPartitioner<I, V, E, M> masterGraphPartitioner;
   /** All the partition stats from the last superstep */
@@ -147,6 +146,7 @@ public class BspServiceMaster<I extends WritableComparable,
       Mapper<?, ?, ?, ?>.Context context,
       GraphMapper<I, V, E, M> graphMapper) {
     super(serverPortList, sessionMsecTimeout, context, graphMapper);
+    superstepStateChanged = new PredicateLock(context);
     registerBspEvent(superstepStateChanged);
 
     maxWorkers =

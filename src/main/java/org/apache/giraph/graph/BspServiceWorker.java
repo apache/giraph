@@ -106,8 +106,7 @@ public class BspServiceWorker<I extends WritableComparable,
   private final Map<Integer, Partition<I, V, E, M>> workerPartitionMap =
       new HashMap<Integer, Partition<I, V, E, M>>();
   /** Have the partition exchange children (workers) changed? */
-  private final BspEvent partitionExchangeChildrenChanged =
-      new PredicateLock();
+  private final BspEvent partitionExchangeChildrenChanged;
   /** Max vertices per partition before sending */
   private final int maxVerticesPerPartition;
   /** Worker Context */
@@ -139,6 +138,7 @@ public class BspServiceWorker<I extends WritableComparable,
     GraphState<I, V, E, M> graphState)
     throws IOException, InterruptedException {
     super(serverPortList, sessionMsecTimeout, context, graphMapper);
+    partitionExchangeChildrenChanged = new PredicateLock(context);
     registerBspEvent(partitionExchangeChildrenChanged);
     maxVerticesPerPartition =
         getConfiguration().getInt(
@@ -654,7 +654,7 @@ public class BspServiceWorker<I extends WritableComparable,
     }
 
     // At this point all vertices have been sent to their destinations.
-    // Move them to the worker, creating creating the empty partitions
+    // Move them to the worker, creating the empty partitions
     movePartitionsToWorker(commService);
     for (PartitionOwner partitionOwner : masterSetPartitionOwners) {
       if (partitionOwner.getWorkerInfo().equals(getWorkerInfo()) &&

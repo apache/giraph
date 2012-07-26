@@ -23,6 +23,7 @@ import static org.junit.Assert.assertTrue;
 
 import org.apache.giraph.zk.BspEvent;
 import org.apache.giraph.zk.PredicateLock;
+import org.apache.hadoop.util.Progressable;
 import org.junit.Test;
 
 /**
@@ -43,12 +44,25 @@ public class TestPredicateLock {
         }
     }
 
+    private Progressable stubContext;
+
+    private Progressable getStubProgressable() {
+        if (stubContext == null)
+            stubContext = new Progressable() {
+                @Override
+                    public void progress() {
+                        System.out.println("progress received");
+                    }
+            };
+        return stubContext;
+    }
+
     /**
      * Make sure the the event is not signaled.
      */
   @Test
     public void testWaitMsecsNoEvent() {
-        BspEvent event = new PredicateLock();
+        BspEvent event = new PredicateLock(getStubProgressable());
         boolean gotPredicate = event.waitMsecs(50);
         assertFalse(gotPredicate);
     }
@@ -58,7 +72,7 @@ public class TestPredicateLock {
      */
   @Test
     public void testEvent() {
-        BspEvent event = new PredicateLock();
+        BspEvent event = new PredicateLock(getStubProgressable());
         event.signal();
         boolean gotPredicate = event.waitMsecs(-1);
         assertTrue(gotPredicate );
@@ -74,7 +88,7 @@ public class TestPredicateLock {
   @Test
     public void testWaitMsecs() {
         System.out.println("testWaitMsecs:");
-        BspEvent event = new PredicateLock();
+        BspEvent event = new PredicateLock(getStubProgressable());
         Thread signalThread = new SignalThread(event);
         signalThread.start();
         boolean gotPredicate = event.waitMsecs(2000);

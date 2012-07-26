@@ -23,20 +23,35 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.apache.hadoop.util.Progressable;
 import org.apache.log4j.Logger;
 
 /**
- * A lock with a predicate that was be used to synchronize events.
+ * A lock with a predicate that was be used to synchronize events and keep the
+ * job context updated while waiting.
  */
 public class PredicateLock implements BspEvent {
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(PredicateLock.class);
+  /** Msecs to refresh the progress meter */
+  private static final int MSEC_PERIOD = 10000;
+  /** Progressable for reporting progress (Job context) */
+  protected final Progressable progressable;
   /** Lock */
   private Lock lock = new ReentrantLock();
   /** Condition associated with lock */
   private Condition cond = lock.newCondition();
   /** Predicate */
   private boolean eventOccurred = false;
+
+  /**
+   * Constructor.
+   *
+   * @param progressable used to report progress() (usually a Mapper.Context)
+   */
+  public PredicateLock(Progressable progressable) {
+    this.progressable = progressable;
+  }
 
   @Override
   public void reset() {
@@ -111,6 +126,8 @@ public class PredicateLock implements BspEvent {
 
   @Override
   public void waitForever() {
-    waitMsecs(-1);
+    while (!waitMsecs(MSEC_PERIOD)) {
+      progressable.progress();
+    }
   }
 }

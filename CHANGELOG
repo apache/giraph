@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-267: Jobs can get killed for not reporting status during
+  INPUT SUPERSTEP (netj via aching).
+
   GIRAPH-266: Average aggregators don't calculate real average
   (majakabiljo via aching).
 
