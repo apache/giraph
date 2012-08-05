@@ -81,7 +81,6 @@ public class RPCCommunications<I extends WritableComparable,
    * @param service Server worker.
    * @param graphState Graph state from infrastructure.
    * @throws IOException
-   * @throws UnknownHostException
    * @throws InterruptedException
    */
   public RPCCommunications(Mapper<?, ?, ?, ?>.Context context,
@@ -202,5 +201,11 @@ public class RPCCommunications<I extends WritableComparable,
         }
       });
     /*end[HADOOP_NON_SASL_RPC]*/
+  }
+
+  @Override
+  public ServerData<I, V, E, M> getServerData() {
+    throw new IllegalStateException(
+        "getServerData: Tried to get ServerData while using RPC");
   }
 }

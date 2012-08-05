@@ -336,6 +336,33 @@ public class GiraphJob {
   public static final String CHECKPOINT_DIRECTORY_DEFAULT =
       "_bsp/_checkpoints/";
 
+  /** Directory in the local file system for out-of-core messages. */
+  public static final String MESSAGES_DIRECTORY = "giraph.messagesDirectory";
+  /**
+   * Default messages directory. Final directory path will also have the
+   * job number for uniqueness
+   */
+  public static final String MESSAGES_DIRECTORY_DEFAULT = "_bsp/_messages/";
+
+  /** Whether or not to use out-of-core messages */
+  public static final String USE_OUT_OF_CORE_MESSAGES =
+      "giraph.useOutOfCoreMessages";
+  /** Default choice about using out-of-core messaging */
+  public static final boolean USE_OUT_OF_CORE_MESSAGES_DEFAULT = false;
+  /**
+   * If using out-of-core messaging, it tells how much messages do we keep
+   * in memory.
+   */
+  public static final String MAX_MESSAGES_IN_MEMORY =
+      "giraph.maxMessagesInMemory";
+  /** Default maximum number of messages in memory. */
+  public static final int MAX_MESSAGES_IN_MEMORY_DEFAULT = 1000000;
+  /** Size of buffer when reading and writing messages out-of-core. */
+  public static final String MESSAGES_BUFFER_SIZE =
+      "giraph.messagesBufferSize";
+  /** Default size of buffer when reading and writing messages out-of-core. */
+  public static final int MESSAGES_BUFFER_SIZE_DEFAULT = 8192;
+
   /** Keep the zookeeper output for debugging? Default is to remove it. */
   public static final String KEEP_ZOOKEEPER_DATA =
       "giraph.keepZooKeeperData";

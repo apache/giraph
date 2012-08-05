@@ -38,10 +38,17 @@ public class RequestRegistry {
   public enum Type {
     /** Sending vertices request */
     SEND_VERTEX_REQUEST,
-    /** Sending a partition of messages */
+    /** Sending a partition of messages for next superstep */
     SEND_PARTITION_MESSAGES_REQUEST,
+    /**
+     * Sending a partition of messages for current superstep
+     * (used during partition exchange)
+     */
+    SEND_PARTITION_CURRENT_MESSAGES_REQUEST,
     /** Send a partition of mutations */
     SEND_PARTITION_MUTATIONS_REQUEST,
+    /** Sending messages request */
+    SEND_MESSAGES_REQUEST,
   }
 
   /**

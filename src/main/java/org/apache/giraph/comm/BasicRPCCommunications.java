@@ -1238,11 +1238,16 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
       }
       VertexMutations<I, V, E, M> vertexMutations =
           inVertexMutationsMap.get(vertexIndex);
+      boolean receivedMessages =
+          messages != null && !Iterables.isEmpty(messages);
       Vertex<I, V, E, M> vertex =
           vertexResolver.resolve(vertexIndex,
               originalVertex,
               vertexMutations,
-              messages);
+              receivedMessages);
+      if (vertex != null && receivedMessages) {
+        service.assignMessagesToVertex(vertex, messages);
+      }
       if (LOG.isDebugEnabled()) {
         LOG.debug("prepareSuperstep: Resolved vertex index " +
             vertexIndex + " with original vertex " +

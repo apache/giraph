@@ -19,6 +19,7 @@
 package org.apache.giraph.graph.partition;
 
 import org.apache.giraph.graph.BspUtils;
+import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
@@ -50,7 +51,7 @@ public class Partition<I extends WritableComparable,
   /** Partition id */
   private final int id;
   /** Vertex map for this range (keyed by index) */
-  private final Map<I, Vertex<I, V, E, M>> vertexMap = Maps.newHashMap();
+  private final Map<I, Vertex<I, V, E, M>> vertexMap;
 
   /**
    * Constructor.
@@ -61,6 +62,12 @@ public class Partition<I extends WritableComparable,
   public Partition(Configuration conf, int id) {
     this.conf = conf;
     this.id = id;
+    if (conf.getBoolean(GiraphJob.USE_OUT_OF_CORE_MESSAGES,
+        GiraphJob.USE_OUT_OF_CORE_MESSAGES_DEFAULT)) {
+      vertexMap = Maps.newTreeMap();
+    } else {
+      vertexMap = Maps.newHashMap();
+    }
   }
 
   /**

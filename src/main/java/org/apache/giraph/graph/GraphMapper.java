@@ -20,6 +20,7 @@ package org.apache.giraph.graph;
 
 import org.apache.giraph.bsp.CentralizedServiceMaster;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
+import org.apache.giraph.comm.messages.MessageStoreByPartition;
 import org.apache.giraph.graph.partition.Partition;
 import org.apache.giraph.graph.partition.PartitionOwner;
 import org.apache.giraph.graph.partition.PartitionStats;
@@ -580,6 +581,13 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
       serviceWorker.getWorkerContext().preSuperstep();
       context.progress();
 
+      boolean useNetty = conf.getBoolean(GiraphJob.USE_NETTY,
+          GiraphJob.USE_NETTY_DEFAULT);
+      MessageStoreByPartition<I, M> messageStore = null;
+      if (useNetty) {
+        messageStore = serviceWorker.getServerData().getCurrentMessageStore();
+      }
+
       partitionStatsList.clear();
       for (Partition<I, V, E, M> partition :
         serviceWorker.getPartitionMap().values()) {
@@ -590,13 +598,27 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
           // Make sure every vertex has the current
           // graphState before computing
           vertex.setGraphState(graphState);
-          if (vertex.isHalted() &
-              !Iterables.isEmpty(vertex.getMessages())) {
+
+          Collection<M> messages = null;
+          if (useNetty) {
+            messages = messageStore.getVertexMessages(vertex.getId());
+            messageStore.clearVertexMessages(vertex.getId());
+          }
+
+          boolean hasMessages = (messages != null && !messages.isEmpty()) ||
+              !Iterables.isEmpty(vertex.getMessages());
+          if (vertex.isHalted() && hasMessages) {
             vertex.wakeUp();
           }
           if (!vertex.isHalted()) {
+            Iterable<M> vertexMsgIt;
+            if (messages == null) {
+              vertexMsgIt = vertex.getMessages();
+            } else {
+              vertexMsgIt = messages;
+            }
             context.progress();
-            vertex.compute(vertex.getMessages());
+            vertex.compute(vertexMsgIt);
             vertex.releaseResources();
           }
           if (vertex.isHalted()) {
@@ -605,6 +627,11 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
           partitionStats.incrVertexCount();
           partitionStats.addEdgeCount(vertex.getNumEdges());
         }
+
+        if (useNetty) {
+          messageStore.clearPartition(partition.getId());
+        }
+
         partitionStatsList.add(partitionStats);
       }
     } while (!serviceWorker.finishSuperstep(partitionStatsList));

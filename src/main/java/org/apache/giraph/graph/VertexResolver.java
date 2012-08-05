@@ -24,8 +24,6 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
 
-import com.google.common.collect.Iterables;
-
 import java.util.List;
 
 /**
@@ -53,7 +51,7 @@ public class VertexResolver<I extends WritableComparable, V extends Writable,
       I vertexId,
       Vertex<I, V, E, M> vertex,
       VertexChanges<I, V, E, M> vertexChanges,
-      Iterable<M> messages) {
+      boolean hasMessages) {
     // Default algorithm:
     // 1. If the vertex exists, first prune the edges
     // 2. If vertex removal desired, remove the vertex.
@@ -85,12 +83,12 @@ public class VertexResolver<I extends WritableComparable, V extends Writable,
           vertex = vertexChanges.getAddedVertexList().get(0);
         }
       }
-      if (vertex == null && messages != null && !Iterables.isEmpty(messages)) {
+      if (vertex == null && hasMessages) {
         vertex = instantiateVertex();
         vertex.initialize(vertexId,
             BspUtils.<V>createVertexValue(getConf()),
             null,
-            messages);
+            null);
       }
     } else {
       if ((vertexChanges != null) &&

@@ -43,14 +43,14 @@ public interface BasicVertexResolver<I extends WritableComparable,
    *        initialize())
    * @param vertex Original vertex or null if none
    * @param vertexChanges Changes that happened to this vertex or null if none
-   * @param messages messages received in the last superstep or null if none
+   * @param hasMessages True iff vertex received messages in the last superstep
    * @return Vertex to be returned, if null, and a vertex currently exists
    *         it will be removed
    */
   Vertex<I, V, E, M> resolve(I vertexId,
       Vertex<I, V, E, M> vertex,
       VertexChanges<I, V, E, M> vertexChanges,
-      Iterable<M> messages);
+      boolean hasMessages);
 
   /**
    * Create a default vertex that can be used to return from resolve().

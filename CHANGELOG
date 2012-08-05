@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+
+  GIRAPH-45: Improve the way to keep outgoing messages (majakabiljo
+  via aching).
  
   GIRAPH-271: Regression in imports in CommunicationsInterface (netj
   via aching).

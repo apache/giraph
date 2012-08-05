@@ -35,7 +35,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Send a collection of vertex messages for a partition.
@@ -118,32 +117,11 @@ public class SendPartitionMessagesRequest<I extends WritableComparable,
 
   @Override
   public void doRequest(ServerData<I, V, E, M> serverData) {
-    ConcurrentHashMap<I, Collection<M>> transientMessages =
-      serverData.getTransientMessages();
-    for (Entry<I, Collection<M>> entry : vertexIdMessages.entrySet()) {
-      Collection<M> messages = transientMessages.get(entry.getKey());
-      if (messages == null) {
-        final Collection<M> tmpMessages =
-            Lists.newArrayListWithCapacity(entry.getValue().size());
-        messages = transientMessages.putIfAbsent(entry.getKey(), tmpMessages);
-        if (messages == null) {
-          messages = tmpMessages;
-        }
-      }
-      synchronized (messages) {
-        messages.addAll(entry.getValue());
-        if (serverData.getCombiner() != null) {
-          try {
-            messages = Lists.newArrayList(
-                serverData.getCombiner().combine(entry.getKey(), messages));
-          } catch (IOException e) {
-            throw new IllegalStateException(
-                "doRequest: Combiner failed to combine messages " + messages,
-                e);
-          }
-          transientMessages.put(entry.getKey(), messages);
-        }
-      }
+    try {
+      serverData.getIncomingMessageStore().addPartitionMessages(
+          vertexIdMessages, partitionId);
+    } catch (IOException e) {
+      throw new RuntimeException("doRequest: Got IOException ", e);
     }
   }
 
@@ -155,5 +133,23 @@ public class SendPartitionMessagesRequest<I extends WritableComparable,
   @Override
   public void setConf(Configuration conf) {
     this.conf = conf;
+  }
+
+  /**
+   * Get id of partition
+   *
+   * @return Partition id
+   */
+  public int getPartitionId() {
+    return partitionId;
+  }
+
+  /**
+   * Get messages
+   *
+   * @return Messages map
+   */
+  public Map<I, Collection<M>> getVertexIdMessages() {
+    return vertexIdMessages;
   }
 }

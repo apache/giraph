@@ -18,14 +18,20 @@
 
 package org.apache.giraph.utils;
 
+import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.WorkerClientServer;
-import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.graph.GraphState;
+import org.apache.giraph.graph.partition.BasicPartitionOwner;
+import org.apache.giraph.graph.partition.PartitionOwner;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.mockito.Mockito;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 
 /** simplify mocking for unit testing vertices */
 public class MockUtils {
@@ -128,4 +134,22 @@ public class MockUtils {
 
         return env;
     }
+
+  public static CentralizedServiceWorker<IntWritable, IntWritable,
+      IntWritable, IntWritable> mockServiceGetVertexPartitionOwner(final int
+      numOfPartitions) {
+    CentralizedServiceWorker<IntWritable, IntWritable, IntWritable,
+        IntWritable> service = Mockito.mock(CentralizedServiceWorker.class);
+    Answer<PartitionOwner> answer = new Answer<PartitionOwner>() {
+      @Override
+      public PartitionOwner answer(InvocationOnMock invocation) throws
+          Throwable {
+        IntWritable vertexId = (IntWritable) invocation.getArguments()[0];
+        return new BasicPartitionOwner(vertexId.get() % numOfPartitions, null);
+      }
+    };
+    Mockito.when(service.getVertexPartitionOwner(
+        Mockito.any(IntWritable.class))).thenAnswer(answer);
+    return service;
+  }
 }

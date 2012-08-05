@@ -22,6 +22,7 @@ import org.apache.giraph.bsp.ApplicationState;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.NettyWorkerClientServer;
 import org.apache.giraph.comm.RPCCommunications;
+import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.comm.WorkerClientServer;
 import org.apache.giraph.comm.WorkerServer;
 import org.apache.giraph.graph.partition.Partition;
@@ -1172,6 +1173,8 @@ public class BspServiceWorker<I extends WritableComparable,
       LOG.warn("storeCheckpoint: Removed file " + verticesFilePath);
     }
 
+    boolean useNetty = getConfiguration().getBoolean(GiraphJob.USE_NETTY,
+        GiraphJob.USE_NETTY_DEFAULT);
     FSDataOutputStream verticesOutputStream =
         getFs().create(verticesFilePath);
     ByteArrayOutputStream metadataByteStream = new ByteArrayOutputStream();
@@ -1179,6 +1182,12 @@ public class BspServiceWorker<I extends WritableComparable,
     for (Partition<I, V, E, M> partition : workerPartitionMap.values()) {
       long startPos = verticesOutputStream.getPos();
       partition.write(verticesOutputStream);
+      // write messages
+      verticesOutputStream.writeBoolean(useNetty);
+      if (useNetty) {
+        getServerData().getCurrentMessageStore().writePartition(
+            verticesOutputStream, partition.getId());
+      }
       // Write the metadata for this partition
       // Format:
       // <index count>
@@ -1211,6 +1220,18 @@ public class BspServiceWorker<I extends WritableComparable,
 
   @Override
   public void loadCheckpoint(long superstep) {
+    if (getConfiguration().getBoolean(GiraphJob.USE_NETTY,
+        GiraphJob.USE_NETTY_DEFAULT)) {
+      try {
+        // clear old message stores
+        getServerData().getIncomingMessageStore().clearAll();
+        getServerData().getCurrentMessageStore().clearAll();
+      } catch (IOException e) {
+        throw new RuntimeException(
+            "loadCheckpoint: Failed to clear message stores ", e);
+      }
+    }
+
     // Algorithm:
     // Examine all the partition owners and load the ones
     // that match my hostname and id from the master designated checkpoint
@@ -1256,6 +1277,10 @@ public class BspServiceWorker<I extends WritableComparable,
                 " on " + partitionsFile);
           }
           partition.readFields(partitionsStream);
+          if (partitionsStream.readBoolean()) {
+            getServerData().getCurrentMessageStore().readFieldsForPartition(
+                partitionsStream, partitionId);
+          }
           partitionsStream.close();
           if (LOG.isInfoEnabled()) {
             LOG.info("loadCheckpoint: Loaded partition " +
@@ -1551,5 +1576,10 @@ public class BspServiceWorker<I extends WritableComparable,
     } else {
       return null;
     }
+  }
+
+  @Override
+  public ServerData<I, V, E, M> getServerData() {
+    return commService.getServerData();
   }
 }

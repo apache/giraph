@@ -19,6 +19,8 @@
 package org.apache.giraph.comm;
 
 import org.apache.giraph.bsp.CentralizedServiceWorker;
+import org.apache.giraph.comm.messages.MessageStoreByPartition;
+import org.apache.giraph.comm.messages.SendPartitionCurrentMessagesRequest;
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.Vertex;
@@ -33,6 +35,7 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -202,10 +205,40 @@ public class NettyWorkerClient<I extends WritableComparable,
           " from " + workerInfo + ", with partition " + partition);
     }
 
-    WritableRequest<I, V, E, M> writableReauest =
-        new SendVertexRequest<I, V, E, M>(
-            partition.getId(), partition.getVertices());
-    nettyClient.sendWritableRequest(remoteServerAddress, writableReauest);
+    int partitionId = partition.getId();
+    WritableRequest<I, V, E, M> vertexRequest =
+        new SendVertexRequest<I, V, E, M>(partitionId,
+            partition.getVertices());
+    nettyClient.sendWritableRequest(remoteServerAddress, vertexRequest);
+
+    // messages are stored separately
+    MessageStoreByPartition<I, M> messageStore =
+        service.getServerData().getCurrentMessageStore();
+    Map<I, Collection<M>> map = Maps.newHashMap();
+    int messagesInMap = 0;
+    for (I vertexId :
+        messageStore.getPartitionDestinationVertices(partitionId)) {
+      try {
+        Collection<M> messages = messageStore.getVertexMessages(vertexId);
+        map.put(vertexId, messages);
+        messagesInMap += messages.size();
+      } catch (IOException e) {
+        throw new IllegalStateException(
+            "sendPartitionReq: Got IOException ", e);
+      }
+      if (messagesInMap > maxMessagesPerPartition) {
+        WritableRequest<I, V, E, M> messagesRequest = new
+            SendPartitionCurrentMessagesRequest<I, V, E, M>(partitionId, map);
+        nettyClient.sendWritableRequest(remoteServerAddress, messagesRequest);
+        map.clear();
+        messagesInMap = 0;
+      }
+    }
+    if (!map.isEmpty()) {
+      WritableRequest<I, V, E, M> messagesRequest = new
+          SendPartitionCurrentMessagesRequest<I, V, E, M>(partitionId, map);
+      nettyClient.sendWritableRequest(remoteServerAddress, messagesRequest);
+    }
   }
 
   /**

@@ -18,14 +18,14 @@
 
 package org.apache.giraph.comm;
 
-import org.apache.giraph.graph.BspUtils;
+import org.apache.giraph.comm.messages.MessageStoreByPartition;
+import org.apache.giraph.comm.messages.MessageStoreFactory;
 import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.graph.VertexCombiner;
 import org.apache.giraph.graph.VertexMutations;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -40,8 +40,6 @@ import java.util.concurrent.ConcurrentHashMap;
 @SuppressWarnings("rawtypes")
 public class ServerData<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable> {
-  /** Combiner instance, can be null */
-  private VertexCombiner<I, M> combiner;
   /**
    * Map of partition ids to incoming vertices from other workers.
    * (Synchronized on values)
@@ -49,15 +47,20 @@ public class ServerData<I extends WritableComparable,
   private final ConcurrentHashMap<Integer, Collection<Vertex<I, V, E, M>>>
   inPartitionVertexMap =
       new ConcurrentHashMap<Integer, Collection<Vertex<I, V, E, M>>>();
+
+  /** Message store factory */
+  private final
+  MessageStoreFactory<I, M, MessageStoreByPartition<I, M>> messageStoreFactory;
   /**
-   * Map of inbound messages, mapping from vertex index to list of messages.
-   * Transferred to inMessages at beginning of a superstep.  This
-   * intermediary step exists so that the combiner will run not only at the
-   * client, but also at the server. Also, allows the sending of large
-   * message lists during the superstep computation. (Synchronized on values)
+   * Message store for incoming messages (messages which will be consumed
+   * in the next super step)
    */
-  private final ConcurrentHashMap<I, Collection<M>> transientMessages =
-      new ConcurrentHashMap<I, Collection<M>>();
+  private volatile MessageStoreByPartition<I, M> incomingMessageStore;
+  /**
+   * Message store for current messages (messages which we received in
+   * previous super step and which will be consumed in current super step)
+   */
+  private volatile MessageStoreByPartition<I, M> currentMessageStore;
   /**
    * Map of partition ids to incoming vertex mutations from other workers.
    * (Synchronized access to values)
@@ -65,16 +68,13 @@ public class ServerData<I extends WritableComparable,
   private final ConcurrentHashMap<I, VertexMutations<I, V, E, M>>
   vertexMutations = new ConcurrentHashMap<I, VertexMutations<I, V, E, M>>();
 
-  /**
-   * Constructor.
-   * @param conf Configuration (used to instantiate the combiner).
-   */
-  public ServerData(Configuration conf) {
-    if (BspUtils.getVertexCombinerClass(conf) == null) {
-      combiner = null;
-    } else {
-      combiner = BspUtils.createVertexCombiner(conf);
-    }
+  /** @param messageStoreFactory Factory for message stores */
+  public ServerData(MessageStoreFactory<I, M, MessageStoreByPartition<I, M>>
+      messageStoreFactory) {
+
+    this.messageStoreFactory = messageStoreFactory;
+    currentMessageStore = messageStoreFactory.newStore();
+    incomingMessageStore = messageStoreFactory.newStore();
   }
 
   /**
@@ -88,12 +88,37 @@ public class ServerData<I extends WritableComparable,
   }
 
   /**
-   * Get the vertex messages (synchronize on the values)
+   * Get message store for incoming messages (messages which will be consumed
+   * in the next super step)
    *
-   * @return Vertex messages
+   * @return Incoming message store
    */
-  public ConcurrentHashMap<I, Collection<M>> getTransientMessages() {
-    return transientMessages;
+  public MessageStoreByPartition<I, M> getIncomingMessageStore() {
+    return incomingMessageStore;
+  }
+
+  /**
+   * Get message store for current messages (messages which we received in
+   * previous super step and which will be consumed in current super step)
+   *
+   * @return Current message store
+   */
+  public MessageStoreByPartition<I, M> getCurrentMessageStore() {
+    return currentMessageStore;
+  }
+
+  /** Prepare for next super step */
+  public void prepareSuperstep() {
+    if (currentMessageStore != null) {
+      try {
+        currentMessageStore.clearAll();
+      } catch (IOException e) {
+        throw new IllegalStateException(
+            "Failed to clear previous message store");
+      }
+    }
+    currentMessageStore = incomingMessageStore;
+    incomingMessageStore = messageStoreFactory.newStore();
   }
 
   /**
@@ -104,13 +129,5 @@ public class ServerData<I extends WritableComparable,
   public ConcurrentHashMap<I, VertexMutations<I, V, E, M>>
   getVertexMutations() {
     return vertexMutations;
-  }
-
-  /**
-   * Get the combiner instance.
-   * @return The combiner.
-   */
-  public VertexCombiner<I, M> getCombiner() {
-    return combiner;
   }
 }

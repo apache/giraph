@@ -16,59 +16,51 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.comm;
+package org.apache.giraph.comm.messages;
 
-import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import java.io.Closeable;
+import java.io.IOException;
 import java.util.Collection;
-import java.util.Map;
 
 /**
- * Interface for message communication server.
+ * Message store
  *
  * @param <I> Vertex id
- * @param <V> Vertex value
- * @param <E> Edge value
  * @param <M> Message data
  */
-@SuppressWarnings("rawtypes")
-public interface WorkerServer<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    extends Closeable {
+public interface MessageStore<I extends WritableComparable,
+    M extends Writable> extends BasicMessageStore<I, M> {
   /**
-   * Get the port
+   * Adds messages
    *
-   * @return Port used by this server
+   * @param vertexId Vertex id for which the messages are
+   * @param messages Messages for the vertex
+   * @throws IOException
    */
-  int getPort();
+  void addVertexMessages(I vertexId,
+      Collection<M> messages) throws IOException;
 
   /**
-   * Move the in transition messages to the in messages for every vertex and
-   * add new connections to any newly appearing RPC proxies.
-   */
-  void prepareSuperstep();
-
-  /**
-   * Get the vertices that were sent in the last iteration.  After getting
-   * the map, the user should synchronize with it to insure it
-   * is thread-safe.
+   * Get number of messages in memory
    *
-   * @return map of vertex ranges to vertices
+   * @return Number of messages in memory
    */
-  Map<Integer, Collection<Vertex<I, V, E, M>>> getInPartitionVertexMap();
+  int getNumberOfMessages();
 
   /**
-   * Get server data
+   * Check if we have messages for some vertex
    *
-   * @return Server data
+   * @param vertexId Id of vertex which we want to check
+   * @return True iff we have messages for vertex with required id
    */
-  ServerData<I, V, E, M> getServerData();
+  boolean hasMessagesForVertex(I vertexId);
 
   /**
-   * Shuts down.
+   * Gets vertex ids which we have messages for
+   *
+   * @return Iterable over vertex ids which we have messages for
    */
-  void close();
+  Iterable<I> getDestinationVertices();
 }

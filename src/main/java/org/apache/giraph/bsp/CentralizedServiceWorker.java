@@ -22,6 +22,8 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+
+import org.apache.giraph.comm.ServerData;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -169,4 +171,11 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
    * Operations that will be called if there is a failure by a worker.
    */
   void failureCleanup();
+
+  /**
+   * Get server data
+   *
+   * @return Server data
+   */
+  ServerData<I, V, E, M> getServerData();
 }

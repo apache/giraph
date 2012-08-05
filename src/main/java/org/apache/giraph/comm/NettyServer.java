@@ -26,6 +26,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import org.apache.giraph.comm.messages.SendPartitionCurrentMessagesRequest;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
@@ -97,6 +98,8 @@ public class NettyServer<I extends WritableComparable,
         new SendPartitionMessagesRequest<I, V, E, M>());
     requestRegistry.registerClass(
         new SendPartitionMutationsRequest<I, V, E, M>());
+    requestRegistry.registerClass(
+        new SendPartitionCurrentMessagesRequest<I, V, E, M>());
     requestRegistry.shutdown();
 
     ThreadFactory bossFactory = new ThreadFactoryBuilder()

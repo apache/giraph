@@ -16,59 +16,52 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.comm;
+package org.apache.giraph.comm.messages;
 
-import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import java.io.Closeable;
+import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
 
 /**
- * Interface for message communication server.
+ * Most basic message store with just add, get and clear operations
  *
  * @param <I> Vertex id
- * @param <V> Vertex value
- * @param <E> Edge value
  * @param <M> Message data
  */
-@SuppressWarnings("rawtypes")
-public interface WorkerServer<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    extends Closeable {
+public interface BasicMessageStore<I extends WritableComparable,
+    M extends Writable> extends Writable {
   /**
-   * Get the port
+   * Adds messages
    *
-   * @return Port used by this server
+   * @param messages Map of messages we want to add
+   * @throws IOException
    */
-  int getPort();
+  void addMessages(Map<I, Collection<M>> messages) throws IOException;
 
   /**
-   * Move the in transition messages to the in messages for every vertex and
-   * add new connections to any newly appearing RPC proxies.
-   */
-  void prepareSuperstep();
-
-  /**
-   * Get the vertices that were sent in the last iteration.  After getting
-   * the map, the user should synchronize with it to insure it
-   * is thread-safe.
+   * Gets messages for a vertex.
    *
-   * @return map of vertex ranges to vertices
+   * @param vertexId Vertex id for which we want to get messages
+   * @return Messages for vertex with required id
+   * @throws IOException
    */
-  Map<Integer, Collection<Vertex<I, V, E, M>>> getInPartitionVertexMap();
+  Collection<M> getVertexMessages(I vertexId) throws IOException;
 
   /**
-   * Get server data
+   * Clears messages for a vertex.
    *
-   * @return Server data
+   * @param vertexId Vertex id for which we want to clear messages
+   * @throws IOException
    */
-  ServerData<I, V, E, M> getServerData();
+  void clearVertexMessages(I vertexId) throws IOException;
 
   /**
-   * Shuts down.
+   * Clears all resources used by this store.
+   *
+   * @throws IOException
    */
-  void close();
+  void clearAll() throws IOException;
 }

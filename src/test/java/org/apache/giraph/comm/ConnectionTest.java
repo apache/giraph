@@ -18,6 +18,8 @@
 
 package org.apache.giraph.comm;
 
+import org.apache.giraph.comm.messages.SimpleMessageStore;
+import org.apache.giraph.utils.MockUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.mapreduce.Mapper.Context;
@@ -47,7 +49,9 @@ public class ConnectionTest {
 
     Configuration conf = new Configuration();
     ServerData<IntWritable, IntWritable, IntWritable, IntWritable> serverData =
-        new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>(conf);
+        new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>
+            (SimpleMessageStore.newFactory(
+                MockUtils.mockServiceGetVertexPartitionOwner(1), conf));
     NettyServer<IntWritable, IntWritable, IntWritable, IntWritable> server =
         new NettyServer<IntWritable, IntWritable, IntWritable, IntWritable>(
             conf, serverData);
@@ -74,7 +78,9 @@ public class ConnectionTest {
 
     Configuration conf = new Configuration();
     ServerData<IntWritable, IntWritable, IntWritable, IntWritable> serverData =
-        new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>(conf);
+        new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>
+            (SimpleMessageStore.newFactory(
+                MockUtils.mockServiceGetVertexPartitionOwner(1), conf));
 
     NettyServer<IntWritable, IntWritable, IntWritable, IntWritable> server1 =
         new NettyServer<IntWritable, IntWritable, IntWritable, IntWritable>(
@@ -114,8 +120,9 @@ public class ConnectionTest {
 
     Configuration conf = new Configuration();
     ServerData<IntWritable, IntWritable, IntWritable, IntWritable> serverData =
-        new ServerData<IntWritable, IntWritable, IntWritable,
-            IntWritable>(conf);
+        new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>
+            (SimpleMessageStore.newFactory(
+                MockUtils.mockServiceGetVertexPartitionOwner(1), conf));
     NettyServer<IntWritable, IntWritable, IntWritable, IntWritable> server =
         new NettyServer<IntWritable, IntWritable, IntWritable, IntWritable>(
             conf, serverData);

@@ -131,6 +131,11 @@ public class NettyWorkerClientServer<I extends WritableComparable,
   }
 
   @Override
+  public ServerData<I, V, E, M> getServerData() {
+    return server.getServerData();
+  }
+
+  @Override
   public void close() {
     server.close();
   }
