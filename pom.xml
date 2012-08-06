@@ -423,8 +423,10 @@ under the License.
               <!-- source control and IDEs -->
               <exclude>.git/**</exclude>
               <exclude>.gitignore</exclude>
-              <exclude>.idea/**</exclude>
               <exclude>*.patch</exclude>
+              <exclude>.idea/**</exclude>
+              <exclude>**/*.iml</exclude>
+              <exclude>**/*.ipr</exclude>
            </excludes>
         </configuration>
       </plugin>

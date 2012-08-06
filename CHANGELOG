@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-280: Add IntelliJ-generated *.iml and *.ipr files to Apache
+  Rat's <exclude> list. (ekoontz via aching).
+
   GIRAPH-45: Improve the way to keep outgoing messages (majakabiljo
   via aching).
  
