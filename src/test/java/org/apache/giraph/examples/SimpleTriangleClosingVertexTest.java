@@ -26,19 +26,14 @@ import org.junit.Test;
 import org.apache.giraph.utils.MockUtils;
 import org.apache.giraph.lib.IdWithValueTextOutputFormat;
 import org.apache.giraph.examples.IntIntNullIntTextInputFormat;
-import org.apache.giraph.examples.SimpleTriangleClosingVertex.IntArrayWritable;
-import org.apache.giraph.utils.InternalVertexRunner;
+import org.apache.giraph.examples.SimpleTriangleClosingVertex.IntArrayListWritable;
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
-import org.apache.hadoop.io.ArrayWritable;
 
 import java.util.Map;
-import java.util.HashMap;
 import java.util.List;
-import java.util.ArrayList;
-import java.util.Iterator;
 
 import org.mockito.Mockito;
 
@@ -55,19 +50,21 @@ public class SimpleTriangleClosingVertexTest {
    * does it send all its out edge values to all neighbors?
    */
   @Test
-  public void testTriangleClosingOutMsgs() throws Exception {
+  public void testSuperstepZero() throws Exception {
     // this guy should end up with an array value of 4
-    SimpleTriangleClosingVertex vertex = new SimpleTriangleClosingVertex();
+    SimpleTriangleClosingVertex vertex =
+      new SimpleTriangleClosingVertex();
+    SimpleTriangleClosingVertex.IntArrayListWritable alw =
+      new SimpleTriangleClosingVertex.IntArrayListWritable();
     vertex.initialize(null, null, null, null);
     vertex.addEdge(new IntWritable(5), NullWritable.get());
     vertex.addEdge(new IntWritable(7), NullWritable.get()); 
-    IntArrayWritable iaw = new IntArrayWritable();
-    iaw.set(new IntWritable[0]);
 
-    MockUtils.MockedEnvironment<IntWritable, IntArrayWritable,
+    MockUtils.MockedEnvironment<IntWritable,
+      SimpleTriangleClosingVertex.IntArrayListWritable,
     NullWritable, IntWritable> env =
-      MockUtils.prepareVertex(vertex, 0L, new IntWritable(1),
-        iaw, false);
+      MockUtils.prepareVertex(vertex, 0L,
+        new IntWritable(1), alw, false);
 
     vertex.compute(Lists.<IntWritable>newArrayList(
       new IntWritable(83), new IntWritable(42)));
@@ -78,59 +75,31 @@ public class SimpleTriangleClosingVertexTest {
     env.verifyMessageSent(new IntWritable(7), new IntWritable(7));
   }
 
- /**
-   * A local integration test on toy data
-   */
+  /** Test behavior of compute() with incoming messages (superstep 1) */
   @Test
-  public void testSampleGraph() throws Exception {
-    // a small four vertex graph
-    String[] graph = new String[] {
-        "1", // this guy should end up with value { 4, 7 }
-        "2 1 4",
-        "3 1 4",
-        "4",
-        "5 1 7",
-        "6 1 7",
-        "7",
-        "8 1 4"
-    };
-
-    /*
-    // run internally
-    Iterable<String> results =
-      InternalVertexRunner.run(
-        SimpleTriangleClosingVertex.class,
-        IntIntNullIntTextInputFormat.class,
-        IdWithValueTextOutputFormat.class,
-        Maps.<String,String>newHashMap(),
-        graph);
-
-    // always be closing
-    Map<Integer, List<Integer>> glenGarry = parseResults(results);
-
-    // verify results
-    assertNotNull(glenGarry);
-    assertEquals(8, glenGarry.size());
-    assertEquals(4, glenGarry.get(1).get(0));
-    assertEquals(7, glenGarry.get(1).get(1));
-    */
-    assertEquals(1,1);
+  public void testSuperstepOne() throws Exception {
+    // see if the vertex interprets its incoming
+    // messages properly to verify the algorithm
+    SimpleTriangleClosingVertex vertex =
+      new SimpleTriangleClosingVertex();
+    vertex.initialize(null, null, null, null);
+    MockUtils.MockedEnvironment<IntWritable,
+      SimpleTriangleClosingVertex.IntArrayListWritable,
+      NullWritable, IntWritable>
+      env = MockUtils.<IntWritable,
+      SimpleTriangleClosingVertex.IntArrayListWritable,
+      NullWritable, IntWritable> prepareVertex(
+        vertex, 1L, new IntWritable(1), null, false);
+      // superstep 1: can the vertex process these correctly?
+      vertex.compute(Lists.<IntWritable>newArrayList(
+        new IntWritable(7),
+        new IntWritable(3),
+        new IntWritable(4),
+        new IntWritable(7),
+        new IntWritable(4),
+        new IntWritable(2),
+        new IntWritable(4)));
+      final String pairCheck = "[4, 7]";
+      assertEquals(pairCheck, vertex.getValue().toString());
   }
-
-  private Map<Integer, List<Integer>> parseResults(Iterable<String> in) {
-    Map<Integer, List<Integer>> map =
-      new HashMap<Integer, List<Integer>>();
-    for (String line : in) {
-      String[] tokens = line.trim().split("\\s*");
-      final int id = Integer.parseInt(tokens[0]);
-      if (map.get(id) == null) {
-        map.put(id, new ArrayList<Integer>());
-      }
-      final int size = tokens.length;
-      for (int ndx = 1; ndx < size; ++ndx) {
-        map.get(id).add(Integer.parseInt(tokens[ndx]));
-      }
-    }
-    return map;
-  }
-}
+ }

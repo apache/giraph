@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-228: SimpleTriangleClosingVertex should not use ArrayWritable
+  for a vertex value. (Eli Reisman via jghoman)
+
   GIRAPH-209: Include munge version in artifact name. 
   (Eli Reisman via jghoman)
   

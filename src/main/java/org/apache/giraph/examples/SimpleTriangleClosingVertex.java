@@ -18,17 +18,18 @@
 
 package org.apache.giraph.examples;
 
+import org.apache.giraph.examples.SimpleTriangleClosingVertex.Pair;
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.EdgeListVertex;
-import org.apache.hadoop.io.ArrayWritable;
+import org.apache.giraph.comm.ArrayListWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
-import org.apache.hadoop.io.Writable;
 
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
+
+import com.google.common.collect.Sets;
+import com.google.common.collect.Maps;
 
 /**
  * Demonstrates triangle closing in simple,
@@ -62,61 +63,90 @@ import java.util.TreeMap;
  * ordering of the final result array.
  */
 public class SimpleTriangleClosingVertex extends EdgeListVertex<
-  IntWritable, SimpleTriangleClosingVertex.IntArrayWritable,
+  IntWritable, SimpleTriangleClosingVertex.IntArrayListWritable,
   NullWritable, IntWritable> {
   /** Vertices to close the triangle, ranked by frequency of in-msgs */
   private Map<IntWritable, Integer> closeMap =
-    new TreeMap<IntWritable, Integer>();
-  /** Set of vertices you already recieved @ least once */
-  private Set<Integer> recvSet = new HashSet<Integer>();
+    Maps.<IntWritable, Integer>newHashMap();
 
   @Override
   public void compute(Iterable<IntWritable> messages) {
     if (getSuperstep() == 0) {
-      // obtain list of all out-edges from THIS vertex
+      // send list of this vertex's neighbors to all neighbors
       for (Edge<IntWritable, NullWritable> edge : getEdges()) {
         sendMessageToAllEdges(edge.getTargetVertexId());
       }
     } else {
       for (IntWritable message : messages) {
-        int inId = message.get();
-        if (recvSet.contains(inId)) {
-          int current = closeMap.get(message) == null ? 0 : inId;
-          closeMap.put(message, current + 1);
-        }
-        if (inId != getId().get()) {
-          recvSet.add(inId);
+        final int current = (closeMap.get(message) == null) ?
+          0 : closeMap.get(message) + 1;
+        closeMap.put(message, current);
+      }
+      // make sure the result values are sorted and
+      // packaged in an IntArrayListWritable for output
+      Set<SimpleTriangleClosingVertex.Pair> sortedResults =
+        Sets.<SimpleTriangleClosingVertex.Pair>newTreeSet();
+      for (Map.Entry<IntWritable, Integer> entry : closeMap.entrySet()) {
+        sortedResults.add(new Pair(entry.getKey(), entry.getValue()));
+      }
+      SimpleTriangleClosingVertex.IntArrayListWritable
+        outputList = new SimpleTriangleClosingVertex.IntArrayListWritable();
+      for (SimpleTriangleClosingVertex.Pair pair : sortedResults) {
+        if (pair.value > 0) {
+          outputList.add(pair.key);
+        } else {
+          break;
         }
       }
-      int ndx = closeMap.size();
-      IntWritable[] temp = new IntWritable[ndx];
-      for (IntWritable w: closeMap.keySet()) {
-        temp[--ndx] = w;
-      }
-      IntArrayWritable result = new IntArrayWritable();
-      result.set(temp);
-      setValue(result);
+      setValue(outputList);
     }
     voteToHalt();
   }
 
+  /** Quick, immutable K,V storage for sorting in tree set */
+  public static class Pair implements Comparable<Pair> {
+    /** key
+     * @param key the IntWritable key */
+    private final IntWritable key;
+    /** value
+     * @param value the Integer value */
+    private final Integer value;
+    /** Constructor
+     * @param k the key
+     * @param v the value
+     */
+    public Pair(IntWritable k, Integer v) {
+      key = k;
+      value = v;
+    }
+    /** key getter
+     * @return the key */
+    public IntWritable getKey() { return key; }
+    /** value getter
+     * @return the value */
+    public Integer getValue() { return value; }
+    /** Comparator to quickly sort by values
+     * @param other the Pair to compare with THIS
+     * @return the comparison value as an integer */
+    @Override
+    public int compareTo(Pair other) {
+      return other.value - this.value;
+    }
+  }
+
   /** Utility class for delivering the array of vertices THIS vertex
     * should connect with to close triangles with neighbors */
-  public static class IntArrayWritable extends ArrayWritable {
-    /** default constructor */
-    public IntArrayWritable() {
-      super(IntWritable.class);
+  public static class IntArrayListWritable
+    extends ArrayListWritable<IntWritable> {
+    /** Default constructor for reflection */
+    public IntArrayListWritable() {
+      super();
     }
-
+    /** Set storage type for this ArrayListWritable */
     @Override
-    public String toString() {
-      StringBuilder sb = new StringBuilder();
-      Writable[] iwArray = get();
-      for (int i = 0; i < iwArray.length; ++i) {
-        IntWritable iw = (IntWritable) iwArray[i];
-        sb.append(iw.get() + "  ");
-      }
-      return sb.toString();
+    @SuppressWarnings("unchecked")
+    public void setClass() {
+      setClass(IntWritable.class);
     }
   }
 }
