@@ -82,6 +82,8 @@ public class NettyServer<I extends WritableComparable,
   private final ServerData<I, V, E, M> serverData;
   /** Server bootstrap */
   private ServerBootstrap bootstrap;
+  /** Byte counter for this client */
+  private final ByteCounter byteCounter = new ByteCounter();
   /** Send buffer size */
   private final int sendBufferSize;
   /** Receive buffer size */
@@ -142,8 +144,9 @@ public class NettyServer<I extends WritableComparable,
       @Override
       public ChannelPipeline getPipeline() throws Exception {
         return Channels.pipeline(
+            byteCounter,
             new LengthFieldBasedFrameDecoder(1024 * 1024 * 1024, 0, 4, 0, 4),
-            new RequestDecoder<I, V, E, M>(conf, requestRegistry),
+            new RequestDecoder<I, V, E, M>(conf, requestRegistry, byteCounter),
             new RequestServerHandler<I, V, E, M>(serverData));
       }
     });

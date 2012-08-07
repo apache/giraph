@@ -452,7 +452,7 @@ public class BspServiceWorker<I extends WritableComparable,
           vertexReader.getCurrentVertex();
       if (readerVertex.getId() == null) {
         throw new IllegalArgumentException(
-            "loadVertices: Vertex reader returned a vertex " +
+            "readVerticesFromInputSplit: Vertex reader returned a vertex " +
                 "without an id!  - " + readerVertex);
       }
       if (readerVertex.getValue() == null) {

@@ -25,6 +25,7 @@ import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferInputStream;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 
@@ -92,5 +93,12 @@ public class ResponseClientHandler extends SimpleChannelUpstreamHandler {
             currentRequestCount + ", bytes = " + buffer.capacity());
       }
     }
+  }
+
+  @Override
+  public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
+    throw new IllegalStateException("exceptionCaught: Channel failed with " +
+        "remote address " + ctx.getChannel().getRemoteAddress() + " with " +
+        "cause " + e.getCause());
   }
 }

@@ -73,6 +73,8 @@ public class NettyClient<I extends WritableComparable,
       Maps.newHashMap();
   /** Number of channels per server */
   private final int channelsPerServer;
+  /** Byte counter for this client */
+  private final ByteCounter byteCounter = new ByteCounter();
   /** Send buffer size */
   private final int sendBufferSize;
   /** Receive buffer size */
@@ -107,6 +109,7 @@ public class NettyClient<I extends WritableComparable,
       @Override
       public ChannelPipeline getPipeline() throws Exception {
         return Channels.pipeline(
+            byteCounter,
             new RequestEncoder(),
             new ResponseClientHandler(waitingRequestCount));
       }
@@ -209,6 +212,9 @@ public class NettyClient<I extends WritableComparable,
    */
   public void sendWritableRequest(InetSocketAddress remoteServer,
                                   WritableRequest<I, V, E, M> request) {
+    if (waitingRequestCount.get() == 0) {
+      byteCounter.resetAll();
+    }
     waitingRequestCount.incrementAndGet();
     Channel channel = addressChannelMap.get(remoteServer).nextChannel();
     if (channel == null) {
@@ -226,6 +232,11 @@ public class NettyClient<I extends WritableComparable,
   public void waitAllRequests() {
     synchronized (waitingRequestCount) {
       while (waitingRequestCount.get() != 0) {
+        if (LOG.isInfoEnabled()) {
+          LOG.info("waitAllRequests: Waiting interval of " +
+              WAITING_REQUEST_MSECS + " msecs and still waiting on " +
+              waitingRequestCount + " requests, " + byteCounter.getMetrics());
+        }
         try {
           waitingRequestCount.wait(WAITING_REQUEST_MSECS);
         } catch (InterruptedException e) {
@@ -234,6 +245,10 @@ public class NettyClient<I extends WritableComparable,
         // Make sure that waiting doesn't kill the job
         context.progress();
       }
+    }
+    if (LOG.isInfoEnabled()) {
+      LOG.info("waitAllRequests: Finished all requests. " +
+          byteCounter.getMetrics());
     }
   }
 

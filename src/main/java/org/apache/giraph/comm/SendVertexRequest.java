@@ -110,9 +110,11 @@ public class SendVertexRequest<I extends WritableComparable,
     Collection<Vertex<I, V, E, M>> vertexMap =
         partitionVertexMap.get(partitionId);
     if (vertexMap == null) {
-      vertexMap = partitionVertexMap.putIfAbsent(partitionId, vertices);
+      final Collection<Vertex<I, V, E, M>> tmpVertices  =
+          Lists.newArrayListWithCapacity(vertices.size());
+      vertexMap = partitionVertexMap.putIfAbsent(partitionId, tmpVertices);
       if (vertexMap == null) {
-        return;
+        vertexMap = tmpVertices;
       }
     }
     synchronized (vertexMap) {

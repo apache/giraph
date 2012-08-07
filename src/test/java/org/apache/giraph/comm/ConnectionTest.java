@@ -82,6 +82,7 @@ public class ConnectionTest {
     @SuppressWarnings("rawtypes")
     Context context = mock(Context.class);
     when(context.getConfiguration()).thenReturn(conf);
+
     ServerData<IntWritable, IntWritable, IntWritable, IntWritable> serverData =
         new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>
             (SimpleMessageStore.newFactory(

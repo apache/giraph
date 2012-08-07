@@ -48,16 +48,21 @@ public class RequestDecoder<I extends WritableComparable,
   private final Configuration conf;
   /** Registry of requests */
   private final RequestRegistry requestRegistry;
+  /** Byte counter to output */
+  private final ByteCounter byteCounter;
 
   /**
    * Constructor.
    *
    * @param conf Configuration
    * @param requestRegistry Request registry
+   * @param byteCounter Keeps track of the decoded bytes
    */
-  public RequestDecoder(Configuration conf, RequestRegistry requestRegistry) {
+  public RequestDecoder(Configuration conf, RequestRegistry requestRegistry,
+                        ByteCounter byteCounter) {
     this.conf = conf;
     this.requestRegistry = requestRegistry;
+    this.byteCounter = byteCounter;
   }
 
   @Override
@@ -65,6 +70,14 @@ public class RequestDecoder<I extends WritableComparable,
       Channel channel, Object msg) throws Exception {
     if (!(msg instanceof ChannelBuffer)) {
       throw new IllegalStateException("decode: Got illegal message " + msg);
+    }
+
+    // Output metrics every 1/2 minute
+    String metrics = byteCounter.getMetricsWindow(30000);
+    if (metrics != null) {
+      if (LOG.isInfoEnabled()) {
+        LOG.info("decode: Server window metrics " + metrics);
+      }
     }
 
     ChannelBuffer buffer = (ChannelBuffer) msg;

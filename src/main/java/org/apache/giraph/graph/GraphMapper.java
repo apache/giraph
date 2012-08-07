@@ -26,6 +26,7 @@ import org.apache.giraph.graph.partition.PartitionOwner;
 import org.apache.giraph.graph.partition.PartitionStats;
 import org.apache.giraph.utils.MemoryUtils;
 import org.apache.giraph.utils.ReflectionUtils;
+import org.apache.giraph.utils.TimedLogger;
 import org.apache.giraph.zk.ZooKeeperManager;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.filecache.DistributedCache;
@@ -589,6 +590,8 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
       }
 
       partitionStatsList.clear();
+      TimedLogger partitionLogger = new TimedLogger(15000, LOG);
+      int completedPartitions = 0;
       for (Partition<I, V, E, M> partition :
         serviceWorker.getPartitionMap().values()) {
         PartitionStats partitionStats =
@@ -633,6 +636,10 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
         }
 
         partitionStatsList.add(partitionStats);
+        ++completedPartitions;
+        partitionLogger.info("map: Completed " + completedPartitions + " of " +
+            serviceWorker.getPartitionMap().size() + " partitions " +
+            MemoryUtils.getRuntimeMemoryStats());
       }
     } while (!serviceWorker.finishSuperstep(partitionStatsList));
     if (LOG.isInfoEnabled()) {
