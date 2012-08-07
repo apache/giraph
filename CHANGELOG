@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-287: Add option to limit the number of open requests.
+  (Maja Kabiljo via jghoman)
+
   GIRAPH-262: Netty optimization to handle requests locally whenever
   possible. (aching)
 

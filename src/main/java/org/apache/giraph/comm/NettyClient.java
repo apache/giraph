@@ -57,6 +57,17 @@ public class NettyClient<I extends WritableComparable,
     M extends Writable> {
   /** Msecs to wait between waiting for all requests to finish */
   public static final int WAITING_REQUEST_MSECS = 15000;
+  /** Do we have a limit on number of open requests we can have */
+  public static final String LIMIT_NUMBER_OF_OPEN_REQUESTS =
+      "giraph.waitForRequestsConfirmation";
+  /** Default choice about having a limit on number of open requests */
+  public static final boolean LIMIT_NUMBER_OF_OPEN_REQUESTS_DEFAULT = false;
+  /** Maximum number of requests without confirmation we should have */
+  public static final String MAX_NUMBER_OF_OPEN_REQUESTS =
+      "giraph.maxNumberOfOpenRequests";
+  /** Default maximum number of requests without confirmation */
+  public static final int MAX_NUMBER_OF_OPEN_REQUESTS_DEFAULT = 10000;
+
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(NettyClient.class);
   /** Context used to report progress */
@@ -80,6 +91,11 @@ public class NettyClient<I extends WritableComparable,
   /** Receive buffer size */
   private final int receiveBufferSize;
 
+  /** Do we have a limit on number of open requests */
+  private final boolean limitNumberOfOpenRequests;
+  /** Maximum number of requests without confirmation we can have */
+  private final int maxNumberOfOpenRequests;
+
   /**
    * Only constructor
    *
@@ -95,6 +111,21 @@ public class NettyClient<I extends WritableComparable,
         GiraphJob.DEFAULT_CLIENT_SEND_BUFFER_SIZE);
     receiveBufferSize = conf.getInt(GiraphJob.CLIENT_RECEIVE_BUFFER_SIZE,
         GiraphJob.DEFAULT_CLIENT_RECEIVE_BUFFER_SIZE);
+
+    limitNumberOfOpenRequests = conf.getBoolean(
+        LIMIT_NUMBER_OF_OPEN_REQUESTS,
+        LIMIT_NUMBER_OF_OPEN_REQUESTS_DEFAULT);
+    if (limitNumberOfOpenRequests) {
+      maxNumberOfOpenRequests = conf.getInt(
+          MAX_NUMBER_OF_OPEN_REQUESTS,
+          MAX_NUMBER_OF_OPEN_REQUESTS_DEFAULT);
+      if (LOG.isInfoEnabled()) {
+        LOG.info("NettyClient: Limit number of open requests to " +
+            maxNumberOfOpenRequests);
+      }
+    } else {
+      maxNumberOfOpenRequests = -1;
+    }
 
     // Configure the client.
     bootstrap = new ClientBootstrap(
@@ -222,6 +253,10 @@ public class NettyClient<I extends WritableComparable,
           "sendWritableRequest: No channel exists for " + remoteServer);
     }
     channel.write(request);
+    if (limitNumberOfOpenRequests &&
+        waitingRequestCount.get() > maxNumberOfOpenRequests) {
+      waitSomeRequests(maxNumberOfOpenRequests);
+    }
   }
 
   /**
@@ -230,12 +265,27 @@ public class NettyClient<I extends WritableComparable,
    * @throws InterruptedException
    */
   public void waitAllRequests() {
+    waitSomeRequests(0);
+    if (LOG.isInfoEnabled()) {
+      LOG.info("waitAllRequests: Finished all requests. " +
+          byteCounter.getMetrics());
+    }
+  }
+
+  /**
+   * Ensure that at most maxOpenRequests are not complete
+   *
+   * @param maxOpenRequests Maximum number of requests which can be not
+   *                        complete
+   */
+  private void waitSomeRequests(int maxOpenRequests) {
     synchronized (waitingRequestCount) {
-      while (waitingRequestCount.get() != 0) {
+      while (waitingRequestCount.get() > maxOpenRequests) {
         if (LOG.isInfoEnabled()) {
-          LOG.info("waitAllRequests: Waiting interval of " +
-              WAITING_REQUEST_MSECS + " msecs and still waiting on " +
-              waitingRequestCount + " requests, " + byteCounter.getMetrics());
+          LOG.info("waitSomeRequests: Waiting interval of " +
+              WAITING_REQUEST_MSECS + " msecs, " + waitingRequestCount +
+              " open requests, waiting for it to be <= " + maxOpenRequests +
+              ", " + byteCounter.getMetrics());
         }
         try {
           waitingRequestCount.wait(WAITING_REQUEST_MSECS);
@@ -245,10 +295,6 @@ public class NettyClient<I extends WritableComparable,
         // Make sure that waiting doesn't kill the job
         context.progress();
       }
-    }
-    if (LOG.isInfoEnabled()) {
-      LOG.info("waitAllRequests: Finished all requests. " +
-          byteCounter.getMetrics());
     }
   }
 
