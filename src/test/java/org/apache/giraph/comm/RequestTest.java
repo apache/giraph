@@ -105,7 +105,7 @@ public class RequestTest {
     client =
         new NettyClient<IntWritable, IntWritable, IntWritable, IntWritable>
             (context);
-    client.connectAllAdddresses(Collections.singleton(server.getMyAddress()));
+    client.connectAllAddresses(Collections.singleton(server.getMyAddress()));
   }
 
   @Test

@@ -18,10 +18,10 @@
 
 package org.apache.giraph.comm;
 
+import com.google.common.collect.Maps;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
@@ -69,9 +69,10 @@ public class NettyClient<I extends WritableComparable,
    * Map of the peer connections, mapping from remote socket address to client
    * meta data
    */
-  private final Map<InetSocketAddress, Channel> addressChannelMap =
-      new HashMap<InetSocketAddress, Channel>();
-
+  private final Map<InetSocketAddress, ChannelRotater> addressChannelMap =
+      Maps.newHashMap();
+  /** Number of channels per server */
+  private final int channelsPerServer;
   /** Send buffer size */
   private final int sendBufferSize;
   /** Receive buffer size */
@@ -85,6 +86,9 @@ public class NettyClient<I extends WritableComparable,
   public NettyClient(Mapper<?, ?, ?, ?>.Context context) {
     this.context = context;
     Configuration conf = context.getConfiguration();
+    this.channelsPerServer = conf.getInt(
+        GiraphJob.CHANNELS_PER_SERVER,
+        GiraphJob.DEFAULT_CHANNELS_PER_SERVER);
     sendBufferSize = conf.getInt(GiraphJob.CLIENT_SEND_BUFFER_SIZE,
         GiraphJob.DEFAULT_CLIENT_SEND_BUFFER_SIZE);
     receiveBufferSize = conf.getInt(GiraphJob.CLIENT_RECEIVE_BUFFER_SIZE,
@@ -94,7 +98,9 @@ public class NettyClient<I extends WritableComparable,
     bootstrap = new ClientBootstrap(
         new NioClientSocketChannelFactory(
             Executors.newCachedThreadPool(),
-            Executors.newCachedThreadPool()));
+            Executors.newCachedThreadPool(),
+            conf.getInt(GiraphJob.MSG_NUM_FLUSH_THREADS,
+                NettyServer.DEFAULT_MAXIMUM_THREAD_POOL_SIZE)));
 
     // Set up the pipeline factory.
     bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
@@ -112,32 +118,52 @@ public class NettyClient<I extends WritableComparable,
    *
    * @param addresses Addresses to connect to (if haven't already connected)
    */
-  public void connectAllAdddresses(Collection<InetSocketAddress> addresses) {
+  public void connectAllAddresses(Collection<InetSocketAddress> addresses) {
     List<ChannelFuture> waitingConnectionList =
         new ArrayList<ChannelFuture>();
     for (InetSocketAddress address : addresses) {
+      if (address == null) {
+        throw new IllegalStateException("connectAllAddresses: Null address " +
+            "in addresses " + addresses);
+      }
+
       if (addressChannelMap.containsKey(address)) {
         continue;
       }
-      // Start connecting to the remote server
-      ChannelFuture connectionFuture = bootstrap.connect(address);
-      connectionFuture.getChannel().getConfig().setOption("tcpNoDelay", true);
-      connectionFuture.getChannel().getConfig().setOption("keepAlive", true);
-      connectionFuture.getChannel().getConfig().setOption("sendBufferSize",
-          sendBufferSize);
-      connectionFuture.getChannel().getConfig().setOption("receiveBufferSize",
-          receiveBufferSize);
-      addressChannelMap.put(address, connectionFuture.getChannel());
 
-      waitingConnectionList.add(connectionFuture);
+      // Start connecting to the remote server up to n time
+      ChannelRotater channelRotater = new ChannelRotater();
+      for (int i = 0; i < channelsPerServer; ++i) {
+        ChannelFuture connectionFuture = bootstrap.connect(address);
+        connectionFuture.getChannel().getConfig().setOption("tcpNoDelay", true);
+        connectionFuture.getChannel().getConfig().setOption("keepAlive", true);
+        connectionFuture.getChannel().getConfig().setOption(
+            "sendBufferSize", sendBufferSize);
+        connectionFuture.getChannel().getConfig().setOption(
+            "receiveBufferSize", receiveBufferSize);
+        channelRotater.addChannel(connectionFuture.getChannel());
+        waitingConnectionList.add(connectionFuture);
+      }
+      addressChannelMap.put(address, channelRotater);
     }
 
     // Wait for all the connections to succeed
     for (ChannelFuture waitingConnection : waitingConnectionList) {
-      waitingConnection.awaitUninterruptibly().getChannel();
+      ChannelFuture future =
+          waitingConnection.awaitUninterruptibly();
+      if (!future.isSuccess()) {
+        throw new IllegalStateException("connectAllAddresses: Future failed " +
+            "with " + future.getCause());
+      }
+      Channel channel = future.getChannel();
       if (LOG.isInfoEnabled()) {
-        LOG.info("connectAllAaddresses: Connected to " +
-            waitingConnection.getChannel().getRemoteAddress());
+        LOG.info("connectAllAddresses: Connected to " +
+            channel.getRemoteAddress());
+      }
+
+      if (channel.getRemoteAddress() == null) {
+        throw new IllegalStateException("connectAllAddresses: Null remote " +
+            "address!");
       }
     }
   }
@@ -149,23 +175,29 @@ public class NettyClient<I extends WritableComparable,
     // close connections asyncronously, in a Netty-approved
     // way, without cleaning up thread pools until all channels
     // in addressChannelMap are closed (success or failure)
-    final int done = addressChannelMap.size();
+    int channelCount = 0;
+    for (ChannelRotater channelRotater : addressChannelMap.values()) {
+      channelCount += channelRotater.getChannels().size();
+    }
+    final int done = channelCount;
     final AtomicInteger count = new AtomicInteger(0);
-    for (Channel channel : addressChannelMap.values()) {
-      ChannelFuture result = channel.close();
-      result.addListener(new ChannelFutureListener() {
-        @Override
-        public void operationComplete(ChannelFuture cf) {
-          if (count.incrementAndGet() == done) {
-            if (LOG.isInfoEnabled()) {
-              LOG.info("stop: reached wait threshold, " +
-                done + " connections closed, releasing " +
-                "NettyClient.bootstrap resources now.");
+    for (ChannelRotater channelRotater : addressChannelMap.values()) {
+      for (Channel channel : channelRotater.getChannels()) {
+        ChannelFuture result = channel.close();
+        result.addListener(new ChannelFutureListener() {
+          @Override
+          public void operationComplete(ChannelFuture cf) {
+            if (count.incrementAndGet() == done) {
+              if (LOG.isInfoEnabled()) {
+                LOG.info("stop: reached wait threshold, " +
+                    done + " connections closed, releasing " +
+                    "NettyClient.bootstrap resources now.");
+              }
+              bootstrap.releaseExternalResources();
             }
-            bootstrap.releaseExternalResources();
           }
-        }
-      });
+        });
+      }
     }
   }
 
@@ -176,9 +208,9 @@ public class NettyClient<I extends WritableComparable,
    * @param request Request to send
    */
   public void sendWritableRequest(InetSocketAddress remoteServer,
-    WritableRequest<I, V, E, M> request) {
+                                  WritableRequest<I, V, E, M> request) {
     waitingRequestCount.incrementAndGet();
-    Channel channel = addressChannelMap.get(remoteServer);
+    Channel channel = addressChannelMap.get(remoteServer).nextChannel();
     if (channel == null) {
       throw new IllegalStateException(
           "sendWritableRequest: No channel exists for " + remoteServer);
@@ -194,11 +226,6 @@ public class NettyClient<I extends WritableComparable,
   public void waitAllRequests() {
     synchronized (waitingRequestCount) {
       while (waitingRequestCount.get() != 0) {
-        if (LOG.isInfoEnabled()) {
-          LOG.info("waitAllRequests: Waiting interval of " +
-              WAITING_REQUEST_MSECS + " msecs and still waiting on " +
-              waitingRequestCount + " requests");
-        }
         try {
           waitingRequestCount.wait(WAITING_REQUEST_MSECS);
         } catch (InterruptedException e) {

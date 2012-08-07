@@ -233,6 +233,12 @@ public class GiraphJob {
   /** Default number of messages that can be bulk sent during a flush */
   public static final int DEFAULT_MAX_MESSAGES_PER_FLUSH_PUT = 2000;
 
+  /** Number of channels used per server */
+  public static final String CHANNELS_PER_SERVER =
+      "giraph.channelsPerServer";
+  /** Default number of channels used per server of 1 */
+  public static final int DEFAULT_CHANNELS_PER_SERVER = 1;
+
   /** Number of flush threads per peer */
   public static final String MSG_NUM_FLUSH_THREADS =
       "giraph.msgNumFlushThreads";

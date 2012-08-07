@@ -59,7 +59,7 @@ public class NettyServer<I extends WritableComparable,
      V extends Writable, E extends Writable,
      M extends Writable> {
   /** Default maximum thread pool size */
-  public static final int DEFAULT_MAXIMUM_THREAD_POOL_SIZE = 64;
+  public static final int DEFAULT_MAXIMUM_THREAD_POOL_SIZE = 32;
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(NettyServer.class);
   /** Configuration */
@@ -124,16 +124,12 @@ public class NettyServer<I extends WritableComparable,
     }
     maximumPoolSize = conf.getInt(GiraphJob.MSG_NUM_FLUSH_THREADS,
                                   DEFAULT_MAXIMUM_THREAD_POOL_SIZE);
-    try {
-      workerThreadPool =
-        (ThreadPoolExecutor) Executors.newCachedThreadPool(workerFactory);
-      workerThreadPool.setMaximumPoolSize(maximumPoolSize);
-    } catch (ClassCastException e) {
-      LOG.warn("Netty worker thread pool is not of type ThreadPoolExecutor", e);
-    }
+    Executors.newCachedThreadPool(workerFactory);
+
     channelFactory = new NioServerSocketChannelFactory(
         Executors.newCachedThreadPool(bossFactory),
-        workerThreadPool);
+        Executors.newCachedThreadPool(workerFactory),
+        maximumPoolSize);
   }
 
   /**
@@ -192,6 +188,9 @@ public class NettyServer<I extends WritableComparable,
         accepted.add(ch);
         tcpNoDelay = ch.getConfig().setOption("tcpNoDelay", true);
         keepAlive = ch.getConfig().setOption("keepAlive", true);
+        ch.getConfig().setOption("sendBufferSize", sendBufferSize);
+        ch.getConfig().setOption("receiveBufferSize", receiveBufferSize);
+
         break;
       } catch (ChannelException e) {
         LOG.warn("start: Likely failed to bind on attempt " +
@@ -211,7 +210,8 @@ public class NettyServer<I extends WritableComparable,
           "communication server: " + myAddress + " with up to " +
           maximumPoolSize + " threads on bind attempt " + bindAttempts +
           " with tcpNoDelay = " + tcpNoDelay + " and keepAlive = " +
-          keepAlive);
+          keepAlive + " sendBufferSize = " + sendBufferSize +
+          " receiveBufferSize = " + receiveBufferSize);
     }
   }
 

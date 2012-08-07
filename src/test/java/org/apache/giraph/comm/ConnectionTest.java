@@ -65,7 +65,7 @@ public class ConnectionTest {
     NettyClient<IntWritable, IntWritable, IntWritable, IntWritable> client =
         new NettyClient<IntWritable, IntWritable, IntWritable,
         IntWritable>(context);
-    client.connectAllAdddresses(Collections.singleton(server.getMyAddress()));
+    client.connectAllAddresses(Collections.singleton(server.getMyAddress()));
 
     client.stop();
     server.stop();
@@ -105,7 +105,7 @@ public class ConnectionTest {
         IntWritable>(context);
     List<InetSocketAddress> serverAddresses =
         new ArrayList<InetSocketAddress>();
-    client.connectAllAdddresses(serverAddresses);
+    client.connectAllAddresses(serverAddresses);
 
     client.stop();
     server1.stop();
@@ -137,15 +137,15 @@ public class ConnectionTest {
     NettyClient<IntWritable, IntWritable, IntWritable, IntWritable> client1 =
         new NettyClient<IntWritable, IntWritable, IntWritable,
         IntWritable>(context);
-    client1.connectAllAdddresses(Collections.singleton(server.getMyAddress()));
+    client1.connectAllAddresses(Collections.singleton(server.getMyAddress()));
     NettyClient<IntWritable, IntWritable, IntWritable, IntWritable> client2 =
         new NettyClient<IntWritable, IntWritable, IntWritable,
         IntWritable>(context);
-    client2.connectAllAdddresses(Collections.singleton(server.getMyAddress()));
+    client2.connectAllAddresses(Collections.singleton(server.getMyAddress()));
     NettyClient<IntWritable, IntWritable, IntWritable, IntWritable> client3 =
         new NettyClient<IntWritable, IntWritable, IntWritable,
         IntWritable>(context);
-    client3.connectAllAdddresses(Collections.singleton(server.getMyAddress()));
+    client3.connectAllAddresses(Collections.singleton(server.getMyAddress()));
 
     client1.stop();
     client2.stop();
