@@ -19,13 +19,17 @@
 package org.apache.giraph.comm;
 
 import org.apache.giraph.comm.messages.SimpleMessageStore;
+import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.utils.MockUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.mapreduce.Mapper.Context;
+import org.jboss.netty.channel.socket.DefaultSocketChannelConfig;
 import org.junit.Test;
 
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -44,10 +48,11 @@ public class ConnectionTest {
    */
   @Test
   public void connectSingleClientServer() throws IOException {
+    Configuration conf = new Configuration();
     @SuppressWarnings("rawtypes")
     Context context = mock(Context.class);
+    when(context.getConfiguration()).thenReturn(conf);
 
-    Configuration conf = new Configuration();
     ServerData<IntWritable, IntWritable, IntWritable, IntWritable> serverData =
         new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>
             (SimpleMessageStore.newFactory(
@@ -73,10 +78,10 @@ public class ConnectionTest {
    */
   @Test
   public void connectOneClientToThreeServers() throws IOException {
+    Configuration conf = new Configuration();
     @SuppressWarnings("rawtypes")
     Context context = mock(Context.class);
-
-    Configuration conf = new Configuration();
+    when(context.getConfiguration()).thenReturn(conf);
     ServerData<IntWritable, IntWritable, IntWritable, IntWritable> serverData =
         new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>
             (SimpleMessageStore.newFactory(
@@ -115,10 +120,11 @@ public class ConnectionTest {
    */
   @Test
   public void connectThreeClientsToOneServer() throws IOException {
+    Configuration conf = new Configuration();
     @SuppressWarnings("rawtypes")
     Context context = mock(Context.class);
+    when(context.getConfiguration()).thenReturn(conf);
 
-    Configuration conf = new Configuration();
     ServerData<IntWritable, IntWritable, IntWritable, IntWritable> serverData =
         new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>
             (SimpleMessageStore.newFactory(
@@ -145,5 +151,51 @@ public class ConnectionTest {
     client2.stop();
     client3.stop();
     server.stop();
+  }
+
+
+  /**
+   * Test that we can use Giraph configuration settings to
+   * modify Netty client channel configuration.
+   * TODO: add test for server-side channel configuration as well.
+   *
+   * @throws IOException
+   */
+  @Test
+  public void testClientChannelConfiguration() throws IOException {
+    Configuration conf = new Configuration();
+    @SuppressWarnings("rawtypes")
+    Context context = mock(Context.class);
+    when(context.getConfiguration()).thenReturn(conf);
+
+    ServerData<IntWritable, IntWritable, IntWritable, IntWritable> serverData =
+        new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>
+            (SimpleMessageStore.newFactory(
+                MockUtils.mockServiceGetVertexPartitionOwner(1), conf));
+
+    NettyServer<IntWritable, IntWritable, IntWritable, IntWritable> server = new NettyServer<IntWritable, IntWritable,
+        IntWritable, IntWritable>(conf, serverData);
+    server.start();
+
+    final int giraphClientSendBufferSize = context.getConfiguration().getInt(GiraphJob.CLIENT_SEND_BUFFER_SIZE,
+        GiraphJob.DEFAULT_CLIENT_SEND_BUFFER_SIZE);
+    final int giraphClientReceiveBufferSize = context.getConfiguration().getInt(GiraphJob.CLIENT_RECEIVE_BUFFER_SIZE,
+        GiraphJob.DEFAULT_CLIENT_RECEIVE_BUFFER_SIZE);
+
+    NettyClient<IntWritable, IntWritable, IntWritable, IntWritable> client =
+        new NettyClient<IntWritable, IntWritable, IntWritable,
+            IntWritable>(context);
+    client.connectAllAdddresses(Collections.singleton(server.getMyAddress()));
+
+    DefaultSocketChannelConfig clientConfig = (DefaultSocketChannelConfig)client.getChannelConfig();
+    final int channelClientSendBufferSize = clientConfig.getSendBufferSize();
+    final int channelClientReceiveBufferSize = clientConfig.getReceiveBufferSize();
+
+    assertEquals(giraphClientSendBufferSize,channelClientSendBufferSize);
+    assertEquals(giraphClientReceiveBufferSize,channelClientReceiveBufferSize);
+
+    client.stop();
+    server.stop();
+
   }
 }

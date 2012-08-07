@@ -27,12 +27,15 @@ import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.giraph.graph.GiraphJob;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelConfig;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelPipeline;
@@ -69,6 +72,11 @@ public class NettyClient<I extends WritableComparable,
   private final Map<InetSocketAddress, Channel> addressChannelMap =
       new HashMap<InetSocketAddress, Channel>();
 
+  /** Send buffer size */
+  private final int sendBufferSize;
+  /** Receive buffer size */
+  private final int receiveBufferSize;
+
   /**
    * Only constructor
    *
@@ -76,6 +84,12 @@ public class NettyClient<I extends WritableComparable,
    */
   public NettyClient(Mapper<?, ?, ?, ?>.Context context) {
     this.context = context;
+    Configuration conf = context.getConfiguration();
+    sendBufferSize = conf.getInt(GiraphJob.CLIENT_SEND_BUFFER_SIZE,
+        GiraphJob.DEFAULT_CLIENT_SEND_BUFFER_SIZE);
+    receiveBufferSize = conf.getInt(GiraphJob.CLIENT_RECEIVE_BUFFER_SIZE,
+        GiraphJob.DEFAULT_CLIENT_RECEIVE_BUFFER_SIZE);
+
     // Configure the client.
     bootstrap = new ClientBootstrap(
         new NioClientSocketChannelFactory(
@@ -109,6 +123,10 @@ public class NettyClient<I extends WritableComparable,
       ChannelFuture connectionFuture = bootstrap.connect(address);
       connectionFuture.getChannel().getConfig().setOption("tcpNoDelay", true);
       connectionFuture.getChannel().getConfig().setOption("keepAlive", true);
+      connectionFuture.getChannel().getConfig().setOption("sendBufferSize",
+          sendBufferSize);
+      connectionFuture.getChannel().getConfig().setOption("receiveBufferSize",
+          receiveBufferSize);
       addressChannelMap.put(address, connectionFuture.getChannel());
 
       waitingConnectionList.add(connectionFuture);
@@ -191,4 +209,15 @@ public class NettyClient<I extends WritableComparable,
       }
     }
   }
+
+  /**
+   * Returning configuration of the first channel.
+   * @throws ArrayIndexOutOfBoundsException if no
+   *   channels exist in the client's address => channel map.
+   * @return ChannelConfig for the first channel (if any).
+   */
+  public ChannelConfig getChannelConfig() {
+    return ((Channel) addressChannelMap.values().toArray()[0]).getConfig();
+  }
+
 }

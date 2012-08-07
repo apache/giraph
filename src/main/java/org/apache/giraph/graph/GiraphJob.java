@@ -183,6 +183,30 @@ public class GiraphJob {
   /** Default maximum number of RPC handlers */
   public static final int RPC_NUM_HANDLERS_DEFAULT = 100;
 
+  /** Client send buffer size */
+  public static final String CLIENT_SEND_BUFFER_SIZE =
+      "giraph.clientSendBufferSize";
+  /** Default client send buffer size of 0.5 MB */
+  public static final int DEFAULT_CLIENT_SEND_BUFFER_SIZE = 512 * 1024;
+
+  /** Client receive buffer size */
+  public static final String CLIENT_RECEIVE_BUFFER_SIZE =
+      "giraph.clientReceiveBufferSize";
+  /** Default client receive buffer size of 32 k */
+  public static final int DEFAULT_CLIENT_RECEIVE_BUFFER_SIZE = 32 * 1024;
+
+  /** Server send buffer size */
+  public static final String SERVER_SEND_BUFFER_SIZE =
+      "giraph.serverSendBufferSize";
+  /** Default server send buffer size of 32 k */
+  public static final int DEFAULT_SERVER_SEND_BUFFER_SIZE = 32 * 1024;
+
+  /** Server receive buffer size */
+  public static final String SERVER_RECEIVE_BUFFER_SIZE =
+      "giraph.serverReceiveBufferSize";
+  /** Default server receive buffer size of 0.5 MB */
+  public static final int DEFAULT_SERVER_RECEIVE_BUFFER_SIZE = 512 * 1024;
+
   /**
    *  Maximum number of vertices per partition before sending.
    *  (input superstep only).

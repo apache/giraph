@@ -82,6 +82,10 @@ public class NettyServer<I extends WritableComparable,
   private final ServerData<I, V, E, M> serverData;
   /** Server bootstrap */
   private ServerBootstrap bootstrap;
+  /** Send buffer size */
+  private final int sendBufferSize;
+  /** Receive buffer size */
+  private final int receiveBufferSize;
 
   /**
    * Constructor for creating the server
@@ -101,6 +105,11 @@ public class NettyServer<I extends WritableComparable,
     requestRegistry.registerClass(
         new SendPartitionCurrentMessagesRequest<I, V, E, M>());
     requestRegistry.shutdown();
+
+    sendBufferSize = conf.getInt(GiraphJob.SERVER_SEND_BUFFER_SIZE,
+        GiraphJob.DEFAULT_SERVER_SEND_BUFFER_SIZE);
+    receiveBufferSize = conf.getInt(GiraphJob.SERVER_RECEIVE_BUFFER_SIZE,
+        GiraphJob.DEFAULT_SERVER_RECEIVE_BUFFER_SIZE);
 
     ThreadFactory bossFactory = new ThreadFactoryBuilder()
       .setNameFormat("Giraph Netty Boss #%d")

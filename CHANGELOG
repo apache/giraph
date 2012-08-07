@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-281: Add options to control Netty's per-channel receive and
+  send buffer sizes (ekoontz via aching).
+
   GIRAPH-228: SimpleTriangleClosingVertex should not use ArrayWritable
   for a vertex value. (Eli Reisman via jghoman)
 

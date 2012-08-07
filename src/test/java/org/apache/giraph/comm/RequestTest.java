@@ -36,6 +36,7 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -76,9 +77,6 @@ public class RequestTest {
 
   @Before
   public void setUp() throws IOException {
-    @SuppressWarnings("rawtypes")
-    Context context = mock(Context.class);
-
     // Setup the conf
     conf = new Configuration();
     conf.setClass(GiraphJob.VERTEX_CLASS, TestVertex.class, Vertex.class);
@@ -90,6 +88,10 @@ public class RequestTest {
         IntWritable.class, Writable.class);
     conf.setClass(GiraphJob.MESSAGE_VALUE_CLASS,
         IntWritable.class, Writable.class);
+
+    @SuppressWarnings("rawtypes")
+    Context context = mock(Context.class);
+    when(context.getConfiguration()).thenReturn(conf);
 
     // Start the service
     serverData =
