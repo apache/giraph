@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-276: Fix broken tests in pseudo-distributed mode.
+  (Alessandro Presta via jghoman)
+
   GIRAPH-281: Add options to control Netty's per-channel receive and
   send buffer sizes (ekoontz via aching).
 

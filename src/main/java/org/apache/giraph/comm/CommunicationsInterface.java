@@ -18,7 +18,6 @@
 
 package org.apache.giraph.comm;
 
-import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.Vertex;
 /*if[HADOOP_NON_SECURE]
  else[HADOOP_NON_SECURE]*/
@@ -94,11 +93,13 @@ public interface CommunicationsInterface<I extends WritableComparable,
   /**
    * Add an edge to a remote vertex
    *
-   * @param vertexIndex Vertex index where the edge is added
-   * @param edge Edge to be added
+   * @param sourceVertexId Source vertex id
+   * @param targetVertexId Target vertex id
+   * @param edgeValue Edge value
    * @throws IOException
    */
-  void addEdge(I vertexIndex, Edge<I, E> edge) throws IOException;
+  void addEdge(I sourceVertexId, I targetVertexId,
+               E edgeValue) throws IOException;
 
   /**
    * Remove an edge on a remote vertex

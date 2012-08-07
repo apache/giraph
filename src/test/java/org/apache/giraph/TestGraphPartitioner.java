@@ -47,7 +47,8 @@ public class TestGraphPartitioner extends BspCase {
 
     private void verifyOutput(FileSystem fs, Path outputPath)
         throws IOException {
-      final int correctLen = 123;
+      // TODO: this is fragile (breaks with legit serialization changes)
+      final int correctLen = 120;
       if (runningInDistributedMode()) {
         FileStatus [] fileStatusArr = fs.listStatus(outputPath);
         int totalLen = 0;
