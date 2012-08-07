@@ -56,9 +56,10 @@ public class NettyWorkerClientServer<I extends WritableComparable,
    */
   public NettyWorkerClientServer(Mapper<?, ?, ?, ?>.Context context,
       CentralizedServiceWorker<I, V, E, M> service) {
-    client = new NettyWorkerClient<I, V, E, M>(context, service);
     server = new NettyWorkerServer<I, V, E, M>(context.getConfiguration(),
-                                               service);
+        service);
+    client = new NettyWorkerClient<I, V, E, M>(context, service,
+       ((NettyWorkerServer<I, V, E, M>) server).getServerData());
   }
 
   @Override

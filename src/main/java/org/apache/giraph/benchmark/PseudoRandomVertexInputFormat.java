@@ -159,7 +159,8 @@ public class PseudoRandomVertexInputFormat<M extends Writable> extends
       // same.
       Random rand = new Random(vertexId);
       DoubleWritable vertexValue = new DoubleWritable(rand.nextDouble());
-      Map<LongWritable, DoubleWritable> edges = Maps.newHashMap();
+      Map<LongWritable, DoubleWritable> edges =
+          Maps.newHashMapWithExpectedSize((int) edgesPerVertex);
       for (long i = 0; i < edgesPerVertex; ++i) {
         LongWritable destVertexId = null;
         do {

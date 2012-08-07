@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-262: Netty optimization to handle requests locally whenever
+  possible. (aching)
+
   GIRAPH-288: Bandwidth tracking - subset of GIRAPH-262. (aching)
 
   GIRAPH-289: Add thread and channel pooling to NettyClient and
