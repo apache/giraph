@@ -159,6 +159,14 @@ under the License.
       <organization>Trend Micro</organization>
       <organizationUrl>http://www.trendmicro.com</organizationUrl>
     </developer>
+    <developer>
+      <id>apresta</id>
+      <name>Alessandro Presta</name>
+      <email>apresta@apache.org</email>
+      <timezone>-8</timezone>
+      <organization>Facebook</organization>
+      <organizationUrl>http://www.facebook.com</organizationUrl>
+    </developer>
   </developers>
 
   <properties>
