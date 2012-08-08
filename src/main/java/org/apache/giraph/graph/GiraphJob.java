@@ -207,15 +207,6 @@ public class GiraphJob {
   /** Default server receive buffer size of 0.5 MB */
   public static final int DEFAULT_SERVER_RECEIVE_BUFFER_SIZE = 512 * 1024;
 
-  /**
-   *  Maximum number of vertices per partition before sending.
-   *  (input superstep only).
-   */
-  public static final String MAX_VERTICES_PER_PARTITION =
-      "giraph.maxVerticesPerPartition";
-  /** Default maximum number of vertices per partition before sending. */
-  public static final int MAX_VERTICES_PER_PARTITION_DEFAULT = 10000;
-
   /** Maximum number of messages per peer before flush */
   public static final String MSG_SIZE = "giraph.msgSize";
   /** Default maximum number of messages per peer before flush */

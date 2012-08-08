@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-256: Partitioning outgoing graph data during INPUT_SUPERSTEP by # of 
+  vertices results in wide variance in RPC message sizes. (Eli Reisman via jghoman)
+  
   GIRAPH-290: Add committer information for Alessandro Presta to pom.xml
   (apresta)
 

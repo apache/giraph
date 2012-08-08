@@ -108,8 +108,11 @@ public class BspServiceWorker<I extends WritableComparable,
       new HashMap<Integer, Partition<I, V, E, M>>();
   /** Have the partition exchange children (workers) changed? */
   private final BspEvent partitionExchangeChildrenChanged;
-  /** Max vertices per partition before sending */
-  private final int maxVerticesPerPartition;
+  /** Regulates the size of outgoing Collections of vertices read
+   * by the local worker during INPUT_SUPERSTEP that are to be
+   * transfered from <code>inputSplitCache</code> to the owner
+   * of their initial, master-assigned Partition.*/
+  private GiraphTransferRegulator transferRegulator;
   /** Worker Context */
   private final WorkerContext workerContext;
   /** Total vertices loaded */
@@ -141,10 +144,8 @@ public class BspServiceWorker<I extends WritableComparable,
     super(serverPortList, sessionMsecTimeout, context, graphMapper);
     partitionExchangeChildrenChanged = new PredicateLock(context);
     registerBspEvent(partitionExchangeChildrenChanged);
-    maxVerticesPerPartition =
-        getConfiguration().getInt(
-            GiraphJob.MAX_VERTICES_PER_PARTITION,
-            GiraphJob.MAX_VERTICES_PER_PARTITION_DEFAULT);
+    transferRegulator =
+        new GiraphTransferRegulator(getConfiguration());
     inputSplitMaxVertices =
         getConfiguration().getLong(
             GiraphJob.INPUT_SPLIT_MAX_VERTICES,
@@ -160,8 +161,11 @@ public class BspServiceWorker<I extends WritableComparable,
           new RPCCommunications<I, V, E, M>(context, this, graphState);
     }
     if (LOG.isInfoEnabled()) {
-      LOG.info("BspServiceWorker: maxVerticesPerPartition = " +
-          maxVerticesPerPartition + " useNetty = " + useNetty);
+      LOG.info("BspServiceWorker: maxVerticesPerTransfer = " +
+          transferRegulator.getMaxVerticesPerTransfer());
+      LOG.info("BspServiceWorker: maxEdgesPerTransfer = " +
+          transferRegulator.getMaxEdgesPerTransfer() +
+          " useNetty = " + useNetty);
     }
 
     workerInfo = new WorkerInfo(
@@ -280,6 +284,7 @@ public class BspServiceWorker<I extends WritableComparable,
             " InputSplits are finished.");
       }
       if (finishedInputSplits == inputSplitPathList.size()) {
+        transferRegulator = null; // don't need this anymore
         return null;
       }
       // Wait for either a reservation to go away or a notification that
@@ -445,8 +450,7 @@ public class BspServiceWorker<I extends WritableComparable,
     VertexReader<I, V, E, M> vertexReader =
         vertexInputFormat.createVertexReader(inputSplit, getContext());
     vertexReader.initialize(inputSplit, getContext());
-    long vertexCount = 0;
-    long edgeCount = 0;
+    transferRegulator.clearCounters();
     while (vertexReader.nextVertex()) {
       Vertex<I, V, E, M> readerVertex =
           vertexReader.getCurrentVertex();
@@ -476,17 +480,16 @@ public class BspServiceWorker<I extends WritableComparable,
         LOG.warn("readVertices: Replacing vertex " + oldVertex +
             " with " + readerVertex);
       }
-      if (partition.getVertices().size() >= maxVerticesPerPartition) {
+      getContext().progress(); // do this before potential data transfer
+      transferRegulator.incrementCounters(partitionOwner, readerVertex);
+      if (transferRegulator.transferThisPartition(partitionOwner)) {
         commService.sendPartitionRequest(partitionOwner.getWorkerInfo(),
             partition);
         partition.getVertices().clear();
       }
-      ++vertexCount;
-      edgeCount += readerVertex.getNumEdges();
-      getContext().progress();
-
       ++totalVerticesLoaded;
       totalEdgesLoaded += readerVertex.getNumEdges();
+
       // Update status every half a million vertices
       if ((totalVerticesLoaded % 500000) == 0) {
         String status = "readVerticesFromInputSplit: Loaded " +
@@ -504,19 +507,21 @@ public class BspServiceWorker<I extends WritableComparable,
 
       // For sampling, or to limit outlier input splits, the number of
       // records per input split can be limited
-      if ((inputSplitMaxVertices > 0) &&
-          (vertexCount >= inputSplitMaxVertices)) {
+      if (inputSplitMaxVertices > 0 &&
+        transferRegulator.getTotalVertices() >=
+        inputSplitMaxVertices) {
         if (LOG.isInfoEnabled()) {
           LOG.info("readVerticesFromInputSplit: Leaving the input " +
               "split early, reached maximum vertices " +
-              vertexCount);
+              transferRegulator.getTotalVertices());
         }
         break;
       }
     }
     vertexReader.close();
 
-    return new VertexEdgeCount(vertexCount, edgeCount);
+    return new VertexEdgeCount(transferRegulator.getTotalVertices(),
+      transferRegulator.getTotalEdges());
   }
 
   @Override

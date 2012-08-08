@@ -18,6 +18,7 @@
 package org.apache.giraph.graph;
 
 import org.apache.giraph.utils.WritableUtils;
+import org.apache.giraph.graph.partition.PartitionOwner;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
@@ -32,9 +33,13 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertFalse;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.List;
@@ -153,6 +158,26 @@ public class TestEdgeListVertex {
     assertEquals(vertex.getNumEdges(), 1);
     assertNotNull(vertex.removeEdge(new IntWritable(4)));
     assertEquals(vertex.getNumEdges(), 0);
+  }
+
+  @Test
+  public void testGiraphTransferRegulator() {
+     job.getConfiguration()
+       .setInt(GiraphTransferRegulator.MAX_VERTICES_PER_TRANSFER, 1);
+     job.getConfiguration()
+       .setInt(GiraphTransferRegulator.MAX_EDGES_PER_TRANSFER, 3);
+     Map<IntWritable, DoubleWritable> edgeMap = Maps.newHashMap();
+     edgeMap.put(new IntWritable(2), new DoubleWritable(22));
+     edgeMap.put(new IntWritable(3), new DoubleWritable(33));
+     edgeMap.put(new IntWritable(4), new DoubleWritable(44));
+     vertex.initialize(null, null, edgeMap, null);
+     GiraphTransferRegulator gtr =
+       new GiraphTransferRegulator(job.getConfiguration());
+     PartitionOwner owner = mock(PartitionOwner.class);
+     when(owner.getPartitionId()).thenReturn(57);
+     assertFalse(gtr.transferThisPartition(owner));
+     gtr.incrementCounters(owner, vertex);
+     assertTrue(gtr.transferThisPartition(owner));
   }
 
   @Test
