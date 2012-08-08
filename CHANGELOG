@@ -2,6 +2,8 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-286. Remove DISCLAIMER from source tree. (jghoman)
+
   GIRAPH-287: Add option to limit the number of open requests.
   (Maja Kabiljo via jghoman)
 
