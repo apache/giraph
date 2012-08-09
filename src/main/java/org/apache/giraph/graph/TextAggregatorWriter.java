@@ -19,7 +19,6 @@
 package org.apache.giraph.graph;
 
 import java.io.IOException;
-import java.util.Map;
 import java.util.Map.Entry;
 
 import com.google.common.base.Charsets;
@@ -77,13 +76,13 @@ public class TextAggregatorWriter implements AggregatorWriter {
   }
 
   @Override
-  public final void writeAggregator(
-      Map<String, Aggregator<Writable>> aggregators,
+  public void writeAggregator(
+      Iterable<Entry<String, Writable>> aggregatorMap,
       long superstep) throws IOException {
     if (shouldWrite(superstep)) {
-      for (Entry<String, Aggregator<Writable>> a: aggregators.entrySet()) {
-        byte[] bytes = aggregatorToString(a.getKey(), a.getValue(), superstep)
-            .getBytes(Charsets.UTF_8);
+      for (Entry<String, Writable> entry : aggregatorMap) {
+        byte[] bytes = aggregatorToString(entry.getKey(), entry.getValue(),
+            superstep).getBytes(Charsets.UTF_8);
         output.write(bytes, 0, bytes.length);
       }
       output.flush();
@@ -95,17 +94,15 @@ public class TextAggregatorWriter implements AggregatorWriter {
    * Override this if you want to implement your own text format.
    *
    * @param aggregatorName Name of the aggregator
-   * @param a Aggregator
+   * @param value Value of aggregator
    * @param superstep Current superstep
    * @return The String representation for the aggregator
    */
   protected String aggregatorToString(String aggregatorName,
-      Aggregator<Writable> a,
+      Writable value,
       long superstep) {
-
     return new StringBuilder("superstep=").append(superstep).append("\t")
-        .append(aggregatorName).append("=").append(a.getAggregatedValue())
-        .append("\t").append(a.getClass().getCanonicalName()).append("\n")
+        .append(aggregatorName).append("=").append(value).append("\n")
         .toString();
   }
 

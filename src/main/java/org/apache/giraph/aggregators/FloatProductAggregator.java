@@ -20,51 +20,17 @@ package org.apache.giraph.aggregators;
 
 import org.apache.hadoop.io.FloatWritable;
 
-import org.apache.giraph.graph.Aggregator;
-
 /**
  * Aggregator for calculating products of float values.
  */
-public class FloatProductAggregator implements Aggregator<FloatWritable> {
-  /** Aggregated product */
-  private float product = 1.0f;
-
-  /**
-   * Aggregate a primitive float.
-   *
-   * @param value Float value to aggregate.
-   */
-  public void aggregate(float value) {
-    product *= value;
-  }
-
+public class FloatProductAggregator extends BasicAggregator<FloatWritable> {
   @Override
   public void aggregate(FloatWritable value) {
-    product *= value.get();
-  }
-
-  /**
-   * Set aggregated value using a primitive float.
-   *
-   * @param value Float value to set.
-   */
-  public void setAggregatedValue(float value) {
-    product = value;
+    getAggregatedValue().set(getAggregatedValue().get() * value.get());
   }
 
   @Override
-  public void setAggregatedValue(FloatWritable value) {
-    product = value.get();
+  public FloatWritable createInitialValue() {
+    return new FloatWritable(1);
   }
-
-  @Override
-  public FloatWritable getAggregatedValue() {
-    return new FloatWritable(product);
-  }
-
-  @Override
-  public FloatWritable createAggregatedValue() {
-    return new FloatWritable();
-  }
-
 }

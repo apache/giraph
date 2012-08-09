@@ -20,50 +20,17 @@ package org.apache.giraph.aggregators;
 
 import org.apache.hadoop.io.IntWritable;
 
-import org.apache.giraph.graph.Aggregator;
-
 /**
  * Aggregator for summing up integer values.
  */
-public class IntSumAggregator implements Aggregator<IntWritable> {
-  /** Internal sum */
-  private int sum = 0;
-
-  /**
-   * Aggregate a primitive integer.
-   *
-   * @param value Integer value to aggregate.
-   */
-  public void aggregate(int value) {
-    sum += value;
-  }
-
+public class IntSumAggregator extends BasicAggregator<IntWritable> {
   @Override
   public void aggregate(IntWritable value) {
-    sum += value.get();
-  }
-
-  /**
-   * Set aggregated value using a primitive integer.
-   *
-   * @param value Integer value to set.
-   */
-  public void setAggregatedValue(int value) {
-    sum = value;
+    getAggregatedValue().set(getAggregatedValue().get() + value.get());
   }
 
   @Override
-  public void setAggregatedValue(IntWritable value) {
-    sum = value.get();
-  }
-
-  @Override
-  public IntWritable getAggregatedValue() {
-    return new IntWritable(sum);
-  }
-
-  @Override
-  public IntWritable createAggregatedValue() {
-    return new IntWritable();
+  public IntWritable createInitialValue() {
+    return new IntWritable(0);
   }
 }

@@ -111,19 +111,21 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
   }
 
   /**
-   * Get the aggregator usage, a subset of the functionality
+   * Get worker aggregator usage, a subset of the functionality
    *
-   * @return Aggregator usage interface
+   * @return Worker aggregator usage interface
    */
-  public final AggregatorUsage getAggregatorUsage() {
-    AggregatorUsage result = null;
-    if (serviceWorker != null) {
-      result = serviceWorker;
-    }
-    if (serviceMaster != null) {
-      result = serviceMaster;
-    }
-    return result;
+  public final WorkerAggregatorUsage getWorkerAggregatorUsage() {
+    return serviceWorker;
+  }
+
+  /**
+   * Get master aggregator usage, a subset of the functionality
+   *
+   * @return Master aggregator usage interface
+   */
+  public final MasterAggregatorUsage getMasterAggregatorUsage() {
+    return serviceMaster;
   }
 
   public final WorkerContext getWorkerContext() {

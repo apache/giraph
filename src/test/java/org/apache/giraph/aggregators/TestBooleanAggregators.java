@@ -29,13 +29,13 @@ public class TestBooleanAggregators {
   public void testAndAggregator() {
     BooleanAndAggregator and = new BooleanAndAggregator();
     assertEquals(true, and.getAggregatedValue().get());
-    and.aggregate(true);
+    and.aggregate(new BooleanWritable(true));
     assertEquals(true, and.getAggregatedValue().get());
     and.aggregate(new BooleanWritable(false));
     assertEquals(false, and.getAggregatedValue().get());
-    and.setAggregatedValue(true);
+    and.setAggregatedValue(new BooleanWritable(true));
     assertEquals(true, and.getAggregatedValue().get());
-    BooleanWritable bw = and.createAggregatedValue();
+    BooleanWritable bw = and.createInitialValue();
     assertNotNull(bw);
   }
 
@@ -43,26 +43,26 @@ public class TestBooleanAggregators {
   public void testOrAggregator() {
     BooleanOrAggregator or = new BooleanOrAggregator();
     assertEquals(false, or.getAggregatedValue().get());
-    or.aggregate(false);
+    or.aggregate(new BooleanWritable(false));
     assertEquals(false, or.getAggregatedValue().get());
     or.aggregate(new BooleanWritable(true));
     assertEquals(true, or.getAggregatedValue().get());
-    or.setAggregatedValue(false);
+    or.setAggregatedValue(new BooleanWritable(false));
     assertEquals(false, or.getAggregatedValue().get());
-    BooleanWritable bw = or.createAggregatedValue();
+    BooleanWritable bw = or.createInitialValue();
     assertNotNull(bw);
   }
 
   @Test
   public void testOverwriteAggregator() {
     BooleanOverwriteAggregator overwrite = new BooleanOverwriteAggregator();
-    overwrite.aggregate(true);
+    overwrite.aggregate(new BooleanWritable(true));
     assertEquals(true, overwrite.getAggregatedValue().get());
     overwrite.aggregate(new BooleanWritable(false));
     assertEquals(false, overwrite.getAggregatedValue().get());
-    overwrite.setAggregatedValue(true);
+    overwrite.setAggregatedValue(new BooleanWritable(true));
     assertEquals(true, overwrite.getAggregatedValue().get());
-    BooleanWritable bw = overwrite.createAggregatedValue();
+    BooleanWritable bw = overwrite.createInitialValue();
     assertNotNull(bw);
   }
 

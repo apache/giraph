@@ -28,61 +28,61 @@ public class TestDoubleAggregators {
   @Test
   public void testMaxAggregator() {
     DoubleMaxAggregator max = new DoubleMaxAggregator();
-    max.aggregate(2.0);
+    max.aggregate(new DoubleWritable(2.0));
     max.aggregate(new DoubleWritable(3.0));
     assertEquals(3.0, max.getAggregatedValue().get());
-    max.setAggregatedValue(1.0);
+    max.setAggregatedValue(new DoubleWritable(1.0));
     assertEquals(1.0, max.getAggregatedValue().get());
-    DoubleWritable dw = max.createAggregatedValue();
+    DoubleWritable dw = max.createInitialValue();
     assertNotNull(dw);
   }
 
   @Test
   public void testMinAggregator() {
     DoubleMinAggregator min = new DoubleMinAggregator();
-    min.aggregate(3.0);
+    min.aggregate(new DoubleWritable(3.0));
     min.aggregate(new DoubleWritable(2.0));
     assertEquals(2.0, min.getAggregatedValue().get());
-    min.setAggregatedValue(3.0);
+    min.setAggregatedValue(new DoubleWritable(3.0));
     assertEquals(3.0, min.getAggregatedValue().get());
-    DoubleWritable dw = min.createAggregatedValue();
+    DoubleWritable dw = min.createInitialValue();
     assertNotNull(dw);
   }
 
   @Test
   public void testOverwriteAggregator() {
     DoubleOverwriteAggregator overwrite = new DoubleOverwriteAggregator();
-    overwrite.aggregate(1.0);
+    overwrite.aggregate(new DoubleWritable(1.0));
     assertEquals(1.0, overwrite.getAggregatedValue().get());
     overwrite.aggregate(new DoubleWritable(2.0));
     assertEquals(2.0, overwrite.getAggregatedValue().get());
-    overwrite.setAggregatedValue(3.0);
+    overwrite.setAggregatedValue(new DoubleWritable(3.0));
     assertEquals(3.0, overwrite.getAggregatedValue().get());
-    DoubleWritable dw = overwrite.createAggregatedValue();
+    DoubleWritable dw = overwrite.createInitialValue();
     assertNotNull(dw);
   }
-  
+
   @Test
   public void testProductAggregator() {
     DoubleProductAggregator product = new DoubleProductAggregator();
-    product.aggregate(6.0);
+    product.aggregate(new DoubleWritable(6.0));
     product.aggregate(new DoubleWritable(7.0));
     assertEquals(42.0, product.getAggregatedValue().get());
-    product.setAggregatedValue(1.0);
+    product.setAggregatedValue(new DoubleWritable(1.0));
     assertEquals(1.0, product.getAggregatedValue().get());
-    DoubleWritable dw = product.createAggregatedValue();
+    DoubleWritable dw = product.createInitialValue();
     assertNotNull(dw);
   }
 
   @Test
   public void testSumAggregator() {
     DoubleSumAggregator sum = new DoubleSumAggregator();
-    sum.aggregate(1.0);
+    sum.aggregate(new DoubleWritable(1.0));
     sum.aggregate(new DoubleWritable(2.0));
     assertEquals(3.0, sum.getAggregatedValue().get());
-    sum.setAggregatedValue(4.0);
+    sum.setAggregatedValue(new DoubleWritable(4.0));
     assertEquals(4.0, sum.getAggregatedValue().get());
-    DoubleWritable dw = sum.createAggregatedValue();
+    DoubleWritable dw = sum.createInitialValue();
     assertNotNull(dw);
   }
 

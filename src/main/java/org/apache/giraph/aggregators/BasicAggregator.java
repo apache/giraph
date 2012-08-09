@@ -18,22 +18,41 @@
 
 package org.apache.giraph.aggregators;
 
-import org.apache.hadoop.io.FloatWritable;
+import org.apache.giraph.graph.Aggregator;
+import org.apache.hadoop.io.Writable;
 
 /**
- * Aggregator that stores a value that is overwritten once another value is
- * aggregated. This aggregator is useful for one-to-many communication from
- * master.compute() or from a special vertex. In case multiple vertices write
- * to this aggregator, its behavior is non-deterministic.
+ * Abstract class for {@link Aggregator}.
+ * Implements get value, set value and reset methods and has internal value
+ * object.
+ *
+ * @param <A> Aggregated value
  */
-public class FloatOverwriteAggregator extends BasicAggregator<FloatWritable> {
-  @Override
-  public void aggregate(FloatWritable value) {
-    getAggregatedValue().set(value.get());
+public abstract class BasicAggregator<A extends Writable> implements
+    Aggregator<A> {
+  /** Internal value */
+  private A value;
+
+  /**
+   * Default constructor.
+   * Creates new value object and resets the aggregator
+   */
+  public BasicAggregator() {
+    value = createInitialValue();
   }
 
   @Override
-  public FloatWritable createInitialValue() {
-    return new FloatWritable(0);
+  public A getAggregatedValue() {
+    return value;
+  }
+
+  @Override
+  public void setAggregatedValue(A value) {
+    this.value = value;
+  }
+
+  @Override
+  public void reset() {
+    value = createInitialValue();
   }
 }

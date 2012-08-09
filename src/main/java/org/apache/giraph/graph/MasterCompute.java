@@ -40,7 +40,7 @@ import org.apache.hadoop.mapreduce.Mapper;
  * not have to be called.
  */
 @SuppressWarnings("rawtypes")
-public abstract class MasterCompute implements AggregatorUsage, Writable,
+public abstract class MasterCompute implements MasterAggregatorUsage, Writable,
     Configurable {
   /** If true, do not do anymore computation on this vertex. */
   private boolean halt = false;
@@ -135,23 +135,32 @@ public abstract class MasterCompute implements AggregatorUsage, Writable,
   }
 
   @Override
-  public final <A extends Writable> Aggregator<A> registerAggregator(
+  public final <A extends Writable> boolean registerAggregator(
     String name, Class<? extends Aggregator<A>> aggregatorClass)
     throws InstantiationException, IllegalAccessException {
-    return getGraphState().getGraphMapper().getAggregatorUsage().
+    return getGraphState().getGraphMapper().getMasterAggregatorUsage().
         registerAggregator(name, aggregatorClass);
   }
 
   @Override
-  public final Aggregator<? extends Writable> getAggregator(String name) {
-    return getGraphState().getGraphMapper().getAggregatorUsage().
-      getAggregator(name);
+  public final <A extends Writable> boolean registerPersistentAggregator(
+      String name,
+      Class<? extends Aggregator<A>> aggregatorClass) throws
+      InstantiationException, IllegalAccessException {
+    return getGraphState().getGraphMapper().getMasterAggregatorUsage().
+        registerPersistentAggregator(name, aggregatorClass);
   }
 
   @Override
-  public final boolean useAggregator(String name) {
-    return getGraphState().getGraphMapper().getAggregatorUsage().
-      useAggregator(name);
+  public <A extends Writable> A getAggregatedValue(String name) {
+    return getGraphState().getGraphMapper().getMasterAggregatorUsage().
+        getAggregatedValue(name);
+  }
+
+  @Override
+  public <A extends Writable> void setAggregatedValue(String name, A value) {
+    getGraphState().getGraphMapper().getMasterAggregatorUsage().
+        setAggregatedValue(name, value);
   }
 
   @Override

@@ -20,51 +20,18 @@ package org.apache.giraph.aggregators;
 
 import org.apache.hadoop.io.BooleanWritable;
 
-import org.apache.giraph.graph.Aggregator;
-
 /**
  * Aggregator for calculating the OR function over boolean values.
  * The default value when nothing is aggregated is false.
  */
-public class BooleanOrAggregator implements Aggregator<BooleanWritable> {
-  /** Internal result */
-  private boolean result = false;
-
-  /**
-   * Aggregate with a primitive boolean.
-   *
-   * @param value Boolean value to aggregate.
-   */
-  public void aggregate(boolean value) {
-    result = result || value;
-  }
-
+public class BooleanOrAggregator extends BasicAggregator<BooleanWritable> {
   @Override
   public void aggregate(BooleanWritable value) {
-    result = result || value.get();
-  }
-
-  /**
-   * Set aggregated value using a primitive boolean.
-   *
-   * @param value Boolean value to set.
-   */
-  public void setAggregatedValue(boolean value) {
-    result = value;
+    getAggregatedValue().set(getAggregatedValue().get() || value.get());
   }
 
   @Override
-  public void setAggregatedValue(BooleanWritable value) {
-    result = value.get();
-  }
-
-  @Override
-  public BooleanWritable getAggregatedValue() {
-    return new BooleanWritable(result);
-  }
-
-  @Override
-  public BooleanWritable createAggregatedValue() {
-    return new BooleanWritable();
+  public BooleanWritable createInitialValue() {
+    return new BooleanWritable(false);
   }
 }

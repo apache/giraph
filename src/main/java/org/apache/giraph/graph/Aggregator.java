@@ -36,12 +36,12 @@ public interface Aggregator<A extends Writable> {
   void aggregate(A value);
 
   /**
-   * Set aggregated value.
-   * Can be used for initialization or reset.
+   * Return new aggregated value which is neutral to aggregate operation.
+   * Must be changeable without affecting internals of Aggregator
    *
-   * @param value Value to be set.
+   * @return Neutral value
    */
-  void setAggregatedValue(A value);
+  A createInitialValue();
 
   /**
    * Return current aggregated value.
@@ -53,10 +53,15 @@ public interface Aggregator<A extends Writable> {
   A getAggregatedValue();
 
   /**
-   * Return new aggregated value.
-   * Must be changeable without affecting internals of Aggregator
+   * Set aggregated value.
+   * Can be used for initialization or reset.
    *
-   * @return Writable
+   * @param value Value to be set.
    */
-  A createAggregatedValue();
+  void setAggregatedValue(A value);
+
+  /**
+   * Reset the value of aggregator to neutral value
+   */
+  void reset();
 }

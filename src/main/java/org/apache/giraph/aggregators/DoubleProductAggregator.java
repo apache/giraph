@@ -20,51 +20,17 @@ package org.apache.giraph.aggregators;
 
 import org.apache.hadoop.io.DoubleWritable;
 
-import org.apache.giraph.graph.Aggregator;
-
 /**
  * Aggregator for calculating products of double values.
  */
-public class DoubleProductAggregator implements Aggregator<DoubleWritable> {
-  /** Aggregated product */
-  private double product = 1.0;
-
-  /**
-   * Aggregate a primitive double.
-   *
-   * @param value Double value to aggregate.
-   */
-  public void aggregate(double value) {
-    product *= value;
-  }
-
+public class DoubleProductAggregator extends BasicAggregator<DoubleWritable> {
   @Override
   public void aggregate(DoubleWritable value) {
-    product *= value.get();
-  }
-
-  /**
-   * Set aggregated value using a primitive double.
-   *
-   * @param value Double value to set.
-   */
-  public void setAggregatedValue(double value) {
-    product = value;
+    getAggregatedValue().set(getAggregatedValue().get() * value.get());
   }
 
   @Override
-  public void setAggregatedValue(DoubleWritable value) {
-    product = value.get();
+  public DoubleWritable createInitialValue() {
+    return new DoubleWritable(1);
   }
-
-  @Override
-  public DoubleWritable getAggregatedValue() {
-    return new DoubleWritable(product);
-  }
-
-  @Override
-  public DoubleWritable createAggregatedValue() {
-    return new DoubleWritable();
-  }
-
 }

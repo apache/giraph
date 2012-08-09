@@ -28,61 +28,61 @@ public class TestLongAggregators {
   @Test
   public void testMaxAggregator() {
     LongMaxAggregator max = new LongMaxAggregator();
-    max.aggregate(2L);
+    max.aggregate(new LongWritable(2L));
     max.aggregate(new LongWritable(3L));
     assertEquals(3L, max.getAggregatedValue().get());
-    max.setAggregatedValue(1L);
+    max.setAggregatedValue(new LongWritable(1L));
     assertEquals(1L, max.getAggregatedValue().get());
-    LongWritable lw = max.createAggregatedValue();
+    LongWritable lw = max.createInitialValue();
     assertNotNull(lw);
   }
 
   @Test
   public void testMinAggregator() {
     LongMinAggregator min = new LongMinAggregator();
-    min.aggregate(3L);
+    min.aggregate(new LongWritable(3L));
     min.aggregate(new LongWritable(2L));
     assertEquals(2L, min.getAggregatedValue().get());
-    min.setAggregatedValue(3L);
+    min.setAggregatedValue(new LongWritable(3L));
     assertEquals(3L, min.getAggregatedValue().get());
-    LongWritable lw = min.createAggregatedValue();
+    LongWritable lw = min.createInitialValue();
     assertNotNull(lw);
   }
 
   @Test
   public void testOverwriteAggregator() {
     LongOverwriteAggregator overwrite = new LongOverwriteAggregator();
-    overwrite.aggregate(1L);
+    overwrite.aggregate(new LongWritable(1L));
     assertEquals(1L, overwrite.getAggregatedValue().get());
     overwrite.aggregate(new LongWritable(2L));
     assertEquals(2L, overwrite.getAggregatedValue().get());
-    overwrite.setAggregatedValue(3L);
+    overwrite.setAggregatedValue(new LongWritable(3L));
     assertEquals(3L, overwrite.getAggregatedValue().get());
-    LongWritable lw = overwrite.createAggregatedValue();
+    LongWritable lw = overwrite.createInitialValue();
     assertNotNull(lw);
   }
   
   @Test
   public void testProductAggregator() {
     LongProductAggregator product = new LongProductAggregator();
-    product.aggregate(6L);
+    product.aggregate(new LongWritable(6L));
     product.aggregate(new LongWritable(7L));
     assertEquals(42L, product.getAggregatedValue().get());
-    product.setAggregatedValue(1L);
+    product.setAggregatedValue(new LongWritable(1L));
     assertEquals(1L, product.getAggregatedValue().get());
-    LongWritable lw = product.createAggregatedValue();
+    LongWritable lw = product.createInitialValue();
     assertNotNull(lw);
   }
 
   @Test
   public void testSumAggregator() {
     LongSumAggregator sum = new LongSumAggregator();
-    sum.aggregate(1L);
+    sum.aggregate(new LongWritable(1L));
     sum.aggregate(new LongWritable(2L));
     assertEquals(3L, sum.getAggregatedValue().get());
-    sum.setAggregatedValue(4L);
+    sum.setAggregatedValue(new LongWritable(4L));
     assertEquals(4L, sum.getAggregatedValue().get());
-    LongWritable lw = sum.createAggregatedValue();
+    LongWritable lw = sum.createInitialValue();
     assertNotNull(lw);
   }
 

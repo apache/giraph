@@ -20,50 +20,17 @@ package org.apache.giraph.aggregators;
 
 import org.apache.hadoop.io.LongWritable;
 
-import org.apache.giraph.graph.Aggregator;
-
 /**
  * Aggregator for summing up long values.
  */
-public class LongSumAggregator implements Aggregator<LongWritable> {
-  /** Internal sum */
-  private long sum = 0;
-
-  /**
-   * Aggregate a primitive long.
-   *
-   * @param value Long value to aggregate.
-   */
-  public void aggregate(long value) {
-    sum += value;
-  }
-
+public class LongSumAggregator extends BasicAggregator<LongWritable> {
   @Override
   public void aggregate(LongWritable value) {
-    sum += value.get();
-  }
-
-  /**
-   * Set aggregated value using a primitive long.
-   *
-   * @param value Long value to set.
-   */
-  public void setAggregatedValue(long value) {
-    sum = value;
+    getAggregatedValue().set(getAggregatedValue().get() + value.get());
   }
 
   @Override
-  public void setAggregatedValue(LongWritable value) {
-    sum = value.get();
-  }
-
-  @Override
-  public LongWritable getAggregatedValue() {
-    return new LongWritable(sum);
-  }
-
-  @Override
-  public LongWritable createAggregatedValue() {
-    return new LongWritable();
+  public LongWritable createInitialValue() {
+    return new LongWritable(0);
   }
 }

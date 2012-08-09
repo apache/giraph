@@ -20,50 +20,17 @@ package org.apache.giraph.aggregators;
 
 import org.apache.hadoop.io.LongWritable;
 
-import org.apache.giraph.graph.Aggregator;
-
 /**
  * Aggregator for calculating products of long values.
  */
-public class LongProductAggregator implements Aggregator<LongWritable> {
-  /** Internal product */
-  private long product = 1L;
-
-  /**
-   * Aggregate a primitive long.
-   *
-   * @param value Long value to aggregate.
-   */
-  public void aggregate(long value) {
-    product *= value;
-  }
-
+public class LongProductAggregator extends BasicAggregator<LongWritable> {
   @Override
   public void aggregate(LongWritable value) {
-    product *= value.get();
-  }
-
-  /**
-   * Set aggregated value using a primitive long.
-   *
-   * @param value Long value to set.
-   */
-  public void setAggregatedValue(long value) {
-    product = value;
+    getAggregatedValue().set(getAggregatedValue().get() * value.get());
   }
 
   @Override
-  public void setAggregatedValue(LongWritable value) {
-    product = value.get();
-  }
-
-  @Override
-  public LongWritable getAggregatedValue() {
-    return new LongWritable(product);
-  }
-
-  @Override
-  public LongWritable createAggregatedValue() {
-    return new LongWritable();
+  public LongWritable createInitialValue() {
+    return new LongWritable(1);
   }
 }

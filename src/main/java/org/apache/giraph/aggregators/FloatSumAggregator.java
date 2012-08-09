@@ -20,51 +20,17 @@ package org.apache.giraph.aggregators;
 
 import org.apache.hadoop.io.FloatWritable;
 
-import org.apache.giraph.graph.Aggregator;
-
 /**
  * Aggregator for summing up float values.
  */
-public class FloatSumAggregator implements Aggregator<FloatWritable> {
-  /** Aggregated sum */
-  private float sum = 0;
-
-  /**
-   * Aggregate a primitive float.
-   *
-   * @param value Float value to aggregate.
-   */
-  public void aggregate(float value) {
-    sum += value;
-  }
-
+public class FloatSumAggregator extends BasicAggregator<FloatWritable> {
   @Override
   public void aggregate(FloatWritable value) {
-    sum += value.get();
-  }
-
-  /**
-   * Set aggregated value using a primitive float.
-   *
-   * @param value Float value to set.
-   */
-  public void setAggregatedValue(float value) {
-    sum = value;
+    getAggregatedValue().set(getAggregatedValue().get() + value.get());
   }
 
   @Override
-  public void setAggregatedValue(FloatWritable value) {
-    sum = value.get();
+  public FloatWritable createInitialValue() {
+    return new FloatWritable(0);
   }
-
-  @Override
-  public FloatWritable getAggregatedValue() {
-    return new FloatWritable(sum);
-  }
-
-  @Override
-  public FloatWritable createAggregatedValue() {
-    return new FloatWritable();
-  }
-
 }

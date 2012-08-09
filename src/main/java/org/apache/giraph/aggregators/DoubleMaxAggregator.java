@@ -20,57 +20,18 @@ package org.apache.giraph.aggregators;
 
 import org.apache.hadoop.io.DoubleWritable;
 
-import org.apache.giraph.graph.Aggregator;
-
 /**
  * Aggregator for getting max double value.
- *
  */
-public class DoubleMaxAggregator implements Aggregator<DoubleWritable> {
-  /** Saved maximum value */
-  private double max = Double.MIN_VALUE;
-
-  /**
-   * Aggregate with a primitive double.
-   *
-   * @param value Double value to aggregate.
-   */
-  public void aggregate(double value) {
-    double val = value;
-    if (val > max) {
-      max = val;
-    }
-  }
-
+public class DoubleMaxAggregator extends BasicAggregator<DoubleWritable> {
   @Override
   public void aggregate(DoubleWritable value) {
-    double val = value.get();
-    if (val > max) {
-      max = val;
-    }
-  }
-
-  /**
-   * Set aggregated value using a primitive double.
-   *
-   * @param value Double value to set.
-   */
-  public void setAggregatedValue(double value) {
-    max = value;
+    getAggregatedValue().set(
+        Math.max(getAggregatedValue().get(), value.get()));
   }
 
   @Override
-  public void setAggregatedValue(DoubleWritable value) {
-    max = value.get();
-  }
-
-  @Override
-  public DoubleWritable getAggregatedValue() {
-    return new DoubleWritable(max);
-  }
-
-  @Override
-  public DoubleWritable createAggregatedValue() {
-    return new DoubleWritable();
+  public DoubleWritable createInitialValue() {
+    return new DoubleWritable(Double.MIN_VALUE);
   }
 }

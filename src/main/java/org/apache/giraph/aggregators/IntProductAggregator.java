@@ -20,50 +20,17 @@ package org.apache.giraph.aggregators;
 
 import org.apache.hadoop.io.IntWritable;
 
-import org.apache.giraph.graph.Aggregator;
-
 /**
  * Aggregator for calculating products of long and integer values.
  */
-public class IntProductAggregator implements Aggregator<IntWritable> {
-  /** Internal product */
-  private int product = 1;
-
-  /**
-   * Aggregate a primitive integer.
-   *
-   * @param value Integer value to aggregate.
-   */
-  public void aggregate(int value) {
-    product *= value;
-  }
-
+public class IntProductAggregator extends BasicAggregator<IntWritable> {
   @Override
   public void aggregate(IntWritable value) {
-    product *= value.get();
-  }
-
-  /**
-   * Set aggregated value using a primitive integer.
-   *
-   * @param value Integer value to set.
-   */
-  public void setAggregatedValue(int value) {
-    product = value;
+    getAggregatedValue().set(getAggregatedValue().get() * value.get());
   }
 
   @Override
-  public void setAggregatedValue(IntWritable value) {
-    product = value.get();
-  }
-
-  @Override
-  public IntWritable getAggregatedValue() {
-    return new IntWritable(product);
-  }
-
-  @Override
-  public IntWritable createAggregatedValue() {
-    return new IntWritable();
+  public IntWritable createInitialValue() {
+    return new IntWritable(1);
   }
 }

@@ -24,6 +24,7 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
 import org.apache.giraph.aggregators.LongSumAggregator;
+import org.apache.giraph.graph.DefaultMasterCompute;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.WorkerContext;
@@ -115,26 +116,17 @@ public class RandomMessageBenchmark implements Tool {
               DEFAULT_NUM_MESSAGES_PER_EDGE);
       numSupersteps = getContext().getConfiguration().
           getInt(SUPERSTEP_COUNT, -1);
-      registerAggregator(AGG_SUPERSTEP_TOTAL_BYTES,
-          LongSumAggregator.class);
-      registerAggregator(AGG_SUPERSTEP_TOTAL_MESSAGES,
-          LongSumAggregator.class);
-      registerAggregator(AGG_SUPERSTEP_TOTAL_MILLIS,
-          LongSumAggregator.class);
-      registerAggregator(WORKERS,
-          LongSumAggregator.class);
     }
 
     @Override
     public void preSuperstep() {
-      LongSumAggregator superstepBytesAggregator =
-          (LongSumAggregator) getAggregator(AGG_SUPERSTEP_TOTAL_BYTES);
-      LongSumAggregator superstepMessagesAggregator =
-          (LongSumAggregator) getAggregator(AGG_SUPERSTEP_TOTAL_MESSAGES);
-      LongSumAggregator superstepMillisAggregator =
-          (LongSumAggregator) getAggregator(AGG_SUPERSTEP_TOTAL_MILLIS);
-      LongSumAggregator workersAggregator =
-          (LongSumAggregator) getAggregator(WORKERS);
+      long superstepBytes = this.<LongWritable>
+          getAggregatedValue(AGG_SUPERSTEP_TOTAL_BYTES).get();
+      long superstepMessages = this.<LongWritable>
+          getAggregatedValue(AGG_SUPERSTEP_TOTAL_MESSAGES).get();
+      long superstepMillis = this.<LongWritable>
+          getAggregatedValue(AGG_SUPERSTEP_TOTAL_MILLIS).get();
+      long workers = this.<LongWritable>getAggregatedValue(WORKERS).get();
 
       // For timing and tracking the supersteps
       // - superstep 0 starts the time, but cannot display any stats
@@ -143,41 +135,26 @@ public class RandomMessageBenchmark implements Tool {
       if (getSuperstep() == 0) {
         startSuperstepMillis = System.currentTimeMillis();
       } else {
-        totalBytes +=
-            superstepBytesAggregator.getAggregatedValue().get();
-        totalMessages +=
-            superstepMessagesAggregator.getAggregatedValue().get();
-        totalMillis +=
-            superstepMillisAggregator.getAggregatedValue().get();
+        totalBytes += superstepBytes;
+        totalMessages += superstepMessages;
+        totalMillis += superstepMillis;
         double superstepMegabytesPerSecond =
-            superstepBytesAggregator.getAggregatedValue().get() *
-            workersAggregator.getAggregatedValue().get() *
-            1000d / 1024d / 1024d /
-            superstepMillisAggregator.getAggregatedValue().get();
+            superstepBytes * workers * 1000d / 1024d / 1024d / superstepMillis;
         double megabytesPerSecond = totalBytes *
-            workersAggregator.getAggregatedValue().get() *
-            1000d / 1024d / 1024d / totalMillis;
+            workers * 1000d / 1024d / 1024d / totalMillis;
         double superstepMessagesPerSecond =
-            superstepMessagesAggregator.getAggregatedValue().get() *
-            workersAggregator.getAggregatedValue().get() * 1000d /
-            superstepMillisAggregator.getAggregatedValue().get();
-        double messagesPerSecond = totalMessages *
-            workersAggregator.getAggregatedValue().get() * 1000d /
-            totalMillis;
+            superstepMessages * workers * 1000d / superstepMillis;
+        double messagesPerSecond =
+            totalMessages * workers * 1000d / totalMillis;
         if (LOG.isInfoEnabled()) {
-          LOG.info("Outputing statistics for superstep " +
-              getSuperstep());
-          LOG.info(AGG_SUPERSTEP_TOTAL_BYTES + " : " +
-              superstepBytesAggregator.getAggregatedValue());
+          LOG.info("Outputing statistics for superstep " + getSuperstep());
+          LOG.info(AGG_SUPERSTEP_TOTAL_BYTES + " : " + superstepBytes);
           LOG.info(AGG_TOTAL_BYTES + " : " + totalBytes);
-          LOG.info(AGG_SUPERSTEP_TOTAL_MESSAGES + " : " +
-              superstepMessagesAggregator.getAggregatedValue());
+          LOG.info(AGG_SUPERSTEP_TOTAL_MESSAGES + " : " + superstepMessages);
           LOG.info(AGG_TOTAL_MESSAGES + " : " + totalMessages);
-          LOG.info(AGG_SUPERSTEP_TOTAL_MILLIS + " : " +
-              superstepMillisAggregator.getAggregatedValue());
+          LOG.info(AGG_SUPERSTEP_TOTAL_MILLIS + " : " + superstepMillis);
           LOG.info(AGG_TOTAL_MILLIS + " : " + totalMillis);
-          LOG.info(WORKERS + " : " +
-              workersAggregator.getAggregatedValue());
+          LOG.info(WORKERS + " : " + workers);
           LOG.info("Superstep megabytes / second = " +
               superstepMegabytesPerSecond);
           LOG.info("Total megabytes / second = " +
@@ -187,41 +164,25 @@ public class RandomMessageBenchmark implements Tool {
           LOG.info("Total messages / second = " +
               messagesPerSecond);
           LOG.info("Superstep megabytes / second / worker = " +
-              superstepMegabytesPerSecond /
-              workersAggregator.getAggregatedValue().get());
+              superstepMegabytesPerSecond / workers);
           LOG.info("Total megabytes / second / worker = " +
-              megabytesPerSecond /
-              workersAggregator.getAggregatedValue().get());
+              megabytesPerSecond / workers);
           LOG.info("Superstep messages / second / worker = " +
-              superstepMessagesPerSecond /
-              workersAggregator.getAggregatedValue().get());
+              superstepMessagesPerSecond / workers);
           LOG.info("Total messages / second / worker = " +
-              messagesPerSecond /
-              workersAggregator.getAggregatedValue().get());
+              messagesPerSecond / workers);
         }
       }
 
-      superstepBytesAggregator.setAggregatedValue(
-          new LongWritable(0L));
-      superstepMessagesAggregator.setAggregatedValue(
-          new LongWritable(0L));
-      workersAggregator.setAggregatedValue(
-          new LongWritable(1L));
-      useAggregator(AGG_SUPERSTEP_TOTAL_BYTES);
-      useAggregator(AGG_SUPERSTEP_TOTAL_MILLIS);
-      useAggregator(AGG_SUPERSTEP_TOTAL_MESSAGES);
-      useAggregator(WORKERS);
+      aggregate(WORKERS, new LongWritable(1));
     }
 
     @Override
     public void postSuperstep() {
-      LongSumAggregator superstepMillisAggregator =
-          (LongSumAggregator) getAggregator(AGG_SUPERSTEP_TOTAL_MILLIS);
       long endSuperstepMillis = System.currentTimeMillis();
       long superstepMillis = endSuperstepMillis - startSuperstepMillis;
       startSuperstepMillis = endSuperstepMillis;
-      superstepMillisAggregator.setAggregatedValue(
-          new LongWritable(superstepMillis));
+      aggregate(AGG_SUPERSTEP_TOTAL_MILLIS, new LongWritable(superstepMillis));
     }
 
     @Override
@@ -263,6 +224,26 @@ public class RandomMessageBenchmark implements Tool {
   }
 
   /**
+   * Master compute associated with {@link RandomMessageBenchmark}.
+   * It registers required aggregators.
+   */
+  public static class RandomMessageBenchmarkMasterCompute extends
+      DefaultMasterCompute {
+    @Override
+    public void initialize() throws InstantiationException,
+        IllegalAccessException {
+      registerAggregator(AGG_SUPERSTEP_TOTAL_BYTES,
+          LongSumAggregator.class);
+      registerAggregator(AGG_SUPERSTEP_TOTAL_MESSAGES,
+          LongSumAggregator.class);
+      registerAggregator(AGG_SUPERSTEP_TOTAL_MILLIS,
+          LongSumAggregator.class);
+      registerAggregator(WORKERS,
+          LongSumAggregator.class);
+    }
+  }
+
+  /**
    * Actual message computation (messaging in this case)
    */
   public static class RandomMessageVertex extends EdgeListVertex<
@@ -271,10 +252,6 @@ public class RandomMessageBenchmark implements Tool {
     public void compute(Iterable<BytesWritable> messages) {
       RandomMessageBenchmarkWorkerContext workerContext =
           (RandomMessageBenchmarkWorkerContext) getWorkerContext();
-      LongSumAggregator superstepBytesAggregator =
-          (LongSumAggregator) getAggregator(AGG_SUPERSTEP_TOTAL_BYTES);
-      LongSumAggregator superstepMessagesAggregator =
-          (LongSumAggregator) getAggregator(AGG_SUPERSTEP_TOTAL_MESSAGES);
       if (getSuperstep() < workerContext.getNumSupersteps()) {
         for (int i = 0; i < workerContext.getNumMessagePerEdge(); i++) {
           workerContext.randomizeMessageBytes();
@@ -282,8 +259,9 @@ public class RandomMessageBenchmark implements Tool {
               new BytesWritable(workerContext.getMessageBytes()));
           long bytesSent = workerContext.getMessageBytes().length *
               getNumEdges();
-          superstepBytesAggregator.aggregate(bytesSent);
-          superstepMessagesAggregator.aggregate(getNumEdges());
+          aggregate(AGG_SUPERSTEP_TOTAL_BYTES, new LongWritable(bytesSent));
+          aggregate(AGG_SUPERSTEP_TOTAL_MESSAGES,
+              new LongWritable(getNumEdges()));
         }
       } else {
         voteToHalt();
@@ -377,6 +355,7 @@ public class RandomMessageBenchmark implements Tool {
     job.setVertexClass(RandomMessageVertex.class);
     job.setVertexInputFormatClass(PseudoRandomVertexInputFormat.class);
     job.setWorkerContextClass(RandomMessageBenchmarkWorkerContext.class);
+    job.setMasterComputeClass(RandomMessageBenchmarkMasterCompute.class);
     job.setWorkerConfiguration(workers, workers, 100.0f);
     job.getConfiguration().setLong(
         PseudoRandomVertexInputFormat.AGGREGATE_VERTICES,

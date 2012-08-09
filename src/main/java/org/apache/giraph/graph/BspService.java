@@ -259,8 +259,8 @@ public abstract class BspService<I extends WritableComparable,
   /** Checkpoint frequency */
   private final int checkpointFrequency;
   /** Map of aggregators */
-  private Map<String, Aggregator<Writable>> aggregatorMap =
-      new TreeMap<String, Aggregator<Writable>>();
+  private Map<String, AggregatorWrapper<Writable>> aggregatorMap =
+      new TreeMap<String, AggregatorWrapper<Writable>>();
 
   /**
    * Constructor.
@@ -884,22 +884,23 @@ public abstract class BspService<I extends WritableComparable,
    * @param <A> Aggregator type
    * @param name Name of the aggregator
    * @param aggregatorClass Class of the aggregator
+   * @param persistent False iff aggregator should be reset at the end of
+   *                   every super step
    * @return Aggregator
    * @throws IllegalAccessException
    * @throws InstantiationException
    */
-  public final <A extends Writable> Aggregator<A> registerAggregator(
-    String name,
-    Class<? extends Aggregator<A>> aggregatorClass)
-    throws InstantiationException, IllegalAccessException {
+  protected <A extends Writable> AggregatorWrapper<A> registerAggregator(
+      String name, Class<? extends Aggregator<A>> aggregatorClass,
+      boolean persistent) throws InstantiationException,
+      IllegalAccessException {
     if (aggregatorMap.get(name) != null) {
       return null;
     }
-    Aggregator<A> aggregator =
-        (Aggregator<A>) aggregatorClass.newInstance();
-    @SuppressWarnings("unchecked")
-    Aggregator<Writable> writableAggregator =
-      (Aggregator<Writable>) aggregator;
+    AggregatorWrapper<A> aggregator =
+        new AggregatorWrapper<A>(aggregatorClass, persistent);
+    AggregatorWrapper<Writable> writableAggregator =
+        (AggregatorWrapper<Writable>) aggregator;
     aggregatorMap.put(name, writableAggregator);
     if (LOG.isInfoEnabled()) {
       LOG.info("registerAggregator: registered " + name);
@@ -913,8 +914,24 @@ public abstract class BspService<I extends WritableComparable,
    * @param name Name of aggregator
    * @return Aggregator or null when not registered
    */
-  public final Aggregator<? extends Writable> getAggregator(String name) {
+  protected AggregatorWrapper<? extends Writable> getAggregator(String name) {
     return aggregatorMap.get(name);
+  }
+
+  /**
+   * Get value of an aggregator.
+   *
+   * @param name Name of aggregator
+   * @param <A> Aggregated value
+   * @return Value of the aggregator
+   */
+  public <A extends Writable> A getAggregatedValue(String name) {
+    AggregatorWrapper<? extends Writable> aggregator = getAggregator(name);
+    if (aggregator == null) {
+      return null;
+    } else {
+      return (A) aggregator.getPreviousAggregatedValue();
+    }
   }
 
   /**
@@ -922,7 +939,7 @@ public abstract class BspService<I extends WritableComparable,
    *
    * @return Map of aggregator names to aggregator
    */
-  public Map<String, Aggregator<Writable>> getAggregatorMap() {
+  protected Map<String, AggregatorWrapper<Writable>> getAggregatorMap() {
     return aggregatorMap;
   }
 

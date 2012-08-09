@@ -20,57 +20,18 @@ package org.apache.giraph.aggregators;
 
 import org.apache.hadoop.io.LongWritable;
 
-import org.apache.giraph.graph.Aggregator;
-
 /**
  * Aggregator for getting min long value.
  */
-public class LongMinAggregator implements Aggregator<LongWritable> {
-  /** Internal aggregator */
-  private long min = Long.MAX_VALUE;
-
-  /**
-   * Aggregate with a primitive long.
-   *
-   * @param value Long value to aggregate.
-   */
-  public void aggregate(long value) {
-    long val = value;
-    if (val < min) {
-      min = val;
-    }
-  }
-
+public class LongMinAggregator extends BasicAggregator<LongWritable> {
   @Override
   public void aggregate(LongWritable value) {
-    long val = value.get();
-    if (val < min) {
-      min = val;
-    }
-  }
-
-  /**
-   * Set aggregated value using a primitive long.
-   *
-   * @param value Long value to set.
-   */
-  public void setAggregatedValue(long value) {
-    min = value;
+    getAggregatedValue().set(
+        Math.min(getAggregatedValue().get(), value.get()));
   }
 
   @Override
-  public void setAggregatedValue(LongWritable value) {
-    min = value.get();
+  public LongWritable createInitialValue() {
+    return new LongWritable(Long.MAX_VALUE);
   }
-
-  @Override
-  public LongWritable getAggregatedValue() {
-    return new LongWritable(min);
-  }
-
-  @Override
-  public LongWritable createAggregatedValue() {
-    return new LongWritable();
-  }
-
 }

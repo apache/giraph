@@ -174,6 +174,27 @@ public class BspCase implements Watcher {
   protected GiraphJob prepareJob(String name, Class<?> vertexClass,
       Class<?> workerContextClass, Class<?> vertexInputFormatClass,
       Class<?> vertexOutputFormatClass, Path outputPath) throws IOException {
+    return prepareJob(name, vertexClass, workerContextClass, null,
+        vertexInputFormatClass, vertexOutputFormatClass, outputPath);
+  }
+
+  /**
+   * Prepare a GiraphJob for test purposes
+   *
+   * @param name  identifying name for the job
+   * @param vertexClass class of the vertex to run
+   * @param workerContextClass class of the workercontext to use
+   * @param masterComputeClass class of mastercompute to use
+   * @param vertexInputFormatClass  inputformat to use
+   * @param vertexOutputFormatClass outputformat to use
+   * @param outputPath  destination path for the output
+   * @return  fully configured job instance
+   * @throws IOException
+   */
+  protected GiraphJob prepareJob(String name, Class<?> vertexClass,
+      Class<?> workerContextClass, Class<?> masterComputeClass,
+      Class<?> vertexInputFormatClass, Class<?> vertexOutputFormatClass,
+      Path outputPath) throws IOException {
     GiraphJob job = new GiraphJob(name);
     setupConfiguration(job);
     job.setVertexClass(vertexClass);
@@ -181,6 +202,9 @@ public class BspCase implements Watcher {
 
     if (workerContextClass != null) {
       job.setWorkerContextClass(workerContextClass);
+    }
+    if (masterComputeClass != null) {
+      job.setMasterComputeClass(masterComputeClass);
     }
     if (vertexOutputFormatClass != null) {
       job.setVertexOutputFormatClass(vertexOutputFormatClass);

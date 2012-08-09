@@ -45,7 +45,7 @@ import java.util.Map;
 @SuppressWarnings("rawtypes")
 public abstract class Vertex<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
-    implements AggregatorUsage, Writable, Configurable {
+    implements WorkerAggregatorUsage, Writable, Configurable {
   /** Vertex id. */
   private I id;
   /** Vertex value. */
@@ -315,23 +315,15 @@ public abstract class Vertex<I extends WritableComparable,
   }
 
   @Override
-  public final <A extends Writable> Aggregator<A> registerAggregator(
-    String name, Class<? extends Aggregator<A>> aggregatorClass)
-    throws InstantiationException, IllegalAccessException {
-    return getGraphState().getGraphMapper().getAggregatorUsage().
-        registerAggregator(name, aggregatorClass);
+  public <A extends Writable> void aggregate(String name, A value) {
+    getGraphState().getGraphMapper().getWorkerAggregatorUsage().
+        aggregate(name, value);
   }
 
   @Override
-  public final Aggregator<? extends Writable> getAggregator(String name) {
-    return getGraphState().getGraphMapper().getAggregatorUsage().
-      getAggregator(name);
-  }
-
-  @Override
-  public final boolean useAggregator(String name) {
-    return getGraphState().getGraphMapper().getAggregatorUsage().
-      useAggregator(name);
+  public <A extends Writable> A getAggregatedValue(String name) {
+    return getGraphState().getGraphMapper().getWorkerAggregatorUsage().
+        getAggregatedValue(name);
   }
 
   @Override

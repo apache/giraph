@@ -28,61 +28,61 @@ public class TestFloatAggregators {
   @Test
   public void testMaxAggregator() {
     FloatMaxAggregator max = new FloatMaxAggregator();
-    max.aggregate(2.0f);
+    max.aggregate(new FloatWritable(2.0f));
     max.aggregate(new FloatWritable(3.0f));
     assertEquals(3.0f, max.getAggregatedValue().get());
-    max.setAggregatedValue(1.0f);
+    max.setAggregatedValue(new FloatWritable(1.0f));
     assertEquals(1.0f, max.getAggregatedValue().get());
-    FloatWritable fw = max.createAggregatedValue();
+    FloatWritable fw = max.createInitialValue();
     assertNotNull(fw);
   }
 
   @Test
   public void testMinAggregator() {
     FloatMinAggregator min = new FloatMinAggregator();
-    min.aggregate(3.0f);
+    min.aggregate(new FloatWritable(3.0f));
     min.aggregate(new FloatWritable(2.0f));
     assertEquals(2.0f, min.getAggregatedValue().get());
-    min.setAggregatedValue(3.0f);
+    min.setAggregatedValue(new FloatWritable(3.0f));
     assertEquals(3.0f, min.getAggregatedValue().get());
-    FloatWritable fw = min.createAggregatedValue();
+    FloatWritable fw = min.createInitialValue();
     assertNotNull(fw);
   }
 
   @Test
   public void testOverwriteAggregator() {
     FloatOverwriteAggregator overwrite = new FloatOverwriteAggregator();
-    overwrite.aggregate(1.0f);
+    overwrite.aggregate(new FloatWritable(1.0f));
     assertEquals(1.0f, overwrite.getAggregatedValue().get());
     overwrite.aggregate(new FloatWritable(2.0f));
     assertEquals(2.0f, overwrite.getAggregatedValue().get());
-    overwrite.setAggregatedValue(3.0f);
+    overwrite.setAggregatedValue(new FloatWritable(3.0f));
     assertEquals(3.0f, overwrite.getAggregatedValue().get());
-    FloatWritable fw = overwrite.createAggregatedValue();
+    FloatWritable fw = overwrite.createInitialValue();
     assertNotNull(fw);
   }
-  
+
   @Test
   public void testProductAggregator() {
     FloatProductAggregator product = new FloatProductAggregator();
-    product.aggregate(6.0f);
+    product.aggregate(new FloatWritable(6.0f));
     product.aggregate(new FloatWritable(7.0f));
     assertEquals(42.0f, product.getAggregatedValue().get());
-    product.setAggregatedValue(1.0f);
+    product.setAggregatedValue(new FloatWritable(1.0f));
     assertEquals(1.0f, product.getAggregatedValue().get());
-    FloatWritable fw = product.createAggregatedValue();
+    FloatWritable fw = product.createInitialValue();
     assertNotNull(fw);
   }
 
   @Test
   public void testSumAggregator() {
     FloatSumAggregator sum = new FloatSumAggregator();
-    sum.aggregate(1.0f);
+    sum.aggregate(new FloatWritable(1.0f));
     sum.aggregate(new FloatWritable(2.0f));
     assertEquals(3.0f, sum.getAggregatedValue().get());
-    sum.setAggregatedValue(4.0f);
+    sum.setAggregatedValue(new FloatWritable(4.0f));
     assertEquals(4.0f, sum.getAggregatedValue().get());
-    FloatWritable fw = sum.createAggregatedValue();
+    FloatWritable fw = sum.createInitialValue();
     assertNotNull(fw);
   }
 

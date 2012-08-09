@@ -20,51 +20,15 @@ package org.apache.giraph.aggregators;
 
 import org.apache.hadoop.io.DoubleWritable;
 
-import org.apache.giraph.graph.Aggregator;
-
-/**
- * Aggregator for summing up double values.
- */
-public class DoubleSumAggregator implements Aggregator<DoubleWritable> {
-  /** Aggregated sum */
-  private double sum = 0;
-
-  /**
-   * Aggregate a primitive double.
-   *
-   * @param value Double value to aggregate.
-   */
-  public void aggregate(double value) {
-    sum += value;
-  }
-
+/** Aggregator for summing up double values. */
+public class DoubleSumAggregator extends BasicAggregator<DoubleWritable> {
   @Override
   public void aggregate(DoubleWritable value) {
-    sum += value.get();
-  }
-
-  /**
-   * Set aggregated value using a primitive double.
-   *
-   * @param value Double value to set.
-   */
-  public void setAggregatedValue(double value) {
-    sum = value;
+    getAggregatedValue().set(getAggregatedValue().get() + value.get());
   }
 
   @Override
-  public void setAggregatedValue(DoubleWritable value) {
-    sum = value.get();
+  public DoubleWritable createInitialValue() {
+    return new DoubleWritable(0);
   }
-
-  @Override
-  public DoubleWritable getAggregatedValue() {
-    return new DoubleWritable(sum);
-  }
-
-  @Override
-  public DoubleWritable createAggregatedValue() {
-    return new DoubleWritable();
-  }
-
 }

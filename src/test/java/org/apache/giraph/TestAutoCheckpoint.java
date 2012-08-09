@@ -59,6 +59,7 @@ public class TestAutoCheckpoint extends BspCase {
     GiraphJob job = prepareJob(getCallingMethodName(),
         SimpleCheckpointVertex.class,
         SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.class,
+        SimpleCheckpointVertex.SimpleCheckpointVertexMasterCompute.class,
         SimpleSuperstepVertexInputFormat.class,
         SimpleSuperstepVertexOutputFormat.class,
         outputPath);

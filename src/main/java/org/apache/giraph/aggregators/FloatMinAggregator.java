@@ -20,57 +20,18 @@ package org.apache.giraph.aggregators;
 
 import org.apache.hadoop.io.FloatWritable;
 
-import org.apache.giraph.graph.Aggregator;
-
 /**
  * Aggregator for getting min float value.
  */
-public class FloatMinAggregator implements Aggregator<FloatWritable> {
-  /** Internal aggregator */
-  private float min = Float.MAX_VALUE;
-
-  /**
-   * Aggregate with a primitive float.
-   *
-   * @param value Float value to aggregate.
-   */
-  public void aggregate(float value) {
-    float val = value;
-    if (val < min) {
-      min = val;
-    }
-  }
-
+public class FloatMinAggregator extends BasicAggregator<FloatWritable> {
   @Override
   public void aggregate(FloatWritable value) {
-    float val = value.get();
-    if (val < min) {
-      min = val;
-    }
-  }
-
-  /**
-   * Set aggregated value using a primitive float.
-   *
-   * @param value Float value to set.
-   */
-  public void setAggregatedValue(float value) {
-    min = value;
+    getAggregatedValue().set(
+        Math.min(getAggregatedValue().get(), value.get()));
   }
 
   @Override
-  public void setAggregatedValue(FloatWritable value) {
-    min = value.get();
+  public FloatWritable createInitialValue() {
+    return new FloatWritable(Float.MAX_VALUE);
   }
-
-  @Override
-  public FloatWritable getAggregatedValue() {
-    return new FloatWritable(min);
-  }
-
-  @Override
-  public FloatWritable createAggregatedValue() {
-    return new FloatWritable();
-  }
-
 }

@@ -19,10 +19,8 @@
 package org.apache.giraph.examples;
 
 import java.io.IOException;
-import java.util.Map;
 import java.util.Map.Entry;
 
-import org.apache.giraph.graph.Aggregator;
 import org.apache.giraph.graph.AggregatorWriter;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -57,11 +55,11 @@ public class SimpleAggregatorWriter implements AggregatorWriter {
   }
 
   @Override
-  public void writeAggregator(Map<String, Aggregator<Writable>> map,
+  public void writeAggregator(
+      Iterable<Entry<String, Writable>> aggregatorMap,
       long superstep) throws IOException {
-
-    for (Entry<String, Aggregator<Writable>> aggregator: map.entrySet()) {
-      aggregator.getValue().getAggregatedValue().write(output);
+    for (Entry<String, Writable> entry : aggregatorMap) {
+      entry.getValue().write(output);
     }
     output.flush();
   }

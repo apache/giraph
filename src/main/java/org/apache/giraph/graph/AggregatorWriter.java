@@ -19,7 +19,7 @@
 package org.apache.giraph.graph;
 
 import java.io.IOException;
-import java.util.Map;
+import java.util.Map.Entry;
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.Mapper.Context;
@@ -28,7 +28,7 @@ import org.apache.hadoop.mapreduce.Mapper.Context;
  *  An AggregatorWriter is used to export Aggregators during or at the end of
  *  each computation. It runs on the master and it's called at the end of each
  *  superstep. The special signal {@link AggregatorWriter#LAST_SUPERSTEP} is
- *  passed to {@link AggregatorWriter#writeAggregator(Map, long)} as the
+ *  passed to {@link AggregatorWriter#writeAggregator(Iterable, long)} as the
  *  superstep value to signal the end of computation.
  */
 public interface AggregatorWriter {
@@ -53,19 +53,19 @@ public interface AggregatorWriter {
    * whether to write the aggregators values for the current superstep. For
    * the last superstep, {@link AggregatorWriter#LAST_SUPERSTEP} is passed.
    *
-   * @param aggregatorMap Map of aggregators to write
+   * @param aggregatorMap Map from aggregator name to aggregator value
    * @param superstep Current superstep
    * @throws IOException
    */
   void writeAggregator(
-      Map<String, Aggregator<Writable>> aggregatorMap,
+      Iterable<Entry<String, Writable>> aggregatorMap,
       long superstep) throws IOException;
 
   /**
    * The method is called at the end of a successful computation. The method
    * is not called when the job fails and a new master is elected. For this
    * reason it's advised to flush data at the end of
-   * {@link AggregatorWriter#writeAggregator(Map, long)}.
+   * {@link AggregatorWriter#writeAggregator(Iterable, long)}.
    *
    * @throws IOException
    */

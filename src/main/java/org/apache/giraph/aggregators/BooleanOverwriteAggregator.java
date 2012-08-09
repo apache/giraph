@@ -20,8 +20,6 @@ package org.apache.giraph.aggregators;
 
 import org.apache.hadoop.io.BooleanWritable;
 
-import org.apache.giraph.graph.Aggregator;
-
 /**
  * Aggregator that stores a value that is overwritten once another value is
  * aggregated. This aggregator is useful for one-to-many communication from
@@ -29,45 +27,15 @@ import org.apache.giraph.graph.Aggregator;
  * to this aggregator, its behavior is non-deterministic. The default value
  * for this aggregator is false.
  */
-public class BooleanOverwriteAggregator implements Aggregator<BooleanWritable> {
-  /** Internal result */
-  private boolean result = false;
-
-  /**
-   * Aggregate with a primitive boolean.
-   *
-   * @param value Boolean value to aggregate.
-   */
-  public void aggregate(boolean value) {
-    result = value;
-  }
-
+public class BooleanOverwriteAggregator extends
+    BasicAggregator<BooleanWritable> {
   @Override
   public void aggregate(BooleanWritable value) {
-    result = value.get();
-  }
-
-  /**
-   * Set aggregated value using a primitive boolean.
-   *
-   * @param value Boolean value to set.
-   */
-  public void setAggregatedValue(boolean value) {
-    result = value;
+    getAggregatedValue().set(value.get());
   }
 
   @Override
-  public void setAggregatedValue(BooleanWritable value) {
-    result = value.get();
-  }
-
-  @Override
-  public BooleanWritable getAggregatedValue() {
-    return new BooleanWritable(result);
-  }
-
-  @Override
-  public BooleanWritable createAggregatedValue() {
-    return new BooleanWritable();
+  public BooleanWritable createInitialValue() {
+    return new BooleanWritable(false);
   }
 }

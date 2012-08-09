@@ -20,57 +20,18 @@ package org.apache.giraph.aggregators;
 
 import org.apache.hadoop.io.IntWritable;
 
-import org.apache.giraph.graph.Aggregator;
-
 /**
  * Aggregator for getting min integer value.
  */
-public class IntMinAggregator implements Aggregator<IntWritable> {
-  /** Internal aggregator */
-  private int min = Integer.MAX_VALUE;
-
-  /**
-   * Aggregate with a primitive integer.
-   *
-   * @param value Integer value to aggregate.
-   */
-  public void aggregate(int value) {
-    int val = value;
-    if (val < min) {
-      min = val;
-    }
-  }
-
+public class IntMinAggregator extends BasicAggregator<IntWritable> {
   @Override
   public void aggregate(IntWritable value) {
-    int val = value.get();
-    if (val < min) {
-      min = val;
-    }
-  }
-
-  /**
-   * Set aggregated value using a primitive integer.
-   *
-   * @param value Integer value to set.
-   */
-  public void setAggregatedValue(int value) {
-    min = value;
+    getAggregatedValue().set(
+        Math.min(getAggregatedValue().get(), value.get()));
   }
 
   @Override
-  public void setAggregatedValue(IntWritable value) {
-    min = value.get();
+  public IntWritable createInitialValue() {
+    return new IntWritable(Integer.MAX_VALUE);
   }
-
-  @Override
-  public IntWritable getAggregatedValue() {
-    return new IntWritable(min);
-  }
-
-  @Override
-  public IntWritable createAggregatedValue() {
-    return new IntWritable();
-  }
-
 }

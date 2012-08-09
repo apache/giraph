@@ -77,6 +77,7 @@ public class TestGraphPartitioner extends BspCase {
         GiraphJob job = prepareJob("testVertexBalancer",
             SimpleCheckpointVertex.class,
             SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.class,
+            SimpleCheckpointVertex.SimpleCheckpointVertexMasterCompute.class,
             SimpleSuperstepVertexInputFormat.class,
             SimpleSuperstepVertexOutputFormat.class, outputPath);
 
@@ -91,6 +92,7 @@ public class TestGraphPartitioner extends BspCase {
         outputPath = getTempPath("testHashPartitioner");
         job = prepareJob("testHashPartitioner", SimpleCheckpointVertex.class,
             SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.class,
+            SimpleCheckpointVertex.SimpleCheckpointVertexMasterCompute.class,
             SimpleSuperstepVertexInputFormat.class,
             SimpleSuperstepVertexOutputFormat.class, outputPath);
         assertTrue(job.run(true));
@@ -100,6 +102,7 @@ public class TestGraphPartitioner extends BspCase {
         job = prepareJob("testSuperstepHashPartitioner",
             SimpleCheckpointVertex.class,
             SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.class,
+            SimpleCheckpointVertex.SimpleCheckpointVertexMasterCompute.class,
             SimpleSuperstepVertexInputFormat.class,
             SimpleSuperstepVertexOutputFormat.class,
             outputPath);
@@ -115,6 +118,8 @@ public class TestGraphPartitioner extends BspCase {
         job.setVertexClass(SimpleCheckpointVertex.class);
         job.setWorkerContextClass(
             SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.class);
+        job.setMasterComputeClass(
+            SimpleCheckpointVertex.SimpleCheckpointVertexMasterCompute.class);
         job.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
         job.setVertexOutputFormatClass(SimpleSuperstepVertexOutputFormat.class);
         job.setGraphPartitionerFactoryClass(
@@ -128,6 +133,7 @@ public class TestGraphPartitioner extends BspCase {
         job = prepareJob("testReverseIdSuperstepHashPartitioner",
             SimpleCheckpointVertex.class,
             SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.class,
+            SimpleCheckpointVertex.SimpleCheckpointVertexMasterCompute.class,
             SimpleSuperstepVertexInputFormat.class,
             SimpleSuperstepVertexOutputFormat.class, outputPath);
         job.setGraphPartitionerFactoryClass(

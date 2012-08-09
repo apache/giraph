@@ -20,53 +20,20 @@ package org.apache.giraph.aggregators;
 
 import org.apache.hadoop.io.IntWritable;
 
-import org.apache.giraph.graph.Aggregator;
-
 /**
  * Aggregator that stores a value that is overwritten once another value is
  * aggregated. This aggregator is useful for one-to-many communication from
  * master.compute() or from a special vertex. In case multiple vertices write
  * to this aggregator, its behavior is non-deterministic.
  */
-public class IntOverwriteAggregator implements Aggregator<IntWritable> {
-  /** Internal result */
-  private int result = 0;
-
-  /**
-   * Aggregate with a primitive integer.
-   *
-   * @param value Integer value to aggregate.
-   */
-  public void aggregate(int value) {
-    result = value;
-  }
-
+public class IntOverwriteAggregator extends BasicAggregator<IntWritable> {
   @Override
   public void aggregate(IntWritable value) {
-    result = value.get();
-  }
-
-  /**
-   * Set aggregated value using a primitive integer.
-   *
-   * @param value Integer value to set.
-   */
-  public void setAggregatedValue(int value) {
-    result = value;
+    getAggregatedValue().set(value.get());
   }
 
   @Override
-  public void setAggregatedValue(IntWritable value) {
-    result = value.get();
-  }
-
-  @Override
-  public IntWritable getAggregatedValue() {
-    return new IntWritable(result);
-  }
-
-  @Override
-  public IntWritable createAggregatedValue() {
-    return new IntWritable();
+  public IntWritable createInitialValue() {
+    return new IntWritable(0);
   }
 }

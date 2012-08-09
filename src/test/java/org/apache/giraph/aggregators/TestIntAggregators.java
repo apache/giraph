@@ -28,61 +28,61 @@ public class TestIntAggregators {
   @Test
   public void testMaxAggregator() {
     IntMaxAggregator max = new IntMaxAggregator();
-    max.aggregate(2);
+    max.aggregate(new IntWritable(2));
     max.aggregate(new IntWritable(3));
     assertEquals(3, max.getAggregatedValue().get());
-    max.setAggregatedValue(1);
+    max.setAggregatedValue(new IntWritable(1));
     assertEquals(1, max.getAggregatedValue().get());
-    IntWritable iw = max.createAggregatedValue();
+    IntWritable iw = max.createInitialValue();
     assertNotNull(iw);
   }
 
   @Test
   public void testMinAggregator() {
     IntMinAggregator min = new IntMinAggregator();
-    min.aggregate(3);
+    min.aggregate(new IntWritable(3));
     min.aggregate(new IntWritable(2));
     assertEquals(2, min.getAggregatedValue().get());
-    min.setAggregatedValue(3);
+    min.setAggregatedValue(new IntWritable(3));
     assertEquals(3, min.getAggregatedValue().get());
-    IntWritable iw = min.createAggregatedValue();
+    IntWritable iw = min.createInitialValue();
     assertNotNull(iw);
   }
 
   @Test
   public void testOverwriteAggregator() {
     IntOverwriteAggregator overwrite = new IntOverwriteAggregator();
-    overwrite.aggregate(1);
+    overwrite.aggregate(new IntWritable(1));
     assertEquals(1, overwrite.getAggregatedValue().get());
     overwrite.aggregate(new IntWritable(2));
     assertEquals(2, overwrite.getAggregatedValue().get());
-    overwrite.setAggregatedValue(3);
+    overwrite.setAggregatedValue(new IntWritable(3));
     assertEquals(3, overwrite.getAggregatedValue().get());
-    IntWritable iw = overwrite.createAggregatedValue();
+    IntWritable iw = overwrite.createInitialValue();
     assertNotNull(iw);
   }
   
   @Test
   public void testProductAggregator() {
     IntProductAggregator product = new IntProductAggregator();
-    product.aggregate(6);
+    product.aggregate(new IntWritable(6));
     product.aggregate(new IntWritable(7));
     assertEquals(42, product.getAggregatedValue().get());
-    product.setAggregatedValue(1);
+    product.setAggregatedValue(new IntWritable(1));
     assertEquals(1, product.getAggregatedValue().get());
-    IntWritable iw = product.createAggregatedValue();
+    IntWritable iw = product.createInitialValue();
     assertNotNull(iw);
   }
 
   @Test
   public void testSumAggregator() {
     IntSumAggregator sum = new IntSumAggregator();
-    sum.aggregate(1);
+    sum.aggregate(new IntWritable(1));
     sum.aggregate(new IntWritable(2));
     assertEquals(3, sum.getAggregatedValue().get());
-    sum.setAggregatedValue(4);
+    sum.setAggregatedValue(new IntWritable(4));
     assertEquals(4, sum.getAggregatedValue().get());
-    IntWritable iw = sum.createAggregatedValue();
+    IntWritable iw = sum.createInitialValue();
     assertNotNull(iw);
   }
 

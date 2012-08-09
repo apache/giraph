@@ -301,6 +301,8 @@ public class TestBspBasic extends BspCase {
         SimplePageRankVertex.class, SimplePageRankVertexInputFormat.class);
     job.setWorkerContextClass(
         SimplePageRankVertex.SimplePageRankVertexWorkerContext.class);
+    job.setMasterComputeClass(
+        SimplePageRankVertex.SimplePageRankVertexMasterCompute.class);
     assertTrue(job.run(true));
     if (!runningInDistributedMode()) {
       double maxPageRank =
@@ -362,6 +364,8 @@ public class TestBspBasic extends BspCase {
         outputPath);
     job.setWorkerContextClass(
         SimplePageRankVertex.SimplePageRankVertexWorkerContext.class);
+    job.setMasterComputeClass(
+        SimplePageRankVertex.SimplePageRankVertexMasterCompute.class);
 
     Configuration conf = job.getConfiguration();
 
@@ -401,23 +405,23 @@ public class TestBspBasic extends BspCase {
             String[] tokens = line.split("\t");
             int superstep = Integer.parseInt(tokens[0].split("=")[1]);
             String value = (tokens[1].split("=")[1]);
-            String aggregatorName = tokens[2];
+            String aggregatorName = (tokens[1].split("=")[0]);
 
-            if (DoubleMinAggregator.class.getName().equals(aggregatorName)) {
+            if ("min".equals(aggregatorName)) {
               minValues.put(superstep, Double.parseDouble(value));
             }
-            if (DoubleMaxAggregator.class.getName().equals(aggregatorName)) {
+            if ("max".equals(aggregatorName)) {
               maxValues.put(superstep, Double.parseDouble(value));
             }
-            if (LongSumAggregator.class.getName().equals(aggregatorName)) {
+            if ("sum".equals(aggregatorName)) {
               vertexCounts.put(superstep, Long.parseLong(value));
             }
           }
 
           int maxSuperstep = SimplePageRankVertex.MAX_SUPERSTEPS;
-          assertEquals(maxSuperstep + 1, minValues.size());
-          assertEquals(maxSuperstep + 1, maxValues.size());
-          assertEquals(maxSuperstep + 1, vertexCounts.size());
+          assertEquals(maxSuperstep + 2, minValues.size());
+          assertEquals(maxSuperstep + 2, maxValues.size());
+          assertEquals(maxSuperstep + 2, vertexCounts.size());
 
           assertEquals(maxPageRank, maxValues.get(maxSuperstep));
           assertEquals(minPageRank, minValues.get(maxSuperstep));

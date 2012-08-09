@@ -19,15 +19,11 @@
 package org.apache.giraph.examples;
 
 import org.apache.giraph.aggregators.DoubleOverwriteAggregator;
+import org.apache.giraph.graph.DefaultMasterCompute;
 import org.apache.giraph.graph.LongDoubleFloatDoubleVertex;
-import org.apache.giraph.graph.MasterCompute;
 import org.apache.giraph.graph.WorkerContext;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.log4j.Logger;
-
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
 
 /**
  * Demonstrates a computation with a centralized part implemented via a
@@ -42,10 +38,8 @@ public class SimpleMasterComputeVertex extends LongDoubleFloatDoubleVertex {
 
   @Override
   public void compute(Iterable<DoubleWritable> messages) {
-    DoubleOverwriteAggregator agg =
-        (DoubleOverwriteAggregator) getAggregator(SMC_AGG);
     double oldSum = getSuperstep() == 0 ? 0 : getValue().get();
-    double newValue = agg.getAggregatedValue().get();
+    double newValue = this.<DoubleWritable>getAggregatedValue(SMC_AGG).get();
     double newSum = oldSum + newValue;
     setValue(new DoubleWritable(newSum));
     SimpleMasterComputeWorkerContext workerContext =
@@ -65,12 +59,10 @@ public class SimpleMasterComputeVertex extends LongDoubleFloatDoubleVertex {
     @Override
     public void preApplication()
       throws InstantiationException, IllegalAccessException {
-      registerAggregator(SMC_AGG, DoubleOverwriteAggregator.class);
     }
 
     @Override
     public void preSuperstep() {
-      useAggregator(SMC_AGG);
     }
 
     @Override
@@ -94,20 +86,11 @@ public class SimpleMasterComputeVertex extends LongDoubleFloatDoubleVertex {
    * MasterCompute used with {@link SimpleMasterComputeVertex}.
    */
   public static class SimpleMasterCompute
-      extends MasterCompute {
-    @Override
-    public void write(DataOutput out) throws IOException {
-    }
-
-    @Override
-    public void readFields(DataInput in) throws IOException {
-    }
-
+      extends DefaultMasterCompute {
     @Override
     public void compute() {
-      DoubleOverwriteAggregator agg =
-          (DoubleOverwriteAggregator) getAggregator(SMC_AGG);
-      agg.aggregate(((double) getSuperstep()) / 2 + 1);
+      setAggregatedValue(SMC_AGG,
+          new DoubleWritable(((double) getSuperstep()) / 2 + 1));
       if (getSuperstep() == 10) {
         haltComputation();
       }

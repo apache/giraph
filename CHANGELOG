@@ -2,6 +2,8 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-259: TestBspBasic.testBspPageRank is broken (majakabiljo via apresta)
+
   GIRAPH-256: Partitioning outgoing graph data during INPUT_SUPERSTEP by # of 
   vertices results in wide variance in RPC message sizes. (Eli Reisman via jghoman)
   

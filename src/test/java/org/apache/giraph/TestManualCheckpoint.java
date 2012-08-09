@@ -53,6 +53,7 @@ public class TestManualCheckpoint extends BspCase {
     GiraphJob job = prepareJob(getCallingMethodName(),
         SimpleCheckpointVertex.class,
         SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.class,
+        SimpleCheckpointVertex.SimpleCheckpointVertexMasterCompute.class,
         SimpleSuperstepVertexInputFormat.class,
         SimpleSuperstepVertexOutputFormat.class, outputPath);
 
@@ -81,8 +82,11 @@ public class TestManualCheckpoint extends BspCase {
     GiraphJob restartedJob = prepareJob(getCallingMethodName() + "Restarted",
         SimpleCheckpointVertex.class,
         SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.class,
+        SimpleCheckpointVertex.SimpleCheckpointVertexMasterCompute.class,
         SimpleSuperstepVertexInputFormat.class,
         SimpleSuperstepVertexOutputFormat.class, outputPath);
+    job.setMasterComputeClass(
+        SimpleCheckpointVertex.SimpleCheckpointVertexMasterCompute.class);
     restartedJob.getConfiguration().set(GiraphJob.CHECKPOINT_DIRECTORY,
         checkpointsDir.toString());
 

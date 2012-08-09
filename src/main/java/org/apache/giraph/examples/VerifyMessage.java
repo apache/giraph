@@ -19,6 +19,7 @@
 package org.apache.giraph.examples;
 
 import org.apache.giraph.aggregators.LongSumAggregator;
+import org.apache.giraph.graph.DefaultMasterCompute;
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.WorkerContext;
@@ -116,25 +117,19 @@ public class VerifyMessage {
       @Override
       public void preApplication() throws InstantiationException,
       IllegalAccessException {
-        registerAggregator(LongSumAggregator.class.getName(),
-            LongSumAggregator.class);
-        LongSumAggregator sumAggregator = (LongSumAggregator)
-            getAggregator(LongSumAggregator.class.getName());
-        sumAggregator.setAggregatedValue(0);
         SUPERSTEPS = getContext().getConfiguration().getInt(
             SUPERSTEP_COUNT, SUPERSTEPS);
       }
 
       @Override
       public void postApplication() {
-        LongSumAggregator sumAggregator = (LongSumAggregator)
-            getAggregator(LongSumAggregator.class.getName());
-        FINAL_SUM = sumAggregator.getAggregatedValue().get();
+        LongWritable sumAggregatorValue =
+            getAggregatedValue(LongSumAggregator.class.getName());
+        FINAL_SUM = sumAggregatorValue.get();
       }
 
       @Override
       public void preSuperstep() {
-        useAggregator(LongSumAggregator.class.getName());
       }
 
       @Override
@@ -143,19 +138,18 @@ public class VerifyMessage {
 
     @Override
     public void compute(Iterable<VerifiableMessage> messages) {
-      LongSumAggregator sumAggregator = (LongSumAggregator)
-          getAggregator(LongSumAggregator.class.getName());
+      String sumAggregatorName = LongSumAggregator.class.getName();
       if (getSuperstep() > SUPERSTEPS) {
         voteToHalt();
         return;
       }
       if (LOG.isDebugEnabled()) {
-        LOG.debug("compute: " + sumAggregator);
+        LOG.debug("compute: " + getAggregatedValue(sumAggregatorName));
       }
-      sumAggregator.aggregate(getId().get());
+      aggregate(sumAggregatorName, new LongWritable(getId().get()));
       if (LOG.isDebugEnabled()) {
         LOG.debug("compute: sum = " +
-            sumAggregator.getAggregatedValue().get() +
+            this.<LongWritable>getAggregatedValue(sumAggregatorName).get() +
             " for vertex " + getId());
       }
       float msgValue = 0.0f;
@@ -204,6 +198,20 @@ public class VerifyMessage {
             new VerifiableMessage(
                 getSuperstep(), getId().get(), newEdgeValue.get()));
       }
+    }
+  }
+
+  /**
+   * Master compute associated with {@link VerifyMessageVertex}.
+   * It registers required aggregators.
+   */
+  public static class VerifyMessageMasterCompute extends
+      DefaultMasterCompute {
+    @Override
+    public void initialize() throws InstantiationException,
+        IllegalAccessException {
+      registerAggregator(LongSumAggregator.class.getName(),
+          LongSumAggregator.class);
     }
   }
 }
