@@ -18,9 +18,6 @@
 
 package org.apache.giraph;
 
-import org.apache.giraph.aggregators.DoubleMaxAggregator;
-import org.apache.giraph.aggregators.DoubleMinAggregator;
-import org.apache.giraph.aggregators.LongSumAggregator;
 import org.apache.giraph.examples.GeneratedVertexReader;
 import org.apache.giraph.examples.SimpleCombinerVertex;
 import org.apache.giraph.examples.SimpleFailVertex;
@@ -39,7 +36,7 @@ import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.TextAggregatorWriter;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexInputFormat;
-import org.apache.giraph.lib.JsonLongDoubleFloatDoubleVertexOutputFormat;
+import org.apache.giraph.io.JsonLongDoubleFloatDoubleVertexOutputFormat;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;

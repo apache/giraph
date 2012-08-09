@@ -24,21 +24,11 @@ import static org.junit.Assert.assertNotNull;
 import org.junit.Test;
 
 import org.apache.giraph.utils.MockUtils;
-import org.apache.giraph.lib.IdWithValueTextOutputFormat;
-import org.apache.giraph.examples.IntIntNullIntTextInputFormat;
-import org.apache.giraph.examples.SimpleTriangleClosingVertex.IntArrayListWritable;
 
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 
-import java.util.Map;
-import java.util.List;
-
-import org.mockito.Mockito;
-
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 
 /**
  * Contains a simple unit test for {@link SimpleTriangleClosingVertex}
@@ -58,7 +48,7 @@ public class SimpleTriangleClosingVertexTest {
       new SimpleTriangleClosingVertex.IntArrayListWritable();
     vertex.initialize(null, null, null, null);
     vertex.addEdge(new IntWritable(5), NullWritable.get());
-    vertex.addEdge(new IntWritable(7), NullWritable.get()); 
+    vertex.addEdge(new IntWritable(7), NullWritable.get());
 
     MockUtils.MockedEnvironment<IntWritable,
       SimpleTriangleClosingVertex.IntArrayListWritable,

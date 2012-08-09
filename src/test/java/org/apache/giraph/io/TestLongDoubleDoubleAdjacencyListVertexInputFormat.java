@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.lib;
+package org.apache.giraph.io;
 
 
 import org.apache.giraph.graph.Edge;
@@ -34,8 +34,8 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.junit.Before;
 import org.junit.Test;
 
-import static org.apache.giraph.lib.TestTextDoubleDoubleAdjacencyListVertexInputFormat.assertValidVertex;
-import static org.apache.giraph.lib.TestTextDoubleDoubleAdjacencyListVertexInputFormat.setGraphState;
+import static org.apache.giraph.io.TestTextDoubleDoubleAdjacencyListVertexInputFormat.assertValidVertex;
+import static org.apache.giraph.io.TestTextDoubleDoubleAdjacencyListVertexInputFormat.setGraphState;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;

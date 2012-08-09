@@ -15,12 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.lib;
+package org.apache.giraph.io;
 
 import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.lib.TextVertexInputFormat.TextVertexReader;
+import org.apache.giraph.io.TextVertexInputFormat.TextVertexReader;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;

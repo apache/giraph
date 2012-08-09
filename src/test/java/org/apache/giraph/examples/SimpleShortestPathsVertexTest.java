@@ -18,8 +18,8 @@
 
 package org.apache.giraph.examples;
 
-import org.apache.giraph.lib.JsonLongDoubleFloatDoubleVertexInputFormat;
-import org.apache.giraph.lib.JsonLongDoubleFloatDoubleVertexOutputFormat;
+import org.apache.giraph.io.JsonLongDoubleFloatDoubleVertexInputFormat;
+import org.apache.giraph.io.JsonLongDoubleFloatDoubleVertexOutputFormat;
 import org.apache.giraph.utils.InternalVertexRunner;
 import org.apache.giraph.utils.MockUtils;
 import org.apache.hadoop.io.DoubleWritable;

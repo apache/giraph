@@ -24,7 +24,7 @@ import org.apache.hadoop.io.LongWritable;
 /**
  * A simple use of the Identity Vertex for taking care of Long, Double,
  * Double, Double type Inputformat Good for use with
- * lib.LongDoubleDoubleAdjacencyListVertexInputFormat
+ * io.LongDoubleDoubleAdjacencyListVertexInputFormat
  */
 
 public abstract class SimpleLongDoubleDoubleDoubleIdentityVertex extends

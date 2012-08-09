@@ -29,6 +29,8 @@ import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.WorkerContext;
+import org.apache.giraph.io.GeneratedVertexInputFormat;
+import org.apache.giraph.io.IdWithValueTextOutputFormat;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.FloatWritable;
@@ -212,7 +214,7 @@ public class SimpleCheckpointVertex extends
     GiraphJob bspJob = new GiraphJob(getConf(), getClass().getName());
     bspJob.setVertexClass(getClass());
     bspJob.setVertexInputFormatClass(GeneratedVertexInputFormat.class);
-    bspJob.setVertexOutputFormatClass(SimpleTextVertexOutputFormat.class);
+    bspJob.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
     bspJob.setWorkerContextClass(SimpleCheckpointVertexWorkerContext.class);
     bspJob.setMasterComputeClass(SimpleCheckpointVertexMasterCompute.class);
     int minWorkers = Integer.parseInt(cmd.getOptionValue('w'));

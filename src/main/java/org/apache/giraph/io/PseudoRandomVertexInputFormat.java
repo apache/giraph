@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.benchmark;
+package org.apache.giraph.io;
 
 import org.apache.giraph.bsp.BspInputSplit;
 import org.apache.giraph.graph.BspUtils;

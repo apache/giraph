@@ -25,6 +25,8 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.io.IntIntNullIntTextInputFormat;
+import org.apache.giraph.io.IdWithValueTextOutputFormat;
 import org.apache.giraph.utils.InternalVertexRunner;
 import org.junit.Test;
 
@@ -71,8 +73,8 @@ public class TryMultiRpcBindingPortsTest {
                 ConnectedComponentsVertex.class,
                 MinimumIntCombiner.class,
                 IntIntNullIntTextInputFormat.class,
-                VertexWithComponentTextOutputFormat.class,
-                params, 
+                IdWithValueTextOutputFormat.class,
+                params,
                 graph);
 
         SetMultimap<Integer,Integer> components = parseResults(results);

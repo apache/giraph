@@ -23,6 +23,8 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.Set;
 
+import org.apache.giraph.io.IntIntNullIntTextInputFormat;
+import org.apache.giraph.io.IdWithValueTextOutputFormat;
 import org.apache.giraph.utils.InternalVertexRunner;
 import org.junit.Test;
 
@@ -66,7 +68,7 @@ public class ConnectedComponentsVertexTest {
                 ConnectedComponentsVertex.class,
                 MinimumIntCombiner.class,
                 IntIntNullIntTextInputFormat.class,
-                VertexWithComponentTextOutputFormat.class,
+                IdWithValueTextOutputFormat.class,
                 Maps.<String,String>newHashMap(), graph);
 
         SetMultimap<Integer,Integer> components = parseResults(results);

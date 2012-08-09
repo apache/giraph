@@ -24,12 +24,11 @@ import java.io.IOException;
 
 import org.apache.giraph.benchmark.PageRankBenchmark;
 import org.apache.giraph.benchmark.PageRankComputation;
-import org.apache.giraph.benchmark.PseudoRandomVertexInputFormat;
+import org.apache.giraph.io.PseudoRandomVertexInputFormat;
 import org.apache.giraph.graph.GiraphJob;
-import org.apache.giraph.lib.JsonBase64VertexInputFormat;
-import org.apache.giraph.lib.JsonBase64VertexOutputFormat;
+import org.apache.giraph.io.JsonBase64VertexInputFormat;
+import org.apache.giraph.io.JsonBase64VertexOutputFormat;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.junit.Test;

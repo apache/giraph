@@ -18,7 +18,7 @@
 
 package org.apache.giraph;
 
-import org.apache.giraph.examples.GeneratedVertexInputFormat;
+import org.apache.giraph.io.GeneratedVertexInputFormat;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.GiraphJob;
@@ -27,8 +27,8 @@ import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexCombiner;
 import org.apache.giraph.graph.VertexInputFormat;
 import org.apache.giraph.graph.VertexOutputFormat;
-import org.apache.giraph.lib.JsonBase64VertexInputFormat;
-import org.apache.giraph.lib.JsonBase64VertexOutputFormat;
+import org.apache.giraph.io.JsonBase64VertexInputFormat;
+import org.apache.giraph.io.JsonBase64VertexOutputFormat;
 import org.apache.giraph.utils.EmptyIterable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DoubleWritable;
@@ -166,7 +166,7 @@ public class TestVertexTypes {
         } catch (IllegalArgumentException e) {
         }
     }
-    
+
     @Test
     public void testMismatchingCombiner() throws SecurityException,
             NoSuchMethodException, NoSuchFieldException {

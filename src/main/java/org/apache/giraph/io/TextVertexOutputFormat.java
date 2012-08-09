@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.lib;
+package org.apache.giraph.io;
 
 import java.io.IOException;
 

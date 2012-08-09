@@ -15,22 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.giraph.lib;
-
 /**
- * Keeps the vertex keys for the input/output vertex format
+ * Package of reusable library Giraph objects.
  */
-public class JsonBase64VertexFormat {
-  /** Vertex id key */
-  public static final String VERTEX_ID_KEY = "vertexId";
-  /** Vertex value key*/
-  public static final String VERTEX_VALUE_KEY = "vertexValue";
-  /** Edge value array key (all the edges are stored here) */
-  public static final String EDGE_ARRAY_KEY = "edgeArray";
-
-  /**
-   * Don't construct.
-   */
-  private JsonBase64VertexFormat() { }
-}
+package org.apache.giraph.io;

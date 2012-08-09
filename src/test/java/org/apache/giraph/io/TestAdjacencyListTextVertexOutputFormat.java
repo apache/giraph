@@ -15,11 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.lib;
+package org.apache.giraph.io;
 
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.lib.AdjacencyListTextVertexOutputFormat.AdjacencyListVertexWriter;
+import org.apache.giraph.io.AdjacencyListTextVertexOutputFormat.AdjacencyListVertexWriter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.Text;

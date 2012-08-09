@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.lib;
+package org.apache.giraph.io;
 
 import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.lib.IdWithValueTextOutputFormat.IdWithValueVertexWriter;
+import org.apache.giraph.io.IdWithValueTextOutputFormat.IdWithValueVertexWriter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.Text;
@@ -29,8 +29,8 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.junit.Test;
 import org.mockito.Matchers;
 
-import static org.apache.giraph.lib.IdWithValueTextOutputFormat.IdWithValueVertexWriter.LINE_TOKENIZE_VALUE;
-import static org.apache.giraph.lib.IdWithValueTextOutputFormat.IdWithValueVertexWriter.REVERSE_ID_AND_VALUE;
+import static org.apache.giraph.io.IdWithValueTextOutputFormat.IdWithValueVertexWriter.LINE_TOKENIZE_VALUE;
+import static org.apache.giraph.io.IdWithValueTextOutputFormat.IdWithValueVertexWriter.REVERSE_ID_AND_VALUE;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;

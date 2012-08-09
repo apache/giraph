@@ -28,8 +28,9 @@ import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexReader;
 import org.apache.giraph.graph.VertexWriter;
 import org.apache.giraph.graph.WorkerContext;
-import org.apache.giraph.lib.TextVertexOutputFormat;
-import org.apache.giraph.lib.TextVertexOutputFormat.TextVertexWriter;
+import org.apache.giraph.io.GeneratedVertexInputFormat;
+import org.apache.giraph.io.TextVertexOutputFormat;
+import org.apache.giraph.io.TextVertexOutputFormat.TextVertexWriter;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -221,8 +222,8 @@ public class SimplePageRankVertex extends LongDoubleFloatDoubleVertex {
    * Simple VertexInputFormat that supports {@link SimplePageRankVertex}
    */
   public static class SimplePageRankVertexInputFormat extends
-      GeneratedVertexInputFormat<LongWritable,
-        DoubleWritable, FloatWritable, DoubleWritable> {
+    GeneratedVertexInputFormat<LongWritable,
+            DoubleWritable, FloatWritable, DoubleWritable> {
     @Override
     public VertexReader<LongWritable, DoubleWritable,
     FloatWritable, DoubleWritable> createVertexReader(InputSplit split,

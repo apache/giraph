@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.lib;
+package org.apache.giraph.io;
 
 import org.apache.giraph.graph.VertexInputFormat;
 import org.apache.giraph.graph.VertexReader;

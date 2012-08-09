@@ -16,12 +16,11 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.examples;
+package org.apache.giraph.io;
 
 import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexReader;
-import org.apache.giraph.lib.TextVertexInputFormat;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
