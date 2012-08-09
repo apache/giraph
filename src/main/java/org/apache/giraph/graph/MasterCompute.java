@@ -154,7 +154,7 @@ public abstract class MasterCompute implements MasterAggregatorUsage, Writable,
   @Override
   public <A extends Writable> A getAggregatedValue(String name) {
     return getGraphState().getGraphMapper().getMasterAggregatorUsage().
-        getAggregatedValue(name);
+        <A>getAggregatedValue(name);
   }
 
   @Override

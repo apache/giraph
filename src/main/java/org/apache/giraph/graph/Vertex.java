@@ -323,7 +323,7 @@ public abstract class Vertex<I extends WritableComparable,
   @Override
   public <A extends Writable> A getAggregatedValue(String name) {
     return getGraphState().getGraphMapper().getWorkerAggregatorUsage().
-        getAggregatedValue(name);
+        <A>getAggregatedValue(name);
   }
 
   @Override
