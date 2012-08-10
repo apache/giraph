@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-258: Check type compatibility before submitting job. 
+  (Eli Reisman via jghoman)
+
   GIRAPH-218: Consolidate all I/O Format classes under one roof in lib/ directory.
   (Eli Reisman via jghoman)
 

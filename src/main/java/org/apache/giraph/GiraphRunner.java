@@ -24,6 +24,7 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.giraph.examples.Algorithm;
 import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.graph.GiraphTypeValidator;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.utils.AnnotationUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -216,6 +217,13 @@ public class GiraphRunner implements Tool {
         jobConf.set(parts[0], parts[1]);
       }
     }
+
+    // validate generic parameters chosen are correct or
+    // throw IllegalArgumentException, halting execution.
+    @SuppressWarnings("rawtypes")
+    GiraphTypeValidator<?, ?, ?, ?> validator =
+      new GiraphTypeValidator(job.getConfiguration());
+    validator.validateClassTypes();
 
     job.setWorkerConfiguration(workers, workers, 100.0f);
 
