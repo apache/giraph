@@ -134,6 +134,8 @@ public class BspServiceMaster<I extends WritableComparable,
   private AggregatorWriter aggregatorWriter;
   /** Master class */
   private MasterCompute masterCompute;
+  /** Limit locality information added to each InputSplit znode */
+  private final int localityLimit = 5;
 
   /**
    * Constructor for setting up the master.
@@ -517,13 +519,29 @@ public class BspServiceMaster<I extends WritableComparable,
           "some workers will be not used");
     }
     String inputSplitPath = null;
+    String[] splitLocations;
+    InputSplit inputSplit;
+    StringBuilder locations;
     for (int i = 0; i < splitList.size(); ++i) {
       try {
         ByteArrayOutputStream byteArrayOutputStream =
             new ByteArrayOutputStream();
         DataOutput outputStream =
             new DataOutputStream(byteArrayOutputStream);
-        InputSplit inputSplit = splitList.get(i);
+        inputSplit = splitList.get(i);
+        splitLocations = inputSplit.getLocations();
+        locations = null;
+        if (splitLocations != null) {
+          int splitListLength =
+            Math.min(splitLocations.length, localityLimit);
+          locations = new StringBuilder();
+          for (String location : splitLocations) {
+            locations.append(location)
+              .append(--splitListLength > 0 ? "\t" : "");
+          }
+        }
+        Text.writeString(outputStream,
+            locations == null ? "" : locations.toString());
         Text.writeString(outputStream,
             inputSplit.getClass().getName());
         ((Writable) inputSplit).write(outputStream);

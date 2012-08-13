@@ -32,16 +32,19 @@ import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexInp
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexOutputFormat;
 import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.graph.LocalityInfoSorter;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.TextAggregatorWriter;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexInputFormat;
+import org.apache.giraph.zk.ZooKeeperExt;
 import org.apache.giraph.io.JsonLongDoubleFloatDoubleVertexOutputFormat;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -54,12 +57,16 @@ import org.apache.hadoop.mapreduce.JobContext;
 else[HADOOP_NON_SASL_RPC]*/
 import org.apache.hadoop.mapreduce.task.JobContextImpl;
 /*end[HADOOP_NON_SASL_RPC]*/
+import org.apache.zookeeper.KeeperException;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.Maps;
@@ -71,6 +78,8 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -282,6 +291,46 @@ public class TestBspBasic extends BspCase {
         SimpleCombinerVertex.class, SimpleSuperstepVertexInputFormat.class);
     job.setVertexCombinerClass(SimpleSumCombiner.class);
     assertTrue(job.run(true));
+  }
+
+  /**
+   * Run a test to see if the LocalityInfoSorter can correctly sort
+   * locality information from a mocked znode of data.
+   * @throws IOException
+   * @throws KeeperException
+   * @throws InterruptedException
+   */
+  @Test
+  public void testLocalityInfoSorter()
+    throws IOException, KeeperException, InterruptedException {
+    final List<String> goodList = new ArrayList<String>();
+    Collections.addAll(goodList, "good", "bad", "ugly");
+    final List<String> testList = new ArrayList<String>();
+    Collections.addAll(testList, "bad", "good", "ugly");
+    final String localHost = "node.LOCAL.com";
+    // build output just as we do to store hostlists in ZNODES
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    DataOutputStream dos = new DataOutputStream(baos);
+    String last = "node.test4.com\tnode.test5.com\tnode.test6.com";
+    Text.writeString(dos, last);
+    byte[] LOCALITY_LAST = baos.toByteArray();
+    baos = new ByteArrayOutputStream();
+    dos = new DataOutputStream(baos);
+    String middle = "node.test1.com\tnode.test2.com\tnode.test3.com";
+    Text.writeString(dos, middle);
+    byte[] LOCALITY_MIDDLE = baos.toByteArray();
+    baos = new ByteArrayOutputStream();
+    dos = new DataOutputStream(baos);
+    String first = "node.testx.com\tnode.LOCAL.com\tnode.testy.com";
+    Text.writeString(dos, first);
+    byte[] LOCALITY_FIRST = baos.toByteArray();
+    ZooKeeperExt zk = mock(ZooKeeperExt.class);
+    when(zk.getData("ugly", false, null)).thenReturn(LOCALITY_LAST);
+    when(zk.getData("bad", false, null)).thenReturn(LOCALITY_MIDDLE);
+    when(zk.getData("good", false, null)).thenReturn(LOCALITY_FIRST);
+    LocalityInfoSorter lis = new LocalityInfoSorter(zk, testList, localHost);
+    final List<String> resultList = lis.getPrioritizedLocalInputSplits();
+    assertEquals(goodList, resultList);
   }
 
   /**

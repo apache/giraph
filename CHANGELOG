@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-275: Restore data locality to workers reading InputSplits where possible
+  without querying NameNode, ZooKeeper. (Eli Reisman via jghoman)
+  
   GIRAPH-258: Check type compatibility before submitting job. 
   (Eli Reisman via jghoman)
 

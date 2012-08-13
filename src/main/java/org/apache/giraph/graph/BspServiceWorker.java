@@ -205,7 +205,10 @@ public class BspServiceWorker<I extends WritableComparable,
     if (inputSplitCount == -1) {
       inputSplitCount = inputSplitPathList.size();
     }
-
+    LocalityInfoSorter localitySorter = new LocalityInfoSorter(
+      getZkExt(), inputSplitPathList, getHostname());
+    inputSplitPathList =
+      localitySorter.getPrioritizedLocalInputSplits();
     String reservedInputSplitPath = null;
     Stat reservedStat = null;
     while (true) {
@@ -400,6 +403,7 @@ public class BspServiceWorker<I extends WritableComparable,
 
     DataInputStream inputStream =
         new DataInputStream(new ByteArrayInputStream(splitList));
+    Text.readString(inputStream); // location data unused here, skip
     String inputSplitClass = Text.readString(inputStream);
     InputSplit inputSplit = (InputSplit)
         ReflectionUtils.newInstance(
