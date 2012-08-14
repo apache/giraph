@@ -123,6 +123,8 @@ public class BspServiceMaster<I extends WritableComparable,
   private final int partitionLongTailMinPrint;
   /** Last finalized checkpoint */
   private long lastCheckpointedSuperstep = -1;
+  /** Worker wrote checkpoint */
+  private final BspEvent workerWroteCheckpoint;
   /** State of the superstep changed */
   private final BspEvent superstepStateChanged;
   /** Master graph partitioner */
@@ -151,6 +153,8 @@ public class BspServiceMaster<I extends WritableComparable,
       Mapper<?, ?, ?, ?>.Context context,
       GraphMapper<I, V, E, M> graphMapper) {
     super(serverPortList, sessionMsecTimeout, context, graphMapper);
+    workerWroteCheckpoint = new PredicateLock(context);
+    registerBspEvent(workerWroteCheckpoint);
     superstepStateChanged = new PredicateLock(context);
     registerBspEvent(superstepStateChanged);
 
@@ -1398,6 +1402,54 @@ public class BspServiceMaster<I extends WritableComparable,
         chosenWorkerInfoList,
         masterGraphPartitioner);
 
+    // Finalize the valid checkpoint file prefixes and possibly
+    // the aggregators.
+    if (checkpointFrequencyMet(getSuperstep())) {
+      String workerWroteCheckpointPath =
+          getWorkerWroteCheckpointPath(getApplicationAttempt(),
+              getSuperstep());
+      // first wait for all the workers to write their checkpoint data
+      if (!barrierOnWorkerList(workerWroteCheckpointPath,
+          chosenWorkerInfoList,
+          getWorkerWroteCheckpointEvent())) {
+        return SuperstepState.WORKER_FAILURE;
+      }
+      try {
+        finalizeCheckpoint(getSuperstep(), chosenWorkerInfoList);
+      } catch (IOException e) {
+        throw new IllegalStateException(
+            "coordinateSuperstep: IOException on finalizing checkpoint",
+            e);
+      }
+    }
+
+    // Clean up the old supersteps (always keep this one)
+    long removeableSuperstep = getSuperstep() - 1;
+    if (!(getConfiguration().getBoolean(
+        GiraphJob.KEEP_ZOOKEEPER_DATA,
+        GiraphJob.KEEP_ZOOKEEPER_DATA_DEFAULT)) &&
+        (removeableSuperstep >= 0)) {
+      String oldSuperstepPath =
+          getSuperstepPath(getApplicationAttempt()) + "/" +
+              removeableSuperstep;
+      try {
+        if (LOG.isInfoEnabled()) {
+          LOG.info("coordinateSuperstep: Cleaning up old Superstep " +
+              oldSuperstepPath);
+        }
+        getZkExt().deleteExt(oldSuperstepPath,
+            -1,
+            true);
+      } catch (KeeperException.NoNodeException e) {
+        LOG.warn("coordinateBarrier: Already cleaned up " +
+            oldSuperstepPath);
+      } catch (KeeperException e) {
+        throw new IllegalStateException(
+            "coordinateSuperstep: KeeperException on " +
+                "finalizing checkpoint", e);
+      }
+    }
+
     if (getSuperstep() == INPUT_SUPERSTEP) {
       // Coordinate the workers finishing sending their vertices to the
       // correct workers and signal when everything is done.
@@ -1468,44 +1520,6 @@ public class BspServiceMaster<I extends WritableComparable,
         globalStats.getMessageCount() -
         sentMessagesCounter.getValue());
 
-    // Finalize the valid checkpoint file prefixes and possibly
-    // the aggregators.
-    if (checkpointFrequencyMet(getSuperstep())) {
-      try {
-        finalizeCheckpoint(getSuperstep(), chosenWorkerInfoList);
-      } catch (IOException e) {
-        throw new IllegalStateException(
-            "coordinateSuperstep: IOException on finalizing checkpoint",
-            e);
-      }
-    }
-
-    // Clean up the old supersteps (always keep this one)
-    long removeableSuperstep = getSuperstep() - 1;
-    if (!(getConfiguration().getBoolean(
-        GiraphJob.KEEP_ZOOKEEPER_DATA,
-        GiraphJob.KEEP_ZOOKEEPER_DATA_DEFAULT)) &&
-        (removeableSuperstep >= 0)) {
-      String oldSuperstepPath =
-          getSuperstepPath(getApplicationAttempt()) + "/" +
-              removeableSuperstep;
-      try {
-        if (LOG.isInfoEnabled()) {
-          LOG.info("coordinateSuperstep: Cleaning up old Superstep " +
-              oldSuperstepPath);
-        }
-        getZkExt().deleteExt(oldSuperstepPath,
-            -1,
-            true);
-      } catch (KeeperException.NoNodeException e) {
-        LOG.warn("coordinateBarrier: Already cleaned up " +
-            oldSuperstepPath);
-      } catch (KeeperException e) {
-        throw new IllegalStateException(
-            "coordinateSuperstep: KeeperException on " +
-                "finalizing checkpoint", e);
-      }
-    }
     incrCachedSuperstep();
     // Counter starts at zero, so no need to increment
     if (getSuperstep() > 0) {
@@ -1718,6 +1732,15 @@ public class BspServiceMaster<I extends WritableComparable,
   }
 
   /**
+   * Event that the master watches that denotes when a worker wrote checkpoint
+   *
+   * @return Event that denotes when a worker wrote checkpoint
+   */
+  public final BspEvent getWorkerWroteCheckpointEvent() {
+    return workerWroteCheckpoint;
+  }
+
+  /**
    * Event that the master watches that denotes if a worker has done something
    * that changes the state of a superstep (either a worker completed or died)
    *
@@ -1778,6 +1801,14 @@ public class BspServiceMaster<I extends WritableComparable,
             "event - superstepStateChanged signaled");
       }
       superstepStateChanged.signal();
+      foundEvent = true;
+    } else if (event.getPath().contains(WORKER_WROTE_CHECKPOINT_DIR) &&
+        event.getType() == EventType.NodeChildrenChanged) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("processEvent: Worker wrote checkpoint (node change) " +
+            "event - workerWroteCheckpoint signaled");
+      }
+      workerWroteCheckpoint.signal();
       foundEvent = true;
     }
 

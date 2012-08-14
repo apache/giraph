@@ -2,19 +2,24 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
-  GIRAPH-275: Restore data locality to workers reading InputSplits where possible
-  without querying NameNode, ZooKeeper. (Eli Reisman via jghoman)
+  GIRAPH-297: Checkpointing on master is done one superstep later
+  (majakabiljo via aching).
+
+  GIRAPH-275: Restore data locality to workers reading InputSplits
+  where possible without querying NameNode, ZooKeeper. (Eli Reisman
+  via jghoman)
   
   GIRAPH-258: Check type compatibility before submitting job. 
   (Eli Reisman via jghoman)
 
-  GIRAPH-218: Consolidate all I/O Format classes under one roof in lib/ directory.
-  (Eli Reisman via jghoman)
+  GIRAPH-218: Consolidate all I/O Format classes under one roof in
+  lib/ directory.  (Eli Reisman via jghoman)
 
   GIRAPH-259: TestBspBasic.testBspPageRank is broken (majakabiljo via apresta)
 
-  GIRAPH-256: Partitioning outgoing graph data during INPUT_SUPERSTEP by # of 
-  vertices results in wide variance in RPC message sizes. (Eli Reisman via jghoman)
+  GIRAPH-256: Partitioning outgoing graph data during INPUT_SUPERSTEP
+  by # of vertices results in wide variance in RPC message sizes. (Eli
+  Reisman via jghoman)
   
   GIRAPH-290: Add committer information for Alessandro Presta to pom.xml
   (apresta)

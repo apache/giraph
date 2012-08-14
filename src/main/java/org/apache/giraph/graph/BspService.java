@@ -103,6 +103,9 @@ public abstract class BspService<I extends WritableComparable,
   public static final String WORKER_HEALTHY_DIR = "/_workerHealthyDir";
   /** Unhealthy workers register here. */
   public static final String WORKER_UNHEALTHY_DIR = "/_workerUnhealthyDir";
+  /** Workers which wrote checkpoint notify here */
+  public static final String WORKER_WROTE_CHECKPOINT_DIR =
+      "/_workerWroteCheckpointDir";
   /** Finished workers notify here */
   public static final String WORKER_FINISHED_DIR = "/_workerFinishedDir";
   /** Where the partition assignments are set */
@@ -432,6 +435,20 @@ public abstract class BspService<I extends WritableComparable,
       long superstep) {
     return applicationAttemptsPath + "/" + attempt +
         SUPERSTEP_DIR + "/" + superstep + WORKER_UNHEALTHY_DIR;
+  }
+
+  /**
+   * Generate the worker "wrote checkpoint" directory path for a
+   * superstep
+   *
+   * @param attempt application attempt number
+   * @param superstep superstep to use
+   * @return directory path based on the a superstep
+   */
+  public final String getWorkerWroteCheckpointPath(long attempt,
+      long superstep) {
+    return applicationAttemptsPath + "/" + attempt +
+        SUPERSTEP_DIR + "/" + superstep + WORKER_WROTE_CHECKPOINT_DIR;
   }
 
   /**
