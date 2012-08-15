@@ -159,6 +159,12 @@ public class GiraphJob {
   /** Default is to use RPC, not netty */
   public static final boolean USE_NETTY_DEFAULT = false;
 
+  /** Netty max connection failures */
+  public static final String NETTY_MAX_CONNECTION_FAILURES =
+      "giraph.nettyMaxConnectionFailures";
+  /** Default Netty max connection failures */
+  public static final int NETTY_MAX_CONNECTION_FAILURES_DEFAULT = 1000;
+
   /** Initial port to start using for the RPC communication */
   public static final String RPC_INITIAL_PORT = "giraph.rpcInitialPort";
   /** Default port to start using for the RPC communication */

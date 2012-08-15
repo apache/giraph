@@ -19,12 +19,13 @@
 package org.apache.giraph.comm;
 
 import java.io.IOException;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.ConcurrentMap;
 
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferInputStream;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
@@ -36,16 +37,17 @@ public class ResponseClientHandler extends SimpleChannelUpstreamHandler {
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(ResponseClientHandler.class);
-  /** Keep track on the responses received */
-  private final AtomicInteger waitingRequestCount;
+  /** Outstanding request map */
+  private final ConcurrentMap<Long, RequestInfo> outstandingRequestMap;
 
   /**
    * Constructor.
    *
-   * @param waitingRequestCount Number of requests to wait for
+   * @param outstandingRequestMap Map of outstanding requests
    */
-  public ResponseClientHandler(AtomicInteger waitingRequestCount) {
-    this.waitingRequestCount = waitingRequestCount;
+  public ResponseClientHandler(
+      ConcurrentMap<Long, RequestInfo> outstandingRequestMap) {
+    this.outstandingRequestMap = outstandingRequestMap;
   }
 
   @Override
@@ -57,48 +59,52 @@ public class ResponseClientHandler extends SimpleChannelUpstreamHandler {
     }
     ChannelBuffer buffer = (ChannelBuffer) event.getMessage();
     ChannelBufferInputStream inputStream = new ChannelBufferInputStream(buffer);
+    long requestId = -1;
     int response = -1;
     try {
-      for (int i = 0; i < buffer.capacity(); ++i) {
-        try {
-          response = inputStream.readByte();
-        } catch (IOException e) {
-          throw new IllegalStateException(
-              "messageReceived: Got IOException ", e);
-        }
-        if (response != 0) {
-          throw new IllegalStateException(
-              "messageReceived: Got illegal response " + response);
-        }
-      }
-    } finally {
-      try {
-        inputStream.close();
-      } catch (IOException e) {
-        throw new IllegalStateException("messageReceived: Got IOException ", e);
+      requestId = inputStream.readLong();
+      response = inputStream.readByte();
+      inputStream.close();
+    } catch (IOException e) {
+      throw new IllegalStateException(
+          "messageReceived: Got IOException ", e);
+    }
+    if (response != 0) {
+      throw new IllegalStateException(
+          "messageReceived: Got illegal response " + response);
+    }
+
+    RequestInfo requestInfo = outstandingRequestMap.remove(requestId);
+    if (requestInfo == null) {
+      throw new IllegalStateException("messageReceived: Impossible to " +
+          "have a non-registered requestId " + requestId);
+    } else {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("messageReceived: Processed request id = " + requestId +
+            " " + requestInfo + ".  Waiting on " +
+            outstandingRequestMap.size() +
+            " requests, bytes = " + buffer.capacity());
       }
     }
 
-    synchronized (waitingRequestCount) {
-      int currentRequestCount =
-          waitingRequestCount.addAndGet(-1 * buffer.capacity());
-      if (currentRequestCount < 0) {
-        throw new IllegalStateException("messageReceived: Impossible to " +
-            "have negative currentRequestCount " + currentRequestCount);
-      } else if (currentRequestCount == 0) {
-        waitingRequestCount.notify();
-      }
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("messageReceived: currentRequestCount = " +
-            currentRequestCount + ", bytes = " + buffer.capacity());
-      }
+    // Help NettyClient#waitSomeRequests() to finish faster
+    synchronized (outstandingRequestMap) {
+      outstandingRequestMap.notifyAll();
+    }
+  }
+
+  @Override
+  public void channelClosed(ChannelHandlerContext ctx,
+                            ChannelStateEvent e) throws Exception {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("channelClosed: Closed the channel on " +
+          ctx.getChannel().getRemoteAddress());
     }
   }
 
   @Override
   public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
     throw new IllegalStateException("exceptionCaught: Channel failed with " +
-        "remote address " + ctx.getChannel().getRemoteAddress() + " with " +
-        "cause " + e.getCause());
+        "remote address " + ctx.getChannel().getRemoteAddress(), e.getCause());
   }
 }

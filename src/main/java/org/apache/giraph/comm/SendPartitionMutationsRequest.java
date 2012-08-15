@@ -28,7 +28,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.giraph.comm.RequestRegistry.Type;
 import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.VertexMutations;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
@@ -46,7 +45,7 @@ import com.google.common.collect.Maps;
 @SuppressWarnings("rawtypes")
 public class SendPartitionMutationsRequest<I extends WritableComparable,
     V extends Writable, E extends Writable,
-    M extends Writable> implements WritableRequest<I, V, E, M> {
+    M extends Writable> extends WritableRequest<I, V, E, M> {
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(SendPartitionMutationsRequest.class);
@@ -54,8 +53,6 @@ public class SendPartitionMutationsRequest<I extends WritableComparable,
   private int partitionId;
   /** Mutations sent for a partition */
   private Map<I, VertexMutations<I, V, E, M>> vertexIdMutations;
-  /** Configuration */
-  private Configuration conf;
 
   /**
    * Constructor used for reflection only
@@ -68,23 +65,24 @@ public class SendPartitionMutationsRequest<I extends WritableComparable,
    * @param partitionId Partition to send the request to
    * @param vertexIdMutations Map of mutations to send
    */
-  public SendPartitionMutationsRequest(int partitionId,
+  public SendPartitionMutationsRequest(
+      int partitionId,
       Map<I, VertexMutations<I, V, E, M>> vertexIdMutations) {
     this.partitionId = partitionId;
     this.vertexIdMutations = vertexIdMutations;
   }
 
   @Override
-  public void readFields(DataInput input) throws IOException {
+  public void readFieldsRequest(DataInput input) throws IOException {
     partitionId = input.readInt();
     int vertexIdMutationsSize = input.readInt();
     vertexIdMutations = Maps.newHashMapWithExpectedSize(vertexIdMutationsSize);
     for (int i = 0; i < vertexIdMutationsSize; ++i) {
-      I vertexId = BspUtils.<I>createVertexId(conf);
+      I vertexId = BspUtils.<I>createVertexId(getConf());
       vertexId.readFields(input);
       VertexMutations<I, V, E, M> vertexMutations =
           new VertexMutations<I, V, E, M>();
-      vertexMutations.setConf(conf);
+      vertexMutations.setConf(getConf());
       vertexMutations.readFields(input);
       if (vertexIdMutations.put(vertexId, vertexMutations) != null) {
         throw new IllegalStateException(
@@ -94,7 +92,7 @@ public class SendPartitionMutationsRequest<I extends WritableComparable,
   }
 
   @Override
-  public void write(DataOutput output) throws IOException {
+  public void writeRequest(DataOutput output) throws IOException {
     output.writeInt(partitionId);
     output.writeInt(vertexIdMutations.size());
     for (Entry<I, VertexMutations<I, V, E, M>> entry :
@@ -128,15 +126,5 @@ public class SendPartitionMutationsRequest<I extends WritableComparable,
         mutations.addVertexMutations(entry.getValue());
       }
     }
-  }
-
-  @Override
-  public Configuration getConf() {
-    return conf;
-  }
-
-  @Override
-  public void setConf(Configuration conf) {
-    this.conf = conf;
   }
 }

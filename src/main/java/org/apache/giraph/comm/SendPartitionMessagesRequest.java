@@ -20,7 +20,6 @@ package org.apache.giraph.comm;
 
 import org.apache.giraph.comm.RequestRegistry.Type;
 import org.apache.giraph.graph.BspUtils;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
@@ -47,7 +46,7 @@ import java.util.Map.Entry;
 @SuppressWarnings("rawtypes")
 public class SendPartitionMessagesRequest<I extends WritableComparable,
     V extends Writable, E extends Writable,
-    M extends Writable> implements WritableRequest<I, V, E, M> {
+    M extends Writable> extends WritableRequest<I, V, E, M> {
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(SendPartitionMessagesRequest.class);
@@ -55,8 +54,6 @@ public class SendPartitionMessagesRequest<I extends WritableComparable,
   private int partitionId;
   /** Messages sent for a partition */
   private Map<I, Collection<M>> vertexIdMessages;
-  /** Configuration */
-  private Configuration conf;
 
   /**
    * Constructor used for reflection only
@@ -76,17 +73,17 @@ public class SendPartitionMessagesRequest<I extends WritableComparable,
   }
 
   @Override
-  public void readFields(DataInput input) throws IOException {
+  public void readFieldsRequest(DataInput input) throws IOException {
     partitionId = input.readInt();
     int vertexIdMessagesSize = input.readInt();
     vertexIdMessages = Maps.newHashMapWithExpectedSize(vertexIdMessagesSize);
     for (int i = 0; i < vertexIdMessagesSize; ++i) {
-      I vertexId = BspUtils.<I>createVertexId(conf);
+      I vertexId = BspUtils.<I>createVertexId(getConf());
       vertexId.readFields(input);
       int messageCount = input.readInt();
       List<M> messageList = Lists.newArrayListWithCapacity(messageCount);
       for (int j = 0; j < messageCount; ++j) {
-        M message = BspUtils.<M>createMessageValue(conf);
+        M message = BspUtils.<M>createMessageValue(getConf());
         message.readFields(input);
         messageList.add(message);
       }
@@ -98,7 +95,7 @@ public class SendPartitionMessagesRequest<I extends WritableComparable,
   }
 
   @Override
-  public void write(DataOutput output) throws IOException {
+  public void writeRequest(DataOutput output) throws IOException {
     output.writeInt(partitionId);
     output.writeInt(vertexIdMessages.size());
     for (Entry<I, Collection<M>> entry : vertexIdMessages.entrySet()) {
@@ -123,16 +120,6 @@ public class SendPartitionMessagesRequest<I extends WritableComparable,
     } catch (IOException e) {
       throw new RuntimeException("doRequest: Got IOException ", e);
     }
-  }
-
-  @Override
-  public Configuration getConf() {
-    return conf;
-  }
-
-  @Override
-  public void setConf(Configuration conf) {
-    this.conf = conf;
   }
 
   /**

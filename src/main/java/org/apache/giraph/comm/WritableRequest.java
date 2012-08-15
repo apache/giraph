@@ -18,8 +18,12 @@
 
 package org.apache.giraph.comm;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 import org.apache.giraph.comm.RequestRegistry.Type;
 import org.apache.hadoop.conf.Configurable;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -32,19 +36,69 @@ import org.apache.hadoop.io.WritableComparable;
  * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
-public interface WritableRequest<I extends WritableComparable,
+public abstract class WritableRequest<I extends WritableComparable,
     V extends Writable, E extends Writable,
-    M extends Writable> extends Writable, Configurable {
+    M extends Writable> implements Writable, Configurable {
+  /** Configuration */
+  private Configuration conf;
+  /** Request id */
+  private long requestId = -1;
+
+  public long getRequestId() {
+    return requestId;
+  }
+
+  public void setRequestId(long requestId) {
+    this.requestId = requestId;
+  }
+
   /**
    * Get the type of the request
    *
    * @return Request type
    */
-  Type getType();
+  public abstract Type getType();
+
+  /**
+   * Serialize the request
+   *
+   * @param input Input to read fields from
+   */
+  abstract void readFieldsRequest(DataInput input) throws IOException;
+
+  /**
+   * Deserialize the request
+   *
+   * @param output Output to write the request to
+   */
+  abstract void writeRequest(DataOutput output) throws IOException;
+
   /**
    * Execute the request
    *
    * @param serverData Accessible data that can be mutated per the request
    */
-  void doRequest(ServerData<I, V, E, M> serverData);
+  public abstract void doRequest(ServerData<I, V, E, M> serverData);
+
+  @Override
+  public final Configuration getConf() {
+    return conf;
+  }
+
+  @Override
+  public final void setConf(Configuration conf) {
+    this.conf = conf;
+  }
+
+  @Override
+  public final void readFields(DataInput input) throws IOException {
+    requestId = input.readLong();
+    readFieldsRequest(input);
+  }
+
+  @Override
+  public final void write(DataOutput output) throws IOException {
+    output.writeLong(requestId);
+    writeRequest(output);
+  }
 }

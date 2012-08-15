@@ -18,6 +18,8 @@
 
 package org.apache.giraph.comm;
 
+import com.google.common.collect.Sets;
+import java.util.Set;
 import org.apache.giraph.comm.messages.SimpleMessageStore;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.utils.MockUtils;
@@ -104,8 +106,10 @@ public class ConnectionTest {
     NettyClient<IntWritable, IntWritable, IntWritable, IntWritable> client =
         new NettyClient<IntWritable, IntWritable, IntWritable,
         IntWritable>(context);
-    List<InetSocketAddress> serverAddresses =
-        new ArrayList<InetSocketAddress>();
+    Set<InetSocketAddress> serverAddresses = Sets.newHashSet();
+    serverAddresses.add(server1.getMyAddress());
+    serverAddresses.add(server2.getMyAddress());
+    serverAddresses.add(server3.getMyAddress());
     client.connectAllAddresses(serverAddresses);
 
     client.stop();

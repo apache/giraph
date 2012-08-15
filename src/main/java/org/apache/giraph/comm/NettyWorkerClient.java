@@ -18,6 +18,8 @@
 
 package org.apache.giraph.comm;
 
+import com.google.common.collect.Sets;
+import java.util.Set;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.messages.MessageStoreByPartition;
 import org.apache.giraph.comm.messages.SendPartitionCurrentMessagesRequest;
@@ -34,13 +36,11 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
@@ -115,8 +115,8 @@ public class NettyWorkerClient<I extends WritableComparable,
   public void fixPartitionIdToSocketAddrMap() {
     // 1. Fix all the cached inet addresses (remove all changed entries)
     // 2. Connect to any new RPC servers
-    List<InetSocketAddress> addresses =
-        Lists.newArrayListWithCapacity(service.getPartitionOwners().size());
+    Set<InetSocketAddress> addresses =
+        Sets.newHashSetWithExpectedSize(service.getPartitionOwners().size());
     for (PartitionOwner partitionOwner : service.getPartitionOwners()) {
       InetSocketAddress address =
           partitionIndexAddressMap.get(

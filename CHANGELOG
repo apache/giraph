@@ -2,8 +2,12 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
-  GIRAPH-296: TotalNumVertices and TotalNumEdges are not saved in checkpoint.
-  (majakabiljo via apresta)
+  GIRAPH-300) Improve netty reliability with retrying failed
+  connections, tracking requests, thread-safe hash partitioning
+  (aching via apresta).
+
+  GIRAPH-296: TotalNumVertices and TotalNumEdges are not saved in
+  checkpoint.  (majakabiljo via apresta)
 
   GIRAPH-297: Checkpointing on master is done one superstep later
   (majakabiljo via aching).
@@ -18,7 +22,8 @@ Release 0.2.0 - unreleased
   GIRAPH-218: Consolidate all I/O Format classes under one roof in
   lib/ directory.  (Eli Reisman via jghoman)
 
-  GIRAPH-259: TestBspBasic.testBspPageRank is broken (majakabiljo via apresta)
+  GIRAPH-259: TestBspBasic.testBspPageRank is broken (majakabiljo via
+  apresta)
 
   GIRAPH-256: Partitioning outgoing graph data during INPUT_SUPERSTEP
   by # of vertices results in wide variance in RPC message sizes. (Eli

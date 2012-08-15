@@ -24,6 +24,8 @@ import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.ChannelHandlerContext;
+import org.jboss.netty.channel.ChannelStateEvent;
+import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 
@@ -65,9 +67,34 @@ public class RequestServerHandler<I extends WritableComparable,
         (WritableRequest<I, V, E, M>) e.getMessage();
     writableRequest.doRequest(serverData);
 
-    // Send the success response
-    ChannelBuffer buffer = ChannelBuffers.directBuffer(1);
+    // Send the success response with the request id
+    ChannelBuffer buffer = ChannelBuffers.directBuffer(9);
+    buffer.writeLong(writableRequest.getRequestId());
     buffer.writeByte(0);
     e.getChannel().write(buffer);
+  }
+
+  @Override
+  public void channelConnected(ChannelHandlerContext ctx,
+                               ChannelStateEvent e) throws Exception {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("channelConnected: Connected the channel on " +
+          ctx.getChannel().getRemoteAddress());
+    }
+  }
+
+  @Override
+  public void channelClosed(ChannelHandlerContext ctx,
+                            ChannelStateEvent e) throws Exception {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("channelClosed: Closed the channel on " +
+          ctx.getChannel().getRemoteAddress());
+    }
+  }
+
+  @Override
+  public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
+    throw new IllegalStateException("exceptionCaught: Channel failed with " +
+        "remote address " + ctx.getChannel().getRemoteAddress(), e.getCause());
   }
 }

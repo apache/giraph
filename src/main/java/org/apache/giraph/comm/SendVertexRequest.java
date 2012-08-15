@@ -27,7 +27,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.apache.giraph.comm.RequestRegistry.Type;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.BspUtils;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
@@ -45,7 +44,7 @@ import com.google.common.collect.Lists;
 @SuppressWarnings("rawtypes")
 public class SendVertexRequest<I extends WritableComparable,
     V extends Writable, E extends Writable,
-    M extends Writable> implements WritableRequest<I, V, E, M> {
+    M extends Writable> extends WritableRequest<I, V, E, M> {
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(SendVertexRequest.class);
@@ -53,8 +52,6 @@ public class SendVertexRequest<I extends WritableComparable,
   private int partitionId;
   /** List of vertices to be stored on this partition */
   private Collection<Vertex<I, V, E, M>> vertices;
-  /** Configuration */
-  private Configuration conf;
 
   /**
    * Constructor used for reflection only
@@ -67,26 +64,26 @@ public class SendVertexRequest<I extends WritableComparable,
    * @param partitionId Partition to send the request to
    * @param vertices Vertices to send
    */
-  public SendVertexRequest(
-      int partitionId, Collection<Vertex<I, V, E, M>> vertices) {
+  public SendVertexRequest(int partitionId,
+                           Collection<Vertex<I, V, E, M>> vertices) {
     this.partitionId = partitionId;
     this.vertices = vertices;
   }
 
   @Override
-  public void readFields(DataInput input) throws IOException {
+  public void readFieldsRequest(DataInput input) throws IOException {
     partitionId = input.readInt();
     int verticesCount = input.readInt();
     vertices = Lists.newArrayListWithCapacity(verticesCount);
     for (int i = 0; i < verticesCount; ++i) {
-      Vertex<I, V, E, M> vertex = BspUtils.createVertex(conf);
+      Vertex<I, V, E, M> vertex = BspUtils.createVertex(getConf());
       vertex.readFields(input);
       vertices.add(vertex);
     }
   }
 
   @Override
-  public void write(DataOutput output) throws IOException {
+  public void writeRequest(DataOutput output) throws IOException {
     output.writeInt(partitionId);
     output.writeInt(vertices.size());
     for (Vertex<I, V, E, M> vertex : vertices) {
@@ -120,16 +117,6 @@ public class SendVertexRequest<I extends WritableComparable,
     synchronized (vertexMap) {
       vertexMap.addAll(vertices);
     }
-  }
-
-  @Override
-  public Configuration getConf() {
-    return conf;
-  }
-
-  @Override
-  public void setConf(Configuration conf) {
-    this.conf = conf;
   }
 }
 

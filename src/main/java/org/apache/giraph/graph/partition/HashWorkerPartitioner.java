@@ -53,8 +53,10 @@ public class HashWorkerPartitioner<I extends WritableComparable,
 
   @Override
   public PartitionOwner getPartitionOwner(I vertexId) {
-    return partitionOwnerList.get(Math.abs(vertexId.hashCode()) %
-      partitionOwnerList.size());
+    synchronized (partitionOwnerList) {
+      return partitionOwnerList.get(Math.abs(vertexId.hashCode()) %
+          partitionOwnerList.size());
+    }
   }
 
   @Override
@@ -70,8 +72,10 @@ public class HashWorkerPartitioner<I extends WritableComparable,
       WorkerInfo myWorkerInfo,
       Collection<? extends PartitionOwner> masterSetPartitionOwners,
       Map<Integer, Partition<I, V, E, M>> partitionMap) {
-    partitionOwnerList.clear();
-    partitionOwnerList.addAll(masterSetPartitionOwners);
+    synchronized (partitionOwnerList) {
+      partitionOwnerList.clear();
+      partitionOwnerList.addAll(masterSetPartitionOwners);
+    }
 
     Set<WorkerInfo> dependentWorkerSet = new HashSet<WorkerInfo>();
     Map<WorkerInfo, List<Integer>> workerPartitionOwnerMap =
@@ -111,6 +115,8 @@ public class HashWorkerPartitioner<I extends WritableComparable,
 
   @Override
   public Collection<? extends PartitionOwner> getPartitionOwners() {
-    return partitionOwnerList;
+    synchronized (partitionOwnerList) {
+      return partitionOwnerList;
+    }
   }
 }

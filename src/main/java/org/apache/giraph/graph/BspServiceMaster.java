@@ -18,6 +18,7 @@
 
 package org.apache.giraph.graph;
 
+import com.google.common.collect.Sets;
 import org.apache.giraph.bsp.ApplicationState;
 import org.apache.giraph.bsp.BspInputFormat;
 import org.apache.giraph.bsp.CentralizedServiceMaster;
@@ -89,6 +90,8 @@ public class BspServiceMaster<I extends WritableComparable,
     implements CentralizedServiceMaster<I, V, E, M> {
   /** Counter group name for the Giraph statistics */
   public static final String GIRAPH_STATS_COUNTER_GROUP_NAME = "Giraph Stats";
+  /** Print worker names only if there are 10 workers left */
+  public static final int MAX_PRINTABLE_REMAINING_WORKERS = 10;
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(BspServiceMaster.class);
   /** Superstep counter */
@@ -344,8 +347,7 @@ public class BspServiceMaster<I extends WritableComparable,
     } catch (KeeperException e) {
       throw new IllegalStateException("getWorkers: KeeperException", e);
     } catch (InterruptedException e) {
-      throw new IllegalStateException("getWorkers: IllegalStateException"
-          , e);
+      throw new IllegalStateException("getWorkers: IllegalStateException", e);
     }
 
     try {
@@ -357,8 +359,7 @@ public class BspServiceMaster<I extends WritableComparable,
     } catch (KeeperException e) {
       throw new IllegalStateException("getWorkers: KeeperException", e);
     } catch (InterruptedException e) {
-      throw new IllegalStateException("getWorkers: IllegalStateException"
-          , e);
+      throw new IllegalStateException("getWorkers: IllegalStateException", e);
     }
 
     List<WorkerInfo> currentHealthyWorkerInfoList =
@@ -1339,6 +1340,12 @@ public class BspServiceMaster<I extends WritableComparable,
             " out of " + workerInfoList.size() +
             " workers finished on superstep " +
             getSuperstep() + " on path " + finishedWorkerPath);
+        if (workerInfoList.size() - finishedHostnameIdList.size() <
+            MAX_PRINTABLE_REMAINING_WORKERS) {
+          Set<String> remainingWorkers = Sets.newHashSet(hostnameIdList);
+          remainingWorkers.removeAll(finishedHostnameIdList);
+          LOG.info("barrierOnWorkerList: Waiting on " + remainingWorkers);
+        }
       }
       getContext().setStatus(getGraphMapper().getMapFunctions() + " - " +
           finishedHostnameIdList.size() +

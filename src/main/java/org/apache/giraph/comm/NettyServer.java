@@ -59,7 +59,9 @@ public class NettyServer<I extends WritableComparable,
      V extends Writable, E extends Writable,
      M extends Writable> {
   /** Default maximum thread pool size */
-  public static final int DEFAULT_MAXIMUM_THREAD_POOL_SIZE = 32;
+  public static final int MAXIMUM_THREAD_POOL_SIZE_DEFAULT = 32;
+  /** Default TCP backlog */
+  public static final int TCP_BACKLOG_DEFAULT = 100;
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(NettyServer.class);
   /** Configuration */
@@ -125,8 +127,7 @@ public class NettyServer<I extends WritableComparable,
       throw new IllegalStateException("NettyServer: unable to get hostname");
     }
     maximumPoolSize = conf.getInt(GiraphJob.MSG_NUM_FLUSH_THREADS,
-                                  DEFAULT_MAXIMUM_THREAD_POOL_SIZE);
-    Executors.newCachedThreadPool(workerFactory);
+                                  MAXIMUM_THREAD_POOL_SIZE_DEFAULT);
 
     channelFactory = new NioServerSocketChannelFactory(
         Executors.newCachedThreadPool(bossFactory),
@@ -140,6 +141,11 @@ public class NettyServer<I extends WritableComparable,
   public void start() {
     bootstrap = new ServerBootstrap(channelFactory);
     // Set up the pipeline factory.
+    bootstrap.setOption("child.keepAlive", true);
+    bootstrap.setOption("child.tcpNoDelay", true);
+    bootstrap.setOption("child.sendBufferSize", sendBufferSize);
+    bootstrap.setOption("child.receiveBufferSize", receiveBufferSize);
+    bootstrap.setOption("backlog", TCP_BACKLOG_DEFAULT);
     bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
       @Override
       public ChannelPipeline getPipeline() throws Exception {
@@ -171,8 +177,6 @@ public class NettyServer<I extends WritableComparable,
     // preserving debugability from the port number alone.
     // Round up the max number of workers to the next power of 10 and use
     // it as a constant to increase the port number with.
-    boolean tcpNoDelay = false;
-    boolean keepAlive = false;
     while (bindAttempts < maxRpcPortBindAttempts) {
       this.myAddress = new InetSocketAddress(localHostname, bindPort);
       if (failFirstPortBindingAttempt && bindAttempts == 0) {
@@ -189,10 +193,6 @@ public class NettyServer<I extends WritableComparable,
       try {
         Channel ch = bootstrap.bind(myAddress);
         accepted.add(ch);
-        tcpNoDelay = ch.getConfig().setOption("tcpNoDelay", true);
-        keepAlive = ch.getConfig().setOption("keepAlive", true);
-        ch.getConfig().setOption("sendBufferSize", sendBufferSize);
-        ch.getConfig().setOption("receiveBufferSize", receiveBufferSize);
 
         break;
       } catch (ChannelException e) {
@@ -212,9 +212,9 @@ public class NettyServer<I extends WritableComparable,
       LOG.info("start: Started server " +
           "communication server: " + myAddress + " with up to " +
           maximumPoolSize + " threads on bind attempt " + bindAttempts +
-          " with tcpNoDelay = " + tcpNoDelay + " and keepAlive = " +
-          keepAlive + " sendBufferSize = " + sendBufferSize +
-          " receiveBufferSize = " + receiveBufferSize);
+          " with sendBufferSize = " + sendBufferSize +
+          " receiveBufferSize = " + receiveBufferSize + " backlog = " +
+          bootstrap.getOption("backlog"));
     }
   }
 
@@ -222,6 +222,9 @@ public class NettyServer<I extends WritableComparable,
    * Stop the server.
    */
   public void stop() {
+    if (LOG.isInfoEnabled()) {
+      LOG.info("stop: Halting netty server");
+    }
     accepted.close().awaitUninterruptibly(10, TimeUnit.SECONDS);
     bootstrap.releaseExternalResources();
   }

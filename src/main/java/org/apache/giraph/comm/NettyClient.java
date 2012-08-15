@@ -18,16 +18,19 @@
 
 package org.apache.giraph.comm;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.utils.TimedLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -42,6 +45,7 @@ import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
 import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
+import org.jboss.netty.handler.codec.frame.FixedLengthFrameDecoder;
 
 /**
  * Netty client for sending requests.
@@ -67,21 +71,26 @@ public class NettyClient<I extends WritableComparable,
       "giraph.maxNumberOfOpenRequests";
   /** Default maximum number of requests without confirmation */
   public static final int MAX_NUMBER_OF_OPEN_REQUESTS_DEFAULT = 10000;
-
+  /** Maximum number of requests to list (for debugging) */
+  public static final int MAX_REQUESTS_TO_LIST = 10;
+  /** 30 seconds to connect by default */
+  public static final int MAX_CONNECTION_MILLISECONDS_DEFAULT = 30 * 1000;
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(NettyClient.class);
   /** Context used to report progress */
   private final Mapper<?, ?, ?, ?>.Context context;
   /** Client bootstrap */
   private final ClientBootstrap bootstrap;
-  /** Atomic count of outstanding requests (synchronize on self) */
-  private final AtomicInteger waitingRequestCount = new AtomicInteger(0);
   /**
    * Map of the peer connections, mapping from remote socket address to client
    * meta data
    */
   private final Map<InetSocketAddress, ChannelRotater> addressChannelMap =
       Maps.newHashMap();
+  /** Atomic request id, used in outstandingRequestMap */
+  private final AtomicInteger requestId = new AtomicInteger(0);
+  /** Outstanding request map (tracks all requests). */
+  private final ConcurrentMap<Long, RequestInfo> outstandingRequestMap;
   /** Number of channels per server */
   private final int channelsPerServer;
   /** Byte counter for this client */
@@ -95,6 +104,10 @@ public class NettyClient<I extends WritableComparable,
   private final boolean limitNumberOfOpenRequests;
   /** Maximum number of requests without confirmation we can have */
   private final int maxNumberOfOpenRequests;
+  /** Maximum number of connnection failures */
+  private final int maxConnectionFailures;
+  /** Timed logger for printing request debugging */
+  private final TimedLogger requestLogger = new TimedLogger(15 * 1000, LOG);
 
   /**
    * Only constructor
@@ -127,13 +140,27 @@ public class NettyClient<I extends WritableComparable,
       maxNumberOfOpenRequests = -1;
     }
 
+    maxConnectionFailures = conf.getInt(
+        GiraphJob.NETTY_MAX_CONNECTION_FAILURES,
+        GiraphJob.NETTY_MAX_CONNECTION_FAILURES_DEFAULT);
+
+    int maxThreads = conf.getInt(GiraphJob.MSG_NUM_FLUSH_THREADS,
+        NettyServer.MAXIMUM_THREAD_POOL_SIZE_DEFAULT);
+    outstandingRequestMap =
+        new MapMaker().concurrencyLevel(maxThreads).makeMap();
+
     // Configure the client.
     bootstrap = new ClientBootstrap(
         new NioClientSocketChannelFactory(
             Executors.newCachedThreadPool(),
             Executors.newCachedThreadPool(),
-            conf.getInt(GiraphJob.MSG_NUM_FLUSH_THREADS,
-                NettyServer.DEFAULT_MAXIMUM_THREAD_POOL_SIZE)));
+            maxThreads));
+    bootstrap.setOption("connectTimeoutMillis",
+        MAX_CONNECTION_MILLISECONDS_DEFAULT);
+    bootstrap.setOption("tcpNoDelay", true);
+    bootstrap.setOption("keepAlive", true);
+    bootstrap.setOption("sendBufferSize", sendBufferSize);
+    bootstrap.setOption("receiveBufferSize", receiveBufferSize);
 
     // Set up the pipeline factory.
     bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
@@ -141,10 +168,32 @@ public class NettyClient<I extends WritableComparable,
       public ChannelPipeline getPipeline() throws Exception {
         return Channels.pipeline(
             byteCounter,
+            new FixedLengthFrameDecoder(9),
             new RequestEncoder(),
-            new ResponseClientHandler(waitingRequestCount));
+            new ResponseClientHandler(outstandingRequestMap));
       }
     });
+  }
+
+  /**
+   * Pair object for connectAllAddresses().
+   */
+  private static class ChannelFutureAddress {
+    /** Future object */
+    private final ChannelFuture future;
+    /** Address of the future */
+    private final InetSocketAddress address;
+
+    /**
+     * Constructor.
+     *
+     * @param future Immutable future
+     * @param address Immutable address
+     */
+    ChannelFutureAddress(ChannelFuture future, InetSocketAddress address) {
+      this.future = future;
+      this.address = address;
+    }
   }
 
   /**
@@ -152,13 +201,19 @@ public class NettyClient<I extends WritableComparable,
    *
    * @param addresses Addresses to connect to (if haven't already connected)
    */
-  public void connectAllAddresses(Collection<InetSocketAddress> addresses) {
-    List<ChannelFuture> waitingConnectionList =
-        new ArrayList<ChannelFuture>();
+  public void connectAllAddresses(Set<InetSocketAddress> addresses) {
+    List<ChannelFutureAddress> waitingConnectionList =
+        Lists.newArrayListWithCapacity(addresses.size() * channelsPerServer);
     for (InetSocketAddress address : addresses) {
-      if (address == null) {
+      context.progress();
+      if (address == null || address.getHostName() == null ||
+          address.getHostName().isEmpty()) {
         throw new IllegalStateException("connectAllAddresses: Null address " +
             "in addresses " + addresses);
+      }
+      if (address.isUnresolved()) {
+        throw new IllegalStateException("connectAllAddresses: Unresolved " +
+            "address " + address);
       }
 
       if (addressChannelMap.containsKey(address)) {
@@ -166,39 +221,68 @@ public class NettyClient<I extends WritableComparable,
       }
 
       // Start connecting to the remote server up to n time
-      ChannelRotater channelRotater = new ChannelRotater();
       for (int i = 0; i < channelsPerServer; ++i) {
         ChannelFuture connectionFuture = bootstrap.connect(address);
-        connectionFuture.getChannel().getConfig().setOption("tcpNoDelay", true);
-        connectionFuture.getChannel().getConfig().setOption("keepAlive", true);
-        connectionFuture.getChannel().getConfig().setOption(
-            "sendBufferSize", sendBufferSize);
-        connectionFuture.getChannel().getConfig().setOption(
-            "receiveBufferSize", receiveBufferSize);
-        channelRotater.addChannel(connectionFuture.getChannel());
-        waitingConnectionList.add(connectionFuture);
+
+        waitingConnectionList.add(
+            new ChannelFutureAddress(connectionFuture, address));
       }
-      addressChannelMap.put(address, channelRotater);
     }
 
-    // Wait for all the connections to succeed
-    for (ChannelFuture waitingConnection : waitingConnectionList) {
-      ChannelFuture future =
-          waitingConnection.awaitUninterruptibly();
-      if (!future.isSuccess()) {
-        throw new IllegalStateException("connectAllAddresses: Future failed " +
-            "with " + future.getCause());
-      }
-      Channel channel = future.getChannel();
-      if (LOG.isInfoEnabled()) {
-        LOG.info("connectAllAddresses: Connected to " +
-            channel.getRemoteAddress());
-      }
+    // Wait for all the connections to succeed up to n tries
+    int failures = 0;
+    int connected = 0;
+    while (failures < maxConnectionFailures) {
+      List<ChannelFutureAddress> nextCheckFutures = Lists.newArrayList();
+      for (ChannelFutureAddress waitingConnection : waitingConnectionList) {
+        context.progress();
+        ChannelFuture future =
+            waitingConnection.future.awaitUninterruptibly();
+        if (!future.isSuccess()) {
+          LOG.warn("connectAllAddresses: Future failed " +
+              "to connect with " + waitingConnection.address + " with " +
+              failures + " failures and because of " + future.getCause());
 
-      if (channel.getRemoteAddress() == null) {
-        throw new IllegalStateException("connectAllAddresses: Null remote " +
-            "address!");
+          ChannelFuture connectionFuture =
+              bootstrap.connect(waitingConnection.address);
+          nextCheckFutures.add(new ChannelFutureAddress(connectionFuture,
+              waitingConnection.address));
+          ++failures;
+        } else {
+          Channel channel = future.getChannel();
+          if (LOG.isInfoEnabled()) {
+            LOG.info("connectAllAddresses: Connected to " +
+                channel.getRemoteAddress());
+          }
+
+          if (channel.getRemoteAddress() == null) {
+            throw new IllegalStateException(
+                "connectAllAddresses: Null remote address!");
+          }
+
+          ChannelRotater rotater =
+              addressChannelMap.get(waitingConnection.address);
+          if (rotater == null) {
+            rotater = new ChannelRotater();
+            addressChannelMap.put(waitingConnection.address, rotater);
+          }
+          rotater.addChannel(future.getChannel());
+          ++connected;
+        }
       }
+      LOG.info("connectAllAddresses: Successfully added " +
+          (waitingConnectionList.size() - nextCheckFutures.size()) +
+          " connections, (" + connected + " total connected) " +
+          nextCheckFutures.size() + " failed, " +
+          failures + " failures total.");
+      if (nextCheckFutures.isEmpty()) {
+        break;
+      }
+      waitingConnectionList = nextCheckFutures;
+    }
+    if (failures >= maxConnectionFailures) {
+      throw new IllegalStateException(
+          "connectAllAddresses: Too many failures (" + failures + ").");
     }
   }
 
@@ -206,7 +290,7 @@ public class NettyClient<I extends WritableComparable,
    * Stop the client.
    */
   public void stop() {
-    // close connections asyncronously, in a Netty-approved
+    // Close connections asyncronously, in a Netty-approved
     // way, without cleaning up thread pools until all channels
     // in addressChannelMap are closed (success or failure)
     int channelCount = 0;
@@ -243,18 +327,28 @@ public class NettyClient<I extends WritableComparable,
    */
   public void sendWritableRequest(InetSocketAddress remoteServer,
                                   WritableRequest<I, V, E, M> request) {
-    if (waitingRequestCount.get() == 0) {
+    if (outstandingRequestMap.isEmpty()) {
       byteCounter.resetAll();
     }
-    waitingRequestCount.incrementAndGet();
+    request.setRequestId(requestId.incrementAndGet());
     Channel channel = addressChannelMap.get(remoteServer).nextChannel();
     if (channel == null) {
       throw new IllegalStateException(
           "sendWritableRequest: No channel exists for " + remoteServer);
     }
-    channel.write(request);
+    RequestInfo newRequestInfo = new RequestInfo(remoteServer);
+    RequestInfo oldRequestInfo = outstandingRequestMap.putIfAbsent(
+        request.getRequestId(), newRequestInfo);
+    if (oldRequestInfo != null) {
+      throw new IllegalStateException("sendWritableRequest: Impossible to " +
+          "have a previous request id = " + request.getRequestId() + ", " +
+          "request info of " + oldRequestInfo);
+    }
+    ChannelFuture writeFuture = channel.write(request);
+    newRequestInfo.setWriteFuture(writeFuture);
+
     if (limitNumberOfOpenRequests &&
-        waitingRequestCount.get() > maxNumberOfOpenRequests) {
+        outstandingRequestMap.size() > maxNumberOfOpenRequests) {
       waitSomeRequests(maxNumberOfOpenRequests);
     }
   }
@@ -279,16 +373,25 @@ public class NettyClient<I extends WritableComparable,
    *                        complete
    */
   private void waitSomeRequests(int maxOpenRequests) {
-    synchronized (waitingRequestCount) {
-      while (waitingRequestCount.get() > maxOpenRequests) {
-        if (LOG.isInfoEnabled()) {
+    synchronized (outstandingRequestMap) {
+      while (outstandingRequestMap.size() > maxOpenRequests) {
+        if (LOG.isInfoEnabled() && requestLogger.isPrintable()) {
           LOG.info("waitSomeRequests: Waiting interval of " +
-              WAITING_REQUEST_MSECS + " msecs, " + waitingRequestCount +
+              WAITING_REQUEST_MSECS + " msecs, " +
+              outstandingRequestMap.size() +
               " open requests, waiting for it to be <= " + maxOpenRequests +
               ", " + byteCounter.getMetrics());
+
+          if (outstandingRequestMap.size() < MAX_REQUESTS_TO_LIST) {
+            for (Map.Entry<Long, RequestInfo> entry :
+                outstandingRequestMap.entrySet()) {
+              LOG.info("waitSomeRequests: Waiting for request " +
+                  entry.getKey() + " - " + entry.getValue());
+            }
+          }
         }
         try {
-          waitingRequestCount.wait(WAITING_REQUEST_MSECS);
+          outstandingRequestMap.wait(WAITING_REQUEST_MSECS);
         } catch (InterruptedException e) {
           LOG.error("waitFutures: Got unexpected InterruptedException", e);
         }

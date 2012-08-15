@@ -48,9 +48,22 @@ public class TimedLogger {
    * @param msg Message to print
    */
   public void info(String msg) {
-    if (System.currentTimeMillis() > lastPrint + msecs) {
+    if (isPrintable()) {
       log.info(msg);
-      lastPrint = System.currentTimeMillis();
     }
+  }
+
+  /**
+   * Is the log message printable (minimum interval met)?
+   *
+   * @return True if the message is printable
+   */
+  public boolean isPrintable() {
+    if (System.currentTimeMillis() > lastPrint + msecs) {
+      lastPrint = System.currentTimeMillis();
+      return true;
+    }
+
+    return false;
   }
 }

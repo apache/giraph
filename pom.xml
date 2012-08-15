@@ -914,7 +914,7 @@ under the License.
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty</artifactId>
-      <version>3.3.1.Final</version>
+      <version>3.5.3.Final</version>
     </dependency>
  </dependencies>
 </project>
