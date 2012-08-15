@@ -1322,6 +1322,23 @@ public class BspServiceWorker<I extends WritableComparable,
           workerGraphPartitioner.getPartitionOwners().size() +
           " total.");
     }
+
+    // Load global statistics
+    String finalizedCheckpointPath =
+        getCheckpointBasePath(superstep) + CHECKPOINT_FINALIZED_POSTFIX;
+    try {
+      DataInputStream finalizedStream =
+          getFs().open(new Path(finalizedCheckpointPath));
+      GlobalStats globalStats = new GlobalStats();
+      globalStats.readFields(finalizedStream);
+      getGraphMapper().getGraphState().
+          setTotalNumEdges(globalStats.getEdgeCount()).
+          setTotalNumVertices(globalStats.getVertexCount());
+    } catch (IOException e) {
+      throw new IllegalStateException(
+          "loadCheckpoint: Failed to load global statistics", e);
+    }
+
     // Communication service needs to setup the connections prior to
     // processing vertices
     commService.setup();

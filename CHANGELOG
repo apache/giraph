@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-296: TotalNumVertices and TotalNumEdges are not saved in checkpoint.
+  (majakabiljo via apresta)
+
   GIRAPH-297: Checkpointing on master is done one superstep later
   (majakabiljo via aching).
 

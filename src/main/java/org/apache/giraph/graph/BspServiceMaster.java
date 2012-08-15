@@ -621,6 +621,9 @@ public class BspServiceMaster<I extends WritableComparable,
         getCheckpointBasePath(superstep) + CHECKPOINT_FINALIZED_POSTFIX;
     DataInputStream finalizedStream =
         fs.open(new Path(finalizedCheckpointPath));
+    GlobalStats globalStats = new GlobalStats();
+    globalStats.readFields(finalizedStream);
+    updateCounters(globalStats);
     int prefixFileCount = finalizedStream.readInt();
     for (int i = 0; i < prefixFileCount; ++i) {
       String metadataFilePath =
@@ -1055,11 +1058,19 @@ public class BspServiceMaster<I extends WritableComparable,
     }
 
     // Format:
+    // <global statistics>
     // <number of files>
     // <used file prefix 0><used file prefix 1>...
     // <aggregator data length><aggregators as a serialized JSON byte array>
+    // <masterCompute data>
     FSDataOutputStream finalizedOutputStream =
         getFs().create(finalizedCheckpointPath);
+
+    String superstepFinishedNode =
+        getSuperstepFinishedPath(getApplicationAttempt(), superstep - 1);
+    finalizedOutputStream.write(
+        getZkExt().getData(superstepFinishedNode, false, null));
+
     finalizedOutputStream.writeInt(chosenWorkerInfoList.size());
     for (WorkerInfo chosenWorkerInfo : chosenWorkerInfoList) {
       String chosenWorkerInfoPrefix =
@@ -1507,18 +1518,7 @@ public class BspServiceMaster<I extends WritableComparable,
         getSuperstepFinishedPath(getApplicationAttempt(), getSuperstep());
     WritableUtils.writeToZnode(
         getZkExt(), superstepFinishedNode, -1, globalStats);
-    vertexCounter.increment(
-        globalStats.getVertexCount() -
-        vertexCounter.getValue());
-    finishedVertexCounter.increment(
-        globalStats.getFinishedVertexCount() -
-        finishedVertexCounter.getValue());
-    edgeCounter.increment(
-        globalStats.getEdgeCount() -
-        edgeCounter.getValue());
-    sentMessagesCounter.increment(
-        globalStats.getMessageCount() -
-        sentMessagesCounter.getValue());
+    updateCounters(globalStats);
 
     incrCachedSuperstep();
     // Counter starts at zero, so no need to increment
@@ -1838,5 +1838,25 @@ public class BspServiceMaster<I extends WritableComparable,
               " registered " + name);
     }
     ((AggregatorWrapper<A>) aggregator).setCurrentAggregatedValue(value);
+  }
+
+  /**
+   * Set values of counters to match the ones from {@link GlobalStats}
+   *
+   * @param globalStats Global statistics which holds new counter values
+   */
+  private void updateCounters(GlobalStats globalStats) {
+    vertexCounter.increment(
+        globalStats.getVertexCount() -
+            vertexCounter.getValue());
+    finishedVertexCounter.increment(
+        globalStats.getFinishedVertexCount() -
+            finishedVertexCounter.getValue());
+    edgeCounter.increment(
+        globalStats.getEdgeCount() -
+            edgeCounter.getValue());
+    sentMessagesCounter.increment(
+        globalStats.getMessageCount() -
+            sentMessagesCounter.getValue());
   }
 }
