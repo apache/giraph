@@ -1,6 +1,7 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-278: Website still tries to load incubator logo (ekoontz)
 
   GIRAPH-300) Improve netty reliability with retrying failed
   connections, tracking requests, thread-safe hash partitioning
