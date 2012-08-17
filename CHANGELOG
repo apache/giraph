@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-303: Regression: cleanup phase happens earlier than it
+  should. (majakabiljo via apresta)
+
   GIRAPH-278: Website still tries to load incubator logo (ekoontz)
 
   GIRAPH-300) Improve netty reliability with retrying failed
