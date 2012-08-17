@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-302: Thread safety issue with sending partitions around.
+  (aching via apresta)
+
   GIRAPH-303: Regression: cleanup phase happens earlier than it
   should. (majakabiljo via apresta)
 

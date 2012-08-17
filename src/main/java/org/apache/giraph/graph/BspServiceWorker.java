@@ -311,11 +311,10 @@ public class BspServiceWorker<I extends WritableComparable,
       if (!entry.getValue().getVertices().isEmpty()) {
         commService.sendPartitionRequest(entry.getKey().getWorkerInfo(),
             entry.getValue());
-        entry.getValue().getVertices().clear();
       }
     }
-    commService.flush();
     inputSplitCache.clear();
+    commService.flush();
 
     return vertexEdgeCount;
   }
@@ -470,7 +469,7 @@ public class BspServiceWorker<I extends WritableComparable,
       if (transferRegulator.transferThisPartition(partitionOwner)) {
         commService.sendPartitionRequest(partitionOwner.getWorkerInfo(),
             partition);
-        partition.getVertices().clear();
+        inputSplitCache.remove(partitionOwner);
       }
       ++totalVerticesLoaded;
       totalEdgesLoaded += readerVertex.getNumEdges();
@@ -960,6 +959,12 @@ public class BspServiceWorker<I extends WritableComparable,
     //    of this worker
     // 5. Let the master know it is finished.
     // 6. Wait for the master's global stats, and check if done
+
+    getContext().setStatus("Flushing started: " +
+        getGraphMapper().getMapFunctions().toString() +
+        " - Attempt=" + getApplicationAttempt() +
+        ", Superstep=" + getSuperstep());
+
     long workerSentMessages = 0;
     try {
       commService.flush();
@@ -975,7 +980,8 @@ public class BspServiceWorker<I extends WritableComparable,
     }
 
     if (LOG.isInfoEnabled()) {
-      LOG.info("finishSuperstep: Superstep " + getSuperstep() + " " +
+      LOG.info("finishSuperstep: Superstep " + getSuperstep() +
+          " , mesages = " + workerSentMessages + " " +
           MemoryUtils.getRuntimeMemoryStats());
     }
 
