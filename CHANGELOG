@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-295: Additional Example Algorithm to compute Outdegree and
+  Indegree. (Sean Choi via aching)
+
   GIRAPH-305: Adding an argument to GiraphRunner for Master Compute
   classes. (Sean Choi via aching)
 
