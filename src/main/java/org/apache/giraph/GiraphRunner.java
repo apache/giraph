@@ -84,6 +84,7 @@ public class GiraphRunner implements Tool {
     options.addOption("c", "combiner", true, "VertexCombiner class");
     options.addOption("wc", "workerContext", true, "WorkerContext class");
     options.addOption("aw", "aggregatorWriter", true, "AggregatorWriter class");
+    options.addOption("mc", "masterCompute", true, "MasterCompute class");
     options.addOption("cf", "cacheFile", true, "Files for distributed cache");
     options.addOption("ca", "customArguments", true, "provide custom" +
         " arguments for the job configuration in the form:" +
@@ -189,6 +190,10 @@ public class GiraphRunner implements Tool {
 
     if (cmd.hasOption("wc")) {
       job.setWorkerContextClass(Class.forName(cmd.getOptionValue("wc")));
+    }
+
+    if (cmd.hasOption("mc")) {
+      job.setMasterComputeClass(Class.forName(cmd.getOptionValue("mc")));
     }
 
     if (cmd.hasOption("aw")) {

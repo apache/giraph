@@ -1,6 +1,10 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+
+  GIRAPH-305: Adding an argument to GiraphRunner for Master Compute
+  classes. (Sean Choi via aching)
+
   GIRAPH-302: Thread safety issue with sending partitions around.
   (aching via apresta)
 
