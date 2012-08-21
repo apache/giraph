@@ -848,11 +848,11 @@ public class BspServiceMaster<I extends WritableComparable,
                     getConfiguration());
         for (Writable writable : writableList) {
           globalStats.addPartitionStats((PartitionStats) writable);
-          globalStats.addMessageCount(
-              workerFinishedInfoObj.getLong(
-                  JSONOBJ_NUM_MESSAGES_KEY));
           allPartitionStatsList.add((PartitionStats) writable);
         }
+        globalStats.addMessageCount(
+            workerFinishedInfoObj.getLong(
+                JSONOBJ_NUM_MESSAGES_KEY));
       } catch (JSONException e) {
         throw new IllegalStateException(
             "aggregateWorkerStats: JSONException", e);

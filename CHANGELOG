@@ -2,6 +2,8 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-309: Message count is wrong. (aching via apresta)
+
   GIRAPH-246: Periodic worker calls to context.progress() will prevent
   timeout on some Hadoop clusters during barrier waits. (Eli Reisman
   via aching)
