@@ -2,6 +2,10 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-246: Periodic worker calls to context.progress() will prevent
+  timeout on some Hadoop clusters during barrier waits. (Eli Reisman
+  via aching)
+
   GIRAPH-295: Additional Example Algorithm to compute Outdegree and
   Indegree. (Sean Choi via aching)
 

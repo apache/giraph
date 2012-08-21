@@ -76,47 +76,37 @@ public class PredicateLock implements BspEvent {
 
   @Override
   public boolean waitMsecs(int msecs) {
-    if (msecs < -1) {
-      throw new RuntimeException("msecs < -1");
+    if (msecs < 0) {
+      throw new RuntimeException("msecs cannot be negative!");
     }
-
     long maxMsecs = System.currentTimeMillis() + msecs;
-    long curMsecTimeout = 0;
+    int curMsecTimeout = 0;
     lock.lock();
     try {
       while (!eventOccurred) {
-        if (msecs == -1) {
-          try {
-            cond.await();
-          } catch (InterruptedException e) {
-            throw new IllegalStateException(
-                "waitMsecs: Caught interrupted " +
-                    "exception on cond.await()", e);
-          }
-        } else {
-          // Keep the wait non-negative
-          curMsecTimeout =
-              Math.max(maxMsecs - System.currentTimeMillis(), 0);
-          if (LOG.isDebugEnabled()) {
-            LOG.debug("waitMsecs: Wait for " + curMsecTimeout);
-          }
-          try {
-            boolean signaled =
-                cond.await(curMsecTimeout, TimeUnit.MILLISECONDS);
-            if (LOG.isDebugEnabled()) {
-              LOG.debug("waitMsecs: Got timed signaled of " +
-                  signaled);
-            }
-          } catch (InterruptedException e) {
-            throw new IllegalStateException(
-                "waitMsecs: Caught interrupted " +
-                    "exception on cond.await() " +
-                    curMsecTimeout, e);
-          }
-          if (System.currentTimeMillis() > maxMsecs) {
-            return false;
-          }
+        curMsecTimeout =
+            Math.min(msecs, MSEC_PERIOD);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("waitMsecs: Wait for " + curMsecTimeout);
         }
+        try {
+          boolean signaled =
+              cond.await(curMsecTimeout, TimeUnit.MILLISECONDS);
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("waitMsecs: Got timed signaled of " +
+              signaled);
+          }
+        } catch (InterruptedException e) {
+          throw new IllegalStateException(
+            "waitMsecs: Caught interrupted " +
+            "exception on cond.await() " +
+            curMsecTimeout, e);
+        }
+        if (System.currentTimeMillis() > maxMsecs) {
+          return false;
+        }
+        msecs = Math.max(0, msecs - curMsecTimeout);
+        progressable.progress(); // go around again
       }
     } finally {
       lock.unlock();

@@ -74,12 +74,28 @@ public class TestPredicateLock {
     public void testEvent() {
         BspEvent event = new PredicateLock(getStubProgressable());
         event.signal();
-        boolean gotPredicate = event.waitMsecs(-1);
-        assertTrue(gotPredicate );
+        boolean gotPredicate = event.waitMsecs(50);
+        assertTrue(gotPredicate);
         event.reset();
         gotPredicate = event.waitMsecs(0);
         assertFalse(gotPredicate);
     }
+
+  /**
+   * Simple test for {@link PredicateLock#waitForever()}
+   */
+  @Test
+  public void testWaitForever() {
+    BspEvent event = new PredicateLock(getStubProgressable());
+    Thread signalThread = new SignalThread(event);
+    signalThread.start();
+    event.waitForever();
+    try {
+      signalThread.join();
+    } catch (InterruptedException e) {
+    }
+    assertTrue(event.waitMsecs(0));
+  }
 
     /**
      * Make sure the the event is signaled correctly
