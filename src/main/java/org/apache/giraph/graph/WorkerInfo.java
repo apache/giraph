@@ -70,7 +70,12 @@ public class WorkerInfo implements Writable {
     return hostnameId;
   }
 
-  public InetSocketAddress getHostnamePort() {
+  /**
+   * Get a new instance of the InetSocketAddress for this hostname and port
+   *
+   * @return InetSocketAddress of the hostname and port.
+   */
+  public InetSocketAddress getInetSocketAddress() {
     return new InetSocketAddress(hostname, port);
   }
 

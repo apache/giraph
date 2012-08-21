@@ -127,7 +127,7 @@ public class RequestTest {
     IntWritable> request =
       new SendVertexRequest<IntWritable, IntWritable,
       IntWritable, IntWritable>(partitionId, vertices);
-    client.sendWritableRequest(server.getMyAddress(), request);
+    client.sendWritableRequest(-1, server.getMyAddress(), request);
     client.waitAllRequests();
 
     // Stop the service
@@ -170,7 +170,7 @@ public class RequestTest {
     IntWritable> request =
       new SendPartitionMessagesRequest<IntWritable, IntWritable,
       IntWritable, IntWritable>(partitionId, vertexIdMessages);
-    client.sendWritableRequest(server.getMyAddress(), request);
+    client.sendWritableRequest(-1, server.getMyAddress(), request);
     client.waitAllRequests();
 
     // Stop the service
@@ -233,7 +233,7 @@ public class RequestTest {
     IntWritable> request =
       new SendPartitionMutationsRequest<IntWritable, IntWritable,
       IntWritable, IntWritable>(partitionId, vertexIdMutations);
-    client.sendWritableRequest(server.getMyAddress(), request);
+    client.sendWritableRequest(-1, server.getMyAddress(), request);
     client.waitAllRequests();
 
     // Stop the service

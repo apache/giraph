@@ -985,7 +985,7 @@ public class BspServiceWorker<I extends WritableComparable,
 
     if (LOG.isInfoEnabled()) {
       LOG.info("finishSuperstep: Superstep " + getSuperstep() +
-          " , mesages = " + workerSentMessages + " " +
+          ", mesages = " + workerSentMessages + " " +
           MemoryUtils.getRuntimeMemoryStats());
     }
 

@@ -41,8 +41,18 @@ public abstract class WritableRequest<I extends WritableComparable,
     M extends Writable> implements Writable, Configurable {
   /** Configuration */
   private Configuration conf;
+  /** Client id */
+  private int clientId = -1;
   /** Request id */
   private long requestId = -1;
+
+  public int getClientId() {
+    return clientId;
+  }
+
+  public void setClientId(int clientId) {
+    this.clientId = clientId;
+  }
 
   public long getRequestId() {
     return requestId;
@@ -92,12 +102,14 @@ public abstract class WritableRequest<I extends WritableComparable,
 
   @Override
   public final void readFields(DataInput input) throws IOException {
+    clientId = input.readInt();
     requestId = input.readLong();
     readFieldsRequest(input);
   }
 
   @Override
   public final void write(DataOutput output) throws IOException {
+    output.writeInt(clientId);
     output.writeLong(requestId);
     writeRequest(output);
   }

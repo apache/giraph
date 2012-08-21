@@ -1356,9 +1356,9 @@ public class BspServiceMaster<I extends WritableComparable,
         break;
       }
 
-      // Wait for a signal or no more than 60 seconds to progress
+      // Wait for a signal or no more than 30 seconds to progress
       // or else will continue.
-      event.waitMsecs(60 * 1000);
+      event.waitMsecs(30 * 1000);
       event.reset();
       getContext().progress();
 

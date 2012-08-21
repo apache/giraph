@@ -40,7 +40,7 @@ import org.jboss.netty.handler.codec.oneone.OneToOneDecoder;
 @SuppressWarnings("rawtypes")
 public class RequestDecoder<I extends WritableComparable,
     V extends Writable, E extends Writable,
-    M extends Writable>  extends OneToOneDecoder {
+    M extends Writable> extends OneToOneDecoder {
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(RequestDecoder.class);
@@ -58,8 +58,9 @@ public class RequestDecoder<I extends WritableComparable,
    * @param requestRegistry Request registry
    * @param byteCounter Keeps track of the decoded bytes
    */
-  public RequestDecoder(Configuration conf, RequestRegistry requestRegistry,
-                        ByteCounter byteCounter) {
+  public RequestDecoder(
+      Configuration conf, RequestRegistry requestRegistry,
+      ByteCounter byteCounter) {
     this.conf = conf;
     this.requestRegistry = requestRegistry;
     this.byteCounter = byteCounter;

@@ -21,10 +21,9 @@ package org.apache.giraph.comm;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.giraph.comm.messages.SendPartitionCurrentMessagesRequest;
 import org.apache.giraph.graph.GiraphJob;
@@ -60,8 +59,6 @@ public class NettyServer<I extends WritableComparable,
      M extends Writable> {
   /** Default maximum thread pool size */
   public static final int MAXIMUM_THREAD_POOL_SIZE_DEFAULT = 32;
-  /** Default TCP backlog */
-  public static final int TCP_BACKLOG_DEFAULT = 100;
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(NettyServer.class);
   /** Configuration */
@@ -78,6 +75,8 @@ public class NettyServer<I extends WritableComparable,
   private InetSocketAddress myAddress;
   /** Maximum number of threads */
   private final int maximumPoolSize;
+  /** TCP backlog */
+  private final int tcpBacklog;
   /** Request reqistry */
   private final RequestRegistry requestRegistry = new RequestRegistry();
   /** Server data */
@@ -90,6 +89,12 @@ public class NettyServer<I extends WritableComparable,
   private final int sendBufferSize;
   /** Receive buffer size */
   private final int receiveBufferSize;
+  /** Boss factory service */
+  private final ExecutorService bossExecutorService;
+  /** Worker factory service */
+  private final ExecutorService workerExecutorService;
+  /** Request completed map per worker */
+  private final WorkerRequestReservedMap workerRequestReservedMap;
 
   /**
    * Constructor for creating the server
@@ -115,12 +120,15 @@ public class NettyServer<I extends WritableComparable,
     receiveBufferSize = conf.getInt(GiraphJob.SERVER_RECEIVE_BUFFER_SIZE,
         GiraphJob.DEFAULT_SERVER_RECEIVE_BUFFER_SIZE);
 
-    ThreadFactory bossFactory = new ThreadFactoryBuilder()
-      .setNameFormat("Giraph Netty Boss #%d")
-      .build();
-    ThreadFactory workerFactory = new ThreadFactoryBuilder()
-      .setNameFormat("Giraph Netty Worker #%d")
-      .build();
+    workerRequestReservedMap = new WorkerRequestReservedMap(conf);
+
+    bossExecutorService = Executors.newCachedThreadPool(
+        new ThreadFactoryBuilder().setNameFormat(
+            "Giraph Server Netty Boss #%d").build());
+    workerExecutorService = Executors.newCachedThreadPool(
+        new ThreadFactoryBuilder().setNameFormat(
+            "Giraph Server Netty Worker #%d").build());
+
     try {
       this.localHostname = InetAddress.getLocalHost().getHostName();
     } catch (UnknownHostException e) {
@@ -129,9 +137,12 @@ public class NettyServer<I extends WritableComparable,
     maximumPoolSize = conf.getInt(GiraphJob.MSG_NUM_FLUSH_THREADS,
                                   MAXIMUM_THREAD_POOL_SIZE_DEFAULT);
 
+    tcpBacklog = conf.getInt(GiraphJob.TCP_BACKLOG,
+        conf.getInt(GiraphJob.MAX_WORKERS, GiraphJob.TCP_BACKLOG_DEFAULT));
+
     channelFactory = new NioServerSocketChannelFactory(
-        Executors.newCachedThreadPool(bossFactory),
-        Executors.newCachedThreadPool(workerFactory),
+        bossExecutorService,
+        workerExecutorService,
         maximumPoolSize);
   }
 
@@ -145,7 +156,7 @@ public class NettyServer<I extends WritableComparable,
     bootstrap.setOption("child.tcpNoDelay", true);
     bootstrap.setOption("child.sendBufferSize", sendBufferSize);
     bootstrap.setOption("child.receiveBufferSize", receiveBufferSize);
-    bootstrap.setOption("backlog", TCP_BACKLOG_DEFAULT);
+    bootstrap.setOption("backlog", tcpBacklog);
     bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
       @Override
       public ChannelPipeline getPipeline() throws Exception {
@@ -153,7 +164,8 @@ public class NettyServer<I extends WritableComparable,
             byteCounter,
             new LengthFieldBasedFrameDecoder(1024 * 1024 * 1024, 0, 4, 0, 4),
             new RequestDecoder<I, V, E, M>(conf, requestRegistry, byteCounter),
-            new RequestServerHandler<I, V, E, M>(serverData));
+            new RequestServerHandler<I, V, E, M>(serverData,
+                workerRequestReservedMap, conf));
       }
     });
 
@@ -225,7 +237,9 @@ public class NettyServer<I extends WritableComparable,
     if (LOG.isInfoEnabled()) {
       LOG.info("stop: Halting netty server");
     }
-    accepted.close().awaitUninterruptibly(10, TimeUnit.SECONDS);
+    accepted.close().awaitUninterruptibly();
+    bossExecutorService.shutdownNow();
+    workerExecutorService.shutdownNow();
     bootstrap.releaseExternalResources();
   }
 

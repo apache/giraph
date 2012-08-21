@@ -51,11 +51,29 @@ public class ChannelRotater {
       throw new IllegalArgumentException("nextChannel: No channels exist!");
     }
 
+    incrementIndex();
+    return channelList.get(index);
+  }
+
+  /**
+   * Remove the last channel that was given out
+   *
+   * @return Return the removed channel
+   */
+  public Channel removeLast() {
+    Channel channel = channelList.remove(index);
+    incrementIndex();
+    return channel;
+  }
+
+  /**
+   * Increment the channel index with wrapping
+   */
+  private void incrementIndex() {
     ++index;
     if (index >= channelList.size()) {
       index = 0;
     }
-    return channelList.get(index);
   }
 
   /**

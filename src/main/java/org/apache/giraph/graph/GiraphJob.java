@@ -159,6 +159,52 @@ public class GiraphJob {
   /** Default is to use RPC, not netty */
   public static final boolean USE_NETTY_DEFAULT = false;
 
+  /** TCP backlog (defaults to number of workers) */
+  public static final String TCP_BACKLOG = "giraph.tcpBacklog";
+  /**
+   * Default TCP backlog default if the number of workers is not specified
+   * (i.e unittests)
+   */
+  public static final int TCP_BACKLOG_DEFAULT = 1;
+
+  /** Netty simulate a first request closed */
+  public static final String NETTY_SIMULATE_FIRST_REQUEST_CLOSED =
+      "giraph.nettySimulateFirstRequestClosed";
+  /** Default of not simulating failure for first request */
+  public static final boolean NETTY_SIMULATE_FIRST_REQUEST_CLOSED_DEFAULT =
+      false;
+
+  /** Netty simulate a first response failed */
+  public static final String NETTY_SIMULATE_FIRST_RESPONSE_FAILED =
+      "giraph.nettySimulateFirstResponseFailed";
+  /** Default of not simulating failure for first reponse */
+  public static final boolean NETTY_SIMULATE_FIRST_RESPONSE_FAILED_DEFAULT =
+      false;
+
+  /** Maximum number of reconnection attempts */
+  public static final String MAX_RECONNECT_ATTEMPTS =
+      "giraph.maxNumberOfOpenRequests";
+  /** Default maximum number of reconnection attempts */
+  public static final int MAX_RECONNECT_ATTEMPTS_DEFAULT = 10;
+
+  /** Max resolve address attempts */
+  public static final String MAX_RESOLVE_ADDRESS_ATTEMPTS =
+      "giraph.maxResolveAddressAttempts";
+  /** Default max resolve address attempts */
+  public static final int MAX_RESOLVE_ADDRESS_ATTEMPTS_DEFAULT = 5;
+
+  /** Msecs to wait between waiting for all requests to finish */
+  public static final String WAITING_REQUEST_MSECS =
+      "giraph.waitingRequestMsecs";
+  /** Default msecs to wait between waiting for all requests to finish */
+  public static final int WAITING_REQUEST_MSECS_DEFAULT = 15000;
+
+  /** Milliseconds for a request to complete (or else resend) */
+  public static final String MAX_REQUEST_MILLISECONDS =
+      "giraph.maxRequestMilliseconds";
+  /** Maximum number of milliseconds for a request to complete */
+  public static final int MAX_REQUEST_MILLISECONDS_DEFAULT = 60 * 1000;
+
   /** Netty max connection failures */
   public static final String NETTY_MAX_CONNECTION_FAILURES =
       "giraph.nettyMaxConnectionFailures";

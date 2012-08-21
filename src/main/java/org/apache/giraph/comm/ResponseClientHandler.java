@@ -21,6 +21,8 @@ package org.apache.giraph.comm;
 import java.io.IOException;
 import java.util.concurrent.ConcurrentMap;
 
+import org.apache.giraph.graph.GiraphJob;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferInputStream;
@@ -37,17 +39,29 @@ public class ResponseClientHandler extends SimpleChannelUpstreamHandler {
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(ResponseClientHandler.class);
-  /** Outstanding request map */
-  private final ConcurrentMap<Long, RequestInfo> outstandingRequestMap;
+  /** Already dropped first response? (used if dropFirstResponse == true) */
+  private static volatile boolean ALREADY_DROPPED_FIRST_RESPONSE = false;
+  /** Drop first response (used for simulating failure) */
+  private final boolean dropFirstResponse;
+  /** Outstanding worker request map */
+  private final ConcurrentMap<ClientRequestId, RequestInfo>
+  workerIdOutstandingRequestMap;
 
   /**
    * Constructor.
    *
-   * @param outstandingRequestMap Map of outstanding requests
+   * @param workerIdOutstandingRequestMap Map of worker ids to outstanding
+   *                                      requests
+   * @param conf Configuration
    */
   public ResponseClientHandler(
-      ConcurrentMap<Long, RequestInfo> outstandingRequestMap) {
-    this.outstandingRequestMap = outstandingRequestMap;
+      ConcurrentMap<ClientRequestId, RequestInfo>
+          workerIdOutstandingRequestMap,
+      Configuration conf) {
+    this.workerIdOutstandingRequestMap = workerIdOutstandingRequestMap;
+    dropFirstResponse = conf.getBoolean(
+        GiraphJob.NETTY_SIMULATE_FIRST_RESPONSE_FAILED,
+        GiraphJob.NETTY_SIMULATE_FIRST_RESPONSE_FAILED_DEFAULT);
   }
 
   @Override
@@ -57,11 +71,14 @@ public class ResponseClientHandler extends SimpleChannelUpstreamHandler {
       throw new IllegalStateException("messageReceived: Got a " +
           "non-ChannelBuffer message " + event.getMessage());
     }
+
     ChannelBuffer buffer = (ChannelBuffer) event.getMessage();
     ChannelBufferInputStream inputStream = new ChannelBufferInputStream(buffer);
+    int senderId = -1;
     long requestId = -1;
     int response = -1;
     try {
+      senderId = inputStream.readInt();
       requestId = inputStream.readLong();
       response = inputStream.readByte();
       inputStream.close();
@@ -69,12 +86,27 @@ public class ResponseClientHandler extends SimpleChannelUpstreamHandler {
       throw new IllegalStateException(
           "messageReceived: Got IOException ", e);
     }
-    if (response != 0) {
+
+    // Simulate a failed response on the first response (if desired)
+    if (dropFirstResponse && !ALREADY_DROPPED_FIRST_RESPONSE) {
+      LOG.info("messageReceived: Simulating dropped response " + response +
+          " for request " + requestId);
+      ALREADY_DROPPED_FIRST_RESPONSE = true;
+      synchronized (workerIdOutstandingRequestMap) {
+        workerIdOutstandingRequestMap.notifyAll();
+      }
+      return;
+    }
+
+    if (response == 1) {
+      LOG.info("messageReceived: Already completed request " + requestId);
+    } else if (response != 0) {
       throw new IllegalStateException(
           "messageReceived: Got illegal response " + response);
     }
 
-    RequestInfo requestInfo = outstandingRequestMap.remove(requestId);
+    RequestInfo requestInfo = workerIdOutstandingRequestMap.remove(
+        new ClientRequestId(senderId, requestId));
     if (requestInfo == null) {
       throw new IllegalStateException("messageReceived: Impossible to " +
           "have a non-registered requestId " + requestId);
@@ -82,14 +114,14 @@ public class ResponseClientHandler extends SimpleChannelUpstreamHandler {
       if (LOG.isDebugEnabled()) {
         LOG.debug("messageReceived: Processed request id = " + requestId +
             " " + requestInfo + ".  Waiting on " +
-            outstandingRequestMap.size() +
+            workerIdOutstandingRequestMap.size() +
             " requests, bytes = " + buffer.capacity());
       }
     }
 
     // Help NettyClient#waitSomeRequests() to finish faster
-    synchronized (outstandingRequestMap) {
-      outstandingRequestMap.notifyAll();
+    synchronized (workerIdOutstandingRequestMap) {
+      workerIdOutstandingRequestMap.notifyAll();
     }
   }
 
@@ -104,7 +136,7 @@ public class ResponseClientHandler extends SimpleChannelUpstreamHandler {
 
   @Override
   public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
-    throw new IllegalStateException("exceptionCaught: Channel failed with " +
+    LOG.warn("exceptionCaught: Channel failed with " +
         "remote address " + ctx.getChannel().getRemoteAddress(), e.getCause());
   }
 }
