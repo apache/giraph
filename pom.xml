@@ -167,6 +167,14 @@ under the License.
       <organization>Facebook</organization>
       <organizationUrl>http://www.facebook.com</organizationUrl>
     </developer>
+    <developer>
+      <id>ereisman</id>
+      <name>Eli Reisman</name>
+      <email>ereisman@apache.org</email>
+      <timezone>-8</timezone>
+      <organization>LinkedIn</organization>
+      <organizationUrl>http://www.linkedin.com/</organizationUrl>
+    </developer>
   </developers>
 
   <properties>
