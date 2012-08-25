@@ -18,24 +18,23 @@
 
 package org.apache.giraph;
 
-import static org.junit.Assert.assertTrue;
-
-import java.io.IOException;
-
 import org.apache.giraph.examples.SimpleMutateGraphVertex;
 import org.apache.giraph.examples.SimplePageRankVertex.SimplePageRankVertexInputFormat;
 import org.apache.giraph.examples.SimplePageRankVertex.SimplePageRankVertexOutputFormat;
 import org.apache.giraph.graph.GiraphJob;
-import org.apache.hadoop.fs.Path;
 import org.junit.Test;
+
+import static org.junit.Assert.assertTrue;
+
+import java.io.IOException;
 
 /**
  * Unit test for graph mutation
  */
-public class TestMutateGraphVertex extends BspCase {
+public class TestMutateGraph extends BspCase {
 
-    public TestMutateGraphVertex() {
-        super(TestMutateGraphVertex.class.getName());
+    public TestMutateGraph() {
+        super(TestMutateGraph.class.getName());
     }
 
     /**

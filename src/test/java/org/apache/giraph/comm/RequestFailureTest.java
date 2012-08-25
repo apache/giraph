@@ -18,13 +18,6 @@
 
 package org.apache.giraph.comm;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import java.io.IOException;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Map;
-
 import org.apache.giraph.comm.messages.SimpleMessageStore;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.GiraphJob;
@@ -41,6 +34,14 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+
+import java.io.IOException;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Map;
 
 /**
  * Test all the netty failure scenarios
@@ -136,7 +137,7 @@ public class RequestFailureTest {
     // Start the service
     serverData =
         new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>
-            (SimpleMessageStore.newFactory(
+            (conf, SimpleMessageStore.newFactory(
                 MockUtils.mockServiceGetVertexPartitionOwner(1), conf));
     server =
         new NettyServer<IntWritable, IntWritable, IntWritable, IntWritable>(
@@ -176,7 +177,7 @@ public class RequestFailureTest {
     // Start the service
     serverData =
         new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>
-            (SimpleMessageStore.newFactory(
+            (conf, SimpleMessageStore.newFactory(
                 MockUtils.mockServiceGetVertexPartitionOwner(1), conf));
     server =
         new NettyServer<IntWritable, IntWritable, IntWritable, IntWritable>(
@@ -216,7 +217,7 @@ public class RequestFailureTest {
     // Start the service
     serverData =
         new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>
-            (SimpleMessageStore.newFactory(
+            (conf, SimpleMessageStore.newFactory(
                 MockUtils.mockServiceGetVertexPartitionOwner(1), conf));
     server =
         new NettyServer<IntWritable, IntWritable, IntWritable, IntWritable>(

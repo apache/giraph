@@ -436,6 +436,24 @@ public class GiraphJob {
   /** Default size of buffer when reading and writing messages out-of-core. */
   public static final int MESSAGES_BUFFER_SIZE_DEFAULT = 8192;
 
+  /** Directory in the local filesystem for out-of-core partitions. */
+  public static final String PARTITIONS_DIRECTORY =
+      "giraph.partitionsDirectory";
+  /** Default directory for out-of-core partitions. */
+  public static final String PARTITIONS_DIRECTORY_DEFAULT = "_bsp/_partitions";
+
+  /** Enable out-of-core graph. */
+  public static final String USE_OUT_OF_CORE_GRAPH =
+      "giraph.useOutOfCoreGraph";
+  /** Default is not to use out-of-core graph. */
+  public static final boolean USE_OUT_OF_CORE_GRAPH_DEFAULT = false;
+
+  /** Maximum number of partitions to hold in memory for each worker. */
+  public static final String MAX_PARTITIONS_IN_MEMORY =
+      "giraph.maxPartitionsInMemory";
+  /** Default maximum number of in-memory partitions. */
+  public static final int MAX_PARTITIONS_IN_MEMORY_DEFAULT = 10;
+
   /** Keep the zookeeper output for debugging? Default is to remove it. */
   public static final String KEEP_ZOOKEEPER_DATA =
       "giraph.keepZooKeeperData";

@@ -20,13 +20,16 @@ package org.apache.giraph.comm;
 
 import org.apache.giraph.comm.messages.MessageStoreByPartition;
 import org.apache.giraph.comm.messages.MessageStoreFactory;
-import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.VertexMutations;
+import org.apache.giraph.graph.partition.DiskBackedPartitionStore;
+import org.apache.giraph.graph.partition.PartitionStore;
+import org.apache.giraph.graph.partition.SimplePartitionStore;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 import java.io.IOException;
-import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -40,14 +43,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @SuppressWarnings("rawtypes")
 public class ServerData<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable> {
-  /**
-   * Map of partition ids to incoming vertices from other workers.
-   * (Synchronized on values)
-   */
-  private final ConcurrentHashMap<Integer, Collection<Vertex<I, V, E, M>>>
-  inPartitionVertexMap =
-      new ConcurrentHashMap<Integer, Collection<Vertex<I, V, E, M>>>();
-
+  /** Partition store for this worker. */
+  private volatile PartitionStore<I, V, E, M> partitionStore;
   /** Message store factory */
   private final
   MessageStoreFactory<I, M, MessageStoreByPartition<I, M>> messageStoreFactory;
@@ -68,23 +65,34 @@ public class ServerData<I extends WritableComparable,
   private final ConcurrentHashMap<I, VertexMutations<I, V, E, M>>
   vertexMutations = new ConcurrentHashMap<I, VertexMutations<I, V, E, M>>();
 
-  /** @param messageStoreFactory Factory for message stores */
-  public ServerData(MessageStoreFactory<I, M, MessageStoreByPartition<I, M>>
-      messageStoreFactory) {
+  /**
+   * Constructor.
+   *
+   * @param configuration Configuration
+   * @param messageStoreFactory Factory for message stores
+   */
+  public ServerData(Configuration configuration,
+                    MessageStoreFactory<I, M, MessageStoreByPartition<I, M>>
+                        messageStoreFactory) {
 
     this.messageStoreFactory = messageStoreFactory;
     currentMessageStore = messageStoreFactory.newStore();
     incomingMessageStore = messageStoreFactory.newStore();
+    if (configuration.getBoolean(GiraphJob.USE_OUT_OF_CORE_GRAPH,
+        GiraphJob.USE_OUT_OF_CORE_GRAPH_DEFAULT)) {
+      partitionStore = new DiskBackedPartitionStore<I, V, E, M>(configuration);
+    } else {
+      partitionStore = new SimplePartitionStore<I, V, E, M>(configuration);
+    }
   }
 
   /**
-   * Get the partition vertices (synchronize on the values)
+   * Return the partition store for this worker.
    *
-   * @return Partition vertices
+   * @return The partition store
    */
-  public ConcurrentHashMap<Integer, Collection<Vertex<I, V, E, M>>>
-  getPartitionVertexMap() {
-    return inPartitionVertexMap;
+  public PartitionStore<I, V, E, M> getPartitionStore() {
+    return partitionStore;
   }
 
   /**

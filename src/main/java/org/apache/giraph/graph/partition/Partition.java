@@ -31,7 +31,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Collection;
-import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 
 /**
  * A generic container that stores vertices.  Vertex ids will map to exactly
@@ -51,7 +52,7 @@ public class Partition<I extends WritableComparable,
   /** Partition id */
   private final int id;
   /** Vertex map for this range (keyed by index) */
-  private final Map<I, Vertex<I, V, E, M>> vertexMap;
+  private final ConcurrentMap<I, Vertex<I, V, E, M>> vertexMap;
 
   /**
    * Constructor.
@@ -64,9 +65,9 @@ public class Partition<I extends WritableComparable,
     this.id = id;
     if (conf.getBoolean(GiraphJob.USE_OUT_OF_CORE_MESSAGES,
         GiraphJob.USE_OUT_OF_CORE_MESSAGES_DEFAULT)) {
-      vertexMap = Maps.newTreeMap();
+      vertexMap = new ConcurrentSkipListMap<I, Vertex<I, V, E, M>>();
     } else {
-      vertexMap = Maps.newHashMap();
+      vertexMap = Maps.newConcurrentMap();
     }
   }
 
@@ -107,6 +108,17 @@ public class Partition<I extends WritableComparable,
    */
   public Collection<Vertex<I, V, E , M>> getVertices() {
     return vertexMap.values();
+  }
+
+  /**
+   * Put several vertices in the partition.
+   *
+   * @param vertices Vertices to add
+   */
+  public void putVertices(Collection<Vertex<I, V, E , M>> vertices) {
+    for (Vertex<I, V, E , M> vertex : vertices) {
+      vertexMap.put(vertex.getId(), vertex);
+    }
   }
 
   /**

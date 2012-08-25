@@ -18,6 +18,10 @@
 
 package org.apache.giraph.graph.partition;
 
+import org.apache.giraph.graph.WorkerInfo;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -25,10 +29,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
-import org.apache.giraph.graph.WorkerInfo;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 
 /**
  * Implements hash-based partitioning from the id hash code.
@@ -62,7 +62,7 @@ public class HashWorkerPartitioner<I extends WritableComparable,
   @Override
   public Collection<PartitionStats> finalizePartitionStats(
       Collection<PartitionStats> workerPartitionStats,
-      Map<Integer, Partition<I, V, E, M>> partitionMap) {
+      PartitionStore<I, V, E, M> partitionStore) {
     // No modification necessary
     return workerPartitionStats;
   }
@@ -71,7 +71,7 @@ public class HashWorkerPartitioner<I extends WritableComparable,
   public PartitionExchange updatePartitionOwners(
       WorkerInfo myWorkerInfo,
       Collection<? extends PartitionOwner> masterSetPartitionOwners,
-      Map<Integer, Partition<I, V, E, M>> partitionMap) {
+      PartitionStore<I, V, E, M> partitionStore) {
     synchronized (partitionOwnerList) {
       partitionOwnerList.clear();
       partitionOwnerList.addAll(masterSetPartitionOwners);

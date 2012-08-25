@@ -18,20 +18,19 @@
 
 package org.apache.giraph.comm;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.util.Collection;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.apache.giraph.comm.RequestRegistry.Type;
-import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.BspUtils;
+import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
 
 import com.google.common.collect.Lists;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.Collection;
 
 /**
  * Send a collection of vertices for a partition.
@@ -98,25 +97,12 @@ public class SendVertexRequest<I extends WritableComparable,
 
   @Override
   public void doRequest(ServerData<I, V, E, M> serverData) {
-    ConcurrentHashMap<Integer, Collection<Vertex<I, V, E, M>>>
-    partitionVertexMap = serverData.getPartitionVertexMap();
     if (vertices.isEmpty()) {
       LOG.warn("doRequest: Got an empty request!");
       return;
     }
-    Collection<Vertex<I, V, E, M>> vertexMap =
-        partitionVertexMap.get(partitionId);
-    if (vertexMap == null) {
-      final Collection<Vertex<I, V, E, M>> tmpVertices  =
-          Lists.newArrayListWithCapacity(vertices.size());
-      vertexMap = partitionVertexMap.putIfAbsent(partitionId, tmpVertices);
-      if (vertexMap == null) {
-        vertexMap = tmpVertices;
-      }
-    }
-    synchronized (vertexMap) {
-      vertexMap.addAll(vertices);
-    }
+    serverData.getPartitionStore().addPartitionVertices(partitionId,
+        vertices);
   }
 }
 

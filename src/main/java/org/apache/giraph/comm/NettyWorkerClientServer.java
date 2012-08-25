@@ -28,8 +28,6 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 
 import java.io.IOException;
-import java.util.Collection;
-import java.util.Map;
 
 /**
  * Netty based implementation of the {@link WorkerClientServer} interface.
@@ -123,12 +121,6 @@ public class NettyWorkerClientServer<I extends WritableComparable,
   @Override
   public void prepareSuperstep() {
     server.prepareSuperstep();
-  }
-
-  @Override
-  public Map<Integer, Collection<Vertex<I, V, E, M>>>
-  getInPartitionVertexMap() {
-    return server.getInPartitionVertexMap();
   }
 
   @Override

@@ -24,6 +24,7 @@ import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexMutations;
+import org.apache.giraph.graph.partition.PartitionStore;
 import org.apache.giraph.utils.MockUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IntWritable;
@@ -96,7 +97,7 @@ public class RequestTest {
     // Start the service
     serverData =
         new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>
-            (SimpleMessageStore.newFactory(
+            (conf, SimpleMessageStore.newFactory(
                 MockUtils.mockServiceGetVertexPartitionOwner(1), conf));
     server =
         new NettyServer<IntWritable, IntWritable, IntWritable, IntWritable>(
@@ -135,19 +136,17 @@ public class RequestTest {
     server.stop();
 
     // Check the output
-    Map<Integer, Collection<Vertex<IntWritable, IntWritable,
-    IntWritable, IntWritable>>> partitionVertexMap =
-        serverData.getPartitionVertexMap();
-    synchronized (partitionVertexMap) {
-      assertTrue(partitionVertexMap.containsKey(partitionId));
-      int total = 0;
-      for (Vertex<IntWritable, IntWritable,
-          IntWritable, IntWritable> vertex :
-            (partitionVertexMap.get(partitionId))) {
-        total += vertex.getId().get();
-      }
-      assertEquals(total, 45);
+    PartitionStore<IntWritable, IntWritable,
+        IntWritable, IntWritable> partitionStore =
+        serverData.getPartitionStore();
+    assertTrue(partitionStore.hasPartition(partitionId));
+    int total = 0;
+    for (Vertex<IntWritable, IntWritable,
+        IntWritable, IntWritable> vertex :
+        partitionStore.getPartition(partitionId).getVertices()) {
+      total += vertex.getId().get();
     }
+    assertEquals(total, 45);
   }
 
   @Test

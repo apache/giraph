@@ -39,7 +39,6 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
 
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 import java.io.IOException;
@@ -812,19 +811,7 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
       LOG.debug("putVertexList: On partition id " + partitionId +
           " adding vertex list of size " + vertexList.size());
     }
-    synchronized (inPartitionVertexMap) {
-      if (vertexList.size() == 0) {
-        return;
-      }
-      if (!inPartitionVertexMap.containsKey(partitionId)) {
-        inPartitionVertexMap.put(partitionId,
-            Lists.newArrayList(vertexList));
-      } else {
-        Collection<Vertex<I, V, E, M>> tmpVertices =
-            inPartitionVertexMap.get(partitionId);
-        tmpVertices.addAll(vertexList);
-      }
-    }
+    service.getPartitionStore().addPartitionVertices(partitionId, vertexList);
   }
 
   @Override
@@ -1170,7 +1157,7 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
       // Assign the messages to each destination vertex (getting rid of
       // the old ones)
       for (Partition<I, V, E, M> partition :
-        service.getPartitionMap().values()) {
+          service.getPartitionStore().getPartitions()) {
         for (Vertex<I, V, E, M> vertex : partition.getVertices()) {
           List<M> msgList = inMessages.get(vertex.getId());
           if (msgList != null) {
@@ -1263,7 +1250,7 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
       if (partition == null) {
         throw new IllegalStateException(
             "prepareSuperstep: No partition for index " + vertexIndex +
-            " in " + service.getPartitionMap() + " should have been " +
+            " in " + service.getPartitionStore() + " should have been " +
             service.getVertexPartitionOwner(vertexIndex));
       }
       if (vertex != null) {
@@ -1314,11 +1301,5 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
   @Override
   public String getName() {
     return myName;
-  }
-
-  @Override
-  public Map<Integer, Collection<Vertex<I, V, E, M>>>
-  getInPartitionVertexMap() {
-    return inPartitionVertexMap;
   }
 }

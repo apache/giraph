@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-249: Move part of the graph out-of-core when memory is low
+  (apresta via aching).
+
   GIRAPH-306: Netty requests should be reliable and implement exactly
   once semantics. (aching)
 

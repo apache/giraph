@@ -477,11 +477,10 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
       TimedLogger partitionLogger = new TimedLogger(15000, LOG);
       int completedPartitions = 0;
       for (Partition<I, V, E, M> partition :
-        serviceWorker.getPartitionMap().values()) {
+        serviceWorker.getPartitionStore().getPartitions()) {
         PartitionStats partitionStats =
             new PartitionStats(partition.getId(), 0, 0, 0);
-        for (Vertex<I, V, E, M> vertex :
-          partition.getVertices()) {
+        for (Vertex<I, V, E, M> vertex : partition.getVertices()) {
           // Make sure every vertex has the current
           // graphState before computing
           vertex.setGraphState(graphState);
@@ -522,8 +521,8 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
         partitionStatsList.add(partitionStats);
         ++completedPartitions;
         partitionLogger.info("map: Completed " + completedPartitions + " of " +
-            serviceWorker.getPartitionMap().size() + " partitions " +
-            MemoryUtils.getRuntimeMemoryStats());
+            serviceWorker.getPartitionStore().getNumPartitions() +
+            " partitions " + MemoryUtils.getRuntimeMemoryStats());
       }
     } while (!serviceWorker.finishSuperstep(partitionStatsList));
     if (LOG.isInfoEnabled()) {

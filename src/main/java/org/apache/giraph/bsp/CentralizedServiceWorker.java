@@ -21,10 +21,10 @@ package org.apache.giraph.bsp;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.graph.WorkerAggregatorUsage;
+import org.apache.giraph.graph.partition.PartitionStore;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -63,14 +63,14 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
   WorkerContext getWorkerContext();
 
   /**
-   * Get a map of the partition id to the partition for this worker.
+   * Get the partition store for this worker.
    * The partitions contain the vertices for
    * this worker and can be used to run compute() for the vertices or do
    * checkpointing.
    *
-   * @return List of partitions that this worker owns.
+   * @return The partition store for this worker.
    */
-  Map<Integer, Partition<I, V, E, M>> getPartitionMap();
+  PartitionStore<I, V, E, M> getPartitionStore();
 
   /**
    * Get a collection of all the partition owners.
@@ -115,13 +115,29 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
   boolean finishSuperstep(List<PartitionStats> partitionStatsList);
 
   /**
-   * Get the partition that a vertex index would belong to
+   * Get the partition that a vertex id would belong to.
    *
-   * @param vertexId Index of the vertex that is used to find the correct
+   * @param vertexId Id of the vertex that is used to find the correct
    *        partition.
    * @return Correct partition if exists on this worker, null otherwise.
    */
   Partition<I, V, E, M> getPartition(I vertexId);
+
+  /**
+   * Get the partition id that a vertex id would belong to.
+   *
+   * @param vertexId Vertex id
+   * @return Partition id
+   */
+  Integer getPartitionId(I vertexId);
+
+  /**
+   * Whether a partition with given id exists on this worker.
+   *
+   * @param partitionId Partition id
+   * @return True iff this worker has the specified partition
+   */
+  boolean hasPartition(Integer partitionId);
 
   /**
    * Every client will need to get a partition owner from a vertex id so that

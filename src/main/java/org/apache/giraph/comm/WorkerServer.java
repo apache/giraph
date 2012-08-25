@@ -18,13 +18,10 @@
 
 package org.apache.giraph.comm;
 
-import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 import java.io.Closeable;
-import java.util.Collection;
-import java.util.Map;
 
 /**
  * Interface for message communication server.
@@ -50,15 +47,6 @@ public interface WorkerServer<I extends WritableComparable,
    * add new connections to any newly appearing RPC proxies.
    */
   void prepareSuperstep();
-
-  /**
-   * Get the vertices that were sent in the last iteration.  After getting
-   * the map, the user should synchronize with it to insure it
-   * is thread-safe.
-   *
-   * @return map of vertex ranges to vertices
-   */
-  Map<Integer, Collection<Vertex<I, V, E, M>>> getInPartitionVertexMap();
 
   /**
    * Get server data

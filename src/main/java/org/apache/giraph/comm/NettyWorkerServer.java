@@ -20,8 +20,8 @@ package org.apache.giraph.comm;
 
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.messages.BasicMessageStore;
-import org.apache.giraph.comm.messages.DiskBackedMessageStoreByPartition;
 import org.apache.giraph.comm.messages.DiskBackedMessageStore;
+import org.apache.giraph.comm.messages.DiskBackedMessageStoreByPartition;
 import org.apache.giraph.comm.messages.FlushableMessageStore;
 import org.apache.giraph.comm.messages.MessageStoreByPartition;
 import org.apache.giraph.comm.messages.MessageStoreFactory;
@@ -40,8 +40,6 @@ import org.apache.log4j.Logger;
 
 import com.google.common.collect.Sets;
 
-import java.util.Collection;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -85,7 +83,7 @@ public class NettyWorkerServer<I extends WritableComparable,
         GiraphJob.USE_OUT_OF_CORE_MESSAGES_DEFAULT);
     if (!useOutOfCoreMessaging) {
       serverData = new ServerData<I, V, E, M>(
-          SimpleMessageStore.newFactory(service, conf));
+          conf, SimpleMessageStore.newFactory(service, conf));
     } else {
       int maxMessagesInMemory = conf.getInt(GiraphJob.MAX_MESSAGES_IN_MEMORY,
           GiraphJob.MAX_MESSAGES_IN_MEMORY_DEFAULT);
@@ -97,7 +95,7 @@ public class NettyWorkerServer<I extends WritableComparable,
       MessageStoreFactory<I, M, MessageStoreByPartition<I, M>>
           storeFactory = DiskBackedMessageStoreByPartition.newFactory(service,
               maxMessagesInMemory, partitionStoreFactory);
-      serverData = new ServerData<I, V, E, M>(storeFactory);
+      serverData = new ServerData<I, V, E, M>(conf, storeFactory);
     }
 
     nettyServer = new NettyServer<I, V, E, M>(conf, serverData);
@@ -115,18 +113,16 @@ public class NettyWorkerServer<I extends WritableComparable,
 
     Set<I> resolveVertexIndexSet = Sets.newHashSet();
     // Keep track of the vertices which are not here but have received messages
-    for (I vertexId :
-        serverData.getCurrentMessageStore().getDestinationVertices()) {
-      Vertex<I, V, E, M> vertex = service.getVertex(vertexId);
-      if (vertex == null) {
-        if (service.getPartition(vertexId) == null) {
-          throw new IllegalStateException(
-              "prepareSuperstep: No partition for vertex index " + vertexId);
-        }
-        if (!resolveVertexIndexSet.add(vertexId)) {
-          throw new IllegalStateException(
-              "prepareSuperstep: Already has missing vertex on this " +
-                  "worker for " + vertexId);
+    for (Integer partitionId : service.getPartitionStore().getPartitionIds()) {
+      for (I vertexId : serverData.getCurrentMessageStore().
+          getPartitionDestinationVertices(partitionId)) {
+        Vertex<I, V, E, M> vertex = service.getVertex(vertexId);
+        if (vertex == null) {
+          if (!resolveVertexIndexSet.add(vertexId)) {
+            throw new IllegalStateException(
+                "prepareSuperstep: Already has missing vertex on this " +
+                    "worker for " + vertexId);
+          }
         }
       }
     }
@@ -175,7 +171,7 @@ public class NettyWorkerServer<I extends WritableComparable,
       if (partition == null) {
         throw new IllegalStateException(
             "prepareSuperstep: No partition for index " + vertexIndex +
-            " in " + service.getPartitionMap() + " should have been " +
+            " in " + service.getPartitionStore() + " should have been " +
             service.getVertexPartitionOwner(vertexIndex));
       }
       if (vertex != null) {
@@ -190,12 +186,6 @@ public class NettyWorkerServer<I extends WritableComparable,
           "still has " + serverData.getVertexMutations().size() +
           " mutations left.");
     }
-  }
-
-  @Override
-  public Map<Integer, Collection<Vertex<I, V, E, M>>>
-  getInPartitionVertexMap() {
-    return serverData.getPartitionVertexMap();
   }
 
   @Override

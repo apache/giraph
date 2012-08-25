@@ -18,26 +18,22 @@
 
 package org.apache.giraph.comm;
 
-import com.google.common.collect.Sets;
-import java.util.Set;
 import org.apache.giraph.comm.messages.SimpleMessageStore;
-import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.utils.MockUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.mapreduce.Mapper.Context;
-import org.jboss.netty.channel.socket.DefaultSocketChannelConfig;
 import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.Sets;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
+import java.util.Set;
 
 /**
  * Test the netty connections
@@ -57,7 +53,7 @@ public class ConnectionTest {
 
     ServerData<IntWritable, IntWritable, IntWritable, IntWritable> serverData =
         new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>
-            (SimpleMessageStore.newFactory(
+            (conf, SimpleMessageStore.newFactory(
                 MockUtils.mockServiceGetVertexPartitionOwner(1), conf));
     NettyServer<IntWritable, IntWritable, IntWritable, IntWritable> server =
         new NettyServer<IntWritable, IntWritable, IntWritable, IntWritable>(
@@ -87,7 +83,7 @@ public class ConnectionTest {
 
     ServerData<IntWritable, IntWritable, IntWritable, IntWritable> serverData =
         new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>
-            (SimpleMessageStore.newFactory(
+            (conf, SimpleMessageStore.newFactory(
                 MockUtils.mockServiceGetVertexPartitionOwner(1), conf));
 
     NettyServer<IntWritable, IntWritable, IntWritable, IntWritable> server1 =
@@ -132,7 +128,7 @@ public class ConnectionTest {
 
     ServerData<IntWritable, IntWritable, IntWritable, IntWritable> serverData =
         new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>
-            (SimpleMessageStore.newFactory(
+            (conf, SimpleMessageStore.newFactory(
                 MockUtils.mockServiceGetVertexPartitionOwner(1), conf));
     NettyServer<IntWritable, IntWritable, IntWritable, IntWritable> server =
         new NettyServer<IntWritable, IntWritable, IntWritable, IntWritable>(
