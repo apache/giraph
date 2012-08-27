@@ -176,6 +176,13 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
   void assignMessagesToVertex(Vertex<I, V, E, M> vertex, Iterable<M> messages);
 
   /**
+   * Get master info
+   *
+   * @return Master info
+   */
+  WorkerInfo getMasterInfo();
+
+  /**
    * Get the GraphMapper that this service is using.  Vertices need to know
    * this.
    *

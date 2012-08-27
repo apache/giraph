@@ -94,6 +94,8 @@ public abstract class BspService<I extends WritableComparable,
       "/_applicationAttemptsDir";
   /** Where the master election happens */
   public static final String MASTER_ELECTION_DIR = "/_masterElectionDir";
+  /** Denotes current master's info */
+  public static final String CURRENT_MASTER_INFO_NODE = "/_currentMaster";
   /** Superstep scope */
   public static final String SUPERSTEP_DIR = "/_superstepDir";
   /** Where the merged aggregators are located */
@@ -208,6 +210,8 @@ public abstract class BspService<I extends WritableComparable,
   protected final String checkpointBasePath;
   /** Path to the master election path */
   protected final String masterElectionPath;
+  /** Path to current master info */
+  protected final String currentMasterPath;
   /** Private ZooKeeper instance that implements the service */
   private final ZooKeeperExt zk;
   /** Has the Connection occurred? */
@@ -339,6 +343,7 @@ public abstract class BspService<I extends WritableComparable,
             GiraphJob.CHECKPOINT_DIRECTORY,
             GiraphJob.CHECKPOINT_DIRECTORY_DEFAULT + "/" + getJobId());
     masterElectionPath = basePath + MASTER_ELECTION_DIR;
+    currentMasterPath = basePath + CURRENT_MASTER_INFO_NODE;
     if (LOG.isInfoEnabled()) {
       LOG.info("BspService: Connecting to ZooKeeper with job " + jobId +
           ", " + getTaskPartition() + " on " + serverPortList);

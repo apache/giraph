@@ -34,8 +34,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.utils.TimedLogger;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
 import org.jboss.netty.bootstrap.ClientBootstrap;
@@ -51,16 +49,8 @@ import org.jboss.netty.handler.codec.frame.FixedLengthFrameDecoder;
 
 /**
  * Netty client for sending requests.
- *
- * @param <I> Vertex id
- * @param <V> Vertex data
- * @param <E> Edge data
- * @param <M> Message data
  */
-@SuppressWarnings("rawtypes")
-public class NettyClient<I extends WritableComparable,
-    V extends Writable, E extends Writable,
-    M extends Writable> {
+public class NettyClient {
   /** Do we have a limit on number of open requests we can have */
   public static final String LIMIT_NUMBER_OF_OPEN_REQUESTS =
       "giraph.waitForRequestsConfirmation";
@@ -420,7 +410,7 @@ public class NettyClient<I extends WritableComparable,
    */
   public void sendWritableRequest(Integer destWorkerId,
                                   InetSocketAddress remoteServer,
-                                  WritableRequest<I, V, E, M> request) {
+                                  WritableRequest request) {
     if (clientRequestIdRequestInfoMap.isEmpty()) {
       byteCounter.resetAll();
     }
@@ -471,8 +461,7 @@ public class NettyClient<I extends WritableComparable,
    */
   private void waitSomeRequests(int maxOpenRequests) {
     List<ClientRequestId> addedRequestIds = Lists.newArrayList();
-    List<RequestInfo<I, V, E, M>> addedRequestInfos =
-        Lists.newArrayList();
+    List<RequestInfo> addedRequestInfos = Lists.newArrayList();
 
     while (clientRequestIdRequestInfoMap.size() > maxOpenRequests) {
       // Wait for requests to complete for some time
@@ -521,7 +510,7 @@ public class NettyClient<I extends WritableComparable,
               "destination = " + writeFuture.getChannel().getRemoteAddress() +
               " " + requestInfo);
           addedRequestIds.add(entry.getKey());
-          addedRequestInfos.add(new RequestInfo<I, V, E, M>(
+          addedRequestInfos.add(new RequestInfo(
               requestInfo.getDestinationAddress(), requestInfo.getRequest()));
         }
       }
@@ -529,7 +518,7 @@ public class NettyClient<I extends WritableComparable,
       // Add any new requests to the system, connect if necessary, and re-send
       for (int i = 0; i < addedRequestIds.size(); ++i) {
         ClientRequestId requestId = addedRequestIds.get(i);
-        RequestInfo<I, V, E, M> requestInfo = addedRequestInfos.get(i);
+        RequestInfo requestInfo = addedRequestInfos.get(i);
 
         if (clientRequestIdRequestInfoMap.put(requestId, requestInfo) ==
             null) {

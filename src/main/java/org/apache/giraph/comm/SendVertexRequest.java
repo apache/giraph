@@ -18,7 +18,6 @@
 
 package org.apache.giraph.comm;
 
-import org.apache.giraph.comm.RequestRegistry.Type;
 import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.Writable;
@@ -42,8 +41,8 @@ import java.util.Collection;
  */
 @SuppressWarnings("rawtypes")
 public class SendVertexRequest<I extends WritableComparable,
-    V extends Writable, E extends Writable,
-    M extends Writable> extends WritableRequest<I, V, E, M> {
+    V extends Writable, E extends Writable, M extends Writable> extends
+    WritableRequest implements WorkerRequest<I, V, E, M> {
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(SendVertexRequest.class);
@@ -91,8 +90,8 @@ public class SendVertexRequest<I extends WritableComparable,
   }
 
   @Override
-  public Type getType() {
-    return Type.SEND_VERTEX_REQUEST;
+  public RequestType getType() {
+    return RequestType.SEND_VERTEX_REQUEST;
   }
 
   @Override

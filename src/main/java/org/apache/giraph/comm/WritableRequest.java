@@ -21,24 +21,14 @@ package org.apache.giraph.comm;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import org.apache.giraph.comm.RequestRegistry.Type;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 
 /**
  * Interface for requests to implement
- *
- * @param <I> Vertex id
- * @param <V> Vertex data
- * @param <E> Edge data
- * @param <M> Message data
  */
-@SuppressWarnings("rawtypes")
-public abstract class WritableRequest<I extends WritableComparable,
-    V extends Writable, E extends Writable,
-    M extends Writable> implements Writable, Configurable {
+public abstract class WritableRequest implements Writable, Configurable {
   /** Configuration */
   private Configuration conf;
   /** Client id */
@@ -67,7 +57,7 @@ public abstract class WritableRequest<I extends WritableComparable,
    *
    * @return Request type
    */
-  public abstract Type getType();
+  public abstract RequestType getType();
 
   /**
    * Serialize the request
@@ -82,13 +72,6 @@ public abstract class WritableRequest<I extends WritableComparable,
    * @param output Output to write the request to
    */
   abstract void writeRequest(DataOutput output) throws IOException;
-
-  /**
-   * Execute the request
-   *
-   * @param serverData Accessible data that can be mutated per the request
-   */
-  public abstract void doRequest(ServerData<I, V, E, M> serverData);
 
   @Override
   public final Configuration getConf() {

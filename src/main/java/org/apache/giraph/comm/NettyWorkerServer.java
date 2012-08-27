@@ -63,7 +63,7 @@ public class NettyWorkerServer<I extends WritableComparable,
   /** Service worker */
   private final CentralizedServiceWorker<I, V, E, M> service;
   /** Netty server that does that actual I/O */
-  private final NettyServer<I, V, E, M> nettyServer;
+  private final NettyServer nettyServer;
   /** Server data storage */
   private final ServerData<I, V, E, M> serverData;
 
@@ -98,7 +98,8 @@ public class NettyWorkerServer<I extends WritableComparable,
       serverData = new ServerData<I, V, E, M>(conf, storeFactory);
     }
 
-    nettyServer = new NettyServer<I, V, E, M>(conf, serverData);
+    nettyServer = new NettyServer(conf,
+        new WorkerRequestServerHandler.Factory<I, V, E, M>(serverData));
     nettyServer.start();
   }
 

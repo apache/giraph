@@ -23,6 +23,8 @@ import org.apache.giraph.bsp.ApplicationState;
 import org.apache.giraph.bsp.BspInputFormat;
 import org.apache.giraph.bsp.CentralizedServiceMaster;
 import org.apache.giraph.bsp.SuperstepState;
+import org.apache.giraph.comm.MasterClientServer;
+import org.apache.giraph.comm.NettyMasterClientServer;
 import org.apache.giraph.graph.GraphMapper.MapFunctions;
 import org.apache.giraph.graph.partition.MasterGraphPartitioner;
 import org.apache.giraph.graph.partition.PartitionOwner;
@@ -139,6 +141,10 @@ public class BspServiceMaster<I extends WritableComparable,
   private AggregatorWriter aggregatorWriter;
   /** Master class */
   private MasterCompute masterCompute;
+  /** Communication service */
+  private MasterClientServer commService;
+  /** Master info */
+  private WorkerInfo masterInfo;
   /** Limit locality information added to each InputSplit znode */
   private final int localityLimit = 5;
 
@@ -790,7 +796,21 @@ public class BspServiceMaster<I extends WritableComparable,
             throw new IllegalStateException("becomeMaster: " +
                 "Couldn't initialize aggregatorWriter", e);
           }
-          LOG.info("becomeMaster: I am now the master!");
+
+          boolean useNetty = getConfiguration().getBoolean(GiraphJob.USE_NETTY,
+              GiraphJob.USE_NETTY_DEFAULT);
+          if (useNetty) {
+            commService = new NettyMasterClientServer(getContext());
+            masterInfo = new WorkerInfo(getHostname(), getTaskPartition(),
+                commService.getMyAddress().getPort());
+            // write my address to znode so workers could read it
+            WritableUtils.writeToZnode(getZkExt(), currentMasterPath, -1,
+                masterInfo);
+          }
+
+          if (LOG.isInfoEnabled()) {
+            LOG.info("becomeMaster: I am now the master!");
+          }
           isMaster = true;
           return isMaster;
         }
@@ -1448,6 +1468,12 @@ public class BspServiceMaster<I extends WritableComparable,
       }
     }
 
+    boolean useNetty = getConfiguration().getBoolean(GiraphJob.USE_NETTY,
+        GiraphJob.USE_NETTY_DEFAULT);
+    if (useNetty) {
+      commService.fixWorkerAddresses(chosenWorkerInfoList);
+    }
+
     currentWorkersCounter.increment(chosenWorkerInfoList.size() -
         currentWorkersCounter.getValue());
     assignPartitionOwners(allPartitionStatsList,
@@ -1736,6 +1762,13 @@ public class BspServiceMaster<I extends WritableComparable,
         }
       }
       aggregatorWriter.close();
+
+      boolean useNetty = getConfiguration().getBoolean(GiraphJob.USE_NETTY,
+          GiraphJob.USE_NETTY_DEFAULT);
+      if (useNetty) {
+        commService.closeConnections();
+        commService.close();
+      }
     }
 
     try {

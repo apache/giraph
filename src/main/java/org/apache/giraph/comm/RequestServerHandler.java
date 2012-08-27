@@ -20,8 +20,6 @@ package org.apache.giraph.comm;
 
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -34,15 +32,10 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 /**
  * Generic handler of requests.
  *
- * @param <I> Vertex id
- * @param <V> Vertex data
- * @param <E> Edge data
- * @param <M> Message data
+ * @param <R> Request type
  */
-@SuppressWarnings("rawtypes")
-public class RequestServerHandler<I extends WritableComparable,
-    V extends Writable, E extends Writable,
-    M extends Writable> extends SimpleChannelUpstreamHandler {
+public abstract class RequestServerHandler<R> extends
+    SimpleChannelUpstreamHandler {
   /** Number of bytes in the encoded response */
   public static final int RESPONSE_BYTES = 13;
   /** Class logger */
@@ -52,25 +45,20 @@ public class RequestServerHandler<I extends WritableComparable,
   private static volatile boolean ALREADY_CLOSED_FIRST_REQUEST = false;
   /** Close connection on first request (used for simulating failure) */
   private final boolean closeFirstRequest;
-  /** Data that can be accessed for handling requests */
-  private final ServerData<I, V, E, M> serverData;
   /** Request reserved map (for exactly one semantics) */
   private final WorkerRequestReservedMap workerRequestReservedMap;
   /** My worker id */
   private final int myWorkerId;
 
   /**
-   * Constructor with external server data
+   * Constructor
    *
-   * @param serverData Data held by the server
    * @param workerRequestReservedMap Worker request reservation map
    * @param conf Configuration
    */
   public RequestServerHandler(
-      ServerData<I, V, E, M> serverData,
       WorkerRequestReservedMap workerRequestReservedMap,
       Configuration conf) {
-    this.serverData = serverData;
     this.workerRequestReservedMap = workerRequestReservedMap;
     closeFirstRequest = conf.getBoolean(
         GiraphJob.NETTY_SIMULATE_FIRST_REQUEST_CLOSED,
@@ -85,9 +73,7 @@ public class RequestServerHandler<I extends WritableComparable,
       LOG.debug("messageReceived: Got " + e.getMessage().getClass());
     }
 
-    @SuppressWarnings("unchecked")
-    WritableRequest<I, V, E, M> writableRequest =
-        (WritableRequest<I, V, E, M>) e.getMessage();
+    WritableRequest writableRequest = (WritableRequest) e.getMessage();
 
     // Simulate a closed connection on the first request (if desired)
     if (closeFirstRequest && !ALREADY_CLOSED_FIRST_REQUEST) {
@@ -104,7 +90,7 @@ public class RequestServerHandler<I extends WritableComparable,
     if (workerRequestReservedMap.reserveRequest(
         writableRequest.getClientId(),
         writableRequest.getRequestId())) {
-      writableRequest.doRequest(serverData);
+      processRequest((R) writableRequest);
       alreadyDone = 0;
     } else {
       LOG.info("messageReceived: Request id " +
@@ -121,6 +107,13 @@ public class RequestServerHandler<I extends WritableComparable,
     buffer.writeByte(alreadyDone);
     e.getChannel().write(buffer);
   }
+
+  /**
+   * Process request
+   *
+   * @param request Request to process
+   */
+  public abstract void processRequest(R request);
 
   @Override
   public void channelConnected(ChannelHandlerContext ctx,
@@ -145,5 +138,21 @@ public class RequestServerHandler<I extends WritableComparable,
   public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
     LOG.warn("exceptionCaught: Channel failed with " +
         "remote address " + ctx.getChannel().getRemoteAddress(), e.getCause());
+  }
+
+  /**
+   * Factory for {@link RequestServerHandler}
+   */
+  public interface RequestServerHandlerFactory {
+    /**
+     * Create new {@link RequestServerHandler}
+     *
+     * @param workerRequestReservedMap Worker request reservation map
+     * @param conf Configuration to use
+     * @return New {@link RequestServerHandler}
+     */
+    RequestServerHandler newHandler(
+        WorkerRequestReservedMap workerRequestReservedMap,
+        Configuration conf);
   }
 }

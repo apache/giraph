@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-313: Open Netty client and server on master. (majakabiljo via
+  aching)
+
   GIRAPH-249: Move part of the graph out-of-core when memory is low
   (apresta via aching).
 

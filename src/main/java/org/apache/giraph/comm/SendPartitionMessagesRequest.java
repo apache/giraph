@@ -18,7 +18,6 @@
 
 package org.apache.giraph.comm;
 
-import org.apache.giraph.comm.RequestRegistry.Type;
 import org.apache.giraph.graph.BspUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -45,8 +44,8 @@ import java.util.Map.Entry;
  */
 @SuppressWarnings("rawtypes")
 public class SendPartitionMessagesRequest<I extends WritableComparable,
-    V extends Writable, E extends Writable,
-    M extends Writable> extends WritableRequest<I, V, E, M> {
+    V extends Writable, E extends Writable, M extends Writable> extends
+    WritableRequest implements WorkerRequest<I, V, E, M> {
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(SendPartitionMessagesRequest.class);
@@ -108,8 +107,8 @@ public class SendPartitionMessagesRequest<I extends WritableComparable,
   }
 
   @Override
-  public Type getType() {
-    return Type.SEND_PARTITION_MESSAGES_REQUEST;
+  public RequestType getType() {
+    return RequestType.SEND_PARTITION_MESSAGES_REQUEST;
   }
 
   @Override

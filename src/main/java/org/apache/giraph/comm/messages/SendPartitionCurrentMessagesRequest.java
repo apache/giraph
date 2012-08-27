@@ -18,7 +18,7 @@
 
 package org.apache.giraph.comm.messages;
 
-import org.apache.giraph.comm.RequestRegistry.Type;
+import org.apache.giraph.comm.RequestType;
 import org.apache.giraph.comm.SendPartitionMessagesRequest;
 import org.apache.giraph.comm.ServerData;
 import org.apache.hadoop.io.Writable;
@@ -55,8 +55,8 @@ public class SendPartitionCurrentMessagesRequest<I extends WritableComparable,
   }
 
   @Override
-  public Type getType() {
-    return Type.SEND_PARTITION_CURRENT_MESSAGES_REQUEST;
+  public RequestType getType() {
+    return RequestType.SEND_PARTITION_CURRENT_MESSAGES_REQUEST;
   }
 
   @Override

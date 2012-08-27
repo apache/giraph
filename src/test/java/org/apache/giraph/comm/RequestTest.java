@@ -60,11 +60,9 @@ public class RequestTest {
   private ServerData<IntWritable, IntWritable, IntWritable, IntWritable>
   serverData;
   /** Server */
-  private NettyServer<IntWritable, IntWritable, IntWritable, IntWritable>
-  server;
+  private NettyServer server;
   /** Client */
-  private NettyClient<IntWritable, IntWritable, IntWritable, IntWritable>
-  client;
+  private NettyClient client;
 
   /**
    * Only for testing.
@@ -99,13 +97,10 @@ public class RequestTest {
         new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>
             (conf, SimpleMessageStore.newFactory(
                 MockUtils.mockServiceGetVertexPartitionOwner(1), conf));
-    server =
-        new NettyServer<IntWritable, IntWritable, IntWritable, IntWritable>(
-            conf, serverData);
+    server = new NettyServer(conf,
+        new WorkerRequestServerHandler.Factory(serverData));
     server.start();
-    client =
-        new NettyClient<IntWritable, IntWritable, IntWritable, IntWritable>
-            (context);
+    client = new NettyClient(context);
     client.connectAllAddresses(Collections.singleton(server.getMyAddress()));
   }
 

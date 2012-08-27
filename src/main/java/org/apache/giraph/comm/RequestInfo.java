@@ -20,26 +20,18 @@ package org.apache.giraph.comm;
 
 import java.net.InetSocketAddress;
 import java.util.Date;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 import org.jboss.netty.channel.ChannelFuture;
 
 /**
  * Help track requests throughout the system
- *
- * @param <I> Vertex id
- * @param <V> Vertex data
- * @param <E> Edge data
- * @param <M> Message data
  */
-public class RequestInfo<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable> {
+public class RequestInfo {
   /** Destination of the request */
   private final InetSocketAddress destinationAddress;
   /** When the request was started */
   private final long startedMsecs;
   /** Request */
-  private final WritableRequest<I, V, E, M> request;
+  private final WritableRequest request;
   /** Future of the write of this request*/
   private volatile ChannelFuture writeFuture;
 
@@ -50,7 +42,7 @@ public class RequestInfo<I extends WritableComparable,
    * @param request Request that is sent
    */
   public RequestInfo(InetSocketAddress destinationAddress,
-                     WritableRequest<I, V, E, M> request) {
+                     WritableRequest request) {
     this.destinationAddress = destinationAddress;
     this.request = request;
     this.startedMsecs = System.currentTimeMillis();
@@ -73,7 +65,7 @@ public class RequestInfo<I extends WritableComparable,
     return System.currentTimeMillis() - startedMsecs;
   }
 
-  public WritableRequest<I, V, E, M> getRequest() {
+  public WritableRequest getRequest() {
     return request;
   }
 

@@ -101,6 +101,8 @@ public class BspServiceWorker<I extends WritableComparable,
   inputSplitCache = new HashMap<PartitionOwner, Partition<I, V, E, M>>();
   /** Communication service */
   private final WorkerClientServer<I, V, E, M> commService;
+  /** Master info */
+  private WorkerInfo masterInfo = new WorkerInfo();
   /** Have the partition exchange children (workers) changed? */
   private final BspEvent partitionExchangeChildrenChanged;
   /** Regulates the size of outgoing Collections of vertices read
@@ -528,6 +530,11 @@ public class BspServiceWorker<I extends WritableComparable,
   }
 
   @Override
+  public WorkerInfo getMasterInfo() {
+    return masterInfo;
+  }
+
+  @Override
   public void setup() {
     // Unless doing a restart, prepare for computation:
     // 1. Start superstep INPUT_SUPERSTEP (no computation)
@@ -937,6 +944,15 @@ public class BspServiceWorker<I extends WritableComparable,
     } catch (InterruptedException e) {
       throw new IllegalStateException(
           "startSuperstep: InterruptedException getting assignments", e);
+    }
+
+
+    boolean useNetty = getConfiguration().getBoolean(GiraphJob.USE_NETTY,
+        GiraphJob.USE_NETTY_DEFAULT);
+    if (useNetty) {
+      // get address of master
+      WritableUtils.readFieldsFromZnode(getZkExt(), currentMasterPath, false,
+          null, masterInfo);
     }
 
     if (LOG.isInfoEnabled()) {

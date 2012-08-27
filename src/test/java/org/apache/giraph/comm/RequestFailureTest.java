@@ -53,11 +53,9 @@ public class RequestFailureTest {
   private ServerData<IntWritable, IntWritable, IntWritable, IntWritable>
   serverData;
   /** Server */
-  private NettyServer<IntWritable, IntWritable, IntWritable, IntWritable>
-  server;
+  private NettyServer server;
   /** Client */
-  private NettyClient<IntWritable, IntWritable, IntWritable, IntWritable>
-  client;
+  private NettyClient client;
   /** Mock context */
   private Context context;
 
@@ -89,8 +87,7 @@ public class RequestFailureTest {
     when(context.getConfiguration()).thenReturn(conf);
   }
 
-  private WritableRequest<IntWritable, IntWritable, IntWritable,
-      IntWritable> getRequest() {
+  private WritableRequest getRequest() {
     // Data to send
     int partitionId = 17;
     Map<IntWritable, Collection<IntWritable>> vertexIdMessages =
@@ -139,20 +136,15 @@ public class RequestFailureTest {
         new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>
             (conf, SimpleMessageStore.newFactory(
                 MockUtils.mockServiceGetVertexPartitionOwner(1), conf));
-    server =
-        new NettyServer<IntWritable, IntWritable, IntWritable, IntWritable>(
-            conf, serverData);
+    server = new NettyServer(conf,
+        new WorkerRequestServerHandler.Factory(serverData));
     server.start();
-    client =
-        new NettyClient<IntWritable, IntWritable, IntWritable, IntWritable>
-            (context);
+    client = new NettyClient(context);
     client.connectAllAddresses(Collections.singleton(server.getMyAddress()));
 
     // Send the request 2x
-    WritableRequest<IntWritable, IntWritable, IntWritable,
-        IntWritable> request1 = getRequest();
-    WritableRequest<IntWritable, IntWritable, IntWritable,
-        IntWritable> request2 = getRequest();
+    WritableRequest request1 = getRequest();
+    WritableRequest request2 = getRequest();
     client.sendWritableRequest(-1, server.getMyAddress(), request1);
     client.sendWritableRequest(-1, server.getMyAddress(), request2);
     client.waitAllRequests();
@@ -179,20 +171,15 @@ public class RequestFailureTest {
         new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>
             (conf, SimpleMessageStore.newFactory(
                 MockUtils.mockServiceGetVertexPartitionOwner(1), conf));
-    server =
-        new NettyServer<IntWritable, IntWritable, IntWritable, IntWritable>(
-            conf, serverData);
+    server = new NettyServer(conf,
+        new WorkerRequestServerHandler.Factory(serverData));
     server.start();
-    client =
-        new NettyClient<IntWritable, IntWritable, IntWritable, IntWritable>
-            (context);
+    client = new NettyClient(context);
     client.connectAllAddresses(Collections.singleton(server.getMyAddress()));
 
     // Send the request 2x, but should only be processed once
-    WritableRequest<IntWritable, IntWritable, IntWritable,
-        IntWritable> request1 = getRequest();
-    WritableRequest<IntWritable, IntWritable, IntWritable,
-        IntWritable> request2 = getRequest();
+    WritableRequest request1 = getRequest();
+    WritableRequest request2 = getRequest();
     client.sendWritableRequest(-1, server.getMyAddress(), request1);
     client.sendWritableRequest(-1, server.getMyAddress(), request2);
     client.waitAllRequests();
@@ -219,20 +206,15 @@ public class RequestFailureTest {
         new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>
             (conf, SimpleMessageStore.newFactory(
                 MockUtils.mockServiceGetVertexPartitionOwner(1), conf));
-    server =
-        new NettyServer<IntWritable, IntWritable, IntWritable, IntWritable>(
-            conf, serverData);
+    server = new NettyServer(conf,
+        new WorkerRequestServerHandler.Factory(serverData));
     server.start();
-    client =
-        new NettyClient<IntWritable, IntWritable, IntWritable, IntWritable>
-            (context);
+    client = new NettyClient(context);
     client.connectAllAddresses(Collections.singleton(server.getMyAddress()));
 
     // Send the request 2x, but should only be processed once
-    WritableRequest<IntWritable, IntWritable, IntWritable,
-        IntWritable> request1 = getRequest();
-    WritableRequest<IntWritable, IntWritable, IntWritable,
-        IntWritable> request2 = getRequest();
+    WritableRequest request1 = getRequest();
+    WritableRequest request2 = getRequest();
     client.sendWritableRequest(-1, server.getMyAddress(), request1);
     client.sendWritableRequest(-1, server.getMyAddress(), request2);
     client.waitAllRequests();

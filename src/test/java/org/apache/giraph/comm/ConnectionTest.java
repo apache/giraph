@@ -18,7 +18,10 @@
 
 package org.apache.giraph.comm;
 
+import com.google.common.collect.Sets;
+import java.util.Set;
 import org.apache.giraph.comm.messages.SimpleMessageStore;
+import org.apache.giraph.comm.RequestServerHandler.RequestServerHandlerFactory;
 import org.apache.giraph.utils.MockUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IntWritable;
@@ -28,12 +31,9 @@ import org.junit.Test;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.google.common.collect.Sets;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Collections;
-import java.util.Set;
 
 /**
  * Test the netty connections
@@ -55,14 +55,12 @@ public class ConnectionTest {
         new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>
             (conf, SimpleMessageStore.newFactory(
                 MockUtils.mockServiceGetVertexPartitionOwner(1), conf));
-    NettyServer<IntWritable, IntWritable, IntWritable, IntWritable> server =
-        new NettyServer<IntWritable, IntWritable, IntWritable, IntWritable>(
-            conf, serverData);
+    NettyServer server =
+        new NettyServer(conf,
+            new WorkerRequestServerHandler.Factory(serverData));
     server.start();
 
-    NettyClient<IntWritable, IntWritable, IntWritable, IntWritable> client =
-        new NettyClient<IntWritable, IntWritable, IntWritable,
-        IntWritable>(context);
+    NettyClient client = new NettyClient(context);
     client.connectAllAddresses(Collections.singleton(server.getMyAddress()));
 
     client.stop();
@@ -85,23 +83,17 @@ public class ConnectionTest {
         new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>
             (conf, SimpleMessageStore.newFactory(
                 MockUtils.mockServiceGetVertexPartitionOwner(1), conf));
+   RequestServerHandlerFactory requestServerHandlerFactory =
+       new WorkerRequestServerHandler.Factory(serverData);
 
-    NettyServer<IntWritable, IntWritable, IntWritable, IntWritable> server1 =
-        new NettyServer<IntWritable, IntWritable, IntWritable, IntWritable>(
-            conf, serverData);
+    NettyServer server1 = new NettyServer(conf, requestServerHandlerFactory);
     server1.start();
-    NettyServer<IntWritable, IntWritable, IntWritable, IntWritable> server2 =
-        new NettyServer<IntWritable, IntWritable, IntWritable, IntWritable>(
-            conf, serverData);
+    NettyServer server2 = new NettyServer(conf, requestServerHandlerFactory);
     server2.start();
-    NettyServer<IntWritable, IntWritable, IntWritable, IntWritable> server3 =
-        new NettyServer<IntWritable, IntWritable, IntWritable, IntWritable>(
-            conf, serverData);
+    NettyServer server3 = new NettyServer(conf, requestServerHandlerFactory);
     server3.start();
 
-    NettyClient<IntWritable, IntWritable, IntWritable, IntWritable> client =
-        new NettyClient<IntWritable, IntWritable, IntWritable,
-        IntWritable>(context);
+    NettyClient client = new NettyClient(context);
     Set<InetSocketAddress> serverAddresses = Sets.newHashSet();
     serverAddresses.add(server1.getMyAddress());
     serverAddresses.add(server2.getMyAddress());
@@ -130,22 +122,15 @@ public class ConnectionTest {
         new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>
             (conf, SimpleMessageStore.newFactory(
                 MockUtils.mockServiceGetVertexPartitionOwner(1), conf));
-    NettyServer<IntWritable, IntWritable, IntWritable, IntWritable> server =
-        new NettyServer<IntWritable, IntWritable, IntWritable, IntWritable>(
-            conf, serverData);
+    NettyServer server = new NettyServer(conf,
+        new WorkerRequestServerHandler.Factory(serverData));
     server.start();
 
-    NettyClient<IntWritable, IntWritable, IntWritable, IntWritable> client1 =
-        new NettyClient<IntWritable, IntWritable, IntWritable,
-        IntWritable>(context);
+    NettyClient client1 = new NettyClient(context);
     client1.connectAllAddresses(Collections.singleton(server.getMyAddress()));
-    NettyClient<IntWritable, IntWritable, IntWritable, IntWritable> client2 =
-        new NettyClient<IntWritable, IntWritable, IntWritable,
-        IntWritable>(context);
+    NettyClient client2 = new NettyClient(context);
     client2.connectAllAddresses(Collections.singleton(server.getMyAddress()));
-    NettyClient<IntWritable, IntWritable, IntWritable, IntWritable> client3 =
-        new NettyClient<IntWritable, IntWritable, IntWritable,
-        IntWritable>(context);
+    NettyClient client3 = new NettyClient(context);
     client3.connectAllAddresses(Collections.singleton(server.getMyAddress()));
 
     client1.stop();

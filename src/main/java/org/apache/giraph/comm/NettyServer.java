@@ -23,13 +23,10 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadPoolExecutor;
 
-import org.apache.giraph.comm.messages.SendPartitionCurrentMessagesRequest;
 import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.comm.RequestServerHandler.RequestServerHandlerFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.Channel;
@@ -47,16 +44,8 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * This server uses Netty and will implement all Giraph communication
- *
- * @param <I> Vertex id
- * @param <V> Vertex data
- * @param <E> Edge data
- * @param <M> Message data
  */
-@SuppressWarnings("rawtypes")
-public class NettyServer<I extends WritableComparable,
-     V extends Writable, E extends Writable,
-     M extends Writable> {
+public class NettyServer {
   /** Default maximum thread pool size */
   public static final int MAXIMUM_THREAD_POOL_SIZE_DEFAULT = 32;
   /** Class logger */
@@ -67,8 +56,6 @@ public class NettyServer<I extends WritableComparable,
   private ChannelFactory channelFactory;
   /** Accepted channels */
   private final ChannelGroup accepted = new DefaultChannelGroup();
-  /** Worker thread pool (if implemented as a ThreadPoolExecutor) */
-  private ThreadPoolExecutor workerThreadPool = null;
   /** Local hostname */
   private final String localHostname;
   /** Address of the server */
@@ -77,10 +64,8 @@ public class NettyServer<I extends WritableComparable,
   private final int maximumPoolSize;
   /** TCP backlog */
   private final int tcpBacklog;
-  /** Request reqistry */
-  private final RequestRegistry requestRegistry = new RequestRegistry();
-  /** Server data */
-  private final ServerData<I, V, E, M> serverData;
+  /** Factory for {@link RequestServerHandler} */
+  private final RequestServerHandlerFactory requestServerHandlerFactory;
   /** Server bootstrap */
   private ServerBootstrap bootstrap;
   /** Byte counter for this client */
@@ -100,20 +85,12 @@ public class NettyServer<I extends WritableComparable,
    * Constructor for creating the server
    *
    * @param conf Configuration to use
-   * @param serverData Server data to operate on
+   * @param requestServerHandlerFactory Factory for request handlers
    */
-  public NettyServer(Configuration conf, ServerData<I, V, E, M> serverData) {
+  public NettyServer(Configuration conf,
+      RequestServerHandlerFactory requestServerHandlerFactory) {
     this.conf = conf;
-    this.serverData = serverData;
-    requestRegistry.registerClass(
-        new SendVertexRequest<I, V, E, M>());
-    requestRegistry.registerClass(
-        new SendPartitionMessagesRequest<I, V, E, M>());
-    requestRegistry.registerClass(
-        new SendPartitionMutationsRequest<I, V, E, M>());
-    requestRegistry.registerClass(
-        new SendPartitionCurrentMessagesRequest<I, V, E, M>());
-    requestRegistry.shutdown();
+    this.requestServerHandlerFactory = requestServerHandlerFactory;
 
     sendBufferSize = conf.getInt(GiraphJob.SERVER_SEND_BUFFER_SIZE,
         GiraphJob.DEFAULT_SERVER_SEND_BUFFER_SIZE);
@@ -163,17 +140,18 @@ public class NettyServer<I extends WritableComparable,
         return Channels.pipeline(
             byteCounter,
             new LengthFieldBasedFrameDecoder(1024 * 1024 * 1024, 0, 4, 0, 4),
-            new RequestDecoder<I, V, E, M>(conf, requestRegistry, byteCounter),
-            new RequestServerHandler<I, V, E, M>(serverData,
-                workerRequestReservedMap, conf));
+            new RequestDecoder(conf, byteCounter),
+            requestServerHandlerFactory.newHandler(workerRequestReservedMap,
+                conf));
       }
     });
 
     int taskId = conf.getInt("mapred.task.partition", -1);
     int numTasks = conf.getInt("mapred.map.tasks", 1);
-    int numWorkers = conf.getInt(GiraphJob.MAX_WORKERS, numTasks);
+    // number of workers + 1 for master
+    int numServers = conf.getInt(GiraphJob.MAX_WORKERS, numTasks) + 1;
     int portIncrementConstant =
-        (int) Math.pow(10, Math.ceil(Math.log10(numWorkers)));
+        (int) Math.pow(10, Math.ceil(Math.log10(numServers)));
     int bindPort = conf.getInt(GiraphJob.RPC_INITIAL_PORT,
         GiraphJob.RPC_INITIAL_PORT_DEFAULT) +
         taskId;
@@ -241,6 +219,7 @@ public class NettyServer<I extends WritableComparable,
     bossExecutorService.shutdownNow();
     workerExecutorService.shutdownNow();
     bootstrap.releaseExternalResources();
+    channelFactory.releaseExternalResources();
   }
 
   public InetSocketAddress getMyAddress() {
