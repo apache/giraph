@@ -21,7 +21,9 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Iterator;
 import org.apache.giraph.zk.ZooKeeperExt;
 import org.apache.hadoop.io.Text;
 import org.apache.zookeeper.KeeperException;
@@ -29,45 +31,62 @@ import org.apache.zookeeper.KeeperException;
 /**
  * Utility class to extract InputSplit locality information
  * from znodes and to sort the InputSplit list for the worker
- * owning this object to select splits from.
+ * owning this object to favor local data block selection.
+ *
+ * This class also provides a hash-rotated index by which workers
+ * must index into their list of InputSplits, This will be especially
+ * helpful to those who do not find local blocks to read, and must
+ * contend with other workers for non-local splits in the list.
+ *
+ * Searching for splits using ZK reads is slowed by the fact that
+ * after each ZK write (to mark a split reserved or finished) the
+ * ZK quorum must be sync'd before pending read requests can be
+ * fulfilled. During InputSplit claiming, the writes are frequent on
+ * both reserved and finished node trees; the aim is to cut down on
+ * the number of ZK reads workers perform to locate an unclaimed node.
  */
-public class LocalityInfoSorter {
+public class LocalityInfoSorter implements Iterable<String> {
   /** The worker's local ZooKeeperExt ref */
   private final ZooKeeperExt zooKeeper;
   /** The List of InputSplit znode paths */
   private final List<String> pathList;
   /** The worker's hostname */
   private final String hostName;
+  /** The adjusted base offset by which to iterate on the path list */
+  private final int baseOffset;
 
   /**
    * Constructor
    * @param zooKeeper the worker's ZkExt
    * @param pathList the path to read from
    * @param hostName the worker's host name (for matching)
+   * @param port the port number for this worker
    */
-  public LocalityInfoSorter(ZooKeeperExt zooKeeper, List<String> pathList,
-    String hostName) {
+  public LocalityInfoSorter(final ZooKeeperExt zooKeeper,
+    List<String> pathList, final String hostName, final int port) {
     this.zooKeeper = zooKeeper;
     this.pathList = pathList;
     this.hostName = hostName;
+    // determine the hash-based offset for this worker to iterate from
+    // and place the local blocks into the list at that index, if any
+    final int temp = hostName.hashCode() + (19 * port);
+    baseOffset =
+      Math.abs(temp == Integer.MIN_VALUE ? 0 : temp) % pathList.size();
+    prioritizeLocalInputSplits();
   }
 
-  /**
-   * Re-order list of InputSplits so files local to this worker node's
-   * disk are the first it will iterate over when attempting to claim
-   * a split to read. This will increase locality of data reads with greater
-   * probability as the % of total nodes in the cluster hosting data and workers
-   * BOTH increase towards 100%. Replication increases our chances of a "hit."
-   *
-   * @return the pathList, with host-local splits sorted to the front.
-   */
-  public List<String> getPrioritizedLocalInputSplits() {
+ /**
+  * Re-order list of InputSplits so files local to this worker node's
+  * disk are the first it will iterate over when attempting to claim
+  * a split to read. This will increase locality of data reads with greater
+  * probability as the % of total nodes in the cluster hosting data and workers
+  * BOTH increase towards 100%. Replication increases our chances of a "hit."
+  */
+  private void prioritizeLocalInputSplits() {
     List<String> sortedList = new ArrayList<String>();
-    boolean prioritize;
     String hosts = null;
     for (int index = 0; index < pathList.size(); ++index) {
       final String path = pathList.get(index);
-      prioritize = false;
       try {
         hosts = getLocationsFromZkInputSplitData(path);
       } catch (IOException ioe) {
@@ -77,10 +96,14 @@ public class LocalityInfoSorter {
       } catch (InterruptedException ie) {
         hosts = null;
       }
-      prioritize = hosts == null ? false : hosts.contains(hostName);
-      sortedList.add(prioritize ? 0 : index, path);
+      if (hosts != null && hosts.contains(hostName)) {
+        sortedList.add(path); // collect the local block
+        pathList.remove(index); // remove local block from list
+      }
     }
-    return sortedList;
+    // shuffle the local blocks in case several workers exist on this host
+    Collections.shuffle(sortedList);
+    pathList.addAll(baseOffset, sortedList); // re-insert local blocks
   }
 
   /**
@@ -88,7 +111,7 @@ public class LocalityInfoSorter {
    *
    * @param zkSplitPath the input split path to attempt to read
    * ZNode locality data from for this InputSplit.
-   * @return an array of String hostnames from ZNode data, or throws
+   * @return a String of hostnames from ZNode data, or throws
    */
   private String getLocationsFromZkInputSplitData(String zkSplitPath)
     throws IOException, KeeperException, InterruptedException {
@@ -97,5 +120,44 @@ public class LocalityInfoSorter {
       new DataInputStream(new ByteArrayInputStream(locationData));
     // only read the "first" entry in the znode data, the locations
     return Text.readString(inputStream);
+  }
+
+  /**
+   * Iterator for the pathList
+   * @return an iterator for our list of input split paths
+   */
+  public Iterator<String> iterator() {
+    return new PathListIterator();
+  }
+
+  /**
+   * Iterator for path list that handles the locality and hash offsetting.
+   */
+  public class PathListIterator implements Iterator<String> {
+    /** the current iterator index */
+    private int currentIndex = 0;
+
+    /**
+     *  Do we have more list to iterate upon?
+     *  @return true if more path strings are available
+     */
+    @Override
+    public boolean hasNext() {
+      return currentIndex < pathList.size();
+    }
+
+    /** return the next pathList element
+     * @return the next input split path
+     */
+    @Override
+    public String next() {
+      return pathList.get((baseOffset + currentIndex++) % pathList.size());
+    }
+
+    /** Just a placeholder; should not do anything! */
+    @Override
+    public void remove() {
+      throw new UnsupportedOperationException("Remove is not allowed.");
+    }
   }
 }

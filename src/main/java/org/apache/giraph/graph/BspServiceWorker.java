@@ -204,6 +204,15 @@ public class BspServiceWorker<I extends WritableComparable,
    * Try to reserve an InputSplit for loading.  While InputSplits exists that
    * are not finished, wait until they are.
    *
+   * NOTE: iterations on the InputSplit list only halt for each worker when it
+   * has scanned the entire list once and found every split marked RESERVED.
+   * When a worker fails, its Ephemeral RESERVED znodes will disappear,
+   * allowing other iterating workers to claim it's previously read splits.
+   * Only when the last worker left iterating on the list fails can a danger
+   * of data loss occur. Since worker failure in INPUT_SUPERSTEP currently
+   * causes job failure, this is OK. As the failure model evolves, this
+   * behavior might need to change.
+   *
    * @return reserved InputSplit or null if no unfinished InputSplits exist
    * @throws KeeperException
    * @throws InterruptedException
@@ -217,27 +226,16 @@ public class BspServiceWorker<I extends WritableComparable,
       inputSplitCount = inputSplitPathList.size();
     }
     LocalityInfoSorter localitySorter = new LocalityInfoSorter(
-      getZkExt(), inputSplitPathList, getHostname());
-    inputSplitPathList =
-      localitySorter.getPrioritizedLocalInputSplits();
+      getZkExt(), inputSplitPathList, getHostname(), getWorkerInfo().getPort());
     String reservedInputSplitPath = null;
     Stat reservedStat = null;
     final Mapper<?, ?, ?, ?>.Context context = getContext();
     while (true) {
-      int finishedInputSplits = 0;
-      for (int i = 0; i < inputSplitPathList.size(); ++i) {
+      int reservedInputSplits = 0;
+      for (String nextSplitToClaim : localitySorter) {
         context.progress();
-        String tmpInputSplitFinishedPath =
-            inputSplitPathList.get(i) + INPUT_SPLIT_FINISHED_NODE;
-        reservedStat =
-            getZkExt().exists(tmpInputSplitFinishedPath, true);
-        if (reservedStat != null) {
-          ++finishedInputSplits;
-          continue;
-        }
-
         String tmpInputSplitReservedPath =
-            inputSplitPathList.get(i) + INPUT_SPLIT_RESERVED_NODE;
+            nextSplitToClaim + INPUT_SPLIT_RESERVED_NODE;
         reservedStat =
             getZkExt().exists(tmpInputSplitReservedPath, true);
         if (reservedStat == null) {
@@ -248,16 +246,16 @@ public class BspServiceWorker<I extends WritableComparable,
                 Ids.OPEN_ACL_UNSAFE,
                 CreateMode.EPHEMERAL,
                 false);
-            reservedInputSplitPath = inputSplitPathList.get(i);
+            reservedInputSplitPath = nextSplitToClaim;
             if (LOG.isInfoEnabled()) {
               float percentFinished =
-                  finishedInputSplits * 100.0f /
+                  reservedInputSplits * 100.0f /
                   inputSplitPathList.size();
               LOG.info("reserveInputSplit: Reserved input " +
                   "split path " + reservedInputSplitPath +
                   ", overall roughly " +
                   + percentFinished +
-                  "% input splits finished");
+                  "% input splits reserved");
             }
             return reservedInputSplitPath;
           } catch (KeeperException.NodeExistsException e) {
@@ -272,15 +270,17 @@ public class BspServiceWorker<I extends WritableComparable,
                 "reserveInputSplit: InterruptedException " +
                     "on reserve", e);
           }
+        } else {
+          ++reservedInputSplits;
         }
       }
       if (LOG.isInfoEnabled()) {
         LOG.info("reserveInputSplit: reservedPath = " +
-            reservedInputSplitPath + ", " + finishedInputSplits +
+            reservedInputSplitPath + ", " + reservedInputSplits +
             " of " + inputSplitPathList.size() +
             " InputSplits are finished.");
       }
-      if (finishedInputSplits == inputSplitPathList.size()) {
+      if (reservedInputSplits == inputSplitPathList.size()) {
         transferRegulator = null; // don't need this anymore
         return null;
       }

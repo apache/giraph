@@ -2,6 +2,10 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-301: InputSplit Reservations are clumping, leaving many workers
+  asleep while other process too many splits and get overloaded.
+  (Eli Reisman via apresta)
+
   GIRAPH-313: Open Netty client and server on master. (majakabiljo via
   aching)
 

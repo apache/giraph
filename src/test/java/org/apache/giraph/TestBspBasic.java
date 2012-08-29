@@ -328,8 +328,12 @@ public class TestBspBasic extends BspCase {
     when(zk.getData("ugly", false, null)).thenReturn(LOCALITY_LAST);
     when(zk.getData("bad", false, null)).thenReturn(LOCALITY_MIDDLE);
     when(zk.getData("good", false, null)).thenReturn(LOCALITY_FIRST);
-    LocalityInfoSorter lis = new LocalityInfoSorter(zk, testList, localHost);
-    final List<String> resultList = lis.getPrioritizedLocalInputSplits();
+    LocalityInfoSorter lis =
+      new LocalityInfoSorter(zk, testList, localHost, 0);
+    final List<String> resultList = new ArrayList<String>();
+    for (String next : lis) {
+      resultList.add(next);
+    }
     assertEquals(goodList, resultList);
   }
 
