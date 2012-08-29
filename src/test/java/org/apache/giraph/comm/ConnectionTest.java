@@ -21,7 +21,10 @@ package org.apache.giraph.comm;
 import com.google.common.collect.Sets;
 import java.util.Set;
 import org.apache.giraph.comm.messages.SimpleMessageStore;
-import org.apache.giraph.comm.RequestServerHandler.RequestServerHandlerFactory;
+import org.apache.giraph.comm.netty.handler.RequestServerHandler;
+import org.apache.giraph.comm.netty.NettyClient;
+import org.apache.giraph.comm.netty.NettyServer;
+import org.apache.giraph.comm.netty.handler.WorkerRequestServerHandler;
 import org.apache.giraph.utils.MockUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IntWritable;
@@ -83,7 +86,7 @@ public class ConnectionTest {
         new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>
             (conf, SimpleMessageStore.newFactory(
                 MockUtils.mockServiceGetVertexPartitionOwner(1), conf));
-   RequestServerHandlerFactory requestServerHandlerFactory =
+   RequestServerHandler.Factory requestServerHandlerFactory =
        new WorkerRequestServerHandler.Factory(serverData);
 
     NettyServer server1 = new NettyServer(conf, requestServerHandlerFactory);

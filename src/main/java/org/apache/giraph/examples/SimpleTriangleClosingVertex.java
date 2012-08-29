@@ -18,10 +18,9 @@
 
 package org.apache.giraph.examples;
 
-import org.apache.giraph.examples.SimpleTriangleClosingVertex.Pair;
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.EdgeListVertex;
-import org.apache.giraph.comm.ArrayListWritable;
+import org.apache.giraph.utils.ArrayListWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 

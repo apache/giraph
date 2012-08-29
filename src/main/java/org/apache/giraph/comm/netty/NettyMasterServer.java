@@ -16,41 +16,39 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.comm;
+package org.apache.giraph.comm.netty;
 
-import org.apache.giraph.graph.BspUtils;
-import org.apache.giraph.utils.ArrayListWritable;
-import org.apache.hadoop.io.Writable;
+import org.apache.giraph.comm.netty.handler.MasterRequestServerHandler;
+import org.apache.giraph.comm.MasterServer;
+import org.apache.hadoop.conf.Configuration;
+
+import java.net.InetSocketAddress;
 
 /**
- * Wrapper around {@link ArrayListWritable} that allows the message class to
- * be set prior to calling readFields().
- *
- * @param <M> message type
+ * Netty implementation of {@link MasterServer}
  */
-public class MsgList<M extends Writable> extends ArrayListWritable<M> {
-  /** Defining a layout version for a serializable class. */
-  private static final long serialVersionUID = 100L;
+public class NettyMasterServer implements MasterServer {
+  /** Netty client that does the actual I/O */
+  private final NettyServer nettyServer;
 
   /**
-   * Default constructor.
-   */
-  public MsgList() {
-    super();
-  }
-
-  /**
-   * Copy constructor.
+   * Constructor
    *
-   * @param msgList List of messages for writing.
+   * @param conf Hadoop configuration
    */
-  public MsgList(MsgList<M> msgList) {
-    super(msgList);
+  public NettyMasterServer(Configuration conf) {
+    nettyServer = new NettyServer(conf,
+        new MasterRequestServerHandler.Factory());
+    nettyServer.start();
   }
 
-  @SuppressWarnings("unchecked")
   @Override
-  public void setClass() {
-    setClass((Class<M>) BspUtils.getMessageValueClass(getConf()));
+  public InetSocketAddress getMyAddress() {
+    return nettyServer.getMyAddress();
+  }
+
+  @Override
+  public void close() {
+    nettyServer.stop();
   }
 }

@@ -24,7 +24,7 @@ import org.apache.giraph.bsp.BspInputFormat;
 import org.apache.giraph.bsp.CentralizedServiceMaster;
 import org.apache.giraph.bsp.SuperstepState;
 import org.apache.giraph.comm.MasterClientServer;
-import org.apache.giraph.comm.NettyMasterClientServer;
+import org.apache.giraph.comm.netty.NettyMasterClientServer;
 import org.apache.giraph.graph.GraphMapper.MapFunctions;
 import org.apache.giraph.graph.partition.MasterGraphPartitioner;
 import org.apache.giraph.graph.partition.PartitionOwner;

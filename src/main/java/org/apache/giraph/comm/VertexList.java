@@ -20,6 +20,7 @@ package org.apache.giraph.comm;
 
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.BspUtils;
+import org.apache.giraph.utils.ArrayListWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 

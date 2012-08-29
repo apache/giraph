@@ -16,45 +16,26 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.comm;
+package org.apache.giraph.comm.requests;
 
-import org.apache.giraph.utils.ArrayListWritable;
+import org.apache.giraph.comm.ServerData;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
- * Wrapper around {@link ArrayListWritable} that provides the list for
- * {@link VertexIdMessages}.
+ * Interface for requests sent to worker to extend
  *
  * @param <I> Vertex id
+ * @param <V> Vertex data
+ * @param <E> Edge data
  * @param <M> Message data
  */
-@SuppressWarnings("rawtypes")
-public class VertexIdMessagesList<I extends WritableComparable,
-    M extends Writable> extends ArrayListWritable<VertexIdMessages<I, M>> {
-  /** Defining a layout version for a serializable class. */
-  private static final long serialVersionUID = 100L;
-
+public interface WorkerRequest<I extends WritableComparable,
+    V extends Writable, E extends Writable, M extends Writable> {
   /**
-   * Default constructor.
-   */
-  public VertexIdMessagesList() {
-    super();
-  }
-
-  /**
-   * Copy constructor.
+   * Execute the request
    *
-   * @param vertexIdMessagesList List to be copied.
+   * @param serverData Accessible data that can be mutated per the request
    */
-  public VertexIdMessagesList(VertexIdMessagesList<I, M> vertexIdMessagesList) {
-    super(vertexIdMessagesList);
-  }
-
-  @SuppressWarnings("unchecked")
-  @Override
-  public void setClass() {
-    setClass((Class<VertexIdMessages<I, M>>)
-      (new VertexIdMessages<I, M>()).getClass());
-  }
+  void doRequest(ServerData<I, V, E, M> serverData);
 }

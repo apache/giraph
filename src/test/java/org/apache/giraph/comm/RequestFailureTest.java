@@ -19,6 +19,11 @@
 package org.apache.giraph.comm;
 
 import org.apache.giraph.comm.messages.SimpleMessageStore;
+import org.apache.giraph.comm.netty.NettyClient;
+import org.apache.giraph.comm.netty.NettyServer;
+import org.apache.giraph.comm.netty.handler.WorkerRequestServerHandler;
+import org.apache.giraph.comm.requests.SendPartitionMessagesRequest;
+import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.Vertex;

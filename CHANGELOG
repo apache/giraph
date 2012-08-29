@@ -2,6 +2,8 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-317: Add subpackages to comm (Maja Kabiljo via ereisman)
+
   GIRAPH-301: InputSplit Reservations are clumping, leaving many workers
   asleep while other process too many splits and get overloaded.
   (Eli Reisman via apresta)

@@ -18,6 +18,7 @@
 
 package org.apache.giraph.comm;
 
+import org.apache.giraph.utils.IncreasingBitSet;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
