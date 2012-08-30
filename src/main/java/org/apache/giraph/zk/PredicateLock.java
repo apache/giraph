@@ -23,6 +23,8 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.apache.giraph.utils.SystemTime;
+import org.apache.giraph.utils.Time;
 import org.apache.hadoop.util.Progressable;
 import org.apache.log4j.Logger;
 
@@ -33,24 +35,41 @@ import org.apache.log4j.Logger;
 public class PredicateLock implements BspEvent {
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(PredicateLock.class);
-  /** Msecs to refresh the progress meter */
-  private static final int MSEC_PERIOD = 10000;
+  /** Default msecs to refresh the progress meter */
+  private static final int DEFAULT_MSEC_PERIOD = 10000;
   /** Progressable for reporting progress (Job context) */
   protected final Progressable progressable;
+  /** Actual mses to refresh the progress meter */
+  private final int msecPeriod;
   /** Lock */
   private Lock lock = new ReentrantLock();
   /** Condition associated with lock */
   private Condition cond = lock.newCondition();
   /** Predicate */
   private boolean eventOccurred = false;
+  /** Keeps track of the time */
+  private final Time time;
+
+  /**
+   * Constructor with default values.
+   *
+   * @param progressable used to report progress() (usually a Mapper.Context)
+   */
+  public PredicateLock(Progressable progressable) {
+    this(progressable, DEFAULT_MSEC_PERIOD, SystemTime.getInstance());
+  }
 
   /**
    * Constructor.
    *
    * @param progressable used to report progress() (usually a Mapper.Context)
+   * @param msecPeriod Msecs between progress reports
+   * @param time Time implementation
    */
-  public PredicateLock(Progressable progressable) {
+  public PredicateLock(Progressable progressable, int msecPeriod, Time time) {
     this.progressable = progressable;
+    this.msecPeriod = msecPeriod;
+    this.time = time;
   }
 
   @Override
@@ -77,15 +96,15 @@ public class PredicateLock implements BspEvent {
   @Override
   public boolean waitMsecs(int msecs) {
     if (msecs < 0) {
-      throw new RuntimeException("msecs cannot be negative!");
+      throw new RuntimeException("waitMsecs: msecs cannot be negative!");
     }
-    long maxMsecs = System.currentTimeMillis() + msecs;
+    long maxMsecs = time.getMilliseconds() + msecs;
     int curMsecTimeout = 0;
     lock.lock();
     try {
       while (!eventOccurred) {
         curMsecTimeout =
-            Math.min(msecs, MSEC_PERIOD);
+            Math.min(msecs, msecPeriod);
         if (LOG.isDebugEnabled()) {
           LOG.debug("waitMsecs: Wait for " + curMsecTimeout);
         }
@@ -102,7 +121,7 @@ public class PredicateLock implements BspEvent {
             "exception on cond.await() " +
             curMsecTimeout, e);
         }
-        if (System.currentTimeMillis() > maxMsecs) {
+        if (time.getMilliseconds() > maxMsecs) {
           return false;
         }
         msecs = Math.max(0, msecs - curMsecTimeout);
@@ -116,7 +135,7 @@ public class PredicateLock implements BspEvent {
 
   @Override
   public void waitForever() {
-    while (!waitMsecs(MSEC_PERIOD)) {
+    while (!waitMsecs(msecPeriod)) {
       progressable.progress();
     }
   }

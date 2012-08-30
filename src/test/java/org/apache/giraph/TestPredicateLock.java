@@ -18,71 +18,101 @@
 
 package org.apache.giraph;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import org.apache.giraph.utils.Time;
 import org.apache.giraph.zk.BspEvent;
 import org.apache.giraph.zk.PredicateLock;
 import org.apache.hadoop.util.Progressable;
+import org.junit.Before;
 import org.junit.Test;
+import org.mockito.stubbing.OngoingStubbing;
 
 /**
  * Ensure that PredicateLock objects work correctly.
  */
 public class TestPredicateLock {
-    private static class SignalThread extends Thread {
-        private final BspEvent event;
-        public SignalThread(BspEvent event) {
-            this.event = event;
+  /** How many times was progress called? */
+  private AtomicInteger progressCalled = new AtomicInteger(0);
+
+  private static class SignalThread extends Thread {
+    private final BspEvent event;
+    public SignalThread(BspEvent event) {
+      this.event = event;
+    }
+    public void run() {
+      try {
+        Thread.sleep(500);
+      } catch (InterruptedException e) {
+      }
+      event.signal();
+    }
+  }
+
+  private Progressable stubContext;
+
+  private Progressable getStubProgressable() {
+    if (stubContext == null)
+      stubContext = new Progressable() {
+        @Override
+        public void progress() {
+          progressCalled.incrementAndGet();
         }
-        public void run() {
-            try {
-                Thread.sleep(500);
-            } catch (InterruptedException e) {
-            }
-            event.signal();
-        }
-    }
+      };
+    return stubContext;
+  }
 
-    private Progressable stubContext;
-
-    private Progressable getStubProgressable() {
-        if (stubContext == null)
-            stubContext = new Progressable() {
-                @Override
-                    public void progress() {
-                        System.out.println("progress received");
-                    }
-            };
-        return stubContext;
-    }
-
-    /**
-     * Make sure the the event is not signaled.
-     */
-  @Test
-    public void testWaitMsecsNoEvent() {
-        BspEvent event = new PredicateLock(getStubProgressable());
-        boolean gotPredicate = event.waitMsecs(50);
-        assertFalse(gotPredicate);
-    }
-
-    /**
-     * Single threaded case
-     */
-  @Test
-    public void testEvent() {
-        BspEvent event = new PredicateLock(getStubProgressable());
-        event.signal();
-        boolean gotPredicate = event.waitMsecs(50);
-        assertTrue(gotPredicate);
-        event.reset();
-        gotPredicate = event.waitMsecs(0);
-        assertFalse(gotPredicate);
-    }
+  @Before
+  public void setUp() {
+    progressCalled.set(0);
+  }
 
   /**
-   * Simple test for {@link PredicateLock#waitForever()}
+   * SMake sure the the event is not signaled.
+   */
+  @Test
+  public void testWaitMsecsNoEvent() {
+    Time mockTime = mock(Time.class);
+    when(mockTime.getMilliseconds()).
+        thenReturn(0L).thenReturn(2L);
+    BspEvent event = new PredicateLock(getStubProgressable(), 1, mockTime);
+    boolean gotPredicate = event.waitMsecs(1);
+    assertFalse(gotPredicate);
+    assertEquals(0, progressCalled.get());
+    when(mockTime.getMilliseconds()).
+        thenReturn(0L).thenReturn(0L).thenReturn(2L);
+    gotPredicate = event.waitMsecs(1);
+    assertFalse(gotPredicate);
+    assertEquals(1, progressCalled.get());
+  }
+
+  /**
+   * Single threaded case where the event is signaled.
+   */
+  @Test
+  public void testEvent() {
+    Time mockTime = mock(Time.class);
+    when(mockTime.getMilliseconds()).
+        thenReturn(0L).thenReturn(2L);
+    BspEvent event = new PredicateLock(getStubProgressable(), 1, mockTime);
+    event.signal();
+    boolean gotPredicate = event.waitMsecs(2);
+    assertTrue(gotPredicate);
+    event.reset();
+    when(mockTime.getMilliseconds()).
+        thenReturn(0L).thenReturn(2L);
+    gotPredicate = event.waitMsecs(0);
+    assertFalse(gotPredicate);
+  }
+
+  /**
+   * Thread signaled test for {@link PredicateLock#waitForever()}
    */
   @Test
   public void testWaitForever() {
@@ -97,23 +127,23 @@ public class TestPredicateLock {
     assertTrue(event.waitMsecs(0));
   }
 
-    /**
-     * Make sure the the event is signaled correctly
-     * @throws InterruptedException
-     */
+  /**
+   * Thread signaled test to make sure the the event is signaled correctly
+   *
+   * @throws InterruptedException
+   */
   @Test
-    public void testWaitMsecs() {
-        System.out.println("testWaitMsecs:");
-        BspEvent event = new PredicateLock(getStubProgressable());
-        Thread signalThread = new SignalThread(event);
-        signalThread.start();
-        boolean gotPredicate = event.waitMsecs(2000);
-        assertTrue(gotPredicate);
-        try {
-            signalThread.join();
-        } catch (InterruptedException e) {
-        }
-        gotPredicate = event.waitMsecs(0);
-        assertTrue(gotPredicate);
+  public void testWaitMsecs() {
+    BspEvent event = new PredicateLock(getStubProgressable());
+    Thread signalThread = new SignalThread(event);
+    signalThread.start();
+    boolean gotPredicate = event.waitMsecs(2000);
+    assertTrue(gotPredicate);
+    try {
+      signalThread.join();
+    } catch (InterruptedException e) {
     }
+    gotPredicate = event.waitMsecs(0);
+    assertTrue(gotPredicate);
+  }
 }

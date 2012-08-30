@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-291: PredicateLock should have a constructor to take in a
+  custom waiting time and additional testing (aching via ereisman)
 
   GIRAPH-318: New Iterator in LocalityInfoSorter is not working.
   (Eli Reisman via apresta)
