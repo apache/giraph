@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-318: New Iterator in LocalityInfoSorter is not working.
+  (Eli Reisman via apresta)
+
   GIRAPH-317: Add subpackages to comm (Maja Kabiljo via ereisman)
 
   GIRAPH-301: InputSplit Reservations are clumping, leaving many workers
