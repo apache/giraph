@@ -1,6 +1,10 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+
+  GIRAPH-319: Receiving two responses for a request causes an
+  exception. (apresta via aching)
+
   GIRAPH-291: PredicateLock should have a constructor to take in a
   custom waiting time and additional testing (aching via ereisman)
 

@@ -203,7 +203,7 @@ public class GiraphJob {
   public static final String MAX_REQUEST_MILLISECONDS =
       "giraph.maxRequestMilliseconds";
   /** Maximum number of milliseconds for a request to complete */
-  public static final int MAX_REQUEST_MILLISECONDS_DEFAULT = 60 * 1000;
+  public static final int MAX_REQUEST_MILLISECONDS_DEFAULT =  600 * 1000;
 
   /** Netty max connection failures */
   public static final String NETTY_MAX_CONNECTION_FAILURES =

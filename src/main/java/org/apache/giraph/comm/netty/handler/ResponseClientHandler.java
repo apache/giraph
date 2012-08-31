@@ -18,9 +18,6 @@
 
 package org.apache.giraph.comm.netty.handler;
 
-import java.io.IOException;
-import java.util.concurrent.ConcurrentMap;
-
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.log4j.Logger;
@@ -31,6 +28,9 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
+
+import java.io.IOException;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * Generic handler of responses.
@@ -108,8 +108,8 @@ public class ResponseClientHandler extends SimpleChannelUpstreamHandler {
     RequestInfo requestInfo = workerIdOutstandingRequestMap.remove(
         new ClientRequestId(senderId, requestId));
     if (requestInfo == null) {
-      throw new IllegalStateException("messageReceived: Impossible to " +
-          "have a non-registered requestId " + requestId);
+      LOG.info("messageReceived: Already received response for request id = " +
+          requestId);
     } else {
       if (LOG.isDebugEnabled()) {
         LOG.debug("messageReceived: Processed request id = " + requestId +
