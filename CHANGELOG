@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+
+  GIRAPH-321: Divide by 0 exception. (ereisman via aching)
+
   GIRAPH-316: Add test-patch.sh for precommit test using Jenkins.
   (hyunsik via ereisman)
 

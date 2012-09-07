@@ -104,8 +104,10 @@ public class LocalityInfoSorter implements Iterable<String> {
     // determine the hash-based offset for this worker to iterate from
     // and place the local blocks into the list at that index, if any
     final int temp = hostName.hashCode() + (19 * port);
-    baseOffset =
-      Math.abs(temp == Integer.MIN_VALUE ? 0 : temp) % pathList.size();
+    if (pathList.size() != 0) {
+      baseOffset =
+        Math.abs(temp == Integer.MIN_VALUE ? 0 : temp) % pathList.size();
+    }
     // re-insert local paths at "adjusted index zero" for caller to iterate on
     pathList.addAll(baseOffset, sortedList);
   }
