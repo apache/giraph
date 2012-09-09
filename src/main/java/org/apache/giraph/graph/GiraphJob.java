@@ -103,6 +103,11 @@ public class GiraphJob {
   /** not in local test mode per default */
   public static final boolean LOCAL_TEST_MODE_DEFAULT = false;
 
+  /** Override the Hadoop log level and set the desired log level. */
+  public static final String LOG_LEVEL = "giraph.logLevel";
+  /** Default log level is INFO (same as Hadoop) */
+  public static final String LOG_LEVEL_DEFAULT = "info";
+
   /**
    * Minimum percent of the maximum number of workers that have responded
    * in order to continue progressing. (float)
@@ -202,8 +207,8 @@ public class GiraphJob {
   /** Milliseconds for a request to complete (or else resend) */
   public static final String MAX_REQUEST_MILLISECONDS =
       "giraph.maxRequestMilliseconds";
-  /** Maximum number of milliseconds for a request to complete */
-  public static final int MAX_REQUEST_MILLISECONDS_DEFAULT =  600 * 1000;
+  /** Maximum number of milliseconds for a request to complete (10 minutes) */
+  public static final int MAX_REQUEST_MILLISECONDS_DEFAULT = 10 * 60 * 1000;
 
   /** Netty max connection failures */
   public static final String NETTY_MAX_CONNECTION_FAILURES =

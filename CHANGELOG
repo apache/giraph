@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-320: Provide a runtime configuration for choosing the
+  log level (aching via ereisman)
 
   GIRAPH-321: Divide by 0 exception. (ereisman via aching)
 

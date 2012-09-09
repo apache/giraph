@@ -379,8 +379,8 @@ public abstract class BspService<I extends WritableComparable,
           "getSuperstepFromPath: Cannot find end of superstep from " +
               path);
     }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("getSuperstepFromPath: Got path=" + path +
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("getSuperstepFromPath: Got path=" + path +
           ", start=" + foundSuperstepStart + ", end=" + endIndex);
     }
     return Long.parseLong(path.substring(foundSuperstepStart, endIndex));

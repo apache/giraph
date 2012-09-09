@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 import com.google.common.collect.Iterables;
@@ -275,6 +276,14 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
     }
     // set pre-validated generic parameter types into Configuration
     determineClassTypes(conf);
+
+    // Set the log level
+    String logLevel =
+        conf.get(GiraphJob.LOG_LEVEL, GiraphJob.LOG_LEVEL_DEFAULT);
+    Logger.getRootLogger().setLevel(Level.toLevel(logLevel));
+    if (LOG.isInfoEnabled()) {
+      LOG.info("setup: Set log level to " + logLevel);
+    }
 
     // Do some initial setup (possibly starting up a Zookeeper service)
     context.setStatus("setup: Initializing Zookeeper services.");

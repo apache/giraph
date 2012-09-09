@@ -172,8 +172,8 @@ public class PseudoRandomVertexInputFormat<M extends Writable> extends
       }
       vertex.initialize(new LongWritable(vertexId), vertexValue, edges, null);
       ++verticesRead;
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("next: Return vertexId=" +
+      if (LOG.isTraceEnabled()) {
+        LOG.trace("next: Return vertexId=" +
                   vertex.getId().get() +
                   ", vertexValue=" + vertex.getValue() +
                   ", edges=" + vertex.getEdges());
