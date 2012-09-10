@@ -18,9 +18,20 @@
 
 package org.apache.giraph.utils;
 
-import com.google.common.base.Charsets;
-import com.google.common.io.Files;
+import java.io.File;
+import java.io.IOException;
+import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.graph.MasterCompute;
+import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.graph.VertexCombiner;
+import org.apache.giraph.graph.VertexInputFormat;
+import org.apache.giraph.graph.VertexOutputFormat;
+import org.apache.giraph.graph.WorkerContext;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
@@ -29,12 +40,8 @@ import org.apache.zookeeper.server.ServerConfig;
 import org.apache.zookeeper.server.ZooKeeperServerMain;
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.Map;
-import java.util.Properties;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import com.google.common.base.Charsets;
+import com.google.common.io.Files;
 
 /**
  * A base class for running internal tests on a vertex
@@ -68,8 +75,11 @@ public class InternalVertexRunner {
    * @return linewise output data
    * @throws Exception
    */
-  public static Iterable<String> run(Class<?> vertexClass,
-      Class<?> vertexInputFormatClass, Class<?> vertexOutputFormatClass,
+  @SuppressWarnings("rawtypes")
+  public static Iterable<String> run(
+      Class<? extends Vertex> vertexClass,
+      Class<? extends VertexInputFormat> vertexInputFormatClass,
+      Class<? extends VertexOutputFormat> vertexOutputFormatClass,
       Map<String, String> params, String... data) throws Exception {
     return run(vertexClass, null, vertexInputFormatClass,
         vertexOutputFormatClass, params, data);
@@ -89,10 +99,42 @@ public class InternalVertexRunner {
    * @return linewise output data
    * @throws Exception
    */
-  public static Iterable<String> run(Class<?> vertexClass,
-      Class<?> vertexCombinerClass, Class<?> vertexInputFormatClass,
-      Class<?> vertexOutputFormatClass, Map<String, String> params,
+  @SuppressWarnings("rawtypes")
+  public static Iterable<String> run(
+      Class<? extends Vertex> vertexClass,
+      Class<? extends VertexCombiner> vertexCombinerClass,
+      Class<? extends VertexInputFormat> vertexInputFormatClass,
+      Class<? extends VertexOutputFormat> vertexOutputFormatClass,
+      Map<String, String> params,
       String... data) throws Exception {
+    return InternalVertexRunner.run(vertexClass, vertexCombinerClass,
+        vertexInputFormatClass, vertexOutputFormatClass, null, null, params,
+        data);
+  }
+
+  /**
+   * Attempts to run the vertex internally in the current JVM, reading from and
+   * writing to a temporary folder on local disk. Will start its own zookeeper
+   * instance.
+   * @param vertexClass the vertex class to instantiate
+   * @param vertexCombinerClass the vertex combiner to use (or null)
+   * @param vertexInputFormatClass the inputformat to use
+   * @param vertexOutputFormatClass the outputformat to use
+   * @param workerContextClass the worker context to use
+   * @param masterComputeClass the master compute class to use
+   * @param params a map of parameters to add to the hadoop configuration
+   * @param data linewise input data
+   * @return linewise output data
+   * @throws Exception
+   */
+  @SuppressWarnings("rawtypes")
+  public static Iterable<String> run(Class<? extends Vertex> vertexClass,
+      Class<? extends VertexCombiner> vertexCombinerClass,
+      Class<? extends VertexInputFormat> vertexInputFormatClass,
+      Class<? extends VertexOutputFormat> vertexOutputFormatClass,
+      Class<? extends WorkerContext> workerContextClass,
+      Class<? extends MasterCompute> masterComputeClass,
+      Map<String, String> params, String... data) throws Exception {
 
     File tmpDir = null;
     try {
@@ -112,9 +154,14 @@ public class InternalVertexRunner {
       job.setVertexClass(vertexClass);
       job.setVertexInputFormatClass(vertexInputFormatClass);
       job.setVertexOutputFormatClass(vertexOutputFormatClass);
-
+      if (workerContextClass != null) {
+        job.setWorkerContextClass(workerContextClass);
+      }
       if (vertexCombinerClass != null) {
         job.setVertexCombinerClass(vertexCombinerClass);
+      }
+      if (masterComputeClass != null) {
+        job.setMasterComputeClass(masterComputeClass);
       }
 
       job.setWorkerConfiguration(1, 1, 100.0f);
@@ -183,8 +230,6 @@ public class InternalVertexRunner {
       FileUtils.delete(tmpDir);
     }
   }
-
-
 
   /**
    * Extension of {@link ZooKeeperServerMain} that allows programmatic shutdown

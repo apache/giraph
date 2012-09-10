@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-191: Random walks on graphs (Gianmarco De Francisci Morales via ereisman)
+
   GIRAPH-320: Provide a runtime configuration for choosing the
   log level (aching via ereisman)
 
