@@ -84,6 +84,10 @@ public class ShortestPathsBenchmark extends EdgeListVertex<LongWritable,
         "vertexClass",
         true,
         "Vertex class (0 for HashMapVertex, 1 for EdgeListVertex)");
+    options.addOption("nc",
+        "noCombiner",
+        false,
+        "Don't use a combiner");
     HelpFormatter formatter = new HelpFormatter();
     if (args.length == 0) {
       formatter.printHelp(getClass().getName(), options, true);
@@ -120,7 +124,9 @@ public class ShortestPathsBenchmark extends EdgeListVertex<LongWritable,
     LOG.info("Using class " +
         BspUtils.getVertexClass(job.getConfiguration()).getName());
     job.setVertexInputFormatClass(PseudoRandomVertexInputFormat.class);
-    job.setVertexCombinerClass(MinimumDoubleCombiner.class);
+    if (!cmd.hasOption("nc")) {
+      job.setVertexCombinerClass(MinimumDoubleCombiner.class);
+    }
     job.setWorkerConfiguration(workers, workers, 100.0f);
     job.getConfiguration().setLong(
         PseudoRandomVertexInputFormat.AGGREGATE_VERTICES,

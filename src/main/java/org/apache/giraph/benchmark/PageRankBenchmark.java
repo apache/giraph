@@ -23,6 +23,7 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
+import org.apache.giraph.examples.DoubleSumCombiner;
 import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.GiraphJob;
@@ -87,6 +88,10 @@ public class PageRankBenchmark extends EdgeListVertex<
         "vertexClass",
         true,
         "Vertex class (0 for HashMapVertex, 1 for EdgeListVertex)");
+    options.addOption("nc",
+        "noCombiner",
+        false,
+        "Don't use a combiner");
     HelpFormatter formatter = new HelpFormatter();
     if (args.length == 0) {
       formatter.printHelp(getClass().getName(), options, true);
@@ -126,6 +131,9 @@ public class PageRankBenchmark extends EdgeListVertex<
     }
     LOG.info("Using class " +
         BspUtils.getVertexClass(job.getConfiguration()).getName());
+    if (!cmd.hasOption("nc")) {
+      job.setVertexCombinerClass(DoubleSumCombiner.class);
+    }
     job.setVertexInputFormatClass(PseudoRandomVertexInputFormat.class);
     job.setWorkerConfiguration(workers, workers, 100.0f);
     job.getConfiguration().setLong(
