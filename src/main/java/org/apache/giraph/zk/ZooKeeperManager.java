@@ -527,9 +527,10 @@ public class ZooKeeperManager {
         writer.write("maxClientCnxns=" +
             GiraphJob.DEFAULT_ZOOKEEPER_MAX_CLIENT_CNXNS +
             "\n");
-        writer.write("minSessionTimeout=" +
-            GiraphJob.DEFAULT_ZOOKEEPER_MIN_SESSION_TIMEOUT +
-            "\n");
+        int minSessionTimeout = conf.getInt(
+            GiraphJob.ZOOKEEPER_MIN_SESSION_TIMEOUT,
+            GiraphJob.DEFAULT_ZOOKEEPER_MIN_SESSION_TIMEOUT);
+        writer.write("minSessionTimeout=" + minSessionTimeout + "\n");
         writer.write("maxSessionTimeout=" +
             GiraphJob.DEFAULT_ZOOKEEPER_MAX_SESSION_TIMEOUT +
             "\n");

@@ -74,6 +74,8 @@ public class TestAutoCheckpoint extends BspCase {
     conf.set(GiraphJob.CHECKPOINT_DIRECTORY,
         getTempPath("_singleFaultCheckpoints").toString());
     conf.setBoolean(GiraphJob.CLEANUP_CHECKPOINTS_AFTER_SUCCESS, false);
+    conf.setInt(GiraphJob.ZOOKEEPER_SESSION_TIMEOUT, 10000);
+    conf.setInt(GiraphJob.ZOOKEEPER_MIN_SESSION_TIMEOUT, 10000);
 
     assertTrue(job.run(true));
   }

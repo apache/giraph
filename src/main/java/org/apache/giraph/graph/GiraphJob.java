@@ -475,6 +475,9 @@ public class GiraphJob {
   public static final int DEFAULT_ZOOKEEPER_SNAP_COUNT = 50000;
   /** Default ZooKeeper maximum client connections. */
   public static final int DEFAULT_ZOOKEEPER_MAX_CLIENT_CNXNS = 10000;
+  /** ZooKeeper minimum session timeout */
+  public static final String ZOOKEEPER_MIN_SESSION_TIMEOUT =
+      "giraph.zookeeperMinSessionTimeout";
   /** Default ZooKeeper minimum session timeout of 5 minutes (in msecs). */
   public static final int DEFAULT_ZOOKEEPER_MIN_SESSION_TIMEOUT = 300 * 1000;
   /** Default ZooKeeper maximum session timeout of 10 minutes (in msecs). */
