@@ -488,6 +488,9 @@ public class NettyClient {
         }
       }
       synchronized (clientRequestIdRequestInfoMap) {
+        if (clientRequestIdRequestInfoMap.size() <= maxOpenRequests) {
+          break;
+        }
         try {
           clientRequestIdRequestInfoMap.wait(waitingRequestMsecs);
         } catch (InterruptedException e) {
