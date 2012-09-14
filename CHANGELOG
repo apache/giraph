@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-327: Timesout values in BspServiceMaster.barrierOnWorkerList
+  (majakabiljo via ereisman)
+
   GIRAPH-323: Check if requests are done before calling wait (majakabiljo
   via ereisman)
 

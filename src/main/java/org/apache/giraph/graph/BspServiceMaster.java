@@ -1326,6 +1326,9 @@ public class BspServiceMaster<I extends WritableComparable,
         getWorkerInfoHealthyPath(getApplicationAttempt(), getSuperstep());
     List<String> finishedHostnameIdList;
     long nextInfoMillis = System.currentTimeMillis();
+    final int defaultTaskTimeoutMsec = 10 * 60 * 1000;  // from TaskTracker
+    final int taskTimeoutMsec = getContext().getConfiguration().getInt(
+        "mapred.task.timeout", defaultTaskTimeoutMsec);
     while (true) {
       try {
         finishedHostnameIdList =
@@ -1376,9 +1379,8 @@ public class BspServiceMaster<I extends WritableComparable,
         break;
       }
 
-      // Wait for a signal or no more than 30 seconds to progress
-      // or else will continue.
-      event.waitMsecs(30 * 1000);
+      // Wait for a signal or timeout
+      event.waitMsecs(taskTimeoutMsec / 2);
       event.reset();
       getContext().progress();
 
