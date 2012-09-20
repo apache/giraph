@@ -2,6 +2,8 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-331: ReviewBoard post-review config. (nitayj via aching)
+
   GIRAPH-332: Duplicate unnecessary info in giraph-formats-contrib
   compile.xml. (nitay via aching)
 
