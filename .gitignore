@@ -1,0 +1,32 @@
+*.patch
+.checkstyle
+
+# Mac files:
+.DS_Store
+
+# Build files:
+*.class
+target
+
+# IntelliJ IDEA files:
+*.iml
+*.ipr
+*.iws
+*.idea
+
+# Eclipse files:
+.classpath
+.eclipse
+.project
+.settings
+
+# Failed patch files:
+*.rej
+*.orig
+
+# Emacs auto-save files:
+*~
+\#*
+
+# Vim auto-save files:
+.*.swp

@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+
+  GIRAPH-330: Ignores file for Git. (nitay via aching)
+
   GIRAPH-327: Timesout values in BspServiceMaster.barrierOnWorkerList
   (majakabiljo via ereisman)
 
