@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-332: Duplicate unnecessary info in giraph-formats-contrib
+  compile.xml. (nitay via aching)
+
   GIRAPH-330: Ignores file for Git. (nitay via aching)
 
   GIRAPH-327: Timesout values in BspServiceMaster.barrierOnWorkerList
