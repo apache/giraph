@@ -24,14 +24,11 @@ import java.util.regex.Pattern;
 
 import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.graph.VertexReader;
 import org.apache.giraph.io.TextVertexInputFormat;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.InputSplit;
-import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 import com.google.common.collect.Lists;
@@ -48,34 +45,20 @@ public class NormalizingLongDoubleFloatDoubleTextInputFormat
       FloatWritable, DoubleWritable> {
 
   @Override
-  public VertexReader<LongWritable, DoubleWritable,
-  FloatWritable, DoubleWritable> createVertexReader(
+  public TextVertexReader createVertexReader(
       InputSplit split, TaskAttemptContext context) throws IOException {
-    return new NormalizingLongDoubleFloatDoubleVertexReader(
-        textInputFormat.createRecordReader(split, context));
+    return new NormalizingLongDoubleFloatDoubleVertexReader();
   }
 
   /**
    * Vertex reader associated with {@link LongDoubleFloatDoubleTextInputFormat}.
    */
-  public static class NormalizingLongDoubleFloatDoubleVertexReader
-      extends
-      TextVertexInputFormat.TextVertexReader<LongWritable, DoubleWritable,
-      FloatWritable, DoubleWritable> {
+  public class NormalizingLongDoubleFloatDoubleVertexReader
+      extends TextVertexInputFormat.TextVertexReader {
     /** Separator of the vertex and neighbors */
-    private static final Pattern EDGE_SEPARATOR = Pattern.compile("\\s+");
+    private final Pattern edgeSeparator = Pattern.compile("\\s+");
     /** Separator of the edge id and edge weight */
-    private static final Pattern WEIGHT_SEPARATOR = Pattern.compile(":");
-
-    /**
-     * Constructor with the line reader.
-     * @param lineReader
-     *          Internal line reader.
-     */
-    public NormalizingLongDoubleFloatDoubleVertexReader(
-        RecordReader<LongWritable, Text> lineReader) {
-      super(lineReader);
-    }
+    private final Pattern weightSeparator = Pattern.compile(":");
 
     @Override
     public Vertex<LongWritable, DoubleWritable,
@@ -87,7 +70,7 @@ public class NormalizingLongDoubleFloatDoubleTextInputFormat
           FloatWritable, DoubleWritable>createVertex(getContext()
               .getConfiguration());
 
-      String[] tokens = EDGE_SEPARATOR.split(getRecordReader()
+      String[] tokens = edgeSeparator.split(getRecordReader()
           .getCurrentValue().toString());
       Map<LongWritable, FloatWritable> edges = Maps
           .newHashMapWithExpectedSize(tokens.length - 1);
@@ -106,9 +89,9 @@ public class NormalizingLongDoubleFloatDoubleTextInputFormat
      * @param tokens The tokens to be parsed.
      * @param edges The map that will contain the result of the parsing.
      */
-    static void parse(String[] tokens, Map<LongWritable, FloatWritable> edges) {
+    void parse(String[] tokens, Map<LongWritable, FloatWritable> edges) {
       for (int n = 1; n < tokens.length; n++) {
-        String[] parts = WEIGHT_SEPARATOR.split(tokens[n]);
+        String[] parts = weightSeparator.split(tokens[n]);
         edges.put(new LongWritable(Long.parseLong(parts[0])),
             new FloatWritable(Float.parseFloat(parts[1])));
       }
@@ -118,7 +101,7 @@ public class NormalizingLongDoubleFloatDoubleTextInputFormat
      * Normalize the edges with L1 normalization.
      * @param edges The edges to be normalized.
      */
-    static void normalize(Map<LongWritable, FloatWritable> edges) {
+    void normalize(Map<LongWritable, FloatWritable> edges) {
       if (edges == null || edges.size() == 0) {
         throw new IllegalArgumentException(
             "Cannot normalize an empy set of edges");

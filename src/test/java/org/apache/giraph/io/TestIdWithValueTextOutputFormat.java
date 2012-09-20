@@ -19,18 +19,16 @@
 package org.apache.giraph.io;
 
 import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.io.IdWithValueTextOutputFormat.IdWithValueVertexWriter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.junit.Test;
 import org.mockito.Matchers;
 
-import static org.apache.giraph.io.IdWithValueTextOutputFormat.IdWithValueVertexWriter.LINE_TOKENIZE_VALUE;
-import static org.apache.giraph.io.IdWithValueTextOutputFormat.IdWithValueVertexWriter.REVERSE_ID_AND_VALUE;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -39,7 +37,8 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.util.ArrayList;
 
-public class TestIdWithValueTextOutputFormat {
+public class TestIdWithValueTextOutputFormat extends
+    IdWithValueTextOutputFormat<Text, DoubleWritable, Writable> {
   @Test
   public void testHappyPath() throws IOException, InterruptedException {
     Configuration conf = new Configuration();
@@ -79,8 +78,14 @@ public class TestIdWithValueTextOutputFormat {
     // Create empty iterator == no edges
     when(vertex.getEdges()).thenReturn(new ArrayList<Text>());
 
-    RecordWriter<Text, Text> tw = mock(RecordWriter.class);
-    IdWithValueVertexWriter writer = new IdWithValueVertexWriter(tw);
+    final RecordWriter<Text, Text> tw = mock(RecordWriter.class);
+    IdWithValueVertexWriter writer = new IdWithValueVertexWriter() {
+      @Override
+      protected RecordWriter<Text, Text> createLineRecordWriter(
+          TaskAttemptContext context) throws IOException, InterruptedException {
+        return tw;
+      }
+    };
     writer.initialize(tac);
     writer.writeVertex(vertex);
 

@@ -22,16 +22,13 @@ import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexReader;
-import org.apache.giraph.graph.VertexWriter;
 import org.apache.giraph.io.GeneratedVertexInputFormat;
 import org.apache.giraph.io.TextVertexOutputFormat;
-import org.apache.giraph.io.TextVertexOutputFormat.TextVertexWriter;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.InputSplit;
-import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.log4j.Logger;
 
@@ -62,12 +59,6 @@ public class SimpleSuperstepVertex extends
     /** Class logger */
     private static final Logger LOG =
         Logger.getLogger(SimpleSuperstepVertexReader.class);
-    /**
-     * Constructor.
-     */
-    public SimpleSuperstepVertexReader() {
-      super();
-    }
 
     @Override
     public boolean nextVertex() throws IOException, InterruptedException {
@@ -121,29 +112,6 @@ public class SimpleSuperstepVertex extends
     }
   }
 
-  /**
-   * Simple VertexWriter that supports {@link SimpleSuperstepVertex}
-   */
-  public static class SimpleSuperstepVertexWriter extends
-      TextVertexWriter<LongWritable, IntWritable, FloatWritable> {
-    /**
-     * Constructor with the line record writer.
-     *
-     * @param lineRecordWriter Writer to write to.
-     */
-    public SimpleSuperstepVertexWriter(
-        RecordWriter<Text, Text> lineRecordWriter) {
-      super(lineRecordWriter);
-    }
-
-    @Override
-    public void writeVertex(Vertex<LongWritable, IntWritable,
-            FloatWritable, ?> vertex) throws IOException, InterruptedException {
-      getRecordWriter().write(
-          new Text(vertex.getId().toString()),
-          new Text(vertex.getValue().toString()));
-    }
-  }
 
   /**
    * Simple VertexOutputFormat that supports {@link SimpleSuperstepVertex}
@@ -151,12 +119,22 @@ public class SimpleSuperstepVertex extends
   public static class SimpleSuperstepVertexOutputFormat extends
       TextVertexOutputFormat<LongWritable, IntWritable, FloatWritable> {
     @Override
-    public VertexWriter<LongWritable, IntWritable, FloatWritable>
-    createVertexWriter(TaskAttemptContext context)
+    public TextVertexWriter createVertexWriter(TaskAttemptContext context)
       throws IOException, InterruptedException {
-      RecordWriter<Text, Text> recordWriter =
-          textOutputFormat.getRecordWriter(context);
-      return new SimpleSuperstepVertexWriter(recordWriter);
+      return new SimpleSuperstepVertexWriter();
+    }
+
+    /**
+     * Simple VertexWriter that supports {@link SimpleSuperstepVertex}
+     */
+    public class SimpleSuperstepVertexWriter extends TextVertexWriter {
+      @Override
+      public void writeVertex(Vertex<LongWritable, IntWritable,
+          FloatWritable, ?> vertex) throws IOException, InterruptedException {
+        getRecordWriter().write(
+            new Text(vertex.getId().toString()),
+            new Text(vertex.getValue().toString()));
+      }
     }
   }
 }

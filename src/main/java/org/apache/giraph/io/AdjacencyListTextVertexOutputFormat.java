@@ -19,11 +19,9 @@ package org.apache.giraph.io;
 
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.graph.VertexWriter;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 import java.io.IOException;
@@ -43,39 +41,37 @@ public class AdjacencyListTextVertexOutputFormat<I extends WritableComparable,
     V extends Writable, E extends Writable>
     extends TextVertexOutputFormat<I, V, E> {
 
+  /** Split delimiter */
+  public static final String LINE_TOKENIZE_VALUE = "output.delimiter";
+  /** Default split delimiter */
+  public static final String LINE_TOKENIZE_VALUE_DEFAULT =
+    AdjacencyListTextVertexInputFormat.LINE_TOKENIZE_VALUE_DEFAULT;
+
+  @Override
+  public AdjacencyListTextVertexWriter createVertexWriter(
+      TaskAttemptContext context) {
+    return new AdjacencyListTextVertexWriter();
+  }
+
   /**
-   * Vertex writer associated wtih {@link AdjacencyListTextVertexOutputFormat}.
-   *
-   * @param <I> Vertex id
-   * @param <V> Vertex data
-   * @param <E> Edge data
+   * Vertex writer associated with {@link AdjacencyListTextVertexOutputFormat}.
    */
-  static class AdjacencyListVertexWriter<I extends WritableComparable, V extends
-      Writable, E extends Writable> extends TextVertexWriter<I, V, E> {
-    /** Split delimiter */
-    public static final String LINE_TOKENIZE_VALUE = "output.delimiter";
-    /** Default split delimiter */
-    public static final String LINE_TOKENIZE_VALUE_DEFAULT = "\t";
+  protected class AdjacencyListTextVertexWriter extends
+    TextVertexWriterToEachLine {
     /** Cached split delimeter */
     private String delimiter;
 
-    /**
-     * Constructor with writer.
-     *
-     * @param recordWriter Record writer used for writing.
-     */
-    public AdjacencyListVertexWriter(RecordWriter<Text, Text> recordWriter) {
-      super(recordWriter);
+    @Override
+    public void initialize(TaskAttemptContext context) throws IOException,
+        InterruptedException {
+      super.initialize(context);
+      delimiter = context.getConfiguration()
+          .get(LINE_TOKENIZE_VALUE, LINE_TOKENIZE_VALUE_DEFAULT);
     }
 
     @Override
-    public void writeVertex(Vertex<I, V, E, ?> vertex) throws IOException,
-    InterruptedException {
-      if (delimiter == null) {
-        delimiter = getContext().getConfiguration()
-            .get(LINE_TOKENIZE_VALUE, LINE_TOKENIZE_VALUE_DEFAULT);
-      }
-
+    public Text convertVertexToLine(Vertex<I, V, E, ?> vertex)
+      throws IOException {
       StringBuffer sb = new StringBuffer(vertex.getId().toString());
       sb.append(delimiter);
       sb.append(vertex.getValue());
@@ -85,14 +81,8 @@ public class AdjacencyListTextVertexOutputFormat<I extends WritableComparable,
         sb.append(delimiter).append(edge.getValue());
       }
 
-      getRecordWriter().write(new Text(sb.toString()), null);
+      return new Text(sb.toString());
     }
   }
 
-  @Override
-  public VertexWriter<I, V, E> createVertexWriter(TaskAttemptContext context)
-    throws IOException, InterruptedException {
-    return new AdjacencyListVertexWriter<I, V, E>
-    (textOutputFormat.getRecordWriter(context));
-  }
 }

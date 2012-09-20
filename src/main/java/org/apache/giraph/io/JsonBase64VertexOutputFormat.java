@@ -20,11 +20,9 @@ package org.apache.giraph.io;
 
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.graph.VertexWriter;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -51,29 +49,20 @@ import java.io.IOException;
 public class JsonBase64VertexOutputFormat<I extends WritableComparable,
     V extends Writable, E extends Writable> extends
     TextVertexOutputFormat<I, V, E> {
+
+  @Override
+  public TextVertexWriter createVertexWriter(TaskAttemptContext context) {
+    return new JsonBase64VertexWriter();
+  }
+
   /**
    * Simple writer that supports {@link JsonBase64VertexOutputFormat}
-   *
-   * @param <I> Vertex index value
-   * @param <V> Vertex value
-   * @param <E> Edge value
    */
-  private static class JsonBase64VertexWriter<I extends WritableComparable,
-      V extends Writable, E extends Writable> extends
-      TextVertexWriter<I, V, E> {
-    /**
-     * Only constructor.  Requires the LineRecordWriter
-     *
-     * @param lineRecordWriter Line record writer to write to
-     */
-    public JsonBase64VertexWriter(
-        RecordWriter<Text, Text> lineRecordWriter) {
-      super(lineRecordWriter);
-    }
+  protected class JsonBase64VertexWriter extends TextVertexWriterToEachLine {
 
     @Override
-    public void writeVertex(Vertex<I, V, E, ?> vertex)
-      throws IOException, InterruptedException {
+    protected Text convertVertexToLine(Vertex<I, V, E, ?> vertex)
+      throws IOException {
       ByteArrayOutputStream outputStream =
           new ByteArrayOutputStream();
       DataOutput output = new DataOutputStream(outputStream);
@@ -112,14 +101,9 @@ public class JsonBase64VertexOutputFormat<I extends WritableComparable,
         throw new IllegalStateException(
             "writerVertex: Failed to insert edge array", e);
       }
-      getRecordWriter().write(new Text(vertexObject.toString()), null);
+      return new Text(vertexObject.toString());
     }
+
   }
 
-  @Override
-  public VertexWriter<I, V, E> createVertexWriter(TaskAttemptContext context)
-    throws IOException, InterruptedException {
-    return new JsonBase64VertexWriter<I, V, E>(
-        textOutputFormat.getRecordWriter(context));
-  }
 }

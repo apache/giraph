@@ -29,6 +29,7 @@ import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.junit.Before;
@@ -44,7 +45,8 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 
-public class TestLongDoubleDoubleAdjacencyListVertexInputFormat {
+public class TestLongDoubleDoubleAdjacencyListVertexInputFormat extends
+    LongDoubleDoubleAdjacencyListVertexInputFormat<BooleanWritable> {
 
   private RecordReader<LongWritable, Text> rr;
   private Configuration conf;
@@ -64,13 +66,30 @@ public class TestLongDoubleDoubleAdjacencyListVertexInputFormat {
     when(tac.getConfiguration()).thenReturn(conf);
   }
 
+  protected TextVertexReader createVertexReader(
+       RecordReader<LongWritable, Text> rr) {
+    return createVertexReader(rr, null);
+  }
+
+  protected TextVertexReader createVertexReader(
+      final RecordReader<LongWritable, Text> rr, LineSanitizer lineSanitizer) {
+    return new LongDoubleDoubleAdjacencyListVertexReader(lineSanitizer) {
+      @Override
+      protected RecordReader<LongWritable, Text> createLineRecordReader(
+          InputSplit inputSplit, TaskAttemptContext context)
+          throws IOException, InterruptedException {
+        return rr;
+      }
+    };
+  }
+
   @Test
   public void testIndexMustHaveValue() throws IOException, InterruptedException {
     String input = "123";
 
     when(rr.getCurrentValue()).thenReturn(new Text(input));
-    LongDoubleDoubleAdjacencyListVertexInputFormat.VertexReader<BooleanWritable> vr =
-        new LongDoubleDoubleAdjacencyListVertexInputFormat.VertexReader<BooleanWritable>(rr);
+    TextVertexReader vr = createVertexReader(rr);
+
 
     vr.initialize(null, tac);
 
@@ -88,8 +107,8 @@ public class TestLongDoubleDoubleAdjacencyListVertexInputFormat {
     String input = "99\t55.2\t100";
 
     when(rr.getCurrentValue()).thenReturn(new Text(input));
-    LongDoubleDoubleAdjacencyListVertexInputFormat.VertexReader vr =
-        new LongDoubleDoubleAdjacencyListVertexInputFormat.VertexReader(rr);
+    TextVertexReader vr = createVertexReader(rr);
+
 
     vr.initialize(null, tac);
 
@@ -107,8 +126,8 @@ public class TestLongDoubleDoubleAdjacencyListVertexInputFormat {
     String input = "42\t0.1\t99\t0.2\t2000\t0.3\t4000\t0.4";
 
     when(rr.getCurrentValue()).thenReturn(new Text(input));
-    LongDoubleDoubleAdjacencyListVertexInputFormat.VertexReader<BooleanWritable> vr =
-        new LongDoubleDoubleAdjacencyListVertexInputFormat.VertexReader<BooleanWritable>(rr);
+    TextVertexReader vr = createVertexReader(rr);
+
 
     vr.initialize(null, tac);
 
@@ -129,9 +148,8 @@ public class TestLongDoubleDoubleAdjacencyListVertexInputFormat {
     String input = "12345:42.42:9999999:99.9";
 
     when(rr.getCurrentValue()).thenReturn(new Text(input));
-    conf.set(AdjacencyListVertexReader.LINE_TOKENIZE_VALUE, ":");
-    LongDoubleDoubleAdjacencyListVertexInputFormat.VertexReader<BooleanWritable> vr =
-        new LongDoubleDoubleAdjacencyListVertexInputFormat.VertexReader<BooleanWritable>(rr);
+    conf.set(AdjacencyListTextVertexInputFormat.LINE_TOKENIZE_VALUE, ":");
+    TextVertexReader vr = createVertexReader(rr);
 
     vr.initialize(null, tac);
     assertTrue("Should have been able to read vertex", vr.nextVertex());

@@ -20,11 +20,10 @@ package org.apache.giraph.io;
 
 
 import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.graph.VertexWriter;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 import java.io.IOException;
@@ -44,48 +43,45 @@ public class IdWithValueTextOutputFormat<I extends WritableComparable,
     V extends Writable, E extends Writable>
     extends TextVertexOutputFormat<I, V, E> {
 
+  /** Specify the output delimiter */
+  public static final String LINE_TOKENIZE_VALUE = "output.delimiter";
+  /** Default output delimiter */
+  public static final String LINE_TOKENIZE_VALUE_DEFAULT = "\t";
+  /** Reverse id and value order? */
+  public static final String REVERSE_ID_AND_VALUE = "reverse.id.and.value";
+  /** Default is to not reverse id and value order. */
+  public static final boolean REVERSE_ID_AND_VALUE_DEFAULT = false;
+
+  @Override
+  public TextVertexWriter createVertexWriter(TaskAttemptContext context) {
+    return new IdWithValueVertexWriter();
+  }
+
   /**
    * Vertex writer used with {@link IdWithValueTextOutputFormat}.
-   *
-   * @param <I> Vertex id
-   * @param <V> Vertex data
-   * @param <E> Edge data
    */
-  static class IdWithValueVertexWriter<I extends WritableComparable, V extends
-      Writable, E extends Writable> extends TextVertexWriter<I, V, E> {
-    /** Specify the output delimiter */
-    public static final String LINE_TOKENIZE_VALUE = "output.delimiter";
-    /** Default output delimiter */
-    public static final String LINE_TOKENIZE_VALUE_DEFAULT = "\t";
-    /** Reverse id and value order? */
-    public static final String REVERSE_ID_AND_VALUE = "reverse.id.and.value";
-    /** Default is to not reverse id and value order. */
-    public static final boolean REVERSE_ID_AND_VALUE_DEFAULT = false;
+  protected class IdWithValueVertexWriter extends TextVertexWriterToEachLine {
     /** Saved delimiter */
     private String delimiter;
+    /** Cached reserve option */
+    private boolean reverseOutput;
 
-    /**
-     * Constructor with record writer.
-     *
-     * @param recordWriter Writer from LineRecordWriter.
-     */
-    public IdWithValueVertexWriter(RecordWriter<Text, Text> recordWriter) {
-      super(recordWriter);
+    @Override
+    public void initialize(TaskAttemptContext context) throws IOException,
+        InterruptedException {
+      super.initialize(context);
+      Configuration conf = context.getConfiguration();
+      delimiter = conf
+          .get(LINE_TOKENIZE_VALUE, LINE_TOKENIZE_VALUE_DEFAULT);
+      reverseOutput = conf
+          .getBoolean(REVERSE_ID_AND_VALUE, REVERSE_ID_AND_VALUE_DEFAULT);
     }
 
     @Override
-    public void writeVertex(Vertex<I, V, E, ?> vertex) throws IOException,
-    InterruptedException {
-      if (delimiter == null) {
-        delimiter = getContext().getConfiguration()
-            .get(LINE_TOKENIZE_VALUE, LINE_TOKENIZE_VALUE_DEFAULT);
-      }
-
+    protected Text convertVertexToLine(Vertex<I, V, E, ?> vertex)
+      throws IOException {
       String first;
       String second;
-      boolean reverseOutput = getContext().getConfiguration()
-          .getBoolean(REVERSE_ID_AND_VALUE, REVERSE_ID_AND_VALUE_DEFAULT);
-
       if (reverseOutput) {
         first = vertex.getValue().toString();
         second = vertex.getId().toString();
@@ -93,17 +89,10 @@ public class IdWithValueTextOutputFormat<I extends WritableComparable,
         first = vertex.getId().toString();
         second = vertex.getValue().toString();
       }
-
       Text line = new Text(first + delimiter + second);
-
-      getRecordWriter().write(line, null);
+      return line;
     }
+
   }
 
-  @Override
-  public VertexWriter<I, V, E> createVertexWriter(TaskAttemptContext context)
-    throws IOException, InterruptedException {
-    return new IdWithValueVertexWriter<I, V, E>
-    (textOutputFormat.getRecordWriter(context));
-  }
 }

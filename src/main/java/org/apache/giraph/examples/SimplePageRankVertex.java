@@ -26,17 +26,14 @@ import org.apache.giraph.graph.DefaultMasterCompute;
 import org.apache.giraph.graph.LongDoubleFloatDoubleVertex;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexReader;
-import org.apache.giraph.graph.VertexWriter;
 import org.apache.giraph.graph.WorkerContext;
 import org.apache.giraph.io.GeneratedVertexInputFormat;
 import org.apache.giraph.io.TextVertexOutputFormat;
-import org.apache.giraph.io.TextVertexOutputFormat.TextVertexWriter;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.InputSplit;
-import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.log4j.Logger;
 
@@ -179,13 +176,6 @@ public class SimplePageRankVertex extends LongDoubleFloatDoubleVertex {
     private static final Logger LOG =
         Logger.getLogger(SimplePageRankVertexReader.class);
 
-    /**
-     * Constructor.
-     */
-    public SimplePageRankVertexReader() {
-      super();
-    }
-
     @Override
     public boolean nextVertex() {
       return totalRecords > recordsRead;
@@ -234,42 +224,28 @@ public class SimplePageRankVertex extends LongDoubleFloatDoubleVertex {
   }
 
   /**
-   * Simple VertexWriter that supports {@link SimplePageRankVertex}
-   */
-  public static class SimplePageRankVertexWriter extends
-      TextVertexWriter<LongWritable, DoubleWritable, FloatWritable> {
-    /**
-     * Constructor with line writer.
-     *
-     * @param lineRecordWriter Line writer that will do the writing.
-     */
-    public SimplePageRankVertexWriter(
-        RecordWriter<Text, Text> lineRecordWriter) {
-      super(lineRecordWriter);
-    }
-
-    @Override
-    public void writeVertex(
-      Vertex<LongWritable, DoubleWritable, FloatWritable, ?> vertex)
-      throws IOException, InterruptedException {
-      getRecordWriter().write(
-          new Text(vertex.getId().toString()),
-          new Text(vertex.getValue().toString()));
-    }
-  }
-
-  /**
    * Simple VertexOutputFormat that supports {@link SimplePageRankVertex}
    */
   public static class SimplePageRankVertexOutputFormat extends
       TextVertexOutputFormat<LongWritable, DoubleWritable, FloatWritable> {
     @Override
-    public VertexWriter<LongWritable, DoubleWritable, FloatWritable>
-    createVertexWriter(TaskAttemptContext context)
+    public TextVertexWriter createVertexWriter(TaskAttemptContext context)
       throws IOException, InterruptedException {
-      RecordWriter<Text, Text> recordWriter =
-          textOutputFormat.getRecordWriter(context);
-      return new SimplePageRankVertexWriter(recordWriter);
+      return new SimplePageRankVertexWriter();
+    }
+
+    /**
+     * Simple VertexWriter that supports {@link SimplePageRankVertex}
+     */
+    public class SimplePageRankVertexWriter extends TextVertexWriter {
+      @Override
+      public void writeVertex(
+          Vertex<LongWritable, DoubleWritable, FloatWritable, ?> vertex)
+        throws IOException, InterruptedException {
+        getRecordWriter().write(
+            new Text(vertex.getId().toString()),
+            new Text(vertex.getValue().toString()));
+      }
     }
   }
 }

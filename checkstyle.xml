@@ -260,39 +260,9 @@
   
   <!-- Setup special comments to suppress specific checks from source files -->
   <module name="SuppressionCommentFilter">
-    <property name="offCommentFormat" value="CHECKSTYLE\: stop JavadocVariable"/>
-    <property name="onCommentFormat"  value="CHECKSTYLE\: resume JavadocVariable"/>
-    <property name="checkFormat"      value="JavadocVariable"/>
-  </module>
-  <module name="SuppressionCommentFilter">
-    <property name="offCommentFormat" value="CHECKSTYLE\: stop JavadocMethodCheck"/>
-    <property name="onCommentFormat"  value="CHECKSTYLE\: resume JavadocMethodCheck"/>
-    <property name="checkFormat"      value="JavadocMethodCheck"/>
-  </module>
-  <module name="SuppressionCommentFilter">
-    <property name="offCommentFormat" value="CHECKSTYLE\: stop ConstantName"/>
-    <property name="onCommentFormat"  value="CHECKSTYLE\: resume ConstantName"/>
-    <property name="checkFormat"      value="ConstantName"/>
-  </module>
-  <module name="SuppressionCommentFilter">
-    <property name="offCommentFormat" value="CHECKSTYLE\: stop HideUtilityClassConstructor"/>
-    <property name="onCommentFormat"  value="CHECKSTYLE\: resume HideUtilityClassConstructor"/>
-    <property name="checkFormat"      value="HideUtilityClassConstructor"/>
-  </module>
-  <module name="SuppressionCommentFilter">
-    <property name="offCommentFormat" value="CHECKSTYLE\: stop MultipleVariableDeclarations"/>
-    <property name="onCommentFormat"  value="CHECKSTYLE\: resume MultipleVariableDeclarations"/>
-    <property name="checkFormat"      value="MultipleVariableDeclarations"/>
-  </module>
-  <module name="SuppressionCommentFilter">
-    <property name="offCommentFormat" value="CHECKSTYLE\: stop IllegalCatch"/>
-    <property name="onCommentFormat"  value="CHECKSTYLE\: resume IllegalCatch"/>
-    <property name="checkFormat"      value="IllegalCatch"/>
-  </module>
-  <module name="SuppressionCommentFilter">
-    <property name="offCommentFormat" value="CHECKSTYLE\: stop DeclarationOrder"/>
-    <property name="onCommentFormat"  value="CHECKSTYLE\: resume DeclarationOrder"/>
-    <property name="checkFormat"      value="DeclarationOrder"/>
+    <property name="offCommentFormat" value="CHECKSTYLE\: stop ([\w\|]+)"/>
+    <property name="onCommentFormat"  value="CHECKSTYLE\: resume ([\w\|]+)"/>
+    <property name="checkFormat"      value="$1"/>
   </module>
 </module>
 

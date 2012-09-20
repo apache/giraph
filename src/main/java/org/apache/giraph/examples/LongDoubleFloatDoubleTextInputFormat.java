@@ -24,14 +24,11 @@ import java.util.regex.Pattern;
 
 import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.graph.VertexReader;
 import org.apache.giraph.io.TextVertexInputFormat;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.InputSplit;
-import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 import com.google.common.collect.Lists;
@@ -48,31 +45,19 @@ public class LongDoubleFloatDoubleTextInputFormat
     FloatWritable, DoubleWritable> {
 
   @Override
-  public VertexReader<LongWritable,
-    DoubleWritable, FloatWritable, DoubleWritable>
-  createVertexReader(InputSplit split, TaskAttemptContext context)
+  public TextVertexReader createVertexReader(InputSplit split,
+      TaskAttemptContext context)
     throws IOException {
-    return new LongDoubleFloatDoubleVertexReader(
-        textInputFormat.createRecordReader(split, context));
+    return new LongDoubleFloatDoubleVertexReader();
   }
 
   /**
    * Vertex reader associated with {@link LongDoubleFloatDoubleTextInputFormat}.
    */
-  public static class LongDoubleFloatDoubleVertexReader extends
-    TextVertexInputFormat.TextVertexReader<LongWritable, DoubleWritable,
-    FloatWritable, DoubleWritable> {
+  public class LongDoubleFloatDoubleVertexReader extends
+    TextVertexInputFormat.TextVertexReader {
     /** Separator of the vertex and neighbors */
-    private static final Pattern SEPARATOR = Pattern.compile("[\t ]");
-
-    /**
-     * Constructor with the line reader.
-     * @param lineReader Internal line reader.
-     */
-    public LongDoubleFloatDoubleVertexReader(
-        RecordReader<LongWritable, Text> lineReader) {
-      super(lineReader);
-    }
+    private final Pattern separator = Pattern.compile("[\t ]");
 
     @Override
     public Vertex<LongWritable, DoubleWritable, FloatWritable, DoubleWritable>
@@ -83,7 +68,7 @@ public class LongDoubleFloatDoubleTextInputFormat
             .getConfiguration());
 
       String[] tokens =
-          SEPARATOR.split(getRecordReader().getCurrentValue().toString());
+          separator.split(getRecordReader().getCurrentValue().toString());
       Map<LongWritable, FloatWritable> edges =
           Maps.newHashMapWithExpectedSize(tokens.length - 1);
       float weight = 1.0f / (tokens.length - 1);

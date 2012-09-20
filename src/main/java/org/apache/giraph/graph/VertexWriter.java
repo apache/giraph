@@ -40,8 +40,10 @@ public interface VertexWriter<I extends WritableComparable, V extends Writable,
    *
    * @param context Context used to write the vertices.
    * @throws IOException
+   * @throws InterruptedException
    */
-  void initialize(TaskAttemptContext context) throws IOException;
+  void initialize(TaskAttemptContext context) throws IOException,
+    InterruptedException;
 
   /**
    * Writes the next vertex and associated data

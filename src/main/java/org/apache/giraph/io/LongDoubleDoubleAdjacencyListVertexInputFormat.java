@@ -20,13 +20,9 @@ package org.apache.giraph.io;
 import org.apache.giraph.graph.Edge;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputSplit;
-import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-
-import java.io.IOException;
 
 /**
  * InputFormat for reading graphs stored as (ordered) adjacency lists
@@ -39,37 +35,30 @@ import java.io.IOException;
  * @param <M> Message data
  */
 public class LongDoubleDoubleAdjacencyListVertexInputFormat<M extends Writable>
-    extends TextVertexInputFormat<LongWritable, DoubleWritable,
+    extends AdjacencyListTextVertexInputFormat<LongWritable, DoubleWritable,
     DoubleWritable, M> {
+
+  @Override
+  public AdjacencyListTextVertexReader createVertexReader(InputSplit split,
+      TaskAttemptContext context) {
+    return new LongDoubleDoubleAdjacencyListVertexReader(null);
+  }
 
   /**
    * VertexReader associated with
    * {@link LongDoubleDoubleAdjacencyListVertexInputFormat}.
-   *
-   * @param <M> Message data.
    */
-  static class VertexReader<M extends Writable> extends
-      AdjacencyListVertexReader<LongWritable, DoubleWritable,
-      DoubleWritable, M> {
+  protected class LongDoubleDoubleAdjacencyListVertexReader extends
+      AdjacencyListTextVertexReader {
 
     /**
-     * Constructor with Line record reader.
+     * Constructor with {@link LineSanitizer}.
      *
-     * @param lineRecordReader Reader to internally use.
+     * @param lineSanitizer the sanitizer to use for reading
      */
-    VertexReader(RecordReader<LongWritable, Text> lineRecordReader) {
-      super(lineRecordReader);
-    }
-
-    /**
-     * Constructor with Line record reader and sanitizer.
-     *
-     * @param lineRecordReader Reader to internally use.
-     * @param sanitizer Line sanitizer.
-     */
-    VertexReader(RecordReader<LongWritable, Text> lineRecordReader,
-        LineSanitizer sanitizer) {
-      super(lineRecordReader, sanitizer);
+    public LongDoubleDoubleAdjacencyListVertexReader(LineSanitizer
+        lineSanitizer) {
+      super(lineSanitizer);
     }
 
     @Override
@@ -92,12 +81,4 @@ public class LongDoubleDoubleAdjacencyListVertexInputFormat<M extends Writable>
     }
   }
 
-  @Override
-  public org.apache.giraph.graph.VertexReader<LongWritable,
-  DoubleWritable, DoubleWritable, M> createVertexReader(
-      InputSplit split,
-      TaskAttemptContext context) throws IOException {
-    return new VertexReader<M>(textInputFormat.createRecordReader(
-        split, context));
-  }
 }

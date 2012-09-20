@@ -19,7 +19,6 @@ package org.apache.giraph.io;
 
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.io.AdjacencyListTextVertexOutputFormat.AdjacencyListVertexWriter;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.Text;
@@ -38,7 +37,20 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 
-public class TestAdjacencyListTextVertexOutputFormat {
+public class TestAdjacencyListTextVertexOutputFormat extends
+    AdjacencyListTextVertexOutputFormat<Text, DoubleWritable, DoubleWritable> {
+
+  protected AdjacencyListTextVertexWriter createVertexWriter(
+      final RecordWriter<Text, Text> tw) {
+    AdjacencyListTextVertexWriter writer = new AdjacencyListTextVertexWriter() {
+      @Override
+      protected RecordWriter<Text, Text> createLineRecordWriter(
+          TaskAttemptContext context) throws IOException, InterruptedException {
+        return tw;
+      }
+    };
+    return writer;
+  }
 
   @Test
   public void testVertexWithNoEdges() throws IOException, InterruptedException {
@@ -53,7 +65,7 @@ public class TestAdjacencyListTextVertexOutputFormat {
     when(vertex.getEdges()).thenReturn(new ArrayList<Text>());
 
     RecordWriter<Text, Text> tw = mock(RecordWriter.class);
-    AdjacencyListVertexWriter writer = new AdjacencyListVertexWriter(tw);
+    AdjacencyListTextVertexWriter writer = createVertexWriter(tw);
     writer.initialize(tac);
     writer.writeVertex(vertex);
 
@@ -84,7 +96,7 @@ public class TestAdjacencyListTextVertexOutputFormat {
     when(vertex.getEdges()).thenReturn(cities);
 
     RecordWriter<Text,Text> tw = mock(RecordWriter.class);
-    AdjacencyListVertexWriter writer = new AdjacencyListVertexWriter(tw);
+    AdjacencyListTextVertexWriter writer = createVertexWriter(tw);
     writer.initialize(tac);
     writer.writeVertex(vertex);
 
@@ -97,7 +109,7 @@ public class TestAdjacencyListTextVertexOutputFormat {
   @Test
   public void testWithDifferentDelimiter() throws IOException, InterruptedException {
     Configuration conf = new Configuration();
-    conf.set(AdjacencyListVertexWriter.LINE_TOKENIZE_VALUE, ":::");
+    conf.set(AdjacencyListTextVertexOutputFormat.LINE_TOKENIZE_VALUE, ":::");
     TaskAttemptContext tac = mock(TaskAttemptContext.class);
     when(tac.getConfiguration()).thenReturn(conf);
 
@@ -116,7 +128,7 @@ public class TestAdjacencyListTextVertexOutputFormat {
     when(vertex.getEdges()).thenReturn(cities);
 
     RecordWriter<Text,Text> tw = mock(RecordWriter.class);
-    AdjacencyListVertexWriter writer = new AdjacencyListVertexWriter(tw);
+    AdjacencyListTextVertexWriter writer = createVertexWriter(tw);
     writer.initialize(tac);
     writer.writeVertex(vertex);
 
@@ -125,4 +137,5 @@ public class TestAdjacencyListTextVertexOutputFormat {
     verify(tw).write(expected, null);
     verify(vertex, times(1)).getEdges();
   }
+
 }

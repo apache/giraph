@@ -38,7 +38,7 @@ import java.io.IOException;
 public interface VertexReader<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable> {
   /**
-   * Use the input split and context to setup reading the vertices.
+   * Use the input split and context t o setup reading the vertices.
    * Guaranteed to be called prior to any other function.
    *
    * @param inputSplit Input split to be used for reading vertices.

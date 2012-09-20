@@ -18,8 +18,7 @@
 
 package org.apache.giraph.io;
 
-import java.io.IOException;
-
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexOutputFormat;
 import org.apache.giraph.graph.VertexWriter;
 import org.apache.hadoop.io.Text;
@@ -30,6 +29,8 @@ import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+
+import java.io.IOException;
 
 /**
  * Abstract class that users should subclass to use their own text based
@@ -43,38 +44,70 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 public abstract class TextVertexOutputFormat<I extends WritableComparable,
     V extends Writable, E extends Writable>
     extends VertexOutputFormat<I, V, E> {
+
   /** Uses the TextOutputFormat to do everything */
   protected TextOutputFormat<Text, Text> textOutputFormat =
       new TextOutputFormat<Text, Text>();
+
+  @Override
+  public void checkOutputSpecs(JobContext context)
+    throws IOException, InterruptedException {
+    textOutputFormat.checkOutputSpecs(context);
+  }
+
+  @Override
+  public OutputCommitter getOutputCommitter(TaskAttemptContext context)
+    throws IOException, InterruptedException {
+    return textOutputFormat.getOutputCommitter(context);
+  }
+
+  /**
+   * The factory method which produces the {@link TextVertexWriter} used by this
+   * output format.
+   *
+   * @param context
+   *          the information about the task
+   * @return
+   *         the text vertex writer to be used
+   */
+  @Override
+  public abstract TextVertexWriter createVertexWriter(TaskAttemptContext
+      context) throws IOException, InterruptedException;
 
   /**
    * Abstract class to be implemented by the user based on their specific
    * vertex output.  Easiest to ignore the key value separator and only use
    * key instead.
-   *
-   * @param <I> Vertex index value
-   * @param <V> Vertex value
-   * @param <E> Edge value
    */
-  public abstract static class TextVertexWriter<I extends WritableComparable,
-      V extends Writable, E extends Writable> implements VertexWriter<I, V, E> {
+  protected abstract class TextVertexWriter implements VertexWriter<I, V, E> {
+    /** Internal line record writer */
+    private RecordWriter<Text, Text> lineRecordWriter;
     /** Context passed to initialize */
     private TaskAttemptContext context;
-    /** Internal line record writer */
-    private final RecordWriter<Text, Text> lineRecordWriter;
-
-    /**
-     * Initialize with the LineRecordWriter.
-     *
-     * @param lineRecordWriter Line record writer from TextOutputFormat
-     */
-    public TextVertexWriter(RecordWriter<Text, Text> lineRecordWriter) {
-      this.lineRecordWriter = lineRecordWriter;
-    }
 
     @Override
-    public void initialize(TaskAttemptContext context) throws IOException {
+    public void initialize(TaskAttemptContext context) throws IOException,
+           InterruptedException {
+      lineRecordWriter = createLineRecordWriter(context);
       this.context = context;
+    }
+
+    /**
+     * Create the line record writer. Override this to use a different
+     * underlying record writer (useful for testing).
+     *
+     * @param context
+     *          the context passed to initialize
+     * @return
+     *         the record writer to be used
+     * @throws IOException
+     *           exception that can be thrown during creation
+     * @throws InterruptedException
+     *           exception that can be thrown during creation
+     */
+    protected RecordWriter<Text, Text> createLineRecordWriter(
+        TaskAttemptContext context) throws IOException, InterruptedException {
+      return textOutputFormat.getRecordWriter(context);
     }
 
     @Override
@@ -102,15 +135,31 @@ public abstract class TextVertexOutputFormat<I extends WritableComparable,
     }
   }
 
-  @Override
-  public void checkOutputSpecs(JobContext context)
-    throws IOException, InterruptedException {
-    textOutputFormat.checkOutputSpecs(context);
+  /**
+   * Abstract class to be implemented by the user to write a line for each
+   * vertex.
+   */
+  protected abstract class TextVertexWriterToEachLine extends TextVertexWriter {
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public final void writeVertex(Vertex vertex) throws
+      IOException, InterruptedException {
+      // Note we are writing line as key with null value
+      getRecordWriter().write(convertVertexToLine(vertex), null);
+    }
+
+    /**
+     * Writes a line for the given vertex.
+     *
+     * @param vertex
+     *          the current vertex for writing
+     * @return the text line to be written
+     * @throws IOException
+     *           exception that can be thrown while writing
+     */
+    protected abstract Text convertVertexToLine(Vertex<I, V, E, ?> vertex)
+      throws IOException;
   }
 
-  @Override
-  public OutputCommitter getOutputCommitter(TaskAttemptContext context)
-    throws IOException, InterruptedException {
-    return textOutputFormat.getOutputCommitter(context);
-  }
 }

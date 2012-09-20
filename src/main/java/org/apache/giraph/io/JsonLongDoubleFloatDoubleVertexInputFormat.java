@@ -17,15 +17,12 @@
  */
 package org.apache.giraph.io;
 
-import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.graph.VertexReader;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.InputSplit;
-import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -46,11 +43,9 @@ public class JsonLongDoubleFloatDoubleVertexInputFormat extends
   FloatWritable, DoubleWritable> {
 
   @Override
-  public VertexReader<LongWritable, DoubleWritable, FloatWritable,
-    DoubleWritable> createVertexReader(InputSplit split,
-    TaskAttemptContext context) throws IOException {
-    return new JsonLongDoubleFloatDoubleVertexReader(
-      textInputFormat.createRecordReader(split, context));
+  public TextVertexReader createVertexReader(InputSplit split,
+      TaskAttemptContext context) {
+    return new JsonLongDoubleFloatDoubleVertexReader();
   }
 
  /**
@@ -64,52 +59,47 @@ public class JsonLongDoubleFloatDoubleVertexInputFormat extends
   * Second edge has a destination vertex 3, edge value 0.7.
   * [1,4.3,[[2,2.1],[3,0.7]]]
   */
-  static class JsonLongDoubleFloatDoubleVertexReader extends
-    TextVertexReader<LongWritable, DoubleWritable,
-    FloatWritable, DoubleWritable> {
+  class JsonLongDoubleFloatDoubleVertexReader extends
+    TextVertexReaderFromEachLineProcessedHandlingExceptions<JSONArray,
+    JSONException> {
 
-  /**
-    * Constructor with the line record reader.
-    *
-    * @param lineRecordReader Will read from this line.
-    */
-    public JsonLongDoubleFloatDoubleVertexReader(
-      RecordReader<LongWritable, Text> lineRecordReader) {
-      super(lineRecordReader);
+    @Override
+    protected JSONArray preprocessLine(Text line) throws JSONException {
+      return new JSONArray(line.toString());
     }
 
     @Override
-    public Vertex<LongWritable, DoubleWritable, FloatWritable,
-          DoubleWritable> getCurrentVertex()
-      throws IOException, InterruptedException {
-      Vertex<LongWritable, DoubleWritable, FloatWritable, DoubleWritable>
-          vertex = BspUtils.<LongWritable, DoubleWritable, FloatWritable,
-          DoubleWritable>createVertex(getContext().getConfiguration());
+    protected LongWritable getId(JSONArray jsonVertex) throws JSONException,
+              IOException {
+      return new LongWritable(jsonVertex.getLong(0));
+    }
 
-      Text line = getRecordReader().getCurrentValue();
-      try {
-        JSONArray jsonVertex = new JSONArray(line.toString());
-        LongWritable vertexId = new LongWritable(jsonVertex.getLong(0));
-        DoubleWritable vertexValue =
-          new DoubleWritable(jsonVertex.getDouble(1));
-        Map<LongWritable, FloatWritable> edges = Maps.newHashMap();
-        JSONArray jsonEdgeArray = jsonVertex.getJSONArray(2);
-        for (int i = 0; i < jsonEdgeArray.length(); ++i) {
-          JSONArray jsonEdge = jsonEdgeArray.getJSONArray(i);
-          edges.put(new LongWritable(jsonEdge.getLong(0)),
+    @Override
+    protected DoubleWritable getValue(JSONArray jsonVertex) throws
+      JSONException, IOException {
+      return new DoubleWritable(jsonVertex.getDouble(1));
+    }
+
+    @Override
+    protected Map<LongWritable, FloatWritable> getEdges(JSONArray jsonVertex)
+      throws JSONException, IOException {
+      Map<LongWritable, FloatWritable> edges = Maps.newHashMap();
+      JSONArray jsonEdgeArray = jsonVertex.getJSONArray(2);
+      for (int i = 0; i < jsonEdgeArray.length(); ++i) {
+        JSONArray jsonEdge = jsonEdgeArray.getJSONArray(i);
+        edges.put(new LongWritable(jsonEdge.getLong(0)),
             new FloatWritable((float) jsonEdge.getDouble(1)));
-        }
-        vertex.initialize(vertexId, vertexValue, edges, null);
-      } catch (JSONException e) {
-        throw new IllegalArgumentException(
-          "next: Couldn't get vertex from line " + line, e);
       }
-      return vertex;
+      return edges;
     }
 
     @Override
-    public boolean nextVertex() throws IOException, InterruptedException {
-      return getRecordReader().nextKeyValue();
+    protected Vertex<LongWritable, DoubleWritable, FloatWritable,
+              DoubleWritable> handleException(Text line, JSONArray jsonVertex,
+                  JSONException e) {
+      throw new IllegalArgumentException(
+          "Couldn't get vertex from line " + line, e);
     }
+
   }
 }

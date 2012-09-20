@@ -20,12 +20,10 @@ package org.apache.giraph.io;
 
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.graph.VertexWriter;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -39,35 +37,24 @@ import java.io.IOException;
 public class JsonLongDoubleFloatDoubleVertexOutputFormat extends
   TextVertexOutputFormat<LongWritable, DoubleWritable,
   FloatWritable> {
+
   @Override
-  public VertexWriter<LongWritable, DoubleWritable, FloatWritable>
-  createVertexWriter(TaskAttemptContext context)
-    throws IOException, InterruptedException {
-    RecordWriter<Text, Text> recordWriter =
-      textOutputFormat.getRecordWriter(context);
-    return new JsonLongDoubleFloatDoubleVertexWriter(recordWriter);
+  public TextVertexWriter createVertexWriter(
+      TaskAttemptContext context) {
+    return new JsonLongDoubleFloatDoubleVertexWriter();
   }
 
  /**
   * VertexWriter that supports vertices with <code>double</code>
   * values and <code>float</code> out-edge weights.
   */
-  static class JsonLongDoubleFloatDoubleVertexWriter extends
-    TextVertexWriter<LongWritable, DoubleWritable, FloatWritable> {
-
-   /**
-    * Vertex writer with the internal line writer.
-    *
-    * @param lineRecordWriter Wil actually be written to.
-    */
-    public JsonLongDoubleFloatDoubleVertexWriter(
-      RecordWriter<Text, Text> lineRecordWriter) {
-      super(lineRecordWriter);
-    }
-
+  private class JsonLongDoubleFloatDoubleVertexWriter extends
+    TextVertexWriterToEachLine {
     @Override
-    public void writeVertex(Vertex<LongWritable, DoubleWritable,
-          FloatWritable, ?> vertex) throws IOException, InterruptedException {
+    public Text convertVertexToLine(
+      Vertex<LongWritable, DoubleWritable,
+        FloatWritable, ?> vertex
+    ) throws IOException {
       JSONArray jsonVertex = new JSONArray();
       try {
         jsonVertex.put(vertex.getId().get());
@@ -84,7 +71,7 @@ public class JsonLongDoubleFloatDoubleVertexOutputFormat extends
         throw new IllegalArgumentException(
           "writeVertex: Couldn't write vertex " + vertex);
       }
-      getRecordWriter().write(new Text(jsonVertex.toString()), null);
+      return new Text(jsonVertex.toString());
     }
   }
 }

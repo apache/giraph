@@ -18,40 +18,38 @@
 
 package org.apache.giraph.examples;
 
-import java.io.IOException;
-
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.TextVertexOutputFormat;
-import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
+import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
+import java.io.IOException;
+
 /**
- * Simple vertex output format for weighted graphs.
+ * Simple text based vertex output format example.
  */
-public class VertexWithDoubleValueFloatEdgeTextOutputFormat extends
-    TextVertexOutputFormat<LongWritable, DoubleWritable, FloatWritable> {
+public class SimpleTextVertexOutputFormat extends
+    TextVertexOutputFormat<LongWritable, IntWritable, FloatWritable> {
+  /**
+   * Simple text based vertex writer
+   */
+  private class SimpleTextVertexWriter extends TextVertexWriter {
+    @Override
+    public void writeVertex(
+      Vertex<LongWritable, IntWritable, FloatWritable, ?> vertex)
+      throws IOException, InterruptedException {
+      getRecordWriter().write(
+          new Text(vertex.getId().toString()),
+          new Text(vertex.getValue().toString()));
+    }
+  }
+
   @Override
   public TextVertexWriter createVertexWriter(TaskAttemptContext context)
     throws IOException, InterruptedException {
-    return new VertexWithDoubleValueWriter();
-  }
-
-  /**
-   * Vertex writer used with {@link VertexWithComponentTextOutputFormat}.
-   */
-  public class VertexWithDoubleValueWriter extends TextVertexWriter {
-    @Override
-    public void writeVertex(
-      Vertex<LongWritable, DoubleWritable, FloatWritable, ?> vertex)
-      throws IOException, InterruptedException {
-      StringBuilder output = new StringBuilder();
-      output.append(vertex.getId().get());
-      output.append('\t');
-      output.append(vertex.getValue().get());
-      getRecordWriter().write(new Text(output.toString()), null);
-    }
+    return new SimpleTextVertexWriter();
   }
 }
