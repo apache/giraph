@@ -2,6 +2,8 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-334: Bugfix HCatalog Hive profile. (nitayj via aching)
+
   GIRAPH-93: Hive input / output format. (nitayj via aching)
 
   GIRAPH-277: Text Vertex Input/Output Format base classes overhaul.

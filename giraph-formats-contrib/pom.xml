@@ -99,7 +99,7 @@ under the License.
                                 </goals>
                                 <configuration>
                                     <sources>
-                                        <source>${basedir}/src/main/java/</source>
+                                        <source>${basedir}/src/hcatalog/java/</source>
                                     </sources>
                                 </configuration>
                             </execution>
