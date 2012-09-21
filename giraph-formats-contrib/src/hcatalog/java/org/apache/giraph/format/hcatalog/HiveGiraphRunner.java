@@ -161,8 +161,8 @@ public class HiveGiraphRunner implements Tool {
 					"Giraph HCatalogVertexOutputFormat class to use");
 		options.addOption("db", "database", true, "Hive database name");
 		options.addOption("i", "inputTable", true, "Input table name");
-		options.addOption("I", "inputPartition", true,
-				"Input table partition expression (e.g., \"a<2 AND b='two'\"");
+		options.addOption("I", "inputFilter", true,
+				"Input table filter expression (e.g., \"a<2 AND b='two'\"");
 		options.addOption("o", "outputTable", true, "Output table name");
 		options.addOption("O", "outputPartition", true,
 				"Output table partition values (e.g., \"a=1,b=two\")");
@@ -346,7 +346,7 @@ public class HiveGiraphRunner implements Tool {
 				+ vertexOutputFormatClass.getCanonicalName());
 		System.out.println(prefix + "-inputTable=" + inputTableName);
 		if (inputTableFilterExpr != null)
-			System.out.println(prefix + "-inputPartition=\""
+			System.out.println(prefix + "-inputFilter=\""
 					+ inputTableFilterExpr + "\"");
 		System.out.println(prefix + "-outputTable=" + outputTableName);
 		if (outputTablePartitionValues != null)

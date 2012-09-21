@@ -28,8 +28,8 @@ under the License.
         <compileSource>1.6</compileSource>
         <hadoop.version>0.20.203.0</hadoop.version>
         <hbase.version>0.90.5</hbase.version>
-        <hive.version>0.10.0-SNAPSHOT</hive.version>
         <hcatalog.version>0.4.0-dev</hcatalog.version>
+        <hive.version>0.9.0</hive.version>
         <accumulo.version>1.4.0</accumulo.version>
         <maven-compiler-plugin.version>2.3.2</maven-compiler-plugin.version>
         <maven-javadoc-plugin.version>2.6</maven-javadoc-plugin.version>
@@ -74,6 +74,41 @@ under the License.
             </plugin>
         </plugins>
     </build>
+    <profiles>
+        <profile>
+            <id>hcatalog</id>
+            <dependencies>
+              <dependency>
+                <groupId>org.apache.hcatalog</groupId>
+                <artifactId>hcatalog</artifactId>
+                <version>${hcatalog.version}</version>
+              </dependency>
+            </dependencies>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>build-helper-maven-plugin</artifactId>
+                        <version>1.7</version>
+                        <executions>
+                            <execution>
+                                <id>add-sources</id>
+                                <phase>generate-sources</phase>
+                                <goals>
+                                    <goal>add-source</goal>
+                                </goals>
+                                <configuration>
+                                    <sources>
+                                        <source>${basedir}/src/main/java/</source>
+                                    </sources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
     <dependencies>
         <dependency>
             <artifactId>giraph</artifactId>
@@ -145,11 +180,6 @@ under the License.
             <artifactId>hadoop-test</artifactId>
             <version>${hadoop.version}</version>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hcatalog</groupId>
-          <artifactId>hcatalog</artifactId>
-          <version>${hcatalog.version}</version>
         </dependency>
         <dependency>
           <groupId>org.apache.hive</groupId>
