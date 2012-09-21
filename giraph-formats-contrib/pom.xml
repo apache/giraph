@@ -28,6 +28,8 @@ under the License.
         <compileSource>1.6</compileSource>
         <hadoop.version>0.20.203.0</hadoop.version>
         <hbase.version>0.90.5</hbase.version>
+        <hive.version>0.10.0-SNAPSHOT</hive.version>
+        <hcatalog.version>0.4.0-dev</hcatalog.version>
         <accumulo.version>1.4.0</accumulo.version>
         <maven-compiler-plugin.version>2.3.2</maven-compiler-plugin.version>
         <maven-javadoc-plugin.version>2.6</maven-javadoc-plugin.version>
@@ -143,6 +145,16 @@ under the License.
             <artifactId>hadoop-test</artifactId>
             <version>${hadoop.version}</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hcatalog</groupId>
+          <artifactId>hcatalog</artifactId>
+          <version>${hcatalog.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hive</groupId>
+          <artifactId>hive-common</artifactId>
+          <version>${hive.version}</version>
         </dependency>
     </dependencies>
 </project>
