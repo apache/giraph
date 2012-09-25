@@ -18,11 +18,12 @@
 
 package org.apache.giraph.comm.netty.handler;
 
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.comm.netty.ByteCounter;
 import org.apache.giraph.comm.requests.RequestType;
 import org.apache.giraph.comm.requests.WritableRequest;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.giraph.utils.ReflectionUtils;
+
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferInputStream;
@@ -38,7 +39,7 @@ public class RequestDecoder extends OneToOneDecoder {
   private static final Logger LOG =
       Logger.getLogger(RequestDecoder.class);
   /** Configuration */
-  private final Configuration conf;
+  private final ImmutableClassesGiraphConfiguration conf;
   /** Byte counter to output */
   private final ByteCounter byteCounter;
 
@@ -48,7 +49,8 @@ public class RequestDecoder extends OneToOneDecoder {
    * @param conf Configuration
    * @param byteCounter Keeps track of the decoded bytes
    */
-  public RequestDecoder(Configuration conf, ByteCounter byteCounter) {
+  public RequestDecoder(ImmutableClassesGiraphConfiguration conf,
+                        ByteCounter byteCounter) {
     this.conf = conf;
     this.byteCounter = byteCounter;
   }

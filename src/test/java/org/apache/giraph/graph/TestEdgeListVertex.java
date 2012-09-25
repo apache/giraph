@@ -17,6 +17,8 @@
  */
 package org.apache.giraph.graph;
 
+import org.apache.giraph.GiraphConfiguration;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.utils.WritableUtils;
 import org.apache.giraph.graph.partition.PartitionOwner;
 import org.apache.hadoop.conf.Configuration;
@@ -53,11 +55,14 @@ public class TestEdgeListVertex {
   private IFDLEdgeListVertex vertex;
   /** Job filled in by setup() */
   private GiraphJob job;
+  /** Immutable classes giraph configuration */
+  private ImmutableClassesGiraphConfiguration<IntWritable, FloatWritable,
+        DoubleWritable, LongWritable> configuration;
 
   /**
    * Simple instantiable class that extends {@link EdgeListVertex}.
    */
-  private static class IFDLEdgeListVertex extends
+  public static class IFDLEdgeListVertex extends
       EdgeListVertex<IntWritable, FloatWritable, DoubleWritable,
       LongWritable> {
     @Override
@@ -72,19 +77,21 @@ public class TestEdgeListVertex {
     } catch (IOException e) {
       throw new RuntimeException("setUp: Failed", e);
     }
-    job.setVertexClass(IFDLEdgeListVertex.class);
+    job.getConfiguration().setVertexClass(IFDLEdgeListVertex.class);
     Configuration conf = job.getConfiguration();
-    conf.setClass(GiraphJob.VERTEX_ID_CLASS, IntWritable.class,
+    conf.setClass(GiraphConfiguration.VERTEX_ID_CLASS, IntWritable.class,
         WritableComparable.class);
-    conf.setClass(GiraphJob.VERTEX_VALUE_CLASS, FloatWritable.class,
+    conf.setClass(GiraphConfiguration.VERTEX_VALUE_CLASS, FloatWritable.class,
         Writable.class);
-    conf.setClass(GiraphJob.EDGE_VALUE_CLASS, DoubleWritable.class,
+    conf.setClass(GiraphConfiguration.EDGE_VALUE_CLASS, DoubleWritable.class,
         Writable.class);
-    conf.setClass(GiraphJob.MESSAGE_VALUE_CLASS, LongWritable.class,
+    conf.setClass(GiraphConfiguration.MESSAGE_VALUE_CLASS, LongWritable.class,
         Writable.class);
-    vertex = (IFDLEdgeListVertex)
-      BspUtils.<IntWritable, FloatWritable, DoubleWritable, LongWritable>
-      createVertex(conf);
+    configuration =
+        new ImmutableClassesGiraphConfiguration<IntWritable,
+            FloatWritable, DoubleWritable, LongWritable>(
+            job.getConfiguration());
+    vertex = (IFDLEdgeListVertex) configuration.createVertex();
   }
 
   @Test
@@ -182,8 +189,9 @@ public class TestEdgeListVertex {
 
   @Test
   public void testSerialize() {
+    final int edgesCount = 1000;
     Map<IntWritable, DoubleWritable> edgeMap = Maps.newHashMap();
-    for (int i = 1000; i > 0; --i) {
+    for (int i = edgesCount; i > 0; --i) {
       edgeMap.put(new IntWritable(i), new DoubleWritable(i * 2.0));
     }
     List<LongWritable> messageList = Lists.newArrayList();
@@ -193,9 +201,9 @@ public class TestEdgeListVertex {
         new IntWritable(2), new FloatWritable(3.0f), edgeMap, messageList);
     byte[] byteArray = WritableUtils.writeToByteArray(vertex);
     IFDLEdgeListVertex readVertex = (IFDLEdgeListVertex)
-      BspUtils.<IntWritable, FloatWritable, DoubleWritable, LongWritable>
-      createVertex(job.getConfiguration());
+      configuration.createVertex();
     WritableUtils.readFieldsFromByteArray(byteArray, readVertex);
+
     assertEquals(vertex.getId(), readVertex.getId());
     assertEquals(vertex.getValue(), readVertex.getValue());
     assertEquals(Lists.newArrayList(vertex.getEdges()),

@@ -18,6 +18,7 @@
 
 package org.apache.giraph.comm.netty;
 
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.comm.WorkerClient;
@@ -54,13 +55,18 @@ public class NettyWorkerClientServer<I extends WritableComparable,
    * Constructor.
    *
    * @param context Mapper context
+   * @param configuration Configuration
    * @param service Service for partition lookup
    */
-  public NettyWorkerClientServer(Mapper<?, ?, ?, ?>.Context context,
+  public NettyWorkerClientServer(
+      Mapper<?, ?, ?, ?>.Context context,
+      ImmutableClassesGiraphConfiguration<I, V, E, M> configuration,
       CentralizedServiceWorker<I, V, E, M> service) {
-    server = new NettyWorkerServer<I, V, E, M>(context.getConfiguration(),
+    server = new NettyWorkerServer<I, V, E, M>(
+        configuration,
         service);
-    client = new NettyWorkerClient<I, V, E, M>(context, service,
+    client = new NettyWorkerClient<I, V, E, M>(context,
+        configuration, service,
        ((NettyWorkerServer<I, V, E, M>) server).getServerData());
   }
 

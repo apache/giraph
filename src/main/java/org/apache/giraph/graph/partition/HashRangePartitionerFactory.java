@@ -18,8 +18,7 @@
 
 package org.apache.giraph.graph.partition;
 
-import org.apache.hadoop.conf.Configurable;
-import org.apache.hadoop.conf.Configuration;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -35,9 +34,9 @@ import org.apache.hadoop.io.WritableComparable;
 @SuppressWarnings("rawtypes")
 public class HashRangePartitionerFactory<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
-    implements Configurable, GraphPartitionerFactory<I, V, E, M> {
+    implements GraphPartitionerFactory<I, V, E, M> {
   /** Saved configuration */
-  private Configuration conf;
+  private ImmutableClassesGiraphConfiguration<I, V, E, M> conf;
 
   @Override
   public MasterGraphPartitioner<I, V, E, M> createMasterGraphPartitioner() {
@@ -50,12 +49,12 @@ public class HashRangePartitionerFactory<I extends WritableComparable,
   }
 
   @Override
-  public Configuration getConf() {
+  public ImmutableClassesGiraphConfiguration getConf() {
     return conf;
   }
 
   @Override
-  public void setConf(Configuration conf) {
+  public void setConf(ImmutableClassesGiraphConfiguration conf) {
     this.conf = conf;
   }
 }

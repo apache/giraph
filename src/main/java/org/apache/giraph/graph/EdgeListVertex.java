@@ -121,18 +121,18 @@ public abstract class EdgeListVertex<I extends WritableComparable,
 
   @Override
   public final void readFields(DataInput in) throws IOException {
-    I vertexId = BspUtils.<I>createVertexId(getConf());
+    I vertexId = getConf().createVertexId();
     vertexId.readFields(in);
-    V vertexValue = BspUtils.<V>createVertexValue(getConf());
+    V vertexValue = getConf().createVertexValue();
     vertexValue.readFields(in);
     super.initialize(vertexId, vertexValue);
 
     int numEdges = in.readInt();
     edgeList = Lists.newArrayListWithCapacity(numEdges);
     for (int i = 0; i < numEdges; ++i) {
-      I targetVertexId = BspUtils.<I>createVertexId(getConf());
+      I targetVertexId = getConf().createVertexId();
       targetVertexId.readFields(in);
-      E edgeValue = BspUtils.<E>createEdgeValue(getConf());
+      E edgeValue = getConf().createEdgeValue();
       edgeValue.readFields(in);
       edgeList.add(new Edge<I, E>(targetVertexId, edgeValue));
     }
@@ -140,7 +140,7 @@ public abstract class EdgeListVertex<I extends WritableComparable,
     int numMessages = in.readInt();
     messageList = Lists.newArrayListWithCapacity(numMessages);
     for (int i = 0; i < numMessages; ++i) {
-      M message = BspUtils.<M>createMessageValue(getConf());
+      M message = getConf().createMessageValue();
       message.readFields(in);
       messageList.add(message);
     }

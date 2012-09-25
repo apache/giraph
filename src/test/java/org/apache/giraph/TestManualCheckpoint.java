@@ -51,17 +51,17 @@ public class TestManualCheckpoint extends BspCase {
     Path checkpointsDir = getTempPath("checkPointsForTesting");
     Path outputPath = getTempPath(getCallingMethodName());
     GiraphJob job = prepareJob(getCallingMethodName(),
-        SimpleCheckpointVertex.class,
+        SimpleCheckpointVertex.SimpleCheckpointComputation.class,
         SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.class,
         SimpleCheckpointVertex.SimpleCheckpointVertexMasterCompute.class,
         SimpleSuperstepVertexInputFormat.class,
         SimpleSuperstepVertexOutputFormat.class, outputPath);
 
-    job.getConfiguration().set(GiraphJob.CHECKPOINT_DIRECTORY,
+    job.getConfiguration().set(GiraphConfiguration.CHECKPOINT_DIRECTORY,
         checkpointsDir.toString());
     job.getConfiguration().setBoolean(
-        GiraphJob.CLEANUP_CHECKPOINTS_AFTER_SUCCESS, false);
-    job.getConfiguration().setInt(GiraphJob.CHECKPOINT_FREQUENCY, 2);
+        GiraphConfiguration.CLEANUP_CHECKPOINTS_AFTER_SUCCESS, false);
+    job.getConfiguration().setInt(GiraphConfiguration.CHECKPOINT_FREQUENCY, 2);
 
     assertTrue(job.run(true));
 
@@ -80,14 +80,14 @@ public class TestManualCheckpoint extends BspCase {
         " with checkpoint path = " + checkpointsDir);
     outputPath = getTempPath(getCallingMethodName() + "Restarted");
     GiraphJob restartedJob = prepareJob(getCallingMethodName() + "Restarted",
-        SimpleCheckpointVertex.class,
+        SimpleCheckpointVertex.SimpleCheckpointComputation.class,
         SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.class,
         SimpleCheckpointVertex.SimpleCheckpointVertexMasterCompute.class,
         SimpleSuperstepVertexInputFormat.class,
         SimpleSuperstepVertexOutputFormat.class, outputPath);
-    job.setMasterComputeClass(
+    job.getConfiguration().setMasterComputeClass(
         SimpleCheckpointVertex.SimpleCheckpointVertexMasterCompute.class);
-    restartedJob.getConfiguration().set(GiraphJob.CHECKPOINT_DIRECTORY,
+    restartedJob.getConfiguration().set(GiraphConfiguration.CHECKPOINT_DIRECTORY,
         checkpointsDir.toString());
 
     assertTrue(restartedJob.run(true));

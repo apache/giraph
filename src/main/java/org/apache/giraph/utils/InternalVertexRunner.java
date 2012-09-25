@@ -25,6 +25,7 @@ import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.MasterCompute;
 import org.apache.giraph.graph.Vertex;
@@ -151,30 +152,34 @@ public class InternalVertexRunner {
 
       // Create and configure the job to run the vertex
       GiraphJob job = new GiraphJob(vertexClass.getName());
-      job.setVertexClass(vertexClass);
-      job.setVertexInputFormatClass(vertexInputFormatClass);
-      job.setVertexOutputFormatClass(vertexOutputFormatClass);
+      job.getConfiguration().setVertexClass(vertexClass);
+      job.getConfiguration().setVertexInputFormatClass(
+          vertexInputFormatClass);
+      job.getConfiguration().setVertexOutputFormatClass(
+          vertexOutputFormatClass);
       if (workerContextClass != null) {
-        job.setWorkerContextClass(workerContextClass);
+        job.getConfiguration().setWorkerContextClass(workerContextClass);
       }
       if (vertexCombinerClass != null) {
-        job.setVertexCombinerClass(vertexCombinerClass);
+        job.getConfiguration().setVertexCombinerClass(vertexCombinerClass);
       }
       if (masterComputeClass != null) {
-        job.setMasterComputeClass(masterComputeClass);
+        job.getConfiguration().setMasterComputeClass(masterComputeClass);
       }
 
-      job.setWorkerConfiguration(1, 1, 100.0f);
+      job.getConfiguration().setWorkerConfiguration(1, 1, 100.0f);
       Configuration conf = job.getConfiguration();
-      conf.setBoolean(GiraphJob.SPLIT_MASTER_WORKER, false);
-      conf.setBoolean(GiraphJob.LOCAL_TEST_MODE, true);
-      conf.set(GiraphJob.ZOOKEEPER_LIST, "localhost:" +
+      conf.setBoolean(GiraphConfiguration.SPLIT_MASTER_WORKER, false);
+      conf.setBoolean(GiraphConfiguration.LOCAL_TEST_MODE, true);
+      conf.set(GiraphConfiguration.ZOOKEEPER_LIST, "localhost:" +
           String.valueOf(LOCAL_ZOOKEEPER_PORT));
 
-      conf.set(GiraphJob.ZOOKEEPER_DIR, zkDir.toString());
-      conf.set(GiraphJob.ZOOKEEPER_MANAGER_DIRECTORY,
+      conf.set(GiraphConfiguration.ZOOKEEPER_DIR, zkDir.toString());
+      conf.set(GiraphConfiguration.ZOOKEEPER_MANAGER_DIRECTORY,
           zkMgrDir.toString());
-      conf.set(GiraphJob.CHECKPOINT_DIRECTORY, checkpointsDir.toString());
+      conf.set(
+          GiraphConfiguration.CHECKPOINT_DIRECTORY,
+          checkpointsDir.toString());
 
       for (Map.Entry<String, String> param : params.entrySet()) {
         conf.set(param.getKey(), param.getValue());

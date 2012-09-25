@@ -18,9 +18,9 @@
 
 package org.apache.giraph.comm.netty;
 
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.comm.netty.handler.MasterRequestServerHandler;
 import org.apache.giraph.comm.MasterServer;
-import org.apache.hadoop.conf.Configuration;
 
 import java.net.InetSocketAddress;
 
@@ -36,7 +36,7 @@ public class NettyMasterServer implements MasterServer {
    *
    * @param conf Hadoop configuration
    */
-  public NettyMasterServer(Configuration conf) {
+  public NettyMasterServer(ImmutableClassesGiraphConfiguration conf) {
     nettyServer = new NettyServer(conf,
         new MasterRequestServerHandler.Factory());
     nettyServer.start();

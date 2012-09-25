@@ -18,10 +18,9 @@
 
 package org.apache.giraph.graph.partition;
 
-import org.apache.giraph.graph.BspUtils;
-import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.GiraphConfiguration;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.Vertex;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
@@ -68,7 +67,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
   /** Directory on the local file system for storing out-of-core partitions. */
   private final String basePath;
   /** Configuration. */
-  private final Configuration conf;
+  private final ImmutableClassesGiraphConfiguration<I, V, E, M> conf;
   /** Slot for loading out-of-core partitions. */
   private Partition<I, V, E, M> loadedPartition;
   /** Locks for accessing and modifying partitions. */
@@ -80,15 +79,16 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
    *
    * @param conf Configuration
    */
-  public DiskBackedPartitionStore(Configuration conf) {
+  public DiskBackedPartitionStore(
+      ImmutableClassesGiraphConfiguration<I, V, E, M> conf) {
     this.conf = conf;
     // We must be able to hold at least one partition in memory
     maxInMemoryPartitions = Math.max(1,
-        conf.getInt(GiraphJob.MAX_PARTITIONS_IN_MEMORY,
-            GiraphJob.MAX_PARTITIONS_IN_MEMORY_DEFAULT));
+        conf.getInt(GiraphConfiguration.MAX_PARTITIONS_IN_MEMORY,
+            GiraphConfiguration.MAX_PARTITIONS_IN_MEMORY_DEFAULT));
     basePath = conf.get("mapred.job.id", "Unknown Job") +
-        conf.get(GiraphJob.PARTITIONS_DIRECTORY,
-            GiraphJob.PARTITIONS_DIRECTORY_DEFAULT);
+        conf.get(GiraphConfiguration.PARTITIONS_DIRECTORY,
+            GiraphConfiguration.PARTITIONS_DIRECTORY_DEFAULT);
   }
 
   /**
@@ -162,7 +162,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
         new BufferedInputStream(new FileInputStream(file)));
     int numVertices = onDiskPartitions.get(partitionId);
     for (int i = 0; i < numVertices; ++i) {
-      Vertex<I, V, E, M> vertex = BspUtils.<I, V, E, M>createVertex(conf);
+      Vertex<I, V, E, M> vertex = conf.createVertex();
       vertex.readFields(inputStream);
       partition.putVertex(vertex);
     }

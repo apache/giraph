@@ -18,7 +18,7 @@
 
 package org.apache.giraph.comm.netty.handler;
 
-import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.GiraphConfiguration;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -60,8 +60,8 @@ public class ResponseClientHandler extends SimpleChannelUpstreamHandler {
       Configuration conf) {
     this.workerIdOutstandingRequestMap = workerIdOutstandingRequestMap;
     dropFirstResponse = conf.getBoolean(
-        GiraphJob.NETTY_SIMULATE_FIRST_RESPONSE_FAILED,
-        GiraphJob.NETTY_SIMULATE_FIRST_RESPONSE_FAILED_DEFAULT);
+        GiraphConfiguration.NETTY_SIMULATE_FIRST_RESPONSE_FAILED,
+        GiraphConfiguration.NETTY_SIMULATE_FIRST_RESPONSE_FAILED_DEFAULT);
   }
 
   @Override

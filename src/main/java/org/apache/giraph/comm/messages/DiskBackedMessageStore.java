@@ -18,10 +18,9 @@
 
 package org.apache.giraph.comm.messages;
 
-import org.apache.giraph.graph.BspUtils;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.VertexCombiner;
 import org.apache.giraph.utils.CollectionUtils;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -55,7 +54,7 @@ public class DiskBackedMessageStore<I extends WritableComparable,
   /** In memory message map */
   private volatile ConcurrentNavigableMap<I, Collection<M>> inMemoryMessages;
   /** Hadoop configuration */
-  private final Configuration config;
+  private final ImmutableClassesGiraphConfiguration<I, ?, ?, M> config;
   /** Combiner for messages */
   private final VertexCombiner<I, M> combiner;
   /** Counter for number of messages in memory */
@@ -76,7 +75,7 @@ public class DiskBackedMessageStore<I extends WritableComparable,
    * @param fileStoreFactory Factory for creating file stores when flushing
    */
   public DiskBackedMessageStore(VertexCombiner<I, M> combiner,
-      Configuration config,
+      ImmutableClassesGiraphConfiguration<I, ?, ?, M> config,
       MessageStoreFactory<I, M, BasicMessageStore<I, M>> fileStoreFactory) {
     inMemoryMessages = new ConcurrentSkipListMap<I, Collection<M>>();
     this.config = config;
@@ -211,7 +210,7 @@ public class DiskBackedMessageStore<I extends WritableComparable,
     // read destination vertices
     int numVertices = in.readInt();
     for (int v = 0; v < numVertices; v++) {
-      I vertexId = BspUtils.<I>createVertexId(config);
+      I vertexId = (I) config.createVertexId();
       vertexId.readFields(in);
       destinationVertices.add(vertexId);
     }
@@ -219,13 +218,13 @@ public class DiskBackedMessageStore<I extends WritableComparable,
     // read in memory map
     int mapSize = in.readInt();
     for (int m = 0; m < mapSize; m++) {
-      I vertexId = BspUtils.<I>createVertexId(config);
+      I vertexId = config.createVertexId();
       vertexId.readFields(in);
       int numMessages = in.readInt();
       numberOfMessagesInMemory.addAndGet(numMessages);
       List<M> messages = Lists.newArrayList();
       for (int i = 0; i < numMessages; i++) {
-        M message = BspUtils.<M>createMessageValue(config);
+        M message = config.createMessageValue();
         message.readFields(in);
         messages.add(message);
       }
@@ -254,7 +253,7 @@ public class DiskBackedMessageStore<I extends WritableComparable,
    */
   public static <I extends WritableComparable, M extends Writable>
   MessageStoreFactory<I, M, FlushableMessageStore<I, M>> newFactory(
-      Configuration config,
+      ImmutableClassesGiraphConfiguration<I, ?, ?, M> config,
       MessageStoreFactory<I, M, BasicMessageStore<I, M>> fileStoreFactory) {
     return new Factory<I, M>(config, fileStoreFactory);
   }
@@ -269,7 +268,7 @@ public class DiskBackedMessageStore<I extends WritableComparable,
       M extends Writable> implements MessageStoreFactory<I, M,
       FlushableMessageStore<I, M>> {
     /** Hadoop configuration */
-    private final Configuration config;
+    private final ImmutableClassesGiraphConfiguration config;
     /** Combiner for messages */
     private final VertexCombiner<I, M> combiner;
     /** Factory for creating message stores for partitions */
@@ -281,13 +280,13 @@ public class DiskBackedMessageStore<I extends WritableComparable,
      * @param fileStoreFactory Factory for creating message stores for
      *                         partitions
      */
-    public Factory(Configuration config,
+    public Factory(ImmutableClassesGiraphConfiguration config,
         MessageStoreFactory<I, M, BasicMessageStore<I, M>> fileStoreFactory) {
       this.config = config;
-      if (BspUtils.getVertexCombinerClass(config) == null) {
+      if (config.getVertexCombinerClass() == null) {
         combiner = null;
       } else {
-        combiner = BspUtils.createVertexCombiner(config);
+        combiner = config.createVertexCombiner();
       }
       this.fileStoreFactory = fileStoreFactory;
     }

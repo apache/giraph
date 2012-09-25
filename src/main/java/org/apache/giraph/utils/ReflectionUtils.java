@@ -29,6 +29,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.apache.giraph.ImmutableClassesGiraphConfigurable;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 
 /**
  * Helper methods to get type arguments to generic classes.  Courtesy of
@@ -158,5 +160,35 @@ public class ReflectionUtils {
       inClass = inClass.getSuperclass();
     }
     throw new NoSuchFieldException();
+  }
+
+  /**
+   * Instantiate classes that are ImmmutableClasssesGiraphConfigurable
+   *
+   * @param theClass Class to instantiate
+   * @param configuration Giraph configuration, may be null
+   * @param <T> Type to instantiate
+   * @return Newly instantiated object with configuration set if possible
+   */
+  @SuppressWarnings("unchecked")
+  public static <T> T newInstance(
+      Class<T> theClass,
+      ImmutableClassesGiraphConfiguration configuration) {
+    T result = null;
+    try {
+      result = theClass.newInstance();
+    } catch (InstantiationException e) {
+      throw new IllegalStateException(
+          "newInstance: Couldn't instantiate " + theClass.getName(), e);
+    } catch (IllegalAccessException e) {
+      throw new IllegalStateException(
+          "newInstance: Illegal access " + theClass.getName(), e);
+    }
+    if (configuration != null) {
+      if (result instanceof ImmutableClassesGiraphConfigurable) {
+        ((ImmutableClassesGiraphConfigurable) result).setConf(configuration);
+      }
+    }
+    return result;
   }
 }

@@ -18,6 +18,8 @@
 
 package org.apache.giraph.comm;
 
+import org.apache.giraph.GiraphConfiguration;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.comm.messages.SimpleMessageStore;
 import org.apache.giraph.comm.netty.NettyClient;
 import org.apache.giraph.comm.netty.NettyServer;
@@ -61,7 +63,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class RequestTest {
   /** Configuration */
-  private Configuration conf;
+  private ImmutableClassesGiraphConfiguration conf;
   /** Server data */
   private ServerData<IntWritable, IntWritable, IntWritable, IntWritable>
   serverData;
@@ -83,16 +85,10 @@ public class RequestTest {
   @Before
   public void setUp() throws IOException {
     // Setup the conf
-    conf = new Configuration();
-    conf.setClass(GiraphJob.VERTEX_CLASS, TestVertex.class, Vertex.class);
-    conf.setClass(GiraphJob.VERTEX_ID_CLASS,
-        IntWritable.class, WritableComparable.class);
-    conf.setClass(GiraphJob.VERTEX_VALUE_CLASS,
-        IntWritable.class, Writable.class);
-    conf.setClass(GiraphJob.EDGE_VALUE_CLASS,
-        IntWritable.class, Writable.class);
-    conf.setClass(GiraphJob.MESSAGE_VALUE_CLASS,
-        IntWritable.class, Writable.class);
+    GiraphConfiguration tmpConf = new GiraphConfiguration();
+    tmpConf.setClass(GiraphConfiguration.VERTEX_CLASS, TestVertex.class,
+        Vertex.class);
+    conf = new ImmutableClassesGiraphConfiguration(tmpConf);
 
     @SuppressWarnings("rawtypes")
     Context context = mock(Context.class);
@@ -106,7 +102,7 @@ public class RequestTest {
     server = new NettyServer(conf,
         new WorkerRequestServerHandler.Factory(serverData));
     server.start();
-    client = new NettyClient(context);
+    client = new NettyClient(context, conf);
     client.connectAllAddresses(Collections.singleton(server.getMyAddress()));
   }
 
@@ -153,7 +149,7 @@ public class RequestTest {
   @Test
   public void sendPartitionMessagesRequest() throws IOException {
     // Data to send
-    int partitionId = 17;
+    int partitionId = 0;
     Map<IntWritable, Collection<IntWritable>> vertexIdMessages =
         Maps.newHashMap();
     for (int i = 1; i < 7; ++i) {

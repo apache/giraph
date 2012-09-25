@@ -18,11 +18,10 @@
 
 package org.apache.giraph.comm.messages;
 
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.VertexCombiner;
 import org.apache.giraph.utils.CollectionUtils;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -38,9 +37,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentMap;
+import org.apache.log4j.Logger;
 
 /**
- * Simple in memory message store implemented with a map
+ * Simple in memory message store implemented with a two level concurrent
+ * hash map.
  *
  * @param <I> Vertex id
  * @param <V> Vertex data
@@ -50,6 +51,8 @@ import java.util.concurrent.ConcurrentMap;
 public class SimpleMessageStore<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
     implements MessageStoreByPartition<I, M> {
+  /** Class logger */
+  private static final Logger LOG = Logger.getLogger(SimpleMessageStore.class);
   /** Service worker */
   private final CentralizedServiceWorker<I, V, E, M> service;
   /**
@@ -58,7 +61,7 @@ public class SimpleMessageStore<I extends WritableComparable,
    */
   private final ConcurrentMap<Integer, ConcurrentMap<I, Collection<M>>> map;
   /** Hadoop configuration */
-  private final Configuration config;
+  private final ImmutableClassesGiraphConfiguration<I, V, E, M> config;
   /** Combiner for messages */
   private final VertexCombiner<I, M> combiner;
 
@@ -68,7 +71,8 @@ public class SimpleMessageStore<I extends WritableComparable,
    * @param config   Hadoop configuration
    */
   SimpleMessageStore(CentralizedServiceWorker<I, V, E, M> service,
-      VertexCombiner<I, M> combiner, Configuration config) {
+      VertexCombiner<I, M> combiner,
+      ImmutableClassesGiraphConfiguration<I, V, E, M> config) {
     this.service = service;
     map = Maps.newConcurrentMap();
     this.combiner = combiner;
@@ -216,12 +220,12 @@ public class SimpleMessageStore<I extends WritableComparable,
       ConcurrentMap<I, Collection<M>> partitionMap = Maps.newConcurrentMap();
       int numVertices = in.readInt();
       for (int v = 0; v < numVertices; v++) {
-        I vertexId = BspUtils.<I>createVertexId(config);
+        I vertexId = config.createVertexId();
         vertexId.readFields(in);
         int numMessages = in.readInt();
         List<M> messages = Lists.newArrayList();
         for (int m = 0; m < numMessages; m++) {
-          M message = BspUtils.<M>createMessageValue(config);
+          M message = config.createMessageValue();
           message.readFields(in);
           messages.add(message);
         }
@@ -255,7 +259,8 @@ public class SimpleMessageStore<I extends WritableComparable,
   public static <I extends WritableComparable, V extends Writable,
       E extends Writable, M extends Writable>
   MessageStoreFactory<I, M, MessageStoreByPartition<I, M>> newFactory(
-      CentralizedServiceWorker<I, V, E, M> service, Configuration config) {
+      CentralizedServiceWorker<I, V, E, M> service,
+      ImmutableClassesGiraphConfiguration<I, V, E, M> config) {
     return new Factory<I, V, E, M>(service, config);
   }
 
@@ -273,7 +278,7 @@ public class SimpleMessageStore<I extends WritableComparable,
     /** Service worker */
     private final CentralizedServiceWorker<I, V, E, M> service;
     /** Hadoop configuration */
-    private final Configuration config;
+    private final ImmutableClassesGiraphConfiguration<I, V, E, M> config;
     /** Combiner for messages */
     private final VertexCombiner<I, M> combiner;
 
@@ -282,13 +287,13 @@ public class SimpleMessageStore<I extends WritableComparable,
      * @param config  Hadoop configuration
      */
     public Factory(CentralizedServiceWorker<I, V, E, M> service,
-        Configuration config) {
+        ImmutableClassesGiraphConfiguration<I, V, E, M> config) {
       this.service = service;
       this.config = config;
-      if (BspUtils.getVertexCombinerClass(config) == null) {
+      if (config.getVertexCombinerClass() == null) {
         combiner = null;
       } else {
-        combiner = BspUtils.createVertexCombiner(config);
+        combiner = config.createVertexCombiner();
       }
     }
 

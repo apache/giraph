@@ -22,7 +22,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.giraph.graph.BspUtils;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
@@ -63,7 +62,7 @@ public class RangePartitionOwner<I extends WritableComparable>
   @Override
   public void readFields(DataInput input) throws IOException {
     super.readFields(input);
-    maxIndex = BspUtils.<I>createVertexId(getConf());
+    maxIndex = (I) getConf().createVertexId();
     maxIndex.readFields(input);
   }
 

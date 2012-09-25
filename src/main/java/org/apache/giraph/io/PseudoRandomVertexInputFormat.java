@@ -18,12 +18,11 @@
 
 package org.apache.giraph.io;
 
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.BspInputSplit;
-import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexInputFormat;
 import org.apache.giraph.graph.VertexReader;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
@@ -98,7 +97,7 @@ public class PseudoRandomVertexInputFormat<M extends Writable> extends
     /** BspInputSplit (used only for index). */
     private BspInputSplit bspInputSplit;
     /** Saved configuration */
-    private Configuration configuration;
+    private ImmutableClassesGiraphConfiguration configuration;
 
     /**
      * Default constructor for reflection.
@@ -109,7 +108,8 @@ public class PseudoRandomVertexInputFormat<M extends Writable> extends
     @Override
     public void initialize(InputSplit inputSplit,
         TaskAttemptContext context) throws IOException {
-      configuration = context.getConfiguration();
+      configuration = new ImmutableClassesGiraphConfiguration(
+          context.getConfiguration());
       aggregateVertices =
         configuration.getLong(
           PseudoRandomVertexInputFormat.AGGREGATE_VERTICES, 0);
@@ -152,7 +152,7 @@ public class PseudoRandomVertexInputFormat<M extends Writable> extends
     public Vertex<LongWritable, DoubleWritable, DoubleWritable, M>
     getCurrentVertex() throws IOException, InterruptedException {
       Vertex<LongWritable, DoubleWritable, DoubleWritable, M>
-      vertex = BspUtils.createVertex(configuration);
+      vertex = configuration.createVertex();
       long vertexId = startingVertexId + verticesRead;
       // Seed on the vertex id to keep the vertex data the same when
       // on different number of workers, but other parameters are the
@@ -174,9 +174,9 @@ public class PseudoRandomVertexInputFormat<M extends Writable> extends
       ++verticesRead;
       if (LOG.isTraceEnabled()) {
         LOG.trace("next: Return vertexId=" +
-                  vertex.getId().get() +
-                  ", vertexValue=" + vertex.getValue() +
-                  ", edges=" + vertex.getEdges());
+            vertex.getId().get() +
+            ", vertexValue=" + vertex.getValue() +
+            ", edges=" + vertex.getEdges());
       }
       return vertex;
     }

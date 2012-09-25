@@ -18,6 +18,8 @@
 
 package org.apache.giraph.graph;
 
+import org.apache.giraph.GiraphConfiguration;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedServiceMaster;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.messages.MessageStoreByPartition;
@@ -75,7 +77,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
   /** Manages the ZooKeeper servers if necessary (dynamic startup) */
   private ZooKeeperManager zkManager;
   /** Configuration */
-  private Configuration conf;
+  private ImmutableClassesGiraphConfiguration<I, V, E, M> conf;
   /** Already complete? */
   private boolean done = false;
   /** What kind of functions is this mapper doing? */
@@ -157,25 +159,25 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
    */
   public void determineClassTypes(Configuration conf) {
     Class<? extends Vertex<I, V, E, M>> vertexClass =
-      BspUtils.<I, V, E, M>getVertexClass(conf);
+        BspUtils.<I, V, E, M>getVertexClass(conf);
     List<Class<?>> classList = ReflectionUtils.<Vertex>getTypeArguments(
-      Vertex.class, vertexClass);
+        Vertex.class, vertexClass);
     Type vertexIndexType = classList.get(0);
     Type vertexValueType = classList.get(1);
     Type edgeValueType = classList.get(2);
     Type messageValueType = classList.get(3);
-    conf.setClass(GiraphJob.VERTEX_ID_CLASS,
-      (Class<?>) vertexIndexType,
-      WritableComparable.class);
-    conf.setClass(GiraphJob.VERTEX_VALUE_CLASS,
-      (Class<?>) vertexValueType,
-      Writable.class);
-    conf.setClass(GiraphJob.EDGE_VALUE_CLASS,
-      (Class<?>) edgeValueType,
-      Writable.class);
-    conf.setClass(GiraphJob.MESSAGE_VALUE_CLASS,
-      (Class<?>) messageValueType,
-      Writable.class);
+    conf.setClass(GiraphConfiguration.VERTEX_ID_CLASS,
+        (Class<?>) vertexIndexType,
+        WritableComparable.class);
+    conf.setClass(GiraphConfiguration.VERTEX_VALUE_CLASS,
+        (Class<?>) vertexValueType,
+        Writable.class);
+    conf.setClass(GiraphConfiguration.EDGE_VALUE_CLASS,
+        (Class<?>) edgeValueType,
+        Writable.class);
+    conf.setClass(GiraphConfiguration.MESSAGE_VALUE_CLASS,
+        (Class<?>) messageValueType,
+        Writable.class);
   }
 
     /**
@@ -223,14 +225,11 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
    * @return Functions that this mapper should do.
    */
   private static MapFunctions determineMapFunctions(
-      Configuration conf,
+      ImmutableClassesGiraphConfiguration conf,
       ZooKeeperManager zkManager) {
-    boolean splitMasterWorker =
-        conf.getBoolean(GiraphJob.SPLIT_MASTER_WORKER,
-            GiraphJob.SPLIT_MASTER_WORKER_DEFAULT);
-    int taskPartition = conf.getInt("mapred.task.partition", -1);
-    boolean zkAlreadyProvided =
-        conf.get(GiraphJob.ZOOKEEPER_LIST) != null;
+    boolean splitMasterWorker = conf.getSplitMasterWorker();
+    int taskPartition = conf.getTaskPartition();
+    boolean zkAlreadyProvided = conf.getZookeeperList() != null;
     MapFunctions functions = MapFunctions.UNKNOWN;
     // What functions should this mapper do?
     if (!splitMasterWorker) {
@@ -241,9 +240,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
       }
     } else {
       if (zkAlreadyProvided) {
-        int masterCount =
-            conf.getInt(GiraphJob.ZOOKEEPER_SERVER_COUNT,
-                GiraphJob.ZOOKEEPER_SERVER_COUNT_DEFAULT);
+        int masterCount = conf.getZooKeeperServerCount();
         if (taskPartition < masterCount) {
           functions = MapFunctions.MASTER_ONLY;
         } else {
@@ -268,18 +265,17 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
     // Setting the default handler for uncaught exceptions.
     Thread.setDefaultUncaughtExceptionHandler(
         new OverrideExceptionHandler());
-    conf = context.getConfiguration();
+    determineClassTypes(context.getConfiguration());
+    conf = new ImmutableClassesGiraphConfiguration<I, V, E, M>(
+        context.getConfiguration());
     // Hadoop security needs this property to be set
     if (System.getenv("HADOOP_TOKEN_FILE_LOCATION") != null) {
       conf.set("mapreduce.job.credentials.binary",
           System.getenv("HADOOP_TOKEN_FILE_LOCATION"));
     }
-    // set pre-validated generic parameter types into Configuration
-    determineClassTypes(conf);
 
     // Set the log level
-    String logLevel =
-        conf.get(GiraphJob.LOG_LEVEL, GiraphJob.LOG_LEVEL_DEFAULT);
+    String logLevel = conf.getLocalLevel();
     Logger.getRootLogger().setLevel(Level.toLevel(logLevel));
     if (LOG.isInfoEnabled()) {
       LOG.info("setup: Set log level to " + logLevel);
@@ -287,8 +283,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
 
     // Do some initial setup (possibly starting up a Zookeeper service)
     context.setStatus("setup: Initializing Zookeeper services.");
-    if (!conf.getBoolean(GiraphJob.LOCAL_TEST_MODE,
-        GiraphJob.LOCAL_TEST_MODE_DEFAULT)) {
+    if (!conf.getLocalTestMode()) {
       Path[] fileClassPaths = DistributedCache.getLocalCacheArchives(conf);
       String zkClasspath = null;
       if (fileClassPaths == null) {
@@ -314,11 +309,11 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
       if (LOG.isInfoEnabled()) {
         LOG.info("setup: classpath @ " + zkClasspath);
       }
-      conf.set(GiraphJob.ZOOKEEPER_JAR, zkClasspath);
+      context.getConfiguration().set(
+          GiraphConfiguration.ZOOKEEPER_JAR, zkClasspath);
     }
-    String serverPortList =
-        conf.get(GiraphJob.ZOOKEEPER_LIST, "");
-    if (serverPortList.isEmpty()) {
+    String serverPortList = conf.getZookeeperList();
+    if (serverPortList == null) {
       zkManager = new ZooKeeperManager(context);
       context.setStatus("setup: Setting up Zookeeper manager.");
       zkManager.setup();
@@ -334,14 +329,11 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
     this.mapFunctions = determineMapFunctions(conf, zkManager);
 
     // Sometimes it takes a while to get multiple ZooKeeper servers up
-    if (conf.getInt(GiraphJob.ZOOKEEPER_SERVER_COUNT,
-        GiraphJob.ZOOKEEPER_SERVER_COUNT_DEFAULT) > 1) {
-      Thread.sleep(GiraphJob.DEFAULT_ZOOKEEPER_INIT_LIMIT *
-          GiraphJob.DEFAULT_ZOOKEEPER_TICK_TIME);
+    if (conf.getZooKeeperServerCount() > 1) {
+      Thread.sleep(GiraphConfiguration.DEFAULT_ZOOKEEPER_INIT_LIMIT *
+          GiraphConfiguration.DEFAULT_ZOOKEEPER_TICK_TIME);
     }
-    int sessionMsecTimeout =
-        conf.getInt(GiraphJob.ZOOKEEPER_SESSION_TIMEOUT,
-            GiraphJob.ZOOKEEPER_SESSION_TIMEOUT_DEFAULT);
+    int sessionMsecTimeout = conf.getZooKeeperSessionTimeout();
     try {
       if ((mapFunctions == MapFunctions.MASTER_ZOOKEEPER_ONLY) ||
           (mapFunctions == MapFunctions.MASTER_ONLY) ||
@@ -475,8 +467,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
       serviceWorker.getWorkerContext().preSuperstep();
       context.progress();
 
-      boolean useNetty = conf.getBoolean(GiraphJob.USE_NETTY,
-          GiraphJob.USE_NETTY_DEFAULT);
+      boolean useNetty = conf.getUseNetty();
       MessageStoreByPartition<I, M> messageStore = null;
       if (useNetty) {
         messageStore = serviceWorker.getServerData().getCurrentMessageStore();

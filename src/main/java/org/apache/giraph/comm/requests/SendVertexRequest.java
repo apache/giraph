@@ -19,7 +19,6 @@
 package org.apache.giraph.comm.requests;
 
 import org.apache.giraph.comm.ServerData;
-import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -43,7 +42,7 @@ import java.util.Collection;
 @SuppressWarnings("rawtypes")
 public class SendVertexRequest<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable> extends
-    WritableRequest implements WorkerRequest<I, V, E, M> {
+    WritableRequest<I, V, E, M> implements WorkerRequest<I, V, E, M> {
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(SendVertexRequest.class);
@@ -75,7 +74,7 @@ public class SendVertexRequest<I extends WritableComparable,
     int verticesCount = input.readInt();
     vertices = Lists.newArrayListWithCapacity(verticesCount);
     for (int i = 0; i < verticesCount; ++i) {
-      Vertex<I, V, E, M> vertex = BspUtils.createVertex(getConf());
+      Vertex<I, V, E, M> vertex = getConf().createVertex();
       vertex.readFields(input);
       vertices.add(vertex);
     }

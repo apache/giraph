@@ -18,7 +18,7 @@
 
 package org.apache.giraph.io;
 
-import org.apache.giraph.graph.BspUtils;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexInputFormat;
 import org.apache.giraph.graph.VertexReader;
@@ -94,11 +94,15 @@ public abstract class TextVertexInputFormat<I extends WritableComparable,
     private RecordReader<LongWritable, Text> lineRecordReader;
     /** Context passed to initialize */
     private TaskAttemptContext context;
+    /** Cached configuration */
+    private ImmutableClassesGiraphConfiguration<I, V, E, M> conf;
 
     @Override
     public void initialize(InputSplit inputSplit, TaskAttemptContext context)
       throws IOException, InterruptedException {
       this.context = context;
+      conf = new ImmutableClassesGiraphConfiguration<I, V, E, M>(
+          context.getConfiguration());
       lineRecordReader = createLineRecordReader(inputSplit, context);
       lineRecordReader.initialize(inputSplit, context);
     }
@@ -151,6 +155,15 @@ public abstract class TextVertexInputFormat<I extends WritableComparable,
     protected TaskAttemptContext getContext() {
       return context;
     }
+
+    /**
+     * Get the configuration.
+     *
+     * @return Configuration for this reader
+     */
+    protected ImmutableClassesGiraphConfiguration<I, V, E, M> getConf() {
+      return conf;
+    }
   }
 
   /**
@@ -164,8 +177,7 @@ public abstract class TextVertexInputFormat<I extends WritableComparable,
     public final Vertex<I, V, E, M> getCurrentVertex() throws IOException,
     InterruptedException {
       Text line = getRecordReader().getCurrentValue();
-      Vertex<I, V, E, M> vertex = BspUtils
-          .<I, V, E, M>createVertex(getContext().getConfiguration());
+      Vertex<I, V, E, M> vertex = getConf().createVertex();
       vertex.initialize(getId(line), getValue(line), getEdges(line), null);
       return vertex;
     }
@@ -234,8 +246,7 @@ public abstract class TextVertexInputFormat<I extends WritableComparable,
       Text line = getRecordReader().getCurrentValue();
       Vertex<I, V, E, M> vertex;
       T processed = preprocessLine(line);
-      vertex = BspUtils
-          .<I, V, E, M>createVertex(getContext().getConfiguration());
+      vertex = getConf().createVertex();
       vertex.initialize(getId(processed), getValue(processed),
           getEdges(processed), null);
       return vertex;
@@ -322,8 +333,7 @@ public abstract class TextVertexInputFormat<I extends WritableComparable,
       try {
         processed = preprocessLine(line);
         Configuration conf = getContext().getConfiguration();
-        vertex = BspUtils
-            .<I, V, E, M>createVertex(conf);
+        vertex = getConf().createVertex();
         vertex.initialize(getId(processed), getValue(processed),
             getEdges(processed), null);
       } catch (IOException e) {

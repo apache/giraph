@@ -18,6 +18,7 @@
 
 package org.apache.giraph.comm.netty;
 
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.comm.MasterClient;
 import org.apache.giraph.comm.MasterClientServer;
 import org.apache.giraph.comm.MasterServer;
@@ -39,10 +40,13 @@ public class NettyMasterClientServer implements MasterClientServer {
    * Constructor
    *
    * @param context Mapper context
+   * @param configuration Configuration
    */
-  public NettyMasterClientServer(Mapper<?, ?, ?, ?>.Context context) {
-    client = new NettyMasterClient(context);
-    server = new NettyMasterServer(context.getConfiguration());
+  public NettyMasterClientServer(
+      Mapper<?, ?, ?, ?>.Context context,
+      ImmutableClassesGiraphConfiguration configuration) {
+    client = new NettyMasterClient(context, configuration);
+    server = new NettyMasterServer(configuration);
   }
 
   @Override

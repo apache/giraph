@@ -19,16 +19,25 @@
 package org.apache.giraph.comm;
 
 import com.google.common.collect.Sets;
+import java.util.Iterator;
 import java.util.Set;
+import org.apache.giraph.GiraphConfiguration;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.benchmark.EdgeListVertexPageRankBenchmark;
+import org.apache.giraph.benchmark.PageRankBenchmark;
 import org.apache.giraph.comm.messages.SimpleMessageStore;
 import org.apache.giraph.comm.netty.handler.RequestServerHandler;
 import org.apache.giraph.comm.netty.NettyClient;
 import org.apache.giraph.comm.netty.NettyServer;
 import org.apache.giraph.comm.netty.handler.WorkerRequestServerHandler;
+import org.apache.giraph.graph.EdgeListVertex;
+import org.apache.giraph.graph.MutableVertex;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.utils.MockUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.mapreduce.Mapper.Context;
+import org.junit.Before;
 import org.junit.Test;
 
 import static org.mockito.Mockito.mock;
@@ -42,6 +51,23 @@ import java.util.Collections;
  * Test the netty connections
  */
 public class ConnectionTest {
+  /** Class configuration */
+  private ImmutableClassesGiraphConfiguration conf;
+
+  public static class IntVertex extends EdgeListVertex<IntWritable,
+          IntWritable, IntWritable, IntWritable> {
+    @Override
+    public void compute(Iterable<IntWritable> messages) throws IOException {
+    }
+  }
+
+  @Before
+  public void setUp() {
+    GiraphConfiguration tmpConfig = new GiraphConfiguration();
+    tmpConfig.setVertexClass(IntVertex.class);
+    conf = new ImmutableClassesGiraphConfiguration(tmpConfig);
+  }
+
   /**
    * Test connecting a single client to a single server.
    *
@@ -49,7 +75,6 @@ public class ConnectionTest {
    */
   @Test
   public void connectSingleClientServer() throws IOException {
-    Configuration conf = new Configuration();
     @SuppressWarnings("rawtypes")
     Context context = mock(Context.class);
     when(context.getConfiguration()).thenReturn(conf);
@@ -63,7 +88,7 @@ public class ConnectionTest {
             new WorkerRequestServerHandler.Factory(serverData));
     server.start();
 
-    NettyClient client = new NettyClient(context);
+    NettyClient client = new NettyClient(context, conf);
     client.connectAllAddresses(Collections.singleton(server.getMyAddress()));
 
     client.stop();
@@ -77,7 +102,6 @@ public class ConnectionTest {
    */
   @Test
   public void connectOneClientToThreeServers() throws IOException {
-    Configuration conf = new Configuration();
     @SuppressWarnings("rawtypes")
     Context context = mock(Context.class);
     when(context.getConfiguration()).thenReturn(conf);
@@ -96,7 +120,7 @@ public class ConnectionTest {
     NettyServer server3 = new NettyServer(conf, requestServerHandlerFactory);
     server3.start();
 
-    NettyClient client = new NettyClient(context);
+    NettyClient client = new NettyClient(context, conf);
     Set<InetSocketAddress> serverAddresses = Sets.newHashSet();
     serverAddresses.add(server1.getMyAddress());
     serverAddresses.add(server2.getMyAddress());
@@ -116,7 +140,6 @@ public class ConnectionTest {
    */
   @Test
   public void connectThreeClientsToOneServer() throws IOException {
-    Configuration conf = new Configuration();
     @SuppressWarnings("rawtypes")
     Context context = mock(Context.class);
     when(context.getConfiguration()).thenReturn(conf);
@@ -129,11 +152,11 @@ public class ConnectionTest {
         new WorkerRequestServerHandler.Factory(serverData));
     server.start();
 
-    NettyClient client1 = new NettyClient(context);
+    NettyClient client1 = new NettyClient(context, conf);
     client1.connectAllAddresses(Collections.singleton(server.getMyAddress()));
-    NettyClient client2 = new NettyClient(context);
+    NettyClient client2 = new NettyClient(context, conf);
     client2.connectAllAddresses(Collections.singleton(server.getMyAddress()));
-    NettyClient client3 = new NettyClient(context);
+    NettyClient client3 = new NettyClient(context, conf);
     client3.connectAllAddresses(Collections.singleton(server.getMyAddress()));
 
     client1.stop();

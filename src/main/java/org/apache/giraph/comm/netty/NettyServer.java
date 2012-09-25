@@ -24,11 +24,11 @@ import java.net.UnknownHostException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import org.apache.giraph.GiraphConfiguration;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.comm.netty.handler.WorkerRequestReservedMap;
 import org.apache.giraph.comm.netty.handler.RequestDecoder;
-import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.comm.netty.handler.RequestServerHandler;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.log4j.Logger;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.Channel;
@@ -53,7 +53,7 @@ public class NettyServer {
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(NettyServer.class);
   /** Configuration */
-  private final Configuration conf;
+  private final ImmutableClassesGiraphConfiguration conf;
   /** Factory of channels */
   private ChannelFactory channelFactory;
   /** Accepted channels */
@@ -89,15 +89,17 @@ public class NettyServer {
    * @param conf Configuration to use
    * @param requestServerHandlerFactory Factory for request handlers
    */
-  public NettyServer(Configuration conf,
+  public NettyServer(ImmutableClassesGiraphConfiguration conf,
       RequestServerHandler.Factory requestServerHandlerFactory) {
     this.conf = conf;
     this.requestServerHandlerFactory = requestServerHandlerFactory;
 
-    sendBufferSize = conf.getInt(GiraphJob.SERVER_SEND_BUFFER_SIZE,
-        GiraphJob.DEFAULT_SERVER_SEND_BUFFER_SIZE);
-    receiveBufferSize = conf.getInt(GiraphJob.SERVER_RECEIVE_BUFFER_SIZE,
-        GiraphJob.DEFAULT_SERVER_RECEIVE_BUFFER_SIZE);
+    sendBufferSize = conf.getInt(
+        GiraphConfiguration.SERVER_SEND_BUFFER_SIZE,
+        GiraphConfiguration.DEFAULT_SERVER_SEND_BUFFER_SIZE);
+    receiveBufferSize = conf.getInt(
+        GiraphConfiguration.SERVER_RECEIVE_BUFFER_SIZE,
+        GiraphConfiguration.DEFAULT_SERVER_RECEIVE_BUFFER_SIZE);
 
     workerRequestReservedMap = new WorkerRequestReservedMap(conf);
 
@@ -113,11 +115,12 @@ public class NettyServer {
     } catch (UnknownHostException e) {
       throw new IllegalStateException("NettyServer: unable to get hostname");
     }
-    maximumPoolSize = conf.getInt(GiraphJob.MSG_NUM_FLUSH_THREADS,
+    maximumPoolSize = conf.getInt(GiraphConfiguration.MSG_NUM_FLUSH_THREADS,
                                   MAXIMUM_THREAD_POOL_SIZE_DEFAULT);
 
-    tcpBacklog = conf.getInt(GiraphJob.TCP_BACKLOG,
-        conf.getInt(GiraphJob.MAX_WORKERS, GiraphJob.TCP_BACKLOG_DEFAULT));
+    tcpBacklog = conf.getInt(GiraphConfiguration.TCP_BACKLOG,
+        conf.getInt(GiraphConfiguration.MAX_WORKERS,
+            GiraphConfiguration.TCP_BACKLOG_DEFAULT));
 
     channelFactory = new NioServerSocketChannelFactory(
         bossExecutorService,
@@ -151,19 +154,19 @@ public class NettyServer {
     int taskId = conf.getInt("mapred.task.partition", -1);
     int numTasks = conf.getInt("mapred.map.tasks", 1);
     // number of workers + 1 for master
-    int numServers = conf.getInt(GiraphJob.MAX_WORKERS, numTasks) + 1;
+    int numServers = conf.getInt(GiraphConfiguration.MAX_WORKERS, numTasks) + 1;
     int portIncrementConstant =
         (int) Math.pow(10, Math.ceil(Math.log10(numServers)));
-    int bindPort = conf.getInt(GiraphJob.RPC_INITIAL_PORT,
-        GiraphJob.RPC_INITIAL_PORT_DEFAULT) +
+    int bindPort = conf.getInt(GiraphConfiguration.RPC_INITIAL_PORT,
+        GiraphConfiguration.RPC_INITIAL_PORT_DEFAULT) +
         taskId;
     int bindAttempts = 0;
     final int maxRpcPortBindAttempts =
-        conf.getInt(GiraphJob.MAX_RPC_PORT_BIND_ATTEMPTS,
-            GiraphJob.MAX_RPC_PORT_BIND_ATTEMPTS_DEFAULT);
+        conf.getInt(GiraphConfiguration.MAX_RPC_PORT_BIND_ATTEMPTS,
+            GiraphConfiguration.MAX_RPC_PORT_BIND_ATTEMPTS_DEFAULT);
     final boolean failFirstPortBindingAttempt =
-        conf.getBoolean(GiraphJob.FAIL_FIRST_RPC_PORT_BIND_ATTEMPT,
-            GiraphJob.FAIL_FIRST_RPC_PORT_BIND_ATTEMPT_DEFAULT);
+        conf.getBoolean(GiraphConfiguration.FAIL_FIRST_RPC_PORT_BIND_ATTEMPT,
+            GiraphConfiguration.FAIL_FIRST_RPC_PORT_BIND_ATTEMPT_DEFAULT);
 
     // Simple handling of port collisions on the same machine while
     // preserving debugability from the port number alone.

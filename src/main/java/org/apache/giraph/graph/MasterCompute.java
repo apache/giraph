@@ -18,8 +18,8 @@
 
 package org.apache.giraph.graph;
 
-import org.apache.hadoop.conf.Configurable;
-import org.apache.hadoop.conf.Configuration;
+import org.apache.giraph.ImmutableClassesGiraphConfigurable;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.Mapper;
 
@@ -41,13 +41,13 @@ import org.apache.hadoop.mapreduce.Mapper;
  */
 @SuppressWarnings("rawtypes")
 public abstract class MasterCompute implements MasterAggregatorUsage, Writable,
-    Configurable {
+    ImmutableClassesGiraphConfigurable {
   /** If true, do not do anymore computation on this vertex. */
   private boolean halt = false;
   /** Global graph state **/
   private GraphState graphState;
   /** Configuration */
-  private Configuration conf;
+  private ImmutableClassesGiraphConfiguration conf;
 
   /**
    * Must be defined by user to specify what the master has to do.
@@ -164,12 +164,12 @@ public abstract class MasterCompute implements MasterAggregatorUsage, Writable,
   }
 
   @Override
-  public Configuration getConf() {
+  public ImmutableClassesGiraphConfiguration getConf() {
     return conf;
   }
 
   @Override
-  public void setConf(Configuration conf) {
+  public void setConf(ImmutableClassesGiraphConfiguration conf) {
     this.conf = conf;
   }
 }

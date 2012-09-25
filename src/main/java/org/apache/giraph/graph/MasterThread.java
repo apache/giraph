@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 
+import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.bsp.ApplicationState;
 import org.apache.giraph.bsp.CentralizedServiceMaster;
 import org.apache.giraph.bsp.SuperstepState;
@@ -74,8 +75,8 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
     this.bspServiceMaster = bspServiceMaster;
     this.context = context;
     superstepCounterOn = context.getConfiguration().getBoolean(
-        GiraphJob.USE_SUPERSTEP_COUNTERS,
-        GiraphJob.USE_SUPERSTEP_COUNTERS_DEFAULT);
+        GiraphConfiguration.USE_SUPERSTEP_COUNTERS,
+        GiraphConfiguration.USE_SUPERSTEP_COUNTERS_DEFAULT);
   }
 
   /**

@@ -18,6 +18,7 @@
 
 package org.apache.giraph.graph;
 
+import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.graph.partition.GraphPartitionerFactory;
 import org.apache.giraph.graph.partition.HashPartitionerFactory;
 import org.apache.giraph.graph.partition.PartitionStats;
@@ -53,7 +54,7 @@ public class BspUtils {
   Class<? extends GraphPartitionerFactory<I, V, E, M>>
   getGraphPartitionerClass(Configuration conf) {
     return (Class<? extends GraphPartitionerFactory<I, V, E, M>>)
-      conf.getClass(GiraphJob.GRAPH_PARTITIONER_FACTORY_CLASS,
+      conf.getClass(GiraphConfiguration.GRAPH_PARTITIONER_FACTORY_CLASS,
         HashPartitionerFactory.class,
         GraphPartitionerFactory.class);
   }
@@ -116,7 +117,7 @@ public class BspUtils {
   Class<? extends VertexInputFormat<I, V, E, M>>
   getVertexInputFormatClass(Configuration conf) {
     return (Class<? extends VertexInputFormat<I, V, E, M>>)
-      conf.getClass(GiraphJob.VERTEX_INPUT_FORMAT_CLASS,
+      conf.getClass(GiraphConfiguration.VERTEX_INPUT_FORMAT_CLASS,
         null,
         VertexInputFormat.class);
   }
@@ -160,7 +161,7 @@ public class BspUtils {
   Class<? extends VertexOutputFormat<I, V, E>>
   getVertexOutputFormatClass(Configuration conf) {
     return (Class<? extends VertexOutputFormat<I, V, E>>)
-      conf.getClass(GiraphJob.VERTEX_OUTPUT_FORMAT_CLASS,
+      conf.getClass(GiraphConfiguration.VERTEX_OUTPUT_FORMAT_CLASS,
         null,
         VertexOutputFormat.class);
   }
@@ -191,7 +192,7 @@ public class BspUtils {
    */
   public static Class<? extends AggregatorWriter>
   getAggregatorWriterClass(Configuration conf) {
-    return conf.getClass(GiraphJob.AGGREGATOR_WRITER_CLASS,
+    return conf.getClass(GiraphConfiguration.AGGREGATOR_WRITER_CLASS,
       TextAggregatorWriter.class,
       AggregatorWriter.class);
   }
@@ -221,7 +222,7 @@ public class BspUtils {
   Class<? extends VertexCombiner<I, M>>
   getVertexCombinerClass(Configuration conf) {
     return (Class<? extends VertexCombiner<I, M>>)
-      conf.getClass(GiraphJob.VERTEX_COMBINER_CLASS,
+      conf.getClass(GiraphConfiguration.VERTEX_COMBINER_CLASS,
         null,
         VertexCombiner.class);
   }
@@ -259,7 +260,7 @@ public class BspUtils {
   Class<? extends VertexResolver<I, V, E, M>>
   getVertexResolverClass(Configuration conf) {
     return (Class<? extends VertexResolver<I, V, E, M>>)
-      conf.getClass(GiraphJob.VERTEX_RESOLVER_CLASS,
+      conf.getClass(GiraphConfiguration.VERTEX_RESOLVER_CLASS,
         VertexResolver.class,
         VertexResolver.class);
   }
@@ -297,7 +298,7 @@ public class BspUtils {
   public static Class<? extends WorkerContext>
   getWorkerContextClass(Configuration conf) {
     return (Class<? extends WorkerContext>)
-      conf.getClass(GiraphJob.WORKER_CONTEXT_CLASS,
+      conf.getClass(GiraphConfiguration.WORKER_CONTEXT_CLASS,
         DefaultWorkerContext.class,
         WorkerContext.class);
   }
@@ -335,7 +336,7 @@ public class BspUtils {
   public static Class<? extends MasterCompute>
   getMasterComputeClass(Configuration conf) {
     return (Class<? extends MasterCompute>)
-      conf.getClass(GiraphJob.MASTER_COMPUTE_CLASS,
+      conf.getClass(GiraphConfiguration.MASTER_COMPUTE_CLASS,
         DefaultMasterCompute.class,
         MasterCompute.class);
   }
@@ -370,7 +371,7 @@ public class BspUtils {
   E extends Writable, M extends Writable>
   Class<? extends Vertex<I, V, E, M>> getVertexClass(Configuration conf) {
     return (Class<? extends Vertex<I, V, E, M>>)
-      conf.getClass(GiraphJob.VERTEX_CLASS,
+      conf.getClass(GiraphConfiguration.VERTEX_CLASS,
         null,
         Vertex.class);
   }
@@ -405,7 +406,7 @@ public class BspUtils {
   @SuppressWarnings("unchecked")
   public static <I extends Writable> Class<I>
   getVertexIdClass(Configuration conf) {
-    return (Class<I>) conf.getClass(GiraphJob.VERTEX_ID_CLASS,
+    return (Class<I>) conf.getClass(GiraphConfiguration.VERTEX_ID_CLASS,
       WritableComparable.class);
   }
 
@@ -441,7 +442,7 @@ public class BspUtils {
   @SuppressWarnings("unchecked")
   public static <V extends Writable> Class<V>
   getVertexValueClass(Configuration conf) {
-    return (Class<V>) conf.getClass(GiraphJob.VERTEX_VALUE_CLASS,
+    return (Class<V>) conf.getClass(GiraphConfiguration.VERTEX_VALUE_CLASS,
       Writable.class);
   }
 
@@ -481,7 +482,7 @@ public class BspUtils {
   @SuppressWarnings("unchecked")
   public static <E extends Writable> Class<E>
   getEdgeValueClass(Configuration conf) {
-    return (Class<E>) conf.getClass(GiraphJob.EDGE_VALUE_CLASS,
+    return (Class<E>) conf.getClass(GiraphConfiguration.EDGE_VALUE_CLASS,
       Writable.class);
   }
 
@@ -521,7 +522,7 @@ public class BspUtils {
   @SuppressWarnings("unchecked")
   public static <M extends Writable> Class<M>
   getMessageValueClass(Configuration conf) {
-    return (Class<M>) conf.getClass(GiraphJob.MESSAGE_VALUE_CLASS,
+    return (Class<M>) conf.getClass(GiraphConfiguration.MESSAGE_VALUE_CLASS,
       Writable.class);
   }
 

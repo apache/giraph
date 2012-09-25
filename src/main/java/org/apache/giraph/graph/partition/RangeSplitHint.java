@@ -22,9 +22,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.giraph.graph.BspUtils;
-import org.apache.hadoop.conf.Configurable;
-import org.apache.hadoop.conf.Configuration;
+import org.apache.giraph.ImmutableClassesGiraphConfigurable;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -36,7 +35,7 @@ import org.apache.hadoop.io.WritableComparable;
  */
 @SuppressWarnings("rawtypes")
 public class RangeSplitHint<I extends WritableComparable>
-    implements Writable, Configurable {
+    implements Writable, ImmutableClassesGiraphConfigurable {
   /** Hinted split index */
   private I splitIndex;
   /** Number of vertices in this range before the split */
@@ -44,11 +43,11 @@ public class RangeSplitHint<I extends WritableComparable>
   /** Number of vertices in this range after the split */
   private long postSplitVertexCount;
   /** Configuration */
-  private Configuration conf;
+  private ImmutableClassesGiraphConfiguration<I, ?, ?, ?> conf;
 
   @Override
   public void readFields(DataInput input) throws IOException {
-    splitIndex = BspUtils.<I>createVertexId(conf);
+    splitIndex = conf.createVertexId();
     splitIndex.readFields(input);
     preSplitVertexCount = input.readLong();
     postSplitVertexCount = input.readLong();
@@ -62,12 +61,12 @@ public class RangeSplitHint<I extends WritableComparable>
   }
 
   @Override
-  public Configuration getConf() {
+  public ImmutableClassesGiraphConfiguration getConf() {
     return conf;
   }
 
   @Override
-  public void setConf(Configuration conf) {
+  public void setConf(ImmutableClassesGiraphConfiguration conf) {
     this.conf = conf;
   }
 }

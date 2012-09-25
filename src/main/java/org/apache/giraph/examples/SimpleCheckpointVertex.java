@@ -46,9 +46,7 @@ import org.apache.log4j.Logger;
  * every iteration to verify that checkpoint restarting works.  Fault injection
  * can also test automated checkpoint restarts.
  */
-public class SimpleCheckpointVertex extends
-    EdgeListVertex<LongWritable, IntWritable, FloatWritable, FloatWritable>
-    implements Tool {
+public class SimpleCheckpointVertex implements Tool {
   /** Which superstep to cause the worker to fail */
   public static final int FAULTING_SUPERSTEP = 4;
   /** Vertex id to fault on */
@@ -65,58 +63,64 @@ public class SimpleCheckpointVertex extends
   /** Configuration */
   private Configuration conf;
 
-  @Override
-  public void compute(Iterable<FloatWritable> messages) {
-    SimpleCheckpointVertexWorkerContext workerContext =
-        (SimpleCheckpointVertexWorkerContext) getWorkerContext();
+  /**
+   * Actual computation.
+   */
+  public static class SimpleCheckpointComputation extends
+      EdgeListVertex<LongWritable, IntWritable, FloatWritable, FloatWritable> {
+    @Override
+    public void compute(Iterable<FloatWritable> messages) {
+      SimpleCheckpointVertexWorkerContext workerContext =
+          (SimpleCheckpointVertexWorkerContext) getWorkerContext();
 
-    boolean enableFault = workerContext.getEnableFault();
-    int supersteps = workerContext.getSupersteps();
+      boolean enableFault = workerContext.getEnableFault();
+      int supersteps = workerContext.getSupersteps();
 
-    if (enableFault && (getSuperstep() == FAULTING_SUPERSTEP) &&
-        (getContext().getTaskAttemptID().getId() == 0) &&
-        (getId().get() == FAULTING_VERTEX_ID)) {
-      LOG.info("compute: Forced a fault on the first " +
-          "attempt of superstep " +
-          FAULTING_SUPERSTEP + " and vertex id " +
-          FAULTING_VERTEX_ID);
-      System.exit(-1);
-    }
-    if (getSuperstep() > supersteps) {
-      voteToHalt();
-      return;
-    }
-    long sumAgg = this.<LongWritable>getAggregatedValue(
-        LongSumAggregator.class.getName()).get();
-    LOG.info("compute: " + sumAgg);
-    aggregate(LongSumAggregator.class.getName(),
-        new LongWritable(getId().get()));
-    LOG.info("compute: sum = " + sumAgg +
-        " for vertex " + getId());
-    float msgValue = 0.0f;
-    for (FloatWritable message : messages) {
-      float curMsgValue = message.get();
-      msgValue += curMsgValue;
-      LOG.info("compute: got msgValue = " + curMsgValue +
-          " for vertex " + getId() +
-          " on superstep " + getSuperstep());
-    }
-    int vertexValue = getValue().get();
-    setValue(new IntWritable(vertexValue + (int) msgValue));
-    LOG.info("compute: vertex " + getId() +
-        " has value " + getValue() +
-        " on superstep " + getSuperstep());
-    for (Edge<LongWritable, FloatWritable> edge : getEdges()) {
-      FloatWritable newEdgeValue = new FloatWritable(edge.getValue().get() +
-          (float) vertexValue);
+      if (enableFault && (getSuperstep() == FAULTING_SUPERSTEP) &&
+          (getContext().getTaskAttemptID().getId() == 0) &&
+          (getId().get() == FAULTING_VERTEX_ID)) {
+        LOG.info("compute: Forced a fault on the first " +
+            "attempt of superstep " +
+            FAULTING_SUPERSTEP + " and vertex id " +
+            FAULTING_VERTEX_ID);
+        System.exit(-1);
+      }
+      if (getSuperstep() > supersteps) {
+        voteToHalt();
+        return;
+      }
+      long sumAgg = this.<LongWritable>getAggregatedValue(
+          LongSumAggregator.class.getName()).get();
+      LOG.info("compute: " + sumAgg);
+      aggregate(LongSumAggregator.class.getName(),
+          new LongWritable(getId().get()));
+      LOG.info("compute: sum = " + sumAgg +
+          " for vertex " + getId());
+      float msgValue = 0.0f;
+      for (FloatWritable message : messages) {
+        float curMsgValue = message.get();
+        msgValue += curMsgValue;
+        LOG.info("compute: got msgValue = " + curMsgValue +
+            " for vertex " + getId() +
+            " on superstep " + getSuperstep());
+      }
+      int vertexValue = getValue().get();
+      setValue(new IntWritable(vertexValue + (int) msgValue));
       LOG.info("compute: vertex " + getId() +
-          " sending edgeValue " + edge.getValue() +
-          " vertexValue " + vertexValue +
-          " total " + newEdgeValue +
-              " to vertex " + edge.getTargetVertexId() +
-              " on superstep " + getSuperstep());
-      addEdge(edge.getTargetVertexId(), newEdgeValue);
-      sendMessage(edge.getTargetVertexId(), newEdgeValue);
+          " has value " + getValue() +
+          " on superstep " + getSuperstep());
+      for (Edge<LongWritable, FloatWritable> edge : getEdges()) {
+        FloatWritable newEdgeValue = new FloatWritable(edge.getValue().get() +
+            (float) vertexValue);
+        LOG.info("compute: vertex " + getId() +
+            " sending edgeValue " + edge.getValue() +
+            " vertexValue " + vertexValue +
+            " total " + newEdgeValue +
+            " to vertex " + edge.getTargetVertexId() +
+            " on superstep " + getSuperstep());
+        addEdge(edge.getTargetVertexId(), newEdgeValue);
+        sendMessage(edge.getTargetVertexId(), newEdgeValue);
+      }
     }
   }
 
@@ -212,14 +216,19 @@ public class SimpleCheckpointVertex extends
     }
 
     GiraphJob bspJob = new GiraphJob(getConf(), getClass().getName());
-    bspJob.setVertexClass(getClass());
-    bspJob.setVertexInputFormatClass(GeneratedVertexInputFormat.class);
-    bspJob.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
-    bspJob.setWorkerContextClass(SimpleCheckpointVertexWorkerContext.class);
-    bspJob.setMasterComputeClass(SimpleCheckpointVertexMasterCompute.class);
+    bspJob.getConfiguration().setVertexClass(SimpleCheckpointComputation.class);
+    bspJob.getConfiguration().setVertexInputFormatClass(
+        GeneratedVertexInputFormat.class);
+    bspJob.getConfiguration().setVertexOutputFormatClass(
+        IdWithValueTextOutputFormat.class);
+    bspJob.getConfiguration().setWorkerContextClass(
+        SimpleCheckpointVertexWorkerContext.class);
+    bspJob.getConfiguration().setMasterComputeClass(
+        SimpleCheckpointVertexMasterCompute.class);
     int minWorkers = Integer.parseInt(cmd.getOptionValue('w'));
     int maxWorkers = Integer.parseInt(cmd.getOptionValue('w'));
-    bspJob.setWorkerConfiguration(minWorkers, maxWorkers, 100.0f);
+    bspJob.getConfiguration().setWorkerConfiguration(
+        minWorkers, maxWorkers, 100.0f);
 
     FileOutputFormat.setOutputPath(bspJob.getInternalJob(),
                                    new Path(cmd.getOptionValue('o')));

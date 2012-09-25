@@ -55,16 +55,18 @@ public class TestNotEnoughMapTasks extends BspCase {
         }
         Path outputPath = getTempPath(getCallingMethodName());
         GiraphJob job = prepareJob(getCallingMethodName(),
-            SimpleCheckpointVertex.class,
+            SimpleCheckpointVertex.SimpleCheckpointComputation.class,
             SimpleSuperstepVertexInputFormat.class,
             SimpleSuperstepVertexOutputFormat.class, outputPath);
 
         // An unlikely impossible number of workers to achieve
         final int unlikelyWorkers = Short.MAX_VALUE;
-        job.setWorkerConfiguration(unlikelyWorkers, unlikelyWorkers, 100.0f);
+        job.getConfiguration().setWorkerConfiguration(unlikelyWorkers, 
+            unlikelyWorkers, 
+            100.0f);
         // Only one poll attempt of one second to make failure faster
-        job.getConfiguration().setInt(GiraphJob.POLL_ATTEMPTS, 1);
-        job.getConfiguration().setInt(GiraphJob.POLL_MSECS, 1);
+        job.getConfiguration().setInt(GiraphConfiguration.POLL_ATTEMPTS, 1);
+        job.getConfiguration().setInt(GiraphConfiguration.POLL_MSECS, 1);
         assertFalse(job.run(false));
     }
 }

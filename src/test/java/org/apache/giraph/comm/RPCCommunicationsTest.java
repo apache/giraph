@@ -22,6 +22,10 @@ import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
+import org.apache.giraph.GiraphConfiguration;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IntWritable;
@@ -31,33 +35,46 @@ import org.junit.Test;
 
 public class RPCCommunicationsTest {
 
+  private static class IntVertex extends EdgeListVertex<IntWritable,
+      IntWritable, IntWritable, IntWritable> {
+    @Override
+    public void compute(Iterable<IntWritable> messages) throws IOException {
+    }
+  }
+
     @Test
     public void testDuplicateRpcPort() throws Exception {
-        @SuppressWarnings("rawtypes")
-        Context context = mock(Context.class);
-        Configuration conf = new Configuration();
-        conf.setInt("mapred.task.partition", 9);
-        conf.setInt(GiraphJob.MAX_WORKERS, 13);
-        when(context.getConfiguration()).thenReturn(conf);
-        when(context.getJobID()).thenReturn(new JobID());
+      @SuppressWarnings("rawtypes")
+      Context context = mock(Context.class);
+      GiraphConfiguration conf = new GiraphConfiguration();
+      conf.setInt("mapred.task.partition", 9);
+      conf.setInt(GiraphConfiguration.MAX_WORKERS, 13);
+      conf.setVertexClass(IntVertex.class);
+      ImmutableClassesGiraphConfiguration immutableClassesGiraphConfiguration =
+          new ImmutableClassesGiraphConfiguration(conf);
+      when(context.getConfiguration()).thenReturn(conf);
+      when(context.getJobID()).thenReturn(new JobID());
 
-        RPCCommunications<IntWritable, IntWritable, IntWritable, IntWritable>
-            comm1 =
-                new RPCCommunications<
-                    IntWritable, IntWritable,
-                    IntWritable, IntWritable>(context, null, null);
-        RPCCommunications<IntWritable, IntWritable, IntWritable, IntWritable>
-            comm2 =
-                new RPCCommunications<
-                    IntWritable, IntWritable,
-                    IntWritable, IntWritable>(context, null, null);
-        RPCCommunications<IntWritable, IntWritable, IntWritable, IntWritable>
-            comm3 =
-                new RPCCommunications<
-                    IntWritable, IntWritable,
-                    IntWritable, IntWritable>(context, null, null);
-        assertEquals(comm1.getPort(), 30009);
-        assertEquals(comm2.getPort(), 30109);
-        assertEquals(comm3.getPort(), 30209);
+      RPCCommunications<IntWritable, IntWritable, IntWritable, IntWritable>
+          comm1 =
+          new RPCCommunications<
+              IntWritable, IntWritable,
+              IntWritable, IntWritable>(
+              context, null, immutableClassesGiraphConfiguration, null);
+      RPCCommunications<IntWritable, IntWritable, IntWritable, IntWritable>
+          comm2 =
+          new RPCCommunications<
+              IntWritable, IntWritable,
+              IntWritable, IntWritable>(
+              context, null, immutableClassesGiraphConfiguration, null);
+      RPCCommunications<IntWritable, IntWritable, IntWritable, IntWritable>
+          comm3 =
+          new RPCCommunications<
+              IntWritable, IntWritable,
+              IntWritable, IntWritable>(
+              context, null, immutableClassesGiraphConfiguration, null);
+      assertEquals(comm1.getPort(), 30009);
+      assertEquals(comm2.getPort(), 30109);
+      assertEquals(comm3.getPort(), 30209);
     }
 }

@@ -23,9 +23,15 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.giraph.examples.Algorithm;
+import org.apache.giraph.graph.AggregatorWriter;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.GiraphTypeValidator;
+import org.apache.giraph.graph.MasterCompute;
 import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.graph.VertexCombiner;
+import org.apache.giraph.graph.VertexInputFormat;
+import org.apache.giraph.graph.VertexOutputFormat;
+import org.apache.giraph.graph.WorkerContext;
 import org.apache.giraph.utils.AnnotationUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.filecache.DistributedCache;
@@ -159,14 +165,21 @@ public class GiraphRunner implements Tool {
     }
 
     int workers = Integer.parseInt(cmd.getOptionValue('w'));
-    GiraphJob job = new GiraphJob(getConf(), "Giraph: " + vertexClassName);
-    job.setVertexClass(Class.forName(vertexClassName));
-    job.setVertexInputFormatClass(Class.forName(cmd.getOptionValue("if")));
-    job.setVertexOutputFormatClass(Class.forName(cmd.getOptionValue("of")));
+    GiraphConfiguration giraphConfiguration = new GiraphConfiguration();
+    giraphConfiguration.setVertexClass(
+        (Class<? extends Vertex>) Class.forName(vertexClassName));
+    giraphConfiguration.setVertexInputFormatClass(
+        (Class<? extends VertexInputFormat>)
+            Class.forName(cmd.getOptionValue("if")));
+    giraphConfiguration.setVertexOutputFormatClass(
+        (Class<? extends VertexOutputFormat>)
+            Class.forName(cmd.getOptionValue("of")));
+    GiraphJob job = new GiraphJob(
+        giraphConfiguration, "Giraph: " + vertexClassName);
 
     if (cmd.hasOption("ip")) {
       FileInputFormat.addInputPath(job.getInternalJob(),
-                                   new Path(cmd.getOptionValue("ip")));
+          new Path(cmd.getOptionValue("ip")));
     } else {
       if (LOG.isInfoEnabled()) {
         LOG.info("No input path specified. Ensure your InputFormat does" +
@@ -185,19 +198,27 @@ public class GiraphRunner implements Tool {
     }
 
     if (cmd.hasOption("c")) {
-      job.setVertexCombinerClass(Class.forName(cmd.getOptionValue("c")));
+      giraphConfiguration.setVertexCombinerClass(
+          (Class<? extends VertexCombiner>)
+              Class.forName(cmd.getOptionValue("c")));
     }
 
     if (cmd.hasOption("wc")) {
-      job.setWorkerContextClass(Class.forName(cmd.getOptionValue("wc")));
+      giraphConfiguration.setWorkerContextClass(
+          (Class<? extends WorkerContext>)
+              Class.forName(cmd.getOptionValue("wc")));
     }
 
     if (cmd.hasOption("mc")) {
-      job.setMasterComputeClass(Class.forName(cmd.getOptionValue("mc")));
+      giraphConfiguration.setMasterComputeClass(
+          (Class<? extends MasterCompute>)
+              Class.forName(cmd.getOptionValue("mc")));
     }
 
     if (cmd.hasOption("aw")) {
-      job.setAggregatorWriterClass(Class.forName(cmd.getOptionValue("aw")));
+      giraphConfiguration.setAggregatorWriterClass(
+          (Class<? extends AggregatorWriter>)
+              Class.forName(cmd.getOptionValue("aw")));
     }
 
     if (cmd.hasOption("cf")) {
@@ -230,10 +251,9 @@ public class GiraphRunner implements Tool {
       new GiraphTypeValidator(job.getConfiguration());
     validator.validateClassTypes();
 
-    job.setWorkerConfiguration(workers, workers, 100.0f);
+    giraphConfiguration.setWorkerConfiguration(workers, workers, 100.0f);
 
     boolean verbose = !cmd.hasOption('q');
-
     return job.run(verbose) ? 0 : -1;
   }
 

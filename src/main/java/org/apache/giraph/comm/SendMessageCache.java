@@ -24,9 +24,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.giraph.graph.BspUtils;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.VertexCombiner;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -56,11 +55,11 @@ public class SendMessageCache<I extends WritableComparable,
    *
    * @param conf Configuration used for instantiating the combiner.
    */
-  public SendMessageCache(Configuration conf) {
-    if (BspUtils.getVertexCombinerClass(conf) == null) {
+  public SendMessageCache(ImmutableClassesGiraphConfiguration conf) {
+    if (conf.getVertexCombinerClass() == null) {
       this.combiner = null;
     } else {
-      this.combiner = BspUtils.createVertexCombiner(conf);
+      this.combiner = conf.createVertexCombiner();
     }
   }
 

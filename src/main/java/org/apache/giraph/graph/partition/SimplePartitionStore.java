@@ -18,8 +18,8 @@
 
 package org.apache.giraph.graph.partition;
 
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.Vertex;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -43,14 +43,15 @@ public class SimplePartitionStore<I extends WritableComparable,
   private final ConcurrentMap<Integer, Partition<I, V, E, M>> partitions =
       Maps.newConcurrentMap();
   /** Configuration. */
-  private final Configuration conf;
+  private final ImmutableClassesGiraphConfiguration<I, V, E, M> conf;
 
   /**
    * Constructor.
    *
    * @param conf Configuration
    */
-  public SimplePartitionStore(Configuration conf) {
+  public SimplePartitionStore(
+      ImmutableClassesGiraphConfiguration<I, V, E, M> conf) {
     this.conf = conf;
   }
 

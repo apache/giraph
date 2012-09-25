@@ -28,6 +28,11 @@ import com.google.common.base.Preconditions;
 import com.google.common.io.Closeables;
 import org.apache.giraph.examples.GeneratedVertexReader;
 import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.graph.MasterCompute;
+import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.graph.VertexInputFormat;
+import org.apache.giraph.graph.VertexOutputFormat;
+import org.apache.giraph.graph.WorkerContext;
 import org.apache.giraph.utils.FileUtils;
 import org.apache.giraph.zk.ZooKeeperExt;
 import org.apache.hadoop.conf.Configuration;
@@ -71,7 +76,7 @@ public class BspCase implements Watcher {
    */
   public final Configuration setupConfiguration(GiraphJob job)
       throws IOException {
-    Configuration conf = job.getConfiguration();
+    GiraphConfiguration conf = job.getConfiguration();
     conf.set("mapred.jar", getJarLocation());
 
     // Allow this test to be run on a real Hadoop setup
@@ -80,20 +85,20 @@ public class BspCase implements Watcher {
           jobTracker + " with jar path " + getJarLocation()
           + " for " + getName());
       conf.set("mapred.job.tracker", jobTracker);
-      job.setWorkerConfiguration(getNumWorkers(), getNumWorkers(), 100.0f);
+      conf.setWorkerConfiguration(getNumWorkers(), getNumWorkers(), 100.0f);
     }
     else {
       System.out.println("setup: Using local job runner with " +
           "location " + getJarLocation() + " for " + getName());
-      job.setWorkerConfiguration(1, 1, 100.0f);
+      conf.setWorkerConfiguration(1, 1, 100.0f);
       // Single node testing
-      conf.setBoolean(GiraphJob.SPLIT_MASTER_WORKER, false);
+      conf.setBoolean(GiraphConfiguration.SPLIT_MASTER_WORKER, false);
     }
-    conf.setInt(GiraphJob.POLL_ATTEMPTS, 10);
-    conf.setInt(GiraphJob.POLL_MSECS, 3 * 1000);
-    conf.setInt(GiraphJob.ZOOKEEPER_SERVERLIST_POLL_MSECS, 500);
+    conf.setInt(GiraphConfiguration.POLL_ATTEMPTS, 10);
+    conf.setInt(GiraphConfiguration.POLL_MSECS, 3 * 1000);
+    conf.setInt(GiraphConfiguration.ZOOKEEPER_SERVERLIST_POLL_MSECS, 500);
     if (getZooKeeperList() != null) {
-      job.setZooKeeperConfiguration(getZooKeeperList());
+      conf.setZooKeeperConfiguration(getZooKeeperList());
     }
     // GeneratedInputSplit will generate 5 vertices
     conf.setLong(GeneratedVertexReader.READER_VERTICES, 5);
@@ -108,10 +113,10 @@ public class BspCase implements Watcher {
     FileUtils.deletePath(conf, zkManagerDir);
     FileUtils.deletePath(conf, checkPointDir);
 
-    conf.set(GiraphJob.ZOOKEEPER_DIR, zookeeperDir.toString());
-    conf.set(GiraphJob.ZOOKEEPER_MANAGER_DIRECTORY,
+    conf.set(GiraphConfiguration.ZOOKEEPER_DIR, zookeeperDir.toString());
+    conf.set(GiraphConfiguration.ZOOKEEPER_MANAGER_DIRECTORY,
         zkManagerDir.toString());
-    conf.set(GiraphJob.CHECKPOINT_DIRECTORY, checkPointDir.toString());
+    conf.set(GiraphConfiguration.CHECKPOINT_DIRECTORY, checkPointDir.toString());
 
     return conf;
   }
@@ -135,8 +140,10 @@ public class BspCase implements Watcher {
    * @return  fully configured job instance
    * @throws IOException
    */
-  protected GiraphJob prepareJob(String name, Class<?> vertexClass,
-      Class<?> vertexInputFormatClass) throws IOException {
+  protected GiraphJob prepareJob(String name,
+      Class<? extends Vertex> vertexClass,
+      Class<? extends VertexInputFormat> vertexInputFormatClass)
+      throws IOException {
     return prepareJob(name, vertexClass, vertexInputFormatClass, null,
         null);
   }
@@ -152,8 +159,10 @@ public class BspCase implements Watcher {
    * @return  fully configured job instance
    * @throws IOException
    */
-  protected GiraphJob prepareJob(String name, Class<?> vertexClass,
-      Class<?> vertexInputFormatClass, Class<?> vertexOutputFormatClass,
+  protected GiraphJob prepareJob(String name,
+      Class<? extends Vertex> vertexClass,
+      Class<? extends VertexInputFormat> vertexInputFormatClass,
+      Class<? extends VertexOutputFormat> vertexOutputFormatClass,
       Path outputPath) throws IOException {
     return prepareJob(name, vertexClass, null, vertexInputFormatClass,
         vertexOutputFormatClass, outputPath);
@@ -171,9 +180,13 @@ public class BspCase implements Watcher {
    * @return  fully configured job instance
    * @throws IOException
    */
-  protected GiraphJob prepareJob(String name, Class<?> vertexClass,
-      Class<?> workerContextClass, Class<?> vertexInputFormatClass,
-      Class<?> vertexOutputFormatClass, Path outputPath) throws IOException {
+  protected GiraphJob prepareJob(String name,
+      Class<? extends Vertex> vertexClass,
+      Class<? extends WorkerContext> workerContextClass,
+      Class<? extends VertexInputFormat> vertexInputFormatClass,
+      Class<? extends VertexOutputFormat> vertexOutputFormatClass,
+      Path outputPath) throws
+      IOException {
     return prepareJob(name, vertexClass, workerContextClass, null,
         vertexInputFormatClass, vertexOutputFormatClass, outputPath);
   }
@@ -191,23 +204,27 @@ public class BspCase implements Watcher {
    * @return  fully configured job instance
    * @throws IOException
    */
-  protected GiraphJob prepareJob(String name, Class<?> vertexClass,
-      Class<?> workerContextClass, Class<?> masterComputeClass,
-      Class<?> vertexInputFormatClass, Class<?> vertexOutputFormatClass,
+  protected GiraphJob prepareJob(String name,
+      Class<? extends Vertex> vertexClass,
+      Class<? extends WorkerContext> workerContextClass,
+      Class<? extends MasterCompute> masterComputeClass,
+      Class<? extends VertexInputFormat> vertexInputFormatClass,
+      Class<? extends VertexOutputFormat> vertexOutputFormatClass,
       Path outputPath) throws IOException {
     GiraphJob job = new GiraphJob(name);
     setupConfiguration(job);
-    job.setVertexClass(vertexClass);
-    job.setVertexInputFormatClass(vertexInputFormatClass);
+    job.getConfiguration().setVertexClass(vertexClass);
+    job.getConfiguration().setVertexInputFormatClass(vertexInputFormatClass);
 
     if (workerContextClass != null) {
-      job.setWorkerContextClass(workerContextClass);
+      job.getConfiguration().setWorkerContextClass(workerContextClass);
     }
     if (masterComputeClass != null) {
-      job.setMasterComputeClass(masterComputeClass);
+      job.getConfiguration().setMasterComputeClass(masterComputeClass);
     }
     if (vertexOutputFormatClass != null) {
-      job.setVertexOutputFormatClass(vertexOutputFormatClass);
+      job.getConfiguration().setVertexOutputFormatClass(
+          vertexOutputFormatClass);
     }
     if (outputPath != null) {
       removeAndSetOutput(job, outputPath);

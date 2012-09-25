@@ -22,7 +22,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.GiraphConfiguration;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
@@ -49,15 +49,15 @@ public class BspInputFormat extends InputFormat<Text, Text> {
    * @return Maximum number of tasks
    */
   public static int getMaxTasks(Configuration conf) {
-    int maxWorkers = conf.getInt(GiraphJob.MAX_WORKERS, 0);
+    int maxWorkers = conf.getInt(GiraphConfiguration.MAX_WORKERS, 0);
     boolean splitMasterWorker =
-        conf.getBoolean(GiraphJob.SPLIT_MASTER_WORKER,
-            GiraphJob.SPLIT_MASTER_WORKER_DEFAULT);
+        conf.getBoolean(GiraphConfiguration.SPLIT_MASTER_WORKER,
+            GiraphConfiguration.SPLIT_MASTER_WORKER_DEFAULT);
     int maxTasks = maxWorkers;
     if (splitMasterWorker) {
       int zkServers =
-          conf.getInt(GiraphJob.ZOOKEEPER_SERVER_COUNT,
-              GiraphJob.ZOOKEEPER_SERVER_COUNT_DEFAULT);
+          conf.getInt(GiraphConfiguration.ZOOKEEPER_SERVER_COUNT,
+              GiraphConfiguration.ZOOKEEPER_SERVER_COUNT_DEFAULT);
       maxTasks += zkServers;
     }
     if (LOG.isDebugEnabled()) {

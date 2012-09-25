@@ -193,7 +193,7 @@ public class WritableUtils {
   }
 
   /**
-   * Read fields from byteArray to a list of Writeable objects.
+   * Read fields from byteArray to a list of Writable objects.
    *
    * @param byteArray Byte array to find the fields in.
    * @param writableClass Class of the objects to instantiate.

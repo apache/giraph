@@ -19,6 +19,8 @@
 package org.apache.giraph.comm;
 
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.giraph.GiraphConfiguration;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.messages.BasicMessageStore;
 import org.apache.giraph.comm.messages.DiskBackedMessageStoreByPartition;
@@ -28,6 +30,7 @@ import org.apache.giraph.comm.messages.MessageStore;
 import org.apache.giraph.comm.messages.MessageStoreFactory;
 import org.apache.giraph.comm.messages.SequentialFileMessageStore;
 import org.apache.giraph.comm.messages.SimpleMessageStore;
+import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.utils.MockUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -62,22 +65,28 @@ import java.util.TreeSet;
 /** Test for different types of message stores */
 public class TestMessageStores {
   private static String directory;
-  private static Configuration config;
+  private static ImmutableClassesGiraphConfiguration config;
   private static TestData testData;
   private static
   CentralizedServiceWorker<IntWritable, IntWritable, IntWritable, IntWritable>
       service;
+
+  private static class IntVertex extends EdgeListVertex<IntWritable,
+      IntWritable, IntWritable, IntWritable> {
+
+    @Override
+    public void compute(Iterable<IntWritable> messages) throws IOException {
+    }
+  }
 
   @Before
   public void prepare() {
     directory = "test/";
 
     Configuration.addDefaultResource("giraph-site.xml");
-    config = new Configuration();
-    config.setClass(GiraphJob.VERTEX_ID_CLASS, IntWritable.class,
-        WritableComparable.class);
-    config.setClass(GiraphJob.MESSAGE_VALUE_CLASS, IntWritable.class,
-        Writable.class);
+    GiraphConfiguration initConfig = new GiraphConfiguration();
+    initConfig.setVertexClass(IntVertex.class);
+    config = new ImmutableClassesGiraphConfiguration(initConfig);
 
     testData = new TestData();
     testData.maxId = 1000000;

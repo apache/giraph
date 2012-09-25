@@ -24,8 +24,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.hadoop.conf.Configurable;
-import org.apache.hadoop.conf.Configuration;
+import org.apache.giraph.ImmutableClassesGiraphConfigurable;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.json.JSONException;
@@ -44,7 +44,7 @@ import org.json.JSONObject;
 public class VertexMutations<I extends WritableComparable,
     V extends Writable, E extends Writable,
     M extends Writable> implements VertexChanges<I, V, E, M>,
-    Writable, Configurable {
+    Writable, ImmutableClassesGiraphConfigurable {
   /** List of added vertices during the last superstep */
   private final List<Vertex<I, V, E, M>> addedVertexList =
       new ArrayList<Vertex<I, V, E, M>>();
@@ -55,7 +55,7 @@ public class VertexMutations<I extends WritableComparable,
   /** List of removed edges */
   private final List<I> removedEdgeList = new ArrayList<I>();
   /** Configuration */
-  private Configuration conf;
+  private ImmutableClassesGiraphConfiguration<I, V, E, M> conf;
 
   /**
    * Copy the vertex mutations.
@@ -85,22 +85,22 @@ public class VertexMutations<I extends WritableComparable,
 
     int addedVertexListSize = input.readInt();
     for (int i = 0; i < addedVertexListSize; ++i) {
-      Vertex<I, V, E, M> vertex = BspUtils.createVertex(conf);
+      Vertex<I, V, E, M> vertex = conf.createVertex();
       vertex.readFields(input);
       addedVertexList.add(vertex);
     }
     removedVertexCount = input.readInt();
     int addedEdgeListSize = input.readInt();
     for (int i = 0; i < addedEdgeListSize; ++i) {
-      I destVertex = BspUtils.<I>createVertexId(conf);
+      I destVertex = conf.createVertexId();
       destVertex.readFields(input);
-      E edgeValue = BspUtils.<E>createEdgeValue(conf);
+      E edgeValue = conf.createEdgeValue();
       edgeValue.readFields(input);
       addedEdgeList.add(new Edge<I, E>(destVertex, edgeValue));
     }
     int removedEdgeListSize = input.readInt();
     for (int i = 0; i < removedEdgeListSize; ++i) {
-      I removedEdge = BspUtils.<I>createVertexId(conf);
+      I removedEdge = conf.createVertexId();
       removedEdge.readFields(input);
       removedEdgeList.add(removedEdge);
     }
@@ -201,12 +201,12 @@ public class VertexMutations<I extends WritableComparable,
   }
 
   @Override
-  public Configuration getConf() {
+  public ImmutableClassesGiraphConfiguration getConf() {
     return conf;
   }
 
   @Override
-  public void setConf(Configuration conf) {
+  public void setConf(ImmutableClassesGiraphConfiguration conf) {
     this.conf = conf;
   }
 }

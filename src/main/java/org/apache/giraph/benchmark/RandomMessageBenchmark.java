@@ -23,6 +23,7 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
+import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.aggregators.LongSumAggregator;
 import org.apache.giraph.graph.DefaultMasterCompute;
 import org.apache.giraph.graph.EdgeListVertex;
@@ -352,12 +353,15 @@ public class RandomMessageBenchmark implements Tool {
     }
     int workers = Integer.parseInt(cmd.getOptionValue('w'));
     GiraphJob job = new GiraphJob(getConf(), getClass().getName());
-    job.getConfiguration().setInt(GiraphJob.CHECKPOINT_FREQUENCY, 0);
-    job.setVertexClass(RandomMessageVertex.class);
-    job.setVertexInputFormatClass(PseudoRandomVertexInputFormat.class);
-    job.setWorkerContextClass(RandomMessageBenchmarkWorkerContext.class);
-    job.setMasterComputeClass(RandomMessageBenchmarkMasterCompute.class);
-    job.setWorkerConfiguration(workers, workers, 100.0f);
+    job.getConfiguration().setInt(GiraphConfiguration.CHECKPOINT_FREQUENCY, 0);
+    job.getConfiguration().setVertexClass(RandomMessageVertex.class);
+    job.getConfiguration().setVertexInputFormatClass(
+        PseudoRandomVertexInputFormat.class);
+    job.getConfiguration().setWorkerContextClass(
+        RandomMessageBenchmarkWorkerContext.class);
+    job.getConfiguration().setMasterComputeClass(
+        RandomMessageBenchmarkMasterCompute.class);
+    job.getConfiguration().setWorkerConfiguration(workers, workers, 100.0f);
     job.getConfiguration().setLong(
         PseudoRandomVertexInputFormat.AGGREGATE_VERTICES,
         Long.parseLong(cmd.getOptionValue('V')));
@@ -383,7 +387,8 @@ public class RandomMessageBenchmark implements Tool {
           Integer.parseInt(cmd.getOptionValue('s')));
     }
     if (cmd.hasOption('f')) {
-      job.getConfiguration().setInt(GiraphJob.MSG_NUM_FLUSH_THREADS,
+      job.getConfiguration().setInt(
+          GiraphConfiguration.MSG_NUM_FLUSH_THREADS,
           Integer.parseInt(cmd.getOptionValue('f')));
     }
     if (job.run(isVerbose)) {

@@ -18,9 +18,8 @@
 
 package org.apache.giraph.comm.messages;
 
-import org.apache.giraph.graph.BspUtils;
-import org.apache.giraph.graph.GiraphJob;
-import org.apache.hadoop.conf.Configuration;
+import org.apache.giraph.GiraphConfiguration;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -61,7 +60,7 @@ public class SequentialFileMessageStore<I extends WritableComparable,
   /** File in which we store data */
   private final File file;
   /** Configuration which we need for reading data */
-  private final Configuration config;
+  private final ImmutableClassesGiraphConfiguration<I, ?, ?, M> config;
   /** Buffer size to use when reading and writing files */
   private final int bufferSize;
   /** File input stream */
@@ -79,7 +78,9 @@ public class SequentialFileMessageStore<I extends WritableComparable,
    * @param fileName   File in which we want to store messages
    * @throws IOException
    */
-  public SequentialFileMessageStore(Configuration config, int bufferSize,
+  public SequentialFileMessageStore(
+      ImmutableClassesGiraphConfiguration<I, ?, ?, M> config,
+      int bufferSize,
       String fileName) {
     this.config = config;
     this.bufferSize = bufferSize;
@@ -248,7 +249,7 @@ public class SequentialFileMessageStore<I extends WritableComparable,
     if (verticesLeft == 0) {
       return null;
     }
-    currentVertexId = BspUtils.<I>createVertexId(config);
+    currentVertexId = config.createVertexId();
     currentVertexId.readFields(in);
     return currentVertexId;
   }
@@ -263,7 +264,7 @@ public class SequentialFileMessageStore<I extends WritableComparable,
     int messagesSize = in.readInt();
     ArrayList<M> messages = Lists.newArrayList();
     for (int i = 0; i < messagesSize; i++) {
-      M message = BspUtils.<M>createMessageValue(config);
+      M message = config.createMessageValue();
       message.readFields(in);
       messages.add(message);
     }
@@ -307,7 +308,7 @@ public class SequentialFileMessageStore<I extends WritableComparable,
    */
   public static <I extends WritableComparable, M extends Writable>
   MessageStoreFactory<I, M, BasicMessageStore<I, M>> newFactory(
-      Configuration config) {
+      ImmutableClassesGiraphConfiguration config) {
     return new Factory<I, M>(config);
   }
 
@@ -321,7 +322,7 @@ public class SequentialFileMessageStore<I extends WritableComparable,
       M extends Writable>
       implements MessageStoreFactory<I, M, BasicMessageStore<I, M>> {
     /** Hadoop configuration */
-    private final Configuration config;
+    private final ImmutableClassesGiraphConfiguration config;
     /** Directory in which we'll keep necessary files */
     private final String directory;
     /** Buffer size to use when reading and writing */
@@ -329,14 +330,19 @@ public class SequentialFileMessageStore<I extends WritableComparable,
     /** Counter for created message stores */
     private final AtomicInteger storeCounter;
 
-    /** @param config Hadoop configuration */
-    public Factory(Configuration config) {
+    /**
+     * Constructor.
+     *
+     * @param config Hadoop configuration
+     */
+    public Factory(ImmutableClassesGiraphConfiguration config) {
       this.config = config;
       String jobId = config.get("mapred.job.id", "Unknown Job");
-      this.directory = config.get(GiraphJob.MESSAGES_DIRECTORY,
-          GiraphJob.MESSAGES_DIRECTORY_DEFAULT) + jobId + File.separator;
-      this.bufferSize = config.getInt(GiraphJob.MESSAGES_BUFFER_SIZE,
-          GiraphJob.MESSAGES_BUFFER_SIZE_DEFAULT);
+      this.directory = config.get(GiraphConfiguration.MESSAGES_DIRECTORY,
+          GiraphConfiguration.MESSAGES_DIRECTORY_DEFAULT) + jobId +
+          File.separator;
+      this.bufferSize = config.getInt(GiraphConfiguration.MESSAGES_BUFFER_SIZE,
+          GiraphConfiguration.MESSAGES_BUFFER_SIZE_DEFAULT);
       storeCounter = new AtomicInteger();
       new File(directory).mkdirs();
     }

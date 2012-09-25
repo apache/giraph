@@ -20,6 +20,8 @@ package org.apache.giraph.comm.netty;
 
 import com.google.common.collect.Sets;
 import java.util.Set;
+import org.apache.giraph.GiraphConfiguration;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.SendMessageCache;
 import org.apache.giraph.comm.SendMutationsCache;
@@ -33,13 +35,11 @@ import org.apache.giraph.comm.requests.SendVertexRequest;
 import org.apache.giraph.comm.requests.WorkerRequest;
 import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexMutations;
 import org.apache.giraph.graph.WorkerInfo;
 import org.apache.giraph.graph.partition.Partition;
 import org.apache.giraph.graph.partition.PartitionOwner;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -71,7 +71,7 @@ public class NettyWorkerClient<I extends WritableComparable,
   private static final Logger LOG =
     Logger.getLogger(NettyWorkerClient.class);
   /** Hadoop configuration */
-  private final Configuration conf;
+  private final ImmutableClassesGiraphConfiguration<I, V, E, M> conf;
   /** Netty client that does that actual I/O */
   private final NettyClient nettyClient;
   /** Centralized service, needed to get vertex ranges */
@@ -104,22 +104,27 @@ public class NettyWorkerClient<I extends WritableComparable,
    * Only constructor.
    *
    * @param context Context from mapper
+   * @param configuration Configuration
    * @param service Used to get partition mapping
    * @param serverData Server data (used for local requests)
    */
-  public NettyWorkerClient(Mapper<?, ?, ?, ?>.Context context,
-                           CentralizedServiceWorker<I, V, E, M> service,
-                           ServerData<I, V, E, M> serverData) {
-    this.nettyClient = new NettyClient(context);
-    this.conf = context.getConfiguration();
+  public NettyWorkerClient(
+      Mapper<?, ?, ?, ?>.Context context,
+      ImmutableClassesGiraphConfiguration<I, V, E, M> configuration,
+      CentralizedServiceWorker<I, V, E, M> service,
+      ServerData<I, V, E, M> serverData) {
+    this.nettyClient = new NettyClient(context, configuration);
+    this.conf = configuration;
     this.service = service;
-    maxMessagesPerPartition = conf.getInt(GiraphJob.MSG_SIZE,
-        GiraphJob.MSG_SIZE_DEFAULT);
-    maxMutationsPerPartition = conf.getInt(GiraphJob.MAX_MUTATIONS_PER_REQUEST,
-        GiraphJob.MAX_MUTATIONS_PER_REQUEST_DEFAULT);
+    maxMessagesPerPartition = conf.getInt(
+        GiraphConfiguration.MSG_SIZE,
+        GiraphConfiguration.MSG_SIZE_DEFAULT);
+    maxMutationsPerPartition = conf.getInt(
+        GiraphConfiguration.MAX_MUTATIONS_PER_REQUEST,
+        GiraphConfiguration.MAX_MUTATIONS_PER_REQUEST_DEFAULT);
     maxResolveAddressAttempts = conf.getInt(
-        GiraphJob.MAX_RESOLVE_ADDRESS_ATTEMPTS,
-        GiraphJob.MAX_RESOLVE_ADDRESS_ATTEMPTS_DEFAULT);
+        GiraphConfiguration.MAX_RESOLVE_ADDRESS_ATTEMPTS,
+        GiraphConfiguration.MAX_RESOLVE_ADDRESS_ATTEMPTS_DEFAULT);
     sendMessageCache = new SendMessageCache<I, M>(conf);
     sendMutationsCache = new SendMutationsCache<I, V, E, M>();
     this.serverData = serverData;
@@ -157,8 +162,8 @@ public class NettyWorkerClient<I extends WritableComparable,
             partitionOwner.getPartitionId()));
       }
     }
-    boolean useNetty = conf.getBoolean(GiraphJob.USE_NETTY,
-        GiraphJob.USE_NETTY_DEFAULT);
+    boolean useNetty = conf.getBoolean(GiraphConfiguration.USE_NETTY,
+        GiraphConfiguration.USE_NETTY_DEFAULT);
     if (useNetty) {
       addresses.add(service.getMasterInfo().getInetSocketAddress());
     }

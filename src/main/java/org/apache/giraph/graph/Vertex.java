@@ -18,8 +18,8 @@
 
 package org.apache.giraph.graph;
 
-import org.apache.hadoop.conf.Configurable;
-import org.apache.hadoop.conf.Configuration;
+import org.apache.giraph.ImmutableClassesGiraphConfigurable;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -45,7 +45,8 @@ import java.util.Map;
 @SuppressWarnings("rawtypes")
 public abstract class Vertex<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
-    implements WorkerAggregatorUsage, Writable, Configurable {
+    implements WorkerAggregatorUsage, Writable,
+    ImmutableClassesGiraphConfigurable<I, V, E, M> {
   /** Vertex id. */
   private I id;
   /** Vertex value. */
@@ -55,12 +56,14 @@ public abstract class Vertex<I extends WritableComparable,
   /** Global graph state **/
   private GraphState<I, V, E, M> graphState;
   /** Configuration */
-  private Configuration conf;
+  private ImmutableClassesGiraphConfiguration<I, V, E, M> conf;
 
 
   /**
-   * This method must be called after instantiation of a vertex with BspUtils
-   * unless deserialization from readFields() is called.
+   * This method must be called after instantiation of a vertex
+   * with ImmutableClassesGiraphConfiguration
+   * unless deserialization from readFields() is
+   * called.
    *
    * @param id Will be the vertex id
    * @param value Will be the vertex value
@@ -328,17 +331,17 @@ public abstract class Vertex<I extends WritableComparable,
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    I vertexId = BspUtils.<I>createVertexId(getConf());
+    I vertexId = (I) getConf().createVertexId();
     vertexId.readFields(in);
-    V vertexValue = BspUtils.<V>createVertexValue(getConf());
+    V vertexValue = (V) getConf().createVertexValue();
     vertexValue.readFields(in);
 
     int numEdges = in.readInt();
     Map<I, E> edges = new HashMap<I, E>(numEdges);
     for (int i = 0; i < numEdges; ++i) {
-      I targetVertexId = BspUtils.<I>createVertexId(getConf());
+      I targetVertexId = (I) getConf().createVertexId();
       targetVertexId.readFields(in);
-      E edgeValue = BspUtils.<E>createEdgeValue(getConf());
+      E edgeValue = (E) getConf().createEdgeValue();
       edgeValue.readFields(in);
       edges.put(targetVertexId, edgeValue);
     }
@@ -346,7 +349,7 @@ public abstract class Vertex<I extends WritableComparable,
     int numMessages = in.readInt();
     List<M> messages = new ArrayList<M>(numMessages);
     for (int i = 0; i < numMessages; ++i) {
-      M message = BspUtils.<M>createMessageValue(getConf());
+      M message = (M) getConf().createMessageValue();
       message.readFields(in);
       messages.add(message);
     }
@@ -375,12 +378,12 @@ public abstract class Vertex<I extends WritableComparable,
   }
 
   @Override
-  public Configuration getConf() {
+  public ImmutableClassesGiraphConfiguration<I, V, E, M> getConf() {
     return conf;
   }
 
   @Override
-  public void setConf(Configuration conf) {
+  public void setConf(ImmutableClassesGiraphConfiguration<I, V, E, M> conf) {
     this.conf = conf;
   }
 

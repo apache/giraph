@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.WorkerInfo;
 import org.apache.giraph.graph.partition.BasicPartitionOwner;
 import org.apache.giraph.graph.partition.HashMasterPartitioner;
@@ -29,7 +30,6 @@ import org.apache.giraph.graph.partition.HashPartitionerFactory;
 import org.apache.giraph.graph.partition.MasterGraphPartitioner;
 import org.apache.giraph.graph.partition.PartitionOwner;
 import org.apache.giraph.graph.partition.PartitionStats;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
@@ -70,7 +70,7 @@ public class SuperstepHashPartitionerFactory<I extends WritableComparable,
      *
      * @param conf Configuration to be stored.
      */
-    public SuperstepMasterPartition(Configuration conf) {
+    public SuperstepMasterPartition(ImmutableClassesGiraphConfiguration conf) {
       super(conf);
     }
 

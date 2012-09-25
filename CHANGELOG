@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-337: Make a specific Giraph configuration for Class caching
+  and specific Giraph configuration. (aching)
+
   GIRAPH-334: Bugfix HCatalog Hive profile. (nitayj via aching)
 
   GIRAPH-93: Hive input / output format. (nitayj via aching)

@@ -18,6 +18,7 @@
 
 package org.apache.giraph.graph.partition;
 
+import org.apache.giraph.ImmutableClassesGiraphConfigurable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -31,7 +32,8 @@ import org.apache.hadoop.io.WritableComparable;
  */
 @SuppressWarnings("rawtypes")
 public interface GraphPartitionerFactory<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable> {
+    V extends Writable, E extends Writable, M extends Writable> extends
+    ImmutableClassesGiraphConfigurable {
   /**
    * Create the {@link MasterGraphPartitioner} used by the master.
    * Instantiated once by the master and reused.

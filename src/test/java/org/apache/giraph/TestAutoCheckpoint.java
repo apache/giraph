@@ -57,7 +57,7 @@ public class TestAutoCheckpoint extends BspCase {
     }
     Path outputPath = getTempPath(getCallingMethodName());
     GiraphJob job = prepareJob(getCallingMethodName(),
-        SimpleCheckpointVertex.class,
+        SimpleCheckpointVertex.SimpleCheckpointComputation.class,
         SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.class,
         SimpleCheckpointVertex.SimpleCheckpointVertexMasterCompute.class,
         SimpleSuperstepVertexInputFormat.class,
@@ -69,13 +69,13 @@ public class TestAutoCheckpoint extends BspCase {
     conf.setInt("mapred.map.max.attempts", 4);
     // Trigger failure faster
     conf.setInt("mapred.task.timeout", 30000);
-    conf.setInt(GiraphJob.POLL_MSECS, 5000);
-    conf.setInt(GiraphJob.CHECKPOINT_FREQUENCY, 2);
-    conf.set(GiraphJob.CHECKPOINT_DIRECTORY,
+    conf.setInt(GiraphConfiguration.POLL_MSECS, 5000);
+    conf.setInt(GiraphConfiguration.CHECKPOINT_FREQUENCY, 2);
+    conf.set(GiraphConfiguration.CHECKPOINT_DIRECTORY,
         getTempPath("_singleFaultCheckpoints").toString());
-    conf.setBoolean(GiraphJob.CLEANUP_CHECKPOINTS_AFTER_SUCCESS, false);
-    conf.setInt(GiraphJob.ZOOKEEPER_SESSION_TIMEOUT, 10000);
-    conf.setInt(GiraphJob.ZOOKEEPER_MIN_SESSION_TIMEOUT, 10000);
+    conf.setBoolean(GiraphConfiguration.CLEANUP_CHECKPOINTS_AFTER_SUCCESS, false);
+    conf.setInt(GiraphConfiguration.ZOOKEEPER_SESSION_TIMEOUT, 10000);
+    conf.setInt(GiraphConfiguration.ZOOKEEPER_MIN_SESSION_TIMEOUT, 10000);
 
     assertTrue(job.run(true));
   }

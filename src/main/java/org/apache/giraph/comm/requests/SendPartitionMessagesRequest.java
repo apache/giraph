@@ -19,7 +19,6 @@
 package org.apache.giraph.comm.requests;
 
 import org.apache.giraph.comm.ServerData;
-import org.apache.giraph.graph.BspUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
@@ -46,7 +45,7 @@ import java.util.Map.Entry;
 @SuppressWarnings("rawtypes")
 public class SendPartitionMessagesRequest<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable> extends
-    WritableRequest implements WorkerRequest<I, V, E, M> {
+    WritableRequest<I, V, E, M> implements WorkerRequest<I, V, E, M> {
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(SendPartitionMessagesRequest.class);
@@ -78,12 +77,12 @@ public class SendPartitionMessagesRequest<I extends WritableComparable,
     int vertexIdMessagesSize = input.readInt();
     vertexIdMessages = Maps.newHashMapWithExpectedSize(vertexIdMessagesSize);
     for (int i = 0; i < vertexIdMessagesSize; ++i) {
-      I vertexId = BspUtils.<I>createVertexId(getConf());
+      I vertexId = getConf().createVertexId();
       vertexId.readFields(input);
       int messageCount = input.readInt();
       List<M> messageList = Lists.newArrayListWithCapacity(messageCount);
       for (int j = 0; j < messageCount; ++j) {
-        M message = BspUtils.<M>createMessageValue(getConf());
+        M message = getConf().createMessageValue();
         message.readFields(input);
         messageList.add(message);
       }

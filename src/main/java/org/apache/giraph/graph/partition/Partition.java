@@ -18,10 +18,9 @@
 
 package org.apache.giraph.graph.partition;
 
-import org.apache.giraph.graph.BspUtils;
-import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.GiraphConfiguration;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.Vertex;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -48,7 +47,7 @@ public class Partition<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
     implements Writable {
   /** Configuration from the worker */
-  private final Configuration conf;
+  private final ImmutableClassesGiraphConfiguration<I, V, E, M> conf;
   /** Partition id */
   private final int id;
   /** Vertex map for this range (keyed by index) */
@@ -60,11 +59,12 @@ public class Partition<I extends WritableComparable,
    * @param conf Configuration.
    * @param id Partition id.
    */
-  public Partition(Configuration conf, int id) {
+  public Partition(ImmutableClassesGiraphConfiguration<I, V, E, M> conf,
+                   int id) {
     this.conf = conf;
     this.id = id;
-    if (conf.getBoolean(GiraphJob.USE_OUT_OF_CORE_MESSAGES,
-        GiraphJob.USE_OUT_OF_CORE_MESSAGES_DEFAULT)) {
+    if (conf.getBoolean(GiraphConfiguration.USE_OUT_OF_CORE_MESSAGES,
+        GiraphConfiguration.USE_OUT_OF_CORE_MESSAGES_DEFAULT)) {
       vertexMap = new ConcurrentSkipListMap<I, Vertex<I, V, E, M>>();
     } else {
       vertexMap = Maps.newConcurrentMap();
@@ -153,8 +153,7 @@ public class Partition<I extends WritableComparable,
   public void readFields(DataInput input) throws IOException {
     int vertices = input.readInt();
     for (int i = 0; i < vertices; ++i) {
-      Vertex<I, V, E, M> vertex =
-        BspUtils.<I, V, E, M>createVertex(conf);
+      Vertex<I, V, E, M> vertex = conf.createVertex();
       vertex.readFields(input);
       if (vertexMap.put(vertex.getId(),
           (Vertex<I, V, E, M>) vertex) != null) {

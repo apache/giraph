@@ -18,14 +18,14 @@
 
 package org.apache.giraph.comm;
 
+import org.apache.giraph.GiraphConfiguration;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.comm.messages.MessageStoreByPartition;
 import org.apache.giraph.comm.messages.MessageStoreFactory;
-import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.VertexMutations;
 import org.apache.giraph.graph.partition.DiskBackedPartitionStore;
 import org.apache.giraph.graph.partition.PartitionStore;
 import org.apache.giraph.graph.partition.SimplePartitionStore;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -71,15 +71,16 @@ public class ServerData<I extends WritableComparable,
    * @param configuration Configuration
    * @param messageStoreFactory Factory for message stores
    */
-  public ServerData(Configuration configuration,
-                    MessageStoreFactory<I, M, MessageStoreByPartition<I, M>>
-                        messageStoreFactory) {
+  public ServerData(
+      ImmutableClassesGiraphConfiguration<I, V, E, M> configuration,
+      MessageStoreFactory<I, M, MessageStoreByPartition<I, M>>
+          messageStoreFactory) {
 
     this.messageStoreFactory = messageStoreFactory;
     currentMessageStore = messageStoreFactory.newStore();
     incomingMessageStore = messageStoreFactory.newStore();
-    if (configuration.getBoolean(GiraphJob.USE_OUT_OF_CORE_GRAPH,
-        GiraphJob.USE_OUT_OF_CORE_GRAPH_DEFAULT)) {
+    if (configuration.getBoolean(GiraphConfiguration.USE_OUT_OF_CORE_GRAPH,
+        GiraphConfiguration.USE_OUT_OF_CORE_GRAPH_DEFAULT)) {
       partitionStore = new DiskBackedPartitionStore<I, V, E, M>(configuration);
     } else {
       partitionStore = new SimplePartitionStore<I, V, E, M>(configuration);

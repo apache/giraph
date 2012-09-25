@@ -18,8 +18,6 @@
 
 package org.apache.giraph.io;
 
-import org.apache.giraph.graph.BspUtils;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -66,14 +64,11 @@ public class JsonBase64VertexInputFormat<I extends WritableComparable,
   protected class JsonBase64VertexReader extends
     TextVertexReaderFromEachLineProcessed<JSONObject> {
 
-    /** Cached configuration */
-    private Configuration conf;
 
     @Override
     public void initialize(InputSplit inputSplit, TaskAttemptContext context)
       throws IOException, InterruptedException {
       super.initialize(inputSplit, context);
-      conf = context.getConfiguration();
     }
 
     @Override
@@ -93,7 +88,7 @@ public class JsonBase64VertexInputFormat<I extends WritableComparable,
             vertexObject.getString(JsonBase64VertexFormat.VERTEX_ID_KEY));
         DataInput input = new DataInputStream(
             new ByteArrayInputStream(decodedWritable));
-        I vertexId = BspUtils.<I>createVertexId(conf);
+        I vertexId = getConf().createVertexId();
         vertexId.readFields(input);
         return vertexId;
       } catch (JSONException e) {
@@ -109,7 +104,7 @@ public class JsonBase64VertexInputFormat<I extends WritableComparable,
             vertexObject.getString(JsonBase64VertexFormat.VERTEX_VALUE_KEY));
         DataInputStream input = new DataInputStream(
             new ByteArrayInputStream(decodedWritable));
-        V vertexValue = BspUtils.<V>createVertexValue(conf);
+        V vertexValue = getConf().createVertexValue();
         vertexValue.readFields(input);
         return vertexValue;
       } catch (JSONException e) {
@@ -139,11 +134,9 @@ public class JsonBase64VertexInputFormat<I extends WritableComparable,
         }
         DataInputStream input = new DataInputStream(
             new ByteArrayInputStream(decodedWritable));
-        I targetVertexId =
-            BspUtils.<I>createVertexId(getContext().getConfiguration());
+        I targetVertexId = getConf().createVertexId();
         targetVertexId.readFields(input);
-        E edgeValue =
-            BspUtils.<E>createEdgeValue(getContext().getConfiguration());
+        E edgeValue = getConf().createEdgeValue();
         edgeValue.readFields(input);
         edgeMap.put(targetVertexId, edgeValue);
       }

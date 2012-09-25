@@ -23,8 +23,8 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.WorkerInfo;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
@@ -59,7 +59,7 @@ public class HashMasterPartitioner<I extends WritableComparable,
    */
   private static final int MAX_PARTTIONS = 1024 * 1024 / 350;
   /** Provided configuration */
-  private Configuration conf;
+  private ImmutableClassesGiraphConfiguration conf;
   /** Specified partition count (overrides calculation) */
   private final int userPartitionCount;
   /** Partition count (calculated in createInitialPartitionOwners) */
@@ -72,7 +72,7 @@ public class HashMasterPartitioner<I extends WritableComparable,
    *
    *@param conf Configuration used.
    */
-  public HashMasterPartitioner(Configuration conf) {
+  public HashMasterPartitioner(ImmutableClassesGiraphConfiguration conf) {
     this.conf = conf;
     userPartitionCount = conf.getInt(USER_PARTITION_COUNT,
         DEFAULT_USER_PARTITION_COUNT);

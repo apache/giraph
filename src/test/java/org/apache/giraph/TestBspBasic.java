@@ -30,7 +30,7 @@ import org.apache.giraph.examples.SimpleSumCombiner;
 import org.apache.giraph.examples.SimpleSuperstepVertex;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexOutputFormat;
-import org.apache.giraph.graph.BspUtils;
+import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.LocalityInfoSorter;
 import org.apache.giraph.graph.GraphState;
@@ -118,13 +118,14 @@ public class TestBspBasic extends BspCase {
     GraphState<LongWritable, IntWritable, FloatWritable, IntWritable> gs =
         new GraphState<LongWritable, IntWritable,
         FloatWritable, IntWritable>();
+    ImmutableClassesGiraphConfiguration configuration =
+        new ImmutableClassesGiraphConfiguration(job.getConfiguration());
     Vertex<LongWritable, IntWritable, FloatWritable, IntWritable> vertex =
-        BspUtils.createVertex(job.getConfiguration());
-    vertex.initialize(null, null, null, null);
+        configuration.createVertex();
     System.out.println("testInstantiateVertex: Got vertex " + vertex +
         ", graphState" + gs);
     VertexInputFormat<LongWritable, IntWritable, FloatWritable, IntWritable>
-    inputFormat = BspUtils.createVertexInputFormat(job.getConfiguration());
+    inputFormat = configuration.createVertexInputFormat();
     /*if[HADOOP_NON_SASL_RPC]
       List<InputSplit> splitArray =
           inputFormat.getSplits(
@@ -142,19 +143,33 @@ public class TestBspBasic extends BspCase {
         byteArrayOutputStream.toString());
   }
 
+  private static class NullVertex extends EdgeListVertex<
+      NullWritable, NullWritable, NullWritable, NullWritable> {
+    @Override
+    public void compute(Iterable<NullWritable> messages) throws IOException { }
+  }
+
   /**
    * Test whether vertices with NullWritable for vertex value type, edge value
    * type and message value type can be instantiated.
    */
   @Test
   public void testInstantiateNullVertex() throws IOException {
-    Configuration nullConf = new Configuration();
-    nullConf.setClass(GiraphJob.VERTEX_VALUE_CLASS, NullWritable.class, Writable.class);
-    nullConf.setClass(GiraphJob.EDGE_VALUE_CLASS, NullWritable.class, Writable.class);
-    nullConf.setClass(GiraphJob.MESSAGE_VALUE_CLASS, NullWritable.class, Writable.class);
-    NullWritable vertexValue = BspUtils.createVertexValue(nullConf);
-    NullWritable edgeValue = BspUtils.createEdgeValue(nullConf);
-    NullWritable messageValue = BspUtils.createMessageValue(nullConf);
+    GiraphConfiguration nullConf = new GiraphConfiguration();
+    nullConf.setVertexClass(NullVertex.class);
+    ImmutableClassesGiraphConfiguration<
+        NullWritable, NullWritable, NullWritable,
+        NullWritable> immutableClassesGiraphConfiguration =
+        new ImmutableClassesGiraphConfiguration<
+            NullWritable, NullWritable, NullWritable, NullWritable>(
+            nullConf);
+    NullWritable vertexValue =
+        immutableClassesGiraphConfiguration.createVertexValue();
+    NullWritable edgeValue =
+        immutableClassesGiraphConfiguration.createEdgeValue();
+    NullWritable messageValue =
+        immutableClassesGiraphConfiguration.createMessageValue();
+    assertSame(vertexValue.getClass(), NullWritable.class);
     assertSame(vertexValue, edgeValue);
     assertSame(edgeValue, messageValue);
   }
@@ -176,8 +191,9 @@ public class TestBspBasic extends BspCase {
     }
     GiraphJob job = prepareJob(getCallingMethodName(),
         SimpleSuperstepVertex.class, SimpleSuperstepVertexInputFormat.class);
-    job.setWorkerConfiguration(5, 5, 100.0f);
-    job.getConfiguration().setBoolean(GiraphJob.SPLIT_MASTER_WORKER, true);
+    job.getConfiguration().setWorkerConfiguration(5, 5, 100.0f);
+    job.getConfiguration().setBoolean(GiraphConfiguration.SPLIT_MASTER_WORKER,
+        true);
 
     try {
       job.run(true);
@@ -185,13 +201,13 @@ public class TestBspBasic extends BspCase {
     } catch (IllegalArgumentException e) {
     }
 
-    job.getConfiguration().setBoolean(GiraphJob.SPLIT_MASTER_WORKER, false);
+    job.getConfiguration().setBoolean(GiraphConfiguration.SPLIT_MASTER_WORKER, false);
     try {
       job.run(true);
       fail();
     } catch (IllegalArgumentException e) {
     }
-    job.setWorkerConfiguration(1, 1, 100.0f);
+    job.getConfiguration().setWorkerConfiguration(1, 1, 100.0f);
     job.run(true);
   }
 
@@ -234,7 +250,7 @@ public class TestBspBasic extends BspCase {
         SimpleSuperstepVertex.class, SimpleSuperstepVertexInputFormat.class,
         SimpleSuperstepVertexOutputFormat.class, outputPath);
     Configuration conf = job.getConfiguration();
-    conf.setFloat(GiraphJob.TOTAL_INPUT_SPLIT_MULTIPLIER, 2.0f);
+    conf.setFloat(GiraphConfiguration.TOTAL_INPUT_SPLIT_MULTIPLIER, 2.0f);
     // GeneratedInputSplit will generate 10 vertices
     conf.setLong(GeneratedVertexReader.READER_VERTICES, 10);
     assertTrue(job.run(true));
@@ -289,7 +305,7 @@ public class TestBspBasic extends BspCase {
       throws IOException, InterruptedException, ClassNotFoundException {
     GiraphJob job = prepareJob(getCallingMethodName(),
         SimpleCombinerVertex.class, SimpleSuperstepVertexInputFormat.class);
-    job.setVertexCombinerClass(SimpleSumCombiner.class);
+    job.getConfiguration().setVertexCombinerClass(SimpleSumCombiner.class);
     assertTrue(job.run(true));
   }
 
@@ -349,9 +365,9 @@ public class TestBspBasic extends BspCase {
       throws IOException, InterruptedException, ClassNotFoundException {
     GiraphJob job = prepareJob(getCallingMethodName(),
         SimplePageRankVertex.class, SimplePageRankVertexInputFormat.class);
-    job.setWorkerContextClass(
+    job.getConfiguration().setWorkerContextClass(
         SimplePageRankVertex.SimplePageRankVertexWorkerContext.class);
-    job.setMasterComputeClass(
+    job.getConfiguration().setMasterComputeClass(
         SimplePageRankVertex.SimplePageRankVertexMasterCompute.class);
     assertTrue(job.run(true));
     if (!runningInDistributedMode()) {
@@ -407,26 +423,27 @@ public class TestBspBasic extends BspCase {
   public void testBspPageRankWithAggregatorWriter()
       throws IOException, InterruptedException, ClassNotFoundException {
     Path outputPath = getTempPath(getCallingMethodName());
+
     GiraphJob job = prepareJob(getCallingMethodName(),
         SimplePageRankVertex.class,
         SimplePageRankVertex.SimplePageRankVertexInputFormat.class,
         SimplePageRankVertex.SimplePageRankVertexOutputFormat.class,
         outputPath);
-    job.setWorkerContextClass(
+    GiraphConfiguration configuration = job.getConfiguration();
+    configuration.setWorkerContextClass(
         SimplePageRankVertex.SimplePageRankVertexWorkerContext.class);
-    job.setMasterComputeClass(
+    configuration.setMasterComputeClass(
         SimplePageRankVertex.SimplePageRankVertexMasterCompute.class);
-
-    Configuration conf = job.getConfiguration();
-
-    job.setAggregatorWriterClass(TextAggregatorWriter.class);
+    configuration.setAggregatorWriterClass(TextAggregatorWriter.class);
     Path aggregatorValues = getTempPath("aggregatorValues");
-    conf.setInt(TextAggregatorWriter.FREQUENCY, TextAggregatorWriter.ALWAYS);
-    conf.set(TextAggregatorWriter.FILENAME, aggregatorValues.toString());
+    configuration.setInt(TextAggregatorWriter.FREQUENCY,
+        TextAggregatorWriter.ALWAYS);
+    configuration.set(TextAggregatorWriter.FILENAME,
+        aggregatorValues.toString());
 
     assertTrue(job.run(true));
 
-    FileSystem fs = FileSystem.get(conf);
+    FileSystem fs = FileSystem.get(configuration);
     Path valuesFile = new Path(aggregatorValues.toString() + "_0");
 
     try {
@@ -499,9 +516,10 @@ public class TestBspBasic extends BspCase {
       throws IOException, InterruptedException, ClassNotFoundException {
     GiraphJob job = prepareJob(getCallingMethodName(),
         SimpleMasterComputeVertex.class, SimplePageRankVertexInputFormat.class);
-    job.setWorkerContextClass(
+    job.getConfiguration().setWorkerContextClass(
         SimpleMasterComputeVertex.SimpleMasterComputeWorkerContext.class);
-    job.setMasterComputeClass(SimpleMasterComputeVertex.SimpleMasterCompute.class);
+    job.getConfiguration().setMasterComputeClass(
+        SimpleMasterComputeVertex.SimpleMasterCompute.class);
     assertTrue(job.run(true));
     if (!runningInDistributedMode()) {
       double finalSum =

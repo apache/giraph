@@ -18,6 +18,8 @@
 
 package org.apache.giraph.graph.partition;
 
+import org.apache.giraph.GiraphConfiguration;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.IntIntNullIntVertex;
 import org.apache.giraph.graph.Vertex;
@@ -26,6 +28,7 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.junit.Before;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
@@ -41,13 +44,16 @@ import java.io.IOException;
  * Test case for partition stores.
  */
 public class TestPartitionStores {
-  private static class MyVertex extends IntIntNullIntVertex {
+  private ImmutableClassesGiraphConfiguration conf;
+
+  public static class MyVertex extends IntIntNullIntVertex {
     @Override
     public void compute(Iterable<IntWritable> messages) throws IOException {}
   }
 
   private Partition<IntWritable, IntWritable, NullWritable,
-      IntWritable> createPartition(Configuration conf, Integer id,
+      IntWritable> createPartition(ImmutableClassesGiraphConfiguration conf,
+                                   Integer id,
                                    Vertex<IntWritable, IntWritable,
                                        NullWritable, IntWritable>... vertices) {
     Partition<IntWritable, IntWritable, NullWritable, IntWritable> partition =
@@ -60,20 +66,15 @@ public class TestPartitionStores {
     return partition;
   }
 
+  @Before
+  public void setUp() {
+    GiraphConfiguration configuration = new GiraphConfiguration();
+    configuration.setVertexClass(MyVertex.class);
+    conf = new ImmutableClassesGiraphConfiguration(configuration);
+  }
+
   @Test
   public void testSimplePartitionStore() {
-    Configuration conf = new Configuration();
-    conf.setClass(GiraphJob.VERTEX_CLASS, MyVertex.class,
-        Vertex.class);
-    conf.setClass(GiraphJob.VERTEX_ID_CLASS, IntWritable.class,
-        WritableComparable.class);
-    conf.setClass(GiraphJob.VERTEX_VALUE_CLASS, IntWritable.class,
-        Writable.class);
-    conf.setClass(GiraphJob.EDGE_VALUE_CLASS, NullWritable.class,
-        Writable.class);
-    conf.setClass(GiraphJob.MESSAGE_VALUE_CLASS, IntWritable.class,
-        Writable.class);
-
     PartitionStore<IntWritable, IntWritable, NullWritable, IntWritable>
         partitionStore = new SimplePartitionStore<IntWritable, IntWritable,
         NullWritable, IntWritable>(conf);
@@ -82,34 +83,24 @@ public class TestPartitionStores {
 
   @Test
   public void testDiskBackedPartitionStore() {
-    Configuration conf = new Configuration();
-    conf.setClass(GiraphJob.VERTEX_CLASS, MyVertex.class,
-        Vertex.class);
-    conf.setClass(GiraphJob.VERTEX_ID_CLASS, IntWritable.class,
-        WritableComparable.class);
-    conf.setClass(GiraphJob.VERTEX_VALUE_CLASS, IntWritable.class,
-        Writable.class);
-    conf.setClass(GiraphJob.EDGE_VALUE_CLASS, NullWritable.class,
-        Writable.class);
-    conf.setClass(GiraphJob.MESSAGE_VALUE_CLASS, IntWritable.class,
-        Writable.class);
-
-    conf.setBoolean(GiraphJob.USE_OUT_OF_CORE_GRAPH, true);
-    conf.setInt(GiraphJob.MAX_PARTITIONS_IN_MEMORY, 1);
+    conf.setBoolean(GiraphConfiguration.USE_OUT_OF_CORE_GRAPH, true);
+    conf.setInt(GiraphConfiguration.MAX_PARTITIONS_IN_MEMORY, 1);
 
     PartitionStore<IntWritable, IntWritable, NullWritable, IntWritable>
         partitionStore = new DiskBackedPartitionStore<IntWritable,
                 IntWritable, NullWritable, IntWritable>(conf);
     testReadWrite(partitionStore, conf);
 
-    conf.setInt(GiraphJob.MAX_PARTITIONS_IN_MEMORY, 2);
+    conf.setInt(GiraphConfiguration.MAX_PARTITIONS_IN_MEMORY, 2);
     partitionStore = new DiskBackedPartitionStore<IntWritable,
             IntWritable, NullWritable, IntWritable>(conf);
     testReadWrite(partitionStore, conf);
   }
 
-  public void testReadWrite(PartitionStore<IntWritable, IntWritable,
-      NullWritable, IntWritable> partitionStore, Configuration conf) {
+  public void testReadWrite(
+      PartitionStore<IntWritable, IntWritable,
+          NullWritable, IntWritable> partitionStore,
+      ImmutableClassesGiraphConfiguration conf) {
     Vertex<IntWritable, IntWritable, NullWritable, IntWritable> v1 =
         new MyVertex();
     v1.initialize(new IntWritable(1), new IntWritable(1), null, null);

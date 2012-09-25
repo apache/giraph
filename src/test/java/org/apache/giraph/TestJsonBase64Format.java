@@ -22,7 +22,7 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 
-import org.apache.giraph.benchmark.PageRankBenchmark;
+import org.apache.giraph.benchmark.EdgeListVertexPageRankBenchmark;
 import org.apache.giraph.benchmark.PageRankComputation;
 import org.apache.giraph.io.PseudoRandomVertexInputFormat;
 import org.apache.giraph.graph.GiraphJob;
@@ -38,14 +38,8 @@ import org.junit.Test;
  */
 public class TestJsonBase64Format extends BspCase {
   /**
-   * Create the test case
-   *
-   * @param testName name of the test case
+   * Constructor.
    */
-  public TestJsonBase64Format(String testName) {
-    super(testName);
-  }
-
   public TestJsonBase64Format() {
     super(TestJsonBase64Format.class.getName());
   }
@@ -64,9 +58,11 @@ public class TestJsonBase64Format extends BspCase {
       throws IOException, InterruptedException, ClassNotFoundException {
 
     Path outputPath = getTempPath(getCallingMethodName());
-    GiraphJob job = prepareJob(getCallingMethodName(), PageRankBenchmark.class,
+    GiraphJob job = prepareJob(getCallingMethodName(),
+        EdgeListVertexPageRankBenchmark.class,
         PseudoRandomVertexInputFormat.class,
-        JsonBase64VertexOutputFormat.class, outputPath);
+        JsonBase64VertexOutputFormat.class,
+        outputPath);
     job.getConfiguration().setLong(
         PseudoRandomVertexInputFormat.AGGREGATE_VERTICES, 101);
     job.getConfiguration().setLong(
@@ -76,15 +72,18 @@ public class TestJsonBase64Format extends BspCase {
     assertTrue(job.run(true));
 
     Path outputPath2 = getTempPath(getCallingMethodName() + "2");
-    job = prepareJob(getCallingMethodName(), PageRankBenchmark.class,
-        JsonBase64VertexInputFormat.class, JsonBase64VertexOutputFormat.class,
+    job = prepareJob(getCallingMethodName(),
+        EdgeListVertexPageRankBenchmark.class,
+        JsonBase64VertexInputFormat.class,
+        JsonBase64VertexOutputFormat.class,
         outputPath2);
     job.getConfiguration().setInt(PageRankComputation.SUPERSTEP_COUNT, 3);
     FileInputFormat.setInputPaths(job.getInternalJob(), outputPath);
     assertTrue(job.run(true));
 
     Path outputPath3 = getTempPath(getCallingMethodName() + "3");
-    job = prepareJob(getCallingMethodName(), PageRankBenchmark.class,
+    job = prepareJob(getCallingMethodName(),
+        EdgeListVertexPageRankBenchmark.class,
         PseudoRandomVertexInputFormat.class,
         JsonBase64VertexOutputFormat.class, outputPath3);
     job.getConfiguration().setLong(

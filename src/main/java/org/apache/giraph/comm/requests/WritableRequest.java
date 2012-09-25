@@ -21,16 +21,25 @@ package org.apache.giraph.comm.requests;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import org.apache.hadoop.conf.Configurable;
-import org.apache.hadoop.conf.Configuration;
+import org.apache.giraph.ImmutableClassesGiraphConfigurable;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 
 /**
  * Interface for requests to implement
+ *
+ * @param <I> Vertex id
+ * @param <V> Vertex data
+ * @param <E> Edge data
+ * @param <M> Message data
  */
-public abstract class WritableRequest implements Writable, Configurable {
+public abstract class WritableRequest<I extends WritableComparable,
+    V extends Writable, E extends Writable, M extends Writable>
+    implements Writable,
+    ImmutableClassesGiraphConfigurable<I, V, E, M> {
   /** Configuration */
-  private Configuration conf;
+  private ImmutableClassesGiraphConfiguration<I, V, E, M> conf;
   /** Client id */
   private int clientId = -1;
   /** Request id */
@@ -74,12 +83,13 @@ public abstract class WritableRequest implements Writable, Configurable {
   abstract void writeRequest(DataOutput output) throws IOException;
 
   @Override
-  public final Configuration getConf() {
+  public final ImmutableClassesGiraphConfiguration<I, V, E, M> getConf() {
     return conf;
   }
 
   @Override
-  public final void setConf(Configuration conf) {
+  public final void setConf(ImmutableClassesGiraphConfiguration<I, V,
+      E, M> conf) {
     this.conf = conf;
   }
 

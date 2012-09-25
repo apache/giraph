@@ -18,8 +18,8 @@
 
 package org.apache.giraph.comm.netty.handler;
 
+import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.comm.requests.WritableRequest;
-import org.apache.giraph.graph.GiraphJob;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -62,8 +62,8 @@ public abstract class RequestServerHandler<R> extends
       Configuration conf) {
     this.workerRequestReservedMap = workerRequestReservedMap;
     closeFirstRequest = conf.getBoolean(
-        GiraphJob.NETTY_SIMULATE_FIRST_REQUEST_CLOSED,
-        GiraphJob.NETTY_SIMULATE_FIRST_REQUEST_CLOSED_DEFAULT);
+        GiraphConfiguration.NETTY_SIMULATE_FIRST_REQUEST_CLOSED,
+        GiraphConfiguration.NETTY_SIMULATE_FIRST_REQUEST_CLOSED_DEFAULT);
     myWorkerId = conf.getInt("mapred.task.partition", -1);
   }
 

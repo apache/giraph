@@ -18,10 +18,11 @@
 
 package org.apache.giraph.comm;
 
+import org.apache.giraph.GiraphConfiguration;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexCombiner;
 import org.apache.giraph.graph.VertexMutations;
@@ -30,7 +31,6 @@ import org.apache.giraph.graph.WorkerInfo;
 import org.apache.giraph.graph.partition.Partition;
 import org.apache.giraph.graph.partition.PartitionOwner;
 import org.apache.giraph.utils.MemoryUtils;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.ipc.RPC;
@@ -86,7 +86,7 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
   /** Maximum number of vertices sent in a single RPC */
   private static final int MAX_VERTICES_PER_RPC = 1024;
   /** Hadoop configuration */
-  protected final Configuration conf;
+  protected final ImmutableClassesGiraphConfiguration<I, V, E, M> conf;
   /** Saved context for progress */
   private final Mapper<?, ?, ?, ?>.Context context;
   /** Indicates whether in superstep preparation */
@@ -438,22 +438,23 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
    * Only constructor.
    *
    * @param context Context for getting configuration
+   * @param configuration Configuration
    * @param service Service worker to get the vertex ranges
    * @throws IOException
-   * @throws UnknownHostException
    * @throws InterruptedException
    */
   public BasicRPCCommunications(Mapper<?, ?, ?, ?>.Context context,
+    ImmutableClassesGiraphConfiguration<I, V, E, M> configuration,
     CentralizedServiceWorker<I, V, E, M> service)
     throws IOException, InterruptedException {
     this.service = service;
     this.context = context;
-    this.conf = context.getConfiguration();
-    this.maxSize = conf.getInt(GiraphJob.MSG_SIZE,
-        GiraphJob.MSG_SIZE_DEFAULT);
+    this.conf = configuration;
+    this.maxSize = conf.getInt(GiraphConfiguration.MSG_SIZE,
+        GiraphConfiguration.MSG_SIZE_DEFAULT);
     this.maxMessagesPerFlushPut =
-        conf.getInt(GiraphJob.MAX_MESSAGES_PER_FLUSH_PUT,
-            GiraphJob.DEFAULT_MAX_MESSAGES_PER_FLUSH_PUT);
+        conf.getInt(GiraphConfiguration.MAX_MESSAGES_PER_FLUSH_PUT,
+            GiraphConfiguration.DEFAULT_MAX_MESSAGES_PER_FLUSH_PUT);
     if (BspUtils.getVertexCombinerClass(conf) == null) {
       this.combiner = null;
     } else {
@@ -466,19 +467,19 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
 
 
 
-    int numHandlers = conf.getInt(GiraphJob.RPC_NUM_HANDLERS,
-        GiraphJob.RPC_NUM_HANDLERS_DEFAULT);
+    int numHandlers = conf.getInt(GiraphConfiguration.RPC_NUM_HANDLERS,
+        GiraphConfiguration.RPC_NUM_HANDLERS_DEFAULT);
     if (numTasks < numHandlers) {
       numHandlers = numTasks;
     }
     this.jobToken = createJobToken();
     this.jobId = context.getJobID().toString();
 
-    int numWorkers = conf.getInt(GiraphJob.MAX_WORKERS, numTasks);
+    int numWorkers = conf.getInt(GiraphConfiguration.MAX_WORKERS, numTasks);
     // If the number of flush threads is unset, it is set to
     // the number of max workers - 1 or a minimum of 1.
     int numFlushThreads =
-        Math.max(conf.getInt(GiraphJob.MSG_NUM_FLUSH_THREADS,
+        Math.max(conf.getInt(GiraphConfiguration.MSG_NUM_FLUSH_THREADS,
             numWorkers - 1),
             1);
     this.executor = Executors.newFixedThreadPool(numFlushThreads);
@@ -490,16 +491,16 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
     int portIncrementConstant =
         (int) Math.pow(10, Math.ceil(Math.log10(numWorkers)));
     String bindAddress = localHostname;
-    int bindPort = conf.getInt(GiraphJob.RPC_INITIAL_PORT,
-        GiraphJob.RPC_INITIAL_PORT_DEFAULT) +
+    int bindPort = conf.getInt(GiraphConfiguration.RPC_INITIAL_PORT,
+        GiraphConfiguration.RPC_INITIAL_PORT_DEFAULT) +
         taskId;
     int bindAttempts = 0;
     final int maxRpcPortBindAttempts =
-        conf.getInt(GiraphJob.MAX_RPC_PORT_BIND_ATTEMPTS,
-            GiraphJob.MAX_RPC_PORT_BIND_ATTEMPTS_DEFAULT);
+        conf.getInt(GiraphConfiguration.MAX_RPC_PORT_BIND_ATTEMPTS,
+            GiraphConfiguration.MAX_RPC_PORT_BIND_ATTEMPTS_DEFAULT);
     final boolean failFirstPortBindingAttempt =
-        conf.getBoolean(GiraphJob.FAIL_FIRST_RPC_PORT_BIND_ATTEMPT,
-            GiraphJob.FAIL_FIRST_RPC_PORT_BIND_ATTEMPT_DEFAULT);
+        conf.getBoolean(GiraphConfiguration.FAIL_FIRST_RPC_PORT_BIND_ATTEMPT,
+            GiraphConfiguration.FAIL_FIRST_RPC_PORT_BIND_ATTEMPT_DEFAULT);
     while (bindAttempts < maxRpcPortBindAttempts) {
       this.myAddress = new InetSocketAddress(bindAddress, bindPort);
       if (failFirstPortBindingAttempt && bindAttempts == 0) {
@@ -1216,8 +1217,7 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
     // Resolve all graph mutations
     for (I vertexIndex : resolveVertexIndexSet) {
       VertexResolver<I, V, E, M> vertexResolver =
-          BspUtils.createVertexResolver(
-              conf, service.getGraphMapper().getGraphState());
+          conf.createVertexResolver(service.getGraphMapper().getGraphState());
       Vertex<I, V, E, M> originalVertex =
           service.getVertex(vertexIndex);
       Iterable<M> messages = inMessages.get(vertexIndex);

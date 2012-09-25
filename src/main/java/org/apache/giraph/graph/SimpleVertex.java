@@ -71,15 +71,15 @@ public abstract class SimpleVertex<I extends WritableComparable,
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    I vertexId = BspUtils.<I>createVertexId(getConf());
+    I vertexId = getConf().createVertexId();
     vertexId.readFields(in);
-    V vertexValue = BspUtils.<V>createVertexValue(getConf());
+    V vertexValue = getConf().createVertexValue();
     vertexValue.readFields(in);
 
     int numEdges = in.readInt();
     Map<I, NullWritable> edges = new HashMap<I, NullWritable>(numEdges);
     for (int i = 0; i < numEdges; ++i) {
-      I targetVertexId = BspUtils.<I>createVertexId(getConf());
+      I targetVertexId = getConf().createVertexId();
       targetVertexId.readFields(in);
       edges.put(targetVertexId, NullWritable.get());
     }
@@ -87,7 +87,7 @@ public abstract class SimpleVertex<I extends WritableComparable,
     int numMessages = in.readInt();
     List<M> messages = new ArrayList<M>(numMessages);
     for (int i = 0; i < numMessages; ++i) {
-      M message = BspUtils.<M>createMessageValue(getConf());
+      M message = getConf().createMessageValue();
       message.readFields(in);
       messages.add(message);
     }

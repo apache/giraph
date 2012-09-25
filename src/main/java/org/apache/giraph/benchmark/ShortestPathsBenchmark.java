@@ -23,8 +23,8 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
+import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.examples.MinimumDoubleCombiner;
-import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.io.PseudoRandomVertexInputFormat;
@@ -40,18 +40,25 @@ import java.io.IOException;
 /**
  * Single-source shortest paths benchmark.
  */
-public class ShortestPathsBenchmark extends EdgeListVertex<LongWritable,
-    DoubleWritable, DoubleWritable, DoubleWritable> implements Tool {
+public class ShortestPathsBenchmark implements Tool {
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(ShortestPathsBenchmark.class);
   /** Configuration */
   private Configuration conf;
 
-  @Override
-  public void compute(Iterable<DoubleWritable> messages) throws IOException {
-    ShortestPathsComputation.computeShortestPaths(this, messages);
+  /**
+   * Vertex implementation
+   */
+  public static class ShortestPathsBenchmarkVertex extends
+      EdgeListVertex<LongWritable, DoubleWritable, DoubleWritable,
+          DoubleWritable> {
+    @Override
+    public void compute(Iterable<DoubleWritable> messages) throws IOException {
+      ShortestPathsComputation.computeShortestPaths(this, messages);
+    }
   }
+
 
   @Override
   public Configuration getConf() {
@@ -117,17 +124,20 @@ public class ShortestPathsBenchmark extends EdgeListVertex<LongWritable,
     GiraphJob job = new GiraphJob(getConf(), getClass().getName());
     if (!cmd.hasOption('c') ||
         (Integer.parseInt(cmd.getOptionValue('c')) == 1)) {
-      job.setVertexClass(ShortestPathsBenchmark.class);
+      job.getConfiguration().setVertexClass(ShortestPathsBenchmarkVertex.class);
     } else {
-      job.setVertexClass(HashMapVertexShortestPathsBenchmark.class);
+      job.getConfiguration().setVertexClass(
+          HashMapVertexShortestPathsBenchmark.class);
     }
     LOG.info("Using class " +
-        BspUtils.getVertexClass(job.getConfiguration()).getName());
-    job.setVertexInputFormatClass(PseudoRandomVertexInputFormat.class);
+        job.getConfiguration().get(GiraphConfiguration.VERTEX_CLASS));
+    job.getConfiguration().setVertexInputFormatClass(
+        PseudoRandomVertexInputFormat.class);
     if (!cmd.hasOption("nc")) {
-      job.setVertexCombinerClass(MinimumDoubleCombiner.class);
+      job.getConfiguration().setVertexCombinerClass(
+          MinimumDoubleCombiner.class);
     }
-    job.setWorkerConfiguration(workers, workers, 100.0f);
+    job.getConfiguration().setWorkerConfiguration(workers, workers, 100.0f);
     job.getConfiguration().setLong(
         PseudoRandomVertexInputFormat.AGGREGATE_VERTICES,
         Long.parseLong(cmd.getOptionValue('V')));

@@ -26,7 +26,6 @@ import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.giraph.comm.ServerData;
-import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.VertexMutations;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -45,7 +44,7 @@ import com.google.common.collect.Maps;
 @SuppressWarnings("rawtypes")
 public class SendPartitionMutationsRequest<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable> extends
-    WritableRequest implements WorkerRequest<I, V, E, M> {
+    WritableRequest<I, V, E, M> implements WorkerRequest<I, V, E, M> {
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(SendPartitionMutationsRequest.class);
@@ -78,7 +77,7 @@ public class SendPartitionMutationsRequest<I extends WritableComparable,
     int vertexIdMutationsSize = input.readInt();
     vertexIdMutations = Maps.newHashMapWithExpectedSize(vertexIdMutationsSize);
     for (int i = 0; i < vertexIdMutationsSize; ++i) {
-      I vertexId = BspUtils.<I>createVertexId(getConf());
+      I vertexId = getConf().createVertexId();
       vertexId.readFields(input);
       VertexMutations<I, V, E, M> vertexMutations =
           new VertexMutations<I, V, E, M>();

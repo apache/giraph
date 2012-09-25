@@ -17,6 +17,7 @@
  */
 package org.apache.giraph.io;
 
+import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.EdgeListVertex;
@@ -65,9 +66,9 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat extends
     rr = mock(RecordReader.class);
     when(rr.nextKeyValue()).thenReturn(true).thenReturn(false);
     conf = new Configuration();
-    conf.setClass(GiraphJob.VERTEX_CLASS, DummyVertex.class, Vertex.class);
-    conf.setClass(GiraphJob.VERTEX_ID_CLASS, Text.class, Writable.class);
-    conf.setClass(GiraphJob.VERTEX_VALUE_CLASS, DoubleWritable.class, Writable.class);
+    conf.setClass(GiraphConfiguration.VERTEX_CLASS, DummyVertex.class, Vertex.class);
+    conf.setClass(GiraphConfiguration.VERTEX_ID_CLASS, Text.class, Writable.class);
+    conf.setClass(GiraphConfiguration.VERTEX_VALUE_CLASS, DoubleWritable.class, Writable.class);
     graphState = mock(GraphState.class);
     tac = mock(TaskAttemptContext.class);
     when(tac.getConfiguration()).thenReturn(conf);

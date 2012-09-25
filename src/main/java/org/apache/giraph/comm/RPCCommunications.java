@@ -39,6 +39,8 @@ import org.apache.log4j.Logger;
 
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.graph.GraphState;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
+
 /*if[HADOOP_NON_SECURE]
 else[HADOOP_NON_SECURE]*/
 import org.apache.giraph.hadoop.BspPolicyProvider;
@@ -78,6 +80,7 @@ public class RPCCommunications<I extends WritableComparable,
    * Constructor.
    *
    * @param context Context to be saved.
+   * @param configuration Configuration
    * @param service Server worker.
    * @param graphState Graph state from infrastructure.
    * @throws IOException
@@ -85,9 +88,10 @@ public class RPCCommunications<I extends WritableComparable,
    */
   public RPCCommunications(Mapper<?, ?, ?, ?>.Context context,
       CentralizedServiceWorker<I, V, E, M> service,
+      ImmutableClassesGiraphConfiguration configuration,
       GraphState<I, V, E, M> graphState) throws
       IOException, InterruptedException {
-    super(context, service);
+    super(context, configuration, service);
   }
 
   /**

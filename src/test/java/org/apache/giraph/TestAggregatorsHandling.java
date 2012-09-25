@@ -40,9 +40,9 @@ public class TestAggregatorsHandling extends BspCase {
     GiraphJob job = prepareJob(getCallingMethodName(),
         AggregatorsTestVertex.class,
         SimplePageRankVertex.SimplePageRankVertexInputFormat.class);
-    job.setMasterComputeClass(
+    job.getConfiguration().setMasterComputeClass(
         AggregatorsTestVertex.AggregatorsTestMasterCompute.class);
-    job.getConfiguration().setBoolean(GiraphJob.USE_NETTY, true);
+    job.getConfiguration().setBoolean(GiraphConfiguration.USE_NETTY, true);
     assertTrue(job.run(true));
   }
 }

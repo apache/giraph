@@ -18,13 +18,14 @@
 
 package org.apache.giraph.graph;
 
+import org.apache.giraph.GiraphConfiguration;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedService;
 import org.apache.giraph.graph.partition.GraphPartitionerFactory;
 import org.apache.giraph.zk.BspEvent;
 import org.apache.giraph.zk.PredicateLock;
 import org.apache.giraph.zk.ZooKeeperExt;
 import org.apache.giraph.zk.ZooKeeperManager;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Writable;
@@ -239,8 +240,8 @@ public abstract class BspService<I extends WritableComparable,
   /** Registered list of BspEvents */
   private final List<BspEvent> registeredBspEvents =
       new ArrayList<BspEvent>();
-  /** Configuration of the job*/
-  private final Configuration conf;
+  /** Immutable configuration of the job*/
+  private final ImmutableClassesGiraphConfiguration<I, V, E, M> conf;
   /** Job context (mainly for progress) */
   private final Mapper<?, ?, ?, ?>.Context context;
   /** Cached superstep (from ZooKeeper) */
@@ -305,10 +306,12 @@ public abstract class BspService<I extends WritableComparable,
 
     this.context = context;
     this.graphMapper = graphMapper;
-    this.conf = context.getConfiguration();
+    this.conf = new ImmutableClassesGiraphConfiguration<I, V, E, M>(
+        context.getConfiguration());
     this.jobId = conf.get("mapred.job.id", "Unknown Job");
     this.taskPartition = conf.getInt("mapred.task.partition", -1);
-    this.restartedSuperstep = conf.getLong(GiraphJob.RESTART_SUPERSTEP,
+    this.restartedSuperstep = conf.getLong(
+        GiraphConfiguration.RESTART_SUPERSTEP,
         UNSET_SUPERSTEP);
     this.cachedSuperstep = restartedSuperstep;
     if ((restartedSuperstep != UNSET_SUPERSTEP) &&
@@ -323,12 +326,11 @@ public abstract class BspService<I extends WritableComparable,
       throw new RuntimeException(e);
     }
     this.hostnamePartitionId = hostname + "_" + getTaskPartition();
-    this.graphPartitionerFactory =
-        BspUtils.<I, V, E, M>createGraphPartitioner(conf);
+    this.graphPartitionerFactory = conf.createGraphPartitioner();
 
     this.checkpointFrequency =
-        conf.getInt(GiraphJob.CHECKPOINT_FREQUENCY,
-            GiraphJob.CHECKPOINT_FREQUENCY_DEFAULT);
+        conf.getInt(GiraphConfiguration.CHECKPOINT_FREQUENCY,
+            GiraphConfiguration.CHECKPOINT_FREQUENCY_DEFAULT);
 
     basePath = ZooKeeperManager.getBasePath(conf) + BASE_DIR + "/" + jobId;
     masterJobStatePath = basePath + MASTER_JOB_STATE_NODE;
@@ -338,10 +340,9 @@ public abstract class BspService<I extends WritableComparable,
     inputSplitsAllDonePath = basePath + INPUT_SPLITS_ALL_DONE_NODE;
     applicationAttemptsPath = basePath + APPLICATION_ATTEMPTS_DIR;
     cleanedUpPath = basePath + CLEANED_UP_DIR;
-    checkpointBasePath =
-        getConfiguration().get(
-            GiraphJob.CHECKPOINT_DIRECTORY,
-            GiraphJob.CHECKPOINT_DIRECTORY_DEFAULT + "/" + getJobId());
+    checkpointBasePath = getConfiguration().get(
+        GiraphConfiguration.CHECKPOINT_DIRECTORY,
+        GiraphConfiguration.CHECKPOINT_DIRECTORY_DEFAULT + "/" + getJobId());
     masterElectionPath = basePath + MASTER_ELECTION_DIR;
     currentMasterPath = basePath + CURRENT_MASTER_INFO_NODE;
     if (LOG.isInfoEnabled()) {
@@ -621,7 +622,8 @@ public abstract class BspService<I extends WritableComparable,
     return fs;
   }
 
-  public final Configuration getConfiguration() {
+  public final ImmutableClassesGiraphConfiguration<I, V, E, M>
+  getConfiguration() {
     return conf;
   }
 

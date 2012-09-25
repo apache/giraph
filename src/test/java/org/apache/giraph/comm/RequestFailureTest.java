@@ -18,6 +18,8 @@
 
 package org.apache.giraph.comm;
 
+import org.apache.giraph.GiraphConfiguration;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.comm.messages.SimpleMessageStore;
 import org.apache.giraph.comm.netty.NettyClient;
 import org.apache.giraph.comm.netty.NettyServer;
@@ -25,7 +27,6 @@ import org.apache.giraph.comm.netty.handler.WorkerRequestServerHandler;
 import org.apache.giraph.comm.requests.SendPartitionMessagesRequest;
 import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.giraph.graph.EdgeListVertex;
-import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.utils.MockUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -53,7 +54,7 @@ import java.util.Map;
  */
 public class RequestFailureTest {
   /** Configuration */
-  private Configuration conf;
+  private ImmutableClassesGiraphConfiguration conf;
   /** Server data */
   private ServerData<IntWritable, IntWritable, IntWritable, IntWritable>
   serverData;
@@ -77,16 +78,9 @@ public class RequestFailureTest {
   @Before
   public void setUp() throws IOException {
     // Setup the conf
-    conf = new Configuration();
-    conf.setClass(GiraphJob.VERTEX_CLASS, TestVertex.class, Vertex.class);
-    conf.setClass(GiraphJob.VERTEX_ID_CLASS,
-        IntWritable.class, WritableComparable.class);
-    conf.setClass(GiraphJob.VERTEX_VALUE_CLASS,
-        IntWritable.class, Writable.class);
-    conf.setClass(GiraphJob.EDGE_VALUE_CLASS,
-        IntWritable.class, Writable.class);
-    conf.setClass(GiraphJob.MESSAGE_VALUE_CLASS,
-        IntWritable.class, Writable.class);
+    GiraphConfiguration tmpConf = new GiraphConfiguration();
+    tmpConf.setVertexClass(TestVertex.class);
+    conf = new ImmutableClassesGiraphConfiguration(tmpConf);
 
     context = mock(Context.class);
     when(context.getConfiguration()).thenReturn(conf);
@@ -94,7 +88,7 @@ public class RequestFailureTest {
 
   private WritableRequest getRequest() {
     // Data to send
-    int partitionId = 17;
+    int partitionId = 0;
     Map<IntWritable, Collection<IntWritable>> vertexIdMessages =
         Maps.newHashMap();
     for (int i = 1; i < 7; ++i) {
@@ -144,7 +138,7 @@ public class RequestFailureTest {
     server = new NettyServer(conf,
         new WorkerRequestServerHandler.Factory(serverData));
     server.start();
-    client = new NettyClient(context);
+    client = new NettyClient(context, conf);
     client.connectAllAddresses(Collections.singleton(server.getMyAddress()));
 
     // Send the request 2x
@@ -165,11 +159,11 @@ public class RequestFailureTest {
   @Test
   public void alreadyProcessedRequest() throws IOException {
     // Force a drop of the first request
-    conf.setBoolean(GiraphJob.NETTY_SIMULATE_FIRST_RESPONSE_FAILED, true);
+    conf.setBoolean(GiraphConfiguration.NETTY_SIMULATE_FIRST_RESPONSE_FAILED, true);
     // One second to finish a request
-    conf.setInt(GiraphJob.MAX_REQUEST_MILLISECONDS, 1000);
+    conf.setInt(GiraphConfiguration.MAX_REQUEST_MILLISECONDS, 1000);
     // Loop every 2 seconds
-    conf.setInt(GiraphJob.WAITING_REQUEST_MSECS, 2000);
+    conf.setInt(GiraphConfiguration.WAITING_REQUEST_MSECS, 2000);
 
     // Start the service
     serverData =
@@ -179,7 +173,7 @@ public class RequestFailureTest {
     server = new NettyServer(conf,
         new WorkerRequestServerHandler.Factory(serverData));
     server.start();
-    client = new NettyClient(context);
+    client = new NettyClient(context, conf);
     client.connectAllAddresses(Collections.singleton(server.getMyAddress()));
 
     // Send the request 2x, but should only be processed once
@@ -200,11 +194,11 @@ public class RequestFailureTest {
   @Test
   public void resendRequest() throws IOException {
     // Force a drop of the first request
-    conf.setBoolean(GiraphJob.NETTY_SIMULATE_FIRST_REQUEST_CLOSED, true);
+    conf.setBoolean(GiraphConfiguration.NETTY_SIMULATE_FIRST_REQUEST_CLOSED, true);
     // One second to finish a request
-    conf.setInt(GiraphJob.MAX_REQUEST_MILLISECONDS, 1000);
+    conf.setInt(GiraphConfiguration.MAX_REQUEST_MILLISECONDS, 1000);
     // Loop every 2 seconds
-    conf.setInt(GiraphJob.WAITING_REQUEST_MSECS, 2000);
+    conf.setInt(GiraphConfiguration.WAITING_REQUEST_MSECS, 2000);
 
     // Start the service
     serverData =
@@ -214,7 +208,7 @@ public class RequestFailureTest {
     server = new NettyServer(conf,
         new WorkerRequestServerHandler.Factory(serverData));
     server.start();
-    client = new NettyClient(context);
+    client = new NettyClient(context, conf);
     client.connectAllAddresses(Collections.singleton(server.getMyAddress()));
 
     // Send the request 2x, but should only be processed once

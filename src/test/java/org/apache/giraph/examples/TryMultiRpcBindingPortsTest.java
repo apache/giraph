@@ -24,6 +24,7 @@ import static org.junit.Assert.assertTrue;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.io.IntIntNullIntTextInputFormat;
 import org.apache.giraph.io.IdWithValueTextOutputFormat;
@@ -68,7 +69,7 @@ public class TryMultiRpcBindingPortsTest {
         // run internally
         // fail the first port binding attempt
         Map<String, String> params = Maps.<String, String>newHashMap();
-        params.put(GiraphJob.FAIL_FIRST_RPC_PORT_BIND_ATTEMPT, "true");
+        params.put(GiraphConfiguration.FAIL_FIRST_RPC_PORT_BIND_ATTEMPT, "true");
         Iterable<String> results = InternalVertexRunner.run(
                 ConnectedComponentsVertex.class,
                 MinimumIntCombiner.class,

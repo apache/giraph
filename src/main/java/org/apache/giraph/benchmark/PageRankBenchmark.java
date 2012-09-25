@@ -23,35 +23,23 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
+import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.examples.DoubleSumCombiner;
-import org.apache.giraph.graph.BspUtils;
-import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.io.PseudoRandomVertexInputFormat;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.DoubleWritable;
-import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
 
-import java.io.IOException;
-
 /**
- * Default Pregel-style PageRank computation using a {@link EdgeListVertex}.
+ * Default Pregel-style PageRank computation.
  */
-public class PageRankBenchmark extends EdgeListVertex<
-    LongWritable, DoubleWritable, DoubleWritable, DoubleWritable>
-    implements Tool {
+public class PageRankBenchmark implements Tool {
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(PageRankBenchmark.class);
   /** Configuration from Configurable */
   private Configuration conf;
-
-  @Override
-  public void compute(Iterable<DoubleWritable> messages) throws IOException {
-    PageRankComputation.computePageRank(this, messages);
-  }
 
   @Override
   public Configuration getConf() {
@@ -88,10 +76,15 @@ public class PageRankBenchmark extends EdgeListVertex<
         "vertexClass",
         true,
         "Vertex class (0 for HashMapVertex, 1 for EdgeListVertex)");
+    options.addOption("N",
+        "name",
+        true,
+        "Name of the job");
     options.addOption("nc",
         "noCombiner",
         false,
         "Don't use a combiner");
+
     HelpFormatter formatter = new HelpFormatter();
     if (args.length == 0) {
       formatter.printHelp(getClass().getName(), options, true);
@@ -122,20 +115,28 @@ public class PageRankBenchmark extends EdgeListVertex<
     }
 
     int workers = Integer.parseInt(cmd.getOptionValue('w'));
-    GiraphJob job = new GiraphJob(getConf(), getClass().getName());
+    String name = getClass().getName();
+    if (cmd.hasOption("N")) {
+      name = name + " " + cmd.getOptionValue("N");
+    }
+
+    GiraphJob job = new GiraphJob(getConf(), name);
     if (!cmd.hasOption('c') ||
         (Integer.parseInt(cmd.getOptionValue('c')) == 1)) {
-      job.setVertexClass(PageRankBenchmark.class);
+      job.getConfiguration().setVertexClass(
+          EdgeListVertexPageRankBenchmark.class);
     } else {
-      job.setVertexClass(HashMapVertexPageRankBenchmark.class);
+      job.getConfiguration().setVertexClass(
+          HashMapVertexPageRankBenchmark.class);
     }
     LOG.info("Using class " +
-        BspUtils.getVertexClass(job.getConfiguration()).getName());
+        job.getConfiguration().get(GiraphConfiguration.VERTEX_CLASS));
     if (!cmd.hasOption("nc")) {
-      job.setVertexCombinerClass(DoubleSumCombiner.class);
+      job.getConfiguration().setVertexCombinerClass(DoubleSumCombiner.class);
     }
-    job.setVertexInputFormatClass(PseudoRandomVertexInputFormat.class);
-    job.setWorkerConfiguration(workers, workers, 100.0f);
+    job.getConfiguration().setVertexInputFormatClass(
+        PseudoRandomVertexInputFormat.class);
+    job.getConfiguration().setWorkerConfiguration(workers, workers, 100.0f);
     job.getConfiguration().setLong(
         PseudoRandomVertexInputFormat.AGGREGATE_VERTICES,
         Long.parseLong(cmd.getOptionValue('V')));

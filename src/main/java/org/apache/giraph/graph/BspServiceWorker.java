@@ -18,6 +18,7 @@
 
 package org.apache.giraph.graph;
 
+import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.bsp.ApplicationState;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.RPCCommunications;
@@ -148,17 +149,19 @@ public class BspServiceWorker<I extends WritableComparable,
         new GiraphTransferRegulator(getConfiguration());
     inputSplitMaxVertices =
         getConfiguration().getLong(
-            GiraphJob.INPUT_SPLIT_MAX_VERTICES,
-            GiraphJob.INPUT_SPLIT_MAX_VERTICES_DEFAULT);
+            GiraphConfiguration.INPUT_SPLIT_MAX_VERTICES,
+            GiraphConfiguration.INPUT_SPLIT_MAX_VERTICES_DEFAULT);
     workerGraphPartitioner =
         getGraphPartitionerFactory().createWorkerGraphPartitioner();
-    boolean useNetty = getConfiguration().getBoolean(GiraphJob.USE_NETTY,
-        GiraphJob.USE_NETTY_DEFAULT);
+    boolean useNetty = getConfiguration().getUseNetty();
     if (useNetty) {
-      commService =  new NettyWorkerClientServer<I, V, E, M>(context, this);
+      commService =  new NettyWorkerClientServer<I, V, E, M>(
+          context, getConfiguration(), this);
     } else {
       commService =
-          new RPCCommunications<I, V, E, M>(context, this, graphState);
+          new RPCCommunications<I, V, E, M>(context, this,
+              getConfiguration(),
+              graphState);
     }
     if (LOG.isInfoEnabled()) {
       LOG.info("BspServiceWorker: maxVerticesPerTransfer = " +
@@ -173,8 +176,7 @@ public class BspServiceWorker<I extends WritableComparable,
 
     graphState.setWorkerCommunications(commService);
     this.workerContext =
-        BspUtils.createWorkerContext(getConfiguration(),
-            graphMapper.getGraphState());
+        getConfiguration().createWorkerContext(graphMapper.getGraphState());
 
     if (useNetty) {
       workerPartitionStore = null;
@@ -445,7 +447,7 @@ public class BspServiceWorker<I extends WritableComparable,
   private VertexEdgeCount readVerticesFromInputSplit(
       InputSplit inputSplit) throws IOException, InterruptedException {
     VertexInputFormat<I, V, E, M> vertexInputFormat =
-        BspUtils.<I, V, E, M>createVertexInputFormat(getConfiguration());
+        getConfiguration().createVertexInputFormat();
     VertexReader<I, V, E, M> vertexReader =
         vertexInputFormat.createVertexReader(inputSplit, getContext());
     vertexReader.initialize(inputSplit, getContext());
@@ -459,8 +461,7 @@ public class BspServiceWorker<I extends WritableComparable,
                 "without an id!  - " + readerVertex);
       }
       if (readerVertex.getValue() == null) {
-        readerVertex.setValue(
-            BspUtils.<V>createVertexValue(getConfiguration()));
+        readerVertex.setValue(getConfiguration().createVertexValue());
       }
       PartitionOwner partitionOwner =
           workerGraphPartitioner.getPartitionOwner(
@@ -947,9 +948,7 @@ public class BspServiceWorker<I extends WritableComparable,
     }
 
 
-    boolean useNetty = getConfiguration().getBoolean(GiraphJob.USE_NETTY,
-        GiraphJob.USE_NETTY_DEFAULT);
-    if (useNetty) {
+    if (getConfiguration().getUseNetty()) {
       // get address of master
       WritableUtils.readFieldsFromZnode(getZkExt(), currentMasterPath, false,
           null, masterInfo);
@@ -1097,15 +1096,15 @@ public class BspServiceWorker<I extends WritableComparable,
    * @throws InterruptedException
    */
   private void saveVertices() throws IOException, InterruptedException {
-    if (getConfiguration().get(GiraphJob.VERTEX_OUTPUT_FORMAT_CLASS) ==
-        null) {
-      LOG.warn("saveVertices: " + GiraphJob.VERTEX_OUTPUT_FORMAT_CLASS +
+    if (getConfiguration().getVertexOutputFormatClass() == null) {
+      LOG.warn("saveVertices: " +
+          GiraphConfiguration.VERTEX_OUTPUT_FORMAT_CLASS +
           " not specified -- there will be no saved output");
       return;
     }
 
     VertexOutputFormat<I, V, E> vertexOutputFormat =
-        BspUtils.<I, V, E>createVertexOutputFormat(getConfiguration());
+        getConfiguration().createVertexOutputFormat();
     VertexWriter<I, V, E> vertexWriter =
         vertexOutputFormat.createVertexWriter(getContext());
     vertexWriter.initialize(getContext());
@@ -1203,8 +1202,7 @@ public class BspServiceWorker<I extends WritableComparable,
       LOG.warn("storeCheckpoint: Removed file " + verticesFilePath);
     }
 
-    boolean useNetty = getConfiguration().getBoolean(GiraphJob.USE_NETTY,
-        GiraphJob.USE_NETTY_DEFAULT);
+    boolean useNetty = getConfiguration().getUseNetty();
     FSDataOutputStream verticesOutputStream =
         getFs().create(verticesFilePath);
     ByteArrayOutputStream metadataByteStream = new ByteArrayOutputStream();
@@ -1272,8 +1270,8 @@ public class BspServiceWorker<I extends WritableComparable,
 
   @Override
   public void loadCheckpoint(long superstep) {
-    if (getConfiguration().getBoolean(GiraphJob.USE_NETTY,
-        GiraphJob.USE_NETTY_DEFAULT)) {
+    if (getConfiguration().getBoolean(GiraphConfiguration.USE_NETTY,
+        GiraphConfiguration.USE_NETTY_DEFAULT)) {
       try {
         // clear old message stores
         getServerData().getIncomingMessageStore().clearAll();

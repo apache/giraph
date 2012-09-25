@@ -18,6 +18,7 @@
 
 package org.apache.giraph.comm.netty;
 
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.comm.MasterClient;
 import org.apache.giraph.graph.WorkerInfo;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -43,9 +44,11 @@ public class NettyMasterClient implements MasterClient {
    * Constructor
    *
    * @param context Context from mapper
+   * @param configuration Configuration
    */
-  public NettyMasterClient(Mapper<?, ?, ?, ?>.Context context) {
-    this.nettyClient = new NettyClient(context);
+  public NettyMasterClient(Mapper<?, ?, ?, ?>.Context context,
+                           ImmutableClassesGiraphConfiguration configuration) {
+    this.nettyClient = new NettyClient(context, configuration);
     workers = Lists.newArrayList();
   }
 

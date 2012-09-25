@@ -19,6 +19,7 @@
 package org.apache.giraph.graph;
 
 import com.google.common.collect.Sets;
+import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.bsp.ApplicationState;
 import org.apache.giraph.bsp.BspInputFormat;
 import org.apache.giraph.bsp.CentralizedServiceMaster;
@@ -168,21 +169,21 @@ public class BspServiceMaster<I extends WritableComparable,
     registerBspEvent(superstepStateChanged);
 
     maxWorkers =
-        getConfiguration().getInt(GiraphJob.MAX_WORKERS, -1);
+        getConfiguration().getInt(GiraphConfiguration.MAX_WORKERS, -1);
     minWorkers =
-        getConfiguration().getInt(GiraphJob.MIN_WORKERS, -1);
+        getConfiguration().getInt(GiraphConfiguration.MIN_WORKERS, -1);
     minPercentResponded =
-        getConfiguration().getFloat(GiraphJob.MIN_PERCENT_RESPONDED,
+        getConfiguration().getFloat(GiraphConfiguration.MIN_PERCENT_RESPONDED,
             100.0f);
     msecsPollPeriod =
-        getConfiguration().getInt(GiraphJob.POLL_MSECS,
-            GiraphJob.POLL_MSECS_DEFAULT);
+        getConfiguration().getInt(GiraphConfiguration.POLL_MSECS,
+            GiraphConfiguration.POLL_MSECS_DEFAULT);
     maxPollAttempts =
-        getConfiguration().getInt(GiraphJob.POLL_ATTEMPTS,
-            GiraphJob.POLL_ATTEMPTS_DEFAULT);
+        getConfiguration().getInt(GiraphConfiguration.POLL_ATTEMPTS,
+            GiraphConfiguration.POLL_ATTEMPTS_DEFAULT);
     partitionLongTailMinPrint = getConfiguration().getInt(
-        GiraphJob.PARTITION_LONG_TAIL_MIN_PRINT,
-        GiraphJob.PARTITION_LONG_TAIL_MIN_PRINT_DEFAULT);
+        GiraphConfiguration.PARTITION_LONG_TAIL_MIN_PRINT,
+        GiraphConfiguration.PARTITION_LONG_TAIL_MIN_PRINT_DEFAULT);
     masterGraphPartitioner =
         getGraphPartitionerFactory().createMasterGraphPartitioner();
   }
@@ -242,15 +243,16 @@ public class BspServiceMaster<I extends WritableComparable,
    */
   private List<InputSplit> generateInputSplits(int numWorkers) {
     VertexInputFormat<I, V, E, M> vertexInputFormat =
-        BspUtils.<I, V, E, M>createVertexInputFormat(getConfiguration());
+        getConfiguration().createVertexInputFormat();
     List<InputSplit> splits;
     try {
       splits = vertexInputFormat.getSplits(getContext(), numWorkers);
       float samplePercent =
           getConfiguration().getFloat(
-              GiraphJob.INPUT_SPLIT_SAMPLE_PERCENT,
-              GiraphJob.INPUT_SPLIT_SAMPLE_PERCENT_DEFAULT);
-      if (samplePercent != GiraphJob.INPUT_SPLIT_SAMPLE_PERCENT_DEFAULT) {
+              GiraphConfiguration.INPUT_SPLIT_SAMPLE_PERCENT,
+              GiraphConfiguration.INPUT_SPLIT_SAMPLE_PERCENT_DEFAULT);
+      if (samplePercent !=
+          GiraphConfiguration.INPUT_SPLIT_SAMPLE_PERCENT_DEFAULT) {
         int lastIndex = (int) (samplePercent * splits.size() / 100f);
         List<InputSplit> sampleSplits = splits.subList(0, lastIndex);
         LOG.warn("generateInputSplits: Using sampling - Processing " +
@@ -285,7 +287,7 @@ public class BspServiceMaster<I extends WritableComparable,
       org.apache.hadoop.mapred.JobClient jobClient =
           new org.apache.hadoop.mapred.JobClient(
               (org.apache.hadoop.mapred.JobConf)
-              getConfiguration());
+              getContext().getConfiguration());
       @SuppressWarnings("deprecation")
       org.apache.hadoop.mapred.JobID jobId =
           org.apache.hadoop.mapred.JobID.forName(getJobId());
@@ -785,10 +787,8 @@ public class BspServiceMaster<I extends WritableComparable,
           currentMasterTaskPartitionCounter.increment(
               getTaskPartition() -
               currentMasterTaskPartitionCounter.getValue());
-          masterCompute =
-              BspUtils.createMasterCompute(getConfiguration());
-          aggregatorWriter =
-              BspUtils.createAggregatorWriter(getConfiguration());
+          masterCompute = getConfiguration().createMasterCompute();
+          aggregatorWriter = getConfiguration().createAggregatorWriter();
           try {
             aggregatorWriter.initialize(getContext(),
                 getApplicationAttempt());
@@ -797,10 +797,9 @@ public class BspServiceMaster<I extends WritableComparable,
                 "Couldn't initialize aggregatorWriter", e);
           }
 
-          boolean useNetty = getConfiguration().getBoolean(GiraphJob.USE_NETTY,
-              GiraphJob.USE_NETTY_DEFAULT);
-          if (useNetty) {
-            commService = new NettyMasterClientServer(getContext());
+          if (getConfiguration().getUseNetty()) {
+            commService = new NettyMasterClientServer(
+                getContext(), getConfiguration());
             masterInfo = new WorkerInfo(getHostname(), getTaskPartition(),
                 commService.getMyAddress().getPort());
             // write my address to znode so workers could read it
@@ -1415,8 +1414,8 @@ public class BspServiceMaster<I extends WritableComparable,
   private void cleanUpOldSuperstep(long removeableSuperstep) throws
       InterruptedException {
     if (!(getConfiguration().getBoolean(
-        GiraphJob.KEEP_ZOOKEEPER_DATA,
-        GiraphJob.KEEP_ZOOKEEPER_DATA_DEFAULT)) &&
+        GiraphConfiguration.KEEP_ZOOKEEPER_DATA,
+        GiraphConfiguration.KEEP_ZOOKEEPER_DATA_DEFAULT)) &&
         (removeableSuperstep >= 0)) {
       String oldSuperstepPath =
           getSuperstepPath(getApplicationAttempt()) + "/" +
@@ -1470,9 +1469,7 @@ public class BspServiceMaster<I extends WritableComparable,
       }
     }
 
-    boolean useNetty = getConfiguration().getBoolean(GiraphJob.USE_NETTY,
-        GiraphJob.USE_NETTY_DEFAULT);
-    if (useNetty) {
+    if (getConfiguration().getUseNetty()) {
       commService.fixWorkerAddresses(chosenWorkerInfoList);
     }
 
@@ -1702,8 +1699,8 @@ public class BspServiceMaster<I extends WritableComparable,
     // and the master can do any final cleanup
     try {
       if (!getConfiguration().getBoolean(
-          GiraphJob.KEEP_ZOOKEEPER_DATA,
-          GiraphJob.KEEP_ZOOKEEPER_DATA_DEFAULT)) {
+          GiraphConfiguration.KEEP_ZOOKEEPER_DATA,
+          GiraphConfiguration.KEEP_ZOOKEEPER_DATA_DEFAULT)) {
         if (LOG.isInfoEnabled()) {
           LOG.info("cleanupZooKeeper: Removing the following path " +
               "and all children - " + basePath);
@@ -1753,8 +1750,8 @@ public class BspServiceMaster<I extends WritableComparable,
       cleanUpZooKeeper();
       // If desired, cleanup the checkpoint directory
       if (getConfiguration().getBoolean(
-          GiraphJob.CLEANUP_CHECKPOINTS_AFTER_SUCCESS,
-          GiraphJob.CLEANUP_CHECKPOINTS_AFTER_SUCCESS_DEFAULT)) {
+          GiraphConfiguration.CLEANUP_CHECKPOINTS_AFTER_SUCCESS,
+          GiraphConfiguration.CLEANUP_CHECKPOINTS_AFTER_SUCCESS_DEFAULT)) {
         boolean success =
             getFs().delete(new Path(checkpointBasePath), true);
         if (LOG.isInfoEnabled()) {
@@ -1765,9 +1762,7 @@ public class BspServiceMaster<I extends WritableComparable,
       }
       aggregatorWriter.close();
 
-      boolean useNetty = getConfiguration().getBoolean(GiraphJob.USE_NETTY,
-          GiraphJob.USE_NETTY_DEFAULT);
-      if (useNetty) {
+      if (getConfiguration().getUseNetty()) {
         commService.closeConnections();
         commService.close();
       }

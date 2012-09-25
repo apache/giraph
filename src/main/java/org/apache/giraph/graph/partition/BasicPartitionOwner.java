@@ -22,17 +22,18 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.giraph.ImmutableClassesGiraphConfigurable;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.WorkerInfo;
-import org.apache.hadoop.conf.Configurable;
-import org.apache.hadoop.conf.Configuration;
 
 /**
  * Basic partition owner, can be subclassed for more complicated partition
  * owner implementations.
  */
-public class BasicPartitionOwner implements PartitionOwner, Configurable {
+public class BasicPartitionOwner implements PartitionOwner,
+    ImmutableClassesGiraphConfigurable {
   /** Configuration */
-  private Configuration conf;
+  private ImmutableClassesGiraphConfiguration conf;
   /** Partition id */
   private int partitionId = -1;
   /** Owning worker information */
@@ -145,12 +146,12 @@ public class BasicPartitionOwner implements PartitionOwner, Configurable {
   }
 
   @Override
-  public Configuration getConf() {
+  public ImmutableClassesGiraphConfiguration getConf() {
     return conf;
   }
 
   @Override
-  public void setConf(Configuration conf) {
+  public void setConf(ImmutableClassesGiraphConfiguration conf) {
     this.conf = conf;
   }
 

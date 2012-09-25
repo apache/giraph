@@ -18,9 +18,9 @@
 
 package org.apache.giraph.examples;
 
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.BspInputSplit;
 import org.apache.giraph.graph.VertexReader;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -59,7 +59,7 @@ public abstract class GeneratedVertexReader<
   /** Reverse the id order? */
   protected boolean reverseIdOrder;
   /** Saved configuration */
-  protected Configuration configuration = null;
+  protected ImmutableClassesGiraphConfiguration configuration = null;
 
   /**
    * Default constructor for reflection.
@@ -70,7 +70,8 @@ public abstract class GeneratedVertexReader<
   @Override
   public final void initialize(InputSplit inputSplit,
       TaskAttemptContext context) throws IOException {
-    configuration = context.getConfiguration();
+    configuration = new ImmutableClassesGiraphConfiguration(
+        context.getConfiguration());
     totalRecords = configuration.getLong(
         GeneratedVertexReader.READER_VERTICES,
         GeneratedVertexReader.DEFAULT_READER_VERTICES);

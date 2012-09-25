@@ -18,8 +18,8 @@
 
 package org.apache.giraph.graph;
 
-import org.apache.hadoop.conf.Configurable;
-import org.apache.hadoop.conf.Configuration;
+import org.apache.giraph.ImmutableClassesGiraphConfigurable;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
@@ -38,11 +38,12 @@ import java.util.List;
 @SuppressWarnings("rawtypes")
 public class VertexResolver<I extends WritableComparable, V extends Writable,
     E extends Writable, M extends Writable>
-    implements BasicVertexResolver<I, V, E, M>, Configurable {
+    implements BasicVertexResolver<I, V, E, M>,
+    ImmutableClassesGiraphConfigurable<I, V, E, M> {
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(VertexResolver.class);
   /** Configuration */
-  private Configuration conf = null;
+  private ImmutableClassesGiraphConfiguration<I, V, E, M> conf = null;
   /** Stored graph state */
   private GraphState<I, V, E, M> graphState;
 
@@ -86,7 +87,7 @@ public class VertexResolver<I extends WritableComparable, V extends Writable,
       if (vertex == null && hasMessages) {
         vertex = instantiateVertex();
         vertex.initialize(vertexId,
-            BspUtils.<V>createVertexValue(getConf()),
+            getConf().createVertexValue(),
             null,
             null);
       }
@@ -114,19 +115,18 @@ public class VertexResolver<I extends WritableComparable, V extends Writable,
 
   @Override
   public Vertex<I, V, E, M> instantiateVertex() {
-    Vertex<I, V, E, M> vertex =
-        BspUtils.<I, V, E, M>createVertex(getConf());
+    Vertex<I, V, E, M> vertex = getConf().createVertex();
     vertex.setGraphState(graphState);
     return vertex;
   }
 
   @Override
-  public Configuration getConf() {
+  public ImmutableClassesGiraphConfiguration<I, V, E, M> getConf() {
     return conf;
   }
 
   @Override
-  public void setConf(Configuration conf) {
+  public void setConf(ImmutableClassesGiraphConfiguration<I, V, E, M> conf) {
     this.conf = conf;
   }
 

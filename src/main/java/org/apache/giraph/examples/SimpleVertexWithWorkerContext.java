@@ -42,26 +42,43 @@ import java.io.IOException;
  * emit worker data to HDFS during a graph
  * computation.
  */
-public class SimpleVertexWithWorkerContext extends
-    EdgeListVertex<LongWritable, IntWritable, FloatWritable, DoubleWritable>
-    implements Tool {
+public class SimpleVertexWithWorkerContext implements Tool {
   /** Directory name of where to write. */
   public static final String OUTPUTDIR = "svwwc.outputdir";
   /** Halting condition for the number of supersteps */
   private static final int TESTLENGTH = 30;
+  /** Configuration */
+  private Configuration conf;
 
   @Override
-  public void compute(Iterable<DoubleWritable> messages) throws IOException {
+  public void setConf(Configuration conf) {
+    this.conf = conf;
+  }
 
-    long superstep = getSuperstep();
+  @Override
+  public Configuration getConf() {
+    return conf;
+  }
 
-    if (superstep < TESTLENGTH) {
-      EmitterWorkerContext emitter =
-          (EmitterWorkerContext) getWorkerContext();
-      emitter.emit("vertexId=" + getId() +
-          " superstep=" + superstep + "\n");
-    } else {
-      voteToHalt();
+  /**
+   * Actual vetex implementation
+   */
+  public static class SimpleVertex extends
+      EdgeListVertex<LongWritable, IntWritable, FloatWritable,
+          DoubleWritable> {
+    @Override
+    public void compute(Iterable<DoubleWritable> messages) throws IOException {
+
+      long superstep = getSuperstep();
+
+      if (superstep < TESTLENGTH) {
+        EmitterWorkerContext emitter =
+            (EmitterWorkerContext) getWorkerContext();
+        emitter.emit("vertexId=" + getId() +
+            " superstep=" + superstep + "\n");
+      } else {
+        voteToHalt();
+      }
     }
   }
 
@@ -152,13 +169,13 @@ public class SimpleVertexWithWorkerContext extends
           "run: Must have 2 arguments <output path> <# of workers>");
     }
     GiraphJob job = new GiraphJob(getConf(), getClass().getName());
-    job.setVertexClass(getClass());
-    job.setVertexInputFormatClass(
+    job.getConfiguration().setVertexClass(SimpleVertex.class);
+    job.getConfiguration().setVertexInputFormatClass(
         SimpleSuperstepVertexInputFormat.class);
-    job.setWorkerContextClass(EmitterWorkerContext.class);
-    Configuration conf = job.getConfiguration();
-    conf.set(SimpleVertexWithWorkerContext.OUTPUTDIR, args[0]);
-    job.setWorkerConfiguration(Integer.parseInt(args[1]),
+    job.getConfiguration().setWorkerContextClass(EmitterWorkerContext.class);
+    job.getConfiguration().set(
+        SimpleVertexWithWorkerContext.OUTPUTDIR, args[0]);
+    job.getConfiguration().setWorkerConfiguration(Integer.parseInt(args[1]),
         Integer.parseInt(args[1]),
         100.0f);
     if (job.run(true)) {

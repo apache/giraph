@@ -21,7 +21,6 @@ package org.apache.giraph.examples;
 import org.apache.giraph.aggregators.DoubleMaxAggregator;
 import org.apache.giraph.aggregators.DoubleMinAggregator;
 import org.apache.giraph.aggregators.LongSumAggregator;
-import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.DefaultMasterCompute;
 import org.apache.giraph.graph.LongDoubleFloatDoubleVertex;
 import org.apache.giraph.graph.Vertex;
@@ -183,10 +182,9 @@ public class SimplePageRankVertex extends LongDoubleFloatDoubleVertex {
 
     @Override
     public Vertex<LongWritable, DoubleWritable,
-        FloatWritable, DoubleWritable>
-    getCurrentVertex() throws IOException {
+        FloatWritable, DoubleWritable> getCurrentVertex() throws IOException {
       Vertex<LongWritable, DoubleWritable, FloatWritable, DoubleWritable>
-      vertex = BspUtils.createVertex(configuration);
+          vertex = configuration.createVertex();
 
       LongWritable vertexId = new LongWritable(
           (inputSplit.getSplitIndex() * totalRecords) + recordsRead);

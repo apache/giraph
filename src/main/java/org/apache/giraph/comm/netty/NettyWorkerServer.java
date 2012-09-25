@@ -18,6 +18,8 @@
 
 package org.apache.giraph.comm.netty;
 
+import org.apache.giraph.GiraphConfiguration;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.comm.netty.handler.WorkerRequestServerHandler;
@@ -30,13 +32,10 @@ import org.apache.giraph.comm.messages.MessageStoreByPartition;
 import org.apache.giraph.comm.messages.MessageStoreFactory;
 import org.apache.giraph.comm.messages.SequentialFileMessageStore;
 import org.apache.giraph.comm.messages.SimpleMessageStore;
-import org.apache.giraph.graph.BspUtils;
-import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexMutations;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.graph.partition.Partition;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
@@ -62,7 +61,7 @@ public class NettyWorkerServer<I extends WritableComparable,
   private static final Logger LOG =
     Logger.getLogger(NettyWorkerServer.class);
   /** Hadoop configuration */
-  private final Configuration conf;
+  private final ImmutableClassesGiraphConfiguration<I, V, E, M> conf;
   /** Service worker */
   private final CentralizedServiceWorker<I, V, E, M> service;
   /** Netty server that does that actual I/O */
@@ -76,20 +75,21 @@ public class NettyWorkerServer<I extends WritableComparable,
    * @param conf Configuration
    * @param service Service to get partition mappings
    */
-  public NettyWorkerServer(Configuration conf,
+  public NettyWorkerServer(ImmutableClassesGiraphConfiguration conf,
       CentralizedServiceWorker<I, V, E, M> service) {
     this.conf = conf;
     this.service = service;
 
     boolean useOutOfCoreMessaging = conf.getBoolean(
-        GiraphJob.USE_OUT_OF_CORE_MESSAGES,
-        GiraphJob.USE_OUT_OF_CORE_MESSAGES_DEFAULT);
+        GiraphConfiguration.USE_OUT_OF_CORE_MESSAGES,
+        GiraphConfiguration.USE_OUT_OF_CORE_MESSAGES_DEFAULT);
     if (!useOutOfCoreMessaging) {
       serverData = new ServerData<I, V, E, M>(
           conf, SimpleMessageStore.newFactory(service, conf));
     } else {
-      int maxMessagesInMemory = conf.getInt(GiraphJob.MAX_MESSAGES_IN_MEMORY,
-          GiraphJob.MAX_MESSAGES_IN_MEMORY_DEFAULT);
+      int maxMessagesInMemory = conf.getInt(
+          GiraphConfiguration.MAX_MESSAGES_IN_MEMORY,
+          GiraphConfiguration.MAX_MESSAGES_IN_MEMORY_DEFAULT);
       MessageStoreFactory<I, M, BasicMessageStore<I, M>> fileStoreFactory =
           SequentialFileMessageStore.newFactory(conf);
       MessageStoreFactory<I, M, FlushableMessageStore<I, M>>
@@ -143,8 +143,8 @@ public class NettyWorkerServer<I extends WritableComparable,
     // Resolve all graph mutations
     for (I vertexIndex : resolveVertexIndexSet) {
       VertexResolver<I, V, E, M> vertexResolver =
-          BspUtils.createVertexResolver(
-              conf, service.getGraphMapper().getGraphState());
+          conf.createVertexResolver(
+              service.getGraphMapper().getGraphState());
       Vertex<I, V, E, M> originalVertex =
           service.getVertex(vertexIndex);
 

@@ -18,7 +18,6 @@
 
 package org.apache.giraph.examples;
 
-import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexReader;
@@ -70,8 +69,7 @@ public class SimpleSuperstepVertex extends
         IntWritable> getCurrentVertex()
       throws IOException, InterruptedException {
       Vertex<LongWritable, IntWritable, FloatWritable, IntWritable> vertex =
-        BspUtils.<LongWritable, IntWritable, FloatWritable,
-        IntWritable>createVertex(configuration);
+          configuration.createVertex();
       long tmpId = reverseIdOrder ?
           ((inputSplit.getSplitIndex() + 1) * totalRecords) -
           recordsRead - 1 :

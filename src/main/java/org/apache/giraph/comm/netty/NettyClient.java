@@ -31,6 +31,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.giraph.GiraphConfiguration;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.comm.netty.handler.AddressRequestIdGenerator;
 import org.apache.giraph.comm.netty.handler.ClientRequestId;
 import org.apache.giraph.comm.netty.handler.RequestServerHandler;
@@ -38,9 +40,7 @@ import org.apache.giraph.comm.netty.handler.ResponseClientHandler;
 import org.apache.giraph.comm.netty.handler.RequestEncoder;
 import org.apache.giraph.comm.netty.handler.RequestInfo;
 import org.apache.giraph.comm.requests.WritableRequest;
-import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.utils.TimedLogger;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
 import org.jboss.netty.bootstrap.ClientBootstrap;
@@ -125,17 +125,20 @@ public class NettyClient {
    * Only constructor
    *
    * @param context Context for progress
+   * @param conf Configuration
    */
-  public NettyClient(Mapper<?, ?, ?, ?>.Context context) {
+  public NettyClient(Mapper<?, ?, ?, ?>.Context context,
+                     final ImmutableClassesGiraphConfiguration conf) {
     this.context = context;
-    final Configuration conf = context.getConfiguration();
     this.channelsPerServer = conf.getInt(
-        GiraphJob.CHANNELS_PER_SERVER,
-        GiraphJob.DEFAULT_CHANNELS_PER_SERVER);
-    sendBufferSize = conf.getInt(GiraphJob.CLIENT_SEND_BUFFER_SIZE,
-        GiraphJob.DEFAULT_CLIENT_SEND_BUFFER_SIZE);
-    receiveBufferSize = conf.getInt(GiraphJob.CLIENT_RECEIVE_BUFFER_SIZE,
-        GiraphJob.DEFAULT_CLIENT_RECEIVE_BUFFER_SIZE);
+        GiraphConfiguration.CHANNELS_PER_SERVER,
+        GiraphConfiguration.DEFAULT_CHANNELS_PER_SERVER);
+    sendBufferSize = conf.getInt(
+        GiraphConfiguration.CLIENT_SEND_BUFFER_SIZE,
+        GiraphConfiguration.DEFAULT_CLIENT_SEND_BUFFER_SIZE);
+    receiveBufferSize = conf.getInt(
+        GiraphConfiguration.CLIENT_RECEIVE_BUFFER_SIZE,
+        GiraphConfiguration.DEFAULT_CLIENT_RECEIVE_BUFFER_SIZE);
 
     limitNumberOfOpenRequests = conf.getBoolean(
         LIMIT_NUMBER_OF_OPEN_REQUESTS,
@@ -153,22 +156,22 @@ public class NettyClient {
     }
 
     maxRequestMilliseconds = conf.getInt(
-        GiraphJob.MAX_REQUEST_MILLISECONDS,
-        GiraphJob.MAX_REQUEST_MILLISECONDS_DEFAULT);
+        GiraphConfiguration.MAX_REQUEST_MILLISECONDS,
+        GiraphConfiguration.MAX_REQUEST_MILLISECONDS_DEFAULT);
 
     maxConnectionFailures = conf.getInt(
-        GiraphJob.NETTY_MAX_CONNECTION_FAILURES,
-        GiraphJob.NETTY_MAX_CONNECTION_FAILURES_DEFAULT);
+        GiraphConfiguration.NETTY_MAX_CONNECTION_FAILURES,
+        GiraphConfiguration.NETTY_MAX_CONNECTION_FAILURES_DEFAULT);
 
     maxReconnectionFailures = conf.getInt(
-        GiraphJob.MAX_RECONNECT_ATTEMPTS,
-        GiraphJob.MAX_RECONNECT_ATTEMPTS_DEFAULT);
+        GiraphConfiguration.MAX_RECONNECT_ATTEMPTS,
+        GiraphConfiguration.MAX_RECONNECT_ATTEMPTS_DEFAULT);
 
     waitingRequestMsecs = conf.getInt(
-        GiraphJob.WAITING_REQUEST_MSECS,
-        GiraphJob.WAITING_REQUEST_MSECS_DEFAULT);
+        GiraphConfiguration.WAITING_REQUEST_MSECS,
+        GiraphConfiguration.WAITING_REQUEST_MSECS_DEFAULT);
 
-    int maxThreads = conf.getInt(GiraphJob.MSG_NUM_FLUSH_THREADS,
+    int maxThreads = conf.getInt(GiraphConfiguration.MSG_NUM_FLUSH_THREADS,
         NettyServer.MAXIMUM_THREAD_POOL_SIZE_DEFAULT);
     clientRequestIdRequestInfoMap =
         new MapMaker().concurrencyLevel(maxThreads).makeMap();
@@ -436,6 +439,7 @@ public class NettyClient {
           "have a previous request id = " + request.getRequestId() + ", " +
           "request info of " + oldRequestInfo);
     }
+
     ChannelFuture writeFuture = channel.write(request);
     newRequestInfo.setWriteFuture(writeFuture);
 
