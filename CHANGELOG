@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-274: Jobs still failing due to tasks timeout during
+  INPUT_SUPERSTEP. (nitayj via aching)
+
   GIRAPH-337: Make a specific Giraph configuration for Class caching
   and specific Giraph configuration. (aching)
 

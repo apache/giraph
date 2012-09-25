@@ -286,6 +286,7 @@ public class BspServiceWorker<I extends WritableComparable,
         transferRegulator = null; // don't need this anymore
         return null;
       }
+      getContext().progress();
       // Wait for either a reservation to go away or a notification that
       // an InputSplit has finished.
       context.progress();
@@ -463,6 +464,7 @@ public class BspServiceWorker<I extends WritableComparable,
       if (readerVertex.getValue() == null) {
         readerVertex.setValue(getConfiguration().createVertexValue());
       }
+      readerVertex.setGraphState(getGraphMapper().getGraphState());
       PartitionOwner partitionOwner =
           workerGraphPartitioner.getPartitionOwner(
               readerVertex.getId());
@@ -1111,8 +1113,10 @@ public class BspServiceWorker<I extends WritableComparable,
     for (Partition<I, V, E, M> partition :
         getPartitionStore().getPartitions()) {
       for (Vertex<I, V, E, M> vertex : partition.getVertices()) {
+        getContext().progress();
         vertexWriter.writeVertex(vertex);
       }
+      getContext().progress();
     }
     vertexWriter.close(getContext());
   }
@@ -1230,6 +1234,7 @@ public class BspServiceWorker<I extends WritableComparable,
             (verticesOutputStream.getPos() - startPos) +
             ", partition = " + partition.toString());
       }
+      getContext().progress();
     }
     // Metadata is buffered and written at the end since it's small and
     // needs to know how many partitions this worker owns
@@ -1342,6 +1347,7 @@ public class BspServiceWorker<I extends WritableComparable,
                     partitionOwner);
           }
           getPartitionStore().addPartition(partition);
+          getContext().progress();
           ++loadedPartitions;
         } catch (IOException e) {
           throw new RuntimeException(

@@ -154,9 +154,9 @@ public class Partition<I extends WritableComparable,
     int vertices = input.readInt();
     for (int i = 0; i < vertices; ++i) {
       Vertex<I, V, E, M> vertex = conf.createVertex();
+      vertex.getContext().progress();
       vertex.readFields(input);
-      if (vertexMap.put(vertex.getId(),
-          (Vertex<I, V, E, M>) vertex) != null) {
+      if (vertexMap.put(vertex.getId(), vertex) != null) {
         throw new IllegalStateException(
             "readFields: " + this +
             " already has same id " + vertex);
@@ -168,6 +168,7 @@ public class Partition<I extends WritableComparable,
   public void write(DataOutput output) throws IOException {
     output.writeInt(vertexMap.size());
     for (Vertex vertex : vertexMap.values()) {
+      vertex.getContext().progress();
       vertex.write(output);
     }
   }

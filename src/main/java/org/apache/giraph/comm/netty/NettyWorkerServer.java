@@ -161,6 +161,8 @@ public class NettyWorkerServer<I extends WritableComparable,
           vertexIndex, originalVertex, mutations,
           serverData.getCurrentMessageStore().
               hasMessagesForVertex(vertexIndex));
+      service.getGraphMapper().getGraphState().getContext().progress();
+
       if (LOG.isDebugEnabled()) {
         LOG.debug("prepareSuperstep: Resolved vertex index " +
             vertexIndex + " with original vertex " +
