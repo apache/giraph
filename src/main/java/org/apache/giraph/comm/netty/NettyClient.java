@@ -50,9 +50,12 @@ import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.handler.codec.frame.FixedLengthFrameDecoder;
+import org.jboss.netty.handler.execution.ExecutionHandler;
+import org.jboss.netty.handler.execution.MemoryAwareThreadPoolExecutor;
+
+import static org.jboss.netty.channel.Channels.pipeline;
 
 /**
  * Netty client for sending requests.
@@ -120,6 +123,12 @@ public class NettyClient {
       new AddressRequestIdGenerator();
   /** Client id */
   private final int clientId;
+  /** Maximum thread pool size */
+  private final int maxPoolSize;
+  /** Execution handler (if used) */
+  private final ExecutionHandler executionHandler;
+  /** Name of the handler before the execution handler (if used) */
+  private final String handlerBeforeExecutionHandler;
 
   /**
    * Only constructor
@@ -171,10 +180,34 @@ public class NettyClient {
         GiraphConfiguration.WAITING_REQUEST_MSECS,
         GiraphConfiguration.WAITING_REQUEST_MSECS_DEFAULT);
 
-    int maxThreads = conf.getInt(GiraphConfiguration.MSG_NUM_FLUSH_THREADS,
-        NettyServer.MAXIMUM_THREAD_POOL_SIZE_DEFAULT);
+    maxPoolSize = conf.getInt(
+        GiraphConfiguration.NETTY_CLIENT_THREADS,
+        GiraphConfiguration.NETTY_CLIENT_THREADS_DEFAULT);
+
     clientRequestIdRequestInfoMap =
-        new MapMaker().concurrencyLevel(maxThreads).makeMap();
+        new MapMaker().concurrencyLevel(maxPoolSize).makeMap();
+
+    handlerBeforeExecutionHandler = conf.get(
+        GiraphConfiguration.NETTY_CLIENT_EXECUTION_AFTER_HANDLER,
+        GiraphConfiguration.NETTY_CLIENT_EXECUTION_AFTER_HANDLER_DEFAULT);
+    boolean useExecutionHandler = conf.getBoolean(
+        GiraphConfiguration.NETTY_CLIENT_USE_EXECUTION_HANDLER,
+        GiraphConfiguration.NETTY_CLIENT_USE_EXECUTION_HANDLER_DEFAULT);
+    if (useExecutionHandler) {
+      int executionThreads = conf.getInt(
+          GiraphConfiguration.NETTY_CLIENT_EXECUTION_THREADS,
+          GiraphConfiguration.NETTY_CLIENT_EXECUTION_THREADS_DEFAULT);
+      executionHandler = new ExecutionHandler(
+          new MemoryAwareThreadPoolExecutor(
+              executionThreads, 1048576, 1048576));
+      if (LOG.isInfoEnabled()) {
+        LOG.info("NettyClient: Using execution handler with " +
+            executionThreads + " threads after " +
+            handlerBeforeExecutionHandler + ".");
+      }
+    } else {
+      executionHandler = null;
+    }
 
     bossExecutorService = Executors.newCachedThreadPool(
         new ThreadFactoryBuilder().setNameFormat(
@@ -190,7 +223,7 @@ public class NettyClient {
         new NioClientSocketChannelFactory(
             bossExecutorService,
             workerExecutorService,
-            maxThreads));
+            maxPoolSize));
     bootstrap.setOption("connectTimeoutMillis",
         MAX_CONNECTION_MILLISECONDS_DEFAULT);
     bootstrap.setOption("tcpNoDelay", true);
@@ -202,13 +235,31 @@ public class NettyClient {
     bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
       @Override
       public ChannelPipeline getPipeline() throws Exception {
-        return Channels.pipeline(
-            byteCounter,
-            new FixedLengthFrameDecoder(RequestServerHandler.RESPONSE_BYTES),
-            new RequestEncoder(),
+        ChannelPipeline pipeline = pipeline();
+        pipeline.addLast("clientByteCounter", byteCounter);
+        pipeline.addLast("responseFrameDecoder",
+            new FixedLengthFrameDecoder(RequestServerHandler.RESPONSE_BYTES));
+        pipeline.addLast("requestEncoder", new RequestEncoder(conf.getInt(
+            GiraphConfiguration.NETTY_REQUEST_ENCODER_BUFFER_SIZE,
+            GiraphConfiguration.NETTY_REQUEST_ENCODER_BUFFER_SIZE_DEFAULT)));
+        pipeline.addLast("responseClientHandler",
             new ResponseClientHandler(clientRequestIdRequestInfoMap, conf));
+
+        if (executionHandler != null) {
+          pipeline.addAfter(handlerBeforeExecutionHandler,
+              "executionHandler", executionHandler);
+        }
+        return pipeline;
       }
     });
+
+    if (LOG.isInfoEnabled()) {
+      LOG.info("NettyClient: Started client" +
+          " with up to " + maxPoolSize + " threads" +
+          " with sendBufferSize = " + sendBufferSize +
+          " receiveBufferSize = " + receiveBufferSize +
+          " maxRequestMilliseconds = " + maxRequestMilliseconds);
+    }
   }
 
   /**

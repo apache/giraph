@@ -35,20 +35,31 @@ public class RequestEncoder extends OneToOneEncoder {
   private static final Logger LOG = Logger.getLogger(RequestEncoder.class);
   /** Holds the place of the message length until known */
   private static final byte[] LENGTH_PLACEHOLDER = new byte[4];
+  /** Buffer starting size */
+  private final int bufferStartingSize;
+
+  /**
+   * Constructor.
+   *
+   * @param bufferStartingSize Starting size of the buffer
+   */
+  public RequestEncoder(int bufferStartingSize) {
+    this.bufferStartingSize = bufferStartingSize;
+  }
 
   @Override
   protected Object encode(ChannelHandlerContext ctx,
-      Channel channel, Object msg) throws Exception {
+                          Channel channel, Object msg) throws Exception {
     if (!(msg instanceof WritableRequest)) {
       throw new IllegalArgumentException(
           "encode: Got a message of type " + msg.getClass());
     }
-    @SuppressWarnings("unchecked")
+
     WritableRequest writableRequest = (WritableRequest) msg;
     ChannelBufferOutputStream outputStream =
         new ChannelBufferOutputStream(ChannelBuffers.dynamicBuffer(
-            10, ctx.getChannel().getConfig().getBufferFactory()));
-
+            bufferStartingSize,
+            ctx.getChannel().getConfig().getBufferFactory()));
     outputStream.write(LENGTH_PLACEHOLDER);
     outputStream.writeByte(writableRequest.getType().ordinal());
     writableRequest.write(outputStream);

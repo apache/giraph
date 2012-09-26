@@ -36,14 +36,16 @@ import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelFactory;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.group.ChannelGroup;
 import org.jboss.netty.channel.group.DefaultChannelGroup;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.jboss.netty.handler.execution.ExecutionHandler;
+import org.jboss.netty.handler.execution.MemoryAwareThreadPoolExecutor;
 
+import static org.jboss.netty.channel.Channels.pipeline;
 /**
  * This server uses Netty and will implement all Giraph communication
  */
@@ -63,7 +65,7 @@ public class NettyServer {
   /** Address of the server */
   private InetSocketAddress myAddress;
   /** Maximum number of threads */
-  private final int maximumPoolSize;
+  private final int maxPoolSize;
   /** TCP backlog */
   private final int tcpBacklog;
   /** Factory for {@link RequestServerHandler} */
@@ -82,6 +84,10 @@ public class NettyServer {
   private final ExecutorService workerExecutorService;
   /** Request completed map per worker */
   private final WorkerRequestReservedMap workerRequestReservedMap;
+  /** Execution handler (if used) */
+  private final ExecutionHandler executionHandler;
+  /** Name of the handler before the execution handler (if used) */
+  private final String handlerBeforeExecutionHandler;
 
   /**
    * Constructor for creating the server
@@ -115,8 +121,10 @@ public class NettyServer {
     } catch (UnknownHostException e) {
       throw new IllegalStateException("NettyServer: unable to get hostname");
     }
-    maximumPoolSize = conf.getInt(GiraphConfiguration.MSG_NUM_FLUSH_THREADS,
-                                  MAXIMUM_THREAD_POOL_SIZE_DEFAULT);
+
+    maxPoolSize = conf.getInt(
+        GiraphConfiguration.NETTY_SERVER_THREADS,
+        GiraphConfiguration.NETTY_SERVER_THREADS_DEFAULT);
 
     tcpBacklog = conf.getInt(GiraphConfiguration.TCP_BACKLOG,
         conf.getInt(GiraphConfiguration.MAX_WORKERS,
@@ -125,7 +133,27 @@ public class NettyServer {
     channelFactory = new NioServerSocketChannelFactory(
         bossExecutorService,
         workerExecutorService,
-        maximumPoolSize);
+        maxPoolSize);
+
+    handlerBeforeExecutionHandler = conf.get(
+        GiraphConfiguration.NETTY_SERVER_EXECUTION_AFTER_HANDLER,
+        GiraphConfiguration.NETTY_SERVER_EXECUTION_AFTER_HANDLER_DEFAULT);
+    boolean useExecutionHandler = conf.getBoolean(
+        GiraphConfiguration.NETTY_SERVER_USE_EXECUTION_HANDLER,
+        GiraphConfiguration.NETTY_SERVER_USE_EXECUTION_HANDLER_DEFAULT);
+    if (useExecutionHandler) {
+      int executionThreads = conf.getNettyServerExecutionThreads();
+      executionHandler = new ExecutionHandler(
+          new MemoryAwareThreadPoolExecutor(
+              executionThreads, 1048576, 1048576));
+      if (LOG.isInfoEnabled()) {
+        LOG.info("NettyServer: Using execution handler with " +
+            executionThreads + " threads after " +
+            handlerBeforeExecutionHandler + ".");
+      }
+    } else {
+      executionHandler = null;
+    }
   }
 
   /**
@@ -139,15 +167,31 @@ public class NettyServer {
     bootstrap.setOption("child.sendBufferSize", sendBufferSize);
     bootstrap.setOption("child.receiveBufferSize", receiveBufferSize);
     bootstrap.setOption("backlog", tcpBacklog);
+    bootstrap.setOption("child.receiveBufferSizePredictorFactory",
+        new WrappedAdaptiveReceiveBufferSizePredictorFactory(
+            receiveBufferSize / 4,
+            receiveBufferSize,
+            receiveBufferSize));
+
     bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
       @Override
       public ChannelPipeline getPipeline() throws Exception {
-        return Channels.pipeline(
-            byteCounter,
-            new LengthFieldBasedFrameDecoder(1024 * 1024 * 1024, 0, 4, 0, 4),
-            new RequestDecoder(conf, byteCounter),
-            requestServerHandlerFactory.newHandler(workerRequestReservedMap,
-                conf));
+        ChannelPipeline pipeline = pipeline();
+
+        pipeline.addLast("serverByteCounter", byteCounter);
+        pipeline.addLast("requestFrameDecoder",
+            new LengthFieldBasedFrameDecoder(
+                1024 * 1024 * 1024, 0, 4, 0, 4));
+        pipeline.addLast("requestDecoder",
+            new RequestDecoder(conf, byteCounter));
+        pipeline.addLast("requestProcessor",
+            requestServerHandlerFactory.newHandler(
+                workerRequestReservedMap, conf));
+        if (executionHandler != null) {
+          pipeline.addAfter(handlerBeforeExecutionHandler,
+              "executionHandler", executionHandler);
+        }
+        return pipeline;
       }
     });
 
@@ -206,7 +250,7 @@ public class NettyServer {
     if (LOG.isInfoEnabled()) {
       LOG.info("start: Started server " +
           "communication server: " + myAddress + " with up to " +
-          maximumPoolSize + " threads on bind attempt " + bindAttempts +
+          maxPoolSize + " threads on bind attempt " + bindAttempts +
           " with sendBufferSize = " + sendBufferSize +
           " receiveBufferSize = " + receiveBufferSize + " backlog = " +
           bootstrap.getOption("backlog"));
