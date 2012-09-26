@@ -2,6 +2,10 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-340: Added client/server ExecutionHandlers to Netty to avoid
+  and added WrappedAdaptiveReceiveBufferSizePredictorFactory to
+  debug/predict the size of the incoming messages. (aching)
+
   GIRAPH-274: Jobs still failing due to tasks timeout during
   INPUT_SUPERSTEP. (nitayj via aching)
 
