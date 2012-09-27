@@ -34,6 +34,7 @@ import org.apache.accumulo.core.security.Authorizations;
 import org.apache.accumulo.core.util.ByteBufferUtil;
 import org.apache.accumulo.core.util.Pair;
 import org.apache.giraph.BspCase;
+import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.format.accumulo.edgemarker.AccumuloEdgeInputFormat;
 import org.apache.giraph.format.accumulo.edgemarker.AccumuloEdgeOutputFormat;
 import org.apache.giraph.graph.EdgeListVertex;
@@ -135,9 +136,10 @@ public class TestAccumuloVertexFormat extends BspCase{
 
         GiraphJob job = new GiraphJob(conf, getCallingMethodName());
         setupConfiguration(job);
-        job.setVertexClass(EdgeNotification.class);
-        job.setVertexInputFormatClass(AccumuloEdgeInputFormat.class);
-        job.setVertexOutputFormatClass(AccumuloEdgeOutputFormat.class);
+        GiraphConfiguration giraphConf = job.getConfiguration();
+        giraphConf.setVertexClass(EdgeNotification.class);
+        giraphConf.setVertexInputFormatClass(AccumuloEdgeInputFormat.class);
+        giraphConf.setVertexOutputFormatClass(AccumuloEdgeOutputFormat.class);
 
         HashSet<Pair<Text, Text>> columnsToFetch = new HashSet<Pair<Text,Text>>();
         columnsToFetch.add(new Pair<Text, Text>(FAMILY, CHILDREN));

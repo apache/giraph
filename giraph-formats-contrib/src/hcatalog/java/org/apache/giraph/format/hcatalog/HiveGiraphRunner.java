@@ -31,6 +31,7 @@ import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.hadoop.conf.Configuration;
@@ -95,22 +96,23 @@ public class HiveGiraphRunner implements Tool {
 
 		// setup GiraphJob
 		GiraphJob job = new GiraphJob(getConf(), getClass().getName());
-		job.setVertexClass(vertexClass);
+		GiraphConfiguration conf = job.getConfiguration();
+		conf.setVertexClass(vertexClass);
 
 		// setup input from Hive
 		InputJobInfo inputJobInfo = InputJobInfo.create(dbName, inputTableName,
 				inputTableFilterExpr);
 		HCatInputFormat.setInput(job.getInternalJob(), inputJobInfo);
-		job.setVertexInputFormatClass(vertexInputFormatClass);
+		conf.setVertexInputFormatClass(vertexInputFormatClass);
 
 		// setup output to Hive
 		HCatOutputFormat.setOutput(job.getInternalJob(), OutputJobInfo.create(
 				dbName, outputTableName, outputTablePartitionValues));
 		HCatOutputFormat.setSchema(job.getInternalJob(),
 				HCatOutputFormat.getTableSchema(job.getInternalJob()));
-		job.setVertexOutputFormatClass(vertexOutputFormatClass);
+		conf.setVertexOutputFormatClass(vertexOutputFormatClass);
 
-		job.setWorkerConfiguration(workers, workers, 100.0f);
+		conf.setWorkerConfiguration(workers, workers, 100.0f);
 		initGiraphJob(job);
 
 		return job.run(isVerbose) ? 0 : -1;
@@ -312,7 +314,7 @@ public class HiveGiraphRunner implements Tool {
 	/**
 	 * Override this method to add more command-line options. You can process
 	 * them by also overriding {@link #processMoreArguments(CommandLine)}.
-	 * 
+	 *
 	 * @param options
 	 */
 	protected void addMoreOptions(Options options) {
@@ -322,7 +324,7 @@ public class HiveGiraphRunner implements Tool {
 	 * Override this method to process additional command-line arguments. You
 	 * may want to declare additional options by also overriding
 	 * {@link #addMoreOptions(Options)}.
-	 * 
+	 *
 	 * @param cmd
 	 */
 	protected void processMoreArguments(CommandLine cmd) {
@@ -331,7 +333,7 @@ public class HiveGiraphRunner implements Tool {
 	/**
 	 * Override this method to do additional setup with the GiraphJob that will
 	 * run.
-	 * 
+	 *
 	 * @param job
 	 *            GiraphJob that is going to run
 	 */

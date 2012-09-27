@@ -58,7 +58,7 @@ public class BspCase extends TestCase implements Watcher {
    * Adjust the configuration to the basic test case
    */
   public final void setupConfiguration(GiraphJob job) {
-    Configuration conf = job.getConfiguration();
+    GiraphConfiguration conf = job.getConfiguration();
     conf.set("mapred.jar", getJarLocation());
 
     // Allow this test to be run on a real Hadoop setup
@@ -67,7 +67,7 @@ public class BspCase extends TestCase implements Watcher {
           getJobTracker() + " with jar path " + getJarLocation()
           + " for " + getName());
       conf.set("mapred.job.tracker", getJobTracker());
-      job.setWorkerConfiguration(getNumWorkers(),
+      conf.setWorkerConfiguration(getNumWorkers(),
           getNumWorkers(),
           100.0f);
     }
@@ -75,15 +75,15 @@ public class BspCase extends TestCase implements Watcher {
       System.out.println("setup: Using local job runner with " +
           "location " + getJarLocation() + " for "
           + getName());
-      job.setWorkerConfiguration(1, 1, 100.0f);
+      conf.setWorkerConfiguration(1, 1, 100.0f);
       // Single node testing
-      conf.setBoolean(GiraphJob.SPLIT_MASTER_WORKER, false);
+      conf.setBoolean(GiraphConfiguration.SPLIT_MASTER_WORKER, false);
     }
-    conf.setInt(GiraphJob.POLL_ATTEMPTS, 10);
-    conf.setInt(GiraphJob.POLL_MSECS, 3*1000);
-    conf.setInt(GiraphJob.ZOOKEEPER_SERVERLIST_POLL_MSECS, 500);
+    conf.setInt(GiraphConfiguration.POLL_ATTEMPTS, 10);
+    conf.setInt(GiraphConfiguration.POLL_MSECS, 3*1000);
+    conf.setInt(GiraphConfiguration.ZOOKEEPER_SERVERLIST_POLL_MSECS, 500);
     if (getZooKeeperList() != null) {
-      job.setZooKeeperConfiguration(getZooKeeperList());
+      conf.setZooKeeperConfiguration(getZooKeeperList());
     }
     // GeneratedInputSplit will generate 5 vertices
     conf.setLong(GeneratedVertexReader.READER_VERTICES, 5);
@@ -175,7 +175,7 @@ public class BspCase extends TestCase implements Watcher {
       FileSystem hdfs = FileSystem.get(conf);
       // Since local jobs always use the same paths, remove them
       Path oldLocalJobPaths = new Path(
-          GiraphJob.ZOOKEEPER_MANAGER_DIR_DEFAULT);
+          GiraphConfiguration.ZOOKEEPER_MANAGER_DIR_DEFAULT);
       FileStatus[] fileStatusArr;
       try {
         fileStatusArr = hdfs.listStatus(oldLocalJobPaths);

@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-347: GiraphConfiguration broke hcatalog build
+  (Nitay Joffe via ereisman)
 
   GIRAPH-340: Added client/server ExecutionHandlers to Netty to avoid
   and added WrappedAdaptiveReceiveBufferSizePredictorFactory to

@@ -21,6 +21,7 @@ package org.apache.giraph.format.hbase;
 import junit.framework.Test;
 import junit.framework.TestSuite;
 import org.apache.giraph.BspCase;
+import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.format.hbase.edgemarker.TableEdgeInputFormat;
 import org.apache.giraph.format.hbase.edgemarker.TableEdgeOutputFormat;
 import org.apache.giraph.graph.EdgeListVertex;
@@ -142,12 +143,13 @@ public class TestHBaseRootMarkerVertextFormat extends BspCase {
             conf.set(TableOutputFormat.OUTPUT_TABLE, TABLE_NAME);
 
             GiraphJob giraphJob = new GiraphJob(conf, getCallingMethodName());
-            giraphJob.setZooKeeperConfiguration(
+            GiraphConfiguration giraphConf = giraphJob.getConfiguration();
+            giraphConf.setZooKeeperConfiguration(
                     cluster.getMaster().getZooKeeper().getQuorum());
             setupConfiguration(giraphJob);
-            giraphJob.setVertexClass(EdgeNotification.class);
-            giraphJob.setVertexInputFormatClass(TableEdgeInputFormat.class);
-            giraphJob.setVertexOutputFormatClass(TableEdgeOutputFormat.class);
+            giraphConf.setVertexClass(EdgeNotification.class);
+            giraphConf.setVertexInputFormatClass(TableEdgeInputFormat.class);
+            giraphConf.setVertexOutputFormatClass(TableEdgeOutputFormat.class);
 
             assertTrue(giraphJob.run(true));
             if(log.isInfoEnabled())
