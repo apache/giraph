@@ -24,6 +24,7 @@ import org.apache.giraph.comm.requests.RequestType;
 import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.giraph.utils.ReflectionUtils;
 
+import org.apache.giraph.utils.SystemTime;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferInputStream;
@@ -42,7 +43,8 @@ public class RequestDecoder extends OneToOneDecoder {
   private final ImmutableClassesGiraphConfiguration conf;
   /** Byte counter to output */
   private final ByteCounter byteCounter;
-
+  /** Start nanoseconds for the decoding time */
+  private long startDecodingNanoseconds = -1;
   /**
    * Constructor.
    *
@@ -70,18 +72,30 @@ public class RequestDecoder extends OneToOneDecoder {
       }
     }
 
+    if (LOG.isDebugEnabled()) {
+      startDecodingNanoseconds = SystemTime.getInstance().getNanoseconds();
+    }
+
+    // Decode the request
     ChannelBuffer buffer = (ChannelBuffer) msg;
     ChannelBufferInputStream inputStream = new ChannelBufferInputStream(buffer);
     int enumValue = inputStream.readByte();
     RequestType type = RequestType.values()[enumValue];
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("decode: Got a request of type " + type);
-    }
     Class<? extends WritableRequest> writableRequestClass =
         type.getRequestClass();
+
     WritableRequest writableRequest =
         ReflectionUtils.newInstance(writableRequestClass, conf);
     writableRequest.readFields(inputStream);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("decode: Client " + writableRequest.getClientId() +
+          ", requestId " + writableRequest.getRequestId() +
+          ", " +  writableRequest.getType() + ", with size " +
+          buffer.array().length + " took " +
+          SystemTime.getInstance().getNanosecondsSince(
+              startDecodingNanoseconds) + " ns");
+    }
+
     return writableRequest;
   }
 }

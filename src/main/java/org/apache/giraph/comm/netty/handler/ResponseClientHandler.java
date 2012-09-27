@@ -112,10 +112,9 @@ public class ResponseClientHandler extends SimpleChannelUpstreamHandler {
           requestId);
     } else {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("messageReceived: Processed request id = " + requestId +
-            " " + requestInfo + ".  Waiting on " +
-            workerIdOutstandingRequestMap.size() +
-            " requests, bytes = " + buffer.capacity());
+        LOG.debug("messageReceived: Completed " + requestInfo +
+            ".  Waiting on " + workerIdOutstandingRequestMap.size() +
+            " requests");
       }
     }
 

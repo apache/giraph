@@ -20,6 +20,7 @@ package org.apache.giraph.comm.netty;
 
 import java.text.DecimalFormat;
 import java.util.concurrent.atomic.AtomicLong;
+import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
@@ -36,6 +37,9 @@ public class ByteCounter extends SimpleChannelHandler {
   /** Helper to format the doubles */
   private static final DecimalFormat DOUBLE_FORMAT =
       new DecimalFormat("#######.####");
+  /** Class logger */
+  private static final Logger LOG =
+      Logger.getLogger(ByteCounter.class);
   /** All bytes ever sent */
   private final AtomicLong bytesSent = new AtomicLong();
   /** Total sent requests */
@@ -56,6 +60,10 @@ public class ByteCounter extends SimpleChannelHandler {
       ChannelBuffer b = (ChannelBuffer) ((MessageEvent) e).getMessage();
       bytesReceived.addAndGet(b.readableBytes());
       receivedRequests.incrementAndGet();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("handleUpstream: " + ctx.getName() + " buffer size = " +
+            b.readableBytes() + ", total bytes = " + bytesReceived.get());
+      }
     }
 
     super.handleUpstream(ctx, e);
@@ -69,6 +77,10 @@ public class ByteCounter extends SimpleChannelHandler {
       ChannelBuffer b = (ChannelBuffer) ((MessageEvent) e).getMessage();
       bytesSent.addAndGet(b.readableBytes());
       sentRequests.incrementAndGet();
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("handleDownstream: " + ctx.getName() + " buffer size = " +
+            b.readableBytes() + ", total bytes = " + bytesSent.get());
+      }
     }
 
     super.handleDownstream(ctx, e);
@@ -141,9 +153,9 @@ public class ByteCounter extends SimpleChannelHandler {
         DOUBLE_FORMAT.format(getMbytesPerSecReceived()) +
         ", MBytesSent = " + DOUBLE_FORMAT.format(mBytesSent) +
         ", MBytesReceived = " + DOUBLE_FORMAT.format(mBytesReceived) +
-        ", ave sent request MBytes = " +
+        ", ave sent req MBytes = " +
         DOUBLE_FORMAT.format(mBytesSentPerReq) +
-        ", ave received request MBytes = " +
+        ", ave received req MBytes = " +
         DOUBLE_FORMAT.format(mBytesReceivedPerReq) +
         ", secs waited = " +
         ((System.currentTimeMillis() - startMsecs.get()) / 1000f);

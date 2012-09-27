@@ -20,6 +20,7 @@ package org.apache.giraph.comm.netty.handler;
 
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.comm.requests.WritableRequest;
+import org.apache.giraph.utils.SystemTime;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -50,6 +51,8 @@ public abstract class RequestServerHandler<R> extends
   private final WorkerRequestReservedMap workerRequestReservedMap;
   /** My worker id */
   private final int myWorkerId;
+  /** Start nanoseconds for the processing time */
+  private long startProcessingNanoseconds = -1;
 
   /**
    * Constructor
@@ -70,8 +73,8 @@ public abstract class RequestServerHandler<R> extends
   @Override
   public void messageReceived(
       ChannelHandlerContext ctx, MessageEvent e) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("messageReceived: Got " + e.getMessage().getClass());
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("messageReceived: Got " + e.getMessage().getClass());
     }
 
     WritableRequest writableRequest = (WritableRequest) e.getMessage();
@@ -91,7 +94,18 @@ public abstract class RequestServerHandler<R> extends
     if (workerRequestReservedMap.reserveRequest(
         writableRequest.getClientId(),
         writableRequest.getRequestId())) {
+      if (LOG.isDebugEnabled()) {
+        startProcessingNanoseconds = SystemTime.getInstance().getNanoseconds();
+      }
       processRequest((R) writableRequest);
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("messageReceived: Processing client " +
+            writableRequest.getClientId() + ", " +
+            "requestId " + writableRequest.getRequestId() +
+            ", " +  writableRequest.getType() + " took " +
+            SystemTime.getInstance().getNanosecondsSince(
+                startProcessingNanoseconds) + " ns");
+      }
       alreadyDone = 0;
     } else {
       LOG.info("messageReceived: Request id " +

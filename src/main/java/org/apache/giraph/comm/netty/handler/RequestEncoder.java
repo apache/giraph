@@ -19,6 +19,8 @@
 package org.apache.giraph.comm.netty.handler;
 
 import org.apache.giraph.comm.requests.WritableRequest;
+import org.apache.giraph.utils.SystemTime;
+
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferOutputStream;
@@ -32,11 +34,14 @@ import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
  */
 public class RequestEncoder extends OneToOneEncoder {
   /** Class logger */
-  private static final Logger LOG = Logger.getLogger(RequestEncoder.class);
+  private static final Logger LOG =
+      Logger.getLogger(RequestEncoder.class);
   /** Holds the place of the message length until known */
   private static final byte[] LENGTH_PLACEHOLDER = new byte[4];
   /** Buffer starting size */
   private final int bufferStartingSize;
+  /** Start nanoseconds for the encoding time */
+  private long startEncodingNanoseconds = -1;
 
   /**
    * Constructor.
@@ -55,6 +60,10 @@ public class RequestEncoder extends OneToOneEncoder {
           "encode: Got a message of type " + msg.getClass());
     }
 
+    // Encode the request
+    if (LOG.isDebugEnabled()) {
+      startEncodingNanoseconds = SystemTime.getInstance().getNanoseconds();
+    }
     WritableRequest writableRequest = (WritableRequest) msg;
     ChannelBufferOutputStream outputStream =
         new ChannelBufferOutputStream(ChannelBuffers.dynamicBuffer(
@@ -65,13 +74,18 @@ public class RequestEncoder extends OneToOneEncoder {
     writableRequest.write(outputStream);
     outputStream.flush();
     outputStream.close();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("encode: Encoding a message of type " + msg.getClass());
-    }
 
     // Set the correct size at the end
     ChannelBuffer encodedBuffer = outputStream.buffer();
     encodedBuffer.setInt(0, encodedBuffer.writerIndex() - 4);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("encode: Client " + writableRequest.getClientId() + ", " +
+          "requestId " + writableRequest.getRequestId() +
+          ", size = " + encodedBuffer.writerIndex() +
+          writableRequest.getType() + " took " +
+          SystemTime.getInstance().getNanosecondsSince(
+              startEncodingNanoseconds) + " ns");
+    }
     return encodedBuffer;
   }
 }

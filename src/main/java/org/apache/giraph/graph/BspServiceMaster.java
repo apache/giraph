@@ -1757,7 +1757,8 @@ public class BspServiceMaster<I extends WritableComparable,
         if (LOG.isInfoEnabled()) {
           LOG.info("cleanup: Removed HDFS checkpoint directory (" +
               checkpointBasePath + ") with return = " +
-              success + " since this job succeeded ");
+              success + " since the job " + getContext().getJobName() +
+              " succeeded ");
         }
       }
       aggregatorWriter.close();

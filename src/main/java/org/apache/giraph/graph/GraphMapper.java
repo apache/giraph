@@ -307,7 +307,8 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
       }
 
       if (LOG.isInfoEnabled()) {
-        LOG.info("setup: classpath @ " + zkClasspath);
+        LOG.info("setup: classpath @ " + zkClasspath + " for job " +
+            context.getJobName());
       }
       context.getConfiguration().set(
           GiraphConfiguration.ZOOKEEPER_JAR, zkClasspath);

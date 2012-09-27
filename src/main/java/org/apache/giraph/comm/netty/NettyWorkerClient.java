@@ -232,8 +232,8 @@ public class NettyWorkerClient<I extends WritableComparable,
     PartitionOwner partitionOwner =
         service.getVertexPartitionOwner(destVertexId);
     int partitionId = partitionOwner.getPartitionId();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("sendMessageRequest: Send bytes (" + message.toString() +
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("sendMessageRequest: Send bytes (" + message.toString() +
           ") to " + destVertexId + " with partition " + partitionId);
     }
     ++totalMsgsSentInSuperstep;
@@ -261,8 +261,9 @@ public class NettyWorkerClient<I extends WritableComparable,
                                    Partition<I, V, E, M> partition) {
     InetSocketAddress remoteServerAddress =
         getInetSocketAddress(workerInfo, partition.getId());
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("sendPartitionRequest: Sending to " + remoteServerAddress +
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("sendPartitionRequest: Sending to " +
+          remoteServerAddress +
           " from " + workerInfo + ", with partition " + partition);
     }
 
@@ -333,8 +334,8 @@ public class NettyWorkerClient<I extends WritableComparable,
     PartitionOwner partitionOwner =
         service.getVertexPartitionOwner(vertexIndex);
     int partitionId = partitionOwner.getPartitionId();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("addEdgeRequest: Sending edge " + edge + " for index " +
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("addEdgeRequest: Sending edge " + edge + " for index " +
           vertexIndex + " with partition " + partitionId);
     }
 
@@ -352,8 +353,9 @@ public class NettyWorkerClient<I extends WritableComparable,
     PartitionOwner partitionOwner =
         service.getVertexPartitionOwner(vertexIndex);
     int partitionId = partitionOwner.getPartitionId();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("removeEdgeRequest: Removing edge " + destinationVertexIndex +
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("removeEdgeRequest: Removing edge " +
+          destinationVertexIndex +
           " for index " + vertexIndex + " with partition " + partitionId);
     }
 
@@ -371,8 +373,8 @@ public class NettyWorkerClient<I extends WritableComparable,
     PartitionOwner partitionOwner =
         service.getVertexPartitionOwner(vertex.getId());
     int partitionId = partitionOwner.getPartitionId();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("addVertexRequest: Sending vertex " + vertex +
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("addVertexRequest: Sending vertex " + vertex +
           " to partition " + partitionId);
     }
 
@@ -389,9 +391,9 @@ public class NettyWorkerClient<I extends WritableComparable,
     PartitionOwner partitionOwner =
         service.getVertexPartitionOwner(vertexIndex);
     int partitionId = partitionOwner.getPartitionId();
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("removeVertexRequest: Removing vertex index " + vertexIndex +
-          " from partition " + partitionId);
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("removeVertexRequest: Removing vertex index " +
+          vertexIndex + " from partition " + partitionId);
     }
 
     // Add the message to the cache

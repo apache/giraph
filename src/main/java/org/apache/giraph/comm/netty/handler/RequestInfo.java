@@ -20,8 +20,9 @@ package org.apache.giraph.comm.netty.handler;
 
 import java.net.InetSocketAddress;
 import java.util.Date;
-
 import org.apache.giraph.comm.requests.WritableRequest;
+import org.apache.giraph.utils.SystemTime;
+import org.apache.giraph.utils.Time;
 import org.jboss.netty.channel.ChannelFuture;
 
 /**
@@ -31,7 +32,7 @@ public class RequestInfo {
   /** Destination of the request */
   private final InetSocketAddress destinationAddress;
   /** When the request was started */
-  private final long startedMsecs;
+  private final long startedNanos;
   /** Request */
   private final WritableRequest request;
   /** Future of the write of this request*/
@@ -47,25 +48,40 @@ public class RequestInfo {
                      WritableRequest request) {
     this.destinationAddress = destinationAddress;
     this.request = request;
-    this.startedMsecs = System.currentTimeMillis();
+    this.startedNanos = SystemTime.getInstance().getNanoseconds();
   }
 
   public InetSocketAddress getDestinationAddress() {
     return destinationAddress;
   }
 
+  /**
+   * Get the started msecs.
+   *
+   * @return Started msecs
+   */
   public long getStartedMsecs() {
-    return startedMsecs;
+    return startedNanos / Time.NS_PER_MS;
   }
 
   /**
-   * Get the elapsed time since the request started.
+   * Get the elapsed nanoseconds since the request started.
    *
-   * @return Msecs since the request was started
+   * @return Nanoseconds since the request was started
+   */
+  public long getElapsedNanos() {
+    return SystemTime.getInstance().getNanoseconds() - startedNanos;
+  }
+
+  /**
+   * Get the elapsed millseconds since the request started.
+   *
+   * @return Milliseconds since the request was started
    */
   public long getElapsedMsecs() {
-    return System.currentTimeMillis() - startedMsecs;
+    return getElapsedNanos() / Time.NS_PER_MS;
   }
+
 
   public WritableRequest getRequest() {
     return request;
@@ -81,9 +97,12 @@ public class RequestInfo {
 
   @Override
   public String toString() {
-    return "(destAddr=" + destinationAddress +
-        ",startDate=" + new Date(startedMsecs) + ",elapsedMsecs=" +
-        getElapsedMsecs() + ",reqId=" + request.getRequestId() +
+    return "(reqId=" + request.getRequestId() +
+        ",destAddr=" + destinationAddress.getHostName() + ":" +
+        destinationAddress.getPort() +
+        ",elapsedNanos=" +
+        getElapsedNanos() +
+        ",started=" + new Date(getStartedMsecs()) +
         ((writeFuture == null) ? ")" :
             ",writeDone=" + writeFuture.isDone() +
                 ",writeSuccess=" + writeFuture.isSuccess() + ")");

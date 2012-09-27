@@ -69,7 +69,7 @@ public class SimpleShortestPathsVertexTest {
         new DoubleWritable(1.5)));
 
     assertTrue(vertex.isHalted());
-    assertEquals(1.5, vertex.getValue().get());
+    assertEquals(1.5d, vertex.getValue().get(), 0d);
 
     env.verifyMessageSent(new LongWritable(10L), new DoubleWritable(4));
     env.verifyMessageSent(new LongWritable(20L), new DoubleWritable(2));
@@ -99,7 +99,7 @@ public class SimpleShortestPathsVertexTest {
         new DoubleWritable(1.5)));
 
     assertTrue(vertex.isHalted());
-    assertEquals(0.5, vertex.getValue().get());
+    assertEquals(0.5d, vertex.getValue().get(), 0d);
 
     env.verifyNoMessageSent();
   }
@@ -133,11 +133,11 @@ public class SimpleShortestPathsVertexTest {
 
     // verify results
     assertNotNull(distances);
-    assertEquals(4, distances.size());
-    assertEquals(0.0, distances.get(1L));
-    assertEquals(1.0, distances.get(2L));
-    assertEquals(2.0, distances.get(3L));
-    assertEquals(4.0, distances.get(4L));
+    assertEquals(4, (int) distances.size());
+    assertEquals(0.0, (double) distances.get(1L), 0d);
+    assertEquals(1.0, (double) distances.get(2L), 0d);
+    assertEquals(2.0, (double) distances.get(3L), 0d);
+    assertEquals(4.0, (double) distances.get(4L), 0d);
   }
 
   private Map<Long, Double> parseDistances(Iterable<String> results) {

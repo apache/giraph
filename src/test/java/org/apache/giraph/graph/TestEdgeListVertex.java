@@ -19,6 +19,8 @@ package org.apache.giraph.graph;
 
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.utils.SystemTime;
+import org.apache.giraph.utils.Time;
 import org.apache.giraph.utils.WritableUtils;
 import org.apache.giraph.graph.partition.PartitionOwner;
 import org.apache.hadoop.conf.Configuration;
@@ -109,7 +111,7 @@ public class TestEdgeListVertex {
     assertEquals(vertex.getNumEdges(), 1000);
     for (Edge<IntWritable, DoubleWritable> edge : vertex.getEdges()) {
       assertEquals(edge.getValue().get(),
-          edge.getTargetVertexId().get() * 2.0d);
+          edge.getTargetVertexId().get() * 2.0d, 0d);
     }
     assertEquals(vertex.removeEdge(new IntWritable(500)),
         new DoubleWritable(1000));
@@ -155,7 +157,8 @@ public class TestEdgeListVertex {
     assertNull(vertex.getEdgeValue(new IntWritable(5)));
     assertNull(vertex.getEdgeValue(new IntWritable(0)));
     for (Edge<IntWritable, DoubleWritable> edge : vertex.getEdges()) {
-      assertEquals(edge.getTargetVertexId().get() * 1.0d, edge.getValue().get());
+      assertEquals(edge.getTargetVertexId().get() * 1.0d,
+          edge.getValue().get(), 0d);
     }
     assertNotNull(vertex.removeEdge(new IntWritable(1)));
     assertEquals(vertex.getNumEdges(), 3);
@@ -199,10 +202,26 @@ public class TestEdgeListVertex {
     messageList.add(new LongWritable(5));
     vertex.initialize(
         new IntWritable(2), new FloatWritable(3.0f), edgeMap, messageList);
+    long serializeNanosStart = SystemTime.getInstance().getNanoseconds();
     byte[] byteArray = WritableUtils.writeToByteArray(vertex);
+    long serializeNanos = SystemTime.getInstance().getNanosecondsSince(
+        serializeNanosStart);
+    System.out.println("testSerialize: Serializing took " +
+        serializeNanos +
+        " ns for " + byteArray.length + " bytes " +
+        (byteArray.length * 1f * Time.NS_PER_SECOND / serializeNanos) +
+        " bytes / sec");
     IFDLEdgeListVertex readVertex = (IFDLEdgeListVertex)
       configuration.createVertex();
+    long deserializeNanosStart = SystemTime.getInstance().getNanoseconds();
     WritableUtils.readFieldsFromByteArray(byteArray, readVertex);
+    long deserializeNanos = SystemTime.getInstance().getNanosecondsSince(
+        deserializeNanosStart);
+    System.out.println("testSerialize: Deserializing took " +
+        deserializeNanos +
+        " ns for " + byteArray.length + " bytes " +
+        (byteArray.length * 1f * Time.NS_PER_SECOND / deserializeNanos) +
+        " bytes / sec");
 
     assertEquals(vertex.getId(), readVertex.getId());
     assertEquals(vertex.getValue(), readVertex.getValue());

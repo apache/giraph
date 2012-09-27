@@ -65,6 +65,7 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -490,9 +491,9 @@ public class TestBspBasic extends BspCase {
           assertEquals(maxSuperstep + 2, maxValues.size());
           assertEquals(maxSuperstep + 2, vertexCounts.size());
 
-          assertEquals(maxPageRank, maxValues.get(maxSuperstep));
-          assertEquals(minPageRank, minValues.get(maxSuperstep));
-          assertEquals(numVertices, vertexCounts.get(maxSuperstep));
+          assertEquals(maxPageRank, (double) maxValues.get(maxSuperstep), 0d);
+          assertEquals(minPageRank, (double) minValues.get(maxSuperstep), 0d);
+          assertEquals(numVertices, (long) vertexCounts.get(maxSuperstep));
 
         } finally {
           Closeables.closeQuietly(in);
@@ -525,7 +526,7 @@ public class TestBspBasic extends BspCase {
       double finalSum =
           SimpleMasterComputeVertex.SimpleMasterComputeWorkerContext.getFinalSum();
       System.out.println("testBspMasterCompute: finalSum=" + finalSum);
-      assertEquals(32.5, finalSum);
+      assertEquals(32.5, finalSum, 0d);
     }
   }
 }
