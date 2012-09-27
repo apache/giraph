@@ -28,7 +28,7 @@ under the License.
         <compileSource>1.6</compileSource>
         <hadoop.version>0.20.203.0</hadoop.version>
         <hbase.version>0.90.5</hbase.version>
-        <hcatalog.version>0.4.0-dev</hcatalog.version>
+        <hcatalog.version>0.5.0-SNAPSHOT</hcatalog.version>
         <hive.version>0.9.0</hive.version>
         <accumulo.version>1.4.0</accumulo.version>
         <maven-compiler-plugin.version>2.3.2</maven-compiler-plugin.version>
@@ -74,42 +74,47 @@ under the License.
             </plugin>
         </plugins>
     </build>
-    <profiles>
-        <profile>
-            <id>hcatalog</id>
-            <dependencies>
-              <dependency>
-                <groupId>org.apache.hcatalog</groupId>
-                <artifactId>hcatalog</artifactId>
-                <version>${hcatalog.version}</version>
-              </dependency>
-            </dependencies>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.codehaus.mojo</groupId>
-                        <artifactId>build-helper-maven-plugin</artifactId>
-                        <version>1.7</version>
-                        <executions>
-                            <execution>
-                                <id>add-sources</id>
-                                <phase>generate-sources</phase>
-                                <goals>
-                                    <goal>add-source</goal>
-                                </goals>
-                                <configuration>
-                                    <sources>
-                                        <source>${basedir}/src/hcatalog/java/</source>
-                                    </sources>
-                                </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
+    <repositories>
+      <!-- This is the main maven repository. Normally we wouldn't need to put
+           it here when it's the only one being used, but since we need to add
+           special repositories to get hcatalog we need to mention this one
+           specifically otherwise it won't be included. -->
+      <repository>
+        <id>central</id>
+        <name>Maven Repository</name>
+        <url>http://repo1.maven.org/maven2</url>
+        <releases>
+          <enabled>true</enabled>
+        </releases>
+      </repository>
+      <!-- This is necessary for hcatalog. -->
+      <repository>
+        <id>apache</id>
+        <name>Apache Repository</name>
+        <url>https://repository.apache.org/content/repositories/snapshots</url>
+        <snapshots>
+          <enabled>true</enabled>
+        </snapshots>
+      </repository>
+      <!-- This is necessary for hive-metastore dependencies for hcatalog. -->
+      <repository>
+        <id>datanucleus</id>
+        <name>datanucleus maven repository</name>
+        <url>http://www.datanucleus.org/downloads/maven2</url>
+        <layout>default</layout>
+        <releases>
+          <enabled>true</enabled>
+          <checksumPolicy>warn</checksumPolicy>
+        </releases>
+      </repository>
+    </repositories>
     <dependencies>
+        <dependency>
+          <groupId>org.apache.hcatalog</groupId>
+          <artifactId>hcatalog</artifactId>
+          <!-- TODO: Use 0.5.0 stable release -->
+          <version>${hcatalog.version}</version>
+        </dependency>
         <dependency>
             <artifactId>giraph</artifactId>
             <groupId>org.apache.giraph</groupId>
