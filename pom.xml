@@ -462,6 +462,7 @@ under the License.
               <exclude>**/target/**</exclude>
               <exclude>_bsp/**</exclude>
               <exclude>.checkstyle</exclude>
+              <exclude>Unknown Job*</exclude>
               <!-- source control and IDEs -->
               <exclude>.reviewboardrc</exclude>
               <exclude>.git/**</exclude>
@@ -470,6 +471,10 @@ under the License.
               <exclude>.idea/**</exclude>
               <exclude>**/*.iml</exclude>
               <exclude>**/*.ipr</exclude>
+              <exclude>**/.project</exclude>
+              <exclude>**/.classpath</exclude>
+              <exclude>**/.settings/**</exclude>
+              <exclude>.arcconfig</exclude>
            </excludes>
         </configuration>
       </plugin>

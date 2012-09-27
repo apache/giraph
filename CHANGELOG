@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-338: More Rat Ignores (Nitay Joffe via ereisman)
+
   GIRAPH-347: GiraphConfiguration broke hcatalog build
   (Nitay Joffe via ereisman)
 

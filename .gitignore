@@ -7,6 +7,7 @@
 # Build files:
 *.class
 target
+Unknown Job*
 
 # IntelliJ IDEA files:
 *.iml
