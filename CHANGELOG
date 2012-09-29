@@ -5,6 +5,9 @@ Release 0.2.0 - unreleased
   GIRAPH-341: Improved log messages (timing) and upgraded junit to 4.8
   for better tests. (aching)
   
+  GIRAPH-352: Loaded vertices don't have their configuration set.
+  (aching)
+  
   GIRAPH-343: Use published hcatalog jars. (nitayj via aching)
 
   GIRAPH-338: More Rat Ignores (Nitay Joffe via ereisman)

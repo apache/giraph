@@ -464,6 +464,7 @@ public class BspServiceWorker<I extends WritableComparable,
       if (readerVertex.getValue() == null) {
         readerVertex.setValue(getConfiguration().createVertexValue());
       }
+      readerVertex.setConf(getConfiguration());
       readerVertex.setGraphState(getGraphMapper().getGraphState());
       PartitionOwner partitionOwner =
           workerGraphPartitioner.getPartitionOwner(
