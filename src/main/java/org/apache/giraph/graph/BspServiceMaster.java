@@ -31,6 +31,7 @@ import org.apache.giraph.graph.partition.MasterGraphPartitioner;
 import org.apache.giraph.graph.partition.PartitionOwner;
 import org.apache.giraph.graph.partition.PartitionStats;
 import org.apache.giraph.graph.partition.PartitionUtils;
+import org.apache.giraph.utils.ProgressableUtils;
 import org.apache.giraph.utils.WritableUtils;
 import org.apache.giraph.zk.BspEvent;
 import org.apache.giraph.zk.PredicateLock;
@@ -74,6 +75,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
@@ -95,6 +99,11 @@ public class BspServiceMaster<I extends WritableComparable,
   public static final String GIRAPH_STATS_COUNTER_GROUP_NAME = "Giraph Stats";
   /** Print worker names only if there are 10 workers left */
   public static final int MAX_PRINTABLE_REMAINING_WORKERS = 10;
+  /** How many threads to use when writing input splits to zookeeper*/
+  public static final String INPUT_SPLIT_THREAD_COUNT =
+      "giraph.inputSplitThreadCount";
+  /** Default number of threads to use when writing input splits to zookeeper */
+  public static final int DEFAULT_INPUT_SPLIT_THREAD_COUNT = 1;
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(BspServiceMaster.class);
   /** Superstep counter */
@@ -531,59 +540,25 @@ public class BspServiceMaster<I extends WritableComparable,
           "=number of healthy processes, " +
           "some workers will be not used");
     }
-    String inputSplitPath = null;
-    String[] splitLocations;
-    InputSplit inputSplit;
-    StringBuilder locations;
+
+    // Write input splits to zookeeper in parallel
+    int inputSplitThreadCount = getConfiguration().getInt(
+        INPUT_SPLIT_THREAD_COUNT,
+        DEFAULT_INPUT_SPLIT_THREAD_COUNT);
+    if (LOG.isInfoEnabled()) {
+      LOG.info("createInputSplits: Starting to write input split data to " +
+          "zookeeper with " + inputSplitThreadCount + " threads");
+    }
+    ExecutorService taskExecutor =
+        Executors.newFixedThreadPool(inputSplitThreadCount);
     for (int i = 0; i < splitList.size(); ++i) {
-      try {
-        ByteArrayOutputStream byteArrayOutputStream =
-            new ByteArrayOutputStream();
-        DataOutput outputStream =
-            new DataOutputStream(byteArrayOutputStream);
-        inputSplit = splitList.get(i);
-        splitLocations = inputSplit.getLocations();
-        locations = null;
-        if (splitLocations != null) {
-          int splitListLength =
-            Math.min(splitLocations.length, localityLimit);
-          locations = new StringBuilder();
-          for (String location : splitLocations) {
-            locations.append(location)
-              .append(--splitListLength > 0 ? "\t" : "");
-          }
-        }
-        Text.writeString(outputStream,
-            locations == null ? "" : locations.toString());
-        Text.writeString(outputStream,
-            inputSplit.getClass().getName());
-        ((Writable) inputSplit).write(outputStream);
-        inputSplitPath = inputSplitsPath + "/" + i;
-        getZkExt().createExt(inputSplitPath,
-            byteArrayOutputStream.toByteArray(),
-            Ids.OPEN_ACL_UNSAFE,
-            CreateMode.PERSISTENT,
-            true);
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("createInputSplits: Created input split " +
-              "with index " + i + " serialized as " +
-              byteArrayOutputStream.toString());
-        }
-      } catch (KeeperException.NodeExistsException e) {
-        if (LOG.isInfoEnabled()) {
-          LOG.info("createInputSplits: Node " +
-              inputSplitPath + " already exists.");
-        }
-      } catch (KeeperException e) {
-        throw new IllegalStateException(
-            "createInputSplits: KeeperException", e);
-      } catch (InterruptedException e) {
-        throw new IllegalStateException(
-            "createInputSplits: IllegalStateException", e);
-      } catch (IOException e) {
-        throw new IllegalStateException(
-            "createInputSplits: IOException", e);
-      }
+      InputSplit inputSplit = splitList.get(i);
+      taskExecutor.submit(new WriteInputSplit(inputSplit, i));
+    }
+    taskExecutor.shutdown();
+    ProgressableUtils.awaitExecutorTermination(taskExecutor, getContext());
+    if (LOG.isInfoEnabled()) {
+      LOG.info("createInputSplits: Done writing input split data to zookeeper");
     }
 
     // Let workers know they can start trying to load the input splits
@@ -1904,5 +1879,82 @@ public class BspServiceMaster<I extends WritableComparable,
     sentMessagesCounter.increment(
         globalStats.getMessageCount() -
             sentMessagesCounter.getValue());
+  }
+
+  /**
+   * Task that writes a given input split to zookeeper.
+   * Upon failure call() throws an exception.
+   */
+  private class WriteInputSplit implements Callable<Void> {
+    /** Input split which we are going to write */
+    private final InputSplit inputSplit;
+    /** Index of the input split */
+    private final int index;
+
+    /**
+     * Constructor
+     *
+     * @param inputSplit Input split which we are going to write
+     * @param index Index of the input split
+     */
+    public WriteInputSplit(InputSplit inputSplit, int index) {
+      this.inputSplit = inputSplit;
+      this.index = index;
+    }
+
+    @Override
+    public Void call() {
+      String inputSplitPath = null;
+      try {
+        ByteArrayOutputStream byteArrayOutputStream =
+            new ByteArrayOutputStream();
+        DataOutput outputStream =
+            new DataOutputStream(byteArrayOutputStream);
+
+        String[] splitLocations = inputSplit.getLocations();
+        StringBuilder locations = null;
+        if (splitLocations != null) {
+          int splitListLength =
+              Math.min(splitLocations.length, localityLimit);
+          locations = new StringBuilder();
+          for (String location : splitLocations) {
+            locations.append(location)
+                .append(--splitListLength > 0 ? "\t" : "");
+          }
+        }
+        Text.writeString(outputStream,
+            locations == null ? "" : locations.toString());
+        Text.writeString(outputStream,
+            inputSplit.getClass().getName());
+        ((Writable) inputSplit).write(outputStream);
+        inputSplitPath = inputSplitsPath + "/" + index;
+        getZkExt().createExt(inputSplitPath,
+            byteArrayOutputStream.toByteArray(),
+            Ids.OPEN_ACL_UNSAFE,
+            CreateMode.PERSISTENT,
+            true);
+
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("call: Created input split " +
+              "with index " + index + " serialized as " +
+              byteArrayOutputStream.toString());
+        }
+      } catch (KeeperException.NodeExistsException e) {
+        if (LOG.isInfoEnabled()) {
+          LOG.info("call: Node " +
+              inputSplitPath + " already exists.");
+        }
+      } catch (KeeperException e) {
+        throw new IllegalStateException(
+            "call: KeeperException", e);
+      } catch (InterruptedException e) {
+        throw new IllegalStateException(
+            "call: IllegalStateException", e);
+      } catch (IOException e) {
+        throw new IllegalStateException(
+            "call: IOException", e);
+      }
+      return null;
+    }
   }
 }

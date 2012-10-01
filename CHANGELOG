@@ -2,6 +2,8 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-326: Writing input splits to ZooKeeper in parallel (maja)
+
   GIRAPH-335: Add committer information for Maja Kabiljo to pom.xml
   (maja)
 
