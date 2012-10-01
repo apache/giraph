@@ -111,9 +111,15 @@ under the License.
     <dependencies>
         <dependency>
           <groupId>org.apache.hcatalog</groupId>
-          <artifactId>hcatalog</artifactId>
+          <artifactId>hcatalog-core</artifactId>
           <!-- TODO: Use 0.5.0 stable release -->
           <version>${hcatalog.version}</version>
+          <exclusions>
+              <exclusion>
+                  <groupId>org.apache.pig</groupId>
+                  <artifactId>pig</artifactId>
+              </exclusion>
+          </exclusions>
         </dependency>
         <dependency>
             <artifactId>giraph</artifactId>
