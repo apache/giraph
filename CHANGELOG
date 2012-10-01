@@ -1,6 +1,7 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-353: Received metrics are not thread-safe (aching via ereisman)
 
   GIRAPH-326: Writing input splits to ZooKeeper in parallel (maja)
 
