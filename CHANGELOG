@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-335: Add committer information for Maja Kabiljo to pom.xml
+  (maja)
+
   GIRAPH-341: Improved log messages (timing) and upgraded junit to 4.8
   for better tests. (aching)
   

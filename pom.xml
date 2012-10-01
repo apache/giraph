@@ -175,6 +175,14 @@ under the License.
       <organization>LinkedIn</organization>
       <organizationUrl>http://www.linkedin.com/</organizationUrl>
     </developer>
+    <developer>
+      <id>maja</id>
+      <name>Maja Kabiljo</name>
+      <email>maja@apache.org</email>
+      <timezone>-8</timezone>
+      <organization>Facebook</organization>
+      <organizationUrl>http://www.facebook.com</organizationUrl>
+    </developer>
   </developers>
 
   <properties>
