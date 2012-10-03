@@ -551,8 +551,9 @@ under the License.
                 </goals>
               </execution>
             </executions>
+	    <!-- profile: hadoop_0.20.203 -->
             <configuration>
-              <symbols>HADOOP_NON_SASL_RPC,HADOOP_NON_INTERVERSIONED_RPC</symbols>
+              <symbols>HADOOP_NON_INTERVERSIONED_RPC,HADOOP_NON_JOBCONTEXT_IS_INTERFACE</symbols>
             </configuration>
           </plugin>
         </plugins>
@@ -594,8 +595,9 @@ under the License.
                 </goals>
               </execution>
             </executions>
+	    <!-- profile: hadoop_1.0 -->
             <configuration>
-              <symbols>HADOOP_NON_SASL_RPC,HADOOP_NON_INTERVERSIONED_RPC</symbols>
+              <symbols>HADOOP_NON_INTERVERSIONED_RPC,HADOOP_NON_JOBCONTEXT_IS_INTERFACE</symbols>
             </configuration>
           </plugin>
         </plugins>
@@ -620,6 +622,12 @@ under the License.
           <version>${hadoop.version}</version>
           <scope>provided</scope>
         </dependency>
+	<dependency>
+	  <groupId>commons-collections</groupId>
+	  <artifactId>commons-collections</artifactId>
+	  <scope>provided</scope>
+	  <version>3.2.1</version>
+	</dependency>
       </dependencies>
       <build>
         <plugins>
@@ -637,7 +645,8 @@ under the License.
               </execution>
             </executions>
             <configuration>
-              <symbols>HADOOP_NON_SECURE,HADOOP_NON_SASL_RPC,HADOOP_NON_INTERVERSIONED_RPC</symbols>
+	      <!-- profile: hadoop_non_secure -->
+              <symbols>HADOOP_NON_SECURE,HADOOP_NON_INTERVERSIONED_RPC,HADOOP_NON_JOBCONTEXT_IS_INTERFACE</symbols>
             </configuration>
           </plugin>
           <plugin>
@@ -647,6 +656,7 @@ under the License.
             <configuration>
               <excludes>
                 <exclude>**/BspTokenSelector.java</exclude>
+                <exclude>**/SecureRPCCommunications.java</exclude>
               </excludes>
               <source>${compileSource}</source>
               <target>${compileSource}</target>
@@ -695,6 +705,7 @@ under the License.
             <directory>${basedir}/src/main/java/org/apache/giraph/hadoop</directory>
             <excludes>
               <exclude>BspTokenSelector.java</exclude>
+	      <exclude>SecureRPCCommunications.java</exclude>
             </excludes>
           </resource>
         </resources>
@@ -706,6 +717,7 @@ under the License.
             <configuration>
               <excludes>
                 <exclude>**/BspTokenSelector.java</exclude>
+		<exclude>**/SecureRPCCommunications.java</exclude>
               </excludes>
               <source>${compileSource}</source>
               <target>${compileSource}</target>
@@ -724,8 +736,9 @@ under the License.
                 </goals>
               </execution>
             </executions>
+	    <!-- profile: hadoop_facebook -->
             <configuration>
-              <symbols>HADOOP_NON_SECURE,HADOOP_NON_SASL_RPC</symbols>
+              <symbols>HADOOP_NON_SECURE,HADOOP_NON_JOBCONTEXT_IS_INTERFACE</symbols>
             </configuration>
           </plugin>
           <plugin>
@@ -745,6 +758,9 @@ under the License.
       </build>
     </profile>
 
+    <!-- Help keep future Hadoop versions munge-free: 
+	 All profiles below are munge-free: avoid introducing any munge
+         flags on any of the following profiles. -->
     <profile>
       <id>hadoop_0.23</id>
        <activation>

@@ -30,6 +30,7 @@ import org.apache.giraph.examples.SimpleSumCombiner;
 import org.apache.giraph.examples.SimpleSuperstepVertex;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexOutputFormat;
+import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.LocalityInfoSorter;
@@ -53,10 +54,10 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.JobContext;
-/*if[HADOOP_NON_SASL_RPC]
-else[HADOOP_NON_SASL_RPC]*/
+/*if[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]
+else[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
 import org.apache.hadoop.mapreduce.task.JobContextImpl;
-/*end[HADOOP_NON_SASL_RPC]*/
+/*end[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
 import org.apache.zookeeper.KeeperException;
 import org.junit.Test;
 
@@ -127,15 +128,15 @@ public class TestBspBasic extends BspCase {
         ", graphState" + gs);
     VertexInputFormat<LongWritable, IntWritable, FloatWritable, IntWritable>
     inputFormat = configuration.createVertexInputFormat();
-    /*if[HADOOP_NON_SASL_RPC]
+/*if[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]
       List<InputSplit> splitArray =
           inputFormat.getSplits(
               new JobContext(new Configuration(), new JobID()), 1);
-    else[HADOOP_NON_SASL_RPC]*/
+else[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
       List<InputSplit> splitArray =
           inputFormat.getSplits(
               new JobContextImpl(new Configuration(), new JobID()), 1);
-      /*end[HADOOP_NON_SASL_RPC]*/
+/*end[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
     ByteArrayOutputStream byteArrayOutputStream =
         new ByteArrayOutputStream();
     DataOutputStream outputStream = new DataOutputStream(byteArrayOutputStream);

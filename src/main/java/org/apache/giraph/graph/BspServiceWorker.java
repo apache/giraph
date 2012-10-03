@@ -21,10 +21,14 @@ package org.apache.giraph.graph;
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.bsp.ApplicationState;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.comm.RPCCommunications;
 import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.comm.WorkerClientServer;
 import org.apache.giraph.comm.netty.NettyWorkerClientServer;
+/*if[HADOOP_NON_SECURE]
+import org.apache.giraph.comm.RPCCommunications;
+else[HADOOP_NON_SECURE]*/
+import org.apache.giraph.comm.SecureRPCCommunications;
+/*end[HADOOP_NON_SECURE]*/
 import org.apache.giraph.graph.partition.Partition;
 import org.apache.giraph.graph.partition.PartitionExchange;
 import org.apache.giraph.graph.partition.PartitionOwner;
@@ -159,10 +163,15 @@ public class BspServiceWorker<I extends WritableComparable,
       commService =  new NettyWorkerClientServer<I, V, E, M>(
           context, getConfiguration(), this);
     } else {
+/*if[HADOOP_NON_SECURE]
       commService =
-          new RPCCommunications<I, V, E, M>(context, this,
-              getConfiguration(),
-              graphState);
+          new RPCCommunications<I, V, E, M>(context, this, getConfiguration(),
+          graphState);
+else[HADOOP_NON_SECURE]*/
+      commService =
+        new SecureRPCCommunications<I, V, E, M>(context, this,
+          getConfiguration(), graphState);
+/*end[HADOOP_NON_SECURE]*/
     }
     if (LOG.isInfoEnabled()) {
       LOG.info("BspServiceWorker: maxVerticesPerTransfer = " +
