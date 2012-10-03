@@ -64,6 +64,10 @@ import java.util.List;
 public class GraphMapper<I extends WritableComparable, V extends Writable,
     E extends Writable, M extends Writable> extends
     Mapper<Object, Object, Object, Object> {
+  static {
+    Configuration.addDefaultResource("giraph-site.xml");
+  }
+
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(GraphMapper.class);
   /** Coordination service worker */

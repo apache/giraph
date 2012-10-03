@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-315: giraph-site.xml isn't read on time. (majakabiljo via
+  aching)
+
   GIRAPH-325: One more progress call. (majakabiljo via aching)
 
   GIRAPH-328: Outgoing messages from current superstep should be
