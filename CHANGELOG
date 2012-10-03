@@ -2,6 +2,10 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-328: Outgoing messages from current superstep should be
+  grouped at the sender by owning worker, not by partition. (Eli
+  Reisman via aching)
+
   GIRAPH-293: Should aggregators be checkpointed? (majakabiljo via
   aching)
 

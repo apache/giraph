@@ -31,8 +31,8 @@ import org.apache.hadoop.io.Writable;
 public class WorkerInfo implements Writable {
   /** Worker hostname */
   private String hostname;
-  /** Partition id of this worker */
-  private int partitionId = -1;
+  /** Task Partition (Worker) ID of this worker */
+  private int taskId = -1;
   /** Port that the RPC server is using */
   private int port = -1;
   /** Hostname + "_" + id for easier debugging */
@@ -45,25 +45,25 @@ public class WorkerInfo implements Writable {
   }
 
   /**
-   * Constructor with paramters.
+   * Constructor with parameters.
    *
    * @param hostname Hostname of this worker.
-   * @param partitionId partition id of this particular object.
+   * @param taskId the task partition for this worker
    * @param port Port of the service.
    */
-  public WorkerInfo(String hostname, int partitionId, int port) {
+  public WorkerInfo(String hostname, int taskId, int port) {
     this.hostname = hostname;
-    this.partitionId = partitionId;
+    this.taskId = taskId;
     this.port = port;
-    this.hostnameId = hostname + "_" + partitionId;
+    this.hostnameId = hostname + "_" + taskId;
   }
 
   public String getHostname() {
     return hostname;
   }
 
-  public int getPartitionId() {
-    return partitionId;
+  public int getTaskId() {
+    return taskId;
   }
 
   public String getHostnameId() {
@@ -88,7 +88,7 @@ public class WorkerInfo implements Writable {
     if (other instanceof WorkerInfo) {
       WorkerInfo workerInfo = (WorkerInfo) other;
       if (hostname.equals(workerInfo.getHostname()) &&
-          (partitionId == workerInfo.getPartitionId()) &&
+          (taskId == workerInfo.getTaskId()) &&
           (port == workerInfo.getPort())) {
         return true;
       }
@@ -101,28 +101,28 @@ public class WorkerInfo implements Writable {
     int result = 17;
     result = 37 * result + port;
     result = 37 * result + hostname.hashCode();
-    result = 37 * result + partitionId;
+    result = 37 * result + taskId;
     return result;
   }
 
   @Override
   public String toString() {
-    return "Worker(hostname=" + hostname + ", MRpartition=" +
-        partitionId + ", port=" + port + ")";
+    return "Worker(hostname=" + hostname + ", MRtaskID=" +
+        taskId + ", port=" + port + ")";
   }
 
   @Override
   public void readFields(DataInput input) throws IOException {
     hostname = input.readUTF();
-    partitionId = input.readInt();
+    taskId = input.readInt();
     port = input.readInt();
-    hostnameId = hostname + "_" + partitionId;
+    hostnameId = hostname + "_" + taskId;
   }
 
   @Override
   public void write(DataOutput output) throws IOException {
     output.writeUTF(hostname);
-    output.writeInt(partitionId);
+    output.writeInt(taskId);
     output.writeInt(port);
   }
 }

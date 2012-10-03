@@ -445,10 +445,10 @@ public class BspServiceMaster<I extends WritableComparable,
             partitionLongTailMinPrint) {
           Set<Integer> partitionSet = new TreeSet<Integer>();
           for (WorkerInfo workerInfo : healthyWorkerInfoList) {
-            partitionSet.add(workerInfo.getPartitionId());
+            partitionSet.add(workerInfo.getTaskId());
           }
           for (WorkerInfo workerInfo : unhealthyWorkerInfoList) {
-            partitionSet.add(workerInfo.getPartitionId());
+            partitionSet.add(workerInfo.getTaskId());
           }
           for (int i = 1; i <= maxWorkers; ++i) {
             if (partitionSet.contains(Integer.valueOf(i))) {

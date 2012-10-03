@@ -24,7 +24,7 @@ import org.apache.giraph.comm.messages.SimpleMessageStore;
 import org.apache.giraph.comm.netty.NettyClient;
 import org.apache.giraph.comm.netty.NettyServer;
 import org.apache.giraph.comm.netty.handler.WorkerRequestServerHandler;
-import org.apache.giraph.comm.requests.SendPartitionMessagesRequest;
+import org.apache.giraph.comm.requests.SendWorkerMessagesRequest;
 import org.apache.giraph.comm.requests.SendPartitionMutationsRequest;
 import org.apache.giraph.comm.requests.SendVertexRequest;
 import org.apache.giraph.graph.Edge;
@@ -145,11 +145,14 @@ public class RequestTest {
   }
 
   @Test
-  public void sendPartitionMessagesRequest() throws IOException {
+  public void sendWorkerMessagesRequest() throws IOException {
     // Data to send
+    Map<Integer, Map<IntWritable, Collection<IntWritable>>> sendMap =
+        Maps.newHashMap();
     int partitionId = 0;
     Map<IntWritable, Collection<IntWritable>> vertexIdMessages =
         Maps.newHashMap();
+    sendMap.put(partitionId, vertexIdMessages);
     for (int i = 1; i < 7; ++i) {
       IntWritable vertexId = new IntWritable(i);
       Collection<IntWritable> messages = Lists.newArrayList();
@@ -160,10 +163,10 @@ public class RequestTest {
     }
 
     // Send the request
-    SendPartitionMessagesRequest<IntWritable, IntWritable, IntWritable,
-    IntWritable> request =
-      new SendPartitionMessagesRequest<IntWritable, IntWritable,
-      IntWritable, IntWritable>(partitionId, vertexIdMessages);
+    SendWorkerMessagesRequest<IntWritable, IntWritable, IntWritable,
+        IntWritable> request =
+      new SendWorkerMessagesRequest<IntWritable, IntWritable,
+            IntWritable, IntWritable>(sendMap);
     client.sendWritableRequest(-1, server.getMyAddress(), request);
     client.waitAllRequests();
 

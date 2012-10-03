@@ -25,7 +25,7 @@ public enum RequestType {
   /** Sending vertices request */
   SEND_VERTEX_REQUEST(SendVertexRequest.class),
   /** Sending a partition of messages for next superstep */
-  SEND_PARTITION_MESSAGES_REQUEST(SendPartitionMessagesRequest.class),
+  SEND_WORKER_MESSAGES_REQUEST(SendWorkerMessagesRequest.class),
   /**
    * Sending a partition of messages for current superstep
    * (used during partition exchange)

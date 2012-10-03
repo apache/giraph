@@ -26,13 +26,14 @@ import java.util.Map;
 
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.VertexCombiner;
+import org.apache.giraph.graph.WorkerInfo;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 import com.google.common.collect.Lists;
 
 /**
- * Aggregates the messages to be send to partitions so they can be sent
+ * Aggregates the messages to be send to workers so they can be sent
  * in bulk.
  *
  * @param <I> Vertex id
@@ -44,11 +45,11 @@ public class SendMessageCache<I extends WritableComparable,
   /** Combiner instance, can be null */
   private final VertexCombiner<I, M> combiner;
   /** Internal cache */
-  private Map<Integer, Map<I, Collection<M>>> messageCache =
-      new HashMap<Integer, Map<I, Collection<M>>>();
+  private Map<WorkerInfo, Map<Integer, Map<I, Collection<M>>>> messageCache =
+      new HashMap<WorkerInfo, Map<Integer, Map<I, Collection<M>>>>();
   /** Number of messages in each partition */
-  private final Map<Integer, Integer> messageCountMap =
-      new HashMap<Integer, Integer>();
+  private final Map<WorkerInfo, Integer> messageCountMap =
+      new HashMap<WorkerInfo, Integer>();
 
   /**
    * Constructor
@@ -66,17 +67,27 @@ public class SendMessageCache<I extends WritableComparable,
   /**
    * Add a message to the cache.
    *
-   * @param partitionId Partition id
-   * @param destVertexId Destination vertex id
-   * @param message Message to be added
+   * @param workerInfo the remote worker destination
+   * @param partitionId the remote Partition this message belongs to
+   * @param destVertexId vertex id that is ultimate destination
+   * @param message Message to be send to remote
+   *                <b>host => partition => vertex</b>
    * @return Number of messages in the partition.
    */
-  public int addMessage(Integer partitionId, I destVertexId, M message) {
+  public int addMessage(WorkerInfo workerInfo,
+    final int partitionId, I destVertexId, M message) {
     // Get the message collection
-    Map<I, Collection<M>> idMessagesMap = messageCache.get(partitionId);
+    Map<Integer, Map<I, Collection<M>>> partitionMap =
+      messageCache.get(workerInfo);
+    if (partitionMap == null) {
+      partitionMap = new HashMap<Integer, Map<I, Collection<M>>>();
+      messageCache.put(workerInfo, partitionMap);
+    }
+    Map<I, Collection<M>> idMessagesMap = partitionMap.get(partitionId);
+
     if (idMessagesMap == null) {
       idMessagesMap = new HashMap<I, Collection<M>>();
-      messageCache.put(partitionId, idMessagesMap);
+      partitionMap.put(partitionId, idMessagesMap);
     }
     Collection<M> messages = idMessagesMap.get(destVertexId);
     if (messages == null) {
@@ -85,7 +96,7 @@ public class SendMessageCache<I extends WritableComparable,
     }
 
     // Add the message
-    int originalMessageCount = messages.size();
+    final int originalMessageCount = messages.size();
     messages.add(message);
     if (combiner != null) {
       try {
@@ -97,27 +108,31 @@ public class SendMessageCache<I extends WritableComparable,
       idMessagesMap.put(destVertexId, messages);
     }
 
-    // Update the number of messages per partition
-    Integer currentPartitionMessageCount = messageCountMap.get(partitionId);
-    if (currentPartitionMessageCount == null) {
-      currentPartitionMessageCount = 0;
+    // Update the number of cached, outgoing messages per worker
+    Integer currentWorkerMessageCount = messageCountMap.get(workerInfo);
+    if (currentWorkerMessageCount == null) {
+      currentWorkerMessageCount = 0;
     }
-    Integer updatedPartitionMessageCount =
-        currentPartitionMessageCount + messages.size() - originalMessageCount;
-    messageCountMap.put(partitionId, updatedPartitionMessageCount);
-    return updatedPartitionMessageCount;
+    final int updatedWorkerMessageCount =
+        currentWorkerMessageCount + messages.size() - originalMessageCount;
+    messageCountMap.put(workerInfo, updatedWorkerMessageCount);
+    return updatedWorkerMessageCount;
   }
 
   /**
-   * Gets the messages for a partition and removes it from the cache.
+   * Gets the messages for a worker and removes it from the cache.
    *
-   * @param partitionId Partition id
-   * @return Removed partition messages
+   * @param workerInfo the address of the worker who owns the data
+   *                   partitions that are receiving the messages
+   * @return Map of all messages (keyed by partition ID's) destined
+   *         for vertices hosted by <code>workerInfo</code>
    */
-  public Map<I, Collection<M>> removePartitionMessages(int partitionId) {
-    Map<I, Collection<M>> idMessages = messageCache.remove(partitionId);
-    messageCountMap.put(partitionId, 0);
-    return idMessages;
+  public Map<Integer, Map<I, Collection<M>>> removeWorkerMessages(
+    WorkerInfo workerInfo) {
+    Map<Integer, Map<I, Collection<M>>> workerMessages =
+      messageCache.remove(workerInfo);
+    messageCountMap.put(workerInfo, 0);
+    return workerMessages;
   }
 
   /**
@@ -125,9 +140,12 @@ public class SendMessageCache<I extends WritableComparable,
    *
    * @return All vertex messages for all partitions
    */
-  public Map<Integer, Map<I, Collection<M>>> removeAllPartitionMessages() {
-    Map<Integer, Map<I, Collection<M>>> allMessages = messageCache;
-    messageCache = new HashMap<Integer, Map<I, Collection<M>>>();
+  public Map<WorkerInfo, Map<
+    Integer, Map<I, Collection<M>>>> removeAllMessages() {
+    Map<WorkerInfo, Map<Integer, Map<I, Collection<M>>>>
+      allMessages = messageCache;
+    messageCache =
+      new HashMap<WorkerInfo, Map<Integer, Map<I, Collection<M>>>>();
     messageCountMap.clear();
     return allMessages;
   }

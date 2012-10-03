@@ -24,7 +24,7 @@ import org.apache.giraph.comm.messages.SimpleMessageStore;
 import org.apache.giraph.comm.netty.NettyClient;
 import org.apache.giraph.comm.netty.NettyServer;
 import org.apache.giraph.comm.netty.handler.WorkerRequestServerHandler;
-import org.apache.giraph.comm.requests.SendPartitionMessagesRequest;
+import org.apache.giraph.comm.requests.SendWorkerMessagesRequest;
 import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.utils.MockUtils;
@@ -84,9 +84,12 @@ public class RequestFailureTest {
 
   private WritableRequest getRequest() {
     // Data to send
-    int partitionId = 0;
+    final int partitionId = 0;
+    Map<Integer, Map<IntWritable, Collection<IntWritable>>> sendMap =
+        Maps.newHashMap();
     Map<IntWritable, Collection<IntWritable>> vertexIdMessages =
         Maps.newHashMap();
+    sendMap.put(partitionId, vertexIdMessages);
     for (int i = 1; i < 7; ++i) {
       IntWritable vertexId = new IntWritable(i);
       Collection<IntWritable> messages = Lists.newArrayList();
@@ -97,10 +100,10 @@ public class RequestFailureTest {
     }
 
     // Send the request
-    SendPartitionMessagesRequest<IntWritable, IntWritable, IntWritable,
-        IntWritable> request =
-        new SendPartitionMessagesRequest<IntWritable, IntWritable,
-            IntWritable, IntWritable>(partitionId, vertexIdMessages);
+    SendWorkerMessagesRequest<IntWritable, IntWritable, IntWritable,
+            IntWritable> request =
+        new SendWorkerMessagesRequest<IntWritable, IntWritable,
+                    IntWritable, IntWritable>(sendMap);
     return request;
   }
 

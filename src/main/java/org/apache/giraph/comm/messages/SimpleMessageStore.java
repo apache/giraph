@@ -84,7 +84,7 @@ public class SimpleMessageStore<I extends WritableComparable,
   @Override
   public void addVertexMessages(I vertexId,
       Collection<M> messages) throws IOException {
-    int partitionId = getPartitonId(vertexId);
+    int partitionId = getPartitionId(vertexId);
     ConcurrentMap<I, Collection<M>> partitionMap = map.get(partitionId);
     if (partitionMap == null) {
       ConcurrentMap<I, Collection<M>> tmpMap  =
@@ -96,13 +96,12 @@ public class SimpleMessageStore<I extends WritableComparable,
         partitionMap = map.get(partitionId);
       }
     }
-
     Collection<M> currentMessages =
-        CollectionUtils.addConcurrent(vertexId, messages, partitionMap);
+      CollectionUtils.addConcurrent(vertexId, messages, partitionMap);
     if (combiner != null) {
       synchronized (currentMessages) {
         currentMessages =
-            Lists.newArrayList(combiner.combine(vertexId, currentMessages));
+          Lists.newArrayList(combiner.combine(vertexId, currentMessages));
         partitionMap.put(vertexId, currentMessages);
       }
     }
@@ -148,9 +147,9 @@ public class SimpleMessageStore<I extends WritableComparable,
   @Override
   public Collection<M> getVertexMessages(I vertexId) throws IOException {
     ConcurrentMap<I, Collection<M>> partitionMap =
-        map.get(getPartitonId(vertexId));
+        map.get(getPartitionId(vertexId));
     return (partitionMap == null) ? Collections.<M>emptyList() :
-        map.get(getPartitonId(vertexId)).get(vertexId);
+        partitionMap.get(vertexId);
   }
 
   @Override
@@ -167,7 +166,7 @@ public class SimpleMessageStore<I extends WritableComparable,
   @Override
   public boolean hasMessagesForVertex(I vertexId) {
     ConcurrentMap<I, Collection<M>> partitionMap =
-        map.get(getPartitonId(vertexId));
+        map.get(getPartitionId(vertexId));
     return (partitionMap == null) ? false : partitionMap.containsKey(vertexId);
   }
 
@@ -190,7 +189,7 @@ public class SimpleMessageStore<I extends WritableComparable,
   @Override
   public void clearVertexMessages(I vertexId) throws IOException {
     ConcurrentMap<I, Collection<M>> partitionMap =
-        map.get(getPartitonId(vertexId));
+        map.get(getPartitionId(vertexId));
     if (partitionMap != null) {
       partitionMap.remove(vertexId);
     }
@@ -212,7 +211,7 @@ public class SimpleMessageStore<I extends WritableComparable,
    * @param vertexId Id of vertex
    * @return Id of partiton
    */
-  private int getPartitonId(I vertexId) {
+  private int getPartitionId(I vertexId) {
     return service.getVertexPartitionOwner(vertexId).getPartitionId();
   }
 
