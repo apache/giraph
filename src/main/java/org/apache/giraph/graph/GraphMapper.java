@@ -119,7 +119,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
    * @return Worker aggregator usage interface
    */
   public final WorkerAggregatorUsage getWorkerAggregatorUsage() {
-    return serviceWorker;
+    return serviceWorker.getAggregatorUsage();
   }
 
   /**
@@ -128,7 +128,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
    * @return Master aggregator usage interface
    */
   public final MasterAggregatorUsage getMasterAggregatorUsage() {
-    return serviceMaster;
+    return serviceMaster.getAggregatorUsage();
   }
 
   public final WorkerContext getWorkerContext() {

@@ -49,8 +49,6 @@ import java.security.InvalidParameterException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
 
 /**
  * Zookeeper-based implementation of {@link CentralizedService}.
@@ -161,13 +159,6 @@ public abstract class BspService<I extends WritableComparable,
   /** JSON superstep key */
   public static final String JSONOBJ_SUPERSTEP_KEY =
       "_superstepKey";
-  /** Aggregator name key */
-  public static final String AGGREGATOR_NAME_KEY = "_aggregatorNameKey";
-  /** Aggregator class name key */
-  public static final String AGGREGATOR_CLASS_NAME_KEY =
-      "_aggregatorClassNameKey";
-  /** Aggregator value key */
-  public static final String AGGREGATOR_VALUE_KEY = "_aggregatorValueKey";
   /** Suffix denotes a worker */
   public static final String WORKER_SUFFIX = "_worker";
   /** Suffix denotes a master */
@@ -266,9 +257,6 @@ public abstract class BspService<I extends WritableComparable,
   private final FileSystem fs;
   /** Checkpoint frequency */
   private final int checkpointFrequency;
-  /** Map of aggregators */
-  private Map<String, AggregatorWrapper<Writable>> aggregatorMap =
-      new TreeMap<String, AggregatorWrapper<Writable>>();
 
   /**
    * Constructor.
@@ -900,71 +888,6 @@ public abstract class BspService<I extends WritableComparable,
           "setApplicationAttempt: InterruptedException - " +
               superstepPath, e);
     }
-  }
-
-  /**
-   * Register an aggregator with name.
-   *
-   * @param <A> Aggregator type
-   * @param name Name of the aggregator
-   * @param aggregatorClass Class of the aggregator
-   * @param persistent False iff aggregator should be reset at the end of
-   *                   every super step
-   * @return Aggregator
-   * @throws IllegalAccessException
-   * @throws InstantiationException
-   */
-  protected <A extends Writable> AggregatorWrapper<A> registerAggregator(
-      String name, Class<? extends Aggregator<A>> aggregatorClass,
-      boolean persistent) throws InstantiationException,
-      IllegalAccessException {
-    if (aggregatorMap.get(name) != null) {
-      return null;
-    }
-    AggregatorWrapper<A> aggregator =
-        new AggregatorWrapper<A>(aggregatorClass, persistent);
-    AggregatorWrapper<Writable> writableAggregator =
-        (AggregatorWrapper<Writable>) aggregator;
-    aggregatorMap.put(name, writableAggregator);
-    if (LOG.isInfoEnabled()) {
-      LOG.info("registerAggregator: registered " + name);
-    }
-    return aggregator;
-  }
-
-  /**
-   * Get aggregator by name.
-   *
-   * @param name Name of aggregator
-   * @return Aggregator or null when not registered
-   */
-  protected AggregatorWrapper<? extends Writable> getAggregator(String name) {
-    return aggregatorMap.get(name);
-  }
-
-  /**
-   * Get value of an aggregator.
-   *
-   * @param name Name of aggregator
-   * @param <A> Aggregated value
-   * @return Value of the aggregator
-   */
-  public <A extends Writable> A getAggregatedValue(String name) {
-    AggregatorWrapper<? extends Writable> aggregator = getAggregator(name);
-    if (aggregator == null) {
-      return null;
-    } else {
-      return (A) aggregator.getPreviousAggregatedValue();
-    }
-  }
-
-  /**
-   * Get the aggregator map.
-   *
-   * @return Map of aggregator names to aggregator
-   */
-  protected Map<String, AggregatorWrapper<Writable>> getAggregatorMap() {
-    return aggregatorMap;
   }
 
   /**

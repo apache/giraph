@@ -48,7 +48,7 @@ import org.apache.giraph.graph.WorkerContext;
 @SuppressWarnings("rawtypes")
 public interface CentralizedServiceWorker<I extends WritableComparable,
   V extends Writable, E extends Writable, M extends Writable>
-  extends CentralizedService<I, V, E, M>, WorkerAggregatorUsage {
+  extends CentralizedService<I, V, E, M> {
   /**
    * Get the worker information
    *
@@ -201,4 +201,11 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
    * @return Server data
    */
   ServerData<I, V, E, M> getServerData();
+
+  /**
+   * Get worker aggregator usage
+   *
+   * @return Worker aggregator usage
+   */
+  WorkerAggregatorUsage getAggregatorUsage();
 }

@@ -295,7 +295,7 @@ public abstract class Vertex<I extends WritableComparable,
    *
    * @param graphState Graph state for all workers
    */
-  void setGraphState(GraphState<I, V, E, M> graphState) {
+  public void setGraphState(GraphState<I, V, E, M> graphState) {
     this.graphState = graphState;
   }
 

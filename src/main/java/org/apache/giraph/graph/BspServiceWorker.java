@@ -59,7 +59,6 @@ import net.iharder.Base64;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
@@ -123,6 +122,8 @@ public class BspServiceWorker<I extends WritableComparable,
    * Partition store for worker (only used by the Hadoop RPC implementation).
    */
   private final PartitionStore<I, V, E, M> workerPartitionStore;
+  /** Handler for aggregators */
+  private final WorkerAggregatorHandler aggregatorHandler;
 
   /**
    * Constructor for setting up the worker.
@@ -185,6 +186,8 @@ public class BspServiceWorker<I extends WritableComparable,
           new SimplePartitionStore<I, V, E, M>(getConfiguration(),
               getContext());
     }
+
+    aggregatorHandler = new WorkerAggregatorHandler();
   }
 
   public WorkerContext getWorkerContext() {
@@ -700,134 +703,6 @@ public class BspServiceWorker<I extends WritableComparable,
     finishSuperstep(partitionStatsList);
   }
 
-  @Override
-  public <A extends Writable> void aggregate(String name, A value) {
-    AggregatorWrapper<? extends Writable> aggregator = getAggregator(name);
-    if (aggregator != null) {
-      ((AggregatorWrapper<A>) aggregator).aggregateCurrent(value);
-    } else {
-      throw new IllegalStateException("aggregate: Tried to aggregate value " +
-          "to unregistered aggregator " + name);
-    }
-  }
-
-  /**
-   *  Marshal the aggregator values of the worker to a byte array that will
-   *  later be aggregated by master.
-   *
-   * @param superstep Superstep to marshall on
-   * @return Byte array of the aggreagtor values
-   */
-  private byte[] marshalAggregatorValues(long superstep) {
-    if (superstep == INPUT_SUPERSTEP) {
-      return new byte[0];
-    }
-
-    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-    DataOutputStream output = new DataOutputStream(outputStream);
-    for (Entry<String, AggregatorWrapper<Writable>> entry :
-        getAggregatorMap().entrySet()) {
-      if (entry.getValue().isChanged()) {
-        try {
-          output.writeUTF(entry.getKey());
-          entry.getValue().getCurrentAggregatedValue().write(output);
-        } catch (IOException e) {
-          throw new IllegalStateException("Failed to marshall aggregator " +
-              "with IOException " + entry.getKey(), e);
-        }
-      }
-    }
-
-    if (LOG.isInfoEnabled()) {
-      LOG.info(
-          "marshalAggregatorValues: Finished assembling aggregator values");
-    }
-    return outputStream.toByteArray();
-  }
-
-  /**
-   * Get values of aggregators aggregated by master in previous superstep.
-   *
-   * @param superstep Superstep to get the aggregated values from
-   */
-  private void getAggregatorValues(long superstep) {
-    // prepare aggregators for reading and next superstep
-    for (AggregatorWrapper<Writable> aggregator :
-        getAggregatorMap().values()) {
-      aggregator.setPreviousAggregatedValue(aggregator.createInitialValue());
-      aggregator.resetCurrentAggregator();
-    }
-    String mergedAggregatorPath =
-        getMergedAggregatorPath(getApplicationAttempt(), superstep - 1);
-
-    byte[] aggregatorArray = null;
-    try {
-      aggregatorArray = getZkExt().getData(mergedAggregatorPath, false, null);
-    } catch (KeeperException.NoNodeException e) {
-      LOG.info("getAggregatorValues: no aggregators in " +
-          mergedAggregatorPath + " on superstep " + superstep);
-      return;
-    } catch (KeeperException e) {
-      throw new IllegalStateException("Failed to get data for " +
-          mergedAggregatorPath + " with KeeperException", e);
-    } catch (InterruptedException e) {
-      throw new IllegalStateException("Failed to get data for " +
-          mergedAggregatorPath + " with InterruptedException", e);
-    }
-
-    DataInput input =
-        new DataInputStream(new ByteArrayInputStream(aggregatorArray));
-    int numAggregators = 0;
-
-    try {
-      numAggregators = input.readInt();
-    } catch (IOException e) {
-      throw new IllegalStateException("getAggregatorValues: " +
-          "Failed to decode data", e);
-    }
-
-    for (int i = 0; i < numAggregators; i++) {
-      try {
-        String aggregatorName = input.readUTF();
-        String aggregatorClassName = input.readUTF();
-        AggregatorWrapper<Writable> aggregatorWrapper =
-            getAggregatorMap().get(aggregatorName);
-        if (aggregatorWrapper == null) {
-          try {
-            Class<? extends Aggregator<Writable>> aggregatorClass =
-                (Class<? extends Aggregator<Writable>>)
-                    Class.forName(aggregatorClassName);
-            aggregatorWrapper =
-                registerAggregator(aggregatorName, aggregatorClass, false);
-          } catch (ClassNotFoundException e) {
-            throw new IllegalStateException("Failed to create aggregator " +
-                aggregatorName + " of class " + aggregatorClassName +
-                " with ClassNotFoundException", e);
-          } catch (InstantiationException e) {
-            throw new IllegalStateException("Failed to create aggregator " +
-                aggregatorName + " of class " + aggregatorClassName +
-                " with InstantiationException", e);
-          } catch (IllegalAccessException e) {
-            throw new IllegalStateException("Failed to create aggregator " +
-                aggregatorName + " of class " + aggregatorClassName +
-                " with IllegalAccessException", e);
-          }
-        }
-        Writable aggregatorValue = aggregatorWrapper.createInitialValue();
-        aggregatorValue.readFields(input);
-        aggregatorWrapper.setPreviousAggregatedValue(aggregatorValue);
-      } catch (IOException e) {
-        throw new IllegalStateException(
-            "Failed to decode data for index " + i, e);
-      }
-    }
-
-    if (LOG.isInfoEnabled()) {
-      LOG.info("getAggregatorValues: Finished loading " +
-          mergedAggregatorPath);
-    }
-  }
-
   /**
    * Register the health of this worker for a given superstep
    *
@@ -967,7 +842,7 @@ public class BspServiceWorker<I extends WritableComparable,
     }
 
     if (getSuperstep() != INPUT_SUPERSTEP) {
-      getAggregatorValues(getSuperstep());
+      aggregatorHandler.prepareSuperstep(getSuperstep(), this);
     }
     getContext().setStatus("startSuperstep: " +
         getGraphMapper().getMapFunctions().toString() +
@@ -1017,7 +892,7 @@ public class BspServiceWorker<I extends WritableComparable,
     }
 
     byte[] aggregatorArray =
-        marshalAggregatorValues(getSuperstep());
+        aggregatorHandler.finishSuperstep(getSuperstep());
     Collection<PartitionStats> finalizedPartitionStats =
         workerGraphPartitioner.finalizePartitionStats(
             partitionStatsList, getPartitionStore());
@@ -1617,5 +1492,10 @@ public class BspServiceWorker<I extends WritableComparable,
   @Override
   public ServerData<I, V, E, M> getServerData() {
     return commService.getServerData();
+  }
+
+  @Override
+  public WorkerAggregatorUsage getAggregatorUsage() {
+    return aggregatorHandler;
   }
 }

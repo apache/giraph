@@ -37,7 +37,7 @@ import org.apache.zookeeper.KeeperException;
 @SuppressWarnings("rawtypes")
 public interface CentralizedServiceMaster<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable> extends
-    CentralizedService<I, V, E, M>, MasterAggregatorUsage {
+    CentralizedService<I, V, E, M> {
   /**
    * Become the master.
    * @return true if became the master, false if the application is done.
@@ -92,4 +92,11 @@ public interface CentralizedServiceMaster<I extends WritableComparable,
   void setJobState(ApplicationState state,
     long applicationAttempt,
     long desiredSuperstep);
+
+  /**
+   * Get master aggregator usage
+   *
+   * @return Master aggregator usage
+   */
+  MasterAggregatorUsage getAggregatorUsage();
 }
