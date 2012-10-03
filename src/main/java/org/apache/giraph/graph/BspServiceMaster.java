@@ -527,6 +527,15 @@ public class BspServiceMaster<I extends WritableComparable,
     // INPUT_SPLIT_SAMPLE_PERCENT is set to something other than 100
     List<InputSplit> splitList =
         generateInputSplits(healthyWorkerInfoList.size());
+    if (splitList.isEmpty()) {
+      LOG.fatal("createInputSplits: Failing job due to 0 input splits, " +
+          "check input of " +
+          getConfiguration().getVertexInputFormatClass().getName() + "!");
+      getContext().setStatus("Failing job due to 0 input splits, " +
+          "check input of " +
+          getConfiguration().getVertexInputFormatClass().getName() + "!");
+      failJob();
+    }
     if (healthyWorkerInfoList.size() > splitList.size()) {
       LOG.warn("createInputSplits: Number of inputSplits=" +
           splitList.size() + " < " +

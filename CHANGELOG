@@ -1,6 +1,7 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-351: Fail job early when there is no input (aching via ereisman)
 
   GIRAPH-212: Security is busted since GIRAPH-168. (ekoontz via
   aching)
