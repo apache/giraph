@@ -165,6 +165,7 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
                   entry.getValue() + " seconds.");
             }
           }
+          context.progress();
         }
         if (LOG.isInfoEnabled()) {
           LOG.info("shutdown: Took " +
