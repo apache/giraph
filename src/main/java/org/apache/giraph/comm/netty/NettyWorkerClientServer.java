@@ -63,8 +63,7 @@ public class NettyWorkerClientServer<I extends WritableComparable,
       ImmutableClassesGiraphConfiguration<I, V, E, M> configuration,
       CentralizedServiceWorker<I, V, E, M> service) {
     server = new NettyWorkerServer<I, V, E, M>(
-        configuration,
-        service);
+        configuration, service, context);
     client = new NettyWorkerClient<I, V, E, M>(context,
         configuration, service,
        ((NettyWorkerServer<I, V, E, M>) server).getServerData());

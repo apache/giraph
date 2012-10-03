@@ -22,6 +22,7 @@ import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapreduce.Mapper;
 
 import com.google.common.collect.Maps;
 
@@ -44,15 +45,20 @@ public class SimplePartitionStore<I extends WritableComparable,
       Maps.newConcurrentMap();
   /** Configuration. */
   private final ImmutableClassesGiraphConfiguration<I, V, E, M> conf;
+  /** Context used to report progress */
+  private final Mapper<?, ?, ?, ?>.Context context;
 
   /**
    * Constructor.
    *
    * @param conf Configuration
+   * @param context Mapper context
    */
   public SimplePartitionStore(
-      ImmutableClassesGiraphConfiguration<I, V, E, M> conf) {
+      ImmutableClassesGiraphConfiguration<I, V, E, M> conf,
+      Mapper<?, ?, ?, ?>.Context context) {
     this.conf = conf;
+    this.context = context;
   }
 
   @Override
@@ -69,7 +75,7 @@ public class SimplePartitionStore<I extends WritableComparable,
     Partition<I, V, E, M> partition = partitions.get(partitionId);
     if (partition == null) {
       Partition<I, V, E, M> newPartition = new Partition<I, V, E, M>(conf,
-          partitionId);
+          partitionId, context);
       partition = partitions.putIfAbsent(partitionId, newPartition);
       if (partition == null) {
         partition = newPartition;

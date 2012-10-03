@@ -23,6 +23,7 @@ import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapreduce.Mapper;
 
 import com.google.common.collect.Maps;
 
@@ -52,17 +53,22 @@ public class Partition<I extends WritableComparable,
   private final int id;
   /** Vertex map for this range (keyed by index) */
   private final ConcurrentMap<I, Vertex<I, V, E, M>> vertexMap;
+  /** Context used to report progress */
+  private final Mapper<?, ?, ?, ?>.Context context;
 
   /**
    * Constructor.
    *
    * @param conf Configuration.
    * @param id Partition id.
+   * @param context Mapper context
    */
   public Partition(ImmutableClassesGiraphConfiguration<I, V, E, M> conf,
-                   int id) {
+                   int id,
+                   Mapper<?, ?, ?, ?>.Context context) {
     this.conf = conf;
     this.id = id;
+    this.context = context;
     if (conf.getBoolean(GiraphConfiguration.USE_OUT_OF_CORE_MESSAGES,
         GiraphConfiguration.USE_OUT_OF_CORE_MESSAGES_DEFAULT)) {
       vertexMap = new ConcurrentSkipListMap<I, Vertex<I, V, E, M>>();
@@ -154,7 +160,7 @@ public class Partition<I extends WritableComparable,
     int vertices = input.readInt();
     for (int i = 0; i < vertices; ++i) {
       Vertex<I, V, E, M> vertex = conf.createVertex();
-      vertex.getContext().progress();
+      context.progress();
       vertex.readFields(input);
       if (vertexMap.put(vertex.getId(), vertex) != null) {
         throw new IllegalStateException(
@@ -168,7 +174,7 @@ public class Partition<I extends WritableComparable,
   public void write(DataOutput output) throws IOException {
     output.writeInt(vertexMap.size());
     for (Vertex vertex : vertexMap.values()) {
-      vertex.getContext().progress();
+      context.progress();
       vertex.write(output);
     }
   }

@@ -29,15 +29,11 @@ import org.apache.giraph.comm.requests.SendPartitionMutationsRequest;
 import org.apache.giraph.comm.requests.SendVertexRequest;
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.EdgeListVertex;
-import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexMutations;
 import org.apache.giraph.graph.partition.PartitionStore;
 import org.apache.giraph.utils.MockUtils;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.junit.Before;
 import org.junit.Test;
@@ -96,9 +92,11 @@ public class RequestTest {
 
     // Start the service
     serverData =
-        new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>
-            (conf, SimpleMessageStore.newFactory(
-                MockUtils.mockServiceGetVertexPartitionOwner(1), conf));
+        new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>(
+            conf,
+            SimpleMessageStore.newFactory(
+                MockUtils.mockServiceGetVertexPartitionOwner(1), conf),
+            context);
     server = new NettyServer(conf,
         new WorkerRequestServerHandler.Factory(serverData));
     server.start();

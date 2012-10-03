@@ -19,22 +19,16 @@
 package org.apache.giraph.comm;
 
 import com.google.common.collect.Sets;
-import java.util.Iterator;
 import java.util.Set;
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.benchmark.EdgeListVertexPageRankBenchmark;
-import org.apache.giraph.benchmark.PageRankBenchmark;
 import org.apache.giraph.comm.messages.SimpleMessageStore;
 import org.apache.giraph.comm.netty.handler.RequestServerHandler;
 import org.apache.giraph.comm.netty.NettyClient;
 import org.apache.giraph.comm.netty.NettyServer;
 import org.apache.giraph.comm.netty.handler.WorkerRequestServerHandler;
 import org.apache.giraph.graph.EdgeListVertex;
-import org.apache.giraph.graph.MutableVertex;
-import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.utils.MockUtils;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.junit.Before;
@@ -80,9 +74,11 @@ public class ConnectionTest {
     when(context.getConfiguration()).thenReturn(conf);
 
     ServerData<IntWritable, IntWritable, IntWritable, IntWritable> serverData =
-        new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>
-            (conf, SimpleMessageStore.newFactory(
-                MockUtils.mockServiceGetVertexPartitionOwner(1), conf));
+        new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>(
+            conf,
+            SimpleMessageStore.newFactory(
+                MockUtils.mockServiceGetVertexPartitionOwner(1), conf),
+            context);
     NettyServer server =
         new NettyServer(conf,
             new WorkerRequestServerHandler.Factory(serverData));
@@ -107,9 +103,11 @@ public class ConnectionTest {
     when(context.getConfiguration()).thenReturn(conf);
 
     ServerData<IntWritable, IntWritable, IntWritable, IntWritable> serverData =
-        new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>
-            (conf, SimpleMessageStore.newFactory(
-                MockUtils.mockServiceGetVertexPartitionOwner(1), conf));
+        new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>(
+            conf,
+            SimpleMessageStore.newFactory(
+                MockUtils.mockServiceGetVertexPartitionOwner(1), conf),
+            context);
    RequestServerHandler.Factory requestServerHandlerFactory =
        new WorkerRequestServerHandler.Factory(serverData);
 
@@ -145,9 +143,11 @@ public class ConnectionTest {
     when(context.getConfiguration()).thenReturn(conf);
 
     ServerData<IntWritable, IntWritable, IntWritable, IntWritable> serverData =
-        new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>
-            (conf, SimpleMessageStore.newFactory(
-                MockUtils.mockServiceGetVertexPartitionOwner(1), conf));
+        new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>(
+            conf,
+            SimpleMessageStore.newFactory(
+                MockUtils.mockServiceGetVertexPartitionOwner(1), conf),
+            context);
     NettyServer server = new NettyServer(conf,
         new WorkerRequestServerHandler.Factory(serverData));
     server.start();

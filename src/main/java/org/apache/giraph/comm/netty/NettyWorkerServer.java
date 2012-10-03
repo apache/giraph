@@ -38,6 +38,7 @@ import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.graph.partition.Partition;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
 
 import com.google.common.collect.Sets;
@@ -74,9 +75,11 @@ public class NettyWorkerServer<I extends WritableComparable,
    *
    * @param conf Configuration
    * @param service Service to get partition mappings
+   * @param context Mapper context
    */
   public NettyWorkerServer(ImmutableClassesGiraphConfiguration conf,
-      CentralizedServiceWorker<I, V, E, M> service) {
+      CentralizedServiceWorker<I, V, E, M> service,
+      Mapper<?, ?, ?, ?>.Context context) {
     this.conf = conf;
     this.service = service;
 
@@ -85,7 +88,7 @@ public class NettyWorkerServer<I extends WritableComparable,
         GiraphConfiguration.USE_OUT_OF_CORE_MESSAGES_DEFAULT);
     if (!useOutOfCoreMessaging) {
       serverData = new ServerData<I, V, E, M>(
-          conf, SimpleMessageStore.newFactory(service, conf));
+          conf, SimpleMessageStore.newFactory(service, conf), context);
     } else {
       int maxMessagesInMemory = conf.getInt(
           GiraphConfiguration.MAX_MESSAGES_IN_MEMORY,
@@ -98,7 +101,7 @@ public class NettyWorkerServer<I extends WritableComparable,
       MessageStoreFactory<I, M, MessageStoreByPartition<I, M>>
           storeFactory = DiskBackedMessageStoreByPartition.newFactory(service,
               maxMessagesInMemory, partitionStoreFactory);
-      serverData = new ServerData<I, V, E, M>(conf, storeFactory);
+      serverData = new ServerData<I, V, E, M>(conf, storeFactory, context);
     }
 
     nettyServer = new NettyServer(conf,

@@ -28,6 +28,7 @@ import org.apache.giraph.graph.partition.PartitionStore;
 import org.apache.giraph.graph.partition.SimplePartitionStore;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapreduce.Mapper;
 
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
@@ -70,20 +71,24 @@ public class ServerData<I extends WritableComparable,
    *
    * @param configuration Configuration
    * @param messageStoreFactory Factory for message stores
+   * @param context Mapper context
    */
   public ServerData(
       ImmutableClassesGiraphConfiguration<I, V, E, M> configuration,
       MessageStoreFactory<I, M, MessageStoreByPartition<I, M>>
-          messageStoreFactory) {
+          messageStoreFactory,
+      Mapper<?, ?, ?, ?>.Context context) {
 
     this.messageStoreFactory = messageStoreFactory;
     currentMessageStore = messageStoreFactory.newStore();
     incomingMessageStore = messageStoreFactory.newStore();
     if (configuration.getBoolean(GiraphConfiguration.USE_OUT_OF_CORE_GRAPH,
         GiraphConfiguration.USE_OUT_OF_CORE_GRAPH_DEFAULT)) {
-      partitionStore = new DiskBackedPartitionStore<I, V, E, M>(configuration);
+      partitionStore =
+          new DiskBackedPartitionStore<I, V, E, M>(configuration, context);
     } else {
-      partitionStore = new SimplePartitionStore<I, V, E, M>(configuration);
+      partitionStore =
+          new SimplePartitionStore<I, V, E, M>(configuration, context);
     }
   }
 

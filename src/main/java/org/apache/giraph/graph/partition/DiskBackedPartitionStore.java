@@ -23,6 +23,7 @@ import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
 
 import com.google.common.collect.Iterables;
@@ -73,15 +74,20 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
   /** Locks for accessing and modifying partitions. */
   private final ConcurrentMap<Integer, Lock> partitionLocks =
       Maps.newConcurrentMap();
+  /** Context used to report progress */
+  private final Mapper<?, ?, ?, ?>.Context context;
 
   /**
    * Constructor.
    *
    * @param conf Configuration
+   * @param context Mapper context
    */
   public DiskBackedPartitionStore(
-      ImmutableClassesGiraphConfiguration<I, V, E, M> conf) {
+      ImmutableClassesGiraphConfiguration<I, V, E, M> conf,
+      Mapper<?, ?, ?, ?>.Context context) {
     this.conf = conf;
+    this.context = context;
     // We must be able to hold at least one partition in memory
     maxInMemoryPartitions = Math.max(1,
         conf.getInt(GiraphConfiguration.MAX_PARTITIONS_IN_MEMORY,
@@ -156,7 +162,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
   private Partition<I, V, E, M> readPartition(Integer partitionId)
     throws IOException {
     Partition<I, V, E, M> partition = new Partition<I, V, E, M>(conf,
-        partitionId);
+        partitionId, context);
     File file = new File(getPartitionPath(partitionId));
     DataInputStream inputStream = new DataInputStream(
         new BufferedInputStream(new FileInputStream(file)));
@@ -284,7 +290,8 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
     } else {
       Lock lock = createLock(partitionId);
       if (lock != null) {
-        addPartitionNoLock(new Partition<I, V, E, M>(conf, partitionId));
+        addPartitionNoLock(
+            new Partition<I, V, E, M>(conf, partitionId, context));
         lock.unlock();
       } else {
         // Another thread is already creating the partition,

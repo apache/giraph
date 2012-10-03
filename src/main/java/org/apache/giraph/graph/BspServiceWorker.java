@@ -182,7 +182,8 @@ public class BspServiceWorker<I extends WritableComparable,
       workerPartitionStore = null;
     } else {
       workerPartitionStore =
-          new SimplePartitionStore<I, V, E, M>(getConfiguration());
+          new SimplePartitionStore<I, V, E, M>(getConfiguration(),
+              getContext());
     }
   }
 
@@ -474,7 +475,8 @@ public class BspServiceWorker<I extends WritableComparable,
       if (partition == null) {
         partition = new Partition<I, V, E, M>(
             getConfiguration(),
-            partitionOwner.getPartitionId());
+            partitionOwner.getPartitionId(),
+            getContext());
         inputSplitCache.put(partitionOwner, partition);
       }
       Vertex<I, V, E, M> oldVertex =
@@ -674,7 +676,7 @@ public class BspServiceWorker<I extends WritableComparable,
               partitionOwner.getPartitionId())) {
         Partition<I, V, E, M> partition =
             new Partition<I, V, E, M>(getConfiguration(),
-                partitionOwner.getPartitionId());
+                partitionOwner.getPartitionId(), getContext());
         getPartitionStore().addPartition(partition);
       }
     }
@@ -1324,7 +1326,8 @@ public class BspServiceWorker<I extends WritableComparable,
           Partition<I, V, E, M> partition =
               new Partition<I, V, E, M>(
                   getConfiguration(),
-                  partitionId);
+                  partitionId,
+                  getContext());
           DataInputStream partitionsStream =
               getFs().open(new Path(partitionsFile));
           if (partitionsStream.skip(startPos) != startPos) {

@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+
+  GIRAPH-355: Partition.readFields crashes. (maja via aching)
+
   GIRAPH-354: Giraph Formats should use hcatalog-core. (nitayj via
   aching)
 
