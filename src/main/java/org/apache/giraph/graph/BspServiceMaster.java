@@ -1455,11 +1455,13 @@ public class BspServiceMaster<I extends WritableComparable,
     }
 
     // At this point, all processes have acknowledged the cleanup,
-    // and the master can do any final cleanup
+    // and the master can do any final cleanup if the ZooKeeper service was
+    // provided (not dynamically started) and we don't want to keep the data
     try {
-      if (!getConfiguration().getBoolean(
-          GiraphConfiguration.KEEP_ZOOKEEPER_DATA,
-          GiraphConfiguration.KEEP_ZOOKEEPER_DATA_DEFAULT)) {
+      if (getConfiguration().get(GiraphConfiguration.ZOOKEEPER_LIST) != null &&
+          !getConfiguration().getBoolean(
+              GiraphConfiguration.KEEP_ZOOKEEPER_DATA,
+              GiraphConfiguration.KEEP_ZOOKEEPER_DATA_DEFAULT)) {
         if (LOG.isInfoEnabled()) {
           LOG.info("cleanupZooKeeper: Removing the following path " +
               "and all children - " + basePath);

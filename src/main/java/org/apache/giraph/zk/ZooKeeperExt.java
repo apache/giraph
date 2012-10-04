@@ -20,6 +20,7 @@ package org.apache.giraph.zk;
 
 import java.io.IOException;
 
+import org.apache.hadoop.util.Progressable;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.CreateMode;
@@ -43,9 +44,11 @@ public class ZooKeeperExt extends ZooKeeper {
   private static final Logger LOG = Logger.getLogger(ZooKeeperExt.class);
   /** Length of the ZK sequence number */
   private static final int SEQUENCE_NUMBER_LENGTH = 10;
+  /** Ensure we have progress */
+  private final Progressable progressable;
 
   /**
-   * Constructor to connect to ZooKeeper
+   * Constructor to connect to ZooKeeper, does not make progress
    *
    * @param connectString Comma separated host:port pairs, each corresponding
    *        to a zk server. e.g.
@@ -62,9 +65,35 @@ public class ZooKeeperExt extends ZooKeeper {
    * @throws IOException
    */
   public ZooKeeperExt(String connectString,
+                      int sessionTimeout,
+                      Watcher watcher) throws IOException {
+    this(connectString, sessionTimeout, watcher, null);
+  }
+
+  /**
+   * Constructor to connect to ZooKeeper, make progress
+   *
+   * @param connectString Comma separated host:port pairs, each corresponding
+   *        to a zk server. e.g.
+   *        "127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002" If the optional
+   *        chroot suffix is used the example would look
+   *        like: "127.0.0.1:3000,127.0.0.1:3001,127.0.0.1:3002/app/a"
+   *        where the client would be rooted at "/app/a" and all paths
+   *        would be relative to this root - ie getting/setting/etc...
+   *        "/foo/bar" would result in operations being run on
+   *        "/app/a/foo/bar" (from the server perspective).
+   * @param sessionTimeout Session timeout in milliseconds
+   * @param watcher A watcher object which will be notified of state changes,
+   *        may also be notified for node events
+   * @param progressable Makes progress for longer operations
+   * @throws IOException
+   */
+  public ZooKeeperExt(String connectString,
       int sessionTimeout,
-      Watcher watcher) throws IOException {
+      Watcher watcher,
+      Progressable progressable) throws IOException {
     super(connectString, sessionTimeout, watcher);
+    this.progressable = progressable;
   }
 
   /**
@@ -106,6 +135,9 @@ public class ZooKeeperExt extends ZooKeeper {
     int pos = path.indexOf("/", 1);
     for (; pos != -1; pos = path.indexOf("/", pos + 1)) {
       try {
+        if (progressable != null) {
+          progressable.progress();
+        }
         create(
             path.substring(0, pos), null, acl, CreateMode.PERSISTENT);
       } catch (KeeperException.NodeExistsException e) {
@@ -246,6 +278,9 @@ public class ZooKeeperExt extends ZooKeeper {
 
     List<String> childList = getChildren(path, false);
     for (String child : childList) {
+      if (progressable != null) {
+        progressable.progress();
+      }
       deleteExt(path + "/" + child, -1, true);
     }
 
