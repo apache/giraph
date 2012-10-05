@@ -954,5 +954,5 @@ under the License.
       <artifactId>netty</artifactId>
       <version>3.5.3.Final</version>
     </dependency>
- </dependencies>
+  </dependencies>
 </project>

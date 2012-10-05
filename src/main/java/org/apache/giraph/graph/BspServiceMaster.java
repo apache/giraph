@@ -443,23 +443,8 @@ public class BspServiceMaster<I extends WritableComparable,
         // Find the missing workers if there are only a few
         if ((maxWorkers - totalResponses) <=
             partitionLongTailMinPrint) {
-          Set<Integer> partitionSet = new TreeSet<Integer>();
-          for (WorkerInfo workerInfo : healthyWorkerInfoList) {
-            partitionSet.add(workerInfo.getTaskId());
-          }
-          for (WorkerInfo workerInfo : unhealthyWorkerInfoList) {
-            partitionSet.add(workerInfo.getTaskId());
-          }
-          for (int i = 1; i <= maxWorkers; ++i) {
-            if (partitionSet.contains(Integer.valueOf(i))) {
-              continue;
-            } else if (i == getTaskPartition()) {
-              continue;
-            } else {
-              LOG.info("checkWorkers: No response from " +
-                  "partition " + i + " (could be master)");
-            }
-          }
+          logMissingWorkersOnSuperstep(healthyWorkerInfoList,
+              unhealthyWorkerInfoList);
         }
       }
       ++pollAttempt;
@@ -477,6 +462,8 @@ public class BspServiceMaster<I extends WritableComparable,
     if (healthyWorkerInfoList.size() < minWorkers) {
       LOG.error("checkWorkers: Only " + healthyWorkerInfoList.size() +
           " available when " + minWorkers + " are required.");
+      logMissingWorkersOnSuperstep(healthyWorkerInfoList,
+          unhealthyWorkerInfoList);
       return null;
     }
 
@@ -486,6 +473,36 @@ public class BspServiceMaster<I extends WritableComparable,
         getSuperstep());
 
     return healthyWorkerInfoList;
+  }
+
+  /**
+   * Log info level of the missing workers on the superstep
+   *
+   * @param healthyWorkerInfoList Healthy worker list
+   * @param unhealthyWorkerInfoList Unhealthy worker list
+   */
+  private void logMissingWorkersOnSuperstep(
+      List<WorkerInfo> healthyWorkerInfoList,
+      List<WorkerInfo> unhealthyWorkerInfoList) {
+    if (LOG.isInfoEnabled()) {
+      Set<Integer> partitionSet = new TreeSet<Integer>();
+      for (WorkerInfo workerInfo : healthyWorkerInfoList) {
+        partitionSet.add(workerInfo.getTaskId());
+      }
+      for (WorkerInfo workerInfo : unhealthyWorkerInfoList) {
+        partitionSet.add(workerInfo.getTaskId());
+      }
+      for (int i = 1; i <= maxWorkers; ++i) {
+        if (partitionSet.contains(Integer.valueOf(i))) {
+          continue;
+        } else if (i == getTaskPartition()) {
+          continue;
+        } else {
+          LOG.info("logMissingWorkersOnSuperstep: No response from " +
+              "partition " + i + " (could be master)");
+        }
+      }
+    }
   }
 
   @Override
@@ -1048,22 +1065,29 @@ public class BspServiceMaster<I extends WritableComparable,
     // Find the last good checkpoint if none have been written to the
     // knowledge of this master
     if (lastCheckpointedSuperstep == -1) {
-      FileStatus[] fileStatusArray =
-          getFs().listStatus(new Path(checkpointBasePath),
-              new FinalizedCheckpointPathFilter());
-      if (fileStatusArray == null) {
-        return -1;
-      }
-      Arrays.sort(fileStatusArray);
-      lastCheckpointedSuperstep = getCheckpoint(
-          fileStatusArray[fileStatusArray.length - 1].getPath());
-      if (LOG.isInfoEnabled()) {
-        LOG.info("getLastGoodCheckpoint: Found last good checkpoint " +
-            lastCheckpointedSuperstep + " from " +
-            fileStatusArray[fileStatusArray.length - 1].
-            getPath().toString());
+      try {
+        FileStatus[] fileStatusArray =
+            getFs().listStatus(new Path(checkpointBasePath),
+                new FinalizedCheckpointPathFilter());
+        if (fileStatusArray == null) {
+          return -1;
+        }
+        Arrays.sort(fileStatusArray);
+        lastCheckpointedSuperstep = getCheckpoint(
+            fileStatusArray[fileStatusArray.length - 1].getPath());
+        if (LOG.isInfoEnabled()) {
+          LOG.info("getLastGoodCheckpoint: Found last good checkpoint " +
+              lastCheckpointedSuperstep + " from " +
+              fileStatusArray[fileStatusArray.length - 1].
+                  getPath().toString());
+        }
+      } catch (IOException e) {
+        LOG.fatal("getLastGoodCheckpoint: No last good checkpoints can be " +
+            "found, killing the job.", e);
+        failJob();
       }
     }
+
     return lastCheckpointedSuperstep;
   }
 
@@ -1458,13 +1482,14 @@ public class BspServiceMaster<I extends WritableComparable,
     // and the master can do any final cleanup if the ZooKeeper service was
     // provided (not dynamically started) and we don't want to keep the data
     try {
-      if (getConfiguration().get(GiraphConfiguration.ZOOKEEPER_LIST) != null &&
+      if (getConfiguration().getZookeeperList() != null &&
           !getConfiguration().getBoolean(
               GiraphConfiguration.KEEP_ZOOKEEPER_DATA,
               GiraphConfiguration.KEEP_ZOOKEEPER_DATA_DEFAULT)) {
         if (LOG.isInfoEnabled()) {
           LOG.info("cleanupZooKeeper: Removing the following path " +
-              "and all children - " + basePath);
+              "and all children - " + basePath + " from ZooKeeper list " +
+              getConfiguration().getZookeeperList());
         }
         getZkExt().deleteExt(basePath, -1, true);
       }

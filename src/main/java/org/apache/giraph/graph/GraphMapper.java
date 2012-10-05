@@ -314,12 +314,11 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
         LOG.info("setup: classpath @ " + zkClasspath + " for job " +
             context.getJobName());
       }
-      context.getConfiguration().set(
-          GiraphConfiguration.ZOOKEEPER_JAR, zkClasspath);
+      conf.setZooKeeperJar(zkClasspath);
     }
     String serverPortList = conf.getZookeeperList();
     if (serverPortList == null) {
-      zkManager = new ZooKeeperManager(context);
+      zkManager = new ZooKeeperManager(context, conf);
       context.setStatus("setup: Setting up Zookeeper manager.");
       zkManager.setup();
       if (zkManager.computationDone()) {
@@ -578,7 +577,18 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
             context);
       }
       cleanup(context);
-    } catch (IOException e) {
+      // Checkstyle exception due to needing to dump ZooKeeper failure
+      // on exception
+      // CHECKSTYLE: stop IllegalCatch
+    } catch (RuntimeException e) {
+      // CHECKSTYLE: resume IllegalCatch
+      if (mapFunctions == MapFunctions.UNKNOWN ||
+          mapFunctions == MapFunctions.MASTER_ZOOKEEPER_ONLY) {
+        // ZooKeeper may have had an issue
+        if (zkManager != null) {
+          zkManager.logZooKeeperOutput(Level.WARN);
+        }
+      }
       if (mapFunctions == MapFunctions.WORKER_ONLY) {
         serviceWorker.failureCleanup();
       }

@@ -466,6 +466,12 @@ public class GiraphConfiguration extends Configuration {
   public static final String ZOOKEEPER_MANAGER_DIR_DEFAULT =
       "_bsp/_defaultZkManagerDir";
 
+  /** Number of ZooKeeper client connection attempts before giving up. */
+  public static final String ZOOKEEPER_CONNECTION_ATTEMPTS =
+      "giraph.zkConnectionAttempts";
+  /** Default of 10 ZooKeeper client connection attempts before giving up. */
+  public static final int ZOOKEEPER_CONNECTION_ATTEMPTS_DEFAULT = 10;
+
   /** This directory has/stores the available checkpoint files in HDFS. */
   public static final String CHECKPOINT_DIRECTORY =
       "giraph.checkpointDirectory";
@@ -539,11 +545,22 @@ public class GiraphConfiguration extends Configuration {
   public static final int DEFAULT_ZOOKEEPER_MAX_CLIENT_CNXNS = 10000;
   /** ZooKeeper minimum session timeout */
   public static final String ZOOKEEPER_MIN_SESSION_TIMEOUT =
-      "giraph.zookeeperMinSessionTimeout";
-  /** Default ZooKeeper minimum session timeout of 5 minutes (in msecs). */
-  public static final int DEFAULT_ZOOKEEPER_MIN_SESSION_TIMEOUT = 300 * 1000;
-  /** Default ZooKeeper maximum session timeout of 10 minutes (in msecs). */
-  public static final int DEFAULT_ZOOKEEPER_MAX_SESSION_TIMEOUT = 600 * 1000;
+      "giraph.zKMinSessionTimeout";
+  /** Default ZooKeeper minimum session timeout of 10 minutes (in msecs). */
+  public static final int DEFAULT_ZOOKEEPER_MIN_SESSION_TIMEOUT = 600 * 1000;
+  /** ZooKeeper maximum session timeout */
+  public static final String ZOOKEEPER_MAX_SESSION_TIMEOUT =
+      "giraph.zkMaxSessionTimeout";
+  /** Default ZooKeeper maximum session timeout of 15 minutes (in msecs). */
+  public static final int DEFAULT_ZOOKEEPER_MAX_SESSION_TIMEOUT = 900 * 1000;
+  /** ZooKeeper force sync */
+  public static final String ZOOKEEPER_FORCE_SYNC = "giraph.zKForceSync";
+  /** Default ZooKeeper force sync is off (for performance) */
+  public static final String DEFAULT_ZOOKEEPER_FORCE_SYNC = "no";
+  /** ZooKeeper skip ACLs */
+  public static final String ZOOKEEPER_SKIP_ACL = "giraph.ZkSkipAcl";
+  /** Default ZooKeeper skip ACLs true (for performance) */
+  public static final String DEFAULT_ZOOKEEPER_SKIP_ACL = "yes";
 
   /**
    * Constructor that creates the configuration
@@ -786,5 +803,42 @@ public class GiraphConfiguration extends Configuration {
     } else {
       return getNettyServerThreads();
     }
+  }
+
+  public int getZookeeperConnectionAttempts() {
+    return getInt(ZOOKEEPER_CONNECTION_ATTEMPTS,
+                  ZOOKEEPER_CONNECTION_ATTEMPTS_DEFAULT);
+  }
+
+  public int getZooKeeperMinSessionTimeout() {
+    return getInt(ZOOKEEPER_MIN_SESSION_TIMEOUT,
+        DEFAULT_ZOOKEEPER_MIN_SESSION_TIMEOUT);
+  }
+
+  public int getZooKeeperMaxSessionTimeout() {
+    return getInt(ZOOKEEPER_MAX_SESSION_TIMEOUT,
+        DEFAULT_ZOOKEEPER_MAX_SESSION_TIMEOUT);
+  }
+
+  public String getZooKeeperForceSync() {
+    return get(ZOOKEEPER_FORCE_SYNC, DEFAULT_ZOOKEEPER_FORCE_SYNC);
+  }
+
+  public String getZooKeeperSkipAcl() {
+    return get(ZOOKEEPER_SKIP_ACL, DEFAULT_ZOOKEEPER_SKIP_ACL);
+  }
+
+  /**
+   * Get the number of map tasks in this job
+   *
+   * @return Number of map tasks in this job
+   */
+  public int getMapTasks() {
+    int mapTasks = getInt("mapred.map.tasks", -1);
+    if (mapTasks == -1) {
+      throw new IllegalStateException("getMapTasks: Failed to get the map " +
+          "tasks!");
+    }
+    return mapTasks;
   }
 }

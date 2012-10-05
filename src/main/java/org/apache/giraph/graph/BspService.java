@@ -934,13 +934,12 @@ public abstract class BspService<I extends WritableComparable,
 
     if ((event.getPath() == null) && (event.getType() == EventType.None)) {
       if (event.getState() == KeeperState.Disconnected) {
-        // No way to recover from a disconnect event, signal all BspEvents
+        // Watches may not be triggered for some time, so signal all BspEvents
         for (BspEvent bspEvent : registeredBspEvents) {
           bspEvent.signal();
         }
-        throw new RuntimeException(
-            "process: Disconnected from ZooKeeper, cannot recover - " +
-                event);
+        LOG.warn("process: Disconnected from ZooKeeper (will automatically " +
+            "try to recover) " + event);
       } else if (event.getState() == KeeperState.SyncConnected) {
         if (LOG.isInfoEnabled()) {
           LOG.info("process: Asynchronous connection complete.");

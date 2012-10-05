@@ -21,13 +21,16 @@ package org.apache.giraph.zk;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
+import java.util.LinkedList;
 import org.apache.commons.io.FileUtils;
 import org.apache.giraph.GiraphConfiguration;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.server.quorum.QuorumPeerMain;
 
@@ -68,7 +71,7 @@ public class ZooKeeperManager {
   /** Job context (mainly for progress) */
   private Mapper<?, ?, ?, ?>.Context context;
   /** Hadoop configuration */
-  private final Configuration conf;
+  private final ImmutableClassesGiraphConfiguration conf;
   /** Task partition, to ensure uniqueness */
   private final int taskPartition;
   /** HDFS base directory for all file-based coordination */
@@ -96,13 +99,13 @@ public class ZooKeeperManager {
   /** Thread that gets the zkProcess output */
   private StreamCollector zkProcessCollector = null;
   /** ZooKeeper local file system directory */
-  private String zkDir = null;
+  private final String zkDir;
   /** ZooKeeper config file path */
-  private String configFilePath = null;
+  private final String configFilePath;
   /** ZooKeeper server list */
   private final Map<String, Integer> zkServerPortMap = Maps.newTreeMap();
   /** ZooKeeper base port */
-  private int zkBasePort = -1;
+  private final int zkBasePort;
   /** Final ZooKeeper server port list (for clients) */
   private String zkServerPortString;
   /** My hostname */
@@ -126,13 +129,15 @@ public class ZooKeeperManager {
   /**
    * Constructor with context.
    *
-   * @param context Context to be stord internally
+   * @param context Context to be stored internally
+   * @param configuration Configuration
    * @throws IOException
    */
-  public ZooKeeperManager(Mapper<?, ?, ?, ?>.Context context)
+  public ZooKeeperManager(Mapper<?, ?, ?, ?>.Context context,
+                          ImmutableClassesGiraphConfiguration configuration)
     throws IOException {
     this.context = context;
-    conf = context.getConfiguration();
+    this.conf = configuration;
     taskPartition = conf.getInt("mapred.task.partition", -1);
     jobId = conf.get("mapred.job.id", "Unknown Job");
     baseDirectory =
@@ -201,11 +206,14 @@ public class ZooKeeperManager {
    * Collects the output of a stream and dumps it to the log.
    */
   private static class StreamCollector extends Thread {
+    /** Number of last lines to keep */
+    private static final int LAST_LINES_COUNT = 100;
     /** Class logger */
     private static final Logger LOG = Logger.getLogger(StreamCollector.class);
-    /** Input stream to dump */
-    private final InputStream is;
-
+    /** Buffered reader of input stream */
+    private final BufferedReader bufferedReader;
+    /** Last lines (help to debug failures) */
+    private final LinkedList<String> lastLines = Lists.newLinkedList();
     /**
      * Constructor.
      *
@@ -213,22 +221,49 @@ public class ZooKeeperManager {
      */
     public StreamCollector(final InputStream is) {
       super(StreamCollector.class.getName());
-      this.is = is;
+      setDaemon(true);
+      InputStreamReader streamReader = new InputStreamReader(is);
+      bufferedReader = new BufferedReader(streamReader);
     }
 
     @Override
     public void run() {
-      InputStreamReader streamReader = new InputStreamReader(is);
-      BufferedReader bufferedReader = new BufferedReader(streamReader);
+      readLines();
+    }
+
+    /**
+     * Read all the lines from the bufferedReader.
+     */
+    private synchronized void readLines() {
       String line;
       try {
         while ((line = bufferedReader.readLine()) != null) {
+          if (lastLines.size() > LAST_LINES_COUNT) {
+            lastLines.removeFirst();
+          }
+          lastLines.add(line);
+
           if (LOG.isDebugEnabled()) {
-            LOG.debug("run: " + line);
+            LOG.debug("readLines: " + line);
           }
         }
       } catch (IOException e) {
-        LOG.error("run: Ignoring IOException", e);
+        LOG.error("readLines: Ignoring IOException", e);
+      }
+    }
+
+    /**
+     * Dump the last n lines of the collector.  Likely used in
+     * the case of failure.
+     *
+     * @param level Log level to dump with
+     */
+    public synchronized void dumpLastLines(Level level) {
+      // Get any remaining lines
+      readLines();
+      // Dump the lines to the screen
+      for (String line : lastLines) {
+        LOG.log(level, line);
       }
     }
   }
@@ -527,19 +562,18 @@ public class ZooKeeperManager {
         writer.write("maxClientCnxns=" +
             GiraphConfiguration.DEFAULT_ZOOKEEPER_MAX_CLIENT_CNXNS +
             "\n");
-        int minSessionTimeout = conf.getInt(
-            GiraphConfiguration.ZOOKEEPER_MIN_SESSION_TIMEOUT,
-            GiraphConfiguration.DEFAULT_ZOOKEEPER_MIN_SESSION_TIMEOUT);
-        writer.write("minSessionTimeout=" + minSessionTimeout + "\n");
+        writer.write("minSessionTimeout=" +
+            conf.getZooKeeperMinSessionTimeout() + "\n");
         writer.write("maxSessionTimeout=" +
-            GiraphConfiguration.DEFAULT_ZOOKEEPER_MAX_SESSION_TIMEOUT +
-            "\n");
+            conf.getZooKeeperMaxSessionTimeout() + "\n");
         writer.write("initLimit=" +
             GiraphConfiguration.DEFAULT_ZOOKEEPER_INIT_LIMIT + "\n");
         writer.write("syncLimit=" +
             GiraphConfiguration.DEFAULT_ZOOKEEPER_SYNC_LIMIT + "\n");
         writer.write("snapCount=" +
             GiraphConfiguration.DEFAULT_ZOOKEEPER_SNAP_COUNT + "\n");
+        writer.write("forceSync=" + conf.getZooKeeperForceSync() + "\n");
+        writer.write("skipACL=" + conf.getZooKeeperSkipAcl() + "\n");
         if (serverList.size() != 1) {
           writer.write("electionAlg=0\n");
           for (int i = 0; i < serverList.size(); ++i) {
@@ -624,17 +658,28 @@ public class ZooKeeperManager {
         }
         Runnable runnable = new Runnable() {
           public void run() {
+            LOG.info("run: Shutdown hook started.");
             synchronized (this) {
               if (zkProcess != null) {
                 LOG.warn("onlineZooKeeperServers: " +
                          "Forced a shutdown hook kill of the " +
                          "ZooKeeper process.");
                 zkProcess.destroy();
+                int exitCode = -1;
+                try {
+                  exitCode = zkProcess.waitFor();
+                } catch (InterruptedException e) {
+                  LOG.warn("run: Couldn't get exit code.");
+                }
+                LOG.info("onlineZooKeeperServers: ZooKeeper process exited " +
+                    "with " + exitCode + " (note that 143 " +
+                    "typically means killed).");
               }
             }
           }
         };
         Runtime.getRuntime().addShutdownHook(new Thread(runnable));
+        LOG.info("onlineZooKeeperServers: Shutdown hook added.");
       } catch (IOException e) {
         LOG.error("onlineZooKeeperServers: Failed to start " +
             "ZooKeeper process", e);
@@ -644,7 +689,8 @@ public class ZooKeeperManager {
       // Once the server is up and running, notify that this server is up
       // and running by dropping a ready stamp.
       int connectAttempts = 0;
-      final int maxConnectAttempts = 10;
+      final int maxConnectAttempts =
+          conf.getZookeeperConnectionAttempts();
       while (connectAttempts < maxConnectAttempts) {
         try {
           if (LOG.isInfoEnabled()) {
@@ -811,7 +857,7 @@ public class ZooKeeperManager {
     }
     synchronized (this) {
       if (zkProcess != null) {
-        int totalMapTasks = conf.getInt("mapred.map.tasks", -1);
+        int totalMapTasks = conf.getMapTasks();
         waitUntilAllTasksDone(totalMapTasks);
         zkProcess.destroy();
         int exitValue = -1;
@@ -848,6 +894,20 @@ public class ZooKeeperManager {
   public boolean runsZooKeeper() {
     synchronized (this) {
       return zkProcess != null;
+    }
+  }
+
+  /**
+   * Log the zookeeper output from the process (if it was started)
+   *
+   * @param level Log level to print at
+   */
+  public void logZooKeeperOutput(Level level) {
+    if (zkProcessCollector != null) {
+      LOG.log(level, "logZooKeeperOutput: Dumping up to last " +
+          StreamCollector.LAST_LINES_COUNT +
+          " lines of the ZooKeeper process STDOUT and STDERR.");
+      zkProcessCollector.dumpLastLines(level);
     }
   }
 }
