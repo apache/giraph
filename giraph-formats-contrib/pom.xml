@@ -18,7 +18,7 @@ under the License.
 -->
 
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.apache.giraph</groupId>
@@ -27,6 +27,7 @@ under the License.
     <properties>
         <compileSource>1.6</compileSource>
         <hadoop.version>0.20.203.0</hadoop.version>
+        <forHadoop>for-hadoop-${hadoop.version}</forHadoop>
         <hbase.version>0.90.5</hbase.version>
         <hcatalog.version>0.5.0-SNAPSHOT</hcatalog.version>
         <hive.version>0.9.0</hive.version>
@@ -47,7 +48,7 @@ under the License.
                     <systemProperties>
                         <property>
                             <name>prop.jarLocation</name>
-                            <value>${giraph.trunk.base}/target/giraph-${project.version}-jar-with-dependencies.jar</value>
+                            <value>${giraph.trunk.base}/target/giraph-${project.version}-${forHadoop}-jar-with-dependencies.jar</value>
                         </property>
                     </systemProperties>
                 </configuration>
@@ -60,15 +61,34 @@ under the License.
                     <configLocation>../checkstyle.xml</configLocation>
                     <enableRulesSummary>false</enableRulesSummary>
                     <headerLocation>../license-header.txt</headerLocation>
-	                <failOnError>true</failOnError>
-	                <includeTestSourceDirectory>false</includeTestSourceDirectory>
+                    <failOnError>true</failOnError>
+                    <includeTestSourceDirectory>false</includeTestSourceDirectory>
                 </configuration>
                 <executions>
                     <execution>
                         <phase>verify</phase>
                         <goals>
-                             <goal>check</goal>
-                       </goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>1.7</version>
+                <executions>
+                    <execution>
+                        <id>add-sources</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>${basedir}/src/main/java/org/apache/giraph/format/hcatalog</source>
+                            </sources>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
@@ -193,9 +213,9 @@ under the License.
             <scope>test</scope>
         </dependency>
         <dependency>
-          <groupId>org.apache.hive</groupId>
-          <artifactId>hive-common</artifactId>
-          <version>${hive.version}</version>
+            <groupId>org.apache.hive</groupId>
+            <artifactId>hive-common</artifactId>
+            <version>${hive.version}</version>
         </dependency>
     </dependencies>
 </project>

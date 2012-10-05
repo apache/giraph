@@ -52,7 +52,7 @@ public class TableEdgeInputFormat extends
                                TaskAttemptContext context) throws IOException {
 
         return new TableEdgeVertexReader(
-                tableInputFormat.createRecordReader(split, context));
+                BASE_FORMAT.createRecordReader(split, context));
 
     }
 

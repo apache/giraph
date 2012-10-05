@@ -22,8 +22,6 @@ import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Value;
 import org.apache.giraph.graph.VertexInputFormat;
 import org.apache.giraph.graph.VertexReader;
-import org.apache.hadoop.conf.Configurable;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -52,27 +50,12 @@ public abstract class AccumuloVertexInputFormat<
         V extends Writable,
         E extends Writable,
         M extends Writable>
-        extends VertexInputFormat<I, V, E, M> implements Configurable {
+        extends VertexInputFormat<I, V, E, M> {
   /**
    * delegate input format for all accumulo operations.
    */
   protected AccumuloInputFormat accumuloInputFormat =
       new AccumuloInputFormat();
-
-  /**
-   * Configured and injected by the job
-  */
-  private Configuration conf;
-
-  @Override
-  public Configuration getConf() {
-    return conf;
-  }
-
-  @Override
-  public void setConf(Configuration conf) {
-    this.conf = conf;
-  }
 
   /**
   * Abstract class which provides a template for instantiating vertices
@@ -103,7 +86,15 @@ public abstract class AccumuloVertexInputFormat<
       this.reader = reader;
     }
 
-    @Override
+      /**
+       * initialize the reader.
+       *
+       * @param inputSplit Input split to be used for reading vertices.
+       * @param context Context from the task.
+       * @throws IOException
+       * @throws InterruptedException
+       */
+
     public void initialize(InputSplit inputSplit,
                            TaskAttemptContext context)
       throws IOException, InterruptedException {
@@ -160,6 +151,7 @@ public abstract class AccumuloVertexInputFormat<
    * @throws IOException
    * @throws InterruptedException
    */
+  @Override
   public List<InputSplit> getSplits(
     JobContext context, int numWorkers)
     throws IOException, InterruptedException {

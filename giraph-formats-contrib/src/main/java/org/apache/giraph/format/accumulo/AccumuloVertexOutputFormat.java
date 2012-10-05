@@ -21,8 +21,6 @@ import org.apache.accumulo.core.client.mapreduce.AccumuloOutputFormat;
 import org.apache.accumulo.core.data.Mutation;
 import org.apache.giraph.graph.VertexOutputFormat;
 import org.apache.giraph.graph.VertexWriter;
-import org.apache.hadoop.conf.Configurable;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -50,7 +48,7 @@ public abstract class AccumuloVertexOutputFormat<
         I extends WritableComparable,
         V extends Writable,
         E extends Writable>
-        extends VertexOutputFormat<I, V, E> implements Configurable {
+        extends VertexOutputFormat<I, V, E> {
 
 
   /**
@@ -63,12 +61,6 @@ public abstract class AccumuloVertexOutputFormat<
    */
   protected AccumuloOutputFormat accumuloOutputFormat =
           new AccumuloOutputFormat();
-
-
-  /**
-   * Used by configured interface
-   */
-  private Configuration conf;
 
   /**
    *
@@ -145,17 +137,6 @@ public abstract class AccumuloVertexOutputFormat<
     }
 
   }
-
-  @Override
-  public void setConf(Configuration conf) {
-    this.conf = conf;
-  }
-
-  @Override
-  public Configuration getConf() {
-    return this.conf;
-  }
-
   /**
    *
    * checkOutputSpecs
@@ -164,6 +145,7 @@ public abstract class AccumuloVertexOutputFormat<
    * @throws IOException
    * @throws InterruptedException
    */
+  @Override
   public void checkOutputSpecs(JobContext context)
     throws IOException, InterruptedException {
     try {
@@ -185,6 +167,7 @@ public abstract class AccumuloVertexOutputFormat<
    * @throws IOException
    * @throws InterruptedException
    */
+  @Override
   public OutputCommitter getOutputCommitter(TaskAttemptContext context)
     throws IOException, InterruptedException {
     return accumuloOutputFormat.getOutputCommitter(context);

@@ -40,7 +40,7 @@ public class TableEdgeOutputFormat
     createVertexWriter(TaskAttemptContext context)
             throws IOException, InterruptedException {
         RecordWriter<ImmutableBytesWritable, Writable> writer =
-                tableOutputFormat.getRecordWriter(context);
+                BASE_FORMAT.getRecordWriter(context);
         return new TableEdgeVertexWriter(writer);
     }
 

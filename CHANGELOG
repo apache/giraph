@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-350: HBaseVertex i/o formats are not being injected with
+  Configuration via Configurable interface. (bfem via aching)
+
   GIRAPH-356: Improve ZooKeeper issues. (aching)
 
   GIRAPH-342: Recursive ZooKeeper calls should call progress, dynamic 

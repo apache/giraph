@@ -19,7 +19,6 @@ package org.apache.giraph.format.hbase;
 
 import org.apache.giraph.graph.VertexInputFormat;
 import org.apache.giraph.graph.VertexReader;
-import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -60,32 +59,22 @@ public abstract  class HBaseVertexInputFormat<
         V extends Writable,
         E extends Writable,
         M extends Writable>
-        extends VertexInputFormat<I, V, E, M> implements Configurable {
+        extends VertexInputFormat<I, V, E, M>  {
 
   /**
    * delegate HBase table input format
    */
-  protected TableInputFormat tableInputFormat =
-         new TableInputFormat();
-  /**
-   * Injected conf by Configurable interface
-   */
-  private Configuration conf;
+  protected static TableInputFormat BASE_FORMAT =
+          new TableInputFormat();
 
-  public Configuration getConf() {
-    return conf;
-  }
-
-  /**
-   * setConf()
-   *
-   * We must initialize the table format since we manually instantiate it.
-   *
-   * @param conf Configuration object
-   */
-  public void setConf(Configuration conf) {
-    tableInputFormat.setConf(conf);
-    this.conf = conf;
+    /**
+     * static method to initialize
+     * base table input format
+     * with Configuration.
+     * @param conf job configuration
+     */
+  public static void setConf(Configuration conf) {
+    BASE_FORMAT.setConf(conf);
   }
 
   /**
@@ -193,6 +182,6 @@ public abstract  class HBaseVertexInputFormat<
   public List<InputSplit> getSplits(
   JobContext context, int numWorkers)
     throws IOException, InterruptedException {
-    return tableInputFormat.getSplits(context);
+    return BASE_FORMAT.getSplits(context);
   }
 }

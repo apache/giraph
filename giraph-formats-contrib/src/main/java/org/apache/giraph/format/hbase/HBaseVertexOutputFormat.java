@@ -20,7 +20,6 @@ package org.apache.giraph.format.hbase;
 
 import org.apache.giraph.graph.VertexOutputFormat;
 import org.apache.giraph.graph.VertexWriter;
-import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableOutputFormat;
@@ -56,17 +55,13 @@ public abstract class HBaseVertexOutputFormat<
         V extends Writable,
         E extends Writable>
         extends VertexOutputFormat
-                <I, V, E> implements Configurable {
+                <I, V, E> {
 
   /**
    * delegate output format that writes to HBase
    */
-  protected TableOutputFormat<ImmutableBytesWritable>
-  tableOutputFormat = new TableOutputFormat<ImmutableBytesWritable>();
-  /**
-   * Injected conf by Configurable
-   */
-  private Configuration conf;
+  protected static TableOutputFormat<ImmutableBytesWritable>
+  BASE_FORMAT = new TableOutputFormat<ImmutableBytesWritable>();
 
   /**
    *   Constructor
@@ -154,13 +149,8 @@ public abstract class HBaseVertexOutputFormat<
    *
    * @param conf Injected configuration instance
    */
-  public void setConf(Configuration conf) {
-    tableOutputFormat.setConf(conf);
-    this.conf = conf;
-  }
-
-  public Configuration getConf() {
-    return this.conf;
+  public static void setConf(Configuration conf) {
+    BASE_FORMAT.setConf(conf);
   }
 
   /**
@@ -172,7 +162,7 @@ public abstract class HBaseVertexOutputFormat<
    */
   public void checkOutputSpecs(JobContext context)
     throws IOException, InterruptedException {
-    tableOutputFormat.checkOutputSpecs(context);
+    BASE_FORMAT.checkOutputSpecs(context);
   }
 
   /**
@@ -186,6 +176,6 @@ public abstract class HBaseVertexOutputFormat<
   public OutputCommitter getOutputCommitter(
     TaskAttemptContext context)
     throws IOException, InterruptedException {
-    return tableOutputFormat.getOutputCommitter(context);
+    return BASE_FORMAT.getOutputCommitter(context);
   }
 }

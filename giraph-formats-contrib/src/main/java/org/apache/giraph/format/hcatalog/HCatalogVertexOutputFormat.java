@@ -21,7 +21,6 @@ package org.apache.giraph.format.hcatalog;
 import java.io.IOException;
 
 import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.VertexOutputFormat;
 import org.apache.giraph.graph.VertexWriter;
 import org.apache.hadoop.io.Writable;
@@ -41,159 +40,175 @@ import org.apache.hcatalog.mapreduce.HCatOutputFormat;
  * depending on how you want to fit your vertices into the output table.
  * <p>
  * The desired database and table name to store to can be specified via
- * {@link HCatOutputFormat#setOutput(org.apache.hadoop.mapreduce.Job, org.apache.hcatalog.mapreduce.OutputJobInfo)}
+ * {@link HCatOutputFormat#setOutput(org.apache.hadoop.mapreduce.Job,
+ * org.apache.hcatalog.mapreduce.OutputJobInfo)}
  * as you setup your vertex output format with
  * {@link GiraphJob#setVertexOutputFormatClass(Class)}. You must create the
  * output table.
- * 
- * @param <I>
- *            Vertex index value
- * @param <V>
- *            Vertex value
- * @param <E>
- *            Edge value
+ * @param <I> Vertex id
+ * @param <V> Vertex value
+ * @param <E> Edge value
  */
 @SuppressWarnings("rawtypes")
-public abstract class HCatalogVertexOutputFormat<I extends WritableComparable, V extends Writable, E extends Writable>
-		extends VertexOutputFormat<I, V, E> {
+public abstract class HCatalogVertexOutputFormat<
+        I extends WritableComparable,
+        V extends Writable,
+        E extends Writable>
+        extends VertexOutputFormat<I, V, E> {
+  /**
+  * hcat output format
+  */
+  protected HCatOutputFormat hCatOutputFormat = new HCatOutputFormat();
 
-	protected HCatOutputFormat hCatOutputFormat = new HCatOutputFormat();
+  @Override
+  public final void checkOutputSpecs(JobContext context) throws IOException,
+      InterruptedException {
+    hCatOutputFormat.checkOutputSpecs(context);
+  }
 
-	@Override
-	public final void checkOutputSpecs(JobContext context) throws IOException,
-			InterruptedException {
-		hCatOutputFormat.checkOutputSpecs(context);
-	}
+  @Override
+  public final OutputCommitter getOutputCommitter(TaskAttemptContext context)
+    throws IOException, InterruptedException {
+    return hCatOutputFormat.getOutputCommitter(context);
+  }
 
-	@Override
-	public final OutputCommitter getOutputCommitter(TaskAttemptContext context)
-			throws IOException, InterruptedException {
-		return hCatOutputFormat.getOutputCommitter(context);
-	}
+  /**
+  * Abstract class that users should
+  * subclass based on their specific vertex
+  * output. Users should implement
+  * writeVertex to create a HCatRecord that is
+  * valid to for writing by HCatalogRecordWriter.
+  */
+  protected abstract class HCatalogVertexWriter implements
+            VertexWriter<I, V, E> {
 
-	/**
-	 * Abstract class that users should subclass based on their specific vertex
-	 * output. Users should implement writeVertex to create a HCatRecord that is
-	 * valid to for writing by HCatalogRecordWriter.
-	 * 
-	 * @param <I>
-	 *            Vertex index value
-	 * @param <V>
-	 *            Vertex value
-	 * @param <E>
-	 *            Edge value
-	 */
-	protected abstract class HCatalogVertexWriter implements
-			VertexWriter<I, V, E> {
+    /** Internal HCatRecordWriter */
+    private RecordWriter<WritableComparable<?>, HCatRecord> hCatRecordWriter;
+    /** Context passed to initialize */
+    private TaskAttemptContext context;
 
-		/** Internal HCatRecordWriter */
-		private RecordWriter<WritableComparable<?>, HCatRecord> hCatRecordWriter;
-		/** Context passed to initialize */
-		private TaskAttemptContext context;
+    /**
+    * Initialize with the HCatRecordWriter
+    * @param hCatRecordWriter
+    *            Internal writer
+    */
+    private void initialize(
+                    RecordWriter<WritableComparable<?>,
+                    HCatRecord> hCatRecordWriter) {
+      this.hCatRecordWriter = hCatRecordWriter;
+    }
 
-		/**
-		 * Initialize with the HCatRecordWriter
-		 * 
-		 * @param hCatRecordWriter
-		 *            Internal writer
-		 */
-		private void initialize(
-				RecordWriter<WritableComparable<?>, HCatRecord> hCatRecordWriter) {
-			this.hCatRecordWriter = hCatRecordWriter;
-		}
+    /**
+    * Get the record reader.
+    * @return Record reader to be used for reading.
+    */
+    protected RecordWriter<WritableComparable<?>,
+            HCatRecord> getRecordWriter() {
+      return hCatRecordWriter;
+    }
 
-		/**
-		 * Get the record reader.
-		 * 
-		 * @return Record reader to be used for reading.
-		 */
-		protected RecordWriter<WritableComparable<?>, HCatRecord> getRecordWriter() {
-			return hCatRecordWriter;
-		}
+    /**
+    * Get the context.
+    *
+    * @return Context passed to initialize.
+    */
+    protected TaskAttemptContext getContext() {
+      return context;
+    }
 
-		/**
-		 * Get the context.
-		 * 
-		 * @return Context passed to initialize.
-		 */
-		protected TaskAttemptContext getContext() {
-			return context;
-		}
+    @Override
+    public void initialize(TaskAttemptContext context) throws IOException {
+      this.context = context;
+    }
 
-		@Override
-		public void initialize(TaskAttemptContext context) throws IOException {
-			this.context = context;
-		}
+    @Override
+    public void close(TaskAttemptContext context) throws IOException,
+        InterruptedException {
+      hCatRecordWriter.close(context);
+    }
 
-		@Override
-		public void close(TaskAttemptContext context) throws IOException,
-				InterruptedException {
-			hCatRecordWriter.close(context);
-		}
+  }
 
-	}
+  /**
+  * create vertex writer.
+  * @return HCatalogVertexWriter
+  */
+  protected abstract HCatalogVertexWriter createVertexWriter();
 
-	protected abstract HCatalogVertexWriter createVertexWriter();
+  @Override
+  public final VertexWriter<I, V, E> createVertexWriter(
+    TaskAttemptContext context) throws IOException,
+    InterruptedException {
+    HCatalogVertexWriter writer = createVertexWriter();
+    writer.initialize(hCatOutputFormat.getRecordWriter(context));
+    return writer;
+  }
 
-	@Override
-	public final VertexWriter<I, V, E> createVertexWriter(
-			TaskAttemptContext context) throws IOException,
-			InterruptedException {
-		HCatalogVertexWriter writer = createVertexWriter();
-		writer.initialize(hCatOutputFormat.getRecordWriter(context));
-		return writer;
-	}
+  /**
+  * HCatalogVertexWriter to write each vertex in each row.
+  */
+  protected abstract class SingleRowHCatalogVertexWriter extends
+            HCatalogVertexWriter {
+    /**
+    * get num columns
+    * @return intcolumns
+    */
+    protected abstract int getNumColumns();
 
-	/**
-	 * HCatalogVertexWriter to write each vertex in each row.
-	 */
-	protected abstract class SingleRowHCatalogVertexWriter extends
-			HCatalogVertexWriter {
+    /**
+    * fill record
+    * @param record to fill
+    * @param vertex to populate record
+    */
+    protected abstract void fillRecord(HCatRecord record,
+                                    Vertex<I, V, E, ?> vertex);
 
-		protected abstract int getNumColumns();
+    /**
+    * create record
+    * @param vertex to populate record
+    * @return HCatRecord newly created
+    */
+    protected HCatRecord createRecord(Vertex<I, V, E, ?> vertex) {
+      HCatRecord record = new DefaultHCatRecord(getNumColumns());
+      fillRecord(record, vertex);
+      return record;
+    }
 
-		protected abstract void fillRecord(HCatRecord record,
-				Vertex<I, V, E, ?> vertex);
+    @Override
+    // XXX It is important not to put generic type signature <I,V,E,?> after
+    // Vertex. Otherwise, any class that extends this will not compile
+    // because of not implementing the VertexWriter#writeVertex. Mystery of
+    // Java Generics :(
+    @SuppressWarnings("unchecked")
+    public final void writeVertex(Vertex vertex) throws IOException,
+        InterruptedException {
+      getRecordWriter().write(null, createRecord(vertex));
+    }
 
-		protected HCatRecord createRecord(Vertex<I, V, E, ?> vertex) {
-			HCatRecord record = new DefaultHCatRecord(getNumColumns());
-			fillRecord(record, vertex);
-			return record;
-		}
+  }
 
-		@Override
-		// XXX It is important not to put generic type signature <I,V,E,?> after
-		// Vertex. Otherwise, any class that extends this will not compile
-		// because of not implementing the VertexWriter#writeVertex. Mystery of
-		// Java Generics :(
-		@SuppressWarnings("unchecked")
-		public final void writeVertex(Vertex vertex) throws IOException,
-				InterruptedException {
-			getRecordWriter().write(null, createRecord(vertex));
-		}
+  /**
+  * HCatalogVertexWriter to write each vertex in multiple rows.
+  */
+  public abstract class MultiRowHCatalogVertexWriter extends
+    HCatalogVertexWriter {
+    /**
+    * create records
+    * @param vertex to populate records
+    * @return Iterable of records
+    */
+    protected abstract Iterable<HCatRecord> createRecords(
+        Vertex<I, V, E, ?> vertex);
 
-	}
-
-	/**
-	 * HCatalogVertexWriter to write each vertex in multiple rows.
-	 */
-	public abstract class MultiRowHCatalogVertexWriter extends
-			HCatalogVertexWriter {
-
-		protected abstract Iterable<HCatRecord> createRecords(
-				Vertex<I, V, E, ?> vertex);
-
-		@Override
-		// XXX Same thing here. No Generics for Vertex here.
-		@SuppressWarnings("unchecked")
-		public final void writeVertex(Vertex vertex) throws IOException,
-				InterruptedException {
-			Iterable<HCatRecord> records = createRecords(vertex);
-			for (HCatRecord record : records) {
-				getRecordWriter().write(null, record);
-			}
-		}
-
-	}
-
+    @Override
+    // XXX Same thing here. No Generics for Vertex here.
+    @SuppressWarnings("unchecked")
+    public final void writeVertex(Vertex vertex) throws IOException,
+        InterruptedException {
+      Iterable<HCatRecord> records = createRecords(vertex);
+      for (HCatRecord record : records) {
+        getRecordWriter().write(null, record);
+      }
+    }
+  }
 }
