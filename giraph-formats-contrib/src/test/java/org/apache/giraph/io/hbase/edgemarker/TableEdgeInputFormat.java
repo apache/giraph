@@ -15,10 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.format.hbase.edgemarker;
+package org.apache.giraph.io.hbase.edgemarker;
 
 import com.google.common.collect.Maps;
-import org.apache.giraph.format.hbase.HBaseVertexInputFormat;
+import org.apache.giraph.io.hbase.HBaseVertexInputFormat;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.VertexReader;

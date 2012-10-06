@@ -2,6 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-358: Rename package format->io in giraph-formats-contrib for
+  consistency with main package. (apresta via aching)
+
   GIRAPH-350: HBaseVertex i/o formats are not being injected with
   Configuration via Configurable interface. (bfem via aching)
 

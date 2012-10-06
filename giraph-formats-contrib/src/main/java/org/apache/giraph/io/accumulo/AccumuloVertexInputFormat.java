@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.format.accumulo;
+package org.apache.giraph.io.accumulo;
 
 import org.apache.accumulo.core.client.mapreduce.AccumuloInputFormat;
 import org.apache.accumulo.core.data.Key;
@@ -38,7 +38,7 @@ import java.util.List;
  *  to read from AccumuloTables.
  *
  *  Works with
- *  {@link org.apache.giraph.format.accumulo.AccumuloVertexOutputFormat}
+ *  {@link org.apache.giraph.io.accumulo.AccumuloVertexOutputFormat}
  *
  * @param <I> vertex id type
  * @param <V>  vertex value type

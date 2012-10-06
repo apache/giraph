@@ -16,8 +16,6 @@
  * limitations under the License.
  */
 /**
- * Package of input and output format classes
- * for loading and storing Hive/Pig data using HCatalog.
+ * Package of all generic utility classes.
  */
-package org.apache.giraph.format.hcatalog;
-
+package org.apache.giraph.io.hbase;

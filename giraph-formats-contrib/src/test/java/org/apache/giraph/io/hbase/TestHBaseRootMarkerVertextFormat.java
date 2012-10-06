@@ -16,14 +16,14 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.format.hbase;
+package org.apache.giraph.io.hbase;
 
 import junit.framework.Test;
 import junit.framework.TestSuite;
 import org.apache.giraph.BspCase;
 import org.apache.giraph.GiraphConfiguration;
-import org.apache.giraph.format.hbase.edgemarker.TableEdgeInputFormat;
-import org.apache.giraph.format.hbase.edgemarker.TableEdgeOutputFormat;
+import org.apache.giraph.io.hbase.edgemarker.TableEdgeInputFormat;
+import org.apache.giraph.io.hbase.edgemarker.TableEdgeOutputFormat;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.hadoop.conf.Configuration;
@@ -46,7 +46,6 @@ import org.apache.log4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Iterator;
 
 /*
 Test case for HBase reading/writing vertices from an HBase instance.

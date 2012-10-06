@@ -18,4 +18,4 @@
 /**
  * Package of all generic utility classes.
  */
-package org.apache.giraph.format.hbase;
+package org.apache.giraph.io.accumulo;

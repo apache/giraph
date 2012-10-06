@@ -15,13 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.format.accumulo;
 
-import org.apache.accumulo.core.client.mapreduce.AccumuloOutputFormat;
-import org.apache.accumulo.core.data.Mutation;
+package org.apache.giraph.io.hbase;
+
 import org.apache.giraph.graph.VertexOutputFormat;
 import org.apache.giraph.graph.VertexWriter;
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.mapreduce.TableOutputFormat;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -30,69 +31,72 @@ import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 import java.io.IOException;
+
 /**
  *
- *  Class which wraps the AccumuloOutputFormat. It's designed
- *  as an extension point to VertexOutputFormat subclasses who wish
- *  to write vertices back to an Accumulo table.
+ * Base class for writing Vertex mutations back to specific
+ * rows in an HBase table. This class wraps an instance of TableOutputFormat
+ * for easy configuration with the existing properties.
  *
- *  Works with
- *  {@link org.apache.giraph.format.accumulo.AccumuloVertexInputFormat}
+ * Setting conf.set(TableOutputFormat.OUTPUT_TABLE, "out_table");
+ * will properly delegate to the TableOutputFormat instance contained
+ * in this class. The Configurable interface prevents specific
+ * wrapper methods from having to be called.
  *
+ * Works with {@link HBaseVertexInputFormat}
  *
- * @param <I> vertex id type
- * @param <V>  vertex value type
- * @param <E>  edge type
+ * @param <I> Vertex index value
+ * @param <V> Vertex value
+ * @param <E> Edge value
  */
-public abstract class AccumuloVertexOutputFormat<
+@SuppressWarnings("rawtypes")
+public abstract class HBaseVertexOutputFormat<
         I extends WritableComparable,
         V extends Writable,
         E extends Writable>
-        extends VertexOutputFormat<I, V, E> {
-
+        extends VertexOutputFormat
+                <I, V, E> {
 
   /**
-   * Output table parameter
+   * delegate output format that writes to HBase
    */
-  protected static final String OUTPUT_TABLE = "OUTPUT_TABLE";
+  protected static TableOutputFormat<ImmutableBytesWritable>
+  BASE_FORMAT = new TableOutputFormat<ImmutableBytesWritable>();
 
   /**
-   * Accumulo delegate for table output
-   */
-  protected AccumuloOutputFormat accumuloOutputFormat =
-          new AccumuloOutputFormat();
-
-  /**
+   *   Constructor
    *
-   * Main abstraction point for vertex writers to persist back
-   * to Accumulo tables.
+   *   Simple class which takes an instance of RecordWriter
+   *   over Writable objects. Subclasses are
+   *   expected to implement writeVertex()
    *
-   * @param <I> vertex id type
-   * @param <V> vertex value type
-   * @param <E>  edge type
+   * @param <I> Vertex index value
+   * @param <V> Vertex value
+   * @param <E> Edge value
    */
-  public abstract static class AccumuloVertexWriter<
+  public abstract static class HBaseVertexWriter<
           I extends WritableComparable,
           V extends Writable,
           E extends Writable>
           implements VertexWriter<I, V, E> {
 
     /**
-     * task attempt context.
+     * context
      */
     private TaskAttemptContext context;
 
     /**
-     * Accumulo record writer
+     * record writer instance
      */
-    private RecordWriter<Text, Mutation> recordWriter;
+    private RecordWriter<ImmutableBytesWritable,
+              Writable> recordWriter;
 
-    /**
-     * Constructor for use with subclasses
-     *
-     * @param recordWriter accumulo record writer
-     */
-    public AccumuloVertexWriter(RecordWriter<Text, Mutation> recordWriter) {
+   /**
+    * Constructor for subclasses to implement recordWriter
+    * @param recordWriter subclass instance
+    */
+    public HBaseVertexWriter(RecordWriter<ImmutableBytesWritable,
+             Writable> recordWriter) {
       this.recordWriter = recordWriter;
     }
 
@@ -102,12 +106,13 @@ public abstract class AccumuloVertexOutputFormat<
      * @param context Context used to write the vertices.
      * @throws IOException
      */
-    public void initialize(TaskAttemptContext context) throws IOException {
+    public void initialize(TaskAttemptContext context)
+      throws IOException {
       this.context = context;
     }
 
     /**
-     *  close
+     * close
      *
      * @param context the context of the task
      * @throws IOException
@@ -123,12 +128,13 @@ public abstract class AccumuloVertexOutputFormat<
      *
      * @return Record writer to be used for writing.
      */
-    public RecordWriter<Text, Mutation> getRecordWriter() {
+    public RecordWriter<ImmutableBytesWritable,
+            Writable> getRecordWriter() {
       return recordWriter;
     }
 
     /**
-     * Get the context.
+     * getContext
      *
      * @return Context passed to initialize.
      */
@@ -137,39 +143,39 @@ public abstract class AccumuloVertexOutputFormat<
     }
 
   }
+
   /**
+   * setConf
    *
+   * @param conf Injected configuration instance
+   */
+  public static void setConf(Configuration conf) {
+    BASE_FORMAT.setConf(conf);
+  }
+
+  /**
    * checkOutputSpecs
    *
    * @param context information about the job
    * @throws IOException
    * @throws InterruptedException
    */
-  @Override
   public void checkOutputSpecs(JobContext context)
     throws IOException, InterruptedException {
-    try {
-      accumuloOutputFormat.checkOutputSpecs(context);
-    } catch (IOException e) {
-      if (e.getMessage().contains("Output info has not been set")) {
-        throw new IOException(e.getMessage() + " Make sure you initialized" +
-                " AccumuloOutputFormat static setters " +
-                "before passing the config to GiraphJob.");
-      }
-    }
+    BASE_FORMAT.checkOutputSpecs(context);
   }
 
   /**
    * getOutputCommitter
    *
    * @param context the task context
-   * @return OutputCommitter
+   * @return  OutputCommitter ouputCommitter
    * @throws IOException
    * @throws InterruptedException
    */
-  @Override
-  public OutputCommitter getOutputCommitter(TaskAttemptContext context)
+  public OutputCommitter getOutputCommitter(
+    TaskAttemptContext context)
     throws IOException, InterruptedException {
-    return accumuloOutputFormat.getOutputCommitter(context);
+    return BASE_FORMAT.getOutputCommitter(context);
   }
 }

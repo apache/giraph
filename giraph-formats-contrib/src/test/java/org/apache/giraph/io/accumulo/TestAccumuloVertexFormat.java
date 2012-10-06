@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.format.accumulo;
+package org.apache.giraph.io.accumulo;
 
 import junit.framework.Test;
 import junit.framework.TestSuite;
@@ -35,8 +35,8 @@ import org.apache.accumulo.core.util.ByteBufferUtil;
 import org.apache.accumulo.core.util.Pair;
 import org.apache.giraph.BspCase;
 import org.apache.giraph.GiraphConfiguration;
-import org.apache.giraph.format.accumulo.edgemarker.AccumuloEdgeInputFormat;
-import org.apache.giraph.format.accumulo.edgemarker.AccumuloEdgeOutputFormat;
+import org.apache.giraph.io.accumulo.edgemarker.AccumuloEdgeInputFormat;
+import org.apache.giraph.io.accumulo.edgemarker.AccumuloEdgeOutputFormat;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.hadoop.conf.Configuration;
@@ -47,7 +47,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.Map;
 
 /*

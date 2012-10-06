@@ -15,12 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.format.accumulo.edgemarker;
+package org.apache.giraph.io.accumulo.edgemarker;
 
 import com.google.common.collect.Maps;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Value;
-import org.apache.giraph.format.accumulo.AccumuloVertexInputFormat;
+import org.apache.giraph.io.accumulo.AccumuloVertexInputFormat;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.VertexReader;

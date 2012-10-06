@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.format.hcatalog;
+package org.apache.giraph.io.hcatalog;
 
 import java.io.File;
 import java.util.Arrays;

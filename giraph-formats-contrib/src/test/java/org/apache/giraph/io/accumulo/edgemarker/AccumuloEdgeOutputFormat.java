@@ -15,11 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.format.accumulo.edgemarker;
+package org.apache.giraph.io.accumulo.edgemarker;
 
 import org.apache.accumulo.core.data.Mutation;
 import org.apache.accumulo.core.data.Value;
-import org.apache.giraph.format.accumulo.AccumuloVertexOutputFormat;
+import org.apache.giraph.io.accumulo.AccumuloVertexOutputFormat;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexWriter;
 import org.apache.hadoop.io.Text;

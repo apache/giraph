@@ -15,9 +15,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.format.hbase.edgemarker;
+package org.apache.giraph.io.hbase.edgemarker;
 
-import org.apache.giraph.format.hbase.HBaseVertexOutputFormat;
+import org.apache.giraph.io.hbase.HBaseVertexOutputFormat;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexWriter;
 import org.apache.hadoop.hbase.client.Put;
