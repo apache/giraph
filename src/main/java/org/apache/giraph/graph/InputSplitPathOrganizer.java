@@ -29,23 +29,17 @@ import org.apache.hadoop.io.Text;
 import org.apache.zookeeper.KeeperException;
 
 /**
- * Utility class to extract InputSplit locality information
- * from znodes and to sort the InputSplit list for the worker
- * owning this object to favor local data block selection.
+ * Utility class to extract the list of InputSplits from the
+ * ZooKeeper tree of "claimable splits" the master created,
+ * and to sort the list to favor local data blocks.
  *
- * This class also provides a hash-rotated index by which workers
- * must index into their list of InputSplits, This will be especially
- * helpful to those who do not find local blocks to read, and must
- * contend with other workers for non-local splits in the list.
- *
- * Searching for splits using ZK reads is slowed by the fact that
- * after each ZK write (to mark a split reserved or finished) the
- * ZK quorum must be sync'd before pending read requests can be
- * fulfilled. During InputSplit claiming, the writes are frequent on
- * both reserved and finished node trees; the aim is to cut down on
- * the number of ZK reads workers perform to locate an unclaimed node.
+ * This class provides an Iterator for the list the worker will
+ * claim splits from, making all sorting and data-code locality
+ * processing done here invisible to callers. The aim is to cut
+ * down on the number of ZK reads workers perform before locating
+ * an unclaimed InputSplit.
  */
-public class LocalityInfoSorter implements Iterable<String> {
+public class InputSplitPathOrganizer implements Iterable<String> {
   /** The worker's local ZooKeeperExt ref */
   private final ZooKeeperExt zooKeeper;
   /** The List of InputSplit znode paths */
@@ -58,14 +52,15 @@ public class LocalityInfoSorter implements Iterable<String> {
   /**
    * Constructor
    * @param zooKeeper the worker's ZkExt
-   * @param pathList the path to read from
+   * @param zkPathList the path to read from
    * @param hostName the worker's host name (for matching)
    * @param port the port number for this worker
    */
-  public LocalityInfoSorter(final ZooKeeperExt zooKeeper,
-    List<String> pathList, final String hostName, final int port) {
+  public InputSplitPathOrganizer(final ZooKeeperExt zooKeeper,
+    final String zkPathList, final String hostName, final int port)
+    throws KeeperException, InterruptedException {
     this.zooKeeper = zooKeeper;
-    this.pathList = pathList;
+    this.pathList = zooKeeper.getChildrenExt(zkPathList, false, false, true);
     this.hostName = hostName;
     this.baseOffset = 0; // set later after switching out local paths
     prioritizeLocalInputSplits(port);
@@ -126,6 +121,14 @@ public class LocalityInfoSorter implements Iterable<String> {
       new DataInputStream(new ByteArrayInputStream(locationData));
     // only read the "first" entry in the znode data, the locations
     return Text.readString(inputStream);
+  }
+
+  /**
+   * Utility accessor for Input Split znode path list size
+   * @return the size of <code>this.pathList</code>
+   */
+  public int getPathListSize() {
+    return this.pathList.size();
   }
 
   /**

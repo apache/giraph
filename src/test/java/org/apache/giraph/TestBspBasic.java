@@ -33,7 +33,7 @@ import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexOut
 import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.GiraphJob;
-import org.apache.giraph.graph.LocalityInfoSorter;
+import org.apache.giraph.graph.InputSplitPathOrganizer;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.TextAggregatorWriter;
 import org.apache.giraph.graph.Vertex;
@@ -312,20 +312,21 @@ else[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
   }
 
   /**
-   * Run a test to see if the LocalityInfoSorter can correctly sort
+   * Run a test to see if the InputSplitPathOrganizer can correctly sort
    * locality information from a mocked znode of data.
    * @throws IOException
    * @throws KeeperException
    * @throws InterruptedException
    */
   @Test
-  public void testLocalityInfoSorter()
+  public void testInputSplitPathOrganizer()
     throws IOException, KeeperException, InterruptedException {
     final List<String> goodList = new ArrayList<String>();
     Collections.addAll(goodList, "good", "bad", "ugly");
     final List<String> testList = new ArrayList<String>();
     Collections.addAll(testList, "bad", "good", "ugly");
     final String localHost = "node.LOCAL.com";
+    final String testListName = "test_list_parent_znode";
     // build output just as we do to store hostlists in ZNODES
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     DataOutputStream dos = new DataOutputStream(baos);
@@ -343,11 +344,12 @@ else[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
     Text.writeString(dos, first);
     byte[] LOCALITY_FIRST = baos.toByteArray();
     ZooKeeperExt zk = mock(ZooKeeperExt.class);
+    when(zk.getChildrenExt(testListName, false, false, true)).thenReturn(testList);
     when(zk.getData("ugly", false, null)).thenReturn(LOCALITY_LAST);
     when(zk.getData("bad", false, null)).thenReturn(LOCALITY_MIDDLE);
     when(zk.getData("good", false, null)).thenReturn(LOCALITY_FIRST);
-    LocalityInfoSorter lis =
-      new LocalityInfoSorter(zk, testList, localHost, 0);
+    InputSplitPathOrganizer lis =
+      new InputSplitPathOrganizer(zk, testListName, localHost, 0);
     final List<String> resultList = new ArrayList<String>();
     for (String next : lis) {
       resultList.add(next);

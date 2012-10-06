@@ -2,6 +2,10 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-307: InputSplit list can be long with many workers 
+  (and locality info) and should not be re-created every time a 
+  worker calls reserveInputSplit() (ereisman via majakabiljo)
+
   GIRAPH-358: Rename package format->io in giraph-formats-contrib for
   consistency with main package. (apresta via aching)
 

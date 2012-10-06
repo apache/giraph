@@ -92,8 +92,6 @@ public class BspServiceWorker<I extends WritableComparable,
     implements CentralizedServiceWorker<I, V, E, M> {
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(BspServiceWorker.class);
-  /** Number of input splits */
-  private int inputSplitCount = -1;
   /** My process health znode */
   private String myHealthZnode;
   /** Worker info */
@@ -126,6 +124,12 @@ public class BspServiceWorker<I extends WritableComparable,
    * Partition store for worker (only used by the Hadoop RPC implementation).
    */
   private final PartitionStore<I, V, E, M> workerPartitionStore;
+  /**
+   * Stores and processes the list of InputSplits advertised
+   * in a tree of child znodes by the master.
+   */
+  private InputSplitPathOrganizer splitOrganizer = null;
+
   /** Handler for aggregators */
   private final WorkerAggregatorHandler aggregatorHandler;
 
@@ -234,20 +238,16 @@ else[HADOOP_NON_SECURE]*/
    */
   private String reserveInputSplit()
     throws KeeperException, InterruptedException {
-    List<String> inputSplitPathList = null;
-    inputSplitPathList =
-        getZkExt().getChildrenExt(inputSplitsPath, false, false, true);
-    if (inputSplitCount == -1) {
-      inputSplitCount = inputSplitPathList.size();
+    if (null == splitOrganizer) {
+      splitOrganizer = new InputSplitPathOrganizer(getZkExt(),
+        inputSplitsPath, getHostname(), getWorkerInfo().getPort());
     }
-    LocalityInfoSorter localitySorter = new LocalityInfoSorter(
-      getZkExt(), inputSplitPathList, getHostname(), getWorkerInfo().getPort());
     String reservedInputSplitPath = null;
     Stat reservedStat = null;
     final Mapper<?, ?, ?, ?>.Context context = getContext();
     while (true) {
       int reservedInputSplits = 0;
-      for (String nextSplitToClaim : localitySorter) {
+      for (String nextSplitToClaim : splitOrganizer) {
         context.progress();
         String tmpInputSplitReservedPath =
             nextSplitToClaim + INPUT_SPLIT_RESERVED_NODE;
@@ -265,7 +265,7 @@ else[HADOOP_NON_SECURE]*/
             if (LOG.isInfoEnabled()) {
               float percentFinished =
                   reservedInputSplits * 100.0f /
-                  inputSplitPathList.size();
+                  splitOrganizer.getPathListSize();
               LOG.info("reserveInputSplit: Reserved input " +
                   "split path " + reservedInputSplitPath +
                   ", overall roughly " +
@@ -292,10 +292,10 @@ else[HADOOP_NON_SECURE]*/
       if (LOG.isInfoEnabled()) {
         LOG.info("reserveInputSplit: reservedPath = " +
             reservedInputSplitPath + ", " + reservedInputSplits +
-            " of " + inputSplitPathList.size() +
+            " of " + splitOrganizer.getPathListSize() +
             " InputSplits are finished.");
       }
-      if (reservedInputSplits == inputSplitPathList.size()) {
+      if (reservedInputSplits == splitOrganizer.getPathListSize()) {
         transferRegulator = null; // don't need this anymore
         return null;
       }
