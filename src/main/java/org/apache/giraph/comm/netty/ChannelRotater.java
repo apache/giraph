@@ -30,7 +30,22 @@ public class ChannelRotater {
   /** Index of last used channel */
   private int index = 0;
   /** Channel list */
-  private List<Channel> channelList = Lists.newArrayList();
+  private final List<Channel> channelList = Lists.newArrayList();
+  /** Task id of this channel */
+  private final Integer taskId;
+
+  /**
+   * Constructor
+   *
+   * @param taskId Id of the task these channels as associated with
+   */
+  public ChannelRotater(Integer taskId) {
+    this.taskId = taskId;
+  }
+
+  public Integer getTaskId() {
+    return taskId;
+  }
 
   /**
    * Add a channel to the rotation

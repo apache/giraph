@@ -195,7 +195,7 @@ public class NettyServer {
       }
     });
 
-    int taskId = conf.getInt("mapred.task.partition", -1);
+    int taskId = conf.getTaskPartition();
     int numTasks = conf.getInt("mapred.map.tasks", 1);
     // number of workers + 1 for master
     int numServers = conf.getInt(GiraphConfiguration.MAX_WORKERS, numTasks) + 1;

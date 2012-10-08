@@ -18,8 +18,8 @@
 
 package org.apache.giraph.comm;
 
-import com.google.common.collect.Sets;
-import java.util.Set;
+import com.google.common.collect.Maps;
+import java.util.Map;
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.comm.messages.SimpleMessageStore;
@@ -85,7 +85,9 @@ public class ConnectionTest {
     server.start();
 
     NettyClient client = new NettyClient(context, conf);
-    client.connectAllAddresses(Collections.singleton(server.getMyAddress()));
+    Map<InetSocketAddress, Integer> addressIdMap = Maps.newHashMap();
+    addressIdMap.put(server.getMyAddress(), -1);
+    client.connectAllAddresses(addressIdMap);
 
     client.stop();
     server.stop();
@@ -119,11 +121,11 @@ public class ConnectionTest {
     server3.start();
 
     NettyClient client = new NettyClient(context, conf);
-    Set<InetSocketAddress> serverAddresses = Sets.newHashSet();
-    serverAddresses.add(server1.getMyAddress());
-    serverAddresses.add(server2.getMyAddress());
-    serverAddresses.add(server3.getMyAddress());
-    client.connectAllAddresses(serverAddresses);
+    Map<InetSocketAddress, Integer> addressIdMap = Maps.newHashMap();
+    addressIdMap.put(server1.getMyAddress(), -1);
+    addressIdMap.put(server2.getMyAddress(), -1);
+    addressIdMap.put(server3.getMyAddress(), -1);
+    client.connectAllAddresses(addressIdMap);
 
     client.stop();
     server1.stop();
@@ -152,12 +154,14 @@ public class ConnectionTest {
         new WorkerRequestServerHandler.Factory(serverData));
     server.start();
 
+    Map<InetSocketAddress, Integer> addressIdMap = Maps.newHashMap();
+    addressIdMap.put(server.getMyAddress(), -1);
     NettyClient client1 = new NettyClient(context, conf);
-    client1.connectAllAddresses(Collections.singleton(server.getMyAddress()));
+    client1.connectAllAddresses(addressIdMap);
     NettyClient client2 = new NettyClient(context, conf);
-    client2.connectAllAddresses(Collections.singleton(server.getMyAddress()));
+    client2.connectAllAddresses(addressIdMap);
     NettyClient client3 = new NettyClient(context, conf);
-    client3.connectAllAddresses(Collections.singleton(server.getMyAddress()));
+    client3.connectAllAddresses(addressIdMap);
 
     client1.stop();
     client2.stop();

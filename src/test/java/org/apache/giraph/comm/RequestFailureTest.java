@@ -18,6 +18,7 @@
 
 package org.apache.giraph.comm;
 
+import java.net.InetSocketAddress;
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.comm.messages.SimpleMessageStore;
@@ -140,7 +141,9 @@ public class RequestFailureTest {
         new WorkerRequestServerHandler.Factory(serverData));
     server.start();
     client = new NettyClient(context, conf);
-    client.connectAllAddresses(Collections.singleton(server.getMyAddress()));
+    Map<InetSocketAddress, Integer> addressIdMap = Maps.newHashMap();
+    addressIdMap.put(server.getMyAddress(), -1);
+    client.connectAllAddresses(addressIdMap);
 
     // Send the request 2x
     WritableRequest request1 = getRequest();
@@ -176,7 +179,9 @@ public class RequestFailureTest {
         new WorkerRequestServerHandler.Factory(serverData));
     server.start();
     client = new NettyClient(context, conf);
-    client.connectAllAddresses(Collections.singleton(server.getMyAddress()));
+    Map<InetSocketAddress, Integer> addressIdMap = Maps.newHashMap();
+    addressIdMap.put(server.getMyAddress(), -1);
+    client.connectAllAddresses(addressIdMap);
 
     // Send the request 2x, but should only be processed once
     WritableRequest request1 = getRequest();
@@ -211,7 +216,9 @@ public class RequestFailureTest {
         new WorkerRequestServerHandler.Factory(serverData));
     server.start();
     client = new NettyClient(context, conf);
-    client.connectAllAddresses(Collections.singleton(server.getMyAddress()));
+    Map<InetSocketAddress, Integer> addressIdMap = Maps.newHashMap();
+    addressIdMap.put(server.getMyAddress(), -1);
+    client.connectAllAddresses(addressIdMap);
 
     // Send the request 2x, but should only be processed once
     WritableRequest request1 = getRequest();

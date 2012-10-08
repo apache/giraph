@@ -18,6 +18,8 @@
 
 package org.apache.giraph.comm.netty;
 
+import com.google.common.collect.Maps;
+import java.util.Map;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.comm.MasterClient;
 import org.apache.giraph.graph.WorkerInfo;
@@ -25,11 +27,9 @@ import org.apache.hadoop.mapreduce.Mapper;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 
 import java.net.InetSocketAddress;
 import java.util.Collection;
-import java.util.Set;
 
 /**
  * Netty implementation of {@link MasterClient}
@@ -56,10 +56,10 @@ public class NettyMasterClient implements MasterClient {
   public void fixWorkerAddresses(Iterable<WorkerInfo> workers) {
     this.workers.clear();
     Iterables.addAll(this.workers, workers);
-    Set<InetSocketAddress> addresses =
-        Sets.newHashSetWithExpectedSize(this.workers.size());
+    Map<InetSocketAddress, Integer> addresses =
+        Maps.newHashMapWithExpectedSize(this.workers.size());
     for (WorkerInfo worker : workers) {
-      addresses.add(worker.getInetSocketAddress());
+      addresses.put(worker.getInetSocketAddress(), worker.getTaskId());
     }
     nettyClient.connectAllAddresses(addresses);
   }

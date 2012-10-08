@@ -25,7 +25,6 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -270,16 +269,21 @@ public class NettyClient {
     private final ChannelFuture future;
     /** Address of the future */
     private final InetSocketAddress address;
+    /** Task id */
+    private final Integer taskId;
 
     /**
      * Constructor.
      *
      * @param future Immutable future
      * @param address Immutable address
+     * @param taskId Immutable taskId
      */
-    ChannelFutureAddress(ChannelFuture future, InetSocketAddress address) {
+    ChannelFutureAddress(
+        ChannelFuture future, InetSocketAddress address, Integer taskId) {
       this.future = future;
       this.address = address;
+      this.taskId = taskId;
     }
   }
 
@@ -288,11 +292,12 @@ public class NettyClient {
    *
    * @param addresses Addresses to connect to (if haven't already connected)
    */
-  public void connectAllAddresses(Set<InetSocketAddress> addresses) {
+  public void connectAllAddresses(Map<InetSocketAddress, Integer> addresses) {
     List<ChannelFutureAddress> waitingConnectionList =
         Lists.newArrayListWithCapacity(addresses.size() * channelsPerServer);
-    for (InetSocketAddress address : addresses) {
+    for (Map.Entry<InetSocketAddress, Integer> entry : addresses.entrySet()) {
       context.progress();
+      InetSocketAddress address = entry.getKey();
       if (address == null || address.getHostName() == null ||
           address.getHostName().isEmpty()) {
         throw new IllegalStateException("connectAllAddresses: Null address " +
@@ -312,7 +317,8 @@ public class NettyClient {
         ChannelFuture connectionFuture = bootstrap.connect(address);
 
         waitingConnectionList.add(
-            new ChannelFutureAddress(connectionFuture, address));
+            new ChannelFutureAddress(
+                connectionFuture, address, entry.getValue()));
       }
     }
 
@@ -333,7 +339,7 @@ public class NettyClient {
           ChannelFuture connectionFuture =
               bootstrap.connect(waitingConnection.address);
           nextCheckFutures.add(new ChannelFutureAddress(connectionFuture,
-              waitingConnection.address));
+              waitingConnection.address, waitingConnection.taskId));
           ++failures;
         } else {
           Channel channel = future.getChannel();
@@ -350,7 +356,7 @@ public class NettyClient {
           ChannelRotater rotater =
               addressChannelMap.get(waitingConnection.address);
           if (rotater == null) {
-            rotater = new ChannelRotater();
+            rotater = new ChannelRotater(waitingConnection.taskId);
             addressChannelMap.put(waitingConnection.address, rotater);
           }
           rotater.addChannel(future.getChannel());

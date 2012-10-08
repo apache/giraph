@@ -18,8 +18,6 @@
 
 package org.apache.giraph.comm.netty;
 
-import com.google.common.collect.Sets;
-import java.util.Set;
 import java.util.Iterator;
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
@@ -137,8 +135,8 @@ public class NettyWorkerClient<I extends WritableComparable,
   public void fixPartitionIdToSocketAddrMap() {
     // 1. Fix all the cached inet addresses (remove all changed entries)
     // 2. Connect to any new RPC servers
-    Set<InetSocketAddress> addresses =
-        Sets.newHashSetWithExpectedSize(service.getPartitionOwners().size());
+    Map<InetSocketAddress, Integer> addressTaskIdMap =
+        Maps.newHashMapWithExpectedSize(service.getPartitionOwners().size());
     for (PartitionOwner partitionOwner : service.getPartitionOwners()) {
       InetSocketAddress address =
           partitionIndexAddressMap.get(
@@ -161,16 +159,19 @@ public class NettyWorkerClient<I extends WritableComparable,
       // No need to connect to myself
       if (service.getWorkerInfo().getTaskId() !=
           partitionOwner.getWorkerInfo().getTaskId()) {
-        addresses.add(getInetSocketAddress(partitionOwner.getWorkerInfo(),
-            partitionOwner.getPartitionId()));
+        addressTaskIdMap.put(
+            getInetSocketAddress(partitionOwner.getWorkerInfo(),
+                partitionOwner.getPartitionId()),
+            partitionOwner.getWorkerInfo().getTaskId());
       }
     }
     boolean useNetty = conf.getBoolean(GiraphConfiguration.USE_NETTY,
         GiraphConfiguration.USE_NETTY_DEFAULT);
     if (useNetty) {
-      addresses.add(service.getMasterInfo().getInetSocketAddress());
+      addressTaskIdMap.put(service.getMasterInfo().getInetSocketAddress(),
+                           null);
     }
-    nettyClient.connectAllAddresses(addresses);
+    nettyClient.connectAllAddresses(addressTaskIdMap);
   }
 
   /**
@@ -226,7 +227,7 @@ public class NettyWorkerClient<I extends WritableComparable,
    * When doing the request, short circuit if it is local
    *
    * @param workerInfo Worker info
-   * @param remoteServerAddress Remote server address (checked against local)
+   * @param remoteServerAddress Remote server address
    * @param writableRequest Request to either submit or run locally
    */
   private void doRequest(WorkerInfo workerInfo,
