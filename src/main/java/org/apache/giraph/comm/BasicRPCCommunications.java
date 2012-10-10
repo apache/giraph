@@ -580,8 +580,18 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
     return myAddress.getPort();
   }
 
+  /**
+   * Connect all BSP workers with each other.
+   * @param authenticate ignored if using Hadoop RPC, since authentication is
+   * handled at the level of Hadoop RPC. Only when Netty is used is this
+   * significant.
+   */
   @Override
+/*if[HADOOP_NON_SECURE]
   public void setup() {
+else[HADOOP_NON_SECURE]*/
+  public void setup(boolean authenticate) {
+/*end[HADOOP_NON_SECURE]*/
     try {
       connectAllRPCProxys(this.jobId, this.jobToken);
     } catch (IOException e) {
@@ -1296,6 +1306,15 @@ public abstract class BasicRPCCommunications<I extends WritableComparable,
       throw new RuntimeException(e);
     }
   }
+
+/*if[HADOOP_NON_SECURE]
+else[HADOOP_NON_SECURE]*/
+  @Override
+  public void authenticate() {
+    // nothing done here if using Hadoop RPC: authentication is
+    // handled at Hadoop library-level
+  }
+/*end[HADOOP_NON_SECURE]*/
 
   @Override
   public String getName() {

@@ -594,7 +594,11 @@ else[HADOOP_NON_SECURE]*/
     workerGraphPartitioner.updatePartitionOwners(
         getWorkerInfo(), masterSetPartitionOwners, getPartitionStore());
 
+/*if[HADOOP_NON_SECURE]
     commService.setup();
+else[HADOOP_NON_SECURE]*/
+    commService.setup(getConfiguration().authenticate());
+/*end[HADOOP_NON_SECURE]*/
 
     // Ensure the InputSplits are ready for processing before processing
     while (true) {
@@ -1037,11 +1041,11 @@ else[HADOOP_NON_SECURE]*/
       }
     } catch (KeeperException e) {
       // Cleaning up, it's okay to fail after cleanup is successful
-      LOG.error("cleanup: Got KeeperException on notifcation " +
+      LOG.error("cleanup: Got KeeperException on notification " +
           "to master about cleanup", e);
     } catch (InterruptedException e) {
       // Cleaning up, it's okay to fail after cleanup is successful
-      LOG.error("cleanup: Got InterruptedException on notifcation " +
+      LOG.error("cleanup: Got InterruptedException on notification " +
           "to master about cleanup", e);
     }
     try {
@@ -1239,7 +1243,7 @@ else[HADOOP_NON_SECURE]*/
           ++loadedPartitions;
         } catch (IOException e) {
           throw new RuntimeException(
-              "loadCheckpoing: Failed to get partition owner " +
+              "loadCheckpoint: Failed to get partition owner " +
                   partitionOwner, e);
         }
       }
@@ -1269,7 +1273,11 @@ else[HADOOP_NON_SECURE]*/
 
     // Communication service needs to setup the connections prior to
     // processing vertices
+/*if[HADOOP_NON_SECURE]
     commService.setup();
+else[HADOOP_NON_SECURE]*/
+    commService.setup(getConfiguration().authenticate());
+/*end[HADOOP_NON_SECURE]*/
   }
 
   /**

@@ -22,6 +22,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +40,12 @@ import org.apache.giraph.comm.netty.handler.RequestServerHandler;
 import org.apache.giraph.comm.netty.handler.ResponseClientHandler;
 import org.apache.giraph.comm.netty.handler.RequestEncoder;
 import org.apache.giraph.comm.netty.handler.RequestInfo;
+/*if[HADOOP_NON_SECURE]
+else[HADOOP_NON_SECURE]*/
+import org.apache.giraph.comm.netty.handler.SaslClientHandler;
+import org.apache.giraph.comm.requests.RequestType;
+import org.apache.giraph.comm.requests.SaslTokenMessageRequest;
+/*end[HADOOP_NON_SECURE]*/
 import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.giraph.utils.TimedLogger;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -47,13 +55,15 @@ import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelConfig;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
+import org.jboss.netty.channel.ChannelLocal;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.channel.Channels;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.handler.codec.frame.FixedLengthFrameDecoder;
+import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder;
 import org.jboss.netty.handler.execution.ExecutionHandler;
 import org.jboss.netty.handler.execution.MemoryAwareThreadPoolExecutor;
-
 import static org.jboss.netty.channel.Channels.pipeline;
 
 /**
@@ -74,6 +84,12 @@ public class NettyClient {
   public static final int MAX_REQUESTS_TO_LIST = 10;
   /** 30 seconds to connect by default */
   public static final int MAX_CONNECTION_MILLISECONDS_DEFAULT = 30 * 1000;
+/*if[HADOOP_NON_SECURE]
+else[HADOOP_NON_SECURE]*/
+  /** Used to authenticate with other workers acting as servers */
+  public static final ChannelLocal<SaslNettyClient> SASL =
+      new ChannelLocal<SaslNettyClient>();
+/*end[HADOOP_NON_SECURE]*/
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(NettyClient.class);
   /** Context used to report progress */
@@ -234,31 +250,62 @@ public class NettyClient {
     bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
       @Override
       public ChannelPipeline getPipeline() throws Exception {
-        ChannelPipeline pipeline = pipeline();
-        pipeline.addLast("clientByteCounter", byteCounter);
-        pipeline.addLast("responseFrameDecoder",
-            new FixedLengthFrameDecoder(RequestServerHandler.RESPONSE_BYTES));
-        pipeline.addLast("requestEncoder", new RequestEncoder(conf.getInt(
-            GiraphConfiguration.NETTY_REQUEST_ENCODER_BUFFER_SIZE,
-            GiraphConfiguration.NETTY_REQUEST_ENCODER_BUFFER_SIZE_DEFAULT)));
-        pipeline.addLast("responseClientHandler",
-            new ResponseClientHandler(clientRequestIdRequestInfoMap, conf));
+/*if[HADOOP_NON_SECURE]
+else[HADOOP_NON_SECURE]*/
+        if (conf.authenticate()) {
+          LOG.info("Using Netty with authentication.");
 
-        if (executionHandler != null) {
-          pipeline.addAfter(handlerBeforeExecutionHandler,
-              "executionHandler", executionHandler);
+          // Our pipeline starts with just byteCounter, and then we use
+          // addLast() to incrementally add pipeline elements, so that we can
+          // name them for identification for removal or replacement after
+          // client is authenticated by server.
+          // After authentication is complete, the pipeline's SASL-specific
+          // functionality is removed, restoring the pipeline to exactly the
+          // same configuration as it would be without authentication.
+          ChannelPipeline pipeline = Channels.pipeline(
+              byteCounter);
+          // The following pipeline component is needed to decode the server's
+          // SASL tokens. It is replaced with a FixedLengthFrameDecoder (same
+          // as used with the non-authenticated pipeline) after authentication
+          // completes (as in non-auth pipeline below).
+          pipeline.addLast("length-field-based-frame-decoder",
+              new LengthFieldBasedFrameDecoder(1024, 0, 4, 0, 4));
+          pipeline.addLast("request-encoder", new RequestEncoder(conf.getInt(
+              GiraphConfiguration.NETTY_REQUEST_ENCODER_BUFFER_SIZE,
+              GiraphConfiguration.NETTY_REQUEST_ENCODER_BUFFER_SIZE_DEFAULT)));
+          // The following pipeline component responds to the server's SASL
+          // tokens with its own responses. Both client and server share the
+          // same Hadoop Job token, which is used to create the SASL tokens to
+          // authenticate with each other.
+          // After authentication finishes, this pipeline component is removed.
+          pipeline.addLast("sasl-client-handler",
+              new SaslClientHandler(conf));
+          pipeline.addLast("response-handler",
+              new ResponseClientHandler(clientRequestIdRequestInfoMap, conf));
+          return pipeline;
+        } else {
+          LOG.info("Using Netty without authentication.");
+/*end[HADOOP_NON_SECURE]*/
+          ChannelPipeline pipeline = pipeline();
+          pipeline.addLast("clientByteCounter", byteCounter);
+          pipeline.addLast("responseFrameDecoder",
+              new FixedLengthFrameDecoder(RequestServerHandler.RESPONSE_BYTES));
+          pipeline.addLast("requestEncoder", new RequestEncoder(conf.getInt(
+              GiraphConfiguration.NETTY_REQUEST_ENCODER_BUFFER_SIZE,
+              GiraphConfiguration.NETTY_REQUEST_ENCODER_BUFFER_SIZE_DEFAULT)));
+          pipeline.addLast("responseClientHandler",
+              new ResponseClientHandler(clientRequestIdRequestInfoMap, conf));
+          if (executionHandler != null) {
+            pipeline.addAfter(handlerBeforeExecutionHandler,
+                "executionHandler", executionHandler);
+          }
+          return pipeline;
+/*if[HADOOP_NON_SECURE]
+else[HADOOP_NON_SECURE]*/
         }
-        return pipeline;
+/*end[HADOOP_NON_SECURE]*/
       }
     });
-
-    if (LOG.isInfoEnabled()) {
-      LOG.info("NettyClient: Started client" +
-          " with up to " + maxPoolSize + " threads" +
-          " with sendBufferSize = " + sendBufferSize +
-          " receiveBufferSize = " + receiveBufferSize +
-          " maxRequestMilliseconds = " + maxRequestMilliseconds);
-    }
   }
 
   /**
@@ -379,6 +426,86 @@ public class NettyClient {
     }
   }
 
+/*if[HADOOP_NON_SECURE]
+else[HADOOP_NON_SECURE]*/
+  /**
+   * Authenticate all servers in addressChannelMap.
+   */
+  public void authenticate() {
+    LOG.info("authenticate: NettyClient starting authentication with " +
+        "servers.");
+    for (InetSocketAddress address: addressChannelMap.keySet()) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("authenticate: Authenticating with address:" + address);
+      }
+      ChannelRotater channelRotater = addressChannelMap.get(address);
+      for (Channel channel: channelRotater.getChannels()) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("authenticate: Authenticating with server on channel: " +
+              channel);
+        }
+        authenticateOnChannel(channelRotater.getTaskId(), channel);
+      }
+    }
+    if (LOG.isInfoEnabled()) {
+      LOG.info("authenticate: NettyClient successfully authenticated with " +
+          addressChannelMap.size() + " server" +
+          ((addressChannelMap.size() != 1) ? "s" : "") +
+          " - continuing with normal work.");
+    }
+  }
+
+  /**
+   * Authenticate with server connected at given channel.
+   *
+   * @param taskId Task id of the channel
+   * @param channel Connection to server to authenticate with.
+   */
+  private void authenticateOnChannel(Integer taskId, Channel channel) {
+    try {
+      SaslNettyClient saslNettyClient = SASL.get(channel);
+      if (SASL.get(channel) == null) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("authenticateOnChannel: Creating saslNettyClient now " +
+              "for channel: " + channel);
+        }
+        saslNettyClient = new SaslNettyClient();
+        SASL.set(channel, saslNettyClient);
+      }
+      if (!saslNettyClient.isComplete()) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("authenticateOnChannel: Waiting for authentication " +
+              "to complete..");
+        }
+        SaslTokenMessageRequest saslTokenMessage = saslNettyClient.firstToken();
+        sendWritableRequest(taskId, (InetSocketAddress) channel
+            .getRemoteAddress(),
+          saslTokenMessage);
+        // We now wait for Netty's thread pool to communicate over this
+        // channel to authenticate with another worker acting as a server.
+        try {
+          synchronized (saslNettyClient.getAuthenticated()) {
+            while (!saslNettyClient.isComplete()) {
+              saslNettyClient.getAuthenticated().wait();
+            }
+          }
+        } catch (InterruptedException e) {
+          LOG.error("authenticateOnChannel: Interrupted while waiting for " +
+              "authentication.");
+        }
+      }
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("authenticateOnChannel: Authentication on channel: " +
+            channel + " has completed successfully.");
+      }
+    } catch (IOException e) {
+      LOG.error("authenticateOnChannel: Failed to authenticate with server " +
+          "due to error: " + e);
+    }
+    return;
+  }
+/*end[HADOOP_NON_SECURE]*/
+
   /**
    * Stop the client.
    */
@@ -436,7 +563,7 @@ public class NettyClient {
     // Get rid of the failed channel
     addressChannelMap.get(remoteServer).removeLast();
     if (LOG.isInfoEnabled()) {
-      LOG.info("checkAndFixChannel: Fixing disconnected channel to " +
+      LOG.info("getNextChannel: Fixing disconnected channel to " +
           remoteServer + ", open = " + channel.isOpen() + ", " +
           "bound = " + channel.isBound());
     }
@@ -446,24 +573,24 @@ public class NettyClient {
       connectionFuture.awaitUninterruptibly();
       if (connectionFuture.isSuccess()) {
         if (LOG.isInfoEnabled()) {
-          LOG.info("checkAndFixChannel: Connected to " + remoteServer + "!");
+          LOG.info("getNextChannel: Connected to " + remoteServer + "!");
         }
         addressChannelMap.get(remoteServer).addChannel(
             connectionFuture.getChannel());
         return connectionFuture.getChannel();
       }
       ++reconnectFailures;
-      LOG.warn("checkAndFixChannel: Failed to reconnect to " +  remoteServer +
+      LOG.warn("getNextChannel: Failed to reconnect to " +  remoteServer +
           " on attempt " + reconnectFailures + " out of " +
           maxConnectionFailures + " max attempts, sleeping for 5 secs",
           connectionFuture.getCause());
       try {
         Thread.sleep(5000);
       } catch (InterruptedException e) {
-        LOG.warn("blockingConnect: Unexpected interrupted exception", e);
+        LOG.warn("getNextChannel: Unexpected interrupted exception", e);
       }
     }
-    throw new IllegalStateException("checkAndFixChannel: Failed to connect " +
+    throw new IllegalStateException("getNextChannel: Failed to connect " +
         "to " + remoteServer + " in " + reconnectFailures +
         " connect attempts");
   }
@@ -481,22 +608,30 @@ public class NettyClient {
     if (clientRequestIdRequestInfoMap.isEmpty()) {
       byteCounter.resetAll();
     }
+    boolean registerRequest = true;
+/*if[HADOOP_NON_SECURE]
+else[HADOOP_NON_SECURE]*/
+    if (request.getType() == RequestType.SASL_TOKEN_MESSAGE_REQUEST) {
+      registerRequest = false;
+    }
+/*end[HADOOP_NON_SECURE]*/
 
     Channel channel = getNextChannel(remoteServer);
-    request.setClientId(clientId);
-    request.setRequestId(
-        addressRequestIdGenerator.getNextRequestId(remoteServer));
-
     RequestInfo newRequestInfo = new RequestInfo(remoteServer, request);
-    RequestInfo oldRequestInfo = clientRequestIdRequestInfoMap.putIfAbsent(
-        new ClientRequestId(destWorkerId, request.getRequestId()),
-            newRequestInfo);
-    if (oldRequestInfo != null) {
-      throw new IllegalStateException("sendWritableRequest: Impossible to " +
+    if (registerRequest) {
+      request.setClientId(clientId);
+      request.setRequestId(
+        addressRequestIdGenerator.getNextRequestId(remoteServer));
+      ClientRequestId clientRequestId =
+        new ClientRequestId(destWorkerId, request.getRequestId());
+      RequestInfo oldRequestInfo = clientRequestIdRequestInfoMap.putIfAbsent(
+        clientRequestId, newRequestInfo);
+      if (oldRequestInfo != null) {
+        throw new IllegalStateException("sendWritableRequest: Impossible to " +
           "have a previous request id = " + request.getRequestId() + ", " +
           "request info of " + oldRequestInfo);
+      }
     }
-
     ChannelFuture writeFuture = channel.write(request);
     newRequestInfo.setWriteFuture(writeFuture);
 

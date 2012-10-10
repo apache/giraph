@@ -563,6 +563,14 @@ public class GiraphConfiguration extends Configuration {
   public static final String DEFAULT_ZOOKEEPER_SKIP_ACL = "yes";
 
   /**
+   * Whether to use SASL with DIGEST and Hadoop Job Tokens to authenticate
+   * and authorize Netty BSP Clients to Servers.
+   */
+  public static final String AUTHENTICATE = "giraph.authenticate";
+  /** Default is not to do authenticate and authorization with Netty. */
+  public static final boolean DEFAULT_AUTHENTICATE = false;
+
+  /**
    * Constructor that creates the configuration
    */
   public GiraphConfiguration() { }
@@ -840,5 +848,14 @@ public class GiraphConfiguration extends Configuration {
           "tasks!");
     }
     return mapTasks;
+  }
+
+  /**
+   * Use authentication? (if supported)
+   *
+   * @return True if should authenticate, false otherwise
+   */
+  public boolean authenticate() {
+    return getBoolean(AUTHENTICATE, DEFAULT_AUTHENTICATE);
   }
 }

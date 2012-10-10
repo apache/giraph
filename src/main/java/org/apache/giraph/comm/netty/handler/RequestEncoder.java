@@ -81,7 +81,7 @@ public class RequestEncoder extends OneToOneEncoder {
     if (LOG.isDebugEnabled()) {
       LOG.debug("encode: Client " + writableRequest.getClientId() + ", " +
           "requestId " + writableRequest.getRequestId() +
-          ", size = " + encodedBuffer.writerIndex() +
+          ", size = " + encodedBuffer.writerIndex() + ", " +
           writableRequest.getType() + " took " +
           SystemTime.getInstance().getNanosecondsSince(
               startEncodingNanoseconds) + " ns");

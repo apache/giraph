@@ -19,11 +19,6 @@
 package org.apache.giraph.comm;
 
 import org.apache.giraph.graph.Vertex;
-/*if[HADOOP_NON_SECURE]
- else[HADOOP_NON_SECURE]*/
-import org.apache.giraph.hadoop.BspTokenSelector;
-import org.apache.hadoop.security.token.TokenInfo;
-/*end[HADOOP_NON_SECURE]*/
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.ipc.VersionedProtocol;
@@ -40,10 +35,6 @@ import java.io.IOException;
  * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
-/*if[HADOOP_NON_SECURE]
- else[HADOOP_NON_SECURE]*/
-@TokenInfo(BspTokenSelector.class)
-/*end[HADOOP_NON_SECURE]*/
 public interface CommunicationsInterface<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
     extends VersionedProtocol {

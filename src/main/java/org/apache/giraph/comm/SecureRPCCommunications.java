@@ -46,7 +46,6 @@ import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.hadoop.BspPolicyProvider;
 
-
 /*if[HADOOP_NON_INTERVERSIONED_RPC]
 else[HADOOP_NON_INTERVERSIONED_RPC]*/
 import org.apache.hadoop.ipc.ProtocolSignature;
@@ -148,8 +147,7 @@ public class SecureRPCCommunications<I extends WritableComparable,
       }
     }
 
-    // TODO: make munge tag more specific: just use HADOOP_1 maybe.
-    /*if[HADOOP_1_AUTHORIZATION]
+/*if[HADOOP_1_SECURITY]
     // Hadoop 1-style authorization.
     Server server = RPC.getServer(this,
       myAddress.getHostName(), myAddress.getPort(),
@@ -160,7 +158,7 @@ public class SecureRPCCommunications<I extends WritableComparable,
     if (conf.getBoolean(hadoopSecurityAuthorization, false)) {
       ServiceAuthorizationManager.refresh(conf, new BspPolicyProvider());
     }
-    else[HADOOP_1_AUTHORIZATION]*/
+else[HADOOP_1_SECURITY]*/
     // Hadoop 2+-style authorization.
     Server server = RPC.getServer(this,
       myAddress.getHostName(), myAddress.getPort(),
@@ -172,7 +170,7 @@ public class SecureRPCCommunications<I extends WritableComparable,
       ServiceAuthorizationManager sam = new ServiceAuthorizationManager();
       sam.refresh(conf, new BspPolicyProvider());
     }
-    /*end[HADOOP_1_AUTHORIZATION]*/
+/*end[HADOOP_1_SECURITY]*/
     return server;
   }
 

@@ -69,7 +69,7 @@ public class NettyWorkerClient<I extends WritableComparable,
   /** Class logger */
   private static final Logger LOG =
     Logger.getLogger(NettyWorkerClient.class);
-  /** signal for getInetSocketAddress() to use WorkerInfo's address */
+  /** Signal for getInetSocketAddress() to use WorkerInfo's address */
   private static final int NO_PARTITION_ID = Integer.MIN_VALUE;
   /** Hadoop configuration */
   private final ImmutableClassesGiraphConfiguration<I, V, E, M> conf;
@@ -470,8 +470,26 @@ public class NettyWorkerClient<I extends WritableComparable,
     nettyClient.stop();
   }
 
+/*if[HADOOP_NON_SECURE]
   @Override
   public void setup() {
     fixPartitionIdToSocketAddrMap();
   }
+else[HADOOP_NON_SECURE]*/
+  @Override
+  public void setup(boolean authenticate) {
+    fixPartitionIdToSocketAddrMap();
+    if (authenticate) {
+      authenticate();
+    }
+  }
+/*end[HADOOP_NON_SECURE]*/
+
+/*if[HADOOP_NON_SECURE]
+else[HADOOP_NON_SECURE]*/
+  @Override
+  public void authenticate() {
+    nettyClient.authenticate();
+  }
+/*end[HADOOP_NON_SECURE]*/
 }

@@ -39,10 +39,21 @@ import java.io.IOException;
 @SuppressWarnings("rawtypes")
 public interface WorkerClient<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable> {
+
   /**
    *  Setup the client.
    */
+/*if[HADOOP_NON_SECURE]
   void setup();
+else[HADOOP_NON_SECURE]*/
+  /**
+   * Setup the client.
+   *
+   * @param authenticate whether to SASL authenticate with server or not:
+   * set by giraph.authenticate configuration option.
+   */
+  void setup(boolean authenticate);
+/*end[HADOOP_NON_SECURE]*/
 
   /**
    * Fix changes to the workers and the mapping between partitions and
@@ -123,4 +134,14 @@ public interface WorkerClient<I extends WritableComparable,
    * @throws IOException
    */
   void closeConnections() throws IOException;
+
+/*if[HADOOP_NON_SECURE]
+else[HADOOP_NON_SECURE]*/
+  /**
+   * Authenticates, as client, with another BSP worker, as server.
+   *
+   * @throws IOException
+   */
+  void authenticate() throws IOException;
+/*end[HADOOP_NON_SECURE]*/
 }

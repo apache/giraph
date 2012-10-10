@@ -31,6 +31,7 @@ import org.apache.giraph.graph.partition.Partition;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.log4j.Logger;
 
 import java.io.IOException;
 
@@ -46,6 +47,9 @@ import java.io.IOException;
 public class NettyWorkerClientServer<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
     implements WorkerClientServer<I, V, E, M> {
+  /** Class logger */
+  private static final Logger LOG =
+      Logger.getLogger(NettyWorkerClientServer.class);
   /** Client that sends requests */
   private final WorkerClient<I, V, E, M> client;
   /** Server that processes requests */
@@ -65,8 +69,7 @@ public class NettyWorkerClientServer<I extends WritableComparable,
     server = new NettyWorkerServer<I, V, E, M>(
         configuration, service, context);
     client = new NettyWorkerClient<I, V, E, M>(context,
-        configuration, service,
-       ((NettyWorkerServer<I, V, E, M>) server).getServerData());
+        configuration, service, server.getServerData());
   }
 
   @Override
@@ -123,9 +126,30 @@ public class NettyWorkerClientServer<I extends WritableComparable,
   }
 
   @Override
+/*if[HADOOP_NON_SECURE]
   public void setup() {
     client.fixPartitionIdToSocketAddrMap();
   }
+else[HADOOP_NON_SECURE]*/
+  public void setup(boolean authenticateWithServer) {
+    client.fixPartitionIdToSocketAddrMap();
+    if (authenticateWithServer) {
+      try {
+        client.authenticate();
+      } catch (IOException e) {
+        LOG.error("setup: Failed to authenticate : " + e);
+      }
+    }
+  }
+/*end[HADOOP_NON_SECURE]*/
+
+/*if[HADOOP_NON_SECURE]
+else[HADOOP_NON_SECURE]*/
+  @Override
+  public void authenticate() throws IOException {
+    client.authenticate();
+  }
+/*end[HADOOP_NON_SECURE]*/
 
   @Override
   public void prepareSuperstep() {
