@@ -2,6 +2,10 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-363: Fix hadoop_0.23 profile broken by GIRAPH-211 (ekoontz)
+
+  GIRAPH-211: Add secure authentication to Netty IPC (ekoontz)
+
   GIRAPH-361: Hive output partition parsing is broken (nitay via apresta)
 
   GIRAPH-360: Keep track of the task id in ChannelRotater to send

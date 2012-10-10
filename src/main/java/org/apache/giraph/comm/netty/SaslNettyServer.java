@@ -62,15 +62,14 @@ public class SaslNettyServer extends SaslRpcServer {
     if (LOG.isDebugEnabled()) {
       LOG.debug("SaslNettyServer: Secret manager is: " + secretManager);
     }
-/*if[HADOOP_1_SECURITY]
-else[HADOOP_1_SECURITY]*/
+/*if[HADOOP_1_SECRET_MANAGER]
+else[HADOOP_1_SECRET_MANAGER]*/
     try {
       secretManager.checkAvailableForRead();
     } catch (StandbyException e) {
       LOG.error("SaslNettyServer: Could not read secret manager: " + e);
     }
-/*end[HADOOP_1_SECURITY]*/
-
+/*end[HADOOP_1_SECRET_MANAGER]*/
     try {
       SaslDigestCallbackHandler ch =
           new SaslNettyServer.SaslDigestCallbackHandler(secretManager);

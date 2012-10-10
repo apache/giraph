@@ -558,7 +558,7 @@ under the License.
             </executions>
 	    <!-- profile: hadoop_0.20.203 -->
             <configuration>
-              <symbols>HADOOP_NON_INTERVERSIONED_RPC,HADOOP_NON_JOBCONTEXT_IS_INTERFACE,HADOOP_1_SECURITY</symbols>
+              <symbols>HADOOP_NON_INTERVERSIONED_RPC,HADOOP_NON_JOBCONTEXT_IS_INTERFACE,HADOOP_1_SECURITY,HADOOP_1_SECRET_MANAGER</symbols>
             </configuration>
           </plugin>
         </plugins>
@@ -608,7 +608,7 @@ under the License.
             </executions>
 	    <!-- profile: hadoop_1.0 -->
             <configuration>
-              <symbols>HADOOP_NON_INTERVERSIONED_RPC,HADOOP_NON_JOBCONTEXT_IS_INTERFACE,HADOOP_1_SECURITY</symbols>
+              <symbols>HADOOP_NON_INTERVERSIONED_RPC,HADOOP_NON_JOBCONTEXT_IS_INTERFACE,HADOOP_1_SECURITY,HADOOP_1_SECRET_MANAGER</symbols>
             </configuration>
           </plugin>
         </plugins>
@@ -713,7 +713,7 @@ under the License.
           <groupId>commons-httpclient</groupId>
           <artifactId>commons-httpclient</artifactId>
           <version>3.0.1</version>
-      <scope>runtime</scope>
+	  <scope>runtime</scope>
         </dependency>
       </dependencies>
       <build>
@@ -788,9 +788,6 @@ under the License.
       </build>
     </profile>
 
-    <!-- Help keep future Hadoop versions munge-free: 
-	 All profiles below are munge-free: avoid introducing any munge
-         flags on any of the following profiles. -->
     <profile>
       <id>hadoop_0.23</id>
        <activation>
@@ -800,7 +797,7 @@ under the License.
         </property>
       </activation>
       <properties>
-        <hadoop.version>0.23.1</hadoop.version>
+        <hadoop.version>0.23.3</hadoop.version>
       </properties>
       <dependencies>
         <dependency>
@@ -820,9 +817,42 @@ under the License.
           <artifactId>hadoop-mapreduce-client-common</artifactId>
           <version>${hadoop.version}</version>
         </dependency>
+
+	<dependency>
+	  <groupId>commons-net</groupId>
+	  <artifactId>commons-net</artifactId>
+	  <scope>provided</scope>
+	  <version>3.1</version>
+	</dependency>
+
       </dependencies>
+      <build>
+	<plugins>
+          <plugin>
+            <groupId>org.sonatype.plugins</groupId>
+            <artifactId>munge-maven-plugin</artifactId>
+            <version>${munge-maven-plugin.version}</version>
+            <executions>
+              <execution>
+		<id>munge</id>
+		<phase>generate-sources</phase>
+		<goals>
+                  <goal>munge</goal>
+		</goals>
+              </execution>
+            </executions>
+	    <!-- profile: hadoop_0.23 -->
+            <configuration>
+	      <symbols>HADOOP_1_SECRET_MANAGER</symbols>
+            </configuration>
+          </plugin>
+	</plugins>
+      </build>
     </profile>
 
+    <!-- Help keep future Hadoop versions munge-free: 
+	 All profiles below are munge-free: avoid introducing any munge
+         flags on any of the following profiles. -->
     <profile>
       <id>hadoop_2.0.0</id>
        <activation>
