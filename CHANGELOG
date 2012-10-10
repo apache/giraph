@@ -2,6 +2,8 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-361: Hive output partition parsing is broken (nitay via apresta)
+
   GIRAPH-360: Keep track of the task id in ChannelRotater to send
   requests without knowing the worker id upfront (aching via
   ekoontz)

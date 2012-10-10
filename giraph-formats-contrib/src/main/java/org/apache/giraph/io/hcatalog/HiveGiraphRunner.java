@@ -23,7 +23,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -43,7 +42,6 @@ import org.apache.hcatalog.mapreduce.InputJobInfo;
 import org.apache.hcatalog.mapreduce.OutputJobInfo;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import org.apache.log4j.Logger;
 
 /**
@@ -292,7 +290,7 @@ public class HiveGiraphRunner implements Tool {
     inputTableName = cmdln.getOptionValue("inputTable");
     inputTableFilterExpr = cmdln.getOptionValue("inputFilter");
     outputTableName = cmdln.getOptionValue("outputTable");
-    outputTablePartitionValues = parsePartitionValues(cmdln
+    outputTablePartitionValues = HiveUtils.parsePartitionValues(cmdln
                 .getOptionValue("outputPartition"));
     workers = Integer.parseInt(cmdln.getOptionValue("workers"));
     isVerbose = cmdln.hasOption("verbose");
@@ -362,50 +360,6 @@ public class HiveGiraphRunner implements Tool {
     }
   }
 
-  // TODO use Hive util class if this is already provided by it
-
-  /**
-  * @param outputTablePartitionString table partition string
-  * @return Map
-  */
-  public static Map<String, String> parsePartitionValues(
-            String outputTablePartitionString) {
-    if (outputTablePartitionString != null) {
-      Map<String, String> partitionValues = Maps.newHashMap();
-      for (String partkeyval : outputTablePartitionString.split(" *, *")) {
-        String[] keyval = partkeyval.split(" *= *", 2);
-        if (keyval.length < 2) {
-          throw new IllegalArgumentException(
-              "Unrecognized partition value format: " +
-               outputTablePartitionString);
-        }
-        partitionValues.put(keyval[0], keyval[1]);
-        return partitionValues;
-      }
-    }
-    return null;
-  }
-
-  /**
-  *
-  * @param outputTablePartitionValues  output table partitions
-  * @return  String partition values
-  */
-  private static String serializePartitionValues(
-            Map<String, String> outputTablePartitionValues) {
-    StringBuilder outputTablePartitionValuesString = new StringBuilder();
-    for (Entry<String, String> partitionValueEntry : outputTablePartitionValues
-                .entrySet()) {
-      if (outputTablePartitionValuesString.length() != 0) {
-        outputTablePartitionValuesString.append(",");
-        outputTablePartitionValuesString
-                    .append(partitionValueEntry.getKey()).append("=")
-                    .append(partitionValueEntry.getValue());
-      }
-    }
-    return outputTablePartitionValuesString.toString();
-  }
-
   @Override
   public final Configuration getConf() {
     return conf;
@@ -458,9 +412,8 @@ public class HiveGiraphRunner implements Tool {
     }
     LOG.info(prefix + "-outputTable=" + outputTableName);
     if (outputTablePartitionValues != null) {
-      LOG.info(prefix + "-outputPartition=\""  +
-        serializePartitionValues(outputTablePartitionValues) +
-        "\"");
+      LOG.info(prefix + "-outputPartition=\"" +
+               outputTablePartitionValues + "\"");
     }
     LOG.info(prefix + "-workers=" + workers);
   }
