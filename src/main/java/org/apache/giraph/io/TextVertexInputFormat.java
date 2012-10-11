@@ -178,7 +178,7 @@ public abstract class TextVertexInputFormat<I extends WritableComparable,
     InterruptedException {
       Text line = getRecordReader().getCurrentValue();
       Vertex<I, V, E, M> vertex = getConf().createVertex();
-      vertex.initialize(getId(line), getValue(line), getEdges(line), null);
+      vertex.initialize(getId(line), getValue(line), getEdges(line));
       return vertex;
     }
 
@@ -248,7 +248,7 @@ public abstract class TextVertexInputFormat<I extends WritableComparable,
       T processed = preprocessLine(line);
       vertex = getConf().createVertex();
       vertex.initialize(getId(processed), getValue(processed),
-          getEdges(processed), null);
+          getEdges(processed));
       return vertex;
     }
 
@@ -335,7 +335,7 @@ public abstract class TextVertexInputFormat<I extends WritableComparable,
         Configuration conf = getContext().getConfiguration();
         vertex = getConf().createVertex();
         vertex.initialize(getId(processed), getValue(processed),
-            getEdges(processed), null);
+            getEdges(processed));
       } catch (IOException e) {
         throw e;
       // CHECKSTYLE: stop IllegalCatch

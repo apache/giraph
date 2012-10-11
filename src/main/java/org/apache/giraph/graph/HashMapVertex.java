@@ -24,14 +24,12 @@ import org.apache.log4j.Logger;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -56,17 +54,10 @@ public abstract class HashMapVertex<I extends WritableComparable,
   private static final Logger LOG = Logger.getLogger(HashMapVertex.class);
   /** Map of target vertices and their edge values */
   protected Map<I, E> edgeMap = new HashMap<I, E>();
-  /** List of incoming messages from the previous superstep */
-  private List<M> messageList = Lists.newArrayList();
 
   @Override
-  public void initialize(
-      I id, V value, Map<I, E> edges, Iterable<M> messages) {
-    super.initialize(id, value);
+  public void setEdges(Map<I, E> edges) {
     edgeMap.putAll(edges);
-    if (messages != null) {
-      Iterables.<M>addAll(messageList, messages);
-    }
   }
 
   @Override
@@ -129,28 +120,12 @@ public abstract class HashMapVertex<I extends WritableComparable,
   }
 
   @Override
-  void putMessages(Iterable<M> messages) {
-    messageList.clear();
-    Iterables.addAll(messageList, messages);
-  }
-
-  @Override
-  public Iterable<M> getMessages() {
-    return Iterables.unmodifiableIterable(messageList);
-  }
-
-  @Override
-  public int getNumMessages() {
-    return messageList.size();
-  }
-
-  @Override
   public final void readFields(DataInput in) throws IOException {
     I vertexId = getConf().createVertexId();
     vertexId.readFields(in);
     V vertexValue = getConf().createVertexValue();
     vertexValue.readFields(in);
-    super.initialize(vertexId, vertexValue);
+    initialize(vertexId, vertexValue);
 
     int numEdges = in.readInt();
     edgeMap = Maps.newHashMapWithExpectedSize(numEdges);
@@ -160,14 +135,6 @@ public abstract class HashMapVertex<I extends WritableComparable,
       E edgeValue = getConf().createEdgeValue();
       edgeValue.readFields(in);
       edgeMap.put(targetVertexId, edgeValue);
-    }
-
-    int numMessages = in.readInt();
-    messageList = Lists.newArrayListWithCapacity(numMessages);
-    for (int i = 0; i < numMessages; ++i) {
-      M message = getConf().createMessageValue();
-      message.readFields(in);
-      messageList.add(message);
     }
 
     boolean halt = in.readBoolean();
@@ -189,18 +156,8 @@ public abstract class HashMapVertex<I extends WritableComparable,
       edge.getValue().write(out);
     }
 
-    out.writeInt(messageList.size());
-    for (M message : messageList) {
-      message.write(out);
-    }
-
     out.writeBoolean(isHalted());
   }
 
-  @Override
-  void releaseResources() {
-    // Hint to GC to free the messages
-    messageList.clear();
-  }
 }
 

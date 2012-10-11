@@ -21,24 +21,19 @@ package org.apache.giraph.graph;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import org.apache.giraph.utils.UnmodifiableDoubleArrayIterator;
 import org.apache.giraph.utils.UnmodifiableLongFloatEdgeArrayIterable;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
-
-import com.google.common.collect.Iterables;
 
 /**
  * Compact vertex representation with primitive arrays.
  */
 public abstract class LongDoubleFloatDoubleEdgeListVertex extends
     Vertex<LongWritable, DoubleWritable, FloatWritable, DoubleWritable> {
-
   /** long represented vertex id */
   private long id;
   /** double represented vertex value */
@@ -47,13 +42,10 @@ public abstract class LongDoubleFloatDoubleEdgeListVertex extends
   private long[] neighbors;
   /** float array of edge weights */
   private float[] edgeWeights;
-  /** double array of messages */
-  private double[] messages;
 
   @Override
   public void initialize(LongWritable vertexId, DoubleWritable vertexValue,
-          Map<LongWritable, FloatWritable> edges,
-          Iterable<DoubleWritable> messages) {
+                         Map<LongWritable, FloatWritable> edges) {
     if (vertexId != null) {
       id = vertexId.get();
     }
@@ -70,12 +62,18 @@ public abstract class LongDoubleFloatDoubleEdgeListVertex extends
         n++;
       }
     }
-    this.messages =
-        new double[(messages != null) ? Iterables.size(messages) : 0];
-    if (messages != null) {
+  }
+
+  @Override
+  public void setEdges(Map<LongWritable, FloatWritable> edges) {
+    neighbors = new long[(edges != null) ? edges.size() : 0];
+    edgeWeights = new float[(edges != null) ? edges.size() : 0];
+    if (edges != null) {
       int n = 0;
-      for (DoubleWritable message : messages) {
-        this.messages[n++] = message.get();
+      for (Entry<LongWritable, FloatWritable> neighbor : edges.entrySet()) {
+        neighbors[n] = neighbor.getKey().get();
+        edgeWeights[n] = neighbor.getValue().get();
+        n++;
       }
     }
   }
@@ -135,30 +133,6 @@ public abstract class LongDoubleFloatDoubleEdgeListVertex extends
   }
 
   @Override
-  public Iterable<DoubleWritable> getMessages() {
-    return new Iterable<DoubleWritable>() {
-      @Override
-      public Iterator<DoubleWritable> iterator() {
-        return new UnmodifiableDoubleArrayIterator(messages);
-      }
-    };
-  }
-
-  @Override
-  public void putMessages(Iterable<DoubleWritable> newMessages) {
-    messages = new double[Iterables.size(newMessages)];
-    int n = 0;
-    for (DoubleWritable message : newMessages) {
-      messages[n++] = message.get();
-    }
-  }
-
-  @Override
-  void releaseResources() {
-    messages = new double[0];
-  }
-
-  @Override
   public void write(final DataOutput out) throws IOException {
     out.writeLong(id);
     out.writeDouble(value);
@@ -168,10 +142,6 @@ public abstract class LongDoubleFloatDoubleEdgeListVertex extends
     }
     for (int n = 0; n < edgeWeights.length; n++) {
       out.writeFloat(edgeWeights[n]);
-    }
-    out.writeInt(messages.length);
-    for (int n = 0; n < messages.length; n++) {
-      out.writeDouble(messages[n]);
     }
   }
 
@@ -188,11 +158,6 @@ public abstract class LongDoubleFloatDoubleEdgeListVertex extends
     for (int n = 0; n < numEdges; n++) {
       edgeWeights[n] = in.readFloat();
     }
-    int numMessages = in.readInt();
-    messages = new double[numMessages];
-    for (int n = 0; n < numMessages; n++) {
-      messages[n] = in.readDouble();
-    }
   }
 
   @Override
@@ -201,11 +166,6 @@ public abstract class LongDoubleFloatDoubleEdgeListVertex extends
     int result = 1;
     result = prime * result + (int) (id ^ (id >>> 32));
     return result;
-  }
-
-  @Override
-  public int getNumMessages() {
-    return messages.length;
   }
 
   @Override

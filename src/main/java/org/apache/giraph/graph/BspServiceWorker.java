@@ -24,17 +24,11 @@ import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.comm.WorkerClientServer;
 import org.apache.giraph.comm.netty.NettyWorkerClientServer;
-/*if[HADOOP_NON_SECURE]
-import org.apache.giraph.comm.RPCCommunications;
-else[HADOOP_NON_SECURE]*/
-import org.apache.giraph.comm.SecureRPCCommunications;
-/*end[HADOOP_NON_SECURE]*/
 import org.apache.giraph.graph.partition.Partition;
 import org.apache.giraph.graph.partition.PartitionExchange;
 import org.apache.giraph.graph.partition.PartitionOwner;
 import org.apache.giraph.graph.partition.PartitionStats;
 import org.apache.giraph.graph.partition.PartitionStore;
-import org.apache.giraph.graph.partition.SimplePartitionStore;
 import org.apache.giraph.graph.partition.WorkerGraphPartitioner;
 import org.apache.giraph.utils.MemoryUtils;
 import org.apache.giraph.utils.WritableUtils;
@@ -121,10 +115,6 @@ public class BspServiceWorker<I extends WritableComparable,
   /** Input split max vertices (-1 denotes all) */
   private final long inputSplitMaxVertices;
   /**
-   * Partition store for worker (only used by the Hadoop RPC implementation).
-   */
-  private final PartitionStore<I, V, E, M> workerPartitionStore;
-  /**
    * Stores and processes the list of InputSplits advertised
    * in a tree of child znodes by the master.
    */
@@ -162,27 +152,14 @@ public class BspServiceWorker<I extends WritableComparable,
             GiraphConfiguration.INPUT_SPLIT_MAX_VERTICES_DEFAULT);
     workerGraphPartitioner =
         getGraphPartitionerFactory().createWorkerGraphPartitioner();
-    boolean useNetty = getConfiguration().getUseNetty();
-    if (useNetty) {
-      commService =  new NettyWorkerClientServer<I, V, E, M>(
-          context, getConfiguration(), this);
-    } else {
-/*if[HADOOP_NON_SECURE]
-      commService =
-          new RPCCommunications<I, V, E, M>(context, this, getConfiguration(),
-          graphState);
-else[HADOOP_NON_SECURE]*/
-      commService =
-        new SecureRPCCommunications<I, V, E, M>(context, this,
-          getConfiguration(), graphState);
-/*end[HADOOP_NON_SECURE]*/
-    }
+    commService =  new NettyWorkerClientServer<I, V, E, M>(
+        context, getConfiguration(), this);
+
     if (LOG.isInfoEnabled()) {
       LOG.info("BspServiceWorker: maxVerticesPerTransfer = " +
           transferRegulator.getMaxVerticesPerTransfer());
       LOG.info("BspServiceWorker: maxEdgesPerTransfer = " +
-          transferRegulator.getMaxEdgesPerTransfer() +
-          " useNetty = " + useNetty);
+          transferRegulator.getMaxEdgesPerTransfer());
     }
 
     workerInfo = new WorkerInfo(
@@ -191,14 +168,6 @@ else[HADOOP_NON_SECURE]*/
     graphState.setWorkerCommunications(commService);
     this.workerContext =
         getConfiguration().createWorkerContext(graphMapper.getGraphState());
-
-    if (useNetty) {
-      workerPartitionStore = null;
-    } else {
-      workerPartitionStore =
-          new SimplePartitionStore<I, V, E, M>(getConfiguration(),
-              getContext());
-    }
 
     aggregatorHandler = new WorkerAggregatorHandler();
   }
@@ -542,12 +511,6 @@ else[HADOOP_NON_SECURE]*/
   }
 
   @Override
-  public void assignMessagesToVertex(Vertex<I, V, E, M> vertex,
-      Iterable<M> messages) {
-    vertex.putMessages(messages);
-  }
-
-  @Override
   public WorkerInfo getMasterInfo() {
     return masterInfo;
   }
@@ -840,12 +803,9 @@ else[HADOOP_NON_SECURE]*/
           "startSuperstep: InterruptedException getting assignments", e);
     }
 
-
-    if (getConfiguration().getUseNetty()) {
-      // get address of master
-      WritableUtils.readFieldsFromZnode(getZkExt(), currentMasterPath, false,
-          null, masterInfo);
-    }
+    // get address of master
+    WritableUtils.readFieldsFromZnode(getZkExt(), currentMasterPath, false,
+        null, masterInfo);
 
     if (LOG.isInfoEnabled()) {
       LOG.info("startSuperstep: Ready for computation on superstep " +
@@ -1097,7 +1057,6 @@ else[HADOOP_NON_SECURE]*/
       LOG.warn("storeCheckpoint: Removed file " + verticesFilePath);
     }
 
-    boolean useNetty = getConfiguration().getUseNetty();
     FSDataOutputStream verticesOutputStream =
         getFs().create(verticesFilePath);
     ByteArrayOutputStream metadataByteStream = new ByteArrayOutputStream();
@@ -1107,11 +1066,8 @@ else[HADOOP_NON_SECURE]*/
       long startPos = verticesOutputStream.getPos();
       partition.write(verticesOutputStream);
       // write messages
-      verticesOutputStream.writeBoolean(useNetty);
-      if (useNetty) {
-        getServerData().getCurrentMessageStore().writePartition(
-            verticesOutputStream, partition.getId());
-      }
+      getServerData().getCurrentMessageStore().writePartition(
+          verticesOutputStream, partition.getId());
       // Write the metadata for this partition
       // Format:
       // <index count>
@@ -1166,16 +1122,13 @@ else[HADOOP_NON_SECURE]*/
 
   @Override
   public void loadCheckpoint(long superstep) {
-    if (getConfiguration().getBoolean(GiraphConfiguration.USE_NETTY,
-        GiraphConfiguration.USE_NETTY_DEFAULT)) {
-      try {
-        // clear old message stores
-        getServerData().getIncomingMessageStore().clearAll();
-        getServerData().getCurrentMessageStore().clearAll();
-      } catch (IOException e) {
-        throw new RuntimeException(
-            "loadCheckpoint: Failed to clear message stores ", e);
-      }
+    try {
+      // clear old message stores
+      getServerData().getIncomingMessageStore().clearAll();
+      getServerData().getCurrentMessageStore().clearAll();
+    } catch (IOException e) {
+      throw new RuntimeException(
+          "loadCheckpoint: Failed to clear message stores ", e);
     }
 
     // Algorithm:
@@ -1462,11 +1415,7 @@ else[HADOOP_NON_SECURE]*/
 
   @Override
   public PartitionStore<I, V, E, M> getPartitionStore() {
-    if (workerPartitionStore != null) {
-      return workerPartitionStore;
-    } else {
-      return getServerData().getPartitionStore();
-    }
+    return getServerData().getPartitionStore();
   }
 
   @Override

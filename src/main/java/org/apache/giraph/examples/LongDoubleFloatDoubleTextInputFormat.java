@@ -31,7 +31,6 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 /**
@@ -78,8 +77,7 @@ public class LongDoubleFloatDoubleTextInputFormat
       }
 
       LongWritable vertexId = new LongWritable(Long.parseLong(tokens[0]));
-      vertex.initialize(vertexId, new DoubleWritable(), edges,
-          Lists.<DoubleWritable>newArrayList());
+      vertex.initialize(vertexId, new DoubleWritable(), edges);
 
       return vertex;
     }

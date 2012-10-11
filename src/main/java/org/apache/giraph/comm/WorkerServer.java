@@ -44,7 +44,7 @@ public interface WorkerServer<I extends WritableComparable,
 
   /**
    * Move the in transition messages to the in messages for every vertex and
-   * add new connections to any newly appearing RPC proxies.
+   * add new connections to any newly appearing IPC proxies.
    */
   void prepareSuperstep();
 

@@ -145,7 +145,7 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat extends
     for(Edge<I, E> edge : edges) {
       edgeMap.put(edge.getTargetVertexId(), edge.getValue());
     }
-    expected.initialize(expectedId, expectedValue, edgeMap, null);
+    expected.initialize(expectedId, expectedValue, edgeMap);
     assertValid(expected, actual);
   }
 

@@ -88,7 +88,6 @@ public class VertexResolver<I extends WritableComparable, V extends Writable,
         vertex = instantiateVertex();
         vertex.initialize(vertexId,
             getConf().createVertexValue(),
-            null,
             null);
       }
     } else {

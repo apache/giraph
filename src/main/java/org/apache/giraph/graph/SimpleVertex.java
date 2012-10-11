@@ -28,10 +28,9 @@ import com.google.common.collect.Iterables;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.annotation.Nullable;
 
@@ -44,6 +43,18 @@ import javax.annotation.Nullable;
 public abstract class SimpleVertex<I extends WritableComparable,
     V extends Writable, M extends Writable> extends Vertex<I, V,
     NullWritable, M> {
+  /**
+   * Set the neighbors of this vertex.
+   *
+   * @param neighbors Set of destination vertex ids.
+   */
+  public abstract void setNeighbors(Set<I> neighbors);
+
+  @Override
+  public void setEdges(Map<I, NullWritable> edges) {
+    setNeighbors(edges.keySet());
+  }
+
   /**
    * Get a read-only view of the neighbors of this
    * vertex, i.e. the target vertices of its out-edges.
@@ -84,14 +95,7 @@ public abstract class SimpleVertex<I extends WritableComparable,
       edges.put(targetVertexId, NullWritable.get());
     }
 
-    int numMessages = in.readInt();
-    List<M> messages = new ArrayList<M>(numMessages);
-    for (int i = 0; i < numMessages; ++i) {
-      M message = getConf().createMessageValue();
-      message.readFields(in);
-      messages.add(message);
-    }
-    initialize(vertexId, vertexValue, edges, messages);
+    initialize(vertexId, vertexValue, edges);
 
     boolean halt = in.readBoolean();
     if (halt) {
@@ -109,11 +113,6 @@ public abstract class SimpleVertex<I extends WritableComparable,
     out.writeInt(getNumEdges());
     for (I neighbor : getNeighbors()) {
       neighbor.write(out);
-    }
-
-    out.writeInt(getNumMessages());
-    for (M message : getMessages()) {
-      message.write(out);
     }
 
     out.writeBoolean(isHalted());

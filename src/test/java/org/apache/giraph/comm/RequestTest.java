@@ -117,7 +117,7 @@ public class RequestTest {
         IntWritable, IntWritable>>();
     for (int i = 0; i < 10; ++i) {
       TestVertex vertex = new TestVertex();
-      vertex.initialize(new IntWritable(i), new IntWritable(i), null, null);
+      vertex.initialize(new IntWritable(i), new IntWritable(i));
       vertices.add(vertex);
     }
 
@@ -210,7 +210,7 @@ public class RequestTest {
       IntWritable, IntWritable>();
       for (int j = 0; j < 3; ++j) {
         TestVertex vertex = new TestVertex();
-        vertex.initialize(new IntWritable(i), new IntWritable(j), null, null);
+        vertex.initialize(new IntWritable(i), new IntWritable(j));
         mutations.addVertex(vertex);
       }
       for (int j = 0; j < 2; ++j) {

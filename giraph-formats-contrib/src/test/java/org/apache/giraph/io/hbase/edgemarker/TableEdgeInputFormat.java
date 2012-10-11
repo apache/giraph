@@ -93,7 +93,7 @@ public class TableEdgeInputFormat extends
             Text vertexValue = new Text();
             Text edgeId = new Text(edge);
             edges.put(edgeId, uselessEdgeValue);
-            vertex.initialize(vertexId, vertexValue, edges, null);
+            vertex.initialize(vertexId, vertexValue, edges);
 
             return vertex;
         }

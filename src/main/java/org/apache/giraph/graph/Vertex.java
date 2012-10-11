@@ -25,13 +25,12 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -58,7 +57,6 @@ public abstract class Vertex<I extends WritableComparable,
   /** Configuration */
   private ImmutableClassesGiraphConfiguration<I, V, E, M> conf;
 
-
   /**
    * This method must be called after instantiation of a vertex
    * with ImmutableClassesGiraphConfiguration
@@ -67,15 +65,17 @@ public abstract class Vertex<I extends WritableComparable,
    *
    * @param id Will be the vertex id
    * @param value Will be the vertex value
-   * @param edges A map of destination edge ids to edge values (can be null)
-   * @param messages Initial messages for this vertex (can be null)
+   * @param edges A map of destination vertex ids to edge values
    */
-  public abstract void initialize(
-      I id, V value, Map<I, E> edges, Iterable<M> messages);
+  public void initialize(I id, V value, Map<I, E> edges) {
+    this.id = id;
+    this.value = value;
+    setEdges(edges);
+  }
 
   /**
-   * This method must be called once by the subclass's initialize() or by
-   * readFields() in order to set id and value.
+   * This method only sets id and value. Can be used by Vertex
+   * implementations in readFields().
    *
    * @param id Vertex id
    * @param value Vertex value
@@ -83,7 +83,15 @@ public abstract class Vertex<I extends WritableComparable,
   public void initialize(I id, V value) {
     this.id = id;
     this.value = value;
+    setEdges(Maps.<I, E>newHashMapWithExpectedSize(0));
   }
+
+  /**
+   * Set the outgoing edges for this vertex.
+   *
+   * @param edges Map of destination vertices to edge values
+   */
+  public abstract void setEdges(Map<I, E> edges);
 
   /**
    * Must be defined by user to do computation on a single Vertex.
@@ -253,35 +261,6 @@ public abstract class Vertex<I extends WritableComparable,
   }
 
   /**
-   *  Get the list of incoming messages from the previous superstep.  Same as
-   *  the message iterator passed to compute().
-   *
-   *  @return Messages received.
-   */
-  public abstract Iterable<M> getMessages();
-
-  /**
-   * Get the number of messages from the previous superstep.
-   * @return Number of messages received.
-   */
-  public int getNumMessages() {
-    return Iterables.size(getMessages());
-  }
-
-  /**
-   * Copy the messages this vertex should process in the current superstep
-   *
-   * @param messages the messages sent to this vertex in the previous superstep
-   */
-  abstract void putMessages(Iterable<M> messages);
-
-  /**
-   * Release unnecessary resources (will be called after vertex returns from
-   * {@link #compute(Iterable)})
-   */
-  abstract void releaseResources();
-
-  /**
    * Get the graph state for all workers.
    *
    * @return Graph state for all workers
@@ -295,7 +274,7 @@ public abstract class Vertex<I extends WritableComparable,
    *
    * @param graphState Graph state for all workers
    */
-  public void setGraphState(GraphState<I, V, E, M> graphState) {
+  void setGraphState(GraphState<I, V, E, M> graphState) {
     this.graphState = graphState;
   }
 
@@ -346,14 +325,7 @@ public abstract class Vertex<I extends WritableComparable,
       edges.put(targetVertexId, edgeValue);
     }
 
-    int numMessages = in.readInt();
-    List<M> messages = new ArrayList<M>(numMessages);
-    for (int i = 0; i < numMessages; ++i) {
-      M message = (M) getConf().createMessageValue();
-      message.readFields(in);
-      messages.add(message);
-    }
-    initialize(vertexId, vertexValue, edges, messages);
+    initialize(vertexId, vertexValue, edges);
 
     halt = in.readBoolean();
   }
@@ -367,11 +339,6 @@ public abstract class Vertex<I extends WritableComparable,
     for (Edge<I, E> edge : getEdges()) {
       edge.getTargetVertexId().write(out);
       edge.getValue().write(out);
-    }
-
-    out.writeInt(getNumMessages());
-    for (M message : getMessages()) {
-      message.write(out);
     }
 
     out.writeBoolean(halt);

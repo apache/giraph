@@ -46,7 +46,7 @@ public class SimpleTriangleClosingVertexTest {
       new SimpleTriangleClosingVertex();
     SimpleTriangleClosingVertex.IntArrayListWritable alw =
       new SimpleTriangleClosingVertex.IntArrayListWritable();
-    vertex.initialize(null, null, null, null);
+    vertex.initialize(null, null);
     vertex.addEdge(new IntWritable(5), NullWritable.get());
     vertex.addEdge(new IntWritable(7), NullWritable.get());
 
@@ -72,7 +72,7 @@ public class SimpleTriangleClosingVertexTest {
     // messages properly to verify the algorithm
     SimpleTriangleClosingVertex vertex =
       new SimpleTriangleClosingVertex();
-    vertex.initialize(null, null, null, null);
+    vertex.initialize(null, null);
     MockUtils.MockedEnvironment<IntWritable,
       SimpleTriangleClosingVertex.IntArrayListWritable,
       NullWritable, IntWritable>

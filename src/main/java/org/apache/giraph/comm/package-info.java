@@ -16,6 +16,6 @@
  * limitations under the License.
  */
 /**
- * Package of communication related objects, RPC service.
+ * Package of communication related objects, IPC service.
  */
 package org.apache.giraph.comm;

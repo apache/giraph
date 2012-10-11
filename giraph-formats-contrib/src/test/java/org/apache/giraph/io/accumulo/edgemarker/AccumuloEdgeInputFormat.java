@@ -87,7 +87,7 @@ public class AccumuloEdgeInputFormat
               String edge = new String(value.get());
               Text edgeId = new Text(edge);
               edges.put(edgeId, uselessEdgeValue);
-              vertex.initialize(vertexId, new Text(), edges, null);
+              vertex.initialize(vertexId, new Text(), edges);
 
             return vertex;
         }

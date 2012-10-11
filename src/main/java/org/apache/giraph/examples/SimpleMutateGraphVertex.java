@@ -87,7 +87,7 @@ public class SimpleMutateGraphVertex extends EdgeListVertex<
           new LongWritable(rangeVertexIdStart(3) + getId().get());
       Vertex<LongWritable, DoubleWritable,
             FloatWritable, DoubleWritable> vertex =
-        instantiateVertex(vertexIndex, new DoubleWritable(0.0), null, null);
+        instantiateVertex(vertexIndex, new DoubleWritable(0.0), null);
       addVertexRequest(vertex);
       // Add edges to those remote vertices as well
       addEdgeRequest(vertexIndex,

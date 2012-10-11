@@ -156,11 +156,6 @@ public class GiraphConfiguration extends Configuration {
   /** Local ZooKeeper directory to use */
   public static final String ZOOKEEPER_DIR = "giraph.zkDir";
 
-  /** Use the RPC communication or netty communication */
-  public static final String USE_NETTY = "giraph.useNetty";
-  /** Default is to use RPC, not netty */
-  public static final boolean USE_NETTY_DEFAULT = false;
-
   /** TCP backlog (defaults to number of workers) */
   public static final String TCP_BACKLOG = "giraph.tcpBacklog";
   /**
@@ -278,29 +273,24 @@ public class GiraphConfiguration extends Configuration {
   /** Default Netty max connection failures */
   public static final int NETTY_MAX_CONNECTION_FAILURES_DEFAULT = 1000;
 
-  /** Initial port to start using for the RPC communication */
-  public static final String RPC_INITIAL_PORT = "giraph.rpcInitialPort";
-  /** Default port to start using for the RPC communication */
-  public static final int RPC_INITIAL_PORT_DEFAULT = 30000;
+  /** Initial port to start using for the IPC communication */
+  public static final String IPC_INITIAL_PORT = "giraph.ipcInitialPort";
+  /** Default port to start using for the IPC communication */
+  public static final int IPC_INITIAL_PORT_DEFAULT = 30000;
 
-  /** Maximum bind attempts for different RPC ports */
-  public static final String MAX_RPC_PORT_BIND_ATTEMPTS =
-      "giraph.maxRpcPortBindAttempts";
-  /** Default maximum bind attempts for different RPC ports */
-  public static final int MAX_RPC_PORT_BIND_ATTEMPTS_DEFAULT = 20;
+  /** Maximum bind attempts for different IPC ports */
+  public static final String MAX_IPC_PORT_BIND_ATTEMPTS =
+      "giraph.maxIpcPortBindAttempts";
+  /** Default maximum bind attempts for different IPC ports */
+  public static final int MAX_IPC_PORT_BIND_ATTEMPTS_DEFAULT = 20;
   /**
-   * Fail first RPC port binding attempt, simulate binding failure
+   * Fail first IPC port binding attempt, simulate binding failure
    * on real grid testing
    */
-  public static final String FAIL_FIRST_RPC_PORT_BIND_ATTEMPT =
-      "giraph.failFirstRpcPortBindAttempt";
-  /** Default fail first RPC port binding attempt flag */
-  public static final boolean FAIL_FIRST_RPC_PORT_BIND_ATTEMPT_DEFAULT = false;
-
-  /** Maximum number of RPC handlers */
-  public static final String RPC_NUM_HANDLERS = "giraph.rpcNumHandlers";
-  /** Default maximum number of RPC handlers */
-  public static final int RPC_NUM_HANDLERS_DEFAULT = 100;
+  public static final String FAIL_FIRST_IPC_PORT_BIND_ATTEMPT =
+      "giraph.failFirstIpcPortBindAttempt";
+  /** Default fail first IPC port binding attempt flag */
+  public static final boolean FAIL_FIRST_IPC_PORT_BIND_ATTEMPT_DEFAULT = false;
 
   /** Client send buffer size */
   public static final String CLIENT_SEND_BUFFER_SIZE =
@@ -760,10 +750,6 @@ public class GiraphConfiguration extends Configuration {
 
   public boolean getLocalTestMode() {
     return getBoolean(LOCAL_TEST_MODE, LOCAL_TEST_MODE_DEFAULT);
-  }
-
-  public boolean getUseNetty() {
-    return getBoolean(USE_NETTY, USE_NETTY_DEFAULT);
   }
 
   public int getZooKeeperServerCount() {

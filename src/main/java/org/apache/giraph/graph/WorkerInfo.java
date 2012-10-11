@@ -33,7 +33,7 @@ public class WorkerInfo implements Writable {
   private String hostname;
   /** Task Partition (Worker) ID of this worker */
   private int taskId = -1;
-  /** Port that the RPC server is using */
+  /** Port that the IPC server is using */
   private int port = -1;
   /** Hostname + "_" + id for easier debugging */
   private String hostnameId;

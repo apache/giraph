@@ -59,11 +59,7 @@ public class TestIntIntNullIntVertex {
     edges.put(new IntWritable(3), NullWritable.get());
     edges.put(new IntWritable(47), NullWritable.get());
 
-    List<IntWritable> messages = Lists.newArrayList(new IntWritable(943),
-        new IntWritable(571));
-
-    vertex.initialize(new IntWritable(23), new IntWritable(7), edges,
-        messages);
+    vertex.initialize(new IntWritable(23), new IntWritable(7), edges);
     vertex.voteToHalt();
 
     ByteArrayOutputStream outStream = new ByteArrayOutputStream();
@@ -78,8 +74,6 @@ public class TestIntIntNullIntVertex {
     vertex1.readFields(in);
 
     assertEquals(2, vertex1.getNumEdges());
-    assertEquals(Lists.newArrayList(new IntWritable(943),
-        new IntWritable(571)), Lists.newArrayList(vertex1.getMessages()));
     assertEquals(true, vertex1.isHalted());
   }
 }

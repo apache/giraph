@@ -62,15 +62,14 @@ public abstract class MutableVertex<I extends WritableComparable,
    * @param vertexId Id of the new vertex.
    * @param vertexValue Value of the new vertex.
    * @param edges Map of edges to be added to this vertex.
-   * @param messages Messages to be added to the vertex (typically empty)
    * @return A new vertex for adding to the graph
    */
   public Vertex<I, V, E, M> instantiateVertex(
-      I vertexId, V vertexValue, Map<I, E> edges, Iterable<M> messages) {
+      I vertexId, V vertexValue, Map<I, E> edges) {
     MutableVertex<I, V, E, M> mutableVertex =
         (MutableVertex<I, V, E, M>) getConf().createVertex();
     mutableVertex.setGraphState(getGraphState());
-    mutableVertex.initialize(vertexId, vertexValue, edges, messages);
+    mutableVertex.initialize(vertexId, vertexValue, edges);
     return mutableVertex;
   }
 

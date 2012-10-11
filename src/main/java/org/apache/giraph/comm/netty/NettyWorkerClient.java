@@ -18,7 +18,6 @@
 
 package org.apache.giraph.comm.netty;
 
-import java.util.Iterator;
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
@@ -49,6 +48,7 @@ import com.google.common.collect.Maps;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
@@ -134,7 +134,7 @@ public class NettyWorkerClient<I extends WritableComparable,
   @Override
   public void fixPartitionIdToSocketAddrMap() {
     // 1. Fix all the cached inet addresses (remove all changed entries)
-    // 2. Connect to any new RPC servers
+    // 2. Connect to any new IPC servers
     Map<InetSocketAddress, Integer> addressTaskIdMap =
         Maps.newHashMapWithExpectedSize(service.getPartitionOwners().size());
     for (PartitionOwner partitionOwner : service.getPartitionOwners()) {
@@ -165,12 +165,8 @@ public class NettyWorkerClient<I extends WritableComparable,
             partitionOwner.getWorkerInfo().getTaskId());
       }
     }
-    boolean useNetty = conf.getBoolean(GiraphConfiguration.USE_NETTY,
-        GiraphConfiguration.USE_NETTY_DEFAULT);
-    if (useNetty) {
-      addressTaskIdMap.put(service.getMasterInfo().getInetSocketAddress(),
-                           null);
-    }
+    addressTaskIdMap.put(service.getMasterInfo().getInetSocketAddress(),
+        null);
     nettyClient.connectAllAddresses(addressTaskIdMap);
   }
 

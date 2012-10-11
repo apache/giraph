@@ -103,25 +103,25 @@ public class TestPartitionStores {
       ImmutableClassesGiraphConfiguration conf) {
     Vertex<IntWritable, IntWritable, NullWritable, IntWritable> v1 =
         new MyVertex();
-    v1.initialize(new IntWritable(1), new IntWritable(1), null, null);
+    v1.initialize(new IntWritable(1), new IntWritable(1));
     Vertex<IntWritable, IntWritable, NullWritable, IntWritable> v2 =
         new MyVertex();
-    v2.initialize(new IntWritable(2), new IntWritable(2), null, null);
+    v2.initialize(new IntWritable(2), new IntWritable(2));
     Vertex<IntWritable, IntWritable, NullWritable, IntWritable> v3 =
         new MyVertex();
-    v3.initialize(new IntWritable(3), new IntWritable(3), null, null);
+    v3.initialize(new IntWritable(3), new IntWritable(3));
     Vertex<IntWritable, IntWritable, NullWritable, IntWritable> v4 =
         new MyVertex();
-    v4.initialize(new IntWritable(4), new IntWritable(4), null, null);
+    v4.initialize(new IntWritable(4), new IntWritable(4));
     Vertex<IntWritable, IntWritable, NullWritable, IntWritable> v5 =
         new MyVertex();
-    v5.initialize(new IntWritable(5), new IntWritable(5), null, null);
+    v5.initialize(new IntWritable(5), new IntWritable(5));
     Vertex<IntWritable, IntWritable, NullWritable, IntWritable> v6 =
         new MyVertex();
-    v6.initialize(new IntWritable(7), new IntWritable(7), null, null);
+    v6.initialize(new IntWritable(7), new IntWritable(7));
     Vertex<IntWritable, IntWritable, NullWritable, IntWritable> v7 =
         new MyVertex();
-    v7.initialize(new IntWritable(7), new IntWritable(7), null, null);
+    v7.initialize(new IntWritable(7), new IntWritable(7));
 
     partitionStore.addPartition(createPartition(conf, 1, v1, v2));
     partitionStore.addPartition(createPartition(conf, 2, v3));

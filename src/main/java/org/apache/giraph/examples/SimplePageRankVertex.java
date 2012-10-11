@@ -195,7 +195,7 @@ public class SimplePageRankVertex extends LongDoubleFloatDoubleVertex {
       float edgeValue = vertexId.get() * 100f;
       Map<LongWritable, FloatWritable> edges = Maps.newHashMap();
       edges.put(new LongWritable(targetVertexId), new FloatWritable(edgeValue));
-      vertex.initialize(vertexId, vertexValue, edges, null);
+      vertex.initialize(vertexId, vertexValue, edges);
       ++recordsRead;
       if (LOG.isInfoEnabled()) {
         LOG.info("next: Return vertexId=" + vertex.getId().get() +

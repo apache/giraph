@@ -107,7 +107,7 @@ public class TestEdgeListVertex {
     for (int i = 1000; i > 0; --i) {
       edgeMap.put(new IntWritable(i), new DoubleWritable(i * 2.0));
     }
-    vertex.initialize(null, null, edgeMap, null);
+    vertex.initialize(null, null, edgeMap);
     assertEquals(vertex.getNumEdges(), 1000);
     for (Edge<IntWritable, DoubleWritable> edge : vertex.getEdges()) {
       assertEquals(edge.getValue().get(),
@@ -124,7 +124,7 @@ public class TestEdgeListVertex {
     for (int i = 1000; i > 0; --i) {
       edgeMap.put(new IntWritable(i), new DoubleWritable(i * 3.0));
     }
-    vertex.initialize(null, null, edgeMap, null);
+    vertex.initialize(null, null, edgeMap);
     assertEquals(vertex.getNumEdges(), 1000);
     assertEquals(vertex.getEdgeValue(new IntWritable(600)),
         new DoubleWritable(600 * 3.0));
@@ -140,7 +140,7 @@ public class TestEdgeListVertex {
   @Test
   public void testAddRemoveEdges() {
     Map<IntWritable, DoubleWritable> edgeMap = Maps.newHashMap();
-    vertex.initialize(null, null, edgeMap, null);
+    vertex.initialize(null, null, edgeMap);
     assertEquals(vertex.getNumEdges(), 0);
     assertTrue(vertex.addEdge(new IntWritable(2),
         new DoubleWritable(2.0)));
@@ -180,7 +180,7 @@ public class TestEdgeListVertex {
      edgeMap.put(new IntWritable(2), new DoubleWritable(22));
      edgeMap.put(new IntWritable(3), new DoubleWritable(33));
      edgeMap.put(new IntWritable(4), new DoubleWritable(44));
-     vertex.initialize(null, null, edgeMap, null);
+     vertex.initialize(null, null, edgeMap);
      GiraphTransferRegulator gtr =
        new GiraphTransferRegulator(job.getConfiguration());
      PartitionOwner owner = mock(PartitionOwner.class);
@@ -197,11 +197,7 @@ public class TestEdgeListVertex {
     for (int i = edgesCount; i > 0; --i) {
       edgeMap.put(new IntWritable(i), new DoubleWritable(i * 2.0));
     }
-    List<LongWritable> messageList = Lists.newArrayList();
-    messageList.add(new LongWritable(4));
-    messageList.add(new LongWritable(5));
-    vertex.initialize(
-        new IntWritable(2), new FloatWritable(3.0f), edgeMap, messageList);
+    vertex.initialize(new IntWritable(2), new FloatWritable(3.0f), edgeMap);
     long serializeNanosStart = SystemTime.getInstance().getNanoseconds();
     byte[] byteArray = WritableUtils.writeToByteArray(vertex);
     long serializeNanos = SystemTime.getInstance().getNanosecondsSince(
@@ -227,7 +223,5 @@ public class TestEdgeListVertex {
     assertEquals(vertex.getValue(), readVertex.getValue());
     assertEquals(Lists.newArrayList(vertex.getEdges()),
         Lists.newArrayList(readVertex.getEdges()));
-    assertEquals(Lists.newArrayList(vertex.getMessages()),
-        Lists.newArrayList(readVertex.getMessages()));
   }
 }

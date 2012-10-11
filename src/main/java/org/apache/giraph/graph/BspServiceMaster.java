@@ -18,7 +18,6 @@
 
 package org.apache.giraph.graph;
 
-import com.google.common.collect.Sets;
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.bsp.ApplicationState;
 import org.apache.giraph.bsp.BspInputFormat;
@@ -56,6 +55,7 @@ import org.apache.zookeeper.ZooDefs.Ids;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import com.google.common.collect.Sets;
 import net.iharder.Base64;
 
 import java.io.ByteArrayOutputStream;
@@ -762,15 +762,13 @@ public class BspServiceMaster<I extends WritableComparable,
           aggregatorHandler = new MasterAggregatorHandler(getConfiguration());
           aggregatorHandler.initialize(this);
 
-          if (getConfiguration().getUseNetty()) {
-            commService = new NettyMasterClientServer(
-                getContext(), getConfiguration());
-            masterInfo = new WorkerInfo(getHostname(), getTaskPartition(),
-                commService.getMyAddress().getPort());
-            // write my address to znode so workers could read it
-            WritableUtils.writeToZnode(getZkExt(), currentMasterPath, -1,
-                masterInfo);
-          }
+          commService = new NettyMasterClientServer(
+              getContext(), getConfiguration());
+          masterInfo = new WorkerInfo(getHostname(), getTaskPartition(),
+              commService.getMyAddress().getPort());
+          // write my address to znode so workers could read it
+          WritableUtils.writeToZnode(getZkExt(), currentMasterPath, -1,
+              masterInfo);
 
           if (LOG.isInfoEnabled()) {
             LOG.info("becomeMaster: I am now the master!");
@@ -1273,9 +1271,7 @@ public class BspServiceMaster<I extends WritableComparable,
       }
     }
 
-    if (getConfiguration().getUseNetty()) {
-      commService.fixWorkerAddresses(chosenWorkerInfoList);
-    }
+    commService.fixWorkerAddresses(chosenWorkerInfoList);
 
     currentWorkersCounter.increment(chosenWorkerInfoList.size() -
         currentWorkersCounter.getValue());
@@ -1549,10 +1545,8 @@ public class BspServiceMaster<I extends WritableComparable,
       }
       aggregatorHandler.close();
 
-      if (getConfiguration().getUseNetty()) {
-        commService.closeConnections();
-        commService.close();
-      }
+      commService.closeConnections();
+      commService.close();
     }
 
     try {

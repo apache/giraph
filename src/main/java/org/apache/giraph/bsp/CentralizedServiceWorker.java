@@ -167,15 +167,6 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
       Collection<? extends PartitionOwner> masterSetPartitionOwners);
 
   /**
-   * Assign messages to a vertex (bypasses package-private access to
-   * setMessages() for internal classes).
-   *
-   * @param vertex Vertex (owned by worker)
-   * @param messages Messages to assign to the vertex
-   */
-  void assignMessagesToVertex(Vertex<I, V, E, M> vertex, Iterable<M> messages);
-
-  /**
    * Get master info
    *
    * @return Master info

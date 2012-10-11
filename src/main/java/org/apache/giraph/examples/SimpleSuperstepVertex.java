@@ -84,7 +84,7 @@ public class SimpleSuperstepVertex extends
       float edgeValue = vertexId.get() * 100f;
       edgeMap.put(new LongWritable(targetVertexId),
           new FloatWritable(edgeValue));
-      vertex.initialize(vertexId, vertexValue, edgeMap, null);
+      vertex.initialize(vertexId, vertexValue, edgeMap);
       ++recordsRead;
       if (LOG.isInfoEnabled()) {
         LOG.info("next: Return vertexId=" + vertex.getId().get() +

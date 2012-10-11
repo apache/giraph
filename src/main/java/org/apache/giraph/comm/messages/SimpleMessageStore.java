@@ -148,8 +148,11 @@ public class SimpleMessageStore<I extends WritableComparable,
   public Collection<M> getVertexMessages(I vertexId) throws IOException {
     ConcurrentMap<I, Collection<M>> partitionMap =
         map.get(getPartitionId(vertexId));
-    return (partitionMap == null) ? Collections.<M>emptyList() :
-        partitionMap.get(vertexId);
+    if (partitionMap == null) {
+      return Collections.<M>emptyList();
+    }
+    Collection<M> messages = partitionMap.get(vertexId);
+    return (messages == null) ? Collections.<M>emptyList() : messages;
   }
 
   @Override

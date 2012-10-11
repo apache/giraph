@@ -279,27 +279,27 @@ else[HADOOP_NON_SECURE]*/
     int numServers = conf.getInt(GiraphConfiguration.MAX_WORKERS, numTasks) + 1;
     int portIncrementConstant =
         (int) Math.pow(10, Math.ceil(Math.log10(numServers)));
-    int bindPort = conf.getInt(GiraphConfiguration.RPC_INITIAL_PORT,
-        GiraphConfiguration.RPC_INITIAL_PORT_DEFAULT) +
+    int bindPort = conf.getInt(GiraphConfiguration.IPC_INITIAL_PORT,
+        GiraphConfiguration.IPC_INITIAL_PORT_DEFAULT) +
         taskId;
     int bindAttempts = 0;
-    final int maxRpcPortBindAttempts =
-        conf.getInt(GiraphConfiguration.MAX_RPC_PORT_BIND_ATTEMPTS,
-            GiraphConfiguration.MAX_RPC_PORT_BIND_ATTEMPTS_DEFAULT);
+    final int maxIpcPortBindAttempts =
+        conf.getInt(GiraphConfiguration.MAX_IPC_PORT_BIND_ATTEMPTS,
+            GiraphConfiguration.MAX_IPC_PORT_BIND_ATTEMPTS_DEFAULT);
     final boolean failFirstPortBindingAttempt =
-        conf.getBoolean(GiraphConfiguration.FAIL_FIRST_RPC_PORT_BIND_ATTEMPT,
-            GiraphConfiguration.FAIL_FIRST_RPC_PORT_BIND_ATTEMPT_DEFAULT);
+        conf.getBoolean(GiraphConfiguration.FAIL_FIRST_IPC_PORT_BIND_ATTEMPT,
+            GiraphConfiguration.FAIL_FIRST_IPC_PORT_BIND_ATTEMPT_DEFAULT);
 
     // Simple handling of port collisions on the same machine while
     // preserving debugability from the port number alone.
     // Round up the max number of workers to the next power of 10 and use
     // it as a constant to increase the port number with.
-    while (bindAttempts < maxRpcPortBindAttempts) {
+    while (bindAttempts < maxIpcPortBindAttempts) {
       this.myAddress = new InetSocketAddress(localHostname, bindPort);
       if (failFirstPortBindingAttempt && bindAttempts == 0) {
         if (LOG.isInfoEnabled()) {
           LOG.info("start: Intentionally fail first " +
-              "binding attempt as giraph.failFirstRpcPortBindAttempt " +
+              "binding attempt as giraph.failFirstIpcPortBindAttempt " +
               "is true, port " + bindPort);
         }
         ++bindAttempts;
@@ -319,7 +319,7 @@ else[HADOOP_NON_SECURE]*/
         bindPort += portIncrementConstant;
       }
     }
-    if (bindAttempts == maxRpcPortBindAttempts || myAddress == null) {
+    if (bindAttempts == maxIpcPortBindAttempts || myAddress == null) {
       throw new IllegalStateException(
           "start: Failed to start NettyServer with " +
               bindAttempts + " attempts");

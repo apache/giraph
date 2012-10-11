@@ -170,7 +170,7 @@ public class PseudoRandomVertexInputFormat<M extends Writable> extends
         } while (edges.containsKey(destVertexId));
         edges.put(destVertexId, new DoubleWritable(rand.nextDouble()));
       }
-      vertex.initialize(new LongWritable(vertexId), vertexValue, edges, null);
+      vertex.initialize(new LongWritable(vertexId), vertexValue, edges);
       ++verticesRead;
       if (LOG.isTraceEnabled()) {
         LOG.trace("next: Return vertexId=" +

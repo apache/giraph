@@ -21,7 +21,6 @@ import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.log4j.Logger;
-import org.apache.mahout.math.function.DoubleProcedure;
 import org.apache.mahout.math.function.LongFloatProcedure;
 import org.apache.mahout.math.list.DoubleArrayList;
 import org.apache.mahout.math.map.OpenLongFloatHashMap;
@@ -47,24 +46,13 @@ public abstract class LongDoubleFloatDoubleVertex extends
   /** Stores the edges */
   private OpenLongFloatHashMap edgeMap =
       new OpenLongFloatHashMap();
-  /** Message list storage */
-  private DoubleArrayList messageList = new DoubleArrayList();
 
   @Override
-  public void initialize(LongWritable id, DoubleWritable value,
-                         Map<LongWritable, FloatWritable> edges,
-                         Iterable<DoubleWritable> messages) {
-    super.initialize(id, value);
+  public void setEdges(Map<LongWritable, FloatWritable> edges) {
     if (edges != null) {
       for (Map.Entry<LongWritable, FloatWritable> edge :
         edges.entrySet()) {
-        edgeMap.put(edge.getKey().get(),
-            edge.getValue().get());
-      }
-    }
-    if (messages != null) {
-      for (DoubleWritable m : messages) {
-        messageList.add(m.get());
+        edgeMap.put(edge.getKey().get(), edge.getValue().get());
       }
     }
   }
@@ -144,16 +132,12 @@ public abstract class LongDoubleFloatDoubleVertex extends
   public final void readFields(DataInput in) throws IOException {
     long id = in.readLong();
     double value = in.readDouble();
-    super.initialize(new LongWritable(id), new DoubleWritable(value));
+    initialize(new LongWritable(id), new DoubleWritable(value));
     long edgeMapSize = in.readLong();
     for (long i = 0; i < edgeMapSize; ++i) {
       long targetVertexId = in.readLong();
       float edgeValue = in.readFloat();
       edgeMap.put(targetVertexId, edgeValue);
-    }
-    long messageListSize = in.readLong();
-    for (long i = 0; i < messageListSize; ++i) {
-      messageList.add(in.readDouble());
     }
     boolean halt = in.readBoolean();
     if (halt) {
@@ -181,44 +165,7 @@ public abstract class LongDoubleFloatDoubleVertex extends
         return true;
       }
     });
-    out.writeLong(messageList.size());
-    messageList.forEach(new DoubleProcedure() {
-      @Override
-      public boolean apply(double message) {
-        try {
-          out.writeDouble(message);
-        } catch (IOException e) {
-          throw new IllegalStateException(
-              "apply: IOException when not allowed", e);
-        }
-        return true;
-      }
-    });
     out.writeBoolean(isHalted());
-  }
-
-  @Override
-  void putMessages(Iterable<DoubleWritable> messages) {
-    messageList.clear();
-    for (DoubleWritable message : messages) {
-      messageList.add(message.get());
-    }
-  }
-
-  @Override
-  void releaseResources() {
-    // Hint to GC to free the messages
-    messageList.clear();
-  }
-
-  @Override
-  public int getNumMessages() {
-    return messageList.size();
-  }
-
-  @Override
-  public Iterable<DoubleWritable> getMessages() {
-    return new UnmodifiableDoubleWritableIterable(messageList);
   }
 
   /**

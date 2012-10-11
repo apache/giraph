@@ -558,7 +558,7 @@ under the License.
             </executions>
 	    <!-- profile: hadoop_0.20.203 -->
             <configuration>
-              <symbols>HADOOP_NON_INTERVERSIONED_RPC,HADOOP_NON_JOBCONTEXT_IS_INTERFACE,HADOOP_1_SECURITY,HADOOP_1_SECRET_MANAGER</symbols>
+              <symbols>HADOOP_NON_JOBCONTEXT_IS_INTERFACE,HADOOP_1_SECURITY,HADOOP_1_SECRET_MANAGER</symbols>
             </configuration>
           </plugin>
         </plugins>
@@ -608,7 +608,7 @@ under the License.
             </executions>
 	    <!-- profile: hadoop_1.0 -->
             <configuration>
-              <symbols>HADOOP_NON_INTERVERSIONED_RPC,HADOOP_NON_JOBCONTEXT_IS_INTERFACE,HADOOP_1_SECURITY,HADOOP_1_SECRET_MANAGER</symbols>
+              <symbols>HADOOP_NON_JOBCONTEXT_IS_INTERFACE,HADOOP_1_SECURITY,HADOOP_1_SECRET_MANAGER</symbols>
             </configuration>
           </plugin>
         </plugins>
@@ -657,17 +657,17 @@ under the License.
             </executions>
             <configuration>
 	      <!-- profile: hadoop_non_secure -->
-              <symbols>HADOOP_NON_SECURE,HADOOP_NON_INTERVERSIONED_RPC,HADOOP_NON_JOBCONTEXT_IS_INTERFACE</symbols>
-	      <excludes>**/comm/SecureRPCCommunications.java,
-                        **/comm/netty/SaslNettyClient.java,
-                        **/comm/netty/SaslNettyServer.java,
-                        **/comm/netty/handler/AuthorizeServerHandler.java,
-                        **/comm/netty/handler/SaslClientHandler.java,
-                        **/comm/netty/handler/SaslServerHandler.java,
-                        **/comm/requests/SaslCompleteRequest.java,
-                        **/comm/requests/SaslTokenMessageRequest.java,
-                        **/comm/SaslConnectionTest.java,
-                        **/hadoop/BspTokenSelector.java</excludes>
+              <symbols>HADOOP_NON_SECURE,HADOOP_NON_JOBCONTEXT_IS_INTERFACE</symbols>
+	      <excludes>
+              **/comm/netty/SaslNettyClient.java,
+              **/comm/netty/SaslNettyServer.java,
+              **/comm/netty/handler/AuthorizeServerHandler.java,
+              **/comm/netty/handler/SaslClientHandler.java,
+              **/comm/netty/handler/SaslServerHandler.java,
+              **/comm/requests/SaslCompleteRequest.java,
+              **/comm/requests/SaslTokenMessageRequest.java,
+              **/comm/SaslConnectionTest.java
+          </excludes>
             </configuration>
           </plugin>
           <plugin>
@@ -720,10 +720,6 @@ under the License.
         <resources>
           <resource>
             <directory>${basedir}/src/main/java/org/apache/giraph/hadoop</directory>
-            <excludes>
-              <exclude>BspTokenSelector.java</exclude>
-	      <exclude>SecureRPCCommunications.java</exclude>
-	    </excludes>
 	  </resource>
 	  <resource>
             <directory>${basedir}/src/main/java/org/apache/giraph/comm/netty</directory>
@@ -735,10 +731,6 @@ under the License.
             <artifactId>maven-compiler-plugin</artifactId>
             <version>${maven-compiler-plugin.version}</version>
             <configuration>
-              <excludes>
-                <exclude>**/BspTokenSelector.java</exclude>
-		<exclude>**/SecureRPCCommunications.java</exclude>
-              </excludes>
               <source>${compileSource}</source>
               <target>${compileSource}</target>
             </configuration>
@@ -759,16 +751,16 @@ under the License.
 	    <!-- profile: hadoop_facebook -->
             <configuration>
               <symbols>HADOOP_NON_SECURE,HADOOP_NON_JOBCONTEXT_IS_INTERFACE</symbols>
-	      <excludes>**/comm/SecureRPCCommunications.java,
-                        **/comm/netty/SaslNettyClient.java,
-                        **/comm/netty/SaslNettyServer.java,
-                        **/comm/netty/handler/AuthorizeServerHandler.java,
-                        **/comm/netty/handler/SaslClientHandler.java,
-                        **/comm/netty/handler/SaslServerHandler.java,
-                        **/comm/requests/SaslCompleteRequest.java,
-                        **/comm/requests/SaslTokenMessageRequest.java,
-                        **/comm/SaslConnectionTest.java,
-                        **/hadoop/BspTokenSelector.java</excludes>
+	      <excludes>
+              **/comm/netty/SaslNettyClient.java,
+              **/comm/netty/SaslNettyServer.java,
+              **/comm/netty/handler/AuthorizeServerHandler.java,
+              **/comm/netty/handler/SaslClientHandler.java,
+              **/comm/netty/handler/SaslServerHandler.java,
+              **/comm/requests/SaslCompleteRequest.java,
+              **/comm/requests/SaslTokenMessageRequest.java,
+              **/comm/SaslConnectionTest.java
+          </excludes>
             </configuration>
           </plugin>
           <plugin>

@@ -237,7 +237,7 @@ public abstract class HCatalogVertexInputFormat<
                     BspUtils.createVertex(getContext()
                             .getConfiguration());
       vertex.initialize(getVertexId(record), getVertexValue(record),
-                    getEdges(record), null);
+                    getEdges(record));
       ++recordCount;
       if ((recordCount % recordModLimit) == 0) {
         log.info("read " + recordCount + " records");
@@ -373,9 +373,8 @@ public abstract class HCatalogVertexInputFormat<
     private void createCurrentVertex() {
       vertex = BspUtils.
               createVertex(getContext().getConfiguration());
-      vertex.initialize(currentVertexId,
-              getVertexValue(
-                      recordsForVertex), destEdgeMap, null);
+      vertex.initialize(currentVertexId, getVertexValue(recordsForVertex),
+          destEdgeMap);
       destEdgeMap.clear();
       recordsForVertex.clear();
       ++recordCount;

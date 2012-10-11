@@ -52,7 +52,7 @@ public class SimpleShortestPathsVertexTest {
   public void testOnShorterPathFound() throws Exception {
 
     SimpleShortestPathsVertex vertex = new SimpleShortestPathsVertex();
-    vertex.initialize(null, null, null, null);
+    vertex.initialize(null, null);
     vertex.addEdge(new LongWritable(10L), new FloatWritable(2.5f));
     vertex.addEdge(new LongWritable(20L), new FloatWritable(0.5f));
 
@@ -83,7 +83,7 @@ public class SimpleShortestPathsVertexTest {
   public void testOnNoShorterPathFound() throws Exception {
 
     SimpleShortestPathsVertex vertex = new SimpleShortestPathsVertex();
-    vertex.initialize(null, null, null, null);
+    vertex.initialize(null, null);
     vertex.addEdge(new LongWritable(10L), new FloatWritable(2.5f));
     vertex.addEdge(new LongWritable(20L), new FloatWritable(0.5f));
 

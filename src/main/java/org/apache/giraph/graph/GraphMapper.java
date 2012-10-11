@@ -39,8 +39,6 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
-import com.google.common.collect.Iterables;
-
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.net.URL;
@@ -471,11 +469,8 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
       serviceWorker.getWorkerContext().preSuperstep();
       context.progress();
 
-      boolean useNetty = conf.getUseNetty();
-      MessageStoreByPartition<I, M> messageStore = null;
-      if (useNetty) {
-        messageStore = serviceWorker.getServerData().getCurrentMessageStore();
-      }
+      MessageStoreByPartition<I, M> messageStore =
+          serviceWorker.getServerData().getCurrentMessageStore();
 
       partitionStatsList.clear();
       TimedLogger partitionLogger = new TimedLogger(15000, LOG);
@@ -489,27 +484,16 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
           // graphState before computing
           vertex.setGraphState(graphState);
 
-          Collection<M> messages = null;
-          if (useNetty) {
-            messages = messageStore.getVertexMessages(vertex.getId());
-            messageStore.clearVertexMessages(vertex.getId());
-          }
+          Collection<M> messages =
+              messageStore.getVertexMessages(vertex.getId());
+          messageStore.clearVertexMessages(vertex.getId());
 
-          boolean hasMessages = (messages != null && !messages.isEmpty()) ||
-              !Iterables.isEmpty(vertex.getMessages());
-          if (vertex.isHalted() && hasMessages) {
+          if (vertex.isHalted() && !messages.isEmpty()) {
             vertex.wakeUp();
           }
           if (!vertex.isHalted()) {
-            Iterable<M> vertexMsgIt;
-            if (messages == null) {
-              vertexMsgIt = vertex.getMessages();
-            } else {
-              vertexMsgIt = messages;
-            }
             context.progress();
-            vertex.compute(vertexMsgIt);
-            vertex.releaseResources();
+            vertex.compute(messages);
           }
           if (vertex.isHalted()) {
             partitionStats.incrFinishedVertexCount();
@@ -518,9 +502,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
           partitionStats.addEdgeCount(vertex.getNumEdges());
         }
 
-        if (useNetty) {
-          messageStore.clearPartition(partition.getId());
-        }
+        messageStore.clearPartition(partition.getId());
 
         partitionStatsList.add(partitionStats);
         ++completedPartitions;
