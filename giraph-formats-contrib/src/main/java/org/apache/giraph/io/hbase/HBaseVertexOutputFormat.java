@@ -60,7 +60,7 @@ public abstract class HBaseVertexOutputFormat<
   /**
    * delegate output format that writes to HBase
    */
-  protected static TableOutputFormat<ImmutableBytesWritable>
+  protected static final TableOutputFormat<ImmutableBytesWritable>
   BASE_FORMAT = new TableOutputFormat<ImmutableBytesWritable>();
 
   /**

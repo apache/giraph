@@ -2,7 +2,9 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
-  GIRAPH-200: remove hadoop RPC and keep just netty (apresta)
+  GIRAPH-346: Top Level POM. (nitay via aching)
+
+  GIRAPH-200: Remove hadoop RPC and keep just netty. (apresta)
 
   GIRAPH-363: Fix hadoop_0.23 profile broken by GIRAPH-211 (ekoontz)
 

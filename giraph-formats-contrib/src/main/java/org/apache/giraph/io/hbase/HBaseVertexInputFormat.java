@@ -64,7 +64,7 @@ public abstract  class HBaseVertexInputFormat<
   /**
    * delegate HBase table input format
    */
-  protected static TableInputFormat BASE_FORMAT =
+  protected static final TableInputFormat BASE_FORMAT =
           new TableInputFormat();
 
     /**

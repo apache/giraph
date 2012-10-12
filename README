@@ -80,7 +80,7 @@ Building and testing:
 
 You will need the following:
 - Java 1.6
-- Maven 3 or higher. Giraph uses the munge plugin 
+- Maven 3 or higher. Giraph uses the munge plugin
   (http://sonatype.github.com/munge-maven-plugin/),
   which requires Maven 3, to support multiple versions of Hadoop. Also, the
   web site plugin requires Maven 3.
@@ -96,12 +96,46 @@ additional argument '-Dhadoop=non_secure' or '-Phadoop_non_secure' to enable
 'mvn -Dhadoop=non_secure compile' and 'mvn -Phadoop_non_secure compile'.
 
 For the Facebook Hadoop release, run the maven commands with the
-additional arguments '-Dhadoop=facebook' or '-Phadoop_facebook' to enable 
+additional arguments '-Dhadoop=facebook' or '-Phadoop_facebook' to enable
 the maven profile 'hadoop_facebook' as well as a location for the hadoop
 core jar file.  Example compilation commands are 'mvn -Dhadoop=facebook
--Dhadoop.jar.path=/tmp/hadoop-0.20.1-core.jar compile' or 'mvn -Phadoop_facebook 
+-Dhadoop.jar.path=/tmp/hadoop-0.20.1-core.jar compile' or 'mvn -Phadoop_facebook
 -Dhadoop.jar.path=/tmp/hadoop-0.20.1-core.jar compile'.
 
+-------------------------------
+
+Developing:
+
+Giraph is a multi-module maven project. The top level generates a POM that
+carries information common to all the modules. Each module creates a jar with
+the code contained in it.
+
+The giraph/ module contains the main giraph code. If you just want to work on
+the main code only you can do all your work inside this subdirectory.
+Specifically you would do something like:
+
+  giraph-root/giraph/ $ mvn verify            # build from current state
+  giraph-root/giraph/ $ mvn clean             # wipe out build files
+  giraph-root/giraph/ $ mvn clean verify      # build from fresh state
+  giraph-root/giraph/ $ mvn install           # install jar to local repository
+
+The giraph-formats-contrib/ module contains hooks to read/write from various
+formats (e.g. Accumulo, HBase, Hive). It depends on the giraph module. This
+means if you make local changes to the giraph codebase you will first need to
+install the giraph/ jar locally so that giraph-formats-contrib/ will pick it up.
+In other words something like this:
+
+  giraph-root/giraph/ $ mvn install
+  giraph-root/giraph-formats-contrib $ mvn verify
+
+To build everything at once you can issue the maven commands at the top level.
+Note that we use the "install" target so that if you have any local changes to
+giraph/ which formats needs it will get picked up because it will install
+locally first.
+
+  giraph-root/ $ mvn clean install
+
+-------------------------------
 
 How to run the unittests on a local pseudo-distributed Hadoop instance:
 
@@ -113,12 +147,12 @@ Download Apache Hadoop 0.20.203 (hadoop-0.20.203.0/hadoop-0.20.203.0rc1.tar.gz)
 from a mirror picked at http://www.apache.org/dyn/closer.cgi/hadoop/common/
 and unpack it into a local directory
 
-Follow the guide at 
+Follow the guide at
 http://hadoop.apache.org/common/docs/r0.20.2/quickstart.html#PseudoDistributed
 to setup a pseudo-distributed single node Hadoop cluster.
 
-Giraph’s code assumes that you can run at least 4 mappers at once, 
-unfortunately the default configuration allows only 2. Therefore you need 
+Giraph’s code assumes that you can run at least 4 mappers at once,
+unfortunately the default configuration allows only 2. Therefore you need
 to update conf/mapred-site.xml:
 
 <property>
@@ -148,7 +182,7 @@ Now you can open a browser, point it to http://localhost:50030 and watch the
 Giraph jobs from the unittests running on your local Hadoop instance!
 
 
-Notes: 
+Notes:
 Counter limit: In Hadoop 0.20.203.0 onwards, there is a limit on the number of
 counters one can use, which is set to 120 by default. This limit restricts the
 number of iterations/supersteps possible in Giraph. This limit can be increased

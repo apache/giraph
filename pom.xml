@@ -17,19 +17,24 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
-
   <groupId>org.apache.giraph</groupId>
-  <artifactId>giraph</artifactId>
-  <packaging>jar</packaging>
+  <artifactId>parent</artifactId>
+  <packaging>pom</packaging>
   <version>0.2-SNAPSHOT</version>
 
-  <name>Apache Giraph</name>
+  <name>Apache Giraph Parent</name>
   <url>http://incubator.apache.org/giraph/</url>
   <description>Giraph : Large-scale graph processing on Hadoop</description>
   <inceptionYear>2011</inceptionYear>
+
+  <modules>
+    <module>giraph</module>
+    <module>giraph-formats-contrib</module>
+  </modules>
 
   <scm>
     <connection>scm:svn:http://svn.apache.org/repos/asf/giraph</connection>
@@ -94,7 +99,7 @@ under the License.
       <name>Hyunsik Choi</name>
       <email>hyunsik@apache.org</email>
       <timezone>+9</timezone>
-      <organization>Database Lab, Korea University </organization>
+      <organization>Database Lab, Korea University</organization>
     </developer>
     <developer>
       <id>jghoman</id>
@@ -148,7 +153,8 @@ under the License.
       <name>Sebastian Schelter</name>
       <email>ssc@apache.org</email>
       <timezone>+1</timezone>
-      <organization>Database Systems and Information Management group (DIMA), TU Berlin</organization>
+      <organization>Database Systems and Information Management group (DIMA), TU Berlin
+      </organization>
       <organizationUrl>http://www.dima.tu-berlin.de/</organizationUrl>
     </developer>
     <developer>
@@ -185,20 +191,8 @@ under the License.
     </developer>
   </developers>
 
-  <properties>
-    <compileSource>1.6</compileSource>
-    <forHadoop>for-hadoop-${hadoop.version}</forHadoop>
-    <maven-compiler-plugin.version>2.3.2</maven-compiler-plugin.version>
-    <maven-javadoc-plugin.version>2.6</maven-javadoc-plugin.version>
-    <jackson.version>1.8.0</jackson.version>
-    <export-target.dir>export/target</export-target.dir>
-    <buildtype>test</buildtype>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <munge-maven-plugin.version>1.0</munge-maven-plugin.version>
-  </properties>
-
   <repositories>
-	<repository>
+    <repository>
       <snapshots>
         <enabled>true</enabled>
       </snapshots>
@@ -222,274 +216,239 @@ under the License.
     </repository>
   </repositories>
 
+  <properties>
+    <buildtype>test</buildtype>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <hbase.version>0.90.5</hbase.version>
+    <jackson.version>1.8.0</jackson.version>
+    <forHadoop>for-hadoop-${hadoop.version}</forHadoop>
+  </properties>
+
   <build>
-    <finalName>giraph-${project.version}-${forHadoop}</finalName>
-    <plugins>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-checkstyle-plugin</artifactId>
-        <version>2.9</version>
-        <configuration>
-          <configLocation>checkstyle.xml</configLocation>
-          <enableRulesSummary>false</enableRulesSummary>
-          <headerLocation>license-header.txt</headerLocation>
-          <failOnError>true</failOnError>
-          <includeTestSourceDirectory>false</includeTestSourceDirectory>
-        </configuration>
-        <executions>
-          <execution>
-            <phase>verify</phase>
-            <goals>
-              <goal>check</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-enforcer-plugin</artifactId>
-        <version>1.0.1</version>
-        <executions>
-          <execution>
-            <id>enforce-maven</id>
-            <goals>
-              <goal>enforce</goal>
-            </goals>
-            <configuration>
-              <rules>
-                <requireMavenVersion>
-                  <version>3.0.0</version>
-                </requireMavenVersion>
-              </rules>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-assembly-plugin</artifactId>
-        <version>2.2</version>
-        <executions>
-          <execution>
-            <id>build-fat-jar</id>
-            <!-- this is used for inheritance merges -->
-            <phase>compile</phase>
-            <!-- append to the packaging phase. -->
-            <configuration>
-              <descriptor>${basedir}/src/main/assembly/compile.xml</descriptor>
-              <outputDirectory>target</outputDirectory>
-            </configuration>
-            <goals>
-              <goal>single</goal>
-              <!-- goals == mojos -->
-            </goals>
-          </execution>
-          <execution>
-            <id>make-assembly</id>
-            <!-- this is used for inheritance merges -->
-            <phase>package</phase>
-            <!-- append to the packaging phase. -->
-            <configuration>
-              <!-- Specifies the configuration file of the assembly plugin -->
-              <descriptors>
-                <descriptor>${basedir}/src/main/assembly/assembly.xml
-                </descriptor>
-              </descriptors>
-              <outputDirectory>target</outputDirectory>
-            </configuration>
-            <goals>
-              <goal>single</goal>
-              <!-- goals == mojos -->
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-        <version>2.6</version>
-        <configuration>
-          <systemProperties>
-            <property>
-              <name>prop.jarLocation</name>
-              <value>${basedir}/target/giraph-${project.version}-${forHadoop}-jar-with-dependencies.jar</value>
-            </property>
-          </systemProperties>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-compiler-plugin</artifactId>
-        <version>${maven-compiler-plugin.version}</version>
-        <configuration>
-          <source>${compileSource}</source>
-          <target>${compileSource}</target>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-javadoc-plugin</artifactId>
-        <version>${maven-javadoc-plugin.version}</version>
-        <executions>
-          <execution>
-            <id>attach-javadocs</id>
-            <goals>
-              <goal>jar</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-source-plugin</artifactId>
-        <version>2.1.2</version>
-        <executions>
-          <execution>
-            <id>attach-sources</id>
-            <goals>
-              <goal>jar</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-jar-plugin</artifactId>
-          <version>2.3.2</version>
-          <executions>
-              <execution>
-                  <goals>
-                      <goal>test-jar</goal>
-                  </goals>
-              </execution>
-          </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>findbugs-maven-plugin</artifactId>
-        <version>2.5.1</version>
-        <configuration>
-          <xmlOutput>true</xmlOutput>
-          <findbugsXmlOutput>false</findbugsXmlOutput>
-          <excludeFilterFile>findbugs-exclude.xml</excludeFilterFile>
-        </configuration>
-        <executions>
-          <execution>
-            <phase>verify</phase>
-            <goals>
-              <goal>check</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-site-plugin</artifactId>
-        <version>3.0</version>
-        <configuration>
-          <reportPlugins>
-            <plugin>
-              <groupId>org.apache.maven.plugins</groupId>
-              <artifactId>maven-project-info-reports-plugin</artifactId>
-              <version>2.2</version>
-              <reports>
-                <report>index</report>
-                <report>project-team</report>
-                <report>license</report>
-                <report>mailing-list</report>
-                <report>dependencies</report>
-                <report>dependency-convergence</report>
-                <report>plugin-management</report>
-                <report>cim</report>
-                <report>issue-tracking</report>
-                <report>scm</report>
-                <report>summary</report>
-              </reports>
-            </plugin>
-            <plugin>
-              <groupId>org.apache.maven.plugins</groupId>
-              <artifactId>maven-surefire-report-plugin</artifactId>
-              <version>2.6</version>
-            </plugin>
-            <plugin>
-              <groupId>org.apache.maven.plugins</groupId>
-              <artifactId>maven-javadoc-plugin</artifactId>
-              <version>2.7</version>
-            </plugin>
-            <plugin>
-              <groupId>org.apache.maven.plugins</groupId>
-              <artifactId>maven-checkstyle-plugin</artifactId>
-              <version>2.9</version>
-            </plugin>
-            <plugin>
-              <groupId>org.codehaus.mojo</groupId>
-              <artifactId>jdepend-maven-plugin</artifactId>
-              <version>2.0-beta-2</version>
-            </plugin>
-            <plugin>
-              <groupId>org.codehaus.mojo</groupId>
-              <artifactId>cobertura-maven-plugin</artifactId>
-              <version>2.4</version>
-            </plugin>
-            <plugin>
-              <groupId>org.codehaus.mojo</groupId>
-              <artifactId>taglist-maven-plugin</artifactId>
-              <version>2.4</version>
-            </plugin>
-            <plugin>
-              <groupId>org.apache.maven.plugins</groupId>
-              <artifactId>maven-jxr-plugin</artifactId>
-              <version>2.1</version>
-            </plugin>
-            <plugin>
-              <groupId>org.codehaus.mojo</groupId>
-              <artifactId>findbugs-maven-plugin</artifactId>
-              <version>2.5.1</version>
-            </plugin>
-         </reportPlugins>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.rat</groupId>
-        <artifactId>apache-rat-plugin</artifactId>
-        <version>0.8</version>
-        <executions>
-          <execution>
-            <phase>verify</phase>
-            <goals>
-              <goal>check</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-           <excludeSubProjects>false</excludeSubProjects>
-           <numUnapprovedLicenses>0</numUnapprovedLicenses>
-           <excludes>
-              <exclude>CODE_CONVENTIONS</exclude>
-              <!-- generated content -->
-              <exclude>**/target/**</exclude>
-              <exclude>_bsp/**</exclude>
-              <exclude>.checkstyle</exclude>
-              <exclude>Unknown Job*</exclude>
-              <!-- source control and IDEs -->
-              <exclude>.reviewboardrc</exclude>
-              <exclude>.git/**</exclude>
-              <exclude>.gitignore</exclude>
-              <exclude>*.patch</exclude>
-              <exclude>.idea/**</exclude>
-              <exclude>**/*.iml</exclude>
-              <exclude>**/*.ipr</exclude>
-              <exclude>**/.project</exclude>
-              <exclude>**/.classpath</exclude>
-              <exclude>**/.settings/**</exclude>
-              <exclude>.arcconfig</exclude>
-           </excludes>
-        </configuration>
-      </plugin>
-    </plugins>
     <pluginManagement>
       <plugins>
-        <!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-assembly-plugin</artifactId>
+          <version>2.2</version>
+          <executions>
+            <execution>
+              <id>build-fat-jar</id>
+              <!-- this is used for inheritance merges -->
+              <phase>compile</phase>
+              <!-- append to the packaging phase. -->
+              <configuration>
+                <descriptor>src/main/assembly/compile.xml</descriptor>
+                <outputDirectory>target</outputDirectory>
+              </configuration>
+              <goals>
+                <goal>single</goal>
+                <!-- goals == mojos -->
+              </goals>
+            </execution>
+            <execution>
+              <id>make-assembly</id>
+              <!-- this is used for inheritance merges -->
+              <phase>package</phase>
+              <!-- append to the packaging phase. -->
+              <configuration>
+                <!-- Specifies the configuration file of the assembly plugin -->
+                <descriptors>
+                  <descriptor>src/main/assembly/assembly.xml
+                  </descriptor>
+                </descriptors>
+                <outputDirectory>target</outputDirectory>
+              </configuration>
+              <goals>
+                <goal>single</goal>
+                <!-- goals == mojos -->
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>2.3.2</version>
+          <configuration>
+            <source>1.6</source>
+            <target>1.6</target>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-enforcer-plugin</artifactId>
+          <version>1.0.1</version>
+          <executions>
+            <execution>
+              <id>enforce-maven</id>
+              <goals>
+                <goal>enforce</goal>
+              </goals>
+              <configuration>
+                <rules>
+                  <requireMavenVersion>
+                    <version>3.0.0</version>
+                  </requireMavenVersion>
+                </rules>
+              </configuration>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-jar-plugin</artifactId>
+            <version>2.3.2</version>
+            <executions>
+                <execution>
+                    <goals>
+                        <goal>test-jar</goal>
+                    </goals>
+                </execution>
+            </executions>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-javadoc-plugin</artifactId>
+          <version>2.6</version>
+          <executions>
+            <execution>
+              <id>attach-javadocs</id>
+              <goals>
+                <goal>jar</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-source-plugin</artifactId>
+          <version>2.1.2</version>
+          <executions>
+            <execution>
+              <id>attach-sources</id>
+              <goals>
+                <goal>jar</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-site-plugin</artifactId>
+          <version>3.0</version>
+          <configuration>
+            <reportPlugins>
+              <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-project-info-reports-plugin</artifactId>
+                <version>2.2</version>
+                <reports>
+                  <report>index</report>
+                  <report>project-team</report>
+                  <report>license</report>
+                  <report>mailing-list</report>
+                  <report>dependencies</report>
+                  <report>dependency-convergence</report>
+                  <report>plugin-management</report>
+                  <report>cim</report>
+                  <report>issue-tracking</report>
+                  <report>scm</report>
+                  <report>summary</report>
+                </reports>
+              </plugin>
+              <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-report-plugin</artifactId>
+                <version>2.6</version>
+              </plugin>
+              <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>2.7</version>
+              </plugin>
+              <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-checkstyle-plugin</artifactId>
+                <version>2.9</version>
+              </plugin>
+              <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>jdepend-maven-plugin</artifactId>
+                <version>2.0-beta-2</version>
+              </plugin>
+              <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>cobertura-maven-plugin</artifactId>
+                <version>2.4</version>
+              </plugin>
+              <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>taglist-maven-plugin</artifactId>
+                <version>2.4</version>
+              </plugin>
+              <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jxr-plugin</artifactId>
+                <version>2.1</version>
+              </plugin>
+              <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>findbugs-maven-plugin</artifactId>
+                <version>2.5.1</version>
+              </plugin>
+           </reportPlugins>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.rat</groupId>
+          <artifactId>apache-rat-plugin</artifactId>
+          <version>0.8</version>
+          <executions>
+            <execution>
+              <phase>verify</phase>
+              <goals>
+                <goal>check</goal>
+              </goals>
+            </execution>
+          </executions>
+          <configuration>
+             <excludeSubProjects>false</excludeSubProjects>
+             <numUnapprovedLicenses>0</numUnapprovedLicenses>
+             <excludes>
+                <exclude>CODE_CONVENTIONS</exclude>
+                <!-- generated content -->
+                <exclude>**/target/**</exclude>
+                <exclude>_bsp/**</exclude>
+                <exclude>.checkstyle</exclude>
+                <!-- source control and IDEs -->
+                <exclude>.reviewboardrc</exclude>
+                <exclude>.git/**</exclude>
+                <exclude>.gitignore</exclude>
+                <exclude>*.patch</exclude>
+                <exclude>.idea/**</exclude>
+                <exclude>**/*.iml</exclude>
+                <exclude>**/*.ipr</exclude>
+             </excludes>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.sonatype.plugins</groupId>
+          <artifactId>munge-maven-plugin</artifactId>
+          <version>1.0</version>
+          <executions>
+            <execution>
+              <id>munge</id>
+              <phase>generate-sources</phase>
+              <goals>
+                <goal>munge</goal>
+              </goals>
+            </execution>
+          </executions>
+          <configuration>
+            <symbols>${munge.symbols}</symbols>
+          </configuration>
+        </plugin>
         <plugin>
           <groupId>org.eclipse.m2e</groupId>
           <artifactId>lifecycle-mapping</artifactId>
@@ -525,99 +484,26 @@ under the License.
         <activeByDefault>true</activeByDefault>
       </activation>
       <properties>
-          <hadoop.version>0.20.203.0</hadoop.version>
+        <hadoop.version>0.20.203.0</hadoop.version>
       </properties>
-      <dependencies>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-core</artifactId>
-          <version>${hadoop.version}</version>
-          <scope>provided</scope>
-        </dependency>
-	<dependency>
-	  <groupId>commons-net</groupId>
-	  <artifactId>commons-net</artifactId>
-	  <scope>provided</scope>
-	  <version>3.1</version>
-	</dependency>
-      </dependencies>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.sonatype.plugins</groupId>
-            <artifactId>munge-maven-plugin</artifactId>
-            <version>${munge-maven-plugin.version}</version>
-            <executions>
-              <execution>
-                <id>munge</id>
-                <phase>generate-sources</phase>
-                <goals>
-                  <goal>munge</goal>
-                </goals>
-              </execution>
-            </executions>
-	    <!-- profile: hadoop_0.20.203 -->
-            <configuration>
-              <symbols>HADOOP_NON_JOBCONTEXT_IS_INTERFACE,HADOOP_1_SECURITY,HADOOP_1_SECRET_MANAGER</symbols>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
     </profile>
 
     <profile>
       <id>hadoop_1.0</id>
       <activation>
         <property>
-           <name>hadoop</name>
-           <value>1.0</value>
+          <name>hadoop</name>
+          <value>1.0</value>
         </property>
       </activation>
       <properties>
         <hadoop.version>1.0.2</hadoop.version>
       </properties>
-      <dependencies>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-core</artifactId>
-          <version>${hadoop.version}</version>
-          <scope>provided</scope>
-        </dependency>
-	<dependency>
-	  <groupId>commons-net</groupId>
-	  <artifactId>commons-net</artifactId>
-	  <scope>provided</scope>
-	  <version>3.1</version>
-	</dependency>
-      </dependencies>
-
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.sonatype.plugins</groupId>
-            <artifactId>munge-maven-plugin</artifactId>
-            <version>${munge-maven-plugin.version}</version>
-            <executions>
-              <execution>
-                <id>munge</id>
-                <phase>generate-sources</phase>
-                <goals>
-                  <goal>munge</goal>
-                </goals>
-              </execution>
-            </executions>
-	    <!-- profile: hadoop_1.0 -->
-            <configuration>
-              <symbols>HADOOP_NON_JOBCONTEXT_IS_INTERFACE,HADOOP_1_SECURITY,HADOOP_1_SECRET_MANAGER</symbols>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
     </profile>
 
     <profile>
       <id>hadoop_non_secure</id>
-       <activation>
+      <activation>
         <property>
           <name>hadoop</name>
           <value>non_secure</value>
@@ -626,66 +512,11 @@ under the License.
       <properties>
         <hadoop.version>0.20.2</hadoop.version>
       </properties>
-      <dependencies>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-core</artifactId>
-          <version>${hadoop.version}</version>
-          <scope>provided</scope>
-        </dependency>
-	<dependency>
-	  <groupId>commons-collections</groupId>
-	  <artifactId>commons-collections</artifactId>
-	  <scope>provided</scope>
-	  <version>3.2.1</version>
-	</dependency>
-      </dependencies>
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.sonatype.plugins</groupId>
-            <artifactId>munge-maven-plugin</artifactId>
-            <version>${munge-maven-plugin.version}</version>
-            <executions>
-              <execution>
-                <id>munge</id>
-                <phase>generate-sources</phase>
-                <goals>
-                  <goal>munge</goal>
-                </goals>
-              </execution>
-            </executions>
-            <configuration>
-	      <!-- profile: hadoop_non_secure -->
-              <symbols>HADOOP_NON_SECURE,HADOOP_NON_JOBCONTEXT_IS_INTERFACE</symbols>
-	      <excludes>
-              **/comm/netty/SaslNettyClient.java,
-              **/comm/netty/SaslNettyServer.java,
-              **/comm/netty/handler/AuthorizeServerHandler.java,
-              **/comm/netty/handler/SaslClientHandler.java,
-              **/comm/netty/handler/SaslServerHandler.java,
-              **/comm/requests/SaslCompleteRequest.java,
-              **/comm/requests/SaslTokenMessageRequest.java,
-              **/comm/SaslConnectionTest.java
-          </excludes>
-            </configuration>
-          </plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-compiler-plugin</artifactId>
-            <version>${maven-compiler-plugin.version}</version>
-            <configuration>
-              <source>${compileSource}</source>
-              <target>${compileSource}</target>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
     </profile>
 
     <profile>
       <id>hadoop_facebook</id>
-       <activation>
+      <activation>
         <property>
           <name>hadoop</name>
           <value>facebook</value>
@@ -694,95 +525,11 @@ under the License.
       <properties>
         <hadoop.version>0.20.1</hadoop.version>
       </properties>
-      <dependencies>
-        <dependency>
-          <groupId>com.facebook.hadoop</groupId>
-          <artifactId>hadoop-core</artifactId>
-          <version>${hadoop.version}</version>
-          <type>jar</type>
-          <scope>system</scope>
-          <systemPath>${hadoop.jar.path}</systemPath>
-        </dependency>
-        <dependency>
-          <groupId>commons-logging</groupId>
-          <artifactId>commons-logging-api</artifactId>
-          <version>1.0.4</version>
-          <scope>runtime</scope>
-        </dependency>
-        <dependency>
-          <groupId>commons-httpclient</groupId>
-          <artifactId>commons-httpclient</artifactId>
-          <version>3.0.1</version>
-	  <scope>runtime</scope>
-        </dependency>
-      </dependencies>
-      <build>
-        <resources>
-          <resource>
-            <directory>${basedir}/src/main/java/org/apache/giraph/hadoop</directory>
-	  </resource>
-	  <resource>
-            <directory>${basedir}/src/main/java/org/apache/giraph/comm/netty</directory>
-          </resource>
-        </resources>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-compiler-plugin</artifactId>
-            <version>${maven-compiler-plugin.version}</version>
-            <configuration>
-              <source>${compileSource}</source>
-              <target>${compileSource}</target>
-            </configuration>
-          </plugin>
-          <plugin>
-            <groupId>org.sonatype.plugins</groupId>
-            <artifactId>munge-maven-plugin</artifactId>
-            <version>${munge-maven-plugin.version}</version>
-            <executions>
-              <execution>
-                <id>munge</id>
-                <phase>generate-sources</phase>
-                <goals>
-                  <goal>munge</goal>
-                </goals>
-              </execution>
-            </executions>
-	    <!-- profile: hadoop_facebook -->
-            <configuration>
-              <symbols>HADOOP_NON_SECURE,HADOOP_NON_JOBCONTEXT_IS_INTERFACE</symbols>
-	      <excludes>
-              **/comm/netty/SaslNettyClient.java,
-              **/comm/netty/SaslNettyServer.java,
-              **/comm/netty/handler/AuthorizeServerHandler.java,
-              **/comm/netty/handler/SaslClientHandler.java,
-              **/comm/netty/handler/SaslServerHandler.java,
-              **/comm/requests/SaslCompleteRequest.java,
-              **/comm/requests/SaslTokenMessageRequest.java,
-              **/comm/SaslConnectionTest.java
-          </excludes>
-            </configuration>
-          </plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-surefire-plugin</artifactId>
-            <version>2.6</version>
-            <configuration>
-              <systemProperties>
-                <property>
-                  <name>prop.jarLocation</name>
-                  <value>${basedir}/target/giraph-${project.version}-${forHadoop}-jar-with-dependencies.jar</value>
-                </property>
-              </systemProperties>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
     </profile>
 
     <profile>
       <id>hadoop_0.23</id>
-       <activation>
+      <activation>
         <property>
           <name>hadoop</name>
           <value>0.23</value>
@@ -791,63 +538,14 @@ under the License.
       <properties>
         <hadoop.version>0.23.3</hadoop.version>
       </properties>
-      <dependencies>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-common</artifactId>
-          <version>${hadoop.version}</version>
-          <scope>provided</scope>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-core</artifactId>
-          <version>${hadoop.version}</version>
-          <scope>provided</scope>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-common</artifactId>
-          <version>${hadoop.version}</version>
-        </dependency>
-
-	<dependency>
-	  <groupId>commons-net</groupId>
-	  <artifactId>commons-net</artifactId>
-	  <scope>provided</scope>
-	  <version>3.1</version>
-	</dependency>
-
-      </dependencies>
-      <build>
-	<plugins>
-          <plugin>
-            <groupId>org.sonatype.plugins</groupId>
-            <artifactId>munge-maven-plugin</artifactId>
-            <version>${munge-maven-plugin.version}</version>
-            <executions>
-              <execution>
-		<id>munge</id>
-		<phase>generate-sources</phase>
-		<goals>
-                  <goal>munge</goal>
-		</goals>
-              </execution>
-            </executions>
-	    <!-- profile: hadoop_0.23 -->
-            <configuration>
-	      <symbols>HADOOP_1_SECRET_MANAGER</symbols>
-            </configuration>
-          </plugin>
-	</plugins>
-      </build>
     </profile>
 
     <!-- Help keep future Hadoop versions munge-free: 
-	 All profiles below are munge-free: avoid introducing any munge
+   All profiles below are munge-free: avoid introducing any munge
          flags on any of the following profiles. -->
     <profile>
       <id>hadoop_2.0.0</id>
-       <activation>
+      <activation>
         <property>
           <name>hadoop</name>
           <value>2.0.0</value>
@@ -856,25 +554,6 @@ under the License.
       <properties>
         <hadoop.version>2.0.0-alpha</hadoop.version>
       </properties>
-      <dependencies>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-common</artifactId>
-      <version>${hadoop.version}</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-mapreduce-client-core</artifactId>
-      <version>${hadoop.version}</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-mapreduce-client-common</artifactId>
-      <version>${hadoop.version}</version>
-    </dependency>
-      </dependencies>
     </profile>
 
     <profile>
@@ -888,25 +567,6 @@ under the License.
       <properties>
         <hadoop.version>2.0.1-alpha</hadoop.version>
       </properties>
-      <dependencies>
-	<dependency>
-	  <groupId>org.apache.hadoop</groupId>
-	  <artifactId>hadoop-common</artifactId>
-	  <version>${hadoop.version}</version>
-	  <scope>provided</scope>
-	</dependency>
-	<dependency>
-	  <groupId>org.apache.hadoop</groupId>
-	  <artifactId>hadoop-mapreduce-client-core</artifactId>
-	  <version>${hadoop.version}</version>
-	  <scope>provided</scope>
-	</dependency>
-	<dependency>
-	  <groupId>org.apache.hadoop</groupId>
-	  <artifactId>hadoop-mapreduce-client-common</artifactId>
-	  <version>${hadoop.version}</version>
-	</dependency>
-      </dependencies>
     </profile>
 
     <profile>
@@ -920,29 +580,11 @@ under the License.
       <properties>
         <hadoop.version>2.0.2-alpha</hadoop.version>
       </properties>
-      <dependencies>
-	<dependency>
-	  <groupId>org.apache.hadoop</groupId>
-	  <artifactId>hadoop-common</artifactId>
-	  <version>${hadoop.version}</version>
-	  <scope>provided</scope>
-	</dependency>
-	<dependency>
-	  <groupId>org.apache.hadoop</groupId>
-	  <artifactId>hadoop-mapreduce-client-core</artifactId>
-	  <version>${hadoop.version}</version>
-	  <scope>provided</scope>
-	</dependency>
-	<dependency>
-	  <groupId>org.apache.hadoop</groupId>
-	  <artifactId>hadoop-mapreduce-client-common</artifactId>
-	  <version>${hadoop.version}</version>
-	</dependency>
-      </dependencies>
     </profile>
+
     <profile>
       <id>hadoop_trunk</id>
-       <activation>
+      <activation>
         <property>
           <name>hadoop</name>
           <value>trunk</value>
@@ -951,123 +593,202 @@ under the License.
       <properties>
         <hadoop.version>3.0.0-SNAPSHOT</hadoop.version>
       </properties>
-      <dependencies>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-common</artifactId>
-          <version>${hadoop.version}</version>
-          <scope>provided</scope>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-core</artifactId>
-          <version>${hadoop.version}</version>
-          <scope>provided</scope>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-common</artifactId>
-          <version>${hadoop.version}</version>
-          <scope>provided</scope>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-auth</artifactId>
-          <version>${hadoop.version}</version>
-          <scope>provided</scope>
-        </dependency>
-        <dependency>
-          <groupId>commons-configuration</groupId>
-          <artifactId>commons-configuration</artifactId>
-          <version>1.6</version>
-          <scope>runtime</scope>
-        </dependency>
-        <dependency>
-          <groupId>commons-httpclient</groupId>
-          <artifactId>commons-httpclient</artifactId>
-          <version>3.0.1</version>
-          <scope>runtime</scope>
-        </dependency>
-     </dependencies>
     </profile>
   </profiles>
 
-  <dependencies>
-    <dependency>
-      <groupId>junit</groupId>
-      <artifactId>junit</artifactId>
-      <version>4.8</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.codehaus.jackson</groupId>
-      <artifactId>jackson-core-asl</artifactId>
-      <version>${jackson.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.mahout</groupId>
-      <artifactId>mahout-collections</artifactId>
-      <version>1.0</version>
-    </dependency>
-    <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
-      <version>12.0</version>
-    </dependency>
-    <dependency>
-      <groupId>org.codehaus.jackson</groupId>
-      <artifactId>jackson-mapper-asl</artifactId>
-      <version>${jackson.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.zookeeper</groupId>
-      <artifactId>zookeeper</artifactId>
-      <version>3.3.3</version>
-      <exclusions>
-        <exclusion>
-          <groupId>com.sun.jmx</groupId>
-          <artifactId>jmxri</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>com.sun.jdmk</groupId>
-          <artifactId>jmxtools</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>javax.jms</groupId>
-          <artifactId>jms</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-io</artifactId>
-      <version>1.3.2</version>
-    </dependency>
-    <dependency>
-      <groupId>commons-cli</groupId>
-      <artifactId>commons-cli</artifactId>
-      <version>1.2</version>
-    </dependency>
-    <dependency>
-      <groupId>net.iharder</groupId>
-      <artifactId>base64</artifactId>
-      <version>2.3.8</version>
-    </dependency>
-    <dependency>
-      <groupId>org.json</groupId>
-      <artifactId>json</artifactId>
-      <version>20090211</version>
-    </dependency>
-    <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-all</artifactId>
-      <version>1.8.5</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>io.netty</groupId>
-      <artifactId>netty</artifactId>
-      <version>3.5.3.Final</version>
-    </dependency>
-  </dependencies>
+  <dependencyManagement>
+    <dependencies>
+      <!-- compile dependencies -->
+      <dependency>
+        <groupId>commons-cli</groupId>
+        <artifactId>commons-cli</artifactId>
+        <version>1.2</version>
+      </dependency>
+      <dependency>
+        <groupId>com.google.guava</groupId>
+        <artifactId>guava</artifactId>
+        <version>12.0</version>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty</artifactId>
+        <version>3.5.3.Final</version>
+      </dependency>
+      <dependency>
+        <groupId>net.iharder</groupId>
+        <artifactId>base64</artifactId>
+        <version>2.3.8</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-io</artifactId>
+        <version>1.3.2</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.giraph</groupId>
+        <artifactId>giraph</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hcatalog</groupId>
+        <artifactId>hcatalog-core</artifactId>
+        <!-- TODO: Use 0.5.0 stable release -->
+        <version>0.5.0-SNAPSHOT</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.apache.pig</groupId>
+            <artifactId>pig</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hive</groupId>
+        <artifactId>hive-common</artifactId>
+        <version>0.9.0</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.mahout</groupId>
+        <artifactId>mahout-collections</artifactId>
+        <version>1.0</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.zookeeper</groupId>
+        <artifactId>zookeeper</artifactId>
+        <version>3.3.3</version>
+        <exclusions>
+          <exclusion>
+            <groupId>com.sun.jmx</groupId>
+            <artifactId>jmxri</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.sun.jdmk</groupId>
+            <artifactId>jmxtools</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>javax.jms</groupId>
+            <artifactId>jms</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.codehaus.jackson</groupId>
+        <artifactId>jackson-core-asl</artifactId>
+        <version>${jackson.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.codehaus.jackson</groupId>
+        <artifactId>jackson-mapper-asl</artifactId>
+        <version>${jackson.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.json</groupId>
+        <artifactId>json</artifactId>
+        <version>20090211</version>
+      </dependency>
+
+      <!-- provided dependencies -->
+      <dependency>
+        <groupId>commons-collections</groupId>
+        <artifactId>commons-collections</artifactId>
+        <version>3.2.1</version>
+        <scope>provided</scope>
+      </dependency>
+      <dependency>
+        <groupId>commons-net</groupId>
+        <artifactId>commons-net</artifactId>
+        <scope>provided</scope>
+        <version>3.1</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.accumulo</groupId>
+        <artifactId>accumulo-core</artifactId>
+        <version>1.4.0</version>
+        <scope>provided</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-auth</artifactId>
+        <version>${hadoop.version}</version>
+        <scope>provided</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-common</artifactId>
+        <version>${hadoop.version}</version>
+        <scope>provided</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-core</artifactId>
+        <version>${hadoop.version}</version>
+        <scope>provided</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-mapreduce-client-common</artifactId>
+        <version>${hadoop.version}</version>
+        <scope>provided</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-mapreduce-client-core</artifactId>
+        <version>${hadoop.version}</version>
+        <scope>provided</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase</artifactId>
+        <version>${hbase.version}</version>
+        <scope>provided</scope>
+      </dependency>
+
+      <!-- runtime dependencies -->
+      <dependency>
+        <groupId>commons-configuration</groupId>
+        <artifactId>commons-configuration</artifactId>
+        <version>1.6</version>
+        <scope>runtime</scope>
+      </dependency>
+      <dependency>
+        <groupId>commons-httpclient</groupId>
+        <artifactId>commons-httpclient</artifactId>
+        <version>3.0.1</version>
+        <scope>runtime</scope>
+      </dependency>
+      <dependency>
+        <groupId>commons-logging</groupId>
+        <artifactId>commons-logging-api</artifactId>
+        <version>1.0.4</version>
+        <scope>runtime</scope>
+      </dependency>
+
+      <!-- test dependencies -->
+      <dependency>
+        <groupId>junit</groupId>
+        <artifactId>junit</artifactId>
+        <version>4.8</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>hadoop-test</artifactId>
+        <version>${hadoop.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase</groupId>
+        <artifactId>hbase</artifactId>
+        <type>test-jar</type>
+        <version>${hbase.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.mockito</groupId>
+        <artifactId>mockito-all</artifactId>
+        <version>1.8.5</version>
+        <scope>test</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
 </project>
