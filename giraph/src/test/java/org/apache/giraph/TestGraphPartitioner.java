@@ -126,7 +126,7 @@ public class TestGraphPartitioner extends BspCase {
         job.getConfiguration().setVertexOutputFormatClass(SimpleSuperstepVertexOutputFormat.class);
         job.getConfiguration().setGraphPartitionerFactoryClass(
             HashRangePartitionerFactory.class);
-        outputPath = new Path("/tmp/testHashRangePartitioner");
+        outputPath = getTempPath("testHashRangePartitioner");
         removeAndSetOutput(job, outputPath);
         assertTrue(job.run(true));
         verifyOutput(hdfs, outputPath);

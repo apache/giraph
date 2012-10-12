@@ -2,6 +2,8 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-366: TestGraphPartitioner should use getTempPath() everywhere
+
   GIRAPH-346: Top Level POM. (nitay via aching)
 
   GIRAPH-200: Remove hadoop RPC and keep just netty. (apresta)
