@@ -54,7 +54,7 @@ public abstract class AccumuloVertexOutputFormat<
   /**
    * Output table parameter
    */
-  protected static final String OUTPUT_TABLE = "OUTPUT_TABLE";
+  public static final String OUTPUT_TABLE = "OUTPUT_TABLE";
 
   /**
    * Accumulo delegate for table output
