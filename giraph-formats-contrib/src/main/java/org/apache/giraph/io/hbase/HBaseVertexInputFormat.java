@@ -19,7 +19,6 @@ package org.apache.giraph.io.hbase;
 
 import org.apache.giraph.graph.VertexInputFormat;
 import org.apache.giraph.graph.VertexReader;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableInputFormat;
@@ -29,6 +28,7 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.log4j.Logger;
 
 import java.io.IOException;
 import java.util.List;
@@ -61,21 +61,17 @@ public abstract  class HBaseVertexInputFormat<
         M extends Writable>
         extends VertexInputFormat<I, V, E, M>  {
 
-  /**
+
+   /**
    * delegate HBase table input format
    */
   protected static final TableInputFormat BASE_FORMAT =
           new TableInputFormat();
-
-    /**
-     * static method to initialize
-     * base table input format
-     * with Configuration.
-     * @param conf job configuration
-     */
-  public static void setConf(Configuration conf) {
-    BASE_FORMAT.setConf(conf);
-  }
+  /**
+  * logger
+  */
+  private static final Logger LOG =
+          Logger.getLogger(HBaseVertexInputFormat.class);
 
   /**
    * Takes an instance of RecordReader that supports
@@ -105,12 +101,15 @@ public abstract  class HBaseVertexInputFormat<
     private TaskAttemptContext context;
 
     /**
-     * constructor used for subclassing vertex record reader.
-     * @param reader HBase record reader instance
+     *  sets the base TableInputFOrmat and creates a record reader.
+     * @param split InputSplit
+     * @param context Context
+     * @throws IOException
      */
-    public HBaseVertexReader(RecordReader<ImmutableBytesWritable,
-                                              Result> reader) {
-      this.reader = reader;
+    public HBaseVertexReader(InputSplit split, TaskAttemptContext context)
+      throws IOException {
+      BASE_FORMAT.setConf(context.getConfiguration());
+      this.reader = BASE_FORMAT.createRecordReader(split, context);
     }
 
     /**
@@ -182,6 +181,7 @@ public abstract  class HBaseVertexInputFormat<
   public List<InputSplit> getSplits(
   JobContext context, int numWorkers)
     throws IOException, InterruptedException {
+    BASE_FORMAT.setConf(context.getConfiguration());
     return BASE_FORMAT.getSplits(context);
   }
 }

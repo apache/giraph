@@ -51,8 +51,7 @@ public class TableEdgeInputFormat extends
             createVertexReader(InputSplit split,
                                TaskAttemptContext context) throws IOException {
 
-        return new TableEdgeVertexReader(
-                BASE_FORMAT.createRecordReader(split, context));
+        return new TableEdgeVertexReader(split, context);
 
     }
 
@@ -65,9 +64,8 @@ public class TableEdgeInputFormat extends
         private final byte[] CF = Bytes.toBytes("cf");
         private final byte[] CHILDREN = Bytes.toBytes("children");
 
-        public TableEdgeVertexReader(
-                RecordReader<ImmutableBytesWritable, Result> recordReader) {
-            super(recordReader);
+        public TableEdgeVertexReader(InputSplit split, TaskAttemptContext context) throws IOException {
+            super(split, context);
         }
 
 

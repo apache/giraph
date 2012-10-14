@@ -39,9 +39,7 @@ public class TableEdgeOutputFormat
     public VertexWriter<Text, Text, Text>
     createVertexWriter(TaskAttemptContext context)
             throws IOException, InterruptedException {
-        RecordWriter<ImmutableBytesWritable, Writable> writer =
-                BASE_FORMAT.getRecordWriter(context);
-        return new TableEdgeVertexWriter(writer);
+        return new TableEdgeVertexWriter(context);
     }
 
     /*
@@ -54,9 +52,9 @@ public class TableEdgeOutputFormat
         private final byte[] CF = Bytes.toBytes("cf");
         private final byte[] PARENT =  Bytes.toBytes("parent");
 
-        public TableEdgeVertexWriter(
-                RecordWriter<ImmutableBytesWritable, Writable> writer) {
-            super(writer);
+        public TableEdgeVertexWriter(TaskAttemptContext context)
+          throws IOException, InterruptedException  {
+            super(context);
         }
         /*
          Record the vertex value as a the value for a new qualifier 'parent'.

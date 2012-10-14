@@ -140,8 +140,6 @@ public class TestHBaseRootMarkerVertextFormat extends BspCase {
             //now operate over HBase using Vertex I/O formats
             conf.set(TableInputFormat.INPUT_TABLE, TABLE_NAME);
             conf.set(TableOutputFormat.OUTPUT_TABLE, TABLE_NAME);
-            HBaseVertexInputFormat.setConf(conf);
-            HBaseVertexOutputFormat.setConf(conf);
 
             GiraphJob giraphJob = new GiraphJob(conf, getCallingMethodName());
             GiraphConfiguration giraphConf = giraphJob.getConfiguration();
