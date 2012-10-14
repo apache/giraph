@@ -28,6 +28,7 @@ import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.WorkerInfo;
 import org.apache.giraph.graph.partition.Partition;
+import org.apache.giraph.graph.partition.PartitionOwner;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -75,6 +76,11 @@ public class NettyWorkerClientServer<I extends WritableComparable,
   @Override
   public void fixPartitionIdToSocketAddrMap() {
     client.fixPartitionIdToSocketAddrMap();
+  }
+
+  @Override
+  public PartitionOwner getVertexPartitionOwner(I vertexId) {
+    return client.getVertexPartitionOwner(vertexId);
   }
 
   @Override

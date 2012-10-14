@@ -23,6 +23,7 @@ import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.WorkerInfo;
 import org.apache.giraph.graph.partition.Partition;
 
+import org.apache.giraph.graph.partition.PartitionOwner;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -60,6 +61,13 @@ else[HADOOP_NON_SECURE]*/
    * workers.
    */
   void fixPartitionIdToSocketAddrMap();
+
+  /**
+   * Lookup PartitionOwner for a vertex.
+   * @param vertexId id to look up.
+   * @return PartitionOwner holding the vertex.
+   */
+  PartitionOwner getVertexPartitionOwner(I vertexId);
 
   /**
    * Sends a message to destination vertex.

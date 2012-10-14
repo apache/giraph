@@ -239,9 +239,18 @@ public class NettyWorkerClient<I extends WritableComparable,
     }
   }
 
+  /**
+   * Lookup PartitionOwner for a vertex.
+   * @param vertexId id to look up.
+   * @return PartitionOwner holding the vertex.
+   */
+  public PartitionOwner getVertexPartitionOwner(I vertexId) {
+    return service.getVertexPartitionOwner(vertexId);
+  }
+
   @Override
   public void sendMessageRequest(I destVertexId, M message) {
-    PartitionOwner owner = service.getVertexPartitionOwner(destVertexId);
+    PartitionOwner owner = getVertexPartitionOwner(destVertexId);
     WorkerInfo workerInfo = owner.getWorkerInfo();
     final int partitionId = owner.getPartitionId();
     if (LOG.isTraceEnabled()) {
@@ -342,8 +351,7 @@ public class NettyWorkerClient<I extends WritableComparable,
   @Override
   public void addEdgeRequest(I vertexIndex, Edge<I, E> edge) throws
       IOException {
-    PartitionOwner partitionOwner =
-        service.getVertexPartitionOwner(vertexIndex);
+    PartitionOwner partitionOwner = getVertexPartitionOwner(vertexIndex);
     int partitionId = partitionOwner.getPartitionId();
     if (LOG.isTraceEnabled()) {
       LOG.trace("addEdgeRequest: Sending edge " + edge + " for index " +
@@ -361,8 +369,7 @@ public class NettyWorkerClient<I extends WritableComparable,
   @Override
   public void removeEdgeRequest(I vertexIndex,
                                 I destinationVertexIndex) throws IOException {
-    PartitionOwner partitionOwner =
-        service.getVertexPartitionOwner(vertexIndex);
+    PartitionOwner partitionOwner = getVertexPartitionOwner(vertexIndex);
     int partitionId = partitionOwner.getPartitionId();
     if (LOG.isTraceEnabled()) {
       LOG.trace("removeEdgeRequest: Removing edge " +
@@ -381,8 +388,7 @@ public class NettyWorkerClient<I extends WritableComparable,
 
   @Override
   public void addVertexRequest(Vertex<I, V, E, M> vertex) throws IOException {
-    PartitionOwner partitionOwner =
-        service.getVertexPartitionOwner(vertex.getId());
+    PartitionOwner partitionOwner = getVertexPartitionOwner(vertex.getId());
     int partitionId = partitionOwner.getPartitionId();
     if (LOG.isTraceEnabled()) {
       LOG.trace("addVertexRequest: Sending vertex " + vertex +
@@ -399,8 +405,7 @@ public class NettyWorkerClient<I extends WritableComparable,
 
   @Override
   public void removeVertexRequest(I vertexIndex) throws IOException {
-    PartitionOwner partitionOwner =
-        service.getVertexPartitionOwner(vertexIndex);
+    PartitionOwner partitionOwner = getVertexPartitionOwner(vertexIndex);
     int partitionId = partitionOwner.getPartitionId();
     if (LOG.isTraceEnabled()) {
       LOG.trace("removeVertexRequest: Removing vertex index " +
@@ -442,7 +447,7 @@ public class NettyWorkerClient<I extends WritableComparable,
           new SendPartitionMutationsRequest<I, V, E, M>(
               entry.getKey(), entry.getValue());
       PartitionOwner partitionOwner =
-          service.getVertexPartitionOwner(
+          getVertexPartitionOwner(
               entry.getValue().keySet().iterator().next());
       InetSocketAddress remoteServerAddress =
           getInetSocketAddress(partitionOwner.getWorkerInfo(),
