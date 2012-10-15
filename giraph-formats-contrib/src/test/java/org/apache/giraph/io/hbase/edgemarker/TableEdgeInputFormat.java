@@ -20,15 +20,11 @@ package org.apache.giraph.io.hbase.edgemarker;
 import com.google.common.collect.Maps;
 import org.apache.giraph.io.hbase.HBaseVertexInputFormat;
 import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.VertexReader;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.InputSplit;
-import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.log4j.Logger;
 
@@ -45,7 +41,6 @@ public class TableEdgeInputFormat extends
     private static final Logger log =
             Logger.getLogger(TableEdgeInputFormat.class);
     private static final Text uselessEdgeValue = new Text();
-    private Configuration conf;
 
     public VertexReader<Text, Text, Text, Text>
             createVertexReader(InputSplit split,
@@ -83,8 +78,7 @@ public class TableEdgeInputFormat extends
                 throws IOException, InterruptedException {
             Result row = getRecordReader().getCurrentValue();
             Vertex<Text, Text, Text, Text> vertex =
-                    BspUtils.<Text, Text, Text, Text>
-                            createVertex(getContext().getConfiguration());
+                getConfiguration().createVertex();
             Text vertexId = new Text(Bytes.toString(row.getRow()));
             Map<Text, Text> edges = Maps.newHashMap();
             String edge = Bytes.toString(row.getValue(CF, CHILDREN));

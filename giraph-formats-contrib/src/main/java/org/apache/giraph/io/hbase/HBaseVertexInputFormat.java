@@ -17,6 +17,7 @@
  */
 package org.apache.giraph.io.hbase;
 
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.VertexInputFormat;
 import org.apache.giraph.graph.VertexReader;
 import org.apache.hadoop.hbase.client.Result;
@@ -92,16 +93,16 @@ public abstract  class HBaseVertexInputFormat<
           V extends Writable,
           E extends Writable, M extends Writable>
           implements VertexReader<I, V, E, M> {
-
-    /**
-     * reader instance
-     */
+    /** Giraph configuration */
+    private ImmutableClassesGiraphConfiguration<I, V, E, M> configuration;
+    /** Reader instance */
     private final RecordReader<ImmutableBytesWritable, Result> reader;
     /** Context passed to initialize */
     private TaskAttemptContext context;
 
     /**
-     *  sets the base TableInputFOrmat and creates a record reader.
+     * Sets the base TableInputFormat and creates a record reader.
+     *
      * @param split InputSplit
      * @param context Context
      * @throws IOException
@@ -110,6 +111,10 @@ public abstract  class HBaseVertexInputFormat<
       throws IOException {
       BASE_FORMAT.setConf(context.getConfiguration());
       this.reader = BASE_FORMAT.createRecordReader(split, context);
+    }
+
+    public ImmutableClassesGiraphConfiguration<I, V, E, M> getConfiguration() {
+      return configuration;
     }
 
     /**
@@ -126,6 +131,8 @@ public abstract  class HBaseVertexInputFormat<
       InterruptedException {
       reader.initialize(inputSplit, context);
       this.context = context;
+      this.configuration = new ImmutableClassesGiraphConfiguration<I, V, E, M>(
+          context.getConfiguration());
     }
 
     /**

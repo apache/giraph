@@ -20,6 +20,7 @@ package org.apache.giraph.io.accumulo;
 import org.apache.accumulo.core.client.mapreduce.AccumuloInputFormat;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Value;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.VertexInputFormat;
 import org.apache.giraph.graph.VertexReader;
 import org.apache.hadoop.io.Writable;
@@ -71,9 +72,11 @@ public abstract class AccumuloVertexInputFormat<
       V extends Writable, E extends Writable, M extends Writable>
       implements VertexReader<I, V, E, M> {
 
+    /** Giraph configuration */
+    private ImmutableClassesGiraphConfiguration<I, V, E, M> configuration;
     /**
-    * Used by subclasses to read key/value pairs.
-    */
+     * Used by subclasses to read key/value pairs.
+     */
     private final RecordReader<Key, Value> reader;
     /** Context passed to initialize */
     private TaskAttemptContext context;
@@ -86,20 +89,25 @@ public abstract class AccumuloVertexInputFormat<
       this.reader = reader;
     }
 
-      /**
-       * initialize the reader.
-       *
-       * @param inputSplit Input split to be used for reading vertices.
-       * @param context Context from the task.
-       * @throws IOException
-       * @throws InterruptedException
-       */
+    public ImmutableClassesGiraphConfiguration<I, V, E, M> getConfiguration() {
+      return configuration;
+    }
 
+    /**
+     * initialize the reader.
+     *
+     * @param inputSplit Input split to be used for reading vertices.
+     * @param context Context from the task.
+     * @throws IOException
+     * @throws InterruptedException
+     */
     public void initialize(InputSplit inputSplit,
                            TaskAttemptContext context)
       throws IOException, InterruptedException {
       reader.initialize(inputSplit, context);
       this.context = context;
+      this.configuration = new ImmutableClassesGiraphConfiguration<I, V, E, M>(
+          context.getConfiguration());
     }
 
     /**

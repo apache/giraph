@@ -22,7 +22,6 @@ import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Value;
 import org.apache.giraph.io.accumulo.AccumuloVertexInputFormat;
 import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.VertexReader;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
@@ -80,8 +79,7 @@ public class AccumuloEdgeInputFormat
               Key key = getRecordReader().getCurrentKey();
               Value value = getRecordReader().getCurrentValue();
               Vertex<Text, Text, Text, Text> vertex =
-                  BspUtils.<Text, Text, Text, Text>createVertex(
-                      getContext().getConfiguration());
+                  getConfiguration().createVertex();
               Text vertexId = key.getRow();
               Map<Text, Text> edges = Maps.newHashMap();
               String edge = new String(value.get());
