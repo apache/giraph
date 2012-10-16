@@ -27,11 +27,11 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -85,7 +85,7 @@ public abstract class Vertex<I extends WritableComparable,
   public void initialize(I id, V value) {
     this.id = id;
     this.value = value;
-    setEdges(Maps.<I, E>newHashMapWithExpectedSize(0));
+    setEdges(Collections.<I, E>emptyMap());
   }
 
   /**

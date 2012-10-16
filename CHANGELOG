@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-375: Cleaner MutableVertex API (apresta)
+
   GIRAPH-371: Replace BspUtils in giraph-formats-contrib for
   speed. (aching)
 

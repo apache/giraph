@@ -22,6 +22,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.Map;
 
 /**
@@ -56,33 +57,29 @@ public abstract class MutableVertex<I extends WritableComparable,
   public abstract E removeEdge(I targetVertexId);
 
   /**
-   * Create a vertex to add to the graph.  Calls initialize() for the vertex
-   * as well.
+   * Sends a request to create a vertex that will be available during the
+   * next superstep.
    *
-   * @param vertexId Id of the new vertex.
-   * @param vertexValue Value of the new vertex.
-   * @param edges Map of edges to be added to this vertex.
-   * @return A new vertex for adding to the graph
+   * @param id Vertex id
+   * @param value Vertex value
+   * @param edges Initial edges
    */
-  public Vertex<I, V, E, M> instantiateVertex(
-      I vertexId, V vertexValue, Map<I, E> edges) {
-    MutableVertex<I, V, E, M> mutableVertex =
-        (MutableVertex<I, V, E, M>) getConf().createVertex();
-    mutableVertex.setGraphState(getGraphState());
-    mutableVertex.initialize(vertexId, vertexValue, edges);
-    return mutableVertex;
+  public void addVertexRequest(I id, V value, Map<I, E> edges)
+    throws IOException {
+    Vertex<I, V, E, M> vertex = getConf().createVertex();
+    vertex.initialize(id, value, edges);
+    getGraphState().getWorkerCommunications().addVertexRequest(vertex);
   }
 
   /**
    * Sends a request to create a vertex that will be available during the
-   * next superstep.  Use instantiateVertex() to do the instantiation.
+   * next superstep.
    *
-   * @param vertex User created vertex
+   * @param id Vertex id
+   * @param value Vertex value
    */
-  public void addVertexRequest(Vertex<I, V, E, M> vertex)
-    throws IOException {
-    getGraphState().getWorkerCommunications().
-        addVertexRequest(vertex);
+  public void addVertexRequest(I id, V value) throws IOException {
+    addVertexRequest(id, value, Collections.<I, E>emptyMap());
   }
 
   /**
@@ -92,8 +89,7 @@ public abstract class MutableVertex<I extends WritableComparable,
    * @param vertexId Id of the vertex to be removed.
    */
   public void removeVertexRequest(I vertexId) throws IOException {
-    getGraphState().getWorkerCommunications().
-        removeVertexRequest(vertexId);
+    getGraphState().getWorkerCommunications().removeVertexRequest(vertexId);
   }
 
   /**

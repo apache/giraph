@@ -20,7 +20,6 @@ package org.apache.giraph.examples;
 
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.EdgeListVertex;
-import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.WorkerContext;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
@@ -85,10 +84,7 @@ public class SimpleMutateGraphVertex extends EdgeListVertex<
       // Create vertices that are sure not to exist (doubling vertices)
       LongWritable vertexIndex =
           new LongWritable(rangeVertexIdStart(3) + getId().get());
-      Vertex<LongWritable, DoubleWritable,
-            FloatWritable, DoubleWritable> vertex =
-        instantiateVertex(vertexIndex, new DoubleWritable(0.0), null);
-      addVertexRequest(vertex);
+      addVertexRequest(vertexIndex, new DoubleWritable(0.0));
       // Add edges to those remote vertices as well
       addEdgeRequest(vertexIndex,
           new Edge<LongWritable, FloatWritable>(
