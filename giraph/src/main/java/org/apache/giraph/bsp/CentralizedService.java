@@ -35,10 +35,7 @@ import java.io.IOException;
 @SuppressWarnings("rawtypes")
 public interface CentralizedService<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable> {
-  /**
-   * Setup (must be called prior to any other function)
-   */
-  void setup();
+
 
   /**
    * Get the current global superstep of the application to work on.

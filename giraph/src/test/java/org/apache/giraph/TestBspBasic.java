@@ -117,15 +117,11 @@ public class TestBspBasic extends BspCase {
     GiraphJob job = prepareJob(getCallingMethodName(),
         SimpleSuperstepVertex.class,
         SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat.class);
-    GraphState<LongWritable, IntWritable, FloatWritable, IntWritable> gs =
-        new GraphState<LongWritable, IntWritable,
-        FloatWritable, IntWritable>();
     ImmutableClassesGiraphConfiguration configuration =
         new ImmutableClassesGiraphConfiguration(job.getConfiguration());
     Vertex<LongWritable, IntWritable, FloatWritable, IntWritable> vertex =
         configuration.createVertex();
-    System.out.println("testInstantiateVertex: Got vertex " + vertex +
-        ", graphState" + gs);
+    System.out.println("testInstantiateVertex: Got vertex " + vertex);
     VertexInputFormat<LongWritable, IntWritable, FloatWritable, IntWritable>
     inputFormat = configuration.createVertexInputFormat();
 /*if[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]
@@ -355,38 +351,6 @@ else[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
       resultList.add(next);
     }
     assertEquals(goodList, resultList);
-  }
-
-  /**
-   * Run a sample BSP job locally and test PageRank.
-   *
-   * @throws IOException
-   * @throws ClassNotFoundException
-   * @throws InterruptedException
-   */
-  @Test
-  public void testBspPageRank()
-      throws IOException, InterruptedException, ClassNotFoundException {
-    GiraphJob job = prepareJob(getCallingMethodName(),
-        SimplePageRankVertex.class, SimplePageRankVertexInputFormat.class);
-    job.getConfiguration().setWorkerContextClass(
-        SimplePageRankVertex.SimplePageRankVertexWorkerContext.class);
-    job.getConfiguration().setMasterComputeClass(
-        SimplePageRankVertex.SimplePageRankVertexMasterCompute.class);
-    assertTrue(job.run(true));
-    if (!runningInDistributedMode()) {
-      double maxPageRank =
-          SimplePageRankVertex.SimplePageRankVertexWorkerContext.getFinalMax();
-      double minPageRank =
-          SimplePageRankVertex.SimplePageRankVertexWorkerContext.getFinalMin();
-      long numVertices =
-          SimplePageRankVertex.SimplePageRankVertexWorkerContext.getFinalSum();
-      System.out.println("testBspPageRank: maxPageRank=" + maxPageRank +
-          " minPageRank=" + minPageRank + " numVertices=" + numVertices);
-      assertEquals(34.03, maxPageRank, 0.001);
-      assertEquals(0.03, minPageRank, 0.00001);
-      assertEquals(5l, numVertices);
-    }
   }
 
   /**

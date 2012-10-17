@@ -20,36 +20,34 @@ package org.apache.giraph.comm.netty.handler;
 
 import com.google.common.collect.Maps;
 import java.net.InetSocketAddress;
-import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Generate different request ids based on the address of the well known
- * port on the workers
+ * port on the workers.  Thread-safe.
  */
 public class AddressRequestIdGenerator {
   /** Address request generator map */
-  private final Map<InetSocketAddress, Long> addressRequestGeneratorMap =
-      Maps.newHashMap();
+  private final ConcurrentMap<InetSocketAddress, AtomicLong>
+  addressRequestGeneratorMap = Maps.newConcurrentMap();
 
   /**
-   * Get the next request id for a given destination.  Not thread-safe.
+   * Get the next request id for a given destination.  Thread-safe.
    *
    * @param address Address of the worker (consistent during a superstep)
    * @return Valid request id
    */
   public Long getNextRequestId(InetSocketAddress address) {
-    Long requestGenerator = addressRequestGeneratorMap.get(address);
+    AtomicLong requestGenerator = addressRequestGeneratorMap.get(address);
     if (requestGenerator == null) {
-      requestGenerator = Long.valueOf(0);
-      if (addressRequestGeneratorMap.put(address, requestGenerator) != null) {
-        throw new IllegalStateException("getNextRequestId: Illegal put for " +
-            "address " + address);
+      requestGenerator = new AtomicLong(0);
+      AtomicLong oldRequestGenerator =
+          addressRequestGeneratorMap.putIfAbsent(address, requestGenerator);
+      if (oldRequestGenerator != null) {
+        requestGenerator = oldRequestGenerator;
       }
-      return requestGenerator;
     }
-
-    requestGenerator = requestGenerator + 1;
-    addressRequestGeneratorMap.put(address, requestGenerator);
-    return requestGenerator;
+    return requestGenerator.getAndIncrement();
   }
 }

@@ -18,6 +18,7 @@
 
 package org.apache.giraph.graph.partition;
 
+import com.google.common.collect.Lists;
 import org.apache.giraph.graph.WorkerInfo;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -42,9 +43,12 @@ import java.util.Set;
 public class HashWorkerPartitioner<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
     implements WorkerGraphPartitioner<I, V, E, M> {
-  /** Mapping of the vertex ids to {@link PartitionOwner} */
+  /**
+   * Mapping of the vertex ids to {@link PartitionOwner}.  Needs to be
+   * thread-safe (hence CopyOnWriteArrayList).
+   */
   protected List<PartitionOwner> partitionOwnerList =
-      new ArrayList<PartitionOwner>();
+      Lists.newCopyOnWriteArrayList();
 
   @Override
   public PartitionOwner createPartitionOwner() {
@@ -53,10 +57,8 @@ public class HashWorkerPartitioner<I extends WritableComparable,
 
   @Override
   public PartitionOwner getPartitionOwner(I vertexId) {
-    synchronized (partitionOwnerList) {
-      return partitionOwnerList.get(Math.abs(vertexId.hashCode()) %
-          partitionOwnerList.size());
-    }
+    return partitionOwnerList.get(Math.abs(vertexId.hashCode()) %
+        partitionOwnerList.size());
   }
 
   @Override
@@ -72,10 +74,8 @@ public class HashWorkerPartitioner<I extends WritableComparable,
       WorkerInfo myWorkerInfo,
       Collection<? extends PartitionOwner> masterSetPartitionOwners,
       PartitionStore<I, V, E, M> partitionStore) {
-    synchronized (partitionOwnerList) {
-      partitionOwnerList.clear();
-      partitionOwnerList.addAll(masterSetPartitionOwners);
-    }
+    partitionOwnerList.clear();
+    partitionOwnerList.addAll(masterSetPartitionOwners);
 
     Set<WorkerInfo> dependentWorkerSet = new HashSet<WorkerInfo>();
     Map<WorkerInfo, List<Integer>> workerPartitionOwnerMap =

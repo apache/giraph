@@ -36,6 +36,7 @@ import org.apache.giraph.comm.netty.handler.ResponseEncoder;
 else[HADOOP_NON_SECURE]*/
 import org.apache.giraph.comm.netty.handler.SaslServerHandler;
 /*end[HADOOP_NON_SECURE]*/
+import java.util.concurrent.TimeUnit;
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.log4j.Logger;
@@ -141,10 +142,10 @@ else[HADOOP_NON_SECURE]*/
 
     bossExecutorService = Executors.newCachedThreadPool(
         new ThreadFactoryBuilder().setNameFormat(
-            "Giraph Server Netty Boss #%d").build());
+            "netty-server-boss-%d").build());
     workerExecutorService = Executors.newCachedThreadPool(
         new ThreadFactoryBuilder().setNameFormat(
-            "Giraph Server Netty Worker #%d").build());
+            "netty-server-worker-%d").build());
 
     try {
       this.localHostname = InetAddress.getLocalHost().getHostName();
@@ -175,7 +176,9 @@ else[HADOOP_NON_SECURE]*/
       int executionThreads = conf.getNettyServerExecutionThreads();
       executionHandler = new ExecutionHandler(
           new MemoryAwareThreadPoolExecutor(
-              executionThreads, 1048576, 1048576));
+              executionThreads, 1048576, 1048576, 1, TimeUnit.HOURS,
+              new ThreadFactoryBuilder().setNameFormat("netty-server-exec-%d").
+                  build()));
       if (LOG.isInfoEnabled()) {
         LOG.info("NettyServer: Using execution handler with " +
             executionThreads + " threads after " +

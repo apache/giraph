@@ -1382,26 +1382,23 @@ public class BspServiceMaster<I extends WritableComparable,
    * @param superstep superstep for which to run the master.compute()
    */
   private void runMasterCompute(long superstep) {
-    GraphState<I, V, E, M> graphState = getGraphMapper().getGraphState();
     // The master.compute() should run logically before the workers, so
     // increase the superstep counter it uses by one
-    graphState.setSuperstep(superstep + 1);
-    graphState.setTotalNumVertices(vertexCounter.getValue());
-    graphState.setTotalNumEdges(edgeCounter.getValue());
-    graphState.setContext(getContext());
-    graphState.setGraphMapper(getGraphMapper());
+    GraphState<I, V, E, M> graphState =
+        new GraphState<I, V, E, M>(superstep + 1, vertexCounter.getValue(),
+            edgeCounter.getValue(), getContext(), getGraphMapper(), null);
     masterCompute.setGraphState(graphState);
     if (superstep == INPUT_SUPERSTEP) {
       try {
         masterCompute.initialize();
       } catch (InstantiationException e) {
-        LOG.fatal("map: MasterCompute.initialize failed in instantiation", e);
+        LOG.fatal("runMasterCompute: Failed in instantiation", e);
         throw new RuntimeException(
-            "map: MasterCompute.initialize failed in instantiation", e);
+            "runMasterCompute: Failed in instantiation", e);
       } catch (IllegalAccessException e) {
-        LOG.fatal("map: MasterCompute.initialize failed in access", e);
+        LOG.fatal("runMasterCompute: Failed in access", e);
         throw new RuntimeException(
-            "map: MasterCompute.initialize failed in access", e);
+            "runMasterCompute: Failed in access", e);
       }
     }
     masterCompute.compute();

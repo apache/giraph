@@ -18,13 +18,14 @@
 
 package org.apache.giraph.comm.netty;
 
-import java.util.Collection;
 import java.util.List;
 import com.google.common.collect.Lists;
 import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
 
 /**
- * Maintains multiple channels and rotates between them
+ * Maintains multiple channels and rotates between them.  This is thread-safe.
  */
 public class ChannelRotater {
   /** Index of last used channel */
@@ -52,8 +53,10 @@ public class ChannelRotater {
    *
    * @param channel Channel to add
    */
-  public void addChannel(Channel channel) {
-    channelList.add(channel);
+  public synchronized void addChannel(Channel channel) {
+    synchronized (channelList) {
+      channelList.add(channel);
+    }
   }
 
   /**
@@ -61,42 +64,62 @@ public class ChannelRotater {
    *
    * @return Next channel
    */
-  public Channel nextChannel() {
+  public synchronized Channel nextChannel() {
     if (channelList.isEmpty()) {
       throw new IllegalArgumentException("nextChannel: No channels exist!");
     }
 
-    incrementIndex();
-    return channelList.get(index);
-  }
-
-  /**
-   * Remove the last channel that was given out
-   *
-   * @return Return the removed channel
-   */
-  public Channel removeLast() {
-    Channel channel = channelList.remove(index);
-    incrementIndex();
-    return channel;
-  }
-
-  /**
-   * Increment the channel index with wrapping
-   */
-  private void incrementIndex() {
     ++index;
     if (index >= channelList.size()) {
       index = 0;
     }
+    return channelList.get(index);
   }
 
   /**
-   * Get the channels
+   * Remove the a channel
    *
-   * @return Collection of the channels
+   * @param channel Channel to remove
+   * @return Return true if successful, false otherwise
    */
-  Collection<Channel> getChannels() {
-    return channelList;
+  public synchronized boolean removeChannel(Channel channel) {
+    boolean success = channelList.remove(channel);
+    if (index >= channelList.size()) {
+      index = 0;
+    }
+    return success;
+  }
+
+  /**
+   * Get the number of channels in this object
+   *
+   * @return Number of channels
+   */
+  public synchronized int size() {
+    return channelList.size();
+  }
+
+  /**
+   * Close the channels
+   *
+   * @param channelFutureListener If desired, pass in a channel future listener
+   */
+  public synchronized void closeChannels(
+      ChannelFutureListener channelFutureListener) {
+    for (Channel channel : channelList) {
+      ChannelFuture channelFuture = channel.close();
+      if (channelFutureListener != null) {
+        channelFuture.addListener(channelFutureListener);
+      }
+    }
+  }
+
+  /**
+   * Get a copy of the channels
+   *
+   * @return Copy of the channels
+   */
+  public synchronized Iterable<Channel> getChannels() {
+    return Lists.newArrayList(channelList);
   }
 }

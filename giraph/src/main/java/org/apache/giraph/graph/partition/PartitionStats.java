@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.giraph.graph.partition;
 
 import java.io.DataInput;
@@ -37,6 +36,8 @@ public class PartitionStats implements Writable {
   private long finishedVertexCount = 0;
   /** Edges in this partition */
   private long edgeCount = 0;
+  /** Messages sent from this partition */
+  private long messagesSentCount = 0;
 
   /**
    * Default constructor for reflection.
@@ -50,15 +51,18 @@ public class PartitionStats implements Writable {
    * @param vertexCount Vertex count.
    * @param finishedVertexCount Finished vertex count.
    * @param edgeCount Edge count.
+   * @param messagesSentCount Number of messages sent
    */
   public PartitionStats(int partitionId,
       long vertexCount,
       long finishedVertexCount,
-      long edgeCount) {
+      long edgeCount,
+      long messagesSentCount) {
     this.partitionId = partitionId;
     this.vertexCount = vertexCount;
     this.finishedVertexCount = finishedVertexCount;
     this.edgeCount = edgeCount;
+    this.messagesSentCount = messagesSentCount;
   }
 
   /**
@@ -129,12 +133,31 @@ public class PartitionStats implements Writable {
     return edgeCount;
   }
 
+  /**
+   * Add messages to the messages sent count.
+   *
+   * @param messagesSentCount Number of messages to add.
+   */
+  public void addMessagesSentCount(long messagesSentCount) {
+    this.messagesSentCount += messagesSentCount;
+  }
+
+  /**
+   * Get the messages sent count.
+   *
+   * @return Messages sent count.
+   */
+  public long getMessagesSentCount() {
+    return messagesSentCount;
+  }
+
   @Override
   public void readFields(DataInput input) throws IOException {
     partitionId = input.readInt();
     vertexCount = input.readLong();
     finishedVertexCount = input.readLong();
     edgeCount = input.readLong();
+    messagesSentCount = input.readLong();
   }
 
   @Override
@@ -143,11 +166,13 @@ public class PartitionStats implements Writable {
     output.writeLong(vertexCount);
     output.writeLong(finishedVertexCount);
     output.writeLong(edgeCount);
+    output.writeLong(messagesSentCount);
   }
 
   @Override
   public String toString() {
     return "(id=" + partitionId + ",vtx=" + vertexCount + ",finVtx=" +
-        finishedVertexCount + ",edges=" + edgeCount + ")";
+        finishedVertexCount + ",edges=" + edgeCount + ",msgsSent=" +
+        messagesSentCount + ")";
   }
 }

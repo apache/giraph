@@ -94,7 +94,7 @@ public class AggregatorWrapper<A extends Writable> {
    *
    * @param value Value to be aggregated
    */
-  public void aggregateCurrent(A value) {
+  public synchronized void aggregateCurrent(A value) {
     changed = true;
     currentAggregator.aggregate(value);
   }

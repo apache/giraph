@@ -34,7 +34,7 @@ import com.google.common.collect.Lists;
 
 /**
  * Aggregates the messages to be send to workers so they can be sent
- * in bulk.
+ * in bulk.  Not thread-safe.
  *
  * @param <I> Vertex id
  * @param <M> Message data
@@ -98,7 +98,7 @@ public class SendMessageCache<I extends WritableComparable,
     // Add the message
     final int originalMessageCount = messages.size();
     messages.add(message);
-    if (combiner != null) {
+    if (combiner != null && originalMessageCount > 0) {
       try {
         messages = Lists.newArrayList(combiner.combine(destVertexId, messages));
       } catch (IOException e) {

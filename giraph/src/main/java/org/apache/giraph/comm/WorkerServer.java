@@ -18,6 +18,7 @@
 
 package org.apache.giraph.comm;
 
+import org.apache.giraph.graph.GraphState;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -45,8 +46,10 @@ public interface WorkerServer<I extends WritableComparable,
   /**
    * Move the in transition messages to the in messages for every vertex and
    * add new connections to any newly appearing IPC proxies.
+   *
+   * @param graphState Current graph state
    */
-  void prepareSuperstep();
+  void prepareSuperstep(GraphState<I, V, E, M> graphState);
 
   /**
    * Get server data

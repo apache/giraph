@@ -39,6 +39,11 @@ public interface CentralizedServiceMaster<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable> extends
     CentralizedService<I, V, E, M> {
   /**
+   * Setup (must be called prior to any other function)
+   */
+  void setup();
+
+  /**
    * Become the master.
    * @return true if became the master, false if the application is done.
    */

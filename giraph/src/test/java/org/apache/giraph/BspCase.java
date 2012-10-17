@@ -81,14 +81,14 @@ public class BspCase implements Watcher {
 
     // Allow this test to be run on a real Hadoop setup
     if (runningInDistributedMode()) {
-      System.out.println("setup: Sending job to job tracker " +
+      System.out.println("setupConfiguration: Sending job to job tracker " +
           jobTracker + " with jar path " + getJarLocation()
           + " for " + getName());
       conf.set("mapred.job.tracker", jobTracker);
       conf.setWorkerConfiguration(getNumWorkers(), getNumWorkers(), 100.0f);
     }
     else {
-      System.out.println("setup: Using local job runner with " +
+      System.out.println("setupConfiguration: Using local job runner with " +
           "location " + getJarLocation() + " for " + getName());
       conf.setWorkerConfiguration(1, 1, 100.0f);
       // Single node testing
@@ -341,7 +341,7 @@ public class BspCase implements Watcher {
   @Before
   public void setUp() {
     if (runningInDistributedMode()) {
-      System.out.println("Setting tasks to 3 for " + getName() +
+      System.out.println("setUp: Setting tasks to 3 for " + getName() +
           " since JobTracker exists...");
       numWorkers = 3;
     }

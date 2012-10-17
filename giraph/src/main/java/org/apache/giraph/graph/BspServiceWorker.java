@@ -18,30 +18,40 @@
 
 package org.apache.giraph.graph;
 
+import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.bsp.ApplicationState;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.ServerData;
-import org.apache.giraph.comm.WorkerClientServer;
-import org.apache.giraph.comm.netty.NettyWorkerClientServer;
+import org.apache.giraph.comm.WorkerClient;
+import org.apache.giraph.comm.WorkerClientRequestProcessor;
+import org.apache.giraph.comm.WorkerServer;
+import org.apache.giraph.comm.netty.NettyWorkerClient;
+import org.apache.giraph.comm.netty.NettyWorkerClientRequestProcessor;
+import org.apache.giraph.comm.netty.NettyWorkerServer;
 import org.apache.giraph.graph.partition.Partition;
 import org.apache.giraph.graph.partition.PartitionExchange;
 import org.apache.giraph.graph.partition.PartitionOwner;
 import org.apache.giraph.graph.partition.PartitionStats;
 import org.apache.giraph.graph.partition.PartitionStore;
 import org.apache.giraph.graph.partition.WorkerGraphPartitioner;
+import org.apache.giraph.utils.LoggerUtils;
 import org.apache.giraph.utils.MemoryUtils;
+import org.apache.giraph.utils.ProgressableUtils;
 import org.apache.giraph.utils.WritableUtils;
 import org.apache.giraph.zk.BspEvent;
 import org.apache.giraph.zk.PredicateLock;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
@@ -55,7 +65,6 @@ import org.json.JSONObject;
 
 import net.iharder.Base64;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutput;
@@ -64,7 +73,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -92,20 +100,16 @@ public class BspServiceWorker<I extends WritableComparable,
   private final WorkerInfo workerInfo;
   /** Worker graph partitioner */
   private final WorkerGraphPartitioner<I, V, E, M> workerGraphPartitioner;
-  /** Input split vertex cache (only used when loading from input split) */
-  private final Map<PartitionOwner, Partition<I, V, E, M>>
-  inputSplitCache = new HashMap<PartitionOwner, Partition<I, V, E, M>>();
-  /** Communication service */
-  private final WorkerClientServer<I, V, E, M> commService;
+
+  /** IPC Client */
+  private final WorkerClient<I, V, E, M> workerClient;
+  /** IPC Server */
+  private final WorkerServer<I, V, E, M> workerServer;
   /** Master info */
   private WorkerInfo masterInfo = new WorkerInfo();
   /** Have the partition exchange children (workers) changed? */
   private final BspEvent partitionExchangeChildrenChanged;
-  /** Regulates the size of outgoing Collections of vertices read
-   * by the local worker during INPUT_SUPERSTEP that are to be
-   * transfered from <code>inputSplitCache</code> to the owner
-   * of their initial, master-assigned Partition.*/
-  private GiraphTransferRegulator transferRegulator;
+
   /** Worker Context */
   private final WorkerContext workerContext;
   /** Total vertices loaded */
@@ -130,7 +134,6 @@ public class BspServiceWorker<I extends WritableComparable,
    * @param sessionMsecTimeout Msecs to timeout connecting to ZooKeeper
    * @param context Mapper context
    * @param graphMapper Graph mapper
-   * @param graphState Global graph state
    * @throws IOException
    * @throws InterruptedException
    */
@@ -138,42 +141,37 @@ public class BspServiceWorker<I extends WritableComparable,
     String serverPortList,
     int sessionMsecTimeout,
     Mapper<?, ?, ?, ?>.Context context,
-    GraphMapper<I, V, E, M> graphMapper,
-    GraphState<I, V, E, M> graphState)
+    GraphMapper<I, V, E, M> graphMapper)
     throws IOException, InterruptedException {
     super(serverPortList, sessionMsecTimeout, context, graphMapper);
     partitionExchangeChildrenChanged = new PredicateLock(context);
     registerBspEvent(partitionExchangeChildrenChanged);
-    transferRegulator =
-        new GiraphTransferRegulator(getConfiguration());
-    inputSplitMaxVertices =
-        getConfiguration().getLong(
-            GiraphConfiguration.INPUT_SPLIT_MAX_VERTICES,
-            GiraphConfiguration.INPUT_SPLIT_MAX_VERTICES_DEFAULT);
+    inputSplitMaxVertices = getConfiguration().getInputSplitMaxVertices();
     workerGraphPartitioner =
         getGraphPartitionerFactory().createWorkerGraphPartitioner();
-    commService =  new NettyWorkerClientServer<I, V, E, M>(
-        context, getConfiguration(), this);
+    workerServer = new NettyWorkerServer<I, V, E, M>(getConfiguration(),
+        this, context);
+    workerClient = new NettyWorkerClient<I, V, E, M>(context,
+        getConfiguration(), this);
 
-    if (LOG.isInfoEnabled()) {
-      LOG.info("BspServiceWorker: maxVerticesPerTransfer = " +
-          transferRegulator.getMaxVerticesPerTransfer());
-      LOG.info("BspServiceWorker: maxEdgesPerTransfer = " +
-          transferRegulator.getMaxEdgesPerTransfer());
-    }
+
 
     workerInfo = new WorkerInfo(
-        getHostname(), getTaskPartition(), commService.getPort());
-
-    graphState.setWorkerCommunications(commService);
+        getHostname(), getTaskPartition(), workerServer.getPort());
     this.workerContext =
-        getConfiguration().createWorkerContext(graphMapper.getGraphState());
+        getConfiguration().createWorkerContext(null);
 
     aggregatorHandler = new WorkerAggregatorHandler();
   }
 
+  @Override
   public WorkerContext getWorkerContext() {
     return workerContext;
+  }
+
+  @Override
+  public WorkerClient<I, V, E, M> getWorkerClient() {
+    return workerClient;
   }
 
   /**
@@ -265,7 +263,6 @@ public class BspServiceWorker<I extends WritableComparable,
             " InputSplits are finished.");
       }
       if (reservedInputSplits == splitOrganizer.getPathListSize()) {
-        transferRegulator = null; // don't need this anymore
         return null;
       }
       getContext().progress();
@@ -286,6 +283,8 @@ public class BspServiceWorker<I extends WritableComparable,
    * ensure the input split cache is flushed prior to marking the last input
    * split complete.
    *
+   * Use one or more threads to do the loading.
+   *
    * @return Statistics of the vertices loaded
    * @throws IOException
    * @throws IllegalAccessException
@@ -297,217 +296,44 @@ public class BspServiceWorker<I extends WritableComparable,
   private VertexEdgeCount loadVertices() throws IOException,
     ClassNotFoundException, InterruptedException, InstantiationException,
     IllegalAccessException, KeeperException {
-    String inputSplitPath = null;
     VertexEdgeCount vertexEdgeCount = new VertexEdgeCount();
-    while ((inputSplitPath = reserveInputSplit()) != null) {
-      vertexEdgeCount = vertexEdgeCount.incrVertexEdgeCount(
-          loadVerticesFromInputSplit(inputSplitPath));
-    }
 
-    // Flush the remaining cached vertices
-    for (Entry<PartitionOwner, Partition<I, V, E, M>> entry :
-      inputSplitCache.entrySet()) {
-      if (!entry.getValue().getVertices().isEmpty()) {
-        getContext().progress();
-        commService.sendPartitionRequest(entry.getKey().getWorkerInfo(),
-            entry.getValue());
-      }
-    }
-    inputSplitCache.clear();
-    commService.flush();
-
-    return vertexEdgeCount;
-  }
-
-  /**
-   * Mark an input split path as completed by this worker.  This notifies
-   * the master and the other workers that this input split has not only
-   * been reserved, but also marked processed.
-   *
-   * @param inputSplitPath Path to the input split.
-   */
-  private void markInputSplitPathFinished(String inputSplitPath) {
-    String inputSplitFinishedPath =
-        inputSplitPath + INPUT_SPLIT_FINISHED_NODE;
-    try {
-      getZkExt().createExt(inputSplitFinishedPath,
-          null,
-          Ids.OPEN_ACL_UNSAFE,
-          CreateMode.PERSISTENT,
-          true);
-    } catch (KeeperException.NodeExistsException e) {
-      LOG.warn("loadVertices: " + inputSplitFinishedPath +
-          " already exists!");
-    } catch (KeeperException e) {
-      throw new IllegalStateException(
-          "loadVertices: KeeperException on " +
-              inputSplitFinishedPath, e);
-    } catch (InterruptedException e) {
-      throw new IllegalStateException(
-          "loadVertices: InterruptedException on " +
-              inputSplitFinishedPath, e);
-    }
-  }
-
-  /**
-   * Extract vertices from input split, saving them into a mini cache of
-   * partitions.  Periodically flush the cache of vertices when a limit is
-   * reached in readVerticeFromInputSplit.
-   * Mark the input split finished when done.
-   *
-   * @param inputSplitPath ZK location of input split
-   * @return Mapping of vertex indices and statistics, or null if no data read
-   * @throws IOException
-   * @throws ClassNotFoundException
-   * @throws InterruptedException
-   * @throws InstantiationException
-   * @throws IllegalAccessException
-   */
-  private VertexEdgeCount loadVerticesFromInputSplit(String inputSplitPath)
-    throws IOException, ClassNotFoundException, InterruptedException,
-    InstantiationException, IllegalAccessException {
-    InputSplit inputSplit = getInputSplitForVertices(inputSplitPath);
-    VertexEdgeCount vertexEdgeCount =
-        readVerticesFromInputSplit(inputSplit);
+    GraphState<I, V, E, M> graphState = new GraphState<I, V, E, M>(
+        INPUT_SUPERSTEP, 0, 0, getContext(), getGraphMapper(),
+        null);
+    int numThreads = getConfiguration().getNumInputSplitsThreads();
+    ExecutorService inputSplitsExecutor =
+        Executors.newFixedThreadPool(numThreads,
+            new ThreadFactoryBuilder().setNameFormat("load-%d").build());
+    List<Future<VertexEdgeCount>> threadsFutures =
+        Lists.newArrayListWithCapacity(numThreads);
     if (LOG.isInfoEnabled()) {
-      LOG.info("loadVerticesFromInputSplit: Finished loading " +
-          inputSplitPath + " " + vertexEdgeCount);
+      LOG.info("loadVertices: Using " + numThreads + " threads.");
     }
-    markInputSplitPathFinished(inputSplitPath);
+    for (int i = 0; i < numThreads; ++i) {
+      Callable<VertexEdgeCount> inputSplitsCallable =
+          new InputSplitsCallable<I, V, E, M>(
+              getContext(),
+              graphState,
+              getConfiguration(),
+              this,
+              inputSplitsPath,
+              getWorkerInfo(),
+              getZkExt());
+      threadsFutures.add(inputSplitsExecutor.submit(inputSplitsCallable));
+    }
+
+    // Wait until all the threads are done to wait on all requests
+    for (Future<VertexEdgeCount> threadFuture : threadsFutures) {
+      VertexEdgeCount threadVertexEdgeCount =
+          ProgressableUtils.getFutureResult(threadFuture, getContext());
+      vertexEdgeCount =
+          vertexEdgeCount.incrVertexEdgeCount(threadVertexEdgeCount);
+    }
+
+    workerClient.waitAllRequests();
+    inputSplitsExecutor.shutdown();
     return vertexEdgeCount;
-  }
-
-  /**
-   * Talk to ZooKeeper to convert the input split path to the actual
-   * InputSplit containing the vertices to read.
-   *
-   * @param inputSplitPath Location in ZK of input split
-   * @return instance of InputSplit containing vertices to read
-   * @throws IOException
-   * @throws ClassNotFoundException
-   */
-  private InputSplit getInputSplitForVertices(String inputSplitPath)
-    throws IOException, ClassNotFoundException {
-    byte[] splitList;
-    try {
-      splitList = getZkExt().getData(inputSplitPath, false, null);
-    } catch (KeeperException e) {
-      throw new IllegalStateException(
-          "loadVertices: KeeperException on " + inputSplitPath, e);
-    } catch (InterruptedException e) {
-      throw new IllegalStateException(
-          "loadVertices: IllegalStateException on " + inputSplitPath, e);
-    }
-    getContext().progress();
-
-    DataInputStream inputStream =
-        new DataInputStream(new ByteArrayInputStream(splitList));
-    Text.readString(inputStream); // location data unused here, skip
-    String inputSplitClass = Text.readString(inputStream);
-    InputSplit inputSplit = (InputSplit)
-        ReflectionUtils.newInstance(
-            getConfiguration().getClassByName(inputSplitClass),
-            getConfiguration());
-    ((Writable) inputSplit).readFields(inputStream);
-
-    if (LOG.isInfoEnabled()) {
-      LOG.info("getInputSplitForVertices: Reserved " + inputSplitPath +
-          " from ZooKeeper and got input split '" +
-          inputSplit.toString() + "'");
-    }
-    return inputSplit;
-  }
-
-  /**
-   * Read vertices from input split.  If testing, the user may request a
-   * maximum number of vertices to be read from an input split.
-   *
-   * @param inputSplit Input split to process with vertex reader
-   * @return List of vertices.
-   * @throws IOException
-   * @throws InterruptedException
-   */
-  private VertexEdgeCount readVerticesFromInputSplit(
-      InputSplit inputSplit) throws IOException, InterruptedException {
-    VertexInputFormat<I, V, E, M> vertexInputFormat =
-        getConfiguration().createVertexInputFormat();
-    VertexReader<I, V, E, M> vertexReader =
-        vertexInputFormat.createVertexReader(inputSplit, getContext());
-    vertexReader.initialize(inputSplit, getContext());
-    transferRegulator.clearCounters();
-    while (vertexReader.nextVertex()) {
-      Vertex<I, V, E, M> readerVertex =
-          vertexReader.getCurrentVertex();
-      if (readerVertex.getId() == null) {
-        throw new IllegalArgumentException(
-            "readVerticesFromInputSplit: Vertex reader returned a vertex " +
-                "without an id!  - " + readerVertex);
-      }
-      if (readerVertex.getValue() == null) {
-        readerVertex.setValue(getConfiguration().createVertexValue());
-      }
-      readerVertex.setConf(getConfiguration());
-      readerVertex.setGraphState(getGraphMapper().getGraphState());
-      PartitionOwner partitionOwner =
-          workerGraphPartitioner.getPartitionOwner(
-              readerVertex.getId());
-      Partition<I, V, E, M> partition =
-          inputSplitCache.get(partitionOwner);
-      if (partition == null) {
-        partition = new Partition<I, V, E, M>(
-            getConfiguration(),
-            partitionOwner.getPartitionId(),
-            getContext());
-        inputSplitCache.put(partitionOwner, partition);
-      }
-      Vertex<I, V, E, M> oldVertex =
-          partition.putVertex(readerVertex);
-      if (oldVertex != null) {
-        LOG.warn("readVertices: Replacing vertex " + oldVertex +
-            " with " + readerVertex);
-      }
-      getContext().progress(); // do this before potential data transfer
-      transferRegulator.incrementCounters(partitionOwner, readerVertex);
-      if (transferRegulator.transferThisPartition(partitionOwner)) {
-        commService.sendPartitionRequest(partitionOwner.getWorkerInfo(),
-            partition);
-        inputSplitCache.remove(partitionOwner);
-      }
-      ++totalVerticesLoaded;
-      totalEdgesLoaded += readerVertex.getNumEdges();
-
-      // Update status every 250k vertices
-      if ((totalVerticesLoaded % 250000) == 0) {
-        String status = "readVerticesFromInputSplit: Loaded " +
-            totalVerticesLoaded + " vertices and " +
-            totalEdgesLoaded + " edges " +
-            MemoryUtils.getRuntimeMemoryStats() + " " +
-            getGraphMapper().getMapFunctions().toString() +
-            " - Attempt=" + getApplicationAttempt() +
-            ", Superstep=" + getSuperstep();
-        if (LOG.isInfoEnabled()) {
-          LOG.info(status);
-        }
-        getContext().setStatus(status);
-      }
-
-      // For sampling, or to limit outlier input splits, the number of
-      // records per input split can be limited
-      if (inputSplitMaxVertices > 0 &&
-        transferRegulator.getTotalVertices() >=
-        inputSplitMaxVertices) {
-        if (LOG.isInfoEnabled()) {
-          LOG.info("readVerticesFromInputSplit: Leaving the input " +
-              "split early, reached maximum vertices " +
-              transferRegulator.getTotalVertices());
-        }
-        break;
-      }
-    }
-    vertexReader.close();
-
-    return new VertexEdgeCount(transferRegulator.getTotalVertices(),
-      transferRegulator.getTotalEdges());
   }
 
   @Override
@@ -516,7 +342,7 @@ public class BspServiceWorker<I extends WritableComparable,
   }
 
   @Override
-  public void setup() {
+  public FinishedSuperstepStats setup() {
     // Unless doing a restart, prepare for computation:
     // 1. Start superstep INPUT_SUPERSTEP (no computation)
     // 2. Wait until the INPUT_SPLIT_ALL_READY_PATH node has been created
@@ -525,7 +351,7 @@ public class BspServiceWorker<I extends WritableComparable,
     // 5. Wait for superstep INPUT_SUPERSTEP to complete.
     if (getRestartedSuperstep() != UNSET_SUPERSTEP) {
       setCachedSuperstep(getRestartedSuperstep());
-      return;
+      return new FinishedSuperstepStats(false, -1, -1);
     }
 
     JSONObject jobState = getJobState();
@@ -542,7 +368,7 @@ public class BspServiceWorker<I extends WritableComparable,
                 getApplicationAttempt());
           }
           setRestartedSuperstep(getSuperstep());
-          return;
+          return new FinishedSuperstepStats(false, -1, -1);
         }
       } catch (JSONException e) {
         throw new RuntimeException(
@@ -552,15 +378,18 @@ public class BspServiceWorker<I extends WritableComparable,
     }
 
     // Add the partitions for that this worker owns
+    GraphState<I, V, E, M> graphState =
+        new GraphState<I, V, E, M>(INPUT_SUPERSTEP, 0, 0,
+            getContext(), getGraphMapper(), null);
     Collection<? extends PartitionOwner> masterSetPartitionOwners =
-        startSuperstep();
+        startSuperstep(graphState);
     workerGraphPartitioner.updatePartitionOwners(
         getWorkerInfo(), masterSetPartitionOwners, getPartitionStore());
 
 /*if[HADOOP_NON_SECURE]
-    commService.setup();
+    workerClient.setup();
 else[HADOOP_NON_SECURE]*/
-    commService.setup(getConfiguration().authenticate());
+    workerClient.setup(getConfiguration().authenticate());
 /*end[HADOOP_NON_SECURE]*/
 
     // Ensure the InputSplits are ready for processing before processing
@@ -670,13 +499,14 @@ else[HADOOP_NON_SECURE]*/
           new PartitionStats(partition.getId(),
               partition.getVertices().size(),
               0,
-              partition.getEdgeCount());
+              partition.getEdgeCount(),
+              0);
       partitionStatsList.add(partitionStats);
     }
     workerGraphPartitioner.finalizePartitionStats(
         partitionStatsList, getPartitionStore());
 
-    finishSuperstep(partitionStatsList);
+    return finishSuperstep(graphState, partitionStatsList);
   }
 
   /**
@@ -759,7 +589,8 @@ else[HADOOP_NON_SECURE]*/
   }
 
   @Override
-  public Collection<? extends PartitionOwner> startSuperstep() {
+  public Collection<? extends PartitionOwner> startSuperstep(
+      GraphState<I, V, E, M> graphState) {
     // Algorithm:
     // 1. Communication service will combine message from previous
     //    superstep
@@ -767,7 +598,7 @@ else[HADOOP_NON_SECURE]*/
     // 3. Wait until the partition assignment is complete and get it
     // 4. Get the aggregator values from the previous superstep
     if (getSuperstep() != INPUT_SUPERSTEP) {
-      commService.prepareSuperstep();
+      workerServer.prepareSuperstep(graphState);
     }
 
     registerHealth(getSuperstep());
@@ -825,35 +656,35 @@ else[HADOOP_NON_SECURE]*/
   }
 
   @Override
-  public boolean finishSuperstep(List<PartitionStats> partitionStatsList) {
+  public FinishedSuperstepStats finishSuperstep(
+      GraphState<I, V, E, M> graphState,
+      List<PartitionStats> partitionStatsList) {
     // This barrier blocks until success (or the master signals it to
     // restart).
     //
     // Master will coordinate the barriers and aggregate "doneness" of all
     // the vertices.  Each worker will:
-    // 1. Flush the unsent messages
+    // 1. Ensure that the requests are complete
     // 2. Execute user postSuperstep() if necessary.
     // 3. Save aggregator values that are in use.
     // 4. Report the statistics (vertices, edges, messages, etc.)
     //    of this worker
     // 5. Let the master know it is finished.
     // 6. Wait for the master's global stats, and check if done
-
-    getContext().setStatus("Flushing started: " +
-        getGraphMapper().getMapFunctions().toString() +
-        " - Attempt=" + getApplicationAttempt() +
-        ", Superstep=" + getSuperstep());
+    if (LOG.isInfoEnabled()) {
+      LOG.info("finishSuperstep: Waiting on all requests, superstep " +
+          getSuperstep() + " " +
+          MemoryUtils.getRuntimeMemoryStats());
+    }
+    workerClient.waitAllRequests();
 
     long workerSentMessages = 0;
-    try {
-      commService.flush();
-      workerSentMessages = commService.resetMessageCount();
-    } catch (IOException e) {
-      throw new IllegalStateException(
-          "finishSuperstep: flush failed", e);
+    for (PartitionStats partitionStats : partitionStatsList) {
+      workerSentMessages += partitionStats.getMessagesSentCount();
     }
 
     if (getSuperstep() != INPUT_SUPERSTEP) {
+      getWorkerContext().setGraphState(graphState);
       getWorkerContext().postSuperstep();
       getContext().progress();
     }
@@ -903,11 +734,13 @@ else[HADOOP_NON_SECURE]*/
       throw new IllegalStateException("Creating " + finishedWorkerPath +
           " failed with InterruptedException", e);
     }
-    getContext().setStatus("finishSuperstep: (waiting for rest " +
-        "of workers) " +
-        getGraphMapper().getMapFunctions().toString() +
-        " - Attempt=" + getApplicationAttempt() +
-        ", Superstep=" + getSuperstep());
+
+    LoggerUtils.setStatusAndLog(getContext(), LOG, Level.INFO,
+        "finishSuperstep: (waiting for rest " +
+            "of workers) " +
+            getGraphMapper().getMapFunctions().toString() +
+            " - Attempt=" + getApplicationAttempt() +
+            ", Superstep=" + getSuperstep());
 
     String superstepFinishedNode =
         getSuperstepFinishedPath(getApplicationAttempt(), getSuperstep());
@@ -937,10 +770,10 @@ else[HADOOP_NON_SECURE]*/
         getGraphMapper().getMapFunctions().toString() +
         " - Attempt=" + getApplicationAttempt() +
         ", Superstep=" + getSuperstep());
-    getGraphMapper().getGraphState().
-        setTotalNumEdges(globalStats.getEdgeCount()).
-        setTotalNumVertices(globalStats.getVertexCount());
-    return globalStats.getHaltComputation();
+    return new FinishedSuperstepStats(
+        globalStats.getHaltComputation(),
+        globalStats.getVertexCount(),
+        globalStats.getEdgeCount());
   }
 
   /**
@@ -956,6 +789,8 @@ else[HADOOP_NON_SECURE]*/
       return;
     }
 
+    LoggerUtils.setStatusAndLog(getContext(), LOG, Level.INFO,
+        "saveVertices: Starting to save vertices");
     VertexOutputFormat<I, V, E> vertexOutputFormat =
         getConfiguration().createVertexOutputFormat();
     VertexWriter<I, V, E> vertexWriter =
@@ -970,11 +805,13 @@ else[HADOOP_NON_SECURE]*/
       getContext().progress();
     }
     vertexWriter.close(getContext());
+    LoggerUtils.setStatusAndLog(getContext(), LOG, Level.INFO,
+        "saveVertices: Done saving vertices");
   }
 
   @Override
   public void cleanup() throws IOException, InterruptedException {
-    commService.closeConnections();
+    workerClient.closeConnections();
     setCachedSuperstep(getSuperstep() - 1);
     saveVertices();
     // All worker processes should denote they are done by adding special
@@ -1018,15 +855,16 @@ else[HADOOP_NON_SECURE]*/
     // Preferably would shut down the service only after
     // all clients have disconnected (or the exceptions on the
     // client side ignored).
-    commService.close();
+    workerServer.close();
   }
 
   @Override
   public void storeCheckpoint() throws IOException {
-    getContext().setStatus("storeCheckpoint: Starting checkpoint " +
-        getGraphMapper().getMapFunctions().toString() +
-        " - Attempt=" + getApplicationAttempt() +
-        ", Superstep=" + getSuperstep());
+    LoggerUtils.setStatusAndLog(getContext(), LOG, Level.INFO,
+        "storeCheckpoint: Starting checkpoint " +
+            getGraphMapper().getMapFunctions().toString() +
+            " - Attempt=" + getApplicationAttempt() +
+            ", Superstep=" + getSuperstep());
 
     // Algorithm:
     // For each partition, dump vertices and messages
@@ -1115,13 +953,14 @@ else[HADOOP_NON_SECURE]*/
       throw new IllegalStateException("Creating " + workerWroteCheckpoint +
           " failed with KeeperException", e);
     } catch (InterruptedException e) {
-      throw new IllegalStateException("Creating " + workerWroteCheckpoint +
+      throw new IllegalStateException("Creating " +
+          workerWroteCheckpoint +
           " failed with InterruptedException", e);
     }
   }
 
   @Override
-  public void loadCheckpoint(long superstep) {
+  public VertexEdgeCount loadCheckpoint(long superstep) {
     try {
       // clear old message stores
       getServerData().getIncomingMessageStore().clearAll();
@@ -1209,16 +1048,14 @@ else[HADOOP_NON_SECURE]*/
     }
 
     // Load global statistics
+    GlobalStats globalStats = null;
     String finalizedCheckpointPath =
         getCheckpointBasePath(superstep) + CHECKPOINT_FINALIZED_POSTFIX;
     try {
       DataInputStream finalizedStream =
           getFs().open(new Path(finalizedCheckpointPath));
-      GlobalStats globalStats = new GlobalStats();
+      globalStats = new GlobalStats();
       globalStats.readFields(finalizedStream);
-      getGraphMapper().getGraphState().
-          setTotalNumEdges(globalStats.getEdgeCount()).
-          setTotalNumVertices(globalStats.getVertexCount());
     } catch (IOException e) {
       throw new IllegalStateException(
           "loadCheckpoint: Failed to load global statistics", e);
@@ -1227,10 +1064,12 @@ else[HADOOP_NON_SECURE]*/
     // Communication service needs to setup the connections prior to
     // processing vertices
 /*if[HADOOP_NON_SECURE]
-    commService.setup();
+    workerClient.setup();
 else[HADOOP_NON_SECURE]*/
-    commService.setup(getConfiguration().authenticate());
+    workerClient.setup(getConfiguration().authenticate());
 /*end[HADOOP_NON_SECURE]*/
+    return new VertexEdgeCount(globalStats.getVertexCount(),
+        globalStats.getEdgeCount());
   }
 
   /**
@@ -1245,6 +1084,9 @@ else[HADOOP_NON_SECURE]*/
         new ArrayList<Entry<WorkerInfo, List<Integer>>>(
             workerPartitionMap.entrySet());
     Collections.shuffle(randomEntryList);
+    WorkerClientRequestProcessor<I, V, E, M> workerClientRequestProcessor =
+        new NettyWorkerClientRequestProcessor<I, V, E, M>(getContext(),
+            getConfiguration(), this);
     for (Entry<WorkerInfo, List<Integer>> workerPartitionList :
       randomEntryList) {
       for (Integer partitionId : workerPartitionList.getValue()) {
@@ -1261,14 +1103,16 @@ else[HADOOP_NON_SECURE]*/
               workerPartitionList.getKey() + " partition " +
               partitionId);
         }
-        getGraphMapper().getGraphState().getWorkerCommunications().
-            sendPartitionRequest(workerPartitionList.getKey(),
-                partition);
+        workerClientRequestProcessor.sendPartitionRequest(
+            workerPartitionList.getKey(),
+            partition);
       }
     }
 
+
     try {
-      getGraphMapper().getGraphState().getWorkerCommunications().flush();
+      workerClientRequestProcessor.flush();
+      workerClient.waitAllRequests();
     } catch (IOException e) {
       throw new IllegalStateException("sendWorkerPartitions: Flush failed", e);
     }
@@ -1307,7 +1151,7 @@ else[HADOOP_NON_SECURE]*/
     PartitionExchange partitionExchange =
         workerGraphPartitioner.updatePartitionOwners(
             getWorkerInfo(), masterSetPartitionOwners, getPartitionStore());
-    commService.fixPartitionIdToSocketAddrMap();
+    workerClient.openConnections(getPartitionOwners());
 
     Map<WorkerInfo, List<Integer>> sendWorkerPartitionMap =
         partitionExchange.getSendWorkerPartitionMap();
@@ -1457,7 +1301,7 @@ else[HADOOP_NON_SECURE]*/
 
   @Override
   public ServerData<I, V, E, M> getServerData() {
-    return commService.getServerData();
+    return workerServer.getServerData();
   }
 
   @Override

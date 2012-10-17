@@ -19,6 +19,7 @@
 package org.apache.giraph.utils;
 
 import org.apache.giraph.bsp.CentralizedServiceWorker;
+import org.apache.giraph.comm.WorkerClientRequestProcessor;
 import org.apache.giraph.comm.WorkerClientServer;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.GraphState;
@@ -53,13 +54,14 @@ public class MockUtils {
         private final GraphState<I, V, E, M> graphState;
         private final Mapper.Context context;
         private final Configuration conf;
-        private final WorkerClientServer communications;
+        private final WorkerClientRequestProcessor workerClientRequestProcessor;
 
         public MockedEnvironment() {
             graphState = Mockito.mock(GraphState.class);
             context = Mockito.mock(Mapper.Context.class);
             conf = Mockito.mock(Configuration.class);
-            communications = Mockito.mock(WorkerClientServer.class);
+            workerClientRequestProcessor =
+                Mockito.mock(WorkerClientRequestProcessor.class);
         }
 
         /** the injected graph state */
@@ -78,19 +80,19 @@ public class MockUtils {
         }
 
         /** the injected worker communications */
-        public WorkerClientServer getCommunications() {
-            return communications;
+        public WorkerClientRequestProcessor getWorkerClientRequestProcessor() {
+            return workerClientRequestProcessor;
         }
 
         /** assert that the test vertex message has been sent to a particular vertex */
         public void verifyMessageSent(I targetVertexId, M message) {
-            Mockito.verify(communications).sendMessageRequest(targetVertexId,
-                message);
+            Mockito.verify(workerClientRequestProcessor).sendMessageRequest
+                (targetVertexId, message);
         }
 
         /** assert that the test vertex has sent no message to a particular vertex */
         public void verifyNoMessageSent() {
-            Mockito.verifyZeroInteractions(communications);
+            Mockito.verifyZeroInteractions(workerClientRequestProcessor);
         }
     }
 
@@ -124,8 +126,8 @@ public class MockUtils {
                 .thenReturn(env.getContext());
         Mockito.when(env.getContext().getConfiguration())
                 .thenReturn(env.getConfiguration());
-        Mockito.when(env.getGraphState().getWorkerCommunications())
-                .thenReturn(env.getCommunications());
+        Mockito.when(env.getGraphState().getWorkerClientRequestProcessor())
+                .thenReturn(env.getWorkerClientRequestProcessor());
 
         ReflectionUtils.setField(vertex, "id", vertexId);
         ReflectionUtils.setField(vertex, "value", vertexValue);

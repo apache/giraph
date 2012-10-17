@@ -18,17 +18,19 @@
 
 package org.apache.giraph.graph;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedServiceMaster;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.messages.MessageStoreByPartition;
-import org.apache.giraph.graph.partition.Partition;
 import org.apache.giraph.graph.partition.PartitionOwner;
 import org.apache.giraph.graph.partition.PartitionStats;
 import org.apache.giraph.utils.MemoryUtils;
+import org.apache.giraph.utils.ProgressableUtils;
 import org.apache.giraph.utils.ReflectionUtils;
-import org.apache.giraph.utils.TimedLogger;
 import org.apache.giraph.zk.ZooKeeperManager;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.filecache.DistributedCache;
@@ -36,8 +38,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.log4j.Appender;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+
+import com.google.common.collect.Lists;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
@@ -47,6 +52,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import org.apache.log4j.PatternLayout;
 
 /**
  * This mapper that will execute the BSP graph tasks.  Since this mapper will
@@ -84,11 +93,10 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
   private boolean done = false;
   /** What kind of functions is this mapper doing? */
   private MapFunctions mapFunctions = MapFunctions.UNKNOWN;
-  /**
-   * Graph state for all vertices that is used for the duration of
-   * this mapper.
-   */
-  private GraphState<I, V, E, M> graphState = new GraphState<I, V, E, M>();
+  /** Total number of vertices in the graph (at this time) */
+  private long numVertices = -1;
+  /** Total number of edges in the graph (at this time) */
+  private long numEdges = -1;
 
   /** What kinds of functions to run on this mapper */
   public enum MapFunctions {
@@ -135,10 +143,6 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
 
   public final WorkerContext getWorkerContext() {
     return serviceWorker.getWorkerContext();
-  }
-
-  public final GraphState<I, V, E, M> getGraphState() {
-    return graphState;
   }
 
   /**
@@ -263,7 +267,6 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
   public void setup(Context context)
     throws IOException, InterruptedException {
     context.setStatus("setup: Beginning mapper setup.");
-    graphState.setContext(context);
     // Setting the default handler for uncaught exceptions.
     Thread.setDefaultUncaughtExceptionHandler(
         new OverrideExceptionHandler());
@@ -281,6 +284,16 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
     Logger.getRootLogger().setLevel(Level.toLevel(logLevel));
     if (LOG.isInfoEnabled()) {
       LOG.info("setup: Set log level to " + logLevel);
+    }
+    // Sets pattern layout for all appenders
+    if (conf.useLogThreadLayout()) {
+      PatternLayout layout =
+          new PatternLayout("%-7p %d [%t] %c %x - %m%n");
+      Enumeration<Appender> appenderEnum =
+          Logger.getRootLogger().getAllAppenders();
+      while (appenderEnum.hasMoreElements()) {
+        appenderEnum.nextElement().setLayout(layout);
+      }
     }
 
     // Do some initial setup (possibly starting up a Zookeeper service)
@@ -326,6 +339,11 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
       zkManager.onlineZooKeeperServers();
       serverPortList = zkManager.getZooKeeperServerPortString();
     }
+    if (zkManager != null && zkManager.runsZooKeeper()) {
+      if (LOG.isInfoEnabled()) {
+        LOG.info("setup: Chosen to run ZooKeeper...");
+      }
+    }
     context.setStatus("setup: Connected to Zookeeper service " +
         serverPortList);
     this.mapFunctions = determineMapFunctions(conf, zkManager);
@@ -345,12 +363,10 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
           LOG.info("setup: Starting up BspServiceMaster " +
               "(master thread)...");
         }
-        serviceMaster = new BspServiceMaster<I, V, E, M>(serverPortList,
-                sessionMsecTimeout,
-                context,
-                this);
+        serviceMaster = new BspServiceMaster<I, V, E, M>(
+            serverPortList, sessionMsecTimeout, context, this);
         masterThread = new MasterThread<I, V, E, M>(
-                (BspServiceMaster<I, V, E, M>) serviceMaster, context);
+            (BspServiceMaster<I, V, E, M>) serviceMaster, context);
         masterThread.start();
       }
       if ((mapFunctions == MapFunctions.WORKER_ONLY) ||
@@ -363,12 +379,10 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
             serverPortList,
             sessionMsecTimeout,
             context,
-            this,
-            graphState);
+            this);
         if (LOG.isInfoEnabled()) {
           LOG.info("setup: Registering health of this worker...");
         }
-        serviceWorker.setup();
       }
     } catch (IOException e) {
       LOG.error("setup: Caught exception just before end of setup", e);
@@ -394,9 +408,6 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
     if (done) {
       return;
     }
-    if ((serviceWorker != null) && (graphState.getTotalNumVertices() == 0)) {
-      return;
-    }
 
     if ((mapFunctions == MapFunctions.MASTER_ZOOKEEPER_ONLY) ||
         (mapFunctions == MapFunctions.MASTER_ONLY)) {
@@ -407,14 +418,23 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
     }
 
     if (mapAlreadyRun) {
-      throw new RuntimeException("In BSP, map should have only been" +
+      throw new RuntimeException("map: In BSP, map should have only been" +
           " run exactly once, (already run)");
     }
     mapAlreadyRun = true;
 
-    graphState.setSuperstep(serviceWorker.getSuperstep()).
-      setContext(context).setGraphMapper(this);
+    FinishedSuperstepStats inputSuperstepStats =
+        serviceWorker.setup();
+    numVertices = inputSuperstepStats.getVertexCount();
+    numEdges = inputSuperstepStats.getEdgeCount();
+    if (inputSuperstepStats.getVertexCount() == 0) {
+      LOG.warn("map: No vertices in the graph, exiting.");
+      return;
+    }
 
+    serviceWorker.getWorkerContext().setGraphState(
+        new GraphState<I, V, E, M>(serviceWorker.getSuperstep(),
+            numVertices, numEdges, context, this, null));
     try {
       serviceWorker.getWorkerContext().preApplication();
     } catch (InstantiationException e) {
@@ -430,19 +450,18 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
 
     List<PartitionStats> partitionStatsList =
         new ArrayList<PartitionStats>();
-    do {
-      long superstep = serviceWorker.getSuperstep();
 
-      graphState.setSuperstep(superstep);
+    int numThreads = conf.getNumComputeThreads();
+    FinishedSuperstepStats finishedSuperstepStats = null;
+    do {
+      final long superstep = serviceWorker.getSuperstep();
+
+      GraphState<I, V, E, M> graphState =
+          new GraphState<I, V, E, M>(superstep, numVertices, numEdges,
+              context, this, null);
 
       Collection<? extends PartitionOwner> masterAssignedPartitionOwners =
-          serviceWorker.startSuperstep();
-      if (zkManager != null && zkManager.runsZooKeeper()) {
-        if (LOG.isInfoEnabled()) {
-          LOG.info("map: Chosen to run ZooKeeper...");
-        }
-        context.setStatus("map: Running Zookeeper Server");
-      }
+          serviceWorker.startSuperstep(graphState);
 
       if (LOG.isDebugEnabled()) {
         LOG.debug("map: " + MemoryUtils.getRuntimeMemoryStats());
@@ -459,8 +478,12 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
         if (LOG.isInfoEnabled()) {
           LOG.info("map: Loading from checkpoint " + superstep);
         }
-        serviceWorker.loadCheckpoint(
+        VertexEdgeCount vertexEdgeCount = serviceWorker.loadCheckpoint(
             serviceWorker.getRestartedSuperstep());
+        numVertices = vertexEdgeCount.getVertexCount();
+        numEdges = vertexEdgeCount.getEdgeCount();
+        graphState = new GraphState<I, V, E, M>(superstep, numVertices,
+            numEdges, context, this, null);
       } else if (serviceWorker.checkpointFrequencyMet(superstep)) {
         serviceWorker.storeCheckpoint();
       }
@@ -471,51 +494,61 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
 
       MessageStoreByPartition<I, M> messageStore =
           serviceWorker.getServerData().getCurrentMessageStore();
-
       partitionStatsList.clear();
-      TimedLogger partitionLogger = new TimedLogger(15000, LOG);
-      int completedPartitions = 0;
-      for (Partition<I, V, E, M> partition :
-        serviceWorker.getPartitionStore().getPartitions()) {
-        PartitionStats partitionStats =
-            new PartitionStats(partition.getId(), 0, 0, 0);
-        for (Vertex<I, V, E, M> vertex : partition.getVertices()) {
-          // Make sure every vertex has the current
-          // graphState before computing
-          vertex.setGraphState(graphState);
+      int numPartitions = serviceWorker.getPartitionStore().getNumPartitions();
+      if (LOG.isInfoEnabled()) {
+        LOG.info("map: " + numPartitions +
+            " partitions to process in superstep " + superstep + " with " +
+            numThreads + " thread(s)");
+      }
 
-          Collection<M> messages =
-              messageStore.getVertexMessages(vertex.getId());
-          messageStore.clearVertexMessages(vertex.getId());
-
-          if (vertex.isHalted() && !messages.isEmpty()) {
-            vertex.wakeUp();
-          }
-          if (!vertex.isHalted()) {
-            context.progress();
-            vertex.compute(messages);
-          }
-          if (vertex.isHalted()) {
-            partitionStats.incrFinishedVertexCount();
-          }
-          partitionStats.incrVertexCount();
-          partitionStats.addEdgeCount(vertex.getNumEdges());
+      if (numPartitions > 0) {
+        List<Future<Collection<PartitionStats>>> partitionFutures =
+            Lists.newArrayListWithCapacity(numPartitions);
+        BlockingQueue<Integer> computePartitionIdQueue =
+            new ArrayBlockingQueue<Integer>(numPartitions);
+        for (Integer partitionId :
+            serviceWorker.getPartitionStore().getPartitionIds()) {
+          computePartitionIdQueue.add(partitionId);
         }
 
-        messageStore.clearPartition(partition.getId());
+        ExecutorService partitionExecutor =
+            Executors.newFixedThreadPool(numThreads,
+                new ThreadFactoryBuilder().setNameFormat("compute-%d").build());
+        for (int i = 0; i < numThreads; ++i) {
+          ComputeCallable<I, V, E, M> computeCallable =
+              new ComputeCallable<I, V, E, M>(
+                  context,
+                  graphState,
+                  messageStore,
+                  computePartitionIdQueue,
+                  conf,
+                  serviceWorker);
+          partitionFutures.add(partitionExecutor.submit(computeCallable));
+        }
 
-        partitionStatsList.add(partitionStats);
-        ++completedPartitions;
-        partitionLogger.info("map: Completed " + completedPartitions + " of " +
-            serviceWorker.getPartitionStore().getNumPartitions() +
-            " partitions " + MemoryUtils.getRuntimeMemoryStats());
+        // Wait until all the threads are done to wait on all requests
+        for (Future<Collection<PartitionStats>> partitionFuture :
+            partitionFutures) {
+          Collection<PartitionStats> stats =
+              ProgressableUtils.getFutureResult(partitionFuture, context);
+          partitionStatsList.addAll(stats);
+        }
+        partitionExecutor.shutdown();
       }
-    } while (!serviceWorker.finishSuperstep(partitionStatsList));
+
+      finishedSuperstepStats =
+          serviceWorker.finishSuperstep(graphState, partitionStatsList);
+      numVertices = finishedSuperstepStats.getVertexCount();
+      numEdges = finishedSuperstepStats.getEdgeCount();
+    } while (!finishedSuperstepStats.getAllVerticesHalted());
     if (LOG.isInfoEnabled()) {
-      LOG.info("map: BSP application done " +
-          "(global vertices marked done)");
+      LOG.info("map: BSP application done (global vertices marked done)");
     }
 
+    serviceWorker.getWorkerContext().setGraphState(
+        new GraphState<I, V, E, M>(serviceWorker.getSuperstep(),
+            numVertices, numEdges, context, this, null));
     serviceWorker.getWorkerContext().postApplication();
     context.progress();
   }

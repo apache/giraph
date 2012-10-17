@@ -111,7 +111,8 @@ public abstract class PartitionStore<I extends WritableComparable,
   }
 
   /**
-   * Return all the stored partitions as an Iterable.
+   * Return all the stored partitions as an Iterable.  Note that this may force
+   * out-of-core partitions to be loaded into memory if using out-of-core.
    *
    * @return The partition objects
    */

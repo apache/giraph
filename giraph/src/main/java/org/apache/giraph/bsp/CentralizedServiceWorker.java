@@ -23,6 +23,10 @@ import java.util.Collection;
 import java.util.List;
 
 import org.apache.giraph.comm.ServerData;
+import org.apache.giraph.comm.WorkerClient;
+import org.apache.giraph.graph.FinishedSuperstepStats;
+import org.apache.giraph.graph.GraphState;
+import org.apache.giraph.graph.VertexEdgeCount;
 import org.apache.giraph.graph.WorkerAggregatorUsage;
 import org.apache.giraph.graph.partition.PartitionStore;
 import org.apache.hadoop.io.Writable;
@@ -50,6 +54,13 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
   V extends Writable, E extends Writable, M extends Writable>
   extends CentralizedService<I, V, E, M> {
   /**
+   * Setup (must be called prior to any other function)
+   *
+   * @return Finished superstep stats for the input superstep
+   */
+  FinishedSuperstepStats setup();
+
+  /**
    * Get the worker information
    *
    * @return Worker information
@@ -57,6 +68,15 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
   WorkerInfo getWorkerInfo();
 
   /**
+   * Get the worker client (for instantiating WorkerClientRequestProcessor
+   * instances.
+   *
+   * @return Worker client
+   */
+  WorkerClient<I, V, E, M> getWorkerClient();
+
+  /**
+   * Get the worker context.
    *
    * @return worker's WorkerContext
    */
@@ -92,27 +112,33 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
    * appropriate superstep.
    *
    * @param superstep which checkpoint to use
+   * @return Graph-wide vertex and edge counts
    * @throws IOException
    */
-  void loadCheckpoint(long superstep) throws IOException;
+  VertexEdgeCount loadCheckpoint(long superstep) throws IOException;
 
   /**
    * Take all steps prior to actually beginning the computation of a
    * superstep.
    *
+   * @param graphState Current graph state
    * @return Collection of all the partition owners from the master for this
    *         superstep.
    */
-  Collection<? extends PartitionOwner> startSuperstep();
+  Collection<? extends PartitionOwner> startSuperstep(
+      GraphState<I, V, E, M> graphState);
 
   /**
    * Worker is done with its portion of the superstep.  Report the
    * worker level statistics after the computation.
    *
+   * @param graphState Current graph state
    * @param partitionStatsList All the partition stats for this worker
-   * @return true if this is the last superstep, false otherwise
+   * @return Stats of the superstep completion
    */
-  boolean finishSuperstep(List<PartitionStats> partitionStatsList);
+  FinishedSuperstepStats finishSuperstep(
+      GraphState<I, V, E, M> graphState,
+      List<PartitionStats> partitionStatsList);
 
   /**
    * Get the partition that a vertex id would belong to.
@@ -158,7 +184,7 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
 
   /**
    * If desired by the user, vertex partitions are redistributed among
-   * workers according to the chosen {@link WorkerGraphPartitioner}.
+   * workers according to the chosen WorkerGraphPartitioner.
    *
    * @param masterSetPartitionOwners Partition owner info passed from the
    *        master.

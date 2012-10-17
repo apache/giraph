@@ -20,7 +20,6 @@ package org.apache.giraph.graph;
 
 import org.apache.giraph.ImmutableClassesGiraphConfigurable;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.comm.WorkerClientServer;
 import org.apache.giraph.graph.partition.PartitionOwner;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -221,11 +220,13 @@ public abstract class Vertex<I extends WritableComparable,
       throw new IllegalArgumentException(
           "sendMessage: Cannot send null message to " + id);
     }
-    getWorkerCommunications().sendMessageRequest(id, message);
+    getGraphState().getWorkerClientRequestProcessor().
+        sendMessageRequest(id, message);
   }
 
   /**
    * Lookup WorkerInfo for myself.
+   *
    * @return WorkerInfo about worker holding this Vertex.
    */
   public WorkerInfo getMyWorkerInfo() {
@@ -234,6 +235,7 @@ public abstract class Vertex<I extends WritableComparable,
 
   /**
    * Lookup WorkerInfo for a Vertex.
+   *
    * @param vertexId VertexId to lookup
    * @return WorkerInfo about worker holding this Vertex.
    */
@@ -243,19 +245,13 @@ public abstract class Vertex<I extends WritableComparable,
 
   /**
    * Lookup PartitionOwner for a Vertex
+   *
    * @param vertexId id of Vertex to look up.
    * @return PartitionOwner holding Vertex
    */
   private PartitionOwner getVertexPartitionOwner(I vertexId) {
-    return getWorkerCommunications().getVertexPartitionOwner(vertexId);
-  }
-
-  /**
-   * Get WorkerClientServer used to communicate with other servers.
-   * @return WorkerClientServer used.
-   */
-  private WorkerClientServer<I, V, E, M> getWorkerCommunications() {
-    return getGraphState().getWorkerCommunications();
+    return getGraphState().getWorkerClientRequestProcessor().
+        getVertexPartitionOwner(vertexId);
   }
 
   /**

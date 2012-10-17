@@ -32,6 +32,7 @@ import org.apache.giraph.comm.messages.MessageStoreByPartition;
 import org.apache.giraph.comm.messages.MessageStoreFactory;
 import org.apache.giraph.comm.messages.SequentialFileMessageStore;
 import org.apache.giraph.comm.messages.SimpleMessageStore;
+import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexMutations;
 import org.apache.giraph.graph.VertexResolver;
@@ -115,7 +116,7 @@ public class NettyWorkerServer<I extends WritableComparable,
   }
 
   @Override
-  public void prepareSuperstep() {
+  public void prepareSuperstep(GraphState<I, V, E, M> graphState) {
     serverData.prepareSuperstep();
 
     Set<I> resolveVertexIndexSet = Sets.newHashSet();
@@ -146,8 +147,7 @@ public class NettyWorkerServer<I extends WritableComparable,
     // Resolve all graph mutations
     for (I vertexIndex : resolveVertexIndexSet) {
       VertexResolver<I, V, E, M> vertexResolver =
-          conf.createVertexResolver(
-              service.getGraphMapper().getGraphState());
+          conf.createVertexResolver(graphState);
       Vertex<I, V, E, M> originalVertex =
           service.getVertex(vertexIndex);
 
@@ -164,7 +164,7 @@ public class NettyWorkerServer<I extends WritableComparable,
           vertexIndex, originalVertex, mutations,
           serverData.getCurrentMessageStore().
               hasMessagesForVertex(vertexIndex));
-      service.getGraphMapper().getGraphState().getContext().progress();
+      graphState.getContext().progress();
 
       if (LOG.isDebugEnabled()) {
         LOG.debug("prepareSuperstep: Resolved vertex index " +

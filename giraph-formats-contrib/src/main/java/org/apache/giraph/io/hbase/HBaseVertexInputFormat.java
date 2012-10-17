@@ -48,19 +48,18 @@ import java.util.List;
  *
  * Works with {@link HBaseVertexOutputFormat}
  *
- *
  * @param <I> Vertex index value
  * @param <V> Vertex value
  * @param <E> Edge value
  * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
-public abstract  class HBaseVertexInputFormat<
-          I extends WritableComparable,
-        V extends Writable,
-        E extends Writable,
-        M extends Writable>
-        extends VertexInputFormat<I, V, E, M>  {
+public abstract class HBaseVertexInputFormat<
+    I extends WritableComparable,
+    V extends Writable,
+    E extends Writable,
+    M extends Writable>
+    extends VertexInputFormat<I, V, E, M>  {
 
 
    /**

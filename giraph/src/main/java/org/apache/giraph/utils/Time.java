@@ -33,10 +33,16 @@ public interface Time {
   long NS_PER_MS = US_PER_MS * NS_PER_US;
   /** Milliseconds per second */
   long MS_PER_SECOND = 1000;
+  /** Milliseconds per second (as float) */
+  float MS_PER_SECOND_AS_FLOAT = MS_PER_SECOND * 1f;
   /** Microseconds per second */
   long US_PER_SECOND = US_PER_MS * MS_PER_SECOND;
+  /** Microseconds per second (as float) */
+  float US_PER_SECOND_AS_FLOAT = US_PER_SECOND * 1f;
   /** Nanoseconds per second */
   long NS_PER_SECOND = NS_PER_US * US_PER_SECOND;
+  /** Nanoseconds per second (as float) */
+  float NS_PER_SECOND_AS_FLOAT = NS_PER_SECOND * 1f;
   /** Seconds per hour */
   long SECONDS_PER_HOUR = 60 * 60;
   /** Seconds per day */

@@ -105,6 +105,11 @@ public class GiraphConfiguration extends Configuration {
   /** Default log level is INFO (same as Hadoop) */
   public static final String LOG_LEVEL_DEFAULT = "info";
 
+  /** Use thread level debugging? */
+  public static final String LOG_THREAD_LAYOUT = "giraph.logThreadLayout";
+  /** Default to not use thread-level debugging */
+  public static final boolean LOG_THREAD_LAYOUT_DEFAULT = false;
+
   /**
    * Minimum percent of the maximum number of workers that have responded
    * in order to continue progressing. (float)
@@ -342,6 +347,17 @@ public class GiraphConfiguration extends Configuration {
   /** Number of flush threads per peer */
   public static final String MSG_NUM_FLUSH_THREADS =
       "giraph.msgNumFlushThreads";
+
+  /** Number of threads for vertex computation */
+  public static final String NUM_COMPUTE_THREADS = "giraph.numComputeThreads";
+  /** Default number of threads for vertex computation */
+  public static final int NUM_COMPUTE_THREADS_DEFAULT = 1;
+
+  /** Number of threads for input splits loading */
+  public static final String NUM_INPUT_SPLITS_THREADS =
+      "giraph.numInputSplitsThreads";
+  /** Default number of threads for input splits loading */
+  public static final int NUM_INPUT_SPLITS_THREADS_DEFAULT = 1;
 
   /** Number of poll attempts prior to failing the job (int) */
   public static final String POLL_ATTEMPTS = "giraph.pollAttempts";
@@ -748,6 +764,15 @@ public class GiraphConfiguration extends Configuration {
     return get(LOG_LEVEL, LOG_LEVEL_DEFAULT);
   }
 
+  /**
+   * Use the log thread layout option?
+   *
+   * @return True if use the log thread layout option, false otherwise
+   */
+  public boolean useLogThreadLayout() {
+    return getBoolean(LOG_THREAD_LAYOUT, LOG_THREAD_LAYOUT_DEFAULT);
+  }
+
   public boolean getLocalTestMode() {
     return getBoolean(LOCAL_TEST_MODE, LOCAL_TEST_MODE_DEFAULT);
   }
@@ -843,5 +868,35 @@ public class GiraphConfiguration extends Configuration {
    */
   public boolean authenticate() {
     return getBoolean(AUTHENTICATE, DEFAULT_AUTHENTICATE);
+  }
+
+  /**
+   * Set the number of compute threads
+   *
+   * @param numComputeThreads Number of compute threads to use
+   */
+  public void setNumComputeThreads(int numComputeThreads) {
+    setInt(NUM_COMPUTE_THREADS, numComputeThreads);
+  }
+
+  public int getNumComputeThreads() {
+    return getInt(NUM_COMPUTE_THREADS, NUM_COMPUTE_THREADS_DEFAULT);
+  }
+
+  /**
+   * Set the number of input split threads
+   *
+   * @param numInputSplitsThreads Number of input split threads to use
+   */
+  public void setNumInputSplitsThreads(int numInputSplitsThreads) {
+    setInt(NUM_INPUT_SPLITS_THREADS, numInputSplitsThreads);
+  }
+
+  public int getNumInputSplitsThreads() {
+    return getInt(NUM_INPUT_SPLITS_THREADS, NUM_INPUT_SPLITS_THREADS_DEFAULT);
+  }
+
+  public long getInputSplitMaxVertices() {
+    return getLong(INPUT_SPLIT_MAX_VERTICES, INPUT_SPLIT_MAX_VERTICES_DEFAULT);
   }
 }

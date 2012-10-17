@@ -20,7 +20,6 @@ package org.apache.giraph.comm.netty;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
-import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import java.io.IOException;
@@ -30,6 +29,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.giraph.GiraphConfiguration;
@@ -52,7 +52,6 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelConfig;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.ChannelLocal;
@@ -67,7 +66,7 @@ import org.jboss.netty.handler.execution.MemoryAwareThreadPoolExecutor;
 import static org.jboss.netty.channel.Channels.pipeline;
 
 /**
- * Netty client for sending requests.
+ * Netty client for sending requests.  Thread-safe.
  */
 public class NettyClient {
   /** Do we have a limit on number of open requests we can have */
@@ -100,8 +99,8 @@ else[HADOOP_NON_SECURE]*/
    * Map of the peer connections, mapping from remote socket address to client
    * meta data
    */
-  private final Map<InetSocketAddress, ChannelRotater> addressChannelMap =
-      Maps.newHashMap();
+  private final ConcurrentMap<InetSocketAddress, ChannelRotater>
+  addressChannelMap = new MapMaker().makeMap();
   /**
    * Request map of client request ids to request information.
    */
@@ -214,7 +213,9 @@ else[HADOOP_NON_SECURE]*/
           GiraphConfiguration.NETTY_CLIENT_EXECUTION_THREADS_DEFAULT);
       executionHandler = new ExecutionHandler(
           new MemoryAwareThreadPoolExecutor(
-              executionThreads, 1048576, 1048576));
+              executionThreads, 1048576, 1048576, 1, TimeUnit.HOURS,
+              new ThreadFactoryBuilder().setNameFormat("netty-client-exec-%d")
+                  .build()));
       if (LOG.isInfoEnabled()) {
         LOG.info("NettyClient: Using execution handler with " +
             executionThreads + " threads after " +
@@ -226,10 +227,10 @@ else[HADOOP_NON_SECURE]*/
 
     bossExecutorService = Executors.newCachedThreadPool(
         new ThreadFactoryBuilder().setNameFormat(
-            "Giraph Client Netty Boss #%d").build());
+            "netty-client-boss-%d").build());
     workerExecutorService = Executors.newCachedThreadPool(
         new ThreadFactoryBuilder().setNameFormat(
-            "Giraph Client Netty Worker #%d").build());
+            "netty-client-worker-%d").build());
 
     clientId = conf.getInt("mapred.task.partition", -1);
 
@@ -332,6 +333,12 @@ else[HADOOP_NON_SECURE]*/
       this.address = address;
       this.taskId = taskId;
     }
+
+    @Override
+    public String toString() {
+      return "(future=" + future + ",address=" + address + ",taskId=" +
+          taskId + ")";
+    }
   }
 
   /**
@@ -403,8 +410,13 @@ else[HADOOP_NON_SECURE]*/
           ChannelRotater rotater =
               addressChannelMap.get(waitingConnection.address);
           if (rotater == null) {
-            rotater = new ChannelRotater(waitingConnection.taskId);
-            addressChannelMap.put(waitingConnection.address, rotater);
+            ChannelRotater newRotater =
+                new ChannelRotater(waitingConnection.taskId);
+            rotater = addressChannelMap.putIfAbsent(
+                waitingConnection.address, newRotater);
+            if (rotater == null) {
+              rotater = newRotater;
+            }
           }
           rotater.addChannel(future.getChannel());
           ++connected;
@@ -515,30 +527,27 @@ else[HADOOP_NON_SECURE]*/
     // in addressChannelMap are closed (success or failure)
     int channelCount = 0;
     for (ChannelRotater channelRotater : addressChannelMap.values()) {
-      channelCount += channelRotater.getChannels().size();
+      channelCount += channelRotater.size();
     }
     final int done = channelCount;
     final AtomicInteger count = new AtomicInteger(0);
     for (ChannelRotater channelRotater : addressChannelMap.values()) {
-      for (Channel channel : channelRotater.getChannels()) {
-        ChannelFuture result = channel.close();
-        result.addListener(new ChannelFutureListener() {
-          @Override
-          public void operationComplete(ChannelFuture cf) {
-            context.progress();
-            if (count.incrementAndGet() == done) {
-              if (LOG.isInfoEnabled()) {
-                LOG.info("stop: reached wait threshold, " +
-                    done + " connections closed, releasing " +
-                    "NettyClient.bootstrap resources now.");
-              }
-              bossExecutorService.shutdownNow();
-              workerExecutorService.shutdownNow();
-              bootstrap.releaseExternalResources();
+      channelRotater.closeChannels(new ChannelFutureListener() {
+        @Override
+        public void operationComplete(ChannelFuture cf) {
+          context.progress();
+          if (count.incrementAndGet() == done) {
+            if (LOG.isInfoEnabled()) {
+              LOG.info("stop: reached wait threshold, " +
+                  done + " connections closed, releasing " +
+                  "NettyClient.bootstrap resources now.");
             }
+            bossExecutorService.shutdownNow();
+            workerExecutorService.shutdownNow();
+            bootstrap.releaseExternalResources();
           }
-        });
-      }
+        }
+      });
     }
   }
 
@@ -561,7 +570,10 @@ else[HADOOP_NON_SECURE]*/
     }
 
     // Get rid of the failed channel
-    addressChannelMap.get(remoteServer).removeLast();
+    if (addressChannelMap.get(remoteServer).removeChannel(channel)) {
+      LOG.warn("getNextChannel: Unlikely event that the channel " +
+          channel + " was already removed!");
+    }
     if (LOG.isInfoEnabled()) {
       LOG.info("getNextChannel: Fixing disconnected channel to " +
           remoteServer + ", open = " + channel.isOpen() + ", " +
@@ -744,15 +756,4 @@ else[HADOOP_NON_SECURE]*/
       addedRequestInfos.clear();
     }
   }
-
-  /**
-   * Returning configuration of the first channel.
-   * @throws ArrayIndexOutOfBoundsException if no
-   *   channels exist in the client's address => channel map.
-   * @return ChannelConfig for the first channel (if any).
-   */
-  public ChannelConfig getChannelConfig() {
-    return ((Channel) addressChannelMap.values().toArray()[0]).getConfig();
-  }
-
 }

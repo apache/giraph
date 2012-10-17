@@ -34,6 +34,7 @@ import java.util.Set;
 
 /**
  * Mutable vertex with no edge values.
+ *
  * @param <I> Vertex id
  * @param <V> Vertex data
  * @param <M> Message data
@@ -96,7 +97,7 @@ public abstract class SimpleMutableVertex<I extends WritableComparable,
    * @param sourceVertexId Source vertex id of edge
    */
   public void addEdgeRequest(I sourceVertexId) throws IOException {
-    getGraphState().getWorkerCommunications().
+    getGraphState().getWorkerClientRequestProcessor().
         addEdgeRequest(sourceVertexId, new Edge<I,
             NullWritable>(sourceVertexId, NullWritable.get()));
   }

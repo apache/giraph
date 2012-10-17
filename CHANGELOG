@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-374: Multithreading in input split loading and compute (aching).
+
   GIRAPH-375: Cleaner MutableVertex API (apresta)
 
   GIRAPH-371: Replace BspUtils in giraph-formats-contrib for
@@ -8,7 +10,8 @@ Release 0.2.0 - unreleased
 
   GIRAPH-369: bin/giraph broken (Nitay Joffe via ereisman)
 
-  GIRAPH-368: HBase Vertex I/O formats handle setConf() internally (bfem via ereisman)
+  GIRAPH-368: HBase Vertex I/O formats handle setConf() internally
+  (bfem via ereisman)
 
   GIRAPH-367: Expose WorkerInfo to clients (Nitay Joffe via ereisman)
 

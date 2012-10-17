@@ -18,11 +18,11 @@
 
 package org.apache.giraph.comm;
 
-import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.WorkerInfo;
-import org.apache.giraph.graph.partition.Partition;
+import java.net.InetSocketAddress;
+import java.util.Collection;
+import org.apache.giraph.comm.requests.WritableRequest;
 
+import org.apache.giraph.graph.WorkerInfo;
 import org.apache.giraph.graph.partition.PartitionOwner;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -30,7 +30,8 @@ import org.apache.hadoop.io.WritableComparable;
 import java.io.IOException;
 
 /**
- * Public interface for workers to do message communication
+ * Public interface for workers to establish connections and send aggregated
+ * requests.
  *
  * @param <I> Vertex id
  * @param <V> Vertex value
@@ -57,84 +58,47 @@ else[HADOOP_NON_SECURE]*/
 /*end[HADOOP_NON_SECURE]*/
 
   /**
-   * Fix changes to the workers and the mapping between partitions and
-   * workers.
-   */
-  void fixPartitionIdToSocketAddrMap();
-
-  /**
    * Lookup PartitionOwner for a vertex.
+   *
    * @param vertexId id to look up.
    * @return PartitionOwner holding the vertex.
    */
   PartitionOwner getVertexPartitionOwner(I vertexId);
 
   /**
-   * Sends a message to destination vertex.
+   * Make sure that all the connections to the partitions owners have been
+   * established.
    *
-   * @param destVertexId Destination vertex id.
-   * @param message Message to send.
+   * @param partitionOwners Partition owners to establish/check connections
    */
-  void sendMessageRequest(I destVertexId, M message);
+  void openConnections(
+      Collection<? extends PartitionOwner> partitionOwners);
 
   /**
-   * Sends a partition to the appropriate partition owner
+   * Fill the socket address cache for the worker info and its partition.
    *
-   * @param workerInfo Owner the vertices belong to
-   * @param partition Partition to send
+   * @param workerInfo Worker information to get the socket address
+   * @param partitionId Partition id to look up.
+   * @return address of the vertex range server containing this vertex
    */
-  void sendPartitionRequest(WorkerInfo workerInfo,
-                            Partition<I, V, E, M> partition);
+  InetSocketAddress getInetSocketAddress(WorkerInfo workerInfo,
+                                         int partitionId);
 
   /**
-   * Sends a request to the appropriate vertex range owner to add an edge
+   * Send a request to a remote server (should be already connected)
    *
-   * @param vertexIndex Index of the vertex to get the request
-   * @param edge Edge to be added
-   * @throws IOException
+   * @param destWorkerId Destination worker id
+   * @param remoteServer Server to send the request to
+   * @param request Request to send
    */
-  void addEdgeRequest(I vertexIndex, Edge<I, E> edge) throws IOException;
+  void sendWritableRequest(Integer destWorkerId,
+                                  InetSocketAddress remoteServer,
+                                  WritableRequest request);
 
   /**
-   * Sends a request to the appropriate vertex range owner to remove an edge
-   *
-   * @param vertexIndex Index of the vertex to get the request
-   * @param destinationVertexIndex Index of the edge to be removed
-   * @throws IOException
+   * Wait until all the outstanding requests are completed.
    */
-  void removeEdgeRequest(I vertexIndex, I destinationVertexIndex)
-    throws IOException;
-
-  /**
-   * Sends a request to the appropriate vertex range owner to add a vertex
-   *
-   * @param vertex Vertex to be added
-   * @throws IOException
-   */
-  void addVertexRequest(Vertex<I, V, E, M> vertex) throws IOException;
-
-  /**
-   * Sends a request to the appropriate vertex range owner to remove a vertex
-   *
-   * @param vertexIndex Index of the vertex to be removed
-   * @throws IOException
-   */
-  void removeVertexRequest(I vertexIndex) throws IOException;
-
-  /**
-   * Flush all outgoing messages.  This will synchronously ensure that all
-   * messages have been send and delivered prior to returning.
-   *
-   * @throws IOException
-   */
-  void flush() throws IOException;
-
-  /**
-   * Get the messages sent during this superstep and clear them.
-   *
-   * @return Number of messages sent before the reset.
-   */
-  long resetMessageCount();
+  void waitAllRequests();
 
   /**
    * Closes all connections.

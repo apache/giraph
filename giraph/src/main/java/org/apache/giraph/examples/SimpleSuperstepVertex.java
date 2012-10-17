@@ -44,6 +44,20 @@ public class SimpleSuperstepVertex extends
     EdgeListVertex<LongWritable, IntWritable, FloatWritable, IntWritable> {
   @Override
   public void compute(Iterable<IntWritable> messages) {
+    // Some checks for additional testing
+    if (getTotalNumVertices() < 1) {
+      throw new IllegalStateException("compute: Illegal total vertices " +
+          getTotalNumVertices());
+    }
+    if (getTotalNumEdges() < 0) {
+      throw new IllegalStateException("compute: Illegal total edges " +
+          getTotalNumEdges());
+    }
+    if (isHalted()) {
+      throw new IllegalStateException("compute: Impossible to be halted - " +
+          isHalted());
+    }
+
     if (getSuperstep() > 3) {
       voteToHalt();
     }

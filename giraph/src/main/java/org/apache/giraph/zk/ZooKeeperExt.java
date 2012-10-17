@@ -37,7 +37,8 @@ import org.apache.zookeeper.ZooKeeper;
 
 /**
  * ZooKeeper provides only atomic operations.  ZooKeeperExt provides additional
- * non-atomic operations that are useful.
+ * non-atomic operations that are useful.  All methods of this class should
+ * be thread-safe.
  */
 public class ZooKeeperExt extends ZooKeeper {
   /** Internal logger */
