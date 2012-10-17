@@ -83,7 +83,7 @@ public class RandomMessageBenchmark implements Tool {
   /**
    * {@link WorkerContext} forRandomMessageBenchmark.
    */
-  private static class RandomMessageBenchmarkWorkerContext extends
+  public static class RandomMessageBenchmarkWorkerContext extends
       WorkerContext {
     /** Class logger */
     private static final Logger LOG =
