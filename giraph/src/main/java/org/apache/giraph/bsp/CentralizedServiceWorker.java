@@ -93,13 +93,6 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
   PartitionStore<I, V, E, M> getPartitionStore();
 
   /**
-   * Get a collection of all the partition owners.
-   *
-   * @return Collection of all the partition owners.
-   */
-  Collection<? extends PartitionOwner> getPartitionOwners();
-
-  /**
    *  Both the vertices and the messages need to be checkpointed in order
    *  for them to be used.  This is done after all messages have been
    *  delivered, but prior to a superstep starting.

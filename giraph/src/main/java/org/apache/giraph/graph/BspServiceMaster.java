@@ -55,6 +55,7 @@ import org.apache.zookeeper.ZooDefs.Ids;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import net.iharder.Base64;
 
@@ -149,6 +150,8 @@ public class BspServiceMaster<I extends WritableComparable,
   private MasterClientServer commService;
   /** Master info */
   private WorkerInfo masterInfo;
+  /** List of workers in current superstep */
+  private List<WorkerInfo> chosenWorkerInfoList = Lists.newArrayList();
   /** Limit locality information added to each InputSplit znode */
   private final int localityLimit = 5;
 
@@ -602,6 +605,11 @@ public class BspServiceMaster<I extends WritableComparable,
   }
 
   @Override
+  public List<WorkerInfo> getWorkerInfoList() {
+    return chosenWorkerInfoList;
+  }
+
+  @Override
   public MasterAggregatorUsage getAggregatorUsage() {
     return aggregatorHandler;
   }
@@ -763,12 +771,9 @@ public class BspServiceMaster<I extends WritableComparable,
           aggregatorHandler.initialize(this);
 
           commService = new NettyMasterClientServer(
-              getContext(), getConfiguration());
+              getContext(), getConfiguration(), this);
           masterInfo = new WorkerInfo(getHostname(), getTaskPartition(),
               commService.getMyAddress().getPort());
-          // write my address to znode so workers could read it
-          WritableUtils.writeToZnode(getZkExt(), currentMasterPath, -1,
-              masterInfo);
 
           if (LOG.isInfoEnabled()) {
             LOG.info("becomeMaster: I am now the master!");
@@ -796,7 +801,7 @@ public class BspServiceMaster<I extends WritableComparable,
    * @return Global statistics aggregated on all worker statistics
    */
   private GlobalStats aggregateWorkerStats(long superstep) {
-    Class<? extends Writable> partitionStatsClass =
+    Class<? extends PartitionStats> partitionStatsClass =
         masterGraphPartitioner.createPartitionStats().getClass();
     GlobalStats globalStats = new GlobalStats();
     // Get the stats from the all the worker selected nodes
@@ -822,15 +827,15 @@ public class BspServiceMaster<I extends WritableComparable,
         byte [] zkData =
             getZkExt().getData(finishedPath, false, null);
         workerFinishedInfoObj = new JSONObject(new String(zkData));
-        List<? extends Writable> writableList =
+        List<PartitionStats> statsList =
             WritableUtils.readListFieldsFromByteArray(
                 Base64.decode(workerFinishedInfoObj.getString(
                     JSONOBJ_PARTITION_STATS_KEY)),
                     partitionStatsClass,
                     getConfiguration());
-        for (Writable writable : writableList) {
-          globalStats.addPartitionStats((PartitionStats) writable);
-          allPartitionStatsList.add((PartitionStats) writable);
+        for (PartitionStats partitionStats : statsList) {
+          globalStats.addPartitionStats(partitionStats);
+          allPartitionStatsList.add(partitionStats);
         }
         globalStats.addMessageCount(
             workerFinishedInfoObj.getLong(
@@ -986,14 +991,17 @@ public class BspServiceMaster<I extends WritableComparable,
     }
 
     // Workers are waiting for these assignments
-    String partitionAssignmentsPath =
-        getPartitionAssignmentsPath(getApplicationAttempt(),
+    AddressesAndPartitionsWritable addressesAndPartitions =
+        new AddressesAndPartitionsWritable(masterInfo, chosenWorkerInfoList,
+            partitionOwners);
+    String addressesAndPartitionsPath =
+        getAddressesAndPartitionsPath(getApplicationAttempt(),
             getSuperstep());
-    WritableUtils.writeListToZnode(
+    WritableUtils.writeToZnode(
         getZkExt(),
-        partitionAssignmentsPath,
+        addressesAndPartitionsPath,
         -1,
-        new ArrayList<Writable>(partitionOwners));
+        addressesAndPartitions);
   }
 
   /**
@@ -1252,7 +1260,7 @@ public class BspServiceMaster<I extends WritableComparable,
     // 5. Create superstep finished node
     // 6. If the checkpoint frequency is met, finalize the checkpoint
 
-    List<WorkerInfo> chosenWorkerInfoList = checkWorkers();
+    chosenWorkerInfoList = checkWorkers();
     if (chosenWorkerInfoList == null) {
       LOG.fatal("coordinateSuperstep: Not enough healthy workers for " +
           "superstep " + getSuperstep());
@@ -1271,7 +1279,7 @@ public class BspServiceMaster<I extends WritableComparable,
       }
     }
 
-    commService.fixWorkerAddresses(chosenWorkerInfoList);
+    commService.openConnections();
 
     currentWorkersCounter.increment(chosenWorkerInfoList.size() -
         currentWorkersCounter.getValue());

@@ -19,9 +19,7 @@ package org.apache.giraph.comm.netty;
 
 import com.google.common.collect.Maps;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.Map;
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
@@ -137,11 +135,9 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
     if (workerMessageCount >= maxMessagesPerWorker) {
       Map<Integer, Map<I, Collection<M>>> workerMessages =
           sendMessageCache.removeWorkerMessages(workerInfo);
-      InetSocketAddress remoteWorkerAddress =
-          workerClient.getInetSocketAddress(workerInfo, partitionId);
       WritableRequest writableRequest =
           new SendWorkerMessagesRequest<I, V, E, M>(workerMessages);
-      doRequest(workerInfo, remoteWorkerAddress, writableRequest);
+      doRequest(workerInfo, writableRequest);
     }
   }
 
@@ -149,18 +145,15 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
   public void sendPartitionRequest(WorkerInfo workerInfo,
                                    Partition<I, V, E, M> partition) {
     final int partitionId = partition.getId();
-    InetSocketAddress remoteServerAddress =
-        workerClient.getInetSocketAddress(workerInfo, partitionId);
     if (LOG.isTraceEnabled()) {
-      LOG.trace("sendVertexRequest: Sending to " +
-          remoteServerAddress +
-          " from " + workerInfo + ", with partition " + partition);
+      LOG.trace("sendVertexRequest: Sending to " + workerInfo +
+          ", with partition " + partition);
     }
 
     WritableRequest vertexRequest =
         new SendVertexRequest<I, V, E, M>(partitionId,
             partition.getVertices());
-    doRequest(workerInfo, remoteServerAddress, vertexRequest);
+    doRequest(workerInfo, vertexRequest);
 
     // Messages are stored separately
     MessageStoreByPartition<I, M> messageStore =
@@ -180,7 +173,7 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
       if (messagesInMap > maxMessagesPerWorker) {
         WritableRequest messagesRequest = new
             SendPartitionCurrentMessagesRequest<I, V, E, M>(partitionId, map);
-        doRequest(workerInfo, remoteServerAddress, messagesRequest);
+        doRequest(workerInfo, messagesRequest);
         map.clear();
         messagesInMap = 0;
       }
@@ -188,7 +181,7 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
     if (!map.isEmpty()) {
       WritableRequest messagesRequest = new
           SendPartitionCurrentMessagesRequest<I, V, E, M>(partitionId, map);
-      doRequest(workerInfo, remoteServerAddress, messagesRequest);
+      doRequest(workerInfo, messagesRequest);
     }
   }
 
@@ -236,16 +229,12 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
       int partitionMutationCount) {
     // Send a request if enough mutations are there for a partition
     if (partitionMutationCount >= maxMutationsPerPartition) {
-      InetSocketAddress remoteServerAddress =
-          workerClient.getInetSocketAddress(
-              partitionOwner.getWorkerInfo(), partitionId);
       Map<I, VertexMutations<I, V, E, M>> partitionMutations =
           sendMutationsCache.removePartitionMutations(partitionId);
       WritableRequest writableRequest =
           new SendPartitionMutationsRequest<I, V, E, M>(
               partitionId, partitionMutations);
-      doRequest(partitionOwner.getWorkerInfo(), remoteServerAddress,
-          writableRequest);
+      doRequest(partitionOwner.getWorkerInfo(), writableRequest);
     }
   }
 
@@ -320,15 +309,9 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
         remainingMessageCache = sendMessageCache.removeAllMessages();
     for (Map.Entry<WorkerInfo, Map<Integer, Map<I, Collection<M>>>> entry :
         remainingMessageCache.entrySet()) {
-      Iterator<Integer> cachedPartitionId =
-          entry.getValue().keySet().iterator();
-      final int partitionId = cachedPartitionId.hasNext() ?
-          cachedPartitionId.next() : NettyWorkerClient.NO_PARTITION_ID;
-      InetSocketAddress remoteWorkerAddress =
-          workerClient.getInetSocketAddress(entry.getKey(), partitionId);
       WritableRequest writableRequest =
           new SendWorkerMessagesRequest<I, V, E, M>(entry.getValue());
-      doRequest(entry.getKey(), remoteWorkerAddress, writableRequest);
+      doRequest(entry.getKey(), writableRequest);
     }
 
     // Execute the remaining sends mutations (if any)
@@ -342,11 +325,7 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
       PartitionOwner partitionOwner =
           serviceWorker.getVertexPartitionOwner(
               entry.getValue().keySet().iterator().next());
-      InetSocketAddress remoteServerAddress =
-          workerClient.getInetSocketAddress(partitionOwner.getWorkerInfo(),
-              partitionOwner.getPartitionId());
-      doRequest(partitionOwner.getWorkerInfo(), remoteServerAddress,
-          writableRequest);
+      doRequest(partitionOwner.getWorkerInfo(), writableRequest);
     }
   }
 
@@ -366,11 +345,9 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
    * When doing the request, short circuit if it is local
    *
    * @param workerInfo Worker info
-   * @param remoteServerAddress Remote server address
    * @param writableRequest Request to either submit or run locally
    */
   private void doRequest(WorkerInfo workerInfo,
-                         InetSocketAddress remoteServerAddress,
                          WritableRequest writableRequest) {
     // If this is local, execute locally
     if (serviceWorker.getWorkerInfo().getTaskId() ==
@@ -378,7 +355,7 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
       ((WorkerRequest) writableRequest).doRequest(serverData);
     } else {
       workerClient.sendWritableRequest(
-          workerInfo.getTaskId(), remoteServerAddress, writableRequest);
+          workerInfo.getTaskId(), writableRequest);
     }
   }
 }

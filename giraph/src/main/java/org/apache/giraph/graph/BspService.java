@@ -93,8 +93,6 @@ public abstract class BspService<I extends WritableComparable,
       "/_applicationAttemptsDir";
   /** Where the master election happens */
   public static final String MASTER_ELECTION_DIR = "/_masterElectionDir";
-  /** Denotes current master's info */
-  public static final String CURRENT_MASTER_INFO_NODE = "/_currentMaster";
   /** Superstep scope */
   public static final String SUPERSTEP_DIR = "/_superstepDir";
   /** Where the merged aggregators are located */
@@ -109,9 +107,9 @@ public abstract class BspService<I extends WritableComparable,
       "/_workerWroteCheckpointDir";
   /** Finished workers notify here */
   public static final String WORKER_FINISHED_DIR = "/_workerFinishedDir";
-  /** Where the partition assignments are set */
-  public static final String PARTITION_ASSIGNMENTS_DIR =
-      "/_partitionAssignments";
+  /** Where the master and worker addresses and partition assignments are set */
+  public static final String ADDRESSES_AND_PARTITIONS_DIR =
+      "/_addressesAndPartitions";
   /** Helps coordinate the partition exchnages */
   public static final String PARTITION_EXCHANGE_DIR =
       "/_partitionExchangeDir";
@@ -202,8 +200,6 @@ public abstract class BspService<I extends WritableComparable,
   protected final String checkpointBasePath;
   /** Path to the master election path */
   protected final String masterElectionPath;
-  /** Path to current master info */
-  protected final String currentMasterPath;
   /** Private ZooKeeper instance that implements the service */
   private final ZooKeeperExt zk;
   /** Has the Connection occurred? */
@@ -218,8 +214,8 @@ public abstract class BspService<I extends WritableComparable,
   private final BspEvent inputSplitsAllDoneChanged;
   /** InputSplit done by a worker finished notification and synchronization */
   private final BspEvent inputSplitsDoneStateChanged;
-  /** Are the partition assignments to workers ready? */
-  private final BspEvent partitionAssignmentsReadyChanged;
+  /** Are the addresses and partition assignments to workers ready? */
+  private final BspEvent addressesAndPartitionsReadyChanged;
   /** Application attempt changed */
   private final BspEvent applicationAttemptChanged;
   /** Superstep finished synchronization */
@@ -276,7 +272,7 @@ public abstract class BspService<I extends WritableComparable,
     this.inputSplitsStateChanged = new PredicateLock(context);
     this.inputSplitsAllDoneChanged = new PredicateLock(context);
     this.inputSplitsDoneStateChanged = new PredicateLock(context);
-    this.partitionAssignmentsReadyChanged = new PredicateLock(context);
+    this.addressesAndPartitionsReadyChanged = new PredicateLock(context);
     this.applicationAttemptChanged = new PredicateLock(context);
     this.superstepFinished = new PredicateLock(context);
     this.masterElectionChildrenChanged = new PredicateLock(context);
@@ -286,7 +282,7 @@ public abstract class BspService<I extends WritableComparable,
     registerBspEvent(workerHealthRegistrationChanged);
     registerBspEvent(inputSplitsAllReadyChanged);
     registerBspEvent(inputSplitsStateChanged);
-    registerBspEvent(partitionAssignmentsReadyChanged);
+    registerBspEvent(addressesAndPartitionsReadyChanged);
     registerBspEvent(applicationAttemptChanged);
     registerBspEvent(superstepFinished);
     registerBspEvent(masterElectionChildrenChanged);
@@ -332,7 +328,6 @@ public abstract class BspService<I extends WritableComparable,
         GiraphConfiguration.CHECKPOINT_DIRECTORY,
         GiraphConfiguration.CHECKPOINT_DIRECTORY_DEFAULT + "/" + getJobId());
     masterElectionPath = basePath + MASTER_ELECTION_DIR;
-    currentMasterPath = basePath + CURRENT_MASTER_INFO_NODE;
     if (LOG.isInfoEnabled()) {
       LOG.info("BspService: Connecting to ZooKeeper with job " + jobId +
           ", " + getTaskPartition() + " on " + serverPortList);
@@ -460,16 +455,16 @@ public abstract class BspService<I extends WritableComparable,
   }
 
   /**
-   * Generate the "partiton assignments" directory path for a superstep
+   * Generate the "addresses and partitions" directory path for a superstep
    *
    * @param attempt application attempt number
    * @param superstep superstep to use
    * @return directory path based on the a superstep
    */
-  public final String getPartitionAssignmentsPath(long attempt,
+  public final String getAddressesAndPartitionsPath(long attempt,
       long superstep) {
     return applicationAttemptsPath + "/" + attempt +
-        SUPERSTEP_DIR + "/" + superstep + PARTITION_ASSIGNMENTS_DIR;
+        SUPERSTEP_DIR + "/" + superstep + ADDRESSES_AND_PARTITIONS_DIR;
   }
 
   /**
@@ -656,8 +651,8 @@ public abstract class BspService<I extends WritableComparable,
     return inputSplitsDoneStateChanged;
   }
 
-  public final BspEvent getPartitionAssignmentsReadyChangedEvent() {
-    return partitionAssignmentsReadyChanged;
+  public final BspEvent getAddressesAndPartitionsReadyChangedEvent() {
+    return addressesAndPartitionsReadyChanged;
   }
 
 
@@ -1014,13 +1009,13 @@ public abstract class BspService<I extends WritableComparable,
       }
       inputSplitsAllDoneChanged.signal();
       eventProcessed = true;
-    } else if (event.getPath().contains(PARTITION_ASSIGNMENTS_DIR) &&
+    } else if (event.getPath().contains(ADDRESSES_AND_PARTITIONS_DIR) &&
         event.getType() == EventType.NodeCreated) {
       if (LOG.isInfoEnabled()) {
         LOG.info("process: partitionAssignmentsReadyChanged " +
             "(partitions are assigned)");
       }
-      partitionAssignmentsReadyChanged.signal();
+      addressesAndPartitionsReadyChanged.signal();
       eventProcessed = true;
     } else if (event.getPath().contains(SUPERSTEP_FINISHED_NODE) &&
         event.getType() == EventType.NodeCreated) {

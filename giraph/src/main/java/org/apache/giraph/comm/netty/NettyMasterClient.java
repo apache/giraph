@@ -18,18 +18,10 @@
 
 package org.apache.giraph.comm.netty;
 
-import com.google.common.collect.Maps;
-import java.util.Map;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.bsp.CentralizedServiceMaster;
 import org.apache.giraph.comm.MasterClient;
-import org.apache.giraph.graph.WorkerInfo;
 import org.apache.hadoop.mapreduce.Mapper;
-
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-
-import java.net.InetSocketAddress;
-import java.util.Collection;
 
 /**
  * Netty implementation of {@link MasterClient}
@@ -38,30 +30,25 @@ public class NettyMasterClient implements MasterClient {
   /** Netty client that does the actual I/O */
   private final NettyClient nettyClient;
   /** Worker information for current superstep */
-  private Collection<WorkerInfo> workers;
+  private CentralizedServiceMaster<?, ?, ?, ?> service;
 
   /**
    * Constructor
    *
    * @param context Context from mapper
    * @param configuration Configuration
+   * @param service Centralized service
    */
   public NettyMasterClient(Mapper<?, ?, ?, ?>.Context context,
-                           ImmutableClassesGiraphConfiguration configuration) {
+                           ImmutableClassesGiraphConfiguration configuration,
+                           CentralizedServiceMaster<?, ?, ?, ?> service) {
     this.nettyClient = new NettyClient(context, configuration);
-    workers = Lists.newArrayList();
+    this.service = service;
   }
 
   @Override
-  public void fixWorkerAddresses(Iterable<WorkerInfo> workers) {
-    this.workers.clear();
-    Iterables.addAll(this.workers, workers);
-    Map<InetSocketAddress, Integer> addresses =
-        Maps.newHashMapWithExpectedSize(this.workers.size());
-    for (WorkerInfo worker : workers) {
-      addresses.put(worker.getInetSocketAddress(), worker.getTaskId());
-    }
-    nettyClient.connectAllAddresses(addresses);
+  public void openConnections() {
+    nettyClient.connectAllAddresses(service.getWorkerInfoList());
   }
 
   @Override

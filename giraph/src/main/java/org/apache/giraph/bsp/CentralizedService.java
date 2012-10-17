@@ -18,10 +18,12 @@
 
 package org.apache.giraph.bsp;
 
+import org.apache.giraph.graph.WorkerInfo;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 import java.io.IOException;
+import java.util.List;
 
 /**
  * Basic service interface shared by both {@link CentralizedServiceMaster} and
@@ -59,6 +61,13 @@ public interface CentralizedService<I extends WritableComparable,
    * @return true if checkpoint frequency met or superstep is 1.
    */
   boolean checkpointFrequencyMet(long superstep);
+
+  /**
+   * Get list of workers
+   *
+   * @return List of workers
+   */
+  List<WorkerInfo> getWorkerInfoList();
 
   /**
    * Clean up the service (no calls may be issued after this)

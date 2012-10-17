@@ -58,6 +58,16 @@ public class WorkerInfo implements Writable {
     this.hostnameId = hostname + "_" + taskId;
   }
 
+  /**
+   * Constructor with InetSocketAddress
+   *
+   * @param address Address of this worker
+   * @param taskId The task partition for this worker
+   */
+  public WorkerInfo(InetSocketAddress address, int taskId) {
+    this(address.getHostName(), taskId, address.getPort());
+  }
+
   public String getHostname() {
     return hostname;
   }

@@ -18,11 +18,8 @@
 
 package org.apache.giraph.comm;
 
-import java.net.InetSocketAddress;
-import java.util.Collection;
 import org.apache.giraph.comm.requests.WritableRequest;
 
-import org.apache.giraph.graph.WorkerInfo;
 import org.apache.giraph.graph.partition.PartitionOwner;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -66,34 +63,18 @@ else[HADOOP_NON_SECURE]*/
   PartitionOwner getVertexPartitionOwner(I vertexId);
 
   /**
-   * Make sure that all the connections to the partitions owners have been
+   * Make sure that all the connections to workers and master have been
    * established.
-   *
-   * @param partitionOwners Partition owners to establish/check connections
    */
-  void openConnections(
-      Collection<? extends PartitionOwner> partitionOwners);
-
-  /**
-   * Fill the socket address cache for the worker info and its partition.
-   *
-   * @param workerInfo Worker information to get the socket address
-   * @param partitionId Partition id to look up.
-   * @return address of the vertex range server containing this vertex
-   */
-  InetSocketAddress getInetSocketAddress(WorkerInfo workerInfo,
-                                         int partitionId);
+  void openConnections();
 
   /**
    * Send a request to a remote server (should be already connected)
    *
    * @param destWorkerId Destination worker id
-   * @param remoteServer Server to send the request to
    * @param request Request to send
    */
-  void sendWritableRequest(Integer destWorkerId,
-                                  InetSocketAddress remoteServer,
-                                  WritableRequest request);
+  void sendWritableRequest(Integer destWorkerId, WritableRequest request);
 
   /**
    * Wait until all the outstanding requests are completed.

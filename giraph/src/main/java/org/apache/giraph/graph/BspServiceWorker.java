@@ -107,17 +107,13 @@ public class BspServiceWorker<I extends WritableComparable,
   private final WorkerServer<I, V, E, M> workerServer;
   /** Master info */
   private WorkerInfo masterInfo = new WorkerInfo();
+  /** List of workers */
+  private List<WorkerInfo> workerInfoList = Lists.newArrayList();
   /** Have the partition exchange children (workers) changed? */
   private final BspEvent partitionExchangeChildrenChanged;
 
   /** Worker Context */
   private final WorkerContext workerContext;
-  /** Total vertices loaded */
-  private long totalVerticesLoaded = 0;
-  /** Total edges loaded */
-  private long totalEdgesLoaded = 0;
-  /** Input split max vertices (-1 denotes all) */
-  private final long inputSplitMaxVertices;
   /**
    * Stores and processes the list of InputSplits advertised
    * in a tree of child znodes by the master.
@@ -146,7 +142,6 @@ public class BspServiceWorker<I extends WritableComparable,
     super(serverPortList, sessionMsecTimeout, context, graphMapper);
     partitionExchangeChildrenChanged = new PredicateLock(context);
     registerBspEvent(partitionExchangeChildrenChanged);
-    inputSplitMaxVertices = getConfiguration().getInputSplitMaxVertices();
     workerGraphPartitioner =
         getGraphPartitionerFactory().createWorkerGraphPartitioner();
     workerServer = new NettyWorkerServer<I, V, E, M>(getConfiguration(),
@@ -339,6 +334,11 @@ public class BspServiceWorker<I extends WritableComparable,
   @Override
   public WorkerInfo getMasterInfo() {
     return masterInfo;
+  }
+
+  @Override
+  public List<WorkerInfo> getWorkerInfoList() {
+    return workerInfoList;
   }
 
   @Override
@@ -603,29 +603,24 @@ else[HADOOP_NON_SECURE]*/
 
     registerHealth(getSuperstep());
 
-    String partitionAssignmentsNode =
-        getPartitionAssignmentsPath(getApplicationAttempt(),
+    String addressesAndPartitionsPath =
+        getAddressesAndPartitionsPath(getApplicationAttempt(),
             getSuperstep());
-    Collection<? extends PartitionOwner> masterSetPartitionOwners;
+    AddressesAndPartitionsWritable addressesAndPartitions =
+        new AddressesAndPartitionsWritable(
+            workerGraphPartitioner.createPartitionOwner().getClass());
     try {
-      while (getZkExt().exists(partitionAssignmentsNode, true) ==
+      while (getZkExt().exists(addressesAndPartitionsPath, true) ==
           null) {
-        getPartitionAssignmentsReadyChangedEvent().waitForever();
-        getPartitionAssignmentsReadyChangedEvent().reset();
+        getAddressesAndPartitionsReadyChangedEvent().waitForever();
+        getAddressesAndPartitionsReadyChangedEvent().reset();
       }
-      List<? extends Writable> writableList =
-          WritableUtils.readListFieldsFromZnode(
-              getZkExt(),
-              partitionAssignmentsNode,
-              false,
-              null,
-              workerGraphPartitioner.createPartitionOwner().getClass(),
-              getConfiguration());
-
-      @SuppressWarnings("unchecked")
-      Collection<? extends PartitionOwner> castedWritableList =
-        (Collection<? extends PartitionOwner>) writableList;
-      masterSetPartitionOwners = castedWritableList;
+      WritableUtils.readFieldsFromZnode(
+          getZkExt(),
+          addressesAndPartitionsPath,
+          false,
+          null,
+          addressesAndPartitions);
     } catch (KeeperException e) {
       throw new IllegalStateException(
           "startSuperstep: KeeperException getting assignments", e);
@@ -634,15 +629,15 @@ else[HADOOP_NON_SECURE]*/
           "startSuperstep: InterruptedException getting assignments", e);
     }
 
-    // get address of master
-    WritableUtils.readFieldsFromZnode(getZkExt(), currentMasterPath, false,
-        null, masterInfo);
+    workerInfoList.clear();
+    workerInfoList = addressesAndPartitions.getWorkerInfos();
+    masterInfo = addressesAndPartitions.getMasterInfo();
 
     if (LOG.isInfoEnabled()) {
       LOG.info("startSuperstep: Ready for computation on superstep " +
           getSuperstep() + " since worker " +
           "selection and vertex range assignments are done in " +
-          partitionAssignmentsNode);
+          addressesAndPartitionsPath);
     }
 
     if (getSuperstep() != INPUT_SUPERSTEP) {
@@ -652,7 +647,7 @@ else[HADOOP_NON_SECURE]*/
         getGraphMapper().getMapFunctions().toString() +
         " - Attempt=" + getApplicationAttempt() +
         ", Superstep=" + getSuperstep());
-    return masterSetPartitionOwners;
+    return addressesAndPartitions.getPartitionOwners();
   }
 
   @Override
@@ -1151,7 +1146,7 @@ else[HADOOP_NON_SECURE]*/
     PartitionExchange partitionExchange =
         workerGraphPartitioner.updatePartitionOwners(
             getWorkerInfo(), masterSetPartitionOwners, getPartitionStore());
-    workerClient.openConnections(getPartitionOwners());
+    workerClient.openConnections();
 
     Map<WorkerInfo, List<Integer>> sendWorkerPartitionMap =
         partitionExchange.getSendWorkerPartitionMap();
@@ -1260,11 +1255,6 @@ else[HADOOP_NON_SECURE]*/
   @Override
   public PartitionStore<I, V, E, M> getPartitionStore() {
     return getServerData().getPartitionStore();
-  }
-
-  @Override
-  public Collection<? extends PartitionOwner> getPartitionOwners() {
-    return workerGraphPartitioner.getPartitionOwners();
   }
 
   @Override

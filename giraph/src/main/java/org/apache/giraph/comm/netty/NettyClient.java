@@ -24,6 +24,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
@@ -47,6 +48,7 @@ import org.apache.giraph.comm.requests.RequestType;
 import org.apache.giraph.comm.requests.SaslTokenMessageRequest;
 /*end[HADOOP_NON_SECURE]*/
 import org.apache.giraph.comm.requests.WritableRequest;
+import org.apache.giraph.graph.WorkerInfo;
 import org.apache.giraph.utils.TimedLogger;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
@@ -102,6 +104,11 @@ else[HADOOP_NON_SECURE]*/
   private final ConcurrentMap<InetSocketAddress, ChannelRotater>
   addressChannelMap = new MapMaker().makeMap();
   /**
+   * Map from task id to address of its server
+   */
+  private final Map<Integer, InetSocketAddress> taskIdAddressMap =
+      new MapMaker().makeMap();
+  /**
    * Request map of client request ids to request information.
    */
   private final ConcurrentMap<ClientRequestId, RequestInfo>
@@ -122,8 +129,6 @@ else[HADOOP_NON_SECURE]*/
   private final int maxConnectionFailures;
   /** Maximum number of milliseconds for a request */
   private final int maxRequestMilliseconds;
-  /** Maximum number of reconnection failures */
-  private final int maxReconnectionFailures;
   /** Waiting internal for checking outstanding requests msecs */
   private final int waitingRequestMsecs;
   /** Timed logger for printing request debugging */
@@ -139,6 +144,8 @@ else[HADOOP_NON_SECURE]*/
   private final int clientId;
   /** Maximum thread pool size */
   private final int maxPoolSize;
+  /** Maximum number of attempts to resolve an address*/
+  private final int maxResolveAddressAttempts;
   /** Execution handler (if used) */
   private final ExecutionHandler executionHandler;
   /** Name of the handler before the execution handler (if used) */
@@ -186,10 +193,6 @@ else[HADOOP_NON_SECURE]*/
         GiraphConfiguration.NETTY_MAX_CONNECTION_FAILURES,
         GiraphConfiguration.NETTY_MAX_CONNECTION_FAILURES_DEFAULT);
 
-    maxReconnectionFailures = conf.getInt(
-        GiraphConfiguration.MAX_RECONNECT_ATTEMPTS,
-        GiraphConfiguration.MAX_RECONNECT_ATTEMPTS_DEFAULT);
-
     waitingRequestMsecs = conf.getInt(
         GiraphConfiguration.WAITING_REQUEST_MSECS,
         GiraphConfiguration.WAITING_REQUEST_MSECS_DEFAULT);
@@ -197,6 +200,10 @@ else[HADOOP_NON_SECURE]*/
     maxPoolSize = conf.getInt(
         GiraphConfiguration.NETTY_CLIENT_THREADS,
         GiraphConfiguration.NETTY_CLIENT_THREADS_DEFAULT);
+
+    maxResolveAddressAttempts = conf.getInt(
+        GiraphConfiguration.MAX_RESOLVE_ADDRESS_ATTEMPTS,
+        GiraphConfiguration.MAX_RESOLVE_ADDRESS_ATTEMPTS_DEFAULT);
 
     clientRequestIdRequestInfoMap =
         new MapMaker().concurrencyLevel(maxPoolSize).makeMap();
@@ -342,20 +349,27 @@ else[HADOOP_NON_SECURE]*/
   }
 
   /**
-   * Connect to a collection of addresses
+   * Connect to a collection of tasks servers
    *
-   * @param addresses Addresses to connect to (if haven't already connected)
+   * @param tasks Tasks to connect to (if haven't already connected)
    */
-  public void connectAllAddresses(Map<InetSocketAddress, Integer> addresses) {
+  public void connectAllAddresses(Collection<WorkerInfo> tasks) {
     List<ChannelFutureAddress> waitingConnectionList =
-        Lists.newArrayListWithCapacity(addresses.size() * channelsPerServer);
-    for (Map.Entry<InetSocketAddress, Integer> entry : addresses.entrySet()) {
+        Lists.newArrayListWithCapacity(tasks.size() * channelsPerServer);
+    for (WorkerInfo taskInfo : tasks) {
       context.progress();
-      InetSocketAddress address = entry.getKey();
+      InetSocketAddress address = taskIdAddressMap.get(taskInfo.getTaskId());
+      if (address == null ||
+          !address.getHostName().equals(taskInfo.getHostname()) ||
+          address.getPort() != taskInfo.getPort()) {
+        address = resolveAddress(maxResolveAddressAttempts,
+            taskInfo.getInetSocketAddress());
+        taskIdAddressMap.put(taskInfo.getTaskId(), address);
+      }
       if (address == null || address.getHostName() == null ||
           address.getHostName().isEmpty()) {
         throw new IllegalStateException("connectAllAddresses: Null address " +
-            "in addresses " + addresses);
+            "in addresses " + tasks);
       }
       if (address.isUnresolved()) {
         throw new IllegalStateException("connectAllAddresses: Unresolved " +
@@ -372,7 +386,7 @@ else[HADOOP_NON_SECURE]*/
 
         waitingConnectionList.add(
             new ChannelFutureAddress(
-                connectionFuture, address, entry.getValue()));
+                connectionFuture, address, taskInfo.getTaskId()));
       }
     }
 
@@ -490,9 +504,7 @@ else[HADOOP_NON_SECURE]*/
               "to complete..");
         }
         SaslTokenMessageRequest saslTokenMessage = saslNettyClient.firstToken();
-        sendWritableRequest(taskId, (InetSocketAddress) channel
-            .getRemoteAddress(),
-          saslTokenMessage);
+        sendWritableRequest(taskId, saslTokenMessage);
         // We now wait for Netty's thread pool to communicate over this
         // channel to authenticate with another worker acting as a server.
         try {
@@ -611,12 +623,11 @@ else[HADOOP_NON_SECURE]*/
    * Send a request to a remote server (should be already connected)
    *
    * @param destWorkerId Destination worker id
-   * @param remoteServer Server to send the request to
    * @param request Request to send
    */
   public void sendWritableRequest(Integer destWorkerId,
-                                  InetSocketAddress remoteServer,
-                                  WritableRequest request) {
+      WritableRequest request) {
+    InetSocketAddress remoteServer = taskIdAddressMap.get(destWorkerId);
     if (clientRequestIdRequestInfoMap.isEmpty()) {
       byteCounter.resetAll();
     }
@@ -755,5 +766,39 @@ else[HADOOP_NON_SECURE]*/
       addedRequestIds.clear();
       addedRequestInfos.clear();
     }
+  }
+
+  /**
+   * Utility method for resolving addresses
+   *
+   * @param maxResolveAddressAttempts Maximum number of attempts to resolve the
+   *        address
+   * @param address The address we are attempting to resolve
+   * @return The successfully resolved address.
+   * @throws IllegalStateException if the address is not resolved
+   *         in <code>maxResolveAddressAttempts</code> tries.
+   */
+  private static InetSocketAddress resolveAddress(
+      int maxResolveAddressAttempts, InetSocketAddress address) {
+    int resolveAttempts = 0;
+    while (address.isUnresolved() &&
+        resolveAttempts < maxResolveAddressAttempts) {
+      ++resolveAttempts;
+      LOG.warn("resolveAddress: Failed to resolve " + address +
+          " on attempt " + resolveAttempts + " of " +
+          maxResolveAddressAttempts + " attempts, sleeping for 5 seconds");
+      try {
+        Thread.sleep(5000);
+      } catch (InterruptedException e) {
+        LOG.warn("resolveAddress: Interrupted.", e);
+      }
+      address = new InetSocketAddress(address.getHostName(),
+          address.getPort());
+    }
+    if (resolveAttempts >= maxResolveAddressAttempts) {
+      throw new IllegalStateException("resolveAddress: Couldn't " +
+          "resolve " + address + " in " +  resolveAttempts + " tries.");
+    }
+    return address;
   }
 }

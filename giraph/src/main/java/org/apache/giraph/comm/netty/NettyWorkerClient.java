@@ -18,8 +18,6 @@
 
 package org.apache.giraph.comm.netty;
 
-import java.util.concurrent.ConcurrentMap;
-import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.WorkerClient;
@@ -31,13 +29,10 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
 
-import com.google.common.collect.Maps;
+import com.google.common.collect.Lists;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.util.Collection;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.List;
 
 /**
  * Takes users facing APIs in {@link WorkerClient} and implements them
@@ -52,8 +47,6 @@ import java.util.concurrent.ConcurrentHashMap;
 public class NettyWorkerClient<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable> implements
     WorkerClient<I, V, E, M> {
-  /** Signal for getInetSocketAddress() to use WorkerInfo's address */
-  public static final int NO_PARTITION_ID = Integer.MIN_VALUE;
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(NettyWorkerClient.class);
   /** Hadoop configuration */
@@ -62,14 +55,6 @@ public class NettyWorkerClient<I extends WritableComparable,
   private final NettyClient nettyClient;
   /** Centralized service, needed to get vertex ranges */
   private final CentralizedServiceWorker<I, V, E, M> service;
-  /**
-   * Cached map of partition ids to remote socket address.
-   */
-  private final ConcurrentMap<Integer, InetSocketAddress>
-  partitionIndexAddressMap =
-      new ConcurrentHashMap<Integer, InetSocketAddress>();
-  /** Maximum number of attempts to resolve an address*/
-  private final int maxResolveAddressAttempts;
 
   /**
    * Only constructor.
@@ -85,10 +70,6 @@ public class NettyWorkerClient<I extends WritableComparable,
     this.nettyClient = new NettyClient(context, configuration);
     this.conf = configuration;
     this.service = service;
-
-    maxResolveAddressAttempts = conf.getInt(
-        GiraphConfiguration.MAX_RESOLVE_ADDRESS_ATTEMPTS,
-        GiraphConfiguration.MAX_RESOLVE_ADDRESS_ATTEMPTS_DEFAULT);
   }
 
   public CentralizedServiceWorker<I, V, E, M> getService() {
@@ -96,94 +77,17 @@ public class NettyWorkerClient<I extends WritableComparable,
   }
 
   @Override
-  public void openConnections(
-      Collection<? extends PartitionOwner> partitionOwners) {
-    // 1. Fix all the cached inet addresses (remove all changed entries)
-    // 2. Connect to any new IPC servers
-    Map<InetSocketAddress, Integer> addressTaskIdMap =
-        Maps.newHashMapWithExpectedSize(partitionOwners.size());
-    for (PartitionOwner partitionOwner : partitionOwners) {
-      InetSocketAddress address =
-          partitionIndexAddressMap.get(
-              partitionOwner.getPartitionId());
-      if (address != null &&
-          (!address.getHostName().equals(
-              partitionOwner.getWorkerInfo().getHostname()) ||
-              address.getPort() !=
-              partitionOwner.getWorkerInfo().getPort())) {
-        if (LOG.isInfoEnabled()) {
-          LOG.info("fixPartitionIdToSocketAddrMap: " +
-              "Partition owner " +
-              partitionOwner + " changed from " +
-              address);
-        }
-        partitionIndexAddressMap.remove(
-            partitionOwner.getPartitionId());
-      }
-
+  public void openConnections() {
+    List<WorkerInfo> addresses = Lists.newArrayListWithCapacity(
+        service.getWorkerInfoList().size());
+    for (WorkerInfo info : service.getWorkerInfoList()) {
       // No need to connect to myself
-      if (service.getWorkerInfo().getTaskId() !=
-          partitionOwner.getWorkerInfo().getTaskId()) {
-        addressTaskIdMap.put(
-            getInetSocketAddress(partitionOwner.getWorkerInfo(),
-                partitionOwner.getPartitionId()),
-            partitionOwner.getWorkerInfo().getTaskId());
+      if (service.getWorkerInfo().getTaskId() != info.getTaskId()) {
+        addresses.add(info);
       }
     }
-
-    addressTaskIdMap.put(service.getMasterInfo().getInetSocketAddress(),
-        null);
-    nettyClient.connectAllAddresses(addressTaskIdMap);
-  }
-
-  @Override
-  public InetSocketAddress getInetSocketAddress(WorkerInfo workerInfo,
-      int partitionId) {
-    InetSocketAddress address = partitionIndexAddressMap.get(partitionId);
-    if (address == null) {
-      address = resolveAddress(maxResolveAddressAttempts,
-          workerInfo.getInetSocketAddress());
-      if (partitionId != NO_PARTITION_ID) {
-        // Only cache valid partition ids
-        partitionIndexAddressMap.put(partitionId, address);
-      }
-    }
-
-    return address;
-  }
-
-  /**
-   * Utility method for getInetSocketAddress()
-   *
-   * @param maxResolveAddressAttempts Maximum number of attempts to resolve the
-   *        address
-   * @param address the address we are attempting to resolve
-   * @return the successfully resolved address.
-   * @throws IllegalStateException if the address is not resolved
-   *         in <code>maxResolveAddressAttempts</code> tries.
-   */
-  private static InetSocketAddress resolveAddress(
-      int maxResolveAddressAttempts, InetSocketAddress address) {
-    int resolveAttempts = 0;
-    while (address.isUnresolved() &&
-      resolveAttempts < maxResolveAddressAttempts) {
-      ++resolveAttempts;
-      LOG.warn("resolveAddress: Failed to resolve " + address +
-        " on attempt " + resolveAttempts + " of " +
-        maxResolveAddressAttempts + " attempts, sleeping for 5 seconds");
-      try {
-        Thread.sleep(5000);
-      } catch (InterruptedException e) {
-        LOG.warn("resolveAddress: Interrupted.", e);
-      }
-      address = new InetSocketAddress(address.getHostName(),
-          address.getPort());
-    }
-    if (resolveAttempts >= maxResolveAddressAttempts) {
-      throw new IllegalStateException("resolveAddress: Couldn't " +
-        "resolve " + address + " in " +  resolveAttempts + " tries.");
-    }
-    return address;
+    addresses.add(service.getMasterInfo());
+    nettyClient.connectAllAddresses(addresses);
   }
 
   @Override
@@ -193,9 +97,8 @@ public class NettyWorkerClient<I extends WritableComparable,
 
   @Override
   public void sendWritableRequest(Integer destWorkerId,
-                                  InetSocketAddress remoteServer,
                                   WritableRequest request) {
-    nettyClient.sendWritableRequest(destWorkerId, remoteServer, request);
+    nettyClient.sendWritableRequest(destWorkerId, request);
   }
 
   @Override
@@ -216,7 +119,7 @@ public class NettyWorkerClient<I extends WritableComparable,
 else[HADOOP_NON_SECURE]*/
   @Override
   public void setup(boolean authenticate) {
-    openConnections(service.getPartitionOwners());
+    openConnections();
     if (authenticate) {
       authenticate();
     }

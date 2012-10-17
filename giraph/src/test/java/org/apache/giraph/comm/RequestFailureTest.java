@@ -18,7 +18,6 @@
 
 package org.apache.giraph.comm;
 
-import java.net.InetSocketAddress;
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.comm.messages.SimpleMessageStore;
@@ -28,6 +27,7 @@ import org.apache.giraph.comm.netty.handler.WorkerRequestServerHandler;
 import org.apache.giraph.comm.requests.SendWorkerMessagesRequest;
 import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.giraph.graph.EdgeListVertex;
+import org.apache.giraph.graph.WorkerInfo;
 import org.apache.giraph.utils.MockUtils;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.mapreduce.Mapper.Context;
@@ -43,7 +43,6 @@ import com.google.common.collect.Maps;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Map;
 
 /**
@@ -141,15 +140,15 @@ public class RequestFailureTest {
         new WorkerRequestServerHandler.Factory(serverData));
     server.start();
     client = new NettyClient(context, conf);
-    Map<InetSocketAddress, Integer> addressIdMap = Maps.newHashMap();
-    addressIdMap.put(server.getMyAddress(), -1);
-    client.connectAllAddresses(addressIdMap);
+    client.connectAllAddresses(
+        Lists.<WorkerInfo>newArrayList(
+            new WorkerInfo(server.getMyAddress(), -1)));
 
     // Send the request 2x
     WritableRequest request1 = getRequest();
     WritableRequest request2 = getRequest();
-    client.sendWritableRequest(-1, server.getMyAddress(), request1);
-    client.sendWritableRequest(-1, server.getMyAddress(), request2);
+    client.sendWritableRequest(-1, request1);
+    client.sendWritableRequest(-1, request2);
     client.waitAllRequests();
 
     // Stop the service
@@ -179,15 +178,15 @@ public class RequestFailureTest {
         new WorkerRequestServerHandler.Factory(serverData));
     server.start();
     client = new NettyClient(context, conf);
-    Map<InetSocketAddress, Integer> addressIdMap = Maps.newHashMap();
-    addressIdMap.put(server.getMyAddress(), -1);
-    client.connectAllAddresses(addressIdMap);
+    client.connectAllAddresses(
+        Lists.<WorkerInfo>newArrayList(
+            new WorkerInfo(server.getMyAddress(), -1)));
 
     // Send the request 2x, but should only be processed once
     WritableRequest request1 = getRequest();
     WritableRequest request2 = getRequest();
-    client.sendWritableRequest(-1, server.getMyAddress(), request1);
-    client.sendWritableRequest(-1, server.getMyAddress(), request2);
+    client.sendWritableRequest(-1, request1);
+    client.sendWritableRequest(-1, request2);
     client.waitAllRequests();
 
     // Stop the service
@@ -216,15 +215,15 @@ public class RequestFailureTest {
         new WorkerRequestServerHandler.Factory(serverData));
     server.start();
     client = new NettyClient(context, conf);
-    Map<InetSocketAddress, Integer> addressIdMap = Maps.newHashMap();
-    addressIdMap.put(server.getMyAddress(), -1);
-    client.connectAllAddresses(addressIdMap);
+    client.connectAllAddresses(
+        Lists.<WorkerInfo>newArrayList(
+            new WorkerInfo(server.getMyAddress(), -1)));
 
     // Send the request 2x, but should only be processed once
     WritableRequest request1 = getRequest();
     WritableRequest request2 = getRequest();
-    client.sendWritableRequest(-1, server.getMyAddress(), request1);
-    client.sendWritableRequest(-1, server.getMyAddress(), request2);
+    client.sendWritableRequest(-1, request1);
+    client.sendWritableRequest(-1, request2);
     client.waitAllRequests();
 
     // Stop the service

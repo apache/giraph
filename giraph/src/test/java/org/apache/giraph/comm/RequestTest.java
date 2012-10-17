@@ -18,7 +18,6 @@
 
 package org.apache.giraph.comm;
 
-import java.net.InetSocketAddress;
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.comm.messages.SimpleMessageStore;
@@ -32,6 +31,7 @@ import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexMutations;
+import org.apache.giraph.graph.WorkerInfo;
 import org.apache.giraph.graph.partition.PartitionStore;
 import org.apache.giraph.utils.MockUtils;
 import org.apache.hadoop.io.IntWritable;
@@ -50,7 +50,6 @@ import com.google.common.collect.Maps;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
@@ -102,9 +101,9 @@ public class RequestTest {
         new WorkerRequestServerHandler.Factory(serverData));
     server.start();
     client = new NettyClient(context, conf);
-    Map<InetSocketAddress, Integer> addressIdMap = Maps.newHashMap();
-    addressIdMap.put(server.getMyAddress(), -1);
-    client.connectAllAddresses(addressIdMap);
+    client.connectAllAddresses(
+        Lists.<WorkerInfo>newArrayList(
+            new WorkerInfo(server.getMyAddress(), -1)));
   }
 
   @Test
@@ -126,7 +125,7 @@ public class RequestTest {
     IntWritable> request =
       new SendVertexRequest<IntWritable, IntWritable,
       IntWritable, IntWritable>(partitionId, vertices);
-    client.sendWritableRequest(-1, server.getMyAddress(), request);
+    client.sendWritableRequest(-1, request);
     client.waitAllRequests();
 
     // Stop the service
@@ -170,7 +169,7 @@ public class RequestTest {
         IntWritable> request =
       new SendWorkerMessagesRequest<IntWritable, IntWritable,
             IntWritable, IntWritable>(sendMap);
-    client.sendWritableRequest(-1, server.getMyAddress(), request);
+    client.sendWritableRequest(-1, request);
     client.waitAllRequests();
 
     // Stop the service
@@ -233,7 +232,7 @@ public class RequestTest {
     IntWritable> request =
       new SendPartitionMutationsRequest<IntWritable, IntWritable,
       IntWritable, IntWritable>(partitionId, vertexIdMutations);
-    client.sendWritableRequest(-1, server.getMyAddress(), request);
+    client.sendWritableRequest(-1, request);
     client.waitAllRequests();
 
     // Stop the service

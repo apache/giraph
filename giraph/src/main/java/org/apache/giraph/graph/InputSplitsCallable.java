@@ -55,7 +55,7 @@ import org.apache.zookeeper.data.Stat;
  */
 public class InputSplitsCallable<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
-    implements Callable {
+    implements Callable<VertexEdgeCount> {
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(InputSplitsCallable.class);

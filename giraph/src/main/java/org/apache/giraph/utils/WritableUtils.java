@@ -193,24 +193,25 @@ public class WritableUtils {
   }
 
   /**
-   * Read fields from byteArray to a list of Writable objects.
+   * Read fields from byteArray to a list of objects.
    *
    * @param byteArray Byte array to find the fields in.
    * @param writableClass Class of the objects to instantiate.
    * @param conf Configuration used for instantiation (i.e Configurable)
-   * @return List of writable objects.
+   * @param <T> Object type
+   * @return List of objects.
    */
-  public static List<? extends Writable> readListFieldsFromByteArray(
+  public static <T extends Writable> List<T> readListFieldsFromByteArray(
       byte[] byteArray,
-      Class<? extends Writable> writableClass,
+      Class<? extends T> writableClass,
       Configuration conf) {
     try {
       DataInputStream inputStream =
           new DataInputStream(new ByteArrayInputStream(byteArray));
       int size = inputStream.readInt();
-      List<Writable> writableList = new ArrayList<Writable>(size);
+      List<T> writableList = new ArrayList<T>(size);
       for (int i = 0; i < size; ++i) {
-        Writable writable =
+        T writable =
             ReflectionUtils.newInstance(writableClass, conf);
         writable.readFields(inputStream);
         writableList.add(writable);
@@ -231,18 +232,20 @@ public class WritableUtils {
    * @param stat Stat of znode if desired.
    * @param writableClass Class of the objects to instantiate.
    * @param conf Configuration used for instantiation (i.e Configurable)
-   * @return List of writable objects.
+   * @param <T> Object type
+   * @return List of objects.
    */
-  public static List<? extends Writable> readListFieldsFromZnode(
+  public static <T extends Writable> List<T> readListFieldsFromZnode(
       ZooKeeperExt zkExt,
       String zkPath,
       boolean watch,
       Stat stat,
-      Class<? extends Writable> writableClass,
+      Class<? extends T> writableClass,
       Configuration conf) {
     try {
       byte[] zkData = zkExt.getData(zkPath, false, stat);
-      return readListFieldsFromByteArray(zkData, writableClass, conf);
+      return WritableUtils.<T>readListFieldsFromByteArray(zkData,
+          writableClass, conf);
     } catch (KeeperException e) {
       throw new IllegalStateException(
           "readListFieldsFromZnode: KeeperException on " + zkPath, e);

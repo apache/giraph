@@ -18,8 +18,9 @@
 
 package org.apache.giraph.comm;
 
-import com.google.common.collect.Maps;
-import java.util.Map;
+import com.google.common.collect.Lists;
+
+import java.util.List;
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.comm.messages.SimpleMessageStore;
@@ -28,6 +29,7 @@ import org.apache.giraph.comm.netty.NettyClient;
 import org.apache.giraph.comm.netty.NettyServer;
 import org.apache.giraph.comm.netty.handler.WorkerRequestServerHandler;
 import org.apache.giraph.graph.EdgeListVertex;
+import org.apache.giraph.graph.WorkerInfo;
 import org.apache.giraph.utils.MockUtils;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.mapreduce.Mapper.Context;
@@ -38,8 +40,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.util.Collections;
 
 /**
  * Test the netty connections
@@ -85,9 +85,9 @@ public class ConnectionTest {
     server.start();
 
     NettyClient client = new NettyClient(context, conf);
-    Map<InetSocketAddress, Integer> addressIdMap = Maps.newHashMap();
-    addressIdMap.put(server.getMyAddress(), -1);
-    client.connectAllAddresses(addressIdMap);
+    client.connectAllAddresses(
+        Lists.<WorkerInfo>newArrayList(
+            new WorkerInfo(server.getMyAddress(), -1)));
 
     client.stop();
     server.stop();
@@ -121,11 +121,12 @@ public class ConnectionTest {
     server3.start();
 
     NettyClient client = new NettyClient(context, conf);
-    Map<InetSocketAddress, Integer> addressIdMap = Maps.newHashMap();
-    addressIdMap.put(server1.getMyAddress(), -1);
-    addressIdMap.put(server2.getMyAddress(), -1);
-    addressIdMap.put(server3.getMyAddress(), -1);
-    client.connectAllAddresses(addressIdMap);
+    WorkerInfo workerInfo1 = new WorkerInfo(server1.getMyAddress(), 1);
+    WorkerInfo workerInfo2 = new WorkerInfo(server2.getMyAddress(), 2);
+    WorkerInfo workerInfo3 = new WorkerInfo(server3.getMyAddress(), 3);
+    List<WorkerInfo> addresses = Lists.<WorkerInfo>newArrayList(workerInfo1,
+        workerInfo2, workerInfo3);
+    client.connectAllAddresses(addresses);
 
     client.stop();
     server1.stop();
@@ -154,14 +155,15 @@ public class ConnectionTest {
         new WorkerRequestServerHandler.Factory(serverData));
     server.start();
 
-    Map<InetSocketAddress, Integer> addressIdMap = Maps.newHashMap();
-    addressIdMap.put(server.getMyAddress(), -1);
+    List<WorkerInfo> addresses =
+        Lists.<WorkerInfo>newArrayList(
+            new WorkerInfo(server.getMyAddress(), -1));
     NettyClient client1 = new NettyClient(context, conf);
-    client1.connectAllAddresses(addressIdMap);
+    client1.connectAllAddresses(addresses);
     NettyClient client2 = new NettyClient(context, conf);
-    client2.connectAllAddresses(addressIdMap);
+    client2.connectAllAddresses(addresses);
     NettyClient client3 = new NettyClient(context, conf);
-    client3.connectAllAddresses(addressIdMap);
+    client3.connectAllAddresses(addresses);
 
     client1.stop();
     client2.stop();

@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-372: Write worker addresses to Zookeeper; 
+  move addresses and resolution to NettyClient (majakabiljo)
+
   GIRAPH-373: RandomMessageBenchmark is broken (majakabiljo).
 
   GIRAPH-374: Multithreading in input split loading and compute (aching).

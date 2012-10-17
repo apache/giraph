@@ -19,10 +19,10 @@
 package org.apache.giraph.comm.netty;
 
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.bsp.CentralizedServiceMaster;
 import org.apache.giraph.comm.MasterClient;
 import org.apache.giraph.comm.MasterClientServer;
 import org.apache.giraph.comm.MasterServer;
-import org.apache.giraph.graph.WorkerInfo;
 import org.apache.hadoop.mapreduce.Mapper;
 
 import java.net.InetSocketAddress;
@@ -41,17 +41,19 @@ public class NettyMasterClientServer implements MasterClientServer {
    *
    * @param context Mapper context
    * @param configuration Configuration
+   * @param service Centralized service
    */
   public NettyMasterClientServer(
       Mapper<?, ?, ?, ?>.Context context,
-      ImmutableClassesGiraphConfiguration configuration) {
-    client = new NettyMasterClient(context, configuration);
+      ImmutableClassesGiraphConfiguration configuration,
+      CentralizedServiceMaster<?, ?, ?, ?> service) {
+    client = new NettyMasterClient(context, configuration, service);
     server = new NettyMasterServer(configuration);
   }
 
   @Override
-  public void fixWorkerAddresses(Iterable<WorkerInfo> workers) {
-    client.fixWorkerAddresses(workers);
+  public void openConnections() {
+    client.openConnections();
   }
 
   @Override

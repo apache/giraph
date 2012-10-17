@@ -18,9 +18,7 @@
 
 package org.apache.giraph.comm;
 
-import com.google.common.collect.Maps;
-import java.net.InetSocketAddress;
-import java.util.Map;
+import com.google.common.collect.Lists;
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.comm.messages.SimpleMessageStore;
@@ -29,6 +27,7 @@ import org.apache.giraph.comm.netty.NettyServer;
 import org.apache.giraph.comm.netty.handler.SaslServerHandler;
 import org.apache.giraph.comm.netty.handler.WorkerRequestServerHandler;
 import org.apache.giraph.graph.EdgeListVertex;
+import org.apache.giraph.graph.WorkerInfo;
 import org.apache.giraph.utils.MockUtils;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.mapreduce.Mapper.Context;
@@ -96,9 +95,9 @@ public class SaslConnectionTest {
     server.start();
 
     NettyClient client = new NettyClient(context, conf);
-    Map<InetSocketAddress, Integer> addressIdMap = Maps.newHashMap();
-    addressIdMap.put(server.getMyAddress(), -1);
-    client.connectAllAddresses(addressIdMap);
+    client.connectAllAddresses(
+        Lists.<WorkerInfo>newArrayList(
+            new WorkerInfo(server.getMyAddress(), -1)));
 
     client.stop();
     server.stop();

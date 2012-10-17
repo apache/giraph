@@ -18,18 +18,14 @@
 
 package org.apache.giraph.comm;
 
-import org.apache.giraph.graph.WorkerInfo;
-
 /**
  * Interface for master to send messages to workers
  */
 public interface MasterClient {
   /**
-   * Fix workers for current superstep
-   *
-   * @param workers Information about workers
+   * Make sure that all the connections to workers have been established.
    */
-  void fixWorkerAddresses(Iterable<WorkerInfo> workers);
+  void openConnections();
 
   /**
    * Flush all outgoing messages.  This will synchronously ensure that all
