@@ -114,7 +114,7 @@ public class NettyWorkerClient<I extends WritableComparable,
 /*if[HADOOP_NON_SECURE]
   @Override
   public void setup() {
-    openConnections(service.getPartitionOwners());
+    openConnections();
   }
 else[HADOOP_NON_SECURE]*/
   @Override

@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-380: Hadoop_non_secure is broken (majakabiljo)
+
   GIRAPH-372: Write worker addresses to Zookeeper; 
   move addresses and resolution to NettyClient (majakabiljo)
 
