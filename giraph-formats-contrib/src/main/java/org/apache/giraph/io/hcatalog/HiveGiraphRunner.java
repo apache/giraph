@@ -46,44 +46,44 @@ import org.apache.log4j.Logger;
 
 /**
  * Hive Giraph Runner
- *
  */
 public class HiveGiraphRunner implements Tool {
   /**
-  * logger
-  */
+   * logger
+   */
   private static final Logger LOG = Logger.getLogger(HiveGiraphRunner.class);
   /**
-  * workers
-  */
+   * workers
+   */
   protected int workers;
   /**
-  * is verbose
-  */
+   * is verbose
+   */
   protected boolean isVerbose;
   /**
-  * output table partitions
-  */
+   * output table partitions
+   */
   protected Map<String, String> outputTablePartitionValues;
   /**
-  * dbName
-  */
+   * dbName
+   */
   protected String dbName;
   /**
-  * input table name
-  */
+   * input table name
+   */
   protected String inputTableName;
   /**
-  * input table filter
-  */
+   * input table filter
+   */
   protected String inputTableFilterExpr;
   /**
-  * output table name
-  */
+   * output table name
+   */
   protected String outputTableName;
-
   /** Configuration */
   private Configuration conf;
+  /** Skip output? (Useful for testing without writing) */
+  private boolean skipOutput = false;
 
   /**
   * vertex class.
@@ -160,7 +160,12 @@ public class HiveGiraphRunner implements Tool {
                 dbName, outputTableName, outputTablePartitionValues));
     HCatOutputFormat.setSchema(job.getInternalJob(),
                 HCatOutputFormat.getTableSchema(job.getInternalJob()));
-    job.getConfiguration().setVertexOutputFormatClass(vertexOutputFormatClass);
+    if (skipOutput) {
+      LOG.warn("run: Warning - Output will be skipped!");
+    } else {
+      job.getConfiguration().setVertexOutputFormatClass(
+          vertexOutputFormatClass);
+    }
 
     job.getConfiguration().setWorkerConfiguration(workers, workers, 100.0f);
     initGiraphJob(job);
@@ -234,6 +239,8 @@ public class HiveGiraphRunner implements Tool {
     options.addOption("o", "outputTable", true, "Output table name");
     options.addOption("O", "outputPartition", true,
                 "Output table partition values (e.g., \"a=1,b=two\")");
+    options.addOption("s", "skipOutput", false, "Skip output?");
+
     addMoreOptions(options);
 
     CommandLineParser parser = new GnuParser();
@@ -257,6 +264,10 @@ public class HiveGiraphRunner implements Tool {
       vertexOutputFormatClass = findClass(
               cmdln.getOptionValue("vertexOutputFormatClass"),
               HCatalogVertexOutputFormat.class);
+    }
+
+    if (cmdln.hasOption("skipOutput")) {
+      skipOutput = true;
     }
 
     if (vertexClass == null) {

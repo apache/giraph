@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-379: HiveGiraphRunner should have a skipOutput option for
+  testing (aching)
+
   GIRAPH-380: Hadoop_non_secure is broken (majakabiljo)
 
   GIRAPH-372: Write worker addresses to Zookeeper; 
