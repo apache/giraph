@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-381: Ensure we get the original exception from
+  GraphMapper#run(). (aching)
+
   GIRAPH-379: HiveGiraphRunner should have a skipOutput option for
   testing (aching)
 

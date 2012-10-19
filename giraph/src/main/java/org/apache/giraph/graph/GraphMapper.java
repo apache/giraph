@@ -604,8 +604,17 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
           zkManager.logZooKeeperOutput(Level.WARN);
         }
       }
-      if (mapFunctions == MapFunctions.WORKER_ONLY) {
-        serviceWorker.failureCleanup();
+      try {
+        if (mapFunctions == MapFunctions.WORKER_ONLY) {
+          serviceWorker.failureCleanup();
+        }
+      // Checkstyle exception due to needing to get the original
+      // exception on failure
+      // CHECKSTYLE: stop IllegalCatch
+      } catch (RuntimeException e1) {
+      // CHECKSTYLE: resume IllegalCatch
+        LOG.error("run: Worker failure failed on another RuntimeException, " +
+            "original expection will be rethrown", e1);
       }
       throw new IllegalStateException(
           "run: Caught an unrecoverable exception " + e.getMessage(), e);
