@@ -586,10 +586,11 @@ public class BspServiceMaster<I extends WritableComparable,
 
     // Let workers know they can start trying to load the input splits
     try {
-      getZkExt().create(inputSplitsAllReadyPath,
-          null,
-          Ids.OPEN_ACL_UNSAFE,
-          CreateMode.PERSISTENT);
+      getZkExt().createExt(inputSplitsAllReadyPath,
+                           null,
+                           Ids.OPEN_ACL_UNSAFE,
+                           CreateMode.PERSISTENT,
+                           false);
     } catch (KeeperException.NodeExistsException e) {
       LOG.info("createInputSplits: Node " +
           inputSplitsAllReadyPath + " already exists.");
@@ -1319,10 +1320,11 @@ public class BspServiceMaster<I extends WritableComparable,
             "(currently not supported)");
       }
       try {
-        getZkExt().create(inputSplitsAllDonePath,
-            null,
-            Ids.OPEN_ACL_UNSAFE,
-            CreateMode.PERSISTENT);
+        getZkExt().createExt(inputSplitsAllDonePath,
+                             null,
+                             Ids.OPEN_ACL_UNSAFE,
+                             CreateMode.PERSISTENT,
+                             false);
       } catch (KeeperException.NodeExistsException e) {
         LOG.info("coordinateInputSplits: Node " +
             inputSplitsAllDonePath + " already exists.");

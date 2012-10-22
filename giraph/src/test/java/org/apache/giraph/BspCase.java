@@ -346,25 +346,23 @@ public class BspCase implements Watcher {
       numWorkers = 3;
     }
     try {
-
       cleanupTemporaryFiles();
 
       if (zkList == null) {
         return;
       }
       ZooKeeperExt zooKeeperExt =
-          new ZooKeeperExt(zkList, 30 * 1000, this);
-      List<String> rootChildren = zooKeeperExt.getChildren("/", false);
+          new ZooKeeperExt(zkList, 30 * 1000, 0, 0, this);
+      List<String> rootChildren =
+          zooKeeperExt.getChildrenExt("/", false, false, true);
       for (String rootChild : rootChildren) {
-        if (rootChild.startsWith("_hadoopBsp")) {
+        if (rootChild.startsWith("/_hadoopBsp")) {
           List<String> children =
-              zooKeeperExt.getChildren("/" + rootChild, false);
+              zooKeeperExt.getChildrenExt(rootChild, false, false, true);
           for (String child: children) {
             if (child.contains("job_local_")) {
-              System.out.println("Cleaning up /_hadoopBsp/" +
-                  child);
-              zooKeeperExt.deleteExt(
-                  "/_hadoopBsp/" + child, -1, true);
+              System.out.println("Cleaning up " + child);
+              zooKeeperExt.deleteExt(child, -1, true);
             }
           }
         }

@@ -571,7 +571,7 @@ else[HADOOP_NON_SECURE]*/
     LOG.error("unregisterHealth: Got failure, unregistering health on " +
         myHealthZnode + " on superstep " + getSuperstep());
     try {
-      getZkExt().delete(myHealthZnode, -1);
+      getZkExt().deleteExt(myHealthZnode, -1, false);
     } catch (InterruptedException e) {
       throw new IllegalStateException(
           "unregisterHealth: InterruptedException - Couldn't delete " +

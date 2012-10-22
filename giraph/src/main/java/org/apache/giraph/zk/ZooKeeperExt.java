@@ -37,16 +37,23 @@ import org.apache.zookeeper.ZooKeeper;
 
 /**
  * ZooKeeper provides only atomic operations.  ZooKeeperExt provides additional
- * non-atomic operations that are useful.  All methods of this class should
- * be thread-safe.
+ * non-atomic operations that are useful.  It also provides wrappers to
+ * deal with ConnectionLossException.  All methods of this class
+ * should be thread-safe.
  */
-public class ZooKeeperExt extends ZooKeeper {
+public class ZooKeeperExt {
   /** Internal logger */
   private static final Logger LOG = Logger.getLogger(ZooKeeperExt.class);
   /** Length of the ZK sequence number */
   private static final int SEQUENCE_NUMBER_LENGTH = 10;
+  /** Internal ZooKeeper */
+  private final ZooKeeper zooKeeper;
   /** Ensure we have progress */
   private final Progressable progressable;
+  /** Number of max attempts to retry when failing due to connection loss */
+  private final int maxRetryAttempts;
+  /** Milliseconds to wait before trying again due to connection loss */
+  private final int retryWaitMsecs;
 
   /**
    * Constructor to connect to ZooKeeper, does not make progress
@@ -61,14 +68,20 @@ public class ZooKeeperExt extends ZooKeeper {
    *        "/foo/bar" would result in operations being run on
    *        "/app/a/foo/bar" (from the server perspective).
    * @param sessionTimeout Session timeout in milliseconds
+   * @param maxRetryAttempts Max retry attempts during connection loss
+   * @param retryWaitMsecs Msecs to wait when retrying due to connection
+   *        loss
    * @param watcher A watcher object which will be notified of state changes,
    *        may also be notified for node events
    * @throws IOException
    */
   public ZooKeeperExt(String connectString,
                       int sessionTimeout,
+                      int maxRetryAttempts,
+                      int retryWaitMsecs,
                       Watcher watcher) throws IOException {
-    this(connectString, sessionTimeout, watcher, null);
+    this(connectString, sessionTimeout, maxRetryAttempts,
+        retryWaitMsecs, watcher, null);
   }
 
   /**
@@ -84,6 +97,9 @@ public class ZooKeeperExt extends ZooKeeper {
    *        "/foo/bar" would result in operations being run on
    *        "/app/a/foo/bar" (from the server perspective).
    * @param sessionTimeout Session timeout in milliseconds
+   * @param maxRetryAttempts Max retry attempts during connection loss
+   * @param retryWaitMsecs Msecs to wait when retrying due to connection
+   *        loss
    * @param watcher A watcher object which will be notified of state changes,
    *        may also be notified for node events
    * @param progressable Makes progress for longer operations
@@ -91,10 +107,14 @@ public class ZooKeeperExt extends ZooKeeper {
    */
   public ZooKeeperExt(String connectString,
       int sessionTimeout,
+      int maxRetryAttempts,
+      int retryWaitMsecs,
       Watcher watcher,
       Progressable progressable) throws IOException {
-    super(connectString, sessionTimeout, watcher);
+    this.zooKeeper = new ZooKeeper(connectString, sessionTimeout, watcher);
     this.progressable = progressable;
+    this.maxRetryAttempts = maxRetryAttempts;
+    this.retryWaitMsecs = retryWaitMsecs;
   }
 
   /**
@@ -121,34 +141,46 @@ public class ZooKeeperExt extends ZooKeeper {
       LOG.debug("createExt: Creating path " + path);
     }
 
-    if (!recursive) {
-      return create(path, data, acl, createMode);
-    }
-
-    try {
-      return create(path, data, acl, createMode);
-    } catch (KeeperException.NoNodeException e) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("createExt: Cannot directly create node " + path);
-      }
-    }
-
-    int pos = path.indexOf("/", 1);
-    for (; pos != -1; pos = path.indexOf("/", pos + 1)) {
+    int attempt = 0;
+    while (attempt < maxRetryAttempts) {
       try {
-        if (progressable != null) {
-          progressable.progress();
+        if (!recursive) {
+          return zooKeeper.create(path, data, acl, createMode);
         }
-        create(
-            path.substring(0, pos), null, acl, CreateMode.PERSISTENT);
-      } catch (KeeperException.NodeExistsException e) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("createExt: Znode " + path.substring(0, pos) +
-              " already exists");
+
+        try {
+          return zooKeeper.create(path, data, acl, createMode);
+        } catch (KeeperException.NoNodeException e) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("createExt: Cannot directly create node " + path);
+          }
         }
+
+        int pos = path.indexOf("/", 1);
+        for (; pos != -1; pos = path.indexOf("/", pos + 1)) {
+          try {
+            if (progressable != null) {
+              progressable.progress();
+            }
+            zooKeeper.create(
+                path.substring(0, pos), null, acl, CreateMode.PERSISTENT);
+          } catch (KeeperException.NodeExistsException e) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("createExt: Znode " + path.substring(0, pos) +
+                  " already exists");
+            }
+          }
+        }
+        return zooKeeper.create(path, data, acl, createMode);
+      } catch (KeeperException.ConnectionLossException e) {
+        LOG.warn("createExt: Connection loss on attempt " + attempt + ", " +
+            "waiting " + retryWaitMsecs + " msecs before retrying.", e);
       }
+      ++attempt;
+      Thread.sleep(retryWaitMsecs);
     }
-    return create(path, data, acl, createMode);
+    throw new IllegalStateException("createExt: Failed to create " + path  +
+        " after " + attempt + " tries!");
   }
 
   /**
@@ -217,7 +249,7 @@ public class ZooKeeperExt extends ZooKeeper {
       if (LOG.isDebugEnabled()) {
         LOG.debug("createOrSet: Node exists on path " + path);
       }
-      setStat = setData(path, data, version);
+      setStat = zooKeeper.setData(path, data, version);
     }
     return new PathStat(createdPath, setStat);
   }
@@ -263,29 +295,189 @@ public class ZooKeeperExt extends ZooKeeper {
    */
   public void deleteExt(final String path, int version, boolean recursive)
     throws InterruptedException, KeeperException {
-    if (!recursive) {
-      delete(path, version);
-      return;
-    }
+    int attempt = 0;
+    while (attempt < maxRetryAttempts) {
+      try {
+        if (!recursive) {
+          zooKeeper.delete(path, version);
+          return;
+        }
 
-    try {
-      delete(path, version);
-      return;
-    } catch (KeeperException.NotEmptyException e) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("deleteExt: Cannot directly remove node " + path);
+        try {
+          zooKeeper.delete(path, version);
+          return;
+        } catch (KeeperException.NotEmptyException e) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("deleteExt: Cannot directly remove node " + path);
+          }
+        }
+
+        List<String> childList = zooKeeper.getChildren(path, false);
+        for (String child : childList) {
+          if (progressable != null) {
+            progressable.progress();
+          }
+          deleteExt(path + "/" + child, -1, true);
+        }
+
+        zooKeeper.delete(path, version);
+        return;
+      } catch (KeeperException.ConnectionLossException e) {
+        LOG.warn("deleteExt: Connection loss on attempt " +
+            attempt + ", waiting " + retryWaitMsecs +
+            " msecs before retrying.", e);
       }
+      ++attempt;
+      Thread.sleep(retryWaitMsecs);
     }
+    throw new IllegalStateException("deleteExt: Failed to delete " + path  +
+        " after " + attempt + " tries!");
+  }
 
-    List<String> childList = getChildren(path, false);
-    for (String child : childList) {
-      if (progressable != null) {
-        progressable.progress();
+  /**
+   * Return the stat of the node of the given path. Return null if no such a
+   * node exists.
+   * <p>
+   * If the watch is true and the call is successful (no exception is thrown),
+   * a watch will be left on the node with the given path. The watch will be
+   * triggered by a successful operation that creates/delete the node or sets
+   * the data on the node.
+   *
+   * @param path
+   *                the node path
+   * @param watch
+   *                whether need to watch this node
+   * @return the stat of the node of the given path; return null if no such a
+   *         node exists.
+   * @throws KeeperException If the server signals an error
+   * @throws InterruptedException If the server transaction is interrupted.
+   */
+  public Stat exists(String path, boolean watch) throws KeeperException,
+      InterruptedException {
+    int attempt = 0;
+    while (attempt < maxRetryAttempts) {
+      try {
+        return zooKeeper.exists(path, watch);
+      } catch (KeeperException.ConnectionLossException e) {
+        LOG.warn("exists: Connection loss on attempt " +
+            attempt + ", waiting " + retryWaitMsecs +
+            " msecs before retrying.", e);
       }
-      deleteExt(path + "/" + child, -1, true);
+      ++attempt;
+      Thread.sleep(retryWaitMsecs);
     }
+    throw new IllegalStateException("exists: Failed to check " + path  +
+        " after " + attempt + " tries!");
+  }
 
-    delete(path, version);
+  /**
+   * Return the stat of the node of the given path. Return null if no such a
+   * node exists.
+   * <p>
+   * If the watch is non-null and the call is successful (no exception is
+   * thrown), a watch will be left on the node with the given path. The
+   * watch will be triggered by a successful operation that
+   * creates/delete the node or sets the data on the node.
+   *
+   * @param path the node path
+   * @param watcher explicit watcher
+   * @return the stat of the node of the given path; return null if no such a
+   *         node exists.
+   * @throws KeeperException If the server signals an error
+   * @throws InterruptedException If the server transaction is interrupted.
+   * @throws IllegalArgumentException if an invalid path is specified
+   */
+  public Stat exists(final String path, Watcher watcher)
+    throws KeeperException, InterruptedException {
+    int attempt = 0;
+    while (attempt < maxRetryAttempts) {
+      try {
+        return zooKeeper.exists(path, watcher);
+      } catch (KeeperException.ConnectionLossException e) {
+        LOG.warn("exists: Connection loss on attempt " +
+            attempt + ", waiting " + retryWaitMsecs +
+            " msecs before retrying.", e);
+      }
+      ++attempt;
+      Thread.sleep(retryWaitMsecs);
+    }
+    throw new IllegalStateException("exists: Failed to check " + path  +
+        " after " + attempt + " tries!");
+  }
+
+  /**
+   * Return the data and the stat of the node of the given path.
+   * <p>
+   * If the watch is non-null and the call is successful (no exception is
+   * thrown), a watch will be left on the node with the given path. The watch
+   * will be triggered by a successful operation that sets data on the node, or
+   * deletes the node.
+   * <p>
+   * A KeeperException with error code KeeperException.NoNode will be thrown
+   * if no node with the given path exists.
+   *
+   * @param path the given path
+   * @param watcher explicit watcher
+   * @param stat the stat of the node
+   * @return the data of the node
+   * @throws KeeperException If the server signals an error with a non-zero
+   *         error code
+   * @throws InterruptedException If the server transaction is interrupted.
+   * @throws IllegalArgumentException if an invalid path is specified
+   */
+  public byte[] getData(final String path, Watcher watcher, Stat stat)
+    throws KeeperException, InterruptedException {
+    int attempt = 0;
+    while (attempt < maxRetryAttempts) {
+      try {
+        return zooKeeper.getData(path, watcher, stat);
+      } catch (KeeperException.ConnectionLossException e) {
+        LOG.warn("getData: Connection loss on attempt " +
+            attempt + ", waiting " + retryWaitMsecs +
+            " msecs before retrying.", e);
+      }
+      ++attempt;
+      Thread.sleep(retryWaitMsecs);
+    }
+    throw new IllegalStateException("getData: Failed to get " + path  +
+        " after " + attempt + " tries!");
+  }
+
+  /**
+   * Return the data and the stat of the node of the given path.
+   * <p>
+   * If the watch is true and the call is successful (no exception is
+   * thrown), a watch will be left on the node with the given path. The watch
+   * will be triggered by a successful operation that sets data on the node, or
+   * deletes the node.
+   * <p>
+   * A KeeperException with error code KeeperException.NoNode will be thrown
+   * if no node with the given path exists.
+   *
+   * @param path the given path
+   * @param watch whether need to watch this node
+   * @param stat the stat of the node
+   * @return the data of the node
+   * @throws KeeperException If the server signals an error with a non-zero
+   *         error code
+   * @throws InterruptedException If the server transaction is interrupted.
+   */
+  public byte[] getData(String path, boolean watch, Stat stat)
+    throws KeeperException, InterruptedException {
+    int attempt = 0;
+    while (attempt < maxRetryAttempts) {
+      try {
+        return zooKeeper.getData(path, watch, stat);
+      } catch (KeeperException.ConnectionLossException e) {
+        LOG.warn("getData: Connection loss on attempt " +
+            attempt + ", waiting " + retryWaitMsecs +
+            " msecs before retrying.", e);
+      }
+      ++attempt;
+      Thread.sleep(retryWaitMsecs);
+    }
+    throw new IllegalStateException("getData: Failed to get " + path  +
+        " after " + attempt + " tries!");
   }
 
   /**
@@ -306,37 +498,62 @@ public class ZooKeeperExt extends ZooKeeper {
       boolean watch,
       boolean sequenceSorted,
       boolean fullPath) throws KeeperException, InterruptedException {
-    List<String> childList = getChildren(path, watch);
-    /* Sort children according to the sequence number, if desired */
-    if (sequenceSorted) {
-      Collections.sort(childList, new Comparator<String>() {
-        public int compare(String s1, String s2) {
-          if ((s1.length() <= SEQUENCE_NUMBER_LENGTH) ||
-              (s2.length() <= SEQUENCE_NUMBER_LENGTH)) {
-            throw new RuntimeException(
-                "getChildrenExt: Invalid length for sequence " +
-                    " sorting > " +
-                    SEQUENCE_NUMBER_LENGTH +
-                    " for s1 (" +
-                    s1.length() + ") or s2 (" + s2.length() + ")");
-          }
-          int s1sequenceNumber = Integer.parseInt(
-              s1.substring(s1.length() -
-                  SEQUENCE_NUMBER_LENGTH));
-          int s2sequenceNumber = Integer.parseInt(
-              s2.substring(s2.length() -
-                  SEQUENCE_NUMBER_LENGTH));
-          return s1sequenceNumber - s2sequenceNumber;
+    int attempt = 0;
+    while (attempt < maxRetryAttempts) {
+      try {
+        List<String> childList = zooKeeper.getChildren(path, watch);
+        /* Sort children according to the sequence number, if desired */
+        if (sequenceSorted) {
+          Collections.sort(childList, new Comparator<String>() {
+            public int compare(String s1, String s2) {
+              if ((s1.length() <= SEQUENCE_NUMBER_LENGTH) ||
+                  (s2.length() <= SEQUENCE_NUMBER_LENGTH)) {
+                throw new RuntimeException(
+                    "getChildrenExt: Invalid length for sequence " +
+                        " sorting > " +
+                        SEQUENCE_NUMBER_LENGTH +
+                        " for s1 (" +
+                        s1.length() + ") or s2 (" + s2.length() + ")");
+              }
+              int s1sequenceNumber = Integer.parseInt(
+                  s1.substring(s1.length() -
+                      SEQUENCE_NUMBER_LENGTH));
+              int s2sequenceNumber = Integer.parseInt(
+                  s2.substring(s2.length() -
+                      SEQUENCE_NUMBER_LENGTH));
+              return s1sequenceNumber - s2sequenceNumber;
+            }
+          });
         }
-      });
-    }
-    if (fullPath) {
-      List<String> fullChildList = new ArrayList<String>();
-      for (String child : childList) {
-        fullChildList.add(path + "/" + child);
+        if (fullPath) {
+          List<String> fullChildList = new ArrayList<String>();
+          for (String child : childList) {
+            fullChildList.add(path + "/" + child);
+          }
+          return fullChildList;
+        }
+        return childList;
+      } catch (KeeperException.ConnectionLossException e) {
+        LOG.warn("getChildrenExt: Connection loss on attempt " +
+            attempt + ", waiting " + retryWaitMsecs +
+            " msecs before retrying.", e);
       }
-      return fullChildList;
+      ++attempt;
+      Thread.sleep(retryWaitMsecs);
     }
-    return childList;
+    throw new IllegalStateException("createExt: Failed to create " + path  +
+        " after " + attempt + " tries!");
+  }
+
+  /**
+   * Close this client object. Once the client is closed, its session becomes
+   * invalid. All the ephemeral nodes in the ZooKeeper server associated with
+   * the session will be removed. The watches left on those nodes (and on
+   * their parents) will be triggered.
+   *
+   * @throws InterruptedException
+   */
+  public void close() throws InterruptedException {
+    zooKeeper.close();
   }
 }

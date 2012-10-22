@@ -161,6 +161,24 @@ public class GiraphConfiguration extends Configuration {
   /** Local ZooKeeper directory to use */
   public static final String ZOOKEEPER_DIR = "giraph.zkDir";
 
+  /** Max attempts for handling ZooKeeper connection loss */
+  public static final String ZOOKEEPER_OPS_MAX_ATTEMPTS =
+      "giraph.zkOpsMaxAttempts";
+  /** Default of 3 attempts for handling ZooKeeper connection loss */
+  public static final int ZOOKEEPER_OPS_MAX_ATTEMPTS_DEFAULT = 3;
+
+  /**
+   * Msecs to wait before retrying a failed ZooKeeper op due to connection
+   * loss.
+   */
+  public static final String ZOOKEEPER_OPS_RETRY_WAIT_MSECS =
+      "giraph.zkOpsRetryWaitMsecs";
+  /**
+   * Default to wait 5 seconds before retrying a failed ZooKeeper op due to
+   * connection loss.
+   */
+  public static final int ZOOKEEPER_OPS_RETRY_WAIT_MSECS_DEFAULT = 5 * 1000;
+
   /** TCP backlog (defaults to number of workers) */
   public static final String TCP_BACKLOG = "giraph.tcpBacklog";
   /**
@@ -794,6 +812,16 @@ public class GiraphConfiguration extends Configuration {
   public int getZooKeeperSessionTimeout() {
     return getInt(ZOOKEEPER_SESSION_TIMEOUT,
         ZOOKEEPER_SESSION_TIMEOUT_DEFAULT);
+  }
+
+  public int getZookeeperOpsMaxAttempts() {
+    return getInt(ZOOKEEPER_OPS_MAX_ATTEMPTS,
+        ZOOKEEPER_OPS_MAX_ATTEMPTS_DEFAULT);
+  }
+
+  public int getZookeeperOpsRetryWaitMsecs() {
+    return getInt(ZOOKEEPER_OPS_RETRY_WAIT_MSECS,
+        ZOOKEEPER_OPS_RETRY_WAIT_MSECS_DEFAULT);
   }
 
   public boolean getNettyServerUseExecutionHandler() {

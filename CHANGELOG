@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-382: ZooKeeperExt should handle ConnectionLossException by
+  retrying. (aching)
+
   GIRAPH-381: Ensure we get the original exception from
   GraphMapper#run(). (aching)
 

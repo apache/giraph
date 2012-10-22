@@ -333,8 +333,12 @@ public abstract class BspService<I extends WritableComparable,
           ", " + getTaskPartition() + " on " + serverPortList);
     }
     try {
-      this.zk = new ZooKeeperExt(
-          serverPortList, sessionMsecTimeout, this, context);
+      this.zk = new ZooKeeperExt(serverPortList,
+                                 sessionMsecTimeout,
+                                 conf.getZookeeperOpsMaxAttempts(),
+                                 conf.getZookeeperOpsRetryWaitMsecs(),
+                                 this,
+                                 context);
       connectedEvent.waitForever();
       this.fs = FileSystem.get(getConfiguration());
     } catch (IOException e) {
