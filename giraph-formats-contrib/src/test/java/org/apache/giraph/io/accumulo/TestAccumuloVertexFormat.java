@@ -18,8 +18,6 @@
 
 package org.apache.giraph.io.accumulo;
 
-import junit.framework.Test;
-import junit.framework.TestSuite;
 import org.apache.accumulo.core.client.BatchWriter;
 import org.apache.accumulo.core.client.Connector;
 import org.apache.accumulo.core.client.Scanner;
@@ -48,6 +46,11 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.HashSet;
 import java.util.Map;
+import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 /*
     Test class for Accumulo vertex input/output formats.
@@ -64,27 +67,21 @@ public class TestAccumuloVertexFormat extends BspCase{
 
 
     private final Logger log = Logger.getLogger(TestAccumuloVertexFormat.class);
+
     /**
      * Create the test case
-     *
-     * @param testName name of the test case
      */
-    public TestAccumuloVertexFormat(String testName) {
-        super(testName);
+    public TestAccumuloVertexFormat() {
+        super(TestAccumuloVertexFormat.class.getName());
     }
-    /**
-     * @return the suite of tests being tested
-     */
-    public static Test suite() {
-        return new TestSuite(TestAccumuloVertexFormat.class);
 
-    }
     /*
      Write a simple parent-child directed graph to Accumulo.
      Run a job which reads the values
      into subclasses that extend AccumuloVertex I/O formats.
      Check the output after the job.
      */
+    @Test
     public void testAccumuloInputOutput() throws Exception {
         if (System.getProperty("prop.mapred.job.tracker") != null) {
             if(log.isInfoEnabled())

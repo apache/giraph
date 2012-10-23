@@ -152,6 +152,12 @@ under the License.
       <groupId>org.apache.zookeeper</groupId>
       <artifactId>zookeeper</artifactId>
     </dependency>
+    <dependency>
+      <groupId>org.apache.giraph</groupId>
+      <artifactId>giraph</artifactId>
+      <version>0.2-SNAPSHOT</version>
+      <type>test-jar</type>
+    </dependency>
 
     <!-- provided dependencies -->
     <dependency>

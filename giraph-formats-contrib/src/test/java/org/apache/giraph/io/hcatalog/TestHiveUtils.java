@@ -21,8 +21,10 @@ package org.apache.giraph.io.hcatalog;
 import junit.framework.TestCase;
 
 import java.util.Map;
+import org.junit.Test;
 
 public class TestHiveUtils extends TestCase {
+  @Test
   public void testParsePartition() {
     String partitionStr = "feature1=2012-10-09, feature2=a1+b2, feature3=ff-gg";
     Map<String, String> partition = HiveUtils.parsePartitionValues(partitionStr);

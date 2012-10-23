@@ -18,8 +18,7 @@
 
 package org.apache.giraph.io.hbase;
 
-import junit.framework.Test;
-import junit.framework.TestSuite;
+
 import org.apache.giraph.BspCase;
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.io.hbase.edgemarker.TableEdgeInputFormat;
@@ -46,7 +45,12 @@ import org.apache.log4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
+import org.junit.Test;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 /*
 Test case for HBase reading/writing vertices from an HBase instance.
 */
@@ -65,17 +69,11 @@ public class TestHBaseRootMarkerVertextFormat extends BspCase {
     private final String QUALIFER = "children";
     private final String OUTPUT_FIELD = "parent";
 
-    public TestHBaseRootMarkerVertextFormat(String testName) {
-        super(testName);
-    }
-    /**
-     * @return the suite of tests being tested
-     */
-    public static Test suite() {
-        return new TestSuite(TestHBaseRootMarkerVertextFormat.class);
-
+    public TestHBaseRootMarkerVertextFormat() {
+        super(TestHBaseRootMarkerVertextFormat.class.getName());
     }
 
+    @Test
     public void testHBaseInputOutput() throws Exception{
 
         if (System.getProperty("prop.mapred.job.tracker") != null) {
@@ -168,7 +166,6 @@ public class TestHBaseRootMarkerVertextFormat extends BspCase {
             cluster.shutdown();
         }
     }
-
 
     /*
     Test compute method that sends each edge a notification of its parents.

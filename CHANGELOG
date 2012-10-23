@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-384: Remove duplicate BspCase in giraph-formats-contrib (and
+  fix GIRAPH-382 breaking the build). (aching)
+
   GIRAPH-382: ZooKeeperExt should handle ConnectionLossException by
   retrying. (aching)
 
