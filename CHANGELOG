@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+
+  GIRAPH-385: Script for running on all profiles. (nitay via aching)
+
   GIRAPH-384: Remove duplicate BspCase in giraph-formats-contrib (and
   fix GIRAPH-382 breaking the build). (aching)
 
