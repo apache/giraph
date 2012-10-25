@@ -37,18 +37,38 @@ public class LoggerUtils {
    * @param context Context to set the status with
    * @param logger Logger to write to
    * @param level Level of logging
-   * @param message Message to
+   * @param message Message to set status with
    */
   public static void setStatusAndLog(
       TaskAttemptContext context, Logger logger, Level level,
       String message) {
     try {
-      context.setStatus(message);
+      setStatus(context, message);
     } catch (IOException e) {
       throw new IllegalStateException("setStatusAndLog: Got IOException", e);
     }
     if (logger.isEnabledFor(level)) {
       logger.log(level, message);
     }
+  }
+
+  /**
+   * Set Hadoop status message.
+   *
+   * NOTE: In theory this function could get folded in to the callsites, but
+   * the issue is that some Hadoop jars, e.g. 0.23 and 2.0.0, don't actually
+   * throw IOException on setStatus while others do. This makes wrapping it in a
+   * try/catch cause a compile error on those Hadoops. With this function every
+   * caller sees a method that throws IOException. In case it doesn't actually,
+   * there is no more compiler error because not throwing a decalred exception
+   * is at best a warning.
+   *
+   * @param context Context to set the status with
+   * @param message Message to set status with
+   * @throws IOException If something goes wrong with setting status message
+   */
+  private static void setStatus(TaskAttemptContext context, String message)
+    throws IOException {
+    context.setStatus(message);
   }
 }

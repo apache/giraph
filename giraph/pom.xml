@@ -72,10 +72,6 @@ under the License.
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-surefire-plugin</artifactId>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
       </plugin>
       <plugin>
@@ -134,20 +130,6 @@ under the License.
       <activation>
         <activeByDefault>true</activeByDefault>
       </activation>
-      <properties>
-        <hadoop.version>0.20.203.0</hadoop.version>
-        <munge.symbols>HADOOP_NON_JOBCONTEXT_IS_INTERFACE,HADOOP_1_SECURITY,HADOOP_1_SECRET_MANAGER</munge.symbols>
-      </properties>
-      <dependencies>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-core</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>commons-net</groupId>
-          <artifactId>commons-net</artifactId>
-        </dependency>
-      </dependencies>
       <build>
         <plugins>
           <plugin>
@@ -160,26 +142,6 @@ under the License.
 
     <profile>
       <id>hadoop_1.0</id>
-      <activation>
-        <property>
-          <name>hadoop</name>
-          <value>1.0</value>
-        </property>
-      </activation>
-      <properties>
-        <hadoop.version>1.0.2</hadoop.version>
-        <munge.symbols>HADOOP_NON_JOBCONTEXT_IS_INTERFACE,HADOOP_1_SECURITY,HADOOP_1_SECRET_MANAGER</munge.symbols>
-      </properties>
-      <dependencies>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-core</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>commons-net</groupId>
-          <artifactId>commons-net</artifactId>
-        </dependency>
-      </dependencies>
       <build>
         <plugins>
           <plugin>
@@ -192,26 +154,6 @@ under the License.
 
     <profile>
       <id>hadoop_non_secure</id>
-      <activation>
-        <property>
-          <name>hadoop</name>
-          <value>non_secure</value>
-        </property>
-      </activation>
-      <properties>
-        <hadoop.version>0.20.2</hadoop.version>
-        <munge.symbols>HADOOP_NON_SECURE,HADOOP_NON_JOBCONTEXT_IS_INTERFACE</munge.symbols>
-      </properties>
-      <dependencies>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-core</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>commons-collections</groupId>
-          <artifactId>commons-collections</artifactId>
-        </dependency>
-      </dependencies>
       <build>
         <plugins>
           <plugin>
@@ -236,34 +178,6 @@ under the License.
 
     <profile>
       <id>hadoop_facebook</id>
-      <activation>
-        <property>
-          <name>hadoop</name>
-          <value>facebook</value>
-        </property>
-      </activation>
-      <properties>
-        <hadoop.version>0.20.1</hadoop.version>
-        <munge.symbols>HADOOP_NON_SECURE,HADOOP_NON_JOBCONTEXT_IS_INTERFACE</munge.symbols>
-      </properties>
-      <dependencies>
-        <dependency>
-          <groupId>com.facebook.hadoop</groupId>
-          <artifactId>hadoop-core</artifactId>
-          <version>${hadoop.version}</version>
-          <type>jar</type>
-          <scope>system</scope>
-          <systemPath>${hadoop.jar.path}</systemPath>
-        </dependency>
-        <dependency>
-          <groupId>commons-logging</groupId>
-          <artifactId>commons-logging-api</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>commons-httpclient</groupId>
-          <artifactId>commons-httpclient</artifactId>
-        </dependency>
-      </dependencies>
       <build>
         <plugins>
           <plugin>
@@ -292,37 +206,12 @@ under the License.
 
     <profile>
       <id>hadoop_0.23</id>
-      <activation>
-        <property>
-          <name>hadoop</name>
-          <value>0.23</value>
-        </property>
-      </activation>
-      <properties>
-        <hadoop.version>0.23.1</hadoop.version>
-        <munge.symbols>HADOOP_1_SECRET_MANAGER</munge.symbols>
-      </properties>
-      <dependencies>
-        <dependency>
-          <groupId>commons-net</groupId>
-          <artifactId>commons-net</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-common</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-core</artifactId>
-          <scope>provided</scope>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-common</artifactId>
-        </dependency>
-      </dependencies>
       <build>
         <plugins>
+          <plugin>
+            <groupId>org.sonatype.plugins</groupId>
+            <artifactId>munge-maven-plugin</artifactId>
+          </plugin>
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-surefire-plugin</artifactId>
@@ -331,174 +220,71 @@ under the License.
       </build>
     </profile>
 
-    <!-- Help keep future Hadoop versions munge-free: 
-     All profiles below are munge-free: avoid introducing any munge
-     flags on any of the following profiles. -->
     <profile>
       <id>hadoop_2.0.0</id>
-      <activation>
-        <property>
-          <name>hadoop</name>
-          <value>2.0.0</value>
-        </property>
-      </activation>
-      <properties>
-        <hadoop.version>2.0.0-alpha</hadoop.version>
-      </properties>
-      <dependencies>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-common</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-core</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-common</artifactId>
-        </dependency>
-      </dependencies>
     </profile>
 
     <profile>
       <id>hadoop_2.0.1</id>
-       <activation>
-        <property>
-          <name>hadoop</name>
-          <value>2.0.1</value>
-        </property>
-      </activation>
-      <properties>
-        <hadoop.version>2.0.1-alpha</hadoop.version>
-      </properties>
-      <dependencies>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-common</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-core</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-common</artifactId>
-        </dependency>
-      </dependencies>
     </profile>
 
-   <profile>
+    <profile>
       <id>hadoop_2.0.2</id>
-       <activation>
-        <property>
-          <name>hadoop</name>
-          <value>2.0.2</value>
-        </property>
-      </activation>
-      <properties>
-        <hadoop.version>2.0.2-alpha</hadoop.version>
-      </properties>
-      <dependencies>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-common</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-core</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-common</artifactId>
-        </dependency>
-      </dependencies>
     </profile>
 
     <profile>
       <id>hadoop_trunk</id>
-      <activation>
-        <property>
-          <name>hadoop</name>
-          <value>trunk</value>
-        </property>
-      </activation>
-      <properties>
-        <hadoop.version>3.0.0-SNAPSHOT</hadoop.version>
-      </properties>
-      <dependencies>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-common</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-core</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-common</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-auth</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>commons-configuration</groupId>
-          <artifactId>commons-configuration</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>commons-httpclient</groupId>
-          <artifactId>commons-httpclient</artifactId>
-        </dependency>
-      </dependencies>
     </profile>
   </profiles>
 
   <dependencies>
-    <!-- compile dependencies -->
-    <dependency>
-      <groupId>org.codehaus.jackson</groupId>
-      <artifactId>jackson-core-asl</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.mahout</groupId>
-      <artifactId>mahout-collections</artifactId>
-    </dependency>
+    <!-- compile dependencies. sorted lexicographically. -->
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.codehaus.jackson</groupId>
-      <artifactId>jackson-mapper-asl</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.zookeeper</groupId>
-      <artifactId>zookeeper</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.commons</groupId>
-      <artifactId>commons-io</artifactId>
     </dependency>
     <dependency>
       <groupId>commons-cli</groupId>
       <artifactId>commons-cli</artifactId>
     </dependency>
     <dependency>
-      <groupId>net.iharder</groupId>
-      <artifactId>base64</artifactId>
+      <groupId>commons-collections</groupId>
+      <artifactId>commons-collections</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.json</groupId>
-      <artifactId>json</artifactId>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty</artifactId>
     </dependency>
+    <dependency>
+      <groupId>net.iharder</groupId>
+      <artifactId>base64</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.mahout</groupId>
+      <artifactId>mahout-collections</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.zookeeper</groupId>
+      <artifactId>zookeeper</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.codehaus.jackson</groupId>
+      <artifactId>jackson-core-asl</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.codehaus.jackson</groupId>
+      <artifactId>jackson-mapper-asl</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.json</groupId>
+      <artifactId>json</artifactId>
+    </dependency>
 
-    <!-- test dependencies -->
+    <!-- test dependencies. sorted lexicographically. -->
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
