@@ -94,7 +94,9 @@ public class GiraphRunner implements Tool {
     options.addOption("cf", "cacheFile", true, "Files for distributed cache");
     options.addOption("ca", "customArguments", true, "provide custom" +
         " arguments for the job configuration in the form:" +
-        " <param1>=<value1>,<param2>=<value2> etc.");
+        " -ca <param1>=<value1>,<param2>=<value2> -ca <param3>=<value3> etc." +
+        " It can appear multiple times, and the last one has effect" +
+        " for the same param.");
     return options;
   }
 
@@ -165,7 +167,8 @@ public class GiraphRunner implements Tool {
     }
 
     int workers = Integer.parseInt(cmd.getOptionValue('w'));
-    GiraphConfiguration giraphConfiguration = new GiraphConfiguration();
+    GiraphConfiguration giraphConfiguration = new GiraphConfiguration(
+            getConf());
     giraphConfiguration.setVertexClass(
         (Class<? extends Vertex>) Class.forName(vertexClassName));
     giraphConfiguration.setVertexInputFormatClass(
@@ -228,19 +231,21 @@ public class GiraphRunner implements Tool {
 
     if (cmd.hasOption("ca")) {
       Configuration jobConf = job.getConfiguration();
-      for (String paramValue :
-          Splitter.on(',').split(cmd.getOptionValue("ca"))) {
-        String[] parts = Iterables.toArray(Splitter.on('=').split(paramValue),
-            String.class);
-        if (parts.length != 2) {
-          throw new IllegalArgumentException("Unable to parse custom " +
-              " argument: " + paramValue);
+      for (String caOptionValue : cmd.getOptionValues("ca")) {
+        for (String paramValue :
+            Splitter.on(',').split(caOptionValue)) {
+          String[] parts = Iterables.toArray(Splitter.on('=').split(paramValue),
+              String.class);
+          if (parts.length != 2) {
+            throw new IllegalArgumentException("Unable to parse custom " +
+                " argument: " + paramValue);
+          }
+          if (LOG.isInfoEnabled()) {
+            LOG.info("Setting custom argument [" + parts[0] + "] to [" +
+                parts[1] + "]");
+          }
+          jobConf.set(parts[0], parts[1]);
         }
-        if (LOG.isInfoEnabled()) {
-          LOG.info("Setting custom argument [" + parts[0] + "] to [" +
-              parts[1] + "]");
-        }
-        jobConf.set(parts[0], parts[1]);
       }
     }
 
