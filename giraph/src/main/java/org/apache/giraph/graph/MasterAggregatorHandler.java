@@ -18,51 +18,68 @@
 
 package org.apache.giraph.graph;
 
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.SuperstepState;
-import org.apache.hadoop.conf.Configuration;
+import org.apache.giraph.comm.MasterClientServer;
+import org.apache.giraph.comm.aggregators.AggregatorUtils;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.util.Progressable;
 import org.apache.log4j.Logger;
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.ZooDefs;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 
-import net.iharder.Base64;
-
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
-import java.io.DataInputStream;
 import java.io.DataOutput;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.AbstractMap;
-import java.util.List;
 import java.util.Map;
 
-/** Master implementation of {@link AggregatorHandler} */
-public class MasterAggregatorHandler extends AggregatorHandler implements
-    MasterAggregatorUsage, Writable {
+/** Handler for aggregators on master */
+public class MasterAggregatorHandler implements MasterAggregatorUsage,
+    Writable {
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(MasterAggregatorHandler.class);
+  /**
+   * Map of aggregators.
+   * This map is used to store final aggregated values received from worker
+   * owners, and also to read and write values provided during master.compute.
+   */
+  private final Map<String, AggregatorWrapper<Writable>> aggregatorMap =
+      Maps.newHashMap();
   /** Aggregator writer */
   private final AggregatorWriter aggregatorWriter;
+  /** Progressable used to report progress */
+  private final Progressable progressable;
 
   /**
-   * @param config Hadoop configuration
+   * Constructor
+   *
+   * @param conf         Giraph configuration
+   * @param progressable Progressable used for reporting progress
    */
-  public MasterAggregatorHandler(Configuration config) {
-    aggregatorWriter = BspUtils.createAggregatorWriter(config);
+  public MasterAggregatorHandler(
+      ImmutableClassesGiraphConfiguration<?, ?, ?, ?> conf,
+      Progressable progressable) {
+    this.progressable = progressable;
+    aggregatorWriter = conf.createAggregatorWriter();
+  }
+
+  @Override
+  public <A extends Writable> A getAggregatedValue(String name) {
+    AggregatorWrapper<? extends Writable> aggregator = aggregatorMap.get(name);
+    if (aggregator == null) {
+      return null;
+    } else {
+      return (A) aggregator.getPreviousAggregatedValue();
+    }
   }
 
   @Override
   public <A extends Writable> void setAggregatedValue(String name, A value) {
-    AggregatorWrapper<? extends Writable> aggregator = getAggregator(name);
+    AggregatorWrapper<? extends Writable> aggregator = aggregatorMap.get(name);
     if (aggregator == null) {
       throw new IllegalStateException(
           "setAggregatedValue: Tried to set value of aggregator which wasn't" +
@@ -75,6 +92,7 @@ public class MasterAggregatorHandler extends AggregatorHandler implements
   public <A extends Writable> boolean registerAggregator(String name,
       Class<? extends Aggregator<A>> aggregatorClass) throws
       InstantiationException, IllegalAccessException {
+    checkAggregatorName(name);
     return registerAggregator(name, aggregatorClass, false) != null;
   }
 
@@ -82,115 +100,81 @@ public class MasterAggregatorHandler extends AggregatorHandler implements
   public <A extends Writable> boolean registerPersistentAggregator(String name,
       Class<? extends Aggregator<A>> aggregatorClass) throws
       InstantiationException, IllegalAccessException {
+    checkAggregatorName(name);
     return registerAggregator(name, aggregatorClass, true) != null;
   }
 
   /**
-   * Get aggregator values supplied by workers for a particular superstep and
-   * aggregate them
+   * Make sure user doesn't use AggregatorUtils.SPECIAL_COUNT_AGGREGATOR as
+   * the name of aggregator. Throw an exception if he tries to use it.
    *
-   * @param superstep Superstep which we are preparing for
-   * @param service BspService to get zookeeper info from
+   * @param name Name of the aggregator to check.
    */
-  public void prepareSuperstep(long superstep, BspService service) {
-    String workerFinishedPath =
-        service.getWorkerFinishedPath(
-            service.getApplicationAttempt(), superstep);
-    List<String> hostnameIdPathList = null;
-    try {
-      hostnameIdPathList =
-          service.getZkExt().getChildrenExt(
-              workerFinishedPath, false, false, true);
-    } catch (KeeperException e) {
-      throw new IllegalStateException(
-          "collectAndProcessAggregatorValues: KeeperException", e);
-    } catch (InterruptedException e) {
-      throw new IllegalStateException(
-          "collectAndProcessAggregatorValues: InterruptedException", e);
+  private void checkAggregatorName(String name) {
+    if (name.equals(AggregatorUtils.SPECIAL_COUNT_AGGREGATOR)) {
+      throw new IllegalStateException("checkAggregatorName: " +
+          AggregatorUtils.SPECIAL_COUNT_AGGREGATOR +
+          " is not allowed for the name of aggregator");
     }
+  }
 
-    for (String hostnameIdPath : hostnameIdPathList) {
-      JSONObject workerFinishedInfoObj = null;
-      byte[] aggregatorArray = null;
-      try {
-        byte[] zkData =
-            service.getZkExt().getData(hostnameIdPath, false, null);
-        workerFinishedInfoObj = new JSONObject(new String(zkData));
-      } catch (KeeperException e) {
-        throw new IllegalStateException(
-            "collectAndProcessAggregatorValues: KeeperException", e);
-      } catch (InterruptedException e) {
-        throw new IllegalStateException(
-            "collectAndProcessAggregatorValues: InterruptedException",
-            e);
-      } catch (JSONException e) {
-        throw new IllegalStateException(
-            "collectAndProcessAggregatorValues: JSONException", e);
-      }
-      try {
-        aggregatorArray = Base64.decode(workerFinishedInfoObj.getString(
-            service.JSONOBJ_AGGREGATOR_VALUE_ARRAY_KEY));
-      } catch (JSONException e) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("collectAndProcessAggregatorValues: " +
-              "No aggregators" + " for " + hostnameIdPath);
-        }
-        continue;
-      } catch (IOException e) {
-        throw new IllegalStateException(
-            "collectAndProcessAggregatorValues: IOException", e);
-      }
-
-      DataInputStream input =
-          new DataInputStream(new ByteArrayInputStream(aggregatorArray));
-      try {
-        while (input.available() > 0) {
-          String aggregatorName = input.readUTF();
-          AggregatorWrapper<Writable> aggregator =
-              getAggregatorMap().get(aggregatorName);
-          if (aggregator == null) {
-            throw new IllegalStateException(
-                "collectAndProcessAggregatorValues: " +
-                    "Master received aggregator which isn't registered: " +
-                    aggregatorName);
-          }
-          Writable aggregatorValue = aggregator.createInitialValue();
-          aggregatorValue.readFields(input);
-          aggregator.aggregateCurrent(aggregatorValue);
-        }
-      } catch (IOException e) {
-        throw new IllegalStateException(
-            "collectAndProcessAggregatorValues: " +
-                "IOException when reading aggregator data", e);
-      }
+  /**
+   * Helper function for registering aggregators.
+   *
+   * @param name            Name of the aggregator
+   * @param aggregatorClass Class of the aggregator
+   * @param persistent      Whether aggregator is persistent or not
+   * @param <A>             Aggregated value type
+   * @return Newly registered aggregator or aggregator which was previously
+   *         created with selected name, if any
+   */
+  private <A extends Writable> AggregatorWrapper<A> registerAggregator
+  (String name, Class<? extends Aggregator<A>> aggregatorClass,
+      boolean persistent) throws InstantiationException,
+      IllegalAccessException {
+    AggregatorWrapper<A> aggregatorWrapper =
+        (AggregatorWrapper<A>) aggregatorMap.get(name);
+    if (aggregatorWrapper == null) {
+      aggregatorWrapper =
+          new AggregatorWrapper<A>(aggregatorClass, persistent);
+      aggregatorMap.put(name, (AggregatorWrapper<Writable>) aggregatorWrapper);
     }
+    return aggregatorWrapper;
+  }
 
-    if (LOG.isInfoEnabled()) {
-      LOG.info("collectAndProcessAggregatorValues: Processed aggregators");
+  /**
+   * Prepare aggregators for current superstep
+   *
+   * @param commService Communication service
+   */
+  public void prepareSuperstep(MasterClientServer commService) {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("prepareSuperstep: Start preapring aggregators");
     }
-
     // prepare aggregators for master compute
-    for (AggregatorWrapper<Writable> aggregator :
-        getAggregatorMap().values()) {
+    for (AggregatorWrapper<Writable> aggregator : aggregatorMap.values()) {
       if (aggregator.isPersistent()) {
         aggregator.aggregateCurrent(aggregator.getPreviousAggregatedValue());
       }
       aggregator.setPreviousAggregatedValue(
           aggregator.getCurrentAggregatedValue());
       aggregator.resetCurrentAggregator();
+      progressable.progress();
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("prepareSuperstep: Aggregators prepared");
     }
   }
 
   /**
-   * Save the supplied aggregator values.
+   * Finalize aggregators for current superstep and share them with workers
    *
-   * @param superstep Superstep which we are finishing.
-   * @param service BspService to get zookeeper info from
+   * @param commService Communication service
    */
-  public void finishSuperstep(long superstep, BspService service) {
-    Map<String, AggregatorWrapper<Writable>> aggregatorMap =
-        getAggregatorMap();
-
+  public void finishSuperstep(MasterClientServer commService) {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("finishSuperstep: Start finishing aggregators");
+    }
     for (AggregatorWrapper<Writable> aggregator : aggregatorMap.values()) {
       if (aggregator.isChanged()) {
         // if master compute changed the value, use the one he chose
@@ -199,74 +183,86 @@ public class MasterAggregatorHandler extends AggregatorHandler implements
         // reset aggregator for the next superstep
         aggregator.resetCurrentAggregator();
       }
+      progressable.progress();
     }
 
-    if (aggregatorMap.size() > 0) {
-      String mergedAggregatorPath =
-          service.getMergedAggregatorPath(
-              service.getApplicationAttempt(),
-              superstep);
-
-      ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-      DataOutput output = new DataOutputStream(outputStream);
-      try {
-        output.writeInt(aggregatorMap.size());
-      } catch (IOException e) {
-        e.printStackTrace();
-      }
+    // send aggregators to their owners
+    // TODO: if aggregator owner and it's value didn't change,
+    //       we don't need to resend it
+    try {
       for (Map.Entry<String, AggregatorWrapper<Writable>> entry :
           aggregatorMap.entrySet()) {
-        try {
-          output.writeUTF(entry.getKey());
-          output.writeUTF(entry.getValue().getAggregatorClass().getName());
-          entry.getValue().getPreviousAggregatedValue().write(output);
-        } catch (IOException e) {
-          throw new IllegalStateException("saveAggregatorValues: " +
-              "IllegalStateException", e);
-        }
+        commService.sendAggregator(entry.getKey(),
+            entry.getValue().getAggregatorClass(),
+            entry.getValue().getPreviousAggregatedValue());
+        progressable.progress();
       }
+      commService.finishSendingAggregatedValues();
+    } catch (IOException e) {
+      throw new IllegalStateException("finishSuperstep: " +
+          "IOException occurred while sending aggregators", e);
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("finishSuperstep: Aggregators finished");
+    }
+  }
 
-      try {
-        service.getZkExt().createExt(mergedAggregatorPath,
-            outputStream.toByteArray(),
-            ZooDefs.Ids.OPEN_ACL_UNSAFE,
-            CreateMode.PERSISTENT,
-            true);
-      } catch (KeeperException.NodeExistsException e) {
-        LOG.warn("saveAggregatorValues: " +
-            mergedAggregatorPath + " already exists!");
-      } catch (KeeperException e) {
+  /**
+   * Accept aggregated values sent by worker. Every aggregator will be sent
+   * only once, by its owner.
+   * We don't need to count the number of these requests because global
+   * superstep barrier will happen after workers ensure all requests of this
+   * type have been received and processed by master.
+   *
+   * @param aggregatedValuesInput Input in which aggregated values are
+   *                              written in the following format:
+   *                              number_of_aggregators
+   *                              name_1  value_1
+   *                              name_2  value_2
+   *                              ...
+   * @throws IOException
+   */
+  public void acceptAggregatedValues(
+      DataInput aggregatedValuesInput) throws IOException {
+    int numAggregators = aggregatedValuesInput.readInt();
+    for (int i = 0; i < numAggregators; i++) {
+      String aggregatorName = aggregatedValuesInput.readUTF();
+      AggregatorWrapper<Writable> aggregator =
+          aggregatorMap.get(aggregatorName);
+      if (aggregator == null) {
         throw new IllegalStateException(
-            "saveAggregatorValues: KeeperException", e);
-      } catch (InterruptedException e) {
-        throw new IllegalStateException(
-            "saveAggregatorValues: IllegalStateException",
-            e);
+            "acceptAggregatedValues: " +
+                "Master received aggregator which isn't registered: " +
+                aggregatorName);
       }
-      if (LOG.isInfoEnabled()) {
-        LOG.info("saveAggregatorValues: Finished loading " +
-            mergedAggregatorPath);
-      }
+      Writable aggregatorValue = aggregator.createInitialValue();
+      aggregatorValue.readFields(aggregatedValuesInput);
+      aggregator.setCurrentAggregatedValue(aggregatorValue);
+      progressable.progress();
+    }
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("acceptAggregatedValues: Accepted one set with " +
+          numAggregators + " aggregated values");
     }
   }
 
   /**
    * Write aggregators to {@link AggregatorWriter}
    *
-   * @param superstep Superstep which just finished
+   * @param superstep      Superstep which just finished
    * @param superstepState State of the superstep which just finished
    */
-  public void writeAggregators(long superstep,
-      SuperstepState superstepState) {
+  public void writeAggregators(long superstep, SuperstepState superstepState) {
     try {
       Iterable<Map.Entry<String, Writable>> iter =
           Iterables.transform(
-              getAggregatorMap().entrySet(),
+              aggregatorMap.entrySet(),
               new Function<Map.Entry<String, AggregatorWrapper<Writable>>,
                   Map.Entry<String, Writable>>() {
                 @Override
                 public Map.Entry<String, Writable> apply(
                     Map.Entry<String, AggregatorWrapper<Writable>> entry) {
+                  progressable.progress();
                   return new AbstractMap.SimpleEntry<String,
                       Writable>(entry.getKey(),
                       entry.getValue().getPreviousAggregatedValue());
@@ -292,7 +288,7 @@ public class MasterAggregatorHandler extends AggregatorHandler implements
       aggregatorWriter.initialize(service.getContext(),
           service.getApplicationAttempt());
     } catch (IOException e) {
-      throw new IllegalStateException("MasterAggregatorHandler: " +
+      throw new IllegalStateException("initialize: " +
           "Couldn't initialize aggregatorWriter", e);
     }
   }
@@ -308,8 +304,6 @@ public class MasterAggregatorHandler extends AggregatorHandler implements
 
   @Override
   public void write(DataOutput out) throws IOException {
-    Map<String, AggregatorWrapper<Writable>> aggregatorMap =
-        getAggregatorMap();
     out.writeInt(aggregatorMap.size());
     for (Map.Entry<String, AggregatorWrapper<Writable>> entry :
         aggregatorMap.entrySet()) {
@@ -317,25 +311,34 @@ public class MasterAggregatorHandler extends AggregatorHandler implements
       out.writeUTF(entry.getValue().getAggregatorClass().getName());
       out.writeBoolean(entry.getValue().isPersistent());
       entry.getValue().getPreviousAggregatedValue().write(out);
+      progressable.progress();
     }
   }
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    Map<String, AggregatorWrapper<Writable>> aggregatorMap =
-        getAggregatorMap();
     aggregatorMap.clear();
     int numAggregators = in.readInt();
-    for (int i = 0; i < numAggregators; i++) {
-      String aggregatorName = in.readUTF();
-      String aggregatorClassName = in.readUTF();
-      boolean isPersistent = in.readBoolean();
-      AggregatorWrapper<Writable> aggregator =
-          registerAggregator(aggregatorName, aggregatorClassName,
-              isPersistent);
-      Writable value = aggregator.createInitialValue();
-      value.readFields(in);
-      aggregator.setPreviousAggregatedValue(value);
+    try {
+      for (int i = 0; i < numAggregators; i++) {
+        String aggregatorName = in.readUTF();
+        String aggregatorClassName = in.readUTF();
+        boolean isPersistent = in.readBoolean();
+        AggregatorWrapper<Writable> aggregator = registerAggregator(
+            aggregatorName,
+            AggregatorUtils.getAggregatorClass(aggregatorClassName),
+            isPersistent);
+        Writable value = aggregator.createInitialValue();
+        value.readFields(in);
+        aggregator.setPreviousAggregatedValue(value);
+        progressable.progress();
+      }
+    } catch (InstantiationException e) {
+      throw new IllegalStateException("readFields: " +
+          "InstantiationException occurred", e);
+    } catch (IllegalAccessException e) {
+      throw new IllegalStateException("readFields: " +
+          "IllegalAccessException occurred", e);
     }
   }
 }

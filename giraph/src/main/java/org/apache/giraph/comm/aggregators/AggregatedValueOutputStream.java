@@ -16,18 +16,30 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.comm.requests;
+package org.apache.giraph.comm.aggregators;
 
-import org.apache.giraph.graph.MasterAggregatorHandler;
+import org.apache.hadoop.io.Writable;
+
+import java.io.IOException;
 
 /**
- * Interface for requests sent to master to extend
+ * Implementation of {@link CountingOutputStream} which allows writing of
+ * aggregator values in the form of pair (name, value)
  */
-public interface MasterRequest {
+public class AggregatedValueOutputStream extends CountingOutputStream {
   /**
-   * Execute the request
+   * Write aggregator to the stream and increment internal counter
    *
-   * @param aggregatorHandler Master aggregator handler
+   * @param aggregatorName Name of the aggregator
+   * @param aggregatedValue Value of aggregator
+   * @return Number of bytes occupied by the stream
+   * @throws IOException
    */
-  void doRequest(MasterAggregatorHandler aggregatorHandler);
+  public int addAggregator(String aggregatorName,
+      Writable aggregatedValue) throws IOException {
+    incrementCounter();
+    dataOutput.writeUTF(aggregatorName);
+    aggregatedValue.write(dataOutput);
+    return getSize();
+  }
 }

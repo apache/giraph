@@ -20,6 +20,8 @@ package org.apache.giraph.comm;
 
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.comm.aggregators.AllAggregatorServerData;
+import org.apache.giraph.comm.aggregators.OwnerAggregatorServerData;
 import org.apache.giraph.comm.messages.MessageStoreByPartition;
 import org.apache.giraph.comm.messages.MessageStoreFactory;
 import org.apache.giraph.graph.VertexMutations;
@@ -65,6 +67,14 @@ public class ServerData<I extends WritableComparable,
    */
   private final ConcurrentHashMap<I, VertexMutations<I, V, E, M>>
   vertexMutations = new ConcurrentHashMap<I, VertexMutations<I, V, E, M>>();
+  /**
+   * Holds aggregtors which current worker owns from current superstep
+   */
+  private final OwnerAggregatorServerData ownerAggregatorData;
+  /**
+   * Holds old aggregators from previous superstep
+   */
+  private final AllAggregatorServerData allAggregatorData;
 
   /**
    * Constructor.
@@ -90,6 +100,8 @@ public class ServerData<I extends WritableComparable,
       partitionStore =
           new SimplePartitionStore<I, V, E, M>(configuration, context);
     }
+    ownerAggregatorData = new OwnerAggregatorServerData(context);
+    allAggregatorData = new AllAggregatorServerData(context);
   }
 
   /**
@@ -143,5 +155,23 @@ public class ServerData<I extends WritableComparable,
   public ConcurrentHashMap<I, VertexMutations<I, V, E, M>>
   getVertexMutations() {
     return vertexMutations;
+  }
+
+  /**
+   * Get holder for aggregators which current worker owns
+   *
+   * @return Holder for aggregators which current worker owns
+   */
+  public OwnerAggregatorServerData getOwnerAggregatorData() {
+    return ownerAggregatorData;
+  }
+
+  /**
+   * Get holder for aggregators from previous superstep
+   *
+   * @return Holder for aggregators from previous superstep
+   */
+  public AllAggregatorServerData getAllAggregatorData() {
+    return allAggregatorData;
   }
 }

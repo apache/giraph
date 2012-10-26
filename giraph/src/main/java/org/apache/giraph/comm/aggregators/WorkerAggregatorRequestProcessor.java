@@ -16,48 +16,49 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.comm;
+package org.apache.giraph.comm.aggregators;
 
-import org.apache.giraph.graph.Aggregator;
 import org.apache.hadoop.io.Writable;
 
 import java.io.IOException;
 
 /**
- * Interface for master to send messages to workers
+ * Aggregates worker aggregator requests and sends them off
  */
-public interface MasterClient {
+public interface WorkerAggregatorRequestProcessor {
   /**
-   * Make sure that all the connections to workers have been established.
-   */
-  void openConnections();
-
-  /**
-   * Sends aggregator to its owner
+   * Sends worker aggregated value to the owner of aggregator
    *
    * @param aggregatorName Name of the aggregator
-   * @param aggregatorClass Class of the aggregator
    * @param aggregatedValue Value of the aggregator
-   * @throws IOException
+   * @throws java.io.IOException
+   * @return True if aggregated value will be sent, false if this worker is
+   * the owner of the aggregator
    */
-  void sendAggregator(String aggregatorName,
-      Class<? extends Aggregator> aggregatorClass,
+  boolean sendAggregatedValue(String aggregatorName,
       Writable aggregatedValue) throws IOException;
 
   /**
    * Flush aggregated values cache.
+   *
+   * @throws IOException
    */
-  void finishSendingAggregatedValues() throws IOException;
+  void flush() throws IOException;
 
   /**
-   * Flush all outgoing messages.  This will synchronously ensure that all
-   * messages have been send and delivered prior to returning.
+   * Sends aggregated values to the master. This worker is the owner of these
+   * aggregators.
+   *
+   * @param aggregatorData Serialized aggregator data
+   * @throws IOException
    */
-  void flush();
+  void sendAggregatedValuesToMaster(byte[] aggregatorData) throws IOException;
 
   /**
-   * Closes all connections.
+   * Sends aggregators to all other workers
+   *
+   * @param aggregatorDataList Serialized aggregator data split into chunks
    */
-  void closeConnections();
+  void distributeAggregators(
+      Iterable<byte[]> aggregatorDataList) throws IOException;
 }
-

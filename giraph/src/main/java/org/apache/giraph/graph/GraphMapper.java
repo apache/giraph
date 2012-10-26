@@ -129,7 +129,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
    * @return Worker aggregator usage interface
    */
   public final WorkerAggregatorUsage getWorkerAggregatorUsage() {
-    return serviceWorker.getAggregatorUsage();
+    return serviceWorker.getAggregatorHandler();
   }
 
   /**
@@ -138,7 +138,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
    * @return Master aggregator usage interface
    */
   public final MasterAggregatorUsage getMasterAggregatorUsage() {
-    return serviceMaster.getAggregatorUsage();
+    return serviceMaster.getAggregatorHandler();
   }
 
   public final WorkerContext getWorkerContext() {
@@ -487,6 +487,8 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
       } else if (serviceWorker.checkpointFrequencyMet(superstep)) {
         serviceWorker.storeCheckpoint();
       }
+
+      serviceWorker.prepareSuperstep();
 
       serviceWorker.getWorkerContext().setGraphState(graphState);
       serviceWorker.getWorkerContext().preSuperstep();

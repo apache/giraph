@@ -20,8 +20,10 @@ package org.apache.giraph.graph;
 
 import org.apache.giraph.BspCase;
 import org.apache.giraph.GiraphConfiguration;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.aggregators.DoubleOverwriteAggregator;
 import org.apache.giraph.aggregators.LongSumAggregator;
+import org.apache.giraph.comm.aggregators.AggregatorUtils;
 import org.apache.giraph.examples.AggregatorsTestVertex;
 import org.apache.giraph.examples.SimpleCheckpointVertex;
 import org.apache.giraph.examples.SimplePageRankVertex;
@@ -30,7 +32,11 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.util.Progressable;
+import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mockito;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -41,12 +47,29 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.util.Map;
 
 /** Tests if aggregators are handled on a proper way */
 public class TestAggregatorsHandling extends BspCase {
 
   public TestAggregatorsHandling() {
     super(TestAggregatorsHandling.class.getName());
+  }
+
+  private Map<String, AggregatorWrapper<Writable>> getAggregatorMap
+      (MasterAggregatorHandler aggregatorHandler) {
+    try {
+      Field aggregtorMapField = aggregatorHandler.getClass().getDeclaredField
+          ("aggregatorMap");
+      aggregtorMapField.setAccessible(true);
+      return (Map<String, AggregatorWrapper<Writable>>)
+          aggregtorMapField.get(aggregatorHandler);
+    } catch (IllegalAccessException e) {
+      throw new IllegalStateException(e);
+    } catch (NoSuchFieldException e) {
+      throw new IllegalStateException(e);
+    }
   }
 
   /** Tests if aggregators are handled on a proper way during supersteps */
@@ -58,6 +81,9 @@ public class TestAggregatorsHandling extends BspCase {
         SimplePageRankVertex.SimplePageRankVertexInputFormat.class);
     job.getConfiguration().setMasterComputeClass(
         AggregatorsTestVertex.AggregatorsTestMasterCompute.class);
+    // test with aggregators split in a few requests
+    job.getConfiguration().setInt(
+        AggregatorUtils.MAX_BYTES_PER_AGGREGATOR_REQUEST, 50);
     assertTrue(job.run(true));
   }
 
@@ -65,8 +91,13 @@ public class TestAggregatorsHandling extends BspCase {
   @Test
   public void testMasterAggregatorsSerialization() throws
       IllegalAccessException, InstantiationException, IOException {
+    ImmutableClassesGiraphConfiguration conf =
+        Mockito.mock(ImmutableClassesGiraphConfiguration.class);
+    Mockito.when(conf.getAggregatorWriterClass()).thenReturn(
+        TextAggregatorWriter.class);
+    Progressable progressable = Mockito.mock(Progressable.class);
     MasterAggregatorHandler handler =
-        new MasterAggregatorHandler(new Configuration());
+        new MasterAggregatorHandler(conf, progressable);
 
     String regularAggName = "regular";
     LongWritable regularValue = new LongWritable(5);
@@ -80,7 +111,7 @@ public class TestAggregatorsHandling extends BspCase {
     handler.setAggregatedValue(persistentAggName, persistentValue);
 
     for (AggregatorWrapper<Writable> aggregator :
-        handler.getAggregatorMap().values()) {
+        getAggregatorMap(handler).values()) {
       aggregator.setPreviousAggregatedValue(
           aggregator.getCurrentAggregatedValue());
     }
@@ -89,14 +120,14 @@ public class TestAggregatorsHandling extends BspCase {
     handler.write(new DataOutputStream(out));
 
     MasterAggregatorHandler restartedHandler =
-        new MasterAggregatorHandler(new Configuration());
+        new MasterAggregatorHandler(conf, progressable);
     restartedHandler.readFields(
         new DataInputStream(new ByteArrayInputStream(out.toByteArray())));
 
-    assertEquals(2, restartedHandler.getAggregatorMap().size());
+    assertEquals(2, getAggregatorMap(restartedHandler).size());
 
     AggregatorWrapper<Writable> regularAgg =
-        restartedHandler.getAggregatorMap().get(regularAggName);
+        getAggregatorMap(restartedHandler).get(regularAggName);
     assertTrue(
         regularAgg.getAggregatorClass().equals(LongSumAggregator.class));
     assertEquals(regularValue, regularAgg.getPreviousAggregatedValue());
@@ -105,7 +136,7 @@ public class TestAggregatorsHandling extends BspCase {
     assertFalse(regularAgg.isPersistent());
 
     AggregatorWrapper<Writable> persistentAgg =
-        restartedHandler.getAggregatorMap().get(persistentAggName);
+        getAggregatorMap(restartedHandler).get(persistentAggName);
     assertTrue(persistentAgg.getAggregatorClass().equals
         (DoubleOverwriteAggregator.class));
     assertEquals(persistentValue, persistentAgg.getPreviousAggregatedValue());

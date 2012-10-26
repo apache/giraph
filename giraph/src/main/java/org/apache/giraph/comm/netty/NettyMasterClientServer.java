@@ -23,8 +23,11 @@ import org.apache.giraph.bsp.CentralizedServiceMaster;
 import org.apache.giraph.comm.MasterClient;
 import org.apache.giraph.comm.MasterClientServer;
 import org.apache.giraph.comm.MasterServer;
+import org.apache.giraph.graph.Aggregator;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.Mapper;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 
 /**
@@ -48,12 +51,25 @@ public class NettyMasterClientServer implements MasterClientServer {
       ImmutableClassesGiraphConfiguration configuration,
       CentralizedServiceMaster<?, ?, ?, ?> service) {
     client = new NettyMasterClient(context, configuration, service);
-    server = new NettyMasterServer(configuration);
+    server = new NettyMasterServer(configuration,
+        service.getAggregatorHandler());
   }
 
   @Override
   public void openConnections() {
     client.openConnections();
+  }
+
+  @Override
+  public void sendAggregator(String aggregatorName,
+      Class<? extends Aggregator> aggregatorClass,
+      Writable aggregatedValue) throws IOException {
+    client.sendAggregator(aggregatorName, aggregatorClass, aggregatedValue);
+  }
+
+  @Override
+  public void finishSendingAggregatedValues() throws IOException {
+    client.finishSendingAggregatedValues();
   }
 
   @Override

@@ -20,7 +20,7 @@ package org.apache.giraph.bsp;
 
 import java.io.IOException;
 
-import org.apache.giraph.graph.MasterAggregatorUsage;
+import org.apache.giraph.graph.MasterAggregatorHandler;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.zookeeper.KeeperException;
@@ -99,9 +99,9 @@ public interface CentralizedServiceMaster<I extends WritableComparable,
     long desiredSuperstep);
 
   /**
-   * Get master aggregator usage
+   * Get master aggregator handler
    *
-   * @return Master aggregator usage
+   * @return Master aggregator handler
    */
-  MasterAggregatorUsage getAggregatorUsage();
+  MasterAggregatorHandler getAggregatorHandler();
 }

@@ -27,7 +27,7 @@ import org.apache.giraph.comm.WorkerClient;
 import org.apache.giraph.graph.FinishedSuperstepStats;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.VertexEdgeCount;
-import org.apache.giraph.graph.WorkerAggregatorUsage;
+import org.apache.giraph.graph.WorkerAggregatorHandler;
 import org.apache.giraph.graph.partition.PartitionStore;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -213,9 +213,16 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
   ServerData<I, V, E, M> getServerData();
 
   /**
-   * Get worker aggregator usage
+   * Get worker aggregator handler
    *
-   * @return Worker aggregator usage
+   * @return Worker aggregator handler
    */
-  WorkerAggregatorUsage getAggregatorUsage();
+  WorkerAggregatorHandler getAggregatorHandler();
+
+  /**
+   * Final preparation for superstep, called after startSuperstep and
+   * potential loading from checkpoint, right before the computation started
+   * TODO how to avoid this additional function
+   */
+  void prepareSuperstep();
 }

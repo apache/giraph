@@ -15,19 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.giraph.comm.requests;
-
-import org.apache.giraph.graph.MasterAggregatorHandler;
-
 /**
- * Interface for requests sent to master to extend
+ * Package for classes which are used to handle aggregators.
  */
-public interface MasterRequest {
-  /**
-   * Execute the request
-   *
-   * @param aggregatorHandler Master aggregator handler
-   */
-  void doRequest(MasterAggregatorHandler aggregatorHandler);
-}
+package org.apache.giraph.comm.aggregators;

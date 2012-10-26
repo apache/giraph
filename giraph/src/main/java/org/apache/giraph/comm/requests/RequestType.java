@@ -43,7 +43,15 @@ public enum RequestType {
   SEND_PARTITION_CURRENT_MESSAGES_REQUEST
       (SendPartitionCurrentMessagesRequest.class),
   /** Send a partition of mutations */
-  SEND_PARTITION_MUTATIONS_REQUEST(SendPartitionMutationsRequest.class);
+  SEND_PARTITION_MUTATIONS_REQUEST(SendPartitionMutationsRequest.class),
+  /** Send aggregated values from one worker's vertices */
+  SEND_WORKER_AGGREGATORS_REQUEST(SendWorkerAggregatorsRequest.class),
+  /** Send aggregated values from worker owner to master */
+  SEND_AGGREGATORS_TO_MASTER_REQUEST(SendAggregatorsToMasterRequest.class),
+  /** Send aggregators from master to worker owners */
+  SEND_AGGREGATORS_TO_OWNER_REQUEST(SendAggregatorsToOwnerRequest.class),
+  /** Send aggregators from worker owner to other workers */
+  SEND_AGGREGATORS_TO_WORKER_REQUEST(SendAggregatorsToWorkerRequest.class);
 
   /** Class of request which this type corresponds to */
   private final Class<? extends WritableRequest> requestClass;

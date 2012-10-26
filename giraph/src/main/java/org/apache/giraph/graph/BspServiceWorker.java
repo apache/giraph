@@ -28,9 +28,11 @@ import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.bsp.ApplicationState;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.ServerData;
+import org.apache.giraph.comm.aggregators.WorkerAggregatorRequestProcessor;
 import org.apache.giraph.comm.WorkerClient;
 import org.apache.giraph.comm.WorkerClientRequestProcessor;
 import org.apache.giraph.comm.WorkerServer;
+import org.apache.giraph.comm.netty.NettyWorkerAggregatorRequestProcessor;
 import org.apache.giraph.comm.netty.NettyWorkerClient;
 import org.apache.giraph.comm.netty.NettyWorkerClientRequestProcessor;
 import org.apache.giraph.comm.netty.NettyWorkerServer;
@@ -105,6 +107,9 @@ public class BspServiceWorker<I extends WritableComparable,
   private final WorkerClient<I, V, E, M> workerClient;
   /** IPC Server */
   private final WorkerServer<I, V, E, M> workerServer;
+  /** Request processor for aggregator requests */
+  private final WorkerAggregatorRequestProcessor
+  workerAggregatorRequestProcessor;
   /** Master info */
   private WorkerInfo masterInfo = new WorkerInfo();
   /** List of workers */
@@ -149,14 +154,17 @@ public class BspServiceWorker<I extends WritableComparable,
     workerClient = new NettyWorkerClient<I, V, E, M>(context,
         getConfiguration(), this);
 
-
+    workerAggregatorRequestProcessor =
+        new NettyWorkerAggregatorRequestProcessor(getContext(),
+            getConfiguration(), this);
 
     workerInfo = new WorkerInfo(
         getHostname(), getTaskPartition(), workerServer.getPort());
     this.workerContext =
         getConfiguration().createWorkerContext(null);
 
-    aggregatorHandler = new WorkerAggregatorHandler();
+    aggregatorHandler =
+        new WorkerAggregatorHandler(this, getConfiguration(), context);
   }
 
   @Override
@@ -640,9 +648,6 @@ else[HADOOP_NON_SECURE]*/
           addressesAndPartitionsPath);
     }
 
-    if (getSuperstep() != INPUT_SUPERSTEP) {
-      aggregatorHandler.prepareSuperstep(getSuperstep(), this);
-    }
     getContext().setStatus("startSuperstep: " +
         getGraphMapper().getMapFunctions().toString() +
         " - Attempt=" + getApplicationAttempt() +
@@ -684,14 +689,14 @@ else[HADOOP_NON_SECURE]*/
       getContext().progress();
     }
 
+    aggregatorHandler.finishSuperstep(workerAggregatorRequestProcessor);
+
     if (LOG.isInfoEnabled()) {
       LOG.info("finishSuperstep: Superstep " + getSuperstep() +
           ", messages = " + workerSentMessages + " " +
           MemoryUtils.getRuntimeMemoryStats());
     }
 
-    byte[] aggregatorArray =
-        aggregatorHandler.finishSuperstep(getSuperstep());
     Collection<PartitionStats> finalizedPartitionStats =
         workerGraphPartitioner.finalizePartitionStats(
             partitionStatsList, getPartitionStore());
@@ -701,8 +706,6 @@ else[HADOOP_NON_SECURE]*/
         WritableUtils.writeListToByteArray(finalizedPartitionStatsList);
     JSONObject workerFinishedInfoObj = new JSONObject();
     try {
-      workerFinishedInfoObj.put(JSONOBJ_AGGREGATOR_VALUE_ARRAY_KEY,
-          Base64.encodeBytes(aggregatorArray));
       workerFinishedInfoObj.put(JSONOBJ_PARTITION_STATS_KEY,
           Base64.encodeBytes(partitionStatsBytes));
       workerFinishedInfoObj.put(JSONOBJ_NUM_MESSAGES_KEY,
@@ -1295,7 +1298,14 @@ else[HADOOP_NON_SECURE]*/
   }
 
   @Override
-  public WorkerAggregatorUsage getAggregatorUsage() {
+  public WorkerAggregatorHandler getAggregatorHandler() {
     return aggregatorHandler;
+  }
+
+  @Override
+  public void prepareSuperstep() {
+    if (getSuperstep() != INPUT_SUPERSTEP) {
+      aggregatorHandler.prepareSuperstep(workerAggregatorRequestProcessor);
+    }
   }
 }

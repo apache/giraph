@@ -611,7 +611,7 @@ public class BspServiceMaster<I extends WritableComparable,
   }
 
   @Override
-  public MasterAggregatorUsage getAggregatorUsage() {
+  public MasterAggregatorHandler getAggregatorHandler() {
     return aggregatorHandler;
   }
 
@@ -650,7 +650,6 @@ public class BspServiceMaster<I extends WritableComparable,
     }
 
     aggregatorHandler.readFields(finalizedStream);
-    aggregatorHandler.finishSuperstep(superstep - 1, this);
     masterCompute.readFields(finalizedStream);
     finalizedStream.close();
 
@@ -768,7 +767,8 @@ public class BspServiceMaster<I extends WritableComparable,
               getTaskPartition() -
               currentMasterTaskPartitionCounter.getValue());
           masterCompute = getConfiguration().createMasterCompute();
-          aggregatorHandler = new MasterAggregatorHandler(getConfiguration());
+          aggregatorHandler = new MasterAggregatorHandler(getConfiguration(),
+              getContext());
           aggregatorHandler.initialize(this);
 
           commService = new NettyMasterClientServer(
@@ -1288,6 +1288,12 @@ public class BspServiceMaster<I extends WritableComparable,
         chosenWorkerInfoList,
         masterGraphPartitioner);
 
+    // We need to finalize aggregators from previous superstep (send them to
+    // worker owners) after new worker assignments
+    if (getSuperstep() >= 0) {
+      aggregatorHandler.finishSuperstep(commService);
+    }
+
     // Finalize the valid checkpoint file prefixes and possibly
     // the aggregators.
     if (checkpointFrequencyMet(getSuperstep())) {
@@ -1347,9 +1353,8 @@ public class BspServiceMaster<I extends WritableComparable,
 
     // Collect aggregator values, then run the master.compute() and
     // finally save the aggregator values
-    aggregatorHandler.prepareSuperstep(getSuperstep(), this);
+    aggregatorHandler.prepareSuperstep(commService);
     runMasterCompute(getSuperstep());
-    aggregatorHandler.finishSuperstep(getSuperstep(), this);
 
     // If the master is halted or all the vertices voted to halt and there
     // are no more messages in the system, stop the computation

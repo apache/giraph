@@ -18,134 +18,199 @@
 
 package org.apache.giraph.graph;
 
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.bsp.CentralizedServiceWorker;
+import org.apache.giraph.comm.aggregators.WorkerAggregatorRequestProcessor;
+import org.apache.giraph.comm.aggregators.AggregatedValueOutputStream;
+import org.apache.giraph.comm.aggregators.AggregatorUtils;
+import org.apache.giraph.comm.aggregators.AllAggregatorServerData;
+import org.apache.giraph.comm.aggregators.OwnerAggregatorServerData;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.util.Progressable;
 import org.apache.log4j.Logger;
-import org.apache.zookeeper.KeeperException;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataInput;
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
+import com.google.common.collect.Maps;
+
 import java.io.IOException;
 import java.util.Map;
 
 /**
- * Worker implementation of {@link AggregatorHandler}
+ * Handler for aggregators on worker. Provides the aggregated values and
+ * performs aggregations from user vertex code (thread-safe). Also has
+ * methods for all superstep coordination related to aggregators.
+ *
+ * At the beginning of any superstep any worker calls prepareSuperstep(),
+ * which blocks until the final aggregates from the previous superstep have
+ * been delivered to the worker.
+ * Next, during the superstep worker can call aggregate() and
+ * getAggregatedValue() (both methods are thread safe) the former
+ * computes partial aggregates for this superstep from the worker,
+ * the latter returns (read-only) final aggregates from the previous superstep.
+ * Finally, at the end of the superstep, the worker calls finishSuperstep(),
+ * which propagates non-owned partial aggregates to the owner workers,
+ * and sends the final aggregate from the owner worker to the master.
  */
-public class WorkerAggregatorHandler extends AggregatorHandler implements
-    WorkerAggregatorUsage {
+public class WorkerAggregatorHandler implements WorkerAggregatorUsage {
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(WorkerAggregatorHandler.class);
+  /** Map of values from previous superstep */
+  private Map<String, Writable> previousAggregatedValueMap =
+      Maps.newHashMap();
+  /** Map of aggregators for current superstep */
+  private Map<String, Aggregator<Writable>> currentAggregatorMap =
+      Maps.newHashMap();
+  /** Service worker */
+  private final CentralizedServiceWorker<?, ?, ?, ?> serviceWorker;
+  /** Progressable for reporting progress */
+  private final Progressable progressable;
+  /** How big a single aggregator request can be */
+  private final int maxBytesPerAggregatorRequest;
+
+  /**
+   * Constructor
+   *
+   * @param serviceWorker Service worker
+   * @param conf          Giraph configuration
+   * @param progressable  Progressable for reporting progress
+   */
+  public WorkerAggregatorHandler(
+      CentralizedServiceWorker<?, ?, ?, ?> serviceWorker,
+      ImmutableClassesGiraphConfiguration conf,
+      Progressable progressable) {
+    this.serviceWorker = serviceWorker;
+    this.progressable = progressable;
+    maxBytesPerAggregatorRequest = conf.getInt(
+        AggregatorUtils.MAX_BYTES_PER_AGGREGATOR_REQUEST,
+        AggregatorUtils.MAX_BYTES_PER_AGGREGATOR_REQUEST_DEFAULT);
+  }
 
   @Override
   public <A extends Writable> void aggregate(String name, A value) {
-    AggregatorWrapper<? extends Writable> aggregator = getAggregator(name);
+    Aggregator<Writable> aggregator = currentAggregatorMap.get(name);
     if (aggregator != null) {
-      ((AggregatorWrapper<A>) aggregator).aggregateCurrent(value);
+      // TODO we can later improve this for mutlithreading to have local
+      // copies of aggregators per thread
+      synchronized (aggregator) {
+        aggregator.aggregate(value);
+      }
     } else {
       throw new IllegalStateException("aggregate: Tried to aggregate value " +
           "to unregistered aggregator " + name);
     }
   }
 
+  @Override
+  public <A extends Writable> A getAggregatedValue(String name) {
+    return (A) previousAggregatedValueMap.get(name);
+  }
+
   /**
-   * Get aggregator values aggregated by master in previous superstep
+   * Prepare aggregators for current superstep
    *
-   * @param superstep Superstep which we are preparing for
-   * @param service BspService to get zookeeper info from
+   * @param requestProcessor Request processor for aggregators
    */
-  public void prepareSuperstep(long superstep, BspService service) {
-    // prepare aggregators for reading and next superstep
-    for (AggregatorWrapper<Writable> aggregator :
-        getAggregatorMap().values()) {
-      aggregator.setPreviousAggregatedValue(aggregator.createInitialValue());
-      aggregator.resetCurrentAggregator();
+  public void prepareSuperstep(
+      WorkerAggregatorRequestProcessor requestProcessor) {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("prepareSuperstep: Start preparing aggregators");
     }
-    String mergedAggregatorPath =
-        service.getMergedAggregatorPath(service.getApplicationAttempt(),
-            superstep - 1);
-
-    byte[] aggregatorArray;
+    AllAggregatorServerData allAggregatorData =
+        serviceWorker.getServerData().getAllAggregatorData();
+    // Wait for my aggregators
+    Iterable<byte[]> dataToDistribute =
+        allAggregatorData.getDataFromMasterWhenReady();
     try {
-      aggregatorArray =
-          service.getZkExt().getData(mergedAggregatorPath, false, null);
-    } catch (KeeperException.NoNodeException e) {
-      LOG.info("getAggregatorValues: no aggregators in " +
-          mergedAggregatorPath + " on superstep " + superstep);
-      return;
-    } catch (KeeperException e) {
-      throw new IllegalStateException("Failed to get data for " +
-          mergedAggregatorPath + " with KeeperException", e);
-    } catch (InterruptedException e) {
-      throw new IllegalStateException("Failed to get data for " +
-          mergedAggregatorPath + " with InterruptedException", e);
-    }
-
-    DataInput input =
-        new DataInputStream(new ByteArrayInputStream(aggregatorArray));
-    int numAggregators = 0;
-
-    try {
-      numAggregators = input.readInt();
+      // Distribute my aggregators
+      requestProcessor.distributeAggregators(dataToDistribute);
     } catch (IOException e) {
-      throw new IllegalStateException("getAggregatorValues: " +
-          "Failed to decode data", e);
+      throw new IllegalStateException("prepareSuperstep: " +
+          "IOException occurred while trying to distribute aggregators", e);
     }
-
-    for (int i = 0; i < numAggregators; i++) {
-      try {
-        String aggregatorName = input.readUTF();
-        String aggregatorClassName = input.readUTF();
-        AggregatorWrapper<Writable> aggregator =
-            registerAggregator(aggregatorName, aggregatorClassName, false);
-        Writable aggregatorValue = aggregator.createInitialValue();
-        aggregatorValue.readFields(input);
-        aggregator.setPreviousAggregatedValue(aggregatorValue);
-      } catch (IOException e) {
-        throw new IllegalStateException(
-            "Failed to decode data for index " + i, e);
-      }
-    }
-
-    if (LOG.isInfoEnabled()) {
-      LOG.info("getAggregatorValues: Finished loading " +
-          mergedAggregatorPath);
+    // Wait for all other aggregators and store them
+    allAggregatorData.fillNextSuperstepMapsWhenReady(
+        serviceWorker.getWorkerInfoList().size(), previousAggregatedValueMap,
+        currentAggregatorMap);
+    allAggregatorData.reset();
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("prepareSuperstep: Aggregators prepared");
     }
   }
 
   /**
-   * Put aggregator values of the worker to a byte array that will later be
-   * aggregated by master.
+   * Send aggregators to their owners and in the end to the master
    *
-   * @param superstep Superstep which we are finishing.
-   * @return Byte array of the aggreagtor values
+   * @param requestProcessor Request processor for aggregators
    */
-  public byte[] finishSuperstep(long superstep) {
-    if (superstep == BspService.INPUT_SUPERSTEP) {
-      return new byte[0];
+  public void finishSuperstep(
+      WorkerAggregatorRequestProcessor requestProcessor) {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("finishSuperstep: Start finishing aggregators");
+    }
+    OwnerAggregatorServerData ownerAggregatorData =
+        serviceWorker.getServerData().getOwnerAggregatorData();
+    // First send partial aggregated values to their owners and determine
+    // which aggregators belong to this worker
+    for (Map.Entry<String, Aggregator<Writable>> entry :
+        currentAggregatorMap.entrySet()) {
+      try {
+        boolean sent = requestProcessor.sendAggregatedValue(entry.getKey(),
+            entry.getValue().getAggregatedValue());
+        if (!sent) {
+          // If it's my aggregator, add it directly
+          ownerAggregatorData.aggregate(entry.getKey(),
+              entry.getValue().getAggregatedValue());
+        }
+      } catch (IOException e) {
+        throw new IllegalStateException("finishSuperstep: " +
+            "IOException occurred while sending aggregator " +
+            entry.getKey() + " to its owner", e);
+      }
+      progressable.progress();
+    }
+    try {
+      // Flush
+      requestProcessor.flush();
+    } catch (IOException e) {
+      throw new IllegalStateException("finishSuperstep: " +
+          "IOException occurred while sending aggregators to owners", e);
     }
 
-    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-    DataOutputStream output = new DataOutputStream(outputStream);
-    for (Map.Entry<String, AggregatorWrapper<Writable>> entry :
-        getAggregatorMap().entrySet()) {
-      if (entry.getValue().isChanged()) {
-        try {
-          output.writeUTF(entry.getKey());
-          entry.getValue().getCurrentAggregatedValue().write(output);
-        } catch (IOException e) {
-          throw new IllegalStateException("Failed to marshall aggregator " +
-              "with IOException " + entry.getKey(), e);
+    // Wait to receive partial aggregated values from all other workers
+    Iterable<Map.Entry<String, Writable>> myAggregators =
+        ownerAggregatorData.getMyAggregatorValuesWhenReady(
+            serviceWorker.getWorkerInfoList().size());
+
+    // Send final aggregated values to master
+    AggregatedValueOutputStream aggregatorOutput =
+        new AggregatedValueOutputStream();
+    for (Map.Entry<String, Writable> entry : myAggregators) {
+      try {
+        int currentSize = aggregatorOutput.addAggregator(entry.getKey(),
+            entry.getValue());
+        if (currentSize > maxBytesPerAggregatorRequest) {
+          requestProcessor.sendAggregatedValuesToMaster(
+              aggregatorOutput.flush());
         }
+        progressable.progress();
+      } catch (IOException e) {
+        throw new IllegalStateException("finishSuperstep: " +
+            "IOException occurred while writing aggregator " +
+            entry.getKey(), e);
       }
     }
-
-    if (LOG.isInfoEnabled()) {
-      LOG.info(
-          "marshalAggregatorValues: Finished assembling aggregator values");
+    try {
+      requestProcessor.sendAggregatedValuesToMaster(aggregatorOutput.flush());
+    } catch (IOException e) {
+      throw new IllegalStateException("finishSuperstep: " +
+          "IOException occured while sending aggregators to master", e);
     }
-    return outputStream.toByteArray();
+    // Wait for master to receive aggregated values before proceeding
+    serviceWorker.getWorkerClient().waitAllRequests();
+
+    ownerAggregatorData.reset();
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("finishSuperstep: Aggregators finished");
+    }
   }
 }

@@ -40,6 +40,10 @@ public class AggregatorsTestVertex extends
   private static final String MASTER_WRITE_AGG = "master";
   /** Value which master compute will use */
   private static final long MASTER_VALUE = 12345;
+  /** Prefix for name of aggregators in array */
+  private static final String ARRAY_PREFIX_AGG = "array";
+  /** Number of aggregators to use in array */
+  private static final int NUM_OF_AGGREGATORS_IN_ARRAY = 100;
 
   @Override
   public void compute(Iterable<DoubleWritable> messages) throws IOException {
@@ -61,6 +65,12 @@ public class AggregatorsTestVertex extends
         ((LongWritable) getAggregatedValue(PERSISTENT_AGG)).get());
     assertEquals(MASTER_VALUE * (1L << superstep),
         ((LongWritable) getAggregatedValue(MASTER_WRITE_AGG)).get());
+
+    for (int i = 0; i < NUM_OF_AGGREGATORS_IN_ARRAY; i++) {
+      aggregate(ARRAY_PREFIX_AGG + i, new LongWritable((superstep + 1) * i));
+      assertEquals(superstep * getTotalNumVertices() * i,
+          ((LongWritable) getAggregatedValue(ARRAY_PREFIX_AGG + i)).get());
+    }
 
     if (getSuperstep() == 10) {
       voteToHalt();
@@ -88,6 +98,11 @@ public class AggregatorsTestVertex extends
       }
       assertEquals(nv * ((1L << superstep) - 1),
           ((LongWritable) getAggregatedValue(PERSISTENT_AGG)).get());
+
+      for (int i = 0; i < NUM_OF_AGGREGATORS_IN_ARRAY; i++) {
+        assertEquals(superstep * getTotalNumVertices() * i,
+            ((LongWritable) getAggregatedValue(ARRAY_PREFIX_AGG + i)).get());
+      }
     }
 
     @Override
@@ -97,6 +112,10 @@ public class AggregatorsTestVertex extends
       registerPersistentAggregator(PERSISTENT_AGG,
           LongSumAggregator.class);
       registerAggregator(MASTER_WRITE_AGG, LongSumAggregator.class);
+
+      for (int i = 0; i < NUM_OF_AGGREGATORS_IN_ARRAY; i++) {
+        registerAggregator(ARRAY_PREFIX_AGG + i, LongSumAggregator.class);
+      }
     }
   }
 

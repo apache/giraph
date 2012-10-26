@@ -117,9 +117,6 @@ public abstract class BspService<I extends WritableComparable,
   public static final String SUPERSTEP_FINISHED_NODE = "/_superstepFinished";
   /** Denotes which workers have been cleaned up */
   public static final String CLEANED_UP_DIR = "/_cleanedUpDir";
-  /** JSON aggregator value array key */
-  public static final String JSONOBJ_AGGREGATOR_VALUE_ARRAY_KEY =
-      "_aggregatorValueArrayKey";
   /** JSON partition stats key */
   public static final String JSONOBJ_PARTITION_STATS_KEY =
       "_partitionStatsKey";

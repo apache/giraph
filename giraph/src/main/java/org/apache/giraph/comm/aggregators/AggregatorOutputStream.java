@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.comm;
+package org.apache.giraph.comm.aggregators;
 
 import org.apache.giraph.graph.Aggregator;
 import org.apache.hadoop.io.Writable;
@@ -24,40 +24,26 @@ import org.apache.hadoop.io.Writable;
 import java.io.IOException;
 
 /**
- * Interface for master to send messages to workers
+ * Implementation of {@link CountingOutputStream} which allows writing of
+ * aggregators in the form of triple (name, classname, value)
  */
-public interface MasterClient {
+public class AggregatorOutputStream extends CountingOutputStream {
   /**
-   * Make sure that all the connections to workers have been established.
-   */
-  void openConnections();
-
-  /**
-   * Sends aggregator to its owner
+   * Write aggregator to the stream and increment internal counter
    *
    * @param aggregatorName Name of the aggregator
-   * @param aggregatorClass Class of the aggregator
-   * @param aggregatedValue Value of the aggregator
+   * @param aggregatorClass Class of aggregator
+   * @param aggregatedValue Value of aggregator
+   * @return Number of bytes occupied by the stream
    * @throws IOException
    */
-  void sendAggregator(String aggregatorName,
+  public int addAggregator(String aggregatorName,
       Class<? extends Aggregator> aggregatorClass,
-      Writable aggregatedValue) throws IOException;
-
-  /**
-   * Flush aggregated values cache.
-   */
-  void finishSendingAggregatedValues() throws IOException;
-
-  /**
-   * Flush all outgoing messages.  This will synchronously ensure that all
-   * messages have been send and delivered prior to returning.
-   */
-  void flush();
-
-  /**
-   * Closes all connections.
-   */
-  void closeConnections();
+      Writable aggregatedValue) throws IOException {
+    incrementCounter();
+    dataOutput.writeUTF(aggregatorName);
+    dataOutput.writeUTF(aggregatorClass.getName());
+    aggregatedValue.write(dataOutput);
+    return getSize();
+  }
 }
-

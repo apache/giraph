@@ -20,14 +20,42 @@ package org.apache.giraph.comm.requests;
 
 import org.apache.giraph.graph.MasterAggregatorHandler;
 
+import java.io.IOException;
+
 /**
- * Interface for requests sent to master to extend
+ * Request to send final aggregated values from worker which owns
+ * aggregators to the master
  */
-public interface MasterRequest {
+public class SendAggregatorsToMasterRequest extends ByteArrayRequest
+    implements MasterRequest {
+
   /**
-   * Execute the request
+   * Constructor
    *
-   * @param aggregatorHandler Master aggregator handler
+   * @param data Serialized aggregator data
    */
-  void doRequest(MasterAggregatorHandler aggregatorHandler);
+  public SendAggregatorsToMasterRequest(byte[] data) {
+    super(data);
+  }
+
+  /**
+   * Constructor used for reflection only
+   */
+  public SendAggregatorsToMasterRequest() {
+  }
+
+  @Override
+  public void doRequest(MasterAggregatorHandler aggregatorHandler) {
+    try {
+      aggregatorHandler.acceptAggregatedValues(getDataInput());
+    } catch (IOException e) {
+      throw new IllegalStateException("doRequest: " +
+          "IOException occurred while processing request", e);
+    }
+  }
+
+  @Override
+  public RequestType getType() {
+    return RequestType.SEND_AGGREGATORS_TO_MASTER_REQUEST;
+  }
 }

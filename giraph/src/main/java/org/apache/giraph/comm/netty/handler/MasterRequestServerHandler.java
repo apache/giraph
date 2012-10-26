@@ -19,36 +19,56 @@
 package org.apache.giraph.comm.netty.handler;
 
 import org.apache.giraph.comm.requests.MasterRequest;
+import org.apache.giraph.graph.MasterAggregatorHandler;
 import org.apache.hadoop.conf.Configuration;
 
 /** Handler for requests on master */
 public class MasterRequestServerHandler extends
     RequestServerHandler<MasterRequest> {
+  /** Aggregator handler */
+  private final MasterAggregatorHandler aggregatorHandler;
+
   /**
    * Constructor
    *
    * @param workerRequestReservedMap Worker request reservation map
    * @param conf                     Configuration
+   * @param aggregatorHandler        Master aggregator handler
    */
   public MasterRequestServerHandler(
-      WorkerRequestReservedMap workerRequestReservedMap, Configuration conf) {
+      WorkerRequestReservedMap workerRequestReservedMap, Configuration conf,
+      MasterAggregatorHandler aggregatorHandler) {
     super(workerRequestReservedMap, conf);
+    this.aggregatorHandler = aggregatorHandler;
   }
 
   @Override
   public void processRequest(MasterRequest request) {
-    request.doRequest();
+    request.doRequest(aggregatorHandler);
   }
 
   /**
    * Factory for {@link MasterRequestServerHandler}
    */
   public static class Factory implements RequestServerHandler.Factory {
+    /** Master aggregator handler */
+    private final MasterAggregatorHandler aggregatorHandler;
+
+    /**
+     * Constructor
+     *
+     * @param aggregatorHandler Master aggregator handler
+     */
+    public Factory(MasterAggregatorHandler aggregatorHandler) {
+      this.aggregatorHandler = aggregatorHandler;
+    }
+
     @Override
     public RequestServerHandler newHandler(
         WorkerRequestReservedMap workerRequestReservedMap,
         Configuration conf) {
-      return new MasterRequestServerHandler(workerRequestReservedMap, conf);
+      return new MasterRequestServerHandler(workerRequestReservedMap, conf,
+          aggregatorHandler);
     }
   }
 }
