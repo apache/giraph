@@ -21,6 +21,7 @@ package org.apache.giraph.comm.messages;
 import com.google.common.collect.MapMaker;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
+import org.apache.giraph.comm.VertexIdMessageCollection;
 import org.apache.giraph.graph.VertexCombiner;
 import org.apache.giraph.utils.CollectionUtils;
 import org.apache.hadoop.io.Writable;
@@ -85,17 +86,8 @@ public class SimpleMessageStore<I extends WritableComparable,
   public void addVertexMessages(I vertexId,
       Collection<M> messages) throws IOException {
     int partitionId = getPartitionId(vertexId);
-    ConcurrentMap<I, Collection<M>> partitionMap = map.get(partitionId);
-    if (partitionMap == null) {
-      ConcurrentMap<I, Collection<M>> tmpMap  =
-          new MapMaker().concurrencyLevel(
-              config.getNettyServerExecutionConcurrency()).
-              makeMap();
-      partitionMap = map.putIfAbsent(partitionId, tmpMap);
-      if (partitionMap == null) {
-        partitionMap = map.get(partitionId);
-      }
-    }
+    ConcurrentMap<I, Collection<M>> partitionMap =
+        getOrCreatePartitionMap(partitionId);
     Collection<M> currentMessages =
       CollectionUtils.addConcurrent(vertexId, messages, partitionMap);
     if (combiner != null) {
@@ -117,17 +109,8 @@ public class SimpleMessageStore<I extends WritableComparable,
   @Override
   public void addPartitionMessages(Map<I, Collection<M>> messages,
       int partitionId) throws IOException {
-    ConcurrentMap<I, Collection<M>> partitionMap = map.get(partitionId);
-    if (partitionMap == null) {
-      ConcurrentMap<I, Collection<M>> tmpMap  =
-          new MapMaker().concurrencyLevel(
-              config.getNettyServerExecutionConcurrency()).
-              makeMap();
-      partitionMap = map.putIfAbsent(partitionId, tmpMap);
-      if (partitionMap == null) {
-        partitionMap = map.get(partitionId);
-      }
-    }
+    ConcurrentMap<I, Collection<M>> partitionMap =
+        getOrCreatePartitionMap(partitionId);
 
     for (Entry<I, Collection<M>> entry : messages.entrySet()) {
       Collection<M> currentMessages =
@@ -142,6 +125,61 @@ public class SimpleMessageStore<I extends WritableComparable,
         }
       }
     }
+  }
+
+  @Override
+  public void addPartitionMessages(VertexIdMessageCollection<I, M> messages,
+      int partitionId) throws IOException {
+    ConcurrentMap<I, Collection<M>> partitionMap =
+        getOrCreatePartitionMap(partitionId);
+
+    VertexIdMessageCollection<I, M>.Iterator iterator = messages.getIterator();
+    while (iterator.hasNext()) {
+      iterator.next();
+      I vertexId = iterator.getCurrentVertexId();
+      M message = iterator.getCurrentMessage();
+      Collection<M> currentMessages = partitionMap.get(vertexId);
+      if (currentMessages == null) {
+        Collection<M> newMessages = Lists.newArrayList(message);
+        currentMessages = partitionMap.putIfAbsent(vertexId, newMessages);
+      }
+      // if vertex messages existed before, or putIfAbsent didn't put new list
+      if (currentMessages != null) {
+        synchronized (currentMessages) {
+          currentMessages.add(message);
+          if (combiner != null) {
+            currentMessages =
+                Lists.newArrayList(combiner.combine(vertexId,
+                    currentMessages));
+            partitionMap.put(vertexId, currentMessages);
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * If there is already a map of messages related to the partition id
+   * return that map, otherwise create a new one, put it in global map and
+   * return it.
+   *
+   * @param partitionId Id of partition
+   * @return Message map for this partition
+   */
+  private ConcurrentMap<I, Collection<M>> getOrCreatePartitionMap(
+      int partitionId) {
+    ConcurrentMap<I, Collection<M>> partitionMap = map.get(partitionId);
+    if (partitionMap == null) {
+      ConcurrentMap<I, Collection<M>> tmpMap =
+          new MapMaker().concurrencyLevel(
+              config.getNettyServerExecutionConcurrency()).
+              makeMap();
+      partitionMap = map.putIfAbsent(partitionId, tmpMap);
+      if (partitionMap == null) {
+        partitionMap = map.get(partitionId);
+      }
+    }
+    return partitionMap;
   }
 
   @Override

@@ -149,19 +149,18 @@ public class RequestTest {
   @Test
   public void sendWorkerMessagesRequest() throws IOException {
     // Data to send
-    Map<Integer, Map<IntWritable, Collection<IntWritable>>> sendMap =
+    Map<Integer, VertexIdMessageCollection<IntWritable, IntWritable>> sendMap =
         Maps.newHashMap();
     int partitionId = 0;
-    Map<IntWritable, Collection<IntWritable>> vertexIdMessages =
-        Maps.newHashMap();
+    VertexIdMessageCollection<IntWritable, IntWritable> vertexIdMessages =
+        new VertexIdMessageCollection<IntWritable, IntWritable>(conf);
+    vertexIdMessages.initialize();
     sendMap.put(partitionId, vertexIdMessages);
     for (int i = 1; i < 7; ++i) {
       IntWritable vertexId = new IntWritable(i);
-      Collection<IntWritable> messages = Lists.newArrayList();
       for (int j = 0; j < i; ++j) {
-        messages.add(new IntWritable(j));
+        vertexIdMessages.add(vertexId, new IntWritable(j));
       }
-      vertexIdMessages.put(vertexId, messages);
     }
 
     // Send the request

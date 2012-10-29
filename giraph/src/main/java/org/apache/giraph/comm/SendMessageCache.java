@@ -18,9 +18,6 @@
 
 package org.apache.giraph.comm;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -29,8 +26,6 @@ import org.apache.giraph.graph.VertexCombiner;
 import org.apache.giraph.graph.WorkerInfo;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-
-import com.google.common.collect.Lists;
 
 /**
  * Aggregates the messages to be send to workers so they can be sent
@@ -45,11 +40,14 @@ public class SendMessageCache<I extends WritableComparable,
   /** Combiner instance, can be null */
   private final VertexCombiner<I, M> combiner;
   /** Internal cache */
-  private Map<WorkerInfo, Map<Integer, Map<I, Collection<M>>>> messageCache =
-      new HashMap<WorkerInfo, Map<Integer, Map<I, Collection<M>>>>();
+  private Map<WorkerInfo, Map<Integer, VertexIdMessageCollection<I, M>>>
+  messageCache =
+      new HashMap<WorkerInfo, Map<Integer, VertexIdMessageCollection<I, M>>>();
   /** Number of messages in each partition */
   private final Map<WorkerInfo, Integer> messageCountMap =
       new HashMap<WorkerInfo, Integer>();
+  /** Giraph configuration */
+  private final ImmutableClassesGiraphConfiguration conf;
 
   /**
    * Constructor
@@ -57,6 +55,7 @@ public class SendMessageCache<I extends WritableComparable,
    * @param conf Configuration used for instantiating the combiner.
    */
   public SendMessageCache(ImmutableClassesGiraphConfiguration conf) {
+    this.conf = conf;
     if (conf.getVertexCombinerClass() == null) {
       this.combiner = null;
     } else {
@@ -77,36 +76,21 @@ public class SendMessageCache<I extends WritableComparable,
   public int addMessage(WorkerInfo workerInfo,
     final int partitionId, I destVertexId, M message) {
     // Get the message collection
-    Map<Integer, Map<I, Collection<M>>> partitionMap =
+    Map<Integer, VertexIdMessageCollection<I, M>> partitionMap =
       messageCache.get(workerInfo);
     if (partitionMap == null) {
-      partitionMap = new HashMap<Integer, Map<I, Collection<M>>>();
+      partitionMap = new HashMap<Integer, VertexIdMessageCollection<I, M>>();
       messageCache.put(workerInfo, partitionMap);
     }
-    Map<I, Collection<M>> idMessagesMap = partitionMap.get(partitionId);
+    VertexIdMessageCollection<I, M> vertexMessages =
+        partitionMap.get(partitionId);
 
-    if (idMessagesMap == null) {
-      idMessagesMap = new HashMap<I, Collection<M>>();
-      partitionMap.put(partitionId, idMessagesMap);
+    if (vertexMessages == null) {
+      vertexMessages = new VertexIdMessageCollection<I, M>(conf);
+      vertexMessages.initialize();
+      partitionMap.put(partitionId, vertexMessages);
     }
-    Collection<M> messages = idMessagesMap.get(destVertexId);
-    if (messages == null) {
-      messages = new ArrayList<M>(1);
-      idMessagesMap.put(destVertexId, messages);
-    }
-
-    // Add the message
-    final int originalMessageCount = messages.size();
-    messages.add(message);
-    if (combiner != null && originalMessageCount > 0) {
-      try {
-        messages = Lists.newArrayList(combiner.combine(destVertexId, messages));
-      } catch (IOException e) {
-        throw new IllegalStateException(
-            "addMessage: Combiner failed to combine messages " + messages, e);
-      }
-      idMessagesMap.put(destVertexId, messages);
-    }
+    vertexMessages.add(destVertexId, message);
 
     // Update the number of cached, outgoing messages per worker
     Integer currentWorkerMessageCount = messageCountMap.get(workerInfo);
@@ -114,7 +98,7 @@ public class SendMessageCache<I extends WritableComparable,
       currentWorkerMessageCount = 0;
     }
     final int updatedWorkerMessageCount =
-        currentWorkerMessageCount + messages.size() - originalMessageCount;
+        currentWorkerMessageCount + 1;
     messageCountMap.put(workerInfo, updatedWorkerMessageCount);
     return updatedWorkerMessageCount;
   }
@@ -127,10 +111,10 @@ public class SendMessageCache<I extends WritableComparable,
    * @return Map of all messages (keyed by partition ID's) destined
    *         for vertices hosted by <code>workerInfo</code>
    */
-  public Map<Integer, Map<I, Collection<M>>> removeWorkerMessages(
-    WorkerInfo workerInfo) {
-    Map<Integer, Map<I, Collection<M>>> workerMessages =
-      messageCache.remove(workerInfo);
+  public Map<Integer, VertexIdMessageCollection<I, M>> removeWorkerMessages(
+      WorkerInfo workerInfo) {
+    Map<Integer, VertexIdMessageCollection<I, M>> workerMessages =
+        messageCache.remove(workerInfo);
     messageCountMap.put(workerInfo, 0);
     return workerMessages;
   }
@@ -141,11 +125,12 @@ public class SendMessageCache<I extends WritableComparable,
    * @return All vertex messages for all partitions
    */
   public Map<WorkerInfo, Map<
-    Integer, Map<I, Collection<M>>>> removeAllMessages() {
-    Map<WorkerInfo, Map<Integer, Map<I, Collection<M>>>>
-      allMessages = messageCache;
+      Integer, VertexIdMessageCollection<I, M>>> removeAllMessages() {
+    Map<WorkerInfo, Map<Integer, VertexIdMessageCollection<I, M>>>
+        allMessages = messageCache;
     messageCache =
-      new HashMap<WorkerInfo, Map<Integer, Map<I, Collection<M>>>>();
+        new HashMap<WorkerInfo,
+            Map<Integer, VertexIdMessageCollection<I, M>>>();
     messageCountMap.clear();
     return allMessages;
   }

@@ -19,18 +19,16 @@
 package org.apache.giraph.comm.requests;
 
 import org.apache.giraph.comm.ServerData;
+import org.apache.giraph.comm.VertexIdMessageCollection;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -54,7 +52,8 @@ public class SendWorkerMessagesRequest<I extends WritableComparable,
    * are owned by a single (destination) worker. These messages are all
    * destined for this worker.
    * */
-  private Map<Integer, Map<I, Collection<M>>> partitionVertexMessagesMap;
+  private Map<Integer, VertexIdMessageCollection<I, M>>
+  partitionVertexMessagesMap;
 
   /**
    * Constructor used for reflection only
@@ -64,10 +63,11 @@ public class SendWorkerMessagesRequest<I extends WritableComparable,
   /**
    * Constructor used to send request.
    *
-   * @param partVertMsgsMap Map of remote partitions => vertices => messages
+   * @param partVertMsgsMap Map of remote partitions =>
+   *                        VertexIdMessageCollection
    */
   public SendWorkerMessagesRequest(
-    Map<Integer, Map<I, Collection<M>>> partVertMsgsMap) {
+    Map<Integer, VertexIdMessageCollection<I, M>> partVertMsgsMap) {
     super();
     this.partitionVertexMessagesMap = partVertMsgsMap;
   }
@@ -75,48 +75,25 @@ public class SendWorkerMessagesRequest<I extends WritableComparable,
   @Override
   public void readFieldsRequest(DataInput input) throws IOException {
     int numPartitions = input.readInt();
-    partitionVertexMessagesMap = Maps.<Integer, Map<I, Collection<M>>>
-      newHashMapWithExpectedSize(numPartitions);
+    partitionVertexMessagesMap =
+        Maps.<Integer, VertexIdMessageCollection<I, M>>
+            newHashMapWithExpectedSize(numPartitions);
     while (numPartitions-- > 0) {
       final int partitionId = input.readInt();
-      int numVertices = input.readInt();
-      Map<I, Collection<M>> vertexIdMessages =
-        Maps.<I, Collection<M>>newHashMapWithExpectedSize(numVertices);
+      VertexIdMessageCollection<I, M> vertexIdMessages =
+          new VertexIdMessageCollection<I, M>(getConf());
+      vertexIdMessages.readFields(input);
       partitionVertexMessagesMap.put(partitionId, vertexIdMessages);
-      while (numVertices-- > 0) {
-        I vertexId = getConf().createVertexId();
-        vertexId.readFields(input);
-        int messageCount = input.readInt();
-        List<M> messageList =
-          Lists.newArrayListWithExpectedSize(messageCount);
-        while (messageCount-- > 0) {
-          M message = getConf().createMessageValue();
-          message.readFields(input);
-          messageList.add(message);
-        }
-        if (vertexIdMessages.put(vertexId, messageList) != null) {
-          throw new IllegalStateException(
-            "readFields: Already has vertex id " + vertexId);
-        }
-      }
     }
   }
 
   @Override
   public void writeRequest(DataOutput output) throws IOException {
     output.writeInt(partitionVertexMessagesMap.size());
-    for (Entry<Integer, Map<I, Collection<M>>> partitionEntry :
+    for (Entry<Integer, VertexIdMessageCollection<I, M>> partitionEntry :
       partitionVertexMessagesMap.entrySet()) {
       output.writeInt(partitionEntry.getKey());
-      output.writeInt(partitionEntry.getValue().size());
-      for (Entry<I, Collection<M>> vertexEntry :
-        partitionEntry.getValue().entrySet()) {
-        vertexEntry.getKey().write(output);
-        output.writeInt(vertexEntry.getValue().size());
-        for (M message : vertexEntry.getValue()) {
-          message.write(output);
-        }
-      }
+      partitionEntry.getValue().write(output);
     }
   }
 
@@ -127,7 +104,7 @@ public class SendWorkerMessagesRequest<I extends WritableComparable,
 
   @Override
   public void doRequest(ServerData<I, V, E, M> serverData) {
-    for (Entry<Integer, Map<I, Collection<M>>> entry :
+    for (Entry<Integer, VertexIdMessageCollection<I, M>> entry :
       partitionVertexMessagesMap.entrySet()) {
       try {
         serverData.getIncomingMessageStore()

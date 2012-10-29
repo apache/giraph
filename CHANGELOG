@@ -1,7 +1,11 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
-  GIRAPH-389: Multithreading should intelligently allocate the thread pools. (aching via ereisman)
+  GIRAPH-388: Improve the way we keep outgoing messages (majakabiljo
+  via aching).
+
+  GIRAPH-389: Multithreading should intelligently allocate the thread
+  pools. (aching via ereisman)
 
   GIRAPH-273: Aggregators shouldn't use Zookeeper (majakabiljo)
 

@@ -19,6 +19,7 @@
 package org.apache.giraph.comm.messages;
 
 import org.apache.giraph.bsp.CentralizedServiceWorker;
+import org.apache.giraph.comm.VertexIdMessageCollection;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -96,6 +97,27 @@ public class DiskBackedMessageStoreByPartition<I extends WritableComparable,
   public void addPartitionMessages(Map<I, Collection<M>> messages,
       int partitionId) throws IOException {
     getMessageStore(partitionId).addMessages(messages);
+    checkMemory();
+  }
+
+  @Override
+  public void addPartitionMessages(VertexIdMessageCollection<I, M> messages,
+      int partitionId) throws IOException {
+    Map<I, Collection<M>> map = Maps.newHashMap();
+    VertexIdMessageCollection<I, M>.Iterator iterator = messages.getIterator();
+    while (iterator.hasNext()) {
+      iterator.next();
+      I vertexId = iterator.getCurrentVertexId();
+      M message = iterator.getCurrentMessage();
+      Collection<M> currentMessages = map.get(vertexId);
+      if (currentMessages == null) {
+        currentMessages = Lists.newArrayList(message);
+        map.put(vertexId, currentMessages);
+      } else {
+        currentMessages.add(message);
+      }
+    }
+    getMessageStore(partitionId).addMessages(map);
     checkMemory();
   }
 

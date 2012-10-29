@@ -28,6 +28,7 @@ import org.apache.giraph.comm.SendMessageCache;
 import org.apache.giraph.comm.SendMutationsCache;
 import org.apache.giraph.comm.SendPartitionCache;
 import org.apache.giraph.comm.ServerData;
+import org.apache.giraph.comm.VertexIdMessageCollection;
 import org.apache.giraph.comm.WorkerClient;
 import org.apache.giraph.comm.WorkerClientRequestProcessor;
 import org.apache.giraph.comm.messages.MessageStoreByPartition;
@@ -133,7 +134,7 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
     // Send a request if the cache of outgoing message to
     // the remote worker 'workerInfo' is full enough to be flushed
     if (workerMessageCount >= maxMessagesPerWorker) {
-      Map<Integer, Map<I, Collection<M>>> workerMessages =
+      Map<Integer, VertexIdMessageCollection<I, M>> workerMessages =
           sendMessageCache.removeWorkerMessages(workerInfo);
       WritableRequest writableRequest =
           new SendWorkerMessagesRequest<I, V, E, M>(workerMessages);
@@ -305,10 +306,10 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
     sendPartitionCache.clear();
 
     // Execute the remaining sends messages (if any)
-    Map<WorkerInfo, Map<Integer, Map<I, Collection<M>>>>
+    Map<WorkerInfo, Map<Integer, VertexIdMessageCollection<I, M>>>
         remainingMessageCache = sendMessageCache.removeAllMessages();
-    for (Map.Entry<WorkerInfo, Map<Integer, Map<I, Collection<M>>>> entry :
-        remainingMessageCache.entrySet()) {
+    for (Map.Entry<WorkerInfo, Map<Integer, VertexIdMessageCollection<I, M>>>
+        entry : remainingMessageCache.entrySet()) {
       WritableRequest writableRequest =
           new SendWorkerMessagesRequest<I, V, E, M>(entry.getValue());
       doRequest(entry.getKey(), writableRequest);
