@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-389: Multithreading should intelligently allocate the thread pools. (aching via ereisman)
+
   GIRAPH-273: Aggregators shouldn't use Zookeeper (majakabiljo)
 
   GIRAPH-376: Facebook Hadoop profile broken. (nitay via aching)

@@ -190,94 +190,6 @@ public class BspServiceWorker<I extends WritableComparable,
   }
 
   /**
-   * Try to reserve an InputSplit for loading.  While InputSplits exists that
-   * are not finished, wait until they are.
-   *
-   * NOTE: iterations on the InputSplit list only halt for each worker when it
-   * has scanned the entire list once and found every split marked RESERVED.
-   * When a worker fails, its Ephemeral RESERVED znodes will disappear,
-   * allowing other iterating workers to claim it's previously read splits.
-   * Only when the last worker left iterating on the list fails can a danger
-   * of data loss occur. Since worker failure in INPUT_SUPERSTEP currently
-   * causes job failure, this is OK. As the failure model evolves, this
-   * behavior might need to change.
-   *
-   * @return reserved InputSplit or null if no unfinished InputSplits exist
-   * @throws KeeperException
-   * @throws InterruptedException
-   */
-  private String reserveInputSplit()
-    throws KeeperException, InterruptedException {
-    if (null == splitOrganizer) {
-      splitOrganizer = new InputSplitPathOrganizer(getZkExt(),
-        inputSplitsPath, getHostname(), getWorkerInfo().getPort());
-    }
-    String reservedInputSplitPath = null;
-    Stat reservedStat = null;
-    final Mapper<?, ?, ?, ?>.Context context = getContext();
-    while (true) {
-      int reservedInputSplits = 0;
-      for (String nextSplitToClaim : splitOrganizer) {
-        context.progress();
-        String tmpInputSplitReservedPath =
-            nextSplitToClaim + INPUT_SPLIT_RESERVED_NODE;
-        reservedStat =
-            getZkExt().exists(tmpInputSplitReservedPath, true);
-        if (reservedStat == null) {
-          try {
-            // Attempt to reserve this InputSplit
-            getZkExt().createExt(tmpInputSplitReservedPath,
-                null,
-                Ids.OPEN_ACL_UNSAFE,
-                CreateMode.EPHEMERAL,
-                false);
-            reservedInputSplitPath = nextSplitToClaim;
-            if (LOG.isInfoEnabled()) {
-              float percentFinished =
-                  reservedInputSplits * 100.0f /
-                  splitOrganizer.getPathListSize();
-              LOG.info("reserveInputSplit: Reserved input " +
-                  "split path " + reservedInputSplitPath +
-                  ", overall roughly " +
-                  + percentFinished +
-                  "% input splits reserved");
-            }
-            return reservedInputSplitPath;
-          } catch (KeeperException.NodeExistsException e) {
-            LOG.info("reserveInputSplit: Couldn't reserve " +
-                "(already reserved) inputSplit" +
-                " at " + tmpInputSplitReservedPath);
-          } catch (KeeperException e) {
-            throw new IllegalStateException(
-                "reserveInputSplit: KeeperException on reserve", e);
-          } catch (InterruptedException e) {
-            throw new IllegalStateException(
-                "reserveInputSplit: InterruptedException " +
-                    "on reserve", e);
-          }
-        } else {
-          ++reservedInputSplits;
-        }
-      }
-      if (LOG.isInfoEnabled()) {
-        LOG.info("reserveInputSplit: reservedPath = " +
-            reservedInputSplitPath + ", " + reservedInputSplits +
-            " of " + splitOrganizer.getPathListSize() +
-            " InputSplits are finished.");
-      }
-      if (reservedInputSplits == splitOrganizer.getPathListSize()) {
-        return null;
-      }
-      getContext().progress();
-      // Wait for either a reservation to go away or a notification that
-      // an InputSplit has finished.
-      context.progress();
-      getInputSplitsStateChangedEvent().waitMsecs(60 * 1000);
-      getInputSplitsStateChangedEvent().reset();
-    }
-  }
-
-  /**
    * Load the vertices from the user-defined VertexReader into our partitions
    * of vertex ranges.  Do this until all the InputSplits have been processed.
    * All workers will try to do as many InputSplits as they can.  The master
@@ -289,29 +201,34 @@ public class BspServiceWorker<I extends WritableComparable,
    * Use one or more threads to do the loading.
    *
    * @return Statistics of the vertices loaded
-   * @throws IOException
-   * @throws IllegalAccessException
-   * @throws InstantiationException
-   * @throws ClassNotFoundException
    * @throws InterruptedException
    * @throws KeeperException
    */
-  private VertexEdgeCount loadVertices() throws IOException,
-    ClassNotFoundException, InterruptedException, InstantiationException,
-    IllegalAccessException, KeeperException {
+  private VertexEdgeCount loadVertices()
+    throws InterruptedException, KeeperException {
     VertexEdgeCount vertexEdgeCount = new VertexEdgeCount();
+
+    // Get the number of splits first to determine how many threads to use
+    List<String> inputSplitPathList =
+        getZkExt().getChildrenExt(inputSplitsPath, false, false, true);
 
     GraphState<I, V, E, M> graphState = new GraphState<I, V, E, M>(
         INPUT_SUPERSTEP, 0, 0, getContext(), getGraphMapper(),
         null);
-    int numThreads = getConfiguration().getNumInputSplitsThreads();
+    int maxInputSplitThreads =
+        inputSplitPathList.size() / getConfiguration().getMaxWorkers();
+    int numThreads =
+        Math.min(getConfiguration().getNumInputSplitsThreads(),
+            maxInputSplitThreads);
     ExecutorService inputSplitsExecutor =
         Executors.newFixedThreadPool(numThreads,
             new ThreadFactoryBuilder().setNameFormat("load-%d").build());
     List<Future<VertexEdgeCount>> threadsFutures =
         Lists.newArrayListWithCapacity(numThreads);
     if (LOG.isInfoEnabled()) {
-      LOG.info("loadVertices: Using " + numThreads + " threads.");
+      LOG.info("loadVertices: Using " + numThreads + " thread(s), " +
+          "originally " + getConfiguration().getNumInputSplitsThreads() +
+          " threads(s) for " + inputSplitPathList.size() + " total splits.");
     }
     for (int i = 0; i < numThreads; ++i) {
       Callable<VertexEdgeCount> inputSplitsCallable =
@@ -320,7 +237,7 @@ public class BspServiceWorker<I extends WritableComparable,
               graphState,
               getConfiguration(),
               this,
-              inputSplitsPath,
+              inputSplitPathList,
               getWorkerInfo(),
               getZkExt());
       threadsFutures.add(inputSplitsExecutor.submit(inputSplitsCallable));
@@ -422,30 +339,20 @@ else[HADOOP_NON_SECURE]*/
 
     getContext().progress();
 
+    // Load all the vertices and edges and get some stats about what was loaded
+    VertexEdgeCount vertexEdgeCount = null;
     try {
-      VertexEdgeCount vertexEdgeCount = loadVertices();
-      if (LOG.isInfoEnabled()) {
-        LOG.info("setup: Finally loaded a total of " +
-            vertexEdgeCount);
-      }
-    } catch (IOException e) {
-      throw new IllegalStateException("setup: loadVertices failed due to " +
-          "IOException", e);
-    } catch (ClassNotFoundException e) {
-      throw new IllegalStateException("setup: loadVertices failed due to " +
-          "ClassNotFoundException", e);
+      vertexEdgeCount = loadVertices();
     } catch (InterruptedException e) {
-      throw new IllegalStateException("setup: loadVertices failed due to " +
-          "InterruptedException", e);
-    } catch (InstantiationException e) {
-      throw new IllegalStateException("setup: loadVertices failed due to " +
-          "InstantiationException", e);
-    } catch (IllegalAccessException e) {
-      throw new IllegalStateException("setup: loadVertices failed due to " +
-          "IllegalAccessException", e);
+      throw new IllegalStateException(
+          "setup: loadVertices failed with InterruptedException", e);
     } catch (KeeperException e) {
-      throw new IllegalStateException("setup: loadVertices failed due to " +
-          "KeeperException", e);
+      throw new IllegalStateException(
+          "setup: loadVertices failed with KeeperException", e);
+    }
+    if (LOG.isInfoEnabled()) {
+      LOG.info("setup: Finally loaded a total of " +
+          vertexEdgeCount);
     }
     getContext().progress();
 

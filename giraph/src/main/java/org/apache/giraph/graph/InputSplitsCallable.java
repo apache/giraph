@@ -20,6 +20,7 @@ package org.apache.giraph.graph;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.Callable;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.comm.WorkerClientRequestProcessor;
@@ -73,8 +74,6 @@ public class InputSplitsCallable<I extends WritableComparable,
    * in a tree of child znodes by the master.
    */
   private final InputSplitPathOrganizer splitOrganizer;
-  /** Location of input splits */
-  private final String inputSplitsPath;
   /** ZooKeeperExt handle */
   private final ZooKeeperExt zooKeeperExt;
   /** Configuration */
@@ -98,7 +97,7 @@ public class InputSplitsCallable<I extends WritableComparable,
    * @param graphState Graph state
    * @param configuration Configuration
    * @param bspServiceWorker service worker
-   * @param inputSplitsPath Path of the input splits
+   * @param inputSplitPathList List of the paths of the input splits
    * @param workerInfo This worker's info
    * @param zooKeeperExt Handle to ZooKeeperExt
    */
@@ -106,7 +105,7 @@ public class InputSplitsCallable<I extends WritableComparable,
       Mapper<?, ?, ?, ?>.Context context, GraphState<I, V, E, M> graphState,
       ImmutableClassesGiraphConfiguration<I, V, E, M> configuration,
       BspServiceWorker<I, V, E, M> bspServiceWorker,
-      String inputSplitsPath,
+      List<String> inputSplitPathList,
       WorkerInfo workerInfo,
       ZooKeeperExt zooKeeperExt)  {
     this.zooKeeperExt = zooKeeperExt;
@@ -117,10 +116,9 @@ public class InputSplitsCallable<I extends WritableComparable,
     this.graphState = new GraphState<I, V, E, M>(graphState.getSuperstep(),
         graphState.getTotalNumVertices(), graphState.getTotalNumEdges(),
         context, graphState.getGraphMapper(), workerClientRequestProcessor);
-    this.inputSplitsPath = inputSplitsPath;
     try {
       splitOrganizer = new InputSplitPathOrganizer(zooKeeperExt,
-          inputSplitsPath, workerInfo.getHostname(), workerInfo.getPort());
+          inputSplitPathList, workerInfo.getHostname(), workerInfo.getPort());
     } catch (KeeperException e) {
       throw new IllegalStateException(
           "InputSplitsCallable: KeeperException", e);

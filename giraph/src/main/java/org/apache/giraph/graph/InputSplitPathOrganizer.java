@@ -17,6 +17,7 @@
  */
 package org.apache.giraph.graph;
 
+import com.google.common.collect.Lists;
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -51,6 +52,7 @@ public class InputSplitPathOrganizer implements Iterable<String> {
 
   /**
    * Constructor
+   *
    * @param zooKeeper the worker's ZkExt
    * @param zkPathList the path to read from
    * @param hostName the worker's host name (for matching)
@@ -59,8 +61,24 @@ public class InputSplitPathOrganizer implements Iterable<String> {
   public InputSplitPathOrganizer(final ZooKeeperExt zooKeeper,
     final String zkPathList, final String hostName, final int port)
     throws KeeperException, InterruptedException {
+    this(zooKeeper, zooKeeper.getChildrenExt(zkPathList, false, false, true),
+        hostName, port);
+  }
+
+  /**
+   * Constructor
+   *
+   * @param zooKeeper the worker's ZkExt
+   * @param inputSplitPathList path of input splits to read from
+   * @param hostName the worker's host name (for matching)
+   * @param port the port number for this worker
+   */
+  public InputSplitPathOrganizer(
+      final ZooKeeperExt zooKeeper, final List<String> inputSplitPathList,
+      final String hostName, final int port)
+    throws KeeperException, InterruptedException {
     this.zooKeeper = zooKeeper;
-    this.pathList = zooKeeper.getChildrenExt(zkPathList, false, false, true);
+    this.pathList = Lists.newArrayList(inputSplitPathList);
     this.hostName = hostName;
     this.baseOffset = 0; // set later after switching out local paths
     prioritizeLocalInputSplits(port);
@@ -72,6 +90,7 @@ public class InputSplitPathOrganizer implements Iterable<String> {
   * a split to read. This will increase locality of data reads with greater
   * probability as the % of total nodes in the cluster hosting data and workers
   * BOTH increase towards 100%. Replication increases our chances of a "hit."
+  *
   * @param port the port number for hashing unique iteration indexes for all
   *             workers, even those sharing the same host node.
   */
@@ -125,6 +144,7 @@ public class InputSplitPathOrganizer implements Iterable<String> {
 
   /**
    * Utility accessor for Input Split znode path list size
+   *
    * @return the size of <code>this.pathList</code>
    */
   public int getPathListSize() {
@@ -133,6 +153,7 @@ public class InputSplitPathOrganizer implements Iterable<String> {
 
   /**
    * Iterator for the pathList
+   *
    * @return an iterator for our list of input split paths
    */
   public Iterator<String> iterator() {
@@ -148,6 +169,7 @@ public class InputSplitPathOrganizer implements Iterable<String> {
 
     /**
      *  Do we have more list to iterate upon?
+     *
      *  @return true if more path strings are available
      */
     @Override
@@ -155,7 +177,9 @@ public class InputSplitPathOrganizer implements Iterable<String> {
       return currentIndex < pathList.size();
     }
 
-    /** return the next pathList element
+    /**
+     * Return the next pathList element
+     *
      * @return the next input split path
      */
     @Override

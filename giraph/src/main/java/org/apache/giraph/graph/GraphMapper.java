@@ -451,7 +451,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
     List<PartitionStats> partitionStatsList =
         new ArrayList<PartitionStats>();
 
-    int numThreads = conf.getNumComputeThreads();
+    int numComputeThreads = conf.getNumComputeThreads();
     FinishedSuperstepStats finishedSuperstepStats = null;
     do {
       final long superstep = serviceWorker.getSuperstep();
@@ -496,14 +496,15 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
 
       MessageStoreByPartition<I, M> messageStore =
           serviceWorker.getServerData().getCurrentMessageStore();
-      partitionStatsList.clear();
       int numPartitions = serviceWorker.getPartitionStore().getNumPartitions();
+      int numThreads =
+          Math.min(numComputeThreads, numPartitions);
       if (LOG.isInfoEnabled()) {
-        LOG.info("map: " + numPartitions +
-            " partitions to process in superstep " + superstep + " with " +
-            numThreads + " thread(s)");
+        LOG.info("map: " + numPartitions + " partitions to process with " +
+            numThreads + " compute thread(s), originally " +
+            numComputeThreads + " thread(s) on superstep " + superstep);
       }
-
+      partitionStatsList.clear();
       if (numPartitions > 0) {
         List<Future<Collection<PartitionStats>>> partitionFutures =
             Lists.newArrayListWithCapacity(numPartitions);
