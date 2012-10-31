@@ -216,7 +216,8 @@ public class BspServiceWorker<I extends WritableComparable,
         INPUT_SUPERSTEP, 0, 0, getContext(), getGraphMapper(),
         null);
     int maxInputSplitThreads =
-        inputSplitPathList.size() / getConfiguration().getMaxWorkers();
+        Math.max(
+            inputSplitPathList.size() / getConfiguration().getMaxWorkers(), 1);
     int numThreads =
         Math.min(getConfiguration().getNumInputSplitsThreads(),
             maxInputSplitThreads);

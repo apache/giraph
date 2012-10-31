@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-393: Number of input split threads should always be >= 1
+  (aching)
+
   GIRAPH-388: Improve the way we keep outgoing messages (majakabiljo
   via aching).
 
