@@ -239,6 +239,7 @@ public class GiraphJob {
     // Should work in MAPREDUCE-1938 to let the user jars/classes
     // get loaded first
     giraphConfiguration.setBoolean("mapreduce.user.classpath.first", true);
+    giraphConfiguration.setBoolean("mapreduce.job.user.classpath.first", true);
 
     // Set the job properties, check them, and submit the job
     ImmutableClassesGiraphConfiguration immutableClassesGiraphConfiguration =
