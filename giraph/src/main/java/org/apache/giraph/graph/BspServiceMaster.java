@@ -18,6 +18,7 @@
 
 package org.apache.giraph.graph;
 
+import com.google.common.collect.Sets;
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.bsp.ApplicationState;
 import org.apache.giraph.bsp.BspInputFormat;
@@ -56,7 +57,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import net.iharder.Base64;
 
 import java.io.ByteArrayOutputStream;

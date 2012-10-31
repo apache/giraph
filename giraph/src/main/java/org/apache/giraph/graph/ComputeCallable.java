@@ -18,11 +18,8 @@
 package org.apache.giraph.graph;
 
 import com.google.common.collect.Lists;
-import java.io.IOException;
-import java.util.Collection;
-import java.util.List;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Callable;
+import com.yammer.metrics.core.Timer;
+import com.yammer.metrics.core.TimerContext;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.WorkerClientRequestProcessor;
@@ -30,6 +27,8 @@ import org.apache.giraph.comm.messages.MessageStoreByPartition;
 import org.apache.giraph.comm.netty.NettyWorkerClientRequestProcessor;
 import org.apache.giraph.graph.partition.Partition;
 import org.apache.giraph.graph.partition.PartitionStats;
+import org.apache.giraph.metrics.GiraphMetrics;
+import org.apache.giraph.metrics.MetricGroup;
 import org.apache.giraph.utils.MemoryUtils;
 import org.apache.giraph.utils.SystemTime;
 import org.apache.giraph.utils.Time;
@@ -38,6 +37,12 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
+
+import java.io.IOException;
+import java.util.Collection;
+import java.util.List;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Callable;
 
 /**
  * Compute as many vertex partitions as possible.  Every thread will has its
@@ -78,6 +83,10 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
   /** Get the start time in nanos */
   private final long startNanos = TIME.getNanoseconds();
 
+  // Metrics
+  /** Timer for single compute() call */
+  private Timer computeOneTimer;
+
   /**
    * Constructor
    *
@@ -101,6 +110,10 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
     this.serviceWorker = serviceWorker;
     // Will be replaced later in call() for locality
     this.graphState = graphState;
+
+    // Metrics
+    computeOneTimer = GiraphMetrics.getTimer(MetricGroup.COMPUTE,
+                                             "compute-one");
   }
 
   @Override
@@ -176,7 +189,12 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
         }
         if (!vertex.isHalted()) {
           context.progress();
-          vertex.compute(messages);
+          TimerContext computeOneTimerContext = computeOneTimer.time();
+          try {
+            vertex.compute(messages);
+          } finally {
+            computeOneTimerContext.stop();
+          }
         }
         if (vertex.isHalted()) {
           partitionStats.incrFinishedVertexCount();

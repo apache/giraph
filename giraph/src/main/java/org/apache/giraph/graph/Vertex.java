@@ -220,8 +220,10 @@ public abstract class Vertex<I extends WritableComparable,
       throw new IllegalArgumentException(
           "sendMessage: Cannot send null message to " + id);
     }
-    getGraphState().getWorkerClientRequestProcessor().
-        sendMessageRequest(id, message);
+    if (graphState.getWorkerClientRequestProcessor().
+          sendMessageRequest(id, message)) {
+      graphState.getGraphMapper().notifySentMessages();
+    }
   }
 
   /**

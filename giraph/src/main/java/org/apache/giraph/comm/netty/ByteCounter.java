@@ -19,7 +19,13 @@
 package org.apache.giraph.comm.netty;
 
 import java.text.DecimalFormat;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+
+import com.yammer.metrics.core.Histogram;
+import com.yammer.metrics.core.Meter;
+import org.apache.giraph.metrics.GiraphMetrics;
+import org.apache.giraph.metrics.MetricGroup;
 import org.apache.log4j.Logger;
 import org.apache.giraph.utils.SystemTime;
 import org.apache.giraph.utils.Time;
@@ -57,17 +63,43 @@ public class ByteCounter extends SimpleChannelHandler {
   /** Last updated msecs for getMetricsWindow */
   private final AtomicLong metricsWindowLastUpdatedMsecs = new AtomicLong();
 
+  // Metrics
+  /** meter of requests sent */
+  private final Meter sentRequestsMeter;
+  /** Histogram of bytes sent */
+  private final Histogram sentBytesHist;
+  /** Meter of requests received */
+  private final Meter receivedRequestsMeter;
+  /** Histogram of bytes received */
+  private final Histogram receivedBytesHist;
+
+  /** Constructor */
+  public ByteCounter() {
+    // Initialize Metrics
+    sentRequestsMeter = GiraphMetrics.getMeter(MetricGroup.NETWORK,
+        "sent-requests", "requests",  TimeUnit.SECONDS);
+    sentBytesHist = GiraphMetrics.getHistogram(MetricGroup.NETWORK,
+        "sent-bytes", false);
+    receivedRequestsMeter = GiraphMetrics.getMeter(MetricGroup.NETWORK,
+        "received-requests", "request", TimeUnit.SECONDS);
+    receivedBytesHist = GiraphMetrics.getHistogram(MetricGroup.NETWORK,
+        "received-bytes", false);
+  }
+
   @Override
   public void handleUpstream(ChannelHandlerContext ctx, ChannelEvent e)
     throws Exception {
     if (e instanceof MessageEvent &&
         ((MessageEvent) e).getMessage() instanceof ChannelBuffer) {
       ChannelBuffer b = (ChannelBuffer) ((MessageEvent) e).getMessage();
-      bytesReceived.addAndGet(b.readableBytes());
+      int receivedBytes = b.readableBytes();
+      bytesReceived.addAndGet(receivedBytes);
+      receivedBytesHist.update(receivedBytes);
       receivedRequests.incrementAndGet();
+      receivedRequestsMeter.mark();
       if (LOG.isDebugEnabled()) {
         LOG.debug("handleUpstream: " + ctx.getName() + " buffer size = " +
-            b.readableBytes() + ", total bytes = " + bytesReceived.get());
+            receivedBytes + ", total bytes = " + bytesReceived.get());
       }
     }
 
@@ -80,11 +112,14 @@ public class ByteCounter extends SimpleChannelHandler {
     if (e instanceof MessageEvent &&
         ((MessageEvent) e).getMessage() instanceof ChannelBuffer) {
       ChannelBuffer b = (ChannelBuffer) ((MessageEvent) e).getMessage();
-      bytesSent.addAndGet(b.readableBytes());
+      int sentBytes = b.readableBytes();
+      bytesSent.addAndGet(sentBytes);
+      sentBytesHist.update(sentBytes);
       sentRequests.incrementAndGet();
+      sentRequestsMeter.mark();
       if (LOG.isDebugEnabled()) {
         LOG.debug("handleDownstream: " + ctx.getName() + " buffer size = " +
-            b.readableBytes() + ", total bytes = " + bytesSent.get());
+                  sentBytes + ", total bytes = " + bytesSent.get());
       }
     }
 

@@ -41,8 +41,9 @@ public interface WorkerClientRequestProcessor<I extends WritableComparable,
    *
    * @param destVertexId Destination vertex id.
    * @param message Message to send.
+   * @return true if any network I/O occurred.
    */
-  void sendMessageRequest(I destVertexId, M message);
+  boolean sendMessageRequest(I destVertexId, M message);
 
   /**
    * Sends a vertex to the appropriate partition owner

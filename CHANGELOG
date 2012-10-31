@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-232: Add metrics system into Giraph. (nitay via aching)
+
   GIRAPH-393: Number of input split threads should always be >= 1
   (aching)
 

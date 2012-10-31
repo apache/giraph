@@ -27,6 +27,7 @@ import org.apache.giraph.graph.VertexOutputFormat;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.graph.WorkerContext;
 import org.apache.giraph.graph.partition.GraphPartitionerFactory;
+import org.apache.giraph.metrics.GiraphMetrics;
 import org.apache.hadoop.conf.Configuration;
 
 /**
@@ -758,6 +759,15 @@ public class GiraphConfiguration extends Configuration {
 
   public final boolean getSplitMasterWorker() {
     return getBoolean(SPLIT_MASTER_WORKER, SPLIT_MASTER_WORKER_DEFAULT);
+  }
+
+  /**
+   * Should we dump metrics at the end of the job.
+   *
+   * @return true if we should dump metrics, false otherwise.
+   */
+  public boolean dumpMetricsAtEnd() {
+    return getBoolean(GiraphMetrics.DUMP_AT_END, false);
   }
 
   /**

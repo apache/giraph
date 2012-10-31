@@ -22,10 +22,14 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.Callable;
+
+import com.yammer.metrics.core.Counter;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.comm.WorkerClientRequestProcessor;
 import org.apache.giraph.comm.netty.NettyWorkerClientRequestProcessor;
 import org.apache.giraph.graph.partition.PartitionOwner;
+import org.apache.giraph.metrics.GiraphMetrics;
+import org.apache.giraph.metrics.MetricGroup;
 import org.apache.giraph.utils.LoggerUtils;
 import org.apache.giraph.utils.MemoryUtils;
 import org.apache.giraph.utils.SystemTime;
@@ -90,6 +94,12 @@ public class InputSplitsCallable<I extends WritableComparable,
   /** Get the start time in nanos */
   private final long startNanos = TIME.getNanoseconds();
 
+    // Metrics
+  /** number of vertices loaded counter */
+  private final Counter verticesLoadedCounter;
+  /** number of edges loaded counter */
+  private final Counter edgesLoadedCounter;
+
   /**
    * Constructor.
    *
@@ -129,6 +139,12 @@ public class InputSplitsCallable<I extends WritableComparable,
     this.configuration = configuration;
     inputSplitMaxVertices = configuration.getInputSplitMaxVertices();
     this.bspServiceWorker = bspServiceWorker;
+
+        // Initialize Metrics
+    verticesLoadedCounter = GiraphMetrics.getCounter(MetricGroup.IO,
+                                                     "vertices-loaded");
+    edgesLoadedCounter = GiraphMetrics.getCounter(MetricGroup.IO,
+                                                  "edges-loaded");
   }
 
   @Override
@@ -429,7 +445,9 @@ public class InputSplitsCallable<I extends WritableComparable,
     }
     vertexReader.close();
     totalVerticesLoaded += inputSplitVerticesLoaded;
+    verticesLoadedCounter.inc(inputSplitVerticesLoaded);
     totalEdgesLoaded += inputSplitEdgesLoaded;
+    edgesLoadedCounter.inc(inputSplitEdgesLoaded);
     return new VertexEdgeCount(
         inputSplitVerticesLoaded, inputSplitEdgesLoaded);
   }

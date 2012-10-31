@@ -18,9 +18,10 @@
 
 package org.apache.giraph.graph;
 
+import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
+import com.yammer.metrics.core.Timer;
+import com.yammer.metrics.core.TimerContext;
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedServiceMaster;
@@ -28,6 +29,8 @@ import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.messages.MessageStoreByPartition;
 import org.apache.giraph.graph.partition.PartitionOwner;
 import org.apache.giraph.graph.partition.PartitionStats;
+import org.apache.giraph.metrics.GiraphMetrics;
+import org.apache.giraph.metrics.MetricGroup;
 import org.apache.giraph.utils.MemoryUtils;
 import org.apache.giraph.utils.ProgressableUtils;
 import org.apache.giraph.utils.ReflectionUtils;
@@ -41,8 +44,7 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Appender;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-
-import com.google.common.collect.Lists;
+import org.apache.log4j.PatternLayout;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
@@ -52,10 +54,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import org.apache.log4j.PatternLayout;
 
 /**
  * This mapper that will execute the BSP graph tasks.  Since this mapper will
@@ -97,6 +100,22 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
   private long numVertices = -1;
   /** Total number of edges in the graph (at this time) */
   private long numEdges = -1;
+
+  // Metrics
+  /** Timer for how long superstep took */
+  private Timer superstepTimer;
+  /** Timer for all compute() calls in a superstep */
+  private Timer computeAllTimer;
+  /** Timer for exchanging vertexes */
+  private Timer exchangeVertexPartitionsTimer;
+  /** Milliseconds from starting compute to sending first message */
+  private Timer timeToFirstMessage;
+  /** Timer context used for computer msec from compute to first message */
+  private TimerContext timeToFirstMessageContext;
+  /** Time from first sent message till last message flushed. */
+  private Timer communicationTimer;
+  /** Timer context for communication timer. */
+  private TimerContext communicationTimerContext;
 
   /** What kinds of functions to run on this mapper */
   public enum MapFunctions {
@@ -267,12 +286,15 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
   public void setup(Context context)
     throws IOException, InterruptedException {
     context.setStatus("setup: Beginning mapper setup.");
+
     // Setting the default handler for uncaught exceptions.
     Thread.setDefaultUncaughtExceptionHandler(
         new OverrideExceptionHandler());
+
     determineClassTypes(context.getConfiguration());
     conf = new ImmutableClassesGiraphConfiguration<I, V, E, M>(
         context.getConfiguration());
+
     // Hadoop security needs this property to be set
     if (System.getenv("HADOOP_TOKEN_FILE_LOCATION") != null) {
       conf.set("mapreduce.job.credentials.binary",
@@ -295,6 +317,14 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
         appenderEnum.nextElement().setLayout(layout);
       }
     }
+
+    // Set up GiraphMetrics
+    GiraphMetrics.init(context);
+    if (LOG.isInfoEnabled()) {
+      LOG.info("setup: Initialized metrics system");
+    }
+    MemoryUtils.initMetrics();
+    initMetrics();
 
     // Do some initial setup (possibly starting up a Zookeeper service)
     context.setStatus("setup: Initializing Zookeeper services.");
@@ -393,7 +423,48 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
       throw new RuntimeException(
           "setup: Offlining servers due to exception...", e);
     }
+
     context.setStatus(getMapFunctions().toString() + " starting...");
+  }
+
+  /**
+   * Initialize Metrics used by this class.
+   */
+  private void initMetrics() {
+    superstepTimer = GiraphMetrics.getTimer(MetricGroup.COMPUTE,
+                                            "superstep-time");
+    computeAllTimer = GiraphMetrics.getTimer(MetricGroup.COMPUTE,
+                                             "compute-all");
+    exchangeVertexPartitionsTimer = GiraphMetrics.getTimer(MetricGroup.NETWORK,
+        "exchange-vertex-partitions");
+    timeToFirstMessage = GiraphMetrics.getTimer(MetricGroup.COMPUTE,
+        "time-to-first-message");
+    communicationTimer = GiraphMetrics.getTimer(MetricGroup.NETWORK,
+        "communication-time");
+  }
+
+  /**
+   * Notification from Vertex that a message has been sent.
+   */
+  public void notifySentMessages() {
+    // We are tracking the time between when the compute started and the first
+    // message get sent. We use null to flag that we have already recorded it.
+    if (timeToFirstMessageContext != null) {
+      timeToFirstMessageContext.stop();
+      timeToFirstMessageContext = null;
+    }
+    communicationTimerContext = communicationTimer.time();
+  }
+
+  /**
+   * Notification of last message flushed. Comes when we finish the superstep
+   * and are done waiting for all messages to send.
+   */
+  public void notifyFinishedCommunication() {
+    if (communicationTimerContext != null) {
+      communicationTimerContext.stop();
+      communicationTimerContext = null;
+    }
   }
 
   @Override
@@ -455,6 +526,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
     FinishedSuperstepStats finishedSuperstepStats = null;
     do {
       final long superstep = serviceWorker.getSuperstep();
+      TimerContext superstepTimerContext = superstepTimer.time();
 
       GraphState<I, V, E, M> graphState =
           new GraphState<I, V, E, M>(superstep, numVertices, numEdges,
@@ -468,8 +540,10 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
       }
       context.progress();
 
-      serviceWorker.exchangeVertexPartitions(
-          masterAssignedPartitionOwners);
+      TimerContext exchangeTimerContext = exchangeVertexPartitionsTimer.time();
+      serviceWorker.exchangeVertexPartitions(masterAssignedPartitionOwners);
+      exchangeTimerContext.stop();
+
       context.progress();
 
       // Might need to restart from another superstep
@@ -515,6 +589,9 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
           computePartitionIdQueue.add(partitionId);
         }
 
+        TimerContext computeAllTimerContext = computeAllTimer.time();
+        timeToFirstMessageContext = timeToFirstMessage.time();
+
         ExecutorService partitionExecutor =
             Executors.newFixedThreadPool(numThreads,
                 new ThreadFactoryBuilder().setNameFormat("compute-%d").build());
@@ -538,12 +615,15 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
           partitionStatsList.addAll(stats);
         }
         partitionExecutor.shutdown();
+
+        computeAllTimerContext.stop();
       }
 
       finishedSuperstepStats =
           serviceWorker.finishSuperstep(graphState, partitionStatsList);
       numVertices = finishedSuperstepStats.getVertexCount();
       numEdges = finishedSuperstepStats.getEdgeCount();
+      superstepTimerContext.stop();
     } while (!finishedSuperstepStats.getAllVerticesHalted());
     if (LOG.isInfoEnabled()) {
       LOG.info("map: BSP application done (global vertices marked done)");

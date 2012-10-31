@@ -18,9 +18,7 @@
 package org.apache.giraph.comm.netty;
 
 import com.google.common.collect.Maps;
-import java.io.IOException;
-import java.util.Collection;
-import java.util.Map;
+import com.yammer.metrics.core.Histogram;
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
@@ -44,10 +42,16 @@ import org.apache.giraph.graph.VertexMutations;
 import org.apache.giraph.graph.WorkerInfo;
 import org.apache.giraph.graph.partition.Partition;
 import org.apache.giraph.graph.partition.PartitionOwner;
+import org.apache.giraph.metrics.GiraphMetrics;
+import org.apache.giraph.metrics.MetricGroup;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
+
+import java.io.IOException;
+import java.util.Collection;
+import java.util.Map;
 
 /**
  * Aggregate requests and sends them to the thread-safe NettyClient.  This
@@ -86,6 +90,9 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
   private final CentralizedServiceWorker<I, V, E, M> serviceWorker;
   /** Server data from the server (used for local requests) */
   private final ServerData<I, V, E, M> serverData;
+  // Metrics
+  /** histogram of messages sent in a superstep */
+  private final Histogram msgsSentInSuperstepHist;
 
   /**
    * Constructor.
@@ -113,10 +120,14 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
         GiraphConfiguration.MAX_MUTATIONS_PER_REQUEST_DEFAULT);
     this.serviceWorker = serviceWorker;
     this.serverData = serviceWorker.getServerData();
+
+    // Initialize Metrics
+    msgsSentInSuperstepHist = GiraphMetrics.getHistogram(
+        MetricGroup.NETWORK, "superstep-msgs-sent");
   }
 
   @Override
-  public void sendMessageRequest(I destVertexId, M message) {
+  public boolean sendMessageRequest(I destVertexId, M message) {
     PartitionOwner owner =
         serviceWorker.getVertexPartitionOwner(destVertexId);
     WorkerInfo workerInfo = owner.getWorkerInfo();
@@ -139,7 +150,10 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
       WritableRequest writableRequest =
           new SendWorkerMessagesRequest<I, V, E, M>(workerMessages);
       doRequest(workerInfo, writableRequest);
+      return true;
     }
+
+    return false;
   }
 
   @Override
@@ -332,6 +346,7 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
 
   @Override
   public long resetMessageCount() {
+    msgsSentInSuperstepHist.update(totalMsgsSentInSuperstep);
     long messagesSentInSuperstep = totalMsgsSentInSuperstep;
     totalMsgsSentInSuperstep = 0;
     return messagesSentInSuperstep;

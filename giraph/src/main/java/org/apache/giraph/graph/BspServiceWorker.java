@@ -20,18 +20,18 @@ package org.apache.giraph.graph;
 
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import com.yammer.metrics.core.Gauge;
+import com.yammer.metrics.core.Timer;
+import com.yammer.metrics.core.TimerContext;
+import net.iharder.Base64;
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.bsp.ApplicationState;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.ServerData;
-import org.apache.giraph.comm.aggregators.WorkerAggregatorRequestProcessor;
 import org.apache.giraph.comm.WorkerClient;
 import org.apache.giraph.comm.WorkerClientRequestProcessor;
 import org.apache.giraph.comm.WorkerServer;
+import org.apache.giraph.comm.aggregators.WorkerAggregatorRequestProcessor;
 import org.apache.giraph.comm.netty.NettyWorkerAggregatorRequestProcessor;
 import org.apache.giraph.comm.netty.NettyWorkerClient;
 import org.apache.giraph.comm.netty.NettyWorkerClientRequestProcessor;
@@ -42,6 +42,8 @@ import org.apache.giraph.graph.partition.PartitionOwner;
 import org.apache.giraph.graph.partition.PartitionStats;
 import org.apache.giraph.graph.partition.PartitionStore;
 import org.apache.giraph.graph.partition.WorkerGraphPartitioner;
+import org.apache.giraph.metrics.GiraphMetrics;
+import org.apache.giraph.metrics.MetricGroup;
 import org.apache.giraph.utils.LoggerUtils;
 import org.apache.giraph.utils.MemoryUtils;
 import org.apache.giraph.utils.ProgressableUtils;
@@ -65,8 +67,6 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import net.iharder.Base64;
-
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutput;
@@ -80,6 +80,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 /**
  * ZooKeeper-based implementation of {@link CentralizedServiceWorker}.
@@ -119,6 +123,7 @@ public class BspServiceWorker<I extends WritableComparable,
 
   /** Worker Context */
   private final WorkerContext workerContext;
+
   /**
    * Stores and processes the list of InputSplits advertised
    * in a tree of child znodes by the master.
@@ -127,6 +132,10 @@ public class BspServiceWorker<I extends WritableComparable,
 
   /** Handler for aggregators */
   private final WorkerAggregatorHandler aggregatorHandler;
+
+
+  /** timer waiting for other workers */
+  private final Timer waitTimer;
 
   /**
    * Constructor for setting up the worker.
@@ -165,6 +174,24 @@ public class BspServiceWorker<I extends WritableComparable,
 
     aggregatorHandler =
         new WorkerAggregatorHandler(this, getConfiguration(), context);
+
+    waitTimer = GiraphMetrics.getTimer(MetricGroup.NETWORK, "waiting");
+
+    initGauges();
+  }
+
+  /**
+   * Initialize Metrics used by this class
+   */
+  private void initGauges() {
+    GiraphMetrics.getGauge(MetricGroup.COMPUTE, "partition-map-size",
+                           new Gauge<Integer>() {
+        @Override
+        public Integer value() {
+          return getPartitionStore().getNumPartitions();
+        }
+      }
+    );
   }
 
   @Override
@@ -586,6 +613,8 @@ else[HADOOP_NON_SECURE]*/
     }
     workerClient.waitAllRequests();
 
+    graphState.getGraphMapper().notifyFinishedCommunication();
+
     long workerSentMessages = 0;
     for (PartitionStats partitionStats : partitionStatsList) {
       workerSentMessages += partitionStats.getMessagesSentCount();
@@ -650,6 +679,8 @@ else[HADOOP_NON_SECURE]*/
 
     String superstepFinishedNode =
         getSuperstepFinishedPath(getApplicationAttempt(), getSuperstep());
+
+    TimerContext waitTimerContext = waitTimer.time();
     try {
       while (getZkExt().exists(superstepFinishedNode, true) == null) {
         getSuperstepFinishedEvent().waitForever();
@@ -664,6 +695,8 @@ else[HADOOP_NON_SECURE]*/
           "finishSuperstep: Failed while waiting for master to " +
               "signal completion of superstep " + getSuperstep(), e);
     }
+    waitTimerContext.stop();
+
     GlobalStats globalStats = new GlobalStats();
     WritableUtils.readFieldsFromZnode(
         getZkExt(), superstepFinishedNode, false, null, globalStats);
@@ -756,6 +789,10 @@ else[HADOOP_NON_SECURE]*/
     } catch (InterruptedException e) {
       // cleanup phase -- just log the error
       LOG.error("cleanup: Zookeeper failed to close with " + e);
+    }
+
+    if (getConfiguration().dumpMetricsAtEnd()) {
+      GiraphMetrics.dumpToStdout();
     }
 
     // Preferably would shut down the service only after

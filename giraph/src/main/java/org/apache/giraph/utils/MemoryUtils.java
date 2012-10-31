@@ -18,6 +18,10 @@
 
 package org.apache.giraph.utils;
 
+import com.yammer.metrics.util.PercentGauge;
+import org.apache.giraph.metrics.GiraphMetrics;
+import org.apache.giraph.metrics.MetricGroup;
+
 /**
  * Helper static methods for tracking memory usage.
  */
@@ -26,16 +30,65 @@ public class MemoryUtils {
   private MemoryUtils() { }
 
   /**
+   * Helper to compute megabytes
+   * @param bytes integer number of bytes
+   * @return megabytes
+   */
+  private static double megaBytes(long bytes) {
+    return bytes / 1024.0 / 1024.0;
+  }
+
+  /**
+   * Get total memory in megabytes
+   * @return total memory in megabytes
+   */
+  public static double totalMemoryMB() {
+    return megaBytes(Runtime.getRuntime().totalMemory());
+  }
+
+  /**
+   * Get maximum memory in megabytes
+   * @return maximum memory in megabytes
+   */
+  public static double maxMemoryMB() {
+    return megaBytes(Runtime.getRuntime().maxMemory());
+  }
+
+  /**
+   * Get free memory in megabytes
+   * @return free memory in megabytes
+   */
+  public static double freeMemoryMB() {
+    return megaBytes(Runtime.getRuntime().freeMemory());
+  }
+
+  /**
+   * Initialize metrics tracked by this helper.
+   */
+  public static void initMetrics() {
+    GiraphMetrics.getGauge(MetricGroup.SYSTEM, "memory-free-pct",
+                           new PercentGauge() {
+        @Override
+        protected double getNumerator() {
+          return freeMemoryMB();
+        }
+
+        @Override
+        protected double getDenominator() {
+          return totalMemoryMB();
+        }
+      }
+    );
+  }
+
+  /**
    * Get stringified runtime memory stats
    *
    * @return String of all Runtime stats.
    */
   public static String getRuntimeMemoryStats() {
-    return "totalMem = " +
-      (Runtime.getRuntime().totalMemory() / 1024f / 1024f) +
-      "M, maxMem = "  +
-      (Runtime.getRuntime().maxMemory() / 1024f / 1024f) +
-      "M, freeMem = " +
-      (Runtime.getRuntime().freeMemory() / 1024f / 1024f) + "M";
+    return "totalMem = " + totalMemoryMB() +
+      "M, maxMem = "  + maxMemoryMB() +
+      "M, freeMem = " + freeMemoryMB() + "M";
   }
 }
