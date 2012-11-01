@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-398: Missing a dependency (nitay via majakabiljo)
+
   GIRAPH-394: mapreduce.job.user.classpath.first hadoop option typo
   (nitay via aching)
 
