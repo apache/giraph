@@ -15,23 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.giraph.graph;
 
-import java.io.ByteArrayInputStream;
-import java.io.DataInputStream;
-import java.io.IOException;
-import java.util.List;
-import java.util.concurrent.Callable;
-
-import com.yammer.metrics.core.Counter;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.comm.WorkerClientRequestProcessor;
 import org.apache.giraph.comm.netty.NettyWorkerClientRequestProcessor;
-import org.apache.giraph.graph.partition.PartitionOwner;
-import org.apache.giraph.metrics.GiraphMetrics;
-import org.apache.giraph.metrics.MetricGroup;
-import org.apache.giraph.utils.LoggerUtils;
-import org.apache.giraph.utils.MemoryUtils;
 import org.apache.giraph.utils.SystemTime;
 import org.apache.giraph.utils.Time;
 import org.apache.giraph.zk.ZooKeeperExt;
@@ -41,15 +30,20 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.util.ReflectionUtils;
-import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs;
 import org.apache.zookeeper.data.Stat;
 
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.util.List;
+import java.util.concurrent.Callable;
+
 /**
- * Load as many input splits as possible.
+ * Abstract base class for loading vertex/edge input splits.
  * Every thread will has its own instance of WorkerClientRequestProcessor
  * to send requests.
  *
@@ -58,7 +52,7 @@ import org.apache.zookeeper.data.Stat;
  * @param <E> Edge value
  * @param <M> Message data
  */
-public class InputSplitsCallable<I extends WritableComparable,
+public abstract class InputSplitsCallable<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
     implements Callable<VertexEdgeCount> {
   /** Class logger */
@@ -66,8 +60,11 @@ public class InputSplitsCallable<I extends WritableComparable,
       Logger.getLogger(InputSplitsCallable.class);
   /** Class time object */
   private static final Time TIME = SystemTime.getInstance();
+  /** Configuration */
+  protected final ImmutableClassesGiraphConfiguration<I, V, E, M>
+  configuration;
   /** Context */
-  private final Mapper<?, ?, ?, ?>.Context context;
+  protected final Mapper<?, ?, ?, ?>.Context context;
   /** Graph state */
   private final GraphState<I, V, E, M> graphState;
   /** Handles IPC communication */
@@ -80,26 +77,16 @@ public class InputSplitsCallable<I extends WritableComparable,
   private final InputSplitPathOrganizer splitOrganizer;
   /** ZooKeeperExt handle */
   private final ZooKeeperExt zooKeeperExt;
-  /** Configuration */
-  private final ImmutableClassesGiraphConfiguration<I, V, E, M>
-  configuration;
-  /** Total vertices loaded */
-  private long totalVerticesLoaded = 0;
-  /** Total edges loaded */
-  private long totalEdgesLoaded = 0;
-  /** Input split max vertices (-1 denotes all) */
-  private final long inputSplitMaxVertices;
-  /** Bsp service worker (only use thread-safe methods) */
-  private final BspServiceWorker<I, V, E, M> bspServiceWorker;
   /** Get the start time in nanos */
   private final long startNanos = TIME.getNanoseconds();
+  /** ZooKeeper input split reserved node. */
+  private final String inputSplitReservedNode;
+  /** ZooKeeper input split finished node. */
+  private final String inputSplitFinishedNode;
+  /** Input split events. */
+  private final InputSplitEvents inputSplitEvents;
 
-    // Metrics
-  /** number of vertices loaded counter */
-  private final Counter verticesLoadedCounter;
-  /** number of edges loaded counter */
-  private final Counter edgesLoadedCounter;
-
+  // CHECKSTYLE: stop ParameterNumberCheck
   /**
    * Constructor.
    *
@@ -110,14 +97,21 @@ public class InputSplitsCallable<I extends WritableComparable,
    * @param inputSplitPathList List of the paths of the input splits
    * @param workerInfo This worker's info
    * @param zooKeeperExt Handle to ZooKeeperExt
+   * @param inputSplitReservedNode Path to input split reserved
+   * @param inputSplitFinishedNode Path to input split finsished
+   * @param inputSplitEvents Input split events
    */
   public InputSplitsCallable(
-      Mapper<?, ?, ?, ?>.Context context, GraphState<I, V, E, M> graphState,
+      Mapper<?, ?, ?, ?>.Context context,
+      GraphState<I, V, E, M> graphState,
       ImmutableClassesGiraphConfiguration<I, V, E, M> configuration,
       BspServiceWorker<I, V, E, M> bspServiceWorker,
       List<String> inputSplitPathList,
       WorkerInfo workerInfo,
-      ZooKeeperExt zooKeeperExt)  {
+      ZooKeeperExt zooKeeperExt,
+      String inputSplitReservedNode,
+      String inputSplitFinishedNode,
+      InputSplitEvents inputSplitEvents) {
     this.zooKeeperExt = zooKeeperExt;
     this.context = context;
     this.workerClientRequestProcessor =
@@ -137,25 +131,35 @@ public class InputSplitsCallable<I extends WritableComparable,
           "InputSplitsCallable: InterruptedException", e);
     }
     this.configuration = configuration;
-    inputSplitMaxVertices = configuration.getInputSplitMaxVertices();
-    this.bspServiceWorker = bspServiceWorker;
-
-        // Initialize Metrics
-    verticesLoadedCounter = GiraphMetrics.getCounter(MetricGroup.IO,
-                                                     "vertices-loaded");
-    edgesLoadedCounter = GiraphMetrics.getCounter(MetricGroup.IO,
-                                                  "edges-loaded");
+    this.inputSplitReservedNode = inputSplitReservedNode;
+    this.inputSplitFinishedNode = inputSplitFinishedNode;
+    this.inputSplitEvents = inputSplitEvents;
   }
+  // CHECKSTYLE: resume ParameterNumberCheck
+
+  /**
+   * Load vertices/edges from the given input split.
+   *
+   * @param inputSplit Input split to load
+   * @param graphState Graph state
+   * @return Count of vertices and edges loaded
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  protected abstract VertexEdgeCount readInputSplit(
+      InputSplit inputSplit,
+      GraphState<I, V, E, M> graphState)
+    throws IOException, InterruptedException;
 
   @Override
   public VertexEdgeCount call() {
     VertexEdgeCount vertexEdgeCount = new VertexEdgeCount();
-    String inputSplitPath = null;
+    String inputSplitPath;
     int inputSplitsProcessed = 0;
     try {
       while ((inputSplitPath = reserveInputSplit()) != null) {
         vertexEdgeCount = vertexEdgeCount.incrVertexEdgeCount(
-            loadVerticesFromInputSplit(inputSplitPath,
+            loadInputSplit(inputSplitPath,
                 graphState));
         context.progress();
         ++inputSplitsProcessed;
@@ -212,13 +216,13 @@ public class InputSplitsCallable<I extends WritableComparable,
   private String reserveInputSplit()
     throws KeeperException, InterruptedException {
     String reservedInputSplitPath = null;
-    Stat reservedStat = null;
+    Stat reservedStat;
     while (true) {
       int reservedInputSplits = 0;
       for (String nextSplitToClaim : splitOrganizer) {
         context.progress();
-        String tmpInputSplitReservedPath =
-            nextSplitToClaim + BspServiceWorker.INPUT_SPLIT_RESERVED_NODE;
+        String tmpInputSplitReservedPath = nextSplitToClaim +
+            inputSplitReservedNode;
         reservedStat =
             zooKeeperExt.exists(tmpInputSplitReservedPath, true);
         if (reservedStat == null) {
@@ -270,9 +274,9 @@ public class InputSplitsCallable<I extends WritableComparable,
       // Wait for either a reservation to go away or a notification that
       // an InputSplit has finished.
       context.progress();
-      bspServiceWorker.getInputSplitsStateChangedEvent().waitMsecs(
+      inputSplitEvents.getStateChanged().waitMsecs(
           60 * 1000);
-      bspServiceWorker.getInputSplitsStateChangedEvent().reset();
+      inputSplitEvents.getStateChanged().reset();
     }
   }
 
@@ -285,7 +289,7 @@ public class InputSplitsCallable<I extends WritableComparable,
    */
   private void markInputSplitPathFinished(String inputSplitPath) {
     String inputSplitFinishedPath =
-        inputSplitPath + BspServiceWorker.INPUT_SPLIT_FINISHED_NODE;
+        inputSplitPath + inputSplitFinishedNode;
     try {
       zooKeeperExt.createExt(inputSplitFinishedPath,
           null,
@@ -293,15 +297,15 @@ public class InputSplitsCallable<I extends WritableComparable,
           CreateMode.PERSISTENT,
           true);
     } catch (KeeperException.NodeExistsException e) {
-      LOG.warn("loadVertices: " + inputSplitFinishedPath +
+      LOG.warn("markInputSplitPathFinished: " + inputSplitFinishedPath +
           " already exists!");
     } catch (KeeperException e) {
       throw new IllegalStateException(
-          "loadVertices: KeeperException on " +
+          "markInputSplitPathFinished: KeeperException on " +
               inputSplitFinishedPath, e);
     } catch (InterruptedException e) {
       throw new IllegalStateException(
-          "loadVertices: InterruptedException on " +
+          "markInputSplitPathFinished: InterruptedException on " +
               inputSplitFinishedPath, e);
     }
   }
@@ -321,16 +325,16 @@ public class InputSplitsCallable<I extends WritableComparable,
    * @throws InstantiationException
    * @throws IllegalAccessException
    */
-  private VertexEdgeCount loadVerticesFromInputSplit(
+  private VertexEdgeCount loadInputSplit(
       String inputSplitPath,
       GraphState<I, V, E, M> graphState)
     throws IOException, ClassNotFoundException, InterruptedException,
       InstantiationException, IllegalAccessException {
-    InputSplit inputSplit = getInputSplitForVertices(inputSplitPath);
+    InputSplit inputSplit = getInputSplit(inputSplitPath);
     VertexEdgeCount vertexEdgeCount =
-        readVerticesFromInputSplit(inputSplit, graphState);
+        readInputSplit(inputSplit, graphState);
     if (LOG.isInfoEnabled()) {
-      LOG.info("loadVerticesFromInputSplit: Finished loading " +
+      LOG.info("loadFromInputSplit: Finished loading " +
           inputSplitPath + " " + vertexEdgeCount);
     }
     markInputSplitPathFinished(inputSplitPath);
@@ -339,24 +343,24 @@ public class InputSplitsCallable<I extends WritableComparable,
 
   /**
    * Talk to ZooKeeper to convert the input split path to the actual
-   * InputSplit containing the vertices to read.
+   * InputSplit.
    *
    * @param inputSplitPath Location in ZK of input split
-   * @return instance of InputSplit containing vertices to read
+   * @return instance of InputSplit
    * @throws IOException
    * @throws ClassNotFoundException
    */
-  private InputSplit getInputSplitForVertices(String inputSplitPath)
+  protected InputSplit getInputSplit(String inputSplitPath)
     throws IOException, ClassNotFoundException {
     byte[] splitList;
     try {
       splitList = zooKeeperExt.getData(inputSplitPath, false, null);
     } catch (KeeperException e) {
       throw new IllegalStateException(
-          "loadVertices: KeeperException on " + inputSplitPath, e);
+          "getInputSplit: KeeperException on " + inputSplitPath, e);
     } catch (InterruptedException e) {
       throw new IllegalStateException(
-          "loadVertices: IllegalStateException on " + inputSplitPath, e);
+          "getInputSplit: IllegalStateException on " + inputSplitPath, e);
     }
     context.progress();
 
@@ -371,85 +375,10 @@ public class InputSplitsCallable<I extends WritableComparable,
     ((Writable) inputSplit).readFields(inputStream);
 
     if (LOG.isInfoEnabled()) {
-      LOG.info("getInputSplitForVertices: Reserved " + inputSplitPath +
+      LOG.info("getInputSplit: Reserved " + inputSplitPath +
           " from ZooKeeper and got input split '" +
           inputSplit.toString() + "'");
     }
     return inputSplit;
   }
-
-  /**
-   * Read vertices from input split.  If testing, the user may request a
-   * maximum number of vertices to be read from an input split.
-   *
-   * @param inputSplit Input split to process with vertex reader
-   * @param graphState Current graph state
-   * @return Vertices and edges loaded from this input split
-   * @throws IOException
-   * @throws InterruptedException
-   */
-  private VertexEdgeCount readVerticesFromInputSplit(
-      InputSplit inputSplit,
-      GraphState<I, V, E, M> graphState)
-    throws IOException, InterruptedException {
-    VertexInputFormat<I, V, E, M> vertexInputFormat =
-        configuration.createVertexInputFormat();
-    VertexReader<I, V, E, M> vertexReader =
-        vertexInputFormat.createVertexReader(inputSplit, context);
-    vertexReader.initialize(inputSplit, context);
-    long inputSplitVerticesLoaded = 0;
-    long inputSplitEdgesLoaded = 0;
-    while (vertexReader.nextVertex()) {
-      Vertex<I, V, E, M> readerVertex =
-          vertexReader.getCurrentVertex();
-      if (readerVertex.getId() == null) {
-        throw new IllegalArgumentException(
-            "readVerticesFromInputSplit: Vertex reader returned a vertex " +
-                "without an id!  - " + readerVertex);
-      }
-      if (readerVertex.getValue() == null) {
-        readerVertex.setValue(configuration.createVertexValue());
-      }
-      readerVertex.setConf(configuration);
-      readerVertex.setGraphState(graphState);
-
-      PartitionOwner partitionOwner =
-          bspServiceWorker.getVertexPartitionOwner(readerVertex.getId());
-      graphState.getWorkerClientRequestProcessor().sendVertexRequest(
-          partitionOwner, readerVertex);
-      context.progress(); // do this before potential data transfer
-      ++inputSplitVerticesLoaded;
-      inputSplitEdgesLoaded += readerVertex.getNumEdges();
-
-      // Update status every 250k vertices
-      if (((inputSplitVerticesLoaded + totalVerticesLoaded) % 250000) == 0) {
-        LoggerUtils.setStatusAndLog(context, LOG, Level.INFO,
-            "readVerticesFromInputSplit: Loaded " +
-                (inputSplitVerticesLoaded + totalVerticesLoaded) +
-                " vertices " +
-                (inputSplitEdgesLoaded + totalEdgesLoaded) + " edges " +
-                MemoryUtils.getRuntimeMemoryStats());
-      }
-
-      // For sampling, or to limit outlier input splits, the number of
-      // records per input split can be limited
-      if (inputSplitMaxVertices > 0 &&
-          inputSplitVerticesLoaded >= inputSplitMaxVertices) {
-        if (LOG.isInfoEnabled()) {
-          LOG.info("readVerticesFromInputSplit: Leaving the input " +
-              "split early, reached maximum vertices " +
-              inputSplitVerticesLoaded);
-        }
-        break;
-      }
-    }
-    vertexReader.close();
-    totalVerticesLoaded += inputSplitVerticesLoaded;
-    verticesLoadedCounter.inc(inputSplitVerticesLoaded);
-    totalEdgesLoaded += inputSplitEdgesLoaded;
-    edgesLoadedCounter.inc(inputSplitEdgesLoaded);
-    return new VertexEdgeCount(
-        inputSplitVerticesLoaded, inputSplitEdgesLoaded);
-  }
 }
-

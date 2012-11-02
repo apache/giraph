@@ -185,6 +185,42 @@ public class BspUtils {
   }
 
   /**
+   * Get the user's subclassed {@link EdgeInputFormat}.
+   *
+   * @param <I> Vertex id
+   * @param <E> Edge data
+   * @param conf Configuration to check
+   * @return User's edge input format class
+   */
+  @SuppressWarnings({ "rawtypes", "unchecked" })
+  public static <I extends WritableComparable, E extends Writable>
+  Class<? extends EdgeInputFormat<I, E>>
+  getEdgeInputFormatClass(Configuration conf) {
+    return (Class<? extends EdgeInputFormat<I, E>>)
+        conf.getClass(GiraphConfiguration.EDGE_INPUT_FORMAT_CLASS,
+            null,
+            EdgeInputFormat.class);
+  }
+
+  /**
+   * Create a user edge input format class
+   *
+   * @param <I> Vertex id
+   * @param <E> Edge data
+   * @param conf Configuration to check
+   * @return Instantiated user edge input format class
+   */
+  @SuppressWarnings("rawtypes")
+  public static <I extends WritableComparable, E extends Writable>
+  EdgeInputFormat<I, E> createEdgeInputFormat(Configuration conf) {
+    Class<? extends EdgeInputFormat<I, E>> edgeInputFormatClass =
+        getEdgeInputFormatClass(conf);
+    EdgeInputFormat<I, E> inputFormat =
+        ReflectionUtils.newInstance(edgeInputFormatClass, conf);
+    return inputFormat;
+  }
+
+  /**
    * Get the user's subclassed {@link AggregatorWriter}.
    *
    * @param conf Configuration to check

@@ -18,14 +18,8 @@
 
 package org.apache.giraph.utils;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.Map;
-import java.util.Properties;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
 import org.apache.giraph.GiraphConfiguration;
+import org.apache.giraph.graph.EdgeInputFormat;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.MasterCompute;
 import org.apache.giraph.graph.Vertex;
@@ -33,9 +27,9 @@ import org.apache.giraph.graph.VertexCombiner;
 import org.apache.giraph.graph.VertexInputFormat;
 import org.apache.giraph.graph.VertexOutputFormat;
 import org.apache.giraph.graph.WorkerContext;
+import org.apache.giraph.io.GiraphFileInputFormat;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.zookeeper.server.ServerConfig;
 import org.apache.zookeeper.server.ZooKeeperServerMain;
@@ -43,6 +37,13 @@ import org.apache.zookeeper.server.quorum.QuorumPeerConfig;
 
 import com.google.common.base.Charsets;
 import com.google.common.io.Files;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * A base class for running internal tests on a vertex
@@ -81,7 +82,8 @@ public class InternalVertexRunner {
       Class<? extends Vertex> vertexClass,
       Class<? extends VertexInputFormat> vertexInputFormatClass,
       Class<? extends VertexOutputFormat> vertexOutputFormatClass,
-      Map<String, String> params, String... data) throws Exception {
+      Map<String, String> params,
+      String[] data) throws Exception {
     return run(vertexClass, null, vertexInputFormatClass,
         vertexOutputFormatClass, params, data);
   }
@@ -107,7 +109,7 @@ public class InternalVertexRunner {
       Class<? extends VertexInputFormat> vertexInputFormatClass,
       Class<? extends VertexOutputFormat> vertexOutputFormatClass,
       Map<String, String> params,
-      String... data) throws Exception {
+      String[] data) throws Exception {
     return InternalVertexRunner.run(vertexClass, vertexCombinerClass,
         vertexInputFormatClass, vertexOutputFormatClass, null, null, params,
         data);
@@ -129,32 +131,90 @@ public class InternalVertexRunner {
    * @throws Exception
    */
   @SuppressWarnings("rawtypes")
-  public static Iterable<String> run(Class<? extends Vertex> vertexClass,
+  public static Iterable<String> run(
+      Class<? extends Vertex> vertexClass,
       Class<? extends VertexCombiner> vertexCombinerClass,
       Class<? extends VertexInputFormat> vertexInputFormatClass,
       Class<? extends VertexOutputFormat> vertexOutputFormatClass,
       Class<? extends WorkerContext> workerContextClass,
       Class<? extends MasterCompute> masterComputeClass,
-      Map<String, String> params, String... data) throws Exception {
+      Map<String, String> params,
+      String[] data) throws Exception {
+    return run(vertexClass, vertexCombinerClass, vertexInputFormatClass, null,
+        vertexOutputFormatClass, workerContextClass, masterComputeClass,
+        params, data, null);
+  }
+
+  // CHECKSTYLE: stop ParameterNumberCheck
+  /**
+   * Attempts to run the vertex internally in the current JVM, reading from and
+   * writing to a temporary folder on local disk. Will start its own zookeeper
+   * instance.
+   * @param vertexClass the vertex class to instantiate
+   * @param vertexCombinerClass the vertex combiner to use (or null)
+   * @param vertexInputFormatClass the vertex inputformat to use
+   * @param edgeInputFormatClass the edge inputformat to use
+   * @param vertexOutputFormatClass the outputformat to use
+   * @param workerContextClass the worker context to use
+   * @param masterComputeClass the master compute class to use
+   * @param params a map of parameters to add to the hadoop configuration
+   * @param vertexInputData linewise vertex input data
+   * @param edgeInputData linewise edge input data
+   * @return linewise output data
+   * @throws Exception
+   */
+  @SuppressWarnings("rawtypes")
+  public static Iterable<String> run(Class<? extends Vertex> vertexClass,
+      Class<? extends VertexCombiner> vertexCombinerClass,
+      Class<? extends VertexInputFormat> vertexInputFormatClass,
+      Class<? extends EdgeInputFormat> edgeInputFormatClass,
+      Class<? extends VertexOutputFormat> vertexOutputFormatClass,
+      Class<? extends WorkerContext> workerContextClass,
+      Class<? extends MasterCompute> masterComputeClass,
+      Map<String, String> params,
+      String[] vertexInputData,
+      String[] edgeInputData) throws Exception {
+
+    boolean useVertexInputFormat = vertexInputFormatClass != null;
+    boolean useEdgeInputFormat = edgeInputFormatClass != null;
 
     File tmpDir = null;
     try {
       // Prepare input file, output folder and temporary folders
       tmpDir = FileUtils.createTestDir(vertexClass);
-      File inputFile = FileUtils.createTempFile(tmpDir, "graph.txt");
+
+      File vertexInputFile = null;
+      File edgeInputFile = null;
+      if (useVertexInputFormat) {
+        vertexInputFile = FileUtils.createTempFile(tmpDir, "vertices.txt");
+      }
+      if (useEdgeInputFormat) {
+        edgeInputFile = FileUtils.createTempFile(tmpDir, "edges.txt");
+      }
+
       File outputDir = FileUtils.createTempDir(tmpDir, "output");
       File zkDir = FileUtils.createTempDir(tmpDir, "_bspZooKeeper");
       File zkMgrDir = FileUtils.createTempDir(tmpDir, "_defaultZkManagerDir");
       File checkpointsDir = FileUtils.createTempDir(tmpDir, "_checkpoints");
 
       // Write input data to disk
-      FileUtils.writeLines(inputFile, data);
+      if (useVertexInputFormat) {
+        FileUtils.writeLines(vertexInputFile, vertexInputData);
+      }
+      if (useEdgeInputFormat) {
+        FileUtils.writeLines(edgeInputFile, edgeInputData);
+      }
 
       // Create and configure the job to run the vertex
       GiraphJob job = new GiraphJob(vertexClass.getName());
       job.getConfiguration().setVertexClass(vertexClass);
-      job.getConfiguration().setVertexInputFormatClass(
-          vertexInputFormatClass);
+      if (useVertexInputFormat) {
+        job.getConfiguration().setVertexInputFormatClass(
+            vertexInputFormatClass);
+      }
+      if (useEdgeInputFormat) {
+        job.getConfiguration().setEdgeInputFormatClass(edgeInputFormatClass);
+      }
       job.getConfiguration().setVertexOutputFormatClass(
           vertexOutputFormatClass);
       if (workerContextClass != null) {
@@ -185,8 +245,14 @@ public class InternalVertexRunner {
         conf.set(param.getKey(), param.getValue());
       }
 
-      FileInputFormat.addInputPath(job.getInternalJob(),
-                                   new Path(inputFile.toString()));
+      if (useVertexInputFormat) {
+        GiraphFileInputFormat.addVertexInputPath(job.getInternalJob(),
+            new Path(vertexInputFile.toString()));
+      }
+      if (useEdgeInputFormat) {
+        GiraphFileInputFormat.addEdgeInputPath(job.getInternalJob(),
+            new Path(edgeInputFile.toString()));
+      }
       FileOutputFormat.setOutputPath(job.getInternalJob(),
                                      new Path(outputDir.toString()));
 
@@ -235,6 +301,7 @@ public class InternalVertexRunner {
       FileUtils.delete(tmpDir);
     }
   }
+  // CHECKSTYLE: resume ParameterNumberCheck
 
   /**
    * Extension of {@link ZooKeeperServerMain} that allows programmatic shutdown

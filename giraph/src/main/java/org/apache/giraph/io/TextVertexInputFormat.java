@@ -31,7 +31,6 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 
 import java.io.IOException;
 import java.util.List;
@@ -39,7 +38,7 @@ import java.util.Map;
 
 /**
  * Abstract class that users should subclass to use their own text based
- * vertex output format.
+ * vertex input format.
  *
  * @param <I> Vertex index value
  * @param <V> Vertex value
@@ -51,15 +50,15 @@ public abstract class TextVertexInputFormat<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
     extends VertexInputFormat<I, V, E, M> {
 
-  /** Uses the TextInputFormat to do everything */
-  protected TextInputFormat textInputFormat = new TextInputFormat();
+  /** Uses the GiraphTextInputFormat to do everything */
+  protected GiraphTextInputFormat textInputFormat = new GiraphTextInputFormat();
 
   @Override
   public List<InputSplit> getSplits(JobContext context, int numWorkers)
     throws IOException, InterruptedException {
-    // Ignore the hint of numWorkers here since we are using TextInputFormat
-    // to do this for us
-    return textInputFormat.getSplits(context);
+    // Ignore the hint of numWorkers here since we are using
+    // GiraphTextInputFormat to do this for us
+    return textInputFormat.getVertexSplits(context);
   }
 
   /**

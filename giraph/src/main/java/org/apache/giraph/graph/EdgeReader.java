@@ -26,57 +26,54 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import java.io.IOException;
 
 /**
- * Analogous to {@link RecordReader} for vertices.  Will read the vertices
+ * Analogous to {@link RecordReader} for edges.  Will read the edges
  * from an input split.
  *
  * @param <I> Vertex id
- * @param <V> Vertex data
  * @param <E> Edge data
- * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
-public interface VertexReader<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable> {
+public interface EdgeReader<I extends WritableComparable, E extends Writable> {
   /**
-   * Use the input split and context to setup reading the vertices.
+   * Use the input split and context to setup reading the edges.
    * Guaranteed to be called prior to any other function.
    *
-   * @param inputSplit Input split to be used for reading vertices.
+   * @param inputSplit Input split to be used for reading edges.
    * @param context Context from the task.
-   * @throws IOException
+   * @throws java.io.IOException
    * @throws InterruptedException
    */
-  void initialize(InputSplit inputSplit, TaskAttemptContext context)
-    throws IOException, InterruptedException;
+  void initialize(InputSplit inputSplit, TaskAttemptContext context) throws
+      IOException, InterruptedException;
 
   /**
    *
-   * @return false iff there are no more vertices
+   * @return false iff there are no more edges
    * @throws IOException
    * @throws InterruptedException
    */
-  boolean nextVertex() throws IOException, InterruptedException;
+  boolean nextEdge() throws IOException, InterruptedException;
 
   /**
-   * Get the current vertex.
+   * Get the current edge.
    *
-   * @return the current vertex which has been read.
-   *         nextVertex() should be called first.
+   * @return the current edge which has been read.
+   *         nextEdge() should be called first.
    * @throws IOException
    * @throws InterruptedException
    */
-  Vertex<I, V, E, M> getCurrentVertex()
-    throws IOException, InterruptedException;
+  EdgeWithSource<I, E> getCurrentEdge() throws IOException,
+      InterruptedException;
 
   /**
-   * Close this {@link VertexReader} to future operations.
+   * Close this {@link EdgeReader} to future operations.
    *
    * @throws IOException
    */
   void close() throws IOException;
 
   /**
-   * How much of the input has the {@link VertexReader} consumed i.e.
+   * How much of the input has the {@link EdgeReader} consumed i.e.
    * has been processed by?
    *
    * @return Progress from <code>0.0</code> to <code>1.0</code>.

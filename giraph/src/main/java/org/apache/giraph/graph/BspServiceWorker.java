@@ -18,12 +18,7 @@
 
 package org.apache.giraph.graph;
 
-import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.yammer.metrics.core.Gauge;
-import com.yammer.metrics.core.Timer;
-import com.yammer.metrics.core.TimerContext;
-import net.iharder.Base64;
+
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.bsp.ApplicationState;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
@@ -66,6 +61,13 @@ import org.apache.zookeeper.data.Stat;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.yammer.metrics.core.Gauge;
+import com.yammer.metrics.core.Timer;
+import com.yammer.metrics.core.TimerContext;
+import net.iharder.Base64;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -217,8 +219,8 @@ public class BspServiceWorker<I extends WritableComparable,
   }
 
   /**
-   * Load the vertices from the user-defined VertexReader into our partitions
-   * of vertex ranges.  Do this until all the InputSplits have been processed.
+   * Load the vertices/edges from input slits. Do this until all the
+   * InputSplits have been processed.
    * All workers will try to do as many InputSplits as they can.  The master
    * will monitor progress and stop this once all the InputSplits have been
    * loaded and check-pointed.  Keep track of the last input split path to
@@ -227,47 +229,36 @@ public class BspServiceWorker<I extends WritableComparable,
    *
    * Use one or more threads to do the loading.
    *
-   * @return Statistics of the vertices loaded
+   * @param inputSplitPathList List of input split paths
+   * @param inputSplitsCallableFactory Factory for {@link InputSplitsCallable}s
+   * @return Statistics of the vertices and edges loaded
    * @throws InterruptedException
    * @throws KeeperException
    */
-  private VertexEdgeCount loadVertices()
-    throws InterruptedException, KeeperException {
+  private VertexEdgeCount loadInputSplits(
+      List<String> inputSplitPathList,
+      InputSplitsCallableFactory<I, V, E, M> inputSplitsCallableFactory)
+    throws KeeperException, InterruptedException {
     VertexEdgeCount vertexEdgeCount = new VertexEdgeCount();
-
-    // Get the number of splits first to determine how many threads to use
-    List<String> inputSplitPathList =
-        getZkExt().getChildrenExt(inputSplitsPath, false, false, true);
-
-    GraphState<I, V, E, M> graphState = new GraphState<I, V, E, M>(
-        INPUT_SUPERSTEP, 0, 0, getContext(), getGraphMapper(),
-        null);
+    // Determine how many threads to use based on the number of input splits
     int maxInputSplitThreads =
         Math.max(
             inputSplitPathList.size() / getConfiguration().getMaxWorkers(), 1);
-    int numThreads =
-        Math.min(getConfiguration().getNumInputSplitsThreads(),
-            maxInputSplitThreads);
+    int numThreads = Math.min(getConfiguration().getNumInputSplitsThreads(),
+        maxInputSplitThreads);
     ExecutorService inputSplitsExecutor =
         Executors.newFixedThreadPool(numThreads,
             new ThreadFactoryBuilder().setNameFormat("load-%d").build());
     List<Future<VertexEdgeCount>> threadsFutures =
         Lists.newArrayListWithCapacity(numThreads);
     if (LOG.isInfoEnabled()) {
-      LOG.info("loadVertices: Using " + numThreads + " thread(s), " +
+      LOG.info("loadInputSplits: Using " + numThreads + " thread(s), " +
           "originally " + getConfiguration().getNumInputSplitsThreads() +
           " threads(s) for " + inputSplitPathList.size() + " total splits.");
     }
     for (int i = 0; i < numThreads; ++i) {
       Callable<VertexEdgeCount> inputSplitsCallable =
-          new InputSplitsCallable<I, V, E, M>(
-              getContext(),
-              graphState,
-              getConfiguration(),
-              this,
-              inputSplitPathList,
-              getWorkerInfo(),
-              getZkExt());
+          inputSplitsCallableFactory.newCallable();
       threadsFutures.add(inputSplitsExecutor.submit(inputSplitsCallable));
     }
 
@@ -284,6 +275,63 @@ public class BspServiceWorker<I extends WritableComparable,
     return vertexEdgeCount;
   }
 
+
+  /**
+   * Load the vertices from the user-defined {@link VertexReader}
+   *
+   * @return Count of vertices and edges loaded
+   */
+  private VertexEdgeCount loadVertices() throws KeeperException,
+      InterruptedException {
+    List<String> inputSplitPathList =
+        getZkExt().getChildrenExt(vertexInputSplitsPaths.getPath(),
+            false, false, true);
+
+    GraphState<I, V, E, M> graphState = new GraphState<I, V, E, M>(
+        INPUT_SUPERSTEP, 0, 0, getContext(), getGraphMapper(),
+        null);
+
+    VertexInputSplitsCallableFactory<I, V, E, M> inputSplitsCallableFactory =
+        new VertexInputSplitsCallableFactory<I, V, E, M>(
+            getContext(),
+            graphState,
+            getConfiguration(),
+            this,
+            inputSplitPathList,
+            getWorkerInfo(),
+            getZkExt());
+
+    return loadInputSplits(inputSplitPathList, inputSplitsCallableFactory);
+  }
+
+  /**
+   * Load the edges from the user-defined {@link EdgeReader}.
+   *
+   * @return Number of edges loaded
+   */
+  private long loadEdges() throws KeeperException, InterruptedException {
+    List<String> inputSplitPathList =
+        getZkExt().getChildrenExt(edgeInputSplitsPaths.getPath(),
+            false, false, true);
+
+    GraphState<I, V, E, M> graphState = new GraphState<I, V, E, M>(
+        INPUT_SUPERSTEP, 0, 0, getContext(), getGraphMapper(),
+        null);
+
+    EdgeInputSplitsCallableFactory<I, V, E, M> inputSplitsCallableFactory =
+        new EdgeInputSplitsCallableFactory<I, V, E, M>(
+            getContext(),
+            graphState,
+            getConfiguration(),
+            this,
+            inputSplitPathList,
+            getWorkerInfo(),
+            getZkExt());
+
+    return loadInputSplits(inputSplitPathList, inputSplitsCallableFactory).
+        getEdgeCount();
+  }
+
   @Override
   public WorkerInfo getMasterInfo() {
     return masterInfo;
@@ -294,6 +342,80 @@ public class BspServiceWorker<I extends WritableComparable,
     return workerInfoList;
   }
 
+  /**
+   * Ensure the input splits are ready for processing
+   *
+   * @param inputSplitPaths Input split paths
+   * @param inputSplitEvents Input split events
+   */
+  private void ensureInputSplitsReady(InputSplitPaths inputSplitPaths,
+                                      InputSplitEvents inputSplitEvents) {
+    while (true) {
+      Stat inputSplitsReadyStat;
+      try {
+        inputSplitsReadyStat = getZkExt().exists(
+            inputSplitPaths.getAllReadyPath(), true);
+      } catch (KeeperException e) {
+        throw new IllegalStateException(
+            "setup: KeeperException waiting on input splits", e);
+      } catch (InterruptedException e) {
+        throw new IllegalStateException(
+            "setup: InterruptedException waiting on input splits", e);
+      }
+      if (inputSplitsReadyStat != null) {
+        break;
+      }
+      inputSplitEvents.getAllReadyChanged().waitForever();
+      inputSplitEvents.getAllReadyChanged().reset();
+    }
+  }
+
+  /**
+   * Wait for all workers to finish processing input splits.
+   *
+   * @param inputSplitPaths Input split paths
+   * @param inputSplitEvents Input split events
+   */
+  private void waitForOtherWorkers(InputSplitPaths inputSplitPaths,
+                                   InputSplitEvents inputSplitEvents) {
+    String workerInputSplitsDonePath =
+        inputSplitPaths.getDonePath() + "/" +
+            getWorkerInfo().getHostnameId();
+    try {
+      getZkExt().createExt(workerInputSplitsDonePath,
+          null,
+          Ids.OPEN_ACL_UNSAFE,
+          CreateMode.PERSISTENT,
+          true);
+    } catch (KeeperException e) {
+      throw new IllegalStateException(
+          "setup: KeeperException creating worker done splits", e);
+    } catch (InterruptedException e) {
+      throw new IllegalStateException(
+          "setup: InterruptedException creating worker done splits",
+          e);
+    }
+    while (true) {
+      Stat inputSplitsDoneStat;
+      try {
+        inputSplitsDoneStat =
+            getZkExt().exists(inputSplitPaths.getAllDonePath(),
+                true);
+      } catch (KeeperException e) {
+        throw new IllegalStateException(
+            "setup: KeeperException waiting on worker done splits", e);
+      } catch (InterruptedException e) {
+        throw new IllegalStateException(
+            "setup: InterruptedException waiting on worker done splits", e);
+      }
+      if (inputSplitsDoneStat != null) {
+        break;
+      }
+      inputSplitEvents.getAllDoneChanged().waitForever();
+      inputSplitEvents.getAllDoneChanged().reset();
+    }
+  }
+
   @Override
   public FinishedSuperstepStats setup() {
     // Unless doing a restart, prepare for computation:
@@ -301,7 +423,8 @@ public class BspServiceWorker<I extends WritableComparable,
     // 2. Wait until the INPUT_SPLIT_ALL_READY_PATH node has been created
     // 3. Process input splits until there are no more.
     // 4. Wait until the INPUT_SPLIT_ALL_DONE_PATH node has been created
-    // 5. Wait for superstep INPUT_SUPERSTEP to complete.
+    // 5. Process any mutations deriving from add edge requests
+    // 6. Wait for superstep INPUT_SUPERSTEP to complete.
     if (getRestartedSuperstep() != UNSET_SUPERSTEP) {
       setCachedSuperstep(getRestartedSuperstep());
       return new FinishedSuperstepStats(false, -1, -1);
@@ -330,7 +453,7 @@ public class BspServiceWorker<I extends WritableComparable,
       }
     }
 
-    // Add the partitions for that this worker owns
+    // Add the partitions that this worker owns
     GraphState<I, V, E, M> graphState =
         new GraphState<I, V, E, M>(INPUT_SUPERSTEP, 0, 0,
             getContext(), getGraphMapper(), null);
@@ -345,79 +468,54 @@ else[HADOOP_NON_SECURE]*/
     workerClient.setup(getConfiguration().authenticate());
 /*end[HADOOP_NON_SECURE]*/
 
-    // Ensure the InputSplits are ready for processing before processing
-    while (true) {
-      Stat inputSplitsReadyStat;
+    VertexEdgeCount vertexEdgeCount;
+
+    if (getConfiguration().hasVertexInputFormat()) {
+      // Ensure the vertex InputSplits are ready for processing
+      ensureInputSplitsReady(vertexInputSplitsPaths, vertexInputSplitsEvents);
+      getContext().progress();
       try {
-        inputSplitsReadyStat =
-            getZkExt().exists(inputSplitsAllReadyPath, true);
-      } catch (KeeperException e) {
-        throw new IllegalStateException(
-            "setup: KeeperException waiting on input splits", e);
+        vertexEdgeCount = loadVertices();
       } catch (InterruptedException e) {
         throw new IllegalStateException(
-            "setup: InterruptedException waiting on input splits", e);
+            "setup: loadVertices failed with InterruptedException", e);
+      } catch (KeeperException e) {
+        throw new IllegalStateException(
+            "setup: loadVertices failed with KeeperException", e);
       }
-      if (inputSplitsReadyStat != null) {
-        break;
-      }
-      getInputSplitsAllReadyEvent().waitForever();
-      getInputSplitsAllReadyEvent().reset();
+      getContext().progress();
+    } else {
+      vertexEdgeCount = new VertexEdgeCount();
     }
 
-    getContext().progress();
-
-    // Load all the vertices and edges and get some stats about what was loaded
-    VertexEdgeCount vertexEdgeCount = null;
-    try {
-      vertexEdgeCount = loadVertices();
-    } catch (InterruptedException e) {
-      throw new IllegalStateException(
-          "setup: loadVertices failed with InterruptedException", e);
-    } catch (KeeperException e) {
-      throw new IllegalStateException(
-          "setup: loadVertices failed with KeeperException", e);
+    if (getConfiguration().hasEdgeInputFormat()) {
+      // Ensure the edge InputSplits are ready for processing
+      ensureInputSplitsReady(edgeInputSplitsPaths, edgeInputSplitsEvents);
+      getContext().progress();
+      try {
+        vertexEdgeCount = vertexEdgeCount.incrVertexEdgeCount(0, loadEdges());
+      } catch (InterruptedException e) {
+        throw new IllegalStateException(
+            "setup: loadEdges failed with InterruptedException", e);
+      } catch (KeeperException e) {
+        throw new IllegalStateException(
+            "setup: loadEdges failed with KeeperException", e);
+      }
+      getContext().progress();
     }
+
     if (LOG.isInfoEnabled()) {
-      LOG.info("setup: Finally loaded a total of " +
-          vertexEdgeCount);
+      LOG.info("setup: Finally loaded a total of " + vertexEdgeCount);
     }
-    getContext().progress();
 
-    // Workers wait for each other to finish, coordinated by master
-    String workerDonePath =
-        inputSplitsDonePath + "/" + getWorkerInfo().getHostnameId();
-    try {
-      getZkExt().createExt(workerDonePath,
-          null,
-          Ids.OPEN_ACL_UNSAFE,
-          CreateMode.PERSISTENT,
-          true);
-    } catch (KeeperException e) {
-      throw new IllegalStateException(
-          "setup: KeeperException creating worker done splits", e);
-    } catch (InterruptedException e) {
-      throw new IllegalStateException(
-          "setup: InterruptedException creating worker done splits", e);
+    if (getConfiguration().hasVertexInputFormat()) {
+      // Workers wait for each other to finish, coordinated by master
+      waitForOtherWorkers(vertexInputSplitsPaths, vertexInputSplitsEvents);
     }
-    while (true) {
-      Stat inputSplitsDoneStat;
-      try {
-        inputSplitsDoneStat =
-            getZkExt().exists(inputSplitsAllDonePath, true);
-      } catch (KeeperException e) {
-        throw new IllegalStateException(
-            "setup: KeeperException waiting on worker done splits", e);
-      } catch (InterruptedException e) {
-        throw new IllegalStateException(
-            "setup: InterruptedException waiting on worker " +
-                "done splits", e);
-      }
-      if (inputSplitsDoneStat != null) {
-        break;
-      }
-      getInputSplitsAllDoneEvent().waitForever();
-      getInputSplitsAllDoneEvent().reset();
+
+    if (getConfiguration().hasEdgeInputFormat()) {
+      // Workers wait for each other to finish, coordinated by master
+      waitForOtherWorkers(edgeInputSplitsPaths, edgeInputSplitsEvents);
     }
 
     // Create remaining partitions owned by this worker.
@@ -430,6 +528,13 @@ else[HADOOP_NON_SECURE]*/
                 partitionOwner.getPartitionId(), getContext());
         getPartitionStore().addPartition(partition);
       }
+    }
+
+    if (getConfiguration().hasEdgeInputFormat()) {
+      // Create vertices from added edges via vertex resolver.
+      // Doing this at the beginning of superstep 0 is not enough,
+      // because we want the vertex/edge stats to be accurate.
+      workerServer.resolveMutations(graphState);
     }
 
     // Generate the partition stats for the input superstep and process

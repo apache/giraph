@@ -72,22 +72,40 @@ public abstract class BspService<I extends WritableComparable,
   public static final String BASE_DIR = "/_hadoopBsp";
   /** Master job state znode above base dir */
   public static final String MASTER_JOB_STATE_NODE = "/_masterJobState";
-  /** Input split directory about base dir */
-  public static final String INPUT_SPLIT_DIR = "/_inputSplitDir";
-  /** Input split done directory about base dir */
-  public static final String INPUT_SPLIT_DONE_DIR = "/_inputSplitDoneDir";
-  /** Denotes a reserved input split */
-  public static final String INPUT_SPLIT_RESERVED_NODE =
-      "/_inputSplitReserved";
-  /** Denotes a finished input split */
-  public static final String INPUT_SPLIT_FINISHED_NODE =
-      "/_inputSplitFinished";
-  /** Denotes that all the input splits are are ready for consumption */
-  public static final String INPUT_SPLITS_ALL_READY_NODE =
-      "/_inputSplitsAllReady";
-  /** Denotes that all the input splits are done. */
-  public static final String INPUT_SPLITS_ALL_DONE_NODE =
-      "/_inputSplitsAllDone";
+  /** Vertex input split directory about base dir */
+  public static final String VERTEX_INPUT_SPLIT_DIR = "/_vertexInputSplitDir";
+  /** Vertex input split done directory about base dir */
+  public static final String VERTEX_INPUT_SPLIT_DONE_DIR =
+      "/_vertexInputSplitDoneDir";
+  /** Denotes a reserved vertex input split */
+  public static final String VERTEX_INPUT_SPLIT_RESERVED_NODE =
+      "/_vertexInputSplitReserved";
+  /** Denotes a finished vertex input split */
+  public static final String VERTEX_INPUT_SPLIT_FINISHED_NODE =
+      "/_vertexInputSplitFinished";
+  /** Denotes that all the vertex input splits are are ready for consumption */
+  public static final String VERTEX_INPUT_SPLITS_ALL_READY_NODE =
+      "/_vertexInputSplitsAllReady";
+  /** Denotes that all the vertex input splits are done. */
+  public static final String VERTEX_INPUT_SPLITS_ALL_DONE_NODE =
+      "/_vertexInputSplitsAllDone";
+  /** Edge input split directory about base dir */
+  public static final String EDGE_INPUT_SPLIT_DIR = "/_edgeInputSplitDir";
+  /** Edge input split done directory about base dir */
+  public static final String EDGE_INPUT_SPLIT_DONE_DIR =
+      "/_edgeInputSplitDoneDir";
+  /** Denotes a reserved edge input split */
+  public static final String EDGE_INPUT_SPLIT_RESERVED_NODE =
+      "/_edgeInputSplitReserved";
+  /** Denotes a finished edge input split */
+  public static final String EDGE_INPUT_SPLIT_FINISHED_NODE =
+      "/_edgeInputSplitFinished";
+  /** Denotes that all the edge input splits are are ready for consumption */
+  public static final String EDGE_INPUT_SPLITS_ALL_READY_NODE =
+      "/_edgeInputSplitsAllReady";
+  /** Denotes that all the edge input splits are done. */
+  public static final String EDGE_INPUT_SPLITS_ALL_DONE_NODE =
+      "/_edgeInputSplitsAllDone";
   /** Directory of attempts of this application */
   public static final String APPLICATION_ATTEMPTS_DIR =
       "/_applicationAttemptsDir";
@@ -120,32 +138,8 @@ public abstract class BspService<I extends WritableComparable,
   /** JSON partition stats key */
   public static final String JSONOBJ_PARTITION_STATS_KEY =
       "_partitionStatsKey";
-  /** JSON finished vertices key */
-  public static final String JSONOBJ_FINISHED_VERTICES_KEY =
-      "_verticesFinishedKey";
-  /** JSON vertex count key */
-  public static final String JSONOBJ_NUM_VERTICES_KEY = "_numVerticesKey";
-  /** JSON edge count key */
-  public static final String JSONOBJ_NUM_EDGES_KEY = "_numEdgesKey";
   /** JSON message count key */
   public static final String JSONOBJ_NUM_MESSAGES_KEY = "_numMsgsKey";
-  /** JSON hostname id key */
-  public static final String JSONOBJ_HOSTNAME_ID_KEY = "_hostnameIdKey";
-  /** JSON max vertex index key */
-  public static final String JSONOBJ_MAX_VERTEX_INDEX_KEY =
-      "_maxVertexIndexKey";
-  /** JSON hostname key */
-  public static final String JSONOBJ_HOSTNAME_KEY = "_hostnameKey";
-  /** JSON port key */
-  public static final String JSONOBJ_PORT_KEY = "_portKey";
-  /** JSON checkpoint file prefix key */
-  public static final String JSONOBJ_CHECKPOINT_FILE_PREFIX_KEY =
-      "_checkpointFilePrefixKey";
-  /** JSON previous hostname key */
-  public static final String JSONOBJ_PREVIOUS_HOSTNAME_KEY =
-      "_previousHostnameKey";
-  /** JSON previous port key */
-  public static final String JSONOBJ_PREVIOUS_PORT_KEY = "_previousPortKey";
   /** JSON state key */
   public static final String JSONOBJ_STATE_KEY = "_stateKey";
   /** JSON application attempt key */
@@ -181,14 +175,14 @@ public abstract class BspService<I extends WritableComparable,
   protected final String basePath;
   /** Path to the job state determined by the master (informative only) */
   protected final String masterJobStatePath;
-  /** Path to the input splits written by the master */
-  protected final String inputSplitsPath;
-  /** Path to the input splits all ready to be processed by workers */
-  protected final String inputSplitsAllReadyPath;
-  /** Path to the input splits done */
-  protected final String inputSplitsDonePath;
-  /** Path to the input splits all done to notify the workers to proceed */
-  protected final String inputSplitsAllDonePath;
+  /** ZooKeeper paths for vertex input splits. */
+  protected final InputSplitPaths vertexInputSplitsPaths;
+  /** ZooKeeper paths for edge input splits. */
+  protected final InputSplitPaths edgeInputSplitsPaths;
+  /** Vertex input split events. */
+  protected final InputSplitEvents vertexInputSplitsEvents;
+  /** Edge input split events. */
+  protected final InputSplitEvents edgeInputSplitsEvents;
   /** Path to the application attempts) */
   protected final String applicationAttemptsPath;
   /** Path to the cleaned up notifications */
@@ -203,14 +197,6 @@ public abstract class BspService<I extends WritableComparable,
   private final BspEvent connectedEvent;
   /** Has worker registration changed (either healthy or unhealthy) */
   private final BspEvent workerHealthRegistrationChanged;
-  /** InputSplits are ready for consumption by workers */
-  private final BspEvent inputSplitsAllReadyChanged;
-  /** InputSplit reservation or finished notification and synchronization */
-  private final BspEvent inputSplitsStateChanged;
-  /** InputSplits are done being processed by workers */
-  private final BspEvent inputSplitsAllDoneChanged;
-  /** InputSplit done by a worker finished notification and synchronization */
-  private final BspEvent inputSplitsDoneStateChanged;
   /** Are the addresses and partition assignments to workers ready? */
   private final BspEvent addressesAndPartitionsReadyChanged;
   /** Application attempt changed */
@@ -263,12 +249,10 @@ public abstract class BspService<I extends WritableComparable,
       int sessionMsecTimeout,
       Mapper<?, ?, ?, ?>.Context context,
       GraphMapper<I, V, E, M> graphMapper) {
+    this.vertexInputSplitsEvents = new InputSplitEvents(context);
+    this.edgeInputSplitsEvents = new InputSplitEvents(context);
     this.connectedEvent = new PredicateLock(context);
     this.workerHealthRegistrationChanged = new PredicateLock(context);
-    this.inputSplitsAllReadyChanged = new PredicateLock(context);
-    this.inputSplitsStateChanged = new PredicateLock(context);
-    this.inputSplitsAllDoneChanged = new PredicateLock(context);
-    this.inputSplitsDoneStateChanged = new PredicateLock(context);
     this.addressesAndPartitionsReadyChanged = new PredicateLock(context);
     this.applicationAttemptChanged = new PredicateLock(context);
     this.superstepFinished = new PredicateLock(context);
@@ -277,8 +261,10 @@ public abstract class BspService<I extends WritableComparable,
 
     registerBspEvent(connectedEvent);
     registerBspEvent(workerHealthRegistrationChanged);
-    registerBspEvent(inputSplitsAllReadyChanged);
-    registerBspEvent(inputSplitsStateChanged);
+    registerBspEvent(vertexInputSplitsEvents.getAllReadyChanged());
+    registerBspEvent(vertexInputSplitsEvents.getStateChanged());
+    registerBspEvent(edgeInputSplitsEvents.getAllReadyChanged());
+    registerBspEvent(edgeInputSplitsEvents.getStateChanged());
     registerBspEvent(addressesAndPartitionsReadyChanged);
     registerBspEvent(applicationAttemptChanged);
     registerBspEvent(superstepFinished);
@@ -315,10 +301,12 @@ public abstract class BspService<I extends WritableComparable,
 
     basePath = ZooKeeperManager.getBasePath(conf) + BASE_DIR + "/" + jobId;
     masterJobStatePath = basePath + MASTER_JOB_STATE_NODE;
-    inputSplitsPath = basePath + INPUT_SPLIT_DIR;
-    inputSplitsAllReadyPath = basePath + INPUT_SPLITS_ALL_READY_NODE;
-    inputSplitsDonePath = basePath + INPUT_SPLIT_DONE_DIR;
-    inputSplitsAllDonePath = basePath + INPUT_SPLITS_ALL_DONE_NODE;
+    vertexInputSplitsPaths = new InputSplitPaths(basePath,
+        VERTEX_INPUT_SPLIT_DIR, VERTEX_INPUT_SPLIT_DONE_DIR,
+        VERTEX_INPUT_SPLITS_ALL_READY_NODE, VERTEX_INPUT_SPLITS_ALL_DONE_NODE);
+    edgeInputSplitsPaths = new InputSplitPaths(basePath,
+        EDGE_INPUT_SPLIT_DIR, EDGE_INPUT_SPLIT_DONE_DIR,
+        EDGE_INPUT_SPLITS_ALL_READY_NODE, EDGE_INPUT_SPLITS_ALL_DONE_NODE);
     applicationAttemptsPath = basePath + APPLICATION_ATTEMPTS_DIR;
     cleanedUpPath = basePath + CLEANED_UP_DIR;
     checkpointBasePath = getConfiguration().get(
@@ -498,18 +486,6 @@ public abstract class BspService<I extends WritableComparable,
   }
 
   /**
-   * Generate the merged aggregator directory path for a superstep
-   *
-   * @param attempt application attempt number
-   * @param superstep superstep to use
-   * @return directory path based on the a superstep
-   */
-  public final String getMergedAggregatorPath(long attempt, long superstep) {
-    return applicationAttemptsPath + "/" + attempt +
-        SUPERSTEP_DIR + "/" + superstep + MERGED_AGGREGATOR_DIR;
-  }
-
-  /**
    * Generate the "superstep finished" directory path for a superstep
    *
    * @param attempt application attempt number
@@ -634,22 +610,6 @@ public abstract class BspService<I extends WritableComparable,
 
   public final BspEvent getWorkerHealthRegistrationChangedEvent() {
     return workerHealthRegistrationChanged;
-  }
-
-  public final BspEvent getInputSplitsAllReadyEvent() {
-    return inputSplitsAllReadyChanged;
-  }
-
-  public final BspEvent getInputSplitsStateChangedEvent() {
-    return inputSplitsStateChanged;
-  }
-
-  public final BspEvent getInputSplitsAllDoneEvent() {
-    return inputSplitsAllDoneChanged;
-  }
-
-  public final BspEvent getInputSplitsDoneStateChangedEvent() {
-    return inputSplitsDoneStateChanged;
   }
 
   public final BspEvent getAddressesAndPartitionsReadyChangedEvent() {
@@ -962,53 +922,105 @@ public abstract class BspService<I extends WritableComparable,
       }
       workerHealthRegistrationChanged.signal();
       eventProcessed = true;
-    } else if (event.getPath().equals(inputSplitsAllReadyPath) &&
+    } else if (event.getPath().equals(
+        vertexInputSplitsPaths.getAllReadyPath()) &&
         (event.getType() == EventType.NodeCreated)) {
       if (LOG.isInfoEnabled()) {
         LOG.info("process: inputSplitsReadyChanged " +
             "(input splits ready)");
       }
-      inputSplitsAllReadyChanged.signal();
+      vertexInputSplitsEvents.getAllReadyChanged().signal();
       eventProcessed = true;
-    } else if (event.getPath().endsWith(INPUT_SPLIT_RESERVED_NODE) &&
+    } else if (event.getPath().endsWith(VERTEX_INPUT_SPLIT_RESERVED_NODE) &&
         (event.getType() == EventType.NodeCreated)) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("process: inputSplitsStateChanged " +
+        LOG.debug("process: vertexInputSplitsStateChanged " +
             "(made a reservation)");
       }
-      inputSplitsStateChanged.signal();
+      vertexInputSplitsEvents.getStateChanged().signal();
       eventProcessed = true;
-    } else if (event.getPath().endsWith(INPUT_SPLIT_RESERVED_NODE) &&
+    } else if (event.getPath().endsWith(VERTEX_INPUT_SPLIT_RESERVED_NODE) &&
         (event.getType() == EventType.NodeDeleted)) {
       if (LOG.isInfoEnabled()) {
-        LOG.info("process: inputSplitsStateChanged " +
+        LOG.info("process: vertexInputSplitsStateChanged " +
             "(lost a reservation)");
       }
-      inputSplitsStateChanged.signal();
+      vertexInputSplitsEvents.getStateChanged().signal();
       eventProcessed = true;
-    } else if (event.getPath().endsWith(INPUT_SPLIT_FINISHED_NODE) &&
+    } else if (event.getPath().endsWith(VERTEX_INPUT_SPLIT_FINISHED_NODE) &&
         (event.getType() == EventType.NodeCreated)) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("process: inputSplitsStateChanged " +
+        LOG.debug("process: vertexInputSplitsStateChanged " +
             "(finished inputsplit)");
       }
-      inputSplitsStateChanged.signal();
+      vertexInputSplitsEvents.getStateChanged().signal();
       eventProcessed = true;
-    } else if (event.getPath().endsWith(INPUT_SPLIT_DONE_DIR) &&
+    } else if (event.getPath().endsWith(VERTEX_INPUT_SPLIT_DONE_DIR) &&
         (event.getType() == EventType.NodeChildrenChanged)) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("process: inputSplitsDoneStateChanged " +
+        LOG.debug("process: vertexInputSplitsDoneStateChanged " +
             "(worker finished sending)");
       }
-      inputSplitsDoneStateChanged.signal();
+      vertexInputSplitsEvents.getDoneStateChanged().signal();
       eventProcessed = true;
-    }  else if (event.getPath().equals(inputSplitsAllDonePath) &&
+    }  else if (event.getPath().equals(
+        vertexInputSplitsPaths.getAllDonePath()) &&
         (event.getType() == EventType.NodeCreated)) {
       if (LOG.isInfoEnabled()) {
-        LOG.info("process: inputSplitsAllDoneChanged " +
+        LOG.info("process: vertexInputSplitsAllDoneChanged " +
             "(all vertices sent from input splits)");
       }
-      inputSplitsAllDoneChanged.signal();
+      vertexInputSplitsEvents.getAllDoneChanged().signal();
+      eventProcessed = true;
+    } else if (event.getPath().equals(
+        edgeInputSplitsPaths.getAllReadyPath()) &&
+        (event.getType() == EventType.NodeCreated)) {
+      if (LOG.isInfoEnabled()) {
+        LOG.info("process: edgeInputSplitsReadyChanged " +
+            "(input splits ready)");
+      }
+      edgeInputSplitsEvents.getAllReadyChanged().signal();
+      eventProcessed = true;
+    } else if (event.getPath().endsWith(EDGE_INPUT_SPLIT_RESERVED_NODE) &&
+        (event.getType() == EventType.NodeCreated)) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("process: edgeInputSplitsStateChanged " +
+            "(made a reservation)");
+      }
+      edgeInputSplitsEvents.getStateChanged().signal();
+      eventProcessed = true;
+    } else if (event.getPath().endsWith(EDGE_INPUT_SPLIT_RESERVED_NODE) &&
+        (event.getType() == EventType.NodeDeleted)) {
+      if (LOG.isInfoEnabled()) {
+        LOG.info("process: edgeInputSplitsStateChanged " +
+            "(lost a reservation)");
+      }
+      edgeInputSplitsEvents.getStateChanged().signal();
+      eventProcessed = true;
+    } else if (event.getPath().endsWith(EDGE_INPUT_SPLIT_FINISHED_NODE) &&
+        (event.getType() == EventType.NodeCreated)) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("process: edgeInputSplitsStateChanged " +
+            "(finished inputsplit)");
+      }
+      edgeInputSplitsEvents.getStateChanged().signal();
+      eventProcessed = true;
+    } else if (event.getPath().endsWith(EDGE_INPUT_SPLIT_DONE_DIR) &&
+        (event.getType() == EventType.NodeChildrenChanged)) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("process: edgeInputSplitsDoneStateChanged " +
+            "(worker finished sending)");
+      }
+      edgeInputSplitsEvents.getDoneStateChanged().signal();
+      eventProcessed = true;
+    } else if (event.getPath().equals(
+        edgeInputSplitsPaths.getAllDonePath()) &&
+        (event.getType() == EventType.NodeCreated)) {
+      if (LOG.isInfoEnabled()) {
+        LOG.info("process: edgeInputSplitsAllDoneChanged " +
+            "(all vertices sent from input splits)");
+      }
+      edgeInputSplitsEvents.getAllDoneChanged().signal();
       eventProcessed = true;
     } else if (event.getPath().contains(ADDRESSES_AND_PARTITIONS_DIR) &&
         event.getType() == EventType.NodeCreated) {

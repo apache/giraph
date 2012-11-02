@@ -18,15 +18,8 @@
 
 package org.apache.giraph;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.List;
-
-import com.google.common.base.Charsets;
-import com.google.common.base.Preconditions;
-import com.google.common.io.Closeables;
 import org.apache.giraph.examples.GeneratedVertexReader;
+import org.apache.giraph.graph.EdgeInputFormat;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.MasterCompute;
 import org.apache.giraph.graph.Vertex;
@@ -36,12 +29,25 @@ import org.apache.giraph.graph.WorkerContext;
 import org.apache.giraph.utils.FileUtils;
 import org.apache.giraph.zk.ZooKeeperExt;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.*;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.junit.After;
 import org.junit.Before;
+
+import com.google.common.base.Charsets;
+import com.google.common.base.Preconditions;
+import com.google.common.io.Closeables;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.List;
 
 /**
  * Extended TestCase for making setting up Bsp testing.
@@ -211,16 +217,48 @@ public class BspCase implements Watcher {
       Class<? extends VertexInputFormat> vertexInputFormatClass,
       Class<? extends VertexOutputFormat> vertexOutputFormatClass,
       Path outputPath) throws IOException {
+    return prepareJob(name, vertexClass, workerContextClass,
+        masterComputeClass, vertexInputFormatClass, null,
+        vertexOutputFormatClass, outputPath);
+  }
+
+  /**
+   * Prepare a GiraphJob for test purposes
+   *
+   * @param name  identifying name for the job
+   * @param vertexClass class of the vertex to run
+   * @param workerContextClass class of the workercontext to use
+   * @param masterComputeClass class of mastercompute to use
+   * @param vertexInputFormatClass  vertex inputformat to use
+   * @param edgeInputFormatClass  edge inputformat to use
+   * @param vertexOutputFormatClass outputformat to use
+   * @param outputPath  destination path for the output
+   * @return  fully configured job instance
+   * @throws IOException
+   */
+  protected GiraphJob prepareJob(
+      String name,
+      Class<? extends Vertex> vertexClass,
+      Class<? extends WorkerContext> workerContextClass,
+      Class<? extends MasterCompute> masterComputeClass,
+      Class<? extends VertexInputFormat> vertexInputFormatClass,
+      Class<? extends EdgeInputFormat> edgeInputFormatClass,
+      Class<? extends VertexOutputFormat> vertexOutputFormatClass,
+      Path outputPath) throws IOException {
     GiraphJob job = new GiraphJob(name);
     setupConfiguration(job);
     job.getConfiguration().setVertexClass(vertexClass);
-    job.getConfiguration().setVertexInputFormatClass(vertexInputFormatClass);
-
     if (workerContextClass != null) {
       job.getConfiguration().setWorkerContextClass(workerContextClass);
     }
     if (masterComputeClass != null) {
       job.getConfiguration().setMasterComputeClass(masterComputeClass);
+    }
+    if (vertexInputFormatClass != null) {
+      job.getConfiguration().setVertexInputFormatClass(vertexInputFormatClass);
+    }
+    if (edgeInputFormatClass != null) {
+      job.getConfiguration().setEdgeInputFormatClass(edgeInputFormatClass);
     }
     if (vertexOutputFormatClass != null) {
       job.getConfiguration().setVertexOutputFormatClass(

@@ -18,12 +18,13 @@
 
 package org.apache.giraph.utils;
 
-import com.google.common.base.Charsets;
-import com.google.common.io.Closeables;
-import com.google.common.io.Files;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+
+import com.google.common.base.Charsets;
+import com.google.common.io.Closeables;
+import com.google.common.io.Files;
 
 import java.io.File;
 import java.io.FileFilter;
@@ -114,7 +115,7 @@ public class FileUtils {
    * @param lines Strings written to the file
    * @throws IOException
    */
-  public static void writeLines(File file, String... lines)
+  public static void writeLines(File file, String[] lines)
     throws IOException {
     Writer writer = Files.newWriter(file, Charsets.UTF_8);
     try {

@@ -57,7 +57,7 @@ public class VertexResolver<I extends WritableComparable, V extends Writable,
     // 1. If the vertex exists, first prune the edges
     // 2. If vertex removal desired, remove the vertex.
     // 3. If creation of vertex desired, pick first vertex
-    // 4. If vertex doesn't exist, but got messages, create
+    // 4. If vertex doesn't exist, but got messages or added edges, create
     // 5. If edge addition, add the edges
     if (vertex != null) {
       if (vertexChanges != null) {
@@ -84,7 +84,8 @@ public class VertexResolver<I extends WritableComparable, V extends Writable,
           vertex = vertexChanges.getAddedVertexList().get(0);
         }
       }
-      if (vertex == null && hasMessages) {
+      if (vertex == null &&
+          (hasMessages || !vertexChanges.getAddedEdgeList().isEmpty())) {
         vertex = instantiateVertex();
         vertex.initialize(vertexId,
             getConf().createVertexValue(),

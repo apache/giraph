@@ -16,56 +16,25 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.comm;
+package org.apache.giraph.graph;
 
-import org.apache.giraph.graph.GraphState;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import java.io.Closeable;
-
 /**
- * Interface for message communication server.
+ * Factory class for creating {@link InputSplitsCallable}s.
  *
  * @param <I> Vertex id
  * @param <V> Vertex value
  * @param <E> Edge value
  * @param <M> Message data
  */
-@SuppressWarnings("rawtypes")
-public interface WorkerServer<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    extends Closeable {
+public interface InputSplitsCallableFactory<I extends WritableComparable,
+    V extends Writable, E extends Writable, M extends Writable> {
   /**
-   * Get the port
+   * Return a newly-created {@link InputSplitsCallable}.
    *
-   * @return Port used by this server
+   * @return A new {@link InputSplitsCallable}
    */
-  int getPort();
-
-  /**
-   * Prepare incoming messages for computation, and resolve mutation requests.
-   *
-   * @param graphState Current graph state
-   */
-  void prepareSuperstep(GraphState<I, V, E, M> graphState);
-
-  /**
-   * Only resolve mutations requests (used for edge-oriented input).
-   *
-   * @param graphState Current graph state
-   */
-  void resolveMutations(GraphState<I, V, E, M> graphState);
-
-  /**
-   * Get server data
-   *
-   * @return Server data
-   */
-  ServerData<I, V, E, M> getServerData();
-
-  /**
-   * Shuts down.
-   */
-  void close();
+  InputSplitsCallable<I, V, E, M> newCallable();
 }

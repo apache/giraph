@@ -18,13 +18,6 @@
 
 package org.apache.giraph.comm.requests;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.graph.VertexMutations;
 import org.apache.hadoop.io.Writable;
@@ -32,6 +25,13 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
 
 import com.google.common.collect.Maps;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Send a collection of vertex mutations for a partition.

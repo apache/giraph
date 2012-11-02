@@ -18,10 +18,10 @@
 
 package org.apache.giraph;
 
-import java.util.List;
 import org.apache.giraph.graph.AggregatorWriter;
 import org.apache.giraph.graph.DefaultMasterCompute;
 import org.apache.giraph.graph.DefaultWorkerContext;
+import org.apache.giraph.graph.EdgeInputFormat;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.MasterCompute;
 import org.apache.giraph.graph.TextAggregatorWriter;
@@ -40,6 +40,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+
+import java.util.List;
 
 /**
  * The classes set here are immutable, the remaining configuration is mutable.
@@ -77,6 +79,10 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   /** Vertex output format class - cached for fast access */
   private final Class<? extends VertexOutputFormat<I, V, E>>
   vertexOutputFormatClass;
+  /** Edge input format class - cached for fast access */
+  private final Class<? extends EdgeInputFormat<I, E>>
+  edgeInputFormatClass;
+
 
   /** Aggregator writer class - cached for fast access */
   private final Class<? extends AggregatorWriter> aggregatorWriterClass;
@@ -124,6 +130,9 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
     vertexOutputFormatClass = (Class<? extends VertexOutputFormat<I, V, E>>)
         conf.getClass(VERTEX_OUTPUT_FORMAT_CLASS,
         null, VertexOutputFormat.class);
+    edgeInputFormatClass = (Class<? extends EdgeInputFormat<I, E>>)
+        conf.getClass(EDGE_INPUT_FORMAT_CLASS,
+        null, EdgeInputFormat.class);
 
     aggregatorWriterClass = conf.getClass(AGGREGATOR_WRITER_CLASS,
         TextAggregatorWriter.class, AggregatorWriter.class);
@@ -169,6 +178,15 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   }
 
   /**
+   * Does the job have a {@link VertexInputFormat}?
+   *
+   * @return True iff a {@link VertexInputFormat} has been specified.
+   */
+  public boolean hasVertexInputFormat() {
+    return vertexInputFormatClass != null;
+  }
+
+  /**
    * Get the user's subclassed
    * {@link org.apache.giraph.graph.VertexInputFormat}.
    *
@@ -208,6 +226,34 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   @SuppressWarnings("rawtypes")
   public VertexOutputFormat<I, V, E> createVertexOutputFormat() {
     return ReflectionUtils.newInstance(vertexOutputFormatClass, this);
+  }
+
+  /**
+   * Does the job have an {@link EdgeInputFormat}?
+   *
+   * @return True iff an {@link EdgeInputFormat} has been specified.
+   */
+  public boolean hasEdgeInputFormat() {
+    return edgeInputFormatClass != null;
+  }
+
+  /**
+   * Get the user's subclassed
+   * {@link org.apache.giraph.graph.EdgeInputFormat}.
+   *
+   * @return User's edge input format class
+   */
+  public Class<? extends EdgeInputFormat<I, E>> getEdgeInputFormatClass() {
+    return edgeInputFormatClass;
+  }
+
+  /**
+   * Create a user edge input format class
+   *
+   * @return Instantiated user edge input format class
+   */
+  public EdgeInputFormat<I, E> createEdgeInputFormat() {
+    return ReflectionUtils.newInstance(edgeInputFormatClass, this);
   }
 
   /**

@@ -118,7 +118,11 @@ public class NettyWorkerServer<I extends WritableComparable,
   @Override
   public void prepareSuperstep(GraphState<I, V, E, M> graphState) {
     serverData.prepareSuperstep();
+    resolveMutations(graphState);
+  }
 
+  @Override
+  public void resolveMutations(GraphState<I, V, E, M> graphState) {
     Set<I> resolveVertexIndexSet = Sets.newHashSet();
     // Keep track of the vertices which are not here but have received messages
     for (Integer partitionId : service.getPartitionStore().getPartitionIds()) {
@@ -180,8 +184,8 @@ public class NettyWorkerServer<I extends WritableComparable,
       if (partition == null) {
         throw new IllegalStateException(
             "prepareSuperstep: No partition for index " + vertexIndex +
-            " in " + service.getPartitionStore() + " should have been " +
-            service.getVertexPartitionOwner(vertexIndex));
+                " in " + service.getPartitionStore() + " should have been " +
+                service.getVertexPartitionOwner(vertexIndex));
       }
       if (vertex != null) {
         partition.putVertex(vertex);

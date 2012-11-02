@@ -153,9 +153,16 @@ public class GiraphJob {
       throw new IllegalArgumentException("checkConfiguration: Null" +
           GiraphConfiguration.VERTEX_CLASS);
     }
-    if (conf.getVertexInputFormatClass() == null) {
-      throw new IllegalArgumentException("checkConfiguration: Null " +
-          GiraphConfiguration.VERTEX_INPUT_FORMAT_CLASS);
+    if (conf.getVertexInputFormatClass() == null &&
+        conf.getEdgeInputFormatClass() == null) {
+      throw new IllegalArgumentException("checkConfiguration: One of " +
+          GiraphConfiguration.VERTEX_INPUT_FORMAT_CLASS + " and " +
+          GiraphConfiguration.EDGE_INPUT_FORMAT_CLASS + " must be non-null");
+    }
+    if (conf.getEdgeInputFormatClass() != null &&
+        !(MutableVertex.class.isAssignableFrom(conf.getVertexClass()))) {
+      throw new IllegalArgumentException("checkConfiguration: EdgeInputFormat" +
+          " only works with mutable vertices");
     }
     if (conf.getVertexResolverClass() == null) {
       if (LOG.isInfoEnabled()) {

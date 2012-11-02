@@ -17,8 +17,6 @@
  */
 package org.apache.giraph.comm.netty;
 
-import com.google.common.collect.Maps;
-import com.yammer.metrics.core.Histogram;
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
@@ -48,6 +46,9 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
+
+import com.google.common.collect.Maps;
+import com.yammer.metrics.core.Histogram;
 
 import java.io.IOException;
 import java.util.Collection;

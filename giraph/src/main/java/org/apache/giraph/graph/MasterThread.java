@@ -18,11 +18,6 @@
 
 package org.apache.giraph.graph;
 
-import java.io.IOException;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.TreeMap;
-
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.bsp.ApplicationState;
 import org.apache.giraph.bsp.CentralizedServiceMaster;
@@ -32,6 +27,11 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.KeeperException;
+
+import java.io.IOException;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.TreeMap;
 
 /**
  * Master thread that will coordinate the activities of the tasks.  It runs
@@ -98,7 +98,8 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
         // Attempt to create InputSplits if necessary. Bail out if that fails.
         if (bspServiceMaster.getRestartedSuperstep() !=
             BspService.UNSET_SUPERSTEP ||
-            bspServiceMaster.createInputSplits() != -1) {
+            (bspServiceMaster.createVertexInputSplits() != -1 &&
+                bspServiceMaster.createEdgeInputSplits() != -1)) {
           long setupMillis = System.currentTimeMillis() - startMillis;
           context.getCounter(GIRAPH_TIMERS_COUNTER_GROUP_NAME,
               "Setup (milliseconds)").
@@ -125,13 +126,13 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
             if (superstepCounterOn) {
               String counterPrefix;
               if (cachedSuperstep == -1) {
-                counterPrefix = "Vertex input superstep";
+                counterPrefix = "Input superstep";
               } else {
                 counterPrefix = "Superstep " + cachedSuperstep;
               }
               context.getCounter(GIRAPH_TIMERS_COUNTER_GROUP_NAME,
                   counterPrefix +
-                  " (milliseconds)").
+                      " (milliseconds)").
                   increment(superstepMillis);
             }
 
@@ -158,7 +159,7 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
           if (LOG.isInfoEnabled()) {
             if (entry.getKey().longValue() ==
                 BspService.INPUT_SUPERSTEP) {
-              LOG.info("vertex input superstep: Took " +
+              LOG.info("input superstep: Took " +
                   entry.getValue() + " seconds.");
             } else {
               LOG.info("superstep " + entry.getKey() + ": Took " +

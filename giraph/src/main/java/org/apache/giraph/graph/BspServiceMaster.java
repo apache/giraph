@@ -18,7 +18,6 @@
 
 package org.apache.giraph.graph;
 
-import com.google.common.collect.Sets;
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.bsp.ApplicationState;
 import org.apache.giraph.bsp.BspInputFormat;
@@ -57,6 +56,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import net.iharder.Base64;
 
 import java.io.ByteArrayOutputStream;
@@ -237,47 +237,44 @@ public class BspServiceMaster<I extends WritableComparable,
   }
 
   /**
-   * Master uses this to calculate the {@link VertexInputFormat}
-   * input splits and write it to ZooKeeper.
+   * Common method for generating vertex/edge input splits.
    *
+   * @param inputFormat The vertex/edge input format
    * @param numWorkers Number of available workers
-   * @return List of input splits
-   * @throws InstantiationException
-   * @throws IllegalAccessException
-   * @throws IOException
-   * @throws InterruptedException
+   * @param inputSplitType Type of input splits (for logging purposes)
+   * @return List of input splits for the given format
    */
-  private List<InputSplit> generateInputSplits(int numWorkers) {
-    VertexInputFormat<I, V, E, M> vertexInputFormat =
-        getConfiguration().createVertexInputFormat();
+  private List<InputSplit> generateInputSplits(GiraphInputFormat inputFormat,
+                                               int numWorkers,
+                                               String inputSplitType) {
+    String logPrefix = "generate" + inputSplitType + "InputSplits";
     List<InputSplit> splits;
     try {
-      splits = vertexInputFormat.getSplits(getContext(), numWorkers);
-      float samplePercent =
-          getConfiguration().getFloat(
-              GiraphConfiguration.INPUT_SPLIT_SAMPLE_PERCENT,
-              GiraphConfiguration.INPUT_SPLIT_SAMPLE_PERCENT_DEFAULT);
-      if (samplePercent !=
-          GiraphConfiguration.INPUT_SPLIT_SAMPLE_PERCENT_DEFAULT) {
-        int lastIndex = (int) (samplePercent * splits.size() / 100f);
-        List<InputSplit> sampleSplits = splits.subList(0, lastIndex);
-        LOG.warn("generateInputSplits: Using sampling - Processing " +
-            "only " + sampleSplits.size() + " instead of " +
-            splits.size() + " expected splits.");
-        return sampleSplits;
-      } else {
-        if (LOG.isInfoEnabled()) {
-          LOG.info("generateInputSplits: Got " + splits.size() +
-              " input splits for " + numWorkers + " workers");
-        }
-        return splits;
-      }
+      splits = inputFormat.getSplits(getContext(), numWorkers);
     } catch (IOException e) {
-      throw new IllegalStateException(
-          "generateInputSplits: Got IOException", e);
+      throw new IllegalStateException(logPrefix + ": Got IOException", e);
     } catch (InterruptedException e) {
       throw new IllegalStateException(
-          "generateInputSplits: Got InterruptedException", e);
+          logPrefix + ": Got InterruptedException", e);
+    }
+    float samplePercent =
+        getConfiguration().getFloat(
+            GiraphConfiguration.INPUT_SPLIT_SAMPLE_PERCENT,
+            GiraphConfiguration.INPUT_SPLIT_SAMPLE_PERCENT_DEFAULT);
+    if (samplePercent !=
+        GiraphConfiguration.INPUT_SPLIT_SAMPLE_PERCENT_DEFAULT) {
+      int lastIndex = (int) (samplePercent * splits.size() / 100f);
+      List<InputSplit> sampleSplits = splits.subList(0, lastIndex);
+      LOG.warn(logPrefix + ": Using sampling - Processing only " +
+          sampleSplits.size() + " instead of " + splits.size() +
+          " expected splits.");
+      return sampleSplits;
+    } else {
+      if (LOG.isInfoEnabled()) {
+        LOG.info(logPrefix + ": Got " + splits.size() +
+            " input splits for " + numWorkers + " workers");
+      }
+      return splits;
     }
   }
 
@@ -508,31 +505,39 @@ public class BspServiceMaster<I extends WritableComparable,
     }
   }
 
-  @Override
-  public int createInputSplits() {
+  /**
+   * Common method for creating vertex/edge input splits.
+   *
+   * @param inputFormat The vertex/edge input format
+   * @param inputSplitPaths ZooKeeper input split paths
+   * @param inputSplitType Type of input split (for logging purposes)
+   * @return Number of splits. Returns -1 on failure to create
+   *         valid input splits.
+   */
+  private int createInputSplits(GiraphInputFormat inputFormat,
+                                InputSplitPaths inputSplitPaths,
+                                String inputSplitType) {
+    String logPrefix = "create" + inputSplitType + "InputSplits";
     // Only the 'master' should be doing this.  Wait until the number of
     // processes that have reported health exceeds the minimum percentage.
     // If the minimum percentage is not met, fail the job.  Otherwise
     // generate the input splits
+    String inputSplitsPath = inputSplitPaths.getPath();
     try {
       if (getZkExt().exists(inputSplitsPath, false) != null) {
-        LOG.info(inputSplitsPath +
-            " already exists, no need to create");
+        LOG.info(inputSplitsPath + " already exists, no need to create");
         return Integer.parseInt(
-            new String(
-                getZkExt().getData(inputSplitsPath, false, null)));
+            new String(getZkExt().getData(inputSplitsPath, false, null)));
       }
     } catch (KeeperException.NoNodeException e) {
       if (LOG.isInfoEnabled()) {
-        LOG.info("createInputSplits: Need to create the " +
-            "input splits at " + inputSplitsPath);
+        LOG.info(logPrefix + ": Need to create the input splits at " +
+            inputSplitsPath);
       }
     } catch (KeeperException e) {
-      throw new IllegalStateException(
-          "createInputSplits: KeeperException", e);
+      throw new IllegalStateException(logPrefix + ": KeeperException", e);
     } catch (InterruptedException e) {
-      throw new IllegalStateException(
-          "createInputSplits: InterrtupedException", e);
+      throw new IllegalStateException(logPrefix + ": InterrtupedException", e);
     }
 
     // When creating znodes, in case the master has already run, resume
@@ -545,19 +550,18 @@ public class BspServiceMaster<I extends WritableComparable,
 
     // Note that the input splits may only be a sample if
     // INPUT_SPLIT_SAMPLE_PERCENT is set to something other than 100
-    List<InputSplit> splitList =
-        generateInputSplits(healthyWorkerInfoList.size());
+    List<InputSplit> splitList = generateInputSplits(inputFormat,
+        healthyWorkerInfoList.size(), inputSplitType);
+
     if (splitList.isEmpty()) {
-      LOG.fatal("createInputSplits: Failing job due to 0 input splits, " +
-          "check input of " +
-          getConfiguration().getVertexInputFormatClass().getName() + "!");
+      LOG.fatal(logPrefix + ": Failing job due to 0 input splits, " +
+          "check input of " + inputFormat.getClass().getName() + "!");
       getContext().setStatus("Failing job due to 0 input splits, " +
-          "check input of " +
-          getConfiguration().getVertexInputFormatClass().getName() + "!");
+          "check input of " + inputFormat.getClass().getName() + "!");
       failJob();
     }
     if (healthyWorkerInfoList.size() > splitList.size()) {
-      LOG.warn("createInputSplits: Number of inputSplits=" +
+      LOG.warn(logPrefix + ": Number of inputSplits=" +
           splitList.size() + " < " +
           healthyWorkerInfoList.size() +
           "=number of healthy processes, " +
@@ -569,40 +573,62 @@ public class BspServiceMaster<I extends WritableComparable,
         INPUT_SPLIT_THREAD_COUNT,
         DEFAULT_INPUT_SPLIT_THREAD_COUNT);
     if (LOG.isInfoEnabled()) {
-      LOG.info("createInputSplits: Starting to write input split data to " +
-          "zookeeper with " + inputSplitThreadCount + " threads");
+      LOG.info(logPrefix + ": Starting to write input split data " +
+          "to zookeeper with " + inputSplitThreadCount + " threads");
     }
     ExecutorService taskExecutor =
         Executors.newFixedThreadPool(inputSplitThreadCount);
     for (int i = 0; i < splitList.size(); ++i) {
       InputSplit inputSplit = splitList.get(i);
-      taskExecutor.submit(new WriteInputSplit(inputSplit, i));
+      taskExecutor.submit(new WriteInputSplit(inputSplit, inputSplitsPath, i));
     }
     taskExecutor.shutdown();
     ProgressableUtils.awaitExecutorTermination(taskExecutor, getContext());
     if (LOG.isInfoEnabled()) {
-      LOG.info("createInputSplits: Done writing input split data to zookeeper");
+      LOG.info(logPrefix + ": Done writing input split data to zookeeper");
     }
 
     // Let workers know they can start trying to load the input splits
     try {
-      getZkExt().createExt(inputSplitsAllReadyPath,
-                           null,
-                           Ids.OPEN_ACL_UNSAFE,
-                           CreateMode.PERSISTENT,
-                           false);
+      getZkExt().createExt(inputSplitPaths.getAllReadyPath(),
+          null,
+          Ids.OPEN_ACL_UNSAFE,
+          CreateMode.PERSISTENT,
+          false);
     } catch (KeeperException.NodeExistsException e) {
-      LOG.info("createInputSplits: Node " +
-          inputSplitsAllReadyPath + " already exists.");
+      LOG.info(logPrefix + ": Node " +
+          inputSplitPaths.getAllReadyPath() + " already exists.");
     } catch (KeeperException e) {
-      throw new IllegalStateException(
-          "createInputSplits: KeeperException", e);
+      throw new IllegalStateException(logPrefix + ": KeeperException", e);
     } catch (InterruptedException e) {
-      throw new IllegalStateException(
-          "createInputSplits: IllegalStateException", e);
+      throw new IllegalStateException(logPrefix + ": IllegalStateException", e);
     }
 
     return splitList.size();
+  }
+
+  @Override
+  public int createVertexInputSplits() {
+    // Short-circuit if there is no vertex input format
+    if (!getConfiguration().hasVertexInputFormat()) {
+      return 0;
+    }
+    VertexInputFormat<I, V, E, M> vertexInputFormat =
+        getConfiguration().createVertexInputFormat();
+    return createInputSplits(vertexInputFormat, vertexInputSplitsPaths,
+        "Vertex");
+  }
+
+  @Override
+  public int createEdgeInputSplits() {
+    // Short-circuit if there is no edge input format
+    if (!getConfiguration().hasEdgeInputFormat()) {
+      return 0;
+    }
+    EdgeInputFormat<I, E> edgeInputFormat =
+        getConfiguration().createEdgeInputFormat();
+    return createInputSplits(edgeInputFormat, edgeInputSplitsPaths,
+        "Edge");
   }
 
   @Override
@@ -1041,7 +1067,10 @@ public class BspServiceMaster<I extends WritableComparable,
     // 2. Increase the application attempt and set to the correct checkpoint
     // 3. Send command to all workers to restart their tasks
     try {
-      getZkExt().deleteExt(inputSplitsPath, -1, true);
+      getZkExt().deleteExt(vertexInputSplitsPaths.getPath(), -1,
+          true);
+      getZkExt().deleteExt(edgeInputSplitsPaths.getPath(), -1,
+          true);
     } catch (InterruptedException e) {
       throw new RuntimeException(
           "restartFromCheckpoint: InterruptedException", e);
@@ -1250,6 +1279,41 @@ public class BspServiceMaster<I extends WritableComparable,
     }
   }
 
+  /**
+   * Coordinate the exchange of vertex/edge input splits among workers.
+   *
+   * @param inputSplitPaths Input split paths
+   * @param inputSplitEvents Input split events
+   * @param inputSplitsType Type of input splits (for logging purposes)
+   */
+  private void coordinateInputSplits(InputSplitPaths inputSplitPaths,
+                                     InputSplitEvents inputSplitEvents,
+                                     String inputSplitsType) {
+    // Coordinate the workers finishing sending their vertices/edges to the
+    // correct workers and signal when everything is done.
+    String logPrefix = "coordinate" + inputSplitsType + "InputSplits";
+    if (!barrierOnWorkerList(inputSplitPaths.getDonePath(),
+        chosenWorkerInfoList,
+        inputSplitEvents.getDoneStateChanged())) {
+      throw new IllegalStateException(logPrefix + ": Worker failed during " +
+          "input split (currently not supported)");
+    }
+    try {
+      getZkExt().createExt(inputSplitPaths.getAllDonePath(),
+          null,
+          Ids.OPEN_ACL_UNSAFE,
+          CreateMode.PERSISTENT,
+          false);
+    } catch (KeeperException.NodeExistsException e) {
+      LOG.info("coordinateInputSplits: Node " +
+          inputSplitPaths.getAllDonePath() + " already exists.");
+    } catch (KeeperException e) {
+      throw new IllegalStateException(logPrefix + ": KeeperException", e);
+    } catch (InterruptedException e) {
+      throw new IllegalStateException(logPrefix + ": IllegalStateException", e);
+    }
+  }
+
   @Override
   public SuperstepState coordinateSuperstep() throws
   KeeperException, InterruptedException {
@@ -1316,30 +1380,13 @@ public class BspServiceMaster<I extends WritableComparable,
     }
 
     if (getSuperstep() == INPUT_SUPERSTEP) {
-      // Coordinate the workers finishing sending their vertices to the
-      // correct workers and signal when everything is done.
-      if (!barrierOnWorkerList(inputSplitsDonePath,
-          chosenWorkerInfoList,
-          getInputSplitsDoneStateChangedEvent())) {
-        throw new IllegalStateException(
-            "coordinateSuperstep: Worker failed during input split " +
-            "(currently not supported)");
+      if (getConfiguration().hasVertexInputFormat()) {
+        coordinateInputSplits(vertexInputSplitsPaths, vertexInputSplitsEvents,
+            "Vertex");
       }
-      try {
-        getZkExt().createExt(inputSplitsAllDonePath,
-                             null,
-                             Ids.OPEN_ACL_UNSAFE,
-                             CreateMode.PERSISTENT,
-                             false);
-      } catch (KeeperException.NodeExistsException e) {
-        LOG.info("coordinateInputSplits: Node " +
-            inputSplitsAllDonePath + " already exists.");
-      } catch (KeeperException e) {
-        throw new IllegalStateException(
-            "coordinateInputSplits: KeeperException", e);
-      } catch (InterruptedException e) {
-        throw new IllegalStateException(
-            "coordinateInputSplits: IllegalStateException", e);
+      if (getConfiguration().hasEdgeInputFormat()) {
+        coordinateInputSplits(edgeInputSplitsPaths, edgeInputSplitsEvents,
+            "Edge");
       }
     }
 
@@ -1680,6 +1727,8 @@ public class BspServiceMaster<I extends WritableComparable,
   private class WriteInputSplit implements Callable<Void> {
     /** Input split which we are going to write */
     private final InputSplit inputSplit;
+    /** Input splits path */
+    private final String inputSplitsPath;
     /** Index of the input split */
     private final int index;
 
@@ -1687,10 +1736,14 @@ public class BspServiceMaster<I extends WritableComparable,
      * Constructor
      *
      * @param inputSplit Input split which we are going to write
+     * @param inputSplitsPath Input splits path
      * @param index Index of the input split
      */
-    public WriteInputSplit(InputSplit inputSplit, int index) {
+    public WriteInputSplit(InputSplit inputSplit,
+                           String inputSplitsPath,
+                           int index) {
       this.inputSplit = inputSplit;
+      this.inputSplitsPath = inputSplitsPath;
       this.index = index;
     }
 

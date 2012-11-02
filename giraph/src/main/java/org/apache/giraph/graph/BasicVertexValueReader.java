@@ -16,56 +16,41 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.comm;
+package org.apache.giraph.graph;
 
-import org.apache.giraph.graph.GraphState;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import java.io.Closeable;
+import java.io.IOException;
 
 /**
- * Interface for message communication server.
+ * Abstract base class for VertexValueReader.
  *
  * @param <I> Vertex id
- * @param <V> Vertex value
- * @param <E> Edge value
+ * @param <V> Vertex data
+ * @param <E> Edge data
  * @param <M> Message data
  */
-@SuppressWarnings("rawtypes")
-public interface WorkerServer<I extends WritableComparable,
+public abstract class BasicVertexValueReader<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
-    extends Closeable {
+    implements VertexReader<I, V, E, M> {
   /**
-   * Get the port
+   * User-defined method to extract the vertex id.
    *
-   * @return Port used by this server
+   * @return The vertex id
+   * @throws java.io.IOException
+   * @throws InterruptedException
    */
-  int getPort();
+  public abstract I getCurrentVertexId() throws IOException,
+      InterruptedException;
 
   /**
-   * Prepare incoming messages for computation, and resolve mutation requests.
+   * User-defined method to extract the vertex value.
    *
-   * @param graphState Current graph state
+   * @return The vertex value
+   * @throws IOException
+   * @throws InterruptedException
    */
-  void prepareSuperstep(GraphState<I, V, E, M> graphState);
-
-  /**
-   * Only resolve mutations requests (used for edge-oriented input).
-   *
-   * @param graphState Current graph state
-   */
-  void resolveMutations(GraphState<I, V, E, M> graphState);
-
-  /**
-   * Get server data
-   *
-   * @return Server data
-   */
-  ServerData<I, V, E, M> getServerData();
-
-  /**
-   * Shuts down.
-   */
-  void close();
+  public abstract V getCurrentVertexValue() throws IOException,
+      InterruptedException;
 }

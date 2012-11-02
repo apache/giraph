@@ -16,56 +16,50 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.comm;
+package org.apache.giraph.graph;
 
-import org.apache.giraph.graph.GraphState;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import java.io.Closeable;
-
 /**
- * Interface for message communication server.
+ * A pair of source vertex id and Edge object (that is,
+ * all the information about an edge).
  *
  * @param <I> Vertex id
- * @param <V> Vertex value
- * @param <E> Edge value
- * @param <M> Message data
+ * @param <E> Edge data
  */
-@SuppressWarnings("rawtypes")
-public interface WorkerServer<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    extends Closeable {
-  /**
-   * Get the port
-   *
-   * @return Port used by this server
-   */
-  int getPort();
+public class EdgeWithSource<I extends WritableComparable, E extends Writable> {
+  /** Source vertex id. */
+  private final I sourceVertexId;
+  /** Edge. */
+  private final Edge<I, E> edge;
 
   /**
-   * Prepare incoming messages for computation, and resolve mutation requests.
+   * Constructor.
    *
-   * @param graphState Current graph state
+   * @param sourceVertexId Source vertex id
+   * @param edge Edge
    */
-  void prepareSuperstep(GraphState<I, V, E, M> graphState);
+  public EdgeWithSource(I sourceVertexId, Edge<I, E> edge) {
+    this.sourceVertexId = sourceVertexId;
+    this.edge = edge;
+  }
 
   /**
-   * Only resolve mutations requests (used for edge-oriented input).
+   * Get the source vertex id.
    *
-   * @param graphState Current graph state
+   * @return Source vertex id.
    */
-  void resolveMutations(GraphState<I, V, E, M> graphState);
+  public I getSourceVertexId() {
+    return sourceVertexId;
+  }
 
   /**
-   * Get server data
+   * Get the edge object.
    *
-   * @return Server data
+   * @return The edge.
    */
-  ServerData<I, V, E, M> getServerData();
-
-  /**
-   * Shuts down.
-   */
-  void close();
+  public Edge<I, E> getEdge() {
+    return edge;
+  }
 }

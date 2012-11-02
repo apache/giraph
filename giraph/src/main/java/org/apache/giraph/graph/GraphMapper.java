@@ -18,10 +18,6 @@
 
 package org.apache.giraph.graph;
 
-import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.yammer.metrics.core.Timer;
-import com.yammer.metrics.core.TimerContext;
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedServiceMaster;
@@ -45,6 +41,11 @@ import org.apache.log4j.Appender;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
+
+import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.yammer.metrics.core.Timer;
+import com.yammer.metrics.core.TimerContext;
 
 import java.io.IOException;
 import java.lang.reflect.Type;

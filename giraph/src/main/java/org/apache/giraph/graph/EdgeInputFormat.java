@@ -28,20 +28,13 @@ import java.io.IOException;
 import java.util.List;
 
 /**
- * Use this to load data for a BSP application.  Note that the InputSplit must
- * also implement Writable.  The InputSplits will determine the partitioning of
- * vertices across the mappers, so keep that in consideration when implementing
- * getSplits().
+ * Input format for reading single edges.
  *
  * @param <I> Vertex id
- * @param <V> Vertex value
- * @param <E> Edge value
- * @param <M> Message data
+ * @param <E> Edge data
  */
-@SuppressWarnings("rawtypes")
-public abstract class VertexInputFormat<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    implements GiraphInputFormat {
+public abstract class EdgeInputFormat<I extends WritableComparable,
+    E extends Writable> implements GiraphInputFormat {
   /**
    * Logically split the vertices for a graph processing application.
    *
@@ -62,12 +55,12 @@ public abstract class VertexInputFormat<I extends WritableComparable,
    */
   @Override
   public abstract List<InputSplit> getSplits(
-    JobContext context, int numWorkers)
-    throws IOException, InterruptedException;
+      JobContext context, int numWorkers) throws IOException,
+      InterruptedException;
 
   /**
-   * Create a vertex reader for a given split. The framework will call
-   * {@link VertexReader#initialize(InputSplit, TaskAttemptContext)} before
+   * Create an edge reader for a given split. The framework will call
+   * {@link EdgeReader#initialize(InputSplit, TaskAttemptContext)} before
    * the split is used.
    *
    * @param split the split to be read
@@ -76,7 +69,7 @@ public abstract class VertexInputFormat<I extends WritableComparable,
    * @throws IOException
    * @throws InterruptedException
    */
-  public abstract VertexReader<I, V, E, M> createVertexReader(
+  public abstract EdgeReader<I, E> createEdgeReader(
       InputSplit split,
       TaskAttemptContext context) throws IOException;
 }

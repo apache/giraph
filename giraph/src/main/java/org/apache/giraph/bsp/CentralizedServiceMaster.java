@@ -54,10 +54,20 @@ public interface CentralizedServiceMaster<I extends WritableComparable,
    * user-defined VertexInputFormat.  The {@link InputSplit} objects will
    * processed by the workers later on during the INPUT_SUPERSTEP.
    *
-   * @return Number of partitions. Returns -1 on failure to create
+   * @return Number of splits. Returns -1 on failure to create
    *         valid input splits.
    */
-  int createInputSplits();
+  int createVertexInputSplits();
+
+  /**
+   * Create the {@link InputSplit} objects from the index range based on the
+   * user-defined EdgeInputFormat.  The {@link InputSplit} objects will
+   * processed by the workers later on during the INPUT_SUPERSTEP.
+   *
+   * @return Number of splits. Returns -1 on failure to create
+   *         valid input splits.
+   */
+  int createEdgeInputSplits();
 
   /**
    * Master coordinates the superstep

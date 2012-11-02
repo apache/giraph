@@ -17,21 +17,21 @@
  */
 
 package org.apache.giraph;
+import org.apache.giraph.benchmark.EdgeListVertexPageRankBenchmark;
+import org.apache.giraph.benchmark.PageRankComputation;
+import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.io.GiraphFileInputFormat;
+import org.apache.giraph.io.JsonBase64VertexInputFormat;
+import org.apache.giraph.io.JsonBase64VertexOutputFormat;
+import org.apache.giraph.io.PseudoRandomVertexInputFormat;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.junit.Test;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
-
-import org.apache.giraph.benchmark.EdgeListVertexPageRankBenchmark;
-import org.apache.giraph.benchmark.PageRankComputation;
-import org.apache.giraph.io.PseudoRandomVertexInputFormat;
-import org.apache.giraph.graph.GiraphJob;
-import org.apache.giraph.io.JsonBase64VertexInputFormat;
-import org.apache.giraph.io.JsonBase64VertexOutputFormat;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.junit.Test;
 
 /**
  * Test out the JsonBase64 format.
@@ -78,7 +78,7 @@ public class TestJsonBase64Format extends BspCase {
         JsonBase64VertexOutputFormat.class,
         outputPath2);
     job.getConfiguration().setInt(PageRankComputation.SUPERSTEP_COUNT, 3);
-    FileInputFormat.setInputPaths(job.getInternalJob(), outputPath);
+    GiraphFileInputFormat.addVertexInputPath(job.getInternalJob(), outputPath);
     assertTrue(job.run(true));
 
     Path outputPath3 = getTempPath(getCallingMethodName() + "3");

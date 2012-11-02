@@ -19,6 +19,7 @@
 package org.apache.giraph;
 
 import org.apache.giraph.graph.AggregatorWriter;
+import org.apache.giraph.graph.EdgeInputFormat;
 import org.apache.giraph.graph.MasterCompute;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexCombiner;
@@ -38,16 +39,9 @@ import org.apache.hadoop.conf.Configuration;
 public class GiraphConfiguration extends Configuration {
   /** Vertex class - required */
   public static final String VERTEX_CLASS = "giraph.vertexClass";
-  /** VertexInputFormat class - required */
-  public static final String VERTEX_INPUT_FORMAT_CLASS =
-      "giraph.vertexInputFormatClass";
 
   /** Class for Master - optional */
   public static final String MASTER_COMPUTE_CLASS = "giraph.masterComputeClass";
-
-  /** VertexOutputFormat class - optional */
-  public static final String VERTEX_OUTPUT_FORMAT_CLASS =
-      "giraph.vertexOutputFormatClass";
   /** Vertex combiner class - optional */
   public static final String VERTEX_COMBINER_CLASS =
       "giraph.combinerClass";
@@ -57,6 +51,18 @@ public class GiraphConfiguration extends Configuration {
   /** Graph partitioner factory class - optional */
   public static final String GRAPH_PARTITIONER_FACTORY_CLASS =
       "giraph.graphPartitionerFactoryClass";
+
+  // At least one of the input format classes is required.
+  /** VertexInputFormat class */
+  public static final String VERTEX_INPUT_FORMAT_CLASS =
+      "giraph.vertexInputFormatClass";
+  /** EdgeInputFormat class */
+  public static final String EDGE_INPUT_FORMAT_CLASS =
+      "giraph.edgeInputFormatClass";
+
+  /** VertexOutputFormat class */
+  public static final String VERTEX_OUTPUT_FORMAT_CLASS =
+      "giraph.vertexOutputFormatClass";
 
   /** Vertex index class */
   public static final String VERTEX_ID_CLASS = "giraph.vertexIdClass";
@@ -425,17 +431,28 @@ public class GiraphConfiguration extends Configuration {
   public static final float INPUT_SPLIT_SAMPLE_PERCENT_DEFAULT = 100f;
 
   /**
-   * To limit outlier input splits from producing too many vertices or to
-   * help with testing, the number of vertices loaded from an input split can
-   * be limited.  By default, everything is loaded.
+   * To limit outlier vertex input splits from producing too many vertices or
+   * to help with testing, the number of vertices loaded from an input split
+   * can be limited.  By default, everything is loaded.
    */
   public static final String INPUT_SPLIT_MAX_VERTICES =
       "giraph.InputSplitMaxVertices";
   /**
-   * Default is that all the vertices are to be loaded from the input
-   * split
+   * Default is that all the vertices are to be loaded from the input split
    */
   public static final long INPUT_SPLIT_MAX_VERTICES_DEFAULT = -1;
+
+  /**
+   * To limit outlier vertex input splits from producing too many vertices or
+   * to help with testing, the number of edges loaded from an input split
+   * can be limited.  By default, everything is loaded.
+   */
+  public static final String INPUT_SPLIT_MAX_EDGES =
+      "giraph.InputSplitMaxEdges";
+  /**
+   * Default is that all the edges are to be loaded from the input split
+   */
+  public static final long INPUT_SPLIT_MAX_EDGES_DEFAULT = -1;
 
   /** Java opts passed to ZooKeeper startup */
   public static final String ZOOKEEPER_JAVA_OPTS =
@@ -629,6 +646,18 @@ public class GiraphConfiguration extends Configuration {
     setClass(VERTEX_INPUT_FORMAT_CLASS,
         vertexInputFormatClass,
         VertexInputFormat.class);
+  }
+
+  /**
+   * Set the edge input format class (required)
+   *
+   * @param edgeInputFormatClass Determines how graph is input
+   */
+  public final void setEdgeInputFormatClass(
+      Class<? extends EdgeInputFormat> edgeInputFormatClass) {
+    setClass(EDGE_INPUT_FORMAT_CLASS,
+        edgeInputFormatClass,
+        EdgeInputFormat.class);
   }
 
   /**
@@ -936,5 +965,9 @@ public class GiraphConfiguration extends Configuration {
 
   public long getInputSplitMaxVertices() {
     return getLong(INPUT_SPLIT_MAX_VERTICES, INPUT_SPLIT_MAX_VERTICES_DEFAULT);
+  }
+
+  public long getInputSplitMaxEdges() {
+    return getLong(INPUT_SPLIT_MAX_EDGES, INPUT_SPLIT_MAX_EDGES_DEFAULT);
   }
 }
