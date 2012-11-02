@@ -21,7 +21,6 @@ import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.EdgeListVertex;
-import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.conf.Configuration;
@@ -168,7 +167,7 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat extends
 
   @Test
   public void testHappyPath() throws Exception {
-    String input = "Hi\t0\tMyEdgeInputFormat\t1.123\tBomdia\t2.234\tOla\t3.345";
+    String input = "Hi\t0\tCiao\t1.123\tBomdia\t2.234\tOla\t3.345";
 
     when(rr.getCurrentValue()).thenReturn(new Text(input));
     TextVertexReader vr = createVertexReader(rr);
@@ -179,7 +178,7 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat extends
         vr.getCurrentVertex();
     setGraphState(vertex, graphState);
     assertValidVertex(conf, graphState, vertex, new Text("Hi"), new DoubleWritable(0),
-        new Edge<Text, DoubleWritable>(new Text("MyEdgeInputFormat"), new DoubleWritable(1.123d)),
+        new Edge<Text, DoubleWritable>(new Text("Ciao"), new DoubleWritable(1.123d)),
         new Edge<Text, DoubleWritable>(new Text("Bomdia"), new DoubleWritable(2.234d)),
         new Edge<Text, DoubleWritable>(new Text("Ola"), new DoubleWritable(3.345d)));
     assertEquals(vertex.getNumEdges(), 3);
@@ -187,7 +186,7 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat extends
 
   @Test
   public void testLineSanitizer() throws Exception {
-    String input = "Bye\t0.01\tMyEdgeInputFormat\t1.001\tTchau\t2.0001\tAdios\t3.00001";
+    String input = "Bye\t0.01\tCiao\t1.001\tTchau\t2.0001\tAdios\t3.00001";
 
     AdjacencyListTextVertexInputFormat.LineSanitizer toUpper =
         new AdjacencyListTextVertexInputFormat.LineSanitizer() {

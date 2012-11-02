@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-400: Refactoring broke
+  TestTextDoubleDoubleAdjacencyListVertexInputFormat (apresta)
+
   GIRAPH-155: Allow creation of graph by adding edges that span
   multiple workers (apresta)
 
