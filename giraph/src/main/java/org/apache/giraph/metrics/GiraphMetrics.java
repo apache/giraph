@@ -17,6 +17,9 @@
  */
 package org.apache.giraph.metrics;
 
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.Mapper;
+
 import com.google.common.base.Joiner;
 import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Gauge;
@@ -28,8 +31,6 @@ import com.yammer.metrics.core.MetricsRegistry;
 import com.yammer.metrics.core.Timer;
 import com.yammer.metrics.reporting.ConsoleReporter;
 import com.yammer.metrics.reporting.JmxReporter;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapreduce.Mapper;
 
 import java.io.PrintStream;
 import java.util.concurrent.TimeUnit;
@@ -81,7 +82,7 @@ public class GiraphMetrics {
     }
 
     Configuration conf = context.getConfiguration();
-    if (conf.getBoolean(ENABLE, true)) {
+    if (conf.getBoolean(ENABLE, false)) {
       REGISTRY = new MetricsRegistry();
       REPORTER = new JmxReporter(REGISTRY);
       REPORTER.start();
