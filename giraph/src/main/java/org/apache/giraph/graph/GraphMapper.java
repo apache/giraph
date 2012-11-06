@@ -443,7 +443,8 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
   public void notifySentMessages() {
     // We are tracking the time between when the compute started and the first
     // message get sent. We use null to flag that we have already recorded it.
-    if (timeToFirstMessageContext != null) {
+    TimerContext tmp = timeToFirstMessageContext;
+    if (tmp != null) {
       synchronized (notifySentMsgLock) {
         if (timeToFirstMessageContext != null) {
           timeToFirstMessageContext.stop();
