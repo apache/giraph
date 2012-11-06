@@ -168,6 +168,13 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
   PartitionOwner getVertexPartitionOwner(I vertexId);
 
   /**
+   * Get all partition owners.
+   *
+   * @return Iterable through partition owners
+   */
+  Iterable<? extends PartitionOwner> getPartitionOwners();
+
+  /**
    * Look up a vertex on a worker given its vertex index.
    *
    * @param vertexId Vertex index to look for

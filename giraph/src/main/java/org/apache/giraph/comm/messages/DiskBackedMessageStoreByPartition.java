@@ -107,8 +107,8 @@ public class DiskBackedMessageStoreByPartition<I extends WritableComparable,
     VertexIdMessageCollection<I, M>.Iterator iterator = messages.getIterator();
     while (iterator.hasNext()) {
       iterator.next();
-      I vertexId = iterator.getCurrentVertexId();
-      M message = iterator.getCurrentMessage();
+      I vertexId = iterator.getCurrentFirst();
+      M message = iterator.getCurrentSecond();
       Collection<M> currentMessages = map.get(vertexId);
       if (currentMessages == null) {
         currentMessages = Lists.newArrayList(message);

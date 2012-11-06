@@ -1316,6 +1316,11 @@ else[HADOOP_NON_SECURE]*/
   }
 
   @Override
+  public Iterable<? extends PartitionOwner> getPartitionOwners() {
+    return workerGraphPartitioner.getPartitionOwners();
+  }
+
+  @Override
   public Partition<I, V, E, M> getPartition(I vertexId) {
     return getPartitionStore().getPartition(getPartitionId(vertexId));
   }

@@ -34,6 +34,7 @@ import org.apache.giraph.graph.VertexMutations;
 import org.apache.giraph.graph.WorkerInfo;
 import org.apache.giraph.graph.partition.PartitionStore;
 import org.apache.giraph.utils.MockUtils;
+import org.apache.giraph.utils.PairList;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.junit.Before;
@@ -149,13 +150,15 @@ public class RequestTest {
   @Test
   public void sendWorkerMessagesRequest() throws IOException {
     // Data to send
-    Map<Integer, VertexIdMessageCollection<IntWritable, IntWritable>> sendMap =
-        Maps.newHashMap();
+    PairList<Integer, VertexIdMessageCollection<IntWritable, IntWritable>>
+        dataToSend = new PairList<Integer,
+        VertexIdMessageCollection<IntWritable, IntWritable>>();
+    dataToSend.initialize();
     int partitionId = 0;
     VertexIdMessageCollection<IntWritable, IntWritable> vertexIdMessages =
         new VertexIdMessageCollection<IntWritable, IntWritable>(conf);
     vertexIdMessages.initialize();
-    sendMap.put(partitionId, vertexIdMessages);
+    dataToSend.add(partitionId, vertexIdMessages);
     for (int i = 1; i < 7; ++i) {
       IntWritable vertexId = new IntWritable(i);
       for (int j = 0; j < i; ++j) {
@@ -167,7 +170,7 @@ public class RequestTest {
     SendWorkerMessagesRequest<IntWritable, IntWritable, IntWritable,
         IntWritable> request =
       new SendWorkerMessagesRequest<IntWritable, IntWritable,
-            IntWritable, IntWritable>(sendMap);
+            IntWritable, IntWritable>(dataToSend);
     client.sendWritableRequest(-1, request);
     client.waitAllRequests();
 

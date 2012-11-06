@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-404: More SendMessageCache improvements (majakabiljo)
+
   GIRAPH-412: Checkstyle error from Giraph-403 (majakabiljo) 
 
   GIRAPH-403: GraphMapper.notiftySentMessages need to be thread-safe 

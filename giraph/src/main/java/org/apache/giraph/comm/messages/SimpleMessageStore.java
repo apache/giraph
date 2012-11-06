@@ -136,8 +136,8 @@ public class SimpleMessageStore<I extends WritableComparable,
     VertexIdMessageCollection<I, M>.Iterator iterator = messages.getIterator();
     while (iterator.hasNext()) {
       iterator.next();
-      I vertexId = iterator.getCurrentVertexId();
-      M message = iterator.getCurrentMessage();
+      I vertexId = iterator.getCurrentFirst();
+      M message = iterator.getCurrentSecond();
       Collection<M> currentMessages = partitionMap.get(vertexId);
       if (currentMessages == null) {
         Collection<M> newMessages = Lists.newArrayList(message);

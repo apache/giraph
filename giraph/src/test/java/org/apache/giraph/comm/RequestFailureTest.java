@@ -29,6 +29,7 @@ import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.WorkerInfo;
 import org.apache.giraph.utils.MockUtils;
+import org.apache.giraph.utils.PairList;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.junit.Before;
@@ -39,11 +40,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.Map;
 
 /**
  * Test all the netty failure scenarios
@@ -85,12 +84,14 @@ public class RequestFailureTest {
   private WritableRequest getRequest() {
     // Data to send
     final int partitionId = 0;
-    Map<Integer, VertexIdMessageCollection<IntWritable, IntWritable>> sendMap =
-        Maps.newHashMap();
+    PairList<Integer, VertexIdMessageCollection<IntWritable, IntWritable>>
+        dataToSend = new PairList<Integer,
+        VertexIdMessageCollection<IntWritable, IntWritable>>();
+    dataToSend.initialize();
     VertexIdMessageCollection<IntWritable, IntWritable> vertexIdMessages =
         new VertexIdMessageCollection<IntWritable, IntWritable>(conf);
     vertexIdMessages.initialize();
-    sendMap.put(partitionId, vertexIdMessages);
+    dataToSend.add(partitionId, vertexIdMessages);
     for (int i = 1; i < 7; ++i) {
       IntWritable vertexId = new IntWritable(i);
       for (int j = 0; j < i; ++j) {
@@ -102,7 +103,7 @@ public class RequestFailureTest {
     SendWorkerMessagesRequest<IntWritable, IntWritable, IntWritable,
             IntWritable> request =
         new SendWorkerMessagesRequest<IntWritable, IntWritable,
-                    IntWritable, IntWritable>(sendMap);
+                    IntWritable, IntWritable>(dataToSend);
     return request;
   }
 

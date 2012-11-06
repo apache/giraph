@@ -42,6 +42,7 @@ import org.apache.giraph.graph.partition.Partition;
 import org.apache.giraph.graph.partition.PartitionOwner;
 import org.apache.giraph.metrics.GiraphMetrics;
 import org.apache.giraph.metrics.MetricGroup;
+import org.apache.giraph.utils.PairList;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -112,7 +113,7 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
     sendPartitionCache = new SendPartitionCache<I, V, E, M>(context,
         configuration);
     sendMessageCache =
-        new SendMessageCache<I, M>(configuration);
+        new SendMessageCache<I, M>(configuration, serviceWorker);
     maxMessagesPerWorker = configuration.getInt(
         GiraphConfiguration.MSG_SIZE,
         GiraphConfiguration.MSG_SIZE_DEFAULT);
@@ -146,7 +147,7 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
     // Send a request if the cache of outgoing message to
     // the remote worker 'workerInfo' is full enough to be flushed
     if (workerMessageCount >= maxMessagesPerWorker) {
-      Map<Integer, VertexIdMessageCollection<I, M>> workerMessages =
+      PairList<Integer, VertexIdMessageCollection<I, M>> workerMessages =
           sendMessageCache.removeWorkerMessages(workerInfo);
       WritableRequest writableRequest =
           new SendWorkerMessagesRequest<I, V, E, M>(workerMessages);
@@ -321,13 +322,17 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
     sendPartitionCache.clear();
 
     // Execute the remaining sends messages (if any)
-    Map<WorkerInfo, Map<Integer, VertexIdMessageCollection<I, M>>>
+    PairList<WorkerInfo, PairList<Integer, VertexIdMessageCollection<I, M>>>
         remainingMessageCache = sendMessageCache.removeAllMessages();
-    for (Map.Entry<WorkerInfo, Map<Integer, VertexIdMessageCollection<I, M>>>
-        entry : remainingMessageCache.entrySet()) {
+    PairList<WorkerInfo,
+        PairList<Integer, VertexIdMessageCollection<I, M>>>.Iterator
+        iterator = remainingMessageCache.getIterator();
+    while (iterator.hasNext()) {
+      iterator.next();
       WritableRequest writableRequest =
-          new SendWorkerMessagesRequest<I, V, E, M>(entry.getValue());
-      doRequest(entry.getKey(), writableRequest);
+          new SendWorkerMessagesRequest<I, V, E, M>(
+              iterator.getCurrentSecond());
+      doRequest(iterator.getCurrentFirst(), writableRequest);
     }
 
     // Execute the remaining sends mutations (if any)

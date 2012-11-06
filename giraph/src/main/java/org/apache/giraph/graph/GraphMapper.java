@@ -112,7 +112,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
   /** Milliseconds from starting compute to sending first message */
   private Timer timeToFirstMessage;
   /** Timer context used for computer msec from compute to first message */
-  private TimerContext timeToFirstMessageContext;
+  private volatile TimerContext timeToFirstMessageContext;
   /** Time from first sent message till last message flushed. */
   private Timer communicationTimer;
   /** Timer context for communication timer. */
