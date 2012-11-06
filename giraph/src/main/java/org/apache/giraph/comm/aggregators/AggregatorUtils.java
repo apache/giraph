@@ -18,6 +18,7 @@
 
 package org.apache.giraph.comm.aggregators;
 
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.Aggregator;
 import org.apache.giraph.graph.WorkerInfo;
 import org.apache.hadoop.io.Writable;
@@ -40,6 +41,17 @@ public class AggregatorUtils {
   /** Default max size of single aggregator request (1MB) */
   public static final int MAX_BYTES_PER_AGGREGATOR_REQUEST_DEFAULT =
       1024 * 1024;
+  /**
+   * Whether or not to have a copy of aggregators for each compute thread.
+   * Unless aggregators are very large and it would hurt the application to
+   * have that many copies of them, user should use thread-local aggregators
+   * to prevent synchronization when aggregate() is called (and get better
+   * performance because of it).
+   */
+  public static final String USE_THREAD_LOCAL_AGGREGATORS =
+      "giraph.useThreadLocalAggregators";
+  /** Default is not to have a copy of aggregators for each thread */
+  public static final boolean USE_THREAD_LOCAL_AGGREGATORS_DEFAULT = false;
 
   /** Do not instantiate */
   private AggregatorUtils() { }
@@ -92,5 +104,17 @@ public class AggregatorUtils {
       List<WorkerInfo> workers) {
     int index = Math.abs(aggregatorName.hashCode()) % workers.size();
     return workers.get(index);
+  }
+
+  /**
+   * Check if we should use thread local aggregators.
+   *
+   * @param conf Giraph configuration
+   * @return True iff we should use thread local aggregators
+   */
+  public static boolean
+  useThreadLocalAggregators(ImmutableClassesGiraphConfiguration conf) {
+    return conf.getBoolean(USE_THREAD_LOCAL_AGGREGATORS,
+        USE_THREAD_LOCAL_AGGREGATORS_DEFAULT);
   }
 }

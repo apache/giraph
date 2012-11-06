@@ -144,15 +144,6 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
   }
 
   /**
-   * Get worker aggregator usage, a subset of the functionality
-   *
-   * @return Worker aggregator usage interface
-   */
-  public final WorkerAggregatorUsage getWorkerAggregatorUsage() {
-    return serviceWorker.getAggregatorHandler();
-  }
-
-  /**
    * Get master aggregator usage, a subset of the functionality
    *
    * @return Master aggregator usage interface
@@ -504,9 +495,11 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
       return;
     }
 
+    WorkerAggregatorUsage aggregatorUsage =
+        serviceWorker.getAggregatorHandler();
     serviceWorker.getWorkerContext().setGraphState(
         new GraphState<I, V, E, M>(serviceWorker.getSuperstep(),
-            numVertices, numEdges, context, this, null));
+            numVertices, numEdges, context, this, null, aggregatorUsage));
     try {
       serviceWorker.getWorkerContext().preApplication();
     } catch (InstantiationException e) {
@@ -531,7 +524,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
 
       GraphState<I, V, E, M> graphState =
           new GraphState<I, V, E, M>(superstep, numVertices, numEdges,
-              context, this, null);
+              context, this, null, aggregatorUsage);
 
       Collection<? extends PartitionOwner> masterAssignedPartitionOwners =
           serviceWorker.startSuperstep(graphState);
@@ -558,7 +551,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
         numVertices = vertexEdgeCount.getVertexCount();
         numEdges = vertexEdgeCount.getEdgeCount();
         graphState = new GraphState<I, V, E, M>(superstep, numVertices,
-            numEdges, context, this, null);
+            numEdges, context, this, null, aggregatorUsage);
       } else if (serviceWorker.checkpointFrequencyMet(superstep)) {
         serviceWorker.storeCheckpoint();
       }
@@ -632,7 +625,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
 
     serviceWorker.getWorkerContext().setGraphState(
         new GraphState<I, V, E, M>(serviceWorker.getSuperstep(),
-            numVertices, numEdges, context, this, null));
+            numVertices, numEdges, context, this, null, aggregatorUsage));
     serviceWorker.getWorkerContext().postApplication();
     context.progress();
   }

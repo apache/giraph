@@ -1465,7 +1465,7 @@ public class BspServiceMaster<I extends WritableComparable,
     // increase the superstep counter it uses by one
     GraphState<I, V, E, M> graphState =
         new GraphState<I, V, E, M>(superstep + 1, vertexCounter.getValue(),
-            edgeCounter.getValue(), getContext(), getGraphMapper(), null);
+            edgeCounter.getValue(), getContext(), getGraphMapper(), null, null);
     masterCompute.setGraphState(graphState);
     if (superstep == INPUT_SUPERSTEP) {
       try {

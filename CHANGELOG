@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-397: We should have copies of aggregators per thread
+  to avoid synchronizing on aggregate() (majakabiljo)
+
   GIRAPH-406: Enforce partition ids in [0, n-1] (majakabiljo)
 
   GIRAPH-402: slf4j dependency bug (nitay via apresta)

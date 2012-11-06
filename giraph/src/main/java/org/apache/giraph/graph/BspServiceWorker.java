@@ -289,7 +289,7 @@ public class BspServiceWorker<I extends WritableComparable,
 
     GraphState<I, V, E, M> graphState = new GraphState<I, V, E, M>(
         INPUT_SUPERSTEP, 0, 0, getContext(), getGraphMapper(),
-        null);
+        null, null);
 
     VertexInputSplitsCallableFactory<I, V, E, M> inputSplitsCallableFactory =
         new VertexInputSplitsCallableFactory<I, V, E, M>(
@@ -316,7 +316,7 @@ public class BspServiceWorker<I extends WritableComparable,
 
     GraphState<I, V, E, M> graphState = new GraphState<I, V, E, M>(
         INPUT_SUPERSTEP, 0, 0, getContext(), getGraphMapper(),
-        null);
+        null, null);
 
     EdgeInputSplitsCallableFactory<I, V, E, M> inputSplitsCallableFactory =
         new EdgeInputSplitsCallableFactory<I, V, E, M>(
@@ -456,7 +456,7 @@ public class BspServiceWorker<I extends WritableComparable,
     // Add the partitions that this worker owns
     GraphState<I, V, E, M> graphState =
         new GraphState<I, V, E, M>(INPUT_SUPERSTEP, 0, 0,
-            getContext(), getGraphMapper(), null);
+            getContext(), getGraphMapper(), null, null);
     Collection<? extends PartitionOwner> masterSetPartitionOwners =
         startSuperstep(graphState);
     workerGraphPartitioner.updatePartitionOwners(

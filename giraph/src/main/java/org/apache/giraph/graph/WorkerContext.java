@@ -111,13 +111,11 @@ public abstract class WorkerContext implements WorkerAggregatorUsage {
 
   @Override
   public <A extends Writable> void aggregate(String name, A value) {
-    graphState.getGraphMapper().getWorkerAggregatorUsage().
-        aggregate(name, value);
+    graphState.getWorkerAggregatorUsage().aggregate(name, value);
   }
 
   @Override
   public <A extends Writable> A getAggregatedValue(String name) {
-    return graphState.getGraphMapper().getWorkerAggregatorUsage().
-        <A>getAggregatedValue(name);
+    return graphState.getWorkerAggregatorUsage().<A>getAggregatedValue(name);
   }
 }

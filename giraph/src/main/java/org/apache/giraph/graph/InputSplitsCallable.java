@@ -119,7 +119,8 @@ public abstract class InputSplitsCallable<I extends WritableComparable,
             context, configuration, bspServiceWorker);
     this.graphState = new GraphState<I, V, E, M>(graphState.getSuperstep(),
         graphState.getTotalNumVertices(), graphState.getTotalNumEdges(),
-        context, graphState.getGraphMapper(), workerClientRequestProcessor);
+        context, graphState.getGraphMapper(), workerClientRequestProcessor,
+        null);
     try {
       splitOrganizer = new InputSplitPathOrganizer(zooKeeperExt,
           inputSplitPathList, workerInfo.getHostname(), workerInfo.getPort());

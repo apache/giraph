@@ -46,6 +46,8 @@ E extends Writable, M extends Writable> {
   /** Handles requests */
   private final WorkerClientRequestProcessor<I, V, E, M>
   workerClientRequestProcessor;
+  /** Worker aggregator usage */
+  private final WorkerAggregatorUsage workerAggregatorUsage;
 
   /**
    * Constructor
@@ -56,18 +58,22 @@ E extends Writable, M extends Writable> {
    * @param context Context
    * @param graphMapper Graph mapper
    * @param workerClientRequestProcessor Handles all communication
+   * @param workerAggregatorUsage Aggregator usage
+   *
    */
   public GraphState(
       long superstep, long numVertices,
       long numEdges, Mapper.Context context,
       GraphMapper<I, V, E, M> graphMapper,
-      WorkerClientRequestProcessor<I, V, E, M> workerClientRequestProcessor) {
+      WorkerClientRequestProcessor<I, V, E, M> workerClientRequestProcessor,
+      WorkerAggregatorUsage workerAggregatorUsage) {
     this.superstep = superstep;
     this.numVertices = numVertices;
     this.numEdges = numEdges;
     this.context = context;
     this.graphMapper = graphMapper;
     this.workerClientRequestProcessor = workerClientRequestProcessor;
+    this.workerAggregatorUsage = workerAggregatorUsage;
   }
 
   public long getSuperstep() {
@@ -93,6 +99,10 @@ E extends Writable, M extends Writable> {
   public WorkerClientRequestProcessor<I, V, E, M>
   getWorkerClientRequestProcessor() {
     return workerClientRequestProcessor;
+  }
+
+  public WorkerAggregatorUsage getWorkerAggregatorUsage() {
+    return workerAggregatorUsage;
   }
 
   @Override

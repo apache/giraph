@@ -50,7 +50,7 @@ import java.util.Map;
  * which propagates non-owned partial aggregates to the owner workers,
  * and sends the final aggregate from the owner worker to the master.
  */
-public class WorkerAggregatorHandler implements WorkerAggregatorUsage {
+public class WorkerAggregatorHandler implements WorkerThreadAggregatorUsage {
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(WorkerAggregatorHandler.class);
@@ -66,6 +66,8 @@ public class WorkerAggregatorHandler implements WorkerAggregatorUsage {
   private final Progressable progressable;
   /** How big a single aggregator request can be */
   private final int maxBytesPerAggregatorRequest;
+  /** Giraph configuration */
+  private final ImmutableClassesGiraphConfiguration conf;
 
   /**
    * Constructor
@@ -80,6 +82,7 @@ public class WorkerAggregatorHandler implements WorkerAggregatorUsage {
       Progressable progressable) {
     this.serviceWorker = serviceWorker;
     this.progressable = progressable;
+    this.conf = conf;
     maxBytesPerAggregatorRequest = conf.getInt(
         AggregatorUtils.MAX_BYTES_PER_AGGREGATOR_REQUEST,
         AggregatorUtils.MAX_BYTES_PER_AGGREGATOR_REQUEST_DEFAULT);
@@ -89,8 +92,6 @@ public class WorkerAggregatorHandler implements WorkerAggregatorUsage {
   public <A extends Writable> void aggregate(String name, A value) {
     Aggregator<Writable> aggregator = currentAggregatorMap.get(name);
     if (aggregator != null) {
-      // TODO we can later improve this for mutlithreading to have local
-      // copies of aggregators per thread
       synchronized (aggregator) {
         aggregator.aggregate(value);
       }
@@ -211,6 +212,83 @@ public class WorkerAggregatorHandler implements WorkerAggregatorUsage {
     ownerAggregatorData.reset();
     if (LOG.isDebugEnabled()) {
       LOG.debug("finishSuperstep: Aggregators finished");
+    }
+  }
+
+  /**
+   * Create new aggregator usage which will be used by one of the compute
+   * threads.
+   *
+   * @return New aggregator usage
+   */
+  public WorkerThreadAggregatorUsage newThreadAggregatorUsage() {
+    if (AggregatorUtils.useThreadLocalAggregators(conf)) {
+      return new ThreadLocalWorkerAggregatorUsage();
+    } else {
+      return this;
+    }
+  }
+
+  @Override
+  public void finishThreadComputation() {
+    // If we don't use thread-local aggregators, all the aggregated values
+    // are already in this object
+  }
+
+  /**
+   * Not thread-safe implementation of {@link WorkerThreadAggregatorUsage}.
+   * We can use one instance of this object per thread to prevent
+   * synchronizing on each aggregate() call. In the end of superstep,
+   * values from each of these will be aggregated back to {@link
+   * WorkerAggregatorHandler}
+   */
+  public class ThreadLocalWorkerAggregatorUsage
+      implements WorkerThreadAggregatorUsage {
+    /** Thread-local aggregator map */
+    private final Map<String, Aggregator<Writable>> threadAggregatorMap;
+
+    /**
+     * Constructor
+     *
+     * Creates new instances of all aggregators from
+     * {@link WorkerAggregatorHandler}
+     */
+    public ThreadLocalWorkerAggregatorUsage() {
+      threadAggregatorMap = Maps.newHashMapWithExpectedSize(
+          WorkerAggregatorHandler.this.currentAggregatorMap.size());
+      for (Map.Entry<String, Aggregator<Writable>> entry :
+          WorkerAggregatorHandler.this.currentAggregatorMap.entrySet()) {
+        threadAggregatorMap.put(entry.getKey(),
+            AggregatorUtils.newAggregatorInstance(
+                (Class<Aggregator<Writable>>) entry.getValue().getClass()));
+      }
+    }
+
+    @Override
+    public <A extends Writable> void aggregate(String name, A value) {
+      Aggregator<Writable> aggregator = threadAggregatorMap.get(name);
+      if (aggregator != null) {
+        aggregator.aggregate(value);
+      } else {
+        throw new IllegalStateException("aggregate: " +
+            "Tried to aggregate value to unregistered aggregator " + name);
+      }
+    }
+
+    @Override
+    public <A extends Writable> A getAggregatedValue(String name) {
+      return WorkerAggregatorHandler.this.<A>getAggregatedValue(name);
+    }
+
+    @Override
+    public void finishThreadComputation() {
+      // Aggregate the values this thread's vertices provided back to
+      // WorkerAggregatorHandler
+      for (Map.Entry<String, Aggregator<Writable>> entry :
+          threadAggregatorMap.entrySet()) {
+        WorkerAggregatorHandler.this.aggregate(entry.getKey(),
+            entry.getValue().getAggregatedValue());
+      }
     }
   }
 }

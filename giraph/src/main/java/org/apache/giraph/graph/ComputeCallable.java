@@ -122,9 +122,13 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
     this.workerClientRequestProcessor =
         new NettyWorkerClientRequestProcessor<I, V, E, M>(
             context, configuration, serviceWorker);
+    WorkerThreadAggregatorUsage aggregatorUsage =
+        serviceWorker.getAggregatorHandler().newThreadAggregatorUsage();
+
     this.graphState = new GraphState<I, V, E, M>(graphState.getSuperstep(),
         graphState.getTotalNumVertices(), graphState.getTotalNumEdges(),
-        context, graphState.getGraphMapper(), workerClientRequestProcessor);
+        context, graphState.getGraphMapper(), workerClientRequestProcessor,
+        aggregatorUsage);
 
     List<PartitionStats> partitionStatsList = Lists.newArrayList();
     while (!partitionIdQueue.isEmpty()) {
@@ -159,6 +163,7 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
     }
     try {
       workerClientRequestProcessor.flush();
+      aggregatorUsage.finishThreadComputation();
     } catch (IOException e) {
       throw new IllegalStateException("call: Flushing failed.", e);
     }
