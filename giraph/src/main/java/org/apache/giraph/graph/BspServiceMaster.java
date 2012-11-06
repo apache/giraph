@@ -977,6 +977,7 @@ public class BspServiceMaster<I extends WritableComparable,
       PartitionUtils.analyzePartitionStats(partitionOwners,
           allPartitionStatsList);
     }
+    checkPartitions(masterGraphPartitioner.getCurrentPartitionOwners());
 
     // If restarted, prepare the checkpoint restart
     if (getRestartedSuperstep() == getSuperstep()) {
@@ -1029,6 +1030,22 @@ public class BspServiceMaster<I extends WritableComparable,
         addressesAndPartitionsPath,
         -1,
         addressesAndPartitions);
+  }
+
+  /**
+   * Check if partition ids are valid
+   *
+   * @param partitionOwners List of partition ids for current superstep
+   */
+  private void checkPartitions(Collection<PartitionOwner> partitionOwners) {
+    for (PartitionOwner partitionOwner : partitionOwners) {
+      int partitionId = partitionOwner.getPartitionId();
+      if (partitionId < 0 || partitionId >= partitionOwners.size()) {
+        throw new IllegalStateException("checkPartitions: " +
+            "Invalid partition id " + partitionId +
+            " - partition ids must be values from 0 to (numPartitions - 1)");
+      }
+    }
   }
 
   /**

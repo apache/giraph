@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-406: Enforce partition ids in [0, n-1] (majakabiljo)
+
   GIRAPH-402: slf4j dependency bug (nitay via apresta)
 
   GIRAPH-401: Metrics should be disabled by default (apresta)
