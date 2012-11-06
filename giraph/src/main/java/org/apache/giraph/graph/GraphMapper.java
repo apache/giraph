@@ -117,6 +117,8 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
   private Timer communicationTimer;
   /** Timer context for communication timer. */
   private TimerContext communicationTimerContext;
+  /** Lock for notifySentMessages() to make it thread safe */
+  private Object notifySentMsgLock = new Object();
 
   /** What kinds of functions to run on this mapper */
   public enum MapFunctions {
@@ -442,10 +444,14 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
     // We are tracking the time between when the compute started and the first
     // message get sent. We use null to flag that we have already recorded it.
     if (timeToFirstMessageContext != null) {
-      timeToFirstMessageContext.stop();
-      timeToFirstMessageContext = null;
+      synchronized (notifySentMsgLock) {
+        if (timeToFirstMessageContext != null) {
+          timeToFirstMessageContext.stop();
+          timeToFirstMessageContext = null;
+          communicationTimerContext = communicationTimer.time();
+        }
+      }
     }
-    communicationTimerContext = communicationTimer.time();
   }
 
   /**

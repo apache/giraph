@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-403: GraphMapper.notiftySentMessages need to be thread-safe 
+  (nitay via majakabiljo)
+
   GIRAPH-397: We should have copies of aggregators per thread
   to avoid synchronizing on aggregate() (majakabiljo)
 
