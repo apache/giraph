@@ -18,17 +18,14 @@
 
 package org.apache.giraph.utils;
 
-import java.io.IOException;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DoubleWritable;
-import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.junit.After;
@@ -36,6 +33,10 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
+
+import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 
 import static org.junit.Assert.assertEquals;
 
@@ -45,6 +46,7 @@ import static org.junit.Assert.assertEquals;
 public class BspUtilsTest {
   @Rule
   public TestName name = new TestName();
+  private static final Time TIME = SystemTime.getInstance();
   private static final long COUNT = 200000;
   private Configuration conf = new Configuration();
   private long startNanos = -1;
@@ -75,7 +77,7 @@ public class BspUtilsTest {
 
   @After
   public void cleanUp() {
-    totalNanos = SystemTime.getInstance().getNanosecondsSince(startNanos);
+    totalNanos = Times.getNanosSince(TIME, startNanos);
     System.out.println(name.getMethodName() + ": took "
         + totalNanos +
         " ns for " + COUNT + " elements " + (totalNanos * 1f / COUNT) +
@@ -86,7 +88,7 @@ public class BspUtilsTest {
 
   @Test
   public void testCreateClass() {
-    startNanos = SystemTime.getInstance().getNanoseconds();
+    startNanos = TIME.getNanoseconds();
     for (int i = 0; i < COUNT; ++i) {
       LongWritable value = BspUtils.createVertexValue(conf);
       value.set(i);
@@ -96,7 +98,7 @@ public class BspUtilsTest {
 
   @Test
   public void testNativeCreateClass() {
-    startNanos = SystemTime.getInstance().getNanoseconds();
+    startNanos = TIME.getNanoseconds();
     for (int i = 0; i < COUNT; ++i) {
       LongWritable value = new LongWritable();
       value.set(i);
@@ -111,7 +113,7 @@ public class BspUtilsTest {
   @Test
   public void testNewInstance()
       throws IllegalAccessException, InstantiationException {
-    startNanos = SystemTime.getInstance().getNanoseconds();
+    startNanos = TIME.getNanoseconds();
     for (int i = 0; i < COUNT; ++i) {
       LongWritable value = (LongWritable)
           getLongWritableClass().newInstance();
@@ -127,7 +129,7 @@ public class BspUtilsTest {
   @Test
   public void testSyncNewInstance()
       throws IllegalAccessException, InstantiationException {
-    startNanos = SystemTime.getInstance().getNanoseconds();
+    startNanos = TIME.getNanoseconds();
     for (int i = 0; i < COUNT; ++i) {
       LongWritable value = (LongWritable)
           getSyncLongWritableClass().newInstance();
@@ -142,7 +144,7 @@ public class BspUtilsTest {
     // Throwaway to put into cache
     org.apache.hadoop.util.ReflectionUtils.newInstance(LongWritable.class,
         null);
-    startNanos = SystemTime.getInstance().getNanoseconds();
+    startNanos = TIME.getNanoseconds();
     for (int i = 0; i < COUNT; ++i) {
       LongWritable value = (LongWritable)
           org.apache.hadoop.util.ReflectionUtils.newInstance(
@@ -158,7 +160,7 @@ public class BspUtilsTest {
       NoSuchMethodException, InvocationTargetException {
     Constructor<?> constructor = LongWritable.class.getDeclaredConstructor
         (new Class[]{});
-    startNanos = SystemTime.getInstance().getNanoseconds();
+    startNanos = TIME.getNanoseconds();
     for (int i = 0; i < COUNT; ++i) {
       LongWritable value = (LongWritable) constructor.newInstance();
       value.set(i);
@@ -180,7 +182,7 @@ public class BspUtilsTest {
 
   @Test
   public void testImmutableClassesGiraphConfigurationNewInstance() {
-    startNanos = SystemTime.getInstance().getNanoseconds();
+    startNanos = TIME.getNanoseconds();
     for (int i = 0; i < COUNT; ++i) {
       LongWritable value = getConfiguration().createVertexValue();
       value.set(i);

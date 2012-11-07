@@ -28,7 +28,6 @@ import org.apache.giraph.graph.VertexOutputFormat;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.graph.WorkerContext;
 import org.apache.giraph.graph.partition.GraphPartitionerFactory;
-import org.apache.giraph.metrics.GiraphMetrics;
 import org.apache.hadoop.conf.Configuration;
 
 /**
@@ -130,6 +129,15 @@ public class GiraphConfiguration extends Configuration {
   public static final String POLL_MSECS = "giraph.pollMsecs";
   /** Default poll msecs (30 seconds) */
   public static final int POLL_MSECS_DEFAULT = 30 * 1000;
+
+  /** Enable the Metrics system **/
+  public static final String METRICS_ENABLE = "giraph.metrics.enable";
+
+  /** Whether to dump all metrics when the job finishes */
+  public static final String METRICS_DUMP_AT_END = "giraph.metrics.dump.at.end";
+
+  /** Whether to print superstep metrics */
+  public static final String METRICS_SUPERSTEP_PRINT = "giraph.metrics.print";
 
   /**
    *  ZooKeeper comma-separated list (if not set,
@@ -796,7 +804,16 @@ public class GiraphConfiguration extends Configuration {
    * @return true if we should dump metrics, false otherwise.
    */
   public boolean dumpMetricsAtEnd() {
-    return getBoolean(GiraphMetrics.DUMP_AT_END, false);
+    return getBoolean(METRICS_DUMP_AT_END, false);
+  }
+
+  /**
+   * Should we print superstep metrics at end of superstep.
+   *
+   * @return true if we should print metrics, false otherwise.
+   */
+  public boolean printSuperstepMetrics() {
+    return getBoolean(METRICS_SUPERSTEP_PRINT, false);
   }
 
   /**

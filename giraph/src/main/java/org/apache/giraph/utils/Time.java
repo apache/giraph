@@ -62,15 +62,6 @@ public interface Time {
   long getMilliseconds();
 
   /**
-   * Convenience method to get milliseconds since a previous milliseconds
-   * point.
-   *
-   * @param previousMilliseconds Previous milliseconds
-   * @return Milliseconds elapsed since the previous milliseconds
-   */
-  long getMillisecondsSince(long previousMilliseconds);
-
-  /**
    * Get the current nanoseconds
    *
    * @return The difference, measured in nanoseconds, between
@@ -79,30 +70,12 @@ public interface Time {
   long getNanoseconds();
 
   /**
-   * Convenience method to get nanoseconds since a previous nanoseconds
-   * point.
-   *
-   * @param previousNanoseconds Previous nanoseconds
-   * @return Nanoseconds elapsed since the previous nanoseconds
-   */
-  long getNanosecondsSince(long previousNanoseconds);
-
-  /**
    * Get the current seconds
    *
    * @return The difference, measured in seconds, between
    *         the current time and midnight, January 1, 1970 UTC.
    */
   int getSeconds();
-
-  /**
-   * Convenience method to get seconds since a previous seconds
-   * point.
-   *
-   * @param previousSeconds Previous seconds
-   * @return Seconds elapsed since the previous seconds
-   */
-  int getSecondsSince(int previousSeconds);
 
   /**
    * Get the current date

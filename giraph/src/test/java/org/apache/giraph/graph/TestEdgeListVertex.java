@@ -17,12 +17,15 @@
  */
 package org.apache.giraph.graph;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.graph.partition.PartitionOwner;
 import org.apache.giraph.utils.SystemTime;
 import org.apache.giraph.utils.Time;
+import org.apache.giraph.utils.Times;
 import org.apache.giraph.utils.WritableUtils;
-import org.apache.giraph.graph.partition.PartitionOwner;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
@@ -33,21 +36,16 @@ import org.apache.hadoop.io.WritableComparable;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.IOException;
+import java.util.Map;
+
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertFalse;
-
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
 
 /**
  * Tests {@link EdgeListVertex}.
@@ -59,7 +57,7 @@ public class TestEdgeListVertex {
   private GiraphJob job;
   /** Immutable classes giraph configuration */
   private ImmutableClassesGiraphConfiguration<IntWritable, FloatWritable,
-        DoubleWritable, LongWritable> configuration;
+      DoubleWritable, LongWritable> configuration;
 
   /**
    * Simple instantiable class that extends {@link EdgeListVertex}.
@@ -197,11 +195,11 @@ public class TestEdgeListVertex {
     for (int i = edgesCount; i > 0; --i) {
       edgeMap.put(new IntWritable(i), new DoubleWritable(i * 2.0));
     }
+    Time time = SystemTime.getInstance();
     vertex.initialize(new IntWritable(2), new FloatWritable(3.0f), edgeMap);
-    long serializeNanosStart = SystemTime.getInstance().getNanoseconds();
+    long serializeNanosStart = time.getNanoseconds();
     byte[] byteArray = WritableUtils.writeToByteArray(vertex);
-    long serializeNanos = SystemTime.getInstance().getNanosecondsSince(
-        serializeNanosStart);
+    long serializeNanos = Times.getNanosSince(time, serializeNanosStart);
     System.out.println("testSerialize: Serializing took " +
         serializeNanos +
         " ns for " + byteArray.length + " bytes " +
@@ -211,8 +209,7 @@ public class TestEdgeListVertex {
       configuration.createVertex();
     long deserializeNanosStart = SystemTime.getInstance().getNanoseconds();
     WritableUtils.readFieldsFromByteArray(byteArray, readVertex);
-    long deserializeNanos = SystemTime.getInstance().getNanosecondsSince(
-        deserializeNanosStart);
+    long deserializeNanos = Times.getNanosSince(time, deserializeNanosStart);
     System.out.println("testSerialize: Deserializing took " +
         deserializeNanos +
         " ns for " + byteArray.length + " bytes " +

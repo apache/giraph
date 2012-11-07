@@ -18,17 +18,20 @@
 
 package org.apache.giraph.comm.netty.handler;
 
-import java.net.InetSocketAddress;
-import java.util.Date;
 import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.giraph.utils.SystemTime;
 import org.apache.giraph.utils.Time;
 import org.jboss.netty.channel.ChannelFuture;
 
+import java.net.InetSocketAddress;
+import java.util.Date;
+
 /**
  * Help track requests throughout the system
  */
 public class RequestInfo {
+  /** Time class to use */
+  private static final Time TIME = SystemTime.getInstance();
   /** Destination of the request */
   private final InetSocketAddress destinationAddress;
   /** When the request was started */
@@ -48,7 +51,7 @@ public class RequestInfo {
                      WritableRequest request) {
     this.destinationAddress = destinationAddress;
     this.request = request;
-    this.startedNanos = SystemTime.getInstance().getNanoseconds();
+    this.startedNanos = TIME.getNanoseconds();
   }
 
   public InetSocketAddress getDestinationAddress() {
@@ -70,7 +73,7 @@ public class RequestInfo {
    * @return Nanoseconds since the request was started
    */
   public long getElapsedNanos() {
-    return SystemTime.getInstance().getNanoseconds() - startedNanos;
+    return TIME.getNanoseconds() - startedNanos;
   }
 
   /**

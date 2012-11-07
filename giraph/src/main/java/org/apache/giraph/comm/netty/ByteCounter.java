@@ -18,28 +18,34 @@
 
 package org.apache.giraph.comm.netty;
 
-import java.text.DecimalFormat;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicLong;
-
-import com.yammer.metrics.core.Histogram;
-import com.yammer.metrics.core.Meter;
 import org.apache.giraph.metrics.GiraphMetrics;
 import org.apache.giraph.metrics.MetricGroup;
-import org.apache.log4j.Logger;
+import org.apache.giraph.metrics.ResetSuperstepMetricsObserver;
+import org.apache.giraph.metrics.SuperstepMetricsRegistry;
 import org.apache.giraph.utils.SystemTime;
 import org.apache.giraph.utils.Time;
+import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.channel.ChannelEvent;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelHandler;
 
+import com.yammer.metrics.core.Histogram;
+import com.yammer.metrics.core.Meter;
+import com.yammer.metrics.core.NoOpHistogram;
+import com.yammer.metrics.core.NoOpMeter;
+
+import java.text.DecimalFormat;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+
 /**
  * Keep track of the bytes sent/received and provide some metrics when
  * desired as part of the Netty Channel stack.
  */
-public class ByteCounter extends SimpleChannelHandler {
+public class ByteCounter extends SimpleChannelHandler implements
+    ResetSuperstepMetricsObserver {
   /** Megabyte in bytes */
   public static final double MEGABYTE = 1024f * 1024f;
   /** Helper to format the doubles */
@@ -64,25 +70,30 @@ public class ByteCounter extends SimpleChannelHandler {
   private final AtomicLong metricsWindowLastUpdatedMsecs = new AtomicLong();
 
   // Metrics
-  /** meter of requests sent */
-  private final Meter sentRequestsMeter;
+  /** Meter of requests sent */
+  private Meter sentRequestsMeter = NoOpMeter.INSTANCE;
   /** Histogram of bytes sent */
-  private final Histogram sentBytesHist;
+  private Histogram sentBytesHist = NoOpHistogram.INSTANCE;
   /** Meter of requests received */
-  private final Meter receivedRequestsMeter;
+  private Meter receivedRequestsMeter = NoOpMeter.INSTANCE;
   /** Histogram of bytes received */
-  private final Histogram receivedBytesHist;
+  private Histogram receivedBytesHist = NoOpHistogram.INSTANCE;
 
   /** Constructor */
   public ByteCounter() {
     // Initialize Metrics
-    sentRequestsMeter = GiraphMetrics.getMeter(MetricGroup.NETWORK,
-        "sent-requests", "requests",  TimeUnit.SECONDS);
-    sentBytesHist = GiraphMetrics.getHistogram(MetricGroup.NETWORK,
+    GiraphMetrics.getInstance().addSuperstepResetObserver(this);
+  }
+
+  @Override
+  public void newSuperstep(SuperstepMetricsRegistry superstepMetrics) {
+    sentRequestsMeter = superstepMetrics.getMeter(MetricGroup.NETWORK,
+        "sent-requests", "requests", TimeUnit.SECONDS);
+    sentBytesHist = superstepMetrics.getHistogram(MetricGroup.NETWORK,
         "sent-bytes", false);
-    receivedRequestsMeter = GiraphMetrics.getMeter(MetricGroup.NETWORK,
+    receivedRequestsMeter = superstepMetrics.getMeter(MetricGroup.NETWORK,
         "received-requests", "request", TimeUnit.SECONDS);
-    receivedBytesHist = GiraphMetrics.getHistogram(MetricGroup.NETWORK,
+    receivedBytesHist = superstepMetrics.getHistogram(MetricGroup.NETWORK,
         "received-bytes", false);
   }
 

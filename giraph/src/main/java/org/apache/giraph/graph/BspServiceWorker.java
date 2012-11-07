@@ -39,9 +39,15 @@ import org.apache.giraph.graph.partition.PartitionStore;
 import org.apache.giraph.graph.partition.WorkerGraphPartitioner;
 import org.apache.giraph.metrics.GiraphMetrics;
 import org.apache.giraph.metrics.MetricGroup;
+import org.apache.giraph.metrics.ResetSuperstepMetricsObserver;
+import org.apache.giraph.metrics.SuperstepMetricsRegistry;
+import org.apache.giraph.metrics.ValueGauge;
 import org.apache.giraph.utils.LoggerUtils;
 import org.apache.giraph.utils.MemoryUtils;
 import org.apache.giraph.utils.ProgressableUtils;
+import org.apache.giraph.utils.SystemTime;
+import org.apache.giraph.utils.Time;
+import org.apache.giraph.utils.Times;
 import org.apache.giraph.utils.WritableUtils;
 import org.apache.giraph.zk.BspEvent;
 import org.apache.giraph.zk.PredicateLock;
@@ -64,9 +70,6 @@ import org.json.JSONObject;
 
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.yammer.metrics.core.Gauge;
-import com.yammer.metrics.core.Timer;
-import com.yammer.metrics.core.TimerContext;
 import net.iharder.Base64;
 
 import java.io.ByteArrayOutputStream;
@@ -99,7 +102,12 @@ import java.util.concurrent.Future;
 public class BspServiceWorker<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
     extends BspService<I, V, E, M>
-    implements CentralizedServiceWorker<I, V, E, M> {
+    implements CentralizedServiceWorker<I, V, E, M>,
+    ResetSuperstepMetricsObserver {
+  /** Name of gauge for time spent waiting on other workers */
+  public static final String GAUGE_WAITING_TIME = "waiting-ms";
+  /** Time instance to use for timing */
+  private static final Time TIME = SystemTime.getInstance();
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(BspServiceWorker.class);
   /** My process health znode */
@@ -135,9 +143,11 @@ public class BspServiceWorker<I extends WritableComparable,
   /** Handler for aggregators */
   private final WorkerAggregatorHandler aggregatorHandler;
 
-
-  /** timer waiting for other workers */
-  private final Timer waitTimer;
+  // Per-Superstep Metrics
+  /** msec spent in WorkerContext#postSuperstep */
+  private ValueGauge<Long> wcPostSuperstepMs;
+  /** msec spent waiting for other workers */
+  private ValueGauge<Long> waitMs;
 
   /**
    * Constructor for setting up the worker.
@@ -171,29 +181,20 @@ public class BspServiceWorker<I extends WritableComparable,
 
     workerInfo = new WorkerInfo(
         getHostname(), getTaskPartition(), workerServer.getPort());
-    this.workerContext =
-        getConfiguration().createWorkerContext(null);
+    this.workerContext = getConfiguration().createWorkerContext(null);
 
     aggregatorHandler =
         new WorkerAggregatorHandler(this, getConfiguration(), context);
 
-    waitTimer = GiraphMetrics.getTimer(MetricGroup.NETWORK, "waiting");
-
-    initGauges();
+    GiraphMetrics.getInstance().addSuperstepResetObserver(this);
   }
 
-  /**
-   * Initialize Metrics used by this class
-   */
-  private void initGauges() {
-    GiraphMetrics.getGauge(MetricGroup.COMPUTE, "partition-map-size",
-                           new Gauge<Integer>() {
-        @Override
-        public Integer value() {
-          return getPartitionStore().getNumPartitions();
-        }
-      }
-    );
+  @Override
+  public void newSuperstep(SuperstepMetricsRegistry superstepMetrics) {
+    waitMs = new ValueGauge<Long>(superstepMetrics, MetricGroup.NETWORK,
+        GAUGE_WAITING_TIME);
+    wcPostSuperstepMs = new ValueGauge<Long>(superstepMetrics,
+        MetricGroup.USER, "worker-context-post-superstep-ms");
   }
 
   @Override
@@ -727,7 +728,9 @@ else[HADOOP_NON_SECURE]*/
 
     if (getSuperstep() != INPUT_SUPERSTEP) {
       getWorkerContext().setGraphState(graphState);
+      long postSuperstepBeginMs = TIME.getMilliseconds();
       getWorkerContext().postSuperstep();
+      wcPostSuperstepMs.set(Times.getMsSince(TIME, postSuperstepBeginMs));
       getContext().progress();
     }
 
@@ -785,7 +788,7 @@ else[HADOOP_NON_SECURE]*/
     String superstepFinishedNode =
         getSuperstepFinishedPath(getApplicationAttempt(), getSuperstep());
 
-    TimerContext waitTimerContext = waitTimer.time();
+    long waitBeginMs = TIME.getMilliseconds();
     try {
       while (getZkExt().exists(superstepFinishedNode, true) == null) {
         getSuperstepFinishedEvent().waitForever();
@@ -800,7 +803,8 @@ else[HADOOP_NON_SECURE]*/
           "finishSuperstep: Failed while waiting for master to " +
               "signal completion of superstep " + getSuperstep(), e);
     }
-    waitTimerContext.stop();
+
+    waitMs.set(Times.getMsSince(TIME, waitBeginMs));
 
     GlobalStats globalStats = new GlobalStats();
     WritableUtils.readFieldsFromZnode(
@@ -814,6 +818,7 @@ else[HADOOP_NON_SECURE]*/
         getGraphMapper().getMapFunctions().toString() +
         " - Attempt=" + getApplicationAttempt() +
         ", Superstep=" + getSuperstep());
+
     return new FinishedSuperstepStats(
         globalStats.getHaltComputation(),
         globalStats.getVertexCount(),
@@ -897,7 +902,7 @@ else[HADOOP_NON_SECURE]*/
     }
 
     if (getConfiguration().dumpMetricsAtEnd()) {
-      GiraphMetrics.dumpToStdout();
+      GiraphMetrics.getInstance().dumpToStdout();
     }
 
     // Preferably would shut down the service only after

@@ -20,7 +20,8 @@ package org.apache.giraph.comm.netty.handler;
 
 import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.giraph.utils.SystemTime;
-
+import org.apache.giraph.utils.Time;
+import org.apache.giraph.utils.Times;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferOutputStream;
@@ -33,9 +34,10 @@ import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
  * Requests have a request type and an encoded request.
  */
 public class RequestEncoder extends OneToOneEncoder {
+  /** Time class to use */
+  private static final Time TIME = SystemTime.getInstance();
   /** Class logger */
-  private static final Logger LOG =
-      Logger.getLogger(RequestEncoder.class);
+  private static final Logger LOG = Logger.getLogger(RequestEncoder.class);
   /** Holds the place of the message length until known */
   private static final byte[] LENGTH_PLACEHOLDER = new byte[4];
   /** Buffer starting size */
@@ -62,7 +64,7 @@ public class RequestEncoder extends OneToOneEncoder {
 
     // Encode the request
     if (LOG.isDebugEnabled()) {
-      startEncodingNanoseconds = SystemTime.getInstance().getNanoseconds();
+      startEncodingNanoseconds = TIME.getNanoseconds();
     }
     WritableRequest writableRequest = (WritableRequest) msg;
     ChannelBufferOutputStream outputStream =
@@ -83,8 +85,7 @@ public class RequestEncoder extends OneToOneEncoder {
           "requestId " + writableRequest.getRequestId() +
           ", size = " + encodedBuffer.writerIndex() + ", " +
           writableRequest.getType() + " took " +
-          SystemTime.getInstance().getNanosecondsSince(
-              startEncodingNanoseconds) + " ns");
+          Times.getNanosSince(TIME, startEncodingNanoseconds) + " ns");
     }
     return encodedBuffer;
   }

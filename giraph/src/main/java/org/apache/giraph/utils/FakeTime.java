@@ -35,28 +35,13 @@ public class FakeTime implements Time {
   }
 
   @Override
-  public long getMillisecondsSince(long previousMilliseconds) {
-    return getMilliseconds() - previousMilliseconds;
-  }
-
-  @Override
   public long getNanoseconds() {
     return nanosecondsSinceEpoch.get();
   }
 
   @Override
-  public long getNanosecondsSince(long previousNanoseconds) {
-    return getNanoseconds() - previousNanoseconds;
-  }
-
-  @Override
   public int getSeconds() {
     return (int) (nanosecondsSinceEpoch.get() / NS_PER_SECOND);
-  }
-
-  @Override
-  public int getSecondsSince(int previousSeconds) {
-    return getSeconds() - previousSeconds;
   }
 
   @Override

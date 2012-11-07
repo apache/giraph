@@ -21,6 +21,8 @@ package org.apache.giraph.comm.netty.handler;
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.giraph.utils.SystemTime;
+import org.apache.giraph.utils.Time;
+import org.apache.giraph.utils.Times;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -40,6 +42,8 @@ public abstract class RequestServerHandler<R> extends
     SimpleChannelUpstreamHandler {
   /** Number of bytes in the encoded response */
   public static final int RESPONSE_BYTES = 13;
+  /** Time class to use */
+  private static Time TIME = SystemTime.getInstance();
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(RequestServerHandler.class);
@@ -95,7 +99,7 @@ public abstract class RequestServerHandler<R> extends
         writableRequest.getClientId(),
         writableRequest.getRequestId())) {
       if (LOG.isDebugEnabled()) {
-        startProcessingNanoseconds = SystemTime.getInstance().getNanoseconds();
+        startProcessingNanoseconds = TIME.getNanoseconds();
       }
       processRequest((R) writableRequest);
       if (LOG.isDebugEnabled()) {
@@ -103,8 +107,7 @@ public abstract class RequestServerHandler<R> extends
             writableRequest.getClientId() + ", " +
             "requestId " + writableRequest.getRequestId() +
             ", " +  writableRequest.getType() + " took " +
-            SystemTime.getInstance().getNanosecondsSince(
-                startProcessingNanoseconds) + " ns");
+            Times.getNanosSince(TIME, startProcessingNanoseconds) + " ns");
       }
       alreadyDone = 0;
     } else {

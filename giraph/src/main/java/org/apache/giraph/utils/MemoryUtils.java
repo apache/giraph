@@ -20,6 +20,7 @@ package org.apache.giraph.utils;
 
 import com.yammer.metrics.util.PercentGauge;
 import org.apache.giraph.metrics.GiraphMetrics;
+import org.apache.giraph.metrics.GiraphMetricsRegistry;
 import org.apache.giraph.metrics.MetricGroup;
 
 /**
@@ -66,8 +67,9 @@ public class MemoryUtils {
    * Initialize metrics tracked by this helper.
    */
   public static void initMetrics() {
-    GiraphMetrics.getGauge(MetricGroup.SYSTEM, "memory-free-pct",
-                           new PercentGauge() {
+    GiraphMetricsRegistry metrics = GiraphMetrics.getInstance().perJob();
+    metrics.getGauge(MetricGroup.SYSTEM, "memory-free-pct",
+      new PercentGauge() {
         @Override
         protected double getNumerator() {
           return freeMemoryMB();

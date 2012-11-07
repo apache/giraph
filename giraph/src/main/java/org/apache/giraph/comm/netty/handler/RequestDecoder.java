@@ -23,8 +23,9 @@ import org.apache.giraph.comm.netty.ByteCounter;
 import org.apache.giraph.comm.requests.RequestType;
 import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.giraph.utils.ReflectionUtils;
-
 import org.apache.giraph.utils.SystemTime;
+import org.apache.giraph.utils.Time;
+import org.apache.giraph.utils.Times;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferInputStream;
@@ -39,6 +40,8 @@ public class RequestDecoder extends OneToOneDecoder {
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(RequestDecoder.class);
+  /** Time class to use */
+  private static final Time TIME = SystemTime.getInstance();
   /** Configuration */
   private final ImmutableClassesGiraphConfiguration conf;
   /** Byte counter to output */
@@ -73,7 +76,7 @@ public class RequestDecoder extends OneToOneDecoder {
     }
 
     if (LOG.isDebugEnabled()) {
-      startDecodingNanoseconds = SystemTime.getInstance().getNanoseconds();
+      startDecodingNanoseconds = TIME.getNanoseconds();
     }
 
     // Decode the request
@@ -92,8 +95,7 @@ public class RequestDecoder extends OneToOneDecoder {
           ", requestId " + writableRequest.getRequestId() +
           ", " +  writableRequest.getType() + ", with size " +
           buffer.array().length + " took " +
-          SystemTime.getInstance().getNanosecondsSince(
-              startDecodingNanoseconds) + " ns");
+          Times.getNanosSince(TIME, startDecodingNanoseconds) + " ns");
     }
 
     return writableRequest;

@@ -42,6 +42,7 @@ import org.apache.giraph.graph.partition.Partition;
 import org.apache.giraph.graph.partition.PartitionOwner;
 import org.apache.giraph.metrics.GiraphMetrics;
 import org.apache.giraph.metrics.MetricGroup;
+import org.apache.giraph.metrics.ValueGauge;
 import org.apache.giraph.utils.PairList;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -49,7 +50,6 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
 
 import com.google.common.collect.Maps;
-import com.yammer.metrics.core.Histogram;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -92,9 +92,10 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
   private final CentralizedServiceWorker<I, V, E, M> serviceWorker;
   /** Server data from the server (used for local requests) */
   private final ServerData<I, V, E, M> serverData;
-  // Metrics
-  /** histogram of messages sent in a superstep */
-  private final Histogram msgsSentInSuperstepHist;
+
+  // Per-Superstep Metrics
+  /** messages sent in a superstep */
+  private final ValueGauge<Long> msgsSentInSuperstep;
 
   /**
    * Constructor.
@@ -123,9 +124,11 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
     this.serviceWorker = serviceWorker;
     this.serverData = serviceWorker.getServerData();
 
-    // Initialize Metrics
-    msgsSentInSuperstepHist = GiraphMetrics.getHistogram(
-        MetricGroup.NETWORK, "superstep-msgs-sent");
+    // Per-Superstep Metrics.
+    // Since this object is not long lived we just initialize the metrics here.
+    GiraphMetrics gmr = GiraphMetrics.getInstance();
+    msgsSentInSuperstep = new ValueGauge<Long>(gmr.perSuperstep(),
+        MetricGroup.NETWORK, "msgs-sent");
   }
 
   @Override
@@ -352,7 +355,7 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
 
   @Override
   public long resetMessageCount() {
-    msgsSentInSuperstepHist.update(totalMsgsSentInSuperstep);
+    msgsSentInSuperstep.set(totalMsgsSentInSuperstep);
     long messagesSentInSuperstep = totalMsgsSentInSuperstep;
     totalMsgsSentInSuperstep = 0;
     return messagesSentInSuperstep;

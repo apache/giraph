@@ -21,6 +21,7 @@ package org.apache.giraph.graph;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.partition.PartitionOwner;
 import org.apache.giraph.metrics.GiraphMetrics;
+import org.apache.giraph.metrics.GiraphMetricsRegistry;
 import org.apache.giraph.metrics.MetricGroup;
 import org.apache.giraph.utils.LoggerUtils;
 import org.apache.giraph.utils.MemoryUtils;
@@ -97,10 +98,11 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
     this.bspServiceWorker = bspServiceWorker;
 
     // Initialize Metrics
-    verticesLoadedCounter = GiraphMetrics.getCounter(MetricGroup.IO,
-        "vertices-loaded");
-    edgesLoadedCounter = GiraphMetrics.getCounter(MetricGroup.IO,
-        "edges-loaded");
+    GiraphMetricsRegistry jobMetrics = GiraphMetrics.getInstance().perJob();
+    verticesLoadedCounter = jobMetrics.getCounter(MetricGroup.IO,
+        COUNTER_VERTICES_LOADED);
+    edgesLoadedCounter = jobMetrics.getCounter(MetricGroup.IO,
+        COUNTER_EDGES_LOADED);
   }
 
   /**

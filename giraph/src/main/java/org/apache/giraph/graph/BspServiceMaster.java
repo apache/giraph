@@ -30,7 +30,15 @@ import org.apache.giraph.graph.partition.MasterGraphPartitioner;
 import org.apache.giraph.graph.partition.PartitionOwner;
 import org.apache.giraph.graph.partition.PartitionStats;
 import org.apache.giraph.graph.partition.PartitionUtils;
+import org.apache.giraph.metrics.GiraphMetrics;
+import org.apache.giraph.metrics.MetricGroup;
+import org.apache.giraph.metrics.ResetSuperstepMetricsObserver;
+import org.apache.giraph.metrics.SuperstepMetricsRegistry;
+import org.apache.giraph.metrics.ValueGauge;
 import org.apache.giraph.utils.ProgressableUtils;
+import org.apache.giraph.utils.SystemTime;
+import org.apache.giraph.utils.Time;
+import org.apache.giraph.utils.Times;
 import org.apache.giraph.utils.WritableUtils;
 import org.apache.giraph.zk.BspEvent;
 import org.apache.giraph.zk.PredicateLock;
@@ -89,7 +97,8 @@ import java.util.concurrent.Executors;
 public class BspServiceMaster<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
     extends BspService<I, V, E, M>
-    implements CentralizedServiceMaster<I, V, E, M> {
+    implements CentralizedServiceMaster<I, V, E, M>,
+    ResetSuperstepMetricsObserver {
   /** Counter group name for the Giraph statistics */
   public static final String GIRAPH_STATS_COUNTER_GROUP_NAME = "Giraph Stats";
   /** Print worker names only if there are 10 workers left */
@@ -99,6 +108,8 @@ public class BspServiceMaster<I extends WritableComparable,
       "giraph.inputSplitThreadCount";
   /** Default number of threads to use when writing input splits to zookeeper */
   public static final int DEFAULT_INPUT_SPLIT_THREAD_COUNT = 1;
+  /** Time instance to use for timing */
+  private static final Time TIME = SystemTime.getInstance();
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(BspServiceMaster.class);
   /** Superstep counter */
@@ -155,6 +166,10 @@ public class BspServiceMaster<I extends WritableComparable,
   /** Limit locality information added to each InputSplit znode */
   private final int localityLimit = 5;
 
+  // Per-Superstep Metrics
+  /** MasterCompute time in msec */
+  private ValueGauge<Long> masterComputeMs;
+
   /**
    * Constructor for setting up the master.
    *
@@ -183,7 +198,7 @@ public class BspServiceMaster<I extends WritableComparable,
             100.0f);
     msecsPollPeriod =
         getConfiguration().getInt(GiraphConfiguration.POLL_MSECS,
-            GiraphConfiguration.POLL_MSECS_DEFAULT);
+                                  GiraphConfiguration.POLL_MSECS_DEFAULT);
     maxPollAttempts =
         getConfiguration().getInt(GiraphConfiguration.POLL_ATTEMPTS,
             GiraphConfiguration.POLL_ATTEMPTS_DEFAULT);
@@ -192,6 +207,14 @@ public class BspServiceMaster<I extends WritableComparable,
         GiraphConfiguration.PARTITION_LONG_TAIL_MIN_PRINT_DEFAULT);
     masterGraphPartitioner =
         getGraphPartitionerFactory().createMasterGraphPartitioner();
+
+    GiraphMetrics.getInstance().addSuperstepResetObserver(this);
+  }
+
+  @Override
+  public void newSuperstep(SuperstepMetricsRegistry superstepMetrics) {
+    masterComputeMs = new ValueGauge<Long>(superstepMetrics, MetricGroup.USER,
+        "master-compute-call");
   }
 
   @Override
@@ -791,7 +814,7 @@ public class BspServiceMaster<I extends WritableComparable,
         if (masterChildArr.get(0).equals(myBid)) {
           currentMasterTaskPartitionCounter.increment(
               getTaskPartition() -
-              currentMasterTaskPartitionCounter.getValue());
+                  currentMasterTaskPartitionCounter.getValue());
           masterCompute = getConfiguration().createMasterCompute();
           aggregatorHandler = new MasterAggregatorHandler(getConfiguration(),
               getContext());
@@ -1480,7 +1503,9 @@ public class BspServiceMaster<I extends WritableComparable,
             "runMasterCompute: Failed in access", e);
       }
     }
+    long masterComputeBeginMs = TIME.getMilliseconds();
     masterCompute.compute();
+    masterComputeMs.set(Times.getMsSince(TIME, masterComputeBeginMs));
   }
 
   /**

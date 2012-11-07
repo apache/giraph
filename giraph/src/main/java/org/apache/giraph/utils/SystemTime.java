@@ -36,29 +36,13 @@ public class SystemTime implements Time {
   }
 
   @Override
-  public long getMillisecondsSince(long previousMilliseconds) {
-    return getMilliseconds() - previousMilliseconds;
-  }
-
-
-  @Override
   public long getNanoseconds() {
     return System.nanoTime();
   }
 
   @Override
-  public long getNanosecondsSince(long previousNanoseconds) {
-    return getNanoseconds() - previousNanoseconds;
-  }
-
-  @Override
   public int getSeconds() {
     return (int) (getMilliseconds() / MS_PER_SECOND);
-  }
-
-  @Override
-  public int getSecondsSince(int previousSeconds) {
-    return getSeconds() - previousSeconds;
   }
 
   @Override

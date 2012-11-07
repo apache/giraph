@@ -23,6 +23,7 @@ import org.apache.giraph.comm.WorkerClientRequestProcessor;
 import org.apache.giraph.comm.netty.NettyWorkerClientRequestProcessor;
 import org.apache.giraph.utils.SystemTime;
 import org.apache.giraph.utils.Time;
+import org.apache.giraph.utils.Times;
 import org.apache.giraph.zk.ZooKeeperExt;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
@@ -55,9 +56,12 @@ import java.util.concurrent.Callable;
 public abstract class InputSplitsCallable<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
     implements Callable<VertexEdgeCount> {
+  /** Name of counter for vertices loaded */
+  public static final String COUNTER_VERTICES_LOADED = "vertices-loaded";
+  /** Name of counter for edges loaded */
+  public static final String COUNTER_EDGES_LOADED = "edges-loaded";
   /** Class logger */
-  private static final Logger LOG =
-      Logger.getLogger(InputSplitsCallable.class);
+  private static final Logger LOG = Logger.getLogger(InputSplitsCallable.class);
   /** Class time object */
   private static final Time TIME = SystemTime.getInstance();
   /** Configuration */
@@ -180,7 +184,7 @@ public abstract class InputSplitsCallable<I extends WritableComparable,
     }
 
     if (LOG.isInfoEnabled()) {
-      float seconds = TIME.getNanosecondsSince(startNanos) /
+      float seconds = Times.getNanosSince(TIME, startNanos) /
           Time.NS_PER_SECOND_AS_FLOAT;
       float verticesPerSecond = vertexEdgeCount.getVertexCount() / seconds;
       float edgesPerSecond = vertexEdgeCount.getEdgeCount() / seconds;

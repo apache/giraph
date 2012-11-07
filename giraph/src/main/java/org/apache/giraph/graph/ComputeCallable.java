@@ -29,9 +29,10 @@ import org.apache.giraph.graph.partition.Partition;
 import org.apache.giraph.graph.partition.PartitionStats;
 import org.apache.giraph.metrics.GiraphMetrics;
 import org.apache.giraph.metrics.MetricGroup;
-import org.apache.giraph.utils.MemoryUtils;
 import org.apache.giraph.utils.SystemTime;
 import org.apache.giraph.utils.Time;
+import org.apache.giraph.utils.Times;
+import org.apache.giraph.utils.MemoryUtils;
 import org.apache.giraph.utils.TimedLogger;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -59,6 +60,8 @@ import java.util.concurrent.Callable;
  */
 public class ComputeCallable<I extends WritableComparable, V extends Writable,
     E extends Writable, M extends Writable> implements Callable {
+  /** Name of timer for compute call */
+  public static final String TIMER_COMPUTE_ONE = "compute-one";
   /** Class logger */
   private static final Logger LOG  = Logger.getLogger(ComputeCallable.class);
   /** Class time object */
@@ -83,9 +86,9 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
   /** Get the start time in nanos */
   private final long startNanos = TIME.getNanoseconds();
 
-  // Metrics
+  // Per-Superstep Metrics
   /** Timer for single compute() call */
-  private Timer computeOneTimer;
+  private final Timer computeOneTimer;
 
   /**
    * Constructor
@@ -111,9 +114,11 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
     // Will be replaced later in call() for locality
     this.graphState = graphState;
 
-    // Metrics
-    computeOneTimer = GiraphMetrics.getTimer(MetricGroup.COMPUTE,
-                                             "compute-one");
+    GiraphMetrics metrics = GiraphMetrics.getInstance();
+    // Normally we would use ResetSuperstepMetricsObserver but this class is
+    // not long-lived, so just instantiating in the constructor is good enough.
+    computeOneTimer = metrics.perSuperstep().getTimer(MetricGroup.COMPUTE,
+        TIMER_COMPUTE_ONE);
   }
 
   @Override
@@ -155,7 +160,7 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
     }
 
     if (LOG.isInfoEnabled()) {
-      float seconds = TIME.getNanosecondsSince(startNanos) /
+      float seconds = Times.getNanosSince(TIME, startNanos) /
           Time.NS_PER_SECOND_AS_FLOAT;
       LOG.info("call: Computation took " + seconds + " secs for "  +
           partitionStatsList.size() + " partitions on superstep " +
