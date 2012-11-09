@@ -476,12 +476,6 @@ under the License.
 
     <profile>
       <id>hadoop_1.0</id>
-      <activation>
-        <property>
-          <name>hadoop</name>
-          <value>1.0</value>
-        </property>
-      </activation>
       <properties>
         <hadoop.version>1.0.2</hadoop.version>
         <munge.symbols>HADOOP_NON_JOBCONTEXT_IS_INTERFACE,HADOOP_1_SECURITY,HADOOP_1_SECRET_MANAGER</munge.symbols>
@@ -503,12 +497,6 @@ under the License.
 
     <profile>
       <id>hadoop_non_secure</id>
-      <activation>
-        <property>
-          <name>hadoop</name>
-          <value>non_secure</value>
-        </property>
-      </activation>
       <properties>
         <hadoop.version>0.20.2</hadoop.version>
         <munge.symbols>HADOOP_NON_SECURE,HADOOP_NON_JOBCONTEXT_IS_INTERFACE</munge.symbols>
@@ -530,13 +518,8 @@ under the License.
 
     <profile>
       <id>hadoop_facebook</id>
-      <activation>
-        <property>
-          <name>hadoop</name>
-          <value>facebook</value>
-        </property>
-      </activation>
       <properties>
+        <hadoop.fb.jar>${project.basedir}/lib/hadoop-0.20-core.jar</hadoop.fb.jar>
         <hadoop.version>0.20.1</hadoop.version>
         <munge.symbols>HADOOP_NON_SECURE,HADOOP_NON_JOBCONTEXT_IS_INTERFACE</munge.symbols>
       </properties>
@@ -548,7 +531,7 @@ under the License.
           <version>${hadoop.version}</version>
           <type>jar</type>
           <scope>system</scope>
-          <systemPath>${hadoop.jar.path}</systemPath>
+          <systemPath>${hadoop.fb.jar}</systemPath>
         </dependency>
         <dependency>
           <groupId>commons-collections</groupId>
@@ -567,12 +550,6 @@ under the License.
 
     <profile>
       <id>hadoop_0.23</id>
-      <activation>
-        <property>
-          <name>hadoop</name>
-          <value>0.23</value>
-        </property>
-      </activation>
       <properties>
         <hadoop.version>0.23.1</hadoop.version>
         <munge.symbols>HADOOP_1_SECRET_MANAGER</munge.symbols>
@@ -603,12 +580,6 @@ under the License.
          flags on any of the following profiles. -->
     <profile>
       <id>hadoop_2.0.0</id>
-      <activation>
-        <property>
-          <name>hadoop</name>
-          <value>2.0.0</value>
-        </property>
-      </activation>
       <properties>
         <hadoop.version>2.0.0-alpha</hadoop.version>
       </properties>
@@ -631,12 +602,6 @@ under the License.
 
     <profile>
       <id>hadoop_2.0.1</id>
-      <activation>
-        <property>
-          <name>hadoop</name>
-          <value>2.0.1</value>
-        </property>
-      </activation>
       <properties>
         <hadoop.version>2.0.1-alpha</hadoop.version>
       </properties>
@@ -659,12 +624,6 @@ under the License.
 
     <profile>
       <id>hadoop_2.0.2</id>
-      <activation>
-        <property>
-          <name>hadoop</name>
-          <value>2.0.2</value>
-        </property>
-      </activation>
       <properties>
         <hadoop.version>2.0.2-alpha</hadoop.version>
       </properties>
@@ -687,12 +646,6 @@ under the License.
 
     <profile>
       <id>hadoop_trunk</id>
-      <activation>
-        <property>
-          <name>hadoop</name>
-          <value>trunk</value>
-        </property>
-      </activation>
       <properties>
         <hadoop.version>3.0.0-SNAPSHOT</hadoop.version>
       </properties>

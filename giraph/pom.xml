@@ -33,6 +33,7 @@ under the License.
 
   <properties>
     <export-target.dir>export/target</export-target.dir>
+    <top.dir>${project.basedir}/..</top.dir>
   </properties>
 
   <build>
@@ -110,7 +111,7 @@ under the License.
         <configuration>
           <xmlOutput>true</xmlOutput>
           <findbugsXmlOutput>false</findbugsXmlOutput>
-          <excludeFilterFile>${project.basedir}/../findbugs-exclude.xml</excludeFilterFile>
+          <excludeFilterFile>${top.dir}/findbugs-exclude.xml</excludeFilterFile>
         </configuration>
         <executions>
           <execution>
@@ -178,6 +179,9 @@ under the License.
 
     <profile>
       <id>hadoop_facebook</id>
+      <properties>
+        <hadoop.fb.jar>${top.dir}/lib/hadoop-0.20-core.jar</hadoop.fb.jar>
+      </properties>
       <build>
         <plugins>
           <plugin>

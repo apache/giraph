@@ -28,6 +28,8 @@ function parse_profiles {
 
 parse_profiles
 
+echo "Running on profiles: $all_profiles"
+
 for profile in $all_profiles; do
   echo "======================"
   echo "=== $profile ==="

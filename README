@@ -62,9 +62,7 @@ Unsecure Hadoop versions:
 
 - Facebook Hadoop releases: https://github.com/facebook/hadoop-20, Master branch
 
-  You may tell maven to use this version with:
-
-mvn -Phadoop_facebook -Dhadoop.jar.path=/path/to/repo/build/hadoop-0.20.1-dev-core.jar <goals>
+  You may tell maven to use this version with "mvn -Phadoop_facebook <goals>"
 
 -- Other versions reported working include:
 ---  Cloudera CDH3u0, CDH3u1
@@ -91,16 +89,12 @@ Use the maven commands with secure Hadoop to:
 - test (i.e. mvn test)
 
 For the non-secure versions of Hadoop, run the maven commands with the
-additional argument '-Dhadoop=non_secure' or '-Phadoop_non_secure' to enable
- the maven profile 'hadoop_non_secure'.  Example compilation commands are
-'mvn -Dhadoop=non_secure compile' and 'mvn -Phadoop_non_secure compile'.
+additional argument '-Phadoop_non_secure'.
+Example compilation commands is 'mvn -Phadoop_non_secure compile'.
 
 For the Facebook Hadoop release, run the maven commands with the
-additional arguments '-Dhadoop=facebook' or '-Phadoop_facebook' to enable
-the maven profile 'hadoop_facebook' as well as a location for the hadoop
-core jar file.  Example compilation commands are 'mvn -Dhadoop=facebook
--Dhadoop.jar.path=/tmp/hadoop-0.20.1-core.jar compile' or 'mvn -Phadoop_facebook
--Dhadoop.jar.path=/tmp/hadoop-0.20.1-core.jar compile'.
+additional arguments '-Phadoop_facebook'.
+Example compilation commands is 'mvn -Phadoop_facebook compile'.
 
 -------------------------------
 
