@@ -150,6 +150,7 @@ public class GiraphTimers extends HadoopCountersBase {
     return Arrays.asList(jobCounters);
   }
 
+  @Override
   public Iterator<GiraphHadoopCounter> iterator() {
     return Iterators.concat(jobCounters().iterator(),
         superstepCounters().values().iterator());
