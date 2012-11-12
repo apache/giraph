@@ -1,0 +1,157 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.apache.giraph.counters;
+
+import org.apache.hadoop.mapreduce.Mapper.Context;
+
+import com.google.common.collect.Iterators;
+import com.google.common.collect.Maps;
+
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.Map;
+
+/**
+ * Hadoop Counters in group "Giraph Timers" for timing things.
+ */
+public class GiraphTimers extends HadoopCountersBase {
+  /** Counter group name for the giraph timers */
+  public static final String GROUP_NAME = "Giraph Timers";
+
+  /** Singleton instance for everyone to use */
+  private static GiraphTimers INSTANCE;
+
+  /** Setup time in msec */
+  private static final int SETUP_MS = 0;
+  /** Total time in msec */
+  private static final int TOTAL_MS = 1;
+  /** Shutdown time in msec */
+  private static final int SHUTDOWN_MS = 2;
+  /** How many whole job counters we have */
+  private static final int NUM_COUNTERS = 3;
+
+  /** superstep time in msec */
+  private final Map<Long, GiraphHadoopCounter> superstepMsec;
+
+  /** Whole job counters stored in this class */
+  private final GiraphHadoopCounter[] jobCounters;
+
+  /**
+   * Internal use only. Create using Hadoop Context
+   *
+   * @param context Hadoop Context to use.
+   */
+  private GiraphTimers(Context context) {
+    super(context, GROUP_NAME);
+    jobCounters = new GiraphHadoopCounter[NUM_COUNTERS];
+    jobCounters[SETUP_MS] = getCounter("Setup (milliseconds)");
+    jobCounters[TOTAL_MS] = getCounter("Total (milliseconds)");
+    jobCounters[SHUTDOWN_MS] = getCounter("Shutdown (milliseconds)");
+    superstepMsec = Maps.newHashMap();
+  }
+
+  /**
+   * Instantiate with Hadoop Context.
+   *
+   * @param context Hadoop Context to use.
+   */
+  public static void init(Context context) {
+    INSTANCE = new GiraphTimers(context);
+  }
+
+  /**
+   * Get singleton instance.
+   *
+   * @return singleton GiraphTimers instance.
+   */
+  public static GiraphTimers getInstance() {
+    return INSTANCE;
+  }
+
+  /**
+   * Get counter for setup time in milliseconds
+   *
+   * @return Counter for setup time in milliseconds
+   */
+  public GiraphHadoopCounter getSetupMs() {
+    return jobCounters[SETUP_MS];
+  }
+
+  /**
+   * Get counter for superstep time in milliseconds
+   *
+   * @param superstep Integer superstep number.
+   * @return Counter for setup time in milliseconds
+   */
+  public GiraphHadoopCounter getSuperstepMs(long superstep) {
+    GiraphHadoopCounter counter = superstepMsec.get(superstep);
+    if (counter == null) {
+      String counterPrefix;
+      if (superstep == -1) {
+        counterPrefix = "Vertex input superstep";
+      } else {
+        counterPrefix = "Superstep " + superstep;
+      }
+      counter = getCounter(counterPrefix + " (milliseconds)");
+      superstepMsec.put(superstep, counter);
+    }
+    return counter;
+  }
+
+  /**
+   * Get counter for total time in milliseconds.
+   *
+   * @return Counter for total time in milliseconds.
+   */
+  public GiraphHadoopCounter getTotalMs() {
+    return jobCounters[TOTAL_MS];
+  }
+
+  /**
+   * Get counter for shutdown time in milliseconds.
+   *
+   * @return Counter for shutdown time in milliseconds.
+   */
+  public GiraphHadoopCounter getShutdownMs() {
+    return jobCounters[SHUTDOWN_MS];
+  }
+
+  /**
+   * Get map of superstep to msec counter.
+   *
+   * @return mapping of superstep to msec counter.
+   */
+  public Map<Long, GiraphHadoopCounter> superstepCounters() {
+    return superstepMsec;
+  }
+
+  /**
+   * Get Iterable through job counters.
+   *
+   * @return Iterable of job counters.
+   */
+  public Iterable<GiraphHadoopCounter> jobCounters() {
+    return Arrays.asList(jobCounters);
+  }
+
+  public Iterator<GiraphHadoopCounter> iterator() {
+    return Iterators.concat(jobCounters().iterator(),
+        superstepCounters().values().iterator());
+  }
+}

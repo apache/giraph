@@ -16,6 +16,6 @@
  * limitations under the License.
  */
 /**
- * Package of all the Giraph metrics related data.
+ * Package of all the Giraph Hadoop counters related data.
  */
-package org.apache.giraph.metrics;
+package org.apache.giraph.counters;

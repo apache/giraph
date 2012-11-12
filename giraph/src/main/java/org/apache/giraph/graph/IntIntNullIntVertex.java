@@ -94,11 +94,6 @@ public abstract class IntIntNullIntVertex extends
     for (int n = 0; n < numEdges; n++) {
       neighbors[n] = in.readInt();
     }
-    boolean halt = in.readBoolean();
-    if (halt) {
-      voteToHalt();
-    } else {
-      wakeUp();
-    }
+    readHaltBoolean(in);
   }
 }

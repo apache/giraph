@@ -114,12 +114,7 @@ public abstract class EdgeListVertex<I extends WritableComparable,
       edgeList.add(new Edge<I, E>(targetVertexId, edgeValue));
     }
 
-    boolean halt = in.readBoolean();
-    if (halt) {
-      voteToHalt();
-    } else {
-      wakeUp();
-    }
+    readHaltBoolean(in);
   }
 
   @Override

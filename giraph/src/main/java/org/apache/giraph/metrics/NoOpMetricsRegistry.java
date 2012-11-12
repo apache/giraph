@@ -45,7 +45,7 @@ import java.util.concurrent.TimeUnit;
  * An empty MetricsRegistry, used to easily turn off all metrics without
  * affecting client code.
  */
-public class EmptyMetricsRegistry extends MetricsRegistry {
+public class NoOpMetricsRegistry extends MetricsRegistry {
   @Override
   public <T> Gauge<T> newGauge(Class<?> klass, String name, Gauge<T> metric) {
     return NoOpGuage.INSTANCE;

@@ -137,12 +137,7 @@ public abstract class HashMapVertex<I extends WritableComparable,
       edgeMap.put(targetVertexId, edgeValue);
     }
 
-    boolean halt = in.readBoolean();
-    if (halt) {
-      voteToHalt();
-    } else {
-      wakeUp();
-    }
+    readHaltBoolean(in);
   }
 
   @Override

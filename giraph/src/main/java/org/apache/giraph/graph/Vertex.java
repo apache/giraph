@@ -360,6 +360,16 @@ public abstract class Vertex<I extends WritableComparable,
 
     initialize(vertexId, vertexValue, edges);
 
+    readHaltBoolean(in);
+  }
+
+  /**
+   * Helper method for subclasses which implement their own readFields() to use.
+   *
+   * @param in DataInput to read from.
+   * @throws IOException If anything goes wrong during read.
+   */
+  protected void readHaltBoolean(DataInput in) throws IOException {
     halt = in.readBoolean();
   }
 

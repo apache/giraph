@@ -50,7 +50,7 @@ public class GiraphMetricsRegistry {
    * Create no-op empty registry that makes no-op metrics.
    */
   public GiraphMetricsRegistry() {
-    registry = new EmptyMetricsRegistry();
+    registry = new NoOpMetricsRegistry();
     jmxReporter = null;
   }
 
@@ -67,7 +67,7 @@ public class GiraphMetricsRegistry {
       jmxReporter = new JmxReporter(registry);
       jmxReporter.start();
     } else {
-      registry = new EmptyMetricsRegistry();
+      registry = new NoOpMetricsRegistry();
       jmxReporter = null;
     }
   }

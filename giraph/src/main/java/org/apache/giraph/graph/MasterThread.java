@@ -22,6 +22,7 @@ import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.bsp.ApplicationState;
 import org.apache.giraph.bsp.CentralizedServiceMaster;
 import org.apache.giraph.bsp.SuperstepState;
+import org.apache.giraph.counters.GiraphTimers;
 import org.apache.giraph.metrics.GiraphMetrics;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -75,6 +76,7 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
     super(MasterThread.class.getName());
     this.bspServiceMaster = bspServiceMaster;
     this.context = context;
+    GiraphTimers.init(context);
     superstepCounterOn = context.getConfiguration().getBoolean(
         GiraphConfiguration.USE_SUPERSTEP_COUNTERS,
         GiraphConfiguration.USE_SUPERSTEP_COUNTERS_DEFAULT);
@@ -102,9 +104,7 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
             (bspServiceMaster.createVertexInputSplits() != -1 &&
                 bspServiceMaster.createEdgeInputSplits() != -1)) {
           long setupMillis = System.currentTimeMillis() - startMillis;
-          context.getCounter(GIRAPH_TIMERS_COUNTER_GROUP_NAME,
-              "Setup (milliseconds)").
-              increment(setupMillis);
+          GiraphTimers.getInstance().getSetupMs().increment(setupMillis);
           setupSecs = setupMillis / 1000.0d;
           SuperstepState superstepState = SuperstepState.INITIAL;
           long cachedSuperstep = BspService.UNSET_SUPERSTEP;
@@ -126,16 +126,8 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
                   bspServiceMaster.getSuperstep());
             }
             if (superstepCounterOn) {
-              String counterPrefix;
-              if (cachedSuperstep == -1) {
-                counterPrefix = "Input superstep";
-              } else {
-                counterPrefix = "Superstep " + cachedSuperstep;
-              }
-              context.getCounter(GIRAPH_TIMERS_COUNTER_GROUP_NAME,
-                  counterPrefix +
-                      " (milliseconds)").
-                  increment(superstepMillis);
+              GiraphTimers.getInstance().getSuperstepMs(cachedSuperstep).
+                increment(superstepMillis);
             }
 
             // If a worker failed, restart from a known good superstep
@@ -150,10 +142,8 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
       }
       bspServiceMaster.cleanup();
       if (!superstepSecsMap.isEmpty()) {
-        context.getCounter(
-            GIRAPH_TIMERS_COUNTER_GROUP_NAME,
-            "Shutdown (milliseconds)").
-            increment(System.currentTimeMillis() - endMillis);
+        GiraphTimers.getInstance().getShutdownMs().
+          increment(System.currentTimeMillis() - endMillis);
         if (LOG.isInfoEnabled()) {
           LOG.info("setup: Took " + setupSecs + " seconds.");
         }
@@ -178,10 +168,8 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
               ((System.currentTimeMillis() - startMillis) /
               1000.0d) + " seconds.");
         }
-        context.getCounter(
-            GIRAPH_TIMERS_COUNTER_GROUP_NAME,
-            "Total (milliseconds)").
-            increment(System.currentTimeMillis() - startMillis);
+        GiraphTimers.getInstance().getTotalMs().
+          increment(System.currentTimeMillis() - startMillis);
       }
     } catch (IOException e) {
       LOG.error("masterThread: Master algorithm failed with " +

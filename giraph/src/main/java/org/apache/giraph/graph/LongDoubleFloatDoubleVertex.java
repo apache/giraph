@@ -139,12 +139,7 @@ public abstract class LongDoubleFloatDoubleVertex extends
       float edgeValue = in.readFloat();
       edgeMap.put(targetVertexId, edgeValue);
     }
-    boolean halt = in.readBoolean();
-    if (halt) {
-      voteToHalt();
-    } else {
-      wakeUp();
-    }
+    readHaltBoolean(in);
   }
 
   @Override

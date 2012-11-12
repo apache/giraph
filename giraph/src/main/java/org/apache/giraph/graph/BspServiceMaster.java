@@ -19,12 +19,14 @@
 package org.apache.giraph.graph;
 
 import org.apache.giraph.GiraphConfiguration;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.ApplicationState;
 import org.apache.giraph.bsp.BspInputFormat;
 import org.apache.giraph.bsp.CentralizedServiceMaster;
 import org.apache.giraph.bsp.SuperstepState;
 import org.apache.giraph.comm.MasterClientServer;
 import org.apache.giraph.comm.netty.NettyMasterClientServer;
+import org.apache.giraph.counters.GiraphStats;
 import org.apache.giraph.graph.GraphMapper.MapFunctions;
 import org.apache.giraph.graph.partition.MasterGraphPartitioner;
 import org.apache.giraph.graph.partition.PartitionOwner;
@@ -51,7 +53,6 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.RunningJob;
-import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
@@ -99,8 +100,6 @@ public class BspServiceMaster<I extends WritableComparable,
     extends BspService<I, V, E, M>
     implements CentralizedServiceMaster<I, V, E, M>,
     ResetSuperstepMetricsObserver {
-  /** Counter group name for the Giraph statistics */
-  public static final String GIRAPH_STATS_COUNTER_GROUP_NAME = "Giraph Stats";
   /** Print worker names only if there are 10 workers left */
   public static final int MAX_PRINTABLE_REMAINING_WORKERS = 10;
   /** How many threads to use when writing input splits to zookeeper*/
@@ -112,22 +111,6 @@ public class BspServiceMaster<I extends WritableComparable,
   private static final Time TIME = SystemTime.getInstance();
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(BspServiceMaster.class);
-  /** Superstep counter */
-  private Counter superstepCounter = null;
-  /** Vertex counter */
-  private Counter vertexCounter = null;
-  /** Finished vertex counter */
-  private Counter finishedVertexCounter = null;
-  /** Edge counter */
-  private Counter edgeCounter = null;
-  /** Sent messages counter */
-  private Counter sentMessagesCounter = null;
-  /** Workers on this superstep */
-  private Counter currentWorkersCounter = null;
-  /** Current master task partition */
-  private Counter currentMasterTaskPartitionCounter = null;
-  /** Last checkpointed superstep */
-  private Counter lastCheckpointedSuperstepCounter = null;
   /** Am I the master? */
   private boolean isMaster = false;
   /** Max number of workers */
@@ -189,26 +172,24 @@ public class BspServiceMaster<I extends WritableComparable,
     superstepStateChanged = new PredicateLock(context);
     registerBspEvent(superstepStateChanged);
 
-    maxWorkers =
-        getConfiguration().getInt(GiraphConfiguration.MAX_WORKERS, -1);
-    minWorkers =
-        getConfiguration().getInt(GiraphConfiguration.MIN_WORKERS, -1);
-    minPercentResponded =
-        getConfiguration().getFloat(GiraphConfiguration.MIN_PERCENT_RESPONDED,
-            100.0f);
-    msecsPollPeriod =
-        getConfiguration().getInt(GiraphConfiguration.POLL_MSECS,
-                                  GiraphConfiguration.POLL_MSECS_DEFAULT);
-    maxPollAttempts =
-        getConfiguration().getInt(GiraphConfiguration.POLL_ATTEMPTS,
-            GiraphConfiguration.POLL_ATTEMPTS_DEFAULT);
-    partitionLongTailMinPrint = getConfiguration().getInt(
+    ImmutableClassesGiraphConfiguration<I, V, E, M> conf = getConfiguration();
+
+    maxWorkers = conf.getInt(GiraphConfiguration.MAX_WORKERS, -1);
+    minWorkers = conf.getInt(GiraphConfiguration.MIN_WORKERS, -1);
+    minPercentResponded = conf.getFloat(
+        GiraphConfiguration.MIN_PERCENT_RESPONDED, 100.0f);
+    msecsPollPeriod = conf.getInt(GiraphConfiguration.POLL_MSECS,
+        GiraphConfiguration.POLL_MSECS_DEFAULT);
+    maxPollAttempts = conf.getInt(GiraphConfiguration.POLL_ATTEMPTS,
+        GiraphConfiguration.POLL_ATTEMPTS_DEFAULT);
+    partitionLongTailMinPrint = conf.getInt(
         GiraphConfiguration.PARTITION_LONG_TAIL_MIN_PRINT,
         GiraphConfiguration.PARTITION_LONG_TAIL_MIN_PRINT_DEFAULT);
     masterGraphPartitioner =
         getGraphPartitionerFactory().createMasterGraphPartitioner();
 
     GiraphMetrics.getInstance().addSuperstepResetObserver(this);
+    GiraphStats.init(context);
   }
 
   @Override
@@ -227,7 +208,7 @@ public class BspServiceMaster<I extends WritableComparable,
       jobState.put(JSONOBJ_APPLICATION_ATTEMPT_KEY, applicationAttempt);
       jobState.put(JSONOBJ_SUPERSTEP_KEY, desiredSuperstep);
     } catch (JSONException e) {
-      throw new RuntimeException("setJobState: Coudn't put " +
+      throw new RuntimeException("setJobState: Couldn't put " +
           state.toString());
     }
     if (LOG.isInfoEnabled()) {
@@ -745,24 +726,10 @@ public class BspServiceMaster<I extends WritableComparable,
     // In that case, the input splits are not set, they will be faked by
     // the checkpoint files.  Each checkpoint file will be an input split
     // and the input split
-    superstepCounter = getContext().getCounter(
-        GIRAPH_STATS_COUNTER_GROUP_NAME, "Superstep");
-    vertexCounter = getContext().getCounter(
-        GIRAPH_STATS_COUNTER_GROUP_NAME, "Aggregate vertices");
-    finishedVertexCounter = getContext().getCounter(
-        GIRAPH_STATS_COUNTER_GROUP_NAME, "Aggregate finished vertices");
-    edgeCounter = getContext().getCounter(
-        GIRAPH_STATS_COUNTER_GROUP_NAME, "Aggregate edges");
-    sentMessagesCounter = getContext().getCounter(
-        GIRAPH_STATS_COUNTER_GROUP_NAME, "Sent messages");
-    currentWorkersCounter = getContext().getCounter(
-        GIRAPH_STATS_COUNTER_GROUP_NAME, "Current workers");
-    currentMasterTaskPartitionCounter = getContext().getCounter(
-        GIRAPH_STATS_COUNTER_GROUP_NAME, "Current master task partition");
-    lastCheckpointedSuperstepCounter = getContext().getCounter(
-        GIRAPH_STATS_COUNTER_GROUP_NAME, "Last checkpointed superstep");
+
     if (getRestartedSuperstep() != UNSET_SUPERSTEP) {
-      superstepCounter.increment(getRestartedSuperstep());
+      GiraphStats.getInstance().getSuperstepCounter().
+        setValue(getRestartedSuperstep());
     }
   }
 
@@ -812,9 +779,8 @@ public class BspServiceMaster<I extends WritableComparable,
               myBid + "'");
         }
         if (masterChildArr.get(0).equals(myBid)) {
-          currentMasterTaskPartitionCounter.increment(
-              getTaskPartition() -
-                  currentMasterTaskPartitionCounter.getValue());
+          GiraphStats.getInstance().getCurrentMasterTaskPartition().
+              setValue(getTaskPartition());
           masterCompute = getConfiguration().createMasterCompute();
           aggregatorHandler = new MasterAggregatorHandler(getConfiguration(),
               getContext());
@@ -961,8 +927,8 @@ public class BspServiceMaster<I extends WritableComparable,
     masterCompute.write(finalizedOutputStream);
     finalizedOutputStream.close();
     lastCheckpointedSuperstep = superstep;
-    lastCheckpointedSuperstepCounter.increment(superstep -
-        lastCheckpointedSuperstepCounter.getValue());
+    GiraphStats.getInstance().
+        getLastCheckpointedSuperstep().setValue(superstep);
   }
 
   /**
@@ -1386,8 +1352,8 @@ public class BspServiceMaster<I extends WritableComparable,
 
     commService.openConnections();
 
-    currentWorkersCounter.increment(chosenWorkerInfoList.size() -
-        currentWorkersCounter.getValue());
+    GiraphStats.getInstance().
+        getCurrentWorkers().setValue(chosenWorkerInfoList.size());
     assignPartitionOwners(allPartitionStatsList,
         chosenWorkerInfoList,
         masterGraphPartitioner);
@@ -1465,7 +1431,7 @@ public class BspServiceMaster<I extends WritableComparable,
     incrCachedSuperstep();
     // Counter starts at zero, so no need to increment
     if (getSuperstep() > 0) {
-      superstepCounter.increment(1);
+      GiraphStats.getInstance().getSuperstepCounter().increment();
     }
     SuperstepState superstepState;
     if (globalStats.getHaltComputation()) {
@@ -1487,8 +1453,10 @@ public class BspServiceMaster<I extends WritableComparable,
     // The master.compute() should run logically before the workers, so
     // increase the superstep counter it uses by one
     GraphState<I, V, E, M> graphState =
-        new GraphState<I, V, E, M>(superstep + 1, vertexCounter.getValue(),
-            edgeCounter.getValue(), getContext(), getGraphMapper(), null, null);
+        new GraphState<I, V, E, M>(superstep + 1,
+            GiraphStats.getInstance().getVertices().getValue(),
+            GiraphStats.getInstance().getEdges().getValue(),
+            getContext(), getGraphMapper(), null, null);
     masterCompute.setGraphState(graphState);
     if (superstep == INPUT_SUPERSTEP) {
       try {
@@ -1748,18 +1716,11 @@ public class BspServiceMaster<I extends WritableComparable,
    * @param globalStats Global statistics which holds new counter values
    */
   private void updateCounters(GlobalStats globalStats) {
-    vertexCounter.increment(
-        globalStats.getVertexCount() -
-            vertexCounter.getValue());
-    finishedVertexCounter.increment(
-        globalStats.getFinishedVertexCount() -
-            finishedVertexCounter.getValue());
-    edgeCounter.increment(
-        globalStats.getEdgeCount() -
-            edgeCounter.getValue());
-    sentMessagesCounter.increment(
-        globalStats.getMessageCount() -
-            sentMessagesCounter.getValue());
+    GiraphStats gs = GiraphStats.getInstance();
+    gs.getVertices().setValue(globalStats.getVertexCount());
+    gs.getFinishedVertexes().setValue(globalStats.getFinishedVertexCount());
+    gs.getEdges().setValue(globalStats.getEdgeCount());
+    gs.getSentMessages().setValue(globalStats.getMessageCount());
   }
 
   /**
