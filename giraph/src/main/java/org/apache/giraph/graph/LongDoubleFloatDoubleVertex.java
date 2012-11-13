@@ -58,7 +58,7 @@ public abstract class LongDoubleFloatDoubleVertex extends
   }
 
   @Override
-  public final boolean addEdge(LongWritable targetId,
+  public boolean addEdge(LongWritable targetId,
       FloatWritable edgeValue) {
     if (edgeMap.put(targetId.get(), edgeValue.get())) {
       if (LOG.isDebugEnabled()) {

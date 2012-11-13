@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-423: Allow overriding addEdge (apresta)
+
   GIRAPH-422: Setting the log level of the root logger to the same level
   can cause issues in Hadoop. (aching)
 

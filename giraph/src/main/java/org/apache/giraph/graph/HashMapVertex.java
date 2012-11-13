@@ -61,7 +61,7 @@ public abstract class HashMapVertex<I extends WritableComparable,
   }
 
   @Override
-  public final boolean addEdge(I targetVertexId, E value) {
+  public boolean addEdge(I targetVertexId, E value) {
     if (edgeMap.put(targetVertexId, value) != null) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("addEdge: Vertex=" + getId() +

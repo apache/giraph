@@ -65,7 +65,7 @@ public abstract class EdgeListVertex<I extends WritableComparable,
   }
 
   @Override
-  public final boolean addEdge(I targetVertexId, E value) {
+  public boolean addEdge(I targetVertexId, E value) {
     for (Edge<I, E> edge : getEdges()) {
       if (edge.getTargetVertexId().equals(targetVertexId)) {
         LOG.warn("addEdge: Vertex=" + getId() +
