@@ -48,7 +48,7 @@ import org.apache.giraph.comm.requests.RequestType;
 import org.apache.giraph.comm.requests.SaslTokenMessageRequest;
 /*end[HADOOP_NON_SECURE]*/
 import org.apache.giraph.comm.requests.WritableRequest;
-import org.apache.giraph.graph.WorkerInfo;
+import org.apache.giraph.graph.TaskInfo;
 import org.apache.giraph.utils.TimedLogger;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
@@ -140,8 +140,8 @@ else[HADOOP_NON_SECURE]*/
   /** Address request id generator */
   private final AddressRequestIdGenerator addressRequestIdGenerator =
       new AddressRequestIdGenerator();
-  /** Client id */
-  private final int clientId;
+  /** Task info */
+  private final TaskInfo myTaskInfo;
   /** Maximum thread pool size */
   private final int maxPoolSize;
   /** Maximum number of attempts to resolve an address*/
@@ -156,10 +156,13 @@ else[HADOOP_NON_SECURE]*/
    *
    * @param context Context for progress
    * @param conf Configuration
+   * @param myTaskInfo Current task info
    */
   public NettyClient(Mapper<?, ?, ?, ?>.Context context,
-                     final ImmutableClassesGiraphConfiguration conf) {
+                     final ImmutableClassesGiraphConfiguration conf,
+                     TaskInfo myTaskInfo) {
     this.context = context;
+    this.myTaskInfo = myTaskInfo;
     this.channelsPerServer = conf.getInt(
         GiraphConfiguration.CHANNELS_PER_SERVER,
         GiraphConfiguration.DEFAULT_CHANNELS_PER_SERVER);
@@ -238,8 +241,6 @@ else[HADOOP_NON_SECURE]*/
     workerExecutorService = Executors.newCachedThreadPool(
         new ThreadFactoryBuilder().setNameFormat(
             "netty-client-worker-%d").build());
-
-    clientId = conf.getInt("mapred.task.partition", -1);
 
     // Configure the client.
     bootstrap = new ClientBootstrap(
@@ -353,10 +354,10 @@ else[HADOOP_NON_SECURE]*/
    *
    * @param tasks Tasks to connect to (if haven't already connected)
    */
-  public void connectAllAddresses(Collection<WorkerInfo> tasks) {
+  public void connectAllAddresses(Collection<? extends TaskInfo> tasks) {
     List<ChannelFutureAddress> waitingConnectionList =
         Lists.newArrayListWithCapacity(tasks.size() * channelsPerServer);
-    for (WorkerInfo taskInfo : tasks) {
+    for (TaskInfo taskInfo : tasks) {
       context.progress();
       InetSocketAddress address = taskIdAddressMap.get(taskInfo.getTaskId());
       if (address == null ||
@@ -622,12 +623,12 @@ else[HADOOP_NON_SECURE]*/
   /**
    * Send a request to a remote server (should be already connected)
    *
-   * @param destWorkerId Destination worker id
+   * @param destTaskId Destination task id
    * @param request Request to send
    */
-  public void sendWritableRequest(Integer destWorkerId,
+  public void sendWritableRequest(Integer destTaskId,
       WritableRequest request) {
-    InetSocketAddress remoteServer = taskIdAddressMap.get(destWorkerId);
+    InetSocketAddress remoteServer = taskIdAddressMap.get(destTaskId);
     if (clientRequestIdRequestInfoMap.isEmpty()) {
       byteCounter.resetAll();
     }
@@ -642,11 +643,11 @@ else[HADOOP_NON_SECURE]*/
     Channel channel = getNextChannel(remoteServer);
     RequestInfo newRequestInfo = new RequestInfo(remoteServer, request);
     if (registerRequest) {
-      request.setClientId(clientId);
+      request.setClientId(myTaskInfo.getTaskId());
       request.setRequestId(
         addressRequestIdGenerator.getNextRequestId(remoteServer));
       ClientRequestId clientRequestId =
-        new ClientRequestId(destWorkerId, request.getRequestId());
+        new ClientRequestId(destTaskId, request.getRequestId());
       RequestInfo oldRequestInfo = clientRequestIdRequestInfoMap.putIfAbsent(
         clientRequestId, newRequestInfo);
       if (oldRequestInfo != null) {

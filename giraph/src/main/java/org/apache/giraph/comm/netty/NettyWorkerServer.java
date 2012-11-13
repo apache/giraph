@@ -45,6 +45,7 @@ import org.apache.log4j.Logger;
 
 import com.google.common.collect.Sets;
 
+import java.net.InetSocketAddress;
 import java.util.Set;
 
 /**
@@ -89,7 +90,8 @@ public class NettyWorkerServer<I extends WritableComparable,
         new ServerData<I, V, E, M>(conf, createMessageStoreFactory(), context);
 
     nettyServer = new NettyServer(conf,
-        new WorkerRequestServerHandler.Factory<I, V, E, M>(serverData));
+        new WorkerRequestServerHandler.Factory<I, V, E, M>(serverData),
+        service.getWorkerInfo());
     nettyServer.start();
   }
 
@@ -138,8 +140,8 @@ public class NettyWorkerServer<I extends WritableComparable,
   }
 
   @Override
-  public int getPort() {
-    return nettyServer.getMyAddress().getPort();
+  public InetSocketAddress getMyAddress() {
+    return nettyServer.getMyAddress();
   }
 
   @Override

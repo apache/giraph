@@ -24,8 +24,10 @@ import org.apache.giraph.bsp.ApplicationState;
 import org.apache.giraph.bsp.BspInputFormat;
 import org.apache.giraph.bsp.CentralizedServiceMaster;
 import org.apache.giraph.bsp.SuperstepState;
-import org.apache.giraph.comm.MasterClientServer;
-import org.apache.giraph.comm.netty.NettyMasterClientServer;
+import org.apache.giraph.comm.MasterClient;
+import org.apache.giraph.comm.MasterServer;
+import org.apache.giraph.comm.netty.NettyMasterClient;
+import org.apache.giraph.comm.netty.NettyMasterServer;
 import org.apache.giraph.counters.GiraphStats;
 import org.apache.giraph.graph.GraphMapper.MapFunctions;
 import org.apache.giraph.graph.partition.MasterGraphPartitioner;
@@ -140,10 +142,12 @@ public class BspServiceMaster<I extends WritableComparable,
   private MasterAggregatorHandler aggregatorHandler;
   /** Master class */
   private MasterCompute masterCompute;
-  /** Communication service */
-  private MasterClientServer commService;
+  /** IPC Client */
+  private MasterClient masterClient;
+  /** IPC Server */
+  private MasterServer masterServer;
   /** Master info */
-  private WorkerInfo masterInfo;
+  private MasterInfo masterInfo;
   /** List of workers in current superstep */
   private List<WorkerInfo> chosenWorkerInfoList = Lists.newArrayList();
   /** Limit locality information added to each InputSplit znode */
@@ -786,10 +790,11 @@ public class BspServiceMaster<I extends WritableComparable,
               getContext());
           aggregatorHandler.initialize(this);
 
-          commService = new NettyMasterClientServer(
-              getContext(), getConfiguration(), this);
-          masterInfo = new WorkerInfo(getHostname(), getTaskPartition(),
-              commService.getMyAddress().getPort());
+          masterInfo = new MasterInfo();
+          masterServer = new NettyMasterServer(getConfiguration(), this);
+          masterInfo.setInetSocketAddress(masterServer.getMyAddress());
+          masterClient =
+              new NettyMasterClient(getContext(), getConfiguration(), this);
 
           if (LOG.isInfoEnabled()) {
             LOG.info("becomeMaster: I am now the master!");
@@ -808,6 +813,11 @@ public class BspServiceMaster<I extends WritableComparable,
             "becomeMaster: IllegalStateException", e);
       }
     }
+  }
+
+  @Override
+  public MasterInfo getMasterInfo() {
+    return masterInfo;
   }
 
   /**
@@ -1350,7 +1360,7 @@ public class BspServiceMaster<I extends WritableComparable,
       }
     }
 
-    commService.openConnections();
+    masterClient.openConnections();
 
     GiraphStats.getInstance().
         getCurrentWorkers().setValue(chosenWorkerInfoList.size());
@@ -1361,7 +1371,7 @@ public class BspServiceMaster<I extends WritableComparable,
     // We need to finalize aggregators from previous superstep (send them to
     // worker owners) after new worker assignments
     if (getSuperstep() >= 0) {
-      aggregatorHandler.finishSuperstep(commService);
+      aggregatorHandler.finishSuperstep(masterClient);
     }
 
     // Finalize the valid checkpoint file prefixes and possibly
@@ -1406,7 +1416,7 @@ public class BspServiceMaster<I extends WritableComparable,
 
     // Collect aggregator values, then run the master.compute() and
     // finally save the aggregator values
-    aggregatorHandler.prepareSuperstep(commService);
+    aggregatorHandler.prepareSuperstep(masterClient);
     runMasterCompute(getSuperstep());
 
     // If the master is halted or all the vertices voted to halt and there
@@ -1614,8 +1624,8 @@ public class BspServiceMaster<I extends WritableComparable,
       }
       aggregatorHandler.close();
 
-      commService.closeConnections();
-      commService.close();
+      masterClient.closeConnections();
+      masterServer.close();
     }
 
     try {

@@ -21,6 +21,7 @@ package org.apache.giraph.bsp;
 import java.io.IOException;
 
 import org.apache.giraph.graph.MasterAggregatorHandler;
+import org.apache.giraph.graph.MasterInfo;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.zookeeper.KeeperException;
@@ -48,6 +49,13 @@ public interface CentralizedServiceMaster<I extends WritableComparable,
    * @return true if became the master, false if the application is done.
    */
   boolean becomeMaster();
+
+  /**
+   * Get master information
+   *
+   * @return Master information
+   */
+  MasterInfo getMasterInfo();
 
   /**
    * Create the {@link InputSplit} objects from the index range based on the

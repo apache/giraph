@@ -19,11 +19,12 @@
 package org.apache.giraph.comm.netty.handler;
 
 import org.apache.giraph.GiraphConfiguration;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.comm.requests.WritableRequest;
+import org.apache.giraph.graph.TaskInfo;
 import org.apache.giraph.utils.SystemTime;
 import org.apache.giraph.utils.Time;
 import org.apache.giraph.utils.Times;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -53,8 +54,8 @@ public abstract class RequestServerHandler<R> extends
   private final boolean closeFirstRequest;
   /** Request reserved map (for exactly one semantics) */
   private final WorkerRequestReservedMap workerRequestReservedMap;
-  /** My worker id */
-  private final int myWorkerId;
+  /** My task info */
+  private final TaskInfo myTaskInfo;
   /** Start nanoseconds for the processing time */
   private long startProcessingNanoseconds = -1;
 
@@ -63,15 +64,17 @@ public abstract class RequestServerHandler<R> extends
    *
    * @param workerRequestReservedMap Worker request reservation map
    * @param conf Configuration
+   * @param myTaskInfo Current task info
    */
   public RequestServerHandler(
       WorkerRequestReservedMap workerRequestReservedMap,
-      Configuration conf) {
+      ImmutableClassesGiraphConfiguration conf,
+      TaskInfo myTaskInfo) {
     this.workerRequestReservedMap = workerRequestReservedMap;
     closeFirstRequest = conf.getBoolean(
         GiraphConfiguration.NETTY_SIMULATE_FIRST_REQUEST_CLOSED,
         GiraphConfiguration.NETTY_SIMULATE_FIRST_REQUEST_CLOSED_DEFAULT);
-    myWorkerId = conf.getInt("mapred.task.partition", -1);
+    this.myTaskInfo = myTaskInfo;
   }
 
   @Override
@@ -120,7 +123,7 @@ public abstract class RequestServerHandler<R> extends
 
     // Send the response with the request id
     ChannelBuffer buffer = ChannelBuffers.directBuffer(RESPONSE_BYTES);
-    buffer.writeInt(myWorkerId);
+    buffer.writeInt(myTaskInfo.getTaskId());
     buffer.writeLong(writableRequest.getRequestId());
     buffer.writeByte(alreadyDone);
     e.getChannel().write(buffer);
@@ -167,10 +170,12 @@ public abstract class RequestServerHandler<R> extends
      *
      * @param workerRequestReservedMap Worker request reservation map
      * @param conf Configuration to use
+     * @param myTaskInfo Current task info
      * @return New {@link RequestServerHandler}
      */
     RequestServerHandler newHandler(
         WorkerRequestReservedMap workerRequestReservedMap,
-        Configuration conf);
+        ImmutableClassesGiraphConfiguration conf,
+        TaskInfo myTaskInfo);
   }
 }

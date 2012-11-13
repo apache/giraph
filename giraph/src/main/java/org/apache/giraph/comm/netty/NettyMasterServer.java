@@ -19,9 +19,9 @@
 package org.apache.giraph.comm.netty;
 
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.bsp.CentralizedServiceMaster;
 import org.apache.giraph.comm.netty.handler.MasterRequestServerHandler;
 import org.apache.giraph.comm.MasterServer;
-import org.apache.giraph.graph.MasterAggregatorHandler;
 
 import java.net.InetSocketAddress;
 
@@ -36,12 +36,13 @@ public class NettyMasterServer implements MasterServer {
    * Constructor
    *
    * @param conf Hadoop configuration
-   * @param aggregatorHandler Master aggregator handler
+   * @param service Centralized service
    */
   public NettyMasterServer(ImmutableClassesGiraphConfiguration conf,
-      MasterAggregatorHandler aggregatorHandler) {
+      CentralizedServiceMaster<?, ?, ?, ?> service) {
     nettyServer = new NettyServer(conf,
-        new MasterRequestServerHandler.Factory(aggregatorHandler));
+        new MasterRequestServerHandler.Factory(service.getAggregatorHandler()),
+        service.getMasterInfo());
     nettyServer.start();
   }
 

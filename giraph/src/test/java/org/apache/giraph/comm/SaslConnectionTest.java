@@ -83,16 +83,17 @@ public class SaslConnectionTest {
     when(mockedSaslServerFactory.newHandler(conf)).
         thenReturn(mockedSaslServerHandler);
 
+    WorkerInfo workerInfo = new WorkerInfo(-1);
     NettyServer server =
         new NettyServer(conf,
             new WorkerRequestServerHandler.Factory(serverData),
+            workerInfo,
             mockedSaslServerFactory);
     server.start();
+    workerInfo.setInetSocketAddress(server.getMyAddress());
 
-    NettyClient client = new NettyClient(context, conf);
-    client.connectAllAddresses(
-        Lists.<WorkerInfo>newArrayList(
-            new WorkerInfo(server.getMyAddress(), -1)));
+    NettyClient client = new NettyClient(context, conf, new WorkerInfo());
+    client.connectAllAddresses(Lists.<WorkerInfo>newArrayList(workerInfo));
 
     client.stop();
     server.stop();

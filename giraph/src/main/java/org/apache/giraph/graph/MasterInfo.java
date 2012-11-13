@@ -16,10 +16,25 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.comm;
+package org.apache.giraph.graph;
 
 /**
- * Interface for both master client and master server
+ * Information about the master that is sent to other workers.
  */
-public interface MasterClientServer extends MasterClient, MasterServer {
+public class MasterInfo extends TaskInfo {
+  /**
+   * Constructor
+   */
+  public MasterInfo() {
+  }
+
+  @Override
+  public int getTaskId() {
+    return -1;
+  }
+
+  @Override
+  public String toString() {
+    return "Master(hostname=" + getHostname() + ", port=" + getPort() + ")";
+  }
 }

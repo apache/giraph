@@ -125,7 +125,7 @@ public class BspServiceWorker<I extends WritableComparable,
   private final WorkerAggregatorRequestProcessor
   workerAggregatorRequestProcessor;
   /** Master info */
-  private WorkerInfo masterInfo = new WorkerInfo();
+  private MasterInfo masterInfo = new MasterInfo();
   /** List of workers */
   private List<WorkerInfo> workerInfoList = Lists.newArrayList();
   /** Have the partition exchange children (workers) changed? */
@@ -170,17 +170,17 @@ public class BspServiceWorker<I extends WritableComparable,
     registerBspEvent(partitionExchangeChildrenChanged);
     workerGraphPartitioner =
         getGraphPartitionerFactory().createWorkerGraphPartitioner();
-    workerServer = new NettyWorkerServer<I, V, E, M>(getConfiguration(),
-        this, context);
-    workerClient = new NettyWorkerClient<I, V, E, M>(context,
-        getConfiguration(), this);
+    workerInfo = new WorkerInfo(getTaskPartition());
+    workerServer =
+        new NettyWorkerServer<I, V, E, M>(getConfiguration(), this, context);
+    workerInfo.setInetSocketAddress(workerServer.getMyAddress());
+    workerClient =
+        new NettyWorkerClient<I, V, E, M>(context, getConfiguration(), this);
 
     workerAggregatorRequestProcessor =
         new NettyWorkerAggregatorRequestProcessor(getContext(),
             getConfiguration(), this);
 
-    workerInfo = new WorkerInfo(
-        getHostname(), getTaskPartition(), workerServer.getPort());
     this.workerContext = getConfiguration().createWorkerContext(null);
 
     aggregatorHandler =
@@ -334,7 +334,7 @@ public class BspServiceWorker<I extends WritableComparable,
   }
 
   @Override
-  public WorkerInfo getMasterInfo() {
+  public MasterInfo getMasterInfo() {
     return masterInfo;
   }
 

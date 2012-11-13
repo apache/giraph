@@ -276,7 +276,7 @@ public abstract class BspService<I extends WritableComparable,
     this.conf = new ImmutableClassesGiraphConfiguration<I, V, E, M>(
         context.getConfiguration());
     this.jobId = conf.get("mapred.job.id", "Unknown Job");
-    this.taskPartition = conf.getInt("mapred.task.partition", -1);
+    this.taskPartition = conf.getTaskPartition();
     this.restartedSuperstep = conf.getLong(
         GiraphConfiguration.RESTART_SUPERSTEP,
         UNSET_SUPERSTEP);

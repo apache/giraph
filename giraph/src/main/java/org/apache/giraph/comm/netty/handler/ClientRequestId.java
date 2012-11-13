@@ -21,27 +21,27 @@ package org.apache.giraph.comm.netty.handler;
 /**
  * Simple immutable object to use for tracking requests uniquely.  This
  * object is guaranteed to be unique for a given client (based on the
- * destination worker and the request).
+ * destination task and the request).
  */
 public class ClientRequestId {
-  /** Destination worker id */
-  private final int destinationWorkerId;
+  /** Destination task id */
+  private final int destinationTaskId;
   /** Request id */
   private final long requestId;
 
   /**
    * Constructor.
    *
-   * @param destinationWorkerId Destination worker id
+   * @param destinationTaskId Destination task id
    * @param requestId Request id
    */
-  public ClientRequestId(int destinationWorkerId, long requestId) {
-    this.destinationWorkerId = destinationWorkerId;
+  public ClientRequestId(int destinationTaskId, long requestId) {
+    this.destinationTaskId = destinationTaskId;
     this.requestId = requestId;
   }
 
-  public int getDestinationWorkerId() {
-    return destinationWorkerId;
+  public int getDestinationTaskId() {
+    return destinationTaskId;
   }
 
   public long getRequestId() {
@@ -50,7 +50,7 @@ public class ClientRequestId {
 
   @Override
   public int hashCode() {
-    return (29 * destinationWorkerId) + (int) (57 * requestId);
+    return (29 * destinationTaskId) + (int) (57 * requestId);
   }
 
   @Override
@@ -58,7 +58,7 @@ public class ClientRequestId {
     if (other instanceof ClientRequestId) {
       ClientRequestId otherObj = (ClientRequestId) other;
       if (otherObj.getRequestId() == requestId &&
-          otherObj.getDestinationWorkerId() == destinationWorkerId) {
+          otherObj.getDestinationTaskId() == destinationTaskId) {
         return true;
       }
     }
@@ -68,6 +68,6 @@ public class ClientRequestId {
 
   @Override
   public String toString() {
-    return "(destWorker=" + destinationWorkerId + ",reqId=" + requestId + ")";
+    return "(destTask=" + destinationTaskId + ",reqId=" + requestId + ")";
   }
 }

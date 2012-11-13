@@ -67,6 +67,8 @@ public class RequestTest {
   private NettyServer server;
   /** Client */
   private NettyClient client;
+  /** Worker info */
+  private WorkerInfo workerInfo;
 
   /**
    * Only for testing.
@@ -92,13 +94,14 @@ public class RequestTest {
 
     // Start the service
     serverData = MockUtils.createNewServerData(conf, context);
+    workerInfo = new WorkerInfo(-1);
     server = new NettyServer(conf,
-        new WorkerRequestServerHandler.Factory(serverData));
+        new WorkerRequestServerHandler.Factory(serverData), workerInfo);
     server.start();
-    client = new NettyClient(context, conf);
+    workerInfo.setInetSocketAddress(server.getMyAddress());
+    client = new NettyClient(context, conf, new WorkerInfo());
     client.connectAllAddresses(
-        Lists.<WorkerInfo>newArrayList(
-            new WorkerInfo(server.getMyAddress(), -1)));
+        Lists.<WorkerInfo>newArrayList(workerInfo));
   }
 
   @Test
@@ -120,7 +123,7 @@ public class RequestTest {
     IntWritable> request =
       new SendVertexRequest<IntWritable, IntWritable,
       IntWritable, IntWritable>(partitionId, vertices);
-    client.sendWritableRequest(-1, request);
+    client.sendWritableRequest(workerInfo.getTaskId(), request);
     client.waitAllRequests();
 
     // Stop the service
@@ -165,7 +168,7 @@ public class RequestTest {
         IntWritable> request =
       new SendWorkerMessagesRequest<IntWritable, IntWritable,
             IntWritable, IntWritable>(dataToSend);
-    client.sendWritableRequest(-1, request);
+    client.sendWritableRequest(workerInfo.getTaskId(), request);
     client.waitAllRequests();
 
     // Stop the service
@@ -228,7 +231,7 @@ public class RequestTest {
     IntWritable> request =
       new SendPartitionMutationsRequest<IntWritable, IntWritable,
       IntWritable, IntWritable>(partitionId, vertexIdMutations);
-    client.sendWritableRequest(-1, request);
+    client.sendWritableRequest(workerInfo.getTaskId(), request);
     client.waitAllRequests();
 
     // Stop the service

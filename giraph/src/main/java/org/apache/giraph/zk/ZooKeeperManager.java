@@ -138,7 +138,7 @@ public class ZooKeeperManager {
     throws IOException {
     this.context = context;
     this.conf = configuration;
-    taskPartition = conf.getInt("mapred.task.partition", -1);
+    taskPartition = conf.getTaskPartition();
     jobId = conf.get("mapred.job.id", "Unknown Job");
     baseDirectory =
         new Path(conf.get(GiraphConfiguration.ZOOKEEPER_MANAGER_DIRECTORY,

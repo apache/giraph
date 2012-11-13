@@ -128,29 +128,7 @@ public class RequestFailureTest {
 
   @Test
   public void send2Requests() throws IOException {
-    // Start the service
-    serverData = MockUtils.createNewServerData(conf, context);
-    server = new NettyServer(conf,
-        new WorkerRequestServerHandler.Factory(serverData));
-    server.start();
-    client = new NettyClient(context, conf);
-    client.connectAllAddresses(
-        Lists.<WorkerInfo>newArrayList(
-            new WorkerInfo(server.getMyAddress(), -1)));
-
-    // Send the request 2x
-    WritableRequest request1 = getRequest();
-    WritableRequest request2 = getRequest();
-    client.sendWritableRequest(-1, request1);
-    client.sendWritableRequest(-1, request2);
-    client.waitAllRequests();
-
-    // Stop the service
-    client.stop();
-    server.stop();
-
-    // Check the output (should have been only processed once)
-    checkResult(2);
+    checkSendingTwoRequests();
   }
 
   @Test
@@ -162,29 +140,7 @@ public class RequestFailureTest {
     // Loop every 2 seconds
     conf.setInt(GiraphConfiguration.WAITING_REQUEST_MSECS, 2000);
 
-    // Start the service
-    serverData = MockUtils.createNewServerData(conf, context);
-    server = new NettyServer(conf,
-        new WorkerRequestServerHandler.Factory(serverData));
-    server.start();
-    client = new NettyClient(context, conf);
-    client.connectAllAddresses(
-        Lists.<WorkerInfo>newArrayList(
-            new WorkerInfo(server.getMyAddress(), -1)));
-
-    // Send the request 2x, but should only be processed once
-    WritableRequest request1 = getRequest();
-    WritableRequest request2 = getRequest();
-    client.sendWritableRequest(-1, request1);
-    client.sendWritableRequest(-1, request2);
-    client.waitAllRequests();
-
-    // Stop the service
-    client.stop();
-    server.stop();
-
-    // Check the output (should have been only processed once)
-    checkResult(2);
+    checkSendingTwoRequests();
   }
 
   @Test
@@ -196,21 +152,26 @@ public class RequestFailureTest {
     // Loop every 2 seconds
     conf.setInt(GiraphConfiguration.WAITING_REQUEST_MSECS, 2000);
 
+    checkSendingTwoRequests();
+  }
+
+  private void checkSendingTwoRequests() throws IOException {
     // Start the service
     serverData = MockUtils.createNewServerData(conf, context);
+    WorkerInfo workerInfo = new WorkerInfo(-1);
     server = new NettyServer(conf,
-        new WorkerRequestServerHandler.Factory(serverData));
+        new WorkerRequestServerHandler.Factory(serverData), workerInfo);
     server.start();
-    client = new NettyClient(context, conf);
+    workerInfo.setInetSocketAddress(server.getMyAddress());
+    client = new NettyClient(context, conf, new WorkerInfo());
     client.connectAllAddresses(
-        Lists.<WorkerInfo>newArrayList(
-            new WorkerInfo(server.getMyAddress(), -1)));
+        Lists.<WorkerInfo>newArrayList(workerInfo));
 
     // Send the request 2x, but should only be processed once
     WritableRequest request1 = getRequest();
     WritableRequest request2 = getRequest();
-    client.sendWritableRequest(-1, request1);
-    client.sendWritableRequest(-1, request2);
+    client.sendWritableRequest(workerInfo.getTaskId(), request1);
+    client.sendWritableRequest(workerInfo.getTaskId(), request2);
     client.waitAllRequests();
 
     // Stop the service

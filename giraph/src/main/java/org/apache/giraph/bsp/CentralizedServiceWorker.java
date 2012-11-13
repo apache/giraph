@@ -26,6 +26,7 @@ import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.comm.WorkerClient;
 import org.apache.giraph.graph.FinishedSuperstepStats;
 import org.apache.giraph.graph.GraphState;
+import org.apache.giraph.graph.MasterInfo;
 import org.apache.giraph.graph.VertexEdgeCount;
 import org.apache.giraph.graph.WorkerAggregatorHandler;
 import org.apache.giraph.graph.partition.PartitionStore;
@@ -197,7 +198,7 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
    *
    * @return Master info
    */
-  WorkerInfo getMasterInfo();
+  MasterInfo getMasterInfo();
 
   /**
    * Get the GraphMapper that this service is using.  Vertices need to know

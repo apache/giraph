@@ -71,10 +71,10 @@ else[HADOOP_NON_SECURE]*/
   /**
    * Send a request to a remote server (should be already connected)
    *
-   * @param destWorkerId Destination worker id
+   * @param destTaskId Destination worker id
    * @param request Request to send
    */
-  void sendWritableRequest(Integer destWorkerId, WritableRequest request);
+  void sendWritableRequest(Integer destTaskId, WritableRequest request);
 
   /**
    * Wait until all the outstanding requests are completed.

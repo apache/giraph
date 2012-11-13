@@ -23,6 +23,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 import java.io.Closeable;
+import java.net.InetSocketAddress;
 
 /**
  * Interface for message communication server.
@@ -37,11 +38,11 @@ public interface WorkerServer<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
     extends Closeable {
   /**
-   * Get the port
+   * Get server address
    *
-   * @return Port used by this server
+   * @return Address used by this server
    */
-  int getPort();
+  InetSocketAddress getMyAddress();
 
   /**
    * Prepare incoming messages for computation, and resolve mutation requests.

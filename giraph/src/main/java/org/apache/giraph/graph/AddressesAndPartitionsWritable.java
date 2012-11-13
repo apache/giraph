@@ -34,7 +34,7 @@ import java.util.List;
  */
 public class AddressesAndPartitionsWritable implements Writable {
   /** Master information */
-  private WorkerInfo masterInfo;
+  private MasterInfo masterInfo;
   /** List of all workers */
   private List<WorkerInfo> workerInfos;
   /** Collection of partitions */
@@ -49,7 +49,7 @@ public class AddressesAndPartitionsWritable implements Writable {
    * @param workerInfos List of all workers
    * @param partitionOwners Collection of partitions
    */
-  public AddressesAndPartitionsWritable(WorkerInfo masterInfo,
+  public AddressesAndPartitionsWritable(MasterInfo masterInfo,
       List<WorkerInfo> workerInfos,
       Collection<PartitionOwner> partitionOwners) {
     this.masterInfo = masterInfo;
@@ -72,7 +72,7 @@ public class AddressesAndPartitionsWritable implements Writable {
    *
    * @return Master information
    */
-  public WorkerInfo getMasterInfo() {
+  public MasterInfo getMasterInfo() {
     return masterInfo;
   }
 
@@ -111,7 +111,7 @@ public class AddressesAndPartitionsWritable implements Writable {
 
   @Override
   public void readFields(DataInput input) throws IOException {
-    masterInfo = new WorkerInfo();
+    masterInfo = new MasterInfo();
     masterInfo.readFields(input);
 
     int workerInfosSize = input.readInt();

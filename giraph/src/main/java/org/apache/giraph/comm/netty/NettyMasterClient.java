@@ -58,7 +58,8 @@ public class NettyMasterClient implements MasterClient {
   public NettyMasterClient(Mapper<?, ?, ?, ?>.Context context,
                            ImmutableClassesGiraphConfiguration configuration,
                            CentralizedServiceMaster<?, ?, ?, ?> service) {
-    this.nettyClient = new NettyClient(context, configuration);
+    this.nettyClient =
+        new NettyClient(context, configuration, service.getMasterInfo());
     this.service = service;
     this.progressable = context;
     maxBytesPerAggregatorRequest = configuration.getInt(

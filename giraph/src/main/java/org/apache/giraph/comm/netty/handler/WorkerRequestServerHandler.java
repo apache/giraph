@@ -18,9 +18,10 @@
 
 package org.apache.giraph.comm.netty.handler;
 
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.comm.requests.WorkerRequest;
-import org.apache.hadoop.conf.Configuration;
+import org.apache.giraph.graph.TaskInfo;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -44,11 +45,13 @@ public class WorkerRequestServerHandler<I extends WritableComparable,
    * @param serverData               Data held by the server
    * @param workerRequestReservedMap Worker request reservation map
    * @param conf                     Configuration
+   * @param myTaskInfo               Current task info
    */
   public WorkerRequestServerHandler(ServerData<I, V, E, M> serverData,
       WorkerRequestReservedMap workerRequestReservedMap,
-      Configuration conf) {
-    super(workerRequestReservedMap, conf);
+      ImmutableClassesGiraphConfiguration conf,
+      TaskInfo myTaskInfo) {
+    super(workerRequestReservedMap, conf, myTaskInfo);
     this.serverData = serverData;
   }
 
@@ -76,9 +79,10 @@ public class WorkerRequestServerHandler<I extends WritableComparable,
     @Override
     public RequestServerHandler newHandler(
         WorkerRequestReservedMap workerRequestReservedMap,
-        Configuration conf) {
+        ImmutableClassesGiraphConfiguration conf,
+        TaskInfo myTaskInfo) {
       return new WorkerRequestServerHandler<I, V, E,
-          M>(serverData, workerRequestReservedMap, conf);
+          M>(serverData, workerRequestReservedMap, conf, myTaskInfo);
     }
   }
 }

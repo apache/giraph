@@ -20,7 +20,7 @@ package org.apache.giraph.graph;
 
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.SuperstepState;
-import org.apache.giraph.comm.MasterClientServer;
+import org.apache.giraph.comm.MasterClient;
 import org.apache.giraph.comm.aggregators.AggregatorUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.Progressable;
@@ -145,9 +145,9 @@ public class MasterAggregatorHandler implements MasterAggregatorUsage,
   /**
    * Prepare aggregators for current superstep
    *
-   * @param commService Communication service
+   * @param masterClient IPC client on master
    */
-  public void prepareSuperstep(MasterClientServer commService) {
+  public void prepareSuperstep(MasterClient masterClient) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("prepareSuperstep: Start preapring aggregators");
     }
@@ -169,9 +169,9 @@ public class MasterAggregatorHandler implements MasterAggregatorUsage,
   /**
    * Finalize aggregators for current superstep and share them with workers
    *
-   * @param commService Communication service
+   * @param masterClient IPC client on master
    */
-  public void finishSuperstep(MasterClientServer commService) {
+  public void finishSuperstep(MasterClient masterClient) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("finishSuperstep: Start finishing aggregators");
     }
@@ -192,12 +192,12 @@ public class MasterAggregatorHandler implements MasterAggregatorUsage,
     try {
       for (Map.Entry<String, AggregatorWrapper<Writable>> entry :
           aggregatorMap.entrySet()) {
-        commService.sendAggregator(entry.getKey(),
+        masterClient.sendAggregator(entry.getKey(),
             entry.getValue().getAggregatorClass(),
             entry.getValue().getPreviousAggregatedValue());
         progressable.progress();
       }
-      commService.finishSendingAggregatedValues();
+      masterClient.finishSendingAggregatedValues();
     } catch (IOException e) {
       throw new IllegalStateException("finishSuperstep: " +
           "IOException occurred while sending aggregators", e);

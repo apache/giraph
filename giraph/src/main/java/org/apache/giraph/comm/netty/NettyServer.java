@@ -39,6 +39,7 @@ import org.apache.giraph.comm.netty.handler.SaslServerHandler;
 import java.util.concurrent.TimeUnit;
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.graph.TaskInfo;
 import org.apache.log4j.Logger;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.Channel;
@@ -87,6 +88,8 @@ else[HADOOP_NON_SECURE]*/
   private final String localHostname;
   /** Address of the server */
   private InetSocketAddress myAddress;
+  /** Current task info */
+  private TaskInfo myTaskInfo;
   /** Maximum number of threads */
   private final int maxPoolSize;
   /** TCP backlog */
@@ -122,15 +125,18 @@ else[HADOOP_NON_SECURE]*/
    *
    * @param conf Configuration to use
    * @param requestServerHandlerFactory Factory for request handlers
+   * @param myTaskInfo Current task info
    */
   public NettyServer(ImmutableClassesGiraphConfiguration conf,
-      RequestServerHandler.Factory requestServerHandlerFactory) {
+      RequestServerHandler.Factory requestServerHandlerFactory,
+      TaskInfo myTaskInfo) {
     this.conf = conf;
     this.requestServerHandlerFactory = requestServerHandlerFactory;
     /*if[HADOOP_NON_SECURE]
     else[HADOOP_NON_SECURE]*/
     this.saslServerHandlerFactory = new SaslServerHandler.Factory();
     /*end[HADOOP_NON_SECURE]*/
+    this.myTaskInfo = myTaskInfo;
     sendBufferSize = conf.getInt(
         GiraphConfiguration.SERVER_SEND_BUFFER_SIZE,
         GiraphConfiguration.DEFAULT_SERVER_SEND_BUFFER_SIZE);
@@ -196,12 +202,14 @@ else[HADOOP_NON_SECURE]*/
    *
    * @param conf Configuration to use
    * @param requestServerHandlerFactory Factory for request handlers
+   * @param myTaskInfo Current task info
    * @param saslServerHandlerFactory  Factory for SASL handlers
    */
   public NettyServer(ImmutableClassesGiraphConfiguration conf,
                      RequestServerHandler.Factory requestServerHandlerFactory,
+                     TaskInfo myTaskInfo,
                      SaslServerHandler.Factory saslServerHandlerFactory) {
-    this(conf, requestServerHandlerFactory);
+    this(conf, requestServerHandlerFactory, myTaskInfo);
     this.saslServerHandlerFactory = saslServerHandlerFactory;
   }
 /*end[HADOOP_NON_SECURE]*/
@@ -247,7 +255,7 @@ else[HADOOP_NON_SECURE]*/
               saslServerHandlerFactory.newHandler(conf),
               new AuthorizeServerHandler(),
               requestServerHandlerFactory.newHandler(workerRequestReservedMap,
-                  conf),
+                  conf, myTaskInfo),
               // Removed after authentication completes:
               new ResponseEncoder());
         } else {
@@ -263,7 +271,7 @@ else[HADOOP_NON_SECURE]*/
               new RequestDecoder(conf, byteCounter));
           pipeline.addLast("requestProcessor",
               requestServerHandlerFactory.newHandler(
-                  workerRequestReservedMap, conf));
+                  workerRequestReservedMap, conf, myTaskInfo));
           if (executionHandler != null) {
             pipeline.addAfter(handlerBeforeExecutionHandler,
                 "executionHandler", executionHandler);

@@ -22,6 +22,7 @@ import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.WorkerClient;
 import org.apache.giraph.comm.requests.WritableRequest;
+import org.apache.giraph.graph.TaskInfo;
 import org.apache.giraph.graph.WorkerInfo;
 import org.apache.giraph.graph.partition.PartitionOwner;
 import org.apache.hadoop.io.Writable;
@@ -67,7 +68,8 @@ public class NettyWorkerClient<I extends WritableComparable,
       Mapper<?, ?, ?, ?>.Context context,
       ImmutableClassesGiraphConfiguration<I, V, E, M> configuration,
       CentralizedServiceWorker<I, V, E, M> service) {
-    this.nettyClient = new NettyClient(context, configuration);
+    this.nettyClient =
+        new NettyClient(context, configuration, service.getWorkerInfo());
     this.conf = configuration;
     this.service = service;
   }
@@ -78,7 +80,7 @@ public class NettyWorkerClient<I extends WritableComparable,
 
   @Override
   public void openConnections() {
-    List<WorkerInfo> addresses = Lists.newArrayListWithCapacity(
+    List<TaskInfo> addresses = Lists.newArrayListWithCapacity(
         service.getWorkerInfoList().size());
     for (WorkerInfo info : service.getWorkerInfoList()) {
       // No need to connect to myself
@@ -96,9 +98,9 @@ public class NettyWorkerClient<I extends WritableComparable,
   }
 
   @Override
-  public void sendWritableRequest(Integer destWorkerId,
+  public void sendWritableRequest(Integer destTaskId,
                                   WritableRequest request) {
-    nettyClient.sendWritableRequest(destWorkerId, request);
+    nettyClient.sendWritableRequest(destTaskId, request);
   }
 
   @Override

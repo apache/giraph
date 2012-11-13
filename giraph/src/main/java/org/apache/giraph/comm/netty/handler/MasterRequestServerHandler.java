@@ -18,9 +18,10 @@
 
 package org.apache.giraph.comm.netty.handler;
 
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.comm.requests.MasterRequest;
 import org.apache.giraph.graph.MasterAggregatorHandler;
-import org.apache.hadoop.conf.Configuration;
+import org.apache.giraph.graph.TaskInfo;
 
 /** Handler for requests on master */
 public class MasterRequestServerHandler extends
@@ -33,12 +34,15 @@ public class MasterRequestServerHandler extends
    *
    * @param workerRequestReservedMap Worker request reservation map
    * @param conf                     Configuration
+   * @param myTaskInfo               Current task info
    * @param aggregatorHandler        Master aggregator handler
    */
   public MasterRequestServerHandler(
-      WorkerRequestReservedMap workerRequestReservedMap, Configuration conf,
+      WorkerRequestReservedMap workerRequestReservedMap,
+      ImmutableClassesGiraphConfiguration conf,
+      TaskInfo myTaskInfo,
       MasterAggregatorHandler aggregatorHandler) {
-    super(workerRequestReservedMap, conf);
+    super(workerRequestReservedMap, conf, myTaskInfo);
     this.aggregatorHandler = aggregatorHandler;
   }
 
@@ -66,9 +70,10 @@ public class MasterRequestServerHandler extends
     @Override
     public RequestServerHandler newHandler(
         WorkerRequestReservedMap workerRequestReservedMap,
-        Configuration conf) {
+        ImmutableClassesGiraphConfiguration conf,
+        TaskInfo myTaskInfo) {
       return new MasterRequestServerHandler(workerRequestReservedMap, conf,
-          aggregatorHandler);
+          myTaskInfo, aggregatorHandler);
     }
   }
 }
