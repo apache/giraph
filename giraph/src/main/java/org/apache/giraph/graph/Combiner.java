@@ -18,30 +18,36 @@
 
 package org.apache.giraph.graph;
 
-import java.io.IOException;
-
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
- * Abstract class to extend for combining of messages sent to the same vertex.
+ * Abstract class to extend for combining messages sent to the same vertex.
+ * Combiner for applications where each two messages for one vertex can be
+ * combined into one.
  *
  * @param <I> Vertex id
  * @param <M> Message data
  */
-@SuppressWarnings("rawtypes")
-public abstract class VertexCombiner<I extends WritableComparable,
+public abstract class Combiner<I extends WritableComparable,
     M extends Writable> {
   /**
-   * Combines message values for a particular vertex index.
+   * Combine messageToCombine with originalMassage,
+   * by modifying originalMessage.
    *
    * @param vertexIndex Index of the vertex getting these messages
-   * @param messages Iterable of the messages to be combined
-   * @return Iterable of the combined messages. The returned value cannot
-   *         be null and its size is required to be smaller or equal to
-   *         the size of the messages list.
-   * @throws IOException
+   * @param originalMessage The first message which we want to combine;
+   *                        put the result of combining in this message
+   * @param messageToCombine The second message which we want to combine
    */
-  public abstract Iterable<M> combine(I vertexIndex,
-      Iterable<M> messages) throws IOException;
+  public abstract void combine(I vertexIndex, M originalMessage,
+      M messageToCombine);
+
+  /**
+   * Get the initial message. When combined with any other message M,
+   * the result should be M.
+   *
+   * @return Initial message
+   */
+  public abstract M createInitialMessage();
 }

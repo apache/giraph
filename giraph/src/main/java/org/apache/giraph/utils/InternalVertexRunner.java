@@ -19,11 +19,11 @@
 package org.apache.giraph.utils;
 
 import org.apache.giraph.GiraphConfiguration;
+import org.apache.giraph.graph.Combiner;
 import org.apache.giraph.graph.EdgeInputFormat;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.MasterCompute;
 import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.graph.VertexCombiner;
 import org.apache.giraph.graph.VertexInputFormat;
 import org.apache.giraph.graph.VertexOutputFormat;
 import org.apache.giraph.graph.WorkerContext;
@@ -105,7 +105,7 @@ public class InternalVertexRunner {
   @SuppressWarnings("rawtypes")
   public static Iterable<String> run(
       Class<? extends Vertex> vertexClass,
-      Class<? extends VertexCombiner> vertexCombinerClass,
+      Class<? extends Combiner> vertexCombinerClass,
       Class<? extends VertexInputFormat> vertexInputFormatClass,
       Class<? extends VertexOutputFormat> vertexOutputFormatClass,
       Map<String, String> params,
@@ -133,7 +133,7 @@ public class InternalVertexRunner {
   @SuppressWarnings("rawtypes")
   public static Iterable<String> run(
       Class<? extends Vertex> vertexClass,
-      Class<? extends VertexCombiner> vertexCombinerClass,
+      Class<? extends Combiner> vertexCombinerClass,
       Class<? extends VertexInputFormat> vertexInputFormatClass,
       Class<? extends VertexOutputFormat> vertexOutputFormatClass,
       Class<? extends WorkerContext> workerContextClass,
@@ -165,7 +165,7 @@ public class InternalVertexRunner {
    */
   @SuppressWarnings("rawtypes")
   public static Iterable<String> run(Class<? extends Vertex> vertexClass,
-      Class<? extends VertexCombiner> vertexCombinerClass,
+      Class<? extends Combiner> vertexCombinerClass,
       Class<? extends VertexInputFormat> vertexInputFormatClass,
       Class<? extends EdgeInputFormat> edgeInputFormatClass,
       Class<? extends VertexOutputFormat> vertexOutputFormatClass,

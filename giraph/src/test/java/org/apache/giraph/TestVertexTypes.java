@@ -21,10 +21,9 @@ package org.apache.giraph;
 import org.apache.giraph.io.GeneratedVertexInputFormat;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat;
 import org.apache.giraph.graph.EdgeListVertex;
-import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.GiraphTypeValidator;
 import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.graph.VertexCombiner;
+import org.apache.giraph.graph.Combiner;
 import org.apache.giraph.graph.VertexInputFormat;
 import org.apache.giraph.graph.VertexOutputFormat;
 import org.apache.giraph.io.JsonBase64VertexInputFormat;
@@ -36,7 +35,7 @@ import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.junit.Test;
-import org.junit.Assert;
+
 import java.io.IOException;
 
 
@@ -76,25 +75,34 @@ public class TestVertexTypes {
      * Matches the {@link GeneratedVertexMatch}
      */
     private static class GeneratedVertexMatchCombiner extends
-            VertexCombiner<LongWritable, FloatWritable> {
-        @Override
-        public Iterable<FloatWritable> combine(LongWritable vertexIndex,
-                Iterable<FloatWritable> msgList) throws IOException {
-            return new EmptyIterable<FloatWritable>();
-        }
+        Combiner<LongWritable, FloatWritable> {
+      @Override
+      public void combine(LongWritable vertexIndex,
+          FloatWritable originalMessage,
+          FloatWritable messageToCombine) {
+      }
+
+      @Override
+      public FloatWritable createInitialMessage() {
+        return null;
+      }
     }
 
     /**
      * Mismatches the {@link GeneratedVertexMatch}
      */
     private static class GeneratedVertexMismatchCombiner extends
-            VertexCombiner<LongWritable, DoubleWritable> {
-        @Override
-        public Iterable<DoubleWritable> combine(LongWritable vertexIndex,
-                Iterable<DoubleWritable> msgList)
-                throws IOException {
-            return new EmptyIterable<DoubleWritable>();
-        }
+        Combiner<LongWritable, DoubleWritable> {
+      @Override
+      public void combine(LongWritable vertexIndex,
+          DoubleWritable originalMessage,
+          DoubleWritable messageToCombine) {
+      }
+
+      @Override
+      public DoubleWritable createInitialMessage() {
+        return null;
+      }
     }
 
     @Test
@@ -109,7 +117,7 @@ public class TestVertexTypes {
                       VertexInputFormat.class);
         conf.setClass(GiraphConfiguration.VERTEX_COMBINER_CLASS,
                       GeneratedVertexMatchCombiner.class,
-                      VertexCombiner.class);
+                      Combiner.class);
       @SuppressWarnings("rawtypes")
       GiraphTypeValidator<?, ?, ?, ?> validator =
         new GiraphTypeValidator(conf);
@@ -175,7 +183,7 @@ public class TestVertexTypes {
         VertexInputFormat.class);
       conf.setClass(GiraphConfiguration.VERTEX_COMBINER_CLASS,
         GeneratedVertexMismatchCombiner.class,
-        VertexCombiner.class);
+        Combiner.class);
       @SuppressWarnings("rawtypes")
       GiraphTypeValidator<?, ?, ?, ?> validator =
         new GiraphTypeValidator(conf);

@@ -23,7 +23,6 @@ import com.google.common.collect.Lists;
 import java.util.List;
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.comm.messages.SimpleMessageStore;
 import org.apache.giraph.comm.netty.handler.RequestServerHandler;
 import org.apache.giraph.comm.netty.NettyClient;
 import org.apache.giraph.comm.netty.NettyServer;
@@ -74,11 +73,7 @@ public class ConnectionTest {
     when(context.getConfiguration()).thenReturn(conf);
 
     ServerData<IntWritable, IntWritable, IntWritable, IntWritable> serverData =
-        new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>(
-            conf,
-            SimpleMessageStore.newFactory(
-                MockUtils.mockServiceGetVertexPartitionOwner(1), conf),
-            context);
+        MockUtils.createNewServerData(conf, context);
     NettyServer server =
         new NettyServer(conf,
             new WorkerRequestServerHandler.Factory(serverData));
@@ -105,11 +100,7 @@ public class ConnectionTest {
     when(context.getConfiguration()).thenReturn(conf);
 
     ServerData<IntWritable, IntWritable, IntWritable, IntWritable> serverData =
-        new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>(
-            conf,
-            SimpleMessageStore.newFactory(
-                MockUtils.mockServiceGetVertexPartitionOwner(1), conf),
-            context);
+        MockUtils.createNewServerData(conf, context);
    RequestServerHandler.Factory requestServerHandlerFactory =
        new WorkerRequestServerHandler.Factory(serverData);
 
@@ -146,11 +137,7 @@ public class ConnectionTest {
     when(context.getConfiguration()).thenReturn(conf);
 
     ServerData<IntWritable, IntWritable, IntWritable, IntWritable> serverData =
-        new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>(
-            conf,
-            SimpleMessageStore.newFactory(
-                MockUtils.mockServiceGetVertexPartitionOwner(1), conf),
-            context);
+        MockUtils.createNewServerData(conf, context);
     NettyServer server = new NettyServer(conf,
         new WorkerRequestServerHandler.Factory(serverData));
     server.start();

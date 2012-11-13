@@ -18,11 +18,7 @@
 
 package org.apache.giraph.examples;
 
-import java.io.IOException;
-import java.util.Collections;
-
-import org.apache.giraph.graph.VertexCombiner;
-import org.apache.giraph.utils.MathUtils;
+import org.apache.giraph.graph.Combiner;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 
@@ -30,10 +26,15 @@ import org.apache.hadoop.io.LongWritable;
  * A combiner that sums double-valued messages
  */
 public class DoubleSumCombiner extends
-    VertexCombiner<LongWritable, DoubleWritable> {
+    Combiner<LongWritable, DoubleWritable> {
   @Override
-  public Iterable<DoubleWritable> combine(LongWritable vertexIndex,
-      Iterable<DoubleWritable> messages) throws IOException {
-    return Collections.singleton(new DoubleWritable(MathUtils.sum(messages)));
+  public void combine(LongWritable vertexIndex, DoubleWritable originalMessage,
+      DoubleWritable messageToCombine) {
+    originalMessage.set(originalMessage.get() + messageToCombine.get());
+  }
+
+  @Override
+  public DoubleWritable createInitialMessage() {
+    return new DoubleWritable(0);
   }
 }

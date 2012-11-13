@@ -19,27 +19,24 @@
 package org.apache.giraph.examples;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
-import java.util.Arrays;
-
-import org.apache.giraph.graph.VertexCombiner;
+import org.apache.giraph.graph.Combiner;
 import org.apache.hadoop.io.IntWritable;
 import org.junit.Test;
 
 public class MinimumIntCombinerTest {
 
-    @Test
-    public void testCombiner() throws Exception {
+  @Test
+  public void testCombiner() throws Exception {
+    Combiner<IntWritable, IntWritable> combiner =
+        new MinimumIntCombiner();
 
-        VertexCombiner<IntWritable, IntWritable> combiner =
-                new MinimumIntCombiner();
-
-        Iterable<IntWritable> result = combiner.combine(
-                new IntWritable(1), Arrays.asList(
-                new IntWritable(39947466), new IntWritable(199),
-                new IntWritable(19998888), new IntWritable(42)));
-        assertTrue(result.iterator().hasNext());
-        assertEquals(42, result.iterator().next().get());
-    }
+    IntWritable vertexId = new IntWritable(1);
+    IntWritable result = combiner.createInitialMessage();
+    combiner.combine(vertexId, result, new IntWritable(39947466));
+    combiner.combine(vertexId, result, new IntWritable(199));
+    combiner.combine(vertexId, result, new IntWritable(42));
+    combiner.combine(vertexId, result, new IntWritable(19998888));
+    assertEquals(42, result.get());
+  }
 }

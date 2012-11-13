@@ -18,16 +18,14 @@
 
 package org.apache.giraph.comm.messages;
 
-import com.google.common.collect.MapMaker;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.VertexIdMessageCollection;
-import org.apache.giraph.graph.VertexCombiner;
-import org.apache.giraph.utils.CollectionUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
 
 import java.io.DataInput;
@@ -37,125 +35,109 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentMap;
-import org.apache.log4j.Logger;
 
 /**
+ * Abstract class for {@link MessageStoreByPartition} which allows any kind
+ * of object to hold messages for one vertex.
  * Simple in memory message store implemented with a two level concurrent
  * hash map.
  *
  * @param <I> Vertex id
- * @param <V> Vertex data
- * @param <E> Edge data
  * @param <M> Message data
+ * @param <T> Type of object which holds messages for one vertex
  */
-public class SimpleMessageStore<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    implements MessageStoreByPartition<I, M> {
-  /** Class logger */
-  private static final Logger LOG = Logger.getLogger(SimpleMessageStore.class);
+public abstract class SimpleMessageStore<I extends WritableComparable,
+    M extends Writable, T> implements MessageStoreByPartition<I, M>  {
   /** Service worker */
-  private final CentralizedServiceWorker<I, V, E, M> service;
-  /**
-   * Internal message map, from partition id to map from vertex id to
-   * messages
-   */
-  private final ConcurrentMap<Integer, ConcurrentMap<I, Collection<M>>> map;
-  /** Hadoop configuration */
-  private final ImmutableClassesGiraphConfiguration<I, V, E, M> config;
-  /** Combiner for messages */
-  private final VertexCombiner<I, M> combiner;
+  protected final CentralizedServiceWorker<I, ?, ?, M> service;
+  /** Map from partition id to map from vertex id to messages for that vertex */
+  protected final ConcurrentMap<Integer, ConcurrentMap<I, T>> map;
+  /** Giraph configuration */
+  protected final ImmutableClassesGiraphConfiguration<I, ?, ?, M> config;
 
   /**
-   * @param service  Service worker
-   * @param combiner Combiner for messages
-   * @param config   Hadoop configuration
+   * Constructor
+   *
+   * @param service Service worker
+   * @param config Giraph configuration
    */
-  SimpleMessageStore(CentralizedServiceWorker<I, V, E, M> service,
-      VertexCombiner<I, M> combiner,
-      ImmutableClassesGiraphConfiguration<I, V, E, M> config) {
+  public SimpleMessageStore(
+      CentralizedServiceWorker<I, ?, ?, M> service,
+      ImmutableClassesGiraphConfiguration<I, ?, ?, M> config) {
     this.service = service;
+    this.config = config;
     map = new MapMaker().concurrencyLevel(
         config.getNettyServerExecutionConcurrency()).makeMap();
-    this.combiner = combiner;
-    this.config = config;
   }
 
-  @Override
-  public void addVertexMessages(I vertexId,
-      Collection<M> messages) throws IOException {
-    int partitionId = getPartitionId(vertexId);
-    ConcurrentMap<I, Collection<M>> partitionMap =
-        getOrCreatePartitionMap(partitionId);
-    Collection<M> currentMessages =
-      CollectionUtils.addConcurrent(vertexId, messages, partitionMap);
-    if (combiner != null) {
-      synchronized (currentMessages) {
-        currentMessages =
-          Lists.newArrayList(combiner.combine(vertexId, currentMessages));
-        partitionMap.put(vertexId, currentMessages);
-      }
-    }
-  }
+  /**
+   * Add collection of messages for vertex to a partition map
+   *
+   * @param vertexId Id of vertex which received messages
+   * @param messages Messages to add
+   * @param partitionMap Map which to add to
+   * @throws IOException
+   */
+  protected abstract void addVertexMessagesToPartition(I vertexId,
+      Collection<M> messages, ConcurrentMap<I, T> partitionMap) throws
+      IOException;
 
-  @Override
-  public void addMessages(Map<I, Collection<M>> messages) throws IOException {
-    for (Entry<I, Collection<M>> entry : messages.entrySet()) {
-      addVertexMessages(entry.getKey(), entry.getValue());
-    }
-  }
+  /**
+   * Add a single message for vertex to a partition map
+   *
+   * @param vertexId Id of vertex which received message
+   * @param message Message to add
+   * @param partitionMap Map which to add to
+   * @throws IOException
+   */
+  protected abstract void addVertexMessageToPartition(I vertexId,
+      M message, ConcurrentMap<I, T> partitionMap) throws IOException;
 
-  @Override
-  public void addPartitionMessages(Map<I, Collection<M>> messages,
-      int partitionId) throws IOException {
-    ConcurrentMap<I, Collection<M>> partitionMap =
-        getOrCreatePartitionMap(partitionId);
+  /**
+   * Get messages as collection from message storage
+   *
+   * @param messages Message storage
+   * @return Messages as collection
+   */
+  protected abstract Collection<M> getMessagesAsCollection(T messages);
 
-    for (Entry<I, Collection<M>> entry : messages.entrySet()) {
-      Collection<M> currentMessages =
-          CollectionUtils.addConcurrent(
-              entry.getKey(), entry.getValue(), partitionMap);
-      if (combiner != null) {
-        synchronized (currentMessages) {
-          currentMessages =
-              Lists.newArrayList(combiner.combine(entry.getKey(),
-                  currentMessages));
-          partitionMap.put(entry.getKey(), currentMessages);
-        }
-      }
-    }
-  }
+  /**
+   * Get number of messages in partition map
+   *
+   * @param partitionMap Partition map in which to count messages
+   * @return Number of messages in partition map
+   */
+  protected abstract int getNumberOfMessagesIn(
+      ConcurrentMap<I, T> partitionMap);
 
-  @Override
-  public void addPartitionMessages(VertexIdMessageCollection<I, M> messages,
-      int partitionId) throws IOException {
-    ConcurrentMap<I, Collection<M>> partitionMap =
-        getOrCreatePartitionMap(partitionId);
+  /**
+   * Write message storage to {@link DataOutput}
+   *
+   * @param messages Message storage
+   * @param out Data output
+   * @throws IOException
+   */
+  protected abstract void writeMessages(T messages, DataOutput out) throws
+      IOException;
 
-    VertexIdMessageCollection<I, M>.Iterator iterator = messages.getIterator();
-    while (iterator.hasNext()) {
-      iterator.next();
-      I vertexId = iterator.getCurrentFirst();
-      M message = iterator.getCurrentSecond();
-      Collection<M> currentMessages = partitionMap.get(vertexId);
-      if (currentMessages == null) {
-        Collection<M> newMessages = Lists.newArrayList(message);
-        currentMessages = partitionMap.putIfAbsent(vertexId, newMessages);
-      }
-      // if vertex messages existed before, or putIfAbsent didn't put new list
-      if (currentMessages != null) {
-        synchronized (currentMessages) {
-          currentMessages.add(message);
-          if (combiner != null) {
-            currentMessages =
-                Lists.newArrayList(combiner.combine(vertexId,
-                    currentMessages));
-            partitionMap.put(vertexId, currentMessages);
-          }
-        }
-      }
-    }
+  /**
+   * Read message storage from {@link DataInput}
+   *
+   * @param in Data input
+   * @return Message storage
+   * @throws IOException
+   */
+  protected abstract T readFieldsForMessages(DataInput in) throws IOException;
+
+  /**
+   * Get id of partition which holds vertex with selected id
+   *
+   * @param vertexId Id of vertex
+   * @return Id of partiton
+   */
+  protected int getPartitionId(I vertexId) {
+    return service.getVertexPartitionOwner(vertexId).getPartitionId();
   }
 
   /**
@@ -166,47 +148,71 @@ public class SimpleMessageStore<I extends WritableComparable,
    * @param partitionId Id of partition
    * @return Message map for this partition
    */
-  private ConcurrentMap<I, Collection<M>> getOrCreatePartitionMap(
-      int partitionId) {
-    ConcurrentMap<I, Collection<M>> partitionMap = map.get(partitionId);
+  protected ConcurrentMap<I, T> getOrCreatePartitionMap(int partitionId) {
+    ConcurrentMap<I, T> partitionMap = map.get(partitionId);
     if (partitionMap == null) {
-      ConcurrentMap<I, Collection<M>> tmpMap =
-          new MapMaker().concurrencyLevel(
-              config.getNettyServerExecutionConcurrency()).
-              makeMap();
+      ConcurrentMap<I, T> tmpMap = new MapMaker().concurrencyLevel(
+          config.getNettyServerExecutionConcurrency()).makeMap();
       partitionMap = map.putIfAbsent(partitionId, tmpMap);
       if (partitionMap == null) {
-        partitionMap = map.get(partitionId);
+        partitionMap = tmpMap;
       }
     }
     return partitionMap;
   }
 
   @Override
-  public Collection<M> getVertexMessages(I vertexId) throws IOException {
-    ConcurrentMap<I, Collection<M>> partitionMap =
-        map.get(getPartitionId(vertexId));
-    if (partitionMap == null) {
-      return Collections.<M>emptyList();
+  public void addMessages(Map<I, Collection<M>> messages) throws IOException {
+    for (Map.Entry<I, Collection<M>> entry : messages.entrySet()) {
+      addVertexMessages(entry.getKey(), entry.getValue());
     }
-    Collection<M> messages = partitionMap.get(vertexId);
-    return (messages == null) ? Collections.<M>emptyList() : messages;
   }
 
   @Override
-  public int getNumberOfMessages() {
-    int numberOfMessages = 0;
-    for (ConcurrentMap<I, Collection<M>> partitionMap : map.values()) {
-      for (Collection<M> messages : partitionMap.values()) {
-        numberOfMessages += messages.size();
-      }
+  public void addVertexMessages(I vertexId,
+      Collection<M> messages) throws IOException {
+    int partitionId = getPartitionId(vertexId);
+    ConcurrentMap<I, T> partitionMap = getOrCreatePartitionMap(partitionId);
+    addVertexMessagesToPartition(vertexId, messages, partitionMap);
+  }
+
+  @Override
+  public void addPartitionMessages(Map<I, Collection<M>> messages,
+      int partitionId) throws IOException {
+    ConcurrentMap<I, T> partitionMap =
+        getOrCreatePartitionMap(partitionId);
+
+    for (Map.Entry<I, Collection<M>> entry : messages.entrySet()) {
+      addVertexMessagesToPartition(entry.getKey(), entry.getValue(),
+          partitionMap);
     }
-    return numberOfMessages;
+  }
+
+  @Override
+  public void addPartitionMessages(VertexIdMessageCollection<I, M> messages,
+      int partitionId) throws IOException {
+    ConcurrentMap<I, T> partitionMap =
+        getOrCreatePartitionMap(partitionId);
+
+    VertexIdMessageCollection<I, M>.Iterator iterator = messages.getIterator();
+    while (iterator.hasNext()) {
+      iterator.next();
+      I vertexId = iterator.getCurrentFirst();
+      M message = iterator.getCurrentSecond();
+      addVertexMessageToPartition(vertexId, message, partitionMap);
+    }
+  }
+
+  @Override
+  public Iterable<I> getPartitionDestinationVertices(int partitionId) {
+    ConcurrentMap<I, ?> partitionMap = map.get(partitionId);
+    return (partitionMap == null) ? Collections.<I>emptyList() :
+        partitionMap.keySet();
   }
 
   @Override
   public boolean hasMessagesForVertex(I vertexId) {
-    ConcurrentMap<I, Collection<M>> partitionMap =
+    ConcurrentMap<I, ?> partitionMap =
         map.get(getPartitionId(vertexId));
     return (partitionMap == null) ? false : partitionMap.containsKey(vertexId);
   }
@@ -214,61 +220,42 @@ public class SimpleMessageStore<I extends WritableComparable,
   @Override
   public Iterable<I> getDestinationVertices() {
     List<I> vertices = Lists.newArrayList();
-    for (ConcurrentMap<I, Collection<M>> partitionMap : map.values()) {
+    for (ConcurrentMap<I, ?> partitionMap : map.values()) {
       vertices.addAll(partitionMap.keySet());
     }
     return vertices;
   }
 
   @Override
-  public Iterable<I> getPartitionDestinationVertices(int partitionId) {
-    ConcurrentMap<I, Collection<M>> partitionMap = map.get(partitionId);
-    return (partitionMap == null) ? Collections.<I>emptyList() :
-        partitionMap.keySet();
-  }
-
-  @Override
-  public void clearVertexMessages(I vertexId) throws IOException {
-    ConcurrentMap<I, Collection<M>> partitionMap =
-        map.get(getPartitionId(vertexId));
-    if (partitionMap != null) {
-      partitionMap.remove(vertexId);
+  public Collection<M> getVertexMessages(I vertexId) throws IOException {
+    ConcurrentMap<I, T> partitionMap = map.get(getPartitionId(vertexId));
+    if (partitionMap == null) {
+      return Collections.<M>emptyList();
     }
+    T messages = partitionMap.get(vertexId);
+    return (messages == null) ? Collections.<M>emptyList() :
+        getMessagesAsCollection(messages);
   }
 
   @Override
-  public void clearPartition(int partitionId) throws IOException {
-    map.remove(partitionId);
-  }
-
-  @Override
-  public void clearAll() throws IOException {
-    map.clear();
-  }
-
-  /**
-   * Get id of partition which holds vertex with selected id
-   *
-   * @param vertexId Id of vertex
-   * @return Id of partiton
-   */
-  private int getPartitionId(I vertexId) {
-    return service.getVertexPartitionOwner(vertexId).getPartitionId();
+  public int getNumberOfMessages() {
+    int numberOfMessages = 0;
+    for (ConcurrentMap<I, T> partitionMap : map.values()) {
+      numberOfMessages += getNumberOfMessagesIn(partitionMap);
+    }
+    return numberOfMessages;
   }
 
   @Override
   public void writePartition(DataOutput out,
       int partitionId) throws IOException {
-    ConcurrentMap<I, Collection<M>> partitionMap = map.get(partitionId);
+    ConcurrentMap<I, T> partitionMap = map.get(partitionId);
     out.writeBoolean(partitionMap != null);
     if (partitionMap != null) {
       out.writeInt(partitionMap.size());
-      for (Entry<I, Collection<M>> entry : partitionMap.entrySet()) {
+      for (Map.Entry<I, T> entry : partitionMap.entrySet()) {
         entry.getKey().write(out);
-        out.writeInt(entry.getValue().size());
-        for (M message : entry.getValue()) {
-          message.write(out);
-        }
+        writeMessages(entry.getValue(), out);
       }
     }
   }
@@ -286,19 +273,12 @@ public class SimpleMessageStore<I extends WritableComparable,
   public void readFieldsForPartition(DataInput in,
       int partitionId) throws IOException {
     if (in.readBoolean()) {
-      ConcurrentMap<I, Collection<M>> partitionMap = Maps.newConcurrentMap();
+      ConcurrentMap<I, T> partitionMap = Maps.newConcurrentMap();
       int numVertices = in.readInt();
       for (int v = 0; v < numVertices; v++) {
         I vertexId = config.createVertexId();
         vertexId.readFields(in);
-        int numMessages = in.readInt();
-        List<M> messages = Lists.newArrayList();
-        for (int m = 0; m < numMessages; m++) {
-          M message = config.createMessageValue();
-          message.readFields(in);
-          messages.add(message);
-        }
-        partitionMap.put(vertexId, messages);
+        partitionMap.put(vertexId, readFieldsForMessages(in));
       }
       map.put(partitionId, partitionMap);
     }
@@ -313,62 +293,22 @@ public class SimpleMessageStore<I extends WritableComparable,
     }
   }
 
-
-  /**
-   * Create new factory for this message store
-   *
-   * @param service Worker service
-   * @param config  Hadoop configuration
-   * @param <I>     Vertex id
-   * @param <V>     Vertex data
-   * @param <E>     Edge data
-   * @param <M>     Message data
-   * @return Factory
-   */
-  public static <I extends WritableComparable, V extends Writable,
-      E extends Writable, M extends Writable>
-  MessageStoreFactory<I, M, MessageStoreByPartition<I, M>> newFactory(
-      CentralizedServiceWorker<I, V, E, M> service,
-      ImmutableClassesGiraphConfiguration<I, V, E, M> config) {
-    return new Factory<I, V, E, M>(service, config);
+  @Override
+  public void clearVertexMessages(I vertexId) throws IOException {
+    ConcurrentMap<I, ?> partitionMap =
+        map.get(getPartitionId(vertexId));
+    if (partitionMap != null) {
+      partitionMap.remove(vertexId);
+    }
   }
 
-  /**
-   * Factory for {@link SimpleMessageStore}
-   *
-   * @param <I> Vertex id
-   * @param <V> Vertex data
-   * @param <E> Edge data
-   * @param <M> Message data
-   */
-  private static class Factory<I extends WritableComparable,
-      V extends Writable, E extends Writable, M extends Writable>
-      implements MessageStoreFactory<I, M, MessageStoreByPartition<I, M>> {
-    /** Service worker */
-    private final CentralizedServiceWorker<I, V, E, M> service;
-    /** Hadoop configuration */
-    private final ImmutableClassesGiraphConfiguration<I, V, E, M> config;
-    /** Combiner for messages */
-    private final VertexCombiner<I, M> combiner;
+  @Override
+  public void clearPartition(int partitionId) throws IOException {
+    map.remove(partitionId);
+  }
 
-    /**
-     * @param service Worker service
-     * @param config  Hadoop configuration
-     */
-    public Factory(CentralizedServiceWorker<I, V, E, M> service,
-        ImmutableClassesGiraphConfiguration<I, V, E, M> config) {
-      this.service = service;
-      this.config = config;
-      if (config.getVertexCombinerClass() == null) {
-        combiner = null;
-      } else {
-        combiner = config.createVertexCombiner();
-      }
-    }
-
-    @Override
-    public MessageStoreByPartition<I, M> newStore() {
-      return new SimpleMessageStore(service, combiner, config);
-    }
+  @Override
+  public void clearAll() throws IOException {
+    map.clear();
   }
 }

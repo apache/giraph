@@ -21,7 +21,6 @@ package org.apache.giraph.comm;
 import com.google.common.collect.Lists;
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.comm.messages.SimpleMessageStore;
 import org.apache.giraph.comm.netty.NettyClient;
 import org.apache.giraph.comm.netty.NettyServer;
 import org.apache.giraph.comm.netty.handler.SaslServerHandler;
@@ -74,11 +73,7 @@ public class SaslConnectionTest {
     when(context.getConfiguration()).thenReturn(conf);
 
     ServerData<IntWritable, IntWritable, IntWritable, IntWritable> serverData =
-        new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>(
-            conf,
-            SimpleMessageStore.newFactory(
-                MockUtils.mockServiceGetVertexPartitionOwner(1), conf),
-            context);
+        MockUtils.createNewServerData(conf, context);
 
     SaslServerHandler.Factory mockedSaslServerFactory =
         Mockito.mock(SaslServerHandler.Factory.class);

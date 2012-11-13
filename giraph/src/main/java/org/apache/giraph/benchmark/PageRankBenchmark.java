@@ -80,10 +80,10 @@ public class PageRankBenchmark implements Tool {
         "name",
         true,
         "Name of the job");
-    options.addOption("nc",
-        "noCombiner",
-        false,
-        "Don't use a combiner");
+    options.addOption("t",
+        "combinerType",
+        true,
+        "Combiner type (0 for no combiner, 1 for DoubleSumCombiner (default)");
 
     HelpFormatter formatter = new HelpFormatter();
     if (args.length == 0) {
@@ -131,8 +131,13 @@ public class PageRankBenchmark implements Tool {
     }
     LOG.info("Using class " +
         job.getConfiguration().get(GiraphConfiguration.VERTEX_CLASS));
-    if (!cmd.hasOption("nc")) {
-      job.getConfiguration().setVertexCombinerClass(DoubleSumCombiner.class);
+    if (!cmd.hasOption('t') ||
+        (Integer.parseInt(cmd.getOptionValue('t')) == 2)) {
+      job.getConfiguration().setVertexCombinerClass(
+          DoubleSumCombiner.class);
+    } else if (Integer.parseInt(cmd.getOptionValue('t')) == 1) {
+      job.getConfiguration().setVertexCombinerClass(
+          DoubleSumCombiner.class);
     }
     job.getConfiguration().setVertexInputFormatClass(
         PseudoRandomVertexInputFormat.class);

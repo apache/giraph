@@ -18,31 +18,24 @@
 
 package org.apache.giraph.examples;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-
+import org.apache.giraph.graph.Combiner;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 
-import org.apache.giraph.graph.VertexCombiner;
-
 /**
- * Test whether combiner is called by summing up the messages.
+ * Combiner which sums up {@link IntWritable} message values.
  */
 public class SimpleSumCombiner
-    extends VertexCombiner<LongWritable, IntWritable> {
+    extends Combiner<LongWritable, IntWritable> {
 
   @Override
-  public Iterable<IntWritable> combine(LongWritable vertexIndex,
-      Iterable<IntWritable> messages) throws IOException {
-    int sum = 0;
-    for (IntWritable msg : messages) {
-      sum += msg.get();
-    }
-    List<IntWritable> value = new ArrayList<IntWritable>();
-    value.add(new IntWritable(sum));
+  public void combine(LongWritable vertexIndex, IntWritable originalMessage,
+      IntWritable messageToCombine) {
+    originalMessage.set(originalMessage.get() + messageToCombine.get());
+  }
 
-    return value;
+  @Override
+  public IntWritable createInitialMessage() {
+    return new IntWritable(0);
   }
 }

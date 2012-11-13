@@ -19,6 +19,7 @@
 package org.apache.giraph;
 
 import org.apache.giraph.graph.AggregatorWriter;
+import org.apache.giraph.graph.Combiner;
 import org.apache.giraph.graph.DefaultMasterCompute;
 import org.apache.giraph.graph.DefaultWorkerContext;
 import org.apache.giraph.graph.EdgeInputFormat;
@@ -26,7 +27,6 @@ import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.MasterCompute;
 import org.apache.giraph.graph.TextAggregatorWriter;
 import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.graph.VertexCombiner;
 import org.apache.giraph.graph.VertexInputFormat;
 import org.apache.giraph.graph.VertexOutputFormat;
 import org.apache.giraph.graph.VertexResolver;
@@ -86,8 +86,9 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
 
   /** Aggregator writer class - cached for fast access */
   private final Class<? extends AggregatorWriter> aggregatorWriterClass;
-  /** Vertex combiner class - cached for fast access */
-  private final Class<? extends VertexCombiner<I, M>> vertexCombinerClass;
+  /** Combiner class - cached for fast access */
+  private final Class<? extends Combiner<I, M>> combinerClass;
+
   /** Vertex resolver class - cached for fast access */
   private final Class<? extends VertexResolver<I, V, E, M>>
   vertexResolverClass;
@@ -136,9 +137,8 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
 
     aggregatorWriterClass = conf.getClass(AGGREGATOR_WRITER_CLASS,
         TextAggregatorWriter.class, AggregatorWriter.class);
-    vertexCombinerClass = (Class<? extends VertexCombiner<I, M>>)
-        conf.getClass(VERTEX_COMBINER_CLASS,
-        null, VertexCombiner.class);
+    combinerClass = (Class<? extends Combiner<I, M>>)
+        conf.getClass(VERTEX_COMBINER_CLASS, null, Combiner.class);
     vertexResolverClass = (Class<? extends VertexResolver<I, V, E, M>>)
         conf.getClass(VERTEX_RESOLVER_CLASS,
         VertexResolver.class, VertexResolver.class);
@@ -275,22 +275,22 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   }
 
   /**
-   * Get the user's subclassed {@link org.apache.giraph.graph.VertexCombiner}.
+   * Create a user combiner class
    *
-   * @return User's vertex combiner class
+   * @return Instantiated user combiner class
    */
-  public Class<? extends VertexCombiner<I, M>> getVertexCombinerClass() {
-    return vertexCombinerClass;
+  @SuppressWarnings("rawtypes")
+  public Combiner<I, M> createCombiner() {
+    return ReflectionUtils.newInstance(combinerClass, this);
   }
 
   /**
-   * Create a user vertex combiner class
+   * Check if user set a combiner
    *
-   * @return Instantiated user vertex combiner class
+   * @return True iff user set a combiner class
    */
-  @SuppressWarnings("rawtypes")
-  public VertexCombiner<I, M> createVertexCombiner() {
-    return ReflectionUtils.newInstance(vertexCombinerClass, this);
+  public boolean useCombiner() {
+    return combinerClass != null;
   }
 
   /**

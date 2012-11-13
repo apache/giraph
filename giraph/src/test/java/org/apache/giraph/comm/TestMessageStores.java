@@ -23,15 +23,14 @@ import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.messages.BasicMessageStore;
+import org.apache.giraph.comm.messages.CollectionOfMessagesPerVertexStore;
 import org.apache.giraph.comm.messages.DiskBackedMessageStoreByPartition;
 import org.apache.giraph.comm.messages.DiskBackedMessageStore;
 import org.apache.giraph.comm.messages.FlushableMessageStore;
 import org.apache.giraph.comm.messages.MessageStore;
 import org.apache.giraph.comm.messages.MessageStoreFactory;
 import org.apache.giraph.comm.messages.SequentialFileMessageStore;
-import org.apache.giraph.comm.messages.SimpleMessageStore;
 import org.apache.giraph.graph.EdgeListVertex;
-import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.utils.MockUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IntWritable;
@@ -214,9 +213,10 @@ public class TestMessageStores {
   }
 
   @Test
-  public void testSimpleMessageStore() {
+  public void testCollectionOfMessagesPeVertexStore() {
     try {
-      testMessageStore(SimpleMessageStore.newFactory(service, config),
+      testMessageStore(
+          CollectionOfMessagesPerVertexStore.newFactory(service, config),
           testData);
     } catch (IOException e) {
       e.printStackTrace();

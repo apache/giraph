@@ -246,7 +246,7 @@ public class BspUtils {
   }
 
   /**
-   * Get the user's subclassed {@link VertexCombiner}.
+   * Get the user's subclassed {@link Combiner}.
    *
    * @param <I> Vertex id
    * @param <M> Message data
@@ -255,28 +255,11 @@ public class BspUtils {
    */
   @SuppressWarnings({ "rawtypes", "unchecked" })
   public static <I extends WritableComparable, M extends Writable>
-  Class<? extends VertexCombiner<I, M>>
-  getVertexCombinerClass(Configuration conf) {
-    return (Class<? extends VertexCombiner<I, M>>)
+  Class<? extends Combiner<I, M>> getCombinerClass(Configuration conf) {
+    return (Class<? extends Combiner<I, M>>)
       conf.getClass(GiraphConfiguration.VERTEX_COMBINER_CLASS,
         null,
-        VertexCombiner.class);
-  }
-
-  /**
-   * Create a user vertex combiner class
-   *
-   * @param <I> Vertex id
-   * @param <M> Message data
-   * @param conf Configuration to check
-   * @return Instantiated user vertex combiner class
-   */
-  @SuppressWarnings("rawtypes")
-  public static <I extends WritableComparable, M extends Writable>
-  VertexCombiner<I, M> createVertexCombiner(Configuration conf) {
-    Class<? extends VertexCombiner<I, M>> vertexCombinerClass =
-      getVertexCombinerClass(conf);
-    return ReflectionUtils.newInstance(vertexCombinerClass, conf);
+        Combiner.class);
   }
 
   /**

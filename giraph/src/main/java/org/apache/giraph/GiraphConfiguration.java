@@ -19,10 +19,10 @@
 package org.apache.giraph;
 
 import org.apache.giraph.graph.AggregatorWriter;
+import org.apache.giraph.graph.Combiner;
 import org.apache.giraph.graph.EdgeInputFormat;
 import org.apache.giraph.graph.MasterCompute;
 import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.graph.VertexCombiner;
 import org.apache.giraph.graph.VertexInputFormat;
 import org.apache.giraph.graph.VertexOutputFormat;
 import org.apache.giraph.graph.VertexResolver;
@@ -697,10 +697,10 @@ public class GiraphConfiguration extends Configuration {
    * @param vertexCombinerClass Determines how vertex messages are combined
    */
   public final void setVertexCombinerClass(
-      Class<? extends VertexCombiner> vertexCombinerClass) {
+      Class<? extends Combiner> vertexCombinerClass) {
     setClass(VERTEX_COMBINER_CLASS,
         vertexCombinerClass,
-        VertexCombiner.class);
+        Combiner.class);
   }
 
   /**

@@ -24,11 +24,11 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.giraph.examples.Algorithm;
 import org.apache.giraph.graph.AggregatorWriter;
+import org.apache.giraph.graph.Combiner;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.GiraphTypeValidator;
 import org.apache.giraph.graph.MasterCompute;
 import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.graph.VertexCombiner;
 import org.apache.giraph.graph.VertexInputFormat;
 import org.apache.giraph.graph.VertexOutputFormat;
 import org.apache.giraph.graph.WorkerContext;
@@ -87,7 +87,7 @@ public class GiraphRunner implements Tool {
     options.addOption("of", "outputFormat", true, "Graph outputformat");
     options.addOption("ip", "inputPath", true, "Graph input path");
     options.addOption("op", "outputPath", true, "Graph output path");
-    options.addOption("c", "combiner", true, "VertexCombiner class");
+    options.addOption("c", "combiner", true, "Combiner class");
     options.addOption("wc", "workerContext", true, "WorkerContext class");
     options.addOption("aw", "aggregatorWriter", true, "AggregatorWriter class");
     options.addOption("mc", "masterCompute", true, "MasterCompute class");
@@ -202,7 +202,7 @@ public class GiraphRunner implements Tool {
 
     if (cmd.hasOption("c")) {
       giraphConfiguration.setVertexCombinerClass(
-          (Class<? extends VertexCombiner>)
+          (Class<? extends Combiner>)
               Class.forName(cmd.getOptionValue("c")));
     }
 

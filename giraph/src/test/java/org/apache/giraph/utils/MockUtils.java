@@ -18,9 +18,11 @@
 
 package org.apache.giraph.utils;
 
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
+import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.comm.WorkerClientRequestProcessor;
-import org.apache.giraph.comm.WorkerClientServer;
+import org.apache.giraph.comm.messages.CollectionOfMessagesPerVertexStore;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.partition.BasicPartitionOwner;
@@ -153,5 +155,15 @@ public class MockUtils {
     Mockito.when(service.getVertexPartitionOwner(
         Mockito.any(IntWritable.class))).thenAnswer(answer);
     return service;
+  }
+
+  public static ServerData<IntWritable, IntWritable, IntWritable, IntWritable>
+  createNewServerData(ImmutableClassesGiraphConfiguration conf,
+      Mapper.Context context) {
+    return new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>(
+        conf,
+        CollectionOfMessagesPerVertexStore.newFactory(
+            MockUtils.mockServiceGetVertexPartitionOwner(1), conf),
+        context);
   }
 }

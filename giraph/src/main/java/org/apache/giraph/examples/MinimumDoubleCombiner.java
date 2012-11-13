@@ -18,32 +18,25 @@
 
 package org.apache.giraph.examples;
 
-import org.apache.giraph.graph.VertexCombiner;
+import org.apache.giraph.graph.Combiner;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-
 /**
- * {@link VertexCombiner} that finds the minimum {@link DoubleWritable}
+ * Combiner which finds the minimum of {@link DoubleWritable}.
  */
 public class MinimumDoubleCombiner extends
-    VertexCombiner<LongWritable, DoubleWritable> {
+    Combiner<LongWritable, DoubleWritable> {
   @Override
-  public Iterable<DoubleWritable> combine(
-      LongWritable target,
-      Iterable<DoubleWritable> messages) throws IOException {
-    double minimum = Double.MAX_VALUE;
-    for (DoubleWritable message : messages) {
-      if (message.get() < minimum) {
-        minimum = message.get();
-      }
+  public void combine(LongWritable vertexIndex, DoubleWritable originalMessage,
+      DoubleWritable messageToCombine) {
+    if (originalMessage.get() > messageToCombine.get()) {
+      originalMessage.set(messageToCombine.get());
     }
-    List<DoubleWritable> value = new ArrayList<DoubleWritable>();
-    value.add(new DoubleWritable(minimum));
+  }
 
-    return value;
+  @Override
+  public DoubleWritable createInitialMessage() {
+    return new DoubleWritable(Double.MAX_VALUE);
   }
 }

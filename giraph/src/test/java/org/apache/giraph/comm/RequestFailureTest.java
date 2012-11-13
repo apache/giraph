@@ -20,7 +20,6 @@ package org.apache.giraph.comm;
 
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.comm.messages.SimpleMessageStore;
 import org.apache.giraph.comm.netty.NettyClient;
 import org.apache.giraph.comm.netty.NettyServer;
 import org.apache.giraph.comm.netty.handler.WorkerRequestServerHandler;
@@ -130,12 +129,7 @@ public class RequestFailureTest {
   @Test
   public void send2Requests() throws IOException {
     // Start the service
-    serverData =
-        new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>(
-            conf,
-            SimpleMessageStore.newFactory(
-                MockUtils.mockServiceGetVertexPartitionOwner(1), conf),
-            context);
+    serverData = MockUtils.createNewServerData(conf, context);
     server = new NettyServer(conf,
         new WorkerRequestServerHandler.Factory(serverData));
     server.start();
@@ -169,11 +163,7 @@ public class RequestFailureTest {
     conf.setInt(GiraphConfiguration.WAITING_REQUEST_MSECS, 2000);
 
     // Start the service
-    serverData =
-        new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>
-            (conf, SimpleMessageStore.newFactory(
-                MockUtils.mockServiceGetVertexPartitionOwner(1), conf),
-                context);
+    serverData = MockUtils.createNewServerData(conf, context);
     server = new NettyServer(conf,
         new WorkerRequestServerHandler.Factory(serverData));
     server.start();
@@ -207,10 +197,7 @@ public class RequestFailureTest {
     conf.setInt(GiraphConfiguration.WAITING_REQUEST_MSECS, 2000);
 
     // Start the service
-    serverData =
-        new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>
-            (conf, SimpleMessageStore.newFactory(
-                MockUtils.mockServiceGetVertexPartitionOwner(1), conf), context);
+    serverData = MockUtils.createNewServerData(conf, context);
     server = new NettyServer(conf,
         new WorkerRequestServerHandler.Factory(serverData));
     server.start();

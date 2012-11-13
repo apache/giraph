@@ -138,12 +138,12 @@ public class GiraphTypeValidator<I extends WritableComparable,
 
   /** If there is a combiner type, verify its generic params match the job. */
   private void verifyVertexCombinerGenericTypes() {
-    Class<? extends VertexCombiner<I, M>> vertexCombinerClass =
-      BspUtils.<I, M>getVertexCombinerClass(conf);
+    Class<? extends Combiner<I, M>> vertexCombinerClass =
+      BspUtils.<I, M>getCombinerClass(conf);
     if (vertexCombinerClass != null) {
       List<Class<?>> classList =
-        ReflectionUtils.<VertexCombiner>getTypeArguments(
-          VertexCombiner.class, vertexCombinerClass);
+        ReflectionUtils.<Combiner>getTypeArguments(
+          Combiner.class, vertexCombinerClass);
       if (!vertexIndexType.equals(classList.get(ID_PARAM_INDEX))) {
         throw new IllegalArgumentException(
           "checkClassTypes: Vertex index types don't match, " +

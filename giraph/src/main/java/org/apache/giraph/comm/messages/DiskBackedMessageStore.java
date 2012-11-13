@@ -19,7 +19,6 @@
 package org.apache.giraph.comm.messages;
 
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.graph.VertexCombiner;
 import org.apache.giraph.utils.CollectionUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -55,8 +54,6 @@ public class DiskBackedMessageStore<I extends WritableComparable,
   private volatile ConcurrentNavigableMap<I, Collection<M>> inMemoryMessages;
   /** Hadoop configuration */
   private final ImmutableClassesGiraphConfiguration<I, ?, ?, M> config;
-  /** Combiner for messages */
-  private final VertexCombiner<I, M> combiner;
   /** Counter for number of messages in memory */
   private final AtomicInteger numberOfMessagesInMemory;
   /** To keep vertex ids which we have messages for */
@@ -70,16 +67,14 @@ public class DiskBackedMessageStore<I extends WritableComparable,
   private final ReadWriteLock rwLock = new ReentrantReadWriteLock(true);
 
   /**
-   * @param combiner         Combiner for messages
    * @param config           Hadoop configuration
    * @param fileStoreFactory Factory for creating file stores when flushing
    */
-  public DiskBackedMessageStore(VertexCombiner<I, M> combiner,
+  public DiskBackedMessageStore(
       ImmutableClassesGiraphConfiguration<I, ?, ?, M> config,
       MessageStoreFactory<I, M, BasicMessageStore<I, M>> fileStoreFactory) {
     inMemoryMessages = new ConcurrentSkipListMap<I, Collection<M>>();
     this.config = config;
-    this.combiner = combiner;
     numberOfMessagesInMemory = new AtomicInteger(0);
     destinationVertices =
         Collections.newSetFromMap(Maps.<I, Boolean>newConcurrentMap());
@@ -94,20 +89,8 @@ public class DiskBackedMessageStore<I extends WritableComparable,
 
     rwLock.readLock().lock();
     try {
-      Collection<M> currentMessages =
-          CollectionUtils.addConcurrent(vertexId, messages, inMemoryMessages);
-      if (combiner != null) {
-        synchronized (currentMessages) {
-          numberOfMessagesInMemory.addAndGet(
-              messages.size() - currentMessages.size());
-          currentMessages =
-              Lists.newArrayList(combiner.combine(vertexId, currentMessages));
-          inMemoryMessages.put(vertexId, currentMessages);
-          numberOfMessagesInMemory.addAndGet(currentMessages.size());
-        }
-      } else {
-        numberOfMessagesInMemory.addAndGet(messages.size());
-      }
+      CollectionUtils.addConcurrent(vertexId, messages, inMemoryMessages);
+      numberOfMessagesInMemory.addAndGet(messages.size());
     } finally {
       rwLock.readLock().unlock();
     }
@@ -269,8 +252,6 @@ public class DiskBackedMessageStore<I extends WritableComparable,
       FlushableMessageStore<I, M>> {
     /** Hadoop configuration */
     private final ImmutableClassesGiraphConfiguration config;
-    /** Combiner for messages */
-    private final VertexCombiner<I, M> combiner;
     /** Factory for creating message stores for partitions */
     private final
     MessageStoreFactory<I, M, BasicMessageStore<I, M>> fileStoreFactory;
@@ -283,18 +264,12 @@ public class DiskBackedMessageStore<I extends WritableComparable,
     public Factory(ImmutableClassesGiraphConfiguration config,
         MessageStoreFactory<I, M, BasicMessageStore<I, M>> fileStoreFactory) {
       this.config = config;
-      if (config.getVertexCombinerClass() == null) {
-        combiner = null;
-      } else {
-        combiner = config.createVertexCombiner();
-      }
       this.fileStoreFactory = fileStoreFactory;
     }
 
     @Override
     public FlushableMessageStore<I, M> newStore() {
-      return new DiskBackedMessageStore<I, M>(combiner, config,
-          fileStoreFactory);
+      return new DiskBackedMessageStore<I, M>(config, fileStoreFactory);
     }
   }
 }

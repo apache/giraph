@@ -22,6 +22,8 @@ import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.ServerData;
+import org.apache.giraph.comm.messages.CollectionOfMessagesPerVertexStore;
+import org.apache.giraph.comm.messages.OneMessagePerVertexStore;
 import org.apache.giraph.comm.netty.handler.WorkerRequestServerHandler;
 import org.apache.giraph.comm.WorkerServer;
 import org.apache.giraph.comm.messages.BasicMessageStore;
@@ -31,7 +33,6 @@ import org.apache.giraph.comm.messages.FlushableMessageStore;
 import org.apache.giraph.comm.messages.MessageStoreByPartition;
 import org.apache.giraph.comm.messages.MessageStoreFactory;
 import org.apache.giraph.comm.messages.SequentialFileMessageStore;
-import org.apache.giraph.comm.messages.SimpleMessageStore;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexMutations;
@@ -78,36 +79,62 @@ public class NettyWorkerServer<I extends WritableComparable,
    * @param service Service to get partition mappings
    * @param context Mapper context
    */
-  public NettyWorkerServer(ImmutableClassesGiraphConfiguration conf,
+  public NettyWorkerServer(ImmutableClassesGiraphConfiguration<I, V, E, M> conf,
       CentralizedServiceWorker<I, V, E, M> service,
       Mapper<?, ?, ?, ?>.Context context) {
     this.conf = conf;
     this.service = service;
 
+    serverData =
+        new ServerData<I, V, E, M>(conf, createMessageStoreFactory(), context);
+
+    nettyServer = new NettyServer(conf,
+        new WorkerRequestServerHandler.Factory<I, V, E, M>(serverData));
+    nettyServer.start();
+  }
+
+  /**
+   * Decide which message store should be used for current application,
+   * and create the factory for that store
+   *
+   * @return Message store factory
+   */
+  private MessageStoreFactory<I, M, MessageStoreByPartition<I, M>>
+  createMessageStoreFactory() {
     boolean useOutOfCoreMessaging = conf.getBoolean(
         GiraphConfiguration.USE_OUT_OF_CORE_MESSAGES,
         GiraphConfiguration.USE_OUT_OF_CORE_MESSAGES_DEFAULT);
     if (!useOutOfCoreMessaging) {
-      serverData = new ServerData<I, V, E, M>(
-          conf, SimpleMessageStore.newFactory(service, conf), context);
+      if (conf.useCombiner()) {
+        if (LOG.isInfoEnabled()) {
+          LOG.info("createMessageStoreFactory: " +
+              "Using OneMessagePerVertexStore since combiner enabled");
+        }
+        return OneMessagePerVertexStore.newFactory(service, conf);
+      } else {
+        if (LOG.isInfoEnabled()) {
+          LOG.info("createMessageStoreFactory: " +
+              "Using CollectionOfMessagesPerVertexStore " +
+              "since there is no combiner");
+        }
+        return CollectionOfMessagesPerVertexStore.newFactory(service, conf);
+      }
     } else {
       int maxMessagesInMemory = conf.getInt(
           GiraphConfiguration.MAX_MESSAGES_IN_MEMORY,
           GiraphConfiguration.MAX_MESSAGES_IN_MEMORY_DEFAULT);
+      if (LOG.isInfoEnabled()) {
+        LOG.info("createMessageStoreFactory: Using DiskBackedMessageStore, " +
+            "maxMessagesInMemory = " + maxMessagesInMemory);
+      }
       MessageStoreFactory<I, M, BasicMessageStore<I, M>> fileStoreFactory =
           SequentialFileMessageStore.newFactory(conf);
       MessageStoreFactory<I, M, FlushableMessageStore<I, M>>
           partitionStoreFactory =
           DiskBackedMessageStore.newFactory(conf, fileStoreFactory);
-      MessageStoreFactory<I, M, MessageStoreByPartition<I, M>>
-          storeFactory = DiskBackedMessageStoreByPartition.newFactory(service,
-              maxMessagesInMemory, partitionStoreFactory);
-      serverData = new ServerData<I, V, E, M>(conf, storeFactory, context);
+      return DiskBackedMessageStoreByPartition.newFactory(service,
+          maxMessagesInMemory, partitionStoreFactory);
     }
-
-    nettyServer = new NettyServer(conf,
-        new WorkerRequestServerHandler.Factory<I, V, E, M>(serverData));
-    nettyServer.start();
   }
 
   @Override
