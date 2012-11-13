@@ -319,9 +319,15 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
 
     // Set the log level
     String logLevel = conf.getLocalLevel();
-    Logger.getRootLogger().setLevel(Level.toLevel(logLevel));
-    if (LOG.isInfoEnabled()) {
-      LOG.info("setup: Set log level to " + logLevel);
+    if (!Logger.getRootLogger().getLevel().equals(Level.toLevel(logLevel))) {
+      Logger.getRootLogger().setLevel(Level.toLevel(logLevel));
+      if (LOG.isInfoEnabled()) {
+        LOG.info("setup: Set log level to " + logLevel);
+      }
+    } else {
+      if (LOG.isInfoEnabled()) {
+        LOG.info("setup: Log level remains at " + logLevel);
+      }
     }
     // Sets pattern layout for all appenders
     if (conf.useLogThreadLayout()) {
