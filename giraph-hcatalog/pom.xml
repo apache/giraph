@@ -186,7 +186,6 @@ under the License.
     <dependency>
       <groupId>org.apache.giraph</groupId>
       <artifactId>giraph-core</artifactId>
-      <version>0.2-SNAPSHOT</version>
       <type>test-jar</type>
     </dependency>
 

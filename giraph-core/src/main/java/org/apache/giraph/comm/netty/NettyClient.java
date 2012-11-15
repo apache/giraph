@@ -126,7 +126,7 @@ public class NettyClient {
   private final boolean limitNumberOfOpenRequests;
   /** Maximum number of requests without confirmation we can have */
   private final int maxNumberOfOpenRequests;
-  /** Maximum number of connnection failures */
+  /** Maximum number of connection failures */
   private final int maxConnectionFailures;
   /** Maximum number of milliseconds for a request */
   private final int maxRequestMilliseconds;

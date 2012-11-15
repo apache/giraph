@@ -49,11 +49,11 @@ import java.util.Map;
 /**
  * Hive Giraph Runner
  */
-public class HiveGiraphRunner implements Tool {
+public class HCatGiraphRunner implements Tool {
   /**
    * logger
    */
-  private static final Logger LOG = Logger.getLogger(HiveGiraphRunner.class);
+  private static final Logger LOG = Logger.getLogger(HCatGiraphRunner.class);
   /**
    * workers
    */
@@ -120,7 +120,7 @@ public class HiveGiraphRunner implements Tool {
   * @param edgeInputFormatClass Edge input format
   * @param vertexOutputFormatClass Output format
   */
-  protected HiveGiraphRunner(
+  protected HCatGiraphRunner(
       Class<? extends Vertex> vertexClass,
       Class<? extends VertexInputFormat> vertexInputFormatClass,
       Class<? extends EdgeInputFormat> edgeInputFormatClass,
@@ -139,7 +139,7 @@ public class HiveGiraphRunner implements Tool {
   */
   public static void main(String[] args) throws Exception {
     System.exit(ToolRunner.run(
-        new HiveGiraphRunner(null, null, null, null), args));
+        new HCatGiraphRunner(null, null, null, null), args));
   }
 
   @Override

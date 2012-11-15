@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-453: Pure Hive I/O (nitay)
+
   GIRAPH-526: HiveGiraphRunner - bug with setting database name (majakabiljo)
 
   GIRAPH-518: Support Hadoop-2.0.3-alpha release on Giraph (ereisman)

@@ -235,7 +235,9 @@ under the License.
     <buildtype>test</buildtype>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <hbase.version>0.90.5</hbase.version>
-    <jackson.version>1.8.0</jackson.version>
+    <hive.version>0.9.0</hive.version>
+    <codehaus-jackson.version>1.8.0</codehaus-jackson.version>
+    <fasterxml-jackson.version>2.1.0</fasterxml-jackson.version>
     <slf4j.version>1.7.2</slf4j.version>
     <hive.version>0.10.0</hive.version>
     <forHadoop>for-hadoop-${hadoop.version}</forHadoop>
@@ -836,6 +838,11 @@ under the License.
     <dependencies>
       <!-- compile dependencies. sorted lexicographically. -->
       <dependency>
+        <groupId>com.facebook.giraph.hive</groupId>
+        <artifactId>hive-io-experimental</artifactId>
+        <version>0.1</version>
+      </dependency>
+      <dependency>
         <groupId>com.google.guava</groupId>
         <artifactId>guava</artifactId>
         <version>12.0</version>
@@ -843,13 +850,28 @@ under the License.
       <dependency>
         <groupId>com.yammer.metrics</groupId>
         <artifactId>metrics-core</artifactId>
-        <version>2.1.2</version>
+        <version>2.2.0</version>
         <exclusions>
           <exclusion>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
           </exclusion>
         </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-core</artifactId>
+        <version>${fasterxml-jackson.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+        <version>${fasterxml-jackson.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.github.spullara.cli-parser</groupId>
+        <artifactId>cli-parser</artifactId>
+        <version>1.1</version>
       </dependency>
       <dependency>
         <groupId>commons-io</groupId>
@@ -874,6 +896,16 @@ under the License.
       <dependency>
         <groupId>org.apache.giraph</groupId>
         <artifactId>giraph-core</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.giraph</groupId>
+        <artifactId>giraph-hcatalog</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.giraph</groupId>
+        <artifactId>giraph-hive</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
@@ -929,12 +961,12 @@ under the License.
       <dependency>
         <groupId>org.codehaus.jackson</groupId>
         <artifactId>jackson-core-asl</artifactId>
-        <version>${jackson.version}</version>
+        <version>${codehaus-jackson.version}</version>
       </dependency>
       <dependency>
         <groupId>org.codehaus.jackson</groupId>
         <artifactId>jackson-mapper-asl</artifactId>
-        <version>${jackson.version}</version>
+        <version>${codehaus-jackson.version}</version>
       </dependency>
       <dependency>
         <groupId>org.json</groupId>
@@ -1030,6 +1062,12 @@ under the License.
         <scope>test</scope>
       </dependency>
       <dependency>
+        <groupId>org.apache.giraph</groupId>
+        <artifactId>giraph-core</artifactId>
+        <type>test-jar</type>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
         <groupId>org.apache.hbase</groupId>
         <artifactId>hbase</artifactId>
         <type>test-jar</type>
@@ -1047,6 +1085,7 @@ under the License.
 
   <modules>
     <module>giraph-core</module>
+    <module>giraph-hive</module>
     <module>giraph-examples</module>
   </modules>
 

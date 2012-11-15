@@ -43,7 +43,7 @@ public class HiveUtils {
   * @return Map
   */
   public static Map<String, String> parsePartitionValues(
-            String outputTablePartitionString) {
+      String outputTablePartitionString) {
     if (outputTablePartitionString == null) {
       return null;
     }

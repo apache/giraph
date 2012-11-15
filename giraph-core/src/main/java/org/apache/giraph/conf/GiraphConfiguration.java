@@ -242,9 +242,7 @@ public class GiraphConfiguration extends Configuration
    */
   public final void setVertexCombinerClass(
       Class<? extends Combiner> vertexCombinerClass) {
-    setClass(VERTEX_COMBINER_CLASS,
-        vertexCombinerClass,
-        Combiner.class);
+    setClass(VERTEX_COMBINER_CLASS, vertexCombinerClass, Combiner.class);
   }
 
   /**
