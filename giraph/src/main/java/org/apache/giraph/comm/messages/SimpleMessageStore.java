@@ -20,14 +20,12 @@ package org.apache.giraph.comm.messages;
 
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.comm.VertexIdMessageCollection;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -36,6 +34,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
+
+import org.apache.giraph.utils.ByteArrayVertexIdMessageCollection;
 
 /**
  * Abstract class for {@link MessageStoreByPartition} which allows any kind
@@ -189,16 +189,18 @@ public abstract class SimpleMessageStore<I extends WritableComparable,
   }
 
   @Override
-  public void addPartitionMessages(VertexIdMessageCollection<I, M> messages,
+  public void addPartitionMessages(ByteArrayVertexIdMessageCollection<I,
+      M> messages,
       int partitionId) throws IOException {
     ConcurrentMap<I, T> partitionMap =
         getOrCreatePartitionMap(partitionId);
 
-    VertexIdMessageCollection<I, M>.Iterator iterator = messages.getIterator();
+    ByteArrayVertexIdMessageCollection<I, M>.Iterator iterator =
+        messages.getIterator();
     while (iterator.hasNext()) {
       iterator.next();
-      I vertexId = iterator.getCurrentFirst();
-      M message = iterator.getCurrentSecond();
+      I vertexId = iterator.getCurrentVertexId();
+      M message = iterator.getCurrentMessage();
       addVertexMessageToPartition(vertexId, message, partitionMap);
     }
   }

@@ -34,7 +34,10 @@ import java.util.Map;
 /**
  * User applications can subclass {@link EdgeListVertex}, which stores
  * the outbound edges in an ArrayList (less memory as the cost of expensive
- * random-access lookup).  Good for static graphs.
+ * random-access lookup).  Good for static graphs.  Not nearly as memory
+ * efficient as using RepresentativeVertex + ByteArrayPartition
+ * (probably about 10x more), but not bad when keeping vertices as objects in
+ * memory (SimplePartition).
  *
  * @param <I> Vertex index value
  * @param <V> Vertex value

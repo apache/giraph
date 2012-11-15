@@ -18,14 +18,10 @@
 
 package org.apache.giraph.graph.partition;
 
-import org.apache.giraph.graph.Vertex;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
-
-import java.util.Collection;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 
 /**
  * Structure that stores partitions for a worker.
@@ -39,20 +35,12 @@ public abstract class PartitionStore<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable> {
 
   /**
-   * Add a new partition to the store.
+   * Add a new partition to the store or just the vertices from the partition
+   * to the old partition.
    *
-   * @param partition Partition
+   * @param partition Partition to add
    */
   public abstract void addPartition(Partition<I, V, E, M> partition);
-
-  /**
-   * Add some vertices to a (possibly existing) partition.
-   *
-   * @param partitionId Id of the destination partition
-   * @param vertices Vertices
-   */
-  public abstract void addPartitionVertices(
-      Integer partitionId, Collection<Vertex<I, V, E, M>> vertices);
 
   /**
    * Get a partition.

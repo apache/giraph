@@ -18,16 +18,15 @@
 
 package org.apache.giraph.comm.requests;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 import org.apache.giraph.comm.ServerData;
-import org.apache.giraph.comm.VertexIdMessageCollection;
+import org.apache.giraph.utils.ByteArrayVertexIdMessageCollection;
 import org.apache.giraph.utils.PairList;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
-
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
 
 /**
  * Send a collection of vertex messages for a partition.
@@ -49,7 +48,7 @@ public class SendWorkerMessagesRequest<I extends WritableComparable,
    * are owned by a single (destination) worker. These messages are all
    * destined for this worker.
    * */
-  private PairList<Integer, VertexIdMessageCollection<I, M>>
+  private PairList<Integer, ByteArrayVertexIdMessageCollection<I, M>>
   partitionVertexMessages;
 
   /**
@@ -60,10 +59,11 @@ public class SendWorkerMessagesRequest<I extends WritableComparable,
   /**
    * Constructor used to send request.
    *
-   * @param partVertMsgs Map of remote partitions => VertexIdMessageCollection
+   * @param partVertMsgs Map of remote partitions =>
+   *                     ByteArrayVertexIdMessageCollection
    */
   public SendWorkerMessagesRequest(
-    PairList<Integer, VertexIdMessageCollection<I, M>> partVertMsgs) {
+    PairList<Integer, ByteArrayVertexIdMessageCollection<I, M>> partVertMsgs) {
     super();
     this.partitionVertexMessages = partVertMsgs;
   }
@@ -72,12 +72,13 @@ public class SendWorkerMessagesRequest<I extends WritableComparable,
   public void readFieldsRequest(DataInput input) throws IOException {
     int numPartitions = input.readInt();
     partitionVertexMessages =
-        new PairList<Integer, VertexIdMessageCollection<I, M>>();
+        new PairList<Integer, ByteArrayVertexIdMessageCollection<I, M>>();
     partitionVertexMessages.initialize(numPartitions);
     while (numPartitions-- > 0) {
       final int partitionId = input.readInt();
-      VertexIdMessageCollection<I, M> vertexIdMessages =
-          new VertexIdMessageCollection<I, M>(getConf());
+      ByteArrayVertexIdMessageCollection<I, M> vertexIdMessages =
+          new ByteArrayVertexIdMessageCollection<I, M>();
+      vertexIdMessages.setConf(getConf());
       vertexIdMessages.readFields(input);
       partitionVertexMessages.add(partitionId, vertexIdMessages);
     }
@@ -86,8 +87,8 @@ public class SendWorkerMessagesRequest<I extends WritableComparable,
   @Override
   public void writeRequest(DataOutput output) throws IOException {
     output.writeInt(partitionVertexMessages.getSize());
-    PairList<Integer, VertexIdMessageCollection<I, M>>.Iterator iterator =
-        partitionVertexMessages.getIterator();
+    PairList<Integer, ByteArrayVertexIdMessageCollection<I, M>>.Iterator
+        iterator = partitionVertexMessages.getIterator();
     while (iterator.hasNext()) {
       iterator.next();
       output.writeInt(iterator.getCurrentFirst());
@@ -102,8 +103,8 @@ public class SendWorkerMessagesRequest<I extends WritableComparable,
 
   @Override
   public void doRequest(ServerData<I, V, E, M> serverData) {
-    PairList<Integer, VertexIdMessageCollection<I, M>>.Iterator iterator =
-        partitionVertexMessages.getIterator();
+    PairList<Integer, ByteArrayVertexIdMessageCollection<I, M>>.Iterator
+        iterator = partitionVertexMessages.getIterator();
     while (iterator.hasNext()) {
       iterator.next();
       try {

@@ -26,7 +26,6 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
 import org.apache.giraph.zk.ZooKeeperExt;
 import org.apache.giraph.zk.ZooKeeperExt.PathStat;
 import org.apache.hadoop.conf.Configuration;
@@ -107,6 +106,74 @@ public class WritableUtils {
           "writeToByteArray: IOStateException", e);
     }
     return outputStream.toByteArray();
+  }
+
+  /**
+   * Read fields from byteArray to a Writeable object, skipping the size.
+   * Serialization method is choosable
+   *
+   * @param byteArray Byte array to find the fields in.
+   * @param writableObject Object to fill in the fields.
+   * @param unsafe Use unsafe deserialization
+   */
+  public static void readFieldsFromByteArrayWithSize(
+      byte[] byteArray, Writable writableObject, boolean unsafe) {
+    ExtendedDataInput extendedDataInput;
+    if (unsafe) {
+      extendedDataInput = new UnsafeByteArrayInputStream(byteArray);
+    } else {
+      extendedDataInput = new ExtendedByteArrayDataInput(byteArray);
+    }
+    try {
+      extendedDataInput.readInt();
+      writableObject.readFields(extendedDataInput);
+    } catch (IOException e) {
+      throw new IllegalStateException(
+          "readFieldsFromByteArrayWithSize: IOException", e);
+    }
+  }
+
+  /**
+   * Write object to a byte array with the first 4 bytes as the size of the
+   * entire buffer (including the size).
+   *
+   * @param writableObject Object to write from.
+   * @param unsafe Use unsafe serialization?
+   * @return Byte array with serialized object.
+   */
+  public static byte[] writeToByteArrayWithSize(Writable writableObject,
+                                                boolean unsafe) {
+    return writeToByteArrayWithSize(writableObject, null, unsafe);
+  }
+
+  /**
+   * Write object to a byte array with the first 4 bytes as the size of the
+   * entire buffer (including the size).
+   *
+   * @param writableObject Object to write from.
+   * @param buffer Use this buffer instead
+   * @param unsafe Use unsafe serialization?
+   * @return Byte array with serialized object.
+   */
+  public static byte[] writeToByteArrayWithSize(Writable writableObject,
+                                                byte[] buffer,
+                                                boolean unsafe) {
+    ExtendedDataOutput extendedDataOutput;
+    if (unsafe) {
+      extendedDataOutput = new UnsafeByteArrayOutputStream(buffer);
+    } else {
+      extendedDataOutput = new ExtendedByteArrayDataOutput(buffer);
+    }
+    try {
+      extendedDataOutput.writeInt(-1);
+      writableObject.write(extendedDataOutput);
+      extendedDataOutput.writeInt(0, extendedDataOutput.getPos());
+    } catch (IOException e) {
+      throw new IllegalStateException("writeToByteArrayWithSize: " +
+          "IOException", e);
+    }
+
+    return extendedDataOutput.getByteArray();
   }
 
   /**

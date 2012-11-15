@@ -37,7 +37,6 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.Lock;
@@ -146,7 +145,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
     file.createNewFile();
     DataOutputStream outputStream = new DataOutputStream(
         new BufferedOutputStream(new FileOutputStream(file)));
-    for (Vertex<I, V, E, M> vertex : partition.getVertices()) {
+    for (Vertex<I, V, E, M> vertex : partition) {
       vertex.write(outputStream);
     }
     outputStream.close();
@@ -161,8 +160,8 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
    */
   private Partition<I, V, E, M> readPartition(Integer partitionId)
     throws IOException {
-    Partition<I, V, E, M> partition = new Partition<I, V, E, M>(conf,
-        partitionId, context);
+    Partition<I, V, E, M> partition =
+        conf.createPartition(partitionId, context);
     File file = new File(getPartitionPath(partitionId));
     DataInputStream inputStream = new DataInputStream(
         new BufferedInputStream(new FileInputStream(file)));
@@ -178,19 +177,17 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
   }
 
   /**
-   * Append some vertices to an out-of-core partition.
+   * Append some vertices of another partition to an out-of-core partition.
    *
-   * @param partitionId Id of the destination partition
-   * @param vertices Vertices to be added
+   * @param partition Partition to add
    * @throws IOException
    */
-  private void appendVertices(Integer partitionId,
-                              Collection<Vertex<I, V, E, M>> vertices)
+  private void appendPartitionOutOfCore(Partition<I, V, E, M> partition)
     throws IOException {
-    File file = new File(getPartitionPath(partitionId));
+    File file = new File(getPartitionPath(partition.getId()));
     DataOutputStream outputStream = new DataOutputStream(
         new BufferedOutputStream(new FileOutputStream(file, true)));
-    for (Vertex<I, V, E, M> vertex : vertices) {
+    for (Vertex<I, V, E, M> vertex : partition) {
       vertex.write(outputStream);
     }
     outputStream.close();
@@ -208,12 +205,12 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
       }
       if (LOG.isInfoEnabled()) {
         LOG.info("loadPartition: moving partition " + loadedPartition.getId() +
-            " out of core");
+            " out of core with size " + loadedPartition.getVertexCount());
       }
       try {
         writePartition(loadedPartition);
         onDiskPartitions.put(loadedPartition.getId(),
-            loadedPartition.getVertices().size());
+            (int) loadedPartition.getVertexCount());
         loadedPartition = null;
       } catch (IOException e) {
         throw new IllegalStateException("loadPartition: failed writing " +
@@ -247,7 +244,8 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
     }
     try {
       writePartition(partition);
-      onDiskPartitions.put(partition.getId(), partition.getVertices().size());
+      onDiskPartitions.put(partition.getId(),
+          (int) partition.getVertexCount());
     } catch (IOException e) {
       throw new IllegalStateException("addPartition: failed writing " +
           "partition " + partition.getId() + "to disk");
@@ -256,51 +254,42 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
 
   @Override
   public void addPartition(Partition<I, V, E, M> partition) {
-    Lock lock = createLock(partition.getId());
-    if (lock == null) {
-      throw new IllegalStateException("addPartition: partition " +
-          partition.getId() + " already exists");
-    }
-    addPartitionNoLock(partition);
-    lock.unlock();
-  }
-
-  @Override
-  public void addPartitionVertices(Integer partitionId,
-                                   Collection<Vertex<I, V, E, M>> vertices) {
-    if (inMemoryPartitions.containsKey(partitionId)) {
-      Partition<I, V, E, M> partition = inMemoryPartitions.get(partitionId);
-      partition.putVertices(vertices);
-    } else if (onDiskPartitions.containsKey(partitionId)) {
-      Lock lock = getLock(partitionId);
+    if (inMemoryPartitions.containsKey(partition.getId())) {
+      Partition<I, V, E, M> existingPartition =
+          inMemoryPartitions.get(partition.getId());
+      existingPartition.addPartition(partition);
+    } else if (onDiskPartitions.containsKey(partition.getId())) {
+      Lock lock = getLock(partition.getId());
       lock.lock();
-      if (loadedPartition != null && loadedPartition.getId() == partitionId) {
-        loadedPartition.putVertices(vertices);
+      if (loadedPartition != null && loadedPartition.getId() ==
+          partition.getId()) {
+        loadedPartition.addPartition(partition);
       } else {
         try {
-          appendVertices(partitionId, vertices);
-          onDiskPartitions.put(partitionId,
-              onDiskPartitions.get(partitionId) + vertices.size());
+          appendPartitionOutOfCore(partition);
+          onDiskPartitions.put(partition.getId(),
+              onDiskPartitions.get(partition.getId()) +
+                  (int) partition.getVertexCount());
         } catch (IOException e) {
-          throw new IllegalStateException("addPartitionVertices: failed " +
-              "writing vertices to partition " + partitionId + " on disk", e);
+          throw new IllegalStateException("addPartition: failed " +
+              "writing vertices to partition " + partition.getId() + " on disk",
+              e);
         }
       }
       lock.unlock();
     } else {
-      Lock lock = createLock(partitionId);
+      Lock lock = createLock(partition.getId());
       if (lock != null) {
-        addPartitionNoLock(
-            new Partition<I, V, E, M>(conf, partitionId, context));
+        addPartitionNoLock(partition);
         lock.unlock();
       } else {
         // Another thread is already creating the partition,
         // so we make sure it's done before repeating the call.
-        lock = getLock(partitionId);
+        lock = getLock(partition.getId());
         lock.lock();
         lock.unlock();
+        addPartition(partition);
       }
-      addPartitionVertices(partitionId, vertices);
     }
   }
 

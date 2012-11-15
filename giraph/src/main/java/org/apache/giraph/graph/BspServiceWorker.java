@@ -525,7 +525,7 @@ else[HADOOP_NON_SECURE]*/
           !getPartitionStore().hasPartition(
               partitionOwner.getPartitionId())) {
         Partition<I, V, E, M> partition =
-            new Partition<I, V, E, M>(getConfiguration(),
+            getConfiguration().createPartition(
                 partitionOwner.getPartitionId(), getContext());
         getPartitionStore().addPartition(partition);
       }
@@ -546,7 +546,7 @@ else[HADOOP_NON_SECURE]*/
         getPartitionStore().getPartitions()) {
       PartitionStats partitionStats =
           new PartitionStats(partition.getId(),
-              partition.getVertices().size(),
+              partition.getVertexCount(),
               0,
               partition.getEdgeCount(),
               0);
@@ -847,7 +847,7 @@ else[HADOOP_NON_SECURE]*/
     vertexWriter.initialize(getContext());
     for (Partition<I, V, E, M> partition :
         getPartitionStore().getPartitions()) {
-      for (Vertex<I, V, E, M> vertex : partition.getVertices()) {
+      for (Vertex<I, V, E, M> vertex : partition) {
         getContext().progress();
         vertexWriter.writeVertex(vertex);
       }
@@ -1057,10 +1057,7 @@ else[HADOOP_NON_SECURE]*/
           }
           metadataStream.close();
           Partition<I, V, E, M> partition =
-              new Partition<I, V, E, M>(
-                  getConfiguration(),
-                  partitionId,
-                  getContext());
+              getConfiguration().createPartition(partitionId, getContext());
           DataInputStream partitionsStream =
               getFs().open(new Path(partitionsFile));
           if (partitionsStream.skip(startPos) != startPos) {

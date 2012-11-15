@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-417: Serialize the graph/message cache into byte[] for
+  improving memory usage and compute speed. (aching)
+
   GIRAPH-386: ClassCastException when giraph.SplitMasterWorker=false
   (majakabiljo)
 

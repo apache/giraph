@@ -18,6 +18,7 @@
 
 package org.apache.giraph;
 
+import java.util.List;
 import org.apache.giraph.graph.AggregatorWriter;
 import org.apache.giraph.graph.Combiner;
 import org.apache.giraph.graph.DefaultMasterCompute;
@@ -34,14 +35,21 @@ import org.apache.giraph.graph.WorkerContext;
 import org.apache.giraph.graph.partition.GraphPartitionerFactory;
 import org.apache.giraph.graph.partition.HashPartitionerFactory;
 import org.apache.giraph.graph.partition.MasterGraphPartitioner;
+import org.apache.giraph.graph.partition.Partition;
 import org.apache.giraph.graph.partition.PartitionStats;
+import org.apache.giraph.graph.partition.SimplePartition;
+import org.apache.giraph.utils.ExtendedByteArrayDataInput;
+import org.apache.giraph.utils.ExtendedByteArrayDataOutput;
+import org.apache.giraph.utils.ExtendedDataInput;
+import org.apache.giraph.utils.ExtendedDataOutput;
 import org.apache.giraph.utils.ReflectionUtils;
+import org.apache.giraph.utils.UnsafeByteArrayInputStream;
+import org.apache.giraph.utils.UnsafeByteArrayOutputStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-
-import java.util.List;
+import org.apache.hadoop.util.Progressable;
 
 /**
  * The classes set here are immutable, the remaining configuration is mutable.
@@ -97,6 +105,15 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   /** Master compute class - cached for fast access */
   private final Class<? extends MasterCompute> masterComputeClass;
 
+  /** Partition class - cached for fast accesss */
+  private final Class<? extends Partition<I, V, E, M>> partitionClass;
+
+  /**
+   * Use unsafe serialization? Cached for fast access to instantiate the
+   * extended data input/output classes
+   */
+  private final boolean useUnsafeSerialization;
+
   /**
    * Constructor.  Takes the configuration and then gets the classes out of
    * them for Giraph
@@ -146,6 +163,12 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
         DefaultWorkerContext.class, WorkerContext.class);
     masterComputeClass =  conf.getClass(MASTER_COMPUTE_CLASS,
         DefaultMasterCompute.class, MasterCompute.class);
+
+    partitionClass = (Class<? extends Partition<I, V, E, M>>)
+        conf.getClass(PARTITION_CLASS, SimplePartition.class);
+
+    useUnsafeSerialization = getBoolean(USE_UNSAFE_SERIALIZATION,
+        USE_UNSAFE_SERIALIZATION_DEFAULT);
   }
 
   /**
@@ -491,6 +514,90 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
         throw new IllegalArgumentException(
             "createMessageValue: Illegally accessed", e);
       }
+    }
+  }
+
+  /**
+   * Create a partition
+   *
+   * @param id Partition id
+   * @param progressable Progressable for reporting progress
+   * @return Instantiated partition
+   */
+  public Partition<I, V, E, M> createPartition(
+      int id, Progressable progressable) {
+    Partition<I, V, E, M> partition =
+        ReflectionUtils.newInstance(partitionClass, this);
+    partition.initialize(id, progressable);
+    return partition;
+  }
+
+  /**
+   * Use unsafe serialization?
+   *
+   * @return True if using unsafe serialization, false otherwise.
+   */
+  public boolean useUnsafeSerialization() {
+    return useUnsafeSerialization;
+  }
+
+  /**
+   * Create an extended data output (can be subclassed)
+   *
+   * @return ExtendedDataOutput object
+   */
+  public ExtendedDataOutput createExtendedDataOutput() {
+    if (useUnsafeSerialization) {
+      return new UnsafeByteArrayOutputStream();
+    } else {
+      return new ExtendedByteArrayDataOutput();
+    }
+  }
+
+  /**
+   * Create an extended data output (can be subclassed)
+   *
+   * @param expectedSize Expected size
+   * @return ExtendedDataOutput object
+   */
+  public ExtendedDataOutput createExtendedDataOutput(int expectedSize) {
+    if (useUnsafeSerialization) {
+      return new UnsafeByteArrayOutputStream(expectedSize);
+    } else {
+      return new ExtendedByteArrayDataOutput(expectedSize);
+    }
+  }
+
+  /**
+   * Create an extended data output (can be subclassed)
+   *
+   * @param buf Buffer to use for the output (reuse perhaps)
+   * @param pos How much of the buffer is already used
+   * @return ExtendedDataOutput object
+   */
+  public ExtendedDataOutput createExtendedDataOutput(byte[] buf,
+                                                     int pos) {
+    if (useUnsafeSerialization) {
+      return new UnsafeByteArrayOutputStream(buf, pos);
+    } else {
+      return new ExtendedByteArrayDataOutput(buf, pos);
+    }
+  }
+
+  /**
+   * Create an extended data input (can be subclassed)
+   *
+   * @param buf Buffer to use for the input
+   * @param off Where to start reading in the buffer
+   * @param length Maximum length of the buffer
+   * @return ExtendedDataInput object
+   */
+  public ExtendedDataInput createExtendedDataInput(
+      byte[] buf, int off, int length) {
+    if (useUnsafeSerialization) {
+      return new UnsafeByteArrayInputStream(buf, off, length);
+    } else {
+      return new ExtendedByteArrayDataInput(buf, off, length);
     }
   }
 }

@@ -18,15 +18,14 @@
 
 package org.apache.giraph.comm.messages;
 
-import org.apache.giraph.comm.VertexIdMessageCollection;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
+import org.apache.giraph.utils.ByteArrayVertexIdMessageCollection;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 
 /**
  * Message store which stores data by partition
@@ -53,7 +52,7 @@ public interface MessageStoreByPartition<I extends WritableComparable,
    * @param partitionId Id of partition
    * @throws IOException
    */
-  void addPartitionMessages(VertexIdMessageCollection<I, M> messages,
+  void addPartitionMessages(ByteArrayVertexIdMessageCollection<I, M> messages,
       int partitionId) throws IOException;
 
   /**

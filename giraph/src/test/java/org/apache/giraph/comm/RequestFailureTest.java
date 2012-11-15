@@ -18,6 +18,9 @@
 
 package org.apache.giraph.comm;
 
+import com.google.common.collect.Lists;
+import java.io.IOException;
+import java.util.Collection;
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.comm.netty.NettyClient;
@@ -27,6 +30,7 @@ import org.apache.giraph.comm.requests.SendWorkerMessagesRequest;
 import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.WorkerInfo;
+import org.apache.giraph.utils.ByteArrayVertexIdMessageCollection;
 import org.apache.giraph.utils.MockUtils;
 import org.apache.giraph.utils.PairList;
 import org.apache.hadoop.io.IntWritable;
@@ -37,11 +41,6 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
-import com.google.common.collect.Lists;
-
-import java.io.IOException;
-import java.util.Collection;
 
 /**
  * Test all the netty failure scenarios
@@ -83,12 +82,15 @@ public class RequestFailureTest {
   private WritableRequest getRequest() {
     // Data to send
     final int partitionId = 0;
-    PairList<Integer, VertexIdMessageCollection<IntWritable, IntWritable>>
+    PairList<Integer, ByteArrayVertexIdMessageCollection<IntWritable,
+            IntWritable>>
         dataToSend = new PairList<Integer,
-        VertexIdMessageCollection<IntWritable, IntWritable>>();
+        ByteArrayVertexIdMessageCollection<IntWritable, IntWritable>>();
     dataToSend.initialize();
-    VertexIdMessageCollection<IntWritable, IntWritable> vertexIdMessages =
-        new VertexIdMessageCollection<IntWritable, IntWritable>(conf);
+    ByteArrayVertexIdMessageCollection<IntWritable,
+        IntWritable> vertexIdMessages =
+        new ByteArrayVertexIdMessageCollection<IntWritable, IntWritable>();
+    vertexIdMessages.setConf(conf);
     vertexIdMessages.initialize();
     dataToSend.add(partitionId, vertexIdMessages);
     for (int i = 1; i < 7; ++i) {

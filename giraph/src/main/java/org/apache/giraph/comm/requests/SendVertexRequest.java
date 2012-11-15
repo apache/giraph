@@ -19,17 +19,14 @@
 package org.apache.giraph.comm.requests;
 
 import org.apache.giraph.comm.ServerData;
-import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.graph.partition.Partition;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
 
-import com.google.common.collect.Lists;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Collection;
 
 /**
  * Send a collection of vertices for a partition.
@@ -46,10 +43,8 @@ public class SendVertexRequest<I extends WritableComparable,
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(SendVertexRequest.class);
-  /** Partition id */
-  private int partitionId;
-  /** List of vertices to be stored on this partition */
-  private Collection<Vertex<I, V, E, M>> vertices;
+  /** Partition */
+  private Partition<I, V, E, M> partition;
 
   /**
    * Constructor used for reflection only
@@ -59,34 +54,21 @@ public class SendVertexRequest<I extends WritableComparable,
   /**
    * Constructor for sending a request.
    *
-   * @param partitionId Partition to send the request to
-   * @param vertices Vertices to send
+   * @param partition Partition to send the request to
    */
-  public SendVertexRequest(int partitionId,
-                           Collection<Vertex<I, V, E, M>> vertices) {
-    this.partitionId = partitionId;
-    this.vertices = vertices;
+  public SendVertexRequest(Partition<I, V, E, M> partition) {
+    this.partition = partition;
   }
 
   @Override
   public void readFieldsRequest(DataInput input) throws IOException {
-    partitionId = input.readInt();
-    int verticesCount = input.readInt();
-    vertices = Lists.newArrayListWithCapacity(verticesCount);
-    for (int i = 0; i < verticesCount; ++i) {
-      Vertex<I, V, E, M> vertex = getConf().createVertex();
-      vertex.readFields(input);
-      vertices.add(vertex);
-    }
+    partition = getConf().createPartition(-1, null);
+    partition.readFields(input);
   }
 
   @Override
   public void writeRequest(DataOutput output) throws IOException {
-    output.writeInt(partitionId);
-    output.writeInt(vertices.size());
-    for (Vertex<I, V, E, M> vertex : vertices) {
-      vertex.write(output);
-    }
+    partition.write(output);
   }
 
   @Override
@@ -96,12 +78,7 @@ public class SendVertexRequest<I extends WritableComparable,
 
   @Override
   public void doRequest(ServerData<I, V, E, M> serverData) {
-    if (vertices.isEmpty()) {
-      LOG.warn("doRequest: Got an empty request!");
-      return;
-    }
-    serverData.getPartitionStore().addPartitionVertices(partitionId,
-        vertices);
+    serverData.getPartitionStore().addPartition(partition);
   }
 }
 

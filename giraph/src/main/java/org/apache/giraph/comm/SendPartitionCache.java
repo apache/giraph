@@ -94,8 +94,7 @@ public class SendPartitionCache<I extends WritableComparable,
     Partition<I, V, E, M> partition =
         ownerPartitionMap.get(partitionOwner);
     if (partition == null) {
-      partition = new Partition<I, V, E, M>(
-          configuration,
+      partition = configuration.createPartition(
           partitionOwner.getPartitionId(),
           context);
       ownerPartitionMap.put(partitionOwner, partition);

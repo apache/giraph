@@ -19,14 +19,12 @@
 package org.apache.giraph.graph.partition;
 
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 
 import com.google.common.collect.Maps;
 
-import java.util.Collection;
 import java.util.concurrent.ConcurrentMap;
 
 /**
@@ -63,25 +61,14 @@ public class SimplePartitionStore<I extends WritableComparable,
 
   @Override
   public void addPartition(Partition<I, V, E, M> partition) {
-    if (partitions.putIfAbsent(partition.getId(), partition) != null) {
-      throw new IllegalStateException("addPartition: partition " +
-          partition.getId() + " already exists");
-    }
-  }
-
-  @Override
-  public void addPartitionVertices(Integer partitionId,
-                                   Collection<Vertex<I, V, E, M>> vertices) {
-    Partition<I, V, E, M> partition = partitions.get(partitionId);
-    if (partition == null) {
-      Partition<I, V, E, M> newPartition = new Partition<I, V, E, M>(conf,
-          partitionId, context);
-      partition = partitions.putIfAbsent(partitionId, newPartition);
-      if (partition == null) {
-        partition = newPartition;
+    Partition<I, V, E, M> oldPartition = partitions.get(partition.getId());
+    if (oldPartition == null) {
+      oldPartition = partitions.putIfAbsent(partition.getId(), partition);
+      if (oldPartition == null) {
+        return;
       }
     }
-    partition.putVertices(vertices);
+    oldPartition.addPartition(partition);
   }
 
   @Override

@@ -18,20 +18,29 @@
 
 package org.apache.giraph.comm;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import java.io.IOException;
+import java.util.Collection;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.comm.netty.NettyClient;
 import org.apache.giraph.comm.netty.NettyServer;
 import org.apache.giraph.comm.netty.handler.WorkerRequestServerHandler;
-import org.apache.giraph.comm.requests.SendWorkerMessagesRequest;
 import org.apache.giraph.comm.requests.SendPartitionMutationsRequest;
 import org.apache.giraph.comm.requests.SendVertexRequest;
+import org.apache.giraph.comm.requests.SendWorkerMessagesRequest;
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexMutations;
 import org.apache.giraph.graph.WorkerInfo;
+import org.apache.giraph.graph.partition.Partition;
 import org.apache.giraph.graph.partition.PartitionStore;
+import org.apache.giraph.utils.ByteArrayVertexIdMessageCollection;
 import org.apache.giraph.utils.MockUtils;
 import org.apache.giraph.utils.PairList;
 import org.apache.hadoop.io.IntWritable;
@@ -43,16 +52,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Test all the different netty requests.
@@ -108,21 +107,19 @@ public class RequestTest {
   public void sendVertexPartition() throws IOException {
     // Data to send
     int partitionId = 13;
-    Collection<Vertex<IntWritable, IntWritable, IntWritable,
-        IntWritable>> vertices =
-        new ArrayList<Vertex<IntWritable, IntWritable,
-        IntWritable, IntWritable>>();
+    Partition<IntWritable, IntWritable, IntWritable, IntWritable> partition =
+        conf.createPartition(partitionId, null);
     for (int i = 0; i < 10; ++i) {
       TestVertex vertex = new TestVertex();
       vertex.initialize(new IntWritable(i), new IntWritable(i));
-      vertices.add(vertex);
+      partition.putVertex(vertex);
     }
 
     // Send the request
     SendVertexRequest<IntWritable, IntWritable, IntWritable,
     IntWritable> request =
       new SendVertexRequest<IntWritable, IntWritable,
-      IntWritable, IntWritable>(partitionId, vertices);
+      IntWritable, IntWritable>(partition);
     client.sendWritableRequest(workerInfo.getTaskId(), request);
     client.waitAllRequests();
 
@@ -138,7 +135,7 @@ public class RequestTest {
     int total = 0;
     for (Vertex<IntWritable, IntWritable,
         IntWritable, IntWritable> vertex :
-        partitionStore.getPartition(partitionId).getVertices()) {
+        partitionStore.getPartition(partitionId)) {
       total += vertex.getId().get();
     }
     assertEquals(total, 45);
@@ -147,13 +144,16 @@ public class RequestTest {
   @Test
   public void sendWorkerMessagesRequest() throws IOException {
     // Data to send
-    PairList<Integer, VertexIdMessageCollection<IntWritable, IntWritable>>
+    PairList<Integer, ByteArrayVertexIdMessageCollection<IntWritable,
+        IntWritable>>
         dataToSend = new PairList<Integer,
-        VertexIdMessageCollection<IntWritable, IntWritable>>();
+        ByteArrayVertexIdMessageCollection<IntWritable, IntWritable>>();
     dataToSend.initialize();
     int partitionId = 0;
-    VertexIdMessageCollection<IntWritable, IntWritable> vertexIdMessages =
-        new VertexIdMessageCollection<IntWritable, IntWritable>(conf);
+    ByteArrayVertexIdMessageCollection<IntWritable,
+        IntWritable> vertexIdMessages =
+        new ByteArrayVertexIdMessageCollection<IntWritable, IntWritable>();
+    vertexIdMessages.setConf(conf);
     vertexIdMessages.initialize();
     dataToSend.add(partitionId, vertexIdMessages);
     for (int i = 1; i < 7; ++i) {

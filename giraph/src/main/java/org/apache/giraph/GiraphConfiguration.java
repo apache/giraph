@@ -28,6 +28,9 @@ import org.apache.giraph.graph.VertexOutputFormat;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.graph.WorkerContext;
 import org.apache.giraph.graph.partition.GraphPartitionerFactory;
+
+import org.apache.giraph.graph.partition.Partition;
+
 import org.apache.hadoop.conf.Configuration;
 
 /**
@@ -77,6 +80,9 @@ public class GiraphConfiguration extends Configuration {
   /** AggregatorWriter class - optional */
   public static final String AGGREGATOR_WRITER_CLASS =
       "giraph.aggregatorWriterClass";
+
+  /** Partition class - optional */
+  public static final String PARTITION_CLASS = "giraph.partitionClass";
 
   /**
    * Minimum number of simultaneous workers before this job can run (int)
@@ -620,6 +626,15 @@ public class GiraphConfiguration extends Configuration {
   /** Default is not to do authenticate and authorization with Netty. */
   public static final boolean DEFAULT_AUTHENTICATE = false;
 
+  /** Use unsafe serialization? */
+  public static final String USE_UNSAFE_SERIALIZATION =
+      "giraph.useUnsafeSerialization";
+  /**
+   * Use unsafe serialization default is true (use it if you can,
+   * its much faster)!
+   */
+  public static final boolean USE_UNSAFE_SERIALIZATION_DEFAULT = true;
+
   /**
    * Constructor that creates the configuration
    */
@@ -751,6 +766,18 @@ public class GiraphConfiguration extends Configuration {
     setClass(AGGREGATOR_WRITER_CLASS,
         aggregatorWriterClass,
         AggregatorWriter.class);
+  }
+
+  /**
+   * Set the partition class (optional)
+   *
+   * @param partitionClass Determines the why partitions are stored
+   */
+  public final void setPartitionClass(
+      Class<? extends Partition> partitionClass) {
+    setClass(PARTITION_CLASS,
+        partitionClass,
+        Partition.class);
   }
 
   /**
@@ -986,5 +1013,14 @@ public class GiraphConfiguration extends Configuration {
 
   public long getInputSplitMaxEdges() {
     return getLong(INPUT_SPLIT_MAX_EDGES, INPUT_SPLIT_MAX_EDGES_DEFAULT);
+  }
+
+  /**
+   * Set whether to use unsafe serialization
+   *
+   * @param useUnsafeSerialization If true, use unsafe serialization
+   */
+  public void useUnsafeSerialization(boolean useUnsafeSerialization) {
+    setBoolean(USE_UNSAFE_SERIALIZATION, useUnsafeSerialization);
   }
 }

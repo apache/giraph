@@ -15,7 +15,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.giraph.benchmark;
 
 import org.apache.commons.cli.CommandLine;
@@ -75,7 +74,9 @@ public class PageRankBenchmark implements Tool {
     options.addOption("c",
         "vertexClass",
         true,
-        "Vertex class (0 for HashMapVertex, 1 for EdgeListVertex)");
+        "Vertex class (0 for HashMapVertex, 1 for EdgeListVertex, " +
+            "2 for RepresentativeVertex, " +
+            "3 for RepresentativeVertex with unsafe)");
     options.addOption("N",
         "name",
         true,
@@ -125,9 +126,17 @@ public class PageRankBenchmark implements Tool {
         (Integer.parseInt(cmd.getOptionValue('c')) == 1)) {
       job.getConfiguration().setVertexClass(
           EdgeListVertexPageRankBenchmark.class);
-    } else {
+    } else if (Integer.parseInt(cmd.getOptionValue('c')) == 0) {
       job.getConfiguration().setVertexClass(
           HashMapVertexPageRankBenchmark.class);
+    } else if (Integer.parseInt(cmd.getOptionValue('c')) == 2) {
+      job.getConfiguration().setVertexClass(
+          RepresentativeVertexPageRankBenchmark.class);
+      job.getConfiguration().useUnsafeSerialization(false);
+    } else if (Integer.parseInt(cmd.getOptionValue('c')) == 3) {
+      job.getConfiguration().setVertexClass(
+          RepresentativeVertexPageRankBenchmark.class);
+      job.getConfiguration().useUnsafeSerialization(true);
     }
     LOG.info("Using class " +
         job.getConfiguration().get(GiraphConfiguration.VERTEX_CLASS));

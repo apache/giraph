@@ -133,6 +133,7 @@ public abstract class LongDoubleFloatDoubleVertex extends
     long id = in.readLong();
     double value = in.readDouble();
     initialize(new LongWritable(id), new DoubleWritable(value));
+    edgeMap.clear();
     long edgeMapSize = in.readLong();
     for (long i = 0; i < edgeMapSize; ++i) {
       long targetVertexId = in.readLong();

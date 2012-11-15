@@ -18,9 +18,9 @@
 
 package org.apache.giraph.comm.aggregators;
 
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
+import org.apache.giraph.utils.ExtendedByteArrayDataOutput;
+import org.apache.giraph.utils.ExtendedDataOutput;
 
 /**
  * Wrapper for output stream which keeps the place in the beginning for the
@@ -28,9 +28,7 @@ import java.io.IOException;
  */
 public abstract class CountingOutputStream {
   /** DataOutput to which subclasses will be writing data */
-  protected DataOutputStream dataOutput;
-  /** Byte output stream used by dataOutput */
-  private final ExtendedByteArrayOutputStream byteOutput;
+  protected ExtendedDataOutput dataOutput;
   /** Counter for objects which were written to the stream */
   private int counter;
 
@@ -38,8 +36,7 @@ public abstract class CountingOutputStream {
    * Default constructor
    */
   public CountingOutputStream() {
-    byteOutput = new ExtendedByteArrayOutputStream();
-    dataOutput = new DataOutputStream(byteOutput);
+    dataOutput = new ExtendedByteArrayDataOutput();
     reset();
   }
 
@@ -56,7 +53,7 @@ public abstract class CountingOutputStream {
    * @return Number of bytes
    */
   protected int getSize() {
-    return byteOutput.size();
+    return dataOutput.getPos();
   }
 
   /**
@@ -65,14 +62,9 @@ public abstract class CountingOutputStream {
    * @return Number of objects followed by the data written to the stream
    */
   public byte[] flush() {
-    byteOutput.writeIntOnPosition(counter, 0);
-    try {
-      dataOutput.flush();
-    } catch (IOException e) {
-      throw new IllegalStateException(
-          "flush: IOException occurred while flushing", e);
-    }
-    byte[] ret = byteOutput.toByteArray();
+    dataOutput.writeInt(0, counter);
+    // Actual flush not required, this is a byte array
+    byte[] ret = dataOutput.toByteArray();
     reset();
     return ret;
   }
@@ -81,39 +73,13 @@ public abstract class CountingOutputStream {
    * Reset the stream
    */
   private void reset() {
-    byteOutput.reset();
-    dataOutput = new DataOutputStream(byteOutput);
+    dataOutput.reset();
     // reserve the place for count to be written in the end
-    for (int i = 0; i < 4; i++) {
-      byteOutput.write(0);
+    try {
+      dataOutput.writeInt(0);
+    } catch (IOException e) {
+      throw new IllegalStateException("reset: Got IOException", e);
     }
     counter = 0;
-  }
-
-  /**
-   * Subclass of {@link ByteArrayOutputStream} which provides an option to
-   * write int value over previously written data
-   */
-  public static class ExtendedByteArrayOutputStream extends
-      ByteArrayOutputStream {
-
-    /**
-     * Write integer value over previously written data at certain
-     * position in byte array
-     *
-     * @param value Value to write
-     * @param position Position from which to write
-     */
-    public void writeIntOnPosition(int value, int position) {
-      if (position + 4 > count) {
-        throw new IndexOutOfBoundsException(
-            "writeIntOnPosition: Tried to write int to position " + position +
-                " but current length is " + count);
-      }
-      buf[position] = (byte) ((value >>> 24) & 0xFF);
-      buf[position + 1] = (byte) ((value >>> 16) & 0xFF);
-      buf[position + 2] = (byte) ((value >>> 8) & 0xFF);
-      buf[position + 3] = (byte) ((value >>> 0) & 0xFF);
-    }
   }
 }

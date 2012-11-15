@@ -18,19 +18,18 @@
 
 package org.apache.giraph.comm;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import java.util.List;
 import java.util.Map;
-
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.graph.WorkerInfo;
 import org.apache.giraph.graph.partition.PartitionOwner;
+import org.apache.giraph.utils.ByteArrayVertexIdMessageCollection;
 import org.apache.giraph.utils.PairList;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 
 /**
  * Aggregates the messages to be send to workers so they can be sent
@@ -43,7 +42,7 @@ import com.google.common.collect.Maps;
 public class SendMessageCache<I extends WritableComparable,
     M extends Writable> {
   /** Internal cache */
-  private final VertexIdMessageCollection<I, M>[] messageCache;
+  private final ByteArrayVertexIdMessageCollection<I, M>[] messageCache;
   /** Number of messages in each partition */
   private final int[] messageCounts;
   /** List of partition ids belonging to a worker */
@@ -74,7 +73,7 @@ public class SendMessageCache<I extends WritableComparable,
       workerPartitionIds.add(partitionOwner.getPartitionId());
       maxPartition = Math.max(partitionOwner.getPartitionId(), maxPartition);
     }
-    messageCache = new VertexIdMessageCollection[maxPartition + 1];
+    messageCache = new ByteArrayVertexIdMessageCollection[maxPartition + 1];
 
     int maxWorker = 0;
     for (WorkerInfo workerInfo : serviceWorker.getWorkerInfoList()) {
@@ -96,10 +95,11 @@ public class SendMessageCache<I extends WritableComparable,
   public int addMessage(WorkerInfo workerInfo,
     final int partitionId, I destVertexId, M message) {
     // Get the message collection
-    VertexIdMessageCollection<I, M> partitionMessages =
+    ByteArrayVertexIdMessageCollection<I, M> partitionMessages =
         messageCache[partitionId];
     if (partitionMessages == null) {
-      partitionMessages = new VertexIdMessageCollection<I, M>(conf);
+      partitionMessages = new ByteArrayVertexIdMessageCollection<I, M>();
+      partitionMessages.setConf(conf);
       partitionMessages.initialize();
       messageCache[partitionId] = partitionMessages;
     }
@@ -115,13 +115,13 @@ public class SendMessageCache<I extends WritableComparable,
    *
    * @param workerInfo the address of the worker who owns the data
    *                   partitions that are receiving the messages
-   * @return List of pairs (partitionId, VertexIdMessageCollection),
+   * @return List of pairs (partitionId, ByteArrayVertexIdMessageCollection),
    *         where all partition ids belong to workerInfo
    */
-  public PairList<Integer, VertexIdMessageCollection<I, M>>
+  public PairList<Integer, ByteArrayVertexIdMessageCollection<I, M>>
   removeWorkerMessages(WorkerInfo workerInfo) {
-    PairList<Integer, VertexIdMessageCollection<I, M>> workerMessages =
-        new PairList<Integer, VertexIdMessageCollection<I, M>>();
+    PairList<Integer, ByteArrayVertexIdMessageCollection<I, M>> workerMessages =
+        new PairList<Integer, ByteArrayVertexIdMessageCollection<I, M>>();
     workerMessages.initialize();
     for (Integer partitionId : workerPartitions.get(workerInfo)) {
       if (messageCache[partitionId] != null) {
@@ -139,13 +139,15 @@ public class SendMessageCache<I extends WritableComparable,
    * @return All vertex messages for all partitions
    */
   public PairList<WorkerInfo, PairList<
-      Integer, VertexIdMessageCollection<I, M>>> removeAllMessages() {
-    PairList<WorkerInfo, PairList<Integer, VertexIdMessageCollection<I, M>>>
+      Integer, ByteArrayVertexIdMessageCollection<I, M>>> removeAllMessages() {
+    PairList<WorkerInfo, PairList<Integer,
+        ByteArrayVertexIdMessageCollection<I, M>>>
         allMessages = new PairList<WorkerInfo,
-        PairList<Integer, VertexIdMessageCollection<I, M>>>();
+        PairList<Integer, ByteArrayVertexIdMessageCollection<I, M>>>();
     allMessages.initialize();
     for (WorkerInfo workerInfo : workerPartitions.keySet()) {
-      PairList<Integer, VertexIdMessageCollection<I, M>> workerMessages =
+      PairList<Integer, ByteArrayVertexIdMessageCollection<I,
+          M>> workerMessages =
           removeWorkerMessages(workerInfo);
       if (!workerMessages.isEmpty()) {
         allMessages.add(workerInfo, workerMessages);

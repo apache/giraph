@@ -17,6 +17,10 @@
  */
 package org.apache.giraph.comm.netty;
 
+import com.google.common.collect.Maps;
+import java.io.IOException;
+import java.util.Collection;
+import java.util.Map;
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
@@ -24,7 +28,6 @@ import org.apache.giraph.comm.SendMessageCache;
 import org.apache.giraph.comm.SendMutationsCache;
 import org.apache.giraph.comm.SendPartitionCache;
 import org.apache.giraph.comm.ServerData;
-import org.apache.giraph.comm.VertexIdMessageCollection;
 import org.apache.giraph.comm.WorkerClient;
 import org.apache.giraph.comm.WorkerClientRequestProcessor;
 import org.apache.giraph.comm.messages.MessageStoreByPartition;
@@ -43,17 +46,12 @@ import org.apache.giraph.graph.partition.PartitionOwner;
 import org.apache.giraph.metrics.GiraphMetrics;
 import org.apache.giraph.metrics.MetricGroup;
 import org.apache.giraph.metrics.ValueGauge;
+import org.apache.giraph.utils.ByteArrayVertexIdMessageCollection;
 import org.apache.giraph.utils.PairList;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
-
-import com.google.common.collect.Maps;
-
-import java.io.IOException;
-import java.util.Collection;
-import java.util.Map;
 
 /**
  * Aggregate requests and sends them to the thread-safe NettyClient.  This
@@ -150,7 +148,8 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
     // Send a request if the cache of outgoing message to
     // the remote worker 'workerInfo' is full enough to be flushed
     if (workerMessageCount >= maxMessagesPerWorker) {
-      PairList<Integer, VertexIdMessageCollection<I, M>> workerMessages =
+      PairList<Integer, ByteArrayVertexIdMessageCollection<I, M>>
+          workerMessages =
           sendMessageCache.removeWorkerMessages(workerInfo);
       WritableRequest writableRequest =
           new SendWorkerMessagesRequest<I, V, E, M>(workerMessages);
@@ -171,8 +170,7 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
     }
 
     WritableRequest vertexRequest =
-        new SendVertexRequest<I, V, E, M>(partitionId,
-            partition.getVertices());
+        new SendVertexRequest<I, V, E, M>(partition);
     doRequest(workerInfo, vertexRequest);
 
     // Messages are stored separately
@@ -325,10 +323,11 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
     sendPartitionCache.clear();
 
     // Execute the remaining sends messages (if any)
-    PairList<WorkerInfo, PairList<Integer, VertexIdMessageCollection<I, M>>>
+    PairList<WorkerInfo, PairList<Integer,
+        ByteArrayVertexIdMessageCollection<I, M>>>
         remainingMessageCache = sendMessageCache.removeAllMessages();
     PairList<WorkerInfo,
-        PairList<Integer, VertexIdMessageCollection<I, M>>>.Iterator
+        PairList<Integer, ByteArrayVertexIdMessageCollection<I, M>>>.Iterator
         iterator = remainingMessageCache.getIterator();
     while (iterator.hasNext()) {
       iterator.next();

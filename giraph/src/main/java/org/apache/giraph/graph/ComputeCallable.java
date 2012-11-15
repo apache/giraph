@@ -187,7 +187,7 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
         new PartitionStats(partition.getId(), 0, 0, 0, 0);
     // Make sure this is thread-safe across runs
     synchronized (partition) {
-      for (Vertex<I, V, E, M> vertex : partition.getVertices()) {
+      for (Vertex<I, V, E, M> vertex : partition) {
         // Make sure every vertex has this thread's
         // graphState before computing
         vertex.setGraphState(graphState);
@@ -205,6 +205,8 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
           } finally {
             computeOneTimerContext.stop();
           }
+          // Need to save the vertex changes (possibly)
+          partition.saveVertex(vertex);
         }
         if (vertex.isHalted()) {
           partitionStats.incrFinishedVertexCount();

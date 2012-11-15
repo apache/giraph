@@ -18,15 +18,9 @@
 
 package org.apache.giraph.comm.messages;
 
-import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.comm.VertexIdMessageCollection;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -36,6 +30,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentMap;
+import org.apache.giraph.bsp.CentralizedServiceWorker;
+import org.apache.giraph.utils.ByteArrayVertexIdMessageCollection;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 
 /**
  * Message store which separates data by partitions,
@@ -101,14 +99,16 @@ public class DiskBackedMessageStoreByPartition<I extends WritableComparable,
   }
 
   @Override
-  public void addPartitionMessages(VertexIdMessageCollection<I, M> messages,
+  public void addPartitionMessages(
+      ByteArrayVertexIdMessageCollection<I, M> messages,
       int partitionId) throws IOException {
     Map<I, Collection<M>> map = Maps.newHashMap();
-    VertexIdMessageCollection<I, M>.Iterator iterator = messages.getIterator();
+    ByteArrayVertexIdMessageCollection<I, M>.Iterator iterator =
+        messages.getIterator();
     while (iterator.hasNext()) {
       iterator.next();
-      I vertexId = iterator.getCurrentFirst();
-      M message = iterator.getCurrentSecond();
+      I vertexId = iterator.getCurrentVertexId();
+      M message = iterator.getCurrentMessage();
       Collection<M> currentMessages = map.get(vertexId);
       if (currentMessages == null) {
         currentMessages = Lists.newArrayList(message);
