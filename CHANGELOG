@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-427: Add committer information for Nitay Joffe to pom.xml (nitay)
+
   GIRAPH-417: Serialize the graph/message cache into byte[] for
   improving memory usage and compute speed. (aching)
 

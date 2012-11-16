@@ -184,6 +184,14 @@ under the License.
       <organization>Facebook</organization>
       <organizationUrl>http://www.facebook.com</organizationUrl>
     </developer>
+    <developer>
+      <id>nitay</id>
+      <name>Nitay Joffe</name>
+      <email>nitay@apache.org</email>
+      <timezone>-5</timezone>
+      <organization>Facebook</organization>
+      <organizationUrl>http://www.facebook.com</organizationUrl>
+    </developer>
   </developers>
 
   <repositories>
