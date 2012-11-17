@@ -130,6 +130,8 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
                 increment(superstepMillis);
             }
 
+            bspServiceMaster.postSuperstep();
+
             // If a worker failed, restart from a known good superstep
             if (superstepState == SuperstepState.WORKER_FAILURE) {
               bspServiceMaster.restartFromCheckpoint(
@@ -184,5 +186,6 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
           "KeeperException", e);
       throw new IllegalStateException(e);
     }
+    bspServiceMaster.postApplication();
   }
 }

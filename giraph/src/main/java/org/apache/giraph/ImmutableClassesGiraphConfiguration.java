@@ -18,7 +18,6 @@
 
 package org.apache.giraph;
 
-import java.util.List;
 import org.apache.giraph.graph.AggregatorWriter;
 import org.apache.giraph.graph.Combiner;
 import org.apache.giraph.graph.DefaultMasterCompute;
@@ -38,6 +37,7 @@ import org.apache.giraph.graph.partition.MasterGraphPartitioner;
 import org.apache.giraph.graph.partition.Partition;
 import org.apache.giraph.graph.partition.PartitionStats;
 import org.apache.giraph.graph.partition.SimplePartition;
+import org.apache.giraph.master.MasterObserver;
 import org.apache.giraph.utils.ExtendedByteArrayDataInput;
 import org.apache.giraph.utils.ExtendedByteArrayDataOutput;
 import org.apache.giraph.utils.ExtendedDataInput;
@@ -50,6 +50,8 @@ import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.util.Progressable;
+
+import java.util.List;
 
 /**
  * The classes set here are immutable, the remaining configuration is mutable.
@@ -454,6 +456,20 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
             "createVertexValue: Illegally accessed", e);
       }
     }
+  }
+
+  /**
+   * Create array of MasterObservers.
+   *
+   * @return Instantiated array of MasterObservers.
+   */
+  public MasterObserver[] createMasterObservers() {
+    Class<? extends MasterObserver>[] klasses = getMasterObserverClasses();
+    MasterObserver[] objects = new MasterObserver[klasses.length];
+    for (int i = 0; i < klasses.length; ++i) {
+      objects[i] = ReflectionUtils.newInstance(klasses[i], this);
+    }
+    return objects;
   }
 
   /**

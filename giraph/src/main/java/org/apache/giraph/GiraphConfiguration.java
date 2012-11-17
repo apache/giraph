@@ -28,9 +28,9 @@ import org.apache.giraph.graph.VertexOutputFormat;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.graph.WorkerContext;
 import org.apache.giraph.graph.partition.GraphPartitionerFactory;
-
 import org.apache.giraph.graph.partition.Partition;
 
+import org.apache.giraph.master.MasterObserver;
 import org.apache.hadoop.conf.Configuration;
 
 /**
@@ -44,6 +44,9 @@ public class GiraphConfiguration extends Configuration {
 
   /** Class for Master - optional */
   public static final String MASTER_COMPUTE_CLASS = "giraph.masterComputeClass";
+  /** Classes for Observer Master - optional */
+  public static final String MASTER_OBSERVER_CLASSES =
+      "giraph.master.observers";
   /** Vertex combiner class - optional */
   public static final String VERTEX_COMBINER_CLASS =
       "giraph.combinerClass";
@@ -695,6 +698,82 @@ public class GiraphConfiguration extends Configuration {
   }
 
   /**
+   * Add a MasterObserver class (optional)
+   *
+   * @param masterObserverClass MasterObserver class to add.
+   */
+  public final void addMasterObserverClass(
+      Class<? extends MasterObserver> masterObserverClass) {
+    addToClasses(MASTER_OBSERVER_CLASSES, masterObserverClass,
+        MasterObserver.class);
+  }
+
+  /**
+   * Add a class to a property that is a list of classes. If the property does
+   * not exist it will be created.
+   *
+   * @param name String name of property.
+   * @param klass interface of the class being set.
+   * @param xface Class to add to the list.
+   */
+  public final void addToClasses(String name, Class<?> klass, Class<?> xface) {
+    if (!xface.isAssignableFrom(klass)) {
+      throw new RuntimeException(klass + " does not implement " +
+          xface.getName());
+    }
+    String value;
+    String klasses = get(name);
+    if (klasses == null) {
+      value = klass.getName();
+    } else {
+      value = klasses + "," + klass.getName();
+    }
+    set(name, value);
+  }
+
+  /**
+   * Set mapping from a key name to a list of classes.
+   *
+   * @param name String key name to use.
+   * @param xface interface of the classes being set.
+   * @param klasses Classes to set.
+   */
+  public final void setClasses(String name, Class<?> xface,
+                               Class<?> ... klasses) {
+    String[] klassNames = new String[klasses.length];
+    for (int i = 0; i < klasses.length; ++i) {
+      Class<?> klass = klasses[i];
+      if (!xface.isAssignableFrom(klass)) {
+        throw new RuntimeException(klass + " does not implement " +
+            xface.getName());
+      }
+      klassNames[i] = klasses[i].getName();
+    }
+    setStrings(name, klassNames);
+  }
+
+  /**
+   * Get classes from a property that all implement a given interface.
+   *
+   * @param name String name of property to fetch.
+   * @param xface interface classes must implement.
+   * @param defaultValue If not found, return this
+   * @param <T> Generic type of interface class
+   * @return array of Classes implementing interface specified.
+   */
+  public final <T> Class<? extends T>[] getClassesOfType(String name,
+      Class<T> xface, Class<? extends T> ... defaultValue) {
+    Class<?>[] klasses = getClasses(name, defaultValue);
+    for (Class<?> klass : klasses) {
+      if (!xface.isAssignableFrom(klass)) {
+        throw new RuntimeException(klass + " is not assignable from " +
+            xface.getName());
+      }
+    }
+    return (Class<? extends T>[]) klasses;
+  }
+
+  /**
    * Set the vertex output format class (optional)
    *
    * @param vertexOutputFormatClass Determines how graph is output
@@ -823,6 +902,15 @@ public class GiraphConfiguration extends Configuration {
 
   public final boolean getSplitMasterWorker() {
     return getBoolean(SPLIT_MASTER_WORKER, SPLIT_MASTER_WORKER_DEFAULT);
+  }
+
+  /**
+   * Get array of MasterObserver classes set in the configuration.
+   *
+   * @return array of MasterObserver classes.
+   */
+  public Class<? extends MasterObserver>[] getMasterObserverClasses() {
+    return getClassesOfType(MASTER_OBSERVER_CLASSES, MasterObserver.class);
   }
 
   /**

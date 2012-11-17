@@ -36,6 +36,7 @@ import org.apache.zookeeper.server.ZooKeeperServerMain;
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig;
 
 import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 
 import java.io.File;
@@ -177,6 +178,7 @@ public class InternalVertexRunner {
 
     boolean useVertexInputFormat = vertexInputFormatClass != null;
     boolean useEdgeInputFormat = edgeInputFormatClass != null;
+    boolean outputData = vertexOutputFormatClass != null;
 
     File tmpDir = null;
     try {
@@ -215,8 +217,10 @@ public class InternalVertexRunner {
       if (useEdgeInputFormat) {
         job.getConfiguration().setEdgeInputFormatClass(edgeInputFormatClass);
       }
-      job.getConfiguration().setVertexOutputFormatClass(
-          vertexOutputFormatClass);
+      if (outputData) {
+        job.getConfiguration().setVertexOutputFormatClass(
+            vertexOutputFormatClass);
+      }
       if (workerContextClass != null) {
         job.getConfiguration().setWorkerContextClass(workerContextClass);
       }
@@ -257,17 +261,7 @@ public class InternalVertexRunner {
                                      new Path(outputDir.toString()));
 
       // Configure a local zookeeper instance
-      Properties zkProperties = new Properties();
-      zkProperties.setProperty("tickTime", "2000");
-      zkProperties.setProperty("dataDir", zkDir.getAbsolutePath());
-      zkProperties.setProperty("clientPort",
-          String.valueOf(LOCAL_ZOOKEEPER_PORT));
-      zkProperties.setProperty("maxClientCnxns", "10000");
-      zkProperties.setProperty("minSessionTimeout", "10000");
-      zkProperties.setProperty("maxSessionTimeout", "100000");
-      zkProperties.setProperty("initLimit", "10");
-      zkProperties.setProperty("syncLimit", "5");
-      zkProperties.setProperty("snapCount", "50000");
+      Properties zkProperties = configLocalZooKeeper(zkDir);
 
       QuorumPeerConfig qpConfig = new QuorumPeerConfig();
       qpConfig.parseProperties(zkProperties);
@@ -295,13 +289,38 @@ public class InternalVertexRunner {
         zookeeper.end();
       }
 
-      return Files.readLines(new File(outputDir, "part-m-00000"),
-          Charsets.UTF_8);
+      if (outputData) {
+        return Files.readLines(new File(outputDir, "part-m-00000"),
+            Charsets.UTF_8);
+      } else {
+        return ImmutableList.of();
+      }
     } finally {
       FileUtils.delete(tmpDir);
     }
   }
   // CHECKSTYLE: resume ParameterNumberCheck
+
+  /**
+   * Configuration options for running local ZK.
+   *
+   * @param zkDir directory for ZK to hold files in.
+   * @return Properties configured for local ZK.
+   */
+  private static Properties configLocalZooKeeper(File zkDir) {
+    Properties zkProperties = new Properties();
+    zkProperties.setProperty("tickTime", "2000");
+    zkProperties.setProperty("dataDir", zkDir.getAbsolutePath());
+    zkProperties.setProperty("clientPort",
+        String.valueOf(LOCAL_ZOOKEEPER_PORT));
+    zkProperties.setProperty("maxClientCnxns", "10000");
+    zkProperties.setProperty("minSessionTimeout", "10000");
+    zkProperties.setProperty("maxSessionTimeout", "100000");
+    zkProperties.setProperty("initLimit", "10");
+    zkProperties.setProperty("syncLimit", "5");
+    zkProperties.setProperty("snapCount", "50000");
+    return zkProperties;
+  }
 
   /**
    * Extension of {@link ZooKeeperServerMain} that allows programmatic shutdown

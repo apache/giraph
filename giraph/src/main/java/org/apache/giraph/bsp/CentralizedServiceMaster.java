@@ -18,13 +18,13 @@
 
 package org.apache.giraph.bsp;
 
-import java.io.IOException;
-
 import org.apache.giraph.graph.MasterAggregatorHandler;
 import org.apache.giraph.graph.MasterInfo;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.zookeeper.KeeperException;
+
+import java.io.IOException;
 
 /**
  * At most, there will be one active master at a time, but many threads can
@@ -122,4 +122,14 @@ public interface CentralizedServiceMaster<I extends WritableComparable,
    * @return Master aggregator handler
    */
   MasterAggregatorHandler getAggregatorHandler();
+
+  /**
+   * Superstep has finished.
+   */
+  void postSuperstep();
+
+  /**
+   * Application has finished.
+   */
+  void postApplication();
 }

@@ -34,6 +34,7 @@ import org.apache.giraph.graph.partition.MasterGraphPartitioner;
 import org.apache.giraph.graph.partition.PartitionOwner;
 import org.apache.giraph.graph.partition.PartitionStats;
 import org.apache.giraph.graph.partition.PartitionUtils;
+import org.apache.giraph.master.MasterObserver;
 import org.apache.giraph.metrics.GiraphMetrics;
 import org.apache.giraph.metrics.MetricGroup;
 import org.apache.giraph.metrics.ResetSuperstepMetricsObserver;
@@ -152,6 +153,8 @@ public class BspServiceMaster<I extends WritableComparable,
   private List<WorkerInfo> chosenWorkerInfoList = Lists.newArrayList();
   /** Limit locality information added to each InputSplit znode */
   private final int localityLimit = 5;
+  /** Observers over master lifecycle. */
+  private final MasterObserver[] observers;
 
   // Per-Superstep Metrics
   /** MasterCompute time in msec */
@@ -191,6 +194,7 @@ public class BspServiceMaster<I extends WritableComparable,
         GiraphConfiguration.PARTITION_LONG_TAIL_MIN_PRINT_DEFAULT);
     masterGraphPartitioner =
         getGraphPartitionerFactory().createMasterGraphPartitioner();
+    observers = getConfiguration().createMasterObservers();
 
     GiraphMetrics.getInstance().addSuperstepResetObserver(this);
     GiraphStats.init(context);
@@ -734,6 +738,10 @@ public class BspServiceMaster<I extends WritableComparable,
     if (getRestartedSuperstep() != UNSET_SUPERSTEP) {
       GiraphStats.getInstance().getSuperstepCounter().
         setValue(getRestartedSuperstep());
+    }
+    for (MasterObserver observer : observers) {
+      observer.preApplication();
+      getContext().progress();
     }
   }
 
@@ -1341,6 +1349,11 @@ public class BspServiceMaster<I extends WritableComparable,
     // 5. Create superstep finished node
     // 6. If the checkpoint frequency is met, finalize the checkpoint
 
+    for (MasterObserver observer : observers) {
+      observer.preSuperstep();
+      getContext().progress();
+    }
+
     chosenWorkerInfoList = checkWorkers();
     if (chosenWorkerInfoList == null) {
       LOG.fatal("coordinateSuperstep: Not enough healthy workers for " +
@@ -1574,6 +1587,22 @@ public class BspServiceMaster<I extends WritableComparable,
     } catch (InterruptedException e) {
       LOG.error("cleanupZooKeeper: Failed to do cleanup of " +
           basePath + " due to InterruptedException", e);
+    }
+  }
+
+  @Override
+  public void postApplication() {
+    for (MasterObserver observer : observers) {
+      observer.postApplication();
+      getContext().progress();
+    }
+  }
+
+  @Override
+  public void postSuperstep() {
+    for (MasterObserver observer : observers) {
+      observer.postSuperstep();
+      getContext().progress();
     }
   }
 
