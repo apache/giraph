@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-433: Vertex#initialize() shouldn't be called with null edges (apresta)
+
   GIRAPH-416: MasterObserver for user post-application customization (nitay)
 
   GIRAPH-427: Add committer information for Nitay Joffe to pom.xml (nitay)

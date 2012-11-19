@@ -55,10 +55,8 @@ public abstract class EdgeListVertex<I extends WritableComparable,
 
   @Override
   public void setEdges(Map<I, E> edges) {
-    if (edges != null) {
-      for (Map.Entry<I, E> edge : edges.entrySet()) {
-        edgeList.add(new Edge<I, E>(edge.getKey(), edge.getValue()));
-      }
+    for (Map.Entry<I, E> edge : edges.entrySet()) {
+      edgeList.add(new Edge<I, E>(edge.getKey(), edge.getValue()));
     }
   }
 

@@ -84,12 +84,10 @@ public class VertexResolver<I extends WritableComparable, V extends Writable,
           vertex = vertexChanges.getAddedVertexList().get(0);
         }
       }
-      if (vertex == null &&
-          (hasMessages || !vertexChanges.getAddedEdgeList().isEmpty())) {
+      if (vertex == null && (hasMessages || (vertexChanges != null &&
+          !vertexChanges.getAddedEdgeList().isEmpty()))) {
         vertex = instantiateVertex();
-        vertex.initialize(vertexId,
-            getConf().createVertexValue(),
-            null);
+        vertex.initialize(vertexId, getConf().createVertexValue());
       }
     } else {
       if ((vertexChanges != null) &&
@@ -100,13 +98,12 @@ public class VertexResolver<I extends WritableComparable, V extends Writable,
       }
     }
 
-    if (vertexChanges != null &&
+    if (vertex != null && vertexChanges != null &&
         !vertexChanges.getAddedEdgeList().isEmpty()) {
       MutableVertex<I, V, E, M> mutableVertex =
           (MutableVertex<I, V, E, M>) vertex;
       for (Edge<I, E> edge : vertexChanges.getAddedEdgeList()) {
-        mutableVertex.addEdge(edge.getTargetVertexId(),
-            edge.getValue());
+        mutableVertex.addEdge(edge.getTargetVertexId(), edge.getValue());
       }
     }
 
