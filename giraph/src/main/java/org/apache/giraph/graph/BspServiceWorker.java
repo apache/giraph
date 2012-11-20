@@ -131,12 +131,6 @@ public class BspServiceWorker<I extends WritableComparable,
   /** Worker Context */
   private final WorkerContext workerContext;
 
-  /**
-   * Stores and processes the list of InputSplits advertised
-   * in a tree of child znodes by the master.
-   */
-  private InputSplitPathOrganizer splitOrganizer = null;
-
   /** Handler for aggregators */
   private final WorkerAggregatorHandler aggregatorHandler;
 

@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-434: Remove unused InputSplitPathOrganizer from BspServiceWorker (apresta via ereisman)
+
   GIRAPH-405: Edge-based input from HCatalog (apresta)
 
   GIRAPH-433: Vertex#initialize() shouldn't be called with null edges (apresta)
