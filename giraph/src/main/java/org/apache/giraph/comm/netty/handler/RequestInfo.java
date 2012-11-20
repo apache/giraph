@@ -31,7 +31,7 @@ import java.util.Date;
  */
 public class RequestInfo {
   /** Time class to use */
-  private static final Time TIME = SystemTime.getInstance();
+  private static final Time TIME = SystemTime.get();
   /** Destination of the request */
   private final InetSocketAddress destinationAddress;
   /** When the request was started */

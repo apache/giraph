@@ -914,21 +914,12 @@ public class GiraphConfiguration extends Configuration {
   }
 
   /**
-   * Should we dump metrics at the end of the job.
+   * Whether to track, print, and aggregate metrics.
    *
-   * @return true if we should dump metrics, false otherwise.
+   * @return true if metrics are enabled, false otherwise (default)
    */
-  public boolean dumpMetricsAtEnd() {
-    return getBoolean(METRICS_DUMP_AT_END, false);
-  }
-
-  /**
-   * Should we print superstep metrics at end of superstep.
-   *
-   * @return true if we should print metrics, false otherwise.
-   */
-  public boolean printSuperstepMetrics() {
-    return getBoolean(METRICS_SUPERSTEP_PRINT, false);
+  public boolean metricsEnabled() {
+    return getBoolean(METRICS_ENABLE, false);
   }
 
   /**

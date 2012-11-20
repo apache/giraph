@@ -38,16 +38,14 @@ import org.apache.giraph.graph.partition.PartitionStats;
 import org.apache.giraph.graph.partition.PartitionStore;
 import org.apache.giraph.graph.partition.WorkerGraphPartitioner;
 import org.apache.giraph.metrics.GiraphMetrics;
-import org.apache.giraph.metrics.MetricGroup;
+import org.apache.giraph.metrics.GiraphTimer;
+import org.apache.giraph.metrics.GiraphTimerContext;
 import org.apache.giraph.metrics.ResetSuperstepMetricsObserver;
 import org.apache.giraph.metrics.SuperstepMetricsRegistry;
-import org.apache.giraph.metrics.ValueGauge;
+import org.apache.giraph.metrics.WorkerSuperstepMetrics;
 import org.apache.giraph.utils.LoggerUtils;
 import org.apache.giraph.utils.MemoryUtils;
 import org.apache.giraph.utils.ProgressableUtils;
-import org.apache.giraph.utils.SystemTime;
-import org.apache.giraph.utils.Time;
-import org.apache.giraph.utils.Times;
 import org.apache.giraph.utils.WritableUtils;
 import org.apache.giraph.zk.BspEvent;
 import org.apache.giraph.zk.PredicateLock;
@@ -89,6 +87,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 /**
  * ZooKeeper-based implementation of {@link CentralizedServiceWorker}.
@@ -105,9 +104,7 @@ public class BspServiceWorker<I extends WritableComparable,
     implements CentralizedServiceWorker<I, V, E, M>,
     ResetSuperstepMetricsObserver {
   /** Name of gauge for time spent waiting on other workers */
-  public static final String GAUGE_WAITING_TIME = "waiting-ms";
-  /** Time instance to use for timing */
-  private static final Time TIME = SystemTime.getInstance();
+  public static final String TIMER_WAIT_REQUESTS = "wait-requests-us";
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(BspServiceWorker.class);
   /** My process health znode */
@@ -144,10 +141,10 @@ public class BspServiceWorker<I extends WritableComparable,
   private final WorkerAggregatorHandler aggregatorHandler;
 
   // Per-Superstep Metrics
-  /** msec spent in WorkerContext#postSuperstep */
-  private ValueGauge<Long> wcPostSuperstepMs;
-  /** msec spent waiting for other workers */
-  private ValueGauge<Long> waitMs;
+  /** Timer for WorkerContext#postSuperstep */
+  private GiraphTimer wcPostSuperstepTimer;
+  /** Time spent waiting on requests to finish */
+  private GiraphTimer waitRequestsTimer;
 
   /**
    * Constructor for setting up the worker.
@@ -191,10 +188,10 @@ public class BspServiceWorker<I extends WritableComparable,
 
   @Override
   public void newSuperstep(SuperstepMetricsRegistry superstepMetrics) {
-    waitMs = new ValueGauge<Long>(superstepMetrics, MetricGroup.NETWORK,
-        GAUGE_WAITING_TIME);
-    wcPostSuperstepMs = new ValueGauge<Long>(superstepMetrics,
-        MetricGroup.USER, "worker-context-post-superstep-ms");
+    waitRequestsTimer = new GiraphTimer(superstepMetrics,
+        TIMER_WAIT_REQUESTS, TimeUnit.MICROSECONDS);
+    wcPostSuperstepTimer = new GiraphTimer(superstepMetrics,
+        "worker-context-post-superstep", TimeUnit.MICROSECONDS);
   }
 
   @Override
@@ -712,12 +709,7 @@ else[HADOOP_NON_SECURE]*/
     //    of this worker
     // 5. Let the master know it is finished.
     // 6. Wait for the master's global stats, and check if done
-    if (LOG.isInfoEnabled()) {
-      LOG.info("finishSuperstep: Waiting on all requests, superstep " +
-          getSuperstep() + " " +
-          MemoryUtils.getRuntimeMemoryStats());
-    }
-    workerClient.waitAllRequests();
+    waitForRequestsToFinish();
 
     graphState.getGraphMapper().notifyFinishedCommunication();
 
@@ -728,9 +720,9 @@ else[HADOOP_NON_SECURE]*/
 
     if (getSuperstep() != INPUT_SUPERSTEP) {
       getWorkerContext().setGraphState(graphState);
-      long postSuperstepBeginMs = TIME.getMilliseconds();
+      GiraphTimerContext timerContext = wcPostSuperstepTimer.time();
       getWorkerContext().postSuperstep();
-      wcPostSuperstepMs.set(Times.getMsSince(TIME, postSuperstepBeginMs));
+      timerContext.stop();
       getContext().progress();
     }
 
@@ -742,22 +734,105 @@ else[HADOOP_NON_SECURE]*/
           MemoryUtils.getRuntimeMemoryStats());
     }
 
+    writeFinshedSuperstepInfoToZK(partitionStatsList, workerSentMessages);
+
+    LoggerUtils.setStatusAndLog(getContext(), LOG, Level.INFO,
+        "finishSuperstep: (waiting for rest " +
+            "of workers) " +
+            getGraphMapper().getMapFunctions().toString() +
+            " - Attempt=" + getApplicationAttempt() +
+            ", Superstep=" + getSuperstep());
+
+    String superstepFinishedNode =
+        getSuperstepFinishedPath(getApplicationAttempt(), getSuperstep());
+
+    waitForOtherWorkers(superstepFinishedNode);
+
+    GlobalStats globalStats = new GlobalStats();
+    WritableUtils.readFieldsFromZnode(
+        getZkExt(), superstepFinishedNode, false, null, globalStats);
+    if (LOG.isInfoEnabled()) {
+      LOG.info("finishSuperstep: Completed superstep " + getSuperstep() +
+          " with global stats " + globalStats);
+    }
+    incrCachedSuperstep();
+    getContext().setStatus("finishSuperstep: (all workers done) " +
+        getGraphMapper().getMapFunctions().toString() +
+        " - Attempt=" + getApplicationAttempt() +
+        ", Superstep=" + getSuperstep());
+
+    return new FinishedSuperstepStats(
+        globalStats.getHaltComputation(),
+        globalStats.getVertexCount(),
+        globalStats.getEdgeCount());
+  }
+
+  /**
+   * Wait for all the requests to finish.
+   */
+  private void waitForRequestsToFinish() {
+    if (LOG.isInfoEnabled()) {
+      LOG.info("finishSuperstep: Waiting on all requests, superstep " +
+          getSuperstep() + " " +
+          MemoryUtils.getRuntimeMemoryStats());
+    }
+    GiraphTimerContext timerContext = waitRequestsTimer.time();
+    workerClient.waitAllRequests();
+    timerContext.stop();
+  }
+
+  /**
+   * Wait for all the other Workers to finish the superstep.
+   *
+   * @param superstepFinishedNode ZooKeeper path to wait on.
+   */
+  private void waitForOtherWorkers(String superstepFinishedNode) {
+    try {
+      while (getZkExt().exists(superstepFinishedNode, true) == null) {
+        getSuperstepFinishedEvent().waitForever();
+        getSuperstepFinishedEvent().reset();
+      }
+    } catch (KeeperException e) {
+      throw new IllegalStateException(
+          "finishSuperstep: Failed while waiting for master to " +
+              "signal completion of superstep " + getSuperstep(), e);
+    } catch (InterruptedException e) {
+      throw new IllegalStateException(
+          "finishSuperstep: Failed while waiting for master to " +
+              "signal completion of superstep " + getSuperstep(), e);
+    }
+  }
+
+  /**
+   * Write finished superstep info to ZooKeeper.
+   *
+   * @param partitionStatsList List of partition stats from superstep.
+   * @param workerSentMessages Number of messages sent in superstep.
+   */
+  private void writeFinshedSuperstepInfoToZK(
+      List<PartitionStats> partitionStatsList, long workerSentMessages) {
     Collection<PartitionStats> finalizedPartitionStats =
         workerGraphPartitioner.finalizePartitionStats(
             partitionStatsList, getPartitionStore());
     List<PartitionStats> finalizedPartitionStatsList =
         new ArrayList<PartitionStats>(finalizedPartitionStats);
-    byte [] partitionStatsBytes =
+    byte[] partitionStatsBytes =
         WritableUtils.writeListToByteArray(finalizedPartitionStatsList);
+    WorkerSuperstepMetrics metrics = new WorkerSuperstepMetrics();
+    metrics.readFromRegistry();
+    byte[] metricsBytes = WritableUtils.writeToByteArray(metrics);
+
     JSONObject workerFinishedInfoObj = new JSONObject();
     try {
       workerFinishedInfoObj.put(JSONOBJ_PARTITION_STATS_KEY,
           Base64.encodeBytes(partitionStatsBytes));
-      workerFinishedInfoObj.put(JSONOBJ_NUM_MESSAGES_KEY,
-          workerSentMessages);
+      workerFinishedInfoObj.put(JSONOBJ_NUM_MESSAGES_KEY, workerSentMessages);
+      workerFinishedInfoObj.put(JSONOBJ_METRICS_KEY,
+          Base64.encodeBytes(metricsBytes));
     } catch (JSONException e) {
       throw new RuntimeException(e);
     }
+
     String finishedWorkerPath =
         getWorkerFinishedPath(getApplicationAttempt(), getSuperstep()) +
         "/" + getHostnamePartitionId();
@@ -777,52 +852,6 @@ else[HADOOP_NON_SECURE]*/
       throw new IllegalStateException("Creating " + finishedWorkerPath +
           " failed with InterruptedException", e);
     }
-
-    LoggerUtils.setStatusAndLog(getContext(), LOG, Level.INFO,
-        "finishSuperstep: (waiting for rest " +
-            "of workers) " +
-            getGraphMapper().getMapFunctions().toString() +
-            " - Attempt=" + getApplicationAttempt() +
-            ", Superstep=" + getSuperstep());
-
-    String superstepFinishedNode =
-        getSuperstepFinishedPath(getApplicationAttempt(), getSuperstep());
-
-    long waitBeginMs = TIME.getMilliseconds();
-    try {
-      while (getZkExt().exists(superstepFinishedNode, true) == null) {
-        getSuperstepFinishedEvent().waitForever();
-        getSuperstepFinishedEvent().reset();
-      }
-    } catch (KeeperException e) {
-      throw new IllegalStateException(
-          "finishSuperstep: Failed while waiting for master to " +
-              "signal completion of superstep " + getSuperstep(), e);
-    } catch (InterruptedException e) {
-      throw new IllegalStateException(
-          "finishSuperstep: Failed while waiting for master to " +
-              "signal completion of superstep " + getSuperstep(), e);
-    }
-
-    waitMs.set(Times.getMsSince(TIME, waitBeginMs));
-
-    GlobalStats globalStats = new GlobalStats();
-    WritableUtils.readFieldsFromZnode(
-        getZkExt(), superstepFinishedNode, false, null, globalStats);
-    if (LOG.isInfoEnabled()) {
-      LOG.info("finishSuperstep: Completed superstep " + getSuperstep() +
-          " with global stats " + globalStats);
-    }
-    incrCachedSuperstep();
-    getContext().setStatus("finishSuperstep: (all workers done) " +
-        getGraphMapper().getMapFunctions().toString() +
-        " - Attempt=" + getApplicationAttempt() +
-        ", Superstep=" + getSuperstep());
-
-    return new FinishedSuperstepStats(
-        globalStats.getHaltComputation(),
-        globalStats.getVertexCount(),
-        globalStats.getEdgeCount());
   }
 
   /**
@@ -901,7 +930,7 @@ else[HADOOP_NON_SECURE]*/
       LOG.error("cleanup: Zookeeper failed to close with " + e);
     }
 
-    if (getConfiguration().dumpMetricsAtEnd()) {
+    if (getConfiguration().metricsEnabled()) {
       GiraphMetrics.getInstance().dumpToStdout();
     }
 

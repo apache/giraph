@@ -19,12 +19,12 @@
 package org.apache.giraph.metrics;
 
 import org.apache.giraph.GiraphConfiguration;
-import org.apache.hadoop.conf.Configuration;
 
 import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Gauge;
 import com.yammer.metrics.core.Histogram;
 import com.yammer.metrics.core.Meter;
+import com.yammer.metrics.core.Metric;
 import com.yammer.metrics.core.MetricName;
 import com.yammer.metrics.core.MetricPredicate;
 import com.yammer.metrics.core.MetricsRegistry;
@@ -33,6 +33,7 @@ import com.yammer.metrics.reporting.ConsoleReporter;
 import com.yammer.metrics.reporting.JmxReporter;
 
 import java.io.PrintStream;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -41,6 +42,8 @@ import java.util.concurrent.TimeUnit;
 public class GiraphMetricsRegistry {
   /** String name of group to use for metrics created */
   private String groupName;
+  /** String type to use for metrics created */
+  private String type;
   /** Internal Yammer registry used */
   private final MetricsRegistry registry;
   /** JmxReporter that send metrics to JMX */
@@ -59,10 +62,13 @@ public class GiraphMetricsRegistry {
    *
    * @param conf Hadoop Configuration to use.
    * @param groupName String group to use for metrics.
+   * @param type String type to use for metrics.
    */
-  public GiraphMetricsRegistry(Configuration conf,  String groupName) {
+  public GiraphMetricsRegistry(GiraphConfiguration conf, String groupName,
+                               String type) {
     this.groupName = groupName;
-    if (conf.getBoolean(GiraphConfiguration.METRICS_ENABLE, false)) {
+    this.type = type;
+    if (conf.metricsEnabled()) {
       registry = new MetricsRegistry();
       jmxReporter = new JmxReporter(registry);
       jmxReporter.start();
@@ -73,6 +79,24 @@ public class GiraphMetricsRegistry {
   }
 
   /**
+   * Get map of all metrics.
+   *
+   * @return Map of all metrics held.
+   */
+  public Map<MetricName, Metric> getAll() {
+    return registry.allMetrics();
+  }
+
+  /**
+   * Get group name used for metrics.
+   *
+   * @return String group name.
+   */
+  public String getGroupName() {
+    return groupName;
+  }
+
+  /**
    * Set group name used by this MetricsRegistry. Used for incrementing
    * superstep number to create a new hierarchy of metrics per superstep.
    *
@@ -80,6 +104,24 @@ public class GiraphMetricsRegistry {
    */
   protected void setGroupName(String groupName) {
     this.groupName = groupName;
+  }
+
+  /**
+   * Get type used for new metrics created
+   *
+   * @return String type to use for metrics
+   */
+  public String getType() {
+    return type;
+  }
+
+  /**
+   * Set type to use for new metrics
+   *
+   * @param type String type to use
+   */
+  public void setType(String type) {
+    this.type = type;
   }
 
   /**
@@ -105,69 +147,61 @@ public class GiraphMetricsRegistry {
    * Creates a new {@link com.yammer.metrics.core.Counter} and registers it
    * under the given group and name.
    *
-   * @param group what type of metric this is
    * @param name the name of the metric
    * @return a new {@link com.yammer.metrics.core.Counter}
    */
-  public Counter getCounter(MetricGroup group, String name) {
-    return registry.newCounter(makeMetricName(group, name));
+  public Counter getCounter(String name) {
+    return registry.newCounter(makeMetricName(name));
   }
 
   /**
    * Given a new {@link com.yammer.metrics.core.Gauge}, registers it under the
    * given group and name.
    *
-   * @param group  what type of metric this is
    * @param name   the name of the metric
    * @param metric the metric
    * @param <T>    the type of the value returned by the metric
    * @return {@code metric}
    */
-  public <T> Gauge<T> getGauge(MetricGroup group, String name,
-                               Gauge<T> metric) {
-    return registry.newGauge(makeMetricName(group, name), metric);
+  public <T> Gauge<T> getGauge(String name, Gauge<T> metric) {
+    return registry.newGauge(makeMetricName(name), metric);
   }
 
   /**
    * Creates a new non-biased {@link com.yammer.metrics.core.Histogram} and
    * registers it under the given group and name.
    *
-   * @param group what type of metric this is
    * @param name  the name of the metric
    * @return a new {@link com.yammer.metrics.core.Histogram}
    */
-  public Histogram getHistogram(MetricGroup group, String name) {
-    return registry.newHistogram(makeMetricName(group, name), false);
+  public Histogram getHistogram(String name) {
+    return registry.newHistogram(makeMetricName(name), false);
   }
 
   /**
    * Creates a new {@link Histogram} and registers it under the given group
    * and name.
    *
-   * @param group what type of metric this is
    * @param name   the name of the metric
    * @param biased whether or not the histogram should be biased
    * @return a new {@link Histogram}
    */
-  public Histogram getHistogram(MetricGroup group, String name,
-                                boolean biased) {
-    return registry.newHistogram(makeMetricName(group, name), biased);
+  public Histogram getHistogram(String name, boolean biased) {
+    return registry.newHistogram(makeMetricName(name), biased);
   }
 
   /**
    * Creates a new {@link com.yammer.metrics.core.Meter} and registers it under
    * the given group and name.
    *
-   * @param group     what type of metric this is
    * @param name      the name of the metric
    * @param eventType the plural name of the type of events the meter is
    *                  measuring (e.g., {@code "requests"})
    * @param timeUnit  the rate unit of the new meter
    * @return a new {@link com.yammer.metrics.core.Meter}
    */
-  public Meter getMeter(MetricGroup group, String name, String eventType,
-                        TimeUnit timeUnit) {
-    return registry.newMeter(makeMetricName(group, name), eventType, timeUnit);
+  public Meter getMeter(String name, String eventType, TimeUnit timeUnit) {
+    return registry.newMeter(makeMetricName(name), eventType, timeUnit);
   }
 
   /**
@@ -175,38 +209,45 @@ public class GiraphMetricsRegistry {
    * the given group and name, measuring elapsed time in milliseconds and
    * invocations per second.
    *
-   * @param group what type of metric this is
    * @param name  the name of the metric
    * @return a new {@link com.yammer.metrics.core.Timer}
    */
-  public Timer getTimer(MetricGroup group, String name) {
-    return getTimer(group, name, TimeUnit.MILLISECONDS, TimeUnit.SECONDS);
+  public Timer getTimer(String name) {
+    return getTimer(name, TimeUnit.MILLISECONDS, TimeUnit.SECONDS);
   }
 
   /**
    * Creates a new {@link Timer} and registers it under the given
    * group and name.
    *
-   * @param group what type of metric this is
    * @param name         the name of the metric
    * @param durationUnit the duration scale unit of the new timer
    * @param rateUnit     the rate scale unit of the new timer
    * @return a new {@link Timer}
    */
-  public Timer getTimer(MetricGroup group, String name,
-                        TimeUnit durationUnit, TimeUnit rateUnit) {
-    return registry.newTimer(makeMetricName(group, name),
-                             durationUnit, rateUnit);
+  public Timer getTimer(String name, TimeUnit durationUnit, TimeUnit rateUnit) {
+    return registry.newTimer(makeMetricName(name), durationUnit, rateUnit);
+  }
+
+  /**
+   * Get a Gauge that is already present in the MetricsRegistry
+   *
+   * @param name String name of Gauge
+   * @param <T> value type Gauge returns
+   * @return Gauge<T> from MetricsRegistry
+   */
+  public <T> Gauge<T> getExistingGauge(String name) {
+    Metric metric = registry.allMetrics().get(makeMetricName(name));
+    return metric instanceof Gauge ? (Gauge<T>) metric : null;
   }
 
   /**
    * Create a MetricName using the job ID, group, and name.
    *
-   * @param group what type of metric this is
    * @param name String name given to metric
    * @return MetricName for use with MetricsRegistry
    */
-  protected MetricName makeMetricName(MetricGroup group, String name) {
-    return new MetricName(groupName, group.toString().toLowerCase(), name);
+  protected MetricName makeMetricName(String name) {
+    return new MetricName(groupName, type, name);
   }
 }

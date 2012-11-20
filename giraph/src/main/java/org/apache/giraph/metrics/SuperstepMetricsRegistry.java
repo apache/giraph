@@ -18,15 +18,8 @@
 
 package org.apache.giraph.metrics;
 
+import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.graph.BspService;
-import org.apache.giraph.graph.BspServiceWorker;
-import org.apache.giraph.graph.ComputeCallable;
-import org.apache.giraph.graph.GraphMapper;
-import org.apache.hadoop.conf.Configuration;
-
-import com.yammer.metrics.core.Gauge;
-import com.yammer.metrics.core.Metric;
-import com.yammer.metrics.core.Timer;
 
 import java.io.PrintStream;
 
@@ -50,8 +43,8 @@ public class SuperstepMetricsRegistry extends GiraphMetricsRegistry {
    * @param conf Hadoop Configuration to use.
    * @param superstep number of superstep to use as group for metrics.
    */
-  public SuperstepMetricsRegistry(Configuration conf, long superstep) {
-    super(conf, makeSuperstepGroupName(superstep));
+  public SuperstepMetricsRegistry(GiraphConfiguration conf, long superstep) {
+    super(conf, "giraph.superstep", String.valueOf(superstep));
     this.superstep = superstep;
   }
 
@@ -61,18 +54,8 @@ public class SuperstepMetricsRegistry extends GiraphMetricsRegistry {
    * @param superstep long number of superstep to use.
    */
   public void setSuperstep(long superstep) {
-    super.setGroupName(makeSuperstepGroupName(superstep));
+    super.setType(String.valueOf(superstep));
     this.superstep = superstep;
-  }
-
-  /**
-   * Create group name to use for superstep.
-   *
-   * @param superstep long value of superstep to use.
-   * @return String group for superstep to use for metrics created.
-   */
-  private static String makeSuperstepGroupName(long superstep) {
-    return "giraph.superstep." + superstep;
   }
 
   /**
@@ -81,28 +64,7 @@ public class SuperstepMetricsRegistry extends GiraphMetricsRegistry {
    * @param out PrintStream to write to.
    */
   public void printSummary(PrintStream out) {
-    Long commTime = getGaugeValue(MetricGroup.NETWORK,
-        GraphMapper.GAUGE_COMMUNICATION_TIME);
-    Long computeAllTime = getGaugeValue(MetricGroup.COMPUTE,
-        GraphMapper.GAUGE_COMPUTE_ALL);
-    Long timeToFirstMsg = getGaugeValue(MetricGroup.NETWORK,
-        GraphMapper.GAUGE_TIME_TO_FIRST_MSG);
-    Long superstepTime = getGaugeValue(MetricGroup.COMPUTE,
-        GraphMapper.GAUGE_SUPERSTEP_TIME);
-    Long waitingMs = getGaugeValue(MetricGroup.NETWORK,
-        BspServiceWorker.GAUGE_WAITING_TIME);
-    Timer computeOne = getTimer(MetricGroup.COMPUTE,
-        ComputeCallable.TIMER_COMPUTE_ONE);
-    double userComputeTime = computeOne.mean() * computeOne.count();
-
-    out.println("");
-    out.println("Superstep " + superstep + ":");
-    out.println("  superstep time: " + superstepTime + " ms");
-    out.println("  time to first message: " + timeToFirstMsg + " ms");
-    out.println("  compute time: " + computeAllTime + " ms");
-    out.println("  user compute time: " + userComputeTime + " ms");
-    out.println("  network communication time: " + commTime + " ms");
-    out.println("  waiting time: " + waitingMs + " ms");
+    new WorkerSuperstepMetrics().readFromRegistry().print(superstep, out);
   }
 
   /**
@@ -110,32 +72,5 @@ public class SuperstepMetricsRegistry extends GiraphMetricsRegistry {
    */
   public void printSummary() {
     printSummary(System.out);
-  }
-
-  /**
-   * Get a Gauge that is already present in the MetricsRegistry
-   *
-   * @param group MetricGroup Gauge belongs to
-   * @param name String name of Gauge
-   * @param <T> value type Gauge returns
-   * @return Gauge<T> from MetricsRegistry
-   */
-  private <T> Gauge<T> getExistingGauge(MetricGroup group, String name) {
-    Metric metric = getInternalRegistry().allMetrics().
-        get(makeMetricName(group, name));
-    return metric instanceof Gauge ? (Gauge<T>) metric : null;
-  }
-
-  /**
-   * Get value of Gauge that is already present in the MetricsRegistry
-   *
-   * @param group MetricGroup Gauge belongs to
-   * @param name String name of Gauge
-   * @param <T> value type Gauge returns
-   * @return T value of Gauge<T> from MetricsRegistry
-   */
-  private <T> T getGaugeValue(MetricGroup group, String name) {
-    Gauge<T> gauge = getExistingGauge(group, name);
-    return gauge == null ? null : gauge.value();
   }
 }

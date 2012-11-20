@@ -41,7 +41,7 @@ public class RequestDecoder extends OneToOneDecoder {
   private static final Logger LOG =
       Logger.getLogger(RequestDecoder.class);
   /** Time class to use */
-  private static final Time TIME = SystemTime.getInstance();
+  private static final Time TIME = SystemTime.get();
   /** Configuration */
   private final ImmutableClassesGiraphConfiguration conf;
   /** Byte counter to output */

@@ -19,7 +19,6 @@
 package org.apache.giraph.comm.netty;
 
 import org.apache.giraph.metrics.GiraphMetrics;
-import org.apache.giraph.metrics.MetricGroup;
 import org.apache.giraph.metrics.ResetSuperstepMetricsObserver;
 import org.apache.giraph.metrics.SuperstepMetricsRegistry;
 import org.apache.giraph.utils.SystemTime;
@@ -55,7 +54,7 @@ public class ByteCounter extends SimpleChannelHandler implements
   private static final Logger LOG =
       Logger.getLogger(ByteCounter.class);
   /** Class timer */
-  private static final Time TIME = SystemTime.getInstance();
+  private static final Time TIME = SystemTime.get();
   /** All bytes ever sent */
   private final AtomicLong bytesSent = new AtomicLong();
   /** Total sent requests */
@@ -87,14 +86,12 @@ public class ByteCounter extends SimpleChannelHandler implements
 
   @Override
   public void newSuperstep(SuperstepMetricsRegistry superstepMetrics) {
-    sentRequestsMeter = superstepMetrics.getMeter(MetricGroup.NETWORK,
-        "sent-requests", "requests", TimeUnit.SECONDS);
-    sentBytesHist = superstepMetrics.getHistogram(MetricGroup.NETWORK,
-        "sent-bytes", false);
-    receivedRequestsMeter = superstepMetrics.getMeter(MetricGroup.NETWORK,
-        "received-requests", "request", TimeUnit.SECONDS);
-    receivedBytesHist = superstepMetrics.getHistogram(MetricGroup.NETWORK,
-        "received-bytes", false);
+    sentRequestsMeter = superstepMetrics.getMeter("sent-requests", "requests",
+        TimeUnit.SECONDS);
+    sentBytesHist = superstepMetrics.getHistogram("sent-bytes", false);
+    receivedRequestsMeter = superstepMetrics.getMeter("received-requests",
+        "request", TimeUnit.SECONDS);
+    receivedBytesHist = superstepMetrics.getHistogram("received-bytes", false);
   }
 
   @Override

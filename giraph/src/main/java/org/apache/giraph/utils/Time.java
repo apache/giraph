@@ -53,13 +53,20 @@ public interface Time {
   long MS_PER_DAY = SECONDS_PER_DAY * MS_PER_SECOND;
 
   /**
-   *
    * Get the current milliseconds
    *
    * @return The difference, measured in milliseconds, between
    *         the current time and midnight, January 1, 1970 UTC.
    */
   long getMilliseconds();
+
+  /**
+   * Get the current microseconds
+   *
+   * @return The difference, measured in microseconds, between
+   *         the current time and midnight, January 1, 1970 UTC.
+   */
+  long getMicroseconds();
 
   /**
    * Get the current nanoseconds

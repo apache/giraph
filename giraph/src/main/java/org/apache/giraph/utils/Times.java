@@ -18,12 +18,38 @@
 
 package org.apache.giraph.utils;
 
+import java.util.concurrent.TimeUnit;
+
 /**
  * Utility methods for Time classes.
  */
 public class Times {
   /** Do not instantiate */
   private Times() { }
+
+  /**
+   * Convenience method to measure time in a given TimeUnit.
+   *
+   * @param time Time instance to use
+   * @param timeUnit TimeUnit to measure in
+   * @return long measured time in TimeUnit dimension
+   */
+  public static long get(Time time, TimeUnit timeUnit) {
+    return timeUnit.convert(time.getNanoseconds(), TimeUnit.NANOSECONDS);
+  }
+
+  /**
+   * Convenience method to get time since the beginning of an event in a given
+   * TimeUnit.
+   *
+   * @param time Time object used for measuring.
+   * @param timeUnit TimeUnit to use for dimension.
+   * @param startTime beginning time to diff against
+   * @return time elapsed since startTime in TimeUnit dimension.
+   */
+  public static long getDiff(Time time, TimeUnit timeUnit, long startTime) {
+    return get(time, timeUnit) - startTime;
+  }
 
   /**
    * Convenience method to get milliseconds since a previous milliseconds
@@ -48,6 +74,17 @@ public class Times {
    */
   public static long getMsSince(Time time, long previousMs) {
     return getMillisecondsSince(time, previousMs);
+  }
+
+  /**
+   * Convenience method to get microseconds since a previous microseconds point.
+   *
+   * @param time Time instance to use
+   * @param previousMicros Previous microseconds
+   * @return Microseconds elapsed since the previous microseconds
+   */
+  public static long getMicrosSince(Time time, long previousMicros) {
+    return time.getMicroseconds() - previousMicros;
   }
 
   /**

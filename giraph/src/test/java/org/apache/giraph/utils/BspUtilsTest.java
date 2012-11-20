@@ -46,7 +46,7 @@ import static org.junit.Assert.assertEquals;
 public class BspUtilsTest {
   @Rule
   public TestName name = new TestName();
-  private static final Time TIME = SystemTime.getInstance();
+  private static final Time TIME = SystemTime.get();
   private static final long COUNT = 200000;
   private Configuration conf = new Configuration();
   private long startNanos = -1;

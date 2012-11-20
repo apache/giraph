@@ -27,23 +27,21 @@ import com.yammer.metrics.core.Gauge;
  */
 public class ValueGauge<T extends Number> extends Gauge<T> {
   /** value held by this class */
-  private T value;
+  private T val;
 
   /**
    * Constructor that registers Gauge in MetricsRegistry.
    *
    * @param registry GiraphMetricsRegistry to use.
-   * @param group MetricGroup for Gauge.
    * @param name String name of Gauge.
    */
-  public ValueGauge(GiraphMetricsRegistry registry, MetricGroup group,
-                    String name) {
-    registry.getGauge(group, name, this);
+  public ValueGauge(GiraphMetricsRegistry registry, String name) {
+    registry.getGauge(name, this);
   }
 
   @Override
   public T value() {
-    return value;
+    return val;
   }
 
   /**
@@ -52,7 +50,7 @@ public class ValueGauge<T extends Number> extends Gauge<T> {
    * @return double value
    */
   public double getDouble() {
-    return value.doubleValue();
+    return val != null ? val.doubleValue() : 0.0d;
   }
 
   /**
@@ -61,15 +59,17 @@ public class ValueGauge<T extends Number> extends Gauge<T> {
    * @return long value
    */
   public long getLong() {
-    return value.longValue();
+    return val != null ? val.longValue() : 0L;
   }
 
   /**
    * Set value held by this object.
    *
    * @param value value to set.
+   * @return this
    */
-  public void set(T value) {
-    this.value = value;
+  public ValueGauge<T> set(T value) {
+    this.val = value;
+    return this;
   }
 }

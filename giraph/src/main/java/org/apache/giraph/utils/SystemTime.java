@@ -36,6 +36,11 @@ public class SystemTime implements Time {
   }
 
   @Override
+  public long getMicroseconds() {
+    return getNanoseconds() / NS_PER_US;
+  }
+
+  @Override
   public long getNanoseconds() {
     return System.nanoTime();
   }
@@ -60,7 +65,7 @@ public class SystemTime implements Time {
    *
    * @return Instance of this object
    */
-  public static Time getInstance() {
+  public static Time get() {
     return SINGLE_TIME;
   }
 }

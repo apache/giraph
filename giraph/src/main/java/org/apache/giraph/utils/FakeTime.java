@@ -35,6 +35,11 @@ public class FakeTime implements Time {
   }
 
   @Override
+  public long getMicroseconds() {
+    return nanosecondsSinceEpoch.get() / NS_PER_US;
+  }
+
+  @Override
   public long getNanoseconds() {
     return nanosecondsSinceEpoch.get();
   }

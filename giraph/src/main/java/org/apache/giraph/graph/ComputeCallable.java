@@ -28,7 +28,6 @@ import org.apache.giraph.comm.netty.NettyWorkerClientRequestProcessor;
 import org.apache.giraph.graph.partition.Partition;
 import org.apache.giraph.graph.partition.PartitionStats;
 import org.apache.giraph.metrics.GiraphMetrics;
-import org.apache.giraph.metrics.MetricGroup;
 import org.apache.giraph.utils.SystemTime;
 import org.apache.giraph.utils.Time;
 import org.apache.giraph.utils.Times;
@@ -65,7 +64,7 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
   /** Class logger */
   private static final Logger LOG  = Logger.getLogger(ComputeCallable.class);
   /** Class time object */
-  private static final Time TIME = SystemTime.getInstance();
+  private static final Time TIME = SystemTime.get();
   /** Context */
   private final Mapper<?, ?, ?, ?>.Context context;
   /** Graph state (note that it is recreated in call() for locality) */
@@ -117,8 +116,7 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
     GiraphMetrics metrics = GiraphMetrics.getInstance();
     // Normally we would use ResetSuperstepMetricsObserver but this class is
     // not long-lived, so just instantiating in the constructor is good enough.
-    computeOneTimer = metrics.perSuperstep().getTimer(MetricGroup.COMPUTE,
-        TIMER_COMPUTE_ONE);
+    computeOneTimer = metrics.perSuperstep().getTimer(TIMER_COMPUTE_ONE);
   }
 
   @Override

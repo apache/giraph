@@ -140,6 +140,9 @@ public abstract class BspService<I extends WritableComparable,
       "_partitionStatsKey";
   /** JSON message count key */
   public static final String JSONOBJ_NUM_MESSAGES_KEY = "_numMsgsKey";
+  /** JSON metrics key */
+  public static final String JSONOBJ_METRICS_KEY = "_metricsKey";
+
   /** JSON state key */
   public static final String JSONOBJ_STATE_KEY = "_stateKey";
   /** JSON application attempt key */

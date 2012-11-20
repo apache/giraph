@@ -56,7 +56,7 @@ public class PredicateLock implements BspEvent {
    * @param progressable used to report progress() (usually a Mapper.Context)
    */
   public PredicateLock(Progressable progressable) {
-    this(progressable, DEFAULT_MSEC_PERIOD, SystemTime.getInstance());
+    this(progressable, DEFAULT_MSEC_PERIOD, SystemTime.get());
   }
 
   /**

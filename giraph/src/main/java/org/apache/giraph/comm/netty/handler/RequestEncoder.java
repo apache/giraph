@@ -35,7 +35,7 @@ import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
  */
 public class RequestEncoder extends OneToOneEncoder {
   /** Time class to use */
-  private static final Time TIME = SystemTime.getInstance();
+  private static final Time TIME = SystemTime.get();
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(RequestEncoder.class);
   /** Holds the place of the message length until known */

@@ -44,7 +44,7 @@ public abstract class RequestServerHandler<R> extends
   /** Number of bytes in the encoded response */
   public static final int RESPONSE_BYTES = 13;
   /** Time class to use */
-  private static Time TIME = SystemTime.getInstance();
+  private static Time TIME = SystemTime.get();
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(RequestServerHandler.class);

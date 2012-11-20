@@ -17,9 +17,8 @@
  */
 package org.apache.giraph.metrics;
 
+import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.graph.BspService;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapreduce.Mapper;
 
 import com.google.common.collect.Lists;
 
@@ -54,11 +53,10 @@ public class GiraphMetrics {
   /**
    * Initialize GiraphMetrics with Hadoop Context
    *
-   * @param context Hadoop Context to use.
+   * @param conf GiraphConfiguration to use.
    */
-  private GiraphMetrics(Mapper.Context context) {
-    Configuration conf = context.getConfiguration();
-    perJob = new GiraphMetricsRegistry(conf, "giraph.job");
+  private GiraphMetrics(GiraphConfiguration conf) {
+    perJob = new GiraphMetricsRegistry(conf, "giraph", "job");
     perSuperstep = new SuperstepMetricsRegistry(conf,
         BspService.INPUT_SUPERSTEP);
   }
@@ -75,10 +73,10 @@ public class GiraphMetrics {
   /**
    * Initialize singleton instance of GiraphMetrics.
    *
-   * @param context Hadoop Context to use.
+   * @param conf GiraphConfiguration to use.
    */
-  public static void init(Mapper.Context context) {
-    INSTANCE = new GiraphMetrics(context);
+  public static void init(GiraphConfiguration conf) {
+    INSTANCE = new GiraphMetrics(conf);
   }
 
   /**

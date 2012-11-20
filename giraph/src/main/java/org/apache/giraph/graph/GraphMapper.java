@@ -27,16 +27,15 @@ import org.apache.giraph.graph.partition.PartitionOwner;
 import org.apache.giraph.graph.partition.PartitionStats;
 import org.apache.giraph.metrics.GiraphMetrics;
 import org.apache.giraph.metrics.GiraphMetricsRegistry;
-import org.apache.giraph.metrics.MetricGroup;
+import org.apache.giraph.metrics.GiraphTimer;
+import org.apache.giraph.metrics.GiraphTimerContext;
 import org.apache.giraph.metrics.ResetSuperstepMetricsObserver;
 import org.apache.giraph.metrics.SuperstepMetricsRegistry;
-import org.apache.giraph.metrics.ValueGauge;
 import org.apache.giraph.utils.MemoryUtils;
 import org.apache.giraph.utils.ProgressableUtils;
 import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.giraph.utils.SystemTime;
 import org.apache.giraph.utils.Time;
-import org.apache.giraph.utils.Times;
 import org.apache.giraph.zk.ZooKeeperManager;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.filecache.DistributedCache;
@@ -44,6 +43,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.util.Progressable;
 import org.apache.log4j.Appender;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -65,6 +65,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 /**
  * This mapper that will execute the BSP graph tasks.  Since this mapper will
@@ -86,17 +87,17 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
   }
 
   /** Name of metric for superstep time in msec */
-  public static final String GAUGE_SUPERSTEP_TIME = "superstep-time-ms";
+  public static final String TIMER_SUPERSTEP_TIME = "superstep-time-ms";
   /** Name of metric for compute on all vertices in msec */
-  public static final String GAUGE_COMPUTE_ALL = "compute-all-ms";
+  public static final String TIMER_COMPUTE_ALL = "compute-all-ms";
   /** Name of metric for time from begin compute to first message sent */
-  public static final String GAUGE_TIME_TO_FIRST_MSG =
+  public static final String TIMER_TIME_TO_FIRST_MSG =
       "time-to-first-message-ms";
   /** Name of metric for time from first message till last message flushed */
-  public static final String GAUGE_COMMUNICATION_TIME = "communication-time-ms";
+  public static final String TIMER_COMMUNICATION_TIME = "communication-time-ms";
 
   /** Time instance used for timing in this class */
-  private static final Time TIME = SystemTime.getInstance();
+  private static final Time TIME = SystemTime.get();
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(GraphMapper.class);
   /** Coordination service worker */
@@ -122,25 +123,25 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
 
   // Per-Job Metrics
   /** Timer for WorkerContext#preApplication() */
-  private ValueGauge<Long> wcPreAppMs;
-  /** Timer in msec for WorkerContext#postApplication() */
-  private ValueGauge<Long> wcPostAppMs;
+  private GiraphTimer wcPreAppTimer;
+  /** Timer for WorkerContext#postApplication() */
+  private GiraphTimer wcPostAppTimer;
 
   // Per-Superstep Metrics
-  /** Time in msec for how long superstep took */
-  private ValueGauge<Long> superstepMs;
-  /** Time in msec for all compute() calls in a superstep */
-  private ValueGauge<Long> computeAllMs;
-  /** Time in msec when computation started */
-  private long computeAllBeginMs;
-  /** Milliseconds from starting compute to sending first message */
-  private ValueGauge<Long> msecToFirstMessage;
-  /** Time in msec first message sent was at */
-  private long firstMessageTimeMs;
+  /** Time for how long superstep took */
+  private GiraphTimer superstepTimer;
+  /** Time for all compute() calls in a superstep */
+  private GiraphTimer computeAll;
+  /** Time from starting compute to sending first message */
+  private GiraphTimer timeToFirstMessage;
+  /** Context for timing time to first message above */
+  private GiraphTimerContext timeToFirstMessageTimerContext;
   /** Time from first sent message till last message flushed. */
-  private ValueGauge<Long> communicationTimer;
-  /** Timer in msec for WorkerContext#preSuperstep() */
-  private ValueGauge<Long> wcPreSuperstepMs;
+  private GiraphTimer communicationTimer;
+  /** Context for timing communication time above */
+  private GiraphTimerContext communicationTimerContext;
+  /** Timer for WorkerContext#preSuperstep() */
+  private GiraphTimer wcPreSuperstepTimer;
 
   /** What kinds of functions to run on this mapper */
   public enum MapFunctions {
@@ -341,7 +342,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
     }
 
     // Set up GiraphMetrics
-    GiraphMetrics.init(context);
+    GiraphMetrics.init(conf);
     GiraphMetrics.getInstance().addSuperstepResetObserver(this);
     initJobMetrics();
     MemoryUtils.initMetrics();
@@ -452,24 +453,24 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
    */
   private void initJobMetrics() {
     GiraphMetricsRegistry jobMetrics = GiraphMetrics.getInstance().perJob();
-    wcPreAppMs = new ValueGauge<Long>(jobMetrics, MetricGroup.USER,
-        "worker-context-pre-app-ms");
-    wcPostAppMs = new ValueGauge<Long>(jobMetrics, MetricGroup.USER,
-        "worker-context-post-app-ms");
+    wcPreAppTimer = new GiraphTimer(jobMetrics, "worker-context-pre-app",
+        TimeUnit.MILLISECONDS);
+    wcPostAppTimer = new GiraphTimer(jobMetrics, "worker-context-post-app",
+        TimeUnit.MILLISECONDS);
   }
 
   @Override
   public void newSuperstep(SuperstepMetricsRegistry superstepMetrics) {
-    superstepMs = new ValueGauge<Long>(superstepMetrics, MetricGroup.COMPUTE,
-        GAUGE_SUPERSTEP_TIME);
-    computeAllMs = new ValueGauge<Long>(superstepMetrics, MetricGroup.COMPUTE,
-        GAUGE_COMPUTE_ALL);
-    msecToFirstMessage = new ValueGauge<Long>(superstepMetrics,
-        MetricGroup.NETWORK, GAUGE_TIME_TO_FIRST_MSG);
-    communicationTimer = new ValueGauge<Long>(superstepMetrics,
-        MetricGroup.NETWORK, GAUGE_COMMUNICATION_TIME);
-    wcPreSuperstepMs = new ValueGauge<Long>(superstepMetrics,
-        MetricGroup.USER, "worker-context-pre-superstep-ms");
+    superstepTimer = new GiraphTimer(superstepMetrics,
+        TIMER_SUPERSTEP_TIME, TimeUnit.MILLISECONDS);
+    computeAll = new GiraphTimer(superstepMetrics,
+        TIMER_COMPUTE_ALL, TimeUnit.MILLISECONDS);
+    timeToFirstMessage = new GiraphTimer(superstepMetrics,
+        TIMER_TIME_TO_FIRST_MSG, TimeUnit.MICROSECONDS);
+    communicationTimer = new GiraphTimer(superstepMetrics,
+        TIMER_COMMUNICATION_TIME, TimeUnit.MILLISECONDS);
+    wcPreSuperstepTimer = new GiraphTimer(superstepMetrics,
+        "worker-context-pre-superstep", TimeUnit.MILLISECONDS);
   }
 
   /**
@@ -477,13 +478,14 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
    */
   public void notifySentMessages() {
     // We are tracking the time between when the compute started and the first
-    // message get sent. We use zero to flag that we have already recorded it.
-    long tmp = firstMessageTimeMs;
-    if (tmp == 0) {
-      synchronized (msecToFirstMessage) {
-        if (firstMessageTimeMs == 0) {
-          firstMessageTimeMs = TIME.getMilliseconds();
-          msecToFirstMessage.set(firstMessageTimeMs - computeAllBeginMs);
+    // message get sent. We use null to flag that we have already recorded it.
+    GiraphTimerContext tmp = timeToFirstMessageTimerContext;
+    if (tmp != null) {
+      synchronized (timeToFirstMessage) {
+        if (timeToFirstMessageTimerContext != null) {
+          timeToFirstMessageTimerContext.stop();
+          timeToFirstMessageTimerContext = null;
+          communicationTimerContext = communicationTimer.time();
         }
       }
     }
@@ -494,10 +496,14 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
    * and are done waiting for all messages to send.
    */
   public void notifyFinishedCommunication() {
-    if (firstMessageTimeMs != 0) {
-      long commTimeMs = Times.getMsSince(TIME, firstMessageTimeMs);
-      communicationTimer.set(commTimeMs);
-      firstMessageTimeMs = 0;
+    GiraphTimerContext tmp = communicationTimerContext;
+    if (tmp != null) {
+      synchronized (communicationTimer) {
+        if (communicationTimerContext != null) {
+          communicationTimerContext.stop();
+          communicationTimerContext = null;
+        }
+      }
     }
   }
 
@@ -546,20 +552,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
         new GraphState<I, V, E, M>(serviceWorker.getSuperstep(),
             numVertices, numEdges, context, this, null, aggregatorUsage));
 
-    long preAppBeginMs = TIME.getMilliseconds();
-    try {
-      serviceWorker.getWorkerContext().preApplication();
-    } catch (InstantiationException e) {
-      LOG.fatal("map: preApplication failed in instantiation", e);
-      throw new RuntimeException(
-          "map: preApplication failed in instantiation", e);
-    } catch (IllegalAccessException e) {
-      LOG.fatal("map: preApplication failed in access", e);
-      throw new RuntimeException(
-          "map: preApplication failed in access", e);
-    }
-    wcPreAppMs.set(Times.getMsSince(TIME, preAppBeginMs));
-    context.progress();
+    workerContextPreApp(context);
 
     List<PartitionStats> partitionStatsList =
         new ArrayList<PartitionStats>();
@@ -570,7 +563,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
       final long superstep = serviceWorker.getSuperstep();
       GiraphMetrics.getInstance().resetSuperstepMetrics(superstep);
 
-      long superstepBeginMs = TIME.getMilliseconds();
+      GiraphTimerContext superstepTimerContext = superstepTimer.time();
 
       GraphState<I, V, E, M> graphState =
           new GraphState<I, V, E, M>(superstep, numVertices, numEdges,
@@ -607,9 +600,9 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
       serviceWorker.prepareSuperstep();
 
       serviceWorker.getWorkerContext().setGraphState(graphState);
-      long preSuperstepBeginMs = TIME.getMilliseconds();
+      GiraphTimerContext perSuperstepTimer = wcPreSuperstepTimer.time();
       serviceWorker.getWorkerContext().preSuperstep();
-      wcPreSuperstepMs.set(Times.getMsSince(TIME, preSuperstepBeginMs));
+      perSuperstepTimer.stop();
       context.progress();
 
       MessageStoreByPartition<I, M> messageStore =
@@ -633,7 +626,8 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
           computePartitionIdQueue.add(partitionId);
         }
 
-        computeAllBeginMs = TIME.getMilliseconds();
+        GiraphTimerContext computeAllTimerContext = computeAll.time();
+        timeToFirstMessageTimerContext = timeToFirstMessage.time();
 
         ExecutorService partitionExecutor =
             Executors.newFixedThreadPool(numThreads,
@@ -659,7 +653,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
         }
         partitionExecutor.shutdown();
 
-        computeAllMs.set(Times.getMsSince(TIME, computeAllBeginMs));
+        computeAllTimerContext.stop();
       }
 
       finishedSuperstepStats =
@@ -667,8 +661,8 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
       numVertices = finishedSuperstepStats.getVertexCount();
       numEdges = finishedSuperstepStats.getEdgeCount();
 
-      superstepMs.set(Times.getMsSince(TIME, superstepBeginMs));
-      if (conf.printSuperstepMetrics()) {
+      superstepTimerContext.stop();
+      if (conf.metricsEnabled()) {
         GiraphMetrics.getInstance().perSuperstep().printSummary();
       }
 
@@ -680,10 +674,32 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
     serviceWorker.getWorkerContext().setGraphState(
         new GraphState<I, V, E, M>(serviceWorker.getSuperstep(),
             numVertices, numEdges, context, this, null, aggregatorUsage));
-    long postAppBeginMs = TIME.getMilliseconds();
+    GiraphTimerContext postAppTimerContext = wcPostAppTimer.time();
     serviceWorker.getWorkerContext().postApplication();
-    wcPostAppMs.set(Times.getMsSince(TIME, postAppBeginMs));
+    postAppTimerContext.stop();
     context.progress();
+  }
+
+  /**
+   * Call to the WorkerContext before application begins.
+   *
+   * @param progressable thing to call progress on.
+   */
+  private void workerContextPreApp(Progressable progressable) {
+    GiraphTimerContext preAppTimerContext = wcPreAppTimer.time();
+    try {
+      serviceWorker.getWorkerContext().preApplication();
+    } catch (InstantiationException e) {
+      LOG.fatal("map: preApplication failed in instantiation", e);
+      throw new RuntimeException(
+          "map: preApplication failed in instantiation", e);
+    } catch (IllegalAccessException e) {
+      LOG.fatal("map: preApplication failed in access", e);
+      throw new RuntimeException(
+          "map: preApplication failed in access", e);
+    }
+    preAppTimerContext.stop();
+    progressable.progress();
   }
 
   @Override

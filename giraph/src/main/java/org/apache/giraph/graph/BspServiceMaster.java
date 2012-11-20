@@ -18,6 +18,7 @@
 
 package org.apache.giraph.graph;
 
+import org.apache.commons.io.FilenameUtils;
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.ApplicationState;
@@ -35,15 +36,16 @@ import org.apache.giraph.graph.partition.PartitionOwner;
 import org.apache.giraph.graph.partition.PartitionStats;
 import org.apache.giraph.graph.partition.PartitionUtils;
 import org.apache.giraph.master.MasterObserver;
+import org.apache.giraph.metrics.AggregatedMetrics;
 import org.apache.giraph.metrics.GiraphMetrics;
-import org.apache.giraph.metrics.MetricGroup;
+import org.apache.giraph.metrics.GiraphTimer;
+import org.apache.giraph.metrics.GiraphTimerContext;
 import org.apache.giraph.metrics.ResetSuperstepMetricsObserver;
 import org.apache.giraph.metrics.SuperstepMetricsRegistry;
-import org.apache.giraph.metrics.ValueGauge;
+import org.apache.giraph.metrics.WorkerSuperstepMetrics;
 import org.apache.giraph.utils.ProgressableUtils;
 import org.apache.giraph.utils.SystemTime;
 import org.apache.giraph.utils.Time;
-import org.apache.giraph.utils.Times;
 import org.apache.giraph.utils.WritableUtils;
 import org.apache.giraph.zk.BspEvent;
 import org.apache.giraph.zk.PredicateLock;
@@ -88,6 +90,7 @@ import java.util.TreeSet;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * ZooKeeper-based implementation of {@link CentralizedServiceMaster}.
@@ -111,7 +114,7 @@ public class BspServiceMaster<I extends WritableComparable,
   /** Default number of threads to use when writing input splits to zookeeper */
   public static final int DEFAULT_INPUT_SPLIT_THREAD_COUNT = 1;
   /** Time instance to use for timing */
-  private static final Time TIME = SystemTime.getInstance();
+  private static final Time TIME = SystemTime.get();
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(BspServiceMaster.class);
   /** Am I the master? */
@@ -157,8 +160,8 @@ public class BspServiceMaster<I extends WritableComparable,
   private final MasterObserver[] observers;
 
   // Per-Superstep Metrics
-  /** MasterCompute time in msec */
-  private ValueGauge<Long> masterComputeMs;
+  /** MasterCompute time */
+  private GiraphTimer masterComputeTimer;
 
   /**
    * Constructor for setting up the master.
@@ -202,8 +205,8 @@ public class BspServiceMaster<I extends WritableComparable,
 
   @Override
   public void newSuperstep(SuperstepMetricsRegistry superstepMetrics) {
-    masterComputeMs = new ValueGauge<Long>(superstepMetrics, MetricGroup.USER,
-        "master-compute-call");
+    masterComputeTimer = new GiraphTimer(superstepMetrics,
+        "master-compute-call", TimeUnit.MILLISECONDS);
   }
 
   @Override
@@ -835,6 +838,8 @@ public class BspServiceMaster<I extends WritableComparable,
    * @return Global statistics aggregated on all worker statistics
    */
   private GlobalStats aggregateWorkerStats(long superstep) {
+    ImmutableClassesGiraphConfiguration conf = getConfiguration();
+
     Class<? extends PartitionStats> partitionStatsClass =
         masterGraphPartitioner.createPartitionStats().getClass();
     GlobalStats globalStats = new GlobalStats();
@@ -854,8 +859,11 @@ public class BspServiceMaster<I extends WritableComparable,
           "aggregateWorkerStats: InterruptedException", e);
     }
 
+    AggregatedMetrics aggregatedMetrics = new AggregatedMetrics();
+
     allPartitionStatsList.clear();
     for (String finishedPath : workerFinishedPathList) {
+      String hostnamePartitionId = FilenameUtils.getName(finishedPath);
       JSONObject workerFinishedInfoObj = null;
       try {
         byte [] zkData =
@@ -866,7 +874,7 @@ public class BspServiceMaster<I extends WritableComparable,
                 Base64.decode(workerFinishedInfoObj.getString(
                     JSONOBJ_PARTITION_STATS_KEY)),
                     partitionStatsClass,
-                    getConfiguration());
+                    conf);
         for (PartitionStats partitionStats : statsList) {
           globalStats.addPartitionStats(partitionStats);
           allPartitionStatsList.add(partitionStats);
@@ -874,6 +882,16 @@ public class BspServiceMaster<I extends WritableComparable,
         globalStats.addMessageCount(
             workerFinishedInfoObj.getLong(
                 JSONOBJ_NUM_MESSAGES_KEY));
+        if (conf.metricsEnabled() &&
+            workerFinishedInfoObj.has(JSONOBJ_METRICS_KEY)) {
+          WorkerSuperstepMetrics workerMetrics = new WorkerSuperstepMetrics();
+          WritableUtils.readFieldsFromByteArray(
+              Base64.decode(
+                  workerFinishedInfoObj.getString(
+                      JSONOBJ_METRICS_KEY)),
+              workerMetrics);
+          aggregatedMetrics.add(workerMetrics, hostnamePartitionId);
+        }
       } catch (JSONException e) {
         throw new IllegalStateException(
             "aggregateWorkerStats: JSONException", e);
@@ -887,6 +905,10 @@ public class BspServiceMaster<I extends WritableComparable,
         throw new IllegalStateException(
             "aggregateWorkerStats: IOException", e);
       }
+    }
+
+    if (conf.metricsEnabled()) {
+      aggregatedMetrics.print(superstep);
     }
 
     if (LOG.isInfoEnabled()) {
@@ -1494,9 +1516,9 @@ public class BspServiceMaster<I extends WritableComparable,
             "runMasterCompute: Failed in access", e);
       }
     }
-    long masterComputeBeginMs = TIME.getMilliseconds();
+    GiraphTimerContext timerContext = masterComputeTimer.time();
     masterCompute.compute();
-    masterComputeMs.set(Times.getMsSince(TIME, masterComputeBeginMs));
+    timerContext.stop();
   }
 
   /**

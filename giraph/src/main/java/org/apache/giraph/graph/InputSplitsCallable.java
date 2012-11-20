@@ -63,7 +63,7 @@ public abstract class InputSplitsCallable<I extends WritableComparable,
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(InputSplitsCallable.class);
   /** Class time object */
-  private static final Time TIME = SystemTime.getInstance();
+  private static final Time TIME = SystemTime.get();
   /** Configuration */
   protected final ImmutableClassesGiraphConfiguration<I, V, E, M>
   configuration;

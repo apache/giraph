@@ -44,7 +44,6 @@ import org.apache.giraph.graph.WorkerInfo;
 import org.apache.giraph.graph.partition.Partition;
 import org.apache.giraph.graph.partition.PartitionOwner;
 import org.apache.giraph.metrics.GiraphMetrics;
-import org.apache.giraph.metrics.MetricGroup;
 import org.apache.giraph.metrics.ValueGauge;
 import org.apache.giraph.utils.ByteArrayVertexIdMessageCollection;
 import org.apache.giraph.utils.PairList;
@@ -125,8 +124,7 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
     // Per-Superstep Metrics.
     // Since this object is not long lived we just initialize the metrics here.
     GiraphMetrics gmr = GiraphMetrics.getInstance();
-    msgsSentInSuperstep = new ValueGauge<Long>(gmr.perSuperstep(),
-        MetricGroup.NETWORK, "msgs-sent");
+    msgsSentInSuperstep = new ValueGauge<Long>(gmr.perSuperstep(), "msgs-sent");
   }
 
   @Override

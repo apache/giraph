@@ -293,9 +293,9 @@ public class TestMutableVertex {
     long serializeNanos = 0;
     byte[] byteArray = null;
     for (int i = 0; i < REPS; ++i) {
-      serializeNanosStart = SystemTime.getInstance().getNanoseconds();
+      serializeNanosStart = SystemTime.get().getNanoseconds();
       byteArray = WritableUtils.writeToByteArray(vertex);
-      serializeNanos += Times.getNanosecondsSince(SystemTime.getInstance(),
+      serializeNanos += Times.getNanosecondsSince(SystemTime.get(),
           serializeNanosStart);
     }
     serializeNanos /= REPS;
@@ -312,9 +312,9 @@ public class TestMutableVertex {
     long deserializeNanosStart = 0;
     long deserializeNanos = 0;
     for (int i = 0; i < REPS; ++i) {
-      deserializeNanosStart = SystemTime.getInstance().getNanoseconds();
+      deserializeNanosStart = SystemTime.get().getNanoseconds();
       WritableUtils.readFieldsFromByteArray(byteArray, readVertex);
-      deserializeNanos += Times.getNanosecondsSince(SystemTime.getInstance(),
+      deserializeNanos += Times.getNanosecondsSince(SystemTime.get(),
           deserializeNanosStart);
     }
     deserializeNanos /= REPS;
@@ -349,11 +349,11 @@ public class TestMutableVertex {
     DynamicChannelBufferOutputStream outputStream = null;
     for (int i = 0; i <
         REPS; ++i) {
-      serializeNanosStart = SystemTime.getInstance().getNanoseconds();
+      serializeNanosStart = SystemTime.get().getNanoseconds();
       outputStream =
           new DynamicChannelBufferOutputStream(32);
       vertex.write(outputStream);
-      serializeNanos += Times.getNanosecondsSince(SystemTime.getInstance(),
+      serializeNanos += Times.getNanosecondsSince(SystemTime.get(),
           serializeNanosStart);
     }
     serializeNanos /= REPS;
@@ -373,12 +373,12 @@ public class TestMutableVertex {
     long deserializeNanosStart = 0;
     long deserializeNanos = 0;
     for (int i = 0; i < REPS; ++i) {
-      deserializeNanosStart = SystemTime.getInstance().getNanoseconds();
+      deserializeNanosStart = SystemTime.get().getNanoseconds();
       DynamicChannelBufferInputStream inputStream = new
           DynamicChannelBufferInputStream(
           outputStream.getDynamicChannelBuffer());
       readVertex.readFields(inputStream);
-      deserializeNanos += Times.getNanosecondsSince(SystemTime.getInstance(),
+      deserializeNanos += Times.getNanosecondsSince(SystemTime.get(),
           deserializeNanosStart);
       outputStream.getDynamicChannelBuffer().readerIndex(0);
     }
@@ -417,11 +417,11 @@ public class TestMutableVertex {
     UnsafeByteArrayOutputStream outputStream = null;
     for (int i = 0; i <
         REPS; ++i) {
-      serializeNanosStart = SystemTime.getInstance().getNanoseconds();
+      serializeNanosStart = SystemTime.get().getNanoseconds();
       outputStream =
           new UnsafeByteArrayOutputStream(32);
       vertex.write(outputStream);
-      serializeNanos += Times.getNanosecondsSince(SystemTime.getInstance(),
+      serializeNanos += Times.getNanosecondsSince(SystemTime.get(),
           serializeNanosStart);
     }
     serializeNanos /= REPS;
@@ -441,12 +441,12 @@ public class TestMutableVertex {
     long deserializeNanosStart = 0;
     long deserializeNanos = 0;
     for (int i = 0; i < REPS; ++i) {
-      deserializeNanosStart = SystemTime.getInstance().getNanoseconds();
+      deserializeNanosStart = SystemTime.get().getNanoseconds();
       UnsafeByteArrayInputStream inputStream = new
           UnsafeByteArrayInputStream(
           outputStream.getByteArray(), 0, outputStream.getPos());
       readVertex.readFields(inputStream);
-      deserializeNanos += Times.getNanosecondsSince(SystemTime.getInstance(),
+      deserializeNanos += Times.getNanosecondsSince(SystemTime.get(),
           deserializeNanosStart);
     }
     deserializeNanos /= REPS;
