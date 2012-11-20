@@ -18,10 +18,6 @@
 
 package org.apache.giraph.io.hcatalog;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
-
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexInputFormat;
@@ -33,11 +29,14 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hcatalog.data.HCatRecord;
-import org.apache.hcatalog.mapreduce.HCatInputFormat;
+import org.apache.log4j.Logger;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import org.apache.log4j.Logger;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Abstract class that users should subclass to load data from a Hive or Pig
@@ -47,10 +46,12 @@ import org.apache.log4j.Logger;
  * stored in the input table.
  * <p>
  * The desired database and table name to load from can be specified via
- * {@link HCatInputFormat#setInput(org.apache.hadoop.mapreduce.Job,
+ * {@link GiraphHCatInputFormat#setVertexInput(org.apache.hadoop.mapreduce.Job,
  * org.apache.hcatalog.mapreduce.InputJobInfo)}
  * as you setup your vertex input format with
- * {@link GiraphJob#setVertexInputFormatClass(Class)}.
+ * {@link org.apache.giraph.GiraphConfiguration#
+ * setVertexInputFormatClass(Class)}.
+ *
  * @param <I> Vertex id
  * @param <V> Vertex value
  * @param <E> Edge value
@@ -65,15 +66,15 @@ public abstract class HCatalogVertexInputFormat<
     M extends Writable>
     extends VertexInputFormat<I, V, E, M> {
   /**
-   * H catalog input format.
+   * HCatalog input format.
    */
-  private HCatInputFormat hCatInputFormat = new HCatInputFormat();
+  private GiraphHCatInputFormat hCatInputFormat = new GiraphHCatInputFormat();
 
   @Override
   public final List<InputSplit> getSplits(
       final JobContext context, final int numWorkers)
     throws IOException, InterruptedException {
-    return hCatInputFormat.getSplits(context);
+    return hCatInputFormat.getVertexSplits(context);
   }
 
   /**
@@ -162,7 +163,7 @@ public abstract class HCatalogVertexInputFormat<
   }
 
   /**
-   * create vertex writer instance.
+   * create vertex reader instance.
    * @return HCatalogVertexReader
    */
   protected abstract HCatalogVertexReader createVertexReader();
@@ -175,7 +176,7 @@ public abstract class HCatalogVertexInputFormat<
     try {
       HCatalogVertexReader reader = createVertexReader();
       reader.initialize(hCatInputFormat.
-          createRecordReader(split, context));
+          createVertexRecordReader(split, context));
       return reader;
     } catch (InterruptedException e) {
       throw new IllegalStateException(

@@ -225,6 +225,7 @@ under the License.
     <hbase.version>0.90.5</hbase.version>
     <jackson.version>1.8.0</jackson.version>
     <slf4j.version>1.7.2</slf4j.version>
+    <hive.version>0.9.0</hive.version>
     <forHadoop>for-hadoop-${hadoop.version}</forHadoop>
   </properties>
 
@@ -746,7 +747,17 @@ under the License.
       <dependency>
         <groupId>org.apache.hive</groupId>
         <artifactId>hive-common</artifactId>
-        <version>0.9.0</version>
+        <version>${hive.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hive</groupId>
+        <artifactId>hive-exec</artifactId>
+        <version>${hive.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hive</groupId>
+        <artifactId>hive-metastore</artifactId>
+        <version>${hive.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.mahout</groupId>

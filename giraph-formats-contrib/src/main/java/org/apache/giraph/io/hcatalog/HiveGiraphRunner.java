@@ -18,31 +18,33 @@
 
 package org.apache.giraph.io.hcatalog;
 
-import java.io.File;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.graph.EdgeInputFormat;
 import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.graph.VertexInputFormat;
+import org.apache.giraph.graph.VertexOutputFormat;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.hcatalog.mapreduce.HCatInputFormat;
 import org.apache.hcatalog.mapreduce.HCatOutputFormat;
 import org.apache.hcatalog.mapreduce.InputJobInfo;
 import org.apache.hcatalog.mapreduce.OutputJobInfo;
+import org.apache.log4j.Logger;
 
 import com.google.common.collect.Lists;
-import org.apache.log4j.Logger;
+
+import java.io.File;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Hive Giraph Runner
@@ -69,13 +71,21 @@ public class HiveGiraphRunner implements Tool {
    */
   protected String dbName;
   /**
-   * input table name
+   * vertex input table name
    */
-  protected String inputTableName;
+  protected String vertexInputTableName;
   /**
-   * input table filter
+   * vertex input table filter
    */
-  protected String inputTableFilterExpr;
+  protected String vertexInputTableFilterExpr;
+  /**
+   * edge input table name
+   */
+  protected String edgeInputTableName;
+  /**
+   * edge input table filter
+   */
+  protected String edgeInputTableFilterExpr;
   /**
    * output table name
    */
@@ -88,34 +98,36 @@ public class HiveGiraphRunner implements Tool {
   /**
   * vertex class.
   */
-  @SuppressWarnings("rawtypes")
   private Class<? extends Vertex> vertexClass;
   /**
-  * vertex input format internal.
-  */
-  @SuppressWarnings("rawtypes")
-  private Class<? extends HCatalogVertexInputFormat> vertexInputFormatClass;
+   * vertex input format internal.
+   */
+  private Class<? extends VertexInputFormat> vertexInputFormatClass;
+  /**
+   * edge input format internal.
+   */
+  private Class<? extends EdgeInputFormat> edgeInputFormatClass;
   /**
   * vertex output format internal.
   */
-  @SuppressWarnings("rawtypes")
-  private Class<? extends HCatalogVertexOutputFormat> vertexOutputFormatClass;
+  private Class<? extends VertexOutputFormat> vertexOutputFormatClass;
 
   /**
-  * giraph runner class.
-  * @param vertexClass vertec class
-  * @param vertexInputFormatClass input format
-  * @param vertexOutputFormatClass output format
+  * Giraph runner class.
+   *
+  * @param vertexClass Vertex class
+  * @param vertexInputFormatClass Vertex input format
+  * @param edgeInputFormatClass Edge input format
+  * @param vertexOutputFormatClass Output format
   */
   protected HiveGiraphRunner(
-          @SuppressWarnings("rawtypes")
-          Class<? extends Vertex> vertexClass,
-          @SuppressWarnings("rawtypes")
-          Class<? extends HCatalogVertexInputFormat> vertexInputFormatClass,
-          @SuppressWarnings("rawtypes")
-          Class<? extends HCatalogVertexOutputFormat> vertexOutputFormatClass) {
+      Class<? extends Vertex> vertexClass,
+      Class<? extends VertexInputFormat> vertexInputFormatClass,
+      Class<? extends EdgeInputFormat> edgeInputFormatClass,
+      Class<? extends VertexOutputFormat> vertexOutputFormatClass) {
     this.vertexClass = vertexClass;
     this.vertexInputFormatClass = vertexInputFormatClass;
+    this.edgeInputFormatClass = edgeInputFormatClass;
     this.vertexOutputFormatClass = vertexOutputFormatClass;
     this.conf = new HiveConf(getClass());
   }
@@ -126,13 +138,13 @@ public class HiveGiraphRunner implements Tool {
   * @throws Exception any errors from Hive Giraph Runner
   */
   public static void main(String[] args) throws Exception {
-    System.exit(ToolRunner
-                .run(new HiveGiraphRunner(null, null, null), args));
+    System.exit(ToolRunner.run(
+        new HiveGiraphRunner(null, null, null, null), args));
   }
 
   @Override
   public final int run(String[] args) throws Exception {
-        // process args
+    // process args
     try {
       processArguments(args);
     } catch (InterruptedException e) {
@@ -150,16 +162,26 @@ public class HiveGiraphRunner implements Tool {
     job.getConfiguration().setVertexClass(vertexClass);
 
     // setup input from Hive
-    InputJobInfo inputJobInfo = InputJobInfo.create(dbName, inputTableName,
-                inputTableFilterExpr);
-    HCatInputFormat.setInput(job.getInternalJob(), inputJobInfo);
-    job.getConfiguration().setVertexInputFormatClass(vertexInputFormatClass);
+    if (vertexInputFormatClass != null) {
+      InputJobInfo vertexInputJobInfo = InputJobInfo.create(dbName,
+          vertexInputTableName, vertexInputTableFilterExpr);
+      GiraphHCatInputFormat.setVertexInput(job.getInternalJob(),
+          vertexInputJobInfo);
+      job.getConfiguration().setVertexInputFormatClass(vertexInputFormatClass);
+    }
+    if (edgeInputFormatClass != null) {
+      InputJobInfo edgeInputJobInfo = InputJobInfo.create(dbName,
+          edgeInputTableName, edgeInputTableFilterExpr);
+      GiraphHCatInputFormat.setEdgeInput(job.getInternalJob(),
+          edgeInputJobInfo);
+      job.getConfiguration().setEdgeInputFormatClass(edgeInputFormatClass);
+    }
 
     // setup output to Hive
     HCatOutputFormat.setOutput(job.getInternalJob(), OutputJobInfo.create(
-                dbName, outputTableName, outputTablePartitionValues));
+        dbName, outputTableName, outputTablePartitionValues));
     HCatOutputFormat.setSchema(job.getInternalJob(),
-                HCatOutputFormat.getTableSchema(job.getInternalJob()));
+        HCatOutputFormat.getTableSchema(job.getInternalJob()));
     if (skipOutput) {
       LOG.warn("run: Warning - Output will be skipped!");
     } else {
@@ -178,20 +200,20 @@ public class HiveGiraphRunner implements Tool {
   * @param conf Configuration argument
   */
   private static void adjustConfigurationForHive(Configuration conf) {
-        // when output partitions are used, workers register them to the
-        // metastore at cleanup stage, and on HiveConf's initialization, it
-        // looks for hive-site.xml from.
+    // when output partitions are used, workers register them to the
+    // metastore at cleanup stage, and on HiveConf's initialization, it
+    // looks for hive-site.xml from.
     addToStringCollection(conf, "tmpfiles", conf.getClassLoader()
-                .getResource("hive-site.xml").toString());
+        .getResource("hive-site.xml").toString());
 
-        // Also, you need hive.aux.jars as well
-        // addToStringCollection(conf, "tmpjars",
-        // conf.getStringCollection("hive.aux.jars.path"));
+    // Also, you need hive.aux.jars as well
+    // addToStringCollection(conf, "tmpjars",
+    // conf.getStringCollection("hive.aux.jars.path"));
 
-        // Or, more effectively, we can provide all the jars client needed to
-        // the workers as well
+    // Or, more effectively, we can provide all the jars client needed to
+    // the workers as well
     String[] hadoopJars = System.getenv("HADOOP_CLASSPATH").split(
-                File.pathSeparator);
+        File.pathSeparator);
     List<String> hadoopJarURLs = Lists.newArrayList();
     for (String jarPath : hadoopJars) {
       File file = new File(jarPath);
@@ -220,25 +242,34 @@ public class HiveGiraphRunner implements Tool {
     options.addOption("w", "workers", true, "Number of workers");
     if (vertexClass == null) {
       options.addOption(null, "vertexClass", true,
-                    "Giraph Vertex class to use");
+          "Giraph Vertex class to use");
     }
     if (vertexInputFormatClass == null) {
       options.addOption(null, "vertexInputFormatClass", true,
-                    "Giraph HCatalogVertexInputFormat class to use");
+          "Giraph HCatalogVertexInputFormat class to use");
+    }
+    if (edgeInputFormatClass == null) {
+      options.addOption(null, "edgeInputFormatClass", true,
+          "Giraph HCatalogEdgeInputFormat class to use");
     }
 
     if (vertexOutputFormatClass == null) {
       options.addOption(null, "vertexOutputFormatClass", true,
-                    "Giraph HCatalogVertexOutputFormat class to use");
+          "Giraph HCatalogVertexOutputFormat class to use");
     }
 
     options.addOption("db", "database", true, "Hive database name");
-    options.addOption("i", "inputTable", true, "Input table name");
-    options.addOption("I", "inputFilter", true,
-                "Input table filter expression (e.g., \"a<2 AND b='two'\"");
+    options.addOption("vi", "vertexInputTable", true,
+        "Vertex input table name");
+    options.addOption("VI", "vertexInputFilter", true,
+        "Vertex input table filter expression (e.g., \"a<2 AND b='two'\"");
+    options.addOption("ei", "edgeInputTable", true,
+        "Edge input table name");
+    options.addOption("EI", "edgeInputFilter", true,
+        "Edge input table filter expression (e.g., \"a<2 AND b='two'\"");
     options.addOption("o", "outputTable", true, "Output table name");
     options.addOption("O", "outputPartition", true,
-                "Output table partition values (e.g., \"a=1,b=two\")");
+        "Output table partition values (e.g., \"a=1,b=two\")");
     options.addOption("s", "skipOutput", false, "Skip output?");
 
     addMoreOptions(options);
@@ -253,17 +284,23 @@ public class HiveGiraphRunner implements Tool {
     // Giraph classes
     if (cmdln.hasOption("vertexClass")) {
       vertexClass = findClass(cmdln.getOptionValue("vertexClass"),
-              Vertex.class);
+          Vertex.class);
     }
     if (cmdln.hasOption("vertexInputFormatClass")) {
       vertexInputFormatClass = findClass(
-              cmdln.getOptionValue("vertexInputFormatClass"),
-              HCatalogVertexInputFormat.class);
+          cmdln.getOptionValue("vertexInputFormatClass"),
+          HCatalogVertexInputFormat.class);
     }
+    if (cmdln.hasOption("edgeInputFormatClass")) {
+      edgeInputFormatClass = findClass(
+          cmdln.getOptionValue("edgeInputFormatClass"),
+          HCatalogEdgeInputFormat.class);
+    }
+
     if (cmdln.hasOption("vertexOutputFormatClass")) {
       vertexOutputFormatClass = findClass(
-              cmdln.getOptionValue("vertexOutputFormatClass"),
-              HCatalogVertexOutputFormat.class);
+          cmdln.getOptionValue("vertexOutputFormatClass"),
+          HCatalogVertexOutputFormat.class);
     }
 
     if (cmdln.hasOption("skipOutput")) {
@@ -272,34 +309,42 @@ public class HiveGiraphRunner implements Tool {
 
     if (vertexClass == null) {
       throw new IllegalArgumentException(
-                "Need the Giraph Vertex class name (-vertexClass) to use");
+          "Need the Giraph Vertex class name (-vertexClass) to use");
     }
-    if (vertexInputFormatClass == null) {
+    if (vertexInputFormatClass == null && edgeInputFormatClass == null) {
       throw new IllegalArgumentException(
-                    "Need the Giraph VertexInputFormat " +
-                            "class name (-vertexInputFormatClass) to use");
+          "Need at least one of Giraph VertexInputFormat " +
+              "class name (-vertexInputFormatClass) and " +
+              "EdgeInputFormat class name (-edgeInputFormatClass)");
     }
     if (vertexOutputFormatClass == null) {
       throw new IllegalArgumentException(
-                    "Need the Giraph VertexOutputFormat " +
-                            "class name (-vertexOutputFormatClass) to use");
+          "Need the Giraph VertexOutputFormat " +
+              "class name (-vertexOutputFormatClass) to use");
     }
     if (!cmdln.hasOption("workers")) {
       throw new IllegalArgumentException(
-                    "Need to choose the number of workers (-w)");
+          "Need to choose the number of workers (-w)");
     }
-    if (!cmdln.hasOption("inputTable")) {
+    if (!cmdln.hasOption("vertexInputTable") &&
+        vertexInputFormatClass != null) {
       throw new IllegalArgumentException(
-                    "Need to set the input table name (-i).  " +
-                            "One example is 'dim_friendlist'");
+          "Need to set the vertex input table name (-vi)");
+    }
+    if (!cmdln.hasOption("edgeInputTable") &&
+        edgeInputFormatClass != null) {
+      throw new IllegalArgumentException(
+          "Need to set the edge input table name (-ei)");
     }
     if (!cmdln.hasOption("outputTable")) {
       throw new IllegalArgumentException(
-                    "Need to set the output table name (-o).");
+          "Need to set the output table name (-o)");
     }
     dbName = cmdln.getOptionValue("dbName", "default");
-    inputTableName = cmdln.getOptionValue("inputTable");
-    inputTableFilterExpr = cmdln.getOptionValue("inputFilter");
+    vertexInputTableName = cmdln.getOptionValue("vertexInputTable");
+    vertexInputTableFilterExpr = cmdln.getOptionValue("vertexInputFilter");
+    edgeInputTableName = cmdln.getOptionValue("edgeInputTable");
+    edgeInputTableFilterExpr = cmdln.getOptionValue("edgeInputFilter");
     outputTableName = cmdln.getOptionValue("outputTable");
     outputTablePartitionValues = HiveUtils.parsePartitionValues(cmdln
                 .getOptionValue("outputPartition"));
@@ -366,8 +411,7 @@ public class HiveGiraphRunner implements Tool {
       }
       return null;
     } catch (ClassNotFoundException e) {
-      throw new IllegalArgumentException(className +
-              ": Invalid class name");
+      throw new IllegalArgumentException(className + ": Invalid class name");
     }
   }
 
@@ -412,21 +456,35 @@ public class HiveGiraphRunner implements Tool {
     String prefix = "\t";
     LOG.info(prefix + "-vertexClass=" +
          vertexClass.getCanonicalName());
-    LOG.info(prefix + "-vertexInputFormatClass=" +
-        vertexInputFormatClass.getCanonicalName());
+    if (vertexInputFormatClass != null) {
+      LOG.info(prefix + "-vertexInputFormatClass=" +
+          vertexInputFormatClass.getCanonicalName());
+    }
+    if (edgeInputFormatClass != null) {
+      LOG.info(prefix + "-edgeInputFormatClass=" +
+          edgeInputFormatClass.getCanonicalName());
+    }
     LOG.info(prefix + "-vertexOutputFormatClass=" +
         vertexOutputFormatClass.getCanonicalName());
-    LOG.info(prefix + "-inputTable=" + inputTableName);
-    if (inputTableFilterExpr != null) {
-      LOG.info(prefix + "-inputFilter=\"" +
-        inputTableFilterExpr + "\"");
+    if (vertexInputTableName != null) {
+      LOG.info(prefix + "-vertexInputTable=" + vertexInputTableName);
+    }
+    if (vertexInputTableFilterExpr != null) {
+      LOG.info(prefix + "-vertexInputFilter=\"" +
+          vertexInputTableFilterExpr + "\"");
+    }
+    if (edgeInputTableName != null) {
+      LOG.info(prefix + "-edgeInputTable=" + edgeInputTableName);
+    }
+    if (edgeInputTableFilterExpr != null) {
+      LOG.info(prefix + "-edgeInputFilter=\"" +
+          edgeInputTableFilterExpr + "\"");
     }
     LOG.info(prefix + "-outputTable=" + outputTableName);
     if (outputTablePartitionValues != null) {
       LOG.info(prefix + "-outputPartition=\"" +
-               outputTablePartitionValues + "\"");
+          outputTablePartitionValues + "\"");
     }
     LOG.info(prefix + "-workers=" + workers);
   }
-
 }

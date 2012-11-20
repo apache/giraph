@@ -18,8 +18,6 @@
 
 package org.apache.giraph.io.hcatalog;
 
-import java.io.IOException;
-
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexOutputFormat;
 import org.apache.giraph.graph.VertexWriter;
@@ -33,6 +31,8 @@ import org.apache.hcatalog.data.DefaultHCatRecord;
 import org.apache.hcatalog.data.HCatRecord;
 import org.apache.hcatalog.mapreduce.HCatOutputFormat;
 
+import java.io.IOException;
+
 /**
  * Abstract class that users should subclass to store data to Hive or Pig table.
  * You can easily implement a {@link HCatalogVertexWriter} by extending
@@ -43,8 +43,9 @@ import org.apache.hcatalog.mapreduce.HCatOutputFormat;
  * {@link HCatOutputFormat#setOutput(org.apache.hadoop.mapreduce.Job,
  * org.apache.hcatalog.mapreduce.OutputJobInfo)}
  * as you setup your vertex output format with
- * {@link GiraphJob#setVertexOutputFormatClass(Class)}. You must create the
- * output table.
+ * {@link org.apache.giraph.GiraphConfiguration#
+ * setVertexOutputFormatClass(Class)}. You must create the output table.
+ *
  * @param <I> Vertex id
  * @param <V> Vertex value
  * @param <E> Edge value
