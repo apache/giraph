@@ -220,8 +220,10 @@ under the License.
   </repositories>
 
   <properties>
+    <lib.dir>${project.basedir}/lib</lib.dir>
     <buildtype>test</buildtype>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <formats.module>giraph-formats-contrib</formats.module>
     <hbase.version>0.90.5</hbase.version>
     <jackson.version>1.8.0</jackson.version>
     <slf4j.version>1.7.2</slf4j.version>
@@ -461,6 +463,9 @@ under the License.
   <profiles>
     <profile>
       <id>hadoop_0.20.203</id>
+      <modules>
+        <module>${formats.module}</module>
+      </modules>
       <activation>
         <activeByDefault>true</activeByDefault>
       </activation>
@@ -485,6 +490,9 @@ under the License.
 
     <profile>
       <id>hadoop_1.0</id>
+      <modules>
+        <module>${formats.module}</module>
+      </modules>
       <properties>
         <hadoop.version>1.0.2</hadoop.version>
         <munge.symbols>HADOOP_NON_JOBCONTEXT_IS_INTERFACE,HADOOP_1_SECURITY,HADOOP_1_SECRET_MANAGER</munge.symbols>
@@ -506,6 +514,9 @@ under the License.
 
     <profile>
       <id>hadoop_non_secure</id>
+      <modules>
+        <module>${formats.module}</module>
+      </modules>
       <properties>
         <hadoop.version>0.20.2</hadoop.version>
         <munge.symbols>HADOOP_NON_SECURE,HADOOP_NON_JOBCONTEXT_IS_INTERFACE</munge.symbols>
@@ -527,20 +538,21 @@ under the License.
 
     <profile>
       <id>hadoop_facebook</id>
+      <modules>
+        <module>${formats.module}</module>
+      </modules>
       <properties>
-        <hadoop.fb.jar>${project.basedir}/lib/hadoop-0.20-core.jar</hadoop.fb.jar>
         <hadoop.version>0.20.1</hadoop.version>
         <munge.symbols>HADOOP_NON_SECURE,HADOOP_NON_JOBCONTEXT_IS_INTERFACE</munge.symbols>
       </properties>
       <dependencies>
         <!-- sorted lexicographically -->
         <dependency>
-          <groupId>com.facebook.hadoop</groupId>
+          <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-core</artifactId>
           <version>${hadoop.version}</version>
-          <type>jar</type>
           <scope>system</scope>
-          <systemPath>${hadoop.fb.jar}</systemPath>
+          <systemPath>${lib.dir}/facebook-hadoop-0.20-core.jar</systemPath>
         </dependency>
         <dependency>
           <groupId>commons-collections</groupId>
@@ -894,12 +906,6 @@ under the License.
         <scope>test</scope>
       </dependency>
       <dependency>
-        <groupId>org.apache.hadoop</groupId>
-        <artifactId>hadoop-test</artifactId>
-        <version>${hadoop.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
         <groupId>org.mockito</groupId>
         <artifactId>mockito-all</artifactId>
         <version>1.8.5</version>
@@ -910,7 +916,6 @@ under the License.
 
   <modules>
     <module>giraph</module>
-    <module>giraph-formats-contrib</module>
   </modules>
 
 </project>

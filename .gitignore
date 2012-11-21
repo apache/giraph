@@ -8,6 +8,7 @@
 *.class
 target
 Unknown Job*
+failed-profile.txt
 
 # IntelliJ IDEA files:
 *.iml
@@ -20,10 +21,6 @@ Unknown Job*
 .eclipse
 .project
 .settings
-
-# Failed patch files:
-*.rej
-*.orig
 
 # Emacs auto-save files:
 *~

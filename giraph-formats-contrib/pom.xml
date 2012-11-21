@@ -33,6 +33,7 @@ under the License.
 
   <properties>
     <top.dir>${project.basedir}/..</top.dir>
+    <lib.dir>${top.dir}/lib</lib.dir>
   </properties>
 
   <build>
@@ -129,41 +130,51 @@ under the License.
   <profiles>
     <profile>
       <id>hadoop_0.20.203</id>
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-test</artifactId>
+          <version>${hadoop.version}</version>
+          <scope>test</scope>
+        </dependency>
+      </dependencies>
     </profile>
 
     <profile>
       <id>hadoop_1.0</id>
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-test</artifactId>
+          <version>${hadoop.version}</version>
+          <scope>test</scope>
+        </dependency>
+      </dependencies>
     </profile>
 
     <profile>
       <id>hadoop_non_secure</id>
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-test</artifactId>
+          <version>${hadoop.version}</version>
+          <scope>test</scope>
+        </dependency>
+      </dependencies>
     </profile>
 
     <profile>
       <id>hadoop_facebook</id>
-      <properties>
-        <hadoop.fb.jar>${top.dir}/lib/hadoop-0.20-core.jar</hadoop.fb.jar>
-      </properties>
-    </profile>
-
-    <profile>
-      <id>hadoop_0.23</id>
-    </profile>
-
-    <profile>
-      <id>hadoop_2.0.0</id>
-    </profile>
-
-    <profile>
-      <id>hadoop_2.0.1</id>
-    </profile>
-
-    <profile>
-      <id>hadoop_2.0.2</id>
-    </profile>
-
-    <profile>
-      <id>hadoop_trunk</id>
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-test</artifactId>
+          <version>${hadoop.version}</version>
+          <scope>system</scope>
+          <systemPath>${lib.dir}/facebook-hadoop-0.20-test.jar</systemPath>
+        </dependency>
+      </dependencies>
     </profile>
   </profiles>
 
@@ -223,11 +234,6 @@ under the License.
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.hadoop</groupId>
-      <artifactId>hadoop-test</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
