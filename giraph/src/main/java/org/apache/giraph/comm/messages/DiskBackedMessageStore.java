@@ -18,21 +18,14 @@
 
 package org.apache.giraph.comm.messages;
 
-import org.apache.giraph.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.utils.CollectionUtils;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentNavigableMap;
@@ -40,9 +33,14 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.utils.ExtendedDataOutput;
+import org.apache.giraph.utils.RepresentativeByteArrayIterable;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 
 /**
- * Message storage with in memory map of messages and with support for
+ * Message storage with in-memory map of messages and with support for
  * flushing all the messages to the disk.
  *
  * @param <I> Vertex id
@@ -50,11 +48,15 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  */
 public class DiskBackedMessageStore<I extends WritableComparable,
     M extends Writable> implements FlushableMessageStore<I, M> {
-  /** In memory message map */
-  private volatile ConcurrentNavigableMap<I, Collection<M>> inMemoryMessages;
+  /**
+   * In-memory message map (must be sorted to insure that the ids are
+   * ordered)
+   */
+  private volatile ConcurrentNavigableMap<I, ExtendedDataOutput>
+  inMemoryMessages;
   /** Hadoop configuration */
   private final ImmutableClassesGiraphConfiguration<I, ?, ?, M> config;
-  /** Counter for number of messages in memory */
+  /** Counter for number of messages in-memory */
   private final AtomicInteger numberOfMessagesInMemory;
   /** To keep vertex ids which we have messages for */
   private final Set<I> destinationVertices;
@@ -67,13 +69,15 @@ public class DiskBackedMessageStore<I extends WritableComparable,
   private final ReadWriteLock rwLock = new ReentrantReadWriteLock(true);
 
   /**
+   * Constructor.
+   *
    * @param config           Hadoop configuration
    * @param fileStoreFactory Factory for creating file stores when flushing
    */
   public DiskBackedMessageStore(
       ImmutableClassesGiraphConfiguration<I, ?, ?, M> config,
       MessageStoreFactory<I, M, BasicMessageStore<I, M>> fileStoreFactory) {
-    inMemoryMessages = new ConcurrentSkipListMap<I, Collection<M>>();
+    inMemoryMessages = new ConcurrentSkipListMap<I, ExtendedDataOutput>();
     this.config = config;
     numberOfMessagesInMemory = new AtomicInteger(0);
     destinationVertices =
@@ -82,37 +86,90 @@ public class DiskBackedMessageStore<I extends WritableComparable,
     this.fileStoreFactory = fileStoreFactory;
   }
 
-  @Override
-  public void addVertexMessages(I vertexId,
-      Collection<M> messages) throws IOException {
+  /**
+   * Add vertex messages
+   *
+   * @param vertexId Vertex id to use
+   * @param messages Messages to add (note that the lifetime of the messages)
+   *                 is only until next() is called again)
+   * @return True if the vertex id ownership is taken by this method,
+   *         false otherwise
+   * @throws IOException
+   */
+  boolean addVertexMessages(I vertexId,
+                            Iterable<M> messages) throws IOException {
+    boolean ownsVertexId = false;
     destinationVertices.add(vertexId);
-
     rwLock.readLock().lock();
     try {
-      CollectionUtils.addConcurrent(vertexId, messages, inMemoryMessages);
-      numberOfMessagesInMemory.addAndGet(messages.size());
+      ExtendedDataOutput extendedDataOutput = inMemoryMessages.get(vertexId);
+      if (extendedDataOutput == null) {
+        ExtendedDataOutput newExtendedDataOutput =
+            config.createExtendedDataOutput();
+        extendedDataOutput =
+            inMemoryMessages.putIfAbsent(vertexId, newExtendedDataOutput);
+        if (extendedDataOutput == null) {
+          ownsVertexId = true;
+          extendedDataOutput = newExtendedDataOutput;
+        }
+      }
+
+      for (M message : messages) {
+        message.write(extendedDataOutput);
+        numberOfMessagesInMemory.getAndIncrement();
+      }
     } finally {
       rwLock.readLock().unlock();
     }
+
+    return ownsVertexId;
   }
 
   @Override
-  public void addMessages(Map<I, Collection<M>> messages) throws IOException {
-    for (Entry<I, Collection<M>> entry : messages.entrySet()) {
-      addVertexMessages(entry.getKey(), entry.getValue());
+  public void addMessages(MessageStore<I, M> messageStore) throws
+      IOException {
+    for (I destinationVertex : messageStore.getDestinationVertices()) {
+      addVertexMessages(destinationVertex,
+          messageStore.getVertexMessages(destinationVertex));
+    }
+  }
+
+  /**
+   * Special iterable that recycles the message
+   */
+  private class MessageIterable extends RepresentativeByteArrayIterable<M> {
+    /**
+     * Constructor
+     *
+     * @param buf Buffer
+     * @param off Offset to start in the buffer
+     * @param length Length of the buffer
+     */
+    public MessageIterable(
+        byte[] buf, int off, int length) {
+      super(config, buf, off, length);
+    }
+
+    @Override
+    protected M createWritable() {
+      return config.createMessageValue();
     }
   }
 
   @Override
-  public Collection<M> getVertexMessages(I vertexId) throws IOException {
-    Collection<M> messages = inMemoryMessages.get(vertexId);
-    if (messages == null) {
-      messages = Lists.newArrayList();
+  public Iterable<M> getVertexMessages(I vertexId) throws IOException {
+    ExtendedDataOutput extendedDataOutput = inMemoryMessages.get(vertexId);
+    if (extendedDataOutput == null) {
+      extendedDataOutput = config.createExtendedDataOutput();
     }
+    Iterable<M> combinedIterable = new MessageIterable(
+        extendedDataOutput.getByteArray(), 0, extendedDataOutput.getPos());
+
     for (BasicMessageStore<I, M> fileStore : fileStores) {
-      messages.addAll(fileStore.getVertexMessages(vertexId));
+      combinedIterable = Iterables.concat(combinedIterable,
+          fileStore.getVertexMessages(vertexId));
     }
-    return messages;
+    return combinedIterable;
   }
 
   @Override
@@ -145,19 +202,94 @@ public class DiskBackedMessageStore<I extends WritableComparable,
     fileStores.clear();
   }
 
+  /**
+   * Special temporary message store for passing along in-memory messages
+   */
+  private class TemporaryMessageStore implements MessageStore<I, M> {
+    /**
+     * In-memory message map (must be sorted to insure that the ids are
+     * ordered)
+     */
+    private final ConcurrentNavigableMap<I, ExtendedDataOutput>
+    temporaryMessages;
+
+    /**
+     * Constructor.
+     *
+     * @param temporaryMessages Messages to be owned by this object
+     */
+    private TemporaryMessageStore(
+        ConcurrentNavigableMap<I, ExtendedDataOutput>
+            temporaryMessages) {
+      this.temporaryMessages = temporaryMessages;
+    }
+
+    @Override
+    public int getNumberOfMessages() {
+      throw new IllegalAccessError("getNumberOfMessages: Not supported");
+    }
+
+    @Override
+    public boolean hasMessagesForVertex(I vertexId) {
+      return temporaryMessages.containsKey(vertexId);
+    }
+
+    @Override
+    public Iterable<I> getDestinationVertices() {
+      return temporaryMessages.keySet();
+    }
+
+    @Override
+    public void addMessages(MessageStore<I, M> messageStore)
+      throws IOException {
+      throw new IllegalAccessError("addMessages: Not supported");
+    }
+
+    @Override
+    public Iterable<M> getVertexMessages(I vertexId) throws IOException {
+      ExtendedDataOutput extendedDataOutput = temporaryMessages.get(vertexId);
+      if (extendedDataOutput == null) {
+        extendedDataOutput = config.createExtendedDataOutput();
+      }
+      return new MessageIterable(extendedDataOutput.getByteArray(), 0,
+          extendedDataOutput.getPos());
+    }
+
+    @Override
+    public void clearVertexMessages(I vertexId) throws IOException {
+      temporaryMessages.remove(vertexId);
+    }
+
+    @Override
+    public void clearAll() throws IOException {
+      temporaryMessages.clear();
+    }
+
+    @Override
+    public void write(DataOutput dataOutput) throws IOException {
+      throw new IllegalAccessError("write: Not supported");
+    }
+
+    @Override
+    public void readFields(DataInput dataInput) throws IOException {
+      throw new IllegalAccessError("readFields: Not supported");
+    }
+  }
+
   @Override
   public void flush() throws IOException {
-    ConcurrentNavigableMap<I, Collection<M>> messagesToFlush = null;
+    ConcurrentNavigableMap<I, ExtendedDataOutput> messagesToFlush = null;
     rwLock.writeLock().lock();
     try {
       messagesToFlush = inMemoryMessages;
-      inMemoryMessages = new ConcurrentSkipListMap<I, Collection<M>>();
+      inMemoryMessages = new ConcurrentSkipListMap<I, ExtendedDataOutput>();
       numberOfMessagesInMemory.set(0);
     } finally {
       rwLock.writeLock().unlock();
     }
     BasicMessageStore<I, M> fileStore = fileStoreFactory.newStore();
-    fileStore.addMessages(messagesToFlush);
+    fileStore.addMessages(new TemporaryMessageStore(messagesToFlush));
+
     synchronized (fileStores) {
       fileStores.add(fileStore);
     }
@@ -171,14 +303,15 @@ public class DiskBackedMessageStore<I extends WritableComparable,
       vertexId.write(out);
     }
 
-    // write in memory messages map
+    // write of in-memory messages
+    out.writeInt(numberOfMessagesInMemory.get());
+
+    // write in-memory messages map
     out.writeInt(inMemoryMessages.size());
-    for (Entry<I, Collection<M>> entry : inMemoryMessages.entrySet()) {
+    for (Entry<I, ExtendedDataOutput> entry : inMemoryMessages.entrySet()) {
       entry.getKey().write(out);
-      out.writeInt(entry.getValue().size());
-      for (M message : entry.getValue()) {
-        message.write(out);
-      }
+      out.writeInt(entry.getValue().getPos());
+      out.write(entry.getValue().getByteArray(), 0, entry.getValue().getPos());
     }
 
     // write file stores
@@ -198,20 +331,19 @@ public class DiskBackedMessageStore<I extends WritableComparable,
       destinationVertices.add(vertexId);
     }
 
-    // read in memory map
+    // read in-memory messages
+    numberOfMessagesInMemory.set(in.readInt());
+
+    // read in-memory map
     int mapSize = in.readInt();
     for (int m = 0; m < mapSize; m++) {
       I vertexId = config.createVertexId();
       vertexId.readFields(in);
-      int numMessages = in.readInt();
-      numberOfMessagesInMemory.addAndGet(numMessages);
-      List<M> messages = Lists.newArrayList();
-      for (int i = 0; i < numMessages; i++) {
-        M message = config.createMessageValue();
-        message.readFields(in);
-        messages.add(message);
-      }
-      inMemoryMessages.put(vertexId, messages);
+      int messageBytes = in.readInt();
+      byte[] buf = new byte[messageBytes];
+      ExtendedDataOutput extendedDataOutput =
+          config.createExtendedDataOutput(buf, messageBytes);
+      inMemoryMessages.put(vertexId, extendedDataOutput);
     }
 
     // read file stores

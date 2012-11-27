@@ -31,6 +31,7 @@ import org.apache.giraph.graph.partition.GraphPartitionerFactory;
 import org.apache.giraph.graph.partition.Partition;
 
 import org.apache.giraph.master.MasterObserver;
+
 import org.apache.hadoop.conf.Configuration;
 
 /**
@@ -379,6 +380,17 @@ public class GiraphConfiguration extends Configuration {
       "giraph.maxMessagesPerFlushPut";
   /** Default number of messages that can be bulk sent during a flush */
   public static final int DEFAULT_MAX_MESSAGES_PER_FLUSH_PUT = 2000;
+
+  /**
+   * Use message size encoding (typically better for complex objects,
+   * not meant for primitive wrapped messages)
+   */
+  public static final String USE_MESSAGE_SIZE_ENCODING =
+      "giraph.useMessageSizeEncoding";
+  /**
+   * By default, do not use message size encoding as it is experimental.
+   */
+  public static final boolean USE_MESSAGE_SIZE_ENCODING_DEFAULT = false;
 
   /** Number of channels used per server */
   public static final String CHANNELS_PER_SERVER =
@@ -1101,5 +1113,16 @@ public class GiraphConfiguration extends Configuration {
    */
   public void useUnsafeSerialization(boolean useUnsafeSerialization) {
     setBoolean(USE_UNSAFE_SERIALIZATION, useUnsafeSerialization);
+  }
+
+  /**
+   * Use message size encoding?  This feature may help with complex message
+   * objects.
+   *
+   * @return Whether to use message size encoding
+   */
+  public boolean useMessageSizeEncoding() {
+    return getBoolean(
+        USE_MESSAGE_SIZE_ENCODING, USE_MESSAGE_SIZE_ENCODING_DEFAULT);
   }
 }

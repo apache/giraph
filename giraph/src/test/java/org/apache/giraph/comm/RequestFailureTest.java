@@ -20,7 +20,6 @@ package org.apache.giraph.comm;
 
 import com.google.common.collect.Lists;
 import java.io.IOException;
-import java.util.Collection;
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.comm.netty.NettyClient;
@@ -30,7 +29,7 @@ import org.apache.giraph.comm.requests.SendWorkerMessagesRequest;
 import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.WorkerInfo;
-import org.apache.giraph.utils.ByteArrayVertexIdMessageCollection;
+import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.giraph.utils.MockUtils;
 import org.apache.giraph.utils.PairList;
 import org.apache.hadoop.io.IntWritable;
@@ -82,14 +81,14 @@ public class RequestFailureTest {
   private WritableRequest getRequest() {
     // Data to send
     final int partitionId = 0;
-    PairList<Integer, ByteArrayVertexIdMessageCollection<IntWritable,
-            IntWritable>>
+    PairList<Integer, ByteArrayVertexIdMessages<IntWritable,
+                IntWritable>>
         dataToSend = new PairList<Integer,
-        ByteArrayVertexIdMessageCollection<IntWritable, IntWritable>>();
+        ByteArrayVertexIdMessages<IntWritable, IntWritable>>();
     dataToSend.initialize();
-    ByteArrayVertexIdMessageCollection<IntWritable,
-        IntWritable> vertexIdMessages =
-        new ByteArrayVertexIdMessageCollection<IntWritable, IntWritable>();
+    ByteArrayVertexIdMessages<IntWritable,
+            IntWritable> vertexIdMessages =
+        new ByteArrayVertexIdMessages<IntWritable, IntWritable>();
     vertexIdMessages.setConf(conf);
     vertexIdMessages.initialize();
     dataToSend.add(partitionId, vertexIdMessages);
@@ -116,7 +115,7 @@ public class RequestFailureTest {
     int messageSum = 0;
     for (IntWritable vertexId : vertices) {
       keySum += vertexId.get();
-      Collection<IntWritable> messages =
+      Iterable<IntWritable> messages =
           serverData.getIncomingMessageStore().getVertexMessages(vertexId);
       synchronized (messages) {
         for (IntWritable message : messages) {

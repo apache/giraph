@@ -21,7 +21,6 @@ package org.apache.giraph.comm.netty;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Collection;
@@ -32,15 +31,14 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.comm.netty.handler.AddressRequestIdGenerator;
 import org.apache.giraph.comm.netty.handler.ClientRequestId;
-import org.apache.giraph.comm.netty.handler.RequestServerHandler;
-import org.apache.giraph.comm.netty.handler.ResponseClientHandler;
 import org.apache.giraph.comm.netty.handler.RequestEncoder;
 import org.apache.giraph.comm.netty.handler.RequestInfo;
+import org.apache.giraph.comm.netty.handler.RequestServerHandler;
+import org.apache.giraph.comm.netty.handler.ResponseClientHandler;
 /*if[HADOOP_NON_SECURE]
 else[HADOOP_NON_SECURE]*/
 import org.apache.giraph.comm.netty.handler.SaslClientHandler;
@@ -65,7 +63,10 @@ import org.jboss.netty.handler.codec.frame.FixedLengthFrameDecoder;
 import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder;
 import org.jboss.netty.handler.execution.ExecutionHandler;
 import org.jboss.netty.handler.execution.MemoryAwareThreadPoolExecutor;
+
 import static org.jboss.netty.channel.Channels.pipeline;
+
+
 
 /**
  * Netty client for sending requests.  Thread-safe.

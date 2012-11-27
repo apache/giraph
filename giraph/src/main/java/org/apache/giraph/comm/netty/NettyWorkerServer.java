@@ -22,7 +22,7 @@ import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.ServerData;
-import org.apache.giraph.comm.messages.CollectionOfMessagesPerVertexStore;
+import org.apache.giraph.comm.messages.ByteArrayMessagesPerVertexStore;
 import org.apache.giraph.comm.messages.OneMessagePerVertexStore;
 import org.apache.giraph.comm.netty.handler.WorkerRequestServerHandler;
 import org.apache.giraph.comm.WorkerServer;
@@ -116,10 +116,10 @@ public class NettyWorkerServer<I extends WritableComparable,
       } else {
         if (LOG.isInfoEnabled()) {
           LOG.info("createMessageStoreFactory: " +
-              "Using CollectionOfMessagesPerVertexStore " +
+              "Using ByteArrayMessagesPerVertexStore " +
               "since there is no combiner");
         }
-        return CollectionOfMessagesPerVertexStore.newFactory(service, conf);
+        return ByteArrayMessagesPerVertexStore.newFactory(service, conf);
       }
     } else {
       int maxMessagesInMemory = conf.getInt(

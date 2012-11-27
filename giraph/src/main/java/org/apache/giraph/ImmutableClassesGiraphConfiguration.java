@@ -18,6 +18,9 @@
 
 package org.apache.giraph;
 
+
+import java.util.List;
+
 import org.apache.giraph.graph.AggregatorWriter;
 import org.apache.giraph.graph.Combiner;
 import org.apache.giraph.graph.DefaultMasterCompute;
@@ -50,8 +53,6 @@ import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.util.Progressable;
-
-import java.util.List;
 
 /**
  * The classes set here are immutable, the remaining configuration is mutable.

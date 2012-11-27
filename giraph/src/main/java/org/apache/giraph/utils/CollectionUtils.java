@@ -18,17 +18,23 @@
 
 package org.apache.giraph.utils;
 
+import com.google.common.collect.Iterables;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.concurrent.ConcurrentMap;
+import org.apache.log4j.Logger;
 
 /** Helper methods for Collections */
 public class CollectionUtils {
+  /** Class logger */
+  private static final Logger LOG = Logger.getLogger(CollectionUtils.class);
+
   /** Do not instantiate. */
   private CollectionUtils() { }
 
   /**
-   * If map already has value associated with the key it adds values to that
-   * value, otherwise it will put values to the map.
+   * If map already has a value associated with the key it adds values to that
+   * value, otherwise it will put values to the map.  Do not reuse values.
    *
    * @param key    Key under which we are adding values
    * @param values Values we want to add
@@ -51,5 +57,62 @@ public class CollectionUtils {
       currentValues.addAll(values);
     }
     return currentValues;
+  }
+
+  /**
+   * Helper method to check if iterables are equal.  Supports the case
+   * where the iterable next() returns a reused object.  We do assume that
+   * iterator() produces the objects in the same order across repeated calls,
+   * if the object doesn't change.   This is very expensive (n^2) and should
+   * be used for testing only.
+   *
+   * @param first First iterable
+   * @param second Second iterable
+   * @param <T> Type to compare
+   * @return True if equal, false otherwise
+   */
+  public static <T> boolean isEqual(Iterable<T> first, Iterable<T> second) {
+    // Relies on elements from the iterator arriving in the same order.
+    // For every element in first, check elements on the second iterable by
+    // marking the ones seen that have been found.  Then ensure that all
+    // the elements of the second have been seen as well.
+    int firstSize = Iterables.size(first);
+    int secondSize = Iterables.size(second);
+    boolean[] usedSecondArray = new boolean[secondSize];
+    Iterator<T> firstIterator = first.iterator();
+    while (firstIterator.hasNext()) {
+      T firstValue = firstIterator.next();
+      boolean foundFirstValue = false;
+      Iterator<T> secondIterator = second.iterator();
+      for (int i = 0; i < usedSecondArray.length; ++i) {
+        T secondValue = secondIterator.next();
+        if (!usedSecondArray[i]) {
+          if (firstValue.equals(secondValue)) {
+            usedSecondArray[i] = true;
+            foundFirstValue = true;
+            break;
+          }
+        }
+      }
+
+      if (!foundFirstValue) {
+        LOG.error("isEqual: Couldn't find element from first (" + firstValue +
+            ") in second " + second + "(size=" + secondSize + ")");
+        return false;
+      }
+    }
+
+    Iterator<T> secondIterator = second.iterator();
+    for (int i = 0; i < usedSecondArray.length; ++i) {
+      T secondValue = secondIterator.next();
+      if (!usedSecondArray[i]) {
+        LOG.error("isEqual: Element " + secondValue + " (index " + i +
+            ") in second " + second + "(size=" + secondSize +
+            ") not found in " + first + " (size=" + firstSize + ")");
+        return false;
+      }
+    }
+
+    return true;
   }
 }

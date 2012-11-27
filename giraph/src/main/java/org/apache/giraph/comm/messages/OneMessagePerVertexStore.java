@@ -18,18 +18,18 @@
 
 package org.apache.giraph.comm.messages;
 
-import org.apache.giraph.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.graph.Combiner;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Collection;
 import java.util.Collections;
+import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.bsp.CentralizedServiceWorker;
+import org.apache.giraph.graph.Combiner;
+import org.apache.giraph.utils.ByteArrayVertexIdMessages;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 
 /**
  * Implementation of {@link SimpleMessageStore} where we have a single
@@ -78,20 +78,15 @@ public class OneMessagePerVertexStore<I extends WritableComparable,
     return currentMessage;
   }
 
-  @Override
-  protected void addVertexMessagesToPartition(I vertexId,
-      Collection<M> messages,
-      ConcurrentMap<I, M> partitionMap) throws IOException {
-    M currentMessage = getOrCreateCurrentMessage(vertexId, partitionMap);
-    synchronized (currentMessage) {
-      for (M message : messages) {
-        combiner.combine(vertexId, currentMessage, message);
-      }
-    }
-  }
-
-  @Override
-  protected void addVertexMessageToPartition(I vertexId, M message,
+  /**
+   * Add a single message for vertex to a partition map
+   *
+   * @param vertexId Id of vertex which received message
+   * @param message Message to add
+   * @param partitionMap Partition map to add the message to
+   * @throws IOException
+   */
+  private void addVertexMessageToPartition(I vertexId, M message,
       ConcurrentMap<I, M> partitionMap) throws IOException {
     M currentMessage = getOrCreateCurrentMessage(vertexId, partitionMap);
     synchronized (currentMessage) {
@@ -100,7 +95,36 @@ public class OneMessagePerVertexStore<I extends WritableComparable,
   }
 
   @Override
-  protected Collection<M> getMessagesAsCollection(M message) {
+  public void addPartitionMessages(
+      int partitionId,
+      ByteArrayVertexIdMessages<I, M> messages) throws IOException {
+    ConcurrentMap<I, M> partitionMap =
+        getOrCreatePartitionMap(partitionId);
+    ByteArrayVertexIdMessages<I, M>.VertexIdMessageIterator
+        vertexIdMessageIterator = messages.getVertexIdMessageIterator();
+    // This loop is a little complicated as it is optimized to only create
+    // the minimal amount of vertex id and message objects as possible.
+    while (vertexIdMessageIterator.hasNext()) {
+      vertexIdMessageIterator.next();
+      I vertexId = vertexIdMessageIterator.getCurrentVertexId();
+      M currentMessage =
+          partitionMap.get(vertexIdMessageIterator.getCurrentVertexId());
+      if (currentMessage == null) {
+        M newMessage = combiner.createInitialMessage();
+        currentMessage = partitionMap.putIfAbsent(
+            vertexIdMessageIterator.releaseCurrentVertexId(), newMessage);
+        if (currentMessage == null) {
+          currentMessage = newMessage;
+        }
+      }
+      synchronized (currentMessage) {
+        combiner.combine(vertexId, currentMessage,
+            vertexIdMessageIterator.getCurrentMessage());
+      }
+    }
+  }
+  @Override
+  protected Iterable<M> getMessagesAsIterable(M message) {
     return Collections.singleton(message);
   }
 
@@ -121,6 +145,27 @@ public class OneMessagePerVertexStore<I extends WritableComparable,
     return message;
   }
 
+  @Override
+  public void addMessages(MessageStore<I, M> messageStore) throws IOException {
+    if (messageStore instanceof OneMessagePerVertexStore) {
+      OneMessagePerVertexStore<I, M> oneMessagePerVertexStore =
+          (OneMessagePerVertexStore<I, M>) messageStore;
+      for (Map.Entry<Integer, ConcurrentMap<I, M>>
+          partitionEntry : oneMessagePerVertexStore.map.entrySet()) {
+        ConcurrentMap<I, M> partitionMap =
+              getOrCreatePartitionMap(partitionEntry.getKey());
+        for (Map.Entry<I, M> vertexEntry :
+            partitionEntry.getValue().entrySet()) {
+          addVertexMessageToPartition(vertexEntry.getKey(),
+              vertexEntry.getValue(), partitionMap);
+        }
+      }
+    } else {
+      throw new IllegalArgumentException("addMessages: Illegal argument " +
+          messageStore.getClass());
+    }
+  }
+
   /**
    * Create new factory for this message store
    *
@@ -138,7 +183,7 @@ public class OneMessagePerVertexStore<I extends WritableComparable,
   }
 
   /**
-   * Factory for {@link CollectionOfMessagesPerVertexStore}
+   * Factory for {@link OneMessagePerVertexStore}
    *
    * @param <I> Vertex id
    * @param <M> Message data

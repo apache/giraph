@@ -18,14 +18,9 @@
 
 package org.apache.giraph.comm.messages;
 
-import org.apache.giraph.GiraphConfiguration;
-import org.apache.giraph.ImmutableClassesGiraphConfiguration;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-
+import com.google.common.collect.Sets;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.DataInput;
@@ -36,18 +31,21 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.SortedMap;
+import java.util.List;
+import java.util.SortedSet;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.apache.giraph.GiraphConfiguration;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.utils.EmptyIterable;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
+import org.apache.log4j.Logger;
 
 /**
  * Used for writing and reading collection of messages to the disk. {@link
- * #addMessages(java.util.Map)} should be called only once with the messages
- * we want to store.
+ * #addMessages(MessageStore<I, M>)} should be called only once with
+ * the messages we want to store.
  * <p/>
  * It's optimized for retrieving messages in the natural order of vertex ids
  * they are sent to.
@@ -57,6 +55,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class SequentialFileMessageStore<I extends WritableComparable,
     M extends Writable> implements BasicMessageStore<I, M> {
+  /** Class logger */
+  private static final Logger LOG =
+      Logger.getLogger(SequentialFileMessageStore.class);
   /** File in which we store data */
   private final File file;
   /** Configuration which we need for reading data */
@@ -88,39 +89,56 @@ public class SequentialFileMessageStore<I extends WritableComparable,
   }
 
   @Override
-  public void addMessages(Map<I, Collection<M>> messages) throws IOException {
-    SortedMap<I, Collection<M>> map;
-    if (!(messages instanceof SortedMap)) {
-      map = Maps.newTreeMap();
-      map.putAll(messages);
-    } else {
-      map = (SortedMap) messages;
-    }
-    writeToFile(map);
-  }
-
-  /**
-   * Writes messages to its file.
-   *
-   * @param messages Messages to write
-   * @throws IOException
-   */
-  private void writeToFile(SortedMap<I, Collection<M>> messages) throws
-      IOException {
+  public void addMessages(MessageStore<I, M> messageStore) throws IOException {
+    // Writes messages to its file
     if (file.exists()) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("addMessages: Deleting " + file);
+      }
       file.delete();
     }
     file.createNewFile();
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("addMessages: Creating " + file);
+    }
+
     DataOutputStream out = null;
 
     try {
       out = new DataOutputStream(
           new BufferedOutputStream(new FileOutputStream(file), bufferSize));
-      out.writeInt(messages.size());
-      for (Entry<I, Collection<M>> entry : messages.entrySet()) {
-        entry.getKey().write(out);
-        out.writeInt(entry.getValue().size());
-        for (M message : entry.getValue()) {
+      int destinationVertexIdCount =
+          Iterables.size(messageStore.getDestinationVertices());
+      out.writeInt(destinationVertexIdCount);
+
+      // Since the message store messages might not be sorted, sort them if
+      // necessary
+      SortedSet<I> sortedSet;
+      if (messageStore.getDestinationVertices() instanceof SortedSet) {
+        sortedSet = (SortedSet<I>) messageStore.getDestinationVertices();
+      } else {
+        sortedSet =
+            Sets.newTreeSet(messageStore.getDestinationVertices());
+        for (I destinationVertexId : messageStore.getDestinationVertices()) {
+          sortedSet.add(destinationVertexId);
+        }
+      }
+
+      // Dump the vertices and their messages in a sorted order
+      for (I destinationVertexId : sortedSet) {
+        destinationVertexId.write(out);
+        Iterable<M> messages =
+            messageStore.getVertexMessages(destinationVertexId);
+        int messageCount = Iterables.size(messages);
+        out.writeInt(messageCount);
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("addMessages: For vertex id " + destinationVertexId +
+              ", messages = " + messageCount + " to file " + file);
+        }
+        for (M message : messages) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("addMessages: Wrote " + message + " to " + file);
+          }
           message.write(out);
         }
       }
@@ -142,8 +160,12 @@ public class SequentialFileMessageStore<I extends WritableComparable,
    * @throws IOException
    */
   @Override
-  public Collection<M> getVertexMessages(I vertexId) throws
+  public Iterable<M> getVertexMessages(I vertexId) throws
       IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("getVertexMessages: Reading for vertex id " + vertexId +
+          " (currently " + currentVertexId + ") from " + file);
+    }
     if (in == null) {
       startReading();
     }
@@ -154,14 +176,14 @@ public class SequentialFileMessageStore<I extends WritableComparable,
     }
 
     if (nextVertexId == null || vertexId.compareTo(nextVertexId) < 0) {
-      return Collections.emptyList();
+      return EmptyIterable.<M>emptyIterable();
     }
+
     return readMessagesForCurrentVertex();
   }
 
   @Override
-  public void clearVertexMessages(I vertexId) throws IOException {
-  }
+  public void clearVertexMessages(I vertexId) throws IOException { }
 
   @Override
   public void clearAll() throws IOException {
@@ -213,6 +235,10 @@ public class SequentialFileMessageStore<I extends WritableComparable,
     in = new DataInputStream(
         new BufferedInputStream(new FileInputStream(file), bufferSize));
     verticesLeft = in.readInt();
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("startReading: File " + file + " with " +
+          verticesLeft + " vertices left");
+    }
   }
 
   /**
@@ -262,10 +288,17 @@ public class SequentialFileMessageStore<I extends WritableComparable,
    */
   private Collection<M> readMessagesForCurrentVertex() throws IOException {
     int messagesSize = in.readInt();
-    ArrayList<M> messages = Lists.newArrayList();
+    List<M> messages = Lists.newArrayListWithCapacity(messagesSize);
     for (int i = 0; i < messagesSize; i++) {
       M message = config.createMessageValue();
-      message.readFields(in);
+      try {
+        message.readFields(in);
+      } catch (IOException e) {
+        throw new IllegalStateException("readMessagesForCurrentVertex: " +
+            "Failed to read message from " + i + " of " +
+            messagesSize + " for vertex id " + currentVertexId + " from " +
+            file, e);
+      }
       messages.add(message);
     }
     currentVertexDone();
@@ -291,6 +324,9 @@ public class SequentialFileMessageStore<I extends WritableComparable,
    * @throws IOException
    */
   private void endReading() throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("endReading: Stopped reading " + file);
+    }
     if (in != null) {
       in.close();
       in = null;

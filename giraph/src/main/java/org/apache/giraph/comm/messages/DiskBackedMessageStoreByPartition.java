@@ -24,14 +24,13 @@ import com.google.common.collect.Maps;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.utils.ByteArrayVertexIdMessageCollection;
+import org.apache.giraph.utils.ByteArrayVertexIdMessages;
+import org.apache.giraph.utils.EmptyIterable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -76,57 +75,60 @@ public class DiskBackedMessageStoreByPartition<I extends WritableComparable,
   }
 
   @Override
-  public void addVertexMessages(I vertexId,
-      Collection<M> messages) throws IOException {
-    getMessageStore(vertexId).addVertexMessages(vertexId, messages);
-    checkMemory();
-  }
-
-  @Override
-  public void addMessages(Map<I, Collection<M>> messages) throws IOException {
-    for (Entry<I, Collection<M>> entry : messages.entrySet()) {
-      getMessageStore(entry.getKey()).addVertexMessages(
-          entry.getKey(), entry.getValue());
+  public void addPartitionMessages(
+      int partitionId,
+      ByteArrayVertexIdMessages<I, M> messages) throws IOException {
+    FlushableMessageStore<I, M> flushableMessageStore =
+        getMessageStore(partitionId);
+    if (flushableMessageStore instanceof DiskBackedMessageStore) {
+      DiskBackedMessageStore<I, M> diskBackedMessageStore =
+          (DiskBackedMessageStore<I, M>) flushableMessageStore;
+      ByteArrayVertexIdMessages<I, M>.VertexIdMessageIterator
+          vertexIdMessageIterator =
+          messages.getVertexIdMessageIterator();
+      while (vertexIdMessageIterator.hasNext()) {
+        vertexIdMessageIterator.next();
+        boolean ownsVertexId =
+            diskBackedMessageStore.addVertexMessages(
+                vertexIdMessageIterator.getCurrentVertexId(),
+                Collections.singleton(
+                    vertexIdMessageIterator.getCurrentMessage()));
+        if (ownsVertexId) {
+          vertexIdMessageIterator.releaseCurrentVertexId();
+        }
+      }
+    } else {
+      throw new IllegalStateException("addPartitionMessages: Doesn't support " +
+          "class " + flushableMessageStore.getClass());
     }
     checkMemory();
   }
 
   @Override
-  public void addPartitionMessages(Map<I, Collection<M>> messages,
-      int partitionId) throws IOException {
-    getMessageStore(partitionId).addMessages(messages);
-    checkMemory();
-  }
-
-  @Override
-  public void addPartitionMessages(
-      ByteArrayVertexIdMessageCollection<I, M> messages,
-      int partitionId) throws IOException {
-    Map<I, Collection<M>> map = Maps.newHashMap();
-    ByteArrayVertexIdMessageCollection<I, M>.Iterator iterator =
-        messages.getIterator();
-    while (iterator.hasNext()) {
-      iterator.next();
-      I vertexId = iterator.getCurrentVertexId();
-      M message = iterator.getCurrentMessage();
-      Collection<M> currentMessages = map.get(vertexId);
-      if (currentMessages == null) {
-        currentMessages = Lists.newArrayList(message);
-        map.put(vertexId, currentMessages);
+  public void addMessages(MessageStore<I, M> messageStore) throws IOException {
+    for (I destinationVertex : messageStore.getDestinationVertices()) {
+      FlushableMessageStore<I, M> flushableMessageStore =
+          getMessageStore(destinationVertex);
+      if (flushableMessageStore instanceof DiskBackedMessageStore) {
+        DiskBackedMessageStore<I, M> diskBackedMessageStore =
+            (DiskBackedMessageStore<I, M>) flushableMessageStore;
+        Iterable<M> messages =
+            messageStore.getVertexMessages(destinationVertex);
+        diskBackedMessageStore.addVertexMessages(destinationVertex, messages);
       } else {
-        currentMessages.add(message);
+        throw new IllegalStateException("addMessages: Doesn't support " +
+            "class " + flushableMessageStore.getClass());
       }
     }
-    getMessageStore(partitionId).addMessages(map);
     checkMemory();
   }
 
   @Override
-  public Collection<M> getVertexMessages(I vertexId) throws IOException {
+  public Iterable<M> getVertexMessages(I vertexId) throws IOException {
     if (hasMessagesForVertex(vertexId)) {
       return getMessageStore(vertexId).getVertexMessages(vertexId);
     } else {
-      return Collections.emptyList();
+      return EmptyIterable.<M>emptyIterable();
     }
   }
 

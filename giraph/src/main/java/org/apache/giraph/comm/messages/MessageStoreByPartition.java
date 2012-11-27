@@ -21,9 +21,7 @@ package org.apache.giraph.comm.messages;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Collection;
-import java.util.Map;
-import org.apache.giraph.utils.ByteArrayVertexIdMessageCollection;
+import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -38,22 +36,13 @@ public interface MessageStoreByPartition<I extends WritableComparable,
   /**
    * Adds messages for partition
    *
-   * @param messages    Map of messages we want to add
    * @param partitionId Id of partition
-   * @throws IOException
-   */
-  void addPartitionMessages(Map<I, Collection<M>> messages,
-      int partitionId) throws IOException;
-
-  /**
-   * Adds messages for partition
-   *
    * @param messages    Collection of vertex ids and messages we want to add
-   * @param partitionId Id of partition
    * @throws IOException
    */
-  void addPartitionMessages(ByteArrayVertexIdMessageCollection<I, M> messages,
-      int partitionId) throws IOException;
+  void addPartitionMessages(
+      int partitionId, ByteArrayVertexIdMessages<I, M> messages)
+    throws IOException;
 
   /**
    * Gets vertex ids from selected partition which we have messages for

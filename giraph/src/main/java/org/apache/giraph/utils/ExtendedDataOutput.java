@@ -24,6 +24,13 @@ import java.io.DataOutput;
  */
 public interface ExtendedDataOutput extends DataOutput {
   /**
+   * Skip some number of bytes.
+   *
+   * @param  bytesToSkip Number of bytes to skip
+   */
+  void skipBytes(int bytesToSkip);
+
+  /**
    * In order to write a size as a first part of an data output, it is
    * useful to be able to write an int at an arbitrary location in the stream
    *

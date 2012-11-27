@@ -17,9 +17,7 @@
  */
 package org.apache.giraph.comm.netty;
 
-import com.google.common.collect.Maps;
 import java.io.IOException;
-import java.util.Collection;
 import java.util.Map;
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
@@ -45,7 +43,7 @@ import org.apache.giraph.graph.partition.Partition;
 import org.apache.giraph.graph.partition.PartitionOwner;
 import org.apache.giraph.metrics.GiraphMetrics;
 import org.apache.giraph.metrics.ValueGauge;
-import org.apache.giraph.utils.ByteArrayVertexIdMessageCollection;
+import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.giraph.utils.PairList;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -146,7 +144,7 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
     // Send a request if the cache of outgoing message to
     // the remote worker 'workerInfo' is full enough to be flushed
     if (workerMessageCount >= maxMessagesPerWorker) {
-      PairList<Integer, ByteArrayVertexIdMessageCollection<I, M>>
+      PairList<Integer, ByteArrayVertexIdMessages<I, M>>
           workerMessages =
           sendMessageCache.removeWorkerMessages(workerInfo);
       WritableRequest writableRequest =
@@ -174,29 +172,41 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
     // Messages are stored separately
     MessageStoreByPartition<I, M> messageStore =
         serverData.getCurrentMessageStore();
-    Map<I, Collection<M>> map = Maps.newHashMap();
+    ByteArrayVertexIdMessages<I, M> vertexIdMessages =
+        new ByteArrayVertexIdMessages<I, M>();
+    vertexIdMessages.setConf(configuration);
+    vertexIdMessages.initialize();
     int messagesInMap = 0;
     for (I vertexId :
         messageStore.getPartitionDestinationVertices(partitionId)) {
       try {
-        Collection<M> messages = messageStore.getVertexMessages(vertexId);
-        map.put(vertexId, messages);
-        messagesInMap += messages.size();
+        // Messages cannot be re-used from this iterable, but add()
+        // serializes the message, making this safe
+        Iterable<M> messages = messageStore.getVertexMessages(vertexId);
+        for (M message : messages) {
+          vertexIdMessages.add(vertexId, message);
+          ++messagesInMap;
+        }
       } catch (IOException e) {
         throw new IllegalStateException(
             "sendVertexRequest: Got IOException ", e);
       }
       if (messagesInMap > maxMessagesPerWorker) {
         WritableRequest messagesRequest = new
-            SendPartitionCurrentMessagesRequest<I, V, E, M>(partitionId, map);
+            SendPartitionCurrentMessagesRequest<I, V, E, M>(
+            partitionId, vertexIdMessages);
         doRequest(workerInfo, messagesRequest);
-        map.clear();
+        vertexIdMessages =
+            new ByteArrayVertexIdMessages<I, M>();
+        vertexIdMessages.setConf(configuration);
+        vertexIdMessages.initialize();
         messagesInMap = 0;
       }
     }
-    if (!map.isEmpty()) {
+    if (vertexIdMessages != null) {
       WritableRequest messagesRequest = new
-          SendPartitionCurrentMessagesRequest<I, V, E, M>(partitionId, map);
+          SendPartitionCurrentMessagesRequest<I, V, E, M>(
+          partitionId, vertexIdMessages);
       doRequest(workerInfo, messagesRequest);
     }
   }
@@ -322,10 +332,10 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
 
     // Execute the remaining sends messages (if any)
     PairList<WorkerInfo, PairList<Integer,
-        ByteArrayVertexIdMessageCollection<I, M>>>
+        ByteArrayVertexIdMessages<I, M>>>
         remainingMessageCache = sendMessageCache.removeAllMessages();
     PairList<WorkerInfo,
-        PairList<Integer, ByteArrayVertexIdMessageCollection<I, M>>>.Iterator
+        PairList<Integer, ByteArrayVertexIdMessages<I, M>>>.Iterator
         iterator = remainingMessageCache.getIterator();
     while (iterator.hasNext()) {
       iterator.next();

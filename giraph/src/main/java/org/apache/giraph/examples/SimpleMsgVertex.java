@@ -46,7 +46,7 @@ public class SimpleMsgVertex extends
       for (IntWritable message : messages) {
         sum += message.get();
       }
-      LOG.info("TestMsgVertex: Received a sum of " + sum +
+      LOG.info("compute: Received a sum of " + sum +
           " (will stop on 306)");
 
       if (sum == 306) {
@@ -54,7 +54,7 @@ public class SimpleMsgVertex extends
       }
     }
     if (getSuperstep() > 3) {
-      System.err.println("TestMsgVertex: Vertex 1 failed to receive " +
+      System.err.println("compute: Vertex 1 failed to receive " +
           "messages in time");
       voteToHalt();
     }

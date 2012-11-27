@@ -212,6 +212,14 @@ public class UnsafeByteArrayOutputStream extends OutputStream
   }
 
   @Override
+  public void skipBytes(int bytesToSkip) {
+    if ((pos + bytesToSkip) > buf.length) {
+      buf = Arrays.copyOf(buf, Math.max(buf.length << 1, pos + bytesToSkip));
+    }
+    pos += bytesToSkip;
+  }
+
+  @Override
   public void writeInt(int pos, int value) {
     if (pos + SIZE_OF_INT > this.pos) {
       throw new IndexOutOfBoundsException(

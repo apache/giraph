@@ -98,7 +98,8 @@ public abstract class Vertex<I extends WritableComparable,
    * Must be defined by user to do computation on a single Vertex.
    *
    * @param messages Messages that were sent to this vertex in the previous
-   *                 superstep
+   *                 superstep.  Each message is only guaranteed to have
+   *                 a life expectancy as long as next() is not called.
    * @throws IOException
    */
   public abstract void compute(Iterable<M> messages) throws IOException;

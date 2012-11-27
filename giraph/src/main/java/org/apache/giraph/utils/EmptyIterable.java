@@ -27,6 +27,20 @@ import java.util.NoSuchElementException;
  * @param <M> Message data
  */
 public class EmptyIterable<M> implements Iterable<M>, Iterator<M> {
+  /** Singleton empty iterable */
+  private static final EmptyIterable<Object> EMPTY_ITERABLE =
+      new EmptyIterable<Object>();
+
+  /**
+   * Get the singleton empty iterable
+   *
+   * @param <T> Type of the empty iterable
+   * @return Empty singleton iterable
+   */
+  public static <T> Iterable<T> emptyIterable() {
+    return (Iterable<T>) EMPTY_ITERABLE;
+  }
+
   @Override
   public Iterator<M> iterator() {
     return this;

@@ -21,9 +21,6 @@ package org.apache.giraph.comm.messages;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import java.io.IOException;
-import java.util.Collection;
-
 /**
  * Message store
  *
@@ -32,16 +29,6 @@ import java.util.Collection;
  */
 public interface MessageStore<I extends WritableComparable,
     M extends Writable> extends BasicMessageStore<I, M> {
-  /**
-   * Adds messages
-   *
-   * @param vertexId Vertex id for which the messages are
-   * @param messages Messages for the vertex
-   * @throws IOException
-   */
-  void addVertexMessages(I vertexId,
-      Collection<M> messages) throws IOException;
-
   /**
    * Get number of messages in memory
    *

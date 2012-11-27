@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-435: Serialize server messages for memory and less GC. (aching)
+
   GIRAPH-420: build formats in profiles where it works. (nitay)
 
   GIRAPH-421: Aggregate metrics up to master. (nitay)

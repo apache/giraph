@@ -18,24 +18,20 @@
 
 package org.apache.giraph.comm.messages;
 
-import org.apache.giraph.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
-
-import org.apache.giraph.utils.ByteArrayVertexIdMessageCollection;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.bsp.CentralizedServiceWorker;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 
 /**
  * Abstract class for {@link MessageStoreByPartition} which allows any kind
@@ -72,35 +68,12 @@ public abstract class SimpleMessageStore<I extends WritableComparable,
   }
 
   /**
-   * Add collection of messages for vertex to a partition map
-   *
-   * @param vertexId Id of vertex which received messages
-   * @param messages Messages to add
-   * @param partitionMap Map which to add to
-   * @throws IOException
-   */
-  protected abstract void addVertexMessagesToPartition(I vertexId,
-      Collection<M> messages, ConcurrentMap<I, T> partitionMap) throws
-      IOException;
-
-  /**
-   * Add a single message for vertex to a partition map
-   *
-   * @param vertexId Id of vertex which received message
-   * @param message Message to add
-   * @param partitionMap Map which to add to
-   * @throws IOException
-   */
-  protected abstract void addVertexMessageToPartition(I vertexId,
-      M message, ConcurrentMap<I, T> partitionMap) throws IOException;
-
-  /**
-   * Get messages as collection from message storage
+   * Get messages as an iterable from message storage
    *
    * @param messages Message storage
-   * @return Messages as collection
+   * @return Messages as an iterable
    */
-  protected abstract Collection<M> getMessagesAsCollection(T messages);
+  protected abstract Iterable<M> getMessagesAsIterable(T messages);
 
   /**
    * Get number of messages in partition map
@@ -162,50 +135,6 @@ public abstract class SimpleMessageStore<I extends WritableComparable,
   }
 
   @Override
-  public void addMessages(Map<I, Collection<M>> messages) throws IOException {
-    for (Map.Entry<I, Collection<M>> entry : messages.entrySet()) {
-      addVertexMessages(entry.getKey(), entry.getValue());
-    }
-  }
-
-  @Override
-  public void addVertexMessages(I vertexId,
-      Collection<M> messages) throws IOException {
-    int partitionId = getPartitionId(vertexId);
-    ConcurrentMap<I, T> partitionMap = getOrCreatePartitionMap(partitionId);
-    addVertexMessagesToPartition(vertexId, messages, partitionMap);
-  }
-
-  @Override
-  public void addPartitionMessages(Map<I, Collection<M>> messages,
-      int partitionId) throws IOException {
-    ConcurrentMap<I, T> partitionMap =
-        getOrCreatePartitionMap(partitionId);
-
-    for (Map.Entry<I, Collection<M>> entry : messages.entrySet()) {
-      addVertexMessagesToPartition(entry.getKey(), entry.getValue(),
-          partitionMap);
-    }
-  }
-
-  @Override
-  public void addPartitionMessages(ByteArrayVertexIdMessageCollection<I,
-      M> messages,
-      int partitionId) throws IOException {
-    ConcurrentMap<I, T> partitionMap =
-        getOrCreatePartitionMap(partitionId);
-
-    ByteArrayVertexIdMessageCollection<I, M>.Iterator iterator =
-        messages.getIterator();
-    while (iterator.hasNext()) {
-      iterator.next();
-      I vertexId = iterator.getCurrentVertexId();
-      M message = iterator.getCurrentMessage();
-      addVertexMessageToPartition(vertexId, message, partitionMap);
-    }
-  }
-
-  @Override
   public Iterable<I> getPartitionDestinationVertices(int partitionId) {
     ConcurrentMap<I, ?> partitionMap = map.get(partitionId);
     return (partitionMap == null) ? Collections.<I>emptyList() :
@@ -229,14 +158,14 @@ public abstract class SimpleMessageStore<I extends WritableComparable,
   }
 
   @Override
-  public Collection<M> getVertexMessages(I vertexId) throws IOException {
+  public Iterable<M> getVertexMessages(I vertexId) throws IOException {
     ConcurrentMap<I, T> partitionMap = map.get(getPartitionId(vertexId));
     if (partitionMap == null) {
       return Collections.<M>emptyList();
     }
     T messages = partitionMap.get(vertexId);
     return (messages == null) ? Collections.<M>emptyList() :
-        getMessagesAsCollection(messages);
+        getMessagesAsIterable(messages);
   }
 
   @Override

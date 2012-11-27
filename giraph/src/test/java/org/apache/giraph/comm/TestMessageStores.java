@@ -18,34 +18,9 @@
 
 package org.apache.giraph.comm;
 
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.giraph.GiraphConfiguration;
-import org.apache.giraph.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.comm.messages.BasicMessageStore;
-import org.apache.giraph.comm.messages.CollectionOfMessagesPerVertexStore;
-import org.apache.giraph.comm.messages.DiskBackedMessageStoreByPartition;
-import org.apache.giraph.comm.messages.DiskBackedMessageStore;
-import org.apache.giraph.comm.messages.FlushableMessageStore;
-import org.apache.giraph.comm.messages.MessageStore;
-import org.apache.giraph.comm.messages.MessageStoreFactory;
-import org.apache.giraph.comm.messages.SequentialFileMessageStore;
-import org.apache.giraph.graph.EdgeListVertex;
-import org.apache.giraph.utils.MockUtils;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
-import static org.junit.Assert.assertTrue;
-
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
@@ -57,9 +32,34 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Random;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import org.apache.giraph.GiraphConfiguration;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.bsp.CentralizedServiceWorker;
+import org.apache.giraph.comm.messages.BasicMessageStore;
+import org.apache.giraph.comm.messages.ByteArrayMessagesPerVertexStore;
+import org.apache.giraph.comm.messages.DiskBackedMessageStore;
+import org.apache.giraph.comm.messages.DiskBackedMessageStoreByPartition;
+import org.apache.giraph.comm.messages.FlushableMessageStore;
+import org.apache.giraph.comm.messages.MessageStore;
+import org.apache.giraph.comm.messages.MessageStoreFactory;
+import org.apache.giraph.comm.messages.SequentialFileMessageStore;
+import org.apache.giraph.graph.EdgeListVertex;
+import org.apache.giraph.utils.ByteArrayVertexIdMessages;
+import org.apache.giraph.utils.CollectionUtils;
+import org.apache.giraph.utils.MockUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+
+import static org.junit.Assert.assertTrue;
 
 /** Test for different types of message stores */
 public class TestMessageStores {
@@ -69,6 +69,11 @@ public class TestMessageStores {
   private static
   CentralizedServiceWorker<IntWritable, IntWritable, IntWritable, IntWritable>
       service;
+  /**
+   * Pseudo-random number generator with the same seed to help with
+   * debugging)
+   */
+  private static final Random RANDOM = new Random(101);
 
   private static class IntVertex extends EdgeListVertex<IntWritable,
       IntWritable, IntWritable, IntWritable> {
@@ -122,27 +127,68 @@ public class TestMessageStores {
     SortedMap<IntWritable, Collection<IntWritable>> allMessages =
         new TreeMap<IntWritable, Collection<IntWritable>>();
     for (int v = 0; v < testData.numVertices; v++) {
-      int messageNum = (int) (Math.random() * testData.maxNumberOfMessages);
+      int messageNum =
+          (int) (RANDOM.nextFloat() * testData.maxNumberOfMessages);
       Collection<IntWritable> vertexMessages = Lists.newArrayList();
       for (int m = 0; m < messageNum; m++) {
         vertexMessages.add(
-            new IntWritable((int) (Math.random() * testData.maxMessage)));
+            new IntWritable((int) (RANDOM.nextFloat() * testData.maxMessage)));
       }
       IntWritable vertexId =
-          new IntWritable((int) (Math.random() * testData.maxId));
+          new IntWritable((int) (RANDOM.nextFloat() * testData.maxId));
       allMessages.put(vertexId, vertexMessages);
     }
     return allMessages;
   }
 
-  private void putNTimes
-      (MessageStore<IntWritable, IntWritable> messageStore,
-          Map<IntWritable, Collection<IntWritable>> messages,
-          TestData testData) throws IOException {
+  /**
+   * Used for testing only
+   */
+  private static class InputMessageStore extends
+      ByteArrayMessagesPerVertexStore<IntWritable, IntWritable> {
+
+    /**
+     * Constructor
+     *
+     * @param service Service worker
+     * @param config  Hadoop configuration
+     */
+    InputMessageStore(
+        CentralizedServiceWorker<IntWritable, ?, ?, IntWritable> service,
+        ImmutableClassesGiraphConfiguration<IntWritable, ?, ?,
+            IntWritable> config,
+        Map<IntWritable, Collection<IntWritable>> inputMap) throws IOException {
+      super(service, config);
+      // Adds all the messages to the store
+      for (Map.Entry<IntWritable, Collection<IntWritable>> entry :
+          inputMap.entrySet()) {
+        int partitionId = getPartitionId(entry.getKey());
+        ByteArrayVertexIdMessages<IntWritable, IntWritable>
+            byteArrayVertexIdMessages =
+            new ByteArrayVertexIdMessages<IntWritable, IntWritable>();
+        byteArrayVertexIdMessages.setConf(config);
+        byteArrayVertexIdMessages.initialize();
+        for (IntWritable message : entry.getValue()) {
+          byteArrayVertexIdMessages.add(entry.getKey(), message);
+        }
+        try {
+          addPartitionMessages(partitionId, byteArrayVertexIdMessages);
+        } catch (IOException e) {
+          throw new IllegalStateException("Got IOException", e);
+        }
+      }
+    }
+  }
+
+  private void putNTimes(
+      MessageStore<IntWritable, IntWritable> messageStore,
+      Map<IntWritable, Collection<IntWritable>> messages,
+      TestData testData) throws IOException {
     for (int n = 0; n < testData.numTimes; n++) {
       SortedMap<IntWritable, Collection<IntWritable>> batch =
           createRandomMessages(testData);
-      messageStore.addMessages(batch);
+      messageStore.addMessages(new InputMessageStore(service, config,
+          batch));
       for (Entry<IntWritable, Collection<IntWritable>> entry :
           batch.entrySet()) {
         if (messages.containsKey(entry.getKey())) {
@@ -161,12 +207,14 @@ public class TestMessageStores {
     TreeSet<I> vertexIds = Sets.newTreeSet();
     Iterables.addAll(vertexIds, messageStore.getDestinationVertices());
     for (I vertexId : vertexIds) {
-      Collection<M> expected = expectedMessages.get(vertexId);
+      Iterable<M> expected = expectedMessages.get(vertexId);
       if (expected == null) {
         return false;
       }
-      Collection<M> actual = messageStore.getVertexMessages(vertexId);
-      if (!CollectionUtils.isEqualCollection(expected, actual)) {
+      Iterable<M> actual = messageStore.getVertexMessages(vertexId);
+      if (!CollectionUtils.isEqual(expected, actual)) {
+        System.err.println("equalMessages: For vertexId " + vertexId +
+            " expected " + expected + ", but got " + actual);
         return false;
       }
     }
@@ -213,10 +261,10 @@ public class TestMessageStores {
   }
 
   @Test
-  public void testCollectionOfMessagesPeVertexStore() {
+  public void testByteArrayMessagesPerVertexStore() {
     try {
       testMessageStore(
-          CollectionOfMessagesPerVertexStore.newFactory(service, config),
+          ByteArrayMessagesPerVertexStore.newFactory(service, config),
           testData);
     } catch (IOException e) {
       e.printStackTrace();

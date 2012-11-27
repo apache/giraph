@@ -21,6 +21,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.util.Arrays;
 
 /**
  * Adds some functionality to ByteArrayOutputStream,
@@ -137,6 +138,14 @@ public class ExtendedByteArrayDataOutput extends ByteArrayOutputStream
   @Override
   public void writeUTF(String s) throws IOException {
     dataOutput.writeUTF(s);
+  }
+
+  @Override
+  public void skipBytes(int bytesToSkip) {
+    if ((count + bytesToSkip) > buf.length) {
+      buf = Arrays.copyOf(buf, Math.max(buf.length << 1, count + bytesToSkip));
+    }
+    count += bytesToSkip;
   }
 
   @Override

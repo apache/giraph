@@ -26,7 +26,7 @@ import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.graph.WorkerInfo;
 import org.apache.giraph.graph.partition.PartitionOwner;
-import org.apache.giraph.utils.ByteArrayVertexIdMessageCollection;
+import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.giraph.utils.PairList;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -42,7 +42,7 @@ import org.apache.hadoop.io.WritableComparable;
 public class SendMessageCache<I extends WritableComparable,
     M extends Writable> {
   /** Internal cache */
-  private final ByteArrayVertexIdMessageCollection<I, M>[] messageCache;
+  private final ByteArrayVertexIdMessages<I, M>[] messageCache;
   /** Number of messages in each partition */
   private final int[] messageCounts;
   /** List of partition ids belonging to a worker */
@@ -73,7 +73,7 @@ public class SendMessageCache<I extends WritableComparable,
       workerPartitionIds.add(partitionOwner.getPartitionId());
       maxPartition = Math.max(partitionOwner.getPartitionId(), maxPartition);
     }
-    messageCache = new ByteArrayVertexIdMessageCollection[maxPartition + 1];
+    messageCache = new ByteArrayVertexIdMessages[maxPartition + 1];
 
     int maxWorker = 0;
     for (WorkerInfo workerInfo : serviceWorker.getWorkerInfoList()) {
@@ -95,10 +95,10 @@ public class SendMessageCache<I extends WritableComparable,
   public int addMessage(WorkerInfo workerInfo,
     final int partitionId, I destVertexId, M message) {
     // Get the message collection
-    ByteArrayVertexIdMessageCollection<I, M> partitionMessages =
+    ByteArrayVertexIdMessages<I, M> partitionMessages =
         messageCache[partitionId];
     if (partitionMessages == null) {
-      partitionMessages = new ByteArrayVertexIdMessageCollection<I, M>();
+      partitionMessages = new ByteArrayVertexIdMessages<I, M>();
       partitionMessages.setConf(conf);
       partitionMessages.initialize();
       messageCache[partitionId] = partitionMessages;
@@ -115,13 +115,13 @@ public class SendMessageCache<I extends WritableComparable,
    *
    * @param workerInfo the address of the worker who owns the data
    *                   partitions that are receiving the messages
-   * @return List of pairs (partitionId, ByteArrayVertexIdMessageCollection),
+   * @return List of pairs (partitionId, ByteArrayVertexIdMessages),
    *         where all partition ids belong to workerInfo
    */
-  public PairList<Integer, ByteArrayVertexIdMessageCollection<I, M>>
+  public PairList<Integer, ByteArrayVertexIdMessages<I, M>>
   removeWorkerMessages(WorkerInfo workerInfo) {
-    PairList<Integer, ByteArrayVertexIdMessageCollection<I, M>> workerMessages =
-        new PairList<Integer, ByteArrayVertexIdMessageCollection<I, M>>();
+    PairList<Integer, ByteArrayVertexIdMessages<I, M>> workerMessages =
+        new PairList<Integer, ByteArrayVertexIdMessages<I, M>>();
     workerMessages.initialize();
     for (Integer partitionId : workerPartitions.get(workerInfo)) {
       if (messageCache[partitionId] != null) {
@@ -139,15 +139,15 @@ public class SendMessageCache<I extends WritableComparable,
    * @return All vertex messages for all partitions
    */
   public PairList<WorkerInfo, PairList<
-      Integer, ByteArrayVertexIdMessageCollection<I, M>>> removeAllMessages() {
+      Integer, ByteArrayVertexIdMessages<I, M>>> removeAllMessages() {
     PairList<WorkerInfo, PairList<Integer,
-        ByteArrayVertexIdMessageCollection<I, M>>>
+        ByteArrayVertexIdMessages<I, M>>>
         allMessages = new PairList<WorkerInfo,
-        PairList<Integer, ByteArrayVertexIdMessageCollection<I, M>>>();
+        PairList<Integer, ByteArrayVertexIdMessages<I, M>>>();
     allMessages.initialize();
     for (WorkerInfo workerInfo : workerPartitions.keySet()) {
-      PairList<Integer, ByteArrayVertexIdMessageCollection<I,
-          M>> workerMessages =
+      PairList<Integer, ByteArrayVertexIdMessages<I,
+                M>> workerMessages =
           removeWorkerMessages(workerInfo);
       if (!workerMessages.isEmpty()) {
         allMessages.add(workerInfo, workerMessages);

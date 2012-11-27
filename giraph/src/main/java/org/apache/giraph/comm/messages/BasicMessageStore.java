@@ -18,12 +18,9 @@
 
 package org.apache.giraph.comm.messages;
 
+import java.io.IOException;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-
-import java.io.IOException;
-import java.util.Collection;
-import java.util.Map;
 
 /**
  * Most basic message store with just add, get and clear operations
@@ -34,21 +31,24 @@ import java.util.Map;
 public interface BasicMessageStore<I extends WritableComparable,
     M extends Writable> extends Writable {
   /**
-   * Adds messages
+   * Adds messages from one message store to another
    *
-   * @param messages Map of messages we want to add
-   * @throws IOException
+   * @param messageStore Add the messages from this message store to this
+   *                     object
+   * @throws java.io.IOException
    */
-  void addMessages(Map<I, Collection<M>> messages) throws IOException;
+  void addMessages(MessageStore<I, M> messageStore) throws IOException;
 
   /**
-   * Gets messages for a vertex.
+   * Gets messages for a vertex.  The lifetime of every message is only
+   * guaranteed until the iterator's next() method is called.  Do not re-use
+   * the messages.
    *
    * @param vertexId Vertex id for which we want to get messages
-   * @return Messages for vertex with required id
+   * @return Iterable of messages for a vertex id
    * @throws IOException
    */
-  Collection<M> getVertexMessages(I vertexId) throws IOException;
+  Iterable<M> getVertexMessages(I vertexId) throws IOException;
 
   /**
    * Clears messages for a vertex.

@@ -17,9 +17,15 @@
  */
 package org.apache.giraph.graph;
 
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.yammer.metrics.core.Timer;
 import com.yammer.metrics.core.TimerContext;
+import java.io.IOException;
+import java.util.Collection;
+import java.util.List;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Callable;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.WorkerClientRequestProcessor;
@@ -28,21 +34,16 @@ import org.apache.giraph.comm.netty.NettyWorkerClientRequestProcessor;
 import org.apache.giraph.graph.partition.Partition;
 import org.apache.giraph.graph.partition.PartitionStats;
 import org.apache.giraph.metrics.GiraphMetrics;
+
+import org.apache.giraph.utils.MemoryUtils;
 import org.apache.giraph.utils.SystemTime;
 import org.apache.giraph.utils.Time;
-import org.apache.giraph.utils.Times;
-import org.apache.giraph.utils.MemoryUtils;
 import org.apache.giraph.utils.TimedLogger;
+import org.apache.giraph.utils.Times;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
-
-import java.io.IOException;
-import java.util.Collection;
-import java.util.List;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Callable;
 
 /**
  * Compute as many vertex partitions as possible.  Every thread will has its
@@ -189,10 +190,9 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
         // Make sure every vertex has this thread's
         // graphState before computing
         vertex.setGraphState(graphState);
-        Collection<M> messages =
+        Iterable<M> messages =
             messageStore.getVertexMessages(vertex.getId());
-        messageStore.clearVertexMessages(vertex.getId());
-        if (vertex.isHalted() && !messages.isEmpty()) {
+        if (vertex.isHalted() && !Iterables.isEmpty(messages)) {
           vertex.wakeUp();
         }
         if (!vertex.isHalted()) {
@@ -209,6 +209,10 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
         if (vertex.isHalted()) {
           partitionStats.incrFinishedVertexCount();
         }
+        // Remove the messages now that the vertex has finished computation
+        messageStore.clearVertexMessages(vertex.getId());
+
+        // Add statistics for this vertex
         partitionStats.incrVertexCount();
         partitionStats.addEdgeCount(vertex.getNumEdges());
       }

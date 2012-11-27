@@ -22,7 +22,7 @@ import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.comm.WorkerClientRequestProcessor;
-import org.apache.giraph.comm.messages.CollectionOfMessagesPerVertexStore;
+import org.apache.giraph.comm.messages.ByteArrayMessagesPerVertexStore;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.partition.BasicPartitionOwner;
@@ -162,7 +162,7 @@ public class MockUtils {
       Mapper.Context context) {
     return new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>(
         conf,
-        CollectionOfMessagesPerVertexStore.newFactory(
+        ByteArrayMessagesPerVertexStore.newFactory(
             MockUtils.mockServiceGetVertexPartitionOwner(1), conf),
         context);
   }
