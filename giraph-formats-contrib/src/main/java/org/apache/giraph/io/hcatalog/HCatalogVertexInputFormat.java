@@ -22,6 +22,7 @@ import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexInputFormat;
 import org.apache.giraph.graph.VertexReader;
+import org.apache.giraph.utils.TimedLogger;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -192,12 +193,10 @@ public abstract class HCatalogVertexInputFormat<
    */
   protected abstract class SingleRowHCatalogVertexReader
       extends HCatalogVertexReader {
-
     /**
      * 1024 const.
      */
     private static final int BYTE_CONST = 1024;
-
     /**
      *  logger
      */
@@ -211,7 +210,11 @@ public abstract class HCatalogVertexInputFormat<
      * modulus check counter.
      */
     private final int recordModLimit = 1000;
-
+    /**
+     * Timed logger to print every 30 seconds
+     */
+    private final TimedLogger timedLogger = new TimedLogger(30 * 1000,
+        log);
 
     /**
      * get vertex id.
@@ -242,14 +245,16 @@ public abstract class HCatalogVertexInputFormat<
       vertex.initialize(getVertexId(record), getVertexValue(record),
           getEdges(record));
       ++recordCount;
-      if ((recordCount % recordModLimit) == 0) {
-        log.info("read " + recordCount + " records");
+      if (log.isInfoEnabled() &&
+          ((recordCount % recordModLimit) == 0)) {
         // memory usage
         Runtime runtime = Runtime.getRuntime();
         double gb = BYTE_CONST *
             BYTE_CONST *
             BYTE_CONST;
-        log.info("Memory: " + (runtime.totalMemory() / gb) +
+        timedLogger.info(
+            "read " + recordCount + " records. Memory: " +
+            (runtime.totalMemory() / gb) +
             "GB total = " +
             ((runtime.totalMemory() - runtime.freeMemory()) / gb) +
             "GB used + " + (runtime.freeMemory() / gb) +
@@ -271,7 +276,6 @@ public abstract class HCatalogVertexInputFormat<
      * modulus check counter.
      */
     private static final int RECORD_MOD_LIMIT = 1000;
-
     /**
      *  logger
      */
@@ -295,9 +299,15 @@ public abstract class HCatalogVertexInputFormat<
     private int recordCount = 0;
     /**
      * vertex.
-     *
      */
     private Vertex<I, V, E, M> vertex = null;
+    /**
+     * Timed logger to print every 30 seconds
+     */
+    private final TimedLogger timedLogger = new TimedLogger(30 * 1000,
+        log);
+
+
     /**
      * get vertex id from record.
      *
@@ -351,8 +361,8 @@ public abstract class HCatalogVertexInputFormat<
           recordsForVertex.add(record);
         } else {
           createCurrentVertex();
-          if ((recordCount % RECORD_MOD_LIMIT) == 0) {
-            log.info("read " + recordCount);
+          if (log.isInfoEnabled() && (recordCount % RECORD_MOD_LIMIT) == 0) {
+            timedLogger.info("read " + recordCount);
           }
           currentVertexId = getVertexId(record);
           recordsForVertex.add(record);
