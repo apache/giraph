@@ -102,7 +102,7 @@ public class AggregatorUtils {
    */
   public static WorkerInfo getOwner(String aggregatorName,
       List<WorkerInfo> workers) {
-    int index = Math.abs(aggregatorName.hashCode()) % workers.size();
+    int index = Math.abs(aggregatorName.hashCode() % workers.size());
     return workers.get(index);
   }
 

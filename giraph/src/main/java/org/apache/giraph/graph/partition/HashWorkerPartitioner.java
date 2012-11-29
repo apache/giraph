@@ -57,8 +57,8 @@ public class HashWorkerPartitioner<I extends WritableComparable,
 
   @Override
   public PartitionOwner getPartitionOwner(I vertexId) {
-    return partitionOwnerList.get(Math.abs(vertexId.hashCode()) %
-        partitionOwnerList.size());
+    return partitionOwnerList.get(
+        Math.abs(vertexId.hashCode() % partitionOwnerList.size()));
   }
 
   @Override

@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-424: Fix hashCode modulo computation (majakabiljo)
+
   GIRAPH-396: HcatalogVertexInputFormat outputs a bit too often. (aching)
 
   GIRAPH-435: Serialize server messages for memory and less GC. (aching)

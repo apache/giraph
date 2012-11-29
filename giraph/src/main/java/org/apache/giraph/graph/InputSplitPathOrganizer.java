@@ -119,8 +119,7 @@ public class InputSplitPathOrganizer implements Iterable<String> {
     // and place the local blocks into the list at that index, if any
     final int temp = hostName.hashCode() + (19 * port);
     if (pathList.size() != 0) {
-      baseOffset =
-        Math.abs(temp == Integer.MIN_VALUE ? 0 : temp) % pathList.size();
+      baseOffset = Math.abs(temp % pathList.size());
     }
     // re-insert local paths at "adjusted index zero" for caller to iterate on
     pathList.addAll(baseOffset, sortedList);
