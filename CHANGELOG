@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-440: ProgressableUtils - TimeoutException from future.get shouldn't 
+  be rethrown (majakabiljo)
+
   GIRAPH-438: When checkpointing is disable, fast fail (aching)
 
   GIRAPH-437: Missing progress calls when stopping Netty server (majakabiljo)

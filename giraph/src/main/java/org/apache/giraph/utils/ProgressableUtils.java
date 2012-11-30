@@ -131,9 +131,6 @@ public class ProgressableUtils {
       } catch (ExecutionException e) {
         throw new IllegalStateException("waitFor: " +
             "ExecutionException occurred while waiting for " + waitable, e);
-      } catch (TimeoutException e) {
-        throw new IllegalStateException("waitFor: " +
-            "TimeoutException occurred while waiting for " + waitable, e);
       }
       if (LOG.isInfoEnabled()) {
         LOG.info("waitFor: Waiting for " + waitable);
@@ -157,8 +154,7 @@ public class ProgressableUtils {
      *
      * @param msecs Number of milliseconds to wait.
      */
-    void waitFor(int msecs) throws InterruptedException, ExecutionException,
-        TimeoutException;
+    void waitFor(int msecs) throws InterruptedException, ExecutionException;
 
     /**
      * Check if waitable is finished.
@@ -218,8 +214,14 @@ public class ProgressableUtils {
 
     @Override
     public void waitFor(int msecs) throws InterruptedException,
-        ExecutionException, TimeoutException {
-      future.get(msecs, TimeUnit.MILLISECONDS);
+        ExecutionException {
+      try {
+        future.get(msecs, TimeUnit.MILLISECONDS);
+      } catch (TimeoutException e) {
+        if (LOG.isInfoEnabled()) {
+          LOG.info("waitFor: Future result not ready yet " + future);
+        }
+      }
     }
 
     @Override
