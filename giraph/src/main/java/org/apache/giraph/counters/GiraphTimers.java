@@ -104,7 +104,7 @@ public class GiraphTimers extends HadoopCountersBase {
     if (counter == null) {
       String counterPrefix;
       if (superstep == -1) {
-        counterPrefix = "Vertex input superstep";
+        counterPrefix = "Input superstep";
       } else {
         counterPrefix = "Superstep " + superstep;
       }
