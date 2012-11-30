@@ -353,7 +353,6 @@ public class RandomMessageBenchmark implements Tool {
     }
     int workers = Integer.parseInt(cmd.getOptionValue('w'));
     GiraphJob job = new GiraphJob(getConf(), getClass().getName());
-    job.getConfiguration().setInt(GiraphConfiguration.CHECKPOINT_FREQUENCY, 0);
     job.getConfiguration().setVertexClass(RandomMessageVertex.class);
     job.getConfiguration().setVertexInputFormatClass(
         PseudoRandomVertexInputFormat.class);

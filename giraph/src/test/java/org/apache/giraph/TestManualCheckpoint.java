@@ -17,11 +17,7 @@
  */
 
 package org.apache.giraph;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
-
 import org.apache.giraph.examples.SimpleCheckpointVertex;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexOutputFormat;
@@ -29,6 +25,9 @@ import org.apache.giraph.graph.GiraphJob;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Unit test for manual checkpoint restarting
@@ -61,7 +60,7 @@ public class TestManualCheckpoint extends BspCase {
         checkpointsDir.toString());
     job.getConfiguration().setBoolean(
         GiraphConfiguration.CLEANUP_CHECKPOINTS_AFTER_SUCCESS, false);
-    job.getConfiguration().setInt(GiraphConfiguration.CHECKPOINT_FREQUENCY, 2);
+    job.getConfiguration().setCheckpointFrequency(2);
 
     assertTrue(job.run(true));
 

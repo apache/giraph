@@ -651,6 +651,13 @@ public class GiraphConfiguration extends Configuration {
   public static final boolean USE_UNSAFE_SERIALIZATION_DEFAULT = true;
 
   /**
+   * Maximum number of attempts a master/worker will retry before killing
+   * the job.  This directly maps to the number of map task attempts in
+   * Hadoop.
+   */
+  public static final String MAX_TASK_ATTEMPTS = "mapred.map.max.attempts";
+
+  /**
    * Constructor that creates the configuration
    */
   public GiraphConfiguration() { }
@@ -1124,5 +1131,43 @@ public class GiraphConfiguration extends Configuration {
   public boolean useMessageSizeEncoding() {
     return getBoolean(
         USE_MESSAGE_SIZE_ENCODING, USE_MESSAGE_SIZE_ENCODING_DEFAULT);
+  }
+
+  /**
+   * Set the checkpoint frequeuncy of how many supersteps to wait before
+   * checkpointing
+   *
+   * @param checkpointFrequency How often to checkpoint (0 means never)
+   */
+  public void setCheckpointFrequency(int checkpointFrequency) {
+    setInt(CHECKPOINT_FREQUENCY, checkpointFrequency);
+  }
+
+  /**
+   * Get the checkpoint frequeuncy of how many supersteps to wait
+   * before checkpointing
+   *
+   * @return Checkpoint frequency (0 means never)
+   */
+  public int getCheckpointFrequency() {
+    return getInt(CHECKPOINT_FREQUENCY, CHECKPOINT_FREQUENCY_DEFAULT);
+  }
+
+  /**
+   * Set the max task attempts
+   *
+   * @param maxTaskAttempts Max task attempts to use
+   */
+  public void setMaxTaskAttempts(int maxTaskAttempts) {
+    setInt(MAX_TASK_ATTEMPTS, maxTaskAttempts);
+  }
+
+  /**
+   * Get the max task attempts
+   *
+   * @return Max task attempts or -1, if not set
+   */
+  public int getMaxTaskAttempts() {
+    return getInt(MAX_TASK_ATTEMPTS, -1);
   }
 }

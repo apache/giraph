@@ -298,9 +298,7 @@ public abstract class BspService<I extends WritableComparable,
     this.hostnamePartitionId = hostname + "_" + getTaskPartition();
     this.graphPartitionerFactory = conf.createGraphPartitioner();
 
-    this.checkpointFrequency =
-        conf.getInt(GiraphConfiguration.CHECKPOINT_FREQUENCY,
-            GiraphConfiguration.CHECKPOINT_FREQUENCY_DEFAULT);
+    this.checkpointFrequency = conf.getCheckpointFrequency();
 
     basePath = ZooKeeperManager.getBasePath(conf) + BASE_DIR + "/" + jobId;
     masterJobStatePath = basePath + MASTER_JOB_STATE_NODE;

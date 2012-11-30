@@ -18,17 +18,15 @@
 
 package org.apache.giraph;
 
-import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
-
 import org.apache.giraph.examples.SimpleCheckpointVertex;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexOutputFormat;
 import org.apache.giraph.graph.GiraphJob;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.junit.Test;
+
+import static org.junit.Assert.assertTrue;
 
 /**
  * Unit test for automated checkpoint restarting
@@ -64,13 +62,13 @@ public class TestAutoCheckpoint extends BspCase {
         SimpleSuperstepVertexOutputFormat.class,
         outputPath);
 
-    Configuration conf = job.getConfiguration();
+    GiraphConfiguration conf = job.getConfiguration();
     conf.setBoolean(SimpleCheckpointVertex.ENABLE_FAULT, true);
     conf.setInt("mapred.map.max.attempts", 4);
     // Trigger failure faster
     conf.setInt("mapred.task.timeout", 30000);
     conf.setInt(GiraphConfiguration.POLL_MSECS, 5000);
-    conf.setInt(GiraphConfiguration.CHECKPOINT_FREQUENCY, 2);
+    conf.setCheckpointFrequency(2);
     conf.set(GiraphConfiguration.CHECKPOINT_DIRECTORY,
         getTempPath("_singleFaultCheckpoints").toString());
     conf.setBoolean(GiraphConfiguration.CLEANUP_CHECKPOINTS_AFTER_SUCCESS, false);

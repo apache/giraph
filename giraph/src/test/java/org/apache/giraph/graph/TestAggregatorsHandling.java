@@ -166,7 +166,7 @@ public class TestAggregatorsHandling extends BspCase {
         checkpointsDir.toString());
     job.getConfiguration().setBoolean(
         GiraphConfiguration.CLEANUP_CHECKPOINTS_AFTER_SUCCESS, false);
-    job.getConfiguration().setInt(GiraphConfiguration.CHECKPOINT_FREQUENCY, 4);
+    job.getConfiguration().setCheckpointFrequency(4);
 
     assertTrue(job.run(true));
 
