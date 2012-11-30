@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-437: Missing progress calls when stopping Netty server (majakabiljo)
+
   GIRAPH-439: Fix naming of input superstep counter (apresta)
 
   GIRAPH-424: Fix hashCode modulo computation (majakabiljo)

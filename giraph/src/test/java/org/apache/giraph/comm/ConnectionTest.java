@@ -77,7 +77,8 @@ public class ConnectionTest {
     WorkerInfo workerInfo = new WorkerInfo(-1);
     NettyServer server =
         new NettyServer(conf,
-            new WorkerRequestServerHandler.Factory(serverData), workerInfo);
+            new WorkerRequestServerHandler.Factory(serverData), workerInfo,
+            context);
     server.start();
     workerInfo.setInetSocketAddress(server.getMyAddress());
 
@@ -107,19 +108,21 @@ public class ConnectionTest {
 
     WorkerInfo workerInfo1 = new WorkerInfo(1);
     NettyServer server1 =
-        new NettyServer(conf, requestServerHandlerFactory, workerInfo1);
+        new NettyServer(conf, requestServerHandlerFactory, workerInfo1, context);
     server1.start();
     workerInfo1.setInetSocketAddress(server1.getMyAddress());
 
     WorkerInfo workerInfo2 = new WorkerInfo(2);
     NettyServer server2 =
-        new NettyServer(conf, requestServerHandlerFactory, workerInfo2);
+        new NettyServer(conf, requestServerHandlerFactory, workerInfo2,
+            context);
     server2.start();
     workerInfo2.setInetSocketAddress(server2.getMyAddress());
 
     WorkerInfo workerInfo3 = new WorkerInfo(3);
     NettyServer server3 =
-        new NettyServer(conf, requestServerHandlerFactory, workerInfo3);
+        new NettyServer(conf, requestServerHandlerFactory, workerInfo3,
+            context);
     server3.start();
     workerInfo3.setInetSocketAddress(server3.getMyAddress());
 
@@ -149,7 +152,8 @@ public class ConnectionTest {
         MockUtils.createNewServerData(conf, context);
     WorkerInfo workerInfo = new WorkerInfo(-1);
     NettyServer server = new NettyServer(conf,
-        new WorkerRequestServerHandler.Factory(serverData), workerInfo);
+        new WorkerRequestServerHandler.Factory(serverData), workerInfo,
+            context);
     server.start();
     workerInfo.setInetSocketAddress(server.getMyAddress());
 

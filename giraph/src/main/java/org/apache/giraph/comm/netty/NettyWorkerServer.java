@@ -91,7 +91,7 @@ public class NettyWorkerServer<I extends WritableComparable,
 
     nettyServer = new NettyServer(conf,
         new WorkerRequestServerHandler.Factory<I, V, E, M>(serverData),
-        service.getWorkerInfo());
+        service.getWorkerInfo(), context);
     nettyServer.start();
   }
 

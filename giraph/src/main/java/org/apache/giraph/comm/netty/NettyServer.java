@@ -40,6 +40,8 @@ import java.util.concurrent.TimeUnit;
 import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.TaskInfo;
+import org.apache.giraph.utils.ProgressableUtils;
+import org.apache.hadoop.util.Progressable;
 import org.apache.log4j.Logger;
 import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.Channel;
@@ -80,6 +82,8 @@ else[HADOOP_NON_SECURE]*/
   private static final Logger LOG = Logger.getLogger(NettyServer.class);
   /** Configuration */
   private final ImmutableClassesGiraphConfiguration conf;
+  /** Progressable for reporting progress */
+  private final Progressable progressable;
   /** Factory of channels */
   private ChannelFactory channelFactory;
   /** Accepted channels */
@@ -126,11 +130,13 @@ else[HADOOP_NON_SECURE]*/
    * @param conf Configuration to use
    * @param requestServerHandlerFactory Factory for request handlers
    * @param myTaskInfo Current task info
+   * @param progressable Progressable for reporting progress
    */
   public NettyServer(ImmutableClassesGiraphConfiguration conf,
       RequestServerHandler.Factory requestServerHandlerFactory,
-      TaskInfo myTaskInfo) {
+      TaskInfo myTaskInfo, Progressable progressable) {
     this.conf = conf;
+    this.progressable = progressable;
     this.requestServerHandlerFactory = requestServerHandlerFactory;
     /*if[HADOOP_NON_SECURE]
     else[HADOOP_NON_SECURE]*/
@@ -203,13 +209,15 @@ else[HADOOP_NON_SECURE]*/
    * @param conf Configuration to use
    * @param requestServerHandlerFactory Factory for request handlers
    * @param myTaskInfo Current task info
+   * @param progressable Progressable for reporting progress
    * @param saslServerHandlerFactory  Factory for SASL handlers
    */
   public NettyServer(ImmutableClassesGiraphConfiguration conf,
                      RequestServerHandler.Factory requestServerHandlerFactory,
                      TaskInfo myTaskInfo,
+                     Progressable progressable,
                      SaslServerHandler.Factory saslServerHandlerFactory) {
-    this(conf, requestServerHandlerFactory, myTaskInfo);
+    this(conf, requestServerHandlerFactory, myTaskInfo, progressable);
     this.saslServerHandlerFactory = saslServerHandlerFactory;
   }
 /*end[HADOOP_NON_SECURE]*/
@@ -353,11 +361,14 @@ else[HADOOP_NON_SECURE]*/
     if (LOG.isInfoEnabled()) {
       LOG.info("stop: Halting netty server");
     }
-    accepted.close().awaitUninterruptibly();
+    ProgressableUtils.awaitChannelGroupFuture(accepted.close(), progressable);
     bossExecutorService.shutdownNow();
     workerExecutorService.shutdownNow();
     bootstrap.releaseExternalResources();
     channelFactory.releaseExternalResources();
+    if (LOG.isInfoEnabled()) {
+      LOG.info("stop: Netty server halted");
+    }
   }
 
   public InetSocketAddress getMyAddress() {

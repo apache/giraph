@@ -22,6 +22,7 @@ import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedServiceMaster;
 import org.apache.giraph.comm.netty.handler.MasterRequestServerHandler;
 import org.apache.giraph.comm.MasterServer;
+import org.apache.hadoop.util.Progressable;
 
 import java.net.InetSocketAddress;
 
@@ -37,12 +38,14 @@ public class NettyMasterServer implements MasterServer {
    *
    * @param conf Hadoop configuration
    * @param service Centralized service
+   * @param progressable Progressable for reporting progress
    */
   public NettyMasterServer(ImmutableClassesGiraphConfiguration conf,
-      CentralizedServiceMaster<?, ?, ?, ?> service) {
+      CentralizedServiceMaster<?, ?, ?, ?> service,
+      Progressable progressable) {
     nettyServer = new NettyServer(conf,
         new MasterRequestServerHandler.Factory(service.getAggregatorHandler()),
-        service.getMasterInfo());
+        service.getMasterInfo(), progressable);
     nettyServer.start();
   }
 

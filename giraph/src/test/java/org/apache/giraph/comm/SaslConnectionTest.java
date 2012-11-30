@@ -88,6 +88,7 @@ public class SaslConnectionTest {
         new NettyServer(conf,
             new WorkerRequestServerHandler.Factory(serverData),
             workerInfo,
+            context,
             mockedSaslServerFactory);
     server.start();
     workerInfo.setInetSocketAddress(server.getMyAddress());

@@ -161,7 +161,8 @@ public class RequestFailureTest {
     serverData = MockUtils.createNewServerData(conf, context);
     WorkerInfo workerInfo = new WorkerInfo(-1);
     server = new NettyServer(conf,
-        new WorkerRequestServerHandler.Factory(serverData), workerInfo);
+        new WorkerRequestServerHandler.Factory(serverData), workerInfo,
+            context);
     server.start();
     workerInfo.setInetSocketAddress(server.getMyAddress());
     client = new NettyClient(context, conf, new WorkerInfo());
