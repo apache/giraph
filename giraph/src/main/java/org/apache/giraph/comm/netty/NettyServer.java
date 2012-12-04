@@ -47,10 +47,13 @@ import org.jboss.netty.bootstrap.ServerBootstrap;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelException;
 import org.jboss.netty.channel.ChannelFactory;
+import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.ChannelLocal;
 import org.jboss.netty.channel.ChannelPipeline;
 import org.jboss.netty.channel.ChannelPipelineFactory;
+import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.Channels;
+import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.channel.group.ChannelGroup;
 import org.jboss.netty.channel.group.DefaultChannelGroup;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
@@ -271,6 +274,18 @@ else[HADOOP_NON_SECURE]*/
 /*end[HADOOP_NON_SECURE]*/
           ChannelPipeline pipeline = pipeline();
 
+          // Store all connected channels in order to ensure that we can close
+          // them on stop(), or else stop() may hang waiting for the
+          // connections to close on their own
+          pipeline.addLast("connectedChannels",
+              new SimpleChannelUpstreamHandler() {
+                @Override
+                public void channelConnected(ChannelHandlerContext ctx,
+                    ChannelStateEvent e) throws Exception {
+                  super.channelConnected(ctx, e);
+                  accepted.add(e.getChannel());
+                }
+              });
           pipeline.addLast("serverByteCounter", byteCounter);
           pipeline.addLast("requestFrameDecoder",
               new LengthFieldBasedFrameDecoder(
@@ -363,7 +378,14 @@ else[HADOOP_NON_SECURE]*/
     }
     ProgressableUtils.awaitChannelGroupFuture(accepted.close(), progressable);
     bossExecutorService.shutdownNow();
+    ProgressableUtils.awaitExecutorTermination(bossExecutorService,
+        progressable);
     workerExecutorService.shutdownNow();
+    ProgressableUtils.awaitExecutorTermination(workerExecutorService,
+        progressable);
+    if (LOG.isInfoEnabled()) {
+      LOG.info("stop: Start releasing resources");
+    }
     bootstrap.releaseExternalResources();
     channelFactory.releaseExternalResources();
     if (LOG.isInfoEnabled()) {

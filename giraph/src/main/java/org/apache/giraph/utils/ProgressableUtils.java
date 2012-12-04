@@ -20,6 +20,7 @@ package org.apache.giraph.utils;
 
 import org.apache.hadoop.util.Progressable;
 import org.apache.log4j.Logger;
+import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.group.ChannelGroupFuture;
 
 import java.util.concurrent.ExecutionException;
@@ -76,6 +77,18 @@ public class ProgressableUtils {
   public static void awaitChannelGroupFuture(ChannelGroupFuture future,
       Progressable progressable) {
     waitForever(new ChannelGroupFutureWaitable(future), progressable);
+  }
+
+  /**
+   * Wait for {@link ChannelFuture} to finish, while periodically
+   * reporting progress.
+   *
+   * @param future       ChannelFuture
+   * @param progressable Progressable for reporting progress (Job context)
+   */
+  public static void awaitChannelFuture(ChannelFuture future,
+      Progressable progressable) {
+    waitForever(new ChannelFutureWaitable(future), progressable);
   }
 
   /**
@@ -268,7 +281,7 @@ public class ProgressableUtils {
   }
 
   /**
-   * {@link Waitable} for waiting on a {@link ChannelGroupFutureWaitable} to
+   * {@link Waitable} for waiting on a {@link ChannelGroupFuture} to
    * terminate.
    */
   private static class ChannelGroupFutureWaitable extends
@@ -282,6 +295,34 @@ public class ProgressableUtils {
      * @param future ChannelGroupFuture which we want to wait for
      */
     public ChannelGroupFutureWaitable(ChannelGroupFuture future) {
+      this.future = future;
+    }
+
+    @Override
+    public void waitFor(int msecs) throws InterruptedException {
+      future.await(msecs, TimeUnit.MILLISECONDS);
+    }
+
+    @Override
+    public boolean isFinished() {
+      return future.isDone();
+    }
+  }
+
+  /**
+   * {@link Waitable} for waiting on a {@link ChannelFuture} to
+   * terminate.
+   */
+  private static class ChannelFutureWaitable extends WaitableWithoutResult {
+    /** ChannelGroupFuture which we want to wait for */
+    private final ChannelFuture future;
+
+    /**
+     * Constructor
+     *
+     * @param future ChannelFuture which we want to wait for
+     */
+    public ChannelFutureWaitable(ChannelFuture future) {
       this.future = future;
     }
 

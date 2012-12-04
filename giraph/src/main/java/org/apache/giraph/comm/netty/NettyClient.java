@@ -47,6 +47,7 @@ import org.apache.giraph.comm.requests.SaslTokenMessageRequest;
 /*end[HADOOP_NON_SECURE]*/
 import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.giraph.graph.TaskInfo;
+import org.apache.giraph.utils.ProgressableUtils;
 import org.apache.giraph.utils.TimedLogger;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
@@ -399,8 +400,8 @@ else[HADOOP_NON_SECURE]*/
       List<ChannelFutureAddress> nextCheckFutures = Lists.newArrayList();
       for (ChannelFutureAddress waitingConnection : waitingConnectionList) {
         context.progress();
-        ChannelFuture future =
-            waitingConnection.future.awaitUninterruptibly();
+        ChannelFuture future = waitingConnection.future;
+        ProgressableUtils.awaitChannelFuture(future, context);
         if (!future.isSuccess()) {
           LOG.warn("connectAllAddresses: Future failed " +
               "to connect with " + waitingConnection.address + " with " +
@@ -596,7 +597,7 @@ else[HADOOP_NON_SECURE]*/
     int reconnectFailures = 0;
     while (reconnectFailures < maxConnectionFailures) {
       ChannelFuture connectionFuture = bootstrap.connect(remoteServer);
-      connectionFuture.awaitUninterruptibly();
+      ProgressableUtils.awaitChannelFuture(connectionFuture, context);
       if (connectionFuture.isSuccess()) {
         if (LOG.isInfoEnabled()) {
           LOG.info("getNextChannel: Connected to " + remoteServer + "!");

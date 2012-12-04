@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-441: Keep track of connected channels in NettyServer (majakabiljo)
+
   GIRAPH-440: ProgressableUtils - TimeoutException from future.get shouldn't 
   be rethrown (majakabiljo)
 
