@@ -44,11 +44,10 @@ public class HashWorkerPartitioner<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
     implements WorkerGraphPartitioner<I, V, E, M> {
   /**
-   * Mapping of the vertex ids to {@link PartitionOwner}.  Needs to be
-   * thread-safe (hence CopyOnWriteArrayList).
+   * Mapping of the vertex ids to {@link PartitionOwner}.
    */
   protected List<PartitionOwner> partitionOwnerList =
-      Lists.newCopyOnWriteArrayList();
+      Lists.newArrayList();
 
   @Override
   public PartitionOwner createPartitionOwner() {
@@ -115,8 +114,6 @@ public class HashWorkerPartitioner<I extends WritableComparable,
 
   @Override
   public Collection<? extends PartitionOwner> getPartitionOwners() {
-    synchronized (partitionOwnerList) {
-      return partitionOwnerList;
-    }
+    return partitionOwnerList;
   }
 }
