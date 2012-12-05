@@ -80,5 +80,10 @@ public class SendVertexRequest<I extends WritableComparable,
   public void doRequest(ServerData<I, V, E, M> serverData) {
     serverData.getPartitionStore().addPartition(partition);
   }
+
+  @Override
+  public int getSerializedSize() {
+    return WritableRequest.UNKNOWN_SIZE;
+  }
 }
 

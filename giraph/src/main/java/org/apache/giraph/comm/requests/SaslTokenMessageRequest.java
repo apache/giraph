@@ -103,4 +103,9 @@ public class SaslTokenMessageRequest extends WritableRequest {
     output.writeInt(token.length);
     output.write(token);
   }
+
+  @Override
+  public int getSerializedSize() {
+    return super.getSerializedSize() + 4 + token.length;
+  }
 }

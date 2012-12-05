@@ -126,4 +126,9 @@ public class SendPartitionMutationsRequest<I extends WritableComparable,
       }
     }
   }
+
+  @Override
+  public int getSerializedSize() {
+    return WritableRequest.UNKNOWN_SIZE;
+  }
 }

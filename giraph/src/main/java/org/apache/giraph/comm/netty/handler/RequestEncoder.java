@@ -67,13 +67,28 @@ public class RequestEncoder extends OneToOneEncoder {
       startEncodingNanoseconds = TIME.getNanoseconds();
     }
     WritableRequest writableRequest = (WritableRequest) msg;
-    ChannelBufferOutputStream outputStream =
-        new ChannelBufferOutputStream(ChannelBuffers.dynamicBuffer(
-            bufferStartingSize,
-            ctx.getChannel().getConfig().getBufferFactory()));
+    int requestSize = writableRequest.getSerializedSize();
+    ChannelBufferOutputStream outputStream;
+    if (requestSize == WritableRequest.UNKNOWN_SIZE) {
+      outputStream =
+          new ChannelBufferOutputStream(ChannelBuffers.dynamicBuffer(
+              bufferStartingSize,
+              ctx.getChannel().getConfig().getBufferFactory()));
+    } else {
+      requestSize += LENGTH_PLACEHOLDER.length + 1;
+      outputStream = new ChannelBufferOutputStream(
+          ChannelBuffers.directBuffer(requestSize));
+    }
     outputStream.write(LENGTH_PLACEHOLDER);
     outputStream.writeByte(writableRequest.getType().ordinal());
-    writableRequest.write(outputStream);
+    try {
+      writableRequest.write(outputStream);
+    } catch (IndexOutOfBoundsException e) {
+      LOG.error("encode: Most likely the size of request was not properly " +
+          "specified - see getSerializedSize() in " +
+          writableRequest.getType().getRequestClass());
+      throw new IllegalStateException(e);
+    }
     outputStream.flush();
     outputStream.close();
 

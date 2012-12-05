@@ -88,4 +88,10 @@ public class SendPartitionCurrentMessagesRequest<I extends WritableComparable,
       throw new RuntimeException("doRequest: Got IOException ", e);
     }
   }
+
+  @Override
+  public int getSerializedSize() {
+    return super.getSerializedSize() + 4 +
+        vertexIdMessageMap.getSerializedSize();
+  }
 }

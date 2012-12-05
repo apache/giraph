@@ -76,4 +76,10 @@ public abstract class ByteArrayRequest extends WritableRequest {
     output.writeInt(data.length);
     output.write(data);
   }
+
+  @Override
+  public int getSerializedSize() {
+    // 4 for the length of data, plus number of data bytes
+    return super.getSerializedSize() + 4 + data.length;
+  }
 }

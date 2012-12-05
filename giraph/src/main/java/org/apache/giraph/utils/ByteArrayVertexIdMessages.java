@@ -182,6 +182,15 @@ public class ByteArrayVertexIdMessages<I extends WritableComparable,
   }
 
   /**
+   * Get the size of this object in serialized form.
+   *
+   * @return The size (in bytes) of serialized object
+   */
+  public int getSerializedSize() {
+    return 1 + 4 + getSize();
+  }
+
+  /**
    * Common implementation for VertexIdMessageIterator
    * and VertexIdMessageBytesIterator
    */

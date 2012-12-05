@@ -116,4 +116,16 @@ public class SendWorkerMessagesRequest<I extends WritableComparable,
       }
     }
   }
+
+  @Override
+  public int getSerializedSize() {
+    int size = super.getSerializedSize() + 4;
+    PairList<Integer, ByteArrayVertexIdMessages<I, M>>.Iterator
+        iterator = partitionVertexMessages.getIterator();
+    while (iterator.hasNext()) {
+      iterator.next();
+      size += 4 + iterator.getCurrentSecond().getSerializedSize();
+    }
+    return size;
+  }
 }

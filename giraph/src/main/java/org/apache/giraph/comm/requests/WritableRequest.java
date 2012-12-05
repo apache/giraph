@@ -38,6 +38,12 @@ public abstract class WritableRequest<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
     implements Writable,
     ImmutableClassesGiraphConfigurable<I, V, E, M> {
+  /**
+   * Value to use when size of the request in serialized form is not known
+   * or too expensive to calculate
+   */
+  public static final int UNKNOWN_SIZE = -1;
+
   /** Configuration */
   private ImmutableClassesGiraphConfiguration<I, V, E, M> conf;
   /** Client id */
@@ -59,6 +65,20 @@ public abstract class WritableRequest<I extends WritableComparable,
 
   public void setRequestId(long requestId) {
     this.requestId = requestId;
+  }
+
+  /**
+   * Get the size of the request in serialized form. The number returned by
+   * this function can't be less than the actual size - if the size can't be
+   * calculated correctly return WritableRequest.UNKNOWN_SIZE.
+   *
+   * @return The size (in bytes) of serialized request,
+   * or WritableRequest.UNKNOWN_SIZE if the size is not known
+   * or too expensive to calculate.
+   */
+  public int getSerializedSize() {
+    // 4 for clientId, 8 for requestId
+    return 4 + 8;
   }
 
   /**

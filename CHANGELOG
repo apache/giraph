@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-443: Properly size netty buffers when encoding requests (majakabiljo)
+
   GIRAPH-395: No need to make HashWorkerPartitioner thread-safe. (aching)
 
   GIRAPH-441: Keep track of connected channels in NettyServer (majakabiljo)
