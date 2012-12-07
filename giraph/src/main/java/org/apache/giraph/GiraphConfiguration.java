@@ -135,11 +135,6 @@ public class GiraphConfiguration extends Configuration {
   /** Default 100% response rate for workers */
   public static final float MIN_PERCENT_RESPONDED_DEFAULT = 100.0f;
 
-  /** Polling timeout to check on the number of responded tasks (int) */
-  public static final String POLL_MSECS = "giraph.pollMsecs";
-  /** Default poll msecs (30 seconds) */
-  public static final int POLL_MSECS_DEFAULT = 30 * 1000;
-
   /** Enable the Metrics system **/
   public static final String METRICS_ENABLE = "giraph.metrics.enable";
 
@@ -303,11 +298,33 @@ public class GiraphConfiguration extends Configuration {
   /** Default max resolve address attempts */
   public static final int MAX_RESOLVE_ADDRESS_ATTEMPTS_DEFAULT = 5;
 
-  /** Msecs to wait between waiting for all requests to finish */
+  /** Milliseconds to wait between waiting for all requests to finish */
   public static final String WAITING_REQUEST_MSECS =
       "giraph.waitingRequestMsecs";
-  /** Default msecs to wait between waiting for all requests to finish */
+  /**
+   * Default milliseconds to wait between waiting for all requests to finish
+   */
   public static final int WAITING_REQUEST_MSECS_DEFAULT = 15000;
+
+  /** Millseconds to wait for an event before continuing */
+  public static final String EVENT_WAIT_MSECS = "giraph.eventWaitMsecs";
+  /**
+   * Default milliseconds to wait for an event before continuing (30 seconds)
+   */
+  public static final int EVENT_WAIT_MSECS_DEFAULT = 30 * 1000;
+
+  /**
+   * Maximum milliseconds to wait before giving up trying to get the minimum
+   * number of workers before a superstep (int).
+   */
+  public static final String MAX_MASTER_SUPERSTEP_WAIT_MSECS =
+      "giraph.maxMasterSuperstepWaitMsecs";
+  /**
+   * Default maximum milliseconds to wait before giving up trying to get
+   * the minimum number of workers before a superstep (10 minutes).
+   */
+  public static final int MAX_MASTER_SUPERSTEP_WAIT_MSECS_DEFAULT =
+      10 * 60 * 1000;
 
   /** Milliseconds for a request to complete (or else resend) */
   public static final String MAX_REQUEST_MILLISECONDS =
@@ -412,11 +429,6 @@ public class GiraphConfiguration extends Configuration {
       "giraph.numInputSplitsThreads";
   /** Default number of threads for input splits loading */
   public static final int NUM_INPUT_SPLITS_THREADS_DEFAULT = 1;
-
-  /** Number of poll attempts prior to failing the job (int) */
-  public static final String POLL_ATTEMPTS = "giraph.pollAttempts";
-  /** Default poll attempts */
-  public static final int POLL_ATTEMPTS_DEFAULT = 10;
 
   /** Number of minimum vertices in each vertex range */
   public static final String MIN_VERTICES_PER_RANGE =
@@ -1169,5 +1181,48 @@ public class GiraphConfiguration extends Configuration {
    */
   public int getMaxTaskAttempts() {
     return getInt(MAX_TASK_ATTEMPTS, -1);
+  }
+
+  /**
+   * Get the number of milliseconds to wait for an event before continuing on
+   *
+   * @return Number of milliseconds to wait for an event before continuing on
+   */
+  public int getEventWaitMsecs() {
+    return getInt(EVENT_WAIT_MSECS, EVENT_WAIT_MSECS_DEFAULT);
+  }
+
+  /**
+   * Set the number of milliseconds to wait for an event before continuing on
+   *
+   * @param eventWaitMsecs Number of milliseconds to wait for an event before
+   *                       continuing on
+   */
+  public void setEventWaitMsecs(int eventWaitMsecs) {
+    setInt(EVENT_WAIT_MSECS, eventWaitMsecs);
+  }
+
+  /**
+   * Get the maximum milliseconds to wait before giving up trying to get the
+   * minimum number of workers before a superstep.
+   *
+   * @return Maximum milliseconds to wait before giving up trying to get the
+   *         minimum number of workers before a superstep
+   */
+  public int getMaxMasterSuperstepWaitMsecs() {
+    return getInt(MAX_MASTER_SUPERSTEP_WAIT_MSECS,
+        MAX_MASTER_SUPERSTEP_WAIT_MSECS_DEFAULT);
+  }
+
+  /**
+   * Set the maximum milliseconds to wait before giving up trying to get the
+   * minimum number of workers before a superstep.
+   *
+   * @param maxMasterSuperstepWaitMsecs Maximum milliseconds to wait before
+   *                                    giving up trying to get the minimum
+   *                                    number of workers before a superstep
+   */
+  public void setMaxMasterSuperstepWaitMsecs(int maxMasterSuperstepWaitMsecs) {
+    setInt(MAX_MASTER_SUPERSTEP_WAIT_MSECS, maxMasterSuperstepWaitMsecs);
   }
 }

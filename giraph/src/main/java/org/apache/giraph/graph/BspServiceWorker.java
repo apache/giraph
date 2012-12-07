@@ -348,11 +348,11 @@ public class BspServiceWorker<I extends WritableComparable,
         inputSplitsReadyStat = getZkExt().exists(
             inputSplitPaths.getAllReadyPath(), true);
       } catch (KeeperException e) {
-        throw new IllegalStateException(
-            "setup: KeeperException waiting on input splits", e);
+        throw new IllegalStateException("ensureInputSplitsReady: " +
+            "KeeperException waiting on input splits", e);
       } catch (InterruptedException e) {
-        throw new IllegalStateException(
-            "setup: InterruptedException waiting on input splits", e);
+        throw new IllegalStateException("ensureInputSplitsReady: " +
+            "InterruptedException waiting on input splits", e);
       }
       if (inputSplitsReadyStat != null) {
         break;
@@ -380,12 +380,11 @@ public class BspServiceWorker<I extends WritableComparable,
           CreateMode.PERSISTENT,
           true);
     } catch (KeeperException e) {
-      throw new IllegalStateException(
-          "setup: KeeperException creating worker done splits", e);
+      throw new IllegalStateException("waitForOtherWorkers: " +
+          "KeeperException creating worker done splits", e);
     } catch (InterruptedException e) {
-      throw new IllegalStateException(
-          "setup: InterruptedException creating worker done splits",
-          e);
+      throw new IllegalStateException("waitForOtherWorkers: " +
+          "InterruptedException creating worker done splits", e);
     }
     while (true) {
       Stat inputSplitsDoneStat;
@@ -394,11 +393,11 @@ public class BspServiceWorker<I extends WritableComparable,
             getZkExt().exists(inputSplitPaths.getAllDonePath(),
                 true);
       } catch (KeeperException e) {
-        throw new IllegalStateException(
-            "setup: KeeperException waiting on worker done splits", e);
+        throw new IllegalStateException("waitForOtherWorkers: " +
+            "KeeperException waiting on worker done splits", e);
       } catch (InterruptedException e) {
-        throw new IllegalStateException(
-            "setup: InterruptedException waiting on worker done splits", e);
+        throw new IllegalStateException("waitForOtherWorkers: " +
+            "InterruptedException waiting on worker done splits", e);
       }
       if (inputSplitsDoneStat != null) {
         break;

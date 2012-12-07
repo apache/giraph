@@ -18,10 +18,7 @@
 
 package org.apache.giraph;
 
-import static org.junit.Assert.assertFalse;
-
 import java.io.IOException;
-
 import org.apache.giraph.examples.SimpleCheckpointVertex;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexOutputFormat;
@@ -29,44 +26,46 @@ import org.apache.giraph.graph.GiraphJob;
 import org.apache.hadoop.fs.Path;
 import org.junit.Test;
 
+import static org.junit.Assert.assertFalse;
+
 /**
  * Unit test for not enough map tasks
  */
 public class TestNotEnoughMapTasks extends BspCase {
 
-    public TestNotEnoughMapTasks() {
-        super(TestNotEnoughMapTasks.class.getName());
-    }
+  public TestNotEnoughMapTasks() {
+    super(TestNotEnoughMapTasks.class.getName());
+  }
 
-    /**
-     * This job should always fail gracefully with not enough map tasks.
-     *
-     * @throws IOException
-     * @throws ClassNotFoundException
-     * @throws InterruptedException
-     */
-    @Test
-    public void testNotEnoughMapTasks()
-            throws IOException, InterruptedException, ClassNotFoundException {
-        if (!runningInDistributedMode()) {
-            System.out.println(
-                "testNotEnoughMapTasks: Ignore this test in local mode.");
-            return;
-        }
-        Path outputPath = getTempPath(getCallingMethodName());
-        GiraphJob job = prepareJob(getCallingMethodName(),
-            SimpleCheckpointVertex.SimpleCheckpointComputation.class,
-            SimpleSuperstepVertexInputFormat.class,
-            SimpleSuperstepVertexOutputFormat.class, outputPath);
-
-        // An unlikely impossible number of workers to achieve
-        final int unlikelyWorkers = Short.MAX_VALUE;
-        job.getConfiguration().setWorkerConfiguration(unlikelyWorkers, 
-            unlikelyWorkers, 
-            100.0f);
-        // Only one poll attempt of one second to make failure faster
-        job.getConfiguration().setInt(GiraphConfiguration.POLL_ATTEMPTS, 1);
-        job.getConfiguration().setInt(GiraphConfiguration.POLL_MSECS, 1);
-        assertFalse(job.run(false));
+  /**
+   * This job should always fail gracefully with not enough map tasks.
+   *
+   * @throws IOException
+   * @throws ClassNotFoundException
+   * @throws InterruptedException
+   */
+  @Test
+  public void testNotEnoughMapTasks()
+      throws IOException, InterruptedException, ClassNotFoundException {
+    if (!runningInDistributedMode()) {
+      System.out.println(
+          "testNotEnoughMapTasks: Ignore this test in local mode.");
+      return;
     }
+    Path outputPath = getTempPath(getCallingMethodName());
+    GiraphJob job = prepareJob(getCallingMethodName(),
+        SimpleCheckpointVertex.SimpleCheckpointComputation.class,
+        SimpleSuperstepVertexInputFormat.class,
+        SimpleSuperstepVertexOutputFormat.class, outputPath);
+
+    // An unlikely impossible number of workers to achieve
+    final int unlikelyWorkers = Short.MAX_VALUE;
+    job.getConfiguration().setWorkerConfiguration(unlikelyWorkers,
+        unlikelyWorkers,
+        100.0f);
+    // Only one poll attempt of one second to make failure faster
+    job.getConfiguration().setMaxMasterSuperstepWaitMsecs(1000);
+    job.getConfiguration().setEventWaitMsecs(1000);
+    assertFalse(job.run(false));
+  }
 }

@@ -66,8 +66,9 @@ public class TestAutoCheckpoint extends BspCase {
     conf.setBoolean(SimpleCheckpointVertex.ENABLE_FAULT, true);
     conf.setInt("mapred.map.max.attempts", 4);
     // Trigger failure faster
-    conf.setInt("mapred.task.timeout", 30000);
-    conf.setInt(GiraphConfiguration.POLL_MSECS, 5000);
+    conf.setInt("mapred.task.timeout", 10000);
+    conf.setMaxMasterSuperstepWaitMsecs(10000);
+    conf.setEventWaitMsecs(1000);
     conf.setCheckpointFrequency(2);
     conf.set(GiraphConfiguration.CHECKPOINT_DIRECTORY,
         getTempPath("_singleFaultCheckpoints").toString());

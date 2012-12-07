@@ -100,8 +100,8 @@ public class BspCase implements Watcher {
       // Single node testing
       conf.setBoolean(GiraphConfiguration.SPLIT_MASTER_WORKER, false);
     }
-    conf.setInt(GiraphConfiguration.POLL_ATTEMPTS, 10);
-    conf.setInt(GiraphConfiguration.POLL_MSECS, 3 * 1000);
+    conf.setMaxMasterSuperstepWaitMsecs(30 * 1000);
+    conf.setEventWaitMsecs(3 * 1000);
     conf.setInt(GiraphConfiguration.ZOOKEEPER_SERVERLIST_POLL_MSECS, 500);
     if (getZooKeeperList() != null) {
       conf.setZooKeeperConfiguration(getZooKeeperList());

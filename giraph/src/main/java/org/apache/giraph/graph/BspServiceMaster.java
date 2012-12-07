@@ -125,10 +125,10 @@ public class BspServiceMaster<I extends WritableComparable,
   private final int minWorkers;
   /** Min % responded workers */
   private final float minPercentResponded;
-  /** Poll period in msecs */
-  private final int msecsPollPeriod;
-  /** Max number of poll attempts */
-  private final int maxPollAttempts;
+  /** Msecs to wait for an event */
+  private final int eventWaitMsecs;
+  /** Max msecs to wait for a superstep to get enough workers */
+  private final int maxSuperstepWaitMsecs;
   /** Min number of long tails before printing */
   private final int partitionLongTailMinPrint;
   /** Last finalized checkpoint */
@@ -188,10 +188,8 @@ public class BspServiceMaster<I extends WritableComparable,
     minWorkers = conf.getInt(GiraphConfiguration.MIN_WORKERS, -1);
     minPercentResponded = conf.getFloat(
         GiraphConfiguration.MIN_PERCENT_RESPONDED, 100.0f);
-    msecsPollPeriod = conf.getInt(GiraphConfiguration.POLL_MSECS,
-        GiraphConfiguration.POLL_MSECS_DEFAULT);
-    maxPollAttempts = conf.getInt(GiraphConfiguration.POLL_ATTEMPTS,
-        GiraphConfiguration.POLL_ATTEMPTS_DEFAULT);
+    eventWaitMsecs = conf.getEventWaitMsecs();
+    maxSuperstepWaitMsecs = conf.getMaxMasterSuperstepWaitMsecs();
     partitionLongTailMinPrint = conf.getInt(
         GiraphConfiguration.PARTITION_LONG_TAIL_MIN_PRINT,
         GiraphConfiguration.PARTITION_LONG_TAIL_MIN_PRINT_DEFAULT);
@@ -419,11 +417,13 @@ public class BspServiceMaster<I extends WritableComparable,
    */
   private List<WorkerInfo> checkWorkers() {
     boolean failJob = true;
-    int pollAttempt = 0;
+    long failWorkerCheckMsecs =
+        SystemTime.get().getMilliseconds() + maxSuperstepWaitMsecs;
     List<WorkerInfo> healthyWorkerInfoList = new ArrayList<WorkerInfo>();
     List<WorkerInfo> unhealthyWorkerInfoList = new ArrayList<WorkerInfo>();
     int totalResponses = -1;
-    while (pollAttempt < maxPollAttempts) {
+    while (SystemTime.get().getMilliseconds() < failWorkerCheckMsecs) {
+      getContext().progress();
       getAllWorkerInfos(
           getSuperstep(), healthyWorkerInfoList, unhealthyWorkerInfoList);
       totalResponses = healthyWorkerInfoList.size() +
@@ -440,7 +440,7 @@ public class BspServiceMaster<I extends WritableComparable,
           " needed to start superstep " +
           getSuperstep());
       if (getWorkerHealthRegistrationChangedEvent().waitMsecs(
-          msecsPollPeriod)) {
+          eventWaitMsecs)) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("checkWorkers: Got event that health " +
               "registration changed, not using poll attempt");
@@ -452,9 +452,10 @@ public class BspServiceMaster<I extends WritableComparable,
         LOG.info("checkWorkers: Only found " + totalResponses +
             " responses of " + maxWorkers +
             " needed to start superstep " +
-            getSuperstep() + ".  Sleeping for " +
-            msecsPollPeriod + " msecs and used " + pollAttempt +
-            " of " + maxPollAttempts + " attempts.");
+            getSuperstep() + ".  Reporting every" +
+            eventWaitMsecs + " msecs, " +
+            (failWorkerCheckMsecs - SystemTime.get().getMilliseconds()) +
+            " more msecs left before giving up.");
         // Find the missing workers if there are only a few
         if ((maxWorkers - totalResponses) <=
             partitionLongTailMinPrint) {
@@ -462,15 +463,14 @@ public class BspServiceMaster<I extends WritableComparable,
               unhealthyWorkerInfoList);
         }
       }
-      ++pollAttempt;
     }
     if (failJob) {
       LOG.error("checkWorkers: Did not receive enough processes in " +
           "time (only " + totalResponses + " of " +
-          minWorkers + " required).  This occurs if you do not " +
-          "have enough map tasks available simultaneously on " +
-          "your Hadoop instance to fulfill the number of " +
-          "requested workers.");
+          minWorkers + " required) after waiting " + maxSuperstepWaitMsecs +
+          "msecs).  This occurs if you do not have enough map tasks " +
+          "available simultaneously on your Hadoop instance to fulfill " +
+          "the number of requested workers.");
       return null;
     }
 
