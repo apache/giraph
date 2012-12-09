@@ -17,7 +17,7 @@
  */
 package org.apache.giraph.metrics;
 
-import org.apache.giraph.GiraphConfiguration;
+import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.graph.BspService;
 
 import com.google.common.collect.Lists;
@@ -66,7 +66,7 @@ public class GiraphMetrics {
    *
    * @return GiraphMetrics singleton instance
    */
-  public static GiraphMetrics getInstance() {
+  public static GiraphMetrics get() {
     return INSTANCE;
   }
 

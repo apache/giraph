@@ -18,7 +18,7 @@
 
 package org.apache.giraph.io;
 
-import org.apache.giraph.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.EdgeInputFormat;
 import org.apache.giraph.graph.EdgeReader;

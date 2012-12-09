@@ -18,6 +18,7 @@
 
 package org.apache.giraph.examples;
 
+import org.apache.giraph.conf.GiraphClasses;
 import org.apache.giraph.io.JsonLongDoubleFloatDoubleVertexInputFormat;
 import org.apache.giraph.io.JsonLongDoubleFloatDoubleVertexOutputFormat;
 import org.apache.giraph.utils.InternalVertexRunner;
@@ -30,15 +31,15 @@ import org.json.JSONException;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 import java.util.Map;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Contains a simple unit test for {@link SimpleShortestPathsVertex}
@@ -122,12 +123,16 @@ public class SimpleShortestPathsVertexTest {
     Map<String, String> params = Maps.newHashMap();
     params.put(SimpleShortestPathsVertex.SOURCE_ID, "1");
 
+    GiraphClasses<LongWritable, DoubleWritable, FloatWritable, DoubleWritable>
+        classes = new GiraphClasses();
+    classes.setVertexClass(SimpleShortestPathsVertex.class);
+    classes.setVertexInputFormatClass(
+        JsonLongDoubleFloatDoubleVertexInputFormat.class);
+    classes.setVertexOutputFormatClass(
+        JsonLongDoubleFloatDoubleVertexOutputFormat.class);
+
     // run internally
-    Iterable<String> results = InternalVertexRunner.run(
-        SimpleShortestPathsVertex.class,
-        JsonLongDoubleFloatDoubleVertexInputFormat.class,
-        JsonLongDoubleFloatDoubleVertexOutputFormat.class,
-        params, graph);
+    Iterable<String> results = InternalVertexRunner.run(classes, params, graph);
 
     Map<Long, Double> distances = parseDistances(results);
 

@@ -17,11 +17,17 @@
  */
 package org.apache.giraph;
 
-import java.io.IOException;
+import org.apache.giraph.conf.GiraphClasses;
+import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.examples.SimplePageRankVertex;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.partition.HashMasterPartitioner;
+import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.FloatWritable;
+import org.apache.hadoop.io.LongWritable;
 import org.junit.Test;
+
+import java.io.IOException;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -61,17 +67,21 @@ public class TestPageRank extends BspCase {
    */
   private void testPageRank(int numComputeThreads)
       throws IOException, InterruptedException, ClassNotFoundException {
-    GiraphJob job = prepareJob(getCallingMethodName(),
-        SimplePageRankVertex.class, SimplePageRankVertex.SimplePageRankVertexInputFormat.class);
-    job.getConfiguration().setWorkerContextClass(
+    GiraphClasses<LongWritable, DoubleWritable, FloatWritable, DoubleWritable>
+        classes = new GiraphClasses();
+    classes.setVertexClass(SimplePageRankVertex.class);
+    classes.setVertexInputFormatClass(
+        SimplePageRankVertex.SimplePageRankVertexInputFormat.class);
+    classes.setWorkerContextClass(
         SimplePageRankVertex.SimplePageRankVertexWorkerContext.class);
-    job.getConfiguration().setMasterComputeClass(
+    classes.setMasterComputeClass(
         SimplePageRankVertex.SimplePageRankVertexMasterCompute.class);
-    job.getConfiguration().setNumComputeThreads(numComputeThreads);
+    GiraphJob job = prepareJob(getCallingMethodName(), classes);
+    GiraphConfiguration conf = job.getConfiguration();
+    conf.setNumComputeThreads(numComputeThreads);
     // Set enough partitions to generate randomness on the compute side
     if (numComputeThreads != 1) {
-      job.getConfiguration().setInt(
-          HashMasterPartitioner.USER_PARTITION_COUNT,
+      conf.setInt(HashMasterPartitioner.USER_PARTITION_COUNT,
           numComputeThreads * 5);
     }
     assertTrue(job.run(true));

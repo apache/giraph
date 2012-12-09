@@ -18,7 +18,6 @@
 
 package org.apache.giraph.graph;
 
-import org.apache.giraph.GraphStateAware;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 

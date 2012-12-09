@@ -18,8 +18,8 @@
 
 package org.apache.giraph.utils;
 
-import org.apache.giraph.ImmutableClassesGiraphConfigurable;
-import org.apache.giraph.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfigurable;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;

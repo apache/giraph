@@ -18,13 +18,13 @@
 
 package org.apache.giraph.comm.netty.handler;
 
-import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.comm.netty.NettyServer;
 import org.apache.giraph.comm.netty.SaslNettyServer;
 import org.apache.giraph.comm.requests.RequestType;
 import org.apache.giraph.comm.requests.SaslCompleteRequest;
 import org.apache.giraph.comm.requests.SaslTokenMessageRequest;
 import org.apache.giraph.comm.requests.WritableRequest;
+import org.apache.giraph.conf.GiraphConstants;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.security.TokenCache;
@@ -75,8 +75,8 @@ public class SaslServerHandler extends
     SaslNettyServer.init(conf);
     setupSecretManager(conf);
     closeFirstRequest = conf.getBoolean(
-        GiraphConfiguration.NETTY_SIMULATE_FIRST_REQUEST_CLOSED,
-        GiraphConfiguration.NETTY_SIMULATE_FIRST_REQUEST_CLOSED_DEFAULT);
+        GiraphConstants.NETTY_SIMULATE_FIRST_REQUEST_CLOSED,
+        GiraphConstants.NETTY_SIMULATE_FIRST_REQUEST_CLOSED_DEFAULT);
   }
 
   @Override

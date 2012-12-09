@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-447: Clean up GiraphConfiguration related things (nitay)
+
   GIRAPH-445: Max message request size in bytes, initialize buffers to 
   expected size (majakabiljo)
 

@@ -18,18 +18,13 @@
 
 package org.apache.giraph.utils;
 
-import org.apache.giraph.GiraphConfiguration;
-import org.apache.giraph.graph.Combiner;
-import org.apache.giraph.graph.EdgeInputFormat;
+import org.apache.giraph.conf.GiraphClasses;
+import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.graph.GiraphJob;
-import org.apache.giraph.graph.MasterCompute;
-import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.graph.VertexInputFormat;
-import org.apache.giraph.graph.VertexOutputFormat;
-import org.apache.giraph.graph.WorkerContext;
 import org.apache.giraph.io.GiraphFileInputFormat;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.zookeeper.server.ServerConfig;
 import org.apache.zookeeper.server.ZooKeeperServerMain;
@@ -60,137 +55,55 @@ public class InternalVertexRunner {
   /** ZooKeeper port to use for tests */
   public static final int LOCAL_ZOOKEEPER_PORT = 22182;
 
-  /**
-   * Default constructor.
-   */
+  /** Don't construct */
   private InternalVertexRunner() { }
 
   /**
-   * Attempts to run the vertex internally in the current JVM, reading from
-   * and writing to a temporary folder on local disk. Will start
-   * its own ZooKeeper instance.
+   * Attempts to run the vertex internally in the current JVM, reading from and
+   * writing to a temporary folder on local disk. Will start its own zookeeper
+   * instance.
    *
-   * @param vertexClass the vertex class to instantiate
-   * @param vertexInputFormatClass the inputformat to use
-   * @param vertexOutputFormatClass the outputformat to use
+   * @param classes GiraphClasses specifying which types to use
    * @param params a map of parameters to add to the hadoop configuration
-   * @param data linewise input data
+   * @param vertexInputData linewise vertex input data
    * @return linewise output data
-   * @throws Exception
+   * @throws Exception if anything goes wrong
    */
-  @SuppressWarnings("rawtypes")
   public static Iterable<String> run(
-      Class<? extends Vertex> vertexClass,
-      Class<? extends VertexInputFormat> vertexInputFormatClass,
-      Class<? extends VertexOutputFormat> vertexOutputFormatClass,
+      GiraphClasses classes,
       Map<String, String> params,
-      String[] data) throws Exception {
-    return run(vertexClass, null, vertexInputFormatClass,
-        vertexOutputFormatClass, params, data);
-  }
-
-  /**
-   *  Attempts to run the vertex internally in the current JVM, reading from
-   *  and writing to a temporary folder on local disk. Will start its own
-   *  zookeeper instance.
-   *
-   * @param vertexClass the vertex class to instantiate
-   * @param vertexCombinerClass the vertex combiner to use (or null)
-   * @param vertexInputFormatClass the inputformat to use
-   * @param vertexOutputFormatClass the outputformat to use
-   * @param params a map of parameters to add to the hadoop configuration
-   * @param data linewise input data
-   * @return linewise output data
-   * @throws Exception
-   */
-  @SuppressWarnings("rawtypes")
-  public static Iterable<String> run(
-      Class<? extends Vertex> vertexClass,
-      Class<? extends Combiner> vertexCombinerClass,
-      Class<? extends VertexInputFormat> vertexInputFormatClass,
-      Class<? extends VertexOutputFormat> vertexOutputFormatClass,
-      Map<String, String> params,
-      String[] data) throws Exception {
-    return InternalVertexRunner.run(vertexClass, vertexCombinerClass,
-        vertexInputFormatClass, vertexOutputFormatClass, null, null, params,
-        data);
+      String[] vertexInputData) throws Exception {
+    return run(classes, params, vertexInputData, null);
   }
 
   /**
    * Attempts to run the vertex internally in the current JVM, reading from and
    * writing to a temporary folder on local disk. Will start its own zookeeper
    * instance.
-   * @param vertexClass the vertex class to instantiate
-   * @param vertexCombinerClass the vertex combiner to use (or null)
-   * @param vertexInputFormatClass the inputformat to use
-   * @param vertexOutputFormatClass the outputformat to use
-   * @param workerContextClass the worker context to use
-   * @param masterComputeClass the master compute class to use
-   * @param params a map of parameters to add to the hadoop configuration
-   * @param data linewise input data
-   * @return linewise output data
-   * @throws Exception
-   */
-  @SuppressWarnings("rawtypes")
-  public static Iterable<String> run(
-      Class<? extends Vertex> vertexClass,
-      Class<? extends Combiner> vertexCombinerClass,
-      Class<? extends VertexInputFormat> vertexInputFormatClass,
-      Class<? extends VertexOutputFormat> vertexOutputFormatClass,
-      Class<? extends WorkerContext> workerContextClass,
-      Class<? extends MasterCompute> masterComputeClass,
-      Map<String, String> params,
-      String[] data) throws Exception {
-    return run(vertexClass, vertexCombinerClass, vertexInputFormatClass, null,
-        vertexOutputFormatClass, workerContextClass, masterComputeClass,
-        params, data, null);
-  }
-
-  // CHECKSTYLE: stop ParameterNumberCheck
-  /**
-   * Attempts to run the vertex internally in the current JVM, reading from and
-   * writing to a temporary folder on local disk. Will start its own zookeeper
-   * instance.
-   * @param vertexClass the vertex class to instantiate
-   * @param vertexCombinerClass the vertex combiner to use (or null)
-   * @param vertexInputFormatClass the vertex inputformat to use
-   * @param edgeInputFormatClass the edge inputformat to use
-   * @param vertexOutputFormatClass the outputformat to use
-   * @param workerContextClass the worker context to use
-   * @param masterComputeClass the master compute class to use
+   *
+   * @param classes GiraphClasses specifying which types to use
    * @param params a map of parameters to add to the hadoop configuration
    * @param vertexInputData linewise vertex input data
    * @param edgeInputData linewise edge input data
    * @return linewise output data
-   * @throws Exception
+   * @throws Exception if anything goes wrong
    */
-  @SuppressWarnings("rawtypes")
-  public static Iterable<String> run(Class<? extends Vertex> vertexClass,
-      Class<? extends Combiner> vertexCombinerClass,
-      Class<? extends VertexInputFormat> vertexInputFormatClass,
-      Class<? extends EdgeInputFormat> edgeInputFormatClass,
-      Class<? extends VertexOutputFormat> vertexOutputFormatClass,
-      Class<? extends WorkerContext> workerContextClass,
-      Class<? extends MasterCompute> masterComputeClass,
+  public static Iterable<String> run(
+      GiraphClasses classes,
       Map<String, String> params,
       String[] vertexInputData,
       String[] edgeInputData) throws Exception {
-
-    boolean useVertexInputFormat = vertexInputFormatClass != null;
-    boolean useEdgeInputFormat = edgeInputFormatClass != null;
-    boolean outputData = vertexOutputFormatClass != null;
-
     File tmpDir = null;
     try {
       // Prepare input file, output folder and temporary folders
-      tmpDir = FileUtils.createTestDir(vertexClass);
+      tmpDir = FileUtils.createTestDir(classes.getVertexClass());
 
       File vertexInputFile = null;
       File edgeInputFile = null;
-      if (useVertexInputFormat) {
+      if (classes.hasVertexInputFormat()) {
         vertexInputFile = FileUtils.createTempFile(tmpDir, "vertices.txt");
       }
-      if (useEdgeInputFormat) {
+      if (classes.hasEdgeInputFormat()) {
         edgeInputFile = FileUtils.createTempFile(tmpDir, "edges.txt");
       }
 
@@ -200,61 +113,58 @@ public class InternalVertexRunner {
       File checkpointsDir = FileUtils.createTempDir(tmpDir, "_checkpoints");
 
       // Write input data to disk
-      if (useVertexInputFormat) {
+      if (classes.hasVertexInputFormat()) {
         FileUtils.writeLines(vertexInputFile, vertexInputData);
       }
-      if (useEdgeInputFormat) {
+      if (classes.hasEdgeInputFormat()) {
         FileUtils.writeLines(edgeInputFile, edgeInputData);
       }
 
       // Create and configure the job to run the vertex
-      GiraphJob job = new GiraphJob(vertexClass.getName());
-      job.getConfiguration().setVertexClass(vertexClass);
-      if (useVertexInputFormat) {
-        job.getConfiguration().setVertexInputFormatClass(
-            vertexInputFormatClass);
+      GiraphJob job = new GiraphJob(classes.getVertexClass().getName());
+      GiraphConfiguration conf = job.getConfiguration();
+      conf.setVertexClass(classes.getVertexClass());
+      if (classes.hasVertexInputFormat()) {
+        conf.setVertexInputFormatClass(classes.getVertexInputFormatClass());
       }
-      if (useEdgeInputFormat) {
-        job.getConfiguration().setEdgeInputFormatClass(edgeInputFormatClass);
+      if (classes.hasEdgeInputFormat()) {
+        conf.setEdgeInputFormatClass(classes.getEdgeInputFormatClass());
       }
-      if (outputData) {
-        job.getConfiguration().setVertexOutputFormatClass(
-            vertexOutputFormatClass);
+      if (classes.hasVertexOutputFormat()) {
+        conf.setVertexOutputFormatClass(classes.getVertexOutputFormatClass());
       }
-      if (workerContextClass != null) {
-        job.getConfiguration().setWorkerContextClass(workerContextClass);
+      if (classes.hasWorkerContextClass()) {
+        conf.setWorkerContextClass(classes.getWorkerContextClass());
       }
-      if (vertexCombinerClass != null) {
-        job.getConfiguration().setVertexCombinerClass(vertexCombinerClass);
+      if (classes.hasCombinerClass()) {
+        conf.setVertexCombinerClass(classes.getCombinerClass());
       }
-      if (masterComputeClass != null) {
-        job.getConfiguration().setMasterComputeClass(masterComputeClass);
+      if (classes.hasMasterComputeClass()) {
+        conf.setMasterComputeClass(classes.getMasterComputeClass());
       }
 
-      job.getConfiguration().setWorkerConfiguration(1, 1, 100.0f);
-      Configuration conf = job.getConfiguration();
-      conf.setBoolean(GiraphConfiguration.SPLIT_MASTER_WORKER, false);
-      conf.setBoolean(GiraphConfiguration.LOCAL_TEST_MODE, true);
-      conf.set(GiraphConfiguration.ZOOKEEPER_LIST, "localhost:" +
+      conf.setWorkerConfiguration(1, 1, 100.0f);
+      conf.setBoolean(GiraphConstants.SPLIT_MASTER_WORKER, false);
+      conf.setBoolean(GiraphConstants.LOCAL_TEST_MODE, true);
+      conf.set(GiraphConstants.ZOOKEEPER_LIST, "localhost:" +
           String.valueOf(LOCAL_ZOOKEEPER_PORT));
 
-      conf.set(GiraphConfiguration.ZOOKEEPER_DIR, zkDir.toString());
-      conf.set(GiraphConfiguration.ZOOKEEPER_MANAGER_DIRECTORY,
+      conf.set(GiraphConstants.ZOOKEEPER_DIR, zkDir.toString());
+      conf.set(GiraphConstants.ZOOKEEPER_MANAGER_DIRECTORY,
           zkMgrDir.toString());
-      conf.set(
-          GiraphConfiguration.CHECKPOINT_DIRECTORY,
-          checkpointsDir.toString());
+      conf.set(GiraphConstants.CHECKPOINT_DIRECTORY, checkpointsDir.toString());
 
       for (Map.Entry<String, String> param : params.entrySet()) {
         conf.set(param.getKey(), param.getValue());
       }
 
-      if (useVertexInputFormat) {
-        GiraphFileInputFormat.addVertexInputPath(job.getInternalJob(),
+      Job internalJob = job.getInternalJob();
+      if (classes.hasVertexInputFormat()) {
+        GiraphFileInputFormat.addVertexInputPath(internalJob,
             new Path(vertexInputFile.toString()));
       }
-      if (useEdgeInputFormat) {
-        GiraphFileInputFormat.addEdgeInputPath(job.getInternalJob(),
+      if (classes.hasEdgeInputFormat()) {
+        GiraphFileInputFormat.addEdgeInputPath(internalJob,
             new Path(edgeInputFile.toString()));
       }
       FileOutputFormat.setOutputPath(job.getInternalJob(),
@@ -289,7 +199,7 @@ public class InternalVertexRunner {
         zookeeper.end();
       }
 
-      if (outputData) {
+      if (classes.hasVertexOutputFormat()) {
         return Files.readLines(new File(outputDir, "part-m-00000"),
             Charsets.UTF_8);
       } else {
@@ -299,7 +209,6 @@ public class InternalVertexRunner {
       FileUtils.delete(tmpDir);
     }
   }
-  // CHECKSTYLE: resume ParameterNumberCheck
 
   /**
    * Configuration options for running local ZK.

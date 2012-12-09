@@ -19,7 +19,6 @@
 package org.apache.giraph.graph;
 
 
-import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.bsp.ApplicationState;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.ServerData;
@@ -31,6 +30,7 @@ import org.apache.giraph.comm.netty.NettyWorkerAggregatorRequestProcessor;
 import org.apache.giraph.comm.netty.NettyWorkerClient;
 import org.apache.giraph.comm.netty.NettyWorkerClientRequestProcessor;
 import org.apache.giraph.comm.netty.NettyWorkerServer;
+import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.graph.partition.Partition;
 import org.apache.giraph.graph.partition.PartitionExchange;
 import org.apache.giraph.graph.partition.PartitionOwner;
@@ -177,7 +177,7 @@ public class BspServiceWorker<I extends WritableComparable,
     aggregatorHandler =
         new WorkerAggregatorHandler(this, getConfiguration(), context);
 
-    GiraphMetrics.getInstance().addSuperstepResetObserver(this);
+    GiraphMetrics.get().addSuperstepResetObserver(this);
   }
 
   @Override
@@ -855,7 +855,7 @@ else[HADOOP_NON_SECURE]*/
   private void saveVertices() throws IOException, InterruptedException {
     if (getConfiguration().getVertexOutputFormatClass() == null) {
       LOG.warn("saveVertices: " +
-          GiraphConfiguration.VERTEX_OUTPUT_FORMAT_CLASS +
+          GiraphConstants.VERTEX_OUTPUT_FORMAT_CLASS +
           " not specified -- there will be no saved output");
       return;
     }
@@ -924,7 +924,7 @@ else[HADOOP_NON_SECURE]*/
     }
 
     if (getConfiguration().metricsEnabled()) {
-      GiraphMetrics.getInstance().dumpToStdout();
+      GiraphMetrics.get().dumpToStdout();
     }
 
     // Preferably would shut down the service only after

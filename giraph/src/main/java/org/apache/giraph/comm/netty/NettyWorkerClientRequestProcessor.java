@@ -17,10 +17,6 @@
  */
 package org.apache.giraph.comm.netty;
 
-import java.io.IOException;
-import java.util.Map;
-import org.apache.giraph.GiraphConfiguration;
-import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.SendMessageCache;
 import org.apache.giraph.comm.SendMutationsCache;
@@ -35,6 +31,8 @@ import org.apache.giraph.comm.requests.SendVertexRequest;
 import org.apache.giraph.comm.requests.SendWorkerMessagesRequest;
 import org.apache.giraph.comm.requests.WorkerRequest;
 import org.apache.giraph.comm.requests.WritableRequest;
+import org.apache.giraph.conf.GiraphConstants;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.BspService;
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.Vertex;
@@ -50,6 +48,9 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
+
+import java.io.IOException;
+import java.util.Map;
 
 /**
  * Aggregate requests and sends them to the thread-safe NettyClient.  This
@@ -112,17 +113,17 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
     sendMessageCache =
         new SendMessageCache<I, M>(configuration, serviceWorker);
     maxMessagesSizePerWorker = configuration.getInt(
-        GiraphConfiguration.MAX_MSG_REQUEST_SIZE,
-        GiraphConfiguration.MAX_MSG_REQUEST_SIZE_DEFAULT);
+        GiraphConstants.MAX_MSG_REQUEST_SIZE,
+        GiraphConstants.MAX_MSG_REQUEST_SIZE_DEFAULT);
     maxMutationsPerPartition = configuration.getInt(
-        GiraphConfiguration.MAX_MUTATIONS_PER_REQUEST,
-        GiraphConfiguration.MAX_MUTATIONS_PER_REQUEST_DEFAULT);
+        GiraphConstants.MAX_MUTATIONS_PER_REQUEST,
+        GiraphConstants.MAX_MUTATIONS_PER_REQUEST_DEFAULT);
     this.serviceWorker = serviceWorker;
     this.serverData = serviceWorker.getServerData();
 
     // Per-Superstep Metrics.
     // Since this object is not long lived we just initialize the metrics here.
-    GiraphMetrics gmr = GiraphMetrics.getInstance();
+    GiraphMetrics gmr = GiraphMetrics.get();
     msgsSentInSuperstep = new ValueGauge<Long>(gmr.perSuperstep(), "msgs-sent");
   }
 

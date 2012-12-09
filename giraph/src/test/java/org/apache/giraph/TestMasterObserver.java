@@ -18,6 +18,8 @@
 
 package org.apache.giraph;
 
+import org.apache.giraph.conf.GiraphClasses;
+import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.graph.IntNullNullNullVertex;
 import org.apache.giraph.io.IntNullNullNullTextInputFormat;
 import org.apache.giraph.master.DefaultMasterObserver;
@@ -84,11 +86,13 @@ public class TestMasterObserver {
         Obs.class.getName(),
         Obs.class.getName()
     };
-    params.put(GiraphConfiguration.MASTER_OBSERVER_CLASSES,
+    params.put(GiraphConstants.MASTER_OBSERVER_CLASSES,
         StringUtils.arrayToString(klasses));
 
-    InternalVertexRunner.run(NoOpVertex.class,
-        IntNullNullNullTextInputFormat.class, null, params, graph);
+    GiraphClasses classes = new GiraphClasses();
+    classes.setVertexClass(NoOpVertex.class);
+    classes.setVertexInputFormatClass(IntNullNullNullTextInputFormat.class);
+    InternalVertexRunner.run(classes, params, graph);
 
     assertEquals(2, Obs.preApp);
     // 3 supersteps + 1 input superstep * 2 observers = 8 callbacks

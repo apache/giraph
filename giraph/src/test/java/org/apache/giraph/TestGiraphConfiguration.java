@@ -18,6 +18,7 @@
 
 package org.apache.giraph;
 
+import org.apache.giraph.conf.GiraphConfiguration;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;

@@ -18,6 +18,7 @@
 
 package org.apache.giraph;
 
+import org.apache.giraph.conf.GiraphClasses;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.io.IdWithValueTextOutputFormat;
 import org.apache.giraph.io.IntIntTextVertexValueInputFormat;
@@ -27,13 +28,13 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
-
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 
 import java.io.IOException;
-import java.util.Collections;
 import java.util.Map;
+
+import static org.junit.Assert.assertEquals;
 
 /**
  * A test case to ensure that loading a graph from a list of edges works as
@@ -55,17 +56,13 @@ public class TestEdgeInput extends BspCase {
         "4 1"
     };
 
-    Iterable<String> results = InternalVertexRunner.run(
-        TestVertexWithNumEdges.class,
-        null,
-        null,
-        IntNullTextEdgeInputFormat.class,
-        IdWithValueTextOutputFormat.class,
-        null,
-        null,
-        Collections.<String, String>emptyMap(),
-        null,
-        edges);
+    GiraphClasses classes = new GiraphClasses();
+    classes.setVertexClass(TestVertexWithNumEdges.class);
+    classes.setEdgeInputFormatClass(IntNullTextEdgeInputFormat.class);
+    classes.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
+    Map<String, String> params = ImmutableMap.of();
+    Iterable<String> results = InternalVertexRunner.run(classes, params,
+        null, edges);
 
     Map<Integer, Integer> values = parseResults(results);
 
@@ -95,18 +92,16 @@ public class TestEdgeInput extends BspCase {
         "5 3"
     };
 
+    GiraphClasses classes = new GiraphClasses();
+    classes.setVertexClass(TestVertexDoNothing.class);
+    classes.setVertexInputFormatClass(IntIntTextVertexValueInputFormat.class);
+    classes.setEdgeInputFormatClass(IntNullTextEdgeInputFormat.class);
+    classes.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
+    Map<String, String> emptyParams = ImmutableMap.of();
+
     // Run a job with a vertex that does nothing
-    Iterable<String> results = InternalVertexRunner.run(
-        TestVertexDoNothing.class,
-        null,
-        IntIntTextVertexValueInputFormat.class,
-        IntNullTextEdgeInputFormat.class,
-        IdWithValueTextOutputFormat.class,
-        null,
-        null,
-        Collections.<String, String>emptyMap(),
-        vertices,
-        edges);
+    Iterable<String> results = InternalVertexRunner.run(classes, emptyParams,
+        vertices, edges);
 
     Map<Integer, Integer> values = parseResults(results);
 
@@ -121,18 +116,14 @@ public class TestEdgeInput extends BspCase {
     // A vertex with edges but no initial value should have the default value
     assertEquals(0, (int) values.get(5));
 
+    classes = new GiraphClasses();
+    classes.setVertexClass(TestVertexWithNumEdges.class);
+    classes.setVertexInputFormatClass(IntIntTextVertexValueInputFormat.class);
+    classes.setEdgeInputFormatClass(IntNullTextEdgeInputFormat.class);
+    classes.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
+
     // Run a job with a vertex that counts outgoing edges
-    results = InternalVertexRunner.run(
-        TestVertexWithNumEdges.class,
-        null,
-        IntIntTextVertexValueInputFormat.class,
-        IntNullTextEdgeInputFormat.class,
-        IdWithValueTextOutputFormat.class,
-        null,
-        null,
-        Collections.<String, String>emptyMap(),
-        vertices,
-        edges);
+    results = InternalVertexRunner.run(classes, emptyParams, vertices, edges);
 
     values = parseResults(results);
 

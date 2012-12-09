@@ -19,6 +19,7 @@
 package org.apache.giraph;
 import org.apache.giraph.benchmark.EdgeListVertexPageRankBenchmark;
 import org.apache.giraph.benchmark.PageRankComputation;
+import org.apache.giraph.conf.GiraphClasses;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.io.GiraphFileInputFormat;
 import org.apache.giraph.io.JsonBase64VertexInputFormat;
@@ -28,10 +29,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.junit.Test;
 
+import java.io.IOException;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-
-import java.io.IOException;
 
 /**
  * Test out the JsonBase64 format.
@@ -58,11 +59,11 @@ public class TestJsonBase64Format extends BspCase {
       throws IOException, InterruptedException, ClassNotFoundException {
 
     Path outputPath = getTempPath(getCallingMethodName());
-    GiraphJob job = prepareJob(getCallingMethodName(),
-        EdgeListVertexPageRankBenchmark.class,
-        PseudoRandomVertexInputFormat.class,
-        JsonBase64VertexOutputFormat.class,
-        outputPath);
+    GiraphClasses classes = new GiraphClasses();
+    classes.setVertexClass(EdgeListVertexPageRankBenchmark.class);
+    classes.setVertexInputFormatClass(PseudoRandomVertexInputFormat.class);
+    classes.setVertexOutputFormatClass(JsonBase64VertexOutputFormat.class);
+    GiraphJob job = prepareJob(getCallingMethodName(), classes, outputPath);
     job.getConfiguration().setLong(
         PseudoRandomVertexInputFormat.AGGREGATE_VERTICES, 101);
     job.getConfiguration().setLong(
@@ -72,20 +73,21 @@ public class TestJsonBase64Format extends BspCase {
     assertTrue(job.run(true));
 
     Path outputPath2 = getTempPath(getCallingMethodName() + "2");
-    job = prepareJob(getCallingMethodName(),
-        EdgeListVertexPageRankBenchmark.class,
-        JsonBase64VertexInputFormat.class,
-        JsonBase64VertexOutputFormat.class,
-        outputPath2);
+    classes = new GiraphClasses();
+    classes.setVertexClass(EdgeListVertexPageRankBenchmark.class);
+    classes.setVertexInputFormatClass(JsonBase64VertexInputFormat.class);
+    classes.setVertexOutputFormatClass(JsonBase64VertexOutputFormat.class);
+    job = prepareJob(getCallingMethodName(), classes, outputPath2);
     job.getConfiguration().setInt(PageRankComputation.SUPERSTEP_COUNT, 3);
     GiraphFileInputFormat.addVertexInputPath(job.getInternalJob(), outputPath);
     assertTrue(job.run(true));
 
     Path outputPath3 = getTempPath(getCallingMethodName() + "3");
-    job = prepareJob(getCallingMethodName(),
-        EdgeListVertexPageRankBenchmark.class,
-        PseudoRandomVertexInputFormat.class,
-        JsonBase64VertexOutputFormat.class, outputPath3);
+    classes = new GiraphClasses();
+    classes.setVertexClass(EdgeListVertexPageRankBenchmark.class);
+    classes.setVertexInputFormatClass(PseudoRandomVertexInputFormat.class);
+    classes.setVertexOutputFormatClass(JsonBase64VertexOutputFormat.class);
+    job = prepareJob(getCallingMethodName(), classes, outputPath3);
     job.getConfiguration().setLong(
         PseudoRandomVertexInputFormat.AGGREGATE_VERTICES, 101);
     job.getConfiguration().setLong(

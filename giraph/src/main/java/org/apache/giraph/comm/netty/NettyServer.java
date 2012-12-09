@@ -18,27 +18,18 @@
 
 package org.apache.giraph.comm.netty;
 
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
-/*if[HADOOP_NON_SECURE]
-else[HADOOP_NON_SECURE]*/
+/*if_not[HADOOP_NON_SECURE]*/
 import org.apache.giraph.comm.netty.handler.AuthorizeServerHandler;
 /*end[HADOOP_NON_SECURE]*/
-import org.apache.giraph.comm.netty.handler.WorkerRequestReservedMap;
 import org.apache.giraph.comm.netty.handler.RequestDecoder;
 import org.apache.giraph.comm.netty.handler.RequestServerHandler;
 import org.apache.giraph.comm.netty.handler.ResponseEncoder;
-/*if[HADOOP_NON_SECURE]
-else[HADOOP_NON_SECURE]*/
+/*if_not[HADOOP_NON_SECURE]*/
 import org.apache.giraph.comm.netty.handler.SaslServerHandler;
 /*end[HADOOP_NON_SECURE]*/
-import java.util.concurrent.TimeUnit;
-import org.apache.giraph.GiraphConfiguration;
-import org.apache.giraph.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.comm.netty.handler.WorkerRequestReservedMap;
+import org.apache.giraph.conf.GiraphConstants;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.TaskInfo;
 import org.apache.giraph.utils.ProgressableUtils;
 import org.apache.hadoop.util.Progressable;
@@ -58,10 +49,17 @@ import org.jboss.netty.channel.group.ChannelGroup;
 import org.jboss.netty.channel.group.DefaultChannelGroup;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder;
-
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.jboss.netty.handler.execution.ExecutionHandler;
 import org.jboss.netty.handler.execution.MemoryAwareThreadPoolExecutor;
+
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.jboss.netty.channel.Channels.pipeline;
 
@@ -73,8 +71,7 @@ public class NettyServer {
   public static final int MAXIMUM_THREAD_POOL_SIZE_DEFAULT = 32;
 
 
-/*if[HADOOP_NON_SECURE]
-else[HADOOP_NON_SECURE]*/
+/*if_not[HADOOP_NON_SECURE]*/
   /** Used to authenticate with netty clients */
   public static final ChannelLocal<SaslNettyServer>
   CHANNEL_SASL_NETTY_SERVERS =
@@ -103,8 +100,7 @@ else[HADOOP_NON_SECURE]*/
   private final int tcpBacklog;
   /** Factory for {@link RequestServerHandler} */
   private final RequestServerHandler.Factory requestServerHandlerFactory;
-/*if[HADOOP_NON_SECURE]
-else[HADOOP_NON_SECURE]*/
+/*if_not[HADOOP_NON_SECURE]*/
   /** Factory for {@link RequestServerHandler} */
   private SaslServerHandler.Factory saslServerHandlerFactory;
 /*end[HADOOP_NON_SECURE]*/
@@ -141,17 +137,16 @@ else[HADOOP_NON_SECURE]*/
     this.conf = conf;
     this.progressable = progressable;
     this.requestServerHandlerFactory = requestServerHandlerFactory;
-    /*if[HADOOP_NON_SECURE]
-    else[HADOOP_NON_SECURE]*/
+    /*if_not[HADOOP_NON_SECURE]*/
     this.saslServerHandlerFactory = new SaslServerHandler.Factory();
     /*end[HADOOP_NON_SECURE]*/
     this.myTaskInfo = myTaskInfo;
     sendBufferSize = conf.getInt(
-        GiraphConfiguration.SERVER_SEND_BUFFER_SIZE,
-        GiraphConfiguration.DEFAULT_SERVER_SEND_BUFFER_SIZE);
+        GiraphConstants.SERVER_SEND_BUFFER_SIZE,
+        GiraphConstants.DEFAULT_SERVER_SEND_BUFFER_SIZE);
     receiveBufferSize = conf.getInt(
-        GiraphConfiguration.SERVER_RECEIVE_BUFFER_SIZE,
-        GiraphConfiguration.DEFAULT_SERVER_RECEIVE_BUFFER_SIZE);
+        GiraphConstants.SERVER_RECEIVE_BUFFER_SIZE,
+        GiraphConstants.DEFAULT_SERVER_RECEIVE_BUFFER_SIZE);
 
     workerRequestReservedMap = new WorkerRequestReservedMap(conf);
 
@@ -169,12 +164,12 @@ else[HADOOP_NON_SECURE]*/
     }
 
     maxPoolSize = conf.getInt(
-        GiraphConfiguration.NETTY_SERVER_THREADS,
-        GiraphConfiguration.NETTY_SERVER_THREADS_DEFAULT);
+        GiraphConstants.NETTY_SERVER_THREADS,
+        GiraphConstants.NETTY_SERVER_THREADS_DEFAULT);
 
-    tcpBacklog = conf.getInt(GiraphConfiguration.TCP_BACKLOG,
-        conf.getInt(GiraphConfiguration.MAX_WORKERS,
-            GiraphConfiguration.TCP_BACKLOG_DEFAULT));
+    tcpBacklog = conf.getInt(GiraphConstants.TCP_BACKLOG,
+        conf.getInt(GiraphConstants.MAX_WORKERS,
+            GiraphConstants.TCP_BACKLOG_DEFAULT));
 
     channelFactory = new NioServerSocketChannelFactory(
         bossExecutorService,
@@ -182,11 +177,11 @@ else[HADOOP_NON_SECURE]*/
         maxPoolSize);
 
     handlerBeforeExecutionHandler = conf.get(
-        GiraphConfiguration.NETTY_SERVER_EXECUTION_AFTER_HANDLER,
-        GiraphConfiguration.NETTY_SERVER_EXECUTION_AFTER_HANDLER_DEFAULT);
+        GiraphConstants.NETTY_SERVER_EXECUTION_AFTER_HANDLER,
+        GiraphConstants.NETTY_SERVER_EXECUTION_AFTER_HANDLER_DEFAULT);
     boolean useExecutionHandler = conf.getBoolean(
-        GiraphConfiguration.NETTY_SERVER_USE_EXECUTION_HANDLER,
-        GiraphConfiguration.NETTY_SERVER_USE_EXECUTION_HANDLER_DEFAULT);
+        GiraphConstants.NETTY_SERVER_USE_EXECUTION_HANDLER,
+        GiraphConstants.NETTY_SERVER_USE_EXECUTION_HANDLER_DEFAULT);
     if (useExecutionHandler) {
       int executionThreads = conf.getNettyServerExecutionThreads();
       executionHandler = new ExecutionHandler(
@@ -204,8 +199,7 @@ else[HADOOP_NON_SECURE]*/
     }
   }
 
-/*if[HADOOP_NON_SECURE]
-else[HADOOP_NON_SECURE]*/
+/*if_not[HADOOP_NON_SECURE]*/
   /**
    * Constructor for creating the server
    *
@@ -249,8 +243,7 @@ else[HADOOP_NON_SECURE]*/
     bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
       @Override
       public ChannelPipeline getPipeline() throws Exception {
-/*if[HADOOP_NON_SECURE]
-else[HADOOP_NON_SECURE]*/
+/*if_not[HADOOP_NON_SECURE]*/
         if (conf.authenticate()) {
           LOG.info("start: Will use Netty pipeline with " +
               "authentication and authorization of clients.");
@@ -300,8 +293,7 @@ else[HADOOP_NON_SECURE]*/
                 "executionHandler", executionHandler);
           }
           return pipeline;
-/*if[HADOOP_NON_SECURE]
-else[HADOOP_NON_SECURE]*/
+/*if_not[HADOOP_NON_SECURE]*/
         }
 /*end[HADOOP_NON_SECURE]*/
       }
@@ -310,19 +302,19 @@ else[HADOOP_NON_SECURE]*/
     int taskId = conf.getTaskPartition();
     int numTasks = conf.getInt("mapred.map.tasks", 1);
     // Number of workers + 1 for master
-    int numServers = conf.getInt(GiraphConfiguration.MAX_WORKERS, numTasks) + 1;
+    int numServers = conf.getInt(GiraphConstants.MAX_WORKERS, numTasks) + 1;
     int portIncrementConstant =
         (int) Math.pow(10, Math.ceil(Math.log10(numServers)));
-    int bindPort = conf.getInt(GiraphConfiguration.IPC_INITIAL_PORT,
-        GiraphConfiguration.IPC_INITIAL_PORT_DEFAULT) +
+    int bindPort = conf.getInt(GiraphConstants.IPC_INITIAL_PORT,
+        GiraphConstants.IPC_INITIAL_PORT_DEFAULT) +
         taskId;
     int bindAttempts = 0;
     final int maxIpcPortBindAttempts =
-        conf.getInt(GiraphConfiguration.MAX_IPC_PORT_BIND_ATTEMPTS,
-            GiraphConfiguration.MAX_IPC_PORT_BIND_ATTEMPTS_DEFAULT);
+        conf.getInt(GiraphConstants.MAX_IPC_PORT_BIND_ATTEMPTS,
+            GiraphConstants.MAX_IPC_PORT_BIND_ATTEMPTS_DEFAULT);
     final boolean failFirstPortBindingAttempt =
-        conf.getBoolean(GiraphConfiguration.FAIL_FIRST_IPC_PORT_BIND_ATTEMPT,
-            GiraphConfiguration.FAIL_FIRST_IPC_PORT_BIND_ATTEMPT_DEFAULT);
+        conf.getBoolean(GiraphConstants.FAIL_FIRST_IPC_PORT_BIND_ATTEMPT,
+            GiraphConstants.FAIL_FIRST_IPC_PORT_BIND_ATTEMPT_DEFAULT);
 
     // Simple handling of port collisions on the same machine while
     // preserving debugability from the port number alone.

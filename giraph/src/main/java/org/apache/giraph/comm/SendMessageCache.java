@@ -18,20 +18,21 @@
 
 package org.apache.giraph.comm;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import java.util.List;
-import java.util.Map;
-
-import org.apache.giraph.GiraphConfiguration;
-import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
+import org.apache.giraph.conf.GiraphConstants;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.WorkerInfo;
 import org.apache.giraph.graph.partition.PartitionOwner;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.giraph.utils.PairList;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * Aggregates the messages to be send to workers so they can be sent
@@ -103,8 +104,8 @@ public class SendMessageCache<I extends WritableComparable,
     float additionalRequestSize =
         conf.getFloat(ADDITIONAL_MSG_REQUEST_SIZE,
             ADDITIONAL_MSG_REQUEST_SIZE_DEFAULT);
-    int requestSize = conf.getInt(GiraphConfiguration.MAX_MSG_REQUEST_SIZE,
-        GiraphConfiguration.MAX_MSG_REQUEST_SIZE_DEFAULT);
+    int requestSize = conf.getInt(GiraphConstants.MAX_MSG_REQUEST_SIZE,
+        GiraphConstants.MAX_MSG_REQUEST_SIZE_DEFAULT);
     int initialRequestSize = (int) (requestSize * (1 + additionalRequestSize));
     initialBufferSizes = new int[maxWorker + 1];
     for (WorkerInfo workerInfo : serviceWorker.getWorkerInfoList()) {

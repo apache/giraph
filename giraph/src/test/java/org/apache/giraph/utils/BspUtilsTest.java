@@ -18,8 +18,9 @@
 
 package org.apache.giraph.utils;
 
-import org.apache.giraph.GiraphConfiguration;
-import org.apache.giraph.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.conf.GiraphConstants;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.hadoop.conf.Configuration;
@@ -58,13 +59,13 @@ public class BspUtilsTest {
 
   @Before
   public void setUp() {
-    conf.setClass(GiraphConfiguration.VERTEX_ID_CLASS, IntWritable.class,
+    conf.setClass(GiraphConstants.VERTEX_ID_CLASS, IntWritable.class,
         WritableComparable.class);
-    conf.setClass(GiraphConfiguration.VERTEX_VALUE_CLASS, LongWritable.class,
+    conf.setClass(GiraphConstants.VERTEX_VALUE_CLASS, LongWritable.class,
         Writable.class);
-    conf.setClass(GiraphConfiguration.EDGE_VALUE_CLASS, DoubleWritable.class,
+    conf.setClass(GiraphConstants.EDGE_VALUE_CLASS, DoubleWritable.class,
         Writable.class);
-    conf.setClass(GiraphConfiguration.MESSAGE_VALUE_CLASS, LongWritable.class,
+    conf.setClass(GiraphConstants.MESSAGE_VALUE_CLASS, LongWritable.class,
         Writable.class);
     GiraphConfiguration conf = new GiraphConfiguration();
     conf.setVertexClass(ImmutableVertex.class);

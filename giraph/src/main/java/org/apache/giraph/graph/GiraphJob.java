@@ -18,10 +18,11 @@
 
 package org.apache.giraph.graph;
 
-import org.apache.giraph.GiraphConfiguration;
-import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.BspInputFormat;
 import org.apache.giraph.bsp.BspOutputFormat;
+import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.conf.GiraphConstants;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.mapreduce.Job;
@@ -137,27 +138,27 @@ public class GiraphJob {
   private void checkConfiguration(ImmutableClassesGiraphConfiguration conf) {
     if (conf.getMaxWorkers() < 0) {
       throw new RuntimeException("checkConfiguration: No valid " +
-          GiraphConfiguration.MAX_WORKERS);
+          GiraphConstants.MAX_WORKERS);
     }
     if (conf.getMinPercentResponded() <= 0.0f ||
         conf.getMinPercentResponded() > 100.0f) {
       throw new IllegalArgumentException(
           "checkConfiguration: Invalid " + conf.getMinPercentResponded() +
-              " for " + GiraphConfiguration.MIN_PERCENT_RESPONDED);
+              " for " + GiraphConstants.MIN_PERCENT_RESPONDED);
     }
     if (conf.getMinWorkers() < 0) {
       throw new IllegalArgumentException("checkConfiguration: No valid " +
-          GiraphConfiguration.MIN_WORKERS);
+          GiraphConstants.MIN_WORKERS);
     }
     if (conf.getVertexClass() == null) {
       throw new IllegalArgumentException("checkConfiguration: Null" +
-          GiraphConfiguration.VERTEX_CLASS);
+          GiraphConstants.VERTEX_CLASS);
     }
     if (conf.getVertexInputFormatClass() == null &&
         conf.getEdgeInputFormatClass() == null) {
       throw new IllegalArgumentException("checkConfiguration: One of " +
-          GiraphConfiguration.VERTEX_INPUT_FORMAT_CLASS + " and " +
-          GiraphConfiguration.EDGE_INPUT_FORMAT_CLASS + " must be non-null");
+          GiraphConstants.VERTEX_INPUT_FORMAT_CLASS + " and " +
+          GiraphConstants.EDGE_INPUT_FORMAT_CLASS + " must be non-null");
     }
     if (conf.getEdgeInputFormatClass() != null &&
         !(MutableVertex.class.isAssignableFrom(conf.getVertexClass()))) {
@@ -167,7 +168,7 @@ public class GiraphJob {
     if (conf.getVertexResolverClass() == null) {
       if (LOG.isInfoEnabled()) {
         LOG.info("checkConfiguration: No class found for " +
-            GiraphConfiguration.VERTEX_RESOLVER_CLASS + ", defaulting to " +
+            GiraphConstants.VERTEX_RESOLVER_CLASS + ", defaulting to " +
             DefaultVertexResolver.class.getCanonicalName());
       }
     }
@@ -256,7 +257,7 @@ public class GiraphJob {
       if (LOG.isInfoEnabled()) {
         LOG.info("run: Since checkpointing is disabled (default), " +
             "do not allow any task retries (setting " +
-            GiraphConfiguration.MAX_TASK_ATTEMPTS + " = 0, " +
+            GiraphConstants.MAX_TASK_ATTEMPTS + " = 0, " +
             "old value = " + oldMaxTaskAttempts + ")");
       }
     }

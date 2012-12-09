@@ -18,13 +18,9 @@
 
 package org.apache.giraph.zk;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.io.Closeables;
-import java.util.LinkedList;
 import org.apache.commons.io.FileUtils;
-import org.apache.giraph.GiraphConfiguration;
-import org.apache.giraph.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.conf.GiraphConstants;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -33,6 +29,10 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.server.quorum.QuorumPeerMain;
+
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.io.Closeables;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -48,10 +48,11 @@ import java.net.Socket;
 import java.net.SocketTimeoutException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import static org.apache.giraph.GiraphConfiguration.BASE_ZNODE_KEY;
+import static org.apache.giraph.conf.GiraphConstants.BASE_ZNODE_KEY;
 
 
 /**
@@ -141,7 +142,7 @@ public class ZooKeeperManager {
     taskPartition = conf.getTaskPartition();
     jobId = conf.get("mapred.job.id", "Unknown Job");
     baseDirectory =
-        new Path(conf.get(GiraphConfiguration.ZOOKEEPER_MANAGER_DIRECTORY,
+        new Path(conf.get(GiraphConstants.ZOOKEEPER_MANAGER_DIRECTORY,
             getFinalZooKeeperPath()));
     taskDirectory = new Path(baseDirectory,
         "_task");
@@ -151,24 +152,24 @@ public class ZooKeeperManager {
         Integer.toString(taskPartition) +
         COMPUTATION_DONE_SUFFIX);
     pollMsecs = conf.getInt(
-        GiraphConfiguration.ZOOKEEPER_SERVERLIST_POLL_MSECS,
-        GiraphConfiguration.ZOOKEEPER_SERVERLIST_POLL_MSECS_DEFAULT);
+        GiraphConstants.ZOOKEEPER_SERVERLIST_POLL_MSECS,
+        GiraphConstants.ZOOKEEPER_SERVERLIST_POLL_MSECS_DEFAULT);
     serverCount = conf.getInt(
-        GiraphConfiguration.ZOOKEEPER_SERVER_COUNT,
-        GiraphConfiguration.ZOOKEEPER_SERVER_COUNT_DEFAULT);
+        GiraphConstants.ZOOKEEPER_SERVER_COUNT,
+        GiraphConstants.ZOOKEEPER_SERVER_COUNT_DEFAULT);
     String jobLocalDir = conf.get("job.local.dir");
     if (jobLocalDir != null) { // for non-local jobs
       zkDirDefault = jobLocalDir +
           "/_bspZooKeeper";
     } else {
       zkDirDefault = System.getProperty("user.dir") + "/" +
-              GiraphConfiguration.ZOOKEEPER_MANAGER_DIR_DEFAULT;
+              GiraphConstants.ZOOKEEPER_MANAGER_DIR_DEFAULT;
     }
-    zkDir = conf.get(GiraphConfiguration.ZOOKEEPER_DIR, zkDirDefault);
+    zkDir = conf.get(GiraphConstants.ZOOKEEPER_DIR, zkDirDefault);
     configFilePath = zkDir + "/zoo.cfg";
     zkBasePort = conf.getInt(
-        GiraphConfiguration.ZOOKEEPER_SERVER_PORT,
-        GiraphConfiguration.ZOOKEEPER_SERVER_PORT_DEFAULT);
+        GiraphConstants.ZOOKEEPER_SERVER_PORT,
+        GiraphConstants.ZOOKEEPER_SERVER_PORT_DEFAULT);
 
 
     myHostname = InetAddress.getLocalHost().getCanonicalHostName();
@@ -181,7 +182,7 @@ public class ZooKeeperManager {
    * @return directory path with job id
    */
   private String getFinalZooKeeperPath() {
-    return GiraphConfiguration.ZOOKEEPER_MANAGER_DIR_DEFAULT + "/" + jobId;
+    return GiraphConstants.ZOOKEEPER_MANAGER_DIR_DEFAULT + "/" + jobId;
   }
 
   /**
@@ -306,7 +307,7 @@ public class ZooKeeperManager {
               "for base directory " + baseDirectory + ".  If there is an " +
               "issue with this directory, please set an accesible " +
               "base directory with the Hadoop configuration option " +
-              GiraphConfiguration.ZOOKEEPER_MANAGER_DIRECTORY);
+              GiraphConstants.ZOOKEEPER_MANAGER_DIRECTORY);
     }
 
     Path myCandidacyPath = new Path(
@@ -556,22 +557,22 @@ public class ZooKeeperManager {
       try {
         writer = new FileWriter(configFilePath);
         writer.write("tickTime=" +
-            GiraphConfiguration.DEFAULT_ZOOKEEPER_TICK_TIME + "\n");
+            GiraphConstants.DEFAULT_ZOOKEEPER_TICK_TIME + "\n");
         writer.write("dataDir=" + this.zkDir + "\n");
         writer.write("clientPort=" + zkBasePort + "\n");
         writer.write("maxClientCnxns=" +
-            GiraphConfiguration.DEFAULT_ZOOKEEPER_MAX_CLIENT_CNXNS +
+            GiraphConstants.DEFAULT_ZOOKEEPER_MAX_CLIENT_CNXNS +
             "\n");
         writer.write("minSessionTimeout=" +
             conf.getZooKeeperMinSessionTimeout() + "\n");
         writer.write("maxSessionTimeout=" +
             conf.getZooKeeperMaxSessionTimeout() + "\n");
         writer.write("initLimit=" +
-            GiraphConfiguration.DEFAULT_ZOOKEEPER_INIT_LIMIT + "\n");
+            GiraphConstants.DEFAULT_ZOOKEEPER_INIT_LIMIT + "\n");
         writer.write("syncLimit=" +
-            GiraphConfiguration.DEFAULT_ZOOKEEPER_SYNC_LIMIT + "\n");
+            GiraphConstants.DEFAULT_ZOOKEEPER_SYNC_LIMIT + "\n");
         writer.write("snapCount=" +
-            GiraphConfiguration.DEFAULT_ZOOKEEPER_SNAP_COUNT + "\n");
+            GiraphConstants.DEFAULT_ZOOKEEPER_SNAP_COUNT + "\n");
         writer.write("forceSync=" + conf.getZooKeeperForceSync() + "\n");
         writer.write("skipACL=" + conf.getZooKeeperSkipAcl() + "\n");
         if (serverList.size() != 1) {
@@ -629,14 +630,14 @@ public class ZooKeeperManager {
       }
       commandList.add(javaHome + "/bin/java");
       String zkJavaOptsString =
-          conf.get(GiraphConfiguration.ZOOKEEPER_JAVA_OPTS,
-              GiraphConfiguration.ZOOKEEPER_JAVA_OPTS_DEFAULT);
+          conf.get(GiraphConstants.ZOOKEEPER_JAVA_OPTS,
+              GiraphConstants.ZOOKEEPER_JAVA_OPTS_DEFAULT);
       String[] zkJavaOptsArray = zkJavaOptsString.split(" ");
       if (zkJavaOptsArray != null) {
         commandList.addAll(Arrays.asList(zkJavaOptsArray));
       }
       commandList.add("-cp");
-      Path fullJarPath = new Path(conf.get(GiraphConfiguration.ZOOKEEPER_JAR));
+      Path fullJarPath = new Path(conf.get(GiraphConstants.ZOOKEEPER_JAR));
       commandList.add(fullJarPath.toString());
       commandList.add(QuorumPeerMain.class.getName());
       commandList.add(configFilePath);

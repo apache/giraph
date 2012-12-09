@@ -17,15 +17,14 @@
  */
 package zk;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import org.apache.giraph.GiraphConfiguration;
-import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.zk.ZooKeeperManager;
 import org.apache.hadoop.conf.Configuration;
 import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class TestZooKeeperManager {
   @Test
@@ -36,17 +35,17 @@ public class TestZooKeeperManager {
     assertEquals("Default value for base path should be empty",
         "", ZooKeeperManager.getBasePath(conf));
 
-    conf.set(GiraphConfiguration.BASE_ZNODE_KEY, "/howdy");
+    conf.set(GiraphConstants.BASE_ZNODE_KEY, "/howdy");
     assertEquals("Base path should reflect value of " +
-        GiraphConfiguration.BASE_ZNODE_KEY,
+        GiraphConstants.BASE_ZNODE_KEY,
         "/howdy", ZooKeeperManager.getBasePath(conf));
 
-    conf.set(GiraphConfiguration.BASE_ZNODE_KEY, "no_slash");
+    conf.set(GiraphConstants.BASE_ZNODE_KEY, "no_slash");
     try {
       ZooKeeperManager.getBasePath(conf);
       fail("Should not have allowed path without starting slash");
     } catch (IllegalArgumentException iae) {
-      assertTrue(iae.getMessage().contains(GiraphConfiguration.BASE_ZNODE_KEY));
+      assertTrue(iae.getMessage().contains(GiraphConstants.BASE_ZNODE_KEY));
     }
   }
 }

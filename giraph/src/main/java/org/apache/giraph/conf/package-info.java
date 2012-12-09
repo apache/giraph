@@ -15,34 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.giraph;
-
-import org.apache.giraph.graph.GraphState;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-
 /**
- * Interface specifying that the class can be configured with a GraphState.
- *
- * @param <I> Vertex ID object
- * @param <V> Vertex Value object
- * @param <E> Edge object
- * @param <M> Message object
+ * Package of Giraph configuration related things.
  */
-public interface GraphStateAware<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable> {
-  /**
-   * Set the graph state.
-   *
-   * @param graphState Graph state saved.
-   */
-  void setGraphState(GraphState<I, V, E, M> graphState);
-
-  /**
-   * Get the graph state stored.
-   *
-   * @return GraphState stored.
-   */
-  GraphState<I, V, E, M> getGraphState();
-}
+package org.apache.giraph.conf;

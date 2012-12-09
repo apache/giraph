@@ -43,7 +43,7 @@ import java.io.IOException;
  * {@link HCatOutputFormat#setOutput(org.apache.hadoop.mapreduce.Job,
  * org.apache.hcatalog.mapreduce.OutputJobInfo)}
  * as you setup your vertex output format with
- * {@link org.apache.giraph.GiraphConfiguration#
+ * {@link org.apache.giraph.conf.GiraphConfiguration}
  * setVertexOutputFormatClass(Class)}. You must create the output table.
  *
  * @param <I> Vertex id

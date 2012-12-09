@@ -16,40 +16,34 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.master;
+package org.apache.giraph.conf;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 
 /**
- * A no-op implementation of MasterObserver to make it easier for users.
+ * Can be instantiated with ImmutableClassesGiraphConfiguration
+ *
+ * @param <I> Vertex id
+ * @param <V> Vertex data
+ * @param <E> Edge data
+ * @param <M> Message data
  */
-public class DefaultMasterObserver implements MasterObserver {
-  /** Configuration to use */
-  private ImmutableClassesGiraphConfiguration conf;
+public interface ImmutableClassesGiraphConfigurable<
+    I extends WritableComparable, V extends Writable, E extends Writable,
+    M extends Writable> {
+  /**
+   * Set the configuration to be used by this object.
+   *
+   * @param configuration Set configuration
+   */
+  void setConf(ImmutableClassesGiraphConfiguration<I, V, E, M>
+                   configuration);
 
-  @Override
-  public void setConf(ImmutableClassesGiraphConfiguration configuration) {
-    this.conf = configuration;
-  }
-
-  @Override
-  public ImmutableClassesGiraphConfiguration getConf() {
-    return conf;
-  }
-
-  @Override
-  public void preApplication() {
-  }
-
-  @Override
-  public void postApplication() {
-  }
-
-  @Override
-  public void preSuperstep() {
-  }
-
-  @Override
-  public void postSuperstep() {
-  }
+  /**
+   * Return the configuration used by this object.
+   *
+   * @return Set configuration
+   */
+  ImmutableClassesGiraphConfiguration<I, V, E, M> getConf();
 }

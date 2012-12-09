@@ -18,13 +18,17 @@
 
 package org.apache.giraph;
 
-import java.io.IOException;
+import org.apache.giraph.conf.GiraphClasses;
+import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.examples.SimpleCheckpointVertex;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexOutputFormat;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.hadoop.fs.Path;
 import org.junit.Test;
+
+import java.io.IOException;
 
 import static org.junit.Assert.assertTrue;
 
@@ -54,13 +58,16 @@ public class TestAutoCheckpoint extends BspCase {
       return;
     }
     Path outputPath = getTempPath(getCallingMethodName());
-    GiraphJob job = prepareJob(getCallingMethodName(),
-        SimpleCheckpointVertex.SimpleCheckpointComputation.class,
-        SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.class,
-        SimpleCheckpointVertex.SimpleCheckpointVertexMasterCompute.class,
-        SimpleSuperstepVertexInputFormat.class,
-        SimpleSuperstepVertexOutputFormat.class,
-        outputPath);
+    GiraphClasses classes = new GiraphClasses();
+    classes.setVertexClass(
+        SimpleCheckpointVertex.SimpleCheckpointComputation.class);
+    classes.setWorkerContextClass(
+        SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.class);
+    classes.setMasterComputeClass(
+        SimpleCheckpointVertex.SimpleCheckpointVertexMasterCompute.class);
+    classes.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
+    classes.setVertexOutputFormatClass(SimpleSuperstepVertexOutputFormat.class);
+    GiraphJob job = prepareJob(getCallingMethodName(), classes, outputPath);
 
     GiraphConfiguration conf = job.getConfiguration();
     conf.setBoolean(SimpleCheckpointVertex.ENABLE_FAULT, true);
@@ -70,11 +77,11 @@ public class TestAutoCheckpoint extends BspCase {
     conf.setMaxMasterSuperstepWaitMsecs(10000);
     conf.setEventWaitMsecs(1000);
     conf.setCheckpointFrequency(2);
-    conf.set(GiraphConfiguration.CHECKPOINT_DIRECTORY,
+    conf.set(GiraphConstants.CHECKPOINT_DIRECTORY,
         getTempPath("_singleFaultCheckpoints").toString());
-    conf.setBoolean(GiraphConfiguration.CLEANUP_CHECKPOINTS_AFTER_SUCCESS, false);
-    conf.setInt(GiraphConfiguration.ZOOKEEPER_SESSION_TIMEOUT, 10000);
-    conf.setInt(GiraphConfiguration.ZOOKEEPER_MIN_SESSION_TIMEOUT, 10000);
+    conf.setBoolean(GiraphConstants.CLEANUP_CHECKPOINTS_AFTER_SUCCESS, false);
+    conf.setInt(GiraphConstants.ZOOKEEPER_SESSION_TIMEOUT, 10000);
+    conf.setInt(GiraphConstants.ZOOKEEPER_MIN_SESSION_TIMEOUT, 10000);
 
     assertTrue(job.run(true));
   }

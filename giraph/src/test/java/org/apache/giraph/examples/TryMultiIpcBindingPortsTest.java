@@ -18,15 +18,10 @@
 
 package org.apache.giraph.examples;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
-import java.util.Map;
-import java.util.Set;
-
-import org.apache.giraph.GiraphConfiguration;
-import org.apache.giraph.io.IntIntNullIntTextInputFormat;
+import org.apache.giraph.conf.GiraphClasses;
+import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.io.IdWithValueTextOutputFormat;
+import org.apache.giraph.io.IntIntNullIntTextInputFormat;
 import org.apache.giraph.utils.InternalVertexRunner;
 import org.junit.Test;
 
@@ -35,6 +30,12 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.SetMultimap;
+
+import java.util.Map;
+import java.util.Set;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  *  Tests for {@link TryMultiIpcBindingPortsTest}
@@ -68,13 +69,15 @@ public class TryMultiIpcBindingPortsTest {
         // run internally
         // fail the first port binding attempt
         Map<String, String> params = Maps.<String, String>newHashMap();
-        params.put(GiraphConfiguration.FAIL_FIRST_IPC_PORT_BIND_ATTEMPT, "true");
-        Iterable<String> results = InternalVertexRunner.run(
-                ConnectedComponentsVertex.class,
-                MinimumIntCombiner.class,
-                IntIntNullIntTextInputFormat.class,
-                IdWithValueTextOutputFormat.class,
-                params,
+        params.put(GiraphConstants.FAIL_FIRST_IPC_PORT_BIND_ATTEMPT, "true");
+
+        GiraphClasses classes = new GiraphClasses();
+        classes.setVertexClass(ConnectedComponentsVertex.class);
+        classes.setCombinerClass(MinimumIntCombiner.class);
+        classes.setVertexInputFormatClass(IntIntNullIntTextInputFormat.class);
+        classes.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
+
+        Iterable<String> results = InternalVertexRunner.run(classes, params,
                 graph);
 
         SetMultimap<Integer,Integer> components = parseResults(results);

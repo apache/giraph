@@ -18,9 +18,9 @@
 
 package org.apache.giraph.graph;
 
-import org.apache.giraph.GiraphConfiguration;
-import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedService;
+import org.apache.giraph.conf.GiraphConstants;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.partition.GraphPartitionerFactory;
 import org.apache.giraph.zk.BspEvent;
 import org.apache.giraph.zk.PredicateLock;
@@ -281,8 +281,7 @@ public abstract class BspService<I extends WritableComparable,
     this.jobId = conf.get("mapred.job.id", "Unknown Job");
     this.taskPartition = conf.getTaskPartition();
     this.restartedSuperstep = conf.getLong(
-        GiraphConfiguration.RESTART_SUPERSTEP,
-        UNSET_SUPERSTEP);
+        GiraphConstants.RESTART_SUPERSTEP, UNSET_SUPERSTEP);
     this.cachedSuperstep = restartedSuperstep;
     if ((restartedSuperstep != UNSET_SUPERSTEP) &&
         (restartedSuperstep < 0)) {
@@ -311,8 +310,8 @@ public abstract class BspService<I extends WritableComparable,
     applicationAttemptsPath = basePath + APPLICATION_ATTEMPTS_DIR;
     cleanedUpPath = basePath + CLEANED_UP_DIR;
     checkpointBasePath = getConfiguration().get(
-        GiraphConfiguration.CHECKPOINT_DIRECTORY,
-        GiraphConfiguration.CHECKPOINT_DIRECTORY_DEFAULT + "/" + getJobId());
+        GiraphConstants.CHECKPOINT_DIRECTORY,
+        GiraphConstants.CHECKPOINT_DIRECTORY_DEFAULT + "/" + getJobId());
     masterElectionPath = basePath + MASTER_ELECTION_DIR;
     if (LOG.isInfoEnabled()) {
       LOG.info("BspService: Connecting to ZooKeeper with job " + jobId +

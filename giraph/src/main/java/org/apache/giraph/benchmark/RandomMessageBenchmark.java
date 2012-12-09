@@ -23,8 +23,8 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
-import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.aggregators.LongSumAggregator;
+import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.graph.DefaultMasterCompute;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.GiraphJob;
@@ -387,7 +387,7 @@ public class RandomMessageBenchmark implements Tool {
     }
     if (cmd.hasOption('f')) {
       job.getConfiguration().setInt(
-          GiraphConfiguration.MSG_NUM_FLUSH_THREADS,
+          GiraphConstants.MSG_NUM_FLUSH_THREADS,
           Integer.parseInt(cmd.getOptionValue('f')));
     }
     if (job.run(isVerbose)) {

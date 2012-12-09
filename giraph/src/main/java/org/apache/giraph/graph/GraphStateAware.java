@@ -16,34 +16,32 @@
  * limitations under the License.
  */
 
-package org.apache.giraph;
+package org.apache.giraph.graph;
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
- * Can be instantiated with ImmutableClassesGiraphConfiguration
+ * Interface specifying that the class can be configured with a GraphState.
  *
- * @param <I> Vertex id
- * @param <V> Vertex data
- * @param <E> Edge data
- * @param <M> Message data
+ * @param <I> Vertex ID object
+ * @param <V> Vertex Value object
+ * @param <E> Edge object
+ * @param <M> Message object
  */
-public interface ImmutableClassesGiraphConfigurable<
-    I extends WritableComparable, V extends Writable, E extends Writable,
-    M extends Writable> {
+public interface GraphStateAware<I extends WritableComparable,
+    V extends Writable, E extends Writable, M extends Writable> {
   /**
-   * Set the configuration to be used by this object.
+   * Set the graph state.
    *
-   * @param configuration Set configuration
+   * @param graphState Graph state saved.
    */
-  void setConf(ImmutableClassesGiraphConfiguration<I, V, E, M>
-                   configuration);
+  void setGraphState(GraphState<I, V, E, M> graphState);
 
   /**
-   * Return the configuration used by this object.
+   * Get the graph state stored.
    *
-   * @return Set configuration
+   * @return GraphState stored.
    */
-  ImmutableClassesGiraphConfiguration<I, V, E, M> getConf();
+  GraphState<I, V, E, M> getGraphState();
 }

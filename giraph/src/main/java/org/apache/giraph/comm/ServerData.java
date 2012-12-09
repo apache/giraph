@@ -18,12 +18,12 @@
 
 package org.apache.giraph.comm;
 
-import org.apache.giraph.GiraphConfiguration;
-import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.comm.aggregators.AllAggregatorServerData;
 import org.apache.giraph.comm.aggregators.OwnerAggregatorServerData;
 import org.apache.giraph.comm.messages.MessageStoreByPartition;
 import org.apache.giraph.comm.messages.MessageStoreFactory;
+import org.apache.giraph.conf.GiraphConstants;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.VertexMutations;
 import org.apache.giraph.graph.partition.DiskBackedPartitionStore;
 import org.apache.giraph.graph.partition.PartitionStore;
@@ -92,8 +92,8 @@ public class ServerData<I extends WritableComparable,
     this.messageStoreFactory = messageStoreFactory;
     currentMessageStore = messageStoreFactory.newStore();
     incomingMessageStore = messageStoreFactory.newStore();
-    if (configuration.getBoolean(GiraphConfiguration.USE_OUT_OF_CORE_GRAPH,
-        GiraphConfiguration.USE_OUT_OF_CORE_GRAPH_DEFAULT)) {
+    if (configuration.getBoolean(GiraphConstants.USE_OUT_OF_CORE_GRAPH,
+        GiraphConstants.USE_OUT_OF_CORE_GRAPH_DEFAULT)) {
       partitionStore =
           new DiskBackedPartitionStore<I, V, E, M>(configuration, context);
     } else {

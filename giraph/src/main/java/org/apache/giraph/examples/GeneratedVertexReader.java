@@ -18,7 +18,7 @@
 
 package org.apache.giraph.examples;
 
-import org.apache.giraph.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.BspInputSplit;
 import org.apache.giraph.graph.VertexReader;
 import org.apache.hadoop.io.Writable;

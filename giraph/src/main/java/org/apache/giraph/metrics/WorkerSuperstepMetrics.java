@@ -69,7 +69,7 @@ public class WorkerSuperstepMetrics implements Writable {
    * @return this object, for chaining
    */
   public WorkerSuperstepMetrics readFromRegistry() {
-    SuperstepMetricsRegistry ssm = GiraphMetrics.getInstance().perSuperstep();
+    SuperstepMetricsRegistry ssm = GiraphMetrics.get().perSuperstep();
     readGiraphTimer(GraphMapper.TIMER_COMMUNICATION_TIME, commTimer);
     readGiraphTimer(GraphMapper.TIMER_COMPUTE_ALL, computeAllTimer);
     readGiraphTimer(GraphMapper.TIMER_TIME_TO_FIRST_MSG, timeToFirstMsg);
@@ -87,7 +87,7 @@ public class WorkerSuperstepMetrics implements Writable {
    * @param data LongAndTimeUnit to read data into.
    */
   private void readGiraphTimer(String name, LongAndTimeUnit data) {
-    Gauge<Long> gauge = GiraphMetrics.getInstance().perSuperstep().
+    Gauge<Long> gauge = GiraphMetrics.get().perSuperstep().
         getExistingGauge(name);
     if (gauge instanceof GiraphTimer) {
       GiraphTimer giraphTimer = (GiraphTimer) gauge;

@@ -18,19 +18,19 @@
 
 package org.apache.giraph.bsp;
 
+import org.apache.giraph.conf.GiraphConstants;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.InputFormat;
+import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.RecordReader;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.log4j.Logger;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-
-import org.apache.giraph.GiraphConfiguration;
-import org.apache.hadoop.mapreduce.RecordReader;
-import org.apache.hadoop.mapreduce.InputFormat;
-import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.apache.hadoop.mapreduce.JobContext;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.InputSplit;
-import org.apache.log4j.Logger;
 
 /**
  * This InputFormat supports the BSP model by ensuring that the user specifies
@@ -49,15 +49,15 @@ public class BspInputFormat extends InputFormat<Text, Text> {
    * @return Maximum number of tasks
    */
   public static int getMaxTasks(Configuration conf) {
-    int maxWorkers = conf.getInt(GiraphConfiguration.MAX_WORKERS, 0);
+    int maxWorkers = conf.getInt(GiraphConstants.MAX_WORKERS, 0);
     boolean splitMasterWorker =
-        conf.getBoolean(GiraphConfiguration.SPLIT_MASTER_WORKER,
-            GiraphConfiguration.SPLIT_MASTER_WORKER_DEFAULT);
+        conf.getBoolean(GiraphConstants.SPLIT_MASTER_WORKER,
+            GiraphConstants.SPLIT_MASTER_WORKER_DEFAULT);
     int maxTasks = maxWorkers;
     if (splitMasterWorker) {
       int zkServers =
-          conf.getInt(GiraphConfiguration.ZOOKEEPER_SERVER_COUNT,
-              GiraphConfiguration.ZOOKEEPER_SERVER_COUNT_DEFAULT);
+          conf.getInt(GiraphConstants.ZOOKEEPER_SERVER_COUNT,
+              GiraphConstants.ZOOKEEPER_SERVER_COUNT_DEFAULT);
       maxTasks += zkServers;
     }
     if (LOG.isDebugEnabled()) {

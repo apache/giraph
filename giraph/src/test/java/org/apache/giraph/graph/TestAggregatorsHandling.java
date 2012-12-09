@@ -19,22 +19,21 @@
 package org.apache.giraph.graph;
 
 import org.apache.giraph.BspCase;
-import org.apache.giraph.GiraphConfiguration;
-import org.apache.giraph.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.conf.GiraphClasses;
+import org.apache.giraph.conf.GiraphConstants;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.aggregators.DoubleOverwriteAggregator;
 import org.apache.giraph.aggregators.LongSumAggregator;
 import org.apache.giraph.comm.aggregators.AggregatorUtils;
 import org.apache.giraph.examples.AggregatorsTestVertex;
 import org.apache.giraph.examples.SimpleCheckpointVertex;
 import org.apache.giraph.examples.SimplePageRankVertex;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.util.Progressable;
-import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
@@ -76,9 +75,12 @@ public class TestAggregatorsHandling extends BspCase {
   @Test
   public void testAggregatorsHandling() throws IOException,
       ClassNotFoundException, InterruptedException {
-    GiraphJob job = prepareJob(getCallingMethodName(),
-        AggregatorsTestVertex.class,
+    GiraphClasses<LongWritable, DoubleWritable, FloatWritable, DoubleWritable>
+        classes = new GiraphClasses();
+    classes.setVertexClass(AggregatorsTestVertex.class);
+    classes.setVertexInputFormatClass(
         SimplePageRankVertex.SimplePageRankVertexInputFormat.class);
+    GiraphJob job = prepareJob(getCallingMethodName(), classes);
     job.getConfiguration().setMasterComputeClass(
         AggregatorsTestVertex.AggregatorsTestMasterCompute.class);
     // test with aggregators split in a few requests
@@ -154,18 +156,19 @@ public class TestAggregatorsHandling extends BspCase {
       IOException, InterruptedException {
     Path checkpointsDir = getTempPath("checkPointsForTesting");
     Path outputPath = getTempPath(getCallingMethodName());
-    GiraphJob job = prepareJob(getCallingMethodName(),
-        AggregatorsTestVertex.class,
-        null,
-        AggregatorsTestVertex.AggregatorsTestMasterCompute.class,
-        SimplePageRankVertex.SimplePageRankVertexInputFormat.class,
-        null,
-        outputPath);
+    GiraphClasses<LongWritable, DoubleWritable, FloatWritable, DoubleWritable>
+        classes = new GiraphClasses();
+    classes.setVertexClass(AggregatorsTestVertex.class);
+    classes.setMasterComputeClass(
+        AggregatorsTestVertex.AggregatorsTestMasterCompute.class);
+    classes.setVertexInputFormatClass(
+        SimplePageRankVertex.SimplePageRankVertexInputFormat.class);
+    GiraphJob job = prepareJob(getCallingMethodName(), classes, outputPath);
 
-    job.getConfiguration().set(GiraphConfiguration.CHECKPOINT_DIRECTORY,
+    job.getConfiguration().set(GiraphConstants.CHECKPOINT_DIRECTORY,
         checkpointsDir.toString());
     job.getConfiguration().setBoolean(
-        GiraphConfiguration.CLEANUP_CHECKPOINTS_AFTER_SUCCESS, false);
+        GiraphConstants.CLEANUP_CHECKPOINTS_AFTER_SUCCESS, false);
     job.getConfiguration().setCheckpointFrequency(4);
 
     assertTrue(job.run(true));
@@ -174,19 +177,20 @@ public class TestAggregatorsHandling extends BspCase {
     System.out.println("testAggregatorsCheckpointing: Restarting from " +
         "superstep 4 with checkpoint path = " + checkpointsDir);
     outputPath = getTempPath(getCallingMethodName() + "Restarted");
+    classes = new GiraphClasses();
+    classes.setVertexClass(AggregatorsTestVertex.class);
+    classes.setMasterComputeClass(
+        AggregatorsTestVertex.AggregatorsTestMasterCompute.class);
+    classes.setVertexInputFormatClass(
+        SimplePageRankVertex.SimplePageRankVertexInputFormat.class);
     GiraphJob restartedJob = prepareJob(getCallingMethodName() + "Restarted",
-        AggregatorsTestVertex.class,
-        null,
-        AggregatorsTestVertex.AggregatorsTestMasterCompute.class,
-        SimplePageRankVertex.SimplePageRankVertexInputFormat.class,
-        null,
-        outputPath);
+        classes, outputPath);
     job.getConfiguration().setMasterComputeClass(
         SimpleCheckpointVertex.SimpleCheckpointVertexMasterCompute.class);
     restartedJob.getConfiguration().set(
-        GiraphConfiguration.CHECKPOINT_DIRECTORY, checkpointsDir.toString());
+        GiraphConstants.CHECKPOINT_DIRECTORY, checkpointsDir.toString());
     restartedJob.getConfiguration().setLong(
-        GiraphConfiguration.RESTART_SUPERSTEP, 4);
+        GiraphConstants.RESTART_SUPERSTEP, 4);
 
     assertTrue(restartedJob.run(true));
   }

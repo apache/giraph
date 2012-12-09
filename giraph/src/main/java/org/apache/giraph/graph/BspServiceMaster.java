@@ -19,8 +19,6 @@
 package org.apache.giraph.graph;
 
 import org.apache.commons.io.FilenameUtils;
-import org.apache.giraph.GiraphConfiguration;
-import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.ApplicationState;
 import org.apache.giraph.bsp.BspInputFormat;
 import org.apache.giraph.bsp.CentralizedServiceMaster;
@@ -29,6 +27,8 @@ import org.apache.giraph.comm.MasterClient;
 import org.apache.giraph.comm.MasterServer;
 import org.apache.giraph.comm.netty.NettyMasterClient;
 import org.apache.giraph.comm.netty.NettyMasterServer;
+import org.apache.giraph.conf.GiraphConstants;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.counters.GiraphStats;
 import org.apache.giraph.graph.GraphMapper.MapFunctions;
 import org.apache.giraph.graph.partition.MasterGraphPartitioner;
@@ -184,20 +184,20 @@ public class BspServiceMaster<I extends WritableComparable,
 
     ImmutableClassesGiraphConfiguration<I, V, E, M> conf = getConfiguration();
 
-    maxWorkers = conf.getInt(GiraphConfiguration.MAX_WORKERS, -1);
-    minWorkers = conf.getInt(GiraphConfiguration.MIN_WORKERS, -1);
+    maxWorkers = conf.getInt(GiraphConstants.MAX_WORKERS, -1);
+    minWorkers = conf.getInt(GiraphConstants.MIN_WORKERS, -1);
     minPercentResponded = conf.getFloat(
-        GiraphConfiguration.MIN_PERCENT_RESPONDED, 100.0f);
+        GiraphConstants.MIN_PERCENT_RESPONDED, 100.0f);
     eventWaitMsecs = conf.getEventWaitMsecs();
     maxSuperstepWaitMsecs = conf.getMaxMasterSuperstepWaitMsecs();
     partitionLongTailMinPrint = conf.getInt(
-        GiraphConfiguration.PARTITION_LONG_TAIL_MIN_PRINT,
-        GiraphConfiguration.PARTITION_LONG_TAIL_MIN_PRINT_DEFAULT);
+        GiraphConstants.PARTITION_LONG_TAIL_MIN_PRINT,
+        GiraphConstants.PARTITION_LONG_TAIL_MIN_PRINT_DEFAULT);
     masterGraphPartitioner =
         getGraphPartitionerFactory().createMasterGraphPartitioner();
     observers = getConfiguration().createMasterObservers();
 
-    GiraphMetrics.getInstance().addSuperstepResetObserver(this);
+    GiraphMetrics.get().addSuperstepResetObserver(this);
     GiraphStats.init(context);
   }
 
@@ -272,10 +272,10 @@ public class BspServiceMaster<I extends WritableComparable,
     }
     float samplePercent =
         getConfiguration().getFloat(
-            GiraphConfiguration.INPUT_SPLIT_SAMPLE_PERCENT,
-            GiraphConfiguration.INPUT_SPLIT_SAMPLE_PERCENT_DEFAULT);
+            GiraphConstants.INPUT_SPLIT_SAMPLE_PERCENT,
+            GiraphConstants.INPUT_SPLIT_SAMPLE_PERCENT_DEFAULT);
     if (samplePercent !=
-        GiraphConfiguration.INPUT_SPLIT_SAMPLE_PERCENT_DEFAULT) {
+        GiraphConstants.INPUT_SPLIT_SAMPLE_PERCENT_DEFAULT) {
       int lastIndex = (int) (samplePercent * splits.size() / 100f);
       List<InputSplit> sampleSplits = splits.subList(0, lastIndex);
       LOG.warn(logPrefix + ": Using sampling - Processing only " +
@@ -1301,8 +1301,8 @@ public class BspServiceMaster<I extends WritableComparable,
   private void cleanUpOldSuperstep(long removeableSuperstep) throws
       InterruptedException {
     if (!(getConfiguration().getBoolean(
-        GiraphConfiguration.KEEP_ZOOKEEPER_DATA,
-        GiraphConfiguration.KEEP_ZOOKEEPER_DATA_DEFAULT)) &&
+        GiraphConstants.KEEP_ZOOKEEPER_DATA,
+        GiraphConstants.KEEP_ZOOKEEPER_DATA_DEFAULT)) &&
         (removeableSuperstep >= 0)) {
       String oldSuperstepPath =
           getSuperstepPath(getApplicationAttempt()) + "/" +
@@ -1595,8 +1595,8 @@ public class BspServiceMaster<I extends WritableComparable,
     try {
       if (getConfiguration().getZookeeperList() != null &&
           !getConfiguration().getBoolean(
-              GiraphConfiguration.KEEP_ZOOKEEPER_DATA,
-              GiraphConfiguration.KEEP_ZOOKEEPER_DATA_DEFAULT)) {
+              GiraphConstants.KEEP_ZOOKEEPER_DATA,
+              GiraphConstants.KEEP_ZOOKEEPER_DATA_DEFAULT)) {
         if (LOG.isInfoEnabled()) {
           LOG.info("cleanupZooKeeper: Removing the following path " +
               "and all children - " + basePath + " from ZooKeeper list " +
@@ -1663,8 +1663,8 @@ public class BspServiceMaster<I extends WritableComparable,
       cleanUpZooKeeper();
       // If desired, cleanup the checkpoint directory
       if (getConfiguration().getBoolean(
-          GiraphConfiguration.CLEANUP_CHECKPOINTS_AFTER_SUCCESS,
-          GiraphConfiguration.CLEANUP_CHECKPOINTS_AFTER_SUCCESS_DEFAULT)) {
+          GiraphConstants.CLEANUP_CHECKPOINTS_AFTER_SUCCESS,
+          GiraphConstants.CLEANUP_CHECKPOINTS_AFTER_SUCCESS_DEFAULT)) {
         boolean success =
             getFs().delete(new Path(checkpointBasePath), true);
         if (LOG.isInfoEnabled()) {

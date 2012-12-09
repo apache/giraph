@@ -18,7 +18,7 @@
 
 package org.apache.giraph.master;
 
-import org.apache.giraph.ImmutableClassesGiraphConfigurable;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfigurable;
 
 /**
  * Observer for Master.

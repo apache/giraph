@@ -18,34 +18,20 @@
 
 package org.apache.giraph.comm.netty;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.MapMaker;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.giraph.GiraphConfiguration;
-import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.comm.netty.handler.AddressRequestIdGenerator;
 import org.apache.giraph.comm.netty.handler.ClientRequestId;
 import org.apache.giraph.comm.netty.handler.RequestEncoder;
 import org.apache.giraph.comm.netty.handler.RequestInfo;
 import org.apache.giraph.comm.netty.handler.RequestServerHandler;
 import org.apache.giraph.comm.netty.handler.ResponseClientHandler;
-/*if[HADOOP_NON_SECURE]
-else[HADOOP_NON_SECURE]*/
+/*if_not[HADOOP_NON_SECURE]*/
 import org.apache.giraph.comm.netty.handler.SaslClientHandler;
 import org.apache.giraph.comm.requests.RequestType;
 import org.apache.giraph.comm.requests.SaslTokenMessageRequest;
 /*end[HADOOP_NON_SECURE]*/
 import org.apache.giraph.comm.requests.WritableRequest;
+import org.apache.giraph.conf.GiraphConstants;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.TaskInfo;
 import org.apache.giraph.utils.ProgressableUtils;
 import org.apache.giraph.utils.TimedLogger;
@@ -65,9 +51,22 @@ import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder;
 import org.jboss.netty.handler.execution.ExecutionHandler;
 import org.jboss.netty.handler.execution.MemoryAwareThreadPoolExecutor;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.MapMaker;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import static org.jboss.netty.channel.Channels.pipeline;
-
-
 
 /**
  * Netty client for sending requests.  Thread-safe.
@@ -87,8 +86,7 @@ public class NettyClient {
   public static final int MAX_REQUESTS_TO_LIST = 10;
   /** 30 seconds to connect by default */
   public static final int MAX_CONNECTION_MILLISECONDS_DEFAULT = 30 * 1000;
-/*if[HADOOP_NON_SECURE]
-else[HADOOP_NON_SECURE]*/
+/*if_not[HADOOP_NON_SECURE]*/
   /** Used to authenticate with other workers acting as servers */
   public static final ChannelLocal<SaslNettyClient> SASL =
       new ChannelLocal<SaslNettyClient>();
@@ -166,14 +164,14 @@ else[HADOOP_NON_SECURE]*/
     this.context = context;
     this.myTaskInfo = myTaskInfo;
     this.channelsPerServer = conf.getInt(
-        GiraphConfiguration.CHANNELS_PER_SERVER,
-        GiraphConfiguration.DEFAULT_CHANNELS_PER_SERVER);
+        GiraphConstants.CHANNELS_PER_SERVER,
+        GiraphConstants.DEFAULT_CHANNELS_PER_SERVER);
     sendBufferSize = conf.getInt(
-        GiraphConfiguration.CLIENT_SEND_BUFFER_SIZE,
-        GiraphConfiguration.DEFAULT_CLIENT_SEND_BUFFER_SIZE);
+        GiraphConstants.CLIENT_SEND_BUFFER_SIZE,
+        GiraphConstants.DEFAULT_CLIENT_SEND_BUFFER_SIZE);
     receiveBufferSize = conf.getInt(
-        GiraphConfiguration.CLIENT_RECEIVE_BUFFER_SIZE,
-        GiraphConfiguration.DEFAULT_CLIENT_RECEIVE_BUFFER_SIZE);
+        GiraphConstants.CLIENT_RECEIVE_BUFFER_SIZE,
+        GiraphConstants.DEFAULT_CLIENT_RECEIVE_BUFFER_SIZE);
 
     limitNumberOfOpenRequests = conf.getBoolean(
         LIMIT_NUMBER_OF_OPEN_REQUESTS,
@@ -191,38 +189,38 @@ else[HADOOP_NON_SECURE]*/
     }
 
     maxRequestMilliseconds = conf.getInt(
-        GiraphConfiguration.MAX_REQUEST_MILLISECONDS,
-        GiraphConfiguration.MAX_REQUEST_MILLISECONDS_DEFAULT);
+        GiraphConstants.MAX_REQUEST_MILLISECONDS,
+        GiraphConstants.MAX_REQUEST_MILLISECONDS_DEFAULT);
 
     maxConnectionFailures = conf.getInt(
-        GiraphConfiguration.NETTY_MAX_CONNECTION_FAILURES,
-        GiraphConfiguration.NETTY_MAX_CONNECTION_FAILURES_DEFAULT);
+        GiraphConstants.NETTY_MAX_CONNECTION_FAILURES,
+        GiraphConstants.NETTY_MAX_CONNECTION_FAILURES_DEFAULT);
 
     waitingRequestMsecs = conf.getInt(
-        GiraphConfiguration.WAITING_REQUEST_MSECS,
-        GiraphConfiguration.WAITING_REQUEST_MSECS_DEFAULT);
+        GiraphConstants.WAITING_REQUEST_MSECS,
+        GiraphConstants.WAITING_REQUEST_MSECS_DEFAULT);
 
     maxPoolSize = conf.getInt(
-        GiraphConfiguration.NETTY_CLIENT_THREADS,
-        GiraphConfiguration.NETTY_CLIENT_THREADS_DEFAULT);
+        GiraphConstants.NETTY_CLIENT_THREADS,
+        GiraphConstants.NETTY_CLIENT_THREADS_DEFAULT);
 
     maxResolveAddressAttempts = conf.getInt(
-        GiraphConfiguration.MAX_RESOLVE_ADDRESS_ATTEMPTS,
-        GiraphConfiguration.MAX_RESOLVE_ADDRESS_ATTEMPTS_DEFAULT);
+        GiraphConstants.MAX_RESOLVE_ADDRESS_ATTEMPTS,
+        GiraphConstants.MAX_RESOLVE_ADDRESS_ATTEMPTS_DEFAULT);
 
     clientRequestIdRequestInfoMap =
         new MapMaker().concurrencyLevel(maxPoolSize).makeMap();
 
     handlerBeforeExecutionHandler = conf.get(
-        GiraphConfiguration.NETTY_CLIENT_EXECUTION_AFTER_HANDLER,
-        GiraphConfiguration.NETTY_CLIENT_EXECUTION_AFTER_HANDLER_DEFAULT);
+        GiraphConstants.NETTY_CLIENT_EXECUTION_AFTER_HANDLER,
+        GiraphConstants.NETTY_CLIENT_EXECUTION_AFTER_HANDLER_DEFAULT);
     boolean useExecutionHandler = conf.getBoolean(
-        GiraphConfiguration.NETTY_CLIENT_USE_EXECUTION_HANDLER,
-        GiraphConfiguration.NETTY_CLIENT_USE_EXECUTION_HANDLER_DEFAULT);
+        GiraphConstants.NETTY_CLIENT_USE_EXECUTION_HANDLER,
+        GiraphConstants.NETTY_CLIENT_USE_EXECUTION_HANDLER_DEFAULT);
     if (useExecutionHandler) {
       int executionThreads = conf.getInt(
-          GiraphConfiguration.NETTY_CLIENT_EXECUTION_THREADS,
-          GiraphConfiguration.NETTY_CLIENT_EXECUTION_THREADS_DEFAULT);
+          GiraphConstants.NETTY_CLIENT_EXECUTION_THREADS,
+          GiraphConstants.NETTY_CLIENT_EXECUTION_THREADS_DEFAULT);
       executionHandler = new ExecutionHandler(
           new MemoryAwareThreadPoolExecutor(
               executionThreads, 1048576, 1048576, 1, TimeUnit.HOURS,
@@ -261,8 +259,7 @@ else[HADOOP_NON_SECURE]*/
     bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
       @Override
       public ChannelPipeline getPipeline() throws Exception {
-/*if[HADOOP_NON_SECURE]
-else[HADOOP_NON_SECURE]*/
+/*if_not[HADOOP_NON_SECURE]*/
         if (conf.authenticate()) {
           LOG.info("Using Netty with authentication.");
 
@@ -282,8 +279,8 @@ else[HADOOP_NON_SECURE]*/
           pipeline.addLast("length-field-based-frame-decoder",
               new LengthFieldBasedFrameDecoder(1024, 0, 4, 0, 4));
           pipeline.addLast("request-encoder", new RequestEncoder(conf.getInt(
-              GiraphConfiguration.NETTY_REQUEST_ENCODER_BUFFER_SIZE,
-              GiraphConfiguration.NETTY_REQUEST_ENCODER_BUFFER_SIZE_DEFAULT)));
+              GiraphConstants.NETTY_REQUEST_ENCODER_BUFFER_SIZE,
+              GiraphConstants.NETTY_REQUEST_ENCODER_BUFFER_SIZE_DEFAULT)));
           // The following pipeline component responds to the server's SASL
           // tokens with its own responses. Both client and server share the
           // same Hadoop Job token, which is used to create the SASL tokens to
@@ -302,8 +299,8 @@ else[HADOOP_NON_SECURE]*/
           pipeline.addLast("responseFrameDecoder",
               new FixedLengthFrameDecoder(RequestServerHandler.RESPONSE_BYTES));
           pipeline.addLast("requestEncoder", new RequestEncoder(conf.getInt(
-              GiraphConfiguration.NETTY_REQUEST_ENCODER_BUFFER_SIZE,
-              GiraphConfiguration.NETTY_REQUEST_ENCODER_BUFFER_SIZE_DEFAULT)));
+              GiraphConstants.NETTY_REQUEST_ENCODER_BUFFER_SIZE,
+              GiraphConstants.NETTY_REQUEST_ENCODER_BUFFER_SIZE_DEFAULT)));
           pipeline.addLast("responseClientHandler",
               new ResponseClientHandler(clientRequestIdRequestInfoMap, conf));
           if (executionHandler != null) {
@@ -311,8 +308,7 @@ else[HADOOP_NON_SECURE]*/
                 "executionHandler", executionHandler);
           }
           return pipeline;
-/*if[HADOOP_NON_SECURE]
-else[HADOOP_NON_SECURE]*/
+/*if_not[HADOOP_NON_SECURE]*/
         }
 /*end[HADOOP_NON_SECURE]*/
       }
@@ -455,8 +451,7 @@ else[HADOOP_NON_SECURE]*/
     }
   }
 
-/*if[HADOOP_NON_SECURE]
-else[HADOOP_NON_SECURE]*/
+/*if_not[HADOOP_NON_SECURE]*/
   /**
    * Authenticate all servers in addressChannelMap.
    */
@@ -635,8 +630,7 @@ else[HADOOP_NON_SECURE]*/
       byteCounter.resetAll();
     }
     boolean registerRequest = true;
-/*if[HADOOP_NON_SECURE]
-else[HADOOP_NON_SECURE]*/
+/*if_not[HADOOP_NON_SECURE]*/
     if (request.getType() == RequestType.SASL_TOKEN_MESSAGE_REQUEST) {
       registerRequest = false;
     }

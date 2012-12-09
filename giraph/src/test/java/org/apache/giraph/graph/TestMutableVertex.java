@@ -17,13 +17,8 @@
  */
 package org.apache.giraph.graph;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import java.io.IOException;
-import java.util.Collection;
-import java.util.Map;
-import org.apache.giraph.GiraphConfiguration;
-import org.apache.giraph.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.utils.DynamicChannelBufferInputStream;
 import org.apache.giraph.utils.DynamicChannelBufferOutputStream;
 import org.apache.giraph.utils.SystemTime;
@@ -39,7 +34,17 @@ import org.apache.hadoop.io.LongWritable;
 import org.junit.Before;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+
+import java.io.IOException;
+import java.util.Collection;
+import java.util.Map;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Test all the mutable vertices

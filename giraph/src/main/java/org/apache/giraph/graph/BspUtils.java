@@ -18,7 +18,7 @@
 
 package org.apache.giraph.graph;
 
-import org.apache.giraph.GiraphConfiguration;
+import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.graph.partition.GraphPartitionerFactory;
 import org.apache.giraph.graph.partition.HashPartitionerFactory;
 import org.apache.giraph.graph.partition.PartitionStats;
@@ -54,7 +54,7 @@ public class BspUtils {
   Class<? extends GraphPartitionerFactory<I, V, E, M>>
   getGraphPartitionerClass(Configuration conf) {
     return (Class<? extends GraphPartitionerFactory<I, V, E, M>>)
-      conf.getClass(GiraphConfiguration.GRAPH_PARTITIONER_FACTORY_CLASS,
+      conf.getClass(GiraphConstants.GRAPH_PARTITIONER_FACTORY_CLASS,
         HashPartitionerFactory.class,
         GraphPartitionerFactory.class);
   }
@@ -117,7 +117,7 @@ public class BspUtils {
   Class<? extends VertexInputFormat<I, V, E, M>>
   getVertexInputFormatClass(Configuration conf) {
     return (Class<? extends VertexInputFormat<I, V, E, M>>)
-      conf.getClass(GiraphConfiguration.VERTEX_INPUT_FORMAT_CLASS,
+      conf.getClass(GiraphConstants.VERTEX_INPUT_FORMAT_CLASS,
         null,
         VertexInputFormat.class);
   }
@@ -161,7 +161,7 @@ public class BspUtils {
   Class<? extends VertexOutputFormat<I, V, E>>
   getVertexOutputFormatClass(Configuration conf) {
     return (Class<? extends VertexOutputFormat<I, V, E>>)
-      conf.getClass(GiraphConfiguration.VERTEX_OUTPUT_FORMAT_CLASS,
+      conf.getClass(GiraphConstants.VERTEX_OUTPUT_FORMAT_CLASS,
         null,
         VertexOutputFormat.class);
   }
@@ -197,7 +197,7 @@ public class BspUtils {
   Class<? extends EdgeInputFormat<I, E>>
   getEdgeInputFormatClass(Configuration conf) {
     return (Class<? extends EdgeInputFormat<I, E>>)
-        conf.getClass(GiraphConfiguration.EDGE_INPUT_FORMAT_CLASS,
+        conf.getClass(GiraphConstants.EDGE_INPUT_FORMAT_CLASS,
             null,
             EdgeInputFormat.class);
   }
@@ -228,9 +228,9 @@ public class BspUtils {
    */
   public static Class<? extends AggregatorWriter>
   getAggregatorWriterClass(Configuration conf) {
-    return conf.getClass(GiraphConfiguration.AGGREGATOR_WRITER_CLASS,
-      TextAggregatorWriter.class,
-      AggregatorWriter.class);
+    return conf.getClass(GiraphConstants.AGGREGATOR_WRITER_CLASS,
+        TextAggregatorWriter.class,
+        AggregatorWriter.class);
   }
 
   /**
@@ -257,7 +257,7 @@ public class BspUtils {
   public static <I extends WritableComparable, M extends Writable>
   Class<? extends Combiner<I, M>> getCombinerClass(Configuration conf) {
     return (Class<? extends Combiner<I, M>>)
-      conf.getClass(GiraphConfiguration.VERTEX_COMBINER_CLASS,
+      conf.getClass(GiraphConstants.VERTEX_COMBINER_CLASS,
         null,
         Combiner.class);
   }
@@ -279,7 +279,7 @@ public class BspUtils {
   Class<? extends VertexResolver<I, V, E, M>>
   getVertexResolverClass(Configuration conf) {
     return (Class<? extends VertexResolver<I, V, E, M>>)
-      conf.getClass(GiraphConfiguration.VERTEX_RESOLVER_CLASS,
+      conf.getClass(GiraphConstants.VERTEX_RESOLVER_CLASS,
         DefaultVertexResolver.class,
         VertexResolver.class);
   }
@@ -293,7 +293,7 @@ public class BspUtils {
   public static Class<? extends WorkerContext>
   getWorkerContextClass(Configuration conf) {
     return (Class<? extends WorkerContext>)
-      conf.getClass(GiraphConfiguration.WORKER_CONTEXT_CLASS,
+      conf.getClass(GiraphConstants.WORKER_CONTEXT_CLASS,
         DefaultWorkerContext.class,
         WorkerContext.class);
   }
@@ -331,7 +331,7 @@ public class BspUtils {
   public static Class<? extends MasterCompute>
   getMasterComputeClass(Configuration conf) {
     return (Class<? extends MasterCompute>)
-      conf.getClass(GiraphConfiguration.MASTER_COMPUTE_CLASS,
+      conf.getClass(GiraphConstants.MASTER_COMPUTE_CLASS,
         DefaultMasterCompute.class,
         MasterCompute.class);
   }
@@ -366,7 +366,7 @@ public class BspUtils {
   E extends Writable, M extends Writable>
   Class<? extends Vertex<I, V, E, M>> getVertexClass(Configuration conf) {
     return (Class<? extends Vertex<I, V, E, M>>)
-      conf.getClass(GiraphConfiguration.VERTEX_CLASS,
+      conf.getClass(GiraphConstants.VERTEX_CLASS,
         null,
         Vertex.class);
   }
@@ -401,7 +401,7 @@ public class BspUtils {
   @SuppressWarnings("unchecked")
   public static <I extends Writable> Class<I>
   getVertexIdClass(Configuration conf) {
-    return (Class<I>) conf.getClass(GiraphConfiguration.VERTEX_ID_CLASS,
+    return (Class<I>) conf.getClass(GiraphConstants.VERTEX_ID_CLASS,
       WritableComparable.class);
   }
 
@@ -437,7 +437,7 @@ public class BspUtils {
   @SuppressWarnings("unchecked")
   public static <V extends Writable> Class<V>
   getVertexValueClass(Configuration conf) {
-    return (Class<V>) conf.getClass(GiraphConfiguration.VERTEX_VALUE_CLASS,
+    return (Class<V>) conf.getClass(GiraphConstants.VERTEX_VALUE_CLASS,
       Writable.class);
   }
 
@@ -477,7 +477,7 @@ public class BspUtils {
   @SuppressWarnings("unchecked")
   public static <E extends Writable> Class<E>
   getEdgeValueClass(Configuration conf) {
-    return (Class<E>) conf.getClass(GiraphConfiguration.EDGE_VALUE_CLASS,
+    return (Class<E>) conf.getClass(GiraphConstants.EDGE_VALUE_CLASS,
       Writable.class);
   }
 
@@ -517,33 +517,7 @@ public class BspUtils {
   @SuppressWarnings("unchecked")
   public static <M extends Writable> Class<M>
   getMessageValueClass(Configuration conf) {
-    return (Class<M>) conf.getClass(GiraphConfiguration.MESSAGE_VALUE_CLASS,
+    return (Class<M>) conf.getClass(GiraphConstants.MESSAGE_VALUE_CLASS,
       Writable.class);
-  }
-
-  /**
-   * Create a user vertex message value
-   *
-   * @param <M> Message data
-   * @param conf Configuration to check
-   * @return Instantiated user vertex message value
-   */
-  @SuppressWarnings("unchecked")
-  public static <M extends Writable> M
-  createMessageValue(Configuration conf) {
-    Class<M> messageValueClass = getMessageValueClass(conf);
-    if (messageValueClass == NullWritable.class) {
-      return (M) NullWritable.get();
-    } else {
-      try {
-        return messageValueClass.newInstance();
-      } catch (InstantiationException e) {
-        throw new IllegalArgumentException(
-          "createMessageValue: Failed to instantiate", e);
-      } catch (IllegalAccessException e) {
-        throw new IllegalArgumentException(
-          "createMessageValue: Illegally accessed", e);
-      }
-    }
   }
 }

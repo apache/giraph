@@ -18,13 +18,14 @@
 
 package org.apache.giraph.comm.netty.handler;
 
-import com.google.common.collect.MapMaker;
-import java.util.concurrent.ConcurrentMap;
-
-import org.apache.giraph.GiraphConfiguration;
-import org.apache.giraph.utils.IncreasingBitSet;
 import org.apache.giraph.comm.netty.NettyServer;
+import org.apache.giraph.conf.GiraphConstants;
+import org.apache.giraph.utils.IncreasingBitSet;
 import org.apache.hadoop.conf.Configuration;
+
+import com.google.common.collect.MapMaker;
+
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * Provides a thread-safe map for checking worker and request id pairs
@@ -41,7 +42,7 @@ public class WorkerRequestReservedMap {
    */
   public WorkerRequestReservedMap(Configuration conf) {
     workerRequestReservedMap = new MapMaker().concurrencyLevel(
-        conf.getInt(GiraphConfiguration.MSG_NUM_FLUSH_THREADS,
+        conf.getInt(GiraphConstants.MSG_NUM_FLUSH_THREADS,
             NettyServer.MAXIMUM_THREAD_POOL_SIZE_DEFAULT)).makeMap();
   }
 

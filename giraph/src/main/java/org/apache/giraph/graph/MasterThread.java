@@ -18,10 +18,10 @@
 
 package org.apache.giraph.graph;
 
-import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.bsp.ApplicationState;
 import org.apache.giraph.bsp.CentralizedServiceMaster;
 import org.apache.giraph.bsp.SuperstepState;
+import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.counters.GiraphTimers;
 import org.apache.giraph.metrics.GiraphMetrics;
 import org.apache.hadoop.io.Writable;
@@ -78,8 +78,8 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
     this.context = context;
     GiraphTimers.init(context);
     superstepCounterOn = context.getConfiguration().getBoolean(
-        GiraphConfiguration.USE_SUPERSTEP_COUNTERS,
-        GiraphConfiguration.USE_SUPERSTEP_COUNTERS_DEFAULT);
+        GiraphConstants.USE_SUPERSTEP_COUNTERS,
+        GiraphConstants.USE_SUPERSTEP_COUNTERS_DEFAULT);
   }
 
   /**
@@ -111,7 +111,7 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
           while (superstepState != SuperstepState.ALL_SUPERSTEPS_DONE) {
             long startSuperstepMillis = System.currentTimeMillis();
             cachedSuperstep = bspServiceMaster.getSuperstep();
-            GiraphMetrics.getInstance().resetSuperstepMetrics(cachedSuperstep);
+            GiraphMetrics.get().resetSuperstepMetrics(cachedSuperstep);
             superstepState = bspServiceMaster.coordinateSuperstep();
             long superstepMillis = System.currentTimeMillis() -
                 startSuperstepMillis;

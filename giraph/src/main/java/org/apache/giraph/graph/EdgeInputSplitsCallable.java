@@ -18,7 +18,7 @@
 
 package org.apache.giraph.graph;
 
-import org.apache.giraph.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.metrics.GiraphMetrics;
 import org.apache.giraph.metrics.GiraphMetricsRegistry;
 import org.apache.giraph.utils.LoggerUtils;
@@ -89,7 +89,7 @@ public class EdgeInputSplitsCallable<I extends WritableComparable,
     inputSplitMaxEdges = configuration.getInputSplitMaxEdges();
 
     // Initialize Metrics
-    GiraphMetricsRegistry jobMetrics = GiraphMetrics.getInstance().perJob();
+    GiraphMetricsRegistry jobMetrics = GiraphMetrics.get().perJob();
     edgesLoadedCounter = jobMetrics.getCounter(COUNTER_EDGES_LOADED);
   }
 

@@ -18,7 +18,7 @@
 
 package org.apache.giraph.metrics;
 
-import org.apache.giraph.GiraphConfiguration;
+import org.apache.giraph.conf.GiraphConfiguration;
 
 import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Gauge;

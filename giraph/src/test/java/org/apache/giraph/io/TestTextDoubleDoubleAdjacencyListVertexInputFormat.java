@@ -17,7 +17,7 @@
  */
 package org.apache.giraph.io;
 
-import org.apache.giraph.GiraphConfiguration;
+import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.EdgeListVertex;
@@ -36,12 +36,6 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.junit.Before;
 import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -51,6 +45,12 @@ import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 public class TestTextDoubleDoubleAdjacencyListVertexInputFormat extends
     TextDoubleDoubleAdjacencyListVertexInputFormat<BooleanWritable> {
@@ -65,9 +65,9 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat extends
     rr = mock(RecordReader.class);
     when(rr.nextKeyValue()).thenReturn(true).thenReturn(false);
     conf = new Configuration();
-    conf.setClass(GiraphConfiguration.VERTEX_CLASS, DummyVertex.class, Vertex.class);
-    conf.setClass(GiraphConfiguration.VERTEX_ID_CLASS, Text.class, Writable.class);
-    conf.setClass(GiraphConfiguration.VERTEX_VALUE_CLASS, DoubleWritable.class, Writable.class);
+    conf.setClass(GiraphConstants.VERTEX_CLASS, DummyVertex.class, Vertex.class);
+    conf.setClass(GiraphConstants.VERTEX_ID_CLASS, Text.class, Writable.class);
+    conf.setClass(GiraphConstants.VERTEX_VALUE_CLASS, DoubleWritable.class, Writable.class);
     graphState = mock(GraphState.class);
     tac = mock(TaskAttemptContext.class);
     when(tac.getConfiguration()).thenReturn(conf);

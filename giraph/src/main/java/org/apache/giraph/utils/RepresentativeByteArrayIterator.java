@@ -18,7 +18,7 @@
 package org.apache.giraph.utils;
 
 import java.io.IOException;
-import org.apache.giraph.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.hadoop.io.Writable;
 
 /**

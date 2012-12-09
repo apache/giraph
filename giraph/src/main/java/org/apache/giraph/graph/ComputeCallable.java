@@ -26,7 +26,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
-import org.apache.giraph.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.WorkerClientRequestProcessor;
 import org.apache.giraph.comm.messages.MessageStoreByPartition;
@@ -114,7 +114,7 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
     // Will be replaced later in call() for locality
     this.graphState = graphState;
 
-    GiraphMetrics metrics = GiraphMetrics.getInstance();
+    GiraphMetrics metrics = GiraphMetrics.get();
     // Normally we would use ResetSuperstepMetricsObserver but this class is
     // not long-lived, so just instantiating in the constructor is good enough.
     computeOneTimer = metrics.perSuperstep().getTimer(TIMER_COMPUTE_ONE);

@@ -23,7 +23,7 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
-import org.apache.giraph.GiraphConfiguration;
+import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.examples.MinimumDoubleCombiner;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.GiraphJob;
@@ -130,7 +130,7 @@ public class ShortestPathsBenchmark implements Tool {
           HashMapVertexShortestPathsBenchmark.class);
     }
     LOG.info("Using class " +
-        job.getConfiguration().get(GiraphConfiguration.VERTEX_CLASS));
+        job.getConfiguration().get(GiraphConstants.VERTEX_CLASS));
     job.getConfiguration().setVertexInputFormatClass(
         PseudoRandomVertexInputFormat.class);
     if (!cmd.hasOption("nc")) {

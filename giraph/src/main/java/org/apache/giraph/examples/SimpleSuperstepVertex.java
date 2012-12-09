@@ -115,7 +115,7 @@ public class SimpleSuperstepVertex extends
    */
   public static class SimpleSuperstepVertexInputFormat extends
     GeneratedVertexInputFormat<LongWritable,
-          IntWritable, FloatWritable, IntWritable> {
+        IntWritable, FloatWritable, IntWritable> {
     @Override
     public VertexReader<LongWritable, IntWritable, FloatWritable, IntWritable>
     createVertexReader(InputSplit split, TaskAttemptContext context)

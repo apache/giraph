@@ -18,7 +18,7 @@
 
 package org.apache.giraph.graph.partition;
 
-import org.apache.giraph.ImmutableClassesGiraphConfigurable;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfigurable;
 import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;

@@ -18,11 +18,11 @@
 
 package org.apache.giraph.graph;
 
-import org.apache.giraph.GiraphConfiguration;
-import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedServiceMaster;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.messages.MessageStoreByPartition;
+import org.apache.giraph.conf.GiraphConstants;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.partition.PartitionOwner;
 import org.apache.giraph.graph.partition.PartitionStats;
 import org.apache.giraph.metrics.GiraphMetrics;
@@ -208,16 +208,16 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
     Type vertexValueType = classList.get(1);
     Type edgeValueType = classList.get(2);
     Type messageValueType = classList.get(3);
-    conf.setClass(GiraphConfiguration.VERTEX_ID_CLASS,
+    conf.setClass(GiraphConstants.VERTEX_ID_CLASS,
         (Class<?>) vertexIndexType,
         WritableComparable.class);
-    conf.setClass(GiraphConfiguration.VERTEX_VALUE_CLASS,
+    conf.setClass(GiraphConstants.VERTEX_VALUE_CLASS,
         (Class<?>) vertexValueType,
         Writable.class);
-    conf.setClass(GiraphConfiguration.EDGE_VALUE_CLASS,
+    conf.setClass(GiraphConstants.EDGE_VALUE_CLASS,
         (Class<?>) edgeValueType,
         Writable.class);
-    conf.setClass(GiraphConfiguration.MESSAGE_VALUE_CLASS,
+    conf.setClass(GiraphConstants.MESSAGE_VALUE_CLASS,
         (Class<?>) messageValueType,
         Writable.class);
   }
@@ -343,7 +343,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
 
     // Set up GiraphMetrics
     GiraphMetrics.init(conf);
-    GiraphMetrics.getInstance().addSuperstepResetObserver(this);
+    GiraphMetrics.get().addSuperstepResetObserver(this);
     initJobMetrics();
     MemoryUtils.initMetrics();
 
@@ -401,8 +401,8 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
 
     // Sometimes it takes a while to get multiple ZooKeeper servers up
     if (conf.getZooKeeperServerCount() > 1) {
-      Thread.sleep(GiraphConfiguration.DEFAULT_ZOOKEEPER_INIT_LIMIT *
-          GiraphConfiguration.DEFAULT_ZOOKEEPER_TICK_TIME);
+      Thread.sleep(GiraphConstants.DEFAULT_ZOOKEEPER_INIT_LIMIT *
+          GiraphConstants.DEFAULT_ZOOKEEPER_TICK_TIME);
     }
     int sessionMsecTimeout = conf.getZooKeeperSessionTimeout();
     try {
@@ -452,7 +452,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
    * Initialize job-level metrics used by this class.
    */
   private void initJobMetrics() {
-    GiraphMetricsRegistry jobMetrics = GiraphMetrics.getInstance().perJob();
+    GiraphMetricsRegistry jobMetrics = GiraphMetrics.get().perJob();
     wcPreAppTimer = new GiraphTimer(jobMetrics, "worker-context-pre-app",
         TimeUnit.MILLISECONDS);
     wcPostAppTimer = new GiraphTimer(jobMetrics, "worker-context-post-app",
@@ -520,7 +520,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
       return;
     }
 
-    GiraphMetrics.getInstance().
+    GiraphMetrics.get().
         resetSuperstepMetrics(BspService.INPUT_SUPERSTEP);
 
     if ((mapFunctions == MapFunctions.MASTER_ZOOKEEPER_ONLY) ||
@@ -561,7 +561,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
     FinishedSuperstepStats finishedSuperstepStats = null;
     do {
       final long superstep = serviceWorker.getSuperstep();
-      GiraphMetrics.getInstance().resetSuperstepMetrics(superstep);
+      GiraphMetrics.get().resetSuperstepMetrics(superstep);
 
       GiraphTimerContext superstepTimerContext = superstepTimer.time();
 
@@ -663,7 +663,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
 
       superstepTimerContext.stop();
       if (conf.metricsEnabled()) {
-        GiraphMetrics.getInstance().perSuperstep().printSummary();
+        GiraphMetrics.get().perSuperstep().printSummary();
       }
 
     } while (!finishedSuperstepStats.getAllVerticesHalted());

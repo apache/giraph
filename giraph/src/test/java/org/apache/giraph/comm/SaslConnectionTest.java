@@ -18,13 +18,13 @@
 
 package org.apache.giraph.comm;
 
-import com.google.common.collect.Lists;
-import org.apache.giraph.GiraphConfiguration;
-import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.comm.netty.NettyClient;
 import org.apache.giraph.comm.netty.NettyServer;
 import org.apache.giraph.comm.netty.handler.SaslServerHandler;
 import org.apache.giraph.comm.netty.handler.WorkerRequestServerHandler;
+import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.conf.GiraphConstants;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.WorkerInfo;
 import org.apache.giraph.utils.MockUtils;
@@ -34,10 +34,12 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
+import com.google.common.collect.Lists;
 
 import java.io.IOException;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Netty connection with mocked authentication.
@@ -47,7 +49,7 @@ public class SaslConnectionTest {
   private ImmutableClassesGiraphConfiguration conf;
 
   public static class IntVertex extends EdgeListVertex<IntWritable,
-      IntWritable, IntWritable, IntWritable> {
+        IntWritable, IntWritable, IntWritable> {
     @Override
     public void compute(Iterable<IntWritable> messages) throws IOException {
     }
@@ -57,7 +59,7 @@ public class SaslConnectionTest {
   public void setUp() {
     GiraphConfiguration tmpConfig = new GiraphConfiguration();
     tmpConfig.setVertexClass(IntVertex.class);
-    tmpConfig.setBoolean(GiraphConfiguration.AUTHENTICATE, true);
+    tmpConfig.setBoolean(GiraphConstants.AUTHENTICATE, true);
     conf = new ImmutableClassesGiraphConfiguration(tmpConfig);
   }
 

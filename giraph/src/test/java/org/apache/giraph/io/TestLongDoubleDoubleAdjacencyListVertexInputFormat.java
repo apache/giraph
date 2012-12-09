@@ -18,10 +18,9 @@
 package org.apache.giraph.io;
 
 
-import org.apache.giraph.GiraphConfiguration;
+import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.EdgeListVertex;
-import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.conf.Configuration;
@@ -36,6 +35,8 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.IOException;
+
 import static org.apache.giraph.io.TestTextDoubleDoubleAdjacencyListVertexInputFormat.assertValidVertex;
 import static org.apache.giraph.io.TestTextDoubleDoubleAdjacencyListVertexInputFormat.setGraphState;
 import static org.junit.Assert.assertEquals;
@@ -43,8 +44,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
-import java.io.IOException;
 
 public class TestLongDoubleDoubleAdjacencyListVertexInputFormat extends
     LongDoubleDoubleAdjacencyListVertexInputFormat<BooleanWritable> {
@@ -59,9 +58,9 @@ public class TestLongDoubleDoubleAdjacencyListVertexInputFormat extends
     rr = mock(RecordReader.class);
     when(rr.nextKeyValue()).thenReturn(true);
     conf = new Configuration();
-    conf.setClass(GiraphConfiguration.VERTEX_CLASS, DummyVertex.class, Vertex.class);
-    conf.setClass(GiraphConfiguration.VERTEX_ID_CLASS, LongWritable.class, Writable.class);
-    conf.setClass(GiraphConfiguration.VERTEX_VALUE_CLASS, DoubleWritable.class, Writable.class);
+    conf.setClass(GiraphConstants.VERTEX_CLASS, DummyVertex.class, Vertex.class);
+    conf.setClass(GiraphConstants.VERTEX_ID_CLASS, LongWritable.class, Writable.class);
+    conf.setClass(GiraphConstants.VERTEX_VALUE_CLASS, DoubleWritable.class, Writable.class);
     graphState = mock(GraphState.class);
     tac = mock(TaskAttemptContext.class);
     when(tac.getConfiguration()).thenReturn(conf);

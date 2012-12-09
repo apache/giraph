@@ -22,7 +22,7 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
-import org.apache.giraph.GiraphConfiguration;
+import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.examples.DoubleSumCombiner;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.io.PseudoRandomVertexInputFormat;
@@ -139,7 +139,7 @@ public class PageRankBenchmark implements Tool {
       job.getConfiguration().useUnsafeSerialization(true);
     }
     LOG.info("Using class " +
-        job.getConfiguration().get(GiraphConfiguration.VERTEX_CLASS));
+        job.getConfiguration().get(GiraphConstants.VERTEX_CLASS));
     if (!cmd.hasOption('t') ||
         (Integer.parseInt(cmd.getOptionValue('t')) == 2)) {
       job.getConfiguration().setVertexCombinerClass(

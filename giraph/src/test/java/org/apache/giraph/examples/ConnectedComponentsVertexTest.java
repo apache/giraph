@@ -18,21 +18,23 @@
 
 package org.apache.giraph.examples;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
-import java.util.Set;
-
-import org.apache.giraph.io.IntIntNullIntTextInputFormat;
+import org.apache.giraph.conf.GiraphClasses;
 import org.apache.giraph.io.IdWithValueTextOutputFormat;
+import org.apache.giraph.io.IntIntNullIntTextInputFormat;
 import org.apache.giraph.utils.InternalVertexRunner;
 import org.junit.Test;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.HashMultimap;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
 import com.google.common.collect.SetMultimap;
+
+import java.util.Map;
+import java.util.Set;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 /**
  *  Tests for {@link ConnectedComponentsVertex}
@@ -63,13 +65,16 @@ public class ConnectedComponentsVertexTest {
 
                 "9" };
 
+        GiraphClasses classes = new GiraphClasses();
+        classes.setVertexClass(ConnectedComponentsVertex.class);
+        classes.setCombinerClass(MinimumIntCombiner.class);
+        classes.setVertexInputFormatClass(IntIntNullIntTextInputFormat.class);
+        classes.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
+        Map<String, String> emptyParams = ImmutableMap.of();
+
         // run internally
-        Iterable<String> results = InternalVertexRunner.run(
-                ConnectedComponentsVertex.class,
-                MinimumIntCombiner.class,
-                IntIntNullIntTextInputFormat.class,
-                IdWithValueTextOutputFormat.class,
-                Maps.<String,String>newHashMap(), graph);
+        Iterable<String> results = InternalVertexRunner.run(classes,
+            emptyParams, graph);
 
         SetMultimap<Integer,Integer> components = parseResults(results);
 

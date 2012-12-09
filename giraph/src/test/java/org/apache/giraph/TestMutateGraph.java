@@ -18,41 +18,47 @@
 
 package org.apache.giraph;
 
+import org.apache.giraph.conf.GiraphClasses;
 import org.apache.giraph.examples.SimpleMutateGraphVertex;
 import org.apache.giraph.examples.SimplePageRankVertex.SimplePageRankVertexInputFormat;
 import org.apache.giraph.examples.SimplePageRankVertex.SimplePageRankVertexOutputFormat;
 import org.apache.giraph.graph.GiraphJob;
+import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.FloatWritable;
+import org.apache.hadoop.io.LongWritable;
 import org.junit.Test;
 
-import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
+
+import static org.junit.Assert.assertTrue;
 
 /**
  * Unit test for graph mutation
  */
 public class TestMutateGraph extends BspCase {
+  public TestMutateGraph() {
+      super(TestMutateGraph.class.getName());
+  }
 
-    public TestMutateGraph() {
-        super(TestMutateGraph.class.getName());
-    }
-
-    /**
-     * Run a job that tests the various graph mutations that can occur
-     *
-     * @throws IOException
-     * @throws ClassNotFoundException
-     * @throws InterruptedException
-     */
-    @Test
-    public void testMutateGraph()
-            throws IOException, InterruptedException, ClassNotFoundException {
-        GiraphJob job = prepareJob(getCallingMethodName(),
-            SimpleMutateGraphVertex.class,
-            SimpleMutateGraphVertex.SimpleMutateGraphVertexWorkerContext.class,
-            SimplePageRankVertexInputFormat.class,
-            SimplePageRankVertexOutputFormat.class,
-            getTempPath(getCallingMethodName()));
-        assertTrue(job.run(true));
-    }
+  /**
+   * Run a job that tests the various graph mutations that can occur
+   *
+   * @throws IOException
+   * @throws ClassNotFoundException
+   * @throws InterruptedException
+   */
+  @Test
+  public void testMutateGraph()
+          throws IOException, InterruptedException, ClassNotFoundException {
+    GiraphClasses<LongWritable, DoubleWritable, FloatWritable, DoubleWritable>
+        classes = new GiraphClasses();
+    classes.setVertexClass(SimpleMutateGraphVertex.class);
+    classes.setVertexInputFormatClass(SimplePageRankVertexInputFormat.class);
+    classes.setVertexOutputFormatClass(SimplePageRankVertexOutputFormat.class);
+    classes.setWorkerContextClass(
+        SimpleMutateGraphVertex.SimpleMutateGraphVertexWorkerContext.class);
+    GiraphJob job = prepareJob(getCallingMethodName(), classes,
+        getTempPath(getCallingMethodName()));
+    assertTrue(job.run(true));
+  }
 }

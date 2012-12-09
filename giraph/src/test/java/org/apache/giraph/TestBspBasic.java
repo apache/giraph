@@ -18,6 +18,10 @@
 
 package org.apache.giraph;
 
+import org.apache.giraph.conf.GiraphClasses;
+import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.conf.GiraphConstants;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.examples.GeneratedVertexReader;
 import org.apache.giraph.examples.SimpleCombinerVertex;
 import org.apache.giraph.examples.SimpleFailVertex;
@@ -30,45 +34,30 @@ import org.apache.giraph.examples.SimpleSumCombiner;
 import org.apache.giraph.examples.SimpleSuperstepVertex;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexOutputFormat;
-import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.InputSplitPathOrganizer;
-import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.TextAggregatorWriter;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexInputFormat;
-import org.apache.giraph.zk.ZooKeeperExt;
 import org.apache.giraph.io.JsonLongDoubleFloatDoubleVertexOutputFormat;
+import org.apache.giraph.zk.ZooKeeperExt;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobID;
-import org.apache.hadoop.mapreduce.JobContext;
-/*if[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]
-else[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
-import org.apache.hadoop.mapreduce.task.JobContextImpl;
-/*end[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
 import org.apache.zookeeper.KeeperException;
 import org.junit.Test;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 
 import com.google.common.base.Charsets;
 import com.google.common.collect.Maps;
@@ -84,6 +73,19 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertSame;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+/*if[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]
+import org.apache.hadoop.mapreduce.JobContext;
+else[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]
+import org.apache.hadoop.mapreduce.task.JobContextImpl;
+end[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
 
 /**
  * Unit test for many simple BSP applications.
@@ -114,9 +116,12 @@ public class TestBspBasic extends BspCase {
       InvocationTargetException, SecurityException, NoSuchMethodException {
     System.out.println("testInstantiateVertex: java.class.path=" +
         System.getProperty("java.class.path"));
-    GiraphJob job = prepareJob(getCallingMethodName(),
-        SimpleSuperstepVertex.class,
+    GiraphClasses<LongWritable, IntWritable, FloatWritable, IntWritable>
+        classes = new GiraphClasses();
+    classes.setVertexClass(SimpleSuperstepVertex.class);
+    classes.setVertexInputFormatClass(
         SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat.class);
+    GiraphJob job = prepareJob(getCallingMethodName(), classes);
     ImmutableClassesGiraphConfiguration configuration =
         new ImmutableClassesGiraphConfiguration(job.getConfiguration());
     Vertex<LongWritable, IntWritable, FloatWritable, IntWritable> vertex =
@@ -187,11 +192,13 @@ else[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
           "non-local");
       return;
     }
-    GiraphJob job = prepareJob(getCallingMethodName(),
-        SimpleSuperstepVertex.class, SimpleSuperstepVertexInputFormat.class);
-    job.getConfiguration().setWorkerConfiguration(5, 5, 100.0f);
-    job.getConfiguration().setBoolean(GiraphConfiguration.SPLIT_MASTER_WORKER,
-        true);
+    GiraphClasses classes = new GiraphClasses();
+    classes.setVertexClass(SimpleSuperstepVertex.class);
+    classes.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
+    GiraphJob job = prepareJob(getCallingMethodName(), classes);
+    GiraphConfiguration conf = job.getConfiguration();
+    conf.setWorkerConfiguration(5, 5, 100.0f);
+    conf.setBoolean(GiraphConstants.SPLIT_MASTER_WORKER, true);
 
     try {
       job.run(true);
@@ -199,7 +206,7 @@ else[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
     } catch (IllegalArgumentException e) {
     }
 
-    job.getConfiguration().setBoolean(GiraphConfiguration.SPLIT_MASTER_WORKER, false);
+    conf.setBoolean(GiraphConstants.SPLIT_MASTER_WORKER, false);
     try {
       job.run(true);
       fail();
@@ -226,8 +233,11 @@ else[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
       return;
     }
 
-    GiraphJob job = prepareJob(getCallingMethodName(), SimpleFailVertex.class,
-        SimplePageRankVertexInputFormat.class, null,
+    GiraphClasses<LongWritable, DoubleWritable, FloatWritable, DoubleWritable>
+        classes = new GiraphClasses();
+    classes.setVertexClass(SimpleFailVertex.class);
+    classes.setVertexInputFormatClass(SimplePageRankVertexInputFormat.class);
+    GiraphJob job = prepareJob(getCallingMethodName(), classes,
         getTempPath(getCallingMethodName()));
     job.getConfiguration().setInt("mapred.map.max.attempts", 1);
     assertTrue(!job.run(true));
@@ -243,12 +253,16 @@ else[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
   @Test
   public void testBspSuperStep()
       throws IOException, InterruptedException, ClassNotFoundException {
-    Path outputPath = getTempPath(getCallingMethodName());
-    GiraphJob job = prepareJob(getCallingMethodName(),
-        SimpleSuperstepVertex.class, SimpleSuperstepVertexInputFormat.class,
-        SimpleSuperstepVertexOutputFormat.class, outputPath);
+    String callingMethod = getCallingMethodName();
+    Path outputPath = getTempPath(callingMethod);
+    GiraphClasses<LongWritable, IntWritable, FloatWritable, IntWritable>
+        classes = new GiraphClasses();
+    classes.setVertexClass(SimpleSuperstepVertex.class);
+    classes.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
+    classes.setVertexOutputFormatClass(SimpleSuperstepVertexOutputFormat.class);
+    GiraphJob job = prepareJob(callingMethod, classes, outputPath);
     Configuration conf = job.getConfiguration();
-    conf.setFloat(GiraphConfiguration.TOTAL_INPUT_SPLIT_MULTIPLIER, 2.0f);
+    conf.setFloat(GiraphConstants.TOTAL_INPUT_SPLIT_MULTIPLIER, 2.0f);
     // GeneratedInputSplit will generate 10 vertices
     conf.setLong(GeneratedVertexReader.READER_VERTICES, 10);
     assertTrue(job.run(true));
@@ -268,8 +282,11 @@ else[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
   @Test
   public void testBspMsg()
       throws IOException, InterruptedException, ClassNotFoundException {
-    GiraphJob job = prepareJob(getCallingMethodName(), SimpleMsgVertex.class,
-        SimpleSuperstepVertexInputFormat.class);
+    GiraphClasses<LongWritable, IntWritable, FloatWritable, IntWritable>
+        classes = new GiraphClasses();
+    classes.setVertexClass(SimpleMsgVertex.class);
+    classes.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
+    GiraphJob job = prepareJob(getCallingMethodName(), classes);
     assertTrue(job.run(true));
   }
 
@@ -285,8 +302,11 @@ else[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
   @Test
   public void testEmptyVertexInputFormat()
       throws IOException, InterruptedException, ClassNotFoundException {
-    GiraphJob job = prepareJob(getCallingMethodName(), SimpleMsgVertex.class,
-        SimpleSuperstepVertexInputFormat.class);
+    GiraphClasses<LongWritable, IntWritable, FloatWritable, IntWritable>
+        classes = new GiraphClasses();
+    classes.setVertexClass(SimpleMsgVertex.class);
+    classes.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
+    GiraphJob job = prepareJob(getCallingMethodName(), classes);
     job.getConfiguration().setLong(GeneratedVertexReader.READER_VERTICES, 0);
     assertTrue(job.run(true));
   }
@@ -301,9 +321,13 @@ else[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
   @Test
   public void testBspCombiner()
       throws IOException, InterruptedException, ClassNotFoundException {
-    GiraphJob job = prepareJob(getCallingMethodName(),
-        SimpleCombinerVertex.class, SimpleSuperstepVertexInputFormat.class);
-    job.getConfiguration().setVertexCombinerClass(SimpleSumCombiner.class);
+    GiraphClasses<LongWritable, IntWritable, FloatWritable, IntWritable>
+        classes = new GiraphClasses();
+    classes.setVertexClass(SimpleCombinerVertex.class);
+    classes.setVertexInputFormatClass(
+        SimpleSuperstepVertexInputFormat.class);
+    classes.setCombinerClass(SimpleSumCombiner.class);
+    GiraphJob job = prepareJob(getCallingMethodName(), classes);
     assertTrue(job.run(true));
   }
 
@@ -364,11 +388,13 @@ else[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
   public void testBspShortestPaths()
       throws IOException, InterruptedException, ClassNotFoundException {
     Path outputPath = getTempPath(getCallingMethodName());
-    GiraphJob job = prepareJob(getCallingMethodName(),
-        SimpleShortestPathsVertex.class,
-        SimplePageRankVertex.SimplePageRankVertexInputFormat.class,
-        JsonLongDoubleFloatDoubleVertexOutputFormat.class,
-        outputPath);
+    GiraphClasses<LongWritable, DoubleWritable, FloatWritable, DoubleWritable>
+        classes = new GiraphClasses();
+    classes.setVertexClass(SimpleShortestPathsVertex.class);
+    classes.setVertexInputFormatClass(SimplePageRankVertexInputFormat.class);
+    classes.setVertexOutputFormatClass(
+        JsonLongDoubleFloatDoubleVertexOutputFormat.class);
+    GiraphJob job = prepareJob(getCallingMethodName(), classes, outputPath);
     Configuration conf = job.getConfiguration();
     conf.setLong(SimpleShortestPathsVertex.SOURCE_ID, 0);
 
@@ -392,17 +418,19 @@ else[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
       throws IOException, InterruptedException, ClassNotFoundException {
     Path outputPath = getTempPath(getCallingMethodName());
 
-    GiraphJob job = prepareJob(getCallingMethodName(),
-        SimplePageRankVertex.class,
-        SimplePageRankVertex.SimplePageRankVertexInputFormat.class,
-        SimplePageRankVertex.SimplePageRankVertexOutputFormat.class,
-        outputPath);
-    GiraphConfiguration configuration = job.getConfiguration();
-    configuration.setWorkerContextClass(
-        SimplePageRankVertex.SimplePageRankVertexWorkerContext.class);
-    configuration.setMasterComputeClass(
+    GiraphClasses<LongWritable, DoubleWritable, FloatWritable, DoubleWritable>
+        classes = new GiraphClasses();
+    classes.setVertexClass(SimplePageRankVertex.class);
+    classes.setAggregatorWriterClass(TextAggregatorWriter.class);
+    classes.setMasterComputeClass(
         SimplePageRankVertex.SimplePageRankVertexMasterCompute.class);
-    configuration.setAggregatorWriterClass(TextAggregatorWriter.class);
+    classes.setVertexInputFormatClass(SimplePageRankVertexInputFormat.class);
+    classes.setVertexOutputFormatClass(
+        SimplePageRankVertex.SimplePageRankVertexOutputFormat.class);
+    classes.setWorkerContextClass(
+        SimplePageRankVertex.SimplePageRankVertexWorkerContext.class);
+    GiraphJob job = prepareJob(getCallingMethodName(), classes, outputPath);
+    GiraphConfiguration configuration = job.getConfiguration();
     Path aggregatorValues = getTempPath("aggregatorValues");
     configuration.setInt(TextAggregatorWriter.FREQUENCY,
         TextAggregatorWriter.ALWAYS);
@@ -482,12 +510,15 @@ else[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
   @Test
   public void testBspMasterCompute()
       throws IOException, InterruptedException, ClassNotFoundException {
-    GiraphJob job = prepareJob(getCallingMethodName(),
-        SimpleMasterComputeVertex.class, SimplePageRankVertexInputFormat.class);
-    job.getConfiguration().setWorkerContextClass(
-        SimpleMasterComputeVertex.SimpleMasterComputeWorkerContext.class);
-    job.getConfiguration().setMasterComputeClass(
+    GiraphClasses<LongWritable, DoubleWritable, FloatWritable, DoubleWritable>
+        classes = new GiraphClasses();
+    classes.setVertexClass(SimpleMasterComputeVertex.class);
+    classes.setVertexInputFormatClass(SimplePageRankVertexInputFormat.class);
+    classes.setMasterComputeClass(
         SimpleMasterComputeVertex.SimpleMasterCompute.class);
+    classes.setWorkerContextClass(
+        SimpleMasterComputeVertex.SimpleMasterComputeWorkerContext.class);
+    GiraphJob job = prepareJob(getCallingMethodName(), classes);
     assertTrue(job.run(true));
     if (!runningInDistributedMode()) {
       double finalSum =

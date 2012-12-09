@@ -24,7 +24,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
-import org.apache.giraph.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.giraph.utils.ExtendedDataOutput;

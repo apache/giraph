@@ -18,9 +18,17 @@
 
 package org.apache.giraph.comm.messages;
 
+import org.apache.giraph.conf.GiraphConstants;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.utils.EmptyIterable;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
+import org.apache.log4j.Logger;
+
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.DataInput;
@@ -35,12 +43,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.SortedSet;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.giraph.GiraphConfiguration;
-import org.apache.giraph.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.utils.EmptyIterable;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-import org.apache.log4j.Logger;
 
 /**
  * Used for writing and reading collection of messages to the disk. {@link
@@ -374,11 +376,11 @@ public class SequentialFileMessageStore<I extends WritableComparable,
     public Factory(ImmutableClassesGiraphConfiguration config) {
       this.config = config;
       String jobId = config.get("mapred.job.id", "Unknown Job");
-      this.directory = config.get(GiraphConfiguration.MESSAGES_DIRECTORY,
-          GiraphConfiguration.MESSAGES_DIRECTORY_DEFAULT) + jobId +
+      this.directory = config.get(GiraphConstants.MESSAGES_DIRECTORY,
+          GiraphConstants.MESSAGES_DIRECTORY_DEFAULT) + jobId +
           File.separator;
-      this.bufferSize = config.getInt(GiraphConfiguration.MESSAGES_BUFFER_SIZE,
-          GiraphConfiguration.MESSAGES_BUFFER_SIZE_DEFAULT);
+      this.bufferSize = config.getInt(GiraphConstants.MESSAGES_BUFFER_SIZE,
+          GiraphConstants.MESSAGES_BUFFER_SIZE_DEFAULT);
       storeCounter = new AtomicInteger();
       new File(directory).mkdirs();
     }

@@ -18,19 +18,21 @@
 
 package org.apache.giraph.graph.partition;
 
+import org.apache.giraph.conf.GiraphConstants;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.graph.Vertex;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.util.Progressable;
+
 import com.google.common.collect.Maps;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
-import org.apache.giraph.GiraphConfiguration;
-import org.apache.giraph.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.graph.Vertex;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.util.Progressable;
 
 /**
  * A simple map-based container that stores vertices.  Vertex ids will map to
@@ -63,8 +65,8 @@ public class SimplePartition<I extends WritableComparable,
   public void initialize(int partitionId, Progressable progressable) {
     setId(partitionId);
     setProgressable(progressable);
-    if (conf.getBoolean(GiraphConfiguration.USE_OUT_OF_CORE_MESSAGES,
-        GiraphConfiguration.USE_OUT_OF_CORE_MESSAGES_DEFAULT)) {
+    if (conf.getBoolean(GiraphConstants.USE_OUT_OF_CORE_MESSAGES,
+        GiraphConstants.USE_OUT_OF_CORE_MESSAGES_DEFAULT)) {
       vertexMap = new ConcurrentSkipListMap<I, Vertex<I, V, E, M>>();
     } else {
       vertexMap = Maps.newConcurrentMap();
@@ -134,8 +136,8 @@ public class SimplePartition<I extends WritableComparable,
 
   @Override
   public void readFields(DataInput input) throws IOException {
-    if (conf.getBoolean(GiraphConfiguration.USE_OUT_OF_CORE_MESSAGES,
-        GiraphConfiguration.USE_OUT_OF_CORE_MESSAGES_DEFAULT)) {
+    if (conf.getBoolean(GiraphConstants.USE_OUT_OF_CORE_MESSAGES,
+        GiraphConstants.USE_OUT_OF_CORE_MESSAGES_DEFAULT)) {
       vertexMap = new ConcurrentSkipListMap<I, Vertex<I, V, E, M>>();
     } else {
       vertexMap = Maps.newConcurrentMap();

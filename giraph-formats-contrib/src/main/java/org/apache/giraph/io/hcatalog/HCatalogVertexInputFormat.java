@@ -18,7 +18,7 @@
 
 package org.apache.giraph.io.hcatalog;
 
-import org.apache.giraph.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexInputFormat;
 import org.apache.giraph.graph.VertexReader;
@@ -50,7 +50,7 @@ import java.util.Map;
  * {@link GiraphHCatInputFormat#setVertexInput(org.apache.hadoop.mapreduce.Job,
  * org.apache.hcatalog.mapreduce.InputJobInfo)}
  * as you setup your vertex input format with
- * {@link org.apache.giraph.GiraphConfiguration#
+ * {@link org.apache.giraph.conf.GiraphConfiguration#
  * setVertexInputFormatClass(Class)}.
  *
  * @param <I> Vertex id

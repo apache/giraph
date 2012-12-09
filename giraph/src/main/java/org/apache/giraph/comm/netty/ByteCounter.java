@@ -81,7 +81,7 @@ public class ByteCounter extends SimpleChannelHandler implements
   /** Constructor */
   public ByteCounter() {
     // Initialize Metrics
-    GiraphMetrics.getInstance().addSuperstepResetObserver(this);
+    GiraphMetrics.get().addSuperstepResetObserver(this);
   }
 
   @Override

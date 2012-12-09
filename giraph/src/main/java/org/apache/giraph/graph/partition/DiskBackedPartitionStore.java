@@ -18,8 +18,8 @@
 
 package org.apache.giraph.graph.partition;
 
-import org.apache.giraph.GiraphConfiguration;
-import org.apache.giraph.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.conf.GiraphConstants;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -89,11 +89,11 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
     this.context = context;
     // We must be able to hold at least one partition in memory
     maxInMemoryPartitions = Math.max(1,
-        conf.getInt(GiraphConfiguration.MAX_PARTITIONS_IN_MEMORY,
-            GiraphConfiguration.MAX_PARTITIONS_IN_MEMORY_DEFAULT));
+        conf.getInt(GiraphConstants.MAX_PARTITIONS_IN_MEMORY,
+            GiraphConstants.MAX_PARTITIONS_IN_MEMORY_DEFAULT));
     basePath = conf.get("mapred.job.id", "Unknown Job") +
-        conf.get(GiraphConfiguration.PARTITIONS_DIRECTORY,
-            GiraphConfiguration.PARTITIONS_DIRECTORY_DEFAULT);
+        conf.get(GiraphConstants.PARTITIONS_DIRECTORY,
+            GiraphConstants.PARTITIONS_DIRECTORY_DEFAULT);
   }
 
   /**
