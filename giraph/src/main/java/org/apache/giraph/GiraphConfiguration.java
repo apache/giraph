@@ -29,9 +29,7 @@ import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.graph.WorkerContext;
 import org.apache.giraph.graph.partition.GraphPartitionerFactory;
 import org.apache.giraph.graph.partition.Partition;
-
 import org.apache.giraph.master.MasterObserver;
-
 import org.apache.hadoop.conf.Configuration;
 
 /**
@@ -54,6 +52,12 @@ public class GiraphConfiguration extends Configuration {
   /** Vertex resolver class - optional */
   public static final String VERTEX_RESOLVER_CLASS =
       "giraph.vertexResolverClass";
+  /**
+   * Option of whether to create vertices that were not existent before but
+   * received messages
+   */
+  public static final String RESOLVER_CREATE_VERTEX_ON_MSGS =
+      "giraph.vertex.resolver.create.on.msgs";
   /** Graph partitioner factory class - optional */
   public static final String GRAPH_PARTITIONER_FACTORY_CLASS =
       "giraph.graphPartitionerFactoryClass";
@@ -847,9 +851,26 @@ public class GiraphConfiguration extends Configuration {
    */
   public final void setVertexResolverClass(
       Class<? extends VertexResolver> vertexResolverClass) {
-    setClass(VERTEX_RESOLVER_CLASS,
-        vertexResolverClass,
-        VertexResolver.class);
+    setClass(VERTEX_RESOLVER_CLASS, vertexResolverClass, VertexResolver.class);
+  }
+
+  /**
+   * Whether to create a vertex that doesn't exist when it receives messages.
+   * This only affects DefaultVertexResolver.
+   *
+   * @return true if we should create non existent vertices that get messages.
+   */
+  public final boolean getResolverCreateVertexOnMessages() {
+    return getBoolean(RESOLVER_CREATE_VERTEX_ON_MSGS, true);
+  }
+
+  /**
+   * Set whether to create non existent vertices when they receive messages.
+   *
+   * @param v true if we should create vertices when they get messages.
+   */
+  public final void setResolverCreateVertexOnMessages(boolean v) {
+    setBoolean(RESOLVER_CREATE_VERTEX_ON_MSGS, v);
   }
 
   /**
@@ -1047,7 +1068,7 @@ public class GiraphConfiguration extends Configuration {
 
   public int getZookeeperConnectionAttempts() {
     return getInt(ZOOKEEPER_CONNECTION_ATTEMPTS,
-                  ZOOKEEPER_CONNECTION_ATTEMPTS_DEFAULT);
+        ZOOKEEPER_CONNECTION_ATTEMPTS_DEFAULT);
   }
 
   public int getZooKeeperMinSessionTimeout() {

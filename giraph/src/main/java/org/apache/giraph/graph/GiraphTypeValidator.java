@@ -19,15 +19,13 @@
 package org.apache.giraph.graph;
 
 import org.apache.giraph.utils.ReflectionUtils;
-
-import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
+import org.apache.log4j.Logger;
 
 import java.lang.reflect.Type;
 import java.util.List;
-
-import org.apache.log4j.Logger;
 
 /**
  * GiraphTypeValidator attempts to verify the consistency of
@@ -91,7 +89,7 @@ public class GiraphTypeValidator<I extends WritableComparable,
   public void validateClassTypes() {
     Class<? extends Vertex<I, V, E, M>> vertexClass =
       BspUtils.<I, V, E, M>getVertexClass(conf);
-    List<Class<?>> classList = ReflectionUtils.<Vertex>getTypeArguments(
+    List<Class<?>> classList = ReflectionUtils.getTypeArguments(
       Vertex.class, vertexClass);
     vertexIndexType = classList.get(ID_PARAM_INDEX);
     vertexValueType = classList.get(VALUE_PARAM_INDEX);
@@ -108,7 +106,7 @@ public class GiraphTypeValidator<I extends WritableComparable,
     Class<? extends VertexInputFormat<I, V, E, M>> vertexInputFormatClass =
       BspUtils.<I, V, E, M>getVertexInputFormatClass(conf);
     List<Class<?>> classList =
-      ReflectionUtils.<VertexInputFormat>getTypeArguments(
+      ReflectionUtils.getTypeArguments(
         VertexInputFormat.class, vertexInputFormatClass);
     if (classList.get(ID_PARAM_INDEX) == null) {
       LOG.warn("Input format vertex index type is not known");
@@ -142,7 +140,7 @@ public class GiraphTypeValidator<I extends WritableComparable,
       BspUtils.<I, M>getCombinerClass(conf);
     if (vertexCombinerClass != null) {
       List<Class<?>> classList =
-        ReflectionUtils.<Combiner>getTypeArguments(
+        ReflectionUtils.getTypeArguments(
           Combiner.class, vertexCombinerClass);
       if (!vertexIndexType.equals(classList.get(ID_PARAM_INDEX))) {
         throw new IllegalArgumentException(
@@ -166,7 +164,7 @@ public class GiraphTypeValidator<I extends WritableComparable,
       BspUtils.<I, V, E>getVertexOutputFormatClass(conf);
     if (vertexOutputFormatClass != null) {
       List<Class<?>> classList =
-        ReflectionUtils.<VertexOutputFormat>getTypeArguments(
+        ReflectionUtils.getTypeArguments(
           VertexOutputFormat.class, vertexOutputFormatClass);
       if (classList.get(ID_PARAM_INDEX) == null) {
         LOG.warn("Output format vertex index type is not known");
@@ -199,11 +197,16 @@ public class GiraphTypeValidator<I extends WritableComparable,
    * validate the generic parameter types. */
   private void verifyVertexResolverGenericTypes() {
     Class<? extends VertexResolver<I, V, E, M>>
-      vertexResolverClass =
-      BspUtils.<I, V, E, M>getVertexResolverClass(conf);
+      vrClass = BspUtils.<I, V, E, M>getVertexResolverClass(conf);
+    if (!DefaultVertexResolver.class.isAssignableFrom(vrClass)) {
+      return;
+    }
+    Class<? extends DefaultVertexResolver<I, V, E, M>>
+      dvrClass =
+        (Class<? extends DefaultVertexResolver<I, V, E, M>>) vrClass;
     List<Class<?>> classList =
-      ReflectionUtils.<VertexResolver>getTypeArguments(
-        VertexResolver.class, vertexResolverClass);
+      ReflectionUtils.getTypeArguments(
+          DefaultVertexResolver.class, dvrClass);
     if (classList.get(ID_PARAM_INDEX) != null &&
       !vertexIndexType.equals(classList.get(ID_PARAM_INDEX))) {
       throw new IllegalArgumentException(

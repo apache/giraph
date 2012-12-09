@@ -18,19 +18,19 @@
 
 package org.apache.giraph.utils;
 
+import org.apache.giraph.ImmutableClassesGiraphConfigurable;
+import org.apache.giraph.ImmutableClassesGiraphConfiguration;
+
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.apache.giraph.ImmutableClassesGiraphConfigurable;
-import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 
 /**
  * Helper methods to get type arguments to generic classes.  Courtesy of
@@ -107,8 +107,7 @@ public class ReflectionUtils {
     }
 
     // finally, for each actual type argument provided to baseClass,
-    // determine (if possible)
-    // the raw class for that type argument.
+    // determine (if possible) the raw class for that type argument.
     Type[] actualTypeArguments;
     if (type instanceof Class) {
       actualTypeArguments = ((Class<?>) type).getTypeParameters();

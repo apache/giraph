@@ -168,7 +168,7 @@ public class GiraphJob {
       if (LOG.isInfoEnabled()) {
         LOG.info("checkConfiguration: No class found for " +
             GiraphConfiguration.VERTEX_RESOLVER_CLASS + ", defaulting to " +
-            VertexResolver.class.getCanonicalName());
+            DefaultVertexResolver.class.getCanonicalName());
       }
     }
   }

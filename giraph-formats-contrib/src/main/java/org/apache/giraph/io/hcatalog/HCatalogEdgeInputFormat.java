@@ -116,7 +116,7 @@ public abstract class HCatalogEdgeInputFormat<
   protected abstract HCatalogEdgeReader createEdgeReader();
 
   @Override
-  public final EdgeReader<I, E>
+  public EdgeReader<I, E>
   createEdgeReader(InputSplit split, TaskAttemptContext context)
     throws IOException {
     try {

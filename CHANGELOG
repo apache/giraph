@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-444: Cleanup VertexResolver (nitay)
+
   GIRAPH-446: Add a proper timeout for waiting for workers to join a
   superstep. (aching)
 

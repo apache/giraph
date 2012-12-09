@@ -280,32 +280,8 @@ public class BspUtils {
   getVertexResolverClass(Configuration conf) {
     return (Class<? extends VertexResolver<I, V, E, M>>)
       conf.getClass(GiraphConfiguration.VERTEX_RESOLVER_CLASS,
-        VertexResolver.class,
+        DefaultVertexResolver.class,
         VertexResolver.class);
-  }
-
-  /**
-   * Create a user vertex revolver
-   *
-   * @param <I> Vertex id
-   * @param <V> Vertex data
-   * @param <E> Edge data
-   * @param <M> Message data
-   * @param conf Configuration to check
-   * @param graphState State of the graph from the worker
-   * @return Instantiated user vertex resolver
-   */
-  @SuppressWarnings("rawtypes")
-  public static <I extends WritableComparable, V extends Writable,
-  E extends Writable, M extends Writable> VertexResolver<I, V, E, M>
-  createVertexResolver(Configuration conf,
-    GraphState<I, V, E, M> graphState) {
-    Class<? extends VertexResolver<I, V, E, M>> vertexResolverClass =
-      getVertexResolverClass(conf);
-    VertexResolver<I, V, E, M> resolver =
-      ReflectionUtils.newInstance(vertexResolverClass, conf);
-    resolver.setGraphState(graphState);
-    return resolver;
   }
 
   /**

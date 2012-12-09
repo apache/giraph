@@ -19,11 +19,10 @@
 package org.apache.giraph;
 
 
-import java.util.List;
-
 import org.apache.giraph.graph.AggregatorWriter;
 import org.apache.giraph.graph.Combiner;
 import org.apache.giraph.graph.DefaultMasterCompute;
+import org.apache.giraph.graph.DefaultVertexResolver;
 import org.apache.giraph.graph.DefaultWorkerContext;
 import org.apache.giraph.graph.EdgeInputFormat;
 import org.apache.giraph.graph.GraphState;
@@ -53,6 +52,8 @@ import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.util.Progressable;
+
+import java.util.List;
 
 /**
  * The classes set here are immutable, the remaining configuration is mutable.
@@ -101,8 +102,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   private final Class<? extends Combiner<I, M>> combinerClass;
 
   /** Vertex resolver class - cached for fast access */
-  private final Class<? extends VertexResolver<I, V, E, M>>
-  vertexResolverClass;
+  private final Class<? extends VertexResolver<I, V, E, M>> vertexResolverClass;
   /** Worker context class - cached for fast access */
   private final Class<? extends WorkerContext> workerContextClass;
   /** Master compute class - cached for fast access */
@@ -142,8 +142,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
             HashPartitionerFactory.class,
             GraphPartitionerFactory.class);
     masterGraphPartitioner =
-        (MasterGraphPartitioner<I, V, E, M>)
-            createGraphPartitioner().createMasterGraphPartitioner();
+        createGraphPartitioner().createMasterGraphPartitioner();
 
     vertexInputFormatClass = (Class<? extends VertexInputFormat<I, V, E, M>>)
         conf.getClass(VERTEX_INPUT_FORMAT_CLASS,
@@ -152,8 +151,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
         conf.getClass(VERTEX_OUTPUT_FORMAT_CLASS,
         null, VertexOutputFormat.class);
     edgeInputFormatClass = (Class<? extends EdgeInputFormat<I, E>>)
-        conf.getClass(EDGE_INPUT_FORMAT_CLASS,
-        null, EdgeInputFormat.class);
+        conf.getClass(EDGE_INPUT_FORMAT_CLASS, null, EdgeInputFormat.class);
 
     aggregatorWriterClass = conf.getClass(AGGREGATOR_WRITER_CLASS,
         TextAggregatorWriter.class, AggregatorWriter.class);
@@ -161,14 +159,14 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
         conf.getClass(VERTEX_COMBINER_CLASS, null, Combiner.class);
     vertexResolverClass = (Class<? extends VertexResolver<I, V, E, M>>)
         conf.getClass(VERTEX_RESOLVER_CLASS,
-        VertexResolver.class, VertexResolver.class);
+        DefaultVertexResolver.class, VertexResolver.class);
     workerContextClass = conf.getClass(WORKER_CONTEXT_CLASS,
         DefaultWorkerContext.class, WorkerContext.class);
     masterComputeClass =  conf.getClass(MASTER_COMPUTE_CLASS,
         DefaultMasterCompute.class, MasterCompute.class);
 
     partitionClass = (Class<? extends Partition<I, V, E, M>>)
-        conf.getClass(PARTITION_CLASS, SimplePartition.class);
+        conf.getClass(PARTITION_CLASS, SimplePartition.class, Partition.class);
 
     useUnsafeSerialization = getBoolean(USE_UNSAFE_SERIALIZATION,
         USE_UNSAFE_SERIALIZATION_DEFAULT);
