@@ -35,6 +35,7 @@ import org.apache.giraph.comm.requests.SendVertexRequest;
 import org.apache.giraph.comm.requests.SendWorkerMessagesRequest;
 import org.apache.giraph.comm.requests.WorkerRequest;
 import org.apache.giraph.comm.requests.WritableRequest;
+import org.apache.giraph.graph.BspService;
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexMutations;
@@ -77,8 +78,8 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
   private final WorkerClient<I, V, E, M> workerClient;
   /** Messages sent during the last superstep */
   private long totalMsgsSentInSuperstep = 0;
-  /** Maximum number of messages per remote worker to cache before sending */
-  private final int maxMessagesPerWorker;
+  /** Maximum size of messages per remote worker to cache before sending */
+  private final int maxMessagesSizePerWorker;
   /** Maximum number of mutations per partition before sending */
   private final int maxMutationsPerPartition;
   /** Giraph configuration */
@@ -110,9 +111,9 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
         configuration);
     sendMessageCache =
         new SendMessageCache<I, M>(configuration, serviceWorker);
-    maxMessagesPerWorker = configuration.getInt(
-        GiraphConfiguration.MSG_SIZE,
-        GiraphConfiguration.MSG_SIZE_DEFAULT);
+    maxMessagesSizePerWorker = configuration.getInt(
+        GiraphConfiguration.MAX_MSG_REQUEST_SIZE,
+        GiraphConfiguration.MAX_MSG_REQUEST_SIZE_DEFAULT);
     maxMutationsPerPartition = configuration.getInt(
         GiraphConfiguration.MAX_MUTATIONS_PER_REQUEST,
         GiraphConfiguration.MAX_MUTATIONS_PER_REQUEST_DEFAULT);
@@ -138,12 +139,12 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
     ++totalMsgsSentInSuperstep;
 
     // Add the message to the cache
-    int workerMessageCount = sendMessageCache.addMessage(
+    int workerMessageSize = sendMessageCache.addMessage(
         workerInfo, partitionId, destVertexId, message);
 
     // Send a request if the cache of outgoing message to
     // the remote worker 'workerInfo' is full enough to be flushed
-    if (workerMessageCount >= maxMessagesPerWorker) {
+    if (workerMessageSize >= maxMessagesSizePerWorker) {
       PairList<Integer, ByteArrayVertexIdMessages<I, M>>
           workerMessages =
           sendMessageCache.removeWorkerMessages(workerInfo);
@@ -159,7 +160,6 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
   @Override
   public void sendPartitionRequest(WorkerInfo workerInfo,
                                    Partition<I, V, E, M> partition) {
-    final int partitionId = partition.getId();
     if (LOG.isTraceEnabled()) {
       LOG.trace("sendVertexRequest: Sending to " + workerInfo +
           ", with partition " + partition);
@@ -170,13 +170,26 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
     doRequest(workerInfo, vertexRequest);
 
     // Messages are stored separately
+    if (serviceWorker.getSuperstep() != BspService.INPUT_SUPERSTEP) {
+      sendPartitionMessages(workerInfo, partition);
+    }
+  }
+
+  /**
+   * Send all messages for a partition to another worker.
+   *
+   * @param workerInfo Worker to send the partition messages to
+   * @param partition Partition whose messages to send
+   */
+  private void sendPartitionMessages(WorkerInfo workerInfo,
+                                     Partition<I, V, E, M> partition) {
+    final int partitionId = partition.getId();
     MessageStoreByPartition<I, M> messageStore =
         serverData.getCurrentMessageStore();
     ByteArrayVertexIdMessages<I, M> vertexIdMessages =
         new ByteArrayVertexIdMessages<I, M>();
     vertexIdMessages.setConf(configuration);
     vertexIdMessages.initialize();
-    int messagesInMap = 0;
     for (I vertexId :
         messageStore.getPartitionDestinationVertices(partitionId)) {
       try {
@@ -185,13 +198,12 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
         Iterable<M> messages = messageStore.getVertexMessages(vertexId);
         for (M message : messages) {
           vertexIdMessages.add(vertexId, message);
-          ++messagesInMap;
         }
       } catch (IOException e) {
         throw new IllegalStateException(
             "sendVertexRequest: Got IOException ", e);
       }
-      if (messagesInMap > maxMessagesPerWorker) {
+      if (vertexIdMessages.getSize() > maxMessagesSizePerWorker) {
         WritableRequest messagesRequest = new
             SendPartitionCurrentMessagesRequest<I, V, E, M>(
             partitionId, vertexIdMessages);
@@ -200,10 +212,9 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
             new ByteArrayVertexIdMessages<I, M>();
         vertexIdMessages.setConf(configuration);
         vertexIdMessages.initialize();
-        messagesInMap = 0;
       }
     }
-    if (vertexIdMessages != null) {
+    if (!vertexIdMessages.isEmpty()) {
       WritableRequest messagesRequest = new
           SendPartitionCurrentMessagesRequest<I, V, E, M>(
           partitionId, vertexIdMessages);

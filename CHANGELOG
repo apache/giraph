@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-445: Max message request size in bytes, initialize buffers to 
+  expected size (majakabiljo)
+
   GIRAPH-444: Cleanup VertexResolver (nitay)
 
   GIRAPH-446: Add a proper timeout for waiting for workers to join a

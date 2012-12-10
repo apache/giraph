@@ -22,6 +22,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import java.util.List;
 import java.util.Map;
+
+import org.apache.giraph.GiraphConfiguration;
 import org.apache.giraph.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.graph.WorkerInfo;
@@ -41,10 +43,27 @@ import org.apache.hadoop.io.WritableComparable;
 @SuppressWarnings("rawtypes")
 public class SendMessageCache<I extends WritableComparable,
     M extends Writable> {
+  /**
+   * How much bigger than the average per partition size to make initial per
+   * partition buffers.
+   * If this value is A, message request size is M,
+   * and a worker has P partitions, than its initial partition buffer size
+   * will be (M / P) * (1 + A).
+   */
+  public static final String ADDITIONAL_MSG_REQUEST_SIZE =
+      "giraph.additionalMsgRequestSize";
+  /**
+   * Default factor for how bigger should initial per partition buffers be
+   * of 20%.
+   */
+  public static final float ADDITIONAL_MSG_REQUEST_SIZE_DEFAULT = 0.2f;
+
   /** Internal cache */
   private final ByteArrayVertexIdMessages<I, M>[] messageCache;
-  /** Number of messages in each partition */
-  private final int[] messageCounts;
+  /** Size of messages (in bytes) for each worker */
+  private final int[] messageSizes;
+  /** How big to initially make output streams for each worker's partitions */
+  private final int[] initialBufferSizes;
   /** List of partition ids belonging to a worker */
   private final Map<WorkerInfo, List<Integer>> workerPartitions =
       Maps.newHashMap();
@@ -79,7 +98,19 @@ public class SendMessageCache<I extends WritableComparable,
     for (WorkerInfo workerInfo : serviceWorker.getWorkerInfoList()) {
       maxWorker = Math.max(maxWorker, workerInfo.getTaskId());
     }
-    messageCounts = new int[maxWorker + 1];
+    messageSizes = new int[maxWorker + 1];
+
+    float additionalRequestSize =
+        conf.getFloat(ADDITIONAL_MSG_REQUEST_SIZE,
+            ADDITIONAL_MSG_REQUEST_SIZE_DEFAULT);
+    int requestSize = conf.getInt(GiraphConfiguration.MAX_MSG_REQUEST_SIZE,
+        GiraphConfiguration.MAX_MSG_REQUEST_SIZE_DEFAULT);
+    int initialRequestSize = (int) (requestSize * (1 + additionalRequestSize));
+    initialBufferSizes = new int[maxWorker + 1];
+    for (WorkerInfo workerInfo : serviceWorker.getWorkerInfoList()) {
+      initialBufferSizes[workerInfo.getTaskId()] =
+          initialRequestSize / workerPartitions.get(workerInfo).size();
+    }
   }
 
   /**
@@ -90,24 +121,28 @@ public class SendMessageCache<I extends WritableComparable,
    * @param destVertexId vertex id that is ultimate destination
    * @param message Message to be send to remote
    *                <b>host => partition => vertex</b>
-   * @return Number of messages in the partition.
+   * @return Size of messages for the worker.
    */
   public int addMessage(WorkerInfo workerInfo,
     final int partitionId, I destVertexId, M message) {
     // Get the message collection
     ByteArrayVertexIdMessages<I, M> partitionMessages =
         messageCache[partitionId];
+    int originalSize = 0;
     if (partitionMessages == null) {
       partitionMessages = new ByteArrayVertexIdMessages<I, M>();
       partitionMessages.setConf(conf);
-      partitionMessages.initialize();
+      partitionMessages.initialize(initialBufferSizes[workerInfo.getTaskId()]);
       messageCache[partitionId] = partitionMessages;
+    } else {
+      originalSize = partitionMessages.getSize();
     }
     partitionMessages.add(destVertexId, message);
 
-    // Update the number of cached, outgoing messages per worker
-    messageCounts[workerInfo.getTaskId()]++;
-    return messageCounts[workerInfo.getTaskId()];
+    // Update the size of cached, outgoing messages per worker
+    messageSizes[workerInfo.getTaskId()] +=
+        partitionMessages.getSize() - originalSize;
+    return messageSizes[workerInfo.getTaskId()];
   }
 
   /**
@@ -122,14 +157,15 @@ public class SendMessageCache<I extends WritableComparable,
   removeWorkerMessages(WorkerInfo workerInfo) {
     PairList<Integer, ByteArrayVertexIdMessages<I, M>> workerMessages =
         new PairList<Integer, ByteArrayVertexIdMessages<I, M>>();
-    workerMessages.initialize();
-    for (Integer partitionId : workerPartitions.get(workerInfo)) {
+    List<Integer> partitions = workerPartitions.get(workerInfo);
+    workerMessages.initialize(partitions.size());
+    for (Integer partitionId : partitions) {
       if (messageCache[partitionId] != null) {
         workerMessages.add(partitionId, messageCache[partitionId]);
         messageCache[partitionId] = null;
       }
     }
-    messageCounts[workerInfo.getTaskId()] = 0;
+    messageSizes[workerInfo.getTaskId()] = 0;
     return workerMessages;
   }
 
@@ -144,7 +180,7 @@ public class SendMessageCache<I extends WritableComparable,
         ByteArrayVertexIdMessages<I, M>>>
         allMessages = new PairList<WorkerInfo,
         PairList<Integer, ByteArrayVertexIdMessages<I, M>>>();
-    allMessages.initialize();
+    allMessages.initialize(messageSizes.length);
     for (WorkerInfo workerInfo : workerPartitions.keySet()) {
       PairList<Integer, ByteArrayVertexIdMessages<I,
                 M>> workerMessages =
@@ -152,7 +188,7 @@ public class SendMessageCache<I extends WritableComparable,
       if (!workerMessages.isEmpty()) {
         allMessages.add(workerInfo, workerMessages);
       }
-      messageCounts[workerInfo.getTaskId()] = 0;
+      messageSizes[workerInfo.getTaskId()] = 0;
     }
     return allMessages;
   }

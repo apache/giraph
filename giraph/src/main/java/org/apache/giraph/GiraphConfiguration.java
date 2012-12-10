@@ -385,22 +385,16 @@ public class GiraphConfiguration extends Configuration {
   /** Default server receive buffer size of 0.5 MB */
   public static final int DEFAULT_SERVER_RECEIVE_BUFFER_SIZE = 512 * 1024;
 
-  /** Maximum number of messages per peer before flush */
-  public static final String MSG_SIZE = "giraph.msgSize";
-  /** Default maximum number of messages per peer before flush */
-  public static final int MSG_SIZE_DEFAULT = 2000;
+  /** Maximum size of messages (in bytes) per peer before flush */
+  public static final String MAX_MSG_REQUEST_SIZE = "giraph.msgRequestSize";
+  /** Default maximum size of messages per peer before flush of 0.5MB */
+  public static final int MAX_MSG_REQUEST_SIZE_DEFAULT = 512 * 1024;
 
   /** Maximum number of mutations per partition before flush */
   public static final String MAX_MUTATIONS_PER_REQUEST =
       "giraph.maxMutationsPerRequest";
   /** Default maximum number of mutations per partition before flush */
   public static final int MAX_MUTATIONS_PER_REQUEST_DEFAULT = 100;
-
-  /** Maximum number of messages that can be bulk sent during a flush */
-  public static final String MAX_MESSAGES_PER_FLUSH_PUT =
-      "giraph.maxMessagesPerFlushPut";
-  /** Default number of messages that can be bulk sent during a flush */
-  public static final int DEFAULT_MAX_MESSAGES_PER_FLUSH_PUT = 2000;
 
   /**
    * Use message size encoding (typically better for complex objects,
