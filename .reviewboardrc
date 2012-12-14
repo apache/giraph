@@ -1,3 +1,5 @@
-GUESS_SUMMARY = True
+GUESS_FIELDS = True
+OPEN_BROWSER = True
+REPOSITORY = "giraph-git"
 REVIEWBOARD_URL = "https://reviews.apache.org/"
 TARGET_GROUPS = "giraph"

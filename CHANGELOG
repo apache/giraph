@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-450: post-review not working after switch to git (nitay)
+
   GIRAPH-449: License header missing from for-each-profile.sh (apresta)
 
   GIRAPH-447: Clean up GiraphConfiguration related things (nitay)
