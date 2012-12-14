@@ -3,3 +3,5 @@ OPEN_BROWSER = True
 REPOSITORY = "giraph-git"
 REVIEWBOARD_URL = "https://reviews.apache.org/"
 TARGET_GROUPS = "giraph"
+TRACKING_BRANCH = "origin/trunk"
+UPSTREAM_BRANCH = "origin/trunk"
