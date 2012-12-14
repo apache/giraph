@@ -18,7 +18,9 @@
 
 package org.apache.giraph.io.hcatalog;
 
+import com.google.common.collect.Lists;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexInputFormat;
 import org.apache.giraph.graph.VertexReader;
@@ -32,12 +34,8 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hcatalog.data.HCatRecord;
 import org.apache.log4j.Logger;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Abstract class that users should subclass to load data from a Hive or Pig
@@ -233,9 +231,9 @@ public abstract class HCatalogVertexInputFormat<
     /**
      * get edges.
      * @param record hcat record
-     * @return Map edges
+     * @return Edges
      */
-    protected abstract Map<I, E> getEdges(HCatRecord record);
+    protected abstract Iterable<Edge<I, E>> getEdges(HCatRecord record);
 
     @Override
     public final Vertex<I, V, E, M> getCurrentVertex()
@@ -286,9 +284,9 @@ public abstract class HCatalogVertexInputFormat<
      */
     private I currentVertexId = null;
     /**
-     * destination edge map.
+     * current vertex edges.
      */
-    private Map<I, E> destEdgeMap = Maps.newHashMap();
+    private List<Edge<I, E>> currentEdges = Lists.newLinkedList();
     /**
      * record for vertex.
      */
@@ -355,9 +353,9 @@ public abstract class HCatalogVertexInputFormat<
           currentVertexId = getVertexId(record);
         }
         if (currentVertexId.equals(getVertexId(record))) {
-          destEdgeMap.put(
-              getTargetVertexId(record),
-              getEdgeValue(record));
+          currentEdges.add(new Edge<I, E>(
+                  getTargetVertexId(record),
+                  getEdgeValue(record)));
           recordsForVertex.add(record);
         } else {
           createCurrentVertex();
@@ -370,7 +368,7 @@ public abstract class HCatalogVertexInputFormat<
         }
       }
 
-      if (destEdgeMap.isEmpty()) {
+      if (currentEdges.isEmpty()) {
         return false;
       } else {
         createCurrentVertex();
@@ -384,8 +382,8 @@ public abstract class HCatalogVertexInputFormat<
     private void createCurrentVertex() {
       vertex = getConfiguration().createVertex();
       vertex.initialize(currentVertexId, getVertexValue(recordsForVertex),
-          destEdgeMap);
-      destEdgeMap.clear();
+          currentEdges);
+      currentEdges.clear();
       recordsForVertex.clear();
       ++recordCount;
     }

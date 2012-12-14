@@ -18,11 +18,8 @@
 
 package org.apache.giraph.examples;
 
-import java.io.IOException;
-import java.util.Map;
-import java.util.regex.Pattern;
-
 import org.apache.giraph.graph.BspUtils;
+import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.TextVertexInputFormat;
 import org.apache.hadoop.io.DoubleWritable;
@@ -31,7 +28,12 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
-import com.google.common.collect.Maps;
+import com.google.common.collect.Lists;
+
+import java.io.IOException;
+import java.util.Collection;
+import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * Simple text-based {@link org.apache.giraph.graph.VertexInputFormat} for
@@ -71,8 +73,8 @@ public class NormalizingLongDoubleFloatDoubleTextInputFormat
 
       String[] tokens = edgeSeparator.split(getRecordReader()
           .getCurrentValue().toString());
-      Map<LongWritable, FloatWritable> edges = Maps
-          .newHashMapWithExpectedSize(tokens.length - 1);
+      List<Edge<LongWritable, FloatWritable>> edges = Lists
+          .newArrayListWithCapacity(tokens.length - 1);
       parse(tokens, edges);
       normalize(edges);
 
@@ -87,11 +89,13 @@ public class NormalizingLongDoubleFloatDoubleTextInputFormat
      * @param tokens The tokens to be parsed.
      * @param edges The map that will contain the result of the parsing.
      */
-    void parse(String[] tokens, Map<LongWritable, FloatWritable> edges) {
+    void parse(String[] tokens,
+               Collection<Edge<LongWritable, FloatWritable>> edges) {
       for (int n = 1; n < tokens.length; n++) {
         String[] parts = weightSeparator.split(tokens[n]);
-        edges.put(new LongWritable(Long.parseLong(parts[0])),
-            new FloatWritable(Float.parseFloat(parts[1])));
+        edges.add(new Edge<LongWritable, FloatWritable>(
+            new LongWritable(Long.parseLong(parts[0])),
+            new FloatWritable(Float.parseFloat(parts[1]))));
       }
     }
 
@@ -99,17 +103,17 @@ public class NormalizingLongDoubleFloatDoubleTextInputFormat
      * Normalize the edges with L1 normalization.
      * @param edges The edges to be normalized.
      */
-    void normalize(Map<LongWritable, FloatWritable> edges) {
+    void normalize(Collection<Edge<LongWritable, FloatWritable>> edges) {
       if (edges == null || edges.size() == 0) {
         throw new IllegalArgumentException(
             "Cannot normalize an empy set of edges");
       }
       float normalizer = 0.0f;
-      for (FloatWritable weight : edges.values()) {
-        normalizer += weight.get();
+      for (Edge<LongWritable, FloatWritable> edge : edges) {
+        normalizer += edge.getValue().get();
       }
-      for (FloatWritable weight : edges.values()) {
-        weight.set(weight.get() / normalizer);
+      for (Edge<LongWritable, FloatWritable> edge : edges) {
+        edge.getValue().set(edge.getValue().get() / normalizer);
       }
     }
 

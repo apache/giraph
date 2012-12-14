@@ -18,16 +18,17 @@
 
 package org.apache.giraph.io;
 
+import org.apache.giraph.graph.Edge;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
-import com.google.common.collect.Maps;
+import com.google.common.collect.Lists;
 
 import java.io.IOException;
-import java.util.Map;
+import java.util.List;
 import java.util.regex.Pattern;
 
 /**
@@ -77,13 +78,14 @@ public class IntIntNullIntTextInputFormat extends
     }
 
     @Override
-    protected Map<IntWritable, NullWritable> getEdges(String[] tokens)
-      throws IOException {
-      Map<IntWritable, NullWritable> edges =
-          Maps.newHashMapWithExpectedSize(tokens.length - 1);
+    protected Iterable<Edge<IntWritable, NullWritable>> getEdges(
+        String[] tokens) throws IOException {
+      List<Edge<IntWritable, NullWritable>> edges =
+          Lists.newArrayListWithCapacity(tokens.length - 1);
       for (int n = 1; n < tokens.length; n++) {
-        edges.put(new IntWritable(Integer.parseInt(tokens[n])),
-            NullWritable.get());
+        edges.add(new Edge<IntWritable, NullWritable>(
+            new IntWritable(Integer.parseInt(tokens[n])),
+            NullWritable.get()));
       }
       return edges;
     }

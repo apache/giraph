@@ -18,11 +18,11 @@
 
 package org.apache.giraph.graph;
 
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import org.apache.giraph.utils.EdgeIterables;
-import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.log4j.Logger;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -30,73 +30,77 @@ import java.io.IOException;
 import java.util.List;
 
 /**
- * Vertex with no edge values.
+ * Common base class for edge-list backed vertices.
+ *
  * @param <I> Vertex id
- * @param <V> Vertex data
+ * @param <V> Vertex value
+ * @param <E> Edge value
  * @param <M> Message data
  */
-public abstract class SimpleVertex<I extends WritableComparable,
-    V extends Writable, M extends Writable> extends Vertex<I, V,
-    NullWritable, M> {
-  /**
-   * Set the neighbors of this vertex.
-   *
-   * @param neighbors Iterable of destination vertex ids.
-   */
-  public abstract void setNeighbors(Iterable<I> neighbors);
-
-  @Override
-  public void setEdges(Iterable<Edge<I, NullWritable>> edges) {
-    setNeighbors(EdgeIterables.getNeighbors(edges));
-  }
+@SuppressWarnings("rawtypes")
+public abstract class EdgeListVertexBase<I extends WritableComparable,
+    V extends Writable, E extends Writable, M extends Writable>
+    extends MutableVertex<I, V, E, M> {
+  /** Class logger */
+  private static final Logger LOG = Logger.getLogger(EdgeListVertexBase.class);
+  /** List of edges */
+  private List<Edge<I, E>> edgeList = Lists.newArrayList();
 
   /**
-   * Get a read-only view of the neighbors of this
-   * vertex, i.e. the target vertices of its out-edges.
+   * Append an edge to the list.
    *
-   * @return the neighbors (sort order determined by subclass implementation).
+   * @param edge Edge to append
    */
-  public abstract Iterable<I> getNeighbors();
-
-  @Override
-  public Iterable<Edge<I, NullWritable>> getEdges() {
-    return EdgeIterables.getEdges(getNeighbors());
+  protected void appendEdge(Edge<I, E> edge) {
+    edgeList.add(edge);
   }
 
   @Override
-  public NullWritable getEdgeValue(I targetVertexId) {
-    return NullWritable.get();
+  public void setEdges(Iterable<Edge<I, E>> edges) {
+    edgeList.clear();
+    Iterables.addAll(edgeList, edges);
   }
 
   @Override
-  public void readFields(DataInput in) throws IOException {
+  public Iterable<Edge<I, E>> getEdges() {
+    return edgeList;
+  }
+
+  @Override
+  public int getNumEdges() {
+    return edgeList.size();
+  }
+
+  @Override
+  public final void readFields(DataInput in) throws IOException {
     I vertexId = getConf().createVertexId();
     vertexId.readFields(in);
     V vertexValue = getConf().createVertexValue();
     vertexValue.readFields(in);
+    initialize(vertexId, vertexValue);
 
     int numEdges = in.readInt();
-    List<I> neighbors = Lists.newArrayListWithCapacity(numEdges);
+    edgeList = Lists.newArrayListWithCapacity(numEdges);
     for (int i = 0; i < numEdges; ++i) {
       I targetVertexId = getConf().createVertexId();
       targetVertexId.readFields(in);
-      neighbors.add(targetVertexId);
+      E edgeValue = getConf().createEdgeValue();
+      edgeValue.readFields(in);
+      edgeList.add(new Edge<I, E>(targetVertexId, edgeValue));
     }
-
-    initialize(vertexId, vertexValue);
-    setNeighbors(neighbors);
 
     readHaltBoolean(in);
   }
 
   @Override
-  public void write(DataOutput out) throws IOException {
+  public final void write(DataOutput out) throws IOException {
     getId().write(out);
     getValue().write(out);
 
-    out.writeInt(getNumEdges());
-    for (I neighbor : getNeighbors()) {
-      neighbor.write(out);
+    out.writeInt(edgeList.size());
+    for (Edge<I, E> edge : edgeList) {
+      edge.getTargetVertexId().write(out);
+      edge.getValue().write(out);
     }
 
     out.writeBoolean(isHalted());

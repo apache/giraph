@@ -17,7 +17,6 @@
  */
 package org.apache.giraph.comm;
 
-import java.io.IOException;
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.WorkerInfo;
@@ -25,6 +24,8 @@ import org.apache.giraph.graph.partition.Partition;
 import org.apache.giraph.graph.partition.PartitionOwner;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+
+import java.io.IOException;
 
 /**
  * Aggregates IPC requests and sends them off
@@ -73,13 +74,14 @@ public interface WorkerClientRequestProcessor<I extends WritableComparable,
   void addEdgeRequest(I vertexIndex, Edge<I, E> edge) throws IOException;
 
   /**
-   * Sends a request to the appropriate vertex range owner to remove an edge
+   * Sends a request to the appropriate vertex range owner to remove all edges
+   * pointing to a given vertex.
    *
    * @param vertexIndex Index of the vertex to get the request
    * @param destinationVertexIndex Index of the edge to be removed
    * @throws IOException
    */
-  void removeEdgeRequest(I vertexIndex, I destinationVertexIndex)
+  void removeEdgesRequest(I vertexIndex, I destinationVertexIndex)
     throws IOException;
 
   /**
@@ -99,7 +101,7 @@ public interface WorkerClientRequestProcessor<I extends WritableComparable,
   void removeVertexRequest(I vertexIndex) throws IOException;
 
   /**
-   * Flush all outgoing messages.  This ensures that all the messages have bee
+   * Flush all outgoing messages.  This ensures that all the messages have been
    * sent, but not guaranteed to have been delivered yet.
    *
    * @throws IOException

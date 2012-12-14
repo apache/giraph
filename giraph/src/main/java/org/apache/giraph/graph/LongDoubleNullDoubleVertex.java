@@ -18,15 +18,16 @@
 
 package org.apache.giraph.graph;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.util.Map;
-
+import com.google.common.collect.Iterables;
 import org.apache.giraph.utils.UnmodifiableLongNullEdgeArrayIterable;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.Collections;
 
 /**
  * Compact vertex representation with primitive arrays and null edges.
@@ -41,15 +42,27 @@ public abstract class LongDoubleNullDoubleVertex extends
   private long[] neighbors;
 
   @Override
-  public void initialize(LongWritable vertexId, DoubleWritable vertexValue,
-                         Map<LongWritable, NullWritable> edges) {
+  public void initialize(LongWritable vertexId, DoubleWritable vertexValue) {
     id = vertexId.get();
     value = vertexValue.get();
-    neighbors = new long[(edges != null) ? edges.size() : 0];
+    setEdges(Collections.<Edge<LongWritable, NullWritable>>emptyList());
+  }
+
+  @Override
+  public void initialize(LongWritable vertexId, DoubleWritable vertexValue,
+                         Iterable<Edge<LongWritable, NullWritable>> edges) {
+    id = vertexId.get();
+    value = vertexValue.get();
+    setEdges(edges);
+  }
+
+  @Override
+  public void setEdges(Iterable<Edge<LongWritable, NullWritable>> edges) {
+    neighbors = new long[(edges != null) ? Iterables.size(edges) : 0];
     int n = 0;
     if (edges != null) {
-      for (LongWritable neighbor : edges.keySet()) {
-        neighbors[n++] = neighbor.get();
+      for (Edge<LongWritable, NullWritable> edge : edges) {
+        neighbors[n++] = edge.getTargetVertexId().get();
       }
     }
   }

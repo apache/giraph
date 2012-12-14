@@ -18,19 +18,16 @@
 
 package org.apache.giraph.graph;
 
+import com.google.common.collect.Lists;
+import org.apache.giraph.utils.EdgeIterables;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import com.google.common.base.Function;
-import com.google.common.collect.Iterables;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.List;
 
 /**
  * Mutable vertex with no edge values.
@@ -45,13 +42,13 @@ public abstract class SimpleMutableVertex<I extends WritableComparable,
   /**
    * Set the neighbors of this vertex.
    *
-   * @param neighbors Set of destination vertex ids.
+   * @param neighbors Iterable of destination vertex ids.
    */
-  public abstract void setNeighbors(Set<I> neighbors);
+  public abstract void setNeighbors(Iterable<I> neighbors);
 
   @Override
-  public void setEdges(Map<I, NullWritable> edges) {
-    setNeighbors(edges.keySet());
+  public void setEdges(Iterable<Edge<I, NullWritable>> edges) {
+    setNeighbors(EdgeIterables.getNeighbors(edges));
   }
 
   /**
@@ -64,12 +61,7 @@ public abstract class SimpleMutableVertex<I extends WritableComparable,
 
   @Override
   public Iterable<Edge<I, NullWritable>> getEdges() {
-    return Iterables.transform(getNeighbors(), new Function<I, Edge<I,
-        NullWritable>>() {
-      public Edge<I, NullWritable> apply(I targetVertexId) {
-        return new Edge<I, NullWritable>(targetVertexId, NullWritable.get());
-      }
-    });
+    return EdgeIterables.getEdges(getNeighbors());
   }
 
   @Override
@@ -86,8 +78,8 @@ public abstract class SimpleMutableVertex<I extends WritableComparable,
   public abstract boolean addEdge(I targetVertexId);
 
   @Override
-  public boolean addEdge(I targetVertexId, NullWritable value) {
-    return addEdge(targetVertexId);
+  public boolean addEdge(Edge<I, NullWritable> edge) {
+    return addEdge(edge.getTargetVertexId());
   }
 
   /**
@@ -110,11 +102,12 @@ public abstract class SimpleMutableVertex<I extends WritableComparable,
     vertexValue.readFields(in);
 
     int numEdges = in.readInt();
-    Map<I, NullWritable> edges = new HashMap<I, NullWritable>(numEdges);
+    List<Edge<I, NullWritable>> edges =
+        Lists.newArrayListWithCapacity(numEdges);
     for (int i = 0; i < numEdges; ++i) {
       I targetVertexId = (I) getConf().createVertexId();
       targetVertexId.readFields(in);
-      edges.put(targetVertexId, NullWritable.get());
+      edges.add(new Edge<I, NullWritable>(targetVertexId, NullWritable.get()));
     }
 
     initialize(vertexId, vertexValue, edges);

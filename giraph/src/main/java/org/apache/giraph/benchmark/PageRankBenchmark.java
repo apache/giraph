@@ -22,9 +22,11 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
+import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.examples.DoubleSumCombiner;
 import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.io.PseudoRandomEdgeInputFormat;
 import org.apache.giraph.io.PseudoRandomVertexInputFormat;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Tool;
@@ -35,9 +37,13 @@ import org.apache.log4j.Logger;
  * Default Pregel-style PageRank computation.
  */
 public class PageRankBenchmark implements Tool {
-  /** Class logger */
+  /**
+   * Class logger
+   */
   private static final Logger LOG = Logger.getLogger(PageRankBenchmark.class);
-  /** Configuration from Configurable */
+  /**
+   * Configuration from Configurable
+   */
   private Configuration conf;
 
   @Override
@@ -76,7 +82,13 @@ public class PageRankBenchmark implements Tool {
         true,
         "Vertex class (0 for HashMapVertex, 1 for EdgeListVertex, " +
             "2 for RepresentativeVertex, " +
-            "3 for RepresentativeVertex with unsafe)");
+            "3 for RepresentativeVertex with unsafe, " +
+            "4 for HashMapVertex (using EdgeInputFormat), " +
+            "5 for MultiGraphEdgeListVertex (using EdgeInputFormat), " +
+            "6 for MultiGraphRepresentativeVertex (using " +
+            "EdgeInputFormat), " +
+            "7 for MultiGraphRepresentativeVertex with unsafe (using " +
+            "EdgeInputFormat))");
     options.addOption("N",
         "name",
         true,
@@ -122,42 +134,10 @@ public class PageRankBenchmark implements Tool {
     }
 
     GiraphJob job = new GiraphJob(getConf(), name);
-    if (!cmd.hasOption('c') ||
-        (Integer.parseInt(cmd.getOptionValue('c')) == 1)) {
-      job.getConfiguration().setVertexClass(
-          EdgeListVertexPageRankBenchmark.class);
-    } else if (Integer.parseInt(cmd.getOptionValue('c')) == 0) {
-      job.getConfiguration().setVertexClass(
-          HashMapVertexPageRankBenchmark.class);
-    } else if (Integer.parseInt(cmd.getOptionValue('c')) == 2) {
-      job.getConfiguration().setVertexClass(
-          RepresentativeVertexPageRankBenchmark.class);
-      job.getConfiguration().useUnsafeSerialization(false);
-    } else if (Integer.parseInt(cmd.getOptionValue('c')) == 3) {
-      job.getConfiguration().setVertexClass(
-          RepresentativeVertexPageRankBenchmark.class);
-      job.getConfiguration().useUnsafeSerialization(true);
-    }
-    LOG.info("Using class " +
-        job.getConfiguration().get(GiraphConstants.VERTEX_CLASS));
-    if (!cmd.hasOption('t') ||
-        (Integer.parseInt(cmd.getOptionValue('t')) == 2)) {
-      job.getConfiguration().setVertexCombinerClass(
-          DoubleSumCombiner.class);
-    } else if (Integer.parseInt(cmd.getOptionValue('t')) == 1) {
-      job.getConfiguration().setVertexCombinerClass(
-          DoubleSumCombiner.class);
-    }
-    job.getConfiguration().setVertexInputFormatClass(
-        PseudoRandomVertexInputFormat.class);
-    job.getConfiguration().setWorkerConfiguration(workers, workers, 100.0f);
-    job.getConfiguration().setLong(
-        PseudoRandomVertexInputFormat.AGGREGATE_VERTICES,
-        Long.parseLong(cmd.getOptionValue('V')));
-    job.getConfiguration().setLong(
-        PseudoRandomVertexInputFormat.EDGES_PER_VERTEX,
-        Long.parseLong(cmd.getOptionValue('e')));
-    job.getConfiguration().setInt(
+    GiraphConfiguration configuration = job.getConfiguration();
+    setVertexAndInputFormatClasses(cmd, configuration);
+    configuration.setWorkerConfiguration(workers, workers, 100.0f);
+    configuration.setInt(
         PageRankComputation.SUPERSTEP_COUNT,
         Integer.parseInt(cmd.getOptionValue('s')));
 
@@ -165,15 +145,77 @@ public class PageRankBenchmark implements Tool {
     if (cmd.hasOption('v')) {
       isVerbose = true;
     }
-    if (cmd.hasOption('s')) {
-      job.getConfiguration().setInt(
-          PageRankComputation.SUPERSTEP_COUNT,
-          Integer.parseInt(cmd.getOptionValue('s')));
-    }
     if (job.run(isVerbose)) {
       return 0;
     } else {
       return -1;
+    }
+  }
+
+  /**
+   * Set vertex class and input format class based on command-line arguments.
+   *
+   * @param cmd Command line arguments
+   * @param configuration Giraph job configuration
+   */
+  protected void setVertexAndInputFormatClasses(
+      CommandLine cmd, GiraphConfiguration configuration) {
+    int vertexClassOption = cmd.hasOption('c') ? Integer.parseInt(
+        cmd.getOptionValue('c')) : 1;
+    if (vertexClassOption == 1) {
+      configuration.setVertexClass(
+          EdgeListVertexPageRankBenchmark.class);
+    } else if (vertexClassOption == 0 || vertexClassOption == 4) {
+      configuration.setVertexClass(
+          HashMapVertexPageRankBenchmark.class);
+    } else if (vertexClassOption == 2) {
+      configuration.setVertexClass(
+          RepresentativeVertexPageRankBenchmark.class);
+      configuration.useUnsafeSerialization(false);
+    } else if (vertexClassOption == 3) {
+      configuration.setVertexClass(
+          RepresentativeVertexPageRankBenchmark.class);
+      configuration.useUnsafeSerialization(true);
+    } else if (vertexClassOption == 5) {
+      configuration.setVertexClass(
+          MultiGraphEdgeListVertexPageRankBenchmark.class);
+    } else if (vertexClassOption == 6) {
+      configuration.setVertexClass(
+          MultiGraphRepresentativeVertexPageRankBenchmark.class);
+      configuration.useUnsafeSerialization(false);
+    } else if (vertexClassOption == 7) {
+      configuration.setVertexClass(
+          MultiGraphRepresentativeVertexPageRankBenchmark.class);
+      configuration.useUnsafeSerialization(true);
+    }
+    LOG.info("Using class " +
+        configuration.get(GiraphConstants.VERTEX_CLASS));
+    if (!cmd.hasOption('t') ||
+        (Integer.parseInt(cmd.getOptionValue('t')) == 2)) {
+      configuration.setVertexCombinerClass(
+          DoubleSumCombiner.class);
+    } else if (Integer.parseInt(cmd.getOptionValue('t')) == 1) {
+      configuration.setVertexCombinerClass(
+          DoubleSumCombiner.class);
+    }
+    if (vertexClassOption <= 3) {
+      configuration.setVertexInputFormatClass(
+          PseudoRandomVertexInputFormat.class);
+      configuration.setLong(
+          PseudoRandomVertexInputFormat.AGGREGATE_VERTICES,
+          Long.parseLong(cmd.getOptionValue('V')));
+      configuration.setLong(
+          PseudoRandomVertexInputFormat.EDGES_PER_VERTEX,
+          Long.parseLong(cmd.getOptionValue('e')));
+    } else {
+      configuration.setEdgeInputFormatClass(
+          PseudoRandomEdgeInputFormat.class);
+      configuration.setLong(
+          PseudoRandomEdgeInputFormat.AGGREGATE_VERTICES,
+          Long.parseLong(cmd.getOptionValue('V')));
+      configuration.setLong(
+          PseudoRandomEdgeInputFormat.EDGES_PER_VERTEX,
+          Long.parseLong(cmd.getOptionValue('e')));
     }
   }
 

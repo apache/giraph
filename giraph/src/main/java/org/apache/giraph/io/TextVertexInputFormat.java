@@ -19,6 +19,7 @@
 package org.apache.giraph.io;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexInputFormat;
 import org.apache.giraph.graph.VertexReader;
@@ -34,7 +35,6 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Abstract class that users should subclass to use their own text based
@@ -216,11 +216,12 @@ public abstract class TextVertexInputFormat<I extends WritableComparable,
      * @param line
      *          the current line
      * @return
-     *         the edges mapping target vertex id to its edge value
+     *         the edges
      * @throws IOException
      *           exception that can be thrown while reading
      */
-    protected abstract Map<I, E> getEdges(Text line) throws IOException;
+    protected abstract Iterable<Edge<I, E>> getEdges(Text line) throws
+        IOException;
 
   }
 
@@ -291,14 +292,16 @@ public abstract class TextVertexInputFormat<I extends WritableComparable,
     /**
      * Reads edges from the preprocessed line.
      *
+     *
      * @param line
      *          the object obtained by preprocessing the line
      * @return
-     *         the edges mapping target vertex id to its edge value
+     *         the edges
      * @throws IOException
      *           exception that can be thrown while reading
      */
-    protected abstract Map<I, E> getEdges(T line) throws IOException;
+    protected abstract Iterable<Edge<I, E>> getEdges(T line) throws
+        IOException;
 
   }
 
@@ -393,17 +396,19 @@ public abstract class TextVertexInputFormat<I extends WritableComparable,
     /**
      * Reads edges from the preprocessed line.
      *
+     *
      * @param line
      *          the object obtained by preprocessing the line
      * @return
-     *         the edges mapping target vertex id to its edge value
+     *         the edges
      * @throws X
      *           exception that can be thrown while reading the preprocessed
      *           object
      * @throws IOException
      *           exception that can be thrown while reading
      */
-    protected abstract Map<I, E> getEdges(T line) throws X, IOException;
+    protected abstract Iterable<Edge<I, E>> getEdges(T line) throws X,
+        IOException;
 
     /**
      * Handles exceptions while reading vertex from each line.

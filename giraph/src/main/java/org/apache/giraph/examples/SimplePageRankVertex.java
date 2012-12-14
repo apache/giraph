@@ -22,6 +22,7 @@ import org.apache.giraph.aggregators.DoubleMaxAggregator;
 import org.apache.giraph.aggregators.DoubleMinAggregator;
 import org.apache.giraph.aggregators.LongSumAggregator;
 import org.apache.giraph.graph.DefaultMasterCompute;
+import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.LongDoubleFloatDoubleVertex;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexReader;
@@ -36,10 +37,10 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.log4j.Logger;
 
-import com.google.common.collect.Maps;
+import com.google.common.collect.Lists;
 
 import java.io.IOException;
-import java.util.Map;
+import java.util.List;
 
 /**
  * Demonstrates the basic Pregel PageRank implementation.
@@ -193,8 +194,10 @@ public class SimplePageRankVertex extends LongDoubleFloatDoubleVertex {
           (vertexId.get() + 1) %
           (inputSplit.getNumSplits() * totalRecords);
       float edgeValue = vertexId.get() * 100f;
-      Map<LongWritable, FloatWritable> edges = Maps.newHashMap();
-      edges.put(new LongWritable(targetVertexId), new FloatWritable(edgeValue));
+      List<Edge<LongWritable, FloatWritable>> edges = Lists.newLinkedList();
+      edges.add(new Edge<LongWritable, FloatWritable>(
+          new LongWritable(targetVertexId),
+          new FloatWritable(edgeValue)));
       vertex.initialize(vertexId, vertexValue, edges);
       ++recordsRead;
       if (LOG.isInfoEnabled()) {

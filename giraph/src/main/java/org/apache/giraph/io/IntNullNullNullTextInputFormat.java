@@ -17,16 +17,16 @@
  */
 package org.apache.giraph.io;
 
+import org.apache.giraph.graph.Edge;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableList;
 
 import java.io.IOException;
-import java.util.Map;
 
 /**
  * Simple text-based {@link org.apache.giraph.graph.VertexInputFormat} for
@@ -67,9 +67,9 @@ public class IntNullNullNullTextInputFormat extends TextVertexInputFormat<
     }
 
     @Override
-    protected Map<IntWritable, NullWritable> getEdges(String line)
+    protected Iterable<Edge<IntWritable, NullWritable>> getEdges(String line)
       throws IOException {
-      return ImmutableMap.of();
+      return ImmutableList.of();
     }
   }
 }

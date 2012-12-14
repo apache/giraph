@@ -17,16 +17,10 @@
  */
 package org.apache.giraph.graph;
 
+import com.google.common.collect.Lists;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.utils.DynamicChannelBufferInputStream;
-import org.apache.giraph.utils.DynamicChannelBufferOutputStream;
-import org.apache.giraph.utils.SystemTime;
-import org.apache.giraph.utils.Time;
-import org.apache.giraph.utils.Times;
-import org.apache.giraph.utils.UnsafeByteArrayInputStream;
-import org.apache.giraph.utils.UnsafeByteArrayOutputStream;
-import org.apache.giraph.utils.WritableUtils;
+import org.apache.giraph.utils.*;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
@@ -34,20 +28,14 @@ import org.apache.hadoop.io.LongWritable;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-
 import java.io.IOException;
 import java.util.Collection;
-import java.util.Map;
+import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 /**
- * Test all the mutable vertices
+ * Test all the mutable vertices (except multigraph versions)
  */
 public class TestMutableVertex {
   /** Number of repetitions */
@@ -147,18 +135,19 @@ public class TestMutableVertex {
         FloatWritable, DoubleWritable, LongWritable> vertex =
         testInstantiateVertexClass(vertexClass);
 
-    Map<IntWritable, DoubleWritable> edgeMap = Maps.newHashMap();
+    List<Edge<IntWritable, DoubleWritable>> edges = Lists.newLinkedList();
     for (int i = 1000; i > 0; --i) {
-      edgeMap.put(new IntWritable(i), new DoubleWritable(i * 2.0));
+      edges.add(new Edge<IntWritable, DoubleWritable>(
+          new IntWritable(i), new DoubleWritable(i * 2.0)));
     }
-    vertex.initialize(null, null, edgeMap);
+
+    vertex.initialize(null, null, edges);
     assertEquals(vertex.getNumEdges(), 1000);
     for (Edge<IntWritable, DoubleWritable> edge : vertex.getEdges()) {
       assertEquals(edge.getValue().get(),
           edge.getTargetVertexId().get() * 2.0d, 0d);
     }
-    assertEquals(vertex.removeEdge(new IntWritable(500)),
-        new DoubleWritable(1000));
+    assertEquals(vertex.removeEdges(new IntWritable(500)), 1);
     assertEquals(vertex.getNumEdges(), 999);
   }
 
@@ -181,16 +170,17 @@ public class TestMutableVertex {
         FloatWritable, DoubleWritable, LongWritable> vertex =
         testInstantiateVertexClass(vertexClass);
 
-    Map<IntWritable, DoubleWritable> edgeMap = Maps.newHashMap();
+    List<Edge<IntWritable, DoubleWritable>> edges = Lists.newLinkedList();
     for (int i = 1000; i > 0; --i) {
-      edgeMap.put(new IntWritable(i), new DoubleWritable(i * 3.0));
+      edges.add(new Edge<IntWritable, DoubleWritable>(
+          new IntWritable(i), new DoubleWritable(i * 3.0)));
     }
-    vertex.initialize(null, null, edgeMap);
+
+    vertex.initialize(null, null, edges);
     assertEquals(vertex.getNumEdges(), 1000);
     assertEquals(vertex.getEdgeValue(new IntWritable(600)),
         new DoubleWritable(600 * 3.0));
-    assertEquals(vertex.removeEdge(new IntWritable(600)),
-        new DoubleWritable(600 * 3.0));
+    assertEquals(vertex.removeEdges(new IntWritable(600)), 1);
     assertEquals(vertex.getNumEdges(), 999);
     assertEquals(vertex.getEdgeValue(new IntWritable(500)),
         new DoubleWritable(500 * 3.0));
@@ -218,20 +208,23 @@ public class TestMutableVertex {
         FloatWritable, DoubleWritable, LongWritable> vertex =
         testInstantiateVertexClass(vertexClass);
 
-    Map<IntWritable, DoubleWritable> edgeMap = Maps.newHashMap();
-    vertex.initialize(null, null, edgeMap);
+    vertex.initialize(new IntWritable(0), new FloatWritable(0.0f));
     assertEquals(vertex.getNumEdges(), 0);
-    assertTrue(vertex.addEdge(new IntWritable(2),
-        new DoubleWritable(2.0)));
+    assertTrue(vertex.addEdge(new Edge<IntWritable, DoubleWritable>(
+        new IntWritable(2),
+        new DoubleWritable(2.0))));
     assertEquals(vertex.getNumEdges(), 1);
     assertEquals(vertex.getEdgeValue(new IntWritable(2)),
         new DoubleWritable(2.0));
-    assertTrue(vertex.addEdge(new IntWritable(4),
-        new DoubleWritable(4.0)));
-    assertTrue(vertex.addEdge(new IntWritable(3),
-        new DoubleWritable(3.0)));
-    assertTrue(vertex.addEdge(new IntWritable(1),
-        new DoubleWritable(1.0)));
+    assertTrue(vertex.addEdge(new Edge<IntWritable, DoubleWritable>(
+        new IntWritable(4),
+        new DoubleWritable(4.0))));
+    assertTrue(vertex.addEdge(new Edge<IntWritable, DoubleWritable>(
+        new IntWritable(3),
+        new DoubleWritable(3.0))));
+    assertTrue(vertex.addEdge(new Edge<IntWritable, DoubleWritable>(
+        new IntWritable(1),
+        new DoubleWritable(1.0))));
     assertEquals(vertex.getNumEdges(), 4);
     assertNull(vertex.getEdgeValue(new IntWritable(5)));
     assertNull(vertex.getEdgeValue(new IntWritable(0)));
@@ -239,13 +232,13 @@ public class TestMutableVertex {
       assertEquals(edge.getTargetVertexId().get() * 1.0d,
           edge.getValue().get(), 0d);
     }
-    assertNotNull(vertex.removeEdge(new IntWritable(1)));
+    assertEquals(vertex.removeEdges(new IntWritable(1)), 1);
     assertEquals(vertex.getNumEdges(), 3);
-    assertNotNull(vertex.removeEdge(new IntWritable(3)));
+    assertEquals(vertex.removeEdges(new IntWritable(3)), 1);
     assertEquals(vertex.getNumEdges(), 2);
-    assertNotNull(vertex.removeEdge(new IntWritable(2)));
+    assertEquals(vertex.removeEdges(new IntWritable(2)), 1);
     assertEquals(vertex.getNumEdges(), 1);
-    assertNotNull(vertex.removeEdge(new IntWritable(4)));
+    assertEquals(vertex.removeEdges(new IntWritable(4)), 1);
     assertEquals(vertex.getNumEdges(), 0);
   }
 
@@ -274,11 +267,13 @@ public class TestMutableVertex {
         testInstantiateVertexClass(vertexClass);
 
     final int edgesCount = 200;
-    Map<IntWritable, DoubleWritable> edgeMap = Maps.newHashMap();
+    List<Edge<IntWritable, DoubleWritable>> edges =
+        Lists.newArrayListWithCapacity(edgesCount);
     for (int i = edgesCount; i > 0; --i) {
-      edgeMap.put(new IntWritable(i), new DoubleWritable(i * 2.0));
+      edges.add(new Edge<IntWritable, DoubleWritable>(
+          new IntWritable(i), new DoubleWritable(i * 2.0)));
     }
-    vertex.initialize(new IntWritable(2), new FloatWritable(3.0f), edgeMap);
+    vertex.initialize(new IntWritable(2), new FloatWritable(3.0f), edges);
     return vertex;
   }
 

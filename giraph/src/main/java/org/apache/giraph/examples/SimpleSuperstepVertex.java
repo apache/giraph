@@ -18,6 +18,7 @@
 
 package org.apache.giraph.examples;
 
+import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexReader;
@@ -31,10 +32,10 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.log4j.Logger;
 
-import com.google.common.collect.Maps;
+import com.google.common.collect.Lists;
 
 import java.io.IOException;
-import java.util.Map;
+import java.util.List;
 
 /**
  * Just a simple Vertex compute implementation that executes 3 supersteps, then
@@ -91,14 +92,15 @@ public class SimpleSuperstepVertex extends
       LongWritable vertexId = new LongWritable(tmpId);
       IntWritable vertexValue =
           new IntWritable((int) (vertexId.get() * 10));
-      Map<LongWritable, FloatWritable> edgeMap = Maps.newHashMap();
+      List<Edge<LongWritable, FloatWritable>> edges = Lists.newLinkedList();
       long targetVertexId =
           (vertexId.get() + 1) %
           (inputSplit.getNumSplits() * totalRecords);
       float edgeValue = vertexId.get() * 100f;
-      edgeMap.put(new LongWritable(targetVertexId),
-          new FloatWritable(edgeValue));
-      vertex.initialize(vertexId, vertexValue, edgeMap);
+      edges.add(new Edge<LongWritable, FloatWritable>(
+          new LongWritable(targetVertexId),
+          new FloatWritable(edgeValue)));
+      vertex.initialize(vertexId, vertexValue, edges);
       ++recordsRead;
       if (LOG.isInfoEnabled()) {
         LOG.info("next: Return vertexId=" + vertex.getId().get() +

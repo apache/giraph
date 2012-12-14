@@ -33,9 +33,7 @@ import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Tests {@link IntIntNullIntVertex}.
@@ -54,10 +52,11 @@ public class TestIntIntNullIntVertex {
   public void testSerialize() throws IOException {
     IntIntNullIntVertex vertex = new MyIntIntNullVertex();
 
-    Map<IntWritable, NullWritable> edges =
-        new HashMap<IntWritable, NullWritable>();
-    edges.put(new IntWritable(3), NullWritable.get());
-    edges.put(new IntWritable(47), NullWritable.get());
+    List<Edge<IntWritable, NullWritable>> edges = Lists.newLinkedList();
+    edges.add(new Edge<IntWritable, NullWritable>(new IntWritable(3),
+        NullWritable.get()));
+    edges.add(new Edge<IntWritable, NullWritable>(new IntWritable(47),
+        NullWritable.get()));
 
     vertex.initialize(new IntWritable(23), new IntWritable(7), edges);
     vertex.voteToHalt();

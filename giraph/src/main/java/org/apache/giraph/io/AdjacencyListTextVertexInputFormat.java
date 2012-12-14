@@ -17,7 +17,6 @@
  */
 package org.apache.giraph.io;
 
-import org.apache.giraph.graph.BspUtils;
 import org.apache.giraph.graph.Edge;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
@@ -26,10 +25,10 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
-import com.google.common.collect.Maps;
+import com.google.common.collect.Lists;
 
 import java.io.IOException;
-import java.util.Map;
+import java.util.List;
 
 /**
  * VertexReader that readers lines of text with vertices encoded as adjacency
@@ -132,54 +131,51 @@ public abstract class AdjacencyListTextVertexInputFormat<I extends
 
     @Override
     protected I getId(String[] values) throws IOException {
-      I vertexId = BspUtils.<I>createVertexId(conf);
-      decodeId(values[0], vertexId);
-      return vertexId;
+      return decodeId(values[0]);
     }
 
     /**
-     * Store the Id for this line in an instance of its correct type.
+     * Decode the id for this line into an instance of its correct type.
      *
      * @param s Id of vertex from line
-     * @param id Instance of Id's type, in which to store its value
+     * @return Vertex id
      */
-    public abstract void decodeId(String s, I id);
+    public abstract I decodeId(String s);
 
     @Override
     protected V getValue(String[] values) throws IOException {
-      V value = BspUtils.<V>createVertexValue(conf);
-      decodeValue(values[1], value);
-      return value;
+      return decodeValue(values[1]);
     }
 
 
     /**
-     * Store the value for this line in an instance of its correct type.
+     * Decode the value for this line into an instance of its correct type.
+     *
      * @param s Value from line
-     * @param value Instance of value's type, in which to store its value
+     * @return Vertex value
      */
-    public abstract void decodeValue(String s, V value);
+    public abstract V decodeValue(String s);
 
     @Override
-    protected Map<I, E> getEdges(String[] values) throws IOException {
+    protected Iterable<Edge<I, E>> getEdges(String[] values) throws
+        IOException {
       int i = 2;
-      Map<I, E> edges = Maps.newHashMap();
-      Edge<I, E> edge = new Edge<I, E>();
+      List<Edge<I, E>> edges = Lists.newLinkedList();
       while (i < values.length) {
-        decodeEdge(values[i], values[i + 1], edge);
-        edges.put(edge.getTargetVertexId(), edge.getValue());
+        edges.add(decodeEdge(values[i], values[i + 1]));
         i += 2;
       }
       return edges;
     }
 
     /**
-     * Store an edge from the line into an instance of a correctly typed Edge
+     * Decode an edge from the line into an instance of a correctly typed Edge
+     *
      * @param id The edge's id from the line
      * @param value The edge's value from the line
-     * @param edge Instance of edge in which to store the id and value
+     * @return Edge with given target id and value
      */
-    public abstract void decodeEdge(String id, String value, Edge<I, E> edge);
+    public abstract Edge<I, E> decodeEdge(String id, String value);
 
   }
 }

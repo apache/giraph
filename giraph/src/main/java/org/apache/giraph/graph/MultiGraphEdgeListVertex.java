@@ -20,53 +20,42 @@ package org.apache.giraph.graph;
 
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.log4j.Logger;
 
 import java.util.Iterator;
 
 /**
- * User applications can subclass {@link EdgeListVertex}, which stores
- * the outbound edges in an ArrayList (less memory as the cost of expensive
- * random-access lookup).  Good for static graphs.  Not nearly as memory
- * efficient as using RepresentativeVertex + ByteArrayPartition
- * (probably about 10x more), but not bad when keeping vertices as objects in
- * memory (SimplePartition).
+ * An edge-list backed vertex that allows for parallel edges.
+ * This can be used not only to support mutable multigraphs,
+ * but also to make mutations and edge-based input efficient without
+ * resorting to a hash-map backed vertex.
  *
- * @param <I> Vertex index value
+ * Note: removeEdge() here removes all edges pointing to the target vertex,
+ * but returns only one of them (or null if there are no such edges).
+ *
+ * @param <I> Vertex id
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message value
+ * @param <M> Message data
  */
-@SuppressWarnings("rawtypes")
-public abstract class EdgeListVertex<I extends WritableComparable,
+public abstract class MultiGraphEdgeListVertex<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
     extends EdgeListVertexBase<I, V, E, M> {
-  /** Class logger */
-  private static final Logger LOG = Logger.getLogger(EdgeListVertex.class);
   @Override
   public final boolean addEdge(Edge<I, E> edge) {
-    for (Edge<I, E> currentEdge : getEdges()) {
-      if (currentEdge.getTargetVertexId().equals(edge.getTargetVertexId())) {
-        LOG.warn("addEdge: Vertex=" + getId() +
-            ": already added an edge value for target vertex id " +
-            edge.getTargetVertexId());
-        return false;
-      }
-    }
     appendEdge(edge);
     return true;
   }
 
   @Override
   public int removeEdges(I targetVertexId) {
+    int removedCount = 0;
     for (Iterator<Edge<I, E>> edges = getEdges().iterator(); edges.hasNext();) {
       Edge<I, E> edge = edges.next();
       if (edge.getTargetVertexId().equals(targetVertexId)) {
+        ++removedCount;
         edges.remove();
-        return 1;
       }
     }
-    return 0;
+    return removedCount;
   }
 }
-

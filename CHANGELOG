@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-141: Multigraph support in Giraph (apresta)
+        
   GIRAPH-452: Fix hcatalog jar (nitay)
 
   GIRAPH-450: post-review not working after switch to git (nitay)

@@ -18,6 +18,7 @@
 
 package org.apache.giraph.graph;
 
+import com.google.common.collect.Iterables;
 import org.apache.giraph.utils.UnmodifiableIntArrayIterator;
 import org.apache.hadoop.io.IntWritable;
 
@@ -25,7 +26,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Iterator;
-import java.util.Set;
 
 /**
  * Simple implementation of {@link Vertex} using an int as id, value and
@@ -38,12 +38,13 @@ public abstract class IntIntNullIntVertex extends
   private int[] neighbors;
 
   @Override
-  public void setNeighbors(Set<IntWritable> neighborSet) {
-    neighbors = new int[(neighborSet != null) ? neighborSet.size() : 0];
+  public void setNeighbors(Iterable<IntWritable> neighbors) {
+    this.neighbors =
+        new int[(neighbors != null) ? Iterables.size(neighbors) : 0];
     int n = 0;
-    if (neighborSet != null) {
-      for (IntWritable neighbor : neighborSet) {
-        neighbors[n++] = neighbor.get();
+    if (neighbors != null) {
+      for (IntWritable neighbor : neighbors) {
+        this.neighbors[n++] = neighbor.get();
       }
     }
   }

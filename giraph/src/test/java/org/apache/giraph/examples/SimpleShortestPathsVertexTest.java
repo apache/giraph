@@ -18,7 +18,11 @@
 
 package org.apache.giraph.examples;
 
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import org.apache.giraph.conf.GiraphClasses;
+import org.apache.giraph.graph.Edge;
 import org.apache.giraph.io.JsonLongDoubleFloatDoubleVertexInputFormat;
 import org.apache.giraph.io.JsonLongDoubleFloatDoubleVertexOutputFormat;
 import org.apache.giraph.utils.InternalVertexRunner;
@@ -31,15 +35,9 @@ import org.json.JSONException;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 /**
  * Contains a simple unit test for {@link SimpleShortestPathsVertex}
@@ -54,8 +52,10 @@ public class SimpleShortestPathsVertexTest {
 
     SimpleShortestPathsVertex vertex = new SimpleShortestPathsVertex();
     vertex.initialize(null, null);
-    vertex.addEdge(new LongWritable(10L), new FloatWritable(2.5f));
-    vertex.addEdge(new LongWritable(20L), new FloatWritable(0.5f));
+    vertex.addEdge(new Edge<LongWritable, FloatWritable>(
+        new LongWritable(10L), new FloatWritable(2.5f)));
+    vertex.addEdge(new Edge<LongWritable, FloatWritable>(
+        new LongWritable(20L), new FloatWritable(0.5f)));
 
     MockUtils.MockedEnvironment<LongWritable, DoubleWritable, FloatWritable,
     DoubleWritable> env = MockUtils.prepareVertex(vertex, 1L,
@@ -84,9 +84,11 @@ public class SimpleShortestPathsVertexTest {
   public void testOnNoShorterPathFound() throws Exception {
 
     SimpleShortestPathsVertex vertex = new SimpleShortestPathsVertex();
-    vertex.initialize(null, null);
-    vertex.addEdge(new LongWritable(10L), new FloatWritable(2.5f));
-    vertex.addEdge(new LongWritable(20L), new FloatWritable(0.5f));
+    vertex.initialize(new LongWritable(0), new DoubleWritable(0.0));
+    vertex.addEdge(new Edge<LongWritable, FloatWritable>(
+        new LongWritable(10L), new FloatWritable(2.5f)));
+    vertex.addEdge(new Edge<LongWritable, FloatWritable>(
+        new LongWritable(20L), new FloatWritable(0.5f)));
 
     MockUtils.MockedEnvironment<LongWritable, DoubleWritable, FloatWritable,
     DoubleWritable> env = MockUtils.prepareVertex(vertex, 1L,

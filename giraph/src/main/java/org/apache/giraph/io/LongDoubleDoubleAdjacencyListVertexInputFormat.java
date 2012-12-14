@@ -62,22 +62,22 @@ public class LongDoubleDoubleAdjacencyListVertexInputFormat<M extends Writable>
     }
 
     @Override
-    public void decodeId(String s, LongWritable id) {
-      id.set(Long.valueOf(s));
+    public LongWritable decodeId(String s) {
+      return new LongWritable(Long.valueOf(s));
     }
 
     @Override
-    public void decodeValue(String s, DoubleWritable value) {
-      value.set(Double.valueOf(s));
+    public DoubleWritable decodeValue(String s) {
+      return new DoubleWritable(Double.valueOf(s));
     }
 
     @Override
-    public void decodeEdge(
+    public Edge<LongWritable, DoubleWritable> decodeEdge(
         String s1,
-        String s2,
-        Edge<LongWritable, DoubleWritable> textIntWritableEdge) {
-      textIntWritableEdge.setTargetVertexId(new LongWritable(Long.valueOf(s1)));
-      textIntWritableEdge.setValue(new DoubleWritable(Double.valueOf(s2)));
+        String s2) {
+      return new Edge<LongWritable, DoubleWritable>(
+          new LongWritable(Long.valueOf(s1)),
+          new DoubleWritable(Double.valueOf(s2)));
     }
   }
 

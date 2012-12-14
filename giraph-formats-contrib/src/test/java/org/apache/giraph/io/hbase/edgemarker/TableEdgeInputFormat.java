@@ -17,10 +17,10 @@
  */
 package org.apache.giraph.io.hbase.edgemarker;
 
-import com.google.common.collect.Maps;
-import org.apache.giraph.io.hbase.HBaseVertexInputFormat;
+import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexReader;
+import org.apache.giraph.io.hbase.HBaseVertexInputFormat;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Text;
@@ -28,8 +28,10 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.log4j.Logger;
 
+import com.google.common.collect.Lists;
+
 import java.io.IOException;
-import java.util.Map;
+import java.util.List;
 
 /*
   Test subclass for HBaseVertexInputFormat. Reads a simple
@@ -80,11 +82,11 @@ public class TableEdgeInputFormat extends
             Vertex<Text, Text, Text, Text> vertex =
                 getConfiguration().createVertex();
             Text vertexId = new Text(Bytes.toString(row.getRow()));
-            Map<Text, Text> edges = Maps.newHashMap();
+            List<Edge<Text, Text>> edges = Lists.newLinkedList();
             String edge = Bytes.toString(row.getValue(CF, CHILDREN));
             Text vertexValue = new Text();
             Text edgeId = new Text(edge);
-            edges.put(edgeId, uselessEdgeValue);
+            edges.add(new Edge<Text, Text>(edgeId, uselessEdgeValue));
             vertex.initialize(vertexId, vertexValue, edges);
 
             return vertex;

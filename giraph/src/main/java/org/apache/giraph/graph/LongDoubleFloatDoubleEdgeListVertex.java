@@ -18,16 +18,15 @@
 
 package org.apache.giraph.graph;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.util.Map;
-import java.util.Map.Entry;
-
+import com.google.common.collect.Iterables;
 import org.apache.giraph.utils.UnmodifiableLongFloatEdgeArrayIterable;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 
 /**
  * Compact vertex representation with primitive arrays.
@@ -44,35 +43,28 @@ public abstract class LongDoubleFloatDoubleEdgeListVertex extends
   private float[] edgeWeights;
 
   @Override
-  public void initialize(LongWritable vertexId, DoubleWritable vertexValue,
-                         Map<LongWritable, FloatWritable> edges) {
-    if (vertexId != null) {
-      id = vertexId.get();
-    }
-    if (vertexValue != null) {
-      value = vertexValue.get();
-    }
-    neighbors = new long[(edges != null) ? edges.size() : 0];
-    edgeWeights = new float[(edges != null) ? edges.size() : 0];
-    if (edges != null) {
-      int n = 0;
-      for (Entry<LongWritable, FloatWritable> neighbor : edges.entrySet()) {
-        neighbors[n] = neighbor.getKey().get();
-        edgeWeights[n] = neighbor.getValue().get();
-        n++;
-      }
-    }
+  public void initialize(LongWritable vertexId, DoubleWritable vertexValue) {
+    id = vertexId.get();
+    value = vertexValue.get();
   }
 
   @Override
-  public void setEdges(Map<LongWritable, FloatWritable> edges) {
-    neighbors = new long[(edges != null) ? edges.size() : 0];
-    edgeWeights = new float[(edges != null) ? edges.size() : 0];
+  public void initialize(LongWritable vertexId, DoubleWritable vertexValue,
+                         Iterable<Edge<LongWritable, FloatWritable>> edges) {
+    id = vertexId.get();
+    value = vertexValue.get();
+    setEdges(edges);
+  }
+
+  @Override
+  public void setEdges(Iterable<Edge<LongWritable, FloatWritable>> edges) {
+    neighbors = new long[(edges != null) ? Iterables.size(edges) : 0];
+    edgeWeights = new float[(edges != null) ? Iterables.size(edges) : 0];
+    int n = 0;
     if (edges != null) {
-      int n = 0;
-      for (Entry<LongWritable, FloatWritable> neighbor : edges.entrySet()) {
-        neighbors[n] = neighbor.getKey().get();
-        edgeWeights[n] = neighbor.getValue().get();
+      for (Edge<LongWritable, FloatWritable> edge : edges) {
+        neighbors[n] = edge.getTargetVertexId().get();
+        edgeWeights[n] = edge.getValue().get();
         n++;
       }
     }

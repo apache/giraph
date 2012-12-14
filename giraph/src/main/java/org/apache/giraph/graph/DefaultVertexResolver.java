@@ -87,12 +87,7 @@ public class DefaultVertexResolver<I extends WritableComparable,
     if (hasEdgeRemovals(vertexChanges)) {
       MutableVertex<I, V, E, M> mv = (MutableVertex<I, V, E, M>) vertex;
       for (I removedDestVertex : vertexChanges.getRemovedEdgeList()) {
-        E removeEdge = mv.removeEdge(removedDestVertex);
-        if (removeEdge == null) {
-          LOG.warn("resolve: Failed to remove edge with " +
-              "destination " + removedDestVertex + "on " +
-              vertex + " since it doesn't exist.");
-        }
+        mv.removeEdges(removedDestVertex);
       }
     }
   }
@@ -161,7 +156,7 @@ public class DefaultVertexResolver<I extends WritableComparable,
     if (hasEdgeAdditions(vertexChanges)) {
       MutableVertex<I, V, E, M> mv = (MutableVertex<I, V, E, M>) vertex;
       for (Edge<I, E> edge : vertexChanges.getAddedEdgeList()) {
-        mv.addEdge(edge.getTargetVertexId(), edge.getValue());
+        mv.addEdge(edge);
       }
     }
   }

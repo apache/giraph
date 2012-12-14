@@ -18,13 +18,12 @@
 
 package org.apache.giraph.graph;
 
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-import org.apache.log4j.Logger;
-
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
+import org.apache.log4j.Logger;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -56,17 +55,20 @@ public abstract class HashMapVertex<I extends WritableComparable,
   protected Map<I, E> edgeMap = new HashMap<I, E>();
 
   @Override
-  public void setEdges(Map<I, E> edges) {
-    edgeMap.putAll(edges);
+  public void setEdges(Iterable<Edge<I, E>> edges) {
+    edgeMap.clear();
+    for (Edge<I, E> edge : edges) {
+      edgeMap.put(edge.getTargetVertexId(), edge.getValue());
+    }
   }
 
   @Override
-  public boolean addEdge(I targetVertexId, E value) {
-    if (edgeMap.put(targetVertexId, value) != null) {
+  public boolean addEdge(Edge<I, E> edge) {
+    if (edgeMap.put(edge.getTargetVertexId(), edge.getValue()) != null) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("addEdge: Vertex=" + getId() +
             ": already added an edge value for target vertex id " +
-            targetVertexId);
+            edge.getTargetVertexId());
       }
       return false;
     } else {
@@ -108,8 +110,8 @@ public abstract class HashMapVertex<I extends WritableComparable,
   }
 
   @Override
-  public E removeEdge(I targetVertexId) {
-    return edgeMap.remove(targetVertexId);
+  public int removeEdges(I targetVertexId) {
+    return edgeMap.remove(targetVertexId) != null ? 1 : 0;
   }
 
   @Override

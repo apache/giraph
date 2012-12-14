@@ -17,38 +17,25 @@
  */
 package org.apache.giraph.io;
 
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import org.apache.giraph.conf.GiraphConstants;
-import org.apache.giraph.graph.BspUtils;
-import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.EdgeListVertex;
-import org.apache.giraph.graph.GraphState;
-import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.graph.*;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.BooleanWritable;
-import org.apache.hadoop.io.DoubleWritable;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -138,13 +125,7 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat extends
       throws Exception {
     Vertex<I, V, E, M> expected = BspUtils.createVertex(conf);
     setGraphState(expected, graphState);
-
-    // FIXME! maybe can't work if not instantiated properly
-    Map<I, E> edgeMap = Maps.newHashMap();
-    for(Edge<I, E> edge : edges) {
-      edgeMap.put(edge.getTargetVertexId(), edge.getValue());
-    }
-    expected.initialize(expectedId, expectedValue, edgeMap);
+    expected.initialize(expectedId, expectedValue, Arrays.asList(edges));
     assertValid(expected, actual);
   }
 

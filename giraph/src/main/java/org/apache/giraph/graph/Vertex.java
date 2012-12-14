@@ -18,6 +18,8 @@
 
 package org.apache.giraph.graph;
 
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfigurable;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.partition.PartitionOwner;
@@ -25,14 +27,11 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 
-import com.google.common.collect.Iterables;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.List;
 
 /**
  * Basic interface for writing a BSP application for computation.
@@ -66,9 +65,9 @@ public abstract class Vertex<I extends WritableComparable,
    *
    * @param id Will be the vertex id
    * @param value Will be the vertex value
-   * @param edges A map of destination vertex ids to edge values
+   * @param edges Iterable of edges
    */
-  public void initialize(I id, V value, Map<I, E> edges) {
+  public void initialize(I id, V value, Iterable<Edge<I, E>> edges) {
     this.id = id;
     this.value = value;
     setEdges(edges);
@@ -84,15 +83,15 @@ public abstract class Vertex<I extends WritableComparable,
   public void initialize(I id, V value) {
     this.id = id;
     this.value = value;
-    setEdges(Collections.<I, E>emptyMap());
+    setEdges(Collections.<Edge<I, E>>emptyList());
   }
 
   /**
    * Set the outgoing edges for this vertex.
    *
-   * @param edges Map of destination vertices to edge values
+   * @param edges Iterable of edges
    */
-  public abstract void setEdges(Map<I, E> edges);
+  public abstract void setEdges(Iterable<Edge<I, E>> edges);
 
   /**
    * Must be defined by user to do computation on a single Vertex.
@@ -350,13 +349,13 @@ public abstract class Vertex<I extends WritableComparable,
     vertexValue.readFields(in);
 
     int numEdges = in.readInt();
-    Map<I, E> edges = new HashMap<I, E>(numEdges);
+    List<Edge<I, E>> edges = Lists.newArrayListWithCapacity(numEdges);
     for (int i = 0; i < numEdges; ++i) {
       I targetVertexId = (I) getConf().createVertexId();
       targetVertexId.readFields(in);
       E edgeValue = (E) getConf().createEdgeValue();
       edgeValue.readFields(in);
-      edges.put(targetVertexId, edgeValue);
+      edges.add(new Edge<I, E>(targetVertexId, edgeValue));
     }
 
     initialize(vertexId, vertexValue, edges);

@@ -18,11 +18,8 @@
 
 package org.apache.giraph.examples;
 
-import java.io.IOException;
-import java.util.Map;
-import java.util.regex.Pattern;
-
 import org.apache.giraph.graph.BspUtils;
+import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.TextVertexInputFormat;
 import org.apache.hadoop.io.DoubleWritable;
@@ -31,7 +28,11 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
-import com.google.common.collect.Maps;
+import com.google.common.collect.Lists;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * Simple text-based {@link org.apache.giraph.graph.VertexInputFormat} for
@@ -68,12 +69,13 @@ public class LongDoubleFloatDoubleTextInputFormat
 
       String[] tokens =
           separator.split(getRecordReader().getCurrentValue().toString());
-      Map<LongWritable, FloatWritable> edges =
-          Maps.newHashMapWithExpectedSize(tokens.length - 1);
+      List<Edge<LongWritable, FloatWritable>> edges =
+          Lists.newArrayListWithCapacity(tokens.length - 1);
       float weight = 1.0f / (tokens.length - 1);
       for (int n = 1; n < tokens.length; n++) {
-        edges.put(new LongWritable(Long.parseLong(tokens[n])),
-            new FloatWritable(weight));
+        edges.add(new Edge<LongWritable, FloatWritable>(
+            new LongWritable(Long.parseLong(tokens[n])),
+            new FloatWritable(weight)));
       }
 
       LongWritable vertexId = new LongWritable(Long.parseLong(tokens[0]));

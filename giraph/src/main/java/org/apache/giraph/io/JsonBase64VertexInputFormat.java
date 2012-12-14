@@ -18,6 +18,7 @@
 
 package org.apache.giraph.io;
 
+import org.apache.giraph.graph.Edge;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -27,14 +28,14 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import com.google.common.collect.Maps;
+import com.google.common.collect.Lists;
 import net.iharder.Base64;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.IOException;
-import java.util.Map;
+import java.util.List;
 
 /**
  * Simple way to represent the structure of the graph with a JSON object.
@@ -114,7 +115,8 @@ public class JsonBase64VertexInputFormat<I extends WritableComparable,
     }
 
     @Override
-    protected Map<I, E> getEdges(JSONObject vertexObject) throws IOException {
+    protected Iterable<Edge<I, E>> getEdges(JSONObject vertexObject) throws
+    IOException {
       JSONArray edgeArray = null;
       try {
         edgeArray = vertexObject.getJSONArray(
@@ -124,7 +126,8 @@ public class JsonBase64VertexInputFormat<I extends WritableComparable,
           "next: Failed to get edge array", e);
       }
       byte[] decodedWritable;
-      Map<I, E> edgeMap = Maps.newHashMap();
+      List<Edge<I, E>> edges = Lists.newArrayListWithCapacity(
+          edgeArray.length());
       for (int i = 0; i < edgeArray.length(); ++i) {
         try {
           decodedWritable = Base64.decode(edgeArray.getString(i));
@@ -138,9 +141,9 @@ public class JsonBase64VertexInputFormat<I extends WritableComparable,
         targetVertexId.readFields(input);
         E edgeValue = getConf().createEdgeValue();
         edgeValue.readFields(input);
-        edgeMap.put(targetVertexId, edgeValue);
+        edges.add(new Edge<I, E>(targetVertexId, edgeValue));
       }
-      return edgeMap;
+      return edges;
     }
 
   }

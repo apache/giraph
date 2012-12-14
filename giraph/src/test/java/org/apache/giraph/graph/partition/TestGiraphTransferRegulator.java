@@ -17,9 +17,7 @@
  */
 package org.apache.giraph.graph.partition;
 
-import com.google.common.collect.Maps;
-import java.io.IOException;
-import java.util.Map;
+import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.EdgeListVertex;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.GiraphTransferRegulator;
@@ -32,9 +30,13 @@ import org.junit.Test;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+
+import com.google.common.collect.Lists;
+
+import java.io.IOException;
+import java.util.List;
 
 /**
  * Test the GiraphTransferRegulator.
@@ -71,11 +73,14 @@ public class TestGiraphTransferRegulator {
         .setInt(GiraphTransferRegulator.MAX_VERTICES_PER_TRANSFER, 1);
     job.getConfiguration()
         .setInt(GiraphTransferRegulator.MAX_EDGES_PER_TRANSFER, 3);
-    Map<IntWritable, DoubleWritable> edgeMap = Maps.newHashMap();
-    edgeMap.put(new IntWritable(2), new DoubleWritable(22));
-    edgeMap.put(new IntWritable(3), new DoubleWritable(33));
-    edgeMap.put(new IntWritable(4), new DoubleWritable(44));
-    vertex.initialize(null, null, edgeMap);
+    List<Edge<IntWritable, DoubleWritable>> edges = Lists.newLinkedList();
+    edges.add(new Edge<IntWritable, DoubleWritable>(new IntWritable(2),
+        new DoubleWritable(22)));
+    edges.add(new Edge<IntWritable, DoubleWritable>(new IntWritable(3),
+        new DoubleWritable(33)));
+    edges.add(new Edge<IntWritable, DoubleWritable>(new IntWritable(4),
+        new DoubleWritable(44)));
+    vertex.initialize(null, null, edges);
     GiraphTransferRegulator gtr =
         new GiraphTransferRegulator(job.getConfiguration());
     PartitionOwner owner = mock(PartitionOwner.class);

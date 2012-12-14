@@ -185,6 +185,9 @@ public class VerifyMessage {
       for (Edge<LongWritable, FloatWritable> edge : getEdges()) {
         FloatWritable newEdgeValue = new FloatWritable(
             edge.getValue().get() + (float) vertexValue);
+        Edge<LongWritable, FloatWritable> newEdge =
+            new Edge<LongWritable, FloatWritable>(edge.getTargetVertexId(),
+                newEdgeValue);
         if (LOG.isDebugEnabled()) {
           LOG.debug("compute: vertex " + getId() +
               " sending edgeValue " + edge.getValue() +
@@ -193,7 +196,7 @@ public class VerifyMessage {
               " to vertex " + edge.getTargetVertexId() +
               " on superstep " + getSuperstep());
         }
-        addEdge(edge.getTargetVertexId(), newEdgeValue);
+        addEdge(newEdge);
         sendMessage(edge.getTargetVertexId(),
             new VerifiableMessage(
                 getSuperstep(), getId().get(), newEdgeValue.get()));

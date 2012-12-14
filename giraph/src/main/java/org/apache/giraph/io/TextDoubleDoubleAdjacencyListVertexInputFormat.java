@@ -44,8 +44,6 @@ public class TextDoubleDoubleAdjacencyListVertexInputFormat<M extends Writable>
   /**
    * Vertex reader used with
    * {@link TextDoubleDoubleAdjacencyListVertexInputFormat}
-   *
-   * @param <M> Message type.
    */
   protected class TextDoubleDoubleAdjacencyListVertexReader extends
       AdjacencyListTextVertexReader {
@@ -61,20 +59,19 @@ public class TextDoubleDoubleAdjacencyListVertexInputFormat<M extends Writable>
     }
 
     @Override
-    public void decodeId(String s, Text id) {
-      id.set(s);
+    public Text decodeId(String s) {
+      return new Text(s);
     }
 
     @Override
-    public void decodeValue(String s, DoubleWritable value) {
-      value.set(Double.valueOf(s));
+    public DoubleWritable decodeValue(String s) {
+      return new DoubleWritable(Double.valueOf(s));
     }
 
     @Override
-    public void decodeEdge(String s1, String s2,
-                           Edge<Text, DoubleWritable> textIntWritableEdge) {
-      textIntWritableEdge.setTargetVertexId(new Text(s1));
-      textIntWritableEdge.setValue(new DoubleWritable(Double.valueOf(s2)));
+    public Edge<Text, DoubleWritable> decodeEdge(String s1, String s2) {
+      return new Edge<Text, DoubleWritable>(new Text(s1),
+          new DoubleWritable(Double.valueOf(s2)));
     }
   }
 

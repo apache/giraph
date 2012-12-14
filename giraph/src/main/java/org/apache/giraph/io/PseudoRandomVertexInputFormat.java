@@ -20,6 +20,7 @@ package org.apache.giraph.io;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.BspInputSplit;
+import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexInputFormat;
 import org.apache.giraph.graph.VertexReader;
@@ -31,13 +32,14 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.log4j.Logger;
 
-import com.google.common.collect.Maps;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 
 /**
  * This VertexInputFormat is meant for large scale testing.  It allows the user
@@ -51,10 +53,10 @@ public class PseudoRandomVertexInputFormat<M extends Writable> extends
     VertexInputFormat<LongWritable, DoubleWritable, DoubleWritable, M> {
   /** Set the number of aggregate vertices. */
   public static final String AGGREGATE_VERTICES =
-      "pseudoRandomVertexReader.aggregateVertices";
+      "pseudoRandomVertexInputFormat.aggregateVertices";
   /** Set the number of edges per vertex (pseudo-random destination). */
   public static final String EDGES_PER_VERTEX =
-      "pseudoRandomVertexReader.edgesPerVertex";
+      "pseudoRandomVertexInputFormat.edgesPerVertex";
 
   @Override
   public final List<InputSplit> getSplits(final JobContext context,
@@ -159,16 +161,19 @@ public class PseudoRandomVertexInputFormat<M extends Writable> extends
       // same.
       Random rand = new Random(vertexId);
       DoubleWritable vertexValue = new DoubleWritable(rand.nextDouble());
-      Map<LongWritable, DoubleWritable> edges =
-          Maps.newHashMapWithExpectedSize((int) edgesPerVertex);
+      List<Edge<LongWritable, DoubleWritable>> edges =
+          Lists.newArrayListWithCapacity((int) edgesPerVertex);
+      Set<LongWritable> destVertices = Sets.newHashSet();
       for (long i = 0; i < edgesPerVertex; ++i) {
         LongWritable destVertexId = null;
         do {
           destVertexId =
             new LongWritable(Math.abs(rand.nextLong()) %
               aggregateVertices);
-        } while (edges.containsKey(destVertexId));
-        edges.put(destVertexId, new DoubleWritable(rand.nextDouble()));
+        } while (destVertices.contains(destVertexId));
+        edges.add(new Edge<LongWritable, DoubleWritable>(
+            destVertexId, new DoubleWritable(rand.nextDouble())));
+        destVertices.add(destVertexId);
       }
       vertex.initialize(new LongWritable(vertexId), vertexValue, edges);
       ++verticesRead;

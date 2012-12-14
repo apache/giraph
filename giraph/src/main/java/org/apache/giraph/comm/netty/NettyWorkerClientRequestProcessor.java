@@ -277,13 +277,13 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
   }
 
   @Override
-  public void removeEdgeRequest(I vertexIndex,
-                                I destinationVertexIndex) throws IOException {
+  public void removeEdgesRequest(I vertexIndex,
+                                 I destinationVertexIndex) throws IOException {
     PartitionOwner partitionOwner =
         serviceWorker.getVertexPartitionOwner(vertexIndex);
     int partitionId = partitionOwner.getPartitionId();
     if (LOG.isTraceEnabled()) {
-      LOG.trace("removeEdgeRequest: Removing edge " +
+      LOG.trace("removeEdgesRequest: Removing edge " +
           destinationVertexIndex +
           " for index " + vertexIndex + " with partition " + partitionId);
     }

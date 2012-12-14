@@ -110,7 +110,7 @@ public class SimpleMutateGraphVertex extends EdgeListVertex<
       LongWritable vertexIndex =
           new LongWritable(rangeVertexIdStart(3) + getId().get());
       workerContext.increaseEdgesRemoved();
-      removeEdgeRequest(vertexIndex, getId());
+      removeEdgesRequest(vertexIndex, getId());
     } else if (getSuperstep() == 6) {
       // Remove all the vertices created in superstep 3
       if (getId().compareTo(

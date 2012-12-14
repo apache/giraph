@@ -112,13 +112,16 @@ public class SimpleCheckpointVertex implements Tool {
       for (Edge<LongWritable, FloatWritable> edge : getEdges()) {
         FloatWritable newEdgeValue = new FloatWritable(edge.getValue().get() +
             (float) vertexValue);
+        Edge<LongWritable, FloatWritable> newEdge =
+            new Edge<LongWritable, FloatWritable>(edge.getTargetVertexId(),
+                newEdgeValue);
         LOG.info("compute: vertex " + getId() +
             " sending edgeValue " + edge.getValue() +
             " vertexValue " + vertexValue +
             " total " + newEdgeValue +
             " to vertex " + edge.getTargetVertexId() +
             " on superstep " + getSuperstep());
-        addEdge(edge.getTargetVertexId(), newEdgeValue);
+        addEdge(newEdge);
         sendMessage(edge.getTargetVertexId(), newEdgeValue);
       }
     }

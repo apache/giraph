@@ -17,6 +17,7 @@
  */
 package org.apache.giraph.io;
 
+import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
@@ -27,10 +28,10 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.json.JSONArray;
 import org.json.JSONException;
 
-import com.google.common.collect.Maps;
+import com.google.common.collect.Lists;
 
 import java.io.IOException;
-import java.util.Map;
+import java.util.List;
 
 /**
   * VertexInputFormat that features <code>long</code> vertex ID's,
@@ -81,14 +82,16 @@ public class JsonLongDoubleFloatDoubleVertexInputFormat extends
     }
 
     @Override
-    protected Map<LongWritable, FloatWritable> getEdges(JSONArray jsonVertex)
-      throws JSONException, IOException {
-      Map<LongWritable, FloatWritable> edges = Maps.newHashMap();
+    protected Iterable<Edge<LongWritable, FloatWritable>> getEdges(
+        JSONArray jsonVertex) throws JSONException, IOException {
       JSONArray jsonEdgeArray = jsonVertex.getJSONArray(2);
+      List<Edge<LongWritable, FloatWritable>> edges =
+          Lists.newArrayListWithCapacity(jsonEdgeArray.length());
       for (int i = 0; i < jsonEdgeArray.length(); ++i) {
         JSONArray jsonEdge = jsonEdgeArray.getJSONArray(i);
-        edges.put(new LongWritable(jsonEdge.getLong(0)),
-            new FloatWritable((float) jsonEdge.getDouble(1)));
+        edges.add(new Edge<LongWritable, FloatWritable>(
+            new LongWritable(jsonEdge.getLong(0)),
+            new FloatWritable((float) jsonEdge.getDouble(1))));
       }
       return edges;
     }

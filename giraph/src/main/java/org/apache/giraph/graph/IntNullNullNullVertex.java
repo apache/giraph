@@ -18,15 +18,13 @@
 
 package org.apache.giraph.graph;
 
+import com.google.common.collect.ImmutableList;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
-
-import com.google.common.collect.ImmutableList;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Map;
 
 /**
  * A vertex with no value, edges, or messages. Just an ID, nothing more.
@@ -34,7 +32,7 @@ import java.util.Map;
 public abstract class IntNullNullNullVertex extends Vertex<IntWritable,
     NullWritable, NullWritable, NullWritable> {
   @Override
-  public void setEdges(Map<IntWritable, NullWritable> edges) { }
+  public void setEdges(Iterable<Edge<IntWritable, NullWritable>> edges) { }
 
   @Override
   public Iterable<Edge<IntWritable, NullWritable>> getEdges() {

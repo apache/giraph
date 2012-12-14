@@ -23,7 +23,6 @@ import org.apache.hadoop.io.WritableComparable;
 
 import java.io.IOException;
 import java.util.Collections;
-import java.util.Map;
 
 /**
  * Interface used by VertexReader to set the properties of a new vertex
@@ -41,20 +40,18 @@ public abstract class MutableVertex<I extends WritableComparable,
   /**
    * Add an edge for this vertex (happens immediately)
    *
-   * @param targetVertexId target vertex
-   * @param value value of the edge
+   * @param edge Edge to add
    * @return Return true if succeeded, false otherwise
    */
-  public abstract boolean addEdge(I targetVertexId, E value);
+  public abstract boolean addEdge(Edge<I, E> edge);
 
   /**
-   * Removes an edge for this vertex (happens immediately).
+   * Removes all edges pointing to the given vertex id.
    *
-   * @param targetVertexId the target vertex id of the edge to be removed.
-   * @return the value of the edge which was removed (or null if no
-   *         edge existed to targetVertexId)
+   * @param targetVertexId the target vertex id
+   * @return the number of removed edges
    */
-  public abstract E removeEdge(I targetVertexId);
+  public abstract int removeEdges(I targetVertexId);
 
   /**
    * Sends a request to create a vertex that will be available during the
@@ -64,7 +61,7 @@ public abstract class MutableVertex<I extends WritableComparable,
    * @param value Vertex value
    * @param edges Initial edges
    */
-  public void addVertexRequest(I id, V value, Map<I, E> edges)
+  public void addVertexRequest(I id, V value, Iterable<Edge<I, E>> edges)
     throws IOException {
     Vertex<I, V, E, M> vertex = getConf().createVertex();
     vertex.initialize(id, value, edges);
@@ -79,7 +76,7 @@ public abstract class MutableVertex<I extends WritableComparable,
    * @param value Vertex value
    */
   public void addVertexRequest(I id, V value) throws IOException {
-    addVertexRequest(id, value, Collections.<I, E>emptyMap());
+    addVertexRequest(id, value, Collections.<Edge<I, E>>emptyList());
   }
 
   /**
@@ -107,15 +104,15 @@ public abstract class MutableVertex<I extends WritableComparable,
   }
 
   /**
-   * Request to remove an edge of a vertex from the graph
-   * (processed just prior to the next superstep).
+   * Request to remove all edges from a given source vertex to a given target
+   * vertex (processed just prior to the next superstep).
    *
-   * @param sourceVertexId Source vertex id of edge
-   * @param targetVertexId Destination vertex id of edge
+   * @param sourceVertexId Source vertex id
+   * @param targetVertexId Target vertex id
    */
-  public void removeEdgeRequest(I sourceVertexId, I targetVertexId)
+  public void removeEdgesRequest(I sourceVertexId, I targetVertexId)
     throws IOException {
     getGraphState().getWorkerClientRequestProcessor().
-        removeEdgeRequest(sourceVertexId, targetVertexId);
+        removeEdgesRequest(sourceVertexId, targetVertexId);
   }
 }

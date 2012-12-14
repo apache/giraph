@@ -17,6 +17,7 @@
  */
 package org.apache.giraph.graph;
 
+import com.google.common.collect.UnmodifiableIterator;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -25,13 +26,10 @@ import org.apache.mahout.math.function.LongFloatProcedure;
 import org.apache.mahout.math.list.DoubleArrayList;
 import org.apache.mahout.math.map.OpenLongFloatHashMap;
 
-import com.google.common.collect.UnmodifiableIterator;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Iterator;
-import java.util.Map;
 
 /**
  * Optimized vertex implementation for
@@ -48,23 +46,22 @@ public abstract class LongDoubleFloatDoubleVertex extends
       new OpenLongFloatHashMap();
 
   @Override
-  public void setEdges(Map<LongWritable, FloatWritable> edges) {
+  public void setEdges(Iterable<Edge<LongWritable, FloatWritable>> edges) {
     if (edges != null) {
-      for (Map.Entry<LongWritable, FloatWritable> edge :
-        edges.entrySet()) {
-        edgeMap.put(edge.getKey().get(), edge.getValue().get());
+      for (Edge<LongWritable, FloatWritable> edge : edges) {
+        edgeMap.put(edge.getTargetVertexId().get(), edge.getValue().get());
       }
     }
   }
 
   @Override
-  public boolean addEdge(LongWritable targetId,
-      FloatWritable edgeValue) {
-    if (edgeMap.put(targetId.get(), edgeValue.get())) {
+  public boolean addEdge(Edge<LongWritable, FloatWritable> edge) {
+    if (edgeMap.put(edge.getTargetVertexId().get(),
+        edge.getValue().get())) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("addEdge: Vertex=" + getId() +
             ": already added an edge value for dest vertex id " +
-            targetId.get());
+            edge.getTargetVertexId());
       }
       return false;
     } else {
@@ -73,14 +70,13 @@ public abstract class LongDoubleFloatDoubleVertex extends
   }
 
   @Override
-  public FloatWritable removeEdge(LongWritable targetVertexId) {
+  public int removeEdges(LongWritable targetVertexId) {
     long target = targetVertexId.get();
     if (edgeMap.containsKey(target)) {
-      float value = edgeMap.get(target);
       edgeMap.removeKey(target);
-      return new FloatWritable(value);
+      return 1;
     } else {
-      return null;
+      return 0;
     }
   }
 
