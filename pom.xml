@@ -748,9 +748,7 @@ under the License.
         <groupId>org.apache.hcatalog</groupId>
         <artifactId>hcatalog-core</artifactId>
         <!-- TODO: Use 0.5.0 stable release -->
-        <version>0.5.0-SNAPSHOT</version>
-        <scope>system</scope>
-        <systemPath>${lib.dir}/hcatalog-0.5.0-SNAPSHOT.jar</systemPath>
+        <version>0.5.0-20121213.030336-32</version>
         <exclusions>
           <exclusion>
             <groupId>org.apache.pig</groupId>
