@@ -220,7 +220,8 @@ under the License.
   </repositories>
 
   <properties>
-    <lib.dir>${project.basedir}/lib</lib.dir>
+    <top.dir>${project.basedir}</top.dir>
+    <lib.dir>${top.dir}/lib</lib.dir>
     <buildtype>test</buildtype>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <formats.module>giraph-formats-contrib</formats.module>
@@ -235,9 +236,27 @@ under the License.
     <pluginManagement>
       <plugins>
         <plugin>
+          <groupId>com.github.koraktor</groupId>
+          <artifactId>mavanagaiata</artifactId>
+          <version>0.4.1</version>
+          <configuration>
+            <gitDir>${top.dir}/.git</gitDir>
+          </configuration>
+          <executions>
+            <execution>
+              <id>git-commit</id>
+              <phase>validate</phase>
+              <goals>
+                <goal>branch</goal>
+                <goal>commit</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-assembly-plugin</artifactId>
-          <version>2.3</version>
+          <version>2.4</version>
           <executions>
             <execution>
               <id>build-fat-jar</id>
@@ -246,11 +265,25 @@ under the License.
               <!-- append to the packaging phase. -->
               <configuration>
                 <descriptor>src/main/assembly/compile.xml</descriptor>
+                <archive>
+                  <manifest>
+                    <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                    <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+                  </manifest>
+                  <manifestEntries>
+                    <Build-Jdk>${java.version}</Build-Jdk>
+                    <Build-Time>${maven.build.timestamp}</Build-Time>
+                    <Git-Commit-Branch>${mvngit.branch}</Git-Commit-Branch>
+                    <Git-Commit-Hash>${mvngit.commit.id}</Git-Commit-Hash>
+                    <Git-Commit-Date>${mvngit.commit.committer.date}</Git-Commit-Date>
+                    <Git-Committer-Email>${mvngit.commit.committer.email}</Git-Committer-Email>
+                    <Git-Committer-Name>${mvngit.commit.committer.name}</Git-Committer-Name>
+                  </manifestEntries>
+                </archive>
                 <outputDirectory>target</outputDirectory>
               </configuration>
               <goals>
                 <goal>single</goal>
-                <!-- goals == mojos -->
               </goals>
             </execution>
             <execution>
@@ -261,14 +294,12 @@ under the License.
               <configuration>
                 <!-- Specifies the configuration file of the assembly plugin -->
                 <descriptors>
-                  <descriptor>src/main/assembly/assembly.xml
-                  </descriptor>
+                  <descriptor>src/main/assembly/assembly.xml</descriptor>
                 </descriptors>
                 <outputDirectory>target</outputDirectory>
               </configuration>
               <goals>
                 <goal>single</goal>
-                <!-- goals == mojos -->
               </goals>
             </execution>
           </executions>
@@ -458,6 +489,12 @@ under the License.
         </plugin>
       </plugins>
     </pluginManagement>
+    <plugins>
+      <plugin>
+        <groupId>com.github.koraktor</groupId>
+        <artifactId>mavanagaiata</artifactId>
+      </plugin>
+    </plugins>
   </build>
 
   <profiles>

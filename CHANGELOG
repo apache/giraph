@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-455: Add meta information to built jars (nitay)
+
   GIRAPH-456: Log where master is on every host (nitay)
 
   GIRAPH-141: Multigraph support in Giraph (apresta)

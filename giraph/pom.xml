@@ -34,7 +34,6 @@ under the License.
   <properties>
     <export-target.dir>export/target</export-target.dir>
     <top.dir>${project.basedir}/..</top.dir>
-    <lib.dir>${top.dir}/lib</lib.dir>
   </properties>
 
   <build>

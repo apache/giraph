@@ -33,7 +33,6 @@ under the License.
 
   <properties>
     <top.dir>${project.basedir}/..</top.dir>
-    <lib.dir>${top.dir}/lib</lib.dir>
   </properties>
 
   <build>
