@@ -162,7 +162,7 @@ public class RequestFailureTest {
   private void checkSendingTwoRequests() throws IOException {
     // Start the service
     serverData = MockUtils.createNewServerData(conf, context);
-    WorkerInfo workerInfo = new WorkerInfo(-1);
+    WorkerInfo workerInfo = new WorkerInfo();
     server = new NettyServer(conf,
         new WorkerRequestServerHandler.Factory(serverData), workerInfo,
             context);

@@ -18,66 +18,18 @@
 
 package org.apache.giraph.graph;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.net.InetSocketAddress;
-
 /**
  * Information about a worker that is sent to the master and other workers.
  */
 public class WorkerInfo extends TaskInfo {
-  /** Task Partition (Worker) ID of this task */
-  private int taskId;
-  /** Hostname + "_" + id for easier debugging */
-  private String hostnameId;
-
   /**
    * Constructor for reflection
    */
   public WorkerInfo() {
   }
 
-  /**
-   * Constructor with parameters.
-   *
-   * @param taskId the task partition for this worker
-   */
-  public WorkerInfo(int taskId) {
-    this.taskId = taskId;
-  }
-
-  @Override
-  public int getTaskId() {
-    return taskId;
-  }
-
-  @Override
-  public void setInetSocketAddress(InetSocketAddress address) {
-    super.setInetSocketAddress(address);
-    hostnameId = getHostname() + "_" + getTaskId();
-  }
-
-  public String getHostnameId() {
-    return hostnameId;
-  }
-
   @Override
   public String toString() {
-    return "Worker(hostname=" + getHostname() + ", MRtaskID=" +
-        getTaskId() + ", port=" + getPort() + ")";
-  }
-
-  @Override
-  public void readFields(DataInput input) throws IOException {
-    super.readFields(input);
-    taskId = input.readInt();
-    hostnameId = getHostname() + "_" + getTaskId();
-  }
-
-  @Override
-  public void write(DataOutput output) throws IOException {
-    super.write(output);
-    output.writeInt(taskId);
+    return "Worker(" + super.toString() + ")";
   }
 }

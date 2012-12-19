@@ -161,10 +161,11 @@ public class BspServiceWorker<I extends WritableComparable,
     registerBspEvent(partitionExchangeChildrenChanged);
     workerGraphPartitioner =
         getGraphPartitionerFactory().createWorkerGraphPartitioner();
-    workerInfo = new WorkerInfo(getTaskPartition());
+    workerInfo = new WorkerInfo();
     workerServer =
         new NettyWorkerServer<I, V, E, M>(getConfiguration(), this, context);
     workerInfo.setInetSocketAddress(workerServer.getMyAddress());
+    workerInfo.setTaskId(getTaskPartition());
     workerClient =
         new NettyWorkerClient<I, V, E, M>(context, getConfiguration(), this);
 
@@ -673,6 +674,7 @@ else[HADOOP_NON_SECURE]*/
     masterInfo = addressesAndPartitions.getMasterInfo();
 
     if (LOG.isInfoEnabled()) {
+      LOG.info("startSuperstep: " + masterInfo);
       LOG.info("startSuperstep: Ready for computation on superstep " +
           getSuperstep() + " since worker " +
           "selection and vertex range assignments are done in " +

@@ -29,12 +29,7 @@ public class MasterInfo extends TaskInfo {
   }
 
   @Override
-  public int getTaskId() {
-    return -1;
-  }
-
-  @Override
   public String toString() {
-    return "Master(hostname=" + getHostname() + ", port=" + getPort() + ")";
+    return "Master(" + super.toString() + ")";
   }
 }

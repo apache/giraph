@@ -74,7 +74,7 @@ public class ConnectionTest {
 
     ServerData<IntWritable, IntWritable, IntWritable, IntWritable> serverData =
         MockUtils.createNewServerData(conf, context);
-    WorkerInfo workerInfo = new WorkerInfo(-1);
+    WorkerInfo workerInfo = new WorkerInfo();
     NettyServer server =
         new NettyServer(conf,
             new WorkerRequestServerHandler.Factory(serverData), workerInfo,
@@ -106,20 +106,23 @@ public class ConnectionTest {
    RequestServerHandler.Factory requestServerHandlerFactory =
        new WorkerRequestServerHandler.Factory(serverData);
 
-    WorkerInfo workerInfo1 = new WorkerInfo(1);
+    WorkerInfo workerInfo1 = new WorkerInfo();
+    workerInfo1.setTaskId(1);
     NettyServer server1 =
         new NettyServer(conf, requestServerHandlerFactory, workerInfo1, context);
     server1.start();
     workerInfo1.setInetSocketAddress(server1.getMyAddress());
 
-    WorkerInfo workerInfo2 = new WorkerInfo(2);
+    WorkerInfo workerInfo2 = new WorkerInfo();
+    workerInfo1.setTaskId(2);
     NettyServer server2 =
         new NettyServer(conf, requestServerHandlerFactory, workerInfo2,
             context);
     server2.start();
     workerInfo2.setInetSocketAddress(server2.getMyAddress());
 
-    WorkerInfo workerInfo3 = new WorkerInfo(3);
+    WorkerInfo workerInfo3 = new WorkerInfo();
+    workerInfo1.setTaskId(3);
     NettyServer server3 =
         new NettyServer(conf, requestServerHandlerFactory, workerInfo3,
             context);
@@ -150,7 +153,7 @@ public class ConnectionTest {
 
     ServerData<IntWritable, IntWritable, IntWritable, IntWritable> serverData =
         MockUtils.createNewServerData(conf, context);
-    WorkerInfo workerInfo = new WorkerInfo(-1);
+    WorkerInfo workerInfo = new WorkerInfo();
     NettyServer server = new NettyServer(conf,
         new WorkerRequestServerHandler.Factory(serverData), workerInfo,
             context);

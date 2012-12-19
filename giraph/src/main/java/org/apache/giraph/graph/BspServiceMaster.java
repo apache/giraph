@@ -805,6 +805,7 @@ public class BspServiceMaster<I extends WritableComparable,
           masterServer =
               new NettyMasterServer(getConfiguration(), this, getContext());
           masterInfo.setInetSocketAddress(masterServer.getMyAddress());
+          masterInfo.setTaskId(getTaskPartition());
           masterClient =
               new NettyMasterClient(getContext(), getConfiguration(), this);
 

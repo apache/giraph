@@ -85,7 +85,8 @@ public class SaslConnectionTest {
     when(mockedSaslServerFactory.newHandler(conf)).
         thenReturn(mockedSaslServerHandler);
 
-    WorkerInfo workerInfo = new WorkerInfo(-1);
+    WorkerInfo workerInfo = new WorkerInfo();
+    workerInfo.setTaskId(-1);
     NettyServer server =
         new NettyServer(conf,
             new WorkerRequestServerHandler.Factory(serverData),

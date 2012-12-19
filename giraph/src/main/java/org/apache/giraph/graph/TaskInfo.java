@@ -33,6 +33,8 @@ public abstract class TaskInfo implements Writable {
   private String hostname;
   /** Port that the IPC server is using */
   private int port;
+  /** Task partition id */
+  private int taskId = -1;
 
   /**
    * Constructor
@@ -78,11 +80,31 @@ public abstract class TaskInfo implements Writable {
   }
 
   /**
+   * Set task partition id of this task
+   *
+   * @param taskId partition id
+   */
+  public void setTaskId(int taskId) {
+    this.taskId = taskId;
+  }
+
+  /**
    * Get task partition id of this task
    *
    * @return Task partition id of this task
    */
-  public abstract int getTaskId();
+  public int getTaskId() {
+    return taskId;
+  }
+
+  /**
+   * Get hostname and task id
+   *
+   * @return Hostname and task id
+   */
+  public String getHostnameId() {
+    return getHostname() + "_" + getTaskId();
+  }
 
   @Override
   public boolean equals(Object other) {
@@ -90,7 +112,8 @@ public abstract class TaskInfo implements Writable {
       TaskInfo taskInfo = (TaskInfo) other;
       if (hostname.equals(taskInfo.getHostname()) &&
           (getTaskId() == taskInfo.getTaskId()) &&
-          (port == taskInfo.getPort())) {
+          (port == taskInfo.getPort() &&
+          (taskId == taskInfo.getTaskId()))) {
         return true;
       }
     }
@@ -98,15 +121,24 @@ public abstract class TaskInfo implements Writable {
   }
 
   @Override
+  public String toString() {
+    return "hostname=" + getHostname() +
+        ", MRtaskID=" + getTaskId() +
+        ", port=" + getPort();
+  }
+
+  @Override
   public void readFields(DataInput input) throws IOException {
     hostname = input.readUTF();
     port = input.readInt();
+    taskId = input.readInt();
   }
 
   @Override
   public void write(DataOutput output) throws IOException {
     output.writeUTF(hostname);
     output.writeInt(port);
+    output.writeInt(taskId);
   }
 
   @Override
