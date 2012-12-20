@@ -23,10 +23,10 @@ under the License.
 
   <parent>
     <groupId>org.apache.giraph</groupId>
-    <artifactId>parent</artifactId>
+    <artifactId>giraph-parent</artifactId>
     <version>0.2-SNAPSHOT</version>
   </parent>
-  <artifactId>giraph-formats-contrib</artifactId>
+  <artifactId>giraph-formats</artifactId>
   <packaging>jar</packaging>
 
   <name>Apache Giraph Formats</name>
@@ -65,7 +65,7 @@ under the License.
           <systemProperties>
             <property>
               <name>prop.jarLocation</name>
-              <value>${top.dir}/giraph/target/giraph-${project.version}-${forHadoop}-jar-with-dependencies.jar</value>
+              <value>${top.dir}/giraph-core/target/giraph-${project.version}-${forHadoop}-jar-with-dependencies.jar</value>
             </property>
           </systemProperties>
         </configuration>
@@ -192,7 +192,7 @@ under the License.
     </dependency>
     <dependency>
       <groupId>org.apache.giraph</groupId>
-      <artifactId>giraph</artifactId>
+      <artifactId>giraph-core</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>

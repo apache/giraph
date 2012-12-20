@@ -28,13 +28,11 @@
       <useProjectArtifact>true</useProjectArtifact>
       <outputDirectory>/</outputDirectory>
       <unpackOptions>
-        <excludes>
-          <exclude>
-	    META-INF/LICENSE
-          </exclude>
-        </excludes>
+          <excludes>
+              <exclude>META-INF/LICENSE</exclude>
+          </excludes>
       </unpackOptions>
-      <unpack>true</unpack>
+      <unpack>false</unpack>
       <scope>runtime</scope>
     </dependencySet>
   </dependencySets>

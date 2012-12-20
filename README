@@ -113,14 +113,14 @@ Specifically you would do something like:
   giraph-root/giraph/ $ mvn clean verify      # build from fresh state
   giraph-root/giraph/ $ mvn install           # install jar to local repository
 
-The giraph-formats-contrib/ module contains hooks to read/write from various
+The giraph-formats/ module contains hooks to read/write from various
 formats (e.g. Accumulo, HBase, Hive). It depends on the giraph module. This
 means if you make local changes to the giraph codebase you will first need to
-install the giraph/ jar locally so that giraph-formats-contrib/ will pick it up.
+install the giraph/ jar locally so that giraph-formats/ will pick it up.
 In other words something like this:
 
   giraph-root/giraph/ $ mvn install
-  giraph-root/giraph-formats-contrib $ mvn verify
+  giraph-root/giraph-formats $ mvn verify
 
 To build everything at once you can issue the maven commands at the top level.
 Note that we use the "install" target so that if you have any local changes to

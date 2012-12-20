@@ -23,10 +23,10 @@ under the License.
 
   <parent>
     <groupId>org.apache.giraph</groupId>
-    <artifactId>parent</artifactId>
+    <artifactId>giraph-parent</artifactId>
     <version>0.2-SNAPSHOT</version>
   </parent>
-  <artifactId>giraph</artifactId>
+  <artifactId>giraph-core</artifactId>
   <packaging>jar</packaging>
 
   <name>Apache Giraph</name>

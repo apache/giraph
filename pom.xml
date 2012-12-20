@@ -22,7 +22,7 @@ under the License.
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.apache.giraph</groupId>
-  <artifactId>parent</artifactId>
+  <artifactId>giraph-parent</artifactId>
   <packaging>pom</packaging>
   <version>0.2-SNAPSHOT</version>
 
@@ -224,7 +224,7 @@ under the License.
     <lib.dir>${top.dir}/lib</lib.dir>
     <buildtype>test</buildtype>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <formats.module>giraph-formats-contrib</formats.module>
+    <formats.module>giraph-formats</formats.module>
     <hbase.version>0.90.5</hbase.version>
     <jackson.version>1.8.0</jackson.version>
     <slf4j.version>1.7.2</slf4j.version>
@@ -778,7 +778,7 @@ under the License.
       </dependency>
       <dependency>
         <groupId>org.apache.giraph</groupId>
-        <artifactId>giraph</artifactId>
+        <artifactId>giraph-core</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
@@ -952,7 +952,7 @@ under the License.
   </dependencyManagement>
 
   <modules>
-    <module>giraph</module>
+    <module>giraph-core</module>
   </modules>
 
 </project>
