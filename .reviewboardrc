@@ -1,4 +1,4 @@
-GUESS_FIELDS = True
+GUESS_SUMMARY = True
 OPEN_BROWSER = True
 REPOSITORY = "giraph-git"
 REVIEWBOARD_URL = "https://reviews.apache.org/"

@@ -224,7 +224,6 @@ under the License.
     <lib.dir>${top.dir}/lib</lib.dir>
     <buildtype>test</buildtype>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <formats.module>giraph-formats</formats.module>
     <hbase.version>0.90.5</hbase.version>
     <jackson.version>1.8.0</jackson.version>
     <slf4j.version>1.7.2</slf4j.version>
@@ -501,7 +500,9 @@ under the License.
     <profile>
       <id>hadoop_0.20.203</id>
       <modules>
-        <module>${formats.module}</module>
+        <module>giraph-accumulo</module>
+        <module>giraph-hbase</module>
+        <module>giraph-hcatalog</module>
       </modules>
       <activation>
         <activeByDefault>true</activeByDefault>
@@ -528,7 +529,9 @@ under the License.
     <profile>
       <id>hadoop_1.0</id>
       <modules>
-        <module>${formats.module}</module>
+        <module>giraph-accumulo</module>
+        <module>giraph-hbase</module>
+        <module>giraph-hcatalog</module>
       </modules>
       <properties>
         <hadoop.version>1.0.2</hadoop.version>
@@ -552,7 +555,9 @@ under the License.
     <profile>
       <id>hadoop_non_secure</id>
       <modules>
-        <module>${formats.module}</module>
+        <module>giraph-accumulo</module>
+        <module>giraph-hbase</module>
+        <module>giraph-hcatalog</module>
       </modules>
       <properties>
         <hadoop.version>0.20.2</hadoop.version>
@@ -576,7 +581,9 @@ under the License.
     <profile>
       <id>hadoop_facebook</id>
       <modules>
-        <module>${formats.module}</module>
+        <module>giraph-accumulo</module>
+        <module>giraph-hbase</module>
+        <module>giraph-hcatalog</module>
       </modules>
       <properties>
         <hadoop.version>0.20.1</hadoop.version>

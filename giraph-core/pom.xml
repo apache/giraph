@@ -29,7 +29,7 @@ under the License.
   <artifactId>giraph-core</artifactId>
   <packaging>jar</packaging>
 
-  <name>Apache Giraph</name>
+  <name>Apache Giraph Core</name>
 
   <properties>
     <export-target.dir>export/target</export-target.dir>
