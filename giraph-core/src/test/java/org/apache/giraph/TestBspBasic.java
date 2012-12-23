@@ -83,9 +83,9 @@ import static org.mockito.Mockito.when;
 
 /*if[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]
 import org.apache.hadoop.mapreduce.JobContext;
-else[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]
+else[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
 import org.apache.hadoop.mapreduce.task.JobContextImpl;
-end[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
+/*end[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
 
 /**
  * Unit test for many simple BSP applications.
