@@ -178,9 +178,9 @@ public class NettyWorkerServer<I extends WritableComparable,
     }
 
     // Resolve all graph mutations
+    VertexResolver<I, V, E, M> vertexResolver =
+        conf.createVertexResolver(graphState);
     for (I vertexIndex : resolveVertexIndexSet) {
-      VertexResolver<I, V, E, M> vertexResolver =
-          conf.createVertexResolver(graphState);
       Vertex<I, V, E, M> originalVertex =
           service.getVertex(vertexIndex);
 
