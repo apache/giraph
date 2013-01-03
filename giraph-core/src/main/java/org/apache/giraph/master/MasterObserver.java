@@ -35,6 +35,13 @@ public interface MasterObserver extends ImmutableClassesGiraphConfigurable {
   void postApplication();
 
   /**
+   * If there is an error during the application.
+   *
+   * @param e Exception that caused failure. May be null.
+   */
+  void applicationFailed(Exception e);
+
+  /**
    * Before each superstep starts.
    */
   void preSuperstep();

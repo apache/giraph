@@ -57,6 +57,7 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapred.JobID;
 import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -293,8 +294,6 @@ public class BspServiceMaster<I extends WritableComparable,
 
   /**
    * When there is no salvaging this job, fail it.
-   *
-   * @throws IOException
    */
   private void failJob() {
     LOG.fatal("failJob: Killing job " + getJobId());
@@ -305,9 +304,9 @@ public class BspServiceMaster<I extends WritableComparable,
               (org.apache.hadoop.mapred.JobConf)
               getContext().getConfiguration());
       @SuppressWarnings("deprecation")
-      org.apache.hadoop.mapred.JobID jobId =
-          org.apache.hadoop.mapred.JobID.forName(getJobId());
+      JobID jobId = JobID.forName(getJobId());
       RunningJob job = jobClient.getJob(jobId);
+      failureCleanup(null);
       job.killJob();
     } catch (IOException e) {
       throw new RuntimeException(e);
@@ -1626,6 +1625,21 @@ public class BspServiceMaster<I extends WritableComparable,
   public void postSuperstep() {
     for (MasterObserver observer : observers) {
       observer.postSuperstep();
+      getContext().progress();
+    }
+  }
+
+  @Override
+  public void failureCleanup(Exception e) {
+    for (MasterObserver observer : observers) {
+      try {
+        observer.applicationFailed(e);
+        // CHECKSTYLE: stop IllegalCatchCheck
+      } catch (RuntimeException re) {
+        // CHECKSTYLE: resume IllegalCatchCheck
+        LOG.error(re.getClass().getName() + " from observer " +
+            observer.getClass().getName(), re);
+      }
       getContext().progress();
     }
   }

@@ -132,4 +132,11 @@ public interface CentralizedServiceMaster<I extends WritableComparable,
    * Application has finished.
    */
   void postApplication();
+
+  /**
+   * Called when the job fails in order to let the Master do any cleanup.
+   *
+   * @param e Exception job failed from. May be null.
+   */
+  void failureCleanup(Exception e);
 }

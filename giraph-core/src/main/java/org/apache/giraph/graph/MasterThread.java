@@ -28,9 +28,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.log4j.Logger;
-import org.apache.zookeeper.KeeperException;
 
-import java.io.IOException;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
@@ -71,7 +69,7 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
    *        been called.
    * @param context Context from the Mapper.
    */
-  MasterThread(BspServiceMaster<I, V, E, M> bspServiceMaster,
+  MasterThread(CentralizedServiceMaster<I, V, E, M> bspServiceMaster,
       Context context) {
     super(MasterThread.class.getName());
     this.bspServiceMaster = bspServiceMaster;
@@ -173,19 +171,14 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
         GiraphTimers.getInstance().getTotalMs().
           increment(System.currentTimeMillis() - startMillis);
       }
-    } catch (IOException e) {
+      bspServiceMaster.postApplication();
+      // CHECKSTYLE: stop IllegalCatchCheck
+    } catch (Exception e) {
+      // CHECKSTYLE: resume IllegalCatchCheck
+      bspServiceMaster.failureCleanup(e);
       LOG.error("masterThread: Master algorithm failed with " +
-          "IOException ", e);
-      throw new IllegalStateException(e);
-    } catch (InterruptedException e) {
-      LOG.error("masterThread: Master algorithm failed with " +
-          "InterruptedException", e);
-      throw new IllegalStateException(e);
-    } catch (KeeperException e) {
-      LOG.error("masterThread: Master algorithm failed with " +
-          "KeeperException", e);
+          e.getClass().getSimpleName(), e);
       throw new IllegalStateException(e);
     }
-    bspServiceMaster.postApplication();
   }
 }

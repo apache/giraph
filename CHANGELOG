@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-464: MasterObserver#applicationFailed callback (nitay)
+
   GIRAPH-458: split formats module into accumulo,hbase,hcatalog (nitay)
 
   GIRAPH-463: Create VertexResolver only once (apresta)

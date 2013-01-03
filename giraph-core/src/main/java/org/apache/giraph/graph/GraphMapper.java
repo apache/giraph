@@ -416,8 +416,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
         }
         serviceMaster = new BspServiceMaster<I, V, E, M>(
             serverPortList, sessionMsecTimeout, context, this);
-        masterThread = new MasterThread<I, V, E, M>(
-            (BspServiceMaster<I, V, E, M>) serviceMaster, context);
+        masterThread = new MasterThread<I, V, E, M>(serviceMaster, context);
         masterThread.start();
       }
       if ((mapFunctions == MapFunctions.WORKER_ONLY) ||
