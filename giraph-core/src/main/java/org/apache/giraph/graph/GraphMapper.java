@@ -143,22 +143,6 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
   /** Timer for WorkerContext#preSuperstep() */
   private GiraphTimer wcPreSuperstepTimer;
 
-  /** What kinds of functions to run on this mapper */
-  public enum MapFunctions {
-    /** Undecided yet */
-    UNKNOWN,
-    /** Only be the master */
-    MASTER_ONLY,
-    /** Only be the master and ZooKeeper */
-    MASTER_ZOOKEEPER_ONLY,
-    /** Only be the worker */
-    WORKER_ONLY,
-    /** Do master, worker, and ZooKeeper */
-    ALL,
-    /** Do master and worker */
-    ALL_EXCEPT_ZOOKEEPER
-  }
-
   /**
    * Get the map function enum.
    *
@@ -406,10 +390,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
     }
     int sessionMsecTimeout = conf.getZooKeeperSessionTimeout();
     try {
-      if ((mapFunctions == MapFunctions.MASTER_ZOOKEEPER_ONLY) ||
-          (mapFunctions == MapFunctions.MASTER_ONLY) ||
-          (mapFunctions == MapFunctions.ALL) ||
-          (mapFunctions == MapFunctions.ALL_EXCEPT_ZOOKEEPER)) {
+      if (mapFunctions.isMaster()) {
         if (LOG.isInfoEnabled()) {
           LOG.info("setup: Starting up BspServiceMaster " +
               "(master thread)...");
@@ -419,9 +400,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
         masterThread = new MasterThread<I, V, E, M>(serviceMaster, context);
         masterThread.start();
       }
-      if ((mapFunctions == MapFunctions.WORKER_ONLY) ||
-          (mapFunctions == MapFunctions.ALL) ||
-          (mapFunctions == MapFunctions.ALL_EXCEPT_ZOOKEEPER)) {
+      if (mapFunctions.isWorker()) {
         if (LOG.isInfoEnabled()) {
           LOG.info("setup: Starting up BspServiceWorker...");
         }
@@ -437,8 +416,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
     } catch (IOException e) {
       LOG.error("setup: Caught exception just before end of setup", e);
       if (zkManager != null) {
-        zkManager.offlineZooKeeperServers(
-            ZooKeeperManager.State.FAILED);
+        zkManager.offlineZooKeeperServers(ZooKeeperManager.State.FAILED);
       }
       throw new RuntimeException(
           "setup: Offlining servers due to exception...", e);
@@ -522,8 +500,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
     GiraphMetrics.get().
         resetSuperstepMetrics(BspService.INPUT_SUPERSTEP);
 
-    if ((mapFunctions == MapFunctions.MASTER_ZOOKEEPER_ONLY) ||
-        (mapFunctions == MapFunctions.MASTER_ONLY)) {
+    if (mapFunctions.isNotAWorker()) {
       if (LOG.isInfoEnabled()) {
         LOG.info("map: No need to do anything when not a worker");
       }
@@ -723,8 +700,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
       LOG.error("cleanup: Master thread couldn't join");
     }
     if (zkManager != null) {
-      zkManager.offlineZooKeeperServers(
-          ZooKeeperManager.State.FINISHED);
+      zkManager.offlineZooKeeperServers(ZooKeeperManager.State.FINISHED);
     }
   }
 
@@ -745,27 +721,40 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
       // CHECKSTYLE: stop IllegalCatch
     } catch (RuntimeException e) {
       // CHECKSTYLE: resume IllegalCatch
-      if (mapFunctions == MapFunctions.UNKNOWN ||
-          mapFunctions == MapFunctions.MASTER_ZOOKEEPER_ONLY) {
-        // ZooKeeper may have had an issue
-        if (zkManager != null) {
-          zkManager.logZooKeeperOutput(Level.WARN);
-        }
-      }
-      try {
-        if (mapFunctions == MapFunctions.WORKER_ONLY) {
-          serviceWorker.failureCleanup();
-        }
-      // Checkstyle exception due to needing to get the original
-      // exception on failure
-      // CHECKSTYLE: stop IllegalCatch
-      } catch (RuntimeException e1) {
-      // CHECKSTYLE: resume IllegalCatch
-        LOG.error("run: Worker failure failed on another RuntimeException, " +
-            "original expection will be rethrown", e1);
-      }
+      zooKeeperCleanup();
+      workerFailureCleanup();
       throw new IllegalStateException(
           "run: Caught an unrecoverable exception " + e.getMessage(), e);
+    }
+  }
+
+  /**
+   * Cleanup ZooKeeper ona failure
+   */
+  private void zooKeeperCleanup() {
+    if (mapFunctions.isZooKeeper()) {
+      // ZooKeeper may have had an issue
+      if (zkManager != null) {
+        zkManager.logZooKeeperOutput(Level.WARN);
+      }
+    }
+  }
+
+  /**
+   * Cleanup worker on a failure
+   */
+  private void workerFailureCleanup() {
+    try {
+      if (mapFunctions.isWorker()) {
+        serviceWorker.failureCleanup();
+      }
+    // Checkstyle exception due to needing to get the original
+    // exception on failure
+    // CHECKSTYLE: stop IllegalCatch
+    } catch (RuntimeException e1) {
+    // CHECKSTYLE: resume IllegalCatch
+      LOG.error("run: Worker failure failed on another RuntimeException, " +
+          "original expection will be rethrown", e1);
     }
   }
 }

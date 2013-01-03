@@ -376,8 +376,7 @@ public class GiraphConfiguration extends Configuration
   }
 
   public int getZooKeeperServerCount() {
-    return getInt(ZOOKEEPER_SERVER_COUNT,
-        ZOOKEEPER_SERVER_COUNT_DEFAULT);
+    return getInt(ZOOKEEPER_SERVER_COUNT, ZOOKEEPER_SERVER_COUNT_DEFAULT);
   }
 
   /**
@@ -390,8 +389,7 @@ public class GiraphConfiguration extends Configuration
   }
 
   public int getZooKeeperSessionTimeout() {
-    return getInt(ZOOKEEPER_SESSION_TIMEOUT,
-        ZOOKEEPER_SESSION_TIMEOUT_DEFAULT);
+    return getInt(ZOOKEEPER_SESSION_TIMEOUT, ZOOKEEPER_SESSION_TIMEOUT_DEFAULT);
   }
 
   public int getZookeeperOpsMaxAttempts() {
