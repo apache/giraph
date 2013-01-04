@@ -18,7 +18,8 @@
 
 package org.apache.giraph.io;
 
-import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.vertex.Vertex;
+import org.apache.giraph.io.formats.IdWithValueTextOutputFormat;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.Text;
@@ -37,8 +38,7 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.util.ArrayList;
 
-public class TestIdWithValueTextOutputFormat extends
-    IdWithValueTextOutputFormat<Text, DoubleWritable, Writable> {
+public class TestIdWithValueTextOutputFormat extends IdWithValueTextOutputFormat<Text, DoubleWritable, Writable> {
   @Test
   public void testHappyPath() throws IOException, InterruptedException {
     Configuration conf = new Configuration();

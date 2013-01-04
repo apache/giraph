@@ -18,8 +18,8 @@
 
 package org.apache.giraph.examples;
 
-import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.io.TextVertexOutputFormat;
+import org.apache.giraph.vertex.Vertex;
+import org.apache.giraph.io.formats.TextVertexOutputFormat;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;

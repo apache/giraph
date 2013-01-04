@@ -19,8 +19,8 @@
 package org.apache.giraph.comm.aggregators;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.graph.Aggregator;
-import org.apache.giraph.graph.WorkerInfo;
+import org.apache.giraph.aggregators.Aggregator;
+import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.Writable;
 
 import java.util.List;

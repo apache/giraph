@@ -18,8 +18,8 @@
 
 package org.apache.giraph.io.hcatalog;
 
-import org.apache.giraph.graph.VertexValueInputFormat;
-import org.apache.giraph.graph.VertexValueReader;
+import org.apache.giraph.io.VertexValueInputFormat;
+import org.apache.giraph.io.VertexValueReader;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;

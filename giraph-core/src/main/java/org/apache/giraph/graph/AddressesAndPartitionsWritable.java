@@ -18,7 +18,9 @@
 
 package org.apache.giraph.graph;
 
-import org.apache.giraph.graph.partition.PartitionOwner;
+import org.apache.giraph.partition.PartitionOwner;
+import org.apache.giraph.master.MasterInfo;
+import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.Writable;
 
 import com.google.common.collect.Lists;

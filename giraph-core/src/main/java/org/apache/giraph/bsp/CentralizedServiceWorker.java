@@ -26,20 +26,20 @@ import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.comm.WorkerClient;
 import org.apache.giraph.graph.FinishedSuperstepStats;
 import org.apache.giraph.graph.GraphState;
-import org.apache.giraph.graph.MasterInfo;
+import org.apache.giraph.master.MasterInfo;
 import org.apache.giraph.graph.VertexEdgeCount;
-import org.apache.giraph.graph.WorkerAggregatorHandler;
-import org.apache.giraph.graph.partition.PartitionStore;
+import org.apache.giraph.worker.WorkerAggregatorHandler;
+import org.apache.giraph.partition.PartitionStore;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.vertex.Vertex;
 import org.apache.giraph.graph.GraphMapper;
-import org.apache.giraph.graph.partition.Partition;
-import org.apache.giraph.graph.partition.PartitionOwner;
-import org.apache.giraph.graph.partition.PartitionStats;
-import org.apache.giraph.graph.WorkerInfo;
-import org.apache.giraph.graph.WorkerContext;
+import org.apache.giraph.partition.Partition;
+import org.apache.giraph.partition.PartitionOwner;
+import org.apache.giraph.partition.PartitionStats;
+import org.apache.giraph.worker.WorkerInfo;
+import org.apache.giraph.worker.WorkerContext;
 
 /**
  * All workers should have access to this centralized service to

@@ -18,7 +18,7 @@
 
 package org.apache.giraph.benchmark;
 
-import org.apache.giraph.graph.MultiGraphRepresentativeVertex;
+import org.apache.giraph.vertex.MultiGraphRepresentativeVertex;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 

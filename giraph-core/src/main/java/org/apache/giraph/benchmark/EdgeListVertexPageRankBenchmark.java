@@ -19,14 +19,14 @@
 package org.apache.giraph.benchmark;
 
 import java.io.IOException;
-import org.apache.giraph.graph.EdgeListVertex;
+import org.apache.giraph.vertex.EdgeListVertex;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 
 /**
  * Same benchmark code as {@link PageRankBenchmark}, but uses
- * {@link org.apache.giraph.graph.EdgeListVertex} implementation rather than
- * {@link org.apache.giraph.graph.HashMapVertex}
+ * {@link org.apache.giraph.vertex.EdgeListVertex} implementation rather than
+ * {@link org.apache.giraph.vertex.HashMapVertex}
  */
 public class EdgeListVertexPageRankBenchmark extends EdgeListVertex<
     LongWritable, DoubleWritable, DoubleWritable, DoubleWritable> {

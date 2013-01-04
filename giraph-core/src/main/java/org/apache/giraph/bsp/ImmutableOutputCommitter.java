@@ -29,7 +29,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  * where output isn't desired, or as a base for not using
  * FileOutputCommitter.
  */
-public class ImmutableOutputCommitter extends OutputCommitter {
+class ImmutableOutputCommitter extends OutputCommitter {
   @Override
   public void abortTask(TaskAttemptContext context) throws IOException {
   }

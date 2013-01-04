@@ -18,7 +18,7 @@
 
 package org.apache.giraph.examples;
 
-import org.apache.giraph.graph.IntIntNullIntVertex;
+import org.apache.giraph.vertex.IntIntNullIntVertex;
 import org.apache.hadoop.io.IntWritable;
 
 import java.io.IOException;

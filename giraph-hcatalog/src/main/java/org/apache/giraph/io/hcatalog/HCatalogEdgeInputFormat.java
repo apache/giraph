@@ -19,8 +19,8 @@
 package org.apache.giraph.io.hcatalog;
 
 import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.EdgeInputFormat;
-import org.apache.giraph.graph.EdgeReader;
+import org.apache.giraph.io.EdgeInputFormat;
+import org.apache.giraph.io.EdgeReader;
 import org.apache.giraph.graph.EdgeWithSource;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;

@@ -17,7 +17,7 @@
  */
 package org.apache.giraph.benchmark;
 
-import org.apache.giraph.graph.HashMapVertex;
+import org.apache.giraph.vertex.HashMapVertex;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 
@@ -26,7 +26,7 @@ import java.io.IOException;
 /**
  * Same benchmark code as {@link PageRankBenchmark}, but uses
  * {@link HashMapVertex} implementation rather than
- * {@link org.apache.giraph.graph.EdgeListVertex}
+ * {@link org.apache.giraph.vertex.EdgeListVertex}
  */
 public class HashMapVertexPageRankBenchmark extends HashMapVertex<
     LongWritable, DoubleWritable, DoubleWritable, DoubleWritable> {

@@ -16,6 +16,6 @@
  * limitations under the License.
  */
 /**
- * Package of all the observer related things.
+ * Package of all the master related things.
  */
 package org.apache.giraph.master;

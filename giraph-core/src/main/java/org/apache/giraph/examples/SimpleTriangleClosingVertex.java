@@ -19,7 +19,7 @@
 package org.apache.giraph.examples;
 
 import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.EdgeListVertex;
+import org.apache.giraph.vertex.EdgeListVertex;
 import org.apache.giraph.utils.ArrayListWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;

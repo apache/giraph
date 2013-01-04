@@ -20,7 +20,7 @@ package org.apache.giraph.comm;
 
 import org.apache.giraph.comm.requests.WritableRequest;
 
-import org.apache.giraph.graph.partition.PartitionOwner;
+import org.apache.giraph.partition.PartitionOwner;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 

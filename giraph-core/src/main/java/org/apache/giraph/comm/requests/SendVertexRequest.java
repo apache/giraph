@@ -19,7 +19,7 @@
 package org.apache.giraph.comm.requests;
 
 import org.apache.giraph.comm.ServerData;
-import org.apache.giraph.graph.partition.Partition;
+import org.apache.giraph.partition.Partition;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;

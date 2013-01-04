@@ -18,7 +18,7 @@
 package org.apache.giraph.metrics;
 
 import org.apache.giraph.conf.GiraphConfiguration;
-import org.apache.giraph.graph.BspService;
+import org.apache.giraph.bsp.BspService;
 
 import com.google.common.collect.Lists;
 

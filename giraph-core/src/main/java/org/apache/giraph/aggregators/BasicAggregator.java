@@ -18,7 +18,6 @@
 
 package org.apache.giraph.aggregators;
 
-import org.apache.giraph.graph.Aggregator;
 import org.apache.hadoop.io.Writable;
 
 /**

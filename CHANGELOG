@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-409: Refactor / cleanups (nitay)
+
   GIRAPH-465: MapFunctions cleanup (nitay)
 
   GIRAPH-464: MasterObserver#applicationFailed callback (nitay)

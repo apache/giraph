@@ -18,7 +18,7 @@
 
 package org.apache.giraph.metrics;
 
-import org.apache.giraph.graph.BspServiceWorker;
+import org.apache.giraph.worker.BspServiceWorker;
 import org.apache.giraph.graph.ComputeCallable;
 import org.apache.giraph.graph.GraphMapper;
 import org.apache.hadoop.io.Writable;

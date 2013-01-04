@@ -18,7 +18,7 @@
 
 package org.apache.giraph.comm.requests;
 
-import org.apache.giraph.graph.MasterAggregatorHandler;
+import org.apache.giraph.master.MasterAggregatorHandler;
 
 import java.io.IOException;
 

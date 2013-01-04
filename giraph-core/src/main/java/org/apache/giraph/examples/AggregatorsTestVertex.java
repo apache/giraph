@@ -19,8 +19,8 @@
 package org.apache.giraph.examples;
 
 import org.apache.giraph.aggregators.LongSumAggregator;
-import org.apache.giraph.graph.DefaultMasterCompute;
-import org.apache.giraph.graph.EdgeListVertex;
+import org.apache.giraph.master.DefaultMasterCompute;
+import org.apache.giraph.vertex.EdgeListVertex;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;

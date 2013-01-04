@@ -20,9 +20,9 @@ package org.apache.giraph.examples;
 
 import org.apache.giraph.examples.SimpleSuperstepVertex.
     SimpleSuperstepVertexInputFormat;
-import org.apache.giraph.graph.EdgeListVertex;
+import org.apache.giraph.vertex.EdgeListVertex;
 import org.apache.giraph.graph.GiraphJob;
-import org.apache.giraph.graph.WorkerContext;
+import org.apache.giraph.worker.WorkerContext;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;

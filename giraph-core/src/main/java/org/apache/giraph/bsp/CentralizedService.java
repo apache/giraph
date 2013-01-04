@@ -18,7 +18,7 @@
 
 package org.apache.giraph.bsp;
 
-import org.apache.giraph.graph.WorkerInfo;
+import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 

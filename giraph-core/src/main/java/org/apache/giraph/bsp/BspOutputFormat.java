@@ -20,7 +20,6 @@ package org.apache.giraph.bsp;
 
 import java.io.IOException;
 
-import org.apache.giraph.graph.BspUtils;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.OutputCommitter;

@@ -19,13 +19,13 @@
 package org.apache.giraph.benchmark;
 
 import java.io.IOException;
-import org.apache.giraph.graph.RepresentativeVertex;
+import org.apache.giraph.vertex.RepresentativeVertex;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 
 /**
  * Same benchmark code as {@link PageRankBenchmark}, but uses
- * {@link org.apache.giraph.graph.RepresentativeVertex}
+ * {@link org.apache.giraph.vertex.RepresentativeVertex}
  * implementation.
  */
 public class RepresentativeVertexPageRankBenchmark extends

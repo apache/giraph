@@ -18,10 +18,11 @@
 
 package org.apache.giraph.examples;
 
+import org.apache.giraph.combiner.MinimumIntCombiner;
 import org.apache.giraph.conf.GiraphClasses;
 import org.apache.giraph.conf.GiraphConstants;
-import org.apache.giraph.io.IdWithValueTextOutputFormat;
-import org.apache.giraph.io.IntIntNullIntTextInputFormat;
+import org.apache.giraph.io.formats.IdWithValueTextOutputFormat;
+import org.apache.giraph.io.formats.IntIntNullIntTextInputFormat;
 import org.apache.giraph.utils.InternalVertexRunner;
 import org.junit.Test;
 

@@ -18,6 +18,7 @@
 package org.apache.giraph.graph;
 
 import org.apache.giraph.comm.WorkerClientRequestProcessor;
+import org.apache.giraph.worker.WorkerAggregatorUsage;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;

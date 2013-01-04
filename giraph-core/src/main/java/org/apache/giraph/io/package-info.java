@@ -16,6 +16,6 @@
  * limitations under the License.
  */
 /**
- * Package of reusable library Giraph objects.
+ * Input/Output related things.
  */
 package org.apache.giraph.io;

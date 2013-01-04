@@ -18,20 +18,20 @@
 
 package org.apache.giraph.conf;
 
-import org.apache.giraph.graph.AggregatorWriter;
-import org.apache.giraph.graph.Combiner;
-import org.apache.giraph.graph.EdgeInputFormat;
+import org.apache.giraph.aggregators.AggregatorWriter;
+import org.apache.giraph.combiner.Combiner;
+import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.graph.GraphState;
-import org.apache.giraph.graph.MasterCompute;
-import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.graph.VertexInputFormat;
-import org.apache.giraph.graph.VertexOutputFormat;
+import org.apache.giraph.master.MasterCompute;
+import org.apache.giraph.vertex.Vertex;
+import org.apache.giraph.io.VertexInputFormat;
+import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.giraph.graph.VertexResolver;
-import org.apache.giraph.graph.WorkerContext;
-import org.apache.giraph.graph.partition.GraphPartitionerFactory;
-import org.apache.giraph.graph.partition.MasterGraphPartitioner;
-import org.apache.giraph.graph.partition.Partition;
-import org.apache.giraph.graph.partition.PartitionStats;
+import org.apache.giraph.worker.WorkerContext;
+import org.apache.giraph.partition.GraphPartitionerFactory;
+import org.apache.giraph.partition.MasterGraphPartitioner;
+import org.apache.giraph.partition.Partition;
+import org.apache.giraph.partition.PartitionStats;
 import org.apache.giraph.master.MasterObserver;
 import org.apache.giraph.utils.ExtendedByteArrayDataInput;
 import org.apache.giraph.utils.ExtendedByteArrayDataOutput;
@@ -90,7 +90,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
 
   /**
    * Get the user's subclassed
-   * {@link org.apache.giraph.graph.partition.GraphPartitionerFactory}.
+   * {@link org.apache.giraph.partition.GraphPartitionerFactory}.
    *
    * @return User's graph partitioner
    */
@@ -139,7 +139,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
 
   /**
    * Get the user's subclassed
-   * {@link org.apache.giraph.graph.VertexInputFormat}.
+   * {@link org.apache.giraph.io.VertexInputFormat}.
    *
    * @return User's vertex input format class
    */
@@ -162,7 +162,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
 
   /**
    * Get the user's subclassed
-   * {@link org.apache.giraph.graph.VertexOutputFormat}.
+   * {@link org.apache.giraph.io.VertexOutputFormat}.
    *
    * @return User's vertex output format class
    */
@@ -194,7 +194,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
 
   /**
    * Get the user's subclassed
-   * {@link org.apache.giraph.graph.EdgeInputFormat}.
+   * {@link org.apache.giraph.io.EdgeInputFormat}.
    *
    * @return User's edge input format class
    */
@@ -213,7 +213,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   }
 
   /**
-   * Get the user's subclassed {@link org.apache.giraph.graph.AggregatorWriter}.
+   * Get the user's subclassed {@link AggregatorWriter}.
    *
    * @return User's aggregator writer class
    */
@@ -298,7 +298,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   }
 
   /**
-   * Get the user's subclassed {@link org.apache.giraph.graph.MasterCompute}
+   * Get the user's subclassed {@link org.apache.giraph.master.MasterCompute}
    *
    * @return User's master class
    */
@@ -316,7 +316,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   }
 
   /**
-   * Get the user's subclassed {@link org.apache.giraph.graph.Vertex}
+   * Get the user's subclassed {@link org.apache.giraph.vertex.Vertex}
    *
    * @return User's vertex class
    */

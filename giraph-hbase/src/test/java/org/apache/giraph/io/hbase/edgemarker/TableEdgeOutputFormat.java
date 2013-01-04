@@ -18,8 +18,8 @@
 package org.apache.giraph.io.hbase.edgemarker;
 
 import org.apache.giraph.io.hbase.HBaseVertexOutputFormat;
-import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.graph.VertexWriter;
+import org.apache.giraph.vertex.Vertex;
+import org.apache.giraph.io.VertexWriter;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.util.Bytes;

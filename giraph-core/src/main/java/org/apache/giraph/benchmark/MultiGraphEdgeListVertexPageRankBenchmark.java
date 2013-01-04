@@ -18,7 +18,7 @@
 
 package org.apache.giraph.benchmark;
 
-import org.apache.giraph.graph.MultiGraphEdgeListVertex;
+import org.apache.giraph.vertex.MultiGraphEdgeListVertex;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 

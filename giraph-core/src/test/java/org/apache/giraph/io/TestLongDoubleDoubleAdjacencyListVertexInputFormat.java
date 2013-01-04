@@ -20,9 +20,11 @@ package org.apache.giraph.io;
 
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.EdgeListVertex;
+import org.apache.giraph.io.formats.AdjacencyListTextVertexInputFormat;
+import org.apache.giraph.io.formats.LongDoubleDoubleAdjacencyListVertexInputFormat;
+import org.apache.giraph.vertex.EdgeListVertex;
 import org.apache.giraph.graph.GraphState;
-import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.vertex.Vertex;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.BooleanWritable;
 import org.apache.hadoop.io.DoubleWritable;
@@ -45,8 +47,7 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class TestLongDoubleDoubleAdjacencyListVertexInputFormat extends
-    LongDoubleDoubleAdjacencyListVertexInputFormat<BooleanWritable> {
+public class TestLongDoubleDoubleAdjacencyListVertexInputFormat extends LongDoubleDoubleAdjacencyListVertexInputFormat<BooleanWritable> {
 
   private RecordReader<LongWritable, Text> rr;
   private Configuration conf;

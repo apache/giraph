@@ -20,7 +20,8 @@ package org.apache.giraph.examples;
 
 import static org.junit.Assert.assertEquals;
 
-import org.apache.giraph.graph.Combiner;
+import org.apache.giraph.combiner.Combiner;
+import org.apache.giraph.combiner.MinimumIntCombiner;
 import org.apache.hadoop.io.IntWritable;
 import org.junit.Test;
 

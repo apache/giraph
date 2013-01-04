@@ -18,7 +18,12 @@
 
 package org.apache.giraph.graph;
 
+import org.apache.giraph.bsp.BspUtils;
+import org.apache.giraph.combiner.Combiner;
+import org.apache.giraph.io.VertexInputFormat;
+import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.giraph.utils.ReflectionUtils;
+import org.apache.giraph.vertex.Vertex;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;

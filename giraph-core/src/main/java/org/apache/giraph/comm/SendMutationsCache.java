@@ -20,7 +20,7 @@ package org.apache.giraph.comm;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.vertex.Vertex;
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.VertexMutations;
 import org.apache.hadoop.io.Writable;

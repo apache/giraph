@@ -26,7 +26,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.graph.Combiner;
+import org.apache.giraph.combiner.Combiner;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;

@@ -19,10 +19,10 @@
 package org.apache.giraph.examples;
 
 import org.apache.giraph.aggregators.LongSumAggregator;
-import org.apache.giraph.graph.DefaultMasterCompute;
+import org.apache.giraph.master.DefaultMasterCompute;
 import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.EdgeListVertex;
-import org.apache.giraph.graph.WorkerContext;
+import org.apache.giraph.vertex.EdgeListVertex;
+import org.apache.giraph.worker.WorkerContext;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;

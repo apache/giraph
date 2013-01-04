@@ -18,7 +18,8 @@
 package org.apache.giraph.io;
 
 import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.vertex.Vertex;
+import org.apache.giraph.io.formats.AdjacencyListTextVertexOutputFormat;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.Text;
@@ -37,8 +38,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 
-public class TestAdjacencyListTextVertexOutputFormat extends
-    AdjacencyListTextVertexOutputFormat<Text, DoubleWritable, DoubleWritable> {
+public class TestAdjacencyListTextVertexOutputFormat extends AdjacencyListTextVertexOutputFormat<Text, DoubleWritable, DoubleWritable> {
 
   protected AdjacencyListTextVertexWriter createVertexWriter(
       final RecordWriter<Text, Text> tw) {

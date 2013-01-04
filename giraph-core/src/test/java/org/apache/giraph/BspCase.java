@@ -234,7 +234,7 @@ public class BspCase implements Watcher {
    *
    *  @return whether we use a real hadoop instance or not
    */
-  boolean runningInDistributedMode() {
+  public boolean runningInDistributedMode() {
     return jobTracker != null;
   }
 

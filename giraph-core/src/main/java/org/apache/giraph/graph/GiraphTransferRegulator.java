@@ -17,10 +17,11 @@
  */
 package org.apache.giraph.graph;
 
+import org.apache.giraph.vertex.Vertex;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.giraph.graph.partition.PartitionOwner;
+import org.apache.giraph.partition.PartitionOwner;
 import com.google.common.collect.Maps;
 import java.util.Map;
 

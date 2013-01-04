@@ -19,9 +19,9 @@
 package org.apache.giraph.examples;
 
 import org.apache.giraph.aggregators.DoubleOverwriteAggregator;
-import org.apache.giraph.graph.DefaultMasterCompute;
-import org.apache.giraph.graph.LongDoubleFloatDoubleVertex;
-import org.apache.giraph.graph.WorkerContext;
+import org.apache.giraph.master.DefaultMasterCompute;
+import org.apache.giraph.vertex.LongDoubleFloatDoubleVertex;
+import org.apache.giraph.worker.WorkerContext;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.log4j.Logger;
 

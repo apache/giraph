@@ -18,10 +18,10 @@
 
 package org.apache.giraph.examples;
 
-import org.apache.giraph.graph.BspUtils;
+import org.apache.giraph.bsp.BspUtils;
 import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.io.TextVertexInputFormat;
+import org.apache.giraph.vertex.Vertex;
+import org.apache.giraph.io.formats.TextVertexInputFormat;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -36,7 +36,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 /**
- * Simple text-based {@link org.apache.giraph.graph.VertexInputFormat} for
+ * Simple text-based {@link org.apache.giraph.io.VertexInputFormat} for
  * unweighted graphs with long ids. Each line consists of: vertex
  * neighbor1:weight1 neighbor2:weight2 ...
  */

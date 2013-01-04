@@ -18,8 +18,8 @@
 
 package org.apache.giraph.io.hbase;
 
-import org.apache.giraph.graph.VertexOutputFormat;
-import org.apache.giraph.graph.VertexWriter;
+import org.apache.giraph.io.VertexOutputFormat;
+import org.apache.giraph.io.VertexWriter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableOutputFormat;
 import org.apache.hadoop.io.Writable;

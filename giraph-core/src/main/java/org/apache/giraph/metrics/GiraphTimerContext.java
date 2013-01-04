@@ -18,9 +18,9 @@
 
 package org.apache.giraph.metrics;
 
-import org.apache.giraph.utils.SystemTime;
-import org.apache.giraph.utils.Time;
-import org.apache.giraph.utils.Times;
+import org.apache.giraph.time.SystemTime;
+import org.apache.giraph.time.Time;
+import org.apache.giraph.time.Times;
 
 import java.util.concurrent.TimeUnit;
 

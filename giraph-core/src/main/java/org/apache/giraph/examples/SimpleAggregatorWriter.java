@@ -21,7 +21,7 @@ package org.apache.giraph.examples;
 import java.io.IOException;
 import java.util.Map.Entry;
 
-import org.apache.giraph.graph.AggregatorWriter;
+import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;

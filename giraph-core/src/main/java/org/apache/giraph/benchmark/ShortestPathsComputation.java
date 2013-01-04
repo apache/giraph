@@ -19,7 +19,7 @@
 package org.apache.giraph.benchmark;
 
 import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.vertex.Vertex;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 

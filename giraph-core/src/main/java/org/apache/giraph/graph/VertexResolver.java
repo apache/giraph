@@ -18,6 +18,7 @@
 
 package org.apache.giraph.graph;
 
+import org.apache.giraph.vertex.Vertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -40,8 +41,7 @@ public interface VertexResolver<I extends WritableComparable,
    * excluding the normal case (a vertex already exists and has zero or more
    * messages sent it to).
    *
-   * @param vertexId Vertex id (can be used for {@link Vertex}'s
-   *        initialize())
+   * @param vertexId Vertex id (can be used for {@link Vertex}'s initialize())
    * @param vertex Original vertex or null if none
    * @param vertexChanges Changes that happened to this vertex or null if none
    * @param hasMessages True iff vertex received messages in the last superstep

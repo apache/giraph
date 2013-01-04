@@ -17,7 +17,7 @@
  */
 package org.apache.giraph.benchmark;
 
-import org.apache.giraph.graph.MutableVertex;
+import org.apache.giraph.vertex.MutableVertex;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 

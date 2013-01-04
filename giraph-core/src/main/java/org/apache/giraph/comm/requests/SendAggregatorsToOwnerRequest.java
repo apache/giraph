@@ -21,7 +21,7 @@ package org.apache.giraph.comm.requests;
 import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.comm.aggregators.AggregatorUtils;
 import org.apache.giraph.comm.aggregators.AllAggregatorServerData;
-import org.apache.giraph.graph.Aggregator;
+import org.apache.giraph.aggregators.Aggregator;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 

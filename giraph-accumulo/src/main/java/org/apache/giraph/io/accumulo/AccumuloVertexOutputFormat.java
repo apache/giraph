@@ -19,8 +19,8 @@ package org.apache.giraph.io.accumulo;
 
 import org.apache.accumulo.core.client.mapreduce.AccumuloOutputFormat;
 import org.apache.accumulo.core.data.Mutation;
-import org.apache.giraph.graph.VertexOutputFormat;
-import org.apache.giraph.graph.VertexWriter;
+import org.apache.giraph.io.VertexOutputFormat;
+import org.apache.giraph.io.VertexWriter;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;

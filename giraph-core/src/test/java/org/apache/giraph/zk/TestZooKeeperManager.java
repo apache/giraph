@@ -18,7 +18,6 @@
 package org.apache.giraph.zk;
 
 import org.apache.giraph.conf.GiraphConstants;
-import org.apache.giraph.zk.ZooKeeperManager;
 import org.apache.hadoop.conf.Configuration;
 import org.junit.Test;
 

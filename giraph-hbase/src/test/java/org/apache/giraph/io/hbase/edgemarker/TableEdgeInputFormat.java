@@ -18,8 +18,8 @@
 package org.apache.giraph.io.hbase.edgemarker;
 
 import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.graph.VertexReader;
+import org.apache.giraph.vertex.Vertex;
+import org.apache.giraph.io.VertexReader;
 import org.apache.giraph.io.hbase.HBaseVertexInputFormat;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;

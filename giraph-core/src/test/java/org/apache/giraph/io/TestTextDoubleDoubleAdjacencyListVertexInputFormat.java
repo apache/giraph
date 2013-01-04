@@ -19,8 +19,14 @@ package org.apache.giraph.io;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+
+import org.apache.giraph.bsp.BspUtils;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.graph.*;
+import org.apache.giraph.io.formats.AdjacencyListTextVertexInputFormat;
+import org.apache.giraph.io.formats.TextDoubleDoubleAdjacencyListVertexInputFormat;
+import org.apache.giraph.vertex.EdgeListVertex;
+import org.apache.giraph.vertex.Vertex;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -39,8 +45,7 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class TestTextDoubleDoubleAdjacencyListVertexInputFormat extends
-    TextDoubleDoubleAdjacencyListVertexInputFormat<BooleanWritable> {
+public class TestTextDoubleDoubleAdjacencyListVertexInputFormat extends TextDoubleDoubleAdjacencyListVertexInputFormat<BooleanWritable> {
 
   private RecordReader<LongWritable, Text> rr;
   private Configuration conf;
@@ -214,7 +219,7 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat extends
 
   public static class DummyVertex
       extends EdgeListVertex<Text, DoubleWritable,
-      DoubleWritable, BooleanWritable> {
+            DoubleWritable, BooleanWritable> {
     @Override
     public void compute(Iterable<BooleanWritable> messages) throws IOException {
       // ignore

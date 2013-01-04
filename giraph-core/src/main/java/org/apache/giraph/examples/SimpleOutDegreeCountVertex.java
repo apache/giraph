@@ -20,7 +20,7 @@ package org.apache.giraph.examples;
 
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.DoubleWritable;
-import org.apache.giraph.graph.EdgeListVertex;
+import org.apache.giraph.vertex.EdgeListVertex;
 
 
 /**

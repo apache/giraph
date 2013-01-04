@@ -18,8 +18,8 @@
 
 package org.apache.giraph.bsp;
 
-import org.apache.giraph.graph.MasterAggregatorHandler;
-import org.apache.giraph.graph.MasterInfo;
+import org.apache.giraph.master.MasterAggregatorHandler;
+import org.apache.giraph.master.MasterInfo;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.zookeeper.KeeperException;

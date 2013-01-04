@@ -18,7 +18,7 @@
 
 package org.apache.giraph.comm;
 
-import org.apache.giraph.graph.Aggregator;
+import org.apache.giraph.aggregators.Aggregator;
 import org.apache.hadoop.io.Writable;
 
 import java.io.IOException;

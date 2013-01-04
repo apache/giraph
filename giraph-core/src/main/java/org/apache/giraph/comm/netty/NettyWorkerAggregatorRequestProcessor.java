@@ -27,7 +27,7 @@ import org.apache.giraph.comm.aggregators.SendAggregatedValueCache;
 import org.apache.giraph.comm.requests.SendAggregatorsToMasterRequest;
 import org.apache.giraph.comm.requests.SendAggregatorsToWorkerRequest;
 import org.apache.giraph.comm.requests.SendWorkerAggregatorsRequest;
-import org.apache.giraph.graph.WorkerInfo;
+import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.Progressable;
 
