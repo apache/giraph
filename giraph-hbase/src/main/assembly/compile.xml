@@ -32,7 +32,7 @@
               <exclude>META-INF/LICENSE</exclude>
           </excludes>
       </unpackOptions>
-      <unpack>false</unpack>
+      <unpack>true</unpack>
       <scope>runtime</scope>
     </dependencySet>
   </dependencySets>

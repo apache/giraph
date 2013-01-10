@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-478: Bring back jar-with-deps for giraph-hcatalog (nitay)
+
   GIRAPH-474: Add an oprtion not to use direct byte buffers. (majakabiljo via ereisman)
 
   GIRAPH-476: SequenceFileVertexOutputFormat (nitay)
