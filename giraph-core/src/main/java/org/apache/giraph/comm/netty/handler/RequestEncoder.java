@@ -19,6 +19,8 @@
 package org.apache.giraph.comm.netty.handler;
 
 import org.apache.giraph.comm.requests.WritableRequest;
+import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.time.SystemTime;
 import org.apache.giraph.time.Time;
 import org.apache.giraph.time.Times;
@@ -42,16 +44,23 @@ public class RequestEncoder extends OneToOneEncoder {
   private static final byte[] LENGTH_PLACEHOLDER = new byte[4];
   /** Buffer starting size */
   private final int bufferStartingSize;
+  /** Whether or not to use direct byte buffers */
+  private final boolean useDirectBuffers;
   /** Start nanoseconds for the encoding time */
   private long startEncodingNanoseconds = -1;
 
   /**
    * Constructor.
    *
-   * @param bufferStartingSize Starting size of the buffer
+   * @param conf Giraph configuration
    */
-  public RequestEncoder(int bufferStartingSize) {
-    this.bufferStartingSize = bufferStartingSize;
+  public RequestEncoder(GiraphConfiguration conf) {
+    bufferStartingSize = conf.getInt(
+        GiraphConstants.NETTY_REQUEST_ENCODER_BUFFER_SIZE,
+        GiraphConstants.NETTY_REQUEST_ENCODER_BUFFER_SIZE_DEFAULT);
+    useDirectBuffers = conf.getBoolean(
+        GiraphConstants.NETTY_REQUEST_ENCODER_USE_DIRECT_BUFFERS,
+        GiraphConstants.NETTY_REQUEST_ENCODER_USE_DIRECT_BUFFERS_DEFAULT);
   }
 
   @Override
@@ -68,17 +77,19 @@ public class RequestEncoder extends OneToOneEncoder {
     }
     WritableRequest writableRequest = (WritableRequest) msg;
     int requestSize = writableRequest.getSerializedSize();
-    ChannelBufferOutputStream outputStream;
+    ChannelBuffer channelBuffer;
     if (requestSize == WritableRequest.UNKNOWN_SIZE) {
-      outputStream =
-          new ChannelBufferOutputStream(ChannelBuffers.dynamicBuffer(
-              bufferStartingSize,
-              ctx.getChannel().getConfig().getBufferFactory()));
+      channelBuffer = ChannelBuffers.dynamicBuffer(
+          bufferStartingSize,
+          ctx.getChannel().getConfig().getBufferFactory());
     } else {
       requestSize += LENGTH_PLACEHOLDER.length + 1;
-      outputStream = new ChannelBufferOutputStream(
-          ChannelBuffers.directBuffer(requestSize));
+      channelBuffer = useDirectBuffers ?
+          ChannelBuffers.directBuffer(requestSize) :
+          ChannelBuffers.buffer(requestSize);
     }
+    ChannelBufferOutputStream outputStream =
+        new ChannelBufferOutputStream(channelBuffer);
     outputStream.write(LENGTH_PLACEHOLDER);
     outputStream.writeByte(writableRequest.getType().ordinal());
     try {

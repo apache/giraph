@@ -177,6 +177,15 @@ public interface GiraphConstants {
   /** Start with 32K */
   int NETTY_REQUEST_ENCODER_BUFFER_SIZE_DEFAULT = 32 * 1024;
 
+  /** Whether or not netty request encoder should use direct byte buffers */
+  String NETTY_REQUEST_ENCODER_USE_DIRECT_BUFFERS =
+      "giraph.nettyRequestEncoderUseDirectBuffers";
+  /**
+   * By default don't use direct buffers,
+   * since jobs can take more than allowed heap memory in that case
+   */
+  boolean NETTY_REQUEST_ENCODER_USE_DIRECT_BUFFERS_DEFAULT = false;
+
   /** Netty client threads */
   String NETTY_CLIENT_THREADS = "giraph.nettyClientThreads";
   /** Default is 4 */

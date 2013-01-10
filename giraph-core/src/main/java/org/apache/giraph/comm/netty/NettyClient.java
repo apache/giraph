@@ -278,9 +278,7 @@ public class NettyClient {
           // completes (as in non-auth pipeline below).
           pipeline.addLast("length-field-based-frame-decoder",
               new LengthFieldBasedFrameDecoder(1024, 0, 4, 0, 4));
-          pipeline.addLast("request-encoder", new RequestEncoder(conf.getInt(
-              GiraphConstants.NETTY_REQUEST_ENCODER_BUFFER_SIZE,
-              GiraphConstants.NETTY_REQUEST_ENCODER_BUFFER_SIZE_DEFAULT)));
+          pipeline.addLast("request-encoder", new RequestEncoder(conf));
           // The following pipeline component responds to the server's SASL
           // tokens with its own responses. Both client and server share the
           // same Hadoop Job token, which is used to create the SASL tokens to
@@ -298,9 +296,7 @@ public class NettyClient {
           pipeline.addLast("clientByteCounter", byteCounter);
           pipeline.addLast("responseFrameDecoder",
               new FixedLengthFrameDecoder(RequestServerHandler.RESPONSE_BYTES));
-          pipeline.addLast("requestEncoder", new RequestEncoder(conf.getInt(
-              GiraphConstants.NETTY_REQUEST_ENCODER_BUFFER_SIZE,
-              GiraphConstants.NETTY_REQUEST_ENCODER_BUFFER_SIZE_DEFAULT)));
+          pipeline.addLast("requestEncoder", new RequestEncoder(conf));
           pipeline.addLast("responseClientHandler",
               new ResponseClientHandler(clientRequestIdRequestInfoMap, conf));
           if (executionHandler != null) {
