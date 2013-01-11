@@ -419,6 +419,20 @@ public interface GiraphConstants {
    */
   long INPUT_SPLIT_MAX_EDGES_DEFAULT = -1;
 
+  /**
+   * To minimize network usage when reading input splits,
+   * each worker can prioritize splits that reside on its host.
+   * This, however, comes at the cost of increased load on ZooKeeper.
+   * Hence, users with a lot of splits and input threads (or with
+   * configurations that can't exploit locality) may want to disable it.
+   */
+  String USE_INPUT_SPLIT_LOCALITY = "giraph.useInputSplitLocality";
+
+  /**
+   * Default is to prioritize local input splits.
+   */
+  boolean USE_INPUT_SPLIT_LOCALITY_DEFAULT = true;
+
   /** Java opts passed to ZooKeeper startup */
   String ZOOKEEPER_JAVA_OPTS = "giraph.zkJavaOpts";
   /** Default java opts passed to ZooKeeper startup */

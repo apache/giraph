@@ -18,9 +18,10 @@
 
 package org.apache.giraph.worker;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.comm.WorkerClientRequestProcessor;
 import org.apache.giraph.comm.netty.NettyWorkerClientRequestProcessor;
+import org.apache.giraph.conf.GiraphConstants;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.InputSplitEvents;
 import org.apache.giraph.graph.VertexEdgeCount;
@@ -92,6 +93,8 @@ public abstract class InputSplitsCallable<I extends WritableComparable,
   private final String inputSplitFinishedNode;
   /** Input split events. */
   private final InputSplitEvents inputSplitEvents;
+  /** Whether to prioritize local input splits. */
+  private final boolean useLocality;
 
   // CHECKSTYLE: stop ParameterNumberCheck
   /**
@@ -130,10 +133,13 @@ public abstract class InputSplitsCallable<I extends WritableComparable,
         graphState.getTotalNumVertices(), graphState.getTotalNumEdges(),
         context, graphState.getGraphMapper(), workerClientRequestProcessor,
         null);
+    this.useLocality = configuration.getBoolean(
+        GiraphConstants.USE_INPUT_SPLIT_LOCALITY,
+        GiraphConstants.USE_INPUT_SPLIT_LOCALITY_DEFAULT);
     try {
       splitOrganizer = new InputSplitPathOrganizer(zooKeeperExt,
           inputSplitPathList, workerInfo.getHostname(), workerInfo.getPort(),
-          threadId);
+          threadId, this.useLocality);
     } catch (KeeperException e) {
       throw new IllegalStateException(
           "InputSplitsCallable: KeeperException", e);
@@ -377,7 +383,9 @@ public abstract class InputSplitsCallable<I extends WritableComparable,
 
     DataInputStream inputStream =
         new DataInputStream(new ByteArrayInputStream(splitList));
-    Text.readString(inputStream); // location data unused here, skip
+    if (useLocality) {
+      Text.readString(inputStream); // location data unused here, skip
+    }
     String inputSplitClass = Text.readString(inputStream);
     InputSplit inputSplit = (InputSplit)
         ReflectionUtils.newInstance(

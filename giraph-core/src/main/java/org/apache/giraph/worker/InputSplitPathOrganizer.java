@@ -60,13 +60,14 @@ public class InputSplitPathOrganizer implements Iterable<String> {
    * @param hostName the worker's host name (for matching)
    * @param port the port number for this worker
    * @param threadId id of the input split thread
+   * @param useLocality whether to prioritize local input splits
    */
   public InputSplitPathOrganizer(final ZooKeeperExt zooKeeper,
     final String zkPathList, final String hostName, final int port,
-    final int threadId)
+    final int threadId, final boolean useLocality)
     throws KeeperException, InterruptedException {
     this(zooKeeper, zooKeeper.getChildrenExt(zkPathList, false, false, true),
-        hostName, port, threadId);
+        hostName, port, threadId, useLocality);
   }
 
   /**
@@ -77,30 +78,44 @@ public class InputSplitPathOrganizer implements Iterable<String> {
    * @param hostName the worker's host name (for matching)
    * @param port the port number for this worker
    * @param threadId id of the input split thread
+   * @param useLocality whether to prioritize local input splits
    */
   public InputSplitPathOrganizer(
       final ZooKeeperExt zooKeeper, final List<String> inputSplitPathList,
-      final String hostName, final int port, final int threadId)
+      final String hostName, final int port, final int threadId,
+      final boolean useLocality)
     throws KeeperException, InterruptedException {
     this.zooKeeper = zooKeeper;
     this.pathList = Lists.newArrayList(inputSplitPathList);
     this.hostName = hostName;
-    this.baseOffset = 0; // set later after switching out local paths
-    prioritizeLocalInputSplits(port, threadId);
+    this.baseOffset = computeBaseOffset(port, threadId);
+    if (useLocality) {
+      prioritizeLocalInputSplits();
+    }
   }
 
- /**
+  /**
+   * Compute base offset to start iterating from,
+   * in order to avoid collisions with other workers/threads.
+   *
+   * @param port the port number for this worker
+   * @param threadId id of the input split thread
+   * @return the offset to start iterating from
+   */
+  private int computeBaseOffset(int port, int threadId) {
+    return pathList.isEmpty() ? 0 :
+        Math.abs(Objects.hashCode(hostName, port, threadId) % pathList.size());
+  }
+
+  /**
   * Re-order list of InputSplits so files local to this worker node's
   * disk are the first it will iterate over when attempting to claim
   * a split to read. This will increase locality of data reads with greater
   * probability as the % of total nodes in the cluster hosting data and workers
   * BOTH increase towards 100%. Replication increases our chances of a "hit."
   *
-  * @param port the port number for hashing unique iteration indexes for all
-  *             workers, even those sharing the same host node.
-  * @param threadId id of the input split thread
   */
-  private void prioritizeLocalInputSplits(final int port, final int threadId) {
+  private void prioritizeLocalInputSplits() {
     List<String> sortedList = new ArrayList<String>();
     String hosts;
     for (Iterator<String> iterator = pathList.iterator(); iterator.hasNext();) {
@@ -121,12 +136,6 @@ public class InputSplitPathOrganizer implements Iterable<String> {
     }
     // shuffle the local blocks in case several workers exist on this host
     Collections.shuffle(sortedList);
-    // determine the hash-based offset for this worker to iterate from
-    // and place the local blocks into the list at that index, if any
-    final int hashOffset = Objects.hashCode(hostName, port, threadId);
-    if (pathList.size() != 0) {
-      baseOffset = Math.abs(hashOffset % pathList.size());
-    }
     // re-insert local paths at "adjusted index zero" for caller to iterate on
     pathList.addAll(baseOffset, sortedList);
   }

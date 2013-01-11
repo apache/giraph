@@ -341,8 +341,6 @@ else[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
   @Test
   public void testInputSplitPathOrganizer()
     throws IOException, KeeperException, InterruptedException {
-    final List<String> goodList = new ArrayList<String>();
-    Collections.addAll(goodList, "local", "remote1", "remote2");
     final List<String> testList = new ArrayList<String>();
     Collections.addAll(testList, "remote2", "local", "remote1");
     final String localHost = "node.LOCAL.com";
@@ -364,17 +362,18 @@ else[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
     Text.writeString(dos, first);
     byte[] local = baos.toByteArray();
     ZooKeeperExt zk = mock(ZooKeeperExt.class);
-    when(zk.getChildrenExt(testListName, false, false, true)).thenReturn(testList);
+    when(zk.getChildrenExt(testListName, false, false, true)).
+        thenReturn(testList);
     when(zk.getData("remote1", false, null)).thenReturn(remote1);
     when(zk.getData("remote2", false, null)).thenReturn(remote2);
     when(zk.getData("local", false, null)).thenReturn(local);
     InputSplitPathOrganizer lis =
-      new InputSplitPathOrganizer(zk, testListName, localHost, 0, 0);
+      new InputSplitPathOrganizer(zk, testListName, localHost, 0, 0, true);
     final List<String> resultList = new ArrayList<String>();
     for (String next : lis) {
       resultList.add(next);
     }
-    assertEquals(goodList, resultList);
+    assertEquals("local", resultList.get(0));
   }
 
   /**

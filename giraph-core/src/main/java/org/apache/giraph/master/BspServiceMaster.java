@@ -602,9 +602,13 @@ public class BspServiceMaster<I extends WritableComparable,
     }
     ExecutorService taskExecutor =
         Executors.newFixedThreadPool(inputSplitThreadCount);
+    boolean writeLocations = getConfiguration().getBoolean(
+        GiraphConstants.USE_INPUT_SPLIT_LOCALITY,
+        GiraphConstants.USE_INPUT_SPLIT_LOCALITY_DEFAULT);
     for (int i = 0; i < splitList.size(); ++i) {
       InputSplit inputSplit = splitList.get(i);
-      taskExecutor.submit(new WriteInputSplit(inputSplit, inputSplitsPath, i));
+      taskExecutor.submit(new WriteInputSplit(inputSplit, inputSplitsPath, i,
+          writeLocations));
     }
     taskExecutor.shutdown();
     ProgressableUtils.awaitExecutorTermination(taskExecutor, getContext());
@@ -1821,6 +1825,8 @@ public class BspServiceMaster<I extends WritableComparable,
     private final String inputSplitsPath;
     /** Index of the input split */
     private final int index;
+    /** Whether to write locality information */
+    private final boolean writeLocations;
 
     /**
      * Constructor
@@ -1828,13 +1834,18 @@ public class BspServiceMaster<I extends WritableComparable,
      * @param inputSplit Input split which we are going to write
      * @param inputSplitsPath Input splits path
      * @param index Index of the input split
+     * @param writeLocations whether to write the input split's locations (to
+     *                       be used by workers for prioritizing local splits
+     *                       when reading)
      */
     public WriteInputSplit(InputSplit inputSplit,
                            String inputSplitsPath,
-                           int index) {
+                           int index,
+                           boolean writeLocations) {
       this.inputSplit = inputSplit;
       this.inputSplitsPath = inputSplitsPath;
       this.index = index;
+      this.writeLocations = writeLocations;
     }
 
     @Override
@@ -1846,19 +1857,22 @@ public class BspServiceMaster<I extends WritableComparable,
         DataOutput outputStream =
             new DataOutputStream(byteArrayOutputStream);
 
-        String[] splitLocations = inputSplit.getLocations();
-        StringBuilder locations = null;
-        if (splitLocations != null) {
-          int splitListLength =
-              Math.min(splitLocations.length, localityLimit);
-          locations = new StringBuilder();
-          for (String location : splitLocations) {
-            locations.append(location)
-                .append(--splitListLength > 0 ? "\t" : "");
+        if (writeLocations) {
+          String[] splitLocations = inputSplit.getLocations();
+          StringBuilder locations = null;
+          if (splitLocations != null) {
+            int splitListLength =
+                Math.min(splitLocations.length, localityLimit);
+            locations = new StringBuilder();
+            for (String location : splitLocations) {
+              locations.append(location)
+                  .append(--splitListLength > 0 ? "\t" : "");
+            }
           }
+          Text.writeString(outputStream,
+              locations == null ? "" : locations.toString());
         }
-        Text.writeString(outputStream,
-            locations == null ? "" : locations.toString());
+
         Text.writeString(outputStream,
             inputSplit.getClass().getName());
         ((Writable) inputSplit).write(outputStream);

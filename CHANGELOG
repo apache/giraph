@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-Fetching locality info in InputSplitPathOrganizer causes jobs to hang (apresta via ereisman)
+
   GIRAPH-459: Group Vertex Mutations by Partition ID (claudio)
 
   GIRAPH-473: InputSplitPathOrganizer should be aware of multiple threads (apresta via ereisman)
