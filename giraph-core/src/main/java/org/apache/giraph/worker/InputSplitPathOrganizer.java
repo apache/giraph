@@ -17,17 +17,19 @@
  */
 package org.apache.giraph.worker;
 
+import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
+import org.apache.giraph.zk.ZooKeeperExt;
+import org.apache.hadoop.io.Text;
+import org.apache.zookeeper.KeeperException;
+
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
 import java.util.Iterator;
-import org.apache.giraph.zk.ZooKeeperExt;
-import org.apache.hadoop.io.Text;
-import org.apache.zookeeper.KeeperException;
+import java.util.List;
 
 /**
  * Utility class to extract the list of InputSplits from the
@@ -57,12 +59,14 @@ public class InputSplitPathOrganizer implements Iterable<String> {
    * @param zkPathList the path to read from
    * @param hostName the worker's host name (for matching)
    * @param port the port number for this worker
+   * @param threadId id of the input split thread
    */
   public InputSplitPathOrganizer(final ZooKeeperExt zooKeeper,
-    final String zkPathList, final String hostName, final int port)
+    final String zkPathList, final String hostName, final int port,
+    final int threadId)
     throws KeeperException, InterruptedException {
     this(zooKeeper, zooKeeper.getChildrenExt(zkPathList, false, false, true),
-        hostName, port);
+        hostName, port, threadId);
   }
 
   /**
@@ -72,16 +76,17 @@ public class InputSplitPathOrganizer implements Iterable<String> {
    * @param inputSplitPathList path of input splits to read from
    * @param hostName the worker's host name (for matching)
    * @param port the port number for this worker
+   * @param threadId id of the input split thread
    */
   public InputSplitPathOrganizer(
       final ZooKeeperExt zooKeeper, final List<String> inputSplitPathList,
-      final String hostName, final int port)
+      final String hostName, final int port, final int threadId)
     throws KeeperException, InterruptedException {
     this.zooKeeper = zooKeeper;
     this.pathList = Lists.newArrayList(inputSplitPathList);
     this.hostName = hostName;
     this.baseOffset = 0; // set later after switching out local paths
-    prioritizeLocalInputSplits(port);
+    prioritizeLocalInputSplits(port, threadId);
   }
 
  /**
@@ -93,10 +98,11 @@ public class InputSplitPathOrganizer implements Iterable<String> {
   *
   * @param port the port number for hashing unique iteration indexes for all
   *             workers, even those sharing the same host node.
+  * @param threadId id of the input split thread
   */
-  private void prioritizeLocalInputSplits(final int port) {
+  private void prioritizeLocalInputSplits(final int port, final int threadId) {
     List<String> sortedList = new ArrayList<String>();
-    String hosts = null;
+    String hosts;
     for (Iterator<String> iterator = pathList.iterator(); iterator.hasNext();) {
       final String path = iterator.next();
       try {
@@ -117,9 +123,9 @@ public class InputSplitPathOrganizer implements Iterable<String> {
     Collections.shuffle(sortedList);
     // determine the hash-based offset for this worker to iterate from
     // and place the local blocks into the list at that index, if any
-    final int temp = hostName.hashCode() + (19 * port);
+    final int hashOffset = Objects.hashCode(hostName, port, threadId);
     if (pathList.size() != 0) {
-      baseOffset = Math.abs(temp % pathList.size());
+      baseOffset = Math.abs(hashOffset % pathList.size());
     }
     // re-insert local paths at "adjusted index zero" for caller to iterate on
     pathList.addAll(baseOffset, sortedList);

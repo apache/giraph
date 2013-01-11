@@ -264,7 +264,7 @@ public class BspServiceWorker<I extends WritableComparable,
     }
     for (int i = 0; i < numThreads; ++i) {
       Callable<VertexEdgeCount> inputSplitsCallable =
-          inputSplitsCallableFactory.newCallable();
+          inputSplitsCallableFactory.newCallable(i);
       threadsFutures.add(inputSplitsExecutor.submit(inputSplitsCallable));
     }
 

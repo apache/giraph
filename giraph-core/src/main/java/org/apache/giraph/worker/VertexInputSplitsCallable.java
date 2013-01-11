@@ -82,6 +82,7 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
    * @param bspServiceWorker service worker
    * @param inputSplitPathList List of the paths of the input splits
    * @param workerInfo This worker's info
+   * @param threadId Id of input split thread
    * @param zooKeeperExt Handle to ZooKeeperExt
    */
   public VertexInputSplitsCallable(
@@ -91,9 +92,10 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
       BspServiceWorker<I, V, E, M> bspServiceWorker,
       List<String> inputSplitPathList,
       WorkerInfo workerInfo,
+      int threadId,
       ZooKeeperExt zooKeeperExt)  {
     super(context, graphState, configuration, bspServiceWorker,
-        inputSplitPathList, workerInfo, zooKeeperExt,
+        inputSplitPathList, workerInfo, threadId, zooKeeperExt,
         BspServiceWorker.VERTEX_INPUT_SPLIT_RESERVED_NODE,
         BspServiceWorker.VERTEX_INPUT_SPLIT_FINISHED_NODE,
         bspServiceWorker.getVertexInputSplitsEvents());

@@ -103,6 +103,7 @@ public abstract class InputSplitsCallable<I extends WritableComparable,
    * @param bspServiceWorker service worker
    * @param inputSplitPathList List of the paths of the input splits
    * @param workerInfo This worker's info
+   * @param threadId Id of input split thread
    * @param zooKeeperExt Handle to ZooKeeperExt
    * @param inputSplitReservedNode Path to input split reserved
    * @param inputSplitFinishedNode Path to input split finsished
@@ -115,6 +116,7 @@ public abstract class InputSplitsCallable<I extends WritableComparable,
       BspServiceWorker<I, V, E, M> bspServiceWorker,
       List<String> inputSplitPathList,
       WorkerInfo workerInfo,
+      int threadId,
       ZooKeeperExt zooKeeperExt,
       String inputSplitReservedNode,
       String inputSplitFinishedNode,
@@ -130,7 +132,8 @@ public abstract class InputSplitsCallable<I extends WritableComparable,
         null);
     try {
       splitOrganizer = new InputSplitPathOrganizer(zooKeeperExt,
-          inputSplitPathList, workerInfo.getHostname(), workerInfo.getPort());
+          inputSplitPathList, workerInfo.getHostname(), workerInfo.getPort(),
+          threadId);
     } catch (KeeperException e) {
       throw new IllegalStateException(
           "InputSplitsCallable: KeeperException", e);

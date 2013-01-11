@@ -82,7 +82,7 @@ public class VertexInputSplitsCallableFactory<I extends WritableComparable,
   }
 
   @Override
-  public InputSplitsCallable<I, V, E, M> newCallable() {
+  public InputSplitsCallable<I, V, E, M> newCallable(int threadId) {
     return new VertexInputSplitsCallable<I, V, E, M>(
         context,
         graphState,
@@ -90,6 +90,7 @@ public class VertexInputSplitsCallableFactory<I extends WritableComparable,
         bspServiceWorker,
         inputSplitPathList,
         workerInfo,
+        threadId,
         zooKeeperExt);
   }
 }

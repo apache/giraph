@@ -34,7 +34,8 @@ public interface InputSplitsCallableFactory<I extends WritableComparable,
   /**
    * Return a newly-created {@link InputSplitsCallable}.
    *
+   * @param threadId Id of input split thread
    * @return A new {@link InputSplitsCallable}
    */
-  InputSplitsCallable<I, V, E, M> newCallable();
+  InputSplitsCallable<I, V, E, M> newCallable(int threadId);
 }

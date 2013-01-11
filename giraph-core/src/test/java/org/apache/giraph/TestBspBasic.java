@@ -342,9 +342,9 @@ else[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
   public void testInputSplitPathOrganizer()
     throws IOException, KeeperException, InterruptedException {
     final List<String> goodList = new ArrayList<String>();
-    Collections.addAll(goodList, "good", "bad", "ugly");
+    Collections.addAll(goodList, "local", "remote1", "remote2");
     final List<String> testList = new ArrayList<String>();
-    Collections.addAll(testList, "bad", "good", "ugly");
+    Collections.addAll(testList, "remote2", "local", "remote1");
     final String localHost = "node.LOCAL.com";
     final String testListName = "test_list_parent_znode";
     // build output just as we do to store hostlists in ZNODES
@@ -352,24 +352,24 @@ else[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
     DataOutputStream dos = new DataOutputStream(baos);
     String last = "node.test4.com\tnode.test5.com\tnode.test6.com";
     Text.writeString(dos, last);
-    byte[] LOCALITY_LAST = baos.toByteArray();
+    byte[] remote1 = baos.toByteArray();
     baos = new ByteArrayOutputStream();
     dos = new DataOutputStream(baos);
     String middle = "node.test1.com\tnode.test2.com\tnode.test3.com";
     Text.writeString(dos, middle);
-    byte[] LOCALITY_MIDDLE = baos.toByteArray();
+    byte[] remote2 = baos.toByteArray();
     baos = new ByteArrayOutputStream();
     dos = new DataOutputStream(baos);
     String first = "node.testx.com\tnode.LOCAL.com\tnode.testy.com";
     Text.writeString(dos, first);
-    byte[] LOCALITY_FIRST = baos.toByteArray();
+    byte[] local = baos.toByteArray();
     ZooKeeperExt zk = mock(ZooKeeperExt.class);
     when(zk.getChildrenExt(testListName, false, false, true)).thenReturn(testList);
-    when(zk.getData("ugly", false, null)).thenReturn(LOCALITY_LAST);
-    when(zk.getData("bad", false, null)).thenReturn(LOCALITY_MIDDLE);
-    when(zk.getData("good", false, null)).thenReturn(LOCALITY_FIRST);
+    when(zk.getData("remote1", false, null)).thenReturn(remote1);
+    when(zk.getData("remote2", false, null)).thenReturn(remote2);
+    when(zk.getData("local", false, null)).thenReturn(local);
     InputSplitPathOrganizer lis =
-      new InputSplitPathOrganizer(zk, testListName, localHost, 0);
+      new InputSplitPathOrganizer(zk, testListName, localHost, 0, 0);
     final List<String> resultList = new ArrayList<String>();
     for (String next : lis) {
       resultList.add(next);
