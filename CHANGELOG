@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-459: Group Vertex Mutations by Partition ID (claudio)
+
   GIRAPH-473: InputSplitPathOrganizer should be aware of multiple threads (apresta via ereisman)
 
   GIRAPH-478: Bring back jar-with-deps for giraph-hcatalog (nitay)

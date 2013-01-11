@@ -43,10 +43,13 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
 
-import com.google.common.collect.Sets;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Multimap;
 
 import java.net.InetSocketAddress;
-import java.util.Set;
+import java.util.Collection;
+import java.util.Map.Entry;
 
 /**
  * Netty worker server that implement {@link WorkerServer} and contains
@@ -152,79 +155,80 @@ public class NettyWorkerServer<I extends WritableComparable,
 
   @Override
   public void resolveMutations(GraphState<I, V, E, M> graphState) {
-    Set<I> resolveVertexIndexSet = Sets.newHashSet();
+    Multimap<Integer, I> resolveVertexIndices = HashMultimap.create(
+        service.getPartitionStore().getNumPartitions(), 100);
+      // Add any mutated vertex indices to be resolved
+    for (Entry<I, VertexMutations<I, V, E, M>> e :
+        serverData.getVertexMutations().entrySet()) {
+      I vertexId = e.getKey();
+      Integer partitionId = service.getPartitionId(vertexId);
+      if (!resolveVertexIndices.put(partitionId, vertexId)) {
+        throw new IllegalStateException(
+            "resolveMutations: Already has missing vertex on this " +
+                "worker for " + vertexId);
+      }
+    }
     // Keep track of the vertices which are not here but have received messages
     for (Integer partitionId : service.getPartitionStore().getPartitionIds()) {
-      for (I vertexId : serverData.getCurrentMessageStore().
-          getPartitionDestinationVertices(partitionId)) {
-        Vertex<I, V, E, M> vertex = service.getVertex(vertexId);
-        if (vertex == null) {
-          if (!resolveVertexIndexSet.add(vertexId)) {
-            throw new IllegalStateException(
-                "prepareSuperstep: Already has missing vertex on this " +
-                    "worker for " + vertexId);
+      Iterable<I> destinations = serverData.getCurrentMessageStore().
+          getPartitionDestinationVertices(partitionId);
+      if (!Iterables.isEmpty(destinations)) {
+        Partition<I, V, E, M> partition =
+            service.getPartitionStore().getPartition(partitionId);
+        for (I vertexId : destinations) {
+          if (partition.getVertex(vertexId) == null) {
+            if (!resolveVertexIndices.put(partitionId, vertexId)) {
+              throw new IllegalStateException(
+                  "resolveMutations: Already has missing vertex on this " +
+                      "worker for " + vertexId);
+            }
           }
         }
       }
     }
-
-    // Add any mutated vertex indices to be resolved
-    for (I vertexIndex : serverData.getVertexMutations().keySet()) {
-      if (!resolveVertexIndexSet.add(vertexIndex)) {
-        throw new IllegalStateException(
-            "prepareSuperstep: Already has missing vertex on this " +
-                "worker for " + vertexIndex);
-      }
-    }
-
     // Resolve all graph mutations
     VertexResolver<I, V, E, M> vertexResolver =
         conf.createVertexResolver(graphState);
-    for (I vertexIndex : resolveVertexIndexSet) {
-      Vertex<I, V, E, M> originalVertex =
-          service.getVertex(vertexIndex);
-
-      VertexMutations<I, V, E, M> mutations = null;
-      VertexMutations<I, V, E, M> vertexMutations =
-          serverData.getVertexMutations().get(vertexIndex);
-      if (vertexMutations != null) {
-        synchronized (vertexMutations) {
-          mutations = vertexMutations.copy();
-        }
-        serverData.getVertexMutations().remove(vertexIndex);
-      }
-      Vertex<I, V, E, M> vertex = vertexResolver.resolve(
-          vertexIndex, originalVertex, mutations,
-          serverData.getCurrentMessageStore().
-              hasMessagesForVertex(vertexIndex));
-      graphState.getContext().progress();
-
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("prepareSuperstep: Resolved vertex index " +
-            vertexIndex + " with original vertex " +
-            originalVertex + ", returned vertex " + vertex +
-            " on superstep " + service.getSuperstep() +
-            " with mutations " +
-            mutations);
-      }
-
+    for (Entry<Integer, Collection<I>> e :
+        resolveVertexIndices.asMap().entrySet()) {
       Partition<I, V, E, M> partition =
-          service.getPartition(vertexIndex);
-      if (partition == null) {
-        throw new IllegalStateException(
-            "prepareSuperstep: No partition for index " + vertexIndex +
-                " in " + service.getPartitionStore() + " should have been " +
-                service.getVertexPartitionOwner(vertexIndex));
-      }
-      if (vertex != null) {
-        partition.putVertex(vertex);
-      } else if (originalVertex != null) {
-        partition.removeVertex(originalVertex.getId());
+          service.getPartitionStore().getPartition(e.getKey());
+      for (I vertexIndex : e.getValue()) {
+        Vertex<I, V, E, M> originalVertex =
+            partition.getVertex(vertexIndex);
+
+        VertexMutations<I, V, E, M> mutations = null;
+        VertexMutations<I, V, E, M> vertexMutations =
+            serverData.getVertexMutations().get(vertexIndex);
+        if (vertexMutations != null) {
+          synchronized (vertexMutations) {
+            mutations = vertexMutations.copy();
+          }
+          serverData.getVertexMutations().remove(vertexIndex);
+        }
+        Vertex<I, V, E, M> vertex = vertexResolver.resolve(
+            vertexIndex, originalVertex, mutations,
+            serverData.getCurrentMessageStore().
+                hasMessagesForVertex(vertexIndex));
+        graphState.getContext().progress();
+
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("resolveMutations: Resolved vertex index " +
+              vertexIndex + " with original vertex " +
+              originalVertex + ", returned vertex " + vertex +
+              " on superstep " + service.getSuperstep() +
+              " with mutations " +
+              mutations);
+        }
+        if (vertex != null) {
+          partition.putVertex(vertex);
+        } else if (originalVertex != null) {
+          partition.removeVertex(originalVertex.getId());
+        }
       }
     }
-
     if (!serverData.getVertexMutations().isEmpty()) {
-      throw new IllegalStateException("prepareSuperstep: Illegally " +
+      throw new IllegalStateException("resolveMutations: Illegally " +
           "still has " + serverData.getVertexMutations().size() +
           " mutations left.");
     }
