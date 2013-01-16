@@ -124,10 +124,9 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
   private boolean done = false;
   /** What kind of functions is this mapper doing? */
   private GraphFunctions graphFunctions = GraphFunctions.UNKNOWN;
-  /** Total number of vertices in the graph (at this time) */
-  private long numVertices = -1;
-  /** Total number of edges in the graph (at this time) */
-  private long numEdges = -1;
+  /** Superstep stats */
+  private FinishedSuperstepStats finishedSuperstepStats =
+      new FinishedSuperstepStats(0, false, 0, 0, false);
 
   // Per-Job Metrics
   /** Timer for WorkerContext#preApplication() */
@@ -224,15 +223,14 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
     if (checkTaskState()) {
       return;
     }
-    FinishedSuperstepStats inputSuperstepStats = serviceWorker.setup();
-    if (collectInputSuperstepStats(inputSuperstepStats)) {
+    finishedSuperstepStats = serviceWorker.setup();
+    if (collectInputSuperstepStats(finishedSuperstepStats)) {
       return;
     }
     WorkerAggregatorUsage aggregatorUsage =
       prepareAggregatorsAndGraphState();
     List<PartitionStats> partitionStatsList = new ArrayList<PartitionStats>();
     int numComputeThreads = conf.getNumComputeThreads();
-    FinishedSuperstepStats finishedSuperstepStats = null;
 
     // main superstep processing loop
     do {
@@ -240,7 +238,9 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
       GiraphTimerContext superstepTimerContext =
         getTimerForThisSuperstep(superstep);
       GraphState<I, V, E, M> graphState =
-        new GraphState<I, V, E, M>(superstep, numVertices, numEdges,
+        new GraphState<I, V, E, M>(superstep,
+            finishedSuperstepStats.getVertexCount(),
+            finishedSuperstepStats.getEdgeCount(),
           context, this, null, aggregatorUsage);
       Collection<? extends PartitionOwner> masterAssignedPartitionOwners =
         serviceWorker.startSuperstep(graphState);
@@ -273,7 +273,7 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
       finishedSuperstepStats = completeSuperstepAndCollectStats(
         partitionStatsList, superstepTimerContext, graphState);
       // END of superstep compute loop
-    } while (!finishedSuperstepStats.getAllVerticesHalted());
+    } while (!finishedSuperstepStats.allVerticesHalted());
 
     if (LOG.isInfoEnabled()) {
       LOG.info("execute: BSP application done (global vertices marked done)");
@@ -335,7 +335,9 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
     WorkerAggregatorUsage aggregatorUsage) {
     serviceWorker.getWorkerContext().setGraphState(
       new GraphState<I, V, E, M>(serviceWorker.getSuperstep(),
-        numVertices, numEdges, context, this, null, aggregatorUsage));
+        finishedSuperstepStats.getVertexCount(),
+          finishedSuperstepStats.getEdgeCount(), context, this, null,
+          aggregatorUsage));
   }
 
   /**
@@ -350,11 +352,8 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
     List<PartitionStats> partitionStatsList,
     GiraphTimerContext superstepTimerContext,
     GraphState<I, V, E, M> graphState) {
-    FinishedSuperstepStats finishedSuperstepStats;
     finishedSuperstepStats =
       serviceWorker.finishSuperstep(graphState, partitionStatsList);
-    numVertices = finishedSuperstepStats.getVertexCount();
-    numEdges = finishedSuperstepStats.getEdgeCount();
     superstepTimerContext.stop();
     if (conf.metricsEnabled()) {
       GiraphMetrics.get().perSuperstep().printSummary();
@@ -747,10 +746,13 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
       }
       VertexEdgeCount vertexEdgeCount = serviceWorker.loadCheckpoint(
         serviceWorker.getRestartedSuperstep());
-      numVertices = vertexEdgeCount.getVertexCount();
-      numEdges = vertexEdgeCount.getEdgeCount();
-      graphState = new GraphState<I, V, E, M>(superstep, numVertices,
-        numEdges, context, this, null, aggregatorUsage);
+      finishedSuperstepStats = new FinishedSuperstepStats(0, false,
+          vertexEdgeCount.getVertexCount(), vertexEdgeCount.getEdgeCount(),
+          false);
+      graphState = new GraphState<I, V, E, M>(superstep,
+          finishedSuperstepStats.getVertexCount(),
+          finishedSuperstepStats.getEdgeCount(),
+          context, this, null, aggregatorUsage);
     } else if (serviceWorker.checkpointFrequencyMet(superstep)) {
       serviceWorker.storeCheckpoint();
     }
@@ -767,9 +769,8 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
    */
   private boolean collectInputSuperstepStats(
     FinishedSuperstepStats inputSuperstepStats) {
-    numVertices = inputSuperstepStats.getVertexCount();
-    numEdges = inputSuperstepStats.getEdgeCount();
-    if (inputSuperstepStats.getVertexCount() == 0) {
+    if (inputSuperstepStats.getVertexCount() == 0 &&
+        !inputSuperstepStats.mustLoadCheckpoint()) {
       LOG.warn("map: No vertices in the graph, exiting.");
       return true;
     }
@@ -833,7 +834,7 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
     }
 
     if (serviceWorker != null) {
-      serviceWorker.cleanup();
+      serviceWorker.cleanup(finishedSuperstepStats);
     }
     try {
       if (masterThread != null) {

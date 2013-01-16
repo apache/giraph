@@ -26,6 +26,7 @@ import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.combiner.DoubleSumCombiner;
 import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.io.formats.JsonBase64VertexOutputFormat;
 import org.apache.giraph.io.formats.PseudoRandomEdgeInputFormat;
 import org.apache.giraph.io.formats.PseudoRandomVertexInputFormat;
 import org.apache.hadoop.conf.Configuration;
@@ -97,6 +98,10 @@ public class PageRankBenchmark implements Tool {
         "combinerType",
         true,
         "Combiner type (0 for no combiner, 1 for DoubleSumCombiner (default)");
+    options.addOption("o",
+        "vertexOutputFormat",
+        true,
+        "0 for JsonBase64VertexOutputFormat");
 
     HelpFormatter formatter = new HelpFormatter();
     if (args.length == 0) {
@@ -136,6 +141,7 @@ public class PageRankBenchmark implements Tool {
     GiraphJob job = new GiraphJob(getConf(), name);
     GiraphConfiguration configuration = job.getConfiguration();
     setVertexAndInputFormatClasses(cmd, configuration);
+
     configuration.setWorkerConfiguration(workers, workers, 100.0f);
     configuration.setInt(
         PageRankComputation.SUPERSTEP_COUNT,
@@ -188,7 +194,7 @@ public class PageRankBenchmark implements Tool {
           MultiGraphRepresentativeVertexPageRankBenchmark.class);
       configuration.useUnsafeSerialization(true);
     }
-    LOG.info("Using class " +
+    LOG.info("Using vertex class " +
         configuration.get(GiraphConstants.VERTEX_CLASS));
     if (!cmd.hasOption('t') ||
         (Integer.parseInt(cmd.getOptionValue('t')) == 2)) {
@@ -216,6 +222,15 @@ public class PageRankBenchmark implements Tool {
       configuration.setLong(
           PseudoRandomEdgeInputFormat.EDGES_PER_VERTEX,
           Long.parseLong(cmd.getOptionValue('e')));
+    }
+
+    int vertexOutputClassOption =
+        cmd.hasOption('o') ? Integer.parseInt(cmd.getOptionValue('o')) : -1;
+    if (vertexOutputClassOption == 0) {
+      LOG.info("Using vertex output format class " +
+          JsonBase64VertexOutputFormat.class.getName());
+      configuration.setVertexOutputFormatClass(
+          JsonBase64VertexOutputFormat.class);
     }
   }
 

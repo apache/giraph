@@ -18,17 +18,20 @@
 
 package org.apache.giraph.worker;
 
+import com.yammer.metrics.core.Counter;
+import java.io.IOException;
+import java.util.List;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.GraphState;
-import org.apache.giraph.vertex.Vertex;
 import org.apache.giraph.graph.VertexEdgeCount;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexReader;
-import org.apache.giraph.partition.PartitionOwner;
 import org.apache.giraph.metrics.GiraphMetrics;
 import org.apache.giraph.metrics.GiraphMetricsRegistry;
+import org.apache.giraph.partition.PartitionOwner;
 import org.apache.giraph.utils.LoggerUtils;
 import org.apache.giraph.utils.MemoryUtils;
+import org.apache.giraph.vertex.Vertex;
 import org.apache.giraph.zk.ZooKeeperExt;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -36,11 +39,6 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-
-import com.yammer.metrics.core.Counter;
-
-import java.io.IOException;
-import java.util.List;
 
 /**
  * Load as many vertex input splits as possible.
@@ -131,6 +129,8 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
     vertexReader.initialize(inputSplit, context);
     long inputSplitVerticesLoaded = 0;
     long inputSplitEdgesLoaded = 0;
+    long nextPrintVertices = 0;
+    long nextPrintMsecs = System.currentTimeMillis() + 15000;
     while (vertexReader.nextVertex()) {
       Vertex<I, V, E, M> readerVertex =
           vertexReader.getCurrentVertex();
@@ -153,14 +153,20 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
       ++inputSplitVerticesLoaded;
       inputSplitEdgesLoaded += readerVertex.getNumEdges();
 
-      // Update status every 250k vertices
-      if (((inputSplitVerticesLoaded + totalVerticesLoaded) % 250000) == 0) {
-        LoggerUtils.setStatusAndLog(context, LOG, Level.INFO,
+      // Update status at most every 250k vertices or 15 seconds
+      if ((inputSplitVerticesLoaded + totalVerticesLoaded) >
+          nextPrintVertices &&
+          System.currentTimeMillis() > nextPrintMsecs) {
+        LoggerUtils.setStatusAndLog(
+            context, LOG, Level.INFO,
             "readInputSplit: Loaded " +
                 (inputSplitVerticesLoaded + totalVerticesLoaded) +
                 " vertices " +
                 (inputSplitEdgesLoaded + totalEdgesLoaded) + " edges " +
                 MemoryUtils.getRuntimeMemoryStats());
+        nextPrintMsecs = System.currentTimeMillis() + 15000;
+        nextPrintVertices = inputSplitVerticesLoaded + totalVerticesLoaded +
+            250000;
       }
 
       // For sampling, or to limit outlier input splits, the number of

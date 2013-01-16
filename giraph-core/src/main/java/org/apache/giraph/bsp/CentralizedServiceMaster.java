@@ -139,4 +139,14 @@ public interface CentralizedServiceMaster<I extends WritableComparable,
    * @param e Exception job failed from. May be null.
    */
   void failureCleanup(Exception e);
+
+
+  /**
+   * Clean up the service (no calls may be issued after this)
+   *
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  void cleanup()
+    throws IOException, InterruptedException;
 }

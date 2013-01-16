@@ -18,27 +18,55 @@
 package org.apache.giraph.graph;
 
 /**
- * Immutable results of finishSuperste()
+ * Immutable graph stats after the completion of a superstep
  */
 public class FinishedSuperstepStats extends VertexEdgeCount {
+  /** Number of local vertices */
+  private final long localVertexCount;
   /** Are all the graph vertices halted? */
   private final boolean allVerticesHalted;
+  /** Needs to load a checkpoint */
+  private final boolean mustLoadCheckpoint;
 
   /**
    * Constructor.
    *
+   * @param numLocalVertices Number of local vertices
    * @param allVerticesHalted Are all the vertices halted
    * @param numVertices Number of vertices
    * @param numEdges Number of edges
+   * @param mustLoadCheckpoint Has to load a checkpoint?
    */
-  public FinishedSuperstepStats(boolean allVerticesHalted,
+  public FinishedSuperstepStats(long numLocalVertices,
+                                boolean allVerticesHalted,
                                 long numVertices,
-                                long numEdges) {
+                                long numEdges,
+                                boolean mustLoadCheckpoint) {
     super(numVertices, numEdges);
+    this.localVertexCount = numLocalVertices;
     this.allVerticesHalted = allVerticesHalted;
+    this.mustLoadCheckpoint = mustLoadCheckpoint;
   }
 
-  public boolean getAllVerticesHalted() {
+  public long getLocalVertexCount() {
+    return localVertexCount;
+  }
+
+  /**
+   * Are all the vertices halted?
+   *
+   * @return True if all halted, false otherwise
+   */
+  public boolean allVerticesHalted() {
     return allVerticesHalted;
+  }
+
+  /**
+   * Must load the checkpoint?
+   *
+   * @return True if the checkpoint must be loaded, false otherwise
+   */
+  public boolean mustLoadCheckpoint() {
+    return mustLoadCheckpoint;
   }
 }

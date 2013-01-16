@@ -432,7 +432,7 @@ public class BspServiceWorker<I extends WritableComparable,
     // 6. Wait for superstep INPUT_SUPERSTEP to complete.
     if (getRestartedSuperstep() != UNSET_SUPERSTEP) {
       setCachedSuperstep(getRestartedSuperstep());
-      return new FinishedSuperstepStats(false, -1, -1);
+      return new FinishedSuperstepStats(0, false, 0, 0, true);
     }
 
     JSONObject jobState = getJobState();
@@ -449,7 +449,7 @@ public class BspServiceWorker<I extends WritableComparable,
                 getApplicationAttempt());
           }
           setRestartedSuperstep(getSuperstep());
-          return new FinishedSuperstepStats(false, -1, -1);
+          return new FinishedSuperstepStats(0, false, 0, 0, true);
         }
       } catch (JSONException e) {
         throw new RuntimeException(
@@ -722,8 +722,10 @@ else[HADOOP_NON_SECURE]*/
     graphState.getGraphTaskManager().notifyFinishedCommunication();
 
     long workerSentMessages = 0;
+    long localVertices = 0;
     for (PartitionStats partitionStats : partitionStatsList) {
       workerSentMessages += partitionStats.getMessagesSentCount();
+      localVertices += partitionStats.getVertexCount();
     }
 
     if (getSuperstep() != INPUT_SUPERSTEP) {
@@ -770,9 +772,11 @@ else[HADOOP_NON_SECURE]*/
         ", Superstep=" + getSuperstep());
 
     return new FinishedSuperstepStats(
+        localVertices,
         globalStats.getHaltComputation(),
         globalStats.getVertexCount(),
-        globalStats.getEdgeCount());
+        globalStats.getEdgeCount(),
+        false);
   }
 
   /**
@@ -865,9 +869,12 @@ else[HADOOP_NON_SECURE]*/
   /**
    * Save the vertices using the user-defined VertexOutputFormat from our
    * vertexArray based on the split.
+   *
+   * @param numLocalVertices Number of local vertices
    * @throws InterruptedException
    */
-  private void saveVertices() throws IOException, InterruptedException {
+  private void saveVertices(long numLocalVertices) throws IOException,
+      InterruptedException {
     if (getConfiguration().getVertexOutputFormatClass() == null) {
       LOG.warn("saveVertices: " +
           GiraphConstants.VERTEX_OUTPUT_FORMAT_CLASS +
@@ -876,19 +883,39 @@ else[HADOOP_NON_SECURE]*/
     }
 
     LoggerUtils.setStatusAndLog(getContext(), LOG, Level.INFO,
-        "saveVertices: Starting to save vertices");
+        "saveVertices: Starting to save " + numLocalVertices + " vertices");
     VertexOutputFormat<I, V, E> vertexOutputFormat =
         getConfiguration().createVertexOutputFormat();
     VertexWriter<I, V, E> vertexWriter =
         vertexOutputFormat.createVertexWriter(getContext());
     vertexWriter.initialize(getContext());
+    long verticesWritten = 0;
+    long nextPrintVertices = 0;
+    long nextPrintMsecs = System.currentTimeMillis() + 15000;
+    int partitionIndex = 0;
+    int numPartitions = getPartitionStore().getNumPartitions();
     for (Partition<I, V, E, M> partition :
         getPartitionStore().getPartitions()) {
       for (Vertex<I, V, E, M> vertex : partition) {
         getContext().progress();
         vertexWriter.writeVertex(vertex);
+        ++verticesWritten;
+
+        // Update status at most every 250k vertices or 15 seconds
+        if (verticesWritten > nextPrintVertices &&
+            System.currentTimeMillis() > nextPrintMsecs) {
+          LoggerUtils.setStatusAndLog(
+              getContext(), LOG, Level.INFO,
+              "saveVertices: Saved " +
+                  verticesWritten + " out of " + numLocalVertices +
+                  " vertices, on partition " + partitionIndex + " out of " +
+                  numPartitions);
+          nextPrintMsecs = System.currentTimeMillis() + 15000;
+          nextPrintVertices = verticesWritten + 250000;
+        }
       }
       getContext().progress();
+      ++partitionIndex;
     }
     vertexWriter.close(getContext());
     LoggerUtils.setStatusAndLog(getContext(), LOG, Level.INFO,
@@ -896,10 +923,11 @@ else[HADOOP_NON_SECURE]*/
   }
 
   @Override
-  public void cleanup() throws IOException, InterruptedException {
+  public void cleanup(FinishedSuperstepStats finishedSuperstepStats)
+    throws IOException, InterruptedException {
     workerClient.closeConnections();
     setCachedSuperstep(getSuperstep() - 1);
-    saveVertices();
+    saveVertices(finishedSuperstepStats.getLocalVertexCount());
     // All worker processes should denote they are done by adding special
     // znode.  Once the number of znodes equals the number of partitions
     // for workers and masters, the master will clean up the ZooKeeper
@@ -1037,7 +1065,7 @@ else[HADOOP_NON_SECURE]*/
           CreateMode.PERSISTENT,
           true);
     } catch (KeeperException.NodeExistsException e) {
-      LOG.warn("finishSuperstep: wrote checkpoint worker path " +
+      LOG.warn("storeCheckpoint: wrote checkpoint worker path " +
           workerWroteCheckpoint + " already exists!");
     } catch (KeeperException e) {
       throw new IllegalStateException("Creating " + workerWroteCheckpoint +

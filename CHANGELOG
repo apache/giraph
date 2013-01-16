@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-492: Saving vertices has no status report, making it hard to 
+  find DFS issues (aching)
+
   GIRAPH-312: Giraph needs an admin script (ereisman)
 
   GIRAPH-469: Refactor GraphMapper (ereisman)

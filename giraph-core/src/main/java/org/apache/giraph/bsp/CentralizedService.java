@@ -18,12 +18,10 @@
 
 package org.apache.giraph.bsp;
 
+import java.util.List;
 import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-
-import java.io.IOException;
-import java.util.List;
 
 /**
  * Basic service interface shared by both {@link CentralizedServiceMaster} and
@@ -68,12 +66,4 @@ public interface CentralizedService<I extends WritableComparable,
    * @return List of workers
    */
   List<WorkerInfo> getWorkerInfoList();
-
-  /**
-   * Clean up the service (no calls may be issued after this)
-   *
-   * @throws IOException
-   * @throws InterruptedException
-   */
-  void cleanup() throws IOException, InterruptedException;
 }

@@ -461,7 +461,7 @@ public class BspServiceMaster<I extends WritableComparable,
         LOG.info("checkWorkers: Only found " + totalResponses +
             " responses of " + maxWorkers +
             " needed to start superstep " +
-            getSuperstep() + ".  Reporting every" +
+            getSuperstep() + ".  Reporting every " +
             eventWaitMsecs + " msecs, " +
             (failWorkerCheckMsecs - SystemTime.get().getMilliseconds()) +
             " more msecs left before giving up.");

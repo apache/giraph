@@ -233,4 +233,14 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
    * TODO how to avoid this additional function
    */
   void prepareSuperstep();
+
+  /**
+   * Clean up the service (no calls may be issued after this)
+   *
+   * @param finishedSuperstepStats Finished supestep stats
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  void cleanup(FinishedSuperstepStats finishedSuperstepStats)
+    throws IOException, InterruptedException;
 }

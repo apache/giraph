@@ -32,6 +32,25 @@ public class LoggerUtils {
   private LoggerUtils() { }
 
   /**
+   * Helper method to set the status and log message together if condition
+   * has been been met.
+   *
+   * @param condition Must be true to write status and log
+   * @param context Context to set the status with
+   * @param logger Logger to write to
+   * @param level Level of logging
+   * @param message Message to set status with
+   */
+  public static void conditionalSetStatusAndLog(
+      boolean condition,
+      TaskAttemptContext context, Logger logger, Level level,
+      String message) {
+    if (condition) {
+      setStatusAndLog(context, logger, level, message);
+    }
+  }
+
+  /**
    * Helper method to set the status and log message together.
    *
    * @param context Context to set the status with
