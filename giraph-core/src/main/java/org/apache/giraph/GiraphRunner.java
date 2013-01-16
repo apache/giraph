@@ -17,36 +17,36 @@
  */
 package org.apache.giraph;
 
+import com.google.common.base.Splitter;
+import com.google.common.collect.Iterables;
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
-import org.apache.giraph.conf.GiraphConfiguration;
-import org.apache.giraph.examples.Algorithm;
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.combiner.Combiner;
+import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.examples.Algorithm;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.GiraphTypeValidator;
-import org.apache.giraph.master.MasterCompute;
-import org.apache.giraph.vertex.Vertex;
+import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
-import org.apache.giraph.worker.WorkerContext;
+import org.apache.giraph.io.formats.GiraphFileInputFormat;
+import org.apache.giraph.master.MasterCompute;
 import org.apache.giraph.utils.AnnotationUtils;
+import org.apache.giraph.vertex.Vertex;
+import org.apache.giraph.worker.WorkerContext;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.ZooKeeper;
-
-import com.google.common.base.Splitter;
-import com.google.common.collect.Iterables;
 
 import java.net.URI;
 import java.util.List;
@@ -66,13 +66,6 @@ public class GiraphRunner implements Tool {
   private Configuration conf;
 
   /**
-   * Required options.
-   */
-  private final String [][] requiredOptions =
-  {{"w", "Need to choose the number of workers (-w)"},
-   {"if", "Need to set inputformat (-if)"}};
-
-  /**
    * Get the options available.
    *
    * @return Options available.
@@ -84,10 +77,12 @@ public class GiraphRunner implements Tool {
         "algorithms");
     options.addOption("q", "quiet", false, "Quiet output");
     options.addOption("w", "workers", true, "Number of workers");
-    options.addOption("if", "inputFormat", true, "Graph inputformat");
-    options.addOption("of", "outputFormat", true, "Graph outputformat");
-    options.addOption("ip", "inputPath", true, "Graph input path");
-    options.addOption("op", "outputPath", true, "Graph output path");
+    options.addOption("vif", "vertexInputFormat", true, "Vertex input format");
+    options.addOption("eif", "edgeInputFormat", true, "Edge input format");
+    options.addOption("of", "outputFormat", true, "Vertex output format");
+    options.addOption("vip", "vertexInputPath", true, "Vertex input path");
+    options.addOption("eip", "edgeInputPath", true, "Edge input path");
+    options.addOption("op", "outputPath", true, "Vertex output path");
     options.addOption("c", "combiner", true, "Combiner class");
     options.addOption("wc", "workerContext", true, "WorkerContext class");
     options.addOption("aw", "aggregatorWriter", true, "AggregatorWriter class");
@@ -157,47 +152,73 @@ public class GiraphRunner implements Tool {
       LOG.debug("Attempting to run Vertex: " + vertexClassName);
     }
 
-    // Verify all the options have been provided
-    for (String[] requiredOption : requiredOptions) {
-      if (!cmd.hasOption(requiredOption[0])) {
-        if (LOG.isInfoEnabled()) {
-          LOG.info(requiredOption[1]);
-        }
-        return -1;
+    // Verify all the required options have been provided
+    if (!cmd.hasOption("w")) {
+      if (LOG.isInfoEnabled()) {
+        LOG.info("Need to choose the number of workers (-w)");
       }
+      return -1;
+    }
+    if (!cmd.hasOption("vif") && !cmd.hasOption("eif")) {
+      if (LOG.isInfoEnabled()) {
+        LOG.info("Need to set an input format (-vif or -eif)");
+      }
+      return -1;
     }
 
     int workers = Integer.parseInt(cmd.getOptionValue('w'));
+
     GiraphConfiguration giraphConfiguration = new GiraphConfiguration(
             getConf());
+
     giraphConfiguration.setVertexClass(
         (Class<? extends Vertex>) Class.forName(vertexClassName));
-    giraphConfiguration.setVertexInputFormatClass(
-        (Class<? extends VertexInputFormat>)
-            Class.forName(cmd.getOptionValue("if")));
-    giraphConfiguration.setVertexOutputFormatClass(
-        (Class<? extends VertexOutputFormat>)
-            Class.forName(cmd.getOptionValue("of")));
+
     GiraphJob job = new GiraphJob(
         giraphConfiguration, "Giraph: " + vertexClassName);
 
-    if (cmd.hasOption("ip")) {
-      FileInputFormat.addInputPath(job.getInternalJob(),
-          new Path(cmd.getOptionValue("ip")));
-    } else {
-      if (LOG.isInfoEnabled()) {
-        LOG.info("No input path specified. Ensure your InputFormat does" +
-            " not require one.");
+    if (cmd.hasOption("vif")) {
+      giraphConfiguration.setVertexInputFormatClass(
+          (Class<? extends VertexInputFormat>)
+              Class.forName(cmd.getOptionValue("vif")));
+      if (cmd.hasOption("vip")) {
+        GiraphFileInputFormat.addVertexInputPath(job.getInternalJob(),
+            new Path(cmd.getOptionValue("eip")));
+      } else {
+        if (LOG.isInfoEnabled()) {
+          LOG.info("No vertex input path specified. Ensure your " +
+              "VertexInputFormat does not require one.");
+        }
       }
     }
 
-    if (cmd.hasOption("op")) {
-      FileOutputFormat.setOutputPath(job.getInternalJob(),
-                                     new Path(cmd.getOptionValue("op")));
-    } else {
-      if (LOG.isInfoEnabled()) {
-        LOG.info("No output path specified. Ensure your OutputFormat does" +
-            " not require one.");
+    if (cmd.hasOption("eif")) {
+      giraphConfiguration.setEdgeInputFormatClass(
+          (Class<? extends EdgeInputFormat>)
+              Class.forName(cmd.getOptionValue("eif")));
+      if (cmd.hasOption("eip")) {
+        GiraphFileInputFormat.addEdgeInputPath(job.getInternalJob(),
+            new Path(cmd.getOptionValue("eip")));
+      } else {
+        if (LOG.isInfoEnabled()) {
+          LOG.info("No edge input path specified. Ensure your " +
+              "VertexInputFormat does not require one.");
+        }
+      }
+    }
+
+    if (cmd.hasOption("of")) {
+      giraphConfiguration.setVertexOutputFormatClass(
+          (Class<? extends VertexOutputFormat>)
+              Class.forName(cmd.getOptionValue("of")));
+      if (cmd.hasOption("op")) {
+        FileOutputFormat.setOutputPath(job.getInternalJob(),
+            new Path(cmd.getOptionValue("op")));
+      } else {
+        if (LOG.isInfoEnabled()) {
+          LOG.info("No output path specified. Ensure your VertexOutputFormat " +
+              "does not require one.");
+        }
       }
     }
 

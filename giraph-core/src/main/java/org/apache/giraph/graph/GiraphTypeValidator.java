@@ -20,6 +20,7 @@ package org.apache.giraph.graph;
 
 import org.apache.giraph.bsp.BspUtils;
 import org.apache.giraph.combiner.Combiner;
+import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.giraph.utils.ReflectionUtils;
@@ -60,6 +61,8 @@ public class GiraphTypeValidator<I extends WritableComparable,
   private static final int MSG_PARAM_INDEX = 3;
   /** M param vertex combiner index in classList */
   private static final int MSG_COMBINER_PARAM_INDEX = 1;
+  /** E param edge input format index in classList */
+  private static final int EDGE_PARAM_EDGE_INPUT_FORMAT_INDEX = 1;
 
   /** Vertex Index Type */
   private Type vertexIndexType;
@@ -101,6 +104,7 @@ public class GiraphTypeValidator<I extends WritableComparable,
     edgeValueType = classList.get(EDGE_PARAM_INDEX);
     messageValueType = classList.get(MSG_PARAM_INDEX);
     verifyVertexInputFormatGenericTypes();
+    verifyEdgeInputFormatGenericTypes();
     verifyVertexOutputFormatGenericTypes();
     verifyVertexResolverGenericTypes();
     verifyVertexCombinerGenericTypes();
@@ -110,32 +114,63 @@ public class GiraphTypeValidator<I extends WritableComparable,
   private void verifyVertexInputFormatGenericTypes() {
     Class<? extends VertexInputFormat<I, V, E, M>> vertexInputFormatClass =
       BspUtils.<I, V, E, M>getVertexInputFormatClass(conf);
-    List<Class<?>> classList =
-      ReflectionUtils.getTypeArguments(
-        VertexInputFormat.class, vertexInputFormatClass);
-    if (classList.get(ID_PARAM_INDEX) == null) {
-      LOG.warn("Input format vertex index type is not known");
-    } else if (!vertexIndexType.equals(classList.get(ID_PARAM_INDEX))) {
-      throw new IllegalArgumentException(
-        "checkClassTypes: Vertex index types don't match, " +
-          "vertex - " + vertexIndexType +
-          ", vertex input format - " + classList.get(ID_PARAM_INDEX));
+    if (vertexInputFormatClass != null) {
+      List<Class<?>> classList =
+          ReflectionUtils.getTypeArguments(
+              VertexInputFormat.class, vertexInputFormatClass);
+      if (classList.get(ID_PARAM_INDEX) == null) {
+        LOG.warn("Input format vertex index type is not known");
+      } else if (!vertexIndexType.equals(classList.get(ID_PARAM_INDEX))) {
+        throw new IllegalArgumentException(
+            "checkClassTypes: Vertex index types don't match, " +
+                "vertex - " + vertexIndexType +
+                ", vertex input format - " + classList.get(ID_PARAM_INDEX));
+      }
+      if (classList.get(VALUE_PARAM_INDEX) == null) {
+        LOG.warn("Input format vertex value type is not known");
+      } else if (!vertexValueType.equals(classList.get(VALUE_PARAM_INDEX))) {
+        throw new IllegalArgumentException(
+            "checkClassTypes: Vertex value types don't match, " +
+                "vertex - " + vertexValueType +
+                ", vertex input format - " + classList.get(VALUE_PARAM_INDEX));
+      }
+      if (classList.get(EDGE_PARAM_INDEX) == null) {
+        LOG.warn("Input format edge value type is not known");
+      } else if (!edgeValueType.equals(classList.get(EDGE_PARAM_INDEX))) {
+        throw new IllegalArgumentException(
+            "checkClassTypes: Edge value types don't match, " +
+                "vertex - " + edgeValueType +
+                ", vertex input format - " + classList.get(EDGE_PARAM_INDEX));
+      }
     }
-    if (classList.get(VALUE_PARAM_INDEX) == null) {
-      LOG.warn("Input format vertex value type is not known");
-    } else if (!vertexValueType.equals(classList.get(VALUE_PARAM_INDEX))) {
-      throw new IllegalArgumentException(
-        "checkClassTypes: Vertex value types don't match, " +
-          "vertex - " + vertexValueType +
-          ", vertex input format - " + classList.get(VALUE_PARAM_INDEX));
-    }
-    if (classList.get(EDGE_PARAM_INDEX) == null) {
-      LOG.warn("Input format edge value type is not known");
-    } else if (!edgeValueType.equals(classList.get(EDGE_PARAM_INDEX))) {
-      throw new IllegalArgumentException(
-        "checkClassTypes: Edge value types don't match, " +
-          "vertex - " + edgeValueType +
-          ", vertex input format - " + classList.get(EDGE_PARAM_INDEX));
+  }
+
+  /** Verify matching generic types in EdgeInputFormat. */
+  private void verifyEdgeInputFormatGenericTypes() {
+    Class<? extends EdgeInputFormat<I, E>> edgeInputFormatClass =
+        BspUtils.<I, E>getEdgeInputFormatClass(conf);
+    if (edgeInputFormatClass != null) {
+      List<Class<?>> classList =
+          ReflectionUtils.getTypeArguments(
+              EdgeInputFormat.class, edgeInputFormatClass);
+      if (classList.get(ID_PARAM_INDEX) == null) {
+        LOG.warn("Input format vertex index type is not known");
+      } else if (!vertexIndexType.equals(classList.get(ID_PARAM_INDEX))) {
+        throw new IllegalArgumentException(
+            "checkClassTypes: Vertex index types don't match, " +
+                "vertex - " + vertexIndexType +
+                ", edge input format - " + classList.get(ID_PARAM_INDEX));
+      }
+      if (classList.get(EDGE_PARAM_EDGE_INPUT_FORMAT_INDEX) == null) {
+        LOG.warn("Input format edge value type is not known");
+      } else if (!edgeValueType.equals(
+          classList.get(EDGE_PARAM_EDGE_INPUT_FORMAT_INDEX))) {
+        throw new IllegalArgumentException(
+            "checkClassTypes: Edge value types don't match, " +
+                "vertex - " + edgeValueType +
+                ", edge input format - " +
+                classList.get(EDGE_PARAM_EDGE_INPUT_FORMAT_INDEX));
+      }
     }
   }
 
