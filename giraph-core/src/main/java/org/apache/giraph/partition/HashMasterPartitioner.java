@@ -57,7 +57,7 @@ public class HashMasterPartitioner<I extends WritableComparable,
    * ZooKeeper has a limit of the data in a single znode of 1 MB and
    * each entry can go be on the average somewhat more than 300 bytes
    */
-  private static final int MAX_PARTTIONS = 1024 * 1024 / 350;
+  private static final int MAX_PARTITIONS = 1024 * 1024 / 350;
   /** Provided configuration */
   private ImmutableClassesGiraphConfiguration conf;
   /** Specified partition count (overrides calculation) */
@@ -104,11 +104,11 @@ public class HashMasterPartitioner<I extends WritableComparable,
         (availableWorkerInfos.size() *
          availableWorkerInfos.size()) + " partitions.");
     }
-    if (partitionCount > MAX_PARTTIONS) {
+    if (partitionCount > MAX_PARTITIONS) {
       LOG.warn("createInitialPartitionOwners: " +
-          "Reducing the partitionCount to " + MAX_PARTTIONS +
+          "Reducing the partitionCount to " + MAX_PARTITIONS +
           " from " + partitionCount);
-      partitionCount = MAX_PARTTIONS;
+      partitionCount = MAX_PARTITIONS;
     }
 
     for (int i = 0; i < partitionCount; ++i) {

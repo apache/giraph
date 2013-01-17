@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-254: Constant Variable name misspelled in HashMasterPartitioner.java (Gustavo Salazar Torres via ereisman)
+
   GIRAPH-431: Support edge and vertex value input formats in GiraphRunner (apresta)
 
   GIRAPH-477: Fetching locality info in InputSplitPathOrganizer causes jobs to hang (apresta via ereisman)
