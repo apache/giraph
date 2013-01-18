@@ -32,7 +32,7 @@ import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.counters.GiraphStats;
 import org.apache.giraph.graph.AddressesAndPartitionsWritable;
 import org.apache.giraph.bsp.BspService;
-import org.apache.giraph.graph.MapFunctions;
+import org.apache.giraph.graph.GraphFunctions;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.GiraphInputFormat;
 import org.apache.giraph.graph.GlobalStats;
@@ -442,7 +442,7 @@ public class BspServiceMaster<I extends WritableComparable,
         failJob = false;
         break;
       }
-      getContext().setStatus(getGraphMapper().getMapFunctions() + " " +
+      getContext().setStatus(getGraphMapper().getGraphFunctions() + " " +
           "checkWorkers: Only found " +
           totalResponses +
           " responses of " + maxWorkers +
@@ -491,7 +491,7 @@ public class BspServiceMaster<I extends WritableComparable,
       return null;
     }
 
-    getContext().setStatus(getGraphMapper().getMapFunctions() + " " +
+    getContext().setStatus(getGraphMapper().getGraphFunctions() + " " +
         "checkWorkers: Done - Found " + totalResponses +
         " responses of " + maxWorkers + " needed to start superstep " +
         getSuperstep());
@@ -1270,7 +1270,7 @@ public class BspServiceMaster<I extends WritableComparable,
           LOG.info("barrierOnWorkerList: Waiting on " + remainingWorkers);
         }
       }
-      getContext().setStatus(getGraphMapper().getMapFunctions() + " - " +
+      getContext().setStatus(getGraphMapper().getGraphFunctions() + " - " +
           finishedHostnameIdList.size() +
           " finished out of " +
           workerInfoList.size() +
@@ -1561,9 +1561,9 @@ public class BspServiceMaster<I extends WritableComparable,
     }
     // Need to wait for the number of workers and masters to complete
     int maxTasks = BspInputFormat.getMaxTasks(getConfiguration());
-    if ((getGraphMapper().getMapFunctions() == MapFunctions.ALL) ||
-        (getGraphMapper().getMapFunctions() ==
-        MapFunctions.ALL_EXCEPT_ZOOKEEPER)) {
+    if ((getGraphMapper().getGraphFunctions() == GraphFunctions.ALL) ||
+        (getGraphMapper().getGraphFunctions() ==
+        GraphFunctions.ALL_EXCEPT_ZOOKEEPER)) {
       maxTasks *= 2;
     }
     List<String> cleanedUpChildrenList = null;

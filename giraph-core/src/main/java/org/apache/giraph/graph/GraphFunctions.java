@@ -18,8 +18,12 @@
 
 package org.apache.giraph.graph;
 
-/** What kinds of functions to run on this mapper */
-public enum MapFunctions {
+/**
+ * Each compute node running on the underlying cluster
+ * is marked with this enum to indicate the worker or
+ * master task(s) it must perform during job runs.
+ */
+public enum GraphFunctions {
   /** Undecided yet */
   UNKNOWN {
     @Override public boolean isMaster() { return false; }

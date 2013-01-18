@@ -695,7 +695,7 @@ else[HADOOP_NON_SECURE]*/
     }
 
     getContext().setStatus("startSuperstep: " +
-        getGraphMapper().getMapFunctions().toString() +
+        getGraphMapper().getGraphFunctions().toString() +
         " - Attempt=" + getApplicationAttempt() +
         ", Superstep=" + getSuperstep());
     return addressesAndPartitions.getPartitionOwners();
@@ -747,7 +747,7 @@ else[HADOOP_NON_SECURE]*/
     LoggerUtils.setStatusAndLog(getContext(), LOG, Level.INFO,
         "finishSuperstep: (waiting for rest " +
             "of workers) " +
-            getGraphMapper().getMapFunctions().toString() +
+            getGraphMapper().getGraphFunctions().toString() +
             " - Attempt=" + getApplicationAttempt() +
             ", Superstep=" + getSuperstep());
 
@@ -765,7 +765,7 @@ else[HADOOP_NON_SECURE]*/
     }
     incrCachedSuperstep();
     getContext().setStatus("finishSuperstep: (all workers done) " +
-        getGraphMapper().getMapFunctions().toString() +
+        getGraphMapper().getGraphFunctions().toString() +
         " - Attempt=" + getApplicationAttempt() +
         ", Superstep=" + getSuperstep());
 
@@ -952,7 +952,7 @@ else[HADOOP_NON_SECURE]*/
   public void storeCheckpoint() throws IOException {
     LoggerUtils.setStatusAndLog(getContext(), LOG, Level.INFO,
         "storeCheckpoint: Starting checkpoint " +
-            getGraphMapper().getMapFunctions().toString() +
+            getGraphMapper().getGraphFunctions().toString() +
             " - Attempt=" + getApplicationAttempt() +
             ", Superstep=" + getSuperstep());
 

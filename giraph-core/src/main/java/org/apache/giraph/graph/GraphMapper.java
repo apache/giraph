@@ -124,7 +124,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
   /** Already complete? */
   private boolean done = false;
   /** What kind of functions is this mapper doing? */
-  private MapFunctions mapFunctions = MapFunctions.UNKNOWN;
+  private GraphFunctions graphFunctions = GraphFunctions.UNKNOWN;
   /** Total number of vertices in the graph (at this time) */
   private long numVertices = -1;
   /** Total number of edges in the graph (at this time) */
@@ -157,8 +157,8 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
    *
    * @return Map functions of this mapper.
    */
-  public MapFunctions getMapFunctions() {
-    return mapFunctions;
+  public GraphFunctions getGraphFunctions() {
+    return graphFunctions;
   }
 
   /**
@@ -259,33 +259,33 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
    *        ZooKeeper
    * @return Functions that this mapper should do.
    */
-  private static MapFunctions determineMapFunctions(
+  private static GraphFunctions determineMapFunctions(
       ImmutableClassesGiraphConfiguration conf,
       ZooKeeperManager zkManager) {
     boolean splitMasterWorker = conf.getSplitMasterWorker();
     int taskPartition = conf.getTaskPartition();
     boolean zkAlreadyProvided = conf.getZookeeperList() != null;
-    MapFunctions functions = MapFunctions.UNKNOWN;
+    GraphFunctions functions = GraphFunctions.UNKNOWN;
     // What functions should this mapper do?
     if (!splitMasterWorker) {
       if ((zkManager != null) && zkManager.runsZooKeeper()) {
-        functions = MapFunctions.ALL;
+        functions = GraphFunctions.ALL;
       } else {
-        functions = MapFunctions.ALL_EXCEPT_ZOOKEEPER;
+        functions = GraphFunctions.ALL_EXCEPT_ZOOKEEPER;
       }
     } else {
       if (zkAlreadyProvided) {
         int masterCount = conf.getZooKeeperServerCount();
         if (taskPartition < masterCount) {
-          functions = MapFunctions.MASTER_ONLY;
+          functions = GraphFunctions.MASTER_ONLY;
         } else {
-          functions = MapFunctions.WORKER_ONLY;
+          functions = GraphFunctions.WORKER_ONLY;
         }
       } else {
         if ((zkManager != null) && zkManager.runsZooKeeper()) {
-          functions = MapFunctions.MASTER_ZOOKEEPER_ONLY;
+          functions = GraphFunctions.MASTER_ZOOKEEPER_ONLY;
         } else {
-          functions = MapFunctions.WORKER_ONLY;
+          functions = GraphFunctions.WORKER_ONLY;
         }
       }
     }
@@ -390,7 +390,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
     }
     context.setStatus("setup: Connected to Zookeeper service " +
         serverPortList);
-    this.mapFunctions = determineMapFunctions(conf, zkManager);
+    this.graphFunctions = determineMapFunctions(conf, zkManager);
 
     // Sometimes it takes a while to get multiple ZooKeeper servers up
     if (conf.getZooKeeperServerCount() > 1) {
@@ -399,7 +399,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
     }
     int sessionMsecTimeout = conf.getZooKeeperSessionTimeout();
     try {
-      if (mapFunctions.isMaster()) {
+      if (graphFunctions.isMaster()) {
         if (LOG.isInfoEnabled()) {
           LOG.info("setup: Starting up BspServiceMaster " +
               "(master thread)...");
@@ -409,7 +409,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
         masterThread = new MasterThread<I, V, E, M>(serviceMaster, context);
         masterThread.start();
       }
-      if (mapFunctions.isWorker()) {
+      if (graphFunctions.isWorker()) {
         if (LOG.isInfoEnabled()) {
           LOG.info("setup: Starting up BspServiceWorker...");
         }
@@ -431,7 +431,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
           "setup: Offlining servers due to exception...", e);
     }
 
-    context.setStatus(getMapFunctions().toString() + " starting...");
+    context.setStatus(getGraphFunctions().toString() + " starting...");
   }
 
   /**
@@ -509,7 +509,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
     GiraphMetrics.get().
         resetSuperstepMetrics(BspService.INPUT_SUPERSTEP);
 
-    if (mapFunctions.isNotAWorker()) {
+    if (graphFunctions.isNotAWorker()) {
       if (LOG.isInfoEnabled()) {
         LOG.info("map: No need to do anything when not a worker");
       }
@@ -691,7 +691,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
   public void cleanup(Context context)
     throws IOException, InterruptedException {
     if (LOG.isInfoEnabled()) {
-      LOG.info("cleanup: Starting for " + getMapFunctions());
+      LOG.info("cleanup: Starting for " + getGraphFunctions());
     }
     if (done) {
       return;
@@ -741,7 +741,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
    * Cleanup ZooKeeper ona failure
    */
   private void zooKeeperCleanup() {
-    if (mapFunctions.isZooKeeper()) {
+    if (graphFunctions.isZooKeeper()) {
       // ZooKeeper may have had an issue
       if (zkManager != null) {
         zkManager.logZooKeeperOutput(Level.WARN);
@@ -754,7 +754,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
    */
   private void workerFailureCleanup() {
     try {
-      if (mapFunctions.isWorker()) {
+      if (graphFunctions.isWorker()) {
         serviceWorker.failureCleanup();
       }
     // Checkstyle exception due to needing to get the original
