@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-481: mvn compile error when building jar file - Error with Accumulo (tavoaqp via nitay)
+
   GIRAPH-472: Refactor MapFunctions enum to be more general (ereisman)
 
   GIRAPH-254: Constant Variable name misspelled in HashMasterPartitioner.java (Gustavo Salazar Torres via ereisman)

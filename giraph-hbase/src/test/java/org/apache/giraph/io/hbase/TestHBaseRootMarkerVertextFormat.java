@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.mapreduce.ImportTsv;
 import org.apache.hadoop.hbase.mapreduce.TableInputFormat;
 import org.apache.hadoop.hbase.mapreduce.TableOutputFormat;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.GenericOptionsParser;
@@ -102,8 +103,8 @@ public class TestHBaseRootMarkerVertextFormat extends BspCase {
                 INPUT_FILE
         };
 
-
-        MiniHBaseCluster cluster = testUtil.startMiniCluster();
+        MiniZooKeeperCluster zkCluster = testUtil.startMiniZKCluster();
+        MiniHBaseCluster cluster = testUtil.startMiniHBaseCluster(2, 2);        
 
         GenericOptionsParser opts =
                 new GenericOptionsParser(cluster.getConfiguration(), args);
@@ -131,7 +132,13 @@ public class TestHBaseRootMarkerVertextFormat extends BspCase {
 
             HTableDescriptor desc = new HTableDescriptor(TAB);
             desc.addFamily(new HColumnDescriptor(FAM));
-            new HBaseAdmin(conf).createTable(desc);
+            HBaseAdmin hbaseAdmin=new HBaseAdmin(conf);
+            if (hbaseAdmin.isTableAvailable(TABLE_NAME))
+            {
+            	hbaseAdmin.disableTable(TABLE_NAME);
+            	hbaseAdmin.deleteTable(TABLE_NAME);
+            }
+            hbaseAdmin.createTable(desc);
 
             Job job = ImportTsv.createSubmittableJob(conf, args);
             job.waitForCompletion(false);
@@ -168,6 +175,7 @@ public class TestHBaseRootMarkerVertextFormat extends BspCase {
 
         }   finally {
             cluster.shutdown();
+            zkCluster.shutdown();
         }
     }
 
