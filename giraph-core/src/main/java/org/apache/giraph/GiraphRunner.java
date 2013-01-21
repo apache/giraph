@@ -183,7 +183,7 @@ public class GiraphRunner implements Tool {
               Class.forName(cmd.getOptionValue("vif")));
       if (cmd.hasOption("vip")) {
         GiraphFileInputFormat.addVertexInputPath(job.getInternalJob(),
-            new Path(cmd.getOptionValue("eip")));
+            new Path(cmd.getOptionValue("vip")));
       } else {
         if (LOG.isInfoEnabled()) {
           LOG.info("No vertex input path specified. Ensure your " +
