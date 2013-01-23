@@ -196,22 +196,32 @@ under the License.
 
   <repositories>
     <repository>
-      <snapshots>
-        <enabled>true</enabled>
-      </snapshots>
+      <id>cloudera cdh</id>
+      <url>https://repository.cloudera.com/artifactory/cloudera-repos</url>
       <releases>
-        <enabled>false</enabled>
+	<enabled>true</enabled>
       </releases>
+      <snapshots>
+	<enabled>false</enabled>
+      </snapshots>
+    </repository>
+    <repository>
       <id>apache snapshots</id>
       <name>www.apache.org</name>
       <url>https://repository.apache.org/content/repositories/snapshots</url>
+      <snapshots>
+	<enabled>true</enabled>
+      </snapshots>
+      <releases>
+	<enabled>false</enabled>
+      </releases>
     </repository>
     <repository>
       <snapshots>
-        <enabled>false</enabled>
+	<enabled>false</enabled>
       </snapshots>
       <releases>
-        <enabled>true</enabled>
+	<enabled>true</enabled>
       </releases>
       <id>apache releases</id>
       <name>www.apache.org</name>
@@ -638,6 +648,60 @@ under the License.
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-mapreduce-client-core</artifactId>
+        </dependency>
+      </dependencies>
+    </profile>
+
+    <profile>
+      <id>hadoop_cdh4.1.2</id>
+      <properties>
+        <hadoop.version>2.0.0-cdh4.1.2</hadoop.version> 
+        <munge.symbols>HADOOP_1_SECRET_MANAGER</munge.symbols>
+      </properties>
+      <dependencies>
+        <dependency>
+          <groupId>commons-net</groupId>
+          <artifactId>commons-net</artifactId>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-mapreduce-client-shuffle</artifactId>
+          <version>${hadoop.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-mapreduce-client-jobclient</artifactId>
+          <version>${hadoop.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-mapreduce-client-hs</artifactId>
+          <version>${hadoop.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-mapreduce-client-core</artifactId>
+          <version>${hadoop.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-mapreduce-client-common</artifactId>
+          <version>${hadoop.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-common</artifactId>
+          <version>${hadoop.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-auth</artifactId>
+          <version>${hadoop.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-client</artifactId>
+          <version>${hadoop.version}</version>
         </dependency>
       </dependencies>
     </profile>
