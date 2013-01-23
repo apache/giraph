@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-418: Create maven profile for CDH 4.1.2 (ekoontz)
+
   GIRAPH-487: VertexInputPath in GiraphRunner refers to EdgeInputPath (taguan via apresta)
 
   GIRAPH-481: mvn compile error when building jar file - Error with Accumulo (tavoaqp via nitay)
