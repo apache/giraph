@@ -88,9 +88,10 @@ public class InputSplitPathOrganizer implements Iterable<String> {
     this.zooKeeper = zooKeeper;
     this.pathList = Lists.newArrayList(inputSplitPathList);
     this.hostName = hostName;
-    this.baseOffset = computeBaseOffset(port, threadId);
     if (useLocality) {
-      prioritizeLocalInputSplits();
+      prioritizeLocalInputSplits(port, threadId);
+    } else {
+      this.baseOffset = computeBaseOffset(port, threadId);
     }
   }
 
@@ -102,7 +103,7 @@ public class InputSplitPathOrganizer implements Iterable<String> {
    * @param threadId id of the input split thread
    * @return the offset to start iterating from
    */
-  private int computeBaseOffset(int port, int threadId) {
+  private int computeBaseOffset(final int port, final int threadId) {
     return pathList.isEmpty() ? 0 :
         Math.abs(Objects.hashCode(hostName, port, threadId) % pathList.size());
   }
@@ -113,9 +114,10 @@ public class InputSplitPathOrganizer implements Iterable<String> {
   * a split to read. This will increase locality of data reads with greater
   * probability as the % of total nodes in the cluster hosting data and workers
   * BOTH increase towards 100%. Replication increases our chances of a "hit."
-  *
+  * @param port the port number to hash against
+  * @param threadId the threadId to hash against
   */
-  private void prioritizeLocalInputSplits() {
+  private void prioritizeLocalInputSplits(final int port, final int threadId) {
     List<String> sortedList = new ArrayList<String>();
     String hosts;
     for (Iterator<String> iterator = pathList.iterator(); iterator.hasNext();) {
@@ -136,6 +138,9 @@ public class InputSplitPathOrganizer implements Iterable<String> {
     }
     // shuffle the local blocks in case several workers exist on this host
     Collections.shuffle(sortedList);
+    // set the base offset for the split iterator based on the insertion
+    // point of the local list items back into the nonlocal split list.
+    baseOffset = computeBaseOffset(port, threadId);
     // re-insert local paths at "adjusted index zero" for caller to iterate on
     pathList.addAll(baseOffset, sortedList);
   }

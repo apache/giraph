@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-488: ArrayOutOfBoundsException in org.apache.giraph.worker.InputSplitPathOrganizer (ereisman)
+
   GIRAPH-418: Create maven profile for CDH 4.1.2 (ekoontz)
 
   GIRAPH-487: VertexInputPath in GiraphRunner refers to EdgeInputPath (taguan via apresta)
