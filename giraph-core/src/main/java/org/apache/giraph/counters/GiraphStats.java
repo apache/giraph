@@ -29,6 +29,25 @@ import java.util.Iterator;
 public class GiraphStats extends HadoopCountersBase {
   /** Counter group name for the Giraph statistics */
   public static final String GROUP_NAME = "Giraph Stats";
+  /** superstep counter name */
+  public static final String SUPERSTEP_NAME = "Superstep";
+  /** aggregate vertices counter name */
+  public static final String VERTICES_NAME = "Aggregate vertices";
+  /** aggregate finished vertices counter name */
+  public static final String FINISHED_VERTICES_NAME =
+      "Aggregate finished vertices";
+  /** aggregate edges counter name */
+  public static final String EDGES_NAME = "Aggregate edges";
+  /** sent messages counter name */
+  public static final String SENT_MESSAGES_NAME = "Sent messages";
+  /** workers counter name */
+  public static final String CURRENT_WORKERS_NAME = "Current workers";
+  /** current master partition task counter name */
+  public static final String CURRENT_MASTER_PARTITION_TASK_NAME =
+      "Current master task partition";
+  /** last checkpointed superstep counter name */
+  public static final String LAST_CHECKPOINTED_SUPERSTEP_NAME =
+      "Last checkpointed superstep";
 
   /** Singleton instance for everyone to use */
   private static GiraphStats INSTANCE;
@@ -63,16 +82,16 @@ public class GiraphStats extends HadoopCountersBase {
   private GiraphStats(Context context) {
     super(context, GROUP_NAME);
     counters = new GiraphHadoopCounter[NUM_COUNTERS];
-    counters[SUPERSTEP] = getCounter("Superstep");
-    counters[VERTICES] = getCounter("Aggregate vertices");
-    counters[FINISHED_VERTICES] = getCounter("Aggregate finished vertices");
-    counters[EDGES] = getCounter("Aggregate edges");
-    counters[SENT_MESSAGES] = getCounter("Sent messages");
-    counters[CURRENT_WORKERS] = getCounter("Current workers");
+    counters[SUPERSTEP] = getCounter(SUPERSTEP_NAME);
+    counters[VERTICES] = getCounter(VERTICES_NAME);
+    counters[FINISHED_VERTICES] = getCounter(FINISHED_VERTICES_NAME);
+    counters[EDGES] = getCounter(EDGES_NAME);
+    counters[SENT_MESSAGES] = getCounter(SENT_MESSAGES_NAME);
+    counters[CURRENT_WORKERS] = getCounter(CURRENT_WORKERS_NAME);
     counters[CURRENT_MASTER_TASK_PARTITION] =
-        getCounter("Current master task partition");
+        getCounter(CURRENT_MASTER_PARTITION_TASK_NAME);
     counters[LAST_CHECKPOINTED_SUPERSTEP] =
-        getCounter("Last checkpointed superstep");
+        getCounter(LAST_CHECKPOINTED_SUPERSTEP_NAME);
   }
 
   /**

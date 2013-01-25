@@ -33,6 +33,12 @@ import java.util.Map;
 public class GiraphTimers extends HadoopCountersBase {
   /** Counter group name for the giraph timers */
   public static final String GROUP_NAME = "Giraph Timers";
+  /** Counter name for setup msec */
+  public static final String SETUP_MS_NAME = "Setup (milliseconds)";
+  /** Counter name for total msec */
+  public static final String TOTAL_MS_NAME = "Total (milliseconds)";
+  /** Counter name for shutdown msec */
+  public static final String SHUTDOWN_MS_NAME = "Shutdown (milliseconds)";
 
   /** Singleton instance for everyone to use */
   private static GiraphTimers INSTANCE;
@@ -60,9 +66,9 @@ public class GiraphTimers extends HadoopCountersBase {
   private GiraphTimers(Context context) {
     super(context, GROUP_NAME);
     jobCounters = new GiraphHadoopCounter[NUM_COUNTERS];
-    jobCounters[SETUP_MS] = getCounter("Setup (milliseconds)");
-    jobCounters[TOTAL_MS] = getCounter("Total (milliseconds)");
-    jobCounters[SHUTDOWN_MS] = getCounter("Shutdown (milliseconds)");
+    jobCounters[SETUP_MS] = getCounter(SETUP_MS_NAME);
+    jobCounters[TOTAL_MS] = getCounter(TOTAL_MS_NAME);
+    jobCounters[SHUTDOWN_MS] = getCounter(SHUTDOWN_MS_NAME);
     superstepMsec = Maps.newHashMap();
   }
 
