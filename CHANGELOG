@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-491: Observer for job lifecycle (nitay)
+
   GIRAPH-490: Constants for GiraphStats / GiraphTimers (nitay)
 
   GIRAPH-488: ArrayOutOfBoundsException in org.apache.giraph.worker.InputSplitPathOrganizer (ereisman)

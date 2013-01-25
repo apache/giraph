@@ -20,16 +20,18 @@ package org.apache.giraph.conf;
 
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.combiner.Combiner;
+import org.apache.giraph.graph.DefaultJobObserver;
+import org.apache.giraph.graph.GiraphJobObserver;
+import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.io.EdgeInputFormat;
-import org.apache.giraph.master.MasterCompute;
-import org.apache.giraph.vertex.Vertex;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
-import org.apache.giraph.graph.VertexResolver;
-import org.apache.giraph.worker.WorkerContext;
+import org.apache.giraph.master.MasterCompute;
+import org.apache.giraph.master.MasterObserver;
 import org.apache.giraph.partition.GraphPartitionerFactory;
 import org.apache.giraph.partition.Partition;
-import org.apache.giraph.master.MasterObserver;
+import org.apache.giraph.vertex.Vertex;
+import org.apache.giraph.worker.WorkerContext;
 import org.apache.hadoop.conf.Configuration;
 
 /**
@@ -107,6 +109,25 @@ public class GiraphConfiguration extends Configuration
       Class<? extends MasterObserver> masterObserverClass) {
     addToClasses(MASTER_OBSERVER_CLASSES, masterObserverClass,
         MasterObserver.class);
+  }
+
+  /**
+   * Get job observer class
+   *
+   * @return GiraphJobObserver class set.
+   */
+  public Class<? extends GiraphJobObserver> getJobObserverClass() {
+    return getClass(JOB_OBSERVER_CLASS, DefaultJobObserver.class,
+        GiraphJobObserver.class);
+  }
+
+  /**
+   * Set job observer class
+   *
+   * @param klass GiraphJobObserver class to set.
+   */
+  public void setJobObserverClass(Class<? extends GiraphJobObserver> klass) {
+    setClass(JOB_OBSERVER_CLASS, klass, GiraphJobObserver.class);
   }
 
   /**

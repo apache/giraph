@@ -20,6 +20,7 @@ package org.apache.giraph.conf;
 
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.combiner.Combiner;
+import org.apache.giraph.graph.GiraphJobObserver;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.master.MasterCompute;
@@ -57,8 +58,8 @@ import org.apache.hadoop.util.Progressable;
  * @param <M> Message data
  */
 public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable> extends
-    GiraphConfiguration {
+    V extends Writable, E extends Writable, M extends Writable>
+    extends GiraphConfiguration {
   /** Master graph partitioner - cached for fast access */
   protected final MasterGraphPartitioner<I, V, E, M> masterGraphPartitioner;
 
@@ -86,6 +87,16 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
 
     useUnsafeSerialization = getBoolean(USE_UNSAFE_SERIALIZATION,
         USE_UNSAFE_SERIALIZATION_DEFAULT);
+  }
+
+  /**
+   * Configure an object with this instance if the object is configurable.
+   * @param obj Object
+   */
+  public void configureIfPossible(Object obj) {
+    if (obj instanceof ImmutableClassesGiraphConfigurable) {
+      ((ImmutableClassesGiraphConfigurable) obj).setConf(this);
+    }
   }
 
   /**
@@ -403,6 +414,14 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
       objects[i] = ReflectionUtils.newInstance(klasses[i], this);
     }
     return objects;
+  }
+
+  /**
+   * Create job observer
+   * @return GiraphJobObserver set in configuration.
+   */
+  public GiraphJobObserver getJobObserver() {
+    return ReflectionUtils.newInstance(getJobObserverClass(), this);
   }
 
   /**

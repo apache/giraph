@@ -43,6 +43,9 @@ public interface GiraphConstants {
   String GRAPH_PARTITIONER_FACTORY_CLASS =
       "giraph.graphPartitionerFactoryClass";
 
+  /** Observer class to watch over job status - optional */
+  String JOB_OBSERVER_CLASS = "giraph.jobObserverClass";
+
   // At least one of the input format classes is required.
   /** VertexInputFormat class */
   String VERTEX_INPUT_FORMAT_CLASS = "giraph.vertexInputFormatClass";

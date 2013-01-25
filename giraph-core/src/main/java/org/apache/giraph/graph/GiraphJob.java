@@ -264,18 +264,24 @@ public class GiraphJob {
     }
 
     // Set the job properties, check them, and submit the job
-    ImmutableClassesGiraphConfiguration immutableClassesGiraphConfiguration =
+    ImmutableClassesGiraphConfiguration conf =
         new ImmutableClassesGiraphConfiguration(giraphConfiguration);
-    checkConfiguration(immutableClassesGiraphConfiguration);
-    checkLocalJobRunnerConfiguration(immutableClassesGiraphConfiguration);
-    Job submittedJob = new Job(immutableClassesGiraphConfiguration, jobName);
+    checkConfiguration(conf);
+    checkLocalJobRunnerConfiguration(conf);
+    Job submittedJob = new Job(conf, jobName);
     if (submittedJob.getJar() == null) {
-      submittedJob.setJarByClass(GiraphJob.class);
+      submittedJob.setJarByClass(getClass());
     }
     submittedJob.setNumReduceTasks(0);
     submittedJob.setMapperClass(GraphMapper.class);
     submittedJob.setInputFormatClass(BspInputFormat.class);
     submittedJob.setOutputFormatClass(BspOutputFormat.class);
-    return submittedJob.waitForCompletion(verbose);
+
+    GiraphJobObserver jobObserver = conf.getJobObserver();
+    jobObserver.launchingJob(submittedJob);
+    boolean passed = submittedJob.waitForCompletion(verbose);
+    jobObserver.jobFinished(submittedJob, passed);
+
+    return passed;
   }
 }

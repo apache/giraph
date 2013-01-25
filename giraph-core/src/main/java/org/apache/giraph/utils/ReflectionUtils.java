@@ -18,7 +18,6 @@
 
 package org.apache.giraph.utils;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfigurable;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 
 import java.lang.reflect.Array;
@@ -184,9 +183,7 @@ public class ReflectionUtils {
           "newInstance: Illegal access " + theClass.getName(), e);
     }
     if (configuration != null) {
-      if (result instanceof ImmutableClassesGiraphConfigurable) {
-        ((ImmutableClassesGiraphConfigurable) result).setConf(configuration);
-      }
+      configuration.configureIfPossible(result);
     }
     return result;
   }
