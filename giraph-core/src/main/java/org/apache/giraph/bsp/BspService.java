@@ -20,7 +20,7 @@ package org.apache.giraph.bsp;
 
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.graph.GraphMapper;
+import org.apache.giraph.graph.GraphTaskManager;
 import org.apache.giraph.graph.InputSplitEvents;
 import org.apache.giraph.graph.InputSplitPaths;
 import org.apache.giraph.partition.GraphPartitionerFactory;
@@ -237,7 +237,7 @@ public abstract class BspService<I extends WritableComparable,
   /** Graph partitioner */
   private final GraphPartitionerFactory<I, V, E, M> graphPartitionerFactory;
   /** Mapper that will do the graph computation */
-  private final GraphMapper<I, V, E, M> graphMapper;
+  private final GraphTaskManager<I, V, E, M> graphTaskManager;
   /** File system */
   private final FileSystem fs;
   /** Checkpoint frequency */
@@ -249,12 +249,12 @@ public abstract class BspService<I extends WritableComparable,
    * @param serverPortList ZooKeeper server port list
    * @param sessionMsecTimeout ZooKeeper session timeount in milliseconds
    * @param context Mapper context
-   * @param graphMapper Graph mapper reference
+   * @param graphTaskManager GraphTaskManager for this compute node
    */
   public BspService(String serverPortList,
       int sessionMsecTimeout,
       Mapper<?, ?, ?, ?>.Context context,
-      GraphMapper<I, V, E, M> graphMapper) {
+      GraphTaskManager<I, V, E, M> graphTaskManager) {
     this.vertexInputSplitsEvents = new InputSplitEvents(context);
     this.edgeInputSplitsEvents = new InputSplitEvents(context);
     this.connectedEvent = new PredicateLock(context);
@@ -278,7 +278,7 @@ public abstract class BspService<I extends WritableComparable,
     registerBspEvent(cleanedUpChildrenChanged);
 
     this.context = context;
-    this.graphMapper = graphMapper;
+    this.graphTaskManager = graphTaskManager;
     this.conf = new ImmutableClassesGiraphConfiguration<I, V, E, M>(
         context.getConfiguration());
     this.jobId = conf.get("mapred.job.id", "Unknown Job");
@@ -625,8 +625,8 @@ public abstract class BspService<I extends WritableComparable,
     return taskPartition;
   }
 
-  public final GraphMapper<I, V, E, M> getGraphMapper() {
-    return graphMapper;
+  public final GraphTaskManager<I, V, E, M> getGraphTaskManager() {
+    return graphTaskManager;
   }
 
   public final BspEvent getWorkerHealthRegistrationChangedEvent() {

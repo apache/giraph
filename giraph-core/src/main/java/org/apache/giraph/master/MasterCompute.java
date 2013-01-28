@@ -140,7 +140,7 @@ public abstract class MasterCompute implements MasterAggregatorUsage, Writable,
   public final <A extends Writable> boolean registerAggregator(
     String name, Class<? extends Aggregator<A>> aggregatorClass)
     throws InstantiationException, IllegalAccessException {
-    return getGraphState().getGraphMapper().getMasterAggregatorUsage().
+    return getGraphState().getGraphTaskManager().getMasterAggregatorUsage().
         registerAggregator(name, aggregatorClass);
   }
 
@@ -149,19 +149,19 @@ public abstract class MasterCompute implements MasterAggregatorUsage, Writable,
       String name,
       Class<? extends Aggregator<A>> aggregatorClass) throws
       InstantiationException, IllegalAccessException {
-    return getGraphState().getGraphMapper().getMasterAggregatorUsage().
+    return getGraphState().getGraphTaskManager().getMasterAggregatorUsage().
         registerPersistentAggregator(name, aggregatorClass);
   }
 
   @Override
   public <A extends Writable> A getAggregatedValue(String name) {
-    return getGraphState().getGraphMapper().getMasterAggregatorUsage().
+    return getGraphState().getGraphTaskManager().getMasterAggregatorUsage().
         <A>getAggregatedValue(name);
   }
 
   @Override
   public <A extends Writable> void setAggregatedValue(String name, A value) {
-    getGraphState().getGraphMapper().getMasterAggregatorUsage().
+    getGraphState().getGraphTaskManager().getMasterAggregatorUsage().
         setAggregatedValue(name, value);
   }
 

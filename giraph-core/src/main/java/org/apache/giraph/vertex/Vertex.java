@@ -227,7 +227,7 @@ public abstract class Vertex<I extends WritableComparable,
     }
     if (graphState.getWorkerClientRequestProcessor().
           sendMessageRequest(id, message)) {
-      graphState.getGraphMapper().notifySentMessages();
+      graphState.getGraphTaskManager().notifySentMessages();
     }
   }
 
@@ -331,7 +331,7 @@ public abstract class Vertex<I extends WritableComparable,
    * @return WorkerContext context
    */
   public WorkerContext getWorkerContext() {
-    return getGraphState().getGraphMapper().getWorkerContext();
+    return getGraphState().getGraphTaskManager().getWorkerContext();
   }
 
   @Override

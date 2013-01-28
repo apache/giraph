@@ -18,8 +18,8 @@
 
 package org.apache.giraph.metrics;
 
+import org.apache.giraph.graph.GraphTaskManager;
 import org.apache.giraph.worker.BspServiceWorker;
-import org.apache.giraph.graph.GraphMapper;
 
 import com.google.common.collect.Maps;
 
@@ -64,11 +64,11 @@ public class AggregatedMetrics {
    */
   public AggregatedMetrics add(WorkerSuperstepMetrics workerMetrics,
                                String hostname) {
-    add(GraphMapper.TIMER_COMMUNICATION_TIME,
+    add(GraphTaskManager.TIMER_COMMUNICATION_TIME,
         workerMetrics.getCommTimer(), hostname);
-    add(GraphMapper.TIMER_COMPUTE_ALL,
+    add(GraphTaskManager.TIMER_COMPUTE_ALL,
         workerMetrics.getComputeAllTimer(), hostname);
-    add(GraphMapper.TIMER_TIME_TO_FIRST_MSG,
+    add(GraphTaskManager.TIMER_TIME_TO_FIRST_MSG,
         workerMetrics.getTimeToFirstMsg(), hostname);
     add(BspServiceWorker.TIMER_WAIT_REQUESTS,
         workerMetrics.getWaitRequestsTimer(), hostname);
@@ -85,10 +85,10 @@ public class AggregatedMetrics {
    * @return this
    */
   public AggregatedMetrics print(long superstep, PrintStream out) {
-    AggregatedMetric commTime = get(GraphMapper.TIMER_COMMUNICATION_TIME);
-    AggregatedMetric computeAll = get(GraphMapper.TIMER_COMPUTE_ALL);
+    AggregatedMetric commTime = get(GraphTaskManager.TIMER_COMMUNICATION_TIME);
+    AggregatedMetric computeAll = get(GraphTaskManager.TIMER_COMPUTE_ALL);
     AggregatedMetric timeToFirstMsg =
-        get(GraphMapper.TIMER_TIME_TO_FIRST_MSG);
+        get(GraphTaskManager.TIMER_TIME_TO_FIRST_MSG);
     AggregatedMetric waitRequestsMicros = get(
         BspServiceWorker.TIMER_WAIT_REQUESTS);
     AggregatedMetric userComputeTime = get(USER_COMPUTE_MS);

@@ -26,6 +26,7 @@ import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.comm.WorkerClient;
 import org.apache.giraph.graph.FinishedSuperstepStats;
 import org.apache.giraph.graph.GraphState;
+import org.apache.giraph.graph.GraphTaskManager;
 import org.apache.giraph.master.MasterInfo;
 import org.apache.giraph.graph.VertexEdgeCount;
 import org.apache.giraph.worker.WorkerAggregatorHandler;
@@ -34,7 +35,6 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 import org.apache.giraph.vertex.Vertex;
-import org.apache.giraph.graph.GraphMapper;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.partition.PartitionOwner;
 import org.apache.giraph.partition.PartitionStats;
@@ -201,12 +201,12 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
   MasterInfo getMasterInfo();
 
   /**
-   * Get the GraphMapper that this service is using.  Vertices need to know
+   * Get the GraphTaskManager that this service is using.  Vertices need to know
    * this.
    *
-   * @return BspMapper
+   * @return the GraphTaskManager instance for this compute node
    */
-  GraphMapper<I, V, E, M> getGraphMapper();
+  GraphTaskManager<I, V, E, M> getGraphTaskManager();
 
   /**
    * Operations that will be called if there is a failure by a worker.

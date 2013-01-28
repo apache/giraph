@@ -30,16 +30,16 @@ import org.apache.giraph.comm.netty.NettyMasterServer;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.counters.GiraphStats;
+import org.apache.giraph.graph.GraphState;
+import org.apache.giraph.graph.InputSplitPaths;
+import org.apache.giraph.graph.GlobalStats;
 import org.apache.giraph.graph.AddressesAndPartitionsWritable;
-import org.apache.giraph.bsp.BspService;
 import org.apache.giraph.graph.GraphFunctions;
+import org.apache.giraph.graph.InputSplitEvents;
+import org.apache.giraph.bsp.BspService;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.GiraphInputFormat;
-import org.apache.giraph.graph.GlobalStats;
-import org.apache.giraph.graph.GraphMapper;
-import org.apache.giraph.graph.GraphState;
-import org.apache.giraph.graph.InputSplitEvents;
-import org.apache.giraph.graph.InputSplitPaths;
+import org.apache.giraph.graph.GraphTaskManager;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.partition.MasterGraphPartitioner;
 import org.apache.giraph.partition.PartitionOwner;
@@ -180,14 +180,14 @@ public class BspServiceMaster<I extends WritableComparable,
    * @param serverPortList ZooKeeper server port list
    * @param sessionMsecTimeout Msecs to timeout connecting to ZooKeeper
    * @param context Mapper context
-   * @param graphMapper Graph mapper
+   * @param graphTaskManager GraphTaskManager for this compute node
    */
   public BspServiceMaster(
       String serverPortList,
       int sessionMsecTimeout,
       Mapper<?, ?, ?, ?>.Context context,
-      GraphMapper<I, V, E, M> graphMapper) {
-    super(serverPortList, sessionMsecTimeout, context, graphMapper);
+      GraphTaskManager<I, V, E, M> graphTaskManager) {
+    super(serverPortList, sessionMsecTimeout, context, graphTaskManager);
     workerWroteCheckpoint = new PredicateLock(context);
     registerBspEvent(workerWroteCheckpoint);
     superstepStateChanged = new PredicateLock(context);
@@ -442,7 +442,7 @@ public class BspServiceMaster<I extends WritableComparable,
         failJob = false;
         break;
       }
-      getContext().setStatus(getGraphMapper().getGraphFunctions() + " " +
+      getContext().setStatus(getGraphTaskManager().getGraphFunctions() + " " +
           "checkWorkers: Only found " +
           totalResponses +
           " responses of " + maxWorkers +
@@ -491,7 +491,7 @@ public class BspServiceMaster<I extends WritableComparable,
       return null;
     }
 
-    getContext().setStatus(getGraphMapper().getGraphFunctions() + " " +
+    getContext().setStatus(getGraphTaskManager().getGraphFunctions() + " " +
         "checkWorkers: Done - Found " + totalResponses +
         " responses of " + maxWorkers + " needed to start superstep " +
         getSuperstep());
@@ -1270,7 +1270,7 @@ public class BspServiceMaster<I extends WritableComparable,
           LOG.info("barrierOnWorkerList: Waiting on " + remainingWorkers);
         }
       }
-      getContext().setStatus(getGraphMapper().getGraphFunctions() + " - " +
+      getContext().setStatus(getGraphTaskManager().getGraphFunctions() + " - " +
           finishedHostnameIdList.size() +
           " finished out of " +
           workerInfoList.size() +
@@ -1516,7 +1516,7 @@ public class BspServiceMaster<I extends WritableComparable,
         new GraphState<I, V, E, M>(superstep + 1,
             GiraphStats.getInstance().getVertices().getValue(),
             GiraphStats.getInstance().getEdges().getValue(),
-            getContext(), getGraphMapper(), null, null);
+            getContext(), getGraphTaskManager(), null, null);
     masterCompute.setGraphState(graphState);
     if (superstep == INPUT_SUPERSTEP) {
       try {
@@ -1561,8 +1561,8 @@ public class BspServiceMaster<I extends WritableComparable,
     }
     // Need to wait for the number of workers and masters to complete
     int maxTasks = BspInputFormat.getMaxTasks(getConfiguration());
-    if ((getGraphMapper().getGraphFunctions() == GraphFunctions.ALL) ||
-        (getGraphMapper().getGraphFunctions() ==
+    if ((getGraphTaskManager().getGraphFunctions() == GraphFunctions.ALL) ||
+        (getGraphTaskManager().getGraphFunctions() ==
         GraphFunctions.ALL_EXCEPT_ZOOKEEPER)) {
       maxTasks *= 2;
     }

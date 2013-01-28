@@ -20,7 +20,7 @@ package org.apache.giraph.metrics;
 
 import org.apache.giraph.worker.BspServiceWorker;
 import org.apache.giraph.graph.ComputeCallable;
-import org.apache.giraph.graph.GraphMapper;
+import org.apache.giraph.graph.GraphTaskManager;
 import org.apache.hadoop.io.Writable;
 
 import com.yammer.metrics.core.Gauge;
@@ -70,10 +70,10 @@ public class WorkerSuperstepMetrics implements Writable {
    */
   public WorkerSuperstepMetrics readFromRegistry() {
     SuperstepMetricsRegistry ssm = GiraphMetrics.get().perSuperstep();
-    readGiraphTimer(GraphMapper.TIMER_COMMUNICATION_TIME, commTimer);
-    readGiraphTimer(GraphMapper.TIMER_COMPUTE_ALL, computeAllTimer);
-    readGiraphTimer(GraphMapper.TIMER_TIME_TO_FIRST_MSG, timeToFirstMsg);
-    readGiraphTimer(GraphMapper.TIMER_SUPERSTEP_TIME, superstepTimer);
+    readGiraphTimer(GraphTaskManager.TIMER_COMMUNICATION_TIME, commTimer);
+    readGiraphTimer(GraphTaskManager.TIMER_COMPUTE_ALL, computeAllTimer);
+    readGiraphTimer(GraphTaskManager.TIMER_TIME_TO_FIRST_MSG, timeToFirstMsg);
+    readGiraphTimer(GraphTaskManager.TIMER_SUPERSTEP_TIME, superstepTimer);
     readGiraphTimer(BspServiceWorker.TIMER_WAIT_REQUESTS, waitRequestsTimer);
     userComputeTime.setValue((long) ssm.getTimer(
         ComputeCallable.TIMER_COMPUTE_ONE).sum());

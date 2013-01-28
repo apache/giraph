@@ -44,7 +44,9 @@ public class GiraphConfiguration extends Configuration
   /**
    * Constructor that creates the configuration
    */
-  public GiraphConfiguration() { }
+  public GiraphConfiguration() {
+    configureHadoopSecurity();
+  }
 
   /**
    * Constructor.
@@ -53,6 +55,7 @@ public class GiraphConfiguration extends Configuration
    */
   public GiraphConfiguration(Configuration conf) {
     super(conf);
+    configureHadoopSecurity();
   }
 
   /**
@@ -630,5 +633,16 @@ public class GiraphConfiguration extends Configuration
    */
   public void setMaxMasterSuperstepWaitMsecs(int maxMasterSuperstepWaitMsecs) {
     setInt(MAX_MASTER_SUPERSTEP_WAIT_MSECS, maxMasterSuperstepWaitMsecs);
+  }
+
+  /**
+   * Check environment for Hadoop security token location in case we are
+   * executing the Giraph job on a MRv1 Hadoop cluster.
+   */
+  public void configureHadoopSecurity() {
+    String hadoopTokenFilePath = System.getenv("HADOOP_TOKEN_FILE_LOCATION");
+    if (hadoopTokenFilePath != null) {
+      set("mapreduce.job.credentials.binary", hadoopTokenFilePath);
+    }
   }
 }

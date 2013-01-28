@@ -131,7 +131,7 @@ public abstract class InputSplitsCallable<I extends WritableComparable,
             context, configuration, bspServiceWorker);
     this.graphState = new GraphState<I, V, E, M>(graphState.getSuperstep(),
         graphState.getTotalNumVertices(), graphState.getTotalNumEdges(),
-        context, graphState.getGraphMapper(), workerClientRequestProcessor,
+        context, graphState.getGraphTaskManager(), workerClientRequestProcessor,
         null);
     this.useLocality = configuration.getBoolean(
         GiraphConstants.USE_INPUT_SPLIT_LOCALITY,

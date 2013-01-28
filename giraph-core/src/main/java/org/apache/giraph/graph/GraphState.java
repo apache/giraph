@@ -41,9 +41,9 @@ E extends Writable, M extends Writable> {
   /** Graph-wide number of edges */
   private final long numEdges;
   /** Graph-wide map context */
-  private final Mapper.Context context;
+  private final Mapper<?, ?, ?, ?>.Context context;
   /** Graph-wide BSP Mapper for this Vertex */
-  private final GraphMapper<I, V, E, M> graphMapper;
+  private final GraphTaskManager<I, V, E, M> graphTaskManager;
   /** Handles requests */
   private final WorkerClientRequestProcessor<I, V, E, M>
   workerClientRequestProcessor;
@@ -57,22 +57,22 @@ E extends Writable, M extends Writable> {
    * @param numVertices Current graph-wide vertices
    * @param numEdges Current graph-wide edges
    * @param context Context
-   * @param graphMapper Graph mapper
+   * @param graphTaskManager GraphTaskManager for this compute node
    * @param workerClientRequestProcessor Handles all communication
    * @param workerAggregatorUsage Aggregator usage
    *
    */
   public GraphState(
       long superstep, long numVertices,
-      long numEdges, Mapper.Context context,
-      GraphMapper<I, V, E, M> graphMapper,
+      long numEdges, Mapper<?, ?, ?, ?>.Context context,
+      GraphTaskManager<I, V, E, M> graphTaskManager,
       WorkerClientRequestProcessor<I, V, E, M> workerClientRequestProcessor,
       WorkerAggregatorUsage workerAggregatorUsage) {
     this.superstep = superstep;
     this.numVertices = numVertices;
     this.numEdges = numEdges;
     this.context = context;
-    this.graphMapper = graphMapper;
+    this.graphTaskManager = graphTaskManager;
     this.workerClientRequestProcessor = workerClientRequestProcessor;
     this.workerAggregatorUsage = workerAggregatorUsage;
   }
@@ -93,8 +93,8 @@ E extends Writable, M extends Writable> {
     return context;
   }
 
-  public GraphMapper<I, V, E, M> getGraphMapper() {
-    return graphMapper;
+  public GraphTaskManager<I, V, E, M> getGraphTaskManager() {
+    return graphTaskManager;
   }
 
   public WorkerClientRequestProcessor<I, V, E, M>
@@ -110,7 +110,7 @@ E extends Writable, M extends Writable> {
   public String toString() {
     return "(superstep=" + superstep + ",numVertices=" + numVertices + "," +
         "numEdges=" + numEdges + ",context=" + context +
-        ",graphMapper=" + graphMapper +
+        ",graphMapper=" + graphTaskManager +
         ",workerClientRequestProcessor=" + workerClientRequestProcessor + ")";
 
   }

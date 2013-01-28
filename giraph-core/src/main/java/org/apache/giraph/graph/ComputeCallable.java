@@ -133,7 +133,7 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
 
     this.graphState = new GraphState<I, V, E, M>(graphState.getSuperstep(),
         graphState.getTotalNumVertices(), graphState.getTotalNumEdges(),
-        context, graphState.getGraphMapper(), workerClientRequestProcessor,
+        context, graphState.getGraphTaskManager(), workerClientRequestProcessor,
         aggregatorUsage);
 
     List<PartitionStats> partitionStatsList = Lists.newArrayList();
