@@ -17,13 +17,23 @@
 
 # friendly message for those who forget to tell us what to do
 if [ $# = 0 ]; then
-  echo "Usage: giraph [-D<Hadoop property>] <jar containing vertex> <parameters to jar>"
-  echo "At a minimum one must provide a path to the jar containing the vertex to be executed."
+  echo "Usage: giraph-admin [-Dgiraph.property1 -Dgiraph.property2...] -cleanZk"
+  echo "if no appropriate -D overrides are included, the conf file is checked"
+  echo "or default values are supplied. The ZK cleaner accepts the standard"
+  echo "giraph -D config options to configure the ZK server list, ports, base path."
   exit 1
 fi
 
-# locate and run the giraph-env script to populate env vars, classpath, etc.
 GIRAPH_ENV_DIR="$( cd -P "$( dirname "$0" )" && pwd )"
 source $GIRAPH_ENV_DIR/giraph-env
 
-exec "$HADOOP_HOME/bin/hadoop" --config $HADOOP_CONF_DIR jar $JAR $CLASS $HADOOP_PROPERTIES -libjars $GIRAPH_JARS  "$@"
+# run the ZK cleaner?
+if [ "$1" == "-cleanZk" ]; then
+    CLASS=org.apache.giraph.zk.GiraphZooKeeperAdmin
+    exec "$HADOOP_HOME/bin/hadoop" --config $HADOOP_CONF_DIR jar $JAR $CLASS $HADOOP_PROPERTIES -libjars $GIRAPH_JARS  "$@"
+    exit 0
+fi
+
+echo "[ERROR] User must supply command-line arguments to start giraph-admin task."
+echo "[ERROR] Current commands accepted:     -cleanZk"
+exit 1
