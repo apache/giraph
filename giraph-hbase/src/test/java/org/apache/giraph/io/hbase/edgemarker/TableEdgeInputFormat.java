@@ -17,10 +17,11 @@
  */
 package org.apache.giraph.io.hbase.edgemarker;
 
+import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.graph.Edge;
-import org.apache.giraph.vertex.Vertex;
 import org.apache.giraph.io.VertexReader;
 import org.apache.giraph.io.hbase.HBaseVertexInputFormat;
+import org.apache.giraph.vertex.Vertex;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Text;
@@ -86,7 +87,7 @@ public class TableEdgeInputFormat extends
             String edge = Bytes.toString(row.getValue(CF, CHILDREN));
             Text vertexValue = new Text();
             Text edgeId = new Text(edge);
-            edges.add(new Edge<Text, Text>(edgeId, uselessEdgeValue));
+            edges.add(new DefaultEdge<Text, Text>(edgeId, uselessEdgeValue));
             vertex.initialize(vertexId, vertexValue, edges);
 
             return vertex;

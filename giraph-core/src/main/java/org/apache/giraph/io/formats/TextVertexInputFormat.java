@@ -20,10 +20,9 @@ package org.apache.giraph.io.formats;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.Edge;
-import org.apache.giraph.vertex.Vertex;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexReader;
-import org.apache.hadoop.conf.Configuration;
+import org.apache.giraph.vertex.Vertex;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
@@ -300,8 +299,7 @@ public abstract class TextVertexInputFormat<I extends WritableComparable,
      * @throws IOException
      *           exception that can be thrown while reading
      */
-    protected abstract Iterable<Edge<I, E>> getEdges(T line) throws
-        IOException;
+    protected abstract Iterable<Edge<I, E>> getEdges(T line) throws IOException;
 
   }
 
@@ -334,7 +332,6 @@ public abstract class TextVertexInputFormat<I extends WritableComparable,
       T processed = null;
       try {
         processed = preprocessLine(line);
-        Configuration conf = getContext().getConfiguration();
         vertex = getConf().createVertex();
         vertex.initialize(getId(processed), getValue(processed),
             getEdges(processed));

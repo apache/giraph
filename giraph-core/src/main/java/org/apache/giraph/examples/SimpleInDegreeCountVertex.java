@@ -19,9 +19,9 @@
 package org.apache.giraph.examples;
 
 import org.apache.giraph.graph.Edge;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.DoubleWritable;
 import org.apache.giraph.vertex.EdgeListVertex;
+import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.LongWritable;
 
 /**
  * Simple function to return the out degree for each vertex.
@@ -30,8 +30,7 @@ import org.apache.giraph.vertex.EdgeListVertex;
     name = "Indegree Count"
 )
 public class SimpleInDegreeCountVertex extends EdgeListVertex<
-  LongWritable, LongWritable,
-  DoubleWritable, DoubleWritable> {
+  LongWritable, LongWritable, DoubleWritable, DoubleWritable> {
 
   @Override
   public void compute(Iterable<DoubleWritable> messages) {
@@ -49,7 +48,6 @@ public class SimpleInDegreeCountVertex extends EdgeListVertex<
       vertexValue.set(sum);
       setValue(vertexValue);
       voteToHalt();
-      return;
     }
   }
 }

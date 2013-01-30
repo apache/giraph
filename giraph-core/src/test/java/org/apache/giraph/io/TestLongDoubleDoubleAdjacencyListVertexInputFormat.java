@@ -19,7 +19,7 @@ package org.apache.giraph.io;
 
 
 import org.apache.giraph.conf.GiraphConstants;
-import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.io.formats.AdjacencyListTextVertexInputFormat;
 import org.apache.giraph.io.formats.LongDoubleDoubleAdjacencyListVertexInputFormat;
 import org.apache.giraph.vertex.EdgeListVertex;
@@ -138,9 +138,9 @@ public class TestLongDoubleDoubleAdjacencyListVertexInputFormat extends LongDoub
     setGraphState(vertex, graphState);
     assertValidVertex(conf, graphState, vertex,
         new LongWritable(42), new DoubleWritable(0.1),
-        new Edge<LongWritable, DoubleWritable>(new LongWritable(99), new DoubleWritable(0.2)),
-        new Edge<LongWritable, DoubleWritable>(new LongWritable(2000), new DoubleWritable(0.3)),
-        new Edge<LongWritable, DoubleWritable>(new LongWritable(4000), new DoubleWritable(0.4)));
+        new DefaultEdge<LongWritable, DoubleWritable>(new LongWritable(99), new DoubleWritable(0.2)),
+        new DefaultEdge<LongWritable, DoubleWritable>(new LongWritable(2000), new DoubleWritable(0.3)),
+        new DefaultEdge<LongWritable, DoubleWritable>(new LongWritable(4000), new DoubleWritable(0.4)));
     assertEquals(vertex.getNumEdges(), 3);
   }
 
@@ -158,7 +158,7 @@ public class TestLongDoubleDoubleAdjacencyListVertexInputFormat extends LongDoub
         vertex = vr.getCurrentVertex();
     setGraphState(vertex, graphState);
     assertValidVertex(conf, graphState, vertex, new LongWritable(12345), new DoubleWritable(42.42),
-       new Edge<LongWritable, DoubleWritable>(new LongWritable(9999999), new DoubleWritable(99.9)));
+       new DefaultEdge<LongWritable, DoubleWritable>(new LongWritable(9999999), new DoubleWritable(99.9)));
     assertEquals(vertex.getNumEdges(), 1);
   }
 

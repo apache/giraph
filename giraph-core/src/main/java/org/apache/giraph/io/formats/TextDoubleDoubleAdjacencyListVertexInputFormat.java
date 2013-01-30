@@ -17,6 +17,7 @@
  */
 package org.apache.giraph.io.formats;
 
+import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.graph.Edge;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.Text;
@@ -70,7 +71,7 @@ public class TextDoubleDoubleAdjacencyListVertexInputFormat<M extends Writable>
 
     @Override
     public Edge<Text, DoubleWritable> decodeEdge(String s1, String s2) {
-      return new Edge<Text, DoubleWritable>(new Text(s1),
+      return new DefaultEdge<Text, DoubleWritable>(new Text(s1),
           new DoubleWritable(Double.valueOf(s2)));
     }
   }

@@ -21,14 +21,15 @@ package org.apache.giraph.examples;
 import org.apache.giraph.aggregators.DoubleMaxAggregator;
 import org.apache.giraph.aggregators.DoubleMinAggregator;
 import org.apache.giraph.aggregators.LongSumAggregator;
-import org.apache.giraph.master.DefaultMasterCompute;
+import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.graph.Edge;
-import org.apache.giraph.vertex.LongDoubleFloatDoubleVertex;
-import org.apache.giraph.vertex.Vertex;
 import org.apache.giraph.io.VertexReader;
-import org.apache.giraph.worker.WorkerContext;
 import org.apache.giraph.io.formats.GeneratedVertexInputFormat;
 import org.apache.giraph.io.formats.TextVertexOutputFormat;
+import org.apache.giraph.master.DefaultMasterCompute;
+import org.apache.giraph.vertex.LongDoubleFloatDoubleVertex;
+import org.apache.giraph.vertex.Vertex;
+import org.apache.giraph.worker.WorkerContext;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -195,7 +196,7 @@ public class SimplePageRankVertex extends LongDoubleFloatDoubleVertex {
           (inputSplit.getNumSplits() * totalRecords);
       float edgeValue = vertexId.get() * 100f;
       List<Edge<LongWritable, FloatWritable>> edges = Lists.newLinkedList();
-      edges.add(new Edge<LongWritable, FloatWritable>(
+      edges.add(new DefaultEdge<LongWritable, FloatWritable>(
           new LongWritable(targetVertexId),
           new FloatWritable(edgeValue)));
       vertex.initialize(vertexId, vertexValue, edges);

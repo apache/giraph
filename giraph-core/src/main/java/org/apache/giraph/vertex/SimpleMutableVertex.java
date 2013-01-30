@@ -18,13 +18,14 @@
 
 package org.apache.giraph.vertex;
 
-import com.google.common.collect.Lists;
-
 import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.EdgeNoValue;
 import org.apache.giraph.utils.EdgeIterables;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+
+import com.google.common.collect.Lists;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -92,24 +93,23 @@ public abstract class SimpleMutableVertex<I extends WritableComparable,
    */
   public void addEdgeRequest(I sourceVertexId) throws IOException {
     getGraphState().getWorkerClientRequestProcessor().
-        addEdgeRequest(sourceVertexId, new Edge<I,
-            NullWritable>(sourceVertexId, NullWritable.get()));
+        addEdgeRequest(sourceVertexId, new EdgeNoValue<I>(sourceVertexId));
   }
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    I vertexId = (I) getConf().createVertexId();
+    I vertexId = getConf().createVertexId();
     vertexId.readFields(in);
-    V vertexValue = (V) getConf().createVertexValue();
+    V vertexValue = getConf().createVertexValue();
     vertexValue.readFields(in);
 
     int numEdges = in.readInt();
     List<Edge<I, NullWritable>> edges =
         Lists.newArrayListWithCapacity(numEdges);
     for (int i = 0; i < numEdges; ++i) {
-      I targetVertexId = (I) getConf().createVertexId();
+      I targetVertexId = getConf().createVertexId();
       targetVertexId.readFields(in);
-      edges.add(new Edge<I, NullWritable>(targetVertexId, NullWritable.get()));
+      edges.add(new EdgeNoValue<I>(targetVertexId));
     }
 
     initialize(vertexId, vertexValue, edges);

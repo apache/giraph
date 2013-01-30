@@ -18,13 +18,14 @@
 
 package org.apache.giraph.vertex;
 
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-
+import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.graph.Edge;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
+
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -88,7 +89,7 @@ public abstract class EdgeListVertexBase<I extends WritableComparable,
       targetVertexId.readFields(in);
       E edgeValue = getConf().createEdgeValue();
       edgeValue.readFields(in);
-      edgeList.add(new Edge<I, E>(targetVertexId, edgeValue));
+      edgeList.add(new DefaultEdge<I, E>(targetVertexId, edgeValue));
     }
 
     readHaltBoolean(in);

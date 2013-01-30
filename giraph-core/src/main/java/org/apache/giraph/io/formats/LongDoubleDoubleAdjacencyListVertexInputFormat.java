@@ -17,6 +17,7 @@
  */
 package org.apache.giraph.io.formats;
 
+import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.graph.Edge;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -72,10 +73,8 @@ public class LongDoubleDoubleAdjacencyListVertexInputFormat<M extends Writable>
     }
 
     @Override
-    public Edge<LongWritable, DoubleWritable> decodeEdge(
-        String s1,
-        String s2) {
-      return new Edge<LongWritable, DoubleWritable>(
+    public Edge<LongWritable, DoubleWritable> decodeEdge(String s1, String s2) {
+      return new DefaultEdge<LongWritable, DoubleWritable>(
           new LongWritable(Long.valueOf(s1)),
           new DoubleWritable(Double.valueOf(s2)));
     }

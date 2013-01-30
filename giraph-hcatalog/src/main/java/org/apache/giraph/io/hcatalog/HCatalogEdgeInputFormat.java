@@ -18,10 +18,12 @@
 
 package org.apache.giraph.io.hcatalog;
 
-import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.DefaultEdge;
+import org.apache.giraph.graph.EdgeNoValue;
+import org.apache.giraph.graph.EdgeWithSource;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.EdgeReader;
-import org.apache.giraph.graph.EdgeWithSource;
+import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -55,13 +57,35 @@ public abstract class HCatalogEdgeInputFormat<
   }
 
   /**
+   * Get underlying HCatalog input format. Used for creating readers.
+   *
+   * @return GiraphHCatInputFormat stored.
+   */
+  protected GiraphHCatInputFormat getHCatInputFormat() {
+    return hCatInputFormat;
+  }
+
+  /**
    * {@link EdgeReader} for {@link HCatalogEdgeInputFormat}.
    */
-  protected abstract class HCatalogEdgeReader implements EdgeReader<I, E> {
+  protected abstract static class HCatalogEdgeReader<
+      I extends WritableComparable, E extends Writable>
+      implements EdgeReader<I, E> {
+    /** HCatalog input format to use */
+    private final GiraphHCatInputFormat hCatInputFormat;
     /** Internal {@link RecordReader}. */
     private RecordReader<WritableComparable, HCatRecord> hCatRecordReader;
     /** Context passed to initialize. */
     private TaskAttemptContext context;
+
+    /**
+     * Constructor taking hcat input format to use.
+     *
+     * @param hCatInputFormat HCatalog input format
+     */
+    public HCatalogEdgeReader(GiraphHCatInputFormat hCatInputFormat) {
+      this.hCatInputFormat = hCatInputFormat;
+    }
 
     @Override
     public final void initialize(InputSplit inputSplit,
@@ -110,10 +134,10 @@ public abstract class HCatalogEdgeInputFormat<
 
   /**
    * Create {@link EdgeReader}.
-
+   *
    * @return {@link HCatalogEdgeReader} instance.
    */
-  protected abstract HCatalogEdgeReader createEdgeReader();
+  protected abstract HCatalogEdgeReader<I, E> createEdgeReader();
 
   @Override
   public EdgeReader<I, E>
@@ -133,8 +157,17 @@ public abstract class HCatalogEdgeInputFormat<
    * {@link HCatalogEdgeReader} for tables holding a complete edge
    * in each row.
    */
-  protected abstract class SingleRowHCatalogEdgeReader
-      extends HCatalogEdgeReader {
+  protected abstract static class SingleRowHCatalogEdgeReader<
+      I extends WritableComparable, E extends Writable>
+      extends HCatalogEdgeReader<I, E> {
+    /**
+     * Constructor
+     * @param hCatInputFormat giraph input format to use
+     */
+    public SingleRowHCatalogEdgeReader(GiraphHCatInputFormat hCatInputFormat) {
+      super(hCatInputFormat);
+    }
+
     /**
      * Get source vertex id from a record.
      *
@@ -165,7 +198,50 @@ public abstract class HCatalogEdgeInputFormat<
       HCatRecord record = getRecordReader().getCurrentValue();
       return new EdgeWithSource<I, E>(
           getSourceVertexId(record),
-          new Edge<I, E>(getTargetVertexId(record), getEdgeValue(record)));
+          new DefaultEdge<I, E>(getTargetVertexId(record),
+              getEdgeValue(record)));
+    }
+  }
+
+  /**
+   * {@link HCatalogEdgeReader} for tables holding a complete edge
+   * in each row where the edges contain no data other than IDs they point to.
+   */
+  protected abstract static class SingleRowHCatalogEdgeNoValueReader<
+      I extends WritableComparable>
+      extends HCatalogEdgeReader<I, NullWritable> {
+    /**
+     * Constructor
+     * @param hCatInputFormat giraph input format to use
+     */
+    public SingleRowHCatalogEdgeNoValueReader(
+        GiraphHCatInputFormat hCatInputFormat) {
+      super(hCatInputFormat);
+    }
+
+    /**
+     * Get source vertex id from a record.
+     *
+     * @param record Input record
+     * @return I Source vertex id
+     */
+    protected abstract I getSourceVertexId(HCatRecord record);
+
+    /**
+     * Get target vertex id from a record.
+     *
+     * @param record Input record
+     * @return I Target vertex id
+     */
+    protected abstract I getTargetVertexId(HCatRecord record);
+
+    @Override
+    public EdgeWithSource<I, NullWritable> getCurrentEdge() throws IOException,
+        InterruptedException {
+      HCatRecord record = getRecordReader().getCurrentValue();
+      return new EdgeWithSource<I, NullWritable>(
+          getSourceVertexId(record),
+          new EdgeNoValue<I>(getTargetVertexId(record)));
     }
   }
 }

@@ -18,15 +18,15 @@
 
 package org.apache.giraph.examples;
 
-import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.EdgeNoValue;
 import org.apache.giraph.utils.MockUtils;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
-
 import com.google.common.collect.Lists;
+
+import static org.junit.Assert.assertEquals;
 
 /**
  * Contains a simple unit test for {@link SimpleTriangleClosingVertex}
@@ -45,10 +45,8 @@ public class SimpleTriangleClosingVertexTest {
     SimpleTriangleClosingVertex.IntArrayListWritable alw =
       new SimpleTriangleClosingVertex.IntArrayListWritable();
     vertex.initialize(null, null);
-    vertex.addEdge(new Edge<IntWritable, NullWritable>(new IntWritable(5),
-        NullWritable.get()));
-    vertex.addEdge(new Edge<IntWritable, NullWritable>(new IntWritable(7),
-        NullWritable.get()));
+    vertex.addEdge(new EdgeNoValue<IntWritable>(new IntWritable(5)));
+    vertex.addEdge(new EdgeNoValue<IntWritable>(new IntWritable(7)));
 
     MockUtils.MockedEnvironment<IntWritable,
       SimpleTriangleClosingVertex.IntArrayListWritable,

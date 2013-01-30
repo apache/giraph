@@ -18,12 +18,14 @@
 
 package org.apache.giraph.utils;
 
-import com.google.common.base.Function;
-import com.google.common.collect.Iterables;
 import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.EdgeNoValue;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+
+import com.google.common.base.Function;
+import com.google.common.collect.Iterables;
 
 /**
  * Utilities for converting between edge iterables and neighbor iterables.
@@ -66,7 +68,7 @@ public class EdgeIterables {
         new Function<I, Edge<I, NullWritable>>() {
           @Override
           public Edge<I, NullWritable> apply(I neighbor) {
-            return new Edge<I, NullWritable>(neighbor, NullWritable.get());
+            return new EdgeNoValue<I>(neighbor);
           }
         });
   }

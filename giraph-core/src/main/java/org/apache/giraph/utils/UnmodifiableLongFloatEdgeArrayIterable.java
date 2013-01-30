@@ -18,13 +18,14 @@
 
 package org.apache.giraph.utils;
 
-import java.util.Iterator;
-
+import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.graph.Edge;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
 
 import com.google.common.collect.UnmodifiableIterator;
+
+import java.util.Iterator;
 
 /**
  * {@link UnmodifiableIterator} over a pair of primitive long-float arrays.
@@ -59,7 +60,7 @@ public class UnmodifiableLongFloatEdgeArrayIterable extends
   @Override
   public Edge<LongWritable, FloatWritable> next() {
     Edge<LongWritable, FloatWritable> retval =
-        new Edge<LongWritable, FloatWritable>(new LongWritable(
+        new DefaultEdge<LongWritable, FloatWritable>(new LongWritable(
             longArray[offset]), new FloatWritable(floatArray[offset]));
     offset++;
     return retval;

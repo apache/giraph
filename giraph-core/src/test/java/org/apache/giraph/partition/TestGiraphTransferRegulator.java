@@ -17,11 +17,11 @@
  */
 package org.apache.giraph.partition;
 
+import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.graph.Edge;
-import org.apache.giraph.partition.PartitionOwner;
-import org.apache.giraph.vertex.EdgeListVertex;
 import org.apache.giraph.graph.GiraphJob;
 import org.apache.giraph.graph.GiraphTransferRegulator;
+import org.apache.giraph.vertex.EdgeListVertex;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
@@ -29,15 +29,15 @@ import org.apache.hadoop.io.LongWritable;
 import org.junit.Before;
 import org.junit.Test;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-
 import com.google.common.collect.Lists;
 
 import java.io.IOException;
 import java.util.List;
+
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Test the GiraphTransferRegulator.
@@ -75,11 +75,11 @@ public class TestGiraphTransferRegulator {
     job.getConfiguration()
         .setInt(GiraphTransferRegulator.MAX_EDGES_PER_TRANSFER, 3);
     List<Edge<IntWritable, DoubleWritable>> edges = Lists.newLinkedList();
-    edges.add(new Edge<IntWritable, DoubleWritable>(new IntWritable(2),
+    edges.add(new DefaultEdge<IntWritable, DoubleWritable>(new IntWritable(2),
         new DoubleWritable(22)));
-    edges.add(new Edge<IntWritable, DoubleWritable>(new IntWritable(3),
+    edges.add(new DefaultEdge<IntWritable, DoubleWritable>(new IntWritable(3),
         new DoubleWritable(33)));
-    edges.add(new Edge<IntWritable, DoubleWritable>(new IntWritable(4),
+    edges.add(new DefaultEdge<IntWritable, DoubleWritable>(new IntWritable(4),
         new DoubleWritable(44)));
     vertex.initialize(null, null, edges);
     GiraphTransferRegulator gtr =

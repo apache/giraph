@@ -18,13 +18,13 @@
 
 package org.apache.giraph.io.hcatalog;
 
-import com.google.common.collect.Lists;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.graph.Edge;
-import org.apache.giraph.vertex.Vertex;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexReader;
 import org.apache.giraph.utils.TimedLogger;
+import org.apache.giraph.vertex.Vertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -33,6 +33,8 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hcatalog.data.HCatRecord;
 import org.apache.log4j.Logger;
+
+import com.google.common.collect.Lists;
 
 import java.io.IOException;
 import java.util.List;
@@ -353,7 +355,7 @@ public abstract class HCatalogVertexInputFormat<
           currentVertexId = getVertexId(record);
         }
         if (currentVertexId.equals(getVertexId(record))) {
-          currentEdges.add(new Edge<I, E>(
+          currentEdges.add(new DefaultEdge<I, E>(
                   getTargetVertexId(record),
                   getEdgeValue(record)));
           recordsForVertex.add(record);

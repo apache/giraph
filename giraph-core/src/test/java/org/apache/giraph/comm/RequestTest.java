@@ -27,16 +27,17 @@ import org.apache.giraph.comm.requests.SendWorkerMessagesRequest;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.graph.Edge;
-import org.apache.giraph.vertex.EdgeListVertex;
-import org.apache.giraph.vertex.Vertex;
 import org.apache.giraph.graph.VertexMutations;
-import org.apache.giraph.worker.WorkerInfo;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.partition.PartitionStore;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.giraph.utils.MockUtils;
 import org.apache.giraph.utils.PairList;
+import org.apache.giraph.vertex.EdgeListVertex;
+import org.apache.giraph.vertex.Vertex;
+import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.junit.Before;
@@ -206,9 +207,8 @@ public class RequestTest {
         Maps.newHashMap();
     for (int i = 0; i < 11; ++i) {
       VertexMutations<IntWritable, IntWritable, IntWritable, IntWritable>
-      mutations =
-      new VertexMutations<IntWritable, IntWritable,
-      IntWritable, IntWritable>();
+      mutations = new VertexMutations<IntWritable, IntWritable,
+          IntWritable, IntWritable>();
       for (int j = 0; j < 3; ++j) {
         TestVertex vertex = new TestVertex();
         vertex.initialize(new IntWritable(i), new IntWritable(j));
@@ -219,7 +219,7 @@ public class RequestTest {
       }
       for (int j = 0; j < 5; ++j) {
         Edge<IntWritable, IntWritable> edge =
-            new Edge<IntWritable, IntWritable>(
+            new DefaultEdge<IntWritable, IntWritable>(
                 new IntWritable(i), new IntWritable(2*j));
         mutations.addEdge(edge);
       }
@@ -260,7 +260,7 @@ public class RequestTest {
         assertEquals(2, entry.getValue().getRemovedVertexCount());
         int removeEdgeValueSum = 0;
         for (Edge<IntWritable, IntWritable> edge :
-          entry.getValue().getAddedEdgeList()) {
+            entry.getValue().getAddedEdgeList()) {
           removeEdgeValueSum += edge.getValue().get();
         }
         assertEquals(20, removeEdgeValueSum);

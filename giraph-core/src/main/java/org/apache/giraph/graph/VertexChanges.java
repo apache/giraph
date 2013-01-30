@@ -18,11 +18,11 @@
 
 package org.apache.giraph.graph;
 
-import java.util.List;
-
 import org.apache.giraph.vertex.Vertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+
+import java.util.List;
 
 /**
  * Structure to hold all the possible graph mutations that can occur during a

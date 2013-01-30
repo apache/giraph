@@ -17,9 +17,10 @@
  */
 package org.apache.giraph.io;
 
+import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.graph.Edge;
-import org.apache.giraph.vertex.Vertex;
 import org.apache.giraph.io.formats.AdjacencyListTextVertexOutputFormat;
+import org.apache.giraph.vertex.Vertex;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.Text;
@@ -29,14 +30,17 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.junit.Test;
 import org.mockito.Matchers;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import com.google.common.collect.Lists;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
+
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class TestAdjacencyListTextVertexOutputFormat extends AdjacencyListTextVertexOutputFormat<Text, DoubleWritable, DoubleWritable> {
 
@@ -85,12 +89,11 @@ public class TestAdjacencyListTextVertexOutputFormat extends AdjacencyListTextVe
     when(vertex.getId()).thenReturn(new Text("San Francisco"));
     when(vertex.getValue()).thenReturn(new DoubleWritable(0d));
     when(vertex.getTotalNumEdges()).thenReturn(2l);
-    ArrayList<Edge<Text, DoubleWritable>> cities = new ArrayList<Edge<Text,
-        DoubleWritable>>();
+    List<Edge<Text, DoubleWritable>> cities = Lists.newArrayList();
     Collections.addAll(cities,
-        new Edge<Text, DoubleWritable>(
+        new DefaultEdge<Text, DoubleWritable>(
             new Text("Los Angeles"), new DoubleWritable(347.16)),
-        new Edge<Text, DoubleWritable>(
+        new DefaultEdge<Text, DoubleWritable>(
             new Text("Phoenix"), new DoubleWritable(652.48)));
 
     when(vertex.getEdges()).thenReturn(cities);
@@ -117,12 +120,11 @@ public class TestAdjacencyListTextVertexOutputFormat extends AdjacencyListTextVe
     when(vertex.getId()).thenReturn(new Text("San Francisco"));
     when(vertex.getValue()).thenReturn(new DoubleWritable(0d));
     when(vertex.getTotalNumEdges()).thenReturn(2l);
-    ArrayList<Edge<Text, DoubleWritable>> cities = new ArrayList<Edge<Text,
-        DoubleWritable>>();
+    List<Edge<Text, DoubleWritable>> cities = Lists.newArrayList();
     Collections.addAll(cities,
-        new Edge<Text, DoubleWritable>(
+        new DefaultEdge<Text, DoubleWritable>(
             new Text("Los Angeles"), new DoubleWritable(347.16)),
-        new Edge<Text, DoubleWritable>(
+        new DefaultEdge<Text, DoubleWritable>(
             new Text("Phoenix"), new DoubleWritable(652.48)));
 
     when(vertex.getEdges()).thenReturn(cities);

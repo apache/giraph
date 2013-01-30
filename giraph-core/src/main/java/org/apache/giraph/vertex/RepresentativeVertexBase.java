@@ -18,7 +18,9 @@
 
 package org.apache.giraph.vertex;
 
+import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.MutableEdge;
 import org.apache.giraph.utils.ExtendedDataInput;
 import org.apache.giraph.utils.ExtendedDataOutput;
 import org.apache.hadoop.io.Writable;
@@ -48,7 +50,7 @@ public abstract class RepresentativeVertexBase<
   private static final Logger LOG =
       Logger.getLogger(RepresentativeVertex.class);
   /** Representative edge */
-  private final Edge<I, E> representativeEdge = new Edge<I, E>();
+  private final MutableEdge<I, E> representativeEdge = new DefaultEdge<I, E>();
   /** Serialized edges */
   private byte[] serializedEdges;
   /** Byte used in serializedEdges */
@@ -149,18 +151,23 @@ public abstract class RepresentativeVertexBase<
 
   @Override
   public final void initialize(I id, V value, Iterable<Edge<I, E>> edges) {
-    // Make sure the initial values exist
-    representativeEdge.setTargetVertexId(getConf().createVertexId());
-    representativeEdge.setValue(getConf().createEdgeValue());
+    setInitialEdgeData();
     super.initialize(id, value, edges);
   }
 
   @Override
   public final void initialize(I id, V value) {
+    setInitialEdgeData();
+    super.initialize(id, value);
+  }
+
+  /**
+   * Initialize representative edge data.
+   */
+  private void setInitialEdgeData() {
     // Make sure the initial values exist
     representativeEdge.setTargetVertexId(getConf().createVertexId());
     representativeEdge.setValue(getConf().createEdgeValue());
-    super.initialize(id, value);
   }
 
   /**

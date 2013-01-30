@@ -19,8 +19,9 @@
 package org.apache.giraph.examples;
 
 import org.apache.giraph.aggregators.LongSumAggregator;
-import org.apache.giraph.master.DefaultMasterCompute;
+import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.graph.Edge;
+import org.apache.giraph.master.DefaultMasterCompute;
 import org.apache.giraph.vertex.EdgeListVertex;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.hadoop.io.FloatWritable;
@@ -186,7 +187,8 @@ public class VerifyMessage {
         FloatWritable newEdgeValue = new FloatWritable(
             edge.getValue().get() + (float) vertexValue);
         Edge<LongWritable, FloatWritable> newEdge =
-            new Edge<LongWritable, FloatWritable>(edge.getTargetVertexId(),
+            new DefaultEdge<LongWritable, FloatWritable>(
+                edge.getTargetVertexId(),
                 newEdgeValue);
         if (LOG.isDebugEnabled()) {
           LOG.debug("compute: vertex " + getId() +

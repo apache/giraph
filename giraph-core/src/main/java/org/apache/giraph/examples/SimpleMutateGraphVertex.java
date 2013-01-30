@@ -18,7 +18,7 @@
 
 package org.apache.giraph.examples;
 
-import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.vertex.EdgeListVertex;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.hadoop.io.DoubleWritable;
@@ -87,7 +87,7 @@ public class SimpleMutateGraphVertex extends EdgeListVertex<
       addVertexRequest(vertexIndex, new DoubleWritable(0.0));
       // Add edges to those remote vertices as well
       addEdgeRequest(vertexIndex,
-          new Edge<LongWritable, FloatWritable>(
+          new DefaultEdge<LongWritable, FloatWritable>(
               getId(), new FloatWritable(0.0f)));
     } else if (getSuperstep() == 4) {
       LOG.debug("Reached superstep " + getSuperstep());

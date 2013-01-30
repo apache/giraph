@@ -21,7 +21,7 @@ package org.apache.giraph.vertex;
 import com.google.common.collect.Lists;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.DefaultEdge;
 import org.apache.hadoop.io.IntWritable;
 import org.junit.Before;
 import org.junit.Test;
@@ -77,11 +77,11 @@ public class TestMultiGraphVertex {
     // in order to catch corner cases:
 
     // Edge list of form: [A, B, A]
-    vertex.addEdge(new Edge<IntWritable, IntWritable>(new IntWritable(1),
+    vertex.addEdge(new DefaultEdge<IntWritable, IntWritable>(new IntWritable(1),
         new IntWritable(1)));
-    vertex.addEdge(new Edge<IntWritable, IntWritable>(new IntWritable(2),
+    vertex.addEdge(new DefaultEdge<IntWritable, IntWritable>(new IntWritable(2),
         new IntWritable(2)));
-    vertex.addEdge(new Edge<IntWritable, IntWritable>(new IntWritable(1),
+    vertex.addEdge(new DefaultEdge<IntWritable, IntWritable>(new IntWritable(1),
         new IntWritable(10)));
     assertEquals(vertex.getNumEdges(), 3);
     assertEquals(vertex.removeEdges(new IntWritable(1)), 2);
@@ -89,11 +89,11 @@ public class TestMultiGraphVertex {
 
     // Edge list of form: [A, B, B]
     vertex = instantiateVertex(vertexClass);
-    vertex.addEdge(new Edge<IntWritable, IntWritable>(new IntWritable(2),
+    vertex.addEdge(new DefaultEdge<IntWritable, IntWritable>(new IntWritable(2),
         new IntWritable(2)));
-    vertex.addEdge(new Edge<IntWritable, IntWritable>(new IntWritable(1),
+    vertex.addEdge(new DefaultEdge<IntWritable, IntWritable>(new IntWritable(1),
         new IntWritable(1)));
-    vertex.addEdge(new Edge<IntWritable, IntWritable>(new IntWritable(1),
+    vertex.addEdge(new DefaultEdge<IntWritable, IntWritable>(new IntWritable(1),
         new IntWritable(10)));
     assertEquals(vertex.getNumEdges(), 3);
     assertEquals(vertex.removeEdges(new IntWritable(1)), 2);
@@ -101,11 +101,11 @@ public class TestMultiGraphVertex {
 
     // Edge list of form: [A, A, B]
     vertex = instantiateVertex(vertexClass);
-    vertex.addEdge(new Edge<IntWritable, IntWritable>(new IntWritable(1),
+    vertex.addEdge(new DefaultEdge<IntWritable, IntWritable>(new IntWritable(1),
         new IntWritable(1)));
-    vertex.addEdge(new Edge<IntWritable, IntWritable>(new IntWritable(1),
+    vertex.addEdge(new DefaultEdge<IntWritable, IntWritable>(new IntWritable(1),
         new IntWritable(10)));
-    vertex.addEdge(new Edge<IntWritable, IntWritable>(new IntWritable(2),
+    vertex.addEdge(new DefaultEdge<IntWritable, IntWritable>(new IntWritable(2),
         new IntWritable(2)));
     assertEquals(vertex.getNumEdges(), 3);
     assertEquals(vertex.removeEdges(new IntWritable(1)), 2);

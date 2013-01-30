@@ -19,6 +19,7 @@
 package org.apache.giraph.io.formats;
 
 import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.EdgeNoValue;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
@@ -83,9 +84,8 @@ public class IntIntNullIntTextInputFormat extends
       List<Edge<IntWritable, NullWritable>> edges =
           Lists.newArrayListWithCapacity(tokens.length - 1);
       for (int n = 1; n < tokens.length; n++) {
-        edges.add(new Edge<IntWritable, NullWritable>(
-            new IntWritable(Integer.parseInt(tokens[n])),
-            NullWritable.get()));
+        edges.add(new EdgeNoValue<IntWritable>(
+            new IntWritable(Integer.parseInt(tokens[n]))));
       }
       return edges;
     }

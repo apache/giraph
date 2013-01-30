@@ -19,11 +19,10 @@
 package org.apache.giraph.vertex;
 
 import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.EdgeNoValue;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.junit.Test;
-
-import static org.junit.Assert.assertEquals;
 
 import com.google.common.collect.Lists;
 
@@ -35,6 +34,8 @@ import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.List;
+
+import static org.junit.Assert.assertEquals;
 
 /**
  * Tests {@link org.apache.giraph.vertex.IntIntNullIntVertex}.
@@ -54,10 +55,8 @@ public class TestIntIntNullIntVertex {
     IntIntNullIntVertex vertex = new MyIntIntNullVertex();
 
     List<Edge<IntWritable, NullWritable>> edges = Lists.newLinkedList();
-    edges.add(new Edge<IntWritable, NullWritable>(new IntWritable(3),
-        NullWritable.get()));
-    edges.add(new Edge<IntWritable, NullWritable>(new IntWritable(47),
-        NullWritable.get()));
+    edges.add(new EdgeNoValue<IntWritable>(new IntWritable(3)));
+    edges.add(new EdgeNoValue<IntWritable>(new IntWritable(47)));
 
     vertex.initialize(new IntWritable(23), new IntWritable(7), edges);
     vertex.voteToHalt();

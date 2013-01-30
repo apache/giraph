@@ -24,13 +24,14 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
 import org.apache.giraph.aggregators.LongSumAggregator;
-import org.apache.giraph.master.DefaultMasterCompute;
+import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.graph.Edge;
-import org.apache.giraph.vertex.EdgeListVertex;
 import org.apache.giraph.graph.GiraphJob;
-import org.apache.giraph.worker.WorkerContext;
 import org.apache.giraph.io.formats.GeneratedVertexInputFormat;
 import org.apache.giraph.io.formats.IdWithValueTextOutputFormat;
+import org.apache.giraph.master.DefaultMasterCompute;
+import org.apache.giraph.vertex.EdgeListVertex;
+import org.apache.giraph.worker.WorkerContext;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.FloatWritable;
@@ -113,8 +114,8 @@ public class SimpleCheckpointVertex implements Tool {
         FloatWritable newEdgeValue = new FloatWritable(edge.getValue().get() +
             (float) vertexValue);
         Edge<LongWritable, FloatWritable> newEdge =
-            new Edge<LongWritable, FloatWritable>(edge.getTargetVertexId(),
-                newEdgeValue);
+            new DefaultEdge<LongWritable, FloatWritable>(
+                edge.getTargetVertexId(), newEdgeValue);
         LOG.info("compute: vertex " + getId() +
             " sending edgeValue " + edge.getValue() +
             " vertexValue " + vertexValue +

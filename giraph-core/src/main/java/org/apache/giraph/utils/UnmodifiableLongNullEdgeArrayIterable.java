@@ -17,13 +17,14 @@
  */
 package org.apache.giraph.utils;
 
-import java.util.Iterator;
-
 import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.EdgeNoValue;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 
 import com.google.common.collect.UnmodifiableIterator;
+
+import java.util.Iterator;
 
 /**
  * {@link UnmodifiableIterator} over a primitive long array with NullWritable
@@ -59,8 +60,7 @@ public class UnmodifiableLongNullEdgeArrayIterable extends
   @Override
   public Edge<LongWritable, NullWritable> next() {
     Edge<LongWritable, NullWritable> retval =
-        new Edge<LongWritable, NullWritable>(
-            new LongWritable(longArray[offset]), NullWritable.get());
+        new EdgeNoValue<LongWritable>(new LongWritable(longArray[offset]));
     offset++;
     return retval;
   }

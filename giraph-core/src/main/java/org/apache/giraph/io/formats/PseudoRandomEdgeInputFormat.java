@@ -21,7 +21,7 @@ package org.apache.giraph.io.formats;
 import com.google.common.collect.Sets;
 import org.apache.giraph.bsp.BspInputSplit;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.EdgeReader;
 import org.apache.giraph.graph.EdgeWithSource;
@@ -180,7 +180,7 @@ public class PseudoRandomEdgeInputFormat
       }
       return new EdgeWithSource<LongWritable, DoubleWritable>(
           currentVertexId,
-          new Edge<LongWritable, DoubleWritable>(
+          new DefaultEdge<LongWritable, DoubleWritable>(
               destVertexId,
               new DoubleWritable(random.nextDouble())));
     }

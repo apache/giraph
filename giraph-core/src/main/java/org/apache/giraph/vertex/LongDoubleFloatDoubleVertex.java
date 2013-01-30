@@ -17,8 +17,7 @@
  */
 package org.apache.giraph.vertex;
 
-import com.google.common.collect.UnmodifiableIterator;
-
+import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.graph.Edge;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
@@ -27,6 +26,8 @@ import org.apache.log4j.Logger;
 import org.apache.mahout.math.function.LongFloatProcedure;
 import org.apache.mahout.math.list.DoubleArrayList;
 import org.apache.mahout.math.map.OpenLongFloatHashMap;
+
+import com.google.common.collect.UnmodifiableIterator;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -101,7 +102,7 @@ public abstract class LongDoubleFloatDoubleVertex
           @Override
           public Edge<LongWritable, FloatWritable> next() {
             long targetVertex = targetVertices[offset++];
-            return new Edge<LongWritable, FloatWritable>(
+            return new DefaultEdge<LongWritable, FloatWritable>(
                 new LongWritable(targetVertex),
                 new FloatWritable(targetVertex));
           }

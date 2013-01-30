@@ -22,7 +22,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.giraph.conf.GiraphClasses;
-import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.io.formats.JsonLongDoubleFloatDoubleVertexInputFormat;
 import org.apache.giraph.io.formats.JsonLongDoubleFloatDoubleVertexOutputFormat;
 import org.apache.giraph.utils.InternalVertexRunner;
@@ -52,9 +52,9 @@ public class SimpleShortestPathsVertexTest {
 
     SimpleShortestPathsVertex vertex = new SimpleShortestPathsVertex();
     vertex.initialize(null, null);
-    vertex.addEdge(new Edge<LongWritable, FloatWritable>(
+    vertex.addEdge(new DefaultEdge<LongWritable, FloatWritable>(
         new LongWritable(10L), new FloatWritable(2.5f)));
-    vertex.addEdge(new Edge<LongWritable, FloatWritable>(
+    vertex.addEdge(new DefaultEdge<LongWritable, FloatWritable>(
         new LongWritable(20L), new FloatWritable(0.5f)));
 
     MockUtils.MockedEnvironment<LongWritable, DoubleWritable, FloatWritable,
@@ -85,9 +85,9 @@ public class SimpleShortestPathsVertexTest {
 
     SimpleShortestPathsVertex vertex = new SimpleShortestPathsVertex();
     vertex.initialize(new LongWritable(0), new DoubleWritable(0.0));
-    vertex.addEdge(new Edge<LongWritable, FloatWritable>(
+    vertex.addEdge(new DefaultEdge<LongWritable, FloatWritable>(
         new LongWritable(10L), new FloatWritable(2.5f)));
-    vertex.addEdge(new Edge<LongWritable, FloatWritable>(
+    vertex.addEdge(new DefaultEdge<LongWritable, FloatWritable>(
         new LongWritable(20L), new FloatWritable(0.5f)));
 
     MockUtils.MockedEnvironment<LongWritable, DoubleWritable, FloatWritable,

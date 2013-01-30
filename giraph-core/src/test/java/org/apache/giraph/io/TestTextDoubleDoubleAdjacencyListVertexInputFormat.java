@@ -17,23 +17,30 @@
  */
 package org.apache.giraph.io;
 
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-
 import org.apache.giraph.bsp.BspUtils;
 import org.apache.giraph.conf.GiraphConstants;
-import org.apache.giraph.graph.*;
+import org.apache.giraph.graph.DefaultEdge;
+import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.io.formats.AdjacencyListTextVertexInputFormat;
 import org.apache.giraph.io.formats.TextDoubleDoubleAdjacencyListVertexInputFormat;
 import org.apache.giraph.vertex.EdgeListVertex;
 import org.apache.giraph.vertex.Vertex;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.*;
+import org.apache.hadoop.io.BooleanWritable;
+import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.junit.Before;
 import org.junit.Test;
+
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -41,7 +48,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -164,9 +173,9 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat extends TextDoub
         vr.getCurrentVertex();
     setGraphState(vertex, graphState);
     assertValidVertex(conf, graphState, vertex, new Text("Hi"), new DoubleWritable(0),
-        new Edge<Text, DoubleWritable>(new Text("Ciao"), new DoubleWritable(1.123d)),
-        new Edge<Text, DoubleWritable>(new Text("Bomdia"), new DoubleWritable(2.234d)),
-        new Edge<Text, DoubleWritable>(new Text("Ola"), new DoubleWritable(3.345d)));
+        new DefaultEdge<Text, DoubleWritable>(new Text("Ciao"), new DoubleWritable(1.123d)),
+        new DefaultEdge<Text, DoubleWritable>(new Text("Bomdia"), new DoubleWritable(2.234d)),
+        new DefaultEdge<Text, DoubleWritable>(new Text("Ola"), new DoubleWritable(3.345d)));
     assertEquals(vertex.getNumEdges(), 3);
   }
 
@@ -192,9 +201,9 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat extends TextDoub
     setGraphState(vertex, graphState);
     assertValidVertex(conf, graphState, vertex,
         new Text("BYE"), new DoubleWritable(0.01d),
-        new Edge<Text, DoubleWritable>(new Text("CIAO"), new DoubleWritable(1.001d)),
-        new Edge<Text, DoubleWritable>(new Text("TCHAU"), new DoubleWritable(2.0001d)),
-        new Edge<Text, DoubleWritable>(new Text("ADIOS"), new DoubleWritable(3.00001d)));
+        new DefaultEdge<Text, DoubleWritable>(new Text("CIAO"), new DoubleWritable(1.001d)),
+        new DefaultEdge<Text, DoubleWritable>(new Text("TCHAU"), new DoubleWritable(2.0001d)),
+        new DefaultEdge<Text, DoubleWritable>(new Text("ADIOS"), new DoubleWritable(3.00001d)));
 
     assertEquals(vertex.getNumEdges(), 3);
   }
@@ -213,7 +222,7 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat extends TextDoub
         vr.getCurrentVertex();
     setGraphState(vertex, graphState);
     assertValidVertex(conf, graphState, vertex, new Text("alpha"), new DoubleWritable(42d),
-        new Edge<Text, DoubleWritable>(new Text("beta"), new DoubleWritable(99d)));
+        new DefaultEdge<Text, DoubleWritable>(new Text("beta"), new DoubleWritable(99d)));
     assertEquals(vertex.getNumEdges(), 1);
   }
 

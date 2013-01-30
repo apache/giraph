@@ -18,11 +18,11 @@
 
 package org.apache.giraph.vertex;
 
-import com.google.common.collect.ImmutableList;
-
 import org.apache.giraph.graph.Edge;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
+
+import com.google.common.collect.ImmutableList;
 
 import java.io.DataInput;
 import java.io.DataOutput;

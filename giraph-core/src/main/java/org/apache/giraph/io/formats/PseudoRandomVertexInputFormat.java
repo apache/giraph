@@ -18,12 +18,13 @@
 
 package org.apache.giraph.io.formats;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.BspInputSplit;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.graph.Edge;
-import org.apache.giraph.vertex.Vertex;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexReader;
+import org.apache.giraph.vertex.Vertex;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
@@ -171,7 +172,7 @@ public class PseudoRandomVertexInputFormat<M extends Writable> extends
             new LongWritable(Math.abs(rand.nextLong()) %
               aggregateVertices);
         } while (destVertices.contains(destVertexId));
-        edges.add(new Edge<LongWritable, DoubleWritable>(
+        edges.add(new DefaultEdge<LongWritable, DoubleWritable>(
             destVertexId, new DoubleWritable(rand.nextDouble())));
         destVertices.add(destVertexId);
       }

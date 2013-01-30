@@ -18,16 +18,16 @@
 
 package org.apache.giraph.examples;
 
-import java.io.IOException;
-
 import org.apache.giraph.aggregators.DoubleSumAggregator;
-import org.apache.giraph.master.DefaultMasterCompute;
 import org.apache.giraph.graph.Edge;
+import org.apache.giraph.master.DefaultMasterCompute;
 import org.apache.giraph.vertex.LongDoubleFloatDoubleEdgeListVertex;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.log4j.Logger;
+
+import java.io.IOException;
 
 /**
  * Base class for executing a random walk on the graph

@@ -434,15 +434,24 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   }
 
   /**
+   * Tell if we are using NullWritable for Edge value.
+   *
+   * @return true if NullWritable is class for
+   */
+  public boolean isEdgeValueNullWritable() {
+    return getEdgeValueClass() == NullWritable.class;
+  }
+
+  /**
    * Create a user edge value
    *
    * @return Instantiated user edge value
    */
   public E createEdgeValue() {
-    Class<E> klass = getEdgeValueClass();
-    if (klass == NullWritable.class) {
+    if (isEdgeValueNullWritable()) {
       return (E) NullWritable.get();
     } else {
+      Class<E> klass = getEdgeValueClass();
       try {
         return klass.newInstance();
       } catch (InstantiationException e) {

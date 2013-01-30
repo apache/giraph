@@ -19,7 +19,7 @@
 package org.apache.giraph.io.formats;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.EdgeReader;
 import org.apache.giraph.graph.EdgeWithSource;
@@ -159,7 +159,7 @@ public abstract class TextEdgeInputFormat<I extends WritableComparable,
       I targetVertexId = getTargetVertexId(line);
       E edgeValue = getValue(line);
       return new EdgeWithSource<I, E>(sourceVertexId,
-          new Edge<I, E>(targetVertexId, edgeValue));
+          new DefaultEdge<I, E>(targetVertexId, edgeValue));
     }
 
     @Override
@@ -223,7 +223,7 @@ public abstract class TextEdgeInputFormat<I extends WritableComparable,
       I targetVertexId = getTargetVertexId(processed);
       E edgeValue = getValue(processed);
       return new EdgeWithSource<I, E>(sourceVertexId,
-          new Edge<I, E>(targetVertexId, edgeValue));
+          new DefaultEdge<I, E>(targetVertexId, edgeValue));
     }
 
     @Override

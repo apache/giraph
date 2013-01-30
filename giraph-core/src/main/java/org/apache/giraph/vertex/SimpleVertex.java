@@ -18,13 +18,13 @@
 
 package org.apache.giraph.vertex;
 
-import com.google.common.collect.Lists;
-
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.utils.EdgeIterables;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+
+import com.google.common.collect.Lists;
 
 import java.io.DataInput;
 import java.io.DataOutput;

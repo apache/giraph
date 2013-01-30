@@ -18,13 +18,13 @@
 
 package org.apache.giraph.vertex;
 
-import com.google.common.collect.Iterables;
-
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.utils.UnmodifiableLongNullEdgeArrayIterable;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
+
+import com.google.common.collect.Iterables;
 
 import java.io.DataInput;
 import java.io.DataOutput;

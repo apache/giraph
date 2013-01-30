@@ -18,14 +18,15 @@
 
 package org.apache.giraph.vertex;
 
-import com.google.common.base.Function;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
-
+import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.graph.Edge;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
+
+import com.google.common.base.Function;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -96,7 +97,7 @@ public abstract class HashMapVertex<I extends WritableComparable,
 
           @Override
           public Edge<I, E> apply(Map.Entry<I, E> edge) {
-            return new Edge<I, E>(edge.getKey(), edge.getValue());
+            return new DefaultEdge<I, E>(edge.getKey(), edge.getValue());
           }
         });
   }

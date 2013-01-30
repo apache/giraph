@@ -19,16 +19,16 @@
 package org.apache.giraph.examples;
 
 import org.apache.giraph.graph.Edge;
-import org.apache.giraph.vertex.EdgeListVertex;
 import org.apache.giraph.utils.ArrayListWritable;
+import org.apache.giraph.vertex.EdgeListVertex;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
+
 import java.util.Map;
 import java.util.Set;
-
-import com.google.common.collect.Sets;
-import com.google.common.collect.Maps;
 
 /**
  * Demonstrates triangle closing in simple,

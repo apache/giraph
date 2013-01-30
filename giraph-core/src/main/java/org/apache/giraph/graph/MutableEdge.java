@@ -23,24 +23,25 @@ import org.apache.hadoop.io.WritableComparable;
 
 /**
  * A complete edge, the target vertex and the edge value.  Can only be one
- * edge with a destination vertex id per edge map.
+ * edge with a destination vertex id per edge map. This edge can be mutated,
+ * that is you can set it's target vertex ID and edge value.
  *
  * @param <I> Vertex index
  * @param <E> Edge value
  */
-public interface Edge<I extends WritableComparable, E extends Writable>
-    extends Comparable<Edge<I, E>> {
+public interface MutableEdge<I extends WritableComparable, E extends Writable>
+    extends Edge<I, E> {
   /**
-   * Get the target vertex index of this edge
+   * Set the destination vertex index of this edge.
    *
-   * @return Target vertex index of this edge
+   * @param targetVertexId new destination vertex
    */
-  I getTargetVertexId();
+  void setTargetVertexId(I targetVertexId);
 
   /**
-   * Get the edge value of the edge
+   * Set the value for this edge.
    *
-   * @return Edge value of this edge
+   * @param value new edge value
    */
-  E getValue();
+  void setValue(E value);
 }

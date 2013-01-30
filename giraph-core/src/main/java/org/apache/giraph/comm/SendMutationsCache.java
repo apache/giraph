@@ -17,14 +17,14 @@
  */
 package org.apache.giraph.comm;
 
-import java.util.HashMap;
-import java.util.Map;
-
-import org.apache.giraph.vertex.Vertex;
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.VertexMutations;
+import org.apache.giraph.vertex.Vertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Aggregates the mutations to be sent to partitions so they can be sent in

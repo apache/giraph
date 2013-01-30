@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-494: Make Edge an interface (nitay)
+
   GIRAPH-492: Saving vertices has no status report, making it hard to 
   find DFS issues (aching)
 

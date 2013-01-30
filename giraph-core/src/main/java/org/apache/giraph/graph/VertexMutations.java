@@ -18,12 +18,6 @@
 
 package org.apache.giraph.graph;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-
 import org.apache.giraph.conf.ImmutableClassesGiraphConfigurable;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.vertex.Vertex;
@@ -31,6 +25,13 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import com.google.common.collect.Lists;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.List;
 
 /**
  * Structure to hold all the possible graph mutations that can occur during a
@@ -47,14 +48,13 @@ public class VertexMutations<I extends WritableComparable,
     M extends Writable> implements VertexChanges<I, V, E, M>,
     Writable, ImmutableClassesGiraphConfigurable {
   /** List of added vertices during the last superstep */
-  private final List<Vertex<I, V, E, M>> addedVertexList =
-      new ArrayList<Vertex<I, V, E, M>>();
+  private final List<Vertex<I, V, E, M>> addedVertexList = Lists.newArrayList();
   /** Count of remove vertex requests */
   private int removedVertexCount = 0;
   /** List of added edges */
-  private final List<Edge<I, E>> addedEdgeList = new ArrayList<Edge<I, E>>();
+  private final List<Edge<I, E>> addedEdgeList = Lists.newArrayList();
   /** List of removed edges */
-  private final List<I> removedEdgeList = new ArrayList<I>();
+  private final List<I> removedEdgeList = Lists.newArrayList();
   /** Configuration */
   private ImmutableClassesGiraphConfiguration<I, V, E, M> conf;
 
@@ -95,9 +95,13 @@ public class VertexMutations<I extends WritableComparable,
     for (int i = 0; i < addedEdgeListSize; ++i) {
       I destVertex = conf.createVertexId();
       destVertex.readFields(input);
-      E edgeValue = conf.createEdgeValue();
-      edgeValue.readFields(input);
-      addedEdgeList.add(new Edge<I, E>(destVertex, edgeValue));
+      if (conf.isEdgeValueNullWritable()) {
+        addedEdgeList.add((Edge<I, E>) new EdgeNoValue<I>(destVertex));
+      } else {
+        E edgeValue = conf.createEdgeValue();
+        edgeValue.readFields(input);
+        addedEdgeList.add(new DefaultEdge<I, E>(destVertex, edgeValue));
+      }
     }
     int removedEdgeListSize = input.readInt();
     for (int i = 0; i < removedEdgeListSize; ++i) {
