@@ -18,19 +18,20 @@
 
 package org.apache.giraph.io.formats;
 
-import com.google.common.collect.Sets;
 import org.apache.giraph.bsp.BspInputSplit;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.DefaultEdge;
+import org.apache.giraph.graph.Edge;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.EdgeReader;
-import org.apache.giraph.graph.EdgeWithSource;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.log4j.Logger;
+
+import com.google.common.collect.Sets;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -149,8 +150,8 @@ public class PseudoRandomEdgeInputFormat
     }
 
     @Override
-    public EdgeWithSource<LongWritable, DoubleWritable> getCurrentEdge()
-      throws IOException, InterruptedException {
+    public LongWritable getCurrentSourceId() throws IOException,
+        InterruptedException {
       if (currentVertexEdgesRead == edgesPerVertex) {
         ++verticesRead;
         currentVertexId = new LongWritable(-1);
@@ -165,7 +166,12 @@ public class PseudoRandomEdgeInputFormat
         random.setSeed(currentVertexId.get());
         currentVertexDestVertices.clear();
       }
+      return currentVertexId;
+    }
 
+    @Override
+    public Edge<LongWritable, DoubleWritable> getCurrentEdge()
+      throws IOException, InterruptedException {
       LongWritable destVertexId;
       do {
         destVertexId =
@@ -178,11 +184,9 @@ public class PseudoRandomEdgeInputFormat
         LOG.trace("getCurrentEdge: Return edge (" + currentVertexId + ", " +
             "" + destVertexId + ")");
       }
-      return new EdgeWithSource<LongWritable, DoubleWritable>(
-          currentVertexId,
-          new DefaultEdge<LongWritable, DoubleWritable>(
+      return new DefaultEdge<LongWritable, DoubleWritable>(
               destVertexId,
-              new DoubleWritable(random.nextDouble())));
+              new DoubleWritable(random.nextDouble()));
     }
 
     @Override

@@ -20,9 +20,9 @@ package org.apache.giraph.io.formats;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.DefaultEdge;
+import org.apache.giraph.graph.Edge;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.EdgeReader;
-import org.apache.giraph.graph.EdgeWithSource;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
@@ -152,14 +152,19 @@ public abstract class TextEdgeInputFormat<I extends WritableComparable,
    */
   protected abstract class TextEdgeReaderFromEachLine extends TextEdgeReader {
     @Override
-    public final EdgeWithSource<I, E> getCurrentEdge() throws IOException,
+    public final I getCurrentSourceId() throws IOException,
         InterruptedException {
       Text line = getRecordReader().getCurrentValue();
-      I sourceVertexId = getSourceVertexId(line);
+      return getSourceVertexId(line);
+    }
+
+    @Override
+    public final Edge<I, E> getCurrentEdge() throws IOException,
+        InterruptedException {
+      Text line = getRecordReader().getCurrentValue();
       I targetVertexId = getTargetVertexId(line);
       E edgeValue = getValue(line);
-      return new EdgeWithSource<I, E>(sourceVertexId,
-          new DefaultEdge<I, E>(targetVertexId, edgeValue));
+      return new DefaultEdge<I, E>(targetVertexId, edgeValue);
     }
 
     @Override
@@ -214,20 +219,42 @@ public abstract class TextEdgeInputFormat<I extends WritableComparable,
    */
   protected abstract class TextEdgeReaderFromEachLineProcessed<T> extends
       TextEdgeReader {
+    /** Generic type holding processed line */
+    private T processedLine;
+
     @Override
-    public final EdgeWithSource<I, E> getCurrentEdge() throws IOException,
+    public I getCurrentSourceId() throws IOException, InterruptedException {
+      T processed = processCurrentLine();
+      return getSourceVertexId(processed);
+    }
+
+    @Override
+    public final Edge<I, E> getCurrentEdge() throws IOException,
         InterruptedException {
-      Text line = getRecordReader().getCurrentValue();
-      T processed = preprocessLine(line);
-      I sourceVertexId = getSourceVertexId(processed);
+      T processed = processCurrentLine();
       I targetVertexId = getTargetVertexId(processed);
       E edgeValue = getValue(processed);
-      return new EdgeWithSource<I, E>(sourceVertexId,
-          new DefaultEdge<I, E>(targetVertexId, edgeValue));
+      return new DefaultEdge<I, E>(targetVertexId, edgeValue);
+    }
+
+    /**
+     * Process the current line to the user's type.
+     *
+     * @return T processed line
+     * @throws IOException on I/O error
+     * @throws InterruptedException on interruption
+     */
+    private T processCurrentLine() throws IOException, InterruptedException {
+      if (processedLine == null) {
+        Text line = getRecordReader().getCurrentValue();
+        processedLine = preprocessLine(line);
+      }
+      return processedLine;
     }
 
     @Override
     public final boolean nextEdge() throws IOException, InterruptedException {
+      processedLine = null;
       return getRecordReader().nextKeyValue();
     }
 

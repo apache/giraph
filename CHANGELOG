@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-493: Remove EdgeWithSource (nitay)
+
   GIRAPH-429: Number of input split threads set to 1 less than necessary (majakabiljo)
   
   GIRAPH-498: We should check input splits status from zookeeeper once per worker, 

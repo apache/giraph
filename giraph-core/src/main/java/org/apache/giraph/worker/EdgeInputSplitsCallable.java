@@ -19,11 +19,11 @@
 package org.apache.giraph.worker;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.io.EdgeInputFormat;
-import org.apache.giraph.io.EdgeReader;
-import org.apache.giraph.graph.EdgeWithSource;
+import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.VertexEdgeCount;
+import org.apache.giraph.io.EdgeInputFormat;
+import org.apache.giraph.io.EdgeReader;
 import org.apache.giraph.metrics.GiraphMetrics;
 import org.apache.giraph.metrics.GiraphMetricsRegistry;
 import org.apache.giraph.utils.LoggerUtils;
@@ -114,25 +114,26 @@ public class EdgeInputSplitsCallable<I extends WritableComparable,
     edgeReader.initialize(inputSplit, context);
     long inputSplitEdgesLoaded = 0;
     while (edgeReader.nextEdge()) {
-      EdgeWithSource<I, E> readerEdge = edgeReader.getCurrentEdge();
-      if (readerEdge.getSourceVertexId() == null) {
+      I sourceId = edgeReader.getCurrentSourceId();
+      Edge<I, E> readerEdge = edgeReader.getCurrentEdge();
+      if (sourceId == null) {
         throw new IllegalArgumentException(
             "readInputSplit: Edge reader returned an edge " +
                 "without a source vertex id!  - " + readerEdge);
       }
-      if (readerEdge.getEdge().getTargetVertexId() == null) {
+      if (readerEdge.getTargetVertexId() == null) {
         throw new IllegalArgumentException(
             "readInputSplit: Edge reader returned an edge " +
                 "without a target vertex id!  - " + readerEdge);
       }
-      if (readerEdge.getEdge().getValue() == null) {
+      if (readerEdge.getValue() == null) {
         throw new IllegalArgumentException(
             "readInputSplit: Edge reader returned an edge " +
                 "without a value!  - " + readerEdge);
       }
 
       graphState.getWorkerClientRequestProcessor().addEdgeRequest(
-          readerEdge.getSourceVertexId(), readerEdge.getEdge());
+          sourceId, readerEdge);
       context.progress(); // do this before potential data transfer
       ++inputSplitEdgesLoaded;
 

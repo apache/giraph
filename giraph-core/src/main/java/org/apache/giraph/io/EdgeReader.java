@@ -18,7 +18,7 @@
 
 package org.apache.giraph.io;
 
-import org.apache.giraph.graph.EdgeWithSource;
+import org.apache.giraph.graph.Edge;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -48,12 +48,23 @@ public interface EdgeReader<I extends WritableComparable, E extends Writable> {
       IOException, InterruptedException;
 
   /**
+   * Read the next edge.
    *
    * @return false iff there are no more edges
    * @throws IOException
    * @throws InterruptedException
    */
   boolean nextEdge() throws IOException, InterruptedException;
+
+  /**
+   * Get the current edge source id.
+   *
+   * @return Current edge source id which has been read.
+   *         nextEdge() should be called first.
+   * @throws IOException
+   * @throws InterruptedException
+   */
+  I getCurrentSourceId() throws IOException, InterruptedException;
 
   /**
    * Get the current edge.
@@ -63,8 +74,7 @@ public interface EdgeReader<I extends WritableComparable, E extends Writable> {
    * @throws IOException
    * @throws InterruptedException
    */
-  EdgeWithSource<I, E> getCurrentEdge() throws IOException,
-      InterruptedException;
+  Edge<I, E> getCurrentEdge() throws IOException, InterruptedException;
 
   /**
    * Close this {@link EdgeReader} to future operations.

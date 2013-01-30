@@ -19,8 +19,8 @@
 package org.apache.giraph.io.hcatalog;
 
 import org.apache.giraph.graph.DefaultEdge;
+import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.EdgeNoValue;
-import org.apache.giraph.graph.EdgeWithSource;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.EdgeReader;
 import org.apache.hadoop.io.NullWritable;
@@ -193,13 +193,17 @@ public abstract class HCatalogEdgeInputFormat<
     protected abstract E getEdgeValue(HCatRecord record);
 
     @Override
-    public EdgeWithSource<I, E> getCurrentEdge() throws IOException,
+    public I getCurrentSourceId() throws IOException, InterruptedException {
+      HCatRecord record = getRecordReader().getCurrentValue();
+      return getSourceVertexId(record);
+    }
+
+    @Override
+    public Edge<I, E> getCurrentEdge() throws IOException,
         InterruptedException {
       HCatRecord record = getRecordReader().getCurrentValue();
-      return new EdgeWithSource<I, E>(
-          getSourceVertexId(record),
-          new DefaultEdge<I, E>(getTargetVertexId(record),
-              getEdgeValue(record)));
+      return new DefaultEdge<I, E>(getTargetVertexId(record),
+          getEdgeValue(record));
     }
   }
 
@@ -236,12 +240,16 @@ public abstract class HCatalogEdgeInputFormat<
     protected abstract I getTargetVertexId(HCatRecord record);
 
     @Override
-    public EdgeWithSource<I, NullWritable> getCurrentEdge() throws IOException,
+    public I getCurrentSourceId() throws IOException, InterruptedException {
+      HCatRecord record = getRecordReader().getCurrentValue();
+      return getSourceVertexId(record);
+    }
+
+    @Override
+    public Edge<I, NullWritable> getCurrentEdge() throws IOException,
         InterruptedException {
       HCatRecord record = getRecordReader().getCurrentValue();
-      return new EdgeWithSource<I, NullWritable>(
-          getSourceVertexId(record),
-          new EdgeNoValue<I>(getTargetVertexId(record)));
+      return new EdgeNoValue<I>(getTargetVertexId(record));
     }
   }
 }
