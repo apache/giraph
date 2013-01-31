@@ -21,7 +21,7 @@ package org.apache.giraph.graph;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import java.util.Objects;
+import com.google.common.base.Objects;
 
 /**
  * A complete edge, the target vertex and the edge value.  Can only be one
@@ -96,12 +96,12 @@ public class DefaultEdge<I extends WritableComparable, E extends Writable>
     }
 
     DefaultEdge edge = (DefaultEdge) o;
-    return Objects.equals(targetVertexId, edge.targetVertexId) &&
-        Objects.equals(value, edge.value);
+    return Objects.equal(targetVertexId, edge.targetVertexId) &&
+        Objects.equal(value, edge.value);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(targetVertexId, value);
+    return Objects.hashCode(targetVertexId, value);
   }
 }
