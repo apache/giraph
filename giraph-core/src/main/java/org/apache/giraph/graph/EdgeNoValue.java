@@ -21,7 +21,7 @@ package org.apache.giraph.graph;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.WritableComparable;
 
-import java.util.Objects;
+import com.google.common.base.Objects;
 
 /**
  * An edge that has no value.
@@ -76,12 +76,12 @@ public class EdgeNoValue<I extends WritableComparable>
     }
 
     EdgeNoValue edge = (EdgeNoValue) o;
-    return Objects.equals(targetVertexId, edge.targetVertexId);
+    return Objects.equal(targetVertexId, edge.targetVertexId);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(targetVertexId);
+    return Objects.hashCode(targetVertexId);
   }
 
   @Override
