@@ -27,8 +27,10 @@ public interface GiraphConstants {
 
   /** Class for Master - optional */
   String MASTER_COMPUTE_CLASS = "giraph.masterComputeClass";
-  /** Classes for Observer Master - optional */
+  /** Classes for Master Observer - optional */
   String MASTER_OBSERVER_CLASSES = "giraph.master.observers";
+  /** Classes for Worker Observer - optional */
+  String WORKER_OBSERVER_CLASSES = "giraph.worker.observers";
   /** Vertex combiner class - optional */
   String VERTEX_COMBINER_CLASS = "giraph.combinerClass";
   /** Vertex resolver class - optional */

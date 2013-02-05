@@ -147,6 +147,9 @@ public class BspServiceWorker<I extends WritableComparable,
   /** Handler for aggregators */
   private final WorkerAggregatorHandler aggregatorHandler;
 
+  /** array of observers to call back to */
+  private final WorkerObserver[] observers;
+
   // Per-Superstep Metrics
   /** Timer for WorkerContext#postSuperstep */
   private GiraphTimer wcPostSuperstepTimer;
@@ -191,6 +194,8 @@ public class BspServiceWorker<I extends WritableComparable,
     aggregatorHandler =
         new WorkerAggregatorHandler(this, getConfiguration(), context);
 
+    observers = getConfiguration().createWorkerObservers();
+
     GiraphMetrics.get().addSuperstepResetObserver(this);
   }
 
@@ -205,6 +210,11 @@ public class BspServiceWorker<I extends WritableComparable,
   @Override
   public WorkerContext getWorkerContext() {
     return workerContext;
+  }
+
+  @Override
+  public WorkerObserver[] getWorkerObservers() {
+    return observers;
   }
 
   @Override
@@ -750,11 +760,7 @@ else[HADOOP_NON_SECURE]*/
     }
 
     if (getSuperstep() != INPUT_SUPERSTEP) {
-      getWorkerContext().setGraphState(graphState);
-      GiraphTimerContext timerContext = wcPostSuperstepTimer.time();
-      getWorkerContext().postSuperstep();
-      timerContext.stop();
-      getContext().progress();
+      postSuperstepCallbacks(graphState);
     }
 
     aggregatorHandler.finishSuperstep(workerAggregatorRequestProcessor);
@@ -798,6 +804,24 @@ else[HADOOP_NON_SECURE]*/
         globalStats.getVertexCount(),
         globalStats.getEdgeCount(),
         false);
+  }
+
+  /**
+   * Handle post-superstep callbacks
+   *
+   * @param graphState GraphState
+   */
+  private void postSuperstepCallbacks(GraphState<I, V, E, M> graphState) {
+    getWorkerContext().setGraphState(graphState);
+    GiraphTimerContext timerContext = wcPostSuperstepTimer.time();
+    getWorkerContext().postSuperstep();
+    timerContext.stop();
+    getContext().progress();
+
+    for (WorkerObserver obs : getWorkerObservers()) {
+      obs.postSuperstep(graphState.getSuperstep());
+      getContext().progress();
+    }
   }
 
   /**

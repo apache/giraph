@@ -32,6 +32,7 @@ import org.apache.giraph.partition.GraphPartitionerFactory;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.vertex.Vertex;
 import org.apache.giraph.worker.WorkerContext;
+import org.apache.giraph.worker.WorkerObserver;
 import org.apache.hadoop.conf.Configuration;
 
 /**
@@ -112,6 +113,17 @@ public class GiraphConfiguration extends Configuration
       Class<? extends MasterObserver> masterObserverClass) {
     addToClasses(MASTER_OBSERVER_CLASSES, masterObserverClass,
         MasterObserver.class);
+  }
+
+  /**
+   * Add a WorkerObserver class (optional)
+   *
+   * @param workerObserverClass WorkerObserver class to add.
+   */
+  public final void addWorkerObserverClass(
+      Class<? extends WorkerObserver> workerObserverClass) {
+    addToClasses(WORKER_OBSERVER_CLASSES, workerObserverClass,
+        WorkerObserver.class);
   }
 
   /**
@@ -271,9 +283,7 @@ public class GiraphConfiguration extends Configuration
    */
   public final void setWorkerContextClass(
       Class<? extends WorkerContext> workerContextClass) {
-    setClass(WORKER_CONTEXT_CLASS,
-        workerContextClass,
-        WorkerContext.class);
+    setClass(WORKER_CONTEXT_CLASS, workerContextClass, WorkerContext.class);
   }
 
   /**
@@ -353,6 +363,15 @@ public class GiraphConfiguration extends Configuration
    */
   public Class<? extends MasterObserver>[] getMasterObserverClasses() {
     return getClassesOfType(MASTER_OBSERVER_CLASSES, MasterObserver.class);
+  }
+
+  /**
+   * Get array of WorkerObserver classes set in configuration.
+   *
+   * @return array of WorkerObserver classes.
+   */
+  public Class<? extends WorkerObserver>[] getWorkerObserverClasses() {
+    return getClassesOfType(WORKER_OBSERVER_CLASSES, WorkerObserver.class);
   }
 
   /**

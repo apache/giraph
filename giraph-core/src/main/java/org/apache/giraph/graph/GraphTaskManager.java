@@ -45,6 +45,7 @@ import org.apache.giraph.vertex.Vertex;
 import org.apache.giraph.worker.BspServiceWorker;
 import org.apache.giraph.worker.WorkerAggregatorUsage;
 import org.apache.giraph.worker.WorkerContext;
+import org.apache.giraph.worker.WorkerObserver;
 import org.apache.giraph.zk.ZooKeeperManager;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -252,8 +253,7 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
       context.progress();
       graphState = checkSuperstepRestarted(
         aggregatorUsage, superstep, graphState);
-      GiraphTimerContext perSuperstepTimer = prepareForSuperstep(graphState);
-      perSuperstepTimer.stop();
+      prepareForSuperstep(graphState);
       context.progress();
       MessageStoreByPartition<I, M> messageStore =
         serviceWorker.getServerData().getCurrentMessageStore();
@@ -279,10 +279,22 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
       LOG.info("execute: BSP application done (global vertices marked done)");
     }
     updateSuperstepGraphState(aggregatorUsage);
+    postApplication();
+  }
+
+  /**
+   * Handle post-application callbacks.
+   */
+  private void postApplication() {
     GiraphTimerContext postAppTimerContext = wcPostAppTimer.time();
     serviceWorker.getWorkerContext().postApplication();
     postAppTimerContext.stop();
     context.progress();
+
+    for (WorkerObserver obs : serviceWorker.getWorkerObservers()) {
+      obs.postApplication();
+      context.progress();
+    }
   }
 
   /**
@@ -365,15 +377,20 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
    * Utility function to prepare various objects managing BSP superstep
    * operations for the next superstep.
    * @param graphState graph state metadata object
-   * @return the timer context for superstep metrics
    */
-  private GiraphTimerContext prepareForSuperstep(
-    GraphState<I, V, E, M> graphState) {
+  private void prepareForSuperstep(GraphState<I, V, E, M> graphState) {
     serviceWorker.prepareSuperstep();
+
     serviceWorker.getWorkerContext().setGraphState(graphState);
-    GiraphTimerContext perSuperstepTimer = wcPreSuperstepTimer.time();
+    GiraphTimerContext preSuperstepTimer = wcPreSuperstepTimer.time();
     serviceWorker.getWorkerContext().preSuperstep();
-    return perSuperstepTimer;
+    preSuperstepTimer.stop();
+    context.progress();
+
+    for (WorkerObserver obs : serviceWorker.getWorkerObservers()) {
+      obs.preSuperstep(graphState.getSuperstep());
+      context.progress();
+    }
   }
 
   /**
@@ -819,6 +836,11 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
     }
     preAppTimerContext.stop();
     context.progress();
+
+    for (WorkerObserver obs : serviceWorker.getWorkerObservers()) {
+      obs.preApplication();
+      context.progress();
+    }
   }
 
   /**

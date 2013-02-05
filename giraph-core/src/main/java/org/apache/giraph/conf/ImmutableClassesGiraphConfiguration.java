@@ -41,6 +41,7 @@ import org.apache.giraph.utils.ExtendedDataOutput;
 import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.giraph.utils.UnsafeByteArrayInputStream;
 import org.apache.giraph.utils.UnsafeByteArrayOutputStream;
+import org.apache.giraph.worker.WorkerObserver;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
@@ -410,6 +411,20 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   public MasterObserver[] createMasterObservers() {
     Class<? extends MasterObserver>[] klasses = getMasterObserverClasses();
     MasterObserver[] objects = new MasterObserver[klasses.length];
+    for (int i = 0; i < klasses.length; ++i) {
+      objects[i] = ReflectionUtils.newInstance(klasses[i], this);
+    }
+    return objects;
+  }
+
+  /**
+   * Create array of WorkerObservers.
+   *
+   * @return Instantiated array of WorkerObservers.
+   */
+  public WorkerObserver[] createWorkerObservers() {
+    Class<? extends WorkerObserver>[] klasses = getWorkerObserverClasses();
+    WorkerObserver[] objects = new WorkerObserver[klasses.length];
     for (int i = 0; i < klasses.length; ++i) {
       objects[i] = ReflectionUtils.newInstance(klasses[i], this);
     }

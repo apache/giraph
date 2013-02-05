@@ -18,26 +18,26 @@
 
 package org.apache.giraph.bsp;
 
-import java.io.IOException;
-import java.util.Collection;
-import java.util.List;
-
 import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.comm.WorkerClient;
 import org.apache.giraph.graph.FinishedSuperstepStats;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.GraphTaskManager;
-import org.apache.giraph.master.MasterInfo;
 import org.apache.giraph.graph.VertexEdgeCount;
-import org.apache.giraph.worker.WorkerAggregatorHandler;
+import org.apache.giraph.master.MasterInfo;
+import org.apache.giraph.partition.PartitionOwner;
+import org.apache.giraph.partition.PartitionStats;
 import org.apache.giraph.partition.PartitionStore;
+import org.apache.giraph.worker.WorkerAggregatorHandler;
+import org.apache.giraph.worker.WorkerContext;
+import org.apache.giraph.worker.WorkerInfo;
+import org.apache.giraph.worker.WorkerObserver;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import org.apache.giraph.partition.PartitionOwner;
-import org.apache.giraph.partition.PartitionStats;
-import org.apache.giraph.worker.WorkerInfo;
-import org.apache.giraph.worker.WorkerContext;
+import java.io.IOException;
+import java.util.Collection;
+import java.util.List;
 
 /**
  * All workers should have access to this centralized service to
@@ -80,6 +80,13 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
    * @return worker's WorkerContext
    */
   WorkerContext getWorkerContext();
+
+  /**
+   * Get the observers for this Worker.
+   *
+   * @return array of WorkerObservers.
+   */
+  WorkerObserver[] getWorkerObservers();
 
   /**
    * Get the partition store for this worker.
