@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-502: In PageRankBenchmark, remove unneeded handling of -t 2 (ekoontz)
+
   GIRAPH-500: Refactor job launch code out of graph package and into job package (ereisman)
 
   GIRAPH-493: Remove EdgeWithSource (nitay)

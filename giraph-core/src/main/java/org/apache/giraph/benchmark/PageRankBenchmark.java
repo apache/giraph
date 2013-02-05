@@ -197,10 +197,7 @@ public class PageRankBenchmark implements Tool {
     LOG.info("Using vertex class " +
         configuration.get(GiraphConstants.VERTEX_CLASS));
     if (!cmd.hasOption('t') ||
-        (Integer.parseInt(cmd.getOptionValue('t')) == 2)) {
-      configuration.setVertexCombinerClass(
-          DoubleSumCombiner.class);
-    } else if (Integer.parseInt(cmd.getOptionValue('t')) == 1) {
+        (Integer.parseInt(cmd.getOptionValue('t')) == 1)) {
       configuration.setVertexCombinerClass(
           DoubleSumCombiner.class);
     }
