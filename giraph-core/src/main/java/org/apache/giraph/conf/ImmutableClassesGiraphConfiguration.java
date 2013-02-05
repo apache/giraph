@@ -20,7 +20,7 @@ package org.apache.giraph.conf;
 
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.combiner.Combiner;
-import org.apache.giraph.graph.GiraphJobObserver;
+import org.apache.giraph.job.GiraphJobObserver;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.master.MasterCompute;

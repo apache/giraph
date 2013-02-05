@@ -19,7 +19,7 @@ package org.apache.giraph.partition;
 
 import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.job.GiraphJob;
 import org.apache.giraph.graph.GiraphTransferRegulator;
 import org.apache.giraph.vertex.EdgeListVertex;
 import org.apache.hadoop.io.DoubleWritable;

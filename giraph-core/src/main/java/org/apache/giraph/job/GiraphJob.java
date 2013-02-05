@@ -16,13 +16,15 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.graph;
+package org.apache.giraph.job;
 
 import org.apache.giraph.bsp.BspInputFormat;
 import org.apache.giraph.bsp.BspOutputFormat;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.graph.DefaultVertexResolver;
+import org.apache.giraph.graph.GraphMapper;
 import org.apache.giraph.vertex.MutableVertex;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.Client;

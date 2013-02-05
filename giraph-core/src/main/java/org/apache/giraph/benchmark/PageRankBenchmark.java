@@ -25,7 +25,7 @@ import org.apache.commons.cli.PosixParser;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.combiner.DoubleSumCombiner;
-import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.job.GiraphJob;
 import org.apache.giraph.io.formats.JsonBase64VertexOutputFormat;
 import org.apache.giraph.io.formats.PseudoRandomEdgeInputFormat;
 import org.apache.giraph.io.formats.PseudoRandomVertexInputFormat;

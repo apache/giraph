@@ -16,10 +16,12 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.graph;
+package org.apache.giraph.job;
 
 import org.apache.giraph.bsp.BspUtils;
 import org.apache.giraph.combiner.Combiner;
+import org.apache.giraph.graph.DefaultVertexResolver;
+import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;

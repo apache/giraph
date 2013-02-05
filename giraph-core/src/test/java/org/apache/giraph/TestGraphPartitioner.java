@@ -23,7 +23,7 @@ import org.apache.giraph.examples.GeneratedVertexReader;
 import org.apache.giraph.examples.SimpleCheckpointVertex;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexOutputFormat;
-import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.job.GiraphJob;
 import org.apache.giraph.partition.HashRangePartitionerFactory;
 import org.apache.giraph.partition.PartitionBalancer;
 import org.apache.giraph.integration.SuperstepHashPartitionerFactory;

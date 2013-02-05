@@ -21,7 +21,7 @@ import org.apache.giraph.BspCase;
 import org.apache.giraph.benchmark.EdgeListVertexPageRankBenchmark;
 import org.apache.giraph.benchmark.PageRankComputation;
 import org.apache.giraph.conf.GiraphClasses;
-import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.job.GiraphJob;
 import org.apache.giraph.io.formats.GiraphFileInputFormat;
 import org.apache.giraph.io.formats.JsonBase64VertexInputFormat;
 import org.apache.giraph.io.formats.JsonBase64VertexOutputFormat;

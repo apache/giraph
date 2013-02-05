@@ -26,7 +26,7 @@ import org.apache.commons.cli.PosixParser;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.combiner.MinimumDoubleCombiner;
 import org.apache.giraph.vertex.EdgeListVertex;
-import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.job.GiraphJob;
 import org.apache.giraph.io.formats.PseudoRandomVertexInputFormat;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DoubleWritable;

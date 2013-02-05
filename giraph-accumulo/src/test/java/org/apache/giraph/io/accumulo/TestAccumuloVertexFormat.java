@@ -36,7 +36,7 @@ import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.io.accumulo.edgemarker.AccumuloEdgeInputFormat;
 import org.apache.giraph.io.accumulo.edgemarker.AccumuloEdgeOutputFormat;
 import org.apache.giraph.vertex.EdgeListVertex;
-import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.job.GiraphJob;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.log4j.Logger;

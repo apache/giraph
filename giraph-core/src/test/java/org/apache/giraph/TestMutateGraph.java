@@ -22,7 +22,7 @@ import org.apache.giraph.conf.GiraphClasses;
 import org.apache.giraph.examples.SimpleMutateGraphVertex;
 import org.apache.giraph.examples.SimplePageRankVertex.SimplePageRankVertexInputFormat;
 import org.apache.giraph.examples.SimplePageRankVertex.SimplePageRankVertexOutputFormat;
-import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.job.GiraphJob;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;

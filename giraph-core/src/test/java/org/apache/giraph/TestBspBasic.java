@@ -35,7 +35,7 @@ import org.apache.giraph.examples.SimpleSuperstepVertex;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexOutputFormat;
 import org.apache.giraph.vertex.EdgeListVertex;
-import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.job.GiraphJob;
 import org.apache.giraph.worker.InputSplitPathOrganizer;
 import org.apache.giraph.aggregators.TextAggregatorWriter;
 import org.apache.giraph.vertex.Vertex;

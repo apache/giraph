@@ -26,7 +26,7 @@ import org.apache.giraph.comm.aggregators.AggregatorUtils;
 import org.apache.giraph.examples.AggregatorsTestVertex;
 import org.apache.giraph.examples.SimpleCheckpointVertex;
 import org.apache.giraph.examples.SimplePageRankVertex;
-import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.job.GiraphJob;
 import org.apache.giraph.master.MasterAggregatorHandler;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DoubleWritable;

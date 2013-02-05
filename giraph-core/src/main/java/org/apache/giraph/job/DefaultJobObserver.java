@@ -16,24 +16,37 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.graph;
+package org.apache.giraph.job;
 
+import org.apache.giraph.conf.ImmutableClassesGiraphConfigurable;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.hadoop.mapreduce.Job;
 
 /**
- * An observer over the job launch lifecycle.
+ * Default implementation of job observer that does nothing.
  */
-public interface GiraphJobObserver {
-  /**
-   * Callback for job about to start.
-   * @param jobToSubmit Job we're going to submit to hadoop.
-   */
-  void launchingJob(Job jobToSubmit);
+public class DefaultJobObserver implements GiraphJobObserver,
+    ImmutableClassesGiraphConfigurable {
+  /** configuration object stored here */
+  private ImmutableClassesGiraphConfiguration conf;
 
-  /**
-   * Callback when job finishes.
-   * @param submittedJob Job that ran in hadoop.
-   * @param passed true if job succeeded.
-   */
-  void jobFinished(Job submittedJob, boolean passed);
+  @Override
+  public void setConf(ImmutableClassesGiraphConfiguration configuration) {
+    this.conf = configuration;
+  }
+
+  @Override
+  public ImmutableClassesGiraphConfiguration getConf() {
+    return this.conf;
+  }
+
+  @Override
+  public void launchingJob(Job jobToSubmit) {
+    // do nothing
+  }
+
+  @Override
+  public void jobFinished(Job jobToSubmit, boolean passed) {
+    // do nothing
+  }
 }

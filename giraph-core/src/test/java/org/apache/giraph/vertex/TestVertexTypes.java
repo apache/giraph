@@ -21,7 +21,7 @@ package org.apache.giraph.vertex;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat;
 import org.apache.giraph.combiner.Combiner;
-import org.apache.giraph.graph.GiraphTypeValidator;
+import org.apache.giraph.job.GiraphTypeValidator;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.giraph.io.formats.GeneratedVertexInputFormat;

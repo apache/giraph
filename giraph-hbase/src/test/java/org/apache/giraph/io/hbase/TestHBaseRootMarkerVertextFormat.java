@@ -22,7 +22,7 @@ package org.apache.giraph.io.hbase;
 import org.apache.giraph.BspCase;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.vertex.EdgeListVertex;
-import org.apache.giraph.graph.GiraphJob;
+import org.apache.giraph.job.GiraphJob;
 import org.apache.giraph.io.hbase.edgemarker.TableEdgeInputFormat;
 import org.apache.giraph.io.hbase.edgemarker.TableEdgeOutputFormat;
 import org.apache.hadoop.conf.Configuration;
