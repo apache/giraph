@@ -645,4 +645,14 @@ public class GiraphConfiguration extends Configuration
       set("mapreduce.job.credentials.binary", hadoopTokenFilePath);
     }
   }
+
+  /**
+   * Check if we want to prioritize input splits which reside on the host.
+   *
+   * @return True iff we want to use input split locality
+   */
+  public boolean useInputSplitLocality() {
+    return getBoolean(GiraphConstants.USE_INPUT_SPLIT_LOCALITY,
+        GiraphConstants.USE_INPUT_SPLIT_LOCALITY_DEFAULT);
+  }
 }

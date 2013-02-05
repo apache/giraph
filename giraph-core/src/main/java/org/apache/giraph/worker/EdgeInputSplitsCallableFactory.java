@@ -25,8 +25,6 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 
-import java.util.List;
-
 /**
  * Factory for {@link EdgeInputSplitsCallable}s.
  *
@@ -46,10 +44,8 @@ public class EdgeInputSplitsCallableFactory<I extends WritableComparable,
   private final ImmutableClassesGiraphConfiguration<I, V, E, M> configuration;
   /** {@link BspServiceWorker} we're running on. */
   private final BspServiceWorker<I, V, E, M> bspServiceWorker;
-  /** List of input split paths. */
-  private final List<String> inputSplitPathList;
-  /** Worker info. */
-  private final WorkerInfo workerInfo;
+  /** Handler for input splits */
+  private final InputSplitsHandler splitsHandler;
   /** {@link ZooKeeperExt} for this worker. */
   private final ZooKeeperExt zooKeeperExt;
 
@@ -60,8 +56,7 @@ public class EdgeInputSplitsCallableFactory<I extends WritableComparable,
    * @param graphState Graph state
    * @param configuration Configuration
    * @param bspServiceWorker Calling {@link BspServiceWorker}
-   * @param inputSplitPathList List of input split paths
-   * @param workerInfo Worker info
+   * @param splitsHandler Handler for input splits
    * @param zooKeeperExt {@link ZooKeeperExt} for this worker
    */
   public EdgeInputSplitsCallableFactory(
@@ -69,16 +64,14 @@ public class EdgeInputSplitsCallableFactory<I extends WritableComparable,
       GraphState<I, V, E, M> graphState,
       ImmutableClassesGiraphConfiguration<I, V, E, M> configuration,
       BspServiceWorker<I, V, E, M> bspServiceWorker,
-      List<String> inputSplitPathList,
-      WorkerInfo workerInfo,
+      InputSplitsHandler splitsHandler,
       ZooKeeperExt zooKeeperExt) {
     this.context = context;
     this.graphState = graphState;
     this.configuration = configuration;
     this.bspServiceWorker = bspServiceWorker;
-    this.inputSplitPathList = inputSplitPathList;
-    this.workerInfo = workerInfo;
     this.zooKeeperExt = zooKeeperExt;
+    this.splitsHandler = splitsHandler;
   }
 
   @Override
@@ -88,9 +81,7 @@ public class EdgeInputSplitsCallableFactory<I extends WritableComparable,
         graphState,
         configuration,
         bspServiceWorker,
-        inputSplitPathList,
-        workerInfo,
-        threadId,
+        splitsHandler,
         zooKeeperExt);
   }
 }

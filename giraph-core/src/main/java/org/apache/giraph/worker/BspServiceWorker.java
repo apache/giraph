@@ -297,14 +297,24 @@ public class BspServiceWorker<I extends WritableComparable,
         INPUT_SUPERSTEP, 0, 0, getContext(), getGraphTaskManager(),
         null, null);
 
+    InputSplitPathOrganizer splitOrganizer =
+        new InputSplitPathOrganizer(getZkExt(),
+            inputSplitPathList, getWorkerInfo().getHostname(),
+            getConfiguration().useInputSplitLocality());
+    InputSplitsHandler splitsHandler = new InputSplitsHandler(
+        splitOrganizer,
+        getZkExt(),
+        getContext(),
+        BspService.VERTEX_INPUT_SPLIT_RESERVED_NODE,
+        BspService.VERTEX_INPUT_SPLIT_FINISHED_NODE);
+
     VertexInputSplitsCallableFactory<I, V, E, M> inputSplitsCallableFactory =
         new VertexInputSplitsCallableFactory<I, V, E, M>(
             getContext(),
             graphState,
             getConfiguration(),
             this,
-            inputSplitPathList,
-            getWorkerInfo(),
+            splitsHandler,
             getZkExt());
 
     return loadInputSplits(inputSplitPathList, inputSplitsCallableFactory);
@@ -324,14 +334,24 @@ public class BspServiceWorker<I extends WritableComparable,
         INPUT_SUPERSTEP, 0, 0, getContext(), getGraphTaskManager(),
         null, null);
 
+    InputSplitPathOrganizer splitOrganizer =
+        new InputSplitPathOrganizer(getZkExt(),
+            inputSplitPathList, getWorkerInfo().getHostname(),
+            getConfiguration().useInputSplitLocality());
+    InputSplitsHandler splitsHandler = new InputSplitsHandler(
+        splitOrganizer,
+        getZkExt(),
+        getContext(),
+        BspService.EDGE_INPUT_SPLIT_RESERVED_NODE,
+        BspService.EDGE_INPUT_SPLIT_FINISHED_NODE);
+
     EdgeInputSplitsCallableFactory<I, V, E, M> inputSplitsCallableFactory =
         new EdgeInputSplitsCallableFactory<I, V, E, M>(
             getContext(),
             graphState,
             getConfiguration(),
             this,
-            inputSplitPathList,
-            getWorkerInfo(),
+            splitsHandler,
             getZkExt());
 
     return loadInputSplits(inputSplitPathList, inputSplitsCallableFactory).

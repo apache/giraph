@@ -17,8 +17,8 @@
  */
 package org.apache.giraph.worker;
 
-import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
+
 import org.apache.giraph.zk.ZooKeeperExt;
 import org.apache.hadoop.io.Text;
 import org.apache.zookeeper.KeeperException;
@@ -42,15 +42,13 @@ import java.util.List;
  * down on the number of ZK reads workers perform before locating
  * an unclaimed InputSplit.
  */
-public class InputSplitPathOrganizer implements Iterable<String> {
+public class InputSplitPathOrganizer {
   /** The worker's local ZooKeeperExt ref */
   private final ZooKeeperExt zooKeeper;
   /** The List of InputSplit znode paths */
   private final List<String> pathList;
   /** The worker's hostname */
   private final String hostName;
-  /** The adjusted base offset by which to iterate on the path list */
-  private int baseOffset;
 
   /**
    * Constructor
@@ -58,16 +56,13 @@ public class InputSplitPathOrganizer implements Iterable<String> {
    * @param zooKeeper the worker's ZkExt
    * @param zkPathList the path to read from
    * @param hostName the worker's host name (for matching)
-   * @param port the port number for this worker
-   * @param threadId id of the input split thread
    * @param useLocality whether to prioritize local input splits
    */
   public InputSplitPathOrganizer(final ZooKeeperExt zooKeeper,
-    final String zkPathList, final String hostName, final int port,
-    final int threadId, final boolean useLocality)
-    throws KeeperException, InterruptedException {
+    final String zkPathList, final String hostName,
+    final boolean useLocality) throws KeeperException, InterruptedException {
     this(zooKeeper, zooKeeper.getChildrenExt(zkPathList, false, false, true),
-        hostName, port, threadId, useLocality);
+        hostName, useLocality);
   }
 
   /**
@@ -76,36 +71,19 @@ public class InputSplitPathOrganizer implements Iterable<String> {
    * @param zooKeeper the worker's ZkExt
    * @param inputSplitPathList path of input splits to read from
    * @param hostName the worker's host name (for matching)
-   * @param port the port number for this worker
-   * @param threadId id of the input split thread
    * @param useLocality whether to prioritize local input splits
    */
   public InputSplitPathOrganizer(
       final ZooKeeperExt zooKeeper, final List<String> inputSplitPathList,
-      final String hostName, final int port, final int threadId,
-      final boolean useLocality)
-    throws KeeperException, InterruptedException {
+      final String hostName, final boolean useLocality) {
     this.zooKeeper = zooKeeper;
     this.pathList = Lists.newArrayList(inputSplitPathList);
     this.hostName = hostName;
+    // Shuffle input splits in case several workers exist on this host
+    Collections.shuffle(pathList);
     if (useLocality) {
-      prioritizeLocalInputSplits(port, threadId);
-    } else {
-      this.baseOffset = computeBaseOffset(port, threadId);
+      prioritizeLocalInputSplits();
     }
-  }
-
-  /**
-   * Compute base offset to start iterating from,
-   * in order to avoid collisions with other workers/threads.
-   *
-   * @param port the port number for this worker
-   * @param threadId id of the input split thread
-   * @return the offset to start iterating from
-   */
-  private int computeBaseOffset(final int port, final int threadId) {
-    return pathList.isEmpty() ? 0 :
-        Math.abs(Objects.hashCode(hostName, port, threadId) % pathList.size());
   }
 
   /**
@@ -114,10 +92,8 @@ public class InputSplitPathOrganizer implements Iterable<String> {
   * a split to read. This will increase locality of data reads with greater
   * probability as the % of total nodes in the cluster hosting data and workers
   * BOTH increase towards 100%. Replication increases our chances of a "hit."
-  * @param port the port number to hash against
-  * @param threadId the threadId to hash against
   */
-  private void prioritizeLocalInputSplits(final int port, final int threadId) {
+  private void prioritizeLocalInputSplits() {
     List<String> sortedList = new ArrayList<String>();
     String hosts;
     for (Iterator<String> iterator = pathList.iterator(); iterator.hasNext();) {
@@ -136,13 +112,7 @@ public class InputSplitPathOrganizer implements Iterable<String> {
         iterator.remove(); // remove local block from list
       }
     }
-    // shuffle the local blocks in case several workers exist on this host
-    Collections.shuffle(sortedList);
-    // set the base offset for the split iterator based on the insertion
-    // point of the local list items back into the nonlocal split list.
-    baseOffset = computeBaseOffset(port, threadId);
-    // re-insert local paths at "adjusted index zero" for caller to iterate on
-    pathList.addAll(baseOffset, sortedList);
+    pathList.addAll(0, sortedList);
   }
 
   /**
@@ -162,54 +132,11 @@ public class InputSplitPathOrganizer implements Iterable<String> {
   }
 
   /**
-   * Utility accessor for Input Split znode path list size
+   * Get the ordered input splits paths.
    *
-   * @return the size of <code>this.pathList</code>
+   * @return Ordered input splits paths
    */
-  public int getPathListSize() {
-    return this.pathList.size();
-  }
-
-  /**
-   * Iterator for the pathList
-   *
-   * @return an iterator for our list of input split paths
-   */
-  public Iterator<String> iterator() {
-    return new PathListIterator();
-  }
-
-  /**
-   * Iterator for path list that handles the locality and hash offsetting.
-   */
-  public class PathListIterator implements Iterator<String> {
-    /** the current iterator index */
-    private int currentIndex = 0;
-
-    /**
-     *  Do we have more list to iterate upon?
-     *
-     *  @return true if more path strings are available
-     */
-    @Override
-    public boolean hasNext() {
-      return currentIndex < pathList.size();
-    }
-
-    /**
-     * Return the next pathList element
-     *
-     * @return the next input split path
-     */
-    @Override
-    public String next() {
-      return pathList.get((baseOffset + currentIndex++) % pathList.size());
-    }
-
-    /** Just a placeholder; should not do anything! */
-    @Override
-    public void remove() {
-      throw new UnsupportedOperationException("Remove is not allowed.");
-    }
+  public Iterable<String> getPathList() {
+    return pathList;
   }
 }

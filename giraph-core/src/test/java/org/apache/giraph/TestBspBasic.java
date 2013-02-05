@@ -60,6 +60,7 @@ import org.apache.zookeeper.KeeperException;
 import org.junit.Test;
 
 import com.google.common.base.Charsets;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
 
@@ -368,11 +369,8 @@ else[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
     when(zk.getData("remote2", false, null)).thenReturn(remote2);
     when(zk.getData("local", false, null)).thenReturn(local);
     InputSplitPathOrganizer lis =
-      new InputSplitPathOrganizer(zk, testListName, localHost, 0, 0, true);
-    final List<String> resultList = new ArrayList<String>();
-    for (String next : lis) {
-      resultList.add(next);
-    }
+      new InputSplitPathOrganizer(zk, testListName, localHost, true);
+    final List<String> resultList = Lists.newArrayList(lis.getPathList());
     assertEquals("local", resultList.get(0));
   }
 

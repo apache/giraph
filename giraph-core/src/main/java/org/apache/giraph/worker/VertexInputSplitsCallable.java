@@ -20,7 +20,6 @@ package org.apache.giraph.worker;
 
 import com.yammer.metrics.core.Counter;
 import java.io.IOException;
-import java.util.List;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.VertexEdgeCount;
@@ -78,9 +77,7 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
    * @param graphState Graph state
    * @param configuration Configuration
    * @param bspServiceWorker service worker
-   * @param inputSplitPathList List of the paths of the input splits
-   * @param workerInfo This worker's info
-   * @param threadId Id of input split thread
+   * @param splitsHandler Handler for input splits
    * @param zooKeeperExt Handle to ZooKeeperExt
    */
   public VertexInputSplitsCallable(
@@ -88,15 +85,10 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
       GraphState<I, V, E, M> graphState,
       ImmutableClassesGiraphConfiguration<I, V, E, M> configuration,
       BspServiceWorker<I, V, E, M> bspServiceWorker,
-      List<String> inputSplitPathList,
-      WorkerInfo workerInfo,
-      int threadId,
+      InputSplitsHandler splitsHandler,
       ZooKeeperExt zooKeeperExt)  {
     super(context, graphState, configuration, bspServiceWorker,
-        inputSplitPathList, workerInfo, threadId, zooKeeperExt,
-        BspServiceWorker.VERTEX_INPUT_SPLIT_RESERVED_NODE,
-        BspServiceWorker.VERTEX_INPUT_SPLIT_FINISHED_NODE,
-        bspServiceWorker.getVertexInputSplitsEvents());
+        splitsHandler, zooKeeperExt);
 
     inputSplitMaxVertices = configuration.getInputSplitMaxVertices();
     this.bspServiceWorker = bspServiceWorker;
