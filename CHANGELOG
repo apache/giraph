@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-497: Limiting number of open requests doesn't work with multithreading (majakabiljo via ereisman)
+
   GIRAPH-461: Convert static assignment of in-memory partitions with LRU cache (claudio)
 
   GIRAPH-494: Make Edge an interface (nitay)
