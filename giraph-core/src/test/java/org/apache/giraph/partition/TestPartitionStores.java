@@ -34,6 +34,8 @@ import org.junit.Test;
 import com.google.common.collect.Iterables;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -80,6 +82,7 @@ public class TestPartitionStores {
         partitionStore = new SimplePartitionStore<IntWritable, IntWritable,
                 NullWritable, IntWritable>(conf, context);
     testReadWrite(partitionStore, conf);
+    partitionStore.shutdown();
   }
 
   @Test
@@ -137,11 +140,13 @@ public class TestPartitionStores {
         partitionStore = new DiskBackedPartitionStore<IntWritable,
                         IntWritable, NullWritable, IntWritable>(conf, context);
     testReadWrite(partitionStore, conf);
+    partitionStore.shutdown();
 
     conf.setInt(GiraphConstants.MAX_PARTITIONS_IN_MEMORY, 2);
     partitionStore = new DiskBackedPartitionStore<IntWritable,
             IntWritable, NullWritable, IntWritable>(conf, context);
     testReadWrite(partitionStore, conf);
+    partitionStore.shutdown();
   }
 
   /**
@@ -185,16 +190,26 @@ public class TestPartitionStores {
 
     Partition<IntWritable, IntWritable, NullWritable, IntWritable> partition1 =
         partitionStore.getPartition(1);
+    partitionStore.putPartition(partition1);
     Partition<IntWritable, IntWritable, NullWritable, IntWritable> partition2 =
         partitionStore.getPartition(2);
+    partitionStore.putPartition(partition2);
     Partition<IntWritable, IntWritable, NullWritable,
         IntWritable> partition3 = partitionStore.removePartition(3);
     Partition<IntWritable, IntWritable, NullWritable, IntWritable> partition4 =
         partitionStore.getPartition(4);
+    partitionStore.putPartition(partition4);
 
     assertEquals(3, partitionStore.getNumPartitions());
     assertEquals(3, Iterables.size(partitionStore.getPartitionIds()));
-    assertEquals(3, Iterables.size(partitionStore.getPartitions()));
+    int partitionsNumber = 0;
+    for (Integer partitionId : partitionStore.getPartitionIds()) {
+      Partition<IntWritable, IntWritable, NullWritable, IntWritable> p = 
+          partitionStore.getPartition(partitionId);
+      partitionStore.putPartition(p);
+      partitionsNumber++;
+    }
+    assertEquals(3, partitionsNumber);
     assertTrue(partitionStore.hasPartition(1));
     assertTrue(partitionStore.hasPartition(2));
     assertFalse(partitionStore.hasPartition(3));

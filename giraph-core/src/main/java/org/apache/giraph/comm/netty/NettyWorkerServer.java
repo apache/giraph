@@ -184,6 +184,7 @@ public class NettyWorkerServer<I extends WritableComparable,
             }
           }
         }
+        service.getPartitionStore().putPartition(partition);
       }
     }
     // Resolve all graph mutations
@@ -226,6 +227,7 @@ public class NettyWorkerServer<I extends WritableComparable,
           partition.removeVertex(originalVertex.getId());
         }
       }
+      service.getPartitionStore().putPartition(partition);
     }
     if (!serverData.getVertexMutations().isEmpty()) {
       throw new IllegalStateException("resolveMutations: Illegally " +

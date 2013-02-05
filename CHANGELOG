@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-461: Convert static assignment of in-memory partitions with LRU cache (claudio)
+
   GIRAPH-494: Make Edge an interface (nitay)
 
   GIRAPH-492: Saving vertices has no status report, making it hard to 

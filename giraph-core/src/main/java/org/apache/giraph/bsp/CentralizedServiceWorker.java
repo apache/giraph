@@ -34,8 +34,6 @@ import org.apache.giraph.partition.PartitionStore;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import org.apache.giraph.vertex.Vertex;
-import org.apache.giraph.partition.Partition;
 import org.apache.giraph.partition.PartitionOwner;
 import org.apache.giraph.partition.PartitionStats;
 import org.apache.giraph.worker.WorkerInfo;
@@ -135,15 +133,6 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
       List<PartitionStats> partitionStatsList);
 
   /**
-   * Get the partition that a vertex id would belong to.
-   *
-   * @param vertexId Id of the vertex that is used to find the correct
-   *        partition.
-   * @return Correct partition if exists on this worker, null otherwise.
-   */
-  Partition<I, V, E, M> getPartition(I vertexId);
-
-  /**
    * Get the partition id that a vertex id would belong to.
    *
    * @param vertexId Vertex id
@@ -174,14 +163,6 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
    * @return Iterable through partition owners
    */
   Iterable<? extends PartitionOwner> getPartitionOwners();
-
-  /**
-   * Look up a vertex on a worker given its vertex index.
-   *
-   * @param vertexId Vertex index to look for
-   * @return Vertex if it exists on this worker.
-   */
-  Vertex<I, V, E, M> getVertex(I vertexId);
 
   /**
    * If desired by the user, vertex partitions are redistributed among

@@ -157,6 +157,8 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
       } catch (IOException e) {
         throw new IllegalStateException("call: Caught unexpected IOException," +
             " failing.", e);
+      } finally {
+        serviceWorker.getPartitionStore().putPartition(partition);
       }
     }
 

@@ -101,5 +101,6 @@ public class SimplePartitionStore<I extends WritableComparable,
     return partitions.size();
   }
 
-
+  @Override
+  public void putPartition(Partition<I, V, E, M> partition) { }
 }

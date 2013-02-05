@@ -546,8 +546,9 @@ else[HADOOP_NON_SECURE]*/
     // if necessary
     List<PartitionStats> partitionStatsList =
         new ArrayList<PartitionStats>();
-    for (Partition<I, V, E, M> partition :
-        getPartitionStore().getPartitions()) {
+    for (Integer partitionId : getPartitionStore().getPartitionIds()) {
+      Partition<I, V, E, M> partition =
+          getPartitionStore().getPartition(partitionId);
       PartitionStats partitionStats =
           new PartitionStats(partition.getId(),
               partition.getVertexCount(),
@@ -555,6 +556,7 @@ else[HADOOP_NON_SECURE]*/
               partition.getEdgeCount(),
               0);
       partitionStatsList.add(partitionStats);
+      getPartitionStore().putPartition(partition);
     }
     workerGraphPartitioner.finalizePartitionStats(
         partitionStatsList, getPartitionStore());
@@ -894,8 +896,9 @@ else[HADOOP_NON_SECURE]*/
     long nextPrintMsecs = System.currentTimeMillis() + 15000;
     int partitionIndex = 0;
     int numPartitions = getPartitionStore().getNumPartitions();
-    for (Partition<I, V, E, M> partition :
-        getPartitionStore().getPartitions()) {
+    for (Integer partitionId : getPartitionStore().getPartitionIds()) {
+      Partition<I, V, E, M> partition =
+          getPartitionStore().getPartition(partitionId);
       for (Vertex<I, V, E, M> vertex : partition) {
         getContext().progress();
         vertexWriter.writeVertex(vertex);
@@ -914,6 +917,7 @@ else[HADOOP_NON_SECURE]*/
           nextPrintVertices = verticesWritten + 250000;
         }
       }
+      getPartitionStore().putPartition(partition);
       getContext().progress();
       ++partitionIndex;
     }
@@ -928,6 +932,7 @@ else[HADOOP_NON_SECURE]*/
     workerClient.closeConnections();
     setCachedSuperstep(getSuperstep() - 1);
     saveVertices(finishedSuperstepStats.getLocalVertexCount());
+    getPartitionStore().shutdown();
     // All worker processes should denote they are done by adding special
     // znode.  Once the number of znodes equals the number of partitions
     // for workers and masters, the master will clean up the ZooKeeper
@@ -1017,8 +1022,9 @@ else[HADOOP_NON_SECURE]*/
         getFs().create(verticesFilePath);
     ByteArrayOutputStream metadataByteStream = new ByteArrayOutputStream();
     DataOutput metadataOutput = new DataOutputStream(metadataByteStream);
-    for (Partition<I, V, E, M> partition :
-        getPartitionStore().getPartitions()) {
+    for (Integer partitionId : getPartitionStore().getPartitionIds()) {
+      Partition<I, V, E, M> partition =
+          getPartitionStore().getPartition(partitionId);
       long startPos = verticesOutputStream.getPos();
       partition.write(verticesOutputStream);
       // write messages
@@ -1037,6 +1043,7 @@ else[HADOOP_NON_SECURE]*/
             (verticesOutputStream.getPos() - startPos) +
             ", partition = " + partition.toString());
       }
+      getPartitionStore().putPartition(partition);
       getContext().progress();
     }
     // Metadata is buffered and written at the end since it's small and
@@ -1388,11 +1395,6 @@ else[HADOOP_NON_SECURE]*/
   }
 
   @Override
-  public Partition<I, V, E, M> getPartition(I vertexId) {
-    return getPartitionStore().getPartition(getPartitionId(vertexId));
-  }
-
-  @Override
   public Integer getPartitionId(I vertexId) {
     PartitionOwner partitionOwner = getVertexPartitionOwner(vertexId);
     return partitionOwner.getPartitionId();
@@ -1401,17 +1403,6 @@ else[HADOOP_NON_SECURE]*/
   @Override
   public boolean hasPartition(Integer partitionId) {
     return getPartitionStore().hasPartition(partitionId);
-  }
-
-  @Override
-  public Vertex<I, V, E, M> getVertex(I vertexId) {
-    PartitionOwner partitionOwner = getVertexPartitionOwner(vertexId);
-    if (getPartitionStore().hasPartition(partitionOwner.getPartitionId())) {
-      return getPartitionStore().getPartition(
-          partitionOwner.getPartitionId()).getVertex(vertexId);
-    } else {
-      return null;
-    }
   }
 
   @Override

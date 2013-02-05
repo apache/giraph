@@ -137,12 +137,15 @@ public class RequestTest {
         serverData.getPartitionStore();
     assertTrue(partitionStore.hasPartition(partitionId));
     int total = 0;
+    Partition<IntWritable, IntWritable, IntWritable, IntWritable> partition2 =
+        partitionStore.getPartition(partitionId);	
     for (Vertex<IntWritable, IntWritable,
-        IntWritable, IntWritable> vertex :
-        partitionStore.getPartition(partitionId)) {
+        IntWritable, IntWritable> vertex : partition2) {
       total += vertex.getId().get();
     }
+    partitionStore.putPartition(partition2);
     assertEquals(total, 45);
+    partitionStore.shutdown();
   }
 
   @Test
