@@ -247,9 +247,8 @@ public class BspServiceWorker<I extends WritableComparable,
     throws KeeperException, InterruptedException {
     VertexEdgeCount vertexEdgeCount = new VertexEdgeCount();
     // Determine how many threads to use based on the number of input splits
-    int maxInputSplitThreads =
-        Math.max(
-            inputSplitPathList.size() / getConfiguration().getMaxWorkers(), 1);
+    int maxInputSplitThreads = (inputSplitPathList.size() - 1) /
+        getConfiguration().getMaxWorkers() + 1;
     int numThreads = Math.min(getConfiguration().getNumInputSplitsThreads(),
         maxInputSplitThreads);
     ExecutorService inputSplitsExecutor =
