@@ -923,7 +923,7 @@ public class BspServiceMaster<I extends WritableComparable,
     }
 
     if (conf.metricsEnabled()) {
-      aggregatedMetrics.print(superstep);
+      aggregatedMetrics.print(superstep, System.err);
     }
 
     if (LOG.isInfoEnabled()) {

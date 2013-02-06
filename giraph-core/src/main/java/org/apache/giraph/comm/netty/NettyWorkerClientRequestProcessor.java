@@ -37,7 +37,8 @@ import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.VertexMutations;
 import org.apache.giraph.metrics.GiraphMetrics;
-import org.apache.giraph.metrics.ValueGauge;
+import org.apache.giraph.metrics.MetricNames;
+import org.apache.giraph.metrics.SuperstepMetricsRegistry;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.partition.PartitionOwner;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
@@ -48,6 +49,10 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
+
+import com.yammer.metrics.core.Counter;
+import com.yammer.metrics.core.Gauge;
+import com.yammer.metrics.util.PercentGauge;
 
 import java.io.IOException;
 import java.util.Map;
@@ -91,8 +96,10 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
   private final ServerData<I, V, E, M> serverData;
 
   // Per-Superstep Metrics
-  /** messages sent in a superstep */
-  private final ValueGauge<Long> msgsSentInSuperstep;
+  /** Number of requests that went on the wire */
+  private final Counter localRequests;
+  /** Number of requests that were handled locally */
+  private final Counter remoteRequests;
 
   /**
    * Constructor.
@@ -123,8 +130,25 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
 
     // Per-Superstep Metrics.
     // Since this object is not long lived we just initialize the metrics here.
-    GiraphMetrics gmr = GiraphMetrics.get();
-    msgsSentInSuperstep = new ValueGauge<Long>(gmr.perSuperstep(), "msgs-sent");
+    SuperstepMetricsRegistry smr = GiraphMetrics.get().perSuperstep();
+    localRequests = smr.getCounter(MetricNames.LOCAL_REQUESTS);
+    remoteRequests = smr.getCounter(MetricNames.REMOTE_REQUESTS);
+    final Gauge<Long> totalRequests = smr.getGauge(MetricNames.TOTAL_REQUESTS,
+        new Gauge<Long>() {
+          @Override public Long value() {
+            return localRequests.count() + remoteRequests.count();
+          }
+        }
+    );
+    smr.getGauge(MetricNames.PERCENT_LOCAL_REQUESTS, new PercentGauge() {
+      @Override protected double getNumerator() {
+        return localRequests.count();
+      }
+
+      @Override protected double getDenominator() {
+        return totalRequests.value();
+      }
+    });
   }
 
   @Override
@@ -374,7 +398,6 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
 
   @Override
   public long resetMessageCount() {
-    msgsSentInSuperstep.set(totalMsgsSentInSuperstep);
     long messagesSentInSuperstep = totalMsgsSentInSuperstep;
     totalMsgsSentInSuperstep = 0;
     return messagesSentInSuperstep;
@@ -397,9 +420,11 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
     if (serviceWorker.getWorkerInfo().getTaskId() ==
         workerInfo.getTaskId()) {
       ((WorkerRequest) writableRequest).doRequest(serverData);
+      localRequests.inc();
     } else {
       workerClient.sendWritableRequest(
           workerInfo.getTaskId(), writableRequest);
+      remoteRequests.inc();
     }
   }
 }

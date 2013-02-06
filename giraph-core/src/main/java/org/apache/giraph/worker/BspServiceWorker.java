@@ -1015,7 +1015,7 @@ else[HADOOP_NON_SECURE]*/
     }
 
     if (getConfiguration().metricsEnabled()) {
-      GiraphMetrics.get().dumpToStdout();
+      GiraphMetrics.get().dumpToStream(System.err);
     }
 
     // Preferably would shut down the service only after

@@ -49,6 +49,14 @@ public class SuperstepMetricsRegistry extends GiraphMetricsRegistry {
   }
 
   /**
+   * Get superstep stored here
+   * @return long superstep
+   */
+  public long getSuperstep() {
+    return superstep;
+  }
+
+  /**
    * Set superstep number used. Internally sets the group for metrics created.
    *
    * @param superstep long number of superstep to use.
@@ -65,12 +73,5 @@ public class SuperstepMetricsRegistry extends GiraphMetricsRegistry {
    */
   public void printSummary(PrintStream out) {
     new WorkerSuperstepMetrics().readFromRegistry().print(superstep, out);
-  }
-
-  /**
-   * Print human readable summary of superstep metrics.
-   */
-  public void printSummary() {
-    printSummary(System.out);
   }
 }

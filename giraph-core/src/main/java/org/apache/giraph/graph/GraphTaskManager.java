@@ -312,7 +312,6 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
    * Utility to encapsulate Giraph metrics setup calls
    */
   private void setupAndInitializeGiraphMetrics() {
-    // Set up GiraphMetrics
     GiraphMetrics.init(conf);
     GiraphMetrics.get().addSuperstepResetObserver(this);
     initJobMetrics();
@@ -368,7 +367,7 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
       serviceWorker.finishSuperstep(graphState, partitionStatsList);
     superstepTimerContext.stop();
     if (conf.metricsEnabled()) {
-      GiraphMetrics.get().perSuperstep().printSummary();
+      GiraphMetrics.get().perSuperstep().printSummary(System.err);
     }
     return finishedSuperstepStats;
   }
@@ -802,8 +801,7 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
     if (done) {
       return true;
     }
-    GiraphMetrics.get().
-      resetSuperstepMetrics(BspService.INPUT_SUPERSTEP);
+    GiraphMetrics.get().resetSuperstepMetrics(BspService.INPUT_SUPERSTEP);
     if (graphFunctions.isNotAWorker()) {
       if (LOG.isInfoEnabled()) {
         LOG.info("map: No need to do anything when not a worker");

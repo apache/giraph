@@ -19,6 +19,8 @@
 package org.apache.giraph.comm.netty;
 
 import org.apache.giraph.metrics.GiraphMetrics;
+import org.apache.giraph.metrics.MeterDesc;
+import org.apache.giraph.metrics.MetricNames;
 import org.apache.giraph.metrics.ResetSuperstepMetricsObserver;
 import org.apache.giraph.metrics.SuperstepMetricsRegistry;
 import org.apache.giraph.time.SystemTime;
@@ -36,7 +38,6 @@ import com.yammer.metrics.core.NoOpHistogram;
 import com.yammer.metrics.core.NoOpMeter;
 
 import java.text.DecimalFormat;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -86,12 +87,13 @@ public class ByteCounter extends SimpleChannelHandler implements
 
   @Override
   public void newSuperstep(SuperstepMetricsRegistry superstepMetrics) {
-    sentRequestsMeter = superstepMetrics.getMeter("sent-requests", "requests",
-        TimeUnit.SECONDS);
-    sentBytesHist = superstepMetrics.getHistogram("sent-bytes", false);
-    receivedRequestsMeter = superstepMetrics.getMeter("received-requests",
-        "request", TimeUnit.SECONDS);
-    receivedBytesHist = superstepMetrics.getHistogram("received-bytes", false);
+    sentRequestsMeter = superstepMetrics.getMeter(MeterDesc.SENT_REQUESTS);
+    sentBytesHist = superstepMetrics.getUniformHistogram(
+        MetricNames.SENT_BYTES);
+    receivedRequestsMeter = superstepMetrics.getMeter(
+        MeterDesc.RECEIVED_REQUESTS);
+    receivedBytesHist = superstepMetrics.getUniformHistogram(
+        MetricNames.RECEIVED_BYTES);
   }
 
   @Override

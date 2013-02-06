@@ -131,11 +131,4 @@ public class GiraphMetrics {
     perJob.printToStream(out);
     perSuperstep.printToStream(out);
   }
-
-  /**
-   * Dump all metrics to stdout.
-   */
-  public void dumpToStdout() {
-    dumpToStream(System.out);
-  }
 }

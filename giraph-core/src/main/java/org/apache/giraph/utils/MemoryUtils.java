@@ -18,9 +18,11 @@
 
 package org.apache.giraph.utils;
 
-import com.yammer.metrics.util.PercentGauge;
 import org.apache.giraph.metrics.GiraphMetrics;
 import org.apache.giraph.metrics.GiraphMetricsRegistry;
+import org.apache.giraph.metrics.MetricNames;
+
+import com.yammer.metrics.util.PercentGauge;
 
 /**
  * Helper static methods for tracking memory usage.
@@ -67,7 +69,7 @@ public class MemoryUtils {
    */
   public static void initMetrics() {
     GiraphMetricsRegistry metrics = GiraphMetrics.get().perJob();
-    metrics.getGauge("memory-free-pct", new PercentGauge() {
+    metrics.getGauge(MetricNames.MEMORY_FREE_PERCENT, new PercentGauge() {
         @Override
         protected double getNumerator() {
           return freeMemoryMB();
@@ -87,8 +89,7 @@ public class MemoryUtils {
    * @return String of all Runtime stats.
    */
   public static String getRuntimeMemoryStats() {
-    return "totalMem = " + totalMemoryMB() +
-      "M, maxMem = "  + maxMemoryMB() +
-      "M, freeMem = " + freeMemoryMB() + "M";
+    return String.format("Memory (free/total/max) = %.2fM / %.2fM / %.2fM",
+            freeMemoryMB(), totalMemoryMB(), maxMemoryMB());
   }
 }

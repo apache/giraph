@@ -23,6 +23,8 @@ import org.apache.giraph.comm.netty.NettyWorkerClientRequestProcessor;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.VertexEdgeCount;
+import org.apache.giraph.metrics.GiraphMetrics;
+import org.apache.giraph.metrics.MeterDesc;
 import org.apache.giraph.time.SystemTime;
 import org.apache.giraph.time.Time;
 import org.apache.giraph.time.Times;
@@ -35,6 +37,8 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.KeeperException;
+
+import com.yammer.metrics.core.Meter;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -54,10 +58,6 @@ import java.util.concurrent.Callable;
 public abstract class InputSplitsCallable<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
     implements Callable<VertexEdgeCount> {
-  /** Name of counter for vertices loaded */
-  public static final String COUNTER_VERTICES_LOADED = "vertices-loaded";
-  /** Name of counter for edges loaded */
-  public static final String COUNTER_EDGES_LOADED = "edges-loaded";
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(InputSplitsCallable.class);
   /** Class time object */
@@ -116,6 +116,24 @@ public abstract class InputSplitsCallable<I extends WritableComparable,
     this.configuration = configuration;
   }
   // CHECKSTYLE: resume ParameterNumberCheck
+
+  /**
+   * Get Meter tracking edges loaded
+   *
+   * @return Meter tracking edges loaded
+   */
+  public static Meter getTotalEdgesLoadedMeter() {
+    return GiraphMetrics.get().perJob().getMeter(MeterDesc.EDGES_LOADED);
+  }
+
+  /**
+   * Get Meter tracking number of vertices loaded.
+   *
+   * @return Meter for vertices loaded
+   */
+  public static Meter getTotalVerticesLoadedMeter() {
+    return GiraphMetrics.get().perJob().getMeter(MeterDesc.VERTICES_LOADED);
+  }
 
   /**
    * Load vertices/edges from the given input split.

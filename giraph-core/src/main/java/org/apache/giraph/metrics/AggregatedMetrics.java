@@ -105,16 +105,6 @@ public class AggregatedMetrics {
   }
 
   /**
-   * Print the aggregated metrics to the stream provided.
-   *
-   * @param superstep long number of superstep.
-   * @return this
-   */
-  public AggregatedMetrics print(long superstep) {
-    return print(superstep, System.out);
-  }
-
-  /**
    * Print batch of lines for AggregatedMetric
    *
    * @param out PrintStream to write to

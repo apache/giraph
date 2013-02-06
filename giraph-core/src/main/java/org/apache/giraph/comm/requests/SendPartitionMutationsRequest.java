@@ -20,11 +20,14 @@ package org.apache.giraph.comm.requests;
 
 import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.graph.VertexMutations;
+import org.apache.giraph.metrics.GiraphMetrics;
+import org.apache.giraph.metrics.MetricNames;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
 
 import com.google.common.collect.Maps;
+import com.yammer.metrics.core.Histogram;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -110,6 +113,9 @@ public class SendPartitionMutationsRequest<I extends WritableComparable,
   public void doRequest(ServerData<I, V, E, M> serverData) {
     ConcurrentHashMap<I, VertexMutations<I, V, E, M>> vertexMutations =
       serverData.getVertexMutations();
+    Histogram verticesInMutationHist = GiraphMetrics.get().perSuperstep()
+        .getUniformHistogram(MetricNames.VERTICES_IN_MUTATION_REQUEST);
+    verticesInMutationHist.update(vertexMutations.size());
     for (Entry<I, VertexMutations<I, V, E, M>> entry :
         vertexIdMutations.entrySet()) {
       VertexMutations<I, V, E, M> mutations =

@@ -18,15 +18,11 @@
 
 package org.apache.giraph.worker;
 
-import com.yammer.metrics.core.Counter;
-import java.io.IOException;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.VertexEdgeCount;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexReader;
-import org.apache.giraph.metrics.GiraphMetrics;
-import org.apache.giraph.metrics.GiraphMetricsRegistry;
 import org.apache.giraph.partition.PartitionOwner;
 import org.apache.giraph.utils.LoggerUtils;
 import org.apache.giraph.utils.MemoryUtils;
@@ -38,6 +34,10 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+
+import com.yammer.metrics.core.Meter;
+
+import java.io.IOException;
 
 /**
  * Load as many vertex input splits as possible.
@@ -52,23 +52,21 @@ import org.apache.log4j.Logger;
 public class VertexInputSplitsCallable<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
     extends InputSplitsCallable<I, V, E, M> {
+  /** How often to update metrics and print info */
+  public static final int VERTICES_UPDATE_PERIOD = 250000;
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(VertexInputSplitsCallable.class);
-  /** Total vertices loaded */
-  private long totalVerticesLoaded = 0;
-  /** Total edges loaded */
-  private long totalEdgesLoaded = 0;
   /** Input split max vertices (-1 denotes all) */
   private final long inputSplitMaxVertices;
   /** Bsp service worker (only use thread-safe methods) */
   private final BspServiceWorker<I, V, E, M> bspServiceWorker;
 
   // Metrics
-  /** number of vertices loaded counter */
-  private final Counter verticesLoadedCounter;
-  /** number of edges loaded counter */
-  private final Counter edgesLoadedCounter;
+  /** number of vertices loaded meter across all readers */
+  private final Meter totalVerticesMeter;
+  /** number of edges loaded meter across all readers */
+  private final Meter totalEdgesMeter;
 
   /**
    * Constructor.
@@ -94,9 +92,8 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
     this.bspServiceWorker = bspServiceWorker;
 
     // Initialize Metrics
-    GiraphMetricsRegistry jobMetrics = GiraphMetrics.get().perJob();
-    verticesLoadedCounter = jobMetrics.getCounter(COUNTER_VERTICES_LOADED);
-    edgesLoadedCounter = jobMetrics.getCounter(COUNTER_EDGES_LOADED);
+    totalVerticesMeter = getTotalVerticesLoadedMeter();
+    totalEdgesMeter = getTotalEdgesLoadedMeter();
   }
 
   /**
@@ -120,9 +117,8 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
         vertexInputFormat.createVertexReader(inputSplit, context);
     vertexReader.initialize(inputSplit, context);
     long inputSplitVerticesLoaded = 0;
+    long edgesSinceLastUpdate = 0;
     long inputSplitEdgesLoaded = 0;
-    long nextPrintVertices = 0;
-    long nextPrintMsecs = System.currentTimeMillis() + 15000;
     while (vertexReader.nextVertex()) {
       Vertex<I, V, E, M> readerVertex =
           vertexReader.getCurrentVertex();
@@ -143,22 +139,23 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
           partitionOwner, readerVertex);
       context.progress(); // do this before potential data transfer
       ++inputSplitVerticesLoaded;
-      inputSplitEdgesLoaded += readerVertex.getNumEdges();
+      edgesSinceLastUpdate += readerVertex.getNumEdges();
 
-      // Update status at most every 250k vertices or 15 seconds
-      if ((inputSplitVerticesLoaded + totalVerticesLoaded) >
-          nextPrintVertices &&
-          System.currentTimeMillis() > nextPrintMsecs) {
+      // Update status every VERTICES_UPDATE_PERIOD vertices
+      if (inputSplitVerticesLoaded % VERTICES_UPDATE_PERIOD == 0) {
+        totalVerticesMeter.mark(VERTICES_UPDATE_PERIOD);
+        totalEdgesMeter.mark(edgesSinceLastUpdate);
+        inputSplitEdgesLoaded += edgesSinceLastUpdate;
+        edgesSinceLastUpdate = 0;
+
         LoggerUtils.setStatusAndLog(
             context, LOG, Level.INFO,
-            "readInputSplit: Loaded " +
-                (inputSplitVerticesLoaded + totalVerticesLoaded) +
-                " vertices " +
-                (inputSplitEdgesLoaded + totalEdgesLoaded) + " edges " +
+            "readVertexInputSplit: Loaded " +
+                totalVerticesMeter.count() + " vertices at " +
+                totalVerticesMeter.meanRate() + " vertices/sec " +
+                totalEdgesMeter.count() + " edges at " +
+                totalEdgesMeter.meanRate() + " edges/sec " +
                 MemoryUtils.getRuntimeMemoryStats());
-        nextPrintMsecs = System.currentTimeMillis() + 15000;
-        nextPrintVertices = inputSplitVerticesLoaded + totalVerticesLoaded +
-            250000;
       }
 
       // For sampling, or to limit outlier input splits, the number of
@@ -174,12 +171,8 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
       }
     }
     vertexReader.close();
-    totalVerticesLoaded += inputSplitVerticesLoaded;
-    verticesLoadedCounter.inc(inputSplitVerticesLoaded);
-    totalEdgesLoaded += inputSplitEdgesLoaded;
-    edgesLoadedCounter.inc(inputSplitEdgesLoaded);
-    return new VertexEdgeCount(
-        inputSplitVerticesLoaded, inputSplitEdgesLoaded);
+    return new VertexEdgeCount(inputSplitVerticesLoaded,
+        inputSplitEdgesLoaded + edgesSinceLastUpdate);
   }
 }
 

@@ -168,14 +168,25 @@ public class GiraphMetricsRegistry {
   }
 
   /**
-   * Creates a new non-biased {@link com.yammer.metrics.core.Histogram} and
-   * registers it under the given group and name.
+   * Creates a new biased {@link Histogram} and registers it under the given
+   * group and name
    *
-   * @param name  the name of the metric
-   * @return a new {@link com.yammer.metrics.core.Histogram}
+   * @param name name of metric
+   * @return new {@link Histogram}
    */
-  public Histogram getHistogram(String name) {
-    return registry.newHistogram(makeMetricName(name), false);
+  public Histogram getBiasedHistogram(String name) {
+    return getHistogram(name, true);
+  }
+
+  /**
+   * Creates a new uniform {@link Histogram} and registers it under the given
+   * group and name
+   *
+   * @param name name of metric
+   * @return new {@link Histogram}
+   */
+  public Histogram getUniformHistogram(String name) {
+    return getHistogram(name, false);
   }
 
   /**
@@ -186,8 +197,20 @@ public class GiraphMetricsRegistry {
    * @param biased whether or not the histogram should be biased
    * @return a new {@link Histogram}
    */
-  public Histogram getHistogram(String name, boolean biased) {
+  private Histogram getHistogram(String name, boolean biased) {
     return registry.newHistogram(makeMetricName(name), biased);
+  }
+
+  /**
+   * Creates a new {@link com.yammer.metrics.core.Meter} and registers it under
+   * the given group and name.
+   *
+   * @param meterDesc description of meter
+   * @return new {@link com.yammer.metrics.core.Meter}
+   */
+  public Meter getMeter(MeterDesc meterDesc) {
+    return getMeter(meterDesc.getName(), meterDesc.getType(),
+        meterDesc.getTimeUnit());
   }
 
   /**
@@ -205,15 +228,15 @@ public class GiraphMetricsRegistry {
   }
 
   /**
-   * Creates a new {@link com.yammer.metrics.core.Timer} and registers it under
-   * the given group and name, measuring elapsed time in milliseconds and
-   * invocations per second.
+   * Create a new {@link Timer} from the description and registers it under the
+   * given group and name.
    *
-   * @param name  the name of the metric
-   * @return a new {@link com.yammer.metrics.core.Timer}
+   * @param timerDesc TimerDesc describing the timer
+   * @return new {@link Timer}
    */
-  public Timer getTimer(String name) {
-    return getTimer(name, TimeUnit.MILLISECONDS, TimeUnit.SECONDS);
+  public Timer getTimer(TimerDesc timerDesc) {
+    return getTimer(timerDesc.getName(), timerDesc.getDurationUnit(),
+        timerDesc.getTimeUnit());
   }
 
   /**

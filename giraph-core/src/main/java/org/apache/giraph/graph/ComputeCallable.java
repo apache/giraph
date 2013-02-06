@@ -17,35 +17,40 @@
  */
 package org.apache.giraph.graph;
 
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.yammer.metrics.core.Timer;
-import com.yammer.metrics.core.TimerContext;
-import java.io.IOException;
-import java.util.Collection;
-import java.util.List;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Callable;
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.WorkerClientRequestProcessor;
 import org.apache.giraph.comm.messages.MessageStoreByPartition;
 import org.apache.giraph.comm.netty.NettyWorkerClientRequestProcessor;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.metrics.GiraphMetrics;
+import org.apache.giraph.metrics.MetricNames;
+import org.apache.giraph.metrics.SuperstepMetricsRegistry;
+import org.apache.giraph.metrics.TimerDesc;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.partition.PartitionStats;
-import org.apache.giraph.metrics.GiraphMetrics;
-
-import org.apache.giraph.utils.MemoryUtils;
 import org.apache.giraph.time.SystemTime;
 import org.apache.giraph.time.Time;
-import org.apache.giraph.utils.TimedLogger;
 import org.apache.giraph.time.Times;
+import org.apache.giraph.utils.MemoryUtils;
+import org.apache.giraph.utils.TimedLogger;
 import org.apache.giraph.vertex.Vertex;
 import org.apache.giraph.worker.WorkerThreadAggregatorUsage;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
+
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.yammer.metrics.core.Counter;
+import com.yammer.metrics.core.Timer;
+import com.yammer.metrics.core.TimerContext;
+
+import java.io.IOException;
+import java.util.Collection;
+import java.util.List;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Callable;
 
 /**
  * Compute as many vertex partitions as possible.  Every thread will has its
@@ -62,8 +67,6 @@ import org.apache.log4j.Logger;
  */
 public class ComputeCallable<I extends WritableComparable, V extends Writable,
     E extends Writable, M extends Writable> implements Callable {
-  /** Name of timer for compute call */
-  public static final String TIMER_COMPUTE_ONE = "compute-one";
   /** Class logger */
   private static final Logger LOG  = Logger.getLogger(ComputeCallable.class);
   /** Class time object */
@@ -89,6 +92,8 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
   private final long startNanos = TIME.getNanoseconds();
 
   // Per-Superstep Metrics
+  /** Messages sent */
+  private final Counter messagesSentCounter;
   /** Timer for single compute() call */
   private final Timer computeOneTimer;
 
@@ -116,10 +121,11 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
     // Will be replaced later in call() for locality
     this.graphState = graphState;
 
-    GiraphMetrics metrics = GiraphMetrics.get();
+    SuperstepMetricsRegistry metrics = GiraphMetrics.get().perSuperstep();
     // Normally we would use ResetSuperstepMetricsObserver but this class is
     // not long-lived, so just instantiating in the constructor is good enough.
-    computeOneTimer = metrics.perSuperstep().getTimer(TIMER_COMPUTE_ONE);
+    computeOneTimer = metrics.getTimer(TimerDesc.COMPUTE_ONE);
+    messagesSentCounter = metrics.getCounter(MetricNames.MESSAGES_SENT);
   }
 
   @Override
@@ -148,8 +154,9 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
       try {
         PartitionStats partitionStats = computePartition(partition);
         partitionStatsList.add(partitionStats);
-        partitionStats.addMessagesSentCount(
-            workerClientRequestProcessor.resetMessageCount());
+        long partitionMsgs = workerClientRequestProcessor.resetMessageCount();
+        partitionStats.addMessagesSentCount(partitionMsgs);
+        messagesSentCounter.inc(partitionMsgs);
         timedLogger.info("call: Completed " +
             partitionStatsList.size() + " partitions, " +
             partitionIdQueue.size() + " remaining " +

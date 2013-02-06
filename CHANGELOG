@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-505: Metrics Updates (nitay)
+
   GIRAPH-506: Concurrency issue - response can arrive before request is added to the outstanding map (majakabiljo)
 
   GIRAPH-501: WorkerObserver (nitay)
