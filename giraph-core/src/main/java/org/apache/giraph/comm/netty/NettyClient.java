@@ -644,8 +644,6 @@ public class NettyClient {
         addressRequestIdGenerator.getNextRequestId(remoteServer));
       ClientRequestId clientRequestId =
         new ClientRequestId(destTaskId, request.getRequestId());
-      ChannelFuture writeFuture = channel.write(request);
-      newRequestInfo.setWriteFuture(writeFuture);
       RequestInfo oldRequestInfo = clientRequestIdRequestInfoMap.putIfAbsent(
         clientRequestId, newRequestInfo);
       if (oldRequestInfo != null) {
@@ -654,6 +652,8 @@ public class NettyClient {
           "request info of " + oldRequestInfo);
       }
     }
+    ChannelFuture writeFuture = channel.write(request);
+    newRequestInfo.setWriteFuture(writeFuture);
 
     if (limitNumberOfOpenRequests &&
         clientRequestIdRequestInfoMap.size() > maxNumberOfOpenRequests) {
@@ -739,6 +739,10 @@ public class NettyClient {
         clientRequestIdRequestInfoMap.entrySet()) {
       RequestInfo requestInfo = entry.getValue();
       ChannelFuture writeFuture = requestInfo.getWriteFuture();
+      // Request wasn't sent yet
+      if (writeFuture == null) {
+        continue;
+      }
       // If not connected anymore, request failed, or the request is taking
       // too long, re-establish and resend
       if (!writeFuture.getChannel().isConnected() ||

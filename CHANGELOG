@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-506: Concurrency issue - response can arrive before request is added to the outstanding map (majakabiljo)
+
   GIRAPH-501: WorkerObserver (nitay)
 
   GIRAPH-502: In PageRankBenchmark, remove unneeded handling of -t 2 (ekoontz)
