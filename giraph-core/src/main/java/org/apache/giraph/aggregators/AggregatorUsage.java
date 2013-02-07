@@ -16,21 +16,20 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.worker;
+package org.apache.giraph.aggregators;
 
-import org.apache.giraph.aggregators.AggregatorUsage;
 import org.apache.hadoop.io.Writable;
 
 /**
- * Vertex classes can access and change aggregators through this interface
+ * Master and workers can access aggregators through this interface.
  */
-public interface WorkerAggregatorUsage extends AggregatorUsage {
+public interface AggregatorUsage {
   /**
-   * Add a new value
+   * Get value of an aggregator.
    *
    * @param name Name of aggregator
-   * @param value Value to add
    * @param <A> Aggregated value
+   * @return Value of the aggregator
    */
-  <A extends Writable> void aggregate(String name, A value);
+  <A extends Writable> A getAggregatedValue(String name);
 }

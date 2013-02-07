@@ -19,12 +19,13 @@
 package org.apache.giraph.master;
 
 import org.apache.giraph.aggregators.Aggregator;
+import org.apache.giraph.aggregators.AggregatorUsage;
 import org.apache.hadoop.io.Writable;
 
 /**
  * Master compute can access and change aggregators through this interface
  */
-public interface MasterAggregatorUsage {
+public interface MasterAggregatorUsage extends AggregatorUsage {
   /**
    * Register an aggregator in preSuperstep() and/or preApplication(). This
    * aggregator will have its value reset at the end of each super step.
@@ -51,15 +52,6 @@ public interface MasterAggregatorUsage {
   <A extends Writable> boolean registerPersistentAggregator(String name,
       Class<? extends Aggregator<A>> aggregatorClass) throws
       InstantiationException, IllegalAccessException;
-
-  /**
-   * Get value of an aggregator.
-   *
-   * @param name Name of aggregator
-   * @param <A> Aggregated value
-   * @return Value of the aggregator
-   */
-  <A extends Writable> A getAggregatedValue(String name);
 
   /**
    * Sets value of an aggregator.
