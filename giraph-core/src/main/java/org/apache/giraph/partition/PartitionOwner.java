@@ -21,6 +21,11 @@ package org.apache.giraph.partition;
 import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.Writable;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.Map;
+
 /**
  * Metadata about ownership of a partition.
  */
@@ -78,4 +83,25 @@ public interface PartitionOwner extends Writable {
    * @param checkpointFilesPrefix HDFS checkpoint file prefix
    */
   void setCheckpointFilesPrefix(String checkpointFilesPrefix);
+
+  /**
+   * Write to the output, but don't serialize the whole WorkerInfo,
+   * instead use just the task id
+   *
+   * @param output Output to write to
+   * @throws IOException
+   */
+  void writeWithWorkerIds(DataOutput output) throws IOException;
+
+  /**
+   * A match for writeWithWorkerIds method - for WorkerInfos it will read
+   * just task ids from input and then find the matching WorkerInfo in the
+   * provided map and set it
+   *
+   * @param input Input to read from
+   * @param workerInfoMap Map from task id to WorkerInfo
+   * @throws IOException
+   */
+  void readFieldsWithWorkerIds(DataInput input,
+      Map<Integer, WorkerInfo> workerInfoMap) throws IOException;
 }

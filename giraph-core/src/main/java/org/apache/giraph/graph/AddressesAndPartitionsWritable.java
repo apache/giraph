@@ -23,13 +23,16 @@ import org.apache.giraph.master.MasterInfo;
 import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.Writable;
 
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Helper class to write descriptions of master, workers and partition owners
@@ -105,9 +108,26 @@ public class AddressesAndPartitionsWritable implements Writable {
       workerInfo.write(output);
     }
 
+    Map<Integer, WorkerInfo> workerInfoMap = getAsWorkerInfoMap(workerInfos);
+    // Also write out the previous worker information that are used
+    // in the partition owners
+    List<WorkerInfo> previousWorkerInfos = Lists.newArrayList();
+    for (PartitionOwner partitionOwner : partitionOwners) {
+      if (partitionOwner.getPreviousWorkerInfo() != null) {
+        if (!workerInfoMap.containsKey(
+            partitionOwner.getPreviousWorkerInfo().getTaskId())) {
+          previousWorkerInfos.add(partitionOwner.getPreviousWorkerInfo());
+        }
+      }
+    }
+    output.writeInt(previousWorkerInfos.size());
+    for (WorkerInfo workerInfo : previousWorkerInfos) {
+      workerInfo.write(output);
+    }
+
     output.writeInt(partitionOwners.size());
     for (PartitionOwner partitionOwner : partitionOwners) {
-      partitionOwner.write(output);
+      partitionOwner.writeWithWorkerIds(output);
     }
   }
 
@@ -124,12 +144,20 @@ public class AddressesAndPartitionsWritable implements Writable {
       workerInfos.add(workerInfo);
     }
 
+    Map<Integer, WorkerInfo> workerInfoMap = getAsWorkerInfoMap(workerInfos);
+    int additionalWorkerInfos = input.readInt();
+    for (int i = 0; i < additionalWorkerInfos; i++) {
+      WorkerInfo workerInfo = new WorkerInfo();
+      workerInfo.readFields(input);
+      workerInfoMap.put(workerInfo.getTaskId(), workerInfo);
+    }
+
     int partitionOwnersSize = input.readInt();
     partitionOwners = Lists.newArrayListWithCapacity(partitionOwnersSize);
     for (int i = 0; i < partitionOwnersSize; i++) {
       try {
         PartitionOwner partitionOwner = partitionOwnerClass.newInstance();
-        partitionOwner.readFields(input);
+        partitionOwner.readFieldsWithWorkerIds(input, workerInfoMap);
         partitionOwners.add(partitionOwner);
       } catch (InstantiationException e) {
         throw new IllegalStateException("readFields: " +
@@ -141,5 +169,21 @@ public class AddressesAndPartitionsWritable implements Writable {
             partitionOwnerClass, e);
       }
     }
+  }
+
+  /**
+   * Convert Iterable of WorkerInfos to the map from task id to WorkerInfo.
+   *
+   * @param workerInfos Iterable of WorkerInfos
+   * @return The map from task id to WorkerInfo
+   */
+  private static Map<Integer, WorkerInfo> getAsWorkerInfoMap(
+      Iterable<WorkerInfo> workerInfos) {
+    Map<Integer, WorkerInfo> workerInfoMap =
+        Maps.newHashMapWithExpectedSize(Iterables.size(workerInfos));
+    for (WorkerInfo workerInfo : workerInfos) {
+      workerInfoMap.put(workerInfo.getTaskId(), workerInfo);
+    }
+    return workerInfoMap;
   }
 }

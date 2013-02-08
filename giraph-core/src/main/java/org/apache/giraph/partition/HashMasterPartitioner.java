@@ -53,11 +53,6 @@ public class HashMasterPartitioner<I extends WritableComparable,
   public static final int DEFAULT_USER_PARTITION_COUNT = -1;
   /** Class logger */
   private static Logger LOG = Logger.getLogger(HashMasterPartitioner.class);
-  /**
-   * ZooKeeper has a limit of the data in a single znode of 1 MB and
-   * each entry can go be on the average somewhat more than 300 bytes
-   */
-  private static final int MAX_PARTITIONS = 1024 * 1024 / 350;
   /** Provided configuration */
   private ImmutableClassesGiraphConfiguration conf;
   /** Specified partition count (overrides calculation) */
@@ -104,11 +99,12 @@ public class HashMasterPartitioner<I extends WritableComparable,
         (availableWorkerInfos.size() *
          availableWorkerInfos.size()) + " partitions.");
     }
-    if (partitionCount > MAX_PARTITIONS) {
+    int maxPartitions = getMaxPartitions();
+    if (partitionCount > maxPartitions) {
       LOG.warn("createInitialPartitionOwners: " +
-          "Reducing the partitionCount to " + MAX_PARTITIONS +
+          "Reducing the partitionCount to " + maxPartitions +
           " from " + partitionCount);
-      partitionCount = MAX_PARTITIONS;
+      partitionCount = maxPartitions;
     }
 
     for (int i = 0; i < partitionCount; ++i) {
@@ -153,5 +149,28 @@ public class HashMasterPartitioner<I extends WritableComparable,
   @Override
   public PartitionStats createPartitionStats() {
     return new PartitionStats();
+  }
+
+  /**
+   * Get the maximum number of partitions supported by Giraph.
+   *
+   * ZooKeeper has a limit of the data in a single znode of 1 MB,
+   * and we write all partition descriptions to the same znode.
+   *
+   * If we are not using checkpointing, each partition owner is serialized
+   * as 4 ints (16B), and we need some space to write the list of workers
+   * there. 50k partitions is conservative enough.
+   *
+   * When checkpointing is used, we need enough space to write all the
+   * checkpoint file paths.
+   *
+   * @return Maximum number of partitions allowed
+   */
+  private int getMaxPartitions() {
+    if (conf.useCheckpointing()) {
+      return 5000;
+    } else {
+      return 50000;
+    }
   }
 }

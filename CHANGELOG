@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-508: Increase the limit on the number of partitions (majakabiljo)
+
   GIRAPH-509: Factor out AggregatorUsage (majakabiljo)
 
   GIRAPH-505: Metrics Updates (nitay)

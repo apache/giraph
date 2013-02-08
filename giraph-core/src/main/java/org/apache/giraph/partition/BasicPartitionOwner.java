@@ -21,6 +21,7 @@ package org.apache.giraph.partition;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Map;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfigurable;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
@@ -109,6 +110,39 @@ public class BasicPartitionOwner implements PartitionOwner,
   @Override
   public void setCheckpointFilesPrefix(String checkpointFilesPrefix) {
     this.checkpointFilesPrefix = checkpointFilesPrefix;
+  }
+
+  @Override
+  public void writeWithWorkerIds(DataOutput output) throws IOException {
+    output.writeInt(partitionId);
+    output.writeInt(workerInfo.getTaskId());
+    if (previousWorkerInfo != null) {
+      output.writeInt(previousWorkerInfo.getTaskId());
+    } else {
+      output.writeInt(-1);
+    }
+    if (checkpointFilesPrefix != null) {
+      output.writeBoolean(true);
+      output.writeUTF(checkpointFilesPrefix);
+    } else {
+      output.writeBoolean(false);
+    }
+  }
+
+  @Override
+  public void readFieldsWithWorkerIds(DataInput input,
+      Map<Integer, WorkerInfo> workerInfoMap) throws IOException {
+    partitionId = input.readInt();
+    int workerId = input.readInt();
+    workerInfo = workerInfoMap.get(workerId);
+    int previousWorkerId = input.readInt();
+    if (previousWorkerId != -1) {
+      previousWorkerInfo = workerInfoMap.get(previousWorkerId);
+    }
+    boolean hasCheckpointFilePrefix = input.readBoolean();
+    if (hasCheckpointFilePrefix) {
+      checkpointFilesPrefix = input.readUTF();
+    }
   }
 
   @Override

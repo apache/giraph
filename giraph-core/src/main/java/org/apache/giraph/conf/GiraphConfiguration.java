@@ -594,6 +594,15 @@ public class GiraphConfiguration extends Configuration
   }
 
   /**
+   * Check if checkpointing is used
+   *
+   * @return True iff checkpointing is used
+   */
+  public boolean useCheckpointing() {
+    return getCheckpointFrequency() != 0;
+  }
+
+  /**
    * Set the max task attempts
    *
    * @param maxTaskAttempts Max task attempts to use

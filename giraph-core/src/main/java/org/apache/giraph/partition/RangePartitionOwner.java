@@ -21,7 +21,9 @@ package org.apache.giraph.partition;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Map;
 
+import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
@@ -70,5 +72,19 @@ public class RangePartitionOwner<I extends WritableComparable>
   public void write(DataOutput output) throws IOException {
     super.write(output);
     maxIndex.write(output);
+  }
+
+  @Override
+  public void writeWithWorkerIds(DataOutput output) throws IOException {
+    super.writeWithWorkerIds(output);
+    maxIndex.write(output);
+  }
+
+  @Override
+  public void readFieldsWithWorkerIds(DataInput input,
+      Map<Integer, WorkerInfo> workerInfoMap) throws IOException {
+    super.readFieldsWithWorkerIds(input, workerInfoMap);
+    maxIndex = (I) getConf().createVertexId();
+    maxIndex.readFields(input);
   }
 }
