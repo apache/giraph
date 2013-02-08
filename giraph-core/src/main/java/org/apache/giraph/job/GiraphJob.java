@@ -237,7 +237,7 @@ public class GiraphJob {
     // Capacity scheduler-specific settings.  These should be enough for
     // a reasonable Giraph job
     setIntConfIfDefault("mapred.job.map.memory.mb", 1024);
-    setIntConfIfDefault("mapred.job.reduce.memory.mb", 1024);
+    setIntConfIfDefault("mapred.job.reduce.memory.mb", 0);
 
     // Speculative execution doesn't make sense for Giraph
     giraphConfiguration.setBoolean(
