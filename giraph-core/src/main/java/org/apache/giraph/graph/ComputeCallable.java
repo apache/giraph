@@ -27,6 +27,7 @@ import org.apache.giraph.metrics.MetricNames;
 import org.apache.giraph.metrics.SuperstepMetricsRegistry;
 import org.apache.giraph.metrics.TimerDesc;
 import org.apache.giraph.partition.Partition;
+import org.apache.giraph.partition.PartitionContext;
 import org.apache.giraph.partition.PartitionStats;
 import org.apache.giraph.time.SystemTime;
 import org.apache.giraph.time.Time;
@@ -34,6 +35,7 @@ import org.apache.giraph.time.Times;
 import org.apache.giraph.utils.MemoryUtils;
 import org.apache.giraph.utils.TimedLogger;
 import org.apache.giraph.vertex.Vertex;
+import org.apache.giraph.worker.WorkerContext;
 import org.apache.giraph.worker.WorkerThreadAggregatorUsage;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -197,6 +199,15 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
         new PartitionStats(partition.getId(), 0, 0, 0, 0);
     // Make sure this is thread-safe across runs
     synchronized (partition) {
+      // Prepare Partition context
+      WorkerContext workerContext =
+          graphState.getGraphTaskManager().getWorkerContext();
+      PartitionContext partitionContext = partition.getPartitionContext();
+      synchronized (workerContext) {
+        partitionContext.preSuperstep(workerContext);
+      }
+      graphState.setPartitionContext(partition.getPartitionContext());
+
       for (Vertex<I, V, E, M> vertex : partition) {
         // Make sure every vertex has this thread's
         // graphState before computing
@@ -229,6 +240,10 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
       }
 
       messageStore.clearPartition(partition.getId());
+
+      synchronized (workerContext) {
+        partitionContext.postSuperstep(workerContext);
+      }
     }
     return partitionStats;
   }

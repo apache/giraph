@@ -65,6 +65,8 @@ public interface GiraphConstants {
   String EDGE_VALUE_CLASS = "giraph.edgeValueClass";
   /** Message value class */
   String MESSAGE_VALUE_CLASS = "giraph.messageValueClass";
+  /** Partition context class */
+  String PARTITION_CONTEXT_CLASS = "giraph.partitionContextClass";
   /** Worker context class */
   String WORKER_CONTEXT_CLASS = "giraph.workerContextClass";
   /** AggregatorWriter class - optional */

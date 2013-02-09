@@ -23,6 +23,7 @@ import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.graph.Edge;
 import org.apache.giraph.graph.GraphState;
+import org.apache.giraph.partition.PartitionContext;
 import org.apache.giraph.partition.PartitionOwner;
 import org.apache.giraph.worker.WorkerAggregatorUsage;
 import org.apache.giraph.worker.WorkerContext;
@@ -325,6 +326,15 @@ public abstract class Vertex<I extends WritableComparable,
    */
   public Mapper.Context getContext() {
     return getGraphState().getContext();
+  }
+
+  /**
+   * Get the partition context
+   *
+   * @return Partition context
+   */
+  public PartitionContext getPartitionContext() {
+    return getGraphState().getPartitionContext();
   }
 
   /**

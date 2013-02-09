@@ -18,6 +18,7 @@
 package org.apache.giraph.graph;
 
 import org.apache.giraph.comm.WorkerClientRequestProcessor;
+import org.apache.giraph.partition.PartitionContext;
 import org.apache.giraph.worker.WorkerAggregatorUsage;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -49,6 +50,8 @@ E extends Writable, M extends Writable> {
   workerClientRequestProcessor;
   /** Worker aggregator usage */
   private final WorkerAggregatorUsage workerAggregatorUsage;
+  /** Partition context */
+  private PartitionContext partitionContext;
 
   /**
    * Constructor
@@ -104,6 +107,14 @@ E extends Writable, M extends Writable> {
 
   public WorkerAggregatorUsage getWorkerAggregatorUsage() {
     return workerAggregatorUsage;
+  }
+
+  public void setPartitionContext(PartitionContext partitionContext) {
+    this.partitionContext = partitionContext;
+  }
+
+  public PartitionContext getPartitionContext() {
+    return partitionContext;
   }
 
   @Override

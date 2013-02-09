@@ -19,7 +19,6 @@
 package org.apache.giraph.partition;
 
 import org.apache.giraph.conf.GiraphConstants;
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.vertex.Vertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -46,15 +45,9 @@ import java.util.concurrent.ConcurrentSkipListMap;
 @SuppressWarnings("rawtypes")
 public class SimplePartition<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
-    implements Partition<I, V, E, M> {
-  /** Configuration from the worker */
-  private ImmutableClassesGiraphConfiguration<I, V, E, M> conf;
-  /** Partition id */
-  private int id;
+    extends BasicPartition<I, V, E, M> {
   /** Vertex map for this range (keyed by index) */
   private ConcurrentMap<I, Vertex<I, V, E, M>> vertexMap;
-  /** Context used to report progress */
-  private Progressable progressable;
 
   /**
    * Constructor for reflection.
@@ -63,9 +56,8 @@ public class SimplePartition<I extends WritableComparable,
 
   @Override
   public void initialize(int partitionId, Progressable progressable) {
-    setId(partitionId);
-    setProgressable(progressable);
-    if (conf.getBoolean(GiraphConstants.USE_OUT_OF_CORE_MESSAGES,
+    super.initialize(partitionId, progressable);
+    if (getConf().getBoolean(GiraphConstants.USE_OUT_OF_CORE_MESSAGES,
         GiraphConstants.USE_OUT_OF_CORE_MESSAGES_DEFAULT)) {
       vertexMap = new ConcurrentSkipListMap<I, Vertex<I, V, E, M>>();
     } else {
@@ -110,21 +102,6 @@ public class SimplePartition<I extends WritableComparable,
   }
 
   @Override
-  public int getId() {
-    return id;
-  }
-
-  @Override
-  public void setId(int id) {
-    this.id = id;
-  }
-
-  @Override
-  public void setProgressable(Progressable progressable) {
-    this.progressable = progressable;
-  }
-
-  @Override
   public void saveVertex(Vertex<I, V, E, M> vertex) {
     // No-op, vertices are stored as Java objects in this partition
   }
@@ -136,19 +113,17 @@ public class SimplePartition<I extends WritableComparable,
 
   @Override
   public void readFields(DataInput input) throws IOException {
-    if (conf.getBoolean(GiraphConstants.USE_OUT_OF_CORE_MESSAGES,
+    super.readFields(input);
+    if (getConf().getBoolean(GiraphConstants.USE_OUT_OF_CORE_MESSAGES,
         GiraphConstants.USE_OUT_OF_CORE_MESSAGES_DEFAULT)) {
       vertexMap = new ConcurrentSkipListMap<I, Vertex<I, V, E, M>>();
     } else {
       vertexMap = Maps.newConcurrentMap();
     }
-    id = input.readInt();
     int vertices = input.readInt();
     for (int i = 0; i < vertices; ++i) {
-      Vertex<I, V, E, M> vertex = conf.createVertex();
-      if (progressable != null) {
-        progressable.progress();
-      }
+      Vertex<I, V, E, M> vertex = getConf().createVertex();
+      progress();
       vertex.readFields(input);
       if (vertexMap.put(vertex.getId(), vertex) != null) {
         throw new IllegalStateException(
@@ -160,25 +135,12 @@ public class SimplePartition<I extends WritableComparable,
 
   @Override
   public void write(DataOutput output) throws IOException {
-    output.writeInt(id);
+    super.write(output);
     output.writeInt(vertexMap.size());
     for (Vertex vertex : vertexMap.values()) {
-      if (progressable != null) {
-        progressable.progress();
-      }
+      progress();
       vertex.write(output);
     }
-  }
-
-  @Override
-  public void setConf(
-      ImmutableClassesGiraphConfiguration<I, V, E, M> configuration) {
-    this.conf = configuration;
-  }
-
-  @Override
-  public ImmutableClassesGiraphConfiguration<I, V, E, M> getConf() {
-    return conf;
   }
 
   @Override

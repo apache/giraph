@@ -181,6 +181,9 @@ public class BspCase implements Watcher {
     if (classes.hasVertexOutputFormat()) {
       conf.setVertexOutputFormatClass(classes.getVertexOutputFormatClass());
     }
+    if (classes.hasPartitionContextClass()) {
+      conf.setPartitionContextClass(classes.getPartitionContextClass());
+    }
     if (classes.hasWorkerContextClass()) {
       conf.setWorkerContextClass(classes.getWorkerContextClass());
     }

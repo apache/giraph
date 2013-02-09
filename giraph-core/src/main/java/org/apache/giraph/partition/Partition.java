@@ -107,6 +107,11 @@ public interface Partition<I extends WritableComparable,
   void setId(int id);
 
   /**
+   * Report progress.
+   */
+  void progress();
+
+  /**
    * Set the context.
    *
    * @param progressable Progressable
@@ -119,4 +124,11 @@ public interface Partition<I extends WritableComparable,
    * @param vertex Vertex to save
    */
   void saveVertex(Vertex<I, V, E, M> vertex);
+
+  /**
+   * Get partition context
+   *
+   * @return Partition context
+   */
+  PartitionContext getPartitionContext();
 }

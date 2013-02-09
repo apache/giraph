@@ -30,6 +30,7 @@ import org.apache.giraph.master.MasterCompute;
 import org.apache.giraph.master.MasterObserver;
 import org.apache.giraph.partition.GraphPartitionerFactory;
 import org.apache.giraph.partition.Partition;
+import org.apache.giraph.partition.PartitionContext;
 import org.apache.giraph.vertex.Vertex;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.giraph.worker.WorkerObserver;
@@ -273,6 +274,18 @@ public class GiraphConfiguration extends Configuration
    */
   public final void setResolverCreateVertexOnMessages(boolean v) {
     setBoolean(RESOLVER_CREATE_VERTEX_ON_MSGS, v);
+  }
+
+  /**
+   * Set the partition context class (optional)
+   *
+   * @param partitionContextClass Determines what code is executed for each
+   *        partition before and after each superstep
+   */
+  public final void setPartitionContextClass(
+      Class<? extends PartitionContext> partitionContextClass) {
+    setClass(PARTITION_CONTEXT_CLASS, partitionContextClass,
+        PartitionContext.class);
   }
 
   /**

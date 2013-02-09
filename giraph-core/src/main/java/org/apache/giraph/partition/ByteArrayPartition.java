@@ -27,7 +27,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.vertex.Vertex;
 import org.apache.giraph.utils.UnsafeByteArrayInputStream;
 import org.apache.giraph.utils.WritableUtils;
@@ -48,21 +47,15 @@ import org.apache.log4j.Logger;
  */
 public class ByteArrayPartition<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
-    implements Partition<I, V, E, M> {
+    extends BasicPartition<I, V, E, M> {
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(ByteArrayPartition.class);
-  /** Configuration from the worker */
-  private ImmutableClassesGiraphConfiguration<I, V, E, M> conf;
-  /** Partition id */
-  private int id;
   /**
    * Vertex map for this range (keyed by index).  Note that the byte[] is a
    * serialized vertex with the first four bytes as the length of the vertex
    * to read.
    */
   private ConcurrentMap<I, byte[]> vertexMap;
-  /** Context used to report progress */
-  private Progressable progressable;
   /** Representative vertex */
   private Vertex<I, V, E, M> representativeVertex;
   /** Use unsafe serialization */
@@ -75,12 +68,11 @@ public class ByteArrayPartition<I extends WritableComparable,
 
   @Override
   public void initialize(int partitionId, Progressable progressable) {
-    setId(partitionId);
-    setProgressable(progressable);
+    super.initialize(partitionId, progressable);
     vertexMap = new MapMaker().concurrencyLevel(
-        conf.getNettyServerExecutionConcurrency()).makeMap();
-    representativeVertex = conf.createVertex();
-    useUnsafeSerialization = conf.useUnsafeSerialization();
+        getConf().getNettyServerExecutionConcurrency()).makeMap();
+    representativeVertex = getConf().createVertex();
+    useUnsafeSerialization = getConf().useUnsafeSerialization();
   }
 
   @Override
@@ -152,21 +144,6 @@ public class ByteArrayPartition<I extends WritableComparable,
   }
 
   @Override
-  public int getId() {
-    return id;
-  }
-
-  @Override
-  public void setId(int id) {
-    this.id = id;
-  }
-
-  @Override
-  public void setProgressable(Progressable progressable) {
-    this.progressable = progressable;
-  }
-
-  @Override
   public void saveVertex(Vertex<I, V, E, M> vertex) {
     // Reuse the old buffer whenever possible
     byte[] oldVertexData = vertexMap.get(vertex.getId());
@@ -183,12 +160,10 @@ public class ByteArrayPartition<I extends WritableComparable,
 
   @Override
   public void write(DataOutput output) throws IOException {
-    output.writeInt(id);
+    super.write(output);
     output.writeInt(vertexMap.size());
     for (Map.Entry<I, byte[]> entry : vertexMap.entrySet()) {
-      if (progressable != null) {
-        progressable.progress();
-      }
+      progress();
       entry.getKey().write(output);
       // Note here that we are writing the size of the vertex data first
       // as it is encoded in the first four bytes of the byte[]
@@ -207,18 +182,16 @@ public class ByteArrayPartition<I extends WritableComparable,
 
   @Override
   public void readFields(DataInput input) throws IOException {
-    id = input.readInt();
+    super.readFields(input);
     int size = input.readInt();
     vertexMap = new MapMaker().concurrencyLevel(
-        conf.getNettyServerExecutionConcurrency()).initialCapacity(
+        getConf().getNettyServerExecutionConcurrency()).initialCapacity(
         size).makeMap();
-    representativeVertex = conf.createVertex();
-    useUnsafeSerialization = conf.useUnsafeSerialization();
+    representativeVertex = getConf().createVertex();
+    useUnsafeSerialization = getConf().useUnsafeSerialization();
     for (int i = 0; i < size; ++i) {
-      if (progressable != null) {
-        progressable.progress();
-      }
-      I vertexId = conf.createVertexId();
+      progress();
+      I vertexId = getConf().createVertexId();
       vertexId.readFields(input);
       int vertexDataSize = input.readInt();
       byte[] vertexData = new byte[vertexDataSize];
@@ -228,17 +201,6 @@ public class ByteArrayPartition<I extends WritableComparable,
             vertexId);
       }
     }
-  }
-
-  @Override
-  public void setConf(
-      ImmutableClassesGiraphConfiguration<I, V, E, M> configuration) {
-    conf = configuration;
-  }
-
-  @Override
-  public ImmutableClassesGiraphConfiguration<I, V, E, M> getConf() {
-    return conf;
   }
 
   @Override

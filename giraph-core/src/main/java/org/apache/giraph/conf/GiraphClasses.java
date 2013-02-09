@@ -21,6 +21,8 @@ import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.combiner.Combiner;
 import org.apache.giraph.master.DefaultMasterCompute;
 import org.apache.giraph.graph.DefaultVertexResolver;
+import org.apache.giraph.partition.DefaultPartitionContext;
+import org.apache.giraph.partition.PartitionContext;
 import org.apache.giraph.worker.DefaultWorkerContext;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.master.MasterCompute;
@@ -83,6 +85,8 @@ public class GiraphClasses<I extends WritableComparable,
 
   /** Vertex resolver class - cached for fast access */
   protected Class<? extends VertexResolver<I, V, E, M>> vertexResolverClass;
+  /** Partition context class - cached for fast access */
+  protected Class<? extends PartitionContext> partitionContextClass;
   /** Worker context class - cached for fast access */
   protected Class<? extends WorkerContext> workerContextClass;
   /** Master compute class - cached for fast access */
@@ -145,6 +149,8 @@ public class GiraphClasses<I extends WritableComparable,
     vertexResolverClass = (Class<? extends VertexResolver<I, V, E, M>>)
         conf.getClass(VERTEX_RESOLVER_CLASS,
         DefaultVertexResolver.class, VertexResolver.class);
+    partitionContextClass = conf.getClass(PARTITION_CONTEXT_CLASS,
+        DefaultPartitionContext.class, PartitionContext.class);
     workerContextClass = conf.getClass(WORKER_CONTEXT_CLASS,
         DefaultWorkerContext.class, WorkerContext.class);
     masterComputeClass =  conf.getClass(MASTER_COMPUTE_CLASS,
@@ -326,6 +332,24 @@ public class GiraphClasses<I extends WritableComparable,
    */
   public Class<? extends VertexResolver<I, V, E, M>> getVertexResolverClass() {
     return vertexResolverClass;
+  }
+
+  /**
+   * Check if PartitionContext is set
+   *
+   * @return true if PartitionContext is set
+   */
+  public boolean hasPartitionContextClass() {
+    return partitionContextClass != null;
+  }
+
+  /**
+   * Get PartitionContext used
+   *
+   * @return PartitionContext
+   */
+  public Class<? extends PartitionContext> getPartitionContextClass() {
+    return partitionContextClass;
   }
 
   /**
@@ -519,6 +543,18 @@ public class GiraphClasses<I extends WritableComparable,
   public GiraphClasses setVertexResolverClass(
       Class<? extends VertexResolver<I, V, E, M>> vertexResolverClass) {
     this.vertexResolverClass = vertexResolverClass;
+    return this;
+  }
+
+  /**
+   * Set PartitionContext used
+   *
+   * @param partitionContextClass PartitionContext class to set
+   * @return this
+   */
+  public GiraphClasses setPartitionContextClass(
+      Class<? extends PartitionContext> partitionContextClass) {
+    this.partitionContextClass = partitionContextClass;
     return this;
   }
 

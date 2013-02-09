@@ -24,6 +24,7 @@ import org.apache.giraph.job.GiraphJobObserver;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.master.MasterCompute;
+import org.apache.giraph.partition.PartitionContext;
 import org.apache.giraph.vertex.Vertex;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
@@ -284,6 +285,24 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
         ReflectionUtils.newInstance(getVertexResolverClass(), this);
     resolver.setGraphState(graphState);
     return resolver;
+  }
+
+  /**
+   * Get the user's subclassed PartitionContext.
+   *
+   * @return User's partition context class
+   */
+  public Class<? extends PartitionContext> getPartitionContextClass() {
+    return classes.getPartitionContextClass();
+  }
+
+  /**
+   * Create a user partition context
+   *
+   * @return Instantiated user partition context
+   */
+  public PartitionContext createPartitionContext() {
+    return ReflectionUtils.newInstance(getPartitionContextClass(), this);
   }
 
   /**
