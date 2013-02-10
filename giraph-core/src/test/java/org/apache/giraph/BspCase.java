@@ -21,7 +21,6 @@ package org.apache.giraph;
 import org.apache.giraph.conf.GiraphClasses;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
-import org.apache.giraph.examples.GeneratedVertexReader;
 import org.apache.giraph.job.GiraphJob;
 import org.apache.giraph.utils.FileUtils;
 import org.apache.giraph.zk.ZooKeeperExt;
@@ -65,6 +64,9 @@ public class BspCase implements Watcher {
   /** Default path for temporary files */
   static final Path DEFAULT_TEMP_DIR =
       new Path(System.getProperty("java.io.tmpdir"), "_giraphTests");
+  
+  public static final String READER_VERTICES =
+		  		    "GeneratedVertexReader.reader_vertices";
 
   /** A filter for listing parts files */
   static final PathFilter PARTS_FILTER = new PathFilter() {
@@ -104,7 +106,7 @@ public class BspCase implements Watcher {
       conf.setZooKeeperConfiguration(getZooKeeperList());
     }
     // GeneratedInputSplit will generate 5 vertices
-    conf.setLong(GeneratedVertexReader.READER_VERTICES, 5);
+    conf.setLong(READER_VERTICES, 5);
 
     // Setup pathes for temporary files
     Path zookeeperDir = getTempPath("_bspZooKeeper");

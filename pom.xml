@@ -1025,6 +1025,7 @@ under the License.
 
   <modules>
     <module>giraph-core</module>
+    <module>giraph-examples</module>
   </modules>
 
 </project>

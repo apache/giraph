@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-470 (tavoaqp via nitay)
+
   GIRAPH-504: Create PartitionContext (majakabiljo)
 
   GIRAPH-499: Giraph should not reserve minimum reduce slot memory 1024 since we never use it (ereisman)

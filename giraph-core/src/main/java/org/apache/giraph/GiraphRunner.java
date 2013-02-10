@@ -27,7 +27,6 @@ import org.apache.commons.cli.Options;
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.combiner.Combiner;
 import org.apache.giraph.conf.GiraphConfiguration;
-import org.apache.giraph.examples.Algorithm;
 import org.apache.giraph.job.GiraphJob;
 import org.apache.giraph.job.GiraphTypeValidator;
 import org.apache.giraph.io.EdgeInputFormat;
