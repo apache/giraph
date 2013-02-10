@@ -18,6 +18,8 @@
 
 package org.apache.giraph.conf;
 
+import java.net.UnknownHostException;
+
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.combiner.Combiner;
 import org.apache.giraph.job.DefaultJobObserver;
@@ -35,6 +37,7 @@ import org.apache.giraph.vertex.Vertex;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.giraph.worker.WorkerObserver;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.net.DNS;
 
 /**
  * Adds user methods specific to Giraph.  This will be put into an
@@ -695,5 +698,17 @@ public class GiraphConfiguration extends Configuration
   public boolean useInputSplitLocality() {
     return getBoolean(GiraphConstants.USE_INPUT_SPLIT_LOCALITY,
         GiraphConstants.USE_INPUT_SPLIT_LOCALITY_DEFAULT);
+  }
+
+  /**
+   * Get the local hostname on the given interface.
+   *
+   * @return The local hostname
+   * @throws UnknownHostException
+   */
+  public String getLocalHostname() throws UnknownHostException {
+    return DNS.getDefaultHost(
+        get(GiraphConstants.DNS_INTERFACE, "default"),
+        get(GiraphConstants.DNS_NAMESERVER, "default"));
   }
 }

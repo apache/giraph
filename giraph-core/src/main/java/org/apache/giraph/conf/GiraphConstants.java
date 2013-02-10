@@ -595,5 +595,10 @@ public interface GiraphConstants {
    * Hadoop.
    */
   String MAX_TASK_ATTEMPTS = "mapred.map.max.attempts";
+
+  /** Interface to use for hostname resolution */
+  String DNS_INTERFACE = "giraph.dns.interface";
+  /** Server for hostname resolution */
+  String DNS_NAMESERVER = "giraph.dns.nameserver";
 }
 // CHECKSTYLE: resume InterfaceIsTypeCheck

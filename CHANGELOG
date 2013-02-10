@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+
+  GIRAPH-511: DNS interface and nameserver for multi-interface machines (claudio)
+
   GIRAPH-470 (tavoaqp via nitay)
 
   GIRAPH-504: Create PartitionContext (majakabiljo)

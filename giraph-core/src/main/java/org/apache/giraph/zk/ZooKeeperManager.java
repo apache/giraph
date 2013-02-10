@@ -42,7 +42,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Writer;
 import java.net.ConnectException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
@@ -171,8 +170,7 @@ public class ZooKeeperManager {
         GiraphConstants.ZOOKEEPER_SERVER_PORT,
         GiraphConstants.ZOOKEEPER_SERVER_PORT_DEFAULT);
 
-
-    myHostname = InetAddress.getLocalHost().getCanonicalHostName();
+    myHostname = conf.getLocalHostname();
     fs = FileSystem.get(conf);
   }
 

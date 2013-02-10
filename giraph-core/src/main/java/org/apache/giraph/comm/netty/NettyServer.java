@@ -54,7 +54,6 @@ import org.jboss.netty.handler.execution.MemoryAwareThreadPoolExecutor;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.concurrent.ExecutorService;
@@ -158,7 +157,7 @@ public class NettyServer {
             "netty-server-worker-%d").build());
 
     try {
-      this.localHostname = InetAddress.getLocalHost().getHostName();
+      this.localHostname = conf.getLocalHostname();
     } catch (UnknownHostException e) {
       throw new IllegalStateException("NettyServer: unable to get hostname");
     }

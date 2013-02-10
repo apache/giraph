@@ -46,7 +46,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.security.InvalidParameterException;
 import java.util.ArrayList;
@@ -293,7 +292,7 @@ public abstract class BspService<I extends WritableComparable,
               restartedSuperstep);
     }
     try {
-      this.hostname = InetAddress.getLocalHost().getHostName();
+      this.hostname = conf.getLocalHostname();
     } catch (UnknownHostException e) {
       throw new RuntimeException(e);
     }
