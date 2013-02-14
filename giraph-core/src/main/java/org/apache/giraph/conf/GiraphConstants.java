@@ -502,7 +502,10 @@ public interface GiraphConstants {
    */
   String CHECKPOINT_DIRECTORY_DEFAULT = "_bsp/_checkpoints/";
 
-  /** Directory in the local file system for out-of-core messages. */
+  /** 
+   * Comma-separated list of directories in the local file system for
+   * out-of-core messages.
+   */
   String MESSAGES_DIRECTORY = "giraph.messagesDirectory";
   /**
    * Default messages directory. directory path will also have the
