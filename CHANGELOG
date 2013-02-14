@@ -2,6 +2,8 @@ Giraph Change Log
 
 Release 0.2.0 - unreleased
 
+  GIRAPH-513: OnDiskPartitionStore should take advantage of multiple disks (claudio)
+
   GIRAPH-511: DNS interface and nameserver for multi-interface machines (claudio)
 
   GIRAPH-470 (tavoaqp via nitay)
