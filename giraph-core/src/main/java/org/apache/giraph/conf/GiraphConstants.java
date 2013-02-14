@@ -528,7 +528,7 @@ public interface GiraphConstants {
 
   /**
    * Comma-separated list of directories in the local filesystem for
-   * out-of-core partitions. 
+   * out-of-core partitions.
    */
   String PARTITIONS_DIRECTORY = "giraph.partitionsDirectory";
   /** Default directory for out-of-core partitions. */

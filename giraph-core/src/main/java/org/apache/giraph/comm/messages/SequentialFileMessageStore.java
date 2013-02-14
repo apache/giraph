@@ -40,6 +40,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.SortedSet;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -361,8 +362,8 @@ public class SequentialFileMessageStore<I extends WritableComparable,
       implements MessageStoreFactory<I, M, BasicMessageStore<I, M>> {
     /** Hadoop configuration */
     private final ImmutableClassesGiraphConfiguration config;
-    /** Directory in which we'll keep necessary files */
-    private final String directory;
+    /** Directories in which we'll keep necessary files */
+    private final String[] directories;
     /** Buffer size to use when reading and writing */
     private final int bufferSize;
     /** Counter for created message stores */
@@ -376,18 +377,29 @@ public class SequentialFileMessageStore<I extends WritableComparable,
     public Factory(ImmutableClassesGiraphConfiguration config) {
       this.config = config;
       String jobId = config.get("mapred.job.id", "Unknown Job");
-      this.directory = config.get(GiraphConstants.MESSAGES_DIRECTORY,
-          GiraphConstants.MESSAGES_DIRECTORY_DEFAULT) + jobId +
-          File.separator;
-      this.bufferSize = config.getInt(GiraphConstants.MESSAGES_BUFFER_SIZE,
+
+      List<String> userPaths = Lists.newArrayList(config.getStrings(
+          GiraphConstants.MESSAGES_DIRECTORY,
+          GiraphConstants.MESSAGES_DIRECTORY_DEFAULT));
+      Collections.shuffle(userPaths);
+      directories = new String[userPaths.size()];
+      int i = 0;
+      for (String path : userPaths) {
+        String directory = path + jobId;
+        directories[i++] = directory;
+        new File(directory).mkdirs();
+      }
+      this.bufferSize = config.getInt(
+          GiraphConstants.MESSAGES_BUFFER_SIZE,
           GiraphConstants.MESSAGES_BUFFER_SIZE_DEFAULT);
       storeCounter = new AtomicInteger();
-      new File(directory).mkdirs();
     }
 
     @Override
     public BasicMessageStore<I, M> newStore() {
-      String fileName = directory + storeCounter.getAndIncrement();
+      int idx = storeCounter.getAndIncrement();
+      String fileName =
+          directories[idx % directories.length] + "/messages-" + idx;
       return new SequentialFileMessageStore<I, M>(config, bufferSize,
           fileName);
     }
