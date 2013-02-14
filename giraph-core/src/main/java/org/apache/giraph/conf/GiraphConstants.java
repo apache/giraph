@@ -526,7 +526,10 @@ public interface GiraphConstants {
   /** Default size of buffer when reading and writing messages out-of-core. */
   int MESSAGES_BUFFER_SIZE_DEFAULT = 8192;
 
-  /** Directory in the local filesystem for out-of-core partitions. */
+  /**
+   * Comma-separated list of directories in the local filesystem for
+   * out-of-core partitions. 
+   */
   String PARTITIONS_DIRECTORY = "giraph.partitionsDirectory";
   /** Default directory for out-of-core partitions. */
   String PARTITIONS_DIRECTORY_DEFAULT = "_bsp/_partitions";
