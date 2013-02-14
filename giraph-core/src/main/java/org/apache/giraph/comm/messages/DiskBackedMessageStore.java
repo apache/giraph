@@ -114,9 +114,11 @@ public class DiskBackedMessageStore<I extends WritableComparable,
         }
       }
 
-      for (M message : messages) {
-        message.write(extendedDataOutput);
-        numberOfMessagesInMemory.getAndIncrement();
+      synchronized (extendedDataOutput) {
+        for (M message : messages) {
+          message.write(extendedDataOutput);
+          numberOfMessagesInMemory.getAndIncrement();
+        }
       }
     } finally {
       rwLock.readLock().unlock();
