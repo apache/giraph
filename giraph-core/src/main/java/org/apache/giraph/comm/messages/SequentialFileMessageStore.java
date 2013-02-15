@@ -98,7 +98,7 @@ public class SequentialFileMessageStore<I extends WritableComparable,
       if (LOG.isDebugEnabled()) {
         LOG.debug("addMessages: Deleting " + file);
       }
-      file.delete();
+      //file.delete();
     }
     file.createNewFile();
     if (LOG.isDebugEnabled()) {
@@ -336,7 +336,6 @@ public class SequentialFileMessageStore<I extends WritableComparable,
     }
   }
 
-
   /**
    * Create new factory for this message store
    *
@@ -377,7 +376,7 @@ public class SequentialFileMessageStore<I extends WritableComparable,
     public Factory(ImmutableClassesGiraphConfiguration config) {
       this.config = config;
       String jobId = config.get("mapred.job.id", "Unknown Job");
-
+      int taskId   = config.getTaskPartition();
       List<String> userPaths = Lists.newArrayList(config.getStrings(
           GiraphConstants.MESSAGES_DIRECTORY,
           GiraphConstants.MESSAGES_DIRECTORY_DEFAULT));
@@ -385,7 +384,8 @@ public class SequentialFileMessageStore<I extends WritableComparable,
       directories = new String[userPaths.size()];
       int i = 0;
       for (String path : userPaths) {
-        String directory = path + jobId;
+        String directory = path + File.separator + jobId + File.separator +
+            taskId + File.separator;
         directories[i++] = directory;
         new File(directory).mkdirs();
       }
@@ -397,9 +397,9 @@ public class SequentialFileMessageStore<I extends WritableComparable,
 
     @Override
     public BasicMessageStore<I, M> newStore() {
-      int idx = storeCounter.getAndIncrement();
+      int idx = Math.abs(storeCounter.getAndIncrement());
       String fileName =
-          directories[idx % directories.length] + "/messages-" + idx;
+          directories[idx % directories.length] + "messages-" + idx;
       return new SequentialFileMessageStore<I, M>(config, bufferSize,
           fileName);
     }
