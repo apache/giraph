@@ -16,50 +16,34 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.comm;
+package org.apache.giraph.vertex;
 
-import org.apache.giraph.graph.GraphState;
+import org.apache.giraph.graph.Edge;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import java.io.Closeable;
-import java.net.InetSocketAddress;
-
 /**
- * Interface for message communication server.
+ * Similar to {@link ByteArrayVertex}, but allows for parallel edges.
+ *
+ * Note:  removeEdge() here removes all edges pointing to the target vertex,
+ * but returns only one of them (or null if there are no such edges).
  *
  * @param <I> Vertex id
  * @param <V> Vertex value
  * @param <E> Edge value
  * @param <M> Message data
  */
-@SuppressWarnings("rawtypes")
-public interface WorkerServer<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    extends Closeable {
-  /**
-   * Get server address
-   *
-   * @return Address used by this server
-   */
-  InetSocketAddress getMyAddress();
+public abstract class MultiGraphByteArrayVertex<I extends
+    WritableComparable, V extends Writable, E extends Writable,
+    M extends Writable> extends ByteArrayVertexBase<I, V, E, M> {
+  @Override
+  public final boolean addEdge(Edge<I, E> edge) {
+    appendEdge(edge);
+    return true;
+  }
 
-  /**
-   * Prepare incoming messages for computation, and resolve mutation requests.
-   *
-   * @param graphState Current graph state
-   */
-  void prepareSuperstep(GraphState<I, V, E, M> graphState);
-
-  /**
-   * Get server data
-   *
-   * @return Server data
-   */
-  ServerData<I, V, E, M> getServerData();
-
-  /**
-   * Shuts down.
-   */
-  void close();
+  @Override
+  public final int removeEdges(I targetVertexId) {
+    return removeAllEdges(targetVertexId);
+  }
 }

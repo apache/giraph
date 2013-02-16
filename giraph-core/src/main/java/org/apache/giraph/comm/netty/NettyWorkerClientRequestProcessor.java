@@ -17,8 +17,12 @@
  */
 package org.apache.giraph.comm.netty;
 
+import com.yammer.metrics.core.Counter;
+import com.yammer.metrics.core.Gauge;
+import com.yammer.metrics.util.PercentGauge;
 import org.apache.giraph.bsp.BspService;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
+import org.apache.giraph.comm.SendEdgeCache;
 import org.apache.giraph.comm.SendMessageCache;
 import org.apache.giraph.comm.SendMutationsCache;
 import org.apache.giraph.comm.SendPartitionCache;
@@ -29,6 +33,7 @@ import org.apache.giraph.comm.messages.MessageStoreByPartition;
 import org.apache.giraph.comm.requests.SendPartitionCurrentMessagesRequest;
 import org.apache.giraph.comm.requests.SendPartitionMutationsRequest;
 import org.apache.giraph.comm.requests.SendVertexRequest;
+import org.apache.giraph.comm.requests.SendWorkerEdgesRequest;
 import org.apache.giraph.comm.requests.SendWorkerMessagesRequest;
 import org.apache.giraph.comm.requests.WorkerRequest;
 import org.apache.giraph.comm.requests.WritableRequest;
@@ -41,6 +46,7 @@ import org.apache.giraph.metrics.MetricNames;
 import org.apache.giraph.metrics.SuperstepMetricsRegistry;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.partition.PartitionOwner;
+import org.apache.giraph.utils.ByteArrayVertexIdEdges;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.giraph.utils.PairList;
 import org.apache.giraph.vertex.Vertex;
@@ -49,10 +55,6 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
-
-import com.yammer.metrics.core.Counter;
-import com.yammer.metrics.core.Gauge;
-import com.yammer.metrics.util.PercentGauge;
 
 import java.io.IOException;
 import java.util.Map;
@@ -67,6 +69,7 @@ import java.util.Map;
  * @param <E> Edge data
  * @param <M> Message data
  */
+@SuppressWarnings("unchecked")
 public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable> implements
     WorkerClientRequestProcessor<I, V, E, M> {
@@ -77,6 +80,8 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
   private final SendPartitionCache<I, V, E, M> sendPartitionCache;
   /** Cached map of partitions to vertex indices to messages */
   private final SendMessageCache<I, M> sendMessageCache;
+  /** Cache of edges to be sent. */
+  private final SendEdgeCache<I, E> sendEdgeCache;
   /** Cached map of partitions to vertex indices to mutations */
   private final SendMutationsCache<I, V, E, M> sendMutationsCache =
       new SendMutationsCache<I, V, E, M>();
@@ -86,6 +91,8 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
   private long totalMsgsSentInSuperstep = 0;
   /** Maximum size of messages per remote worker to cache before sending */
   private final int maxMessagesSizePerWorker;
+  /** Maximum size of edges per remote worker to cache before sending. */
+  private final int maxEdgesSizePerWorker;
   /** Maximum number of mutations per partition before sending */
   private final int maxMutationsPerPartition;
   /** Giraph configuration */
@@ -119,9 +126,13 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
         configuration);
     sendMessageCache =
         new SendMessageCache<I, M>(configuration, serviceWorker);
+    sendEdgeCache = new SendEdgeCache<I, E>(configuration, serviceWorker);
     maxMessagesSizePerWorker = configuration.getInt(
         GiraphConstants.MAX_MSG_REQUEST_SIZE,
         GiraphConstants.MAX_MSG_REQUEST_SIZE_DEFAULT);
+    maxEdgesSizePerWorker = configuration.getInt(
+        GiraphConstants.MAX_EDGE_REQUEST_SIZE,
+        GiraphConstants.MAX_EDGE_REQUEST_SIZE_DEFAULT);
     maxMutationsPerPartition = configuration.getInt(
         GiraphConstants.MAX_MUTATIONS_PER_REQUEST,
         GiraphConstants.MAX_MUTATIONS_PER_REQUEST_DEFAULT);
@@ -135,7 +146,8 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
     remoteRequests = smr.getCounter(MetricNames.REMOTE_REQUESTS);
     final Gauge<Long> totalRequests = smr.getGauge(MetricNames.TOTAL_REQUESTS,
         new Gauge<Long>() {
-          @Override public Long value() {
+          @Override
+          public Long value() {
             return localRequests.count() + remoteRequests.count();
           }
         }
@@ -174,7 +186,7 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
           workerMessages =
           sendMessageCache.removeWorkerMessages(workerInfo);
       WritableRequest writableRequest =
-          new SendWorkerMessagesRequest<I, V, E, M>(workerMessages);
+          new SendWorkerMessagesRequest<I, M>(workerMessages);
       doRequest(workerInfo, writableRequest);
       return true;
     }
@@ -278,6 +290,36 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
         partitionId, partitionOwner, partitionMutationCount);
   }
 
+  @Override
+  public boolean sendEdgeRequest(I sourceVertexId, Edge<I, E> edge)
+    throws IOException {
+    PartitionOwner owner =
+        serviceWorker.getVertexPartitionOwner(sourceVertexId);
+    WorkerInfo workerInfo = owner.getWorkerInfo();
+    final int partitionId = owner.getPartitionId();
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("sendEdgeRequest: Send bytes (" + edge.toString() +
+          ") to " + sourceVertexId + " on worker " + workerInfo);
+    }
+
+    // Add the message to the cache
+    int workerEdgesSize = sendEdgeCache.addEdge(
+        workerInfo, partitionId, sourceVertexId, edge);
+
+    // Send a request if the cache of outgoing edges to the remote worker is
+    // full
+    if (workerEdgesSize >= maxEdgesSizePerWorker) {
+      PairList<Integer, ByteArrayVertexIdEdges<I, E>> workerEdges =
+          sendEdgeCache.removeWorkerEdges(workerInfo);
+      WritableRequest writableRequest =
+          new SendWorkerEdgesRequest<I, E>(workerEdges);
+      doRequest(workerInfo, writableRequest);
+      return true;
+    }
+
+    return false;
+  }
+
   /**
    * Send a mutations request if the maximum number of mutations per partition
    * was met.
@@ -376,9 +418,24 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
     while (iterator.hasNext()) {
       iterator.next();
       WritableRequest writableRequest =
-          new SendWorkerMessagesRequest<I, V, E, M>(
+          new SendWorkerMessagesRequest<I, M>(
               iterator.getCurrentSecond());
       doRequest(iterator.getCurrentFirst(), writableRequest);
+    }
+
+    // Execute the remaining sends edges (if any)
+    PairList<WorkerInfo, PairList<Integer,
+        ByteArrayVertexIdEdges<I, E>>>
+        remainingEdgeCache = sendEdgeCache.removeAllEdges();
+    PairList<WorkerInfo,
+        PairList<Integer, ByteArrayVertexIdEdges<I, E>>>.Iterator
+        edgeIterator = remainingEdgeCache.getIterator();
+    while (edgeIterator.hasNext()) {
+      edgeIterator.next();
+      WritableRequest writableRequest =
+          new SendWorkerEdgesRequest<I, E>(
+              edgeIterator.getCurrentSecond());
+      doRequest(edgeIterator.getCurrentFirst(), writableRequest);
     }
 
     // Execute the remaining sends mutations (if any)

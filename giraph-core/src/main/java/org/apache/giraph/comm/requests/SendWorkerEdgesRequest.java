@@ -19,62 +19,58 @@
 package org.apache.giraph.comm.requests;
 
 import org.apache.giraph.comm.ServerData;
-import org.apache.giraph.utils.ByteArrayVertexIdMessages;
+import org.apache.giraph.graph.Edge;
+import org.apache.giraph.utils.ByteArrayVertexIdEdges;
 import org.apache.giraph.utils.PairList;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import java.io.IOException;
-
 /**
- * Send a collection of vertex messages for a partition.
+ * Send a collection of edges for a partition.
  *
  * @param <I> Vertex id
- * @param <M> Message data
+ * @param <E> Edge data
  */
 @SuppressWarnings("unchecked")
-public class SendWorkerMessagesRequest<I extends WritableComparable,
-    M extends Writable>
-    extends SendWorkerDataRequest<I, M, ByteArrayVertexIdMessages<I, M>> {
+public class SendWorkerEdgesRequest<I extends WritableComparable,
+    E extends Writable>
+    extends SendWorkerDataRequest<I, Edge<I, E>,
+    ByteArrayVertexIdEdges<I, E>> {
   /**
    * Constructor used for reflection only
    */
-  public SendWorkerMessagesRequest() { }
+  public SendWorkerEdgesRequest() { }
 
   /**
    * Constructor used to send request.
    *
-   * @param partVertMsgs Map of remote partitions =>
-   *                     ByteArrayVertexIdMessages
+   * @param partVertEdges Map of remote partitions =>
+   *                     ByteArrayVertexIdEdges
    */
-  public SendWorkerMessagesRequest(
-      PairList<Integer, ByteArrayVertexIdMessages<I, M>> partVertMsgs) {
-    this.partitionVertexData = partVertMsgs;
+  public SendWorkerEdgesRequest(
+      PairList<Integer, ByteArrayVertexIdEdges<I, E>> partVertEdges) {
+    this.partitionVertexData = partVertEdges;
   }
 
   @Override
-  public ByteArrayVertexIdMessages<I, M> createByteArrayVertexIdData() {
-    return new ByteArrayVertexIdMessages<I, M>();
+  public ByteArrayVertexIdEdges<I, E> createByteArrayVertexIdData() {
+    return new ByteArrayVertexIdEdges<I, E>();
   }
 
   @Override
   public RequestType getType() {
-    return RequestType.SEND_WORKER_MESSAGES_REQUEST;
+    return RequestType.SEND_WORKER_EDGES_REQUEST;
   }
 
   @Override
   public void doRequest(ServerData serverData) {
-    PairList<Integer, ByteArrayVertexIdMessages<I, M>>.Iterator
+    PairList<Integer, ByteArrayVertexIdEdges<I, E>>.Iterator
         iterator = partitionVertexData.getIterator();
     while (iterator.hasNext()) {
       iterator.next();
-      try {
-        serverData.getIncomingMessageStore().
-            addPartitionMessages(iterator.getCurrentFirst(),
-                iterator.getCurrentSecond());
-      } catch (IOException e) {
-        throw new RuntimeException("doRequest: Got IOException ", e);
-      }
+      serverData.getEdgeStore().
+          addPartitionEdges(iterator.getCurrentFirst(),
+              iterator.getCurrentSecond());
     }
   }
 }

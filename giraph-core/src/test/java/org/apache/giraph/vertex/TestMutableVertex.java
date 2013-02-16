@@ -80,10 +80,10 @@ public class TestMutableVertex {
 
   /**
    * Simple instantiable class that extends
-   * {@link org.apache.giraph.vertex.RepresentativeVertex}.
+   * {@link ByteArrayVertex}.
    */
-  public static class IFDLRepresentativeVertex extends RepresentativeVertex<IntWritable, FloatWritable, DoubleWritable,
-                  LongWritable> {
+  public static class IFDLRepresentativeVertex extends ByteArrayVertex<IntWritable, FloatWritable, DoubleWritable,
+                    LongWritable> {
     @Override
     public void compute(Iterable<LongWritable> messages) throws IOException { }
   }

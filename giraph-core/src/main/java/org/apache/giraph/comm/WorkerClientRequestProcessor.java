@@ -74,6 +74,19 @@ public interface WorkerClientRequestProcessor<I extends WritableComparable,
   void addEdgeRequest(I vertexIndex, Edge<I, E> edge) throws IOException;
 
   /**
+   * Sends a request to the source vertex owner to add an edge.
+   * Note: this request follows an optimized code path used by edge-based
+   * input, and doesn't coordinate with mutations.
+   *
+   * @param sourceVertexId Source vertex id.
+   * @param edge Edge to be added.
+   * @return Returns true iff any network I/O occurred.
+   * @throws IOException
+   */
+  boolean sendEdgeRequest(I sourceVertexId, Edge<I, E> edge)
+    throws IOException;
+
+  /**
    * Sends a request to the appropriate vertex range owner to remove all edges
    * pointing to a given vertex.
    *

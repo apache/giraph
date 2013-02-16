@@ -161,6 +161,7 @@ public class MockUtils {
   createNewServerData(ImmutableClassesGiraphConfiguration conf,
       Mapper.Context context) {
     return new ServerData<IntWritable, IntWritable, IntWritable, IntWritable>(
+        Mockito.mock(CentralizedServiceWorker.class),
         conf,
         ByteArrayMessagesPerVertexStore.newFactory(
             MockUtils.mockServiceGetVertexPartitionOwner(1), conf),

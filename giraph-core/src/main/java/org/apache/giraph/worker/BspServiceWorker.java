@@ -565,10 +565,8 @@ else[HADOOP_NON_SECURE]*/
     }
 
     if (getConfiguration().hasEdgeInputFormat()) {
-      // Create vertices from added edges via vertex resolver.
-      // Doing this at the beginning of superstep 0 is not enough,
-      // because we want the vertex/edge stats to be accurate.
-      workerServer.resolveMutations(graphState);
+      // Move edges from temporary storage to their source vertices.
+      getServerData().getEdgeStore().moveEdgesToVertices();
     }
 
     // Generate the partition stats for the input superstep and process

@@ -18,10 +18,12 @@
 
 package org.apache.giraph.utils;
 
+import org.apache.giraph.graph.Edge;
 import org.apache.giraph.zk.ZooKeeperExt;
 import org.apache.giraph.zk.ZooKeeperExt.PathStat;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
@@ -30,6 +32,7 @@ import org.apache.zookeeper.data.Stat;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
@@ -322,5 +325,37 @@ public class WritableUtils {
           "readListFieldsFromZnode: InterruptedException on " + zkPath,
           e);
     }
+  }
+
+  /**
+   * Write an edge to an output stream.
+   *
+   * @param out Data output
+   * @param edge Edge to write
+   * @param <I> Vertex id
+   * @param <E> Edge value
+   * @throws IOException
+   */
+  public static <I extends WritableComparable, E extends Writable>
+  void writeEdge(DataOutput out, Edge<I, E> edge)
+    throws IOException {
+    edge.getTargetVertexId().write(out);
+    edge.getValue().write(out);
+  }
+
+  /**
+   * Read an edge from an input stream.
+   *
+   * @param in Data input
+   * @param edge Edge to fill in-place
+   * @param <I> Vertex id
+   * @param <E> Edge value
+   * @throws IOException
+   */
+  public static <I extends WritableComparable, E extends Writable>
+  void readEdge(DataInput in, Edge<I, E> edge)
+    throws IOException {
+    edge.getTargetVertexId().readFields(in);
+    edge.getValue().readFields(in);
   }
 }

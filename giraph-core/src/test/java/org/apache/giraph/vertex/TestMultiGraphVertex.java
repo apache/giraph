@@ -45,9 +45,9 @@ public class TestMultiGraphVertex {
     public void compute(Iterable<IntWritable> messages) throws IOException { }
   }
 
-  public static class MyMultiGraphRepresentativeVertex
-      extends MultiGraphRepresentativeVertex<IntWritable, IntWritable,
-            IntWritable, IntWritable> {
+  public static class MyMultiGraphByteArrayVertex
+      extends MultiGraphByteArrayVertex<IntWritable, IntWritable,
+                  IntWritable, IntWritable> {
     @Override
     public void compute(Iterable<IntWritable> messages) throws IOException { }
   }
@@ -55,7 +55,7 @@ public class TestMultiGraphVertex {
   @Before
   public void setUp() {
     vertexClasses.add(MyMultiGraphEdgeListVertex.class);
-    vertexClasses.add(MyMultiGraphRepresentativeVertex.class);
+    vertexClasses.add(MyMultiGraphByteArrayVertex.class);
   }
 
   @Test

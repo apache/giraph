@@ -20,21 +20,23 @@ package org.apache.giraph.conf;
 
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.combiner.Combiner;
-import org.apache.giraph.job.GiraphJobObserver;
-import org.apache.giraph.io.EdgeInputFormat;
+import org.apache.giraph.graph.DefaultEdge;
+import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.EdgeNoValue;
 import org.apache.giraph.graph.GraphState;
-import org.apache.giraph.master.MasterCompute;
-import org.apache.giraph.partition.PartitionContext;
-import org.apache.giraph.vertex.Vertex;
+import org.apache.giraph.graph.MutableEdge;
+import org.apache.giraph.graph.VertexResolver;
+import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
-import org.apache.giraph.graph.VertexResolver;
-import org.apache.giraph.worker.WorkerContext;
+import org.apache.giraph.job.GiraphJobObserver;
+import org.apache.giraph.master.MasterCompute;
+import org.apache.giraph.master.MasterObserver;
 import org.apache.giraph.partition.GraphPartitionerFactory;
 import org.apache.giraph.partition.MasterGraphPartitioner;
 import org.apache.giraph.partition.Partition;
+import org.apache.giraph.partition.PartitionContext;
 import org.apache.giraph.partition.PartitionStats;
-import org.apache.giraph.master.MasterObserver;
 import org.apache.giraph.utils.ExtendedByteArrayDataInput;
 import org.apache.giraph.utils.ExtendedByteArrayDataOutput;
 import org.apache.giraph.utils.ExtendedDataInput;
@@ -42,6 +44,8 @@ import org.apache.giraph.utils.ExtendedDataOutput;
 import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.giraph.utils.UnsafeByteArrayInputStream;
 import org.apache.giraph.utils.UnsafeByteArrayOutputStream;
+import org.apache.giraph.vertex.Vertex;
+import org.apache.giraph.worker.WorkerContext;
 import org.apache.giraph.worker.WorkerObserver;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.NullWritable;
@@ -495,6 +499,32 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
         throw new IllegalArgumentException(
             "createEdgeValue: Illegally accessed", e);
       }
+    }
+  }
+
+  /**
+   * Create a user edge.
+   *
+   * @return Instantiated user edge.
+   */
+  public Edge<I, E> createEdge() {
+    if (isEdgeValueNullWritable()) {
+      return (Edge<I, E>) new EdgeNoValue<I>(createVertexId());
+    } else {
+      return new DefaultEdge<I, E>(createVertexId(), createEdgeValue());
+    }
+  }
+
+  /**
+   * Create a mutable user edge.
+   *
+   * @return Instantiated mutable user edge.
+   */
+  public MutableEdge<I, E> createMutableEdge() {
+    if (isEdgeValueNullWritable()) {
+      return (MutableEdge<I, E>) new EdgeNoValue<I>(createVertexId());
+    } else {
+      return new DefaultEdge<I, E>(createVertexId(), createEdgeValue());
     }
   }
 

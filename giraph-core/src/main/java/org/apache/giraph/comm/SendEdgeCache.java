@@ -21,76 +21,77 @@ package org.apache.giraph.comm;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.utils.ByteArrayVertexIdMessages;
+import org.apache.giraph.graph.Edge;
+import org.apache.giraph.utils.ByteArrayVertexIdEdges;
 import org.apache.giraph.utils.PairList;
 import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
- * Aggregates the messages to be sent to workers so they can be sent
+ * Aggregates the edges to be sent to workers so they can be sent
  * in bulk.  Not thread-safe.
  *
  * @param <I> Vertex id
- * @param <M> Message data
+ * @param <E> Edge value
  */
-public class SendMessageCache<I extends WritableComparable, M extends Writable>
-    extends SendCache<I, M, ByteArrayVertexIdMessages<I, M>> {
+public class SendEdgeCache<I extends WritableComparable, E extends Writable>
+    extends SendCache<I, Edge<I, E>, ByteArrayVertexIdEdges<I, E>> {
   /**
    * Constructor
    *
    * @param conf Giraph configuration
    * @param serviceWorker Service worker
    */
-  public SendMessageCache(ImmutableClassesGiraphConfiguration conf,
-      CentralizedServiceWorker<?, ?, ?, ?> serviceWorker) {
+  public SendEdgeCache(ImmutableClassesGiraphConfiguration conf,
+                       CentralizedServiceWorker<?, ?, ?, ?> serviceWorker) {
     super(conf,
         serviceWorker,
-        conf.getInt(GiraphConstants.MAX_MSG_REQUEST_SIZE,
-            GiraphConstants.MAX_MSG_REQUEST_SIZE_DEFAULT),
-        conf.getFloat(GiraphConstants.ADDITIONAL_MSG_REQUEST_SIZE,
-            GiraphConstants.ADDITIONAL_MSG_REQUEST_SIZE_DEFAULT));
+        conf.getInt(GiraphConstants.MAX_EDGE_REQUEST_SIZE,
+            GiraphConstants.MAX_EDGE_REQUEST_SIZE_DEFAULT),
+        conf.getFloat(GiraphConstants.ADDITIONAL_EDGE_REQUEST_SIZE,
+            GiraphConstants.ADDITIONAL_EDGE_REQUEST_SIZE_DEFAULT));
   }
 
   @Override
-  public ByteArrayVertexIdMessages<I, M> createByteArrayVertexIdData() {
-    return new ByteArrayVertexIdMessages<I, M>();
+  public ByteArrayVertexIdEdges<I, E> createByteArrayVertexIdData() {
+    return new ByteArrayVertexIdEdges<I, E>();
   }
 
   /**
-   * Add a message to the cache.
+   * Add an edge to the cache.
    *
    * @param workerInfo the remote worker destination
-   * @param partitionId the remote Partition this message belongs to
+   * @param partitionId the remote Partition this edge belongs to
    * @param destVertexId vertex id that is ultimate destination
-   * @param message Message to send to remote worker
-   * @return Size of messages for the worker.
+   * @param edge Edge to send to remote worker
+   * @return Size of edges for the worker.
    */
-  public int addMessage(WorkerInfo workerInfo,
-                        int partitionId, I destVertexId, M message) {
-    return addData(workerInfo, partitionId, destVertexId, message);
+  public int addEdge(WorkerInfo workerInfo,
+                     int partitionId, I destVertexId, Edge<I, E> edge) {
+    return addData(workerInfo, partitionId, destVertexId, edge);
   }
 
   /**
-   * Gets the messages for a worker and removes it from the cache.
+   * Gets the edges for a worker and removes it from the cache.
    *
    * @param workerInfo the address of the worker who owns the data
-   *                   partitions that are receiving the messages
-   * @return List of pairs (partitionId, ByteArrayVertexIdMessages),
+   *                   partitions that are receiving the edges
+   * @return List of pairs (partitionId, ByteArrayVertexIdEdges),
    *         where all partition ids belong to workerInfo
    */
-  public PairList<Integer, ByteArrayVertexIdMessages<I, M>>
-  removeWorkerMessages(WorkerInfo workerInfo) {
+  public PairList<Integer, ByteArrayVertexIdEdges<I, E>>
+  removeWorkerEdges(WorkerInfo workerInfo) {
     return removeWorkerData(workerInfo);
   }
 
   /**
-   * Gets all the messages and removes them from the cache.
+   * Gets all the edges and removes them from the cache.
    *
-   * @return All vertex messages for all partitions
+   * @return All vertex edges for all partitions
    */
-  public PairList<WorkerInfo, PairList<
-      Integer, ByteArrayVertexIdMessages<I, M>>> removeAllMessages() {
+  public PairList<WorkerInfo, PairList<Integer, ByteArrayVertexIdEdges<I, E>>>
+  removeAllEdges() {
     return removeAllData();
   }
 }

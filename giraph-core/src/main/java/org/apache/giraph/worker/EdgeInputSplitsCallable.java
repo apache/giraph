@@ -130,7 +130,7 @@ public class EdgeInputSplitsCallable<I extends WritableComparable,
                 "without a value!  - " + readerEdge);
       }
 
-      graphState.getWorkerClientRequestProcessor().addEdgeRequest(
+      graphState.getWorkerClientRequestProcessor().sendEdgeRequest(
           sourceId, readerEdge);
       context.progress(); // do this before potential data transfer
       ++inputSplitEdgesLoaded;
