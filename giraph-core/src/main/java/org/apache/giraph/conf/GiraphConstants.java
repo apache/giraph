@@ -57,6 +57,9 @@ public interface GiraphConstants {
   /** VertexOutputFormat class */
   String VERTEX_OUTPUT_FORMAT_CLASS = "giraph.vertexOutputFormatClass";
 
+  /** Output Format Path (for Giraph-on-YARN) */
+  String GIRAPH_OUTPUT_DIR = "giraph.output.dir";
+
   /** Vertex index class */
   String VERTEX_ID_CLASS = "giraph.vertexIdClass";
   /** Vertex value class */

@@ -25,7 +25,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.mapreduce.InputSplit;
-import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.FileSplit;
@@ -81,12 +80,12 @@ public abstract class GiraphFileInputFormat<K, V>
   /**
    * Add a {@link org.apache.hadoop.fs.Path} to the list of vertex inputs.
    *
-   * @param job The {@link org.apache.hadoop.mapreduce.Job} to modify
+   * @param conf the Configuration to store the input paths
    * @param path {@link org.apache.hadoop.fs.Path} to be added to the list of
    *                                              vertex inputs
    */
-  public static void addVertexInputPath(Job job, Path path) throws IOException {
-    Configuration conf = job.getConfiguration();
+  public static void addVertexInputPath(Configuration conf,
+    Path path) throws IOException {
     path = path.getFileSystem(conf).makeQualified(path);
     String dirStr = StringUtils.escapeString(path.toString());
     String dirs = conf.get(VERTEX_INPUT_DIR);
@@ -96,12 +95,12 @@ public abstract class GiraphFileInputFormat<K, V>
   /**
    * Add a {@link org.apache.hadoop.fs.Path} to the list of edge inputs.
    *
-   * @param job The {@link org.apache.hadoop.mapreduce.Job} to modify
+   * @param conf the Configuration to store the input paths
    * @param path {@link org.apache.hadoop.fs.Path} to be added to the list of
    *                                              edge inputs
    */
-  public static void addEdgeInputPath(Job job, Path path) throws IOException {
-    Configuration conf = job.getConfiguration();
+  public static void addEdgeInputPath(Configuration conf,
+    Path path) throws IOException {
     path = path.getFileSystem(conf).makeQualified(path);
     String dirStr = StringUtils.escapeString(path.toString());
     String dirs = conf.get(EDGE_INPUT_DIR);
