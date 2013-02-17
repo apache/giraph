@@ -114,6 +114,21 @@ public interface GiraphConstants {
   /** Default to not use thread-level debugging */
   boolean LOG_THREAD_LAYOUT_DEFAULT = false;
 
+  /** Configuration key to enable jmap printing */
+  String JMAP_ENABLE = "giraph.jmap.histo.enable";
+  /** Default value for enabling jmap */
+  boolean JMAP_ENABLE_DEFAULT = false;
+
+  /** Configuration key for msec to sleep between calls */
+  String JMAP_SLEEP_MILLIS = "giraph.jmap.histo.msec";
+  /** Default msec to sleep between calls */
+  int JMAP_SLEEP_MILLIS_DEFAULT = 30000;
+
+  /** Configuration key for how many lines to print */
+  String JMAP_PRINT_LINES = "giraph.jmap.histo.print_lines";
+  /** Default lines of output to print */
+  int JMAP_PRINT_LINES_DEFAULT = 30;
+
   /**
    * Minimum percent of the maximum number of workers that have responded
    * in order to continue progressing. (float)

@@ -150,6 +150,15 @@ public class GiraphConfiguration extends Configuration
   }
 
   /**
+   * Check whether to enable jmap dumping thread.
+   *
+   * @return true if jmap dumper is enabled.
+   */
+  public boolean isJMapHistogramDumpEnabled() {
+    return getBoolean(JMAP_ENABLE, JMAP_ENABLE_DEFAULT);
+  }
+
+  /**
    * Add a class to a property that is a list of classes. If the property does
    * not exist it will be created.
    *
