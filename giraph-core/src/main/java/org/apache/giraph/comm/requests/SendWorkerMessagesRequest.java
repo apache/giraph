@@ -18,39 +18,24 @@
 
 package org.apache.giraph.comm.requests;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
 import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.giraph.utils.PairList;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.log4j.Logger;
+
+import java.io.IOException;
 
 /**
  * Send a collection of vertex messages for a partition.
  *
  * @param <I> Vertex id
- * @param <V> Vertex data
- * @param <E> Edge data
  * @param <M> Message data
  */
-@SuppressWarnings("rawtypes")
+@SuppressWarnings("unchecked")
 public class SendWorkerMessagesRequest<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable> extends
-    WritableRequest<I, V, E, M> implements WorkerRequest<I, V, E, M> {
-  /** Class logger */
-  private static final Logger LOG =
-      Logger.getLogger(SendWorkerMessagesRequest.class);
-  /**
-   * All messages for a group of vertices, organized by partition, which
-   * are owned by a single (destination) worker. These messages are all
-   * destined for this worker.
-   * */
-  private PairList<Integer, ByteArrayVertexIdMessages<I, M>>
-  partitionVertexMessages;
-
+    M extends Writable>
+    extends SendWorkerDataRequest<I, M, ByteArrayVertexIdMessages<I, M>> {
   /**
    * Constructor used for reflection only
    */
@@ -63,37 +48,13 @@ public class SendWorkerMessagesRequest<I extends WritableComparable,
    *                     ByteArrayVertexIdMessages
    */
   public SendWorkerMessagesRequest(
-    PairList<Integer, ByteArrayVertexIdMessages<I, M>> partVertMsgs) {
-    super();
-    this.partitionVertexMessages = partVertMsgs;
+      PairList<Integer, ByteArrayVertexIdMessages<I, M>> partVertMsgs) {
+    this.partitionVertexData = partVertMsgs;
   }
 
   @Override
-  public void readFieldsRequest(DataInput input) throws IOException {
-    int numPartitions = input.readInt();
-    partitionVertexMessages =
-        new PairList<Integer, ByteArrayVertexIdMessages<I, M>>();
-    partitionVertexMessages.initialize(numPartitions);
-    while (numPartitions-- > 0) {
-      final int partitionId = input.readInt();
-      ByteArrayVertexIdMessages<I, M> vertexIdMessages =
-          new ByteArrayVertexIdMessages<I, M>();
-      vertexIdMessages.setConf(getConf());
-      vertexIdMessages.readFields(input);
-      partitionVertexMessages.add(partitionId, vertexIdMessages);
-    }
-  }
-
-  @Override
-  public void writeRequest(DataOutput output) throws IOException {
-    output.writeInt(partitionVertexMessages.getSize());
-    PairList<Integer, ByteArrayVertexIdMessages<I, M>>.Iterator
-        iterator = partitionVertexMessages.getIterator();
-    while (iterator.hasNext()) {
-      iterator.next();
-      output.writeInt(iterator.getCurrentFirst());
-      iterator.getCurrentSecond().write(output);
-    }
+  public ByteArrayVertexIdMessages<I, M> createByteArrayVertexIdData() {
+    return new ByteArrayVertexIdMessages<I, M>();
   }
 
   @Override
@@ -102,9 +63,9 @@ public class SendWorkerMessagesRequest<I extends WritableComparable,
   }
 
   @Override
-  public void doRequest(ServerData<I, V, E, M> serverData) {
+  public void doRequest(ServerData serverData) {
     PairList<Integer, ByteArrayVertexIdMessages<I, M>>.Iterator
-        iterator = partitionVertexMessages.getIterator();
+        iterator = partitionVertexData.getIterator();
     while (iterator.hasNext()) {
       iterator.next();
       try {
@@ -115,17 +76,5 @@ public class SendWorkerMessagesRequest<I extends WritableComparable,
         throw new RuntimeException("doRequest: Got IOException ", e);
       }
     }
-  }
-
-  @Override
-  public int getSerializedSize() {
-    int size = super.getSerializedSize() + 4;
-    PairList<Integer, ByteArrayVertexIdMessages<I, M>>.Iterator
-        iterator = partitionVertexMessages.getIterator();
-    while (iterator.hasNext()) {
-      iterator.next();
-      size += 4 + iterator.getCurrentSecond().getSerializedSize();
-    }
-    return size;
   }
 }

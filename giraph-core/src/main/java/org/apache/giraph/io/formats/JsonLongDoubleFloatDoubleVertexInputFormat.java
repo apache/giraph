@@ -17,8 +17,8 @@
  */
 package org.apache.giraph.io.formats;
 
-import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.EdgeFactory;
 import org.apache.giraph.vertex.Vertex;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
@@ -90,8 +90,7 @@ public class JsonLongDoubleFloatDoubleVertexInputFormat extends
           Lists.newArrayListWithCapacity(jsonEdgeArray.length());
       for (int i = 0; i < jsonEdgeArray.length(); ++i) {
         JSONArray jsonEdge = jsonEdgeArray.getJSONArray(i);
-        edges.add(new DefaultEdge<LongWritable, FloatWritable>(
-            new LongWritable(jsonEdge.getLong(0)),
+        edges.add(EdgeFactory.create(new LongWritable(jsonEdge.getLong(0)),
             new FloatWritable((float) jsonEdge.getDouble(1))));
       }
       return edges;

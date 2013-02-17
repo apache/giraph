@@ -18,12 +18,14 @@
 
 package org.apache.giraph.comm;
 
+import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.aggregators.AllAggregatorServerData;
 import org.apache.giraph.comm.aggregators.OwnerAggregatorServerData;
 import org.apache.giraph.comm.messages.MessageStoreByPartition;
 import org.apache.giraph.comm.messages.MessageStoreFactory;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.graph.EdgeStore;
 import org.apache.giraph.graph.VertexMutations;
 import org.apache.giraph.partition.DiskBackedPartitionStore;
 import org.apache.giraph.partition.PartitionStore;
@@ -48,6 +50,8 @@ public class ServerData<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable> {
   /** Partition store for this worker. */
   private volatile PartitionStore<I, V, E, M> partitionStore;
+  /** Edge store for this worker. */
+  private final EdgeStore<I, V, E, M> edgeStore;
   /** Message store factory */
   private final
   MessageStoreFactory<I, M, MessageStoreByPartition<I, M>> messageStoreFactory;
@@ -79,11 +83,13 @@ public class ServerData<I extends WritableComparable,
   /**
    * Constructor.
    *
+   * @param service Service worker
    * @param configuration Configuration
    * @param messageStoreFactory Factory for message stores
    * @param context Mapper context
    */
   public ServerData(
+      CentralizedServiceWorker<I, V, E, M> service,
       ImmutableClassesGiraphConfiguration<I, V, E, M> configuration,
       MessageStoreFactory<I, M, MessageStoreByPartition<I, M>>
           messageStoreFactory,
@@ -100,8 +106,13 @@ public class ServerData<I extends WritableComparable,
       partitionStore =
           new SimplePartitionStore<I, V, E, M>(configuration, context);
     }
+    edgeStore = new EdgeStore<I, V, E, M>(service, configuration, context);
     ownerAggregatorData = new OwnerAggregatorServerData(context);
     allAggregatorData = new AllAggregatorServerData(context);
+  }
+
+  public EdgeStore<I, V, E, M> getEdgeStore() {
+    return edgeStore;
   }
 
   /**

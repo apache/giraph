@@ -19,19 +19,21 @@
 package org.apache.giraph.comm.messages;
 
 import com.google.common.collect.Iterators;
+import org.apache.giraph.bsp.CentralizedServiceWorker;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.utils.ByteArrayVertexIdMessages;
+import org.apache.giraph.utils.ExtendedDataOutput;
+import org.apache.giraph.utils.RepresentativeByteArrayIterable;
+import org.apache.giraph.utils.RepresentativeByteArrayIterator;
+import org.apache.giraph.utils.VertexIdIterator;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.utils.ByteArrayVertexIdMessages;
-import org.apache.giraph.utils.ExtendedDataOutput;
-import org.apache.giraph.utils.RepresentativeByteArrayIterable;
-import org.apache.giraph.utils.RepresentativeByteArrayIterator;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 
 /**
  * Implementation of {@link SimpleMessageStore} where multiple messages are
@@ -65,7 +67,7 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
    */
   private ExtendedDataOutput getExtendedDataOutput(
       ConcurrentMap<I, ExtendedDataOutput> partitionMap,
-      ByteArrayVertexIdMessages<I, M>.VertexIdIterator iterator) {
+      VertexIdIterator<I> iterator) {
     ExtendedDataOutput extendedDataOutput =
         partitionMap.get(iterator.getCurrentVertexId());
     if (extendedDataOutput == null) {

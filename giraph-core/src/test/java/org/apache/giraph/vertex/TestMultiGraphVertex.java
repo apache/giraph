@@ -18,13 +18,14 @@
 
 package org.apache.giraph.vertex;
 
-import com.google.common.collect.Lists;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.graph.DefaultEdge;
+import org.apache.giraph.graph.EdgeFactory;
 import org.apache.hadoop.io.IntWritable;
 import org.junit.Before;
 import org.junit.Test;
+
+import com.google.common.collect.Lists;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -45,9 +46,9 @@ public class TestMultiGraphVertex {
     public void compute(Iterable<IntWritable> messages) throws IOException { }
   }
 
-  public static class MyMultiGraphRepresentativeVertex
-      extends MultiGraphRepresentativeVertex<IntWritable, IntWritable,
-            IntWritable, IntWritable> {
+  public static class MyMultiGraphByteArrayVertex
+      extends MultiGraphByteArrayVertex<IntWritable, IntWritable,
+                  IntWritable, IntWritable> {
     @Override
     public void compute(Iterable<IntWritable> messages) throws IOException { }
   }
@@ -55,7 +56,7 @@ public class TestMultiGraphVertex {
   @Before
   public void setUp() {
     vertexClasses.add(MyMultiGraphEdgeListVertex.class);
-    vertexClasses.add(MyMultiGraphRepresentativeVertex.class);
+    vertexClasses.add(MyMultiGraphByteArrayVertex.class);
   }
 
   @Test
@@ -77,36 +78,27 @@ public class TestMultiGraphVertex {
     // in order to catch corner cases:
 
     // Edge list of form: [A, B, A]
-    vertex.addEdge(new DefaultEdge<IntWritable, IntWritable>(new IntWritable(1),
-        new IntWritable(1)));
-    vertex.addEdge(new DefaultEdge<IntWritable, IntWritable>(new IntWritable(2),
-        new IntWritable(2)));
-    vertex.addEdge(new DefaultEdge<IntWritable, IntWritable>(new IntWritable(1),
-        new IntWritable(10)));
+    vertex.addEdge(EdgeFactory.create(new IntWritable(1), new IntWritable(1)));
+    vertex.addEdge(EdgeFactory.create(new IntWritable(2), new IntWritable(2)));
+    vertex.addEdge(EdgeFactory.create(new IntWritable(1), new IntWritable(10)));
     assertEquals(vertex.getNumEdges(), 3);
     assertEquals(vertex.removeEdges(new IntWritable(1)), 2);
     assertEquals(vertex.getNumEdges(), 1);
 
     // Edge list of form: [A, B, B]
     vertex = instantiateVertex(vertexClass);
-    vertex.addEdge(new DefaultEdge<IntWritable, IntWritable>(new IntWritable(2),
-        new IntWritable(2)));
-    vertex.addEdge(new DefaultEdge<IntWritable, IntWritable>(new IntWritable(1),
-        new IntWritable(1)));
-    vertex.addEdge(new DefaultEdge<IntWritable, IntWritable>(new IntWritable(1),
-        new IntWritable(10)));
+    vertex.addEdge(EdgeFactory.create(new IntWritable(2), new IntWritable(2)));
+    vertex.addEdge(EdgeFactory.create(new IntWritable(1), new IntWritable(1)));
+    vertex.addEdge(EdgeFactory.create(new IntWritable(1), new IntWritable(10)));
     assertEquals(vertex.getNumEdges(), 3);
     assertEquals(vertex.removeEdges(new IntWritable(1)), 2);
     assertEquals(vertex.getNumEdges(), 1);
 
     // Edge list of form: [A, A, B]
     vertex = instantiateVertex(vertexClass);
-    vertex.addEdge(new DefaultEdge<IntWritable, IntWritable>(new IntWritable(1),
-        new IntWritable(1)));
-    vertex.addEdge(new DefaultEdge<IntWritable, IntWritable>(new IntWritable(1),
-        new IntWritable(10)));
-    vertex.addEdge(new DefaultEdge<IntWritable, IntWritable>(new IntWritable(2),
-        new IntWritable(2)));
+    vertex.addEdge(EdgeFactory.create(new IntWritable(1), new IntWritable(1)));
+    vertex.addEdge(EdgeFactory.create(new IntWritable(1), new IntWritable(10)));
+    vertex.addEdge(EdgeFactory.create(new IntWritable(2), new IntWritable(2)));
     assertEquals(vertex.getNumEdges(), 3);
     assertEquals(vertex.removeEdges(new IntWritable(1)), 2);
     assertEquals(vertex.getNumEdges(), 1);

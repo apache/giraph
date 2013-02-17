@@ -23,9 +23,7 @@ import org.apache.giraph.bsp.BspOutputFormat;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.graph.DefaultVertexResolver;
 import org.apache.giraph.graph.GraphMapper;
-import org.apache.giraph.vertex.MutableVertex;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.mapreduce.Job;
@@ -132,60 +130,16 @@ public class GiraphJob {
     delegatedJob.jobInited = true;
     return delegatedJob;
   }
-  /**
-   * Make sure the configuration is set properly by the user prior to
-   * submitting the job.
-   *
-   * @param conf Configuration to check
-   */
-  private void checkConfiguration(ImmutableClassesGiraphConfiguration conf) {
-    if (conf.getMaxWorkers() < 0) {
-      throw new RuntimeException("checkConfiguration: No valid " +
-          GiraphConstants.MAX_WORKERS);
-    }
-    if (conf.getMinPercentResponded() <= 0.0f ||
-        conf.getMinPercentResponded() > 100.0f) {
-      throw new IllegalArgumentException(
-          "checkConfiguration: Invalid " + conf.getMinPercentResponded() +
-              " for " + GiraphConstants.MIN_PERCENT_RESPONDED);
-    }
-    if (conf.getMinWorkers() < 0) {
-      throw new IllegalArgumentException("checkConfiguration: No valid " +
-          GiraphConstants.MIN_WORKERS);
-    }
-    if (conf.getVertexClass() == null) {
-      throw new IllegalArgumentException("checkConfiguration: Null" +
-          GiraphConstants.VERTEX_CLASS);
-    }
-    if (conf.getVertexInputFormatClass() == null &&
-        conf.getEdgeInputFormatClass() == null) {
-      throw new IllegalArgumentException("checkConfiguration: One of " +
-          GiraphConstants.VERTEX_INPUT_FORMAT_CLASS + " and " +
-          GiraphConstants.EDGE_INPUT_FORMAT_CLASS + " must be non-null");
-    }
-    if (conf.getEdgeInputFormatClass() != null &&
-        !(MutableVertex.class.isAssignableFrom(conf.getVertexClass()))) {
-      throw new IllegalArgumentException("checkConfiguration: EdgeInputFormat" +
-          " only works with mutable vertices");
-    }
-    if (conf.getVertexResolverClass() == null) {
-      if (LOG.isInfoEnabled()) {
-        LOG.info("checkConfiguration: No class found for " +
-            GiraphConstants.VERTEX_RESOLVER_CLASS + ", defaulting to " +
-            DefaultVertexResolver.class.getCanonicalName());
-      }
-    }
-  }
-
 
   /**
    * Check if the configuration is local.  If it is local, do additional
-   * checks due to the restrictions of LocalJobRunner.
+   * checks due to the restrictions of LocalJobRunner. This checking is
+   * performed here because the local job runner is MRv1-configured.
    *
    * @param conf Configuration
    */
   private static void checkLocalJobRunnerConfiguration(
-      GiraphConfiguration conf) {
+      ImmutableClassesGiraphConfiguration conf) {
     String jobTracker = conf.get("mapred.job.tracker", null);
     if (!jobTracker.equals("local")) {
       // Nothing to check
@@ -268,7 +222,6 @@ public class GiraphJob {
     // Set the job properties, check them, and submit the job
     ImmutableClassesGiraphConfiguration conf =
         new ImmutableClassesGiraphConfiguration(giraphConfiguration);
-    checkConfiguration(conf);
     checkLocalJobRunnerConfiguration(conf);
     Job submittedJob = new Job(conf, jobName);
     if (submittedJob.getJar() == null) {

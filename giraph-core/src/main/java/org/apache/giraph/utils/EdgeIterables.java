@@ -19,7 +19,7 @@
 package org.apache.giraph.utils;
 
 import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.EdgeNoValue;
+import org.apache.giraph.graph.EdgeFactory;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -61,14 +61,13 @@ public class EdgeIterables {
    * @param <I> Vertex id type.
    * @return Edge iterable.
    */
-  public static
-  <I extends WritableComparable>
+  public static <I extends WritableComparable>
   Iterable<Edge<I, NullWritable>> getEdges(Iterable<I> neighbors) {
     return Iterables.transform(neighbors,
         new Function<I, Edge<I, NullWritable>>() {
           @Override
           public Edge<I, NullWritable> apply(I neighbor) {
-            return new EdgeNoValue<I>(neighbor);
+            return EdgeFactory.create(neighbor);
           }
         });
   }

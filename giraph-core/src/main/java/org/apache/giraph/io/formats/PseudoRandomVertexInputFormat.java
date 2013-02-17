@@ -20,8 +20,8 @@ package org.apache.giraph.io.formats;
 
 import org.apache.giraph.bsp.BspInputSplit;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.EdgeFactory;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexReader;
 import org.apache.giraph.vertex.Vertex;
@@ -172,8 +172,8 @@ public class PseudoRandomVertexInputFormat<M extends Writable> extends
             new LongWritable(Math.abs(rand.nextLong()) %
               aggregateVertices);
         } while (destVertices.contains(destVertexId));
-        edges.add(new DefaultEdge<LongWritable, DoubleWritable>(
-            destVertexId, new DoubleWritable(rand.nextDouble())));
+        edges.add(EdgeFactory.create(destVertexId,
+            new DoubleWritable(rand.nextDouble())));
         destVertices.add(destVertexId);
       }
       vertex.initialize(new LongWritable(vertexId), vertexValue, edges);

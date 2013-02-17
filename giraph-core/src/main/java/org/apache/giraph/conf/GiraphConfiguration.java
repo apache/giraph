@@ -18,16 +18,14 @@
 
 package org.apache.giraph.conf;
 
-import java.net.UnknownHostException;
-
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.combiner.Combiner;
-import org.apache.giraph.job.DefaultJobObserver;
-import org.apache.giraph.job.GiraphJobObserver;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
+import org.apache.giraph.job.DefaultJobObserver;
+import org.apache.giraph.job.GiraphJobObserver;
 import org.apache.giraph.master.MasterCompute;
 import org.apache.giraph.master.MasterObserver;
 import org.apache.giraph.partition.GraphPartitionerFactory;
@@ -38,6 +36,8 @@ import org.apache.giraph.worker.WorkerContext;
 import org.apache.giraph.worker.WorkerObserver;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.net.DNS;
+
+import java.net.UnknownHostException;
 
 /**
  * Adds user methods specific to Giraph.  This will be put into an
@@ -698,6 +698,16 @@ public class GiraphConfiguration extends Configuration
   public boolean useInputSplitLocality() {
     return getBoolean(GiraphConstants.USE_INPUT_SPLIT_LOCALITY,
         GiraphConstants.USE_INPUT_SPLIT_LOCALITY_DEFAULT);
+  }
+
+  /**
+   * Check if we can reuse incoming edge objects.
+   *
+   * @return True iff we can reuse incoming edge objects.
+   */
+  public boolean reuseIncomingEdgeObjects() {
+    return getBoolean(GiraphConstants.REUSE_INCOMING_EDGE_OBJECTS,
+        GiraphConstants.REUSE_INCOMING_EDGE_OBJECTS_DEFAULT);
   }
 
   /**

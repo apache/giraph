@@ -18,8 +18,8 @@
 
 package org.apache.giraph.vertex;
 
-import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.EdgeFactory;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
@@ -97,7 +97,7 @@ public abstract class HashMapVertex<I extends WritableComparable,
 
           @Override
           public Edge<I, E> apply(Map.Entry<I, E> edge) {
-            return new DefaultEdge<I, E>(edge.getKey(), edge.getValue());
+            return EdgeFactory.create(edge.getKey(), edge.getValue());
           }
         });
   }

@@ -20,6 +20,7 @@ package org.apache.giraph.graph;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfigurable;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.utils.WritableUtils;
 import org.apache.giraph.vertex.Vertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -93,15 +94,9 @@ public class VertexMutations<I extends WritableComparable,
     removedVertexCount = input.readInt();
     int addedEdgeListSize = input.readInt();
     for (int i = 0; i < addedEdgeListSize; ++i) {
-      I destVertex = conf.createVertexId();
-      destVertex.readFields(input);
-      if (conf.isEdgeValueNullWritable()) {
-        addedEdgeList.add((Edge<I, E>) new EdgeNoValue<I>(destVertex));
-      } else {
-        E edgeValue = conf.createEdgeValue();
-        edgeValue.readFields(input);
-        addedEdgeList.add(new DefaultEdge<I, E>(destVertex, edgeValue));
-      }
+      Edge<I, E> edge = conf.createEdge();
+      WritableUtils.readEdge(input, edge);
+      addedEdgeList.add(edge);
     }
     int removedEdgeListSize = input.readInt();
     for (int i = 0; i < removedEdgeListSize; ++i) {

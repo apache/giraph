@@ -19,11 +19,11 @@ package org.apache.giraph.io;
 
 
 import org.apache.giraph.conf.GiraphConstants;
-import org.apache.giraph.graph.DefaultEdge;
+import org.apache.giraph.graph.EdgeFactory;
+import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.io.formats.AdjacencyListTextVertexInputFormat;
 import org.apache.giraph.io.formats.LongDoubleDoubleAdjacencyListVertexInputFormat;
 import org.apache.giraph.vertex.EdgeListVertex;
-import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.vertex.Vertex;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.BooleanWritable;
@@ -138,9 +138,9 @@ public class TestLongDoubleDoubleAdjacencyListVertexInputFormat extends LongDoub
     setGraphState(vertex, graphState);
     assertValidVertex(conf, graphState, vertex,
         new LongWritable(42), new DoubleWritable(0.1),
-        new DefaultEdge<LongWritable, DoubleWritable>(new LongWritable(99), new DoubleWritable(0.2)),
-        new DefaultEdge<LongWritable, DoubleWritable>(new LongWritable(2000), new DoubleWritable(0.3)),
-        new DefaultEdge<LongWritable, DoubleWritable>(new LongWritable(4000), new DoubleWritable(0.4)));
+        EdgeFactory.create(new LongWritable(99), new DoubleWritable(0.2)),
+        EdgeFactory.create(new LongWritable(2000), new DoubleWritable(0.3)),
+        EdgeFactory.create(new LongWritable(4000), new DoubleWritable(0.4)));
     assertEquals(vertex.getNumEdges(), 3);
   }
 
@@ -157,8 +157,9 @@ public class TestLongDoubleDoubleAdjacencyListVertexInputFormat extends LongDoub
     Vertex<LongWritable, DoubleWritable, DoubleWritable, BooleanWritable>
         vertex = vr.getCurrentVertex();
     setGraphState(vertex, graphState);
-    assertValidVertex(conf, graphState, vertex, new LongWritable(12345), new DoubleWritable(42.42),
-       new DefaultEdge<LongWritable, DoubleWritable>(new LongWritable(9999999), new DoubleWritable(99.9)));
+    assertValidVertex(conf, graphState, vertex,
+        new LongWritable(12345), new DoubleWritable(42.42),
+       EdgeFactory.create(new LongWritable(9999999), new DoubleWritable(99.9)));
     assertEquals(vertex.getNumEdges(), 1);
   }
 

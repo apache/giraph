@@ -44,12 +44,12 @@ public class DefaultEdge<I extends WritableComparable, E extends Writable>
   public DefaultEdge() { }
 
   /**
-   * Create the edge with final values
+   * Create the edge with final values. Don't call, use EdgeFactory instead.
    *
    * @param targetVertexId Desination vertex id.
    * @param value Value of the edge.
    */
-  public DefaultEdge(I targetVertexId, E value) {
+  DefaultEdge(I targetVertexId, E value) {
     this.targetVertexId = targetVertexId;
     this.value = value;
   }

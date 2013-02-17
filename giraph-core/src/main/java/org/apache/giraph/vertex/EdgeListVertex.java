@@ -29,7 +29,7 @@ import java.util.Iterator;
  * User applications can subclass {@link EdgeListVertex}, which stores
  * the outbound edges in an ArrayList (less memory as the cost of expensive
  * random-access lookup).  Good for static graphs.  Not nearly as memory
- * efficient as using RepresentativeVertex + ByteArrayPartition
+ * efficient as using ByteArrayVertex + ByteArrayPartition
  * (probably about 10x more), but not bad when keeping vertices as objects in
  * memory (SimplePartition).
  *

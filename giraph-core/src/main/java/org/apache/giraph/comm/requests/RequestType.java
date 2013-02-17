@@ -42,6 +42,8 @@ public enum RequestType {
    */
   SEND_PARTITION_CURRENT_MESSAGES_REQUEST
       (SendPartitionCurrentMessagesRequest.class),
+  /** Send a partition of edges */
+  SEND_WORKER_EDGES_REQUEST(SendWorkerEdgesRequest.class),
   /** Send a partition of mutations */
   SEND_PARTITION_MUTATIONS_REQUEST(SendPartitionMutationsRequest.class),
   /** Send aggregated values from one worker's vertices */

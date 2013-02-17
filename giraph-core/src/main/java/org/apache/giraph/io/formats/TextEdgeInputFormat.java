@@ -19,8 +19,8 @@
 package org.apache.giraph.io.formats;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.EdgeFactory;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.EdgeReader;
 import org.apache.hadoop.io.LongWritable;
@@ -57,10 +57,6 @@ public abstract class TextEdgeInputFormat<I extends WritableComparable,
     // GiraphTextInputFormat to do this for us
     return textInputFormat.getEdgeSplits(context);
   }
-
-  @Override
-  public abstract TextEdgeReader createEdgeReader(
-      InputSplit split, TaskAttemptContext context) throws IOException;
 
   /**
    * {@link EdgeReader} for {@link TextEdgeInputFormat}.
@@ -164,7 +160,7 @@ public abstract class TextEdgeInputFormat<I extends WritableComparable,
       Text line = getRecordReader().getCurrentValue();
       I targetVertexId = getTargetVertexId(line);
       E edgeValue = getValue(line);
-      return new DefaultEdge<I, E>(targetVertexId, edgeValue);
+      return EdgeFactory.create(targetVertexId, edgeValue);
     }
 
     @Override
@@ -234,7 +230,7 @@ public abstract class TextEdgeInputFormat<I extends WritableComparable,
       T processed = processCurrentLine();
       I targetVertexId = getTargetVertexId(processed);
       E edgeValue = getValue(processed);
-      return new DefaultEdge<I, E>(targetVertexId, edgeValue);
+      return EdgeFactory.create(targetVertexId, edgeValue);
     }
 
     /**

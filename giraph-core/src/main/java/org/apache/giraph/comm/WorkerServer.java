@@ -52,13 +52,6 @@ public interface WorkerServer<I extends WritableComparable,
   void prepareSuperstep(GraphState<I, V, E, M> graphState);
 
   /**
-   * Only resolve mutations requests (used for edge-oriented input).
-   *
-   * @param graphState Current graph state
-   */
-  void resolveMutations(GraphState<I, V, E, M> graphState);
-
-  /**
    * Get server data
    *
    * @return Server data

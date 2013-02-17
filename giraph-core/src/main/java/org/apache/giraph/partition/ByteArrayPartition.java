@@ -18,22 +18,20 @@
 package org.apache.giraph.partition;
 
 import com.google.common.collect.MapMaker;
-
 import com.google.common.primitives.Ints;
+import org.apache.giraph.utils.UnsafeByteArrayInputStream;
+import org.apache.giraph.utils.WritableUtils;
+import org.apache.giraph.vertex.Vertex;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.util.Progressable;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
-
-import org.apache.giraph.vertex.Vertex;
-import org.apache.giraph.utils.UnsafeByteArrayInputStream;
-import org.apache.giraph.utils.WritableUtils;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.util.Progressable;
-import org.apache.log4j.Logger;
 
 /**
  * Byte array based partition.  Should reduce the amount of memory used since
@@ -48,8 +46,6 @@ import org.apache.log4j.Logger;
 public class ByteArrayPartition<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
     extends BasicPartition<I, V, E, M> {
-  /** Class logger */
-  private static final Logger LOG = Logger.getLogger(ByteArrayPartition.class);
   /**
    * Vertex map for this range (keyed by index).  Note that the byte[] is a
    * serialized vertex with the first four bytes as the length of the vertex

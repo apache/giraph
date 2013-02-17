@@ -160,11 +160,11 @@ public class InternalVertexRunner {
 
       Job internalJob = job.getInternalJob();
       if (classes.hasVertexInputFormat()) {
-        GiraphFileInputFormat.addVertexInputPath(internalJob,
+        GiraphFileInputFormat.addVertexInputPath(internalJob.getConfiguration(),
             new Path(vertexInputFile.toString()));
       }
       if (classes.hasEdgeInputFormat()) {
-        GiraphFileInputFormat.addEdgeInputPath(internalJob,
+        GiraphFileInputFormat.addEdgeInputPath(internalJob.getConfiguration(),
             new Path(edgeInputFile.toString()));
       }
       FileOutputFormat.setOutputPath(job.getInternalJob(),

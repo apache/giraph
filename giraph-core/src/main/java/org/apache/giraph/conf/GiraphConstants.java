@@ -57,6 +57,9 @@ public interface GiraphConstants {
   /** VertexOutputFormat class */
   String VERTEX_OUTPUT_FORMAT_CLASS = "giraph.vertexOutputFormatClass";
 
+  /** Output Format Path (for Giraph-on-YARN) */
+  String GIRAPH_OUTPUT_DIR = "giraph.output.dir";
+
   /** Vertex index class */
   String VERTEX_ID_CLASS = "giraph.vertexIdClass";
   /** Vertex value class */
@@ -337,15 +340,54 @@ public interface GiraphConstants {
   /** Default maximum size of messages per peer before flush of 0.5MB */
   int MAX_MSG_REQUEST_SIZE_DEFAULT = 512 * 1024;
 
-  /** Maximum number of messages per peer before flush */
-  String MSG_SIZE = "giraph.msgSize";
-  /** Default maximum number of messages per peer before flush */
-  int MSG_SIZE_DEFAULT = 2000;
+  /**
+   * How much bigger than the average per partition size to make initial per
+   * partition buffers.
+   * If this value is A, message request size is M,
+   * and a worker has P partitions, than its initial partition buffer size
+   * will be (M / P) * (1 + A).
+   */
+  String ADDITIONAL_MSG_REQUEST_SIZE =
+      "giraph.additionalMsgRequestSize";
+  /**
+   * Default factor for how bigger should initial per partition buffers be
+   * of 20%.
+   */
+  float ADDITIONAL_MSG_REQUEST_SIZE_DEFAULT = 0.2f;
+
+  /** Maximum size of edges (in bytes) per peer before flush */
+  String MAX_EDGE_REQUEST_SIZE = "giraph.edgeRequestSize";
+  /** Default maximum size of edges per peer before flush of 0.5MB */
+  int MAX_EDGE_REQUEST_SIZE_DEFAULT = 512 * 1024;
+
+  /**
+   * Additional size (expressed as a ratio) of each per-partition buffer on
+   * top of the average size.
+   */
+  String ADDITIONAL_EDGE_REQUEST_SIZE =
+      "giraph.additionalEdgeRequestSize";
+  /**
+   * Default additional per-partition buffer size.
+   */
+  float ADDITIONAL_EDGE_REQUEST_SIZE_DEFAULT = 0.2f;
 
   /** Maximum number of mutations per partition before flush */
   String MAX_MUTATIONS_PER_REQUEST = "giraph.maxMutationsPerRequest";
   /** Default maximum number of mutations per partition before flush */
   int MAX_MUTATIONS_PER_REQUEST_DEFAULT = 100;
+
+  /**
+   * Whether we should reuse the same Edge object when adding edges from
+   * requests.
+   * This works with edge storage implementations that don't keep references
+   * to the input Edge objects (e.g., ByteArrayVertex).
+   */
+  String REUSE_INCOMING_EDGE_OBJECTS = "giraph.reuseIncomingEdgeObjects";
+  /**
+   * Default is to not reuse edge objects (since it's not compatible with
+   * all storage implementations).
+   */
+  boolean REUSE_INCOMING_EDGE_OBJECTS_DEFAULT = false;
 
   /**
    * Use message size encoding (typically better for complex objects,

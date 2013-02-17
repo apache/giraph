@@ -90,7 +90,8 @@ public class NettyWorkerServer<I extends WritableComparable,
     this.service = service;
 
     serverData =
-        new ServerData<I, V, E, M>(conf, createMessageStoreFactory(), context);
+        new ServerData<I, V, E, M>(service, conf, createMessageStoreFactory(),
+            context);
 
     nettyServer = new NettyServer(conf,
         new WorkerRequestServerHandler.Factory<I, V, E, M>(serverData),
@@ -153,8 +154,12 @@ public class NettyWorkerServer<I extends WritableComparable,
     resolveMutations(graphState);
   }
 
-  @Override
-  public void resolveMutations(GraphState<I, V, E, M> graphState) {
+  /**
+   * Resolve mutation requests.
+   *
+   * @param graphState Graph state
+   */
+  private void resolveMutations(GraphState<I, V, E, M> graphState) {
     Multimap<Integer, I> resolveVertexIndices = HashMultimap.create(
         service.getPartitionStore().getNumPartitions(), 100);
       // Add any mutated vertex indices to be resolved

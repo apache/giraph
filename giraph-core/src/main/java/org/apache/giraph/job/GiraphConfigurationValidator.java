@@ -20,12 +20,15 @@ package org.apache.giraph.job;
 
 import org.apache.giraph.bsp.BspUtils;
 import org.apache.giraph.combiner.Combiner;
+import org.apache.giraph.conf.GiraphConstants;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.DefaultVertexResolver;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.giraph.utils.ReflectionUtils;
+import org.apache.giraph.vertex.MutableVertex;
 import org.apache.giraph.vertex.Vertex;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
@@ -36,22 +39,23 @@ import java.lang.reflect.Type;
 import java.util.List;
 
 /**
- * GiraphTypeValidator attempts to verify the consistency of
- * user-chosen InputFormat, OutputFormat, and Vertex type
- * parameters before the job run actually begins.
+ * GiraphConfigurationValidator attempts to verify the consistency of
+ * user-chosen InputFormat, OutputFormat, and Vertex generic type
+ * parameters as well as the general Configuration settings
+ * before the job run actually begins.
  *
  * @param <I> the Vertex ID type
  * @param <V> the Vertex Value type
  * @param <E> the Edge Value type
  * @param <M> the Message type
  */
-public class GiraphTypeValidator<I extends WritableComparable,
+public class GiraphConfigurationValidator<I extends WritableComparable,
   V extends Writable, E extends Writable, M extends Writable> {
   /**
    * Class logger object.
    */
   private static Logger LOG =
-    Logger.getLogger(GiraphTypeValidator.class);
+    Logger.getLogger(GiraphConfigurationValidator.class);
 
   /** I param vertex index in classList */
   private static final int ID_PARAM_INDEX = 0;
@@ -78,7 +82,7 @@ public class GiraphTypeValidator<I extends WritableComparable,
   /**
    * The Configuration object for use in the validation test.
    */
-  private Configuration conf;
+  private ImmutableClassesGiraphConfiguration conf;
 
   /**
    * Constructor to execute the validation test, throws
@@ -86,8 +90,8 @@ public class GiraphTypeValidator<I extends WritableComparable,
    *
    * @param conf the Configuration for this run.
    */
-  public GiraphTypeValidator(Configuration conf) {
-    this.conf = conf;
+  public GiraphConfigurationValidator(Configuration conf) {
+    this.conf = new ImmutableClassesGiraphConfiguration(conf);
   }
 
   /**
@@ -96,7 +100,8 @@ public class GiraphTypeValidator<I extends WritableComparable,
    * the class type arguments.  Also, set the vertex index, vertex value,
    * edge value and message value classes.
    */
-  public void validateClassTypes() {
+  public void validateConfiguration() {
+    checkConfiguration();
     Class<? extends Vertex<I, V, E, M>> vertexClass =
       BspUtils.<I, V, E, M>getVertexClass(conf);
     List<Class<?>> classList = ReflectionUtils.getTypeArguments(
@@ -110,6 +115,49 @@ public class GiraphTypeValidator<I extends WritableComparable,
     verifyVertexOutputFormatGenericTypes();
     verifyVertexResolverGenericTypes();
     verifyVertexCombinerGenericTypes();
+  }
+
+  /**
+   * Make sure the configuration is set properly by the user prior to
+   * submitting the job.
+   */
+  private void checkConfiguration() {
+    if (conf.getMaxWorkers() < 0) {
+      throw new RuntimeException("checkConfiguration: No valid " +
+          GiraphConstants.MAX_WORKERS);
+    }
+    if (conf.getMinPercentResponded() <= 0.0f ||
+        conf.getMinPercentResponded() > 100.0f) {
+      throw new IllegalArgumentException(
+          "checkConfiguration: Invalid " + conf.getMinPercentResponded() +
+              " for " + GiraphConstants.MIN_PERCENT_RESPONDED);
+    }
+    if (conf.getMinWorkers() < 0) {
+      throw new IllegalArgumentException("checkConfiguration: No valid " +
+          GiraphConstants.MIN_WORKERS);
+    }
+    if (conf.getVertexClass() == null) {
+      throw new IllegalArgumentException("checkConfiguration: Null" +
+          GiraphConstants.VERTEX_CLASS);
+    }
+    if (conf.getVertexInputFormatClass() == null &&
+        conf.getEdgeInputFormatClass() == null) {
+      throw new IllegalArgumentException("checkConfiguration: One of " +
+          GiraphConstants.VERTEX_INPUT_FORMAT_CLASS + " and " +
+          GiraphConstants.EDGE_INPUT_FORMAT_CLASS + " must be non-null");
+    }
+    if (conf.getEdgeInputFormatClass() != null &&
+        !(MutableVertex.class.isAssignableFrom(conf.getVertexClass()))) {
+      throw new IllegalArgumentException("checkConfiguration: EdgeInputFormat" +
+          " only works with mutable vertices");
+    }
+    if (conf.getVertexResolverClass() == null) {
+      if (LOG.isInfoEnabled()) {
+        LOG.info("checkConfiguration: No class found for " +
+            GiraphConstants.VERTEX_RESOLVER_CLASS + ", defaulting to " +
+            DefaultVertexResolver.class.getCanonicalName());
+      }
+    }
   }
 
   /** Verify matching generic types in VertexInputFormat. */

@@ -21,8 +21,8 @@ package org.apache.giraph.examples;
 import org.apache.giraph.aggregators.DoubleMaxAggregator;
 import org.apache.giraph.aggregators.DoubleMinAggregator;
 import org.apache.giraph.aggregators.LongSumAggregator;
-import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.EdgeFactory;
 import org.apache.giraph.io.VertexReader;
 import org.apache.giraph.io.formats.GeneratedVertexInputFormat;
 import org.apache.giraph.io.formats.TextVertexOutputFormat;
@@ -196,8 +196,7 @@ public class SimplePageRankVertex extends LongDoubleFloatDoubleVertex {
           (inputSplit.getNumSplits() * totalRecords);
       float edgeValue = vertexId.get() * 100f;
       List<Edge<LongWritable, FloatWritable>> edges = Lists.newLinkedList();
-      edges.add(new DefaultEdge<LongWritable, FloatWritable>(
-          new LongWritable(targetVertexId),
+      edges.add(EdgeFactory.create(new LongWritable(targetVertexId),
           new FloatWritable(edgeValue)));
       vertex.initialize(vertexId, vertexValue, edges);
       ++recordsRead;

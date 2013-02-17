@@ -20,8 +20,8 @@ package org.apache.giraph.vertex;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfigurable;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.EdgeFactory;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.partition.PartitionContext;
 import org.apache.giraph.partition.PartitionOwner;
@@ -372,7 +372,7 @@ public abstract class Vertex<I extends WritableComparable,
       targetVertexId.readFields(in);
       E edgeValue = (E) getConf().createEdgeValue();
       edgeValue.readFields(in);
-      edges.add(new DefaultEdge<I, E>(targetVertexId, edgeValue));
+      edges.add(EdgeFactory.create(targetVertexId, edgeValue));
     }
 
     initialize(vertexId, vertexValue, edges);

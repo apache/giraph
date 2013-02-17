@@ -19,7 +19,7 @@
 package org.apache.giraph.vertex;
 
 import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.EdgeNoValue;
+import org.apache.giraph.graph.EdgeFactory;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.junit.Test;
@@ -55,8 +55,8 @@ public class TestIntIntNullIntVertex {
     IntIntNullIntVertex vertex = new MyIntIntNullVertex();
 
     List<Edge<IntWritable, NullWritable>> edges = Lists.newLinkedList();
-    edges.add(new EdgeNoValue<IntWritable>(new IntWritable(3)));
-    edges.add(new EdgeNoValue<IntWritable>(new IntWritable(47)));
+    edges.add(EdgeFactory.create(new IntWritable(3)));
+    edges.add(EdgeFactory.create(new IntWritable(47)));
 
     vertex.initialize(new IntWritable(23), new IntWritable(7), edges);
     vertex.voteToHalt();

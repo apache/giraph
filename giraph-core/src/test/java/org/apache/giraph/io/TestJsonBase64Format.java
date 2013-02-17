@@ -80,7 +80,8 @@ public class TestJsonBase64Format extends BspCase {
     classes.setVertexOutputFormatClass(JsonBase64VertexOutputFormat.class);
     job = prepareJob(getCallingMethodName(), classes, outputPath2);
     job.getConfiguration().setInt(PageRankComputation.SUPERSTEP_COUNT, 3);
-    GiraphFileInputFormat.addVertexInputPath(job.getInternalJob(), outputPath);
+    GiraphFileInputFormat.addVertexInputPath(
+      job.getInternalJob().getConfiguration(), outputPath);
     assertTrue(job.run(true));
 
     Path outputPath3 = getTempPath(getCallingMethodName() + "3");

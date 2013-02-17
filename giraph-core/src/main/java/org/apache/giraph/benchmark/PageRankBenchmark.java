@@ -82,13 +82,13 @@ public class PageRankBenchmark implements Tool {
         "vertexClass",
         true,
         "Vertex class (0 for HashMapVertex, 1 for EdgeListVertex, " +
-            "2 for RepresentativeVertex, " +
-            "3 for RepresentativeVertex with unsafe, " +
+            "2 for ByteArrayVertex, " +
+            "3 for ByteArrayVertex with unsafe, " +
             "4 for HashMapVertex (using EdgeInputFormat), " +
             "5 for MultiGraphEdgeListVertex (using EdgeInputFormat), " +
-            "6 for MultiGraphRepresentativeVertex (using " +
+            "6 for MultiGraphByteArrayVertex (using " +
             "EdgeInputFormat), " +
-            "7 for MultiGraphRepresentativeVertex with unsafe (using " +
+            "7 for MultiGraphByteArrayVertex with unsafe (using " +
             "EdgeInputFormat))");
     options.addOption("N",
         "name",
@@ -176,22 +176,22 @@ public class PageRankBenchmark implements Tool {
           HashMapVertexPageRankBenchmark.class);
     } else if (vertexClassOption == 2) {
       configuration.setVertexClass(
-          RepresentativeVertexPageRankBenchmark.class);
+          ByteArrayVertexPageRankBenchmark.class);
       configuration.useUnsafeSerialization(false);
     } else if (vertexClassOption == 3) {
       configuration.setVertexClass(
-          RepresentativeVertexPageRankBenchmark.class);
+          ByteArrayVertexPageRankBenchmark.class);
       configuration.useUnsafeSerialization(true);
     } else if (vertexClassOption == 5) {
       configuration.setVertexClass(
           MultiGraphEdgeListVertexPageRankBenchmark.class);
     } else if (vertexClassOption == 6) {
       configuration.setVertexClass(
-          MultiGraphRepresentativeVertexPageRankBenchmark.class);
+          MultiGraphByteArrayVertexPageRankBenchmark.class);
       configuration.useUnsafeSerialization(false);
     } else if (vertexClassOption == 7) {
       configuration.setVertexClass(
-          MultiGraphRepresentativeVertexPageRankBenchmark.class);
+          MultiGraphByteArrayVertexPageRankBenchmark.class);
       configuration.useUnsafeSerialization(true);
     }
     LOG.info("Using vertex class " +
