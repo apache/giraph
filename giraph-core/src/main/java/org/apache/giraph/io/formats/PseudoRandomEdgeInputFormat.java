@@ -20,8 +20,8 @@ package org.apache.giraph.io.formats;
 
 import org.apache.giraph.bsp.BspInputSplit;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.EdgeFactory;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.EdgeReader;
 import org.apache.hadoop.io.DoubleWritable;
@@ -184,7 +184,7 @@ public class PseudoRandomEdgeInputFormat
         LOG.trace("getCurrentEdge: Return edge (" + currentVertexId + ", " +
             "" + destVertexId + ")");
       }
-      return new DefaultEdge<LongWritable, DoubleWritable>(
+      return EdgeFactory.create(
               destVertexId,
               new DoubleWritable(random.nextDouble()));
     }

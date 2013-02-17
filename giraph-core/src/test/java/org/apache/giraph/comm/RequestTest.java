@@ -27,8 +27,8 @@ import org.apache.giraph.comm.requests.SendWorkerMessagesRequest;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.EdgeFactory;
 import org.apache.giraph.graph.VertexMutations;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.partition.PartitionStore;
@@ -220,8 +220,7 @@ public class RequestTest {
       }
       for (int j = 0; j < 5; ++j) {
         Edge<IntWritable, IntWritable> edge =
-            new DefaultEdge<IntWritable, IntWritable>(
-                new IntWritable(i), new IntWritable(2*j));
+            EdgeFactory.create(new IntWritable(i), new IntWritable(2 * j));
         mutations.addEdge(edge);
       }
       for (int j = 0; j < 7; ++j) {

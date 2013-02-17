@@ -19,8 +19,8 @@ package org.apache.giraph.io;
 
 import org.apache.giraph.bsp.BspUtils;
 import org.apache.giraph.conf.GiraphConstants;
-import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.EdgeFactory;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.io.formats.AdjacencyListTextVertexInputFormat;
 import org.apache.giraph.io.formats.TextDoubleDoubleAdjacencyListVertexInputFormat;
@@ -173,9 +173,9 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat extends TextDoub
         vr.getCurrentVertex();
     setGraphState(vertex, graphState);
     assertValidVertex(conf, graphState, vertex, new Text("Hi"), new DoubleWritable(0),
-        new DefaultEdge<Text, DoubleWritable>(new Text("Ciao"), new DoubleWritable(1.123d)),
-        new DefaultEdge<Text, DoubleWritable>(new Text("Bomdia"), new DoubleWritable(2.234d)),
-        new DefaultEdge<Text, DoubleWritable>(new Text("Ola"), new DoubleWritable(3.345d)));
+        EdgeFactory.create(new Text("Ciao"), new DoubleWritable(1.123d)),
+        EdgeFactory.create(new Text("Bomdia"), new DoubleWritable(2.234d)),
+        EdgeFactory.create(new Text("Ola"), new DoubleWritable(3.345d)));
     assertEquals(vertex.getNumEdges(), 3);
   }
 
@@ -201,9 +201,9 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat extends TextDoub
     setGraphState(vertex, graphState);
     assertValidVertex(conf, graphState, vertex,
         new Text("BYE"), new DoubleWritable(0.01d),
-        new DefaultEdge<Text, DoubleWritable>(new Text("CIAO"), new DoubleWritable(1.001d)),
-        new DefaultEdge<Text, DoubleWritable>(new Text("TCHAU"), new DoubleWritable(2.0001d)),
-        new DefaultEdge<Text, DoubleWritable>(new Text("ADIOS"), new DoubleWritable(3.00001d)));
+        EdgeFactory.create(new Text("CIAO"), new DoubleWritable(1.001d)),
+        EdgeFactory.create(new Text("TCHAU"), new DoubleWritable(2.0001d)),
+        EdgeFactory.create(new Text("ADIOS"), new DoubleWritable(3.00001d)));
 
     assertEquals(vertex.getNumEdges(), 3);
   }
@@ -222,7 +222,7 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat extends TextDoub
         vr.getCurrentVertex();
     setGraphState(vertex, graphState);
     assertValidVertex(conf, graphState, vertex, new Text("alpha"), new DoubleWritable(42d),
-        new DefaultEdge<Text, DoubleWritable>(new Text("beta"), new DoubleWritable(99d)));
+        EdgeFactory.create(new Text("beta"), new DoubleWritable(99d)));
     assertEquals(vertex.getNumEdges(), 1);
   }
 

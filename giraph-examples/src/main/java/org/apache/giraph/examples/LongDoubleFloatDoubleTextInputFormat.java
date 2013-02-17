@@ -19,8 +19,8 @@
 package org.apache.giraph.examples;
 
 import org.apache.giraph.bsp.BspUtils;
-import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.EdgeFactory;
 import org.apache.giraph.io.formats.TextVertexInputFormat;
 import org.apache.giraph.vertex.Vertex;
 import org.apache.hadoop.io.DoubleWritable;
@@ -74,7 +74,7 @@ public class LongDoubleFloatDoubleTextInputFormat
           Lists.newArrayListWithCapacity(tokens.length - 1);
       float weight = 1.0f / (tokens.length - 1);
       for (int n = 1; n < tokens.length; n++) {
-        edges.add(new DefaultEdge<LongWritable, FloatWritable>(
+        edges.add(EdgeFactory.create(
             new LongWritable(Long.parseLong(tokens[n])),
             new FloatWritable(weight)));
       }

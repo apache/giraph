@@ -19,8 +19,8 @@
 package org.apache.giraph.examples;
 
 import org.apache.giraph.bsp.BspUtils;
-import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.EdgeFactory;
 import org.apache.giraph.io.formats.TextVertexInputFormat;
 import org.apache.giraph.vertex.Vertex;
 import org.apache.hadoop.io.DoubleWritable;
@@ -94,8 +94,7 @@ public class NormalizingLongDoubleFloatDoubleTextInputFormat
                Collection<Edge<LongWritable, FloatWritable>> edges) {
       for (int n = 1; n < tokens.length; n++) {
         String[] parts = weightSeparator.split(tokens[n]);
-        edges.add(new DefaultEdge<LongWritable, FloatWritable>(
-            new LongWritable(Long.parseLong(parts[0])),
+        edges.add(EdgeFactory.create(new LongWritable(Long.parseLong(parts[0])),
             new FloatWritable(Float.parseFloat(parts[1]))));
       }
     }

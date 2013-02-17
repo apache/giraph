@@ -17,8 +17,8 @@
  */
 package org.apache.giraph.vertex;
 
-import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.EdgeFactory;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -102,8 +102,7 @@ public abstract class LongDoubleFloatDoubleVertex
           @Override
           public Edge<LongWritable, FloatWritable> next() {
             long targetVertex = targetVertices[offset++];
-            return new DefaultEdge<LongWritable, FloatWritable>(
-                new LongWritable(targetVertex),
+            return EdgeFactory.create(new LongWritable(targetVertex),
                 new FloatWritable(targetVertex));
           }
 

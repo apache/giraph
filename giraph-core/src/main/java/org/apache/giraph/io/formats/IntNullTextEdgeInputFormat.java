@@ -18,6 +18,7 @@
 
 package org.apache.giraph.io.formats;
 
+import org.apache.giraph.io.EdgeReader;
 import org.apache.giraph.utils.IntPair;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
@@ -40,7 +41,7 @@ public class IntNullTextEdgeInputFormat extends
   private static final Pattern SEPARATOR = Pattern.compile("[\t ]");
 
   @Override
-  public TextEdgeReader createEdgeReader(
+  public EdgeReader<IntWritable, NullWritable> createEdgeReader(
       InputSplit split, TaskAttemptContext context) throws IOException {
     return new IntNullTextEdgeReader();
   }

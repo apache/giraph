@@ -18,8 +18,8 @@
 
 package org.apache.giraph.utils;
 
-import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.EdgeFactory;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
 
@@ -60,8 +60,8 @@ public class UnmodifiableLongFloatEdgeArrayIterable extends
   @Override
   public Edge<LongWritable, FloatWritable> next() {
     Edge<LongWritable, FloatWritable> retval =
-        new DefaultEdge<LongWritable, FloatWritable>(new LongWritable(
-            longArray[offset]), new FloatWritable(floatArray[offset]));
+        EdgeFactory.create(new LongWritable(longArray[offset]),
+            new FloatWritable(floatArray[offset]));
     offset++;
     return retval;
   }

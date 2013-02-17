@@ -17,10 +17,10 @@
  */
 package org.apache.giraph.partition;
 
-import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.graph.Edge;
-import org.apache.giraph.job.GiraphJob;
+import org.apache.giraph.graph.EdgeFactory;
 import org.apache.giraph.graph.GiraphTransferRegulator;
+import org.apache.giraph.job.GiraphJob;
 import org.apache.giraph.vertex.EdgeListVertex;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
@@ -75,12 +75,9 @@ public class TestGiraphTransferRegulator {
     job.getConfiguration()
         .setInt(GiraphTransferRegulator.MAX_EDGES_PER_TRANSFER, 3);
     List<Edge<IntWritable, DoubleWritable>> edges = Lists.newLinkedList();
-    edges.add(new DefaultEdge<IntWritable, DoubleWritable>(new IntWritable(2),
-        new DoubleWritable(22)));
-    edges.add(new DefaultEdge<IntWritable, DoubleWritable>(new IntWritable(3),
-        new DoubleWritable(33)));
-    edges.add(new DefaultEdge<IntWritable, DoubleWritable>(new IntWritable(4),
-        new DoubleWritable(44)));
+    edges.add(EdgeFactory.create(new IntWritable(2), new DoubleWritable(22)));
+    edges.add(EdgeFactory.create(new IntWritable(3), new DoubleWritable(33)));
+    edges.add(EdgeFactory.create(new IntWritable(4), new DoubleWritable(44)));
     vertex.initialize(null, null, edges);
     GiraphTransferRegulator gtr =
         new GiraphTransferRegulator(job.getConfiguration());

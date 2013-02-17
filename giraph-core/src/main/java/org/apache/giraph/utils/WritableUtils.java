@@ -337,8 +337,7 @@ public class WritableUtils {
    * @throws IOException
    */
   public static <I extends WritableComparable, E extends Writable>
-  void writeEdge(DataOutput out, Edge<I, E> edge)
-    throws IOException {
+  void writeEdge(DataOutput out, Edge<I, E> edge) throws IOException {
     edge.getTargetVertexId().write(out);
     edge.getValue().write(out);
   }
@@ -353,8 +352,7 @@ public class WritableUtils {
    * @throws IOException
    */
   public static <I extends WritableComparable, E extends Writable>
-  void readEdge(DataInput in, Edge<I, E> edge)
-    throws IOException {
+  void readEdge(DataInput in, Edge<I, E> edge) throws IOException {
     edge.getTargetVertexId().readFields(in);
     edge.getValue().readFields(in);
   }

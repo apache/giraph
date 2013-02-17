@@ -18,7 +18,7 @@
 package org.apache.giraph.utils;
 
 import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.EdgeNoValue;
+import org.apache.giraph.graph.EdgeFactory;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 
@@ -60,7 +60,7 @@ public class UnmodifiableLongNullEdgeArrayIterable extends
   @Override
   public Edge<LongWritable, NullWritable> next() {
     Edge<LongWritable, NullWritable> retval =
-        new EdgeNoValue<LongWritable>(new LongWritable(longArray[offset]));
+        EdgeFactory.create(new LongWritable(longArray[offset]));
     offset++;
     return retval;
   }

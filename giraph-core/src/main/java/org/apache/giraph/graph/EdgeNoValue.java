@@ -34,15 +34,14 @@ public class EdgeNoValue<I extends WritableComparable>
   private I targetVertexId = null;
 
   /** Empty constructor */
-  public EdgeNoValue() {
-    // do nothing
-  }
+  EdgeNoValue() { }
 
   /**
-   * Constructor with target vertex ID
+   * Constructor with target vertex ID. Don't call, use EdgeFactory instead.
+   *
    * @param targetVertexId vertex ID
    */
-  public EdgeNoValue(I targetVertexId) {
+  EdgeNoValue(I targetVertexId) {
     this.targetVertexId = targetVertexId;
   }
 

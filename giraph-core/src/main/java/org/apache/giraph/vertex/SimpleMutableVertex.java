@@ -19,7 +19,7 @@
 package org.apache.giraph.vertex;
 
 import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.EdgeNoValue;
+import org.apache.giraph.graph.EdgeFactory;
 import org.apache.giraph.utils.EdgeIterables;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
@@ -93,7 +93,7 @@ public abstract class SimpleMutableVertex<I extends WritableComparable,
    */
   public void addEdgeRequest(I sourceVertexId) throws IOException {
     getGraphState().getWorkerClientRequestProcessor().
-        addEdgeRequest(sourceVertexId, new EdgeNoValue<I>(sourceVertexId));
+        addEdgeRequest(sourceVertexId, EdgeFactory.create(sourceVertexId));
   }
 
   @Override
@@ -109,7 +109,7 @@ public abstract class SimpleMutableVertex<I extends WritableComparable,
     for (int i = 0; i < numEdges; ++i) {
       I targetVertexId = getConf().createVertexId();
       targetVertexId.readFields(in);
-      edges.add(new EdgeNoValue<I>(targetVertexId));
+      edges.add(EdgeFactory.create(targetVertexId));
     }
 
     initialize(vertexId, vertexValue, edges);

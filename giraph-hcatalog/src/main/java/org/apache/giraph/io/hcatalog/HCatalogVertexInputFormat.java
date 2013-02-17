@@ -19,8 +19,8 @@
 package org.apache.giraph.io.hcatalog;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.EdgeFactory;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexReader;
 import org.apache.giraph.utils.TimedLogger;
@@ -349,15 +349,13 @@ public abstract class HCatalogVertexInputFormat<
     @Override
     public boolean nextVertex() throws IOException, InterruptedException {
       while (getRecordReader().nextKeyValue()) {
-        HCatRecord record =
-            getRecordReader().getCurrentValue();
+        HCatRecord record = getRecordReader().getCurrentValue();
         if (currentVertexId == null) {
           currentVertexId = getVertexId(record);
         }
         if (currentVertexId.equals(getVertexId(record))) {
-          currentEdges.add(new DefaultEdge<I, E>(
-                  getTargetVertexId(record),
-                  getEdgeValue(record)));
+          currentEdges.add(EdgeFactory.create(getTargetVertexId(record),
+              getEdgeValue(record)));
           recordsForVertex.add(record);
         } else {
           createCurrentVertex();

@@ -18,9 +18,8 @@
 
 package org.apache.giraph.io.hcatalog;
 
-import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.EdgeNoValue;
+import org.apache.giraph.graph.EdgeFactory;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.EdgeReader;
 import org.apache.hadoop.io.NullWritable;
@@ -202,7 +201,7 @@ public abstract class HCatalogEdgeInputFormat<
     public Edge<I, E> getCurrentEdge() throws IOException,
         InterruptedException {
       HCatRecord record = getRecordReader().getCurrentValue();
-      return new DefaultEdge<I, E>(getTargetVertexId(record),
+      return EdgeFactory.create(getTargetVertexId(record),
           getEdgeValue(record));
     }
   }
@@ -249,7 +248,7 @@ public abstract class HCatalogEdgeInputFormat<
     public Edge<I, NullWritable> getCurrentEdge() throws IOException,
         InterruptedException {
       HCatRecord record = getRecordReader().getCurrentValue();
-      return new EdgeNoValue<I>(getTargetVertexId(record));
+      return EdgeFactory.create(getTargetVertexId(record));
     }
   }
 }

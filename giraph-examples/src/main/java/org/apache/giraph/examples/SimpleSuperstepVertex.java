@@ -18,8 +18,8 @@
 
 package org.apache.giraph.examples;
 
-import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.EdgeFactory;
 import org.apache.giraph.io.VertexReader;
 import org.apache.giraph.io.formats.GeneratedVertexInputFormat;
 import org.apache.giraph.io.formats.TextVertexOutputFormat;
@@ -98,8 +98,7 @@ public class SimpleSuperstepVertex extends
           (vertexId.get() + 1) %
           (inputSplit.getNumSplits() * totalRecords);
       float edgeValue = vertexId.get() * 100f;
-      edges.add(new DefaultEdge<LongWritable, FloatWritable>(
-          new LongWritable(targetVertexId),
+      edges.add(EdgeFactory.create(new LongWritable(targetVertexId),
           new FloatWritable(edgeValue)));
       vertex.initialize(vertexId, vertexValue, edges);
       ++recordsRead;

@@ -18,8 +18,8 @@
 
 package org.apache.giraph.io.formats;
 
-import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.EdgeFactory;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -142,7 +142,7 @@ public class JsonBase64VertexInputFormat<I extends WritableComparable,
         targetVertexId.readFields(input);
         E edgeValue = getConf().createEdgeValue();
         edgeValue.readFields(input);
-        edges.add(new DefaultEdge<I, E>(targetVertexId, edgeValue));
+        edges.add(EdgeFactory.create(targetVertexId, edgeValue));
       }
       return edges;
     }

@@ -18,7 +18,7 @@
 
 package org.apache.giraph.examples;
 
-import org.apache.giraph.graph.EdgeNoValue;
+import org.apache.giraph.graph.EdgeFactory;
 import org.apache.giraph.utils.MockUtils;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
@@ -45,8 +45,8 @@ public class SimpleTriangleClosingVertexTest {
     SimpleTriangleClosingVertex.IntArrayListWritable alw =
       new SimpleTriangleClosingVertex.IntArrayListWritable();
     vertex.initialize(null, null);
-    vertex.addEdge(new EdgeNoValue<IntWritable>(new IntWritable(5)));
-    vertex.addEdge(new EdgeNoValue<IntWritable>(new IntWritable(7)));
+    vertex.addEdge(EdgeFactory.create(new IntWritable(5)));
+    vertex.addEdge(EdgeFactory.create(new IntWritable(7)));
 
     MockUtils.MockedEnvironment<IntWritable,
       SimpleTriangleClosingVertex.IntArrayListWritable,

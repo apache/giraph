@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-519: EdgeFactory (nitay)
+
   GIRAPH-515: More efficient and flexible edge-based input (apresta)
 
   GIRAPH-516: out-of-core messages dies for ArrayIndexOutOfBoundsException when 

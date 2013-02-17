@@ -20,9 +20,8 @@ package org.apache.giraph.conf;
 
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.combiner.Combiner;
-import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.EdgeNoValue;
+import org.apache.giraph.graph.EdgeFactory;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.MutableEdge;
 import org.apache.giraph.graph.VertexResolver;
@@ -509,9 +508,9 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    */
   public Edge<I, E> createEdge() {
     if (isEdgeValueNullWritable()) {
-      return (Edge<I, E>) new EdgeNoValue<I>(createVertexId());
+      return (Edge<I, E>) EdgeFactory.create(createVertexId());
     } else {
-      return new DefaultEdge<I, E>(createVertexId(), createEdgeValue());
+      return EdgeFactory.create(createVertexId(), createEdgeValue());
     }
   }
 
@@ -522,9 +521,9 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    */
   public MutableEdge<I, E> createMutableEdge() {
     if (isEdgeValueNullWritable()) {
-      return (MutableEdge<I, E>) new EdgeNoValue<I>(createVertexId());
+      return (MutableEdge<I, E>) EdgeFactory.createMutable(createVertexId());
     } else {
-      return new DefaultEdge<I, E>(createVertexId(), createEdgeValue());
+      return EdgeFactory.createMutable(createVertexId(), createEdgeValue());
     }
   }
 

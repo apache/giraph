@@ -19,8 +19,8 @@ package org.apache.giraph.vertex;
 
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.EdgeFactory;
 import org.apache.giraph.time.SystemTime;
 import org.apache.giraph.time.Time;
 import org.apache.giraph.time.Times;
@@ -147,8 +147,8 @@ public class TestMutableVertex {
 
     List<Edge<IntWritable, DoubleWritable>> edges = Lists.newLinkedList();
     for (int i = 1000; i > 0; --i) {
-      edges.add(new DefaultEdge<IntWritable, DoubleWritable>(
-          new IntWritable(i), new DoubleWritable(i * 2.0)));
+      edges.add(EdgeFactory.create(new IntWritable(i),
+          new DoubleWritable(i * 2.0)));
     }
 
     vertex.initialize(null, null, edges);
@@ -182,7 +182,7 @@ public class TestMutableVertex {
 
     List<Edge<IntWritable, DoubleWritable>> edges = Lists.newLinkedList();
     for (int i = 1000; i > 0; --i) {
-      edges.add(new DefaultEdge<IntWritable, DoubleWritable>(
+      edges.add(EdgeFactory.create(
           new IntWritable(i), new DoubleWritable(i * 3.0)));
     }
 
@@ -220,19 +220,19 @@ public class TestMutableVertex {
 
     vertex.initialize(new IntWritable(0), new FloatWritable(0.0f));
     assertEquals(vertex.getNumEdges(), 0);
-    assertTrue(vertex.addEdge(new DefaultEdge<IntWritable, DoubleWritable>(
+    assertTrue(vertex.addEdge(EdgeFactory.create(
         new IntWritable(2),
         new DoubleWritable(2.0))));
     assertEquals(vertex.getNumEdges(), 1);
     assertEquals(vertex.getEdgeValue(new IntWritable(2)),
         new DoubleWritable(2.0));
-    assertTrue(vertex.addEdge(new DefaultEdge<IntWritable, DoubleWritable>(
+    assertTrue(vertex.addEdge(EdgeFactory.create(
         new IntWritable(4),
         new DoubleWritable(4.0))));
-    assertTrue(vertex.addEdge(new DefaultEdge<IntWritable, DoubleWritable>(
+    assertTrue(vertex.addEdge(EdgeFactory.create(
         new IntWritable(3),
         new DoubleWritable(3.0))));
-    assertTrue(vertex.addEdge(new DefaultEdge<IntWritable, DoubleWritable>(
+    assertTrue(vertex.addEdge(EdgeFactory.create(
         new IntWritable(1),
         new DoubleWritable(1.0))));
     assertEquals(vertex.getNumEdges(), 4);
@@ -280,7 +280,7 @@ public class TestMutableVertex {
     List<Edge<IntWritable, DoubleWritable>> edges =
         Lists.newArrayListWithCapacity(edgesCount);
     for (int i = edgesCount; i > 0; --i) {
-      edges.add(new DefaultEdge<IntWritable, DoubleWritable>(
+      edges.add(EdgeFactory.create(
           new IntWritable(i), new DoubleWritable(i * 2.0)));
     }
     vertex.initialize(new IntWritable(2), new FloatWritable(3.0f), edges);

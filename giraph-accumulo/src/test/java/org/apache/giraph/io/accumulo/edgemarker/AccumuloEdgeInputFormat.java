@@ -19,8 +19,8 @@ package org.apache.giraph.io.accumulo.edgemarker;
 
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Value;
-import org.apache.giraph.graph.DefaultEdge;
 import org.apache.giraph.graph.Edge;
+import org.apache.giraph.graph.EdgeFactory;
 import org.apache.giraph.io.VertexReader;
 import org.apache.giraph.io.accumulo.AccumuloVertexInputFormat;
 import org.apache.giraph.vertex.Vertex;
@@ -87,7 +87,7 @@ public class AccumuloEdgeInputFormat
               List<Edge<Text, Text>> edges = Lists.newLinkedList();
               String edge = new String(value.get());
               Text edgeId = new Text(edge);
-              edges.add(new DefaultEdge<Text, Text>(edgeId, uselessEdgeValue));
+              edges.add(EdgeFactory.create(edgeId, uselessEdgeValue));
               vertex.initialize(vertexId, new Text(), edges);
 
             return vertex;
