@@ -98,7 +98,7 @@ public class SequentialFileMessageStore<I extends WritableComparable,
       if (LOG.isDebugEnabled()) {
         LOG.debug("addMessages: Deleting " + file);
       }
-      //file.delete();
+      file.delete();
     }
     file.createNewFile();
     if (LOG.isDebugEnabled()) {
