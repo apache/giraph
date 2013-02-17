@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-520: ReverseEdgeDuplicator (nitay)
+
   GIRAPH-522: JMap Dumper (nitay)
 
   GIRAPH-517: Use stable hcatalog 0.5.0-incubating (nitay)
