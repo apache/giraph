@@ -36,6 +36,7 @@ import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.giraph.master.MasterCompute;
+import org.apache.giraph.partition.Partition;
 import org.apache.giraph.vertex.Vertex;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.hadoop.fs.Path;
@@ -76,6 +77,7 @@ public final class ConfigurationUtils {
     OPTIONS.addOption("aw", "aggregatorWriter", true, "AggregatorWriter class");
     OPTIONS.addOption("mc", "masterCompute", true, "MasterCompute class");
     OPTIONS.addOption("cf", "cacheFile", true, "Files for distributed cache");
+    OPTIONS.addOption("pc", "partitionClass", true, "Partition class");
     OPTIONS.addOption("ca", "customArguments", true, "provide custom" +
         " arguments for the job configuration in the form:" +
         " -ca <param1>=<value1>,<param2>=<value2> -ca <param3>=<value3> etc." +
@@ -235,6 +237,11 @@ public final class ConfigurationUtils {
         LOG.info("No output format specified. Ensure your OutputFormat " +
           "does not require one.");
       }
+    }
+    if (cmd.hasOption("pc")) {
+      giraphConfiguration.setPartitionClass(
+          (Class<? extends Partition>)
+              Class.forName(cmd.getOptionValue("pc")));
     }
     if (cmd.hasOption("ca")) {
       for (String caOptionValue : cmd.getOptionValues("ca")) {
