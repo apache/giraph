@@ -31,6 +31,7 @@ import org.apache.giraph.comm.netty.NettyWorkerClient;
 import org.apache.giraph.comm.netty.NettyWorkerClientRequestProcessor;
 import org.apache.giraph.comm.netty.NettyWorkerServer;
 import org.apache.giraph.conf.GiraphConstants;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.bsp.BspService;
 import org.apache.giraph.graph.GraphTaskManager;
@@ -40,6 +41,7 @@ import org.apache.giraph.graph.InputSplitEvents;
 import org.apache.giraph.graph.FinishedSuperstepStats;
 import org.apache.giraph.graph.AddressesAndPartitionsWritable;
 import org.apache.giraph.graph.GlobalStats;
+import org.apache.giraph.utils.JMapHistoDumper;
 import org.apache.giraph.vertex.Vertex;
 import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.giraph.io.VertexWriter;
@@ -173,28 +175,28 @@ public class BspServiceWorker<I extends WritableComparable,
     GraphTaskManager<I, V, E, M> graphTaskManager)
     throws IOException, InterruptedException {
     super(serverPortList, sessionMsecTimeout, context, graphTaskManager);
+    ImmutableClassesGiraphConfiguration conf = getConfiguration();
     partitionExchangeChildrenChanged = new PredicateLock(context);
     registerBspEvent(partitionExchangeChildrenChanged);
     workerGraphPartitioner =
         getGraphPartitionerFactory().createWorkerGraphPartitioner();
     workerInfo = new WorkerInfo();
-    workerServer =
-        new NettyWorkerServer<I, V, E, M>(getConfiguration(), this, context);
+    workerServer = new NettyWorkerServer<I, V, E, M>(conf, this, context);
     workerInfo.setInetSocketAddress(workerServer.getMyAddress());
     workerInfo.setTaskId(getTaskPartition());
-    workerClient =
-        new NettyWorkerClient<I, V, E, M>(context, getConfiguration(), this);
+    workerClient = new NettyWorkerClient<I, V, E, M>(context, conf, this);
 
     workerAggregatorRequestProcessor =
-        new NettyWorkerAggregatorRequestProcessor(getContext(),
-            getConfiguration(), this);
+        new NettyWorkerAggregatorRequestProcessor(getContext(), conf, this);
 
-    this.workerContext = getConfiguration().createWorkerContext(null);
+    workerContext = conf.createWorkerContext(null);
 
-    aggregatorHandler =
-        new WorkerAggregatorHandler(this, getConfiguration(), context);
+    aggregatorHandler = new WorkerAggregatorHandler(this, conf, context);
 
-    observers = getConfiguration().createWorkerObservers();
+    if (conf.isJMapHistogramDumpEnabled()) {
+      conf.addWorkerObserverClass(JMapHistoDumper.class);
+    }
+    observers = conf.createWorkerObservers();
 
     GiraphMetrics.get().addSuperstepResetObserver(this);
   }

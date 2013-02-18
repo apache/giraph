@@ -20,11 +20,12 @@ package org.apache.giraph.io;
 
 import org.apache.giraph.BspCase;
 import org.apache.giraph.conf.GiraphClasses;
-import org.apache.giraph.vertex.EdgeListVertex;
 import org.apache.giraph.io.formats.IdWithValueTextOutputFormat;
 import org.apache.giraph.io.formats.IntIntTextVertexValueInputFormat;
+import org.apache.giraph.io.formats.IntNullReverseTextEdgeInputFormat;
 import org.apache.giraph.io.formats.IntNullTextEdgeInputFormat;
 import org.apache.giraph.utils.InternalVertexRunner;
+import org.apache.giraph.vertex.EdgeListVertex;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.junit.Test;
@@ -73,6 +74,37 @@ public class TestEdgeInput extends BspCase {
     assertEquals(1, (int) values.get(1));
     assertEquals(2, (int) values.get(2));
     assertEquals(1, (int) values.get(4));
+  }
+
+  // It should be able to build a graph starting from the edges only.
+  // Using ReverseEdgeDuplicator it should also create the reverse edges.
+  // Vertices should be implicitly created with default values.
+  @Test
+  public void testEdgesOnlyWithReverse() throws Exception {
+    String[] edges = new String[] {
+        "1 2",
+        "2 3",
+        "2 4",
+        "4 1"
+    };
+
+    GiraphClasses classes = new GiraphClasses();
+    classes.setVertexClass(TestVertexWithNumEdges.class);
+    classes.setEdgeInputFormatClass(IntNullReverseTextEdgeInputFormat.class);
+    classes.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
+    Map<String, String> params = ImmutableMap.of();
+    Iterable<String> results = InternalVertexRunner.run(classes, params,
+        null, edges);
+
+    Map<Integer, Integer> values = parseResults(results);
+
+    // Check that all vertices with outgoing edges have been created
+    assertEquals(4, values.size());
+    // Check the number of edges for each vertex
+    assertEquals(2, (int) values.get(1));
+    assertEquals(3, (int) values.get(2));
+    assertEquals(1, (int) values.get(3));
+    assertEquals(2, (int) values.get(4));
   }
 
   // It should be able to build a graph by specifying vertex data and edges
