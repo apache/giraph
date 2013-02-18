@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+
+  GIRAPH-514: DiskBackedMessageStores should take advantage of machines with multiple disks (claudio)
+
   GIRAPH-503: Refactor platform-independent CLI argument parsing in GiraphRunner into a separate class (ereisman)
 
   GIRAPH-519: EdgeFactory (nitay)
