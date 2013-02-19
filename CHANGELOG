@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-518: Support Hadoop-2.0.3-alpha release on Giraph (ereisman)
+
   GIRAPH-525: Add PartitionClass to the ConfigurationUtils (claudio)
 
   GIRAPH-514: DiskBackedMessageStores should take advantage of machines with multiple disks (claudio)

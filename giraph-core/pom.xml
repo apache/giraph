@@ -252,6 +252,10 @@ under the License.
     </profile>
 
     <profile>
+      <id>hadoop_2.0.3</id>
+    </profile>
+ 
+    <profile>
       <id>hadoop_trunk</id>
     </profile>
   </profiles>
