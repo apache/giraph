@@ -258,7 +258,7 @@ public class HiveGiraphRunner implements Tool {
           "Giraph HCatalogVertexOutputFormat class to use");
     }
 
-    options.addOption("db", "database", true, "Hive database name");
+    options.addOption("db", "dbName", true, "Hive database name");
     options.addOption("vi", "vertexInputTable", true,
         "Vertex input table name");
     options.addOption("VI", "vertexInputFilter", true,
