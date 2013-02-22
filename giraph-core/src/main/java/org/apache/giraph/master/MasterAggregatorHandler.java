@@ -57,6 +57,8 @@ public class MasterAggregatorHandler implements MasterAggregatorUsage,
   private final AggregatorWriter aggregatorWriter;
   /** Progressable used to report progress */
   private final Progressable progressable;
+  /** Giraph configuration */
+  private final ImmutableClassesGiraphConfiguration<?, ?, ?, ?> conf;
 
   /**
    * Constructor
@@ -67,6 +69,7 @@ public class MasterAggregatorHandler implements MasterAggregatorUsage,
   public MasterAggregatorHandler(
       ImmutableClassesGiraphConfiguration<?, ?, ?, ?> conf,
       Progressable progressable) {
+    this.conf = conf;
     this.progressable = progressable;
     aggregatorWriter = conf.createAggregatorWriter();
   }
@@ -75,6 +78,9 @@ public class MasterAggregatorHandler implements MasterAggregatorUsage,
   public <A extends Writable> A getAggregatedValue(String name) {
     AggregatorWrapper<? extends Writable> aggregator = aggregatorMap.get(name);
     if (aggregator == null) {
+      LOG.warn("getAggregatedValue: " +
+          AggregatorUtils.getUnregisteredAggregatorMessage(name,
+              aggregatorMap.size() != 0, conf));
       return null;
     } else {
       return (A) aggregator.getPreviousAggregatedValue();
@@ -86,8 +92,9 @@ public class MasterAggregatorHandler implements MasterAggregatorUsage,
     AggregatorWrapper<? extends Writable> aggregator = aggregatorMap.get(name);
     if (aggregator == null) {
       throw new IllegalStateException(
-          "setAggregatedValue: Tried to set value of aggregator which wasn't" +
-              " registered " + name);
+          "setAggregatedValue: " +
+              AggregatorUtils.getUnregisteredAggregatorMessage(name,
+                  aggregatorMap.size() != 0, conf));
     }
     ((AggregatorWrapper<A>) aggregator).setCurrentAggregatedValue(value);
   }

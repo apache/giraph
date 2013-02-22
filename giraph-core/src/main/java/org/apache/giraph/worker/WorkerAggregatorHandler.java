@@ -97,14 +97,21 @@ public class WorkerAggregatorHandler implements WorkerThreadAggregatorUsage {
         aggregator.aggregate(value);
       }
     } else {
-      throw new IllegalStateException("aggregate: Tried to aggregate value " +
-          "to unregistered aggregator " + name);
+      throw new IllegalStateException("aggregate: " +
+          AggregatorUtils.getUnregisteredAggregatorMessage(name,
+              currentAggregatorMap.size() != 0, conf));
     }
   }
 
   @Override
   public <A extends Writable> A getAggregatedValue(String name) {
-    return (A) previousAggregatedValueMap.get(name);
+    A value = (A) previousAggregatedValueMap.get(name);
+    if (value == null) {
+      LOG.warn("getAggregatedValue: " +
+          AggregatorUtils.getUnregisteredAggregatorMessage(name,
+              previousAggregatedValueMap.size() != 0, conf));
+    }
+    return value;
   }
 
   /**
@@ -272,7 +279,8 @@ public class WorkerAggregatorHandler implements WorkerThreadAggregatorUsage {
         aggregator.aggregate(value);
       } else {
         throw new IllegalStateException("aggregate: " +
-            "Tried to aggregate value to unregistered aggregator " + name);
+            AggregatorUtils.getUnregisteredAggregatorMessage(name,
+                threadAggregatorMap.size() != 0, conf));
       }
     }
 

@@ -117,4 +117,30 @@ public class AggregatorUtils {
     return conf.getBoolean(USE_THREAD_LOCAL_AGGREGATORS,
         USE_THREAD_LOCAL_AGGREGATORS_DEFAULT);
   }
+
+  /**
+   * Get the warning message about usage of unregistered aggregator to be
+   * printed to user. If user didn't register any aggregators also provide
+   * the explanation on how to do so.
+   *
+   * @param aggregatorName The name of the aggregator which user tried to
+   *                       access
+   * @param hasRegisteredAggregators True iff user registered some aggregators
+   * @param conf Giraph configuration
+   * @return Warning message
+   */
+  public static String getUnregisteredAggregatorMessage(
+      String aggregatorName, boolean hasRegisteredAggregators,
+      ImmutableClassesGiraphConfiguration conf) {
+    String message = "Tried to access aggregator which wasn't registered " +
+        aggregatorName;
+    if (!hasRegisteredAggregators) {
+      message = message + "; Aggregators can be registered in " +
+          "MasterCompute.initialize by calling " +
+          "registerAggregator(aggregatorName, aggregatorClass). " +
+          "Also be sure that you are correctly setting MasterCompute class, " +
+          "currently using " + conf.getMasterComputeClass().getName();
+    }
+    return message;
+  }
 }
