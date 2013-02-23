@@ -48,12 +48,11 @@ import java.util.List;
 public abstract class TextVertexInputFormat<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
     extends VertexInputFormat<I, V, E, M> {
-
   /** Uses the GiraphTextInputFormat to do everything */
   protected GiraphTextInputFormat textInputFormat = new GiraphTextInputFormat();
 
   @Override
-  public List<InputSplit> getSplits(JobContext context, int numWorkers)
+  public List<InputSplit> getSplits(JobContext context, int minSplitCountHint)
     throws IOException, InterruptedException {
     // Ignore the hint of numWorkers here since we are using
     // GiraphTextInputFormat to do this for us

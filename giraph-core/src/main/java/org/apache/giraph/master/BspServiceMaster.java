@@ -268,17 +268,17 @@ public class BspServiceMaster<I extends WritableComparable,
    * Common method for generating vertex/edge input splits.
    *
    * @param inputFormat The vertex/edge input format
-   * @param numWorkers Number of available workers
+   * @param minSplitCountHint Minimum number of splits to create (hint)
    * @param inputSplitType Type of input splits (for logging purposes)
    * @return List of input splits for the given format
    */
   private List<InputSplit> generateInputSplits(GiraphInputFormat inputFormat,
-                                               int numWorkers,
+                                               int minSplitCountHint,
                                                String inputSplitType) {
     String logPrefix = "generate" + inputSplitType + "InputSplits";
     List<InputSplit> splits;
     try {
-      splits = inputFormat.getSplits(getContext(), numWorkers);
+      splits = inputFormat.getSplits(getContext(), minSplitCountHint);
     } catch (IOException e) {
       throw new IllegalStateException(logPrefix + ": Got IOException", e);
     } catch (InterruptedException e) {
@@ -300,7 +300,7 @@ public class BspServiceMaster<I extends WritableComparable,
     } else {
       if (LOG.isInfoEnabled()) {
         LOG.info(logPrefix + ": Got " + splits.size() +
-            " input splits for " + numWorkers + " workers");
+            " input splits for " + minSplitCountHint + " workers");
       }
       return splits;
     }
@@ -576,10 +576,14 @@ public class BspServiceMaster<I extends WritableComparable,
       return -1;
     }
 
+    // Create at least as many splits as the total number of input threads.
+    int minSplitCountHint = healthyWorkerInfoList.size() *
+        getConfiguration().getNumInputSplitsThreads();
+
     // Note that the input splits may only be a sample if
     // INPUT_SPLIT_SAMPLE_PERCENT is set to something other than 100
     List<InputSplit> splitList = generateInputSplits(inputFormat,
-        healthyWorkerInfoList.size(), inputSplitType);
+        minSplitCountHint, inputSplitType);
 
     if (splitList.isEmpty()) {
       LOG.fatal(logPrefix + ": Failing job due to 0 input splits, " +
@@ -588,12 +592,12 @@ public class BspServiceMaster<I extends WritableComparable,
           "check input of " + inputFormat.getClass().getName() + "!");
       failJob();
     }
-    if (healthyWorkerInfoList.size() > splitList.size()) {
+    if (minSplitCountHint > splitList.size()) {
       LOG.warn(logPrefix + ": Number of inputSplits=" +
           splitList.size() + " < " +
-          healthyWorkerInfoList.size() +
-          "=number of healthy processes, " +
-          "some workers will be not used");
+          minSplitCountHint +
+          "=total number of input threads, " +
+          "some threads will be not used");
     }
 
     // Write input splits to zookeeper in parallel

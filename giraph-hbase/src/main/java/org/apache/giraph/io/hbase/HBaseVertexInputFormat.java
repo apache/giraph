@@ -175,17 +175,9 @@ public abstract class HBaseVertexInputFormat<
 
   }
 
-  /**
-   * getSplits
-   *
-   * @param context Context of the job
-   * @param numWorkers Number of workers used for this job
-   * @return HBase region splits
-   * @throws IOException
-   * @throws InterruptedException
-   */
+  @Override
   public List<InputSplit> getSplits(
-  JobContext context, int numWorkers)
+  JobContext context, int minSplitCountHint)
     throws IOException, InterruptedException {
     BASE_FORMAT.setConf(context.getConfiguration());
     return BASE_FORMAT.getSplits(context);

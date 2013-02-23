@@ -150,18 +150,9 @@ public abstract class AccumuloVertexInputFormat<
 
   }
 
-  /**
-   * getSplits
-   *
-   * @param context Context of the job
-   * @param numWorkers Number of workers used for this job
-   * @return  tablet splits
-   * @throws IOException
-   * @throws InterruptedException
-   */
   @Override
   public List<InputSplit> getSplits(
-    JobContext context, int numWorkers)
+    JobContext context, int minSplitCountHint)
     throws IOException, InterruptedException {
     List<InputSplit> splits = null;
     try {

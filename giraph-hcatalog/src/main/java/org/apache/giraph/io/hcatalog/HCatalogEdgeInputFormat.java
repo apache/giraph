@@ -50,7 +50,8 @@ public abstract class HCatalogEdgeInputFormat<
   private GiraphHCatInputFormat hCatInputFormat = new GiraphHCatInputFormat();
 
   @Override
-  public final List<InputSplit> getSplits(JobContext context, int numWorkers)
+  public final List<InputSplit> getSplits(JobContext context,
+                                          int minSplitCountHint)
     throws IOException, InterruptedException {
     return hCatInputFormat.getEdgeSplits(context);
   }

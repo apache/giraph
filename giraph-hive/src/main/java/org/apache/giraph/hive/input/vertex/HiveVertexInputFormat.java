@@ -58,7 +58,7 @@ public class HiveVertexInputFormat<I extends WritableComparable,
   }
 
   @Override
-  public List<InputSplit> getSplits(JobContext context, int numWorkers)
+  public List<InputSplit> getSplits(JobContext context, int minSplitCountHint)
     throws IOException, InterruptedException {
     return hiveInputFormat.getSplits(context);
   }

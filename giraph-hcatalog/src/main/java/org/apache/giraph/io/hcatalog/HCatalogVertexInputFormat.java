@@ -73,7 +73,7 @@ public abstract class HCatalogVertexInputFormat<
 
   @Override
   public final List<InputSplit> getSplits(
-      final JobContext context, final int numWorkers)
+      final JobContext context, final int minSplitCountHint)
     throws IOException, InterruptedException {
     return hCatInputFormat.getVertexSplits(context);
   }

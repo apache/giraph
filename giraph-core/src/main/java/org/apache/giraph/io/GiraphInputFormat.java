@@ -32,11 +32,11 @@ public interface GiraphInputFormat {
    * Get the list of input splits for the format.
    *
    * @param context The job context
-   * @param numWorkers Number of workers
+   * @param minSplitCountHint Minimum number of splits to create (hint)
    * @return The list of input splits
    * @throws IOException
    * @throws InterruptedException
    */
-  List<InputSplit> getSplits(JobContext context, int numWorkers)
+  List<InputSplit> getSplits(JobContext context, int minSplitCountHint)
     throws IOException, InterruptedException;
 }

@@ -49,7 +49,7 @@ public abstract class TextVertexValueInputFormat<I extends WritableComparable,
   protected GiraphTextInputFormat textInputFormat = new GiraphTextInputFormat();
 
   @Override
-  public List<InputSplit> getSplits(JobContext context, int numWorkers)
+  public List<InputSplit> getSplits(JobContext context, int minSplitCountHint)
     throws IOException, InterruptedException {
     // Ignore the hint of numWorkers here since we are using
     // GiraphTextInputFormat to do this for us

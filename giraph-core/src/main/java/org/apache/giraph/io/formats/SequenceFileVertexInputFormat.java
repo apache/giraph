@@ -50,7 +50,7 @@ public class SequenceFileVertexInputFormat<I extends WritableComparable,
     new SequenceFileInputFormat<I, X>();
 
   @Override
-  public List<InputSplit> getSplits(JobContext context, int numWorkers)
+  public List<InputSplit> getSplits(JobContext context, int minSplitCountHint)
     throws IOException, InterruptedException {
     return sequenceFileInputFormat.getSplits(context);
   }

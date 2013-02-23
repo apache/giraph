@@ -55,13 +55,13 @@ public class PseudoRandomEdgeInputFormat
 
   @Override
   public final List<InputSplit> getSplits(final JobContext context,
-                                          final int numWorkers)
+                                          final int minSplitCountHint)
     throws IOException, InterruptedException {
     // This is meaningless, the PseudoRandomEdgeReader will generate
     // all the test data
     List<InputSplit> inputSplitList = new ArrayList<InputSplit>();
-    for (int i = 0; i < numWorkers; ++i) {
-      inputSplitList.add(new BspInputSplit(i, numWorkers));
+    for (int i = 0; i < minSplitCountHint; ++i) {
+      inputSplitList.add(new BspInputSplit(i, minSplitCountHint));
     }
     return inputSplitList;
   }

@@ -51,7 +51,7 @@ public abstract class TextEdgeInputFormat<I extends WritableComparable,
 
   @Override
   public List<InputSplit> getSplits(
-      JobContext context, int numWorkers) throws IOException,
+      JobContext context, int minSplitCountHint) throws IOException,
       InterruptedException {
     // Ignore the hint of numWorkers here since we are using
     // GiraphTextInputFormat to do this for us
