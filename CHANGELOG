@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-539: When having open requests log which workers are they sent to (majakabiljo)
+
   GIRAPH-532: Give an explanation when trying to use unregistered aggregators (majakabiljo)
 
   GIRAPH-453: Pure Hive I/O (nitay)
