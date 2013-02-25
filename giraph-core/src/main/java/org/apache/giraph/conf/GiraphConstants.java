@@ -497,6 +497,23 @@ public interface GiraphConstants {
    */
   boolean USE_INPUT_SPLIT_LOCALITY_DEFAULT = true;
 
+  /** Multiplier for the current workers squared */
+  String PARTITION_COUNT_MULTIPLIER =
+      "partition.masterPartitionCountMultipler";
+  /** Default mulitplier for current workers squared */
+  float DEFAULT_PARTITION_COUNT_MULTIPLIER = 1.0f;
+
+  /** Overrides default partition count calculation if not -1 */
+  String USER_PARTITION_COUNT =
+      "partition.userPartitionCount";
+  /** Default user partition count */
+  int DEFAULT_USER_PARTITION_COUNT = -1;
+
+  /** Vertex key space size for
+   * {@link org.apache.giraph.partition.SimpleRangeWorkerPartitioner}
+   */
+  String PARTITION_VERTEX_KEY_SPACE_SIZE = "partition.vertexKeySpaceSize";
+
   /** Java opts passed to ZooKeeper startup */
   String ZOOKEEPER_JAVA_OPTS = "giraph.zkJavaOpts";
   /** Default java opts passed to ZooKeeper startup */

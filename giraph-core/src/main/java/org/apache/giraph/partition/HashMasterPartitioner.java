@@ -18,16 +18,16 @@
 
 package org.apache.giraph.partition;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
 
 /**
  * Master will execute a hash based partitioning.
@@ -41,24 +41,10 @@ import org.apache.log4j.Logger;
 public class HashMasterPartitioner<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable> implements
     MasterGraphPartitioner<I, V, E, M> {
-  /** Multiplier for the current workers squared */
-  public static final String PARTITION_COUNT_MULTIPLIER =
-    "hash.masterPartitionCountMultipler";
-  /** Default mulitplier for current workers squared */
-  public static final float DEFAULT_PARTITION_COUNT_MULTIPLIER = 1.0f;
-  /** Overrides default partition count calculation if not -1 */
-  public static final String USER_PARTITION_COUNT =
-    "hash.userPartitionCount";
-  /** Default user partition count */
-  public static final int DEFAULT_USER_PARTITION_COUNT = -1;
   /** Class logger */
   private static Logger LOG = Logger.getLogger(HashMasterPartitioner.class);
   /** Provided configuration */
   private ImmutableClassesGiraphConfiguration conf;
-  /** Specified partition count (overrides calculation) */
-  private final int userPartitionCount;
-  /** Partition count (calculated in createInitialPartitionOwners) */
-  private int partitionCount = -1;
   /** Save the last generated partition owner list */
   private List<PartitionOwner> partitionOwnerList;
 
@@ -69,44 +55,15 @@ public class HashMasterPartitioner<I extends WritableComparable,
    */
   public HashMasterPartitioner(ImmutableClassesGiraphConfiguration conf) {
     this.conf = conf;
-    userPartitionCount = conf.getInt(USER_PARTITION_COUNT,
-        DEFAULT_USER_PARTITION_COUNT);
   }
 
   @Override
   public Collection<PartitionOwner> createInitialPartitionOwners(
       Collection<WorkerInfo> availableWorkerInfos, int maxWorkers) {
-    if (availableWorkerInfos.isEmpty()) {
-      throw new IllegalArgumentException(
-          "createInitialPartitionOwners: No available workers");
-    }
+    int partitionCount = PartitionUtils.computePartitionCount(
+        availableWorkerInfos, maxWorkers, conf);
     List<PartitionOwner> ownerList = new ArrayList<PartitionOwner>();
     Iterator<WorkerInfo> workerIt = availableWorkerInfos.iterator();
-    if (userPartitionCount == DEFAULT_USER_PARTITION_COUNT) {
-      float multiplier = conf.getFloat(
-          PARTITION_COUNT_MULTIPLIER,
-          DEFAULT_PARTITION_COUNT_MULTIPLIER);
-      partitionCount =
-          Math.max((int) (multiplier * availableWorkerInfos.size() *
-              availableWorkerInfos.size()),
-              1);
-    } else {
-      partitionCount = userPartitionCount;
-    }
-    if (LOG.isInfoEnabled()) {
-      LOG.info("createInitialPartitionOwners: Creating " +
-        partitionCount + ", default would have been " +
-        (availableWorkerInfos.size() *
-         availableWorkerInfos.size()) + " partitions.");
-    }
-    int maxPartitions = getMaxPartitions();
-    if (partitionCount > maxPartitions) {
-      LOG.warn("createInitialPartitionOwners: " +
-          "Reducing the partitionCount to " + maxPartitions +
-          " from " + partitionCount);
-      partitionCount = maxPartitions;
-    }
-
     for (int i = 0; i < partitionCount; ++i) {
       PartitionOwner owner = new BasicPartitionOwner(i, workerIt.next());
       if (!workerIt.hasNext()) {
@@ -151,26 +108,5 @@ public class HashMasterPartitioner<I extends WritableComparable,
     return new PartitionStats();
   }
 
-  /**
-   * Get the maximum number of partitions supported by Giraph.
-   *
-   * ZooKeeper has a limit of the data in a single znode of 1 MB,
-   * and we write all partition descriptions to the same znode.
-   *
-   * If we are not using checkpointing, each partition owner is serialized
-   * as 4 ints (16B), and we need some space to write the list of workers
-   * there. 50k partitions is conservative enough.
-   *
-   * When checkpointing is used, we need enough space to write all the
-   * checkpoint file paths.
-   *
-   * @return Maximum number of partitions allowed
-   */
-  private int getMaxPartitions() {
-    if (conf.useCheckpointing()) {
-      return 5000;
-    } else {
-      return 50000;
-    }
-  }
+
 }

@@ -18,6 +18,8 @@
 
 package org.apache.giraph.io.formats;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import org.apache.giraph.bsp.BspInputSplit;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.Edge;
@@ -32,9 +34,6 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.log4j.Logger;
-
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -52,13 +51,6 @@ import java.util.Set;
  */
 public class PseudoRandomVertexInputFormat<M extends Writable> extends
     VertexInputFormat<LongWritable, DoubleWritable, DoubleWritable, M> {
-  /** Set the number of aggregate vertices. */
-  public static final String AGGREGATE_VERTICES =
-      "pseudoRandomVertexInputFormat.aggregateVertices";
-  /** Set the number of edges per vertex (pseudo-random destination). */
-  public static final String EDGES_PER_VERTEX =
-      "pseudoRandomVertexInputFormat.edgesPerVertex";
-
   @Override
   public final List<InputSplit> getSplits(final JobContext context,
       final int minSplitCountHint) throws IOException, InterruptedException {
@@ -101,6 +93,8 @@ public class PseudoRandomVertexInputFormat<M extends Writable> extends
     private BspInputSplit bspInputSplit;
     /** Saved configuration */
     private ImmutableClassesGiraphConfiguration configuration;
+    /** Helper for generating pseudo-random local edges. */
+    private PseudoRandomLocalEdgesHelper localEdgesHelper;
 
     /**
      * Default constructor for reflection.
@@ -115,10 +109,10 @@ public class PseudoRandomVertexInputFormat<M extends Writable> extends
           context.getConfiguration());
       aggregateVertices =
         configuration.getLong(
-          PseudoRandomVertexInputFormat.AGGREGATE_VERTICES, 0);
+          PseudoRandomInputFormatConstants.AGGREGATE_VERTICES, 0);
       if (aggregateVertices <= 0) {
         throw new IllegalArgumentException(
-            PseudoRandomVertexInputFormat.AGGREGATE_VERTICES + " <= 0");
+            PseudoRandomInputFormatConstants.AGGREGATE_VERTICES + " <= 0");
       }
       if (inputSplit instanceof BspInputSplit) {
         bspInputSplit = (BspInputSplit) inputSplit;
@@ -139,11 +133,16 @@ public class PseudoRandomVertexInputFormat<M extends Writable> extends
             " instead of " + BspInputSplit.class);
       }
       edgesPerVertex = configuration.getLong(
-        PseudoRandomVertexInputFormat.EDGES_PER_VERTEX, 0);
+          PseudoRandomInputFormatConstants.EDGES_PER_VERTEX, 0);
       if (edgesPerVertex <= 0) {
         throw new IllegalArgumentException(
-          PseudoRandomVertexInputFormat.EDGES_PER_VERTEX + " <= 0");
+          PseudoRandomInputFormatConstants.EDGES_PER_VERTEX + " <= 0");
       }
+      float minLocalEdgesRatio = configuration.getFloat(
+          PseudoRandomInputFormatConstants.LOCAL_EDGES_MIN_RATIO,
+          PseudoRandomInputFormatConstants.LOCAL_EDGES_MIN_RATIO_DEFAULT);
+      localEdgesHelper = new PseudoRandomLocalEdgesHelper(aggregateVertices,
+          minLocalEdgesRatio, configuration);
     }
 
     @Override
@@ -166,11 +165,10 @@ public class PseudoRandomVertexInputFormat<M extends Writable> extends
           Lists.newArrayListWithCapacity((int) edgesPerVertex);
       Set<LongWritable> destVertices = Sets.newHashSet();
       for (long i = 0; i < edgesPerVertex; ++i) {
-        LongWritable destVertexId = null;
+        LongWritable destVertexId = new LongWritable();
         do {
-          destVertexId =
-            new LongWritable(Math.abs(rand.nextLong()) %
-              aggregateVertices);
+          destVertexId.set(
+              localEdgesHelper.generateDestVertex(vertexId, rand));
         } while (destVertices.contains(destVertexId));
         edges.add(EdgeFactory.create(destVertexId,
             new DoubleWritable(rand.nextDouble())));

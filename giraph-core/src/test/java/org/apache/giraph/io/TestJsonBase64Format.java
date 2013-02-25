@@ -21,6 +21,7 @@ import org.apache.giraph.BspCase;
 import org.apache.giraph.benchmark.EdgeListVertexPageRankBenchmark;
 import org.apache.giraph.benchmark.PageRankComputation;
 import org.apache.giraph.conf.GiraphClasses;
+import org.apache.giraph.io.formats.PseudoRandomInputFormatConstants;
 import org.apache.giraph.job.GiraphJob;
 import org.apache.giraph.io.formats.GiraphFileInputFormat;
 import org.apache.giraph.io.formats.JsonBase64VertexInputFormat;
@@ -66,9 +67,9 @@ public class TestJsonBase64Format extends BspCase {
     classes.setVertexOutputFormatClass(JsonBase64VertexOutputFormat.class);
     GiraphJob job = prepareJob(getCallingMethodName(), classes, outputPath);
     job.getConfiguration().setLong(
-        PseudoRandomVertexInputFormat.AGGREGATE_VERTICES, 101);
+        PseudoRandomInputFormatConstants.AGGREGATE_VERTICES, 101);
     job.getConfiguration().setLong(
-        PseudoRandomVertexInputFormat.EDGES_PER_VERTEX, 2);
+        PseudoRandomInputFormatConstants.EDGES_PER_VERTEX, 2);
     job.getConfiguration().setInt(PageRankComputation.SUPERSTEP_COUNT, 2);
 
     assertTrue(job.run(true));
@@ -91,9 +92,9 @@ public class TestJsonBase64Format extends BspCase {
     classes.setVertexOutputFormatClass(JsonBase64VertexOutputFormat.class);
     job = prepareJob(getCallingMethodName(), classes, outputPath3);
     job.getConfiguration().setLong(
-        PseudoRandomVertexInputFormat.AGGREGATE_VERTICES, 101);
+        PseudoRandomInputFormatConstants.AGGREGATE_VERTICES, 101);
     job.getConfiguration().setLong(
-        PseudoRandomVertexInputFormat.EDGES_PER_VERTEX, 2);
+        PseudoRandomInputFormatConstants.EDGES_PER_VERTEX, 2);
     job.getConfiguration().setInt(PageRankComputation.SUPERSTEP_COUNT, 5);
     assertTrue(job.run(true));
 

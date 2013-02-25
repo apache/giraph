@@ -19,19 +19,19 @@
 package org.apache.giraph;
 
 import org.apache.giraph.conf.GiraphClasses;
-import org.apache.giraph.examples.PartitionContextTestVertex;
+import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.examples.GeneratedVertexReader;
+import org.apache.giraph.examples.PartitionContextTestVertex;
 import org.apache.giraph.examples.SimplePageRankVertex;
 import org.apache.giraph.job.GiraphJob;
-import org.apache.giraph.partition.HashMasterPartitioner;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.junit.Test;
 
-import static org.junit.Assert.assertTrue;
-
 import java.io.IOException;
+
+import static org.junit.Assert.assertTrue;
 
 public class TestPartitionContext extends BspCase {
   public TestPartitionContext() {
@@ -65,7 +65,7 @@ public class TestPartitionContext extends BspCase {
         PartitionContextTestVertex.NUM_VERTICES);
     // Increase the number of partitions
     job.getConfiguration().setInt(
-        HashMasterPartitioner.USER_PARTITION_COUNT,
+        GiraphConstants.USER_PARTITION_COUNT,
         PartitionContextTestVertex.NUM_PARTITIONS);
     assertTrue(job.run(true));
   }

@@ -25,6 +25,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
 import org.apache.giraph.aggregators.LongSumAggregator;
 import org.apache.giraph.conf.GiraphConstants;
+import org.apache.giraph.io.formats.PseudoRandomInputFormatConstants;
 import org.apache.giraph.master.DefaultMasterCompute;
 import org.apache.giraph.vertex.EdgeListVertex;
 import org.apache.giraph.job.GiraphJob;
@@ -362,10 +363,10 @@ public class RandomMessageBenchmark implements Tool {
         RandomMessageBenchmarkMasterCompute.class);
     job.getConfiguration().setWorkerConfiguration(workers, workers, 100.0f);
     job.getConfiguration().setLong(
-        PseudoRandomVertexInputFormat.AGGREGATE_VERTICES,
+        PseudoRandomInputFormatConstants.AGGREGATE_VERTICES,
         Long.parseLong(cmd.getOptionValue('V')));
     job.getConfiguration().setLong(
-        PseudoRandomVertexInputFormat.EDGES_PER_VERTEX,
+        PseudoRandomInputFormatConstants.EDGES_PER_VERTEX,
         Long.parseLong(cmd.getOptionValue('e')));
     job.getConfiguration().setInt(
         SUPERSTEP_COUNT,

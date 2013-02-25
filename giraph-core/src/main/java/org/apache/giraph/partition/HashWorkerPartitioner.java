@@ -23,13 +23,8 @@ import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * Implements hash-based partitioning from the id hash code.
@@ -73,43 +68,8 @@ public class HashWorkerPartitioner<I extends WritableComparable,
       WorkerInfo myWorkerInfo,
       Collection<? extends PartitionOwner> masterSetPartitionOwners,
       PartitionStore<I, V, E, M> partitionStore) {
-    partitionOwnerList.clear();
-    partitionOwnerList.addAll(masterSetPartitionOwners);
-
-    Set<WorkerInfo> dependentWorkerSet = new HashSet<WorkerInfo>();
-    Map<WorkerInfo, List<Integer>> workerPartitionOwnerMap =
-        new HashMap<WorkerInfo, List<Integer>>();
-    for (PartitionOwner partitionOwner : masterSetPartitionOwners) {
-      if (partitionOwner.getPreviousWorkerInfo() == null) {
-        continue;
-      } else if (partitionOwner.getWorkerInfo().equals(
-          myWorkerInfo) &&
-          partitionOwner.getPreviousWorkerInfo().equals(
-              myWorkerInfo)) {
-        throw new IllegalStateException(
-            "updatePartitionOwners: Impossible to have the same " +
-                "previous and current worker info " + partitionOwner +
-                " as me " + myWorkerInfo);
-      } else if (partitionOwner.getWorkerInfo().equals(myWorkerInfo)) {
-        dependentWorkerSet.add(partitionOwner.getPreviousWorkerInfo());
-      } else if (partitionOwner.getPreviousWorkerInfo().equals(
-          myWorkerInfo)) {
-        if (workerPartitionOwnerMap.containsKey(
-            partitionOwner.getWorkerInfo())) {
-          workerPartitionOwnerMap.get(
-              partitionOwner.getWorkerInfo()).add(
-                  partitionOwner.getPartitionId());
-        } else {
-          List<Integer> tmpPartitionOwnerList = new ArrayList<Integer>();
-          tmpPartitionOwnerList.add(partitionOwner.getPartitionId());
-          workerPartitionOwnerMap.put(partitionOwner.getWorkerInfo(),
-                                      tmpPartitionOwnerList);
-        }
-      }
-    }
-
-    return new PartitionExchange(dependentWorkerSet,
-        workerPartitionOwnerMap);
+    return PartitionBalancer.updatePartitionOwners(partitionOwnerList,
+        myWorkerInfo, masterSetPartitionOwners, partitionStore);
   }
 
   @Override

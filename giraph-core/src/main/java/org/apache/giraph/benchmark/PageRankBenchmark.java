@@ -25,10 +25,12 @@ import org.apache.commons.cli.PosixParser;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.combiner.DoubleSumCombiner;
+import org.apache.giraph.io.formats.PseudoRandomInputFormatConstants;
 import org.apache.giraph.job.GiraphJob;
 import org.apache.giraph.io.formats.JsonBase64VertexOutputFormat;
 import org.apache.giraph.io.formats.PseudoRandomEdgeInputFormat;
 import org.apache.giraph.io.formats.PseudoRandomVertexInputFormat;
+import org.apache.giraph.partition.SimpleLongRangePartitionerFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
@@ -90,6 +92,15 @@ public class PageRankBenchmark implements Tool {
             "EdgeInputFormat), " +
             "7 for MultiGraphByteArrayVertex with unsafe (using " +
             "EdgeInputFormat))");
+    options.addOption("l",
+        "localEdgesMinRatio",
+        true,
+        "Minimum ratio of partition-local edges (default is 0)");
+    options.addOption("p",
+        "partitioner",
+        true,
+        "Partitioning algorithm (0 for hash partitioning (default), " +
+            "1 for range partitioning)");
     options.addOption("N",
         "name",
         true,
@@ -140,7 +151,7 @@ public class PageRankBenchmark implements Tool {
 
     GiraphJob job = new GiraphJob(getConf(), name);
     GiraphConfiguration configuration = job.getConfiguration();
-    setVertexAndInputFormatClasses(cmd, configuration);
+    setClassesAndParameters(cmd, configuration);
 
     configuration.setWorkerConfiguration(workers, workers, 100.0f);
     configuration.setInt(
@@ -159,12 +170,13 @@ public class PageRankBenchmark implements Tool {
   }
 
   /**
-   * Set vertex class and input format class based on command-line arguments.
+   * Set vertex, input format, partitioner classes and related parameters
+   * based on command-line arguments.
    *
    * @param cmd Command line arguments
    * @param configuration Giraph job configuration
    */
-  protected void setVertexAndInputFormatClasses(
+  protected void setClassesAndParameters(
       CommandLine cmd, GiraphConfiguration configuration) {
     int vertexClassOption = cmd.hasOption('c') ? Integer.parseInt(
         cmd.getOptionValue('c')) : 1;
@@ -201,24 +213,24 @@ public class PageRankBenchmark implements Tool {
       configuration.setVertexCombinerClass(
           DoubleSumCombiner.class);
     }
+
     if (vertexClassOption <= 3) {
       configuration.setVertexInputFormatClass(
           PseudoRandomVertexInputFormat.class);
-      configuration.setLong(
-          PseudoRandomVertexInputFormat.AGGREGATE_VERTICES,
-          Long.parseLong(cmd.getOptionValue('V')));
-      configuration.setLong(
-          PseudoRandomVertexInputFormat.EDGES_PER_VERTEX,
-          Long.parseLong(cmd.getOptionValue('e')));
     } else {
-      configuration.setEdgeInputFormatClass(
-          PseudoRandomEdgeInputFormat.class);
-      configuration.setLong(
-          PseudoRandomEdgeInputFormat.AGGREGATE_VERTICES,
-          Long.parseLong(cmd.getOptionValue('V')));
-      configuration.setLong(
-          PseudoRandomEdgeInputFormat.EDGES_PER_VERTEX,
-          Long.parseLong(cmd.getOptionValue('e')));
+      configuration.setEdgeInputFormatClass(PseudoRandomEdgeInputFormat.class);
+    }
+    configuration.setLong(
+        PseudoRandomInputFormatConstants.AGGREGATE_VERTICES,
+        Long.parseLong(cmd.getOptionValue('V')));
+    configuration.setLong(
+        PseudoRandomInputFormatConstants.EDGES_PER_VERTEX,
+        Long.parseLong(cmd.getOptionValue('e')));
+    if (cmd.hasOption('l')) {
+      float localEdgesMinRatio = Float.parseFloat(cmd.getOptionValue('l'));
+      configuration.setFloat(
+          PseudoRandomInputFormatConstants.LOCAL_EDGES_MIN_RATIO,
+          localEdgesMinRatio);
     }
 
     int vertexOutputClassOption =
@@ -228,6 +240,12 @@ public class PageRankBenchmark implements Tool {
           JsonBase64VertexOutputFormat.class.getName());
       configuration.setVertexOutputFormatClass(
           JsonBase64VertexOutputFormat.class);
+    }
+
+    if (cmd.hasOption('p') &&
+        Integer.parseInt(cmd.getOptionValue('p')) == 1) {
+      configuration.setGraphPartitionerFactoryClass(
+          SimpleLongRangePartitionerFactory.class);
     }
   }
 

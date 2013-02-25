@@ -18,6 +18,14 @@
 
 package org.apache.giraph.partition;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import org.apache.giraph.conf.GiraphConstants;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.graph.VertexEdgeCount;
+import org.apache.giraph.worker.WorkerInfo;
+import org.apache.log4j.Logger;
+
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -25,13 +33,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-
-import org.apache.giraph.graph.VertexEdgeCount;
-import org.apache.giraph.worker.WorkerInfo;
-import org.apache.log4j.Logger;
-
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 
 /**
  * Helper class for {@link Partition} related operations.
@@ -146,6 +147,77 @@ public class PartitionUtils {
               " - " +
               workerEntryList.get(workerEntryList.size() - 1).
               getValue().getEdgeCount());
+    }
+  }
+
+  /**
+   * Compute the number of partitions, based on the configuration.
+   *
+   * @param availableWorkerInfos Available workers.
+   * @param maxWorkers Maximum number of workers.
+   * @param conf Configuration.
+   * @return Number of partitions for the job.
+   */
+  public static int computePartitionCount(
+      Collection<WorkerInfo> availableWorkerInfos, int maxWorkers,
+      ImmutableClassesGiraphConfiguration conf) {
+    if (availableWorkerInfos.isEmpty()) {
+      throw new IllegalArgumentException(
+          "computePartitionCount: No available workers");
+    }
+
+    int userPartitionCount = conf.getInt(GiraphConstants.USER_PARTITION_COUNT,
+        GiraphConstants.DEFAULT_USER_PARTITION_COUNT);
+    int partitionCount;
+    if (userPartitionCount == GiraphConstants.DEFAULT_USER_PARTITION_COUNT) {
+      float multiplier = conf.getFloat(
+          GiraphConstants.PARTITION_COUNT_MULTIPLIER,
+          GiraphConstants.DEFAULT_PARTITION_COUNT_MULTIPLIER);
+      partitionCount =
+          Math.max((int) (multiplier * availableWorkerInfos.size() *
+              availableWorkerInfos.size()),
+              1);
+    } else {
+      partitionCount = userPartitionCount;
+    }
+    if (LOG.isInfoEnabled()) {
+      LOG.info("computePartitionCount: Creating " +
+          partitionCount + ", default would have been " +
+          (availableWorkerInfos.size() *
+              availableWorkerInfos.size()) + " partitions.");
+    }
+    int maxPartitions = getMaxPartitions(conf);
+    if (partitionCount > maxPartitions) {
+      LOG.warn("computePartitionCount: " +
+          "Reducing the partitionCount to " + maxPartitions +
+          " from " + partitionCount);
+      partitionCount = maxPartitions;
+    }
+    return partitionCount;
+  }
+
+  /**
+   * Get the maximum number of partitions supported by Giraph.
+   *
+   * ZooKeeper has a limit of the data in a single znode of 1 MB,
+   * and we write all partition descriptions to the same znode.
+   *
+   * If we are not using checkpointing, each partition owner is serialized
+   * as 4 ints (16B), and we need some space to write the list of workers
+   * there. 50k partitions is conservative enough.
+   *
+   * When checkpointing is used, we need enough space to write all the
+   * checkpoint file paths.
+   *
+   * @param conf Configuration.
+   * @return Maximum number of partitions allowed
+   */
+  private static int getMaxPartitions(
+      ImmutableClassesGiraphConfiguration conf) {
+    if (conf.useCheckpointing()) {
+      return 5000;
+    } else {
+      return 50000;
     }
   }
 }

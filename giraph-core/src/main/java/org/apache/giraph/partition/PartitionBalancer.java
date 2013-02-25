@@ -18,18 +18,20 @@
 
 package org.apache.giraph.partition;
 
+import org.apache.giraph.worker.WorkerInfo;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.log4j.Logger;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
-
-import org.apache.giraph.worker.WorkerInfo;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.log4j.Logger;
+import java.util.Set;
 
 /**
  * Helper class for balancing partitions across a set of workers.
@@ -283,6 +285,62 @@ public class PartitionBalancer {
     }
 
     return partitionOwnerList;
+  }
+
+  /**
+   * Helper function to update partition owners and determine which
+   * partitions need to be sent from a specific worker.
+   *
+   * @param partitionOwnerList Local {@link PartitionOwner} list for the
+   *                           given worker
+   * @param myWorkerInfo Worker info
+   * @param masterSetPartitionOwners Master set partition owners, received
+   *        prior to beginning the superstep
+   * @param partitionStore Partition store for the given worker
+   * @return Information for the partition exchange.
+   */
+  public static PartitionExchange updatePartitionOwners(
+      List<PartitionOwner> partitionOwnerList,
+      WorkerInfo myWorkerInfo,
+      Collection<? extends PartitionOwner> masterSetPartitionOwners,
+      PartitionStore partitionStore) {
+    partitionOwnerList.clear();
+    partitionOwnerList.addAll(masterSetPartitionOwners);
+
+    Set<WorkerInfo> dependentWorkerSet = new HashSet<WorkerInfo>();
+    Map<WorkerInfo, List<Integer>> workerPartitionOwnerMap =
+        new HashMap<WorkerInfo, List<Integer>>();
+    for (PartitionOwner partitionOwner : masterSetPartitionOwners) {
+      if (partitionOwner.getPreviousWorkerInfo() == null) {
+        continue;
+      } else if (partitionOwner.getWorkerInfo().equals(
+          myWorkerInfo) &&
+          partitionOwner.getPreviousWorkerInfo().equals(
+              myWorkerInfo)) {
+        throw new IllegalStateException(
+            "updatePartitionOwners: Impossible to have the same " +
+                "previous and current worker info " + partitionOwner +
+                " as me " + myWorkerInfo);
+      } else if (partitionOwner.getWorkerInfo().equals(myWorkerInfo)) {
+        dependentWorkerSet.add(partitionOwner.getPreviousWorkerInfo());
+      } else if (partitionOwner.getPreviousWorkerInfo().equals(
+          myWorkerInfo)) {
+        if (workerPartitionOwnerMap.containsKey(
+            partitionOwner.getWorkerInfo())) {
+          workerPartitionOwnerMap.get(
+              partitionOwner.getWorkerInfo()).add(
+              partitionOwner.getPartitionId());
+        } else {
+          List<Integer> tmpPartitionOwnerList = new ArrayList<Integer>();
+          tmpPartitionOwnerList.add(partitionOwner.getPartitionId());
+          workerPartitionOwnerMap.put(partitionOwner.getWorkerInfo(),
+              tmpPartitionOwnerList);
+        }
+      }
+    }
+
+    return new PartitionExchange(dependentWorkerSet,
+        workerPartitionOwnerMap);
   }
 }
 

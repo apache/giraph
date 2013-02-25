@@ -20,8 +20,8 @@ package org.apache.giraph.examples;
 import org.apache.giraph.BspCase;
 import org.apache.giraph.conf.GiraphClasses;
 import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.job.GiraphJob;
-import org.apache.giraph.partition.HashMasterPartitioner;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -81,7 +81,7 @@ public class TestPageRank extends BspCase {
     conf.setNumComputeThreads(numComputeThreads);
     // Set enough partitions to generate randomness on the compute side
     if (numComputeThreads != 1) {
-      conf.setInt(HashMasterPartitioner.USER_PARTITION_COUNT,
+      conf.setInt(GiraphConstants.USER_PARTITION_COUNT,
           numComputeThreads * 5);
     }
     assertTrue(job.run(true));

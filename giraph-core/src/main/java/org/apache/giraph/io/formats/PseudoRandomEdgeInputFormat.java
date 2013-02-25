@@ -46,13 +46,6 @@ import java.util.Set;
  */
 public class PseudoRandomEdgeInputFormat
     extends EdgeInputFormat<LongWritable, DoubleWritable> {
-  /** Set the number of aggregate vertices. */
-  public static final String AGGREGATE_VERTICES =
-      "pseudoRandomEdgeInputFormat.aggregateVertices";
-  /** Set the number of edges per vertex (pseudo-random destination). */
-  public static final String EDGES_PER_VERTEX =
-      "pseudoRandomEdgeInputFormat.edgesPerVertex";
-
   @Override
   public final List<InputSplit> getSplits(final JobContext context,
                                           final int minSplitCountHint)
@@ -103,6 +96,8 @@ public class PseudoRandomEdgeInputFormat
     private BspInputSplit bspInputSplit;
     /** Saved configuration */
     private ImmutableClassesGiraphConfiguration configuration;
+    /** Helper for generating pseudo-random local edges. */
+    private PseudoRandomLocalEdgesHelper localEdgesHelper;
 
     @Override
     public void initialize(InputSplit inputSplit, TaskAttemptContext context)
@@ -111,10 +106,10 @@ public class PseudoRandomEdgeInputFormat
           context.getConfiguration());
       aggregateVertices =
           configuration.getLong(
-              PseudoRandomEdgeInputFormat.AGGREGATE_VERTICES, 0);
+              PseudoRandomInputFormatConstants.AGGREGATE_VERTICES, 0);
       if (aggregateVertices <= 0) {
         throw new IllegalArgumentException(
-            PseudoRandomEdgeInputFormat.AGGREGATE_VERTICES + " <= 0");
+            PseudoRandomInputFormatConstants.AGGREGATE_VERTICES + " <= 0");
       }
       if (inputSplit instanceof BspInputSplit) {
         bspInputSplit = (BspInputSplit) inputSplit;
@@ -135,11 +130,16 @@ public class PseudoRandomEdgeInputFormat
                 " instead of " + BspInputSplit.class);
       }
       edgesPerVertex = configuration.getLong(
-          PseudoRandomEdgeInputFormat.EDGES_PER_VERTEX, 0);
+          PseudoRandomInputFormatConstants.EDGES_PER_VERTEX, 0);
       if (edgesPerVertex <= 0) {
         throw new IllegalArgumentException(
-            PseudoRandomEdgeInputFormat.EDGES_PER_VERTEX + " <= 0");
+            PseudoRandomInputFormatConstants.EDGES_PER_VERTEX + " <= 0");
       }
+      float minLocalEdgesRatio = configuration.getFloat(
+          PseudoRandomInputFormatConstants.LOCAL_EDGES_MIN_RATIO,
+          PseudoRandomInputFormatConstants.LOCAL_EDGES_MIN_RATIO_DEFAULT);
+      localEdgesHelper = new PseudoRandomLocalEdgesHelper(aggregateVertices,
+          minLocalEdgesRatio, configuration);
     }
 
     @Override
@@ -172,11 +172,10 @@ public class PseudoRandomEdgeInputFormat
     @Override
     public Edge<LongWritable, DoubleWritable> getCurrentEdge()
       throws IOException, InterruptedException {
-      LongWritable destVertexId;
+      LongWritable destVertexId = new LongWritable();
       do {
-        destVertexId =
-            new LongWritable(Math.abs(random.nextLong()) %
-                aggregateVertices);
+        destVertexId.set(localEdgesHelper.generateDestVertex(
+            currentVertexId.get(), random));
       } while (currentVertexDestVertices.contains(destVertexId));
       ++currentVertexEdgesRead;
       currentVertexDestVertices.add(destVertexId);
