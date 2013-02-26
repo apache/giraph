@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-541: Log before observers (nitay)
+
   GIRAPH-535: Range-partitioning and edge locality benchmark (apresta)
 
   GIRAPH-539: When having open requests log which workers are they sent to (majakabiljo)

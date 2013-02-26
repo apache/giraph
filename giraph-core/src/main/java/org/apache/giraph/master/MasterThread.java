@@ -176,9 +176,9 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
       // CHECKSTYLE: stop IllegalCatchCheck
     } catch (Exception e) {
       // CHECKSTYLE: resume IllegalCatchCheck
-      bspServiceMaster.failureCleanup(e);
       LOG.error("masterThread: Master algorithm failed with " +
           e.getClass().getSimpleName(), e);
+      bspServiceMaster.failureCleanup(e);
       throw new IllegalStateException(e);
     }
   }
