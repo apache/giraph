@@ -18,57 +18,91 @@
 
 package org.apache.giraph.utils;
 
-import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.EdgeFactory;
-import org.apache.hadoop.io.NullWritable;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-
-import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
+import org.apache.giraph.edge.Edge;
+import org.apache.giraph.edge.EdgeFactory;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.io.WritableUtils;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Iterator;
 
 /**
- * Utilities for converting between edge iterables and neighbor iterables.
+ * Utility methods for iterables of edges.
  */
 public class EdgeIterables {
   /** Utility classes shouldn't be instantiated. */
   private EdgeIterables() { }
 
   /**
-   * Convert an edge iterable into a neighbor iterable.
+   * Compare two edge iterables element-wise. The edge value type needs
+   * to be Comparable.
    *
-   * @param edges Edge iterable.
-   * @param <I> Vertex id type.
-   * @param <E> Edge value type.
-   * @return Neighbor iterable.
+   * @param e1 First edge iterable
+   * @param e2 Second edge iterable
+   * @param <I> Vertex id
+   * @param <E> Edge value
+   * @return Whether the two iterables are equal element-wise
    */
-  public static
-  <I extends WritableComparable, E extends Writable>
-  Iterable<I> getNeighbors(Iterable<Edge<I, E>> edges) {
-    return Iterables.transform(edges,
-        new Function<Edge<I, E>, I>() {
-          @Override
-          public I apply(Edge<I, E> edge) {
-            return edge == null ? null : edge.getTargetVertexId();
-          }
-        });
+  public static <I extends WritableComparable, E extends WritableComparable>
+  boolean equals(Iterable<Edge<I, E>> e1, Iterable<Edge<I, E>> e2) {
+    Iterator<Edge<I, E>> i1 = e1.iterator();
+    Iterator<Edge<I, E>> i2 = e2.iterator();
+    while (i1.hasNext()) {
+      if (!i2.hasNext()) {
+        return false;
+      }
+      if (!EdgeComparator.equal(i1.next(), i2.next())) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**
-   * Convert a neighbor iterable into an edge iterable.
+   * Make a deep copy of an edge iterable and return it as an {@link
+   * ArrayList}.
+   * Note: this method is slow since it has to deserialize all serialize all
+   * the ids and values. It should only be used in unit tests.
    *
-   * @param neighbors Neighbor iterable.
-   * @param <I> Vertex id type.
-   * @return Edge iterable.
+   * @param edges Iterable of edges
+   * @param <I> Vertex id
+   * @param <E> Edge value
+   * @return A new list with copies of all the edges
    */
-  public static <I extends WritableComparable>
-  Iterable<Edge<I, NullWritable>> getEdges(Iterable<I> neighbors) {
-    return Iterables.transform(neighbors,
-        new Function<I, Edge<I, NullWritable>>() {
-          @Override
-          public Edge<I, NullWritable> apply(I neighbor) {
-            return EdgeFactory.create(neighbor);
-          }
-        });
+  public static <I extends WritableComparable, E extends WritableComparable>
+  ArrayList<Edge<I, E>> copy(Iterable<Edge<I, E>> edges) {
+    Configuration conf = new Configuration();
+    ArrayList<Edge<I, E>> edgeList =
+        new ArrayList<Edge<I, E>>(Iterables.size(edges));
+    for (Edge<I, E> edge : edges) {
+      edgeList.add(EdgeFactory.create(
+          WritableUtils.clone(edge.getTargetVertexId(), conf),
+          WritableUtils.clone(edge.getValue(), conf)));
+    }
+    return edgeList;
+  }
+
+  /**
+   * Compare two edge iterables up to reordering. The edge value type needs
+   * to be Comparable.
+   *
+   * @param e1 First edge iterable
+   * @param e2 Second edge iterable
+   * @param <I> Vertex id
+   * @param <E> Edge value
+   * @return Whether the two iterables are equal up to reordering
+   */
+  public static <I extends WritableComparable, E extends WritableComparable>
+  boolean sameEdges(Iterable<Edge<I, E>> e1, Iterable<Edge<I, E>> e2) {
+    ArrayList<Edge<I, E>> edgeList1 = copy(e1);
+    ArrayList<Edge<I, E>> edgeList2 = copy(e2);
+    Comparator<Edge<I, E>> edgeComparator = new EdgeComparator<I, E>();
+    Collections.sort(edgeList1, edgeComparator);
+    Collections.sort(edgeList2, edgeComparator);
+    return equals(edgeList1, edgeList2);
   }
 }

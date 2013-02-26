@@ -18,8 +18,8 @@
 
 package org.apache.giraph.examples;
 
-import org.apache.giraph.graph.Edge;
-import org.apache.giraph.vertex.EdgeListVertex;
+import org.apache.giraph.edge.Edge;
+import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 
@@ -29,7 +29,7 @@ import org.apache.hadoop.io.LongWritable;
 @Algorithm(
     name = "Indegree Count"
 )
-public class SimpleInDegreeCountVertex extends EdgeListVertex<
+public class SimpleInDegreeCountVertex extends Vertex<
   LongWritable, LongWritable, DoubleWritable, DoubleWritable> {
 
   @Override

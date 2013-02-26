@@ -20,6 +20,7 @@ package org.apache.giraph.conf;
 
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.combiner.Combiner;
+import org.apache.giraph.edge.VertexEdges;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
@@ -31,7 +32,7 @@ import org.apache.giraph.master.MasterObserver;
 import org.apache.giraph.partition.GraphPartitionerFactory;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.partition.PartitionContext;
-import org.apache.giraph.vertex.Vertex;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.giraph.worker.WorkerObserver;
 import org.apache.hadoop.conf.Configuration;
@@ -71,6 +72,16 @@ public class GiraphConfiguration extends Configuration
   public final void setVertexClass(
       Class<? extends Vertex> vertexClass) {
     setClass(VERTEX_CLASS, vertexClass, Vertex.class);
+  }
+
+  /**
+   * Set the vertex edges class
+   *
+   * @param vertexEdgesClass Determines the way edges are stored
+   */
+  public final void setVertexEdgesClass(
+      Class<? extends VertexEdges> vertexEdgesClass) {
+    setClass(VERTEX_EDGES_CLASS, vertexEdgesClass, VertexEdges.class);
   }
 
   /**

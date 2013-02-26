@@ -21,7 +21,7 @@ import com.google.common.collect.Maps;
 import java.util.Map;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.GiraphTransferRegulator;
-import org.apache.giraph.vertex.Vertex;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.partition.PartitionOwner;
 import org.apache.hadoop.io.Writable;

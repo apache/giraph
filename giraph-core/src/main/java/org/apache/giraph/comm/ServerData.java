@@ -25,7 +25,7 @@ import org.apache.giraph.comm.messages.MessageStoreByPartition;
 import org.apache.giraph.comm.messages.MessageStoreFactory;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.graph.EdgeStore;
+import org.apache.giraph.edge.EdgeStore;
 import org.apache.giraph.graph.VertexMutations;
 import org.apache.giraph.partition.DiskBackedPartitionStore;
 import org.apache.giraph.partition.PartitionStore;

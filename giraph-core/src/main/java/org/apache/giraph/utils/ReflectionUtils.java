@@ -84,9 +84,16 @@ public class ReflectionUtils {
     // start walking up the inheritance hierarchy until we hit baseClass
     while (! getClass(type).equals(baseClass)) {
       if (type instanceof Class) {
-        // there is no useful information for us in raw types,
-        // so just keep going.
-        type = ((Class<?>) type).getGenericSuperclass();
+        Type newType = ((Class<?>) type).getGenericSuperclass();
+        if (newType == null) {
+          // we have reached an interface, so we stop here
+          break;
+        } else {
+          // there is no useful information for us in raw types,
+          // so just keep going.
+          type = newType;
+        }
+
       } else {
         ParameterizedType parameterizedType = (ParameterizedType) type;
         Class<?> rawType = (Class<?>) parameterizedType.getRawType();
@@ -161,7 +168,7 @@ public class ReflectionUtils {
   }
 
   /**
-   * Instantiate classes that are ImmmutableClasssesGiraphConfigurable
+   * Instantiate classes that are ImmutableClassesGiraphConfigurable
    *
    * @param theClass Class to instantiate
    * @param configuration Giraph configuration, may be null

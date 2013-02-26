@@ -19,10 +19,10 @@
 package org.apache.giraph.examples;
 
 import org.apache.giraph.aggregators.LongSumAggregator;
-import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.EdgeFactory;
+import org.apache.giraph.edge.Edge;
+import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.master.DefaultMasterCompute;
-import org.apache.giraph.vertex.EdgeListVertex;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
@@ -94,7 +94,7 @@ public class VerifyMessage {
    * Send and verify messages.
    */
   public static class VerifyMessageVertex extends
-      EdgeListVertex<LongWritable, IntWritable, FloatWritable,
+      Vertex<LongWritable, IntWritable, FloatWritable,
       VerifiableMessage> {
     /** Dynamically set number of SUPERSTEPS */
     public static final String SUPERSTEP_COUNT =

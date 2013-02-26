@@ -48,6 +48,7 @@ import java.util.List;
 /**
  * Extended TestCase for making setting up Bsp testing.
  */
+@SuppressWarnings("unchecked")
 public class BspCase implements Watcher {
   /** JobTracker system property */
   private final String jobTracker =
@@ -272,11 +273,12 @@ public class BspCase implements Watcher {
   }
 
   /**
-   * Read all parts- files in the output and count their lines. This works only for textual output!
+   * Read all parts- files in the output and count their lines.
+   * This works only for textual output!
    *
-   * @param conf
-   * @param outputPath
-   * @return
+   * @param conf Configuration
+   * @param outputPath Output path
+   * @return Number of output lines
    * @throws IOException
    */
   public int getNumResults(Configuration conf, Path outputPath)

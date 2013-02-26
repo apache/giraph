@@ -51,6 +51,7 @@ import java.util.concurrent.Executors;
  *
  * Heavily inspired from Apache Mahout's MahoutTestCase
  */
+@SuppressWarnings("unchecked")
 public class InternalVertexRunner {
   /** ZooKeeper port to use for tests */
   public static final int LOCAL_ZOOKEEPER_PORT = 22182;
@@ -124,6 +125,7 @@ public class InternalVertexRunner {
       GiraphJob job = new GiraphJob(classes.getVertexClass().getName());
       GiraphConfiguration conf = job.getConfiguration();
       conf.setVertexClass(classes.getVertexClass());
+      conf.setVertexEdgesClass(classes.getVertexEdgesClass());
       if (classes.hasVertexInputFormat()) {
         conf.setVertexInputFormatClass(classes.getVertexInputFormatClass());
       }

@@ -19,8 +19,12 @@
 package org.apache.giraph.vertex;
 
 import org.apache.giraph.conf.GiraphConstants;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.edge.ByteArrayEdges;
+import org.apache.giraph.edge.VertexEdges;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat;
 import org.apache.giraph.combiner.Combiner;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.job.GiraphConfigurationValidator;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
@@ -42,9 +46,8 @@ public class TestVertexTypes {
     /**
      * Matches the {@link GeneratedVertexInputFormat}
      */
-    private static class GeneratedVertexMatch extends
-            EdgeListVertex<LongWritable, IntWritable, FloatWritable,
-            FloatWritable> {
+    private static class GeneratedVertexMatch extends Vertex<LongWritable,
+        IntWritable, FloatWritable, FloatWritable> {
         @Override
         public void compute(Iterable<FloatWritable> messages)
             throws IOException {
@@ -60,9 +63,8 @@ public class TestVertexTypes {
     /**
      * Mismatches the {@link GeneratedVertexInputFormat}
      */
-    private static class GeneratedVertexMismatch extends
-            EdgeListVertex<LongWritable, FloatWritable, FloatWritable,
-            FloatWritable> {
+    private static class GeneratedVertexMismatch extends Vertex<LongWritable,
+        FloatWritable, FloatWritable, FloatWritable> {
         @Override
         public void compute(Iterable<FloatWritable> messages)
                 throws IOException {
@@ -123,6 +125,9 @@ public class TestVertexTypes {
         conf.setClass(GiraphConstants.VERTEX_CLASS,
                       GeneratedVertexMatch.class,
                       Vertex.class);
+        conf.setClass(GiraphConstants.VERTEX_EDGES_CLASS,
+                      ByteArrayEdges.class,
+                      VertexEdges.class);
         conf.setClass(GiraphConstants.VERTEX_INPUT_FORMAT_CLASS,
                       SimpleSuperstepVertexInputFormat.class,
                       VertexInputFormat.class);
@@ -132,6 +137,11 @@ public class TestVertexTypes {
       @SuppressWarnings("rawtypes")
       GiraphConfigurationValidator<?, ?, ?, ?> validator =
         new GiraphConfigurationValidator(conf);
+
+      ImmutableClassesGiraphConfiguration gc = new
+          ImmutableClassesGiraphConfiguration(conf);
+
+
       validator.validateConfiguration();
     }
 
@@ -142,6 +152,9 @@ public class TestVertexTypes {
         conf.setClass(GiraphConstants.VERTEX_CLASS,
                       DerivedVertexMatch.class,
                       Vertex.class);
+        conf.setClass(GiraphConstants.VERTEX_EDGES_CLASS,
+                      ByteArrayEdges.class,
+                      VertexEdges.class);
         conf.setClass(GiraphConstants.VERTEX_INPUT_FORMAT_CLASS,
                       SimpleSuperstepVertexInputFormat.class,
                       VertexInputFormat.class);
@@ -158,6 +171,9 @@ public class TestVertexTypes {
         conf.setClass(GiraphConstants.VERTEX_CLASS,
                       DerivedVertexMatch.class,
                       Vertex.class);
+        conf.setClass(GiraphConstants.VERTEX_EDGES_CLASS,
+                      ByteArrayEdges.class,
+                      VertexEdges.class);
         conf.setClass(GiraphConstants.VERTEX_INPUT_FORMAT_CLASS,
                       SimpleSuperstepVertexInputFormat.class,
                       VertexInputFormat.class);
@@ -174,6 +190,9 @@ public class TestVertexTypes {
       conf.setClass(GiraphConstants.VERTEX_CLASS,
         GeneratedVertexMismatch.class,
         Vertex.class);
+      conf.setClass(GiraphConstants.VERTEX_EDGES_CLASS,
+          ByteArrayEdges.class,
+          VertexEdges.class);
         conf.setClass(GiraphConstants.VERTEX_INPUT_FORMAT_CLASS,
           SimpleSuperstepVertexInputFormat.class,
           VertexInputFormat.class);
@@ -189,6 +208,9 @@ public class TestVertexTypes {
       Configuration conf = getDefaultTestConf() ;
       conf.setClass(GiraphConstants.VERTEX_CLASS,
         GeneratedVertexMatch.class, Vertex.class);
+      conf.setClass(GiraphConstants.VERTEX_EDGES_CLASS,
+          ByteArrayEdges.class,
+          VertexEdges.class);
       conf.setClass(GiraphConstants.VERTEX_INPUT_FORMAT_CLASS,
         SimpleSuperstepVertexInputFormat.class,
         VertexInputFormat.class);
@@ -208,6 +230,9 @@ public class TestVertexTypes {
         conf.setClass(GiraphConstants.VERTEX_CLASS,
                       GeneratedVertexMatch.class,
                       Vertex.class);
+        conf.setClass(GiraphConstants.VERTEX_EDGES_CLASS,
+                      ByteArrayEdges.class,
+                      VertexEdges.class);
         conf.setClass(GiraphConstants.VERTEX_INPUT_FORMAT_CLASS,
                       JsonBase64VertexInputFormat.class,
                       VertexInputFormat.class);

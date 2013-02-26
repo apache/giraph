@@ -19,26 +19,25 @@
 package org.apache.giraph.comm;
 
 import com.google.common.collect.Lists;
-
-import java.util.List;
-import org.apache.giraph.conf.GiraphConfiguration;
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.comm.netty.handler.RequestServerHandler;
 import org.apache.giraph.comm.netty.NettyClient;
 import org.apache.giraph.comm.netty.NettyServer;
+import org.apache.giraph.comm.netty.handler.RequestServerHandler;
 import org.apache.giraph.comm.netty.handler.WorkerRequestServerHandler;
-import org.apache.giraph.vertex.EdgeListVertex;
-import org.apache.giraph.worker.WorkerInfo;
+import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.utils.MockUtils;
+import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.IOException;
+import java.util.List;
+
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
-import java.io.IOException;
 
 /**
  * Test the netty connections
@@ -47,8 +46,8 @@ public class ConnectionTest {
   /** Class configuration */
   private ImmutableClassesGiraphConfiguration conf;
 
-  public static class IntVertex extends EdgeListVertex<IntWritable,
-          IntWritable, IntWritable, IntWritable> {
+  public static class IntVertex extends Vertex<IntWritable,
+            IntWritable, IntWritable, IntWritable> {
     @Override
     public void compute(Iterable<IntWritable> messages) throws IOException {
     }

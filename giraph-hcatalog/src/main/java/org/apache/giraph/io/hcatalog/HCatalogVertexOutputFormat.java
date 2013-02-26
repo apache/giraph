@@ -18,7 +18,7 @@
 
 package org.apache.giraph.io.hcatalog;
 
-import org.apache.giraph.vertex.Vertex;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.giraph.io.VertexWriter;
 import org.apache.hadoop.io.Writable;

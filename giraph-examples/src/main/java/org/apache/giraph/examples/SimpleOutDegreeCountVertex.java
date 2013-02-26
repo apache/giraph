@@ -20,7 +20,7 @@ package org.apache.giraph.examples;
 
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.DoubleWritable;
-import org.apache.giraph.vertex.EdgeListVertex;
+import org.apache.giraph.graph.Vertex;
 
 
 /**
@@ -29,7 +29,7 @@ import org.apache.giraph.vertex.EdgeListVertex;
 @Algorithm(
     name = "Outdegree Count"
 )
-public class SimpleOutDegreeCountVertex extends EdgeListVertex<
+public class SimpleOutDegreeCountVertex extends Vertex<
   LongWritable, LongWritable,
   DoubleWritable, DoubleWritable> {
 

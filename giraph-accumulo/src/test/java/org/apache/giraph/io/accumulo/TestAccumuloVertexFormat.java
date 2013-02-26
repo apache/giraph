@@ -35,18 +35,18 @@ import org.apache.giraph.BspCase;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.io.accumulo.edgemarker.AccumuloEdgeInputFormat;
 import org.apache.giraph.io.accumulo.edgemarker.AccumuloEdgeOutputFormat;
-import org.apache.giraph.vertex.EdgeListVertex;
 import org.apache.giraph.job.GiraphJob;
+import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.log4j.Logger;
+import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.HashSet;
 import java.util.Map;
-import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -170,7 +170,7 @@ public class TestAccumuloVertexFormat extends BspCase{
     The test set only has a 1-1 parent-to-child ratio for this unit test.
      */
     public static class EdgeNotification
-            extends EdgeListVertex<Text, Text, Text, Text> {
+            extends Vertex<Text, Text, Text, Text> {
         @Override
         public void compute(Iterable<Text> messages) throws IOException {
           for (Text message : messages) {

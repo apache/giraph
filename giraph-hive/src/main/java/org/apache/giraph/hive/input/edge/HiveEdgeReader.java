@@ -18,20 +18,19 @@
 
 package org.apache.giraph.hive.input.edge;
 
+import com.facebook.giraph.hive.HiveRecord;
+import com.facebook.giraph.hive.HiveTableSchema;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.EdgeFactory;
-import org.apache.giraph.graph.MutableEdge;
 import org.apache.giraph.io.EdgeReader;
 import org.apache.giraph.utils.ReflectionUtils;
+import org.apache.giraph.edge.Edge;
+import org.apache.giraph.edge.EdgeFactory;
+import org.apache.giraph.edge.MutableEdge;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-
-import com.facebook.giraph.hive.HiveRecord;
-import com.facebook.giraph.hive.HiveTableSchema;
 
 import java.io.IOException;
 

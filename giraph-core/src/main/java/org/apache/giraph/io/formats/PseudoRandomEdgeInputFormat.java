@@ -18,20 +18,19 @@
 
 package org.apache.giraph.io.formats;
 
+import com.google.common.collect.Sets;
 import org.apache.giraph.bsp.BspInputSplit;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.EdgeFactory;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.EdgeReader;
+import org.apache.giraph.edge.Edge;
+import org.apache.giraph.edge.EdgeFactory;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.log4j.Logger;
-
-import com.google.common.collect.Sets;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -91,7 +90,7 @@ public class PseudoRandomEdgeInputFormat
     /** Aggregate vertices (all input splits). */
     private long aggregateVertices = -1;
     /** Edges per vertex. */
-    private long edgesPerVertex = -1;
+    private int edgesPerVertex = -1;
     /** BspInputSplit (used only for index). */
     private BspInputSplit bspInputSplit;
     /** Saved configuration */
@@ -129,7 +128,7 @@ public class PseudoRandomEdgeInputFormat
             "initialize: Got " + inputSplit.getClass() +
                 " instead of " + BspInputSplit.class);
       }
-      edgesPerVertex = configuration.getLong(
+      edgesPerVertex = configuration.getInt(
           PseudoRandomInputFormatConstants.EDGES_PER_VERTEX, 0);
       if (edgesPerVertex <= 0) {
         throw new IllegalArgumentException(
@@ -184,8 +183,8 @@ public class PseudoRandomEdgeInputFormat
             "" + destVertexId + ")");
       }
       return EdgeFactory.create(
-              destVertexId,
-              new DoubleWritable(random.nextDouble()));
+          destVertexId,
+          new DoubleWritable(random.nextDouble()));
     }
 
     @Override

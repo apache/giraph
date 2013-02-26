@@ -18,15 +18,18 @@
 
 package org.apache.giraph.utils;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.comm.WorkerClientRequestProcessor;
 import org.apache.giraph.comm.messages.ByteArrayMessagesPerVertexStore;
-import org.apache.giraph.vertex.Vertex;
+import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.partition.BasicPartitionOwner;
 import org.apache.giraph.partition.PartitionOwner;
+import org.apache.giraph.edge.ArrayListEdges;
+import org.apache.giraph.edge.ConfigurableVertexEdges;
+import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Writable;
@@ -131,8 +134,18 @@ public class MockUtils {
         Mockito.when(env.getGraphState().getWorkerClientRequestProcessor())
                 .thenReturn(env.getWorkerClientRequestProcessor());
 
+        GiraphConfiguration giraphConf = new GiraphConfiguration();
+        giraphConf.setVertexClass(vertex.getClass());
+        ImmutableClassesGiraphConfiguration<I, V, E, M> conf =
+            new ImmutableClassesGiraphConfiguration<I, V, E, M>(giraphConf);
+        vertex.setConf(conf);
+        ConfigurableVertexEdges<I, E> edges = new ArrayListEdges<I, E>();
+        edges.setConf(conf);
+        edges.initialize();
+
         ReflectionUtils.setField(vertex, "id", vertexId);
         ReflectionUtils.setField(vertex, "value", vertexValue);
+        ReflectionUtils.setField(vertex, "edges", edges);
         ReflectionUtils.setField(vertex, "graphState", env.getGraphState());
         ReflectionUtils.setField(vertex, "halt", isHalted);
 

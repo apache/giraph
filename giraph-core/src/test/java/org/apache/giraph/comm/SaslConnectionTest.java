@@ -18,6 +18,7 @@
 
 package org.apache.giraph.comm;
 
+import com.google.common.collect.Lists;
 import org.apache.giraph.comm.netty.NettyClient;
 import org.apache.giraph.comm.netty.NettyServer;
 import org.apache.giraph.comm.netty.handler.SaslServerHandler;
@@ -25,16 +26,14 @@ import org.apache.giraph.comm.netty.handler.WorkerRequestServerHandler;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.vertex.EdgeListVertex;
-import org.apache.giraph.worker.WorkerInfo;
 import org.apache.giraph.utils.MockUtils;
+import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
-
-import com.google.common.collect.Lists;
 
 import java.io.IOException;
 
@@ -48,8 +47,8 @@ public class SaslConnectionTest {
   /** Class configuration */
   private ImmutableClassesGiraphConfiguration conf;
 
-  public static class IntVertex extends EdgeListVertex<IntWritable,
-        IntWritable, IntWritable, IntWritable> {
+  public static class IntVertex extends Vertex<IntWritable,
+          IntWritable, IntWritable, IntWritable> {
     @Override
     public void compute(Iterable<IntWritable> messages) throws IOException {
     }

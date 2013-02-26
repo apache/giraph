@@ -18,17 +18,17 @@
 
 package org.apache.giraph.examples;
 
+import com.google.common.collect.Lists;
 import org.apache.giraph.aggregators.DoubleMaxAggregator;
 import org.apache.giraph.aggregators.DoubleMinAggregator;
 import org.apache.giraph.aggregators.LongSumAggregator;
-import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.EdgeFactory;
 import org.apache.giraph.io.VertexReader;
 import org.apache.giraph.io.formats.GeneratedVertexInputFormat;
 import org.apache.giraph.io.formats.TextVertexOutputFormat;
 import org.apache.giraph.master.DefaultMasterCompute;
-import org.apache.giraph.vertex.LongDoubleFloatDoubleVertex;
-import org.apache.giraph.vertex.Vertex;
+import org.apache.giraph.edge.Edge;
+import org.apache.giraph.edge.EdgeFactory;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
@@ -37,8 +37,6 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.log4j.Logger;
-
-import com.google.common.collect.Lists;
 
 import java.io.IOException;
 import java.util.List;
@@ -49,7 +47,8 @@ import java.util.List;
 @Algorithm(
     name = "Page rank"
 )
-public class SimplePageRankVertex extends LongDoubleFloatDoubleVertex {
+public class SimplePageRankVertex extends Vertex<LongWritable,
+    DoubleWritable, FloatWritable, DoubleWritable> {
   /** Number of supersteps for this test */
   public static final int MAX_SUPERSTEPS = 30;
   /** Logger */

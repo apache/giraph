@@ -18,13 +18,13 @@
 
 package org.apache.giraph.examples;
 
-import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.EdgeFactory;
+import com.google.common.collect.Lists;
 import org.apache.giraph.io.VertexReader;
 import org.apache.giraph.io.formats.GeneratedVertexInputFormat;
 import org.apache.giraph.io.formats.TextVertexOutputFormat;
-import org.apache.giraph.vertex.EdgeListVertex;
-import org.apache.giraph.vertex.Vertex;
+import org.apache.giraph.edge.Edge;
+import org.apache.giraph.edge.EdgeFactory;
+import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -33,8 +33,6 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.log4j.Logger;
 
-import com.google.common.collect.Lists;
-
 import java.io.IOException;
 import java.util.List;
 
@@ -42,8 +40,8 @@ import java.util.List;
  * Just a simple Vertex compute implementation that executes 3 supersteps, then
  * finishes.
  */
-public class SimpleSuperstepVertex extends
-    EdgeListVertex<LongWritable, IntWritable, FloatWritable, IntWritable> {
+public class SimpleSuperstepVertex extends Vertex<LongWritable, IntWritable,
+    FloatWritable, IntWritable> {
   @Override
   public void compute(Iterable<IntWritable> messages) {
     // Some checks for additional testing

@@ -19,7 +19,7 @@
 package org.apache.giraph.comm.requests;
 
 import org.apache.giraph.comm.ServerData;
-import org.apache.giraph.graph.Edge;
+import org.apache.giraph.edge.Edge;
 import org.apache.giraph.utils.ByteArrayVertexIdEdges;
 import org.apache.giraph.utils.PairList;
 import org.apache.hadoop.io.Writable;

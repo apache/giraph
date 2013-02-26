@@ -18,8 +18,8 @@
 
 package org.apache.giraph.io.formats;
 
-import org.apache.giraph.graph.Edge;
-import org.apache.giraph.vertex.Vertex;
+import org.apache.giraph.edge.Edge;
+import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;

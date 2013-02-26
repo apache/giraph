@@ -18,8 +18,8 @@
 
 package org.apache.giraph.examples;
 
-import org.apache.giraph.graph.EdgeFactory;
-import org.apache.giraph.vertex.EdgeListVertex;
+import org.apache.giraph.edge.EdgeFactory;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
@@ -31,7 +31,7 @@ import java.io.IOException;
 /**
  * Vertex to allow unit testing of graph mutations.
  */
-public class SimpleMutateGraphVertex extends EdgeListVertex<
+public class SimpleMutateGraphVertex extends Vertex<
     LongWritable, DoubleWritable, FloatWritable, DoubleWritable> {
   /** Class logger */
   private static Logger LOG =

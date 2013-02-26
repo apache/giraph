@@ -34,11 +34,10 @@ import org.apache.giraph.combiner.SimpleSumCombiner;
 import org.apache.giraph.examples.SimpleSuperstepVertex;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexOutputFormat;
-import org.apache.giraph.vertex.EdgeListVertex;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.job.GiraphJob;
 import org.apache.giraph.worker.InputSplitPathOrganizer;
 import org.apache.giraph.aggregators.TextAggregatorWriter;
-import org.apache.giraph.vertex.Vertex;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.formats.JsonLongDoubleFloatDoubleVertexOutputFormat;
 import org.apache.giraph.zk.ZooKeeperExt;
@@ -91,7 +90,8 @@ import org.apache.hadoop.mapreduce.task.JobContextImpl;
 /**
  * Unit test for many simple BSP applications.
  */
-public class TestBspBasic extends BspCase {
+public class
+    TestBspBasic extends BspCase {
 
   public TestBspBasic() {
     super(TestBspBasic.class.getName());
@@ -127,6 +127,7 @@ public class TestBspBasic extends BspCase {
         new ImmutableClassesGiraphConfiguration(job.getConfiguration());
     Vertex<LongWritable, IntWritable, FloatWritable, IntWritable> vertex =
         configuration.createVertex();
+    vertex.initialize(new LongWritable(1), new IntWritable(1));
     System.out.println("testInstantiateVertex: Got vertex " + vertex);
     VertexInputFormat<LongWritable, IntWritable, FloatWritable, IntWritable>
     inputFormat = configuration.createVertexInputFormat();
@@ -147,8 +148,8 @@ else[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
         byteArrayOutputStream.toString());
   }
 
-  private static class NullVertex extends EdgeListVertex<
-      NullWritable, NullWritable, NullWritable, NullWritable> {
+  private static class NullVertex extends Vertex<NullWritable, NullWritable,
+      NullWritable, NullWritable> {
     @Override
     public void compute(Iterable<NullWritable> messages) throws IOException { }
   }

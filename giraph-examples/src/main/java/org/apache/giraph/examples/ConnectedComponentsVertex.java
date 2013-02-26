@@ -18,8 +18,10 @@
 
 package org.apache.giraph.examples;
 
-import org.apache.giraph.vertex.IntIntNullIntVertex;
+import org.apache.giraph.edge.Edge;
+import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.NullWritable;
 
 import java.io.IOException;
 
@@ -43,7 +45,8 @@ import java.io.IOException;
     name = "Connected components",
     description = "Finds connected components of the graph"
 )
-public class ConnectedComponentsVertex extends IntIntNullIntVertex {
+public class ConnectedComponentsVertex extends Vertex<IntWritable,
+    IntWritable, NullWritable, IntWritable> {
   /**
    * Propagates the smallest vertex id to all neighbors. Will always choose to
    * halt and only reactivate if a smaller id has been sent to it.
@@ -57,17 +60,19 @@ public class ConnectedComponentsVertex extends IntIntNullIntVertex {
 
     // First superstep is special, because we can simply look at the neighbors
     if (getSuperstep() == 0) {
-      for (IntWritable neighbor : getNeighbors()) {
-        if (neighbor.get() < currentComponent) {
-          currentComponent = neighbor.get();
+      for (Edge<IntWritable, NullWritable> edge : getEdges()) {
+        int neighbor = edge.getTargetVertexId().get();
+        if (neighbor < currentComponent) {
+          currentComponent = neighbor;
         }
       }
       // Only need to send value if it is not the own id
       if (currentComponent != getValue().get()) {
         setValue(new IntWritable(currentComponent));
-        for (IntWritable neighbor : getNeighbors()) {
+        for (Edge<IntWritable, NullWritable> edge : getEdges()) {
+          IntWritable neighbor = edge.getTargetVertexId();
           if (neighbor.get() > currentComponent) {
-            sendMessage(new IntWritable(neighbor.get()), getValue());
+            sendMessage(neighbor, getValue());
           }
         }
       }

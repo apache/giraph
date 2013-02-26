@@ -17,16 +17,15 @@
  */
 package org.apache.giraph.io;
 
-import org.apache.giraph.bsp.BspUtils;
-import org.apache.giraph.conf.GiraphConstants;
-import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.EdgeFactory;
+import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.io.formats.AdjacencyListTextVertexInputFormat;
 import org.apache.giraph.io.formats.TextDoubleDoubleAdjacencyListVertexInputFormat;
-import org.apache.giraph.vertex.EdgeListVertex;
-import org.apache.giraph.vertex.Vertex;
-import org.apache.hadoop.conf.Configuration;
+import org.apache.giraph.utils.EdgeIterables;
+import org.apache.giraph.edge.Edge;
+import org.apache.giraph.edge.EdgeFactory;
+import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.BooleanWritable;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -39,14 +38,9 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -57,7 +51,8 @@ import static org.mockito.Mockito.when;
 public class TestTextDoubleDoubleAdjacencyListVertexInputFormat extends TextDoubleDoubleAdjacencyListVertexInputFormat<BooleanWritable> {
 
   private RecordReader<LongWritable, Text> rr;
-  private Configuration conf;
+  private ImmutableClassesGiraphConfiguration<Text, DoubleWritable,
+      DoubleWritable, BooleanWritable> conf;
   private TaskAttemptContext tac;
   private GraphState<Text, DoubleWritable, DoubleWritable, BooleanWritable> graphState;
 
@@ -65,10 +60,10 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat extends TextDoub
   public void setUp() throws IOException, InterruptedException {
     rr = mock(RecordReader.class);
     when(rr.nextKeyValue()).thenReturn(true).thenReturn(false);
-    conf = new Configuration();
-    conf.setClass(GiraphConstants.VERTEX_CLASS, DummyVertex.class, Vertex.class);
-    conf.setClass(GiraphConstants.VERTEX_ID_CLASS, Text.class, Writable.class);
-    conf.setClass(GiraphConstants.VERTEX_VALUE_CLASS, DoubleWritable.class, Writable.class);
+    GiraphConfiguration giraphConf = new GiraphConfiguration();
+    giraphConf.setVertexClass(DummyVertex.class);
+    conf = new ImmutableClassesGiraphConfiguration<Text, DoubleWritable,
+        DoubleWritable, BooleanWritable>(giraphConf);
     graphState = mock(GraphState.class);
     tac = mock(TaskAttemptContext.class);
     when(tac.getConfiguration()).thenReturn(conf);
@@ -133,31 +128,26 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat extends TextDoub
   }
 
   public static <I extends WritableComparable, V extends Writable,
-      E extends Writable, M extends Writable> void assertValidVertex(Configuration conf,
-      GraphState<I, V, E, M> graphState, Vertex<I, V, E, M> actual,
-      I expectedId, V expectedValue, Edge<I, E>... edges)
-      throws Exception {
-    Vertex<I, V, E, M> expected = BspUtils.createVertex(conf);
+      E extends WritableComparable, M extends Writable> void assertValidVertex(
+      ImmutableClassesGiraphConfiguration<I, V, E, M> conf,
+      GraphState<I, V, E, M> graphState,
+      Vertex<I, V, E, M> actual,
+      I expectedId,
+      V expectedValue,
+      Edge<I, E>... edges) throws Exception {
+    Vertex<I, V, E, M> expected = conf.createVertex();
     setGraphState(expected, graphState);
     expected.initialize(expectedId, expectedValue, Arrays.asList(edges));
     assertValid(expected, actual);
   }
 
-  public static
-  <I extends WritableComparable, V extends Writable, E extends Writable, M extends Writable> void
-  assertValid(Vertex<I, V, E, M> expected, Vertex<I, V, E, M> actual) {
+  public static <I extends WritableComparable, V extends Writable,
+      E extends WritableComparable, M extends Writable> void assertValid(
+      Vertex<I, V, E, M> expected, Vertex<I, V, E, M> actual) {
     assertEquals(expected.getId(), actual.getId());
     assertEquals(expected.getValue(), actual.getValue());
     assertEquals(expected.getTotalNumEdges(), actual.getTotalNumEdges());
-    List<Edge<I, E>> expectedEdges = Lists.newArrayList();
-    List<Edge<I, E>> actualEdges = Lists.newArrayList();
-    Iterables.addAll(actualEdges, actual.getEdges());
-    Iterables.addAll(expectedEdges, expected.getEdges());
-    Collections.sort(expectedEdges);
-    Collections.sort(actualEdges);
-    for(int i = 0; i < expectedEdges.size(); i++) {
-      assertEquals(expectedEdges.get(i), actualEdges.get(i));
-    }
+    assertTrue(EdgeIterables.equals(expected.getEdges(), actual.getEdges()));
   }
 
   @Test
@@ -172,7 +162,8 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat extends TextDoub
     Vertex<Text, DoubleWritable, DoubleWritable, BooleanWritable> vertex =
         vr.getCurrentVertex();
     setGraphState(vertex, graphState);
-    assertValidVertex(conf, graphState, vertex, new Text("Hi"), new DoubleWritable(0),
+    assertValidVertex(conf, graphState, vertex,
+        new Text("Hi"), new DoubleWritable(0),
         EdgeFactory.create(new Text("Ciao"), new DoubleWritable(1.123d)),
         EdgeFactory.create(new Text("Bomdia"), new DoubleWritable(2.234d)),
         EdgeFactory.create(new Text("Ola"), new DoubleWritable(3.345d)));
@@ -221,13 +212,13 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat extends TextDoub
     Vertex<Text, DoubleWritable, DoubleWritable, BooleanWritable> vertex =
         vr.getCurrentVertex();
     setGraphState(vertex, graphState);
-    assertValidVertex(conf, graphState, vertex, new Text("alpha"), new DoubleWritable(42d),
+    assertValidVertex(conf, graphState, vertex,
+        new Text("alpha"), new DoubleWritable(42d),
         EdgeFactory.create(new Text("beta"), new DoubleWritable(99d)));
     assertEquals(vertex.getNumEdges(), 1);
   }
 
-  public static class DummyVertex
-      extends EdgeListVertex<Text, DoubleWritable,
+  public static class DummyVertex extends Vertex<Text, DoubleWritable,
             DoubleWritable, BooleanWritable> {
     @Override
     public void compute(Iterable<BooleanWritable> messages) throws IOException {

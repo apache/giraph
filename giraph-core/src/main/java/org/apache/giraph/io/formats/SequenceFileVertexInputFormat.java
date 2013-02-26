@@ -17,7 +17,7 @@
  */
 package org.apache.giraph.io.formats;
 
-import org.apache.giraph.vertex.Vertex;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexReader;
 import org.apache.hadoop.io.Writable;

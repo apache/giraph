@@ -20,24 +20,25 @@ package org.apache.giraph.utils;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
 import org.apache.commons.cli.BasicParser;
-import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.giraph.Algorithm;
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.combiner.Combiner;
 import org.apache.giraph.conf.GiraphConfiguration;
-import org.apache.giraph.Algorithm;
 import org.apache.giraph.conf.GiraphConstants;
-import org.apache.giraph.io.formats.GiraphFileInputFormat;
-import org.apache.giraph.job.GiraphConfigurationValidator;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
+import org.apache.giraph.io.formats.GiraphFileInputFormat;
+import org.apache.giraph.job.GiraphConfigurationValidator;
 import org.apache.giraph.master.MasterCompute;
 import org.apache.giraph.partition.Partition;
-import org.apache.giraph.vertex.Vertex;
+import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.edge.VertexEdges;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.hadoop.fs.Path;
 import org.apache.log4j.Level;
@@ -73,6 +74,7 @@ public final class ConfigurationUtils {
     OPTIONS.addOption("eip", "edgeInputPath", true, "Edge input path");
     OPTIONS.addOption("op", "outputPath", true, "Vertex output path");
     OPTIONS.addOption("c", "combiner", true, "Combiner class");
+    OPTIONS.addOption("ve", "vertexEdges", true, "Vertex edges class");
     OPTIONS.addOption("wc", "workerContext", true, "WorkerContext class");
     OPTIONS.addOption("aw", "aggregatorWriter", true, "AggregatorWriter class");
     OPTIONS.addOption("mc", "masterCompute", true, "MasterCompute class");
@@ -192,6 +194,11 @@ public final class ConfigurationUtils {
       giraphConfiguration.setVertexCombinerClass(
           (Class<? extends Combiner>)
               Class.forName(cmd.getOptionValue("c")));
+    }
+    if (cmd.hasOption("ve")) {
+      giraphConfiguration.setVertexEdgesClass(
+          (Class<? extends VertexEdges>)
+              Class.forName(cmd.getOptionValue("ve")));
     }
     if (cmd.hasOption("wc")) {
       giraphConfiguration.setWorkerContextClass(

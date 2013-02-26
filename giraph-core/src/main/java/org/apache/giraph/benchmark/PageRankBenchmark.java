@@ -25,6 +25,10 @@ import org.apache.commons.cli.PosixParser;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.combiner.DoubleSumCombiner;
+import org.apache.giraph.edge.ArrayListEdges;
+import org.apache.giraph.edge.ByteArrayEdges;
+import org.apache.giraph.edge.HashMapEdges;
+import org.apache.giraph.edge.LongDoubleArrayEdges;
 import org.apache.giraph.io.formats.PseudoRandomInputFormatConstants;
 import org.apache.giraph.job.GiraphJob;
 import org.apache.giraph.io.formats.JsonBase64VertexOutputFormat;
@@ -81,17 +85,17 @@ public class PageRankBenchmark implements Tool {
         true,
         "Edges per vertex");
     options.addOption("c",
-        "vertexClass",
+        "edgesClass",
         true,
-        "Vertex class (0 for HashMapVertex, 1 for EdgeListVertex, " +
-            "2 for ByteArrayVertex, " +
-            "3 for ByteArrayVertex with unsafe, " +
-            "4 for HashMapVertex (using EdgeInputFormat), " +
-            "5 for MultiGraphEdgeListVertex (using EdgeInputFormat), " +
-            "6 for MultiGraphByteArrayVertex (using " +
-            "EdgeInputFormat), " +
-            "7 for MultiGraphByteArrayVertex with unsafe (using " +
-            "EdgeInputFormat))");
+        "Vertex edges class (0 for LongDoubleArrayEdges," +
+            "1 for ByteArrayEdges, " +
+            "2 for ByteArrayEdges with unsafe serialization, " +
+            "3 for ArrayListEdges, " +
+            "4 for HashMapVertex");
+    options.addOption("ei",
+        "edgeInput",
+        false,
+        "Use edge-based input instead of vertex-based input.");
     options.addOption("l",
         "localEdgesMinRatio",
         true,
@@ -155,7 +159,7 @@ public class PageRankBenchmark implements Tool {
 
     configuration.setWorkerConfiguration(workers, workers, 100.0f);
     configuration.setInt(
-        PageRankComputation.SUPERSTEP_COUNT,
+        PageRankVertex.SUPERSTEP_COUNT,
         Integer.parseInt(cmd.getOptionValue('s')));
 
     boolean isVerbose = false;
@@ -170,7 +174,7 @@ public class PageRankBenchmark implements Tool {
   }
 
   /**
-   * Set vertex, input format, partitioner classes and related parameters
+   * Set vertex edges, input format, partitioner classes and related parameters
    * based on command-line arguments.
    *
    * @param cmd Command line arguments
@@ -178,48 +182,46 @@ public class PageRankBenchmark implements Tool {
    */
   protected void setClassesAndParameters(
       CommandLine cmd, GiraphConfiguration configuration) {
-    int vertexClassOption = cmd.hasOption('c') ? Integer.parseInt(
+    configuration.setVertexClass(PageRankVertex.class);
+    int edgesClassOption = cmd.hasOption('c') ? Integer.parseInt(
         cmd.getOptionValue('c')) : 1;
-    if (vertexClassOption == 1) {
-      configuration.setVertexClass(
-          EdgeListVertexPageRankBenchmark.class);
-    } else if (vertexClassOption == 0 || vertexClassOption == 4) {
-      configuration.setVertexClass(
-          HashMapVertexPageRankBenchmark.class);
-    } else if (vertexClassOption == 2) {
-      configuration.setVertexClass(
-          ByteArrayVertexPageRankBenchmark.class);
-      configuration.useUnsafeSerialization(false);
-    } else if (vertexClassOption == 3) {
-      configuration.setVertexClass(
-          ByteArrayVertexPageRankBenchmark.class);
+    switch (edgesClassOption) {
+    case 0:
+      configuration.setVertexEdgesClass(LongDoubleArrayEdges.class);
+      break;
+    case 1:
+      configuration.setVertexEdgesClass(ByteArrayEdges.class);
+      break;
+    case 2:
+      configuration.setVertexEdgesClass(ByteArrayEdges.class);
       configuration.useUnsafeSerialization(true);
-    } else if (vertexClassOption == 5) {
-      configuration.setVertexClass(
-          MultiGraphEdgeListVertexPageRankBenchmark.class);
-    } else if (vertexClassOption == 6) {
-      configuration.setVertexClass(
-          MultiGraphByteArrayVertexPageRankBenchmark.class);
-      configuration.useUnsafeSerialization(false);
-    } else if (vertexClassOption == 7) {
-      configuration.setVertexClass(
-          MultiGraphByteArrayVertexPageRankBenchmark.class);
-      configuration.useUnsafeSerialization(true);
-    }
-    LOG.info("Using vertex class " +
-        configuration.get(GiraphConstants.VERTEX_CLASS));
-    if (!cmd.hasOption('t') ||
-        (Integer.parseInt(cmd.getOptionValue('t')) == 1)) {
-      configuration.setVertexCombinerClass(
-          DoubleSumCombiner.class);
+      break;
+    case 3:
+      configuration.setVertexEdgesClass(ArrayListEdges.class);
+      break;
+    case 4:
+      configuration.setVertexEdgesClass(HashMapEdges.class);
+      break;
+    default:
+      LOG.info("Unknown VertexEdges class, " +
+          "defaulting to LongDoubleArrayEdges");
+      configuration.setVertexEdgesClass(LongDoubleArrayEdges.class);
     }
 
-    if (vertexClassOption <= 3) {
+    LOG.info("Using edges class " +
+        configuration.get(GiraphConstants.VERTEX_EDGES_CLASS));
+    if (!cmd.hasOption('t') ||
+        (Integer.parseInt(cmd.getOptionValue('t')) == 1)) {
+      configuration.setVertexCombinerClass(DoubleSumCombiner.class);
+    }
+
+    if (cmd.hasOption("ei")) {
+      configuration.setEdgeInputFormatClass(PseudoRandomEdgeInputFormat.class);
+    } else {
       configuration.setVertexInputFormatClass(
           PseudoRandomVertexInputFormat.class);
-    } else {
-      configuration.setEdgeInputFormatClass(PseudoRandomEdgeInputFormat.class);
     }
+
     configuration.setLong(
         PseudoRandomInputFormatConstants.AGGREGATE_VERTICES,
         Long.parseLong(cmd.getOptionValue('V')));

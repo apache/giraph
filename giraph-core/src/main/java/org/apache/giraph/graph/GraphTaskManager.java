@@ -18,8 +18,9 @@
 
 package org.apache.giraph.graph;
 
+import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.giraph.bsp.BspService;
-import org.apache.giraph.bsp.BspUtils;
 import org.apache.giraph.bsp.CentralizedServiceMaster;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.messages.MessageStoreByPartition;
@@ -41,7 +42,6 @@ import org.apache.giraph.time.Time;
 import org.apache.giraph.utils.MemoryUtils;
 import org.apache.giraph.utils.ProgressableUtils;
 import org.apache.giraph.utils.ReflectionUtils;
-import org.apache.giraph.vertex.Vertex;
 import org.apache.giraph.worker.BspServiceWorker;
 import org.apache.giraph.worker.WorkerAggregatorUsage;
 import org.apache.giraph.worker.WorkerContext;
@@ -56,9 +56,6 @@ import org.apache.log4j.Appender;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
-
-import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import java.io.IOException;
 import java.lang.reflect.Type;
@@ -433,8 +430,10 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
    * @param conf the Configuration object for this job run.
    */
   public void determineClassTypes(Configuration conf) {
+    ImmutableClassesGiraphConfiguration giraphConf =
+        new ImmutableClassesGiraphConfiguration(conf);
     Class<? extends Vertex<I, V, E, M>> vertexClass =
-        BspUtils.<I, V, E, M>getVertexClass(conf);
+        giraphConf.getVertexClass();
     List<Class<?>> classList = ReflectionUtils.<Vertex>getTypeArguments(
         Vertex.class, vertexClass);
     Type vertexIndexType = classList.get(0);

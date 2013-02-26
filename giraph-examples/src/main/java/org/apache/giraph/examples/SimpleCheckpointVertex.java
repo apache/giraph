@@ -24,13 +24,13 @@ import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
 import org.apache.giraph.aggregators.LongSumAggregator;
-import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.EdgeFactory;
+import org.apache.giraph.edge.Edge;
+import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.io.formats.GeneratedVertexInputFormat;
 import org.apache.giraph.io.formats.IdWithValueTextOutputFormat;
 import org.apache.giraph.job.GiraphJob;
 import org.apache.giraph.master.DefaultMasterCompute;
-import org.apache.giraph.vertex.EdgeListVertex;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -68,7 +68,7 @@ public class SimpleCheckpointVertex implements Tool {
    * Actual computation.
    */
   public static class SimpleCheckpointComputation extends
-      EdgeListVertex<LongWritable, IntWritable, FloatWritable, FloatWritable> {
+      Vertex<LongWritable, IntWritable, FloatWritable, FloatWritable> {
     @Override
     public void compute(Iterable<FloatWritable> messages) {
       SimpleCheckpointVertexWorkerContext workerContext =

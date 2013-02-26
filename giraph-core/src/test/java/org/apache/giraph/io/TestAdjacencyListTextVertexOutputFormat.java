@@ -17,20 +17,17 @@
  */
 package org.apache.giraph.io;
 
-import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.EdgeFactory;
+import com.google.common.collect.Lists;
 import org.apache.giraph.io.formats.AdjacencyListTextVertexOutputFormat;
-import org.apache.giraph.vertex.Vertex;
+import org.apache.giraph.edge.Edge;
+import org.apache.giraph.edge.EdgeFactory;
+import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.junit.Test;
-import org.mockito.Matchers;
-
-import com.google.common.collect.Lists;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -76,7 +73,6 @@ public class TestAdjacencyListTextVertexOutputFormat extends AdjacencyListTextVe
     Text expected = new Text("The Beautiful South\t32.2");
     verify(tw).write(expected, null);
     verify(vertex, times(1)).getEdges();
-    verify(vertex, times(0)).getEdgeValue(Matchers.<WritableComparable>any());
   }
 
   @Test

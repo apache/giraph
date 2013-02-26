@@ -18,16 +18,17 @@
 
 package org.apache.giraph.master;
 
+import com.google.common.collect.Maps;
 import org.apache.giraph.conf.GiraphClasses;
 import org.apache.giraph.conf.GiraphConstants;
-import org.apache.giraph.vertex.IntNullNullNullVertex;
 import org.apache.giraph.io.formats.IntNullNullNullTextInputFormat;
 import org.apache.giraph.utils.InternalVertexRunner;
+import org.apache.giraph.edge.ByteArrayEdges;
+import org.apache.giraph.graph.Vertex;
+import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Test;
-
-import com.google.common.collect.Maps;
 
 import java.io.IOException;
 import java.util.Map;
@@ -35,7 +36,8 @@ import java.util.Map;
 import static org.junit.Assert.assertEquals;
 
 public class TestMasterObserver {
-  public static class NoOpVertex extends IntNullNullNullVertex {
+  public static class NoOpVertex extends Vertex<IntWritable, NullWritable,
+      NullWritable, NullWritable> {
     private int count = 0;
 
     @Override
@@ -90,6 +92,7 @@ public class TestMasterObserver {
 
     GiraphClasses classes = new GiraphClasses();
     classes.setVertexClass(NoOpVertex.class);
+    classes.setVertexEdgesClass(ByteArrayEdges.class);
     classes.setVertexInputFormatClass(IntNullNullNullTextInputFormat.class);
     InternalVertexRunner.run(classes, params, graph);
 

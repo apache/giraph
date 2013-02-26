@@ -24,6 +24,7 @@ import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.io.formats.IdWithValueTextOutputFormat;
 import org.apache.giraph.io.formats.IntIntNullIntTextInputFormat;
 import org.apache.giraph.utils.InternalVertexRunner;
+import org.apache.giraph.edge.ByteArrayEdges;
 import org.junit.Test;
 
 import com.google.common.base.Splitter;
@@ -74,6 +75,7 @@ public class TryMultiIpcBindingPortsTest {
 
         GiraphClasses classes = new GiraphClasses();
         classes.setVertexClass(ConnectedComponentsVertex.class);
+        classes.setVertexEdgesClass(ByteArrayEdges.class);
         classes.setCombinerClass(MinimumIntCombiner.class);
         classes.setVertexInputFormatClass(IntIntNullIntTextInputFormat.class);
         classes.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);

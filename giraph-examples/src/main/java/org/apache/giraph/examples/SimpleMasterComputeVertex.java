@@ -20,16 +20,19 @@ package org.apache.giraph.examples;
 
 import org.apache.giraph.aggregators.DoubleOverwriteAggregator;
 import org.apache.giraph.master.DefaultMasterCompute;
-import org.apache.giraph.vertex.LongDoubleFloatDoubleVertex;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.FloatWritable;
+import org.apache.hadoop.io.LongWritable;
 import org.apache.log4j.Logger;
 
 /**
  * Demonstrates a computation with a centralized part implemented via a
  * MasterCompute.
  */
-public class SimpleMasterComputeVertex extends LongDoubleFloatDoubleVertex {
+public class SimpleMasterComputeVertex extends Vertex<LongWritable,
+    DoubleWritable, FloatWritable, DoubleWritable> {
   /** Aggregator to get values from the master to the workers */
   public static final String SMC_AGG = "simplemastercompute.aggregator";
   /** Logger */

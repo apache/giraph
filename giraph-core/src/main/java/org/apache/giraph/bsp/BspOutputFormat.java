@@ -18,8 +18,7 @@
 
 package org.apache.giraph.bsp;
 
-import java.io.IOException;
-
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.OutputCommitter;
@@ -27,6 +26,8 @@ import org.apache.hadoop.mapreduce.OutputFormat;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.log4j.Logger;
+
+import java.io.IOException;
 
 /**
  * This is for internal use only.  Allows the vertex output format routines
@@ -39,27 +40,27 @@ public class BspOutputFormat extends OutputFormat<Text, Text> {
   @Override
   public void checkOutputSpecs(JobContext context)
     throws IOException, InterruptedException {
-    if (BspUtils.getVertexOutputFormatClass(context.getConfiguration()) ==
-        null) {
+    ImmutableClassesGiraphConfiguration conf =
+        new ImmutableClassesGiraphConfiguration(context.getConfiguration());
+    if (!conf.hasVertexOutputFormat()) {
       LOG.warn("checkOutputSpecs: ImmutableOutputCommiter" +
           " will not check anything");
       return;
     }
-    BspUtils.createVertexOutputFormat(context.getConfiguration()).
-      checkOutputSpecs(context);
+    conf.createVertexOutputFormat().checkOutputSpecs(context);
   }
 
   @Override
   public OutputCommitter getOutputCommitter(TaskAttemptContext context)
     throws IOException, InterruptedException {
-    if (BspUtils.getVertexOutputFormatClass(context.getConfiguration()) ==
-        null) {
+    ImmutableClassesGiraphConfiguration conf =
+        new ImmutableClassesGiraphConfiguration(context.getConfiguration());
+    if (!conf.hasVertexOutputFormat()) {
       LOG.warn("getOutputCommitter: Returning " +
           "ImmutableOutputCommiter (does nothing).");
       return new ImmutableOutputCommitter();
     }
-    return BspUtils.createVertexOutputFormat(context.getConfiguration()).
-        getOutputCommitter(context);
+    return conf.createVertexOutputFormat().getOutputCommitter(context);
   }
 
   @Override

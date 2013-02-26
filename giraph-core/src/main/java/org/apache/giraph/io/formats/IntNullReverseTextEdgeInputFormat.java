@@ -18,8 +18,8 @@
 
 package org.apache.giraph.io.formats;
 
-import org.apache.giraph.graph.ReverseEdgeDuplicator;
 import org.apache.giraph.io.EdgeReader;
+import org.apache.giraph.io.ReverseEdgeDuplicator;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.InputSplit;

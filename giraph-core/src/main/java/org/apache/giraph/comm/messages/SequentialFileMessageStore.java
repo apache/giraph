@@ -179,7 +179,7 @@ public class SequentialFileMessageStore<I extends WritableComparable,
     }
 
     if (nextVertexId == null || vertexId.compareTo(nextVertexId) < 0) {
-      return EmptyIterable.<M>emptyIterable();
+      return EmptyIterable.get();
     }
 
     return readMessagesForCurrentVertex();

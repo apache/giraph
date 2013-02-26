@@ -18,13 +18,12 @@
 
 package org.apache.giraph.examples;
 
-import org.apache.giraph.graph.EdgeFactory;
+import com.google.common.collect.Lists;
 import org.apache.giraph.utils.MockUtils;
+import org.apache.giraph.edge.EdgeFactory;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.junit.Test;
-
-import com.google.common.collect.Lists;
 
 import static org.junit.Assert.assertEquals;
 
@@ -41,18 +40,19 @@ public class SimpleTriangleClosingVertexTest {
   public void testSuperstepZero() throws Exception {
     // this guy should end up with an array value of 4
     SimpleTriangleClosingVertex vertex =
-      new SimpleTriangleClosingVertex();
+        new SimpleTriangleClosingVertex();
+
     SimpleTriangleClosingVertex.IntArrayListWritable alw =
       new SimpleTriangleClosingVertex.IntArrayListWritable();
-    vertex.initialize(null, null);
-    vertex.addEdge(EdgeFactory.create(new IntWritable(5)));
-    vertex.addEdge(EdgeFactory.create(new IntWritable(7)));
 
     MockUtils.MockedEnvironment<IntWritable,
       SimpleTriangleClosingVertex.IntArrayListWritable,
     NullWritable, IntWritable> env =
       MockUtils.prepareVertex(vertex, 0L,
         new IntWritable(1), alw, false);
+
+    vertex.addEdge(EdgeFactory.create(new IntWritable(5)));
+    vertex.addEdge(EdgeFactory.create(new IntWritable(7)));
 
     vertex.compute(Lists.<IntWritable>newArrayList(
       new IntWritable(83), new IntWritable(42)));
@@ -70,7 +70,7 @@ public class SimpleTriangleClosingVertexTest {
     // messages properly to verify the algorithm
     SimpleTriangleClosingVertex vertex =
       new SimpleTriangleClosingVertex();
-    vertex.initialize(null, null);
+
     MockUtils.MockedEnvironment<IntWritable,
       SimpleTriangleClosingVertex.IntArrayListWritable,
       NullWritable, IntWritable>

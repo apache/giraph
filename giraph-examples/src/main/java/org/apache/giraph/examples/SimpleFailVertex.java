@@ -18,7 +18,7 @@
 
 package org.apache.giraph.examples;
 
-import org.apache.giraph.vertex.EdgeListVertex;
+import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -27,7 +27,7 @@ import org.apache.log4j.Logger;
 /**
  * Vertex to allow unit testing of failure detection
  */
-public class SimpleFailVertex extends EdgeListVertex<
+public class SimpleFailVertex extends Vertex<
     LongWritable, DoubleWritable, FloatWritable, DoubleWritable> {
   /** Class logger */
   private static Logger LOG = Logger.getLogger(SimpleFailVertex.class);

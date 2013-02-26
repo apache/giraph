@@ -18,15 +18,14 @@
 
 package org.apache.giraph.io.formats;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import org.apache.giraph.bsp.BspInputSplit;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.EdgeFactory;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexReader;
-import org.apache.giraph.vertex.Vertex;
+import org.apache.giraph.edge.EdgeFactory;
+import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.edge.VertexEdges;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
@@ -88,7 +87,7 @@ public class PseudoRandomVertexInputFormat<M extends Writable> extends
     /** Aggregate vertices (all input splits). */
     private long aggregateVertices = -1;
     /** Edges per vertex. */
-    private long edgesPerVertex = -1;
+    private int edgesPerVertex = -1;
     /** BspInputSplit (used only for index). */
     private BspInputSplit bspInputSplit;
     /** Saved configuration */
@@ -132,7 +131,7 @@ public class PseudoRandomVertexInputFormat<M extends Writable> extends
             "initialize: Got " + inputSplit.getClass() +
             " instead of " + BspInputSplit.class);
       }
-      edgesPerVertex = configuration.getLong(
+      edgesPerVertex = configuration.getInt(
           PseudoRandomInputFormatConstants.EDGES_PER_VERTEX, 0);
       if (edgesPerVertex <= 0) {
         throw new IllegalArgumentException(
@@ -161,8 +160,10 @@ public class PseudoRandomVertexInputFormat<M extends Writable> extends
       // same.
       Random rand = new Random(vertexId);
       DoubleWritable vertexValue = new DoubleWritable(rand.nextDouble());
-      List<Edge<LongWritable, DoubleWritable>> edges =
-          Lists.newArrayListWithCapacity((int) edgesPerVertex);
+      // In order to save memory and avoid copying, we add directly to a
+      // VertexEdges instance.
+      VertexEdges<LongWritable, DoubleWritable> edges =
+          configuration.createAndInitializeVertexEdges(edgesPerVertex);
       Set<LongWritable> destVertices = Sets.newHashSet();
       for (long i = 0; i < edgesPerVertex; ++i) {
         LongWritable destVertexId = new LongWritable();

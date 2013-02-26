@@ -18,18 +18,18 @@
 
 package org.apache.giraph.examples;
 
-import org.apache.giraph.combiner.MinimumIntCombiner;
-import org.apache.giraph.conf.GiraphClasses;
-import org.apache.giraph.io.formats.IdWithValueTextOutputFormat;
-import org.apache.giraph.io.formats.IntIntNullIntTextInputFormat;
-import org.apache.giraph.utils.InternalVertexRunner;
-import org.junit.Test;
-
 import com.google.common.base.Splitter;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.SetMultimap;
+import org.apache.giraph.combiner.MinimumIntCombiner;
+import org.apache.giraph.conf.GiraphClasses;
+import org.apache.giraph.io.formats.IdWithValueTextOutputFormat;
+import org.apache.giraph.io.formats.IntIntNullIntTextInputFormat;
+import org.apache.giraph.utils.InternalVertexRunner;
+import org.apache.giraph.edge.ByteArrayEdges;
+import org.junit.Test;
 
 import java.util.Map;
 import java.util.Set;
@@ -68,6 +68,7 @@ public class ConnectedComponentsVertexTest {
 
         GiraphClasses classes = new GiraphClasses();
         classes.setVertexClass(ConnectedComponentsVertex.class);
+        classes.setVertexEdgesClass(ByteArrayEdges.class);
         classes.setCombinerClass(MinimumIntCombiner.class);
         classes.setVertexInputFormatClass(IntIntNullIntTextInputFormat.class);
         classes.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);

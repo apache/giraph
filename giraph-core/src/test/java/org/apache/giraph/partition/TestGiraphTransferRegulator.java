@@ -17,11 +17,12 @@
  */
 package org.apache.giraph.partition;
 
-import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.EdgeFactory;
+import org.apache.giraph.edge.ArrayListEdges;
+import org.apache.giraph.edge.EdgeFactory;
+import org.apache.giraph.edge.VertexEdges;
 import org.apache.giraph.graph.GiraphTransferRegulator;
 import org.apache.giraph.job.GiraphJob;
-import org.apache.giraph.vertex.EdgeListVertex;
+import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
@@ -29,10 +30,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.junit.Before;
 import org.junit.Test;
 
-import com.google.common.collect.Lists;
-
 import java.io.IOException;
-import java.util.List;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -46,14 +44,13 @@ public class TestGiraphTransferRegulator {
   /** Job filled in by setup() */
   private GiraphJob job;
   /** Instantiated vertex filled in from setup() */
-  private IFDLEdgeListVertex vertex = new IFDLEdgeListVertex();
+  private TestVertex vertex = new TestVertex();
 
   /**
-   * Simple instantiable class that extends
-   * {@link org.apache.giraph.vertex.EdgeListVertex}.
+   * Dummy vertex.
    */
-  public static class IFDLEdgeListVertex extends
-      EdgeListVertex<IntWritable, FloatWritable, DoubleWritable, LongWritable> {
+  public static class TestVertex extends
+      Vertex<IntWritable, FloatWritable, DoubleWritable, LongWritable> {
     @Override
     public void compute(Iterable<LongWritable> messages) throws IOException { }
   }
@@ -65,7 +62,7 @@ public class TestGiraphTransferRegulator {
     } catch (IOException e) {
       throw new RuntimeException("setUp: Failed", e);
     }
-    job.getConfiguration().setVertexClass(IFDLEdgeListVertex.class);
+    job.getConfiguration().setVertexClass(TestVertex.class);
   }
 
   @Test
@@ -74,11 +71,13 @@ public class TestGiraphTransferRegulator {
         .setInt(GiraphTransferRegulator.MAX_VERTICES_PER_TRANSFER, 1);
     job.getConfiguration()
         .setInt(GiraphTransferRegulator.MAX_EDGES_PER_TRANSFER, 3);
-    List<Edge<IntWritable, DoubleWritable>> edges = Lists.newLinkedList();
+    VertexEdges<IntWritable, DoubleWritable> edges =
+        new ArrayListEdges<IntWritable, DoubleWritable>();
+    edges.initialize(3);
     edges.add(EdgeFactory.create(new IntWritable(2), new DoubleWritable(22)));
     edges.add(EdgeFactory.create(new IntWritable(3), new DoubleWritable(33)));
     edges.add(EdgeFactory.create(new IntWritable(4), new DoubleWritable(44)));
-    vertex.initialize(null, null, edges);
+    vertex.initialize(new IntWritable(1), new FloatWritable(1), edges);
     GiraphTransferRegulator gtr =
         new GiraphTransferRegulator(job.getConfiguration());
     PartitionOwner owner = mock(PartitionOwner.class);

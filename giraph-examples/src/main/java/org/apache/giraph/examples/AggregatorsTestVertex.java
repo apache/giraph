@@ -20,7 +20,7 @@ package org.apache.giraph.examples;
 
 import org.apache.giraph.aggregators.LongSumAggregator;
 import org.apache.giraph.master.DefaultMasterCompute;
-import org.apache.giraph.vertex.EdgeListVertex;
+import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -29,7 +29,7 @@ import java.io.IOException;
 
 /** Vertex which uses aggrergators. To be used for testing. */
 public class AggregatorsTestVertex extends
-    EdgeListVertex<LongWritable, DoubleWritable, FloatWritable,
+    Vertex<LongWritable, DoubleWritable, FloatWritable,
         DoubleWritable> {
 
   /** Name of regular aggregator */

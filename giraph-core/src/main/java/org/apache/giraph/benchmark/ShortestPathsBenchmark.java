@@ -23,20 +23,17 @@ import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
-import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.combiner.MinimumDoubleCombiner;
+import org.apache.giraph.conf.GiraphConstants;
+import org.apache.giraph.edge.ArrayListEdges;
+import org.apache.giraph.edge.HashMapEdges;
 import org.apache.giraph.io.formats.PseudoRandomInputFormatConstants;
-import org.apache.giraph.vertex.EdgeListVertex;
-import org.apache.giraph.job.GiraphJob;
 import org.apache.giraph.io.formats.PseudoRandomVertexInputFormat;
+import org.apache.giraph.job.GiraphJob;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.DoubleWritable;
-import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
-
-import java.io.IOException;
 
 /**
  * Single-source shortest paths benchmark.
@@ -47,19 +44,6 @@ public class ShortestPathsBenchmark implements Tool {
       Logger.getLogger(ShortestPathsBenchmark.class);
   /** Configuration */
   private Configuration conf;
-
-  /**
-   * Vertex implementation
-   */
-  public static class ShortestPathsBenchmarkVertex extends
-      EdgeListVertex<LongWritable, DoubleWritable, DoubleWritable,
-          DoubleWritable> {
-    @Override
-    public void compute(Iterable<DoubleWritable> messages) throws IOException {
-      ShortestPathsComputation.computeShortestPaths(this, messages);
-    }
-  }
-
 
   @Override
   public Configuration getConf() {
@@ -89,9 +73,9 @@ public class ShortestPathsBenchmark implements Tool {
         true,
         "Edges per vertex");
     options.addOption("c",
-        "vertexClass",
+        "edgesClass",
         true,
-        "Vertex class (0 for HashMapVertex, 1 for EdgeListVertex)");
+        "Vertex edges class (0 for HashMapEdges, 1 for ArrayListEdges)");
     options.addOption("nc",
         "noCombiner",
         false,
@@ -123,12 +107,12 @@ public class ShortestPathsBenchmark implements Tool {
 
     int workers = Integer.parseInt(cmd.getOptionValue('w'));
     GiraphJob job = new GiraphJob(getConf(), getClass().getName());
+    job.getConfiguration().setVertexClass(ShortestPathsVertex.class);
     if (!cmd.hasOption('c') ||
         (Integer.parseInt(cmd.getOptionValue('c')) == 1)) {
-      job.getConfiguration().setVertexClass(ShortestPathsBenchmarkVertex.class);
+      job.getConfiguration().setVertexEdgesClass(ArrayListEdges.class);
     } else {
-      job.getConfiguration().setVertexClass(
-          HashMapVertexShortestPathsBenchmark.class);
+      job.getConfiguration().setVertexEdgesClass(HashMapEdges.class);
     }
     LOG.info("Using class " +
         job.getConfiguration().get(GiraphConstants.VERTEX_CLASS));

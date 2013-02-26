@@ -20,8 +20,7 @@ package org.apache.giraph.graph;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfigurable;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.vertex.MutableVertex;
-import org.apache.giraph.vertex.Vertex;
+import org.apache.giraph.edge.Edge;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
@@ -87,9 +86,8 @@ public class DefaultVertexResolver<I extends WritableComparable,
       return;
     }
     if (hasEdgeRemovals(vertexChanges)) {
-      MutableVertex<I, V, E, M> mv = (MutableVertex<I, V, E, M>) vertex;
       for (I removedDestVertex : vertexChanges.getRemovedEdgeList()) {
-        mv.removeEdges(removedDestVertex);
+        vertex.removeEdges(removedDestVertex);
       }
     }
   }
@@ -156,9 +154,8 @@ public class DefaultVertexResolver<I extends WritableComparable,
       return;
     }
     if (hasEdgeAdditions(vertexChanges)) {
-      MutableVertex<I, V, E, M> mv = (MutableVertex<I, V, E, M>) vertex;
       for (Edge<I, E> edge : vertexChanges.getAddedEdgeList()) {
-        mv.addEdge(edge);
+        vertex.addEdge(edge);
       }
     }
   }

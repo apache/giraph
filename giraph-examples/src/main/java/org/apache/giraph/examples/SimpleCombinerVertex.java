@@ -18,7 +18,7 @@
 
 package org.apache.giraph.examples;
 
-import org.apache.giraph.vertex.EdgeListVertex;
+import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -28,7 +28,7 @@ import org.apache.log4j.Logger;
  * Test whether messages can go through a combiner.
  */
 public class SimpleCombinerVertex extends
-    EdgeListVertex<LongWritable, IntWritable, FloatWritable, IntWritable> {
+    Vertex<LongWritable, IntWritable, FloatWritable, IntWritable> {
   /** Class logger */
   private static Logger LOG = Logger.getLogger(SimpleCombinerVertex.class);
 

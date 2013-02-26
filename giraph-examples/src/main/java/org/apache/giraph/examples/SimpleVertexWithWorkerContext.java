@@ -20,7 +20,7 @@ package org.apache.giraph.examples;
 
 import org.apache.giraph.examples.SimpleSuperstepVertex.
     SimpleSuperstepVertexInputFormat;
-import org.apache.giraph.vertex.EdgeListVertex;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.job.GiraphJob;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.hadoop.conf.Configuration;
@@ -64,7 +64,7 @@ public class SimpleVertexWithWorkerContext implements Tool {
    * Actual vetex implementation
    */
   public static class SimpleVertex extends
-      EdgeListVertex<LongWritable, IntWritable, FloatWritable,
+      Vertex<LongWritable, IntWritable, FloatWritable,
           DoubleWritable> {
     @Override
     public void compute(Iterable<DoubleWritable> messages) throws IOException {

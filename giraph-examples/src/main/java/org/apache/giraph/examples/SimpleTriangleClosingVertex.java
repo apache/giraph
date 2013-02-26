@@ -18,9 +18,9 @@
 
 package org.apache.giraph.examples;
 
-import org.apache.giraph.graph.Edge;
+import org.apache.giraph.edge.Edge;
 import org.apache.giraph.utils.ArrayListWritable;
-import org.apache.giraph.vertex.EdgeListVertex;
+import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 
@@ -61,7 +61,7 @@ import java.util.Set;
  * adapted to represent additional qualities that could affect the
  * ordering of the final result array.
  */
-public class SimpleTriangleClosingVertex extends EdgeListVertex<
+public class SimpleTriangleClosingVertex extends Vertex<
   IntWritable, SimpleTriangleClosingVertex.IntArrayListWritable,
   NullWritable, IntWritable> {
   /** Vertices to close the triangle, ranked by frequency of in-msgs */

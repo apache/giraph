@@ -26,11 +26,11 @@ import org.apache.commons.cli.PosixParser;
 import org.apache.giraph.aggregators.LongSumAggregator;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.io.formats.PseudoRandomInputFormatConstants;
-import org.apache.giraph.master.DefaultMasterCompute;
-import org.apache.giraph.vertex.EdgeListVertex;
-import org.apache.giraph.job.GiraphJob;
-import org.apache.giraph.worker.WorkerContext;
 import org.apache.giraph.io.formats.PseudoRandomVertexInputFormat;
+import org.apache.giraph.job.GiraphJob;
+import org.apache.giraph.master.DefaultMasterCompute;
+import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.worker.WorkerContext;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.DoubleWritable;
@@ -249,8 +249,8 @@ public class RandomMessageBenchmark implements Tool {
   /**
    * Actual message computation (messaging in this case)
    */
-  public static class RandomMessageVertex extends EdgeListVertex<
-      LongWritable, DoubleWritable, DoubleWritable, BytesWritable> {
+  public static class RandomMessageVertex extends Vertex<LongWritable,
+      DoubleWritable, DoubleWritable, BytesWritable> {
     @Override
     public void compute(Iterable<BytesWritable> messages) {
       RandomMessageBenchmarkWorkerContext workerContext =

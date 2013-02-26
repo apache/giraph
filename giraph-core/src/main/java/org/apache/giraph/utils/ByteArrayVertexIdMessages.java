@@ -104,6 +104,11 @@ public class ByteArrayVertexIdMessages<I extends WritableComparable,
    * lifetime of the object is only until next() is called.
    */
   public class VertexIdMessageIterator extends VertexIdDataIterator {
+    /**
+     * Get the current message.
+     *
+     * @return Current message
+     */
     public M getCurrentMessage() {
       return getCurrentData();
     }

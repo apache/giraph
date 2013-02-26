@@ -17,14 +17,13 @@
  */
 package org.apache.giraph.io.formats;
 
-import org.apache.giraph.graph.Edge;
+import com.google.common.collect.ImmutableList;
+import org.apache.giraph.edge.Edge;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-
-import com.google.common.collect.ImmutableList;
 
 import java.io.IOException;
 

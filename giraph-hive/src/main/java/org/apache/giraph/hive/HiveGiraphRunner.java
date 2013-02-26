@@ -37,7 +37,7 @@ import org.apache.giraph.hive.output.HiveVertexOutputFormat;
 import org.apache.giraph.hive.output.HiveVertexWriter;
 import org.apache.giraph.hive.output.VertexToHive;
 import org.apache.giraph.job.GiraphJob;
-import org.apache.giraph.vertex.Vertex;
+import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.util.Tool;

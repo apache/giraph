@@ -18,6 +18,8 @@
 
 package org.apache.giraph.comm;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import org.apache.giraph.comm.netty.NettyClient;
 import org.apache.giraph.comm.netty.NettyServer;
 import org.apache.giraph.comm.netty.handler.WorkerRequestServerHandler;
@@ -27,24 +29,21 @@ import org.apache.giraph.comm.requests.SendWorkerMessagesRequest;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.EdgeFactory;
+import org.apache.giraph.metrics.GiraphMetrics;
+import org.apache.giraph.edge.Edge;
+import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.graph.VertexMutations;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.partition.PartitionStore;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.giraph.utils.MockUtils;
 import org.apache.giraph.utils.PairList;
-import org.apache.giraph.vertex.EdgeListVertex;
-import org.apache.giraph.vertex.Vertex;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.junit.Before;
 import org.junit.Test;
-
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 
 import java.io.IOException;
 import java.util.Map;
@@ -75,7 +74,7 @@ public class RequestTest {
   /**
    * Only for testing.
    */
-  public static class TestVertex extends EdgeListVertex<IntWritable,
+  public static class TestVertex extends Vertex<IntWritable,
       IntWritable, IntWritable, IntWritable> {
     @Override
     public void compute(Iterable<IntWritable> messages) throws IOException {
@@ -114,7 +113,7 @@ public class RequestTest {
     Partition<IntWritable, IntWritable, IntWritable, IntWritable> partition =
         conf.createPartition(partitionId, null);
     for (int i = 0; i < 10; ++i) {
-      TestVertex vertex = new TestVertex();
+      Vertex vertex = conf.createVertex();
       vertex.initialize(new IntWritable(i), new IntWritable(i));
       partition.putVertex(vertex);
     }
@@ -211,7 +210,7 @@ public class RequestTest {
       mutations = new VertexMutations<IntWritable, IntWritable,
           IntWritable, IntWritable>();
       for (int j = 0; j < 3; ++j) {
-        TestVertex vertex = new TestVertex();
+        Vertex vertex = conf.createVertex();
         vertex.initialize(new IntWritable(i), new IntWritable(j));
         mutations.addVertex(vertex);
       }
@@ -234,6 +233,7 @@ public class RequestTest {
     IntWritable> request =
       new SendPartitionMutationsRequest<IntWritable, IntWritable,
       IntWritable, IntWritable>(partitionId, vertexIdMutations);
+    GiraphMetrics.init(conf);
     client.sendWritableRequest(workerInfo.getTaskId(), request);
     client.waitAllRequests();
 

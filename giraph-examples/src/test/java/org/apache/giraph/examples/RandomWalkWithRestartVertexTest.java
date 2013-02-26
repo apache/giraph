@@ -21,8 +21,8 @@ package org.apache.giraph.examples;
 import org.apache.giraph.conf.GiraphClasses;
 import org.apache.giraph.examples.RandomWalkVertex.RandomWalkVertexMasterCompute;
 import org.apache.giraph.utils.InternalVertexRunner;
+import org.apache.giraph.edge.ByteArrayEdges;
 import org.apache.hadoop.io.DoubleWritable;
-import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.junit.Test;
 
@@ -54,13 +54,15 @@ public class RandomWalkWithRestartVertexTest {
     params.put(RandomWalkWithRestartVertex.MAX_SUPERSTEPS, "30");
     params.put(RandomWalkWithRestartVertex.TELEPORTATION_PROBABILITY, "0.25");
 
-    GiraphClasses<LongWritable, DoubleWritable, FloatWritable, DoubleWritable>
-        classes = new GiraphClasses();
+    GiraphClasses<LongWritable, DoubleWritable, DoubleWritable, DoubleWritable>
+        classes = new GiraphClasses<LongWritable, DoubleWritable,
+        DoubleWritable, DoubleWritable>();
     classes.setVertexClass(RandomWalkWithRestartVertex.class);
+    classes.setVertexEdgesClass(ByteArrayEdges.class);
     classes.setVertexInputFormatClass(
-        LongDoubleFloatDoubleTextInputFormat.class);
+        LongDoubleDoubleDoubleTextInputFormat.class);
     classes.setVertexOutputFormatClass(
-        VertexWithDoubleValueFloatEdgeTextOutputFormat.class);
+        VertexWithDoubleValueDoubleEdgeTextOutputFormat.class);
     classes.setWorkerContextClass(RandomWalkWorkerContext.class);
     classes.setMasterComputeClass(RandomWalkVertexMasterCompute.class);
     // Run internally
@@ -91,12 +93,15 @@ public class RandomWalkWithRestartVertexTest {
     params.put(RandomWalkWithRestartVertex.MAX_SUPERSTEPS, "30");
     params.put(RandomWalkWithRestartVertex.TELEPORTATION_PROBABILITY, "0.15");
 
-    GiraphClasses classes = new GiraphClasses();
+    GiraphClasses<LongWritable, DoubleWritable, DoubleWritable,
+        DoubleWritable> classes = new GiraphClasses<LongWritable,
+        DoubleWritable, DoubleWritable, DoubleWritable>();
     classes.setVertexClass(RandomWalkWithRestartVertex.class);
+    classes.setVertexEdgesClass(ByteArrayEdges.class);
     classes.setVertexInputFormatClass(
-        NormalizingLongDoubleFloatDoubleTextInputFormat.class);
+        NormalizingLongDoubleDoubleDoubleTextInputFormat.class);
     classes.setVertexOutputFormatClass(
-        VertexWithDoubleValueFloatEdgeTextOutputFormat.class);
+        VertexWithDoubleValueDoubleEdgeTextOutputFormat.class);
     classes.setWorkerContextClass(RandomWalkWorkerContext.class);
     classes.setMasterComputeClass(RandomWalkVertexMasterCompute.class);
     // Run internally

@@ -20,10 +20,7 @@ package org.apache.giraph.conf;
 
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.combiner.Combiner;
-import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.EdgeFactory;
 import org.apache.giraph.graph.GraphState;
-import org.apache.giraph.graph.MutableEdge;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
@@ -32,10 +29,8 @@ import org.apache.giraph.job.GiraphJobObserver;
 import org.apache.giraph.master.MasterCompute;
 import org.apache.giraph.master.MasterObserver;
 import org.apache.giraph.partition.GraphPartitionerFactory;
-import org.apache.giraph.partition.MasterGraphPartitioner;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.partition.PartitionContext;
-import org.apache.giraph.partition.PartitionStats;
 import org.apache.giraph.utils.ExtendedByteArrayDataInput;
 import org.apache.giraph.utils.ExtendedByteArrayDataOutput;
 import org.apache.giraph.utils.ExtendedDataInput;
@@ -43,7 +38,11 @@ import org.apache.giraph.utils.ExtendedDataOutput;
 import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.giraph.utils.UnsafeByteArrayInputStream;
 import org.apache.giraph.utils.UnsafeByteArrayOutputStream;
-import org.apache.giraph.vertex.Vertex;
+import org.apache.giraph.edge.Edge;
+import org.apache.giraph.edge.EdgeFactory;
+import org.apache.giraph.edge.MutableEdge;
+import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.edge.VertexEdges;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.giraph.worker.WorkerObserver;
 import org.apache.hadoop.conf.Configuration;
@@ -62,12 +61,10 @@ import org.apache.hadoop.util.Progressable;
  * @param <E> Edge data
  * @param <M> Message data
  */
+@SuppressWarnings("unchecked")
 public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
     extends GiraphConfiguration {
-  /** Master graph partitioner - cached for fast access */
-  protected final MasterGraphPartitioner<I, V, E, M> masterGraphPartitioner;
-
   /** Holder for all the classes */
   private final GiraphClasses classes;
 
@@ -85,11 +82,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    */
   public ImmutableClassesGiraphConfiguration(Configuration conf) {
     super(conf);
-
     classes = new GiraphClasses(conf);
-    masterGraphPartitioner = (MasterGraphPartitioner<I, V, E, M>)
-        createGraphPartitioner().createMasterGraphPartitioner();
-
     useUnsafeSerialization = getBoolean(USE_UNSAFE_SERIALIZATION,
         USE_UNSAFE_SERIALIZATION_DEFAULT);
   }
@@ -127,24 +120,6 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   }
 
   /**
-   * Create a user graph partitioner partition stats class
-   *
-   * @return Instantiated user graph partition stats class
-   */
-  public PartitionStats createGraphPartitionStats() {
-    return getMasterGraphPartitioner().createPartitionStats();
-  }
-
-  /**
-   * Get the cached MasterGraphPartitioner.
-   *
-   * @return MasterGraphPartitioner cached in this class.
-   */
-  public MasterGraphPartitioner<I, V, E, M> getMasterGraphPartitioner() {
-    return masterGraphPartitioner;
-  }
-
-  /**
    * Does the job have a {@link VertexInputFormat}?
    *
    * @return True iff a {@link VertexInputFormat} has been specified.
@@ -174,6 +149,15 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
     Class<? extends VertexInputFormat<I, V, E, M>> klass =
         classes.getVertexInputFormatClass();
     return ReflectionUtils.newInstance(klass, this);
+  }
+
+  /**
+   * Does the job have a {@link VertexOutputFormat}?
+   *
+   * @return True iff a {@link VertexOutputFormat} has been specified.
+   */
+  public boolean hasVertexOutputFormat() {
+    return classes.hasVertexOutputFormat();
   }
 
   /**
@@ -244,6 +228,15 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    */
   public AggregatorWriter createAggregatorWriter() {
     return ReflectionUtils.newInstance(getAggregatorWriterClass(), this);
+  }
+
+  /**
+   * Get the user's subclassed {@link Combiner} class.
+   *
+   * @return User's combiner class
+   */
+  public Class<? extends Combiner<I, M>> getCombinerClass() {
+    return classes.getCombinerClass();
   }
 
   /**
@@ -350,7 +343,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   }
 
   /**
-   * Get the user's subclassed {@link org.apache.giraph.vertex.Vertex}
+   * Get the user's subclassed {@link org.apache.giraph.graph.Vertex}
    *
    * @return User's vertex class
    */
@@ -557,6 +550,51 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
             "createMessageValue: Illegally accessed", e);
       }
     }
+  }
+
+  /**
+   * Get the user's subclassed {@link VertexEdges}
+   *
+   * @return User's vertex edges class
+   */
+  public Class<? extends VertexEdges<I, E>> getVertexEdgesClass() {
+    return classes.getVertexEdgesClass();
+  }
+
+  /**
+   * Create a user {@link VertexEdges}
+   *
+   * @return Instantiated user VertexEdges
+   */
+  public VertexEdges<I, E> createVertexEdges() {
+    return ReflectionUtils.newInstance(getVertexEdgesClass(), this);
+  }
+
+  /**
+   * Create a {@link VertexEdges} instance and initialize it with the given
+   * capacity (the number of edges that will be added).
+   *
+   * @param capacity Number of edges that will be added
+   * @return Instantiated VertexEdges
+   */
+  public VertexEdges<I, E> createAndInitializeVertexEdges(int capacity) {
+    VertexEdges<I, E> vertexEdges = createVertexEdges();
+    vertexEdges.initialize(capacity);
+    return vertexEdges;
+  }
+
+  /**
+   * Create a {@link VertexEdges} instance and initialize it with the given
+   * iterable of edges.
+   *
+   * @param edges Iterable of edges to add
+   * @return Instantiated VertexEdges
+   */
+  public VertexEdges<I, E> createAndInitializeVertexEdges(
+      Iterable<Edge<I, E>> edges) {
+    VertexEdges<I, E> vertexEdges = createVertexEdges();
+    vertexEdges.initialize(edges);
+    return vertexEdges;
   }
 
   /**

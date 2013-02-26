@@ -18,7 +18,6 @@
 
 package org.apache.giraph.job;
 
-import org.apache.giraph.bsp.BspUtils;
 import org.apache.giraph.combiner.Combiner;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
@@ -28,8 +27,9 @@ import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.giraph.utils.ReflectionUtils;
-import org.apache.giraph.vertex.MutableVertex;
-import org.apache.giraph.vertex.Vertex;
+import org.apache.giraph.edge.ByteArrayEdges;
+import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.edge.VertexEdges;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -69,6 +69,8 @@ public class GiraphConfigurationValidator<I extends WritableComparable,
   private static final int MSG_COMBINER_PARAM_INDEX = 1;
   /** E param edge input format index in classList */
   private static final int EDGE_PARAM_EDGE_INPUT_FORMAT_INDEX = 1;
+  /** E param vertex edges index in classList */
+  private static final int EDGE_PARAM_VERTEX_EDGES_INDEX = 1;
 
   /** Vertex Index Type */
   private Type vertexIndexType;
@@ -103,13 +105,14 @@ public class GiraphConfigurationValidator<I extends WritableComparable,
   public void validateConfiguration() {
     checkConfiguration();
     Class<? extends Vertex<I, V, E, M>> vertexClass =
-      BspUtils.<I, V, E, M>getVertexClass(conf);
+      conf.getVertexClass();
     List<Class<?>> classList = ReflectionUtils.getTypeArguments(
       Vertex.class, vertexClass);
     vertexIndexType = classList.get(ID_PARAM_INDEX);
     vertexValueType = classList.get(VALUE_PARAM_INDEX);
     edgeValueType = classList.get(EDGE_PARAM_INDEX);
     messageValueType = classList.get(MSG_PARAM_INDEX);
+    verifyVertexEdgesGenericTypes();
     verifyVertexInputFormatGenericTypes();
     verifyEdgeInputFormatGenericTypes();
     verifyVertexOutputFormatGenericTypes();
@@ -146,11 +149,6 @@ public class GiraphConfigurationValidator<I extends WritableComparable,
           GiraphConstants.VERTEX_INPUT_FORMAT_CLASS + " and " +
           GiraphConstants.EDGE_INPUT_FORMAT_CLASS + " must be non-null");
     }
-    if (conf.getEdgeInputFormatClass() != null &&
-        !(MutableVertex.class.isAssignableFrom(conf.getVertexClass()))) {
-      throw new IllegalArgumentException("checkConfiguration: EdgeInputFormat" +
-          " only works with mutable vertices");
-    }
     if (conf.getVertexResolverClass() == null) {
       if (LOG.isInfoEnabled()) {
         LOG.info("checkConfiguration: No class found for " +
@@ -158,12 +156,47 @@ public class GiraphConfigurationValidator<I extends WritableComparable,
             DefaultVertexResolver.class.getCanonicalName());
       }
     }
+    if (conf.getVertexEdgesClass() == null) {
+      if (LOG.isInfoEnabled()) {
+        LOG.info("checkConfiguration: No class found for " +
+            GiraphConstants.VERTEX_EDGES_CLASS + ", defaulting to " +
+            ByteArrayEdges.class.getCanonicalName());
+      }
+    }
+  }
+
+  /** Verify matching generic types in VertexEdges. */
+  private void verifyVertexEdgesGenericTypes() {
+    Class<? extends VertexEdges<I, E>> vertexEdgesClass =
+        conf.getVertexEdgesClass();
+    List<Class<?>> classList = ReflectionUtils.getTypeArguments(
+        VertexEdges.class, vertexEdgesClass);
+    // VertexEdges implementations can be generic, in which case there are no
+    // types to check.
+    if (classList.isEmpty()) {
+      return;
+    }
+    if (classList.get(ID_PARAM_INDEX) != null &&
+        !vertexIndexType.equals(classList.get(ID_PARAM_INDEX))) {
+      throw new IllegalArgumentException(
+          "checkClassTypes: Vertex index types don't match, " +
+              "vertex - " + vertexIndexType +
+              ", vertex edges - " + classList.get(ID_PARAM_INDEX));
+    }
+    if (classList.get(EDGE_PARAM_VERTEX_EDGES_INDEX) != null &&
+        !edgeValueType.equals(classList.get(EDGE_PARAM_VERTEX_EDGES_INDEX))) {
+      throw new IllegalArgumentException(
+          "checkClassTypes: Edge value types don't match, " +
+              "vertex - " + edgeValueType +
+              ", vertex edges - " +
+              classList.get(EDGE_PARAM_VERTEX_EDGES_INDEX));
+    }
   }
 
   /** Verify matching generic types in VertexInputFormat. */
   private void verifyVertexInputFormatGenericTypes() {
     Class<? extends VertexInputFormat<I, V, E, M>> vertexInputFormatClass =
-      BspUtils.<I, V, E, M>getVertexInputFormatClass(conf);
+      conf.getVertexInputFormatClass();
     if (vertexInputFormatClass != null) {
       List<Class<?>> classList =
           ReflectionUtils.getTypeArguments(
@@ -198,7 +231,7 @@ public class GiraphConfigurationValidator<I extends WritableComparable,
   /** Verify matching generic types in EdgeInputFormat. */
   private void verifyEdgeInputFormatGenericTypes() {
     Class<? extends EdgeInputFormat<I, E>> edgeInputFormatClass =
-        BspUtils.<I, E>getEdgeInputFormatClass(conf);
+        conf.getEdgeInputFormatClass();
     if (edgeInputFormatClass != null) {
       List<Class<?>> classList =
           ReflectionUtils.getTypeArguments(
@@ -227,7 +260,7 @@ public class GiraphConfigurationValidator<I extends WritableComparable,
   /** If there is a combiner type, verify its generic params match the job. */
   private void verifyVertexCombinerGenericTypes() {
     Class<? extends Combiner<I, M>> vertexCombinerClass =
-      BspUtils.<I, M>getCombinerClass(conf);
+      conf.getCombinerClass();
     if (vertexCombinerClass != null) {
       List<Class<?>> classList =
         ReflectionUtils.getTypeArguments(
@@ -250,8 +283,7 @@ public class GiraphConfigurationValidator<I extends WritableComparable,
   /** Verify that the output format's generic params match the job. */
   private void verifyVertexOutputFormatGenericTypes() {
     Class<? extends VertexOutputFormat<I, V, E>>
-      vertexOutputFormatClass =
-      BspUtils.<I, V, E>getVertexOutputFormatClass(conf);
+      vertexOutputFormatClass = conf.getVertexOutputFormatClass();
     if (vertexOutputFormatClass != null) {
       List<Class<?>> classList =
         ReflectionUtils.getTypeArguments(
@@ -287,7 +319,7 @@ public class GiraphConfigurationValidator<I extends WritableComparable,
    * validate the generic parameter types. */
   private void verifyVertexResolverGenericTypes() {
     Class<? extends VertexResolver<I, V, E, M>>
-      vrClass = BspUtils.<I, V, E, M>getVertexResolverClass(conf);
+      vrClass = conf.getVertexResolverClass();
     if (!DefaultVertexResolver.class.isAssignableFrom(vrClass)) {
       return;
     }

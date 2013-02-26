@@ -220,6 +220,17 @@ public abstract class ByteArrayVertexIdData<I extends WritableComparable, T>
     public T getCurrentData() {
       return data;
     }
+
+    /**
+     * Release the current data object.
+     *
+     * @return Released data object
+     */
+    public T releaseCurrentData() {
+      T releasedData = data;
+      data = null;
+      return releasedData;
+    }
   }
 
 }

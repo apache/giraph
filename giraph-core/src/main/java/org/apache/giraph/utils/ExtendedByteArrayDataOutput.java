@@ -56,9 +56,8 @@ public class ExtendedByteArrayDataOutput extends ByteArrayOutputStream
    * @param pos Position in the buffer to start writing from
    */
   public ExtendedByteArrayDataOutput(byte[] buf, int pos) {
-    this.buf = buf;
+    this(buf);
     this.count = pos;
-    dataOutput = new DataOutputStream(this);
   }
 
   /**

@@ -19,7 +19,7 @@
 package org.apache.giraph.utils;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.graph.Edge;
+import org.apache.giraph.edge.Edge;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -76,8 +76,22 @@ public class ByteArrayVertexIdEdges<I extends WritableComparable,
    * lifetime of the object is only until next() is called.
    */
   public class VertexIdEdgeIterator extends VertexIdDataIterator {
+    /**
+     * Get the current edge.
+     *
+     * @return Current edge
+     */
     public Edge<I, E> getCurrentEdge() {
       return getCurrentData();
+    }
+
+    /**
+     * Release the current edge.
+     *
+     * @return Released edge
+     */
+    public Edge<I, E> releaseCurrentEdge() {
+      return releaseCurrentData();
     }
   }
 }

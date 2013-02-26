@@ -116,7 +116,7 @@ public class UnsafeByteArrayOutputStream extends OutputStream
    * @param pos Position to write at the buffer
    */
   public UnsafeByteArrayOutputStream(byte[] buf, int pos) {
-    this.buf = buf;
+    this(buf);
     this.pos = pos;
   }
 

@@ -18,7 +18,7 @@
 
 package org.apache.giraph.examples;
 
-import org.apache.giraph.vertex.EdgeListVertex;
+import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -36,7 +36,7 @@ import org.apache.hadoop.io.WritableComparable;
 
 public abstract class IdentityVertex<I extends WritableComparable,
   V extends Writable, E extends Writable, M extends Writable>
-  extends EdgeListVertex<I, V, E, M> {
+  extends Vertex<I, V, E, M> {
 
   @Override
   public void compute(Iterable<M> messages) {

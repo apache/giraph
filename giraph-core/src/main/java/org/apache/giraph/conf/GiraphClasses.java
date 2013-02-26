@@ -18,24 +18,27 @@
 package org.apache.giraph.conf;
 
 import org.apache.giraph.aggregators.AggregatorWriter;
-import org.apache.giraph.combiner.Combiner;
-import org.apache.giraph.master.DefaultMasterCompute;
-import org.apache.giraph.graph.DefaultVertexResolver;
-import org.apache.giraph.partition.DefaultPartitionContext;
-import org.apache.giraph.partition.PartitionContext;
-import org.apache.giraph.worker.DefaultWorkerContext;
-import org.apache.giraph.io.EdgeInputFormat;
-import org.apache.giraph.master.MasterCompute;
 import org.apache.giraph.aggregators.TextAggregatorWriter;
-import org.apache.giraph.vertex.Vertex;
+import org.apache.giraph.combiner.Combiner;
+import org.apache.giraph.edge.ByteArrayEdges;
+import org.apache.giraph.edge.VertexEdges;
+import org.apache.giraph.graph.DefaultVertexResolver;
+import org.apache.giraph.graph.VertexResolver;
+import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
-import org.apache.giraph.graph.VertexResolver;
-import org.apache.giraph.worker.WorkerContext;
+import org.apache.giraph.master.DefaultMasterCompute;
+import org.apache.giraph.master.MasterCompute;
+import org.apache.giraph.partition.DefaultPartitionContext;
 import org.apache.giraph.partition.GraphPartitionerFactory;
 import org.apache.giraph.partition.HashPartitionerFactory;
 import org.apache.giraph.partition.Partition;
+import org.apache.giraph.partition.PartitionContext;
 import org.apache.giraph.partition.SimplePartition;
+import org.apache.giraph.utils.ReflectionUtils;
+import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.worker.DefaultWorkerContext;
+import org.apache.giraph.worker.WorkerContext;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -50,6 +53,7 @@ import java.util.List;
  * @param <E> Edge class
  * @param <M> Message class
  */
+@SuppressWarnings("unchecked")
 public class GiraphClasses<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
     implements GiraphConstants {
@@ -63,6 +67,8 @@ public class GiraphClasses<I extends WritableComparable,
   protected Class<E> edgeValueClass;
   /** Message value class - cached for fast access */
   protected Class<M> messageValueClass;
+  /** Vertex edges class - cached for fast access */
+  protected Class<? extends VertexEdges<I, E>> vertexEdgesClass;
 
   /** Graph partitioner factory class - cached for fast access */
   protected Class<? extends GraphPartitionerFactory<I, V, E, M>>
@@ -96,9 +102,25 @@ public class GiraphClasses<I extends WritableComparable,
   protected Class<? extends Partition<I, V, E, M>> partitionClass;
 
   /**
-   * Empty constructor. Initialize with classes all null.
+   * Empty constructor. Initialize with default classes or null.
    */
-  public GiraphClasses() { }
+  public GiraphClasses() {
+    // Note: the cast to Object is required in order for javac to accept the
+    // downcast.
+    vertexEdgesClass = (Class<? extends VertexEdges<I, E>>) (Object)
+        ByteArrayEdges.class;
+    graphPartitionerFactoryClass =
+        (Class<? extends GraphPartitionerFactory<I, V, E, M>>) (Object)
+            HashPartitionerFactory.class;
+    aggregatorWriterClass = TextAggregatorWriter.class;
+    vertexResolverClass = (Class<? extends VertexResolver<I, V, E, M>>)
+        (Object) DefaultVertexResolver.class;
+    partitionContextClass = DefaultPartitionContext.class;
+    workerContextClass = DefaultWorkerContext.class;
+    masterComputeClass = DefaultMasterCompute.class;
+    partitionClass = (Class<? extends Partition<I, V, E, M>>) (Object)
+        SimplePartition.class;
+  }
 
   /**
    * Contructor that reads classes from a Configuration object.
@@ -118,13 +140,15 @@ public class GiraphClasses<I extends WritableComparable,
     // set pre-validated generic parameter types into Configuration
     vertexClass = (Class<? extends Vertex<I, V, E, M>>)
         conf.getClass(VERTEX_CLASS, null, Vertex.class);
-    List<Class<?>> classList =
-        org.apache.giraph.utils.ReflectionUtils.<Vertex>getTypeArguments(
-            Vertex.class, vertexClass);
+    List<Class<?>> classList = ReflectionUtils.getTypeArguments(Vertex.class,
+        vertexClass);
     vertexIdClass = (Class<I>) classList.get(0);
     vertexValueClass = (Class<V>) classList.get(1);
     edgeValueClass = (Class<E>) classList.get(2);
     messageValueClass = (Class<M>) classList.get(3);
+    vertexEdgesClass = (Class<? extends VertexEdges<I, E>>)
+        conf.getClass(VERTEX_EDGES_CLASS, ByteArrayEdges.class,
+            VertexEdges.class);
 
     graphPartitionerFactoryClass =
         (Class<? extends GraphPartitionerFactory<I, V, E, M>>)
@@ -206,12 +230,12 @@ public class GiraphClasses<I extends WritableComparable,
   }
 
   /**
-   * Check if we GraphPartitionerFactory is set
+   * Get Vertex edges class
    *
-   * @return true if GraphPartitionerFactory is set
+   * @return Vertex edges class.
    */
-  public boolean hasGraphPartitionerFactoryClass() {
-    return graphPartitionerFactoryClass != null;
+  public Class<? extends VertexEdges<I, E>> getVertexEdgesClass() {
+    return vertexEdgesClass;
   }
 
   /**
@@ -459,6 +483,19 @@ public class GiraphClasses<I extends WritableComparable,
    */
   public GiraphClasses setMessageValueClass(Class<M> messageValueClass) {
     this.messageValueClass = messageValueClass;
+    return this;
+  }
+
+  /**
+   * Set VertexEdges class held
+   *
+   * @param vertexEdgesClass Vertex edges class to set
+   * @return this
+   */
+  public GiraphClasses setVertexEdgesClass(
+      Class<? extends VertexEdges> vertexEdgesClass) {
+    this.vertexEdgesClass =
+        (Class<? extends VertexEdges<I, E>>) vertexEdgesClass;
     return this;
   }
 

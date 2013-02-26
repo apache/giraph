@@ -18,8 +18,10 @@
 
 package org.apache.giraph.io.formats;
 
-import org.apache.giraph.graph.Edge;
-import org.apache.giraph.graph.EdgeFactory;
+import com.google.common.collect.Lists;
+import net.iharder.Base64;
+import org.apache.giraph.edge.Edge;
+import org.apache.giraph.edge.EdgeFactory;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -28,9 +30,6 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-
-import com.google.common.collect.Lists;
-import net.iharder.Base64;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInput;

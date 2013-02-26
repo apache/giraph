@@ -891,6 +891,11 @@ under the License.
         <version>2.3.8</version>
       </dependency>
       <dependency>
+        <groupId>it.unimi.dsi</groupId>
+        <artifactId>fastutil</artifactId>
+        <version>6.5.3</version>
+      </dependency>
+      <dependency>
         <groupId>org.apache.giraph</groupId>
         <artifactId>giraph-core</artifactId>
         <version>${project.version}</version>
@@ -930,11 +935,6 @@ under the License.
         <groupId>org.apache.hive</groupId>
         <artifactId>hive-metastore</artifactId>
         <version>${hive.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.mahout</groupId>
-        <artifactId>mahout-collections</artifactId>
-        <version>1.0</version>
       </dependency>
       <dependency>
         <groupId>org.apache.zookeeper</groupId>

@@ -24,6 +24,8 @@ package org.apache.giraph.conf;
 public interface GiraphConstants {
   /** Vertex class - required */
   String VERTEX_CLASS = "giraph.vertexClass";
+  /** Vertex edges class - required */
+  String VERTEX_EDGES_CLASS = "giraph.vertexEdgesClass";
 
   /** Class for Master - optional */
   String MASTER_COMPUTE_CLASS = "giraph.masterComputeClass";

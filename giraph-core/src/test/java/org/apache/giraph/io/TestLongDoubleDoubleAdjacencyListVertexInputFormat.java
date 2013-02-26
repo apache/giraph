@@ -18,19 +18,17 @@
 package org.apache.giraph.io;
 
 
-import org.apache.giraph.conf.GiraphConstants;
-import org.apache.giraph.graph.EdgeFactory;
+import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.io.formats.AdjacencyListTextVertexInputFormat;
 import org.apache.giraph.io.formats.LongDoubleDoubleAdjacencyListVertexInputFormat;
-import org.apache.giraph.vertex.EdgeListVertex;
-import org.apache.giraph.vertex.Vertex;
-import org.apache.hadoop.conf.Configuration;
+import org.apache.giraph.edge.EdgeFactory;
+import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.BooleanWritable;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
@@ -50,7 +48,8 @@ import static org.mockito.Mockito.when;
 public class TestLongDoubleDoubleAdjacencyListVertexInputFormat extends LongDoubleDoubleAdjacencyListVertexInputFormat<BooleanWritable> {
 
   private RecordReader<LongWritable, Text> rr;
-  private Configuration conf;
+  private ImmutableClassesGiraphConfiguration<LongWritable, DoubleWritable,
+      DoubleWritable, BooleanWritable> conf;
   private TaskAttemptContext tac;
   private GraphState<LongWritable, DoubleWritable, DoubleWritable, BooleanWritable> graphState;
 
@@ -58,10 +57,10 @@ public class TestLongDoubleDoubleAdjacencyListVertexInputFormat extends LongDoub
   public void setUp() throws IOException, InterruptedException {
     rr = mock(RecordReader.class);
     when(rr.nextKeyValue()).thenReturn(true);
-    conf = new Configuration();
-    conf.setClass(GiraphConstants.VERTEX_CLASS, DummyVertex.class, Vertex.class);
-    conf.setClass(GiraphConstants.VERTEX_ID_CLASS, LongWritable.class, Writable.class);
-    conf.setClass(GiraphConstants.VERTEX_VALUE_CLASS, DoubleWritable.class, Writable.class);
+    GiraphConfiguration giraphConf = new GiraphConfiguration();
+    giraphConf.setVertexClass(DummyVertex.class);
+    conf = new ImmutableClassesGiraphConfiguration<LongWritable, DoubleWritable,
+        DoubleWritable, BooleanWritable>(giraphConf);
     graphState = mock(GraphState.class);
     tac = mock(TaskAttemptContext.class);
     when(tac.getConfiguration()).thenReturn(conf);
@@ -163,8 +162,7 @@ public class TestLongDoubleDoubleAdjacencyListVertexInputFormat extends LongDoub
     assertEquals(vertex.getNumEdges(), 1);
   }
 
-  public static class DummyVertex
-      extends EdgeListVertex<LongWritable, DoubleWritable,
+  public static class DummyVertex extends Vertex<LongWritable, DoubleWritable,
       DoubleWritable, BooleanWritable> {
     @Override
     public void compute(Iterable<BooleanWritable> messages) throws IOException {

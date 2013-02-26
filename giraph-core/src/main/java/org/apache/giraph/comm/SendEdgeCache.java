@@ -21,7 +21,7 @@ package org.apache.giraph.comm;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.graph.Edge;
+import org.apache.giraph.edge.Edge;
 import org.apache.giraph.utils.ByteArrayVertexIdEdges;
 import org.apache.giraph.utils.PairList;
 import org.apache.giraph.worker.WorkerInfo;

@@ -19,7 +19,7 @@
 package org.apache.giraph.worker;
 
 /**
- * A dumb implementation of {@link WorkerContext}. This is the default
+ * A dummy implementation of {@link WorkerContext}. This is the default
  * implementation when no WorkerContext is defined by the user. It does
  * nothing.
  */

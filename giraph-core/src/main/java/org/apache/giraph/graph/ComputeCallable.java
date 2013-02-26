@@ -34,7 +34,6 @@ import org.apache.giraph.time.Time;
 import org.apache.giraph.time.Times;
 import org.apache.giraph.utils.MemoryUtils;
 import org.apache.giraph.utils.TimedLogger;
-import org.apache.giraph.vertex.Vertex;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.giraph.worker.WorkerThreadAggregatorUsage;
 import org.apache.hadoop.io.Writable;
@@ -212,8 +211,7 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
         // Make sure every vertex has this thread's
         // graphState before computing
         vertex.setGraphState(graphState);
-        Iterable<M> messages =
-            messageStore.getVertexMessages(vertex.getId());
+        Iterable<M> messages = messageStore.getVertexMessages(vertex.getId());
         if (vertex.isHalted() && !Iterables.isEmpty(messages)) {
           vertex.wakeUp();
         }

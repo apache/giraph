@@ -19,7 +19,7 @@
 package org.apache.giraph.examples;
 
 import org.apache.giraph.partition.DefaultPartitionContext;
-import org.apache.giraph.vertex.EdgeListVertex;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.worker.DefaultWorkerContext;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.hadoop.io.DoubleWritable;
@@ -32,7 +32,7 @@ import java.io.IOException;
  * Vertex to test the functionality of PartitionContext
  */
 public class PartitionContextTestVertex extends
-    EdgeListVertex<LongWritable, DoubleWritable, FloatWritable,
+    Vertex<LongWritable, DoubleWritable, FloatWritable,
         DoubleWritable> {
   /** How many compute threads to use in the test */
   public static final int NUM_COMPUTE_THREADS = 10;

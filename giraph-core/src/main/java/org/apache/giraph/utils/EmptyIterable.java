@@ -18,47 +18,32 @@
 
 package org.apache.giraph.utils;
 
+import com.google.common.collect.Iterators;
+
 import java.util.Iterator;
-import java.util.NoSuchElementException;
 
 /**
- * Helper empty iterable when there are no messages.
+ * Singleton class for empty iterables.
  *
- * @param <M> Message data
+ * @param <T> Element type
  */
-public class EmptyIterable<M> implements Iterable<M>, Iterator<M> {
+public class EmptyIterable<T> implements Iterable<T> {
   /** Singleton empty iterable */
-  private static final EmptyIterable<Object> EMPTY_ITERABLE =
-      new EmptyIterable<Object>();
+  private static final EmptyIterable EMPTY_ITERABLE = new EmptyIterable();
 
   /**
    * Get the singleton empty iterable
    *
-   * @param <T> Type of the empty iterable
-   * @return Empty singleton iterable
+   * @param <T> Element type
+   * @return Singleton empty iterable
    */
-  public static <T> Iterable<T> emptyIterable() {
+  public static <T> Iterable<T> get() {
     return (Iterable<T>) EMPTY_ITERABLE;
   }
 
   @Override
-  public Iterator<M> iterator() {
-    return this;
-  }
-
-  @Override
-  public boolean hasNext() {
-    return false;
-  }
-
-  @Override
-  public M next() {
-    throw new NoSuchElementException();
-  }
-
-  @Override
-  public void remove() {
-    throw new UnsupportedOperationException();
+  public Iterator<T> iterator() {
+    return Iterators.emptyIterator();
   }
 }
 

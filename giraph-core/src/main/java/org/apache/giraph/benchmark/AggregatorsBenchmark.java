@@ -25,11 +25,11 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
 import org.apache.giraph.aggregators.LongSumAggregator;
 import org.apache.giraph.io.formats.PseudoRandomInputFormatConstants;
-import org.apache.giraph.master.DefaultMasterCompute;
-import org.apache.giraph.worker.DefaultWorkerContext;
-import org.apache.giraph.vertex.EdgeListVertex;
-import org.apache.giraph.job.GiraphJob;
 import org.apache.giraph.io.formats.PseudoRandomVertexInputFormat;
+import org.apache.giraph.job.GiraphJob;
+import org.apache.giraph.master.DefaultMasterCompute;
+import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.worker.DefaultWorkerContext;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -55,8 +55,7 @@ public class AggregatorsBenchmark implements Tool {
    * Vertex class for AggregatorsBenchmark
    */
   public static class AggregatorsBenchmarkVertex extends
-      EdgeListVertex<LongWritable, DoubleWritable, DoubleWritable,
-          DoubleWritable> {
+      Vertex<LongWritable, DoubleWritable, DoubleWritable, DoubleWritable> {
     @Override
     public void compute(Iterable<DoubleWritable> messages) throws IOException {
       int n = getNumAggregators(getConf());

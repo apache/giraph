@@ -51,7 +51,7 @@ under the License.
           <configLocation>checkstyle.xml</configLocation>
           <enableRulesSummary>false</enableRulesSummary>
           <headerLocation>license-header.txt</headerLocation>
-          <failOnError>true</failOnError>
+          <failOnViolation>true</failOnViolation>
           <includeTestSourceDirectory>false</includeTestSourceDirectory>
         </configuration>
         <executions>
@@ -271,10 +271,6 @@ under the License.
     <dependency>
       <groupId>net.iharder</groupId>
       <artifactId>base64</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.mahout</groupId>
-      <artifactId>mahout-collections</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.zookeeper</groupId>

@@ -18,6 +18,8 @@
 
 package org.apache.giraph.io;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import org.apache.giraph.BspCase;
 import org.apache.giraph.conf.GiraphClasses;
 import org.apache.giraph.io.formats.IdWithValueTextOutputFormat;
@@ -25,13 +27,11 @@ import org.apache.giraph.io.formats.IntIntTextVertexValueInputFormat;
 import org.apache.giraph.io.formats.IntNullReverseTextEdgeInputFormat;
 import org.apache.giraph.io.formats.IntNullTextEdgeInputFormat;
 import org.apache.giraph.utils.InternalVertexRunner;
-import org.apache.giraph.vertex.EdgeListVertex;
+import org.apache.giraph.edge.ByteArrayEdges;
+import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.junit.Test;
-
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 
 import java.io.IOException;
 import java.util.Map;
@@ -60,6 +60,7 @@ public class TestEdgeInput extends BspCase {
 
     GiraphClasses classes = new GiraphClasses();
     classes.setVertexClass(TestVertexWithNumEdges.class);
+    classes.setVertexEdgesClass(ByteArrayEdges.class);
     classes.setEdgeInputFormatClass(IntNullTextEdgeInputFormat.class);
     classes.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
     Map<String, String> params = ImmutableMap.of();
@@ -90,6 +91,7 @@ public class TestEdgeInput extends BspCase {
 
     GiraphClasses classes = new GiraphClasses();
     classes.setVertexClass(TestVertexWithNumEdges.class);
+    classes.setVertexEdgesClass(ByteArrayEdges.class);
     classes.setEdgeInputFormatClass(IntNullReverseTextEdgeInputFormat.class);
     classes.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
     Map<String, String> params = ImmutableMap.of();
@@ -127,6 +129,7 @@ public class TestEdgeInput extends BspCase {
 
     GiraphClasses classes = new GiraphClasses();
     classes.setVertexClass(TestVertexDoNothing.class);
+    classes.setVertexEdgesClass(ByteArrayEdges.class);
     classes.setVertexInputFormatClass(IntIntTextVertexValueInputFormat.class);
     classes.setEdgeInputFormatClass(IntNullTextEdgeInputFormat.class);
     classes.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
@@ -151,6 +154,7 @@ public class TestEdgeInput extends BspCase {
 
     classes = new GiraphClasses();
     classes.setVertexClass(TestVertexWithNumEdges.class);
+    classes.setVertexEdgesClass(ByteArrayEdges.class);
     classes.setVertexInputFormatClass(IntIntTextVertexValueInputFormat.class);
     classes.setEdgeInputFormatClass(IntNullTextEdgeInputFormat.class);
     classes.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
@@ -168,8 +172,8 @@ public class TestEdgeInput extends BspCase {
     assertEquals(1, (int) values.get(5));
   }
 
-  public static class TestVertexWithNumEdges extends EdgeListVertex<IntWritable,
-      IntWritable, NullWritable, NullWritable> {
+  public static class TestVertexWithNumEdges extends Vertex<IntWritable,
+        IntWritable, NullWritable, NullWritable> {
     @Override
     public void compute(Iterable<NullWritable> messages) throws IOException {
       setValue(new IntWritable(getNumEdges()));
@@ -177,7 +181,7 @@ public class TestEdgeInput extends BspCase {
     }
   }
 
-  public static class TestVertexDoNothing extends EdgeListVertex<IntWritable,
+  public static class TestVertexDoNothing extends Vertex<IntWritable,
       IntWritable, NullWritable, NullWritable> {
     @Override
     public void compute(Iterable<NullWritable> messages) throws IOException {
