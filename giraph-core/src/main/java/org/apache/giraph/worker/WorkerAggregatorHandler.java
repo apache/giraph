@@ -93,6 +93,7 @@ public class WorkerAggregatorHandler implements WorkerThreadAggregatorUsage {
   public <A extends Writable> void aggregate(String name, A value) {
     Aggregator<Writable> aggregator = currentAggregatorMap.get(name);
     if (aggregator != null) {
+      progressable.progress();
       synchronized (aggregator) {
         aggregator.aggregate(value);
       }
@@ -276,6 +277,7 @@ public class WorkerAggregatorHandler implements WorkerThreadAggregatorUsage {
     public <A extends Writable> void aggregate(String name, A value) {
       Aggregator<Writable> aggregator = threadAggregatorMap.get(name);
       if (aggregator != null) {
+        progressable.progress();
         aggregator.aggregate(value);
       } else {
         throw new IllegalStateException("aggregate: " +
