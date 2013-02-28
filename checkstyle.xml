@@ -86,7 +86,6 @@
 
     <!-- Checks for common coding problems               -->
     <!-- See http://checkstyle.sf.net/config_coding.html -->
-    <module name="DoubleCheckedLocking"/>
     <module name="EmptyStatement"/>
       <!-- Require hash code override when equals is -->
     <module name="EqualsHashCode"/>

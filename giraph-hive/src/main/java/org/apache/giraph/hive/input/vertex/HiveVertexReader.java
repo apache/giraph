@@ -19,9 +19,10 @@
 package org.apache.giraph.hive.input.vertex;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.edge.Edge;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.VertexReader;
 import org.apache.giraph.utils.ReflectionUtils;
-import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -31,6 +32,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import com.facebook.giraph.hive.HiveRecord;
 import com.facebook.giraph.hive.HiveTableSchema;
 import com.facebook.giraph.hive.HiveTableSchemaAware;
+import com.facebook.giraph.hive.HiveTableSchemas;
 
 import java.io.IOException;
 
@@ -45,8 +47,14 @@ import java.io.IOException;
 public class HiveVertexReader<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
     implements VertexReader<I, V, E, M>, HiveTableSchemaAware {
-  /** Key in Configuration for HiveToVertex class */
-  public static final String HIVE_TO_VERTEX_KEY = "giraph.hive.to.vertex.class";
+  /** Configuration key for {@link HiveToVertexValue} class */
+  public static final String HIVE_TO_VERTEX_KEY =
+      "giraph.hive.to.vertex.value.class";
+  /** Configuration key for {@link HiveToVertexEdges} class */
+  public static final String HIVE_TO_VERTEX_EDGES_KEY =
+      "giraph.hive.to.vertex.edges.class";
+  /** Configuration key for whether to reuse vertex */
+  public static final String REUSE_VERTEX_KEY = "giraph.hive.reuse.vertex";
 
   /** Underlying Hive RecordReader used */
   private RecordReader<WritableComparable, HiveRecord> hiveRecordReader;
@@ -57,7 +65,15 @@ public class HiveVertexReader<I extends WritableComparable,
   private ImmutableClassesGiraphConfiguration<I, V, E, M> conf;
 
   /** User class to create vertices from a HiveRecord */
-  private HiveToVertex<I, V, E> hiveToVertex;
+  private HiveToVertexValue<I, V> hiveToVertexValue;
+  /** User class to create vertex edges from HiveRecord - optional */
+  private HiveToVertexEdges<I, E> hiveToVertexEdges;
+
+  /**
+   * If we are reusing vertices this will be the single vertex to read into.
+   * Otherwise if it's null we will create a new vertex each time.
+   */
+  private Vertex<I, V, E, M> vertexToReuse = null;
 
   /**
    * Get underlying Hive record reader used.
@@ -103,21 +119,40 @@ public class HiveVertexReader<I extends WritableComparable,
     hiveRecordReader.initialize(inputSplit, context);
     conf = new ImmutableClassesGiraphConfiguration(context.getConfiguration());
     instantiateHiveToVertexFromConf();
+    instantiateHiveToVertexEdgesFromConf();
+    if (conf.getBoolean(REUSE_VERTEX_KEY, false)) {
+      vertexToReuse = conf.createVertex();
+    }
   }
 
   /**
-   * Retrieve the user's HiveVertexCreator from our configuration.
+   * Retrieve the user's HiveToVertex from our configuration.
    *
    * @throws IOException if anything goes wrong reading from Configuration.
    */
   private void instantiateHiveToVertexFromConf() throws IOException {
-    Class<? extends HiveToVertex> klass = conf.getClass(HIVE_TO_VERTEX_KEY,
-        null, HiveToVertex.class);
+    Class<? extends HiveToVertexValue> klass = conf.getClass(HIVE_TO_VERTEX_KEY,
+        null, HiveToVertexValue.class);
     if (klass == null) {
       throw new IOException(HIVE_TO_VERTEX_KEY + " not set in conf");
     }
-    hiveToVertex = ReflectionUtils.newInstance(klass, conf);
-    hiveToVertex.setTableSchema(tableSchema);
+    hiveToVertexValue = ReflectionUtils.newInstance(klass, conf);
+    HiveTableSchemas.configure(hiveToVertexValue, tableSchema);
+  }
+
+  /**
+   * Retrieve the user's HiveToVertexEdges from our configuration. This class
+   * is optional. If not specified will just use HiveToVertexEdges.Empty.
+   */
+  private void instantiateHiveToVertexEdgesFromConf() {
+    Class<? extends HiveToVertexEdges> klass = conf.getClass(
+        HIVE_TO_VERTEX_EDGES_KEY, null, HiveToVertexEdges.class);
+    if (klass == null) {
+      hiveToVertexEdges = HiveToVertexEdges.Empty.get();
+    } else {
+      hiveToVertexEdges = ReflectionUtils.newInstance(klass, conf);
+    }
+    HiveTableSchemas.configure(hiveToVertexEdges, tableSchema);
   }
 
   @Override
@@ -139,8 +174,14 @@ public class HiveVertexReader<I extends WritableComparable,
   public final Vertex<I, V, E, M> getCurrentVertex()
     throws IOException, InterruptedException {
     HiveRecord hiveRecord = hiveRecordReader.getCurrentValue();
-    Vertex vertex = conf.createVertex();
-    hiveToVertex.fillVertex(hiveRecord, vertex);
+    Vertex<I, V, E, M> vertex = vertexToReuse;
+    if (vertex == null) {
+      vertex = conf.createVertex();
+    }
+    I id = hiveToVertexValue.getVertexId(hiveRecord);
+    V value = hiveToVertexValue.getVertexValue(hiveRecord);
+    Iterable<Edge<I, E>> edges = hiveToVertexEdges.getEdges(hiveRecord);
+    vertex.initialize(id, value, edges);
     return vertex;
   }
 }

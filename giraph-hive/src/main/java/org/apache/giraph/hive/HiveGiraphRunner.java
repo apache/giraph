@@ -30,7 +30,8 @@ import org.apache.giraph.hive.common.HiveProfiles;
 import org.apache.giraph.hive.input.edge.HiveEdgeInputFormat;
 import org.apache.giraph.hive.input.edge.HiveEdgeReader;
 import org.apache.giraph.hive.input.edge.HiveToEdge;
-import org.apache.giraph.hive.input.vertex.HiveToVertex;
+import org.apache.giraph.hive.input.vertex.HiveToVertexValue;
+import org.apache.giraph.hive.input.vertex.HiveToVertexEdges;
 import org.apache.giraph.hive.input.vertex.HiveVertexInputFormat;
 import org.apache.giraph.hive.input.vertex.HiveVertexReader;
 import org.apache.giraph.hive.output.HiveVertexOutputFormat;
@@ -77,7 +78,9 @@ public class HiveGiraphRunner implements Tool {
   private Class<? extends Vertex> vertexClass;
 
   /** Vertex creator from hive records. */
-  private Class<? extends HiveToVertex> hiveToVertexClass;
+  private Class<? extends HiveToVertexValue> hiveToVertexClass;
+  /** Vertex edges creator from hive records. */
+  private Class<? extends HiveToVertexEdges> hiveToVertexEdgesClass;
   /** hive vertex input information */
   private  final HiveInputDescription hiveVertexInputDescription;
 
@@ -104,77 +107,28 @@ public class HiveGiraphRunner implements Tool {
     hiveOutputDescription = new HiveOutputDescription();
   }
 
-  /**
-   * Get Vertex class used.
-   *
-   * @return Vertex class
-   */
   public Class<? extends Vertex> getVertexClass() {
     return vertexClass;
   }
 
-  /**
-   * Set Vertex class to use
-   *
-   * @param vertexClass Vertex class
-   */
   public void setVertexClass(Class<? extends Vertex> vertexClass) {
     this.vertexClass = vertexClass;
   }
 
-  /**
-   * Get hive vertex input description
-   *
-   * @return HiveInputDescription
-   */
   public HiveInputDescription getHiveVertexInputDescription() {
     return hiveVertexInputDescription;
   }
 
-  /**
-   * Get hive output description
-   *
-   * @return HiveOutputDescription
-   */
   public HiveOutputDescription getHiveOutputDescription() {
     return hiveOutputDescription;
   }
 
-  /**
-   * Get hive input description
-   *
-   * @return HiveInputDescription
-   */
   public HiveInputDescription getHiveEdgeInputDescription() {
     return hiveEdgeInputDescription;
   }
 
-  /**
-   * Get HiveVertexCreator used with HiveVertexInputFormat
-   *
-   * @return HiveVertexCreator
-   */
-  public Class<? extends HiveToVertex> getHiveToVertexClass() {
+  public Class<? extends HiveToVertexValue> getHiveToVertexValueClass() {
     return hiveToVertexClass;
-  }
-
-  /**
-   * Whether to use vertex input.
-   *
-   * @return true if vertex input enabled (HiveVertexCreator is set).
-   */
-  public boolean hasVertexInput() {
-    return hiveToVertexClass != null;
-  }
-
-  /**
-   * Set class used to convert hive records to Vertexes.
-   *
-   * @param hiveToVertexValueClass HiveToVertex class
-   */
-  public void setHiveToVertexValueClass(
-      Class<? extends HiveToVertex> hiveToVertexValueClass) {
-    setHiveToVertexClass(hiveToVertexValueClass);
   }
 
   /**
@@ -182,18 +136,47 @@ public class HiveGiraphRunner implements Tool {
    *
    * @param hiveToVertexClass HiveVertexCreator
    */
-  public void setHiveToVertexClass(
-      Class<? extends HiveToVertex> hiveToVertexClass) {
+  public void setHiveToVertexValueClass(
+      Class<? extends HiveToVertexValue> hiveToVertexClass) {
     this.hiveToVertexClass = hiveToVertexClass;
     conf.setClass(HiveVertexReader.HIVE_TO_VERTEX_KEY, hiveToVertexClass,
-        HiveToVertex.class);
+        HiveToVertexValue.class);
   }
 
   /**
-   * Get HiveEdgeCreator used with HiveEdgeInputFormat
+   * Whether to use vertex input.
    *
-   * @return HiveEdgeCreator
+   * @return true if vertex input enabled (HiveVertexCreator is set).
    */
+  public boolean hasVertexValueInput() {
+    return hiveToVertexClass != null;
+  }
+
+  public Class<? extends HiveToVertexEdges> getHiveToVertexEdgesClass() {
+    return hiveToVertexEdgesClass;
+  }
+
+  /**
+   * Whether we have a class for reading per-vertex edges from Hive.
+   *
+   * @return true if user set class for reading vertex edges.
+   */
+  public boolean hasHiveToVertexEdgesClass() {
+    return hiveToVertexEdgesClass != null;
+  }
+
+  /**
+   * Set class for reading per-vertex edges from hive.
+   *
+   * @param klass Class to use
+   */
+  public void setHiveToVertexEdgesClass(
+      Class<? extends HiveToVertexEdges> klass) {
+    this.hiveToVertexEdgesClass = klass;
+    conf.setClass(HiveVertexReader.HIVE_TO_VERTEX_EDGES_KEY, klass,
+        HiveToVertexEdges.class);
+  }
+
   public Class<? extends HiveToEdge> getHiveToEdgeClass() {
     return hiveToEdgeClass;
   }
@@ -214,15 +197,10 @@ public class HiveGiraphRunner implements Tool {
    */
   public void setHiveToEdgeClass(Class<? extends HiveToEdge> hiveToEdgeClass) {
     this.hiveToEdgeClass = hiveToEdgeClass;
-    conf.setClass(HiveEdgeReader.EDGE_CREATOR_KEY, hiveToEdgeClass,
+    conf.setClass(HiveEdgeReader.HIVE_TO_EDGE_KEY, hiveToEdgeClass,
         HiveToEdge.class);
   }
 
-  /**
-   * Get class used to write vertices to Hive.
-   *
-   * @return class for writing vertices to Hive
-   */
   public Class<? extends VertexToHive> getVertexToHiveClass() {
     return vertexToHiveClass;
   }
@@ -386,7 +364,15 @@ public class HiveGiraphRunner implements Tool {
 
     String hiveToVertexClassStr = cmdln.getOptionValue("hiveToVertexClass");
     if (hiveToVertexClassStr != null) {
-      hiveToVertexClass = findClass(hiveToVertexClassStr, HiveToVertex.class);
+      setHiveToVertexValueClass(findClass(hiveToVertexClassStr,
+          HiveToVertexValue.class));
+    }
+
+    String hiveToVertexEdgesClassStr =
+        cmdln.getOptionValue("hiveToVertexEdgesClass");
+    if (hiveToVertexEdgesClassStr != null) {
+      setHiveToVertexEdgesClass(findClass(hiveToVertexEdgesClassStr,
+          HiveToVertexEdges.class));
     }
 
     String hiveToEdgeClassStr = cmdln.getOptionValue("hiveToEdgeClass");
@@ -396,26 +382,26 @@ public class HiveGiraphRunner implements Tool {
 
     String vertexToHiveClassStr = cmdln.getOptionValue("vertexToHiveClass");
     if (vertexToHiveClassStr != null) {
-      vertexToHiveClass = findClass(vertexToHiveClassStr, VertexToHive.class);
+      setVertexToHiveClass(findClass(vertexToHiveClassStr, VertexToHive.class));
     }
 
     if (cmdln.hasOption("skipOutput")) {
       skipOutput = true;
     }
 
-//    if (hiveToVertexClass == null && hiveToEdgeClass == null) {
-//      throw new IllegalArgumentException(
-//          "Need at least one of Giraph " +
-//          HiveToVertex.class.getSimpleName() +
-//          " class name (-hiveToVertexClass) and " +
-//          HiveToEdge.class.getSimpleName() +
-//          " class name (-hiveToEdgeClass)");
-//    }
-//    if (vertexToHiveClass == null && !skipOutput) {
-//      throw new IllegalArgumentException(
-//          "Need the Giraph " + VertexToHive.class.getSimpleName() +
-//              " class name (-vertexToHiveClass) to use");
-//    }
+    if (hiveToVertexClass == null && hiveToEdgeClass == null) {
+      throw new IllegalArgumentException(
+          "Need at least one of Giraph " +
+          HiveToVertexValue.class.getSimpleName() +
+          " class name (-hiveToVertexClass) and " +
+          HiveToEdge.class.getSimpleName() +
+          " class name (-hiveToEdgeClass)");
+    }
+    if (vertexToHiveClass == null && !skipOutput) {
+      throw new IllegalArgumentException(
+          "Need the Giraph " + VertexToHive.class.getSimpleName() +
+          " class name (-vertexToHiveClass) to use");
+    }
     String workersStr = cmdln.getOptionValue("workers");
     if (workersStr == null) {
       throw new IllegalArgumentException(
@@ -536,7 +522,12 @@ public class HiveGiraphRunner implements Tool {
     // Vertex input settings
     if (hiveToVertexClass == null) {
       options.addOption(null, "hiveToVertexClass", true,
-          "Giraph " + HiveToVertex.class.getSimpleName() + " class to use");
+          "Giraph " + HiveToVertexValue.class.getSimpleName() + " class to use");
+    }
+    if (hiveToVertexEdgesClass == null) {
+      options.addOption(null, "hiveToVertexEdgesClass", true,
+          "Giraph " + HiveToVertexEdges.class.getSimpleName() +
+              " class to use");
     }
     options.addOption("vi", "vertexInputTable", true,
         "Vertex input table name");
@@ -661,6 +652,10 @@ public class HiveGiraphRunner implements Tool {
     if (hiveToVertexClass != null) {
       LOG.info(LOG_PREFIX + "-hiveToVertexClass=" +
           hiveToVertexClass.getCanonicalName());
+    }
+    if (hiveToVertexEdgesClass != null) {
+      LOG.info(LOG_PREFIX + "-hiveToVertexEdgesClass=" +
+          hiveToVertexEdgesClass.getCanonicalName());
     }
     LOG.info(LOG_PREFIX + "-vertexInputFormatClass=" +
         classes.getVertexInputFormatClass().getCanonicalName());

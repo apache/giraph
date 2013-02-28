@@ -19,9 +19,9 @@
 package org.apache.giraph.hive.output;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.VertexWriter;
 import org.apache.giraph.utils.ReflectionUtils;
-import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -31,6 +31,7 @@ import org.apache.log4j.Logger;
 
 import com.facebook.giraph.hive.HiveRecord;
 import com.facebook.giraph.hive.HiveTableSchema;
+import com.facebook.giraph.hive.HiveTableSchemas;
 import com.facebook.giraph.hive.impl.HiveApiRecord;
 
 import java.io.IOException;
@@ -117,7 +118,7 @@ public class HiveVertexWriter<I extends WritableComparable, V extends Writable,
       throw new IOException(VERTEX_TO_HIVE_KEY + " not set in conf");
     }
     vertexToHive = ReflectionUtils.newInstance(klass, conf);
-    vertexToHive.setTableSchema(tableSchema);
+    HiveTableSchemas.configure(vertexToHive, tableSchema);
   }
 
   @Override

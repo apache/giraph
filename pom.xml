@@ -301,6 +301,27 @@ under the License.
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-checkstyle-plugin</artifactId>
+          <version>2.10</version>
+          <configuration>
+            <configLocation>${top.dir}/checkstyle.xml</configLocation>
+            <consoleOutput>true</consoleOutput>
+            <enableRulesSummary>false</enableRulesSummary>
+            <headerLocation>${top.dir}/license-header.txt</headerLocation>
+            <failOnViolation>true</failOnViolation>
+            <includeTestSourceDirectory>false</includeTestSourceDirectory>
+          </configuration>
+          <executions>
+            <execution>
+              <phase>verify</phase>
+              <goals>
+                <goal>check</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-compiler-plugin</artifactId>
           <version>3.0</version>
           <configuration>
@@ -482,6 +503,24 @@ under the License.
                 <exclude>**/*.ipr</exclude>
              </excludes>
           </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>findbugs-maven-plugin</artifactId>
+          <version>2.5.2</version>
+          <configuration>
+            <xmlOutput>true</xmlOutput>
+            <findbugsXmlOutput>false</findbugsXmlOutput>
+            <excludeFilterFile>${top.dir}/findbugs-exclude.xml</excludeFilterFile>
+          </configuration>
+          <executions>
+            <execution>
+              <phase>verify</phase>
+              <goals>
+                <goal>check</goal>
+              </goals>
+            </execution>
+          </executions>
         </plugin>
         <plugin>
           <groupId>org.sonatype.plugins</groupId>
@@ -837,7 +876,7 @@ under the License.
       <dependency>
         <groupId>com.facebook.giraph.hive</groupId>
         <artifactId>hive-io-experimental</artifactId>
-        <version>0.1</version>
+        <version>0.2-SNAPSHOT</version>
       </dependency>
       <dependency>
         <groupId>com.google.guava</groupId>

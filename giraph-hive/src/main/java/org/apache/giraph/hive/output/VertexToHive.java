@@ -22,7 +22,6 @@ import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import com.facebook.giraph.hive.HiveTableSchemaAware;
 import com.facebook.giraph.hive.HiveWritableRecord;
 
 /**
@@ -33,7 +32,7 @@ import com.facebook.giraph.hive.HiveWritableRecord;
  * @param <E> Edge Value
  */
 public interface VertexToHive<I extends WritableComparable, V extends Writable,
-    E extends Writable> extends HiveTableSchemaAware {
+    E extends Writable> {
   /**
    * Fill the HiveRecord from the Vertex given.
    *

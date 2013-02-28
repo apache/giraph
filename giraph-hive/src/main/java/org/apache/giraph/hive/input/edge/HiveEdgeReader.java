@@ -18,19 +18,20 @@
 
 package org.apache.giraph.hive.input.edge;
 
-import com.facebook.giraph.hive.HiveRecord;
-import com.facebook.giraph.hive.HiveTableSchema;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.edge.Edge;
+import org.apache.giraph.edge.MutableEdge;
 import org.apache.giraph.io.EdgeReader;
 import org.apache.giraph.utils.ReflectionUtils;
-import org.apache.giraph.edge.Edge;
-import org.apache.giraph.edge.EdgeFactory;
-import org.apache.giraph.edge.MutableEdge;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+
+import com.facebook.giraph.hive.HiveRecord;
+import com.facebook.giraph.hive.HiveTableSchema;
+import com.facebook.giraph.hive.HiveTableSchemas;
 
 import java.io.IOException;
 
@@ -43,7 +44,7 @@ import java.io.IOException;
 public class HiveEdgeReader<I extends WritableComparable, E extends Writable>
     implements EdgeReader<I, E> {
   /** Configuration key for edge creator class */
-  public static final String EDGE_CREATOR_KEY = "giraph.hive.to.edge.class";
+  public static final String HIVE_TO_EDGE_KEY = "giraph.hive.to.edge.class";
   /** Configuration key for whether to reuse edge */
   public static final String REUSE_EDGE_KEY = "giraph.hive.reuse.edge";
 
@@ -126,13 +127,13 @@ public class HiveEdgeReader<I extends WritableComparable, E extends Writable>
    * @throws IOException if anything goes wrong reading from Configuration
    */
   private void instantiateHiveToEdgeFromConf() throws IOException {
-    Class<? extends HiveToEdge> klass = conf.getClass(EDGE_CREATOR_KEY,
+    Class<? extends HiveToEdge> klass = conf.getClass(HIVE_TO_EDGE_KEY,
         null, HiveToEdge.class);
     if (klass == null) {
-      throw new IOException(EDGE_CREATOR_KEY + " not set in conf");
+      throw new IOException(HIVE_TO_EDGE_KEY + " not set in conf");
     }
     hiveToEdge = ReflectionUtils.newInstance(klass, conf);
-    hiveToEdge.setTableSchema(tableSchema);
+    HiveTableSchemas.configure(hiveToEdge, tableSchema);
   }
 
   @Override
@@ -159,14 +160,12 @@ public class HiveEdgeReader<I extends WritableComparable, E extends Writable>
   public Edge<I, E> getCurrentEdge() throws IOException,
       InterruptedException {
     HiveRecord record = hiveRecordReader.getCurrentValue();
-    I targetId = hiveToEdge.getTargetVertexId(record);
-    E edgeValue = hiveToEdge.getEdgeValue(record);
-    if (edgeToReuse == null) {
-      return EdgeFactory.create(targetId, edgeValue);
-    } else {
-      edgeToReuse.setTargetVertexId(targetId);
-      edgeToReuse.setValue(edgeValue);
-      return edgeToReuse;
+    MutableEdge<I, E> edge = edgeToReuse;
+    if (edge == null) {
+      edge = conf.createMutableEdge();
     }
+    edge.setValue(hiveToEdge.getEdgeValue(record));
+    edge.setTargetVertexId(hiveToEdge.getTargetVertexId(record));
+    return edge;
   }
 }

@@ -18,28 +18,32 @@
 
 package org.apache.giraph.hive.input.vertex;
 
-import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 import com.facebook.giraph.hive.HiveReadableRecord;
-import com.facebook.giraph.hive.HiveTableSchemaAware;
 
 /**
  * Interface for creating vertices from a Hive record.
- * Also used for reading vertex values.
  *
  * @param <I> Vertex ID
  * @param <V> Vertex Value
- * @param <E> Edge Value
  */
-public interface HiveToVertex<I extends WritableComparable,
-    V extends Writable, E extends Writable> extends HiveTableSchemaAware {
+public interface HiveToVertexValue<I extends WritableComparable,
+    V extends Writable> {
   /**
-   * Fill the Vertex from the HiveRecord given.
+   * Read the Vertex's ID from the HiveRecord given.
    *
    * @param record HiveRecord to read from.
-   * @param vertex Vertex to fill.
+   * @return Vertex ID
    */
-  void fillVertex(HiveReadableRecord record, Vertex<I, V, E, ?> vertex);
+  I getVertexId(HiveReadableRecord record);
+
+  /**
+   * Read the Vertex's Value from the HiveRecord given.
+   *
+   * @param record HiveRecord to read from.
+   * @return Vertex Value
+   */
+  V getVertexValue(HiveReadableRecord record);
 }

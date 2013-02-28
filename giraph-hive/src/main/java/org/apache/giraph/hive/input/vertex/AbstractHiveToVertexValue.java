@@ -15,42 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.giraph.hive.input.vertex;
 
-package org.apache.giraph.hive.input.edge;
-
+import org.apache.giraph.conf.ImmutableClassesGiraphConfigurable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import com.facebook.giraph.hive.HiveReadableRecord;
+import com.facebook.giraph.hive.HiveTableSchemaAware;
 
 /**
- * An interface used to create edges from Hive records.
+ * Base class for HiveToVertex implementations
  *
  * @param <I> Vertex ID
+ * @param <V> Vertex Value
  * @param <E> Edge Value
+ * @param <M> Message Value
  */
-public interface HiveToEdge<I extends WritableComparable, E extends Writable> {
-  /**
-   * Read source vertex ID from Hive record
-   *
-   * @param hiveRecord HiveRecord to read from
-   * @return source vertex ID
-   */
-  I getSourceVertexId(HiveReadableRecord hiveRecord);
-
-  /**
-   * Read target vertex ID from Hive record
-   *
-   * @param hiveRecord HiveRecord to read from
-   * @return target vertex ID
-   */
-  I getTargetVertexId(HiveReadableRecord hiveRecord);
-
-  /**
-   * Read edge value from the Hive record.
-   *
-   * @param hiveRecord HiveRecord to read from
-   * @return Edge value
-   */
-  E getEdgeValue(HiveReadableRecord hiveRecord);
-}
+public abstract class AbstractHiveToVertexValue<I extends WritableComparable,
+    V extends Writable, E extends Writable, M extends Writable> implements
+    HiveTableSchemaAware, HiveToVertexValue<I, V>,
+    ImmutableClassesGiraphConfigurable<I, V, E, M> { }
