@@ -600,17 +600,14 @@ under the License.
         <module>giraph-hcatalog</module>
       </modules>
       <properties>
-        <hadoop.version>0.20.1</hadoop.version>
+        <hadoop.version>0.20.0</hadoop.version>
         <munge.symbols>HADOOP_NON_SECURE,HADOOP_NON_JOBCONTEXT_IS_INTERFACE</munge.symbols>
       </properties>
       <dependencies>
         <!-- sorted lexicographically -->
         <dependency>
-          <groupId>org.apache.hadoop</groupId>
+          <groupId>com.facebook.hadoop</groupId>
           <artifactId>hadoop-core</artifactId>
-          <version>${hadoop.version}</version>
-          <scope>system</scope>
-          <systemPath>${lib.dir}/facebook-hadoop-0.20-core.jar</systemPath>
         </dependency>
         <dependency>
           <groupId>commons-collections</groupId>
@@ -998,6 +995,12 @@ under the License.
         <version>3.1</version>
       </dependency>
       <dependency>
+        <groupId>com.facebook.hadoop</groupId>
+        <artifactId>hadoop-core</artifactId>
+        <version>${hadoop.version}</version>
+        <scope>provided</scope>
+      </dependency>
+      <dependency>
         <groupId>org.apache.accumulo</groupId>
         <artifactId>accumulo-core</artifactId>
         <version>1.4.0</version>
@@ -1055,6 +1058,12 @@ under the License.
       </dependency>
 
       <!-- test dependencies. sorted lexicographically. -->
+      <dependency>
+        <groupId>com.facebook.hadoop</groupId>
+        <artifactId>hadoop-test</artifactId>
+        <version>${hadoop.version}</version>
+        <scope>test</scope>
+      </dependency>
       <dependency>
         <groupId>junit</groupId>
         <artifactId>junit</artifactId>

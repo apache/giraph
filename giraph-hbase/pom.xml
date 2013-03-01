@@ -178,11 +178,9 @@ under the License.
       <id>hadoop_facebook</id>
       <dependencies>
         <dependency>
-          <groupId>org.apache.hadoop</groupId>
+          <groupId>com.facebook.hadoop</groupId>
           <artifactId>hadoop-test</artifactId>
-          <version>${hadoop.version}</version>
-          <scope>system</scope>
-          <systemPath>${lib.dir}/facebook-hadoop-0.20-test.jar</systemPath>
+          <scope>test</scope>
         </dependency>
       </dependencies>
     </profile>
