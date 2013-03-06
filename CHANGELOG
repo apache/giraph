@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-553: Cleanup HCatalogVertexOutputFormat (majakabiljo)
+
   GIRAPH-545: Improve Facebook Hadoop dependency (nitay)
 
   GIRAPH-541: Log before observers (nitay)

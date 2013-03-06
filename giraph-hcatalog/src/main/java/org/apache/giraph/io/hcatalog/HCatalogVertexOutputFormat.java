@@ -74,14 +74,21 @@ public abstract class HCatalogVertexOutputFormat<
   }
 
   /**
-  * Abstract class that users should
-  * subclass based on their specific vertex
-  * output. Users should implement
-  * writeVertex to create a HCatRecord that is
-  * valid to for writing by HCatalogRecordWriter.
+   * Abstract class that users should
+   * subclass based on their specific vertex
+   * output. Users should implement
+   * writeVertex to create a HCatRecord that is
+   * valid to for writing by HCatalogRecordWriter.
+   *
+   * @param <I> Vertex id
+   * @param <V> Vertex value
+   * @param <E> Edge value
   */
-  protected abstract class HCatalogVertexWriter implements
-            VertexWriter<I, V, E> {
+  protected abstract static class HCatalogVertexWriter<
+      I extends WritableComparable,
+      V extends Writable,
+      E extends Writable>
+      implements VertexWriter<I, V, E> {
 
     /** Internal HCatRecordWriter */
     private RecordWriter<WritableComparable<?>, HCatRecord> hCatRecordWriter;
@@ -93,7 +100,7 @@ public abstract class HCatalogVertexOutputFormat<
     * @param hCatRecordWriter
     *            Internal writer
     */
-    private void initialize(
+    protected void initialize(
                     RecordWriter<WritableComparable<?>,
                     HCatRecord> hCatRecordWriter) {
       this.hCatRecordWriter = hCatRecordWriter;
@@ -134,22 +141,29 @@ public abstract class HCatalogVertexOutputFormat<
   * create vertex writer.
   * @return HCatalogVertexWriter
   */
-  protected abstract HCatalogVertexWriter createVertexWriter();
+  protected abstract HCatalogVertexWriter<I, V, E> createVertexWriter();
 
   @Override
   public final VertexWriter<I, V, E> createVertexWriter(
     TaskAttemptContext context) throws IOException,
     InterruptedException {
-    HCatalogVertexWriter writer = createVertexWriter();
+    HCatalogVertexWriter<I, V, E>  writer = createVertexWriter();
     writer.initialize(hCatOutputFormat.getRecordWriter(context));
     return writer;
   }
 
   /**
-  * HCatalogVertexWriter to write each vertex in each row.
-  */
-  protected abstract class SingleRowHCatalogVertexWriter extends
-            HCatalogVertexWriter {
+   * HCatalogVertexWriter to write each vertex in each row.
+   *
+   * @param <I> Vertex id
+   * @param <V> Vertex value
+   * @param <E> Edge value
+   */
+  protected abstract static class SingleRowHCatalogVertexWriter<
+      I extends WritableComparable,
+      V extends Writable,
+      E extends Writable>
+      extends HCatalogVertexWriter<I, V, E> {
     /**
     * get num columns
     * @return intcolumns
@@ -176,12 +190,7 @@ public abstract class HCatalogVertexOutputFormat<
     }
 
     @Override
-    // XXX It is important not to put generic type signature <I,V,E,?> after
-    // Vertex. Otherwise, any class that extends this will not compile
-    // because of not implementing the VertexWriter#writeVertex. Mystery of
-    // Java Generics :(
-    @SuppressWarnings("unchecked")
-    public final void writeVertex(Vertex vertex) throws IOException,
+    public final void writeVertex(Vertex<I, V, E, ?> vertex) throws IOException,
         InterruptedException {
       getRecordWriter().write(null, createRecord(vertex));
     }
@@ -189,10 +198,17 @@ public abstract class HCatalogVertexOutputFormat<
   }
 
   /**
-  * HCatalogVertexWriter to write each vertex in multiple rows.
-  */
-  public abstract class MultiRowHCatalogVertexWriter extends
-    HCatalogVertexWriter {
+   * HCatalogVertexWriter to write each vertex in multiple rows.
+   *
+   * @param <I> Vertex id
+   * @param <V> Vertex value
+   * @param <E> Edge value
+   */
+  public abstract static class MultiRowHCatalogVertexWriter<
+      I extends WritableComparable,
+      V extends Writable,
+      E extends Writable>
+      extends HCatalogVertexWriter<I, V, E> {
     /**
     * create records
     * @param vertex to populate records
@@ -202,9 +218,7 @@ public abstract class HCatalogVertexOutputFormat<
         Vertex<I, V, E, ?> vertex);
 
     @Override
-    // XXX Same thing here. No Generics for Vertex here.
-    @SuppressWarnings("unchecked")
-    public final void writeVertex(Vertex vertex) throws IOException,
+    public final void writeVertex(Vertex<I, V, E, ?> vertex) throws IOException,
         InterruptedException {
       Iterable<HCatRecord> records = createRecords(vertex);
       for (HCatRecord record : records) {
