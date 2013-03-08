@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-523: MasterObserver should pass in superstep number (gaurav.menghani via nitay)
+
   GIRAPH-556: Race condition in EdgeStore (apresta)
 
   GIRAPH-528: Decouple vertex implementation from edge storage (apresta)

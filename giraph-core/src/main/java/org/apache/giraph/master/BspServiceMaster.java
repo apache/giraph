@@ -1395,7 +1395,7 @@ public class BspServiceMaster<I extends WritableComparable,
     // 6. If the checkpoint frequency is met, finalize the checkpoint
 
     for (MasterObserver observer : observers) {
-      observer.preSuperstep();
+      observer.preSuperstep(getSuperstep());
       getContext().progress();
     }
 
@@ -1646,7 +1646,7 @@ public class BspServiceMaster<I extends WritableComparable,
   @Override
   public void postSuperstep() {
     for (MasterObserver observer : observers) {
-      observer.postSuperstep();
+      observer.postSuperstep(getSuperstep());
       getContext().progress();
     }
   }

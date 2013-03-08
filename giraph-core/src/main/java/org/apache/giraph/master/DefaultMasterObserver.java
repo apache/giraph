@@ -47,8 +47,8 @@ public class DefaultMasterObserver implements MasterObserver {
   public void applicationFailed(Exception e) { }
 
   @Override
-  public void preSuperstep() { }
+  public void preSuperstep(long superstep) { }
 
   @Override
-  public void postSuperstep() { }
+  public void postSuperstep(long superstep) { }
 }

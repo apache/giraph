@@ -97,12 +97,6 @@ public class JMapHistoDumper implements MasterObserver, WorkerObserver {
   public void applicationFailed(Exception e) { }
 
   @Override
-  public void preSuperstep() { }
-
-  @Override
-  public void postSuperstep() { }
-
-  @Override
   public void setConf(ImmutableClassesGiraphConfiguration configuration) {
     sleepMillis = configuration.getInt(GiraphConstants.JMAP_SLEEP_MILLIS,
         GiraphConstants.JMAP_SLEEP_MILLIS_DEFAULT);

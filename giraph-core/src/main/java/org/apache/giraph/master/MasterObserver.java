@@ -43,11 +43,15 @@ public interface MasterObserver extends ImmutableClassesGiraphConfigurable {
 
   /**
    * Before each superstep starts.
+   *
+   * @param superstep The superstep number
    */
-  void preSuperstep();
+  void preSuperstep(long superstep);
 
   /**
    * After each superstep ends.
+   *
+   * @param superstep The superstep number
    */
-  void postSuperstep();
+  void postSuperstep(long superstep);
 }

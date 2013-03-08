@@ -66,12 +66,12 @@ public class TestMasterObserver {
     }
 
     @Override
-    public void preSuperstep() {
+    public void preSuperstep(long superstep) {
       ++preSuperstep;
     }
 
     @Override
-    public void postSuperstep() {
+    public void postSuperstep(long superstep) {
       ++postSuperstep;
     }
   }
