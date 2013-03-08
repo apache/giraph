@@ -43,15 +43,13 @@ public class ArrayListEdges<I extends WritableComparable, E extends Writable>
 
   @Override
   public void initialize(Iterable<Edge<I, E>> edges) {
-    if (edges != null) {
-      // If the iterable is actually an instance of ArrayList,
-      // we simply copy the reference.
-      // Otherwise we have to add every edge.
-      if (edges instanceof ArrayList) {
-        edgeList = (ArrayList<Edge<I, E>>) edges;
-      } else {
-        edgeList = Lists.newArrayList(edges);
-      }
+    // If the iterable is actually an instance of ArrayList,
+    // we simply copy the reference.
+    // Otherwise we have to add every edge.
+    if (edges instanceof ArrayList) {
+      edgeList = (ArrayList<Edge<I, E>>) edges;
+    } else {
+      edgeList = Lists.newArrayList(edges);
     }
   }
 

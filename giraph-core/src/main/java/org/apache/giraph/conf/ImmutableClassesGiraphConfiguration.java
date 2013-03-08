@@ -571,6 +571,18 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   }
 
   /**
+   * Create a {@link VertexEdges} instance and initialize it with the default
+   * capacity.
+   *
+   * @return Instantiated VertexEdges
+   */
+  public VertexEdges<I, E> createAndInitializeVertexEdges() {
+    VertexEdges<I, E> vertexEdges = createVertexEdges();
+    vertexEdges.initialize();
+    return vertexEdges;
+  }
+
+  /**
    * Create a {@link VertexEdges} instance and initialize it with the given
    * capacity (the number of edges that will be added).
    *

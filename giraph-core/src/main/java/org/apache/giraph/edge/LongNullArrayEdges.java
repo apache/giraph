@@ -45,19 +45,17 @@ public class LongNullArrayEdges
 
   @Override
   public void initialize(Iterable<Edge<LongWritable, NullWritable>> edges) {
-    if (edges != null) {
-      // If the iterable is actually a collection, we can cheaply get the
-      // size and initialize the arrays with the expected capacity.
-      if (edges instanceof Collection) {
-        int numEdges =
-            ((Collection<Edge<LongWritable, NullWritable>>) edges).size();
-        initialize(numEdges);
-      } else {
-        initialize();
-      }
-      for (Edge<LongWritable, NullWritable> edge : edges) {
-        add(edge);
-      }
+    // If the iterable is actually a collection, we can cheaply get the
+    // size and initialize the arrays with the expected capacity.
+    if (edges instanceof Collection) {
+      int numEdges =
+          ((Collection<Edge<LongWritable, NullWritable>>) edges).size();
+      initialize(numEdges);
+    } else {
+      initialize();
+    }
+    for (Edge<LongWritable, NullWritable> edge : edges) {
+      add(edge);
     }
   }
 

@@ -357,7 +357,7 @@ public abstract class Vertex<I extends WritableComparable,
    * @param value Vertex value
    */
   public void addVertexRequest(I id, V value) throws IOException {
-    addVertexRequest(id, value, conf.createVertexEdges());
+    addVertexRequest(id, value, conf.createAndInitializeVertexEdges());
   }
 
   /**

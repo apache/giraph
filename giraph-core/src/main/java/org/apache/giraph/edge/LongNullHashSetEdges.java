@@ -47,18 +47,16 @@ public class LongNullHashSetEdges
 
   @Override
   public void initialize(Iterable<Edge<LongWritable, NullWritable>> edges) {
-    if (edges != null) {
-      // If the iterable is actually a collection, we can cheaply get the
-      // size and initialize the hash-map with the expected capacity.
-      if (edges instanceof Collection) {
-        initialize(
-            ((Collection<Edge<LongWritable, NullWritable>>) edges).size());
-      } else {
-        initialize();
-      }
-      for (Edge<LongWritable, NullWritable> edge : edges) {
-        add(edge);
-      }
+    // If the iterable is actually a collection, we can cheaply get the
+    // size and initialize the hash-map with the expected capacity.
+    if (edges instanceof Collection) {
+      initialize(
+          ((Collection<Edge<LongWritable, NullWritable>>) edges).size());
+    } else {
+      initialize();
+    }
+    for (Edge<LongWritable, NullWritable> edge : edges) {
+      add(edge);
     }
   }
 

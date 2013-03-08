@@ -110,13 +110,11 @@ public class EdgeStore<I extends WritableComparable,
           vertexIdEdgeIterator.releaseCurrentEdge();
       VertexEdges<I, E> vertexEdges = partitionEdges.get(vertexId);
       if (vertexEdges == null) {
-        VertexEdges<I, E> newVertexEdges = configuration.createVertexEdges();
+        VertexEdges<I, E> newVertexEdges =
+            configuration.createAndInitializeVertexEdges();
         vertexEdges = partitionEdges.putIfAbsent(vertexId, newVertexEdges);
         if (vertexEdges == null) {
           vertexEdges = newVertexEdges;
-          // Only initialize the new vertex once we are sure it's going to be
-          // used.
-          vertexEdges.initialize();
           // Since we had to use the vertex id as a new key in the map,
           // we need to release the object.
           vertexIdEdgeIterator.releaseCurrentVertexId();

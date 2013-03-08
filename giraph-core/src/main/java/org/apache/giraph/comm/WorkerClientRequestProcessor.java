@@ -127,12 +127,4 @@ public interface WorkerClientRequestProcessor<I extends WritableComparable,
    * @return Number of messages sent before the reset.
    */
   long resetMessageCount();
-
-  /**
-   * Lookup PartitionOwner for a vertex.
-   *
-   * @param vertexId id to look up.
-   * @return PartitionOwner holding the vertex.
-   */
-  PartitionOwner getVertexPartitionOwner(I vertexId);
 }

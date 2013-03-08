@@ -460,11 +460,6 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
     return messagesSentInSuperstep;
   }
 
-  @Override
-  public PartitionOwner getVertexPartitionOwner(I vertexId) {
-    return workerClient.getVertexPartitionOwner(vertexId);
-  }
-
   /**
    * When doing the request, short circuit if it is local
    *

@@ -55,16 +55,14 @@ public class ByteArrayEdges<I extends WritableComparable, E extends Writable>
   public void initialize(Iterable<Edge<I, E>> edges) {
     ExtendedDataOutput extendedOutputStream =
         getConf().createExtendedDataOutput();
-    if (edges != null) {
-      for (Edge<I, E> edge : edges) {
-        try {
-          WritableUtils.writeEdge(extendedOutputStream, edge);
-        } catch (IOException e) {
-          throw new IllegalStateException("initialize: Failed to serialize " +
-              edge);
-        }
-        ++edgeCount;
+    for (Edge<I, E> edge : edges) {
+      try {
+        WritableUtils.writeEdge(extendedOutputStream, edge);
+      } catch (IOException e) {
+        throw new IllegalStateException("initialize: Failed to serialize " +
+            edge);
       }
+      ++edgeCount;
     }
     serializedEdges = extendedOutputStream.getByteArray();
     serializedEdgesBytesUsed = extendedOutputStream.getPos();
