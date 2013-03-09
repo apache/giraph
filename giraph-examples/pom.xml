@@ -53,6 +53,7 @@ under the License.
           <headerLocation>license-header.txt</headerLocation>
           <failOnViolation>true</failOnViolation>
           <includeTestSourceDirectory>false</includeTestSourceDirectory>
+          <consoleOutput>true</consoleOutput>
         </configuration>
         <executions>
           <execution>

@@ -37,9 +37,6 @@ import static org.junit.Assert.assertEquals;
  */
 public class RandomWalkWithRestartVertexTest {
 
-  /** Minimum difference between doubles */
-  private static final double EPSILON = 10e-3;
-
   /**
    * A local integration test on toy data
    */
@@ -69,13 +66,15 @@ public class RandomWalkWithRestartVertexTest {
     Iterable<String> results = InternalVertexRunner.run(classes, params, graph);
 
     Map<Long, Double> steadyStateProbabilities =
-        parseSteadyStateProbabilities(results);
+        RandomWalkTestUtils.parseSteadyStateProbabilities(results);
     // values computed with external software
     // 0.25, 0.354872, 0.09375, 0.301377
-    assertEquals(0.25, steadyStateProbabilities.get(12L), EPSILON);
-    assertEquals(0.354872, steadyStateProbabilities.get(34L), EPSILON);
-    assertEquals(0.09375, steadyStateProbabilities.get(56L), EPSILON);
-    assertEquals(0.301377, steadyStateProbabilities.get(78L), EPSILON);
+    assertEquals(0.25, steadyStateProbabilities.get(12L), RandomWalkTestUtils.EPSILON);
+    assertEquals(0.354872, steadyStateProbabilities.get(34L),
+        RandomWalkTestUtils.EPSILON);
+    assertEquals(0.09375, steadyStateProbabilities.get(56L), RandomWalkTestUtils.EPSILON);
+    assertEquals(0.301377, steadyStateProbabilities.get(78L),
+        RandomWalkTestUtils.EPSILON);
   }
 
   /**
@@ -108,29 +107,18 @@ public class RandomWalkWithRestartVertexTest {
     Iterable<String> results = InternalVertexRunner.run(classes, params, graph);
 
     Map<Long, Double> steadyStateProbabilities =
-        parseSteadyStateProbabilities(results);
+        RandomWalkTestUtils.parseSteadyStateProbabilities(results);
     // values computed with external software
     // 0.163365, 0.378932, 0.156886, 0.300816
-    assertEquals(0.163365, steadyStateProbabilities.get(12L), EPSILON);
-    assertEquals(0.378932, steadyStateProbabilities.get(34L), EPSILON);
-    assertEquals(0.156886, steadyStateProbabilities.get(56L), EPSILON);
-    assertEquals(0.300816, steadyStateProbabilities.get(78L), EPSILON);
+    assertEquals(0.163365, steadyStateProbabilities.get(12L),
+        RandomWalkTestUtils.EPSILON);
+    assertEquals(0.378932, steadyStateProbabilities.get(34L),
+        RandomWalkTestUtils.EPSILON);
+    assertEquals(0.156886, steadyStateProbabilities.get(56L),
+        RandomWalkTestUtils.EPSILON);
+    assertEquals(0.300816, steadyStateProbabilities.get(78L),
+        RandomWalkTestUtils.EPSILON);
   }
 
-  /**
-   * Parse steady state probabilities.
-   * @param results The steady state probabilities in text format.
-   * @return A map representation of the steady state probabilities.
-   */
-  private Map<Long, Double> parseSteadyStateProbabilities(
-      Iterable<String> results) {
-    Map<Long, Double> result = Maps.newHashMap();
-    for (String s : results) {
-      String[] tokens = s.split("\\t");
-      Long id = Long.parseLong(tokens[0]);
-      Double value = Double.parseDouble(tokens[1]);
-      result.put(id, value);
-    }
-    return result;
-  }
+
 }

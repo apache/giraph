@@ -18,15 +18,19 @@
 
 package org.apache.giraph.examples;
 
+import com.google.common.base.Preconditions;
+import org.apache.giraph.edge.Edge;
 import org.apache.giraph.utils.MathUtils;
 import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.LongWritable;
 
 /**
  * Executes "RandomWalkWithRestart", a random walk on the graph which is biased
  * towards a source vertex. The resulting probabilities of staying at a given
  * vertex can be interpreted as a measure of proximity to the source vertex.
  */
-public class RandomWalkWithRestartVertex extends RandomWalkVertex {
+public class RandomWalkWithRestartVertex
+    extends RandomWalkVertex<DoubleWritable> {
 
   /** Configuration parameter for the source vertex */
   static final String SOURCE_VERTEX = RandomWalkWithRestartVertex.class
@@ -42,34 +46,26 @@ public class RandomWalkWithRestartVertex extends RandomWalkVertex {
   }
 
   /**
-   * Returns the number of source vertexes.
-   * @return The number of source vertexes.
+   * Returns the number of source vertices.
+   * @return The number of source vertices.
    */
-  private int numSourceVertexes() {
+  private int numSourceVertices() {
     return ((RandomWalkWorkerContext) getWorkerContext()).numSources();
   }
 
-  /**
-   * Returns the cumulated probability from dangling nodes.
-   * @return The cumulated probability from dangling nodes.
-   */
-  private double getDanglingProbability() {
-    return this.<DoubleWritable>getAggregatedValue(RandomWalkVertex.DANGLING)
-        .get();
-  }
-
-  /**
-   * Start with a uniform distribution.
-   * @return A uniform probability over all the vertexces.
-   */
   @Override
-  protected double initialProbability() {
-    return 1.0 / getTotalNumVertices();
+  protected double transitionProbability(double stateProbability,
+      Edge<LongWritable, DoubleWritable> edge) {
+    return stateProbability * edge.getValue().get();
   }
 
   @Override
   protected double recompute(Iterable<DoubleWritable> transitionProbabilities,
       double teleportationProbability) {
+
+    int numSourceVertices = numSourceVertices();
+    Preconditions.checkState(numSourceVertices > 0, "No source vertex found");
+
     double stateProbability = MathUtils.sum(transitionProbabilities);
     // Add the contribution of dangling nodes (weakly preferential
     // implementation: dangling nodes redistribute uniformly)
@@ -77,7 +73,7 @@ public class RandomWalkWithRestartVertex extends RandomWalkVertex {
     // The random walk might teleport back to one of the source vertexes
     stateProbability *= 1 - teleportationProbability;
     if (isSourceVertex()) {
-      stateProbability += teleportationProbability / numSourceVertexes();
+      stateProbability += teleportationProbability / numSourceVertices;
     }
     return stateProbability;
   }
