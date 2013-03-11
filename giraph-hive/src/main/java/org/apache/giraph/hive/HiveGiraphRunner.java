@@ -522,7 +522,8 @@ public class HiveGiraphRunner implements Tool {
     // Vertex input settings
     if (hiveToVertexClass == null) {
       options.addOption(null, "hiveToVertexClass", true,
-          "Giraph " + HiveToVertexValue.class.getSimpleName() + " class to use");
+          "Giraph " + HiveToVertexValue.class.getSimpleName() +
+          " class to use");
     }
     if (hiveToVertexEdgesClass == null) {
       options.addOption(null, "hiveToVertexEdgesClass", true,
