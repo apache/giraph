@@ -139,7 +139,7 @@ public class InternalVertexRunner {
         conf.setWorkerContextClass(classes.getWorkerContextClass());
       }
       if (classes.hasPartitionContextClass()) {
-        conf.setMasterComputeClass(classes.getPartitionContextClass());
+        conf.setPartitionContextClass(classes.getPartitionContextClass());
       }
       if (classes.hasCombinerClass()) {
         conf.setVertexCombinerClass(classes.getCombinerClass());
