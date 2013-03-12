@@ -69,41 +69,6 @@ under the License.
     </plugins>
   </build>
 
-  <repositories>
-    <!-- This is the main maven repository. Normally we wouldn't need to put
-       it here when it's the only one being used, but since we need to add
-       special repositories to get hcatalog we need to mention this one
-       specifically otherwise it won't be included. -->
-    <repository>
-      <id>central</id>
-      <name>Maven Repository</name>
-      <url>http://repo1.maven.org/maven2</url>
-      <releases>
-        <enabled>true</enabled>
-      </releases>
-    </repository>
-    <!-- This is necessary for hcatalog. -->
-    <repository>
-      <id>apache</id>
-      <name>Apache Repository</name>
-      <url>https://repository.apache.org/content/repositories/snapshots</url>
-      <snapshots>
-        <enabled>true</enabled>
-      </snapshots>
-    </repository>
-    <!-- This is necessary for hive-metastore dependencies for hcatalog. -->
-    <repository>
-      <id>datanucleus</id>
-      <name>datanucleus maven repository</name>
-      <url>http://www.datanucleus.org/downloads/maven2</url>
-      <layout>default</layout>
-      <releases>
-        <enabled>true</enabled>
-        <checksumPolicy>warn</checksumPolicy>
-      </releases>
-    </repository>
-  </repositories>
-
   <profiles>
     <profile>
       <id>hadoop_0.20.203</id>

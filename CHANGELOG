@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-559: Giraph build breaks (nitay)
+
   GIRAPH-550: HiveVertexReader should call initialize, not users (nitay)
 
   GIRAPH-523: MasterObserver should pass in superstep number (gaurav.menghani via nitay)
