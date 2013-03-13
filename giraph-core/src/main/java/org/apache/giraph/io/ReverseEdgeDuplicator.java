@@ -32,7 +32,7 @@ import java.io.IOException;
  * Used to create an undirected graph from a directed input.
  * This class is a decorator around any other EdgeReader.
  *
- * @param <I> Vertex ID
+ * @param <I> Vertex id
  * @param <E> Edge Value
  */
 public class ReverseEdgeDuplicator<I extends WritableComparable,

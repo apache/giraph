@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-561: Only print vertex/edge input classes if not null (aching)
+
   GIRAPH-554: Set PartitionContext in InternalVertexRunner (majakabiljo)
 
   GIRAPH-559: Giraph build breaks (nitay)

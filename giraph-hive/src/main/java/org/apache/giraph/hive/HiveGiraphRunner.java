@@ -658,17 +658,21 @@ public class HiveGiraphRunner implements Tool {
       LOG.info(LOG_PREFIX + "-hiveToVertexEdgesClass=" +
           hiveToVertexEdgesClass.getCanonicalName());
     }
-    LOG.info(LOG_PREFIX + "-vertexInputFormatClass=" +
-        classes.getVertexInputFormatClass().getCanonicalName());
-    logInputDesc(hiveVertexInputDescription, "vertex");
+    if (classes.getVertexInputFormatClass() != null) {
+      LOG.info(LOG_PREFIX + "-vertexInputFormatClass=" +
+          classes.getVertexInputFormatClass().getCanonicalName());
+      logInputDesc(hiveVertexInputDescription, "vertex");
+    }
 
     if (hiveToEdgeClass != null) {
       LOG.info(LOG_PREFIX + "-hiveToEdgeClass=" +
           hiveToEdgeClass.getCanonicalName());
     }
-    LOG.info(LOG_PREFIX + "-edgeInputFormatClass=" +
+    if (classes.getEdgeInputFormatClass() != null) {
+      LOG.info(LOG_PREFIX + "-edgeInputFormatClass=" +
         classes.getEdgeInputFormatClass().getCanonicalName());
-    logInputDesc(hiveEdgeInputDescription, "edge");
+      logInputDesc(hiveEdgeInputDescription, "edge");
+    }
 
     LOG.info(LOG_PREFIX + "-outputTable=" +
         hiveOutputDescription.getTableName());
