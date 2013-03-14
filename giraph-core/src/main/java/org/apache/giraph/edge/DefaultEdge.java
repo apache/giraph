@@ -30,7 +30,7 @@ import org.apache.hadoop.io.WritableComparable;
  */
 @SuppressWarnings("rawtypes")
 public class DefaultEdge<I extends WritableComparable, E extends Writable>
-    implements MutableEdge<I, E> {
+    implements ReusableEdge<I, E> {
   /** Target vertex id */
   private I targetVertexId = null;
   /** Edge value */

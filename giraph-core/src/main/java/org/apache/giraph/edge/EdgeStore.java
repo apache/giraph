@@ -75,8 +75,7 @@ public class EdgeStore<I extends WritableComparable,
     this.progressable = progressable;
     transientEdges = new MapMaker().concurrencyLevel(
         configuration.getNettyServerExecutionConcurrency()).makeMap();
-    reuseEdgeObjects = ReuseObjectsVertexEdges.class.isAssignableFrom(
-        configuration.getVertexEdgesClass());
+    reuseEdgeObjects = configuration.reuseEdgeObjects();
   }
 
   /**

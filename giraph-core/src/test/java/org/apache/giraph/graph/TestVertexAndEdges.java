@@ -28,6 +28,7 @@ import org.apache.giraph.edge.HashMapEdges;
 import org.apache.giraph.edge.HashMultimapEdges;
 import org.apache.giraph.edge.LongDoubleArrayEdges;
 import org.apache.giraph.edge.LongDoubleHashMapEdges;
+import org.apache.giraph.edge.MutableEdge;
 import org.apache.giraph.edge.VertexEdges;
 import org.apache.giraph.time.SystemTime;
 import org.apache.giraph.time.Time;
@@ -44,8 +45,11 @@ import org.apache.hadoop.io.LongWritable;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
@@ -53,7 +57,7 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 /**
- * Test {@link Vertex} functionality across the provided {@link org.apache.giraph.edge.VertexEdges}
+ * Test {@link Vertex} functionality across the provided {@link VertexEdges}
  * classes.
  */
 public class TestVertexAndEdges {
@@ -72,8 +76,82 @@ public class TestVertexAndEdges {
     public void compute(Iterable<LongWritable> messages) { }
   }
 
+  /**
+   * A basic {@link VertexEdges} implementation that doesn't provide any
+   * special functionality. Used to test the default implementations of
+   * Vertex#getEdgeValue(), Vertex#getMutableEdges(), etc.
+   */
+  public static class TestVertexEdges
+      implements VertexEdges<LongWritable, DoubleWritable> {
+    private List<Edge<LongWritable, DoubleWritable>> edgeList;
+
+
+    @Override
+    public void initialize(Iterable<Edge<LongWritable, DoubleWritable>> edges) {
+      this.edgeList = Lists.newArrayList(edges);
+    }
+
+    @Override
+    public void initialize(int capacity) {
+      this.edgeList = Lists.newArrayListWithCapacity(capacity);
+    }
+
+    @Override
+    public void initialize() {
+      this.edgeList = Lists.newArrayList();
+    }
+
+    @Override
+    public void add(Edge<LongWritable, DoubleWritable> edge) {
+      edgeList.add(edge);
+    }
+
+    @Override
+    public void remove(LongWritable targetVertexId) {
+      for (Iterator<Edge<LongWritable, DoubleWritable>> edges =
+               edgeList.iterator(); edges.hasNext();) {
+        Edge<LongWritable, DoubleWritable> edge = edges.next();
+        if (edge.getTargetVertexId().equals(targetVertexId)) {
+          edges.remove();
+        }
+      }
+    }
+
+    @Override
+    public int size() {
+      return edgeList.size();
+    }
+
+    @Override
+    public Iterator<Edge<LongWritable, DoubleWritable>> iterator() {
+      return edgeList.iterator();
+    }
+
+    @Override
+    public void write(DataOutput out) throws IOException {
+      out.writeInt(edgeList.size());
+      for (Edge<LongWritable, DoubleWritable> edge : edgeList) {
+        edge.getTargetVertexId().write(out);
+        edge.getValue().write(out);
+      }
+    }
+
+    @Override
+    public void readFields(DataInput in) throws IOException {
+      int numEdges = in.readInt();
+      initialize(numEdges);
+      for (int i = 0; i < numEdges; ++i) {
+        Edge<LongWritable, DoubleWritable> edge = EdgeFactory.createReusable(
+            new LongWritable(), new DoubleWritable());
+        WritableUtils.readEdge(in, edge);
+        edgeList.add(edge);
+      }
+    }
+  }
+
   @Before
   public void setUp() {
+    edgesClasses.add(TestVertexEdges.class);
     edgesClasses.add(ByteArrayEdges.class);
     edgesClasses.add(ArrayListEdges.class);
     edgesClasses.add(HashMapEdges.class);
@@ -157,6 +235,95 @@ public class TestVertexAndEdges {
     for (Edge<LongWritable, DoubleWritable> edge : vertex.getEdges()) {
       assert(edge.getTargetVertexId().get() != 500);
     }
+
+    vertex.setEdgeValue(new LongWritable(10), new DoubleWritable(33.0));
+    assertEquals(33.0, vertex.getEdgeValue(new LongWritable(10)).get(), 0);
+  }
+
+  /**
+   * Test in-place edge mutations via the iterable returned by {@link
+   * Vertex#getMutableEdges()}.
+   */
+  @Test
+  public void testMutateEdges() {
+    for (Class<? extends VertexEdges> edgesClass : edgesClasses) {
+      testMutateEdgesClass(edgesClass);
+    }
+  }
+
+  private void testMutateEdgesClass(Class<? extends VertexEdges> edgesClass) {
+    Vertex<LongWritable, FloatWritable, DoubleWritable, LongWritable> vertex =
+        instantiateVertex(edgesClass);
+    VertexEdges<LongWritable, DoubleWritable> vertexEdges =
+        instantiateVertexEdges(edgesClass);
+
+    vertexEdges.initialize();
+    vertex.initialize(new LongWritable(0), new FloatWritable(0), vertexEdges);
+
+    // Add 10 edges with id i, value i for i = 0..9
+    for (int i = 0; i < 10; ++i) {
+      vertex.addEdge(EdgeFactory.create(
+          new LongWritable(i), new DoubleWritable(i)));
+    }
+
+    // Use the mutable iterable to multiply each edge value by 2
+    for (MutableEdge<LongWritable, DoubleWritable> edge :
+        vertex.getMutableEdges()) {
+      edge.setValue(new DoubleWritable(edge.getValue().get() * 2));
+    }
+
+    // We should still have 10 edges
+    assertEquals(10, vertex.getNumEdges());
+    // The edge values should now be double the ids
+    for (Edge<LongWritable, DoubleWritable> edge : vertex.getEdges()) {
+      long id = edge.getTargetVertexId().get();
+      double value = edge.getValue().get();
+      assertEquals(id * 2, value, 0);
+    }
+
+    // Use the mutable iterator to remove edges with even id
+    Iterator<MutableEdge<LongWritable, DoubleWritable>> edgeIt =
+        vertex.getMutableEdges().iterator();
+    while (edgeIt.hasNext()) {
+      if (edgeIt.next().getTargetVertexId().get() % 2 == 0) {
+        edgeIt.remove();
+      }
+    }
+
+    // We should now have 5 edges
+    assertEquals(5, vertex.getNumEdges());
+    // The edge ids should be all odd
+    for (Edge<LongWritable, DoubleWritable> edge : vertex.getEdges()) {
+      assertEquals(1, edge.getTargetVertexId().get() % 2);
+    }
+
+    // Breaking iteration early should not make us lose edges.
+    // This version uses repeated calls to next():
+    Iterator<MutableEdge<LongWritable, DoubleWritable>> it =
+        vertex.getMutableEdges().iterator();
+    it.next();
+    it.next();
+    assertEquals(5, vertex.getNumEdges());
+
+    // This version uses a for-each loop, and the break statement:
+    int i = 2;
+    for (MutableEdge<LongWritable, DoubleWritable> edge :
+        vertex.getMutableEdges()) {
+      System.out.println(edge.toString());
+      if (i-- == 0) {
+        break;
+      }
+    }
+    assertEquals(5, vertex.getNumEdges());
+
+    // This version uses a normal, immutable iterable:
+    i = 2;
+    for (Edge<LongWritable, DoubleWritable> edge : vertex.getEdges()) {
+      if (i-- == 0) {
+        break;
+      }
+    }
+    assertEquals(5, vertex.getNumEdges());
   }
 
   /**

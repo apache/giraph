@@ -19,7 +19,6 @@
 package org.apache.giraph.edge;
 
 import com.google.common.collect.Maps;
-import com.google.common.collect.UnmodifiableIterator;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -42,7 +41,8 @@ import java.util.Map;
  */
 public class HashMapEdges<I extends WritableComparable, E extends Writable>
     extends ConfigurableVertexEdges<I, E>
-    implements StrictRandomAccessVertexEdges<I, E> {
+    implements StrictRandomAccessVertexEdges<I, E>,
+    MutableVertexEdges<I, E> {
   /** Map from target vertex id to edge value. */
   private HashMap<I, E> edgeMap;
 
@@ -86,6 +86,13 @@ public class HashMapEdges<I extends WritableComparable, E extends Writable>
   }
 
   @Override
+  public void setEdgeValue(I targetVertexId, E edgeValue) {
+    if (edgeMap.containsKey(targetVertexId)) {
+      edgeMap.put(targetVertexId, edgeValue);
+    }
+  }
+
+  @Override
   public int size() {
     return edgeMap.size();
   }
@@ -93,13 +100,20 @@ public class HashMapEdges<I extends WritableComparable, E extends Writable>
   @Override
   public Iterator<Edge<I, E>> iterator() {
     // Returns an iterator that reuses objects.
-    return new UnmodifiableIterator<Edge<I, E>>() {
+    // The downcast is fine because all concrete Edge implementations are
+    // mutable, but we only expose the mutation functionality when appropriate.
+    return (Iterator) mutableIterator();
+  }
+
+  @Override
+  public Iterator<MutableEdge<I, E>> mutableIterator() {
+    return new Iterator<MutableEdge<I, E>>() {
       /** Wrapped map iterator. */
       private Iterator<Map.Entry<I, E>> mapIterator =
           edgeMap.entrySet().iterator();
       /** Representative edge object. */
-      private MutableEdge<I, E> representativeEdge =
-          getConf().createMutableEdge();
+      private MapMutableEdge<I, E> representativeEdge =
+          new MapMutableEdge<I, E>();
 
       @Override
       public boolean hasNext() {
@@ -107,11 +121,14 @@ public class HashMapEdges<I extends WritableComparable, E extends Writable>
       }
 
       @Override
-      public Edge<I, E> next() {
-        Map.Entry<I, E> nextEntry = mapIterator.next();
-        representativeEdge.setTargetVertexId(nextEntry.getKey());
-        representativeEdge.setValue(nextEntry.getValue());
+      public MutableEdge<I, E> next() {
+        representativeEdge.setEntry(mapIterator.next());
         return representativeEdge;
+      }
+
+      @Override
+      public void remove() {
+        mapIterator.remove();
       }
     };
   }

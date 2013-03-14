@@ -23,6 +23,10 @@ import org.apache.giraph.conf.ImmutableClassesGiraphConfigurable;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.MultiRandomAccessVertexEdges;
+import org.apache.giraph.edge.MutableEdge;
+import org.apache.giraph.edge.MutableEdgesIterable;
+import org.apache.giraph.edge.MutableEdgesWrapper;
+import org.apache.giraph.edge.MutableVertexEdges;
 import org.apache.giraph.edge.StrictRandomAccessVertexEdges;
 import org.apache.giraph.edge.VertexEdges;
 import org.apache.giraph.partition.PartitionContext;
@@ -186,6 +190,42 @@ public abstract class Vertex<I extends WritableComparable,
   }
 
   /**
+   * Get an iterable of out-edges that can be modified in-place.
+   * This can mean changing the current edge value or removing the current edge
+   * (by using the iterator version).
+   * Note: if
+   *
+   * @return An iterable of mutable out-edges
+   */
+  public Iterable<MutableEdge<I, E>> getMutableEdges() {
+    // If the VertexEdges implementation has a specialized mutable iterator,
+    // we use that; otherwise, we build a new data structure as we iterate
+    // over the current edges.
+    if (edges instanceof MutableVertexEdges) {
+      return new Iterable<MutableEdge<I, E>>() {
+        @Override
+        public Iterator<MutableEdge<I, E>> iterator() {
+          return ((MutableVertexEdges<I, E>) edges).mutableIterator();
+        }
+      };
+    } else {
+      return new MutableEdgesIterable<I, E>(this);
+    }
+  }
+
+  /**
+   * If a {@link MutableEdgesWrapper} was used to provide a mutable iterator,
+   * copy any remaining edges to the new {@link VertexEdges} data
+   * structure and keep a direct reference to it (thus discarding the wrapper).
+   * Called by the Giraph infrastructure after computation.
+   */
+  public void unwrapMutableEdges() {
+    if (edges instanceof MutableEdgesWrapper) {
+      edges = ((MutableEdgesWrapper<I, E>) edges).unwrap();
+    }
+  }
+
+  /**
    * Get the number of outgoing edges on this vertex.
    *
    * @return the total number of outbound edges from this vertex
@@ -205,6 +245,8 @@ public abstract class Vertex<I extends WritableComparable,
    * @return Edge value (or null if missing)
    */
   public E getEdgeValue(I targetVertexId) {
+    // If the VertexEdges implementation has a specialized random-access
+    // method, we use that; otherwise, we scan the edges.
     if (edges instanceof StrictRandomAccessVertexEdges) {
       return ((StrictRandomAccessVertexEdges<I, E>) edges)
           .getEdgeValue(targetVertexId);
@@ -215,6 +257,28 @@ public abstract class Vertex<I extends WritableComparable,
         }
       }
       return null;
+    }
+  }
+
+  /**
+   * If an edge to the target vertex exists, set it to the given edge value.
+   * This only makes sense with strict graphs.
+   *
+   * @param targetVertexId Target vertex id
+   * @param edgeValue Edge value
+   */
+  public void setEdgeValue(I targetVertexId, E edgeValue) {
+    // If the VertexEdges implementation has a specialized random-access
+    // method, we use that; otherwise, we scan the edges.
+    if (edges instanceof StrictRandomAccessVertexEdges) {
+      ((StrictRandomAccessVertexEdges<I, E>) edges).setEdgeValue(
+          targetVertexId, edgeValue);
+    } else {
+      for (MutableEdge<I, E> edge : getMutableEdges()) {
+        if (edge.getTargetVertexId().equals(targetVertexId)) {
+          edge.setValue(edgeValue);
+        }
+      }
     }
   }
 
@@ -230,6 +294,8 @@ public abstract class Vertex<I extends WritableComparable,
    * @return Iterable of edge values
    */
   public Iterable<E> getAllEdgeValues(final I targetVertexId) {
+    // If the VertexEdges implementation has a specialized random-access
+    // method, we use that; otherwise, we scan the edges.
     if (edges instanceof MultiRandomAccessVertexEdges) {
       return ((MultiRandomAccessVertexEdges<I, E>) edges)
           .getAllEdgeValues(targetVertexId);

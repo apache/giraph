@@ -20,7 +20,7 @@ package org.apache.giraph.hive.input.edge;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.Edge;
-import org.apache.giraph.edge.MutableEdge;
+import org.apache.giraph.edge.ReusableEdge;
 import org.apache.giraph.io.EdgeReader;
 import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.hadoop.io.Writable;
@@ -62,7 +62,7 @@ public class HiveEdgeReader<I extends WritableComparable, E extends Writable>
    * If we are reusing edges this will be the single edge to read into.
    * Otherwise if it's null we will create a new edge each time.
    */
-  private MutableEdge<I, E> edgeToReuse = null;
+  private ReusableEdge<I, E> edgeToReuse = null;
 
   /**
    * Get underlying Hive record reader used.
@@ -117,7 +117,7 @@ public class HiveEdgeReader<I extends WritableComparable, E extends Writable>
     conf = new ImmutableClassesGiraphConfiguration(context.getConfiguration());
     instantiateHiveToEdgeFromConf();
     if (conf.getBoolean(REUSE_EDGE_KEY, false)) {
-      edgeToReuse = conf.createMutableEdge();
+      edgeToReuse = conf.createReusableEdge();
     }
   }
 
@@ -160,9 +160,9 @@ public class HiveEdgeReader<I extends WritableComparable, E extends Writable>
   public Edge<I, E> getCurrentEdge() throws IOException,
       InterruptedException {
     HiveRecord record = hiveRecordReader.getCurrentValue();
-    MutableEdge<I, E> edge = edgeToReuse;
+    ReusableEdge<I, E> edge = edgeToReuse;
     if (edge == null) {
-      edge = conf.createMutableEdge();
+      edge = conf.createReusableEdge();
     }
     edge.setValue(hiveToEdge.getEdgeValue(record));
     edge.setTargetVertexId(hiveToEdge.getTargetVertexId(record));

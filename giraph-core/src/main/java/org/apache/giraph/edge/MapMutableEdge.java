@@ -18,53 +18,44 @@
 
 package org.apache.giraph.edge;
 
-import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-/**
- * An edge that has no value.
- *
- * @param <I> Vertex ID
- */
-public class EdgeNoValue<I extends WritableComparable>
-    implements ReusableEdge<I, NullWritable> {
-  /** Target vertex id */
-  private I targetVertexId = null;
+import java.util.Map;
 
-  /** Empty constructor */
-  EdgeNoValue() { }
+/**
+ * Helper class for a mutable edge that modifies the backing map entry.
+ *
+ * @param <I> Vertex id
+ * @param <E> Edge value
+ */
+public class MapMutableEdge<I extends WritableComparable, E extends Writable>
+    implements MutableEdge<I, E> {
+  /** Backing entry for the edge in the map. */
+  private Map.Entry<I, E> entry;
 
   /**
-   * Constructor with target vertex ID. Don't call, use EdgeFactory instead.
+   * Set the backing entry for this edge in the map.
    *
-   * @param targetVertexId vertex ID
+   * @param entry Backing entry
    */
-  EdgeNoValue(I targetVertexId) {
-    this.targetVertexId = targetVertexId;
+  public void setEntry(Map.Entry<I, E> entry) {
+    this.entry = entry;
   }
 
   @Override
-  public void setTargetVertexId(I targetVertexId) {
-    this.targetVertexId = targetVertexId;
-  }
-
-  @Override
-  public void setValue(NullWritable value) {
-    // do nothing
+  public void setValue(E value) {
+    // Replace the value in the map.
+    entry.setValue(value);
   }
 
   @Override
   public I getTargetVertexId() {
-    return targetVertexId;
+    return entry.getKey();
   }
 
   @Override
-  public NullWritable getValue() {
-    return NullWritable.get();
-  }
-
-  @Override
-  public String toString() {
-    return "(targetVertexId = " + targetVertexId + ")";
+  public E getValue() {
+    return entry.getValue();
   }
 }

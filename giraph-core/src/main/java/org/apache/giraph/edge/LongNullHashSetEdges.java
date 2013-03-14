@@ -18,7 +18,6 @@
 
 package org.apache.giraph.edge;
 
-import com.google.common.collect.UnmodifiableIterator;
 import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import org.apache.hadoop.io.LongWritable;
@@ -40,8 +39,8 @@ import java.util.Iterator;
  */
 public class LongNullHashSetEdges
     extends ConfigurableVertexEdges<LongWritable, NullWritable>
-    implements StrictRandomAccessVertexEdges<LongWritable, NullWritable>,
-    ReuseObjectsVertexEdges<LongWritable, NullWritable> {
+    implements ReuseObjectsVertexEdges<LongWritable, NullWritable>,
+    MutableVertexEdges<LongWritable, NullWritable> {
   /** Hash set of target vertex ids. */
   private LongOpenHashSet neighbors;
 
@@ -81,11 +80,6 @@ public class LongNullHashSetEdges
   }
 
   @Override
-  public NullWritable getEdgeValue(LongWritable targetVertexId) {
-    return NullWritable.get();
-  }
-
-  @Override
   public int size() {
     return neighbors.size();
   }
@@ -93,12 +87,19 @@ public class LongNullHashSetEdges
   @Override
   public Iterator<Edge<LongWritable, NullWritable>> iterator() {
     // Returns an iterator that reuses objects.
-    return new UnmodifiableIterator<Edge<LongWritable, NullWritable>>() {
+    // The downcast is fine because all concrete Edge implementations are
+    // mutable, but we only expose the mutation functionality when appropriate.
+    return (Iterator) mutableIterator();
+  }
+
+  @Override
+  public Iterator<MutableEdge<LongWritable, NullWritable>> mutableIterator() {
+    return new Iterator<MutableEdge<LongWritable, NullWritable>>() {
       /** Wrapped neighbors iterator. */
       private LongIterator neighborsIt = neighbors.iterator();
       /** Representative edge object. */
-      private MutableEdge<LongWritable, NullWritable> representativeEdge =
-          getConf().createMutableEdge();
+      private ReusableEdge<LongWritable, NullWritable> representativeEdge =
+          getConf().createReusableEdge();
 
       @Override
       public boolean hasNext() {
@@ -106,9 +107,14 @@ public class LongNullHashSetEdges
       }
 
       @Override
-      public Edge<LongWritable, NullWritable> next() {
+      public MutableEdge<LongWritable, NullWritable> next() {
         representativeEdge.getTargetVertexId().set(neighborsIt.nextLong());
         return representativeEdge;
+      }
+
+      @Override
+      public void remove() {
+        neighborsIt.remove();
       }
     };
   }

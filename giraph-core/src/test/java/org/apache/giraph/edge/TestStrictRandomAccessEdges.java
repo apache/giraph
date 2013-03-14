@@ -74,5 +74,8 @@ public class TestStrictRandomAccessEdges {
 
       assertEquals(3.0, edges.getEdgeValue(new LongWritable(3)).get(), 0.0);
       assertNull(edges.getEdgeValue(new LongWritable(55)));
+
+      edges.setEdgeValue(new LongWritable(2), new DoubleWritable(33.0));
+      assertEquals(33.0, edges.getEdgeValue(new LongWritable(2)).get(), 0);
     }
 }

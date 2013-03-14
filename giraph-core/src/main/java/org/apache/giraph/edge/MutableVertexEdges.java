@@ -21,31 +21,22 @@ package org.apache.giraph.edge;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
+import java.util.Iterator;
+
 /**
- * Interface for {@link VertexEdges} implementations that provide efficient
- * random access to the edges given the target vertex id.
- * This version is for strict graphs (i.e. assumes no parallel edges).
+ * Interface for {@link VertexEdges} implementations that have an optimized
+ * mutable edge iterator.
  *
  * @param <I> Vertex id
  * @param <E> Edge value
  */
-public interface StrictRandomAccessVertexEdges<I extends WritableComparable,
+public interface MutableVertexEdges<I extends WritableComparable,
     E extends Writable> extends VertexEdges<I, E> {
   /**
-   * Return the edge value for the given target vertex id (or null if there
-   * is no edge pointing to it).
+   * Returns an iterator over edges that can be modified in-place,
+   * either by changing the current edge value or by removing the current edge.
    *
-   * @param targetVertexId Target vertex id
-   * @return Edge value
+   * @return A mutable edge iterator
    */
-  E getEdgeValue(I targetVertexId);
-
-  /**
-   * Set the edge value for the given target vertex id (if an edge to that
-   * vertex exists).
-   *
-   * @param targetVertexId Target vertex id
-   * @param edgeValue Edge value
-   */
-  void setEdgeValue(I targetVertexId, E edgeValue);
+  Iterator<MutableEdge<I, E>> mutableIterator();
 }

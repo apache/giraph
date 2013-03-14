@@ -41,7 +41,8 @@ import java.util.Iterator;
  */
 public class LongDoubleArrayEdges
     extends ConfigurableVertexEdges<LongWritable, DoubleWritable>
-    implements ReuseObjectsVertexEdges<LongWritable, DoubleWritable> {
+    implements ReuseObjectsVertexEdges<LongWritable, DoubleWritable>,
+    MutableVertexEdges<LongWritable, DoubleWritable> {
   /** Array of target vertex ids. */
   private LongArrayList neighbors;
   /** Array of edge values. */
@@ -97,7 +98,7 @@ public class LongDoubleArrayEdges
    *
    * @param i Position of edge to be removed
    */
-  private void remove(int i) {
+  private void removeAt(int i) {
     // The order of the edges is irrelevant, so we can simply replace
     // the deleted edge with the rightmost element, thus achieving constant
     // time.
@@ -108,18 +109,19 @@ public class LongDoubleArrayEdges
       neighbors.set(i, neighbors.popLong());
       edgeValues.set(i, edgeValues.popDouble());
     }
+    // If needed after the removal, trim the arrays.
+    trim();
   }
 
   @Override
   public void remove(LongWritable targetVertexId) {
-    // Thanks to the constant-time implementation of remove(int),
+    // Thanks to the constant-time implementation of removeAt(int),
     // we can remove all matching edges in linear time.
     for (int i = neighbors.size() - 1; i >= 0; --i) {
       if (neighbors.get(i) == targetVertexId.get()) {
-        remove(i);
+        removeAt(i);
       }
     }
-    trim();
   }
 
   @Override
@@ -149,6 +151,70 @@ public class LongDoubleArrayEdges
         representativeEdge.getTargetVertexId().set(neighborsIt.nextLong());
         representativeEdge.getValue().set(edgeValuesIt.nextDouble());
         return representativeEdge;
+      }
+    };
+  }
+
+  /** Helper class for a mutable edge that modifies the backing arrays. */
+  private class LongDoubleArrayMutableEdge
+      extends DefaultEdge<LongWritable, DoubleWritable> {
+    /** Index of the edge in the backing arrays. */
+    private int index;
+
+    /** Constructor. */
+    public LongDoubleArrayMutableEdge() {
+      super(new LongWritable(), new DoubleWritable());
+    }
+
+    /**
+     * Make the edge point to the given index in the backing arrays.
+     *
+     * @param index Index in the arrays
+     */
+    public void setIndex(int index) {
+      // Update the id and value objects from the superclass.
+      getTargetVertexId().set(neighbors.get(index));
+      getValue().set(edgeValues.get(index));
+      // Update the index.
+      this.index = index;
+    }
+
+    @Override
+    public void setValue(DoubleWritable value) {
+      // Update the value object from the superclass.
+      getValue().set(value.get());
+      // Update the value stored in the backing array.
+      edgeValues.set(index, value.get());
+    }
+  }
+
+  @Override
+  public Iterator<MutableEdge<LongWritable, DoubleWritable>>
+  mutableIterator() {
+    return new Iterator<MutableEdge<LongWritable, DoubleWritable>>() {
+      /** Current position in the array. */
+      private int offset = 0;
+      /** Representative edge object. */
+      private LongDoubleArrayMutableEdge representativeEdge =
+          new LongDoubleArrayMutableEdge();
+
+      @Override
+      public boolean hasNext() {
+        return offset < neighbors.size();
+      }
+
+      @Override
+      public MutableEdge<LongWritable, DoubleWritable> next() {
+        representativeEdge.setIndex(offset++);
+        return representativeEdge;
+      }
+
+      @Override
+      public void remove() {
+        // Since removeAt() might replace the deleted edge with the last edge
+        // in the array, we need to decrease the offset so that the latter
+        // won't be skipped.
+        removeAt(--offset);
       }
     };
   }

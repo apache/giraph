@@ -42,7 +42,8 @@ import java.util.Iterator;
 public class LongDoubleHashMapEdges
     extends ConfigurableVertexEdges<LongWritable, DoubleWritable>
     implements StrictRandomAccessVertexEdges<LongWritable, DoubleWritable>,
-    ReuseObjectsVertexEdges<LongWritable, DoubleWritable> {
+    ReuseObjectsVertexEdges<LongWritable, DoubleWritable>,
+    MutableVertexEdges<LongWritable, DoubleWritable> {
   /** Hash map from target vertex id to edge value. */
   private Long2DoubleOpenHashMap edgeMap;
   /** Representative edge value object, used by getEdgeValue(). */
@@ -96,6 +97,14 @@ public class LongDoubleHashMapEdges
   }
 
   @Override
+  public void setEdgeValue(LongWritable targetVertexId,
+                           DoubleWritable edgeValue) {
+    if (edgeMap.containsKey(targetVertexId.get())) {
+      edgeMap.put(targetVertexId.get(), edgeValue.get());
+    }
+  }
+
+  @Override
   public int size() {
     return edgeMap.size();
   }
@@ -108,8 +117,8 @@ public class LongDoubleHashMapEdges
       private ObjectIterator<Long2DoubleMap.Entry> mapIterator =
           edgeMap.long2DoubleEntrySet().fastIterator();
       /** Representative edge object. */
-      private MutableEdge<LongWritable, DoubleWritable> representativeEdge =
-          getConf().createMutableEdge();
+      private ReusableEdge<LongWritable, DoubleWritable> representativeEdge =
+          getConf().createReusableEdge();
 
       @Override
       public boolean hasNext() {
@@ -122,6 +131,71 @@ public class LongDoubleHashMapEdges
         representativeEdge.getTargetVertexId().set(nextEntry.getLongKey());
         representativeEdge.getValue().set(nextEntry.getDoubleValue());
         return representativeEdge;
+      }
+    };
+  }
+
+  /** Helper class for a mutable edge that modifies the backing map entry. */
+  private static class LongDoubleHashMapMutableEdge
+      extends DefaultEdge<LongWritable, DoubleWritable> {
+    /** Backing entry for the edge in the map. */
+    private Long2DoubleMap.Entry entry;
+
+    /** Constructor. */
+    public LongDoubleHashMapMutableEdge() {
+      super(new LongWritable(), new DoubleWritable());
+    }
+
+    /**
+     * Make the edge point to the given entry in the backing map.
+     *
+     * @param entry Backing entry
+     */
+    public void setEntry(Long2DoubleMap.Entry entry) {
+      // Update the id and value objects from the superclass.
+      getTargetVertexId().set(entry.getLongKey());
+      getValue().set(entry.getValue());
+      // Update the entry.
+      this.entry = entry;
+    }
+
+    @Override
+    public void setValue(DoubleWritable value) {
+      // Update the value object from the superclass.
+      getValue().set(value.get());
+      // Update the value stored in the backing map.
+      entry.setValue(value.get());
+    }
+  }
+
+  @Override
+  public Iterator<MutableEdge<LongWritable, DoubleWritable>> mutableIterator() {
+    return new Iterator<MutableEdge<LongWritable, DoubleWritable>>() {
+      /**
+       * Wrapped map iterator.
+       * Note: we cannot use the fast iterator in this case,
+       * because we need to call setValue() on an entry.
+       */
+      private ObjectIterator<Long2DoubleMap.Entry> mapIterator =
+          edgeMap.long2DoubleEntrySet().iterator();
+      /** Representative edge object. */
+      private LongDoubleHashMapMutableEdge representativeEdge =
+          new LongDoubleHashMapMutableEdge();
+
+      @Override
+      public boolean hasNext() {
+        return mapIterator.hasNext();
+      }
+
+      @Override
+      public MutableEdge<LongWritable, DoubleWritable> next() {
+        representativeEdge.setEntry(mapIterator.next());
+        return representativeEdge;
+      }
+
+      @Override
+      public void remove() {
+        mapIterator.remove();
       }
     };
   }

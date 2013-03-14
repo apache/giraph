@@ -111,8 +111,8 @@ public class HashMultimapEdges<I extends WritableComparable, E extends Writable>
       private Iterator<Map.Entry<I, E>> mapIterator =
           edgeMultimap.entries().iterator();
       /** Representative edge object. */
-      private MutableEdge<I, E> representativeEdge =
-          getConf().createMutableEdge();
+      private ReusableEdge<I, E> representativeEdge =
+          getConf().createReusableEdge();
 
       @Override
       public boolean hasNext() {

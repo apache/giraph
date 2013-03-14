@@ -25,6 +25,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 
 import static org.apache.giraph.graph.TestVertexAndEdges.instantiateVertexEdges;
@@ -35,7 +36,7 @@ import static org.junit.Assert.assertEquals;
  */
 public class TestNullValueEdges {
   /** {@link VertexEdges} classes to be tested. */
-  private Collection<Class<? extends VertexEdges>>
+  private Collection<Class<? extends MutableVertexEdges>>
       edgesClasses = Lists.newArrayList();
 
   @Before
@@ -65,10 +66,51 @@ public class TestNullValueEdges {
     edges.initialize(initialEdges);
     assertEquals(3, edges.size());
 
-    edges.add(EdgeFactory.createMutable(new LongWritable(4)));
+    edges.add(EdgeFactory.createReusable(new LongWritable(4)));
     assertEquals(4, edges.size());
 
     edges.remove(new LongWritable(2));
     assertEquals(3, edges.size());
+  }
+
+  /**
+   * Test in-place edge mutations via the iterable returned by {@link
+   * org.apache.giraph.graph.Vertex#getMutableEdges()}.
+   */
+  @Test
+  public void testMutateEdges() {
+    for (Class<? extends MutableVertexEdges> edgesClass : edgesClasses) {
+      testMutateEdgesClass(edgesClass);
+    }
+  }
+
+  private void testMutateEdgesClass(
+      Class<? extends MutableVertexEdges> edgesClass) {
+    MutableVertexEdges<LongWritable, NullWritable> edges =
+       (MutableVertexEdges<LongWritable, NullWritable>)
+           instantiateVertexEdges(edgesClass);
+
+    edges.initialize();
+
+    // Add 10 edges with id i, for i = 0..9
+    for (int i = 0; i < 10; ++i) {
+      edges.add(EdgeFactory.create(new LongWritable(i)));
+    }
+
+    // Use the mutable iterator to remove edges with even id
+    Iterator<MutableEdge<LongWritable, NullWritable>> edgeIt =
+        edges.mutableIterator();
+    while (edgeIt.hasNext()) {
+      if (edgeIt.next().getTargetVertexId().get() % 2 == 0) {
+        edgeIt.remove();
+      }
+    }
+
+    // We should now have 5 edges
+    assertEquals(5, edges.size());
+    // The edge ids should be all odd
+    for (Edge<LongWritable, NullWritable> edge : edges) {
+      assertEquals(1, edge.getTargetVertexId().get() % 2);
+    }
   }
 }

@@ -47,7 +47,7 @@ public class ByteArrayVertexIdEdges<I extends WritableComparable,
 
   @Override
   public Edge<I, E> createData() {
-    return getConf().createMutableEdge();
+    return getConf().createReusableEdge();
   }
 
   @Override

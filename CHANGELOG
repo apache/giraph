@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-547: Allow in-place modification of edges (apresta)
+
   GIRAPH-537: Fix log messages produced by aggregators (majakabiljo)
 
   GIRAPH-480: Add convergence detection to org.apache.giraph.examples.RandomWalkVertex (ssc)

@@ -223,6 +223,8 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
           } finally {
             computeOneTimerContext.stop();
           }
+          // Need to unwrap the mutated edges (possibly)
+          vertex.unwrapMutableEdges();
           // Need to save the vertex changes (possibly)
           partition.saveVertex(vertex);
         }

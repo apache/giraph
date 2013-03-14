@@ -22,30 +22,22 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
- * Interface for {@link VertexEdges} implementations that provide efficient
- * random access to the edges given the target vertex id.
- * This version is for strict graphs (i.e. assumes no parallel edges).
+ * A complete edge, the target vertex and the edge value.  Can only be one
+ * edge with a destination vertex id per edge map. This edge can be reused,
+ * that is you can set it's target vertex ID and edge value.
+ * Note: this class is useful for certain optimizations,
+ * but it's not meant to be exposed to the user. Look at {@link MutableEdge}
+ * instead.
  *
- * @param <I> Vertex id
+ * @param <I> Vertex index
  * @param <E> Edge value
  */
-public interface StrictRandomAccessVertexEdges<I extends WritableComparable,
-    E extends Writable> extends VertexEdges<I, E> {
+public interface ReusableEdge<I extends WritableComparable, E extends Writable>
+    extends MutableEdge<I, E> {
   /**
-   * Return the edge value for the given target vertex id (or null if there
-   * is no edge pointing to it).
+   * Set the destination vertex index of this edge.
    *
-   * @param targetVertexId Target vertex id
-   * @return Edge value
+   * @param targetVertexId new destination vertex
    */
-  E getEdgeValue(I targetVertexId);
-
-  /**
-   * Set the edge value for the given target vertex id (if an edge to that
-   * vertex exists).
-   *
-   * @param targetVertexId Target vertex id
-   * @param edgeValue Edge value
-   */
-  void setEdgeValue(I targetVertexId, E edgeValue);
+  void setTargetVertexId(I targetVertexId);
 }

@@ -18,7 +18,6 @@
 
 package org.apache.giraph.edge;
 
-import com.google.common.collect.UnmodifiableIterator;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongIterator;
 import org.apache.hadoop.io.LongWritable;
@@ -39,7 +38,8 @@ import java.util.Iterator;
  */
 public class LongNullArrayEdges
     extends ConfigurableVertexEdges<LongWritable, NullWritable>
-    implements ReuseObjectsVertexEdges<LongWritable, NullWritable> {
+    implements ReuseObjectsVertexEdges<LongWritable, NullWritable>,
+    MutableVertexEdges<LongWritable, NullWritable> {
   /** Array of target vertex ids. */
   private LongArrayList neighbors;
 
@@ -89,7 +89,7 @@ public class LongNullArrayEdges
    *
    * @param i Position of edge to be removed
    */
-  private void remove(int i) {
+  private void removeAt(int i) {
     // The order of the edges is irrelevant, so we can simply replace
     // the deleted edge with the rightmost element, thus achieving constant
     // time.
@@ -98,18 +98,19 @@ public class LongNullArrayEdges
     } else {
       neighbors.set(i, neighbors.popLong());
     }
+    // If needed after the removal, trim the array.
+    trim();
   }
 
   @Override
   public void remove(LongWritable targetVertexId) {
-    // Thanks to the constant-time implementation of remove(int),
+    // Thanks to the constant-time implementation of removeAt(int),
     // we can remove all matching edges in linear time.
     for (int i = neighbors.size() - 1; i >= 0; --i) {
       if (neighbors.get(i) == targetVertexId.get()) {
-        remove(i);
+        removeAt(i);
       }
     }
-    trim();
   }
 
   @Override
@@ -120,22 +121,37 @@ public class LongNullArrayEdges
   @Override
   public Iterator<Edge<LongWritable, NullWritable>> iterator() {
     // Returns an iterator that reuses objects.
-    return new UnmodifiableIterator<Edge<LongWritable, NullWritable>>() {
-      /** Wrapped neighbors iterator. */
-      private LongIterator neighborsIt = neighbors.iterator();
+    // The downcast is fine because all concrete Edge implementations are
+    // mutable, but we only expose the mutation functionality when appropriate.
+    return (Iterator) mutableIterator();
+  }
+
+  @Override
+  public Iterator<MutableEdge<LongWritable, NullWritable>> mutableIterator() {
+    return new Iterator<MutableEdge<LongWritable, NullWritable>>() {
+      /** Current position in the array. */
+      private int offset = 0;
       /** Representative edge object. */
-      private Edge<LongWritable, NullWritable> representativeEdge =
-          getConf().createEdge();
+      private MutableEdge<LongWritable, NullWritable> representativeEdge =
+          getConf().createReusableEdge();
 
       @Override
       public boolean hasNext() {
-        return neighborsIt.hasNext();
+        return offset < neighbors.size();
       }
 
       @Override
-      public Edge<LongWritable, NullWritable> next() {
-        representativeEdge.getTargetVertexId().set(neighborsIt.nextLong());
+      public MutableEdge<LongWritable, NullWritable> next() {
+        representativeEdge.getTargetVertexId().set(neighbors.get(offset++));
         return representativeEdge;
+      }
+
+      @Override
+      public void remove() {
+        // Since removeAt() might replace the deleted edge with the last edge
+        // in the array, we need to decrease the offset so that the latter
+        // won't be skipped.
+        removeAt(--offset);
       }
     };
   }

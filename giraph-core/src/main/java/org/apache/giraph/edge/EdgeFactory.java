@@ -41,7 +41,7 @@ public class EdgeFactory {
   public static <I extends WritableComparable,
                  E extends Writable>
   Edge<I, E> create(I id, E value) {
-    return createMutable(id, value);
+    return createReusable(id, value);
   }
 
   /**
@@ -53,11 +53,11 @@ public class EdgeFactory {
    */
   public static <I extends WritableComparable>
   Edge<I, NullWritable> create(I id) {
-    return createMutable(id);
+    return createReusable(id);
   }
 
   /**
-   * Create a mutable edge pointing to a given ID with a value
+   * Create a reusable edge pointing to a given ID with a value
    *
    * @param id target ID
    * @param value edge value
@@ -67,23 +67,23 @@ public class EdgeFactory {
    */
   public static <I extends WritableComparable,
                  E extends Writable>
-  MutableEdge<I, E> createMutable(I id, E value) {
+  ReusableEdge<I, E> createReusable(I id, E value) {
     if (value instanceof NullWritable) {
-      return (MutableEdge<I, E>) createMutable(id);
+      return (ReusableEdge<I, E>) createReusable(id);
     } else {
       return new DefaultEdge<I, E>(id, value);
     }
   }
 
   /**
-   * Create a mutable edge pointing to a given ID with a value
+   * Create a reusable edge pointing to a given ID with a value
    *
    * @param id target ID
    * @param <I> Vertex ID type
    * @return Edge pointing to ID with value
    */
   public static <I extends WritableComparable>
-  MutableEdge<I, NullWritable> createMutable(I id) {
+  ReusableEdge<I, NullWritable> createReusable(I id) {
     return new EdgeNoValue<I>(id);
   }
 }

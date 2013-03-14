@@ -37,7 +37,8 @@ import java.util.Iterator;
  * @param <E> Edge value
  */
 public class ArrayListEdges<I extends WritableComparable, E extends Writable>
-    extends ConfigurableVertexEdges<I, E> {
+    extends ConfigurableVertexEdges<I, E>
+    implements MutableVertexEdges<I, E> {
   /** List of edges. */
   private ArrayList<Edge<I, E>> edgeList;
 
@@ -86,6 +87,14 @@ public class ArrayListEdges<I extends WritableComparable, E extends Writable>
   @Override
   public final Iterator<Edge<I, E>> iterator() {
     return edgeList.iterator();
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public Iterator<MutableEdge<I, E>> mutableIterator() {
+    // The downcast is fine because all concrete Edge implementations are
+    // mutable, but we only expose the mutation functionality when appropriate.
+    return (Iterator) iterator();
   }
 
   @Override

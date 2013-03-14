@@ -20,6 +20,8 @@ package org.apache.giraph.conf;
 
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.combiner.Combiner;
+import org.apache.giraph.edge.ReusableEdge;
+import org.apache.giraph.edge.ReuseObjectsVertexEdges;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.io.EdgeInputFormat;
@@ -40,7 +42,6 @@ import org.apache.giraph.utils.UnsafeByteArrayInputStream;
 import org.apache.giraph.utils.UnsafeByteArrayOutputStream;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.EdgeFactory;
-import org.apache.giraph.edge.MutableEdge;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.edge.VertexEdges;
 import org.apache.giraph.worker.WorkerContext;
@@ -508,15 +509,15 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   }
 
   /**
-   * Create a mutable user edge.
+   * Create a reusable edge.
    *
-   * @return Instantiated mutable user edge.
+   * @return Instantiated reusable edge.
    */
-  public MutableEdge<I, E> createMutableEdge() {
+  public ReusableEdge<I, E> createReusableEdge() {
     if (isEdgeValueNullWritable()) {
-      return (MutableEdge<I, E>) EdgeFactory.createMutable(createVertexId());
+      return (ReusableEdge<I, E>) EdgeFactory.createReusable(createVertexId());
     } else {
-      return EdgeFactory.createMutable(createVertexId(), createEdgeValue());
+      return EdgeFactory.createReusable(createVertexId(), createEdgeValue());
     }
   }
 
@@ -559,6 +560,22 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    */
   public Class<? extends VertexEdges<I, E>> getVertexEdgesClass() {
     return classes.getVertexEdgesClass();
+  }
+
+  /**
+   * True if the {@link VertexEdges} implementation copies the passed edges
+   * to its own data structure, i.e. it doesn't keep references to Edge
+   * objects, target vertex ids or edge values passed to add() or
+   * initialize().
+   * This makes it possible to reuse edge objects passed to the data
+   * structure, to minimize object instantiation (see for example
+   * EdgeStore#addPartitionEdges()).
+   *
+   * @return True iff we can reuse the edge objects
+   */
+  public boolean reuseEdgeObjects() {
+    return ReuseObjectsVertexEdges.class.isAssignableFrom(
+        getVertexEdgesClass());
   }
 
   /**
