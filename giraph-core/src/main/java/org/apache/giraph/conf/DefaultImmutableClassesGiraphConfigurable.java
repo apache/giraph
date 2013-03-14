@@ -29,8 +29,9 @@ import org.apache.hadoop.io.WritableComparable;
  * @param <E> Edge data
  * @param <M> Message data
  */
-public class DefaultImmutableClassesGiraphConfigurable<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable> implements
+public class DefaultImmutableClassesGiraphConfigurable<
+    I extends WritableComparable, V extends Writable,
+    E extends Writable, M extends Writable> implements
     ImmutableClassesGiraphConfigurable<I, V, E, M> {
   /** Configuration */
   private ImmutableClassesGiraphConfiguration<I, V, E, M> conf;
