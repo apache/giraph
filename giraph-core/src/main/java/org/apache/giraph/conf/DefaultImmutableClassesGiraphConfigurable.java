@@ -15,23 +15,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.hive.input.vertex;
 
-import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
+package org.apache.giraph.conf;
+
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import com.facebook.giraph.hive.HiveTableSchemaAware;
-
 /**
- * Base class for HiveToVertex implementations
+ * Default implementation of ImmutableClassesGiraphConfigurable
  *
- * @param <I> Vertex ID
- * @param <V> Vertex Value
- * @param <E> Edge Value
- * @param <M> Message Value
+ * @param <I> Vertex id
+ * @param <V> Vertex data
+ * @param <E> Edge data
+ * @param <M> Message data
  */
-public abstract class AbstractHiveToVertexValue<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    extends DefaultImmutableClassesGiraphConfigurable<I, V, E, M>
-    implements HiveTableSchemaAware, HiveToVertexValue<I, V> { }
+public class DefaultImmutableClassesGiraphConfigurable<I extends WritableComparable,
+    V extends Writable, E extends Writable, M extends Writable> implements
+    ImmutableClassesGiraphConfigurable<I, V, E, M> {
+  /** Configuration */
+  private ImmutableClassesGiraphConfiguration<I, V, E, M> conf;
+
+  @Override
+  public void setConf(ImmutableClassesGiraphConfiguration<I, V, E, M> conf) {
+    this.conf = conf;
+  }
+
+  @Override
+  public ImmutableClassesGiraphConfiguration<I, V, E, M> getConf() {
+    return conf;
+  }
+}

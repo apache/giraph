@@ -17,7 +17,7 @@
  */
 package org.apache.giraph.hive.input.vertex;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfigurable;
+import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -32,7 +32,6 @@ import com.facebook.giraph.hive.HiveTableSchemaAware;
  * @param <M> Message Value
  */
 public abstract class AbstractHiveToVertexEdges<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable> implements
-    HiveTableSchemaAware,
-    HiveToVertexEdges<I, E>,
-    ImmutableClassesGiraphConfigurable<I, V, E, M> { }
+    V extends Writable, E extends Writable, M extends Writable>
+    extends DefaultImmutableClassesGiraphConfigurable<I, V, E, M>
+    implements HiveTableSchemaAware, HiveToVertexEdges<I, E> { }
