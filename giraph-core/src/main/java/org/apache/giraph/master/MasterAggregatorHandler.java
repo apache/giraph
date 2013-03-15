@@ -26,6 +26,7 @@ import org.apache.giraph.aggregators.Aggregator;
 import org.apache.giraph.aggregators.AggregatorWrapper;
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.bsp.BspService;
+import org.apache.giraph.utils.MasterLoggingAggregator;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.Progressable;
 import org.apache.log4j.Logger;
@@ -72,6 +73,7 @@ public class MasterAggregatorHandler implements MasterAggregatorUsage,
     this.conf = conf;
     this.progressable = progressable;
     aggregatorWriter = conf.createAggregatorWriter();
+    MasterLoggingAggregator.registerAggregator(this, conf);
   }
 
   @Override
@@ -160,7 +162,7 @@ public class MasterAggregatorHandler implements MasterAggregatorUsage,
    */
   public void prepareSuperstep(MasterClient masterClient) {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("prepareSuperstep: Start preapring aggregators");
+      LOG.debug("prepareSuperstep: Start preparing aggregators");
     }
     // prepare aggregators for master compute
     for (AggregatorWrapper<Writable> aggregator : aggregatorMap.values()) {
@@ -172,6 +174,7 @@ public class MasterAggregatorHandler implements MasterAggregatorUsage,
       aggregator.resetCurrentAggregator();
       progressable.progress();
     }
+    MasterLoggingAggregator.logAggregatedValue(this, conf);
     if (LOG.isDebugEnabled()) {
       LOG.debug("prepareSuperstep: Aggregators prepared");
     }

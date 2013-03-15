@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-565: Make an easy way to gather some logs from workers on master (majakabiljo)
+
   GIRAPH-559: use hive-io-experimental release (nitay)
 
   GIRAPH-562: Implement getConf/setConf in AbstractHive classes (majakabiljo)
