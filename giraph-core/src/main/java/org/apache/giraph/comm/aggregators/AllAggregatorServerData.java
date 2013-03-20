@@ -19,7 +19,8 @@
 package org.apache.giraph.comm.aggregators;
 
 import org.apache.giraph.aggregators.Aggregator;
-import org.apache.giraph.utils.ExpectedBarrier;
+import org.apache.giraph.master.MasterInfo;
+import org.apache.giraph.utils.TaskIdsPermitsBarrier;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.Progressable;
 import org.apache.log4j.Logger;
@@ -30,6 +31,7 @@ import com.google.common.collect.Maps;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
 /**
@@ -65,7 +67,7 @@ public class AllAggregatorServerData {
    * (named AggregatorUtils.SPECIAL_COUNT_AGGREGATOR)
    * to know how many requests it has to receive.
    */
-  private final ExpectedBarrier masterBarrier;
+  private final TaskIdsPermitsBarrier masterBarrier;
   /**
    * Aggregator data which this worker received from master and which it is
    * going to distribute before starting next superstep. Thread-safe.
@@ -78,7 +80,7 @@ public class AllAggregatorServerData {
    * (named AggregatorUtils.SPECIAL_COUNT_AGGREGATOR)
    * to know how many requests it has to receive.
    */
-  private final ExpectedBarrier workersBarrier;
+  private final TaskIdsPermitsBarrier workersBarrier;
   /** Progressable used to report progress */
   private final Progressable progressable;
 
@@ -89,8 +91,8 @@ public class AllAggregatorServerData {
    */
   public AllAggregatorServerData(Progressable progressable) {
     this.progressable = progressable;
-    workersBarrier = new ExpectedBarrier(progressable);
-    masterBarrier = new ExpectedBarrier(progressable);
+    workersBarrier = new TaskIdsPermitsBarrier(progressable);
+    masterBarrier = new TaskIdsPermitsBarrier(progressable);
   }
 
   /**
@@ -154,9 +156,10 @@ public class AllAggregatorServerData {
    * arrive from master.
    *
    * @param requestCount Number of requests which should arrive
+   * @param taskId Task id of master
    */
-  public void receivedRequestCountFromMaster(long requestCount) {
-    masterBarrier.requirePermits(requestCount);
+  public void receivedRequestCountFromMaster(long requestCount, int taskId) {
+    masterBarrier.requirePermits(requestCount, taskId);
   }
 
   /**
@@ -172,19 +175,22 @@ public class AllAggregatorServerData {
    * arrive from one of the workers.
    *
    * @param requestCount Number of requests which should arrive
+   * @param taskId Task id of that worker
    */
-  public void receivedRequestCountFromWorker(long requestCount) {
-    workersBarrier.requirePermits(requestCount);
+  public void receivedRequestCountFromWorker(long requestCount, int taskId) {
+    workersBarrier.requirePermits(requestCount, taskId);
   }
 
   /**
    * This function will wait until all aggregator requests from master have
    * arrived, and return that data afterwards.
    *
+   * @param masterInfo Master info
    * @return Iterable through data received from master
    */
-  public Iterable<byte[]> getDataFromMasterWhenReady() {
-    masterBarrier.waitForRequiredPermits(1);
+  public Iterable<byte[]> getDataFromMasterWhenReady(MasterInfo masterInfo) {
+    masterBarrier.waitForRequiredPermits(
+        Collections.singleton(masterInfo.getTaskId()));
     if (LOG.isDebugEnabled()) {
       LOG.debug("getDataFromMasterWhenReady: " +
           "Aggregator data for distribution ready");
@@ -196,7 +202,7 @@ public class AllAggregatorServerData {
    * This function will wait until all aggregator requests from workers have
    * arrived, and fill the maps for next superstep when ready.
    *
-   * @param numberOfWorkers Total number of workers in the job
+   * @param workerIds All workers in the job apart from the current one
    * @param previousAggregatedValuesMap Map of values from previous
    *                                    superstep to fill out
    * @param currentAggregatorMap Map of aggregators for current superstep to
@@ -204,10 +210,10 @@ public class AllAggregatorServerData {
    *                             be set to initial value.
    */
   public void fillNextSuperstepMapsWhenReady(
-      int numberOfWorkers,
+      Set<Integer> workerIds,
       Map<String, Writable> previousAggregatedValuesMap,
       Map<String, Aggregator<Writable>> currentAggregatorMap) {
-    workersBarrier.waitForRequiredPermits(numberOfWorkers - 1);
+    workersBarrier.waitForRequiredPermits(workerIds);
     if (LOG.isDebugEnabled()) {
       LOG.debug("fillNextSuperstepMapsWhenReady: Aggregators ready");
     }

@@ -19,7 +19,7 @@
 package org.apache.giraph.comm.aggregators;
 
 import org.apache.giraph.aggregators.Aggregator;
-import org.apache.giraph.utils.ExpectedBarrier;
+import org.apache.giraph.utils.TaskIdsPermitsBarrier;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.Progressable;
 import org.apache.log4j.Logger;
@@ -30,6 +30,7 @@ import com.google.common.collect.Maps;
 
 import java.util.AbstractMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
 /**
@@ -68,7 +69,7 @@ public class OwnerAggregatorServerData {
    * (named AggregatorUtils.SPECIAL_COUNT_AGGREGATOR)
    * to know how many requests it has to receive.
    */
-  private final ExpectedBarrier workersBarrier;
+  private final TaskIdsPermitsBarrier workersBarrier;
   /** Progressable used to report progress */
   private final Progressable progressable;
 
@@ -79,7 +80,7 @@ public class OwnerAggregatorServerData {
    */
   public OwnerAggregatorServerData(Progressable progressable) {
     this.progressable = progressable;
-    workersBarrier = new ExpectedBarrier(progressable);
+    workersBarrier = new TaskIdsPermitsBarrier(progressable);
   }
 
   /**
@@ -143,9 +144,10 @@ public class OwnerAggregatorServerData {
    * arrive from one of the workers. Thread-safe.
    *
    * @param requestCount Number of requests which should arrive
+   * @param taskId Task id of that worker
    */
-  public void receivedRequestCountFromWorker(long requestCount) {
-    workersBarrier.requirePermits(requestCount);
+  public void receivedRequestCountFromWorker(long requestCount, int taskId) {
+    workersBarrier.requirePermits(requestCount, taskId);
   }
 
   /**
@@ -153,12 +155,12 @@ public class OwnerAggregatorServerData {
    * workers are ready and aggregated, and return final aggregated values
    * afterwards.
    *
-   * @param numberOfWorkers Total number of workers in the job
+   * @param workerIds All workers in the job apart from the current one
    * @return Iterable through final aggregated values which this worker owns
    */
   public Iterable<Map.Entry<String, Writable>>
-  getMyAggregatorValuesWhenReady(int numberOfWorkers) {
-    workersBarrier.waitForRequiredPermits(numberOfWorkers - 1);
+  getMyAggregatorValuesWhenReady(Set<Integer> workerIds) {
+    workersBarrier.waitForRequiredPermits(workerIds);
     if (LOG.isDebugEnabled()) {
       LOG.debug("getMyAggregatorValuesWhenReady: Values ready");
     }

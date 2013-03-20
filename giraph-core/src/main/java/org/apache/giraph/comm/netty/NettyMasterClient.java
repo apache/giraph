@@ -104,7 +104,8 @@ public class NettyMasterClient implements MasterClient {
     byte[] aggregatorData =
         sendAggregatorCache.removeAggregators(worker.getTaskId());
     nettyClient.sendWritableRequest(
-        worker.getTaskId(), new SendAggregatorsToOwnerRequest(aggregatorData));
+        worker.getTaskId(), new SendAggregatorsToOwnerRequest(aggregatorData,
+          service.getMasterInfo().getTaskId()));
   }
 
   @Override

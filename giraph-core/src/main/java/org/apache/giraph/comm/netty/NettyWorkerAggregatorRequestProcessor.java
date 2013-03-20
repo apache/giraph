@@ -109,7 +109,8 @@ public class NettyWorkerAggregatorRequestProcessor
     byte[] aggregatorData =
         sendAggregatedValueCache.removeAggregators(worker.getTaskId());
     workerClient.sendWritableRequest(worker.getTaskId(),
-        new SendWorkerAggregatorsRequest(aggregatorData));
+        new SendWorkerAggregatorsRequest(aggregatorData,
+            serviceWorker.getWorkerInfo().getTaskId()));
   }
 
   @Override
@@ -124,7 +125,8 @@ public class NettyWorkerAggregatorRequestProcessor
       Iterable<byte[]> aggregatorDataList) throws IOException {
     for (byte[] aggregatorData : aggregatorDataList) {
       SendAggregatorsToWorkerRequest request =
-          new SendAggregatorsToWorkerRequest(aggregatorData);
+          new SendAggregatorsToWorkerRequest(aggregatorData,
+              serviceWorker.getWorkerInfo().getTaskId());
       for (WorkerInfo worker : serviceWorker.getWorkerInfoList()) {
         if (!isThisWorker(worker)) {
           workerClient.sendWritableRequest(worker.getTaskId(), request);

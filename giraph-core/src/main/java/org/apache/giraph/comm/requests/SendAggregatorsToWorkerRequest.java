@@ -33,15 +33,16 @@ import java.io.IOException;
  * other workers
  */
 public class SendAggregatorsToWorkerRequest extends
-    ByteArrayRequest implements WorkerRequest {
+    ByteArrayWithSenderTaskIdRequest implements WorkerRequest {
 
   /**
    * Constructor
    *
    * @param data Serialized aggregator data
+   * @param senderTaskId Sender task id
    */
-  public SendAggregatorsToWorkerRequest(byte[] data) {
-    super(data);
+  public SendAggregatorsToWorkerRequest(byte[] data, int senderTaskId) {
+    super(data, senderTaskId);
   }
 
   /**
@@ -62,7 +63,8 @@ public class SendAggregatorsToWorkerRequest extends
         if (aggregatorName.equals(AggregatorUtils.SPECIAL_COUNT_AGGREGATOR)) {
           LongWritable count = new LongWritable(0);
           count.readFields(input);
-          aggregatorData.receivedRequestCountFromWorker(count.get());
+          aggregatorData.receivedRequestCountFromWorker(count.get(),
+              getSenderTaskId());
         } else {
           Class<Aggregator<Writable>> aggregatorClass =
               AggregatorUtils.getAggregatorClass(aggregatorClassName);

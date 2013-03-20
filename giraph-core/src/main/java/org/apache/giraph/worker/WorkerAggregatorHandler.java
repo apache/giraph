@@ -31,9 +31,11 @@ import org.apache.hadoop.util.Progressable;
 import org.apache.log4j.Logger;
 
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Handler for aggregators on worker. Provides the aggregated values and
@@ -129,7 +131,8 @@ public class WorkerAggregatorHandler implements WorkerThreadAggregatorUsage {
         serviceWorker.getServerData().getAllAggregatorData();
     // Wait for my aggregators
     Iterable<byte[]> dataToDistribute =
-        allAggregatorData.getDataFromMasterWhenReady();
+        allAggregatorData.getDataFromMasterWhenReady(
+            serviceWorker.getMasterInfo());
     try {
       // Distribute my aggregators
       requestProcessor.distributeAggregators(dataToDistribute);
@@ -139,7 +142,7 @@ public class WorkerAggregatorHandler implements WorkerThreadAggregatorUsage {
     }
     // Wait for all other aggregators and store them
     allAggregatorData.fillNextSuperstepMapsWhenReady(
-        serviceWorker.getWorkerInfoList().size(), previousAggregatedValueMap,
+        getOtherWorkerIdsSet(), previousAggregatedValueMap,
         currentAggregatorMap);
     allAggregatorData.reset();
     if (LOG.isDebugEnabled()) {
@@ -154,8 +157,10 @@ public class WorkerAggregatorHandler implements WorkerThreadAggregatorUsage {
    */
   public void finishSuperstep(
       WorkerAggregatorRequestProcessor requestProcessor) {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("finishSuperstep: Start finishing aggregators");
+    if (LOG.isInfoEnabled()) {
+      LOG.info("finishSuperstep: Start gathering aggregators, " +
+          "workers will send their aggregated values " +
+          "once they are done with superstep computation");
     }
     OwnerAggregatorServerData ownerAggregatorData =
         serviceWorker.getServerData().getOwnerAggregatorData();
@@ -189,7 +194,7 @@ public class WorkerAggregatorHandler implements WorkerThreadAggregatorUsage {
     // Wait to receive partial aggregated values from all other workers
     Iterable<Map.Entry<String, Writable>> myAggregators =
         ownerAggregatorData.getMyAggregatorValuesWhenReady(
-            serviceWorker.getWorkerInfoList().size());
+            getOtherWorkerIdsSet());
 
     // Send final aggregated values to master
     AggregatedValueOutputStream aggregatorOutput =
@@ -242,6 +247,22 @@ public class WorkerAggregatorHandler implements WorkerThreadAggregatorUsage {
   public void finishThreadComputation() {
     // If we don't use thread-local aggregators, all the aggregated values
     // are already in this object
+  }
+
+  /**
+   * Get set of all worker task ids except the current one
+   *
+   * @return Set of all other worker task ids
+   */
+  public Set<Integer> getOtherWorkerIdsSet() {
+    Set<Integer> otherWorkers = Sets.newHashSetWithExpectedSize(
+        serviceWorker.getWorkerInfoList().size());
+    for (WorkerInfo workerInfo : serviceWorker.getWorkerInfoList()) {
+      if (workerInfo.getTaskId() != serviceWorker.getWorkerInfo().getTaskId()) {
+        otherWorkers.add(workerInfo.getTaskId());
+      }
+    }
+    return otherWorkers;
   }
 
   /**

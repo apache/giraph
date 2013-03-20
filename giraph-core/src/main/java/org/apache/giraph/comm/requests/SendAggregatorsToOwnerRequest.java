@@ -32,16 +32,17 @@ import java.io.IOException;
  * Request to send final aggregatd values from master to worker which owns
  * the aggregators
  */
-public class SendAggregatorsToOwnerRequest extends ByteArrayRequest
-    implements WorkerRequest {
+public class SendAggregatorsToOwnerRequest
+    extends ByteArrayWithSenderTaskIdRequest implements WorkerRequest {
 
   /**
    * Constructor
    *
    * @param data Serialized aggregator data
+   * @param senderTaskId Sender task id
    */
-  public SendAggregatorsToOwnerRequest(byte[] data) {
-    super(data);
+  public SendAggregatorsToOwnerRequest(byte[] data, int senderTaskId) {
+    super(data, senderTaskId);
   }
 
   /**
@@ -62,7 +63,8 @@ public class SendAggregatorsToOwnerRequest extends ByteArrayRequest
         if (aggregatorName.equals(AggregatorUtils.SPECIAL_COUNT_AGGREGATOR)) {
           LongWritable count = new LongWritable(0);
           count.readFields(input);
-          aggregatorData.receivedRequestCountFromMaster(count.get());
+          aggregatorData.receivedRequestCountFromMaster(count.get(),
+              getSenderTaskId());
         } else {
           Class<Aggregator<Writable>> aggregatorClass =
               AggregatorUtils.getAggregatorClass(aggregatorClassName);

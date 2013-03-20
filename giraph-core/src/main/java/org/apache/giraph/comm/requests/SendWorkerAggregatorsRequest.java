@@ -32,15 +32,16 @@ import java.io.IOException;
  * which were computed by one worker's vertices)
  */
 public class SendWorkerAggregatorsRequest extends
-    ByteArrayRequest implements WorkerRequest {
+    ByteArrayWithSenderTaskIdRequest implements WorkerRequest {
 
   /**
    * Constructor
    *
    * @param data Serialized aggregator data
+   * @param senderTaskId Sender task id
    */
-  public SendWorkerAggregatorsRequest(byte[] data) {
-    super(data);
+  public SendWorkerAggregatorsRequest(byte[] data, int senderTaskId) {
+    super(data, senderTaskId);
   }
 
   /**
@@ -62,7 +63,8 @@ public class SendWorkerAggregatorsRequest extends
             AggregatorUtils.SPECIAL_COUNT_AGGREGATOR)) {
           LongWritable count = new LongWritable(0);
           count.readFields(input);
-          aggregatorData.receivedRequestCountFromWorker(count.get());
+          aggregatorData.receivedRequestCountFromWorker(count.get(),
+              getSenderTaskId());
         } else {
           Writable aggregatedValue =
               aggregatorData.createAggregatorInitialValue(aggregatorName);
