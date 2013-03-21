@@ -71,6 +71,8 @@ public class GiraphClasses<I extends WritableComparable,
   protected Class<M> messageValueClass;
   /** Vertex edges class - cached for fast access */
   protected Class<? extends VertexEdges<I, E>> vertexEdgesClass;
+  /** Input vertex edges class - cached for fast access */
+  protected Class<? extends VertexEdges<I, E>> inputVertexEdgesClass;
 
   /** Vertex value factory class - cached for fast access */
   protected Class<? extends VertexValueFactory<V>> vertexValueFactoryClass;
@@ -114,6 +116,8 @@ public class GiraphClasses<I extends WritableComparable,
     // downcast.
     vertexEdgesClass = (Class<? extends VertexEdges<I, E>>) (Object)
         ByteArrayEdges.class;
+    inputVertexEdgesClass = (Class<? extends VertexEdges<I, E>>) (Object)
+        ByteArrayEdges.class;
     vertexValueFactoryClass = (Class<? extends VertexValueFactory<V>>) (Object)
         DefaultVertexValueFactory.class;
     graphPartitionerFactoryClass =
@@ -156,9 +160,12 @@ public class GiraphClasses<I extends WritableComparable,
     vertexEdgesClass = (Class<? extends VertexEdges<I, E>>)
         conf.getClass(VERTEX_EDGES_CLASS, ByteArrayEdges.class,
             VertexEdges.class);
+    inputVertexEdgesClass = (Class<? extends VertexEdges<I, E>>)
+        conf.getClass(INPUT_VERTEX_EDGES_CLASS, vertexEdgesClass,
+            VertexEdges.class);
     vertexValueFactoryClass = (Class<? extends VertexValueFactory<V>>)
         conf.getClass(VERTEX_VALUE_FACTORY_CLASS,
-            DefaultVertexValueFactory.class);
+            DefaultVertexValueFactory.class, VertexValueFactory.class);
 
     graphPartitionerFactoryClass =
         (Class<? extends GraphPartitionerFactory<I, V, E, M>>)
@@ -247,6 +254,15 @@ public class GiraphClasses<I extends WritableComparable,
   public Class<? extends VertexEdges<I, E>> getVertexEdgesClass() {
     return vertexEdgesClass;
   }
+
+  /* Get Vertex edges class used during edge-based input
+ *
+ * @return Vertex edges class.
+ */
+  public Class<? extends VertexEdges<I, E>> getInputVertexEdgesClass() {
+    return inputVertexEdgesClass;
+  }
+
 
   /**
    * Get vertex value factory class
@@ -515,6 +531,20 @@ public class GiraphClasses<I extends WritableComparable,
       Class<? extends VertexEdges> vertexEdgesClass) {
     this.vertexEdgesClass =
         (Class<? extends VertexEdges<I, E>>) vertexEdgesClass;
+    return this;
+  }
+
+  /**
+   * Set VertexEdges class used during edge-input (if different from the one
+   * used for computation)
+   *
+   * @param inputVertexEdgesClass Input vertex edges class to set
+   * @return this
+   */
+  public GiraphClasses setInputVertexEdgesClass(
+      Class<? extends VertexEdges> inputVertexEdgesClass) {
+    this.inputVertexEdgesClass =
+        (Class<? extends VertexEdges<I, E>>) inputVertexEdgesClass;
     return this;
   }
 

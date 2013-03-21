@@ -97,6 +97,18 @@ public class GiraphConfiguration extends Configuration
   }
 
   /**
+   * Set the vertex edges class used during edge-based input (if different
+   * from the one used during computation)
+   *
+   * @param inputVertexEdgesClass Determines the way edges are stored
+   */
+  public final void setInputVertexEdgesClass(
+      Class<? extends VertexEdges> inputVertexEdgesClass) {
+    setClass(INPUT_VERTEX_EDGES_CLASS, inputVertexEdgesClass,
+        VertexEdges.class);
+  }
+
+  /**
    * Set the vertex input format class (required)
    *
    * @param vertexInputFormatClass Determines how graph is input

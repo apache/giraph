@@ -28,6 +28,8 @@ public interface GiraphConstants {
   String VERTEX_VALUE_FACTORY_CLASS = "giraph.vertexValueFactoryClass";
   /** Vertex edges class - optional */
   String VERTEX_EDGES_CLASS = "giraph.vertexEdgesClass";
+  /** Vertex edges class to be used during edge input only - optional */
+  String INPUT_VERTEX_EDGES_CLASS = "giraph.inputVertexEdgesClass";
 
   /** Class for Master - optional */
   String MASTER_COMPUTE_CLASS = "giraph.masterComputeClass";

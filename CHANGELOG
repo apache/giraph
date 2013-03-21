@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-579: Make it possible to use different out-edges data structures
+  for input and computation (apresta)
+
   GIRAPH-582: Create a generic option for determining the number of
   supersteps that a job runs for (aching)
 

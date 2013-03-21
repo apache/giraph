@@ -575,6 +575,25 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   }
 
   /**
+   * Get the user's subclassed {@link VertexEdges} used for input
+   *
+   * @return User's input vertex edges class
+   */
+  public Class<? extends VertexEdges<I, E>> getInputVertexEdgesClass() {
+    return classes.getInputVertexEdgesClass();
+  }
+
+  /**
+   * Check whether the user has specified a different {@link VertexEdges}
+   * class to be used during edge-based input.
+   *
+   * @return True iff there is a special edges class for input
+   */
+  public boolean useInputVertexEdges() {
+    return classes.getInputVertexEdgesClass() != classes.getVertexEdgesClass();
+  }
+
+  /**
    * True if the {@link VertexEdges} implementation copies the passed edges
    * to its own data structure, i.e. it doesn't keep references to Edge
    * objects, target vertex ids or edge values passed to add() or
@@ -635,6 +654,27 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
       Iterable<Edge<I, E>> edges) {
     VertexEdges<I, E> vertexEdges = createVertexEdges();
     vertexEdges.initialize(edges);
+    return vertexEdges;
+  }
+
+  /**
+   * Create a user {@link VertexEdges} used during edge-based input
+   *
+   * @return Instantiated user input VertexEdges
+   */
+  public VertexEdges<I, E> createInputVertexEdges() {
+    return ReflectionUtils.newInstance(getInputVertexEdgesClass(), this);
+  }
+
+  /**
+   * Create an input {@link VertexEdges} instance and initialize it with the
+   * default capacity.
+   *
+   * @return Instantiated input VertexEdges
+   */
+  public VertexEdges<I, E> createAndInitializeInputVertexEdges() {
+    VertexEdges<I, E> vertexEdges = createInputVertexEdges();
+    vertexEdges.initialize();
     return vertexEdges;
   }
 

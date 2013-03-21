@@ -19,18 +19,24 @@
 package org.apache.giraph.edge;
 
 import com.google.common.collect.MapMaker;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.utils.ByteArrayVertexIdEdges;
-import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.utils.ProgressableUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.util.Progressable;
 import org.apache.log4j.Logger;
 
-import java.util.Map;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Collects incoming edges for vertices owned by this worker.
@@ -58,6 +64,11 @@ public class EdgeStore<I extends WritableComparable,
    * reuse.
    */
   private boolean reuseEdgeObjects;
+  /**
+   * Whether the {@link VertexEdges} class used during input is different
+   * from the one used during computation.
+   */
+  private boolean useInputVertexEdges;
 
   /**
    * Constructor.
@@ -76,6 +87,7 @@ public class EdgeStore<I extends WritableComparable,
     transientEdges = new MapMaker().concurrencyLevel(
         configuration.getNettyServerExecutionConcurrency()).makeMap();
     reuseEdgeObjects = configuration.reuseEdgeObjects();
+    useInputVertexEdges = configuration.useInputVertexEdges();
   }
 
   /**
@@ -110,7 +122,7 @@ public class EdgeStore<I extends WritableComparable,
       VertexEdges<I, E> vertexEdges = partitionEdges.get(vertexId);
       if (vertexEdges == null) {
         VertexEdges<I, E> newVertexEdges =
-            configuration.createAndInitializeVertexEdges();
+            configuration.createAndInitializeInputVertexEdges();
         vertexEdges = partitionEdges.putIfAbsent(vertexId, newVertexEdges);
         if (vertexEdges == null) {
           vertexEdges = newVertexEdges;
@@ -126,6 +138,27 @@ public class EdgeStore<I extends WritableComparable,
   }
 
   /**
+   * Convert the input edges to the {@link VertexEdges} data structure used
+   * for computation (if different).
+   *
+   * @param inputEdges Input edges
+   * @return Compute edges
+   */
+  private VertexEdges<I, E> convertInputToComputeEdges(
+      VertexEdges<I, E> inputEdges) {
+    if (!useInputVertexEdges) {
+      return inputEdges;
+    } else {
+      VertexEdges<I, E> computeEdges =
+          configuration.createAndInitializeVertexEdges(inputEdges.size());
+      for (Edge<I, E> edge : inputEdges) {
+        computeEdges.add(edge);
+      }
+      return computeEdges;
+    }
+  }
+
+  /**
    * Move all edges from temporary storage to their source vertices.
    * Note: this method is not thread-safe.
    */
@@ -133,37 +166,62 @@ public class EdgeStore<I extends WritableComparable,
     if (LOG.isInfoEnabled()) {
       LOG.info("moveEdgesToVertices: Moving incoming edges to vertices.");
     }
-    for (Map.Entry<Integer, ConcurrentMap<I,
-        VertexEdges<I, E>>> partitionEdges : transientEdges.entrySet()) {
-      Partition<I, V, E, M> partition =
-          service.getPartitionStore().getPartition(partitionEdges.getKey());
-      for (I vertexId : partitionEdges.getValue().keySet()) {
-        VertexEdges<I, E> vertexEdges =
-            partitionEdges.getValue().remove(vertexId);
-        Vertex<I, V, E, M> vertex = partition.getVertex(vertexId);
-        // If the source vertex doesn't exist, create it. Otherwise,
-        // just set the edges.
-        if (vertex == null) {
-          vertex = configuration.createVertex();
-          vertex.initialize(vertexId, configuration.createVertexValue(),
-              vertexEdges);
-          partition.putVertex(vertex);
-        } else {
-          vertex.setEdges(vertexEdges);
-          // Some Partition implementations (e.g. ByteArrayPartition) require
-          // us to put back the vertex after modifying it.
-          partition.saveVertex(vertex);
+
+    final BlockingQueue<Integer> partitionIdQueue =
+        new ArrayBlockingQueue<Integer>(transientEdges.size());
+    partitionIdQueue.addAll(transientEdges.keySet());
+    int numThreads = configuration.getNumInputSplitsThreads();
+    ExecutorService movePartitionExecutor =
+        Executors.newFixedThreadPool(numThreads,
+            new ThreadFactoryBuilder().setNameFormat("move-edges-%d").build());
+
+    for (int i = 0; i < numThreads; ++i) {
+      Callable moveCallable = new Callable<Void>() {
+        @Override
+        public Void call() throws Exception {
+          Integer partitionId;
+          while ((partitionId = partitionIdQueue.poll()) != null) {
+            Partition<I, V, E, M> partition =
+                service.getPartitionStore().getPartition(partitionId);
+            ConcurrentMap<I, VertexEdges<I, E>> partitionEdges =
+                transientEdges.remove(partitionId);
+            for (I vertexId : partitionEdges.keySet()) {
+              VertexEdges<I, E> vertexEdges = convertInputToComputeEdges(
+                  partitionEdges.remove(vertexId));
+              Vertex<I, V, E, M> vertex = partition.getVertex(vertexId);
+              // If the source vertex doesn't exist, create it. Otherwise,
+              // just set the edges.
+              if (vertex == null) {
+                vertex = configuration.createVertex();
+                vertex.initialize(vertexId, configuration.createVertexValue(),
+                    vertexEdges);
+                partition.putVertex(vertex);
+              } else {
+                vertex.setEdges(vertexEdges);
+                // Some Partition implementations (e.g. ByteArrayPartition)
+                // require us to put back the vertex after modifying it.
+                partition.saveVertex(vertex);
+              }
+            }
+            // Some PartitionStore implementations
+            // (e.g. DiskBackedPartitionStore) require us to put back the
+            // partition after modifying it.
+            service.getPartitionStore().putPartition(partition);
+          }
+          return null;
         }
-        progressable.progress();
-      }
-      // Some PartitionStore implementations (e.g. DiskBackedPartitionStore)
-      // require us to put back the partition after modifying it.
-      service.getPartitionStore().putPartition(partition);
+      };
+      movePartitionExecutor.submit(moveCallable);
     }
+
+    movePartitionExecutor.shutdown();
+    ProgressableUtils.awaitExecutorTermination(movePartitionExecutor,
+        progressable);
+    transientEdges.clear();
+
     if (LOG.isInfoEnabled()) {
       LOG.info("moveEdgesToVertices: Finished moving incoming edges to " +
           "vertices.");
     }
-    transientEdges.clear();
   }
 }

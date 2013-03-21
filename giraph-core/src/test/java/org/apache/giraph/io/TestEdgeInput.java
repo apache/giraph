@@ -23,14 +23,15 @@ import com.google.common.collect.Maps;
 import org.apache.giraph.BspCase;
 import org.apache.giraph.conf.GiraphClasses;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.edge.ByteArrayEdges;
+import org.apache.giraph.edge.Edge;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexValueFactory;
 import org.apache.giraph.io.formats.IdWithValueTextOutputFormat;
 import org.apache.giraph.io.formats.IntIntTextVertexValueInputFormat;
 import org.apache.giraph.io.formats.IntNullReverseTextEdgeInputFormat;
 import org.apache.giraph.io.formats.IntNullTextEdgeInputFormat;
 import org.apache.giraph.utils.InternalVertexRunner;
-import org.apache.giraph.edge.ByteArrayEdges;
-import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.junit.Test;
@@ -39,6 +40,8 @@ import java.io.IOException;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /**
  * A test case to ensure that loading a graph from a list of edges works as
@@ -183,6 +186,38 @@ public class TestEdgeInput extends BspCase {
     assertEquals(1, (int) values.get(5));
   }
 
+  // It should use the specified input VertexEdges class.
+  @Test
+  public void testDifferentInputEdgesClass() throws Exception {
+    String[] edges = new String[] {
+        "1 2",
+        "2 3",
+        "2 4",
+        "4 1"
+    };
+
+    GiraphClasses classes = new GiraphClasses();
+    classes.setVertexClass(TestVertexCheckEdgesType.class);
+    classes.setVertexEdgesClass(ByteArrayEdges.class);
+    classes.setInputVertexEdgesClass(TestVertexEdgesFilterEven.class);
+    classes.setEdgeInputFormatClass(IntNullTextEdgeInputFormat.class);
+    classes.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
+    Map<String, String> params = ImmutableMap.of();
+    Iterable<String> results = InternalVertexRunner.run(classes, params,
+        null, edges);
+
+    Map<Integer, Integer> values = parseResults(results);
+
+    // Check that all vertices with outgoing edges in the input have been
+    // created
+    assertEquals(3, values.size());
+    // Check the number of edges for each vertex (edges with odd target id
+    // should have been removed)
+    assertEquals(1, (int) values.get(1));
+    assertEquals(1, (int) values.get(2));
+    assertEquals(0, (int) values.get(4));
+  }
+
   public static class TestVertexWithNumEdges extends Vertex<IntWritable,
         IntWritable, NullWritable, NullWritable> {
     @Override
@@ -192,8 +227,17 @@ public class TestEdgeInput extends BspCase {
     }
   }
 
+  public static class TestVertexCheckEdgesType extends TestVertexWithNumEdges {
+    @Override
+    public void compute(Iterable<NullWritable> messages) throws IOException {
+      assertFalse(getEdges() instanceof TestVertexEdgesFilterEven);
+      assertTrue(getEdges() instanceof ByteArrayEdges);
+      super.compute(messages);
+    }
+  }
+
   public static class TestVertexDoNothing extends Vertex<IntWritable,
-      IntWritable, NullWritable, NullWritable> {
+        IntWritable, NullWritable, NullWritable> {
     @Override
     public void compute(Iterable<NullWritable> messages) throws IOException {
       voteToHalt();
@@ -204,11 +248,21 @@ public class TestEdgeInput extends BspCase {
       implements VertexValueFactory<IntWritable> {
     @Override
     public void initialize(ImmutableClassesGiraphConfiguration<?, IntWritable,
-        ?, ?> configuration) { }
+            ?, ?> configuration) { }
 
     @Override
     public IntWritable createVertexValue() {
       return new IntWritable(3);
+    }
+  }
+
+  public static class TestVertexEdgesFilterEven
+      extends ByteArrayEdges<IntWritable, NullWritable> {
+    @Override
+    public void add(Edge<IntWritable, NullWritable> edge) {
+      if (edge.getTargetVertexId().get() % 2 == 0) {
+        super.add(edge);
+      }
     }
   }
 

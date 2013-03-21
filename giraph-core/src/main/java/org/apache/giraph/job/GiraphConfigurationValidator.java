@@ -170,10 +170,13 @@ public class GiraphConfigurationValidator<I extends WritableComparable,
     }
   }
 
-  /** Verify matching generic types in VertexEdges. */
-  private void verifyVertexEdgesGenericTypes() {
-    Class<? extends VertexEdges<I, E>> vertexEdgesClass =
-        conf.getVertexEdgesClass();
+  /**
+   * Verify matching generic types for a specific VertexEdges class.
+   *
+   * @param vertexEdgesClass {@link VertexEdges} class to check
+   */
+  private void verifyVertexEdgesGenericTypesClass(
+      Class<? extends VertexEdges<I, E>> vertexEdgesClass) {
     List<Class<?>> classList = ReflectionUtils.getTypeArguments(
         VertexEdges.class, vertexEdgesClass);
     // VertexEdges implementations can be generic, in which case there are no
@@ -196,6 +199,16 @@ public class GiraphConfigurationValidator<I extends WritableComparable,
               ", vertex edges - " +
               classList.get(EDGE_PARAM_VERTEX_EDGES_INDEX));
     }
+  }
+
+  /** Verify matching generic types in VertexEdges. */
+  private void verifyVertexEdgesGenericTypes() {
+    Class<? extends VertexEdges<I, E>> vertexEdgesClass =
+        conf.getVertexEdgesClass();
+    Class<? extends VertexEdges<I, E>> inputVertexEdgesClass =
+        conf.getInputVertexEdgesClass();
+    verifyVertexEdgesGenericTypesClass(vertexEdgesClass);
+    verifyVertexEdgesGenericTypesClass(inputVertexEdgesClass);
   }
 
   /** Verify matching generic types in VertexInputFormat. */

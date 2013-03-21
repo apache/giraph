@@ -203,6 +203,11 @@ public final class ConfigurationUtils {
           (Class<? extends VertexEdges>)
               Class.forName(cmd.getOptionValue("ve")));
     }
+    if (cmd.hasOption("ive")) {
+      giraphConfiguration.setInputVertexEdgesClass(
+          (Class<? extends VertexEdges>)
+              Class.forName(cmd.getOptionValue("ive")));
+    }
     if (cmd.hasOption("wc")) {
       giraphConfiguration.setWorkerContextClass(
           (Class<? extends WorkerContext>)
