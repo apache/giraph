@@ -107,8 +107,8 @@ public class ServerData<I extends WritableComparable,
           new SimplePartitionStore<I, V, E, M>(configuration, context);
     }
     edgeStore = new EdgeStore<I, V, E, M>(service, configuration, context);
-    ownerAggregatorData = new OwnerAggregatorServerData(context);
-    allAggregatorData = new AllAggregatorServerData(context);
+    ownerAggregatorData = new OwnerAggregatorServerData(context, configuration);
+    allAggregatorData = new AllAggregatorServerData(context, configuration);
   }
 
   public EdgeStore<I, V, E, M> getEdgeStore() {

@@ -290,7 +290,8 @@ public class WorkerAggregatorHandler implements WorkerThreadAggregatorUsage {
           WorkerAggregatorHandler.this.currentAggregatorMap.entrySet()) {
         threadAggregatorMap.put(entry.getKey(),
             AggregatorUtils.newAggregatorInstance(
-                (Class<Aggregator<Writable>>) entry.getValue().getClass()));
+                (Class<Aggregator<Writable>>) entry.getValue().getClass(),
+                conf));
       }
     }
 

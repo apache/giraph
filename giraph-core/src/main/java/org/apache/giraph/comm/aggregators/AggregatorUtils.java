@@ -20,6 +20,7 @@ package org.apache.giraph.comm.aggregators;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.aggregators.Aggregator;
+import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.Writable;
 
@@ -78,19 +79,13 @@ public class AggregatorUtils {
    * catch all exceptions.
    *
    * @param aggregatorClass Class of aggregator
+   * @param conf Configuration
    * @return New aggregator
    */
   public static Aggregator<Writable> newAggregatorInstance(
-      Class<Aggregator<Writable>> aggregatorClass) {
-    try {
-      return aggregatorClass.newInstance();
-    } catch (InstantiationException e) {
-      throw new IllegalStateException("createAggregator: " +
-          "InstantiationException for aggregator class " + aggregatorClass, e);
-    } catch (IllegalAccessException e) {
-      throw new IllegalStateException("createAggregator: " +
-          "IllegalAccessException for aggregator class " + aggregatorClass, e);
-    }
+      Class<Aggregator<Writable>> aggregatorClass,
+      ImmutableClassesGiraphConfiguration conf) {
+    return ReflectionUtils.newInstance(aggregatorClass, conf);
   }
 
   /**

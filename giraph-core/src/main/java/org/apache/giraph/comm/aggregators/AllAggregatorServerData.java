@@ -19,6 +19,7 @@
 package org.apache.giraph.comm.aggregators;
 
 import org.apache.giraph.aggregators.Aggregator;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.master.MasterInfo;
 import org.apache.giraph.utils.TaskIdsPermitsBarrier;
 import org.apache.hadoop.io.Writable;
@@ -83,14 +84,19 @@ public class AllAggregatorServerData {
   private final TaskIdsPermitsBarrier workersBarrier;
   /** Progressable used to report progress */
   private final Progressable progressable;
+  /** Configuration */
+  private final ImmutableClassesGiraphConfiguration conf;
 
   /**
    * Constructor
    *
    * @param progressable Progressable used to report progress
+   * @param conf Configuration
    */
-  public AllAggregatorServerData(Progressable progressable) {
+  public AllAggregatorServerData(Progressable progressable,
+      ImmutableClassesGiraphConfiguration conf) {
     this.progressable = progressable;
+    this.conf = conf;
     workersBarrier = new TaskIdsPermitsBarrier(progressable);
     masterBarrier = new TaskIdsPermitsBarrier(progressable);
   }
@@ -106,7 +112,7 @@ public class AllAggregatorServerData {
     aggregatorClassMap.put(name, aggregatorClass);
     if (!aggregatorTypesMap.containsKey(aggregatorClass)) {
       aggregatorTypesMap.putIfAbsent(aggregatorClass,
-          AggregatorUtils.newAggregatorInstance(aggregatorClass));
+          AggregatorUtils.newAggregatorInstance(aggregatorClass, conf));
     }
     progressable.progress();
   }
@@ -225,7 +231,7 @@ public class AllAggregatorServerData {
           currentAggregatorMap.get(entry.getKey());
       if (aggregator == null) {
         currentAggregatorMap.put(entry.getKey(),
-            AggregatorUtils.newAggregatorInstance(entry.getValue()));
+            AggregatorUtils.newAggregatorInstance(entry.getValue(), conf));
       } else {
         aggregator.reset();
       }

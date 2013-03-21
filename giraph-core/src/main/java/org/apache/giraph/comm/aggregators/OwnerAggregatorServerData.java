@@ -19,6 +19,7 @@
 package org.apache.giraph.comm.aggregators;
 
 import org.apache.giraph.aggregators.Aggregator;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.utils.TaskIdsPermitsBarrier;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.Progressable;
@@ -72,14 +73,19 @@ public class OwnerAggregatorServerData {
   private final TaskIdsPermitsBarrier workersBarrier;
   /** Progressable used to report progress */
   private final Progressable progressable;
+  /** Configuration */
+  private final ImmutableClassesGiraphConfiguration conf;
 
   /**
    * Constructor
    *
    * @param progressable Progressable used to report progress
+   * @param conf         Configuration
    */
-  public OwnerAggregatorServerData(Progressable progressable) {
+  public OwnerAggregatorServerData(Progressable progressable,
+      ImmutableClassesGiraphConfiguration conf) {
     this.progressable = progressable;
+    this.conf = conf;
     workersBarrier = new TaskIdsPermitsBarrier(progressable);
   }
 
@@ -95,7 +101,7 @@ public class OwnerAggregatorServerData {
       LOG.debug("registerAggregator: The first registration after a reset()");
     }
     myAggregatorMap.putIfAbsent(name,
-        AggregatorUtils.newAggregatorInstance(aggregatorClass));
+        AggregatorUtils.newAggregatorInstance(aggregatorClass, conf));
     progressable.progress();
   }
 
