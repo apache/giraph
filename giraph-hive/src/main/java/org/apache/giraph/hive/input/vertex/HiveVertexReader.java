@@ -26,13 +26,13 @@ import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
-import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 import com.facebook.giraph.hive.HiveRecord;
 import com.facebook.giraph.hive.HiveTableSchema;
 import com.facebook.giraph.hive.HiveTableSchemaAware;
 import com.facebook.giraph.hive.HiveTableSchemas;
+import com.facebook.giraph.hive.impl.input.HiveApiRecordReader;
 
 import java.io.IOException;
 
@@ -57,7 +57,7 @@ public class HiveVertexReader<I extends WritableComparable,
   public static final String REUSE_VERTEX_KEY = "giraph.hive.reuse.vertex";
 
   /** Underlying Hive RecordReader used */
-  private RecordReader<WritableComparable, HiveRecord> hiveRecordReader;
+  private HiveApiRecordReader hiveRecordReader;
   /** Schema for table in Hive */
   private HiveTableSchema tableSchema;
 
@@ -80,7 +80,7 @@ public class HiveVertexReader<I extends WritableComparable,
    *
    * @return RecordReader from Hive.
    */
-  public RecordReader<WritableComparable, HiveRecord> getHiveRecordReader() {
+  public HiveApiRecordReader getHiveRecordReader() {
     return hiveRecordReader;
   }
 
@@ -89,8 +89,7 @@ public class HiveVertexReader<I extends WritableComparable,
    *
    * @param hiveRecordReader RecordReader to read from Hive.
    */
-  public void setHiveRecordReader(
-      RecordReader<WritableComparable, HiveRecord> hiveRecordReader) {
+  public void setHiveRecordReader(HiveApiRecordReader hiveRecordReader) {
     this.hiveRecordReader = hiveRecordReader;
   }
 
@@ -118,7 +117,7 @@ public class HiveVertexReader<I extends WritableComparable,
     throws IOException, InterruptedException {
     hiveRecordReader.initialize(inputSplit, context);
     conf = new ImmutableClassesGiraphConfiguration(context.getConfiguration());
-    instantiateHiveToVertexFromConf();
+    instantiateHiveToVertexValueFromConf();
     instantiateHiveToVertexEdgesFromConf();
     if (conf.getBoolean(REUSE_VERTEX_KEY, false)) {
       vertexToReuse = conf.createVertex();
@@ -130,7 +129,7 @@ public class HiveVertexReader<I extends WritableComparable,
    *
    * @throws IOException if anything goes wrong reading from Configuration.
    */
-  private void instantiateHiveToVertexFromConf() throws IOException {
+  private void instantiateHiveToVertexValueFromConf() throws IOException {
     Class<? extends HiveToVertexValue> klass = conf.getClass(HIVE_TO_VERTEX_KEY,
         null, HiveToVertexValue.class);
     if (klass == null) {

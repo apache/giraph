@@ -35,6 +35,7 @@ import com.facebook.giraph.hive.HiveTableSchemas;
 import com.facebook.giraph.hive.impl.HiveApiRecord;
 
 import java.io.IOException;
+import java.util.Collections;
 
 /**
  * Vertex writer using Hive.
@@ -124,7 +125,8 @@ public class HiveVertexWriter<I extends WritableComparable, V extends Writable,
   @Override
   public void writeVertex(Vertex<I, V, E, ?> vertex)
     throws IOException, InterruptedException {
-    HiveRecord record = new HiveApiRecord(tableSchema.numColumns());
+    HiveRecord record = new HiveApiRecord(tableSchema.numColumns(),
+        Collections.<String>emptyList());
     vertexToHive.fillRecord(vertex, record);
     hiveRecordWriter.write(NullWritable.get(), record);
   }

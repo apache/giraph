@@ -51,8 +51,8 @@ public interface HiveToVertexEdges<I extends WritableComparable,
     /** Singleton */
     private static final Empty INSTANCE = new Empty();
 
-    /** Don't construct */
-    private Empty() { }
+    /** Don't construct, allow inheritance */
+    protected Empty() { }
 
     /**
      * Get singleton instance
@@ -60,7 +60,8 @@ public interface HiveToVertexEdges<I extends WritableComparable,
      */
     public static Empty get() { return INSTANCE; }
 
-    @Override public Iterable getEdges(HiveReadableRecord record) {
+    @Override
+    public Iterable getEdges(HiveReadableRecord record) {
       return Collections.emptyList();
     }
   }

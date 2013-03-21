@@ -66,17 +66,17 @@ public class HiveEdgeInputFormat<I extends WritableComparable,
     throws IOException {
     Configuration conf = context.getConfiguration();
 
-    RecordReader<WritableComparable, HiveRecord> baseReader;
     HiveEdgeReader<I, E> reader = new HiveEdgeReader<I, E>();
     reader.setTableSchema(hiveInputFormat.getTableSchema(conf));
 
+    RecordReader<WritableComparable, HiveRecord> baseReader;
     try {
       baseReader = hiveInputFormat.createRecordReader(split, context);
-      reader.setHiveRecordReader(baseReader);
-      reader.initialize(split, context);
     } catch (InterruptedException e) {
       throw new IllegalStateException("Could not create edge record reader", e);
     }
+
+    reader.setHiveRecordReader(baseReader);
     return reader;
   }
 }

@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-575: update hive-io (nitay)
+
   GIRAPH-576: BspServiceMaster.failureCleanup() shouldn't pass null in
               observers' applicationFailed() method (jgarms via nitay)
 

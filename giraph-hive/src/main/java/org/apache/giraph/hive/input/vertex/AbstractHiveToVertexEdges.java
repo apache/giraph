@@ -21,6 +21,7 @@ import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
+import com.facebook.giraph.hive.HiveTableSchema;
 import com.facebook.giraph.hive.HiveTableSchemaAware;
 
 /**
@@ -34,4 +35,15 @@ import com.facebook.giraph.hive.HiveTableSchemaAware;
 public abstract class AbstractHiveToVertexEdges<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
     extends DefaultImmutableClassesGiraphConfigurable<I, V, E, M>
-    implements HiveTableSchemaAware, HiveToVertexEdges<I, E> { }
+    implements HiveTableSchemaAware, HiveToVertexEdges<I, E> {
+  /** Schema stored here */
+  private HiveTableSchema tableSchema;
+
+  @Override public void setTableSchema(HiveTableSchema tableSchema) {
+    this.tableSchema = tableSchema;
+  }
+
+  @Override public HiveTableSchema getTableSchema() {
+    return tableSchema;
+  }
+}
