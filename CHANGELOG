@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-576: BspServiceMaster.failureCleanup() shouldn't pass null in
+              observers' applicationFailed() method (jgarms via nitay)
+
   GIRAPH-547: Allow in-place modification of edges (apresta)
 
   GIRAPH-537: Fix log messages produced by aggregators (majakabiljo)
