@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-510: Remove HBase Cruft (kelarini via nitay)
+
   GIRAPH-566: Make option for aggregators to be configurable (majakabiljo)
 
   GIRAPH-575: update hive-io (nitay)

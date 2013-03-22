@@ -29,8 +29,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.client.Get;
@@ -51,6 +53,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.UUID;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -65,7 +68,7 @@ public class TestHBaseRootMarkerVertextFormat extends BspCase {
      *
      * @param testName name of the test case
      */
-    private HBaseTestingUtility testUtil = new HBaseTestingUtility();
+
     private final Logger log = Logger.getLogger(TestHBaseRootMarkerVertextFormat.class);
 
     private final String TABLE_NAME = "simple_graph";
@@ -73,12 +76,33 @@ public class TestHBaseRootMarkerVertextFormat extends BspCase {
     private final String QUALIFER = "children";
     private final String OUTPUT_FIELD = "parent";
 
+    private HBaseTestingUtility testUtil;
+    private Path hbaseRootdir;
+
+
     public TestHBaseRootMarkerVertextFormat() {
         super(TestHBaseRootMarkerVertextFormat.class.getName());
+
+        // Let's set up the hbase root directory.
+        Configuration conf = HBaseConfiguration.create();
+        try {
+            FileSystem fs = FileSystem.get(conf);
+            String randomStr = UUID.randomUUID().toString();
+            String tmpdir = System.getProperty("java.io.tmpdir") +
+                randomStr + "/";
+            hbaseRootdir = fs.makeQualified(new Path(tmpdir));
+            conf.set(HConstants.HBASE_DIR, hbaseRootdir.toString());
+            fs.mkdirs(hbaseRootdir);
+        } catch(IOException ioe) {
+            fail("Could not create hbase root directory.");
+        }
+
+        // Start the test utility.
+        testUtil = new HBaseTestingUtility(conf);
     }
 
     @Test
-    public void testHBaseInputOutput() throws Exception{
+    public void testHBaseInputOutput() throws Exception {
 
         if (System.getProperty("prop.mapred.job.tracker") != null) {
             if(log.isInfoEnabled())
@@ -93,7 +117,7 @@ public class TestHBaseRootMarkerVertextFormat extends BspCase {
                     "Make sure you built the main Giraph artifact?.");
         }
 
-        String INPUT_FILE = "graph.csv";
+        String INPUT_FILE = hbaseRootdir.toString() + "/graph.csv";
         //First let's load some data using ImportTsv into our mock table.
         String[] args = new String[] {
                 "-Dimporttsv.columns=HBASE_ROW_KEY,cf:"+QUALIFER,
@@ -102,17 +126,23 @@ public class TestHBaseRootMarkerVertextFormat extends BspCase {
                 INPUT_FILE
         };
 
-        MiniZooKeeperCluster zkCluster = testUtil.startMiniZKCluster();
-        MiniHBaseCluster cluster = testUtil.startMiniHBaseCluster(2, 2);        
-
-        GenericOptionsParser opts =
-                new GenericOptionsParser(cluster.getConfiguration(), args);
-        Configuration conf = opts.getConfiguration();
-        args = opts.getRemainingArgs();
+        MiniHBaseCluster cluster = null;
+        MiniZooKeeperCluster zkCluster = null;
+        FileSystem fs = null;
 
         try {
+            // using the restart method allows us to avoid having the hbase
+            // root directory overwritten by /home/$username
+            zkCluster = testUtil.startMiniZKCluster();
+            testUtil.restartHBaseCluster(2);
+            cluster = testUtil.getMiniHBaseCluster();
 
-            FileSystem fs = FileSystem.get(conf);
+            GenericOptionsParser opts =
+                    new GenericOptionsParser(cluster.getConfiguration(), args);
+            Configuration conf = opts.getConfiguration();
+            args = opts.getRemainingArgs();
+
+            fs = FileSystem.get(conf);
             FSDataOutputStream op = fs.create(new Path(INPUT_FILE), true);
             String line1 = "0001,0002\n";
             String line2 = "0002,0004\n";
@@ -132,8 +162,7 @@ public class TestHBaseRootMarkerVertextFormat extends BspCase {
             HTableDescriptor desc = new HTableDescriptor(TAB);
             desc.addFamily(new HColumnDescriptor(FAM));
             HBaseAdmin hbaseAdmin=new HBaseAdmin(conf);
-            if (hbaseAdmin.isTableAvailable(TABLE_NAME))
-            {
+            if (hbaseAdmin.isTableAvailable(TABLE_NAME)) {
             	hbaseAdmin.disableTable(TABLE_NAME);
             	hbaseAdmin.deleteTable(TABLE_NAME);
             }
@@ -171,10 +200,17 @@ public class TestHBaseRootMarkerVertextFormat extends BspCase {
             assertNotNull(parentBytes);
             assertTrue(parentBytes.length > 0);
             Assert.assertEquals("0001", Bytes.toString(parentBytes));
-
         }   finally {
-            cluster.shutdown();
-            zkCluster.shutdown();
+            if (cluster != null) {
+                cluster.shutdown();
+            }
+            if (zkCluster != null) {
+                zkCluster.shutdown();
+            }
+            // clean test files
+            if (fs != null) {
+                fs.delete(hbaseRootdir);
+            }
         }
     }
 
