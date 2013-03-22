@@ -680,8 +680,10 @@ public class HiveGiraphRunner implements Tool {
       LOG.info(LOG_PREFIX + "-outputPartition=\"" +
           hiveOutputDescription.getPartitionValues() + "\"");
     }
-    LOG.info(LOG_PREFIX + "-outputFormatClass=" +
-        classes.getVertexOutputFormatClass().getCanonicalName());
+    if (classes.getVertexOutputFormatClass() != null) {
+      LOG.info(LOG_PREFIX + "-outputFormatClass=" +
+          classes.getVertexOutputFormatClass().getCanonicalName());
+    }
 
     LOG.info(LOG_PREFIX + "-workers=" + workers);
   }

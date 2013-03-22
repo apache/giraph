@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-580: NPE in HiveGiraphRunner when the vertex output format is
+  not defined (aching)
+
   GIRAPH-510: Remove HBase Cruft (kelarini via nitay)
 
   GIRAPH-566: Make option for aggregators to be configurable (majakabiljo)
