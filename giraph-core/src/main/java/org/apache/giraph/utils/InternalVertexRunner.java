@@ -126,6 +126,7 @@ public class InternalVertexRunner {
       GiraphConfiguration conf = job.getConfiguration();
       conf.setVertexClass(classes.getVertexClass());
       conf.setVertexEdgesClass(classes.getVertexEdgesClass());
+      conf.setVertexValueFactoryClass(classes.getVertexValueFactoryClass());
       if (classes.hasVertexInputFormat()) {
         conf.setVertexInputFormatClass(classes.getVertexInputFormatClass());
       }

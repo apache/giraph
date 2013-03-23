@@ -18,19 +18,20 @@
 
 package org.apache.giraph.vertex;
 
+import org.apache.giraph.combiner.Combiner;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.ByteArrayEdges;
 import org.apache.giraph.edge.VertexEdges;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat;
-import org.apache.giraph.combiner.Combiner;
 import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.job.GiraphConfigurationValidator;
+import org.apache.giraph.graph.VertexValueFactory;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.giraph.io.formats.GeneratedVertexInputFormat;
 import org.apache.giraph.io.formats.JsonBase64VertexInputFormat;
 import org.apache.giraph.io.formats.JsonBase64VertexOutputFormat;
+import org.apache.giraph.job.GiraphConfigurationValidator;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
@@ -102,6 +103,23 @@ public class TestVertexTypes {
       @Override
       public DoubleWritable createInitialMessage() {
         return null;
+      }
+    }
+
+    /**
+     * Mismatches the {@link GeneratedVertexMatch}
+     */
+    private static class GeneratedVertexMismatchValueFactory implements
+        VertexValueFactory<DoubleWritable> {
+
+      @Override
+      public void initialize(
+          ImmutableClassesGiraphConfiguration<?, DoubleWritable, ?, ?>
+              configuration) {}
+
+      @Override
+      public DoubleWritable createVertexValue() {
+        return new DoubleWritable();
       }
     }
 
@@ -220,6 +238,27 @@ public class TestVertexTypes {
       @SuppressWarnings("rawtypes")
       GiraphConfigurationValidator<?, ?, ?, ?> validator =
         new GiraphConfigurationValidator(conf);
+      validator.validateConfiguration();
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testMismatchingVertexValueFactory() throws SecurityException,
+        NoSuchMethodException, NoSuchFieldException {
+      Configuration conf = getDefaultTestConf() ;
+      conf.setClass(GiraphConstants.VERTEX_CLASS,
+          GeneratedVertexMatch.class, Vertex.class);
+      conf.setClass(GiraphConstants.VERTEX_EDGES_CLASS,
+          ByteArrayEdges.class,
+          VertexEdges.class);
+      conf.setClass(GiraphConstants.VERTEX_INPUT_FORMAT_CLASS,
+          SimpleSuperstepVertexInputFormat.class,
+          VertexInputFormat.class);
+      conf.setClass(GiraphConstants.VERTEX_VALUE_FACTORY_CLASS,
+          GeneratedVertexMismatchValueFactory.class,
+          VertexValueFactory.class);
+      @SuppressWarnings("rawtypes")
+      GiraphConfigurationValidator<?, ?, ?, ?> validator =
+          new GiraphConfigurationValidator(conf);
       validator.validateConfiguration();
     }
 

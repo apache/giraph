@@ -24,6 +24,7 @@ import org.apache.giraph.edge.ReusableEdge;
 import org.apache.giraph.edge.ReuseObjectsVertexEdges;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.VertexResolver;
+import org.apache.giraph.graph.VertexValueFactory;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
@@ -68,6 +69,8 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
     extends GiraphConfiguration {
   /** Holder for all the classes */
   private final GiraphClasses classes;
+  /** Vertex value factory. */
+  private final VertexValueFactory<V> vertexValueFactory;
 
   /**
    * Use unsafe serialization? Cached for fast access to instantiate the
@@ -86,6 +89,19 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
     classes = new GiraphClasses(conf);
     useUnsafeSerialization = getBoolean(USE_UNSAFE_SERIALIZATION,
         USE_UNSAFE_SERIALIZATION_DEFAULT);
+    try {
+      vertexValueFactory = (VertexValueFactory<V>)
+          classes.getVertexValueFactoryClass().newInstance();
+    } catch (InstantiationException e) {
+      throw new IllegalArgumentException(
+          "ImmutableClassesGiraphConfiguration: Failed to instantiate class " +
+              classes.getVertexValueFactoryClass(), e);
+    } catch (IllegalAccessException e) {
+      throw new IllegalArgumentException(
+          "ImmutableClassesGiraphConfiguration: Illegally accessed class " +
+              classes.getVertexValueFactoryClass(), e);
+    }
+    vertexValueFactory.initialize(this);
   }
 
   /**
@@ -403,20 +419,16 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    */
   @SuppressWarnings("unchecked")
   public V createVertexValue() {
-    Class<V> klass = getVertexValueClass();
-    if (klass == NullWritable.class) {
-      return (V) NullWritable.get();
-    } else {
-      try {
-        return klass.newInstance();
-      } catch (InstantiationException e) {
-        throw new IllegalArgumentException(
-            "createVertexValue: Failed to instantiate", e);
-      } catch (IllegalAccessException e) {
-        throw new IllegalArgumentException(
-            "createVertexValue: Illegally accessed", e);
-      }
-    }
+    return vertexValueFactory.createVertexValue();
+  }
+
+  /**
+   * Get the user's subclassed vertex value factory class
+   *
+   * @return User's vertex value factory class
+   */
+  public Class<? extends VertexValueFactory<V>> getVertexValueFactoryClass() {
+    return classes.getVertexValueFactoryClass();
   }
 
   /**

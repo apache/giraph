@@ -22,6 +22,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import org.apache.giraph.BspCase;
 import org.apache.giraph.conf.GiraphClasses;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.graph.VertexValueFactory;
 import org.apache.giraph.io.formats.IdWithValueTextOutputFormat;
 import org.apache.giraph.io.formats.IntIntTextVertexValueInputFormat;
 import org.apache.giraph.io.formats.IntNullReverseTextEdgeInputFormat;
@@ -152,6 +154,15 @@ public class TestEdgeInput extends BspCase {
     // A vertex with edges but no initial value should have the default value
     assertEquals(0, (int) values.get(5));
 
+    // Run a job with a custom VertexValueFactory
+    classes.setVertexValueFactoryClass(TestVertexValueFactory.class);
+    results = InternalVertexRunner.run(classes, emptyParams,
+        vertices, edges);
+    values = parseResults(results);
+    // A vertex with edges but no initial value should have been constructed
+    // by the custom factory
+    assertEquals(3, (int) values.get(5));
+
     classes = new GiraphClasses();
     classes.setVertexClass(TestVertexWithNumEdges.class);
     classes.setVertexEdgesClass(ByteArrayEdges.class);
@@ -186,6 +197,18 @@ public class TestEdgeInput extends BspCase {
     @Override
     public void compute(Iterable<NullWritable> messages) throws IOException {
       voteToHalt();
+    }
+  }
+
+  public static class TestVertexValueFactory
+      implements VertexValueFactory<IntWritable> {
+    @Override
+    public void initialize(ImmutableClassesGiraphConfiguration<?, IntWritable,
+        ?, ?> configuration) { }
+
+    @Override
+    public IntWritable createVertexValue() {
+      return new IntWritable(3);
     }
   }
 

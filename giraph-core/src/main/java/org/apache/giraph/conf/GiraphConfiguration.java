@@ -22,6 +22,7 @@ import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.combiner.Combiner;
 import org.apache.giraph.edge.VertexEdges;
 import org.apache.giraph.graph.VertexResolver;
+import org.apache.giraph.graph.VertexValueFactory;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
@@ -72,6 +73,17 @@ public class GiraphConfiguration extends Configuration
   public final void setVertexClass(
       Class<? extends Vertex> vertexClass) {
     setClass(VERTEX_CLASS, vertexClass, Vertex.class);
+  }
+
+  /**
+   * Set the vertex value factory class
+   *
+   * @param vertexValueFactoryClass Creates default vertex values
+   */
+  public final void setVertexValueFactoryClass(
+      Class<? extends VertexValueFactory> vertexValueFactoryClass) {
+    setClass(VERTEX_VALUE_FACTORY_CLASS, vertexValueFactoryClass,
+        VertexValueFactory.class);
   }
 
   /**

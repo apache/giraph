@@ -21,15 +21,17 @@ package org.apache.giraph.job;
 import org.apache.giraph.combiner.Combiner;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.edge.ByteArrayEdges;
+import org.apache.giraph.edge.VertexEdges;
 import org.apache.giraph.graph.DefaultVertexResolver;
+import org.apache.giraph.graph.DefaultVertexValueFactory;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexResolver;
+import org.apache.giraph.graph.VertexValueFactory;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.giraph.utils.ReflectionUtils;
-import org.apache.giraph.edge.ByteArrayEdges;
-import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.edge.VertexEdges;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -71,6 +73,8 @@ public class GiraphConfigurationValidator<I extends WritableComparable,
   private static final int EDGE_PARAM_EDGE_INPUT_FORMAT_INDEX = 1;
   /** E param vertex edges index in classList */
   private static final int EDGE_PARAM_VERTEX_EDGES_INDEX = 1;
+  /** V param vertex value factory index in classList */
+  private static final int VALUE_PARAM_VERTEX_VALUE_FACTORY_INDEX = 0;
 
   /** Vertex Index Type */
   private Type vertexIndexType;
@@ -118,6 +122,7 @@ public class GiraphConfigurationValidator<I extends WritableComparable,
     verifyVertexOutputFormatGenericTypes();
     verifyVertexResolverGenericTypes();
     verifyVertexCombinerGenericTypes();
+    verifyVertexValueFactoryGenericTypes();
   }
 
   /**
@@ -312,6 +317,26 @@ public class GiraphConfigurationValidator<I extends WritableComparable,
             "vertex - " + edgeValueType +
             ", vertex output format - " + classList.get(EDGE_PARAM_INDEX));
       }
+    }
+  }
+
+  /** Verify that the vertex value factory's type matches the job */
+  private void verifyVertexValueFactoryGenericTypes() {
+    Class<? extends VertexValueFactory<V>>
+        vvfClass = conf.getVertexValueFactoryClass();
+    if (DefaultVertexValueFactory.class.equals(vvfClass)) {
+      return;
+    }
+    List<Class<?>> classList = ReflectionUtils.getTypeArguments(
+        VertexValueFactory.class, vvfClass);
+    if (classList.get(VALUE_PARAM_VERTEX_VALUE_FACTORY_INDEX) != null &&
+        !vertexValueType.equals(
+            classList.get(VALUE_PARAM_VERTEX_VALUE_FACTORY_INDEX))) {
+      throw new IllegalArgumentException(
+          "checkClassTypes: Vertex value types don't match, " +
+              "vertex - " + vertexValueType +
+              ", vertex value factory - " +
+              classList.get(VALUE_PARAM_VERTEX_VALUE_FACTORY_INDEX));
     }
   }
 

@@ -30,6 +30,7 @@ import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.combiner.Combiner;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
+import org.apache.giraph.graph.VertexValueFactory;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
@@ -80,6 +81,8 @@ public final class ConfigurationUtils {
     OPTIONS.addOption("mc", "masterCompute", true, "MasterCompute class");
     OPTIONS.addOption("cf", "cacheFile", true, "Files for distributed cache");
     OPTIONS.addOption("pc", "partitionClass", true, "Partition class");
+    OPTIONS.addOption("vvf", "vertexValueFactoryClass", true,
+        "Vertex value factory class");
     OPTIONS.addOption("ca", "customArguments", true, "provide custom" +
         " arguments for the job configuration in the form:" +
         " -ca <param1>=<value1>,<param2>=<value2> -ca <param3>=<value3> etc." +
@@ -249,6 +252,11 @@ public final class ConfigurationUtils {
       giraphConfiguration.setPartitionClass(
           (Class<? extends Partition>)
               Class.forName(cmd.getOptionValue("pc")));
+    }
+    if (cmd.hasOption("vvf")) {
+      giraphConfiguration.setVertexValueFactoryClass(
+          (Class<? extends VertexValueFactory>)
+              Class.forName(cmd.getOptionValue("vvf")));
     }
     if (cmd.hasOption("ca")) {
       for (String caOptionValue : cmd.getOptionValues("ca")) {
