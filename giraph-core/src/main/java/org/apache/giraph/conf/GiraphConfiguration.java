@@ -751,4 +751,24 @@ public class GiraphConfiguration extends Configuration
         get(GiraphConstants.DNS_INTERFACE, "default"),
         get(GiraphConstants.DNS_NAMESERVER, "default"));
   }
+
+  /**
+   * Set the maximum number of supersteps of this application.  After this
+   * many supersteps are executed, the application will shutdown.
+   *
+   * @param maxNumberOfSupersteps Maximum number of supersteps
+   */
+  public void setMaxNumberOfSupersteps(int maxNumberOfSupersteps) {
+    setInt(MAX_NUMBER_OF_SUPERSTEPS, maxNumberOfSupersteps);
+  }
+
+  /**
+   * Get the maximum number of supersteps of this application.  After this
+   * many supersteps are executed, the application will shutdown.
+   *
+   * @return Maximum number of supersteps
+   */
+  public int getMaxNumberOfSupersteps() {
+    return getInt(MAX_NUMBER_OF_SUPERSTEPS, MAX_NUMBER_OF_SUPERSTEPS_DEFAULT);
+  }
 }

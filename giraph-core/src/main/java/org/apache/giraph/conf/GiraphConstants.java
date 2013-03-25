@@ -684,5 +684,14 @@ public interface GiraphConstants {
   String DNS_INTERFACE = "giraph.dns.interface";
   /** Server for hostname resolution */
   String DNS_NAMESERVER = "giraph.dns.nameserver";
+
+  /**
+   * The application will halt after this many supersteps is completed.  For
+   * instance, if it is set to 3, the application will run at most 0, 1,
+   * and 2 supersteps and then go into the shutdown superstep.
+   */
+  String MAX_NUMBER_OF_SUPERSTEPS = "giraph.maxNumberOfSupersteps";
+  /** By default, the number of supersteps is not limited */
+  int MAX_NUMBER_OF_SUPERSTEPS_DEFAULT = -1;
 }
 // CHECKSTYLE: resume InterfaceIsTypeCheck

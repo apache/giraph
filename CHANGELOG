@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-582: Create a generic option for determining the number of
+  supersteps that a job runs for (aching)
+
   GIRAPH-586: Customizable default vertex value (apresta)
 
   GIRAPH-580: NPE in HiveGiraphRunner when the vertex output format is

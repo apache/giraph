@@ -135,6 +135,8 @@ public class BspServiceMaster<I extends WritableComparable,
   private final int maxWorkers;
   /** Min number of workers */
   private final int minWorkers;
+  /** Max number of supersteps */
+  private final int maxNumberOfSupersteps;
   /** Min % responded workers */
   private final float minPercentResponded;
   /** Msecs to wait for an event */
@@ -196,8 +198,9 @@ public class BspServiceMaster<I extends WritableComparable,
 
     ImmutableClassesGiraphConfiguration<I, V, E, M> conf = getConfiguration();
 
-    maxWorkers = conf.getInt(GiraphConstants.MAX_WORKERS, -1);
-    minWorkers = conf.getInt(GiraphConstants.MIN_WORKERS, -1);
+    maxWorkers = conf.getMaxWorkers();
+    minWorkers = conf.getMinWorkers();
+    maxNumberOfSupersteps = conf.getMaxNumberOfSupersteps();
     minPercentResponded = conf.getFloat(
         GiraphConstants.MIN_PERCENT_RESPONDED, 100.0f);
     eventWaitMsecs = conf.getEventWaitMsecs();
@@ -1514,6 +1517,18 @@ public class BspServiceMaster<I extends WritableComparable,
         (globalStats.getFinishedVertexCount() ==
         globalStats.getVertexCount() &&
         globalStats.getMessageCount() == 0)) {
+      globalStats.setHaltComputation(true);
+    }
+
+    // If we have completed the maximum number of supersteps, stop
+    // the computation
+    if (maxNumberOfSupersteps !=
+        GiraphConstants.MAX_NUMBER_OF_SUPERSTEPS_DEFAULT &&
+        (getSuperstep() == maxNumberOfSupersteps - 1)) {
+      if (LOG.isInfoEnabled()) {
+        LOG.info("coordinateSuperstep: Finished " + maxNumberOfSupersteps +
+            " supersteps (max specified by the user), halting");
+      }
       globalStats.setHaltComputation(true);
     }
 
