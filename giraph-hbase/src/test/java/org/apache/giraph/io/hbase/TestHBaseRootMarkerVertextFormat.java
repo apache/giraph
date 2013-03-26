@@ -88,7 +88,7 @@ public class TestHBaseRootMarkerVertextFormat extends BspCase {
         try {
             FileSystem fs = FileSystem.get(conf);
             String randomStr = UUID.randomUUID().toString();
-            String tmpdir = System.getProperty("java.io.tmpdir") +
+            String tmpdir = System.getProperty("java.io.tmpdir") + "/" +
                 randomStr + "/";
             hbaseRootdir = fs.makeQualified(new Path(tmpdir));
             conf.set(HConstants.HBASE_DIR, hbaseRootdir.toString());
