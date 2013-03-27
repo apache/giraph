@@ -22,10 +22,12 @@ import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import com.facebook.giraph.hive.HiveWritableRecord;
+import com.facebook.giraph.hive.HiveRecord;
+
+import java.io.IOException;
 
 /**
- * Interface for writing vertices to a Hive record.
+ * Interface for writing vertices to Hive.
  *
  * @param <I> Vertex ID
  * @param <V> Vertex Value
@@ -34,10 +36,20 @@ import com.facebook.giraph.hive.HiveWritableRecord;
 public interface VertexToHive<I extends WritableComparable, V extends Writable,
     E extends Writable> {
   /**
-   * Fill the HiveRecord from the Vertex given.
+   * Save vertex to the output. One vertex can be stored to multiple rows in
+   * the output.
    *
-   * @param vertex Vertex to read from.
-   * @param record HiveRecord to write to.
+   * Record you get here is reusable, and the protocol to follow is:
+   * - fill the reusableRecord with your data
+   * - call recordSaver.save(reusableRecord)
+   * - repeat
+   * If you don't call save() at all then there won't be any output for this
+   * vertex.
+   *
+   * @param vertex Vertex which we want to save.
+   * @param reusableRecord Record to use for writing data to it.
+   * @param recordSaver Saver of records
    */
-  void fillRecord(Vertex<I, V, E, ?> vertex, HiveWritableRecord record);
+  void saveVertex(Vertex<I, V, E, ?> vertex, HiveRecord reusableRecord,
+      HiveRecordSaver recordSaver) throws IOException, InterruptedException;
 }

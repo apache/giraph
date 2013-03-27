@@ -45,7 +45,7 @@ import java.util.Collections;
  * @param <E> Edge Value
  */
 public class HiveVertexWriter<I extends WritableComparable, V extends Writable,
-    E extends Writable> implements VertexWriter<I, V, E> {
+    E extends Writable> implements VertexWriter<I, V, E>, HiveRecordSaver {
   /** Key in configuration for VertexToHive class */
   public static final String VERTEX_TO_HIVE_KEY = "giraph.vertex.to.hive.class";
 
@@ -56,6 +56,9 @@ public class HiveVertexWriter<I extends WritableComparable, V extends Writable,
   private RecordWriter<WritableComparable, HiveRecord>  hiveRecordWriter;
   /** Schema for table in Hive */
   private HiveTableSchema tableSchema;
+
+  /** Reusable {@link HiveRecord} */
+  private HiveRecord reusableRecord;
 
   /** Configuration */
   private ImmutableClassesGiraphConfiguration<I, V, E, ?> conf;
@@ -98,6 +101,8 @@ public class HiveVertexWriter<I extends WritableComparable, V extends Writable,
    */
   public void setTableSchema(HiveTableSchema tableSchema) {
     this.tableSchema = tableSchema;
+    reusableRecord = new HiveApiRecord(tableSchema.numColumns(),
+        Collections.<String>emptyList());
   }
 
   @Override
@@ -125,15 +130,17 @@ public class HiveVertexWriter<I extends WritableComparable, V extends Writable,
   @Override
   public void writeVertex(Vertex<I, V, E, ?> vertex)
     throws IOException, InterruptedException {
-    HiveRecord record = new HiveApiRecord(tableSchema.numColumns(),
-        Collections.<String>emptyList());
-    vertexToHive.fillRecord(vertex, record);
-    hiveRecordWriter.write(NullWritable.get(), record);
+    vertexToHive.saveVertex(vertex, reusableRecord, this);
   }
 
   @Override
   public void close(TaskAttemptContext context)
     throws IOException, InterruptedException {
     hiveRecordWriter.close(context);
+  }
+
+  @Override
+  public void save(HiveRecord record) throws IOException, InterruptedException {
+    hiveRecordWriter.write(NullWritable.get(), record);
   }
 }

@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-581: More flexible Hive output (majakabiljo)
+
   GIRAPH-579: Make it possible to use different out-edges data structures
   for input and computation (apresta)
 

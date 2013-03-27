@@ -15,35 +15,46 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.giraph.hive.output;
 
-import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
+import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import com.facebook.giraph.hive.HiveTableSchema;
-import com.facebook.giraph.hive.HiveTableSchemaAware;
+import com.facebook.giraph.hive.HiveRecord;
+import com.facebook.giraph.hive.HiveWritableRecord;
+
+import java.io.IOException;
 
 /**
- * Base class for VertexToHive implementations
+ * Simple implementation of {@link VertexToHive} when each {@link Vertex} is
+ * stored to one row in the output.
  *
  * @param <I> Vertex ID
  * @param <V> Vertex Value
  * @param <E> Edge Value
  * @param <M> Message Value
  */
-public abstract class AbstractVertexToHive<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    extends DefaultImmutableClassesGiraphConfigurable<I, V, E, M>
-    implements HiveTableSchemaAware, VertexToHive<I, V, E> {
-  /** Schema stored here */
-  private HiveTableSchema tableSchema;
+public abstract class SimpleVertexToHive<I extends WritableComparable,
+    V extends Writable, E extends Writable, M extends Writable> extends
+    AbstractVertexToHive<I, V, E, M> {
 
-  @Override public void setTableSchema(HiveTableSchema tableSchema) {
-    this.tableSchema = tableSchema;
-  }
+  /**
+   * Fill the HiveRecord from the Vertex given.
+   *
+   * @param vertex Vertex to read from.
+   * @param record HiveRecord to write to.
+   */
+  public abstract void fillRecord(Vertex<I, V, E, ?> vertex,
+      HiveWritableRecord record);
 
-  @Override public HiveTableSchema getTableSchema() {
-    return tableSchema;
+  @Override
+  public final void saveVertex(
+      Vertex<I, V, E, ?> vertex,
+      HiveRecord reusableRecord,
+      HiveRecordSaver recordSaver) throws IOException, InterruptedException {
+    fillRecord(vertex, reusableRecord);
+    recordSaver.save(reusableRecord);
   }
 }
