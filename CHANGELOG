@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-597: Don't reuse vertex by default in SimpleHiveToVertex (majakabiljo)
+
   GIRAPH-588: More flexible Hive input (majakabiljo)
 
   GIRAPH-587: Refactor configuration options (nitay)

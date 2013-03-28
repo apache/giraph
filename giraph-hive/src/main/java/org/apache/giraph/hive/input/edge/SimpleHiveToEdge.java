@@ -18,6 +18,7 @@
 
 package org.apache.giraph.hive.input.edge;
 
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.io.iterables.EdgeWithSource;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -67,6 +68,12 @@ public abstract class SimpleHiveToEdge<I extends WritableComparable,
    * @return Edge value
    */
   public abstract E getEdgeValue(HiveReadableRecord hiveRecord);
+
+  @Override
+  public void setConf(ImmutableClassesGiraphConfiguration<I, V, E, M> conf) {
+    super.setConf(conf);
+    reusableEdge.setEdge(getConf().createReusableEdge());
+  }
 
   @Override
   public final void initializeRecords(Iterator<HiveRecord> records) {

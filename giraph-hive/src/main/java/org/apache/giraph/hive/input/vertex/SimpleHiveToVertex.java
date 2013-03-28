@@ -18,6 +18,8 @@
 
 package org.apache.giraph.hive.input.vertex;
 
+import org.apache.giraph.conf.BooleanConfOption;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.Writable;
@@ -40,11 +42,14 @@ import java.util.Iterator;
 public abstract class SimpleHiveToVertex<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
     extends AbstractHiveToVertex<I, V, E, M> {
+  /** Configuration option for whether to reuse vertex */
+  public static final BooleanConfOption REUSE_VERTEX_KEY =
+      new BooleanConfOption("giraph.hive.reuse.vertex", false);
   /** Hive records which we are reading from */
   private Iterator<HiveRecord> records;
 
   /** Reusable vertex object */
-  private Vertex<I, V, E, M> reusableVertex;
+  private Vertex<I, V, E, M> reusableVertex = null;
 
   /**
    * Read the Vertex's ID from the HiveRecord given.
@@ -71,9 +76,16 @@ public abstract class SimpleHiveToVertex<I extends WritableComparable,
   public abstract Iterable<Edge<I, E>> getEdges(HiveReadableRecord record);
 
   @Override
+  public void setConf(ImmutableClassesGiraphConfiguration<I, V, E, M> conf) {
+    super.setConf(conf);
+    if (REUSE_VERTEX_KEY.get(conf)) {
+      reusableVertex = getConf().createVertex();
+    }
+  }
+
+  @Override
   public void initializeRecords(Iterator<HiveRecord> records) {
     this.records = records;
-    reusableVertex = getConf().createVertex();
   }
 
   @Override
@@ -87,7 +99,11 @@ public abstract class SimpleHiveToVertex<I extends WritableComparable,
     I id = getVertexId(record);
     V value = getVertexValue(record);
     Iterable<Edge<I, E>> edges = getEdges(record);
-    reusableVertex.initialize(id, value, edges);
-    return reusableVertex;
+    Vertex<I, V, E, M> vertex = reusableVertex;
+    if (vertex == null) {
+      vertex = getConf().createVertex();
+    }
+    vertex.initialize(id, value, edges);
+    return vertex;
   }
 }
