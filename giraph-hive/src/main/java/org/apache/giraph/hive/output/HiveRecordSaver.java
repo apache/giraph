@@ -18,7 +18,7 @@
 
 package org.apache.giraph.hive.output;
 
-import com.facebook.giraph.hive.HiveRecord;
+import com.facebook.giraph.hive.record.HiveWritableRecord;
 
 import java.io.IOException;
 
@@ -33,5 +33,5 @@ public interface HiveRecordSaver {
    * @throws IOException
    * @throws InterruptedException
    */
-  void save(HiveRecord record) throws IOException, InterruptedException;
+  void save(HiveWritableRecord record) throws IOException, InterruptedException;
 }

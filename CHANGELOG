@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-593: Update Hive IO performance improvements (nitay)
+
   GIRAPH-594: auto set reusing objects (nitay)
 
   GIRAPH-597: Don't reuse vertex by default in SimpleHiveToVertex (majakabiljo)

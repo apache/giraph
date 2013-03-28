@@ -22,7 +22,7 @@ import org.apache.giraph.io.iterables.EdgeWithSource;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import com.facebook.giraph.hive.HiveRecord;
+import com.facebook.giraph.hive.record.HiveReadableRecord;
 
 import java.util.Iterator;
 
@@ -43,5 +43,5 @@ public interface HiveToEdge<I extends WritableComparable,
    *
    * @param records Hive records
    */
-  void initializeRecords(Iterator<HiveRecord> records);
+  void initializeRecords(Iterator<HiveReadableRecord> records);
 }

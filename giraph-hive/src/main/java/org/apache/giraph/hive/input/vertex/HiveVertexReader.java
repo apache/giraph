@@ -26,15 +26,17 @@ import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
-import com.facebook.giraph.hive.HiveRecord;
-import com.facebook.giraph.hive.HiveTableSchema;
-import com.facebook.giraph.hive.HiveTableSchemaAware;
-import com.facebook.giraph.hive.HiveTableSchemas;
-import com.facebook.giraph.hive.impl.input.HiveApiRecordReader;
+import com.facebook.giraph.hive.record.HiveReadableRecord;
+import com.facebook.giraph.hive.schema.HiveTableSchema;
+import com.facebook.giraph.hive.schema.HiveTableSchemaAware;
+import com.facebook.giraph.hive.schema.HiveTableSchemas;
 
 import java.io.IOException;
+
+import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_TO_VERTEX_CLASS;
 
 /**
  * VertexReader using Hive
@@ -47,11 +49,8 @@ import java.io.IOException;
 public class HiveVertexReader<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
     implements GiraphReader<Vertex<I, V, E, M>>, HiveTableSchemaAware {
-  /** Configuration key for {@link HiveToVertex} class */
-  public static final String HIVE_TO_VERTEX_KEY =
-      "giraph.hive.to.vertex.class";
   /** Underlying Hive RecordReader used */
-  private HiveApiRecordReader hiveRecordReader;
+  private RecordReader<WritableComparable, HiveReadableRecord> hiveRecordReader;
   /** Schema for table in Hive */
   private HiveTableSchema tableSchema;
 
@@ -69,7 +68,8 @@ public class HiveVertexReader<I extends WritableComparable,
    *
    * @return RecordReader from Hive.
    */
-  public HiveApiRecordReader getHiveRecordReader() {
+  public RecordReader<WritableComparable, HiveReadableRecord>
+  getHiveRecordReader() {
     return hiveRecordReader;
   }
 
@@ -78,7 +78,8 @@ public class HiveVertexReader<I extends WritableComparable,
    *
    * @param hiveRecordReader RecordReader to read from Hive.
    */
-  public void setHiveRecordReader(HiveApiRecordReader hiveRecordReader) {
+  public void setHiveRecordReader(
+      RecordReader<WritableComparable, HiveReadableRecord> hiveRecordReader) {
     this.hiveRecordReader = hiveRecordReader;
   }
 
@@ -105,14 +106,13 @@ public class HiveVertexReader<I extends WritableComparable,
   public void initialize(InputSplit inputSplit,
       TaskAttemptContext context) throws IOException, InterruptedException {
     hiveRecordReader.initialize(inputSplit, context);
-    conf = new ImmutableClassesGiraphConfiguration<I, V, E,
-        M>(context.getConfiguration());
-    Class<? extends HiveToVertex> klass = conf.getClass(HIVE_TO_VERTEX_KEY,
-        SimpleHiveToVertex.class, HiveToVertex.class);
+    conf = new ImmutableClassesGiraphConfiguration<I, V, E, M>(
+        context.getConfiguration());
+    Class<? extends HiveToVertex> klass = HIVE_TO_VERTEX_CLASS.get(conf);
     hiveToVertex = ReflectionUtils.newInstance(klass, conf);
     HiveTableSchemas.configure(hiveToVertex, tableSchema);
     hiveToVertex.initializeRecords(
-        new RecordReaderWrapper<HiveRecord>(hiveRecordReader));
+        new RecordReaderWrapper<HiveReadableRecord>(hiveRecordReader));
   }
 
   @Override

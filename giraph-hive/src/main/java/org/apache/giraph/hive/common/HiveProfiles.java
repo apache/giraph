@@ -26,9 +26,6 @@ public class HiveProfiles {
   public static final String VERTEX_INPUT_PROFILE_ID = "vertex_input_profile";
   /** name of edge input profile */
   public static final String EDGE_INPUT_PROFILE_ID = "edge_input_profile";
-  /** name of vertex value input profile */
-  public static final String VERTEX_VALUE_INPUT_PROFILE_ID =
-      "vertex_value_input_profile";
   /** Name of vertex output profile */
   public static final String VERTEX_OUTPUT_PROFILE_ID = "vertex_output_profile";
 

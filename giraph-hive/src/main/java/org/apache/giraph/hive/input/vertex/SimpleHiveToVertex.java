@@ -24,8 +24,7 @@ import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import com.facebook.giraph.hive.HiveReadableRecord;
-import com.facebook.giraph.hive.HiveRecord;
+import com.facebook.giraph.hive.record.HiveReadableRecord;
 
 import java.util.Iterator;
 
@@ -42,7 +41,7 @@ public abstract class SimpleHiveToVertex<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
     extends AbstractHiveToVertex<I, V, E, M> {
   /** Hive records which we are reading from */
-  private Iterator<HiveRecord> records;
+  private Iterator<HiveReadableRecord> records;
 
   /** Reusable vertex object */
   private Vertex<I, V, E, M> reusableVertex = null;
@@ -80,7 +79,7 @@ public abstract class SimpleHiveToVertex<I extends WritableComparable,
   }
 
   @Override
-  public void initializeRecords(Iterator<HiveRecord> records) {
+  public void initializeRecords(Iterator<HiveReadableRecord> records) {
     this.records = records;
   }
 
@@ -91,7 +90,7 @@ public abstract class SimpleHiveToVertex<I extends WritableComparable,
 
   @Override
   public Vertex<I, V, E, M> next() {
-    HiveRecord record = records.next();
+    HiveReadableRecord record = records.next();
     I id = getVertexId(record);
     V value = getVertexValue(record);
     Iterable<Edge<I, E>> edges = getEdges(record);

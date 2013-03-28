@@ -29,8 +29,8 @@ import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
-import com.facebook.giraph.hive.HiveRecord;
 import com.facebook.giraph.hive.output.HiveApiOutputFormat;
+import com.facebook.giraph.hive.record.HiveWritableRecord;
 
 import java.io.IOException;
 
@@ -60,7 +60,7 @@ public class HiveVertexOutputFormat<I extends WritableComparable,
     throws IOException, InterruptedException {
     Configuration conf = context.getConfiguration();
 
-    RecordWriter<WritableComparable, HiveRecord> baseWriter =
+    RecordWriter<WritableComparable, HiveWritableRecord> baseWriter =
         hiveOutputFormat.getRecordWriter(context);
     HiveVertexWriter writer = new HiveVertexWriter();
     writer.setBaseWriter(baseWriter);

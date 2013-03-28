@@ -27,10 +27,11 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
-import com.facebook.giraph.hive.impl.input.HiveApiRecordReader;
 import com.facebook.giraph.hive.input.HiveApiInputFormat;
+import com.facebook.giraph.hive.record.HiveReadableRecord;
 
 import java.io.IOException;
 import java.util.List;
@@ -71,7 +72,7 @@ public class HiveVertexInputFormat<I extends WritableComparable,
     HiveVertexReader<I, V, E, M> reader = new HiveVertexReader<I, V, E, M>();
     reader.setTableSchema(hiveInputFormat.getTableSchema(conf));
 
-    HiveApiRecordReader baseReader;
+    RecordReader<WritableComparable, HiveReadableRecord> baseReader;
     try {
       baseReader = hiveInputFormat.createRecordReader(split, context);
     } catch (InterruptedException e) {

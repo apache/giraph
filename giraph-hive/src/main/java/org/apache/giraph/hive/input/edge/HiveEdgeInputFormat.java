@@ -30,8 +30,8 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
-import com.facebook.giraph.hive.HiveRecord;
 import com.facebook.giraph.hive.input.HiveApiInputFormat;
+import com.facebook.giraph.hive.record.HiveReadableRecord;
 
 import java.io.IOException;
 import java.util.List;
@@ -70,7 +70,7 @@ public class HiveEdgeInputFormat<I extends WritableComparable,
     HiveEdgeReader<I, E> reader = new HiveEdgeReader<I, E>();
     reader.setTableSchema(hiveInputFormat.getTableSchema(conf));
 
-    RecordReader<WritableComparable, HiveRecord> baseReader;
+    RecordReader<WritableComparable, HiveReadableRecord> baseReader;
     try {
       baseReader = hiveInputFormat.createRecordReader(split, context);
     } catch (InterruptedException e) {

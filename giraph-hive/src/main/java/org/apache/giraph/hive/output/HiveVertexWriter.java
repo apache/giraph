@@ -29,13 +29,14 @@ import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.log4j.Logger;
 
-import com.facebook.giraph.hive.HiveRecord;
-import com.facebook.giraph.hive.HiveTableSchema;
-import com.facebook.giraph.hive.HiveTableSchemas;
-import com.facebook.giraph.hive.impl.HiveApiRecord;
+import com.facebook.giraph.hive.input.parser.hive.DefaultRecord;
+import com.facebook.giraph.hive.record.HiveRecord;
+import com.facebook.giraph.hive.record.HiveWritableRecord;
+import com.facebook.giraph.hive.schema.HiveTableSchema;
+import com.facebook.giraph.hive.schema.HiveTableSchemas;
 
 import java.io.IOException;
-import java.util.Collections;
+
 
 /**
  * Vertex writer using Hive.
@@ -53,7 +54,7 @@ public class HiveVertexWriter<I extends WritableComparable, V extends Writable,
   private static final Logger LOG = Logger.getLogger(HiveVertexWriter.class);
 
   /** Underlying Hive RecordWriter used */
-  private RecordWriter<WritableComparable, HiveRecord>  hiveRecordWriter;
+  private RecordWriter<WritableComparable, HiveWritableRecord> hiveRecordWriter;
   /** Schema for table in Hive */
   private HiveTableSchema tableSchema;
 
@@ -71,7 +72,7 @@ public class HiveVertexWriter<I extends WritableComparable, V extends Writable,
    *
    * @return RecordWriter for Hive.
    */
-  public RecordWriter<WritableComparable, HiveRecord> getBaseWriter() {
+  public RecordWriter<WritableComparable, HiveWritableRecord> getBaseWriter() {
     return hiveRecordWriter;
   }
 
@@ -81,7 +82,7 @@ public class HiveVertexWriter<I extends WritableComparable, V extends Writable,
    * @param hiveRecordWriter RecordWriter to write to Hive.
    */
   public void setBaseWriter(
-      RecordWriter<WritableComparable, HiveRecord> hiveRecordWriter) {
+      RecordWriter<WritableComparable, HiveWritableRecord> hiveRecordWriter) {
     this.hiveRecordWriter = hiveRecordWriter;
   }
 
@@ -101,8 +102,8 @@ public class HiveVertexWriter<I extends WritableComparable, V extends Writable,
    */
   public void setTableSchema(HiveTableSchema tableSchema) {
     this.tableSchema = tableSchema;
-    reusableRecord = new HiveApiRecord(tableSchema.numColumns(),
-        Collections.<String>emptyList());
+    reusableRecord = new DefaultRecord(tableSchema.numColumns(),
+        new String[0]);
   }
 
   @Override
@@ -140,7 +141,8 @@ public class HiveVertexWriter<I extends WritableComparable, V extends Writable,
   }
 
   @Override
-  public void save(HiveRecord record) throws IOException, InterruptedException {
+  public void save(HiveWritableRecord record) throws IOException,
+      InterruptedException {
     hiveRecordWriter.write(NullWritable.get(), record);
   }
 }

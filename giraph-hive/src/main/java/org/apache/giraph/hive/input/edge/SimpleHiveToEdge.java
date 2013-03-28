@@ -18,13 +18,11 @@
 
 package org.apache.giraph.hive.input.edge;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.io.iterables.EdgeWithSource;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import com.facebook.giraph.hive.HiveReadableRecord;
-import com.facebook.giraph.hive.HiveRecord;
+import com.facebook.giraph.hive.record.HiveReadableRecord;
 
 import java.util.Iterator;
 
@@ -41,7 +39,7 @@ public abstract class SimpleHiveToEdge<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
     extends AbstractHiveToEdge<I, V, E, M> {
   /** Iterator over input records */
-  private Iterator<HiveRecord> records;
+  private Iterator<HiveReadableRecord> records;
   /** Reusable {@link EdgeWithSource} object */
   private EdgeWithSource<I, E> reusableEdge = new EdgeWithSource<I, E>();
 
@@ -70,14 +68,9 @@ public abstract class SimpleHiveToEdge<I extends WritableComparable,
   public abstract E getEdgeValue(HiveReadableRecord hiveRecord);
 
   @Override
-  public void setConf(ImmutableClassesGiraphConfiguration<I, V, E, M> conf) {
-    super.setConf(conf);
-    reusableEdge.setEdge(getConf().createReusableEdge());
-  }
-
-  @Override
-  public final void initializeRecords(Iterator<HiveRecord> records) {
+  public final void initializeRecords(Iterator<HiveReadableRecord> records) {
     this.records = records;
+    reusableEdge.setEdge(getConf().createReusableEdge());
   }
 
   @Override
@@ -87,7 +80,7 @@ public abstract class SimpleHiveToEdge<I extends WritableComparable,
 
   @Override
   public EdgeWithSource<I, E> next() {
-    HiveRecord record = records.next();
+    HiveReadableRecord record = records.next();
     reusableEdge.setSourceVertexId(getSourceVertexId(record));
     reusableEdge.setTargetVertexId(getTargetVertexId(record));
     reusableEdge.setEdgeValue(getEdgeValue(record));

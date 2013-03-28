@@ -22,7 +22,7 @@ import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import com.facebook.giraph.hive.HiveRecord;
+import com.facebook.giraph.hive.record.HiveReadableRecord;
 
 import java.util.Iterator;
 
@@ -46,5 +46,5 @@ public interface HiveToVertex<I extends WritableComparable,
    *
    * @param records Hive records
    */
-  void initializeRecords(Iterator<HiveRecord> records);
+  void initializeRecords(Iterator<HiveReadableRecord> records);
 }

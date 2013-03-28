@@ -19,9 +19,9 @@
 package org.apache.giraph.hive.input.edge;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.hive.input.RecordReaderWrapper;
 import org.apache.giraph.io.iterables.EdgeWithSource;
 import org.apache.giraph.io.iterables.GiraphReader;
-import org.apache.giraph.hive.input.RecordReaderWrapper;
 import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -29,12 +29,14 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
-import com.facebook.giraph.hive.HiveRecord;
-import com.facebook.giraph.hive.HiveTableSchema;
-import com.facebook.giraph.hive.HiveTableSchemaAware;
-import com.facebook.giraph.hive.HiveTableSchemas;
+import com.facebook.giraph.hive.record.HiveReadableRecord;
+import com.facebook.giraph.hive.schema.HiveTableSchema;
+import com.facebook.giraph.hive.schema.HiveTableSchemaAware;
+import com.facebook.giraph.hive.schema.HiveTableSchemas;
 
 import java.io.IOException;
+
+import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_TO_EDGE_CLASS;
 
 /**
  * A reader for reading edges from Hive.
@@ -48,7 +50,7 @@ public class HiveEdgeReader<I extends WritableComparable, E extends Writable>
   public static final String HIVE_TO_EDGE_KEY = "giraph.hive.to.edge.class";
 
   /** Underlying Hive RecordReader used */
-  private RecordReader<WritableComparable, HiveRecord> hiveRecordReader;
+  private RecordReader<WritableComparable, HiveReadableRecord> hiveRecordReader;
   /** Schema for table in Hive */
   private HiveTableSchema tableSchema;
 
@@ -63,7 +65,8 @@ public class HiveEdgeReader<I extends WritableComparable, E extends Writable>
    *
    * @return RecordReader from Hive
    */
-  public RecordReader<WritableComparable, HiveRecord> getHiveRecordReader() {
+  public RecordReader<WritableComparable, HiveReadableRecord>
+  getHiveRecordReader() {
     return hiveRecordReader;
   }
 
@@ -73,7 +76,7 @@ public class HiveEdgeReader<I extends WritableComparable, E extends Writable>
    * @param hiveRecordReader RecordReader to read from Hive.
    */
   public void setHiveRecordReader(
-      RecordReader<WritableComparable, HiveRecord> hiveRecordReader) {
+      RecordReader<WritableComparable, HiveReadableRecord> hiveRecordReader) {
     this.hiveRecordReader = hiveRecordReader;
   }
 
@@ -103,7 +106,7 @@ public class HiveEdgeReader<I extends WritableComparable, E extends Writable>
     conf = new ImmutableClassesGiraphConfiguration(context.getConfiguration());
     instantiateHiveToEdgeFromConf();
     hiveToEdge.initializeRecords(
-        new RecordReaderWrapper<HiveRecord>(hiveRecordReader));
+        new RecordReaderWrapper<HiveReadableRecord>(hiveRecordReader));
   }
 
   /**
@@ -112,10 +115,9 @@ public class HiveEdgeReader<I extends WritableComparable, E extends Writable>
    * @throws IOException if anything goes wrong reading from Configuration
    */
   private void instantiateHiveToEdgeFromConf() throws IOException {
-    Class<? extends HiveToEdge> klass = conf.getClass(HIVE_TO_EDGE_KEY,
-        null, HiveToEdge.class);
+    Class<? extends HiveToEdge> klass = HIVE_TO_EDGE_CLASS.get(conf);
     if (klass == null) {
-      throw new IOException(HIVE_TO_EDGE_KEY + " not set in conf");
+      throw new IOException(HIVE_TO_EDGE_CLASS.getKey() + " not set in conf");
     }
     hiveToEdge = ReflectionUtils.newInstance(klass, conf);
     HiveTableSchemas.configure(hiveToEdge, tableSchema);
