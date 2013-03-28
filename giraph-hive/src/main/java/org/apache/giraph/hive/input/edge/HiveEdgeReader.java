@@ -19,9 +19,9 @@
 package org.apache.giraph.hive.input.edge;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.edge.Edge;
-import org.apache.giraph.edge.ReusableEdge;
-import org.apache.giraph.io.EdgeReader;
+import org.apache.giraph.io.iterables.EdgeWithSource;
+import org.apache.giraph.io.iterables.GiraphReader;
+import org.apache.giraph.hive.input.RecordReaderWrapper;
 import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -31,6 +31,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 import com.facebook.giraph.hive.HiveRecord;
 import com.facebook.giraph.hive.HiveTableSchema;
+import com.facebook.giraph.hive.HiveTableSchemaAware;
 import com.facebook.giraph.hive.HiveTableSchemas;
 
 import java.io.IOException;
@@ -42,11 +43,9 @@ import java.io.IOException;
  * @param <E> Edge Value
  */
 public class HiveEdgeReader<I extends WritableComparable, E extends Writable>
-    implements EdgeReader<I, E> {
+    implements GiraphReader<EdgeWithSource<I, E>>, HiveTableSchemaAware {
   /** Configuration key for edge creator class */
   public static final String HIVE_TO_EDGE_KEY = "giraph.hive.to.edge.class";
-  /** Configuration key for whether to reuse edge */
-  public static final String REUSE_EDGE_KEY = "giraph.hive.reuse.edge";
 
   /** Underlying Hive RecordReader used */
   private RecordReader<WritableComparable, HiveRecord> hiveRecordReader;
@@ -58,11 +57,6 @@ public class HiveEdgeReader<I extends WritableComparable, E extends Writable>
 
   /** User class to create edges from a HiveRecord */
   private HiveToEdge<I, E> hiveToEdge;
-  /**
-   * If we are reusing edges this will be the single edge to read into.
-   * Otherwise if it's null we will create a new edge each time.
-   */
-  private ReusableEdge<I, E> edgeToReuse = null;
 
   /**
    * Get underlying Hive record reader used.
@@ -83,20 +77,12 @@ public class HiveEdgeReader<I extends WritableComparable, E extends Writable>
     this.hiveRecordReader = hiveRecordReader;
   }
 
-  /**
-   * Get Hive table schema for table being read from.
-   *
-   * @return Hive table schema for table
-   */
+  @Override
   public HiveTableSchema getTableSchema() {
     return tableSchema;
   }
 
-  /**
-   * Set Hive schema for table being read from.
-   *
-   * @param tableSchema Hive table schema
-   */
+  @Override
   public void setTableSchema(HiveTableSchema tableSchema) {
     this.tableSchema = tableSchema;
   }
@@ -116,13 +102,12 @@ public class HiveEdgeReader<I extends WritableComparable, E extends Writable>
     hiveRecordReader.initialize(inputSplit, context);
     conf = new ImmutableClassesGiraphConfiguration(context.getConfiguration());
     instantiateHiveToEdgeFromConf();
-    if (conf.getBoolean(REUSE_EDGE_KEY, false)) {
-      edgeToReuse = conf.createReusableEdge();
-    }
+    hiveToEdge.initializeRecords(
+        new RecordReaderWrapper<HiveRecord>(hiveRecordReader));
   }
 
   /**
-   * Retrieve the user's HiveEdgeCreator from the Configuration.
+   * Retrieve the user's {@link HiveToEdge} from the Configuration.
    *
    * @throws IOException if anything goes wrong reading from Configuration
    */
@@ -137,11 +122,6 @@ public class HiveEdgeReader<I extends WritableComparable, E extends Writable>
   }
 
   @Override
-  public boolean nextEdge() throws IOException, InterruptedException {
-    return hiveRecordReader.nextKeyValue();
-  }
-
-  @Override
   public void close() throws IOException {
     hiveRecordReader.close();
   }
@@ -152,20 +132,17 @@ public class HiveEdgeReader<I extends WritableComparable, E extends Writable>
   }
 
   @Override
-  public I getCurrentSourceId() throws IOException, InterruptedException {
-    return hiveToEdge.getSourceVertexId(hiveRecordReader.getCurrentValue());
+  public boolean hasNext() {
+    return hiveToEdge.hasNext();
   }
 
   @Override
-  public Edge<I, E> getCurrentEdge() throws IOException,
-      InterruptedException {
-    HiveRecord record = hiveRecordReader.getCurrentValue();
-    ReusableEdge<I, E> edge = edgeToReuse;
-    if (edge == null) {
-      edge = conf.createReusableEdge();
-    }
-    edge.setValue(hiveToEdge.getEdgeValue(record));
-    edge.setTargetVertexId(hiveToEdge.getTargetVertexId(record));
-    return edge;
+  public EdgeWithSource<I, E> next() {
+    return hiveToEdge.next();
+  }
+
+  @Override
+  public void remove() {
+    hiveToEdge.remove();
   }
 }

@@ -19,6 +19,7 @@
 package org.apache.giraph.hive.input.edge;
 
 import org.apache.giraph.hive.common.HiveProfiles;
+import org.apache.giraph.io.iterables.EdgeReaderWrapper;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.EdgeReader;
 import org.apache.hadoop.conf.Configuration;
@@ -77,6 +78,6 @@ public class HiveEdgeInputFormat<I extends WritableComparable,
     }
 
     reader.setHiveRecordReader(baseReader);
-    return reader;
+    return new EdgeReaderWrapper<I, E>(reader);
   }
 }

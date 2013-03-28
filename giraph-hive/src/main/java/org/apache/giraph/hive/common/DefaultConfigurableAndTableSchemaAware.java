@@ -16,32 +16,37 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.hive.input.edge;
+package org.apache.giraph.hive.common;
 
-import org.apache.giraph.io.iterables.EdgeWithSource;
+import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import com.facebook.giraph.hive.HiveRecord;
-
-import java.util.Iterator;
+import com.facebook.giraph.hive.HiveTableSchema;
+import com.facebook.giraph.hive.HiveTableSchemaAware;
 
 /**
- * An interface used to create edges from Hive records.
- *
- * It gets initialized with HiveRecord iterator, and it needs to provide an
- * iterator over edges, so it's possible to skip some rows from the input,
- * combine several rows together, etc.
+ * Default implementation of {@link HiveTableSchemaAware} and
+ * {@link org.apache.giraph.conf.ImmutableClassesGiraphConfigurable}
  *
  * @param <I> Vertex ID
+ * @param <V> Vertex Value
  * @param <E> Edge Value
+ * @param <M> Message Value
  */
-public interface HiveToEdge<I extends WritableComparable,
-    E extends Writable> extends Iterator<EdgeWithSource<I, E>> {
-  /**
-   * Set the records which contain edge input data
-   *
-   * @param records Hive records
-   */
-  void initializeRecords(Iterator<HiveRecord> records);
+public class DefaultConfigurableAndTableSchemaAware<
+    I extends WritableComparable, V extends Writable, E extends Writable,
+    M extends Writable>
+    extends DefaultImmutableClassesGiraphConfigurable<I, V, E, M>
+    implements HiveTableSchemaAware {
+  /** Schema stored here */
+  private HiveTableSchema tableSchema;
+
+  @Override public void setTableSchema(HiveTableSchema tableSchema) {
+    this.tableSchema = tableSchema;
+  }
+
+  @Override public HiveTableSchema getTableSchema() {
+    return tableSchema;
+  }
 }

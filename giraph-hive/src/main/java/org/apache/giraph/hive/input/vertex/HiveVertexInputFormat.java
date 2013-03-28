@@ -21,6 +21,7 @@ package org.apache.giraph.hive.input.vertex;
 import org.apache.giraph.hive.common.HiveProfiles;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexReader;
+import org.apache.giraph.io.iterables.VertexReaderWrapper;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -67,7 +68,7 @@ public class HiveVertexInputFormat<I extends WritableComparable,
       TaskAttemptContext context) throws IOException {
     Configuration conf = context.getConfiguration();
 
-    HiveVertexReader reader = new HiveVertexReader();
+    HiveVertexReader<I, V, E, M> reader = new HiveVertexReader<I, V, E, M>();
     reader.setTableSchema(hiveInputFormat.getTableSchema(conf));
 
     HiveApiRecordReader baseReader;
@@ -78,6 +79,6 @@ public class HiveVertexInputFormat<I extends WritableComparable,
     }
 
     reader.setHiveRecordReader(baseReader);
-    return reader;
+    return new VertexReaderWrapper<I, V, E, M>(reader);
   }
 }

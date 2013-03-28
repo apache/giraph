@@ -18,32 +18,33 @@
 
 package org.apache.giraph.hive.input.vertex;
 
+import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import com.facebook.giraph.hive.HiveReadableRecord;
+import com.facebook.giraph.hive.HiveRecord;
+
+import java.util.Iterator;
 
 /**
- * Interface for creating vertices from a Hive record.
+ * An interface used to create vertices from Hive records.
+ *
+ * It gets initialized with HiveRecord iterator, and it needs to provide an
+ * iterator over vertices, so it's possible to skip some rows from the input,
+ * combine several rows together, etc.
  *
  * @param <I> Vertex ID
  * @param <V> Vertex Value
+ * @param <E> Edge Value
+ * @param <M> Message Value
  */
-public interface HiveToVertexValue<I extends WritableComparable,
-    V extends Writable> {
+public interface HiveToVertex<I extends WritableComparable,
+    V extends Writable, E extends Writable, M extends Writable> extends
+    Iterator<Vertex<I, V, E, M>> {
   /**
-   * Read the Vertex's ID from the HiveRecord given.
+   * Set the records which contain vertex input data
    *
-   * @param record HiveRecord to read from.
-   * @return Vertex ID
+   * @param records Hive records
    */
-  I getVertexId(HiveReadableRecord record);
-
-  /**
-   * Read the Vertex's Value from the HiveRecord given.
-   *
-   * @param record HiveRecord to read from.
-   * @return Vertex Value
-   */
-  V getVertexValue(HiveReadableRecord record);
+  void initializeRecords(Iterator<HiveRecord> records);
 }

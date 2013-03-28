@@ -15,35 +15,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.giraph.hive.input.vertex;
 
-import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
+import org.apache.giraph.edge.Edge;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import com.facebook.giraph.hive.HiveTableSchema;
-import com.facebook.giraph.hive.HiveTableSchemaAware;
+import com.facebook.giraph.hive.HiveReadableRecord;
+import com.google.common.collect.ImmutableList;
 
 /**
- * Base class for HiveToVertex implementations
+ * Simple implementation of {@link HiveToVertex} when each vertex is in the one
+ * row of the input, and there are no edges in vertex input.
  *
  * @param <I> Vertex ID
  * @param <V> Vertex Value
  * @param <E> Edge Value
  * @param <M> Message Value
  */
-public abstract class AbstractHiveToVertexValue<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    extends DefaultImmutableClassesGiraphConfigurable<I, V, E, M>
-    implements HiveTableSchemaAware, HiveToVertexValue<I, V> {
-  /** Schema stored here */
-  private HiveTableSchema tableSchema;
-
-  @Override public void setTableSchema(HiveTableSchema tableSchema) {
-    this.tableSchema = tableSchema;
-  }
-
-  @Override public HiveTableSchema getTableSchema() {
-    return tableSchema;
+public abstract class SimpleNoEdgesHiveToVertex<I extends WritableComparable,
+    V extends Writable, E extends Writable, M extends Writable> extends
+    SimpleHiveToVertex<I, V, E, M> {
+  @Override
+  public Iterable<Edge<I, E>> getEdges(HiveReadableRecord record) {
+    return ImmutableList.of();
   }
 }

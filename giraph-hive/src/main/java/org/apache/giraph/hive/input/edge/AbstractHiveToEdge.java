@@ -17,11 +17,9 @@
  */
 package org.apache.giraph.hive.input.edge;
 
-import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
+import org.apache.giraph.hive.common.DefaultConfigurableAndTableSchemaAware;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-
-import com.facebook.giraph.hive.HiveTableSchemaAware;
 
 /**
  * Base class for HiveToEdge implementations
@@ -33,5 +31,10 @@ import com.facebook.giraph.hive.HiveTableSchemaAware;
  */
 public abstract class AbstractHiveToEdge<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
-    extends DefaultImmutableClassesGiraphConfigurable<I, V, E, M>
-    implements HiveTableSchemaAware, HiveToEdge<I, E> { }
+    extends DefaultConfigurableAndTableSchemaAware<I, V, E, M>
+    implements HiveToEdge<I, E> {
+  @Override
+  public final void remove() {
+    throw new UnsupportedOperationException();
+  }
+}

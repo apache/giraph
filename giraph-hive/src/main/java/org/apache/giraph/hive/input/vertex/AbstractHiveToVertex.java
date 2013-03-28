@@ -15,35 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.giraph.hive.input.vertex;
 
-import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
+import org.apache.giraph.hive.common.DefaultConfigurableAndTableSchemaAware;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import com.facebook.giraph.hive.HiveTableSchema;
-import com.facebook.giraph.hive.HiveTableSchemaAware;
-
 /**
- * Base class for HiveToVertexEdges implementations
+ * Base class for HiveToVertex implementations
  *
  * @param <I> Vertex ID
  * @param <V> Vertex Value
  * @param <E> Edge Value
  * @param <M> Message Value
  */
-public abstract class AbstractHiveToVertexEdges<I extends WritableComparable,
+public abstract class AbstractHiveToVertex<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
-    extends DefaultImmutableClassesGiraphConfigurable<I, V, E, M>
-    implements HiveTableSchemaAware, HiveToVertexEdges<I, E> {
-  /** Schema stored here */
-  private HiveTableSchema tableSchema;
-
-  @Override public void setTableSchema(HiveTableSchema tableSchema) {
-    this.tableSchema = tableSchema;
-  }
-
-  @Override public HiveTableSchema getTableSchema() {
-    return tableSchema;
+    extends DefaultConfigurableAndTableSchemaAware<I, V, E, M>
+    implements HiveToVertex<I, V, E, M> {
+  @Override
+  public final void remove() {
+    throw new UnsupportedOperationException();
   }
 }

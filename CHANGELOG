@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-588: More flexible Hive input (majakabiljo)
+
   GIRAPH-587: Refactor configuration options (nitay)
 
   GIRAPH-581: More flexible Hive output (majakabiljo)
