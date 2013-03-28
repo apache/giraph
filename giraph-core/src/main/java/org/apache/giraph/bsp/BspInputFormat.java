@@ -50,14 +50,10 @@ public class BspInputFormat extends InputFormat<Text, Text> {
    */
   public static int getMaxTasks(Configuration conf) {
     int maxWorkers = conf.getInt(GiraphConstants.MAX_WORKERS, 0);
-    boolean splitMasterWorker =
-        conf.getBoolean(GiraphConstants.SPLIT_MASTER_WORKER,
-            GiraphConstants.SPLIT_MASTER_WORKER_DEFAULT);
+    boolean splitMasterWorker = GiraphConstants.SPLIT_MASTER_WORKER.get(conf);
     int maxTasks = maxWorkers;
     if (splitMasterWorker) {
-      int zkServers =
-          conf.getInt(GiraphConstants.ZOOKEEPER_SERVER_COUNT,
-              GiraphConstants.ZOOKEEPER_SERVER_COUNT_DEFAULT);
+      int zkServers = GiraphConstants.ZOOKEEPER_SERVER_COUNT.get(conf);
       maxTasks += zkServers;
     }
     if (LOG.isDebugEnabled()) {

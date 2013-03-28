@@ -209,7 +209,7 @@ public class PageRankBenchmark implements Tool {
     }
 
     LOG.info("Using edges class " +
-        configuration.get(GiraphConstants.VERTEX_EDGES_CLASS));
+        GiraphConstants.VERTEX_EDGES_CLASS.get(configuration));
     if (!cmd.hasOption('t') ||
         (Integer.parseInt(cmd.getOptionValue('t')) == 1)) {
       configuration.setVertexCombinerClass(DoubleSumCombiner.class);

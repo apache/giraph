@@ -24,7 +24,6 @@ import org.apache.giraph.comm.requests.RequestType;
 import org.apache.giraph.comm.requests.SaslCompleteRequest;
 import org.apache.giraph.comm.requests.SaslTokenMessageRequest;
 import org.apache.giraph.comm.requests.WritableRequest;
-import org.apache.giraph.conf.GiraphConstants;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.security.TokenCache;
@@ -44,6 +43,8 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.Collection;
+
+import static org.apache.giraph.conf.GiraphConstants.NETTY_SIMULATE_FIRST_REQUEST_CLOSED;
 
 /**
  * Generate SASL response tokens to client SASL tokens, allowing clients to
@@ -74,9 +75,7 @@ public class SaslServerHandler extends
       Configuration conf) throws IOException {
     SaslNettyServer.init(conf);
     setupSecretManager(conf);
-    closeFirstRequest = conf.getBoolean(
-        GiraphConstants.NETTY_SIMULATE_FIRST_REQUEST_CLOSED,
-        GiraphConstants.NETTY_SIMULATE_FIRST_REQUEST_CLOSED_DEFAULT);
+    closeFirstRequest = NETTY_SIMULATE_FIRST_REQUEST_CLOSED.get(conf);
   }
 
   @Override

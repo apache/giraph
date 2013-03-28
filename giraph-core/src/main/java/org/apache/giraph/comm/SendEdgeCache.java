@@ -19,7 +19,6 @@
 package org.apache.giraph.comm;
 
 import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.utils.ByteArrayVertexIdEdges;
@@ -27,6 +26,9 @@ import org.apache.giraph.utils.PairList;
 import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+
+import static org.apache.giraph.conf.GiraphConstants.ADDITIONAL_EDGE_REQUEST_SIZE;
+import static org.apache.giraph.conf.GiraphConstants.MAX_EDGE_REQUEST_SIZE;
 
 /**
  * Aggregates the edges to be sent to workers so they can be sent
@@ -45,12 +47,8 @@ public class SendEdgeCache<I extends WritableComparable, E extends Writable>
    */
   public SendEdgeCache(ImmutableClassesGiraphConfiguration conf,
                        CentralizedServiceWorker<?, ?, ?, ?> serviceWorker) {
-    super(conf,
-        serviceWorker,
-        conf.getInt(GiraphConstants.MAX_EDGE_REQUEST_SIZE,
-            GiraphConstants.MAX_EDGE_REQUEST_SIZE_DEFAULT),
-        conf.getFloat(GiraphConstants.ADDITIONAL_EDGE_REQUEST_SIZE,
-            GiraphConstants.ADDITIONAL_EDGE_REQUEST_SIZE_DEFAULT));
+    super(conf, serviceWorker, MAX_EDGE_REQUEST_SIZE.get(conf),
+        ADDITIONAL_EDGE_REQUEST_SIZE.get(conf));
   }
 
   @Override

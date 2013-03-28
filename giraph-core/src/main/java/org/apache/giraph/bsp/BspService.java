@@ -52,6 +52,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import static org.apache.giraph.conf.GiraphConstants.CHECKPOINT_DIRECTORY;
+
 /**
  * Zookeeper-based implementation of {@link CentralizedService}.
  *
@@ -311,9 +313,9 @@ public abstract class BspService<I extends WritableComparable,
         EDGE_INPUT_SPLITS_ALL_READY_NODE, EDGE_INPUT_SPLITS_ALL_DONE_NODE);
     applicationAttemptsPath = basePath + APPLICATION_ATTEMPTS_DIR;
     cleanedUpPath = basePath + CLEANED_UP_DIR;
-    checkpointBasePath = getConfiguration().get(
-        GiraphConstants.CHECKPOINT_DIRECTORY,
-        GiraphConstants.CHECKPOINT_DIRECTORY_DEFAULT + "/" + getJobId());
+    checkpointBasePath =
+        CHECKPOINT_DIRECTORY.getWithDefault(getConfiguration(),
+            CHECKPOINT_DIRECTORY.getDefaultValue() + "/" + getJobId());
     masterElectionPath = basePath + MASTER_ELECTION_DIR;
     if (LOG.isInfoEnabled()) {
       LOG.info("BspService: Connecting to ZooKeeper with job " + jobId +

@@ -84,13 +84,13 @@ public class ServerData<I extends WritableComparable,
    * Constructor.
    *
    * @param service Service worker
-   * @param configuration Configuration
+   * @param conf Configuration
    * @param messageStoreFactory Factory for message stores
    * @param context Mapper context
    */
   public ServerData(
       CentralizedServiceWorker<I, V, E, M> service,
-      ImmutableClassesGiraphConfiguration<I, V, E, M> configuration,
+      ImmutableClassesGiraphConfiguration<I, V, E, M> conf,
       MessageStoreFactory<I, M, MessageStoreByPartition<I, M>>
           messageStoreFactory,
       Mapper<?, ?, ?, ?>.Context context) {
@@ -98,17 +98,16 @@ public class ServerData<I extends WritableComparable,
     this.messageStoreFactory = messageStoreFactory;
     currentMessageStore = messageStoreFactory.newStore();
     incomingMessageStore = messageStoreFactory.newStore();
-    if (configuration.getBoolean(GiraphConstants.USE_OUT_OF_CORE_GRAPH,
-        GiraphConstants.USE_OUT_OF_CORE_GRAPH_DEFAULT)) {
+    if (GiraphConstants.USE_OUT_OF_CORE_GRAPH.get(conf)) {
       partitionStore =
-          new DiskBackedPartitionStore<I, V, E, M>(configuration, context);
+          new DiskBackedPartitionStore<I, V, E, M>(conf, context);
     } else {
       partitionStore =
-          new SimplePartitionStore<I, V, E, M>(configuration, context);
+          new SimplePartitionStore<I, V, E, M>(conf, context);
     }
-    edgeStore = new EdgeStore<I, V, E, M>(service, configuration, context);
-    ownerAggregatorData = new OwnerAggregatorServerData(context, configuration);
-    allAggregatorData = new AllAggregatorServerData(context, configuration);
+    edgeStore = new EdgeStore<I, V, E, M>(service, conf, context);
+    ownerAggregatorData = new OwnerAggregatorServerData(context, conf);
+    allAggregatorData = new AllAggregatorServerData(context, conf);
   }
 
   public EdgeStore<I, V, E, M> getEdgeStore() {

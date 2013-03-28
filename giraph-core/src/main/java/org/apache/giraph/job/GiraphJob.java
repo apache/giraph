@@ -214,7 +214,7 @@ public class GiraphJob {
       if (LOG.isInfoEnabled()) {
         LOG.info("run: Since checkpointing is disabled (default), " +
             "do not allow any task retries (setting " +
-            GiraphConstants.MAX_TASK_ATTEMPTS + " = 0, " +
+            GiraphConstants.MAX_TASK_ATTEMPTS.getKey() + " = 0, " +
             "old value = " + oldMaxTaskAttempts + ")");
       }
     }

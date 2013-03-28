@@ -71,7 +71,8 @@ public class TryMultiIpcBindingPortsTest {
         // run internally
         // fail the first port binding attempt
         Map<String, String> params = Maps.<String, String>newHashMap();
-        params.put(GiraphConstants.FAIL_FIRST_IPC_PORT_BIND_ATTEMPT, "true");
+        params.put(GiraphConstants.FAIL_FIRST_IPC_PORT_BIND_ATTEMPT.getKey(),
+            "true");
 
         GiraphClasses classes = new GiraphClasses();
         classes.setVertexClass(ConnectedComponentsVertex.class);

@@ -115,7 +115,7 @@ public class ShortestPathsBenchmark implements Tool {
       job.getConfiguration().setVertexEdgesClass(HashMapEdges.class);
     }
     LOG.info("Using class " +
-        job.getConfiguration().get(GiraphConstants.VERTEX_CLASS));
+        GiraphConstants.VERTEX_CLASS.get(job.getConfiguration()));
     job.getConfiguration().setVertexInputFormatClass(
         PseudoRandomVertexInputFormat.class);
     if (!cmd.hasOption("nc")) {

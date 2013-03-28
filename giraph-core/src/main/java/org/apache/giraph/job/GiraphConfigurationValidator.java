@@ -21,7 +21,6 @@ package org.apache.giraph.job;
 import org.apache.giraph.combiner.Combiner;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.edge.ByteArrayEdges;
 import org.apache.giraph.edge.VertexEdges;
 import org.apache.giraph.graph.DefaultVertexResolver;
 import org.apache.giraph.graph.DefaultVertexValueFactory;
@@ -39,6 +38,9 @@ import org.apache.log4j.Logger;
 
 import java.lang.reflect.Type;
 import java.util.List;
+
+import static org.apache.giraph.conf.GiraphConstants.VERTEX_EDGES_CLASS;
+import static org.apache.giraph.conf.GiraphConstants.VERTEX_RESOLVER_CLASS;
 
 /**
  * GiraphConfigurationValidator attempts to verify the consistency of
@@ -138,34 +140,36 @@ public class GiraphConfigurationValidator<I extends WritableComparable,
         conf.getMinPercentResponded() > 100.0f) {
       throw new IllegalArgumentException(
           "checkConfiguration: Invalid " + conf.getMinPercentResponded() +
-              " for " + GiraphConstants.MIN_PERCENT_RESPONDED);
+              " for " + GiraphConstants.MIN_PERCENT_RESPONDED.getKey());
     }
     if (conf.getMinWorkers() < 0) {
       throw new IllegalArgumentException("checkConfiguration: No valid " +
           GiraphConstants.MIN_WORKERS);
     }
     if (conf.getVertexClass() == null) {
-      throw new IllegalArgumentException("checkConfiguration: Null" +
-          GiraphConstants.VERTEX_CLASS);
+      throw new IllegalArgumentException("checkConfiguration: Null " +
+          GiraphConstants.VERTEX_CLASS.getKey());
     }
     if (conf.getVertexInputFormatClass() == null &&
         conf.getEdgeInputFormatClass() == null) {
       throw new IllegalArgumentException("checkConfiguration: One of " +
-          GiraphConstants.VERTEX_INPUT_FORMAT_CLASS + " and " +
-          GiraphConstants.EDGE_INPUT_FORMAT_CLASS + " must be non-null");
+          GiraphConstants.VERTEX_INPUT_FORMAT_CLASS.getKey() + " and " +
+          GiraphConstants.EDGE_INPUT_FORMAT_CLASS.getKey() +
+          " must be non-null");
     }
     if (conf.getVertexResolverClass() == null) {
       if (LOG.isInfoEnabled()) {
         LOG.info("checkConfiguration: No class found for " +
-            GiraphConstants.VERTEX_RESOLVER_CLASS + ", defaulting to " +
-            DefaultVertexResolver.class.getCanonicalName());
+            VERTEX_RESOLVER_CLASS.getKey() +
+            ", defaulting to " +
+            VERTEX_RESOLVER_CLASS.getDefaultClass().getCanonicalName());
       }
     }
     if (conf.getVertexEdgesClass() == null) {
       if (LOG.isInfoEnabled()) {
         LOG.info("checkConfiguration: No class found for " +
-            GiraphConstants.VERTEX_EDGES_CLASS + ", defaulting to " +
-            ByteArrayEdges.class.getCanonicalName());
+            VERTEX_EDGES_CLASS.getKey() + ", defaulting to " +
+            VERTEX_EDGES_CLASS.getDefaultClass().getCanonicalName());
       }
     }
   }

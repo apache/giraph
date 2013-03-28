@@ -18,7 +18,6 @@
 
 package org.apache.giraph.comm.netty.handler;
 
-import org.apache.giraph.conf.GiraphConstants;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.log4j.Logger;
 import org.jboss.netty.buffer.ChannelBuffer;
@@ -31,6 +30,8 @@ import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 
 import java.io.IOException;
 import java.util.concurrent.ConcurrentMap;
+
+import static org.apache.giraph.conf.GiraphConstants.NETTY_SIMULATE_FIRST_RESPONSE_FAILED;
 
 /**
  * Generic handler of responses.
@@ -59,9 +60,7 @@ public class ResponseClientHandler extends SimpleChannelUpstreamHandler {
           workerIdOutstandingRequestMap,
       Configuration conf) {
     this.workerIdOutstandingRequestMap = workerIdOutstandingRequestMap;
-    dropFirstResponse = conf.getBoolean(
-        GiraphConstants.NETTY_SIMULATE_FIRST_RESPONSE_FAILED,
-        GiraphConstants.NETTY_SIMULATE_FIRST_RESPONSE_FAILED_DEFAULT);
+    dropFirstResponse = NETTY_SIMULATE_FIRST_RESPONSE_FAILED.get(conf);
   }
 
   @Override

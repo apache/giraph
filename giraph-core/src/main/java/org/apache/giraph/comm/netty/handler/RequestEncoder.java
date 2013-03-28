@@ -55,12 +55,10 @@ public class RequestEncoder extends OneToOneEncoder {
    * @param conf Giraph configuration
    */
   public RequestEncoder(GiraphConfiguration conf) {
-    bufferStartingSize = conf.getInt(
-        GiraphConstants.NETTY_REQUEST_ENCODER_BUFFER_SIZE,
-        GiraphConstants.NETTY_REQUEST_ENCODER_BUFFER_SIZE_DEFAULT);
-    useDirectBuffers = conf.getBoolean(
-        GiraphConstants.NETTY_REQUEST_ENCODER_USE_DIRECT_BUFFERS,
-        GiraphConstants.NETTY_REQUEST_ENCODER_USE_DIRECT_BUFFERS_DEFAULT);
+    bufferStartingSize =
+        GiraphConstants.NETTY_REQUEST_ENCODER_BUFFER_SIZE.get(conf);
+    useDirectBuffers =
+        GiraphConstants.NETTY_REQUEST_ENCODER_USE_DIRECT_BUFFERS.get(conf);
   }
 
   @Override

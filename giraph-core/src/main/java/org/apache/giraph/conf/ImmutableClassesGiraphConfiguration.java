@@ -53,6 +53,8 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.util.Progressable;
 
+import static org.apache.giraph.conf.GiraphConstants.USE_UNSAFE_SERIALIZATION;
+
 /**
  * The classes set here are immutable, the remaining configuration is mutable.
  * Classes are immutable and final to provide the best performance for
@@ -87,8 +89,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   public ImmutableClassesGiraphConfiguration(Configuration conf) {
     super(conf);
     classes = new GiraphClasses(conf);
-    useUnsafeSerialization = getBoolean(USE_UNSAFE_SERIALIZATION,
-        USE_UNSAFE_SERIALIZATION_DEFAULT);
+    useUnsafeSerialization = USE_UNSAFE_SERIALIZATION.get(this);
     try {
       vertexValueFactory = (VertexValueFactory<V>)
           classes.getVertexValueFactoryClass().newInstance();

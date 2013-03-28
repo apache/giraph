@@ -17,9 +17,6 @@
  */
 package org.apache.giraph.comm.netty;
 
-import com.yammer.metrics.core.Counter;
-import com.yammer.metrics.core.Gauge;
-import com.yammer.metrics.util.PercentGauge;
 import org.apache.giraph.bsp.BspService;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.SendEdgeCache;
@@ -37,9 +34,9 @@ import org.apache.giraph.comm.requests.SendWorkerEdgesRequest;
 import org.apache.giraph.comm.requests.SendWorkerMessagesRequest;
 import org.apache.giraph.comm.requests.WorkerRequest;
 import org.apache.giraph.comm.requests.WritableRequest;
-import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.Edge;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexMutations;
 import org.apache.giraph.metrics.GiraphMetrics;
 import org.apache.giraph.metrics.MetricNames;
@@ -49,15 +46,22 @@ import org.apache.giraph.partition.PartitionOwner;
 import org.apache.giraph.utils.ByteArrayVertexIdEdges;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.giraph.utils.PairList;
-import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
 
+import com.yammer.metrics.core.Counter;
+import com.yammer.metrics.core.Gauge;
+import com.yammer.metrics.util.PercentGauge;
+
 import java.io.IOException;
 import java.util.Map;
+
+import static org.apache.giraph.conf.GiraphConstants.MAX_EDGE_REQUEST_SIZE;
+import static org.apache.giraph.conf.GiraphConstants.MAX_MSG_REQUEST_SIZE;
+import static org.apache.giraph.conf.GiraphConstants.MAX_MUTATIONS_PER_REQUEST;
 
 /**
  * Aggregate requests and sends them to the thread-safe NettyClient.  This
@@ -112,30 +116,22 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
    * Constructor.
    *
    * @param context Context
-   * @param configuration Configuration
+   * @param conf Configuration
    * @param serviceWorker Service worker
    */
   public NettyWorkerClientRequestProcessor(
       Mapper<?, ?, ?, ?>.Context context,
-      ImmutableClassesGiraphConfiguration<I, V, E, M> configuration,
+      ImmutableClassesGiraphConfiguration<I, V, E, M> conf,
       CentralizedServiceWorker<I, V, E, M> serviceWorker) {
     this.workerClient = serviceWorker.getWorkerClient();
-    this.configuration = configuration;
+    this.configuration = conf;
 
-    sendPartitionCache = new SendPartitionCache<I, V, E, M>(context,
-        configuration);
-    sendMessageCache =
-        new SendMessageCache<I, M>(configuration, serviceWorker);
-    sendEdgeCache = new SendEdgeCache<I, E>(configuration, serviceWorker);
-    maxMessagesSizePerWorker = configuration.getInt(
-        GiraphConstants.MAX_MSG_REQUEST_SIZE,
-        GiraphConstants.MAX_MSG_REQUEST_SIZE_DEFAULT);
-    maxEdgesSizePerWorker = configuration.getInt(
-        GiraphConstants.MAX_EDGE_REQUEST_SIZE,
-        GiraphConstants.MAX_EDGE_REQUEST_SIZE_DEFAULT);
-    maxMutationsPerPartition = configuration.getInt(
-        GiraphConstants.MAX_MUTATIONS_PER_REQUEST,
-        GiraphConstants.MAX_MUTATIONS_PER_REQUEST_DEFAULT);
+    sendPartitionCache = new SendPartitionCache<I, V, E, M>(context, conf);
+    sendMessageCache = new SendMessageCache<I, M>(conf, serviceWorker);
+    sendEdgeCache = new SendEdgeCache<I, E>(conf, serviceWorker);
+    maxMessagesSizePerWorker = MAX_MSG_REQUEST_SIZE.get(conf);
+    maxEdgesSizePerWorker = MAX_EDGE_REQUEST_SIZE.get(conf);
+    maxMutationsPerPartition = MAX_MUTATIONS_PER_REQUEST.get(conf);
     this.serviceWorker = serviceWorker;
     this.serverData = serviceWorker.getServerData();
 

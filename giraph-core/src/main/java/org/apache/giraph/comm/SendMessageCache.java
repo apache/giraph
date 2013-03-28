@@ -19,13 +19,15 @@
 package org.apache.giraph.comm;
 
 import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.giraph.utils.PairList;
 import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+
+import static org.apache.giraph.conf.GiraphConstants.ADDITIONAL_MSG_REQUEST_SIZE;
+import static org.apache.giraph.conf.GiraphConstants.MAX_MSG_REQUEST_SIZE;
 
 /**
  * Aggregates the messages to be sent to workers so they can be sent
@@ -44,12 +46,8 @@ public class SendMessageCache<I extends WritableComparable, M extends Writable>
    */
   public SendMessageCache(ImmutableClassesGiraphConfiguration conf,
       CentralizedServiceWorker<?, ?, ?, ?> serviceWorker) {
-    super(conf,
-        serviceWorker,
-        conf.getInt(GiraphConstants.MAX_MSG_REQUEST_SIZE,
-            GiraphConstants.MAX_MSG_REQUEST_SIZE_DEFAULT),
-        conf.getFloat(GiraphConstants.ADDITIONAL_MSG_REQUEST_SIZE,
-            GiraphConstants.ADDITIONAL_MSG_REQUEST_SIZE_DEFAULT));
+    super(conf, serviceWorker, MAX_MSG_REQUEST_SIZE.get(conf),
+        ADDITIONAL_MSG_REQUEST_SIZE.get(conf));
   }
 
   @Override

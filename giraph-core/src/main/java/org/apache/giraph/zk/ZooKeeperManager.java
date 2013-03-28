@@ -52,6 +52,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.apache.giraph.conf.GiraphConstants.BASE_ZNODE_KEY;
+import static org.apache.giraph.conf.GiraphConstants.ZOOKEEPER_MANAGER_DIRECTORY;
 
 
 /**
@@ -141,7 +142,7 @@ public class ZooKeeperManager {
     taskPartition = conf.getTaskPartition();
     jobId = conf.get("mapred.job.id", "Unknown Job");
     baseDirectory =
-        new Path(conf.get(GiraphConstants.ZOOKEEPER_MANAGER_DIRECTORY,
+        new Path(ZOOKEEPER_MANAGER_DIRECTORY.getWithDefault(conf,
             getFinalZooKeeperPath()));
     taskDirectory = new Path(baseDirectory,
         "_task");
@@ -150,25 +151,19 @@ public class ZooKeeperManager {
     myClosedPath = new Path(taskDirectory,
         Integer.toString(taskPartition) +
         COMPUTATION_DONE_SUFFIX);
-    pollMsecs = conf.getInt(
-        GiraphConstants.ZOOKEEPER_SERVERLIST_POLL_MSECS,
-        GiraphConstants.ZOOKEEPER_SERVERLIST_POLL_MSECS_DEFAULT);
-    serverCount = conf.getInt(
-        GiraphConstants.ZOOKEEPER_SERVER_COUNT,
-        GiraphConstants.ZOOKEEPER_SERVER_COUNT_DEFAULT);
+    pollMsecs = GiraphConstants.ZOOKEEPER_SERVERLIST_POLL_MSECS.get(conf);
+    serverCount = GiraphConstants.ZOOKEEPER_SERVER_COUNT.get(conf);
     String jobLocalDir = conf.get("job.local.dir");
     if (jobLocalDir != null) { // for non-local jobs
       zkDirDefault = jobLocalDir +
           "/_bspZooKeeper";
     } else {
       zkDirDefault = System.getProperty("user.dir") + "/" +
-              GiraphConstants.ZOOKEEPER_MANAGER_DIR_DEFAULT;
+              ZOOKEEPER_MANAGER_DIRECTORY.getDefaultValue();
     }
     zkDir = conf.get(GiraphConstants.ZOOKEEPER_DIR, zkDirDefault);
     configFilePath = zkDir + "/zoo.cfg";
-    zkBasePort = conf.getInt(
-        GiraphConstants.ZOOKEEPER_SERVER_PORT,
-        GiraphConstants.ZOOKEEPER_SERVER_PORT_DEFAULT);
+    zkBasePort = GiraphConstants.ZOOKEEPER_SERVER_PORT.get(conf);
 
     myHostname = conf.getLocalHostname();
     fs = FileSystem.get(conf);
@@ -180,7 +175,7 @@ public class ZooKeeperManager {
    * @return directory path with job id
    */
   private String getFinalZooKeeperPath() {
-    return GiraphConstants.ZOOKEEPER_MANAGER_DIR_DEFAULT + "/" + jobId;
+    return ZOOKEEPER_MANAGER_DIRECTORY.getDefaultValue() + "/" + jobId;
   }
 
   /**
@@ -305,7 +300,7 @@ public class ZooKeeperManager {
               "for base directory " + baseDirectory + ".  If there is an " +
               "issue with this directory, please set an accesible " +
               "base directory with the Hadoop configuration option " +
-              GiraphConstants.ZOOKEEPER_MANAGER_DIRECTORY);
+              ZOOKEEPER_MANAGER_DIRECTORY.getKey());
     }
 
     Path myCandidacyPath = new Path(
@@ -627,9 +622,7 @@ public class ZooKeeperManager {
             "onlineZooKeeperServers: java.home is not set!");
       }
       commandList.add(javaHome + "/bin/java");
-      String zkJavaOptsString =
-          conf.get(GiraphConstants.ZOOKEEPER_JAVA_OPTS,
-              GiraphConstants.ZOOKEEPER_JAVA_OPTS_DEFAULT);
+      String zkJavaOptsString = GiraphConstants.ZOOKEEPER_JAVA_OPTS.get(conf);
       String[] zkJavaOptsArray = zkJavaOptsString.split(" ");
       if (zkJavaOptsArray != null) {
         commandList.addAll(Arrays.asList(zkJavaOptsArray));

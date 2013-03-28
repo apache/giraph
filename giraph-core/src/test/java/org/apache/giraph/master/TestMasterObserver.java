@@ -18,17 +18,18 @@
 
 package org.apache.giraph.master;
 
-import com.google.common.collect.Maps;
 import org.apache.giraph.conf.GiraphClasses;
 import org.apache.giraph.conf.GiraphConstants;
-import org.apache.giraph.io.formats.IntNullNullNullTextInputFormat;
-import org.apache.giraph.utils.InternalVertexRunner;
 import org.apache.giraph.edge.ByteArrayEdges;
 import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.io.formats.IntNullNullNullTextInputFormat;
+import org.apache.giraph.utils.InternalVertexRunner;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.util.StringUtils;
 import org.junit.Test;
+
+import com.google.common.collect.Maps;
 
 import java.io.IOException;
 import java.util.Map;
@@ -87,7 +88,7 @@ public class TestMasterObserver {
         Obs.class.getName(),
         Obs.class.getName()
     };
-    params.put(GiraphConstants.MASTER_OBSERVER_CLASSES,
+    params.put(GiraphConstants.MASTER_OBSERVER_CLASSES.getKey(),
         StringUtils.arrayToString(klasses));
 
     GiraphClasses classes = new GiraphClasses();

@@ -18,13 +18,14 @@
 
 package org.apache.giraph.partition;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.VertexEdgeCount;
 import org.apache.giraph.worker.WorkerInfo;
 import org.apache.log4j.Logger;
+
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -33,6 +34,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+
+import static org.apache.giraph.conf.GiraphConstants.USER_PARTITION_COUNT;
 
 /**
  * Helper class for {@link Partition} related operations.
@@ -166,13 +169,10 @@ public class PartitionUtils {
           "computePartitionCount: No available workers");
     }
 
-    int userPartitionCount = conf.getInt(GiraphConstants.USER_PARTITION_COUNT,
-        GiraphConstants.DEFAULT_USER_PARTITION_COUNT);
+    int userPartitionCount = USER_PARTITION_COUNT.get(conf);
     int partitionCount;
-    if (userPartitionCount == GiraphConstants.DEFAULT_USER_PARTITION_COUNT) {
-      float multiplier = conf.getFloat(
-          GiraphConstants.PARTITION_COUNT_MULTIPLIER,
-          GiraphConstants.DEFAULT_PARTITION_COUNT_MULTIPLIER);
+    if (userPartitionCount == USER_PARTITION_COUNT.getDefaultValue()) {
+      float multiplier = GiraphConstants.PARTITION_COUNT_MULTIPLIER.get(conf);
       partitionCount =
           Math.max((int) (multiplier * availableWorkerInfos.size() *
               availableWorkerInfos.size()),

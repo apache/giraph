@@ -19,7 +19,6 @@
 package org.apache.giraph.comm.netty.handler;
 
 import org.apache.giraph.comm.requests.WritableRequest;
-import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.TaskInfo;
 import org.apache.giraph.time.SystemTime;
@@ -33,6 +32,8 @@ import org.jboss.netty.channel.ChannelStateEvent;
 import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
+
+import static org.apache.giraph.conf.GiraphConstants.NETTY_SIMULATE_FIRST_REQUEST_CLOSED;
 
 /**
  * Generic handler of requests.
@@ -71,9 +72,7 @@ public abstract class RequestServerHandler<R> extends
       ImmutableClassesGiraphConfiguration conf,
       TaskInfo myTaskInfo) {
     this.workerRequestReservedMap = workerRequestReservedMap;
-    closeFirstRequest = conf.getBoolean(
-        GiraphConstants.NETTY_SIMULATE_FIRST_REQUEST_CLOSED,
-        GiraphConstants.NETTY_SIMULATE_FIRST_REQUEST_CLOSED_DEFAULT);
+    closeFirstRequest = NETTY_SIMULATE_FIRST_REQUEST_CLOSED.get(conf);
     this.myTaskInfo = myTaskInfo;
   }
 

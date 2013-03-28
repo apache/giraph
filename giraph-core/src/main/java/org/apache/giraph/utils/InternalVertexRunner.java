@@ -151,15 +151,15 @@ public class InternalVertexRunner {
       }
 
       conf.setWorkerConfiguration(1, 1, 100.0f);
-      conf.setBoolean(GiraphConstants.SPLIT_MASTER_WORKER, false);
-      conf.setBoolean(GiraphConstants.LOCAL_TEST_MODE, true);
+      GiraphConstants.SPLIT_MASTER_WORKER.set(conf, false);
+      GiraphConstants.LOCAL_TEST_MODE.set(conf, true);
       conf.set(GiraphConstants.ZOOKEEPER_LIST, "localhost:" +
           String.valueOf(LOCAL_ZOOKEEPER_PORT));
 
       conf.set(GiraphConstants.ZOOKEEPER_DIR, zkDir.toString());
-      conf.set(GiraphConstants.ZOOKEEPER_MANAGER_DIRECTORY,
+      GiraphConstants.ZOOKEEPER_MANAGER_DIRECTORY.set(conf,
           zkMgrDir.toString());
-      conf.set(GiraphConstants.CHECKPOINT_DIRECTORY, checkpointsDir.toString());
+      GiraphConstants.CHECKPOINT_DIRECTORY.set(conf, checkpointsDir.toString());
 
       for (Map.Entry<String, String> param : params.entrySet()) {
         conf.set(param.getKey(), param.getValue());

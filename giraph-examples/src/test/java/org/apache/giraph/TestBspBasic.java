@@ -200,7 +200,7 @@ else[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
     GiraphJob job = prepareJob(getCallingMethodName(), classes);
     GiraphConfiguration conf = job.getConfiguration();
     conf.setWorkerConfiguration(5, 5, 100.0f);
-    conf.setBoolean(GiraphConstants.SPLIT_MASTER_WORKER, true);
+    GiraphConstants.SPLIT_MASTER_WORKER.set(conf, true);
 
     try {
       job.run(true);
@@ -208,7 +208,7 @@ else[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
     } catch (IllegalArgumentException e) {
     }
 
-    conf.setBoolean(GiraphConstants.SPLIT_MASTER_WORKER, false);
+    GiraphConstants.SPLIT_MASTER_WORKER.set(conf, false);
     try {
       job.run(true);
       fail();
@@ -264,7 +264,6 @@ else[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
     classes.setVertexOutputFormatClass(SimpleSuperstepVertexOutputFormat.class);
     GiraphJob job = prepareJob(callingMethod, classes, outputPath);
     Configuration conf = job.getConfiguration();
-    conf.setFloat(GiraphConstants.TOTAL_INPUT_SPLIT_MULTIPLIER, 2.0f);
     // GeneratedInputSplit will generate 10 vertices
     conf.setLong(GeneratedVertexReader.READER_VERTICES, 10);
     assertTrue(job.run(true));

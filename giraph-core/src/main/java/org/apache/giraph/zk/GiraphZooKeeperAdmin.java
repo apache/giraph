@@ -18,20 +18,22 @@
 package org.apache.giraph.zk;
 
 
-import static java.lang.System.out;
-
-import java.net.UnknownHostException;
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
 import org.apache.giraph.bsp.BspService;
-import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.conf.GiraphConstants;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.WatchedEvent;
+import org.apache.zookeeper.Watcher;
+
+import java.io.IOException;
+import java.net.UnknownHostException;
+import java.util.Arrays;
+import java.util.List;
+
+import static java.lang.System.out;
+import static org.apache.giraph.conf.GiraphConstants.ZOOKEEPER_SERVER_PORT;
 
 /**
  * A Utility class to be used by Giraph admins to occasionally clean up the
@@ -74,15 +76,13 @@ public class GiraphZooKeeperAdmin implements Watcher, Tool {
    */
   @Override
   public int run(String[] args) {
-    final int zkPort = getConf().getInt(
-      GiraphConfiguration.ZOOKEEPER_SERVER_PORT,
-      GiraphConfiguration.ZOOKEEPER_SERVER_PORT_DEFAULT);
+    final int zkPort = ZOOKEEPER_SERVER_PORT.get(getConf());
     final String zkBasePath = getConf().get(
-      GiraphConfiguration.BASE_ZNODE_KEY, "") + BspService.BASE_DIR;
+      GiraphConstants.BASE_ZNODE_KEY, "") + BspService.BASE_DIR;
     final String[] zkServerList;
     try {
       zkServerList = getConf()
-        .get(GiraphConfiguration.ZOOKEEPER_LIST).split(",");
+        .get(GiraphConstants.ZOOKEEPER_LIST).split(",");
     } catch (NullPointerException npe) {
       throw new IllegalStateException("GiraphZooKeeperAdmin requires a list " +
         "of ZooKeeper servers to clean.");
@@ -94,9 +94,9 @@ public class GiraphZooKeeperAdmin implements Watcher, Tool {
     try {
       ZooKeeperExt zooKeeper = new ZooKeeperExt(
         formatZkServerList(zkServerList, zkPort),
-        GiraphConfiguration.ZOOKEEPER_SESSION_TIMEOUT_DEFAULT,
-        GiraphConfiguration.ZOOKEEPER_OPS_MAX_ATTEMPTS_DEFAULT,
-        GiraphConfiguration.ZOOKEEPER_SERVERLIST_POLL_MSECS_DEFAULT,
+        GiraphConstants.ZOOKEEPER_SESSION_TIMEOUT.getDefaultValue(),
+        GiraphConstants.ZOOKEEPER_OPS_MAX_ATTEMPTS.getDefaultValue(),
+        GiraphConstants.ZOOKEEPER_SERVERLIST_POLL_MSECS.getDefaultValue(),
         this);
       doZooKeeperCleanup(zooKeeper, zkBasePath);
       return 0;

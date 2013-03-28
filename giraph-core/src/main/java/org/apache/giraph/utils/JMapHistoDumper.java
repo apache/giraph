@@ -98,10 +98,8 @@ public class JMapHistoDumper implements MasterObserver, WorkerObserver {
 
   @Override
   public void setConf(ImmutableClassesGiraphConfiguration configuration) {
-    sleepMillis = configuration.getInt(GiraphConstants.JMAP_SLEEP_MILLIS,
-        GiraphConstants.JMAP_SLEEP_MILLIS_DEFAULT);
-    linesToPrint = configuration.getInt(GiraphConstants.JMAP_PRINT_LINES,
-        GiraphConstants.JMAP_PRINT_LINES_DEFAULT);
+    sleepMillis = GiraphConstants.JMAP_SLEEP_MILLIS.get(configuration);
+    linesToPrint = GiraphConstants.JMAP_PRINT_LINES.get(configuration);
   }
 
   @Override

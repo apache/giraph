@@ -21,19 +21,18 @@ package org.apache.giraph.conf;
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.combiner.Combiner;
 import org.apache.giraph.edge.VertexEdges;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.graph.VertexValueFactory;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
-import org.apache.giraph.job.DefaultJobObserver;
 import org.apache.giraph.job.GiraphJobObserver;
 import org.apache.giraph.master.MasterCompute;
 import org.apache.giraph.master.MasterObserver;
 import org.apache.giraph.partition.GraphPartitionerFactory;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.partition.PartitionContext;
-import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.giraph.worker.WorkerObserver;
 import org.apache.hadoop.conf.Configuration;
@@ -72,7 +71,7 @@ public class GiraphConfiguration extends Configuration
    */
   public final void setVertexClass(
       Class<? extends Vertex> vertexClass) {
-    setClass(VERTEX_CLASS, vertexClass, Vertex.class);
+    VERTEX_CLASS.set(this, vertexClass);
   }
 
   /**
@@ -82,8 +81,7 @@ public class GiraphConfiguration extends Configuration
    */
   public final void setVertexValueFactoryClass(
       Class<? extends VertexValueFactory> vertexValueFactoryClass) {
-    setClass(VERTEX_VALUE_FACTORY_CLASS, vertexValueFactoryClass,
-        VertexValueFactory.class);
+    VERTEX_VALUE_FACTORY_CLASS.set(this, vertexValueFactoryClass);
   }
 
   /**
@@ -93,7 +91,7 @@ public class GiraphConfiguration extends Configuration
    */
   public final void setVertexEdgesClass(
       Class<? extends VertexEdges> vertexEdgesClass) {
-    setClass(VERTEX_EDGES_CLASS, vertexEdgesClass, VertexEdges.class);
+    VERTEX_EDGES_CLASS.set(this, vertexEdgesClass);
   }
 
   /**
@@ -104,8 +102,7 @@ public class GiraphConfiguration extends Configuration
    */
   public final void setInputVertexEdgesClass(
       Class<? extends VertexEdges> inputVertexEdgesClass) {
-    setClass(INPUT_VERTEX_EDGES_CLASS, inputVertexEdgesClass,
-        VertexEdges.class);
+    INPUT_VERTEX_EDGES_CLASS.set(this, inputVertexEdgesClass);
   }
 
   /**
@@ -115,9 +112,7 @@ public class GiraphConfiguration extends Configuration
    */
   public final void setVertexInputFormatClass(
       Class<? extends VertexInputFormat> vertexInputFormatClass) {
-    setClass(VERTEX_INPUT_FORMAT_CLASS,
-        vertexInputFormatClass,
-        VertexInputFormat.class);
+    VERTEX_INPUT_FORMAT_CLASS.set(this, vertexInputFormatClass);
   }
 
   /**
@@ -127,9 +122,7 @@ public class GiraphConfiguration extends Configuration
    */
   public final void setEdgeInputFormatClass(
       Class<? extends EdgeInputFormat> edgeInputFormatClass) {
-    setClass(EDGE_INPUT_FORMAT_CLASS,
-        edgeInputFormatClass,
-        EdgeInputFormat.class);
+    EDGE_INPUT_FORMAT_CLASS.set(this, edgeInputFormatClass);
   }
 
   /**
@@ -139,8 +132,7 @@ public class GiraphConfiguration extends Configuration
    */
   public final void setMasterComputeClass(
       Class<? extends MasterCompute> masterComputeClass) {
-    setClass(MASTER_COMPUTE_CLASS, masterComputeClass,
-        MasterCompute.class);
+    MASTER_COMPUTE_CLASS.set(this, masterComputeClass);
   }
 
   /**
@@ -150,8 +142,7 @@ public class GiraphConfiguration extends Configuration
    */
   public final void addMasterObserverClass(
       Class<? extends MasterObserver> masterObserverClass) {
-    addToClasses(MASTER_OBSERVER_CLASSES, masterObserverClass,
-        MasterObserver.class);
+    MASTER_OBSERVER_CLASSES.add(this, masterObserverClass);
   }
 
   /**
@@ -161,8 +152,7 @@ public class GiraphConfiguration extends Configuration
    */
   public final void addWorkerObserverClass(
       Class<? extends WorkerObserver> workerObserverClass) {
-    addToClasses(WORKER_OBSERVER_CLASSES, workerObserverClass,
-        WorkerObserver.class);
+    WORKER_OBSERVER_CLASSES.add(this, workerObserverClass);
   }
 
   /**
@@ -171,8 +161,7 @@ public class GiraphConfiguration extends Configuration
    * @return GiraphJobObserver class set.
    */
   public Class<? extends GiraphJobObserver> getJobObserverClass() {
-    return getClass(JOB_OBSERVER_CLASS, DefaultJobObserver.class,
-        GiraphJobObserver.class);
+    return JOB_OBSERVER_CLASS.get(this);
   }
 
   /**
@@ -181,7 +170,7 @@ public class GiraphConfiguration extends Configuration
    * @param klass GiraphJobObserver class to set.
    */
   public void setJobObserverClass(Class<? extends GiraphJobObserver> klass) {
-    setClass(JOB_OBSERVER_CLASS, klass, GiraphJobObserver.class);
+    JOB_OBSERVER_CLASS.set(this, klass);
   }
 
   /**
@@ -190,30 +179,7 @@ public class GiraphConfiguration extends Configuration
    * @return true if jmap dumper is enabled.
    */
   public boolean isJMapHistogramDumpEnabled() {
-    return getBoolean(JMAP_ENABLE, JMAP_ENABLE_DEFAULT);
-  }
-
-  /**
-   * Add a class to a property that is a list of classes. If the property does
-   * not exist it will be created.
-   *
-   * @param name String name of property.
-   * @param klass interface of the class being set.
-   * @param xface Class to add to the list.
-   */
-  public final void addToClasses(String name, Class<?> klass, Class<?> xface) {
-    if (!xface.isAssignableFrom(klass)) {
-      throw new RuntimeException(klass + " does not implement " +
-          xface.getName());
-    }
-    String value;
-    String klasses = get(name);
-    if (klasses == null) {
-      value = klass.getName();
-    } else {
-      value = klasses + "," + klass.getName();
-    }
-    set(name, value);
+    return JMAP_ENABLE.get(this);
   }
 
   /**
@@ -238,36 +204,13 @@ public class GiraphConfiguration extends Configuration
   }
 
   /**
-   * Get classes from a property that all implement a given interface.
-   *
-   * @param name String name of property to fetch.
-   * @param xface interface classes must implement.
-   * @param defaultValue If not found, return this
-   * @param <T> Generic type of interface class
-   * @return array of Classes implementing interface specified.
-   */
-  public final <T> Class<? extends T>[] getClassesOfType(String name,
-      Class<T> xface, Class<? extends T> ... defaultValue) {
-    Class<?>[] klasses = getClasses(name, defaultValue);
-    for (Class<?> klass : klasses) {
-      if (!xface.isAssignableFrom(klass)) {
-        throw new RuntimeException(klass + " is not assignable from " +
-            xface.getName());
-      }
-    }
-    return (Class<? extends T>[]) klasses;
-  }
-
-  /**
    * Set the vertex output format class (optional)
    *
    * @param vertexOutputFormatClass Determines how graph is output
    */
   public final void setVertexOutputFormatClass(
       Class<? extends VertexOutputFormat> vertexOutputFormatClass) {
-    setClass(VERTEX_OUTPUT_FORMAT_CLASS,
-        vertexOutputFormatClass,
-        VertexOutputFormat.class);
+    VERTEX_OUTPUT_FORMAT_CLASS.set(this, vertexOutputFormatClass);
   }
 
   /**
@@ -277,7 +220,7 @@ public class GiraphConfiguration extends Configuration
    */
   public final void setVertexCombinerClass(
       Class<? extends Combiner> vertexCombinerClass) {
-    setClass(VERTEX_COMBINER_CLASS, vertexCombinerClass, Combiner.class);
+    VERTEX_COMBINER_CLASS.set(this, vertexCombinerClass);
   }
 
   /**
@@ -286,10 +229,8 @@ public class GiraphConfiguration extends Configuration
    * @param graphPartitionerFactoryClass Determines how the graph is partitioned
    */
   public final void setGraphPartitionerFactoryClass(
-      Class<?> graphPartitionerFactoryClass) {
-    setClass(GRAPH_PARTITIONER_FACTORY_CLASS,
-        graphPartitionerFactoryClass,
-        GraphPartitionerFactory.class);
+      Class<? extends GraphPartitionerFactory> graphPartitionerFactoryClass) {
+    GRAPH_PARTITIONER_FACTORY_CLASS.set(this, graphPartitionerFactoryClass);
   }
 
   /**
@@ -299,7 +240,7 @@ public class GiraphConfiguration extends Configuration
    */
   public final void setVertexResolverClass(
       Class<? extends VertexResolver> vertexResolverClass) {
-    setClass(VERTEX_RESOLVER_CLASS, vertexResolverClass, VertexResolver.class);
+    VERTEX_RESOLVER_CLASS.set(this, vertexResolverClass);
   }
 
   /**
@@ -309,7 +250,7 @@ public class GiraphConfiguration extends Configuration
    * @return true if we should create non existent vertices that get messages.
    */
   public final boolean getResolverCreateVertexOnMessages() {
-    return getBoolean(RESOLVER_CREATE_VERTEX_ON_MSGS, true);
+    return RESOLVER_CREATE_VERTEX_ON_MSGS.get(this);
   }
 
   /**
@@ -318,7 +259,7 @@ public class GiraphConfiguration extends Configuration
    * @param v true if we should create vertices when they get messages.
    */
   public final void setResolverCreateVertexOnMessages(boolean v) {
-    setBoolean(RESOLVER_CREATE_VERTEX_ON_MSGS, v);
+    RESOLVER_CREATE_VERTEX_ON_MSGS.set(this, v);
   }
 
   /**
@@ -329,8 +270,7 @@ public class GiraphConfiguration extends Configuration
    */
   public final void setPartitionContextClass(
       Class<? extends PartitionContext> partitionContextClass) {
-    setClass(PARTITION_CONTEXT_CLASS, partitionContextClass,
-        PartitionContext.class);
+    PARTITION_CONTEXT_CLASS.set(this, partitionContextClass);
   }
 
   /**
@@ -341,7 +281,7 @@ public class GiraphConfiguration extends Configuration
    */
   public final void setWorkerContextClass(
       Class<? extends WorkerContext> workerContextClass) {
-    setClass(WORKER_CONTEXT_CLASS, workerContextClass, WorkerContext.class);
+    WORKER_CONTEXT_CLASS.set(this, workerContextClass);
   }
 
   /**
@@ -352,9 +292,7 @@ public class GiraphConfiguration extends Configuration
    */
   public final void setAggregatorWriterClass(
       Class<? extends AggregatorWriter> aggregatorWriterClass) {
-    setClass(AGGREGATOR_WRITER_CLASS,
-        aggregatorWriterClass,
-        AggregatorWriter.class);
+    AGGREGATOR_WRITER_CLASS.set(this, aggregatorWriterClass);
   }
 
   /**
@@ -364,9 +302,7 @@ public class GiraphConfiguration extends Configuration
    */
   public final void setPartitionClass(
       Class<? extends Partition> partitionClass) {
-    setClass(PARTITION_CLASS,
-        partitionClass,
-        Partition.class);
+    PARTITION_CLASS.set(this, partitionClass);
   }
 
   /**
@@ -384,7 +320,7 @@ public class GiraphConfiguration extends Configuration
                                            float minPercentResponded) {
     setInt(MIN_WORKERS, minWorkers);
     setInt(MAX_WORKERS, maxWorkers);
-    setFloat(MIN_PERCENT_RESPONDED, minPercentResponded);
+    MIN_PERCENT_RESPONDED.set(this, minPercentResponded);
   }
 
   public final int getMinWorkers() {
@@ -396,7 +332,7 @@ public class GiraphConfiguration extends Configuration
   }
 
   public final float getMinPercentResponded() {
-    return getFloat(MIN_PERCENT_RESPONDED, MIN_PERCENT_RESPONDED_DEFAULT);
+    return MIN_PERCENT_RESPONDED.get(this);
   }
 
   /**
@@ -411,7 +347,7 @@ public class GiraphConfiguration extends Configuration
   }
 
   public final boolean getSplitMasterWorker() {
-    return getBoolean(SPLIT_MASTER_WORKER, SPLIT_MASTER_WORKER_DEFAULT);
+    return SPLIT_MASTER_WORKER.get(this);
   }
 
   /**
@@ -420,7 +356,7 @@ public class GiraphConfiguration extends Configuration
    * @return array of MasterObserver classes.
    */
   public Class<? extends MasterObserver>[] getMasterObserverClasses() {
-    return getClassesOfType(MASTER_OBSERVER_CLASSES, MasterObserver.class);
+    return MASTER_OBSERVER_CLASSES.getArray(this);
   }
 
   /**
@@ -429,7 +365,7 @@ public class GiraphConfiguration extends Configuration
    * @return array of WorkerObserver classes.
    */
   public Class<? extends WorkerObserver>[] getWorkerObserverClasses() {
-    return getClassesOfType(WORKER_OBSERVER_CLASSES, WorkerObserver.class);
+    return WORKER_OBSERVER_CLASSES.getArray(this);
   }
 
   /**
@@ -438,7 +374,7 @@ public class GiraphConfiguration extends Configuration
    * @return true if metrics are enabled, false otherwise (default)
    */
   public boolean metricsEnabled() {
-    return getBoolean(METRICS_ENABLE, false);
+    return METRICS_ENABLE.isTrue(this);
   }
 
   /**
@@ -460,7 +396,7 @@ public class GiraphConfiguration extends Configuration
   }
 
   public String getLocalLevel() {
-    return get(LOG_LEVEL, LOG_LEVEL_DEFAULT);
+    return LOG_LEVEL.get(this);
   }
 
   /**
@@ -469,15 +405,15 @@ public class GiraphConfiguration extends Configuration
    * @return True if use the log thread layout option, false otherwise
    */
   public boolean useLogThreadLayout() {
-    return getBoolean(LOG_THREAD_LAYOUT, LOG_THREAD_LAYOUT_DEFAULT);
+    return LOG_THREAD_LAYOUT.get(this);
   }
 
   public boolean getLocalTestMode() {
-    return getBoolean(LOCAL_TEST_MODE, LOCAL_TEST_MODE_DEFAULT);
+    return LOCAL_TEST_MODE.get(this);
   }
 
   public int getZooKeeperServerCount() {
-    return getInt(ZOOKEEPER_SERVER_COUNT, ZOOKEEPER_SERVER_COUNT_DEFAULT);
+    return ZOOKEEPER_SERVER_COUNT.get(this);
   }
 
   /**
@@ -490,31 +426,27 @@ public class GiraphConfiguration extends Configuration
   }
 
   public int getZooKeeperSessionTimeout() {
-    return getInt(ZOOKEEPER_SESSION_TIMEOUT, ZOOKEEPER_SESSION_TIMEOUT_DEFAULT);
+    return ZOOKEEPER_SESSION_TIMEOUT.get(this);
   }
 
   public int getZookeeperOpsMaxAttempts() {
-    return getInt(ZOOKEEPER_OPS_MAX_ATTEMPTS,
-        ZOOKEEPER_OPS_MAX_ATTEMPTS_DEFAULT);
+    return ZOOKEEPER_OPS_MAX_ATTEMPTS.get(this);
   }
 
   public int getZookeeperOpsRetryWaitMsecs() {
-    return getInt(ZOOKEEPER_OPS_RETRY_WAIT_MSECS,
-        ZOOKEEPER_OPS_RETRY_WAIT_MSECS_DEFAULT);
+    return ZOOKEEPER_OPS_RETRY_WAIT_MSECS.get(this);
   }
 
   public boolean getNettyServerUseExecutionHandler() {
-    return getBoolean(NETTY_SERVER_USE_EXECUTION_HANDLER,
-        NETTY_SERVER_USE_EXECUTION_HANDLER_DEFAULT);
+    return NETTY_SERVER_USE_EXECUTION_HANDLER.get(this);
   }
 
   public int getNettyServerThreads() {
-    return getInt(NETTY_SERVER_THREADS, NETTY_SERVER_THREADS_DEFAULT);
+    return NETTY_SERVER_THREADS.get(this);
   }
 
   public int getNettyServerExecutionThreads() {
-    return getInt(NETTY_SERVER_EXECUTION_THREADS,
-        NETTY_SERVER_EXECUTION_THREADS_DEFAULT);
+    return NETTY_SERVER_EXECUTION_THREADS.get(this);
   }
 
   /**
@@ -532,26 +464,23 @@ public class GiraphConfiguration extends Configuration
   }
 
   public int getZookeeperConnectionAttempts() {
-    return getInt(ZOOKEEPER_CONNECTION_ATTEMPTS,
-        ZOOKEEPER_CONNECTION_ATTEMPTS_DEFAULT);
+    return ZOOKEEPER_CONNECTION_ATTEMPTS.get(this);
   }
 
   public int getZooKeeperMinSessionTimeout() {
-    return getInt(ZOOKEEPER_MIN_SESSION_TIMEOUT,
-        DEFAULT_ZOOKEEPER_MIN_SESSION_TIMEOUT);
+    return ZOOKEEPER_MIN_SESSION_TIMEOUT.get(this);
   }
 
   public int getZooKeeperMaxSessionTimeout() {
-    return getInt(ZOOKEEPER_MAX_SESSION_TIMEOUT,
-        DEFAULT_ZOOKEEPER_MAX_SESSION_TIMEOUT);
+    return ZOOKEEPER_MAX_SESSION_TIMEOUT.get(this);
   }
 
   public String getZooKeeperForceSync() {
-    return get(ZOOKEEPER_FORCE_SYNC, DEFAULT_ZOOKEEPER_FORCE_SYNC);
+    return ZOOKEEPER_FORCE_SYNC.get(this);
   }
 
   public String getZooKeeperSkipAcl() {
-    return get(ZOOKEEPER_SKIP_ACL, DEFAULT_ZOOKEEPER_SKIP_ACL);
+    return ZOOKEEPER_SKIP_ACL.get(this);
   }
 
   /**
@@ -574,7 +503,7 @@ public class GiraphConfiguration extends Configuration
    * @return True if should authenticate, false otherwise
    */
   public boolean authenticate() {
-    return getBoolean(AUTHENTICATE, DEFAULT_AUTHENTICATE);
+    return AUTHENTICATE.get(this);
   }
 
   /**
@@ -583,11 +512,11 @@ public class GiraphConfiguration extends Configuration
    * @param numComputeThreads Number of compute threads to use
    */
   public void setNumComputeThreads(int numComputeThreads) {
-    setInt(NUM_COMPUTE_THREADS, numComputeThreads);
+    NUM_COMPUTE_THREADS.set(this, numComputeThreads);
   }
 
   public int getNumComputeThreads() {
-    return getInt(NUM_COMPUTE_THREADS, NUM_COMPUTE_THREADS_DEFAULT);
+    return NUM_COMPUTE_THREADS.get(this);
   }
 
   /**
@@ -596,19 +525,19 @@ public class GiraphConfiguration extends Configuration
    * @param numInputSplitsThreads Number of input split threads to use
    */
   public void setNumInputSplitsThreads(int numInputSplitsThreads) {
-    setInt(NUM_INPUT_SPLITS_THREADS, numInputSplitsThreads);
+    NUM_INPUT_SPLITS_THREADS.set(this, numInputSplitsThreads);
   }
 
   public int getNumInputSplitsThreads() {
-    return getInt(NUM_INPUT_SPLITS_THREADS, NUM_INPUT_SPLITS_THREADS_DEFAULT);
+    return NUM_INPUT_SPLITS_THREADS.get(this);
   }
 
   public long getInputSplitMaxVertices() {
-    return getLong(INPUT_SPLIT_MAX_VERTICES, INPUT_SPLIT_MAX_VERTICES_DEFAULT);
+    return INPUT_SPLIT_MAX_VERTICES.get(this);
   }
 
   public long getInputSplitMaxEdges() {
-    return getLong(INPUT_SPLIT_MAX_EDGES, INPUT_SPLIT_MAX_EDGES_DEFAULT);
+    return INPUT_SPLIT_MAX_EDGES.get(this);
   }
 
   /**
@@ -617,7 +546,7 @@ public class GiraphConfiguration extends Configuration
    * @param useUnsafeSerialization If true, use unsafe serialization
    */
   public void useUnsafeSerialization(boolean useUnsafeSerialization) {
-    setBoolean(USE_UNSAFE_SERIALIZATION, useUnsafeSerialization);
+    USE_UNSAFE_SERIALIZATION.set(this, useUnsafeSerialization);
   }
 
   /**
@@ -627,8 +556,7 @@ public class GiraphConfiguration extends Configuration
    * @return Whether to use message size encoding
    */
   public boolean useMessageSizeEncoding() {
-    return getBoolean(
-        USE_MESSAGE_SIZE_ENCODING, USE_MESSAGE_SIZE_ENCODING_DEFAULT);
+    return USE_MESSAGE_SIZE_ENCODING.get(this);
   }
 
   /**
@@ -638,7 +566,7 @@ public class GiraphConfiguration extends Configuration
    * @param checkpointFrequency How often to checkpoint (0 means never)
    */
   public void setCheckpointFrequency(int checkpointFrequency) {
-    setInt(CHECKPOINT_FREQUENCY, checkpointFrequency);
+    CHECKPOINT_FREQUENCY.set(this, checkpointFrequency);
   }
 
   /**
@@ -648,7 +576,7 @@ public class GiraphConfiguration extends Configuration
    * @return Checkpoint frequency (0 means never)
    */
   public int getCheckpointFrequency() {
-    return getInt(CHECKPOINT_FREQUENCY, CHECKPOINT_FREQUENCY_DEFAULT);
+    return CHECKPOINT_FREQUENCY.get(this);
   }
 
   /**
@@ -666,7 +594,7 @@ public class GiraphConfiguration extends Configuration
    * @param maxTaskAttempts Max task attempts to use
    */
   public void setMaxTaskAttempts(int maxTaskAttempts) {
-    setInt(MAX_TASK_ATTEMPTS, maxTaskAttempts);
+    MAX_TASK_ATTEMPTS.set(this, maxTaskAttempts);
   }
 
   /**
@@ -675,7 +603,7 @@ public class GiraphConfiguration extends Configuration
    * @return Max task attempts or -1, if not set
    */
   public int getMaxTaskAttempts() {
-    return getInt(MAX_TASK_ATTEMPTS, -1);
+    return MAX_TASK_ATTEMPTS.get(this);
   }
 
   /**
@@ -684,7 +612,7 @@ public class GiraphConfiguration extends Configuration
    * @return Number of milliseconds to wait for an event before continuing on
    */
   public int getEventWaitMsecs() {
-    return getInt(EVENT_WAIT_MSECS, EVENT_WAIT_MSECS_DEFAULT);
+    return EVENT_WAIT_MSECS.get(this);
   }
 
   /**
@@ -694,7 +622,7 @@ public class GiraphConfiguration extends Configuration
    *                       continuing on
    */
   public void setEventWaitMsecs(int eventWaitMsecs) {
-    setInt(EVENT_WAIT_MSECS, eventWaitMsecs);
+    EVENT_WAIT_MSECS.set(this, eventWaitMsecs);
   }
 
   /**
@@ -705,8 +633,7 @@ public class GiraphConfiguration extends Configuration
    *         minimum number of workers before a superstep
    */
   public int getMaxMasterSuperstepWaitMsecs() {
-    return getInt(MAX_MASTER_SUPERSTEP_WAIT_MSECS,
-        MAX_MASTER_SUPERSTEP_WAIT_MSECS_DEFAULT);
+    return MAX_MASTER_SUPERSTEP_WAIT_MSECS.get(this);
   }
 
   /**
@@ -718,7 +645,7 @@ public class GiraphConfiguration extends Configuration
    *                                    number of workers before a superstep
    */
   public void setMaxMasterSuperstepWaitMsecs(int maxMasterSuperstepWaitMsecs) {
-    setInt(MAX_MASTER_SUPERSTEP_WAIT_MSECS, maxMasterSuperstepWaitMsecs);
+    MAX_MASTER_SUPERSTEP_WAIT_MSECS.set(this, maxMasterSuperstepWaitMsecs);
   }
 
   /**
@@ -738,8 +665,7 @@ public class GiraphConfiguration extends Configuration
    * @return True iff we want to use input split locality
    */
   public boolean useInputSplitLocality() {
-    return getBoolean(GiraphConstants.USE_INPUT_SPLIT_LOCALITY,
-        GiraphConstants.USE_INPUT_SPLIT_LOCALITY_DEFAULT);
+    return USE_INPUT_SPLIT_LOCALITY.get(this);
   }
 
   /**
@@ -748,8 +674,7 @@ public class GiraphConfiguration extends Configuration
    * @return True iff we can reuse incoming edge objects.
    */
   public boolean reuseIncomingEdgeObjects() {
-    return getBoolean(GiraphConstants.REUSE_INCOMING_EDGE_OBJECTS,
-        GiraphConstants.REUSE_INCOMING_EDGE_OBJECTS_DEFAULT);
+    return GiraphConstants.REUSE_INCOMING_EDGE_OBJECTS.get(this);
   }
 
   /**
@@ -760,8 +685,8 @@ public class GiraphConfiguration extends Configuration
    */
   public String getLocalHostname() throws UnknownHostException {
     return DNS.getDefaultHost(
-        get(GiraphConstants.DNS_INTERFACE, "default"),
-        get(GiraphConstants.DNS_NAMESERVER, "default"));
+        GiraphConstants.DNS_INTERFACE.get(this),
+        GiraphConstants.DNS_NAMESERVER.get(this));
   }
 
   /**
@@ -771,7 +696,7 @@ public class GiraphConfiguration extends Configuration
    * @param maxNumberOfSupersteps Maximum number of supersteps
    */
   public void setMaxNumberOfSupersteps(int maxNumberOfSupersteps) {
-    setInt(MAX_NUMBER_OF_SUPERSTEPS, maxNumberOfSupersteps);
+    MAX_NUMBER_OF_SUPERSTEPS.set(this, maxNumberOfSupersteps);
   }
 
   /**
@@ -781,6 +706,6 @@ public class GiraphConfiguration extends Configuration
    * @return Maximum number of supersteps
    */
   public int getMaxNumberOfSupersteps() {
-    return getInt(MAX_NUMBER_OF_SUPERSTEPS, MAX_NUMBER_OF_SUPERSTEPS_DEFAULT);
+    return MAX_NUMBER_OF_SUPERSTEPS.get(this);
   }
 }

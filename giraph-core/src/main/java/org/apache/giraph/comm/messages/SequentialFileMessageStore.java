@@ -45,6 +45,8 @@ import java.util.List;
 import java.util.SortedSet;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.apache.giraph.conf.GiraphConstants.MESSAGES_DIRECTORY;
+
 /**
  * Used for writing and reading collection of messages to the disk. {@link
  * #addMessages(MessageStore<I, M>)} should be called only once with
@@ -377,9 +379,7 @@ public class SequentialFileMessageStore<I extends WritableComparable,
       this.config = config;
       String jobId = config.get("mapred.job.id", "Unknown Job");
       int taskId   = config.getTaskPartition();
-      List<String> userPaths = Lists.newArrayList(config.getStrings(
-          GiraphConstants.MESSAGES_DIRECTORY,
-          GiraphConstants.MESSAGES_DIRECTORY_DEFAULT));
+      List<String> userPaths = MESSAGES_DIRECTORY.getList(config);
       Collections.shuffle(userPaths);
       directories = new String[userPaths.size()];
       int i = 0;
@@ -389,9 +389,7 @@ public class SequentialFileMessageStore<I extends WritableComparable,
         directories[i++] = directory;
         new File(directory).mkdirs();
       }
-      this.bufferSize = config.getInt(
-          GiraphConstants.MESSAGES_BUFFER_SIZE,
-          GiraphConstants.MESSAGES_BUFFER_SIZE_DEFAULT);
+      this.bufferSize = GiraphConstants.MESSAGES_BUFFER_SIZE.get(config);
       storeCounter = new AtomicInteger();
     }
 

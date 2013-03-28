@@ -18,8 +18,6 @@
 
 package org.apache.giraph.graph;
 
-import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import org.apache.giraph.bsp.BspService;
 import org.apache.giraph.bsp.CentralizedServiceMaster;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
@@ -57,6 +55,9 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 
+import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.net.URL;
@@ -71,6 +72,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+
+import static org.apache.giraph.conf.GiraphConstants.EDGE_VALUE_CLASS;
+import static org.apache.giraph.conf.GiraphConstants.MESSAGE_VALUE_CLASS;
+import static org.apache.giraph.conf.GiraphConstants.VERTEX_ID_CLASS;
+import static org.apache.giraph.conf.GiraphConstants.VERTEX_VALUE_CLASS;
 
 /**
  * The Giraph-specific business logic for a single BSP
@@ -440,18 +446,10 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
     Type vertexValueType = classList.get(1);
     Type edgeValueType = classList.get(2);
     Type messageValueType = classList.get(3);
-    conf.setClass(GiraphConstants.VERTEX_ID_CLASS,
-        (Class<?>) vertexIndexType,
-        WritableComparable.class);
-    conf.setClass(GiraphConstants.VERTEX_VALUE_CLASS,
-        (Class<?>) vertexValueType,
-        Writable.class);
-    conf.setClass(GiraphConstants.EDGE_VALUE_CLASS,
-        (Class<?>) edgeValueType,
-        Writable.class);
-    conf.setClass(GiraphConstants.MESSAGE_VALUE_CLASS,
-        (Class<?>) messageValueType,
-        Writable.class);
+    VERTEX_ID_CLASS.set(conf, (Class<WritableComparable>) vertexIndexType);
+    VERTEX_VALUE_CLASS.set(conf, (Class<Writable>) vertexValueType);
+    EDGE_VALUE_CLASS.set(conf, (Class<Writable>) edgeValueType);
+    MESSAGE_VALUE_CLASS.set(conf, (Class<Writable>) messageValueType);
   }
 
   /**

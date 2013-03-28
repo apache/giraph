@@ -70,6 +70,15 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static org.apache.giraph.conf.GiraphConstants.CLIENT_RECEIVE_BUFFER_SIZE;
+import static org.apache.giraph.conf.GiraphConstants.CLIENT_SEND_BUFFER_SIZE;
+import static org.apache.giraph.conf.GiraphConstants.MAX_REQUEST_MILLISECONDS;
+import static org.apache.giraph.conf.GiraphConstants.MAX_RESOLVE_ADDRESS_ATTEMPTS;
+import static org.apache.giraph.conf.GiraphConstants.NETTY_CLIENT_EXECUTION_AFTER_HANDLER;
+import static org.apache.giraph.conf.GiraphConstants.NETTY_CLIENT_EXECUTION_THREADS;
+import static org.apache.giraph.conf.GiraphConstants.NETTY_CLIENT_USE_EXECUTION_HANDLER;
+import static org.apache.giraph.conf.GiraphConstants.NETTY_MAX_CONNECTION_FAILURES;
+import static org.apache.giraph.conf.GiraphConstants.WAITING_REQUEST_MSECS;
 import static org.jboss.netty.channel.Channels.pipeline;
 
 /**
@@ -175,15 +184,9 @@ public class NettyClient {
                      TaskInfo myTaskInfo) {
     this.context = context;
     this.myTaskInfo = myTaskInfo;
-    this.channelsPerServer = conf.getInt(
-        GiraphConstants.CHANNELS_PER_SERVER,
-        GiraphConstants.DEFAULT_CHANNELS_PER_SERVER);
-    sendBufferSize = conf.getInt(
-        GiraphConstants.CLIENT_SEND_BUFFER_SIZE,
-        GiraphConstants.DEFAULT_CLIENT_SEND_BUFFER_SIZE);
-    receiveBufferSize = conf.getInt(
-        GiraphConstants.CLIENT_RECEIVE_BUFFER_SIZE,
-        GiraphConstants.DEFAULT_CLIENT_RECEIVE_BUFFER_SIZE);
+    this.channelsPerServer = GiraphConstants.CHANNELS_PER_SERVER.get(conf);
+    sendBufferSize = CLIENT_SEND_BUFFER_SIZE.get(conf);
+    receiveBufferSize = CLIENT_RECEIVE_BUFFER_SIZE.get(conf);
 
     limitNumberOfOpenRequests = conf.getBoolean(
         LIMIT_NUMBER_OF_OPEN_REQUESTS,
@@ -200,39 +203,24 @@ public class NettyClient {
       maxNumberOfOpenRequests = -1;
     }
 
-    maxRequestMilliseconds = conf.getInt(
-        GiraphConstants.MAX_REQUEST_MILLISECONDS,
-        GiraphConstants.MAX_REQUEST_MILLISECONDS_DEFAULT);
+    maxRequestMilliseconds = MAX_REQUEST_MILLISECONDS.get(conf);
 
-    maxConnectionFailures = conf.getInt(
-        GiraphConstants.NETTY_MAX_CONNECTION_FAILURES,
-        GiraphConstants.NETTY_MAX_CONNECTION_FAILURES_DEFAULT);
+    maxConnectionFailures = NETTY_MAX_CONNECTION_FAILURES.get(conf);
 
-    waitingRequestMsecs = conf.getInt(
-        GiraphConstants.WAITING_REQUEST_MSECS,
-        GiraphConstants.WAITING_REQUEST_MSECS_DEFAULT);
+    waitingRequestMsecs = WAITING_REQUEST_MSECS.get(conf);
 
-    maxPoolSize = conf.getInt(
-        GiraphConstants.NETTY_CLIENT_THREADS,
-        GiraphConstants.NETTY_CLIENT_THREADS_DEFAULT);
+    maxPoolSize = GiraphConstants.NETTY_CLIENT_THREADS.get(conf);
 
-    maxResolveAddressAttempts = conf.getInt(
-        GiraphConstants.MAX_RESOLVE_ADDRESS_ATTEMPTS,
-        GiraphConstants.MAX_RESOLVE_ADDRESS_ATTEMPTS_DEFAULT);
+    maxResolveAddressAttempts = MAX_RESOLVE_ADDRESS_ATTEMPTS.get(conf);
 
     clientRequestIdRequestInfoMap =
         new MapMaker().concurrencyLevel(maxPoolSize).makeMap();
 
-    handlerBeforeExecutionHandler = conf.get(
-        GiraphConstants.NETTY_CLIENT_EXECUTION_AFTER_HANDLER,
-        GiraphConstants.NETTY_CLIENT_EXECUTION_AFTER_HANDLER_DEFAULT);
-    boolean useExecutionHandler = conf.getBoolean(
-        GiraphConstants.NETTY_CLIENT_USE_EXECUTION_HANDLER,
-        GiraphConstants.NETTY_CLIENT_USE_EXECUTION_HANDLER_DEFAULT);
+    handlerBeforeExecutionHandler =
+        NETTY_CLIENT_EXECUTION_AFTER_HANDLER.get(conf);
+    boolean useExecutionHandler = NETTY_CLIENT_USE_EXECUTION_HANDLER.get(conf);
     if (useExecutionHandler) {
-      int executionThreads = conf.getInt(
-          GiraphConstants.NETTY_CLIENT_EXECUTION_THREADS,
-          GiraphConstants.NETTY_CLIENT_EXECUTION_THREADS_DEFAULT);
+      int executionThreads = NETTY_CLIENT_EXECUTION_THREADS.get(conf);
       executionHandler = new ExecutionHandler(
           new MemoryAwareThreadPoolExecutor(
               executionThreads, 1048576, 1048576, 1, TimeUnit.HOURS,

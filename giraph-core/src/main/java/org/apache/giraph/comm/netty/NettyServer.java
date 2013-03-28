@@ -60,6 +60,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import static org.apache.giraph.conf.GiraphConstants.MAX_IPC_PORT_BIND_ATTEMPTS;
 import static org.jboss.netty.channel.Channels.pipeline;
 
 /**
@@ -140,12 +141,8 @@ public class NettyServer {
     this.saslServerHandlerFactory = new SaslServerHandler.Factory();
     /*end[HADOOP_NON_SECURE]*/
     this.myTaskInfo = myTaskInfo;
-    sendBufferSize = conf.getInt(
-        GiraphConstants.SERVER_SEND_BUFFER_SIZE,
-        GiraphConstants.DEFAULT_SERVER_SEND_BUFFER_SIZE);
-    receiveBufferSize = conf.getInt(
-        GiraphConstants.SERVER_RECEIVE_BUFFER_SIZE,
-        GiraphConstants.DEFAULT_SERVER_RECEIVE_BUFFER_SIZE);
+    sendBufferSize = GiraphConstants.SERVER_SEND_BUFFER_SIZE.get(conf);
+    receiveBufferSize = GiraphConstants.SERVER_RECEIVE_BUFFER_SIZE.get(conf);
 
     workerRequestReservedMap = new WorkerRequestReservedMap(conf);
 
@@ -162,25 +159,21 @@ public class NettyServer {
       throw new IllegalStateException("NettyServer: unable to get hostname");
     }
 
-    maxPoolSize = conf.getInt(
-        GiraphConstants.NETTY_SERVER_THREADS,
-        GiraphConstants.NETTY_SERVER_THREADS_DEFAULT);
+    maxPoolSize = GiraphConstants.NETTY_SERVER_THREADS.get(conf);
 
-    tcpBacklog = conf.getInt(GiraphConstants.TCP_BACKLOG,
+    tcpBacklog = conf.getInt(GiraphConstants.TCP_BACKLOG.getKey(),
         conf.getInt(GiraphConstants.MAX_WORKERS,
-            GiraphConstants.TCP_BACKLOG_DEFAULT));
+            GiraphConstants.TCP_BACKLOG.getDefaultValue()));
 
     channelFactory = new NioServerSocketChannelFactory(
         bossExecutorService,
         workerExecutorService,
         maxPoolSize);
 
-    handlerBeforeExecutionHandler = conf.get(
-        GiraphConstants.NETTY_SERVER_EXECUTION_AFTER_HANDLER,
-        GiraphConstants.NETTY_SERVER_EXECUTION_AFTER_HANDLER_DEFAULT);
-    boolean useExecutionHandler = conf.getBoolean(
-        GiraphConstants.NETTY_SERVER_USE_EXECUTION_HANDLER,
-        GiraphConstants.NETTY_SERVER_USE_EXECUTION_HANDLER_DEFAULT);
+    handlerBeforeExecutionHandler =
+        GiraphConstants.NETTY_SERVER_EXECUTION_AFTER_HANDLER.get(conf);
+    boolean useExecutionHandler =
+        GiraphConstants.NETTY_SERVER_USE_EXECUTION_HANDLER.get(conf);
     if (useExecutionHandler) {
       int executionThreads = conf.getNettyServerExecutionThreads();
       executionHandler = new ExecutionHandler(
@@ -304,16 +297,11 @@ public class NettyServer {
     int numServers = conf.getInt(GiraphConstants.MAX_WORKERS, numTasks) + 1;
     int portIncrementConstant =
         (int) Math.pow(10, Math.ceil(Math.log10(numServers)));
-    int bindPort = conf.getInt(GiraphConstants.IPC_INITIAL_PORT,
-        GiraphConstants.IPC_INITIAL_PORT_DEFAULT) +
-        taskId;
+    int bindPort = GiraphConstants.IPC_INITIAL_PORT.get(conf) + taskId;
     int bindAttempts = 0;
-    final int maxIpcPortBindAttempts =
-        conf.getInt(GiraphConstants.MAX_IPC_PORT_BIND_ATTEMPTS,
-            GiraphConstants.MAX_IPC_PORT_BIND_ATTEMPTS_DEFAULT);
+    final int maxIpcPortBindAttempts = MAX_IPC_PORT_BIND_ATTEMPTS.get(conf);
     final boolean failFirstPortBindingAttempt =
-        conf.getBoolean(GiraphConstants.FAIL_FIRST_IPC_PORT_BIND_ATTEMPT,
-            GiraphConstants.FAIL_FIRST_IPC_PORT_BIND_ATTEMPT_DEFAULT);
+        GiraphConstants.FAIL_FIRST_IPC_PORT_BIND_ATTEMPT.get(conf);
 
     // Simple handling of port collisions on the same machine while
     // preserving debugability from the port number alone.

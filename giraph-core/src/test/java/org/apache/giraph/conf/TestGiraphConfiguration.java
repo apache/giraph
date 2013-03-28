@@ -20,6 +20,7 @@ package org.apache.giraph.conf;
 
 import org.junit.Test;
 
+import static org.apache.giraph.conf.ClassConfOption.getClassesOfType;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
@@ -45,7 +46,7 @@ public class TestGiraphConfiguration {
       assertEquals(2, conf.getClasses("foo").length);
     }
 
-    Class<? extends If>[] klasses2 = conf.getClassesOfType("foo", If.class);
+    Class<? extends If>[] klasses2 = getClassesOfType(conf, "foo", If.class);
     assertEquals(2, klasses2.length);
     assertEquals(A.class, klasses2[0]);
     assertEquals(B.class, klasses2[1]);
@@ -56,14 +57,14 @@ public class TestGiraphConfiguration {
     GiraphConfiguration conf = new GiraphConfiguration();
 
     conf.setClasses("foo", If.class, A.class, B.class);
-    conf.addToClasses("foo", C.class, If.class);
+    ClassConfOption.addToClasses(conf, "foo", C.class, If.class);
     Class<?>[] klasses = conf.getClasses("foo");
     assertEquals(3, klasses.length);
     assertEquals(A.class, klasses[0]);
     assertEquals(B.class, klasses[1]);
     assertEquals(C.class, klasses[2]);
 
-    conf.addToClasses("bar", B.class, If.class);
+    ClassConfOption.addToClasses(conf, "bar", B.class, If.class);
     klasses = conf.getClasses("bar");
     assertEquals(1, klasses.length);
     assertEquals(B.class, klasses[0]);

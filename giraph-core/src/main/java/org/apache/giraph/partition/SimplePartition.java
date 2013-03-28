@@ -18,7 +18,6 @@
 
 package org.apache.giraph.partition;
 
-import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -32,6 +31,8 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
+
+import static org.apache.giraph.conf.GiraphConstants.USE_OUT_OF_CORE_MESSAGES;
 
 /**
  * A simple map-based container that stores vertices.  Vertex ids will map to
@@ -57,8 +58,7 @@ public class SimplePartition<I extends WritableComparable,
   @Override
   public void initialize(int partitionId, Progressable progressable) {
     super.initialize(partitionId, progressable);
-    if (getConf().getBoolean(GiraphConstants.USE_OUT_OF_CORE_MESSAGES,
-        GiraphConstants.USE_OUT_OF_CORE_MESSAGES_DEFAULT)) {
+    if (USE_OUT_OF_CORE_MESSAGES.get(getConf())) {
       vertexMap = new ConcurrentSkipListMap<I, Vertex<I, V, E, M>>();
     } else {
       vertexMap = Maps.newConcurrentMap();
@@ -114,8 +114,7 @@ public class SimplePartition<I extends WritableComparable,
   @Override
   public void readFields(DataInput input) throws IOException {
     super.readFields(input);
-    if (getConf().getBoolean(GiraphConstants.USE_OUT_OF_CORE_MESSAGES,
-        GiraphConstants.USE_OUT_OF_CORE_MESSAGES_DEFAULT)) {
+    if (USE_OUT_OF_CORE_MESSAGES.get(getConf())) {
       vertexMap = new ConcurrentSkipListMap<I, Vertex<I, V, E, M>>();
     } else {
       vertexMap = Maps.newConcurrentMap();

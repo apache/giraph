@@ -104,6 +104,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import static org.apache.giraph.conf.GiraphConstants.INPUT_SPLIT_SAMPLE_PERCENT;
+import static org.apache.giraph.conf.GiraphConstants.KEEP_ZOOKEEPER_DATA;
+import static org.apache.giraph.conf.GiraphConstants.PARTITION_LONG_TAIL_MIN_PRINT;
+import static org.apache.giraph.conf.GiraphConstants.USE_INPUT_SPLIT_LOCALITY;
+
 /**
  * ZooKeeper-based implementation of {@link CentralizedServiceMaster}.
  *
@@ -201,13 +206,10 @@ public class BspServiceMaster<I extends WritableComparable,
     maxWorkers = conf.getMaxWorkers();
     minWorkers = conf.getMinWorkers();
     maxNumberOfSupersteps = conf.getMaxNumberOfSupersteps();
-    minPercentResponded = conf.getFloat(
-        GiraphConstants.MIN_PERCENT_RESPONDED, 100.0f);
+    minPercentResponded = GiraphConstants.MIN_PERCENT_RESPONDED.get(conf);
     eventWaitMsecs = conf.getEventWaitMsecs();
     maxSuperstepWaitMsecs = conf.getMaxMasterSuperstepWaitMsecs();
-    partitionLongTailMinPrint = conf.getInt(
-        GiraphConstants.PARTITION_LONG_TAIL_MIN_PRINT,
-        GiraphConstants.PARTITION_LONG_TAIL_MIN_PRINT_DEFAULT);
+    partitionLongTailMinPrint = PARTITION_LONG_TAIL_MIN_PRINT.get(conf);
     masterGraphPartitioner =
         getGraphPartitionerFactory().createMasterGraphPartitioner();
     if (conf.isJMapHistogramDumpEnabled()) {
@@ -316,11 +318,8 @@ public class BspServiceMaster<I extends WritableComparable,
           logPrefix + ": Got InterruptedException", e);
     }
     float samplePercent =
-        getConfiguration().getFloat(
-            GiraphConstants.INPUT_SPLIT_SAMPLE_PERCENT,
-            GiraphConstants.INPUT_SPLIT_SAMPLE_PERCENT_DEFAULT);
-    if (samplePercent !=
-        GiraphConstants.INPUT_SPLIT_SAMPLE_PERCENT_DEFAULT) {
+        INPUT_SPLIT_SAMPLE_PERCENT.get(getConfiguration());
+    if (samplePercent != INPUT_SPLIT_SAMPLE_PERCENT.getDefaultValue()) {
       int lastIndex = (int) (samplePercent * splits.size() / 100f);
       List<InputSplit> sampleSplits = splits.subList(0, lastIndex);
       LOG.warn(logPrefix + ": Using sampling - Processing only " +
@@ -579,6 +578,7 @@ public class BspServiceMaster<I extends WritableComparable,
   private int createInputSplits(GiraphInputFormat inputFormat,
                                 InputSplitPaths inputSplitPaths,
                                 String inputSplitType) {
+    ImmutableClassesGiraphConfiguration conf = getConfiguration();
     String logPrefix = "create" + inputSplitType + "InputSplits";
     // Only the 'master' should be doing this.  Wait until the number of
     // processes that have reported health exceeds the minimum percentage.
@@ -612,7 +612,7 @@ public class BspServiceMaster<I extends WritableComparable,
 
     // Create at least as many splits as the total number of input threads.
     int minSplitCountHint = healthyWorkerInfoList.size() *
-        getConfiguration().getNumInputSplitsThreads();
+        conf.getNumInputSplitsThreads();
 
     // Note that the input splits may only be a sample if
     // INPUT_SPLIT_SAMPLE_PERCENT is set to something other than 100
@@ -635,8 +635,7 @@ public class BspServiceMaster<I extends WritableComparable,
     }
 
     // Write input splits to zookeeper in parallel
-    int inputSplitThreadCount = getConfiguration().getInt(
-        INPUT_SPLIT_THREAD_COUNT,
+    int inputSplitThreadCount = conf.getInt(INPUT_SPLIT_THREAD_COUNT,
         DEFAULT_INPUT_SPLIT_THREAD_COUNT);
     if (LOG.isInfoEnabled()) {
       LOG.info(logPrefix + ": Starting to write input split data " +
@@ -644,9 +643,7 @@ public class BspServiceMaster<I extends WritableComparable,
     }
     ExecutorService taskExecutor =
         Executors.newFixedThreadPool(inputSplitThreadCount);
-    boolean writeLocations = getConfiguration().getBoolean(
-        GiraphConstants.USE_INPUT_SPLIT_LOCALITY,
-        GiraphConstants.USE_INPUT_SPLIT_LOCALITY_DEFAULT);
+    boolean writeLocations = USE_INPUT_SPLIT_LOCALITY.get(conf);
     for (int i = 0; i < splitList.size(); ++i) {
       InputSplit inputSplit = splitList.get(i);
       taskExecutor.submit(new WriteInputSplit(inputSplit, inputSplitsPath, i,
@@ -1356,9 +1353,7 @@ public class BspServiceMaster<I extends WritableComparable,
    */
   private void cleanUpOldSuperstep(long removeableSuperstep) throws
       InterruptedException {
-    if (!(getConfiguration().getBoolean(
-        GiraphConstants.KEEP_ZOOKEEPER_DATA,
-        GiraphConstants.KEEP_ZOOKEEPER_DATA_DEFAULT)) &&
+    if (KEEP_ZOOKEEPER_DATA.isFalse(getConfiguration()) &&
         (removeableSuperstep >= 0)) {
       String oldSuperstepPath =
           getSuperstepPath(getApplicationAttempt()) + "/" +
@@ -1523,7 +1518,7 @@ public class BspServiceMaster<I extends WritableComparable,
     // If we have completed the maximum number of supersteps, stop
     // the computation
     if (maxNumberOfSupersteps !=
-        GiraphConstants.MAX_NUMBER_OF_SUPERSTEPS_DEFAULT &&
+        GiraphConstants.MAX_NUMBER_OF_SUPERSTEPS.getDefaultValue() &&
         (getSuperstep() == maxNumberOfSupersteps - 1)) {
       if (LOG.isInfoEnabled()) {
         LOG.info("coordinateSuperstep: Finished " + maxNumberOfSupersteps +
@@ -1661,9 +1656,7 @@ public class BspServiceMaster<I extends WritableComparable,
     // provided (not dynamically started) and we don't want to keep the data
     try {
       if (getConfiguration().getZookeeperList() != null &&
-          !getConfiguration().getBoolean(
-              GiraphConstants.KEEP_ZOOKEEPER_DATA,
-              GiraphConstants.KEEP_ZOOKEEPER_DATA_DEFAULT)) {
+          KEEP_ZOOKEEPER_DATA.isFalse(getConfiguration())) {
         if (LOG.isInfoEnabled()) {
           LOG.info("cleanupZooKeeper: Removing the following path " +
               "and all children - " + basePath + " from ZooKeeper list " +
@@ -1713,6 +1706,8 @@ public class BspServiceMaster<I extends WritableComparable,
 
   @Override
   public void cleanup() throws IOException {
+    ImmutableClassesGiraphConfiguration conf = getConfiguration();
+
     // All master processes should denote they are done by adding special
     // znode.  Once the number of znodes equals the number of partitions
     // for workers and masters, the master will clean up the ZooKeeper
@@ -1744,9 +1739,7 @@ public class BspServiceMaster<I extends WritableComparable,
     if (isMaster) {
       cleanUpZooKeeper();
       // If desired, cleanup the checkpoint directory
-      if (getConfiguration().getBoolean(
-          GiraphConstants.CLEANUP_CHECKPOINTS_AFTER_SUCCESS,
-          GiraphConstants.CLEANUP_CHECKPOINTS_AFTER_SUCCESS_DEFAULT)) {
+      if (GiraphConstants.CLEANUP_CHECKPOINTS_AFTER_SUCCESS.get(conf)) {
         boolean success =
             getFs().delete(new Path(checkpointBasePath), true);
         if (LOG.isInfoEnabled()) {

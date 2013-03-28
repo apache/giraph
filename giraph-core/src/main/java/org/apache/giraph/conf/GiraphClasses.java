@@ -149,56 +149,42 @@ public class GiraphClasses<I extends WritableComparable,
    */
   public void readFromConf(Configuration conf) {
     // set pre-validated generic parameter types into Configuration
-    vertexClass = (Class<? extends Vertex<I, V, E, M>>)
-        conf.getClass(VERTEX_CLASS, null, Vertex.class);
+    vertexClass = (Class<? extends Vertex<I, V, E, M>>) VERTEX_CLASS.get(conf);
     List<Class<?>> classList = ReflectionUtils.getTypeArguments(Vertex.class,
         vertexClass);
     vertexIdClass = (Class<I>) classList.get(0);
     vertexValueClass = (Class<V>) classList.get(1);
     edgeValueClass = (Class<E>) classList.get(2);
     messageValueClass = (Class<M>) classList.get(3);
+
     vertexEdgesClass = (Class<? extends VertexEdges<I, E>>)
-        conf.getClass(VERTEX_EDGES_CLASS, ByteArrayEdges.class,
-            VertexEdges.class);
+        VERTEX_EDGES_CLASS.get(conf);
     inputVertexEdgesClass = (Class<? extends VertexEdges<I, E>>)
-        conf.getClass(INPUT_VERTEX_EDGES_CLASS, vertexEdgesClass,
-            VertexEdges.class);
+        INPUT_VERTEX_EDGES_CLASS.getWithDefault(conf, vertexEdgesClass);
     vertexValueFactoryClass = (Class<? extends VertexValueFactory<V>>)
-        conf.getClass(VERTEX_VALUE_FACTORY_CLASS,
-            DefaultVertexValueFactory.class, VertexValueFactory.class);
+        VERTEX_VALUE_FACTORY_CLASS.get(conf);
 
     graphPartitionerFactoryClass =
         (Class<? extends GraphPartitionerFactory<I, V, E, M>>)
-        conf.getClass(GRAPH_PARTITIONER_FACTORY_CLASS,
-            HashPartitionerFactory.class,
-            GraphPartitionerFactory.class);
+            GRAPH_PARTITIONER_FACTORY_CLASS.get(conf);
 
     vertexInputFormatClass = (Class<? extends VertexInputFormat<I, V, E, M>>)
-        conf.getClass(VERTEX_INPUT_FORMAT_CLASS,
-        null, VertexInputFormat.class);
+        VERTEX_INPUT_FORMAT_CLASS.get(conf);
     vertexOutputFormatClass = (Class<? extends VertexOutputFormat<I, V, E>>)
-        conf.getClass(VERTEX_OUTPUT_FORMAT_CLASS,
-        null, VertexOutputFormat.class);
+        VERTEX_OUTPUT_FORMAT_CLASS.get(conf);
     edgeInputFormatClass = (Class<? extends EdgeInputFormat<I, E>>)
-        conf.getClass(EDGE_INPUT_FORMAT_CLASS,
-        null, EdgeInputFormat.class);
+        EDGE_INPUT_FORMAT_CLASS.get(conf);
 
-    aggregatorWriterClass = conf.getClass(AGGREGATOR_WRITER_CLASS,
-        TextAggregatorWriter.class, AggregatorWriter.class);
+    aggregatorWriterClass = AGGREGATOR_WRITER_CLASS.get(conf);
     combinerClass = (Class<? extends Combiner<I, M>>)
-        conf.getClass(VERTEX_COMBINER_CLASS, null, Combiner.class);
+        VERTEX_COMBINER_CLASS.get(conf);
     vertexResolverClass = (Class<? extends VertexResolver<I, V, E, M>>)
-        conf.getClass(VERTEX_RESOLVER_CLASS,
-        DefaultVertexResolver.class, VertexResolver.class);
-    partitionContextClass = conf.getClass(PARTITION_CONTEXT_CLASS,
-        DefaultPartitionContext.class, PartitionContext.class);
-    workerContextClass = conf.getClass(WORKER_CONTEXT_CLASS,
-        DefaultWorkerContext.class, WorkerContext.class);
-    masterComputeClass =  conf.getClass(MASTER_COMPUTE_CLASS,
-        DefaultMasterCompute.class, MasterCompute.class);
-
+        VERTEX_RESOLVER_CLASS.get(conf);
+    partitionContextClass = PARTITION_CONTEXT_CLASS.get(conf);
+    workerContextClass = WORKER_CONTEXT_CLASS.get(conf);
+    masterComputeClass =  MASTER_COMPUTE_CLASS.get(conf);
     partitionClass = (Class<? extends Partition<I, V, E, M>>)
-        conf.getClass(PARTITION_CLASS, SimplePartition.class);
+        PARTITION_CLASS.get(conf);
   }
 
   /**

@@ -19,11 +19,10 @@
 package org.apache.giraph.master;
 
 import org.apache.giraph.bsp.ApplicationState;
+import org.apache.giraph.bsp.BspService;
 import org.apache.giraph.bsp.CentralizedServiceMaster;
 import org.apache.giraph.bsp.SuperstepState;
-import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.counters.GiraphTimers;
-import org.apache.giraph.bsp.BspService;
 import org.apache.giraph.metrics.GiraphMetrics;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -33,6 +32,8 @@ import org.apache.log4j.Logger;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.TreeMap;
+
+import static org.apache.giraph.conf.GiraphConstants.USE_SUPERSTEP_COUNTERS;
 
 /**
  * Master thread that will coordinate the activities of the tasks.  It runs
@@ -76,9 +77,7 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
     this.bspServiceMaster = bspServiceMaster;
     this.context = context;
     GiraphTimers.init(context);
-    superstepCounterOn = context.getConfiguration().getBoolean(
-        GiraphConstants.USE_SUPERSTEP_COUNTERS,
-        GiraphConstants.USE_SUPERSTEP_COUNTERS_DEFAULT);
+    superstepCounterOn = USE_SUPERSTEP_COUNTERS.get(context.getConfiguration());
   }
 
   /**

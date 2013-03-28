@@ -19,10 +19,11 @@
 package org.apache.giraph.aggregators;
 
 import org.apache.giraph.BspCase;
+import org.apache.giraph.comm.aggregators.AggregatorUtils;
 import org.apache.giraph.conf.GiraphClasses;
+import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.comm.aggregators.AggregatorUtils;
 import org.apache.giraph.examples.AggregatorsTestVertex;
 import org.apache.giraph.examples.SimpleCheckpointVertex;
 import org.apache.giraph.examples.SimplePageRankVertex;
@@ -37,10 +38,6 @@ import org.apache.hadoop.util.Progressable;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -48,6 +45,10 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.Map;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 /** Tests if aggregators are handled on a proper way */
 public class TestAggregatorsHandling extends BspCase {
@@ -165,11 +166,10 @@ public class TestAggregatorsHandling extends BspCase {
         SimplePageRankVertex.SimplePageRankVertexInputFormat.class);
     GiraphJob job = prepareJob(getCallingMethodName(), classes, outputPath);
 
-    job.getConfiguration().set(GiraphConstants.CHECKPOINT_DIRECTORY,
-        checkpointsDir.toString());
-    job.getConfiguration().setBoolean(
-        GiraphConstants.CLEANUP_CHECKPOINTS_AFTER_SUCCESS, false);
-    job.getConfiguration().setCheckpointFrequency(4);
+    GiraphConfiguration conf = job.getConfiguration();
+    GiraphConstants.CHECKPOINT_DIRECTORY.set(conf, checkpointsDir.toString());
+    GiraphConstants.CLEANUP_CHECKPOINTS_AFTER_SUCCESS.set(conf, false);
+    conf.setCheckpointFrequency(4);
 
     assertTrue(job.run(true));
 
@@ -187,10 +187,10 @@ public class TestAggregatorsHandling extends BspCase {
         classes, outputPath);
     job.getConfiguration().setMasterComputeClass(
         SimpleCheckpointVertex.SimpleCheckpointVertexMasterCompute.class);
-    restartedJob.getConfiguration().set(
-        GiraphConstants.CHECKPOINT_DIRECTORY, checkpointsDir.toString());
-    restartedJob.getConfiguration().setLong(
-        GiraphConstants.RESTART_SUPERSTEP, 4);
+    GiraphConfiguration restartedJobConf = restartedJob.getConfiguration();
+    GiraphConstants.CHECKPOINT_DIRECTORY.set(restartedJobConf,
+        checkpointsDir.toString());
+    restartedJobConf.setLong(GiraphConstants.RESTART_SUPERSTEP, 4);
 
     assertTrue(restartedJob.run(true));
   }

@@ -18,15 +18,13 @@
 
 package org.apache.giraph.conf;
 
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.time.SystemTime;
 import org.apache.giraph.time.Time;
 import org.apache.giraph.time.Times;
-import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -58,14 +56,10 @@ public class TestObjectCreation {
   @Before
   public void setUp() {
     GiraphConfiguration conf = new GiraphConfiguration();
-    conf.setClass(GiraphConstants.VERTEX_ID_CLASS, IntWritable.class,
-        WritableComparable.class);
-    conf.setClass(GiraphConstants.VERTEX_VALUE_CLASS, LongWritable.class,
-        Writable.class);
-    conf.setClass(GiraphConstants.EDGE_VALUE_CLASS, DoubleWritable.class,
-        Writable.class);
-    conf.setClass(GiraphConstants.MESSAGE_VALUE_CLASS, LongWritable.class,
-        Writable.class);
+    GiraphConstants.VERTEX_ID_CLASS.set(conf, IntWritable.class);
+    GiraphConstants.VERTEX_VALUE_CLASS.set(conf, LongWritable.class);
+    GiraphConstants.EDGE_VALUE_CLASS.set(conf, DoubleWritable.class);
+    GiraphConstants.MESSAGE_VALUE_CLASS.set(conf, LongWritable.class);
     conf.setVertexClass(ImmutableVertex.class);
     configuration =
         new ImmutableClassesGiraphConfiguration<LongWritable, LongWritable,

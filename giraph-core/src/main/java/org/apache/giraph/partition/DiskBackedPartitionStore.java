@@ -18,12 +18,6 @@
 
 package org.apache.giraph.partition;
 
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
-import com.google.common.hash.HashFunction;
-import com.google.common.hash.Hashing;
-import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.Writable;
@@ -31,6 +25,12 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.log4j.Logger;
+
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
+import com.google.common.hash.HashFunction;
+import com.google.common.hash.Hashing;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -54,6 +54,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import static org.apache.giraph.conf.GiraphConstants.MAX_PARTITIONS_IN_MEMORY;
+import static org.apache.giraph.conf.GiraphConstants.PARTITIONS_DIRECTORY;
 
 /**
  * Disk-backed PartitionStore. Partitions are stored in memory on a LRU basis.
@@ -128,14 +131,10 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
     this.conf = conf;
     this.context = context;
     // We must be able to hold at least one partition in memory
-    maxInMemoryPartitions = Math.max(1,
-        conf.getInt(GiraphConstants.MAX_PARTITIONS_IN_MEMORY,
-            GiraphConstants.MAX_PARTITIONS_IN_MEMORY_DEFAULT));
+    maxInMemoryPartitions = Math.max(MAX_PARTITIONS_IN_MEMORY.get(conf), 1);
 
     // Take advantage of multiple disks
-    String[] userPaths = conf.getStrings(
-        GiraphConstants.PARTITIONS_DIRECTORY,
-        GiraphConstants.PARTITIONS_DIRECTORY_DEFAULT);
+    String[] userPaths = PARTITIONS_DIRECTORY.getArray(conf);
     basePaths = new String[userPaths.length];
     int i = 0;
     for (String path : userPaths) {

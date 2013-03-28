@@ -98,11 +98,11 @@ public class BspCase implements Watcher {
           "location " + getJarLocation() + " for " + getName());
       conf.setWorkerConfiguration(1, 1, 100.0f);
       // Single node testing
-      conf.setBoolean(GiraphConstants.SPLIT_MASTER_WORKER, false);
+      GiraphConstants.SPLIT_MASTER_WORKER.set(conf, false);
     }
     conf.setMaxMasterSuperstepWaitMsecs(30 * 1000);
     conf.setEventWaitMsecs(3 * 1000);
-    conf.setInt(GiraphConstants.ZOOKEEPER_SERVERLIST_POLL_MSECS, 500);
+    GiraphConstants.ZOOKEEPER_SERVERLIST_POLL_MSECS.set(conf, 500);
     if (getZooKeeperList() != null) {
       conf.setZooKeeperConfiguration(getZooKeeperList());
     }
@@ -120,9 +120,9 @@ public class BspCase implements Watcher {
     FileUtils.deletePath(conf, checkPointDir);
 
     conf.set(GiraphConstants.ZOOKEEPER_DIR, zookeeperDir.toString());
-    conf.set(GiraphConstants.ZOOKEEPER_MANAGER_DIRECTORY,
+    GiraphConstants.ZOOKEEPER_MANAGER_DIRECTORY.set(conf,
         zkManagerDir.toString());
-    conf.set(GiraphConstants.CHECKPOINT_DIRECTORY, checkPointDir.toString());
+    GiraphConstants.CHECKPOINT_DIRECTORY.set(conf, checkPointDir.toString());
 
     return conf;
   }

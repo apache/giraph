@@ -31,7 +31,6 @@ import org.apache.giraph.comm.messages.MessageStoreFactory;
 import org.apache.giraph.comm.messages.OneMessagePerVertexStore;
 import org.apache.giraph.comm.messages.SequentialFileMessageStore;
 import org.apache.giraph.comm.netty.handler.WorkerRequestServerHandler;
-import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.Vertex;
@@ -50,6 +49,9 @@ import com.google.common.collect.Multimap;
 import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.Map.Entry;
+
+import static org.apache.giraph.conf.GiraphConstants.MAX_MESSAGES_IN_MEMORY;
+import static org.apache.giraph.conf.GiraphConstants.USE_OUT_OF_CORE_MESSAGES;
 
 /**
  * Netty worker server that implement {@link WorkerServer} and contains
@@ -107,9 +109,7 @@ public class NettyWorkerServer<I extends WritableComparable,
    */
   private MessageStoreFactory<I, M, MessageStoreByPartition<I, M>>
   createMessageStoreFactory() {
-    boolean useOutOfCoreMessaging = conf.getBoolean(
-        GiraphConstants.USE_OUT_OF_CORE_MESSAGES,
-        GiraphConstants.USE_OUT_OF_CORE_MESSAGES_DEFAULT);
+    boolean useOutOfCoreMessaging = USE_OUT_OF_CORE_MESSAGES.get(conf);
     if (!useOutOfCoreMessaging) {
       if (conf.useCombiner()) {
         if (LOG.isInfoEnabled()) {
@@ -126,9 +126,7 @@ public class NettyWorkerServer<I extends WritableComparable,
         return ByteArrayMessagesPerVertexStore.newFactory(service, conf);
       }
     } else {
-      int maxMessagesInMemory = conf.getInt(
-          GiraphConstants.MAX_MESSAGES_IN_MEMORY,
-          GiraphConstants.MAX_MESSAGES_IN_MEMORY_DEFAULT);
+      int maxMessagesInMemory = MAX_MESSAGES_IN_MEMORY.get(conf);
       if (LOG.isInfoEnabled()) {
         LOG.info("createMessageStoreFactory: Using DiskBackedMessageStore, " +
             "maxMessagesInMemory = " + maxMessagesInMemory);

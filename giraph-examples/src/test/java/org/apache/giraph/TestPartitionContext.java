@@ -64,8 +64,7 @@ public class TestPartitionContext extends BspCase {
         GeneratedVertexReader.READER_VERTICES,
         PartitionContextTestVertex.NUM_VERTICES);
     // Increase the number of partitions
-    job.getConfiguration().setInt(
-        GiraphConstants.USER_PARTITION_COUNT,
+    GiraphConstants.USER_PARTITION_COUNT.set(job.getConfiguration(),
         PartitionContextTestVertex.NUM_PARTITIONS);
     assertTrue(job.run(true));
   }

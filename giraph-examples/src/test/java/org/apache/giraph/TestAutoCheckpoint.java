@@ -77,11 +77,11 @@ public class TestAutoCheckpoint extends BspCase {
     conf.setMaxMasterSuperstepWaitMsecs(10000);
     conf.setEventWaitMsecs(1000);
     conf.setCheckpointFrequency(2);
-    conf.set(GiraphConstants.CHECKPOINT_DIRECTORY,
+    GiraphConstants.CHECKPOINT_DIRECTORY.set(conf,
         getTempPath("_singleFaultCheckpoints").toString());
-    conf.setBoolean(GiraphConstants.CLEANUP_CHECKPOINTS_AFTER_SUCCESS, false);
-    conf.setInt(GiraphConstants.ZOOKEEPER_SESSION_TIMEOUT, 10000);
-    conf.setInt(GiraphConstants.ZOOKEEPER_MIN_SESSION_TIMEOUT, 10000);
+    GiraphConstants.CLEANUP_CHECKPOINTS_AFTER_SUCCESS.set(conf, false);
+    GiraphConstants.ZOOKEEPER_SESSION_TIMEOUT.set(conf, 10000);
+    GiraphConstants.ZOOKEEPER_MIN_SESSION_TIMEOUT.set(conf, 10000);
 
     assertTrue(job.run(true));
   }

@@ -19,6 +19,7 @@
 package org.apache.giraph;
 
 import org.apache.giraph.conf.GiraphClasses;
+import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.examples.SimpleCheckpointVertex;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat;
@@ -64,11 +65,10 @@ public class TestManualCheckpoint extends BspCase {
     classes.setVertexOutputFormatClass(SimpleSuperstepVertexOutputFormat.class);
     GiraphJob job = prepareJob(getCallingMethodName(), classes, outputPath);
 
-    job.getConfiguration().set(GiraphConstants.CHECKPOINT_DIRECTORY,
-        checkpointsDir.toString());
-    job.getConfiguration().setBoolean(
-        GiraphConstants.CLEANUP_CHECKPOINTS_AFTER_SUCCESS, false);
-    job.getConfiguration().setCheckpointFrequency(2);
+    GiraphConfiguration conf = job.getConfiguration();
+    GiraphConstants.CHECKPOINT_DIRECTORY.set(conf, checkpointsDir.toString());
+    GiraphConstants.CLEANUP_CHECKPOINTS_AFTER_SUCCESS.set(conf, false);
+    conf.setCheckpointFrequency(2);
 
     assertTrue(job.run(true));
 
@@ -97,9 +97,9 @@ public class TestManualCheckpoint extends BspCase {
     classes.setVertexOutputFormatClass(SimpleSuperstepVertexOutputFormat.class);
     GiraphJob restartedJob = prepareJob(getCallingMethodName() + "Restarted",
         classes, outputPath);
-    job.getConfiguration().setMasterComputeClass(
+    conf.setMasterComputeClass(
         SimpleCheckpointVertex.SimpleCheckpointVertexMasterCompute.class);
-    restartedJob.getConfiguration().set(GiraphConstants.CHECKPOINT_DIRECTORY,
+    GiraphConstants.CHECKPOINT_DIRECTORY.set(restartedJob.getConfiguration(),
         checkpointsDir.toString());
 
     assertTrue(restartedJob.run(true));

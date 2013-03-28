@@ -18,18 +18,19 @@
 
 package org.apache.giraph.partition;
 
-import com.google.common.collect.Iterables;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.utils.UnsafeByteArrayInputStream;
 import org.apache.giraph.utils.UnsafeByteArrayOutputStream;
-import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.junit.Before;
 import org.junit.Test;
+
+import com.google.common.collect.Iterables;
 
 import java.io.IOException;
 
@@ -134,8 +135,8 @@ public class TestPartitionStores {
 
   @Test
   public void testDiskBackedPartitionStore() {
-    conf.setBoolean(GiraphConstants.USE_OUT_OF_CORE_GRAPH, true);
-    conf.setInt(GiraphConstants.MAX_PARTITIONS_IN_MEMORY, 1);
+    GiraphConstants.USE_OUT_OF_CORE_GRAPH.set(conf, true);
+    GiraphConstants.MAX_PARTITIONS_IN_MEMORY.set(conf, 1);
 
     PartitionStore<IntWritable, IntWritable, NullWritable, IntWritable>
         partitionStore = new DiskBackedPartitionStore<IntWritable,
@@ -143,7 +144,7 @@ public class TestPartitionStores {
     testReadWrite(partitionStore, conf);
     partitionStore.shutdown();
 
-    conf.setInt(GiraphConstants.MAX_PARTITIONS_IN_MEMORY, 2);
+    GiraphConstants.MAX_PARTITIONS_IN_MEMORY.set(conf, 2);
     partitionStore = new DiskBackedPartitionStore<IntWritable,
             IntWritable, NullWritable, IntWritable>(conf, context);
     testReadWrite(partitionStore, conf);

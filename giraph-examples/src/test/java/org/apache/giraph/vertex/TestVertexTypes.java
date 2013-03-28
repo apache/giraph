@@ -22,12 +22,9 @@ import org.apache.giraph.combiner.Combiner;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.ByteArrayEdges;
-import org.apache.giraph.edge.VertexEdges;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexValueFactory;
-import org.apache.giraph.io.VertexInputFormat;
-import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.giraph.io.formats.GeneratedVertexInputFormat;
 import org.apache.giraph.io.formats.JsonBase64VertexInputFormat;
 import org.apache.giraph.io.formats.JsonBase64VertexOutputFormat;
@@ -40,6 +37,8 @@ import org.apache.hadoop.io.LongWritable;
 import org.junit.Test;
 
 import java.io.IOException;
+
+import static org.apache.giraph.conf.GiraphConstants.VERTEX_VALUE_FACTORY_CLASS;
 
 
 public class TestVertexTypes {
@@ -131,7 +130,7 @@ public class TestVertexTypes {
       Configuration conf = new Configuration();
       conf.setInt(GiraphConstants.MAX_WORKERS, 1);
       conf.setInt(GiraphConstants.MIN_WORKERS, 1);
-      conf.set(GiraphConstants.VERTEX_INPUT_FORMAT_CLASS,
+      conf.set(GiraphConstants.VERTEX_INPUT_FORMAT_CLASS.getKey(),
         "org.apache.giraph.io.formats.DUMMY_TEST_VALUE");
       return conf;
     }
@@ -140,18 +139,12 @@ public class TestVertexTypes {
     public void testMatchingType() throws SecurityException,
             NoSuchMethodException, NoSuchFieldException {
         Configuration conf = getDefaultTestConf();
-        conf.setClass(GiraphConstants.VERTEX_CLASS,
-                      GeneratedVertexMatch.class,
-                      Vertex.class);
-        conf.setClass(GiraphConstants.VERTEX_EDGES_CLASS,
-                      ByteArrayEdges.class,
-                      VertexEdges.class);
-        conf.setClass(GiraphConstants.VERTEX_INPUT_FORMAT_CLASS,
-                      SimpleSuperstepVertexInputFormat.class,
-                      VertexInputFormat.class);
-        conf.setClass(GiraphConstants.VERTEX_COMBINER_CLASS,
-                      GeneratedVertexMatchCombiner.class,
-                      Combiner.class);
+        GiraphConstants.VERTEX_CLASS.set(conf, GeneratedVertexMatch.class);
+        GiraphConstants.VERTEX_EDGES_CLASS.set(conf, ByteArrayEdges.class);
+        GiraphConstants.VERTEX_INPUT_FORMAT_CLASS.set(conf,
+            SimpleSuperstepVertexInputFormat.class);
+        GiraphConstants.VERTEX_COMBINER_CLASS.set(conf,
+            GeneratedVertexMatchCombiner.class);
       @SuppressWarnings("rawtypes")
       GiraphConfigurationValidator<?, ?, ?, ?> validator =
         new GiraphConfigurationValidator(conf);
@@ -167,15 +160,10 @@ public class TestVertexTypes {
     public void testDerivedMatchingType() throws SecurityException,
             NoSuchMethodException, NoSuchFieldException {
         Configuration conf = getDefaultTestConf() ;
-        conf.setClass(GiraphConstants.VERTEX_CLASS,
-                      DerivedVertexMatch.class,
-                      Vertex.class);
-        conf.setClass(GiraphConstants.VERTEX_EDGES_CLASS,
-                      ByteArrayEdges.class,
-                      VertexEdges.class);
-        conf.setClass(GiraphConstants.VERTEX_INPUT_FORMAT_CLASS,
-                      SimpleSuperstepVertexInputFormat.class,
-                      VertexInputFormat.class);
+        GiraphConstants.VERTEX_CLASS.set(conf, DerivedVertexMatch.class);
+        GiraphConstants.VERTEX_EDGES_CLASS.set(conf, ByteArrayEdges.class);
+        GiraphConstants.VERTEX_INPUT_FORMAT_CLASS.set(conf,
+            SimpleSuperstepVertexInputFormat.class);
         @SuppressWarnings("rawtypes")
         GiraphConfigurationValidator<?, ?, ?, ?> validator =
           new GiraphConfigurationValidator(conf);
@@ -186,15 +174,10 @@ public class TestVertexTypes {
     public void testDerivedInputFormatType() throws SecurityException,
             NoSuchMethodException, NoSuchFieldException {
         Configuration conf = getDefaultTestConf() ;
-        conf.setClass(GiraphConstants.VERTEX_CLASS,
-                      DerivedVertexMatch.class,
-                      Vertex.class);
-        conf.setClass(GiraphConstants.VERTEX_EDGES_CLASS,
-                      ByteArrayEdges.class,
-                      VertexEdges.class);
-        conf.setClass(GiraphConstants.VERTEX_INPUT_FORMAT_CLASS,
-                      SimpleSuperstepVertexInputFormat.class,
-                      VertexInputFormat.class);
+        GiraphConstants.VERTEX_CLASS.set(conf, DerivedVertexMatch.class);
+        GiraphConstants.VERTEX_EDGES_CLASS.set(conf, ByteArrayEdges.class);
+        GiraphConstants.VERTEX_INPUT_FORMAT_CLASS.set(conf,
+            SimpleSuperstepVertexInputFormat.class);
       @SuppressWarnings("rawtypes")
       GiraphConfigurationValidator<?, ?, ?, ?> validator =
         new GiraphConfigurationValidator(conf);
@@ -205,36 +188,26 @@ public class TestVertexTypes {
     public void testMismatchingVertex() throws SecurityException,
       NoSuchMethodException, NoSuchFieldException {
       Configuration conf = getDefaultTestConf() ;
-      conf.setClass(GiraphConstants.VERTEX_CLASS,
-        GeneratedVertexMismatch.class,
-        Vertex.class);
-      conf.setClass(GiraphConstants.VERTEX_EDGES_CLASS,
-          ByteArrayEdges.class,
-          VertexEdges.class);
-        conf.setClass(GiraphConstants.VERTEX_INPUT_FORMAT_CLASS,
-          SimpleSuperstepVertexInputFormat.class,
-          VertexInputFormat.class);
-        @SuppressWarnings("rawtypes")
-        GiraphConfigurationValidator<?, ?, ?, ?> validator =
-          new GiraphConfigurationValidator(conf);
-        validator.validateConfiguration();
+      GiraphConstants.VERTEX_CLASS.set(conf, GeneratedVertexMismatch.class);
+      GiraphConstants.VERTEX_EDGES_CLASS.set(conf, ByteArrayEdges.class);
+      GiraphConstants.VERTEX_INPUT_FORMAT_CLASS.set(conf,
+        SimpleSuperstepVertexInputFormat.class);
+      @SuppressWarnings("rawtypes")
+      GiraphConfigurationValidator<?, ?, ?, ?> validator =
+        new GiraphConfigurationValidator(conf);
+      validator.validateConfiguration();
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void testMismatchingCombiner() throws SecurityException,
       NoSuchMethodException, NoSuchFieldException {
       Configuration conf = getDefaultTestConf() ;
-      conf.setClass(GiraphConstants.VERTEX_CLASS,
-        GeneratedVertexMatch.class, Vertex.class);
-      conf.setClass(GiraphConstants.VERTEX_EDGES_CLASS,
-          ByteArrayEdges.class,
-          VertexEdges.class);
-      conf.setClass(GiraphConstants.VERTEX_INPUT_FORMAT_CLASS,
-        SimpleSuperstepVertexInputFormat.class,
-        VertexInputFormat.class);
-      conf.setClass(GiraphConstants.VERTEX_COMBINER_CLASS,
-        GeneratedVertexMismatchCombiner.class,
-        Combiner.class);
+      GiraphConstants.VERTEX_CLASS.set(conf, GeneratedVertexMatch.class);
+      GiraphConstants.VERTEX_EDGES_CLASS.set(conf, ByteArrayEdges.class);
+      GiraphConstants.VERTEX_INPUT_FORMAT_CLASS.set(conf,
+        SimpleSuperstepVertexInputFormat.class);
+      GiraphConstants.VERTEX_COMBINER_CLASS.set(conf,
+        GeneratedVertexMismatchCombiner.class);
       @SuppressWarnings("rawtypes")
       GiraphConfigurationValidator<?, ?, ?, ?> validator =
         new GiraphConfigurationValidator(conf);
@@ -245,17 +218,12 @@ public class TestVertexTypes {
     public void testMismatchingVertexValueFactory() throws SecurityException,
         NoSuchMethodException, NoSuchFieldException {
       Configuration conf = getDefaultTestConf() ;
-      conf.setClass(GiraphConstants.VERTEX_CLASS,
-          GeneratedVertexMatch.class, Vertex.class);
-      conf.setClass(GiraphConstants.VERTEX_EDGES_CLASS,
-          ByteArrayEdges.class,
-          VertexEdges.class);
-      conf.setClass(GiraphConstants.VERTEX_INPUT_FORMAT_CLASS,
-          SimpleSuperstepVertexInputFormat.class,
-          VertexInputFormat.class);
-      conf.setClass(GiraphConstants.VERTEX_VALUE_FACTORY_CLASS,
-          GeneratedVertexMismatchValueFactory.class,
-          VertexValueFactory.class);
+      GiraphConstants.VERTEX_CLASS.set(conf, GeneratedVertexMatch.class);
+      GiraphConstants.VERTEX_EDGES_CLASS.set(conf, ByteArrayEdges.class);
+      GiraphConstants.VERTEX_INPUT_FORMAT_CLASS.set(conf,
+          SimpleSuperstepVertexInputFormat.class);
+      VERTEX_VALUE_FACTORY_CLASS.set(conf,
+          GeneratedVertexMismatchValueFactory.class);
       @SuppressWarnings("rawtypes")
       GiraphConfigurationValidator<?, ?, ?, ?> validator =
           new GiraphConfigurationValidator(conf);
@@ -266,18 +234,12 @@ public class TestVertexTypes {
     public void testJsonBase64FormatType() throws SecurityException,
             NoSuchMethodException, NoSuchFieldException {
         Configuration conf = getDefaultTestConf() ;
-        conf.setClass(GiraphConstants.VERTEX_CLASS,
-                      GeneratedVertexMatch.class,
-                      Vertex.class);
-        conf.setClass(GiraphConstants.VERTEX_EDGES_CLASS,
-                      ByteArrayEdges.class,
-                      VertexEdges.class);
-        conf.setClass(GiraphConstants.VERTEX_INPUT_FORMAT_CLASS,
-                      JsonBase64VertexInputFormat.class,
-                      VertexInputFormat.class);
-        conf.setClass(GiraphConstants.VERTEX_OUTPUT_FORMAT_CLASS,
-                      JsonBase64VertexOutputFormat.class,
-                      VertexOutputFormat.class);
+        GiraphConstants.VERTEX_CLASS.set(conf, GeneratedVertexMatch.class);
+        GiraphConstants.VERTEX_EDGES_CLASS.set(conf, ByteArrayEdges.class);
+        GiraphConstants.VERTEX_INPUT_FORMAT_CLASS.set(conf,
+            JsonBase64VertexInputFormat.class);
+        GiraphConstants.VERTEX_OUTPUT_FORMAT_CLASS.set(conf,
+            JsonBase64VertexOutputFormat.class);
         @SuppressWarnings("rawtypes")
         GiraphConfigurationValidator<?, ?, ?, ?> validator =
           new GiraphConfigurationValidator(conf);

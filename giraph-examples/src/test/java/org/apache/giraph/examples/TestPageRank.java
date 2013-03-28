@@ -81,8 +81,7 @@ public class TestPageRank extends BspCase {
     conf.setNumComputeThreads(numComputeThreads);
     // Set enough partitions to generate randomness on the compute side
     if (numComputeThreads != 1) {
-      conf.setInt(GiraphConstants.USER_PARTITION_COUNT,
-          numComputeThreads * 5);
+      GiraphConstants.USER_PARTITION_COUNT.set(conf, numComputeThreads * 5);
     }
     assertTrue(job.run(true));
     if (!runningInDistributedMode()) {
