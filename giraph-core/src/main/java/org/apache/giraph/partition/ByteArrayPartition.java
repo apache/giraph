@@ -17,14 +17,15 @@
  */
 package org.apache.giraph.partition;
 
-import com.google.common.collect.MapMaker;
-import com.google.common.primitives.Ints;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.utils.UnsafeByteArrayInputStream;
 import org.apache.giraph.utils.WritableUtils;
-import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.util.Progressable;
+
+import com.google.common.collect.MapMaker;
+import com.google.common.primitives.Ints;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -45,7 +46,8 @@ import java.util.concurrent.ConcurrentMap;
  */
 public class ByteArrayPartition<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
-    extends BasicPartition<I, V, E, M> {
+    extends BasicPartition<I, V, E, M>
+    implements ReusesObjectsPartition<I, V, E, M> {
   /**
    * Vertex map for this range (keyed by index).  Note that the byte[] is a
    * serialized vertex with the first four bytes as the length of the vertex

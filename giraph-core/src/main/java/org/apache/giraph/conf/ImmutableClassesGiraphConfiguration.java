@@ -20,9 +20,12 @@ package org.apache.giraph.conf;
 
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.combiner.Combiner;
+import org.apache.giraph.edge.Edge;
+import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.edge.ReusableEdge;
-import org.apache.giraph.edge.ReuseObjectsVertexEdges;
+import org.apache.giraph.edge.VertexEdges;
 import org.apache.giraph.graph.GraphState;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.graph.VertexValueFactory;
 import org.apache.giraph.io.EdgeInputFormat;
@@ -41,10 +44,6 @@ import org.apache.giraph.utils.ExtendedDataOutput;
 import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.giraph.utils.UnsafeByteArrayInputStream;
 import org.apache.giraph.utils.UnsafeByteArrayOutputStream;
-import org.apache.giraph.edge.Edge;
-import org.apache.giraph.edge.EdgeFactory;
-import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.edge.VertexEdges;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.giraph.worker.WorkerObserver;
 import org.apache.hadoop.conf.Configuration;
@@ -566,11 +565,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
     }
   }
 
-  /**
-   * Get the user's subclassed {@link VertexEdges}
-   *
-   * @return User's vertex edges class
-   */
+  @Override
   public Class<? extends VertexEdges<I, E>> getVertexEdgesClass() {
     return classes.getVertexEdgesClass();
   }
@@ -592,22 +587,6 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    */
   public boolean useInputVertexEdges() {
     return classes.getInputVertexEdgesClass() != classes.getVertexEdgesClass();
-  }
-
-  /**
-   * True if the {@link VertexEdges} implementation copies the passed edges
-   * to its own data structure, i.e. it doesn't keep references to Edge
-   * objects, target vertex ids or edge values passed to add() or
-   * initialize().
-   * This makes it possible to reuse edge objects passed to the data
-   * structure, to minimize object instantiation (see for example
-   * EdgeStore#addPartitionEdges()).
-   *
-   * @return True iff we can reuse the edge objects
-   */
-  public boolean reuseEdgeObjects() {
-    return ReuseObjectsVertexEdges.class.isAssignableFrom(
-        getVertexEdgesClass());
   }
 
   /**

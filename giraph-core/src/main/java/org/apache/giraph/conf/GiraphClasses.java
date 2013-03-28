@@ -147,7 +147,7 @@ public class GiraphClasses<I extends WritableComparable,
    *
    * @param conf Configuration to read from.
    */
-  public void readFromConf(Configuration conf) {
+  private void readFromConf(Configuration conf) {
     // set pre-validated generic parameter types into Configuration
     vertexClass = (Class<? extends Vertex<I, V, E, M>>) VERTEX_CLASS.get(conf);
     List<Class<?>> classList = ReflectionUtils.getTypeArguments(Vertex.class,

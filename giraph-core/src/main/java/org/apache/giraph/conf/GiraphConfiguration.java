@@ -20,6 +20,7 @@ package org.apache.giraph.conf;
 
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.combiner.Combiner;
+import org.apache.giraph.edge.ReuseObjectsVertexEdges;
 import org.apache.giraph.edge.VertexEdges;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexResolver;
@@ -33,6 +34,7 @@ import org.apache.giraph.master.MasterObserver;
 import org.apache.giraph.partition.GraphPartitionerFactory;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.partition.PartitionContext;
+import org.apache.giraph.partition.ReusesObjectsPartition;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.giraph.worker.WorkerObserver;
 import org.apache.hadoop.conf.Configuration;
@@ -85,6 +87,15 @@ public class GiraphConfiguration extends Configuration
   }
 
   /**
+   * Get the vertex edges class
+   *
+   * @return vertex edges class
+   */
+  public Class<? extends VertexEdges> getVertexEdgesClass() {
+    return VERTEX_EDGES_CLASS.get(this);
+  }
+
+  /**
    * Set the vertex edges class
    *
    * @param vertexEdgesClass Determines the way edges are stored
@@ -103,6 +114,43 @@ public class GiraphConfiguration extends Configuration
   public final void setInputVertexEdgesClass(
       Class<? extends VertexEdges> inputVertexEdgesClass) {
     INPUT_VERTEX_EDGES_CLASS.set(this, inputVertexEdgesClass);
+  }
+
+  /**
+   * True if the {@link VertexEdges} implementation copies the passed edges
+   * to its own data structure, i.e. it doesn't keep references to Edge
+   * objects, target vertex ids or edge values passed to add() or
+   * initialize().
+   * This makes it possible to reuse edge objects passed to the data
+   * structure, to minimize object instantiation (see for example
+   * EdgeStore#addPartitionEdges()).
+   *
+   * @return True iff we can reuse the edge objects
+   */
+  public boolean reuseEdgeObjects() {
+    return ReuseObjectsVertexEdges.class.isAssignableFrom(
+        getVertexEdgesClass());
+  }
+
+  /**
+   * True if the {@link Partition} implementation copies the passed vertices
+   * to its own data structure, i.e. it doesn't keep references to Vertex
+   * objects passed to it.
+   * This makes it possible to reuse vertex objects passed to the data
+   * structure, to minimize object instantiation.
+   *
+   * @return True iff we can reuse the vertex objects
+   */
+  public boolean reuseVertexObjects() {
+    return ReusesObjectsPartition.class.isAssignableFrom(getPartitionClass());
+  }
+
+  /**
+   * Get Partition class used
+   * @return Partition class
+   */
+  public Class<? extends Partition> getPartitionClass() {
+    return PARTITION_CLASS.get(this);
   }
 
   /**

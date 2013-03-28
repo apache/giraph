@@ -18,7 +18,6 @@
 
 package org.apache.giraph.hive.input.vertex;
 
-import org.apache.giraph.conf.BooleanConfOption;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.graph.Vertex;
@@ -42,9 +41,6 @@ import java.util.Iterator;
 public abstract class SimpleHiveToVertex<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
     extends AbstractHiveToVertex<I, V, E, M> {
-  /** Configuration option for whether to reuse vertex */
-  public static final BooleanConfOption REUSE_VERTEX_KEY =
-      new BooleanConfOption("giraph.hive.reuse.vertex", false);
   /** Hive records which we are reading from */
   private Iterator<HiveRecord> records;
 
@@ -78,7 +74,7 @@ public abstract class SimpleHiveToVertex<I extends WritableComparable,
   @Override
   public void setConf(ImmutableClassesGiraphConfiguration<I, V, E, M> conf) {
     super.setConf(conf);
-    if (REUSE_VERTEX_KEY.get(conf)) {
+    if (conf.reuseVertexObjects()) {
       reusableVertex = getConf().createVertex();
     }
   }
