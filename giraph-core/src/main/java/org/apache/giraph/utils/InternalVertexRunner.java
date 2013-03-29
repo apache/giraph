@@ -24,6 +24,8 @@ import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.job.GiraphJob;
 import org.apache.giraph.io.formats.GiraphFileInputFormat;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.zookeeper.server.ServerConfig;
@@ -212,6 +214,115 @@ public class InternalVertexRunner {
       } else {
         return ImmutableList.of();
       }
+    } finally {
+      FileUtils.delete(tmpDir);
+    }
+  }
+
+  /**
+   * Attempts to run the vertex internally in the current JVM, reading and
+   * writing to an in-memory graph. Will start its own zookeeper
+   * instance.
+   * @param <I> The vertex index type
+   * @param <V> The vertex type
+   * @param <E> The edge type
+   * @param <M> The message type
+   * @param classes GiraphClasses specifying which types to use
+   * @param params a map of parameters to add to the hadoop configuration
+   * @param graph input graph
+   * @return iterable output data
+   * @throws Exception if anything goes wrong
+   */
+  public static <I extends WritableComparable,
+    V extends Writable,
+    E extends Writable,
+    M extends Writable> TestGraph<I, V, E, M> run(
+      GiraphClasses<I, V, E, M> classes,
+      Map<String, String> params,
+      TestGraph<I, V, E, M> graph) throws Exception {
+    File tmpDir = null;
+    try {
+      // Prepare temporary folders
+      tmpDir = FileUtils.createTestDir(classes.getVertexClass());
+
+      File zkDir = FileUtils.createTempDir(tmpDir, "_bspZooKeeper");
+      File zkMgrDir = FileUtils.createTempDir(tmpDir, "_defaultZkManagerDir");
+      File checkpointsDir = FileUtils.createTempDir(tmpDir, "_checkpoints");
+
+      // Create and configure the job to run the vertex
+      GiraphJob job = new GiraphJob(classes.getVertexClass().getName());
+
+      InMemoryVertexInputFormat.setGraph(graph);
+
+      GiraphConfiguration conf = job.getConfiguration();
+      conf.setVertexClass(classes.getVertexClass());
+      conf.setVertexEdgesClass(classes.getVertexEdgesClass());
+      conf.setVertexInputFormatClass(InMemoryVertexInputFormat.class);
+      conf.setInputVertexEdgesClass(classes.getInputVertexEdgesClass());
+      conf.setVertexValueFactoryClass(classes.getVertexValueFactoryClass());
+      if (classes.hasWorkerContextClass()) {
+        conf.setWorkerContextClass(classes.getWorkerContextClass());
+      }
+      if (classes.hasCombinerClass()) {
+        conf.setVertexCombinerClass(classes.getCombinerClass());
+      }
+      if (classes.hasMasterComputeClass()) {
+        conf.setMasterComputeClass(classes.getMasterComputeClass());
+      }
+      if (classes.hasVertexInputFormat()) {
+        conf.setVertexInputFormatClass(classes.getVertexInputFormatClass());
+      }
+      if (classes.hasEdgeInputFormat()) {
+        conf.setEdgeInputFormatClass(classes.getEdgeInputFormatClass());
+      }
+      if (classes.hasVertexOutputFormat()) {
+        conf.setVertexOutputFormatClass(classes.getVertexOutputFormatClass());
+      }
+
+      conf.setWorkerConfiguration(1, 1, 100.0f);
+      GiraphConstants.SPLIT_MASTER_WORKER.set(conf, false);
+      GiraphConstants.LOCAL_TEST_MODE.set(conf, true);
+      conf.set(GiraphConstants.ZOOKEEPER_LIST, "localhost:" +
+          String.valueOf(LOCAL_ZOOKEEPER_PORT));
+
+      conf.set(GiraphConstants.ZOOKEEPER_DIR, zkDir.toString());
+      GiraphConstants.ZOOKEEPER_MANAGER_DIRECTORY.set(conf,
+          zkMgrDir.toString());
+      GiraphConstants.CHECKPOINT_DIRECTORY.set(conf, checkpointsDir.toString());
+
+      for (Map.Entry<String, String> param : params.entrySet()) {
+        conf.set(param.getKey(), param.getValue());
+      }
+
+      // Configure a local zookeeper instance
+      Properties zkProperties = configLocalZooKeeper(zkDir);
+
+      QuorumPeerConfig qpConfig = new QuorumPeerConfig();
+      qpConfig.parseProperties(zkProperties);
+
+      // Create and run the zookeeper instance
+      final InternalZooKeeper zookeeper = new InternalZooKeeper();
+      final ServerConfig zkConfig = new ServerConfig();
+      zkConfig.readFrom(qpConfig);
+
+      ExecutorService executorService = Executors.newSingleThreadExecutor();
+      executorService.execute(new Runnable() {
+        @Override
+        public void run() {
+          try {
+            zookeeper.runFromConfig(zkConfig);
+          } catch (IOException e) {
+            throw new RuntimeException(e);
+          }
+        }
+      });
+      try {
+        job.run(true);
+      } finally {
+        executorService.shutdown();
+        zookeeper.end();
+      }
+      return graph;
     } finally {
       FileUtils.delete(tmpDir);
     }
