@@ -24,6 +24,7 @@ import org.apache.giraph.graph.FinishedSuperstepStats;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.GraphTaskManager;
 import org.apache.giraph.graph.VertexEdgeCount;
+import org.apache.giraph.io.superstep_output.SuperstepOutput;
 import org.apache.giraph.master.MasterInfo;
 import org.apache.giraph.partition.PartitionOwner;
 import org.apache.giraph.partition.PartitionStats;
@@ -221,6 +222,13 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
    * TODO how to avoid this additional function
    */
   void prepareSuperstep();
+
+  /**
+   * Get the superstep output class
+   *
+   * @return SuperstepOutput
+   */
+  SuperstepOutput<I, V, E> getSuperstepOutput();
 
   /**
    * Clean up the service (no calls may be issued after this)

@@ -22,6 +22,7 @@ import org.apache.giraph.comm.WorkerClientRequestProcessor;
 import org.apache.giraph.comm.messages.MessageStoreByPartition;
 import org.apache.giraph.comm.netty.NettyWorkerClientRequestProcessor;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.io.SimpleVertexWriter;
 import org.apache.giraph.metrics.GiraphMetrics;
 import org.apache.giraph.metrics.MetricNames;
 import org.apache.giraph.metrics.SuperstepMetricsRegistry;
@@ -89,6 +90,8 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
   /** Sends the messages (unique per Callable) */
   private WorkerClientRequestProcessor<I, V, E, M>
   workerClientRequestProcessor;
+  /** VertexWriter for this ComputeCallable */
+  private SimpleVertexWriter<I, V, E> vertexWriter;
   /** Get the start time in nanos */
   private final long startNanos = TIME.getNanoseconds();
 
@@ -143,6 +146,8 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
         context, graphState.getGraphTaskManager(), workerClientRequestProcessor,
         aggregatorUsage);
 
+    vertexWriter = serviceWorker.getSuperstepOutput().getVertexWriter();
+
     List<PartitionStats> partitionStatsList = Lists.newArrayList();
     while (!partitionIdQueue.isEmpty()) {
       Integer partitionId = partitionIdQueue.poll();
@@ -165,10 +170,16 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
       } catch (IOException e) {
         throw new IllegalStateException("call: Caught unexpected IOException," +
             " failing.", e);
+      } catch (InterruptedException e) {
+        throw new IllegalStateException("call: Caught unexpected " +
+            "InterruptedException, failing.", e);
       } finally {
         serviceWorker.getPartitionStore().putPartition(partition);
       }
     }
+
+    // Return VertexWriter after the usage
+    serviceWorker.getSuperstepOutput().returnVertexWriter(vertexWriter);
 
     if (LOG.isInfoEnabled()) {
       float seconds = Times.getNanosSince(TIME, startNanos) /
@@ -193,7 +204,7 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
    * @return Partition stats for this computed partition
    */
   private PartitionStats computePartition(Partition<I, V, E, M> partition)
-    throws IOException {
+    throws IOException, InterruptedException {
     PartitionStats partitionStats =
         new PartitionStats(partition.getId(), 0, 0, 0, 0);
     // Make sure this is thread-safe across runs
@@ -225,6 +236,8 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
           }
           // Need to unwrap the mutated edges (possibly)
           vertex.unwrapMutableEdges();
+          // Write vertex to superstep output (no-op if it is not used)
+          vertexWriter.writeVertex(vertex);
           // Need to save the vertex changes (possibly)
           partition.saveVertex(vertex);
         }

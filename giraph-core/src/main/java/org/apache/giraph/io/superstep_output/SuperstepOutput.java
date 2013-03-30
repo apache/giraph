@@ -16,42 +16,42 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.io;
+package org.apache.giraph.io.superstep_output;
+
+import org.apache.giraph.io.SimpleVertexWriter;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 
 import java.io.IOException;
 
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.mapreduce.TaskAttemptContext;
-
 /**
- * Implement to output a vertex range of the graph after the computation
+ * Interface for outputing data during the computation.
  *
  * @param <I> Vertex id
  * @param <V> Vertex value
  * @param <E> Edge value
  */
-@SuppressWarnings("rawtypes")
-public interface VertexWriter<I extends WritableComparable, V extends Writable,
-    E extends Writable> extends SimpleVertexWriter<I, V, E> {
-  /**
-   * Use the context to setup writing the vertices.
-   * Guaranteed to be called prior to any other function.
-   *
-   * @param context Context used to write the vertices.
-   * @throws IOException
-   * @throws InterruptedException
-   */
-  void initialize(TaskAttemptContext context) throws IOException,
-    InterruptedException;
+public interface SuperstepOutput<I extends WritableComparable,
+    V extends Writable, E extends Writable> {
 
   /**
-   * Close this {@link VertexWriter} to future operations.
+   * Get the Writer. You have to return it after usage in order for it to be
+   * properly closed.
    *
-   * @param context the context of the task
-   * @throws IOException
-   * @throws InterruptedException
+   * @return SimpleVertexWriter
    */
-  void close(TaskAttemptContext context)
-    throws IOException, InterruptedException;
+  SimpleVertexWriter<I, V, E> getVertexWriter();
+
+  /**
+   * Return the Writer after usage, which you got by calling
+   * {@link #getVertexWriter()}
+   *
+   * @param vertexWriter SimpleVertexWriter which you are returning
+   */
+  void returnVertexWriter(SimpleVertexWriter<I, V, E> vertexWriter);
+
+  /**
+   * Finalize this output in the end of the application
+   */
+  void postApplication() throws IOException, InterruptedException;
 }

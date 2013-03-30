@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-600: Create an option to do output during computation (majakabiljo)
+
   GIRAPH-599: Hive IO dependency issues with some Hadoop profiles (nitay via majakabiljo)
 
   GIRAPH-577: Create a testing framework that doesn't require I/O formats (ves via apresta)

@@ -41,6 +41,7 @@ import org.apache.giraph.graph.InputSplitEvents;
 import org.apache.giraph.graph.FinishedSuperstepStats;
 import org.apache.giraph.graph.AddressesAndPartitionsWritable;
 import org.apache.giraph.graph.GlobalStats;
+import org.apache.giraph.io.superstep_output.SuperstepOutput;
 import org.apache.giraph.utils.JMapHistoDumper;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.VertexOutputFormat;
@@ -149,6 +150,9 @@ public class BspServiceWorker<I extends WritableComparable,
   /** Handler for aggregators */
   private final WorkerAggregatorHandler aggregatorHandler;
 
+  /** Superstep output */
+  private SuperstepOutput<I, V, E> superstepOutput;
+
   /** array of observers to call back to */
   private final WorkerObserver[] observers;
 
@@ -175,7 +179,7 @@ public class BspServiceWorker<I extends WritableComparable,
     GraphTaskManager<I, V, E, M> graphTaskManager)
     throws IOException, InterruptedException {
     super(serverPortList, sessionMsecTimeout, context, graphTaskManager);
-    ImmutableClassesGiraphConfiguration conf = getConfiguration();
+    ImmutableClassesGiraphConfiguration<I, V, E, M> conf = getConfiguration();
     partitionExchangeChildrenChanged = new PredicateLock(context);
     registerBspEvent(partitionExchangeChildrenChanged);
     workerGraphPartitioner =
@@ -192,6 +196,8 @@ public class BspServiceWorker<I extends WritableComparable,
     workerContext = conf.createWorkerContext(null);
 
     aggregatorHandler = new WorkerAggregatorHandler(this, conf, context);
+
+    superstepOutput = conf.createSuperstepOutput(context);
 
     if (conf.isJMapHistogramDumpEnabled()) {
       conf.addWorkerObserverClass(JMapHistoDumper.class);
@@ -926,6 +932,14 @@ else[HADOOP_NON_SECURE]*/
           " not specified -- there will be no saved output");
       return;
     }
+    if (getConfiguration().doOutputDuringComputation()) {
+      if (LOG.isInfoEnabled()) {
+        LOG.info("saveVertices: The option for doing output during " +
+            "computation is selected, so there will be no saving of the " +
+            "output in the end of application");
+      }
+      return;
+    }
 
     LoggerUtils.setStatusAndLog(getContext(), LOG, Level.INFO,
         "saveVertices: Starting to save " + numLocalVertices + " vertices");
@@ -1463,5 +1477,10 @@ else[HADOOP_NON_SECURE]*/
     if (getSuperstep() != INPUT_SUPERSTEP) {
       aggregatorHandler.prepareSuperstep(workerAggregatorRequestProcessor);
     }
+  }
+
+  @Override
+  public SuperstepOutput<I, V, E> getSuperstepOutput() {
+    return superstepOutput;
   }
 }

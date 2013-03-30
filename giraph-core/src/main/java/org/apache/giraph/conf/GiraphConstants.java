@@ -124,6 +124,22 @@ public interface GiraphConstants {
   ClassConfOption<VertexOutputFormat> VERTEX_OUTPUT_FORMAT_CLASS =
       ClassConfOption.create("giraph.vertexOutputFormatClass", null,
           VertexOutputFormat.class);
+  /**
+   * If you use this option, instead of having saving vertices in the end of
+   * application, saveVertex will be called right after each vertex.compute()
+   * is called.
+   * NOTE: This feature doesn't work well with checkpointing - if you restart
+   * from a checkpoint you won't have any ouptut from previous supresteps.
+   */
+  BooleanConfOption DO_OUTPUT_DURING_COMPUTATION =
+      new BooleanConfOption("giraph.doOutputDuringComputation", false);
+  /**
+   * Vertex output format thread-safe - if your VertexOutputFormat allows
+   * several vertexWriters to be created and written to in parallel,
+   * you should set this to true.
+   */
+  BooleanConfOption VERTEX_OUTPUT_FORMAT_THREAD_SAFE =
+      new BooleanConfOption("giraph.vertexOutputFormatThreadSafe", false);
 
   /** Output Format Path (for Giraph-on-YARN) */
   String GIRAPH_OUTPUT_DIR = "giraph.output.dir";

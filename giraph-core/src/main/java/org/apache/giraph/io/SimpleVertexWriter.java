@@ -18,40 +18,28 @@
 
 package org.apache.giraph.io;
 
-import java.io.IOException;
-
+import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.mapreduce.TaskAttemptContext;
+
+import java.io.IOException;
 
 /**
- * Implement to output a vertex range of the graph after the computation
+ * Interface which can only write vertices
  *
  * @param <I> Vertex id
  * @param <V> Vertex value
  * @param <E> Edge value
  */
-@SuppressWarnings("rawtypes")
-public interface VertexWriter<I extends WritableComparable, V extends Writable,
-    E extends Writable> extends SimpleVertexWriter<I, V, E> {
+public interface SimpleVertexWriter<I extends WritableComparable,
+    V extends Writable, E extends Writable> {
   /**
-   * Use the context to setup writing the vertices.
-   * Guaranteed to be called prior to any other function.
+   * Writes the next vertex and associated data
    *
-   * @param context Context used to write the vertices.
+   * @param vertex set the properties of this vertex
    * @throws IOException
    * @throws InterruptedException
    */
-  void initialize(TaskAttemptContext context) throws IOException,
-    InterruptedException;
-
-  /**
-   * Close this {@link VertexWriter} to future operations.
-   *
-   * @param context the context of the task
-   * @throws IOException
-   * @throws InterruptedException
-   */
-  void close(TaskAttemptContext context)
-    throws IOException, InterruptedException;
+  void writeVertex(Vertex<I, V, E, ?> vertex) throws IOException,
+      InterruptedException;
 }

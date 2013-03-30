@@ -288,9 +288,10 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
   /**
    * Handle post-application callbacks.
    */
-  private void postApplication() {
+  private void postApplication() throws IOException, InterruptedException {
     GiraphTimerContext postAppTimerContext = wcPostAppTimer.time();
     serviceWorker.getWorkerContext().postApplication();
+    serviceWorker.getSuperstepOutput().postApplication();
     postAppTimerContext.stop();
     context.progress();
 

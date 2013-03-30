@@ -31,6 +31,10 @@ import org.apache.giraph.graph.VertexValueFactory;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
+import org.apache.giraph.io.superstep_output.MultiThreadedSuperstepOutput;
+import org.apache.giraph.io.superstep_output.NoOpSuperstepOutput;
+import org.apache.giraph.io.superstep_output.SuperstepOutput;
+import org.apache.giraph.io.superstep_output.SynchronizedSuperstepOutput;
 import org.apache.giraph.job.GiraphJobObserver;
 import org.apache.giraph.master.MasterCompute;
 import org.apache.giraph.master.MasterObserver;
@@ -50,6 +54,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.util.Progressable;
 
 import static org.apache.giraph.conf.GiraphConstants.USE_UNSAFE_SERIALIZATION;
@@ -198,6 +203,25 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
     Class<? extends VertexOutputFormat<I, V, E>> klass =
         classes.getVertexOutputFormatClass();
     return ReflectionUtils.newInstance(klass, this);
+  }
+
+  /**
+   * Create the proper superstep output, based on the configuration settings.
+   *
+   * @param context Mapper context
+   * @return SuperstepOutput
+   */
+  public SuperstepOutput<I, V, E> createSuperstepOutput(
+      Mapper<?, ?, ?, ?>.Context context) {
+    if (doOutputDuringComputation()) {
+      if (vertexOutputFormatThreadSafe()) {
+        return new MultiThreadedSuperstepOutput<I, V, E>(this, context);
+      } else {
+        return new SynchronizedSuperstepOutput<I, V, E>(this, context);
+      }
+    } else {
+      return new NoOpSuperstepOutput<I, V, E>();
+    }
   }
 
   /**

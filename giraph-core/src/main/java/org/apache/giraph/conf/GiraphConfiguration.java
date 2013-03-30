@@ -262,6 +262,46 @@ public class GiraphConfiguration extends Configuration
   }
 
   /**
+   * Check if output should be done during computation
+   *
+   * @return True iff output should be done during computation
+   */
+  public final boolean doOutputDuringComputation() {
+    return DO_OUTPUT_DURING_COMPUTATION.get(this);
+  }
+
+  /**
+   * Set whether or not we should do output during computation
+   *
+   * @param doOutputDuringComputation True iff we want output to happen
+   *                                  during computation
+   */
+  public final void setDoOutputDuringComputation(
+      boolean doOutputDuringComputation) {
+    DO_OUTPUT_DURING_COMPUTATION.set(this, doOutputDuringComputation);
+  }
+
+  /**
+   * Check if VertexOutputFormat is thread-safe
+   *
+   * @return True iff VertexOutputFormat is thread-safe
+   */
+  public final boolean vertexOutputFormatThreadSafe() {
+    return VERTEX_OUTPUT_FORMAT_THREAD_SAFE.get(this);
+  }
+
+  /**
+   * Set whether or not selected VertexOutputFormat is thread-safe
+   *
+   * @param vertexOutputFormatThreadSafe True iff selected VertexOutputFormat
+   *                                     is thread-safe
+   */
+  public final void setVertexOutputFormatThreadSafe(
+      boolean vertexOutputFormatThreadSafe) {
+    VERTEX_OUTPUT_FORMAT_THREAD_SAFE.set(this, vertexOutputFormatThreadSafe);
+  }
+
+  /**
    * Set the vertex combiner class (optional)
    *
    * @param vertexCombinerClass Determines how vertex messages are combined
