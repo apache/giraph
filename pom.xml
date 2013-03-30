@@ -240,11 +240,11 @@ under the License.
     <buildtype>test</buildtype>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <hbase.version>0.90.5</hbase.version>
-    <hive.version>0.9.0</hive.version>
     <codehaus-jackson.version>1.8.0</codehaus-jackson.version>
     <fasterxml-jackson.version>2.1.0</fasterxml-jackson.version>
     <slf4j.version>1.7.2</slf4j.version>
     <hive.version>0.10.0</hive.version>
+    <facebook-hadoop.version>0.20.0</facebook-hadoop.version>
     <forHadoop>for-hadoop-${hadoop.version}</forHadoop>
   </properties>
 
@@ -1041,7 +1041,7 @@ under the License.
       <dependency>
         <groupId>com.facebook.hadoop</groupId>
         <artifactId>hadoop-core</artifactId>
-        <version>${hadoop.version}</version>
+        <version>${facebook-hadoop.version}</version>
         <scope>provided</scope>
       </dependency>
       <dependency>
@@ -1105,7 +1105,7 @@ under the License.
       <dependency>
         <groupId>com.facebook.hadoop</groupId>
         <artifactId>hadoop-test</artifactId>
-        <version>${hadoop.version}</version>
+        <version>${facebook-hadoop.version}</version>
         <scope>test</scope>
       </dependency>
       <dependency>
