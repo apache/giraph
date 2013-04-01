@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-602: HiveGiraphRunner should allow disabling/choosing of input 
+  formats at runtime (aching)
+
   GIRAPH-13: Port Giraph to YARN (ereisman)
 
   GIRAPH-600: Create an option to do output during computation (majakabiljo)

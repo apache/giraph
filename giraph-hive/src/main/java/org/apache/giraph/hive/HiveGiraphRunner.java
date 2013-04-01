@@ -348,12 +348,22 @@ public class HiveGiraphRunner implements Tool {
 
     String hiveToVertexClassStr = cmdln.getOptionValue("hiveToVertexClass");
     if (hiveToVertexClassStr != null) {
-      setHiveToVertexClass(findClass(hiveToVertexClassStr, HiveToVertex.class));
+      if (hiveToVertexClassStr.equals("disable")) {
+        hiveToVertexClass = null;
+      } else {
+        setHiveToVertexClass(
+            findClass(hiveToVertexClassStr, HiveToVertex.class));
+      }
     }
 
     String hiveToEdgeClassStr = cmdln.getOptionValue("hiveToEdgeClass");
     if (hiveToEdgeClassStr != null) {
-      hiveToEdgeClass = findClass(hiveToEdgeClassStr, HiveToEdge.class);
+      if (hiveToEdgeClassStr.equals("disable")) {
+        hiveToEdgeClass = null;
+      } else {
+        setHiveToEdgeClass(
+            findClass(hiveToEdgeClassStr, HiveToEdge.class));
+      }
     }
 
     String vertexToHiveClassStr = cmdln.getOptionValue("vertexToHiveClass");
@@ -496,21 +506,24 @@ public class HiveGiraphRunner implements Tool {
     options.addOption("db", "dbName", true, "Hive database name");
 
     // Vertex input settings
-    if (hiveToVertexClass == null) {
-      options.addOption(null, "hiveToVertexClass", true,
-          "Giraph " + HiveToVertex.class.getSimpleName() +
-          " class to use");
-    }
+    options.addOption(null, "hiveToVertexClass", true,
+        "Giraph " + HiveToVertex.class.getSimpleName() +
+            " class to use (default - " +
+            (hiveToVertexClass == null ? "not used" :
+                hiveToVertexClass.getSimpleName()) + "), " +
+            "\"disable\" will unset this option");
     options.addOption("vi", "vertexInputTable", true,
         "Vertex input table name");
     options.addOption("VI", "vertexInputFilter", true,
         "Vertex input table filter expression (e.g., \"a<2 AND b='two'\"");
 
     // Edge input settings
-    if (hiveToEdgeClass == null) {
-      options.addOption(null, "hiveToEdgeClass", true,
-          "Giraph " + HiveToEdge.class.getSimpleName() + " class to use");
-    }
+    options.addOption(null, "hiveToEdgeClass", true,
+        "Giraph " + HiveToEdge.class.getSimpleName() +
+            " class to use (default - " +
+            (hiveToEdgeClass == null ? "not used" :
+                hiveToEdgeClass.getSimpleName()) + "), " +
+            "\"disable\" will unset this option");
     options.addOption("ei", "edgeInputTable", true,
         "Edge input table name");
     options.addOption("EI", "edgeInputFilter", true,
