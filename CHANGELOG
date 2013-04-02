@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-555: Fix log message on generated input splits (apresta)
+
   GIRAPH-602: HiveGiraphRunner should allow disabling/choosing of input 
   formats at runtime (aching)
 

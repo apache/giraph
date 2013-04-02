@@ -329,7 +329,7 @@ public class BspServiceMaster<I extends WritableComparable,
     } else {
       if (LOG.isInfoEnabled()) {
         LOG.info(logPrefix + ": Got " + splits.size() +
-            " input splits for " + minSplitCountHint + " workers");
+            " input splits for " + minSplitCountHint + " input threads");
       }
       return splits;
     }
