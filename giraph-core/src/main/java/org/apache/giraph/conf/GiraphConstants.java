@@ -444,9 +444,9 @@ public interface GiraphConstants {
   IntConfOption NUM_COMPUTE_THREADS =
       new IntConfOption("giraph.numComputeThreads", 1);
 
-  /** Number of threads for input splits loading */
-  IntConfOption NUM_INPUT_SPLITS_THREADS =
-      new IntConfOption("giraph.numInputSplitsThreads", 1);
+  /** Number of threads for input split loading */
+  IntConfOption NUM_INPUT_THREADS =
+      new IntConfOption("giraph.numInputThreads", 1);
 
   /** Minimum stragglers of the superstep before printing them out */
   IntConfOption PARTITION_LONG_TAIL_MIN_PRINT =
@@ -493,16 +493,16 @@ public interface GiraphConstants {
 
   /** Multiplier for the current workers squared */
   FloatConfOption PARTITION_COUNT_MULTIPLIER =
-      new FloatConfOption("partition.masterPartitionCountMultipler", 1.0f);
+      new FloatConfOption("giraph.masterPartitionCountMultiplier", 1.0f);
 
   /** Overrides default partition count calculation if not -1 */
   IntConfOption USER_PARTITION_COUNT =
-      new IntConfOption("partition.userPartitionCount", -1);
+      new IntConfOption("giraph.userPartitionCount", -1);
 
   /** Vertex key space size for
    * {@link org.apache.giraph.partition.SimpleRangeWorkerPartitioner}
    */
-  String PARTITION_VERTEX_KEY_SPACE_SIZE = "partition.vertexKeySpaceSize";
+  String PARTITION_VERTEX_KEY_SPACE_SIZE = "giraph.vertexKeySpaceSize";
 
   /** Java opts passed to ZooKeeper startup */
   StrConfOption ZOOKEEPER_JAVA_OPTS =
@@ -608,11 +608,11 @@ public interface GiraphConstants {
   IntConfOption ZOOKEEPER_MAX_SESSION_TIMEOUT =
       new IntConfOption("giraph.zkMaxSessionTimeout", MINUTES.toMillis(15));
   /** ZooKeeper force sync */
-  StrConfOption ZOOKEEPER_FORCE_SYNC =
-      new StrConfOption("giraph.zKForceSync", "no");
+  BooleanConfOption ZOOKEEPER_FORCE_SYNC =
+      new BooleanConfOption("giraph.zKForceSync", false);
   /** ZooKeeper skip ACLs */
-  StrConfOption ZOOKEEPER_SKIP_ACL =
-      new StrConfOption("giraph.ZkSkipAcl", "yes");
+  BooleanConfOption ZOOKEEPER_SKIP_ACL =
+      new BooleanConfOption("giraph.ZkSkipAcl", true);
 
   /**
    * Whether to use SASL with DIGEST and Hadoop Job Tokens to authenticate

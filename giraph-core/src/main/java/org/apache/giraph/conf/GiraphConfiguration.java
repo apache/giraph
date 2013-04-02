@@ -628,11 +628,11 @@ public class GiraphConfiguration extends Configuration
     return ZOOKEEPER_MAX_SESSION_TIMEOUT.get(this);
   }
 
-  public String getZooKeeperForceSync() {
+  public boolean getZooKeeperForceSync() {
     return ZOOKEEPER_FORCE_SYNC.get(this);
   }
 
-  public String getZooKeeperSkipAcl() {
+  public boolean getZooKeeperSkipAcl() {
     return ZOOKEEPER_SKIP_ACL.get(this);
   }
 
@@ -678,11 +678,11 @@ public class GiraphConfiguration extends Configuration
    * @param numInputSplitsThreads Number of input split threads to use
    */
   public void setNumInputSplitsThreads(int numInputSplitsThreads) {
-    NUM_INPUT_SPLITS_THREADS.set(this, numInputSplitsThreads);
+    NUM_INPUT_THREADS.set(this, numInputSplitsThreads);
   }
 
   public int getNumInputSplitsThreads() {
-    return NUM_INPUT_SPLITS_THREADS.get(this);
+    return NUM_INPUT_THREADS.get(this);
   }
 
   public long getInputSplitMaxVertices() {

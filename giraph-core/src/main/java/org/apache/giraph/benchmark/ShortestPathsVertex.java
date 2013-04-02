@@ -31,7 +31,8 @@ import java.io.IOException;
 public class ShortestPathsVertex extends Vertex<LongWritable, DoubleWritable,
     DoubleWritable, DoubleWritable> {
   /** Source id. */
-  public static final String SOURCE_ID = "ShortestPathsBenchmark.sourceId";
+  public static final String SOURCE_ID =
+      "giraph.shortestPathsBenchmark.sourceId";
   /** Default source id. */
   public static final long SOURCE_ID_DEFAULT = 1;
 

@@ -47,15 +47,15 @@ import java.util.Random;
 public class RandomMessageBenchmark implements Tool {
   /** How many supersteps to run */
   public static final String SUPERSTEP_COUNT =
-      "RandomMessageBenchmark.superstepCount";
+      "giraph.randomMessageBenchmark.superstepCount";
   /** How many bytes per message */
   public static final String NUM_BYTES_PER_MESSAGE =
-      "RandomMessageBenchmark.numBytesPerMessage";
+      "giraph.randomMessageBenchmark.numBytesPerMessage";
   /** Default bytes per message */
   public static final int DEFAULT_NUM_BYTES_PER_MESSAGE = 16;
   /** How many messages per edge */
   public static final String NUM_MESSAGES_PER_EDGE =
-      "RandomMessageBenchmark.numMessagesPerEdge";
+      "giraph.randomMessageBenchmark.numMessagesPerEdge";
   /** Default messages per edge */
   public static final int DEFAULT_NUM_MESSAGES_PER_EDGE = 1;
   /** All bytes sent during this superstep */

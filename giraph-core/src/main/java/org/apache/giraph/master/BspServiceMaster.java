@@ -126,8 +126,8 @@ public class BspServiceMaster<I extends WritableComparable,
   /** Print worker names only if there are 10 workers left */
   public static final int MAX_PRINTABLE_REMAINING_WORKERS = 10;
   /** How many threads to use when writing input splits to zookeeper*/
-  public static final String INPUT_SPLIT_THREAD_COUNT =
-      "giraph.inputSplitThreadCount";
+  public static final String NUM_MASTER_ZK_INPUT_SPLIT_THREADS =
+      "giraph.numMasterZkInputSplitThreads";
   /** Default number of threads to use when writing input splits to zookeeper */
   public static final int DEFAULT_INPUT_SPLIT_THREAD_COUNT = 1;
   /** Time instance to use for timing */
@@ -641,7 +641,7 @@ public class BspServiceMaster<I extends WritableComparable,
     }
 
     // Write input splits to zookeeper in parallel
-    int inputSplitThreadCount = conf.getInt(INPUT_SPLIT_THREAD_COUNT,
+    int inputSplitThreadCount = conf.getInt(NUM_MASTER_ZK_INPUT_SPLIT_THREADS,
         DEFAULT_INPUT_SPLIT_THREAD_COUNT);
     if (LOG.isInfoEnabled()) {
       LOG.info(logPrefix + ": Starting to write input split data " +

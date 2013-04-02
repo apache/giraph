@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-536: Clean up configuration options (apresta)
+
   GIRAPH-551: Fix log message at the end of edge input (apresta)
 
   GIRAPH-555: Fix log message on generated input splits (apresta)

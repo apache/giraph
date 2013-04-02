@@ -566,8 +566,10 @@ public class ZooKeeperManager {
             GiraphConstants.DEFAULT_ZOOKEEPER_SYNC_LIMIT + "\n");
         writer.write("snapCount=" +
             GiraphConstants.DEFAULT_ZOOKEEPER_SNAP_COUNT + "\n");
-        writer.write("forceSync=" + conf.getZooKeeperForceSync() + "\n");
-        writer.write("skipACL=" + conf.getZooKeeperSkipAcl() + "\n");
+        writer.write("forceSync=" +
+            (conf.getZooKeeperForceSync() ? "yes" : "no") + "\n");
+        writer.write("skipACL=" +
+            (conf.getZooKeeperSkipAcl() ? "yes" : "no") + "\n");
         if (serverList.size() != 1) {
           writer.write("electionAlg=0\n");
           for (int i = 0; i < serverList.size(); ++i) {

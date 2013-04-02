@@ -31,7 +31,7 @@ public class PageRankVertex extends Vertex<LongWritable, DoubleWritable,
     DoubleWritable, DoubleWritable> {
   /** Number of supersteps */
   public static final String SUPERSTEP_COUNT =
-      "PageRankBenchmark.superstepCount";
+      "giraph.pageRankBenchmark.superstepCount";
 
   @Override
   public void compute(Iterable<DoubleWritable> messages) throws IOException {
