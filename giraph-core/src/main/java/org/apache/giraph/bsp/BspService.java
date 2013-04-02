@@ -1040,7 +1040,7 @@ public abstract class BspService<I extends WritableComparable,
         (event.getType() == EventType.NodeCreated)) {
       if (LOG.isInfoEnabled()) {
         LOG.info("process: edgeInputSplitsAllDoneChanged " +
-            "(all vertices sent from input splits)");
+            "(all edges sent from input splits)");
       }
       edgeInputSplitsEvents.getAllDoneChanged().signal();
       eventProcessed = true;
