@@ -44,14 +44,12 @@ import java.util.List;
  * @param <I> vertex id type
  * @param <V>  vertex value type
  * @param <E>  edge type
- * @param <M>  message type
  */
 public abstract class AccumuloVertexInputFormat<
         I extends WritableComparable,
         V extends Writable,
-        E extends Writable,
-        M extends Writable>
-        extends VertexInputFormat<I, V, E, M> {
+        E extends Writable>
+        extends VertexInputFormat<I, V, E> {
   /**
    * delegate input format for all accumulo operations.
    */
@@ -65,15 +63,15 @@ public abstract class AccumuloVertexInputFormat<
   * @param <I>  vertex id type
   * @param <V>  vertex value type
   * @param <E>  edge type
-  * @param <M>  message type
   */
   public abstract static class AccumuloVertexReader<
       I extends WritableComparable,
-      V extends Writable, E extends Writable, M extends Writable>
-      implements VertexReader<I, V, E, M> {
+      V extends Writable, E extends Writable>
+      implements VertexReader<I, V, E> {
 
     /** Giraph configuration */
-    private ImmutableClassesGiraphConfiguration<I, V, E, M> configuration;
+    private ImmutableClassesGiraphConfiguration<I, V, E, Writable>
+    configuration;
     /**
      * Used by subclasses to read key/value pairs.
      */
@@ -89,7 +87,8 @@ public abstract class AccumuloVertexInputFormat<
       this.reader = reader;
     }
 
-    public ImmutableClassesGiraphConfiguration<I, V, E, M> getConfiguration() {
+    public ImmutableClassesGiraphConfiguration<I, V, E, Writable>
+    getConfiguration() {
       return configuration;
     }
 
@@ -106,8 +105,9 @@ public abstract class AccumuloVertexInputFormat<
       throws IOException, InterruptedException {
       reader.initialize(inputSplit, context);
       this.context = context;
-      this.configuration = new ImmutableClassesGiraphConfiguration<I, V, E, M>(
-          context.getConfiguration());
+      this.configuration =
+          new ImmutableClassesGiraphConfiguration<I, V, E, Writable>(
+              context.getConfiguration());
     }
 
     /**

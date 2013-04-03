@@ -33,11 +33,10 @@ import java.io.IOException;
  * @param <I> Vertex id
  * @param <V> Vertex data
  * @param <E> Edge data
- * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public interface VertexReader<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable> {
+    V extends Writable, E extends Writable> {
   /**
    * Use the input split and context to setup reading the vertices.
    * Guaranteed to be called prior to any other function.
@@ -66,7 +65,7 @@ public interface VertexReader<I extends WritableComparable,
    * @throws IOException
    * @throws InterruptedException
    */
-  Vertex<I, V, E, M> getCurrentVertex()
+  Vertex<I, V, E, ?> getCurrentVertex()
     throws IOException, InterruptedException;
 
   /**

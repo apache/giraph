@@ -57,7 +57,7 @@ public class RandomWalkWithRestartVertexTest {
     classes.setVertexClass(RandomWalkWithRestartVertex.class);
     classes.setVertexEdgesClass(ByteArrayEdges.class);
     classes.setVertexInputFormatClass(
-        LongDoubleDoubleDoubleTextInputFormat.class);
+        LongDoubleDoubleTextInputFormat.class);
     classes.setVertexOutputFormatClass(
         VertexWithDoubleValueDoubleEdgeTextOutputFormat.class);
     classes.setWorkerContextClass(RandomWalkWorkerContext.class);
@@ -98,7 +98,7 @@ public class RandomWalkWithRestartVertexTest {
     classes.setVertexClass(RandomWalkWithRestartVertex.class);
     classes.setVertexEdgesClass(ByteArrayEdges.class);
     classes.setVertexInputFormatClass(
-        NormalizingLongDoubleDoubleDoubleTextInputFormat.class);
+        NormalizingLongDoubleDoubleTextInputFormat.class);
     classes.setVertexOutputFormatClass(
         VertexWithDoubleValueDoubleEdgeTextOutputFormat.class);
     classes.setWorkerContextClass(RandomWalkWorkerContext.class);

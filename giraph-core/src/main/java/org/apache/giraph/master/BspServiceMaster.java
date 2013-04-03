@@ -686,7 +686,7 @@ public class BspServiceMaster<I extends WritableComparable,
     if (!getConfiguration().hasVertexInputFormat()) {
       return 0;
     }
-    VertexInputFormat<I, V, E, M> vertexInputFormat =
+    VertexInputFormat<I, V, E> vertexInputFormat =
         getConfiguration().createVertexInputFormat();
     return createInputSplits(vertexInputFormat, vertexInputSplitsPaths,
         "Vertex");

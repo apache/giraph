@@ -38,13 +38,11 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  * @param <I> The Input
  * @param <V> The vertex type
  * @param <E> The edge type
- * @param <M> The message type
  */
 public class InMemoryVertexInputFormat<I extends WritableComparable,
                                  V extends Writable,
-                                 E extends Writable,
-                                 M extends Writable>
-    extends VertexInputFormat<I, V, E, M> {
+                                 E extends Writable>
+    extends VertexInputFormat<I, V, E> {
   /** The graph */
   private static TestGraph GRAPH;
 
@@ -69,13 +67,13 @@ public class InMemoryVertexInputFormat<I extends WritableComparable,
   }
 
   @Override
-  public VertexReader<I, V, E, M> createVertexReader(InputSplit inputSpplit,
+  public VertexReader<I, V, E> createVertexReader(InputSplit inputSpplit,
       TaskAttemptContext context) throws IOException {
 
-    return new VertexReader<I, V, E, M>() {
+    return new VertexReader<I, V, E>() {
       /** The iterator */
-      private Iterator<Vertex<I, V, E, M>> vertexIterator;
-      private Vertex<I, V, E, M> currentVertex;
+      private Iterator<Vertex<I, V, E, ?>> vertexIterator;
+      private Vertex<I, V, E, ?> currentVertex;
 
       @Override
       public void initialize(InputSplit inputSplit,
@@ -93,7 +91,7 @@ public class InMemoryVertexInputFormat<I extends WritableComparable,
       }
 
       @Override
-      public Vertex<I, V, E, M> getCurrentVertex() {
+      public Vertex<I, V, E, ?> getCurrentVertex() {
         return currentVertex;
       }
 

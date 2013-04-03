@@ -42,11 +42,10 @@ import java.util.List;
  * @param <I> Vertex id
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message data
  */
 public class HiveVertexInputFormat<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    extends VertexInputFormat<I, V, E, M> {
+    V extends Writable, E extends Writable>
+    extends VertexInputFormat<I, V, E> {
   /** Underlying Hive InputFormat used */
   private final HiveApiInputFormat hiveInputFormat;
 
@@ -65,11 +64,11 @@ public class HiveVertexInputFormat<I extends WritableComparable,
   }
 
   @Override
-  public VertexReader<I, V, E, M> createVertexReader(InputSplit split,
+  public VertexReader<I, V, E> createVertexReader(InputSplit split,
       TaskAttemptContext context) throws IOException {
     Configuration conf = context.getConfiguration();
 
-    HiveVertexReader<I, V, E, M> reader = new HiveVertexReader<I, V, E, M>();
+    HiveVertexReader<I, V, E> reader = new HiveVertexReader<I, V, E>();
     reader.setTableSchema(hiveInputFormat.getTableSchema(conf));
 
     RecordReader<WritableComparable, HiveReadableRecord> baseReader;
@@ -80,6 +79,6 @@ public class HiveVertexInputFormat<I extends WritableComparable,
     }
 
     reader.setHiveRecordReader(baseReader);
-    return new VertexReaderWrapper<I, V, E, M>(reader);
+    return new VertexReaderWrapper<I, V, E>(reader);
   }
 }

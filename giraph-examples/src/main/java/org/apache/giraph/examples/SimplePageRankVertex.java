@@ -170,8 +170,7 @@ public class SimplePageRankVertex extends Vertex<LongWritable,
    * Simple VertexReader that supports {@link SimplePageRankVertex}
    */
   public static class SimplePageRankVertexReader extends
-      GeneratedVertexReader<LongWritable, DoubleWritable, FloatWritable,
-      DoubleWritable> {
+      GeneratedVertexReader<LongWritable, DoubleWritable, FloatWritable> {
     /** Class logger */
     private static final Logger LOG =
         Logger.getLogger(SimplePageRankVertexReader.class);
@@ -212,11 +211,10 @@ public class SimplePageRankVertex extends Vertex<LongWritable,
    * Simple VertexInputFormat that supports {@link SimplePageRankVertex}
    */
   public static class SimplePageRankVertexInputFormat extends
-    GeneratedVertexInputFormat<LongWritable,
-            DoubleWritable, FloatWritable, DoubleWritable> {
+    GeneratedVertexInputFormat<LongWritable, DoubleWritable, FloatWritable> {
     @Override
     public VertexReader<LongWritable, DoubleWritable,
-    FloatWritable, DoubleWritable> createVertexReader(InputSplit split,
+    FloatWritable> createVertexReader(InputSplit split,
       TaskAttemptContext context)
       throws IOException {
       return new SimplePageRankVertexReader();

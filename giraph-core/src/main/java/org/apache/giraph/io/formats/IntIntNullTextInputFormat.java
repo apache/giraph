@@ -37,9 +37,8 @@ import java.util.regex.Pattern;
  *
  * Each line consists of: vertex neighbor1 neighbor2 ...
  */
-public class IntIntNullIntTextInputFormat extends
-    TextVertexInputFormat<IntWritable, IntWritable, NullWritable,
-    IntWritable> {
+public class IntIntNullTextInputFormat extends
+    TextVertexInputFormat<IntWritable, IntWritable, NullWritable> {
   /** Separator of the vertex and neighbors */
   private static final Pattern SEPARATOR = Pattern.compile("[\t ]");
 
@@ -51,7 +50,7 @@ public class IntIntNullIntTextInputFormat extends
   }
 
   /**
-   * Vertex reader associated with {@link IntIntNullIntTextInputFormat}.
+   * Vertex reader associated with {@link IntIntNullTextInputFormat}.
    */
   public class IntIntNullIntVertexReader extends
     TextVertexReaderFromEachLineProcessed<String[]> {

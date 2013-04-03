@@ -17,6 +17,7 @@
  */
 package org.apache.giraph.hive.input.edge;
 
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.hive.common.DefaultConfigurableAndTableSchemaAware;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -25,14 +26,18 @@ import org.apache.hadoop.io.WritableComparable;
  * Base class for HiveToEdge implementations
  *
  * @param <I> Vertex ID
- * @param <V> Vertex Value
  * @param <E> Edge Value
- * @param <M> Message Value
  */
 public abstract class AbstractHiveToEdge<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    extends DefaultConfigurableAndTableSchemaAware<I, V, E, M>
+    E extends Writable>
+    extends DefaultConfigurableAndTableSchemaAware<I, Writable, E, Writable>
     implements HiveToEdge<I, E> {
+  @Override
+  public ImmutableClassesGiraphConfiguration<I, Writable, E, Writable>
+  getConf() {
+    return super.getConf();
+  }
+
   @Override
   public final void remove() {
     throw new UnsupportedOperationException();

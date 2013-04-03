@@ -18,25 +18,17 @@
 
 package org.apache.giraph.examples;
 
-import com.google.common.base.Splitter;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.SetMultimap;
 import org.apache.giraph.combiner.MinimumIntCombiner;
 import org.apache.giraph.conf.GiraphClasses;
 import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.io.formats.IdWithValueTextOutputFormat;
-import org.apache.giraph.io.formats.IntIntNullIntTextInputFormat;
 import org.apache.giraph.utils.InternalVertexRunner;
 import org.apache.giraph.utils.TestGraph;
 import org.apache.giraph.edge.ByteArrayEdges;
-import org.apache.giraph.edge.EdgeFactory;
-import org.apache.giraph.edge.VertexEdges;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
-import org.apache.hadoop.io.Writable;
-import org.apache.log4j.Logger;
 import org.junit.Test;
 
 import java.util.Map;

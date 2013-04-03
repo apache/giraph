@@ -22,7 +22,7 @@ import org.apache.giraph.combiner.MinimumIntCombiner;
 import org.apache.giraph.conf.GiraphClasses;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.io.formats.IdWithValueTextOutputFormat;
-import org.apache.giraph.io.formats.IntIntNullIntTextInputFormat;
+import org.apache.giraph.io.formats.IntIntNullTextInputFormat;
 import org.apache.giraph.utils.InternalVertexRunner;
 import org.apache.giraph.edge.ByteArrayEdges;
 import org.junit.Test;
@@ -78,7 +78,7 @@ public class TryMultiIpcBindingPortsTest {
         classes.setVertexClass(ConnectedComponentsVertex.class);
         classes.setVertexEdgesClass(ByteArrayEdges.class);
         classes.setCombinerClass(MinimumIntCombiner.class);
-        classes.setVertexInputFormatClass(IntIntNullIntTextInputFormat.class);
+        classes.setVertexInputFormatClass(IntIntNullTextInputFormat.class);
         classes.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
 
         Iterable<String> results = InternalVertexRunner.run(classes, params,

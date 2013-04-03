@@ -31,12 +31,9 @@ import java.io.IOException;
  *
  * @param <I> Vertex id
  * @param <V> Vertex value
- * @param <E> Edge value
- * @param <M> Message value
  */
 public abstract class VertexValueInputFormat<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    extends VertexInputFormat<I, V, E, M> {
+    V extends Writable> extends VertexInputFormat<I, V, Writable> {
   /**
    * Create a {@link VertexValueReader} for a given split. The framework will
    * call {@link VertexValueReader#initialize(InputSplit,
@@ -47,11 +44,11 @@ public abstract class VertexValueInputFormat<I extends WritableComparable,
    * @return A new vertex value reader
    * @throws IOException
    */
-  public abstract VertexValueReader<I, V, E, M> createVertexValueReader(
+  public abstract VertexValueReader<I, V> createVertexValueReader(
       InputSplit split, TaskAttemptContext context) throws IOException;
 
   @Override
-  public final VertexReader<I, V, E, M> createVertexReader(
+  public final VertexReader<I, V, Writable> createVertexReader(
       InputSplit split, TaskAttemptContext context) throws IOException {
     return createVertexValueReader(split, context);
   }

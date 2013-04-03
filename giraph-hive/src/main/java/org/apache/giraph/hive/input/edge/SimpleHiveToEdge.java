@@ -31,13 +31,10 @@ import java.util.Iterator;
  * row of the input.
  *
  * @param <I> Vertex id
- * @param <V> Vertex data
  * @param <E> Edge data
- * @param <M> Message data
  */
 public abstract class SimpleHiveToEdge<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    extends AbstractHiveToEdge<I, V, E, M> {
+    E extends Writable> extends AbstractHiveToEdge<I, E> {
   /** Iterator over input records */
   private Iterator<HiveReadableRecord> records;
   /** Reusable {@link EdgeWithSource} object */

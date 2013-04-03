@@ -28,12 +28,10 @@ import java.io.IOException;
  *
  * @param <I> Vertex id
  * @param <V> Vertex data
- * @param <E> Edge data
- * @param <M> Message data
  */
 public abstract class BasicVertexValueReader<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    implements VertexReader<I, V, E, M> {
+    V extends Writable>
+    implements VertexReader<I, V, Writable> {
   /**
    * User-defined method to extract the vertex id.
    *

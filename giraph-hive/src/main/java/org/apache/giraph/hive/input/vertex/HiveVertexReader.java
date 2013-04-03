@@ -20,6 +20,7 @@ package org.apache.giraph.hive.input.vertex;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.hive.common.DefaultConfigurableAndTableSchemaAware;
 import org.apache.giraph.hive.input.RecordReaderWrapper;
 import org.apache.giraph.io.iterables.GiraphReader;
 import org.apache.giraph.utils.ReflectionUtils;
@@ -30,8 +31,6 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 import com.facebook.giraph.hive.record.HiveReadableRecord;
-import com.facebook.giraph.hive.schema.HiveTableSchema;
-import com.facebook.giraph.hive.schema.HiveTableSchemaAware;
 import com.facebook.giraph.hive.schema.HiveTableSchemas;
 
 import java.io.IOException;
@@ -44,24 +43,19 @@ import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_TO_VERTEX_C
  * @param <I> Vertex ID
  * @param <V> Vertex Value
  * @param <E> Edge Value
- * @param <M> Message Value
  */
 public class HiveVertexReader<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    implements GiraphReader<Vertex<I, V, E, M>>, HiveTableSchemaAware {
+    V extends Writable, E extends Writable>
+    extends DefaultConfigurableAndTableSchemaAware<I, V, E, Writable>
+    implements GiraphReader<Vertex<I, V, E, ?>> {
   /** Underlying Hive RecordReader used */
   private RecordReader<WritableComparable, HiveReadableRecord> hiveRecordReader;
-  /** Schema for table in Hive */
-  private HiveTableSchema tableSchema;
-
-  /** Configuration */
-  private ImmutableClassesGiraphConfiguration<I, V, E, M> conf;
 
   /**
    * {@link HiveToVertex} chosen by user,
    * or {@link SimpleHiveToVertex} if none specified
    */
-  private HiveToVertex<I, V, E, M> hiveToVertex;
+  private HiveToVertex<I, V, E> hiveToVertex;
 
   /**
    * Get underlying Hive record reader used.
@@ -84,33 +78,14 @@ public class HiveVertexReader<I extends WritableComparable,
   }
 
   @Override
-  public HiveTableSchema getTableSchema() {
-    return tableSchema;
-  }
-
-  @Override
-  public void setTableSchema(HiveTableSchema tableSchema) {
-    this.tableSchema = tableSchema;
-  }
-
-  /**
-   * Get our Configuration.
-   *
-   * @return ImmutableClassesGiraphConfiguration
-   */
-  public ImmutableClassesGiraphConfiguration<I, V, E, M> getConf() {
-    return conf;
-  }
-
-  @Override
   public void initialize(InputSplit inputSplit,
       TaskAttemptContext context) throws IOException, InterruptedException {
     hiveRecordReader.initialize(inputSplit, context);
-    conf = new ImmutableClassesGiraphConfiguration<I, V, E, M>(
-        context.getConfiguration());
-    Class<? extends HiveToVertex> klass = HIVE_TO_VERTEX_CLASS.get(conf);
-    hiveToVertex = ReflectionUtils.newInstance(klass, conf);
-    HiveTableSchemas.configure(hiveToVertex, tableSchema);
+    setConf(new ImmutableClassesGiraphConfiguration<I, V, E, Writable>(
+        context.getConfiguration()));
+    Class<? extends HiveToVertex> klass = HIVE_TO_VERTEX_CLASS.get(getConf());
+    hiveToVertex = ReflectionUtils.newInstance(klass, getConf());
+    HiveTableSchemas.configure(hiveToVertex, getTableSchema());
     hiveToVertex.initializeRecords(
         new RecordReaderWrapper<HiveReadableRecord>(hiveRecordReader));
   }
@@ -131,7 +106,7 @@ public class HiveVertexReader<I extends WritableComparable,
   }
 
   @Override
-  public Vertex<I, V, E, M> next() {
+  public Vertex<I, V, E, ?> next() {
     return hiveToVertex.next();
   }
 

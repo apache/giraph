@@ -21,7 +21,6 @@ import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.EdgeFactory;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
@@ -32,12 +31,10 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  * 22 0.1 45 0.3 99 0.44
  * to repesent a vertex with id 22, value of 0.1 and edges to nodes 45 and 99,
  * with values of 0.3 and 0.44, respectively.
- *
- * @param <M> Message data
  */
-public class LongDoubleDoubleAdjacencyListVertexInputFormat<M extends Writable>
+public class LongDoubleDoubleAdjacencyListVertexInputFormat
     extends AdjacencyListTextVertexInputFormat<LongWritable, DoubleWritable,
-    DoubleWritable, M> {
+    DoubleWritable> {
 
   @Override
   public AdjacencyListTextVertexReader createVertexReader(InputSplit split,

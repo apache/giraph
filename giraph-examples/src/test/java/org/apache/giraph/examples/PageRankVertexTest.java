@@ -63,7 +63,7 @@ public class PageRankVertexTest {
     classes.setVertexClass(PageRankVertex.class);
     classes.setVertexEdgesClass(ByteArrayEdges.class);
     classes.setVertexInputFormatClass(
-        LongDoubleNullDoubleTextInputFormat.class);
+        LongDoubleNullTextInputFormat.class);
     classes.setVertexOutputFormatClass(
         VertexWithDoubleValueNullEdgeTextOutputFormat.class);
     classes.setWorkerContextClass(RandomWalkWorkerContext.class);

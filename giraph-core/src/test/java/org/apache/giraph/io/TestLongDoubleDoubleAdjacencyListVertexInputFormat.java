@@ -45,7 +45,7 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-public class TestLongDoubleDoubleAdjacencyListVertexInputFormat extends LongDoubleDoubleAdjacencyListVertexInputFormat<BooleanWritable> {
+public class TestLongDoubleDoubleAdjacencyListVertexInputFormat extends LongDoubleDoubleAdjacencyListVertexInputFormat {
 
   private RecordReader<LongWritable, Text> rr;
   private ImmutableClassesGiraphConfiguration<LongWritable, DoubleWritable,
@@ -132,7 +132,7 @@ public class TestLongDoubleDoubleAdjacencyListVertexInputFormat extends LongDoub
     vr.initialize(null, tac);
 
     assertTrue("Should have been able to read vertex", vr.nextVertex());
-    Vertex<LongWritable, DoubleWritable, DoubleWritable, BooleanWritable>
+    Vertex<LongWritable, DoubleWritable, DoubleWritable, ?>
         vertex = vr.getCurrentVertex();
     setGraphState(vertex, graphState);
     assertValidVertex(conf, graphState, vertex,
@@ -153,7 +153,7 @@ public class TestLongDoubleDoubleAdjacencyListVertexInputFormat extends LongDoub
 
     vr.initialize(null, tac);
     assertTrue("Should have been able to read vertex", vr.nextVertex());
-    Vertex<LongWritable, DoubleWritable, DoubleWritable, BooleanWritable>
+    Vertex<LongWritable, DoubleWritable, DoubleWritable, ?>
         vertex = vr.getCurrentVertex();
     setGraphState(vertex, graphState);
     assertValidVertex(conf, graphState, vertex,

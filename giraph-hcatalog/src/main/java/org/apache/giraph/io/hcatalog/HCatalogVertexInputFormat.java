@@ -55,16 +55,14 @@ import java.util.List;
  * @param <I> Vertex id
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message data
  */
 
 @SuppressWarnings("rawtypes")
 public abstract class HCatalogVertexInputFormat<
     I extends WritableComparable,
     V extends Writable,
-    E extends Writable,
-    M extends Writable>
-    extends VertexInputFormat<I, V, E, M> {
+    E extends Writable>
+    extends VertexInputFormat<I, V, E> {
   /**
    * HCatalog input format.
    */
@@ -87,16 +85,18 @@ public abstract class HCatalogVertexInputFormat<
    * nextVertex() should be overwritten to handle that logic as well.
    */
   protected abstract class HCatalogVertexReader implements
-      VertexReader<I, V, E, M> {
+      VertexReader<I, V, E> {
     /** Giraph configuration */
-    private ImmutableClassesGiraphConfiguration<I, V, E, M> configuration;
+    private ImmutableClassesGiraphConfiguration<I, V, E, Writable>
+    configuration;
     /** Internal HCatRecordReader. */
     private RecordReader<WritableComparable,
         HCatRecord> hCatRecordReader;
     /** Context passed to initialize. */
     private TaskAttemptContext context;
 
-    public ImmutableClassesGiraphConfiguration<I, V, E, M> getConfiguration() {
+    public ImmutableClassesGiraphConfiguration<I, V, E, Writable>
+    getConfiguration() {
       return configuration;
     }
 
@@ -119,8 +119,9 @@ public abstract class HCatalogVertexInputFormat<
       throws IOException, InterruptedException {
       hCatRecordReader.initialize(inputSplit, ctxt);
       this.context = ctxt;
-      this.configuration = new ImmutableClassesGiraphConfiguration<I, V, E, M>(
-          context.getConfiguration());
+      this.configuration =
+          new ImmutableClassesGiraphConfiguration<I, V, E, Writable>(
+              context.getConfiguration());
     }
 
     @Override
@@ -169,7 +170,7 @@ public abstract class HCatalogVertexInputFormat<
   protected abstract HCatalogVertexReader createVertexReader();
 
   @Override
-  public final VertexReader<I, V, E, M>
+  public final VertexReader<I, V, E>
   createVertexReader(final InputSplit split,
                      final TaskAttemptContext context)
     throws IOException {
@@ -237,10 +238,10 @@ public abstract class HCatalogVertexInputFormat<
     protected abstract Iterable<Edge<I, E>> getEdges(HCatRecord record);
 
     @Override
-    public final Vertex<I, V, E, M> getCurrentVertex()
+    public final Vertex<I, V, E, ?> getCurrentVertex()
       throws IOException, InterruptedException {
       HCatRecord record = getRecordReader().getCurrentValue();
-      Vertex<I, V, E, M> vertex = getConfiguration().createVertex();
+      Vertex<I, V, E, ?> vertex = getConfiguration().createVertex();
       vertex.initialize(getVertexId(record), getVertexValue(record),
           getEdges(record));
       ++recordCount;
@@ -299,7 +300,7 @@ public abstract class HCatalogVertexInputFormat<
     /**
      * vertex.
      */
-    private Vertex<I, V, E, M> vertex = null;
+    private Vertex<I, V, E, ?> vertex = null;
     /**
      * Timed logger to print every 30 seconds
      */
@@ -340,7 +341,7 @@ public abstract class HCatalogVertexInputFormat<
     protected abstract E getEdgeValue(HCatRecord record);
 
     @Override
-    public final Vertex<I, V, E, M>
+    public final Vertex<I, V, E, ?>
     getCurrentVertex() throws IOException, InterruptedException {
       return vertex;
     }

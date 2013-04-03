@@ -33,8 +33,8 @@ import java.io.IOException;
  *
  * Each line is just simply the vertex id.
  */
-public class IntNullNullNullTextInputFormat extends TextVertexInputFormat<
-    IntWritable, NullWritable, NullWritable, NullWritable> {
+public class IntNullNullTextInputFormat extends TextVertexInputFormat<
+    IntWritable, NullWritable, NullWritable> {
   @Override
   public TextVertexReader createVertexReader(
       InputSplit split, TaskAttemptContext context) throws IOException {

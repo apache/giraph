@@ -111,9 +111,9 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
       InputSplit inputSplit,
       GraphState<I, V, E, M> graphState)
     throws IOException, InterruptedException {
-    VertexInputFormat<I, V, E, M> vertexInputFormat =
+    VertexInputFormat<I, V, E> vertexInputFormat =
         configuration.createVertexInputFormat();
-    VertexReader<I, V, E, M> vertexReader =
+    VertexReader<I, V, E> vertexReader =
         vertexInputFormat.createVertexReader(inputSplit, context);
     vertexReader.initialize(inputSplit, context);
     long inputSplitVerticesLoaded = 0;
@@ -121,7 +121,7 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
     long inputSplitEdgesLoaded = 0;
     while (vertexReader.nextVertex()) {
       Vertex<I, V, E, M> readerVertex =
-          vertexReader.getCurrentVertex();
+          (Vertex<I, V, E, M>) vertexReader.getCurrentVertex();
       if (readerVertex.getId() == null) {
         throw new IllegalArgumentException(
             "readInputSplit: Vertex reader returned a vertex " +

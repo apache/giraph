@@ -36,12 +36,11 @@ import java.util.List;
  * @param <I> Vertex id
  * @param <V> Vertex data
  * @param <E> Edge data
- * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public abstract class GeneratedVertexInputFormat<
-    I extends WritableComparable, V extends Writable, E extends Writable,
-    M extends Writable> extends VertexInputFormat<I, V, E, M> {
+    I extends WritableComparable, V extends Writable, E extends Writable>
+    extends VertexInputFormat<I, V, E> {
   @Override
   public List<InputSplit> getSplits(JobContext context, int minSplitCountHint)
     throws IOException, InterruptedException {

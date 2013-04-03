@@ -46,12 +46,11 @@ import java.util.List;
  * @param <I> Vertex index value
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public class JsonBase64VertexInputFormat<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    extends TextVertexInputFormat<I, V, E, M> {
+    V extends Writable, E extends Writable>
+    extends TextVertexInputFormat<I, V, E> {
 
   @Override
   public TextVertexReader createVertexReader(InputSplit split,

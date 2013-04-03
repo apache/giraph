@@ -82,7 +82,7 @@ public class GiraphClasses<I extends WritableComparable,
   graphPartitionerFactoryClass;
 
   /** Vertex input format class - cached for fast access */
-  protected Class<? extends VertexInputFormat<I, V, E, M>>
+  protected Class<? extends VertexInputFormat<I, V, E>>
   vertexInputFormatClass;
   /** Vertex output format class - cached for fast access */
   protected Class<? extends VertexOutputFormat<I, V, E>>
@@ -168,7 +168,7 @@ public class GiraphClasses<I extends WritableComparable,
         (Class<? extends GraphPartitionerFactory<I, V, E, M>>)
             GRAPH_PARTITIONER_FACTORY_CLASS.get(conf);
 
-    vertexInputFormatClass = (Class<? extends VertexInputFormat<I, V, E, M>>)
+    vertexInputFormatClass = (Class<? extends VertexInputFormat<I, V, E>>)
         VERTEX_INPUT_FORMAT_CLASS.get(conf);
     vertexOutputFormatClass = (Class<? extends VertexOutputFormat<I, V, E>>)
         VERTEX_OUTPUT_FORMAT_CLASS.get(conf);
@@ -283,7 +283,7 @@ public class GiraphClasses<I extends WritableComparable,
    *
    * @return VertexInputFormat
    */
-  public Class<? extends VertexInputFormat<I, V, E, M>>
+  public Class<? extends VertexInputFormat<I, V, E>>
   getVertexInputFormatClass() {
     return vertexInputFormatClass;
   }
@@ -566,7 +566,7 @@ public class GiraphClasses<I extends WritableComparable,
    * @return this
    */
   public GiraphClasses setVertexInputFormatClass(
-      Class<? extends VertexInputFormat<I, V, E, M>> vertexInputFormatClass) {
+      Class<? extends VertexInputFormat<I, V, E>> vertexInputFormatClass) {
     this.vertexInputFormatClass = vertexInputFormatClass;
     return this;
   }

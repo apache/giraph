@@ -51,15 +51,13 @@ import java.util.List;
  * @param <I> Vertex index value
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public abstract class HBaseVertexInputFormat<
     I extends WritableComparable,
     V extends Writable,
-    E extends Writable,
-    M extends Writable>
-    extends VertexInputFormat<I, V, E, M>  {
+    E extends Writable>
+    extends VertexInputFormat<I, V, E>  {
 
 
    /**
@@ -85,15 +83,15 @@ public abstract class HBaseVertexInputFormat<
    * @param <I> Vertex index value
    * @param <V> Vertex value
    * @param <E> Edge value
-   * @param <M> Message data
    */
   public abstract static class HBaseVertexReader<
           I extends WritableComparable,
           V extends Writable,
-          E extends Writable, M extends Writable>
-          implements VertexReader<I, V, E, M> {
+          E extends Writable>
+          implements VertexReader<I, V, E> {
     /** Giraph configuration */
-    private ImmutableClassesGiraphConfiguration<I, V, E, M> configuration;
+    private ImmutableClassesGiraphConfiguration<I, V, E, Writable>
+    configuration;
     /** Reader instance */
     private final RecordReader<ImmutableBytesWritable, Result> reader;
     /** Context passed to initialize */
@@ -112,7 +110,8 @@ public abstract class HBaseVertexInputFormat<
       this.reader = BASE_FORMAT.createRecordReader(split, context);
     }
 
-    public ImmutableClassesGiraphConfiguration<I, V, E, M> getConfiguration() {
+    public ImmutableClassesGiraphConfiguration<I, V, E, Writable>
+    getConfiguration() {
       return configuration;
     }
 
@@ -130,8 +129,9 @@ public abstract class HBaseVertexInputFormat<
       InterruptedException {
       reader.initialize(inputSplit, context);
       this.context = context;
-      this.configuration = new ImmutableClassesGiraphConfiguration<I, V, E, M>(
-          context.getConfiguration());
+      this.configuration =
+          new ImmutableClassesGiraphConfiguration<I, V, E, Writable>(
+              context.getConfiguration());
     }
 
     /**

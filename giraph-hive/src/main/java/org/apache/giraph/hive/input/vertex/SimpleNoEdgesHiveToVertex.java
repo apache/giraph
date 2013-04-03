@@ -31,14 +31,11 @@ import com.google.common.collect.ImmutableList;
  *
  * @param <I> Vertex ID
  * @param <V> Vertex Value
- * @param <E> Edge Value
- * @param <M> Message Value
  */
 public abstract class SimpleNoEdgesHiveToVertex<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable> extends
-    SimpleHiveToVertex<I, V, E, M> {
+    V extends Writable> extends SimpleHiveToVertex<I, V, Writable> {
   @Override
-  public Iterable<Edge<I, E>> getEdges(HiveReadableRecord record) {
+  public final Iterable<Edge<I, Writable>> getEdges(HiveReadableRecord record) {
     return ImmutableList.of();
   }
 }

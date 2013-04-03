@@ -44,7 +44,7 @@ import java.util.List;
 @SuppressWarnings("rawtypes")
 public abstract class TextVertexValueInputFormat<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
-    extends VertexValueInputFormat<I, V, E, M> {
+    extends VertexValueInputFormat<I, V> {
   /** Uses the GiraphTextInputFormat to do everything */
   protected GiraphTextInputFormat textInputFormat = new GiraphTextInputFormat();
 
@@ -64,7 +64,7 @@ public abstract class TextVertexValueInputFormat<I extends WritableComparable,
    * {@link VertexValueReader} for {@link VertexValueInputFormat}.
    */
   protected abstract class TextVertexValueReader extends
-      VertexValueReader<I, V, E, M> {
+      VertexValueReader<I, V> {
     /** Internal line record reader */
     private RecordReader<LongWritable, Text> lineRecordReader;
     /** Context passed to initialize */

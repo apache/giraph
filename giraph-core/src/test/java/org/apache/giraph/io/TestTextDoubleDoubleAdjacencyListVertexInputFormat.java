@@ -128,22 +128,22 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat extends TextDoub
   }
 
   public static <I extends WritableComparable, V extends Writable,
-      E extends WritableComparable, M extends Writable> void assertValidVertex(
-      ImmutableClassesGiraphConfiguration<I, V, E, M> conf,
-      GraphState<I, V, E, M> graphState,
-      Vertex<I, V, E, M> actual,
+      E extends WritableComparable> void assertValidVertex(
+      ImmutableClassesGiraphConfiguration<I, V, E, ?> conf,
+      GraphState<I, V, E, ?> graphState,
+      Vertex<I, V, E, ?> actual,
       I expectedId,
       V expectedValue,
       Edge<I, E>... edges) throws Exception {
-    Vertex<I, V, E, M> expected = conf.createVertex();
+    Vertex<I, V, E, ?> expected = conf.createVertex();
     setGraphState(expected, graphState);
     expected.initialize(expectedId, expectedValue, Arrays.asList(edges));
     assertValid(expected, actual);
   }
 
   public static <I extends WritableComparable, V extends Writable,
-      E extends WritableComparable, M extends Writable> void assertValid(
-      Vertex<I, V, E, M> expected, Vertex<I, V, E, M> actual) {
+      E extends WritableComparable> void assertValid(
+      Vertex<I, V, E, ?> expected, Vertex<I, V, E, ?> actual) {
     assertEquals(expected.getId(), actual.getId());
     assertEquals(expected.getValue(), actual.getValue());
     assertEquals(expected.getTotalNumEdges(), actual.getTotalNumEdges());
@@ -159,8 +159,7 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat extends TextDoub
 
     vr.initialize(null, tac);
     assertTrue("Should have been able to add a vertex", vr.nextVertex());
-    Vertex<Text, DoubleWritable, DoubleWritable, BooleanWritable> vertex =
-        vr.getCurrentVertex();
+    Vertex<Text, DoubleWritable, DoubleWritable, ?> vertex = vr.getCurrentVertex();
     setGraphState(vertex, graphState);
     assertValidVertex(conf, graphState, vertex,
         new Text("Hi"), new DoubleWritable(0),
@@ -187,8 +186,7 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat extends TextDoub
 
     vr.initialize(null, tac);
     assertTrue("Should have been able to read vertex", vr.nextVertex());
-    Vertex<Text, DoubleWritable, DoubleWritable, BooleanWritable> vertex =
-        vr.getCurrentVertex();
+    Vertex<Text, DoubleWritable, DoubleWritable, ?> vertex = vr.getCurrentVertex();
     setGraphState(vertex, graphState);
     assertValidVertex(conf, graphState, vertex,
         new Text("BYE"), new DoubleWritable(0.01d),
@@ -209,8 +207,7 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat extends TextDoub
 
     vr.initialize(null, tac);
     assertTrue("Should have been able to read vertex", vr.nextVertex());
-    Vertex<Text, DoubleWritable, DoubleWritable, BooleanWritable> vertex =
-        vr.getCurrentVertex();
+    Vertex<Text, DoubleWritable, DoubleWritable, ?> vertex = vr.getCurrentVertex();
     setGraphState(vertex, graphState);
     assertValidVertex(conf, graphState, vertex,
         new Text("alpha"), new DoubleWritable(42d),

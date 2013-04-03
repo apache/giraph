@@ -34,12 +34,11 @@ import java.io.IOException;
  * @param <I> Vertex index value
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public abstract class GeneratedVertexReader<
-    I extends WritableComparable, V extends Writable, E extends Writable,
-    M extends Writable> implements VertexReader<I, V, E, M> {
+    I extends WritableComparable, V extends Writable,
+    E extends Writable> implements VertexReader<I, V, E> {
   /** Vertices produced by this reader */
   public static final String READER_VERTICES =
     "GeneratedVertexReader.reader_vertices";

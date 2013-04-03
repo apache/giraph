@@ -37,15 +37,10 @@ import java.util.List;
  *
  * @param <I> Vertex id
  * @param <V> Vertex value
- * @param <E> Edge value
- * @param <M> Message data
  */
 public abstract class HCatalogVertexValueInputFormat<I extends
-    WritableComparable,
-    V extends Writable,
-    E extends Writable,
-    M extends Writable>
-    extends VertexValueInputFormat<I, V, E, M> {
+    WritableComparable, V extends Writable>
+    extends VertexValueInputFormat<I, V> {
   /**
    * HCatalog input format.
    */
@@ -61,7 +56,7 @@ public abstract class HCatalogVertexValueInputFormat<I extends
    * {@link VertexValueReader} for {@link HCatalogVertexValueInputFormat}.
    */
   protected abstract class HCatalogVertexValueReader
-      extends VertexValueReader<I, V, E, M> {
+      extends VertexValueReader<I, V> {
     /** Internal {@link RecordReader}. */
     private RecordReader<WritableComparable, HCatRecord> hCatRecordReader;
     /** Context passed to initialize. */
@@ -121,7 +116,7 @@ public abstract class HCatalogVertexValueInputFormat<I extends
   protected abstract HCatalogVertexValueReader createVertexValueReader();
 
   @Override
-  public final VertexValueReader<I, V, E, M>
+  public final VertexValueReader<I, V>
   createVertexValueReader(InputSplit split, TaskAttemptContext context)
     throws IOException {
     try {

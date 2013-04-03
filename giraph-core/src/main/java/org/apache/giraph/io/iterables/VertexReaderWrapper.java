@@ -33,24 +33,22 @@ import java.io.IOException;
  * @param <I> Vertex id
  * @param <V> Vertex data
  * @param <E> Edge data
- * @param <M> Message data
  */
 public class VertexReaderWrapper<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable> implements
-    VertexReader<I, V, E, M> {
+    V extends Writable, E extends Writable> implements VertexReader<I, V, E> {
   /** Wrapped edge reader */
-  private GiraphReader<Vertex<I, V, E, M>> vertexReader;
+  private GiraphReader<Vertex<I, V, E, ?>> vertexReader;
   /** {@link VertexReader}-like wrapper of {@link #vertexReader} */
-  private IteratorToReaderWrapper<Vertex<I, V, E, M>> iterator;
+  private IteratorToReaderWrapper<Vertex<I, V, E, ?>> iterator;
 
   /**
    * Constructor
    *
    * @param vertexReader GiraphReader for vertices to wrap
    */
-  public VertexReaderWrapper(GiraphReader<Vertex<I, V, E, M>> vertexReader) {
+  public VertexReaderWrapper(GiraphReader<Vertex<I, V, E, ?>> vertexReader) {
     this.vertexReader = vertexReader;
-    iterator = new IteratorToReaderWrapper<Vertex<I, V, E, M>>(vertexReader);
+    iterator = new IteratorToReaderWrapper<Vertex<I, V, E, ?>>(vertexReader);
   }
 
   @Override
@@ -59,7 +57,7 @@ public class VertexReaderWrapper<I extends WritableComparable,
   }
 
   @Override
-  public Vertex<I, V, E, M> getCurrentVertex() throws IOException,
+  public Vertex<I, V, E, ?> getCurrentVertex() throws IOException,
       InterruptedException {
     return iterator.getCurrentObject();
   }

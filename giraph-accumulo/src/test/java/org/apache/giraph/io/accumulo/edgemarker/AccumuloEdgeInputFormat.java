@@ -39,11 +39,11 @@ import java.util.regex.Pattern;
  Example subclass which reads in Key/Value pairs to construct vertex objects.
  */
 public class AccumuloEdgeInputFormat
-        extends AccumuloVertexInputFormat<Text, Text, Text, Text> {
+        extends AccumuloVertexInputFormat<Text, Text, Text> {
 
     private static final Text uselessEdgeValue = new Text();
     private Configuration conf;
-    public VertexReader<Text, Text, Text, Text>
+    public VertexReader<Text, Text, Text>
     createVertexReader(InputSplit split, TaskAttemptContext context)
             throws IOException {
         try {
@@ -60,7 +60,7 @@ public class AccumuloEdgeInputFormat
         Reader takes Key/Value pairs from the underlying input format.
      */
     public static class AccumuloEdgeVertexReader
-            extends AccumuloVertexReader<Text, Text, Text, Text> {
+            extends AccumuloVertexReader<Text, Text, Text> {
 
         public static final Pattern commaPattern = Pattern.compile("[,]");
 
@@ -76,11 +76,11 @@ public class AccumuloEdgeInputFormat
         /*
        Each Key/Value contains the information needed to construct the vertices.
          */
-        public Vertex<Text, Text, Text, Text> getCurrentVertex()
+        public Vertex<Text, Text, Text, ?> getCurrentVertex()
                 throws IOException, InterruptedException {
               Key key = getRecordReader().getCurrentKey();
               Value value = getRecordReader().getCurrentValue();
-              Vertex<Text, Text, Text, Text> vertex =
+              Vertex<Text, Text, Text, ?> vertex =
                   getConfiguration().createVertex();
               Text vertexId = key.getRow();
               List<Edge<Text, Text>> edges = Lists.newLinkedList();

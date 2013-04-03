@@ -28,7 +28,6 @@ import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.edge.VertexEdges;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
@@ -45,11 +44,9 @@ import java.util.Set;
  * to create an input data source that a variable number of aggregate vertices
  * and edges per vertex that is repeatable for the exact same parameter
  * (pseudo-random).
- *
- * @param <M> Message data
  */
-public class PseudoRandomVertexInputFormat<M extends Writable> extends
-    VertexInputFormat<LongWritable, DoubleWritable, DoubleWritable, M> {
+public class PseudoRandomVertexInputFormat extends
+    VertexInputFormat<LongWritable, DoubleWritable, DoubleWritable> {
   @Override
   public final List<InputSplit> getSplits(final JobContext context,
       final int minSplitCountHint) throws IOException, InterruptedException {
@@ -63,18 +60,18 @@ public class PseudoRandomVertexInputFormat<M extends Writable> extends
   }
 
   @Override
-  public VertexReader<LongWritable, DoubleWritable, DoubleWritable, M>
+  public VertexReader<LongWritable, DoubleWritable, DoubleWritable>
   createVertexReader(InputSplit split, TaskAttemptContext context)
     throws IOException {
-    return new PseudoRandomVertexReader<M>();
+    return new PseudoRandomVertexReader();
   }
 
   /**
    * Used by {@link PseudoRandomVertexInputFormat} to read
    * pseudo-randomly generated data.
    */
-  private static class PseudoRandomVertexReader<M extends Writable> implements
-      VertexReader<LongWritable, DoubleWritable, DoubleWritable, M> {
+  private static class PseudoRandomVertexReader implements
+      VertexReader<LongWritable, DoubleWritable, DoubleWritable> {
     /** Logger. */
     private static final Logger LOG =
         Logger.getLogger(PseudoRandomVertexReader.class);
@@ -150,9 +147,9 @@ public class PseudoRandomVertexInputFormat<M extends Writable> extends
     }
 
     @Override
-    public Vertex<LongWritable, DoubleWritable, DoubleWritable, M>
+    public Vertex<LongWritable, DoubleWritable, DoubleWritable, ?>
     getCurrentVertex() throws IOException, InterruptedException {
-      Vertex<LongWritable, DoubleWritable, DoubleWritable, M>
+      Vertex<LongWritable, DoubleWritable, DoubleWritable, ?>
       vertex = configuration.createVertex();
       long vertexId = startingVertexId + verticesRead;
       // Seed on the vertex id to keep the vertex data the same when

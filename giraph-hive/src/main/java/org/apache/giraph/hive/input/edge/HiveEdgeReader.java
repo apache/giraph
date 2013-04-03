@@ -19,6 +19,7 @@
 package org.apache.giraph.hive.input.edge;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.hive.common.DefaultConfigurableAndTableSchemaAware;
 import org.apache.giraph.hive.input.RecordReaderWrapper;
 import org.apache.giraph.io.iterables.EdgeWithSource;
 import org.apache.giraph.io.iterables.GiraphReader;
@@ -30,8 +31,6 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 import com.facebook.giraph.hive.record.HiveReadableRecord;
-import com.facebook.giraph.hive.schema.HiveTableSchema;
-import com.facebook.giraph.hive.schema.HiveTableSchemaAware;
 import com.facebook.giraph.hive.schema.HiveTableSchemas;
 
 import java.io.IOException;
@@ -45,17 +44,10 @@ import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_TO_EDGE_CLA
  * @param <E> Edge Value
  */
 public class HiveEdgeReader<I extends WritableComparable, E extends Writable>
-    implements GiraphReader<EdgeWithSource<I, E>>, HiveTableSchemaAware {
-  /** Configuration key for edge creator class */
-  public static final String HIVE_TO_EDGE_KEY = "giraph.hive.to.edge.class";
-
+    extends DefaultConfigurableAndTableSchemaAware<I, Writable, E, Writable>
+    implements GiraphReader<EdgeWithSource<I, E>> {
   /** Underlying Hive RecordReader used */
   private RecordReader<WritableComparable, HiveReadableRecord> hiveRecordReader;
-  /** Schema for table in Hive */
-  private HiveTableSchema tableSchema;
-
-  /** Configuration */
-  private ImmutableClassesGiraphConfiguration<I, ?, E, ?> conf;
 
   /** User class to create edges from a HiveRecord */
   private HiveToEdge<I, E> hiveToEdge;
@@ -81,29 +73,11 @@ public class HiveEdgeReader<I extends WritableComparable, E extends Writable>
   }
 
   @Override
-  public HiveTableSchema getTableSchema() {
-    return tableSchema;
-  }
-
-  @Override
-  public void setTableSchema(HiveTableSchema tableSchema) {
-    this.tableSchema = tableSchema;
-  }
-
-  /**
-   * Get our Configuration.
-   *
-   * @return ImmutableClassesGiraphConfiguration
-   */
-  public ImmutableClassesGiraphConfiguration<I, ?, E, ?> getConf() {
-    return conf;
-  }
-
-  @Override
   public void initialize(InputSplit inputSplit, TaskAttemptContext context)
     throws IOException, InterruptedException {
     hiveRecordReader.initialize(inputSplit, context);
-    conf = new ImmutableClassesGiraphConfiguration(context.getConfiguration());
+    setConf(new ImmutableClassesGiraphConfiguration<I, Writable, E, Writable>(
+        context.getConfiguration()));
     instantiateHiveToEdgeFromConf();
     hiveToEdge.initializeRecords(
         new RecordReaderWrapper<HiveReadableRecord>(hiveRecordReader));
@@ -115,12 +89,12 @@ public class HiveEdgeReader<I extends WritableComparable, E extends Writable>
    * @throws IOException if anything goes wrong reading from Configuration
    */
   private void instantiateHiveToEdgeFromConf() throws IOException {
-    Class<? extends HiveToEdge> klass = HIVE_TO_EDGE_CLASS.get(conf);
+    Class<? extends HiveToEdge> klass = HIVE_TO_EDGE_CLASS.get(getConf());
     if (klass == null) {
       throw new IOException(HIVE_TO_EDGE_CLASS.getKey() + " not set in conf");
     }
-    hiveToEdge = ReflectionUtils.newInstance(klass, conf);
-    HiveTableSchemas.configure(hiveToEdge, tableSchema);
+    hiveToEdge = ReflectionUtils.newInstance(klass, getConf());
+    HiveTableSchemas.configure(hiveToEdge, getTableSchema());
   }
 
   @Override

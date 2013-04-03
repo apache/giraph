@@ -38,13 +38,13 @@ import java.util.List;
   children qualifier to create an edge.
  */
 public class TableEdgeInputFormat extends
-        HBaseVertexInputFormat<Text, Text, Text, Text> {
+        HBaseVertexInputFormat<Text, Text, Text> {
 
     private static final Logger log =
             Logger.getLogger(TableEdgeInputFormat.class);
     private static final Text uselessEdgeValue = new Text();
 
-    public VertexReader<Text, Text, Text, Text>
+    public VertexReader<Text, Text, Text>
             createVertexReader(InputSplit split,
                                TaskAttemptContext context) throws IOException {
 
@@ -56,7 +56,7 @@ public class TableEdgeInputFormat extends
      Uses the RecordReader to return Hbase rows
      */
     public static class TableEdgeVertexReader
-            extends HBaseVertexReader<Text, Text, Text, Text> {
+            extends HBaseVertexReader<Text, Text, Text> {
 
         private final byte[] CF = Bytes.toBytes("cf");
         private final byte[] CHILDREN = Bytes.toBytes("children");
@@ -75,11 +75,11 @@ public class TableEdgeInputFormat extends
          For each row, create a vertex with the row ID as a text,
          and it's 'children' qualifier as a single edge.
          */
-        public Vertex<Text, Text, Text, Text>
+        public Vertex<Text, Text, Text, ?>
                     getCurrentVertex()
                 throws IOException, InterruptedException {
             Result row = getRecordReader().getCurrentValue();
-            Vertex<Text, Text, Text, Text> vertex =
+            Vertex<Text, Text, Text, ?> vertex =
                 getConfiguration().createVertex();
             Text vertexId = new Text(Bytes.toString(row.getRow()));
             List<Edge<Text, Text>> edges = Lists.newLinkedList();

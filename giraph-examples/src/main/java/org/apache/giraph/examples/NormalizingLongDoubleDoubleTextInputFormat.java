@@ -27,6 +27,7 @@ import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
@@ -40,15 +41,14 @@ import java.util.regex.Pattern;
  * unweighted graphs with long ids. Each line consists of: vertex
  * neighbor1:weight1 neighbor2:weight2 ...
  */
-public class NormalizingLongDoubleDoubleDoubleTextInputFormat
+public class NormalizingLongDoubleDoubleTextInputFormat
     extends
-    TextVertexInputFormat<LongWritable, DoubleWritable,
-      DoubleWritable, DoubleWritable>
+    TextVertexInputFormat<LongWritable, DoubleWritable, DoubleWritable>
     implements ImmutableClassesGiraphConfigurable<LongWritable, DoubleWritable,
-    DoubleWritable, DoubleWritable> {
+    DoubleWritable, Writable> {
   /** Configuration. */
   private ImmutableClassesGiraphConfiguration<LongWritable, DoubleWritable,
-      DoubleWritable, DoubleWritable> conf;
+      DoubleWritable, Writable> conf;
 
   @Override
   public TextVertexReader createVertexReader(
@@ -58,22 +58,22 @@ public class NormalizingLongDoubleDoubleDoubleTextInputFormat
 
   @Override
   public void setConf(ImmutableClassesGiraphConfiguration<LongWritable,
-      DoubleWritable, DoubleWritable, DoubleWritable> configuration) {
+      DoubleWritable, DoubleWritable, Writable> configuration) {
     conf = configuration;
   }
 
   @Override
   public ImmutableClassesGiraphConfiguration<LongWritable, DoubleWritable,
-      DoubleWritable, DoubleWritable> getConf() {
+      DoubleWritable, Writable> getConf() {
     return conf;
   }
 
   /**
    * Vertex reader associated with
-   * {@link LongDoubleDoubleDoubleTextInputFormat}.
+   * {@link LongDoubleDoubleTextInputFormat}.
    */
   public class NormalizingLongDoubleDoubleDoubleVertexReader
-      extends TextVertexInputFormat.TextVertexReader {
+      extends NormalizingLongDoubleDoubleTextInputFormat.TextVertexReader {
     /** Separator of the vertex and neighbors */
     private final Pattern edgeSeparator = Pattern.compile("\\s+");
     /** Separator of the edge id and edge weight */
@@ -81,10 +81,10 @@ public class NormalizingLongDoubleDoubleDoubleTextInputFormat
 
     @Override
     public Vertex<LongWritable, DoubleWritable,
-    DoubleWritable, DoubleWritable> getCurrentVertex()
+        DoubleWritable, ?> getCurrentVertex()
       throws IOException, InterruptedException {
       Vertex<LongWritable, DoubleWritable,
-      DoubleWritable, DoubleWritable> vertex = conf.createVertex();
+      DoubleWritable, ?> vertex = conf.createVertex();
 
       String[] tokens = edgeSeparator.split(getRecordReader()
           .getCurrentValue().toString());

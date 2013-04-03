@@ -40,8 +40,7 @@ import java.util.List;
   *  specified in JSON format.
   */
 public class JsonLongDoubleFloatDoubleVertexInputFormat extends
-  TextVertexInputFormat<LongWritable, DoubleWritable,
-  FloatWritable, DoubleWritable> {
+  TextVertexInputFormat<LongWritable, DoubleWritable, FloatWritable> {
 
   @Override
   public TextVertexReader createVertexReader(InputSplit split,

@@ -67,8 +67,7 @@ public class SimpleSuperstepVertex extends Vertex<LongWritable, IntWritable,
    * Simple VertexReader that supports {@link SimpleSuperstepVertex}
    */
   public static class SimpleSuperstepVertexReader extends
-      GeneratedVertexReader<LongWritable, IntWritable,
-        FloatWritable, IntWritable> {
+      GeneratedVertexReader<LongWritable, IntWritable, FloatWritable> {
     /** Class logger */
     private static final Logger LOG =
         Logger.getLogger(SimpleSuperstepVertexReader.class);
@@ -114,10 +113,9 @@ public class SimpleSuperstepVertex extends Vertex<LongWritable, IntWritable,
    * Simple VertexInputFormat that supports {@link SimpleSuperstepVertex}
    */
   public static class SimpleSuperstepVertexInputFormat extends
-    GeneratedVertexInputFormat<LongWritable,
-        IntWritable, FloatWritable, IntWritable> {
+    GeneratedVertexInputFormat<LongWritable, IntWritable, FloatWritable> {
     @Override
-    public VertexReader<LongWritable, IntWritable, FloatWritable, IntWritable>
+    public VertexReader<LongWritable, IntWritable, FloatWritable>
     createVertexReader(InputSplit split, TaskAttemptContext context)
       throws IOException {
       return new SimpleSuperstepVertexReader();

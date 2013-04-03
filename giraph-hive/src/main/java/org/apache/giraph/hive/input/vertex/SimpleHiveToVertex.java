@@ -35,16 +35,15 @@ import java.util.Iterator;
  * @param <I> Vertex ID
  * @param <V> Vertex Value
  * @param <E> Edge Value
- * @param <M> Message Value
  */
 public abstract class SimpleHiveToVertex<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    extends AbstractHiveToVertex<I, V, E, M> {
+    V extends Writable, E extends Writable>
+    extends AbstractHiveToVertex<I, V, E> {
   /** Hive records which we are reading from */
   private Iterator<HiveReadableRecord> records;
 
   /** Reusable vertex object */
-  private Vertex<I, V, E, M> reusableVertex = null;
+  private Vertex<I, V, E, ?> reusableVertex = null;
 
   /**
    * Read the Vertex's ID from the HiveRecord given.
@@ -71,7 +70,8 @@ public abstract class SimpleHiveToVertex<I extends WritableComparable,
   public abstract Iterable<Edge<I, E>> getEdges(HiveReadableRecord record);
 
   @Override
-  public void setConf(ImmutableClassesGiraphConfiguration<I, V, E, M> conf) {
+  public void setConf(
+      ImmutableClassesGiraphConfiguration<I, V, E, Writable> conf) {
     super.setConf(conf);
     if (conf.reuseVertexObjects()) {
       reusableVertex = getConf().createVertex();
@@ -89,12 +89,12 @@ public abstract class SimpleHiveToVertex<I extends WritableComparable,
   }
 
   @Override
-  public Vertex<I, V, E, M> next() {
+  public Vertex<I, V, E, ?> next() {
     HiveReadableRecord record = records.next();
     I id = getVertexId(record);
     V value = getVertexValue(record);
     Iterable<Edge<I, E>> edges = getEdges(record);
-    Vertex<I, V, E, M> vertex = reusableVertex;
+    Vertex<I, V, E, ?> vertex = reusableVertex;
     if (vertex == null) {
       vertex = getConf().createVertex();
     }

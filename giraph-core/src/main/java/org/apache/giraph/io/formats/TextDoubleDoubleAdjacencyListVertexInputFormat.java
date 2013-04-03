@@ -34,7 +34,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  */
 public class TextDoubleDoubleAdjacencyListVertexInputFormat<M extends Writable>
     extends AdjacencyListTextVertexInputFormat<Text, DoubleWritable,
-            DoubleWritable, M>  {
+            DoubleWritable>  {
 
   @Override
   public AdjacencyListTextVertexReader createVertexReader(InputSplit split,

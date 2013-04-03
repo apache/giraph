@@ -40,12 +40,11 @@ import java.util.List;
  * @param <I> Vertex index value
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public abstract class AdjacencyListTextVertexInputFormat<I extends
-    WritableComparable, V extends Writable, E extends Writable, M extends
-    Writable> extends TextVertexInputFormat<I, V, E, M> {
+    WritableComparable, V extends Writable, E extends Writable> extends
+    TextVertexInputFormat<I, V, E> {
   /** Delimiter for split */
   public static final String LINE_TOKENIZE_VALUE = "adj.list.input.delimiter";
   /** Default delimiter for split */

@@ -42,12 +42,11 @@ import java.util.List;
  * @param <I> Vertex index value
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message value
  */
 @SuppressWarnings("rawtypes")
 public abstract class TextVertexInputFormat<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    extends VertexInputFormat<I, V, E, M> {
+    V extends Writable, E extends Writable>
+    extends VertexInputFormat<I, V, E> {
   /** Uses the GiraphTextInputFormat to do everything */
   protected GiraphTextInputFormat textInputFormat = new GiraphTextInputFormat();
 
@@ -86,19 +85,19 @@ public abstract class TextVertexInputFormat<I extends WritableComparable,
    * {@link TextVertexReaderFromEachLineProcessedHandlingExceptions}.
    */
   protected abstract class TextVertexReader implements
-    VertexReader<I, V, E, M> {
+    VertexReader<I, V, E> {
     /** Internal line record reader */
     private RecordReader<LongWritable, Text> lineRecordReader;
     /** Context passed to initialize */
     private TaskAttemptContext context;
     /** Cached configuration */
-    private ImmutableClassesGiraphConfiguration<I, V, E, M> conf;
+    private ImmutableClassesGiraphConfiguration<I, V, E, Writable> conf;
 
     @Override
     public void initialize(InputSplit inputSplit, TaskAttemptContext context)
       throws IOException, InterruptedException {
       this.context = context;
-      conf = new ImmutableClassesGiraphConfiguration<I, V, E, M>(
+      conf = new ImmutableClassesGiraphConfiguration<I, V, E, Writable>(
           context.getConfiguration());
       lineRecordReader = createLineRecordReader(inputSplit, context);
       lineRecordReader.initialize(inputSplit, context);
@@ -158,7 +157,7 @@ public abstract class TextVertexInputFormat<I extends WritableComparable,
      *
      * @return Configuration for this reader
      */
-    protected ImmutableClassesGiraphConfiguration<I, V, E, M> getConf() {
+    protected ImmutableClassesGiraphConfiguration<I, V, E, Writable> getConf() {
       return conf;
     }
   }
@@ -171,10 +170,10 @@ public abstract class TextVertexInputFormat<I extends WritableComparable,
     TextVertexReader {
 
     @Override
-    public final Vertex<I, V, E, M> getCurrentVertex() throws IOException,
+    public final Vertex<I, V, E, ?> getCurrentVertex() throws IOException,
     InterruptedException {
       Text line = getRecordReader().getCurrentValue();
-      Vertex<I, V, E, M> vertex = getConf().createVertex();
+      Vertex<I, V, E, ?> vertex = getConf().createVertex();
       vertex.initialize(getId(line), getValue(line), getEdges(line));
       return vertex;
     }
@@ -239,10 +238,10 @@ public abstract class TextVertexInputFormat<I extends WritableComparable,
     }
 
     @Override
-    public final Vertex<I, V, E, M> getCurrentVertex() throws IOException,
+    public final Vertex<I, V, E, ?> getCurrentVertex() throws IOException,
     InterruptedException {
       Text line = getRecordReader().getCurrentValue();
-      Vertex<I, V, E, M> vertex;
+      Vertex<I, V, E, ?> vertex;
       T processed = preprocessLine(line);
       vertex = getConf().createVertex();
       vertex.initialize(getId(processed), getValue(processed),
@@ -323,11 +322,11 @@ public abstract class TextVertexInputFormat<I extends WritableComparable,
 
     @SuppressWarnings("unchecked")
     @Override
-    public final Vertex<I, V, E, M> getCurrentVertex() throws IOException,
+    public final Vertex<I, V, E, ?> getCurrentVertex() throws IOException,
         InterruptedException {
       // Note we are reading from value only since key is the line number
       Text line = getRecordReader().getCurrentValue();
-      Vertex<I, V, E, M> vertex;
+      Vertex<I, V, E, ?> vertex;
       T processed = null;
       try {
         processed = preprocessLine(line);
@@ -418,7 +417,7 @@ public abstract class TextVertexInputFormat<I extends WritableComparable,
      *          the exception thrown while reading the line
      * @return the recovered/alternative vertex to be used
      */
-    protected Vertex<I, V, E, M> handleException(Text line, T processed, X e) {
+    protected Vertex<I, V, E, ?> handleException(Text line, T processed, X e) {
       throw new IllegalArgumentException(e);
     }
 

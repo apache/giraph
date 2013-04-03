@@ -18,6 +18,7 @@
 
 package org.apache.giraph.hive.input.vertex;
 
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.hive.common.DefaultConfigurableAndTableSchemaAware;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -28,12 +29,16 @@ import org.apache.hadoop.io.WritableComparable;
  * @param <I> Vertex ID
  * @param <V> Vertex Value
  * @param <E> Edge Value
- * @param <M> Message Value
  */
 public abstract class AbstractHiveToVertex<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    extends DefaultConfigurableAndTableSchemaAware<I, V, E, M>
-    implements HiveToVertex<I, V, E, M> {
+    V extends Writable, E extends Writable>
+    extends DefaultConfigurableAndTableSchemaAware<I, V, E, Writable>
+    implements HiveToVertex<I, V, E> {
+  @Override
+  public ImmutableClassesGiraphConfiguration<I, V, E, Writable> getConf() {
+    return super.getConf();
+  }
+
   @Override
   public final void remove() {
     throw new UnsupportedOperationException();

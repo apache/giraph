@@ -32,31 +32,31 @@ import java.io.IOException;
  *
  * @param <I> Vertex id
  * @param <V> Vertex value
- * @param <E> Edge value
- * @param <M> Message value
  */
 public abstract class VertexValueReader<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    extends BasicVertexValueReader<I, V, E, M> {
+    V extends Writable> extends BasicVertexValueReader<I, V> {
   /** Configuration. */
-  private ImmutableClassesGiraphConfiguration<I, V, E, M> configuration;
+  private ImmutableClassesGiraphConfiguration<I, V, Writable, Writable>
+  configuration;
 
   @Override
   public void initialize(InputSplit inputSplit, TaskAttemptContext context)
     throws IOException, InterruptedException {
-    configuration = new ImmutableClassesGiraphConfiguration<I, V, E, M>(
-        context.getConfiguration());
+    configuration =
+        new ImmutableClassesGiraphConfiguration<I, V, Writable, Writable>(
+            context.getConfiguration());
   }
 
   @Override
-  public final Vertex<I, V, E, M> getCurrentVertex() throws IOException,
+  public final Vertex<I, V, Writable, ?> getCurrentVertex() throws IOException,
       InterruptedException {
-    Vertex<I, V, E, M> vertex = getConf().createVertex();
+    Vertex<I, V, Writable, ?> vertex = getConf().createVertex();
     vertex.initialize(getCurrentVertexId(), getCurrentVertexValue());
     return vertex;
   }
 
-  public ImmutableClassesGiraphConfiguration<I, V, E, M> getConf() {
+  public ImmutableClassesGiraphConfiguration<I, V, Writable, Writable>
+  getConf() {
     return configuration;
   }
 }

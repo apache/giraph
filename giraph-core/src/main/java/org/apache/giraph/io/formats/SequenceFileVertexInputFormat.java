@@ -37,14 +37,12 @@ import java.util.List;
  * @param <I> Vertex id
  * @param <V> Vertex data
  * @param <E> Edge data
- * @param <M> Message data
  * @param <X> Value type
  */
 @SuppressWarnings("rawtypes")
 public class SequenceFileVertexInputFormat<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable,
-    X extends Vertex<I, V, E, M>>
-    extends VertexInputFormat<I, V, E, M> {
+    V extends Writable, E extends Writable, X extends Vertex<I, V, E, ?>>
+    extends VertexInputFormat<I, V, E> {
   /** Internal input format */
   protected SequenceFileInputFormat<I, X> sequenceFileInputFormat =
     new SequenceFileInputFormat<I, X>();
@@ -56,9 +54,9 @@ public class SequenceFileVertexInputFormat<I extends WritableComparable,
   }
 
   @Override
-  public VertexReader<I, V, E, M> createVertexReader(InputSplit split,
+  public VertexReader<I, V, E> createVertexReader(InputSplit split,
       TaskAttemptContext context) throws IOException {
-    return new SequenceFileVertexReader<I, V, E, M, X>(
+    return new SequenceFileVertexReader<I, V, E, X>(
         sequenceFileInputFormat.createRecordReader(split, context));
   }
 
@@ -68,13 +66,11 @@ public class SequenceFileVertexInputFormat<I extends WritableComparable,
    * @param <I> Vertex id
    * @param <V> Vertex data
    * @param <E> Edge data
-   * @param <M> Message data
    * @param <X> Value type
    */
   public static class SequenceFileVertexReader<I extends WritableComparable,
-      V extends Writable, E extends Writable, M extends Writable,
-      X extends Vertex<I, V, E, M>>
-      implements VertexReader<I, V, E, M> {
+      V extends Writable, E extends Writable, X extends Vertex<I, V, E, ?>>
+      implements VertexReader<I, V, E> {
     /** Internal record reader from {@link SequenceFileInputFormat} */
     private final RecordReader<I, X> recordReader;
 
@@ -97,7 +93,7 @@ public class SequenceFileVertexInputFormat<I extends WritableComparable,
       return recordReader.nextKeyValue();
     }
 
-    @Override public Vertex<I, V, E, M> getCurrentVertex()
+    @Override public Vertex<I, V, E, ?> getCurrentVertex()
       throws IOException, InterruptedException {
       return recordReader.getCurrentValue();
     }

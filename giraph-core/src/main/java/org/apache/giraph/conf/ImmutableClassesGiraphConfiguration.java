@@ -156,7 +156,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    *
    * @return User's vertex input format class
    */
-  public Class<? extends VertexInputFormat<I, V, E, M>>
+  public Class<? extends VertexInputFormat<I, V, E>>
   getVertexInputFormatClass() {
     return classes.getVertexInputFormatClass();
   }
@@ -166,9 +166,8 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    *
    * @return Instantiated user vertex input format class
    */
-  public VertexInputFormat<I, V, E, M>
-  createVertexInputFormat() {
-    Class<? extends VertexInputFormat<I, V, E, M>> klass =
+  public VertexInputFormat<I, V, E> createVertexInputFormat() {
+    Class<? extends VertexInputFormat<I, V, E>> klass =
         classes.getVertexInputFormatClass();
     return ReflectionUtils.newInstance(klass, this);
   }

@@ -36,11 +36,10 @@ import java.util.Iterator;
  * @param <I> Vertex ID
  * @param <V> Vertex Value
  * @param <E> Edge Value
- * @param <M> Message Value
  */
 public interface HiveToVertex<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable> extends
-    Iterator<Vertex<I, V, E, M>> {
+    V extends Writable, E extends Writable> extends
+    Iterator<Vertex<I, V, E, ?>> {
   /**
    * Set the records which contain vertex input data
    *

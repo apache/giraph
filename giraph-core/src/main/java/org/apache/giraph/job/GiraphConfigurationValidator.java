@@ -217,7 +217,7 @@ public class GiraphConfigurationValidator<I extends WritableComparable,
 
   /** Verify matching generic types in VertexInputFormat. */
   private void verifyVertexInputFormatGenericTypes() {
-    Class<? extends VertexInputFormat<I, V, E, M>> vertexInputFormatClass =
+    Class<? extends VertexInputFormat<I, V, E>> vertexInputFormatClass =
       conf.getVertexInputFormatClass();
     if (vertexInputFormatClass != null) {
       List<Class<?>> classList =

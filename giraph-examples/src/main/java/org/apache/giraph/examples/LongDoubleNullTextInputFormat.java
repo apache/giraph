@@ -28,6 +28,7 @@ import org.apache.giraph.io.formats.TextVertexInputFormat;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
@@ -38,14 +39,13 @@ import java.util.regex.Pattern;
 /**
  * Input format for unweighted graphs with long ids and double vertex values
  */
-public class LongDoubleNullDoubleTextInputFormat
-    extends TextVertexInputFormat<LongWritable, DoubleWritable, NullWritable,
-    DoubleWritable>
+public class LongDoubleNullTextInputFormat
+    extends TextVertexInputFormat<LongWritable, DoubleWritable, NullWritable>
     implements ImmutableClassesGiraphConfigurable<LongWritable, DoubleWritable,
-    NullWritable, DoubleWritable> {
+    NullWritable, Writable> {
   /** Configuration. */
   private ImmutableClassesGiraphConfiguration<LongWritable, DoubleWritable,
-      NullWritable, DoubleWritable> conf;
+      NullWritable, Writable> conf;
 
   @Override
   public TextVertexReader createVertexReader(InputSplit split,
@@ -56,30 +56,30 @@ public class LongDoubleNullDoubleTextInputFormat
 
   @Override
   public void setConf(ImmutableClassesGiraphConfiguration<LongWritable,
-      DoubleWritable, NullWritable, DoubleWritable> configuration) {
+      DoubleWritable, NullWritable, Writable> configuration) {
     this.conf = configuration;
   }
 
   @Override
   public ImmutableClassesGiraphConfiguration<LongWritable, DoubleWritable,
-      NullWritable, DoubleWritable> getConf() {
+      NullWritable, Writable> getConf() {
     return conf;
   }
 
   /**
    * Vertex reader associated with
-   * {@link LongDoubleNullDoubleTextInputFormat}.
+   * {@link LongDoubleNullTextInputFormat}.
    */
   public class LongDoubleNullDoubleVertexReader extends
-      TextVertexInputFormat<LongWritable, DoubleWritable, NullWritable,
-          DoubleWritable>.TextVertexReader {
+      TextVertexInputFormat<LongWritable, DoubleWritable,
+          NullWritable>.TextVertexReader {
     /** Separator of the vertex and neighbors */
     private final Pattern separator = Pattern.compile("[\t ]");
 
     @Override
-    public Vertex<LongWritable, DoubleWritable, NullWritable, DoubleWritable>
+    public Vertex<LongWritable, DoubleWritable, NullWritable, ?>
     getCurrentVertex() throws IOException, InterruptedException {
-      Vertex<LongWritable, DoubleWritable, NullWritable, DoubleWritable>
+      Vertex<LongWritable, DoubleWritable, NullWritable, ?>
           vertex = conf.createVertex();
 
       String[] tokens =

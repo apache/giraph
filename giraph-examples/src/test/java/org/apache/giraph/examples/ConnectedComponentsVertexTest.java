@@ -26,7 +26,7 @@ import com.google.common.collect.SetMultimap;
 import org.apache.giraph.combiner.MinimumIntCombiner;
 import org.apache.giraph.conf.GiraphClasses;
 import org.apache.giraph.io.formats.IdWithValueTextOutputFormat;
-import org.apache.giraph.io.formats.IntIntNullIntTextInputFormat;
+import org.apache.giraph.io.formats.IntIntNullTextInputFormat;
 import org.apache.giraph.utils.InternalVertexRunner;
 import org.apache.giraph.edge.ByteArrayEdges;
 import org.junit.Test;
@@ -70,7 +70,7 @@ public class ConnectedComponentsVertexTest {
         classes.setVertexClass(ConnectedComponentsVertex.class);
         classes.setVertexEdgesClass(ByteArrayEdges.class);
         classes.setCombinerClass(MinimumIntCombiner.class);
-        classes.setVertexInputFormatClass(IntIntNullIntTextInputFormat.class);
+        classes.setVertexInputFormatClass(IntIntNullTextInputFormat.class);
         classes.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
         Map<String, String> emptyParams = ImmutableMap.of();
 

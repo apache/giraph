@@ -36,11 +36,10 @@ import java.util.List;
  * @param <I> Vertex id
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public abstract class VertexInputFormat<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
+    V extends Writable, E extends Writable>
     implements GiraphInputFormat {
   @Override
   public abstract List<InputSplit> getSplits(
@@ -58,7 +57,7 @@ public abstract class VertexInputFormat<I extends WritableComparable,
    * @throws IOException
    * @throws InterruptedException
    */
-  public abstract VertexReader<I, V, E, M> createVertexReader(
+  public abstract VertexReader<I, V, E> createVertexReader(
       InputSplit split,
       TaskAttemptContext context) throws IOException;
 }
