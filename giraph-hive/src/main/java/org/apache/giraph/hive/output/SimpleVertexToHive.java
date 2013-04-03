@@ -34,11 +34,10 @@ import java.io.IOException;
  * @param <I> Vertex ID
  * @param <V> Vertex Value
  * @param <E> Edge Value
- * @param <M> Message Value
  */
 public abstract class SimpleVertexToHive<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable> extends
-    AbstractVertexToHive<I, V, E, M> {
+    V extends Writable, E extends Writable> extends
+    AbstractVertexToHive<I, V, E> {
 
   /**
    * Fill the HiveRecord from the Vertex given.

@@ -27,9 +27,8 @@ import org.apache.hadoop.io.WritableComparable;
  * @param <I> Vertex ID
  * @param <V> Vertex Value
  * @param <E> Edge Value
- * @param <M> Message Value
  */
 public abstract class AbstractVertexToHive<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    extends DefaultConfigurableAndTableSchemaAware<I, V, E, M>
+    V extends Writable, E extends Writable>
+    extends DefaultConfigurableAndTableSchemaAware<I, V, E, Writable>
     implements VertexToHive<I, V, E> { }

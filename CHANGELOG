@@ -1,6 +1,10 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-603: AbstractVertexToHive doesn't need message type (majakabiljo)
+
+  GIRAPH-589: Remove unnecessary generics from input formats (majakabiljo)
+
   GIRAPH-536: Clean up configuration options (apresta)
 
   GIRAPH-551: Fix log message at the end of edge input (apresta)
