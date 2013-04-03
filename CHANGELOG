@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-13: Port Giraph to YARN (ereisman)
+
   GIRAPH-600: Create an option to do output during computation (majakabiljo)
 
   GIRAPH-599: Hive IO dependency issues with some Hadoop profiles (nitay via majakabiljo)

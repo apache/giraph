@@ -344,15 +344,21 @@ public class BspServiceMaster<I extends WritableComparable,
     LOG.fatal("failJob: Killing job " + getJobId());
     LOG.fatal("failJob: exception " + e.toString());
     try {
-      @SuppressWarnings("deprecation")
-      org.apache.hadoop.mapred.JobClient jobClient =
+      if (getConfiguration().isPureYarnJob()) {
+        throw new RuntimeException(
+          "BspServiceMaster (YARN profile) is " +
+          "FAILING this task, throwing exception to end job run.", e);
+      } else {
+        @SuppressWarnings("deprecation")
+        org.apache.hadoop.mapred.JobClient jobClient =
           new org.apache.hadoop.mapred.JobClient(
-              (org.apache.hadoop.mapred.JobConf)
-              getContext().getConfiguration());
-      @SuppressWarnings("deprecation")
-      JobID jobId = JobID.forName(getJobId());
-      RunningJob job = jobClient.getJob(jobId);
-      job.killJob();
+            (org.apache.hadoop.mapred.JobConf)
+            getContext().getConfiguration());
+        @SuppressWarnings("deprecation")
+        JobID jobId = JobID.forName(getJobId());
+        RunningJob job = jobClient.getJob(jobId);
+        job.killJob();
+      }
     } catch (IOException ioe) {
       throw new RuntimeException(ioe);
     } finally {
@@ -1737,6 +1743,7 @@ public class BspServiceMaster<I extends WritableComparable,
     }
 
     if (isMaster) {
+      getGraphTaskManager().setIsMaster(true);
       cleanUpZooKeeper();
       // If desired, cleanup the checkpoint directory
       if (GiraphConstants.CLEANUP_CHECKPOINTS_AFTER_SUCCESS.get(conf)) {
@@ -1750,7 +1757,6 @@ public class BspServiceMaster<I extends WritableComparable,
         }
       }
       aggregatorHandler.close();
-
       masterClient.closeConnections();
       masterServer.close();
     }

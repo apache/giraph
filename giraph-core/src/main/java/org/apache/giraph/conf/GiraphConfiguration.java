@@ -434,6 +434,10 @@ public class GiraphConfiguration extends Configuration
     set(ZOOKEEPER_LIST, serverList);
   }
 
+  /**
+   * Getter for SPLIT_MASTER_WORKER flag.
+   * @return boolean flag value.
+   */
   public final boolean getSplitMasterWorker() {
     return SPLIT_MASTER_WORKER.get(this);
   }
@@ -475,6 +479,50 @@ public class GiraphConfiguration extends Configuration
   }
 
   /**
+   * Is this a "pure YARN" Giraph job, or is a MapReduce layer (v1 or v2)
+   * actually managing our cluster nodes, i.e. each task is a Mapper.
+   * @return TRUE if this is a pure YARN job.
+   */
+  public boolean isPureYarnJob() {
+    return IS_PURE_YARN_JOB.get(this);
+  }
+
+  /**
+   * Jars required in "Pure YARN" jobs (names only, no paths) should
+   * be listed here in full, including Giraph framework jar(s).
+   * @return the comma-separated list of jar names for export to cluster.
+   */
+  public String getYarnLibJars() {
+    return GIRAPH_YARN_LIBJARS.get(this);
+  }
+
+  /**
+   * Populate jar list for Pure YARN jobs.
+   * @param jarList a comma-separated list of jar names
+   */
+  public void setYarnLibJars(String jarList) {
+    GIRAPH_YARN_LIBJARS.set(this, jarList);
+  }
+
+  /**
+   * Get heap size (in MB) for each task in our Giraph job run,
+   * assuming this job will run on the "pure YARN" profile.
+   * @return the heap size for all tasks, in MB
+   */
+  public int getYarnTaskHeapMb() {
+    return GIRAPH_YARN_TASK_HEAP_MB.get(this);
+  }
+
+  /**
+   * Set heap size for Giraph tasks in our job run, assuming
+   * the job will run on the "pure YARN" profile.
+   * @param heapMb the heap size for all tasks
+   */
+  public void setYarnTaskHeapMb(int heapMb) {
+    GIRAPH_YARN_TASK_HEAP_MB.set(this, heapMb);
+  }
+
+  /**
    * Get the ZooKeeper list.
    *
    * @return ZooKeeper list of strings, comma separated or null if none set.
@@ -496,10 +544,27 @@ public class GiraphConfiguration extends Configuration
     return LOG_THREAD_LAYOUT.get(this);
   }
 
+  /**
+   * is this job run a local test?
+   * @return the test status as recorded in the Configuration
+   */
   public boolean getLocalTestMode() {
     return LOCAL_TEST_MODE.get(this);
   }
 
+  /**
+   * Flag this job as a local test run.
+   * @param flag the test status for this job
+   */
+  public void setLocalTestMode(boolean flag) {
+    LOCAL_TEST_MODE.set(this, flag);
+  }
+
+  /**
+   * The number of server tasks in our ZK quorum for
+   * this job run.
+   * @return the number of ZK servers in the quorum
+   */
   public int getZooKeeperServerCount() {
     return ZOOKEEPER_SERVER_COUNT.get(this);
   }

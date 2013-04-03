@@ -141,8 +141,21 @@ public interface GiraphConstants {
   BooleanConfOption VERTEX_OUTPUT_FORMAT_THREAD_SAFE =
       new BooleanConfOption("giraph.vertexOutputFormatThreadSafe", false);
 
-  /** Output Format Path (for Giraph-on-YARN) */
-  String GIRAPH_OUTPUT_DIR = "giraph.output.dir";
+  /** conf key for comma-separated list of jars to export to YARN workers */
+  StrConfOption GIRAPH_YARN_LIBJARS =
+    new StrConfOption("giraph.yarn.libjars", "");
+  /** Name of the XML file that will export our Configuration to YARN workers */
+  String GIRAPH_YARN_CONF_FILE = "giraph-conf.xml";
+  /** Giraph default heap size for all tasks when running on YARN profile */
+  int GIRAPH_YARN_TASK_HEAP_MB_DEFAULT = 1024;
+  /** Name of Giraph property for user-configurable heap memory per worker */
+  IntConfOption GIRAPH_YARN_TASK_HEAP_MB = new IntConfOption(
+    "giraph.yarn.task.heap.mb", GIRAPH_YARN_TASK_HEAP_MB_DEFAULT);
+  /** Default priority level in YARN for our task containers */
+  int GIRAPH_YARN_PRIORITY = 10;
+  /** Is this a pure YARN job (i.e. no MapReduce layer managing Giraph tasks) */
+  BooleanConfOption IS_PURE_YARN_JOB =
+    new BooleanConfOption("giraph.pure.yarn.job", false);
 
   /** Vertex index class */
   ClassConfOption<WritableComparable> VERTEX_ID_CLASS =

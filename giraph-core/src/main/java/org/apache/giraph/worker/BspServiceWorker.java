@@ -70,6 +70,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.CreateMode;
@@ -978,9 +979,30 @@ else[HADOOP_NON_SECURE]*/
       getContext().progress();
       ++partitionIndex;
     }
-    vertexWriter.close(getContext());
+    vertexWriter.close(getContext()); // the temp results are saved now
     LoggerUtils.setStatusAndLog(getContext(), LOG, Level.INFO,
-        "saveVertices: Done saving vertices");
+      "saveVertices: Done saving vertices.");
+    // YARN: must complete the commit the "task" output, Hadoop isn't there.
+    if (getConfiguration().isPureYarnJob() &&
+      getConfiguration().getVertexOutputFormatClass() != null) {
+      try {
+        OutputCommitter outputCommitter =
+          vertexOutputFormat.getOutputCommitter(getContext());
+        if (outputCommitter.needsTaskCommit(getContext())) {
+          LoggerUtils.setStatusAndLog(getContext(), LOG, Level.INFO,
+            "OutputCommitter: committing task output.");
+          // transfer from temp dirs to "task commit" dirs to prep for
+          // the master's OutputCommitter#commitJob(context) call to finish.
+          outputCommitter.commitTask(getContext());
+        }
+      } catch (InterruptedException ie) {
+        LOG.error("Interrupted while attempting to obtain " +
+          "OutputCommitter.", ie);
+      } catch (IOException ioe) {
+        LOG.error("Master task's attempt to commit output has " +
+          "FAILED.", ioe);
+      }
+    }
   }
 
   @Override
@@ -1403,6 +1425,12 @@ else[HADOOP_NON_SECURE]*/
             "to see if it needs to restart");
       }
       JSONObject jsonObj = getJobState();
+      // in YARN, we have to manually commit our own output in 2 stages that we
+      // do not have to do in Hadoop-based Giraph. So jsonObj can be null.
+      if (getConfiguration().isPureYarnJob() && null == jsonObj) {
+        LOG.error("BspServiceWorker#getJobState() came back NULL.");
+        return false; // the event has been processed.
+      }
       try {
         if ((ApplicationState.valueOf(jsonObj.getString(JSONOBJ_STATE_KEY)) ==
             ApplicationState.START_SUPERSTEP) &&

@@ -52,13 +52,16 @@ public class BspInputFormat extends InputFormat<Text, Text> {
     int maxWorkers = conf.getInt(GiraphConstants.MAX_WORKERS, 0);
     boolean splitMasterWorker = GiraphConstants.SPLIT_MASTER_WORKER.get(conf);
     int maxTasks = maxWorkers;
-    if (splitMasterWorker) {
+    // if this is a YARN job, separate ZK should already be running
+    boolean isYarnJob = GiraphConstants.IS_PURE_YARN_JOB.get(conf);
+    if (splitMasterWorker && !isYarnJob) {
       int zkServers = GiraphConstants.ZOOKEEPER_SERVER_COUNT.get(conf);
       maxTasks += zkServers;
     }
     if (LOG.isDebugEnabled()) {
       LOG.debug("getMaxTasks: Max workers = " + maxWorkers +
           ", split master/worker = " + splitMasterWorker +
+          ", is YARN-only job = " + isYarnJob +
           ", total max tasks = " + maxTasks);
     }
     return maxTasks;

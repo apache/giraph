@@ -94,10 +94,11 @@ import static org.apache.giraph.conf.GiraphConstants.VERTEX_VALUE_CLASS;
 public class GraphTaskManager<I extends WritableComparable, V extends Writable,
   E extends Writable, M extends Writable> implements
   ResetSuperstepMetricsObserver {
-  static {
+  /*if_not[PURE_YARN]
+  static { // Eliminate this? Even MRv1 tasks should not need it here.
     Configuration.addDefaultResource("giraph-site.xml");
   }
-
+  end[PURE_YARN]*/
   /** Name of metric for superstep time in msec */
   public static final String TIMER_SUPERSTEP_TIME = "superstep-time-ms";
   /** Name of metric for compute on all vertices in msec */
@@ -157,6 +158,8 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
   private String serverPortList;
   /** The Hadoop Mapper#Context for this job */
   private Mapper<?, ?, ?, ?>.Context context;
+  /** is this GraphTaskManager the master? */
+  private boolean isMaster;
 
   /**
    * Default constructor for GiraphTaskManager.
@@ -165,6 +168,7 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
    */
   public GraphTaskManager(Mapper<?, ?, ?, ?>.Context context) {
     this.context = context;
+    this.isMaster = false;
   }
 
   /**
@@ -174,9 +178,9 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
   public void setup(Path[] zkPathList)
     throws IOException, InterruptedException {
     context.setStatus("setup: Beginning worker setup.");
-    determineClassTypes(context.getConfiguration());
     conf = new ImmutableClassesGiraphConfiguration<I, V, E, M>(
       context.getConfiguration());
+    determineClassTypes(conf);
     // configure global logging level for Giraph job
     initializeAndConfigureLogging();
     // init the metrics objects
@@ -299,6 +303,23 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
       obs.postApplication();
       context.progress();
     }
+  }
+
+  /**
+   * Sets the "isMaster" flag for final output commit to happen on master.
+   * @param im the boolean input to set isMaster. Applies to "pure YARN only"
+   */
+  public void setIsMaster(final boolean im) {
+    this.isMaster = im;
+  }
+
+  /**
+   * Get "isMaster" status flag -- we need to know if we're the master in the
+   * "finally" block of our GiraphYarnTask#execute() to commit final job output.
+   * @return true if this task IS the master.
+   */
+  public boolean isMaster() {
+    return isMaster;
   }
 
   /**
@@ -455,7 +476,8 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
 
   /**
    * Copied from JobConf to get the location of this jar.  Workaround for
-   * things like Oozie map-reduce jobs.
+   * things like Oozie map-reduce jobs. NOTE: Pure YARN profile cannot
+   * make use of this, as the jars are unpacked at each container site.
    *
    * @param myClass Class to search the class loader path for to locate
    *        the relevant jar file
@@ -574,7 +596,6 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
   private void locateZookeeperClasspath(Path[] fileClassPaths)
     throws IOException {
     if (!conf.getLocalTestMode()) {
-      //Path[] fileClassPaths = DistributedCache.getLocalCacheArchives(conf);
       String zkClasspath = null;
       if (fileClassPaths == null) {
         if (LOG.isInfoEnabled()) {
@@ -584,7 +605,10 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
         if (jarFile == null) {
           jarFile = findContainingJar(getClass());
         }
-        zkClasspath = jarFile.replaceFirst("file:", "");
+        // Pure YARN profiles will use unpacked resources, so calls
+        // to "findContainingJar()" in that context can return NULL!
+        zkClasspath = null == jarFile ?
+          "./*" : jarFile.replaceFirst("file:", "");
       } else {
         StringBuilder sb = new StringBuilder();
         sb.append(fileClassPaths[0]);

@@ -104,6 +104,18 @@ under the License.
       <build>
         <plugins>
           <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+              <excludes>
+                <exclude>**/yarn/**</exclude>
+              </excludes>
+              <testExcludes>
+                <exclude>**/yarn/**</exclude>
+              </testExcludes>
+            </configuration>
+          </plugin>
+          <plugin>
             <groupId>org.sonatype.plugins</groupId>
             <artifactId>munge-maven-plugin</artifactId>
           </plugin>
@@ -116,6 +128,18 @@ under the License.
       <build>
         <plugins>
           <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+              <excludes>
+                <exclude>**/yarn/**</exclude>
+              </excludes>
+              <testExcludes>
+                <exclude>**/yarn/**</exclude>
+              </testExcludes>
+            </configuration>
+          </plugin>
+          <plugin>
             <groupId>org.sonatype.plugins</groupId>
             <artifactId>munge-maven-plugin</artifactId>
           </plugin>
@@ -127,6 +151,18 @@ under the License.
       <id>hadoop_non_secure</id>
       <build>
         <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+              <excludes>
+                <exclude>**/yarn/**</exclude>
+              </excludes>
+              <testExcludes>
+                <exclude>**/yarn/**</exclude>
+              </testExcludes>
+            </configuration>
+          </plugin>
           <plugin>
             <groupId>org.sonatype.plugins</groupId>
             <artifactId>munge-maven-plugin</artifactId>
@@ -151,6 +187,18 @@ under the License.
       <id>hadoop_facebook</id>
       <build>
         <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+              <excludes>
+                <exclude>**/yarn/**</exclude>
+              </excludes>
+              <testExcludes>
+                <exclude>**/yarn/**</exclude>
+              </testExcludes>
+            </configuration>
+          </plugin>
           <plugin>
             <groupId>org.sonatype.plugins</groupId>
             <artifactId>munge-maven-plugin</artifactId>
@@ -180,6 +228,18 @@ under the License.
       <build>
         <plugins>
           <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+              <excludes>
+                <exclude>**/yarn/**</exclude>
+              </excludes>
+              <testExcludes>
+                <exclude>**/yarn/**</exclude>
+              </testExcludes>
+            </configuration>
+          </plugin>
+          <plugin>
             <groupId>org.sonatype.plugins</groupId>
             <artifactId>munge-maven-plugin</artifactId>
           </plugin>
@@ -191,24 +251,119 @@ under the License.
       </build>
     </profile>
 
+    <!-- Currently supports hadoop-2.0.2-alpha
+      (see hadoop_yarn profile in giraph-parent POM to change) -->
+    <profile>
+      <id>hadoop_yarn</id>
+      <build>
+        <plugins>
+          <plugin>
+              <groupId>org.sonatype.plugins</groupId>
+              <artifactId>munge-maven-plugin</artifactId>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <!-- The profiles below do not (yet) include any munge flags -->
     <profile>
       <id>hadoop_2.0.0</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+              <excludes>
+                <exclude>**/yarn/**</exclude>
+              </excludes>
+              <testExcludes>
+                <exclude>**/yarn/**</exclude>
+              </testExcludes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
 
     <profile>
       <id>hadoop_2.0.1</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+              <excludes>
+                <exclude>**/yarn/**</exclude>
+              </excludes>
+              <testExcludes>
+                <exclude>**/yarn/**</exclude>
+              </testExcludes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
 
     <profile>
       <id>hadoop_2.0.2</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+              <excludes>
+                <exclude>**/yarn/**</exclude>
+              </excludes>
+              <testExcludes>
+                <exclude>**/yarn/**</exclude>
+              </testExcludes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
 
     <profile>
-        <id>hadoop_2.0.3</id>
+      <id>hadoop_2.0.3</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+              <excludes>
+                <exclude>**/yarn/**</exclude>
+              </excludes>
+              <testExcludes>
+                <exclude>**/yarn/**</exclude>
+              </testExcludes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
 
     <profile>
       <id>hadoop_trunk</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+              <excludes>
+                <exclude>**/yarn/**</exclude>
+              </excludes>
+              <testExcludes>
+                <exclude>**/yarn/**</exclude>
+              </testExcludes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
   </profiles>
 

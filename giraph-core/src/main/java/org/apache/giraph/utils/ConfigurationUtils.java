@@ -17,6 +17,9 @@
  */
 package org.apache.giraph.utils;
 
+/*if[PURE_YARN]
+import static org.apache.hadoop.mapreduce.lib.output.FileOutputFormat.OUTDIR;
+end[PURE_YARN]*/
 import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
 import org.apache.commons.cli.BasicParser;
@@ -41,6 +44,8 @@ import org.apache.giraph.partition.Partition;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.edge.VertexEdges;
 import org.apache.giraph.worker.WorkerContext;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -57,16 +62,33 @@ public final class ConfigurationUtils {
   private static final Logger LOG =
     Logger.getLogger(ConfigurationUtils.class);
   /** The base path for output dirs as saved in GiraphConfiguration */
-  private static final Path BASE_OUTPUT_DIR =
-    new Path("hdfs://user/" + System.getenv("USER"));
+  private static final Path BASE_OUTPUT_PATH;
+  static {
+    // whether local or remote, if there's no *-site.xml's to find, we're done
+    try {
+      BASE_OUTPUT_PATH = FileSystem.get(new Configuration()).getHomeDirectory();
+    } catch (IOException ioe) {
+      throw new IllegalStateException("Error locating default base path!", ioe);
+    }
+  }
   /** Maintains our accepted options in case the caller wants to add some */
   private static Options OPTIONS;
+  /*if_not[PURE_YARN]
+  private static String OUTDIR = ""; // no-op placeholder for YARN
+  end[PURE_YARN]*/
+
   static {
     OPTIONS = new Options();
     OPTIONS.addOption("h", "help", false, "Help");
     OPTIONS.addOption("la", "listAlgorithms", false, "List supported " +
         "algorithms");
     OPTIONS.addOption("q", "quiet", false, "Quiet output");
+    OPTIONS.addOption("yj", "yarnjars", true, "comma-separated list of JAR " +
+      "filenames to distribute to Giraph tasks and ApplicationMaster. " +
+      "YARN only. Search order: CLASSPATH, HADOOP_HOME, user current dir.");
+    OPTIONS.addOption("yh", "yarnheap", true, "Heap size, in MB, for each " +
+      "Giraph task (YARN only.) Defaults to " +
+      GiraphConstants.GIRAPH_YARN_TASK_HEAP_MB + " MB.");
     OPTIONS.addOption("w", "workers", true, "Number of workers");
     OPTIONS.addOption("vif", "vertexInputFormat", true, "Vertex input format");
     OPTIONS.addOption("eif", "edgeInputFormat", true, "Edge input format");
@@ -304,11 +326,20 @@ public final class ConfigurationUtils {
         }
       }
     }
+    // YARN-ONLY OPTIONS
+    if (cmd.hasOption("yj")) {
+      giraphConfiguration.setYarnLibJars(cmd.getOptionValue("yj"));
+    }
+    if (cmd.hasOption("yh")) {
+      giraphConfiguration.setYarnTaskHeapMb(
+        Integer.parseInt(cmd.getOptionValue("yh")));
+    }
     if (cmd.hasOption("of")) {
       if (cmd.hasOption("op")) {
-        Path outputDir = new Path(BASE_OUTPUT_DIR, cmd.getOptionValue("op"));
-        giraphConfiguration.set(
-          GiraphConstants.GIRAPH_OUTPUT_DIR, outputDir.toString());
+        Path outputDir = new Path(BASE_OUTPUT_PATH, cmd.getOptionValue("op"));
+        outputDir = // for YARN conf to get the out dir we need w/o a Job obj
+          outputDir.getFileSystem(giraphConfiguration).makeQualified(outputDir);
+        giraphConfiguration.set(OUTDIR, outputDir.toString());
       } else {
         if (LOG.isInfoEnabled()) {
           LOG.info("No output path specified. Ensure your OutputFormat " +
@@ -316,6 +347,7 @@ public final class ConfigurationUtils {
         }
       }
     }
+    // END YARN-ONLY OPTIONS
   }
 
   /**
