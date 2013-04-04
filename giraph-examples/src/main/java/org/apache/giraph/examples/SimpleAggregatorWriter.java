@@ -20,8 +20,8 @@ package org.apache.giraph.examples;
 
 import java.io.IOException;
 import java.util.Map.Entry;
-
 import org.apache.giraph.aggregators.AggregatorWriter;
+import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -34,7 +34,9 @@ import org.apache.hadoop.mapreduce.Mapper.Context;
  * Writable interface. The file will be created on the current working
  * directory.
  */
-public class SimpleAggregatorWriter implements AggregatorWriter {
+public class SimpleAggregatorWriter extends
+    DefaultImmutableClassesGiraphConfigurable implements
+    AggregatorWriter {
   /** Name of the file we wrote to */
   private static String FILENAME;
   /** Saved output stream to write to */

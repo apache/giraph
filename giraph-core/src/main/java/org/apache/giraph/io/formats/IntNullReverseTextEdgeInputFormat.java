@@ -42,6 +42,7 @@ public class IntNullReverseTextEdgeInputFormat
       InputSplit split, TaskAttemptContext context) throws IOException {
     EdgeReader<IntWritable, NullWritable> edgeReader =
         super.createEdgeReader(split, context);
+    edgeReader.setConf(getConf());
     return new ReverseEdgeDuplicator<IntWritable, NullWritable>(edgeReader);
   }
 }

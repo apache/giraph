@@ -52,7 +52,7 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat extends TextDoub
 
   private RecordReader<LongWritable, Text> rr;
   private ImmutableClassesGiraphConfiguration<Text, DoubleWritable,
-      DoubleWritable, BooleanWritable> conf;
+      DoubleWritable, Writable> conf;
   private TaskAttemptContext tac;
   private GraphState<Text, DoubleWritable, DoubleWritable, BooleanWritable> graphState;
 
@@ -63,7 +63,7 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat extends TextDoub
     GiraphConfiguration giraphConf = new GiraphConfiguration();
     giraphConf.setVertexClass(DummyVertex.class);
     conf = new ImmutableClassesGiraphConfiguration<Text, DoubleWritable,
-        DoubleWritable, BooleanWritable>(giraphConf);
+        DoubleWritable, Writable>(giraphConf);
     graphState = mock(GraphState.class);
     tac = mock(TaskAttemptContext.class);
     when(tac.getConfiguration()).thenReturn(conf);
@@ -92,7 +92,7 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat extends TextDoub
 
     when(rr.getCurrentValue()).thenReturn(new Text(input));
     TextVertexReader vr = createVertexReader(rr);
-
+    vr.setConf(conf);
     vr.initialize(null, tac);
 
     try {
@@ -110,6 +110,7 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat extends TextDoub
 
     when(rr.getCurrentValue()).thenReturn(new Text(input));
     TextVertexReader vr = createVertexReader(rr);
+    vr.setConf(conf);
     vr.initialize(null, tac);
     try {
       vr.nextVertex();
@@ -156,7 +157,7 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat extends TextDoub
 
     when(rr.getCurrentValue()).thenReturn(new Text(input));
     TextVertexReader vr = createVertexReader(rr);
-
+    vr.setConf(conf);
     vr.initialize(null, tac);
     assertTrue("Should have been able to add a vertex", vr.nextVertex());
     Vertex<Text, DoubleWritable, DoubleWritable, ?> vertex = vr.getCurrentVertex();
@@ -183,7 +184,7 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat extends TextDoub
 
     when(rr.getCurrentValue()).thenReturn(new Text(input));
     TextVertexReader vr = createVertexReader(rr, toUpper);
-
+    vr.setConf(conf);
     vr.initialize(null, tac);
     assertTrue("Should have been able to read vertex", vr.nextVertex());
     Vertex<Text, DoubleWritable, DoubleWritable, ?> vertex = vr.getCurrentVertex();
@@ -204,7 +205,7 @@ public class TestTextDoubleDoubleAdjacencyListVertexInputFormat extends TextDoub
     when(rr.getCurrentValue()).thenReturn(new Text(input));
     conf.set(AdjacencyListTextVertexInputFormat.LINE_TOKENIZE_VALUE, ":");
     TextVertexReader vr = createVertexReader(rr);
-
+    vr.setConf(conf);
     vr.initialize(null, tac);
     assertTrue("Should have been able to read vertex", vr.nextVertex());
     Vertex<Text, DoubleWritable, DoubleWritable, ?> vertex = vr.getCurrentVertex();

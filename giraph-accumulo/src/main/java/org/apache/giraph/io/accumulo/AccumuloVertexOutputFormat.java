@@ -17,6 +17,7 @@
  */
 package org.apache.giraph.io.accumulo;
 
+import java.io.IOException;
 import org.apache.accumulo.core.client.mapreduce.AccumuloOutputFormat;
 import org.apache.accumulo.core.data.Mutation;
 import org.apache.giraph.io.VertexOutputFormat;
@@ -28,8 +29,6 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-
-import java.io.IOException;
 /**
  *
  *  Class which wraps the AccumuloOutputFormat. It's designed
@@ -72,10 +71,10 @@ public abstract class AccumuloVertexOutputFormat<
    * @param <E>  edge type
    */
   public abstract static class AccumuloVertexWriter<
-          I extends WritableComparable,
-          V extends Writable,
-          E extends Writable>
-          implements VertexWriter<I, V, E> {
+      I extends WritableComparable,
+      V extends Writable,
+      E extends Writable>
+      extends VertexWriter<I, V, E> {
 
     /**
      * task attempt context.

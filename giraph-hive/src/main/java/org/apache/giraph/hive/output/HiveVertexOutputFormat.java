@@ -18,21 +18,18 @@
 
 package org.apache.giraph.hive.output;
 
+import com.facebook.giraph.hive.output.HiveApiOutputFormat;
+import com.facebook.giraph.hive.record.HiveWritableRecord;
+import java.io.IOException;
 import org.apache.giraph.hive.common.HiveProfiles;
 import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.giraph.io.VertexWriter;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-
-import com.facebook.giraph.hive.output.HiveApiOutputFormat;
-import com.facebook.giraph.hive.record.HiveWritableRecord;
-
-import java.io.IOException;
 
 /**
  * VertexOutputFormat using Hive
@@ -58,13 +55,11 @@ public class HiveVertexOutputFormat<I extends WritableComparable,
   @Override
   public VertexWriter<I, V, E> createVertexWriter(TaskAttemptContext context)
     throws IOException, InterruptedException {
-    Configuration conf = context.getConfiguration();
-
     RecordWriter<WritableComparable, HiveWritableRecord> baseWriter =
         hiveOutputFormat.getRecordWriter(context);
     HiveVertexWriter writer = new HiveVertexWriter();
     writer.setBaseWriter(baseWriter);
-    writer.setTableSchema(hiveOutputFormat.getTableSchema(conf));
+    writer.setTableSchema(hiveOutputFormat.getTableSchema(getConf()));
     writer.initialize(context);
     return writer;
   }

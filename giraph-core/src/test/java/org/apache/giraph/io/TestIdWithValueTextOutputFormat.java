@@ -18,53 +18,71 @@
 
 package org.apache.giraph.io;
 
-import org.apache.giraph.io.formats.IdWithValueTextOutputFormat;
+import java.io.IOException;
+import java.util.ArrayList;
+import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.Vertex;
-import org.apache.hadoop.conf.Configuration;
+import org.apache.giraph.io.formats.IdWithValueTextOutputFormat;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.junit.Before;
 import org.junit.Test;
 
-import java.io.IOException;
-import java.util.ArrayList;
+import static org.mockito.Mockito.*;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+public class TestIdWithValueTextOutputFormat extends
+    IdWithValueTextOutputFormat<Text, DoubleWritable, Writable> {
+  /** Test configuration */
+  private ImmutableClassesGiraphConfiguration<
+      Text, DoubleWritable, Writable, Writable> conf;
+  /**
+   * Dummy class to allow ImmutableClassesGiraphConfiguration to be created.
+   */
+  public static class DummyVertex extends Vertex<Text, DoubleWritable,
+      DoubleWritable, DoubleWritable> {
+    @Override
+    public void compute(Iterable<DoubleWritable> messages) throws IOException {
+      // Do nothing
+    }
+  }
 
-public class TestIdWithValueTextOutputFormat extends IdWithValueTextOutputFormat<Text, DoubleWritable, Writable> {
+  @Before
+  public void setUp() {
+    GiraphConfiguration giraphConfiguration = new GiraphConfiguration();
+    giraphConfiguration.setVertexClass(DummyVertex.class);
+    conf = new ImmutableClassesGiraphConfiguration<Text, DoubleWritable,
+        Writable, Writable>(giraphConfiguration);
+  }
+
   @Test
   public void testHappyPath() throws IOException, InterruptedException {
-    Configuration conf = new Configuration();
     Text expected = new Text("Four Tops\t4.0");
 
-    IdWithValueTestWorker(conf, expected);
+    IdWithValueTestWorker(expected);
   }
 
   @Test
   public void testReverseIdAndValue() throws IOException, InterruptedException {
-    Configuration conf = new Configuration();
     conf.setBoolean(REVERSE_ID_AND_VALUE, true);
     Text expected = new Text("4.0\tFour Tops");
 
-    IdWithValueTestWorker(conf, expected);
+    IdWithValueTestWorker(expected);
   }
 
   @Test
   public void testWithDifferentDelimiter()  throws IOException,
       InterruptedException {
-    Configuration conf = new Configuration();
     conf.set(LINE_TOKENIZE_VALUE, "blah");
     Text expected = new Text("Four Topsblah4.0");
 
-    IdWithValueTestWorker(conf, expected);
+    IdWithValueTestWorker(expected);
   }
 
-  private void IdWithValueTestWorker(Configuration conf, Text expected)
+  private void IdWithValueTestWorker(Text expected)
       throws IOException, InterruptedException {
     TaskAttemptContext tac = mock(TaskAttemptContext.class);
     when(tac.getConfiguration()).thenReturn(conf);
@@ -84,6 +102,7 @@ public class TestIdWithValueTextOutputFormat extends IdWithValueTextOutputFormat
         return tw;
       }
     };
+    writer.setConf(conf);
     writer.initialize(tac);
     writer.writeVertex(vertex);
 

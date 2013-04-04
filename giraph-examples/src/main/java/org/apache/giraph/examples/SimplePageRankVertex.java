@@ -19,27 +19,27 @@
 package org.apache.giraph.examples;
 
 import com.google.common.collect.Lists;
+import java.io.IOException;
+import java.util.List;
 import org.apache.giraph.aggregators.DoubleMaxAggregator;
 import org.apache.giraph.aggregators.DoubleMinAggregator;
 import org.apache.giraph.aggregators.LongSumAggregator;
+import org.apache.giraph.edge.Edge;
+import org.apache.giraph.edge.EdgeFactory;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.VertexReader;
 import org.apache.giraph.io.formats.GeneratedVertexInputFormat;
 import org.apache.giraph.io.formats.TextVertexOutputFormat;
 import org.apache.giraph.master.DefaultMasterCompute;
-import org.apache.giraph.edge.Edge;
-import org.apache.giraph.edge.EdgeFactory;
-import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.log4j.Logger;
-
-import java.io.IOException;
-import java.util.List;
 
 /**
  * Demonstrates the basic Pregel PageRank implementation.
@@ -182,10 +182,9 @@ public class SimplePageRankVertex extends Vertex<LongWritable,
 
     @Override
     public Vertex<LongWritable, DoubleWritable,
-        FloatWritable, DoubleWritable> getCurrentVertex() throws IOException {
-      Vertex<LongWritable, DoubleWritable, FloatWritable, DoubleWritable>
-          vertex = configuration.createVertex();
-
+        FloatWritable, Writable> getCurrentVertex() throws IOException {
+      Vertex<LongWritable, DoubleWritable, FloatWritable, Writable>
+          vertex = getConf().createVertex();
       LongWritable vertexId = new LongWritable(
           (inputSplit.getSplitIndex() * totalRecords) + recordsRead);
       DoubleWritable vertexValue = new DoubleWritable(vertexId.get() * 10d);

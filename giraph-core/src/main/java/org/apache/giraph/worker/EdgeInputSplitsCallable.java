@@ -109,6 +109,9 @@ public class EdgeInputSplitsCallable<I extends WritableComparable,
         configuration.createEdgeInputFormat();
     EdgeReader<I, E> edgeReader =
         edgeInputFormat.createEdgeReader(inputSplit, context);
+    edgeReader.setConf(
+        (ImmutableClassesGiraphConfiguration<I, Writable, E, Writable>)
+            configuration);
     edgeReader.initialize(inputSplit, context);
     long inputSplitEdgesLoaded = 0;
     while (edgeReader.nextEdge()) {

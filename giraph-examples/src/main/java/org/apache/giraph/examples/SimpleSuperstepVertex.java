@@ -19,22 +19,22 @@
 package org.apache.giraph.examples;
 
 import com.google.common.collect.Lists;
-import org.apache.giraph.io.VertexReader;
-import org.apache.giraph.io.formats.GeneratedVertexInputFormat;
-import org.apache.giraph.io.formats.TextVertexOutputFormat;
+import java.io.IOException;
+import java.util.List;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.io.VertexReader;
+import org.apache.giraph.io.formats.GeneratedVertexInputFormat;
+import org.apache.giraph.io.formats.TextVertexOutputFormat;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.log4j.Logger;
-
-import java.io.IOException;
-import java.util.List;
 
 /**
  * Just a simple Vertex compute implementation that executes 3 supersteps, then
@@ -79,10 +79,10 @@ public class SimpleSuperstepVertex extends Vertex<LongWritable, IntWritable,
 
     @Override
     public Vertex<LongWritable, IntWritable, FloatWritable,
-        IntWritable> getCurrentVertex()
+        Writable> getCurrentVertex()
       throws IOException, InterruptedException {
-      Vertex<LongWritable, IntWritable, FloatWritable, IntWritable> vertex =
-          configuration.createVertex();
+      Vertex<LongWritable, IntWritable, FloatWritable, Writable> vertex =
+          getConf().createVertex();
       long tmpId = reverseIdOrder ?
           ((inputSplit.getSplitIndex() + 1) * totalRecords) -
           recordsRead - 1 :

@@ -40,7 +40,6 @@ import java.io.IOException;
 public class AdjacencyListTextVertexOutputFormat<I extends WritableComparable,
     V extends Writable, E extends Writable>
     extends TextVertexOutputFormat<I, V, E> {
-
   /** Split delimiter */
   public static final String LINE_TOKENIZE_VALUE = "output.delimiter";
   /** Default split delimiter */
@@ -65,8 +64,8 @@ public class AdjacencyListTextVertexOutputFormat<I extends WritableComparable,
     public void initialize(TaskAttemptContext context) throws IOException,
         InterruptedException {
       super.initialize(context);
-      delimiter = context.getConfiguration()
-          .get(LINE_TOKENIZE_VALUE, LINE_TOKENIZE_VALUE_DEFAULT);
+      delimiter =
+          getConf().get(LINE_TOKENIZE_VALUE, LINE_TOKENIZE_VALUE_DEFAULT);
     }
 
     @Override

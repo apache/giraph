@@ -17,6 +17,8 @@
  */
 package org.apache.giraph.io.accumulo;
 
+import java.io.IOException;
+import java.util.List;
 import org.apache.accumulo.core.client.mapreduce.AccumuloInputFormat;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Value;
@@ -29,9 +31,6 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-
-import java.io.IOException;
-import java.util.List;
 
 /**
  *  Class which wraps the AccumuloInputFormat. It's designed
@@ -67,7 +66,7 @@ public abstract class AccumuloVertexInputFormat<
   public abstract static class AccumuloVertexReader<
       I extends WritableComparable,
       V extends Writable, E extends Writable>
-      implements VertexReader<I, V, E> {
+      extends VertexReader<I, V, E> {
 
     /** Giraph configuration */
     private ImmutableClassesGiraphConfiguration<I, V, E, Writable>

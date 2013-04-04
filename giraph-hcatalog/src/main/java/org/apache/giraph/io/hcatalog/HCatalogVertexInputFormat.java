@@ -19,13 +19,14 @@
 package org.apache.giraph.io.hcatalog;
 
 import com.google.common.collect.Lists;
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.io.VertexInputFormat;
-import org.apache.giraph.io.VertexReader;
-import org.apache.giraph.utils.TimedLogger;
+import java.io.IOException;
+import java.util.List;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.io.VertexInputFormat;
+import org.apache.giraph.io.VertexReader;
+import org.apache.giraph.utils.TimedLogger;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -34,9 +35,6 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hcatalog.data.HCatRecord;
 import org.apache.log4j.Logger;
-
-import java.io.IOException;
-import java.util.List;
 
 /**
  * Abstract class that users should subclass to load data from a Hive or Pig
@@ -84,21 +82,13 @@ public abstract class HCatalogVertexInputFormat<
    * than one HCatRecord,
    * nextVertex() should be overwritten to handle that logic as well.
    */
-  protected abstract class HCatalogVertexReader implements
-      VertexReader<I, V, E> {
-    /** Giraph configuration */
-    private ImmutableClassesGiraphConfiguration<I, V, E, Writable>
-    configuration;
+  protected abstract class HCatalogVertexReader
+      extends VertexReader<I, V, E> {
     /** Internal HCatRecordReader. */
     private RecordReader<WritableComparable,
         HCatRecord> hCatRecordReader;
     /** Context passed to initialize. */
     private TaskAttemptContext context;
-
-    public ImmutableClassesGiraphConfiguration<I, V, E, Writable>
-    getConfiguration() {
-      return configuration;
-    }
 
     /**
      * Initialize with the HCatRecordReader.
@@ -119,9 +109,6 @@ public abstract class HCatalogVertexInputFormat<
       throws IOException, InterruptedException {
       hCatRecordReader.initialize(inputSplit, ctxt);
       this.context = ctxt;
-      this.configuration =
-          new ImmutableClassesGiraphConfiguration<I, V, E, Writable>(
-              context.getConfiguration());
     }
 
     @Override
@@ -241,7 +228,7 @@ public abstract class HCatalogVertexInputFormat<
     public final Vertex<I, V, E, ?> getCurrentVertex()
       throws IOException, InterruptedException {
       HCatRecord record = getRecordReader().getCurrentValue();
-      Vertex<I, V, E, ?> vertex = getConfiguration().createVertex();
+      Vertex<I, V, E, ?> vertex = getConf().createVertex();
       vertex.initialize(getVertexId(record), getVertexValue(record),
           getEdges(record));
       ++recordCount;
@@ -380,7 +367,7 @@ public abstract class HCatalogVertexInputFormat<
      * create current vertex.
      */
     private void createCurrentVertex() {
-      vertex = getConfiguration().createVertex();
+      vertex = getConf().createVertex();
       vertex.initialize(currentVertexId, getVertexValue(recordsForVertex),
           currentEdges);
       currentEdges.clear();

@@ -18,11 +18,10 @@
 
 package org.apache.giraph.io;
 
-import org.apache.hadoop.mapreduce.InputSplit;
-import org.apache.hadoop.mapreduce.JobContext;
-
 import java.io.IOException;
 import java.util.List;
+import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.JobContext;
 
 /**
  * Common interface for {@link VertexInputFormat} and {@link EdgeInputFormat}.

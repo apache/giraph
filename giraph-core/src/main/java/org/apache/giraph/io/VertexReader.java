@@ -18,25 +18,26 @@
 
 package org.apache.giraph.io;
 
+import java.io.IOException;
+import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
 import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
-import java.io.IOException;
-
 /**
- * Analogous to {@link RecordReader} for vertices.  Will read the vertices
- * from an input split.
+ * Analogous to Hadoop's RecordReader for vertices.  Will read the
+ * vertices from an input split.
  *
  * @param <I> Vertex id
  * @param <V> Vertex data
  * @param <E> Edge data
  */
 @SuppressWarnings("rawtypes")
-public interface VertexReader<I extends WritableComparable,
-    V extends Writable, E extends Writable> {
+public abstract class VertexReader<I extends WritableComparable,
+    V extends Writable, E extends Writable> extends
+    DefaultImmutableClassesGiraphConfigurable<I, V, E, Writable> {
   /**
    * Use the input split and context to setup reading the vertices.
    * Guaranteed to be called prior to any other function.
@@ -46,7 +47,8 @@ public interface VertexReader<I extends WritableComparable,
    * @throws IOException
    * @throws InterruptedException
    */
-  void initialize(InputSplit inputSplit, TaskAttemptContext context)
+  public abstract void initialize(InputSplit inputSplit,
+                                  TaskAttemptContext context)
     throws IOException, InterruptedException;
 
   /**
@@ -55,7 +57,8 @@ public interface VertexReader<I extends WritableComparable,
    * @throws IOException
    * @throws InterruptedException
    */
-  boolean nextVertex() throws IOException, InterruptedException;
+  public abstract boolean nextVertex() throws IOException,
+      InterruptedException;
 
   /**
    * Get the current vertex.
@@ -65,7 +68,7 @@ public interface VertexReader<I extends WritableComparable,
    * @throws IOException
    * @throws InterruptedException
    */
-  Vertex<I, V, E, ?> getCurrentVertex()
+  public abstract Vertex<I, V, E, ?> getCurrentVertex()
     throws IOException, InterruptedException;
 
   /**
@@ -73,7 +76,7 @@ public interface VertexReader<I extends WritableComparable,
    *
    * @throws IOException
    */
-  void close() throws IOException;
+  public abstract void close() throws IOException;
 
   /**
    * How much of the input has the {@link VertexReader} consumed i.e.
@@ -83,5 +86,5 @@ public interface VertexReader<I extends WritableComparable,
    * @throws IOException
    * @throws InterruptedException
    */
-  float getProgress() throws IOException, InterruptedException;
+  public abstract float getProgress() throws IOException, InterruptedException;
 }

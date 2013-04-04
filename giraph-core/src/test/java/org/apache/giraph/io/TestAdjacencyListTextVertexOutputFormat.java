@@ -18,28 +18,49 @@
 package org.apache.giraph.io;
 
 import com.google.common.collect.Lists;
-import org.apache.giraph.io.formats.AdjacencyListTextVertexOutputFormat;
-import org.apache.giraph.edge.Edge;
-import org.apache.giraph.edge.EdgeFactory;
-import org.apache.giraph.graph.Vertex;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.io.DoubleWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.mapreduce.RecordWriter;
-import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.junit.Test;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.edge.Edge;
+import org.apache.giraph.edge.EdgeFactory;
+import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.io.formats.AdjacencyListTextVertexOutputFormat;
+import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.mapreduce.RecordWriter;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.junit.Before;
+import org.junit.Test;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 public class TestAdjacencyListTextVertexOutputFormat extends AdjacencyListTextVertexOutputFormat<Text, DoubleWritable, DoubleWritable> {
+  /** Test configuration */
+  private ImmutableClassesGiraphConfiguration<Text,
+      DoubleWritable, DoubleWritable, Writable> conf;
+
+  /**
+   * Dummy class to allow ImmutableClassesGiraphConfiguration to be created.
+   */
+  public static class DummyVertex extends Vertex<Text, DoubleWritable,
+      DoubleWritable, DoubleWritable> {
+    @Override
+    public void compute(Iterable<DoubleWritable> messages) throws IOException {
+      // Do nothing
+    }
+  }
+
+  @Before
+  public void setUp() {
+    GiraphConfiguration giraphConfiguration = new GiraphConfiguration();
+    giraphConfiguration.setVertexClass(DummyVertex.class);
+    conf = new ImmutableClassesGiraphConfiguration<Text,
+        DoubleWritable, DoubleWritable, Writable>(giraphConfiguration);
+  }
 
   protected AdjacencyListTextVertexWriter createVertexWriter(
       final RecordWriter<Text, Text> tw) {
@@ -55,7 +76,6 @@ public class TestAdjacencyListTextVertexOutputFormat extends AdjacencyListTextVe
 
   @Test
   public void testVertexWithNoEdges() throws IOException, InterruptedException {
-    Configuration conf = new Configuration();
     TaskAttemptContext tac = mock(TaskAttemptContext.class);
     when(tac.getConfiguration()).thenReturn(conf);
 
@@ -67,6 +87,7 @@ public class TestAdjacencyListTextVertexOutputFormat extends AdjacencyListTextVe
 
     RecordWriter<Text, Text> tw = mock(RecordWriter.class);
     AdjacencyListTextVertexWriter writer = createVertexWriter(tw);
+    writer.setConf(conf);
     writer.initialize(tac);
     writer.writeVertex(vertex);
 
@@ -77,7 +98,6 @@ public class TestAdjacencyListTextVertexOutputFormat extends AdjacencyListTextVe
 
   @Test
   public void testVertexWithEdges() throws IOException, InterruptedException {
-    Configuration conf = new Configuration();
     TaskAttemptContext tac = mock(TaskAttemptContext.class);
     when(tac.getConfiguration()).thenReturn(conf);
 
@@ -94,6 +114,7 @@ public class TestAdjacencyListTextVertexOutputFormat extends AdjacencyListTextVe
 
     RecordWriter<Text,Text> tw = mock(RecordWriter.class);
     AdjacencyListTextVertexWriter writer = createVertexWriter(tw);
+    writer.setConf(conf);
     writer.initialize(tac);
     writer.writeVertex(vertex);
 
@@ -105,7 +126,6 @@ public class TestAdjacencyListTextVertexOutputFormat extends AdjacencyListTextVe
 
   @Test
   public void testWithDifferentDelimiter() throws IOException, InterruptedException {
-    Configuration conf = new Configuration();
     conf.set(AdjacencyListTextVertexOutputFormat.LINE_TOKENIZE_VALUE, ":::");
     TaskAttemptContext tac = mock(TaskAttemptContext.class);
     when(tac.getConfiguration()).thenReturn(conf);
@@ -123,6 +143,7 @@ public class TestAdjacencyListTextVertexOutputFormat extends AdjacencyListTextVe
 
     RecordWriter<Text,Text> tw = mock(RecordWriter.class);
     AdjacencyListTextVertexWriter writer = createVertexWriter(tw);
+    writer.setConf(conf);
     writer.initialize(tac);
     writer.writeVertex(vertex);
 

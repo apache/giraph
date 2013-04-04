@@ -18,13 +18,13 @@
 
 package org.apache.giraph.io.formats;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.io.EdgeInputFormat;
-import org.apache.giraph.io.EdgeReader;
+import java.io.IOException;
+import java.util.List;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.EdgeFactory;
+import org.apache.giraph.io.EdgeInputFormat;
+import org.apache.giraph.io.EdgeReader;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -32,9 +32,6 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-
-import java.io.IOException;
-import java.util.List;
 
 /**
  * Abstract class that users should subclass to use their own text based
@@ -61,23 +58,16 @@ public abstract class TextEdgeInputFormat<I extends WritableComparable,
   /**
    * {@link EdgeReader} for {@link TextEdgeInputFormat}.
    */
-  protected abstract class TextEdgeReader implements EdgeReader<I, E> {
+  protected abstract class TextEdgeReader extends EdgeReader<I, E> {
     /** Internal line record reader */
     private RecordReader<LongWritable, Text> lineRecordReader;
     /** Context passed to initialize */
     private TaskAttemptContext context;
-    /**
-     * Cached configuration. We don't care about vertex value and message type.
-     */
-    private ImmutableClassesGiraphConfiguration<I, NullWritable, E,
-        NullWritable> conf;
 
     @Override
     public void initialize(InputSplit inputSplit, TaskAttemptContext context)
       throws IOException, InterruptedException {
       this.context = context;
-      conf = new ImmutableClassesGiraphConfiguration<I, NullWritable, E,
-          NullWritable>(context.getConfiguration());
       lineRecordReader = createLineRecordReader(inputSplit, context);
       lineRecordReader.initialize(inputSplit, context);
     }
@@ -129,16 +119,6 @@ public abstract class TextEdgeInputFormat<I extends WritableComparable,
      */
     protected TaskAttemptContext getContext() {
       return context;
-    }
-
-    /**
-     * Get the configuration.
-     *
-     * @return Configuration for this reader
-     */
-    protected ImmutableClassesGiraphConfiguration<I, NullWritable, E,
-        NullWritable> getConf() {
-      return conf;
     }
   }
 

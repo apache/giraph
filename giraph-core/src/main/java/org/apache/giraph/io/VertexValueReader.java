@@ -18,14 +18,12 @@
 
 package org.apache.giraph.io;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import java.io.IOException;
 import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-
-import java.io.IOException;
 
 /**
  * Vertex reader for {@link org.apache.giraph.io.VertexValueInputFormat}.
@@ -35,16 +33,9 @@ import java.io.IOException;
  */
 public abstract class VertexValueReader<I extends WritableComparable,
     V extends Writable> extends BasicVertexValueReader<I, V> {
-  /** Configuration. */
-  private ImmutableClassesGiraphConfiguration<I, V, Writable, Writable>
-  configuration;
-
   @Override
   public void initialize(InputSplit inputSplit, TaskAttemptContext context)
     throws IOException, InterruptedException {
-    configuration =
-        new ImmutableClassesGiraphConfiguration<I, V, Writable, Writable>(
-            context.getConfiguration());
   }
 
   @Override
@@ -53,10 +44,5 @@ public abstract class VertexValueReader<I extends WritableComparable,
     Vertex<I, V, Writable, ?> vertex = getConf().createVertex();
     vertex.initialize(getCurrentVertexId(), getCurrentVertexValue());
     return vertex;
-  }
-
-  public ImmutableClassesGiraphConfiguration<I, V, Writable, Writable>
-  getConf() {
-    return configuration;
   }
 }

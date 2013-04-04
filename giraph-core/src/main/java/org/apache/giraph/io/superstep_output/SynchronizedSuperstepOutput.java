@@ -55,6 +55,7 @@ public class SynchronizedSuperstepOutput<I extends WritableComparable,
    * @param conf Configuration
    * @param context Mapper context
    */
+  @SuppressWarnings("unchecked")
   public SynchronizedSuperstepOutput(
       ImmutableClassesGiraphConfiguration<I, V, E, ?> conf,
       Mapper<?, ?, ?, ?>.Context context) {
@@ -62,6 +63,8 @@ public class SynchronizedSuperstepOutput<I extends WritableComparable,
     try {
       vertexWriter =
           conf.createVertexOutputFormat().createVertexWriter(context);
+      vertexWriter.setConf(
+          (ImmutableClassesGiraphConfiguration<I, V, E, Writable>) conf);
       vertexWriter.initialize(context);
     } catch (IOException e) {
       throw new IllegalStateException("SynchronizedSuperstepOutput: " +

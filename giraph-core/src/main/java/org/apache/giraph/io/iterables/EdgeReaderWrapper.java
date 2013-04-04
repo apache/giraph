@@ -18,14 +18,13 @@
 
 package org.apache.giraph.io.iterables;
 
+import java.io.IOException;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.io.EdgeReader;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-
-import java.io.IOException;
 
 /**
  * Wraps {@link GiraphReader} for edges into {@link EdgeReader}
@@ -34,7 +33,7 @@ import java.io.IOException;
  * @param <E> Edge data
  */
 public class EdgeReaderWrapper<I extends WritableComparable,
-    E extends Writable> implements EdgeReader<I, E> {
+    E extends Writable> extends EdgeReader<I, E> {
   /** Wrapped edge reader */
   private GiraphReader<EdgeWithSource<I, E>> edgeReader;
   /** {@link EdgeReader}-like wrapper of {@link #edgeReader} */

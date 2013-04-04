@@ -18,23 +18,20 @@
 
 package org.apache.giraph.hive.input.edge;
 
+import com.facebook.giraph.hive.input.HiveApiInputFormat;
+import com.facebook.giraph.hive.record.HiveReadableRecord;
+import java.io.IOException;
+import java.util.List;
 import org.apache.giraph.hive.common.HiveProfiles;
-import org.apache.giraph.io.iterables.EdgeReaderWrapper;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.EdgeReader;
-import org.apache.hadoop.conf.Configuration;
+import org.apache.giraph.io.iterables.EdgeReaderWrapper;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-
-import com.facebook.giraph.hive.input.HiveApiInputFormat;
-import com.facebook.giraph.hive.record.HiveReadableRecord;
-
-import java.io.IOException;
-import java.util.List;
 
 /**
  * {@link EdgeInputFormat} for reading edges from Hive.
@@ -65,10 +62,9 @@ public class HiveEdgeInputFormat<I extends WritableComparable,
   public EdgeReader<I, E> createEdgeReader(InputSplit split,
                                            TaskAttemptContext context)
     throws IOException {
-    Configuration conf = context.getConfiguration();
 
     HiveEdgeReader<I, E> reader = new HiveEdgeReader<I, E>();
-    reader.setTableSchema(hiveInputFormat.getTableSchema(conf));
+    reader.setTableSchema(hiveInputFormat.getTableSchema(getConf()));
 
     RecordReader<WritableComparable, HiveReadableRecord> baseReader;
     try {

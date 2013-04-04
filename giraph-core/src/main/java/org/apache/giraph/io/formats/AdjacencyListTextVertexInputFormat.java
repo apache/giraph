@@ -18,16 +18,14 @@
 package org.apache.giraph.io.formats;
 
 import com.google.common.collect.Lists;
+import java.io.IOException;
+import java.util.List;
 import org.apache.giraph.edge.Edge;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-
-import java.io.IOException;
-import java.util.List;
 
 /**
  * VertexReader that readers lines of text with vertices encoded as adjacency
@@ -72,23 +70,13 @@ public abstract class AdjacencyListTextVertexInputFormat<I extends
    */
   protected abstract class AdjacencyListTextVertexReader extends
     TextVertexReaderFromEachLineProcessed<String[]> {
-    /**
-     * Cached configuration.
-     */
-    private Configuration conf;
-
     /** Cached delimiter used for split */
     private String splitValue = null;
-
-    /**
-     * Sanitizer from constructor.
-     */
+    /** Sanitizer from constructor. */
     private final LineSanitizer sanitizer;
-
 
     /**
      * Constructor without line sanitizer.
-     *
      */
     public AdjacencyListTextVertexReader() {
       this(null);
@@ -107,8 +95,8 @@ public abstract class AdjacencyListTextVertexInputFormat<I extends
     public void initialize(InputSplit inputSplit, TaskAttemptContext context)
       throws IOException, InterruptedException {
       super.initialize(inputSplit, context);
-      conf = context.getConfiguration();
-      splitValue = conf.get(LINE_TOKENIZE_VALUE, LINE_TOKENIZE_VALUE_DEFAULT);
+      splitValue =
+          getConf().get(LINE_TOKENIZE_VALUE, LINE_TOKENIZE_VALUE_DEFAULT);
     }
 
     @Override

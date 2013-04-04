@@ -19,14 +19,12 @@
 package org.apache.giraph.io.formats;
 
 
+import java.io.IOException;
 import org.apache.giraph.graph.Vertex;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-
-import java.io.IOException;
 
 /**
  * Write out Vertices' IDs and values, but not their edges nor edges' values.
@@ -70,11 +68,10 @@ public class IdWithValueTextOutputFormat<I extends WritableComparable,
     public void initialize(TaskAttemptContext context) throws IOException,
         InterruptedException {
       super.initialize(context);
-      Configuration conf = context.getConfiguration();
-      delimiter = conf
-          .get(LINE_TOKENIZE_VALUE, LINE_TOKENIZE_VALUE_DEFAULT);
-      reverseOutput = conf
-          .getBoolean(REVERSE_ID_AND_VALUE, REVERSE_ID_AND_VALUE_DEFAULT);
+      delimiter = getConf().get(
+          LINE_TOKENIZE_VALUE, LINE_TOKENIZE_VALUE_DEFAULT);
+      reverseOutput = getConf().getBoolean(
+          REVERSE_ID_AND_VALUE, REVERSE_ID_AND_VALUE_DEFAULT);
     }
 
     @Override

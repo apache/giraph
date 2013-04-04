@@ -18,30 +18,28 @@
 package org.apache.giraph.io;
 
 
+import java.io.IOException;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.graph.GraphState;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.formats.AdjacencyListTextVertexInputFormat;
 import org.apache.giraph.io.formats.LongDoubleDoubleAdjacencyListVertexInputFormat;
-import org.apache.giraph.edge.EdgeFactory;
-import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.BooleanWritable;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.IOException;
-
 import static org.apache.giraph.io.TestTextDoubleDoubleAdjacencyListVertexInputFormat.assertValidVertex;
 import static org.apache.giraph.io.TestTextDoubleDoubleAdjacencyListVertexInputFormat.setGraphState;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -49,7 +47,7 @@ public class TestLongDoubleDoubleAdjacencyListVertexInputFormat extends LongDoub
 
   private RecordReader<LongWritable, Text> rr;
   private ImmutableClassesGiraphConfiguration<LongWritable, DoubleWritable,
-      DoubleWritable, BooleanWritable> conf;
+      DoubleWritable, Writable> conf;
   private TaskAttemptContext tac;
   private GraphState<LongWritable, DoubleWritable, DoubleWritable, BooleanWritable> graphState;
 
@@ -60,7 +58,7 @@ public class TestLongDoubleDoubleAdjacencyListVertexInputFormat extends LongDoub
     GiraphConfiguration giraphConf = new GiraphConfiguration();
     giraphConf.setVertexClass(DummyVertex.class);
     conf = new ImmutableClassesGiraphConfiguration<LongWritable, DoubleWritable,
-        DoubleWritable, BooleanWritable>(giraphConf);
+        DoubleWritable, Writable>(giraphConf);
     graphState = mock(GraphState.class);
     tac = mock(TaskAttemptContext.class);
     when(tac.getConfiguration()).thenReturn(conf);
@@ -90,7 +88,7 @@ public class TestLongDoubleDoubleAdjacencyListVertexInputFormat extends LongDoub
     when(rr.getCurrentValue()).thenReturn(new Text(input));
     TextVertexReader vr = createVertexReader(rr);
 
-
+    vr.setConf( conf);
     vr.initialize(null, tac);
 
     try {
@@ -109,7 +107,7 @@ public class TestLongDoubleDoubleAdjacencyListVertexInputFormat extends LongDoub
     when(rr.getCurrentValue()).thenReturn(new Text(input));
     TextVertexReader vr = createVertexReader(rr);
 
-
+    vr.setConf( conf);
     vr.initialize(null, tac);
 
     try {
@@ -127,8 +125,7 @@ public class TestLongDoubleDoubleAdjacencyListVertexInputFormat extends LongDoub
 
     when(rr.getCurrentValue()).thenReturn(new Text(input));
     TextVertexReader vr = createVertexReader(rr);
-
-
+    vr.setConf(conf);
     vr.initialize(null, tac);
 
     assertTrue("Should have been able to read vertex", vr.nextVertex());
@@ -150,7 +147,7 @@ public class TestLongDoubleDoubleAdjacencyListVertexInputFormat extends LongDoub
     when(rr.getCurrentValue()).thenReturn(new Text(input));
     conf.set(AdjacencyListTextVertexInputFormat.LINE_TOKENIZE_VALUE, ":");
     TextVertexReader vr = createVertexReader(rr);
-
+    vr.setConf(conf);
     vr.initialize(null, tac);
     assertTrue("Should have been able to read vertex", vr.nextVertex());
     Vertex<LongWritable, DoubleWritable, DoubleWritable, ?>

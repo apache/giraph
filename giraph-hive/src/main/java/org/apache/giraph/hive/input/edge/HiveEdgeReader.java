@@ -18,7 +18,9 @@
 
 package org.apache.giraph.hive.input.edge;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import com.facebook.giraph.hive.record.HiveReadableRecord;
+import com.facebook.giraph.hive.schema.HiveTableSchemas;
+import java.io.IOException;
 import org.apache.giraph.hive.common.DefaultConfigurableAndTableSchemaAware;
 import org.apache.giraph.hive.input.RecordReaderWrapper;
 import org.apache.giraph.io.iterables.EdgeWithSource;
@@ -29,11 +31,6 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-
-import com.facebook.giraph.hive.record.HiveReadableRecord;
-import com.facebook.giraph.hive.schema.HiveTableSchemas;
-
-import java.io.IOException;
 
 import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_TO_EDGE_CLASS;
 
@@ -76,8 +73,6 @@ public class HiveEdgeReader<I extends WritableComparable, E extends Writable>
   public void initialize(InputSplit inputSplit, TaskAttemptContext context)
     throws IOException, InterruptedException {
     hiveRecordReader.initialize(inputSplit, context);
-    setConf(new ImmutableClassesGiraphConfiguration<I, Writable, E, Writable>(
-        context.getConfiguration()));
     instantiateHiveToEdgeFromConf();
     hiveToEdge.initializeRecords(
         new RecordReaderWrapper<HiveReadableRecord>(hiveRecordReader));

@@ -18,23 +18,20 @@
 
 package org.apache.giraph.hive.input.vertex;
 
+import com.facebook.giraph.hive.input.HiveApiInputFormat;
+import com.facebook.giraph.hive.record.HiveReadableRecord;
+import java.io.IOException;
+import java.util.List;
 import org.apache.giraph.hive.common.HiveProfiles;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexReader;
 import org.apache.giraph.io.iterables.VertexReaderWrapper;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-
-import com.facebook.giraph.hive.input.HiveApiInputFormat;
-import com.facebook.giraph.hive.record.HiveReadableRecord;
-
-import java.io.IOException;
-import java.util.List;
 
 /**
  * {@link VertexInputFormat} for reading vertices from Hive.
@@ -66,10 +63,8 @@ public class HiveVertexInputFormat<I extends WritableComparable,
   @Override
   public VertexReader<I, V, E> createVertexReader(InputSplit split,
       TaskAttemptContext context) throws IOException {
-    Configuration conf = context.getConfiguration();
-
     HiveVertexReader<I, V, E> reader = new HiveVertexReader<I, V, E>();
-    reader.setTableSchema(hiveInputFormat.getTableSchema(conf));
+    reader.setTableSchema(hiveInputFormat.getTableSchema(getConf()));
 
     RecordReader<WritableComparable, HiveReadableRecord> baseReader;
     try {

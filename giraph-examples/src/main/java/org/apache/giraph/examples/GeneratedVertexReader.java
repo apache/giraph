@@ -18,15 +18,13 @@
 
 package org.apache.giraph.examples;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import java.io.IOException;
 import org.apache.giraph.bsp.BspInputSplit;
 import org.apache.giraph.io.VertexReader;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-
-import java.io.IOException;
 
 /**
  * Used by GeneratedVertexInputFormat to read some generated data
@@ -38,7 +36,8 @@ import java.io.IOException;
 @SuppressWarnings("rawtypes")
 public abstract class GeneratedVertexReader<
     I extends WritableComparable, V extends Writable,
-    E extends Writable> implements VertexReader<I, V, E> {
+    E extends Writable>
+    extends VertexReader<I, V, E> {
   /** Vertices produced by this reader */
   public static final String READER_VERTICES =
     "GeneratedVertexReader.reader_vertices";
@@ -57,8 +56,6 @@ public abstract class GeneratedVertexReader<
   protected BspInputSplit inputSplit = null;
   /** Reverse the id order? */
   protected boolean reverseIdOrder;
-  /** Saved configuration */
-  protected ImmutableClassesGiraphConfiguration configuration = null;
 
   /**
    * Default constructor for reflection.
@@ -69,12 +66,10 @@ public abstract class GeneratedVertexReader<
   @Override
   public final void initialize(InputSplit inputSplit,
       TaskAttemptContext context) throws IOException {
-    configuration = new ImmutableClassesGiraphConfiguration(
-        context.getConfiguration());
-    totalRecords = configuration.getLong(
+    totalRecords = getConf().getLong(
         GeneratedVertexReader.READER_VERTICES,
         GeneratedVertexReader.DEFAULT_READER_VERTICES);
-    reverseIdOrder = configuration.getBoolean(
+    reverseIdOrder = getConf().getBoolean(
         GeneratedVertexReader.REVERSE_ID_ORDER,
         GeneratedVertexReader.DEAFULT_REVERSE_ID_ORDER);
     this.inputSplit = (BspInputSplit) inputSplit;

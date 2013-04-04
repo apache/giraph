@@ -19,7 +19,7 @@
 package org.apache.giraph.io;
 
 import java.io.IOException;
-
+import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
@@ -32,8 +32,10 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  * @param <E> Edge value
  */
 @SuppressWarnings("rawtypes")
-public interface VertexWriter<I extends WritableComparable, V extends Writable,
-    E extends Writable> extends SimpleVertexWriter<I, V, E> {
+public abstract class VertexWriter<I extends WritableComparable,
+    V extends Writable, E extends Writable>
+    extends DefaultImmutableClassesGiraphConfigurable<I, V, E, Writable>
+    implements SimpleVertexWriter<I, V, E> {
   /**
    * Use the context to setup writing the vertices.
    * Guaranteed to be called prior to any other function.
@@ -42,8 +44,8 @@ public interface VertexWriter<I extends WritableComparable, V extends Writable,
    * @throws IOException
    * @throws InterruptedException
    */
-  void initialize(TaskAttemptContext context) throws IOException,
-    InterruptedException;
+  public abstract void initialize(TaskAttemptContext context)
+    throws IOException, InterruptedException;
 
   /**
    * Close this {@link VertexWriter} to future operations.
@@ -52,6 +54,6 @@ public interface VertexWriter<I extends WritableComparable, V extends Writable,
    * @throws IOException
    * @throws InterruptedException
    */
-  void close(TaskAttemptContext context)
+  public abstract void close(TaskAttemptContext context)
     throws IOException, InterruptedException;
 }

@@ -18,11 +18,12 @@
 
 package org.apache.giraph.io.formats;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.io.VertexInputFormat;
-import org.apache.giraph.io.VertexReader;
+import java.io.IOException;
+import java.util.List;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.io.VertexInputFormat;
+import org.apache.giraph.io.VertexReader;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
@@ -31,9 +32,6 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-
-import java.io.IOException;
-import java.util.List;
 
 /**
  * Abstract class that users should subclass to use their own text based
@@ -84,21 +82,16 @@ public abstract class TextVertexInputFormat<I extends WritableComparable,
    * need common exception handling while preprocessing, then extend
    * {@link TextVertexReaderFromEachLineProcessedHandlingExceptions}.
    */
-  protected abstract class TextVertexReader implements
-    VertexReader<I, V, E> {
+  protected abstract class TextVertexReader extends VertexReader<I, V, E> {
     /** Internal line record reader */
     private RecordReader<LongWritable, Text> lineRecordReader;
     /** Context passed to initialize */
     private TaskAttemptContext context;
-    /** Cached configuration */
-    private ImmutableClassesGiraphConfiguration<I, V, E, Writable> conf;
 
     @Override
     public void initialize(InputSplit inputSplit, TaskAttemptContext context)
       throws IOException, InterruptedException {
       this.context = context;
-      conf = new ImmutableClassesGiraphConfiguration<I, V, E, Writable>(
-          context.getConfiguration());
       lineRecordReader = createLineRecordReader(inputSplit, context);
       lineRecordReader.initialize(inputSplit, context);
     }
@@ -150,15 +143,6 @@ public abstract class TextVertexInputFormat<I extends WritableComparable,
      */
     protected TaskAttemptContext getContext() {
       return context;
-    }
-
-    /**
-     * Get the configuration.
-     *
-     * @return Configuration for this reader
-     */
-    protected ImmutableClassesGiraphConfiguration<I, V, E, Writable> getConf() {
-      return conf;
     }
   }
 

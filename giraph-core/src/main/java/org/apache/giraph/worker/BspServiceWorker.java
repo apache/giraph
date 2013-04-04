@@ -948,6 +948,9 @@ else[HADOOP_NON_SECURE]*/
         getConfiguration().createVertexOutputFormat();
     VertexWriter<I, V, E> vertexWriter =
         vertexOutputFormat.createVertexWriter(getContext());
+    vertexWriter.setConf(
+        (ImmutableClassesGiraphConfiguration<I, V, E, Writable>)
+            getConfiguration());
     vertexWriter.initialize(getContext());
     long verticesWritten = 0;
     long nextPrintVertices = 0;

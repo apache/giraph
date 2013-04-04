@@ -18,13 +18,13 @@
 
 package org.apache.giraph.io;
 
+import java.io.IOException;
+import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
 import org.apache.giraph.edge.Edge;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-
-import java.io.IOException;
 
 /**
  * Analogous to {@link RecordReader} for edges.  Will read the edges
@@ -34,7 +34,9 @@ import java.io.IOException;
  * @param <E> Edge data
  */
 @SuppressWarnings("rawtypes")
-public interface EdgeReader<I extends WritableComparable, E extends Writable> {
+public abstract class EdgeReader<I extends WritableComparable,
+    E extends Writable> extends DefaultImmutableClassesGiraphConfigurable<
+        I, Writable, E, Writable> {
   /**
    * Use the input split and context to setup reading the edges.
    * Guaranteed to be called prior to any other function.
@@ -44,8 +46,9 @@ public interface EdgeReader<I extends WritableComparable, E extends Writable> {
    * @throws java.io.IOException
    * @throws InterruptedException
    */
-  void initialize(InputSplit inputSplit, TaskAttemptContext context) throws
-      IOException, InterruptedException;
+  public abstract void initialize(InputSplit inputSplit,
+                                  TaskAttemptContext context)
+    throws IOException, InterruptedException;
 
   /**
    * Read the next edge.
@@ -54,7 +57,7 @@ public interface EdgeReader<I extends WritableComparable, E extends Writable> {
    * @throws IOException
    * @throws InterruptedException
    */
-  boolean nextEdge() throws IOException, InterruptedException;
+  public abstract boolean nextEdge() throws IOException, InterruptedException;
 
   /**
    * Get the current edge source id.
@@ -64,7 +67,8 @@ public interface EdgeReader<I extends WritableComparable, E extends Writable> {
    * @throws IOException
    * @throws InterruptedException
    */
-  I getCurrentSourceId() throws IOException, InterruptedException;
+  public abstract I getCurrentSourceId()
+    throws IOException, InterruptedException;
 
   /**
    * Get the current edge.
@@ -74,14 +78,15 @@ public interface EdgeReader<I extends WritableComparable, E extends Writable> {
    * @throws IOException
    * @throws InterruptedException
    */
-  Edge<I, E> getCurrentEdge() throws IOException, InterruptedException;
+  public abstract Edge<I, E> getCurrentEdge()
+    throws IOException, InterruptedException;
 
   /**
    * Close this {@link EdgeReader} to future operations.
    *
    * @throws IOException
    */
-  void close() throws IOException;
+  public abstract void close() throws IOException;
 
   /**
    * How much of the input has the {@link EdgeReader} consumed i.e.
@@ -91,5 +96,5 @@ public interface EdgeReader<I extends WritableComparable, E extends Writable> {
    * @throws IOException
    * @throws InterruptedException
    */
-  float getProgress() throws IOException, InterruptedException;
+  public abstract float getProgress() throws IOException, InterruptedException;
 }

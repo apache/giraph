@@ -21,6 +21,7 @@ package org.apache.giraph.aggregators;
 import java.io.IOException;
 import java.util.Map.Entry;
 
+import org.apache.giraph.conf.ImmutableClassesGiraphConfigurable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.Mapper.Context;
 
@@ -31,7 +32,7 @@ import org.apache.hadoop.mapreduce.Mapper.Context;
  *  passed to {@link AggregatorWriter#writeAggregator(Iterable, long)} as the
  *  superstep value to signal the end of computation.
  */
-public interface AggregatorWriter {
+public interface AggregatorWriter extends ImmutableClassesGiraphConfigurable {
   /** Signal for last superstep */
   int LAST_SUPERSTEP = -1;
 

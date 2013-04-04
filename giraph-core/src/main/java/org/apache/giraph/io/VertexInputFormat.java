@@ -18,20 +18,20 @@
 
 package org.apache.giraph.io;
 
+import java.io.IOException;
+import java.util.List;
+import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
-import java.io.IOException;
-import java.util.List;
-
 /**
  * Use this to load data for a BSP application.  Note that the InputSplit must
  * also implement Writable.  The InputSplits will determine the partitioning of
  * vertices across the mappers, so keep that in consideration when implementing
- * getSplits().
+ * getSplits().  Provides access to ImmutableClassesGiraphConfiguration.
  *
  * @param <I> Vertex id
  * @param <V> Vertex value
@@ -40,6 +40,7 @@ import java.util.List;
 @SuppressWarnings("rawtypes")
 public abstract class VertexInputFormat<I extends WritableComparable,
     V extends Writable, E extends Writable>
+    extends DefaultImmutableClassesGiraphConfigurable<I, V, E, Writable>
     implements GiraphInputFormat {
   @Override
   public abstract List<InputSplit> getSplits(
@@ -47,8 +48,9 @@ public abstract class VertexInputFormat<I extends WritableComparable,
     throws IOException, InterruptedException;
 
   /**
-   * Create a vertex reader for a given split. The framework will call
-   * {@link VertexReader#initialize(InputSplit, TaskAttemptContext)} before
+   * Create a vertex reader for a given split. Guaranteed to have been
+   * configured with setConf() prior to use.  The framework will also call
+   * {@linkVertexReader#initialize(InputSplit, TaskAttemptContext)} before
    * the split is used.
    *
    * @param split the split to be read

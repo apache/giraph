@@ -20,6 +20,7 @@ package org.apache.giraph.io;
 
 import java.io.IOException;
 
+import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 
@@ -30,6 +31,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 /**
  * Implement to output the graph after the computation.  It is modeled
  * directly after the Hadoop OutputFormat.
+ * ImmutableClassesGiraphConfiguration is available
  *
  * @param <I> Vertex index value
  * @param <V> Vertex value
@@ -37,10 +39,12 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  */
 @SuppressWarnings("rawtypes")
 public abstract class VertexOutputFormat<
-    I extends WritableComparable, V extends Writable, E extends Writable> {
+    I extends WritableComparable, V extends Writable,
+    E extends Writable> extends
+    DefaultImmutableClassesGiraphConfigurable<I, V, E, Writable> {
   /**
    * Create a vertex writer for a given split. The framework will call
-   * {@link VertexReader#initialize(InputSplit, TaskAttemptContext)} before
+   * {@link VertexWriter#initialize(TaskAttemptContext)} before
    * the split is used.
    *
    * @param context the information about the task

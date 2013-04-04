@@ -18,6 +18,7 @@
 
 package org.apache.giraph.io;
 
+import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -28,13 +29,17 @@ import java.io.IOException;
 import java.util.List;
 
 /**
- * Input format for reading single edges.
+ * Input format for reading single edges.  Provides access to
+ * ImmutableClassesGiraphConfiguration.
  *
  * @param <I> Vertex id
  * @param <E> Edge data
  */
 public abstract class EdgeInputFormat<I extends WritableComparable,
-    E extends Writable> implements GiraphInputFormat {
+    E extends Writable>
+    extends
+    DefaultImmutableClassesGiraphConfigurable<I, Writable, E, Writable>
+    implements GiraphInputFormat {
   @Override
   public abstract List<InputSplit> getSplits(
       JobContext context, int minSplitCountHint) throws IOException,

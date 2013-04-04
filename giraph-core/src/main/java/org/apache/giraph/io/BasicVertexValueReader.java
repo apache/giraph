@@ -18,10 +18,9 @@
 
 package org.apache.giraph.io;
 
+import java.io.IOException;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-
-import java.io.IOException;
 
 /**
  * Abstract base class for VertexValueReader.
@@ -31,7 +30,7 @@ import java.io.IOException;
  */
 public abstract class BasicVertexValueReader<I extends WritableComparable,
     V extends Writable>
-    implements VertexReader<I, V, Writable> {
+    extends VertexReader<I, V, Writable> {
   /**
    * User-defined method to extract the vertex id.
    *

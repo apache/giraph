@@ -33,63 +33,64 @@ import org.apache.log4j.Logger;
 import java.io.IOException;
 import java.util.List;
 
-/*
-  Test subclass for HBaseVertexInputFormat. Reads a simple
-  children qualifier to create an edge.
+/**
+ *  Test subclass for HBaseVertexInputFormat. Reads a simple
+ *  children qualifier to create an edge.
  */
 public class TableEdgeInputFormat extends
-        HBaseVertexInputFormat<Text, Text, Text> {
+    HBaseVertexInputFormat<Text, Text, Text> {
 
-    private static final Logger log =
-            Logger.getLogger(TableEdgeInputFormat.class);
-    private static final Text uselessEdgeValue = new Text();
+  private static final Logger LOG =
+      Logger.getLogger(TableEdgeInputFormat.class);
+  private static final Text uselessEdgeValue = new Text();
 
-    public VertexReader<Text, Text, Text>
-            createVertexReader(InputSplit split,
-                               TaskAttemptContext context) throws IOException {
+  public VertexReader<Text, Text, Text>
+  createVertexReader(InputSplit split,
+                     TaskAttemptContext context) throws IOException {
 
-        return new TableEdgeVertexReader(split, context);
+    return new TableEdgeVertexReader(split, context);
 
+  }
+
+  /**
+   * Uses the RecordReader to return Hbase rows
+   */
+  public static class TableEdgeVertexReader
+      extends HBaseVertexReader<Text, Text, Text> {
+
+    private final byte[] CF = Bytes.toBytes("cf");
+    private final byte[] CHILDREN = Bytes.toBytes("children");
+
+    public TableEdgeVertexReader(InputSplit split, TaskAttemptContext context) throws IOException {
+      super(split, context);
     }
 
-    /*
-     Uses the RecordReader to return Hbase rows
+    @Override
+    public boolean nextVertex() throws IOException,
+        InterruptedException {
+      return getRecordReader().nextKeyValue();
+    }
+
+    /**
+     * For each row, create a vertex with the row ID as a text,
+     * and it's 'children' qualifier as a single edge.
      */
-    public static class TableEdgeVertexReader
-            extends HBaseVertexReader<Text, Text, Text> {
+    @Override
+    public Vertex<Text, Text, Text, ?>
+    getCurrentVertex()
+        throws IOException, InterruptedException {
+      Result row = getRecordReader().getCurrentValue();
+      Vertex<Text, Text, Text, ?> vertex =
+          getConf().createVertex();
+      Text vertexId = new Text(Bytes.toString(row.getRow()));
+      List<Edge<Text, Text>> edges = Lists.newLinkedList();
+      String edge = Bytes.toString(row.getValue(CF, CHILDREN));
+      Text vertexValue = new Text();
+      Text edgeId = new Text(edge);
+      edges.add(EdgeFactory.create(edgeId, uselessEdgeValue));
+      vertex.initialize(vertexId, vertexValue, edges);
 
-        private final byte[] CF = Bytes.toBytes("cf");
-        private final byte[] CHILDREN = Bytes.toBytes("children");
-
-        public TableEdgeVertexReader(InputSplit split, TaskAttemptContext context) throws IOException {
-            super(split, context);
-        }
-
-
-        public boolean nextVertex() throws IOException,
-                InterruptedException {
-            return getRecordReader().nextKeyValue();
-        }
-
-        /*
-         For each row, create a vertex with the row ID as a text,
-         and it's 'children' qualifier as a single edge.
-         */
-        public Vertex<Text, Text, Text, ?>
-                    getCurrentVertex()
-                throws IOException, InterruptedException {
-            Result row = getRecordReader().getCurrentValue();
-            Vertex<Text, Text, Text, ?> vertex =
-                getConfiguration().createVertex();
-            Text vertexId = new Text(Bytes.toString(row.getRow()));
-            List<Edge<Text, Text>> edges = Lists.newLinkedList();
-            String edge = Bytes.toString(row.getValue(CF, CHILDREN));
-            Text vertexValue = new Text();
-            Text edgeId = new Text(edge);
-            edges.add(EdgeFactory.create(edgeId, uselessEdgeValue));
-            vertex.initialize(vertexId, vertexValue, edges);
-
-            return vertex;
-        }
+      return vertex;
     }
+  }
 }

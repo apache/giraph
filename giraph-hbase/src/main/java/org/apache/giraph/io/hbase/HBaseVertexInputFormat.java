@@ -17,7 +17,8 @@
  */
 package org.apache.giraph.io.hbase;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import java.io.IOException;
+import java.util.List;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexReader;
 import org.apache.hadoop.hbase.client.Result;
@@ -30,9 +31,6 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.log4j.Logger;
-
-import java.io.IOException;
-import java.util.List;
 
 /**
  *
@@ -85,13 +83,11 @@ public abstract class HBaseVertexInputFormat<
    * @param <E> Edge value
    */
   public abstract static class HBaseVertexReader<
-          I extends WritableComparable,
-          V extends Writable,
-          E extends Writable>
-          implements VertexReader<I, V, E> {
-    /** Giraph configuration */
-    private ImmutableClassesGiraphConfiguration<I, V, E, Writable>
-    configuration;
+      I extends WritableComparable,
+      V extends Writable,
+      E extends Writable>
+      extends VertexReader<I, V, E> {
+
     /** Reader instance */
     private final RecordReader<ImmutableBytesWritable, Result> reader;
     /** Context passed to initialize */
@@ -110,11 +106,6 @@ public abstract class HBaseVertexInputFormat<
       this.reader = BASE_FORMAT.createRecordReader(split, context);
     }
 
-    public ImmutableClassesGiraphConfiguration<I, V, E, Writable>
-    getConfiguration() {
-      return configuration;
-    }
-
     /**
      * initialize
      *
@@ -125,13 +116,9 @@ public abstract class HBaseVertexInputFormat<
      */
     public void initialize(InputSplit inputSplit,
                            TaskAttemptContext context)
-      throws IOException,
-      InterruptedException {
+      throws IOException, InterruptedException {
       reader.initialize(inputSplit, context);
       this.context = context;
-      this.configuration =
-          new ImmutableClassesGiraphConfiguration<I, V, E, Writable>(
-              context.getConfiguration());
     }
 
     /**
@@ -179,7 +166,7 @@ public abstract class HBaseVertexInputFormat<
   public List<InputSplit> getSplits(
   JobContext context, int minSplitCountHint)
     throws IOException, InterruptedException {
-    BASE_FORMAT.setConf(context.getConfiguration());
+    BASE_FORMAT.setConf(getConf());
     return BASE_FORMAT.getSplits(context);
   }
 }

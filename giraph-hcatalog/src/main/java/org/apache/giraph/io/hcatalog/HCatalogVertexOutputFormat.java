@@ -88,7 +88,7 @@ public abstract class HCatalogVertexOutputFormat<
       I extends WritableComparable,
       V extends Writable,
       E extends Writable>
-      implements VertexWriter<I, V, E> {
+      extends VertexWriter<I, V, E> {
 
     /** Internal HCatRecordWriter */
     private RecordWriter<WritableComparable<?>, HCatRecord> hCatRecordWriter;

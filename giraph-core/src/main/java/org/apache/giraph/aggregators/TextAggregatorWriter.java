@@ -18,11 +18,10 @@
 
 package org.apache.giraph.aggregators;
 
+import com.google.common.base.Charsets;
 import java.io.IOException;
 import java.util.Map.Entry;
-
-import com.google.common.base.Charsets;
-import org.apache.hadoop.conf.Configuration;
+import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -34,7 +33,9 @@ import org.apache.hadoop.mapreduce.Mapper.Context;
  * text and contains the aggregator name, the aggregator value and the
  * aggregator class.
  */
-public class TextAggregatorWriter implements AggregatorWriter {
+public class TextAggregatorWriter
+    extends DefaultImmutableClassesGiraphConfigurable
+    implements AggregatorWriter {
   /** The filename of the outputfile */
   public static final String FILENAME =
       "giraph.textAggregatorWriter.filename";
@@ -61,12 +62,11 @@ public class TextAggregatorWriter implements AggregatorWriter {
   @Override
   @SuppressWarnings("rawtypes")
   public void initialize(Context context, long attempt) throws IOException {
-    Configuration conf = context.getConfiguration();
-    frequency = conf.getInt(FREQUENCY, NEVER);
-    String filename  = conf.get(FILENAME, DEFAULT_FILENAME);
+    frequency = getConf().getInt(FREQUENCY, NEVER);
+    String filename  = getConf().get(FILENAME, DEFAULT_FILENAME);
     if (frequency != NEVER) {
       Path p = new Path(filename + "_" + attempt);
-      FileSystem fs = FileSystem.get(conf);
+      FileSystem fs = FileSystem.get(getConf());
       if (fs.exists(p)) {
         throw new RuntimeException("aggregatorWriter file already" +
             " exists: " + p.getName());

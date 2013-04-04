@@ -18,6 +18,7 @@
 
 package org.apache.giraph.io.hbase;
 
+import java.io.IOException;
 import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.giraph.io.VertexWriter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -28,8 +29,6 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-
-import java.io.IOException;
 
 /**
  *
@@ -74,21 +73,15 @@ public abstract class HBaseVertexOutputFormat<
    * @param <E> Edge value
    */
   public abstract static class HBaseVertexWriter<
-          I extends WritableComparable,
-          V extends Writable,
-          E extends Writable>
-          implements VertexWriter<I, V, E> {
+      I extends WritableComparable,
+      V extends Writable,
+      E extends Writable>
+      extends VertexWriter<I, V, E> {
 
-    /**
-     * context
-     */
+    /** Context */
     private TaskAttemptContext context;
-
-    /**
-     * record writer instance
-     */
-    private RecordWriter<ImmutableBytesWritable,
-              Writable> recordWriter;
+    /** Record writer instance */
+    private RecordWriter<ImmutableBytesWritable, Writable> recordWriter;
 
    /**
     * Sets up base table output format and creates a record writer.
@@ -141,7 +134,6 @@ public abstract class HBaseVertexOutputFormat<
     public TaskAttemptContext getContext() {
       return context;
     }
-
   }
 
   /**
@@ -167,7 +159,7 @@ public abstract class HBaseVertexOutputFormat<
   public OutputCommitter getOutputCommitter(
     TaskAttemptContext context)
     throws IOException, InterruptedException {
-    BASE_FORMAT.setConf(context.getConfiguration());
+    BASE_FORMAT.setConf(getConf());
     return BASE_FORMAT.getOutputCommitter(context);
   }
 }

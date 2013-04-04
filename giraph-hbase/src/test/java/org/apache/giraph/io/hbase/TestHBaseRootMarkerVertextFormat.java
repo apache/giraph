@@ -58,177 +58,178 @@ import java.util.UUID;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-/*
-Test case for HBase reading/writing vertices from an HBase instance.
-*/
+
+/**
+ * Test case for HBase reading/writing vertices from an HBase instance.
+ */
 public class TestHBaseRootMarkerVertextFormat extends BspCase {
 
-    /**
-     * Create the test case
-     *
-     * @param testName name of the test case
-     */
+  /**
+   * Create the test case
+   *
+   * @param testName name of the test case
+   */
 
-    private final Logger log = Logger.getLogger(TestHBaseRootMarkerVertextFormat.class);
+  private final Logger log = Logger.getLogger(TestHBaseRootMarkerVertextFormat.class);
 
-    private final String TABLE_NAME = "simple_graph";
-    private final String FAMILY = "cf";
-    private final String QUALIFER = "children";
-    private final String OUTPUT_FIELD = "parent";
+  private final String TABLE_NAME = "simple_graph";
+  private final String FAMILY = "cf";
+  private final String QUALIFER = "children";
+  private final String OUTPUT_FIELD = "parent";
 
-    private HBaseTestingUtility testUtil;
-    private Path hbaseRootdir;
+  private HBaseTestingUtility testUtil;
+  private Path hbaseRootdir;
 
 
-    public TestHBaseRootMarkerVertextFormat() {
-        super(TestHBaseRootMarkerVertextFormat.class.getName());
+  public TestHBaseRootMarkerVertextFormat() {
+    super(TestHBaseRootMarkerVertextFormat.class.getName());
 
-        // Let's set up the hbase root directory.
-        Configuration conf = HBaseConfiguration.create();
-        try {
-            FileSystem fs = FileSystem.get(conf);
-            String randomStr = UUID.randomUUID().toString();
-            String tmpdir = System.getProperty("java.io.tmpdir") + "/" +
-                randomStr + "/";
-            hbaseRootdir = fs.makeQualified(new Path(tmpdir));
-            conf.set(HConstants.HBASE_DIR, hbaseRootdir.toString());
-            fs.mkdirs(hbaseRootdir);
-        } catch(IOException ioe) {
-            fail("Could not create hbase root directory.");
-        }
-
-        // Start the test utility.
-        testUtil = new HBaseTestingUtility(conf);
+    // Let's set up the hbase root directory.
+    Configuration conf = HBaseConfiguration.create();
+    try {
+      FileSystem fs = FileSystem.get(conf);
+      String randomStr = UUID.randomUUID().toString();
+      String tmpdir = System.getProperty("java.io.tmpdir") + "/" +
+          randomStr + "/";
+      hbaseRootdir = fs.makeQualified(new Path(tmpdir));
+      conf.set(HConstants.HBASE_DIR, hbaseRootdir.toString());
+      fs.mkdirs(hbaseRootdir);
+    } catch(IOException ioe) {
+      fail("Could not create hbase root directory.");
     }
 
-    @Test
-    public void testHBaseInputOutput() throws Exception {
+    // Start the test utility.
+    testUtil = new HBaseTestingUtility(conf);
+  }
 
-        if (System.getProperty("prop.mapred.job.tracker") != null) {
-            if(log.isInfoEnabled())
-                log.info("testHBaseInputOutput: Ignore this test if not local mode.");
-            return;
-        }
+  @Test
+  public void testHBaseInputOutput() throws Exception {
 
-        File jarTest = new File(System.getProperty("prop.jarLocation"));
-        if(!jarTest.exists()) {
-            fail("Could not find Giraph jar at " +
-                    "location specified by 'prop.jarLocation'. " +
-                    "Make sure you built the main Giraph artifact?.");
-        }
-
-        String INPUT_FILE = hbaseRootdir.toString() + "/graph.csv";
-        //First let's load some data using ImportTsv into our mock table.
-        String[] args = new String[] {
-                "-Dimporttsv.columns=HBASE_ROW_KEY,cf:"+QUALIFER,
-                "-Dimporttsv.separator=" + "\u002c",
-                TABLE_NAME,
-                INPUT_FILE
-        };
-
-        MiniHBaseCluster cluster = null;
-        MiniZooKeeperCluster zkCluster = null;
-        FileSystem fs = null;
-
-        try {
-            // using the restart method allows us to avoid having the hbase
-            // root directory overwritten by /home/$username
-            zkCluster = testUtil.startMiniZKCluster();
-            testUtil.restartHBaseCluster(2);
-            cluster = testUtil.getMiniHBaseCluster();
-
-            GenericOptionsParser opts =
-                    new GenericOptionsParser(cluster.getConfiguration(), args);
-            Configuration conf = opts.getConfiguration();
-            args = opts.getRemainingArgs();
-
-            fs = FileSystem.get(conf);
-            FSDataOutputStream op = fs.create(new Path(INPUT_FILE), true);
-            String line1 = "0001,0002\n";
-            String line2 = "0002,0004\n";
-            String line3 = "0003,0005\n";
-            String line4 = "0004,-1\n";
-            String line5 = "0005,-1\n";
-            op.write(line1.getBytes());
-            op.write(line2.getBytes());
-            op.write(line3.getBytes());
-            op.write(line4.getBytes());
-            op.write(line5.getBytes());
-            op.close();
-
-            final byte[] FAM = Bytes.toBytes(FAMILY);
-            final byte[] TAB = Bytes.toBytes(TABLE_NAME);
-
-            HTableDescriptor desc = new HTableDescriptor(TAB);
-            desc.addFamily(new HColumnDescriptor(FAM));
-            HBaseAdmin hbaseAdmin=new HBaseAdmin(conf);
-            if (hbaseAdmin.isTableAvailable(TABLE_NAME)) {
-            	hbaseAdmin.disableTable(TABLE_NAME);
-            	hbaseAdmin.deleteTable(TABLE_NAME);
-            }
-            hbaseAdmin.createTable(desc);
-
-            Job job = ImportTsv.createSubmittableJob(conf, args);
-            job.waitForCompletion(false);
-            assertTrue(job.isSuccessful());
-            if(log.isInfoEnabled())
-                log.info("ImportTsv successful. Running HBase Giraph job.");
-
-            //now operate over HBase using Vertex I/O formats
-            conf.set(TableInputFormat.INPUT_TABLE, TABLE_NAME);
-            conf.set(TableOutputFormat.OUTPUT_TABLE, TABLE_NAME);
-
-            GiraphJob giraphJob = new GiraphJob(conf, BspCase.getCallingMethodName());
-            GiraphConfiguration giraphConf = giraphJob.getConfiguration();
-            giraphConf.setZooKeeperConfiguration(
-                    cluster.getMaster().getZooKeeper().getQuorum());
-            setupConfiguration(giraphJob);
-            giraphConf.setVertexClass(EdgeNotification.class);
-            giraphConf.setVertexInputFormatClass(TableEdgeInputFormat.class);
-            giraphConf.setVertexOutputFormatClass(TableEdgeOutputFormat.class);
-
-            assertTrue(giraphJob.run(true));
-            if(log.isInfoEnabled())
-                log.info("Giraph job successful. Checking output qualifier.");
-
-            //Do a get on row 0002, it should have a parent of 0001
-            //if the outputFormat worked.
-            HTable table = new HTable(conf, TABLE_NAME);
-            Result result = table.get(new Get("0002".getBytes()));
-            byte[] parentBytes = result.getValue(FAMILY.getBytes(),
-                    OUTPUT_FIELD.getBytes());
-            assertNotNull(parentBytes);
-            assertTrue(parentBytes.length > 0);
-            Assert.assertEquals("0001", Bytes.toString(parentBytes));
-        }   finally {
-            if (cluster != null) {
-                cluster.shutdown();
-            }
-            if (zkCluster != null) {
-                zkCluster.shutdown();
-            }
-            // clean test files
-            if (fs != null) {
-                fs.delete(hbaseRootdir);
-            }
-        }
+    if (System.getProperty("prop.mapred.job.tracker") != null) {
+      if(log.isInfoEnabled())
+        log.info("testHBaseInputOutput: Ignore this test if not local mode.");
+      return;
     }
 
-    /*
-    Test compute method that sends each edge a notification of its parents.
-    The test set only has a 1-1 parent-to-child ratio for this unit test.
-     */
-    public static class EdgeNotification
-            extends Vertex<Text, Text, Text, Text> {
-        @Override
-        public void compute(Iterable<Text> messages) throws IOException {
-          for (Text message : messages) {
-            getValue().set(message);
-          }
-          if(getSuperstep() == 0) {
-            sendMessageToAllEdges(getId());
-          }
-          voteToHalt();
-        }
+    File jarTest = new File(System.getProperty("prop.jarLocation"));
+    if(!jarTest.exists()) {
+      fail("Could not find Giraph jar at " +
+          "location specified by 'prop.jarLocation'. " +
+          "Make sure you built the main Giraph artifact?.");
     }
+
+    String INPUT_FILE = hbaseRootdir.toString() + "/graph.csv";
+    //First let's load some data using ImportTsv into our mock table.
+    String[] args = new String[] {
+        "-Dimporttsv.columns=HBASE_ROW_KEY,cf:"+QUALIFER,
+        "-Dimporttsv.separator=" + "\u002c",
+        TABLE_NAME,
+        INPUT_FILE
+    };
+
+    MiniHBaseCluster cluster = null;
+    MiniZooKeeperCluster zkCluster = null;
+    FileSystem fs = null;
+
+    try {
+      // using the restart method allows us to avoid having the hbase
+      // root directory overwritten by /home/$username
+      zkCluster = testUtil.startMiniZKCluster();
+      testUtil.restartHBaseCluster(2);
+      cluster = testUtil.getMiniHBaseCluster();
+
+      GenericOptionsParser opts =
+          new GenericOptionsParser(cluster.getConfiguration(), args);
+      Configuration conf = opts.getConfiguration();
+      args = opts.getRemainingArgs();
+
+      fs = FileSystem.get(conf);
+      FSDataOutputStream op = fs.create(new Path(INPUT_FILE), true);
+      String line1 = "0001,0002\n";
+      String line2 = "0002,0004\n";
+      String line3 = "0003,0005\n";
+      String line4 = "0004,-1\n";
+      String line5 = "0005,-1\n";
+      op.write(line1.getBytes());
+      op.write(line2.getBytes());
+      op.write(line3.getBytes());
+      op.write(line4.getBytes());
+      op.write(line5.getBytes());
+      op.close();
+
+      final byte[] FAM = Bytes.toBytes(FAMILY);
+      final byte[] TAB = Bytes.toBytes(TABLE_NAME);
+
+      HTableDescriptor desc = new HTableDescriptor(TAB);
+      desc.addFamily(new HColumnDescriptor(FAM));
+      HBaseAdmin hbaseAdmin=new HBaseAdmin(conf);
+      if (hbaseAdmin.isTableAvailable(TABLE_NAME)) {
+        hbaseAdmin.disableTable(TABLE_NAME);
+        hbaseAdmin.deleteTable(TABLE_NAME);
+      }
+      hbaseAdmin.createTable(desc);
+
+      Job job = ImportTsv.createSubmittableJob(conf, args);
+      job.waitForCompletion(false);
+      assertTrue(job.isSuccessful());
+      if(log.isInfoEnabled())
+        log.info("ImportTsv successful. Running HBase Giraph job.");
+
+      //now operate over HBase using Vertex I/O formats
+      conf.set(TableInputFormat.INPUT_TABLE, TABLE_NAME);
+      conf.set(TableOutputFormat.OUTPUT_TABLE, TABLE_NAME);
+
+      GiraphJob giraphJob = new GiraphJob(conf, BspCase.getCallingMethodName());
+      GiraphConfiguration giraphConf = giraphJob.getConfiguration();
+      giraphConf.setZooKeeperConfiguration(
+          cluster.getMaster().getZooKeeper().getQuorum());
+      setupConfiguration(giraphJob);
+      giraphConf.setVertexClass(EdgeNotification.class);
+      giraphConf.setVertexInputFormatClass(TableEdgeInputFormat.class);
+      giraphConf.setVertexOutputFormatClass(TableEdgeOutputFormat.class);
+
+      assertTrue(giraphJob.run(true));
+      if(log.isInfoEnabled())
+        log.info("Giraph job successful. Checking output qualifier.");
+
+      //Do a get on row 0002, it should have a parent of 0001
+      //if the outputFormat worked.
+      HTable table = new HTable(conf, TABLE_NAME);
+      Result result = table.get(new Get("0002".getBytes()));
+      byte[] parentBytes = result.getValue(FAMILY.getBytes(),
+          OUTPUT_FIELD.getBytes());
+      assertNotNull(parentBytes);
+      assertTrue(parentBytes.length > 0);
+      Assert.assertEquals("0001", Bytes.toString(parentBytes));
+    }   finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+      if (zkCluster != null) {
+        zkCluster.shutdown();
+      }
+      // clean test files
+      if (fs != null) {
+        fs.delete(hbaseRootdir);
+      }
+    }
+  }
+
+  /*
+  Test compute method that sends each edge a notification of its parents.
+  The test set only has a 1-1 parent-to-child ratio for this unit test.
+   */
+  public static class EdgeNotification
+      extends Vertex<Text, Text, Text, Text> {
+    @Override
+    public void compute(Iterable<Text> messages) throws IOException {
+      for (Text message : messages) {
+        getValue().set(message);
+      }
+      if(getSuperstep() == 0) {
+        sendMessageToAllEdges(getId());
+      }
+      voteToHalt();
+    }
+  }
 }

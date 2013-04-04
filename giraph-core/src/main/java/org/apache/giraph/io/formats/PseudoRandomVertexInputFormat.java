@@ -19,25 +19,23 @@
 package org.apache.giraph.io.formats;
 
 import com.google.common.collect.Sets;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+import java.util.Set;
 import org.apache.giraph.bsp.BspInputSplit;
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.edge.EdgeFactory;
+import org.apache.giraph.edge.VertexEdges;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexReader;
-import org.apache.giraph.edge.EdgeFactory;
-import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.edge.VertexEdges;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.log4j.Logger;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
-import java.util.Set;
 
 /**
  * This VertexInputFormat is meant for large scale testing.  It allows the user
@@ -70,7 +68,7 @@ public class PseudoRandomVertexInputFormat extends
    * Used by {@link PseudoRandomVertexInputFormat} to read
    * pseudo-randomly generated data.
    */
-  private static class PseudoRandomVertexReader implements
+  private static class PseudoRandomVertexReader extends
       VertexReader<LongWritable, DoubleWritable, DoubleWritable> {
     /** Logger. */
     private static final Logger LOG =
@@ -87,8 +85,6 @@ public class PseudoRandomVertexInputFormat extends
     private int edgesPerVertex = -1;
     /** BspInputSplit (used only for index). */
     private BspInputSplit bspInputSplit;
-    /** Saved configuration */
-    private ImmutableClassesGiraphConfiguration configuration;
     /** Helper for generating pseudo-random local edges. */
     private PseudoRandomLocalEdgesHelper localEdgesHelper;
 
@@ -101,11 +97,8 @@ public class PseudoRandomVertexInputFormat extends
     @Override
     public void initialize(InputSplit inputSplit,
         TaskAttemptContext context) throws IOException {
-      configuration = new ImmutableClassesGiraphConfiguration(
-          context.getConfiguration());
-      aggregateVertices =
-        configuration.getLong(
-          PseudoRandomInputFormatConstants.AGGREGATE_VERTICES, 0);
+      aggregateVertices = getConf().getLong(
+            PseudoRandomInputFormatConstants.AGGREGATE_VERTICES, 0);
       if (aggregateVertices <= 0) {
         throw new IllegalArgumentException(
             PseudoRandomInputFormatConstants.AGGREGATE_VERTICES + " <= 0");
@@ -128,17 +121,17 @@ public class PseudoRandomVertexInputFormat extends
             "initialize: Got " + inputSplit.getClass() +
             " instead of " + BspInputSplit.class);
       }
-      edgesPerVertex = configuration.getInt(
+      edgesPerVertex = getConf().getInt(
           PseudoRandomInputFormatConstants.EDGES_PER_VERTEX, 0);
       if (edgesPerVertex <= 0) {
         throw new IllegalArgumentException(
           PseudoRandomInputFormatConstants.EDGES_PER_VERTEX + " <= 0");
       }
-      float minLocalEdgesRatio = configuration.getFloat(
+      float minLocalEdgesRatio = getConf().getFloat(
           PseudoRandomInputFormatConstants.LOCAL_EDGES_MIN_RATIO,
           PseudoRandomInputFormatConstants.LOCAL_EDGES_MIN_RATIO_DEFAULT);
       localEdgesHelper = new PseudoRandomLocalEdgesHelper(aggregateVertices,
-          minLocalEdgesRatio, configuration);
+          minLocalEdgesRatio, getConf());
     }
 
     @Override
@@ -150,7 +143,7 @@ public class PseudoRandomVertexInputFormat extends
     public Vertex<LongWritable, DoubleWritable, DoubleWritable, ?>
     getCurrentVertex() throws IOException, InterruptedException {
       Vertex<LongWritable, DoubleWritable, DoubleWritable, ?>
-      vertex = configuration.createVertex();
+      vertex = getConf().createVertex();
       long vertexId = startingVertexId + verticesRead;
       // Seed on the vertex id to keep the vertex data the same when
       // on different number of workers, but other parameters are the
@@ -160,7 +153,7 @@ public class PseudoRandomVertexInputFormat extends
       // In order to save memory and avoid copying, we add directly to a
       // VertexEdges instance.
       VertexEdges<LongWritable, DoubleWritable> edges =
-          configuration.createAndInitializeVertexEdges(edgesPerVertex);
+          getConf().createAndInitializeVertexEdges(edgesPerVertex);
       Set<LongWritable> destVertices = Sets.newHashSet();
       for (long i = 0; i < edgesPerVertex; ++i) {
         LongWritable destVertexId = new LongWritable();
@@ -184,8 +177,7 @@ public class PseudoRandomVertexInputFormat extends
     }
 
     @Override
-    public void close() throws IOException {
-    }
+    public void close() throws IOException { }
 
     @Override
     public float getProgress() throws IOException {

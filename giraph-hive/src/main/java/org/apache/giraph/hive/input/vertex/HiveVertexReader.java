@@ -18,7 +18,9 @@
 
 package org.apache.giraph.hive.input.vertex;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import com.facebook.giraph.hive.record.HiveReadableRecord;
+import com.facebook.giraph.hive.schema.HiveTableSchemas;
+import java.io.IOException;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.hive.common.DefaultConfigurableAndTableSchemaAware;
 import org.apache.giraph.hive.input.RecordReaderWrapper;
@@ -29,11 +31,6 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-
-import com.facebook.giraph.hive.record.HiveReadableRecord;
-import com.facebook.giraph.hive.schema.HiveTableSchemas;
-
-import java.io.IOException;
 
 import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_TO_VERTEX_CLASS;
 
@@ -81,8 +78,6 @@ public class HiveVertexReader<I extends WritableComparable,
   public void initialize(InputSplit inputSplit,
       TaskAttemptContext context) throws IOException, InterruptedException {
     hiveRecordReader.initialize(inputSplit, context);
-    setConf(new ImmutableClassesGiraphConfiguration<I, V, E, Writable>(
-        context.getConfiguration()));
     Class<? extends HiveToVertex> klass = HIVE_TO_VERTEX_CLASS.get(getConf());
     hiveToVertex = ReflectionUtils.newInstance(klass, getConf());
     HiveTableSchemas.configure(hiveToVertex, getTableSchema());

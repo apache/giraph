@@ -18,7 +18,12 @@
 
 package org.apache.giraph.hive.output;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import com.facebook.giraph.hive.input.parser.hive.DefaultRecord;
+import com.facebook.giraph.hive.record.HiveRecord;
+import com.facebook.giraph.hive.record.HiveWritableRecord;
+import com.facebook.giraph.hive.schema.HiveTableSchema;
+import com.facebook.giraph.hive.schema.HiveTableSchemas;
+import java.io.IOException;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.VertexWriter;
 import org.apache.giraph.utils.ReflectionUtils;
@@ -29,14 +34,6 @@ import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.log4j.Logger;
 
-import com.facebook.giraph.hive.input.parser.hive.DefaultRecord;
-import com.facebook.giraph.hive.record.HiveRecord;
-import com.facebook.giraph.hive.record.HiveWritableRecord;
-import com.facebook.giraph.hive.schema.HiveTableSchema;
-import com.facebook.giraph.hive.schema.HiveTableSchemas;
-
-import java.io.IOException;
-
 
 /**
  * Vertex writer using Hive.
@@ -46,24 +43,19 @@ import java.io.IOException;
  * @param <E> Edge Value
  */
 public class HiveVertexWriter<I extends WritableComparable, V extends Writable,
-    E extends Writable> implements VertexWriter<I, V, E>, HiveRecordSaver {
+    E extends Writable>
+    extends VertexWriter<I, V, E> implements HiveRecordSaver {
   /** Key in configuration for VertexToHive class */
-  public static final String VERTEX_TO_HIVE_KEY = "giraph.vertex.to.hive.class";
-
+  public static final String VERTEX_TO_HIVE_KEY =
+      "giraph.vertex.to.hive.class";
   /** Logger */
   private static final Logger LOG = Logger.getLogger(HiveVertexWriter.class);
-
   /** Underlying Hive RecordWriter used */
   private RecordWriter<WritableComparable, HiveWritableRecord> hiveRecordWriter;
   /** Schema for table in Hive */
   private HiveTableSchema tableSchema;
-
   /** Reusable {@link HiveRecord} */
   private HiveRecord reusableRecord;
-
-  /** Configuration */
-  private ImmutableClassesGiraphConfiguration<I, V, E, ?> conf;
-
   /** User class to write vertices from a HiveRecord */
   private VertexToHive<I, V, E> vertexToHive;
 
@@ -109,8 +101,6 @@ public class HiveVertexWriter<I extends WritableComparable, V extends Writable,
   @Override
   public void initialize(TaskAttemptContext context)
     throws IOException, InterruptedException {
-    conf = new ImmutableClassesGiraphConfiguration<I, V, E, Writable>(
-        context.getConfiguration());
     instantiateVertexToHiveFromConf();
   }
 
@@ -119,12 +109,12 @@ public class HiveVertexWriter<I extends WritableComparable, V extends Writable,
    * @throws IOException errors instantiating
    */
   private void instantiateVertexToHiveFromConf() throws IOException {
-    Class<? extends VertexToHive> klass = conf.getClass(VERTEX_TO_HIVE_KEY,
-        null, VertexToHive.class);
+    Class<? extends VertexToHive> klass =
+        getConf().getClass(VERTEX_TO_HIVE_KEY, null, VertexToHive.class);
     if (klass == null) {
       throw new IOException(VERTEX_TO_HIVE_KEY + " not set in conf");
     }
-    vertexToHive = ReflectionUtils.newInstance(klass, conf);
+    vertexToHive = ReflectionUtils.newInstance(klass, getConf());
     HiveTableSchemas.configure(vertexToHive, tableSchema);
   }
 

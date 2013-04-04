@@ -18,6 +18,7 @@
 
 package org.apache.giraph.io.formats;
 
+import java.io.IOException;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.giraph.io.VertexWriter;
@@ -29,8 +30,6 @@ import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
-
-import java.io.IOException;
 
 /**
  * Abstract class that users should subclass to use their own text based
@@ -79,7 +78,8 @@ public abstract class TextVertexOutputFormat<I extends WritableComparable,
    * vertex output.  Easiest to ignore the key value separator and only use
    * key instead.
    */
-  protected abstract class TextVertexWriter implements VertexWriter<I, V, E> {
+  protected abstract class TextVertexWriter
+      extends VertexWriter<I, V, E> {
     /** Internal line record writer */
     private RecordWriter<Text, Text> lineRecordWriter;
     /** Context passed to initialize */

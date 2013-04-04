@@ -40,8 +40,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  * @param <E> The edge type
  */
 public class InMemoryVertexInputFormat<I extends WritableComparable,
-                                 V extends Writable,
-                                 E extends Writable>
+    V extends Writable, E extends Writable>
     extends VertexInputFormat<I, V, E> {
   /** The graph */
   private static TestGraph GRAPH;
@@ -67,42 +66,47 @@ public class InMemoryVertexInputFormat<I extends WritableComparable,
   }
 
   @Override
-  public VertexReader<I, V, E> createVertexReader(InputSplit inputSpplit,
+  public VertexReader<I, V, E> createVertexReader(InputSplit inputSplit,
       TaskAttemptContext context) throws IOException {
+    return new InMemoryVertexReader();
+  }
 
-    return new VertexReader<I, V, E>() {
-      /** The iterator */
-      private Iterator<Vertex<I, V, E, ?>> vertexIterator;
-      private Vertex<I, V, E, ?> currentVertex;
+  /**
+   * Simple in memory reader
+   */
+  private class InMemoryVertexReader extends VertexReader<I, V, E> {
+    /** The iterator */
+    private Iterator<Vertex<I, V, E, ?>> vertexIterator;
+    /** Current vertex */
+    private Vertex<I, V, E, ?> currentVertex;
 
-      @Override
-      public void initialize(InputSplit inputSplit,
-          TaskAttemptContext context) {
-        vertexIterator = GRAPH.iterator();
+    @Override
+    public void initialize(InputSplit inputSplit,
+                           TaskAttemptContext context) {
+      vertexIterator = GRAPH.iterator();
+    }
+
+    @Override
+    public boolean nextVertex() {
+      if (vertexIterator.hasNext()) {
+        currentVertex = vertexIterator.next();
+        return true;
       }
+      return false;
+    }
 
-      @Override
-      public boolean nextVertex() {
-        if (vertexIterator.hasNext()) {
-          currentVertex = vertexIterator.next();
-          return true;
-        }
-        return false;
-      }
+    @Override
+    public Vertex<I, V, E, ?> getCurrentVertex() {
+      return currentVertex;
+    }
 
-      @Override
-      public Vertex<I, V, E, ?> getCurrentVertex() {
-        return currentVertex;
-      }
+    @Override
+    public void close() {
+    }
 
-      @Override
-      public void close() {
-      }
-
-      @Override
-      public float getProgress() {
-        return 0;
-      }
-    };
+    @Override
+    public float getProgress() {
+      return 0;
+    }
   }
 }

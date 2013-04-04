@@ -115,6 +115,8 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
         configuration.createVertexInputFormat();
     VertexReader<I, V, E> vertexReader =
         vertexInputFormat.createVertexReader(inputSplit, context);
+    vertexReader.setConf(
+        (ImmutableClassesGiraphConfiguration<I, V, E, Writable>) configuration);
     vertexReader.initialize(inputSplit, context);
     long inputSplitVerticesLoaded = 0;
     long edgesSinceLastUpdate = 0;

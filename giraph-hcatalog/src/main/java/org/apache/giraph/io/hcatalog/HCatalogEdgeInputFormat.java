@@ -18,10 +18,12 @@
 
 package org.apache.giraph.io.hcatalog;
 
-import org.apache.giraph.io.EdgeInputFormat;
-import org.apache.giraph.io.EdgeReader;
+import java.io.IOException;
+import java.util.List;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.EdgeFactory;
+import org.apache.giraph.io.EdgeInputFormat;
+import org.apache.giraph.io.EdgeReader;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -30,9 +32,6 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hcatalog.data.HCatRecord;
-
-import java.io.IOException;
-import java.util.List;
 
 /**
  * HCatalog {@link EdgeInputFormat} for reading edges from Hive/Pig.
@@ -70,7 +69,7 @@ public abstract class HCatalogEdgeInputFormat<
    */
   protected abstract static class HCatalogEdgeReader<
       I extends WritableComparable, E extends Writable>
-      implements EdgeReader<I, E> {
+      extends EdgeReader<I, E> {
     /** HCatalog input format to use */
     private final GiraphHCatInputFormat hCatInputFormat;
     /** Internal {@link RecordReader}. */

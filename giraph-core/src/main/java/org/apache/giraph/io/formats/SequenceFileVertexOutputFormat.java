@@ -17,9 +17,10 @@
  */
 package org.apache.giraph.io.formats;
 
+import java.io.IOException;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.giraph.io.VertexWriter;
-import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -27,8 +28,6 @@ import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
-
-import java.io.IOException;
 
 /**
  * Sequence file vertex output format. It allows to convert a vertex into a key
@@ -92,7 +91,7 @@ public abstract class SequenceFileVertexOutputFormat<
    * Vertex writer that converts a vertex into a key-value pair and writes
    * the result into a sequence file for a context.
    */
-  private class SequenceFileVertexWriter implements VertexWriter<I, V, E> {
+  private class SequenceFileVertexWriter extends VertexWriter<I, V, E> {
     /**
      * A record writer that will write into a sequence file initialized for
      * a context.

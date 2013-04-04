@@ -18,14 +18,13 @@
 
 package org.apache.giraph.io;
 
+import java.io.IOException;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.EdgeFactory;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-
-import java.io.IOException;
 
 /**
  * An EdgeReader that creates the opposite direction edge for each edge read.
@@ -36,7 +35,7 @@ import java.io.IOException;
  * @param <E> Edge Value
  */
 public class ReverseEdgeDuplicator<I extends WritableComparable,
-    E extends Writable> implements EdgeReader<I, E> {
+    E extends Writable> extends EdgeReader<I, E> {
   /** The underlying EdgeReader to wrap */
   private final EdgeReader<I, E> baseReader;
 

@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-564: Input/output formats and readers/writers should implement
+  ImmutableClassesGiraphConfigurable (aching)
+
   GIRAPH-604: Clean up benchmarks (majakabiljo)
 
   GIRAPH-605: Worker crashes if its vertices have no edges when using edge input (majakabiljo)
