@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-605: Worker crashes if its vertices have no edges when using edge input (majakabiljo)
+
   GIRAPH-603: AbstractVertexToHive doesn't need message type (majakabiljo)
 
   GIRAPH-589: Remove unnecessary generics from input formats (majakabiljo)

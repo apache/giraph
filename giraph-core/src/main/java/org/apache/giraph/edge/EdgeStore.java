@@ -163,6 +163,13 @@ public class EdgeStore<I extends WritableComparable,
    * Note: this method is not thread-safe.
    */
   public void moveEdgesToVertices() {
+    if (transientEdges.isEmpty()) {
+      if (LOG.isInfoEnabled()) {
+        LOG.info("moveEdgesToVertices: No edges to move");
+      }
+      return;
+    }
+
     if (LOG.isInfoEnabled()) {
       LOG.info("moveEdgesToVertices: Moving incoming edges to vertices.");
     }
