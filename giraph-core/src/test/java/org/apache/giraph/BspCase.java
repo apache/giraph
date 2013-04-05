@@ -166,6 +166,9 @@ public class BspCase implements Watcher {
     setupConfiguration(job);
     GiraphConfiguration conf = job.getConfiguration();
     conf.setVertexClass(classes.getVertexClass());
+    conf.setVertexEdgesClass(classes.getVertexEdgesClass());
+    conf.setInputVertexEdgesClass(classes.getInputVertexEdgesClass());
+    conf.setVertexValueFactoryClass(classes.getVertexValueFactoryClass());
     if (classes.hasAggregatorWriterClass()) {
       conf.setAggregatorWriterClass(classes.getAggregatorWriterClass());
     }

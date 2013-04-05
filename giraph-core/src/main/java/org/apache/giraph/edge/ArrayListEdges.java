@@ -19,6 +19,7 @@
 package org.apache.giraph.edge;
 
 import com.google.common.collect.Lists;
+import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
 import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -37,7 +38,7 @@ import java.util.Iterator;
  * @param <E> Edge value
  */
 public class ArrayListEdges<I extends WritableComparable, E extends Writable>
-    extends ConfigurableVertexEdges<I, E>
+    extends DefaultImmutableClassesGiraphConfigurable<I, Writable, E, Writable>
     implements MutableVertexEdges<I, E> {
   /** List of edges. */
   private ArrayList<Edge<I, E>> edgeList;

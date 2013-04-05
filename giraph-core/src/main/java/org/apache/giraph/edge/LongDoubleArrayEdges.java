@@ -40,7 +40,6 @@ import java.util.Iterator;
  * but edge removals are expensive.
  */
 public class LongDoubleArrayEdges
-    extends ConfigurableVertexEdges<LongWritable, DoubleWritable>
     implements ReuseObjectsVertexEdges<LongWritable, DoubleWritable>,
     MutableVertexEdges<LongWritable, DoubleWritable> {
   /** Array of target vertex ids. */
@@ -139,7 +138,7 @@ public class LongDoubleArrayEdges
       private DoubleIterator edgeValuesIt = edgeValues.iterator();
       /** Representative edge object. */
       private Edge<LongWritable, DoubleWritable> representativeEdge =
-          getConf().createEdge();
+          EdgeFactory.create(new LongWritable(), new DoubleWritable());
 
       @Override
       public boolean hasNext() {

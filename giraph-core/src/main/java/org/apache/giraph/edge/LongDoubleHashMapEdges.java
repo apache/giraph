@@ -40,7 +40,6 @@ import java.util.Iterator;
  * {@link LongDoubleArrayEdges}.
  */
 public class LongDoubleHashMapEdges
-    extends ConfigurableVertexEdges<LongWritable, DoubleWritable>
     implements StrictRandomAccessVertexEdges<LongWritable, DoubleWritable>,
     ReuseObjectsVertexEdges<LongWritable, DoubleWritable>,
     MutableVertexEdges<LongWritable, DoubleWritable> {
@@ -90,7 +89,7 @@ public class LongDoubleHashMapEdges
       return null;
     }
     if (representativeEdgeValue == null) {
-      representativeEdgeValue = getConf().createEdgeValue();
+      representativeEdgeValue = new DoubleWritable();
     }
     representativeEdgeValue.set(edgeMap.get(targetVertexId.get()));
     return representativeEdgeValue;
@@ -118,7 +117,7 @@ public class LongDoubleHashMapEdges
           edgeMap.long2DoubleEntrySet().fastIterator();
       /** Representative edge object. */
       private ReusableEdge<LongWritable, DoubleWritable> representativeEdge =
-          getConf().createReusableEdge();
+          EdgeFactory.createReusable(new LongWritable(), new DoubleWritable());
 
       @Override
       public boolean hasNext() {

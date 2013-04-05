@@ -19,8 +19,7 @@
 package org.apache.giraph.graph;
 
 import com.google.common.collect.UnmodifiableIterator;
-import org.apache.giraph.conf.ImmutableClassesGiraphConfigurable;
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.MultiRandomAccessVertexEdges;
 import org.apache.giraph.edge.MutableEdge;
@@ -51,8 +50,8 @@ import java.util.Iterator;
  */
 public abstract class Vertex<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
-    implements WorkerAggregatorUsage, Writable,
-    ImmutableClassesGiraphConfigurable<I, V, E, M> {
+    extends DefaultImmutableClassesGiraphConfigurable<I, V, E, M>
+    implements WorkerAggregatorUsage, Writable {
   /** Vertex id. */
   private I id;
   /** Vertex value. */
@@ -63,8 +62,6 @@ public abstract class Vertex<I extends WritableComparable,
   private boolean halt;
   /** Global graph state **/
   private GraphState<I, V, E, M> graphState;
-  /** Configuration */
-  private ImmutableClassesGiraphConfiguration<I, V, E, M> conf;
 
   /**
    * Initialize id, value, and edges.
@@ -92,7 +89,7 @@ public abstract class Vertex<I extends WritableComparable,
   public void initialize(I id, V value) {
     this.id = id;
     this.value = value;
-    this.edges = conf.createAndInitializeVertexEdges(0);
+    this.edges = getConf().createAndInitializeVertexEdges(0);
   }
 
   /**
@@ -107,7 +104,7 @@ public abstract class Vertex<I extends WritableComparable,
     if (edges instanceof VertexEdges) {
       this.edges = (VertexEdges<I, E>) edges;
     } else {
-      this.edges = conf.createAndInitializeVertexEdges(edges);
+      this.edges = getConf().createAndInitializeVertexEdges(edges);
     }
   }
 
@@ -410,7 +407,7 @@ public abstract class Vertex<I extends WritableComparable,
    */
   public void addVertexRequest(I id, V value, VertexEdges<I, E> edges)
     throws IOException {
-    Vertex<I, V, E, M> vertex = conf.createVertex();
+    Vertex<I, V, E, M> vertex = getConf().createVertex();
     vertex.initialize(id, value, edges);
     graphState.getWorkerClientRequestProcessor().addVertexRequest(vertex);
   }
@@ -423,7 +420,7 @@ public abstract class Vertex<I extends WritableComparable,
    * @param value Vertex value
    */
   public void addVertexRequest(I id, V value) throws IOException {
-    addVertexRequest(id, value, conf.createAndInitializeVertexEdges());
+    addVertexRequest(id, value, getConf().createAndInitializeVertexEdges());
   }
 
   /**
@@ -511,11 +508,11 @@ public abstract class Vertex<I extends WritableComparable,
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    id = conf.createVertexId();
+    id = getConf().createVertexId();
     id.readFields(in);
-    value = conf.createVertexValue();
+    value = getConf().createVertexValue();
     value.readFields(in);
-    edges = conf.createVertexEdges();
+    edges = getConf().createVertexEdges();
     edges.readFields(in);
     halt = in.readBoolean();
   }
@@ -526,16 +523,6 @@ public abstract class Vertex<I extends WritableComparable,
     value.write(out);
     edges.write(out);
     out.writeBoolean(halt);
-  }
-
-  @Override
-  public ImmutableClassesGiraphConfiguration<I, V, E, M> getConf() {
-    return conf;
-  }
-
-  @Override
-  public void setConf(ImmutableClassesGiraphConfiguration<I, V, E, M> conf) {
-    this.conf = conf;
   }
 
   @Override

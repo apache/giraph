@@ -28,7 +28,6 @@ import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.partition.BasicPartitionOwner;
 import org.apache.giraph.partition.PartitionOwner;
 import org.apache.giraph.edge.ArrayListEdges;
-import org.apache.giraph.edge.ConfigurableVertexEdges;
 import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IntWritable;
@@ -139,8 +138,9 @@ public class MockUtils {
         ImmutableClassesGiraphConfiguration<I, V, E, M> conf =
             new ImmutableClassesGiraphConfiguration<I, V, E, M>(giraphConf);
         vertex.setConf(conf);
-        ConfigurableVertexEdges<I, E> edges = new ArrayListEdges<I, E>();
-        edges.setConf(conf);
+        ArrayListEdges<I, E> edges = new ArrayListEdges<I, E>();
+        edges.setConf((ImmutableClassesGiraphConfiguration<I, Writable, E,
+            Writable>) conf);
         edges.initialize();
 
         ReflectionUtils.setField(vertex, "id", vertexId);

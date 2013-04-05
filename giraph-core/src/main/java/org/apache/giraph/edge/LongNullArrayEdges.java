@@ -37,7 +37,6 @@ import java.util.Iterator;
  * but random access and edge removals are expensive.
  */
 public class LongNullArrayEdges
-    extends ConfigurableVertexEdges<LongWritable, NullWritable>
     implements ReuseObjectsVertexEdges<LongWritable, NullWritable>,
     MutableVertexEdges<LongWritable, NullWritable> {
   /** Array of target vertex ids. */
@@ -133,9 +132,8 @@ public class LongNullArrayEdges
       private int offset = 0;
       /** Representative edge object. */
       private MutableEdge<LongWritable, NullWritable> representativeEdge =
-          getConf().createReusableEdge();
+          EdgeFactory.createReusable(new LongWritable());
 
-      @Override
       public boolean hasNext() {
         return offset < neighbors.size();
       }

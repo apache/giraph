@@ -20,6 +20,7 @@ package org.apache.giraph.edge;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.UnmodifiableIterator;
+import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -40,7 +41,7 @@ import java.util.Map;
  * @param <E> Edge value
  */
 public class HashMultimapEdges<I extends WritableComparable, E extends Writable>
-    extends ConfigurableVertexEdges<I, E>
+    extends DefaultImmutableClassesGiraphConfigurable<I, Writable, E, Writable>
     implements MultiRandomAccessVertexEdges<I, E> {
   /** Multimap from target vertex id to edge values. */
   private ArrayListMultimap<I, E> edgeMultimap;

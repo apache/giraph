@@ -38,7 +38,6 @@ import java.util.Iterator;
  * {@link LongNullArrayEdges}.
  */
 public class LongNullHashSetEdges
-    extends ConfigurableVertexEdges<LongWritable, NullWritable>
     implements ReuseObjectsVertexEdges<LongWritable, NullWritable>,
     MutableVertexEdges<LongWritable, NullWritable> {
   /** Hash set of target vertex ids. */
@@ -99,9 +98,8 @@ public class LongNullHashSetEdges
       private LongIterator neighborsIt = neighbors.iterator();
       /** Representative edge object. */
       private ReusableEdge<LongWritable, NullWritable> representativeEdge =
-          getConf().createReusableEdge();
+          EdgeFactory.createReusable(new LongWritable());
 
-      @Override
       public boolean hasNext() {
         return neighborsIt.hasNext();
       }

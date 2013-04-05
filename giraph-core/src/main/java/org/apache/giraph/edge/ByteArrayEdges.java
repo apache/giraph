@@ -19,6 +19,7 @@
 package org.apache.giraph.edge;
 
 import com.google.common.collect.UnmodifiableIterator;
+import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
 import org.apache.giraph.utils.ExtendedDataInput;
 import org.apache.giraph.utils.ExtendedDataOutput;
 import org.apache.giraph.utils.WritableUtils;
@@ -42,7 +43,7 @@ import java.util.List;
  * @param <E> Edge value
  */
 public class ByteArrayEdges<I extends WritableComparable, E extends Writable>
-    extends ConfigurableVertexEdges<I, E>
+    extends DefaultImmutableClassesGiraphConfigurable<I, Writable, E, Writable>
     implements ReuseObjectsVertexEdges<I, E> {
   /** Serialized edges. */
   private byte[] serializedEdges;

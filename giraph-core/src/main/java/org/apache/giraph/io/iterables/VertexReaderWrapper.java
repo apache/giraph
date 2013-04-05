@@ -35,7 +35,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  */
 public class VertexReaderWrapper<I extends WritableComparable,
     V extends Writable, E extends Writable> extends VertexReader<I, V, E> {
-  /** Wrapped edge reader */
+  /** Wrapped vertex reader */
   private GiraphReader<Vertex<I, V, E, ?>> vertexReader;
   /** {@link VertexReader}-like wrapper of {@link #vertexReader} */
   private IteratorToReaderWrapper<Vertex<I, V, E, ?>> iterator;

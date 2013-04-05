@@ -423,7 +423,7 @@ public class BspServiceMaster<I extends WritableComparable,
     } catch (KeeperException e) {
       throw new IllegalStateException("getWorkers: KeeperException", e);
     } catch (InterruptedException e) {
-      throw new IllegalStateException("getWorkers: IllegalStateException", e);
+      throw new IllegalStateException("getWorkers: InterruptedException", e);
     }
 
     try {
@@ -435,7 +435,7 @@ public class BspServiceMaster<I extends WritableComparable,
     } catch (KeeperException e) {
       throw new IllegalStateException("getWorkers: KeeperException", e);
     } catch (InterruptedException e) {
-      throw new IllegalStateException("getWorkers: IllegalStateException", e);
+      throw new IllegalStateException("getWorkers: InterruptedException", e);
     }
 
     List<WorkerInfo> currentHealthyWorkerInfoList =
@@ -605,7 +605,7 @@ public class BspServiceMaster<I extends WritableComparable,
     } catch (KeeperException e) {
       throw new IllegalStateException(logPrefix + ": KeeperException", e);
     } catch (InterruptedException e) {
-      throw new IllegalStateException(logPrefix + ": InterrtupedException", e);
+      throw new IllegalStateException(logPrefix + ": InterruptedException", e);
     }
 
     // When creating znodes, in case the master has already run, resume
