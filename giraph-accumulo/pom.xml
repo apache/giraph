@@ -30,6 +30,8 @@ under the License.
   <packaging>jar</packaging>
 
   <name>Apache Giraph Accumulo I/O</name>
+  <url>http://giraph.apache.org/giraph-accumulo/</url>
+  <description>Giraph Accumulo input/output classes</description>
 
   <properties>
     <top.dir>${project.basedir}/..</top.dir>
@@ -48,6 +50,17 @@ under the License.
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-site-plugin</artifactId>
+        <configuration>
+          <siteDirectory>${project.basedir}/src/site</siteDirectory>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

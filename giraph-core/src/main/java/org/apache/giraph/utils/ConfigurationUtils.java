@@ -17,9 +17,6 @@
  */
 package org.apache.giraph.utils;
 
-/*if[PURE_YARN]
-import static org.apache.hadoop.mapreduce.lib.output.FileOutputFormat.OUTDIR;
-end[PURE_YARN]*/
 import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
 import org.apache.commons.cli.BasicParser;
@@ -73,9 +70,6 @@ public final class ConfigurationUtils {
   }
   /** Maintains our accepted options in case the caller wants to add some */
   private static Options OPTIONS;
-  /*if_not[PURE_YARN]
-  private static String OUTDIR = ""; // no-op placeholder for YARN
-  end[PURE_YARN]*/
 
   static {
     OPTIONS = new Options();
@@ -339,7 +333,10 @@ public final class ConfigurationUtils {
         Path outputDir = new Path(BASE_OUTPUT_PATH, cmd.getOptionValue("op"));
         outputDir = // for YARN conf to get the out dir we need w/o a Job obj
           outputDir.getFileSystem(giraphConfiguration).makeQualified(outputDir);
-        giraphConfiguration.set(OUTDIR, outputDir.toString());
+        /*if[PURE_YARN]
+        giraphConfiguration.set(org.apache.hadoop.mapreduce.lib.output.
+            FileOutputFormat.OUTDIR, outputDir.toString());
+         end[PURE_YARN]*/
       } else {
         if (LOG.isInfoEnabled()) {
           LOG.info("No output path specified. Ensure your OutputFormat " +

@@ -32,26 +32,22 @@ under the License.
 
         <p>Graph processing platforms to run large-scale algorithms (such as page rank, shared connections, personalization-based popularity, etc.) have become quite popular. Some recent examples include Pregel and HaLoop. For general-purpose big data computation, the map-reduce computing model has been well adopted and the most deployed map-reduce infrastructure is Apache Hadoop. We have implemented a graph-processing framework that is launched as a typical Hadoop job to leverage existing Hadoop infrastructure, such as Amazon's EC2. Giraph builds upon the graph-oriented nature of Pregel but additionally adds fault-tolerance to the coordinator process with the use of ZooKeeper as its centralized coordination service.</p>
 
-        <p>Giraph follows the bulk-synchronous parallel model relative to graphs where vertices can send messages to other vertices during a given superstep. Checkpoints are initiated by the Giraph infrastructure at user-defined intervals and are used for automatic application restarts when any worker in the application fails. Any worker in the application can act as the application coordinator and one will automatically take over if the current application coordinator fails.</p>
+        <p>Giraph follows the <a href="http://en.wikipedia.org/wiki/Bulk_synchronous_parallel">bulk-synchronous parallel model</a> relative to graphs where vertices can send messages to other vertices during a given superstep. Checkpoints are initiated by the Giraph infrastructure at user-defined intervals and are used for automatic application restarts when any worker in the application fails. Any worker in the application can act as the application coordinator and one will automatically take over if the current application coordinator fails.</p>
 
     </section>
 	<section name="News">
 	  <!-- TODO: remove 'incubator/' from URL when Apache distribution supports it. -->
-		<ul><li><strong>February 6, 2012: Giraph 0.1-incubating released.</strong> The Giraph PPMC is excited to announce that version 0.1 has been released. Grab a copy of the release <a href="http://www.apache.org/dyn/closer.cgi/incubator/giraph/">here</a>.</li></ul>
+	  <ul>
+	    <li><strong>April 9, 2013: Giraph 1.0 is near a release.</strong> The Giraph PPMC is excited to announce that version 1.0 is near a release.  We will hopefully complete this release in about a week from now.
+	    </li>
+	    <li><strong>February 6, 2012: Giraph 0.1-incubating released.</strong> The Giraph PPMC is excited to announce that version 0.1 has been released. Grab a copy of the release <a href="http://www.apache.org/dyn/closer.cgi/incubator/giraph/">here</a>.
+	    </li>
+	  </ul>
 	</section>
-	<section name="Presentations">
-      We're working hard to build a community of users and developers around Giraph. As part of that outreach, we're giving presentations and talks to help bring people up to speed.
-      <ul>
-          <li>Avery Ching introduced Giraph at Hadoop Summit 2011. <a href="http://www.youtube.com/watch?v=l4nQjAG6fac">Watch the video</a>.</li>
-          <li>An updated slidedeck of the Hadoop Summit talk was presented at HortonWorks. <a href="http://www.slideshare.net/averyching/20111014hortonworks">Read the slides</a>.</li>
-          <li>Claudio Martella gave a talk about Giraph at FOSDEM 2012. Watch <a href="http://www.youtube.com/watch?v=3ZrqPEIPRe4">part 1</a> and <a href="http://www.youtube.com/watch?v=BmRaejKGeDM">part 2</a>. The presentation slides can be found <a href="http://prezi.com/9ake_klzwrga/apache-giraph-distributed-graph-processing-in-the-cloud/">here</a>.</li>
-          <li>André Kelpe presented an overview of the Giraph project at the Belgian Big Data group. Slides are <a href="https://speakerdeck.com/u/fs111/p/large-scale-graph-processing-with-apache-giraph">available here</a>.</li>
-          <li>Jakob Homan talked about Giraph at 2012 Berlin Buzzwords. Slides are <a href="http://bit.ly/MDc4Dk">available here</a>.</li>
-      </ul>
-    </section>
 	<section name="Supported versions of Apache Hadoop">
 	<p>	Hadoop versions for use with Giraph:
 		<ul>
+		<li>YARN version: Apache Hadoop 2.0.3-alpha, other versions may work as well</li>
 		<li>Secure Hadoop versions: Apache Hadoop 0.20.203, 0.20.204, other secure versions may work as well</li>
 		<li>Unsecure Hadoop versions: Apache Hadoop 0.20.1, 0.20.2, 0.20.3. While we provide support for unsecure Hadoop with the maven profile 'hadoop_non_secure', we have been primarily focusing on secure Hadoop releases at this time.</li>
 		<li>Other distributions that included Apache Hadoop reported to work include: Cloudera CDH3u0, CDH3u1</li>
@@ -71,38 +67,25 @@ under the License.
 		<p>Official releases of Giraph may be downloaded from an <a href="http://www.apache.org/dyn/closer.cgi/incubator/giraph/">Apache mirror</a>. Soon we will also publish our release artifacts to Apache's Maven repositories to make it easier to include Giraph in your projects.</p>
 	</section>
 	<section name="Building and testing">
-		<p>You will need the following:</p>
-		<ul>
-		<li>Java 1.6</li>
-		<li>Maven 3 or higher. Giraph uses the <a href="http://sonatype.github.com/munge-maven-plugin/">munge plugin</a>, which requires Maven 3, to support multiple versions of Hadoop. Also, the web site plugin requires Maven 3.</li>
-	</ul>
-
-		<p>Use the maven commands with secure Hadoop to:
-		<ul>
-		<li>compile (i.e <tt>mvn compile</tt>)</li>
-		<li>package (i.e. <tt>mvn package</tt>)</li>
-		<li>test (i.e. <tt>mvn test</tt>) For testing, one can submit the test to a running Hadoop instance (i.e. <tt>mvn test -Dprop.mapred.job.tracker=localhost:50300</tt>)</li>
+	  <p>You will need the following:</p>
+	  <ul>
+	    <li>Java 1.6</li>
+	    <li>Maven 3 or higher. Giraph uses the <a href="http://sonatype.github.com/munge-maven-plugin/">munge plugin</a>, which requires Maven 3, to support multiple versions of Hadoop. Also, the web site plugin requires Maven 3.</li>
+	  </ul>
+	  
+	  <p>Use the maven commands with secure Hadoop to:
+	    <ul>
+	      <li>compile (i.e <tt>mvn compile</tt>)</li>
+	      <li>package (i.e. <tt>mvn package</tt>)</li>
+	      <li>test (i.e. <tt>mvn test</tt>) For testing, one can submit the test to a running Hadoop instance (i.e. <tt>mvn test -Dprop.mapred.job.tracker=localhost:50300</tt>)</li>
 	    </ul>
-		For the non-secure versions of Hadoop, run the maven commands with the
-		additional argument <tt>-Dhadoop=non_secure</tt> to enable the maven profile
-		 <tt>hadoop_non_secure</tt>.  An example compilation command is
-		<tt>mvn -Dhadoop=non_secure compile</tt>.</p>
+	    For the non-secure versions of Hadoop, run the maven commands with the
+	    additional argument <tt>-Dhadoop=non_secure</tt> to enable the maven profile
+	    <tt>hadoop_non_secure</tt>.  An example compilation command is
+	    <tt>mvn -Dhadoop=non_secure compile</tt>.</p>
 	</section>
   <section name="Notes">
       Counter limit: In Hadoop 0.20.203.0 onwards, there is a limit on the number of counters one can use, which is set to 120 by default. This limit restricts the number of iterations/supersteps possible in Giraph. This limit can be increased by setting a parameter <tt>mapreduce.job.counters.limit</tt> in job tracker's config file mapred-site.xml.
   </section>
-  <section name="Generating patches" id="Generatingpatches">
-	<p>Follow these steps to generate a patch that can be attached to a JIRA issue for review.</p>
-    <ul>
-	   <li>Check out the Giraph source, either from the <a href="source-repository.html">subversion repository</a> or from a <a href="http://git.apache.org/">git mirror</a>. Note that the git mirrors may lag slightly behind the subversion repos.</li>
-	   <li>Make the changes necessary for your particular issue. Try to avoid unnecessary changes, such as extra whitespace or formatting changes. Include a unit test, or be ready to justify in the JIRA why one isn't necessary.</li>
-	   <li>Verify the new and existing tests continue to pass via <tt>mvn test</tt>. Verify the change works as expected on a real cluster, if possible. If one's not available for testing, mention it on the JIRA so another contributor can verify.</li>
-	   <li>Verify that RAT is ok with the changes that you've made via <tt>mvn rat:check</tt>. Also check that the patch follows Giraph's style guidelines (found in the source root in <tt>CODE_CONVENTIONS</tt>).</li>
-	   <li>Generate a patch either by <tt>svn diff > GIRAPH-{ISSUE-NUMBER}.patch</tt> or <tt>git diff --no-prefix trunk > GIRAPH-{ISSUE_NUMBER}.patch</tt> (the <tt>--no-prefix</tt> option is necessary to make the patch compatible with Apache's subversion repository). For subsequent patches, if necessary, number each version to make it easier for reviewers to track their progress.</li>
-		<li>Attach the patch to the JIRA issue (click <em>More Actions</em> and then <em>Attach File</em> from the top menu) using the comment to briefly explain what changes it contains and what testing was done. Mark the JIRA as <em>Patch Available</em> to let reviewers know it's ripe for evaluation.</li>
-		<li>Optionally, you can open <a href="https://reviews.apache.org/">reviewboard</a> request for the patch, although not all reviewers use this tool.</li>
-	</ul>
-	<p>A committer should review the patch shortly and either provide feedback for a new version, or commit it to the Giraph source.</p>
-	</section>
   </body>
 </document>

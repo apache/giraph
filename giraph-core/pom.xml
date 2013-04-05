@@ -30,6 +30,8 @@ under the License.
   <packaging>jar</packaging>
 
   <name>Apache Giraph Core</name>
+  <url>http://giraph.apache.org/giraph-core/</url>
+  <description>Giraph core classes</description>
 
   <properties>
     <export-target.dir>export/target</export-target.dir>
@@ -84,6 +86,9 @@ under the License.
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-site-plugin</artifactId>
+        <configuration>
+          <siteDirectory>${project.basedir}/src/site</siteDirectory>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

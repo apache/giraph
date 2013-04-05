@@ -1,0 +1,85 @@
+ <?xml version="1.0" encoding="ISO-8859-1"?>
+<!--
+  Licensed to the Apache Software Foundation (ASF) under one or more
+  contributor license agreements.  See the NOTICE file distributed with
+  this work for additional information regarding copyright ownership.
+  The ASF licenses this file to You under the Apache License, Version 2.0
+  (the "License"); you may not use this file except in compliance with
+  the License.  You may obtain a copy of the License at
+
+      http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<project name="Giraph">
+  <skin>
+    <groupId>org.apache.maven.skins</groupId>
+    <artifactId>maven-fluido-skin</artifactId>
+    <version>1.3.0</version>
+  </skin>
+
+  <custom>
+    <fluidoSkin>
+      <googleSearch>
+        <sitesearch>http://giraph.apache.org</sitesearch>
+      </googleSearch>
+      <facebookLike />
+      <googlePlusOne />
+      <topBarEnabled>true</topBarEnabled>
+      <sideBarEnabled>false</sideBarEnabled>
+    </fluidoSkin>
+  </custom>
+ 
+  <bannerLeft>
+    <src>images/ApacheGiraph.svg</src>
+    <href>http://giraph.apache.org/</href>
+  </bannerLeft>
+
+  <publishDate position="right"/>
+  <version position="right"/>
+
+  <body>
+    <breadcrumbs position="left">
+      <item name="Apache" href="http://www.apache.org/" />
+      <item name="Giraph" href="http://giraph.apache.org/"/>
+    </breadcrumbs>
+    
+    <menu name="Project Information" inherit="top">
+      <item name="Team" href="team-list.html" />
+      <item name="Mailing Lists" href="mail-lists.html" />
+      <item name="Source Repository" href="source-repository.html" />
+      <item name="Issue Tracking" href="issue-tracking.html" />
+      <item name="Continuous Integration" href="integration.html" />
+      <item name="Summary" href="project-summary.html" />
+      <item name="License" href="http://www.apache.org/licenses/LICENSE-2.0.html" />
+      <item name="Dependencies" href="dependencies.html" />
+      <item name="Reports" href="project-reports.html" collapse="true">
+        <item name="Surefire Report" href="surefire-report.html" />
+        <item name="Checkstyle Results" href="checkstyle.html" />
+        <item name="Jdepend" href="jdepend-report.html" />
+        <item name="Cobertura Test Coverage" href="cobertura/index.html" />
+        <item name="Tag List" href="taglist.html" />
+        <item name="Source Xref" href="xref/index.html" />
+        <item name="Test Source Xref" href="xref-test/index.html" />
+      </item>
+    </menu>
+    
+    <menu name="User Docs" inherit="top">
+      <item name="Page Rank Example" href="pagerank.html"/>
+      <item name="Javadoc" href="javadoc_modules.html"/>
+      <item name="Presentations" href="presentations.html"/>
+      <item name="External Community Wiki" href="https://cwiki.apache.org/confluence/display/GIRAPH" />
+    </menu> 
+
+    <menu name="Developer Docs" inherit="top">
+      <item name="How to generate patches" href="generating_patches.html" />
+      <item name="How to build this site" href="build_site.html" />
+    </menu>
+
+    <menu ref="modules" inherit="top"/>
+  </body>
+</project>

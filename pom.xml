@@ -27,15 +27,20 @@ under the License.
   <version>0.2-SNAPSHOT</version>
 
   <name>Apache Giraph Parent</name>
-  <url>http://incubator.apache.org/giraph/</url>
+  <url>http://giraph.apache.org/</url>
   <description>Giraph : Large-scale graph processing on Hadoop</description>
   <inceptionYear>2011</inceptionYear>
 
   <scm>
-    <connection>scm:svn:http://svn.apache.org/repos/asf/giraph</connection>
-    <developerConnection>scm:svn:https://svn.apache.org/repos/asf/giraph/trunk</developerConnection>
-    <url>https://svn.apache.org/repos/asf/giraph/</url>
+    <connection>scm:git:http://git-wip-us.apache.org/repos/asf/giraph.git</connection>
+    <developerConnection>scm:git:https://git-wip-us.apache.org/repos/asf/giraph.git</developerConnection>
+    <url>https://git-wip-us.apache.org/repos/asf/giraph.git</url>
   </scm>
+
+  <ciManagement>
+    <system>hudson</system>
+    <url>http://builds.apache.org/job/Giraph-trunk-Commit</url>
+  </ciManagement> 
 
   <issueManagement>
     <system>JIRA</system>
@@ -55,6 +60,13 @@ under the License.
     <name>The Apache Software Foundation</name>
     <url>http://www.apache.org</url>
   </organization>
+
+  <distributionManagement>
+    <site>
+      <id>apache.website</id>
+      <url>scpexe://people.apache.org/www/giraph.apache.org</url>
+    </site>
+  </distributionManagement>
 
   <mailingLists>
     <mailingList>
@@ -413,7 +425,7 @@ under the License.
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-site-plugin</artifactId>
-          <version>3.0</version>
+          <version>3.2</version>
           <configuration>
             <reportPlugins>
               <plugin>
@@ -442,7 +454,7 @@ under the License.
               <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>2.7</version>
+                <version>2.9</version>
               </plugin>
               <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

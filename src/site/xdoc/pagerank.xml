@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+
+<document xmlns="http://maven.apache.org/XDOC/2.0"
+	  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	  xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
+  <properties>
+    <title>Page Rank Example</title>
+  </properties>
+  
+  <body>
+    <section name="How to write a Page Rank application">
+      <p>In this example, we will detail a very simple implementation of the page rank algorithm and how input/output works in Giraph.  At the end of this short tutorial, you should have a simple working piece of code that will run on a real cluster.</p>
+    </section>
+    <section name="Choose your graph generic types">
+      <p>Giraph implements bulk synchronous parallel computing model (http://en.wikipedia.org/wiki/Bulk_synchronous_parallel) specifically for graph processing. Graphs are composed of vertices and edges. We have four types that need to be defined by the user. Note that if you intend to use primitive based objects for any of the types, they are all available (i.e. ShortWritable, IntWritable, LongWritable, FloatWritable, DoubleWritable, BooleanWritable). They are lots of other types available as well (i.e. TextWritable, BytesWritable, MapWritable, etc.). Note that if you are not using a type (i.e. vertex value or edge value), you can set them to NullWritable.</p>
+      <ul>
+	<li>Vertex id (type I)
+	  <ul>
+	    <li>Used to identify a vertex</li>
+            <li>Implements WritableComparable</li>
+            <li>Typically a LongWritable to support 64-bit integers</li>
+	  </ul>
+	</li>
+	<li>Vertex value (type V)
+	  <ul>
+	    <li>Used to store a vertex value</li>
+            <li>Implements Writable</li>
+            <li>Can be anything, a map for label influence, a DoubleWritable for page rank, etc. </li>
+	  </ul>
+	</li>
+	<li>Edge value (type E)
+          <ul>
+	    <li>Used to store a value on an outgoing edge</li>
+            <li>Implements Writable</li>
+            <li>Can be anything, a DoubleWritable for page rank weights, NullWritable for unweighted graph, etc.</li>
+	  </ul>
+	</li>
+	<li>Message value (type M)
+          <ul>
+	    <li>Used as a container for sending messages to other vertices</li>
+            <li>Implements Writable</li>
+            <li>Can be anything, a DoubleWritable for page rank values, LongWritable for component ids, etc.</li>
+	  </ul>
+	</li>
+      </ul>
+      <subsection name="Choosing the types for Page Rank">
+	<p>For the vertex id (I), we'll use LongWritable, which allows us to load user ids from the facebook graph. For the vertex value (V), we'll use DoubleWritable, which will be the page rank value. For the edge value (E), we'll use DoubleWritable to represent the edge weights. For the message value (M), we'll use DoubleWritable, which represents the page rank value that a vertex propagates to my neighbors.</p>
+      </subsection>
+    </section>
+    <section name="Define how to load the graph into Giraph">
+      <p>There are two types of input vertex-centric and edge-centric. Some algorithms need vertex centric data, such as pairs of vertex ids and initial page ranks. Some algorithms only look at edges. For example, connected components can be run without any vertex values. Some have input from multiple sources (i.e. vertex values from vertex-centric input and edges from edge-centric input). You need to think about your input sources and what makes sense for you.</p>
+      <p>Giraph can convert an input source into vertex-centric or edge-centric output (i.e. HDFS files, HBase, mySQL, etc.) as long as someone writes the code to convert the source data into a graph. In Facebook, we typically load from /store to Hive.</p>
+      <subsection name="Vertex Input Format">
+	<p>A vertex input format can create vertex ids, vertex values, and edges. It can also create a subset of that data, such as simply vertex ids and vertex values (in that case, you'll likely want an edge input Format to load the edges).</p>
+      </subsection>
+      <subsection name="LongDoubleNullTextInputFormat">
+	<p>This vertex input format loads a simple format where a line is a vertex, begining with the vertex id as a long and than destination edge ids.  The initial vertex values are 0 and the edges do not have any weights.</p> 
+      </subsection>
+      <subsection name="Edge Input Format">
+	<p>An edge input format can create edges from one vertex to another and edge values if desired.  It can be used as a stand alone input format or in conjuction with the Vertex Input Format.  We do not use it in this example</p>
+      </subsection>
+    </section>
+    <section name="Define how to store the graph from Giraph">
+      <p>After the Giraph computation, you need to store your data back to persistent storage (i.e. HDFS, HBase, or a Hive table).</p>
+      <subsection name="Vertex Output Format">
+	<p>A vertex output format can dump anything to persistent storage in a vertex-centric way. You can still dump only edges if you choose, or any other type of data. This is pretty flexible. For our example aplication, we simply want to dump the vertex id and the associated final page rank.  </p>
+      </subsection>
+      <subsection name="VertexWithDoubleValueNullEdgeTextOutputFormat">
+	<p>This vertex output format is perfect for our example.  It stores the graph in a single text line with tab as the delimiter between vertex id and vertex value.</p> 
+      </subsection>      
+    </section>
+    <section name="Building and compiling page rank">
+      <p>TBD</p>
+    </section>
+  </body>
+</document>
