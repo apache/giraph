@@ -19,126 +19,60 @@
 package org.apache.giraph.benchmark;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.PosixParser;
 import org.apache.giraph.combiner.MinimumDoubleCombiner;
+import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.edge.ArrayListEdges;
 import org.apache.giraph.edge.HashMapEdges;
 import org.apache.giraph.io.formats.PseudoRandomInputFormatConstants;
 import org.apache.giraph.io.formats.PseudoRandomVertexInputFormat;
-import org.apache.giraph.job.GiraphJob;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
+
+import com.google.common.collect.Sets;
+
+import java.util.Set;
 
 /**
  * Single-source shortest paths benchmark.
  */
-public class ShortestPathsBenchmark implements Tool {
+public class ShortestPathsBenchmark extends GiraphBenchmark {
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(ShortestPathsBenchmark.class);
-  /** Configuration */
-  private Configuration conf;
+
+  /** Option for VertexEdges class */
+  private static final BenchmarkOption EDGES_CLASS = new BenchmarkOption(
+      "c", "edgesClass", true,
+      "Vertex edges class (0 for HashMapEdges, 1 for ArrayListEdges)");
+  /** Option for not using combiner */
+  private static final BenchmarkOption NO_COMBINER = new BenchmarkOption(
+      "nc", "noCombiner", false, "Don't use a combiner");
 
   @Override
-  public Configuration getConf() {
-    return conf;
+  public Set<BenchmarkOption> getBenchmarkOptions() {
+    return Sets.newHashSet(BenchmarkOption.VERTICES,
+        BenchmarkOption.EDGES_PER_VERTEX, EDGES_CLASS, NO_COMBINER);
   }
 
   @Override
-  public void setConf(Configuration conf) {
-    this.conf = conf;
-  }
-
-  @Override
-  public final int run(final String[] args) throws Exception {
-    Options options = new Options();
-    options.addOption("h", "help", false, "Help");
-    options.addOption("v", "verbose", false, "Verbose");
-    options.addOption("w",
-        "workers",
-        true,
-        "Number of workers");
-    options.addOption("V",
-        "aggregateVertices",
-        true,
-        "Aggregate vertices");
-    options.addOption("e",
-        "edgesPerVertex",
-        true,
-        "Edges per vertex");
-    options.addOption("c",
-        "edgesClass",
-        true,
-        "Vertex edges class (0 for HashMapEdges, 1 for ArrayListEdges)");
-    options.addOption("nc",
-        "noCombiner",
-        false,
-        "Don't use a combiner");
-    HelpFormatter formatter = new HelpFormatter();
-    if (args.length == 0) {
-      formatter.printHelp(getClass().getName(), options, true);
-      return 0;
-    }
-    CommandLineParser parser = new PosixParser();
-    CommandLine cmd = parser.parse(options, args);
-    if (cmd.hasOption('h')) {
-      formatter.printHelp(getClass().getName(), options, true);
-      return 0;
-    }
-    if (!cmd.hasOption('w')) {
-      LOG.info("Need to choose the number of workers (-w)");
-      return -1;
-    }
-    if (!cmd.hasOption('V')) {
-      LOG.info("Need to set the aggregate vertices (-V)");
-      return -1;
-    }
-    if (!cmd.hasOption('e')) {
-      LOG.info("Need to set the number of edges " +
-          "per vertex (-e)");
-      return -1;
-    }
-
-    int workers = Integer.parseInt(cmd.getOptionValue('w'));
-    GiraphJob job = new GiraphJob(getConf(), getClass().getName());
-    job.getConfiguration().setVertexClass(ShortestPathsVertex.class);
-    if (!cmd.hasOption('c') ||
-        (Integer.parseInt(cmd.getOptionValue('c')) == 1)) {
-      job.getConfiguration().setVertexEdgesClass(ArrayListEdges.class);
+  protected void prepareConfiguration(GiraphConfiguration conf,
+      CommandLine cmd) {
+    conf.setVertexClass(ShortestPathsVertex.class);
+    if (EDGES_CLASS.getOptionIntValue(cmd, 1) == 1) {
+      conf.setVertexEdgesClass(ArrayListEdges.class);
     } else {
-      job.getConfiguration().setVertexEdgesClass(HashMapEdges.class);
+      conf.setVertexEdgesClass(HashMapEdges.class);
     }
-    LOG.info("Using class " +
-        GiraphConstants.VERTEX_CLASS.get(job.getConfiguration()));
-    job.getConfiguration().setVertexInputFormatClass(
-        PseudoRandomVertexInputFormat.class);
-    if (!cmd.hasOption("nc")) {
-      job.getConfiguration().setVertexCombinerClass(
-          MinimumDoubleCombiner.class);
+    LOG.info("Using class " + GiraphConstants.VERTEX_CLASS.get(conf));
+    conf.setVertexInputFormatClass(PseudoRandomVertexInputFormat.class);
+    if (!NO_COMBINER.optionTurnedOn(cmd)) {
+      conf.setVertexCombinerClass(MinimumDoubleCombiner.class);
     }
-    job.getConfiguration().setWorkerConfiguration(workers, workers, 100.0f);
-    job.getConfiguration().setLong(
-        PseudoRandomInputFormatConstants.AGGREGATE_VERTICES,
-        Long.parseLong(cmd.getOptionValue('V')));
-    job.getConfiguration().setLong(
-        PseudoRandomInputFormatConstants.EDGES_PER_VERTEX,
-        Long.parseLong(cmd.getOptionValue('e')));
-
-    boolean isVerbose = false;
-    if (cmd.hasOption('v')) {
-      isVerbose = true;
-    }
-    if (job.run(isVerbose)) {
-      return 0;
-    } else {
-      return -1;
-    }
+    conf.setLong(PseudoRandomInputFormatConstants.AGGREGATE_VERTICES,
+        BenchmarkOption.VERTICES.getOptionLongValue(cmd));
+    conf.setLong(PseudoRandomInputFormatConstants.EDGES_PER_VERTEX,
+        BenchmarkOption.EDGES_PER_VERTEX.getOptionLongValue(cmd));
   }
 
   /**

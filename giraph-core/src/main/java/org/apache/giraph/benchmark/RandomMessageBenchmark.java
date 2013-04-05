@@ -19,32 +19,29 @@
 package org.apache.giraph.benchmark;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.PosixParser;
 import org.apache.giraph.aggregators.LongSumAggregator;
+import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.io.formats.PseudoRandomInputFormatConstants;
 import org.apache.giraph.io.formats.PseudoRandomVertexInputFormat;
-import org.apache.giraph.job.GiraphJob;
 import org.apache.giraph.master.DefaultMasterCompute;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.worker.WorkerContext;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
 
+import com.google.common.collect.Sets;
+
 import java.util.Random;
+import java.util.Set;
 
 /**
  * Random Message Benchmark for evaluating the messaging performance.
  */
-public class RandomMessageBenchmark implements Tool {
+public class RandomMessageBenchmark extends GiraphBenchmark {
   /** How many supersteps to run */
   public static final String SUPERSTEP_COUNT =
       "giraph.randomMessageBenchmark.superstepCount";
@@ -74,12 +71,23 @@ public class RandomMessageBenchmark implements Tool {
   /** All millis during this application */
   public static final String AGG_TOTAL_MILLIS = "total millis";
   /** Workers for that superstep */
-  public static final String WORKERS = "workers";
+  public static final String WORKERS_NUM = "workers";
+
+  /** Option for number of bytes per message */
+  private static final BenchmarkOption BYTES_PER_MESSAGE = new BenchmarkOption(
+      "b", "bytes", true, "Message bytes per memssage",
+      "Need to set the number of message bytes (-b)");
+  /** Option for number of messages per edge */
+  private static final BenchmarkOption MESSAGES_PER_EDGE = new BenchmarkOption(
+      "n", "number", true, "Number of messages per edge",
+      "Need to set the number of messages per edge (-n)");
+  /** Option for number of flush threads */
+  private static final BenchmarkOption FLUSH_THREADS = new BenchmarkOption(
+      "f", "flusher", true, "Number of flush threads");
+
   /** Class logger */
   private static final Logger LOG =
     Logger.getLogger(RandomMessageBenchmarkWorkerContext.class);
-  /** Configuration from Configurable */
-  private Configuration conf;
 
   /**
    * {@link WorkerContext} forRandomMessageBenchmark.
@@ -129,7 +137,7 @@ public class RandomMessageBenchmark implements Tool {
           getAggregatedValue(AGG_SUPERSTEP_TOTAL_MESSAGES).get();
       long superstepMillis = this.<LongWritable>
           getAggregatedValue(AGG_SUPERSTEP_TOTAL_MILLIS).get();
-      long workers = this.<LongWritable>getAggregatedValue(WORKERS).get();
+      long workers = this.<LongWritable>getAggregatedValue(WORKERS_NUM).get();
 
       // For timing and tracking the supersteps
       // - superstep 0 starts the time, but cannot display any stats
@@ -157,7 +165,7 @@ public class RandomMessageBenchmark implements Tool {
           LOG.info(AGG_TOTAL_MESSAGES + " : " + totalMessages);
           LOG.info(AGG_SUPERSTEP_TOTAL_MILLIS + " : " + superstepMillis);
           LOG.info(AGG_TOTAL_MILLIS + " : " + totalMillis);
-          LOG.info(WORKERS + " : " + workers);
+          LOG.info(WORKERS_NUM + " : " + workers);
           LOG.info("Superstep megabytes / second = " +
               superstepMegabytesPerSecond);
           LOG.info("Total megabytes / second = " +
@@ -177,7 +185,7 @@ public class RandomMessageBenchmark implements Tool {
         }
       }
 
-      aggregate(WORKERS, new LongWritable(1));
+      aggregate(WORKERS_NUM, new LongWritable(1));
     }
 
     @Override
@@ -241,7 +249,7 @@ public class RandomMessageBenchmark implements Tool {
           LongSumAggregator.class);
       registerAggregator(AGG_SUPERSTEP_TOTAL_MILLIS,
           LongSumAggregator.class);
-      registerAggregator(WORKERS,
+      registerAggregator(WORKERS_NUM,
           LongSumAggregator.class);
     }
   }
@@ -273,128 +281,32 @@ public class RandomMessageBenchmark implements Tool {
   }
 
   @Override
-  public Configuration getConf() {
-    return conf;
+  public Set<BenchmarkOption> getBenchmarkOptions() {
+    return Sets.newHashSet(BenchmarkOption.SUPERSTEPS,
+        BenchmarkOption.VERTICES, BenchmarkOption.EDGES_PER_VERTEX,
+        BYTES_PER_MESSAGE, MESSAGES_PER_EDGE, FLUSH_THREADS);
   }
 
   @Override
-  public void setConf(Configuration conf) {
-    this.conf = conf;
-  }
-
-  @Override
-  public int run(String[] args) throws Exception {
-    Options options = new Options();
-    options.addOption("h", "help", false, "Help");
-    options.addOption("v", "verbose", false, "Verbose");
-    options.addOption("w",
-        "workers",
-        true,
-        "Number of workers");
-    options.addOption("b",
-        "bytes",
-        true,
-        "Message bytes per memssage");
-    options.addOption("n",
-        "number",
-        true,
-        "Number of messages per edge");
-    options.addOption("s",
-        "supersteps",
-        true,
-        "Supersteps to execute before finishing");
-    options.addOption("V",
-        "aggregateVertices",
-        true,
-        "Aggregate vertices");
-    options.addOption("e",
-        "edgesPerVertex",
-        true,
-        "Edges per vertex");
-    options.addOption("f",
-        "flusher",
-        true,
-        "Number of flush threads");
-
-    HelpFormatter formatter = new HelpFormatter();
-    if (args.length == 0) {
-      formatter.printHelp(getClass().getName(), options, true);
-      return 0;
-    }
-    CommandLineParser parser = new PosixParser();
-    CommandLine cmd = parser.parse(options, args);
-    if (cmd.hasOption('h')) {
-      formatter.printHelp(getClass().getName(), options, true);
-      return 0;
-    }
-    if (!cmd.hasOption('w')) {
-      LOG.info("Need to choose the number of workers (-w)");
-      return -1;
-    }
-    if (!cmd.hasOption('s')) {
-      LOG.info("Need to set the number of supersteps (-s)");
-      return -1;
-    }
-    if (!cmd.hasOption('V')) {
-      LOG.info("Need to set the aggregate vertices (-V)");
-      return -1;
-    }
-    if (!cmd.hasOption('e')) {
-      LOG.info("Need to set the number of edges " +
-          "per vertex (-e)");
-      return -1;
-    }
-    if (!cmd.hasOption('b')) {
-      LOG.info("Need to set the number of message bytes (-b)");
-      return -1;
-    }
-    if (!cmd.hasOption('n')) {
-      LOG.info("Need to set the number of messages per edge (-n)");
-      return -1;
-    }
-    int workers = Integer.parseInt(cmd.getOptionValue('w'));
-    GiraphJob job = new GiraphJob(getConf(), getClass().getName());
-    job.getConfiguration().setVertexClass(RandomMessageVertex.class);
-    job.getConfiguration().setVertexInputFormatClass(
-        PseudoRandomVertexInputFormat.class);
-    job.getConfiguration().setWorkerContextClass(
-        RandomMessageBenchmarkWorkerContext.class);
-    job.getConfiguration().setMasterComputeClass(
-        RandomMessageBenchmarkMasterCompute.class);
-    job.getConfiguration().setWorkerConfiguration(workers, workers, 100.0f);
-    job.getConfiguration().setLong(
-        PseudoRandomInputFormatConstants.AGGREGATE_VERTICES,
-        Long.parseLong(cmd.getOptionValue('V')));
-    job.getConfiguration().setLong(
-        PseudoRandomInputFormatConstants.EDGES_PER_VERTEX,
-        Long.parseLong(cmd.getOptionValue('e')));
-    job.getConfiguration().setInt(
-        SUPERSTEP_COUNT,
-        Integer.parseInt(cmd.getOptionValue('s')));
-    job.getConfiguration().setInt(
-        RandomMessageBenchmark.NUM_BYTES_PER_MESSAGE,
-        Integer.parseInt(cmd.getOptionValue('b')));
-    job.getConfiguration().setInt(
-        RandomMessageBenchmark.NUM_MESSAGES_PER_EDGE,
-        Integer.parseInt(cmd.getOptionValue('n')));
-
-    boolean isVerbose = false;
-    if (cmd.hasOption('v')) {
-      isVerbose = true;
-    }
-    if (cmd.hasOption('s')) {
-      getConf().setInt(SUPERSTEP_COUNT,
-          Integer.parseInt(cmd.getOptionValue('s')));
-    }
-    if (cmd.hasOption('f')) {
-      job.getConfiguration().setInt(
-          GiraphConstants.MSG_NUM_FLUSH_THREADS,
-          Integer.parseInt(cmd.getOptionValue('f')));
-    }
-    if (job.run(isVerbose)) {
-      return 0;
-    } else {
-      return -1;
+  protected void prepareConfiguration(GiraphConfiguration conf,
+      CommandLine cmd) {
+    conf.setVertexClass(RandomMessageVertex.class);
+    conf.setVertexInputFormatClass(PseudoRandomVertexInputFormat.class);
+    conf.setWorkerContextClass(RandomMessageBenchmarkWorkerContext.class);
+    conf.setMasterComputeClass(RandomMessageBenchmarkMasterCompute.class);
+    conf.setLong(PseudoRandomInputFormatConstants.AGGREGATE_VERTICES,
+        BenchmarkOption.VERTICES.getOptionLongValue(cmd));
+    conf.setLong(PseudoRandomInputFormatConstants.EDGES_PER_VERTEX,
+        BenchmarkOption.EDGES_PER_VERTEX.getOptionLongValue(cmd));
+    conf.setInt(SUPERSTEP_COUNT,
+        BenchmarkOption.SUPERSTEPS.getOptionIntValue(cmd));
+    conf.setInt(RandomMessageBenchmark.NUM_BYTES_PER_MESSAGE,
+        BYTES_PER_MESSAGE.getOptionIntValue(cmd));
+    conf.setInt(RandomMessageBenchmark.NUM_MESSAGES_PER_EDGE,
+        MESSAGES_PER_EDGE.getOptionIntValue(cmd));
+    if (FLUSH_THREADS.optionTurnedOn(cmd)) {
+      conf.setInt(GiraphConstants.MSG_NUM_FLUSH_THREADS,
+          FLUSH_THREADS.getOptionIntValue(cmd));
     }
   }
 

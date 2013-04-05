@@ -19,37 +19,35 @@
 package org.apache.giraph.benchmark;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.PosixParser;
 import org.apache.giraph.aggregators.LongSumAggregator;
+import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.io.formats.PseudoRandomInputFormatConstants;
 import org.apache.giraph.io.formats.PseudoRandomVertexInputFormat;
-import org.apache.giraph.job.GiraphJob;
 import org.apache.giraph.master.DefaultMasterCompute;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.worker.DefaultWorkerContext;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.log4j.Logger;
+
+import com.google.common.collect.Sets;
 
 import java.io.IOException;
+import java.util.Set;
 
 /**
  * Benchmark for aggregators. Also checks the correctness.
  */
-public class AggregatorsBenchmark implements Tool {
-  /** Class logger */
-  private static final Logger LOG =
-      Logger.getLogger(AggregatorsBenchmark.class);
+public class AggregatorsBenchmark extends GiraphBenchmark {
   /** Number of aggregators setting */
   private static final String AGGREGATORS_NUM = "aggregatorsbenchmark.num";
-  /** Configuration */
-  private Configuration conf;
+
+  /** Option for number of aggregators */
+  private static final BenchmarkOption AGGREGATORS =
+      new BenchmarkOption("a", "aggregators",
+          true, "Aggregators", "Need to set number of aggregators (-a)");
 
   /**
    * Vertex class for AggregatorsBenchmark
@@ -76,16 +74,6 @@ public class AggregatorsBenchmark implements Tool {
         voteToHalt();
       }
     }
-  }
-
-  @Override
-  public Configuration getConf() {
-    return conf;
-  }
-
-  @Override
-  public void setConf(Configuration conf) {
-    this.conf = conf;
   }
 
   /**
@@ -206,75 +194,22 @@ public class AggregatorsBenchmark implements Tool {
   }
 
   @Override
-  public final int run(final String[] args) throws Exception {
-    Options options = new Options();
-    options.addOption("h", "help", false, "Help");
-    options.addOption("v", "verbose", false, "Verbose");
-    options.addOption("w",
-        "workers",
-        true,
-        "Number of workers");
-    options.addOption("V",
-        "aggregateVertices",
-        true,
-        "Aggregate vertices");
-    options.addOption("a",
-        "aggregators",
-        true,
-        "Aggregators");
-    HelpFormatter formatter = new HelpFormatter();
-    if (args.length == 0) {
-      formatter.printHelp(getClass().getName(), options, true);
-      return 0;
-    }
-    CommandLineParser parser = new PosixParser();
-    CommandLine cmd = parser.parse(options, args);
-    if (cmd.hasOption('h')) {
-      formatter.printHelp(getClass().getName(), options, true);
-      return 0;
-    }
-    if (!cmd.hasOption('w')) {
-      LOG.info("Need to choose the number of workers (-w)");
-      return -1;
-    }
-    if (!cmd.hasOption('V')) {
-      LOG.info("Need to set the aggregate vertices (-V)");
-      return -1;
-    }
-    if (!cmd.hasOption('a')) {
-      LOG.info("Need to set number of aggregators (-a)");
-      return -1;
-    }
+  public Set<BenchmarkOption> getBenchmarkOptions() {
+    return Sets.newHashSet(BenchmarkOption.VERTICES, AGGREGATORS);
+  }
 
-    int workers = Integer.parseInt(cmd.getOptionValue('w'));
-    GiraphJob job = new GiraphJob(getConf(), getClass().getName());
-    job.getConfiguration().setVertexClass(AggregatorsBenchmarkVertex.class);
-    job.getConfiguration().setMasterComputeClass(
-        AggregatorsBenchmarkMasterCompute.class);
-    job.getConfiguration().setVertexInputFormatClass(
-        PseudoRandomVertexInputFormat.class);
-    job.getConfiguration().setWorkerContextClass(
-        AggregatorsBenchmarkWorkerContext.class);
-    job.getConfiguration().setWorkerConfiguration(workers, workers, 100.0f);
-    job.getConfiguration().setLong(
-        PseudoRandomInputFormatConstants.AGGREGATE_VERTICES,
-        Long.parseLong(cmd.getOptionValue('V')));
-    job.getConfiguration().setLong(
-        PseudoRandomInputFormatConstants.EDGES_PER_VERTEX,
-        1);
-    job.getConfiguration().setInt(AGGREGATORS_NUM,
-        Integer.parseInt(cmd.getOptionValue('a')));
-    job.getConfiguration().setInt("workers", workers);
-
-    boolean isVerbose = false;
-    if (cmd.hasOption('v')) {
-      isVerbose = true;
-    }
-    if (job.run(isVerbose)) {
-      return 0;
-    } else {
-      return -1;
-    }
+  @Override
+  protected void prepareConfiguration(GiraphConfiguration conf,
+      CommandLine cmd) {
+    conf.setVertexClass(AggregatorsBenchmarkVertex.class);
+    conf.setMasterComputeClass(AggregatorsBenchmarkMasterCompute.class);
+    conf.setVertexInputFormatClass(PseudoRandomVertexInputFormat.class);
+    conf.setWorkerContextClass(AggregatorsBenchmarkWorkerContext.class);
+    conf.setLong(PseudoRandomInputFormatConstants.AGGREGATE_VERTICES,
+        BenchmarkOption.VERTICES.getOptionLongValue(cmd));
+    conf.setLong(PseudoRandomInputFormatConstants.EDGES_PER_VERTEX, 1);
+    conf.setInt(AGGREGATORS_NUM, AGGREGATORS.getOptionIntValue(cmd));
+    conf.setInt("workers", conf.getInt(GiraphConstants.MAX_WORKERS, -1));
   }
 
   /**
