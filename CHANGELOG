@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-607: Hive IO bump (nitay)
+
   GIRAPH-564: Input/output formats and readers/writers should implement
   ImmutableClassesGiraphConfigurable (aching)
 

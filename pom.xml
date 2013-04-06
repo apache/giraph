@@ -936,8 +936,8 @@ under the License.
       <!-- compile dependencies. sorted lexicographically. -->
       <dependency>
         <groupId>com.facebook.giraph.hive</groupId>
-        <artifactId>hive-io-experimental</artifactId>
-        <version>0.5</version>
+        <artifactId>hive-io-exp-core</artifactId>
+        <version>0.6</version>
       </dependency>
       <dependency>
         <groupId>com.google.guava</groupId>

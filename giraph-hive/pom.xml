@@ -73,7 +73,7 @@ under the License.
     <!-- compile dependencies. sorted lexicographically. -->
     <dependency>
       <groupId>com.facebook.giraph.hive</groupId>
-      <artifactId>hive-io-experimental</artifactId>
+      <artifactId>hive-io-exp-core</artifactId>
     </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
