@@ -37,6 +37,7 @@ import org.apache.giraph.partition.PartitionOwner;
 import org.apache.giraph.partition.PartitionStats;
 import org.apache.giraph.time.SystemTime;
 import org.apache.giraph.time.Time;
+import org.apache.giraph.utils.LogStacktraceCallable;
 import org.apache.giraph.utils.MemoryUtils;
 import org.apache.giraph.utils.ProgressableUtils;
 import org.apache.giraph.utils.ReflectionUtils;
@@ -752,7 +753,10 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
           computePartitionIdQueue,
           conf,
           serviceWorker);
-      partitionFutures.add(partitionExecutor.submit(computeCallable));
+      LogStacktraceCallable<Collection<PartitionStats>> wrapped =
+          new LogStacktraceCallable<Collection<PartitionStats>>(
+              computeCallable);
+      partitionFutures.add(partitionExecutor.submit(wrapped));
     }
 
     // Wait until all the threads are done to wait on all requests

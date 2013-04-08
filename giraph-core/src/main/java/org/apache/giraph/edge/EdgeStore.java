@@ -20,23 +20,23 @@ package org.apache.giraph.edge;
 
 import com.google.common.collect.MapMaker;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.partition.Partition;
-import org.apache.giraph.utils.ByteArrayVertexIdEdges;
-import org.apache.giraph.utils.ProgressableUtils;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.util.Progressable;
-import org.apache.log4j.Logger;
-
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import org.apache.giraph.bsp.CentralizedServiceWorker;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.partition.Partition;
+import org.apache.giraph.utils.ByteArrayVertexIdEdges;
+import org.apache.giraph.utils.LogStacktraceCallable;
+import org.apache.giraph.utils.ProgressableUtils;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.util.Progressable;
+import org.apache.log4j.Logger;
 
 /**
  * Collects incoming edges for vertices owned by this worker.
@@ -218,7 +218,8 @@ public class EdgeStore<I extends WritableComparable,
           return null;
         }
       };
-      movePartitionExecutor.submit(moveCallable);
+      movePartitionExecutor.submit(
+          new LogStacktraceCallable<Void>(moveCallable));
     }
 
     movePartitionExecutor.shutdown();

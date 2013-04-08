@@ -56,6 +56,7 @@ import org.apache.giraph.utils.JMapHistoDumper;
 import org.apache.giraph.utils.ProgressableUtils;
 import org.apache.giraph.time.SystemTime;
 import org.apache.giraph.time.Time;
+import org.apache.giraph.utils.LogStacktraceCallable;
 import org.apache.giraph.utils.WritableUtils;
 import org.apache.giraph.worker.WorkerInfo;
 import org.apache.giraph.zk.BspEvent;
@@ -652,8 +653,8 @@ public class BspServiceMaster<I extends WritableComparable,
     boolean writeLocations = USE_INPUT_SPLIT_LOCALITY.get(conf);
     for (int i = 0; i < splitList.size(); ++i) {
       InputSplit inputSplit = splitList.get(i);
-      taskExecutor.submit(new WriteInputSplit(inputSplit, inputSplitsPath, i,
-          writeLocations));
+      taskExecutor.submit(new LogStacktraceCallable<Void>(
+          new WriteInputSplit(inputSplit, inputSplitsPath, i, writeLocations)));
     }
     taskExecutor.shutdown();
     ProgressableUtils.awaitExecutorTermination(taskExecutor, getContext());

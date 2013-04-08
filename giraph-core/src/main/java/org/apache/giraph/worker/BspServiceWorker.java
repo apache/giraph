@@ -42,6 +42,7 @@ import org.apache.giraph.graph.FinishedSuperstepStats;
 import org.apache.giraph.graph.AddressesAndPartitionsWritable;
 import org.apache.giraph.graph.GlobalStats;
 import org.apache.giraph.io.superstep_output.SuperstepOutput;
+import org.apache.giraph.utils.LogStacktraceCallable;
 import org.apache.giraph.utils.JMapHistoDumper;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.VertexOutputFormat;
@@ -283,7 +284,10 @@ public class BspServiceWorker<I extends WritableComparable,
     for (int i = 0; i < numThreads; ++i) {
       Callable<VertexEdgeCount> inputSplitsCallable =
           inputSplitsCallableFactory.newCallable(i);
-      threadsFutures.add(inputSplitsExecutor.submit(inputSplitsCallable));
+      LogStacktraceCallable<VertexEdgeCount> wrapped =
+          new LogStacktraceCallable<VertexEdgeCount>(
+              inputSplitsCallable);
+      threadsFutures.add(inputSplitsExecutor.submit(wrapped));
     }
 
     // Wait until all the threads are done to wait on all requests
