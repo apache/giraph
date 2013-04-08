@@ -19,7 +19,6 @@
 package org.apache.giraph.edge;
 
 import com.google.common.collect.Maps;
-import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -41,7 +40,7 @@ import java.util.Map;
  * @param <E> Edge value
  */
 public class HashMapEdges<I extends WritableComparable, E extends Writable>
-    extends DefaultImmutableClassesGiraphConfigurable<I, Writable, E, Writable>
+    extends ConfigurableVertexEdges<I, E>
     implements StrictRandomAccessVertexEdges<I, E>,
     MutableVertexEdges<I, E> {
   /** Map from target vertex id to edge value. */
