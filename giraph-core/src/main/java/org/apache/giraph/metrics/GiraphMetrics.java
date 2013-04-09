@@ -18,12 +18,13 @@
 package org.apache.giraph.metrics;
 
 import org.apache.giraph.conf.GiraphConfiguration;
-import org.apache.giraph.bsp.BspService;
 
 import com.google.common.collect.Lists;
 
 import java.io.PrintStream;
 import java.util.List;
+
+import static org.apache.giraph.bsp.BspService.INPUT_SUPERSTEP;
 
 /**
  * Top level metrics class for using Yammer's metrics in Giraph.
@@ -35,8 +36,11 @@ public class GiraphMetrics {
   /** registry for per-superstep metrics */
   private final SuperstepMetricsRegistry perSuperstep;
 
-  /** registry for per-job metrics */
-  private final GiraphMetricsRegistry perJob;
+  /** registry for optional per-job metrics */
+  private final GiraphMetricsRegistry perJobOptional;
+
+  /** registry for required per-job metrics */
+  private final GiraphMetricsRegistry perJobRequired;
 
   /** observer for per-superstep metrics re-initialization */
   private final List<ResetSuperstepMetricsObserver> observers =
@@ -46,8 +50,9 @@ public class GiraphMetrics {
    * Initialize no-op registry that creates no-op metrics.
    */
   private GiraphMetrics() {
-    perJob = new GiraphMetricsRegistry();
-    perSuperstep = new SuperstepMetricsRegistry();
+    perJobOptional = GiraphMetricsRegistry.createFake();
+    perSuperstep = SuperstepMetricsRegistry.createFake();
+    perJobRequired = GiraphMetricsRegistry.createWithOptional("giraph", "job");
   }
 
   /**
@@ -56,9 +61,9 @@ public class GiraphMetrics {
    * @param conf GiraphConfiguration to use.
    */
   private GiraphMetrics(GiraphConfiguration conf) {
-    perJob = new GiraphMetricsRegistry(conf, "giraph", "job");
-    perSuperstep = new SuperstepMetricsRegistry(conf,
-        BspService.INPUT_SUPERSTEP);
+    perJobOptional = GiraphMetricsRegistry.create(conf, "giraph", "job");
+    perSuperstep = SuperstepMetricsRegistry.create(conf, INPUT_SUPERSTEP);
+    perJobRequired = GiraphMetricsRegistry.createWithOptional("giraph", "job");
   }
 
   /**
@@ -80,12 +85,21 @@ public class GiraphMetrics {
   }
 
   /**
-   * Get per-job metrics.
+   * Get per-job optional metrics.
    *
-   * @return per-job GiraphMetricsRegistry
+   * @return per-job optional {@link GiraphMetricsRegistry}
    */
-  public GiraphMetricsRegistry perJob() {
-    return perJob;
+  public GiraphMetricsRegistry perJobOptional() {
+    return perJobOptional;
+  }
+
+  /**
+   * Get per-job required metrics.
+   *
+   * @return per-job require {@link GiraphMetricsRegistry}
+   */
+  public GiraphMetricsRegistry perJobRequired() {
+    return perJobRequired;
   }
 
   /**
@@ -128,7 +142,8 @@ public class GiraphMetrics {
    * @param out PrintStream to dump to.
    */
   public void dumpToStream(PrintStream out) {
-    perJob.printToStream(out);
+    perJobOptional.printToStream(out);
+    perJobRequired.printToStream(out);
     perSuperstep.printToStream(out);
   }
 }

@@ -661,7 +661,7 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
    * Initialize job-level metrics used by this class.
    */
   private void initJobMetrics() {
-    GiraphMetricsRegistry jobMetrics = GiraphMetrics.get().perJob();
+    GiraphMetricsRegistry jobMetrics = GiraphMetrics.get().perJobOptional();
     wcPreAppTimer = new GiraphTimer(jobMetrics, "worker-context-pre-app",
         TimeUnit.MILLISECONDS);
     wcPostAppTimer = new GiraphTimer(jobMetrics, "worker-context-post-app",

@@ -68,7 +68,7 @@ public class MemoryUtils {
    * Initialize metrics tracked by this helper.
    */
   public static void initMetrics() {
-    GiraphMetricsRegistry metrics = GiraphMetrics.get().perJob();
+    GiraphMetricsRegistry metrics = GiraphMetrics.get().perJobOptional();
     metrics.getGauge(MetricNames.MEMORY_FREE_PERCENT, new PercentGauge() {
         @Override
         protected double getNumerator() {

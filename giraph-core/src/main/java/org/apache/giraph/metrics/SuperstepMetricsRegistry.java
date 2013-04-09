@@ -21,6 +21,9 @@ package org.apache.giraph.metrics;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.bsp.BspService;
 
+import com.yammer.metrics.core.MetricsRegistry;
+import com.yammer.metrics.reporting.JmxReporter;
+
 import java.io.PrintStream;
 
 /**
@@ -31,10 +34,15 @@ public class SuperstepMetricsRegistry extends GiraphMetricsRegistry {
   private long superstep = BspService.INPUT_SUPERSTEP;
 
   /**
-   * Create no-op registry that creates no-op metrics.
+   * Constructor
+   * @param registry {@link com.yammer.metrics.core.MetricsRegistry} to use
+   * @param reporter {@link com.yammer.metrics.reporting.JmxReporter} to use
+   * @param groupName String grouping for metrics
+   * @param type String type name for metrics
    */
-  public SuperstepMetricsRegistry() {
-    super();
+  protected SuperstepMetricsRegistry(MetricsRegistry registry,
+      JmxReporter reporter, String groupName, String type) {
+    super(registry, reporter, groupName, type);
   }
 
   /**
@@ -42,10 +50,29 @@ public class SuperstepMetricsRegistry extends GiraphMetricsRegistry {
    *
    * @param conf Hadoop Configuration to use.
    * @param superstep number of superstep to use as group for metrics.
+   * @return new metrics registry
    */
-  public SuperstepMetricsRegistry(GiraphConfiguration conf, long superstep) {
-    super(conf, "giraph.superstep", String.valueOf(superstep));
-    this.superstep = superstep;
+  public static SuperstepMetricsRegistry create(GiraphConfiguration conf,
+      long superstep) {
+    if (conf.metricsEnabled()) {
+      MetricsRegistry registry = new MetricsRegistry();
+      SuperstepMetricsRegistry superstepMetrics = new SuperstepMetricsRegistry(
+          registry, new JmxReporter(registry),
+          "giraph.superstep", String.valueOf(superstep));
+      superstepMetrics.superstep = superstep;
+      return superstepMetrics;
+    } else {
+      return createFake();
+    }
+  }
+
+  /**
+   * Create an empty registry
+   * @return fake metrics registry that returns no op metrics
+   */
+  public static SuperstepMetricsRegistry createFake() {
+    return new SuperstepMetricsRegistry(new NoOpMetricsRegistry(), null,
+        "", "");
   }
 
   /**

@@ -123,7 +123,8 @@ public abstract class InputSplitsCallable<I extends WritableComparable,
    * @return Meter tracking edges loaded
    */
   public static Meter getTotalEdgesLoadedMeter() {
-    return GiraphMetrics.get().perJob().getMeter(MeterDesc.EDGES_LOADED);
+    return GiraphMetrics.get().perJobRequired()
+        .getMeter(MeterDesc.EDGES_LOADED);
   }
 
   /**
@@ -132,7 +133,8 @@ public abstract class InputSplitsCallable<I extends WritableComparable,
    * @return Meter for vertices loaded
    */
   public static Meter getTotalVerticesLoadedMeter() {
-    return GiraphMetrics.get().perJob().getMeter(MeterDesc.VERTICES_LOADED);
+    return GiraphMetrics.get().perJobRequired()
+        .getMeter(MeterDesc.VERTICES_LOADED);
   }
 
   /**

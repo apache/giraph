@@ -50,31 +50,61 @@ public class GiraphMetricsRegistry {
   private final JmxReporter jmxReporter;
 
   /**
-   * Create no-op empty registry that makes no-op metrics.
+   * Constructor
+   * @param registry {@link MetricsRegistry} to use
+   * @param reporter {@link JmxReporter} to use
+   * @param groupName String grouping for metrics
+   * @param type String type name for metrics
    */
-  public GiraphMetricsRegistry() {
-    registry = new NoOpMetricsRegistry();
-    jmxReporter = null;
+  protected GiraphMetricsRegistry(MetricsRegistry registry,
+      JmxReporter reporter, String groupName, String type) {
+    this.registry = registry;
+    this.jmxReporter = reporter;
+    this.groupName = groupName;
+    this.type = type;
+    if (jmxReporter != null) {
+      jmxReporter.start();
+    }
+  }
+
+  /**
+   * Create no-op empty registry that makes no-op metrics.
+   * @return fake registry that makes no-op metrics
+   */
+  public static GiraphMetricsRegistry createFake() {
+    return new GiraphMetricsRegistry(new NoOpMetricsRegistry(), null, "", "");
+  }
+
+  /**
+   * Create registry with group to use for metrics.
+   *
+   * @param groupName String group to use for metrics.
+   * @param type String type to use for metrics.
+   * @return new metrics registry
+   */
+  public static GiraphMetricsRegistry createWithOptional(String groupName,
+    String type) {
+    MetricsRegistry registry = new MetricsRegistry();
+    return new GiraphMetricsRegistry(registry, new JmxReporter(registry),
+        groupName, type);
   }
 
   /**
    * Create registry with Hadoop Configuration and group to use for metrics.
+   * Checks the configuration object for whether the optional metrics are
+   * enabled, and optionally creates those.
    *
    * @param conf Hadoop Configuration to use.
    * @param groupName String group to use for metrics.
    * @param type String type to use for metrics.
+   * @return new metrics registry
    */
-  public GiraphMetricsRegistry(GiraphConfiguration conf, String groupName,
-                               String type) {
-    this.groupName = groupName;
-    this.type = type;
+  public static GiraphMetricsRegistry create(GiraphConfiguration conf,
+    String groupName, String type) {
     if (conf.metricsEnabled()) {
-      registry = new MetricsRegistry();
-      jmxReporter = new JmxReporter(registry);
-      jmxReporter.start();
+      return createWithOptional(groupName, type);
     } else {
-      registry = new NoOpMetricsRegistry();
-      jmxReporter = null;
+      return createFake();
     }
   }
 
