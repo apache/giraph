@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-611: Vertex/EdgeReaderWrapper should configure inner reader (majakabiljo)
+
   GIRAPH-609: More information on runtime exceptions for Callables (aching)
 
   GIRAPH-607: Hive IO bump (nitay)

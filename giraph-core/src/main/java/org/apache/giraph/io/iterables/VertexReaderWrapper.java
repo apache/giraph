@@ -19,6 +19,8 @@
 package org.apache.giraph.io.iterables;
 
 import java.io.IOException;
+
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.VertexReader;
 import org.apache.hadoop.io.Writable;
@@ -48,6 +50,13 @@ public class VertexReaderWrapper<I extends WritableComparable,
   public VertexReaderWrapper(GiraphReader<Vertex<I, V, E, ?>> vertexReader) {
     this.vertexReader = vertexReader;
     iterator = new IteratorToReaderWrapper<Vertex<I, V, E, ?>>(vertexReader);
+  }
+
+  @Override
+  public void setConf(
+      ImmutableClassesGiraphConfiguration<I, V, E, Writable> conf) {
+    super.setConf(conf);
+    conf.configureIfPossible(vertexReader);
   }
 
   @Override

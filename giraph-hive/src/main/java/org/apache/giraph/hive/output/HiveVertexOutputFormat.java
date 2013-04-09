@@ -57,10 +57,9 @@ public class HiveVertexOutputFormat<I extends WritableComparable,
     throws IOException, InterruptedException {
     RecordWriter<WritableComparable, HiveWritableRecord> baseWriter =
         hiveOutputFormat.getRecordWriter(context);
-    HiveVertexWriter writer = new HiveVertexWriter();
+    HiveVertexWriter<I, V, E> writer = new HiveVertexWriter<I, V, E>();
     writer.setBaseWriter(baseWriter);
     writer.setTableSchema(hiveOutputFormat.getTableSchema(getConf()));
-    writer.initialize(context);
     return writer;
   }
 

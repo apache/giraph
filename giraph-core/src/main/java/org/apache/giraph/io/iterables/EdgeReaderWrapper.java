@@ -19,6 +19,8 @@
 package org.apache.giraph.io.iterables;
 
 import java.io.IOException;
+
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.io.EdgeReader;
 import org.apache.hadoop.io.Writable;
@@ -47,6 +49,13 @@ public class EdgeReaderWrapper<I extends WritableComparable,
   public EdgeReaderWrapper(GiraphReader<EdgeWithSource<I, E>> edgeReader) {
     this.edgeReader = edgeReader;
     iterator = new IteratorToReaderWrapper<EdgeWithSource<I, E>>(edgeReader);
+  }
+
+  @Override
+  public void setConf(
+      ImmutableClassesGiraphConfiguration<I, Writable, E, Writable> conf) {
+    super.setConf(conf);
+    conf.configureIfPossible(edgeReader);
   }
 
   @Override
