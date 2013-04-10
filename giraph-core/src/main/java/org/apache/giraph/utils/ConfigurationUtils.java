@@ -328,15 +328,18 @@ public final class ConfigurationUtils {
       giraphConfiguration.setYarnTaskHeapMb(
         Integer.parseInt(cmd.getOptionValue("yh")));
     }
+    /*if[PURE_YARN]
     if (cmd.hasOption("of")) {
       if (cmd.hasOption("op")) {
-        Path outputDir = new Path(BASE_OUTPUT_PATH, cmd.getOptionValue("op"));
-        outputDir = // for YARN conf to get the out dir we need w/o a Job obj
+        // For YARN conf to get the out dir we need w/o a Job obj
+        Path outputDir =
+            new Path(BASE_OUTPUT_PATH, cmd.getOptionValue("op"));
+        outputDir =
           outputDir.getFileSystem(giraphConfiguration).makeQualified(outputDir);
-        /*if[PURE_YARN]
-        giraphConfiguration.set(org.apache.hadoop.mapreduce.lib.output.
-            FileOutputFormat.OUTDIR, outputDir.toString());
-         end[PURE_YARN]*/
+        giraphConfiguration.set(
+            org.apache.hadoop.mapreduce.lib.output.FileOutputFormat.OUTDIR,
+            outputDir.toString());
+
       } else {
         if (LOG.isInfoEnabled()) {
           LOG.info("No output path specified. Ensure your OutputFormat " +
@@ -344,6 +347,7 @@ public final class ConfigurationUtils {
         }
       }
     }
+    end[PURE_YARN]*/
     // END YARN-ONLY OPTIONS
   }
 
