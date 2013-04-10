@@ -15,149 +15,50 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.giraph.benchmark;
 
 import org.apache.commons.cli.CommandLine;
+import org.apache.giraph.combiner.FloatSumCombiner;
 import org.apache.giraph.conf.GiraphConfiguration;
-import org.apache.giraph.conf.GiraphConstants;
-import org.apache.giraph.combiner.DoubleSumCombiner;
-import org.apache.giraph.edge.ArrayListEdges;
-import org.apache.giraph.edge.ByteArrayEdges;
-import org.apache.giraph.edge.HashMapEdges;
-import org.apache.giraph.edge.LongDoubleArrayEdges;
+import org.apache.giraph.edge.IntNullArrayEdges;
 import org.apache.giraph.io.formats.PseudoRandomInputFormatConstants;
-import org.apache.giraph.io.formats.JsonBase64VertexOutputFormat;
-import org.apache.giraph.io.formats.PseudoRandomEdgeInputFormat;
-import org.apache.giraph.io.formats.PseudoRandomVertexInputFormat;
-import org.apache.giraph.partition.SimpleLongRangePartitionerFactory;
+import org.apache.giraph.io.formats.PseudoRandomIntNullVertexInputFormat;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.log4j.Logger;
 
 import com.google.common.collect.Sets;
 
 import java.util.Set;
 
 /**
- * Default Pregel-style PageRank computation.
+ * Benchmark for {@link PageRankVertex}
  */
 public class PageRankBenchmark extends GiraphBenchmark {
-  /** Class logger */
-  private static final Logger LOG = Logger.getLogger(PageRankBenchmark.class);
-
-  /** Option for VertexEdges class */
-  private static final BenchmarkOption EDGES_CLASS = new BenchmarkOption(
-      "c", "edgesClass", true,
-      "Vertex edges class (0 for LongDoubleArrayEdges," +
-          "1 for ByteArrayEdges, " +
-          "2 for ByteArrayEdges with unsafe serialization, " +
-          "3 for ArrayListEdges, " +
-          "4 for HashMapVertex");
-  /** Option for using edge input */
-  private static final BenchmarkOption EDGE_INPUT = new BenchmarkOption(
-      "ei", "edgeInput", false,
-      "Use edge-based input instead of vertex-based input.");
-  /** Option for minimum ratio of partition-local edges */
-  private static final BenchmarkOption LOCAL_EDGES_MIN_RATIO =
-      new BenchmarkOption(
-          "l", "localEdgesMinRatio", true,
-          "Minimum ratio of partition-local edges (default is 0)");
-  /** Option for partitioning algorithm */
-  private static final BenchmarkOption PARTITIONER = new BenchmarkOption(
-      "p", "partitioner", true,
-      "Partitioning algorithm (0 for hash partitioning (default), " +
-          "1 for range partitioning)");
-  /** Option for type of combiner */
-  private static final BenchmarkOption COMBINER_TYPE = new BenchmarkOption(
-      "t", "combinerType", true,
-      "Combiner type (0 for no combiner, 1 for DoubleSumCombiner (default)");
-  /** Option for output format */
-  private static final BenchmarkOption OUTPUT_FORMAT = new BenchmarkOption(
-      "o", "vertexOutputFormat", true,
-      "0 for JsonBase64VertexOutputFormat");
-
   @Override
   public Set<BenchmarkOption> getBenchmarkOptions() {
-    return Sets.newHashSet(
-        BenchmarkOption.SUPERSTEPS, BenchmarkOption.VERTICES,
-        BenchmarkOption.EDGES_PER_VERTEX, EDGES_CLASS, EDGE_INPUT,
-        LOCAL_EDGES_MIN_RATIO, PARTITIONER, COMBINER_TYPE, OUTPUT_FORMAT);
+    return Sets.newHashSet(BenchmarkOption.VERTICES,
+        BenchmarkOption.EDGES_PER_VERTEX, BenchmarkOption.SUPERSTEPS,
+        BenchmarkOption.LOCAL_EDGES_MIN_RATIO);
   }
 
-  /**
-   * Set vertex edges, input format, partitioner classes and related parameters
-   * based on command-line arguments.
-   *
-   * @param cmd           Command line arguments
-   * @param configuration Giraph job configuration
-   */
-  protected void prepareConfiguration(GiraphConfiguration configuration,
+  @Override
+  protected void prepareConfiguration(GiraphConfiguration conf,
       CommandLine cmd) {
-    configuration.setVertexClass(PageRankVertex.class);
-    int edgesClassOption = EDGES_CLASS.getOptionIntValue(cmd, 1);
-    switch (edgesClassOption) {
-    case 0:
-      configuration.setVertexEdgesClass(LongDoubleArrayEdges.class);
-      break;
-    case 1:
-      configuration.setVertexEdgesClass(ByteArrayEdges.class);
-      break;
-    case 2:
-      configuration.setVertexEdgesClass(ByteArrayEdges.class);
-      configuration.useUnsafeSerialization(true);
-      break;
-    case 3:
-      configuration.setVertexEdgesClass(ArrayListEdges.class);
-      break;
-    case 4:
-      configuration.setVertexEdgesClass(HashMapEdges.class);
-      break;
-    default:
-      LOG.info("Unknown VertexEdges class, " +
-          "defaulting to LongDoubleArrayEdges");
-      configuration.setVertexEdgesClass(LongDoubleArrayEdges.class);
-    }
+    conf.setVertexClass(PageRankVertex.class);
+    conf.setVertexEdgesClass(IntNullArrayEdges.class);
+    conf.setVertexCombinerClass(FloatSumCombiner.class);
+    conf.setVertexInputFormatClass(
+        PseudoRandomIntNullVertexInputFormat.class);
 
-    LOG.info("Using edges class " +
-        GiraphConstants.VERTEX_EDGES_CLASS.get(configuration));
-    if (COMBINER_TYPE.getOptionIntValue(cmd, 1) == 1) {
-      configuration.setVertexCombinerClass(DoubleSumCombiner.class);
-    }
-
-    if (EDGE_INPUT.optionTurnedOn(cmd)) {
-      configuration.setEdgeInputFormatClass(PseudoRandomEdgeInputFormat.class);
-    } else {
-      configuration.setVertexInputFormatClass(
-          PseudoRandomVertexInputFormat.class);
-    }
-
-    configuration.setLong(
-        PseudoRandomInputFormatConstants.AGGREGATE_VERTICES,
-        BenchmarkOption.VERTICES.getOptionLongValue(cmd));
-    configuration.setLong(
-        PseudoRandomInputFormatConstants.EDGES_PER_VERTEX,
-        BenchmarkOption.EDGES_PER_VERTEX.getOptionLongValue(cmd));
-    if (LOCAL_EDGES_MIN_RATIO.optionTurnedOn(cmd)) {
-      float localEdgesMinRatio =
-          Float.parseFloat(LOCAL_EDGES_MIN_RATIO.getOptionValue(cmd));
-      configuration.setFloat(
-          PseudoRandomInputFormatConstants.LOCAL_EDGES_MIN_RATIO,
-          localEdgesMinRatio);
-    }
-
-    if (OUTPUT_FORMAT.getOptionIntValue(cmd, -1) == 0) {
-      LOG.info("Using vertex output format class " +
-          JsonBase64VertexOutputFormat.class.getName());
-      configuration.setVertexOutputFormatClass(
-          JsonBase64VertexOutputFormat.class);
-    }
-
-    if (PARTITIONER.getOptionIntValue(cmd, 0) == 1) {
-      configuration.setGraphPartitionerFactoryClass(
-          SimpleLongRangePartitionerFactory.class);
-    }
-
-    configuration.setInt(PageRankVertex.SUPERSTEP_COUNT,
+    conf.setInt(PseudoRandomInputFormatConstants.AGGREGATE_VERTICES,
+        BenchmarkOption.VERTICES.getOptionIntValue(cmd));
+    conf.setInt(PseudoRandomInputFormatConstants.EDGES_PER_VERTEX,
+        BenchmarkOption.EDGES_PER_VERTEX.getOptionIntValue(cmd));
+    conf.setInt(PageRankVertex.SUPERSTEP_COUNT,
         BenchmarkOption.SUPERSTEPS.getOptionIntValue(cmd));
+    conf.setFloat(PseudoRandomInputFormatConstants.LOCAL_EDGES_MIN_RATIO,
+        BenchmarkOption.LOCAL_EDGES_MIN_RATIO.getOptionFloatValue(cmd,
+            PseudoRandomInputFormatConstants.LOCAL_EDGES_MIN_RATIO_DEFAULT));
   }
 
   /**

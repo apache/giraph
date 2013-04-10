@@ -50,6 +50,11 @@ public class BenchmarkOption {
       new BenchmarkOption("e", "edgesPerVertex", true,
           "Edges per vertex",
           "Need to set the number of edges per vertex (-e)");
+  /** Option for minimum ratio of partition-local edges */
+  public static final BenchmarkOption LOCAL_EDGES_MIN_RATIO =
+      new BenchmarkOption(
+          "l", "localEdgesMinRatio", true,
+          "Minimum ratio of partition-local edges (default is 0)");
 
   /** Short option */
   private String shortOption;
@@ -186,5 +191,28 @@ public class BenchmarkOption {
    */
   public long getOptionLongValue(CommandLine cmd) {
     return Long.parseLong(getOptionValue(cmd));
+  }
+
+  /**
+   * Retrieve the argument of this option as float value
+   *
+   * @param cmd CommandLine
+   * @return Value of the argument as float value
+   */
+  public float getOptionFloatValue(CommandLine cmd) {
+    return Float.parseFloat(getOptionValue(cmd));
+  }
+
+  /**
+   * Retrieve the argument of this option as float value,
+   * or default value if option is not set
+   *
+   * @param cmd CommandLine
+   * @param defaultValue Default value
+   * @return Value of the argument as float value,
+   * or default value if option is not set
+   */
+  public float getOptionFloatValue(CommandLine cmd, float defaultValue) {
+    return optionTurnedOn(cmd) ? getOptionFloatValue(cmd) : defaultValue;
   }
 }

@@ -20,7 +20,6 @@ package org.apache.giraph.io.formats;
 
 import com.google.common.collect.Sets;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
@@ -47,13 +46,7 @@ public class PseudoRandomEdgeInputFormat
   public final List<InputSplit> getSplits(final JobContext context,
                                           final int minSplitCountHint)
     throws IOException, InterruptedException {
-    // This is meaningless, the PseudoRandomEdgeReader will generate
-    // all the test data
-    List<InputSplit> inputSplitList = new ArrayList<InputSplit>();
-    for (int i = 0; i < minSplitCountHint; ++i) {
-      inputSplitList.add(new BspInputSplit(i, minSplitCountHint));
-    }
-    return inputSplitList;
+    return PseudoRandomUtils.getSplits(minSplitCountHint);
   }
 
   @Override

@@ -19,33 +19,35 @@
 package org.apache.giraph.benchmark;
 
 import org.apache.giraph.graph.Vertex;
-import org.apache.hadoop.io.DoubleWritable;
-import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.FloatWritable;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.NullWritable;
 
 import java.io.IOException;
 
 /**
- * PageRank algorithm.
+ * Implementation of PageRank in which vertex ids are ints, page rank values
+ * are floats, and graph is unweighted.
  */
-public class PageRankVertex extends Vertex<LongWritable, DoubleWritable,
-    DoubleWritable, DoubleWritable> {
+public class PageRankVertex extends Vertex<IntWritable, FloatWritable,
+    NullWritable, FloatWritable> {
   /** Number of supersteps */
   public static final String SUPERSTEP_COUNT =
-      "giraph.pageRankBenchmark.superstepCount";
+      "giraph.pageRank.superstepCount";
 
   @Override
-  public void compute(Iterable<DoubleWritable> messages) throws IOException {
+  public void compute(Iterable<FloatWritable> messages) throws IOException {
     if (getSuperstep() >= 1) {
-      double sum = 0;
-      for (DoubleWritable message : messages) {
+      float sum = 0;
+      for (FloatWritable message : messages) {
         sum += message.get();
       }
       getValue().set((0.15f / getTotalNumVertices()) + 0.85f * sum);
     }
 
     if (getSuperstep() < getConf().getInt(SUPERSTEP_COUNT, 0)) {
-      long edges = getNumEdges();
-      sendMessageToAllEdges(new DoubleWritable(getValue().get() / edges));
+      sendMessageToAllEdges(
+          new FloatWritable(getValue().get() / getNumEdges()));
     } else {
       voteToHalt();
     }
