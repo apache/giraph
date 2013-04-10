@@ -16,26 +16,21 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.worker;
+package org.apache.giraph.utils;
 
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
+import java.util.concurrent.Callable;
 
 /**
- * Factory class for creating {@link InputSplitsCallable}s.
+ * Factory for creating {@link Callable}s
  *
- * @param <I> Vertex id
- * @param <V> Vertex value
- * @param <E> Edge value
- * @param <M> Message data
+ * @param <R> Callable result type
  */
-public interface InputSplitsCallableFactory<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable> {
+public interface CallableFactory<R> {
   /**
-   * Return a newly-created {@link InputSplitsCallable}.
+   * Create new callable
    *
-   * @param threadId Id of input split thread
-   * @return A new {@link InputSplitsCallable}
+   * @param callableId Id of the callable
+   * @return Callable
    */
-  InputSplitsCallable<I, V, E, M> newCallable(int threadId);
+  Callable<R> newCallable(int callableId);
 }

@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-615: Add support for multithreaded output (majakabiljo)
+
   GIRAPH-612: Improve website for upcoming release (aching)
 
   GIRAPH-527: readVertexInputSplit is always reporting 0 vertices and 0 edges (nitay)

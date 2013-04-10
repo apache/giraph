@@ -23,8 +23,14 @@ import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.group.ChannelGroupFuture;
 
+import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+
+import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -154,6 +160,39 @@ public class ProgressableUtils {
       progressable.progress();
       msecs = Math.max(0, msecs - currentWaitMsecs);
     }
+  }
+
+  /**
+   * Create {#link numThreads} callables from {#link callableFactory},
+   * execute them and gather results.
+   *
+   * @param callableFactory Factory for Callables
+   * @param numThreads Number of threads to use
+   * @param threadNameFormat Format for thread name
+   * @param progressable Progressable for reporting progress
+   * @param <R> Type of Callable's results
+   * @return List of results from Callables
+   */
+  public static <R> List<R> getResultsWithNCallables(
+      CallableFactory<R> callableFactory, int numThreads,
+      String threadNameFormat, Progressable progressable) {
+    ExecutorService executorService =
+        Executors.newFixedThreadPool(numThreads,
+            new ThreadFactoryBuilder().setNameFormat(threadNameFormat).build());
+    List<Future<R>> futures = Lists.newArrayListWithCapacity(numThreads);
+    for (int i = 0; i < numThreads; i++) {
+      Callable<R> callable = callableFactory.newCallable(i);
+      Future<R> future = executorService.submit(
+          new LogStacktraceCallable<R>(callable));
+      futures.add(future);
+    }
+    executorService.shutdown();
+    List<R> futureResults = Lists.newArrayListWithCapacity(numThreads);
+    for (Future<R> future : futures) {
+      R result = ProgressableUtils.getFutureResult(future, progressable);
+      futureResults.add(result);
+    }
+    return futureResults;
   }
 
   /**

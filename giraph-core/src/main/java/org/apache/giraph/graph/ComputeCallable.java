@@ -68,7 +68,8 @@ import java.util.concurrent.Callable;
  * @param <M> Message data
  */
 public class ComputeCallable<I extends WritableComparable, V extends Writable,
-    E extends Writable, M extends Writable> implements Callable {
+    E extends Writable, M extends Writable>
+    implements Callable<Collection<PartitionStats>> {
   /** Class logger */
   private static final Logger LOG  = Logger.getLogger(ComputeCallable.class);
   /** Class time object */

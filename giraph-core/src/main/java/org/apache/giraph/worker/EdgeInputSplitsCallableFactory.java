@@ -20,6 +20,8 @@ package org.apache.giraph.worker;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.GraphState;
+import org.apache.giraph.graph.VertexEdgeCount;
+import org.apache.giraph.utils.CallableFactory;
 import org.apache.giraph.zk.ZooKeeperExt;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -35,7 +37,7 @@ import org.apache.hadoop.mapreduce.Mapper;
  */
 public class EdgeInputSplitsCallableFactory<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
-    implements InputSplitsCallableFactory<I, V, E, M> {
+    implements CallableFactory<VertexEdgeCount> {
   /** Mapper context. */
   private final Mapper<?, ?, ?, ?>.Context context;
   /** Graph state. */

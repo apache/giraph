@@ -37,7 +37,7 @@ import org.apache.giraph.partition.PartitionOwner;
 import org.apache.giraph.partition.PartitionStats;
 import org.apache.giraph.time.SystemTime;
 import org.apache.giraph.time.Time;
-import org.apache.giraph.utils.LogStacktraceCallable;
+import org.apache.giraph.utils.CallableFactory;
 import org.apache.giraph.utils.MemoryUtils;
 import org.apache.giraph.utils.ProgressableUtils;
 import org.apache.giraph.utils.ReflectionUtils;
@@ -56,9 +56,6 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 
-import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
-
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.net.URL;
@@ -69,9 +66,7 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
 import static org.apache.giraph.conf.GiraphConstants.EDGE_VALUE_CLASS;
@@ -725,13 +720,13 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
    * @param numPartitions the number of data partitions (vertices) to process
    * @param numThreads number of concurrent threads to do processing
    */
-  private void processGraphPartitions(Mapper<?, ?, ?, ?>.Context context,
-    List<PartitionStats> partitionStatsList, GraphState<I, V, E, M> graphState,
-    MessageStoreByPartition<I, M> messageStore, int numPartitions,
-    int numThreads) {
-    List<Future<Collection<PartitionStats>>> partitionFutures =
-      Lists.newArrayListWithCapacity(numPartitions);
-    BlockingQueue<Integer> computePartitionIdQueue =
+  private void processGraphPartitions(final Mapper<?, ?, ?, ?>.Context context,
+      List<PartitionStats> partitionStatsList,
+      final GraphState<I, V, E, M> graphState,
+      final MessageStoreByPartition<I, M> messageStore,
+      int numPartitions,
+      int numThreads) {
+    final BlockingQueue<Integer> computePartitionIdQueue =
       new ArrayBlockingQueue<Integer>(numPartitions);
     for (Integer partitionId :
       serviceWorker.getPartitionStore().getPartitionIds()) {
@@ -741,32 +736,27 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
     GiraphTimerContext computeAllTimerContext = computeAll.time();
     timeToFirstMessageTimerContext = timeToFirstMessage.time();
 
-    ExecutorService partitionExecutor =
-      Executors.newFixedThreadPool(numThreads,
-        new ThreadFactoryBuilder().setNameFormat("compute-%d").build());
-    for (int i = 0; i < numThreads; ++i) {
-      ComputeCallable<I, V, E, M> computeCallable =
-        new ComputeCallable<I, V, E, M>(
-          context,
-          graphState,
-          messageStore,
-          computePartitionIdQueue,
-          conf,
-          serviceWorker);
-      LogStacktraceCallable<Collection<PartitionStats>> wrapped =
-          new LogStacktraceCallable<Collection<PartitionStats>>(
-              computeCallable);
-      partitionFutures.add(partitionExecutor.submit(wrapped));
+    CallableFactory<Collection<PartitionStats>> callableFactory =
+        new CallableFactory<Collection<PartitionStats>>() {
+          @Override
+          public Callable<Collection<PartitionStats>> newCallable(
+              int callableId) {
+            return new ComputeCallable<I, V, E, M>(
+                context,
+                graphState,
+                messageStore,
+                computePartitionIdQueue,
+                conf,
+                serviceWorker);
+          }
+        };
+    List<Collection<PartitionStats>> results =
+        ProgressableUtils.getResultsWithNCallables(callableFactory,
+            numThreads, "compute-%d", context);
+    for (Collection<PartitionStats> result : results) {
+      partitionStatsList.addAll(result);
     }
 
-    // Wait until all the threads are done to wait on all requests
-    for (Future<Collection<PartitionStats>> partitionFuture :
-      partitionFutures) {
-      Collection<PartitionStats> stats =
-        ProgressableUtils.getFutureResult(partitionFuture, context);
-      partitionStatsList.addAll(stats);
-    }
-    partitionExecutor.shutdown();
     computeAllTimerContext.stop();
   }
 

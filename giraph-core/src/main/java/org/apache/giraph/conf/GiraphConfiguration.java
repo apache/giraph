@@ -302,6 +302,30 @@ public class GiraphConfiguration extends Configuration
   }
 
   /**
+   * Get the number of threads to use for writing output in the end of the
+   * application. If output format is not thread safe, returns 1.
+   *
+   * @return Number of output threads
+   */
+  public final int getNumOutputThreads() {
+    if (!vertexOutputFormatThreadSafe()) {
+      return 1;
+    } else {
+      return NUM_OUTPUT_THREADS.get(this);
+    }
+  }
+
+  /**
+   * Set the number of threads to use for writing output in the end of the
+   * application. Will be used only if {#vertexOutputFormatThreadSafe} is true.
+   *
+   * @param numOutputThreads Number of output threads
+   */
+  public void setNumOutputThreads(int numOutputThreads) {
+    NUM_OUTPUT_THREADS.set(this, numOutputThreads);
+  }
+
+  /**
    * Set the vertex combiner class (optional)
    *
    * @param vertexCombinerClass Determines how vertex messages are combined

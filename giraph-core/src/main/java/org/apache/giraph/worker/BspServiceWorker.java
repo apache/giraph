@@ -42,7 +42,7 @@ import org.apache.giraph.graph.FinishedSuperstepStats;
 import org.apache.giraph.graph.AddressesAndPartitionsWritable;
 import org.apache.giraph.graph.GlobalStats;
 import org.apache.giraph.io.superstep_output.SuperstepOutput;
-import org.apache.giraph.utils.LogStacktraceCallable;
+import org.apache.giraph.utils.CallableFactory;
 import org.apache.giraph.utils.JMapHistoDumper;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.VertexOutputFormat;
@@ -85,7 +85,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import net.iharder.Base64;
 
 import java.io.ByteArrayOutputStream;
@@ -102,9 +101,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -263,7 +259,7 @@ public class BspServiceWorker<I extends WritableComparable,
    */
   private VertexEdgeCount loadInputSplits(
       List<String> inputSplitPathList,
-      InputSplitsCallableFactory<I, V, E, M> inputSplitsCallableFactory)
+      CallableFactory<VertexEdgeCount> inputSplitsCallableFactory)
     throws KeeperException, InterruptedException {
     VertexEdgeCount vertexEdgeCount = new VertexEdgeCount();
     // Determine how many threads to use based on the number of input splits
@@ -271,35 +267,20 @@ public class BspServiceWorker<I extends WritableComparable,
         getConfiguration().getMaxWorkers() + 1;
     int numThreads = Math.min(getConfiguration().getNumInputSplitsThreads(),
         maxInputSplitThreads);
-    ExecutorService inputSplitsExecutor =
-        Executors.newFixedThreadPool(numThreads,
-            new ThreadFactoryBuilder().setNameFormat("load-%d").build());
-    List<Future<VertexEdgeCount>> threadsFutures =
-        Lists.newArrayListWithCapacity(numThreads);
     if (LOG.isInfoEnabled()) {
       LOG.info("loadInputSplits: Using " + numThreads + " thread(s), " +
           "originally " + getConfiguration().getNumInputSplitsThreads() +
           " threads(s) for " + inputSplitPathList.size() + " total splits.");
     }
-    for (int i = 0; i < numThreads; ++i) {
-      Callable<VertexEdgeCount> inputSplitsCallable =
-          inputSplitsCallableFactory.newCallable(i);
-      LogStacktraceCallable<VertexEdgeCount> wrapped =
-          new LogStacktraceCallable<VertexEdgeCount>(
-              inputSplitsCallable);
-      threadsFutures.add(inputSplitsExecutor.submit(wrapped));
-    }
 
-    // Wait until all the threads are done to wait on all requests
-    for (Future<VertexEdgeCount> threadFuture : threadsFutures) {
-      VertexEdgeCount threadVertexEdgeCount =
-          ProgressableUtils.getFutureResult(threadFuture, getContext());
-      vertexEdgeCount =
-          vertexEdgeCount.incrVertexEdgeCount(threadVertexEdgeCount);
+    List<VertexEdgeCount> results =
+        ProgressableUtils.getResultsWithNCallables(inputSplitsCallableFactory,
+            numThreads, "load-%d", getContext());
+    for (VertexEdgeCount result : results) {
+      vertexEdgeCount = vertexEdgeCount.incrVertexEdgeCount(result);
     }
 
     workerClient.waitAllRequests();
-    inputSplitsExecutor.shutdown();
     return vertexEdgeCount;
   }
 
@@ -946,47 +927,60 @@ else[HADOOP_NON_SECURE]*/
       return;
     }
 
+    int numThreads = Math.min(getConfiguration().getNumOutputThreads(),
+        getPartitionStore().getNumPartitions());
     LoggerUtils.setStatusAndLog(getContext(), LOG, Level.INFO,
-        "saveVertices: Starting to save " + numLocalVertices + " vertices");
-    VertexOutputFormat<I, V, E> vertexOutputFormat =
+        "saveVertices: Starting to save " + numLocalVertices + " vertices " +
+            "using " + numThreads + " threads");
+    final VertexOutputFormat<I, V, E> vertexOutputFormat =
         getConfiguration().createVertexOutputFormat();
-    VertexWriter<I, V, E> vertexWriter =
-        vertexOutputFormat.createVertexWriter(getContext());
-    vertexWriter.setConf(
-        (ImmutableClassesGiraphConfiguration<I, V, E, Writable>)
-            getConfiguration());
-    vertexWriter.initialize(getContext());
-    long verticesWritten = 0;
-    long nextPrintVertices = 0;
-    long nextPrintMsecs = System.currentTimeMillis() + 15000;
-    int partitionIndex = 0;
-    int numPartitions = getPartitionStore().getNumPartitions();
-    for (Integer partitionId : getPartitionStore().getPartitionIds()) {
-      Partition<I, V, E, M> partition =
-          getPartitionStore().getPartition(partitionId);
-      for (Vertex<I, V, E, M> vertex : partition) {
-        getContext().progress();
-        vertexWriter.writeVertex(vertex);
-        ++verticesWritten;
+    CallableFactory<Void> callableFactory = new CallableFactory<Void>() {
+      @Override
+      public Callable<Void> newCallable(int callableId) {
+        return new Callable<Void>() {
+          @Override
+          public Void call() throws Exception {
+            VertexWriter<I, V, E> vertexWriter =
+                vertexOutputFormat.createVertexWriter(getContext());
+            vertexWriter.setConf(
+                (ImmutableClassesGiraphConfiguration<I, V, E, Writable>)
+                    getConfiguration());
+            vertexWriter.initialize(getContext());
+            long verticesWritten = 0;
+            long nextPrintVertices = 0;
+            long nextPrintMsecs = System.currentTimeMillis() + 15000;
+            int partitionIndex = 0;
+            int numPartitions = getPartitionStore().getNumPartitions();
+            for (Integer partitionId : getPartitionStore().getPartitionIds()) {
+              Partition<I, V, E, M> partition =
+                  getPartitionStore().getPartition(partitionId);
+              for (Vertex<I, V, E, M> vertex : partition) {
+                vertexWriter.writeVertex(vertex);
+                ++verticesWritten;
 
-        // Update status at most every 250k vertices or 15 seconds
-        if (verticesWritten > nextPrintVertices &&
-            System.currentTimeMillis() > nextPrintMsecs) {
-          LoggerUtils.setStatusAndLog(
-              getContext(), LOG, Level.INFO,
-              "saveVertices: Saved " +
-                  verticesWritten + " out of " + numLocalVertices +
-                  " vertices, on partition " + partitionIndex + " out of " +
-                  numPartitions);
-          nextPrintMsecs = System.currentTimeMillis() + 15000;
-          nextPrintVertices = verticesWritten + 250000;
-        }
+                // Update status at most every 250k vertices or 15 seconds
+                if (verticesWritten > nextPrintVertices &&
+                    System.currentTimeMillis() > nextPrintMsecs) {
+                  LoggerUtils.setStatusAndLog(getContext(), LOG, Level.INFO,
+                      "saveVertices: Saved " + verticesWritten + " out of " +
+                          partition.getVertexCount() + " partition vertices, " +
+                          "on partition " + partitionIndex +
+                          " out of " + numPartitions);
+                  nextPrintMsecs = System.currentTimeMillis() + 15000;
+                  nextPrintVertices = verticesWritten + 250000;
+                }
+              }
+              ++partitionIndex;
+            }
+            vertexWriter.close(getContext()); // the temp results are saved now
+            return null;
+          }
+        };
       }
-      getPartitionStore().putPartition(partition);
-      getContext().progress();
-      ++partitionIndex;
-    }
-    vertexWriter.close(getContext()); // the temp results are saved now
+    };
+    ProgressableUtils.getResultsWithNCallables(callableFactory, numThreads,
+        "save-vertices-%d", getContext());
+
     LoggerUtils.setStatusAndLog(getContext(), LOG, Level.INFO,
       "saveVertices: Done saving vertices.");
     // YARN: must complete the commit the "task" output, Hadoop isn't there.

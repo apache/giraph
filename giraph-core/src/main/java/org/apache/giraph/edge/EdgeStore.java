@@ -19,19 +19,16 @@
 package org.apache.giraph.edge;
 
 import com.google.common.collect.MapMaker;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.utils.ByteArrayVertexIdEdges;
-import org.apache.giraph.utils.LogStacktraceCallable;
+import org.apache.giraph.utils.CallableFactory;
 import org.apache.giraph.utils.ProgressableUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -178,53 +175,50 @@ public class EdgeStore<I extends WritableComparable,
         new ArrayBlockingQueue<Integer>(transientEdges.size());
     partitionIdQueue.addAll(transientEdges.keySet());
     int numThreads = configuration.getNumInputSplitsThreads();
-    ExecutorService movePartitionExecutor =
-        Executors.newFixedThreadPool(numThreads,
-            new ThreadFactoryBuilder().setNameFormat("move-edges-%d").build());
 
-    for (int i = 0; i < numThreads; ++i) {
-      Callable moveCallable = new Callable<Void>() {
-        @Override
-        public Void call() throws Exception {
-          Integer partitionId;
-          while ((partitionId = partitionIdQueue.poll()) != null) {
-            Partition<I, V, E, M> partition =
-                service.getPartitionStore().getPartition(partitionId);
-            ConcurrentMap<I, VertexEdges<I, E>> partitionEdges =
-                transientEdges.remove(partitionId);
-            for (I vertexId : partitionEdges.keySet()) {
-              VertexEdges<I, E> vertexEdges = convertInputToComputeEdges(
-                  partitionEdges.remove(vertexId));
-              Vertex<I, V, E, M> vertex = partition.getVertex(vertexId);
-              // If the source vertex doesn't exist, create it. Otherwise,
-              // just set the edges.
-              if (vertex == null) {
-                vertex = configuration.createVertex();
-                vertex.initialize(vertexId, configuration.createVertexValue(),
-                    vertexEdges);
-                partition.putVertex(vertex);
-              } else {
-                vertex.setEdges(vertexEdges);
-                // Some Partition implementations (e.g. ByteArrayPartition)
-                // require us to put back the vertex after modifying it.
-                partition.saveVertex(vertex);
+    CallableFactory<Void> callableFactory = new CallableFactory<Void>() {
+      @Override
+      public Callable<Void> newCallable(int callableId) {
+        return new Callable<Void>() {
+          @Override
+          public Void call() throws Exception {
+            Integer partitionId;
+            while ((partitionId = partitionIdQueue.poll()) != null) {
+              Partition<I, V, E, M> partition =
+                  service.getPartitionStore().getPartition(partitionId);
+              ConcurrentMap<I, VertexEdges<I, E>> partitionEdges =
+                  transientEdges.remove(partitionId);
+              for (I vertexId : partitionEdges.keySet()) {
+                VertexEdges<I, E> vertexEdges = convertInputToComputeEdges(
+                    partitionEdges.remove(vertexId));
+                Vertex<I, V, E, M> vertex = partition.getVertex(vertexId);
+                // If the source vertex doesn't exist, create it. Otherwise,
+                // just set the edges.
+                if (vertex == null) {
+                  vertex = configuration.createVertex();
+                  vertex.initialize(vertexId, configuration.createVertexValue(),
+                      vertexEdges);
+                  partition.putVertex(vertex);
+                } else {
+                  vertex.setEdges(vertexEdges);
+                  // Some Partition implementations (e.g. ByteArrayPartition)
+                  // require us to put back the vertex after modifying it.
+                  partition.saveVertex(vertex);
+                }
               }
+              // Some PartitionStore implementations
+              // (e.g. DiskBackedPartitionStore) require us to put back the
+              // partition after modifying it.
+              service.getPartitionStore().putPartition(partition);
             }
-            // Some PartitionStore implementations
-            // (e.g. DiskBackedPartitionStore) require us to put back the
-            // partition after modifying it.
-            service.getPartitionStore().putPartition(partition);
+            return null;
           }
-          return null;
-        }
-      };
-      movePartitionExecutor.submit(
-          new LogStacktraceCallable<Void>(moveCallable));
-    }
+        };
+      }
+    };
+    ProgressableUtils.getResultsWithNCallables(callableFactory, numThreads,
+        "move-edges-%d", progressable);
 
-    movePartitionExecutor.shutdown();
-    ProgressableUtils.awaitExecutorTermination(movePartitionExecutor,
-        progressable);
     transientEdges.clear();
 
     if (LOG.isInfoEnabled()) {

@@ -140,6 +140,9 @@ public interface GiraphConstants {
    */
   BooleanConfOption VERTEX_OUTPUT_FORMAT_THREAD_SAFE =
       new BooleanConfOption("giraph.vertexOutputFormatThreadSafe", false);
+  /** Number of threads for writing output in the end of the application */
+  IntConfOption NUM_OUTPUT_THREADS =
+      new IntConfOption("giraph.numOutputThreads", 1);
 
   /** conf key for comma-separated list of jars to export to YARN workers */
   StrConfOption GIRAPH_YARN_LIBJARS =
