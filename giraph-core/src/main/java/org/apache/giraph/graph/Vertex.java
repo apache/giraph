@@ -40,7 +40,7 @@ import java.util.Iterator;
 
 /**
  * Basic abstract class for writing a BSP application for computation.
- * Giraph will checkpoint Vertex value and edges, hence all user data should
+ * Giraph will store Vertex value and edges, hence all user data should
  * be stored as part of the vertex value.
  *
  * @param <I> Vertex id

@@ -70,6 +70,10 @@ public class ByteArrayPartition<I extends WritableComparable,
     vertexMap = new MapMaker().concurrencyLevel(
         getConf().getNettyServerExecutionConcurrency()).makeMap();
     representativeVertex = getConf().createVertex();
+    representativeVertex.initialize(
+        getConf().createVertexId(),
+        getConf().createVertexValue(),
+        getConf().createVertexEdges());
     useUnsafeSerialization = getConf().useUnsafeSerialization();
   }
 
