@@ -402,10 +402,9 @@ public class WritableUtils {
   * @param <E> Edge value
   * @param <M> Message value
   * @param conf Configuration
-  * @return The vertex
   */
   public static <I extends WritableComparable, V extends Writable,
-  E extends Writable, M extends Writable> Vertex<I, V, E, M>
+  E extends Writable, M extends Writable> void
   reinitializeVertexFromByteArray(
       byte[] byteArray,
       Vertex<I, V, E, M> vertex,
@@ -424,7 +423,6 @@ public class WritableUtils {
       throw new IllegalStateException(
           "readFieldsFromByteArrayWithSize: IOException", e);
     }
-    return vertex;
   }
 
   /**

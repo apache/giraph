@@ -191,6 +191,10 @@ public class ByteArrayPartition<I extends WritableComparable,
         getConf().getNettyServerExecutionConcurrency()).initialCapacity(
         size).makeMap();
     representativeVertex = getConf().createVertex();
+    representativeVertex.initialize(
+        getConf().createVertexId(),
+        getConf().createVertexValue(),
+        getConf().createVertexEdges());
     useUnsafeSerialization = getConf().useUnsafeSerialization();
     for (int i = 0; i < size; ++i) {
       progress();
