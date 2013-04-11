@@ -370,7 +370,8 @@ public class TestVertexAndEdges {
     byte[] byteArray = null;
     for (int i = 0; i < REPS; ++i) {
       serializeNanosStart = SystemTime.get().getNanoseconds();
-      byteArray = WritableUtils.writeToByteArray(vertex);
+      byteArray = WritableUtils.writeVertexToByteArray(
+          vertex, false, vertex.getConf());
       serializeNanos += Times.getNanosecondsSince(SystemTime.get(),
           serializeNanosStart);
     }
@@ -381,13 +382,14 @@ public class TestVertexAndEdges {
         " bytes / sec for " + edgesClass.getName());
 
     Vertex<LongWritable, FloatWritable, DoubleWritable, LongWritable>
-        readVertex = instantiateVertex(edgesClass);
-
+        readVertex = buildVertex(edgesClass);
+    
     long deserializeNanosStart;
     long deserializeNanos = 0;
     for (int i = 0; i < REPS; ++i) {
       deserializeNanosStart = SystemTime.get().getNanoseconds();
-      WritableUtils.readFieldsFromByteArray(byteArray, readVertex);
+      WritableUtils.reinitializeVertexFromByteArray(byteArray, readVertex, false, 
+          readVertex.getConf());
       deserializeNanos += Times.getNanosecondsSince(SystemTime.get(),
           deserializeNanosStart);
     }
@@ -416,7 +418,7 @@ public class TestVertexAndEdges {
       serializeNanosStart = SystemTime.get().getNanoseconds();
       outputStream =
           new DynamicChannelBufferOutputStream(32);
-      vertex.write(outputStream);
+      WritableUtils.writeVertexToDataOutput(outputStream, vertex, vertex.getConf());
       serializeNanos += Times.getNanosecondsSince(SystemTime.get(),
           serializeNanosStart);
     }
@@ -429,7 +431,7 @@ public class TestVertexAndEdges {
         " bytes / sec for " + edgesClass.getName());
 
     Vertex<LongWritable, FloatWritable, DoubleWritable, LongWritable>
-        readVertex = instantiateVertex(edgesClass);
+        readVertex = buildVertex(edgesClass);
 
     long deserializeNanosStart;
     long deserializeNanos = 0;
@@ -438,7 +440,8 @@ public class TestVertexAndEdges {
       DynamicChannelBufferInputStream inputStream = new
           DynamicChannelBufferInputStream(
           outputStream.getDynamicChannelBuffer());
-      readVertex.readFields(inputStream);
+      WritableUtils.reinitializeVertexFromDataInput(
+          inputStream, readVertex, readVertex.getConf());
       deserializeNanos += Times.getNanosecondsSince(SystemTime.get(),
           deserializeNanosStart);
       outputStream.getDynamicChannelBuffer().readerIndex(0);
@@ -470,7 +473,7 @@ public class TestVertexAndEdges {
       serializeNanosStart = SystemTime.get().getNanoseconds();
       outputStream =
           new UnsafeByteArrayOutputStream(32);
-      vertex.write(outputStream);
+      WritableUtils.writeVertexToDataOutput(outputStream, vertex, vertex.getConf());
       serializeNanos += Times.getNanosecondsSince(SystemTime.get(),
           serializeNanosStart);
     }
@@ -485,7 +488,7 @@ public class TestVertexAndEdges {
         " bytes / sec for " + edgesClass.getName());
 
     Vertex<LongWritable, FloatWritable, DoubleWritable, LongWritable>
-        readVertex = instantiateVertex(edgesClass);
+        readVertex = buildVertex(edgesClass);
 
     long deserializeNanosStart;
     long deserializeNanos = 0;
@@ -494,7 +497,8 @@ public class TestVertexAndEdges {
       UnsafeByteArrayInputStream inputStream = new
           UnsafeByteArrayInputStream(
           outputStream.getByteArray(), 0, outputStream.getPos());
-      readVertex.readFields(inputStream);
+      WritableUtils.reinitializeVertexFromDataInput(
+          inputStream, readVertex, readVertex.getConf());
       deserializeNanos += Times.getNanosecondsSince(SystemTime.get(),
           deserializeNanosStart);
     }

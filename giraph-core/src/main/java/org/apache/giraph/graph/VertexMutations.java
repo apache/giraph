@@ -87,8 +87,8 @@ public class VertexMutations<I extends WritableComparable,
 
     int addedVertexListSize = input.readInt();
     for (int i = 0; i < addedVertexListSize; ++i) {
-      Vertex<I, V, E, M> vertex = conf.createVertex();
-      vertex.readFields(input);
+      Vertex<I, V, E, M> vertex =
+          WritableUtils.readVertexFromDataInput(input, getConf());
       addedVertexList.add(vertex);
     }
     removedVertexCount = input.readInt();
@@ -110,7 +110,7 @@ public class VertexMutations<I extends WritableComparable,
   public void write(DataOutput output) throws IOException {
     output.writeInt(addedVertexList.size());
     for (Vertex<I, V, E, M> vertex : addedVertexList) {
-      vertex.write(output);
+      WritableUtils.writeVertexToDataOutput(output, vertex, getConf());
     }
     output.writeInt(removedVertexCount);
     output.writeInt(addedEdgeList.size());

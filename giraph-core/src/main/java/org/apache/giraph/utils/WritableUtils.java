@@ -18,7 +18,10 @@
 
 package org.apache.giraph.utils;
 
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.Edge;
+import org.apache.giraph.edge.VertexEdges;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.zk.ZooKeeperExt;
 import org.apache.giraph.zk.ZooKeeperExt.PathStat;
 import org.apache.hadoop.conf.Configuration;
@@ -328,6 +331,103 @@ public class WritableUtils {
   }
 
   /**
+   * Write vertex data to byte array with the first 4 bytes as the size of the
+   * entire buffer (including the size).
+   *
+   * @param vertex Vertex to write from.
+   * @param buffer Use this buffer instead
+   * @param unsafe Use unsafe serialization?
+   * @param conf Configuration
+   * @param <I> Vertex id
+   * @param <V> Vertex value
+   * @param <E> Edge value
+   * @param <M> Message value
+   * @return Byte array with serialized object.
+   */
+  public static <I extends WritableComparable, V extends Writable,
+      E extends Writable, M extends Writable> byte[] writeVertexToByteArray(
+      Vertex<I, V, E, M> vertex,
+      byte[] buffer,
+      boolean unsafe,
+      ImmutableClassesGiraphConfiguration<I, V, E, M> conf) {
+    ExtendedDataOutput extendedDataOutput;
+    if (unsafe) {
+      extendedDataOutput = new UnsafeByteArrayOutputStream(buffer);
+    } else {
+      extendedDataOutput = new ExtendedByteArrayDataOutput(buffer);
+    }
+    try {
+      extendedDataOutput.writeInt(-1);
+      writeVertexToDataOutput(extendedDataOutput, vertex, conf);
+      extendedDataOutput.writeInt(0, extendedDataOutput.getPos());
+    } catch (IOException e) {
+      throw new IllegalStateException("writeVertexToByteArray: " +
+          "IOException", e);
+    }
+
+    return extendedDataOutput.getByteArray();
+  }
+
+  /**
+   * Write vertex data to byte array with the first 4 bytes as the size of the
+   * entire buffer (including the size).
+   *
+   * @param vertex Vertex to write from.
+   * @param unsafe Use unsafe serialization?
+   * @param conf Configuration
+   * @param <I> Vertex id
+   * @param <V> Vertex value
+   * @param <E> Edge value
+   * @param <M> Message value
+   * @return Byte array with serialized object.
+   */
+  public static <I extends WritableComparable, V extends Writable,
+      E extends Writable, M extends Writable> byte[] writeVertexToByteArray(
+      Vertex<I, V, E, M> vertex,
+      boolean unsafe,
+      ImmutableClassesGiraphConfiguration<I, V, E, M> conf) {
+    return writeVertexToByteArray(vertex, null, unsafe, conf);
+  }
+
+  /**
+  * Read vertex data from byteArray to a Writeable object, skipping the size.
+  * Serialization method is choosable. Assumes the vertex has already been
+  * initialized and contains values for Id, value, and edges.
+  *
+  * @param byteArray Byte array to find the fields in.
+  * @param vertex Vertex to fill in the fields.
+  * @param unsafe Use unsafe deserialization
+  * @param <I> Vertex id
+  * @param <V> Vertex value
+  * @param <E> Edge value
+  * @param <M> Message value
+  * @param conf Configuration
+  * @return The vertex
+  */
+  public static <I extends WritableComparable, V extends Writable,
+  E extends Writable, M extends Writable> Vertex<I, V, E, M>
+  reinitializeVertexFromByteArray(
+      byte[] byteArray,
+      Vertex<I, V, E, M> vertex,
+      boolean unsafe,
+      ImmutableClassesGiraphConfiguration<I, V, E, M> conf) {
+    ExtendedDataInput extendedDataInput;
+    if (unsafe) {
+      extendedDataInput = new UnsafeByteArrayInputStream(byteArray);
+    } else {
+      extendedDataInput = new ExtendedByteArrayDataInput(byteArray);
+    }
+    try {
+      extendedDataInput.readInt();
+      reinitializeVertexFromDataInput(extendedDataInput, vertex, conf);
+    } catch (IOException e) {
+      throw new IllegalStateException(
+          "readFieldsFromByteArrayWithSize: IOException", e);
+    }
+    return vertex;
+  }
+
+  /**
    * Write an edge to an output stream.
    *
    * @param out Data output
@@ -355,5 +455,87 @@ public class WritableUtils {
   void readEdge(DataInput in, Edge<I, E> edge) throws IOException {
     edge.getTargetVertexId().readFields(in);
     edge.getValue().readFields(in);
+  }
+
+  /**
+   * Reads data from input stream to inizialize Vertex. Assumes the vertex has
+   * already been initialized and contains values for Id, value, and edges.
+   *
+   * @param input The input stream
+   * @param vertex The vertex to initialize
+   * @param conf Configuration
+   * @param <I> Vertex id
+   * @param <V> Vertex value
+   * @param <E> Edge value
+   * @param <M> Message value
+   * @throws IOException
+   */
+  @SuppressWarnings("unchecked")
+  public static <I extends WritableComparable, V extends Writable,
+  E extends Writable, M extends Writable> void reinitializeVertexFromDataInput(
+      DataInput input,
+      Vertex<I, V, E, M> vertex,
+      ImmutableClassesGiraphConfiguration<I, V, E, M> conf)
+    throws IOException {
+    vertex.getId().readFields(input);
+    vertex.getValue().readFields(input);
+    ((VertexEdges<I, E>) vertex.getEdges()).readFields(input);
+    if (input.readBoolean()) {
+      vertex.voteToHalt();
+    } else {
+      vertex.wakeUp();
+    }
+  }
+
+  /**
+   * Reads data from input stream to inizialize Vertex.
+   *
+   * @param input The input stream
+   * @param conf Configuration
+   * @param <I> Vertex id
+   * @param <V> Vertex value
+   * @param <E> Edge value
+   * @param <M> Message value
+   * @return The vertex
+   * @throws IOException
+   */
+  public static <I extends WritableComparable, V extends Writable,
+  E extends Writable, M extends Writable> Vertex<I, V, E, M>
+  readVertexFromDataInput(
+      DataInput input,
+      ImmutableClassesGiraphConfiguration<I, V, E, M> conf)
+    throws IOException {
+    Vertex<I, V, E, M> vertex = conf.createVertex();
+    I id = conf.createVertexId();
+    V value = conf.createVertexValue();
+    VertexEdges<I, E> edges = conf.createVertexEdges();
+    vertex.initialize(id, value, edges);
+    reinitializeVertexFromDataInput(input, vertex, conf);
+    return vertex;
+  }
+
+  /**
+   * Writes Vertex data to output stream.
+   *
+   * @param output the output stream
+   * @param vertex The vertex to serialize
+   * @param conf Configuration
+   * @param <I> Vertex id
+   * @param <V> Vertex value
+   * @param <E> Edge value
+   * @param <M> Message value
+   * @throws IOException
+   */
+  @SuppressWarnings("unchecked")
+  public static <I extends WritableComparable, V extends Writable,
+  E extends Writable, M extends Writable> void writeVertexToDataOutput(
+      DataOutput output,
+      Vertex<I, V, E, M> vertex,
+      ImmutableClassesGiraphConfiguration<I, V, E, M> conf)
+    throws IOException {
+    vertex.getId().write(output);
+    vertex.getValue().write(output);
+    ((VertexEdges<I, E>) vertex.getEdges()).write(output);
+    output.writeBoolean(vertex.isHalted());
   }
 }

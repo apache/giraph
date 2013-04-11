@@ -79,21 +79,22 @@ public class ByteArrayPartition<I extends WritableComparable,
     if (vertexData == null) {
       return null;
     }
-    WritableUtils.readFieldsFromByteArrayWithSize(
-        vertexData, representativeVertex, useUnsafeSerialization);
+    WritableUtils.reinitializeVertexFromByteArray(
+        vertexData, representativeVertex, useUnsafeSerialization, getConf());
     return representativeVertex;
   }
 
   @Override
   public Vertex<I, V, E, M> putVertex(Vertex<I, V, E, M> vertex) {
     byte[] vertexData =
-        WritableUtils.writeToByteArrayWithSize(vertex, useUnsafeSerialization);
+        WritableUtils.writeVertexToByteArray(
+            vertex, useUnsafeSerialization, getConf());
     byte[] oldVertexBytes = vertexMap.put(vertex.getId(), vertexData);
     if (oldVertexBytes == null) {
       return null;
     } else {
-      WritableUtils.readFieldsFromByteArrayWithSize(
-          oldVertexBytes, representativeVertex, useUnsafeSerialization);
+      WritableUtils.reinitializeVertexFromByteArray(oldVertexBytes,
+          representativeVertex, useUnsafeSerialization, getConf());
       return representativeVertex;
     }
   }
@@ -104,8 +105,8 @@ public class ByteArrayPartition<I extends WritableComparable,
     if (vertexBytes == null) {
       return null;
     }
-    WritableUtils.readFieldsFromByteArrayWithSize(vertexBytes,
-        representativeVertex, useUnsafeSerialization);
+    WritableUtils.reinitializeVertexFromByteArray(vertexBytes,
+        representativeVertex, useUnsafeSerialization, getConf());
     return representativeVertex;
   }
 
@@ -134,8 +135,8 @@ public class ByteArrayPartition<I extends WritableComparable,
   public long getEdgeCount() {
     long edges = 0;
     for (byte[] vertexBytes : vertexMap.values()) {
-      WritableUtils.readFieldsFromByteArrayWithSize(vertexBytes,
-          representativeVertex, useUnsafeSerialization);
+      WritableUtils.reinitializeVertexFromByteArray(vertexBytes,
+          representativeVertex, useUnsafeSerialization, getConf());
       edges += representativeVertex.getNumEdges();
     }
     return edges;
@@ -147,12 +148,12 @@ public class ByteArrayPartition<I extends WritableComparable,
     byte[] oldVertexData = vertexMap.get(vertex.getId());
     if (oldVertexData != null) {
       vertexMap.put(vertex.getId(),
-          WritableUtils.writeToByteArrayWithSize(
-              vertex, oldVertexData, useUnsafeSerialization));
+          WritableUtils.writeVertexToByteArray(
+              vertex, oldVertexData, useUnsafeSerialization, getConf()));
     } else {
       vertexMap.put(vertex.getId(),
-          WritableUtils.writeToByteArrayWithSize(
-              vertex, useUnsafeSerialization));
+          WritableUtils.writeVertexToByteArray(
+              vertex, useUnsafeSerialization, getConf()));
     }
   }
 
@@ -223,9 +224,9 @@ public class ByteArrayPartition<I extends WritableComparable,
 
     @Override
     public Vertex<I, V, E, M> next() {
-      WritableUtils.readFieldsFromByteArrayWithSize(
+      WritableUtils.reinitializeVertexFromByteArray(
           vertexDataIterator.next(), representativeVertex,
-          useUnsafeSerialization);
+          useUnsafeSerialization, getConf());
       return representativeVertex;
     }
 

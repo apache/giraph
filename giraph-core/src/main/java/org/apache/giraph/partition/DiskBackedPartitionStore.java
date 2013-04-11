@@ -20,6 +20,7 @@ package org.apache.giraph.partition;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -370,8 +371,8 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
     DataInputStream inputStream = new DataInputStream(
         new BufferedInputStream(new FileInputStream(file)));
     for (int i = 0; i < numVertices; ++i) {
-      Vertex<I, V, E, M> vertex = conf.createVertex();
-      vertex.readFields(inputStream);
+      Vertex<I, V , E, M> vertex =
+          WritableUtils.readVertexFromDataInput(inputStream, conf);
       partition.putVertex(vertex);
     }
     inputStream.close();
@@ -397,7 +398,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
     DataOutputStream outputStream = new DataOutputStream(
         new BufferedOutputStream(new FileOutputStream(file)));
     for (Vertex<I, V, E, M> vertex : partition) {
-      vertex.write(outputStream);
+      WritableUtils.writeVertexToDataOutput(outputStream, vertex, conf);
     }
     outputStream.close();
   }
@@ -418,7 +419,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
     DataOutputStream outputStream = new DataOutputStream(
         new BufferedOutputStream(new FileOutputStream(file, true)));
     for (Vertex<I, V, E, M> vertex : partition) {
-      vertex.write(outputStream);
+      WritableUtils.writeVertexToDataOutput(outputStream, vertex, conf);
     }
     outputStream.close();
   }

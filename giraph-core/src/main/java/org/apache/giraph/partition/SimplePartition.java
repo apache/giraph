@@ -19,6 +19,7 @@
 package org.apache.giraph.partition;
 
 import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.util.Progressable;
@@ -121,9 +122,9 @@ public class SimplePartition<I extends WritableComparable,
     }
     int vertices = input.readInt();
     for (int i = 0; i < vertices; ++i) {
-      Vertex<I, V, E, M> vertex = getConf().createVertex();
       progress();
-      vertex.readFields(input);
+      Vertex<I, V, E, M> vertex =
+          WritableUtils.readVertexFromDataInput(input, getConf());
       if (vertexMap.put(vertex.getId(), vertex) != null) {
         throw new IllegalStateException(
             "readFields: " + this +
@@ -136,9 +137,9 @@ public class SimplePartition<I extends WritableComparable,
   public void write(DataOutput output) throws IOException {
     super.write(output);
     output.writeInt(vertexMap.size());
-    for (Vertex vertex : vertexMap.values()) {
+    for (Vertex<I, V, E, M> vertex : vertexMap.values()) {
       progress();
-      vertex.write(output);
+      WritableUtils.writeVertexToDataOutput(output, vertex, getConf());
     }
   }
 

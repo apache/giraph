@@ -134,7 +134,7 @@ public class GiraphClasses<I extends WritableComparable,
   }
 
   /**
-   * Contructor that reads classes from a Configuration object.
+   * Constructor that reads classes from a Configuration object.
    *
    * @param conf Configuration object to read from.
    */

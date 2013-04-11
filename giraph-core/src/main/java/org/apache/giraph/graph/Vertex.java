@@ -35,13 +35,13 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 
-import java.io.DataInput;
-import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Iterator;
 
 /**
  * Basic abstract class for writing a BSP application for computation.
+ * Giraph will checkpoint Vertex value and edges, hence all user data should
+ * be stored as part of the vertex value.
  *
  * @param <I> Vertex id
  * @param <V> Vertex data
@@ -51,7 +51,7 @@ import java.util.Iterator;
 public abstract class Vertex<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
     extends DefaultImmutableClassesGiraphConfigurable<I, V, E, M>
-    implements WorkerAggregatorUsage, Writable {
+    implements WorkerAggregatorUsage {
   /** Vertex id. */
   private I id;
   /** Vertex value. */
@@ -504,25 +504,6 @@ public abstract class Vertex<I extends WritableComparable,
   @Override
   public <A extends Writable> A getAggregatedValue(String name) {
     return graphState.getWorkerAggregatorUsage().<A>getAggregatedValue(name);
-  }
-
-  @Override
-  public void readFields(DataInput in) throws IOException {
-    id = getConf().createVertexId();
-    id.readFields(in);
-    value = getConf().createVertexValue();
-    value.readFields(in);
-    edges = getConf().createVertexEdges();
-    edges.readFields(in);
-    halt = in.readBoolean();
-  }
-
-  @Override
-  public void write(DataOutput out) throws IOException {
-    id.write(out);
-    value.write(out);
-    edges.write(out);
-    out.writeBoolean(halt);
   }
 
   @Override
