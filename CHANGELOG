@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-616: Decouple vertices and edges in DiskBackedPartitionStore and avoid writing 
+  back edges when the algorithm does not change topology. (claudio)
+
   GIRAPH-613: Remove Writable from the interfaces implemented by Vertex (claudio)
 
   GIRAPH-543: Fix PageRankBenchmark and make WeightedPageRankBenchmark (majakabiljo)
