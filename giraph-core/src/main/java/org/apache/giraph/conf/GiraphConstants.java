@@ -650,5 +650,12 @@ public interface GiraphConstants {
    */
   IntConfOption MAX_NUMBER_OF_SUPERSTEPS =
       new IntConfOption("giraph.maxNumberOfSupersteps", 1);
+
+  /**
+   * The application will not mutate the graph topology (the edges). It is used
+   * to optimise out-of-core graph, by not writing back edges every time.
+   */
+  BooleanConfOption STATIC_GRAPH =
+      new BooleanConfOption("giraph.isStaticGraph", false);
 }
 // CHECKSTYLE: resume InterfaceIsTypeCheck

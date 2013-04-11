@@ -885,4 +885,13 @@ public class GiraphConfiguration extends Configuration
   public int getMaxNumberOfSupersteps() {
     return MAX_NUMBER_OF_SUPERSTEPS.get(this);
   }
+
+  /**
+   * Whether the application with change or not the graph topology.
+   *
+   * @return true if the graph is static, false otherwise.
+   */
+  public boolean isStaticGraph() {
+    return STATIC_GRAPH.isTrue(this);
+  }
 }
