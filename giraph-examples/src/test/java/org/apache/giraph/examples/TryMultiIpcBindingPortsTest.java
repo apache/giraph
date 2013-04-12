@@ -19,21 +19,19 @@
 package org.apache.giraph.examples;
 
 import org.apache.giraph.combiner.MinimumIntCombiner;
-import org.apache.giraph.conf.GiraphClasses;
+import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
+import org.apache.giraph.edge.ByteArrayEdges;
 import org.apache.giraph.io.formats.IdWithValueTextOutputFormat;
 import org.apache.giraph.io.formats.IntIntNullTextInputFormat;
 import org.apache.giraph.utils.InternalVertexRunner;
-import org.apache.giraph.edge.ByteArrayEdges;
 import org.junit.Test;
 
 import com.google.common.base.Splitter;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
 import com.google.common.collect.SetMultimap;
 
-import java.util.Map;
 import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
@@ -70,19 +68,15 @@ public class TryMultiIpcBindingPortsTest {
 
         // run internally
         // fail the first port binding attempt
-        Map<String, String> params = Maps.<String, String>newHashMap();
-        params.put(GiraphConstants.FAIL_FIRST_IPC_PORT_BIND_ATTEMPT.getKey(),
-            "true");
+        GiraphConfiguration conf = new GiraphConfiguration();
+        GiraphConstants.FAIL_FIRST_IPC_PORT_BIND_ATTEMPT.set(conf, true);
+        conf.setVertexClass(ConnectedComponentsVertex.class);
+        conf.setVertexEdgesClass(ByteArrayEdges.class);
+        conf.setCombinerClass(MinimumIntCombiner.class);
+        conf.setVertexInputFormatClass(IntIntNullTextInputFormat.class);
+        conf.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
 
-        GiraphClasses classes = new GiraphClasses();
-        classes.setVertexClass(ConnectedComponentsVertex.class);
-        classes.setVertexEdgesClass(ByteArrayEdges.class);
-        classes.setCombinerClass(MinimumIntCombiner.class);
-        classes.setVertexInputFormatClass(IntIntNullTextInputFormat.class);
-        classes.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
-
-        Iterable<String> results = InternalVertexRunner.run(classes, params,
-                graph);
+        Iterable<String> results = InternalVertexRunner.run(conf, graph);
 
         SetMultimap<Integer,Integer> components = parseResults(results);
 

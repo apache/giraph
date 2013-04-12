@@ -20,7 +20,6 @@ package org.apache.giraph.aggregators;
 
 import org.apache.giraph.BspCase;
 import org.apache.giraph.comm.aggregators.AggregatorUtils;
-import org.apache.giraph.conf.GiraphClasses;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
@@ -31,7 +30,6 @@ import org.apache.giraph.job.GiraphJob;
 import org.apache.giraph.master.MasterAggregatorHandler;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DoubleWritable;
-import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.Progressable;
@@ -76,12 +74,11 @@ public class TestAggregatorsHandling extends BspCase {
   @Test
   public void testAggregatorsHandling() throws IOException,
       ClassNotFoundException, InterruptedException {
-    GiraphClasses<LongWritable, DoubleWritable, FloatWritable, DoubleWritable>
-        classes = new GiraphClasses();
-    classes.setVertexClass(AggregatorsTestVertex.class);
-    classes.setVertexInputFormatClass(
+    GiraphConfiguration conf = new GiraphConfiguration();
+    conf.setVertexClass(AggregatorsTestVertex.class);
+    conf.setVertexInputFormatClass(
         SimplePageRankVertex.SimplePageRankVertexInputFormat.class);
-    GiraphJob job = prepareJob(getCallingMethodName(), classes);
+    GiraphJob job = prepareJob(getCallingMethodName(), conf);
     job.getConfiguration().setMasterComputeClass(
         AggregatorsTestVertex.AggregatorsTestMasterCompute.class);
     // test with aggregators split in a few requests
@@ -157,19 +154,18 @@ public class TestAggregatorsHandling extends BspCase {
       IOException, InterruptedException {
     Path checkpointsDir = getTempPath("checkPointsForTesting");
     Path outputPath = getTempPath(getCallingMethodName());
-    GiraphClasses<LongWritable, DoubleWritable, FloatWritable, DoubleWritable>
-        classes = new GiraphClasses();
-    classes.setVertexClass(AggregatorsTestVertex.class);
-    classes.setMasterComputeClass(
+    GiraphConfiguration conf = new GiraphConfiguration();
+    conf.setVertexClass(AggregatorsTestVertex.class);
+    conf.setMasterComputeClass(
         AggregatorsTestVertex.AggregatorsTestMasterCompute.class);
-    classes.setVertexInputFormatClass(
+    conf.setVertexInputFormatClass(
         SimplePageRankVertex.SimplePageRankVertexInputFormat.class);
-    GiraphJob job = prepareJob(getCallingMethodName(), classes, outputPath);
+    GiraphJob job = prepareJob(getCallingMethodName(), conf, outputPath);
 
-    GiraphConfiguration conf = job.getConfiguration();
-    GiraphConstants.CHECKPOINT_DIRECTORY.set(conf, checkpointsDir.toString());
-    GiraphConstants.CLEANUP_CHECKPOINTS_AFTER_SUCCESS.set(conf, false);
-    conf.setCheckpointFrequency(4);
+    GiraphConfiguration configuration = job.getConfiguration();
+    GiraphConstants.CHECKPOINT_DIRECTORY.set(configuration, checkpointsDir.toString());
+    GiraphConstants.CLEANUP_CHECKPOINTS_AFTER_SUCCESS.set(configuration, false);
+    configuration.setCheckpointFrequency(4);
 
     assertTrue(job.run(true));
 
@@ -177,14 +173,14 @@ public class TestAggregatorsHandling extends BspCase {
     System.out.println("testAggregatorsCheckpointing: Restarting from " +
         "superstep 4 with checkpoint path = " + checkpointsDir);
     outputPath = getTempPath(getCallingMethodName() + "Restarted");
-    classes = new GiraphClasses();
-    classes.setVertexClass(AggregatorsTestVertex.class);
-    classes.setMasterComputeClass(
+    conf = new GiraphConfiguration();
+    conf.setVertexClass(AggregatorsTestVertex.class);
+    conf.setMasterComputeClass(
         AggregatorsTestVertex.AggregatorsTestMasterCompute.class);
-    classes.setVertexInputFormatClass(
+    conf.setVertexInputFormatClass(
         SimplePageRankVertex.SimplePageRankVertexInputFormat.class);
     GiraphJob restartedJob = prepareJob(getCallingMethodName() + "Restarted",
-        classes, outputPath);
+        conf, outputPath);
     job.getConfiguration().setMasterComputeClass(
         SimpleCheckpointVertex.SimpleCheckpointVertexMasterCompute.class);
     GiraphConfiguration restartedJobConf = restartedJob.getConfiguration();

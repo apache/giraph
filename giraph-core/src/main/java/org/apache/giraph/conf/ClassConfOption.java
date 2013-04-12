@@ -146,6 +146,24 @@ public class ClassConfOption<C> extends AbstractConfOption {
   }
 
   /**
+   * Set classes for this key
+   * @param conf Configuration
+   * @param klasses Classes to set
+   */
+  public void setMany(Configuration conf, Class<? extends C> ... klasses) {
+    String[] klassNames = new String[klasses.length];
+    for (int i = 0; i < klasses.length; ++i) {
+      Class<?> klass = klasses[i];
+      if (!interfaceClass.isAssignableFrom(klass)) {
+        throw new RuntimeException(klass + " does not implement " +
+            interfaceClass.getName());
+      }
+      klassNames[i] = klasses[i].getName();
+    }
+    conf.setStrings(getKey(), klassNames);
+  }
+
+  /**
    * Add class to list for key
    * @param conf Configuration
    * @param klass Class to add

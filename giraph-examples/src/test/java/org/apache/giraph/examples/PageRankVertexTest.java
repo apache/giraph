@@ -18,13 +18,9 @@
 
 package org.apache.giraph.examples;
 
-import com.google.common.collect.Maps;
-import org.apache.giraph.conf.GiraphClasses;
+import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.edge.ByteArrayEdges;
 import org.apache.giraph.utils.InternalVertexRunner;
-import org.apache.hadoop.io.DoubleWritable;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.NullWritable;
 import org.junit.Test;
 
 import java.util.Map;
@@ -52,25 +48,19 @@ public class PageRankVertexTest {
       "5 2 4"
     };
 
-    Map<String, String> params = Maps.newHashMap();
-    params.put(RandomWalkWithRestartVertex.MAX_SUPERSTEPS, String.valueOf(50));
-    params.put(RandomWalkWithRestartVertex.TELEPORTATION_PROBABILITY,
-        String.valueOf(0.15));
-
-    GiraphClasses<LongWritable, DoubleWritable, NullWritable, DoubleWritable>
-        classes = new GiraphClasses<LongWritable, DoubleWritable,
-                NullWritable, DoubleWritable>();
-    classes.setVertexClass(PageRankVertex.class);
-    classes.setVertexEdgesClass(ByteArrayEdges.class);
-    classes.setVertexInputFormatClass(
-        LongDoubleNullTextInputFormat.class);
-    classes.setVertexOutputFormatClass(
+    GiraphConfiguration conf = new GiraphConfiguration();
+    conf.setInt(RandomWalkWithRestartVertex.MAX_SUPERSTEPS, 50);
+    conf.setFloat(RandomWalkWithRestartVertex.TELEPORTATION_PROBABILITY, 0.15f);
+    conf.setVertexClass(PageRankVertex.class);
+    conf.setVertexEdgesClass(ByteArrayEdges.class);
+    conf.setVertexInputFormatClass(LongDoubleNullTextInputFormat.class);
+    conf.setVertexOutputFormatClass(
         VertexWithDoubleValueNullEdgeTextOutputFormat.class);
-    classes.setWorkerContextClass(RandomWalkWorkerContext.class);
-    classes.setMasterComputeClass(
+    conf.setWorkerContextClass(RandomWalkWorkerContext.class);
+    conf.setMasterComputeClass(
         RandomWalkVertex.RandomWalkVertexMasterCompute.class);
     // Run internally
-    Iterable<String> results = InternalVertexRunner.run(classes, params, graph);
+    Iterable<String> results = InternalVertexRunner.run(conf, graph);
 
     Map<Long, Double> steadyStateProbabilities =
         RandomWalkTestUtils.parseSteadyStateProbabilities(results);

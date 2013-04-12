@@ -67,6 +67,15 @@ public class GiraphConfiguration extends Configuration
   }
 
   /**
+   * Get the user's subclassed {@link org.apache.giraph.graph.Vertex}
+   *
+   * @return User's vertex class
+   */
+  public Class<? extends Vertex> getVertexClass() {
+    return VERTEX_CLASS.get(this);
+  }
+
+  /**
    * Set the vertex class (required)
    *
    * @param vertexClass Runs vertex computation
@@ -154,6 +163,15 @@ public class GiraphConfiguration extends Configuration
   }
 
   /**
+   * Does the job have a {@link VertexInputFormat}?
+   *
+   * @return True iff a {@link VertexInputFormat} has been specified.
+   */
+  public boolean hasVertexInputFormat() {
+    return VERTEX_INPUT_FORMAT_CLASS.get(this) != null;
+  }
+
+  /**
    * Set the vertex input format class (required)
    *
    * @param vertexInputFormatClass Determines how graph is input
@@ -161,6 +179,15 @@ public class GiraphConfiguration extends Configuration
   public final void setVertexInputFormatClass(
       Class<? extends VertexInputFormat> vertexInputFormatClass) {
     VERTEX_INPUT_FORMAT_CLASS.set(this, vertexInputFormatClass);
+  }
+
+  /**
+   * Does the job have a {@link EdgeInputFormat}?
+   *
+   * @return True iff a {@link EdgeInputFormat} has been specified.
+   */
+  public boolean hasEdgeInputFormat() {
+    return EDGE_INPUT_FORMAT_CLASS.get(this) != null;
   }
 
   /**
@@ -252,6 +279,15 @@ public class GiraphConfiguration extends Configuration
   }
 
   /**
+   * Does the job have a {@link VertexOutputFormat}?
+   *
+   * @return True iff a {@link VertexOutputFormat} has been specified.
+   */
+  public boolean hasVertexOutputFormat() {
+    return VERTEX_OUTPUT_FORMAT_CLASS.get(this) != null;
+  }
+
+  /**
    * Set the vertex output format class (optional)
    *
    * @param vertexOutputFormatClass Determines how graph is output
@@ -326,11 +362,20 @@ public class GiraphConfiguration extends Configuration
   }
 
   /**
+   * Get the vertex combiner class (optional)
+   *
+   * @return vertexCombinerClass Determines how vertex messages are combined
+   */
+  public Class<? extends Combiner> getCombinerClass() {
+    return VERTEX_COMBINER_CLASS.get(this);
+  }
+
+  /**
    * Set the vertex combiner class (optional)
    *
    * @param vertexCombinerClass Determines how vertex messages are combined
    */
-  public final void setVertexCombinerClass(
+  public final void setCombinerClass(
       Class<? extends Combiner> vertexCombinerClass) {
     VERTEX_COMBINER_CLASS.set(this, vertexCombinerClass);
   }

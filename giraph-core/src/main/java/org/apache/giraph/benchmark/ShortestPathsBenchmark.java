@@ -67,7 +67,7 @@ public class ShortestPathsBenchmark extends GiraphBenchmark {
     LOG.info("Using class " + GiraphConstants.VERTEX_CLASS.get(conf));
     conf.setVertexInputFormatClass(PseudoRandomVertexInputFormat.class);
     if (!NO_COMBINER.optionTurnedOn(cmd)) {
-      conf.setVertexCombinerClass(MinimumDoubleCombiner.class);
+      conf.setCombinerClass(MinimumDoubleCombiner.class);
     }
     conf.setLong(PseudoRandomInputFormatConstants.AGGREGATE_VERTICES,
         BenchmarkOption.VERTICES.getOptionLongValue(cmd));

@@ -18,7 +18,7 @@
 
 package org.apache.giraph;
 
-import org.apache.giraph.conf.GiraphClasses;
+import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.examples.SimpleCheckpointVertex;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexOutputFormat;
@@ -55,12 +55,12 @@ public class TestNotEnoughMapTasks extends BspCase {
       return;
     }
     Path outputPath = getTempPath(getCallingMethodName());
-    GiraphClasses classes = new GiraphClasses();
-    classes.setVertexClass(
+    GiraphConfiguration conf = new GiraphConfiguration();
+    conf.setVertexClass(
         SimpleCheckpointVertex.SimpleCheckpointComputation.class);
-    classes.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
-    classes.setVertexOutputFormatClass(SimpleSuperstepVertexOutputFormat.class);
-    GiraphJob job = prepareJob(getCallingMethodName(), classes, outputPath);
+    conf.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
+    conf.setVertexOutputFormatClass(SimpleSuperstepVertexOutputFormat.class);
+    GiraphJob job = prepareJob(getCallingMethodName(), conf, outputPath);
 
     // An unlikely impossible number of workers to achieve
     final int unlikelyWorkers = Short.MAX_VALUE;

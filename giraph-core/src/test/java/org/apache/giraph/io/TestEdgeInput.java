@@ -18,10 +18,8 @@
 
 package org.apache.giraph.io;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Maps;
 import org.apache.giraph.BspCase;
-import org.apache.giraph.conf.GiraphClasses;
+import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.ByteArrayEdges;
 import org.apache.giraph.edge.Edge;
@@ -35,6 +33,8 @@ import org.apache.giraph.utils.InternalVertexRunner;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.junit.Test;
+
+import com.google.common.collect.Maps;
 
 import java.io.IOException;
 import java.util.Map;
@@ -63,14 +63,12 @@ public class TestEdgeInput extends BspCase {
         "4 1"
     };
 
-    GiraphClasses classes = new GiraphClasses();
-    classes.setVertexClass(TestVertexWithNumEdges.class);
-    classes.setVertexEdgesClass(ByteArrayEdges.class);
-    classes.setEdgeInputFormatClass(IntNullTextEdgeInputFormat.class);
-    classes.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
-    Map<String, String> params = ImmutableMap.of();
-    Iterable<String> results = InternalVertexRunner.run(classes, params,
-        null, edges);
+    GiraphConfiguration conf = new GiraphConfiguration();
+    conf.setVertexClass(TestVertexWithNumEdges.class);
+    conf.setVertexEdgesClass(ByteArrayEdges.class);
+    conf.setEdgeInputFormatClass(IntNullTextEdgeInputFormat.class);
+    conf.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
+    Iterable<String> results = InternalVertexRunner.run(conf, null, edges);
 
     Map<Integer, Integer> values = parseResults(results);
 
@@ -94,14 +92,12 @@ public class TestEdgeInput extends BspCase {
         "4 1"
     };
 
-    GiraphClasses classes = new GiraphClasses();
-    classes.setVertexClass(TestVertexWithNumEdges.class);
-    classes.setVertexEdgesClass(ByteArrayEdges.class);
-    classes.setEdgeInputFormatClass(IntNullReverseTextEdgeInputFormat.class);
-    classes.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
-    Map<String, String> params = ImmutableMap.of();
-    Iterable<String> results = InternalVertexRunner.run(classes, params,
-        null, edges);
+    GiraphConfiguration conf = new GiraphConfiguration();
+    conf.setVertexClass(TestVertexWithNumEdges.class);
+    conf.setVertexEdgesClass(ByteArrayEdges.class);
+    conf.setEdgeInputFormatClass(IntNullReverseTextEdgeInputFormat.class);
+    conf.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
+    Iterable<String> results = InternalVertexRunner.run(conf, null, edges);
 
     Map<Integer, Integer> values = parseResults(results);
 
@@ -132,17 +128,15 @@ public class TestEdgeInput extends BspCase {
         "5 3"
     };
 
-    GiraphClasses classes = new GiraphClasses();
-    classes.setVertexClass(TestVertexDoNothing.class);
-    classes.setVertexEdgesClass(ByteArrayEdges.class);
-    classes.setVertexInputFormatClass(IntIntTextVertexValueInputFormat.class);
-    classes.setEdgeInputFormatClass(IntNullTextEdgeInputFormat.class);
-    classes.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
-    Map<String, String> emptyParams = ImmutableMap.of();
+    GiraphConfiguration conf = new GiraphConfiguration();
+    conf.setVertexClass(TestVertexDoNothing.class);
+    conf.setVertexEdgesClass(ByteArrayEdges.class);
+    conf.setVertexInputFormatClass(IntIntTextVertexValueInputFormat.class);
+    conf.setEdgeInputFormatClass(IntNullTextEdgeInputFormat.class);
+    conf.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
 
     // Run a job with a vertex that does nothing
-    Iterable<String> results = InternalVertexRunner.run(classes, emptyParams,
-        vertices, edges);
+    Iterable<String> results = InternalVertexRunner.run(conf, vertices, edges);
 
     Map<Integer, Integer> values = parseResults(results);
 
@@ -158,23 +152,22 @@ public class TestEdgeInput extends BspCase {
     assertEquals(0, (int) values.get(5));
 
     // Run a job with a custom VertexValueFactory
-    classes.setVertexValueFactoryClass(TestVertexValueFactory.class);
-    results = InternalVertexRunner.run(classes, emptyParams,
-        vertices, edges);
+    conf.setVertexValueFactoryClass(TestVertexValueFactory.class);
+    results = InternalVertexRunner.run(conf, vertices, edges);
     values = parseResults(results);
     // A vertex with edges but no initial value should have been constructed
     // by the custom factory
     assertEquals(3, (int) values.get(5));
 
-    classes = new GiraphClasses();
-    classes.setVertexClass(TestVertexWithNumEdges.class);
-    classes.setVertexEdgesClass(ByteArrayEdges.class);
-    classes.setVertexInputFormatClass(IntIntTextVertexValueInputFormat.class);
-    classes.setEdgeInputFormatClass(IntNullTextEdgeInputFormat.class);
-    classes.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
+    conf = new GiraphConfiguration();
+    conf.setVertexClass(TestVertexWithNumEdges.class);
+    conf.setVertexEdgesClass(ByteArrayEdges.class);
+    conf.setVertexInputFormatClass(IntIntTextVertexValueInputFormat.class);
+    conf.setEdgeInputFormatClass(IntNullTextEdgeInputFormat.class);
+    conf.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
 
     // Run a job with a vertex that counts outgoing edges
-    results = InternalVertexRunner.run(classes, emptyParams, vertices, edges);
+    results = InternalVertexRunner.run(conf, vertices, edges);
 
     values = parseResults(results);
 
@@ -196,15 +189,13 @@ public class TestEdgeInput extends BspCase {
         "4 1"
     };
 
-    GiraphClasses classes = new GiraphClasses();
-    classes.setVertexClass(TestVertexCheckEdgesType.class);
-    classes.setVertexEdgesClass(ByteArrayEdges.class);
-    classes.setInputVertexEdgesClass(TestVertexEdgesFilterEven.class);
-    classes.setEdgeInputFormatClass(IntNullTextEdgeInputFormat.class);
-    classes.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
-    Map<String, String> params = ImmutableMap.of();
-    Iterable<String> results = InternalVertexRunner.run(classes, params,
-        null, edges);
+    GiraphConfiguration conf = new GiraphConfiguration();
+    conf.setVertexClass(TestVertexCheckEdgesType.class);
+    conf.setVertexEdgesClass(ByteArrayEdges.class);
+    conf.setInputVertexEdgesClass(TestVertexEdgesFilterEven.class);
+    conf.setEdgeInputFormatClass(IntNullTextEdgeInputFormat.class);
+    conf.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
+    Iterable<String> results = InternalVertexRunner.run(conf, null, edges);
 
     Map<Integer, Integer> values = parseResults(results);
 

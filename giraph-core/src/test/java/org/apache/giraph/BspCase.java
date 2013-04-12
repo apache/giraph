@@ -18,7 +18,6 @@
 
 package org.apache.giraph;
 
-import org.apache.giraph.conf.GiraphClasses;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.job.GiraphJob;
@@ -141,58 +140,29 @@ public class BspCase implements Watcher {
    * Prepare a GiraphJob for test purposes
    *
    * @param name identifying name for job
-   * @param classes GiraphClasses describing which classes to use
+   * @param conf GiraphConfiguration describing which classes to use
    * @return GiraphJob configured for testing
    * @throws IOException if anything goes wrong
    */
-  protected GiraphJob prepareJob(String name, GiraphClasses classes)
+  protected GiraphJob prepareJob(String name, GiraphConfiguration conf)
       throws IOException {
-    return prepareJob(name, classes, null);
+    return prepareJob(name, conf, null);
   }
 
   /**
    * Prepare a GiraphJob for test purposes
    *
    * @param name identifying name for job
-   * @param classes GiraphClasses describing which classes to use
+   * @param conf GiraphConfiguration describing which classes to use
    * @param outputPath Where to right output to
    * @return GiraphJob configured for testing
    * @throws IOException if anything goes wrong
    */
-  protected GiraphJob prepareJob(String name, GiraphClasses classes,
+  protected GiraphJob prepareJob(String name, GiraphConfiguration conf,
                                  Path outputPath)
       throws IOException {
-    GiraphJob job = new GiraphJob(name);
+    GiraphJob job = new GiraphJob(conf, name);
     setupConfiguration(job);
-    GiraphConfiguration conf = job.getConfiguration();
-    conf.setVertexClass(classes.getVertexClass());
-    conf.setVertexEdgesClass(classes.getVertexEdgesClass());
-    conf.setInputVertexEdgesClass(classes.getInputVertexEdgesClass());
-    conf.setVertexValueFactoryClass(classes.getVertexValueFactoryClass());
-    if (classes.hasAggregatorWriterClass()) {
-      conf.setAggregatorWriterClass(classes.getAggregatorWriterClass());
-    }
-    if (classes.hasCombinerClass()) {
-      conf.setVertexCombinerClass(classes.getCombinerClass());
-    }
-    if (classes.hasEdgeInputFormat()) {
-      conf.setEdgeInputFormatClass(classes.getEdgeInputFormatClass());
-    }
-    if (classes.hasMasterComputeClass()) {
-      conf.setMasterComputeClass(classes.getMasterComputeClass());
-    }
-    if (classes.hasVertexInputFormat()) {
-      conf.setVertexInputFormatClass(classes.getVertexInputFormatClass());
-    }
-    if (classes.hasVertexOutputFormat()) {
-      conf.setVertexOutputFormatClass(classes.getVertexOutputFormatClass());
-    }
-    if (classes.hasPartitionContextClass()) {
-      conf.setPartitionContextClass(classes.getPartitionContextClass());
-    }
-    if (classes.hasWorkerContextClass()) {
-      conf.setWorkerContextClass(classes.getWorkerContextClass());
-    }
     if (outputPath != null) {
       removeAndSetOutput(job, outputPath);
     }

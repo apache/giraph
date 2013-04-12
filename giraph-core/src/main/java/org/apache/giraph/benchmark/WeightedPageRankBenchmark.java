@@ -116,7 +116,7 @@ public class WeightedPageRankBenchmark extends GiraphBenchmark {
     LOG.info("Using edges class " +
         GiraphConstants.VERTEX_EDGES_CLASS.get(configuration));
     if (COMBINER_TYPE.getOptionIntValue(cmd, 1) == 1) {
-      configuration.setVertexCombinerClass(DoubleSumCombiner.class);
+      configuration.setCombinerClass(DoubleSumCombiner.class);
     }
 
     if (EDGE_INPUT.optionTurnedOn(cmd)) {

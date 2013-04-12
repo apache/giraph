@@ -18,15 +18,11 @@
 
 package org.apache.giraph.examples;
 
-import org.apache.giraph.conf.GiraphClasses;
+import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.edge.ByteArrayEdges;
 import org.apache.giraph.examples.RandomWalkVertex.RandomWalkVertexMasterCompute;
 import org.apache.giraph.utils.InternalVertexRunner;
-import org.apache.giraph.edge.ByteArrayEdges;
-import org.apache.hadoop.io.DoubleWritable;
-import org.apache.hadoop.io.LongWritable;
 import org.junit.Test;
-
-import com.google.common.collect.Maps;
 
 import java.util.Map;
 
@@ -42,28 +38,22 @@ public class RandomWalkWithRestartVertexTest {
    */
   @Test
   public void testToyData() throws Exception {
-
     // A small graph
     String[] graph = new String[] { "12 34 56", "34 78", "56 34 78", "78 34" };
 
-    Map<String, String> params = Maps.newHashMap();
-    params.put(RandomWalkWithRestartVertex.SOURCE_VERTEX, "12");
-    params.put(RandomWalkWithRestartVertex.MAX_SUPERSTEPS, "30");
-    params.put(RandomWalkWithRestartVertex.TELEPORTATION_PROBABILITY, "0.25");
-
-    GiraphClasses<LongWritable, DoubleWritable, DoubleWritable, DoubleWritable>
-        classes = new GiraphClasses<LongWritable, DoubleWritable,
-        DoubleWritable, DoubleWritable>();
-    classes.setVertexClass(RandomWalkWithRestartVertex.class);
-    classes.setVertexEdgesClass(ByteArrayEdges.class);
-    classes.setVertexInputFormatClass(
-        LongDoubleDoubleTextInputFormat.class);
-    classes.setVertexOutputFormatClass(
+    GiraphConfiguration conf = new GiraphConfiguration();
+    conf.setInt(RandomWalkWithRestartVertex.SOURCE_VERTEX, 12);
+    conf.setInt(RandomWalkWithRestartVertex.MAX_SUPERSTEPS, 30);
+    conf.setFloat(RandomWalkWithRestartVertex.TELEPORTATION_PROBABILITY, 0.25f);
+    conf.setVertexClass(RandomWalkWithRestartVertex.class);
+    conf.setVertexEdgesClass(ByteArrayEdges.class);
+    conf.setVertexInputFormatClass(LongDoubleDoubleTextInputFormat.class);
+    conf.setVertexOutputFormatClass(
         VertexWithDoubleValueDoubleEdgeTextOutputFormat.class);
-    classes.setWorkerContextClass(RandomWalkWorkerContext.class);
-    classes.setMasterComputeClass(RandomWalkVertexMasterCompute.class);
+    conf.setWorkerContextClass(RandomWalkWorkerContext.class);
+    conf.setMasterComputeClass(RandomWalkVertexMasterCompute.class);
     // Run internally
-    Iterable<String> results = InternalVertexRunner.run(classes, params, graph);
+    Iterable<String> results = InternalVertexRunner.run(conf, graph);
 
     Map<Long, Double> steadyStateProbabilities =
         RandomWalkTestUtils.parseSteadyStateProbabilities(results);
@@ -87,24 +77,20 @@ public class RandomWalkWithRestartVertexTest {
         new String[] { "12 34:0.1 56:0.9", "34 78:0.9 56:0.1",
           "56 12:0.1 34:0.8 78:0.1", "78 34:1.0" };
 
-    Map<String, String> params = Maps.newHashMap();
-    params.put(RandomWalkWithRestartVertex.SOURCE_VERTEX, "12");
-    params.put(RandomWalkWithRestartVertex.MAX_SUPERSTEPS, "30");
-    params.put(RandomWalkWithRestartVertex.TELEPORTATION_PROBABILITY, "0.15");
-
-    GiraphClasses<LongWritable, DoubleWritable, DoubleWritable,
-        DoubleWritable> classes = new GiraphClasses<LongWritable,
-        DoubleWritable, DoubleWritable, DoubleWritable>();
-    classes.setVertexClass(RandomWalkWithRestartVertex.class);
-    classes.setVertexEdgesClass(ByteArrayEdges.class);
-    classes.setVertexInputFormatClass(
+    GiraphConfiguration conf = new GiraphConfiguration();
+    conf.setInt(RandomWalkWithRestartVertex.SOURCE_VERTEX, 12);
+    conf.setInt(RandomWalkWithRestartVertex.MAX_SUPERSTEPS, 30);
+    conf.setFloat(RandomWalkWithRestartVertex.TELEPORTATION_PROBABILITY, 0.15f);
+    conf.setVertexClass(RandomWalkWithRestartVertex.class);
+    conf.setVertexEdgesClass(ByteArrayEdges.class);
+    conf.setVertexInputFormatClass(
         NormalizingLongDoubleDoubleTextInputFormat.class);
-    classes.setVertexOutputFormatClass(
+    conf.setVertexOutputFormatClass(
         VertexWithDoubleValueDoubleEdgeTextOutputFormat.class);
-    classes.setWorkerContextClass(RandomWalkWorkerContext.class);
-    classes.setMasterComputeClass(RandomWalkVertexMasterCompute.class);
+    conf.setWorkerContextClass(RandomWalkWorkerContext.class);
+    conf.setMasterComputeClass(RandomWalkVertexMasterCompute.class);
     // Run internally
-    Iterable<String> results = InternalVertexRunner.run(classes, params, graph);
+    Iterable<String> results = InternalVertexRunner.run(conf, graph);
 
     Map<Long, Double> steadyStateProbabilities =
         RandomWalkTestUtils.parseSteadyStateProbabilities(results);

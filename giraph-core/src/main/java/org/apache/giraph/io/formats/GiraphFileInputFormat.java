@@ -86,10 +86,20 @@ public abstract class GiraphFileInputFormat<K, V>
    */
   public static void addVertexInputPath(Configuration conf,
     Path path) throws IOException {
-    path = path.getFileSystem(conf).makeQualified(path);
-    String dirStr = StringUtils.escapeString(path.toString());
+    String dirStr = pathToDirString(conf, path);
     String dirs = conf.get(VERTEX_INPUT_DIR);
     conf.set(VERTEX_INPUT_DIR, dirs == null ? dirStr : dirs + "," + dirStr);
+  }
+
+  /**
+   * Set the {@link Path} for vertex input.
+   * @param conf Configuration to store in
+   * @param path {@link Path} to set
+   * @throws IOException on I/O errors
+   */
+  public static void setVertexInputPath(Configuration conf,
+      Path path) throws IOException {
+    conf.set(VERTEX_INPUT_DIR, pathToDirString(conf, path));
   }
 
   /**
@@ -101,10 +111,35 @@ public abstract class GiraphFileInputFormat<K, V>
    */
   public static void addEdgeInputPath(Configuration conf,
     Path path) throws IOException {
-    path = path.getFileSystem(conf).makeQualified(path);
-    String dirStr = StringUtils.escapeString(path.toString());
+    String dirStr = pathToDirString(conf, path);
     String dirs = conf.get(EDGE_INPUT_DIR);
     conf.set(EDGE_INPUT_DIR, dirs == null ? dirStr : dirs + "," + dirStr);
+  }
+
+  /**
+   * Set the {@link Path} for edge input.
+   * @param conf Configuration to store in
+   * @param path {@link Path} to set
+   * @throws IOException on I/O errors
+   */
+  public static void setEdgeInputPath(Configuration conf,
+      Path path) throws IOException {
+    conf.set(EDGE_INPUT_DIR, pathToDirString(conf, path));
+  }
+
+  /**
+   * Convert from a Path to a string.
+   * This makes the path fully qualified and does escaping.
+   *
+   * @param conf Configuration to use
+   * @param path Path to convert
+   * @return String of escaped dir
+   * @throws IOException on I/O errors
+   */
+  private static String pathToDirString(Configuration conf, Path path)
+    throws IOException {
+    path = path.getFileSystem(conf).makeQualified(path);
+    return StringUtils.escapeString(path.toString());
   }
 
   /**

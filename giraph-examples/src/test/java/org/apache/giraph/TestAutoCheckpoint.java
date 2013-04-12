@@ -18,7 +18,6 @@
 
 package org.apache.giraph;
 
-import org.apache.giraph.conf.GiraphClasses;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.examples.SimpleCheckpointVertex;
@@ -58,18 +57,15 @@ public class TestAutoCheckpoint extends BspCase {
       return;
     }
     Path outputPath = getTempPath(getCallingMethodName());
-    GiraphClasses classes = new GiraphClasses();
-    classes.setVertexClass(
+    GiraphConfiguration conf = new GiraphConfiguration();
+    conf.setVertexClass(
         SimpleCheckpointVertex.SimpleCheckpointComputation.class);
-    classes.setWorkerContextClass(
+    conf.setWorkerContextClass(
         SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.class);
-    classes.setMasterComputeClass(
+    conf.setMasterComputeClass(
         SimpleCheckpointVertex.SimpleCheckpointVertexMasterCompute.class);
-    classes.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
-    classes.setVertexOutputFormatClass(SimpleSuperstepVertexOutputFormat.class);
-    GiraphJob job = prepareJob(getCallingMethodName(), classes, outputPath);
-
-    GiraphConfiguration conf = job.getConfiguration();
+    conf.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
+    conf.setVertexOutputFormatClass(SimpleSuperstepVertexOutputFormat.class);
     conf.setBoolean(SimpleCheckpointVertex.ENABLE_FAULT, true);
     conf.setInt("mapred.map.max.attempts", 4);
     // Trigger failure faster
@@ -82,7 +78,7 @@ public class TestAutoCheckpoint extends BspCase {
     GiraphConstants.CLEANUP_CHECKPOINTS_AFTER_SUCCESS.set(conf, false);
     GiraphConstants.ZOOKEEPER_SESSION_TIMEOUT.set(conf, 10000);
     GiraphConstants.ZOOKEEPER_MIN_SESSION_TIMEOUT.set(conf, 10000);
-
+    GiraphJob job = prepareJob(getCallingMethodName(), conf, outputPath);
     assertTrue(job.run(true));
   }
 }

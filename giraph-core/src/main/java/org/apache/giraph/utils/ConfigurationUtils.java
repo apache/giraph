@@ -210,9 +210,8 @@ public final class ConfigurationUtils {
     giraphConfiguration.setVertexClass(
         (Class<? extends Vertex>) Class.forName(vertexClassName));
     if (cmd.hasOption("c")) {
-      giraphConfiguration.setVertexCombinerClass(
-          (Class<? extends Combiner>)
-              Class.forName(cmd.getOptionValue("c")));
+      giraphConfiguration.setCombinerClass(
+          (Class<? extends Combiner>) Class.forName(cmd.getOptionValue("c")));
     }
     if (cmd.hasOption("ve")) {
       giraphConfiguration.setVertexEdgesClass(

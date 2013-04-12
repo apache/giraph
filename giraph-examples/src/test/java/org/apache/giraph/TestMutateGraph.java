@@ -18,14 +18,11 @@
 
 package org.apache.giraph;
 
-import org.apache.giraph.conf.GiraphClasses;
+import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.examples.SimpleMutateGraphVertex;
 import org.apache.giraph.examples.SimplePageRankVertex.SimplePageRankVertexInputFormat;
 import org.apache.giraph.examples.SimplePageRankVertex.SimplePageRankVertexOutputFormat;
 import org.apache.giraph.job.GiraphJob;
-import org.apache.hadoop.io.DoubleWritable;
-import org.apache.hadoop.io.FloatWritable;
-import org.apache.hadoop.io.LongWritable;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -50,14 +47,13 @@ public class TestMutateGraph extends BspCase {
   @Test
   public void testMutateGraph()
           throws IOException, InterruptedException, ClassNotFoundException {
-    GiraphClasses<LongWritable, DoubleWritable, FloatWritable, DoubleWritable>
-        classes = new GiraphClasses();
-    classes.setVertexClass(SimpleMutateGraphVertex.class);
-    classes.setVertexInputFormatClass(SimplePageRankVertexInputFormat.class);
-    classes.setVertexOutputFormatClass(SimplePageRankVertexOutputFormat.class);
-    classes.setWorkerContextClass(
+    GiraphConfiguration conf = new GiraphConfiguration();
+    conf.setVertexClass(SimpleMutateGraphVertex.class);
+    conf.setVertexInputFormatClass(SimplePageRankVertexInputFormat.class);
+    conf.setVertexOutputFormatClass(SimplePageRankVertexOutputFormat.class);
+    conf.setWorkerContextClass(
         SimpleMutateGraphVertex.SimpleMutateGraphVertexWorkerContext.class);
-    GiraphJob job = prepareJob(getCallingMethodName(), classes,
+    GiraphJob job = prepareJob(getCallingMethodName(), conf,
         getTempPath(getCallingMethodName()));
     assertTrue(job.run(true));
   }

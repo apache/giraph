@@ -18,6 +18,7 @@
 
 package org.apache.giraph.examples;
 
+import org.apache.giraph.conf.LongConfOption;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.DoubleWritable;
@@ -36,9 +37,8 @@ public class SimpleShortestPathsVertex extends
     Vertex<LongWritable, DoubleWritable,
     FloatWritable, DoubleWritable> {
   /** The shortest paths id */
-  public static final String SOURCE_ID = "SimpleShortestPathsVertex.sourceId";
-  /** Default shortest paths id */
-  public static final long SOURCE_ID_DEFAULT = 1;
+  public static final LongConfOption SOURCE_ID =
+      new LongConfOption("SimpleShortestPathsVertex.sourceId", 1);
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(SimpleShortestPathsVertex.class);
@@ -49,7 +49,7 @@ public class SimpleShortestPathsVertex extends
    * @return True if the source id
    */
   private boolean isSource() {
-    return getId().get() == getConf().getLong(SOURCE_ID, SOURCE_ID_DEFAULT);
+    return getId().get() == SOURCE_ID.get(getConf());
   }
 
   @Override

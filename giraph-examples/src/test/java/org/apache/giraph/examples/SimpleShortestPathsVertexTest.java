@@ -18,16 +18,13 @@
 
 package org.apache.giraph.examples;
 
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import org.apache.giraph.conf.GiraphClasses;
+import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.edge.ByteArrayEdges;
+import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.io.formats.JsonLongDoubleFloatDoubleVertexInputFormat;
 import org.apache.giraph.io.formats.JsonLongDoubleFloatDoubleVertexOutputFormat;
 import org.apache.giraph.utils.InternalVertexRunner;
 import org.apache.giraph.utils.MockUtils;
-import org.apache.giraph.edge.ByteArrayEdges;
-import org.apache.giraph.edge.EdgeFactory;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -36,8 +33,13 @@ import org.json.JSONException;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+
 import java.util.Map;
 
+import static org.apache.giraph.examples.SimpleShortestPathsVertex.SOURCE_ID;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -58,9 +60,7 @@ public class SimpleShortestPathsVertexTest {
     DoubleWritable> env = MockUtils.prepareVertex(vertex, 1L,
         new LongWritable(7L), new DoubleWritable(Double.MAX_VALUE), false);
 
-    Mockito.when(env.getConfiguration().getLong(
-        SimpleShortestPathsVertex.SOURCE_ID,
-        SimpleShortestPathsVertex.SOURCE_ID_DEFAULT)).thenReturn(2L);
+    Mockito.when(SOURCE_ID.get(env.getConfiguration())).thenReturn(2L);
 
     vertex.addEdge(EdgeFactory.create(
         new LongWritable(10L), new FloatWritable(2.5f)));
@@ -90,9 +90,7 @@ public class SimpleShortestPathsVertexTest {
     DoubleWritable> env = MockUtils.prepareVertex(vertex, 1L,
         new LongWritable(7L), new DoubleWritable(0.5), false);
 
-    Mockito.when(env.getConfiguration().getLong(
-        SimpleShortestPathsVertex.SOURCE_ID,
-        SimpleShortestPathsVertex.SOURCE_ID_DEFAULT)).thenReturn(2L);
+    Mockito.when(SOURCE_ID.get(env.getConfiguration())).thenReturn(2L);
 
     vertex.addEdge(EdgeFactory.create(new LongWritable(10L),
         new FloatWritable(2.5f)));
@@ -122,21 +120,18 @@ public class SimpleShortestPathsVertexTest {
         "[4,0,[]]"
     };
 
+    GiraphConfiguration conf = new GiraphConfiguration();
     // start from vertex 1
-    Map<String, String> params = Maps.newHashMap();
-    params.put(SimpleShortestPathsVertex.SOURCE_ID, "1");
-
-    GiraphClasses<LongWritable, DoubleWritable, FloatWritable, DoubleWritable>
-        classes = new GiraphClasses();
-    classes.setVertexClass(SimpleShortestPathsVertex.class);
-    classes.setVertexEdgesClass(ByteArrayEdges.class);
-    classes.setVertexInputFormatClass(
+    SOURCE_ID.set(conf, 1);
+    conf.setVertexClass(SimpleShortestPathsVertex.class);
+    conf.setVertexEdgesClass(ByteArrayEdges.class);
+    conf.setVertexInputFormatClass(
         JsonLongDoubleFloatDoubleVertexInputFormat.class);
-    classes.setVertexOutputFormatClass(
+    conf.setVertexOutputFormatClass(
         JsonLongDoubleFloatDoubleVertexOutputFormat.class);
 
     // run internally
-    Iterable<String> results = InternalVertexRunner.run(classes, params, graph);
+    Iterable<String> results = InternalVertexRunner.run(conf, graph);
 
     Map<Long, Double> distances = parseDistances(results);
 

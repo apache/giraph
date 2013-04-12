@@ -18,8 +18,7 @@
 
 package org.apache.giraph;
 
-import java.io.IOException;
-import org.apache.giraph.conf.GiraphClasses;
+import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.counters.GiraphHadoopCounter;
 import org.apache.giraph.counters.GiraphStats;
 import org.apache.giraph.examples.SimplePageRankVertex.SimplePageRankVertexInputFormat;
@@ -30,6 +29,8 @@ import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.junit.Test;
+
+import java.io.IOException;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -65,12 +66,11 @@ public class TestMaxSuperstep extends BspCase {
   @Test
   public void testMaxSuperstep()
           throws IOException, InterruptedException, ClassNotFoundException {
-    GiraphClasses<LongWritable, DoubleWritable, FloatWritable, DoubleWritable>
-        classes = new GiraphClasses();
-    classes.setVertexClass(InfiniteLoopVertex.class);
-    classes.setVertexInputFormatClass(SimplePageRankVertexInputFormat.class);
-    classes.setVertexOutputFormatClass(SimplePageRankVertexOutputFormat.class);
-    GiraphJob job = prepareJob(getCallingMethodName(), classes,
+    GiraphConfiguration conf = new GiraphConfiguration();
+    conf.setVertexClass(InfiniteLoopVertex.class);
+    conf.setVertexInputFormatClass(SimplePageRankVertexInputFormat.class);
+    conf.setVertexOutputFormatClass(SimplePageRankVertexOutputFormat.class);
+    GiraphJob job = prepareJob(getCallingMethodName(), conf,
         getTempPath(getCallingMethodName()));
     job.getConfiguration().setMaxNumberOfSupersteps(3);
     assertTrue(job.run(true));

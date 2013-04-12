@@ -18,22 +18,21 @@
 
 package org.apache.giraph.examples;
 
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.SetMultimap;
 import org.apache.giraph.combiner.MinimumIntCombiner;
-import org.apache.giraph.conf.GiraphClasses;
+import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.edge.ByteArrayEdges;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.utils.InternalVertexRunner;
 import org.apache.giraph.utils.TestGraph;
-import org.apache.giraph.edge.ByteArrayEdges;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.junit.Test;
 
-import java.util.Map;
-import java.util.Map.Entry;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.SetMultimap;
+
 import java.util.AbstractMap.SimpleEntry;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
@@ -57,19 +56,13 @@ public class ConnectedComponentsVertexTestInMemory {
    */
   @Test
   public void testToyData() throws Exception {
-    GiraphClasses<IntWritable,
-                  IntWritable,
-                  NullWritable,
-                  IntWritable > classes = new GiraphClasses();
-    classes.setVertexClass(ConnectedComponentsVertex.class);
-    classes.setVertexEdgesClass(ByteArrayEdges.class);
-    classes.setCombinerClass(MinimumIntCombiner.class);
+    GiraphConfiguration conf = new GiraphConfiguration();
+    conf.setVertexClass(ConnectedComponentsVertex.class);
+    conf.setVertexEdgesClass(ByteArrayEdges.class);
+    conf.setCombinerClass(MinimumIntCombiner.class);
 
     TestGraph<IntWritable, IntWritable, NullWritable, IntWritable> graph =
-      new TestGraph<IntWritable,
-                    IntWritable,
-                    NullWritable,
-                    IntWritable> (classes);
+      new TestGraph<IntWritable, IntWritable, NullWritable, IntWritable> (conf);
     // a small graph with three components
     graph.addVertex(new IntWritable(1), new IntWritable(1), makeEdges(2, 3))
       .addVertex(new IntWritable(2), new IntWritable(2), makeEdges(1, 4, 5))
@@ -87,11 +80,9 @@ public class ConnectedComponentsVertexTestInMemory {
       .addVertex(new IntWritable(11), new IntWritable(11), makeEdges(7, 10))
       .addVertex(new IntWritable(9), new IntWritable(9));
 
-    Map<String, String> emptyParams = ImmutableMap.of();
-
     // run internally
     TestGraph<IntWritable, IntWritable, NullWritable, IntWritable> results =
-      InternalVertexRunner.run(classes, emptyParams, graph);
+      InternalVertexRunner.run(conf, graph);
 
     SetMultimap<Integer,Integer> components = parseResults(results);
 

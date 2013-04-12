@@ -18,15 +18,12 @@
 
 package org.apache.giraph;
 
-import org.apache.giraph.conf.GiraphClasses;
+import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.examples.GeneratedVertexReader;
 import org.apache.giraph.examples.PartitionContextTestVertex;
 import org.apache.giraph.examples.SimplePageRankVertex;
 import org.apache.giraph.job.GiraphJob;
-import org.apache.hadoop.io.DoubleWritable;
-import org.apache.hadoop.io.FloatWritable;
-import org.apache.hadoop.io.LongWritable;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -46,16 +43,15 @@ public class TestPartitionContext extends BspCase {
           "testComputeContext: Ignore this test in distributed mode.");
       return;
     }
-    GiraphClasses<LongWritable, DoubleWritable, FloatWritable, DoubleWritable>
-        classes = new GiraphClasses();
-    classes.setVertexClass(PartitionContextTestVertex.class);
-    classes.setVertexInputFormatClass(
+    GiraphConfiguration conf = new GiraphConfiguration();
+    conf.setVertexClass(PartitionContextTestVertex.class);
+    conf.setVertexInputFormatClass(
         SimplePageRankVertex.SimplePageRankVertexInputFormat.class);
-    classes.setWorkerContextClass(
+    conf.setWorkerContextClass(
         PartitionContextTestVertex.TestPartitionContextWorkerContext.class);
-    classes.setPartitionContextClass(
+    conf.setPartitionContextClass(
         PartitionContextTestVertex.TestPartitionContextPartitionContext.class);
-    GiraphJob job = prepareJob(getCallingMethodName(), classes);
+    GiraphJob job = prepareJob(getCallingMethodName(), conf);
     // Use multithreading
     job.getConfiguration().setNumComputeThreads(
         PartitionContextTestVertex.NUM_COMPUTE_THREADS);

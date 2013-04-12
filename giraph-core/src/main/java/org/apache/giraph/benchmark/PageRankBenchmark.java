@@ -46,7 +46,7 @@ public class PageRankBenchmark extends GiraphBenchmark {
       CommandLine cmd) {
     conf.setVertexClass(PageRankVertex.class);
     conf.setVertexEdgesClass(IntNullArrayEdges.class);
-    conf.setVertexCombinerClass(FloatSumCombiner.class);
+    conf.setCombinerClass(FloatSumCombiner.class);
     conf.setVertexInputFormatClass(
         PseudoRandomIntNullVertexInputFormat.class);
 

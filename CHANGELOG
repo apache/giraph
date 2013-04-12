@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-595: InternalVertexRunner.run() should take GiraphConfiguration, not GiraphClasses
+  (nitay via apresta)
+
   GIRAPH-364: Clean up directories created by test suite (majakabiljo)
 
   GIRAPH-614: SplitMasterWorker=false is broken (majakabiljo)

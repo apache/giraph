@@ -18,13 +18,9 @@
 package org.apache.giraph.examples;
 
 import org.apache.giraph.BspCase;
-import org.apache.giraph.conf.GiraphClasses;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.job.GiraphJob;
-import org.apache.hadoop.io.DoubleWritable;
-import org.apache.hadoop.io.FloatWritable;
-import org.apache.hadoop.io.LongWritable;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -67,22 +63,20 @@ public class TestPageRank extends BspCase {
    */
   private void testPageRank(int numComputeThreads)
       throws IOException, InterruptedException, ClassNotFoundException {
-    GiraphClasses<LongWritable, DoubleWritable, FloatWritable, DoubleWritable>
-        classes = new GiraphClasses();
-    classes.setVertexClass(SimplePageRankVertex.class);
-    classes.setVertexInputFormatClass(
+    GiraphConfiguration conf = new GiraphConfiguration();
+    conf.setVertexClass(SimplePageRankVertex.class);
+    conf.setVertexInputFormatClass(
         SimplePageRankVertex.SimplePageRankVertexInputFormat.class);
-    classes.setWorkerContextClass(
+    conf.setWorkerContextClass(
         SimplePageRankVertex.SimplePageRankVertexWorkerContext.class);
-    classes.setMasterComputeClass(
+    conf.setMasterComputeClass(
         SimplePageRankVertex.SimplePageRankVertexMasterCompute.class);
-    GiraphJob job = prepareJob(getCallingMethodName(), classes);
-    GiraphConfiguration conf = job.getConfiguration();
     conf.setNumComputeThreads(numComputeThreads);
     // Set enough partitions to generate randomness on the compute side
     if (numComputeThreads != 1) {
       GiraphConstants.USER_PARTITION_COUNT.set(conf, numComputeThreads * 5);
     }
+    GiraphJob job = prepareJob(getCallingMethodName(), conf);
     assertTrue(job.run(true));
     if (!runningInDistributedMode()) {
       double maxPageRank =
@@ -97,7 +91,7 @@ public class TestPageRank extends BspCase {
           " numComputeThreads=" + numComputeThreads);
       assertEquals(34.03, maxPageRank, 0.001);
       assertEquals(0.03, minPageRank, 0.00001);
-      assertEquals(5l, numVertices);
+      assertEquals(5L, numVertices);
     }
   }
 }

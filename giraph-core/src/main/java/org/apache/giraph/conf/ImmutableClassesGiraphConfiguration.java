@@ -57,8 +57,6 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.util.Progressable;
 
-import static org.apache.giraph.conf.GiraphConstants.USE_UNSAFE_SERIALIZATION;
-
 /**
  * The classes set here are immutable, the remaining configuration is mutable.
  * Classes are immutable and final to provide the best performance for
@@ -110,6 +108,23 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   }
 
   /**
+   * Create a new ImmutableClassesGiraphConfiguration. This is a convenience
+   * method to make it easier to deal with generics.
+   *
+   * @param conf Configuration to read
+   * @param <I> Vertex ID
+   * @param <V> Vertex Value
+   * @param <E> Edge Value
+   * @param <M> Message Value
+   * @return new ImmutableClassesGiraphConfiguration
+   */
+  public static <I extends WritableComparable,
+      V extends Writable, E extends Writable, M extends Writable>
+  ImmutableClassesGiraphConfiguration<I, V, E, M> create(Configuration conf) {
+    return new ImmutableClassesGiraphConfiguration<I, V, E, M>(conf);
+  }
+
+  /**
    * Configure an object with this instance if the object is configurable.
    * @param obj Object
    */
@@ -141,11 +156,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
     return ReflectionUtils.newInstance(klass, this);
   }
 
-  /**
-   * Does the job have a {@link VertexInputFormat}?
-   *
-   * @return True iff a {@link VertexInputFormat} has been specified.
-   */
+  @Override
   public boolean hasVertexInputFormat() {
     return classes.hasVertexInputFormat();
   }
@@ -172,11 +183,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
     return ReflectionUtils.newInstance(klass, this);
   }
 
-  /**
-   * Does the job have a {@link VertexOutputFormat}?
-   *
-   * @return True iff a {@link VertexOutputFormat} has been specified.
-   */
+  @Override
   public boolean hasVertexOutputFormat() {
     return classes.hasVertexOutputFormat();
   }
@@ -223,11 +230,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
     }
   }
 
-  /**
-   * Does the job have an {@link EdgeInputFormat}?
-   *
-   * @return True iff an {@link EdgeInputFormat} has been specified.
-   */
+  @Override
   public boolean hasEdgeInputFormat() {
     return classes.hasEdgeInputFormat();
   }
@@ -382,11 +385,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
     return ReflectionUtils.newInstance(getMasterComputeClass(), this);
   }
 
-  /**
-   * Get the user's subclassed {@link org.apache.giraph.graph.Vertex}
-   *
-   * @return User's vertex class
-   */
+  @Override
   public Class<? extends Vertex<I, V, E, M>> getVertexClass() {
     return classes.getVertexClass();
   }

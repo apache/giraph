@@ -18,7 +18,7 @@
 
 package org.apache.giraph.master;
 
-import org.apache.giraph.conf.GiraphClasses;
+import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.edge.ByteArrayEdges;
 import org.apache.giraph.graph.Vertex;
@@ -26,14 +26,11 @@ import org.apache.giraph.io.formats.IntNullNullTextInputFormat;
 import org.apache.giraph.utils.InternalVertexRunner;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
-import org.apache.hadoop.util.StringUtils;
 import org.junit.Test;
 
-import com.google.common.collect.Maps;
-
 import java.io.IOException;
-import java.util.Map;
 
+import static org.apache.hadoop.util.StringUtils.arrayToString;
 import static org.junit.Assert.assertEquals;
 
 public class TestMasterObserver {
@@ -83,19 +80,18 @@ public class TestMasterObserver {
 
     String[] graph = new String[] { "1", "2", "3" };
 
-    Map<String, String> params = Maps.newHashMap();
     String klasses[] = new String[] {
         Obs.class.getName(),
         Obs.class.getName()
     };
-    params.put(GiraphConstants.MASTER_OBSERVER_CLASSES.getKey(),
-        StringUtils.arrayToString(klasses));
 
-    GiraphClasses classes = new GiraphClasses();
-    classes.setVertexClass(NoOpVertex.class);
-    classes.setVertexEdgesClass(ByteArrayEdges.class);
-    classes.setVertexInputFormatClass(IntNullNullTextInputFormat.class);
-    InternalVertexRunner.run(classes, params, graph);
+    GiraphConfiguration conf = new GiraphConfiguration();
+    conf.set(GiraphConstants.MASTER_OBSERVER_CLASSES.getKey(),
+        arrayToString(klasses));
+    conf.setVertexClass(NoOpVertex.class);
+    conf.setVertexEdgesClass(ByteArrayEdges.class);
+    conf.setVertexInputFormatClass(IntNullNullTextInputFormat.class);
+    InternalVertexRunner.run(conf, graph);
 
     assertEquals(2, Obs.preApp);
     // 3 supersteps + 1 input superstep * 2 observers = 8 callbacks

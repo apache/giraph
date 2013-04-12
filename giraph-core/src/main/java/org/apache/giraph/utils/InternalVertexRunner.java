@@ -18,16 +18,17 @@
 
 package org.apache.giraph.utils;
 
-import org.apache.giraph.conf.GiraphClasses;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
-import org.apache.giraph.job.GiraphJob;
 import org.apache.giraph.io.formats.GiraphFileInputFormat;
+import org.apache.giraph.job.GiraphJob;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.log4j.Logger;
+import org.apache.zookeeper.server.NIOServerCnxn;
 import org.apache.zookeeper.server.ServerConfig;
 import org.apache.zookeeper.server.ZooKeeperServerMain;
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig;
@@ -38,7 +39,7 @@ import com.google.common.io.Files;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Map;
+import java.lang.reflect.Field;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -58,6 +59,10 @@ public class InternalVertexRunner {
   /** ZooKeeper port to use for tests */
   public static final int LOCAL_ZOOKEEPER_PORT = 22182;
 
+  /** Logger */
+  private static final Logger LOG =
+      Logger.getLogger(InternalVertexRunner.class);
+
   /** Don't construct */
   private InternalVertexRunner() { }
 
@@ -66,17 +71,16 @@ public class InternalVertexRunner {
    * writing to a temporary folder on local disk. Will start its own zookeeper
    * instance.
    *
-   * @param classes GiraphClasses specifying which types to use
-   * @param params a map of parameters to add to the hadoop configuration
+   *
+   * @param conf GiraphClasses specifying which types to use
    * @param vertexInputData linewise vertex input data
    * @return linewise output data
    * @throws Exception if anything goes wrong
    */
   public static Iterable<String> run(
-      GiraphClasses classes,
-      Map<String, String> params,
+      GiraphConfiguration conf,
       String[] vertexInputData) throws Exception {
-    return run(classes, params, vertexInputData, null);
+    return run(conf, vertexInputData, null);
   }
 
   /**
@@ -84,29 +88,28 @@ public class InternalVertexRunner {
    * writing to a temporary folder on local disk. Will start its own zookeeper
    * instance.
    *
-   * @param classes GiraphClasses specifying which types to use
-   * @param params a map of parameters to add to the hadoop configuration
+   *
+   * @param conf GiraphClasses specifying which types to use
    * @param vertexInputData linewise vertex input data
    * @param edgeInputData linewise edge input data
    * @return linewise output data
    * @throws Exception if anything goes wrong
    */
   public static Iterable<String> run(
-      GiraphClasses classes,
-      Map<String, String> params,
+      GiraphConfiguration conf,
       String[] vertexInputData,
       String[] edgeInputData) throws Exception {
     File tmpDir = null;
     try {
       // Prepare input file, output folder and temporary folders
-      tmpDir = FileUtils.createTestDir(classes.getVertexClass());
+      tmpDir = FileUtils.createTestDir(conf.getVertexClass());
 
       File vertexInputFile = null;
       File edgeInputFile = null;
-      if (classes.hasVertexInputFormat()) {
+      if (conf.hasVertexInputFormat()) {
         vertexInputFile = FileUtils.createTempFile(tmpDir, "vertices.txt");
       }
-      if (classes.hasEdgeInputFormat()) {
+      if (conf.hasEdgeInputFormat()) {
         edgeInputFile = FileUtils.createTempFile(tmpDir, "edges.txt");
       }
 
@@ -116,40 +119,11 @@ public class InternalVertexRunner {
       File checkpointsDir = FileUtils.createTempDir(tmpDir, "_checkpoints");
 
       // Write input data to disk
-      if (classes.hasVertexInputFormat()) {
+      if (conf.hasVertexInputFormat()) {
         FileUtils.writeLines(vertexInputFile, vertexInputData);
       }
-      if (classes.hasEdgeInputFormat()) {
+      if (conf.hasEdgeInputFormat()) {
         FileUtils.writeLines(edgeInputFile, edgeInputData);
-      }
-
-      // Create and configure the job to run the vertex
-      GiraphJob job = new GiraphJob(classes.getVertexClass().getName());
-      GiraphConfiguration conf = job.getConfiguration();
-      conf.setVertexClass(classes.getVertexClass());
-      conf.setVertexEdgesClass(classes.getVertexEdgesClass());
-      conf.setInputVertexEdgesClass(classes.getInputVertexEdgesClass());
-      conf.setVertexValueFactoryClass(classes.getVertexValueFactoryClass());
-      if (classes.hasVertexInputFormat()) {
-        conf.setVertexInputFormatClass(classes.getVertexInputFormatClass());
-      }
-      if (classes.hasEdgeInputFormat()) {
-        conf.setEdgeInputFormatClass(classes.getEdgeInputFormatClass());
-      }
-      if (classes.hasVertexOutputFormat()) {
-        conf.setVertexOutputFormatClass(classes.getVertexOutputFormatClass());
-      }
-      if (classes.hasWorkerContextClass()) {
-        conf.setWorkerContextClass(classes.getWorkerContextClass());
-      }
-      if (classes.hasPartitionContextClass()) {
-        conf.setPartitionContextClass(classes.getPartitionContextClass());
-      }
-      if (classes.hasCombinerClass()) {
-        conf.setVertexCombinerClass(classes.getCombinerClass());
-      }
-      if (classes.hasMasterComputeClass()) {
-        conf.setMasterComputeClass(classes.getMasterComputeClass());
       }
 
       conf.setWorkerConfiguration(1, 1, 100.0f);
@@ -163,17 +137,16 @@ public class InternalVertexRunner {
           zkMgrDir.toString());
       GiraphConstants.CHECKPOINT_DIRECTORY.set(conf, checkpointsDir.toString());
 
-      for (Map.Entry<String, String> param : params.entrySet()) {
-        conf.set(param.getKey(), param.getValue());
-      }
+      // Create and configure the job to run the vertex
+      GiraphJob job = new GiraphJob(conf, conf.getVertexClass().getName());
 
       Job internalJob = job.getInternalJob();
-      if (classes.hasVertexInputFormat()) {
-        GiraphFileInputFormat.addVertexInputPath(internalJob.getConfiguration(),
+      if (conf.hasVertexInputFormat()) {
+        GiraphFileInputFormat.setVertexInputPath(internalJob.getConfiguration(),
             new Path(vertexInputFile.toString()));
       }
-      if (classes.hasEdgeInputFormat()) {
-        GiraphFileInputFormat.addEdgeInputPath(internalJob.getConfiguration(),
+      if (conf.hasEdgeInputFormat()) {
+        GiraphFileInputFormat.setEdgeInputPath(internalJob.getConfiguration(),
             new Path(edgeInputFile.toString()));
       }
       FileOutputFormat.setOutputPath(job.getInternalJob(),
@@ -208,7 +181,7 @@ public class InternalVertexRunner {
         zookeeper.end();
       }
 
-      if (classes.hasVertexOutputFormat()) {
+      if (conf.hasVertexOutputFormat()) {
         return Files.readLines(new File(outputDir, "part-m-00000"),
             Charsets.UTF_8);
       } else {
@@ -223,12 +196,12 @@ public class InternalVertexRunner {
    * Attempts to run the vertex internally in the current JVM, reading and
    * writing to an in-memory graph. Will start its own zookeeper
    * instance.
-   * @param <I> The vertex index type
-   * @param <V> The vertex type
-   * @param <E> The edge type
-   * @param <M> The message type
-   * @param classes GiraphClasses specifying which types to use
-   * @param params a map of parameters to add to the hadoop configuration
+   *
+   * @param <I> Vertex ID
+   * @param <V> Vertex Value
+   * @param <E> Edge Value
+   * @param <M> Message Value
+   * @param conf GiraphClasses specifying which types to use
    * @param graph input graph
    * @return iterable output data
    * @throws Exception if anything goes wrong
@@ -237,47 +210,21 @@ public class InternalVertexRunner {
     V extends Writable,
     E extends Writable,
     M extends Writable> TestGraph<I, V, E, M> run(
-      GiraphClasses<I, V, E, M> classes,
-      Map<String, String> params,
+      GiraphConfiguration conf,
       TestGraph<I, V, E, M> graph) throws Exception {
     File tmpDir = null;
     try {
       // Prepare temporary folders
-      tmpDir = FileUtils.createTestDir(classes.getVertexClass());
+      tmpDir = FileUtils.createTestDir(conf.getVertexClass());
 
       File zkDir = FileUtils.createTempDir(tmpDir, "_bspZooKeeper");
       File zkMgrDir = FileUtils.createTempDir(tmpDir, "_defaultZkManagerDir");
       File checkpointsDir = FileUtils.createTempDir(tmpDir, "_checkpoints");
 
       // Create and configure the job to run the vertex
-      GiraphJob job = new GiraphJob(classes.getVertexClass().getName());
+      GiraphJob job = new GiraphJob(conf.getVertexClass().getName());
 
       InMemoryVertexInputFormat.setGraph(graph);
-
-      GiraphConfiguration conf = job.getConfiguration();
-      conf.setVertexClass(classes.getVertexClass());
-      conf.setVertexEdgesClass(classes.getVertexEdgesClass());
-      conf.setVertexInputFormatClass(InMemoryVertexInputFormat.class);
-      conf.setInputVertexEdgesClass(classes.getInputVertexEdgesClass());
-      conf.setVertexValueFactoryClass(classes.getVertexValueFactoryClass());
-      if (classes.hasWorkerContextClass()) {
-        conf.setWorkerContextClass(classes.getWorkerContextClass());
-      }
-      if (classes.hasCombinerClass()) {
-        conf.setVertexCombinerClass(classes.getCombinerClass());
-      }
-      if (classes.hasMasterComputeClass()) {
-        conf.setMasterComputeClass(classes.getMasterComputeClass());
-      }
-      if (classes.hasVertexInputFormat()) {
-        conf.setVertexInputFormatClass(classes.getVertexInputFormatClass());
-      }
-      if (classes.hasEdgeInputFormat()) {
-        conf.setEdgeInputFormatClass(classes.getEdgeInputFormatClass());
-      }
-      if (classes.hasVertexOutputFormat()) {
-        conf.setVertexOutputFormatClass(classes.getVertexOutputFormatClass());
-      }
 
       conf.setWorkerConfiguration(1, 1, 100.0f);
       GiraphConstants.SPLIT_MASTER_WORKER.set(conf, false);
@@ -289,10 +236,6 @@ public class InternalVertexRunner {
       GiraphConstants.ZOOKEEPER_MANAGER_DIRECTORY.set(conf,
           zkMgrDir.toString());
       GiraphConstants.CHECKPOINT_DIRECTORY.set(conf, checkpointsDir.toString());
-
-      for (Map.Entry<String, String> param : params.entrySet()) {
-        conf.set(param.getKey(), param.getValue());
-      }
 
       // Configure a local zookeeper instance
       Properties zkProperties = configLocalZooKeeper(zkDir);
@@ -357,7 +300,27 @@ public class InternalVertexRunner {
      * Shutdown the ZooKeeper instance.
      */
     void end() {
-      shutdown();
+      if (getCnxnFactory() != null) {
+        shutdown();
+      }
+    }
+
+    /**
+     * Get the ZooKeeper connection factory using reflection.
+     * @return {@link NIOServerCnxn.Factory} from ZooKeeper
+     */
+    private NIOServerCnxn.Factory getCnxnFactory() {
+      NIOServerCnxn.Factory factory = null;
+      try {
+        Field field = ZooKeeperServerMain.class.getDeclaredField("cnxnFactory");
+        field.setAccessible(true);
+        factory = (NIOServerCnxn.Factory) field.get(this);
+        // CHECKSTYLE: stop IllegalCatch
+      } catch (Exception e) {
+        // CHECKSTYLE: resume IllegalCatch
+        LOG.error("Couldn't get cnxn factory", e);
+      }
+      return factory;
     }
   }
 }

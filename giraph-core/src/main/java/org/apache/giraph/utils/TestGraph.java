@@ -18,12 +18,6 @@
 
 package org.apache.giraph.utils;
 
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map.Entry;
-
-import org.apache.giraph.conf.GiraphClasses;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.Edge;
@@ -35,6 +29,11 @@ import org.apache.hadoop.io.WritableComparable;
 import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map.Entry;
 
 /**
  * TestGraph class for in-memory testing.
@@ -57,11 +56,10 @@ public class TestGraph<I extends WritableComparable,
   /**
    * Constructor requiring classes
    *
-   * @param classes Should have vertex and edge classes set.
+   * @param conf Should have vertex and edge classes set.
    */
-  public TestGraph(GiraphClasses<I, V, E, M> classes) {
-    super();
-    setConf(classes);
+  public TestGraph(GiraphConfiguration conf) {
+    this.conf = new ImmutableClassesGiraphConfiguration(conf);
   }
 
   public HashMap<I, Vertex<I, V, E, M>> getVertices() {
@@ -100,8 +98,8 @@ public class TestGraph<I extends WritableComparable,
    */
   public TestGraph<I, V, E, M> addEdge(I vertexId, Entry<I, E> edgePair) {
     if (!vertices.containsKey(vertexId)) {
-      Vertex<I, V, E, M> v = getConf().createVertex();
-      v.initialize(vertexId, getConf().createVertexValue());
+      Vertex<I, V, E, M> v = conf.createVertex();
+      v.initialize(vertexId, conf.createVertexValue());
       vertices.put(vertexId, v);
     }
     vertices.get(vertexId)
@@ -120,8 +118,8 @@ public class TestGraph<I extends WritableComparable,
    */
   public TestGraph<I, V, E, M> addEdge(I vertexId, I toVertex, E edgeValue) {
     if (!vertices.containsKey(vertexId)) {
-      Vertex<I, V, E, M> v = getConf().createVertex();
-      v.initialize(vertexId, getConf().createVertexValue());
+      Vertex<I, V, E, M> v = conf.createVertex();
+      v.initialize(vertexId, conf.createVertexValue());
       vertices.put(vertexId, v);
     }
     vertices.get(vertexId)
@@ -182,32 +180,9 @@ public class TestGraph<I extends WritableComparable,
   protected Vertex<I, V, E, M> makeVertex(I id, V value,
       Entry<I, E>... edges) {
     @SuppressWarnings("unchecked")
-    Vertex<I, V, E, M> vertex = getConf().createVertex();
+    Vertex<I, V, E, M> vertex = conf.createVertex();
     vertex.initialize(id, value, createEdges(edges));
     return vertex;
-  }
-
-  /**
-   * Get the configuration
-   *
-   * @return the configuration
-   */
-  public ImmutableClassesGiraphConfiguration<I, V, E, M> getConf() {
-    return conf;
-  }
-
-  /**
-   * Create a configuration from giraph classes
-   *
-   * @param classes Should have vertex and edge class set
-   */
-  public void setConf(GiraphClasses<I, V, E, M> classes) {
-    GiraphConfiguration giraphConf = new GiraphConfiguration();
-    giraphConf.setVertexClass(classes.getVertexClass());
-    giraphConf.setVertexEdgesClass(classes.getVertexEdgesClass());
-    giraphConf.setVertexValueFactoryClass(classes.getVertexValueFactoryClass());
-
-    conf = new ImmutableClassesGiraphConfiguration(giraphConf);
   }
 
   @Override

@@ -18,20 +18,19 @@
 
 package org.apache.giraph.examples;
 
-import com.google.common.base.Splitter;
-import com.google.common.collect.HashMultimap;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.SetMultimap;
 import org.apache.giraph.combiner.MinimumIntCombiner;
-import org.apache.giraph.conf.GiraphClasses;
+import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.edge.ByteArrayEdges;
 import org.apache.giraph.io.formats.IdWithValueTextOutputFormat;
 import org.apache.giraph.io.formats.IntIntNullTextInputFormat;
 import org.apache.giraph.utils.InternalVertexRunner;
-import org.apache.giraph.edge.ByteArrayEdges;
 import org.junit.Test;
 
-import java.util.Map;
+import com.google.common.base.Splitter;
+import com.google.common.collect.HashMultimap;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.SetMultimap;
+
 import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
@@ -66,17 +65,15 @@ public class ConnectedComponentsVertexTest {
 
                 "9" };
 
-        GiraphClasses classes = new GiraphClasses();
-        classes.setVertexClass(ConnectedComponentsVertex.class);
-        classes.setVertexEdgesClass(ByteArrayEdges.class);
-        classes.setCombinerClass(MinimumIntCombiner.class);
-        classes.setVertexInputFormatClass(IntIntNullTextInputFormat.class);
-        classes.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
-        Map<String, String> emptyParams = ImmutableMap.of();
+        GiraphConfiguration conf = new GiraphConfiguration();
+        conf.setVertexClass(ConnectedComponentsVertex.class);
+        conf.setVertexEdgesClass(ByteArrayEdges.class);
+        conf.setCombinerClass(MinimumIntCombiner.class);
+        conf.setVertexInputFormatClass(IntIntNullTextInputFormat.class);
+        conf.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
 
         // run internally
-        Iterable<String> results = InternalVertexRunner.run(classes,
-            emptyParams, graph);
+        Iterable<String> results = InternalVertexRunner.run(conf, graph);
 
         SetMultimap<Integer,Integer> components = parseResults(results);
 

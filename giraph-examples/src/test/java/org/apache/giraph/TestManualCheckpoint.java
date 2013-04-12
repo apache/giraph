@@ -18,7 +18,6 @@
 
 package org.apache.giraph;
 
-import org.apache.giraph.conf.GiraphClasses;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.examples.SimpleCheckpointVertex;
@@ -54,21 +53,21 @@ public class TestManualCheckpoint extends BspCase {
       throws IOException, InterruptedException, ClassNotFoundException {
     Path checkpointsDir = getTempPath("checkPointsForTesting");
     Path outputPath = getTempPath(getCallingMethodName());
-    GiraphClasses classes = new GiraphClasses();
-    classes.setVertexClass(
+    GiraphConfiguration conf = new GiraphConfiguration();
+    conf.setVertexClass(
         SimpleCheckpointVertex.SimpleCheckpointComputation.class);
-    classes.setWorkerContextClass(
+    conf.setWorkerContextClass(
         SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.class);
-    classes.setMasterComputeClass(
+    conf.setMasterComputeClass(
         SimpleCheckpointVertex.SimpleCheckpointVertexMasterCompute.class);
-    classes.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
-    classes.setVertexOutputFormatClass(SimpleSuperstepVertexOutputFormat.class);
-    GiraphJob job = prepareJob(getCallingMethodName(), classes, outputPath);
+    conf.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
+    conf.setVertexOutputFormatClass(SimpleSuperstepVertexOutputFormat.class);
+    GiraphJob job = prepareJob(getCallingMethodName(), conf, outputPath);
 
-    GiraphConfiguration conf = job.getConfiguration();
-    GiraphConstants.CHECKPOINT_DIRECTORY.set(conf, checkpointsDir.toString());
-    GiraphConstants.CLEANUP_CHECKPOINTS_AFTER_SUCCESS.set(conf, false);
-    conf.setCheckpointFrequency(2);
+    GiraphConfiguration configuration = job.getConfiguration();
+    GiraphConstants.CHECKPOINT_DIRECTORY.set(configuration, checkpointsDir.toString());
+    GiraphConstants.CLEANUP_CHECKPOINTS_AFTER_SUCCESS.set(configuration, false);
+    configuration.setCheckpointFrequency(2);
 
     assertTrue(job.run(true));
 
@@ -86,18 +85,18 @@ public class TestManualCheckpoint extends BspCase {
     System.out.println("testBspCheckpoint: Restarting from superstep 2" +
         " with checkpoint path = " + checkpointsDir);
     outputPath = getTempPath(getCallingMethodName() + "Restarted");
-    classes = new GiraphClasses();
-    classes.setVertexClass(
+    conf = new GiraphConfiguration();
+    conf.setVertexClass(
         SimpleCheckpointVertex.SimpleCheckpointComputation.class);
-    classes.setWorkerContextClass(
+    conf.setWorkerContextClass(
         SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.class);
-    classes.setMasterComputeClass(
-        SimpleCheckpointVertex.SimpleCheckpointVertexMasterCompute.class);
-    classes.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
-    classes.setVertexOutputFormatClass(SimpleSuperstepVertexOutputFormat.class);
-    GiraphJob restartedJob = prepareJob(getCallingMethodName() + "Restarted",
-        classes, outputPath);
     conf.setMasterComputeClass(
+        SimpleCheckpointVertex.SimpleCheckpointVertexMasterCompute.class);
+    conf.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
+    conf.setVertexOutputFormatClass(SimpleSuperstepVertexOutputFormat.class);
+    GiraphJob restartedJob = prepareJob(getCallingMethodName() + "Restarted",
+        conf, outputPath);
+    configuration.setMasterComputeClass(
         SimpleCheckpointVertex.SimpleCheckpointVertexMasterCompute.class);
     GiraphConstants.CHECKPOINT_DIRECTORY.set(restartedJob.getConfiguration(),
         checkpointsDir.toString());
