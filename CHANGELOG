@@ -1,8 +1,11 @@
 Giraph Change Log
 
 Release 1.1 - unreleased
-
+  
 Release 1.0 - 2013-04-12
+
+  GIRAPH-628: Can't build Giraph without git due to mavanagaiata not
+  configured right (aching).
 
   GIRAPH-595: InternalVertexRunner.run() should take GiraphConfiguration, not GiraphClasses
   (nitay via apresta)

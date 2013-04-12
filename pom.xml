@@ -266,9 +266,10 @@ under the License.
         <plugin>
           <groupId>com.github.koraktor</groupId>
           <artifactId>mavanagaiata</artifactId>
-          <version>0.4.1</version>
+          <version>0.5.0</version>
           <configuration>
             <gitDir>${top.dir}/.git</gitDir>
+            <skipNoGit>true</skipNoGit>
           </configuration>
           <executions>
             <execution>
