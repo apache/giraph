@@ -21,6 +21,8 @@ package org.apache.giraph.comm;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.google.common.io.Files;
+import org.apache.commons.io.FileUtils;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.messages.BasicMessageStore;
 import org.apache.giraph.comm.messages.ByteArrayMessagesPerVertexStore;
@@ -31,6 +33,7 @@ import org.apache.giraph.comm.messages.MessageStore;
 import org.apache.giraph.comm.messages.MessageStoreFactory;
 import org.apache.giraph.comm.messages.SequentialFileMessageStore;
 import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.giraph.utils.CollectionUtils;
@@ -64,7 +67,7 @@ import static org.junit.Assert.assertTrue;
 
 /** Test for different types of message stores */
 public class TestMessageStores {
-  private static String directory;
+  private static File directory;
   private static ImmutableClassesGiraphConfiguration config;
   private static TestData testData;
   private static
@@ -85,12 +88,14 @@ public class TestMessageStores {
   }
 
   @Before
-  public void prepare() {
-    directory = "test/";
+  public void prepare() throws IOException {
+    directory = Files.createTempDir();
 
     Configuration.addDefaultResource("giraph-site.xml");
     GiraphConfiguration initConfig = new GiraphConfiguration();
     initConfig.setVertexClass(IntVertex.class);
+    GiraphConstants.MESSAGES_DIRECTORY.set(
+        initConfig, new File(directory, "giraph_messages").toString());
     config = new ImmutableClassesGiraphConfiguration(initConfig);
 
     testData = new TestData();
@@ -104,13 +109,11 @@ public class TestMessageStores {
 
     service =
         MockUtils.mockServiceGetVertexPartitionOwner(testData.numOfPartitions);
-
-    new File(directory).mkdir();
   }
 
   @After
-  public void cleanUp() {
-    new File(directory).delete();
+  public void cleanUp() throws IOException {
+    FileUtils.deleteDirectory(directory);
   }
 
   private static class TestData {
@@ -225,7 +228,7 @@ public class TestMessageStores {
   private <S extends MessageStore<IntWritable, IntWritable>> S doCheckpoint(
       MessageStoreFactory<IntWritable, IntWritable, S> messageStoreFactory,
       S messageStore) throws IOException {
-    File file = new File(directory + "messageStoreTest");
+    File file = new File(directory, "messageStoreTest");
     if (file.exists()) {
       file.delete();
     }

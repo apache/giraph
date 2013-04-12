@@ -18,6 +18,7 @@
 
 package org.apache.giraph.partition;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
@@ -31,7 +32,9 @@ import org.junit.Before;
 import org.junit.Test;
 
 import com.google.common.collect.Iterables;
+import com.google.common.io.Files;
 
+import java.io.File;
 import java.io.IOException;
 
 import static org.junit.Assert.assertEquals;
@@ -134,7 +137,10 @@ public class TestPartitionStores {
   }
 
   @Test
-  public void testDiskBackedPartitionStore() {
+  public void testDiskBackedPartitionStore() throws IOException {
+    File directory = Files.createTempDir();
+    GiraphConstants.PARTITIONS_DIRECTORY.set(
+        conf, new File(directory, "giraph_partitions").toString());
     GiraphConstants.USE_OUT_OF_CORE_GRAPH.set(conf, true);
     GiraphConstants.MAX_PARTITIONS_IN_MEMORY.set(conf, 1);
 
@@ -149,6 +155,7 @@ public class TestPartitionStores {
             IntWritable, NullWritable, IntWritable>(conf, context);
     testReadWrite(partitionStore, conf);
     partitionStore.shutdown();
+    FileUtils.deleteDirectory(directory);
   }
 
   /**
