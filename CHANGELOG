@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 0.2.0 - unreleased
+  GIRAPH-614: SplitMasterWorker=false is broken (majakabiljo)
+
   GIRAPH-616: Decouple vertices and edges in DiskBackedPartitionStore and avoid writing 
   back edges when the algorithm does not change topology. (claudio)
 

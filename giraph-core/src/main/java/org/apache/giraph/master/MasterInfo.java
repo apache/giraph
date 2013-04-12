@@ -30,8 +30,26 @@ public class MasterInfo extends TaskInfo {
   public MasterInfo() {
   }
 
+  /**
+   * This taskId is used internally as a unique identification of the
+   * nettyServer which runs on this task. Master is always returning -1
+   * because we need to make sure that the case when option
+   * {@link org.apache.giraph.conf.GiraphConstants#SPLIT_MASTER_WORKER} is
+   * false works correctly (master needs to have different id than the worker
+   * which runs in the same mapper)
+   *
+   * @return -1
+   */
+  @Override
+  public int getTaskId() {
+    return -1;
+  }
+
   @Override
   public String toString() {
-    return "Master(" + super.toString() + ")";
+    return "Master(hostname=" + getHostname() +
+        ", MRtaskID=" + super.getTaskId() +
+        ", port=" + getPort() +
+        ")";
   }
 }
