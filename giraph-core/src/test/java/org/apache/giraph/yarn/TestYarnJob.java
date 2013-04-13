@@ -33,7 +33,7 @@ import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.formats.GiraphFileInputFormat;
 import org.apache.giraph.io.formats.IdWithValueTextOutputFormat;
-import org.apache.giraph.io.formats.IntIntNullIntTextInputFormat;
+import org.apache.giraph.io.formats.IntIntNullTextInputFormat;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
@@ -204,7 +204,7 @@ public class TestYarnJob implements Watcher {
     conf.setYarnLibJars(""); // no need
     conf.setYarnTaskHeapMb(256); // small since no work to be done
     conf.setVertexClass(DummyYarnVertex.class);
-    conf.setVertexInputFormatClass(IntIntNullIntTextInputFormat.class);
+    conf.setVertexInputFormatClass(IntIntNullTextInputFormat.class);
     conf.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
     conf.setNumComputeThreads(1);
     conf.setMaxTaskAttempts(1);
