@@ -43,7 +43,6 @@ public class PageRankVertexTest {
     String[] graph = new String[] {
       "1 4 2 3",
       "2 1",
-      "3",
       "4 3 2",
       "5 2 4"
     };
@@ -57,8 +56,7 @@ public class PageRankVertexTest {
     conf.setVertexOutputFormatClass(
         VertexWithDoubleValueNullEdgeTextOutputFormat.class);
     conf.setWorkerContextClass(RandomWalkWorkerContext.class);
-    conf.setMasterComputeClass(
-        RandomWalkVertex.RandomWalkVertexMasterCompute.class);
+    conf.setMasterComputeClass(RandomWalkVertexMasterCompute.class);
     // Run internally
     Iterable<String> results = InternalVertexRunner.run(conf, graph);
 
@@ -76,4 +74,5 @@ public class PageRankVertexTest {
     assertEquals(0.06784692727193153, steadyStateProbabilities.get(5l),
         RandomWalkTestUtils.EPSILON);
   }
+
 }

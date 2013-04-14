@@ -20,7 +20,6 @@ package org.apache.giraph.examples;
 
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.edge.ByteArrayEdges;
-import org.apache.giraph.examples.RandomWalkVertex.RandomWalkVertexMasterCompute;
 import org.apache.giraph.utils.InternalVertexRunner;
 import org.junit.Test;
 
