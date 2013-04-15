@@ -30,15 +30,15 @@ import java.util.Collection;
 import java.util.Iterator;
 
 /**
- * Implementation of {@link VertexEdges} with long ids and null edge
+ * Implementation of {@link OutEdges} with long ids and null edge
  * values, backed by a dynamic primitive array.
  * Parallel edges are allowed.
  * Note: this implementation is optimized for space usage,
  * but random access and edge removals are expensive.
  */
 public class LongNullArrayEdges
-    implements ReuseObjectsVertexEdges<LongWritable, NullWritable>,
-    MutableVertexEdges<LongWritable, NullWritable> {
+    implements ReuseObjectsOutEdges<LongWritable, NullWritable>,
+    MutableOutEdges<LongWritable, NullWritable> {
   /** Array of target vertex ids. */
   private LongArrayList neighbors;
 

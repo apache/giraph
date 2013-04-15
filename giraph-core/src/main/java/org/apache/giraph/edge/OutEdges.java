@@ -27,7 +27,7 @@ import org.apache.hadoop.io.WritableComparable;
  * @param <I> Vertex id
  * @param <E> Edge value
  */
-public interface VertexEdges<I extends WritableComparable, E extends Writable>
+public interface OutEdges<I extends WritableComparable, E extends Writable>
     extends Iterable<Edge<I, E>>, Writable {
   /**
    * Initialize the data structure and set the edges from an iterable.

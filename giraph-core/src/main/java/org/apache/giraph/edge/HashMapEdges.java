@@ -31,7 +31,7 @@ import java.util.Iterator;
 import java.util.Map;
 
 /**
- * {@link VertexEdges} implementation backed by a {@link HashMap}.
+ * {@link OutEdges} implementation backed by a {@link HashMap}.
  * Parallel edges are not allowed.
  * Note: this implementation is optimized for fast random access and mutations,
  * but uses more space.
@@ -40,9 +40,9 @@ import java.util.Map;
  * @param <E> Edge value
  */
 public class HashMapEdges<I extends WritableComparable, E extends Writable>
-    extends ConfigurableVertexEdges<I, E>
-    implements StrictRandomAccessVertexEdges<I, E>,
-    MutableVertexEdges<I, E> {
+    extends ConfigurableOutEdges<I, E>
+    implements StrictRandomAccessOutEdges<I, E>,
+    MutableOutEdges<I, E> {
   /** Map from target vertex id to edge value. */
   private HashMap<I, E> edgeMap;
 

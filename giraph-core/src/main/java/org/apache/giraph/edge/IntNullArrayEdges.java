@@ -33,14 +33,14 @@ import java.util.Collection;
 import java.util.Iterator;
 
 /**
- * Implementation of {@link VertexEdges} with int ids and null edge
+ * Implementation of {@link OutEdges} with int ids and null edge
  * values, backed by dynamic primitive array.
  * Parallel edges are allowed.
  * Note: this implementation is optimized for space usage,
  * but edge removals are expensive.
  */
 public class IntNullArrayEdges
-    implements ReuseObjectsVertexEdges<IntWritable, NullWritable> {
+    implements ReuseObjectsOutEdges<IntWritable, NullWritable> {
   /** Array of target vertex ids */
   private IntArrayList neighbors;
 

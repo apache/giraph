@@ -51,7 +51,7 @@ public class PageRankVertexTest {
     conf.setInt(RandomWalkWithRestartVertex.MAX_SUPERSTEPS, 50);
     conf.setFloat(RandomWalkWithRestartVertex.TELEPORTATION_PROBABILITY, 0.15f);
     conf.setVertexClass(PageRankVertex.class);
-    conf.setVertexEdgesClass(ByteArrayEdges.class);
+    conf.setOutEdgesClass(ByteArrayEdges.class);
     conf.setVertexInputFormatClass(LongDoubleNullTextInputFormat.class);
     conf.setVertexOutputFormatClass(
         VertexWithDoubleValueNullEdgeTextOutputFormat.class);

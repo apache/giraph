@@ -45,7 +45,7 @@ public class PageRankBenchmark extends GiraphBenchmark {
   protected void prepareConfiguration(GiraphConfiguration conf,
       CommandLine cmd) {
     conf.setVertexClass(PageRankVertex.class);
-    conf.setVertexEdgesClass(IntNullArrayEdges.class);
+    conf.setOutEdgesClass(IntNullArrayEdges.class);
     conf.setCombinerClass(FloatSumCombiner.class);
     conf.setVertexInputFormatClass(
         PseudoRandomIntNullVertexInputFormat.class);

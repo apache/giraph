@@ -20,8 +20,8 @@ package org.apache.giraph.conf;
 
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.combiner.Combiner;
-import org.apache.giraph.edge.ReuseObjectsVertexEdges;
-import org.apache.giraph.edge.VertexEdges;
+import org.apache.giraph.edge.OutEdges;
+import org.apache.giraph.edge.ReuseObjectsOutEdges;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.graph.VertexValueFactory;
@@ -100,36 +100,36 @@ public class GiraphConfiguration extends Configuration
    *
    * @return vertex edges class
    */
-  public Class<? extends VertexEdges> getVertexEdgesClass() {
+  public Class<? extends OutEdges> getOutEdgesClass() {
     return VERTEX_EDGES_CLASS.get(this);
   }
 
   /**
    * Set the vertex edges class
    *
-   * @param vertexEdgesClass Determines the way edges are stored
+   * @param outEdgesClass Determines the way edges are stored
    */
-  public final void setVertexEdgesClass(
-      Class<? extends VertexEdges> vertexEdgesClass) {
-    VERTEX_EDGES_CLASS.set(this, vertexEdgesClass);
+  public final void setOutEdgesClass(
+      Class<? extends OutEdges> outEdgesClass) {
+    VERTEX_EDGES_CLASS.set(this, outEdgesClass);
   }
 
   /**
    * Set the vertex edges class used during edge-based input (if different
    * from the one used during computation)
    *
-   * @param inputVertexEdgesClass Determines the way edges are stored
+   * @param inputOutEdgesClass Determines the way edges are stored
    */
-  public final void setInputVertexEdgesClass(
-      Class<? extends VertexEdges> inputVertexEdgesClass) {
-    INPUT_VERTEX_EDGES_CLASS.set(this, inputVertexEdgesClass);
+  public final void setInputOutEdgesClass(
+      Class<? extends OutEdges> inputOutEdgesClass) {
+    INPUT_VERTEX_EDGES_CLASS.set(this, inputOutEdgesClass);
   }
 
   /**
-   * True if the {@link VertexEdges} implementation copies the passed edges
-   * to its own data structure, i.e. it doesn't keep references to Edge
-   * objects, target vertex ids or edge values passed to add() or
-   * initialize().
+   * True if the {@link org.apache.giraph.edge.OutEdges} implementation
+   * copies the passed edges to its own data structure,
+   * i.e. it doesn't keep references to Edge objects, target vertex ids or edge
+   * values passed to add() or initialize().
    * This makes it possible to reuse edge objects passed to the data
    * structure, to minimize object instantiation (see for example
    * EdgeStore#addPartitionEdges()).
@@ -137,8 +137,8 @@ public class GiraphConfiguration extends Configuration
    * @return True iff we can reuse the edge objects
    */
   public boolean reuseEdgeObjects() {
-    return ReuseObjectsVertexEdges.class.isAssignableFrom(
-        getVertexEdgesClass());
+    return ReuseObjectsOutEdges.class.isAssignableFrom(
+        getOutEdgesClass());
   }
 
   /**

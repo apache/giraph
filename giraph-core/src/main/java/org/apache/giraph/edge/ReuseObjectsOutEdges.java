@@ -22,30 +22,13 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
- * Interface for {@link VertexEdges} implementations that provide efficient
- * random access to the edges given the target vertex id.
- * This version is for strict graphs (i.e. assumes no parallel edges).
+ * Empty interface to characterize {@link OutEdges} implementations that
+ * don't keep references to the Edge (or id and value) objects they are passed.
+ * The Giraph infrastructure can exploit this characteristic by reusing Edge
+ * objects.
  *
  * @param <I> Vertex id
  * @param <E> Edge value
  */
-public interface StrictRandomAccessVertexEdges<I extends WritableComparable,
-    E extends Writable> extends VertexEdges<I, E> {
-  /**
-   * Return the edge value for the given target vertex id (or null if there
-   * is no edge pointing to it).
-   *
-   * @param targetVertexId Target vertex id
-   * @return Edge value
-   */
-  E getEdgeValue(I targetVertexId);
-
-  /**
-   * Set the edge value for the given target vertex id (if an edge to that
-   * vertex exists).
-   *
-   * @param targetVertexId Target vertex id
-   * @param edgeValue Edge value
-   */
-  void setEdgeValue(I targetVertexId, E edgeValue);
-}
+public interface ReuseObjectsOutEdges<I extends WritableComparable,
+    E extends Writable> extends OutEdges<I, E> { }

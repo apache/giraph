@@ -25,7 +25,7 @@ import java.util.Random;
 import java.util.Set;
 import org.apache.giraph.bsp.BspInputSplit;
 import org.apache.giraph.edge.EdgeFactory;
-import org.apache.giraph.edge.VertexEdges;
+import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexReader;
@@ -144,9 +144,9 @@ public class PseudoRandomVertexInputFormat extends
       Random rand = new Random(vertexId);
       DoubleWritable vertexValue = new DoubleWritable(rand.nextDouble());
       // In order to save memory and avoid copying, we add directly to a
-      // VertexEdges instance.
-      VertexEdges<LongWritable, DoubleWritable> edges =
-          getConf().createAndInitializeVertexEdges(edgesPerVertex);
+      // OutEdges instance.
+      OutEdges<LongWritable, DoubleWritable> edges =
+          getConf().createAndInitializeOutEdges(edgesPerVertex);
       Set<LongWritable> destVertices = Sets.newHashSet();
       for (long i = 0; i < edgesPerVertex; ++i) {
         LongWritable destVertexId = new LongWritable();

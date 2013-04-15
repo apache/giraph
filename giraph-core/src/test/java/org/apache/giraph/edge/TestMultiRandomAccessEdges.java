@@ -28,15 +28,15 @@ import org.junit.Test;
 import java.util.Collection;
 import java.util.List;
 
-import static org.apache.giraph.graph.TestVertexAndEdges.instantiateVertexEdges;
+import static org.apache.giraph.graph.TestVertexAndEdges.instantiateOutEdges;
 import static org.junit.Assert.assertEquals;
 
 /**
- * Tests {@link MultiRandomAccessVertexEdges} implementations.
+ * Tests {@link MultiRandomAccessOutEdges} implementations.
  */
 public class TestMultiRandomAccessEdges {
-  /** {@link MultiRandomAccessVertexEdges} classes to be tested. */
-  private Collection<Class<? extends MultiRandomAccessVertexEdges>>
+  /** {@link MultiRandomAccessOutEdges} classes to be tested. */
+  private Collection<Class<? extends MultiRandomAccessOutEdges>>
       edgesClasses = Lists.newArrayList();
 
   @Before
@@ -45,22 +45,22 @@ public class TestMultiRandomAccessEdges {
   }
 
   /**
-   * Ensures that all {@link MultiRandomAccessVertexEdges} implementations
+   * Ensures that all {@link MultiRandomAccessOutEdges} implementations
    * correctly return edge values.
    */
   @Test
   public void testParallelEdges() {
-    for (Class<? extends MultiRandomAccessVertexEdges> edgesClass :
+    for (Class<? extends MultiRandomAccessOutEdges> edgesClass :
         edgesClasses) {
       testParallelEdgesClass(edgesClass);
     }
   }
 
   private void testParallelEdgesClass(
-      Class<? extends MultiRandomAccessVertexEdges> edgesClass) {
-    MultiRandomAccessVertexEdges<LongWritable, DoubleWritable> edges =
-        (MultiRandomAccessVertexEdges<LongWritable, DoubleWritable>)
-            instantiateVertexEdges(edgesClass);
+      Class<? extends MultiRandomAccessOutEdges> edgesClass) {
+    MultiRandomAccessOutEdges<LongWritable, DoubleWritable> edges =
+        (MultiRandomAccessOutEdges<LongWritable, DoubleWritable>)
+            instantiateOutEdges(edgesClass);
 
     // Initial edges list contains parallel edges.
     List<Edge<LongWritable, DoubleWritable>> initialEdges = Lists.newArrayList(

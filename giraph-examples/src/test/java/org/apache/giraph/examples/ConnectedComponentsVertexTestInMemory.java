@@ -58,7 +58,7 @@ public class ConnectedComponentsVertexTestInMemory {
   public void testToyData() throws Exception {
     GiraphConfiguration conf = new GiraphConfiguration();
     conf.setVertexClass(ConnectedComponentsVertex.class);
-    conf.setVertexEdgesClass(ByteArrayEdges.class);
+    conf.setOutEdgesClass(ByteArrayEdges.class);
     conf.setCombinerClass(MinimumIntCombiner.class);
 
     TestGraph<IntWritable, IntWritable, NullWritable, IntWritable> graph =

@@ -22,8 +22,8 @@ import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.combiner.Combiner;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.EdgeFactory;
+import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.edge.ReusableEdge;
-import org.apache.giraph.edge.VertexEdges;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexResolver;
@@ -588,96 +588,99 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   }
 
   @Override
-  public Class<? extends VertexEdges<I, E>> getVertexEdgesClass() {
-    return classes.getVertexEdgesClass();
+  public Class<? extends OutEdges<I, E>> getOutEdgesClass() {
+    return classes.getOutEdgesClass();
   }
 
   /**
-   * Get the user's subclassed {@link VertexEdges} used for input
+   * Get the user's subclassed {@link org.apache.giraph.edge.OutEdges} used for
+   * input
    *
    * @return User's input vertex edges class
    */
-  public Class<? extends VertexEdges<I, E>> getInputVertexEdgesClass() {
-    return classes.getInputVertexEdgesClass();
+  public Class<? extends OutEdges<I, E>> getInputOutEdgesClass() {
+    return classes.getInputOutEdgesClass();
   }
 
   /**
-   * Check whether the user has specified a different {@link VertexEdges}
-   * class to be used during edge-based input.
+   * Check whether the user has specified a different
+   * {@link org.apache.giraph.edge.OutEdges} class to be used during
+   * edge-based input.
    *
    * @return True iff there is a special edges class for input
    */
-  public boolean useInputVertexEdges() {
-    return classes.getInputVertexEdgesClass() != classes.getVertexEdgesClass();
+  public boolean useInputOutEdges() {
+    return classes.getInputOutEdgesClass() != classes.getOutEdgesClass();
   }
 
   /**
-   * Create a user {@link VertexEdges}
+   * Create a user {@link org.apache.giraph.edge.OutEdges}
    *
-   * @return Instantiated user VertexEdges
+   * @return Instantiated user OutEdges
    */
-  public VertexEdges<I, E> createVertexEdges() {
-    return ReflectionUtils.newInstance(getVertexEdgesClass(), this);
+  public OutEdges<I, E> createOutEdges() {
+    return ReflectionUtils.newInstance(getOutEdgesClass(), this);
   }
 
   /**
-   * Create a {@link VertexEdges} instance and initialize it with the default
-   * capacity.
+   * Create a {@link org.apache.giraph.edge.OutEdges} instance and initialize
+   * it with the default capacity.
    *
-   * @return Instantiated VertexEdges
+   * @return Instantiated OutEdges
    */
-  public VertexEdges<I, E> createAndInitializeVertexEdges() {
-    VertexEdges<I, E> vertexEdges = createVertexEdges();
-    vertexEdges.initialize();
-    return vertexEdges;
+  public OutEdges<I, E> createAndInitializeOutEdges() {
+    OutEdges<I, E> outEdges = createOutEdges();
+    outEdges.initialize();
+    return outEdges;
   }
 
   /**
-   * Create a {@link VertexEdges} instance and initialize it with the given
-   * capacity (the number of edges that will be added).
+   * Create a {@link org.apache.giraph.edge.OutEdges} instance and initialize
+   * it with the given capacity (the number of edges that will be added).
    *
    * @param capacity Number of edges that will be added
-   * @return Instantiated VertexEdges
+   * @return Instantiated OutEdges
    */
-  public VertexEdges<I, E> createAndInitializeVertexEdges(int capacity) {
-    VertexEdges<I, E> vertexEdges = createVertexEdges();
-    vertexEdges.initialize(capacity);
-    return vertexEdges;
+  public OutEdges<I, E> createAndInitializeOutEdges(int capacity) {
+    OutEdges<I, E> outEdges = createOutEdges();
+    outEdges.initialize(capacity);
+    return outEdges;
   }
 
   /**
-   * Create a {@link VertexEdges} instance and initialize it with the given
-   * iterable of edges.
+   * Create a {@link org.apache.giraph.edge.OutEdges} instance and initialize
+   * it with the given iterable of edges.
    *
    * @param edges Iterable of edges to add
-   * @return Instantiated VertexEdges
+   * @return Instantiated OutEdges
    */
-  public VertexEdges<I, E> createAndInitializeVertexEdges(
+  public OutEdges<I, E> createAndInitializeOutEdges(
       Iterable<Edge<I, E>> edges) {
-    VertexEdges<I, E> vertexEdges = createVertexEdges();
-    vertexEdges.initialize(edges);
-    return vertexEdges;
+    OutEdges<I, E> outEdges = createOutEdges();
+    outEdges.initialize(edges);
+    return outEdges;
   }
 
   /**
-   * Create a user {@link VertexEdges} used during edge-based input
+   * Create a user {@link org.apache.giraph.edge.OutEdges} used during
+   * edge-based input
    *
-   * @return Instantiated user input VertexEdges
+   * @return Instantiated user input OutEdges
    */
-  public VertexEdges<I, E> createInputVertexEdges() {
-    return ReflectionUtils.newInstance(getInputVertexEdgesClass(), this);
+  public OutEdges<I, E> createInputOutEdges() {
+    return ReflectionUtils.newInstance(getInputOutEdgesClass(), this);
   }
 
   /**
-   * Create an input {@link VertexEdges} instance and initialize it with the
-   * default capacity.
+   * Create an input {@link org.apache.giraph.edge.OutEdges} instance and
+   * initialize it with the default capacity.
    *
-   * @return Instantiated input VertexEdges
+   * @return Instantiated input OutEdges
    */
-  public VertexEdges<I, E> createAndInitializeInputVertexEdges() {
-    VertexEdges<I, E> vertexEdges = createInputVertexEdges();
-    vertexEdges.initialize();
-    return vertexEdges;
+  public OutEdges<I, E> createAndInitializeInputOutEdges() {
+    OutEdges<I, E> outEdges = createInputOutEdges();
+    outEdges.initialize();
+    return outEdges;
   }
 
   /**

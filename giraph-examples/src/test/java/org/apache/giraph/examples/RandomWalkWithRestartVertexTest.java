@@ -45,7 +45,7 @@ public class RandomWalkWithRestartVertexTest {
     conf.setInt(RandomWalkWithRestartVertex.MAX_SUPERSTEPS, 30);
     conf.setFloat(RandomWalkWithRestartVertex.TELEPORTATION_PROBABILITY, 0.25f);
     conf.setVertexClass(RandomWalkWithRestartVertex.class);
-    conf.setVertexEdgesClass(ByteArrayEdges.class);
+    conf.setOutEdgesClass(ByteArrayEdges.class);
     conf.setVertexInputFormatClass(LongDoubleDoubleTextInputFormat.class);
     conf.setVertexOutputFormatClass(
         VertexWithDoubleValueDoubleEdgeTextOutputFormat.class);
@@ -81,7 +81,7 @@ public class RandomWalkWithRestartVertexTest {
     conf.setInt(RandomWalkWithRestartVertex.MAX_SUPERSTEPS, 30);
     conf.setFloat(RandomWalkWithRestartVertex.TELEPORTATION_PROBABILITY, 0.15f);
     conf.setVertexClass(RandomWalkWithRestartVertex.class);
-    conf.setVertexEdgesClass(ByteArrayEdges.class);
+    conf.setOutEdgesClass(ByteArrayEdges.class);
     conf.setVertexInputFormatClass(
         NormalizingLongDoubleDoubleTextInputFormat.class);
     conf.setVertexOutputFormatClass(
