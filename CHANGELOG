@@ -3,6 +3,7 @@ Giraph Change Log
 Release 1.0.1 - unreleased
   
 Release 1.0.0 - 2013-04-12
+  GIRAPH-634: InternalGiraphRunner with TestGraph is broken (majakabiljo)
 
   GIRAPH-630: Convergence detection broken in
   o.a.g.examples.PageRankVertex. (ssc via aching)
