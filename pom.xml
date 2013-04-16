@@ -24,7 +24,7 @@ under the License.
   <groupId>org.apache.giraph</groupId>
   <artifactId>giraph-parent</artifactId>
   <packaging>pom</packaging>
-  <version>0.2-SNAPSHOT</version>
+  <version>1.0.0</version>
 
   <name>Apache Giraph Parent</name>
   <url>http://giraph.apache.org/</url>
