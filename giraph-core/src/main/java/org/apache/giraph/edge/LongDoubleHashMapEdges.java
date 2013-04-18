@@ -22,13 +22,14 @@ import com.google.common.collect.UnmodifiableIterator;
 import it.unimi.dsi.fastutil.longs.Long2DoubleMap;
 import it.unimi.dsi.fastutil.longs.Long2DoubleOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
+
+import org.apache.giraph.utils.EdgeIterables;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Collection;
 import java.util.Iterator;
 
 /**
@@ -50,17 +51,7 @@ public class LongDoubleHashMapEdges
 
   @Override
   public void initialize(Iterable<Edge<LongWritable, DoubleWritable>> edges) {
-    // If the iterable is actually a collection, we can cheaply get the
-    // size and initialize the hash-map with the expected capacity.
-    if (edges instanceof Collection) {
-      initialize(
-          ((Collection<Edge<LongWritable, DoubleWritable>>) edges).size());
-    } else {
-      initialize();
-    }
-    for (Edge<LongWritable, DoubleWritable> edge : edges) {
-      add(edge);
-    }
+    EdgeIterables.initialize(this, edges);
   }
 
   @Override

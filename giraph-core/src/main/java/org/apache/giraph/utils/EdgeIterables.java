@@ -21,11 +21,14 @@ package org.apache.giraph.utils;
 import com.google.common.collect.Iterables;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.EdgeFactory;
+import org.apache.giraph.edge.OutEdges;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.io.WritableUtils;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
@@ -104,5 +107,49 @@ public class EdgeIterables {
     Collections.sort(edgeList1, edgeComparator);
     Collections.sort(edgeList2, edgeComparator);
     return equals(edgeList1, edgeList2);
+  }
+
+  /**
+   * Get the size of edges. Optimized implementation for cases when edges is
+   * instance of {@link OutEdges} or {@link Collection} which only calls
+   * size() method from these classes.
+   *
+   * @param edges Edges
+   * @param <I> Vertex index
+   * @param <E> Edge value
+   * @return Size of edges
+   */
+  public static <I extends WritableComparable, E extends Writable> int size(
+      Iterable<Edge<I, E>> edges) {
+    if (edges instanceof OutEdges) {
+      return ((OutEdges) edges).size();
+    } else {
+      return Iterables.size(edges);
+    }
+  }
+
+  /**
+   * Initialize edges data structure and add the edges from edgesIterable.
+   *
+   * If edgesIterable is instance of {@link OutEdges} or {@link Collection}
+   * edges will be initialized with size of edgesIterable,
+   * otherwise edges will be initialized without size.
+   *
+   * @param edges Edges to initialize
+   * @param edgesIterable Iterable whose edges to use
+   * @param <I> Vertex index
+   * @param <E> Edge value
+   */
+  public static <I extends WritableComparable, E extends Writable>
+  void initialize(OutEdges<I, E> edges, Iterable<Edge<I, E>> edgesIterable) {
+    if (edgesIterable instanceof OutEdges ||
+        edgesIterable instanceof Collection) {
+      edges.initialize(size(edgesIterable));
+    } else {
+      edges.initialize();
+    }
+    for (Edge<I, E> edge : edgesIterable) {
+      edges.add(edge);
+    }
   }
 }

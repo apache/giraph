@@ -20,13 +20,14 @@ package org.apache.giraph.edge;
 
 import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+
+import org.apache.giraph.utils.EdgeIterables;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Collection;
 import java.util.Iterator;
 
 /**
@@ -45,17 +46,7 @@ public class LongNullHashSetEdges
 
   @Override
   public void initialize(Iterable<Edge<LongWritable, NullWritable>> edges) {
-    // If the iterable is actually a collection, we can cheaply get the
-    // size and initialize the hash-map with the expected capacity.
-    if (edges instanceof Collection) {
-      initialize(
-          ((Collection<Edge<LongWritable, NullWritable>>) edges).size());
-    } else {
-      initialize();
-    }
-    for (Edge<LongWritable, NullWritable> edge : edges) {
-      add(edge);
-    }
+    EdgeIterables.initialize(this, edges);
   }
 
   @Override

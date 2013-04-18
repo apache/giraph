@@ -23,13 +23,14 @@ import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import it.unimi.dsi.fastutil.doubles.DoubleIterator;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongIterator;
+
+import org.apache.giraph.utils.EdgeIterables;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Collection;
 import java.util.Iterator;
 
 /**
@@ -49,18 +50,7 @@ public class LongDoubleArrayEdges
 
   @Override
   public void initialize(Iterable<Edge<LongWritable, DoubleWritable>> edges) {
-    // If the iterable is actually a collection, we can cheaply get the
-    // size and initialize the arrays with the expected capacity.
-    if (edges instanceof Collection) {
-      int numEdges =
-          ((Collection<Edge<LongWritable, DoubleWritable>>) edges).size();
-      initialize(numEdges);
-    } else {
-      initialize();
-    }
-    for (Edge<LongWritable, DoubleWritable> edge : edges) {
-      add(edge);
-    }
+    EdgeIterables.initialize(this, edges);
   }
 
   @Override

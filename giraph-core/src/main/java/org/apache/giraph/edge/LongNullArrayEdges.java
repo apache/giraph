@@ -20,13 +20,14 @@ package org.apache.giraph.edge;
 
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongIterator;
+
+import org.apache.giraph.utils.EdgeIterables;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Collection;
 import java.util.Iterator;
 
 /**
@@ -44,18 +45,7 @@ public class LongNullArrayEdges
 
   @Override
   public void initialize(Iterable<Edge<LongWritable, NullWritable>> edges) {
-    // If the iterable is actually a collection, we can cheaply get the
-    // size and initialize the arrays with the expected capacity.
-    if (edges instanceof Collection) {
-      int numEdges =
-          ((Collection<Edge<LongWritable, NullWritable>>) edges).size();
-      initialize(numEdges);
-    } else {
-      initialize();
-    }
-    for (Edge<LongWritable, NullWritable> edge : edges) {
-      add(edge);
-    }
+    EdgeIterables.initialize(this, edges);
   }
 
   @Override

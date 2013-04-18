@@ -18,6 +18,7 @@
 
 package org.apache.giraph.edge;
 
+import org.apache.giraph.utils.EdgeIterables;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 
@@ -29,7 +30,6 @@ import it.unimi.dsi.fastutil.ints.IntIterator;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Collection;
 import java.util.Iterator;
 
 /**
@@ -46,18 +46,7 @@ public class IntNullArrayEdges
 
   @Override
   public void initialize(Iterable<Edge<IntWritable, NullWritable>> edges) {
-    // If the iterable is actually a collection, we can cheaply get the
-    // size and initialize the array with the expected capacity.
-    if (edges instanceof Collection) {
-      int numEdges =
-          ((Collection<Edge<IntWritable, NullWritable>>) edges).size();
-      initialize(numEdges);
-    } else {
-      initialize();
-    }
-    for (Edge<IntWritable, NullWritable> edge : edges) {
-      add(edge);
-    }
+    EdgeIterables.initialize(this, edges);
   }
 
   @Override

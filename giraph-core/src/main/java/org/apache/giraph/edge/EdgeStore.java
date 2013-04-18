@@ -146,12 +146,7 @@ public class EdgeStore<I extends WritableComparable,
     if (!useInputOutEdges) {
       return inputEdges;
     } else {
-      OutEdges<I, E> computeEdges =
-          configuration.createAndInitializeOutEdges(inputEdges.size());
-      for (Edge<I, E> edge : inputEdges) {
-        computeEdges.add(edge);
-      }
-      return computeEdges;
+      return configuration.createAndInitializeOutEdges(inputEdges);
     }
   }
 
