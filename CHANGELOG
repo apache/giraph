@@ -1,7 +1,9 @@
 Giraph Change Log
 
 Release 1.0.1 - unreleased
-  GIRAPH-463: Maven Release settings more friendly to Git (nitay)
+  GIRAPH-645: Specify maven deploy plugin version (nitay)
+
+  GIRAPH-643: Maven Release settings more friendly to Git (nitay)
   
 Release 1.0.0 - 2013-04-15
   GIRAPH-633: Rename VertexEdges to OutEdges (apresta)
