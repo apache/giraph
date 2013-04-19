@@ -143,6 +143,10 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
     for (String path : userPaths) {
       basePaths[i++] = path + "/" + conf.get("mapred.job.id", "Unknown Job");
     }
+    if (LOG.isInfoEnabled()) {
+      LOG.info("DiskBackedPartitionStore with maxInMemoryPartitions=" +
+          maxInMemoryPartitions + ", isStaticGraph=" + conf.isStaticGraph());
+    }
   }
 
   @Override
@@ -358,15 +362,13 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
   }
 
   /**
-   * Writes vertex data (Id, Vertex Value and halted state) to stream.
+   * Writes vertex data (Id, value and halted state) to stream.
    *
    * @param output The output stream
    * @param vertex The vertex to serialize
    * @throws IOException
    */
-  private void writeVertexData(
-      DataOutput output,
-      Vertex<I, V, E, M> vertex)
+  private void writeVertexData(DataOutput output, Vertex<I, V, E, M> vertex)
     throws IOException {
     vertex.getId().write(output);
     vertex.getValue().write(output);
@@ -374,16 +376,14 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
   }
 
   /**
-   * Writes vertex edges (Id, Edges) to stream.
+   * Writes vertex edges (Id, edges) to stream.
    *
    * @param output The output stream
    * @param vertex The vertex to serialize
    * @throws IOException
    */
   @SuppressWarnings("unchecked")
-  private void writeOutEdges(
-      DataOutput output,
-      Vertex<I, V, E, M> vertex)
+  private void writeOutEdges(DataOutput output, Vertex<I, V, E, M> vertex)
     throws IOException {
     vertex.getId().write(output);
     ((OutEdges<I, E>) vertex.getEdges()).write(output);
@@ -402,7 +402,8 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
     id.readFields(in);
     V value = conf.createVertexValue();
     value.readFields(in);
-    vertex.initialize(id, value);
+    OutEdges<I, E> edges = conf.createOutEdges();
+    vertex.initialize(id, value, edges);
     if (in.readBoolean()) {
       vertex.voteToHalt();
     } else {
@@ -417,15 +418,15 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
    * @param partition The partition owning the vertex
    * @throws IOException
    */
+  @SuppressWarnings("unchecked")
   private void readOutEdges(DataInput in, Partition<I, V, E, M> partition)
     throws IOException {
     I id = conf.createVertexId();
     id.readFields(in);
     Vertex<I, V, E, M> v = partition.getVertex(id);
-    OutEdges<I, E> edges = conf.createOutEdges();
-    edges.readFields(in);
-    v.setEdges(edges);
+    ((OutEdges<I, E>) v.getEdges()).readFields(in);
   }
+
 
   /**
    * Load a partition from disk. It deletes the files after the load,
@@ -441,22 +442,42 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
     Partition<I, V, E, M> partition =
         conf.createPartition(id, context);
     File file = new File(getVerticesPath(id));
-    DataInputStream inputStream = new DataInputStream(
-        new BufferedInputStream(new FileInputStream(file)));
-    for (int i = 0; i < numVertices; ++i) {
-      Vertex<I, V , E, M> vertex = conf.createVertex();
-      readVertexData(inputStream, vertex);
-      partition.putVertex(vertex);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("loadPartition: loading partition vertices " +
+          partition.getId() + " from " + file.getAbsolutePath());
     }
-    inputStream.close();
+    DataInputStream inputStream = null;
+    try {
+      inputStream = new DataInputStream(
+          new BufferedInputStream(new FileInputStream(file)));
+      for (int i = 0; i < numVertices; ++i) {
+        Vertex<I, V , E, M> vertex = conf.createVertex();
+        readVertexData(inputStream, vertex);
+        partition.putVertex(vertex);
+      }
+    } finally {
+      if (inputStream != null) {
+        inputStream.close();
+        inputStream = null;
+      }
+    }
     file.delete();
     file = new File(getEdgesPath(id));
-    inputStream = new DataInputStream(
-        new BufferedInputStream(new FileInputStream(file)));
-    for (int i = 0; i < numVertices; ++i) {
-      readOutEdges(inputStream, partition);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("loadPartition: loading partition edges " +
+          partition.getId() + " from " + file.getAbsolutePath());
     }
-    inputStream.close();
+    try {
+      inputStream = new DataInputStream(
+          new BufferedInputStream(new FileInputStream(file)));
+      for (int i = 0; i < numVertices; ++i) {
+        readOutEdges(inputStream, partition);
+      }
+    } finally {
+      if (inputStream != null) {
+        inputStream.close();
+      }
+    }
     /*
      * If the graph is static, keep the file around.
      */
@@ -477,16 +498,23 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
     File file = new File(getVerticesPath(partition.getId()));
     file.getParentFile().mkdirs();
     file.createNewFile();
-    if (LOG.isInfoEnabled()) {
-      LOG.info("offloadPartition: writing partition vertices " +
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("offloadPartition: writing partition vertices " +
           partition.getId() + " to " + file.getAbsolutePath());
     }
-    DataOutputStream outputStream = new DataOutputStream(
-        new BufferedOutputStream(new FileOutputStream(file)));
-    for (Vertex<I, V, E, M> vertex : partition) {
-      writeVertexData(outputStream, vertex);
+    DataOutputStream outputStream = null;
+    try {
+      outputStream = new DataOutputStream(
+          new BufferedOutputStream(new FileOutputStream(file)));
+      for (Vertex<I, V, E, M> vertex : partition) {
+        writeVertexData(outputStream, vertex);
+      }
+    } finally {
+      if (outputStream != null) {
+        outputStream.close();
+        outputStream = null;
+      }
     }
-    outputStream.close();
     file = new File(getEdgesPath(partition.getId()));
     /*
      * Avoid writing back edges if we have already written them once and
@@ -494,16 +522,21 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
      */
     if (!conf.isStaticGraph() || !file.exists()) {
       file.createNewFile();
-      if (LOG.isInfoEnabled()) {
-        LOG.info("offloadPartition: writing partition edges " +
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("offloadPartition: writing partition edges " +
             partition.getId() + " to " + file.getAbsolutePath());
       }
-      outputStream = new DataOutputStream(
-          new BufferedOutputStream(new FileOutputStream(file)));
-      for (Vertex<I, V, E, M> vertex : partition) {
-        writeOutEdges(outputStream, vertex);
+      try {
+        outputStream = new DataOutputStream(
+            new BufferedOutputStream(new FileOutputStream(file)));
+        for (Vertex<I, V, E, M> vertex : partition) {
+          writeOutEdges(outputStream, vertex);
+        }
+      } finally {
+        if (outputStream != null) {
+          outputStream.close();
+        }
       }
-      outputStream.close();
     }
   }
 
@@ -520,19 +553,31 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
     Integer count = onDisk.get(id);
     onDisk.put(id, count + (int) partition.getVertexCount());
     File file = new File(getVerticesPath(id));
-    DataOutputStream outputStream = new DataOutputStream(
-        new BufferedOutputStream(new FileOutputStream(file, true)));
-    for (Vertex<I, V, E, M> vertex : partition) {
-      writeVertexData(outputStream, vertex);
+    DataOutputStream outputStream = null;
+    try {
+      outputStream = new DataOutputStream(
+          new BufferedOutputStream(new FileOutputStream(file, true)));
+      for (Vertex<I, V, E, M> vertex : partition) {
+        writeVertexData(outputStream, vertex);
+      }
+    } finally {
+      if (outputStream != null) {
+        outputStream.close();
+        outputStream = null;
+      }
     }
-    outputStream.close();
     file = new File(getEdgesPath(id));
-    outputStream = new DataOutputStream(
-        new BufferedOutputStream(new FileOutputStream(file, true)));
-    for (Vertex<I, V, E, M> vertex : partition) {
-      writeOutEdges(outputStream, vertex);
+    try {
+      outputStream = new DataOutputStream(
+          new BufferedOutputStream(new FileOutputStream(file, true)));
+      for (Vertex<I, V, E, M> vertex : partition) {
+        writeOutEdges(outputStream, vertex);
+      }
+    } finally {
+      if (outputStream != null) {
+        outputStream.close();
+      }
     }
-    outputStream.close();
   }
 
   /**

@@ -22,6 +22,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.utils.UnsafeByteArrayInputStream;
 import org.apache.giraph.utils.UnsafeByteArrayOutputStream;
@@ -135,6 +136,23 @@ public class TestPartitionStores {
     assertEquals(0, deserializatedPartition.getEdgeCount());
     assertEquals(7, deserializatedPartition.getVertexCount());
   }
+  
+  @Test
+  public void testDiskBackedPartitionStoreWithByteArrayPartition() throws IOException {
+    File directory = Files.createTempDir();
+    GiraphConstants.PARTITIONS_DIRECTORY.set(
+        conf, new File(directory, "giraph_partitions").toString());
+    GiraphConstants.USE_OUT_OF_CORE_GRAPH.set(conf, true);
+    GiraphConstants.MAX_PARTITIONS_IN_MEMORY.set(conf, 1);
+    conf.setPartitionClass(ByteArrayPartition.class);
+    
+    PartitionStore<IntWritable, IntWritable, NullWritable, IntWritable>
+        partitionStore = new DiskBackedPartitionStore<IntWritable,
+            IntWritable, NullWritable, IntWritable>(conf, context);
+    testReadWrite(partitionStore, conf);
+    partitionStore.shutdown();
+    FileUtils.deleteDirectory(directory);
+  }
 
   @Test
   public void testDiskBackedPartitionStore() throws IOException {
@@ -190,6 +208,8 @@ public class TestPartitionStores {
     Vertex<IntWritable, IntWritable, NullWritable, IntWritable> v7 =
         conf.createVertex();
     v7.initialize(new IntWritable(7), new IntWritable(7));
+    v7.addEdge(EdgeFactory.create(new IntWritable(1)));
+    v7.addEdge(EdgeFactory.create(new IntWritable(2)));
 
     partitionStore.addPartition(createPartition(conf, 1, v1, v2));
     partitionStore.addPartition(createPartition(conf, 2, v3));
@@ -219,18 +239,23 @@ public class TestPartitionStores {
       partitionStore.putPartition(p);
       partitionsNumber++;
     }
+    Partition<IntWritable, IntWritable, NullWritable, IntWritable> partition;
     assertEquals(3, partitionsNumber);
     assertTrue(partitionStore.hasPartition(1));
     assertTrue(partitionStore.hasPartition(2));
     assertFalse(partitionStore.hasPartition(3));
     assertTrue(partitionStore.hasPartition(4));
-    assertEquals(3, partition1.getVertexCount());
-    assertEquals(2, partition2.getVertexCount());
-    assertEquals(1, partition3.getVertexCount());
-    assertEquals(1, partition4.getVertexCount());
-
+    partition = partitionStore.getPartition(1);
+    assertEquals(3, partition.getVertexCount());
+    partitionStore.putPartition(partition);
+    partition = partitionStore.getPartition(2);
+    assertEquals(2, partition.getVertexCount());
+    partitionStore.putPartition(partition);
+    partition = partitionStore.getPartition(4);
+    assertEquals(1, partition.getVertexCount());
+    assertEquals(2, partition.getEdgeCount());
+    partitionStore.putPartition(partition);
     partitionStore.deletePartition(2);
-
     assertEquals(2, partitionStore.getNumPartitions());
   }
 }

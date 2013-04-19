@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 1.0.1 - unreleased
+  GIRAPH-624: ByteArrayPartition reports 0 aggregate edges when used with 
+  DiskBackedPartitionStore (claudio)
+
   GIRAPH-636: Initialize compute OutEdges directly from input OutEdges
   (majakabiljo)
 
