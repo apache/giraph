@@ -22,7 +22,7 @@ import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import com.facebook.giraph.hive.record.HiveReadableRecord;
+import com.facebook.hiveio.record.HiveReadableRecord;
 
 import java.util.Iterator;
 

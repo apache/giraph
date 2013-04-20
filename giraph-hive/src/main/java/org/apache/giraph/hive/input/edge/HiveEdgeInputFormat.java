@@ -18,10 +18,6 @@
 
 package org.apache.giraph.hive.input.edge;
 
-import com.facebook.giraph.hive.input.HiveApiInputFormat;
-import com.facebook.giraph.hive.record.HiveReadableRecord;
-import java.io.IOException;
-import java.util.List;
 import org.apache.giraph.hive.common.HiveProfiles;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.EdgeReader;
@@ -32,6 +28,12 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+
+import com.facebook.hiveio.input.HiveApiInputFormat;
+import com.facebook.hiveio.record.HiveReadableRecord;
+
+import java.io.IOException;
+import java.util.List;
 
 /**
  * {@link EdgeInputFormat} for reading edges from Hive.

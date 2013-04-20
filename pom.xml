@@ -225,7 +225,7 @@ under the License.
       </snapshots>
     </repository>
     <repository>
-      <id>apache snapshots</id>
+      <id>apache</id>
       <url>https://repository.apache.org/content/groups/public/</url>
       <snapshots>
         <enabled>true</enabled>
@@ -235,7 +235,7 @@ under the License.
       </releases>
     </repository>
     <repository>
-      <id>sonatypereleases</id>
+      <id>sonatype</id>
       <url>https://oss.sonatype.org/content/groups/public/</url>
       <snapshots>
         <enabled>true</enabled>
@@ -962,9 +962,9 @@ under the License.
     <dependencies>
       <!-- compile dependencies. sorted lexicographically. -->
       <dependency>
-        <groupId>com.facebook.giraph.hive</groupId>
+        <groupId>com.facebook.hiveio</groupId>
         <artifactId>hive-io-exp-core</artifactId>
-        <version>0.6</version>
+        <version>0.8</version>
       </dependency>
       <dependency>
         <groupId>com.google.guava</groupId>

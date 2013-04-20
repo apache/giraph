@@ -18,9 +18,6 @@
 
 package org.apache.giraph.hive.output;
 
-import com.facebook.giraph.hive.output.HiveApiOutputFormat;
-import com.facebook.giraph.hive.record.HiveWritableRecord;
-import java.io.IOException;
 import org.apache.giraph.hive.common.HiveProfiles;
 import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.giraph.io.VertexWriter;
@@ -30,6 +27,11 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+
+import com.facebook.hiveio.output.HiveApiOutputFormat;
+import com.facebook.hiveio.record.HiveWritableRecord;
+
+import java.io.IOException;
 
 /**
  * VertexOutputFormat using Hive

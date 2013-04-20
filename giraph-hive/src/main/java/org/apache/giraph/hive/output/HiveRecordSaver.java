@@ -18,7 +18,7 @@
 
 package org.apache.giraph.hive.output;
 
-import com.facebook.giraph.hive.record.HiveWritableRecord;
+import com.facebook.hiveio.record.HiveWritableRecord;
 
 import java.io.IOException;
 

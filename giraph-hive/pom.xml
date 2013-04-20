@@ -85,7 +85,7 @@ under the License.
   <dependencies>
     <!-- compile dependencies. sorted lexicographically. -->
     <dependency>
-      <groupId>com.facebook.giraph.hive</groupId>
+      <groupId>com.facebook.hiveio</groupId>
       <artifactId>hive-io-exp-core</artifactId>
     </dependency>
     <dependency>

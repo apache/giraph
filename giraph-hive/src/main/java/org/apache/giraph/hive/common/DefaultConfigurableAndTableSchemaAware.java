@@ -22,8 +22,8 @@ import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import com.facebook.giraph.hive.schema.HiveTableSchema;
-import com.facebook.giraph.hive.schema.HiveTableSchemaAware;
+import com.facebook.hiveio.schema.HiveTableSchema;
+import com.facebook.hiveio.schema.HiveTableSchemaAware;
 
 /**
  * Default implementation of {@link HiveTableSchemaAware} and

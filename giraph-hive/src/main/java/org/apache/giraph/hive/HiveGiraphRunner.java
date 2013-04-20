@@ -42,11 +42,11 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
 
-import com.facebook.giraph.hive.input.HiveApiInputFormat;
-import com.facebook.giraph.hive.input.HiveInputDescription;
-import com.facebook.giraph.hive.output.HiveApiOutputFormat;
-import com.facebook.giraph.hive.output.HiveOutputDescription;
-import com.facebook.giraph.hive.schema.HiveTableSchemas;
+import com.facebook.hiveio.input.HiveApiInputFormat;
+import com.facebook.hiveio.input.HiveInputDescription;
+import com.facebook.hiveio.output.HiveApiOutputFormat;
+import com.facebook.hiveio.output.HiveOutputDescription;
+import com.facebook.hiveio.schema.HiveTableSchemas;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;

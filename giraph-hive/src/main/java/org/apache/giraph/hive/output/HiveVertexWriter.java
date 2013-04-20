@@ -18,12 +18,6 @@
 
 package org.apache.giraph.hive.output;
 
-import com.facebook.giraph.hive.input.parser.hive.DefaultRecord;
-import com.facebook.giraph.hive.record.HiveRecord;
-import com.facebook.giraph.hive.record.HiveWritableRecord;
-import com.facebook.giraph.hive.schema.HiveTableSchema;
-import com.facebook.giraph.hive.schema.HiveTableSchemas;
-import java.io.IOException;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.VertexWriter;
 import org.apache.giraph.utils.ReflectionUtils;
@@ -33,6 +27,14 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.log4j.Logger;
+
+import com.facebook.hiveio.input.parser.hive.DefaultRecord;
+import com.facebook.hiveio.record.HiveRecord;
+import com.facebook.hiveio.record.HiveWritableRecord;
+import com.facebook.hiveio.schema.HiveTableSchema;
+import com.facebook.hiveio.schema.HiveTableSchemas;
+
+import java.io.IOException;
 
 
 /**

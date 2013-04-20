@@ -22,8 +22,8 @@ import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import com.facebook.giraph.hive.record.HiveRecord;
-import com.facebook.giraph.hive.record.HiveWritableRecord;
+import com.facebook.hiveio.record.HiveRecord;
+import com.facebook.hiveio.record.HiveWritableRecord;
 
 import java.io.IOException;
 

@@ -18,9 +18,6 @@
 
 package org.apache.giraph.hive.input.edge;
 
-import com.facebook.giraph.hive.record.HiveReadableRecord;
-import com.facebook.giraph.hive.schema.HiveTableSchemas;
-import java.io.IOException;
 import org.apache.giraph.hive.common.DefaultConfigurableAndTableSchemaAware;
 import org.apache.giraph.hive.input.RecordReaderWrapper;
 import org.apache.giraph.io.iterables.EdgeWithSource;
@@ -31,6 +28,11 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+
+import com.facebook.hiveio.record.HiveReadableRecord;
+import com.facebook.hiveio.schema.HiveTableSchemas;
+
+import java.io.IOException;
 
 import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_TO_EDGE_CLASS;
 
