@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.0.1 - unreleased
+  GIRAPH-635: Website Documentation: Missing presentations (ssc)
+
   GIRAPH-647: Update HiveIO to 0.8 (nitay)
 
   GIRAPH-624: ByteArrayPartition reports 0 aggregate edges when used with 

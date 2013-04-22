@@ -33,6 +33,8 @@ under the License.
         <li>Claudio Martella gave a talk about Giraph at FOSDEM 2012. Watch <a href="http://www.youtube.com/watch?v=3ZrqPEIPRe4">part 1</a> and <a href="http://www.youtube.com/watch?v=BmRaejKGeDM">part 2</a>. The presentation slides can be found <a href="http://prezi.com/9ake_klzwrga/apache-giraph-distributed-graph-processing-in-the-cloud/">here</a>.</li>
         <li>André Kelpe presented an overview of the Giraph project at the Belgian Big Data group. Slides are <a href="https://speakerdeck.com/u/fs111/p/large-scale-graph-processing-with-apache-giraph">available here</a>.</li>
         <li>Jakob Homan talked about Giraph at 2012 Berlin Buzzwords. Slides are <a href="http://bit.ly/MDc4Dk">available here</a>.</li>
+          <li>Sebastian Schelter gave a talk about Giraph at the GameDuell Tech-talk Berlin, in May 2012. Slides are <a href="http://s.apache.org/mks">available here</a>.</li>
+          <li>Sebastian Schelter introduced Giraph at Berlin's Hadoop Get-Together, in April 2012. Slides are <a href="http://s.apache.org/WFf">available here</a>, video is <a href="http://s.apache.org/A2o">available here</a>.</li>
         <li>Avery Ching introduced Giraph at Hadoop Summit 2011. <a href="http://www.youtube.com/watch?v=l4nQjAG6fac">Watch the video</a>.</li>
       </ul>
     </section>
