@@ -106,7 +106,7 @@ public class EdgeInputSplitsCallable<I extends WritableComparable,
       GraphState<I, V, E, M> graphState) throws IOException,
       InterruptedException {
     EdgeInputFormat<I, E> edgeInputFormat =
-        configuration.createEdgeInputFormat();
+        configuration.createWrappedEdgeInputFormat();
     EdgeReader<I, E> edgeReader =
         edgeInputFormat.createEdgeReader(inputSplit, context);
     edgeReader.setConf(

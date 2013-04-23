@@ -15,20 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.giraph.hive.common;
-
 /**
- * Profiles used throughout Hive code.
+ * Input/Output classes for internal use only.
  */
-public class HiveProfiles {
-  /** name of vertex input profile */
-  public static final String VERTEX_INPUT_PROFILE_ID = "vertex_input_profile";
-  /** name of edge input profile */
-  public static final String EDGE_INPUT_PROFILE_ID = "edge_input_profile";
-  /** Name of vertex output profile */
-  public static final String VERTEX_OUTPUT_PROFILE_ID = "vertex_output_profile";
-
-  /** Disable creation */
-  private HiveProfiles() { }
-}
+package org.apache.giraph.io.internal;

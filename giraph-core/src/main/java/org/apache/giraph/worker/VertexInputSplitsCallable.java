@@ -112,7 +112,7 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
       GraphState<I, V, E, M> graphState)
     throws IOException, InterruptedException {
     VertexInputFormat<I, V, E> vertexInputFormat =
-        configuration.createVertexInputFormat();
+        configuration.createWrappedVertexInputFormat();
     VertexReader<I, V, E> vertexReader =
         vertexInputFormat.createVertexReader(inputSplit, context);
     vertexReader.setConf(

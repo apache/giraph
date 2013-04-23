@@ -129,7 +129,7 @@ public class
     vertex.initialize(new LongWritable(1), new IntWritable(1));
     System.out.println("testInstantiateVertex: Got vertex " + vertex);
     VertexInputFormat<LongWritable, IntWritable, FloatWritable>
-    inputFormat = configuration.createVertexInputFormat();
+    inputFormat = configuration.createWrappedVertexInputFormat();
 /*if[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]
       List<InputSplit> splitArray =
           inputFormat.getSplits(

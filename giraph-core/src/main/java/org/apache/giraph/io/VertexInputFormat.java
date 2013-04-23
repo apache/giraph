@@ -19,12 +19,11 @@
 package org.apache.giraph.io;
 
 import java.io.IOException;
-import java.util.List;
+
 import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
-import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 /**
@@ -32,6 +31,13 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  * also implement Writable.  The InputSplits will determine the partitioning of
  * vertices across the mappers, so keep that in consideration when implementing
  * getSplits().  Provides access to ImmutableClassesGiraphConfiguration.
+ *
+ * It's guaranteed that whatever parameters are set in the configuration are
+ * also going to be available in all method arguments related to this input
+ * format (context in getSplits and createVertexReader; methods invoked on
+ * VertexReader). So if backing input format relies on some parameters from
+ * configuration, you can safely set them for example in
+ * {@link #setConf(org.apache.giraph.conf.ImmutableClassesGiraphConfiguration)}.
  *
  * @param <I> Vertex id
  * @param <V> Vertex value
@@ -42,11 +48,6 @@ public abstract class VertexInputFormat<I extends WritableComparable,
     V extends Writable, E extends Writable>
     extends DefaultImmutableClassesGiraphConfigurable<I, V, E, Writable>
     implements GiraphInputFormat {
-  @Override
-  public abstract List<InputSplit> getSplits(
-    JobContext context, int minSplitCountHint)
-    throws IOException, InterruptedException;
-
   /**
    * Create a vertex reader for a given split. Guaranteed to have been
    * configured with setConf() prior to use.  The framework will also call

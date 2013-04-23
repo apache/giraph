@@ -688,7 +688,7 @@ public class BspServiceMaster<I extends WritableComparable,
       return 0;
     }
     VertexInputFormat<I, V, E> vertexInputFormat =
-        getConfiguration().createVertexInputFormat();
+        getConfiguration().createWrappedVertexInputFormat();
     return createInputSplits(vertexInputFormat, vertexInputSplitsPaths,
         "Vertex");
   }
@@ -700,7 +700,7 @@ public class BspServiceMaster<I extends WritableComparable,
       return 0;
     }
     EdgeInputFormat<I, E> edgeInputFormat =
-        getConfiguration().createEdgeInputFormat();
+        getConfiguration().createWrappedEdgeInputFormat();
     return createInputSplits(edgeInputFormat, edgeInputSplitsPaths,
         "Edge");
   }

@@ -62,7 +62,7 @@ public class SynchronizedSuperstepOutput<I extends WritableComparable,
     this.context = context;
     try {
       vertexWriter =
-          conf.createVertexOutputFormat().createVertexWriter(context);
+          conf.createWrappedVertexOutputFormat().createVertexWriter(context);
       vertexWriter.setConf(
           (ImmutableClassesGiraphConfiguration<I, V, E, Writable>) conf);
       vertexWriter.initialize(context);

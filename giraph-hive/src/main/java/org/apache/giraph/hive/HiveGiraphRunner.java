@@ -32,7 +32,6 @@ import org.apache.giraph.hive.input.edge.HiveToEdge;
 import org.apache.giraph.hive.input.vertex.HiveToVertex;
 import org.apache.giraph.hive.input.vertex.HiveVertexInputFormat;
 import org.apache.giraph.hive.output.HiveVertexOutputFormat;
-import org.apache.giraph.hive.output.HiveVertexWriter;
 import org.apache.giraph.hive.output.VertexToHive;
 import org.apache.giraph.job.GiraphJob;
 import org.apache.hadoop.conf.Configuration;
@@ -42,28 +41,28 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
 
-import com.facebook.hiveio.input.HiveApiInputFormat;
-import com.facebook.hiveio.input.HiveInputDescription;
-import com.facebook.hiveio.output.HiveApiOutputFormat;
-import com.facebook.hiveio.output.HiveOutputDescription;
-import com.facebook.hiveio.schema.HiveTableSchemas;
-import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 
 import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 
-import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_EDGE_SPLITS;
+import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_EDGE_INPUT_DATABASE;
+import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_EDGE_INPUT_PARTITION;
+import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_EDGE_INPUT_PROFILE_ID;
+import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_EDGE_INPUT_TABLE;
 import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_TO_EDGE_CLASS;
 import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_TO_VERTEX_CLASS;
-import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_SPLITS;
-import static org.apache.giraph.hive.common.HiveProfiles.EDGE_INPUT_PROFILE_ID;
-import static org.apache.giraph.hive.common.HiveProfiles.VERTEX_INPUT_PROFILE_ID;
-import static org.apache.giraph.hive.common.HiveProfiles.VERTEX_OUTPUT_PROFILE_ID;
+import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_INPUT_DATABASE;
+import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_INPUT_PARTITION;
+import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_INPUT_PROFILE_ID;
+import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_INPUT_TABLE;
+import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_OUTPUT_DATABASE;
+import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_OUTPUT_PARTITION;
+import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_OUTPUT_PROFILE_ID;
+import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_OUTPUT_TABLE;
+import static org.apache.giraph.hive.common.GiraphHiveConstants.VERTEX_TO_HIVE_CLASS;
 
 /**
  * Hive Giraph Runner
@@ -84,18 +83,12 @@ public class HiveGiraphRunner implements Tool {
 
   /** Vertex creator from hive records. */
   private Class<? extends HiveToVertex> hiveToVertexClass;
-  /** hive vertex input information */
-  private  final HiveInputDescription hiveVertexInputDescription;
 
   /** Edge creator from hive records. */
   private Class<? extends HiveToEdge> hiveToEdgeClass;
-  /** hive edge input information */
-  private final HiveInputDescription hiveEdgeInputDescription;
 
   /** Hive Vertex writer */
   private Class<? extends VertexToHive> vertexToHiveClass;
-  /** hive output information */
-  private final HiveOutputDescription hiveOutputDescription;
   /** Skip output? (Useful for testing without writing) */
   private boolean skipOutput = false;
 
@@ -105,9 +98,6 @@ public class HiveGiraphRunner implements Tool {
   /** Create a new runner */
   public HiveGiraphRunner() {
     conf = new HiveConf(getClass());
-    hiveVertexInputDescription = new HiveInputDescription();
-    hiveEdgeInputDescription = new HiveInputDescription();
-    hiveOutputDescription = new HiveOutputDescription();
   }
 
   public Class<? extends Vertex> getVertexClass() {
@@ -116,18 +106,6 @@ public class HiveGiraphRunner implements Tool {
 
   public void setVertexClass(Class<? extends Vertex> vertexClass) {
     this.vertexClass = vertexClass;
-  }
-
-  public HiveInputDescription getHiveVertexInputDescription() {
-    return hiveVertexInputDescription;
-  }
-
-  public HiveOutputDescription getHiveOutputDescription() {
-    return hiveOutputDescription;
-  }
-
-  public HiveInputDescription getHiveEdgeInputDescription() {
-    return hiveEdgeInputDescription;
   }
 
   public Class<? extends HiveToVertex> getHiveToVertexClass() {
@@ -198,8 +176,7 @@ public class HiveGiraphRunner implements Tool {
   public void setVertexToHiveClass(
       Class<? extends VertexToHive> vertexToHiveClass) {
     this.vertexToHiveClass = vertexToHiveClass;
-    conf.setClass(HiveVertexWriter.VERTEX_TO_HIVE_KEY, vertexToHiveClass,
-        VertexToHive.class);
+    VERTEX_TO_HIVE_CLASS.set(conf, vertexToHiveClass);
   }
 
   /**
@@ -251,21 +228,13 @@ public class HiveGiraphRunner implements Tool {
    */
   private void setupHiveInputs(GiraphConfiguration conf) throws TException {
     if (hiveToVertexClass != null) {
-      hiveVertexInputDescription.setNumSplits(HIVE_VERTEX_SPLITS.get(conf));
-      HiveApiInputFormat.setProfileInputDesc(conf, hiveVertexInputDescription,
-          VERTEX_INPUT_PROFILE_ID);
       conf.setVertexInputFormatClass(HiveVertexInputFormat.class);
-      HiveTableSchemas.put(conf, VERTEX_INPUT_PROFILE_ID,
-          hiveVertexInputDescription.hiveTableName());
+      HIVE_VERTEX_INPUT_PROFILE_ID.set(conf, "vertex_input_profile");
     }
 
     if (hiveToEdgeClass != null) {
-      hiveEdgeInputDescription.setNumSplits(HIVE_EDGE_SPLITS.get(conf));
-      HiveApiInputFormat.setProfileInputDesc(conf, hiveEdgeInputDescription,
-          EDGE_INPUT_PROFILE_ID);
       conf.setEdgeInputFormatClass(HiveEdgeInputFormat.class);
-      HiveTableSchemas.put(conf, EDGE_INPUT_PROFILE_ID,
-          hiveEdgeInputDescription.hiveTableName());
+      HIVE_EDGE_INPUT_PROFILE_ID.set(conf, "edge_input_profile");
     }
   }
 
@@ -279,11 +248,8 @@ public class HiveGiraphRunner implements Tool {
     if (skipOutput) {
       LOG.warn("run: Warning - Output will be skipped!");
     } else if (vertexToHiveClass != null) {
-      HiveApiOutputFormat.initProfile(conf, hiveOutputDescription,
-          VERTEX_OUTPUT_PROFILE_ID);
       conf.setVertexOutputFormatClass(HiveVertexOutputFormat.class);
-      HiveTableSchemas.put(conf, VERTEX_OUTPUT_PROFILE_ID,
-          hiveOutputDescription.hiveTableName());
+      HIVE_VERTEX_OUTPUT_PROFILE_ID.set(conf, "vertex_output_profile");
     } else {
       LOG.fatal("output requested but " + VertexToHive.class.getSimpleName() +
           " not set");
@@ -291,8 +257,8 @@ public class HiveGiraphRunner implements Tool {
   }
 
   /**
-  * set hive configuration
-  */
+   * set hive configuration
+   */
   private void adjustConfigurationForHive() {
     // when output partitions are used, workers register them to the
     // metastore at cleanup stage, and on HiveConf's initialization, it
@@ -316,14 +282,14 @@ public class HiveGiraphRunner implements Tool {
   }
 
   /**
-  * process arguments
-  * @param args to process
-  * @return CommandLine instance
-  * @throws org.apache.commons.cli.ParseException error parsing arguments
-  * @throws InterruptedException interrupted
-  */
+   * process arguments
+   * @param args to process
+   * @return CommandLine instance
+   * @throws org.apache.commons.cli.ParseException error parsing arguments
+   * @throws InterruptedException interrupted
+   */
   private CommandLine handleCommandLine(String[] args) throws ParseException,
-            InterruptedException {
+      InterruptedException {
     Options options = new Options();
     addOptions(options);
     addMoreOptions(options);
@@ -413,22 +379,21 @@ public class HiveGiraphRunner implements Tool {
     }
 
     String dbName = cmdln.getOptionValue("dbName", "default");
-    hiveVertexInputDescription.setDbName(dbName);
-    hiveEdgeInputDescription.setDbName(dbName);
-    hiveOutputDescription.setDbName(dbName);
 
-    hiveEdgeInputDescription.setPartitionFilter(
-        cmdln.getOptionValue("edgeInputFilter"));
-    hiveEdgeInputDescription.setTableName(edgeInputTableStr);
-
-    hiveVertexInputDescription.setPartitionFilter(
+    HIVE_VERTEX_INPUT_DATABASE.set(conf, dbName);
+    HIVE_VERTEX_INPUT_TABLE.set(conf, vertexInputTableStr);
+    HIVE_VERTEX_INPUT_PARTITION.set(conf,
         cmdln.getOptionValue("vertexInputFilter"));
-    hiveVertexInputDescription.setTableName(vertexInputTableStr);
 
-    hiveOutputDescription.setTableName(cmdln.getOptionValue("outputTable"));
-    hiveOutputDescription.setPartitionValues(
-        parsePartitionValues(cmdln.getOptionValue("outputPartition"))
-    );
+    HIVE_EDGE_INPUT_DATABASE.set(conf, dbName);
+    HIVE_EDGE_INPUT_TABLE.set(conf, edgeInputTableStr);
+    HIVE_EDGE_INPUT_PARTITION.set(conf,
+        cmdln.getOptionValue("edgeInputFilter"));
+
+    HIVE_VERTEX_OUTPUT_DATABASE.set(conf, dbName);
+    HIVE_VERTEX_OUTPUT_TABLE.set(conf, cmdln.getOptionValue("outputTable"));
+    HIVE_VERTEX_OUTPUT_PARTITION.set(conf,
+        cmdln.getOptionValue("outputPartition"));
 
     workers = Integer.parseInt(workersStr);
 
@@ -460,30 +425,6 @@ public class HiveGiraphRunner implements Tool {
         }
       }
     }
-  }
-
-  /**
-   * @param outputTablePartitionString table partition string
-   * @return Map
-   */
-  public static Map<String, String> parsePartitionValues(
-      String outputTablePartitionString) {
-    if (outputTablePartitionString == null) {
-      return null;
-    }
-    Splitter commaSplitter = Splitter.on(',').omitEmptyStrings().trimResults();
-    Splitter equalSplitter = Splitter.on('=').omitEmptyStrings().trimResults();
-    Map<String, String> partitionValues = Maps.newHashMap();
-    for (String keyValStr : commaSplitter.split(outputTablePartitionString)) {
-      List<String> keyVal = Lists.newArrayList(equalSplitter.split(keyValStr));
-      if (keyVal.size() != 2) {
-        throw new IllegalArgumentException(
-            "Unrecognized partition value format: " +
-            outputTablePartitionString);
-      }
-      partitionValues.put(keyVal.get(0), keyVal.get(1));
-    }
-    return partitionValues;
   }
 
   /**
@@ -542,37 +483,37 @@ public class HiveGiraphRunner implements Tool {
   }
 
   /**
-  * add string to collection
-  * @param conf Configuration
-  * @param name name to add
-  * @param values values for collection
-  */
+   * add string to collection
+   * @param conf Configuration
+   * @param name name to add
+   * @param values values for collection
+   */
   private static void addToStringCollection(Configuration conf, String name,
-                                              String... values) {
+      String... values) {
     addToStringCollection(conf, name, Arrays.asList(values));
   }
 
   /**
-  * add string to collection
-  * @param conf Configuration
-  * @param name to add
-  * @param values values for collection
-  */
+   * add string to collection
+   * @param conf Configuration
+   * @param name to add
+   * @param values values for collection
+   */
   private static void addToStringCollection(
-          Configuration conf, String name, Collection
-          <? extends String> values) {
+      Configuration conf, String name, Collection
+      <? extends String> values) {
     Collection<String> tmpfiles = conf.getStringCollection(name);
     tmpfiles.addAll(values);
     conf.setStrings(name, tmpfiles.toArray(new String[tmpfiles.size()]));
   }
 
   /**
-  *
-  * @param className to find
-  * @param base  base class
-  * @param <T> class type found
-  * @return type found
-  */
+   *
+   * @param className to find
+   * @param base  base class
+   * @param <T> class type found
+   * @return type found
+   */
   private <T> Class<? extends T> findClass(String className, Class<T> base) {
     try {
       Class<?> cls = Class.forName(className);
@@ -596,30 +537,30 @@ public class HiveGiraphRunner implements Tool {
   }
 
   /**
-  * Override this method to add more command-line options. You can process
-  * them by also overriding {@link #processMoreArguments(CommandLine)}.
-  *
-  * @param options Options
-  */
+   * Override this method to add more command-line options. You can process
+   * them by also overriding {@link #processMoreArguments(CommandLine)}.
+   *
+   * @param options Options
+   */
   protected void addMoreOptions(Options options) {
   }
 
   /**
-  * Override this method to process additional command-line arguments. You
-  * may want to declare additional options by also overriding
-  * {@link #addMoreOptions(org.apache.commons.cli.Options)}.
-  *
-  * @param cmd Command
-  */
+   * Override this method to process additional command-line arguments. You
+   * may want to declare additional options by also overriding
+   * {@link #addMoreOptions(org.apache.commons.cli.Options)}.
+   *
+   * @param cmd Command
+   */
   protected void processMoreArguments(CommandLine cmd) {
   }
 
   /**
-  * Override this method to do additional setup with the GiraphJob that will
-  * run.
-  *
-  * @param job GiraphJob that is going to run
-  */
+   * Override this method to do additional setup with the GiraphJob that will
+   * run.
+   *
+   * @param job GiraphJob that is going to run
+   */
   protected void initGiraphJob(GiraphJob job) { }
 
   /**
@@ -641,7 +582,6 @@ public class HiveGiraphRunner implements Tool {
     if (classes.getVertexInputFormatClass() != null) {
       LOG.info(LOG_PREFIX + "-vertexInputFormatClass=" +
           classes.getVertexInputFormatClass().getCanonicalName());
-      logInputDesc(hiveVertexInputDescription, "vertex");
     }
 
     if (hiveToEdgeClass != null) {
@@ -650,38 +590,14 @@ public class HiveGiraphRunner implements Tool {
     }
     if (classes.getEdgeInputFormatClass() != null) {
       LOG.info(LOG_PREFIX + "-edgeInputFormatClass=" +
-        classes.getEdgeInputFormatClass().getCanonicalName());
-      logInputDesc(hiveEdgeInputDescription, "edge");
+          classes.getEdgeInputFormatClass().getCanonicalName());
     }
 
-    LOG.info(LOG_PREFIX + "-outputTable=" +
-        hiveOutputDescription.getTableName());
-    if (hiveOutputDescription.hasPartitionValues()) {
-      LOG.info(LOG_PREFIX + "-outputPartition=\"" +
-          hiveOutputDescription.getPartitionValues() + "\"");
-    }
     if (classes.getVertexOutputFormatClass() != null) {
       LOG.info(LOG_PREFIX + "-outputFormatClass=" +
           classes.getVertexOutputFormatClass().getCanonicalName());
     }
 
     LOG.info(LOG_PREFIX + "-workers=" + workers);
-  }
-
-  /**
-   * Helper to log input description with a name
-   *
-   * @param inputDesc input description to log
-   * @param name String prefix name
-   */
-  private void logInputDesc(HiveInputDescription inputDesc, String name) {
-    if (inputDesc.hasTableName()) {
-      LOG.info(
-          LOG_PREFIX + "-" + name + "InputTable=" + inputDesc.getTableName());
-    }
-    if (inputDesc.hasPartitionFilter()) {
-      LOG.info(LOG_PREFIX + "-" + name + "InputFilter=\"" +
-          inputDesc.getPartitionFilter() + "\"");
-    }
   }
 }

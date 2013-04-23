@@ -36,6 +36,7 @@ import com.facebook.hiveio.schema.HiveTableSchemas;
 
 import java.io.IOException;
 
+import static org.apache.giraph.hive.common.GiraphHiveConstants.VERTEX_TO_HIVE_CLASS;
 
 /**
  * Vertex writer using Hive.
@@ -47,9 +48,6 @@ import java.io.IOException;
 public class HiveVertexWriter<I extends WritableComparable, V extends Writable,
     E extends Writable>
     extends VertexWriter<I, V, E> implements HiveRecordSaver {
-  /** Key in configuration for VertexToHive class */
-  public static final String VERTEX_TO_HIVE_KEY =
-      "giraph.vertex.to.hive.class";
   /** Logger */
   private static final Logger LOG = Logger.getLogger(HiveVertexWriter.class);
   /** Underlying Hive RecordWriter used */
@@ -111,10 +109,9 @@ public class HiveVertexWriter<I extends WritableComparable, V extends Writable,
    * @throws IOException errors instantiating
    */
   private void instantiateVertexToHiveFromConf() throws IOException {
-    Class<? extends VertexToHive> klass =
-        getConf().getClass(VERTEX_TO_HIVE_KEY, null, VertexToHive.class);
+    Class<? extends VertexToHive> klass = VERTEX_TO_HIVE_CLASS.get(getConf());
     if (klass == null) {
-      throw new IOException(VERTEX_TO_HIVE_KEY + " not set in conf");
+      throw new IOException(VERTEX_TO_HIVE_CLASS.getKey() + " not set in conf");
     }
     vertexToHive = ReflectionUtils.newInstance(klass, getConf());
     HiveTableSchemas.configure(vertexToHive, tableSchema);

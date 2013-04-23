@@ -933,7 +933,7 @@ else[HADOOP_NON_SECURE]*/
         "saveVertices: Starting to save " + numLocalVertices + " vertices " +
             "using " + numThreads + " threads");
     final VertexOutputFormat<I, V, E> vertexOutputFormat =
-        getConfiguration().createVertexOutputFormat();
+        getConfiguration().createWrappedVertexOutputFormat();
     CallableFactory<Void> callableFactory = new CallableFactory<Void>() {
       @Override
       public Callable<Void> newCallable(int callableId) {

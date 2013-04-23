@@ -68,7 +68,7 @@ public class MultiThreadedSuperstepOutput<I extends WritableComparable,
       ImmutableClassesGiraphConfiguration<I, V, E, ?> conf,
       Mapper<?, ?, ?, ?>.Context context) {
     this.configuration = conf;
-    vertexOutputFormat = conf.createVertexOutputFormat();
+    vertexOutputFormat = conf.createWrappedVertexOutputFormat();
     this.context = context;
     availableVertexWriters = Lists.newArrayList();
     occupiedVertexWriters = Sets.newHashSet();

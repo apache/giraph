@@ -33,6 +33,14 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  * directly after the Hadoop OutputFormat.
  * ImmutableClassesGiraphConfiguration is available
  *
+ * It's guaranteed that whatever parameters are set in the configuration are
+ * also going to be available in all method arguments related to this output
+ * format (context in createVertexWriter, checkOutputSpecs and
+ * getOutputCommitter; methods invoked on VertexWriter and OutputCommitter).
+ * So if backing output format relies on some parameters from configuration,
+ * you can safely set them for example in
+ * {@link #setConf(org.apache.giraph.conf.ImmutableClassesGiraphConfiguration)}.
+ *
  * @param <I> Vertex index value
  * @param <V> Vertex value
  * @param <E> Edge value

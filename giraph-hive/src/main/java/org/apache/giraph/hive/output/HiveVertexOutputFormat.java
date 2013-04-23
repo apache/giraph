@@ -18,7 +18,10 @@
 
 package org.apache.giraph.hive.output;
 
-import org.apache.giraph.hive.common.HiveProfiles;
+import java.io.IOException;
+
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.hive.common.HiveUtils;
 import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.giraph.io.VertexWriter;
 import org.apache.hadoop.io.Writable;
@@ -31,7 +34,10 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import com.facebook.hiveio.output.HiveApiOutputFormat;
 import com.facebook.hiveio.record.HiveWritableRecord;
 
-import java.io.IOException;
+import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_OUTPUT_DATABASE;
+import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_OUTPUT_PARTITION;
+import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_OUTPUT_PROFILE_ID;
+import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_OUTPUT_TABLE;
 
 /**
  * VertexOutputFormat using Hive
@@ -51,7 +57,19 @@ public class HiveVertexOutputFormat<I extends WritableComparable,
    */
   public HiveVertexOutputFormat() {
     hiveOutputFormat = new HiveApiOutputFormat();
-    hiveOutputFormat.setMyProfileId(HiveProfiles.VERTEX_OUTPUT_PROFILE_ID);
+  }
+
+  @Override
+  public void setConf(
+      ImmutableClassesGiraphConfiguration<I, V, E, Writable> conf) {
+    super.setConf(conf);
+    HiveUtils.initializeHiveOutput(
+        hiveOutputFormat,
+        HIVE_VERTEX_OUTPUT_PROFILE_ID.get(conf),
+        HIVE_VERTEX_OUTPUT_DATABASE.get(conf),
+        HIVE_VERTEX_OUTPUT_TABLE.get(conf),
+        HIVE_VERTEX_OUTPUT_PARTITION.get(conf),
+        conf);
   }
 
   @Override

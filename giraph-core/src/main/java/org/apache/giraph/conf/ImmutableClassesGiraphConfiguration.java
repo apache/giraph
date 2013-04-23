@@ -31,6 +31,9 @@ import org.apache.giraph.graph.VertexValueFactory;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
+import org.apache.giraph.io.internal.WrappedEdgeInputFormat;
+import org.apache.giraph.io.internal.WrappedVertexInputFormat;
+import org.apache.giraph.io.internal.WrappedVertexOutputFormat;
 import org.apache.giraph.io.superstep_output.MultiThreadedSuperstepOutput;
 import org.apache.giraph.io.superstep_output.NoOpSuperstepOutput;
 import org.apache.giraph.io.superstep_output.SuperstepOutput;
@@ -173,14 +176,30 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   }
 
   /**
-   * Create a user vertex input format class
+   * Create a user vertex input format class.
+   * Note: Giraph should only use WrappedVertexInputFormat,
+   * which makes sure that Configuration parameters are set properly.
    *
    * @return Instantiated user vertex input format class
    */
-  public VertexInputFormat<I, V, E> createVertexInputFormat() {
+  private VertexInputFormat<I, V, E> createVertexInputFormat() {
     Class<? extends VertexInputFormat<I, V, E>> klass =
-        classes.getVertexInputFormatClass();
+        getVertexInputFormatClass();
     return ReflectionUtils.newInstance(klass, this);
+  }
+
+  /**
+   * Create a wrapper for user vertex input format,
+   * which makes sure that Configuration parameters are set properly in all
+   * methods related to this format.
+   *
+   * @return Wrapper around user vertex input format
+   */
+  public WrappedVertexInputFormat<I, V, E> createWrappedVertexInputFormat() {
+    WrappedVertexInputFormat<I, V, E> wrappedVertexInputFormat =
+        new WrappedVertexInputFormat<I, V, E>(createVertexInputFormat());
+    configureIfPossible(wrappedVertexInputFormat);
+    return wrappedVertexInputFormat;
   }
 
   @Override
@@ -200,15 +219,30 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   }
 
   /**
-   * Create a user vertex output format class
+   * Create a user vertex output format class.
+   * Note: Giraph should only use WrappedVertexOutputFormat,
+   * which makes sure that Configuration parameters are set properly.
    *
    * @return Instantiated user vertex output format class
    */
-  @SuppressWarnings("rawtypes")
-  public VertexOutputFormat<I, V, E> createVertexOutputFormat() {
+  private VertexOutputFormat<I, V, E> createVertexOutputFormat() {
     Class<? extends VertexOutputFormat<I, V, E>> klass =
-        classes.getVertexOutputFormatClass();
+        getVertexOutputFormatClass();
     return ReflectionUtils.newInstance(klass, this);
+  }
+
+  /**
+   * Create a wrapper for user vertex output format,
+   * which makes sure that Configuration parameters are set properly in all
+   * methods related to this format.
+   *
+   * @return Wrapper around user vertex output format
+   */
+  public WrappedVertexOutputFormat<I, V, E> createWrappedVertexOutputFormat() {
+    WrappedVertexOutputFormat<I, V, E> wrappedVertexOutputFormat =
+        new WrappedVertexOutputFormat<I, V, E>(createVertexOutputFormat());
+    configureIfPossible(wrappedVertexOutputFormat);
+    return wrappedVertexOutputFormat;
   }
 
   /**
@@ -246,13 +280,29 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   }
 
   /**
-   * Create a user edge input format class
+   * Create a user edge input format class.
+   * Note: Giraph should only use WrappedEdgeInputFormat,
+   * which makes sure that Configuration parameters are set properly.
    *
    * @return Instantiated user edge input format class
    */
-  public EdgeInputFormat<I, E> createEdgeInputFormat() {
+  private EdgeInputFormat<I, E> createEdgeInputFormat() {
     Class<? extends EdgeInputFormat<I, E>> klass = getEdgeInputFormatClass();
     return ReflectionUtils.newInstance(klass, this);
+  }
+
+  /**
+   * Create a wrapper for user edge input format,
+   * which makes sure that Configuration parameters are set properly in all
+   * methods related to this format.
+   *
+   * @return Wrapper around user edge input format
+   */
+  public WrappedEdgeInputFormat<I, E> createWrappedEdgeInputFormat() {
+    WrappedEdgeInputFormat<I, E> wrappedEdgeInputFormat =
+        new WrappedEdgeInputFormat<I, E>(createEdgeInputFormat());
+    configureIfPossible(wrappedEdgeInputFormat);
+    return wrappedEdgeInputFormat;
   }
 
   /**

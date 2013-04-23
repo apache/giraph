@@ -18,7 +18,8 @@
 
 package org.apache.giraph.hive.input.edge;
 
-import org.apache.giraph.hive.common.HiveProfiles;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.hive.common.HiveUtils;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.EdgeReader;
 import org.apache.giraph.io.iterables.EdgeReaderWrapper;
@@ -34,6 +35,12 @@ import com.facebook.hiveio.record.HiveReadableRecord;
 
 import java.io.IOException;
 import java.util.List;
+
+import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_EDGE_INPUT_DATABASE;
+import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_EDGE_INPUT_PARTITION;
+import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_EDGE_INPUT_PROFILE_ID;
+import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_EDGE_INPUT_TABLE;
+import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_EDGE_SPLITS;
 
 /**
  * {@link EdgeInputFormat} for reading edges from Hive.
@@ -51,7 +58,20 @@ public class HiveEdgeInputFormat<I extends WritableComparable,
    */
   public HiveEdgeInputFormat() {
     hiveInputFormat = new HiveApiInputFormat();
-    hiveInputFormat.setMyProfileId(HiveProfiles.EDGE_INPUT_PROFILE_ID);
+  }
+
+  @Override
+  public void setConf(
+      ImmutableClassesGiraphConfiguration<I, Writable, E, Writable> conf) {
+    super.setConf(conf);
+    HiveUtils.initializeHiveInput(
+        hiveInputFormat,
+        HIVE_EDGE_INPUT_PROFILE_ID.get(conf),
+        HIVE_EDGE_INPUT_DATABASE.get(conf),
+        HIVE_EDGE_INPUT_TABLE.get(conf),
+        HIVE_EDGE_INPUT_PARTITION.get(conf),
+        HIVE_EDGE_SPLITS.get(conf),
+        conf);
   }
 
   @Override

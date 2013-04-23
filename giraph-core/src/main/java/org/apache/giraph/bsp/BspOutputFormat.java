@@ -47,7 +47,7 @@ public class BspOutputFormat extends OutputFormat<Text, Text> {
           " will not check anything");
       return;
     }
-    conf.createVertexOutputFormat().checkOutputSpecs(context);
+    conf.createWrappedVertexOutputFormat().checkOutputSpecs(context);
   }
 
   @Override
@@ -60,7 +60,7 @@ public class BspOutputFormat extends OutputFormat<Text, Text> {
           "ImmutableOutputCommiter (does nothing).");
       return new ImmutableOutputCommitter();
     }
-    return conf.createVertexOutputFormat().getOutputCommitter(context);
+    return conf.createWrappedVertexOutputFormat().getOutputCommitter(context);
   }
 
   @Override
