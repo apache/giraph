@@ -55,16 +55,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
-import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_EDGE_INPUT_DATABASE;
-import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_EDGE_INPUT_PARTITION;
-import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_EDGE_INPUT_PROFILE_ID;
-import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_EDGE_INPUT_TABLE;
-import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_TO_EDGE_CLASS;
-import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_TO_VERTEX_CLASS;
-import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_INPUT_DATABASE;
-import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_INPUT_PARTITION;
-import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_INPUT_PROFILE_ID;
-import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_INPUT_TABLE;
+import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_EDGE_INPUT;
+import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_INPUT;
 import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_OUTPUT_DATABASE;
 import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_OUTPUT_PARTITION;
 import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_OUTPUT_PROFILE_ID;
@@ -143,14 +135,14 @@ public class HiveGiraphRunner implements Tool {
     VertexInputFormatDescription description =
         new VertexInputFormatDescription(HiveVertexInputFormat.class);
     description.addParameter(
-        HIVE_TO_VERTEX_CLASS.getKey(), hiveToVertexClass.getName());
-    description.addParameter(HIVE_VERTEX_INPUT_PROFILE_ID.getKey(),
+        HIVE_VERTEX_INPUT.getClassOpt().getKey(), hiveToVertexClass.getName());
+    description.addParameter(HIVE_VERTEX_INPUT.getProfileIdOpt().getKey(),
         "vertex_input_profile_" + vertexInputDescriptions.size());
     description.addParameter(
-        HIVE_VERTEX_INPUT_TABLE.getKey(), tableName);
+        HIVE_VERTEX_INPUT.getTableOpt().getKey(), tableName);
     if (partitionFilter != null && !partitionFilter.isEmpty()) {
       description.addParameter(
-          HIVE_VERTEX_INPUT_PARTITION.getKey(), partitionFilter);
+          HIVE_VERTEX_INPUT.getPartitionOpt().getKey(), partitionFilter);
     }
     addAdditionalOptions(description, additionalOptions);
     vertexInputDescriptions.add(description);
@@ -182,14 +174,14 @@ public class HiveGiraphRunner implements Tool {
     EdgeInputFormatDescription description =
         new EdgeInputFormatDescription(HiveEdgeInputFormat.class);
     description.addParameter(
-        HIVE_TO_EDGE_CLASS.getKey(), hiveToEdgeClass.getName());
-    description.addParameter(HIVE_EDGE_INPUT_PROFILE_ID.getKey(),
+        HIVE_EDGE_INPUT.getClassOpt().getKey(), hiveToEdgeClass.getName());
+    description.addParameter(HIVE_EDGE_INPUT.getProfileIdOpt().getKey(),
         "edge_input_profile_" + edgeInputDescriptions.size());
     description.addParameter(
-        HIVE_EDGE_INPUT_TABLE.getKey(), tableName);
+        HIVE_EDGE_INPUT.getTableOpt().getKey(), tableName);
     if (partitionFilter != null && !partitionFilter.isEmpty()) {
       description.addParameter(
-          HIVE_EDGE_INPUT_PARTITION.getKey(), partitionFilter);
+          HIVE_EDGE_INPUT.getPartitionOpt().getKey(), partitionFilter);
     }
     addAdditionalOptions(description, additionalOptions);
     edgeInputDescriptions.add(description);
@@ -450,12 +442,12 @@ public class HiveGiraphRunner implements Tool {
     String dbName = cmdln.getOptionValue("dbName", "default");
 
     if (hasVertexInput()) {
-      HIVE_VERTEX_INPUT_DATABASE.set(conf, dbName);
+      HIVE_VERTEX_INPUT.getDatabaseOpt().set(conf, dbName);
       prepareHiveVertexInputs();
     }
 
     if (hasEdgeInput()) {
-      HIVE_EDGE_INPUT_DATABASE.set(conf, dbName);
+      HIVE_EDGE_INPUT.getDatabaseOpt().set(conf, dbName);
       prepareHiveEdgeInputs();
     }
 

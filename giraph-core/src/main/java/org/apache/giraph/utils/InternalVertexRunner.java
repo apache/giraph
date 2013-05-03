@@ -71,7 +71,6 @@ public class InternalVertexRunner {
    * writing to a temporary folder on local disk. Will start its own zookeeper
    * instance.
    *
-   *
    * @param conf GiraphClasses specifying which types to use
    * @param vertexInputData linewise vertex input data
    * @return linewise output data
@@ -181,9 +180,9 @@ public class InternalVertexRunner {
         zookeeper.end();
       }
 
-      if (conf.hasVertexOutputFormat()) {
-        return Files.readLines(new File(outputDir, "part-m-00000"),
-            Charsets.UTF_8);
+      File outFile = new File(outputDir, "part-m-00000");
+      if (conf.hasVertexOutputFormat() && outFile.canRead()) {
+        return Files.readLines(outFile, Charsets.UTF_8);
       } else {
         return ImmutableList.of();
       }

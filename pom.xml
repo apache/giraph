@@ -249,13 +249,18 @@ under the License.
   <properties>
     <top.dir>${project.basedir}</top.dir>
     <lib.dir>${top.dir}/lib</lib.dir>
+
     <buildtype>test</buildtype>
+
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+
+    <dep.hiveio.version>0.9</dep.hiveio.version>
     <hbase.version>0.90.5</hbase.version>
     <codehaus-jackson.version>1.8.0</codehaus-jackson.version>
     <fasterxml-jackson.version>2.1.0</fasterxml-jackson.version>
     <slf4j.version>1.7.2</slf4j.version>
     <hive.version>0.10.0</hive.version>
+
     <facebook-hadoop.version>0.20.0</facebook-hadoop.version>
     <forHadoop>for-hadoop-${hadoop.version}</forHadoop>
   </properties>
@@ -964,7 +969,12 @@ under the License.
       <dependency>
         <groupId>com.facebook.hiveio</groupId>
         <artifactId>hive-io-exp-core</artifactId>
-        <version>0.8</version>
+        <version>${dep.hiveio.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.facebook.hiveio</groupId>
+        <artifactId>hive-io-exp-testing</artifactId>
+        <version>${dep.hiveio.version}</version>
       </dependency>
       <dependency>
         <groupId>com.google.guava</groupId>
@@ -1047,11 +1057,6 @@ under the License.
             <artifactId>pig</artifactId>
           </exclusion>
         </exclusions>
-      </dependency>
-      <dependency>
-        <groupId>org.apache.hive</groupId>
-        <artifactId>hive-common</artifactId>
-        <version>${hive.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hive</groupId>

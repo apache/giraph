@@ -45,22 +45,14 @@ public class HiveUtils {
    * Initialize hive input, prepare Configuration parameters
    *
    * @param hiveInputFormat HiveApiInputFormat
-   * @param profileId Profile id
-   * @param dbName Database name
-   * @param tableName Table name
-   * @param partitionFilter Partition filter
-   * @param numSplits Number of splits
+   * @param inputDescription HiveInputDescription
+   * @param profileId profile ID
    * @param conf Configuration
    */
   public static void initializeHiveInput(HiveApiInputFormat hiveInputFormat,
-      String profileId, String dbName, String tableName, String partitionFilter,
-      int numSplits, Configuration conf) {
+      HiveInputDescription inputDescription, String profileId,
+      Configuration conf) {
     hiveInputFormat.setMyProfileId(profileId);
-    HiveInputDescription inputDescription = new HiveInputDescription();
-    inputDescription.setDbName(dbName);
-    inputDescription.setTableName(tableName);
-    inputDescription.setPartitionFilter(partitionFilter);
-    inputDescription.setNumSplits(numSplits);
     HiveApiInputFormat.setProfileInputDesc(conf, inputDescription, profileId);
     HiveTableSchemas.put(conf, profileId, inputDescription.hiveTableName());
   }

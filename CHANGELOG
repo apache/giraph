@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.0.1 - unreleased
+  GIRAPH-651: giraph-hive tests (nitay)
+
   GIRAPH-639: Add support for multiple Vertex/Edge inputs (majakabiljo)
 
   GIRAPH-653: Hadoop_non_secure broken (majakabiljo)

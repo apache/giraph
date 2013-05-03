@@ -18,8 +18,6 @@
 
 package org.apache.giraph.hive.output;
 
-import java.io.IOException;
-
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.hive.common.HiveUtils;
 import org.apache.giraph.io.VertexOutputFormat;
@@ -33,6 +31,8 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 import com.facebook.hiveio.output.HiveApiOutputFormat;
 import com.facebook.hiveio.record.HiveWritableRecord;
+
+import java.io.IOException;
 
 import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_OUTPUT_DATABASE;
 import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_OUTPUT_PARTITION;

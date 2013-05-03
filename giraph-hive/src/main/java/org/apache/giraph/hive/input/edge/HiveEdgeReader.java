@@ -34,7 +34,7 @@ import com.facebook.hiveio.schema.HiveTableSchemas;
 
 import java.io.IOException;
 
-import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_TO_EDGE_CLASS;
+import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_EDGE_INPUT;
 
 /**
  * A reader for reading edges from Hive.
@@ -86,9 +86,10 @@ public class HiveEdgeReader<I extends WritableComparable, E extends Writable>
    * @throws IOException if anything goes wrong reading from Configuration
    */
   private void instantiateHiveToEdgeFromConf() throws IOException {
-    Class<? extends HiveToEdge> klass = HIVE_TO_EDGE_CLASS.get(getConf());
+    Class<? extends HiveToEdge> klass = HIVE_EDGE_INPUT.getClass(getConf());
     if (klass == null) {
-      throw new IOException(HIVE_TO_EDGE_CLASS.getKey() + " not set in conf");
+      throw new IOException(HIVE_EDGE_INPUT.getClassOpt().getKey() +
+          " not set in conf");
     }
     hiveToEdge = ReflectionUtils.newInstance(klass, getConf());
     HiveTableSchemas.configure(hiveToEdge, getTableSchema());

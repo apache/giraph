@@ -34,7 +34,7 @@ import com.facebook.hiveio.schema.HiveTableSchemas;
 
 import java.io.IOException;
 
-import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_TO_VERTEX_CLASS;
+import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_INPUT;
 
 /**
  * VertexReader using Hive
@@ -80,7 +80,7 @@ public class HiveVertexReader<I extends WritableComparable,
   public void initialize(InputSplit inputSplit,
       TaskAttemptContext context) throws IOException, InterruptedException {
     hiveRecordReader.initialize(inputSplit, context);
-    Class<? extends HiveToVertex> klass = HIVE_TO_VERTEX_CLASS.get(getConf());
+    Class<? extends HiveToVertex> klass = HIVE_VERTEX_INPUT.getClass(getConf());
     hiveToVertex = ReflectionUtils.newInstance(klass, getConf());
     HiveTableSchemas.configure(hiveToVertex, getTableSchema());
     hiveToVertex.initializeRecords(

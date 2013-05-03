@@ -19,6 +19,7 @@
 package org.apache.giraph.hive.input.vertex;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.hive.common.GiraphHiveConstants;
 import org.apache.giraph.hive.common.HiveUtils;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexReader;
@@ -35,12 +36,6 @@ import com.facebook.hiveio.record.HiveReadableRecord;
 
 import java.io.IOException;
 import java.util.List;
-
-import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_INPUT_DATABASE;
-import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_INPUT_PARTITION;
-import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_INPUT_PROFILE_ID;
-import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_INPUT_TABLE;
-import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_SPLITS;
 
 /**
  * {@link VertexInputFormat} for reading vertices from Hive.
@@ -68,11 +63,8 @@ public class HiveVertexInputFormat<I extends WritableComparable,
     super.setConf(conf);
     HiveUtils.initializeHiveInput(
         hiveInputFormat,
-        HIVE_VERTEX_INPUT_PROFILE_ID.get(conf),
-        HIVE_VERTEX_INPUT_DATABASE.get(conf),
-        HIVE_VERTEX_INPUT_TABLE.get(conf),
-        HIVE_VERTEX_INPUT_PARTITION.get(conf),
-        HIVE_VERTEX_SPLITS.get(conf),
+        GiraphHiveConstants.HIVE_VERTEX_INPUT.makeInputDescription(conf),
+        GiraphHiveConstants.HIVE_VERTEX_INPUT.getProfileID(conf),
         conf);
   }
 
