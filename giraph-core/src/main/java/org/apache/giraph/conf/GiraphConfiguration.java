@@ -60,8 +60,8 @@ public class GiraphConfiguration extends Configuration
    * Constructor that creates the configuration
    */
   public GiraphConfiguration() {
-    configureHadoopSecurity();
     giraphSetParameters = new Configuration(false);
+    configureHadoopSecurity();
   }
 
   /**
@@ -71,8 +71,8 @@ public class GiraphConfiguration extends Configuration
    */
   public GiraphConfiguration(Configuration conf) {
     super(conf);
-    configureHadoopSecurity();
     giraphSetParameters = new Configuration(false);
+    configureHadoopSecurity();
   }
 
   /**

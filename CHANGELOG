@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.0.1 - unreleased
+  GIRAPH-650: Exception in GiraphConfiguration initialization (majakabiljo)
+
   GIRAPH-648: Allow IO formats to add parameters to Configuration (majakabiljo)
 
   GIRAPH-635: Website Documentation: Missing presentations (ssc)
