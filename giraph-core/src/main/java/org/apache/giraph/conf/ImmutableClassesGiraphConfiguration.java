@@ -203,6 +203,13 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   }
 
   @Override
+  public void setVertexInputFormatClass(
+      Class<? extends VertexInputFormat> vertexInputFormatClass) {
+    super.setVertexInputFormatClass(vertexInputFormatClass);
+    classes.setVertexInputFormatClass(vertexInputFormatClass);
+  }
+
+  @Override
   public boolean hasVertexOutputFormat() {
     return classes.hasVertexOutputFormat();
   }
@@ -303,6 +310,13 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
         new WrappedEdgeInputFormat<I, E>(createEdgeInputFormat());
     configureIfPossible(wrappedEdgeInputFormat);
     return wrappedEdgeInputFormat;
+  }
+
+  @Override
+  public void setEdgeInputFormatClass(
+      Class<? extends EdgeInputFormat> edgeInputFormatClass) {
+    super.setEdgeInputFormatClass(edgeInputFormatClass);
+    classes.setEdgeInputFormatClass(edgeInputFormatClass);
   }
 
   /**

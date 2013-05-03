@@ -18,15 +18,29 @@
 
 package org.apache.giraph.io;
 
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 import java.util.List;
+
+import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.util.ReflectionUtils;
 
 /**
  * Common interface for {@link VertexInputFormat} and {@link EdgeInputFormat}.
+ *
+ * @param <I> Vertex id
+ * @param <V> Vertex data
+ * @param <E> Edge data
  */
-public interface GiraphInputFormat {
+public abstract class GiraphInputFormat<I extends WritableComparable,
+    V extends Writable, E extends Writable> extends
+    DefaultImmutableClassesGiraphConfigurable<I, V, E, Writable> {
   /**
    * Get the list of input splits for the format.
    *
@@ -36,6 +50,33 @@ public interface GiraphInputFormat {
    * @throws IOException
    * @throws InterruptedException
    */
-  List<InputSplit> getSplits(JobContext context, int minSplitCountHint)
-    throws IOException, InterruptedException;
+  public abstract List<InputSplit> getSplits(JobContext context,
+      int minSplitCountHint) throws IOException, InterruptedException;
+
+  /**
+   * Write input split info to DataOutput.
+   *
+   * @param inputSplit InputSplit
+   * @param dataOutput DataOutput
+   */
+  public void writeInputSplit(InputSplit inputSplit,
+      DataOutput dataOutput) throws IOException {
+    Text.writeString(dataOutput, inputSplit.getClass().getName());
+    ((Writable) inputSplit).write(dataOutput);
+  }
+
+  /**
+   * Read input split info from DataInput.
+   *
+   * @param dataInput DataInput
+   * @return InputSplit
+   */
+  public InputSplit readInputSplit(DataInput dataInput) throws IOException,
+      ClassNotFoundException {
+    String inputSplitClass = Text.readString(dataInput);
+    InputSplit inputSplit = (InputSplit) ReflectionUtils.newInstance(
+            getConf().getClassByName(inputSplitClass), getConf());
+    ((Writable) inputSplit).readFields(dataInput);
+    return inputSplit;
+  }
 }

@@ -185,7 +185,7 @@ public class GiraphConfiguration extends Configuration
    *
    * @param vertexInputFormatClass Determines how graph is input
    */
-  public final void setVertexInputFormatClass(
+  public void setVertexInputFormatClass(
       Class<? extends VertexInputFormat> vertexInputFormatClass) {
     VERTEX_INPUT_FORMAT_CLASS.set(this, vertexInputFormatClass);
   }
@@ -204,7 +204,7 @@ public class GiraphConfiguration extends Configuration
    *
    * @param edgeInputFormatClass Determines how graph is input
    */
-  public final void setEdgeInputFormatClass(
+  public void setEdgeInputFormatClass(
       Class<? extends EdgeInputFormat> edgeInputFormatClass) {
     EDGE_INPUT_FORMAT_CLASS.set(this, edgeInputFormatClass);
   }
@@ -955,8 +955,10 @@ public class GiraphConfiguration extends Configuration
    * @param conf Configuration
    */
   public void updateConfiguration(Configuration conf) {
-    for (Map.Entry<String, String> parameter : giraphSetParameters) {
-      conf.set(parameter.getKey(), parameter.getValue());
+    if (this != conf) {
+      for (Map.Entry<String, String> parameter : giraphSetParameters) {
+        conf.set(parameter.getKey(), parameter.getValue());
+      }
     }
   }
 

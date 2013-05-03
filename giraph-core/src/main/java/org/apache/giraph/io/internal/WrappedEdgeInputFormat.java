@@ -28,6 +28,8 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 import java.util.List;
 
@@ -74,6 +76,7 @@ public class WrappedEdgeInputFormat<I extends WritableComparable,
       @Override
       public void setConf(
           ImmutableClassesGiraphConfiguration<I, Writable, E, Writable> conf) {
+        WrappedEdgeInputFormat.this.getConf().updateConfiguration(conf);
         super.setConf(conf);
         edgeReader.setConf(conf);
       }
@@ -112,5 +115,17 @@ public class WrappedEdgeInputFormat<I extends WritableComparable,
         return edgeReader.getProgress();
       }
     };
+  }
+
+  @Override
+  public void writeInputSplit(InputSplit inputSplit,
+      DataOutput dataOutput) throws IOException {
+    originalInputFormat.writeInputSplit(inputSplit, dataOutput);
+  }
+
+  @Override
+  public InputSplit readInputSplit(
+      DataInput dataInput) throws IOException, ClassNotFoundException {
+    return originalInputFormat.readInputSplit(dataInput);
   }
 }

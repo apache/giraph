@@ -21,6 +21,7 @@ package org.apache.giraph.worker;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.VertexEdgeCount;
+import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.utils.CallableFactory;
 import org.apache.giraph.zk.ZooKeeperExt;
 import org.apache.hadoop.io.Writable;
@@ -38,6 +39,8 @@ import org.apache.hadoop.mapreduce.Mapper;
 public class VertexInputSplitsCallableFactory<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
     implements CallableFactory<VertexEdgeCount> {
+  /** Vertex input format */
+  private final VertexInputFormat<I, V, E> vertexInputFormat;
   /** Mapper context. */
   private final Mapper<?, ?, ?, ?>.Context context;
   /** Graph state. */
@@ -54,6 +57,7 @@ public class VertexInputSplitsCallableFactory<I extends WritableComparable,
   /**
    * Constructor.
    *
+   * @param vertexInputFormat Vertex input format
    * @param context Mapper context
    * @param graphState Graph state
    * @param configuration Configuration
@@ -62,12 +66,14 @@ public class VertexInputSplitsCallableFactory<I extends WritableComparable,
    * @param zooKeeperExt {@link ZooKeeperExt} for this worker
    */
   public VertexInputSplitsCallableFactory(
+      VertexInputFormat<I, V, E> vertexInputFormat,
       Mapper<?, ?, ?, ?>.Context context,
       GraphState<I, V, E, M> graphState,
       ImmutableClassesGiraphConfiguration<I, V, E, M> configuration,
       BspServiceWorker<I, V, E, M> bspServiceWorker,
       InputSplitsHandler splitsHandler,
       ZooKeeperExt zooKeeperExt) {
+    this.vertexInputFormat = vertexInputFormat;
     this.context = context;
     this.graphState = graphState;
     this.configuration = configuration;
@@ -79,6 +85,7 @@ public class VertexInputSplitsCallableFactory<I extends WritableComparable,
   @Override
   public InputSplitsCallable<I, V, E, M> newCallable(int threadId) {
     return new VertexInputSplitsCallable<I, V, E, M>(
+        vertexInputFormat,
         context,
         graphState,
         configuration,

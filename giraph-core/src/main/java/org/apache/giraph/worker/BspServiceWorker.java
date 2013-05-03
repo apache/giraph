@@ -313,6 +313,7 @@ public class BspServiceWorker<I extends WritableComparable,
 
     VertexInputSplitsCallableFactory<I, V, E, M> inputSplitsCallableFactory =
         new VertexInputSplitsCallableFactory<I, V, E, M>(
+            getConfiguration().createWrappedVertexInputFormat(),
             getContext(),
             graphState,
             getConfiguration(),
@@ -350,6 +351,7 @@ public class BspServiceWorker<I extends WritableComparable,
 
     EdgeInputSplitsCallableFactory<I, V, E, M> inputSplitsCallableFactory =
         new EdgeInputSplitsCallableFactory<I, V, E, M>(
+            getConfiguration().createWrappedEdgeInputFormat(),
             getContext(),
             graphState,
             getConfiguration(),

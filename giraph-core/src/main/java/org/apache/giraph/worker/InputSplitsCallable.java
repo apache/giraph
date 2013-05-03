@@ -23,6 +23,7 @@ import org.apache.giraph.comm.netty.NettyWorkerClientRequestProcessor;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.VertexEdgeCount;
+import org.apache.giraph.io.GiraphInputFormat;
 import org.apache.giraph.metrics.GiraphMetrics;
 import org.apache.giraph.metrics.MeterDesc;
 import org.apache.giraph.time.SystemTime;
@@ -34,7 +35,6 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.KeeperException;
 
@@ -116,6 +116,13 @@ public abstract class InputSplitsCallable<I extends WritableComparable,
     this.configuration = configuration;
   }
   // CHECKSTYLE: resume ParameterNumberCheck
+
+  /**
+   * Get input format
+   *
+   * @return Input format
+   */
+  public abstract GiraphInputFormat getInputFormat();
 
   /**
    * Get Meter tracking edges loaded
@@ -255,12 +262,7 @@ public abstract class InputSplitsCallable<I extends WritableComparable,
     if (useLocality) {
       Text.readString(inputStream); // location data unused here, skip
     }
-    String inputSplitClass = Text.readString(inputStream);
-    InputSplit inputSplit = (InputSplit)
-        ReflectionUtils.newInstance(
-            configuration.getClassByName(inputSplitClass),
-            configuration);
-    ((Writable) inputSplit).readFields(inputStream);
+    InputSplit inputSplit = getInputFormat().readInputSplit(inputStream);
 
     if (LOG.isInfoEnabled()) {
       LOG.info("getInputSplit: Reserved " + inputSplitPath +

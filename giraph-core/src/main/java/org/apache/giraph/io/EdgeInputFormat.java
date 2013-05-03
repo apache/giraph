@@ -18,7 +18,6 @@
 
 package org.apache.giraph.io;
 
-import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -41,10 +40,7 @@ import java.io.IOException;
  * @param <E> Edge data
  */
 public abstract class EdgeInputFormat<I extends WritableComparable,
-    E extends Writable>
-    extends
-    DefaultImmutableClassesGiraphConfigurable<I, Writable, E, Writable>
-    implements GiraphInputFormat {
+    E extends Writable> extends GiraphInputFormat<I, Writable, E> {
   /**
    * Create an edge reader for a given split. The framework will call
    * {@link EdgeReader#initialize(InputSplit, TaskAttemptContext)} before

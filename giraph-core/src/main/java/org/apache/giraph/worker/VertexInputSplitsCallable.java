@@ -21,6 +21,7 @@ package org.apache.giraph.worker;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.VertexEdgeCount;
+import org.apache.giraph.io.GiraphInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexReader;
 import org.apache.giraph.partition.PartitionOwner;
@@ -57,6 +58,8 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(VertexInputSplitsCallable.class);
+  /** Vertex input format */
+  private final VertexInputFormat<I, V, E> vertexInputFormat;
   /** Input split max vertices (-1 denotes all) */
   private final long inputSplitMaxVertices;
   /** Bsp service worker (only use thread-safe methods) */
@@ -71,6 +74,7 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
   /**
    * Constructor.
    *
+   * @param vertexInputFormat Vertex input format
    * @param context Context
    * @param graphState Graph state
    * @param configuration Configuration
@@ -79,6 +83,7 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
    * @param zooKeeperExt Handle to ZooKeeperExt
    */
   public VertexInputSplitsCallable(
+      VertexInputFormat<I, V, E> vertexInputFormat,
       Mapper<?, ?, ?, ?>.Context context,
       GraphState<I, V, E, M> graphState,
       ImmutableClassesGiraphConfiguration<I, V, E, M> configuration,
@@ -87,6 +92,7 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
       ZooKeeperExt zooKeeperExt)  {
     super(context, graphState, configuration, bspServiceWorker,
         splitsHandler, zooKeeperExt);
+    this.vertexInputFormat = vertexInputFormat;
 
     inputSplitMaxVertices = configuration.getInputSplitMaxVertices();
     this.bspServiceWorker = bspServiceWorker;
@@ -94,6 +100,11 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
     // Initialize Metrics
     totalVerticesMeter = getTotalVerticesLoadedMeter();
     totalEdgesMeter = getTotalEdgesLoadedMeter();
+  }
+
+  @Override
+  public GiraphInputFormat getInputFormat() {
+    return vertexInputFormat;
   }
 
   /**
@@ -111,8 +122,6 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
       InputSplit inputSplit,
       GraphState<I, V, E, M> graphState)
     throws IOException, InterruptedException {
-    VertexInputFormat<I, V, E> vertexInputFormat =
-        configuration.createWrappedVertexInputFormat();
     VertexReader<I, V, E> vertexReader =
         vertexInputFormat.createVertexReader(inputSplit, context);
     vertexReader.setConf(

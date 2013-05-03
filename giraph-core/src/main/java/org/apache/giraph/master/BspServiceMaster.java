@@ -654,7 +654,8 @@ public class BspServiceMaster<I extends WritableComparable,
     for (int i = 0; i < splitList.size(); ++i) {
       InputSplit inputSplit = splitList.get(i);
       taskExecutor.submit(new LogStacktraceCallable<Void>(
-          new WriteInputSplit(inputSplit, inputSplitsPath, i, writeLocations)));
+          new WriteInputSplit(inputFormat, inputSplit, inputSplitsPath, i,
+              writeLocations)));
     }
     taskExecutor.shutdown();
     ProgressableUtils.awaitExecutorTermination(taskExecutor, getContext());
@@ -1872,6 +1873,8 @@ public class BspServiceMaster<I extends WritableComparable,
    * Upon failure call() throws an exception.
    */
   private class WriteInputSplit implements Callable<Void> {
+    /** Input format */
+    private final GiraphInputFormat inputFormat;
     /** Input split which we are going to write */
     private final InputSplit inputSplit;
     /** Input splits path */
@@ -1884,6 +1887,7 @@ public class BspServiceMaster<I extends WritableComparable,
     /**
      * Constructor
      *
+     * @param inputFormat Input format
      * @param inputSplit Input split which we are going to write
      * @param inputSplitsPath Input splits path
      * @param index Index of the input split
@@ -1891,10 +1895,12 @@ public class BspServiceMaster<I extends WritableComparable,
      *                       be used by workers for prioritizing local splits
      *                       when reading)
      */
-    public WriteInputSplit(InputSplit inputSplit,
+    public WriteInputSplit(GiraphInputFormat inputFormat,
+                           InputSplit inputSplit,
                            String inputSplitsPath,
                            int index,
                            boolean writeLocations) {
+      this.inputFormat = inputFormat;
       this.inputSplit = inputSplit;
       this.inputSplitsPath = inputSplitsPath;
       this.index = index;
@@ -1926,9 +1932,7 @@ public class BspServiceMaster<I extends WritableComparable,
               locations == null ? "" : locations.toString());
         }
 
-        Text.writeString(outputStream,
-            inputSplit.getClass().getName());
-        ((Writable) inputSplit).write(outputStream);
+        inputFormat.writeInputSplit(inputSplit, outputStream);
         inputSplitPath = inputSplitsPath + "/" + index;
         getZkExt().createExt(inputSplitPath,
             byteArrayOutputStream.toByteArray(),

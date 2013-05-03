@@ -57,6 +57,8 @@ public class EdgeInputSplitsCallable<I extends WritableComparable,
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(
       EdgeInputSplitsCallable.class);
+  /** Edge input format */
+  private final EdgeInputFormat<I, E> edgeInputFormat;
   /** Input split max edges (-1 denotes all) */
   private final long inputSplitMaxEdges;
 
@@ -67,6 +69,7 @@ public class EdgeInputSplitsCallable<I extends WritableComparable,
   /**
    * Constructor.
    *
+   * @param edgeInputFormat Edge input format
    * @param context Context
    * @param graphState Graph state
    * @param configuration Configuration
@@ -75,6 +78,7 @@ public class EdgeInputSplitsCallable<I extends WritableComparable,
    * @param zooKeeperExt Handle to ZooKeeperExt
    */
   public EdgeInputSplitsCallable(
+      EdgeInputFormat<I, E> edgeInputFormat,
       Mapper<?, ?, ?, ?>.Context context,
       GraphState<I, V, E, M> graphState,
       ImmutableClassesGiraphConfiguration<I, V, E, M> configuration,
@@ -83,11 +87,17 @@ public class EdgeInputSplitsCallable<I extends WritableComparable,
       ZooKeeperExt zooKeeperExt)  {
     super(context, graphState, configuration, bspServiceWorker,
         splitsHandler, zooKeeperExt);
+    this.edgeInputFormat = edgeInputFormat;
 
     inputSplitMaxEdges = configuration.getInputSplitMaxEdges();
 
     // Initialize Metrics
     totalEdgesMeter = getTotalEdgesLoadedMeter();
+  }
+
+  @Override
+  public EdgeInputFormat<I, E> getInputFormat() {
+    return edgeInputFormat;
   }
 
   /**
@@ -105,8 +115,6 @@ public class EdgeInputSplitsCallable<I extends WritableComparable,
       InputSplit inputSplit,
       GraphState<I, V, E, M> graphState) throws IOException,
       InterruptedException {
-    EdgeInputFormat<I, E> edgeInputFormat =
-        configuration.createWrappedEdgeInputFormat();
     EdgeReader<I, E> edgeReader =
         edgeInputFormat.createEdgeReader(inputSplit, context);
     edgeReader.setConf(
