@@ -25,7 +25,9 @@ import org.apache.giraph.io.VertexWriter;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.JobContext;
+/*if_not[HADOOP_NON_SECURE]*/
 import org.apache.hadoop.mapreduce.JobStatus;
+/*end[HADOOP_NON_SECURE]*/
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
@@ -141,17 +143,16 @@ public class WrappedVertexOutputFormat<I extends WritableComparable,
       }
 
       @Override
-      public void commitJob(JobContext context) throws IOException {
-        getConf().updateConfiguration(context.getConfiguration());
-        outputCommitter.commitJob(context);
-
-      }
-
-      @Override
       public void cleanupJob(JobContext context) throws IOException {
         getConf().updateConfiguration(context.getConfiguration());
         outputCommitter.cleanupJob(context);
+      }
 
+      /*if_not[HADOOP_NON_SECURE]*/
+      @Override
+      public void commitJob(JobContext context) throws IOException {
+        getConf().updateConfiguration(context.getConfiguration());
+        outputCommitter.commitJob(context);
       }
 
       @Override
@@ -159,8 +160,8 @@ public class WrappedVertexOutputFormat<I extends WritableComparable,
           JobStatus.State state) throws IOException {
         getConf().updateConfiguration(context.getConfiguration());
         outputCommitter.abortJob(context, state);
-
       }
+      /*end[HADOOP_NON_SECURE]*/
     };
   }
 }

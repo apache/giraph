@@ -121,7 +121,7 @@ public class GiraphYarnTask<I extends WritableComparable, V extends Writable,
       try {
         LOG.info("Master is ready to commit final job output data.");
         VertexOutputFormat vertexOutputFormat =
-          conf.createVertexOutputFormat();
+          conf.createWrappedVertexOutputFormat();
         OutputCommitter outputCommitter =
           vertexOutputFormat.getOutputCommitter(proxy);
         // now we will have our output in OUTDIR if all went well...
