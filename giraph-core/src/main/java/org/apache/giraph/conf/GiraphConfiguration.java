@@ -901,15 +901,6 @@ public class GiraphConfiguration extends Configuration
   }
 
   /**
-   * Check if we can reuse incoming edge objects.
-   *
-   * @return True iff we can reuse incoming edge objects.
-   */
-  public boolean reuseIncomingEdgeObjects() {
-    return GiraphConstants.REUSE_INCOMING_EDGE_OBJECTS.get(this);
-  }
-
-  /**
    * Get the local hostname on the given interface.
    *
    * @return The local hostname

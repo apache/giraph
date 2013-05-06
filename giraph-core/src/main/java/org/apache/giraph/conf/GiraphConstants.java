@@ -421,15 +421,6 @@ public interface GiraphConstants {
       new IntConfOption("giraph.maxMutationsPerRequest", 100);
 
   /**
-   * Whether we should reuse the same Edge object when adding edges from
-   * requests.
-   * This works with edge storage implementations that don't keep references
-   * to the input Edge objects (e.g., ByteArrayVertex).
-   */
-  BooleanConfOption REUSE_INCOMING_EDGE_OBJECTS =
-      new BooleanConfOption("giraph.reuseIncomingEdgeObjects", false);
-
-  /**
    * Use message size encoding (typically better for complex objects,
    * not meant for primitive wrapped messages)
    */
