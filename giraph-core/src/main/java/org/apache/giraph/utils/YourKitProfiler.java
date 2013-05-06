@@ -32,8 +32,10 @@ import com.yourkit.api.ProfilingModes;
  *  - http://www.yourkit.com/docs/95/api/index.html
  *
  * This class is a simple helper around the API mentioned above that allows you
- * to easily wrap code with {@link YourKitProfiler#startProfile(GiraphConfiguration)}
- * followed by any amount of snapshotX calls and finally {@link YourKitContext#stop()}.
+ * to easily wrap code with
+ * {@link YourKitProfiler#startProfile(GiraphConfiguration)}
+ * followed by any amount of snapshotX calls and finally
+ * {@link YourKitContext#stop()}.
  * See also {@link YourKitContext}.
  *
  * As of 05/2013 YourKit is not publishing their API jars to Maven, but their
