@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 1.0.1 - unreleased
+  GIRAPH-618: Website Documentation: Aggregators (and sharded aggregators)
+  (majakabiljo)
+
   GIRAPH-651: giraph-hive tests (nitay)
 
   GIRAPH-639: Add support for multiple Vertex/Edge inputs (majakabiljo)
