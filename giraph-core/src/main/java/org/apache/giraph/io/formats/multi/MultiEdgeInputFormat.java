@@ -21,6 +21,7 @@ package org.apache.giraph.io.formats.multi;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.EdgeReader;
+import org.apache.giraph.io.internal.WrappedEdgeReader;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -61,11 +62,29 @@ public class MultiEdgeInputFormat<I extends WritableComparable,
   public EdgeReader<I, E> createEdgeReader(InputSplit inputSplit,
       TaskAttemptContext context) throws IOException {
     if (inputSplit instanceof InputSplitWithInputFormatIndex) {
-      InputSplitWithInputFormatIndex split =
-          (InputSplitWithInputFormatIndex) inputSplit;
-      EdgeInputFormat<I, E> edgeInputFormat =
-          edgeInputFormats.get(split.getInputFormatIndex());
-      return edgeInputFormat.createEdgeReader(split.getSplit(), context);
+      // When multithreaded input is used we need to make sure other threads
+      // don't change context's configuration while we use it
+      synchronized (context) {
+        InputSplitWithInputFormatIndex split =
+            (InputSplitWithInputFormatIndex) inputSplit;
+        EdgeInputFormat<I, E> edgeInputFormat =
+            edgeInputFormats.get(split.getInputFormatIndex());
+        EdgeReader<I, E> edgeReader =
+            edgeInputFormat.createEdgeReader(split.getSplit(), context);
+        return new WrappedEdgeReader<I, E>(
+            edgeReader, edgeInputFormat.getConf()) {
+          @Override
+          public void initialize(InputSplit inputSplit,
+              TaskAttemptContext context) throws IOException,
+              InterruptedException {
+            // When multithreaded input is used we need to make sure other
+            // threads don't change context's configuration while we use it
+            synchronized (context) {
+              super.initialize(inputSplit, context);
+            }
+          }
+        };
+      }
     } else {
       throw new IllegalStateException("createEdgeReader: Got InputSplit which" +
           " was not created by this class: " + inputSplit.getClass().getName());
@@ -75,8 +94,12 @@ public class MultiEdgeInputFormat<I extends WritableComparable,
   @Override
   public List<InputSplit> getSplits(JobContext context,
       int minSplitCountHint) throws IOException, InterruptedException {
-    return
-        MultiInputUtils.getSplits(context, minSplitCountHint, edgeInputFormats);
+    // When multithreaded input is used we need to make sure other threads don't
+    // change context's configuration while we use it
+    synchronized (context) {
+      return MultiInputUtils.getSplits(
+          context, minSplitCountHint, edgeInputFormats);
+    }
   }
 
   @Override

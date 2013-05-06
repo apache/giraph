@@ -18,8 +18,6 @@
 
 package org.apache.giraph.io.internal;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.edge.Edge;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.EdgeReader;
 import org.apache.hadoop.io.Writable;
@@ -70,51 +68,9 @@ public class WrappedEdgeInputFormat<I extends WritableComparable,
   public EdgeReader<I, E> createEdgeReader(InputSplit split,
       TaskAttemptContext context) throws IOException {
     getConf().updateConfiguration(context.getConfiguration());
-    final EdgeReader<I, E> edgeReader =
+    EdgeReader<I, E> edgeReader =
         originalInputFormat.createEdgeReader(split, context);
-    return new EdgeReader<I, E>() {
-      @Override
-      public void setConf(
-          ImmutableClassesGiraphConfiguration<I, Writable, E, Writable> conf) {
-        WrappedEdgeInputFormat.this.getConf().updateConfiguration(conf);
-        super.setConf(conf);
-        edgeReader.setConf(conf);
-      }
-
-      @Override
-      public void initialize(InputSplit inputSplit,
-          TaskAttemptContext context) throws IOException, InterruptedException {
-        WrappedEdgeInputFormat.this.getConf().updateConfiguration(
-            context.getConfiguration());
-        edgeReader.initialize(inputSplit, context);
-      }
-
-      @Override
-      public boolean nextEdge() throws IOException, InterruptedException {
-        return edgeReader.nextEdge();
-      }
-
-      @Override
-      public I getCurrentSourceId() throws IOException, InterruptedException {
-        return edgeReader.getCurrentSourceId();
-      }
-
-      @Override
-      public Edge<I, E> getCurrentEdge() throws IOException,
-          InterruptedException {
-        return edgeReader.getCurrentEdge();
-      }
-
-      @Override
-      public void close() throws IOException {
-        edgeReader.close();
-      }
-
-      @Override
-      public float getProgress() throws IOException, InterruptedException {
-        return edgeReader.getProgress();
-      }
-    };
+    return new WrappedEdgeReader<I, E>(edgeReader, getConf());
   }
 
   @Override

@@ -18,8 +18,6 @@
 
 package org.apache.giraph.io.internal;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexReader;
 import org.apache.hadoop.io.Writable;
@@ -74,44 +72,7 @@ public class WrappedVertexInputFormat<I extends WritableComparable,
     getConf().updateConfiguration(context.getConfiguration());
     final VertexReader<I, V, E> vertexReader =
         originalInputFormat.createVertexReader(split, context);
-    return new VertexReader<I, V, E>() {
-      @Override
-      public void setConf(
-          ImmutableClassesGiraphConfiguration<I, V, E, Writable> conf) {
-        WrappedVertexInputFormat.this.getConf().updateConfiguration(conf);
-        super.setConf(conf);
-        vertexReader.setConf(conf);
-      }
-
-      @Override
-      public void initialize(InputSplit inputSplit,
-          TaskAttemptContext context) throws IOException, InterruptedException {
-        WrappedVertexInputFormat.this.getConf().updateConfiguration(
-            context.getConfiguration());
-        vertexReader.initialize(inputSplit, context);
-      }
-
-      @Override
-      public boolean nextVertex() throws IOException, InterruptedException {
-        return vertexReader.nextVertex();
-      }
-
-      @Override
-      public Vertex<I, V, E, ?> getCurrentVertex() throws IOException,
-          InterruptedException {
-        return vertexReader.getCurrentVertex();
-      }
-
-      @Override
-      public void close() throws IOException {
-        vertexReader.close();
-      }
-
-      @Override
-      public float getProgress() throws IOException, InterruptedException {
-        return vertexReader.getProgress();
-      }
-    };
+    return new WrappedVertexReader<I, V, E>(vertexReader, getConf());
   }
 
   @Override
