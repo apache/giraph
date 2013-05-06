@@ -69,8 +69,12 @@
     </menu>
     
     <menu name="User Docs" inherit="top">
+      <item name="Introduction" href="intro.html"/>
+      <item name="Building and Testing" href="build.html"/>
+      <item name="FAQ" href="faq.html"/>
+      <item name="Implementation" href="implementation.html"/>
       <item name="Page Rank Example" href="pagerank.html"/>
-      <item name="Input/output in Giraph" href="io.html"/>
+      <item name="Input/Output in Giraph" href="io.html"/>
       <item name="Aggregators" href="aggregators.html"/>
       <item name="Javadoc" href="javadoc_modules.html"/>
       <item name="Presentations" href="presentations.html"/>

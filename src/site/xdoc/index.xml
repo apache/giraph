@@ -27,65 +27,44 @@ under the License.
   </properties>
 
   <body>
-    <section name="Welcome To Apache Giraph">
-        <p>Web and online social graphs have been rapidly growing in size and scale during the past decade. In 2008, Google estimated that the number of web pages reached over a trillion. Online social networking and email sites, including Yahoo!, Google, Microsoft, Facebook, LinkedIn, and Twitter, have hundreds of millions of users and are expected to grow much more in the future. Processing these graphs plays a big role in relevant and personalized information for users, such as results from a search engine or news in an online social networking site.</p>
 
-        <p>Graph processing platforms to run large-scale algorithms (such as page rank, shared connections, personalization-based popularity, etc.) have become quite popular. Some recent examples include Pregel and HaLoop. For general-purpose big data computation, the map-reduce computing model has been well adopted and the most deployed map-reduce infrastructure is Apache Hadoop. We have implemented a graph-processing framework that is launched as a typical Hadoop job to leverage existing Hadoop infrastructure, such as Amazon's EC2. Giraph builds upon the graph-oriented nature of Pregel but additionally adds fault-tolerance to the coordinator process with the use of ZooKeeper as its centralized coordination service.</p>
+    <section name="Distributed graph processing with Giraph">
+<p><i>Giraph</i> (pronounced like the animal giraffe) is an iterative graph processing system.  As an exemple use case, Facebook uses Giraph to analyze its social graph in production. Giraph is motivated by the Turing Award winning [<a href="#turing">1</a>] elegant Bulk Synchronous Parallel (BSP) model of distributed computation by Valiant [<a href="#bsp">2</a>], and the Pregel graph processing system [<a href="#pregel">3</a>] from Google that evidenced that an appropriately extended BSP model is useful for large-scale graph computation. Giraph distinguishes itself by being an open source, scalable graph processing platform with a growing community of users worldwide. You are welcome to explore the <i>User Docs</i> menu above that explain how to process graphs with Giraph.</p>
+</section>
 
-        <p>Giraph follows the <a href="http://en.wikipedia.org/wiki/Bulk_synchronous_parallel">bulk-synchronous parallel model</a> relative to graphs where vertices can send messages to other vertices during a given superstep. Checkpoints are initiated by the Giraph infrastructure at user-defined intervals and are used for automatic application restarts when any worker in the application fails. Any worker in the application can act as the application coordinator and one will automatically take over if the current application coordinator fails.</p>
 
-    </section>
-	<section name="News">
-	  <!-- TODO: remove 'incubator/' from URL when Apache distribution supports it. -->
-	  <ul>
-	    <li><strong>April 9, 2013: Giraph 1.0 is near a release.</strong> The Giraph PPMC is excited to announce that version 1.0 is near a release.  We will hopefully complete this release in about a week from now.
-	    </li>
-	    <li><strong>February 6, 2012: Giraph 0.1-incubating released.</strong> The Giraph PPMC is excited to announce that version 0.1 has been released. Grab a copy of the release <a href="http://www.apache.org/dyn/closer.cgi/incubator/giraph/">here</a>.
-	    </li>
-	  </ul>
-	</section>
-	<section name="Supported versions of Apache Hadoop">
-	<p>	Hadoop versions for use with Giraph:
-		<ul>
-		<li>YARN version: Apache Hadoop 2.0.3-alpha, other versions may work as well</li>
-		<li>Secure Hadoop versions: Apache Hadoop 0.20.203, 0.20.204, other secure versions may work as well</li>
-		<li>Unsecure Hadoop versions: Apache Hadoop 0.20.1, 0.20.2, 0.20.3. While we provide support for unsecure Hadoop with the maven profile 'hadoop_non_secure', we have been primarily focusing on secure Hadoop releases at this time.</li>
-		<li>Other distributions that included Apache Hadoop reported to work include: Cloudera CDH3u0, CDH3u1</li>
-	</ul>
-	</p>
-	</section>
-	<section name="Getting involved">
-		<p>Giraph is a new project and we're looking to quickly build a community of users and contributors. All types of help is appreciated: contributing patches, writing documentation, posing and answering questions on the mailing list, even <a href="https://issues.apache.org/jira/browse/GIRAPH-4">graphic design</a>. Here's how to get involved with Giraph (or any Apache project):</p>
-		<ul>
-		<li>Subscribe to the <a href="mail-lists.html">mailing lists</a>, particularly the user and dev list, and follow their activity for a while to get a feel for the state of the project and what the community is working on.</li>
-		<li>Browse through <a href="issue-tracking.html">Giraph's JIRA</a>, our issue tracking system, to find issues you may be interested in working on. To help new contributors pitch in quickly, we maintain a <a href="http://bit.ly/newbie_apache_giraph_issues">set of JIRAs</a> that focus on getting new contributors started with the mechanics of generating a patch &#151; downloading the source, changing a couple lines, creating a patch, verifying its correctness, uploading it to JIRA and working with the community &#151; rather that deep technical issues within Giraph itself. These are good issues with which to join the community. See <a href="#Generatingpatches">below</a> for detailed instructions on creating patches.</li>
-		<li>Try out the examples and play with Giraph on your cluster. Be sure to ask questions on the mailing list or open new JIRAs if you run into issues with your particular configuration.</li>
-	</ul>
-	</section>
-	<section name="Releases">
-	  <!-- TODO: remove 'incubator/' from URL when Apache distribution supports it. -->
-		<p>Official releases of Giraph may be downloaded from an <a href="http://www.apache.org/dyn/closer.cgi/incubator/giraph/">Apache mirror</a>. Soon we will also publish our release artifacts to Apache's Maven repositories to make it easier to include Giraph in your projects.</p>
-	</section>
-	<section name="Building and testing">
-	  <p>You will need the following:</p>
-	  <ul>
-	    <li>Java 1.6</li>
-	    <li>Maven 3 or higher. Giraph uses the <a href="http://sonatype.github.com/munge-maven-plugin/">munge plugin</a>, which requires Maven 3, to support multiple versions of Hadoop. Also, the web site plugin requires Maven 3.</li>
-	  </ul>
-	  
-	  <p>Use the maven commands with secure Hadoop to:
-	    <ul>
-	      <li>compile (i.e <tt>mvn compile</tt>)</li>
-	      <li>package (i.e. <tt>mvn package</tt>)</li>
-	      <li>test (i.e. <tt>mvn test</tt>) For testing, one can submit the test to a running Hadoop instance (i.e. <tt>mvn test -Dprop.mapred.job.tracker=localhost:50300</tt>)</li>
-	    </ul>
-	    For the non-secure versions of Hadoop, run the maven commands with the
-	    additional argument <tt>-Dhadoop=non_secure</tt> to enable the maven profile
-	    <tt>hadoop_non_secure</tt>.  An example compilation command is
-	    <tt>mvn -Dhadoop=non_secure compile</tt>.</p>
-	</section>
-  <section name="Notes">
-      Counter limit: In Hadoop 0.20.203.0 onwards, there is a limit on the number of counters one can use, which is set to 120 by default. This limit restricts the number of iterations/supersteps possible in Giraph. This limit can be increased by setting a parameter <tt>mapreduce.job.counters.limit</tt> in job tracker's config file mapred-site.xml.
-  </section>
+<section name="News">
+
+<ul>
+  <li>Official releases of Giraph may be downloaded from an <a href="http://www.apache.org/dyn/closer.cgi/incubator/giraph/">Apache mirror</a>. Soon we will also publish our release artifacts to Apache's Maven repositories to make it easier to include Giraph in your projects.</li>
+  <li><strong>April 9, 2013: Giraph 1.0 is near a release.</strong> The Giraph PPMC is excited to announce that version 1.0 is near a release.  We will hopefully complete this release in about a week from now.</li>
+  <li><strong>February 6, 2012: Giraph 0.1-incubating released.</strong> The Giraph PPMC is excited to announce that version 0.1 has been released. Grab a copy of the release <a href="http://www.apache.org/dyn/closer.cgi/incubator/giraph/">here</a>.</li>
+</ul>
+
+</section>
+
+<section name="Getting involved">
+
+<p>Giraph is a new project and we're looking to quickly build a community of users and contributors. All types of help is appreciated: contributing patches, writing documentation, posing and answering questions on the mailing list, even <a href="https://issues.apache.org/jira/browse/GIRAPH-4">graphic design</a>. Here's how to get involved with Giraph (or any Apache project):</p>
+
+<ul>
+  <li>Subscribe to the <a href="mail-lists.html">mailing lists</a>, particularly the user and dev list, and follow their activity for a while to get a feel for the state of the project and what the community is working on.</li>
+  <li>Browse through <a href="issue-tracking.html">Giraph's JIRA</a>, our issue tracking system, to find issues you may be interested in working on. To help new contributors pitch in quickly, we maintain a <a href="http://bit.ly/newbie_apache_giraph_issues">set of JIRAs</a> that focus on getting new contributors started with the mechanics of generating a patch &#151; downloading the source, changing a couple of lines, creating a patch, verifying its correctness, uploading it to JIRA and working with the community &#151; rather than deep technical issues within Giraph itself. These are good issues with which to join the community. Take a look at the section on <a href="generating_patches.html">generating patches</a> for detailed instructions on creating patches.</li>
+  <li>Try out the examples and play with Giraph on your cluster. Be sure to ask questions on the mailing list or open new JIRAs if you run into issues with your particular configuration.</li>
+</ul>
+
+</section>
+
+
+<section name="References">
+
+<ol>
+<li id="turing">Leslie Valiant: The 2010 A.M. Turing Award (<a href="http://amturing.acm.org/award_winners/valiant_2612174.cfm">link</a>)</li>
+<li id="bsp">Leslie Valiant: A bridging model for parallel computation. Communications of the ACM, Vol. 33(8) (1990) pp. 103-111 (<a href="http://dl.acm.org/citation.cfm?id=79173.79181">link</a>)</li>
+<li id="pregel">Grzegorz Malewicz, Matthew H. Austern, Aart J.C Bik, James C. Dehnert, Ilan Horn, Naty Leiser, Grzegorz Czajkowski: Pregel: a system for large-scale graph processing. ACM SIGMOD International Conference on Management of Data (2010) pp. 135-146 (<a href="http://dl.acm.org/citation.cfm?id=1807184">link</a>)</li>
+</ol>
+
+</section>
+
   </body>
 </document>
