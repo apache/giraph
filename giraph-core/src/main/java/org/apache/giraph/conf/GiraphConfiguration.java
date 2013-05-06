@@ -38,6 +38,7 @@ import org.apache.giraph.partition.ReusesObjectsPartition;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.giraph.worker.WorkerObserver;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.net.DNS;
 
 import java.net.UnknownHostException;
@@ -1008,5 +1009,64 @@ public class GiraphConfiguration extends Configuration
   public void setClass(String name, Class<?> theClass, Class<?> xface) {
     super.setClass(name, theClass, xface);
     giraphSetParameters.setClass(name, theClass, xface);
+  }
+
+  /**
+   * Get the output directory to write YourKit snapshots to
+   * @param context Map context
+   * @return output directory
+   */
+  public String getYourKitOutputDir(Mapper.Context context) {
+    final String cacheKey = "giraph.yourkit.outputDirCached";
+    String outputDir = get(cacheKey);
+    if (outputDir == null) {
+      outputDir = getStringVars(YOURKIT_OUTPUT_DIR, YOURKIT_OUTPUT_DIR_DEFAULT,
+          context);
+      set(cacheKey, outputDir);
+    }
+    return outputDir;
+  }
+
+  /**
+   * Get string, replacing variables in the output.
+   *
+   * %JOB_ID% => job id
+   * %TASK_ID% => task id
+   * %USER% => owning user name
+   *
+   * @param key name of key to lookup
+   * @param context mapper context
+   * @return value for key, with variables expanded
+   */
+  public String getStringVars(String key, Mapper.Context context) {
+    return getStringVars(key, null, context);
+  }
+
+  /**
+   * Get string, replacing variables in the output.
+   *
+   * %JOB_ID% => job id
+   * %TASK_ID% => task id
+   * %USER% => owning user name
+   *
+   * @param key name of key to lookup
+   * @param defaultValue value to return if no mapping exists. This can also
+   *                     have variables, which will be substituted.
+   * @param context mapper context
+   * @return value for key, with variables expanded
+   */
+  public String getStringVars(String key, String defaultValue,
+                              Mapper.Context context) {
+    String value = get(key);
+    if (value == null) {
+      if (defaultValue == null) {
+        return null;
+      }
+      value = defaultValue;
+    }
+    value = value.replace("%JOB_ID%", context.getJobID().toString());
+    value = value.replace("%TASK_ID%", context.getTaskAttemptID().toString());
+    value = value.replace("%USER%", get("user.name", "unknown_user"));
+    return value;
   }
 }

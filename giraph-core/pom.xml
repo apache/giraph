@@ -409,6 +409,10 @@ under the License.
   <dependencies>
     <!-- compile dependencies. sorted lexicographically. -->
     <dependency>
+      <groupId>com.facebook.thirdparty.yourkit-api</groupId>
+      <artifactId>yjp-controller-api-redist</artifactId>
+    </dependency>
+    <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
     </dependency>

@@ -586,6 +586,11 @@ public interface GiraphConstants {
   BooleanConfOption USE_OUT_OF_CORE_GRAPH =
       new BooleanConfOption("giraph.useOutOfCoreGraph", false);
 
+  /** Directory to write YourKit snapshots to */
+  String YOURKIT_OUTPUT_DIR = "giraph.yourkit.outputDir";
+  /** Default directory to write YourKit snapshots to */
+  String YOURKIT_OUTPUT_DIR_DEFAULT = "/tmp/giraph/%JOB_ID%/%TASK_ID%";
+
   /** Maximum number of partitions to hold in memory for each worker. */
   IntConfOption MAX_PARTITIONS_IN_MEMORY =
       new IntConfOption("giraph.maxPartitionsInMemory", 10);
