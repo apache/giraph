@@ -18,7 +18,8 @@
 
 package org.apache.giraph;
 
-import org.apache.giraph.conf.GiraphClasses;
+import org.apache.giraph.aggregators.TextAggregatorWriter;
+import org.apache.giraph.combiner.SimpleSumCombiner;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
@@ -30,23 +31,21 @@ import org.apache.giraph.examples.SimpleMsgVertex;
 import org.apache.giraph.examples.SimplePageRankVertex;
 import org.apache.giraph.examples.SimplePageRankVertex.SimplePageRankVertexInputFormat;
 import org.apache.giraph.examples.SimpleShortestPathsVertex;
-import org.apache.giraph.combiner.SimpleSumCombiner;
 import org.apache.giraph.examples.SimpleSuperstepVertex;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat;
 import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexOutputFormat;
 import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.job.GiraphJob;
-import org.apache.giraph.worker.InputSplitPathOrganizer;
-import org.apache.giraph.aggregators.TextAggregatorWriter;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.formats.JsonLongDoubleFloatDoubleVertexOutputFormat;
+import org.apache.giraph.job.GiraphJob;
+import org.apache.giraph.job.HadoopUtils;
+import org.apache.giraph.worker.InputSplitPathOrganizer;
 import org.apache.giraph.zk.ZooKeeperExt;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -54,7 +53,7 @@ import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputSplit;
-import org.apache.hadoop.mapreduce.JobID;
+import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.zookeeper.KeeperException;
 import org.junit.Test;
 
@@ -80,12 +79,6 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
-
-/*if[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]
-import org.apache.hadoop.mapreduce.JobContext;
-else[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
-import org.apache.hadoop.mapreduce.task.JobContextImpl;
-/*end[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
 
 /**
  * Unit test for many simple BSP applications.
@@ -130,15 +123,8 @@ public class
     System.out.println("testInstantiateVertex: Got vertex " + vertex);
     VertexInputFormat<LongWritable, IntWritable, FloatWritable>
     inputFormat = configuration.createWrappedVertexInputFormat();
-/*if[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]
-      List<InputSplit> splitArray =
-          inputFormat.getSplits(
-              new JobContext(new Configuration(), new JobID()), 1);
-else[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
-      List<InputSplit> splitArray =
-          inputFormat.getSplits(
-              new JobContextImpl(new Configuration(), new JobID()), 1);
-/*end[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
+    List<InputSplit> splitArray = inputFormat.getSplits(
+        HadoopUtils.makeJobContext(), 1);
     ByteArrayOutputStream byteArrayOutputStream =
         new ByteArrayOutputStream();
     DataOutputStream outputStream = new DataOutputStream(byteArrayOutputStream);

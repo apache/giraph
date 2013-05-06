@@ -28,11 +28,12 @@ import org.apache.giraph.io.formats.IntNullTextEdgeInputFormat;
 import org.apache.giraph.io.internal.WrappedVertexOutputFormat;
 import org.apache.giraph.utils.InternalVertexRunner;
 import org.apache.hadoop.mapred.HackJobContext;
+import org.apache.hadoop.mapred.HackTaskAttemptContext;
 import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.TaskAttemptID;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.thrift.TException;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -124,11 +125,11 @@ public class HiveOutputTest {
     throws IOException, InterruptedException {
     ImmutableClassesGiraphConfiguration iconf = new ImmutableClassesGiraphConfiguration(conf);
     WrappedVertexOutputFormat outputFormat = iconf.createWrappedVertexOutputFormat();
-    TaskAttemptID taskID = new TaskAttemptID();
-    TaskAttemptContext taskContext = new TaskAttemptContext(new JobConf(conf), taskID);
-    OutputCommitter outputCommitter = outputFormat.getOutputCommitter(taskContext);
     JobConf jobConf = new JobConf(conf);
-    JobContext jobContext = new HackJobContext(jobConf, taskID.getJobID());
+    TaskAttemptContext taskContext = new HackTaskAttemptContext(jobConf, new TaskAttemptID());
+    OutputCommitter outputCommitter = outputFormat.getOutputCommitter(
+        taskContext);
+    JobContext jobContext = new HackJobContext(jobConf, taskContext.getJobID());
     outputCommitter.commitJob(jobContext);
   }
 

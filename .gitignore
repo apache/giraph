@@ -29,4 +29,5 @@ failed-profile.txt
 # Vim auto-save files:
 .*.swp
 
+/for-each-profile-results.txt
 /giraph-hive/derby.log

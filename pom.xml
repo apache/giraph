@@ -254,7 +254,7 @@ under the License.
 
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-    <dep.hiveio.version>0.9</dep.hiveio.version>
+    <dep.hiveio.version>0.10</dep.hiveio.version>
     <hbase.version>0.90.5</hbase.version>
     <codehaus-jackson.version>1.8.0</codehaus-jackson.version>
     <fasterxml-jackson.version>2.1.0</fasterxml-jackson.version>
@@ -596,6 +596,7 @@ under the License.
         <module>giraph-accumulo</module>
         <module>giraph-hbase</module>
         <module>giraph-hcatalog</module>
+        <module>giraph-hive</module>
       </modules>
       <activation>
         <activeByDefault>true</activeByDefault>
@@ -625,6 +626,7 @@ under the License.
         <module>giraph-accumulo</module>
         <module>giraph-hbase</module>
         <module>giraph-hcatalog</module>
+        <module>giraph-hive</module>
       </modules>
       <properties>
         <hadoop.version>1.0.2</hadoop.version>
@@ -651,6 +653,7 @@ under the License.
         <module>giraph-accumulo</module>
         <module>giraph-hbase</module>
         <module>giraph-hcatalog</module>
+        <module>giraph-hive</module>
       </modules>
       <properties>
         <hadoop.version>0.20.2</hadoop.version>
@@ -677,6 +680,7 @@ under the License.
         <module>giraph-accumulo</module>
         <module>giraph-hbase</module>
         <module>giraph-hcatalog</module>
+        <module>giraph-hive</module>
       </modules>
       <properties>
         <hadoop.version>0.20.0</hadoop.version>
@@ -1232,7 +1236,6 @@ under the License.
 
   <modules>
     <module>giraph-core</module>
-    <module>giraph-hive</module>
     <module>giraph-examples</module>
   </modules>
 
