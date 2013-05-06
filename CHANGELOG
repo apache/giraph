@@ -1,6 +1,9 @@
 Giraph Change Log
 
-Release 1.0.1 - unreleased
+Release 1.1.0 - unreleased
+  GIRAPH-660: Move the snapshot to 1.1.0 and also add a releases page for 
+  the 1.0 release (aching)
+
   GIRAPH-560: Input filtering (nitay)
 
   GIRAPH-621: Website Documentation: Basic Design Document (aching)

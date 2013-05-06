@@ -29,15 +29,15 @@ under the License.
   <body>
 
     <section name="Distributed graph processing with Giraph">
-<p><i>Giraph</i> (pronounced like the animal giraffe) is an iterative graph processing system.  As an exemple use case, Facebook uses Giraph to analyze its social graph in production. Giraph is motivated by the Turing Award winning [<a href="#turing">1</a>] elegant Bulk Synchronous Parallel (BSP) model of distributed computation by Valiant [<a href="#bsp">2</a>], and the Pregel graph processing system [<a href="#pregel">3</a>] from Google that evidenced that an appropriately extended BSP model is useful for large-scale graph computation. Giraph distinguishes itself by being an open source, scalable graph processing platform with a growing community of users worldwide. You are welcome to explore the <i>User Docs</i> menu above that explain how to process graphs with Giraph.</p>
+<p><i>Giraph</i> (pronounced like the animal giraffe) is an iterative graph processing system.  As an example use case, Facebook uses Giraph to analyze its social graph in production. Giraph is motivated by the Turing Award winning [<a href="#turing">1</a>] elegant Bulk Synchronous Parallel (BSP) model of distributed computation by Valiant [<a href="#bsp">2</a>], and the Pregel graph processing system [<a href="#pregel">3</a>] from Google that evidenced that an appropriately extended BSP model is useful for large-scale graph computation. Giraph distinguishes itself by being an open source, scalable graph processing platform with a growing community of users worldwide. You are welcome to explore the <i>User Docs</i> menu above that explain how to process graphs with Giraph.</p>
 </section>
 
 
 <section name="News">
 
 <ul>
-  <li>Official releases of Giraph may be downloaded from an <a href="http://www.apache.org/dyn/closer.cgi/incubator/giraph/">Apache mirror</a>. Soon we will also publish our release artifacts to Apache's Maven repositories to make it easier to include Giraph in your projects.</li>
-  <li><strong>April 9, 2013: Giraph 1.0 is near a release.</strong> The Giraph PPMC is excited to announce that version 1.0 is near a release.  We will hopefully complete this release in about a week from now.</li>
+  <li>Official releases of Giraph may be downloaded from an <a href="http://www.apache.org/dyn/closer.cgi/giraph/">Apache mirror</a>. Soon we will also publish our release artifacts to Apache's Maven repositories to make it easier to include Giraph in your projects.</li>
+  <li><strong>May 6, 2013: Giraph 1.0.0 is now released!</strong> Please pick up a copy at <a href="http://www.apache.org/dyn/closer.cgi/giraph/giraph-1.0.0">here</a>.</li>
   <li><strong>February 6, 2012: Giraph 0.1-incubating released.</strong> The Giraph PPMC is excited to announce that version 0.1 has been released. Grab a copy of the release <a href="http://www.apache.org/dyn/closer.cgi/incubator/giraph/">here</a>.</li>
 </ul>
 

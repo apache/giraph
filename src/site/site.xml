@@ -73,6 +73,7 @@
       <item name="Building and Testing" href="build.html"/>
       <item name="FAQ" href="faq.html"/>
       <item name="Implementation" href="implementation.html"/>
+      <item name="Download Releases" href="releases.html"/>
       <item name="Page Rank Example" href="pagerank.html"/>
       <item name="Input/Output in Giraph" href="io.html"/>
       <item name="Aggregators" href="aggregators.html"/>

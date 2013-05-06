@@ -23,18 +23,20 @@ under the License.
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
   <properties>
-    <title>How to build this site in maven</title>
+    <title>Download Releases</title>
   </properties>
 
   <body>
-    <section name="Summary">
-      <p>We build this site with Maven using the fluido plugin.  Due to difficulties with the maven site plugin and munge working together, we build the site using a profile that does not require munge.</p>
-      <ul>
-	<li>Start at the parent directory and do <source>mvn clean site -DskipTests -Phadoop_2.0.0 -Ddependency.locations.enabled=false</source></li>
-	<li>Then we need to stage this site since it has multiple modules with <source>mvn site:stage -DskipTests -Phadoop_2.0.0</source></li>
-	<li>You can check the results of the site building and staging in <source>target/staging</source> and then deploy as necessary.</li>
-	<li>To deploy, check out the site from svn with <source>svn co https://svn.apache.org/repos/asf/giraph/site</source>.  Remove everything and then copy the staged site to the directory and then commit.  All changes should be live immediately.</li>
-      </ul>
-    </section>
+
+<section name="Download Releases">
+
+<p>
+Here are our stable releases of Giraph.</p>
+<ul>
+  <li><strong>1.0.0</strong> - Download <a href="http://www.apache.org/dyn/closer.cgi/giraph/giraph-1.0.0">here</a>.</li>
+</ul>
+
+</section>
+
   </body>
 </document>
