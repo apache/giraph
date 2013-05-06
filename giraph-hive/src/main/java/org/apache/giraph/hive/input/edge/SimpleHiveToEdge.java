@@ -65,7 +65,7 @@ public abstract class SimpleHiveToEdge<I extends WritableComparable,
   public abstract E getEdgeValue(HiveReadableRecord hiveRecord);
 
   @Override
-  public final void initializeRecords(Iterator<HiveReadableRecord> records) {
+  public void initializeRecords(Iterator<HiveReadableRecord> records) {
     this.records = records;
     reusableEdge.setEdge(getConf().createReusableEdge());
   }
