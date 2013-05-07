@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-662: Incubator release should point to archived (aching)
+
   GIRAPH-655: Fix Hive Build for Hadoop 2.0.0 (nitay)
 
   GIRAPH-660: Move the snapshot to 1.1.0 and also add a releases page for 

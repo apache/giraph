@@ -38,7 +38,7 @@ under the License.
 <ul>
   <li>Official releases of Giraph may be downloaded from an <a href="http://www.apache.org/dyn/closer.cgi/giraph/">Apache mirror</a>. Soon we will also publish our release artifacts to Apache's Maven repositories to make it easier to include Giraph in your projects.</li>
   <li><strong>May 6, 2013: Giraph 1.0.0 is now released!</strong> Please pick up a copy at <a href="http://www.apache.org/dyn/closer.cgi/giraph/giraph-1.0.0">here</a>.</li>
-  <li><strong>February 6, 2012: Giraph 0.1-incubating released.</strong> The Giraph PPMC is excited to announce that version 0.1 has been released. Grab a copy of the release <a href="http://www.apache.org/dyn/closer.cgi/incubator/giraph/">here</a>.</li>
+  <li><strong>February 6, 2012: Giraph 0.1-incubating released.</strong> The Giraph PPMC is excited to announce that version 0.1 has been released. Grab a copy of the archived release <a href="http://archive.apache.org/dist/incubator/giraph">here</a>.</li>
 </ul>
 
 </section>
