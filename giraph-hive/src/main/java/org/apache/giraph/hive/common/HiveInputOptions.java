@@ -61,7 +61,7 @@ public class HiveInputOptions<C> {
     splitsOpt = new IntConfOption(key(name, "splits"), 0);
     databaseOpt = new StrConfOption(key(name, "database"), "default");
     tableOpt = new StrConfOption(key(name, "table"), "");
-    hostOpt = new StrConfOption(key(name, "metastore.host"), "");
+    hostOpt = new StrConfOption(key(name, "metastore.host"), null);
     portOpt = new IntConfOption(key(name, "metastore.port"), 9083);
   }
 
