@@ -653,11 +653,10 @@ under the License.
         <module>giraph-accumulo</module>
         <module>giraph-hbase</module>
         <module>giraph-hcatalog</module>
-        <module>giraph-hive</module>
       </modules>
       <properties>
         <hadoop.version>0.20.2</hadoop.version>
-        <munge.symbols>HADOOP_NON_SECURE,HADOOP_NON_JOBCONTEXT_IS_INTERFACE</munge.symbols>
+        <munge.symbols>HADOOP_NON_SECURE,HADOOP_NON_JOBCONTEXT_IS_INTERFACE,HADOOP_NON_COMMIT_JOB</munge.symbols>
       </properties>
       <dependencies>
         <!-- sorted lexicographically -->
