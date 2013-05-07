@@ -31,6 +31,8 @@ import org.apache.giraph.graph.VertexValueFactory;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
+import org.apache.giraph.io.filters.EdgeInputFilter;
+import org.apache.giraph.io.filters.VertexInputFilter;
 import org.apache.giraph.io.internal.WrappedEdgeInputFormat;
 import org.apache.giraph.io.internal.WrappedVertexInputFormat;
 import org.apache.giraph.io.internal.WrappedVertexOutputFormat;
@@ -93,7 +95,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    */
   public ImmutableClassesGiraphConfiguration(Configuration conf) {
     super(conf);
-    classes = new GiraphClasses(conf);
+    classes = new GiraphClasses<I, V, E, M>(conf);
     useUnsafeSerialization = USE_UNSAFE_SERIALIZATION.get(this);
     try {
       vertexValueFactory = (VertexValueFactory<V>)
@@ -135,6 +137,42 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
     if (obj instanceof ImmutableClassesGiraphConfigurable) {
       ((ImmutableClassesGiraphConfigurable) obj).setConf(this);
     }
+  }
+
+  /**
+   * Get the vertex input filter class
+   *
+   * @return VertexInputFilter class
+   */
+  public Class<? extends EdgeInputFilter<I, E>>
+  getEdgeInputFilterClass() {
+    return classes.getEdgeInputFilterClass();
+  }
+
+  /**
+   * Get the edge input filter to use
+   * @return EdgeInputFilter
+   */
+  public EdgeInputFilter getEdgeInputFilter() {
+    return ReflectionUtils.newInstance(getEdgeInputFilterClass(), this);
+  }
+
+  /**
+   * Get the vertex input filter class
+   *
+   * @return VertexInputFilter class
+   */
+  public Class<? extends VertexInputFilter<I, V, E, M>>
+  getVertexInputFilterClass() {
+    return classes.getVertexInputFilterClass();
+  }
+
+  /**
+   * Get the vertex input filter to use
+   * @return VertexInputFilter
+   */
+  public VertexInputFilter getVertexInputFilter() {
+    return ReflectionUtils.newInstance(getVertexInputFilterClass(), this);
   }
 
   /**

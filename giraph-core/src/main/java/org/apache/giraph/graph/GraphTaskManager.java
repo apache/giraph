@@ -42,6 +42,7 @@ import org.apache.giraph.utils.MemoryUtils;
 import org.apache.giraph.utils.ProgressableUtils;
 import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.giraph.worker.BspServiceWorker;
+import org.apache.giraph.worker.InputSplitsCallable;
 import org.apache.giraph.worker.WorkerAggregatorUsage;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.giraph.worker.WorkerObserver;
@@ -337,6 +338,7 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
     GiraphMetrics.get().addSuperstepResetObserver(this);
     initJobMetrics();
     MemoryUtils.initMetrics();
+    InputSplitsCallable.initMetrics();
   }
 
   /**

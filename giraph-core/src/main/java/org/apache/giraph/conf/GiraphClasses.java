@@ -27,7 +27,11 @@ import org.apache.giraph.graph.DefaultVertexValueFactory;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.graph.VertexValueFactory;
+import org.apache.giraph.io.filters.DefaultEdgeInputFilter;
+import org.apache.giraph.io.filters.DefaultVertexInputFilter;
+import org.apache.giraph.io.filters.EdgeInputFilter;
 import org.apache.giraph.io.EdgeInputFormat;
+import org.apache.giraph.io.filters.VertexInputFilter;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.giraph.master.DefaultMasterCompute;
@@ -108,6 +112,12 @@ public class GiraphClasses<I extends WritableComparable,
   /** Partition class - cached for fast accesss */
   protected Class<? extends Partition<I, V, E, M>> partitionClass;
 
+  /** Edge Input Filter class */
+  protected Class<? extends EdgeInputFilter<I, E>> edgeInputFilterClass;
+  /** Vertex Input Filter class */
+  protected Class<? extends VertexInputFilter<I, V, E, M>>
+  vertexInputFilterClass;
+
   /**
    * Empty constructor. Initialize with default classes or null.
    */
@@ -131,6 +141,10 @@ public class GiraphClasses<I extends WritableComparable,
     masterComputeClass = DefaultMasterCompute.class;
     partitionClass = (Class<? extends Partition<I, V, E, M>>) (Object)
         SimplePartition.class;
+    edgeInputFilterClass = (Class<? extends EdgeInputFilter<I, E>>)
+        (Object) DefaultEdgeInputFilter.class;
+    vertexInputFilterClass = (Class<? extends VertexInputFilter<I, V, E, M>>)
+        (Object) DefaultVertexInputFilter.class;
   }
 
   /**
@@ -185,6 +199,11 @@ public class GiraphClasses<I extends WritableComparable,
     masterComputeClass =  MASTER_COMPUTE_CLASS.get(conf);
     partitionClass = (Class<? extends Partition<I, V, E, M>>)
         PARTITION_CLASS.get(conf);
+
+    edgeInputFilterClass = (Class<? extends EdgeInputFilter<I, E>>)
+        EDGE_INPUT_FILTER_CLASS.get(conf);
+    vertexInputFilterClass = (Class<? extends VertexInputFilter<I, V, E, M>>)
+        VERTEX_INPUT_FILTER_CLASS.get(conf);
   }
 
   /**
@@ -267,6 +286,16 @@ public class GiraphClasses<I extends WritableComparable,
   public Class<? extends GraphPartitionerFactory<I, V, E, M>>
   getGraphPartitionerFactoryClass() {
     return graphPartitionerFactoryClass;
+  }
+
+  public Class<? extends EdgeInputFilter<I, E>>
+  getEdgeInputFilterClass() {
+    return edgeInputFilterClass;
+  }
+
+  public Class<? extends VertexInputFilter<I, V, E, M>>
+  getVertexInputFilterClass() {
+    return vertexInputFilterClass;
   }
 
   /**

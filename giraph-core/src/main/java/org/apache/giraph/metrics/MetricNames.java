@@ -78,4 +78,14 @@ public interface MetricNames {
 
   /** PercentGauge of memory free */
   String MEMORY_FREE_PERCENT = "memory-free-pct";
+
+  /** Total edges loaded */
+  String EDGES_FILTERED = "edges-filtered";
+  /** Percent of edges filtered out */
+  String EDGES_FILTERED_PCT = "edges-filtered-pct";
+
+  /** Total vertices filtered */
+  String VERTICES_FILTERED = "vertices-filtered";
+  /** Percent of vertices filtered out */
+  String VERTICES_FILTERED_PCT = "vertices-filtered-pct";
 }

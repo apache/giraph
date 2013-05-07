@@ -30,6 +30,10 @@ import org.apache.giraph.graph.VertexValueFactory;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
+import org.apache.giraph.io.filters.DefaultEdgeInputFilter;
+import org.apache.giraph.io.filters.DefaultVertexInputFilter;
+import org.apache.giraph.io.filters.EdgeInputFilter;
+import org.apache.giraph.io.filters.VertexInputFilter;
 import org.apache.giraph.job.DefaultJobObserver;
 import org.apache.giraph.job.GiraphJobObserver;
 import org.apache.giraph.master.DefaultMasterCompute;
@@ -119,6 +123,16 @@ public interface GiraphConstants {
   ClassConfOption<EdgeInputFormat> EDGE_INPUT_FORMAT_CLASS =
       ClassConfOption.create("giraph.edgeInputFormatClass", null,
           EdgeInputFormat.class);
+
+  /** EdgeInputFilter class */
+  ClassConfOption<EdgeInputFilter> EDGE_INPUT_FILTER_CLASS =
+      ClassConfOption.create("giraph.edgeInputFilterClass",
+          DefaultEdgeInputFilter.class, EdgeInputFilter.class);
+
+  /** VertexInputFilter class */
+  ClassConfOption<VertexInputFilter> VERTEX_INPUT_FILTER_CLASS =
+      ClassConfOption.create("giraph.vertexInputFilterClass",
+          DefaultVertexInputFilter.class, VertexInputFilter.class);
 
   /** VertexOutputFormat class */
   ClassConfOption<VertexOutputFormat> VERTEX_OUTPUT_FORMAT_CLASS =

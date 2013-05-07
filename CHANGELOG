@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.0.1 - unreleased
+  GIRAPH-560: Input filtering (nitay)
+
   GIRAPH-621: Website Documentation: Basic Design Document (aching)
 
   GIRAPH-658: Remove final modifier from SimpleHiveToEdge.initializeRecords

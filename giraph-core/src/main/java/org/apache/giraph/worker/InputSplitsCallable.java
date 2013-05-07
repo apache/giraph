@@ -25,7 +25,9 @@ import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.VertexEdgeCount;
 import org.apache.giraph.io.GiraphInputFormat;
 import org.apache.giraph.metrics.GiraphMetrics;
+import org.apache.giraph.metrics.GiraphMetricsRegistry;
 import org.apache.giraph.metrics.MeterDesc;
+import org.apache.giraph.metrics.MetricNames;
 import org.apache.giraph.time.SystemTime;
 import org.apache.giraph.time.Time;
 import org.apache.giraph.time.Times;
@@ -38,7 +40,9 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.KeeperException;
 
+import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Meter;
+import com.yammer.metrics.util.PercentGauge;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -135,6 +139,16 @@ public abstract class InputSplitsCallable<I extends WritableComparable,
   }
 
   /**
+   * Get Counter tracking edges filtered
+   *
+   * @return Counter tracking edges filtered
+   */
+  public static Counter getTotalEdgesFilteredCounter() {
+    return GiraphMetrics.get().perJobRequired()
+        .getCounter(MetricNames.EDGES_FILTERED);
+  }
+
+  /**
    * Get Meter tracking number of vertices loaded.
    *
    * @return Meter for vertices loaded
@@ -142,6 +156,49 @@ public abstract class InputSplitsCallable<I extends WritableComparable,
   public static Meter getTotalVerticesLoadedMeter() {
     return GiraphMetrics.get().perJobRequired()
         .getMeter(MeterDesc.VERTICES_LOADED);
+  }
+
+  /**
+   * Get Counter tracking vertices filtered
+   *
+   * @return Counter tracking vertices filtered
+   */
+  public static Counter getTotalVerticesFilteredCounter() {
+    return GiraphMetrics.get().perJobRequired()
+        .getCounter(MetricNames.VERTICES_FILTERED);
+  }
+
+  /**
+   * Initialize metrics used by this class and its subclasses.
+   */
+  public static void initMetrics() {
+    GiraphMetricsRegistry metrics = GiraphMetrics.get().perJobRequired();
+
+    final Counter edgesFiltered = getTotalEdgesFilteredCounter();
+    final Meter edgesLoaded = getTotalEdgesLoadedMeter();
+
+    metrics.getGauge(MetricNames.EDGES_FILTERED_PCT, new PercentGauge() {
+      @Override protected double getNumerator() {
+        return edgesFiltered.count();
+      }
+
+      @Override protected double getDenominator() {
+        return edgesLoaded.count();
+      }
+    });
+
+    final Counter verticesFiltered = getTotalVerticesFilteredCounter();
+    final Meter verticesLoaded = getTotalVerticesLoadedMeter();
+
+    metrics.getGauge(MetricNames.VERTICES_FILTERED_PCT, new PercentGauge() {
+      @Override protected double getNumerator() {
+        return verticesFiltered.count();
+      }
+
+      @Override protected double getDenominator() {
+        return verticesLoaded.count();
+      }
+    });
   }
 
   /**

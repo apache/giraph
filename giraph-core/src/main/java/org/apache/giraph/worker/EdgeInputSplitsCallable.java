@@ -24,6 +24,7 @@ import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.VertexEdgeCount;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.EdgeReader;
+import org.apache.giraph.io.filters.EdgeInputFilter;
 import org.apache.giraph.utils.LoggerUtils;
 import org.apache.giraph.utils.MemoryUtils;
 import org.apache.giraph.zk.ZooKeeperExt;
@@ -34,6 +35,7 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
+import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Meter;
 
 import java.io.IOException;
@@ -52,7 +54,9 @@ public class EdgeInputSplitsCallable<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
     extends InputSplitsCallable<I, V, E, M> {
   /** How often to update metrics and print info */
-  public static final int VERTICES_UPDATE_PERIOD = 1000000;
+  public static final int EDGES_UPDATE_PERIOD = 1000000;
+  /** How often to update filtered metrics */
+  public static final int EDGES_FILTERED_UPDATE_PERIOD = 10000;
 
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(
@@ -62,9 +66,14 @@ public class EdgeInputSplitsCallable<I extends WritableComparable,
   /** Input split max edges (-1 denotes all) */
   private final long inputSplitMaxEdges;
 
+  /** Filter to use */
+  private final EdgeInputFilter<I, E> edgeInputFilter;
+
   // Metrics
   /** edges loaded meter across all readers */
   private final Meter totalEdgesMeter;
+  /** edges filtered out by user */
+  private final Counter totalEdgesFiltered;
 
   /**
    * Constructor.
@@ -90,9 +99,11 @@ public class EdgeInputSplitsCallable<I extends WritableComparable,
     this.edgeInputFormat = edgeInputFormat;
 
     inputSplitMaxEdges = configuration.getInputSplitMaxEdges();
+    edgeInputFilter = configuration.getEdgeInputFilter();
 
     // Initialize Metrics
     totalEdgesMeter = getTotalEdgesLoadedMeter();
+    totalEdgesFiltered = getTotalEdgesFilteredCounter();
   }
 
   @Override
@@ -121,7 +132,10 @@ public class EdgeInputSplitsCallable<I extends WritableComparable,
         (ImmutableClassesGiraphConfiguration<I, Writable, E, Writable>)
             configuration);
     edgeReader.initialize(inputSplit, context);
+
     long inputSplitEdgesLoaded = 0;
+    long inputSplitEdgesFiltered = 0;
+
     while (edgeReader.nextEdge()) {
       I sourceId = edgeReader.getCurrentSourceId();
       Edge<I, E> readerEdge = edgeReader.getCurrentEdge();
@@ -141,14 +155,24 @@ public class EdgeInputSplitsCallable<I extends WritableComparable,
                 "without a value!  - " + readerEdge);
       }
 
-      graphState.getWorkerClientRequestProcessor().sendEdgeRequest(
-          sourceId, readerEdge);
-      context.progress(); // do this before potential data transfer
       ++inputSplitEdgesLoaded;
 
-      // Update status every VERTICES_UPDATE_PERIOD edges
-      if (inputSplitEdgesLoaded % VERTICES_UPDATE_PERIOD == 0) {
-        totalEdgesMeter.mark(VERTICES_UPDATE_PERIOD);
+      if (edgeInputFilter.dropEdge(sourceId, readerEdge)) {
+        ++inputSplitEdgesFiltered;
+        if (inputSplitEdgesFiltered % EDGES_FILTERED_UPDATE_PERIOD == 0) {
+          totalEdgesFiltered.inc(inputSplitEdgesFiltered);
+          inputSplitEdgesFiltered = 0;
+        }
+        continue;
+      }
+
+      graphState.getWorkerClientRequestProcessor().sendEdgeRequest(sourceId,
+          readerEdge);
+      context.progress(); // do this before potential data transfer
+
+      // Update status every EDGES_UPDATE_PERIOD edges
+      if (inputSplitEdgesLoaded % EDGES_UPDATE_PERIOD == 0) {
+        totalEdgesMeter.mark(EDGES_UPDATE_PERIOD);
         LoggerUtils.setStatusAndLog(context, LOG, Level.INFO,
             "readEdgeInputSplit: Loaded " +
                 totalEdgesMeter.count() + " edges at " +
@@ -169,6 +193,10 @@ public class EdgeInputSplitsCallable<I extends WritableComparable,
       }
     }
     edgeReader.close();
+
+    totalEdgesFiltered.inc(inputSplitEdgesFiltered);
+    totalEdgesMeter.mark(inputSplitEdgesLoaded % EDGES_UPDATE_PERIOD);
+
     return new VertexEdgeCount(0, inputSplitEdgesLoaded);
   }
 }

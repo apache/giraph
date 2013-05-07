@@ -20,14 +20,15 @@ package org.apache.giraph.worker;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.GraphState;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexEdgeCount;
 import org.apache.giraph.io.GiraphInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexReader;
+import org.apache.giraph.io.filters.VertexInputFilter;
 import org.apache.giraph.partition.PartitionOwner;
 import org.apache.giraph.utils.LoggerUtils;
 import org.apache.giraph.utils.MemoryUtils;
-import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.zk.ZooKeeperExt;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -36,6 +37,7 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
+import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Meter;
 
 import java.io.IOException;
@@ -55,6 +57,9 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
     extends InputSplitsCallable<I, V, E, M> {
   /** How often to update metrics and print info */
   public static final int VERTICES_UPDATE_PERIOD = 250000;
+  /** How often to update filtered out metrics */
+  public static final int VERTICES_FILTERED_UPDATE_PERIOD = 2500;
+
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(VertexInputSplitsCallable.class);
@@ -64,10 +69,14 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
   private final long inputSplitMaxVertices;
   /** Bsp service worker (only use thread-safe methods) */
   private final BspServiceWorker<I, V, E, M> bspServiceWorker;
+  /** Filter to select which vertices to keep */
+  private final VertexInputFilter<I, V, E, M> vertexInputFilter;
 
   // Metrics
   /** number of vertices loaded meter across all readers */
   private final Meter totalVerticesMeter;
+  /** number of vertices filtered out */
+  private final Counter totalVerticesFilteredCounter;
   /** number of edges loaded meter across all readers */
   private final Meter totalEdgesMeter;
 
@@ -96,9 +105,11 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
 
     inputSplitMaxVertices = configuration.getInputSplitMaxVertices();
     this.bspServiceWorker = bspServiceWorker;
+    vertexInputFilter = configuration.getVertexInputFilter();
 
     // Initialize Metrics
     totalVerticesMeter = getTotalVerticesLoadedMeter();
+    totalVerticesFilteredCounter = getTotalVerticesFilteredCounter();
     totalEdgesMeter = getTotalEdgesLoadedMeter();
   }
 
@@ -127,9 +138,13 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
     vertexReader.setConf(
         (ImmutableClassesGiraphConfiguration<I, V, E, Writable>) configuration);
     vertexReader.initialize(inputSplit, context);
+
     long inputSplitVerticesLoaded = 0;
+    long inputSplitVerticesFiltered = 0;
+
     long edgesSinceLastUpdate = 0;
     long inputSplitEdgesLoaded = 0;
+
     while (vertexReader.nextVertex()) {
       Vertex<I, V, E, M> readerVertex =
           (Vertex<I, V, E, M>) vertexReader.getCurrentVertex();
@@ -144,12 +159,22 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
       readerVertex.setConf(configuration);
       readerVertex.setGraphState(graphState);
 
+      ++inputSplitVerticesLoaded;
+
+      if (vertexInputFilter.dropVertex(readerVertex)) {
+        ++inputSplitVerticesFiltered;
+        if (inputSplitVerticesFiltered % VERTICES_FILTERED_UPDATE_PERIOD == 0) {
+          totalVerticesFilteredCounter.inc(inputSplitVerticesFiltered);
+          inputSplitVerticesFiltered = 0;
+        }
+        continue;
+      }
+
       PartitionOwner partitionOwner =
           bspServiceWorker.getVertexPartitionOwner(readerVertex.getId());
       graphState.getWorkerClientRequestProcessor().sendVertexRequest(
           partitionOwner, readerVertex);
       context.progress(); // do this before potential data transfer
-      ++inputSplitVerticesLoaded;
       edgesSinceLastUpdate += readerVertex.getNumEdges();
 
       // Update status every VERTICES_UPDATE_PERIOD vertices
@@ -181,6 +206,11 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
         break;
       }
     }
+
+    totalVerticesMeter.mark(inputSplitVerticesLoaded % VERTICES_UPDATE_PERIOD);
+    totalEdgesMeter.mark(edgesSinceLastUpdate);
+    totalVerticesFilteredCounter.inc(inputSplitVerticesFiltered);
+
     vertexReader.close();
     return new VertexEdgeCount(inputSplitVerticesLoaded,
         inputSplitEdgesLoaded + edgesSinceLastUpdate);

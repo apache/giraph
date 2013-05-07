@@ -28,6 +28,8 @@ import org.apache.giraph.graph.VertexValueFactory;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
+import org.apache.giraph.io.filters.EdgeInputFilter;
+import org.apache.giraph.io.filters.VertexInputFilter;
 import org.apache.giraph.job.GiraphJobObserver;
 import org.apache.giraph.master.MasterCompute;
 import org.apache.giraph.master.MasterObserver;
@@ -103,6 +105,26 @@ public class GiraphConfiguration extends Configuration
   public final void setVertexValueFactoryClass(
       Class<? extends VertexValueFactory> vertexValueFactoryClass) {
     VERTEX_VALUE_FACTORY_CLASS.set(this, vertexValueFactoryClass);
+  }
+
+  /**
+   * Set the edge input filter class
+   *
+   * @param edgeFilterClass class to use
+   */
+  public void setEdgeInputFilterClass(
+      Class<? extends EdgeInputFilter> edgeFilterClass) {
+    EDGE_INPUT_FILTER_CLASS.set(this, edgeFilterClass);
+  }
+
+  /**
+   * Set the vertex input filter class
+   *
+   * @param vertexFilterClass class to use
+   */
+  public void setVertexInputFilterClass(
+      Class<? extends VertexInputFilter> vertexFilterClass) {
+    VERTEX_INPUT_FILTER_CLASS.set(this, vertexFilterClass);
   }
 
   /**
