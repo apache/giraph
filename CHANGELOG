@@ -1,6 +1,10 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-659: giraph-hive tests all fail (majakabiljo)
+
+  GIRAPH-663: Fix HiveIO metastore host setting (nitay)
+
   GIRAPH-661: Munge symbols helper (nitay)
 
   GIRAPH-662: Incubator release should point to archived (aching)
