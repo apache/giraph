@@ -254,7 +254,7 @@ under the License.
 
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-    <dep.hiveio.version>0.10</dep.hiveio.version>
+    <dep.hiveio.version>0.11</dep.hiveio.version>
     <hbase.version>0.90.5</hbase.version>
     <codehaus-jackson.version>1.8.0</codehaus-jackson.version>
     <fasterxml-jackson.version>2.1.0</fasterxml-jackson.version>

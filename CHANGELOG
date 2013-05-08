@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-664: Bump HiveIO dep - fixes tests with hadoop facebook
+  (nitayj via majakabiljo)
+
   GIRAPH-622: Website Documentation: Out-of-core (claudio)
 
   GIRAPH-659: giraph-hive tests all fail (majakabiljo)
