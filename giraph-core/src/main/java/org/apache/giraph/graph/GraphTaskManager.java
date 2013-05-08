@@ -54,6 +54,7 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Appender;
 import org.apache.log4j.Level;
+import org.apache.log4j.LogManager;
 import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 
@@ -593,37 +594,35 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
    */
   private void locateZookeeperClasspath(Path[] fileClassPaths)
     throws IOException {
-    if (!conf.getLocalTestMode()) {
-      String zkClasspath = null;
-      if (fileClassPaths == null) {
-        if (LOG.isInfoEnabled()) {
-          LOG.info("Distributed cache is empty. Assuming fatjar.");
-        }
-        String jarFile = context.getJar();
-        if (jarFile == null) {
-          jarFile = findContainingJar(getClass());
-        }
-        // Pure YARN profiles will use unpacked resources, so calls
-        // to "findContainingJar()" in that context can return NULL!
-        zkClasspath = null == jarFile ?
-          "./*" : jarFile.replaceFirst("file:", "");
-      } else {
-        StringBuilder sb = new StringBuilder();
-        sb.append(fileClassPaths[0]);
-
-        for (int i = 1; i < fileClassPaths.length; i++) {
-          sb.append(":");
-          sb.append(fileClassPaths[i]);
-        }
-        zkClasspath = sb.toString();
-      }
-
+    String zkClasspath = null;
+    if (fileClassPaths == null) {
       if (LOG.isInfoEnabled()) {
-        LOG.info("setup: classpath @ " + zkClasspath + " for job " +
-          context.getJobName());
+        LOG.info("Distributed cache is empty. Assuming fatjar.");
       }
-      conf.setZooKeeperJar(zkClasspath);
+      String jarFile = context.getJar();
+      if (jarFile == null) {
+        jarFile = findContainingJar(getClass());
+      }
+      // Pure YARN profiles will use unpacked resources, so calls
+      // to "findContainingJar()" in that context can return NULL!
+      zkClasspath = null == jarFile ?
+          "./*" : jarFile.replaceFirst("file:", "");
+    } else {
+      StringBuilder sb = new StringBuilder();
+      sb.append(fileClassPaths[0]);
+
+      for (int i = 1; i < fileClassPaths.length; i++) {
+        sb.append(":");
+        sb.append(fileClassPaths[i]);
+      }
+      zkClasspath = sb.toString();
     }
+
+    if (LOG.isInfoEnabled()) {
+      LOG.info("setup: classpath @ " + zkClasspath + " for job " +
+          context.getJobName());
+    }
+    conf.setZooKeeperJar(zkClasspath);
   }
 
   /**
@@ -651,6 +650,12 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
       while (appenderEnum.hasMoreElements()) {
         appenderEnum.nextElement().setLayout(layout);
       }
+    }
+    // Change ZooKeeper logging level to error (info is quite verbose) for
+    // testing only
+    if (conf.getLocalTestMode()) {
+      LogManager.getLogger(org.apache.zookeeper.server.PrepRequestProcessor.
+          class.getName()).setLevel(Level.ERROR);
     }
   }
 

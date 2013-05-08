@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-665: Reduce ZooKeeper output in tests by changing log level from 
+  INFO to ERROR (aching)
+
   GIRAPH-664: Bump HiveIO dep - fixes tests with hadoop facebook
   (nitayj via majakabiljo)
 

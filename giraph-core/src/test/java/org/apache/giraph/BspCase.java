@@ -30,6 +30,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.log4j.Level;
+import org.apache.log4j.LogManager;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.junit.After;
@@ -98,6 +100,7 @@ public class BspCase implements Watcher {
       conf.setWorkerConfiguration(1, 1, 100.0f);
       // Single node testing
       GiraphConstants.SPLIT_MASTER_WORKER.set(conf, false);
+      GiraphConstants.LOCAL_TEST_MODE.set(conf, true);
     }
     conf.setMaxMasterSuperstepWaitMsecs(30 * 1000);
     conf.setEventWaitMsecs(3 * 1000);
@@ -180,7 +183,6 @@ public class BspCase implements Watcher {
    */
   public BspCase(String testName) {
     this.testName = testName;
-
   }
 
   /**
