@@ -146,4 +146,13 @@ public class GiraphMetrics {
     perJobRequired.printToStream(out);
     perSuperstep.printToStream(out);
   }
+
+  /**
+   * Stop using metrics (for cleanup)
+   */
+  public void shutdown() {
+    perJobOptional.shutdown();
+    perJobRequired.shutdown();
+    perSuperstep.shutdown();
+  }
 }

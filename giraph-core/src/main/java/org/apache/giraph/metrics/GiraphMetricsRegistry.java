@@ -303,4 +303,11 @@ public class GiraphMetricsRegistry {
   protected MetricName makeMetricName(String name) {
     return new MetricName(groupName, type, name);
   }
+
+  /**
+   * Nothing will be captured after this is called.
+   */
+  public void shutdown() {
+    registry.shutdown();
+  }
 }

@@ -890,6 +890,8 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
     if (zkManager != null) {
       zkManager.offlineZooKeeperServers(ZooKeeperManager.State.FINISHED);
     }
+    // Stop tracking metrics
+    GiraphMetrics.get().shutdown();
   }
 
   /**
@@ -914,6 +916,8 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
       if (graphFunctions.isWorker()) {
         serviceWorker.failureCleanup();
       }
+      // Stop tracking metrics
+      GiraphMetrics.get().shutdown();
     // Checkstyle exception due to needing to get the original
     // exception on failure
     // CHECKSTYLE: stop IllegalCatch

@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-666: Netty execs threads and metrics threads don't get 
+  cleaned up properly (aching)
+
   GIRAPH-665: Reduce ZooKeeper output in tests by changing log level from 
   INFO to ERROR (aching)
 

@@ -118,6 +118,8 @@ public class NettyServer {
   private final ExecutorService workerExecutorService;
   /** Request completed map per worker */
   private final WorkerRequestReservedMap workerRequestReservedMap;
+  /** Use execution handler? */
+  private final boolean useExecutionHandler;
   /** Execution handler (if used) */
   private final ExecutionHandler executionHandler;
   /** Name of the handler before the execution handler (if used) */
@@ -172,7 +174,7 @@ public class NettyServer {
 
     handlerBeforeExecutionHandler =
         GiraphConstants.NETTY_SERVER_EXECUTION_AFTER_HANDLER.get(conf);
-    boolean useExecutionHandler =
+    useExecutionHandler =
         GiraphConstants.NETTY_SERVER_USE_EXECUTION_HANDLER.get(conf);
     if (useExecutionHandler) {
       int executionThreads = conf.getNettyServerExecutionThreads();
@@ -367,6 +369,9 @@ public class NettyServer {
     }
     bootstrap.releaseExternalResources();
     channelFactory.releaseExternalResources();
+    if (useExecutionHandler) {
+      executionHandler.releaseExternalResources();
+    }
     if (LOG.isInfoEnabled()) {
       LOG.info("stop: Netty server halted");
     }

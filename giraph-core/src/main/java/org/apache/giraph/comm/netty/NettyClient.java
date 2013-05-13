@@ -164,6 +164,8 @@ public class NettyClient {
   private final int maxPoolSize;
   /** Maximum number of attempts to resolve an address*/
   private final int maxResolveAddressAttempts;
+  /** Use execution handler? */
+  private final boolean useExecutionHandler;
   /** Execution handler (if used) */
   private final ExecutionHandler executionHandler;
   /** Name of the handler before the execution handler (if used) */
@@ -218,7 +220,7 @@ public class NettyClient {
 
     handlerBeforeExecutionHandler =
         NETTY_CLIENT_EXECUTION_AFTER_HANDLER.get(conf);
-    boolean useExecutionHandler = NETTY_CLIENT_USE_EXECUTION_HANDLER.get(conf);
+    useExecutionHandler = NETTY_CLIENT_USE_EXECUTION_HANDLER.get(conf);
     if (useExecutionHandler) {
       int executionThreads = NETTY_CLIENT_EXECUTION_THREADS.get(conf);
       executionHandler = new ExecutionHandler(
@@ -551,6 +553,9 @@ public class NettyClient {
             bossExecutorService.shutdownNow();
             workerExecutorService.shutdownNow();
             bootstrap.releaseExternalResources();
+            if (useExecutionHandler) {
+              executionHandler.releaseExternalResources();
+            }
           }
         }
       });
