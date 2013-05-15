@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-608: Spelling error in Combiner.java (Michael Aro via aching)
+
   GIRAPH-666: Netty execs threads and metrics threads don't get 
   cleaned up properly (aching)
 

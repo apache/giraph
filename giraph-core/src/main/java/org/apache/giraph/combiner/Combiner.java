@@ -32,7 +32,7 @@ import org.apache.hadoop.io.WritableComparable;
 public abstract class Combiner<I extends WritableComparable,
     M extends Writable> {
   /**
-   * Combine messageToCombine with originalMassage,
+   * Combine messageToCombine with originalMessage,
    * by modifying originalMessage.
    *
    * @param vertexIndex Index of the vertex getting these messages
