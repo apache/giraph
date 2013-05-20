@@ -59,7 +59,7 @@ public class MasterAggregatorHandler implements MasterAggregatorUsage,
   /** Progressable used to report progress */
   private final Progressable progressable;
   /** Giraph configuration */
-  private final ImmutableClassesGiraphConfiguration<?, ?, ?, ?> conf;
+  private final ImmutableClassesGiraphConfiguration<?, ?, ?> conf;
 
   /**
    * Constructor
@@ -68,7 +68,7 @@ public class MasterAggregatorHandler implements MasterAggregatorUsage,
    * @param progressable Progressable used for reporting progress
    */
   public MasterAggregatorHandler(
-      ImmutableClassesGiraphConfiguration<?, ?, ?, ?> conf,
+      ImmutableClassesGiraphConfiguration<?, ?, ?> conf,
       Progressable progressable) {
     this.conf = conf;
     this.progressable = progressable;

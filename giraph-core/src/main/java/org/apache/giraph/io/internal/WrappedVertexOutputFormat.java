@@ -70,7 +70,7 @@ public class WrappedVertexOutputFormat<I extends WritableComparable,
     return new VertexWriter<I, V, E>() {
       @Override
       public void setConf(
-          ImmutableClassesGiraphConfiguration<I, V, E, Writable> conf) {
+          ImmutableClassesGiraphConfiguration<I, V, E> conf) {
         super.setConf(conf);
         vertexWriter.setConf(conf);
       }
@@ -91,7 +91,7 @@ public class WrappedVertexOutputFormat<I extends WritableComparable,
 
       @Override
       public void writeVertex(
-          Vertex<I, V, E, ?> vertex) throws IOException, InterruptedException {
+          Vertex<I, V, E> vertex) throws IOException, InterruptedException {
         vertexWriter.writeVertex(vertex);
       }
     };

@@ -19,11 +19,11 @@ package org.apache.giraph.hive.input;
 
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.hive.Helpers;
+import org.apache.giraph.hive.computations.ComputationCountEdges;
+import org.apache.giraph.hive.computations.ComputationSumEdges;
 import org.apache.giraph.hive.input.edge.HiveEdgeInputFormat;
 import org.apache.giraph.hive.input.edge.examples.HiveIntDoubleEdge;
 import org.apache.giraph.hive.input.edge.examples.HiveIntNullEdge;
-import org.apache.giraph.hive.vertexes.VertexCountEdges;
-import org.apache.giraph.hive.vertexes.VertexSumEdges;
 import org.apache.giraph.io.formats.IdWithValueTextOutputFormat;
 import org.apache.giraph.utils.InternalVertexRunner;
 import org.apache.thrift.TException;
@@ -71,7 +71,7 @@ public class HiveEdgeInputTest {
     GiraphConfiguration conf = new GiraphConfiguration();
     HIVE_EDGE_INPUT.setTable(conf, tableName);
     HIVE_EDGE_INPUT.setClass(conf, HiveIntNullEdge.class);
-    conf.setVertexClass(VertexCountEdges.class);
+    conf.setComputationClass(ComputationCountEdges.class);
     conf.setEdgeInputFormatClass(HiveEdgeInputFormat.class);
     conf.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
     Iterable<String> output = InternalVertexRunner.run(conf, new String[0], new String[0]);
@@ -103,7 +103,7 @@ public class HiveEdgeInputTest {
     HIVE_EDGE_INPUT.setTable(conf, tableName);
     HIVE_EDGE_INPUT.setPartition(conf, partition);
     HIVE_EDGE_INPUT.setClass(conf, HiveIntNullEdge.class);
-    conf.setVertexClass(VertexCountEdges.class);
+    conf.setComputationClass(ComputationCountEdges.class);
     conf.setEdgeInputFormatClass(HiveEdgeInputFormat.class);
     conf.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
     Iterable<String> output = InternalVertexRunner.run(conf, new String[0], new String[0]);
@@ -134,7 +134,7 @@ public class HiveEdgeInputTest {
     GiraphConfiguration conf = new GiraphConfiguration();
     HIVE_EDGE_INPUT.setTable(conf, tableName);
     HIVE_EDGE_INPUT.setClass(conf, HiveIntDoubleEdge.class);
-    conf.setVertexClass(VertexSumEdges.class);
+    conf.setComputationClass(ComputationSumEdges.class);
     conf.setEdgeInputFormatClass(HiveEdgeInputFormat.class);
     conf.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
     Iterable<String> output = InternalVertexRunner.run(conf, new String[0], new String[0]);

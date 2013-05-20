@@ -36,16 +36,15 @@ import java.io.IOException;
  * @param <I> Vertex id
  * @param <V> Vertex data
  * @param <E> Edge data
- * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public class GraphMapper<I extends WritableComparable, V extends Writable,
-    E extends Writable, M extends Writable> extends
+    E extends Writable> extends
     Mapper<Object, Object, Object, Object> {
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(GraphMapper.class);
   /** Manage the framework-agnostic Giraph tasks for this job run */
-  private GraphTaskManager<I, V, E, M> graphTaskManager;
+  private GraphTaskManager<I, V, E> graphTaskManager;
 
   @Override
   public void setup(Context context)
@@ -56,7 +55,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
 
     // Execute all Giraph-related role(s) assigned to this compute node.
     // Roles can include "master," "worker," "zookeeper," or . . . ?
-    graphTaskManager = new GraphTaskManager<I, V, E, M>(context);
+    graphTaskManager = new GraphTaskManager<I, V, E>(context);
     graphTaskManager.setup(
       DistributedCache.getLocalCacheArchives(context.getConfiguration()));
   }

@@ -45,12 +45,12 @@ public abstract class SimpleVertexToHive<I extends WritableComparable,
    * @param vertex Vertex to read from.
    * @param record HiveRecord to write to.
    */
-  public abstract void fillRecord(Vertex<I, V, E, ?> vertex,
+  public abstract void fillRecord(Vertex<I, V, E> vertex,
       HiveWritableRecord record);
 
   @Override
   public final void saveVertex(
-      Vertex<I, V, E, ?> vertex,
+      Vertex<I, V, E> vertex,
       HiveRecord reusableRecord,
       HiveRecordSaver recordSaver) throws IOException, InterruptedException {
     fillRecord(vertex, reusableRecord);

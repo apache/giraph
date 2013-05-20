@@ -41,9 +41,9 @@ public class NettyWorkerAggregatorRequestProcessor
   /** Progressable used to report progress */
   private final Progressable progressable;
   /** NettyClient that could be shared among one or more instances */
-  private final WorkerClient<?, ?, ?, ?> workerClient;
+  private final WorkerClient<?, ?, ?> workerClient;
   /** Service worker */
-  private final CentralizedServiceWorker<?, ?, ?, ?> serviceWorker;
+  private final CentralizedServiceWorker<?, ?, ?> serviceWorker;
   /** Cached map of partition ids to serialized aggregator data */
   private final SendAggregatedValueCache sendAggregatedValueCache =
       new SendAggregatedValueCache();
@@ -59,8 +59,8 @@ public class NettyWorkerAggregatorRequestProcessor
    */
   public NettyWorkerAggregatorRequestProcessor(
       Progressable progressable,
-      ImmutableClassesGiraphConfiguration<?, ?, ?, ?> configuration,
-      CentralizedServiceWorker<?, ?, ?, ?> serviceWorker) {
+      ImmutableClassesGiraphConfiguration<?, ?, ?> configuration,
+      CentralizedServiceWorker<?, ?, ?> serviceWorker) {
     this.serviceWorker = serviceWorker;
     this.workerClient = serviceWorker.getWorkerClient();
     this.progressable = progressable;

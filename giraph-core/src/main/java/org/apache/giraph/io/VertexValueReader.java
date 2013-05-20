@@ -39,9 +39,9 @@ public abstract class VertexValueReader<I extends WritableComparable,
   }
 
   @Override
-  public final Vertex<I, V, Writable, ?> getCurrentVertex() throws IOException,
+  public final Vertex<I, V, Writable> getCurrentVertex() throws IOException,
       InterruptedException {
-    Vertex<I, V, Writable, ?> vertex = getConf().createVertex();
+    Vertex<I, V, Writable> vertex = getConf().createVertex();
     vertex.initialize(getCurrentVertexId(), getCurrentVertexValue());
     return vertex;
   }

@@ -20,9 +20,9 @@ package org.apache.giraph.conf;
 
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.combiner.Combiner;
+import org.apache.giraph.graph.Computation;
 import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.edge.ReuseObjectsOutEdges;
-import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.graph.VertexValueFactory;
 import org.apache.giraph.io.EdgeInputFormat;
@@ -35,7 +35,6 @@ import org.apache.giraph.master.MasterCompute;
 import org.apache.giraph.master.MasterObserver;
 import org.apache.giraph.partition.GraphPartitionerFactory;
 import org.apache.giraph.partition.Partition;
-import org.apache.giraph.partition.PartitionContext;
 import org.apache.giraph.partition.ReusesObjectsPartition;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.giraph.worker.WorkerObserver;
@@ -79,22 +78,22 @@ public class GiraphConfiguration extends Configuration
   }
 
   /**
-   * Get the user's subclassed {@link org.apache.giraph.graph.Vertex}
+   * Get the user's subclassed {@link Computation}
    *
-   * @return User's vertex class
+   * @return User's computation class
    */
-  public Class<? extends Vertex> getVertexClass() {
-    return VERTEX_CLASS.get(this);
+  public Class<? extends Computation> getComputationClass() {
+    return COMPUTATION_CLASS.get(this);
   }
 
   /**
-   * Set the vertex class (required)
+   * Set the computation class (required)
    *
-   * @param vertexClass Runs vertex computation
+   * @param computationClass Runs vertex computation
    */
-  public final void setVertexClass(
-      Class<? extends Vertex> vertexClass) {
-    VERTEX_CLASS.set(this, vertexClass);
+  public void setComputationClass(
+      Class<? extends Computation> computationClass) {
+    COMPUTATION_CLASS.set(this, computationClass);
   }
 
   /**
@@ -407,7 +406,7 @@ public class GiraphConfiguration extends Configuration
    *
    * @param vertexCombinerClass Determines how vertex messages are combined
    */
-  public final void setCombinerClass(
+  public void setCombinerClass(
       Class<? extends Combiner> vertexCombinerClass) {
     VERTEX_COMBINER_CLASS.set(this, vertexCombinerClass);
   }
@@ -449,17 +448,6 @@ public class GiraphConfiguration extends Configuration
    */
   public final void setResolverCreateVertexOnMessages(boolean v) {
     RESOLVER_CREATE_VERTEX_ON_MSGS.set(this, v);
-  }
-
-  /**
-   * Set the partition context class (optional)
-   *
-   * @param partitionContextClass Determines what code is executed for each
-   *        partition before and after each superstep
-   */
-  public final void setPartitionContextClass(
-      Class<? extends PartitionContext> partitionContextClass) {
-    PARTITION_CONTEXT_CLASS.set(this, partitionContextClass);
   }
 
   /**

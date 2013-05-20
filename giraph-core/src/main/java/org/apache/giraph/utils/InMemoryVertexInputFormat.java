@@ -76,9 +76,9 @@ public class InMemoryVertexInputFormat<I extends WritableComparable,
    */
   private class InMemoryVertexReader extends VertexReader<I, V, E> {
     /** The iterator */
-    private Iterator<Vertex<I, V, E, ?>> vertexIterator;
+    private Iterator<Vertex<I, V, E>> vertexIterator;
     /** Current vertex */
-    private Vertex<I, V, E, ?> currentVertex;
+    private Vertex<I, V, E> currentVertex;
 
     @Override
     public void initialize(InputSplit inputSplit,
@@ -96,7 +96,7 @@ public class InMemoryVertexInputFormat<I extends WritableComparable,
     }
 
     @Override
-    public Vertex<I, V, E, ?> getCurrentVertex() {
+    public Vertex<I, V, E> getCurrentVertex() {
       return currentVertex;
     }
 

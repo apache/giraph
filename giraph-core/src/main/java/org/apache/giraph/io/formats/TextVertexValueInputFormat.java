@@ -39,11 +39,10 @@ import java.util.List;
  * @param <I> Vertex index value
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message value
  */
 @SuppressWarnings("rawtypes")
 public abstract class TextVertexValueInputFormat<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
+    V extends Writable, E extends Writable>
     extends VertexValueInputFormat<I, V> {
   /** Uses the GiraphTextInputFormat to do everything */
   protected GiraphTextInputFormat textInputFormat = new GiraphTextInputFormat();

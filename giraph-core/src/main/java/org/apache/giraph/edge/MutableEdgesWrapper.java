@@ -73,7 +73,7 @@ public class MutableEdgesWrapper<I extends WritableComparable,
   public static <I extends WritableComparable, E extends Writable>
   MutableEdgesWrapper<I, E> wrap(
       OutEdges<I, E> edges,
-      ImmutableClassesGiraphConfiguration<I, ?, E, ?> conf) {
+      ImmutableClassesGiraphConfiguration<I, ?, E> conf) {
     MutableEdgesWrapper<I, E> wrapper = new MutableEdgesWrapper<I, E>(
         edges, conf.createAndInitializeOutEdges(edges.size()));
     return wrapper;

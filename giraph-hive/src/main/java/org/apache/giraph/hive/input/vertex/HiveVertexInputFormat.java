@@ -59,7 +59,7 @@ public class HiveVertexInputFormat<I extends WritableComparable,
 
   @Override
   public void setConf(
-      ImmutableClassesGiraphConfiguration<I, V, E, Writable> conf) {
+      ImmutableClassesGiraphConfiguration<I, V, E> conf) {
     super.setConf(conf);
     HiveUtils.initializeHiveInput(
         hiveInputFormat,

@@ -64,7 +64,7 @@ public class WorkerAggregatorHandler implements WorkerThreadAggregatorUsage {
   private Map<String, Aggregator<Writable>> currentAggregatorMap =
       Maps.newHashMap();
   /** Service worker */
-  private final CentralizedServiceWorker<?, ?, ?, ?> serviceWorker;
+  private final CentralizedServiceWorker<?, ?, ?> serviceWorker;
   /** Progressable for reporting progress */
   private final Progressable progressable;
   /** How big a single aggregator request can be */
@@ -80,7 +80,7 @@ public class WorkerAggregatorHandler implements WorkerThreadAggregatorUsage {
    * @param progressable  Progressable for reporting progress
    */
   public WorkerAggregatorHandler(
-      CentralizedServiceWorker<?, ?, ?, ?> serviceWorker,
+      CentralizedServiceWorker<?, ?, ?> serviceWorker,
       ImmutableClassesGiraphConfiguration conf,
       Progressable progressable) {
     this.serviceWorker = serviceWorker;

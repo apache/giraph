@@ -45,14 +45,15 @@ public class SendMessageCache<I extends WritableComparable, M extends Writable>
    * @param serviceWorker Service worker
    */
   public SendMessageCache(ImmutableClassesGiraphConfiguration conf,
-      CentralizedServiceWorker<?, ?, ?, ?> serviceWorker) {
+      CentralizedServiceWorker<?, ?, ?> serviceWorker) {
     super(conf, serviceWorker, MAX_MSG_REQUEST_SIZE.get(conf),
         ADDITIONAL_MSG_REQUEST_SIZE.get(conf));
   }
 
   @Override
   public ByteArrayVertexIdMessages<I, M> createByteArrayVertexIdData() {
-    return new ByteArrayVertexIdMessages<I, M>();
+    return new ByteArrayVertexIdMessages<I, M>(
+        getConf().getOutgoingMessageValueClass());
   }
 
   /**

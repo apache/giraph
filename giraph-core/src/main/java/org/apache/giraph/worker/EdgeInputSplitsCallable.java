@@ -20,7 +20,6 @@ package org.apache.giraph.worker;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.Edge;
-import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.VertexEdgeCount;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.EdgeReader;
@@ -48,11 +47,10 @@ import java.io.IOException;
  * @param <I> Vertex id
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message data
  */
 public class EdgeInputSplitsCallable<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    extends InputSplitsCallable<I, V, E, M> {
+    V extends Writable, E extends Writable>
+    extends InputSplitsCallable<I, V, E> {
   /** How often to update metrics and print info */
   public static final int EDGES_UPDATE_PERIOD = 1000000;
   /** How often to update filtered metrics */
@@ -80,7 +78,6 @@ public class EdgeInputSplitsCallable<I extends WritableComparable,
    *
    * @param edgeInputFormat Edge input format
    * @param context Context
-   * @param graphState Graph state
    * @param configuration Configuration
    * @param bspServiceWorker service worker
    * @param splitsHandler Handler for input splits
@@ -89,13 +86,12 @@ public class EdgeInputSplitsCallable<I extends WritableComparable,
   public EdgeInputSplitsCallable(
       EdgeInputFormat<I, E> edgeInputFormat,
       Mapper<?, ?, ?, ?>.Context context,
-      GraphState<I, V, E, M> graphState,
-      ImmutableClassesGiraphConfiguration<I, V, E, M> configuration,
-      BspServiceWorker<I, V, E, M> bspServiceWorker,
+      ImmutableClassesGiraphConfiguration<I, V, E> configuration,
+      BspServiceWorker<I, V, E> bspServiceWorker,
       InputSplitsHandler splitsHandler,
       ZooKeeperExt zooKeeperExt)  {
-    super(context, graphState, configuration, bspServiceWorker,
-        splitsHandler, zooKeeperExt);
+    super(context, configuration, bspServiceWorker, splitsHandler,
+        zooKeeperExt);
     this.edgeInputFormat = edgeInputFormat;
 
     inputSplitMaxEdges = configuration.getInputSplitMaxEdges();
@@ -116,20 +112,18 @@ public class EdgeInputSplitsCallable<I extends WritableComparable,
    * maximum number of edges to be read from an input split.
    *
    * @param inputSplit Input split to process with edge reader
-   * @param graphState Current graph state
    * @return Edges loaded from this input split
    * @throws IOException
    * @throws InterruptedException
    */
   @Override
   protected VertexEdgeCount readInputSplit(
-      InputSplit inputSplit,
-      GraphState<I, V, E, M> graphState) throws IOException,
+      InputSplit inputSplit) throws IOException,
       InterruptedException {
     EdgeReader<I, E> edgeReader =
         edgeInputFormat.createEdgeReader(inputSplit, context);
     edgeReader.setConf(
-        (ImmutableClassesGiraphConfiguration<I, Writable, E, Writable>)
+        (ImmutableClassesGiraphConfiguration<I, Writable, E>)
             configuration);
     edgeReader.initialize(inputSplit, context);
 
@@ -166,8 +160,7 @@ public class EdgeInputSplitsCallable<I extends WritableComparable,
         continue;
       }
 
-      graphState.getWorkerClientRequestProcessor().sendEdgeRequest(sourceId,
-          readerEdge);
+      workerClientRequestProcessor.sendEdgeRequest(sourceId, readerEdge);
       context.progress(); // do this before potential data transfer
 
       // Update status every EDGES_UPDATE_PERIOD edges

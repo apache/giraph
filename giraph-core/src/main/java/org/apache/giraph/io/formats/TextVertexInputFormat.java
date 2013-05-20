@@ -154,10 +154,10 @@ public abstract class TextVertexInputFormat<I extends WritableComparable,
     TextVertexReader {
 
     @Override
-    public final Vertex<I, V, E, ?> getCurrentVertex() throws IOException,
+    public final Vertex<I, V, E> getCurrentVertex() throws IOException,
     InterruptedException {
       Text line = getRecordReader().getCurrentValue();
-      Vertex<I, V, E, ?> vertex = getConf().createVertex();
+      Vertex<I, V, E> vertex = getConf().createVertex();
       vertex.initialize(getId(line), getValue(line), getEdges(line));
       return vertex;
     }
@@ -222,10 +222,10 @@ public abstract class TextVertexInputFormat<I extends WritableComparable,
     }
 
     @Override
-    public final Vertex<I, V, E, ?> getCurrentVertex() throws IOException,
+    public final Vertex<I, V, E> getCurrentVertex() throws IOException,
     InterruptedException {
       Text line = getRecordReader().getCurrentValue();
-      Vertex<I, V, E, ?> vertex;
+      Vertex<I, V, E> vertex;
       T processed = preprocessLine(line);
       vertex = getConf().createVertex();
       vertex.initialize(getId(processed), getValue(processed),
@@ -306,11 +306,11 @@ public abstract class TextVertexInputFormat<I extends WritableComparable,
 
     @SuppressWarnings("unchecked")
     @Override
-    public final Vertex<I, V, E, ?> getCurrentVertex() throws IOException,
+    public final Vertex<I, V, E> getCurrentVertex() throws IOException,
         InterruptedException {
       // Note we are reading from value only since key is the line number
       Text line = getRecordReader().getCurrentValue();
-      Vertex<I, V, E, ?> vertex;
+      Vertex<I, V, E> vertex;
       T processed = null;
       try {
         processed = preprocessLine(line);
@@ -401,7 +401,7 @@ public abstract class TextVertexInputFormat<I extends WritableComparable,
      *          the exception thrown while reading the line
      * @return the recovered/alternative vertex to be used
      */
-    protected Vertex<I, V, E, ?> handleException(Text line, T processed, X e) {
+    protected Vertex<I, V, E> handleException(Text line, T processed, X e) {
       throw new IllegalArgumentException(e);
     }
 

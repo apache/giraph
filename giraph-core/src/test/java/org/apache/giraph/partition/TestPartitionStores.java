@@ -24,6 +24,7 @@ import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.utils.NoOpComputation;
 import org.apache.giraph.utils.UnsafeByteArrayInputStream;
 import org.apache.giraph.utils.UnsafeByteArrayOutputStream;
 import org.apache.hadoop.io.IntWritable;
@@ -48,25 +49,20 @@ import static org.mockito.Mockito.mock;
  */
 public class TestPartitionStores {
   private ImmutableClassesGiraphConfiguration<IntWritable, IntWritable,
-      NullWritable, IntWritable> conf;
+      NullWritable> conf;
   private Mapper<?, ?, ?, ?>.Context context;
 
-  public static class MyVertex extends Vertex<IntWritable, IntWritable,
-      NullWritable, IntWritable> {
-    @Override
-    public void compute(Iterable<IntWritable> messages) throws IOException {}
-  }
+  public static class MyComputation extends NoOpComputation<IntWritable,
+      IntWritable, NullWritable, IntWritable> { }
 
-  private Partition<IntWritable, IntWritable, NullWritable,
-        IntWritable> createPartition(
+  private Partition<IntWritable, IntWritable, NullWritable> createPartition(
       ImmutableClassesGiraphConfiguration<IntWritable, IntWritable,
-          NullWritable, IntWritable> conf,
+          NullWritable> conf,
       Integer id,
-      Vertex<IntWritable, IntWritable, NullWritable,
-          IntWritable>... vertices) {
-    Partition<IntWritable, IntWritable, NullWritable, IntWritable> partition =
+      Vertex<IntWritable, IntWritable, NullWritable>... vertices) {
+    Partition<IntWritable, IntWritable, NullWritable> partition =
         conf.createPartition(id, context);
-    for (Vertex<IntWritable, IntWritable, NullWritable, IntWritable> v :
+    for (Vertex<IntWritable, IntWritable, NullWritable> v :
         vertices) {
       partition.putVertex(v);
     }
@@ -76,17 +72,17 @@ public class TestPartitionStores {
   @Before
   public void setUp() {
     GiraphConfiguration configuration = new GiraphConfiguration();
-    configuration.setVertexClass(MyVertex.class);
+    configuration.setComputationClass(MyComputation.class);
     conf = new ImmutableClassesGiraphConfiguration<IntWritable, IntWritable,
-        NullWritable, IntWritable>(configuration);
+        NullWritable>(configuration);
     context = mock(Mapper.Context.class);
   }
 
   @Test
   public void testSimplePartitionStore() {
-    PartitionStore<IntWritable, IntWritable, NullWritable, IntWritable>
+    PartitionStore<IntWritable, IntWritable, NullWritable>
         partitionStore = new SimplePartitionStore<IntWritable, IntWritable,
-                NullWritable, IntWritable>(conf, context);
+                NullWritable>(conf, context);
     testReadWrite(partitionStore, conf);
     partitionStore.shutdown();
   }
@@ -94,30 +90,23 @@ public class TestPartitionStores {
   @Test
   public void testUnsafePartitionSerializationClass() throws IOException {
     conf.setPartitionClass(ByteArrayPartition.class);
-    Vertex<IntWritable, IntWritable, NullWritable, IntWritable> v1 =
+    Vertex<IntWritable, IntWritable, NullWritable> v1 =
         conf.createVertex();
     v1.initialize(new IntWritable(1), new IntWritable(1));
-    Vertex<IntWritable, IntWritable, NullWritable, IntWritable> v2 =
-        conf.createVertex();
+    Vertex<IntWritable, IntWritable, NullWritable> v2 = conf.createVertex();
     v2.initialize(new IntWritable(2), new IntWritable(2));
-    Vertex<IntWritable, IntWritable, NullWritable, IntWritable> v3 =
-        conf.createVertex();
+    Vertex<IntWritable, IntWritable, NullWritable> v3 = conf.createVertex();
     v3.initialize(new IntWritable(3), new IntWritable(3));
-    Vertex<IntWritable, IntWritable, NullWritable, IntWritable> v4 =
-        conf.createVertex();
+    Vertex<IntWritable, IntWritable, NullWritable> v4 = conf.createVertex();
     v4.initialize(new IntWritable(4), new IntWritable(4));
-    Vertex<IntWritable, IntWritable, NullWritable, IntWritable> v5 =
-        conf.createVertex();
+    Vertex<IntWritable, IntWritable, NullWritable> v5 = conf.createVertex();
     v5.initialize(new IntWritable(5), new IntWritable(5));
-    Vertex<IntWritable, IntWritable, NullWritable, IntWritable> v6 =
-        conf.createVertex();
+    Vertex<IntWritable, IntWritable, NullWritable> v6 = conf.createVertex();
     v6.initialize(new IntWritable(6), new IntWritable(6));
-    Vertex<IntWritable, IntWritable, NullWritable, IntWritable> v7 =
-        conf.createVertex();
+    Vertex<IntWritable, IntWritable, NullWritable> v7 = conf.createVertex();
     v7.initialize(new IntWritable(7), new IntWritable(7));
 
-    Partition<IntWritable, IntWritable, NullWritable,
-        IntWritable> partition =
+    Partition<IntWritable, IntWritable, NullWritable> partition =
         createPartition(conf, 3, v1, v2, v3, v4, v5, v6, v7);
     assertEquals(3, partition.getId());
     assertEquals(0, partition.getEdgeCount());
@@ -127,9 +116,8 @@ public class TestPartitionStores {
     partition.write(outputStream);
     UnsafeByteArrayInputStream inputStream = new UnsafeByteArrayInputStream(
         outputStream.getByteArray(), 0, outputStream.getPos());
-    Partition<IntWritable, IntWritable, NullWritable,
-        IntWritable> deserializatedPartition = conf.createPartition(-1,
-        context);
+    Partition<IntWritable, IntWritable, NullWritable> deserializatedPartition =
+        conf.createPartition(-1, context);
     deserializatedPartition.readFields(inputStream);
 
     assertEquals(3, deserializatedPartition.getId());
@@ -146,9 +134,9 @@ public class TestPartitionStores {
     GiraphConstants.MAX_PARTITIONS_IN_MEMORY.set(conf, 1);
     conf.setPartitionClass(ByteArrayPartition.class);
     
-    PartitionStore<IntWritable, IntWritable, NullWritable, IntWritable>
-        partitionStore = new DiskBackedPartitionStore<IntWritable,
-            IntWritable, NullWritable, IntWritable>(conf, context);
+    PartitionStore<IntWritable, IntWritable, NullWritable> partitionStore =
+        new DiskBackedPartitionStore<IntWritable, IntWritable, NullWritable>(
+            conf, context);
     testReadWrite(partitionStore, conf);
     partitionStore.shutdown();
     FileUtils.deleteDirectory(directory);
@@ -162,15 +150,15 @@ public class TestPartitionStores {
     GiraphConstants.USE_OUT_OF_CORE_GRAPH.set(conf, true);
     GiraphConstants.MAX_PARTITIONS_IN_MEMORY.set(conf, 1);
 
-    PartitionStore<IntWritable, IntWritable, NullWritable, IntWritable>
-        partitionStore = new DiskBackedPartitionStore<IntWritable,
-                        IntWritable, NullWritable, IntWritable>(conf, context);
+    PartitionStore<IntWritable, IntWritable, NullWritable> partitionStore =
+        new DiskBackedPartitionStore<IntWritable, IntWritable, NullWritable>(
+            conf, context);
     testReadWrite(partitionStore, conf);
     partitionStore.shutdown();
 
     GiraphConstants.MAX_PARTITIONS_IN_MEMORY.set(conf, 2);
     partitionStore = new DiskBackedPartitionStore<IntWritable,
-            IntWritable, NullWritable, IntWritable>(conf, context);
+            IntWritable, NullWritable>(conf, context);
     testReadWrite(partitionStore, conf);
     partitionStore.shutdown();
     FileUtils.deleteDirectory(directory);
@@ -184,29 +172,22 @@ public class TestPartitionStores {
    */
   public void testReadWrite(
       PartitionStore<IntWritable, IntWritable,
-          NullWritable, IntWritable> partitionStore,
+          NullWritable> partitionStore,
       ImmutableClassesGiraphConfiguration<IntWritable, IntWritable,
-          NullWritable, IntWritable> conf) {
-    Vertex<IntWritable, IntWritable, NullWritable, IntWritable> v1 =
-        conf.createVertex();
+          NullWritable> conf) {
+    Vertex<IntWritable, IntWritable, NullWritable> v1 = conf.createVertex();
     v1.initialize(new IntWritable(1), new IntWritable(1));
-    Vertex<IntWritable, IntWritable, NullWritable, IntWritable> v2 =
-        conf.createVertex();
+    Vertex<IntWritable, IntWritable, NullWritable> v2 = conf.createVertex();
     v2.initialize(new IntWritable(2), new IntWritable(2));
-    Vertex<IntWritable, IntWritable, NullWritable, IntWritable> v3 =
-        conf.createVertex();
+    Vertex<IntWritable, IntWritable, NullWritable> v3 = conf.createVertex();
     v3.initialize(new IntWritable(3), new IntWritable(3));
-    Vertex<IntWritable, IntWritable, NullWritable, IntWritable> v4 =
-        conf.createVertex();
+    Vertex<IntWritable, IntWritable, NullWritable> v4 = conf.createVertex();
     v4.initialize(new IntWritable(4), new IntWritable(4));
-    Vertex<IntWritable, IntWritable, NullWritable, IntWritable> v5 =
-        conf.createVertex();
+    Vertex<IntWritable, IntWritable, NullWritable> v5 = conf.createVertex();
     v5.initialize(new IntWritable(5), new IntWritable(5));
-    Vertex<IntWritable, IntWritable, NullWritable, IntWritable> v6 =
-        conf.createVertex();
+    Vertex<IntWritable, IntWritable, NullWritable> v6 = conf.createVertex();
     v6.initialize(new IntWritable(7), new IntWritable(7));
-    Vertex<IntWritable, IntWritable, NullWritable, IntWritable> v7 =
-        conf.createVertex();
+    Vertex<IntWritable, IntWritable, NullWritable> v7 = conf.createVertex();
     v7.initialize(new IntWritable(7), new IntWritable(7));
     v7.addEdge(EdgeFactory.create(new IntWritable(1)));
     v7.addEdge(EdgeFactory.create(new IntWritable(2)));
@@ -218,15 +199,15 @@ public class TestPartitionStores {
     partitionStore.addPartition(createPartition(conf, 1, v6));
     partitionStore.addPartition(createPartition(conf, 4, v7));
 
-    Partition<IntWritable, IntWritable, NullWritable, IntWritable> partition1 =
+    Partition<IntWritable, IntWritable, NullWritable> partition1 =
         partitionStore.getPartition(1);
     partitionStore.putPartition(partition1);
-    Partition<IntWritable, IntWritable, NullWritable, IntWritable> partition2 =
+    Partition<IntWritable, IntWritable, NullWritable> partition2 =
         partitionStore.getPartition(2);
     partitionStore.putPartition(partition2);
-    Partition<IntWritable, IntWritable, NullWritable,
-        IntWritable> partition3 = partitionStore.removePartition(3);
-    Partition<IntWritable, IntWritable, NullWritable, IntWritable> partition4 =
+    Partition<IntWritable, IntWritable, NullWritable> partition3 =
+        partitionStore.removePartition(3);
+    Partition<IntWritable, IntWritable, NullWritable> partition4 =
         partitionStore.getPartition(4);
     partitionStore.putPartition(partition4);
 
@@ -234,12 +215,12 @@ public class TestPartitionStores {
     assertEquals(3, Iterables.size(partitionStore.getPartitionIds()));
     int partitionsNumber = 0;
     for (Integer partitionId : partitionStore.getPartitionIds()) {
-      Partition<IntWritable, IntWritable, NullWritable, IntWritable> p = 
+      Partition<IntWritable, IntWritable, NullWritable> p =
           partitionStore.getPartition(partitionId);
       partitionStore.putPartition(p);
       partitionsNumber++;
     }
-    Partition<IntWritable, IntWritable, NullWritable, IntWritable> partition;
+    Partition<IntWritable, IntWritable, NullWritable> partition;
     assertEquals(3, partitionsNumber);
     assertTrue(partitionStore.hasPartition(1));
     assertTrue(partitionStore.hasPartition(2));

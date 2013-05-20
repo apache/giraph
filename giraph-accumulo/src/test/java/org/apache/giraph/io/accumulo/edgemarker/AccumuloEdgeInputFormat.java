@@ -73,11 +73,11 @@ public class AccumuloEdgeInputFormat
     /*
    Each Key/Value contains the information needed to construct the vertices.
      */
-    public Vertex<Text, Text, Text, ?> getCurrentVertex()
+    public Vertex<Text, Text, Text> getCurrentVertex()
         throws IOException, InterruptedException {
       Key key = getRecordReader().getCurrentKey();
       Value value = getRecordReader().getCurrentValue();
-      Vertex<Text, Text, Text, ?> vertex =
+      Vertex<Text, Text, Text> vertex =
           getConfiguration().createVertex();
       Text vertexId = key.getRow();
       List<Edge<Text, Text>> edges = Lists.newLinkedList();

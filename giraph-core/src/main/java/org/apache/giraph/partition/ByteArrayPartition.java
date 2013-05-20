@@ -42,12 +42,11 @@ import java.util.concurrent.ConcurrentMap;
  * @param <I> Vertex index value
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message data
  */
 public class ByteArrayPartition<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    extends BasicPartition<I, V, E, M>
-    implements ReusesObjectsPartition<I, V, E, M> {
+    V extends Writable, E extends Writable>
+    extends BasicPartition<I, V, E>
+    implements ReusesObjectsPartition<I, V, E> {
   /**
    * Vertex map for this range (keyed by index).  Note that the byte[] is a
    * serialized vertex with the first four bytes as the length of the vertex
@@ -55,7 +54,7 @@ public class ByteArrayPartition<I extends WritableComparable,
    */
   private ConcurrentMap<I, byte[]> vertexMap;
   /** Representative vertex */
-  private Vertex<I, V, E, M> representativeVertex;
+  private Vertex<I, V, E> representativeVertex;
   /** Use unsafe serialization */
   private boolean useUnsafeSerialization;
 
@@ -78,7 +77,7 @@ public class ByteArrayPartition<I extends WritableComparable,
   }
 
   @Override
-  public Vertex<I, V, E, M> getVertex(I vertexIndex) {
+  public Vertex<I, V, E> getVertex(I vertexIndex) {
     byte[] vertexData = vertexMap.get(vertexIndex);
     if (vertexData == null) {
       return null;
@@ -89,7 +88,7 @@ public class ByteArrayPartition<I extends WritableComparable,
   }
 
   @Override
-  public Vertex<I, V, E, M> putVertex(Vertex<I, V, E, M> vertex) {
+  public Vertex<I, V, E> putVertex(Vertex<I, V, E> vertex) {
     byte[] vertexData =
         WritableUtils.writeVertexToByteArray(
             vertex, useUnsafeSerialization, getConf());
@@ -104,7 +103,7 @@ public class ByteArrayPartition<I extends WritableComparable,
   }
 
   @Override
-  public Vertex<I, V, E, M> removeVertex(I vertexIndex) {
+  public Vertex<I, V, E> removeVertex(I vertexIndex) {
     byte[] vertexBytes = vertexMap.remove(vertexIndex);
     if (vertexBytes == null) {
       return null;
@@ -115,15 +114,15 @@ public class ByteArrayPartition<I extends WritableComparable,
   }
 
   @Override
-  public void addPartition(Partition<I, V, E, M> partition) {
+  public void addPartition(Partition<I, V, E> partition) {
     // Only work with other ByteArrayPartition instances
     if (!(partition instanceof ByteArrayPartition)) {
       throw new IllegalStateException("addPartition: Cannot add partition " +
           "of type " + partition.getClass());
     }
 
-    ByteArrayPartition<I, V, E, M> byteArrayPartition =
-        (ByteArrayPartition<I, V, E, M>) partition;
+    ByteArrayPartition<I, V, E> byteArrayPartition =
+        (ByteArrayPartition<I, V, E>) partition;
     for (Map.Entry<I, byte[]> entry :
         byteArrayPartition.vertexMap.entrySet()) {
       vertexMap.put(entry.getKey(), entry.getValue());
@@ -147,7 +146,7 @@ public class ByteArrayPartition<I extends WritableComparable,
   }
 
   @Override
-  public void saveVertex(Vertex<I, V, E, M> vertex) {
+  public void saveVertex(Vertex<I, V, E> vertex) {
     // Reuse the old buffer whenever possible
     byte[] oldVertexData = vertexMap.get(vertex.getId());
     if (oldVertexData != null) {
@@ -211,7 +210,7 @@ public class ByteArrayPartition<I extends WritableComparable,
   }
 
   @Override
-  public Iterator<Vertex<I, V, E, M>> iterator() {
+  public Iterator<Vertex<I, V, E>> iterator() {
     return new RepresentativeVertexIterator();
   }
 
@@ -220,7 +219,7 @@ public class ByteArrayPartition<I extends WritableComparable,
    * the same representative vertex object.
    */
   private class RepresentativeVertexIterator implements
-      Iterator<Vertex<I, V, E, M>> {
+      Iterator<Vertex<I, V, E>> {
     /** Iterator to the vertex values */
     private Iterator<byte[]> vertexDataIterator =
         vertexMap.values().iterator();
@@ -231,7 +230,7 @@ public class ByteArrayPartition<I extends WritableComparable,
     }
 
     @Override
-    public Vertex<I, V, E, M> next() {
+    public Vertex<I, V, E> next() {
       WritableUtils.reinitializeVertexFromByteArray(
           vertexDataIterator.next(), representativeVertex,
           useUnsafeSerialization, getConf());

@@ -48,7 +48,7 @@ public class MultiEdgeInputFormat<I extends WritableComparable,
 
   @Override
   public void setConf(
-      ImmutableClassesGiraphConfiguration<I, Writable, E, Writable> conf) {
+      ImmutableClassesGiraphConfiguration<I, Writable, E> conf) {
     super.setConf(conf);
     edgeInputFormats =
         EdgeInputFormatDescription.createEdgeInputFormats(getConf());

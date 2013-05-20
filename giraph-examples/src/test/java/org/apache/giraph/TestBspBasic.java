@@ -24,21 +24,22 @@ import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.examples.GeneratedVertexReader;
-import org.apache.giraph.examples.SimpleCombinerVertex;
-import org.apache.giraph.examples.SimpleFailVertex;
-import org.apache.giraph.examples.SimpleMasterComputeVertex;
-import org.apache.giraph.examples.SimpleMsgVertex;
-import org.apache.giraph.examples.SimplePageRankVertex;
-import org.apache.giraph.examples.SimplePageRankVertex.SimplePageRankVertexInputFormat;
-import org.apache.giraph.examples.SimpleShortestPathsVertex;
-import org.apache.giraph.examples.SimpleSuperstepVertex;
-import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat;
-import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexOutputFormat;
+import org.apache.giraph.examples.SimpleCombinerComputation;
+import org.apache.giraph.examples.SimpleFailComputation;
+import org.apache.giraph.examples.SimpleMasterComputeComputation;
+import org.apache.giraph.examples.SimpleMsgComputation;
+import org.apache.giraph.examples.SimplePageRankComputation;
+import org.apache.giraph.examples.SimplePageRankComputation.SimplePageRankVertexInputFormat;
+import org.apache.giraph.examples.SimpleShortestPathsComputation;
+import org.apache.giraph.examples.SimpleSuperstepComputation;
+import org.apache.giraph.examples.SimpleSuperstepComputation.SimpleSuperstepVertexInputFormat;
+import org.apache.giraph.examples.SimpleSuperstepComputation.SimpleSuperstepVertexOutputFormat;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.formats.JsonLongDoubleFloatDoubleVertexOutputFormat;
 import org.apache.giraph.job.GiraphJob;
 import org.apache.giraph.job.HadoopUtils;
+import org.apache.giraph.utils.NoOpComputation;
 import org.apache.giraph.worker.InputSplitPathOrganizer;
 import org.apache.giraph.zk.ZooKeeperExt;
 import org.apache.hadoop.conf.Configuration;
@@ -111,13 +112,12 @@ public class
     System.out.println("testInstantiateVertex: java.class.path=" +
         System.getProperty("java.class.path"));
     GiraphConfiguration conf = new GiraphConfiguration();
-    conf.setVertexClass(SimpleSuperstepVertex.class);
-    conf.setVertexInputFormatClass(
-        SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat.class);
+    conf.setComputationClass(SimpleSuperstepComputation.class);
+    conf.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
     GiraphJob job = prepareJob(getCallingMethodName(), conf);
     ImmutableClassesGiraphConfiguration configuration =
         new ImmutableClassesGiraphConfiguration(job.getConfiguration());
-    Vertex<LongWritable, IntWritable, FloatWritable, IntWritable> vertex =
+    Vertex<LongWritable, IntWritable, FloatWritable> vertex =
         configuration.createVertex();
     vertex.initialize(new LongWritable(1), new IntWritable(1));
     System.out.println("testInstantiateVertex: Got vertex " + vertex);
@@ -133,11 +133,8 @@ public class
         byteArrayOutputStream.toString());
   }
 
-  private static class NullVertex extends Vertex<NullWritable, NullWritable,
-      NullWritable, NullWritable> {
-    @Override
-    public void compute(Iterable<NullWritable> messages) throws IOException { }
-  }
+  private static class NullComputation extends NoOpComputation<NullWritable,
+      NullWritable, NullWritable, NullWritable> { }
 
   /**
    * Test whether vertices with NullWritable for vertex value type, edge value
@@ -146,19 +143,17 @@ public class
   @Test
   public void testInstantiateNullVertex() throws IOException {
     GiraphConfiguration nullConf = new GiraphConfiguration();
-    nullConf.setVertexClass(NullVertex.class);
-    ImmutableClassesGiraphConfiguration<
-        NullWritable, NullWritable, NullWritable,
+    nullConf.setComputationClass(NullComputation.class);
+    ImmutableClassesGiraphConfiguration<NullWritable, NullWritable,
         NullWritable> immutableClassesGiraphConfiguration =
         new ImmutableClassesGiraphConfiguration<
-            NullWritable, NullWritable, NullWritable, NullWritable>(
-            nullConf);
+            NullWritable, NullWritable, NullWritable>(nullConf);
     NullWritable vertexValue =
         immutableClassesGiraphConfiguration.createVertexValue();
     NullWritable edgeValue =
         immutableClassesGiraphConfiguration.createEdgeValue();
     NullWritable messageValue =
-        immutableClassesGiraphConfiguration.createMessageValue();
+        immutableClassesGiraphConfiguration.createOutgoingMessageValue();
     assertSame(vertexValue.getClass(), NullWritable.class);
     assertSame(vertexValue, edgeValue);
     assertSame(edgeValue, messageValue);
@@ -180,7 +175,7 @@ public class
       return;
     }
     GiraphConfiguration conf = new GiraphConfiguration();
-    conf.setVertexClass(SimpleSuperstepVertex.class);
+    conf.setComputationClass(SimpleSuperstepComputation.class);
     conf.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
     GiraphJob job = prepareJob(getCallingMethodName(), conf);
     conf = job.getConfiguration();
@@ -222,7 +217,7 @@ public class
     }
 
     GiraphConfiguration conf = new GiraphConfiguration();
-    conf.setVertexClass(SimpleFailVertex.class);
+    conf.setComputationClass(SimpleFailComputation.class);
     conf.setVertexInputFormatClass(SimplePageRankVertexInputFormat.class);
     GiraphJob job = prepareJob(getCallingMethodName(), conf,
         getTempPath(getCallingMethodName()));
@@ -243,7 +238,7 @@ public class
     String callingMethod = getCallingMethodName();
     Path outputPath = getTempPath(callingMethod);
     GiraphConfiguration conf = new GiraphConfiguration();
-    conf.setVertexClass(SimpleSuperstepVertex.class);
+    conf.setComputationClass(SimpleSuperstepComputation.class);
     conf.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
     conf.setVertexOutputFormatClass(SimpleSuperstepVertexOutputFormat.class);
     GiraphJob job = prepareJob(callingMethod, conf, outputPath);
@@ -268,7 +263,7 @@ public class
   public void testBspMsg()
       throws IOException, InterruptedException, ClassNotFoundException {
     GiraphConfiguration conf = new GiraphConfiguration();
-    conf.setVertexClass(SimpleMsgVertex.class);
+    conf.setComputationClass(SimpleMsgComputation.class);
     conf.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
     GiraphJob job = prepareJob(getCallingMethodName(), conf);
     assertTrue(job.run(true));
@@ -287,7 +282,7 @@ public class
   public void testEmptyVertexInputFormat()
       throws IOException, InterruptedException, ClassNotFoundException {
     GiraphConfiguration conf = new GiraphConfiguration();
-    conf.setVertexClass(SimpleMsgVertex.class);
+    conf.setComputationClass(SimpleMsgComputation.class);
     conf.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
     GiraphJob job = prepareJob(getCallingMethodName(), conf);
     job.getConfiguration().setLong(GeneratedVertexReader.READER_VERTICES, 0);
@@ -305,7 +300,7 @@ public class
   public void testBspCombiner()
       throws IOException, InterruptedException, ClassNotFoundException {
     GiraphConfiguration conf = new GiraphConfiguration();
-    conf.setVertexClass(SimpleCombinerVertex.class);
+    conf.setComputationClass(SimpleCombinerComputation.class);
     conf.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
     conf.setCombinerClass(SimpleSumCombiner.class);
     GiraphJob job = prepareJob(getCallingMethodName(), conf);
@@ -366,11 +361,11 @@ public class
       throws IOException, InterruptedException, ClassNotFoundException {
     Path outputPath = getTempPath(getCallingMethodName());
     GiraphConfiguration conf = new GiraphConfiguration();
-    conf.setVertexClass(SimpleShortestPathsVertex.class);
+    conf.setComputationClass(SimpleShortestPathsComputation.class);
     conf.setVertexInputFormatClass(SimplePageRankVertexInputFormat.class);
     conf.setVertexOutputFormatClass(
         JsonLongDoubleFloatDoubleVertexOutputFormat.class);
-    SimpleShortestPathsVertex.SOURCE_ID.set(conf, 0);
+    SimpleShortestPathsComputation.SOURCE_ID.set(conf, 0);
     GiraphJob job = prepareJob(getCallingMethodName(), conf, outputPath);
 
     assertTrue(job.run(true));
@@ -394,15 +389,15 @@ public class
     Path outputPath = getTempPath(getCallingMethodName());
 
     GiraphConfiguration conf = new GiraphConfiguration();
-    conf.setVertexClass(SimplePageRankVertex.class);
+    conf.setComputationClass(SimplePageRankComputation.class);
     conf.setAggregatorWriterClass(TextAggregatorWriter.class);
     conf.setMasterComputeClass(
-        SimplePageRankVertex.SimplePageRankVertexMasterCompute.class);
+        SimplePageRankComputation.SimplePageRankMasterCompute.class);
     conf.setVertexInputFormatClass(SimplePageRankVertexInputFormat.class);
     conf.setVertexOutputFormatClass(
-        SimplePageRankVertex.SimplePageRankVertexOutputFormat.class);
+        SimplePageRankComputation.SimplePageRankVertexOutputFormat.class);
     conf.setWorkerContextClass(
-        SimplePageRankVertex.SimplePageRankVertexWorkerContext.class);
+        SimplePageRankComputation.SimplePageRankWorkerContext.class);
     GiraphJob job = prepareJob(getCallingMethodName(), conf, outputPath);
     GiraphConfiguration configuration = job.getConfiguration();
     Path aggregatorValues = getTempPath("aggregatorValues");
@@ -419,11 +414,11 @@ public class
     try {
       if (!runningInDistributedMode()) {
         double maxPageRank =
-            SimplePageRankVertex.SimplePageRankVertexWorkerContext.getFinalMax();
+            SimplePageRankComputation.SimplePageRankWorkerContext.getFinalMax();
         double minPageRank =
-            SimplePageRankVertex.SimplePageRankVertexWorkerContext.getFinalMin();
+            SimplePageRankComputation.SimplePageRankWorkerContext.getFinalMin();
         long numVertices =
-            SimplePageRankVertex.SimplePageRankVertexWorkerContext.getFinalSum();
+            SimplePageRankComputation.SimplePageRankWorkerContext.getFinalSum();
         System.out.println("testBspPageRank: maxPageRank=" + maxPageRank +
             " minPageRank=" + minPageRank + " numVertices=" + numVertices);
 
@@ -455,7 +450,7 @@ public class
             }
           }
 
-          int maxSuperstep = SimplePageRankVertex.MAX_SUPERSTEPS;
+          int maxSuperstep = SimplePageRankComputation.MAX_SUPERSTEPS;
           assertEquals(maxSuperstep + 2, minValues.size());
           assertEquals(maxSuperstep + 2, maxValues.size());
           assertEquals(maxSuperstep + 2, vertexCounts.size());
@@ -485,17 +480,17 @@ public class
   public void testBspMasterCompute()
       throws IOException, InterruptedException, ClassNotFoundException {
     GiraphConfiguration conf = new GiraphConfiguration();
-    conf.setVertexClass(SimpleMasterComputeVertex.class);
+    conf.setComputationClass(SimpleMasterComputeComputation.class);
     conf.setVertexInputFormatClass(SimplePageRankVertexInputFormat.class);
     conf.setMasterComputeClass(
-        SimpleMasterComputeVertex.SimpleMasterCompute.class);
+        SimpleMasterComputeComputation.SimpleMasterCompute.class);
     conf.setWorkerContextClass(
-        SimpleMasterComputeVertex.SimpleMasterComputeWorkerContext.class);
+        SimpleMasterComputeComputation.SimpleMasterComputeWorkerContext.class);
     GiraphJob job = prepareJob(getCallingMethodName(), conf);
     assertTrue(job.run(true));
     if (!runningInDistributedMode()) {
       double finalSum =
-          SimpleMasterComputeVertex.SimpleMasterComputeWorkerContext.getFinalSum();
+          SimpleMasterComputeComputation.SimpleMasterComputeWorkerContext.getFinalSum();
       System.out.println("testBspMasterCompute: finalSum=" + finalSum);
       assertEquals(32.5, finalSum, 0d);
     }

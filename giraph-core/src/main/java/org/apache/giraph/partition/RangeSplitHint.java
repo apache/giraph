@@ -43,7 +43,7 @@ public class RangeSplitHint<I extends WritableComparable>
   /** Number of vertices in this range after the split */
   private long postSplitVertexCount;
   /** Configuration */
-  private ImmutableClassesGiraphConfiguration<I, ?, ?, ?> conf;
+  private ImmutableClassesGiraphConfiguration<I, ?, ?> conf;
 
   @Override
   public void readFields(DataInput input) throws IOException {

@@ -40,7 +40,7 @@ import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
  */
 @SuppressWarnings("rawtypes")
 public class SequenceFileVertexInputFormat<I extends WritableComparable,
-    V extends Writable, E extends Writable, X extends Vertex<I, V, E, ?>>
+    V extends Writable, E extends Writable, X extends Vertex<I, V, E>>
     extends VertexInputFormat<I, V, E> {
   /** Internal input format */
   protected SequenceFileInputFormat<I, X> sequenceFileInputFormat =
@@ -68,7 +68,7 @@ public class SequenceFileVertexInputFormat<I extends WritableComparable,
    * @param <X> Value type
    */
   public static class SequenceFileVertexReader<I extends WritableComparable,
-      V extends Writable, E extends Writable, X extends Vertex<I, V, E, ?>>
+      V extends Writable, E extends Writable, X extends Vertex<I, V, E>>
       extends VertexReader<I, V, E> {
     /** Internal record reader from {@link SequenceFileInputFormat} */
     private final RecordReader<I, X> recordReader;
@@ -92,7 +92,7 @@ public class SequenceFileVertexInputFormat<I extends WritableComparable,
       return recordReader.nextKeyValue();
     }
 
-    @Override public Vertex<I, V, E, ?> getCurrentVertex()
+    @Override public Vertex<I, V, E> getCurrentVertex()
       throws IOException, InterruptedException {
       return recordReader.getCurrentValue();
     }

@@ -30,7 +30,7 @@ import com.facebook.hiveio.record.HiveWritableRecord;
 public class HiveOutputIntIntVertex extends SimpleVertexToHive<IntWritable,
     IntWritable, NullWritable> {
   @Override public void fillRecord(
-      Vertex<IntWritable, IntWritable, NullWritable, ?> vertex,
+      Vertex<IntWritable, IntWritable, NullWritable> vertex,
       HiveWritableRecord record) {
     record.set(0, (long) vertex.getId().get());
     record.set(1, (long) vertex.getValue().get());

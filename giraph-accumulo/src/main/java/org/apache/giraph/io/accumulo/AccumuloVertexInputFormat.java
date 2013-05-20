@@ -69,7 +69,7 @@ public abstract class AccumuloVertexInputFormat<
       extends VertexReader<I, V, E> {
 
     /** Giraph configuration */
-    private ImmutableClassesGiraphConfiguration<I, V, E, Writable>
+    private ImmutableClassesGiraphConfiguration<I, V, E>
     configuration;
     /**
      * Used by subclasses to read key/value pairs.
@@ -86,7 +86,7 @@ public abstract class AccumuloVertexInputFormat<
       this.reader = reader;
     }
 
-    public ImmutableClassesGiraphConfiguration<I, V, E, Writable>
+    public ImmutableClassesGiraphConfiguration<I, V, E>
     getConfiguration() {
       return configuration;
     }
@@ -105,7 +105,7 @@ public abstract class AccumuloVertexInputFormat<
       reader.initialize(inputSplit, context);
       this.context = context;
       this.configuration =
-          new ImmutableClassesGiraphConfiguration<I, V, E, Writable>(
+          new ImmutableClassesGiraphConfiguration<I, V, E>(
               context.getConfiguration());
     }
 

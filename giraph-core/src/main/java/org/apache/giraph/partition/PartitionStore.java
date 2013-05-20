@@ -27,10 +27,9 @@ import org.apache.hadoop.io.WritableComparable;
  * @param <I> Vertex id
  * @param <V> Vertex data
  * @param <E> Edge data
- * @param <M> Message data
  */
 public abstract class PartitionStore<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable> {
+    V extends Writable, E extends Writable> {
 
   /**
    * Add a new partition to the store or just the vertices from the partition
@@ -38,16 +37,16 @@ public abstract class PartitionStore<I extends WritableComparable,
    *
    * @param partition Partition to add
    */
-  public abstract void addPartition(Partition<I, V, E, M> partition);
+  public abstract void addPartition(Partition<I, V, E> partition);
 
   /**
    * Get a partition. Note: user has to put back it to the store through
-   * {@link #putPartition(Integer, Partition)} after use.
+   * {@link #putPartition(Partition)} after use.
    *
    * @param partitionId Partition id
    * @return The requested partition
    */
-  public abstract Partition<I, V, E, M> getPartition(Integer partitionId);
+  public abstract Partition<I, V, E> getPartition(Integer partitionId);
 
   /**
    * Put a partition back to the store. Use this method to be put a partition
@@ -55,7 +54,7 @@ public abstract class PartitionStore<I extends WritableComparable,
    *
    * @param partition Partition
    */
-  public abstract void putPartition(Partition<I, V, E, M> partition);
+  public abstract void putPartition(Partition<I, V, E> partition);
 
   /**
    * Remove a partition and return it.
@@ -63,7 +62,7 @@ public abstract class PartitionStore<I extends WritableComparable,
    * @param partitionId Partition id
    * @return The removed partition
    */
-  public abstract Partition<I, V, E, M> removePartition(Integer partitionId);
+  public abstract Partition<I, V, E> removePartition(Integer partitionId);
 
   /**
    * Just delete a partition

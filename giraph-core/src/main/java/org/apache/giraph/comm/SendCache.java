@@ -64,7 +64,7 @@ public abstract class SendCache<I extends WritableComparable, T,
    *                              ratio of the average request size)
    */
   public SendCache(ImmutableClassesGiraphConfiguration conf,
-                   CentralizedServiceWorker<?, ?, ?, ?> serviceWorker,
+                   CentralizedServiceWorker<?, ?, ?> serviceWorker,
                    int maxRequestSize,
                    float additionalRequestSize) {
     this.conf = conf;
@@ -175,5 +175,9 @@ public abstract class SendCache<I extends WritableComparable, T,
       dataSizes[workerInfo.getTaskId()] = 0;
     }
     return allData;
+  }
+
+  public ImmutableClassesGiraphConfiguration getConf() {
+    return conf;
   }
 }

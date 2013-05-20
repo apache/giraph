@@ -28,6 +28,7 @@ import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.combiner.Combiner;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
+import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -45,14 +46,17 @@ public class OneMessagePerVertexStore<I extends WritableComparable,
   private final Combiner<I, M> combiner;
 
   /**
+   * @param messageClass Message class held in the store
    * @param service  Service worker
    * @param combiner Combiner for messages
    * @param config   Hadoop configuration
    */
-  OneMessagePerVertexStore(CentralizedServiceWorker<I, ?, ?, M> service,
+  OneMessagePerVertexStore(
+      Class<M> messageClass,
+      CentralizedServiceWorker<I, ?, ?> service,
       Combiner<I, M> combiner,
-      ImmutableClassesGiraphConfiguration<I, ?, ?, M> config) {
-    super(service, config);
+      ImmutableClassesGiraphConfiguration<I, ?, ?> config) {
+    super(messageClass, service, config);
     this.combiner = combiner;
   }
 
@@ -140,7 +144,7 @@ public class OneMessagePerVertexStore<I extends WritableComparable,
 
   @Override
   protected M readFieldsForMessages(DataInput in) throws IOException {
-    M message = config.createMessageValue();
+    M message = ReflectionUtils.newInstance(messageClass);
     message.readFields(in);
     return message;
   }
@@ -177,8 +181,8 @@ public class OneMessagePerVertexStore<I extends WritableComparable,
    */
   public static <I extends WritableComparable, M extends Writable>
   MessageStoreFactory<I, M, MessageStoreByPartition<I, M>> newFactory(
-      CentralizedServiceWorker<I, ?, ?, M> service,
-      ImmutableClassesGiraphConfiguration<I, ?, ?, M> config) {
+      CentralizedServiceWorker<I, ?, ?> service,
+      ImmutableClassesGiraphConfiguration<I, ?, ?> config) {
     return new Factory<I, M>(service, config);
   }
 
@@ -192,26 +196,24 @@ public class OneMessagePerVertexStore<I extends WritableComparable,
       M extends Writable>
       implements MessageStoreFactory<I, M, MessageStoreByPartition<I, M>> {
     /** Service worker */
-    private final CentralizedServiceWorker<I, ?, ?, M> service;
+    private final CentralizedServiceWorker<I, ?, ?> service;
     /** Hadoop configuration */
-    private final ImmutableClassesGiraphConfiguration<I, ?, ?, M> config;
-    /** Combiner for messages */
-    private final Combiner<I, M> combiner;
+    private final ImmutableClassesGiraphConfiguration<I, ?, ?> config;
 
     /**
      * @param service Worker service
      * @param config  Hadoop configuration
      */
-    public Factory(CentralizedServiceWorker<I, ?, ?, M> service,
-        ImmutableClassesGiraphConfiguration<I, ?, ?, M> config) {
+    public Factory(CentralizedServiceWorker<I, ?, ?> service,
+        ImmutableClassesGiraphConfiguration<I, ?, ?> config) {
       this.service = service;
       this.config = config;
-      combiner = config.createCombiner();
     }
 
     @Override
-    public MessageStoreByPartition<I, M> newStore() {
-      return new OneMessagePerVertexStore<I, M>(service, combiner, config);
+    public MessageStoreByPartition<I, M> newStore(Class<M> messageClass) {
+      return new OneMessagePerVertexStore<I, M>(messageClass, service,
+          config.<M>createCombiner(), config);
     }
   }
 }

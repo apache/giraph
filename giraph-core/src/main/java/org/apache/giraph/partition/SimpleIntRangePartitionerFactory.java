@@ -30,26 +30,25 @@ import org.apache.hadoop.io.Writable;
  *
  * @param <V> Vertex value type
  * @param <E> Edge value type
- * @param <M> Message data type
  */
 public class SimpleIntRangePartitionerFactory<V extends Writable,
-    E extends Writable, M extends Writable>
-    implements GraphPartitionerFactory<IntWritable, V, E, M> {
+    E extends Writable>
+    implements GraphPartitionerFactory<IntWritable, V, E> {
   /** Configuration. */
   private ImmutableClassesGiraphConfiguration conf;
   /** Vertex key space size. */
   private long keySpaceSize;
 
   @Override
-  public MasterGraphPartitioner<IntWritable, V, E, M>
+  public MasterGraphPartitioner<IntWritable, V, E>
   createMasterGraphPartitioner() {
-    return new SimpleRangeMasterPartitioner<IntWritable, V, E, M>(conf);
+    return new SimpleRangeMasterPartitioner<IntWritable, V, E>(conf);
   }
 
   @Override
-  public WorkerGraphPartitioner<IntWritable, V, E, M>
+  public WorkerGraphPartitioner<IntWritable, V, E>
   createWorkerGraphPartitioner() {
-    return new SimpleRangeWorkerPartitioner<IntWritable, V, E, M>(
+    return new SimpleRangeWorkerPartitioner<IntWritable, V, E>(
         keySpaceSize) {
       @Override
       protected long vertexKeyFromId(IntWritable id) {

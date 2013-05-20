@@ -24,7 +24,7 @@ import com.google.common.collect.Lists;
 import java.util.Collections;
 import java.util.List;
 
-import static org.apache.giraph.conf.GiraphConstants.VERTEX_CLASS;
+import static org.apache.giraph.conf.GiraphConstants.COMPUTATION_CLASS;
 
 /**
  * Tracks all of the Giraph options
@@ -75,7 +75,7 @@ public class AllOptions {
   public static void main(String[] args) {
     // This is necessary to trigger the static constants in GiraphConstants to
     // get loaded. Without it we get no output.
-    VERTEX_CLASS.toString();
+    COMPUTATION_CLASS.toString();
 
     LOG.info(allOptionsString());
   }

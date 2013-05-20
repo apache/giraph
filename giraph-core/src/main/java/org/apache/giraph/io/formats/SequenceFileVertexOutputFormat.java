@@ -105,7 +105,7 @@ public abstract class SequenceFileVertexOutputFormat<
     }
 
     @Override
-    public final void writeVertex(Vertex<I, V, E, ?> vertex) throws
+    public final void writeVertex(Vertex<I, V, E> vertex) throws
       IOException, InterruptedException {
       // Convert vertex id to type OK.
       OK outKey = convertToSequenceFileKey(vertex.getId());

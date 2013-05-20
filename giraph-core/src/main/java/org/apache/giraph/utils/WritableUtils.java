@@ -56,14 +56,16 @@ public class WritableUtils {
    * Read fields from byteArray to a Writeable object.
    *
    * @param byteArray Byte array to find the fields in.
-   * @param writableObject Object to fill in the fields.
+   * @param writableObjects Objects to fill in the fields.
    */
   public static void readFieldsFromByteArray(
-      byte[] byteArray, Writable writableObject) {
+      byte[] byteArray, Writable... writableObjects) {
     DataInputStream inputStream =
       new DataInputStream(new ByteArrayInputStream(byteArray));
     try {
-      writableObject.readFields(inputStream);
+      for (Writable writableObject : writableObjects) {
+        writableObject.readFields(inputStream);
+      }
     } catch (IOException e) {
       throw new IllegalStateException(
           "readFieldsFromByteArray: IOException", e);
@@ -77,16 +79,16 @@ public class WritableUtils {
    * @param zkPath Path of znode.
    * @param watch Add a watch?
    * @param stat Stat of znode if desired.
-   * @param writableObject Object to read into.
+   * @param writableObjects Objects to read into.
    */
   public static void readFieldsFromZnode(ZooKeeperExt zkExt,
                                          String zkPath,
                                          boolean watch,
                                          Stat stat,
-                                         Writable writableObject) {
+                                         Writable... writableObjects) {
     try {
       byte[] zkData = zkExt.getData(zkPath, false, stat);
-      readFieldsFromByteArray(zkData, writableObject);
+      readFieldsFromByteArray(zkData, writableObjects);
     } catch (KeeperException e) {
       throw new IllegalStateException(
         "readFieldsFromZnode: KeeperException on " + zkPath, e);
@@ -99,15 +101,17 @@ public class WritableUtils {
   /**
    * Write object to a byte array.
    *
-   * @param writableObject Object to write from.
+   * @param writableObjects Objects to write from.
    * @return Byte array with serialized object.
    */
-  public static byte[] writeToByteArray(Writable writableObject) {
+  public static byte[] writeToByteArray(Writable... writableObjects) {
     ByteArrayOutputStream outputStream =
         new ByteArrayOutputStream();
     DataOutput output = new DataOutputStream(outputStream);
     try {
-      writableObject.write(output);
+      for (Writable writableObject : writableObjects) {
+        writableObject.write(output);
+      }
     } catch (IOException e) {
       throw new IllegalStateException(
           "writeToByteArray: IOStateException", e);
@@ -189,15 +193,15 @@ public class WritableUtils {
    * @param zkExt ZooKeeper instance.
    * @param zkPath Path of znode.
    * @param version Version of the write.
-   * @param writableObject Object to write from.
+   * @param writableObjects Objects to write from.
    * @return Path and stat information of the znode.
    */
   public static PathStat writeToZnode(ZooKeeperExt zkExt,
                                       String zkPath,
                                       int version,
-                                      Writable writableObject) {
+                                      Writable... writableObjects) {
     try {
-      byte[] byteArray = writeToByteArray(writableObject);
+      byte[] byteArray = writeToByteArray(writableObjects);
       return zkExt.createOrSetExt(zkPath,
           byteArray,
           Ids.OPEN_ACL_UNSAFE,
@@ -341,15 +345,14 @@ public class WritableUtils {
    * @param <I> Vertex id
    * @param <V> Vertex value
    * @param <E> Edge value
-   * @param <M> Message value
    * @return Byte array with serialized object.
    */
   public static <I extends WritableComparable, V extends Writable,
-      E extends Writable, M extends Writable> byte[] writeVertexToByteArray(
-      Vertex<I, V, E, M> vertex,
+      E extends Writable> byte[] writeVertexToByteArray(
+      Vertex<I, V, E> vertex,
       byte[] buffer,
       boolean unsafe,
-      ImmutableClassesGiraphConfiguration<I, V, E, M> conf) {
+      ImmutableClassesGiraphConfiguration<I, V, E> conf) {
     ExtendedDataOutput extendedDataOutput;
     if (unsafe) {
       extendedDataOutput = new UnsafeByteArrayOutputStream(buffer);
@@ -378,14 +381,13 @@ public class WritableUtils {
    * @param <I> Vertex id
    * @param <V> Vertex value
    * @param <E> Edge value
-   * @param <M> Message value
    * @return Byte array with serialized object.
    */
   public static <I extends WritableComparable, V extends Writable,
-      E extends Writable, M extends Writable> byte[] writeVertexToByteArray(
-      Vertex<I, V, E, M> vertex,
+      E extends Writable> byte[] writeVertexToByteArray(
+      Vertex<I, V, E> vertex,
       boolean unsafe,
-      ImmutableClassesGiraphConfiguration<I, V, E, M> conf) {
+      ImmutableClassesGiraphConfiguration<I, V, E> conf) {
     return writeVertexToByteArray(vertex, null, unsafe, conf);
   }
 
@@ -400,16 +402,14 @@ public class WritableUtils {
   * @param <I> Vertex id
   * @param <V> Vertex value
   * @param <E> Edge value
-  * @param <M> Message value
   * @param conf Configuration
   */
   public static <I extends WritableComparable, V extends Writable,
-  E extends Writable, M extends Writable> void
-  reinitializeVertexFromByteArray(
+  E extends Writable> void reinitializeVertexFromByteArray(
       byte[] byteArray,
-      Vertex<I, V, E, M> vertex,
+      Vertex<I, V, E> vertex,
       boolean unsafe,
-      ImmutableClassesGiraphConfiguration<I, V, E, M> conf) {
+      ImmutableClassesGiraphConfiguration<I, V, E> conf) {
     ExtendedDataInput extendedDataInput;
     if (unsafe) {
       extendedDataInput = new UnsafeByteArrayInputStream(byteArray);
@@ -465,15 +465,14 @@ public class WritableUtils {
    * @param <I> Vertex id
    * @param <V> Vertex value
    * @param <E> Edge value
-   * @param <M> Message value
    * @throws IOException
    */
   @SuppressWarnings("unchecked")
   public static <I extends WritableComparable, V extends Writable,
-  E extends Writable, M extends Writable> void reinitializeVertexFromDataInput(
+  E extends Writable> void reinitializeVertexFromDataInput(
       DataInput input,
-      Vertex<I, V, E, M> vertex,
-      ImmutableClassesGiraphConfiguration<I, V, E, M> conf)
+      Vertex<I, V, E> vertex,
+      ImmutableClassesGiraphConfiguration<I, V, E> conf)
     throws IOException {
     vertex.getId().readFields(input);
     vertex.getValue().readFields(input);
@@ -493,17 +492,16 @@ public class WritableUtils {
    * @param <I> Vertex id
    * @param <V> Vertex value
    * @param <E> Edge value
-   * @param <M> Message value
    * @return The vertex
    * @throws IOException
    */
   public static <I extends WritableComparable, V extends Writable,
-  E extends Writable, M extends Writable> Vertex<I, V, E, M>
+  E extends Writable> Vertex<I, V, E>
   readVertexFromDataInput(
       DataInput input,
-      ImmutableClassesGiraphConfiguration<I, V, E, M> conf)
+      ImmutableClassesGiraphConfiguration<I, V, E> conf)
     throws IOException {
-    Vertex<I, V, E, M> vertex = conf.createVertex();
+    Vertex<I, V, E> vertex = conf.createVertex();
     I id = conf.createVertexId();
     V value = conf.createVertexValue();
     OutEdges<I, E> edges = conf.createOutEdges();
@@ -521,19 +519,56 @@ public class WritableUtils {
    * @param <I> Vertex id
    * @param <V> Vertex value
    * @param <E> Edge value
-   * @param <M> Message value
    * @throws IOException
    */
   @SuppressWarnings("unchecked")
   public static <I extends WritableComparable, V extends Writable,
-  E extends Writable, M extends Writable> void writeVertexToDataOutput(
+  E extends Writable> void writeVertexToDataOutput(
       DataOutput output,
-      Vertex<I, V, E, M> vertex,
-      ImmutableClassesGiraphConfiguration<I, V, E, M> conf)
+      Vertex<I, V, E> vertex,
+      ImmutableClassesGiraphConfiguration<I, V, E> conf)
     throws IOException {
     vertex.getId().write(output);
     vertex.getValue().write(output);
     ((OutEdges<I, E>) vertex.getEdges()).write(output);
     output.writeBoolean(vertex.isHalted());
+  }
+
+  /**
+   * Write class to data output. Also handles the case when class is null.
+   *
+   * @param clazz Class
+   * @param output Data output
+   * @param <T> Class type
+   */
+  public static <T> void writeClass(Class<T> clazz,
+      DataOutput output) throws IOException {
+    output.writeBoolean(clazz != null);
+    if (clazz != null) {
+      output.writeUTF(clazz.getName());
+    }
+  }
+
+  /**
+   * Read class from data input.
+   * Matches {@link #writeClass(Class, DataOutput)}.
+   *
+   * @param input Data input
+   * @param <T> Class type
+   * @return Class, or null if null was written
+   */
+  @SuppressWarnings("unchecked")
+  public static <T> Class<T> readClass(DataInput input) throws IOException {
+    if (input.readBoolean()) {
+      String className = input.readUTF();
+      try {
+        return (Class<T>) Class.forName(className);
+      } catch (ClassNotFoundException e) {
+        throw new IllegalStateException("readClass: No class found " +
+            className);
+      }
+    } else {
+      return null;
+    }
   }
 }

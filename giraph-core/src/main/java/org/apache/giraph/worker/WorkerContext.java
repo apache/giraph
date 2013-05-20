@@ -30,6 +30,8 @@ import org.apache.hadoop.mapreduce.Mapper;
 public abstract class WorkerContext implements WorkerAggregatorUsage {
   /** Global graph state */
   private GraphState graphState;
+  /** Worker aggregator usage */
+  private WorkerAggregatorUsage workerAggregatorUsage;
 
   /**
    * Set the graph state.
@@ -38,6 +40,16 @@ public abstract class WorkerContext implements WorkerAggregatorUsage {
    */
   public void setGraphState(GraphState graphState) {
     this.graphState = graphState;
+  }
+
+  /**
+   * Set worker aggregator usage
+   *
+   * @param workerAggregatorUsage Worker aggregator usage
+   */
+  public void setWorkerAggregatorUsage(
+      WorkerAggregatorUsage workerAggregatorUsage) {
+    this.workerAggregatorUsage = workerAggregatorUsage;
   }
 
   /**
@@ -112,11 +124,11 @@ public abstract class WorkerContext implements WorkerAggregatorUsage {
 
   @Override
   public <A extends Writable> void aggregate(String name, A value) {
-    graphState.getWorkerAggregatorUsage().aggregate(name, value);
+    workerAggregatorUsage.aggregate(name, value);
   }
 
   @Override
   public <A extends Writable> A getAggregatedValue(String name) {
-    return graphState.getWorkerAggregatorUsage().<A>getAggregatedValue(name);
+    return workerAggregatorUsage.<A>getAggregatedValue(name);
   }
 }

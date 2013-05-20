@@ -31,7 +31,7 @@ import com.google.common.collect.Sets;
 import java.util.Set;
 
 /**
- * Benchmark for {@link PageRankVertex}
+ * Benchmark for {@link PageRankComputation}
  */
 public class PageRankBenchmark extends GiraphBenchmark {
   @Override
@@ -44,7 +44,7 @@ public class PageRankBenchmark extends GiraphBenchmark {
   @Override
   protected void prepareConfiguration(GiraphConfiguration conf,
       CommandLine cmd) {
-    conf.setVertexClass(PageRankVertex.class);
+    conf.setComputationClass(PageRankComputation.class);
     conf.setOutEdgesClass(IntNullArrayEdges.class);
     conf.setCombinerClass(FloatSumCombiner.class);
     conf.setVertexInputFormatClass(
@@ -54,7 +54,7 @@ public class PageRankBenchmark extends GiraphBenchmark {
         BenchmarkOption.VERTICES.getOptionIntValue(cmd));
     conf.setInt(PseudoRandomInputFormatConstants.EDGES_PER_VERTEX,
         BenchmarkOption.EDGES_PER_VERTEX.getOptionIntValue(cmd));
-    conf.setInt(PageRankVertex.SUPERSTEP_COUNT,
+    conf.setInt(PageRankComputation.SUPERSTEP_COUNT,
         BenchmarkOption.SUPERSTEPS.getOptionIntValue(cmd));
     conf.setFloat(PseudoRandomInputFormatConstants.LOCAL_EDGES_MIN_RATIO,
         BenchmarkOption.LOCAL_EDGES_MIN_RATIO.getOptionFloatValue(cmd,

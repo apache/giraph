@@ -23,14 +23,15 @@ import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.ByteArrayEdges;
 import org.apache.giraph.edge.Edge;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexValueFactory;
 import org.apache.giraph.io.formats.IdWithValueTextOutputFormat;
 import org.apache.giraph.io.formats.IntIntTextVertexValueInputFormat;
 import org.apache.giraph.io.formats.IntNullReverseTextEdgeInputFormat;
 import org.apache.giraph.io.formats.IntNullTextEdgeInputFormat;
+import org.apache.giraph.utils.ComputationCountEdges;
+import org.apache.giraph.utils.IntIntNullNoOpComputation;
 import org.apache.giraph.utils.InternalVertexRunner;
-import org.apache.giraph.vertices.IntIntNullVertexDoNothing;
-import org.apache.giraph.vertices.VertexCountEdges;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.junit.Test;
@@ -65,7 +66,7 @@ public class TestEdgeInput extends BspCase {
     };
 
     GiraphConfiguration conf = new GiraphConfiguration();
-    conf.setVertexClass(VertexCountEdges.class);
+    conf.setComputationClass(ComputationCountEdges.class);
     conf.setOutEdgesClass(ByteArrayEdges.class);
     conf.setEdgeInputFormatClass(IntNullTextEdgeInputFormat.class);
     conf.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
@@ -94,7 +95,7 @@ public class TestEdgeInput extends BspCase {
     };
 
     GiraphConfiguration conf = new GiraphConfiguration();
-    conf.setVertexClass(VertexCountEdges.class);
+    conf.setComputationClass(ComputationCountEdges.class);
     conf.setOutEdgesClass(ByteArrayEdges.class);
     conf.setEdgeInputFormatClass(IntNullReverseTextEdgeInputFormat.class);
     conf.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
@@ -130,7 +131,7 @@ public class TestEdgeInput extends BspCase {
     };
 
     GiraphConfiguration conf = new GiraphConfiguration();
-    conf.setVertexClass(IntIntNullVertexDoNothing.class);
+    conf.setComputationClass(IntIntNullNoOpComputation.class);
     conf.setOutEdgesClass(ByteArrayEdges.class);
     conf.setVertexInputFormatClass(IntIntTextVertexValueInputFormat.class);
     conf.setEdgeInputFormatClass(IntNullTextEdgeInputFormat.class);
@@ -161,7 +162,7 @@ public class TestEdgeInput extends BspCase {
     assertEquals(3, (int) values.get(5));
 
     conf = new GiraphConfiguration();
-    conf.setVertexClass(VertexCountEdges.class);
+    conf.setComputationClass(ComputationCountEdges.class);
     conf.setOutEdgesClass(ByteArrayEdges.class);
     conf.setVertexInputFormatClass(IntIntTextVertexValueInputFormat.class);
     conf.setEdgeInputFormatClass(IntNullTextEdgeInputFormat.class);
@@ -191,7 +192,7 @@ public class TestEdgeInput extends BspCase {
     };
 
     GiraphConfiguration conf = new GiraphConfiguration();
-    conf.setVertexClass(TestVertexCheckEdgesType.class);
+    conf.setComputationClass(TestComputationCheckEdgesType.class);
     conf.setOutEdgesClass(ByteArrayEdges.class);
     conf.setInputOutEdgesClass(TestOutEdgesFilterEven.class);
     conf.setEdgeInputFormatClass(IntNullTextEdgeInputFormat.class);
@@ -210,12 +211,14 @@ public class TestEdgeInput extends BspCase {
     assertEquals(0, (int) values.get(4));
   }
 
-  public static class TestVertexCheckEdgesType extends VertexCountEdges {
+  public static class TestComputationCheckEdgesType extends
+      ComputationCountEdges {
     @Override
-    public void compute(Iterable<NullWritable> messages) throws IOException {
-      assertFalse(getEdges() instanceof TestOutEdgesFilterEven);
-      assertTrue(getEdges() instanceof ByteArrayEdges);
-      super.compute(messages);
+    public void compute(Vertex<IntWritable, IntWritable, NullWritable> vertex,
+        Iterable<NullWritable> messages) throws IOException {
+      assertFalse(vertex.getEdges() instanceof TestOutEdgesFilterEven);
+      assertTrue(vertex.getEdges() instanceof ByteArrayEdges);
+      super.compute(vertex, messages);
     }
   }
 
@@ -223,7 +226,7 @@ public class TestEdgeInput extends BspCase {
       implements VertexValueFactory<IntWritable> {
     @Override
     public void initialize(ImmutableClassesGiraphConfiguration<?, IntWritable,
-            ?, ?> configuration) { }
+        ?> configuration) { }
 
     @Override
     public IntWritable createVertexValue() {

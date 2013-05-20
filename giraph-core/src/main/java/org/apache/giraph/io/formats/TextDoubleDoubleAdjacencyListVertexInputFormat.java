@@ -21,7 +21,6 @@ import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.EdgeFactory;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
@@ -29,10 +28,8 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
  * Class to read graphs stored as adjacency lists with ids represented by
  * Strings and values as doubles.  This is a good inputformat for reading
  * graphs where the id types do not matter and can be stashed in a String.
- *
- * @param <M> Message type.
  */
-public class TextDoubleDoubleAdjacencyListVertexInputFormat<M extends Writable>
+public class TextDoubleDoubleAdjacencyListVertexInputFormat
     extends AdjacencyListTextVertexInputFormat<Text, DoubleWritable,
             DoubleWritable>  {
 

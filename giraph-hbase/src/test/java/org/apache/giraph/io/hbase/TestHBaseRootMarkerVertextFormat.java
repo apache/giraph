@@ -20,6 +20,7 @@ package org.apache.giraph.io.hbase;
 
 
 import org.apache.giraph.BspCase;
+import org.apache.giraph.graph.BasicComputation;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.io.hbase.edgemarker.TableEdgeInputFormat;
 import org.apache.giraph.io.hbase.edgemarker.TableEdgeOutputFormat;
@@ -184,7 +185,7 @@ public class TestHBaseRootMarkerVertextFormat extends BspCase {
       giraphConf.setZooKeeperConfiguration(
           cluster.getMaster().getZooKeeper().getQuorum());
       setupConfiguration(giraphJob);
-      giraphConf.setVertexClass(EdgeNotification.class);
+      giraphConf.setComputationClass(EdgeNotification.class);
       giraphConf.setVertexInputFormatClass(TableEdgeInputFormat.class);
       giraphConf.setVertexOutputFormatClass(TableEdgeOutputFormat.class);
 
@@ -220,16 +221,17 @@ public class TestHBaseRootMarkerVertextFormat extends BspCase {
   The test set only has a 1-1 parent-to-child ratio for this unit test.
    */
   public static class EdgeNotification
-      extends Vertex<Text, Text, Text, Text> {
+      extends BasicComputation<Text, Text, Text, Text> {
     @Override
-    public void compute(Iterable<Text> messages) throws IOException {
+    public void compute(Vertex<Text, Text, Text> vertex,
+        Iterable<Text> messages) throws IOException {
       for (Text message : messages) {
-        getValue().set(message);
+        vertex.getValue().set(message);
       }
       if(getSuperstep() == 0) {
-        sendMessageToAllEdges(getId());
+        sendMessageToAllEdges(vertex, vertex.getId());
       }
-      voteToHalt();
+      vertex.voteToHalt();
     }
   }
 }

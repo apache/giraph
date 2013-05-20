@@ -95,9 +95,8 @@ public class JsonLongDoubleFloatDoubleVertexInputFormat extends
     }
 
     @Override
-    protected Vertex<LongWritable, DoubleWritable, FloatWritable,
-              DoubleWritable> handleException(Text line, JSONArray jsonVertex,
-                  JSONException e) {
+    protected Vertex<LongWritable, DoubleWritable, FloatWritable>
+    handleException(Text line, JSONArray jsonVertex, JSONException e) {
       throw new IllegalArgumentException(
           "Couldn't get vertex from line " + line, e);
     }

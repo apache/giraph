@@ -30,7 +30,7 @@ import org.apache.hadoop.io.WritableComparable;
  */
 public class DefaultEdgeInputFilter<I extends WritableComparable,
     E extends Writable>
-    extends DefaultImmutableClassesGiraphConfigurable<I, Writable, E, Writable>
+    extends DefaultImmutableClassesGiraphConfigurable<I, Writable, E>
     implements EdgeInputFilter<I, E> {
   @Override
   public boolean dropEdge(I sourceId, Edge<I, E> edge) {

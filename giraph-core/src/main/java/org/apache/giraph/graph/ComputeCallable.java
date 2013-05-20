@@ -28,7 +28,6 @@ import org.apache.giraph.metrics.MetricNames;
 import org.apache.giraph.metrics.SuperstepMetricsRegistry;
 import org.apache.giraph.metrics.TimerDesc;
 import org.apache.giraph.partition.Partition;
-import org.apache.giraph.partition.PartitionContext;
 import org.apache.giraph.partition.PartitionStats;
 import org.apache.giraph.time.SystemTime;
 import org.apache.giraph.time.Time;
@@ -65,10 +64,11 @@ import java.util.concurrent.Callable;
  * @param <I> Vertex index value
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message data
+ * @param <M1> Incoming message type
+ * @param <M2> Outgoing message type
  */
 public class ComputeCallable<I extends WritableComparable, V extends Writable,
-    E extends Writable, M extends Writable>
+    E extends Writable, M1 extends Writable, M2 extends Writable>
     implements Callable<Collection<PartitionStats>> {
   /** Class logger */
   private static final Logger LOG  = Logger.getLogger(ComputeCallable.class);
@@ -76,21 +76,18 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
   private static final Time TIME = SystemTime.get();
   /** Context */
   private final Mapper<?, ?, ?, ?>.Context context;
-  /** Graph state (note that it is recreated in call() for locality) */
-  private GraphState<I, V, E, M> graphState;
+  /** Graph state */
+  private final GraphState graphState;
   /** Thread-safe queue of all partition ids */
   private final BlockingQueue<Integer> partitionIdQueue;
   /** Message store */
-  private final MessageStoreByPartition<I, M> messageStore;
+  private final MessageStoreByPartition<I, M1> messageStore;
   /** Configuration */
-  private final ImmutableClassesGiraphConfiguration<I, V, E, M> configuration;
+  private final ImmutableClassesGiraphConfiguration<I, V, E> configuration;
   /** Worker (for NettyWorkerClientRequestProcessor) */
-  private final CentralizedServiceWorker<I, V, E, M> serviceWorker;
+  private final CentralizedServiceWorker<I, V, E> serviceWorker;
   /** Dump some progress every 30 seconds */
   private final TimedLogger timedLogger = new TimedLogger(30 * 1000, LOG);
-  /** Sends the messages (unique per Callable) */
-  private WorkerClientRequestProcessor<I, V, E, M>
-  workerClientRequestProcessor;
   /** VertexWriter for this ComputeCallable */
   private SimpleVertexWriter<I, V, E> vertexWriter;
   /** Get the start time in nanos */
@@ -113,17 +110,16 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
    * @param serviceWorker Service worker
    */
   public ComputeCallable(
-      Mapper<?, ?, ?, ?>.Context context, GraphState<I, V, E, M> graphState,
-      MessageStoreByPartition<I, M> messageStore,
+      Mapper<?, ?, ?, ?>.Context context, GraphState graphState,
+      MessageStoreByPartition<I, M1> messageStore,
       BlockingQueue<Integer> partitionIdQueue,
-      ImmutableClassesGiraphConfiguration<I, V, E, M> configuration,
-      CentralizedServiceWorker<I, V, E, M> serviceWorker) {
+      ImmutableClassesGiraphConfiguration<I, V, E> configuration,
+      CentralizedServiceWorker<I, V, E> serviceWorker) {
     this.context = context;
     this.configuration = configuration;
     this.partitionIdQueue = partitionIdQueue;
     this.messageStore = messageStore;
     this.serviceWorker = serviceWorker;
-    // Will be replaced later in call() for locality
     this.graphState = graphState;
 
     SuperstepMetricsRegistry metrics = GiraphMetrics.get().perSuperstep();
@@ -136,16 +132,12 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
   @Override
   public Collection<PartitionStats> call() {
     // Thread initialization (for locality)
-    this.workerClientRequestProcessor =
-        new NettyWorkerClientRequestProcessor<I, V, E, M>(
+    WorkerClientRequestProcessor<I, V, E> workerClientRequestProcessor =
+        new NettyWorkerClientRequestProcessor<I, V, E>(
             context, configuration, serviceWorker);
     WorkerThreadAggregatorUsage aggregatorUsage =
         serviceWorker.getAggregatorHandler().newThreadAggregatorUsage();
-
-    this.graphState = new GraphState<I, V, E, M>(graphState.getSuperstep(),
-        graphState.getTotalNumVertices(), graphState.getTotalNumEdges(),
-        context, graphState.getGraphTaskManager(), workerClientRequestProcessor,
-        aggregatorUsage);
+    WorkerContext workerContext = serviceWorker.getWorkerContext();
 
     vertexWriter = serviceWorker.getSuperstepOutput().getVertexWriter();
 
@@ -156,10 +148,18 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
         break;
       }
 
-      Partition<I, V, E, M> partition =
+      Partition<I, V, E> partition =
           serviceWorker.getPartitionStore().getPartition(partitionId);
+
+      Computation<I, V, E, M1, M2> computation =
+          (Computation<I, V, E, M1, M2>) configuration.createComputation();
+      computation.initialize(graphState, workerClientRequestProcessor,
+          serviceWorker.getGraphTaskManager(), aggregatorUsage, workerContext);
+      computation.preSuperstep();
+
       try {
-        PartitionStats partitionStats = computePartition(partition);
+        PartitionStats partitionStats =
+            computePartition(computation, partition);
         partitionStatsList.add(partitionStats);
         long partitionMsgs = workerClientRequestProcessor.resetMessageCount();
         partitionStats.addMessagesSentCount(partitionMsgs);
@@ -177,6 +177,8 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
       } finally {
         serviceWorker.getPartitionStore().putPartition(partition);
       }
+
+      computation.postSuperstep();
     }
 
     // Return VertexWriter after the usage
@@ -201,29 +203,19 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
   /**
    * Compute a single partition
    *
+   * @param computation Computation to use
    * @param partition Partition to compute
    * @return Partition stats for this computed partition
    */
-  private PartitionStats computePartition(Partition<I, V, E, M> partition)
-    throws IOException, InterruptedException {
+  private PartitionStats computePartition(
+      Computation<I, V, E, M1, M2> computation,
+      Partition<I, V, E> partition) throws IOException, InterruptedException {
     PartitionStats partitionStats =
         new PartitionStats(partition.getId(), 0, 0, 0, 0);
     // Make sure this is thread-safe across runs
     synchronized (partition) {
-      // Prepare Partition context
-      WorkerContext workerContext =
-          graphState.getGraphTaskManager().getWorkerContext();
-      PartitionContext partitionContext = partition.getPartitionContext();
-      synchronized (workerContext) {
-        partitionContext.preSuperstep(workerContext);
-      }
-      graphState.setPartitionContext(partition.getPartitionContext());
-
-      for (Vertex<I, V, E, M> vertex : partition) {
-        // Make sure every vertex has this thread's
-        // graphState before computing
-        vertex.setGraphState(graphState);
-        Iterable<M> messages = messageStore.getVertexMessages(vertex.getId());
+      for (Vertex<I, V, E> vertex : partition) {
+        Iterable<M1> messages = messageStore.getVertexMessages(vertex.getId());
         if (vertex.isHalted() && !Iterables.isEmpty(messages)) {
           vertex.wakeUp();
         }
@@ -231,7 +223,7 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
           context.progress();
           TimerContext computeOneTimerContext = computeOneTimer.time();
           try {
-            vertex.compute(messages);
+            computation.compute(vertex, messages);
           } finally {
             computeOneTimerContext.stop();
           }
@@ -254,10 +246,6 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
       }
 
       messageStore.clearPartition(partition.getId());
-
-      synchronized (workerContext) {
-        partitionContext.postSuperstep(workerContext);
-      }
     }
     return partitionStats;
   }

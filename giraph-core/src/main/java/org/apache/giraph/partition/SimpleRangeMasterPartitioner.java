@@ -37,11 +37,10 @@ import java.util.List;
  * @param <I> Vertex id type
  * @param <V> Vertex value type
  * @param <E> Edge value type
- * @param <M> Message data type
  */
 public class SimpleRangeMasterPartitioner<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable> implements
-    MasterGraphPartitioner<I, V, E, M> {
+    V extends Writable, E extends Writable> implements
+    MasterGraphPartitioner<I, V, E> {
   /** Class logger */
   private static Logger LOG = Logger.getLogger(HashMasterPartitioner.class);
   /** Provided configuration */

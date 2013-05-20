@@ -18,7 +18,6 @@
 
 package org.apache.giraph.comm;
 
-import org.apache.giraph.graph.GraphState;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -31,11 +30,10 @@ import java.net.InetSocketAddress;
  * @param <I> Vertex id
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public interface WorkerServer<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
+    V extends Writable, E extends Writable>
     extends Closeable {
   /**
    * Get server address
@@ -46,17 +44,15 @@ public interface WorkerServer<I extends WritableComparable,
 
   /**
    * Prepare incoming messages for computation, and resolve mutation requests.
-   *
-   * @param graphState Current graph state
    */
-  void prepareSuperstep(GraphState<I, V, E, M> graphState);
+  void prepareSuperstep();
 
   /**
    * Get server data
    *
    * @return Server data
    */
-  ServerData<I, V, E, M> getServerData();
+  ServerData<I, V, E> getServerData();
 
   /**
    * Shuts down.

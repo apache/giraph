@@ -17,7 +17,6 @@
  */
 package org.apache.giraph.utils;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -34,8 +33,20 @@ import java.io.IOException;
 @SuppressWarnings("unchecked")
 public class ByteArrayVertexIdMessages<I extends WritableComparable,
     M extends Writable> extends ByteArrayVertexIdData<I, M> {
+  /** Message value class */
+  private Class<M> messageValueClass;
   /** Add the message size to the stream? (Depends on the message store) */
   private boolean useMessageSizeEncoding = false;
+
+  /**
+   * Constructor
+   *
+   * @param messageValueClass Class for messages
+   */
+  public ByteArrayVertexIdMessages(
+      Class<? extends Writable> messageValueClass) {
+    this.messageValueClass = (Class<M>) messageValueClass;
+  }
 
   /**
    * Set whether message sizes should be encoded.  This should only be a
@@ -50,20 +61,9 @@ public class ByteArrayVertexIdMessages<I extends WritableComparable,
     }
   }
 
-  /**
-   * Cast the {@link ImmutableClassesGiraphConfiguration} so it can be used
-   * to generate message objects.
-   *
-   * @return Casted configuration
-   */
-  @Override
-  public ImmutableClassesGiraphConfiguration<I, ?, ?, M> getConf() {
-    return (ImmutableClassesGiraphConfiguration<I, ?, ?, M>) super.getConf();
-  }
-
   @Override
   public M createData() {
-    return getConf().createMessageValue();
+    return ReflectionUtils.newInstance(messageValueClass);
   }
 
   @Override

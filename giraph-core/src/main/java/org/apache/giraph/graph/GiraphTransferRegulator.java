@@ -155,12 +155,11 @@ public class GiraphTransferRegulator {
    * @param <I> the vertex id type.
    * @param <V> the vertex value type.
    * @param <E> the edge value type.
-   * @param <M> the message value type.
    */
   public <I extends WritableComparable, V extends Writable,
-  E extends Writable, M extends Writable> void
+  E extends Writable> void
   incrementCounters(PartitionOwner partitionOwner,
-    Vertex<I, V, E, M> vertex) {
+    Vertex<I, V, E> vertex) {
     final int id = partitionOwner.getPartitionId();
     // vertex counts
     vertexAccumulator

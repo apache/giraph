@@ -27,16 +27,15 @@ import org.apache.hadoop.io.WritableComparable;
  * @param <I> Vertex ID
  * @param <V> Vertex Value
  * @param <E> Edge Value
- * @param <M> Message Value
  */
 public interface VertexInputFilter<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable> {
+    V extends Writable, E extends Writable> {
   /**
    * Whether to drop a vertex on input.
    *
    * @param vertex to check
    * @return true if we should drop vertex
    */
-  boolean dropVertex(Vertex<I, V, E, M> vertex);
+  boolean dropVertex(Vertex<I, V, E> vertex);
 }
 

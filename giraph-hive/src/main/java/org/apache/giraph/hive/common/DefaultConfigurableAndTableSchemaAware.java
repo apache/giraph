@@ -32,12 +32,10 @@ import com.facebook.hiveio.schema.HiveTableSchemaAware;
  * @param <I> Vertex ID
  * @param <V> Vertex Value
  * @param <E> Edge Value
- * @param <M> Message Value
  */
 public class DefaultConfigurableAndTableSchemaAware<
-    I extends WritableComparable, V extends Writable, E extends Writable,
-    M extends Writable>
-    extends DefaultImmutableClassesGiraphConfigurable<I, V, E, M>
+    I extends WritableComparable, V extends Writable, E extends Writable>
+    extends DefaultImmutableClassesGiraphConfigurable<I, V, E>
     implements HiveTableSchemaAware {
   /** Schema stored here */
   private HiveTableSchema tableSchema;

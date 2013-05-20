@@ -30,10 +30,10 @@ import org.apache.hadoop.io.WritableComparable;
  */
 public abstract class AbstractHiveToEdge<I extends WritableComparable,
     E extends Writable>
-    extends DefaultConfigurableAndTableSchemaAware<I, Writable, E, Writable>
+    extends DefaultConfigurableAndTableSchemaAware<I, Writable, E>
     implements HiveToEdge<I, E> {
   @Override
-  public ImmutableClassesGiraphConfiguration<I, Writable, E, Writable>
+  public ImmutableClassesGiraphConfiguration<I, Writable, E>
   getConf() {
     return super.getConf();
   }

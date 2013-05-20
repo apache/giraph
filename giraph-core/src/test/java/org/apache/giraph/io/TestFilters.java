@@ -26,9 +26,9 @@ import org.apache.giraph.io.filters.VertexInputFilter;
 import org.apache.giraph.io.formats.IdWithValueTextOutputFormat;
 import org.apache.giraph.io.formats.IntIntTextVertexValueInputFormat;
 import org.apache.giraph.io.formats.IntNullTextEdgeInputFormat;
+import org.apache.giraph.utils.ComputationCountEdges;
+import org.apache.giraph.utils.IntNoOpComputation;
 import org.apache.giraph.utils.InternalVertexRunner;
-import org.apache.giraph.vertices.IntIntNullVertexDoNothing;
-import org.apache.giraph.vertices.VertexCountEdges;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.junit.Test;
@@ -60,7 +60,7 @@ public class TestFilters extends BspCase {
     };
 
     GiraphConfiguration conf = new GiraphConfiguration();
-    conf.setVertexClass(VertexCountEdges.class);
+    conf.setComputationClass(ComputationCountEdges.class);
     conf.setEdgeInputFormatClass(IntNullTextEdgeInputFormat.class);
     conf.setEdgeInputFilterClass(EdgeFilter.class);
     conf.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
@@ -74,9 +74,9 @@ public class TestFilters extends BspCase {
   }
 
   public static class VertexFilter implements VertexInputFilter<IntWritable,
-      NullWritable, NullWritable, NullWritable> {
+      NullWritable, NullWritable> {
     @Override
-    public boolean dropVertex(Vertex<IntWritable, NullWritable, NullWritable,
+    public boolean dropVertex(Vertex<IntWritable, NullWritable,
         NullWritable> vertex) {
       int id = vertex.getId().get();
       return id == 2 || id == 3;
@@ -93,7 +93,7 @@ public class TestFilters extends BspCase {
     };
 
     GiraphConfiguration conf = new GiraphConfiguration();
-    conf.setVertexClass(IntIntNullVertexDoNothing.class);
+    conf.setComputationClass(IntNoOpComputation.class);
     conf.setVertexInputFormatClass(IntIntTextVertexValueInputFormat.class);
     conf.setVertexInputFilterClass(VertexFilter.class);
     conf.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);

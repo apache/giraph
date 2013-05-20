@@ -101,7 +101,7 @@ public class InternalVertexRunner {
     File tmpDir = null;
     try {
       // Prepare input file, output folder and temporary folders
-      tmpDir = FileUtils.createTestDir(conf.getVertexClass());
+      tmpDir = FileUtils.createTestDir(conf.getComputationClass());
 
       File vertexInputFile = null;
       File edgeInputFile = null;
@@ -137,7 +137,7 @@ public class InternalVertexRunner {
       GiraphConstants.CHECKPOINT_DIRECTORY.set(conf, checkpointsDir.toString());
 
       // Create and configure the job to run the vertex
-      GiraphJob job = new GiraphJob(conf, conf.getVertexClass().getName());
+      GiraphJob job = new GiraphJob(conf, conf.getComputationClass().getName());
 
       Job internalJob = job.getInternalJob();
       if (conf.hasVertexInputFormat()) {
@@ -199,7 +199,6 @@ public class InternalVertexRunner {
    * @param <I> Vertex ID
    * @param <V> Vertex Value
    * @param <E> Edge Value
-   * @param <M> Message Value
    * @param conf GiraphClasses specifying which types to use
    * @param graph input graph
    * @return iterable output data
@@ -207,14 +206,13 @@ public class InternalVertexRunner {
    */
   public static <I extends WritableComparable,
     V extends Writable,
-    E extends Writable,
-    M extends Writable> TestGraph<I, V, E, M> run(
+    E extends Writable> TestGraph<I, V, E> run(
       GiraphConfiguration conf,
-      TestGraph<I, V, E, M> graph) throws Exception {
+      TestGraph<I, V, E> graph) throws Exception {
     File tmpDir = null;
     try {
       // Prepare temporary folders
-      tmpDir = FileUtils.createTestDir(conf.getVertexClass());
+      tmpDir = FileUtils.createTestDir(conf.getComputationClass());
 
       File zkDir = FileUtils.createTempDir(tmpDir, "_bspZooKeeper");
       File zkMgrDir = FileUtils.createTempDir(tmpDir, "_defaultZkManagerDir");
@@ -223,7 +221,7 @@ public class InternalVertexRunner {
       conf.setVertexInputFormatClass(InMemoryVertexInputFormat.class);
 
       // Create and configure the job to run the vertex
-      GiraphJob job = new GiraphJob(conf, conf.getVertexClass().getName());
+      GiraphJob job = new GiraphJob(conf, conf.getComputationClass().getName());
 
       InMemoryVertexInputFormat.setGraph(graph);
 

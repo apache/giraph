@@ -42,12 +42,11 @@ import org.apache.log4j.Logger;
  * @param <I> Vertex id
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public class SuperstepHashPartitionerFactory<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    extends HashPartitionerFactory<I, V, E, M> {
+    V extends Writable, E extends Writable>
+    extends HashPartitionerFactory<I, V, E> {
   /**
    * Changes the {@link HashMasterPartitioner} to make ownership of the
    * partitions based on a superstep.  For testing only as it is totally
@@ -56,11 +55,10 @@ public class SuperstepHashPartitionerFactory<I extends WritableComparable,
    * @param <I> vertex id
    * @param <V> vertex data
    * @param <E> edge data
-   * @param <M> message data
    */
   private static class SuperstepMasterPartition<I extends WritableComparable,
-      V extends Writable, E extends Writable, M extends Writable>
-      extends HashMasterPartitioner<I, V, E, M> {
+      V extends Writable, E extends Writable>
+      extends HashMasterPartitioner<I, V, E> {
     /** Class logger */
     private static Logger LOG =
         Logger.getLogger(SuperstepMasterPartition.class);
@@ -120,8 +118,8 @@ public class SuperstepHashPartitionerFactory<I extends WritableComparable,
   }
 
   @Override
-  public MasterGraphPartitioner<I, V, E, M>
+  public MasterGraphPartitioner<I, V, E>
   createMasterGraphPartitioner() {
-    return new SuperstepMasterPartition<I, V, E, M>(getConf());
+    return new SuperstepMasterPartition<I, V, E>(getConf());
   }
 }

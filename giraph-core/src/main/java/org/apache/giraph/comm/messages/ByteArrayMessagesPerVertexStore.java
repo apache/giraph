@@ -23,6 +23,7 @@ import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.giraph.utils.ExtendedDataOutput;
+import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.giraph.utils.RepresentativeByteArrayIterable;
 import org.apache.giraph.utils.RepresentativeByteArrayIterator;
 import org.apache.giraph.utils.VertexIdIterator;
@@ -47,13 +48,15 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
   /**
    * Constructor
    *
+   * @param messageClass Message class held in the store
    * @param service Service worker
    * @param config Hadoop configuration
    */
   public ByteArrayMessagesPerVertexStore(
-      CentralizedServiceWorker<I, ?, ?, M> service,
-      ImmutableClassesGiraphConfiguration<I, ?, ?, M> config) {
-    super(service, config);
+      Class<M> messageClass,
+      CentralizedServiceWorker<I, ?, ?> service,
+      ImmutableClassesGiraphConfiguration<I, ?, ?> config) {
+    super(messageClass, service, config);
   }
 
   /**
@@ -142,7 +145,7 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
 
     @Override
     protected M createWritable() {
-      return config.createMessageValue();
+      return ReflectionUtils.newInstance(messageClass);
     }
   }
 
@@ -175,7 +178,7 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
 
     @Override
     protected M createWritable() {
-      return config.createMessageValue();
+      return ReflectionUtils.newInstance(messageClass);
     }
   }
 
@@ -222,8 +225,8 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
    */
   public static <I extends WritableComparable, M extends Writable>
   MessageStoreFactory<I, M, MessageStoreByPartition<I, M>> newFactory(
-      CentralizedServiceWorker<I, ?, ?, M> service,
-      ImmutableClassesGiraphConfiguration<I, ?, ?, M> config) {
+      CentralizedServiceWorker<I, ?, ?> service,
+      ImmutableClassesGiraphConfiguration<I, ?, ?> config) {
     return new Factory<I, M>(service, config);
   }
 
@@ -272,23 +275,23 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
   private static class Factory<I extends WritableComparable, M extends Writable>
       implements MessageStoreFactory<I, M, MessageStoreByPartition<I, M>> {
     /** Service worker */
-    private final CentralizedServiceWorker<I, ?, ?, M> service;
+    private final CentralizedServiceWorker<I, ?, ?> service;
     /** Hadoop configuration */
-    private final ImmutableClassesGiraphConfiguration<I, ?, ?, M> config;
+    private final ImmutableClassesGiraphConfiguration<I, ?, ?> config;
 
     /**
      * @param service Worker service
      * @param config  Hadoop configuration
      */
-    public Factory(CentralizedServiceWorker<I, ?, ?, M> service,
-        ImmutableClassesGiraphConfiguration<I, ?, ?, M> config) {
+    public Factory(CentralizedServiceWorker<I, ?, ?> service,
+        ImmutableClassesGiraphConfiguration<I, ?, ?> config) {
       this.service = service;
       this.config = config;
     }
 
     @Override
-    public MessageStoreByPartition<I, M> newStore() {
-      return new ByteArrayMessagesPerVertexStore(service, config);
+    public MessageStoreByPartition<I, M> newStore(Class<M> messageClass) {
+      return new ByteArrayMessagesPerVertexStore(messageClass, service, config);
     }
   }
 }

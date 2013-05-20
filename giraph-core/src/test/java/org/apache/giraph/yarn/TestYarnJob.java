@@ -30,6 +30,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.graph.BasicComputation;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.formats.GiraphFileInputFormat;
 import org.apache.giraph.io.formats.IdWithValueTextOutputFormat;
@@ -61,11 +62,12 @@ public class TestYarnJob implements Watcher {
   /**
    * Simple No-Op vertex to test if we can run a quick Giraph job on YARN.
    */
-  private static class DummyYarnVertex extends Vertex<IntWritable, IntWritable,
-      NullWritable, IntWritable> {
+  private static class DummyYarnComputation extends BasicComputation<
+      IntWritable, IntWritable, NullWritable, IntWritable> {
     @Override
-    public void compute(Iterable<IntWritable> messages) throws IOException {
-      voteToHalt();
+    public void compute(Vertex<IntWritable, IntWritable, NullWritable> vertex,
+        Iterable<IntWritable> messages) throws IOException {
+      vertex.voteToHalt();
     }
   }
 
@@ -203,7 +205,7 @@ public class TestYarnJob implements Watcher {
     conf.setEventWaitMsecs(3 * 1000);
     conf.setYarnLibJars(""); // no need
     conf.setYarnTaskHeapMb(256); // small since no work to be done
-    conf.setVertexClass(DummyYarnVertex.class);
+    conf.setComputationClass(DummyYarnComputation.class);
     conf.setVertexInputFormatClass(IntIntNullTextInputFormat.class);
     conf.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
     conf.setNumComputeThreads(1);

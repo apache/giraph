@@ -38,7 +38,7 @@ import com.google.common.collect.Sets;
 import java.util.Set;
 
 /**
- * Benchmark for {@link WeightedPageRankVertex}
+ * Benchmark for {@link WeightedPageRankComputation}
  */
 public class WeightedPageRankBenchmark extends GiraphBenchmark {
   /** Class logger */
@@ -88,7 +88,7 @@ public class WeightedPageRankBenchmark extends GiraphBenchmark {
    */
   protected void prepareConfiguration(GiraphConfiguration configuration,
       CommandLine cmd) {
-    configuration.setVertexClass(WeightedPageRankVertex.class);
+    configuration.setComputationClass(WeightedPageRankComputation.class);
     int edgesClassOption = EDGES_CLASS.getOptionIntValue(cmd, 1);
     switch (edgesClassOption) {
     case 0:
@@ -149,7 +149,7 @@ public class WeightedPageRankBenchmark extends GiraphBenchmark {
           SimpleLongRangePartitionerFactory.class);
     }
 
-    configuration.setInt(WeightedPageRankVertex.SUPERSTEP_COUNT,
+    configuration.setInt(WeightedPageRankComputation.SUPERSTEP_COUNT,
         BenchmarkOption.SUPERSTEPS.getOptionIntValue(cmd));
   }
 

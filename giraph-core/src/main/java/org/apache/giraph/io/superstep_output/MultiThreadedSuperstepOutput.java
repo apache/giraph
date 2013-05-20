@@ -47,7 +47,7 @@ public class MultiThreadedSuperstepOutput<I extends WritableComparable,
   /** Mapper context */
   private final Mapper<?, ?, ?, ?>.Context context;
   /** Configuration */
-  private ImmutableClassesGiraphConfiguration<I, V, E, ?> configuration;
+  private ImmutableClassesGiraphConfiguration<I, V, E> configuration;
   /** Vertex output format, used to get new vertex writers */
   private final VertexOutputFormat<I, V, E> vertexOutputFormat;
   /**
@@ -65,7 +65,7 @@ public class MultiThreadedSuperstepOutput<I extends WritableComparable,
    * @param context Mapper context
    */
   public MultiThreadedSuperstepOutput(
-      ImmutableClassesGiraphConfiguration<I, V, E, ?> conf,
+      ImmutableClassesGiraphConfiguration<I, V, E> conf,
       Mapper<?, ?, ?, ?>.Context context) {
     this.configuration = conf;
     vertexOutputFormat = conf.createWrappedVertexOutputFormat();
@@ -80,9 +80,7 @@ public class MultiThreadedSuperstepOutput<I extends WritableComparable,
     if (availableVertexWriters.isEmpty()) {
       try {
         vertexWriter = vertexOutputFormat.createVertexWriter(context);
-        vertexWriter.setConf(
-            (ImmutableClassesGiraphConfiguration<I, V, E, Writable>)
-                configuration);
+        vertexWriter.setConf(configuration);
         vertexWriter.initialize(context);
       } catch (IOException e) {
         throw new IllegalStateException("getVertexWriter: " +

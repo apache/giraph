@@ -18,6 +18,7 @@
 package org.apache.giraph.graph;
 
 import com.google.common.collect.Lists;
+
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.ArrayListEdges;
@@ -36,6 +37,7 @@ import org.apache.giraph.time.Times;
 import org.apache.giraph.utils.DynamicChannelBufferInputStream;
 import org.apache.giraph.utils.DynamicChannelBufferOutputStream;
 import org.apache.giraph.utils.EdgeIterables;
+import org.apache.giraph.utils.NoOpComputation;
 import org.apache.giraph.utils.UnsafeByteArrayInputStream;
 import org.apache.giraph.utils.UnsafeByteArrayOutputStream;
 import org.apache.giraph.utils.WritableUtils;
@@ -70,11 +72,8 @@ public class TestVertexAndEdges {
   /**
    * Dummy concrete vertex.
    */
-  public static class TestVertex extends Vertex<LongWritable, FloatWritable,
-        DoubleWritable, LongWritable> {
-    @Override
-    public void compute(Iterable<LongWritable> messages) { }
-  }
+  public static class TestComputation extends NoOpComputation<LongWritable,
+      FloatWritable, DoubleWritable, LongWritable> { }
 
   /**
    * A basic {@link org.apache.giraph.edge.OutEdges} implementation that doesn't provide any
@@ -160,10 +159,10 @@ public class TestVertexAndEdges {
     edgesClasses.add(LongDoubleHashMapEdges.class);
   }
 
-  private Vertex<LongWritable, FloatWritable, DoubleWritable, LongWritable>
+  private Vertex<LongWritable, FloatWritable, DoubleWritable>
   instantiateVertex(Class<? extends OutEdges> edgesClass) {
     GiraphConfiguration giraphConfiguration = new GiraphConfiguration();
-    giraphConfiguration.setVertexClass(TestVertex.class);
+    giraphConfiguration.setComputationClass(TestComputation.class);
     giraphConfiguration.setOutEdgesClass(edgesClass);
     ImmutableClassesGiraphConfiguration immutableClassesGiraphConfiguration =
         new ImmutableClassesGiraphConfiguration(giraphConfiguration);
@@ -175,7 +174,7 @@ public class TestVertexAndEdges {
    */
   @Test
   public void testVertexIdAndValue() {
-    Vertex<LongWritable, FloatWritable, DoubleWritable, LongWritable> vertex =
+    Vertex<LongWritable, FloatWritable, DoubleWritable> vertex =
         instantiateVertex(ArrayListEdges.class);
     assertNotNull(vertex);
     vertex.initialize(new LongWritable(7), new FloatWritable(3.0f));
@@ -189,7 +188,7 @@ public class TestVertexAndEdges {
   instantiateOutEdges(Class<? extends OutEdges> edgesClass) {
     GiraphConfiguration giraphConfiguration = new GiraphConfiguration();
     // Needed to extract type arguments in ReflectionUtils.
-    giraphConfiguration.setVertexClass(TestVertex.class);
+    giraphConfiguration.setComputationClass(TestComputation.class);
     giraphConfiguration.setOutEdgesClass(edgesClass);
     ImmutableClassesGiraphConfiguration immutableClassesGiraphConfiguration =
         new ImmutableClassesGiraphConfiguration(giraphConfiguration);
@@ -208,7 +207,7 @@ public class TestVertexAndEdges {
   }
 
   private void testEdgesClass(Class<? extends OutEdges> edgesClass) {
-    Vertex<LongWritable, FloatWritable, DoubleWritable, LongWritable> vertex =
+    Vertex<LongWritable, FloatWritable, DoubleWritable> vertex =
         instantiateVertex(edgesClass);
     OutEdges<LongWritable, DoubleWritable> outEdges =
         instantiateOutEdges(edgesClass);
@@ -252,7 +251,7 @@ public class TestVertexAndEdges {
   }
 
   private void testMutateEdgesClass(Class<? extends OutEdges> edgesClass) {
-    Vertex<LongWritable, FloatWritable, DoubleWritable, LongWritable> vertex =
+    Vertex<LongWritable, FloatWritable, DoubleWritable> vertex =
         instantiateVertex(edgesClass);
     OutEdges<LongWritable, DoubleWritable> outEdges =
         instantiateOutEdges(edgesClass);
@@ -339,9 +338,9 @@ public class TestVertexAndEdges {
     }
   }
 
-  private Vertex<LongWritable, FloatWritable, DoubleWritable, LongWritable>
+  private Vertex<LongWritable, FloatWritable, DoubleWritable>
   buildVertex(Class<? extends OutEdges> edgesClass) {
-    Vertex<LongWritable, FloatWritable, DoubleWritable, LongWritable> vertex =
+    Vertex<LongWritable, FloatWritable, DoubleWritable> vertex =
         instantiateVertex(edgesClass);
     OutEdges<LongWritable, DoubleWritable> outEdges =
         instantiateOutEdges(edgesClass);
@@ -362,7 +361,7 @@ public class TestVertexAndEdges {
 
   private void testSerializeOutEdgesClass(
       Class<? extends OutEdges> edgesClass) {
-    Vertex<LongWritable, FloatWritable, DoubleWritable, LongWritable> vertex =
+    Vertex<LongWritable, FloatWritable, DoubleWritable> vertex =
         buildVertex(edgesClass);
 
     long serializeNanosStart;
@@ -381,7 +380,7 @@ public class TestVertexAndEdges {
         (byteArray.length * 1f * Time.NS_PER_SECOND / serializeNanos) +
         " bytes / sec for " + edgesClass.getName());
 
-    Vertex<LongWritable, FloatWritable, DoubleWritable, LongWritable>
+    Vertex<LongWritable, FloatWritable, DoubleWritable>
         readVertex = buildVertex(edgesClass);
     
     long deserializeNanosStart;
@@ -407,7 +406,7 @@ public class TestVertexAndEdges {
   private void testDynamicChannelBufferSerializeOutEdgesClass(
       Class<? extends OutEdges> edgesClass)
       throws IOException {
-    Vertex<LongWritable, FloatWritable, DoubleWritable, LongWritable> vertex =
+    Vertex<LongWritable, FloatWritable, DoubleWritable> vertex =
         buildVertex(edgesClass);
 
     long serializeNanosStart;
@@ -430,7 +429,7 @@ public class TestVertexAndEdges {
             Time.NS_PER_SECOND / serializeNanos) +
         " bytes / sec for " + edgesClass.getName());
 
-    Vertex<LongWritable, FloatWritable, DoubleWritable, LongWritable>
+    Vertex<LongWritable, FloatWritable, DoubleWritable>
         readVertex = buildVertex(edgesClass);
 
     long deserializeNanosStart;
@@ -462,7 +461,7 @@ public class TestVertexAndEdges {
   private void testUnsafeSerializeOutEdgesClass(
       Class<? extends OutEdges> edgesClass)
       throws IOException {
-    Vertex<LongWritable, FloatWritable, DoubleWritable, LongWritable> vertex =
+    Vertex<LongWritable, FloatWritable, DoubleWritable> vertex =
         buildVertex(edgesClass);
 
     long serializeNanosStart;
@@ -487,7 +486,7 @@ public class TestVertexAndEdges {
             Time.NS_PER_SECOND / serializeNanos) +
         " bytes / sec for " + edgesClass.getName());
 
-    Vertex<LongWritable, FloatWritable, DoubleWritable, LongWritable>
+    Vertex<LongWritable, FloatWritable, DoubleWritable>
         readVertex = buildVertex(edgesClass);
 
     long deserializeNanosStart;

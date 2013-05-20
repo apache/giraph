@@ -43,7 +43,7 @@ import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_EDGE_INPUT;
  * @param <E> Edge Value
  */
 public class HiveEdgeReader<I extends WritableComparable, E extends Writable>
-    extends DefaultConfigurableAndTableSchemaAware<I, Writable, E, Writable>
+    extends DefaultConfigurableAndTableSchemaAware<I, Writable, E>
     implements GiraphReader<EdgeWithSource<I, E>> {
   /** Underlying Hive RecordReader used */
   private RecordReader<WritableComparable, HiveReadableRecord> hiveRecordReader;

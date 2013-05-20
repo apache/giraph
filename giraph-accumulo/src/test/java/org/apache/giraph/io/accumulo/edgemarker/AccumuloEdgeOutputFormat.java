@@ -64,7 +64,7 @@ public class AccumuloEdgeOutputFormat
      Write back a mutation that adds a qualifier for 'parent' containing the vertex value
      as the cell value. Assume the vertex ID corresponds to a key.
      */
-    public void writeVertex(Vertex<Text, Text, Text, ?> vertex)
+    public void writeVertex(Vertex<Text, Text, Text> vertex)
         throws IOException, InterruptedException {
       RecordWriter<Text, Mutation> writer = getRecordWriter();
       Mutation mt = new Mutation(vertex.getId());

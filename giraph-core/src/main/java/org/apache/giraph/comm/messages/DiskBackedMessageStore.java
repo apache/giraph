@@ -35,6 +35,7 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.utils.ExtendedDataOutput;
+import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.giraph.utils.RepresentativeByteArrayIterable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -48,6 +49,8 @@ import org.apache.hadoop.io.WritableComparable;
  */
 public class DiskBackedMessageStore<I extends WritableComparable,
     M extends Writable> implements FlushableMessageStore<I, M> {
+  /** Message class */
+  private final Class<M> messageClass;
   /**
    * In-memory message map (must be sorted to insure that the ids are
    * ordered)
@@ -55,7 +58,7 @@ public class DiskBackedMessageStore<I extends WritableComparable,
   private volatile ConcurrentNavigableMap<I, ExtendedDataOutput>
   inMemoryMessages;
   /** Hadoop configuration */
-  private final ImmutableClassesGiraphConfiguration<I, ?, ?, M> config;
+  private final ImmutableClassesGiraphConfiguration<I, ?, ?> config;
   /** Counter for number of messages in-memory */
   private final AtomicInteger numberOfMessagesInMemory;
   /** To keep vertex ids which we have messages for */
@@ -71,13 +74,16 @@ public class DiskBackedMessageStore<I extends WritableComparable,
   /**
    * Constructor.
    *
+   * @param messageClass     Message class held in the store
    * @param config           Hadoop configuration
    * @param fileStoreFactory Factory for creating file stores when flushing
    */
   public DiskBackedMessageStore(
-      ImmutableClassesGiraphConfiguration<I, ?, ?, M> config,
+      Class<M> messageClass,
+      ImmutableClassesGiraphConfiguration<I, ?, ?> config,
       MessageStoreFactory<I, M, BasicMessageStore<I, M>> fileStoreFactory) {
     inMemoryMessages = new ConcurrentSkipListMap<I, ExtendedDataOutput>();
+    this.messageClass = messageClass;
     this.config = config;
     numberOfMessagesInMemory = new AtomicInteger(0);
     destinationVertices =
@@ -154,7 +160,7 @@ public class DiskBackedMessageStore<I extends WritableComparable,
 
     @Override
     protected M createWritable() {
-      return config.createMessageValue();
+      return ReflectionUtils.newInstance(messageClass);
     }
   }
 
@@ -289,7 +295,8 @@ public class DiskBackedMessageStore<I extends WritableComparable,
     } finally {
       rwLock.writeLock().unlock();
     }
-    BasicMessageStore<I, M> fileStore = fileStoreFactory.newStore();
+    BasicMessageStore<I, M> fileStore =
+        fileStoreFactory.newStore(messageClass);
     fileStore.addMessages(new TemporaryMessageStore(messagesToFlush));
 
     synchronized (fileStores) {
@@ -351,7 +358,8 @@ public class DiskBackedMessageStore<I extends WritableComparable,
     // read file stores
     int numFileStores = in.readInt();
     for (int s = 0; s < numFileStores; s++) {
-      BasicMessageStore<I, M> fileStore = fileStoreFactory.newStore();
+      BasicMessageStore<I, M> fileStore =
+          fileStoreFactory.newStore(messageClass);
       fileStore.readFields(in);
       fileStores.add(fileStore);
     }
@@ -370,7 +378,7 @@ public class DiskBackedMessageStore<I extends WritableComparable,
    */
   public static <I extends WritableComparable, M extends Writable>
   MessageStoreFactory<I, M, FlushableMessageStore<I, M>> newFactory(
-      ImmutableClassesGiraphConfiguration<I, ?, ?, M> config,
+      ImmutableClassesGiraphConfiguration<I, ?, ?> config,
       MessageStoreFactory<I, M, BasicMessageStore<I, M>> fileStoreFactory) {
     return new Factory<I, M>(config, fileStoreFactory);
   }
@@ -402,8 +410,9 @@ public class DiskBackedMessageStore<I extends WritableComparable,
     }
 
     @Override
-    public FlushableMessageStore<I, M> newStore() {
-      return new DiskBackedMessageStore<I, M>(config, fileStoreFactory);
+    public FlushableMessageStore<I, M> newStore(Class<M> messageClass) {
+      return new DiskBackedMessageStore<I, M>(messageClass, config,
+          fileStoreFactory);
     }
   }
 }

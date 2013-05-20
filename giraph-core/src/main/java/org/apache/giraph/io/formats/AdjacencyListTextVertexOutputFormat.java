@@ -69,7 +69,7 @@ public class AdjacencyListTextVertexOutputFormat<I extends WritableComparable,
     }
 
     @Override
-    public Text convertVertexToLine(Vertex<I, V, E, ?> vertex)
+    public Text convertVertexToLine(Vertex<I, V, E> vertex)
       throws IOException {
       StringBuffer sb = new StringBuffer(vertex.getId().toString());
       sb.append(delimiter);

@@ -46,7 +46,7 @@ public class SendEdgeCache<I extends WritableComparable, E extends Writable>
    * @param serviceWorker Service worker
    */
   public SendEdgeCache(ImmutableClassesGiraphConfiguration conf,
-                       CentralizedServiceWorker<?, ?, ?, ?> serviceWorker) {
+                       CentralizedServiceWorker<?, ?, ?> serviceWorker) {
     super(conf, serviceWorker, MAX_EDGE_REQUEST_SIZE.get(conf),
         ADDITIONAL_EDGE_REQUEST_SIZE.get(conf));
   }

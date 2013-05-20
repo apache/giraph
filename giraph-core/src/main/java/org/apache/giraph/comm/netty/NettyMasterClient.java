@@ -39,7 +39,7 @@ public class NettyMasterClient implements MasterClient {
   /** Netty client that does the actual I/O */
   private final NettyClient nettyClient;
   /** Worker information for current superstep */
-  private CentralizedServiceMaster<?, ?, ?, ?> service;
+  private CentralizedServiceMaster<?, ?, ?> service;
   /** Cached map of partition ids to serialized aggregator data */
   private final SendAggregatorCache sendAggregatorCache =
       new SendAggregatorCache();
@@ -57,7 +57,7 @@ public class NettyMasterClient implements MasterClient {
    */
   public NettyMasterClient(Mapper<?, ?, ?, ?>.Context context,
                            ImmutableClassesGiraphConfiguration configuration,
-                           CentralizedServiceMaster<?, ?, ?, ?> service) {
+                           CentralizedServiceMaster<?, ?, ?> service) {
     this.nettyClient =
         new NettyClient(context, configuration, service.getMasterInfo());
     this.service = service;

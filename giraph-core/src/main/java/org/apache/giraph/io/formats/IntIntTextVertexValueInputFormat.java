@@ -35,11 +35,9 @@ import java.util.regex.Pattern;
  * Each line consists of: id, value
  *
  * @param <E> Edge value
- * @param <M> Message data
  */
-public class IntIntTextVertexValueInputFormat<E extends Writable,
-    M extends Writable> extends
-    TextVertexValueInputFormat<IntWritable, IntWritable, E, M> {
+public class IntIntTextVertexValueInputFormat<E extends Writable> extends
+    TextVertexValueInputFormat<IntWritable, IntWritable, E> {
   /** Separator for id and value */
   private static final Pattern SEPARATOR = Pattern.compile("[\t ]");
 

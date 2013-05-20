@@ -60,12 +60,11 @@ import static org.apache.giraph.conf.GiraphConstants.CHECKPOINT_DIRECTORY;
  * @param <I> Vertex id
  * @param <V> Vertex data
  * @param <E> Edge data
- * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public abstract class BspService<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    implements Watcher, CentralizedService<I, V, E, M> {
+    V extends Writable, E extends Writable>
+    implements Watcher, CentralizedService<I, V, E> {
   /** Unset superstep */
   public static final long UNSET_SUPERSTEP = Long.MIN_VALUE;
   /** Input superstep (superstep when loading the vertices happens) */
@@ -218,7 +217,7 @@ public abstract class BspService<I extends WritableComparable,
   private final List<BspEvent> registeredBspEvents =
       new ArrayList<BspEvent>();
   /** Immutable configuration of the job*/
-  private final ImmutableClassesGiraphConfiguration<I, V, E, M> conf;
+  private final ImmutableClassesGiraphConfiguration<I, V, E> conf;
   /** Job context (mainly for progress) */
   private final Mapper<?, ?, ?, ?>.Context context;
   /** Cached superstep (from ZooKeeper) */
@@ -236,9 +235,9 @@ public abstract class BspService<I extends WritableComparable,
   /** Combination of hostname '_' partition (unique id) */
   private final String hostnamePartitionId;
   /** Graph partitioner */
-  private final GraphPartitionerFactory<I, V, E, M> graphPartitionerFactory;
+  private final GraphPartitionerFactory<I, V, E> graphPartitionerFactory;
   /** Mapper that will do the graph computation */
-  private final GraphTaskManager<I, V, E, M> graphTaskManager;
+  private final GraphTaskManager<I, V, E> graphTaskManager;
   /** File system */
   private final FileSystem fs;
   /** Checkpoint frequency */
@@ -255,7 +254,7 @@ public abstract class BspService<I extends WritableComparable,
   public BspService(String serverPortList,
       int sessionMsecTimeout,
       Mapper<?, ?, ?, ?>.Context context,
-      GraphTaskManager<I, V, E, M> graphTaskManager) {
+      GraphTaskManager<I, V, E> graphTaskManager) {
     this.vertexInputSplitsEvents = new InputSplitEvents(context);
     this.edgeInputSplitsEvents = new InputSplitEvents(context);
     this.connectedEvent = new PredicateLock(context);
@@ -280,8 +279,7 @@ public abstract class BspService<I extends WritableComparable,
 
     this.context = context;
     this.graphTaskManager = graphTaskManager;
-    this.conf = new ImmutableClassesGiraphConfiguration<I, V, E, M>(
-        context.getConfiguration());
+    this.conf = graphTaskManager.getConf();
     this.jobId = conf.get("mapred.job.id", "Unknown Job");
     this.taskPartition = conf.getTaskPartition();
     this.restartedSuperstep = conf.getLong(
@@ -605,7 +603,7 @@ public abstract class BspService<I extends WritableComparable,
     return fs;
   }
 
-  public final ImmutableClassesGiraphConfiguration<I, V, E, M>
+  public final ImmutableClassesGiraphConfiguration<I, V, E>
   getConfiguration() {
     return conf;
   }
@@ -626,7 +624,7 @@ public abstract class BspService<I extends WritableComparable,
     return taskPartition;
   }
 
-  public final GraphTaskManager<I, V, E, M> getGraphTaskManager() {
+  public final GraphTaskManager<I, V, E> getGraphTaskManager() {
     return graphTaskManager;
   }
 
@@ -885,7 +883,7 @@ public abstract class BspService<I extends WritableComparable,
    *
    * @return Instantiated graph partitioner factory
    */
-  protected GraphPartitionerFactory<I, V, E, M> getGraphPartitionerFactory() {
+  protected GraphPartitionerFactory<I, V, E> getGraphPartitionerFactory() {
     return graphPartitionerFactory;
   }
 

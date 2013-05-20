@@ -61,7 +61,7 @@ public class HiveVertexOutputFormat<I extends WritableComparable,
 
   @Override
   public void setConf(
-      ImmutableClassesGiraphConfiguration<I, V, E, Writable> conf) {
+      ImmutableClassesGiraphConfiguration<I, V, E> conf) {
     super.setConf(conf);
     HiveUtils.initializeHiveOutput(
         hiveOutputFormat,

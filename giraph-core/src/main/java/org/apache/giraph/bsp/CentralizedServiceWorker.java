@@ -21,7 +21,6 @@ package org.apache.giraph.bsp;
 import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.comm.WorkerClient;
 import org.apache.giraph.graph.FinishedSuperstepStats;
-import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.GraphTaskManager;
 import org.apache.giraph.graph.VertexEdgeCount;
 import org.apache.giraph.io.superstep_output.SuperstepOutput;
@@ -47,12 +46,11 @@ import java.util.List;
  * @param <I> Vertex id
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public interface CentralizedServiceWorker<I extends WritableComparable,
-  V extends Writable, E extends Writable, M extends Writable>
-  extends CentralizedService<I, V, E, M> {
+  V extends Writable, E extends Writable>
+  extends CentralizedService<I, V, E> {
   /**
    * Setup (must be called prior to any other function)
    *
@@ -73,7 +71,7 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
    *
    * @return Worker client
    */
-  WorkerClient<I, V, E, M> getWorkerClient();
+  WorkerClient<I, V, E> getWorkerClient();
 
   /**
    * Get the worker context.
@@ -97,7 +95,7 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
    *
    * @return The partition store for this worker.
    */
-  PartitionStore<I, V, E, M> getPartitionStore();
+  PartitionStore<I, V, E> getPartitionStore();
 
   /**
    *  Both the vertices and the messages need to be checkpointed in order
@@ -121,23 +119,19 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
    * Take all steps prior to actually beginning the computation of a
    * superstep.
    *
-   * @param graphState Current graph state
    * @return Collection of all the partition owners from the master for this
    *         superstep.
    */
-  Collection<? extends PartitionOwner> startSuperstep(
-      GraphState<I, V, E, M> graphState);
+  Collection<? extends PartitionOwner> startSuperstep();
 
   /**
    * Worker is done with its portion of the superstep.  Report the
    * worker level statistics after the computation.
    *
-   * @param graphState Current graph state
    * @param partitionStatsList All the partition stats for this worker
    * @return Stats of the superstep completion
    */
   FinishedSuperstepStats finishSuperstep(
-      GraphState<I, V, E, M> graphState,
       List<PartitionStats> partitionStatsList);
 
   /**
@@ -195,7 +189,7 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
    *
    * @return the GraphTaskManager instance for this compute node
    */
-  GraphTaskManager<I, V, E, M> getGraphTaskManager();
+  GraphTaskManager<I, V, E> getGraphTaskManager();
 
   /**
    * Operations that will be called if there is a failure by a worker.
@@ -207,7 +201,7 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
    *
    * @return Server data
    */
-  ServerData<I, V, E, M> getServerData();
+  ServerData<I, V, E> getServerData();
 
   /**
    * Get worker aggregator handler

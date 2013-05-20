@@ -34,14 +34,14 @@ import java.util.Iterator;
 public class MutableEdgesIterable<I extends WritableComparable,
     E extends Writable> implements Iterable<MutableEdge<I, E>> {
   /** Vertex that owns the out-edges. */
-  private Vertex<I, ?, E, ?> vertex;
+  private Vertex<I, ?, E> vertex;
 
   /**
    * Constructor.
    *
    * @param vertex Owning vertex
    */
-  public MutableEdgesIterable(Vertex<I, ?, E, ?> vertex) {
+  public MutableEdgesIterable(Vertex<I, ?, E> vertex) {
     this.vertex = vertex;
   }
 

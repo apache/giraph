@@ -41,16 +41,15 @@ import org.apache.log4j.Logger;
  * @param <I> Vertex id
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message data
  */
 public class EdgeStore<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable> {
+    V extends Writable, E extends Writable> {
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(EdgeStore.class);
   /** Service worker. */
-  private CentralizedServiceWorker<I, V, E, M> service;
+  private CentralizedServiceWorker<I, V, E> service;
   /** Giraph configuration. */
-  private ImmutableClassesGiraphConfiguration<I, V, E, M> configuration;
+  private ImmutableClassesGiraphConfiguration<I, V, E> configuration;
   /** Progressable to report progress. */
   private Progressable progressable;
   /** Map used to temporarily store incoming edges. */
@@ -75,8 +74,8 @@ public class EdgeStore<I extends WritableComparable,
    * @param progressable Progressable
    */
   public EdgeStore(
-      CentralizedServiceWorker<I, V, E, M> service,
-      ImmutableClassesGiraphConfiguration<I, V, E, M> configuration,
+      CentralizedServiceWorker<I, V, E> service,
+      ImmutableClassesGiraphConfiguration<I, V, E> configuration,
       Progressable progressable) {
     this.service = service;
     this.configuration = configuration;
@@ -179,14 +178,14 @@ public class EdgeStore<I extends WritableComparable,
           public Void call() throws Exception {
             Integer partitionId;
             while ((partitionId = partitionIdQueue.poll()) != null) {
-              Partition<I, V, E, M> partition =
+              Partition<I, V, E> partition =
                   service.getPartitionStore().getPartition(partitionId);
               ConcurrentMap<I, OutEdges<I, E>> partitionEdges =
                   transientEdges.remove(partitionId);
               for (I vertexId : partitionEdges.keySet()) {
                 OutEdges<I, E> outEdges = convertInputToComputeEdges(
                     partitionEdges.remove(vertexId));
-                Vertex<I, V, E, M> vertex = partition.getVertex(vertexId);
+                Vertex<I, V, E> vertex = partition.getVertex(vertexId);
                 // If the source vertex doesn't exist, create it. Otherwise,
                 // just set the edges.
                 if (vertex == null) {

@@ -28,30 +28,21 @@ import org.apache.giraph.edge.MutableEdgesWrapper;
 import org.apache.giraph.edge.MutableOutEdges;
 import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.edge.StrictRandomAccessOutEdges;
-import org.apache.giraph.partition.PartitionContext;
-import org.apache.giraph.worker.WorkerAggregatorUsage;
-import org.apache.giraph.worker.WorkerContext;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.mapreduce.Mapper;
 
-import java.io.IOException;
 import java.util.Iterator;
 
 /**
- * Basic abstract class for writing a BSP application for computation.
- * Giraph will store Vertex value and edges, hence all user data should
- * be stored as part of the vertex value.
+ * Class which holds vertex id, data and edges.
  *
  * @param <I> Vertex id
  * @param <V> Vertex data
  * @param <E> Edge data
- * @param <M> Message data
  */
-public abstract class Vertex<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    extends DefaultImmutableClassesGiraphConfigurable<I, V, E, M>
-    implements WorkerAggregatorUsage {
+public class Vertex<I extends WritableComparable,
+    V extends Writable, E extends Writable>
+    extends DefaultImmutableClassesGiraphConfigurable<I, V, E> {
   /** Vertex id. */
   private I id;
   /** Vertex value. */
@@ -60,8 +51,6 @@ public abstract class Vertex<I extends WritableComparable,
   private OutEdges<I, E> edges;
   /** If true, do not do anymore computation on this vertex. */
   private boolean halt;
-  /** Global graph state **/
-  private GraphState<I, V, E, M> graphState;
 
   /**
    * Initialize id, value, and edges.
@@ -109,25 +98,6 @@ public abstract class Vertex<I extends WritableComparable,
   }
 
   /**
-   * Must be defined by user to do computation on a single Vertex.
-   *
-   * @param messages Messages that were sent to this vertex in the previous
-   *                 superstep.  Each message is only guaranteed to have
-   *                 a life expectancy as long as next() is not called.
-   * @throws IOException
-   */
-  public abstract void compute(Iterable<M> messages) throws IOException;
-
-  /**
-   * Retrieves the current superstep.
-   *
-   * @return Current superstep
-   */
-  public long getSuperstep() {
-    return graphState.getSuperstep();
-  }
-
-  /**
    * Get the vertex id.
    *
    * @return My vertex id.
@@ -152,26 +122,6 @@ public abstract class Vertex<I extends WritableComparable,
    */
   public void setValue(V value) {
     this.value = value;
-  }
-
-  /**
-   * Get the total (all workers) number of vertices that
-   * existed in the previous superstep.
-   *
-   * @return Total number of vertices (-1 if first superstep)
-   */
-  public long getTotalNumVertices() {
-    return graphState.getTotalNumVertices();
-  }
-
-  /**
-   * Get the total (all workers) number of edges that
-   * existed in the previous superstep.
-   *
-   * @return Total number of edges (-1 if first superstep)
-   */
-  public long getTotalNumEdges() {
-    return graphState.getTotalNumEdges();
   }
 
   /**
@@ -329,32 +279,6 @@ public abstract class Vertex<I extends WritableComparable,
   }
 
   /**
-   * Send a message to a vertex id.  The message should not be mutated after
-   * this method returns or else undefined results could occur.
-   *
-   * @param id Vertex id to send the message to
-   * @param message Message data to send.  Note that after the message is sent,
-   *        the user should not modify the object.
-   */
-  public void sendMessage(I id, M message) {
-    if (graphState.getWorkerClientRequestProcessor().
-          sendMessageRequest(id, message)) {
-      graphState.getGraphTaskManager().notifySentMessages();
-    }
-  }
-
-  /**
-   * Send a message to all edges.
-   *
-   * @param message Message sent to all edges.
-   */
-  public void sendMessageToAllEdges(M message) {
-    for (Edge<I, E> edge : getEdges()) {
-      sendMessage(edge.getTargetVertexId(), message);
-    }
-  }
-
-  /**
    * After this is called, the compute() code will no longer be called for
    * this vertex unless a message is sent to it.  Then the compute() code
    * will be called once again until this function is called.  The
@@ -396,115 +320,6 @@ public abstract class Vertex<I extends WritableComparable,
    */
   public void removeEdges(I targetVertexId) {
     edges.remove(targetVertexId);
-  }
-
-  /**
-   * Sends a request to create a vertex that will be available during the
-   * next superstep.
-   *
-   * @param id Vertex id
-   * @param value Vertex value
-   * @param edges Initial edges
-   */
-  public void addVertexRequest(I id, V value, OutEdges<I, E> edges)
-    throws IOException {
-    Vertex<I, V, E, M> vertex = getConf().createVertex();
-    vertex.initialize(id, value, edges);
-    graphState.getWorkerClientRequestProcessor().addVertexRequest(vertex);
-  }
-
-  /**
-   * Sends a request to create a vertex that will be available during the
-   * next superstep.
-   *
-   * @param id Vertex id
-   * @param value Vertex value
-   */
-  public void addVertexRequest(I id, V value) throws IOException {
-    addVertexRequest(id, value, getConf().createAndInitializeOutEdges());
-  }
-
-  /**
-   * Request to remove a vertex from the graph
-   * (applied just prior to the next superstep).
-   *
-   * @param vertexId Id of the vertex to be removed.
-   */
-  public void removeVertexRequest(I vertexId) throws IOException {
-    graphState.getWorkerClientRequestProcessor().
-        removeVertexRequest(vertexId);
-  }
-
-  /**
-   * Request to add an edge of a vertex in the graph
-   * (processed just prior to the next superstep)
-   *
-   * @param sourceVertexId Source vertex id of edge
-   * @param edge Edge to add
-   */
-  public void addEdgeRequest(I sourceVertexId, Edge<I, E> edge)
-    throws IOException {
-    graphState.getWorkerClientRequestProcessor().
-        addEdgeRequest(sourceVertexId, edge);
-  }
-
-  /**
-   * Request to remove all edges from a given source vertex to a given target
-   * vertex (processed just prior to the next superstep).
-   *
-   * @param sourceVertexId Source vertex id
-   * @param targetVertexId Target vertex id
-   */
-  public void removeEdgesRequest(I sourceVertexId, I targetVertexId)
-    throws IOException {
-    graphState.getWorkerClientRequestProcessor().
-        removeEdgesRequest(sourceVertexId, targetVertexId);
-  }
-
-  /**
-   * Set the graph state for all workers
-   *
-   * @param graphState Graph state for all workers
-   */
-  public void setGraphState(GraphState<I, V, E, M> graphState) {
-    this.graphState = graphState;
-  }
-
-  /**
-   * Get the mapper context
-   *
-   * @return Mapper context
-   */
-  public Mapper.Context getContext() {
-    return graphState.getContext();
-  }
-
-  /**
-   * Get the partition context
-   *
-   * @return Partition context
-   */
-  public PartitionContext getPartitionContext() {
-    return graphState.getPartitionContext();
-  }
-
-  /**
-   * Get the worker context
-   *
-   * @return WorkerContext context
-   */
-  public WorkerContext getWorkerContext() {
-    return graphState.getGraphTaskManager().getWorkerContext();
-  }
-
-  @Override
-  public <A extends Writable> void aggregate(String name, A value) {
-    graphState.getWorkerAggregatorUsage().aggregate(name, value);
-  }
-
-  @Override
-  public <A extends Writable> A getAggregatedValue(String name) {
-    return graphState.getWorkerAggregatorUsage().<A>getAggregatedValue(name);
   }
 
   @Override

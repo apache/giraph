@@ -41,8 +41,8 @@ public class ByteArrayVertexIdEdges<I extends WritableComparable,
    * @return Casted configuration
    */
   @Override
-  public ImmutableClassesGiraphConfiguration<I, ?, E, ?> getConf() {
-    return (ImmutableClassesGiraphConfiguration<I, ?, E, ?>) super.getConf();
+  public ImmutableClassesGiraphConfiguration<I, ?, E> getConf() {
+    return (ImmutableClassesGiraphConfiguration<I, ?, E>) super.getConf();
   }
 
   @Override

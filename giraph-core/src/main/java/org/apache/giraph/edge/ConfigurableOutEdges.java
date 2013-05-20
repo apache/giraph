@@ -31,6 +31,6 @@ import org.apache.hadoop.io.WritableComparable;
  */
 public abstract class ConfigurableOutEdges<I extends WritableComparable,
     E extends Writable>
-    extends DefaultImmutableClassesGiraphConfigurable<I, Writable, E,
-    Writable> implements OutEdges<I, E> {
+    extends DefaultImmutableClassesGiraphConfigurable<I, Writable, E>
+    implements OutEdges<I, E> {
 }

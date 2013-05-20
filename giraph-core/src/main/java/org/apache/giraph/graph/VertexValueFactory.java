@@ -36,7 +36,7 @@ public interface VertexValueFactory<V extends Writable> {
    * @param configuration Configuration
    */
   void initialize(
-      ImmutableClassesGiraphConfiguration<?, V, ?, ?> configuration);
+      ImmutableClassesGiraphConfiguration<?, V, ?> configuration);
 
   /**
    * Create a new vertex value.

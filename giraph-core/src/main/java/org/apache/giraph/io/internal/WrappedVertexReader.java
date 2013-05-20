@@ -51,7 +51,7 @@ public class WrappedVertexReader<I extends WritableComparable,
    * @param conf Configuration
    */
   public WrappedVertexReader(VertexReader<I, V, E> baseVertexReader,
-      ImmutableClassesGiraphConfiguration<I, V, E, Writable> conf) {
+      ImmutableClassesGiraphConfiguration<I, V, E> conf) {
     this.baseVertexReader = baseVertexReader;
     super.setConf(conf);
     baseVertexReader.setConf(conf);
@@ -59,7 +59,7 @@ public class WrappedVertexReader<I extends WritableComparable,
 
   @Override
   public void setConf(
-      ImmutableClassesGiraphConfiguration<I, V, E, Writable> conf) {
+      ImmutableClassesGiraphConfiguration<I, V, E> conf) {
     // We don't want to use external configuration
   }
 
@@ -76,7 +76,7 @@ public class WrappedVertexReader<I extends WritableComparable,
   }
 
   @Override
-  public Vertex<I, V, E, ?> getCurrentVertex() throws IOException,
+  public Vertex<I, V, E> getCurrentVertex() throws IOException,
       InterruptedException {
     return baseVertexReader.getCurrentVertex();
   }

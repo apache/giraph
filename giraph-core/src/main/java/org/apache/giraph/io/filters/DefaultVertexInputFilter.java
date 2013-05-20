@@ -32,10 +32,10 @@ import org.apache.hadoop.io.WritableComparable;
  */
 public class DefaultVertexInputFilter<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
-    extends DefaultImmutableClassesGiraphConfigurable<I, V, E, M>
-    implements VertexInputFilter<I, V, E, M> {
+    extends DefaultImmutableClassesGiraphConfigurable<I, V, E>
+    implements VertexInputFilter<I, V, E> {
   @Override
-  public boolean dropVertex(Vertex<I, V, E, M> vertex) {
+  public boolean dropVertex(Vertex<I, V, E> vertex) {
     return false;
   }
 }

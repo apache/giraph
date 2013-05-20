@@ -34,35 +34,31 @@ import java.io.IOException;
  * @param <I> Vertex index value
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message data
  */
 public abstract class BasicPartition<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    implements Partition<I, V, E, M> {
+    V extends Writable, E extends Writable>
+    implements Partition<I, V, E> {
   /** Configuration from the worker */
-  private ImmutableClassesGiraphConfiguration<I, V, E, M> conf;
+  private ImmutableClassesGiraphConfiguration<I, V, E> conf;
   /** Partition id */
   private int id;
   /** Context used to report progress */
   private Progressable progressable;
-  /** Partition context */
-  private PartitionContext partitionContext;
 
   @Override
   public void initialize(int partitionId, Progressable progressable) {
     setId(partitionId);
     setProgressable(progressable);
-    partitionContext = conf.createPartitionContext();
   }
 
   @Override
   public void setConf(
-      ImmutableClassesGiraphConfiguration<I, V, E, M> configuration) {
+      ImmutableClassesGiraphConfiguration<I, V, E> configuration) {
     conf = configuration;
   }
 
   @Override
-  public ImmutableClassesGiraphConfiguration<I, V, E, M> getConf() {
+  public ImmutableClassesGiraphConfiguration<I, V, E> getConf() {
     return conf;
   }
 
@@ -74,11 +70,6 @@ public abstract class BasicPartition<I extends WritableComparable,
   @Override
   public void setId(int id) {
     this.id = id;
-  }
-
-  @Override
-  public PartitionContext getPartitionContext() {
-    return partitionContext;
   }
 
   @Override
@@ -101,6 +92,5 @@ public abstract class BasicPartition<I extends WritableComparable,
   @Override
   public void readFields(DataInput input) throws IOException {
     id = input.readInt();
-    partitionContext = conf.createPartitionContext();
   }
 }

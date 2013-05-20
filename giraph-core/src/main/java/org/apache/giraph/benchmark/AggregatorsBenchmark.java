@@ -20,6 +20,7 @@ package org.apache.giraph.benchmark;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.giraph.aggregators.LongSumAggregator;
+import org.apache.giraph.graph.BasicComputation;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.io.formats.PseudoRandomInputFormatConstants;
@@ -52,10 +53,13 @@ public class AggregatorsBenchmark extends GiraphBenchmark {
   /**
    * Vertex class for AggregatorsBenchmark
    */
-  public static class AggregatorsBenchmarkVertex extends
-      Vertex<LongWritable, DoubleWritable, DoubleWritable, DoubleWritable> {
+  public static class AggregatorsBenchmarkComputation extends
+      BasicComputation<LongWritable, DoubleWritable, DoubleWritable,
+          DoubleWritable> {
     @Override
-    public void compute(Iterable<DoubleWritable> messages) throws IOException {
+    public void compute(
+        Vertex<LongWritable, DoubleWritable, DoubleWritable> vertex,
+        Iterable<DoubleWritable> messages) throws IOException {
       int n = getNumAggregators(getConf());
       long superstep = getSuperstep();
       int w = getWorkerContextAggregated(getConf(), superstep);
@@ -71,7 +75,7 @@ public class AggregatorsBenchmark extends GiraphBenchmark {
             ((LongWritable) getAggregatedValue("p" + i)).get());
       }
       if (superstep > 2) {
-        voteToHalt();
+        vertex.voteToHalt();
       }
     }
   }
@@ -201,7 +205,7 @@ public class AggregatorsBenchmark extends GiraphBenchmark {
   @Override
   protected void prepareConfiguration(GiraphConfiguration conf,
       CommandLine cmd) {
-    conf.setVertexClass(AggregatorsBenchmarkVertex.class);
+    conf.setComputationClass(AggregatorsBenchmarkComputation.class);
     conf.setMasterComputeClass(AggregatorsBenchmarkMasterCompute.class);
     conf.setVertexInputFormatClass(PseudoRandomVertexInputFormat.class);
     conf.setWorkerContextClass(AggregatorsBenchmarkWorkerContext.class);

@@ -21,7 +21,6 @@ package org.apache.giraph.worker;
 import org.apache.giraph.comm.WorkerClientRequestProcessor;
 import org.apache.giraph.comm.netty.NettyWorkerClientRequestProcessor;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.VertexEdgeCount;
 import org.apache.giraph.io.GiraphInputFormat;
 import org.apache.giraph.metrics.GiraphMetrics;
@@ -57,24 +56,20 @@ import java.util.concurrent.Callable;
  * @param <I> Vertex index value
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message data
  */
 public abstract class InputSplitsCallable<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
+    V extends Writable, E extends Writable>
     implements Callable<VertexEdgeCount> {
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(InputSplitsCallable.class);
   /** Class time object */
   private static final Time TIME = SystemTime.get();
   /** Configuration */
-  protected final ImmutableClassesGiraphConfiguration<I, V, E, M>
-  configuration;
+  protected final ImmutableClassesGiraphConfiguration<I, V, E> configuration;
   /** Context */
   protected final Mapper<?, ?, ?, ?>.Context context;
-  /** Graph state */
-  private final GraphState<I, V, E, M> graphState;
   /** Handles IPC communication */
-  private final WorkerClientRequestProcessor<I, V, E, M>
+  protected final WorkerClientRequestProcessor<I, V, E>
   workerClientRequestProcessor;
   /**
    * Stores and processes the list of InputSplits advertised
@@ -93,7 +88,6 @@ public abstract class InputSplitsCallable<I extends WritableComparable,
    * Constructor.
    *
    * @param context Context
-   * @param graphState Graph state
    * @param configuration Configuration
    * @param bspServiceWorker service worker
    * @param splitsHandler Handler for input splits
@@ -101,20 +95,15 @@ public abstract class InputSplitsCallable<I extends WritableComparable,
    */
   public InputSplitsCallable(
       Mapper<?, ?, ?, ?>.Context context,
-      GraphState<I, V, E, M> graphState,
-      ImmutableClassesGiraphConfiguration<I, V, E, M> configuration,
-      BspServiceWorker<I, V, E, M> bspServiceWorker,
+      ImmutableClassesGiraphConfiguration<I, V, E> configuration,
+      BspServiceWorker<I, V, E> bspServiceWorker,
       InputSplitsHandler splitsHandler,
       ZooKeeperExt zooKeeperExt) {
     this.zooKeeperExt = zooKeeperExt;
     this.context = context;
     this.workerClientRequestProcessor =
-        new NettyWorkerClientRequestProcessor<I, V, E, M>(
+        new NettyWorkerClientRequestProcessor<I, V, E>(
             context, configuration, bspServiceWorker);
-    this.graphState = new GraphState<I, V, E, M>(graphState.getSuperstep(),
-        graphState.getTotalNumVertices(), graphState.getTotalNumEdges(),
-        context, graphState.getGraphTaskManager(), workerClientRequestProcessor,
-        null);
     this.useLocality = configuration.useInputSplitLocality();
     this.splitsHandler = splitsHandler;
     this.configuration = configuration;
@@ -205,14 +194,11 @@ public abstract class InputSplitsCallable<I extends WritableComparable,
    * Load vertices/edges from the given input split.
    *
    * @param inputSplit Input split to load
-   * @param graphState Graph state
    * @return Count of vertices and edges loaded
    * @throws IOException
    * @throws InterruptedException
    */
-  protected abstract VertexEdgeCount readInputSplit(
-      InputSplit inputSplit,
-      GraphState<I, V, E, M> graphState)
+  protected abstract VertexEdgeCount readInputSplit(InputSplit inputSplit)
     throws IOException, InterruptedException;
 
   @Override
@@ -222,9 +208,8 @@ public abstract class InputSplitsCallable<I extends WritableComparable,
     int inputSplitsProcessed = 0;
     try {
       while ((inputSplitPath = splitsHandler.reserveInputSplit()) != null) {
-        vertexEdgeCount = vertexEdgeCount.incrVertexEdgeCount(
-            loadInputSplit(inputSplitPath,
-                graphState));
+        vertexEdgeCount =
+            vertexEdgeCount.incrVertexEdgeCount(loadInputSplit(inputSplitPath));
         context.progress();
         ++inputSplitsProcessed;
       }
@@ -267,7 +252,6 @@ public abstract class InputSplitsCallable<I extends WritableComparable,
    * Mark the input split finished when done.
    *
    * @param inputSplitPath ZK location of input split
-   * @param graphState Current graph state
    * @return Mapping of vertex indices and statistics, or null if no data read
    * @throws IOException
    * @throws ClassNotFoundException
@@ -276,13 +260,11 @@ public abstract class InputSplitsCallable<I extends WritableComparable,
    * @throws IllegalAccessException
    */
   private VertexEdgeCount loadInputSplit(
-      String inputSplitPath,
-      GraphState<I, V, E, M> graphState)
+      String inputSplitPath)
     throws IOException, ClassNotFoundException, InterruptedException,
       InstantiationException, IllegalAccessException {
     InputSplit inputSplit = getInputSplit(inputSplitPath);
-    VertexEdgeCount vertexEdgeCount =
-        readInputSplit(inputSplit, graphState);
+    VertexEdgeCount vertexEdgeCount = readInputSplit(inputSplit);
     if (LOG.isInfoEnabled()) {
       LOG.info("loadFromInputSplit: Finished loading " +
           inputSplitPath + " " + vertexEdgeCount);

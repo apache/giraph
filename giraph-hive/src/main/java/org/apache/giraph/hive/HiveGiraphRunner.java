@@ -27,7 +27,7 @@ import org.apache.commons.cli.ParseException;
 import org.apache.giraph.conf.GiraphClasses;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
-import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.graph.Computation;
 import org.apache.giraph.hive.input.edge.HiveEdgeInputFormat;
 import org.apache.giraph.hive.input.edge.HiveToEdge;
 import org.apache.giraph.hive.input.vertex.HiveToVertex;
@@ -78,7 +78,7 @@ public class HiveGiraphRunner implements Tool {
   protected boolean isVerbose;
 
   /** vertex class. */
-  private Class<? extends Vertex> vertexClass;
+  private Class<? extends Computation> computationClass;
 
   /** Descriptions of vertex input formats */
   private List<VertexInputFormatDescription> vertexInputDescriptions =
@@ -101,12 +101,13 @@ public class HiveGiraphRunner implements Tool {
     conf = new HiveConf(getClass());
   }
 
-  public Class<? extends Vertex> getVertexClass() {
-    return vertexClass;
+  public Class<? extends Computation> getComputationClass() {
+    return computationClass;
   }
 
-  public void setVertexClass(Class<? extends Vertex> vertexClass) {
-    this.vertexClass = vertexClass;
+  public void setComputationClass(
+      Class<? extends Computation> computationClass) {
+    this.computationClass = computationClass;
   }
 
   public List<VertexInputFormatDescription> getVertexInputDescriptions() {
@@ -265,7 +266,7 @@ public class HiveGiraphRunner implements Tool {
     // setup GiraphJob
     GiraphJob job = new GiraphJob(getConf(), getClass().getName());
     GiraphConfiguration giraphConf = job.getConfiguration();
-    giraphConf.setVertexClass(vertexClass);
+    giraphConf.setComputationClass(computationClass);
 
     giraphConf.setWorkerConfiguration(workers, workers, 100.0f);
     initGiraphJob(job);
@@ -363,14 +364,14 @@ public class HiveGiraphRunner implements Tool {
     }
 
     // Giraph classes
-    String vertexClassStr = cmdln.getOptionValue("vertexClass");
-    if (vertexClassStr != null) {
-      vertexClass = findClass(vertexClassStr, Vertex.class);
+    String computationClassStr = cmdln.getOptionValue("computationClass");
+    if (computationClassStr != null) {
+      computationClass = findClass(computationClassStr, Computation.class);
     }
-    if (vertexClass == null) {
+    if (computationClass == null) {
       throw new IllegalArgumentException(
-          "Need the Giraph " + Vertex.class.getSimpleName() +
-              " class name (-vertexClass) to use");
+          "Need the Giraph " + Computation.class.getSimpleName() +
+              " class name (-computationClass) to use");
     }
 
     String[] vertexInputs = cmdln.getOptionValues("vertexInput");
@@ -502,9 +503,9 @@ public class HiveGiraphRunner implements Tool {
                 "property=value for Hive/Hadoop configuration");
     options.addOption("w", "workers", true, "Number of workers");
 
-    if (vertexClass == null) {
-      options.addOption(null, "vertexClass", true,
-          "Giraph Vertex class to use");
+    if (computationClass == null) {
+      options.addOption(null, "computationClass", true,
+          "Giraph Computation class to use");
     }
 
     options.addOption("db", "dbName", true, "Hive database name");
@@ -634,11 +635,12 @@ public class HiveGiraphRunner implements Tool {
    * @param giraphConf GiraphConfiguration
    */
   private void logOptions(GiraphConfiguration giraphConf) {
-    GiraphClasses<?, ?, ?, ?> classes = new GiraphClasses(giraphConf);
+    GiraphClasses<?, ?, ?> classes = new GiraphClasses(giraphConf);
 
     LOG.info(getClass().getSimpleName() + " with");
 
-    LOG.info(LOG_PREFIX + "-vertexClass=" + vertexClass.getCanonicalName());
+    LOG.info(LOG_PREFIX + "-computationClass=" +
+        computationClass.getCanonicalName());
 
     for (VertexInputFormatDescription description : vertexInputDescriptions) {
       LOG.info(LOG_PREFIX + "Vertex input: " + description);

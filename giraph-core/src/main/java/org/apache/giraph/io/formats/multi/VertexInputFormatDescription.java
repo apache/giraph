@@ -80,11 +80,11 @@ public class VertexInputFormatDescription<I extends WritableComparable,
    * @param conf Configuration which we want to create a copy from
    * @return Copy of configuration
    */
-  private ImmutableClassesGiraphConfiguration<I, V, E, Writable>
+  private ImmutableClassesGiraphConfiguration<I, V, E>
   createConfigurationCopy(
-      ImmutableClassesGiraphConfiguration<I, V, E, Writable> conf) {
-    ImmutableClassesGiraphConfiguration<I, V, E, Writable> confCopy =
-        new ImmutableClassesGiraphConfiguration<I, V, E, Writable>(conf);
+      ImmutableClassesGiraphConfiguration<I, V, E> conf) {
+    ImmutableClassesGiraphConfiguration<I, V, E> confCopy =
+        new ImmutableClassesGiraphConfiguration<I, V, E>(conf);
     confCopy.setVertexInputFormatClass(getInputFormatClass());
     putParametersToConfiguration(confCopy);
     return confCopy;
@@ -136,13 +136,13 @@ public class VertexInputFormatDescription<I extends WritableComparable,
   public static <I extends WritableComparable, V extends Writable,
       E extends Writable>
   List<VertexInputFormat<I, V, E>> createVertexInputFormats(
-      ImmutableClassesGiraphConfiguration<I, V, E, Writable> conf) {
+      ImmutableClassesGiraphConfiguration<I, V, E> conf) {
     List<VertexInputFormatDescription<I, V, E>> descriptions =
         getVertexInputFormatDescriptions(conf);
     List<VertexInputFormat<I, V, E>> vertexInputFormats =
         Lists.newArrayListWithCapacity(descriptions.size());
     for (VertexInputFormatDescription<I, V, E> description : descriptions) {
-      ImmutableClassesGiraphConfiguration<I, V, E, Writable> confCopy =
+      ImmutableClassesGiraphConfiguration<I, V, E> confCopy =
           description.createConfigurationCopy(conf);
       vertexInputFormats.add(confCopy.createWrappedVertexInputFormat());
     }

@@ -50,7 +50,7 @@ public class WrappedEdgeReader<I extends WritableComparable,
    * @param conf Configuration
    */
   public WrappedEdgeReader(EdgeReader<I, E> baseEdgeReader,
-      ImmutableClassesGiraphConfiguration<I, Writable, E, Writable> conf) {
+      ImmutableClassesGiraphConfiguration<I, Writable, E> conf) {
     this.baseEdgeReader = baseEdgeReader;
     super.setConf(conf);
     baseEdgeReader.setConf(conf);
@@ -58,7 +58,7 @@ public class WrappedEdgeReader<I extends WritableComparable,
 
   @Override
   public void setConf(
-      ImmutableClassesGiraphConfiguration<I, Writable, E, Writable> conf) {
+      ImmutableClassesGiraphConfiguration<I, Writable, E> conf) {
     // We don't want to use external configuration
   }
 

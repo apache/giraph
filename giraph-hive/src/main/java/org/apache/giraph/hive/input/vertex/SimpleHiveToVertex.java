@@ -43,7 +43,7 @@ public abstract class SimpleHiveToVertex<I extends WritableComparable,
   private Iterator<HiveReadableRecord> records;
 
   /** Reusable vertex object */
-  private Vertex<I, V, E, ?> reusableVertex = null;
+  private Vertex<I, V, E> reusableVertex = null;
 
   /**
    * Read the Vertex's ID from the HiveRecord given.
@@ -71,7 +71,7 @@ public abstract class SimpleHiveToVertex<I extends WritableComparable,
 
   @Override
   public void setConf(
-      ImmutableClassesGiraphConfiguration<I, V, E, Writable> conf) {
+      ImmutableClassesGiraphConfiguration<I, V, E> conf) {
     super.setConf(conf);
     if (conf.reuseVertexObjects()) {
       reusableVertex = getConf().createVertex();
@@ -89,12 +89,12 @@ public abstract class SimpleHiveToVertex<I extends WritableComparable,
   }
 
   @Override
-  public Vertex<I, V, E, ?> next() {
+  public Vertex<I, V, E> next() {
     HiveReadableRecord record = records.next();
     I id = getVertexId(record);
     V value = getVertexValue(record);
     Iterable<Edge<I, E>> edges = getEdges(record);
-    Vertex<I, V, E, ?> vertex = reusableVertex;
+    Vertex<I, V, E> vertex = reusableVertex;
     if (vertex == null) {
       vertex = getConf().createVertex();
     }

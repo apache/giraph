@@ -44,7 +44,7 @@ public class VertexWithDoubleValueDoubleEdgeTextOutputFormat extends
   public class VertexWithDoubleValueWriter extends TextVertexWriter {
     @Override
     public void writeVertex(
-      Vertex<LongWritable, DoubleWritable, DoubleWritable, ?> vertex)
+      Vertex<LongWritable, DoubleWritable, DoubleWritable> vertex)
       throws IOException, InterruptedException {
       StringBuilder output = new StringBuilder();
       output.append(vertex.getId().get());

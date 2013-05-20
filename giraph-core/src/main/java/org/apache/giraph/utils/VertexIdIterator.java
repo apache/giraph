@@ -42,7 +42,7 @@ public abstract class VertexIdIterator<I extends WritableComparable> {
    */
   public VertexIdIterator(
       ExtendedDataOutput extendedDataOutput,
-      ImmutableClassesGiraphConfiguration<I, ?, ?, ?> configuration) {
+      ImmutableClassesGiraphConfiguration<I, ?, ?> configuration) {
     extendedDataInput = configuration.createExtendedDataInput(
         extendedDataOutput.getByteArray(), 0, extendedDataOutput.getPos());
   }

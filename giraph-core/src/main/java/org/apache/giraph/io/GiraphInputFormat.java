@@ -40,7 +40,7 @@ import org.apache.hadoop.util.ReflectionUtils;
  */
 public abstract class GiraphInputFormat<I extends WritableComparable,
     V extends Writable, E extends Writable> extends
-    DefaultImmutableClassesGiraphConfigurable<I, V, E, Writable> {
+    DefaultImmutableClassesGiraphConfigurable<I, V, E> {
   /**
    * Get the list of input splits for the format.
    *

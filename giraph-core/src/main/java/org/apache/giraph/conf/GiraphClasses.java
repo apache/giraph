@@ -20,11 +20,11 @@ package org.apache.giraph.conf;
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.aggregators.TextAggregatorWriter;
 import org.apache.giraph.combiner.Combiner;
+import org.apache.giraph.graph.Computation;
 import org.apache.giraph.edge.ByteArrayEdges;
 import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.graph.DefaultVertexResolver;
 import org.apache.giraph.graph.DefaultVertexValueFactory;
-import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.graph.VertexValueFactory;
 import org.apache.giraph.io.filters.DefaultEdgeInputFilter;
@@ -36,11 +36,9 @@ import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.giraph.master.DefaultMasterCompute;
 import org.apache.giraph.master.MasterCompute;
-import org.apache.giraph.partition.DefaultPartitionContext;
 import org.apache.giraph.partition.GraphPartitionerFactory;
 import org.apache.giraph.partition.HashPartitionerFactory;
 import org.apache.giraph.partition.Partition;
-import org.apache.giraph.partition.PartitionContext;
 import org.apache.giraph.partition.SimplePartition;
 import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.giraph.worker.DefaultWorkerContext;
@@ -57,22 +55,25 @@ import java.util.List;
  * @param <I> Vertex ID class
  * @param <V> Vertex Value class
  * @param <E> Edge class
- * @param <M> Message class
  */
 @SuppressWarnings("unchecked")
 public class GiraphClasses<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
+    V extends Writable, E extends Writable>
     implements GiraphConstants {
-  /** Vertex class - cached for fast access */
-  protected Class<? extends Vertex<I, V, E, M>> vertexClass;
+  /** Computation class - cached for fast access */
+  protected Class<? extends
+      Computation<I, V, E, ? extends Writable, ? extends Writable>>
+  computationClass;
   /** Vertex id class - cached for fast access */
   protected Class<I> vertexIdClass;
   /** Vertex value class - cached for fast access */
   protected Class<V> vertexValueClass;
   /** Edge value class - cached for fast access */
   protected Class<E> edgeValueClass;
-  /** Message value class - cached for fast access */
-  protected Class<M> messageValueClass;
+  /** Incoming message value class - cached for fast access */
+  protected Class<? extends Writable> incomingMessageValueClass;
+  /** Outgoing message value class - cached for fast access */
+  protected Class<? extends Writable> outgoingMessageValueClass;
   /** Vertex edges class - cached for fast access */
   protected Class<? extends OutEdges<I, E>> outEdgesClass;
   /** Input vertex edges class - cached for fast access */
@@ -82,7 +83,7 @@ public class GiraphClasses<I extends WritableComparable,
   protected Class<? extends VertexValueFactory<V>> vertexValueFactoryClass;
 
   /** Graph partitioner factory class - cached for fast access */
-  protected Class<? extends GraphPartitionerFactory<I, V, E, M>>
+  protected Class<? extends GraphPartitionerFactory<I, V, E>>
   graphPartitionerFactoryClass;
 
   /** Vertex input format class - cached for fast access */
@@ -98,24 +99,22 @@ public class GiraphClasses<I extends WritableComparable,
   /** Aggregator writer class - cached for fast access */
   protected Class<? extends AggregatorWriter> aggregatorWriterClass;
   /** Combiner class - cached for fast access */
-  protected Class<? extends Combiner<I, M>> combinerClass;
+  protected Class<? extends Combiner<I, ? extends Writable>> combinerClass;
 
   /** Vertex resolver class - cached for fast access */
-  protected Class<? extends VertexResolver<I, V, E, M>> vertexResolverClass;
-  /** Partition context class - cached for fast access */
-  protected Class<? extends PartitionContext> partitionContextClass;
+  protected Class<? extends VertexResolver<I, V, E>> vertexResolverClass;
   /** Worker context class - cached for fast access */
   protected Class<? extends WorkerContext> workerContextClass;
   /** Master compute class - cached for fast access */
   protected Class<? extends MasterCompute> masterComputeClass;
 
   /** Partition class - cached for fast accesss */
-  protected Class<? extends Partition<I, V, E, M>> partitionClass;
+  protected Class<? extends Partition<I, V, E>> partitionClass;
 
   /** Edge Input Filter class */
   protected Class<? extends EdgeInputFilter<I, E>> edgeInputFilterClass;
   /** Vertex Input Filter class */
-  protected Class<? extends VertexInputFilter<I, V, E, M>>
+  protected Class<? extends VertexInputFilter<I, V, E>>
   vertexInputFilterClass;
 
   /**
@@ -131,19 +130,18 @@ public class GiraphClasses<I extends WritableComparable,
     vertexValueFactoryClass = (Class<? extends VertexValueFactory<V>>) (Object)
         DefaultVertexValueFactory.class;
     graphPartitionerFactoryClass =
-        (Class<? extends GraphPartitionerFactory<I, V, E, M>>) (Object)
+        (Class<? extends GraphPartitionerFactory<I, V, E>>) (Object)
             HashPartitionerFactory.class;
     aggregatorWriterClass = TextAggregatorWriter.class;
-    vertexResolverClass = (Class<? extends VertexResolver<I, V, E, M>>)
+    vertexResolverClass = (Class<? extends VertexResolver<I, V, E>>)
         (Object) DefaultVertexResolver.class;
-    partitionContextClass = DefaultPartitionContext.class;
     workerContextClass = DefaultWorkerContext.class;
     masterComputeClass = DefaultMasterCompute.class;
-    partitionClass = (Class<? extends Partition<I, V, E, M>>) (Object)
+    partitionClass = (Class<? extends Partition<I, V, E>>) (Object)
         SimplePartition.class;
     edgeInputFilterClass = (Class<? extends EdgeInputFilter<I, E>>)
         (Object) DefaultEdgeInputFilter.class;
-    vertexInputFilterClass = (Class<? extends VertexInputFilter<I, V, E, M>>)
+    vertexInputFilterClass = (Class<? extends VertexInputFilter<I, V, E>>)
         (Object) DefaultVertexInputFilter.class;
   }
 
@@ -163,13 +161,17 @@ public class GiraphClasses<I extends WritableComparable,
    */
   private void readFromConf(Configuration conf) {
     // set pre-validated generic parameter types into Configuration
-    vertexClass = (Class<? extends Vertex<I, V, E, M>>) VERTEX_CLASS.get(conf);
-    List<Class<?>> classList = ReflectionUtils.getTypeArguments(Vertex.class,
-        vertexClass);
+    computationClass =
+        (Class<? extends
+            Computation<I, V, E, ? extends Writable, ? extends Writable>>)
+            COMPUTATION_CLASS.get(conf);
+    List<Class<?>> classList =
+        ReflectionUtils.getTypeArguments(Computation.class, computationClass);
     vertexIdClass = (Class<I>) classList.get(0);
     vertexValueClass = (Class<V>) classList.get(1);
     edgeValueClass = (Class<E>) classList.get(2);
-    messageValueClass = (Class<M>) classList.get(3);
+    incomingMessageValueClass = (Class<? extends Writable>) classList.get(3);
+    outgoingMessageValueClass = (Class<? extends Writable>) classList.get(4);
 
     outEdgesClass = (Class<? extends OutEdges<I, E>>)
         VERTEX_EDGES_CLASS.get(conf);
@@ -179,7 +181,7 @@ public class GiraphClasses<I extends WritableComparable,
         VERTEX_VALUE_FACTORY_CLASS.get(conf);
 
     graphPartitionerFactoryClass =
-        (Class<? extends GraphPartitionerFactory<I, V, E, M>>)
+        (Class<? extends GraphPartitionerFactory<I, V, E>>)
             GRAPH_PARTITIONER_FACTORY_CLASS.get(conf);
 
     vertexInputFormatClass = (Class<? extends VertexInputFormat<I, V, E>>)
@@ -190,29 +192,30 @@ public class GiraphClasses<I extends WritableComparable,
         EDGE_INPUT_FORMAT_CLASS.get(conf);
 
     aggregatorWriterClass = AGGREGATOR_WRITER_CLASS.get(conf);
-    combinerClass = (Class<? extends Combiner<I, M>>)
+    combinerClass = (Class<? extends Combiner<I, ? extends Writable>>)
         VERTEX_COMBINER_CLASS.get(conf);
-    vertexResolverClass = (Class<? extends VertexResolver<I, V, E, M>>)
+    vertexResolverClass = (Class<? extends VertexResolver<I, V, E>>)
         VERTEX_RESOLVER_CLASS.get(conf);
-    partitionContextClass = PARTITION_CONTEXT_CLASS.get(conf);
     workerContextClass = WORKER_CONTEXT_CLASS.get(conf);
     masterComputeClass =  MASTER_COMPUTE_CLASS.get(conf);
-    partitionClass = (Class<? extends Partition<I, V, E, M>>)
+    partitionClass = (Class<? extends Partition<I, V, E>>)
         PARTITION_CLASS.get(conf);
 
     edgeInputFilterClass = (Class<? extends EdgeInputFilter<I, E>>)
         EDGE_INPUT_FILTER_CLASS.get(conf);
-    vertexInputFilterClass = (Class<? extends VertexInputFilter<I, V, E, M>>)
+    vertexInputFilterClass = (Class<? extends VertexInputFilter<I, V, E>>)
         VERTEX_INPUT_FILTER_CLASS.get(conf);
   }
 
   /**
-   * Get Vertex class
+   * Get Computation class
    *
-   * @return Vertex class.
+   * @return Computation class.
    */
-  public Class<? extends Vertex<I, V, E, M>> getVertexClass() {
-    return vertexClass;
+  public Class<? extends
+      Computation<I, V, E, ? extends Writable, ? extends Writable>>
+  getComputationClass() {
+    return computationClass;
   }
 
   /**
@@ -243,12 +246,23 @@ public class GiraphClasses<I extends WritableComparable,
   }
 
   /**
-   * Get Message Value class
+   * Get incoming Message Value class - messages which have been sent in the
+   * previous superstep and are processed in the current one
    *
    * @return Message Value class
    */
-  public Class<M> getMessageValueClass() {
-    return messageValueClass;
+  public Class<? extends Writable> getIncomingMessageValueClass() {
+    return incomingMessageValueClass;
+  }
+
+  /**
+   * Get outgoing Message Value class - messages which are going to be sent
+   * during current superstep
+   *
+   * @return Message Value class
+   */
+  public Class<? extends Writable> getOutgoingMessageValueClass() {
+    return outgoingMessageValueClass;
   }
 
   /**
@@ -283,7 +297,7 @@ public class GiraphClasses<I extends WritableComparable,
    *
    * @return GraphPartitionerFactory
    */
-  public Class<? extends GraphPartitionerFactory<I, V, E, M>>
+  public Class<? extends GraphPartitionerFactory<I, V, E>>
   getGraphPartitionerFactoryClass() {
     return graphPartitionerFactoryClass;
   }
@@ -293,7 +307,7 @@ public class GiraphClasses<I extends WritableComparable,
     return edgeInputFilterClass;
   }
 
-  public Class<? extends VertexInputFilter<I, V, E, M>>
+  public Class<? extends VertexInputFilter<I, V, E>>
   getVertexInputFilterClass() {
     return vertexInputFilterClass;
   }
@@ -386,7 +400,7 @@ public class GiraphClasses<I extends WritableComparable,
    *
    * @return Combiner
    */
-  public Class<? extends Combiner<I, M>> getCombinerClass() {
+  public Class<? extends Combiner<I, ? extends Writable>> getCombinerClass() {
     return combinerClass;
   }
 
@@ -404,26 +418,8 @@ public class GiraphClasses<I extends WritableComparable,
    *
    * @return VertexResolver
    */
-  public Class<? extends VertexResolver<I, V, E, M>> getVertexResolverClass() {
+  public Class<? extends VertexResolver<I, V, E>> getVertexResolverClass() {
     return vertexResolverClass;
-  }
-
-  /**
-   * Check if PartitionContext is set
-   *
-   * @return true if PartitionContext is set
-   */
-  public boolean hasPartitionContextClass() {
-    return partitionContextClass != null;
-  }
-
-  /**
-   * Get PartitionContext used
-   *
-   * @return PartitionContext
-   */
-  public Class<? extends PartitionContext> getPartitionContextClass() {
-    return partitionContextClass;
   }
 
   /**
@@ -476,19 +472,24 @@ public class GiraphClasses<I extends WritableComparable,
    *
    * @return Partition
    */
-  public Class<? extends Partition<I, V, E, M>> getPartitionClass() {
+  public Class<? extends Partition<I, V, E>> getPartitionClass() {
     return partitionClass;
   }
 
   /**
-   * Set Vertex class held
+   * Set Computation class held, and update message types
    *
-   * @param vertexClass Vertex class to set
+   * @param computationClass Computation class to set
    * @return this
    */
-  public GiraphClasses setVertexClass(
-      Class<? extends Vertex<I, V, E, M>> vertexClass) {
-    this.vertexClass = vertexClass;
+  public GiraphClasses setComputationClass(Class<? extends
+      Computation<I, V, E, ? extends Writable, ? extends Writable>>
+      computationClass) {
+    this.computationClass = computationClass;
+    List<Class<?>> classList =
+        ReflectionUtils.getTypeArguments(Computation.class, computationClass);
+    incomingMessageValueClass = (Class<? extends Writable>) classList.get(3);
+    outgoingMessageValueClass = (Class<? extends Writable>) classList.get(4);
     return this;
   }
 
@@ -526,13 +527,28 @@ public class GiraphClasses<I extends WritableComparable,
   }
 
   /**
-   * Set Message Value class held
+   * Set incoming Message Value class held - messages which have been sent in
+   * the previous superstep and are processed in the current one
    *
-   * @param messageValueClass Message Value class to set
+   * @param incomingMessageValueClass Message Value class to set
    * @return this
    */
-  public GiraphClasses setMessageValueClass(Class<M> messageValueClass) {
-    this.messageValueClass = messageValueClass;
+  public GiraphClasses setIncomingMessageValueClass(
+      Class<? extends Writable> incomingMessageValueClass) {
+    this.incomingMessageValueClass = incomingMessageValueClass;
+    return this;
+  }
+
+  /**
+   * Set outgoing Message Value class held - messages which are going to be sent
+   * during current superstep
+   *
+   * @param outgoingMessageValueClass Message Value class to set
+   * @return this
+   */
+  public GiraphClasses setOutgoingMessageValueClass(
+      Class<? extends Writable> outgoingMessageValueClass) {
+    this.outgoingMessageValueClass = outgoingMessageValueClass;
     return this;
   }
 
@@ -583,7 +599,7 @@ public class GiraphClasses<I extends WritableComparable,
    * @return this
    */
   public GiraphClasses setGraphPartitionerFactoryClass(
-      Class<? extends GraphPartitionerFactory<I, V, E, M>> klass) {
+      Class<? extends GraphPartitionerFactory<I, V, E>> klass) {
     this.graphPartitionerFactoryClass = klass;
     return this;
   }
@@ -643,7 +659,7 @@ public class GiraphClasses<I extends WritableComparable,
    * @return this
    */
   public GiraphClasses setCombinerClass(
-      Class<? extends Combiner<I, M>> combinerClass) {
+      Class<? extends Combiner<I, ? extends Writable>> combinerClass) {
     this.combinerClass = combinerClass;
     return this;
   }
@@ -655,20 +671,8 @@ public class GiraphClasses<I extends WritableComparable,
    * @return this
    */
   public GiraphClasses setVertexResolverClass(
-      Class<? extends VertexResolver<I, V, E, M>> vertexResolverClass) {
+      Class<? extends VertexResolver<I, V, E>> vertexResolverClass) {
     this.vertexResolverClass = vertexResolverClass;
-    return this;
-  }
-
-  /**
-   * Set PartitionContext used
-   *
-   * @param partitionContextClass PartitionContext class to set
-   * @return this
-   */
-  public GiraphClasses setPartitionContextClass(
-      Class<? extends PartitionContext> partitionContextClass) {
-    this.partitionContextClass = partitionContextClass;
     return this;
   }
 
@@ -703,7 +707,7 @@ public class GiraphClasses<I extends WritableComparable,
    * @return this
    */
   public GiraphClasses setPartitionClass(
-      Class<? extends Partition<I, V, E, M>> partitionClass) {
+      Class<? extends Partition<I, V, E>> partitionClass) {
     this.partitionClass = partitionClass;
     return this;
   }

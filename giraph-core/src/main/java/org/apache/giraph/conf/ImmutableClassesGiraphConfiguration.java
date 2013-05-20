@@ -20,11 +20,11 @@ package org.apache.giraph.conf;
 
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.combiner.Combiner;
+import org.apache.giraph.graph.Computation;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.edge.ReusableEdge;
-import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.graph.VertexValueFactory;
@@ -43,9 +43,9 @@ import org.apache.giraph.io.superstep_output.SynchronizedSuperstepOutput;
 import org.apache.giraph.job.GiraphJobObserver;
 import org.apache.giraph.master.MasterCompute;
 import org.apache.giraph.master.MasterObserver;
+import org.apache.giraph.master.SuperstepClasses;
 import org.apache.giraph.partition.GraphPartitionerFactory;
 import org.apache.giraph.partition.Partition;
-import org.apache.giraph.partition.PartitionContext;
 import org.apache.giraph.utils.ExtendedByteArrayDataInput;
 import org.apache.giraph.utils.ExtendedByteArrayDataOutput;
 import org.apache.giraph.utils.ExtendedDataInput;
@@ -70,11 +70,10 @@ import org.apache.hadoop.util.Progressable;
  * @param <I> Vertex id
  * @param <V> Vertex data
  * @param <E> Edge data
- * @param <M> Message data
  */
 @SuppressWarnings("unchecked")
 public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
+    V extends Writable, E extends Writable>
     extends GiraphConfiguration {
   /** Holder for all the classes */
   private final GiraphClasses classes;
@@ -95,7 +94,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    */
   public ImmutableClassesGiraphConfiguration(Configuration conf) {
     super(conf);
-    classes = new GiraphClasses<I, V, E, M>(conf);
+    classes = new GiraphClasses<I, V, E>(conf);
     useUnsafeSerialization = USE_UNSAFE_SERIALIZATION.get(this);
     try {
       vertexValueFactory = (VertexValueFactory<V>)
@@ -110,23 +109,6 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
               classes.getVertexValueFactoryClass(), e);
     }
     vertexValueFactory.initialize(this);
-  }
-
-  /**
-   * Create a new ImmutableClassesGiraphConfiguration. This is a convenience
-   * method to make it easier to deal with generics.
-   *
-   * @param conf Configuration to read
-   * @param <I> Vertex ID
-   * @param <V> Vertex Value
-   * @param <E> Edge Value
-   * @param <M> Message Value
-   * @return new ImmutableClassesGiraphConfiguration
-   */
-  public static <I extends WritableComparable,
-      V extends Writable, E extends Writable, M extends Writable>
-  ImmutableClassesGiraphConfiguration<I, V, E, M> create(Configuration conf) {
-    return new ImmutableClassesGiraphConfiguration<I, V, E, M>(conf);
   }
 
   /**
@@ -162,7 +144,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    *
    * @return VertexInputFilter class
    */
-  public Class<? extends VertexInputFilter<I, V, E, M>>
+  public Class<? extends VertexInputFilter<I, V, E>>
   getVertexInputFilterClass() {
     return classes.getVertexInputFilterClass();
   }
@@ -181,7 +163,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    *
    * @return User's graph partitioner
    */
-  public Class<? extends GraphPartitionerFactory<I, V, E, M>>
+  public Class<? extends GraphPartitionerFactory<I, V, E>>
   getGraphPartitionerClass() {
     return classes.getGraphPartitionerFactoryClass();
   }
@@ -191,8 +173,8 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    *
    * @return Instantiated user graph partitioner class
    */
-  public GraphPartitionerFactory<I, V, E, M> createGraphPartitioner() {
-    Class<? extends GraphPartitionerFactory<I, V, E, M>> klass =
+  public GraphPartitionerFactory<I, V, E> createGraphPartitioner() {
+    Class<? extends GraphPartitionerFactory<I, V, E>> klass =
         classes.getGraphPartitionerFactoryClass();
     return ReflectionUtils.newInstance(klass, this);
   }
@@ -380,17 +362,18 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    *
    * @return User's combiner class
    */
-  public Class<? extends Combiner<I, M>> getCombinerClass() {
+  public Class<? extends Combiner<I, ? extends Writable>> getCombinerClass() {
     return classes.getCombinerClass();
   }
 
   /**
    * Create a user combiner class
    *
+   * @param <M> Message data
    * @return Instantiated user combiner class
    */
   @SuppressWarnings("rawtypes")
-  public Combiner<I, M> createCombiner() {
+  public <M extends Writable> Combiner<I, M> createCombiner() {
     Class<? extends Combiner<I, M>> klass = classes.getCombinerClass();
     return ReflectionUtils.newInstance(klass, this);
   }
@@ -409,41 +392,17 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    *
    * @return User's vertex resolver class
    */
-  public Class<? extends VertexResolver<I, V, E, M>> getVertexResolverClass() {
+  public Class<? extends VertexResolver<I, V, E>> getVertexResolverClass() {
     return classes.getVertexResolverClass();
   }
 
   /**
    * Create a user vertex revolver
    *
-   * @param graphState State of the graph from the worker
    * @return Instantiated user vertex resolver
    */
-  @SuppressWarnings("rawtypes")
-  public VertexResolver<I, V, E, M> createVertexResolver(
-                       GraphState<I, V, E, M> graphState) {
-    VertexResolver<I, V, E, M> resolver =
-        ReflectionUtils.newInstance(getVertexResolverClass(), this);
-    resolver.setGraphState(graphState);
-    return resolver;
-  }
-
-  /**
-   * Get the user's subclassed PartitionContext.
-   *
-   * @return User's partition context class
-   */
-  public Class<? extends PartitionContext> getPartitionContextClass() {
-    return classes.getPartitionContextClass();
-  }
-
-  /**
-   * Create a user partition context
-   *
-   * @return Instantiated user partition context
-   */
-  public PartitionContext createPartitionContext() {
-    return ReflectionUtils.newInstance(getPartitionContextClass(), this);
+  public VertexResolver<I, V, E> createVertexResolver() {
+    return ReflectionUtils.newInstance(getVertexResolverClass(), this);
   }
 
   /**
@@ -458,15 +417,10 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   /**
    * Create a user worker context
    *
-   * @param graphState State of the graph from the worker
    * @return Instantiated user worker context
    */
-  @SuppressWarnings("rawtypes")
-  public WorkerContext createWorkerContext(GraphState<I, V, E, M> graphState) {
-    WorkerContext workerContext =
-        ReflectionUtils.newInstance(getWorkerContextClass(), this);
-    workerContext.setGraphState(graphState);
-    return workerContext;
+  public WorkerContext createWorkerContext() {
+    return ReflectionUtils.newInstance(getWorkerContextClass(), this);
   }
 
   /**
@@ -488,17 +442,29 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   }
 
   @Override
-  public Class<? extends Vertex<I, V, E, M>> getVertexClass() {
-    return classes.getVertexClass();
+  public Class<? extends
+      Computation<I, V, E, ? extends Writable, ? extends Writable>>
+  getComputationClass() {
+    return classes.getComputationClass();
   }
 
   /**
-   * Create a user vertex
+   * Create a user computation
    *
-   * @return Instantiated user vertex
+   * @return Instantiated user computation
    */
-  public Vertex<I, V, E, M> createVertex() {
-    return ReflectionUtils.newInstance(getVertexClass(), this);
+  public Computation<I, V, E, ? extends Writable, ? extends Writable>
+  createComputation() {
+    return ReflectionUtils.newInstance(getComputationClass(), this);
+  }
+
+  /**
+   * Create a vertex
+   *
+   * @return Instantiated vertex
+   */
+  public Vertex<I, V, E> createVertex() {
+    return ReflectionUtils.newInstance(Vertex.class, this);
   }
 
   /**
@@ -658,34 +624,58 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   }
 
   /**
-   * Get the user's subclassed vertex message value class.
+   * Get the user's subclassed incoming message value class.
    *
+   * @param <M> Message data
    * @return User's vertex message value class
    */
-  @SuppressWarnings("unchecked")
-  public Class<M> getMessageValueClass() {
-    return classes.getMessageValueClass();
+  public <M extends Writable> Class<M> getIncomingMessageValueClass() {
+    return classes.getIncomingMessageValueClass();
   }
 
   /**
-   * Create a user vertex message value
+   * Get the user's subclassed outgoing message value class.
    *
-   * @return Instantiated user vertex message value
+   * @param <M> Message data
+   * @return User's vertex message value class
    */
-  public M createMessageValue() {
-    Class<M> klass = getMessageValueClass();
-    if (klass == NullWritable.class) {
+  public <M extends Writable> Class<M> getOutgoingMessageValueClass() {
+    return classes.getOutgoingMessageValueClass();
+  }
+
+  /**
+   * Create incoming message value
+   *
+   * @param <M> Message data
+   * @return Incoming message value
+   */
+  public <M extends Writable> M createIncomingMessageValue() {
+    return this.<M>createMessageValue(this.<M>getIncomingMessageValueClass());
+  }
+
+  /**
+   * Create outgoing message value
+   *
+   * @param <M> Message data
+   * @return Outgoing message value
+   */
+  public <M extends Writable> M createOutgoingMessageValue() {
+    return this.<M>createMessageValue(this.<M>getOutgoingMessageValueClass());
+  }
+
+  /**
+   * Create a message value
+   *
+   * @param <M> Message data
+   * @param messageClass Message class
+   * @return Instantiated message value
+   */
+  private <M extends Writable> M createMessageValue(
+      Class<? extends Writable> messageClass) {
+    if (messageClass == NullWritable.class) {
       return (M) NullWritable.get();
     } else {
-      try {
-        return klass.newInstance();
-      } catch (InstantiationException e) {
-        throw new IllegalArgumentException(
-            "createMessageValue: Failed to instantiate", e);
-      } catch (IllegalAccessException e) {
-        throw new IllegalArgumentException(
-            "createMessageValue: Illegally accessed", e);
-      }
+      return (M) ReflectionUtils.newInstance(messageClass);
     }
   }
 
@@ -792,10 +782,10 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    * @param progressable Progressable for reporting progress
    * @return Instantiated partition
    */
-  public Partition<I, V, E, M> createPartition(
+  public Partition<I, V, E> createPartition(
       int id, Progressable progressable) {
-    Class<? extends Partition<I, V, E, M>> klass = classes.getPartitionClass();
-    Partition<I, V, E, M> partition = ReflectionUtils.newInstance(klass, this);
+    Class<? extends Partition<I, V, E>> klass = classes.getPartitionClass();
+    Partition<I, V, E> partition = ReflectionUtils.newInstance(klass, this);
     partition.initialize(id, progressable);
     return partition;
   }
@@ -867,5 +857,15 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
     } else {
       return new ExtendedByteArrayDataInput(buf, off, length);
     }
+  }
+
+  /**
+   * Update Computation and Combiner class used
+   *
+   * @param superstepClasses SuperstepClasses
+   */
+  public void updateSuperstepClasses(SuperstepClasses superstepClasses) {
+    classes.setComputationClass(superstepClasses.getComputationClass());
+    classes.setCombinerClass(superstepClasses.getCombinerClass());
   }
 }

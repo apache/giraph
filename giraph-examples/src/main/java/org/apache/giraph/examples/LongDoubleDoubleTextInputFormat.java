@@ -27,7 +27,6 @@ import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
@@ -44,10 +43,10 @@ public class LongDoubleDoubleTextInputFormat
     extends TextVertexInputFormat<LongWritable, DoubleWritable,
     DoubleWritable>
     implements ImmutableClassesGiraphConfigurable<LongWritable, DoubleWritable,
-    DoubleWritable, Writable> {
+    DoubleWritable> {
   /** Configuration. */
   private ImmutableClassesGiraphConfiguration<LongWritable, DoubleWritable,
-      DoubleWritable, Writable> conf;
+      DoubleWritable> conf;
 
   @Override
   public TextVertexReader createVertexReader(InputSplit split,
@@ -58,13 +57,13 @@ public class LongDoubleDoubleTextInputFormat
 
   @Override
   public void setConf(ImmutableClassesGiraphConfiguration<LongWritable,
-      DoubleWritable, DoubleWritable, Writable> configuration) {
+      DoubleWritable, DoubleWritable> configuration) {
     this.conf = configuration;
   }
 
   @Override
   public ImmutableClassesGiraphConfiguration<LongWritable, DoubleWritable,
-      DoubleWritable, Writable> getConf() {
+      DoubleWritable> getConf() {
     return conf;
   }
 
@@ -79,9 +78,9 @@ public class LongDoubleDoubleTextInputFormat
     private final Pattern separator = Pattern.compile("[\t ]");
 
     @Override
-    public Vertex<LongWritable, DoubleWritable, DoubleWritable, ?>
+    public Vertex<LongWritable, DoubleWritable, DoubleWritable>
     getCurrentVertex() throws IOException, InterruptedException {
-      Vertex<LongWritable, DoubleWritable, DoubleWritable, ?>
+      Vertex<LongWritable, DoubleWritable, DoubleWritable>
         vertex = conf.createVertex();
 
       String[] tokens =

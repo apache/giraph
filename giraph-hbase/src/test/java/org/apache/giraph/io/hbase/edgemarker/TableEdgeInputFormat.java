@@ -76,11 +76,11 @@ public class TableEdgeInputFormat extends
      * and it's 'children' qualifier as a single edge.
      */
     @Override
-    public Vertex<Text, Text, Text, ?>
+    public Vertex<Text, Text, Text>
     getCurrentVertex()
         throws IOException, InterruptedException {
       Result row = getRecordReader().getCurrentValue();
-      Vertex<Text, Text, Text, ?> vertex =
+      Vertex<Text, Text, Text> vertex =
           getConf().createVertex();
       Text vertexId = new Text(Bytes.toString(row.getRow()));
       List<Edge<Text, Text>> edges = Lists.newLinkedList();

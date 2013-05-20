@@ -35,6 +35,7 @@ import org.apache.giraph.metrics.GiraphMetrics;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.partition.PartitionStore;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
+import org.apache.giraph.utils.IntNoOpComputation;
 import org.apache.giraph.utils.MockUtils;
 import org.apache.giraph.utils.PairList;
 import org.apache.giraph.worker.WorkerInfo;
@@ -63,8 +64,7 @@ public class RequestTest {
   /** Configuration */
   private ImmutableClassesGiraphConfiguration conf;
   /** Server data */
-  private ServerData<IntWritable, IntWritable, IntWritable, IntWritable>
-  serverData;
+  private ServerData<IntWritable, IntWritable, IntWritable> serverData;
   /** Server */
   private NettyServer server;
   /** Client */
@@ -72,21 +72,11 @@ public class RequestTest {
   /** Worker info */
   private WorkerInfo workerInfo;
 
-  /**
-   * Only for testing.
-   */
-  public static class TestVertex extends Vertex<IntWritable,
-      IntWritable, IntWritable, IntWritable> {
-    @Override
-    public void compute(Iterable<IntWritable> messages) throws IOException {
-    }
-  }
-
   @Before
   public void setUp() throws IOException {
     // Setup the conf
     GiraphConfiguration tmpConf = new GiraphConfiguration();
-    GiraphConstants.VERTEX_CLASS.set(tmpConf, TestVertex.class);
+    GiraphConstants.COMPUTATION_CLASS.set(tmpConf, IntNoOpComputation.class);
     conf = new ImmutableClassesGiraphConfiguration(tmpConf);
 
     @SuppressWarnings("rawtypes")
@@ -110,7 +100,7 @@ public class RequestTest {
   public void sendVertexPartition() throws IOException {
     // Data to send
     int partitionId = 13;
-    Partition<IntWritable, IntWritable, IntWritable, IntWritable> partition =
+    Partition<IntWritable, IntWritable, IntWritable> partition =
         conf.createPartition(partitionId, null);
     for (int i = 0; i < 10; ++i) {
       Vertex vertex = conf.createVertex();
@@ -119,10 +109,8 @@ public class RequestTest {
     }
 
     // Send the request
-    SendVertexRequest<IntWritable, IntWritable, IntWritable,
-    IntWritable> request =
-      new SendVertexRequest<IntWritable, IntWritable,
-      IntWritable, IntWritable>(partition);
+    SendVertexRequest<IntWritable, IntWritable, IntWritable> request =
+      new SendVertexRequest<IntWritable, IntWritable, IntWritable>(partition);
     client.sendWritableRequest(workerInfo.getTaskId(), request);
     client.waitAllRequests();
 
@@ -131,15 +119,13 @@ public class RequestTest {
     server.stop();
 
     // Check the output
-    PartitionStore<IntWritable, IntWritable,
-        IntWritable, IntWritable> partitionStore =
+    PartitionStore<IntWritable, IntWritable, IntWritable> partitionStore =
         serverData.getPartitionStore();
     assertTrue(partitionStore.hasPartition(partitionId));
     int total = 0;
-    Partition<IntWritable, IntWritable, IntWritable, IntWritable> partition2 =
+    Partition<IntWritable, IntWritable, IntWritable> partition2 =
         partitionStore.getPartition(partitionId);	
-    for (Vertex<IntWritable, IntWritable,
-        IntWritable, IntWritable> vertex : partition2) {
+    for (Vertex<IntWritable, IntWritable, IntWritable> vertex : partition2) {
       total += vertex.getId().get();
     }
     partitionStore.putPartition(partition2);
@@ -158,7 +144,8 @@ public class RequestTest {
     int partitionId = 0;
     ByteArrayVertexIdMessages<IntWritable,
             IntWritable> vertexIdMessages =
-        new ByteArrayVertexIdMessages<IntWritable, IntWritable>();
+        new ByteArrayVertexIdMessages<IntWritable, IntWritable>(
+            IntWritable.class);
     vertexIdMessages.setConf(conf);
     vertexIdMessages.initialize();
     dataToSend.add(partitionId, vertexIdMessages);
@@ -187,7 +174,8 @@ public class RequestTest {
     for (IntWritable vertexId : vertices) {
       keySum += vertexId.get();
       Iterable<IntWritable> messages =
-          serverData.getIncomingMessageStore().getVertexMessages(vertexId);
+          serverData.<IntWritable>getIncomingMessageStore().getVertexMessages(
+              vertexId);
       synchronized (messages) {
         for (IntWritable message : messages) {
           messageSum += message.get();
@@ -203,12 +191,11 @@ public class RequestTest {
     // Data to send
     int partitionId = 19;
     Map<IntWritable, VertexMutations<IntWritable, IntWritable,
-    IntWritable, IntWritable>> vertexIdMutations =
+    IntWritable>> vertexIdMutations =
         Maps.newHashMap();
     for (int i = 0; i < 11; ++i) {
-      VertexMutations<IntWritable, IntWritable, IntWritable, IntWritable>
-      mutations = new VertexMutations<IntWritable, IntWritable,
-          IntWritable, IntWritable>();
+      VertexMutations<IntWritable, IntWritable, IntWritable> mutations =
+          new VertexMutations<IntWritable, IntWritable, IntWritable>();
       for (int j = 0; j < 3; ++j) {
         Vertex vertex = conf.createVertex();
         vertex.initialize(new IntWritable(i), new IntWritable(j));
@@ -229,10 +216,9 @@ public class RequestTest {
     }
 
     // Send the request
-    SendPartitionMutationsRequest<IntWritable, IntWritable, IntWritable,
-    IntWritable> request =
-      new SendPartitionMutationsRequest<IntWritable, IntWritable,
-      IntWritable, IntWritable>(partitionId, vertexIdMutations);
+    SendPartitionMutationsRequest<IntWritable, IntWritable, IntWritable>
+        request = new SendPartitionMutationsRequest<IntWritable, IntWritable,
+        IntWritable>(partitionId, vertexIdMutations);
     GiraphMetrics.init(conf);
     client.sendWritableRequest(workerInfo.getTaskId(), request);
     client.waitAllRequests();
@@ -243,16 +229,16 @@ public class RequestTest {
 
     // Check the output
     ConcurrentHashMap<IntWritable, VertexMutations<IntWritable, IntWritable,
-    IntWritable, IntWritable>> inVertexIdMutations =
+    IntWritable>> inVertexIdMutations =
         serverData.getVertexMutations();
     int keySum = 0;
     for (Entry<IntWritable, VertexMutations<IntWritable, IntWritable,
-        IntWritable, IntWritable>> entry :
+        IntWritable>> entry :
           inVertexIdMutations.entrySet()) {
       synchronized (entry.getValue()) {
         keySum += entry.getKey().get();
         int vertexValueSum = 0;
-        for (Vertex<IntWritable, IntWritable, IntWritable, IntWritable>
+        for (Vertex<IntWritable, IntWritable, IntWritable>
         vertex : entry.getValue().getAddedVertexList()) {
           vertexValueSum += vertex.getValue().get();
         }

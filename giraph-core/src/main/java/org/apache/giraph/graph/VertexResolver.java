@@ -28,12 +28,10 @@ import org.apache.hadoop.io.WritableComparable;
  * @param <I> Vertex id
  * @param <V> Vertex data
  * @param <E> Edge data
- * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public interface VertexResolver<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    extends GraphStateAware<I, V, E, M> {
+    V extends Writable, E extends Writable> {
   /**
    * A vertex may have been removed, created zero or more times and had
    * zero or more messages sent to it.  This method will handle all situations
@@ -47,15 +45,8 @@ public interface VertexResolver<I extends WritableComparable,
    * @return Vertex to be returned, if null, and a vertex currently exists
    *         it will be removed
    */
-  Vertex<I, V, E, M> resolve(I vertexId,
-      Vertex<I, V, E, M> vertex,
-      VertexChanges<I, V, E, M> vertexChanges,
+  Vertex<I, V, E> resolve(I vertexId,
+      Vertex<I, V, E> vertex,
+      VertexChanges<I, V, E> vertexChanges,
       boolean hasMessages);
-
-  /**
-   * Set the graph state.
-   *
-   * @param graphState Graph state saved.
-   */
-  void setGraphState(GraphState<I, V, E, M> graphState);
 }

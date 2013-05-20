@@ -168,6 +168,26 @@ public class ReflectionUtils {
   }
 
   /**
+   * Instantiate a class, wrap exceptions
+   *
+   * @param theClass Class to instantiate
+   * @param <T> Type to instantiate
+   * @return Newly instantiated object
+   */
+  @SuppressWarnings("unchecked")
+  public static <T> T newInstance(Class<T> theClass) {
+    try {
+      return theClass.newInstance();
+    } catch (InstantiationException e) {
+      throw new IllegalStateException(
+          "newInstance: Couldn't instantiate " + theClass.getName(), e);
+    } catch (IllegalAccessException e) {
+      throw new IllegalStateException(
+          "newInstance: Illegal access " + theClass.getName(), e);
+    }
+  }
+
+  /**
    * Instantiate classes that are ImmutableClassesGiraphConfigurable
    *
    * @param theClass Class to instantiate

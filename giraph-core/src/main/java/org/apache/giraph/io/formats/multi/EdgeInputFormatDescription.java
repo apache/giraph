@@ -78,11 +78,11 @@ public class EdgeInputFormatDescription<I extends WritableComparable,
    * @param conf Configuration which we want to create a copy from
    * @return Copy of configuration
    */
-  private ImmutableClassesGiraphConfiguration<I, Writable, E, Writable>
+  private ImmutableClassesGiraphConfiguration<I, Writable, E>
   createConfigurationCopy(
-      ImmutableClassesGiraphConfiguration<I, Writable, E, Writable> conf) {
-    ImmutableClassesGiraphConfiguration<I, Writable, E, Writable> confCopy =
-        new ImmutableClassesGiraphConfiguration<I, Writable, E, Writable>(conf);
+      ImmutableClassesGiraphConfiguration<I, Writable, E> conf) {
+    ImmutableClassesGiraphConfiguration<I, Writable, E> confCopy =
+        new ImmutableClassesGiraphConfiguration<I, Writable, E>(conf);
     confCopy.setEdgeInputFormatClass(getInputFormatClass());
     putParametersToConfiguration(confCopy);
     return confCopy;
@@ -130,13 +130,13 @@ public class EdgeInputFormatDescription<I extends WritableComparable,
    */
   public static <I extends WritableComparable,
       E extends Writable> List<EdgeInputFormat<I, E>> createEdgeInputFormats(
-      ImmutableClassesGiraphConfiguration<I, Writable, E, Writable> conf) {
+      ImmutableClassesGiraphConfiguration<I, Writable, E> conf) {
     List<EdgeInputFormatDescription<I, E>> descriptions =
         getEdgeInputFormatDescriptions(conf);
     List<EdgeInputFormat<I, E>> edgeInputFormats =
         Lists.newArrayListWithCapacity(descriptions.size());
     for (EdgeInputFormatDescription<I, E> description : descriptions) {
-      ImmutableClassesGiraphConfiguration<I, Writable, E, Writable> confCopy =
+      ImmutableClassesGiraphConfiguration<I, Writable, E> confCopy =
           description.createConfigurationCopy(conf);
       edgeInputFormats.add(confCopy.createWrappedEdgeInputFormat());
     }

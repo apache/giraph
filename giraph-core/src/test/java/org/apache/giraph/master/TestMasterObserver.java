@@ -18,14 +18,19 @@
 
 package org.apache.giraph.master;
 
+import org.apache.giraph.graph.BasicComputation;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.edge.ByteArrayEdges;
+import org.apache.giraph.edge.Edge;
 import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.io.formats.IntNullNullTextInputFormat;
+import org.apache.giraph.io.formats.TextVertexInputFormat;
 import org.apache.giraph.utils.InternalVertexRunner;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -33,17 +38,45 @@ import java.io.IOException;
 import static org.apache.hadoop.util.StringUtils.arrayToString;
 import static org.junit.Assert.assertEquals;
 
-public class TestMasterObserver {
-  public static class NoOpVertex extends Vertex<IntWritable, NullWritable,
-      NullWritable, NullWritable> {
-    private int count = 0;
+import com.google.common.collect.ImmutableList;
 
+public class TestMasterObserver {
+  public static class SimpleComputation extends BasicComputation<IntWritable,
+      IntWritable, NullWritable, NullWritable> {
     @Override
-    public void compute(Iterable<NullWritable> messages) throws IOException {
-      if (count == 2) {
-        voteToHalt();
+    public void compute(
+        Vertex<IntWritable, IntWritable, NullWritable> vertex,
+        Iterable<NullWritable> messages) throws IOException {
+      int currentValue = vertex.getValue().get();
+      if (currentValue == 2) {
+        vertex.voteToHalt();
       }
-      ++count;
+      vertex.setValue(new IntWritable(currentValue + 1));
+    }
+  }
+
+  public static class InputFormat extends TextVertexInputFormat<
+      IntWritable, IntWritable, NullWritable> {
+    @Override
+    public TextVertexReader createVertexReader(
+        InputSplit split, TaskAttemptContext context) throws IOException {
+      return new TextVertexReaderFromEachLine() {
+        @Override
+        protected IntWritable getId(Text line) throws IOException {
+          return new IntWritable(Integer.parseInt(line.toString()));
+        }
+
+        @Override
+        protected IntWritable getValue(Text line) throws IOException {
+          return new IntWritable(0);
+        }
+
+        @Override
+        protected Iterable<Edge<IntWritable, NullWritable>> getEdges(
+            Text line) throws IOException {
+          return ImmutableList.of();
+        }
+      };
     }
   }
 
@@ -88,9 +121,9 @@ public class TestMasterObserver {
     GiraphConfiguration conf = new GiraphConfiguration();
     conf.set(GiraphConstants.MASTER_OBSERVER_CLASSES.getKey(),
         arrayToString(klasses));
-    conf.setVertexClass(NoOpVertex.class);
+    conf.setComputationClass(SimpleComputation.class);
     conf.setOutEdgesClass(ByteArrayEdges.class);
-    conf.setVertexInputFormatClass(IntNullNullTextInputFormat.class);
+    conf.setVertexInputFormatClass(InputFormat.class);
     InternalVertexRunner.run(conf, graph);
 
     assertEquals(2, Obs.preApp);

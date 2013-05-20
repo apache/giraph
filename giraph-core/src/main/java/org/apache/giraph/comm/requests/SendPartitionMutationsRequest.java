@@ -42,19 +42,18 @@ import java.util.concurrent.ConcurrentHashMap;
  * @param <I> Vertex id
  * @param <V> Vertex data
  * @param <E> Edge data
- * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public class SendPartitionMutationsRequest<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable> extends
-    WritableRequest<I, V, E, M> implements WorkerRequest<I, V, E, M> {
+    V extends Writable, E extends Writable> extends
+    WritableRequest<I, V, E> implements WorkerRequest<I, V, E> {
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(SendPartitionMutationsRequest.class);
   /** Partition id */
   private int partitionId;
   /** Mutations sent for a partition */
-  private Map<I, VertexMutations<I, V, E, M>> vertexIdMutations;
+  private Map<I, VertexMutations<I, V, E>> vertexIdMutations;
 
   /**
    * Constructor used for reflection only
@@ -69,7 +68,7 @@ public class SendPartitionMutationsRequest<I extends WritableComparable,
    */
   public SendPartitionMutationsRequest(
       int partitionId,
-      Map<I, VertexMutations<I, V, E, M>> vertexIdMutations) {
+      Map<I, VertexMutations<I, V, E>> vertexIdMutations) {
     this.partitionId = partitionId;
     this.vertexIdMutations = vertexIdMutations;
   }
@@ -82,8 +81,8 @@ public class SendPartitionMutationsRequest<I extends WritableComparable,
     for (int i = 0; i < vertexIdMutationsSize; ++i) {
       I vertexId = getConf().createVertexId();
       vertexId.readFields(input);
-      VertexMutations<I, V, E, M> vertexMutations =
-          new VertexMutations<I, V, E, M>();
+      VertexMutations<I, V, E> vertexMutations =
+          new VertexMutations<I, V, E>();
       vertexMutations.setConf(getConf());
       vertexMutations.readFields(input);
       if (vertexIdMutations.put(vertexId, vertexMutations) != null) {
@@ -97,7 +96,7 @@ public class SendPartitionMutationsRequest<I extends WritableComparable,
   public void writeRequest(DataOutput output) throws IOException {
     output.writeInt(partitionId);
     output.writeInt(vertexIdMutations.size());
-    for (Entry<I, VertexMutations<I, V, E, M>> entry :
+    for (Entry<I, VertexMutations<I, V, E>> entry :
         vertexIdMutations.entrySet()) {
       entry.getKey().write(output);
       entry.getValue().write(output);
@@ -110,15 +109,15 @@ public class SendPartitionMutationsRequest<I extends WritableComparable,
   }
 
   @Override
-  public void doRequest(ServerData<I, V, E, M> serverData) {
-    ConcurrentHashMap<I, VertexMutations<I, V, E, M>> vertexMutations =
+  public void doRequest(ServerData<I, V, E> serverData) {
+    ConcurrentHashMap<I, VertexMutations<I, V, E>> vertexMutations =
       serverData.getVertexMutations();
     Histogram verticesInMutationHist = GiraphMetrics.get().perSuperstep()
         .getUniformHistogram(MetricNames.VERTICES_IN_MUTATION_REQUEST);
     verticesInMutationHist.update(vertexMutations.size());
-    for (Entry<I, VertexMutations<I, V, E, M>> entry :
+    for (Entry<I, VertexMutations<I, V, E>> entry :
         vertexIdMutations.entrySet()) {
-      VertexMutations<I, V, E, M> mutations =
+      VertexMutations<I, V, E> mutations =
           vertexMutations.get(entry.getKey());
       if (mutations == null) {
         mutations = vertexMutations.putIfAbsent(

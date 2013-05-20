@@ -20,6 +20,7 @@ package org.apache.giraph.benchmark;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.giraph.aggregators.LongSumAggregator;
+import org.apache.giraph.graph.BasicComputation;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.io.formats.PseudoRandomInputFormatConstants;
@@ -35,6 +36,7 @@ import org.apache.log4j.Logger;
 
 import com.google.common.collect.Sets;
 
+import java.io.IOException;
 import java.util.Random;
 import java.util.Set;
 
@@ -257,25 +259,26 @@ public class RandomMessageBenchmark extends GiraphBenchmark {
   /**
    * Actual message computation (messaging in this case)
    */
-  public static class RandomMessageVertex extends Vertex<LongWritable,
-      DoubleWritable, DoubleWritable, BytesWritable> {
+  public static class RandomMessageComputation extends BasicComputation<
+      LongWritable, DoubleWritable, DoubleWritable, BytesWritable> {
     @Override
-    public void compute(Iterable<BytesWritable> messages) {
-      RandomMessageBenchmarkWorkerContext workerContext =
-          (RandomMessageBenchmarkWorkerContext) getWorkerContext();
+    public void compute(
+        Vertex<LongWritable, DoubleWritable, DoubleWritable> vertex,
+        Iterable<BytesWritable> messages) throws IOException {
+      RandomMessageBenchmarkWorkerContext workerContext = getWorkerContext();
       if (getSuperstep() < workerContext.getNumSupersteps()) {
         for (int i = 0; i < workerContext.getNumMessagePerEdge(); i++) {
           workerContext.randomizeMessageBytes();
-          sendMessageToAllEdges(
+          sendMessageToAllEdges(vertex,
               new BytesWritable(workerContext.getMessageBytes()));
           long bytesSent = workerContext.getMessageBytes().length *
-              getNumEdges();
+              vertex.getNumEdges();
           aggregate(AGG_SUPERSTEP_TOTAL_BYTES, new LongWritable(bytesSent));
           aggregate(AGG_SUPERSTEP_TOTAL_MESSAGES,
-              new LongWritable(getNumEdges()));
+              new LongWritable(vertex.getNumEdges()));
         }
       } else {
-        voteToHalt();
+        vertex.voteToHalt();
       }
     }
   }
@@ -290,7 +293,7 @@ public class RandomMessageBenchmark extends GiraphBenchmark {
   @Override
   protected void prepareConfiguration(GiraphConfiguration conf,
       CommandLine cmd) {
-    conf.setVertexClass(RandomMessageVertex.class);
+    conf.setComputationClass(RandomMessageComputation.class);
     conf.setVertexInputFormatClass(PseudoRandomVertexInputFormat.class);
     conf.setWorkerContextClass(RandomMessageBenchmarkWorkerContext.class);
     conf.setMasterComputeClass(RandomMessageBenchmarkMasterCompute.class);

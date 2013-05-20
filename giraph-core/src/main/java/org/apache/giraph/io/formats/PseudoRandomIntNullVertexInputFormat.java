@@ -116,9 +116,9 @@ public class PseudoRandomIntNullVertexInputFormat extends
     }
 
     @Override
-    public Vertex<IntWritable, FloatWritable, NullWritable, ?>
+    public Vertex<IntWritable, FloatWritable, NullWritable>
     getCurrentVertex() throws IOException, InterruptedException {
-      Vertex<IntWritable, FloatWritable, NullWritable, ?> vertex =
+      Vertex<IntWritable, FloatWritable, NullWritable> vertex =
           getConf().createVertex();
       int vertexId = startingVertexId + verticesRead;
       OutEdges<IntWritable, NullWritable> edges =

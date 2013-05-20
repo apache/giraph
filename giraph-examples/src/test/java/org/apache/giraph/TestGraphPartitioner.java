@@ -21,9 +21,9 @@ package org.apache.giraph;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.examples.GeneratedVertexReader;
-import org.apache.giraph.examples.SimpleCheckpointVertex;
-import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat;
-import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexOutputFormat;
+import org.apache.giraph.examples.SimpleCheckpoint;
+import org.apache.giraph.examples.SimpleSuperstepComputation.SimpleSuperstepVertexInputFormat;
+import org.apache.giraph.examples.SimpleSuperstepComputation.SimpleSuperstepVertexOutputFormat;
 import org.apache.giraph.integration.SuperstepHashPartitionerFactory;
 import org.apache.giraph.job.GiraphJob;
 import org.apache.giraph.partition.HashRangePartitionerFactory;
@@ -76,12 +76,12 @@ public class TestGraphPartitioner extends BspCase {
       throws IOException, InterruptedException, ClassNotFoundException {
     Path outputPath = getTempPath("testVertexBalancer");
     GiraphConfiguration conf = new GiraphConfiguration();
-    conf.setVertexClass(
-        SimpleCheckpointVertex.SimpleCheckpointComputation.class);
+    conf.setComputationClass(
+        SimpleCheckpoint.SimpleCheckpointComputation.class);
     conf.setWorkerContextClass(
-        SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.class);
+        SimpleCheckpoint.SimpleCheckpointVertexWorkerContext.class);
     conf.setMasterComputeClass(
-        SimpleCheckpointVertex.SimpleCheckpointVertexMasterCompute.class);
+        SimpleCheckpoint.SimpleCheckpointVertexMasterCompute.class);
     conf.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
     conf.setVertexOutputFormatClass(SimpleSuperstepVertexOutputFormat.class);
     GiraphJob job = prepareJob("testVertexBalancer", conf, outputPath);
@@ -94,12 +94,12 @@ public class TestGraphPartitioner extends BspCase {
     FileSystem hdfs = FileSystem.get(job.getConfiguration());
 
     conf = new GiraphConfiguration();
-    conf.setVertexClass(
-        SimpleCheckpointVertex.SimpleCheckpointComputation.class);
+    conf.setComputationClass(
+        SimpleCheckpoint.SimpleCheckpointComputation.class);
     conf.setWorkerContextClass(
-        SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.class);
+        SimpleCheckpoint.SimpleCheckpointVertexWorkerContext.class);
     conf.setMasterComputeClass(
-        SimpleCheckpointVertex.SimpleCheckpointVertexMasterCompute.class);
+        SimpleCheckpoint.SimpleCheckpointVertexMasterCompute.class);
     conf.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
     conf.setVertexOutputFormatClass(SimpleSuperstepVertexOutputFormat.class);
     outputPath = getTempPath("testHashPartitioner");
@@ -109,12 +109,12 @@ public class TestGraphPartitioner extends BspCase {
 
     outputPath = getTempPath("testSuperstepHashPartitioner");
     conf = new GiraphConfiguration();
-    conf.setVertexClass(
-        SimpleCheckpointVertex.SimpleCheckpointComputation.class);
+    conf.setComputationClass(
+        SimpleCheckpoint.SimpleCheckpointComputation.class);
     conf.setWorkerContextClass(
-        SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.class);
+        SimpleCheckpoint.SimpleCheckpointVertexWorkerContext.class);
     conf.setMasterComputeClass(
-        SimpleCheckpointVertex.SimpleCheckpointVertexMasterCompute.class);
+        SimpleCheckpoint.SimpleCheckpointVertexMasterCompute.class);
     conf.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
     conf.setVertexOutputFormatClass(SimpleSuperstepVertexOutputFormat.class);
     job = prepareJob("testSuperstepHashPartitioner", conf, outputPath);
@@ -127,12 +127,12 @@ public class TestGraphPartitioner extends BspCase {
 
     job = new GiraphJob("testHashRangePartitioner");
     setupConfiguration(job);
-    job.getConfiguration().setVertexClass(
-        SimpleCheckpointVertex.SimpleCheckpointComputation.class);
+    job.getConfiguration().setComputationClass(
+        SimpleCheckpoint.SimpleCheckpointComputation.class);
     job.getConfiguration().setWorkerContextClass(
-        SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.class);
+        SimpleCheckpoint.SimpleCheckpointVertexWorkerContext.class);
     job.getConfiguration().setMasterComputeClass(
-        SimpleCheckpointVertex.SimpleCheckpointVertexMasterCompute.class);
+        SimpleCheckpoint.SimpleCheckpointVertexMasterCompute.class);
     job.getConfiguration().setVertexInputFormatClass(
         SimpleSuperstepVertexInputFormat.class);
     job.getConfiguration().setVertexOutputFormatClass(
@@ -146,12 +146,12 @@ public class TestGraphPartitioner extends BspCase {
 
     outputPath = getTempPath("testReverseIdSuperstepHashPartitioner");
     conf = new GiraphConfiguration();
-    conf.setVertexClass(
-        SimpleCheckpointVertex.SimpleCheckpointComputation.class);
+    conf.setComputationClass(
+        SimpleCheckpoint.SimpleCheckpointComputation.class);
     conf.setWorkerContextClass(
-        SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.class);
+        SimpleCheckpoint.SimpleCheckpointVertexWorkerContext.class);
     conf.setMasterComputeClass(
-        SimpleCheckpointVertex.SimpleCheckpointVertexMasterCompute.class);
+        SimpleCheckpoint.SimpleCheckpointVertexMasterCompute.class);
     conf.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
     conf.setVertexOutputFormatClass(SimpleSuperstepVertexOutputFormat.class);
     job = prepareJob("testReverseIdSuperstepHashPartitioner", conf,
@@ -165,12 +165,12 @@ public class TestGraphPartitioner extends BspCase {
 
     job = new GiraphJob("testSimpleRangePartitioner");
     setupConfiguration(job);
-    job.getConfiguration().setVertexClass(
-        SimpleCheckpointVertex.SimpleCheckpointComputation.class);
+    job.getConfiguration().setComputationClass(
+        SimpleCheckpoint.SimpleCheckpointComputation.class);
     job.getConfiguration().setWorkerContextClass(
-        SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.class);
+        SimpleCheckpoint.SimpleCheckpointVertexWorkerContext.class);
     job.getConfiguration().setMasterComputeClass(
-        SimpleCheckpointVertex.SimpleCheckpointVertexMasterCompute.class);
+        SimpleCheckpoint.SimpleCheckpointVertexMasterCompute.class);
     job.getConfiguration().setVertexInputFormatClass(
         SimpleSuperstepVertexInputFormat.class);
     job.getConfiguration().setVertexOutputFormatClass(

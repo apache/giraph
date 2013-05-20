@@ -19,7 +19,6 @@
 package org.apache.giraph.worker;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexEdgeCount;
 import org.apache.giraph.io.GiraphInputFormat;
@@ -50,11 +49,10 @@ import java.io.IOException;
  * @param <I> Vertex index value
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message data
  */
 public class VertexInputSplitsCallable<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    extends InputSplitsCallable<I, V, E, M> {
+    V extends Writable, E extends Writable>
+    extends InputSplitsCallable<I, V, E> {
   /** How often to update metrics and print info */
   public static final int VERTICES_UPDATE_PERIOD = 250000;
   /** How often to update filtered out metrics */
@@ -68,9 +66,9 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
   /** Input split max vertices (-1 denotes all) */
   private final long inputSplitMaxVertices;
   /** Bsp service worker (only use thread-safe methods) */
-  private final BspServiceWorker<I, V, E, M> bspServiceWorker;
+  private final BspServiceWorker<I, V, E> bspServiceWorker;
   /** Filter to select which vertices to keep */
-  private final VertexInputFilter<I, V, E, M> vertexInputFilter;
+  private final VertexInputFilter<I, V, E> vertexInputFilter;
 
   // Metrics
   /** number of vertices loaded meter across all readers */
@@ -85,7 +83,6 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
    *
    * @param vertexInputFormat Vertex input format
    * @param context Context
-   * @param graphState Graph state
    * @param configuration Configuration
    * @param bspServiceWorker service worker
    * @param splitsHandler Handler for input splits
@@ -94,13 +91,12 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
   public VertexInputSplitsCallable(
       VertexInputFormat<I, V, E> vertexInputFormat,
       Mapper<?, ?, ?, ?>.Context context,
-      GraphState<I, V, E, M> graphState,
-      ImmutableClassesGiraphConfiguration<I, V, E, M> configuration,
-      BspServiceWorker<I, V, E, M> bspServiceWorker,
+      ImmutableClassesGiraphConfiguration<I, V, E> configuration,
+      BspServiceWorker<I, V, E> bspServiceWorker,
       InputSplitsHandler splitsHandler,
       ZooKeeperExt zooKeeperExt)  {
-    super(context, graphState, configuration, bspServiceWorker,
-        splitsHandler, zooKeeperExt);
+    super(context, configuration, bspServiceWorker, splitsHandler,
+        zooKeeperExt);
     this.vertexInputFormat = vertexInputFormat;
 
     inputSplitMaxVertices = configuration.getInputSplitMaxVertices();
@@ -123,20 +119,16 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
    * maximum number of vertices to be read from an input split.
    *
    * @param inputSplit Input split to process with vertex reader
-   * @param graphState Current graph state
    * @return Vertices and edges loaded from this input split
    * @throws IOException
    * @throws InterruptedException
    */
   @Override
   protected VertexEdgeCount readInputSplit(
-      InputSplit inputSplit,
-      GraphState<I, V, E, M> graphState)
-    throws IOException, InterruptedException {
+      InputSplit inputSplit) throws IOException, InterruptedException {
     VertexReader<I, V, E> vertexReader =
         vertexInputFormat.createVertexReader(inputSplit, context);
-    vertexReader.setConf(
-        (ImmutableClassesGiraphConfiguration<I, V, E, Writable>) configuration);
+    vertexReader.setConf(configuration);
     vertexReader.initialize(inputSplit, context);
 
     long inputSplitVerticesLoaded = 0;
@@ -146,8 +138,7 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
     long inputSplitEdgesLoaded = 0;
 
     while (vertexReader.nextVertex()) {
-      Vertex<I, V, E, M> readerVertex =
-          (Vertex<I, V, E, M>) vertexReader.getCurrentVertex();
+      Vertex<I, V, E> readerVertex = vertexReader.getCurrentVertex();
       if (readerVertex.getId() == null) {
         throw new IllegalArgumentException(
             "readInputSplit: Vertex reader returned a vertex " +
@@ -157,7 +148,6 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
         readerVertex.setValue(configuration.createVertexValue());
       }
       readerVertex.setConf(configuration);
-      readerVertex.setGraphState(graphState);
 
       ++inputSplitVerticesLoaded;
 
@@ -172,7 +162,7 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
 
       PartitionOwner partitionOwner =
           bspServiceWorker.getVertexPartitionOwner(readerVertex.getId());
-      graphState.getWorkerClientRequestProcessor().sendVertexRequest(
+      workerClientRequestProcessor.sendVertexRequest(
           partitionOwner, readerVertex);
       context.progress(); // do this before potential data transfer
       edgesSinceLastUpdate += readerVertex.getNumEdges();

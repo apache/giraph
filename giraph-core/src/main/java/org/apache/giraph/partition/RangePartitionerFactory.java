@@ -34,10 +34,9 @@ import org.apache.hadoop.io.WritableComparable;
  * @param <I> Vertex index value
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message value
  */
 @SuppressWarnings("rawtypes")
 public abstract class RangePartitionerFactory<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    implements GraphPartitionerFactory<I, V, E, M> {
+    V extends Writable, E extends Writable>
+    implements GraphPartitionerFactory<I, V, E> {
 }

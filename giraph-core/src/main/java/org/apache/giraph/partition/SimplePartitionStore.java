@@ -33,16 +33,15 @@ import java.util.concurrent.ConcurrentMap;
  * @param <I> Vertex id
  * @param <V> Vertex data
  * @param <E> Edge data
- * @param <M> Message data
  */
 public class SimplePartitionStore<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    extends PartitionStore<I, V, E, M> {
+    V extends Writable, E extends Writable>
+    extends PartitionStore<I, V, E> {
   /** Map of stored partitions. */
-  private final ConcurrentMap<Integer, Partition<I, V, E, M>> partitions =
+  private final ConcurrentMap<Integer, Partition<I, V, E>> partitions =
       Maps.newConcurrentMap();
   /** Configuration. */
-  private final ImmutableClassesGiraphConfiguration<I, V, E, M> conf;
+  private final ImmutableClassesGiraphConfiguration<I, V, E> conf;
   /** Context used to report progress */
   private final Mapper<?, ?, ?, ?>.Context context;
 
@@ -53,15 +52,15 @@ public class SimplePartitionStore<I extends WritableComparable,
    * @param context Mapper context
    */
   public SimplePartitionStore(
-      ImmutableClassesGiraphConfiguration<I, V, E, M> conf,
+      ImmutableClassesGiraphConfiguration<I, V, E> conf,
       Mapper<?, ?, ?, ?>.Context context) {
     this.conf = conf;
     this.context = context;
   }
 
   @Override
-  public void addPartition(Partition<I, V, E, M> partition) {
-    Partition<I, V, E, M> oldPartition = partitions.get(partition.getId());
+  public void addPartition(Partition<I, V, E> partition) {
+    Partition<I, V, E> oldPartition = partitions.get(partition.getId());
     if (oldPartition == null) {
       oldPartition = partitions.putIfAbsent(partition.getId(), partition);
       if (oldPartition == null) {
@@ -72,12 +71,12 @@ public class SimplePartitionStore<I extends WritableComparable,
   }
 
   @Override
-  public Partition<I, V, E, M> getPartition(Integer partitionId) {
+  public Partition<I, V, E> getPartition(Integer partitionId) {
     return partitions.get(partitionId);
   }
 
   @Override
-  public Partition<I, V, E, M> removePartition(Integer partitionId) {
+  public Partition<I, V, E> removePartition(Integer partitionId) {
     return partitions.remove(partitionId);
   }
 
@@ -102,5 +101,5 @@ public class SimplePartitionStore<I extends WritableComparable,
   }
 
   @Override
-  public void putPartition(Partition<I, V, E, M> partition) { }
+  public void putPartition(Partition<I, V, E> partition) { }
 }

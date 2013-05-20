@@ -32,13 +32,12 @@ import org.apache.hadoop.util.Progressable;
  * @param <I> Vertex id
  * @param <V> Vertex data
  * @param <E> Edge data
- * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public interface Partition<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    extends Writable, ImmutableClassesGiraphConfigurable<I, V, E, M>,
-    Iterable<Vertex<I, V, E, M>> {
+    V extends Writable, E extends Writable>
+    extends Writable, ImmutableClassesGiraphConfigurable<I, V, E>,
+    Iterable<Vertex<I, V, E>> {
   /**
    * Initialize the partition.  Guaranteed to be called before used.
    *
@@ -53,7 +52,7 @@ public interface Partition<I extends WritableComparable,
    * @param vertexIndex Vertex index to search for
    * @return Vertex if it exists, null otherwise
    */
-  Vertex<I, V, E, M> getVertex(I vertexIndex);
+  Vertex<I, V, E> getVertex(I vertexIndex);
 
   /**
    * Put a vertex into the Partition
@@ -61,7 +60,7 @@ public interface Partition<I extends WritableComparable,
    * @param vertex Vertex to put in the Partition
    * @return old vertex value (i.e. null if none existed prior)
    */
-  Vertex<I, V, E, M> putVertex(Vertex<I, V, E, M> vertex);
+  Vertex<I, V, E> putVertex(Vertex<I, V, E> vertex);
 
   /**
    * Remove a vertex from the Partition
@@ -69,14 +68,14 @@ public interface Partition<I extends WritableComparable,
    * @param vertexIndex Vertex index to remove
    * @return The removed vertex.
    */
-  Vertex<I, V, E, M> removeVertex(I vertexIndex);
+  Vertex<I, V, E> removeVertex(I vertexIndex);
 
   /**
    * Add a partition's vertices
    *
    * @param partition Partition to add
    */
-  void addPartition(Partition<I, V, E, M> partition);
+  void addPartition(Partition<I, V, E> partition);
 
   /**
    * Get the number of vertices in this partition
@@ -123,12 +122,5 @@ public interface Partition<I extends WritableComparable,
    *
    * @param vertex Vertex to save
    */
-  void saveVertex(Vertex<I, V, E, M> vertex);
-
-  /**
-   * Get partition context
-   *
-   * @return Partition context
-   */
-  PartitionContext getPartitionContext();
+  void saveVertex(Vertex<I, V, E> vertex);
 }

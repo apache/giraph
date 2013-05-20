@@ -22,17 +22,15 @@ import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.comm.WorkerServer;
 import org.apache.giraph.comm.messages.BasicMessageStore;
-import org.apache.giraph.comm.messages.ByteArrayMessagesPerVertexStore;
 import org.apache.giraph.comm.messages.DiskBackedMessageStore;
 import org.apache.giraph.comm.messages.DiskBackedMessageStoreByPartition;
 import org.apache.giraph.comm.messages.FlushableMessageStore;
+import org.apache.giraph.comm.messages.InMemoryMessageStoreFactory;
 import org.apache.giraph.comm.messages.MessageStoreByPartition;
 import org.apache.giraph.comm.messages.MessageStoreFactory;
-import org.apache.giraph.comm.messages.OneMessagePerVertexStore;
 import org.apache.giraph.comm.messages.SequentialFileMessageStore;
 import org.apache.giraph.comm.netty.handler.WorkerRequestServerHandler;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexMutations;
 import org.apache.giraph.graph.VertexResolver;
@@ -60,23 +58,24 @@ import static org.apache.giraph.conf.GiraphConstants.USE_OUT_OF_CORE_MESSAGES;
  * @param <I> Vertex id
  * @param <V> Vertex data
  * @param <E> Edge data
- * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public class NettyWorkerServer<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    implements WorkerServer<I, V, E, M> {
+    V extends Writable, E extends Writable>
+    implements WorkerServer<I, V, E> {
   /** Class logger */
   private static final Logger LOG =
     Logger.getLogger(NettyWorkerServer.class);
   /** Hadoop configuration */
-  private final ImmutableClassesGiraphConfiguration<I, V, E, M> conf;
+  private final ImmutableClassesGiraphConfiguration<I, V, E> conf;
   /** Service worker */
-  private final CentralizedServiceWorker<I, V, E, M> service;
+  private final CentralizedServiceWorker<I, V, E> service;
   /** Netty server that does that actual I/O */
   private final NettyServer nettyServer;
   /** Server data storage */
-  private final ServerData<I, V, E, M> serverData;
+  private final ServerData<I, V, E> serverData;
+  /** Mapper context */
+  private final Mapper<?, ?, ?, ?>.Context context;
 
   /**
    * Constructor to start the server.
@@ -85,18 +84,19 @@ public class NettyWorkerServer<I extends WritableComparable,
    * @param service Service to get partition mappings
    * @param context Mapper context
    */
-  public NettyWorkerServer(ImmutableClassesGiraphConfiguration<I, V, E, M> conf,
-      CentralizedServiceWorker<I, V, E, M> service,
+  public NettyWorkerServer(ImmutableClassesGiraphConfiguration<I, V, E> conf,
+      CentralizedServiceWorker<I, V, E> service,
       Mapper<?, ?, ?, ?>.Context context) {
     this.conf = conf;
     this.service = service;
+    this.context = context;
 
     serverData =
-        new ServerData<I, V, E, M>(service, conf, createMessageStoreFactory(),
+        new ServerData<I, V, E>(service, conf, createMessageStoreFactory(),
             context);
 
     nettyServer = new NettyServer(conf,
-        new WorkerRequestServerHandler.Factory<I, V, E, M>(serverData),
+        new WorkerRequestServerHandler.Factory<I, V, E>(serverData),
         service.getWorkerInfo(), context);
     nettyServer.start();
   }
@@ -107,33 +107,20 @@ public class NettyWorkerServer<I extends WritableComparable,
    *
    * @return Message store factory
    */
-  private MessageStoreFactory<I, M, MessageStoreByPartition<I, M>>
+  private MessageStoreFactory<I, Writable, MessageStoreByPartition<I, Writable>>
   createMessageStoreFactory() {
     boolean useOutOfCoreMessaging = USE_OUT_OF_CORE_MESSAGES.get(conf);
     if (!useOutOfCoreMessaging) {
-      if (conf.useCombiner()) {
-        if (LOG.isInfoEnabled()) {
-          LOG.info("createMessageStoreFactory: " +
-              "Using OneMessagePerVertexStore since combiner enabled");
-        }
-        return OneMessagePerVertexStore.newFactory(service, conf);
-      } else {
-        if (LOG.isInfoEnabled()) {
-          LOG.info("createMessageStoreFactory: " +
-              "Using ByteArrayMessagesPerVertexStore " +
-              "since there is no combiner");
-        }
-        return ByteArrayMessagesPerVertexStore.newFactory(service, conf);
-      }
+      return new InMemoryMessageStoreFactory<I, Writable>(service, conf);
     } else {
       int maxMessagesInMemory = MAX_MESSAGES_IN_MEMORY.get(conf);
       if (LOG.isInfoEnabled()) {
         LOG.info("createMessageStoreFactory: Using DiskBackedMessageStore, " +
             "maxMessagesInMemory = " + maxMessagesInMemory);
       }
-      MessageStoreFactory<I, M, BasicMessageStore<I, M>> fileStoreFactory =
-          SequentialFileMessageStore.newFactory(conf);
-      MessageStoreFactory<I, M, FlushableMessageStore<I, M>>
+      MessageStoreFactory<I, Writable, BasicMessageStore<I, Writable>>
+          fileStoreFactory = SequentialFileMessageStore.newFactory(conf);
+      MessageStoreFactory<I, Writable, FlushableMessageStore<I, Writable>>
           partitionStoreFactory =
           DiskBackedMessageStore.newFactory(conf, fileStoreFactory);
       return DiskBackedMessageStoreByPartition.newFactory(service,
@@ -147,21 +134,19 @@ public class NettyWorkerServer<I extends WritableComparable,
   }
 
   @Override
-  public void prepareSuperstep(GraphState<I, V, E, M> graphState) {
+  public void prepareSuperstep() {
     serverData.prepareSuperstep();
-    resolveMutations(graphState);
+    resolveMutations();
   }
 
   /**
    * Resolve mutation requests.
-   *
-   * @param graphState Graph state
    */
-  private void resolveMutations(GraphState<I, V, E, M> graphState) {
+  private void resolveMutations() {
     Multimap<Integer, I> resolveVertexIndices = HashMultimap.create(
         service.getPartitionStore().getNumPartitions(), 100);
       // Add any mutated vertex indices to be resolved
-    for (Entry<I, VertexMutations<I, V, E, M>> e :
+    for (Entry<I, VertexMutations<I, V, E>> e :
         serverData.getVertexMutations().entrySet()) {
       I vertexId = e.getKey();
       Integer partitionId = service.getPartitionId(vertexId);
@@ -176,7 +161,7 @@ public class NettyWorkerServer<I extends WritableComparable,
       Iterable<I> destinations = serverData.getCurrentMessageStore().
           getPartitionDestinationVertices(partitionId);
       if (!Iterables.isEmpty(destinations)) {
-        Partition<I, V, E, M> partition =
+        Partition<I, V, E> partition =
             service.getPartitionStore().getPartition(partitionId);
         for (I vertexId : destinations) {
           if (partition.getVertex(vertexId) == null) {
@@ -191,18 +176,17 @@ public class NettyWorkerServer<I extends WritableComparable,
       }
     }
     // Resolve all graph mutations
-    VertexResolver<I, V, E, M> vertexResolver =
-        conf.createVertexResolver(graphState);
+    VertexResolver<I, V, E> vertexResolver = conf.createVertexResolver();
     for (Entry<Integer, Collection<I>> e :
         resolveVertexIndices.asMap().entrySet()) {
-      Partition<I, V, E, M> partition =
+      Partition<I, V, E> partition =
           service.getPartitionStore().getPartition(e.getKey());
       for (I vertexIndex : e.getValue()) {
-        Vertex<I, V, E, M> originalVertex =
+        Vertex<I, V, E> originalVertex =
             partition.getVertex(vertexIndex);
 
-        VertexMutations<I, V, E, M> mutations = null;
-        VertexMutations<I, V, E, M> vertexMutations =
+        VertexMutations<I, V, E> mutations = null;
+        VertexMutations<I, V, E> vertexMutations =
             serverData.getVertexMutations().get(vertexIndex);
         if (vertexMutations != null) {
           synchronized (vertexMutations) {
@@ -210,11 +194,11 @@ public class NettyWorkerServer<I extends WritableComparable,
           }
           serverData.getVertexMutations().remove(vertexIndex);
         }
-        Vertex<I, V, E, M> vertex = vertexResolver.resolve(
+        Vertex<I, V, E> vertex = vertexResolver.resolve(
             vertexIndex, originalVertex, mutations,
             serverData.getCurrentMessageStore().
                 hasMessagesForVertex(vertexIndex));
-        graphState.getContext().progress();
+        context.progress();
 
         if (LOG.isDebugEnabled()) {
           LOG.debug("resolveMutations: Resolved vertex index " +
@@ -240,7 +224,7 @@ public class NettyWorkerServer<I extends WritableComparable,
   }
 
   @Override
-  public ServerData<I, V, E, M> getServerData() {
+  public ServerData<I, V, E> getServerData() {
     return serverData;
   }
 

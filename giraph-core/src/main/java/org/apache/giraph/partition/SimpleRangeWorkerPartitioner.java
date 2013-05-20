@@ -35,12 +35,10 @@ import java.util.List;
  * @param <I> Vertex id type
  * @param <V> Vertex value type
  * @param <E> Edge value type
- * @param <M> Message data type
  */
 public abstract class SimpleRangeWorkerPartitioner<I extends
-    WritableComparable, V extends Writable, E extends Writable,
-    M extends Writable>
-    implements WorkerGraphPartitioner<I, V, E, M> {
+    WritableComparable, V extends Writable, E extends Writable>
+    implements WorkerGraphPartitioner<I, V, E> {
   /** List of {@link PartitionOwner}s for this worker. */
   private List<PartitionOwner> partitionOwnerList = Lists.newArrayList();
   /** Vertex keys space size. */
@@ -88,7 +86,7 @@ public abstract class SimpleRangeWorkerPartitioner<I extends
   @Override
   public Collection<PartitionStats> finalizePartitionStats(
       Collection<PartitionStats> workerPartitionStats,
-      PartitionStore<I, V, E, M> partitionStore) {
+      PartitionStore<I, V, E> partitionStore) {
     // No modification necessary
     return workerPartitionStats;
   }
@@ -97,7 +95,7 @@ public abstract class SimpleRangeWorkerPartitioner<I extends
   public PartitionExchange updatePartitionOwners(
       WorkerInfo myWorkerInfo,
       Collection<? extends PartitionOwner> masterSetPartitionOwners,
-      PartitionStore<I, V, E, M> partitionStore) {
+      PartitionStore<I, V, E> partitionStore) {
     return PartitionBalancer.updatePartitionOwners(partitionOwnerList,
         myWorkerInfo, masterSetPartitionOwners, partitionStore);
   }

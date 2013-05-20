@@ -35,12 +35,11 @@ import java.util.List;
  * @param <I> Vertex index value
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message value
  */
 @SuppressWarnings("rawtypes")
 public class HashMasterPartitioner<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable> implements
-    MasterGraphPartitioner<I, V, E, M> {
+    V extends Writable, E extends Writable> implements
+    MasterGraphPartitioner<I, V, E> {
   /** Class logger */
   private static Logger LOG = Logger.getLogger(HashMasterPartitioner.class);
   /** Provided configuration */

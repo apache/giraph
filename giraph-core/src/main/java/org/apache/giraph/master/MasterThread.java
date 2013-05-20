@@ -43,17 +43,16 @@ import static org.apache.giraph.conf.GiraphConstants.USE_SUPERSTEP_COUNTERS;
  * @param <I> Vertex id
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public class MasterThread<I extends WritableComparable, V extends Writable,
-    E extends Writable, M extends Writable> extends Thread {
+    E extends Writable> extends Thread {
   /** Counter group name for the Giraph timers */
   public static final String GIRAPH_TIMERS_COUNTER_GROUP_NAME = "Giraph Timers";
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(MasterThread.class);
   /** Reference to shared BspService */
-  private CentralizedServiceMaster<I, V, E, M> bspServiceMaster = null;
+  private CentralizedServiceMaster<I, V, E> bspServiceMaster = null;
   /** Context (for counters) */
   private final Context context;
   /** Use superstep counters? */
@@ -71,7 +70,7 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
    *        been called.
    * @param context Context from the Mapper.
    */
-  public MasterThread(CentralizedServiceMaster<I, V, E, M> bspServiceMaster,
+  public MasterThread(CentralizedServiceMaster<I, V, E> bspServiceMaster,
       Context context) {
     super(MasterThread.class.getName());
     this.bspServiceMaster = bspServiceMaster;

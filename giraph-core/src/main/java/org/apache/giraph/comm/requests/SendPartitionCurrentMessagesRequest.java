@@ -37,7 +37,7 @@ import org.apache.hadoop.io.WritableComparable;
  */
 public class SendPartitionCurrentMessagesRequest<I extends WritableComparable,
   V extends Writable, E extends Writable, M extends Writable> extends
-  WritableRequest<I, V, E, M> implements WorkerRequest<I, V, E, M> {
+  WritableRequest<I, V, E> implements WorkerRequest<I, V, E> {
   /** Destination partition for these vertices' messages*/
   private int partitionId;
   /** Map of destination vertex ID's to message lists */
@@ -67,7 +67,10 @@ public class SendPartitionCurrentMessagesRequest<I extends WritableComparable,
   @Override
   public void readFieldsRequest(DataInput input) throws IOException {
     partitionId = input.readInt();
-    vertexIdMessageMap = new ByteArrayVertexIdMessages<I, M>();
+    // At this moment the Computation class have already been replaced with
+    // the new one, and we deal with messages from previous superstep
+    vertexIdMessageMap = new ByteArrayVertexIdMessages<I, M>(
+        getConf().getIncomingMessageValueClass());
     vertexIdMessageMap.setConf(getConf());
     vertexIdMessageMap.initialize();
     vertexIdMessageMap.readFields(input);
@@ -80,9 +83,9 @@ public class SendPartitionCurrentMessagesRequest<I extends WritableComparable,
   }
 
   @Override
-  public void doRequest(ServerData<I, V, E, M> serverData) {
+  public void doRequest(ServerData<I, V, E> serverData) {
     try {
-      serverData.getCurrentMessageStore().addPartitionMessages(partitionId,
+      serverData.<M>getCurrentMessageStore().addPartitionMessages(partitionId,
           vertexIdMessageMap);
     } catch (IOException e) {
       throw new RuntimeException("doRequest: Got IOException ", e);

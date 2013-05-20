@@ -29,12 +29,11 @@ import com.google.common.primitives.UnsignedInts;
  * @param <I> Vertex index value
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message value
  */
 @SuppressWarnings("rawtypes")
 public class HashRangeWorkerPartitioner<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    extends HashWorkerPartitioner<I, V, E, M> {
+    V extends Writable, E extends Writable>
+    extends HashWorkerPartitioner<I, V, E> {
   /** A transformed hashCode() must be strictly smaller than this. */
   private static final long HASH_LIMIT = 2L * Integer.MAX_VALUE + 2L;
 

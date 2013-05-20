@@ -47,8 +47,10 @@ import java.util.concurrent.ConcurrentMap;
 public class DiskBackedMessageStoreByPartition<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable> implements
     MessageStoreByPartition<I, M> {
+  /** Message class */
+  private final Class<M> messageClass;
   /** Service worker */
-  private final CentralizedServiceWorker<I, V, E, M> service;
+  private final CentralizedServiceWorker<I, V, E> service;
   /** Number of messages to keep in memory */
   private final int maxNumberOfMessagesInMemory;
   /** Factory for creating file stores when flushing */
@@ -57,18 +59,20 @@ public class DiskBackedMessageStoreByPartition<I extends WritableComparable,
   /** Map from partition id to its message store */
   private final
   ConcurrentMap<Integer, FlushableMessageStore<I, M>> partitionMessageStores;
-
   /**
+   * @param messageClass                Message class held in the store
    * @param service                     Service worker
    * @param maxNumberOfMessagesInMemory Number of messages to keep in memory
    * @param fileStoreFactory            Factory for creating file stores
    *                                    when flushing
    */
   public DiskBackedMessageStoreByPartition(
-      CentralizedServiceWorker<I, V, E, M> service,
+      Class<M> messageClass,
+      CentralizedServiceWorker<I, V, E> service,
       int maxNumberOfMessagesInMemory,
       MessageStoreFactory<I, M, FlushableMessageStore<I,
           M>> fileStoreFactory) {
+    this.messageClass = messageClass;
     this.service = service;
     this.maxNumberOfMessagesInMemory = maxNumberOfMessagesInMemory;
     this.fileStoreFactory = fileStoreFactory;
@@ -267,7 +271,7 @@ public class DiskBackedMessageStoreByPartition<I extends WritableComparable,
     if (messageStore != null) {
       return messageStore;
     }
-    messageStore = fileStoreFactory.newStore();
+    messageStore = fileStoreFactory.newStore(messageClass);
     FlushableMessageStore<I, M> store =
         partitionMessageStores.putIfAbsent(partitionId, messageStore);
     return (store == null) ? messageStore : store;
@@ -298,7 +302,8 @@ public class DiskBackedMessageStoreByPartition<I extends WritableComparable,
   public void readFieldsForPartition(DataInput in,
       int partitionId) throws IOException {
     if (in.readBoolean()) {
-      FlushableMessageStore<I, M> messageStore = fileStoreFactory.newStore();
+      FlushableMessageStore<I, M> messageStore =
+          fileStoreFactory.newStore(messageClass);
       messageStore.readFields(in);
       partitionMessageStores.put(partitionId, messageStore);
     }
@@ -309,7 +314,8 @@ public class DiskBackedMessageStoreByPartition<I extends WritableComparable,
     int numStores = in.readInt();
     for (int s = 0; s < numStores; s++) {
       int partitionId = in.readInt();
-      FlushableMessageStore<I, M> messageStore = fileStoreFactory.newStore();
+      FlushableMessageStore<I, M> messageStore =
+          fileStoreFactory.newStore(messageClass);
       messageStore.readFields(in);
       partitionMessageStores.put(partitionId, messageStore);
     }
@@ -332,7 +338,7 @@ public class DiskBackedMessageStoreByPartition<I extends WritableComparable,
   public static <I extends WritableComparable, V extends Writable,
       E extends Writable, M extends Writable>
   MessageStoreFactory<I, M, MessageStoreByPartition<I, M>> newFactory(
-      CentralizedServiceWorker<I, V, E, M> service,
+      CentralizedServiceWorker<I, V, E> service,
       int maxMessagesInMemory,
       MessageStoreFactory<I, M, FlushableMessageStore<I, M>>
           fileStoreFactory) {
@@ -352,7 +358,7 @@ public class DiskBackedMessageStoreByPartition<I extends WritableComparable,
       V extends Writable, E extends Writable, M extends Writable>
       implements MessageStoreFactory<I, M, MessageStoreByPartition<I, M>> {
     /** Service worker */
-    private final CentralizedServiceWorker<I, V, E, M> service;
+    private final CentralizedServiceWorker<I, V, E> service;
     /** Number of messages to keep in memory */
     private final int maxMessagesInMemory;
     /** Factory for creating file stores when flushing */
@@ -365,7 +371,7 @@ public class DiskBackedMessageStoreByPartition<I extends WritableComparable,
      * @param fileStoreFactory    Factory for creating file stores when
      *                            flushing
      */
-    public Factory(CentralizedServiceWorker<I, V, E, M> service,
+    public Factory(CentralizedServiceWorker<I, V, E> service,
         int maxMessagesInMemory,
         MessageStoreFactory<I, M, FlushableMessageStore<I, M>>
             fileStoreFactory) {
@@ -375,9 +381,9 @@ public class DiskBackedMessageStoreByPartition<I extends WritableComparable,
     }
 
     @Override
-    public MessageStoreByPartition<I, M> newStore() {
-      return new DiskBackedMessageStoreByPartition<I, V, E, M>(service,
-          maxMessagesInMemory, fileStoreFactory);
+    public MessageStoreByPartition<I, M> newStore(Class<M> messageClass) {
+      return new DiskBackedMessageStoreByPartition<I, V, E, M>(messageClass,
+          service, maxMessagesInMemory, fileStoreFactory);
     }
   }
 

@@ -58,13 +58,13 @@ public class ShortestPathsBenchmark extends GiraphBenchmark {
   @Override
   protected void prepareConfiguration(GiraphConfiguration conf,
       CommandLine cmd) {
-    conf.setVertexClass(ShortestPathsVertex.class);
+    conf.setComputationClass(ShortestPathsComputation.class);
     if (EDGES_CLASS.getOptionIntValue(cmd, 1) == 1) {
       conf.setOutEdgesClass(ArrayListEdges.class);
     } else {
       conf.setOutEdgesClass(HashMapEdges.class);
     }
-    LOG.info("Using class " + GiraphConstants.VERTEX_CLASS.get(conf));
+    LOG.info("Using class " + GiraphConstants.COMPUTATION_CLASS.get(conf));
     conf.setVertexInputFormatClass(PseudoRandomVertexInputFormat.class);
     if (!NO_COMBINER.optionTurnedOn(cmd)) {
       conf.setCombinerClass(MinimumDoubleCombiner.class);

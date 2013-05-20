@@ -41,7 +41,7 @@ public class NettyMasterServer implements MasterServer {
    * @param progressable Progressable for reporting progress
    */
   public NettyMasterServer(ImmutableClassesGiraphConfiguration conf,
-      CentralizedServiceMaster<?, ?, ?, ?> service,
+      CentralizedServiceMaster<?, ?, ?> service,
       Progressable progressable) {
     nettyServer = new NettyServer(conf,
         new MasterRequestServerHandler.Factory(service.getAggregatorHandler()),

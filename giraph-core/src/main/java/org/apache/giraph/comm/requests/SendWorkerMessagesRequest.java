@@ -54,7 +54,8 @@ public class SendWorkerMessagesRequest<I extends WritableComparable,
 
   @Override
   public ByteArrayVertexIdMessages<I, M> createByteArrayVertexIdData() {
-    return new ByteArrayVertexIdMessages<I, M>();
+    return new ByteArrayVertexIdMessages<I, M>(
+        getConf().getOutgoingMessageValueClass());
   }
 
   @Override

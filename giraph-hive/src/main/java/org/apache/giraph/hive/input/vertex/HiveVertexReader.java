@@ -45,8 +45,8 @@ import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_INPU
  */
 public class HiveVertexReader<I extends WritableComparable,
     V extends Writable, E extends Writable>
-    extends DefaultConfigurableAndTableSchemaAware<I, V, E, Writable>
-    implements GiraphReader<Vertex<I, V, E, ?>> {
+    extends DefaultConfigurableAndTableSchemaAware<I, V, E>
+    implements GiraphReader<Vertex<I, V, E>> {
   /** Underlying Hive RecordReader used */
   private RecordReader<WritableComparable, HiveReadableRecord> hiveRecordReader;
 
@@ -103,7 +103,7 @@ public class HiveVertexReader<I extends WritableComparable,
   }
 
   @Override
-  public Vertex<I, V, E, ?> next() {
+  public Vertex<I, V, E> next() {
     return hiveToVertex.next();
   }
 

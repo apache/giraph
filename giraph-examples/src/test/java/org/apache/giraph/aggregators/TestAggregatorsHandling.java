@@ -23,9 +23,9 @@ import org.apache.giraph.comm.aggregators.AggregatorUtils;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.examples.AggregatorsTestVertex;
-import org.apache.giraph.examples.SimpleCheckpointVertex;
-import org.apache.giraph.examples.SimplePageRankVertex;
+import org.apache.giraph.examples.AggregatorsTestComputation;
+import org.apache.giraph.examples.SimpleCheckpoint;
+import org.apache.giraph.examples.SimplePageRankComputation;
 import org.apache.giraph.job.GiraphJob;
 import org.apache.giraph.master.MasterAggregatorHandler;
 import org.apache.hadoop.fs.Path;
@@ -75,12 +75,12 @@ public class TestAggregatorsHandling extends BspCase {
   public void testAggregatorsHandling() throws IOException,
       ClassNotFoundException, InterruptedException {
     GiraphConfiguration conf = new GiraphConfiguration();
-    conf.setVertexClass(AggregatorsTestVertex.class);
+    conf.setComputationClass(AggregatorsTestComputation.class);
     conf.setVertexInputFormatClass(
-        SimplePageRankVertex.SimplePageRankVertexInputFormat.class);
+        SimplePageRankComputation.SimplePageRankVertexInputFormat.class);
     GiraphJob job = prepareJob(getCallingMethodName(), conf);
     job.getConfiguration().setMasterComputeClass(
-        AggregatorsTestVertex.AggregatorsTestMasterCompute.class);
+        AggregatorsTestComputation.AggregatorsTestMasterCompute.class);
     // test with aggregators split in a few requests
     job.getConfiguration().setInt(
         AggregatorUtils.MAX_BYTES_PER_AGGREGATOR_REQUEST, 50);
@@ -155,11 +155,11 @@ public class TestAggregatorsHandling extends BspCase {
     Path checkpointsDir = getTempPath("checkPointsForTesting");
     Path outputPath = getTempPath(getCallingMethodName());
     GiraphConfiguration conf = new GiraphConfiguration();
-    conf.setVertexClass(AggregatorsTestVertex.class);
+    conf.setComputationClass(AggregatorsTestComputation.class);
     conf.setMasterComputeClass(
-        AggregatorsTestVertex.AggregatorsTestMasterCompute.class);
+        AggregatorsTestComputation.AggregatorsTestMasterCompute.class);
     conf.setVertexInputFormatClass(
-        SimplePageRankVertex.SimplePageRankVertexInputFormat.class);
+        SimplePageRankComputation.SimplePageRankVertexInputFormat.class);
     GiraphJob job = prepareJob(getCallingMethodName(), conf, outputPath);
 
     GiraphConfiguration configuration = job.getConfiguration();
@@ -174,15 +174,15 @@ public class TestAggregatorsHandling extends BspCase {
         "superstep 4 with checkpoint path = " + checkpointsDir);
     outputPath = getTempPath(getCallingMethodName() + "Restarted");
     conf = new GiraphConfiguration();
-    conf.setVertexClass(AggregatorsTestVertex.class);
+    conf.setComputationClass(AggregatorsTestComputation.class);
     conf.setMasterComputeClass(
-        AggregatorsTestVertex.AggregatorsTestMasterCompute.class);
+        AggregatorsTestComputation.AggregatorsTestMasterCompute.class);
     conf.setVertexInputFormatClass(
-        SimplePageRankVertex.SimplePageRankVertexInputFormat.class);
+        SimplePageRankComputation.SimplePageRankVertexInputFormat.class);
     GiraphJob restartedJob = prepareJob(getCallingMethodName() + "Restarted",
         conf, outputPath);
     job.getConfiguration().setMasterComputeClass(
-        SimpleCheckpointVertex.SimpleCheckpointVertexMasterCompute.class);
+        SimpleCheckpoint.SimpleCheckpointVertexMasterCompute.class);
     GiraphConfiguration restartedJobConf = restartedJob.getConfiguration();
     GiraphConstants.CHECKPOINT_DIRECTORY.set(restartedJobConf,
         checkpointsDir.toString());

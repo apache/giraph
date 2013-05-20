@@ -32,6 +32,7 @@ import org.apache.accumulo.core.security.Authorizations;
 import org.apache.accumulo.core.util.ByteBufferUtil;
 import org.apache.accumulo.core.util.Pair;
 import org.apache.giraph.BspCase;
+import org.apache.giraph.graph.BasicComputation;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.io.accumulo.edgemarker.AccumuloEdgeInputFormat;
 import org.apache.giraph.io.accumulo.edgemarker.AccumuloEdgeOutputFormat;
@@ -133,7 +134,7 @@ public class TestAccumuloVertexFormat extends BspCase{
         GiraphJob job = new GiraphJob(conf, getCallingMethodName());
         setupConfiguration(job);
         GiraphConfiguration giraphConf = job.getConfiguration();
-        giraphConf.setVertexClass(EdgeNotification.class);
+        giraphConf.setComputationClass(EdgeNotification.class);
         giraphConf.setVertexInputFormatClass(AccumuloEdgeInputFormat.class);
         giraphConf.setVertexOutputFormatClass(AccumuloEdgeOutputFormat.class);
 
@@ -170,16 +171,17 @@ public class TestAccumuloVertexFormat extends BspCase{
     The test set only has a 1-1 parent-to-child ratio for this unit test.
      */
     public static class EdgeNotification
-            extends Vertex<Text, Text, Text, Text> {
-        @Override
-        public void compute(Iterable<Text> messages) throws IOException {
+            extends BasicComputation<Text, Text, Text, Text> {
+      @Override
+      public void compute(Vertex<Text, Text, Text> vertex,
+          Iterable<Text> messages) throws IOException {
           for (Text message : messages) {
-            getValue().set(message);
+            vertex.getValue().set(message);
           }
           if(getSuperstep() == 0) {
-            sendMessageToAllEdges(getId());
+            sendMessageToAllEdges(vertex, vertex.getId());
           }
-          voteToHalt();
-        }
+        vertex.voteToHalt();
+      }
     }
 }

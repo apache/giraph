@@ -70,7 +70,7 @@ public class TryMultiIpcBindingPortsTest {
         // fail the first port binding attempt
         GiraphConfiguration conf = new GiraphConfiguration();
         GiraphConstants.FAIL_FIRST_IPC_PORT_BIND_ATTEMPT.set(conf, true);
-        conf.setVertexClass(ConnectedComponentsVertex.class);
+        conf.setComputationClass(ConnectedComponentsComputation.class);
         conf.setOutEdgesClass(ByteArrayEdges.class);
         conf.setCombinerClass(MinimumIntCombiner.class);
         conf.setVertexInputFormatClass(IntIntNullTextInputFormat.class);

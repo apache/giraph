@@ -24,9 +24,9 @@ import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.giraph.graph.Computation;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.job.GiraphJob;
-import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.hadoop.conf.Configuration;
@@ -96,9 +96,9 @@ public class HCatGiraphRunner implements Tool {
   private boolean skipOutput = false;
 
   /**
-  * vertex class.
+  * computation class.
   */
-  private Class<? extends Vertex> vertexClass;
+  private Class<? extends Computation> computationClass;
   /**
    * vertex input format internal.
    */
@@ -115,17 +115,17 @@ public class HCatGiraphRunner implements Tool {
   /**
   * Giraph runner class.
    *
-  * @param vertexClass Vertex class
+  * @param computationClass Computation class
   * @param vertexInputFormatClass Vertex input format
   * @param edgeInputFormatClass Edge input format
   * @param vertexOutputFormatClass Output format
   */
   protected HCatGiraphRunner(
-      Class<? extends Vertex> vertexClass,
+      Class<? extends Computation> computationClass,
       Class<? extends VertexInputFormat> vertexInputFormatClass,
       Class<? extends EdgeInputFormat> edgeInputFormatClass,
       Class<? extends VertexOutputFormat> vertexOutputFormatClass) {
-    this.vertexClass = vertexClass;
+    this.computationClass = computationClass;
     this.vertexInputFormatClass = vertexInputFormatClass;
     this.edgeInputFormatClass = edgeInputFormatClass;
     this.vertexOutputFormatClass = vertexOutputFormatClass;
@@ -159,7 +159,7 @@ public class HCatGiraphRunner implements Tool {
 
     // setup GiraphJob
     GiraphJob job = new GiraphJob(getConf(), getClass().getName());
-    job.getConfiguration().setVertexClass(vertexClass);
+    job.getConfiguration().setComputationClass(computationClass);
 
     // setup input from Hive
     if (vertexInputFormatClass != null) {
@@ -240,9 +240,9 @@ public class HCatGiraphRunner implements Tool {
     options.addOption("D", "hiveconf", true,
                 "property=value for Hive/Hadoop configuration");
     options.addOption("w", "workers", true, "Number of workers");
-    if (vertexClass == null) {
-      options.addOption(null, "vertexClass", true,
-          "Giraph Vertex class to use");
+    if (computationClass == null) {
+      options.addOption(null, "computationClass", true,
+          "Giraph Computation class to use");
     }
     if (vertexInputFormatClass == null) {
       options.addOption(null, "vertexInputFormatClass", true,
@@ -282,9 +282,9 @@ public class HCatGiraphRunner implements Tool {
     }
 
     // Giraph classes
-    if (cmdln.hasOption("vertexClass")) {
-      vertexClass = findClass(cmdln.getOptionValue("vertexClass"),
-          Vertex.class);
+    if (cmdln.hasOption("computationClass")) {
+      computationClass = findClass(cmdln.getOptionValue("computationClass"),
+          Computation.class);
     }
     if (cmdln.hasOption("vertexInputFormatClass")) {
       vertexInputFormatClass = findClass(
@@ -307,9 +307,9 @@ public class HCatGiraphRunner implements Tool {
       skipOutput = true;
     }
 
-    if (vertexClass == null) {
+    if (computationClass == null) {
       throw new IllegalArgumentException(
-          "Need the Giraph Vertex class name (-vertexClass) to use");
+          "Need the Giraph Computation class name (-computationClass) to use");
     }
     if (vertexInputFormatClass == null && edgeInputFormatClass == null) {
       throw new IllegalArgumentException(
@@ -454,8 +454,8 @@ public class HCatGiraphRunner implements Tool {
   protected void initGiraphJob(GiraphJob job) {
     LOG.info(getClass().getSimpleName() + " with");
     String prefix = "\t";
-    LOG.info(prefix + "-vertexClass=" +
-         vertexClass.getCanonicalName());
+    LOG.info(prefix + "-computationClass=" +
+         computationClass.getCanonicalName());
     if (vertexInputFormatClass != null) {
       LOG.info(prefix + "-vertexInputFormatClass=" +
           vertexInputFormatClass.getCanonicalName());

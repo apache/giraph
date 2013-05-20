@@ -18,10 +18,10 @@
 
 package org.apache.giraph.conf;
 
-import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.time.SystemTime;
 import org.apache.giraph.time.Time;
 import org.apache.giraph.time.Times;
+import org.apache.giraph.utils.LongNoOpComputation;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -51,7 +51,7 @@ public class TestObjectCreation {
   private long total = 0;
   private long expected = COUNT * (COUNT - 1) / 2L;
   private ImmutableClassesGiraphConfiguration<LongWritable, LongWritable,
-      LongWritable, LongWritable> configuration;
+      LongWritable> configuration;
 
   @Before
   public void setUp() {
@@ -59,11 +59,12 @@ public class TestObjectCreation {
     GiraphConstants.VERTEX_ID_CLASS.set(conf, IntWritable.class);
     GiraphConstants.VERTEX_VALUE_CLASS.set(conf, LongWritable.class);
     GiraphConstants.EDGE_VALUE_CLASS.set(conf, DoubleWritable.class);
-    GiraphConstants.MESSAGE_VALUE_CLASS.set(conf, LongWritable.class);
-    conf.setVertexClass(ImmutableVertex.class);
+    GiraphConstants.INCOMING_MESSAGE_VALUE_CLASS.set(conf, LongWritable.class);
+    GiraphConstants.OUTGOING_MESSAGE_VALUE_CLASS.set(conf, LongWritable.class);
+    conf.setComputationClass(LongNoOpComputation.class);
     configuration =
         new ImmutableClassesGiraphConfiguration<LongWritable, LongWritable,
-            LongWritable, LongWritable>(conf);
+            LongWritable>(conf);
     total = 0;
     System.gc();
   }
@@ -161,15 +162,8 @@ public class TestObjectCreation {
     }
   }
 
-  private static class ImmutableVertex extends Vertex<LongWritable,
-        LongWritable, LongWritable, LongWritable> {
-    @Override
-    public void compute(Iterable<LongWritable> messages) throws IOException {
-    }
-  }
-
   private ImmutableClassesGiraphConfiguration<LongWritable, LongWritable,
-      LongWritable, LongWritable> getConfiguration() {
+      LongWritable> getConfiguration() {
     return configuration;
   }
 

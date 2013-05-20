@@ -31,9 +31,13 @@ import org.apache.hadoop.io.WritableComparable;
 public interface MessageStoreFactory<I extends WritableComparable,
     M extends Writable, S extends BasicMessageStore<I, M>> {
   /**
-   * Creates new message store
+   * Creates new message store.
    *
+   * Note: Combiner class in Configuration can be changed,
+   * this method should return MessageStore which uses current combiner
+   *
+   * @param messageClass Message class held in the store
    * @return New message store
    */
-  S newStore();
+  S newStore(Class<M> messageClass);
 }

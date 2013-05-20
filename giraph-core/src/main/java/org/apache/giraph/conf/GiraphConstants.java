@@ -20,11 +20,11 @@ package org.apache.giraph.conf;
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.aggregators.TextAggregatorWriter;
 import org.apache.giraph.combiner.Combiner;
+import org.apache.giraph.graph.Computation;
 import org.apache.giraph.edge.ByteArrayEdges;
 import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.graph.DefaultVertexResolver;
 import org.apache.giraph.graph.DefaultVertexValueFactory;
-import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.graph.VertexValueFactory;
 import org.apache.giraph.io.EdgeInputFormat;
@@ -39,11 +39,9 @@ import org.apache.giraph.job.GiraphJobObserver;
 import org.apache.giraph.master.DefaultMasterCompute;
 import org.apache.giraph.master.MasterCompute;
 import org.apache.giraph.master.MasterObserver;
-import org.apache.giraph.partition.DefaultPartitionContext;
 import org.apache.giraph.partition.GraphPartitionerFactory;
 import org.apache.giraph.partition.HashPartitionerFactory;
 import org.apache.giraph.partition.Partition;
-import org.apache.giraph.partition.PartitionContext;
 import org.apache.giraph.partition.SimplePartition;
 import org.apache.giraph.worker.DefaultWorkerContext;
 import org.apache.giraph.worker.WorkerContext;
@@ -62,9 +60,10 @@ public interface GiraphConstants {
   /** 1KB in bytes */
   int ONE_KB = 1024;
 
-  /** Vertex class - required */
-  ClassConfOption<Vertex> VERTEX_CLASS =
-      ClassConfOption.create("giraph.vertexClass", null, Vertex.class);
+  /** Computation class - required */
+  ClassConfOption<Computation> COMPUTATION_CLASS =
+      ClassConfOption.create("giraph.computationClass", null,
+          Computation.class);
   /** Vertex value factory class - optional */
   ClassConfOption<VertexValueFactory> VERTEX_VALUE_FACTORY_CLASS =
       ClassConfOption.create("giraph.vertexValueFactoryClass",
@@ -184,13 +183,14 @@ public interface GiraphConstants {
   /** Edge value class */
   ClassConfOption<Writable> EDGE_VALUE_CLASS =
       ClassConfOption.create("giraph.edgeValueClass", null, Writable.class);
-  /** Message value class */
-  ClassConfOption<Writable> MESSAGE_VALUE_CLASS =
-      ClassConfOption.create("giraph.messageValueClass", null, Writable.class);
-  /** Partition context class */
-  ClassConfOption<PartitionContext> PARTITION_CONTEXT_CLASS =
-      ClassConfOption.create("giraph.partitionContextClass",
-          DefaultPartitionContext.class, PartitionContext.class);
+  /** Incoming message value class */
+  ClassConfOption<Writable> INCOMING_MESSAGE_VALUE_CLASS =
+      ClassConfOption.create("giraph.incomingMessageValueClass", null,
+          Writable.class);
+  /** Outgoing message value class */
+  ClassConfOption<Writable> OUTGOING_MESSAGE_VALUE_CLASS =
+      ClassConfOption.create("giraph.outgoingMessageValueClass", null,
+          Writable.class);
   /** Worker context class */
   ClassConfOption<WorkerContext> WORKER_CONTEXT_CLASS =
       ClassConfOption.create("giraph.workerContextClass",

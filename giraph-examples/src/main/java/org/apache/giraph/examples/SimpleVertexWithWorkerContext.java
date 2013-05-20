@@ -18,8 +18,8 @@
 
 package org.apache.giraph.examples;
 
-import org.apache.giraph.examples.SimpleSuperstepVertex.
-    SimpleSuperstepVertexInputFormat;
+import org.apache.giraph.graph.BasicComputation;
+import org.apache.giraph.examples.SimpleSuperstepComputation.SimpleSuperstepVertexInputFormat;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.job.GiraphJob;
 import org.apache.giraph.worker.WorkerContext;
@@ -63,21 +63,21 @@ public class SimpleVertexWithWorkerContext implements Tool {
   /**
    * Actual vetex implementation
    */
-  public static class SimpleVertex extends
-      Vertex<LongWritable, IntWritable, FloatWritable,
-          DoubleWritable> {
+  public static class SimpleComputation extends BasicComputation<LongWritable,
+      IntWritable, FloatWritable, DoubleWritable> {
     @Override
-    public void compute(Iterable<DoubleWritable> messages) throws IOException {
+    public void compute(
+        Vertex<LongWritable, IntWritable, FloatWritable> vertex,
+        Iterable<DoubleWritable> messages) throws IOException {
 
       long superstep = getSuperstep();
 
       if (superstep < TESTLENGTH) {
-        EmitterWorkerContext emitter =
-            (EmitterWorkerContext) getWorkerContext();
-        emitter.emit("vertexId=" + getId() +
+        EmitterWorkerContext emitter = getWorkerContext();
+        emitter.emit("vertexId=" + vertex.getId() +
             " superstep=" + superstep + "\n");
       } else {
-        voteToHalt();
+        vertex.voteToHalt();
       }
     }
   }
@@ -169,7 +169,7 @@ public class SimpleVertexWithWorkerContext implements Tool {
           "run: Must have 2 arguments <output path> <# of workers>");
     }
     GiraphJob job = new GiraphJob(getConf(), getClass().getName());
-    job.getConfiguration().setVertexClass(SimpleVertex.class);
+    job.getConfiguration().setComputationClass(SimpleComputation.class);
     job.getConfiguration().setVertexInputFormatClass(
         SimpleSuperstepVertexInputFormat.class);
     job.getConfiguration().setWorkerContextClass(EmitterWorkerContext.class);

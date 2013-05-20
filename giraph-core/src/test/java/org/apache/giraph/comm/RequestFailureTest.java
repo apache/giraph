@@ -26,8 +26,8 @@ import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
+import org.apache.giraph.utils.IntNoOpComputation;
 import org.apache.giraph.utils.MockUtils;
 import org.apache.giraph.utils.PairList;
 import org.apache.giraph.worker.WorkerInfo;
@@ -51,7 +51,7 @@ public class RequestFailureTest {
   /** Configuration */
   private ImmutableClassesGiraphConfiguration conf;
   /** Server data */
-  private ServerData<IntWritable, IntWritable, IntWritable, IntWritable>
+  private ServerData<IntWritable, IntWritable, IntWritable>
   serverData;
   /** Server */
   private NettyServer server;
@@ -60,21 +60,11 @@ public class RequestFailureTest {
   /** Mock context */
   private Context context;
 
-  /**
-   * Only for testing.
-   */
-  public static class TestVertex extends Vertex<IntWritable,
-        IntWritable, IntWritable, IntWritable> {
-    @Override
-    public void compute(Iterable<IntWritable> messages) throws IOException {
-    }
-  }
-
   @Before
   public void setUp() throws IOException {
     // Setup the conf
     GiraphConfiguration tmpConf = new GiraphConfiguration();
-    tmpConf.setVertexClass(TestVertex.class);
+    tmpConf.setComputationClass(IntNoOpComputation.class);
     conf = new ImmutableClassesGiraphConfiguration(tmpConf);
 
     context = mock(Context.class);
@@ -91,7 +81,8 @@ public class RequestFailureTest {
     dataToSend.initialize();
     ByteArrayVertexIdMessages<IntWritable,
             IntWritable> vertexIdMessages =
-        new ByteArrayVertexIdMessages<IntWritable, IntWritable>();
+        new ByteArrayVertexIdMessages<IntWritable, IntWritable>(
+            IntWritable.class);
     vertexIdMessages.setConf(conf);
     vertexIdMessages.initialize();
     dataToSend.add(partitionId, vertexIdMessages);
@@ -117,7 +108,8 @@ public class RequestFailureTest {
     for (IntWritable vertexId : vertices) {
       keySum += vertexId.get();
       Iterable<IntWritable> messages =
-          serverData.getIncomingMessageStore().getVertexMessages(vertexId);
+          serverData.<IntWritable>getIncomingMessageStore().getVertexMessages(
+              vertexId);
       synchronized (messages) {
         for (IntWritable message : messages) {
           messageSum += message.get();

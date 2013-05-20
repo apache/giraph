@@ -158,7 +158,7 @@ public abstract class TextVertexOutputFormat<I extends WritableComparable,
      * @throws IOException
      *           exception that can be thrown while writing
      */
-    protected abstract Text convertVertexToLine(Vertex<I, V, E, ?> vertex)
+    protected abstract Text convertVertexToLine(Vertex<I, V, E> vertex)
       throws IOException;
   }
 

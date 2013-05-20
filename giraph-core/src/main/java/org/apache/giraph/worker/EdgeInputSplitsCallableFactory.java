@@ -19,7 +19,6 @@
 package org.apache.giraph.worker;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.VertexEdgeCount;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.utils.CallableFactory;
@@ -34,21 +33,18 @@ import org.apache.hadoop.mapreduce.Mapper;
  * @param <I> Vertex id
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message data
  */
 public class EdgeInputSplitsCallableFactory<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
+    V extends Writable, E extends Writable>
     implements CallableFactory<VertexEdgeCount> {
   /** Edge input format */
   private final EdgeInputFormat<I, E> edgeInputFormat;
   /** Mapper context. */
   private final Mapper<?, ?, ?, ?>.Context context;
-  /** Graph state. */
-  private final GraphState<I, V, E, M> graphState;
   /** Configuration. */
-  private final ImmutableClassesGiraphConfiguration<I, V, E, M> configuration;
+  private final ImmutableClassesGiraphConfiguration<I, V, E> configuration;
   /** {@link BspServiceWorker} we're running on. */
-  private final BspServiceWorker<I, V, E, M> bspServiceWorker;
+  private final BspServiceWorker<I, V, E> bspServiceWorker;
   /** Handler for input splits */
   private final InputSplitsHandler splitsHandler;
   /** {@link ZooKeeperExt} for this worker. */
@@ -59,7 +55,6 @@ public class EdgeInputSplitsCallableFactory<I extends WritableComparable,
    *
    * @param edgeInputFormat Edge input format
    * @param context Mapper context
-   * @param graphState Graph state
    * @param configuration Configuration
    * @param bspServiceWorker Calling {@link BspServiceWorker}
    * @param splitsHandler Handler for input splits
@@ -68,14 +63,12 @@ public class EdgeInputSplitsCallableFactory<I extends WritableComparable,
   public EdgeInputSplitsCallableFactory(
       EdgeInputFormat<I, E> edgeInputFormat,
       Mapper<?, ?, ?, ?>.Context context,
-      GraphState<I, V, E, M> graphState,
-      ImmutableClassesGiraphConfiguration<I, V, E, M> configuration,
-      BspServiceWorker<I, V, E, M> bspServiceWorker,
+      ImmutableClassesGiraphConfiguration<I, V, E> configuration,
+      BspServiceWorker<I, V, E> bspServiceWorker,
       InputSplitsHandler splitsHandler,
       ZooKeeperExt zooKeeperExt) {
     this.edgeInputFormat = edgeInputFormat;
     this.context = context;
-    this.graphState = graphState;
     this.configuration = configuration;
     this.bspServiceWorker = bspServiceWorker;
     this.zooKeeperExt = zooKeeperExt;
@@ -83,11 +76,10 @@ public class EdgeInputSplitsCallableFactory<I extends WritableComparable,
   }
 
   @Override
-  public InputSplitsCallable<I, V, E, M> newCallable(int threadId) {
-    return new EdgeInputSplitsCallable<I, V, E, M>(
+  public InputSplitsCallable<I, V, E> newCallable(int threadId) {
+    return new EdgeInputSplitsCallable<I, V, E>(
         edgeInputFormat,
         context,
-        graphState,
         configuration,
         bspServiceWorker,
         splitsHandler,

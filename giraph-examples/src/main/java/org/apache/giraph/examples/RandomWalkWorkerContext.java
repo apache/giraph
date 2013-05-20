@@ -48,8 +48,8 @@ public class RandomWalkWorkerContext extends WorkerContext {
   private static Set<Long> SOURCES;
 
   /** Configuration parameter for the source vertex */
-  private static final String SOURCE_VERTEX = RandomWalkWithRestartVertex.class
-      .getName() + ".sourceVertex";
+  private static final String SOURCE_VERTEX =
+      RandomWalkWithRestartComputation.class.getName() + ".sourceVertex";
 
   /** Logger */
   private static final Logger LOG = Logger
@@ -143,10 +143,10 @@ public class RandomWalkWorkerContext extends WorkerContext {
   public void preApplication() throws InstantiationException,
       IllegalAccessException {
     Configuration configuration = getContext().getConfiguration();
-    MAX_SUPERSTEPS = configuration.getInt(RandomWalkVertex.MAX_SUPERSTEPS,
+    MAX_SUPERSTEPS = configuration.getInt(RandomWalkComputation.MAX_SUPERSTEPS,
         DEFAULT_MAX_SUPERSTEPS);
     TELEPORTATION_PROBABILITY = configuration.getFloat(
-        RandomWalkVertex.TELEPORTATION_PROBABILITY,
+        RandomWalkComputation.TELEPORTATION_PROBABILITY,
         DEFAULT_TELEPORTATION_PROBABILITY);
     SOURCES = initializeSources(configuration);
   }

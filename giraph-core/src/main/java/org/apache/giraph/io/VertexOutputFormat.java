@@ -49,7 +49,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 public abstract class VertexOutputFormat<
     I extends WritableComparable, V extends Writable,
     E extends Writable> extends
-    DefaultImmutableClassesGiraphConfigurable<I, V, E, Writable> {
+    DefaultImmutableClassesGiraphConfigurable<I, V, E> {
   /**
    * Create a vertex writer for a given split. The framework will call
    * {@link VertexWriter#initialize(TaskAttemptContext)} before

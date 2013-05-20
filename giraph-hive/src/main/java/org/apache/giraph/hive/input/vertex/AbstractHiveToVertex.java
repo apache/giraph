@@ -32,10 +32,10 @@ import org.apache.hadoop.io.WritableComparable;
  */
 public abstract class AbstractHiveToVertex<I extends WritableComparable,
     V extends Writable, E extends Writable>
-    extends DefaultConfigurableAndTableSchemaAware<I, V, E, Writable>
+    extends DefaultConfigurableAndTableSchemaAware<I, V, E>
     implements HiveToVertex<I, V, E> {
   @Override
-  public ImmutableClassesGiraphConfiguration<I, V, E, Writable> getConf() {
+  public ImmutableClassesGiraphConfiguration<I, V, E> getConf() {
     return super.getConf();
   }
 

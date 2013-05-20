@@ -35,9 +35,9 @@ import org.apache.hadoop.io.WritableComparable;
  */
 public class WorkerRequestServerHandler<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable> extends
-    RequestServerHandler<WorkerRequest<I, V, E, M>> {
+    RequestServerHandler<WorkerRequest<I, V, E>> {
   /** Data that can be accessed for handling requests */
-  private final ServerData<I, V, E, M> serverData;
+  private final ServerData<I, V, E> serverData;
 
   /**
    * Constructor with external server data
@@ -47,7 +47,7 @@ public class WorkerRequestServerHandler<I extends WritableComparable,
    * @param conf                     Configuration
    * @param myTaskInfo               Current task info
    */
-  public WorkerRequestServerHandler(ServerData<I, V, E, M> serverData,
+  public WorkerRequestServerHandler(ServerData<I, V, E> serverData,
       WorkerRequestReservedMap workerRequestReservedMap,
       ImmutableClassesGiraphConfiguration conf,
       TaskInfo myTaskInfo) {
@@ -56,23 +56,23 @@ public class WorkerRequestServerHandler<I extends WritableComparable,
   }
 
   @Override
-  public void processRequest(WorkerRequest<I, V, E, M> request) {
+  public void processRequest(WorkerRequest<I, V, E> request) {
     request.doRequest(serverData);
   }
 
   /** Factory for {@link WorkerRequestServerHandler} */
   public static class Factory<I extends WritableComparable,
-      V extends Writable, E extends Writable, M extends Writable> implements
+      V extends Writable, E extends Writable> implements
       RequestServerHandler.Factory {
     /** Data that can be accessed for handling requests */
-    private final ServerData<I, V, E, M> serverData;
+    private final ServerData<I, V, E> serverData;
 
     /**
      * Constructor
      *
      * @param serverData Data held by the server
      */
-    public Factory(ServerData<I, V, E, M> serverData) {
+    public Factory(ServerData<I, V, E> serverData) {
       this.serverData = serverData;
     }
 
@@ -81,8 +81,8 @@ public class WorkerRequestServerHandler<I extends WritableComparable,
         WorkerRequestReservedMap workerRequestReservedMap,
         ImmutableClassesGiraphConfiguration conf,
         TaskInfo myTaskInfo) {
-      return new WorkerRequestServerHandler<I, V, E,
-          M>(serverData, workerRequestReservedMap, conf, myTaskInfo);
+      return new WorkerRequestServerHandler<I, V, E, Writable>(serverData,
+          workerRequestReservedMap, conf, myTaskInfo);
     }
   }
 }

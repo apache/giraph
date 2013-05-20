@@ -50,6 +50,6 @@ public interface VertexToHive<I extends WritableComparable, V extends Writable,
    * @param reusableRecord Record to use for writing data to it.
    * @param recordSaver Saver of records
    */
-  void saveVertex(Vertex<I, V, E, ?> vertex, HiveRecord reusableRecord,
+  void saveVertex(Vertex<I, V, E> vertex, HiveRecord reusableRecord,
       HiveRecordSaver recordSaver) throws IOException, InterruptedException;
 }

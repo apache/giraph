@@ -69,12 +69,11 @@ import static org.apache.giraph.conf.GiraphConstants.PARTITIONS_DIRECTORY;
  * @param <I> Vertex id
  * @param <V> Vertex data
  * @param <E> Edge data
- * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public class DiskBackedPartitionStore<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    extends PartitionStore<I, V, E, M> {
+    V extends Writable, E extends Writable>
+    extends PartitionStore<I, V, E> {
   /** Class logger. */
   private static final Logger LOG =
       Logger.getLogger(DiskBackedPartitionStore.class);
@@ -92,9 +91,9 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
   /** Partitions' states store */
   private final Map<Integer, State> states = Maps.newHashMap();
   /** Current active partitions, which have not been put back yet */
-  private final Map<Integer, Partition<I, V, E, M>> active = Maps.newHashMap();
+  private final Map<Integer, Partition<I, V, E>> active = Maps.newHashMap();
   /** Inactive partitions to re-activate or spill to disk to make space */
-  private final Map<Integer, Partition<I, V, E, M>> inactive =
+  private final Map<Integer, Partition<I, V, E>> inactive =
       Maps.newLinkedHashMap();
   /** Ids of partitions stored on disk and number of vertices contained */
   private final Map<Integer, Integer> onDisk = Maps.newHashMap();
@@ -110,7 +109,8 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
   /** Executors for users requests. Uses caller threads */
   private final ExecutorService pool = new DirectExecutorService();
   /** Giraph configuration */
-  private final ImmutableClassesGiraphConfiguration<I, V, E, M> conf;
+  private final
+  ImmutableClassesGiraphConfiguration<I, V, E> conf;
   /** Mapper context */
   private final Context context;
   /** Base path where the partition files are written to */
@@ -129,7 +129,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
    * @param context Context
    */
   public DiskBackedPartitionStore(
-      ImmutableClassesGiraphConfiguration<I, V, E, M> conf,
+      ImmutableClassesGiraphConfiguration<I, V, E> conf,
       Mapper<?, ?, ?, ?>.Context context) {
     this.conf = conf;
     this.context = context;
@@ -222,7 +222,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
   }
 
   @Override
-  public Partition<I, V, E, M> getPartition(Integer id) {
+  public Partition<I, V, E> getPartition(Integer id) {
     try {
       return pool.submit(new GetPartition(id)).get();
     } catch (InterruptedException e) {
@@ -235,7 +235,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
   }
 
   @Override
-  public void putPartition(Partition<I, V, E, M> partition) {
+  public void putPartition(Partition<I, V, E> partition) {
     Integer id = partition.getId();
     try {
       pool.submit(new PutPartition(id, partition)).get();
@@ -262,8 +262,8 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
   }
 
   @Override
-  public Partition<I, V, E, M> removePartition(Integer id) {
-    Partition<I, V, E, M> partition = getPartition(id);
+  public Partition<I, V, E> removePartition(Integer id) {
+    Partition<I, V, E> partition = getPartition(id);
     // we put it back, so the partition can turn INACTIVE and be deleted.
     putPartition(partition);
     deletePartition(id);
@@ -271,7 +271,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
   }
 
   @Override
-  public void addPartition(Partition<I, V, E, M> partition) {
+  public void addPartition(Partition<I, V, E> partition) {
     Integer id = partition.getId();
     try {
       pool.submit(new AddPartition(partition.getId(), partition)).get();
@@ -307,11 +307,11 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
     StringBuilder sb = new StringBuilder();
     sb.append(partitionIds.toString());
     sb.append("\nActive\n");
-    for (Entry<Integer, Partition<I, V, E, M>> e : active.entrySet()) {
+    for (Entry<Integer, Partition<I, V, E>> e : active.entrySet()) {
       sb.append(e.getKey() + ":" + e.getValue() + "\n");
     }
     sb.append("Inactive\n");
-    for (Entry<Integer, Partition<I, V, E, M>> e : inactive.entrySet()) {
+    for (Entry<Integer, Partition<I, V, E>> e : inactive.entrySet()) {
       sb.append(e.getKey() + ":" + e.getValue() + "\n");
     }
     sb.append("OnDisk\n");
@@ -368,7 +368,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
    * @param vertex The vertex to serialize
    * @throws IOException
    */
-  private void writeVertexData(DataOutput output, Vertex<I, V, E, M> vertex)
+  private void writeVertexData(DataOutput output, Vertex<I, V, E> vertex)
     throws IOException {
     vertex.getId().write(output);
     vertex.getValue().write(output);
@@ -383,7 +383,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
    * @throws IOException
    */
   @SuppressWarnings("unchecked")
-  private void writeOutEdges(DataOutput output, Vertex<I, V, E, M> vertex)
+  private void writeOutEdges(DataOutput output, Vertex<I, V, E> vertex)
     throws IOException {
     vertex.getId().write(output);
     ((OutEdges<I, E>) vertex.getEdges()).write(output);
@@ -396,7 +396,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
    * @param vertex The vertex to initialize
    * @throws IOException
    */
-  private void readVertexData(DataInput in, Vertex<I, V, E, M> vertex)
+  private void readVertexData(DataInput in, Vertex<I, V, E> vertex)
     throws IOException {
     I id = conf.createVertexId();
     id.readFields(in);
@@ -419,11 +419,11 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
    * @throws IOException
    */
   @SuppressWarnings("unchecked")
-  private void readOutEdges(DataInput in, Partition<I, V, E, M> partition)
+  private void readOutEdges(DataInput in, Partition<I, V, E> partition)
     throws IOException {
     I id = conf.createVertexId();
     id.readFields(in);
-    Vertex<I, V, E, M> v = partition.getVertex(id);
+    Vertex<I, V, E> v = partition.getVertex(id);
     ((OutEdges<I, E>) v.getEdges()).readFields(in);
   }
 
@@ -437,9 +437,9 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
    * @return The partition
    * @throws IOException
    */
-  private Partition<I, V, E, M> loadPartition(Integer id, int numVertices)
+  private Partition<I, V, E> loadPartition(Integer id, int numVertices)
     throws IOException {
-    Partition<I, V, E, M> partition =
+    Partition<I, V, E> partition =
         conf.createPartition(id, context);
     File file = new File(getVerticesPath(id));
     if (LOG.isDebugEnabled()) {
@@ -451,7 +451,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
       inputStream = new DataInputStream(
           new BufferedInputStream(new FileInputStream(file)));
       for (int i = 0; i < numVertices; ++i) {
-        Vertex<I, V , E, M> vertex = conf.createVertex();
+        Vertex<I, V , E> vertex = conf.createVertex();
         readVertexData(inputStream, vertex);
         partition.putVertex(vertex);
       }
@@ -493,7 +493,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
    * @param partition The partition to offload
    * @throws IOException
    */
-  private void offloadPartition(Partition<I, V, E, M> partition)
+  private void offloadPartition(Partition<I, V, E> partition)
     throws IOException {
     File file = new File(getVerticesPath(partition.getId()));
     file.getParentFile().mkdirs();
@@ -506,7 +506,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
     try {
       outputStream = new DataOutputStream(
           new BufferedOutputStream(new FileOutputStream(file)));
-      for (Vertex<I, V, E, M> vertex : partition) {
+      for (Vertex<I, V, E> vertex : partition) {
         writeVertexData(outputStream, vertex);
       }
     } finally {
@@ -529,7 +529,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
       try {
         outputStream = new DataOutputStream(
             new BufferedOutputStream(new FileOutputStream(file)));
-        for (Vertex<I, V, E, M> vertex : partition) {
+        for (Vertex<I, V, E> vertex : partition) {
           writeOutEdges(outputStream, vertex);
         }
       } finally {
@@ -547,7 +547,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
    * @param partition The partition
    * @throws IOException
    */
-  private void addToOOCPartition(Partition<I, V, E, M> partition)
+  private void addToOOCPartition(Partition<I, V, E> partition)
     throws IOException {
     Integer id = partition.getId();
     Integer count = onDisk.get(id);
@@ -557,7 +557,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
     try {
       outputStream = new DataOutputStream(
           new BufferedOutputStream(new FileOutputStream(file, true)));
-      for (Vertex<I, V, E, M> vertex : partition) {
+      for (Vertex<I, V, E> vertex : partition) {
         writeVertexData(outputStream, vertex);
       }
     } finally {
@@ -570,7 +570,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
     try {
       outputStream = new DataOutputStream(
           new BufferedOutputStream(new FileOutputStream(file, true)));
-      for (Vertex<I, V, E, M> vertex : partition) {
+      for (Vertex<I, V, E> vertex : partition) {
         writeOutEdges(outputStream, vertex);
       }
     } finally {
@@ -627,7 +627,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
   /**
    * Task that gets a partition from the store
    */
-  private class GetPartition implements Callable<Partition<I, V, E, M>> {
+  private class GetPartition implements Callable<Partition<I, V, E>> {
     /** Partition id */
     private Integer id;
 
@@ -645,17 +645,17 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
      *
      * @return The last recently used entry.
      */
-    private Entry<Integer, Partition<I, V, E, M>> getLRUEntry() {
-      Iterator<Entry<Integer, Partition<I, V, E, M>>> i =
+    private Entry<Integer, Partition<I, V, E>> getLRUEntry() {
+      Iterator<Entry<Integer, Partition<I, V, E>>> i =
           inactive.entrySet().iterator();
-      Entry<Integer, Partition<I, V, E, M>> lruEntry = i.next();
+      Entry<Integer, Partition<I, V, E>> lruEntry = i.next();
       i.remove();
       return lruEntry;
     }
 
     @Override
-    public Partition<I, V, E, M> call() throws Exception {
-      Partition<I, V, E, M> partition = null;
+    public Partition<I, V, E> call() throws Exception {
+      Partition<I, V, E> partition = null;
 
       while (partition == null) {
         wLock.lock();
@@ -663,7 +663,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
           State pState = states.get(id);
           switch (pState) {
           case ONDISK:
-            Entry<Integer, Partition<I, V, E, M>> lru = null;
+            Entry<Integer, Partition<I, V, E>> lru = null;
             states.put(id, State.LOADING);
             int numVertices = onDisk.remove(id);
             /*
@@ -747,7 +747,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
      * @param id The partition id
      * @param partition The partition
      */
-    public PutPartition(Integer id, Partition<I, V, E, M> partition) {
+    public PutPartition(Integer id, Partition<I, V, E> partition) {
       this.id = id;
     }
 
@@ -775,7 +775,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
     /** Partition id */
     private Integer id;
     /** Partition */
-    private Partition<I, V, E, M> partition;
+    private Partition<I, V, E> partition;
 
     /**
      * Constructor
@@ -783,7 +783,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
      * @param id The partition id
      * @param partition The partition
      */
-    public AddPartition(Integer id, Partition<I, V, E, M> partition) {
+    public AddPartition(Integer id, Partition<I, V, E> partition) {
       this.id = id;
       this.partition = partition;
     }
@@ -794,7 +794,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
       wLock.lock();
       try {
         if (partitionIds.contains(id)) {
-          Partition<I, V, E, M> existing = null;
+          Partition<I, V, E> existing = null;
           boolean isOOC = false;
           boolean done  = false;
           while (!done) {

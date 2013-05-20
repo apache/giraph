@@ -26,7 +26,7 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.log4j.Logger;
 
 /**
- * Master compute associated with {@link RandomWalkVertex}. It handles
+ * Master compute associated with {@link RandomWalkComputation}. It handles
  * dangling nodes.
  */
 public class RandomWalkVertexMasterCompute extends DefaultMasterCompute {
@@ -42,16 +42,16 @@ public class RandomWalkVertexMasterCompute extends DefaultMasterCompute {
   public void compute() {
     double danglingContribution =
         this.<DoubleWritable>getAggregatedValue(
-            RandomWalkVertex.CUMULATIVE_DANGLING_PROBABILITY).get();
+            RandomWalkComputation.CUMULATIVE_DANGLING_PROBABILITY).get();
     double cumulativeProbability =
         this.<DoubleWritable>getAggregatedValue(
-            RandomWalkVertex.CUMULATIVE_PROBABILITY).get();
+            RandomWalkComputation.CUMULATIVE_PROBABILITY).get();
     double l1NormOfStateDiff =
         this.<DoubleWritable>getAggregatedValue(
-            RandomWalkVertex.L1_NORM_OF_PROBABILITY_DIFFERENCE).get();
+            RandomWalkComputation.L1_NORM_OF_PROBABILITY_DIFFERENCE).get();
     long numDanglingVertices =
         this.<LongWritable>getAggregatedValue(
-            RandomWalkVertex.NUM_DANGLING_VERTICES).get();
+            RandomWalkComputation.NUM_DANGLING_VERTICES).get();
 
     LOG.info("[Superstep " + getSuperstep() + "] Dangling contribution = " +
         danglingContribution + ", number of dangling vertices = " +
@@ -69,13 +69,13 @@ public class RandomWalkVertexMasterCompute extends DefaultMasterCompute {
   @Override
   public void initialize() throws InstantiationException,
       IllegalAccessException {
-    registerAggregator(RandomWalkVertex.NUM_DANGLING_VERTICES,
+    registerAggregator(RandomWalkComputation.NUM_DANGLING_VERTICES,
         LongSumAggregator.class);
-    registerAggregator(RandomWalkVertex.CUMULATIVE_DANGLING_PROBABILITY,
+    registerAggregator(RandomWalkComputation.CUMULATIVE_DANGLING_PROBABILITY,
         DoubleSumAggregator.class);
-    registerAggregator(RandomWalkVertex.CUMULATIVE_PROBABILITY,
+    registerAggregator(RandomWalkComputation.CUMULATIVE_PROBABILITY,
         DoubleSumAggregator.class);
-    registerAggregator(RandomWalkVertex.L1_NORM_OF_PROBABILITY_DIFFERENCE,
+    registerAggregator(RandomWalkComputation.L1_NORM_OF_PROBABILITY_DIFFERENCE,
         DoubleSumAggregator.class);
   }
 }

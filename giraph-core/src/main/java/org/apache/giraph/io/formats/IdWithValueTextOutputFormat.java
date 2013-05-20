@@ -75,7 +75,7 @@ public class IdWithValueTextOutputFormat<I extends WritableComparable,
     }
 
     @Override
-    protected Text convertVertexToLine(Vertex<I, V, E, ?> vertex)
+    protected Text convertVertexToLine(Vertex<I, V, E> vertex)
       throws IOException {
       String first;
       String second;

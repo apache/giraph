@@ -31,11 +31,10 @@ import org.apache.giraph.worker.WorkerInfo;
  * @param <I> Vertex index value
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message value
  */
 @SuppressWarnings("rawtypes")
 public interface MasterGraphPartitioner<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable> {
+    V extends Writable, E extends Writable> {
   /**
    * Set some initial partition owners for the graph. Guaranteed to be called
    * prior to the graph being loaded (initial or restart).

@@ -58,7 +58,7 @@ public class HiveEdgeInputFormat<I extends WritableComparable,
 
   @Override
   public void setConf(
-      ImmutableClassesGiraphConfiguration<I, Writable, E, Writable> conf) {
+      ImmutableClassesGiraphConfiguration<I, Writable, E> conf) {
     super.setConf(conf);
     HiveUtils.initializeHiveInput(
         hiveInputFormat,

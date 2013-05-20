@@ -32,12 +32,10 @@ import org.apache.hadoop.io.WritableComparable;
  * @param <I> Vertex id
  * @param <V> Vertex data
  * @param <E> Edge data
- * @param <M> Message data
  */
 public abstract class WritableRequest<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    implements Writable,
-    ImmutableClassesGiraphConfigurable<I, V, E, M> {
+    V extends Writable, E extends Writable> implements Writable,
+    ImmutableClassesGiraphConfigurable<I, V, E> {
   /**
    * Value to use when size of the request in serialized form is not known
    * or too expensive to calculate
@@ -45,7 +43,7 @@ public abstract class WritableRequest<I extends WritableComparable,
   public static final int UNKNOWN_SIZE = -1;
 
   /** Configuration */
-  private ImmutableClassesGiraphConfiguration<I, V, E, M> conf;
+  private ImmutableClassesGiraphConfiguration<I, V, E> conf;
   /** Client id */
   private int clientId = -1;
   /** Request id */
@@ -103,13 +101,12 @@ public abstract class WritableRequest<I extends WritableComparable,
   abstract void writeRequest(DataOutput output) throws IOException;
 
   @Override
-  public final ImmutableClassesGiraphConfiguration<I, V, E, M> getConf() {
+  public final ImmutableClassesGiraphConfiguration<I, V, E> getConf() {
     return conf;
   }
 
   @Override
-  public final void setConf(ImmutableClassesGiraphConfiguration<I, V,
-      E, M> conf) {
+  public final void setConf(ImmutableClassesGiraphConfiguration<I, V, E> conf) {
     this.conf = conf;
   }
 

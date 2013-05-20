@@ -176,21 +176,21 @@ public abstract class HCatalogVertexOutputFormat<
     * @param vertex to populate record
     */
     protected abstract void fillRecord(HCatRecord record,
-                                    Vertex<I, V, E, ?> vertex);
+        Vertex<I, V, E> vertex);
 
     /**
     * create record
     * @param vertex to populate record
     * @return HCatRecord newly created
     */
-    protected HCatRecord createRecord(Vertex<I, V, E, ?> vertex) {
+    protected HCatRecord createRecord(Vertex<I, V, E> vertex) {
       HCatRecord record = new DefaultHCatRecord(getNumColumns());
       fillRecord(record, vertex);
       return record;
     }
 
     @Override
-    public final void writeVertex(Vertex<I, V, E, ?> vertex) throws IOException,
+    public final void writeVertex(Vertex<I, V, E> vertex) throws IOException,
         InterruptedException {
       getRecordWriter().write(null, createRecord(vertex));
     }
@@ -215,10 +215,10 @@ public abstract class HCatalogVertexOutputFormat<
     * @return Iterable of records
     */
     protected abstract Iterable<HCatRecord> createRecords(
-        Vertex<I, V, E, ?> vertex);
+        Vertex<I, V, E> vertex);
 
     @Override
-    public final void writeVertex(Vertex<I, V, E, ?> vertex) throws IOException,
+    public final void writeVertex(Vertex<I, V, E> vertex) throws IOException,
         InterruptedException {
       Iterable<HCatRecord> records = createRecords(vertex);
       for (HCatRecord record : records) {

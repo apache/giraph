@@ -37,8 +37,8 @@ import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.giraph.utils.CollectionUtils;
+import org.apache.giraph.utils.IntNoOpComputation;
 import org.apache.giraph.utils.MockUtils;
-import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Writable;
@@ -68,24 +68,16 @@ import static org.junit.Assert.assertTrue;
 /** Test for different types of message stores */
 public class TestMessageStores {
   private static File directory;
-  private static ImmutableClassesGiraphConfiguration config;
+  private static ImmutableClassesGiraphConfiguration<IntWritable,
+      IntWritable, IntWritable> config;
   private static TestData testData;
   private static
-  CentralizedServiceWorker<IntWritable, IntWritable, IntWritable, IntWritable>
-      service;
+  CentralizedServiceWorker<IntWritable, IntWritable, IntWritable> service;
   /**
    * Pseudo-random number generator with the same seed to help with
    * debugging)
    */
   private static final Random RANDOM = new Random(101);
-
-  private static class IntVertex extends Vertex<IntWritable,
-        IntWritable, IntWritable, IntWritable> {
-
-    @Override
-    public void compute(Iterable<IntWritable> messages) throws IOException {
-    }
-  }
 
   @Before
   public void prepare() throws IOException {
@@ -93,10 +85,11 @@ public class TestMessageStores {
 
     Configuration.addDefaultResource("giraph-site.xml");
     GiraphConfiguration initConfig = new GiraphConfiguration();
-    initConfig.setVertexClass(IntVertex.class);
+    initConfig.setComputationClass(IntNoOpComputation.class);
     GiraphConstants.MESSAGES_DIRECTORY.set(
         initConfig, new File(directory, "giraph_messages").toString());
-    config = new ImmutableClassesGiraphConfiguration(initConfig);
+    config = new ImmutableClassesGiraphConfiguration<IntWritable,
+        IntWritable, IntWritable>(initConfig);
 
     testData = new TestData();
     testData.maxId = 1000000;
@@ -158,18 +151,18 @@ public class TestMessageStores {
      * @param config  Hadoop configuration
      */
     InputMessageStore(
-        CentralizedServiceWorker<IntWritable, ?, ?, IntWritable> service,
-        ImmutableClassesGiraphConfiguration<IntWritable, ?, ?,
-            IntWritable> config,
+        CentralizedServiceWorker<IntWritable, ?, ?> service,
+        ImmutableClassesGiraphConfiguration<IntWritable, ?, ?> config,
         Map<IntWritable, Collection<IntWritable>> inputMap) throws IOException {
-      super(service, config);
+      super(IntWritable.class, service, config);
       // Adds all the messages to the store
       for (Map.Entry<IntWritable, Collection<IntWritable>> entry :
           inputMap.entrySet()) {
         int partitionId = getPartitionId(entry.getKey());
         ByteArrayVertexIdMessages<IntWritable, IntWritable>
             byteArrayVertexIdMessages =
-            new ByteArrayVertexIdMessages<IntWritable, IntWritable>();
+            new ByteArrayVertexIdMessages<IntWritable,
+                IntWritable>(IntWritable.class);
         byteArrayVertexIdMessages.setConf(config);
         byteArrayVertexIdMessages.initialize();
         for (IntWritable message : entry.getValue()) {
@@ -238,7 +231,7 @@ public class TestMessageStores {
     messageStore.write(out);
     out.close();
 
-    messageStore = messageStoreFactory.newStore();
+    messageStore = messageStoreFactory.newStore(IntWritable.class);
 
     DataInputStream in = new DataInputStream(new BufferedInputStream(
         (new FileInputStream(file))));
@@ -255,7 +248,7 @@ public class TestMessageStores {
       TestData testData) throws IOException {
     SortedMap<IntWritable, Collection<IntWritable>> messages =
         new TreeMap<IntWritable, Collection<IntWritable>>();
-    S messageStore = messageStoreFactory.newStore();
+    S messageStore = messageStoreFactory.newStore(IntWritable.class);
     putNTimes(messageStore, messages, testData);
     assertTrue(equalMessages(messageStore, messages));
     messageStore.clearAll();
@@ -268,7 +261,8 @@ public class TestMessageStores {
   public void testByteArrayMessagesPerVertexStore() {
     try {
       testMessageStore(
-          ByteArrayMessagesPerVertexStore.newFactory(service, config),
+          ByteArrayMessagesPerVertexStore.<IntWritable, IntWritable>newFactory(
+              service, config),
           testData);
     } catch (IOException e) {
       e.printStackTrace();

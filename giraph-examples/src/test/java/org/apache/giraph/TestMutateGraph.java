@@ -19,9 +19,9 @@
 package org.apache.giraph;
 
 import org.apache.giraph.conf.GiraphConfiguration;
-import org.apache.giraph.examples.SimpleMutateGraphVertex;
-import org.apache.giraph.examples.SimplePageRankVertex.SimplePageRankVertexInputFormat;
-import org.apache.giraph.examples.SimplePageRankVertex.SimplePageRankVertexOutputFormat;
+import org.apache.giraph.examples.SimpleMutateGraphComputation;
+import org.apache.giraph.examples.SimplePageRankComputation.SimplePageRankVertexInputFormat;
+import org.apache.giraph.examples.SimplePageRankComputation.SimplePageRankVertexOutputFormat;
 import org.apache.giraph.job.GiraphJob;
 import org.junit.Test;
 
@@ -48,11 +48,11 @@ public class TestMutateGraph extends BspCase {
   public void testMutateGraph()
           throws IOException, InterruptedException, ClassNotFoundException {
     GiraphConfiguration conf = new GiraphConfiguration();
-    conf.setVertexClass(SimpleMutateGraphVertex.class);
+    conf.setComputationClass(SimpleMutateGraphComputation.class);
     conf.setVertexInputFormatClass(SimplePageRankVertexInputFormat.class);
     conf.setVertexOutputFormatClass(SimplePageRankVertexOutputFormat.class);
     conf.setWorkerContextClass(
-        SimpleMutateGraphVertex.SimpleMutateGraphVertexWorkerContext.class);
+        SimpleMutateGraphComputation.SimpleMutateGraphVertexWorkerContext.class);
     GiraphJob job = prepareJob(getCallingMethodName(), conf,
         getTempPath(getCallingMethodName()));
     assertTrue(job.run(true));

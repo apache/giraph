@@ -27,7 +27,6 @@ import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
@@ -45,10 +44,10 @@ public class NormalizingLongDoubleDoubleTextInputFormat
     extends
     TextVertexInputFormat<LongWritable, DoubleWritable, DoubleWritable>
     implements ImmutableClassesGiraphConfigurable<LongWritable, DoubleWritable,
-    DoubleWritable, Writable> {
+    DoubleWritable> {
   /** Configuration. */
   private ImmutableClassesGiraphConfiguration<LongWritable, DoubleWritable,
-      DoubleWritable, Writable> conf;
+      DoubleWritable> conf;
 
   @Override
   public TextVertexReader createVertexReader(
@@ -58,13 +57,13 @@ public class NormalizingLongDoubleDoubleTextInputFormat
 
   @Override
   public void setConf(ImmutableClassesGiraphConfiguration<LongWritable,
-      DoubleWritable, DoubleWritable, Writable> configuration) {
+      DoubleWritable, DoubleWritable> configuration) {
     conf = configuration;
   }
 
   @Override
   public ImmutableClassesGiraphConfiguration<LongWritable, DoubleWritable,
-      DoubleWritable, Writable> getConf() {
+      DoubleWritable> getConf() {
     return conf;
   }
 
@@ -81,10 +80,10 @@ public class NormalizingLongDoubleDoubleTextInputFormat
 
     @Override
     public Vertex<LongWritable, DoubleWritable,
-        DoubleWritable, ?> getCurrentVertex()
+        DoubleWritable> getCurrentVertex()
       throws IOException, InterruptedException {
-      Vertex<LongWritable, DoubleWritable,
-      DoubleWritable, ?> vertex = conf.createVertex();
+      Vertex<LongWritable, DoubleWritable, DoubleWritable> vertex =
+          conf.createVertex();
 
       String[] tokens = edgeSeparator.split(getRecordReader()
           .getCurrentValue().toString());

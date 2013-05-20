@@ -20,9 +20,9 @@ package org.apache.giraph;
 
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
-import org.apache.giraph.examples.SimpleCheckpointVertex;
-import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexInputFormat;
-import org.apache.giraph.examples.SimpleSuperstepVertex.SimpleSuperstepVertexOutputFormat;
+import org.apache.giraph.examples.SimpleCheckpoint;
+import org.apache.giraph.examples.SimpleSuperstepComputation.SimpleSuperstepVertexInputFormat;
+import org.apache.giraph.examples.SimpleSuperstepComputation.SimpleSuperstepVertexOutputFormat;
 import org.apache.giraph.job.GiraphJob;
 import org.apache.hadoop.fs.Path;
 import org.junit.Test;
@@ -58,15 +58,15 @@ public class TestAutoCheckpoint extends BspCase {
     }
     Path outputPath = getTempPath(getCallingMethodName());
     GiraphConfiguration conf = new GiraphConfiguration();
-    conf.setVertexClass(
-        SimpleCheckpointVertex.SimpleCheckpointComputation.class);
+    conf.setComputationClass(
+        SimpleCheckpoint.SimpleCheckpointComputation.class);
     conf.setWorkerContextClass(
-        SimpleCheckpointVertex.SimpleCheckpointVertexWorkerContext.class);
+        SimpleCheckpoint.SimpleCheckpointVertexWorkerContext.class);
     conf.setMasterComputeClass(
-        SimpleCheckpointVertex.SimpleCheckpointVertexMasterCompute.class);
+        SimpleCheckpoint.SimpleCheckpointVertexMasterCompute.class);
     conf.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
     conf.setVertexOutputFormatClass(SimpleSuperstepVertexOutputFormat.class);
-    conf.setBoolean(SimpleCheckpointVertex.ENABLE_FAULT, true);
+    conf.setBoolean(SimpleCheckpoint.ENABLE_FAULT, true);
     conf.setInt("mapred.map.max.attempts", 4);
     // Trigger failure faster
     conf.setInt("mapred.task.timeout", 10000);

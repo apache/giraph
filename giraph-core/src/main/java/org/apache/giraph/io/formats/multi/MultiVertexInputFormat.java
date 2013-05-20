@@ -49,7 +49,7 @@ public class MultiVertexInputFormat<I extends WritableComparable,
 
   @Override
   public void setConf(
-      ImmutableClassesGiraphConfiguration<I, V, E, Writable> conf) {
+      ImmutableClassesGiraphConfiguration<I, V, E> conf) {
     super.setConf(conf);
     vertexInputFormats =
         VertexInputFormatDescription.createVertexInputFormats(getConf());

@@ -36,23 +36,19 @@ import org.apache.log4j.Logger;
  * @param <I> Vertex index value
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message data
  */
 public class SendPartitionCache<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable> {
+    V extends Writable, E extends Writable> {
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(SendPartitionCache.class);
   /** Input split vertex cache (only used when loading from input split) */
-  private final Map<PartitionOwner, Partition<I, V, E, M>>
+  private final Map<PartitionOwner, Partition<I, V, E>>
   ownerPartitionMap = Maps.newHashMap();
-  /** Number of messages in each partition */
-  private final Map<PartitionOwner, Integer> messageCountMap =
-      Maps.newHashMap();
   /** Context */
   private final Mapper<?, ?, ?, ?>.Context context;
   /** Configuration */
-  private final ImmutableClassesGiraphConfiguration<I, V, E, M> configuration;
+  private final ImmutableClassesGiraphConfiguration<I, V, E> configuration;
   /**
    *  Regulates the size of outgoing Collections of vertices read
    * by the local worker during INPUT_SUPERSTEP that are to be
@@ -69,7 +65,7 @@ public class SendPartitionCache<I extends WritableComparable,
    */
   public SendPartitionCache(
       Mapper<?, ?, ?, ?>.Context context,
-      ImmutableClassesGiraphConfiguration<I, V, E, M> configuration) {
+      ImmutableClassesGiraphConfiguration<I, V, E> configuration) {
     this.context = context;
     this.configuration = configuration;
     transferRegulator =
@@ -89,9 +85,9 @@ public class SendPartitionCache<I extends WritableComparable,
    * @param vertex Vertex to add
    * @return A partition to send or null, if requirements are not met
    */
-  public Partition<I, V, E, M> addVertex(PartitionOwner partitionOwner,
-                                         Vertex<I, V, E, M> vertex) {
-    Partition<I, V, E, M> partition =
+  public Partition<I, V, E> addVertex(PartitionOwner partitionOwner,
+                                         Vertex<I, V, E> vertex) {
+    Partition<I, V, E> partition =
         ownerPartitionMap.get(partitionOwner);
     if (partition == null) {
       partition = configuration.createPartition(
@@ -101,7 +97,7 @@ public class SendPartitionCache<I extends WritableComparable,
     }
     transferRegulator.incrementCounters(partitionOwner, vertex);
 
-    Vertex<I, V, E, M> oldVertex =
+    Vertex<I, V, E> oldVertex =
         partition.putVertex(vertex);
     if (oldVertex != null) {
       LOG.warn("addVertex: Replacing vertex " + oldVertex +
@@ -121,7 +117,7 @@ public class SendPartitionCache<I extends WritableComparable,
    *
    * @return Owner partition map
    */
-  public Map<PartitionOwner, Partition<I, V, E, M>> getOwnerPartitionMap() {
+  public Map<PartitionOwner, Partition<I, V, E>> getOwnerPartitionMap() {
     return ownerPartitionMap;
   }
 

@@ -57,14 +57,13 @@ public class SynchronizedSuperstepOutput<I extends WritableComparable,
    */
   @SuppressWarnings("unchecked")
   public SynchronizedSuperstepOutput(
-      ImmutableClassesGiraphConfiguration<I, V, E, ?> conf,
+      ImmutableClassesGiraphConfiguration<I, V, E> conf,
       Mapper<?, ?, ?, ?>.Context context) {
     this.context = context;
     try {
       vertexWriter =
           conf.createWrappedVertexOutputFormat().createVertexWriter(context);
-      vertexWriter.setConf(
-          (ImmutableClassesGiraphConfiguration<I, V, E, Writable>) conf);
+      vertexWriter.setConf(conf);
       vertexWriter.initialize(context);
     } catch (IOException e) {
       throw new IllegalStateException("SynchronizedSuperstepOutput: " +
@@ -76,7 +75,7 @@ public class SynchronizedSuperstepOutput<I extends WritableComparable,
     simpleVertexWriter = new SimpleVertexWriter<I, V, E>() {
       @Override
       public synchronized void writeVertex(
-          Vertex<I, V, E, ?> vertex) throws IOException, InterruptedException {
+          Vertex<I, V, E> vertex) throws IOException, InterruptedException {
         vertexWriter.writeVertex(vertex);
       }
     };

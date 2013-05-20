@@ -39,7 +39,7 @@ import java.util.Iterator;
  */
 public interface HiveToVertex<I extends WritableComparable,
     V extends Writable, E extends Writable> extends
-    Iterator<Vertex<I, V, E, ?>> {
+    Iterator<Vertex<I, V, E>> {
   /**
    * Set the records which contain vertex input data
    *

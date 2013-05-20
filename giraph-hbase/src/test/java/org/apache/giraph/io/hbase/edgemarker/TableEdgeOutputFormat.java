@@ -60,7 +60,7 @@ public class TableEdgeOutputFormat
          Record the vertex value as a the value for a new qualifier 'parent'.
          */
         public void writeVertex(
-                Vertex<Text, Text, Text, ?> vertex)
+                Vertex<Text, Text, Text> vertex)
                 throws IOException, InterruptedException {
               RecordWriter<ImmutableBytesWritable, Writable> writer = getRecordWriter();
               byte[] rowBytes = vertex.getId().getBytes();

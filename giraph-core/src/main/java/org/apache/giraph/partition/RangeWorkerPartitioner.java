@@ -39,12 +39,11 @@ import org.apache.hadoop.io.WritableComparable;
  * @param <I> Vertex index value
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message value
  */
 @SuppressWarnings("rawtypes")
 public abstract class RangeWorkerPartitioner<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable> implements
-    WorkerGraphPartitioner<I, V, E, M> {
+    V extends Writable, E extends Writable> implements
+    WorkerGraphPartitioner<I, V, E> {
   /** Mapping of the vertex ids to the {@link PartitionOwner} */
   protected NavigableMap<I, RangePartitionOwner<I>> vertexRangeMap =
       new TreeMap<I, RangePartitionOwner<I>>();

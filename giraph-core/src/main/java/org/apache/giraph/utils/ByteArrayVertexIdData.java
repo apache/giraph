@@ -38,7 +38,7 @@ public abstract class ByteArrayVertexIdData<I extends WritableComparable, T>
   /** Extended data output */
   private ExtendedDataOutput extendedDataOutput;
   /** Configuration */
-  private ImmutableClassesGiraphConfiguration<I, ?, ?, ?> configuration;
+  private ImmutableClassesGiraphConfiguration<I, ?, ?> configuration;
 
   /**
    * Create a new data object.
@@ -149,7 +149,7 @@ public abstract class ByteArrayVertexIdData<I extends WritableComparable, T>
   }
 
   @Override
-  public ImmutableClassesGiraphConfiguration getConf() {
+  public ImmutableClassesGiraphConfiguration<I, ?, ?> getConf() {
     return configuration;
   }
 

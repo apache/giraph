@@ -50,20 +50,19 @@ import java.util.Map;
  * @param <I> Vertex id
  * @param <V> Vertex data
  * @param <E> Edge data
- * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public class NettyWorkerClient<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable> implements
-    WorkerClient<I, V, E, M>, ResetSuperstepMetricsObserver {
+    V extends Writable, E extends Writable> implements
+    WorkerClient<I, V, E>, ResetSuperstepMetricsObserver {
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(NettyWorkerClient.class);
   /** Hadoop configuration */
-  private final ImmutableClassesGiraphConfiguration<I, V, E, M> conf;
+  private final ImmutableClassesGiraphConfiguration<I, V, E> conf;
   /** Netty client that does that actual I/O */
   private final NettyClient nettyClient;
   /** Centralized service, needed to get vertex ranges */
-  private final CentralizedServiceWorker<I, V, E, M> service;
+  private final CentralizedServiceWorker<I, V, E> service;
 
   // Metrics
   /** Per-superstep, per-request counters */
@@ -78,8 +77,8 @@ public class NettyWorkerClient<I extends WritableComparable,
    */
   public NettyWorkerClient(
       Mapper<?, ?, ?, ?>.Context context,
-      ImmutableClassesGiraphConfiguration<I, V, E, M> configuration,
-      CentralizedServiceWorker<I, V, E, M> service) {
+      ImmutableClassesGiraphConfiguration<I, V, E> configuration,
+      CentralizedServiceWorker<I, V, E> service) {
     this.nettyClient =
         new NettyClient(context, configuration, service.getWorkerInfo());
     this.conf = configuration;
@@ -111,7 +110,7 @@ public class NettyWorkerClient<I extends WritableComparable,
         metrics.getCounter(MetricNames.SEND_AGGREGATORS_TO_WORKER_REQUESTS));
   }
 
-  public CentralizedServiceWorker<I, V, E, M> getService() {
+  public CentralizedServiceWorker<I, V, E> getService() {
     return service;
   }
 

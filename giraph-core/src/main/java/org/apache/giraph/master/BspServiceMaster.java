@@ -30,13 +30,13 @@ import org.apache.giraph.comm.netty.NettyMasterServer;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.counters.GiraphStats;
-import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.InputSplitPaths;
 import org.apache.giraph.graph.GlobalStats;
 import org.apache.giraph.graph.AddressesAndPartitionsWritable;
 import org.apache.giraph.graph.GraphFunctions;
 import org.apache.giraph.graph.InputSplitEvents;
 import org.apache.giraph.bsp.BspService;
+import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.GiraphInputFormat;
 import org.apache.giraph.graph.GraphTaskManager;
@@ -116,13 +116,12 @@ import static org.apache.giraph.conf.GiraphConstants.USE_INPUT_SPLIT_LOCALITY;
  * @param <I> Vertex id
  * @param <V> Vertex data
  * @param <E> Edge data
- * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public class BspServiceMaster<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    extends BspService<I, V, E, M>
-    implements CentralizedServiceMaster<I, V, E, M>,
+    V extends Writable, E extends Writable>
+    extends BspService<I, V, E>
+    implements CentralizedServiceMaster<I, V, E>,
     ResetSuperstepMetricsObserver {
   /** Print worker names only if there are 10 workers left */
   public static final int MAX_PRINTABLE_REMAINING_WORKERS = 10;
@@ -158,7 +157,7 @@ public class BspServiceMaster<I extends WritableComparable,
   /** State of the superstep changed */
   private final BspEvent superstepStateChanged;
   /** Master graph partitioner */
-  private final MasterGraphPartitioner<I, V, E, M> masterGraphPartitioner;
+  private final MasterGraphPartitioner<I, V, E> masterGraphPartitioner;
   /** All the partition stats from the last superstep */
   private final List<PartitionStats> allPartitionStatsList =
       new ArrayList<PartitionStats>();
@@ -195,14 +194,15 @@ public class BspServiceMaster<I extends WritableComparable,
       String serverPortList,
       int sessionMsecTimeout,
       Mapper<?, ?, ?, ?>.Context context,
-      GraphTaskManager<I, V, E, M> graphTaskManager) {
+      GraphTaskManager<I, V, E> graphTaskManager) {
     super(serverPortList, sessionMsecTimeout, context, graphTaskManager);
     workerWroteCheckpoint = new PredicateLock(context);
     registerBspEvent(workerWroteCheckpoint);
     superstepStateChanged = new PredicateLock(context);
     registerBspEvent(superstepStateChanged);
 
-    ImmutableClassesGiraphConfiguration<I, V, E, M> conf = getConfiguration();
+    ImmutableClassesGiraphConfiguration<I, V, E> conf =
+        getConfiguration();
 
     maxWorkers = conf.getMaxWorkers();
     minWorkers = conf.getMinWorkers();
@@ -743,6 +743,9 @@ public class BspServiceMaster<I extends WritableComparable,
     GlobalStats globalStats = new GlobalStats();
     globalStats.readFields(finalizedStream);
     updateCounters(globalStats);
+    SuperstepClasses superstepClasses = new SuperstepClasses();
+    superstepClasses.readFields(finalizedStream);
+    getConfiguration().updateSuperstepClasses(superstepClasses);
     int prefixFileCount = finalizedStream.readInt();
     for (int i = 0; i < prefixFileCount; ++i) {
       String metadataFilePath =
@@ -856,10 +859,11 @@ public class BspServiceMaster<I extends WritableComparable,
         if (masterChildArr.get(0).equals(myBid)) {
           GiraphStats.getInstance().getCurrentMasterTaskPartition().
               setValue(getTaskPartition());
-          masterCompute = getConfiguration().createMasterCompute();
           aggregatorHandler = new MasterAggregatorHandler(getConfiguration(),
               getContext());
           aggregatorHandler.initialize(this);
+          masterCompute = getConfiguration().createMasterCompute();
+          masterCompute.setMasterAggregatorUsage(aggregatorHandler);
 
           masterInfo = new MasterInfo();
           masterServer =
@@ -1006,6 +1010,7 @@ public class BspServiceMaster<I extends WritableComparable,
 
     // Format:
     // <global statistics>
+    // <superstep classes>
     // <number of files>
     // <used file prefix 0><used file prefix 1>...
     // <aggregator data>
@@ -1046,7 +1051,7 @@ public class BspServiceMaster<I extends WritableComparable,
   private void assignPartitionOwners(
       List<PartitionStats> allPartitionStatsList,
       List<WorkerInfo> chosenWorkerInfoList,
-      MasterGraphPartitioner<I, V, E, M> masterGraphPartitioner) {
+      MasterGraphPartitioner<I, V, E> masterGraphPartitioner) {
     Collection<PartitionOwner> partitionOwners;
     if (getSuperstep() == INPUT_SUPERSTEP ||
         getSuperstep() == getRestartedSuperstep()) {
@@ -1511,7 +1516,7 @@ public class BspServiceMaster<I extends WritableComparable,
     // Collect aggregator values, then run the master.compute() and
     // finally save the aggregator values
     aggregatorHandler.prepareSuperstep(masterClient);
-    runMasterCompute(getSuperstep());
+    SuperstepClasses superstepClasses = runMasterCompute(getSuperstep());
 
     // If the master is halted or all the vertices voted to halt and there
     // are no more messages in the system, stop the computation
@@ -1535,12 +1540,15 @@ public class BspServiceMaster<I extends WritableComparable,
       globalStats.setHaltComputation(true);
     }
 
+    superstepClasses.verifyTypesMatch(getConfiguration());
+    getConfiguration().updateSuperstepClasses(superstepClasses);
+
     // Let everyone know the aggregated application state through the
     // superstep finishing znode.
     String superstepFinishedNode =
         getSuperstepFinishedPath(getApplicationAttempt(), getSuperstep());
     WritableUtils.writeToZnode(
-        getZkExt(), superstepFinishedNode, -1, globalStats);
+        getZkExt(), superstepFinishedNode, -1, globalStats, superstepClasses);
     updateCounters(globalStats);
 
     cleanUpOldSuperstep(getSuperstep() - 1);
@@ -1564,16 +1572,19 @@ public class BspServiceMaster<I extends WritableComparable,
    * Run the master.compute() class
    *
    * @param superstep superstep for which to run the master.compute()
+   * @return Superstep classes set by Master compute
    */
-  private void runMasterCompute(long superstep) {
+  private SuperstepClasses runMasterCompute(long superstep) {
     // The master.compute() should run logically before the workers, so
     // increase the superstep counter it uses by one
-    GraphState<I, V, E, M> graphState =
-        new GraphState<I, V, E, M>(superstep + 1,
-            GiraphStats.getInstance().getVertices().getValue(),
-            GiraphStats.getInstance().getEdges().getValue(),
-            getContext(), getGraphTaskManager(), null, null);
+    GraphState graphState = new GraphState(superstep + 1,
+        GiraphStats.getInstance().getVertices().getValue(),
+        GiraphStats.getInstance().getEdges().getValue(),
+        getContext());
+    SuperstepClasses superstepClasses =
+        new SuperstepClasses(getConfiguration());
     masterCompute.setGraphState(graphState);
+    masterCompute.setSuperstepClasses(superstepClasses);
     if (superstep == INPUT_SUPERSTEP) {
       try {
         masterCompute.initialize();
@@ -1590,6 +1601,7 @@ public class BspServiceMaster<I extends WritableComparable,
     GiraphTimerContext timerContext = masterComputeTimer.time();
     masterCompute.compute();
     timerContext.stop();
+    return superstepClasses;
   }
 
   /**

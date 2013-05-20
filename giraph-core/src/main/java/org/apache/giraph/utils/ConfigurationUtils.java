@@ -28,6 +28,7 @@ import org.apache.commons.cli.ParseException;
 import org.apache.giraph.Algorithm;
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.combiner.Combiner;
+import org.apache.giraph.graph.Computation;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.edge.OutEdges;
@@ -142,14 +143,14 @@ public final class ConfigurationUtils {
     performSanityCheck(cmd);
 
     // Args are OK; attempt to populate the GiraphConfiguration with them.
-    final String vertexClassName = args[0];
+    final String computationClassName = args[0];
     final int workers = Integer.parseInt(cmd.getOptionValue('w'));
-    populateGiraphConfiguration(giraphConf, cmd, vertexClassName, workers);
+    populateGiraphConfiguration(giraphConf, cmd, computationClassName, workers);
 
     // validate generic parameters chosen are correct or
     // throw IllegalArgumentException, halting execution.
     @SuppressWarnings("rawtypes")
-    GiraphConfigurationValidator<?, ?, ?, ?> gtv =
+    GiraphConfigurationValidator<?, ?, ?, ?, ?> gtv =
       new GiraphConfigurationValidator(giraphConf);
     gtv.validateConfiguration();
 
@@ -200,15 +201,17 @@ public final class ConfigurationUtils {
    * should be captured here.
    * @param giraphConfiguration config for this job run
    * @param cmd parsed command line options to store in giraphConfiguration
-   * @param vertexClassName the vertex class (application) to run in this job.
+   * @param computationClassName the computation class (application) to run in
+   *                             this job.
    * @param workers the number of worker tasks for this job run.
    */
   private static void populateGiraphConfiguration(final GiraphConfiguration
-    giraphConfiguration, final CommandLine cmd, final String vertexClassName,
+    giraphConfiguration, final CommandLine cmd,
+      final String computationClassName,
     final int workers) throws ClassNotFoundException, IOException {
     giraphConfiguration.setWorkerConfiguration(workers, workers, 100.0f);
-    giraphConfiguration.setVertexClass(
-        (Class<? extends Vertex>) Class.forName(vertexClassName));
+    giraphConfiguration.setComputationClass(
+        (Class<? extends Computation>) Class.forName(computationClassName));
     if (cmd.hasOption("c")) {
       giraphConfiguration.setCombinerClass(
           (Class<? extends Combiner>) Class.forName(cmd.getOptionValue("c")));

@@ -29,23 +29,22 @@ import org.apache.hadoop.io.WritableComparable;
  * @param <I> Vertex index value
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message value
  */
 @SuppressWarnings("rawtypes")
 public class HashPartitionerFactory<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable>
-    implements GraphPartitionerFactory<I, V, E, M> {
+    V extends Writable, E extends Writable>
+    implements GraphPartitionerFactory<I, V, E> {
   /** Saved configuration */
   private ImmutableClassesGiraphConfiguration conf;
 
   @Override
-  public MasterGraphPartitioner<I, V, E, M> createMasterGraphPartitioner() {
-    return new HashMasterPartitioner<I, V, E, M>(getConf());
+  public MasterGraphPartitioner<I, V, E> createMasterGraphPartitioner() {
+    return new HashMasterPartitioner<I, V, E>(getConf());
   }
 
   @Override
-  public WorkerGraphPartitioner<I, V, E, M> createWorkerGraphPartitioner() {
-    return new HashWorkerPartitioner<I, V, E, M>();
+  public WorkerGraphPartitioner<I, V, E> createWorkerGraphPartitioner() {
+    return new HashWorkerPartitioner<I, V, E>();
   }
 
   @Override

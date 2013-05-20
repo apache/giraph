@@ -133,9 +133,9 @@ public class PseudoRandomVertexInputFormat extends
     }
 
     @Override
-    public Vertex<LongWritable, DoubleWritable, DoubleWritable, ?>
+    public Vertex<LongWritable, DoubleWritable, DoubleWritable>
     getCurrentVertex() throws IOException, InterruptedException {
-      Vertex<LongWritable, DoubleWritable, DoubleWritable, ?>
+      Vertex<LongWritable, DoubleWritable, DoubleWritable>
       vertex = getConf().createVertex();
       long vertexId = startingVertexId + verticesRead;
       // Seed on the vertex id to keep the vertex data the same when

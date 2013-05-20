@@ -19,11 +19,11 @@ package org.apache.giraph.hive.input;
 
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.hive.Helpers;
+import org.apache.giraph.hive.computations.ComputationCountEdges;
+import org.apache.giraph.hive.computations.ComputationSumEdges;
 import org.apache.giraph.hive.input.vertex.HiveVertexInputFormat;
 import org.apache.giraph.hive.input.vertex.examples.HiveIntDoubleDoubleVertex;
 import org.apache.giraph.hive.input.vertex.examples.HiveIntNullNullVertex;
-import org.apache.giraph.hive.vertexes.VertexCountEdges;
-import org.apache.giraph.hive.vertexes.VertexSumEdges;
 import org.apache.giraph.io.formats.IdWithValueTextOutputFormat;
 import org.apache.giraph.utils.InternalVertexRunner;
 import org.apache.thrift.TException;
@@ -36,8 +36,6 @@ import com.facebook.hiveio.testing.LocalHiveServer;
 
 import java.io.IOException;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import static junit.framework.Assert.assertEquals;
 import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_INPUT;
@@ -74,7 +72,7 @@ public class HiveVertexInputTest {
     GiraphConfiguration conf = new GiraphConfiguration();
     HIVE_VERTEX_INPUT.setTable(conf, tableName);
     HIVE_VERTEX_INPUT.setClass(conf, HiveIntNullNullVertex.class);
-    conf.setVertexClass(VertexCountEdges.class);
+    conf.setComputationClass(ComputationCountEdges.class);
     conf.setVertexInputFormatClass(HiveVertexInputFormat.class);
     conf.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
     Iterable<String> output = InternalVertexRunner.run(conf, new String[0], new String[0]);
@@ -107,7 +105,7 @@ public class HiveVertexInputTest {
     HIVE_VERTEX_INPUT.setTable(conf, tableName);
     HIVE_VERTEX_INPUT.setPartition(conf, partition);
     HIVE_VERTEX_INPUT.setClass(conf, HiveIntNullNullVertex.class);
-    conf.setVertexClass(VertexCountEdges.class);
+    conf.setComputationClass(ComputationCountEdges.class);
     conf.setVertexInputFormatClass(HiveVertexInputFormat.class);
     conf.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
     Iterable<String> output = InternalVertexRunner.run(conf, new String[0], new String[0]);
@@ -138,7 +136,7 @@ public class HiveVertexInputTest {
     GiraphConfiguration conf = new GiraphConfiguration();
     HIVE_VERTEX_INPUT.setTable(conf, tableName);
     HIVE_VERTEX_INPUT.setClass(conf, HiveIntDoubleDoubleVertex.class);
-    conf.setVertexClass(VertexSumEdges.class);
+    conf.setComputationClass(ComputationSumEdges.class);
     conf.setVertexInputFormatClass(HiveVertexInputFormat.class);
     conf.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
     Iterable<String> output = InternalVertexRunner.run(conf, new String[0], new String[0]);

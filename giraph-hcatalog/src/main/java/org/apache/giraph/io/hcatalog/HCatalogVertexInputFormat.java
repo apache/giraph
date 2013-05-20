@@ -225,10 +225,10 @@ public abstract class HCatalogVertexInputFormat<
     protected abstract Iterable<Edge<I, E>> getEdges(HCatRecord record);
 
     @Override
-    public final Vertex<I, V, E, ?> getCurrentVertex()
+    public final Vertex<I, V, E> getCurrentVertex()
       throws IOException, InterruptedException {
       HCatRecord record = getRecordReader().getCurrentValue();
-      Vertex<I, V, E, ?> vertex = getConf().createVertex();
+      Vertex<I, V, E> vertex = getConf().createVertex();
       vertex.initialize(getVertexId(record), getVertexValue(record),
           getEdges(record));
       ++recordCount;
@@ -287,7 +287,7 @@ public abstract class HCatalogVertexInputFormat<
     /**
      * vertex.
      */
-    private Vertex<I, V, E, ?> vertex = null;
+    private Vertex<I, V, E> vertex = null;
     /**
      * Timed logger to print every 30 seconds
      */
@@ -328,7 +328,7 @@ public abstract class HCatalogVertexInputFormat<
     protected abstract E getEdgeValue(HCatRecord record);
 
     @Override
-    public final Vertex<I, V, E, ?>
+    public final Vertex<I, V, E>
     getCurrentVertex() throws IOException, InterruptedException {
       return vertex;
     }

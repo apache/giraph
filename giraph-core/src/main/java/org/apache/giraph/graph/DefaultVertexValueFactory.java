@@ -35,7 +35,7 @@ public class DefaultVertexValueFactory<V extends Writable>
 
   @Override
   public void initialize(
-      ImmutableClassesGiraphConfiguration<?, V, ?, ?> configuration) {
+      ImmutableClassesGiraphConfiguration<?, V, ?> configuration) {
     vertexValueClass = configuration.getVertexValueClass();
   }
 

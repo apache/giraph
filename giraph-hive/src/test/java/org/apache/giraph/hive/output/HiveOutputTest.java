@@ -22,8 +22,8 @@ import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.ByteArrayEdges;
 import org.apache.giraph.hive.Helpers;
 import org.apache.giraph.hive.common.GiraphHiveConstants;
+import org.apache.giraph.hive.computations.ComputationCountEdges;
 import org.apache.giraph.hive.output.examples.HiveOutputIntIntVertex;
-import org.apache.giraph.hive.vertexes.VertexCountEdges;
 import org.apache.giraph.io.formats.IntNullTextEdgeInputFormat;
 import org.apache.giraph.io.internal.WrappedVertexOutputFormat;
 import org.apache.giraph.utils.InternalVertexRunner;
@@ -112,7 +112,7 @@ public class HiveOutputTest {
     GiraphHiveConstants.HIVE_VERTEX_OUTPUT_TABLE.set(conf, tableName);
     GiraphHiveConstants.VERTEX_TO_HIVE_CLASS.set(conf, HiveOutputIntIntVertex.class);
 
-    conf.setVertexClass(VertexCountEdges.class);
+    conf.setComputationClass(ComputationCountEdges.class);
     conf.setOutEdgesClass(ByteArrayEdges.class);
     conf.setEdgeInputFormatClass(IntNullTextEdgeInputFormat.class);
     conf.setVertexOutputFormatClass(HiveVertexOutputFormat.class);

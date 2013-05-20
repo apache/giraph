@@ -27,22 +27,21 @@ import org.apache.hadoop.io.WritableComparable;
  * @param <I> Vertex id
  * @param <V> Vertex data
  * @param <E> Edge data
- * @param <M> Message data
  */
 public class DefaultImmutableClassesGiraphConfigurable<
     I extends WritableComparable, V extends Writable,
-    E extends Writable, M extends Writable> implements
-    ImmutableClassesGiraphConfigurable<I, V, E, M> {
+    E extends Writable> implements
+    ImmutableClassesGiraphConfigurable<I, V, E> {
   /** Configuration */
-  private ImmutableClassesGiraphConfiguration<I, V, E, M> conf;
+  private ImmutableClassesGiraphConfiguration<I, V, E> conf;
 
   @Override
-  public void setConf(ImmutableClassesGiraphConfiguration<I, V, E, M> conf) {
+  public void setConf(ImmutableClassesGiraphConfiguration<I, V, E> conf) {
     this.conf = conf;
   }
 
   @Override
-  public ImmutableClassesGiraphConfiguration<I, V, E, M> getConf() {
+  public ImmutableClassesGiraphConfiguration<I, V, E> getConf() {
     return conf;
   }
 }

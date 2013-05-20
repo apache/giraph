@@ -43,34 +43,38 @@ import java.util.concurrent.ConcurrentHashMap;
  * @param <I> Vertex id
  * @param <V> Vertex data
  * @param <E> Edge data
- * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public class ServerData<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable> {
+    V extends Writable, E extends Writable> {
+  /** Configuration */
+  private final ImmutableClassesGiraphConfiguration<I, V, E> conf;
   /** Partition store for this worker. */
-  private volatile PartitionStore<I, V, E, M> partitionStore;
+  private volatile PartitionStore<I, V, E> partitionStore;
   /** Edge store for this worker. */
-  private final EdgeStore<I, V, E, M> edgeStore;
+  private final EdgeStore<I, V, E> edgeStore;
   /** Message store factory */
   private final
-  MessageStoreFactory<I, M, MessageStoreByPartition<I, M>> messageStoreFactory;
+  MessageStoreFactory<I, Writable, MessageStoreByPartition<I, Writable>>
+  messageStoreFactory;
   /**
    * Message store for incoming messages (messages which will be consumed
    * in the next super step)
    */
-  private volatile MessageStoreByPartition<I, M> incomingMessageStore;
+  private volatile MessageStoreByPartition<I, Writable>
+  incomingMessageStore;
   /**
    * Message store for current messages (messages which we received in
    * previous super step and which will be consumed in current super step)
    */
-  private volatile MessageStoreByPartition<I, M> currentMessageStore;
+  private volatile MessageStoreByPartition<I, Writable>
+  currentMessageStore;
   /**
    * Map of partition ids to incoming vertex mutations from other workers.
    * (Synchronized access to values)
    */
-  private final ConcurrentHashMap<I, VertexMutations<I, V, E, M>>
-  vertexMutations = new ConcurrentHashMap<I, VertexMutations<I, V, E, M>>();
+  private final ConcurrentHashMap<I, VertexMutations<I, V, E>>
+  vertexMutations = new ConcurrentHashMap<I, VertexMutations<I, V, E>>();
   /**
    * Holds aggregtors which current worker owns from current superstep
    */
@@ -89,28 +93,30 @@ public class ServerData<I extends WritableComparable,
    * @param context Mapper context
    */
   public ServerData(
-      CentralizedServiceWorker<I, V, E, M> service,
-      ImmutableClassesGiraphConfiguration<I, V, E, M> conf,
-      MessageStoreFactory<I, M, MessageStoreByPartition<I, M>>
+      CentralizedServiceWorker<I, V, E> service,
+      ImmutableClassesGiraphConfiguration<I, V, E> conf,
+      MessageStoreFactory<I, Writable, MessageStoreByPartition<I, Writable>>
           messageStoreFactory,
       Mapper<?, ?, ?, ?>.Context context) {
-
+    this.conf = conf;
     this.messageStoreFactory = messageStoreFactory;
-    currentMessageStore = messageStoreFactory.newStore();
-    incomingMessageStore = messageStoreFactory.newStore();
+    currentMessageStore =
+        messageStoreFactory.newStore(conf.getOutgoingMessageValueClass());
+    incomingMessageStore =
+        messageStoreFactory.newStore(conf.getIncomingMessageValueClass());
     if (GiraphConstants.USE_OUT_OF_CORE_GRAPH.get(conf)) {
       partitionStore =
-          new DiskBackedPartitionStore<I, V, E, M>(conf, context);
+          new DiskBackedPartitionStore<I, V, E>(conf, context);
     } else {
       partitionStore =
-          new SimplePartitionStore<I, V, E, M>(conf, context);
+          new SimplePartitionStore<I, V, E>(conf, context);
     }
-    edgeStore = new EdgeStore<I, V, E, M>(service, conf, context);
+    edgeStore = new EdgeStore<I, V, E>(service, conf, context);
     ownerAggregatorData = new OwnerAggregatorServerData(context, conf);
     allAggregatorData = new AllAggregatorServerData(context, conf);
   }
 
-  public EdgeStore<I, V, E, M> getEdgeStore() {
+  public EdgeStore<I, V, E> getEdgeStore() {
     return edgeStore;
   }
 
@@ -119,7 +125,7 @@ public class ServerData<I extends WritableComparable,
    *
    * @return The partition store
    */
-  public PartitionStore<I, V, E, M> getPartitionStore() {
+  public PartitionStore<I, V, E> getPartitionStore() {
     return partitionStore;
   }
 
@@ -127,20 +133,24 @@ public class ServerData<I extends WritableComparable,
    * Get message store for incoming messages (messages which will be consumed
    * in the next super step)
    *
+   * @param <M> Message data
    * @return Incoming message store
    */
-  public MessageStoreByPartition<I, M> getIncomingMessageStore() {
-    return incomingMessageStore;
+  public <M extends Writable> MessageStoreByPartition<I, M>
+  getIncomingMessageStore() {
+    return (MessageStoreByPartition<I, M>) incomingMessageStore;
   }
 
   /**
    * Get message store for current messages (messages which we received in
    * previous super step and which will be consumed in current super step)
    *
+   * @param <M> Message data
    * @return Current message store
    */
-  public MessageStoreByPartition<I, M> getCurrentMessageStore() {
-    return currentMessageStore;
+  public <M extends Writable> MessageStoreByPartition<I, M>
+  getCurrentMessageStore() {
+    return (MessageStoreByPartition<I, M>) currentMessageStore;
   }
 
   /** Prepare for next super step */
@@ -154,7 +164,8 @@ public class ServerData<I extends WritableComparable,
       }
     }
     currentMessageStore = incomingMessageStore;
-    incomingMessageStore = messageStoreFactory.newStore();
+    incomingMessageStore =
+        messageStoreFactory.newStore(conf.getOutgoingMessageValueClass());
   }
 
   /**
@@ -162,7 +173,7 @@ public class ServerData<I extends WritableComparable,
    *
    * @return Vertex mutations
    */
-  public ConcurrentHashMap<I, VertexMutations<I, V, E, M>>
+  public ConcurrentHashMap<I, VertexMutations<I, V, E>>
   getVertexMutations() {
     return vertexMutations;
   }

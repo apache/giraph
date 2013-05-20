@@ -45,22 +45,27 @@ import org.apache.hadoop.io.WritableComparable;
  */
 public abstract class SimpleMessageStore<I extends WritableComparable,
     M extends Writable, T> implements MessageStoreByPartition<I, M>  {
+  /** Message class */
+  protected final Class<M> messageClass;
   /** Service worker */
-  protected final CentralizedServiceWorker<I, ?, ?, M> service;
+  protected final CentralizedServiceWorker<I, ?, ?> service;
   /** Map from partition id to map from vertex id to messages for that vertex */
   protected final ConcurrentMap<Integer, ConcurrentMap<I, T>> map;
   /** Giraph configuration */
-  protected final ImmutableClassesGiraphConfiguration<I, ?, ?, M> config;
+  protected final ImmutableClassesGiraphConfiguration<I, ?, ?> config;
 
   /**
    * Constructor
    *
+   * @param messageClass Message class held in the store
    * @param service Service worker
    * @param config Giraph configuration
    */
   public SimpleMessageStore(
-      CentralizedServiceWorker<I, ?, ?, M> service,
-      ImmutableClassesGiraphConfiguration<I, ?, ?, M> config) {
+      Class<M> messageClass,
+      CentralizedServiceWorker<I, ?, ?> service,
+      ImmutableClassesGiraphConfiguration<I, ?, ?> config) {
+    this.messageClass = messageClass;
     this.service = service;
     this.config = config;
     map = new MapMaker().concurrencyLevel(

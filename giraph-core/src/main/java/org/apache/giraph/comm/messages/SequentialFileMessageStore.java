@@ -21,6 +21,7 @@ package org.apache.giraph.comm.messages;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.utils.EmptyIterable;
+import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
@@ -63,10 +64,12 @@ public class SequentialFileMessageStore<I extends WritableComparable,
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(SequentialFileMessageStore.class);
+  /** Message class */
+  private final Class<M> messageClass;
   /** File in which we store data */
   private final File file;
   /** Configuration which we need for reading data */
-  private final ImmutableClassesGiraphConfiguration<I, ?, ?, M> config;
+  private final ImmutableClassesGiraphConfiguration<I, ?, ?> config;
   /** Buffer size to use when reading and writing files */
   private final int bufferSize;
   /** File input stream */
@@ -79,15 +82,18 @@ public class SequentialFileMessageStore<I extends WritableComparable,
   /**
    * Stores message on the disk.
    *
-   * @param config     Configuration used later for reading
-   * @param bufferSize Buffer size to use when reading and writing
-   * @param fileName   File in which we want to store messages
+   * @param messageClass Message class held in the store
+   * @param config       Configuration used later for reading
+   * @param bufferSize   Buffer size to use when reading and writing
+   * @param fileName     File in which we want to store messages
    * @throws IOException
    */
   public SequentialFileMessageStore(
-      ImmutableClassesGiraphConfiguration<I, ?, ?, M> config,
+      Class<M> messageClass,
+      ImmutableClassesGiraphConfiguration<I, ?, ?> config,
       int bufferSize,
       String fileName) {
+    this.messageClass = messageClass;
     this.config = config;
     this.bufferSize = bufferSize;
     file = new File(fileName);
@@ -295,7 +301,7 @@ public class SequentialFileMessageStore<I extends WritableComparable,
     int messagesSize = in.readInt();
     List<M> messages = Lists.newArrayListWithCapacity(messagesSize);
     for (int i = 0; i < messagesSize; i++) {
-      M message = config.createMessageValue();
+      M message = ReflectionUtils.newInstance(messageClass);
       try {
         message.readFields(in);
       } catch (IOException e) {
@@ -394,12 +400,12 @@ public class SequentialFileMessageStore<I extends WritableComparable,
     }
 
     @Override
-    public BasicMessageStore<I, M> newStore() {
+    public BasicMessageStore<I, M> newStore(Class<M> messageClass) {
       int idx = Math.abs(storeCounter.getAndIncrement());
       String fileName =
           directories[idx % directories.length] + "messages-" + idx;
-      return new SequentialFileMessageStore<I, M>(config, bufferSize,
-          fileName);
+      return new SequentialFileMessageStore<I, M>(messageClass, config,
+          bufferSize, fileName);
     }
   }
 }

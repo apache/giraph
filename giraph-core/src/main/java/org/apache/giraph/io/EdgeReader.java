@@ -36,7 +36,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 @SuppressWarnings("rawtypes")
 public abstract class EdgeReader<I extends WritableComparable,
     E extends Writable> extends DefaultImmutableClassesGiraphConfigurable<
-        I, Writable, E, Writable> {
+        I, Writable, E> {
   /**
    * Use the input split and context to setup reading the edges.
    * Guaranteed to be called prior to any other function.

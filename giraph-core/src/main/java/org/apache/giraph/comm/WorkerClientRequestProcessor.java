@@ -33,10 +33,9 @@ import java.io.IOException;
  * @param <I> Vertex index value
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message data
  */
 public interface WorkerClientRequestProcessor<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable> {
+    V extends Writable, E extends Writable> {
   /**
    * Sends a message to destination vertex.
    *
@@ -44,7 +43,7 @@ public interface WorkerClientRequestProcessor<I extends WritableComparable,
    * @param message Message to send.
    * @return true if any network I/O occurred.
    */
-  boolean sendMessageRequest(I destVertexId, M message);
+  boolean sendMessageRequest(I destVertexId, Writable message);
 
   /**
    * Sends a vertex to the appropriate partition owner
@@ -53,7 +52,7 @@ public interface WorkerClientRequestProcessor<I extends WritableComparable,
    * @param vertex Vertex to send
    */
   void sendVertexRequest(PartitionOwner partitionOwner,
-                         Vertex<I, V, E, M> vertex);
+                         Vertex<I, V, E> vertex);
 
   /**
    * Send a partition request (no batching).
@@ -62,7 +61,7 @@ public interface WorkerClientRequestProcessor<I extends WritableComparable,
    * @param partition Partition to send
    */
   void sendPartitionRequest(WorkerInfo workerInfo,
-                            Partition<I, V, E, M> partition);
+                            Partition<I, V, E> partition);
 
   /**
    * Sends a request to the appropriate vertex range owner to add an edge
@@ -103,7 +102,7 @@ public interface WorkerClientRequestProcessor<I extends WritableComparable,
    * @param vertex Vertex to be added
    * @throws IOException
    */
-  void addVertexRequest(Vertex<I, V, E, M> vertex) throws IOException;
+  void addVertexRequest(Vertex<I, V, E> vertex) throws IOException;
 
   /**
    * Sends a request to the appropriate vertex range owner to remove a vertex

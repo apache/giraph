@@ -41,17 +41,15 @@ import java.util.Map.Entry;
  * @param <I> Vertex index type
  * @param <V> Vertex type
  * @param <E> Edge type
- * @param <M> Message type
  */
 public class TestGraph<I extends WritableComparable,
                        V extends Writable,
-                       E extends Writable,
-                       M extends Writable>
-                       implements Iterable<Vertex<I, V, E, M>> {
+                       E extends Writable>
+                       implements Iterable<Vertex<I, V, E>> {
   /** The vertex values */
-  private final HashMap<I, Vertex<I, V, E, M>> vertices = Maps.newHashMap();
+  private final HashMap<I, Vertex<I, V, E>> vertices = Maps.newHashMap();
   /** The configuration */
-  private ImmutableClassesGiraphConfiguration<I, V, E, M> conf;
+  private ImmutableClassesGiraphConfiguration<I, V, E> conf;
 
   /**
    * Constructor requiring classes
@@ -62,7 +60,7 @@ public class TestGraph<I extends WritableComparable,
     this.conf = new ImmutableClassesGiraphConfiguration(conf);
   }
 
-  public HashMap<I, Vertex<I, V, E, M>> getVertices() {
+  public HashMap<I, Vertex<I, V, E>> getVertices() {
     return vertices;
   }
 
@@ -82,9 +80,9 @@ public class TestGraph<I extends WritableComparable,
    * @param edges all edges
    * @return this
    */
-  public TestGraph<I, V, E, M> addVertex(I id, V value,
+  public TestGraph<I, V, E> addVertex(I id, V value,
                                          Entry<I, E>... edges) {
-    Vertex<I, V, E, M> v = makeVertex(id, value, edges);
+    Vertex<I, V, E> v = makeVertex(id, value, edges);
     vertices.put(id, v);
     return this;
   }
@@ -96,9 +94,9 @@ public class TestGraph<I extends WritableComparable,
    * @param edgePair The edge
    * @return this
    */
-  public TestGraph<I, V, E, M> addEdge(I vertexId, Entry<I, E> edgePair) {
+  public TestGraph<I, V, E> addEdge(I vertexId, Entry<I, E> edgePair) {
     if (!vertices.containsKey(vertexId)) {
-      Vertex<I, V, E, M> v = conf.createVertex();
+      Vertex<I, V, E> v = conf.createVertex();
       v.initialize(vertexId, conf.createVertexValue());
       vertices.put(vertexId, v);
     }
@@ -116,9 +114,9 @@ public class TestGraph<I extends WritableComparable,
    * @param edgeValue Edge value
    * @return this
    */
-  public TestGraph<I, V, E, M> addEdge(I vertexId, I toVertex, E edgeValue) {
+  public TestGraph<I, V, E> addEdge(I vertexId, I toVertex, E edgeValue) {
     if (!vertices.containsKey(vertexId)) {
-      Vertex<I, V, E, M> v = conf.createVertex();
+      Vertex<I, V, E> v = conf.createVertex();
       v.initialize(vertexId, conf.createVertexValue());
       vertices.put(vertexId, v);
     }
@@ -140,7 +138,7 @@ public class TestGraph<I extends WritableComparable,
    *
    * @return the iterator
    */
-  public Iterator<Vertex<I, V, E, M>> iterator() {
+  public Iterator<Vertex<I, V, E>> iterator() {
     return vertices.values().iterator();
   }
 
@@ -150,7 +148,7 @@ public class TestGraph<I extends WritableComparable,
    * @param id the id
    * @return the value
    */
-  public Vertex<I, V, E, M> getVertex(I id) {
+  public Vertex<I, V, E> getVertex(I id) {
     return vertices.get(id);
   }
 
@@ -177,10 +175,10 @@ public class TestGraph<I extends WritableComparable,
    * @param edges edges to other vertices
    * @return a new vertex
    */
-  protected Vertex<I, V, E, M> makeVertex(I id, V value,
+  protected Vertex<I, V, E> makeVertex(I id, V value,
       Entry<I, E>... edges) {
     @SuppressWarnings("unchecked")
-    Vertex<I, V, E, M> vertex = conf.createVertex();
+    Vertex<I, V, E> vertex = conf.createVertex();
     vertex.initialize(id, value, createEdges(edges));
     return vertex;
   }

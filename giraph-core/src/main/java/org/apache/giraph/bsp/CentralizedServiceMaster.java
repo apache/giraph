@@ -33,12 +33,11 @@ import java.io.IOException;
  * @param <I> Vertex id
  * @param <V> Vertex value
  * @param <E> Edge value
- * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public interface CentralizedServiceMaster<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable> extends
-    CentralizedService<I, V, E, M> {
+    V extends Writable, E extends Writable> extends
+    CentralizedService<I, V, E> {
   /**
    * Setup (must be called prior to any other function)
    */

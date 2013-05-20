@@ -33,14 +33,13 @@ import java.util.Map;
  * @param <I> Vertex id
  * @param <V> Vertex data
  * @param <E> Edge data
- * @param <M> Message data
  */
 @SuppressWarnings("rawtypes")
 public class SendMutationsCache<I extends WritableComparable,
-    V extends Writable, E extends Writable, M extends Writable> {
+    V extends Writable, E extends Writable> {
   /** Internal cache */
-  private Map<Integer, Map<I, VertexMutations<I, V, E, M>>> mutationCache =
-      new HashMap<Integer, Map<I, VertexMutations<I, V, E, M>>>();
+  private Map<Integer, Map<I, VertexMutations<I, V, E>>> mutationCache =
+      new HashMap<Integer, Map<I, VertexMutations<I, V, E>>>();
   /** Number of mutations in each partition */
   private final Map<Integer, Integer> mutationCountMap =
       new HashMap<Integer, Integer>();
@@ -53,17 +52,17 @@ public class SendMutationsCache<I extends WritableComparable,
    * @param destVertexId Destination vertex id
    * @return Mutations for the vertex
    */
-  private VertexMutations<I, V, E, M> getVertexMutations(
+  private VertexMutations<I, V, E> getVertexMutations(
       Integer partitionId, I destVertexId) {
-    Map<I, VertexMutations<I, V, E, M>> idMutations =
+    Map<I, VertexMutations<I, V, E>> idMutations =
         mutationCache.get(partitionId);
     if (idMutations == null) {
-      idMutations = new HashMap<I, VertexMutations<I, V, E, M>>();
+      idMutations = new HashMap<I, VertexMutations<I, V, E>>();
       mutationCache.put(partitionId, idMutations);
     }
-    VertexMutations<I, V, E, M> mutations = idMutations.get(destVertexId);
+    VertexMutations<I, V, E> mutations = idMutations.get(destVertexId);
     if (mutations == null) {
-      mutations = new VertexMutations<I, V, E, M>();
+      mutations = new VertexMutations<I, V, E>();
       idMutations.put(destVertexId, mutations);
     }
     return mutations;
@@ -97,7 +96,7 @@ public class SendMutationsCache<I extends WritableComparable,
   public int addEdgeMutation(
       Integer partitionId, I destVertexId, Edge<I, E> edge) {
     // Get the mutations for this partition
-    VertexMutations<I, V, E, M> mutations =
+    VertexMutations<I, V, E> mutations =
         getVertexMutations(partitionId, destVertexId);
 
     // Add the edge
@@ -118,7 +117,7 @@ public class SendMutationsCache<I extends WritableComparable,
   public int removeEdgeMutation(
       Integer partitionId, I vertexIndex, I destinationVertexIndex) {
     // Get the mutations for this partition
-    VertexMutations<I, V, E, M> mutations =
+    VertexMutations<I, V, E> mutations =
         getVertexMutations(partitionId, vertexIndex);
 
     // Remove the edge
@@ -136,9 +135,9 @@ public class SendMutationsCache<I extends WritableComparable,
    * @return Number of mutations in the partition.
    */
   public int addVertexMutation(
-      Integer partitionId, Vertex<I, V, E, M> vertex) {
+      Integer partitionId, Vertex<I, V, E> vertex) {
     // Get the mutations for this partition
-    VertexMutations<I, V, E, M> mutations =
+    VertexMutations<I, V, E> mutations =
         getVertexMutations(partitionId, vertex.getId());
 
     // Add the vertex
@@ -158,7 +157,7 @@ public class SendMutationsCache<I extends WritableComparable,
   public int removeVertexMutation(
       Integer partitionId, I destVertexId) {
     // Get the mutations for this partition
-    VertexMutations<I, V, E, M> mutations =
+    VertexMutations<I, V, E> mutations =
         getVertexMutations(partitionId, destVertexId);
 
     // Remove the vertex
@@ -174,9 +173,9 @@ public class SendMutationsCache<I extends WritableComparable,
    * @param partitionId Partition id
    * @return Removed partition mutations
    */
-  public Map<I, VertexMutations<I, V, E, M>> removePartitionMutations(
+  public Map<I, VertexMutations<I, V, E>> removePartitionMutations(
       int partitionId) {
-    Map<I, VertexMutations<I, V, E, M>> idMutations =
+    Map<I, VertexMutations<I, V, E>> idMutations =
         mutationCache.remove(partitionId);
     mutationCountMap.put(partitionId, 0);
     return idMutations;
@@ -187,12 +186,12 @@ public class SendMutationsCache<I extends WritableComparable,
    *
    * @return All vertex mutations for all partitions
    */
-  public Map<Integer, Map<I, VertexMutations<I, V, E, M>>>
+  public Map<Integer, Map<I, VertexMutations<I, V, E>>>
   removeAllPartitionMutations() {
-    Map<Integer, Map<I, VertexMutations<I, V, E, M>>> allMutations =
+    Map<Integer, Map<I, VertexMutations<I, V, E>>> allMutations =
         mutationCache;
     mutationCache =
-        new HashMap<Integer, Map<I, VertexMutations<I, V, E, M>>>();
+        new HashMap<Integer, Map<I, VertexMutations<I, V, E>>>();
     mutationCountMap.clear();
     return allMutations;
   }

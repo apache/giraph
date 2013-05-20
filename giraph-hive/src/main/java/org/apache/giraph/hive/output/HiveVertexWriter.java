@@ -118,7 +118,7 @@ public class HiveVertexWriter<I extends WritableComparable, V extends Writable,
   }
 
   @Override
-  public void writeVertex(Vertex<I, V, E, ?> vertex)
+  public void writeVertex(Vertex<I, V, E> vertex)
     throws IOException, InterruptedException {
     vertexToHive.saveVertex(vertex, reusableRecord, this);
   }
