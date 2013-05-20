@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-620: Website Documentation: How to use Hive I/O with Giraph (nitay)
+
   GIRAPH-667: Decouple Vertex data and Computation, make Computation
   and Combiner classes switchable (majakabiljo)
 

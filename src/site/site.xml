@@ -76,6 +76,7 @@
       <item name="Download Releases" href="releases.html"/>
       <item name="Page Rank Example" href="pagerank.html"/>
       <item name="Input/Output in Giraph" href="io.html"/>
+      <item name="Hive" href="hive.html"/>
       <item name="Aggregators" href="aggregators.html"/>
       <item name="Out-of-core" href="ooc.html"/>
       <item name="Javadoc" href="javadoc_modules.html"/>
@@ -87,7 +88,5 @@
       <item name="How to generate patches" href="generating_patches.html" />
       <item name="How to build this site" href="build_site.html" />
     </menu>
-
-    <menu ref="modules" inherit="top"/>
   </body>
 </project>
