@@ -23,48 +23,36 @@ under the License.
   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
   <properties>
-    <title>Welcome To Apache Giraph</title>
+    <title>Welcome To Apache Giraph!</title>
   </properties>
 
   <body>
 
-    <section name="Distributed graph processing with Giraph">
-<p><i>Giraph</i> (pronounced like the animal giraffe) is an iterative graph processing system.  As an example use case, Facebook uses Giraph to analyze its social graph in production. Giraph is motivated by the Turing Award winning [<a href="#turing">1</a>] elegant Bulk Synchronous Parallel (BSP) model of distributed computation by Valiant [<a href="#bsp">2</a>], and the Pregel graph processing system [<a href="#pregel">3</a>] from Google that evidenced that an appropriately extended BSP model is useful for large-scale graph computation. Giraph distinguishes itself by being an open source, scalable graph processing platform with a growing community of users worldwide. You are welcome to explore the <i>User Docs</i> menu above that explain how to process graphs with Giraph.</p>
-</section>
+    <section name="Welcome to Apache Giraph!">
+      <p><i>Apache Giraph</i> is an iterative graph processing system built for high scalability. For example, it is currently used at Facebook to analyze the social graph formed by users and their connections. Giraph originated as the open-source counterpart to <i>Pregel</i>, the graph processing architecture developed at Google and described in a 2010 <a href="http://dl.acm.org/citation.cfm?id=1807184">paper</a>. Both systems are inspired by the <a href="http://en.wikipedia.org/wiki/Bulk_synchronous_parallel">Bulk Synchronous Parallel</a> model of distributed computation introduced by Leslie Valiant. Giraph adds several features beyond the basic Pregel model, including master computation, sharded aggregators, edge-oriented input, out-of-core computation, and more. With a steady development cycle and a growing community of users worldwide, Giraph is a natural choice for unleashing the potential of structured datasets at a massive scale. To learn more, consult the <i>User Docs</i> section above.</p>
 
+      <subsection name="Download">
+        <p>Official releases of Giraph may be downloaded from an <a href="http://www.apache.org/dyn/closer.cgi/giraph/">Apache mirror</a>. Pre-built packages will soon be available through Apache's Maven repositories, making it easier to include Giraph in your projects.</p>        
+      </subsection>
 
-<section name="News">
+      <subsection name="News">
+        <ul>
+          <li><strong>May 6, 2013: Giraph 1.0.0 is now released!</strong> Please pick up a copy <a href="http://www.apache.org/dyn/closer.cgi/giraph/giraph-1.0.0">here</a>.</li>
+          <li><strong>February 6, 2012: Giraph 0.1-incubating released.</strong> The Giraph PPMC is excited to announce that version 0.1 has been released. Grab a copy of the archived release <a href="http://archive.apache.org/dist/incubator/giraph">here</a>.</li>
+        </ul>
+      </subsection>
 
-<ul>
-  <li>Official releases of Giraph may be downloaded from an <a href="http://www.apache.org/dyn/closer.cgi/giraph/">Apache mirror</a>. Soon we will also publish our release artifacts to Apache's Maven repositories to make it easier to include Giraph in your projects.</li>
-  <li><strong>May 6, 2013: Giraph 1.0.0 is now released!</strong> Please pick up a copy at <a href="http://www.apache.org/dyn/closer.cgi/giraph/giraph-1.0.0">here</a>.</li>
-  <li><strong>February 6, 2012: Giraph 0.1-incubating released.</strong> The Giraph PPMC is excited to announce that version 0.1 has been released. Grab a copy of the archived release <a href="http://archive.apache.org/dist/incubator/giraph">here</a>.</li>
-</ul>
+      <subsection name="Getting involved">
+        <p>Giraph is an open-source project and external contributions are extremely appreciated. There are many ways to get involved:</p>
+        <ul>
+          <li>Subscribe to the <a href="mail-lists.html">mailing lists</a>, particularly the <i>user</i> and <i>developer</i> lists, where you can get a feel for the state of the project and what the community is working on.</li>
+          <li>Try out the examples and play with Giraph on your cluster. Be sure to ask questions on the user list or <a href="issue-tracking.html">file an issue</a> if you run into problems with your particular configuration.</li>
+          <li>Browse the existing issues to find something you may be interested in working on. Take a look at the section on <a href="generating_patches.html">generating patches</a> for detailed instructions on contributing your changes.</li>
+        </ul>
+      </subsection>
 
-</section>
-
-<section name="Getting involved">
-
-<p>Giraph is a new project and we're looking to quickly build a community of users and contributors. All types of help is appreciated: contributing patches, writing documentation, posing and answering questions on the mailing list, even <a href="https://issues.apache.org/jira/browse/GIRAPH-4">graphic design</a>. Here's how to get involved with Giraph (or any Apache project):</p>
-
-<ul>
-  <li>Subscribe to the <a href="mail-lists.html">mailing lists</a>, particularly the user and dev list, and follow their activity for a while to get a feel for the state of the project and what the community is working on.</li>
-  <li>Browse through <a href="issue-tracking.html">Giraph's JIRA</a>, our issue tracking system, to find issues you may be interested in working on. To help new contributors pitch in quickly, we maintain a <a href="http://bit.ly/newbie_apache_giraph_issues">set of JIRAs</a> that focus on getting new contributors started with the mechanics of generating a patch &#151; downloading the source, changing a couple of lines, creating a patch, verifying its correctness, uploading it to JIRA and working with the community &#151; rather than deep technical issues within Giraph itself. These are good issues with which to join the community. Take a look at the section on <a href="generating_patches.html">generating patches</a> for detailed instructions on creating patches.</li>
-  <li>Try out the examples and play with Giraph on your cluster. Be sure to ask questions on the mailing list or open new JIRAs if you run into issues with your particular configuration.</li>
-</ul>
-
-</section>
-
-
-<section name="References">
-
-<ol>
-<li id="turing">Leslie Valiant: The 2010 A.M. Turing Award (<a href="http://amturing.acm.org/award_winners/valiant_2612174.cfm">link</a>)</li>
-<li id="bsp">Leslie Valiant: A bridging model for parallel computation. Communications of the ACM, Vol. 33(8) (1990) pp. 103-111 (<a href="http://dl.acm.org/citation.cfm?id=79173.79181">link</a>)</li>
-<li id="pregel">Grzegorz Malewicz, Matthew H. Austern, Aart J.C Bik, James C. Dehnert, Ilan Horn, Naty Leiser, Grzegorz Czajkowski: Pregel: a system for large-scale graph processing. ACM SIGMOD International Conference on Management of Data (2010) pp. 135-146 (<a href="http://dl.acm.org/citation.cfm?id=1807184">link</a>)</li>
-</ol>
-
-</section>
+    </section>
 
   </body>
+
 </document>
