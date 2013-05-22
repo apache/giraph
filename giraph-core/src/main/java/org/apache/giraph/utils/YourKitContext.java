@@ -83,7 +83,7 @@ public class YourKitContext {
   /**
    * This method is just a convenient replacement of
    * {@link #captureSnapshot(long, java.io.File)} with
-   * {@link com.yourkit.api.ProfilingModes.SNAPSHOT_WITH_HEAP} for the flags.
+   * {@link com.yourkit.api.ProfilingModes#SNAPSHOT_WITH_HEAP} for the flags.
    *
    * WARNING: This is likely to be VERY slow for large jobs.
    *
@@ -97,7 +97,7 @@ public class YourKitContext {
   /**
    * This method is just a convenient replacement of
    * {@link #captureSnapshot(long, java.io.File)} with
-   * {@link com.yourkit.api.ProfilingModes.SNAPSHOT_WITHOUT_HEAP} for the flags.
+   * {@link com.yourkit.api.ProfilingModes#SNAPSHOT_WITHOUT_HEAP} for the flags.
    *
    * @param context map context
    * @param name unique name for this snapshot

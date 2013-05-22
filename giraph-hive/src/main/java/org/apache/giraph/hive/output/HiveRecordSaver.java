@@ -23,7 +23,7 @@ import com.facebook.hiveio.record.HiveWritableRecord;
 import java.io.IOException;
 
 /**
- * Interface which can save {@link HiveRecord}s.
+ * Interface which can save {@link HiveWritableRecord}s.
  */
 public interface HiveRecordSaver {
   /**

@@ -49,9 +49,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.apache.giraph.conf.GiraphConstants.MESSAGES_DIRECTORY;
 
 /**
- * Used for writing and reading collection of messages to the disk. {@link
- * #addMessages(MessageStore<I, M>)} should be called only once with
- * the messages we want to store.
+ * Used for writing and reading collection of messages to the disk.
+ * {@link SequentialFileMessageStore#addMessages(MessageStore)}
+ * should be called only once with the messages we want to store.
  * <p/>
  * It's optimized for retrieving messages in the natural order of vertex ids
  * they are sent to.

@@ -39,7 +39,8 @@ public class VertexWithDoubleValueDoubleEdgeTextOutputFormat extends
   }
 
   /**
-   * Vertex writer used with {@link VertexWithComponentTextOutputFormat}.
+   * Vertex writer used with
+   * {@link VertexWithDoubleValueDoubleEdgeTextOutputFormat}.
    */
   public class VertexWithDoubleValueWriter extends TextVertexWriter {
     @Override

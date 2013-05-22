@@ -47,7 +47,8 @@ public class TextDoubleDoubleAdjacencyListVertexInputFormat
       AdjacencyListTextVertexReader {
 
     /**
-     * Constructor with {@link LineSanitizer}.
+     * Constructor with
+     * {@link AdjacencyListTextVertexInputFormat.LineSanitizer}.
      *
      * @param lineSanitizer the sanitizer to use for reading
      */

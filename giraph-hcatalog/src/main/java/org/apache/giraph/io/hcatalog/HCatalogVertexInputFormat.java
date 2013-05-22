@@ -46,9 +46,9 @@ import org.apache.log4j.Logger;
  * The desired database and table name to load from can be specified via
  * {@link GiraphHCatInputFormat#setVertexInput(org.apache.hadoop.mapreduce.Job,
  * org.apache.hcatalog.mapreduce.InputJobInfo)}
- * as you setup your vertex input format with
- * {@link org.apache.giraph.conf.GiraphConfiguration#
- * setVertexInputFormatClass(Class)}.
+ * as you setup your vertex input format with {@link
+ * org.apache.giraph.conf.GiraphConfiguration#setVertexInputFormatClass(Class)
+ * }.
  *
  * @param <I> Vertex id
  * @param <V> Vertex value

@@ -51,7 +51,7 @@ public class YourKitProfiler {
 
   /**
    * Convenient replacement of {@link #startProfilingCPU(long)} with
-   * {@link ProfilingModes.CPU_TRACING} for the mode.
+   * {@link ProfilingModes#CPU_TRACING} for the mode.
    *
    * @param conf GiraphConfiguration
    * @return profiler context
