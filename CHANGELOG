@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-670: [easy] Example Max Computation (nitay)
+
   GIRAPH-675: Mutable edge iterator gets corrupted by calling
   vertex.getNumEdges() during iteration (apresta)
 
