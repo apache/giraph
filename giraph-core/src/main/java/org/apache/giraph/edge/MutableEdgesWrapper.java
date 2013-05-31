@@ -47,6 +47,8 @@ public class MutableEdgesWrapper<I extends WritableComparable,
   private final Iterator<Edge<I, E>> oldEdgesIterator;
   /** Last edge that was returned during iteration. */
   private MutableEdge<I, E> currentEdge;
+  /** Number of edges. */
+  private int numEdges;
 
   /**
    * Private constructor: instantiation happens through the {@code wrap()}
@@ -59,6 +61,7 @@ public class MutableEdgesWrapper<I extends WritableComparable,
                               OutEdges<I, E> newEdges) {
     oldEdgesIterator = oldEdges.iterator();
     this.newEdges = newEdges;
+    numEdges = oldEdges.size();
   }
 
   /**
@@ -131,6 +134,14 @@ public class MutableEdgesWrapper<I extends WritableComparable,
     currentEdge = edge;
   }
 
+  /**
+   * Decrement the number of edges (to account for a deletion from the mutable
+   * iterator).
+   */
+  public void decrementEdges() {
+    --numEdges;
+  }
+
   @Override
   public void initialize(Iterable<Edge<I, E>> edges) {
     throw new IllegalStateException("initialize: MutableEdgesWrapper should " +
@@ -161,7 +172,7 @@ public class MutableEdgesWrapper<I extends WritableComparable,
 
   @Override
   public int size() {
-    return unwrap().size();
+    return numEdges;
   }
 
   @Override

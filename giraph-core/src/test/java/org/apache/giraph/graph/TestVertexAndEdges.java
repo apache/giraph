@@ -308,7 +308,6 @@ public class TestVertexAndEdges {
     int i = 2;
     for (MutableEdge<LongWritable, DoubleWritable> edge :
         vertex.getMutableEdges()) {
-      System.out.println(edge.toString());
       if (i-- == 0) {
         break;
       }
@@ -323,6 +322,26 @@ public class TestVertexAndEdges {
       }
     }
     assertEquals(5, vertex.getNumEdges());
+
+    // Calling size() during iteration shouldn't modify the data structure.
+    int iterations = 0;
+    for (MutableEdge<LongWritable, DoubleWritable> edge : vertex.getMutableEdges()) {
+      edge.setValue(new DoubleWritable(3));
+      assertEquals(5, vertex.getNumEdges());
+      ++iterations;
+    }
+    assertEquals(5, vertex.getNumEdges());
+    assertEquals(5, iterations);
+
+    // If we remove an edge after calling next(), size() should return the
+    // correct number of edges.
+    it = vertex.getMutableEdges().iterator();
+    it.next();
+    it.remove();
+    assertEquals(4, vertex.getNumEdges());
+    it.next();
+    it.remove();
+    assertEquals(3, vertex.getNumEdges());
   }
 
   /**

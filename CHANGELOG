@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-675: Mutable edge iterator gets corrupted by calling
+  vertex.getNumEdges() during iteration (apresta)
+
   GIRAPH-512: JavaDoc warnings (emre.aladag via nitay)
 
   GIRAPH-620: Website Documentation: How to use Hive I/O with Giraph (nitay)

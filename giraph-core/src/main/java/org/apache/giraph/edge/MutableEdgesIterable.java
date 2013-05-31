@@ -96,6 +96,7 @@ public class MutableEdgesIterable<I extends WritableComparable,
         // Set the current edge to null, so that it's not added to the
         // new edges.
         mutableEdgesWrapper.setCurrentEdge(null);
+        mutableEdgesWrapper.decrementEdges();
       }
     };
   }

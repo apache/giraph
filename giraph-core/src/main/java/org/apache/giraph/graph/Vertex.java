@@ -129,6 +129,8 @@ public class Vertex<I extends WritableComparable,
    * Note: edge objects returned by this iterable may be invalidated as soon
    * as the next element is requested. Thus, keeping a reference to an edge
    * almost always leads to undesired behavior.
+   * Accessing the edges with other methods (e.g., addEdge()) during iteration
+   * leads to undefined behavior.
    *
    * @return the out edges (sort order determined by subclass implementation).
    */
@@ -140,7 +142,8 @@ public class Vertex<I extends WritableComparable,
    * Get an iterable of out-edges that can be modified in-place.
    * This can mean changing the current edge value or removing the current edge
    * (by using the iterator version).
-   * Note: if
+   * Note: accessing the edges with other methods (e.g., addEdge()) during
+   * iteration leads to undefined behavior.
    *
    * @return An iterable of mutable out-edges
    */
