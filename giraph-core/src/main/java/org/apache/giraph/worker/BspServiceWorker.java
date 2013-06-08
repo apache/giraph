@@ -957,6 +957,7 @@ else[HADOOP_NON_SECURE]*/
                   nextPrintVertices = verticesWritten + 250000;
                 }
               }
+              getPartitionStore().putPartition(partition);
               ++partitionIndex;
             }
             vertexWriter.close(getContext()); // the temp results are saved now
