@@ -40,7 +40,8 @@ import java.util.Iterator;
  */
 public class LongNullHashSetEdges
     implements ReuseObjectsOutEdges<LongWritable, NullWritable>,
-    MutableOutEdges<LongWritable, NullWritable> {
+    MutableOutEdges<LongWritable, NullWritable>,
+    StrictRandomAccessOutEdges<LongWritable, NullWritable> {
   /** Hash set of target vertex ids. */
   private LongOpenHashSet neighbors;
 
@@ -124,5 +125,22 @@ public class LongNullHashSetEdges
     for (int i = 0; i < numEdges; ++i) {
       neighbors.add(in.readLong());
     }
+  }
+
+  @Override
+  public NullWritable getEdgeValue(LongWritable targetVertexId) {
+    if (neighbors.contains(targetVertexId.get())) {
+      return NullWritable.get();
+    } else {
+      return null;
+    }
+  }
+
+  @Override
+  public void setEdgeValue(LongWritable targetVertexId,
+    NullWritable edgeValue) {
+    // No operation.
+    // Only set value for an existing edge.
+    // If the edge exist, the Null value is already there.
   }
 }
