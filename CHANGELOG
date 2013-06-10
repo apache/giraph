@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-667: all workers suspended at 'saveVertices' when use 
+  out of core (claudio)
+
   GIRAPH-670: [easy] Example Max Computation (nitay)
 
   GIRAPH-675: Mutable edge iterator gets corrupted by calling
