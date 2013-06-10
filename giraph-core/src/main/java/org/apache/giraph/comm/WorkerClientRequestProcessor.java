@@ -18,9 +18,9 @@
 package org.apache.giraph.comm;
 
 import org.apache.giraph.edge.Edge;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.partition.PartitionOwner;
-import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;

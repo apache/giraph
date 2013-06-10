@@ -19,12 +19,12 @@ package org.apache.giraph.io;
 
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.io.formats.AdjacencyListTextVertexInputFormat;
-import org.apache.giraph.io.formats.TextDoubleDoubleAdjacencyListVertexInputFormat;
-import org.apache.giraph.utils.EdgeIterables;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.io.formats.AdjacencyListTextVertexInputFormat;
+import org.apache.giraph.io.formats.TextDoubleDoubleAdjacencyListVertexInputFormat;
+import org.apache.giraph.utils.EdgeIterables;
 import org.apache.giraph.utils.NoOpComputation;
 import org.apache.hadoop.io.BooleanWritable;
 import org.apache.hadoop.io.DoubleWritable;

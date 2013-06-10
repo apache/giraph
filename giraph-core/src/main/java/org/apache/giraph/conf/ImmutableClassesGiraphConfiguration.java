@@ -20,11 +20,12 @@ package org.apache.giraph.conf;
 
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.combiner.Combiner;
-import org.apache.giraph.graph.Computation;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.edge.ReusableEdge;
+import org.apache.giraph.graph.DefaultVertex;
+import org.apache.giraph.graph.Computation;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.graph.VertexValueFactory;
@@ -464,7 +465,9 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    * @return Instantiated vertex
    */
   public Vertex<I, V, E> createVertex() {
-    return ReflectionUtils.newInstance(Vertex.class, this);
+    Vertex<I, V, E> vertex = new DefaultVertex<I, V, E>();
+    vertex.setConf(this);
+    return vertex;
   }
 
   /**

@@ -62,8 +62,7 @@ public class TestPartitionStores {
       Vertex<IntWritable, IntWritable, NullWritable>... vertices) {
     Partition<IntWritable, IntWritable, NullWritable> partition =
         conf.createPartition(id, context);
-    for (Vertex<IntWritable, IntWritable, NullWritable> v :
-        vertices) {
+    for (Vertex<IntWritable, IntWritable, NullWritable> v : vertices) {
       partition.putVertex(v);
     }
     return partition;

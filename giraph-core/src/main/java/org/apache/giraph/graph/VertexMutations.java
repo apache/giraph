@@ -47,7 +47,8 @@ public class VertexMutations<I extends WritableComparable,
     V extends Writable, E extends Writable> implements VertexChanges<I, V, E>,
     Writable, ImmutableClassesGiraphConfigurable {
   /** List of added vertices during the last superstep */
-  private final List<Vertex<I, V, E>> addedVertexList = Lists.newArrayList();
+  private final List<Vertex<I, V, E>> addedVertexList =
+      Lists.newArrayList();
   /** Count of remove vertex requests */
   private int removedVertexCount = 0;
   /** List of added edges */

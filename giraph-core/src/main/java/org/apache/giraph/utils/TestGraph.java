@@ -177,7 +177,6 @@ public class TestGraph<I extends WritableComparable,
    */
   protected Vertex<I, V, E> makeVertex(I id, V value,
       Entry<I, E>... edges) {
-    @SuppressWarnings("unchecked")
     Vertex<I, V, E> vertex = conf.createVertex();
     vertex.initialize(id, value, createEdges(edges));
     return vertex;

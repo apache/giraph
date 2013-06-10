@@ -21,6 +21,7 @@ package org.apache.giraph.examples;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.edge.ByteArrayEdges;
 import org.apache.giraph.edge.EdgeFactory;
+import org.apache.giraph.graph.DefaultVertex;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.formats.JsonLongDoubleFloatDoubleVertexInputFormat;
 import org.apache.giraph.io.formats.JsonLongDoubleFloatDoubleVertexOutputFormat;
@@ -56,7 +57,7 @@ public class SimpleShortestPathsComputationTest {
   @Test
   public void testOnShorterPathFound() throws Exception {
     Vertex<LongWritable, DoubleWritable, FloatWritable> vertex =
-        new Vertex<LongWritable, DoubleWritable, FloatWritable>();
+        new DefaultVertex<LongWritable, DoubleWritable, FloatWritable>();
     SimpleShortestPathsComputation computation =
         new SimpleShortestPathsComputation();
     MockUtils.MockedEnvironment<LongWritable, DoubleWritable, FloatWritable,
@@ -87,7 +88,7 @@ public class SimpleShortestPathsComputationTest {
   @Test
   public void testOnNoShorterPathFound() throws Exception {
     Vertex<LongWritable, DoubleWritable, FloatWritable> vertex =
-        new Vertex<LongWritable, DoubleWritable, FloatWritable>();
+        new DefaultVertex<LongWritable, DoubleWritable, FloatWritable>();
     SimpleShortestPathsComputation computation =
         new SimpleShortestPathsComputation();
     MockUtils.MockedEnvironment<LongWritable, DoubleWritable, FloatWritable,

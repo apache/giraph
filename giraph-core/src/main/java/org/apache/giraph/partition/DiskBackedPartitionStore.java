@@ -368,8 +368,8 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
    * @param vertex The vertex to serialize
    * @throws IOException
    */
-  private void writeVertexData(DataOutput output, Vertex<I, V, E> vertex)
-    throws IOException {
+  private void writeVertexData(DataOutput output,
+      Vertex<I, V, E> vertex) throws IOException {
     vertex.getId().write(output);
     vertex.getValue().write(output);
     output.writeBoolean(vertex.isHalted());

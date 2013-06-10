@@ -18,17 +18,17 @@
 
 package org.apache.giraph.examples;
 
-import com.google.common.collect.Lists;
-
+import org.apache.giraph.edge.EdgeFactory;
+import org.apache.giraph.graph.DefaultVertex;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.utils.MockUtils;
-import org.apache.giraph.edge.EdgeFactory;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.junit.Test;
 
-import static org.apache.giraph.examples.SimpleTriangleClosingComputation.IntArrayListWritable;
+import com.google.common.collect.Lists;
 
+import static org.apache.giraph.examples.SimpleTriangleClosingComputation.IntArrayListWritable;
 import static org.junit.Assert.assertEquals;
 
 /**
@@ -44,7 +44,7 @@ public class SimpleTriangleClosingComputationTest {
   public void testSuperstepZero() throws Exception {
     // this guy should end up with an array value of 4
     Vertex<IntWritable, IntArrayListWritable, NullWritable> vertex =
-        new Vertex<IntWritable, IntArrayListWritable, NullWritable>();
+        new DefaultVertex<IntWritable, IntArrayListWritable, NullWritable>();
 
     IntArrayListWritable alw = new IntArrayListWritable();
 
@@ -71,7 +71,7 @@ public class SimpleTriangleClosingComputationTest {
     // see if the vertex interprets its incoming
     // messages properly to verify the algorithm
     Vertex<IntWritable, IntArrayListWritable, NullWritable> vertex =
-        new Vertex<IntWritable, IntArrayListWritable, NullWritable>();
+        new DefaultVertex<IntWritable, IntArrayListWritable, NullWritable>();
     SimpleTriangleClosingComputation computation =
         new SimpleTriangleClosingComputation();
     MockUtils.MockedEnvironment env = MockUtils.prepareVertexAndComputation(

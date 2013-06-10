@@ -18,9 +18,6 @@
 
 package org.apache.giraph.io.hcatalog;
 
-import com.google.common.collect.Lists;
-import java.io.IOException;
-import java.util.List;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.graph.Vertex;
@@ -35,6 +32,11 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hcatalog.data.HCatRecord;
 import org.apache.log4j.Logger;
+
+import com.google.common.collect.Lists;
+
+import java.io.IOException;
+import java.util.List;
 
 /**
  * Abstract class that users should subclass to load data from a Hive or Pig

@@ -17,8 +17,6 @@
  */
 package org.apache.giraph.io.formats;
 
-import java.io.IOException;
-import java.util.List;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexReader;
@@ -29,6 +27,9 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.SequenceFileInputFormat;
+
+import java.io.IOException;
+import java.util.List;
 
 /**
  * Sequence file vertex input format based on {@link SequenceFileInputFormat}.

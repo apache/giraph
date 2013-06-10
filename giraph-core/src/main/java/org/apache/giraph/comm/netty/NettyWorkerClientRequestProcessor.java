@@ -257,7 +257,7 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
 
   @Override
   public void sendVertexRequest(PartitionOwner partitionOwner,
-                                Vertex<I, V, E> vertex) {
+      Vertex<I, V, E> vertex) {
     Partition<I, V, E> partition =
         sendPartitionCache.addVertex(partitionOwner, vertex);
     if (partition == null) {

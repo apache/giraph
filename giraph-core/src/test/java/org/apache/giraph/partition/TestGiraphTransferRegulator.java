@@ -20,9 +20,10 @@ package org.apache.giraph.partition;
 import org.apache.giraph.edge.ArrayListEdges;
 import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.edge.OutEdges;
+import org.apache.giraph.graph.DefaultVertex;
 import org.apache.giraph.graph.GiraphTransferRegulator;
-import org.apache.giraph.job.GiraphJob;
 import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.job.GiraphJob;
 import org.apache.giraph.utils.NoOpComputation;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
@@ -46,7 +47,7 @@ public class TestGiraphTransferRegulator {
   private GiraphJob job;
   /** Instantiated vertex filled in from setup() */
   private Vertex<IntWritable, FloatWritable, DoubleWritable>
-      vertex = new Vertex<IntWritable, FloatWritable, DoubleWritable>();
+      vertex = new DefaultVertex<IntWritable, FloatWritable, DoubleWritable>();
 
   /**
    * Dummy vertex.

@@ -107,7 +107,7 @@ public class TestAdjacencyListTextVertexOutputFormat extends AdjacencyListTextVe
 
     when(vertex.getEdges()).thenReturn(cities);
 
-    RecordWriter<Text,Text> tw = mock(RecordWriter.class);
+    RecordWriter<Text, Text> tw = mock(RecordWriter.class);
     AdjacencyListTextVertexWriter writer = createVertexWriter(tw);
     writer.setConf(conf);
     writer.initialize(tac);
@@ -135,7 +135,7 @@ public class TestAdjacencyListTextVertexOutputFormat extends AdjacencyListTextVe
 
     when(vertex.getEdges()).thenReturn(cities);
 
-    RecordWriter<Text,Text> tw = mock(RecordWriter.class);
+    RecordWriter<Text, Text> tw = mock(RecordWriter.class);
     AdjacencyListTextVertexWriter writer = createVertexWriter(tw);
     writer.setConf(conf);
     writer.initialize(tac);

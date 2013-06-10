@@ -17,8 +17,6 @@
  */
 package org.apache.giraph.comm;
 
-import com.google.common.collect.Maps;
-import java.util.Map;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.GiraphTransferRegulator;
 import org.apache.giraph.graph.Vertex;
@@ -28,6 +26,10 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
+
+import com.google.common.collect.Maps;
+
+import java.util.Map;
 
 /**
  * Caches partition vertices prior to sending.  Aggregating these requests
@@ -86,7 +88,7 @@ public class SendPartitionCache<I extends WritableComparable,
    * @return A partition to send or null, if requirements are not met
    */
   public Partition<I, V, E> addVertex(PartitionOwner partitionOwner,
-                                         Vertex<I, V, E> vertex) {
+      Vertex<I, V, E> vertex) {
     Partition<I, V, E> partition =
         ownerPartitionMap.get(partitionOwner);
     if (partition == null) {
@@ -97,8 +99,7 @@ public class SendPartitionCache<I extends WritableComparable,
     }
     transferRegulator.incrementCounters(partitionOwner, vertex);
 
-    Vertex<I, V, E> oldVertex =
-        partition.putVertex(vertex);
+    Vertex<I, V, E> oldVertex = partition.putVertex(vertex);
     if (oldVertex != null) {
       LOG.warn("addVertex: Replacing vertex " + oldVertex +
           " with " + vertex);

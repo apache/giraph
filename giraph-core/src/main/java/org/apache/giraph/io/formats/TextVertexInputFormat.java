@@ -18,8 +18,6 @@
 
 package org.apache.giraph.io.formats;
 
-import java.io.IOException;
-import java.util.List;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.VertexInputFormat;
@@ -32,6 +30,9 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+
+import java.io.IOException;
+import java.util.List;
 
 /**
  * Abstract class that users should subclass to use their own text based

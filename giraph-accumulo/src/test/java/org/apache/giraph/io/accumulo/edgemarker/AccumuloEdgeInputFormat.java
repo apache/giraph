@@ -17,10 +17,6 @@
  */
 package org.apache.giraph.io.accumulo.edgemarker;
 
-import com.google.common.collect.Lists;
-import java.io.IOException;
-import java.util.List;
-import java.util.regex.Pattern;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Value;
 import org.apache.giraph.edge.Edge;
@@ -32,6 +28,12 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+
+import com.google.common.collect.Lists;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.regex.Pattern;
 
 /*
  Example subclass which reads in Key/Value pairs to construct vertex objects.

@@ -18,11 +18,6 @@
 
 package org.apache.giraph.io.formats;
 
-import com.google.common.collect.Sets;
-import java.io.IOException;
-import java.util.List;
-import java.util.Random;
-import java.util.Set;
 import org.apache.giraph.bsp.BspInputSplit;
 import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.edge.OutEdges;
@@ -35,6 +30,13 @@ import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.log4j.Logger;
+
+import com.google.common.collect.Sets;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.Random;
+import java.util.Set;
 
 /**
  * This VertexInputFormat is meant for large scale testing.  It allows the user

@@ -232,7 +232,7 @@ public class TestVertexAndEdges {
     vertex.removeEdges(new LongWritable(500));
     assertEquals(999, vertex.getNumEdges());
     for (Edge<LongWritable, DoubleWritable> edge : vertex.getEdges()) {
-      assert(edge.getTargetVertexId().get() != 500);
+      assertTrue(edge.getTargetVertexId().get() != 500);
     }
 
     vertex.setEdgeValue(new LongWritable(10), new DoubleWritable(33.0));

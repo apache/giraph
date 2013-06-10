@@ -45,7 +45,7 @@ public class ConnectedComponentsComputationTestInMemory {
   public static Entry<IntWritable, NullWritable>[] makeEdges(int... args){
     Entry<IntWritable, NullWritable> result[] =
       new Entry[args.length];
-    for (int i=0; i<args.length; i++){
+    for (int i = 0; i < args.length; i++){
       result[i] = new SimpleEntry<IntWritable, NullWritable>(
           new IntWritable(args[i]), NullWritable.get());
     }
@@ -62,7 +62,7 @@ public class ConnectedComponentsComputationTestInMemory {
     conf.setCombinerClass(MinimumIntCombiner.class);
 
     TestGraph<IntWritable, IntWritable, NullWritable> graph =
-      new TestGraph<IntWritable, IntWritable, NullWritable> (conf);
+      new TestGraph<IntWritable, IntWritable, NullWritable>(conf);
     // a small graph with three components
     graph.addVertex(new IntWritable(1), new IntWritable(1), makeEdges(2, 3))
       .addVertex(new IntWritable(2), new IntWritable(2), makeEdges(1, 4, 5))
@@ -84,7 +84,7 @@ public class ConnectedComponentsComputationTestInMemory {
     TestGraph<IntWritable, IntWritable, NullWritable> results =
       InternalVertexRunner.run(conf, graph);
 
-    SetMultimap<Integer,Integer> components = parseResults(results);
+    SetMultimap<Integer, Integer> components = parseResults(results);
 
     Set<Integer> componentIDs = components.keySet();
     assertEquals(3, componentIDs.size());
@@ -115,9 +115,9 @@ public class ConnectedComponentsComputationTestInMemory {
     assertTrue(componentThree.contains(9));
   }
 
-  private SetMultimap<Integer,Integer> parseResults(
+  private SetMultimap<Integer, Integer> parseResults(
     TestGraph<IntWritable, IntWritable, NullWritable> results) {
-    SetMultimap<Integer,Integer> components = HashMultimap.create();
+    SetMultimap<Integer, Integer> components = HashMultimap.create();
     for (Vertex<IntWritable, IntWritable, NullWritable> vertex : results) {
       int component = vertex.getValue().get();
       components.put(component, vertex.getId().get());

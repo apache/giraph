@@ -66,7 +66,7 @@ public class TableEdgeOutputFormat
               byte[] rowBytes = vertex.getId().getBytes();
               Put put = new Put(rowBytes);
               Text value = vertex.getValue();
-              if(value.toString().length() > 0)   {
+              if (value.toString().length() > 0)   {
                  put.add(CF, PARENT, value.getBytes());
                  writer.write(new ImmutableBytesWritable(rowBytes), put);
               }

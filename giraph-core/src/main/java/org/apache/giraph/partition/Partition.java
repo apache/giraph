@@ -22,7 +22,6 @@ import org.apache.giraph.conf.ImmutableClassesGiraphConfigurable;
 import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-
 import org.apache.hadoop.util.Progressable;
 
 /**

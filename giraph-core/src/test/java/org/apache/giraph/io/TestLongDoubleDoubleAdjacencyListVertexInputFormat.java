@@ -86,7 +86,7 @@ public class TestLongDoubleDoubleAdjacencyListVertexInputFormat extends LongDoub
     when(rr.getCurrentValue()).thenReturn(new Text(input));
     TextVertexReader vr = createVertexReader(rr);
 
-    vr.setConf( conf);
+    vr.setConf(conf);
     vr.initialize(null, tac);
 
     try {
@@ -105,7 +105,7 @@ public class TestLongDoubleDoubleAdjacencyListVertexInputFormat extends LongDoub
     when(rr.getCurrentValue()).thenReturn(new Text(input));
     TextVertexReader vr = createVertexReader(rr);
 
-    vr.setConf( conf);
+    vr.setConf(conf);
     vr.initialize(null, tac);
 
     try {
