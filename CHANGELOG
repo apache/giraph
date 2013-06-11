@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-681: Graphviz Output Format (nitay)
+
   GIRAPH-468: Make Vertex an Interface (nitay)
 
   GIRAPH-667: all workers suspended at 'saveVertices' when use 
