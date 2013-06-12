@@ -425,6 +425,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
     id.readFields(in);
     Vertex<I, V, E> v = partition.getVertex(id);
     ((OutEdges<I, E>) v.getEdges()).readFields(in);
+    partition.saveVertex(v);
   }
 
 

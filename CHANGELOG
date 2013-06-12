@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-686: DiskBackedPartitionStore does not saveVertex after edges 
+  are loaded (claudio)
+
   GIRAPH-681: Graphviz Output Format (nitay)
 
   GIRAPH-468: Make Vertex an Interface (nitay)
