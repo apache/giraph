@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-673: Input superstep should support aggregators like any 
+  other superstep (Bingjing via aching)
+
   GIRAPH-686: DiskBackedPartitionStore does not saveVertex after edges 
   are loaded (claudio)
 

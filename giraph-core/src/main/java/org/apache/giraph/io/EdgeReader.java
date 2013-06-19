@@ -21,6 +21,7 @@ package org.apache.giraph.io;
 import java.io.IOException;
 import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
 import org.apache.giraph.edge.Edge;
+import org.apache.giraph.worker.WorkerAggregatorUsage;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -36,7 +37,11 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 @SuppressWarnings("rawtypes")
 public abstract class EdgeReader<I extends WritableComparable,
     E extends Writable> extends DefaultImmutableClassesGiraphConfigurable<
-        I, Writable, E> {
+        I, Writable, E> implements WorkerAggregatorUsage {
+
+  /** Aggregator usage for edge reader */
+  private WorkerAggregatorUsage workerAggregatorUsage;
+
   /**
    * Use the input split and context to setup reading the edges.
    * Guaranteed to be called prior to any other function.
@@ -49,6 +54,21 @@ public abstract class EdgeReader<I extends WritableComparable,
   public abstract void initialize(InputSplit inputSplit,
                                   TaskAttemptContext context)
     throws IOException, InterruptedException;
+
+  /**
+   * Set aggregator usage. It provides the functionality
+   * of aggregation operation in reading an edge.
+   * It is invoked just after initialization.
+   * E.g.,
+   * edgeReader.initialize(inputSplit, context);
+   * edgeReader.setAggregator(aggregatorUsage);
+   * This method is only for use by the infrastructure.
+   *
+   * @param agg aggregator usage for edge reader
+   */
+  public void setWorkerAggregatorUse(WorkerAggregatorUsage agg) {
+    workerAggregatorUsage = agg;
+  }
 
   /**
    * Read the next edge.
@@ -97,4 +117,14 @@ public abstract class EdgeReader<I extends WritableComparable,
    * @throws InterruptedException
    */
   public abstract float getProgress() throws IOException, InterruptedException;
+
+  @Override
+  public <A extends Writable> void aggregate(String name, A value) {
+    workerAggregatorUsage.aggregate(name, value);
+  }
+
+  @Override
+  public <A extends Writable> A getAggregatedValue(String name) {
+    return workerAggregatorUsage.<A>getAggregatedValue(name);
+  }
 }

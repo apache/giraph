@@ -59,6 +59,9 @@ public class EdgeInputSplitsCallable<I extends WritableComparable,
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(
       EdgeInputSplitsCallable.class);
+
+  /** Aggregator handler */
+  private final WorkerThreadAggregatorUsage aggregatorUsage;
   /** Edge input format */
   private final EdgeInputFormat<I, E> edgeInputFormat;
   /** Input split max edges (-1 denotes all) */
@@ -95,6 +98,9 @@ public class EdgeInputSplitsCallable<I extends WritableComparable,
     this.edgeInputFormat = edgeInputFormat;
 
     inputSplitMaxEdges = configuration.getInputSplitMaxEdges();
+    // Initialize aggregator usage.
+    this.aggregatorUsage = bspServiceWorker.getAggregatorHandler()
+      .newThreadAggregatorUsage();
     edgeInputFilter = configuration.getEdgeInputFilter();
 
     // Initialize Metrics
@@ -125,7 +131,10 @@ public class EdgeInputSplitsCallable<I extends WritableComparable,
     edgeReader.setConf(
         (ImmutableClassesGiraphConfiguration<I, Writable, E>)
             configuration);
+
     edgeReader.initialize(inputSplit, context);
+    // Set aggregator usage to edge reader
+    edgeReader.setWorkerAggregatorUse(aggregatorUsage);
 
     long inputSplitEdgesLoaded = 0;
     long inputSplitEdgesFiltered = 0;

@@ -129,7 +129,14 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
     VertexReader<I, V, E> vertexReader =
         vertexInputFormat.createVertexReader(inputSplit, context);
     vertexReader.setConf(configuration);
+
+    WorkerThreadAggregatorUsage aggregatorUsage =
+      this.bspServiceWorker
+        .getAggregatorHandler().newThreadAggregatorUsage();
+
     vertexReader.initialize(inputSplit, context);
+    // Set aggregator usage to vertex reader
+    vertexReader.setWorkerAggregatorUse(aggregatorUsage);
 
     long inputSplitVerticesLoaded = 0;
     long inputSplitVerticesFiltered = 0;

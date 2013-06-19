@@ -1425,6 +1425,58 @@ public class BspServiceMaster<I extends WritableComparable,
     }
   }
 
+  /**
+   * Initialize aggregator at the master side
+   * before vertex/edge loading.
+   * This methods cooperates with other code
+   * to enables aggregation usage at INPUT_SUPERSTEP
+   * Other codes are:
+   *  BSPServiceWorker:
+   *  aggregatorHandler.prepareSuperstep in
+   *  setup
+   *  set aggregator usage in vertexReader and
+   *  edgeReader
+   *
+   * @throws InterruptedException
+   */
+  private void initializeAggregatorInputSuperstep()
+    throws InterruptedException {
+    aggregatorHandler.prepareSuperstep(masterClient);
+    prepareMasterCompute(getSuperstep());
+    try {
+      masterCompute.initialize();
+    } catch (InstantiationException e) {
+      LOG.fatal(
+        "initializeAggregatorInputSuperstep: Failed in instantiation", e);
+      throw new RuntimeException(
+        "initializeAggregatorInputSuperstep: Failed in instantiation", e);
+    } catch (IllegalAccessException e) {
+      LOG.fatal("initializeAggregatorInputSuperstep: Failed in access", e);
+      throw new RuntimeException(
+        "initializeAggregatorInputSuperstep: Failed in access", e);
+    }
+    aggregatorHandler.finishSuperstep(masterClient);
+  }
+
+  /**
+   * This is required before initialization
+   * and run of MasterCompute
+   *
+   * @param superstep superstep for which to run masterCompute
+   * @return Superstep classes set by masterCompute
+   */
+  private SuperstepClasses prepareMasterCompute(long superstep) {
+    GraphState graphState = new GraphState(superstep ,
+        GiraphStats.getInstance().getVertices().getValue(),
+        GiraphStats.getInstance().getEdges().getValue(),
+        getContext());
+    SuperstepClasses superstepClasses =
+      new SuperstepClasses(getConfiguration());
+    masterCompute.setGraphState(graphState);
+    masterCompute.setSuperstepClasses(superstepClasses);
+    return superstepClasses;
+  }
+
   @Override
   public SuperstepState coordinateSuperstep() throws
   KeeperException, InterruptedException {
@@ -1495,6 +1547,9 @@ public class BspServiceMaster<I extends WritableComparable,
     }
 
     if (getSuperstep() == INPUT_SUPERSTEP) {
+      // Initialize aggregators before coordinating
+      // vertex loading and edge loading
+      initializeAggregatorInputSuperstep();
       if (getConfiguration().hasVertexInputFormat()) {
         coordinateInputSplits(vertexInputSplitsPaths, vertexInputSplitsEvents,
             "Vertex");
@@ -1516,7 +1571,9 @@ public class BspServiceMaster<I extends WritableComparable,
     // Collect aggregator values, then run the master.compute() and
     // finally save the aggregator values
     aggregatorHandler.prepareSuperstep(masterClient);
-    SuperstepClasses superstepClasses = runMasterCompute(getSuperstep());
+    SuperstepClasses superstepClasses =
+      prepareMasterCompute(getSuperstep() + 1);
+    doMasterCompute();
 
     // If the master is halted or all the vertices voted to halt and there
     // are no more messages in the system, stop the computation
@@ -1569,39 +1626,13 @@ public class BspServiceMaster<I extends WritableComparable,
   }
 
   /**
-   * Run the master.compute() class
-   *
-   * @param superstep superstep for which to run the master.compute()
-   * @return Superstep classes set by Master compute
+   * This doMasterCompute is only called
+   * after masterCompute is initialized
    */
-  private SuperstepClasses runMasterCompute(long superstep) {
-    // The master.compute() should run logically before the workers, so
-    // increase the superstep counter it uses by one
-    GraphState graphState = new GraphState(superstep + 1,
-        GiraphStats.getInstance().getVertices().getValue(),
-        GiraphStats.getInstance().getEdges().getValue(),
-        getContext());
-    SuperstepClasses superstepClasses =
-        new SuperstepClasses(getConfiguration());
-    masterCompute.setGraphState(graphState);
-    masterCompute.setSuperstepClasses(superstepClasses);
-    if (superstep == INPUT_SUPERSTEP) {
-      try {
-        masterCompute.initialize();
-      } catch (InstantiationException e) {
-        LOG.fatal("runMasterCompute: Failed in instantiation", e);
-        throw new RuntimeException(
-            "runMasterCompute: Failed in instantiation", e);
-      } catch (IllegalAccessException e) {
-        LOG.fatal("runMasterCompute: Failed in access", e);
-        throw new RuntimeException(
-            "runMasterCompute: Failed in access", e);
-      }
-    }
+  private void doMasterCompute() {
     GiraphTimerContext timerContext = masterComputeTimer.time();
     masterCompute.compute();
     timerContext.stop();
-    return superstepClasses;
   }
 
   /**

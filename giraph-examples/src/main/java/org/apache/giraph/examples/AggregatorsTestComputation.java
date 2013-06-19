@@ -19,14 +19,29 @@
 package org.apache.giraph.examples;
 
 import org.apache.giraph.aggregators.LongSumAggregator;
+import org.apache.giraph.bsp.BspInputSplit;
+import org.apache.giraph.edge.Edge;
+import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.graph.BasicComputation;
 import org.apache.giraph.master.DefaultMasterCompute;
 import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.io.EdgeInputFormat;
+import org.apache.giraph.io.EdgeReader;
+import org.apache.giraph.io.VertexReader;
+import org.apache.giraph.io.formats.GeneratedVertexInputFormat;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.log4j.Logger;
+
+import com.google.common.collect.Lists;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 /** Computation which uses aggrergators. To be used for testing. */
 public class AggregatorsTestComputation extends
@@ -37,6 +52,12 @@ public class AggregatorsTestComputation extends
   private static final String REGULAR_AGG = "regular";
   /** Name of persistent aggregator */
   private static final String PERSISTENT_AGG = "persistent";
+  /** Name of input super step persistent aggregator */
+  private static final String INPUT_VERTEX_PERSISTENT_AGG
+    = "input_super_step_vertex_agg";
+  /** Name of input super step persistent aggregator */
+  private static final String INPUT_EDGE_PERSISTENT_AGG
+    = "input_super_step_edge_agg";
   /** Name of master overwriting aggregator */
   private static final String MASTER_WRITE_AGG = "master";
   /** Value which master compute will use */
@@ -92,6 +113,14 @@ public class AggregatorsTestComputation extends
       setAggregatedValue(MASTER_WRITE_AGG, myValue);
 
       long nv = getTotalNumVertices();
+      if (superstep >= 0) {
+        assertEquals(100, ((LongWritable)
+          getAggregatedValue(INPUT_VERTEX_PERSISTENT_AGG)).get());
+      }
+      if (superstep >= 0) {
+        assertEquals(4500, ((LongWritable)
+          getAggregatedValue(INPUT_EDGE_PERSISTENT_AGG)).get());
+      }
       if (superstep > 0) {
         assertEquals(nv * (1L << (superstep - 1)),
             ((LongWritable) getAggregatedValue(REGULAR_AGG)).get());
@@ -111,6 +140,10 @@ public class AggregatorsTestComputation extends
     @Override
     public void initialize() throws InstantiationException,
         IllegalAccessException {
+      registerPersistentAggregator(
+          INPUT_VERTEX_PERSISTENT_AGG, LongSumAggregator.class);
+      registerPersistentAggregator(
+          INPUT_EDGE_PERSISTENT_AGG, LongSumAggregator.class);
       registerAggregator(REGULAR_AGG, LongSumAggregator.class);
       registerPersistentAggregator(PERSISTENT_AGG,
           LongSumAggregator.class);
@@ -132,6 +165,127 @@ public class AggregatorsTestComputation extends
     if (expected != actual) {
       throw new RuntimeException("expected: " + expected +
           ", actual: " + actual);
+    }
+  }
+
+  /**
+   * Simple VertexReader
+   */
+  public static class SimpleVertexReader extends
+      GeneratedVertexReader<LongWritable, DoubleWritable, FloatWritable> {
+    /** Class logger */
+    private static final Logger LOG =
+        Logger.getLogger(SimpleVertexReader.class);
+
+    @Override
+    public boolean nextVertex() {
+      return totalRecords > recordsRead;
+    }
+
+    @Override
+    public Vertex<LongWritable, DoubleWritable,
+        FloatWritable> getCurrentVertex() throws IOException {
+      Vertex<LongWritable, DoubleWritable, FloatWritable> vertex =
+          getConf().createVertex();
+      LongWritable vertexId = new LongWritable(
+          (inputSplit.getSplitIndex() * totalRecords) + recordsRead);
+      DoubleWritable vertexValue = new DoubleWritable(vertexId.get() * 10d);
+      long targetVertexId =
+          (vertexId.get() + 1) %
+          (inputSplit.getNumSplits() * totalRecords);
+      float edgeValue = vertexId.get() * 100f;
+      List<Edge<LongWritable, FloatWritable>> edges = Lists.newLinkedList();
+      edges.add(EdgeFactory.create(new LongWritable(targetVertexId),
+          new FloatWritable(edgeValue)));
+      vertex.initialize(vertexId, vertexValue, edges);
+      ++recordsRead;
+      if (LOG.isInfoEnabled()) {
+        LOG.info("next vertex: Return vertexId=" + vertex.getId().get() +
+            ", vertexValue=" + vertex.getValue() +
+            ", targetVertexId=" + targetVertexId + ", edgeValue=" + edgeValue);
+      }
+      aggregate(INPUT_VERTEX_PERSISTENT_AGG,
+        new LongWritable((long) vertex.getValue().get()));
+      return vertex;
+    }
+  }
+
+  /**
+   * Simple VertexInputFormat
+   */
+  public static class SimpleVertexInputFormat extends
+    GeneratedVertexInputFormat<LongWritable, DoubleWritable, FloatWritable> {
+    @Override
+    public VertexReader<LongWritable, DoubleWritable,
+    FloatWritable> createVertexReader(InputSplit split,
+      TaskAttemptContext context)
+      throws IOException {
+      return new SimpleVertexReader();
+    }
+  }
+
+  /**
+   * Simple Edge Reader
+   */
+  public static class SimpleEdgeReader extends
+    GeneratedEdgeReader<LongWritable, FloatWritable> {
+    /** Class logger */
+    private static final Logger LOG = Logger.getLogger(SimpleEdgeReader.class);
+
+    @Override
+    public boolean nextEdge() {
+      return totalRecords > recordsRead;
+    }
+
+    @Override
+    public Edge<LongWritable, FloatWritable> getCurrentEdge()
+      throws IOException {
+      LongWritable vertexId = new LongWritable(
+        (inputSplit.getSplitIndex() * totalRecords) + recordsRead);
+      long targetVertexId = (vertexId.get() + 1) %
+        (inputSplit.getNumSplits() * totalRecords);
+      float edgeValue = vertexId.get() * 100f;
+      Edge<LongWritable, FloatWritable> edge = EdgeFactory.create(
+        new LongWritable(targetVertexId), new FloatWritable(edgeValue));
+      ++recordsRead;
+      if (LOG.isInfoEnabled()) {
+        LOG.info("next edge: Return targetVertexId=" + targetVertexId +
+          ", edgeValue=" + edgeValue);
+      }
+      aggregate(INPUT_EDGE_PERSISTENT_AGG, new LongWritable((long) edge
+        .getValue().get()));
+      return edge;
+    }
+
+    @Override
+    public LongWritable getCurrentSourceId() throws IOException,
+      InterruptedException {
+      LongWritable vertexId = new LongWritable(
+        (inputSplit.getSplitIndex() * totalRecords) + recordsRead);
+      return vertexId;
+    }
+  }
+
+  /**
+   * Simple VertexInputFormat
+   */
+  public static class SimpleEdgeInputFormat extends
+    EdgeInputFormat<LongWritable, FloatWritable> {
+
+    @Override
+    public EdgeReader<LongWritable, FloatWritable> createEdgeReader(
+      InputSplit split, TaskAttemptContext context) throws IOException {
+      return new SimpleEdgeReader();
+    }
+
+    @Override
+    public List<InputSplit> getSplits(JobContext context, int minSplitCountHint)
+      throws IOException, InterruptedException {
+      List<InputSplit> inputSplitList = new ArrayList<InputSplit>();
+      for (int i = 0; i < minSplitCountHint; ++i) {
+        inputSplitList.add(new BspInputSplit(i, minSplitCountHint));
+      }
+      return inputSplitList;
     }
   }
 }

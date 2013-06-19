@@ -25,7 +25,6 @@ import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.examples.AggregatorsTestComputation;
 import org.apache.giraph.examples.SimpleCheckpoint;
-import org.apache.giraph.examples.SimplePageRankComputation;
 import org.apache.giraph.job.GiraphJob;
 import org.apache.giraph.master.MasterAggregatorHandler;
 import org.apache.hadoop.fs.Path;
@@ -77,7 +76,9 @@ public class TestAggregatorsHandling extends BspCase {
     GiraphConfiguration conf = new GiraphConfiguration();
     conf.setComputationClass(AggregatorsTestComputation.class);
     conf.setVertexInputFormatClass(
-        SimplePageRankComputation.SimplePageRankVertexInputFormat.class);
+        AggregatorsTestComputation.SimpleVertexInputFormat.class);
+    conf.setEdgeInputFormatClass(
+        AggregatorsTestComputation.SimpleEdgeInputFormat.class);
     GiraphJob job = prepareJob(getCallingMethodName(), conf);
     job.getConfiguration().setMasterComputeClass(
         AggregatorsTestComputation.AggregatorsTestMasterCompute.class);
@@ -159,7 +160,9 @@ public class TestAggregatorsHandling extends BspCase {
     conf.setMasterComputeClass(
         AggregatorsTestComputation.AggregatorsTestMasterCompute.class);
     conf.setVertexInputFormatClass(
-        SimplePageRankComputation.SimplePageRankVertexInputFormat.class);
+        AggregatorsTestComputation.SimpleVertexInputFormat.class);
+    conf.setEdgeInputFormatClass(
+        AggregatorsTestComputation.SimpleEdgeInputFormat.class);
     GiraphJob job = prepareJob(getCallingMethodName(), conf, outputPath);
 
     GiraphConfiguration configuration = job.getConfiguration();
@@ -178,7 +181,9 @@ public class TestAggregatorsHandling extends BspCase {
     conf.setMasterComputeClass(
         AggregatorsTestComputation.AggregatorsTestMasterCompute.class);
     conf.setVertexInputFormatClass(
-        SimplePageRankComputation.SimplePageRankVertexInputFormat.class);
+        AggregatorsTestComputation.SimpleVertexInputFormat.class);
+    conf.setEdgeInputFormatClass(
+        AggregatorsTestComputation.SimpleEdgeInputFormat.class);
     GiraphJob restartedJob = prepareJob(getCallingMethodName() + "Restarted",
         conf, outputPath);
     job.getConfiguration().setMasterComputeClass(
