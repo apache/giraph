@@ -24,7 +24,6 @@ import org.apache.commons.cli.GnuParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
-import org.apache.giraph.conf.GiraphClasses;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.graph.Computation;
@@ -635,8 +634,6 @@ public class HiveGiraphRunner implements Tool {
    * @param giraphConf GiraphConfiguration
    */
   private void logOptions(GiraphConfiguration giraphConf) {
-    GiraphClasses<?, ?, ?> classes = new GiraphClasses(giraphConf);
-
     LOG.info(getClass().getSimpleName() + " with");
 
     LOG.info(LOG_PREFIX + "-computationClass=" +
@@ -650,7 +647,7 @@ public class HiveGiraphRunner implements Tool {
       LOG.info(LOG_PREFIX + "Edge input: " + description);
     }
 
-    if (classes.getVertexOutputFormatClass() != null) {
+    if (GiraphConstants.VERTEX_OUTPUT_FORMAT_CLASS.contains(giraphConf)) {
       LOG.info(LOG_PREFIX + "Output: VertexToHive=" +
           vertexToHiveClass.getCanonicalName() + ", table=" +
           HIVE_VERTEX_OUTPUT_TABLE.get(conf) + ", partition=\"" +

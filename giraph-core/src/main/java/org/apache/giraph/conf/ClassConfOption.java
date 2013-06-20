@@ -20,8 +20,11 @@ package org.apache.giraph.conf;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.log4j.Logger;
 
+import com.google.common.base.Objects;
+
 /**
  * Class configuration option
+ *
  * @param <C> interface of class
  */
 public class ClassConfOption<C> extends AbstractConfOption {
@@ -35,6 +38,7 @@ public class ClassConfOption<C> extends AbstractConfOption {
 
   /**
    * Private constructor
+   *
    * @param key Key
    * @param defaultClass default class
    * @param interfaceClass interface class
@@ -49,6 +53,7 @@ public class ClassConfOption<C> extends AbstractConfOption {
 
   /**
    * Static create method
+   *
    * @param key key
    * @param defaultClass default class
    * @param interfaceClass interface class
@@ -66,6 +71,10 @@ public class ClassConfOption<C> extends AbstractConfOption {
 
   public Class<C> getInterfaceClass() {
     return interfaceClass;
+  }
+
+  @Override public boolean isDefaultValue(Configuration conf) {
+    return Objects.equal(get(conf), defaultClass);
   }
 
   @Override public String getDefaultValueStr() {
@@ -87,6 +96,7 @@ public class ClassConfOption<C> extends AbstractConfOption {
 
   /**
    * Lookup value
+   *
    * @param conf Configuration
    * @return Class set for key, or defaultClass
    */
@@ -96,6 +106,7 @@ public class ClassConfOption<C> extends AbstractConfOption {
 
   /**
    * Lookup array of classes for key
+   *
    * @param conf Configuration
    * @return array of classes
    */
@@ -127,6 +138,7 @@ public class ClassConfOption<C> extends AbstractConfOption {
 
   /**
    * Lookup with user specified default value
+   *
    * @param conf Configuration
    * @param defaultValue default value
    * @return Class
@@ -138,6 +150,7 @@ public class ClassConfOption<C> extends AbstractConfOption {
 
   /**
    * Set value for key
+   *
    * @param conf Configuration
    * @param klass Class to set
    */
@@ -146,7 +159,20 @@ public class ClassConfOption<C> extends AbstractConfOption {
   }
 
   /**
+   * Set value for key if it is not already set
+   *
+   * @param conf Configuration
+   * @param klass Class to set
+   */
+  public void setIfUnset(Configuration conf, Class<? extends C> klass) {
+    if (!contains(conf)) {
+      set(conf, klass);
+    }
+  }
+
+  /**
    * Set classes for this key
+   *
    * @param conf Configuration
    * @param klasses Classes to set
    */
@@ -165,6 +191,7 @@ public class ClassConfOption<C> extends AbstractConfOption {
 
   /**
    * Add class to list for key
+   *
    * @param conf Configuration
    * @param klass Class to add
    */

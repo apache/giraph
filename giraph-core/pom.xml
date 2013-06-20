@@ -457,8 +457,16 @@ under the License.
       <artifactId>jackson-mapper-asl</artifactId>
     </dependency>
     <dependency>
+      <groupId>org.jodah</groupId>
+      <artifactId>typetools</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.json</groupId>
       <artifactId>json</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.python</groupId>
+      <artifactId>jython</artifactId>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>

@@ -243,7 +243,7 @@ public class
     GiraphJob job = prepareJob(callingMethod, conf, outputPath);
     Configuration configuration = job.getConfiguration();
     // GeneratedInputSplit will generate 10 vertices
-    configuration.setLong(GeneratedVertexReader.READER_VERTICES, 10);
+    GeneratedVertexReader.READER_VERTICES.set(configuration, 10);
     assertTrue(job.run(true));
     if (!runningInDistributedMode()) {
       FileStatus fileStatus = getSinglePartFileStatus(configuration, outputPath);
@@ -284,7 +284,7 @@ public class
     conf.setComputationClass(SimpleMsgComputation.class);
     conf.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
     GiraphJob job = prepareJob(getCallingMethodName(), conf);
-    job.getConfiguration().setLong(GeneratedVertexReader.READER_VERTICES, 0);
+    GeneratedVertexReader.READER_VERTICES.set(job.getConfiguration(), 0);
     assertTrue(job.run(true));
   }
 

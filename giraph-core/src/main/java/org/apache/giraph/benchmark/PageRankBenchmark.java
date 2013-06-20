@@ -21,14 +21,23 @@ package org.apache.giraph.benchmark;
 import org.apache.commons.cli.CommandLine;
 import org.apache.giraph.combiner.FloatSumCombiner;
 import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.conf.GiraphTypes;
 import org.apache.giraph.edge.IntNullArrayEdges;
 import org.apache.giraph.io.formats.PseudoRandomInputFormatConstants;
 import org.apache.giraph.io.formats.PseudoRandomIntNullVertexInputFormat;
+import org.apache.giraph.jython.DeployType;
+import org.apache.giraph.jython.JythonUtils;
+import org.apache.giraph.utils.DistributedCacheUtils;
+import org.apache.giraph.utils.ReflectionUtils;
+import org.apache.hadoop.filecache.DistributedCache;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.ToolRunner;
 
 import com.google.common.collect.Sets;
 
 import java.util.Set;
+
+import static org.apache.giraph.jython.JythonComputationFactory.JYTHON_DEPLOY_TYPE;
 
 /**
  * Benchmark for {@link PageRankComputation}
@@ -38,13 +47,32 @@ public class PageRankBenchmark extends GiraphBenchmark {
   public Set<BenchmarkOption> getBenchmarkOptions() {
     return Sets.newHashSet(BenchmarkOption.VERTICES,
         BenchmarkOption.EDGES_PER_VERTEX, BenchmarkOption.SUPERSTEPS,
-        BenchmarkOption.LOCAL_EDGES_MIN_RATIO);
+        BenchmarkOption.LOCAL_EDGES_MIN_RATIO, BenchmarkOption.JYTHON,
+        BenchmarkOption.SCRIPT_PATH);
   }
 
   @Override
   protected void prepareConfiguration(GiraphConfiguration conf,
       CommandLine cmd) {
-    conf.setComputationClass(PageRankComputation.class);
+    if (BenchmarkOption.JYTHON.optionTurnedOn(cmd)) {
+      GiraphTypes types = new GiraphTypes();
+      types.inferFrom(PageRankComputation.class);
+      String script;
+      if (BenchmarkOption.SCRIPT_PATH.optionTurnedOn(cmd)) {
+        JYTHON_DEPLOY_TYPE.set(conf, DeployType.DISTRIBUTED_CACHE);
+        String path = BenchmarkOption.SCRIPT_PATH.getOptionValue(cmd);
+        Path hadoopPath = new Path(path);
+        Path remotePath = DistributedCacheUtils.copyToHdfs(hadoopPath, conf);
+        DistributedCache.addCacheFile(remotePath.toUri(), conf);
+        script = remotePath.toString();
+      } else {
+        JYTHON_DEPLOY_TYPE.set(conf, DeployType.RESOURCE);
+        script = ReflectionUtils.getPackagePath(this) + "/page-rank.py";
+      }
+      JythonUtils.init(conf, script, "PageRank", types);
+    } else {
+      conf.setComputationClass(PageRankComputation.class);
+    }
     conf.setOutEdgesClass(IntNullArrayEdges.class);
     conf.setCombinerClass(FloatSumCombiner.class);
     conf.setVertexInputFormatClass(

@@ -19,61 +19,68 @@ package org.apache.giraph.conf;
 
 import org.apache.hadoop.conf.Configuration;
 
+import com.google.common.base.Objects;
+
 /**
- * Integer configuration option
+ * Enum Configuration option
+ *
+ * @param <T> Enum class
  */
-public class IntConfOption extends AbstractConfOption {
+public class EnumConfOption<T extends Enum<T>> extends AbstractConfOption {
+  /** Enum class */
+  private final Class<T> klass;
   /** Default value */
-  private final int defaultValue;
+  private final T defaultValue;
 
   /**
    * Constructor
    *
-   * @param key key
+   * @param key Configuration key
+   * @param klass Enum class
    * @param defaultValue default value
    */
-  public IntConfOption(String key, int defaultValue) {
+  public EnumConfOption(String key, Class<T> klass, T defaultValue) {
     super(key);
+    this.klass = klass;
     this.defaultValue = defaultValue;
     AllOptions.add(this);
   }
 
   /**
-   * Constructor
+   * Create new EnumConfOption
    *
-   * @param key key
-   * @param defaultValue default value
+   * @param key String configuration key
+   * @param klass enum class
+   * @param defaultValue default enum value
+   * @param <X> enum type
+   * @return EnumConfOption
    */
-  public IntConfOption(String key, long defaultValue) {
-    super(key);
-    this.defaultValue = (int) defaultValue;
-    AllOptions.add(this);
-  }
-
-  public int getDefaultValue() {
-    return defaultValue;
+  public static <X extends Enum<X>> EnumConfOption<X>
+  create(String key, Class<X> klass, X defaultValue) {
+    return new EnumConfOption<X>(key, klass, defaultValue);
   }
 
   @Override public boolean isDefaultValue(Configuration conf) {
-    return get(conf) == defaultValue;
+    return Objects.equal(get(conf), defaultValue);
   }
 
   @Override public String getDefaultValueStr() {
-    return Integer.toString(defaultValue);
+    return defaultValue.name();
   }
 
   @Override public ConfOptionType getType() {
-    return ConfOptionType.INTEGER;
+    return ConfOptionType.ENUM;
   }
 
   /**
    * Lookup value
    *
    * @param conf Configuration
-   * @return value for key, or default value if not set
+   * @return enum value
    */
-  public int get(Configuration conf) {
-    return conf.getInt(getKey(), defaultValue);
+  public T get(Configuration conf) {
+    String valueStr = conf.get(getKey(), getDefaultValueStr());
+    return T.valueOf(klass, valueStr);
   }
 
   /**
@@ -82,19 +89,7 @@ public class IntConfOption extends AbstractConfOption {
    * @param conf Configuration
    * @param value to set
    */
-  public void set(Configuration conf, int value) {
-    conf.setInt(getKey(), value);
-  }
-
-  /**
-   * Set value if it's not already present
-   *
-   * @param conf Configuration
-   * @param value to set
-   */
-  public void setIfUnset(Configuration conf, int value) {
-    if (!contains(conf)) {
-      conf.setInt(getKey(), value);
-    }
+  public void set(Configuration conf, Enum<T> value) {
+    conf.set(getKey(), value.name());
   }
 }

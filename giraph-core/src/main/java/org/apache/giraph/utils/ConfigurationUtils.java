@@ -17,8 +17,6 @@
  */
 package org.apache.giraph.utils;
 
-import com.google.common.base.Splitter;
-import com.google.common.collect.Iterables;
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -28,29 +26,38 @@ import org.apache.commons.cli.ParseException;
 import org.apache.giraph.Algorithm;
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.combiner.Combiner;
-import org.apache.giraph.graph.Computation;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
+import org.apache.giraph.conf.GiraphTypes;
+import org.apache.giraph.conf.TypesHolder;
 import org.apache.giraph.edge.OutEdges;
+import org.apache.giraph.graph.Computation;
 import org.apache.giraph.graph.VertexValueFactory;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.giraph.io.formats.GiraphFileInputFormat;
 import org.apache.giraph.job.GiraphConfigurationValidator;
+import org.apache.giraph.jython.JythonUtils;
 import org.apache.giraph.master.MasterCompute;
 import org.apache.giraph.partition.Partition;
-import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.ZooKeeper;
 
+import com.google.common.base.Splitter;
+import com.google.common.collect.Iterables;
+
 import java.io.IOException;
 import java.util.List;
+
+import static org.apache.giraph.conf.GiraphConstants.COMPUTATION_CLASS;
+import static org.apache.giraph.conf.GiraphConstants.TYPES_HOLDER_CLASS;
 
 /**
  * Translate command line args into Configuration Key-Value pairs.
@@ -100,6 +107,10 @@ public final class ConfigurationUtils {
     OPTIONS.addOption("pc", "partitionClass", true, "Partition class");
     OPTIONS.addOption("vvf", "vertexValueFactoryClass", true,
         "Vertex value factory class");
+    OPTIONS.addOption("th", "typesHolder", true,
+        "Class that holds types. Needed only if Computation is not set");
+    OPTIONS.addOption("jyc", "jythonClass", true,
+        "Jython class name, used if computation passed in is a python script");
     OPTIONS.addOption("ca", "customArguments", true, "provide custom" +
         " arguments for the job configuration in the form:" +
         " -ca <param1>=<value1>,<param2>=<value2> -ca <param3>=<value3> etc." +
@@ -111,6 +122,29 @@ public final class ConfigurationUtils {
    * No constructing this utility class
    */
   private ConfigurationUtils() { }
+
+  /**
+   * Get a class which is parameterized by the graph types defined by user.
+   * The types holder is actually an interface that any class which holds all of
+   * Giraph types can implement. It is used with reflection to infer the Giraph
+   * types.
+   *
+   * The current order of type holders we try are:
+   * 1) The {@link TypesHolder} class directly.
+   * 2) The {@link Computation} class, as that holds all the types.
+   *
+   * @param conf Configuration
+   * @return {@link TypesHolder} or null if could not find one.
+   */
+  public static Class<? extends TypesHolder> getTypesHolderClass(
+      Configuration conf) {
+    Class<? extends TypesHolder> klass = TYPES_HOLDER_CLASS.get(conf);
+    if (klass != null) {
+      return klass;
+    }
+    klass = COMPUTATION_CLASS.get(conf);
+    return klass;
+  }
 
   /**
    * Translate CLI arguments to GiraphRunner or 'bin/hadoop jar' into
@@ -199,52 +233,55 @@ public final class ConfigurationUtils {
    * Populate GiraphConfiguration for this job with all cmd line args found.
    * Any global configuration data that Giraph on any platform might need
    * should be captured here.
-   * @param giraphConfiguration config for this job run
-   * @param cmd parsed command line options to store in giraphConfiguration
+   *
+   * @param conf config for this job run
+   * @param cmd parsed command line options to store in conf
    * @param computationClassName the computation class (application) to run in
    *                             this job.
    * @param workers the number of worker tasks for this job run.
    */
   private static void populateGiraphConfiguration(final GiraphConfiguration
-    giraphConfiguration, final CommandLine cmd,
-      final String computationClassName,
-    final int workers) throws ClassNotFoundException, IOException {
-    giraphConfiguration.setWorkerConfiguration(workers, workers, 100.0f);
-    giraphConfiguration.setComputationClass(
-        (Class<? extends Computation>) Class.forName(computationClassName));
+    conf, final CommandLine cmd,
+    final String computationClassName, final int workers)
+    throws ClassNotFoundException, IOException {
+    conf.setWorkerConfiguration(workers, workers, 100.0f);
+    if (cmd.hasOption("typesHolder")) {
+      Class<? extends TypesHolder> typesHolderClass =
+          (Class<? extends TypesHolder>)
+              Class.forName(cmd.getOptionValue("typesHolder"));
+      TYPES_HOLDER_CLASS.set(conf, typesHolderClass);
+    }
     if (cmd.hasOption("c")) {
-      giraphConfiguration.setCombinerClass(
+      conf.setCombinerClass(
           (Class<? extends Combiner>) Class.forName(cmd.getOptionValue("c")));
     }
     if (cmd.hasOption("ve")) {
-      giraphConfiguration.setOutEdgesClass(
-          (Class<? extends OutEdges>)
-              Class.forName(cmd.getOptionValue("ve")));
+      conf.setOutEdgesClass(
+          (Class<? extends OutEdges>) Class.forName(cmd.getOptionValue("ve")));
     }
     if (cmd.hasOption("ive")) {
-      giraphConfiguration.setInputOutEdgesClass(
-          (Class<? extends OutEdges>)
-              Class.forName(cmd.getOptionValue("ive")));
+      conf.setInputOutEdgesClass(
+          (Class<? extends OutEdges>) Class.forName(cmd.getOptionValue("ive")));
     }
     if (cmd.hasOption("wc")) {
-      giraphConfiguration.setWorkerContextClass(
-          (Class<? extends WorkerContext>)
-              Class.forName(cmd.getOptionValue("wc")));
+      conf.setWorkerContextClass(
+          (Class<? extends WorkerContext>) Class
+              .forName(cmd.getOptionValue("wc")));
     }
     if (cmd.hasOption("mc")) {
-      giraphConfiguration.setMasterComputeClass(
-          (Class<? extends MasterCompute>)
-              Class.forName(cmd.getOptionValue("mc")));
+      conf.setMasterComputeClass(
+          (Class<? extends MasterCompute>) Class
+              .forName(cmd.getOptionValue("mc")));
     }
     if (cmd.hasOption("aw")) {
-      giraphConfiguration.setAggregatorWriterClass(
-          (Class<? extends AggregatorWriter>)
-              Class.forName(cmd.getOptionValue("aw")));
+      conf.setAggregatorWriterClass(
+          (Class<? extends AggregatorWriter>) Class
+              .forName(cmd.getOptionValue("aw")));
     }
     if (cmd.hasOption("vif")) {
-      giraphConfiguration.setVertexInputFormatClass(
-          (Class<? extends VertexInputFormat>)
-              Class.forName(cmd.getOptionValue("vif")));
+      conf.setVertexInputFormatClass(
+          (Class<? extends VertexInputFormat>) Class
+              .forName(cmd.getOptionValue("vif")));
     } else {
       if (LOG.isInfoEnabled()) {
         LOG.info("No vertex input format specified. Ensure your " +
@@ -252,9 +289,9 @@ public final class ConfigurationUtils {
       }
     }
     if (cmd.hasOption("eif")) {
-      giraphConfiguration.setEdgeInputFormatClass(
-          (Class<? extends EdgeInputFormat>)
-              Class.forName(cmd.getOptionValue("eif")));
+      conf.setEdgeInputFormatClass(
+          (Class<? extends EdgeInputFormat>) Class
+              .forName(cmd.getOptionValue("eif")));
     } else {
       if (LOG.isInfoEnabled()) {
         LOG.info("No edge input format specified. Ensure your " +
@@ -262,9 +299,9 @@ public final class ConfigurationUtils {
       }
     }
     if (cmd.hasOption("of")) {
-      giraphConfiguration.setVertexOutputFormatClass(
-          (Class<? extends VertexOutputFormat>)
-              Class.forName(cmd.getOptionValue("of")));
+      conf.setVertexOutputFormatClass(
+          (Class<? extends VertexOutputFormat>) Class
+              .forName(cmd.getOptionValue("of")));
     } else {
       if (LOG.isInfoEnabled()) {
         LOG.info("No output format specified. Ensure your OutputFormat " +
@@ -272,14 +309,13 @@ public final class ConfigurationUtils {
       }
     }
     if (cmd.hasOption("pc")) {
-      giraphConfiguration.setPartitionClass(
-          (Class<? extends Partition>)
-              Class.forName(cmd.getOptionValue("pc")));
+      conf.setPartitionClass(
+          (Class<? extends Partition>) Class.forName(cmd.getOptionValue("pc")));
     }
     if (cmd.hasOption("vvf")) {
-      giraphConfiguration.setVertexValueFactoryClass(
-          (Class<? extends VertexValueFactory>)
-              Class.forName(cmd.getOptionValue("vvf")));
+      conf.setVertexValueFactoryClass(
+          (Class<? extends VertexValueFactory>) Class
+              .forName(cmd.getOptionValue("vvf")));
     }
     if (cmd.hasOption("ca")) {
       for (String caOptionValue : cmd.getOptionValues("ca")) {
@@ -295,14 +331,14 @@ public final class ConfigurationUtils {
             LOG.info("Setting custom argument [" + parts[0] + "] to [" +
                 parts[1] + "] in GiraphConfiguration");
           }
-          giraphConfiguration.set(parts[0], parts[1]);
+          conf.set(parts[0], parts[1]);
         }
       }
     }
     // Now, we parse options that are specific to Hadoop MR Job
     if (cmd.hasOption("vif")) {
       if (cmd.hasOption("vip")) {
-        GiraphFileInputFormat.addVertexInputPath(giraphConfiguration,
+        GiraphFileInputFormat.addVertexInputPath(conf,
           new Path(cmd.getOptionValue("vip")));
       } else {
         if (LOG.isInfoEnabled()) {
@@ -313,7 +349,7 @@ public final class ConfigurationUtils {
     }
     if (cmd.hasOption("eif")) {
       if (cmd.hasOption("eip")) {
-        GiraphFileInputFormat.addEdgeInputPath(giraphConfiguration,
+        GiraphFileInputFormat.addEdgeInputPath(conf,
           new Path(cmd.getOptionValue("eip")));
       } else {
         if (LOG.isInfoEnabled()) {
@@ -324,11 +360,11 @@ public final class ConfigurationUtils {
     }
     // YARN-ONLY OPTIONS
     if (cmd.hasOption("yj")) {
-      giraphConfiguration.setYarnLibJars(cmd.getOptionValue("yj"));
+      conf.setYarnLibJars(cmd.getOptionValue("yj"));
     }
     if (cmd.hasOption("yh")) {
-      giraphConfiguration.setYarnTaskHeapMb(
-        Integer.parseInt(cmd.getOptionValue("yh")));
+      conf.setYarnTaskHeapMb(
+          Integer.parseInt(cmd.getOptionValue("yh")));
     }
     /*if[PURE_YARN]
     if (cmd.hasOption("of")) {
@@ -337,8 +373,8 @@ public final class ConfigurationUtils {
         Path outputDir =
             new Path(BASE_OUTPUT_PATH, cmd.getOptionValue("op"));
         outputDir =
-          outputDir.getFileSystem(giraphConfiguration).makeQualified(outputDir);
-        giraphConfiguration.set(
+          outputDir.getFileSystem(conf).makeQualified(outputDir);
+        conf.set(
             org.apache.hadoop.mapreduce.lib.output.FileOutputFormat.OUTDIR,
             outputDir.toString());
 
@@ -351,6 +387,57 @@ public final class ConfigurationUtils {
     }
     end[PURE_YARN]*/
     // END YARN-ONLY OPTIONS
+    handleComputationClass(conf, cmd, computationClassName);
+  }
+
+  /**
+   * Helper to deal with computation class.
+   *
+   * @param conf Configuration
+   * @param cmd CommandLine
+   * @param computationClassName Name of computation
+   * @throws ClassNotFoundException error finding class
+   */
+  private static void handleComputationClass(GiraphConfiguration conf,
+    CommandLine cmd, String computationClassName)
+    throws ClassNotFoundException {
+    if (computationClassName.endsWith("py")) {
+      handleJythonComputation(conf, cmd, computationClassName);
+    } else {
+      conf.setComputationClass(
+          (Class<? extends Computation>) Class.forName(computationClassName));
+    }
+  }
+
+  /**
+   * Helper to handle Computations implemented in Python.
+   *
+   * @param conf Configuration
+   * @param cmd CommandLine
+   * @param scriptPath Path to python script
+   */
+  private static void handleJythonComputation(GiraphConfiguration conf,
+    CommandLine cmd, String scriptPath) {
+    String jythonClass = cmd.getOptionValue("jythonClass");
+    if (jythonClass == null) {
+      throw new IllegalArgumentException(
+          "handleJythonComputation: Need to set Jython Computation class " +
+          "name with --jythonClass");
+    }
+    String typesHolderClass = cmd.getOptionValue("typesHolder");
+    if (typesHolderClass == null) {
+      throw new IllegalArgumentException(
+          "handleJythonComputation: Need to set TypesHolder class name " +
+          "with --typesHolder");
+    }
+
+    Path path = new Path(scriptPath);
+    Path remotePath = DistributedCacheUtils.copyToHdfs(path, conf);
+
+    DistributedCache.addCacheFile(remotePath.toUri(), conf);
+
+    GiraphTypes types = GiraphTypes.readFrom(conf);
+    JythonUtils.init(conf, scriptPath, jythonClass, types);
   }
 
   /**
@@ -372,7 +459,7 @@ public final class ConfigurationUtils {
       Algorithm.class, "org.apache.giraph");
     System.out.print("  Supported algorithms:\n");
     for (Class<?> clazz : classes) {
-      if (Vertex.class.isAssignableFrom(clazz)) {
+      if (Computation.class.isAssignableFrom(clazz)) {
         Algorithm algorithm = clazz.getAnnotation(Algorithm.class);
         StringBuilder sb = new StringBuilder();
         sb.append(algorithm.name()).append(" - ").append(clazz.getName())

@@ -20,11 +20,14 @@ package org.apache.giraph.conf;
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.aggregators.TextAggregatorWriter;
 import org.apache.giraph.combiner.Combiner;
-import org.apache.giraph.graph.Computation;
 import org.apache.giraph.edge.ByteArrayEdges;
 import org.apache.giraph.edge.OutEdges;
+import org.apache.giraph.graph.Computation;
+import org.apache.giraph.graph.ComputationFactory;
+import org.apache.giraph.graph.DefaultComputationFactory;
 import org.apache.giraph.graph.DefaultVertexResolver;
 import org.apache.giraph.graph.DefaultVertexValueFactory;
+import org.apache.giraph.graph.Language;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.graph.VertexValueFactory;
 import org.apache.giraph.io.EdgeInputFormat;
@@ -64,6 +67,14 @@ public interface GiraphConstants {
   ClassConfOption<Computation> COMPUTATION_CLASS =
       ClassConfOption.create("giraph.computationClass", null,
           Computation.class);
+  /** Computation factory class - optional */
+  ClassConfOption<ComputationFactory> COMPUTATION_FACTORY_CLASS =
+      ClassConfOption.create("giraph.computation.factory.class",
+          DefaultComputationFactory.class, ComputationFactory.class);
+  /** TypesHolder, used if Computation not set - optional */
+  ClassConfOption<TypesHolder> TYPES_HOLDER_CLASS =
+      ClassConfOption.create("giraph.typesHolder", null,
+          TypesHolder.class);
   /** Vertex value factory class - optional */
   ClassConfOption<VertexValueFactory> VERTEX_VALUE_FACTORY_CLASS =
       ClassConfOption.create("giraph.vertexValueFactoryClass",
@@ -96,6 +107,11 @@ public interface GiraphConstants {
   ClassConfOption<VertexResolver> VERTEX_RESOLVER_CLASS =
       ClassConfOption.create("giraph.vertexResolverClass",
           DefaultVertexResolver.class, VertexResolver.class);
+
+  /** Which language computation is implemented in */
+  EnumConfOption<Language> COMPUTATION_LANGUAGE =
+      EnumConfOption.create("giraph.computation.language",
+          Language.class, Language.JAVA);
 
   /**
    * Option of whether to create vertexes that were not existent before but
@@ -142,7 +158,7 @@ public interface GiraphConstants {
    * application, saveVertex will be called right after each vertex.compute()
    * is called.
    * NOTE: This feature doesn't work well with checkpointing - if you restart
-   * from a checkpoint you won't have any ouptut from previous supresteps.
+   * from a checkpoint you won't have any output from previous supersteps.
    */
   BooleanConfOption DO_OUTPUT_DURING_COMPUTATION =
       new BooleanConfOption("giraph.doOutputDuringComputation", false);

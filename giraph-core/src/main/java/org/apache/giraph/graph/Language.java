@@ -15,24 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.conf;
+package org.apache.giraph.graph;
 
 /**
- * Type of value for a Configuration option
+ * Programming language that something is implemented in
  */
-public enum ConfOptionType {
-  /** boolean */
-  BOOLEAN,
-  /** class */
-  CLASS,
-  /** enum */
-  ENUM,
-  /** integer */
-  INTEGER,
-  /** float */
-  FLOAT,
-  /** long */
-  LONG,
-  /** string */
-  STRING
+public enum Language {
+  /** java */
+  JAVA,
+  /** jython */
+  JYTHON
 }

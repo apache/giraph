@@ -17,22 +17,21 @@
  */
 package org.apache.giraph.conf;
 
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
+
 /**
- * Type of value for a Configuration option
+ * Interface for classes that are parameterized by all of the Giraph types.
+ * These classes can be used to infer the types used by {@link GiraphTypes}
+ *
+ * @param <I> Vertex ID
+ * @param <V> Vertex Value
+ * @param <E> Edge Value
+ * @param <M1> Incoming Message Value
+ * @param <M2> Outgoing Message Value
  */
-public enum ConfOptionType {
-  /** boolean */
-  BOOLEAN,
-  /** class */
-  CLASS,
-  /** enum */
-  ENUM,
-  /** integer */
-  INTEGER,
-  /** float */
-  FLOAT,
-  /** long */
-  LONG,
-  /** string */
-  STRING
+public interface TypesHolder<I extends WritableComparable,
+    V extends Writable, E extends Writable, M1 extends Writable,
+    M2 extends Writable> {
+  // Nothing here
 }

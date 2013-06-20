@@ -54,8 +54,7 @@ public class TestComputationState extends BspCase {
     job.getConfiguration().setNumComputeThreads(
         TestComputationStateComputation.NUM_COMPUTE_THREADS);
     // Increase the number of vertices
-    job.getConfiguration().setInt(
-        GeneratedVertexReader.READER_VERTICES,
+    GeneratedVertexReader.READER_VERTICES.set(job.getConfiguration(),
         TestComputationStateComputation.NUM_VERTICES);
     // Increase the number of partitions
     GiraphConstants.USER_PARTITION_COUNT.set(job.getConfiguration(),

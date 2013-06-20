@@ -20,6 +20,7 @@ package org.apache.giraph.graph;
 
 import org.apache.giraph.comm.WorkerClientRequestProcessor;
 import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
+import org.apache.giraph.conf.TypesHolder;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.worker.WorkerAggregatorUsage;
@@ -27,6 +28,7 @@ import org.apache.giraph.worker.WorkerContext;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.log4j.Logger;
 
 import java.io.IOException;
 
@@ -53,7 +55,10 @@ public abstract class Computation<I extends WritableComparable,
     V extends Writable, E extends Writable, M1 extends Writable,
     M2 extends Writable>
     extends DefaultImmutableClassesGiraphConfigurable<I, V, E>
-    implements WorkerAggregatorUsage {
+    implements TypesHolder<I, V, E, M1, M2>, WorkerAggregatorUsage {
+  /** Logger */
+  private static final Logger LOG = Logger.getLogger(Computation.class);
+
   /** Global graph state **/
   private GraphState graphState;
   /** Handles requests */
@@ -101,7 +106,7 @@ public abstract class Computation<I extends WritableComparable,
    * @param workerAggregatorUsage Worker aggregator usage
    * @param workerContext Worker context
    */
-  public final void initialize(
+  public void initialize(
       GraphState graphState,
       WorkerClientRequestProcessor<I, V, E> workerClientRequestProcessor,
       GraphTaskManager<I, V, E> graphTaskManager,

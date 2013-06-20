@@ -255,6 +255,9 @@ under the License.
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
     <dep.hiveio.version>0.11</dep.hiveio.version>
+    <dep.jython.version>2.5.3</dep.jython.version>
+    <dep.typetools.version>0.2.1</dep.typetools.version>
+
     <hbase.version>0.90.5</hbase.version>
     <codehaus-jackson.version>1.8.0</codehaus-jackson.version>
     <fasterxml-jackson.version>2.1.0</fasterxml-jackson.version>
@@ -1107,9 +1110,19 @@ under the License.
         <version>${codehaus-jackson.version}</version>
       </dependency>
       <dependency>
+        <groupId>org.jodah</groupId>
+        <artifactId>typetools</artifactId>
+        <version>${dep.typetools.version}</version>
+      </dependency>
+      <dependency>
         <groupId>org.json</groupId>
         <artifactId>json</artifactId>
         <version>20090211</version>
+      </dependency>
+      <dependency>
+        <groupId>org.python</groupId>
+        <artifactId>jython</artifactId>
+        <version>${dep.jython.version}</version>
       </dependency>
       <dependency>
         <groupId>org.slf4j</groupId>

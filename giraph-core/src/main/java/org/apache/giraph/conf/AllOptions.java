@@ -43,6 +43,7 @@ public class AllOptions {
   /**
    * Add an option. Subclasses of {@link AbstractConfOption} should call this
    * at the end of their constructor.
+   *
    * @param confOption option
    */
   public static void add(AbstractConfOption confOption) {
@@ -51,6 +52,7 @@ public class AllOptions {
 
   /**
    * String representation of all of the options stored
+   *
    * @return string
    */
   public static String allOptionsString() {
@@ -70,6 +72,7 @@ public class AllOptions {
 
   /**
    * Command line utility to dump all Giraph options
+   *
    * @param args cmdline args
    */
   public static void main(String[] args) {

@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-683: Jython for Computation (nitay)
+
   GIRAPH-673: Input superstep should support aggregators like any 
   other superstep (Bingjing via aching)
 

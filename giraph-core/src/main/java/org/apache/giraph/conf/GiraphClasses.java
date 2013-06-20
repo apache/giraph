@@ -20,34 +20,35 @@ package org.apache.giraph.conf;
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.aggregators.TextAggregatorWriter;
 import org.apache.giraph.combiner.Combiner;
-import org.apache.giraph.graph.Computation;
 import org.apache.giraph.edge.ByteArrayEdges;
 import org.apache.giraph.edge.OutEdges;
+import org.apache.giraph.graph.Computation;
+import org.apache.giraph.graph.ComputationFactory;
+import org.apache.giraph.graph.DefaultComputationFactory;
 import org.apache.giraph.graph.DefaultVertexResolver;
 import org.apache.giraph.graph.DefaultVertexValueFactory;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.graph.VertexValueFactory;
+import org.apache.giraph.io.EdgeInputFormat;
+import org.apache.giraph.io.VertexInputFormat;
+import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.giraph.io.filters.DefaultEdgeInputFilter;
 import org.apache.giraph.io.filters.DefaultVertexInputFilter;
 import org.apache.giraph.io.filters.EdgeInputFilter;
-import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.filters.VertexInputFilter;
-import org.apache.giraph.io.VertexInputFormat;
-import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.giraph.master.DefaultMasterCompute;
 import org.apache.giraph.master.MasterCompute;
 import org.apache.giraph.partition.GraphPartitionerFactory;
 import org.apache.giraph.partition.HashPartitionerFactory;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.partition.SimplePartition;
-import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.giraph.worker.DefaultWorkerContext;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import java.util.List;
+import static org.apache.giraph.utils.ReflectionUtils.getTypeArguments;
 
 /**
  * Holder for classes used by Giraph.
@@ -60,20 +61,16 @@ import java.util.List;
 public class GiraphClasses<I extends WritableComparable,
     V extends Writable, E extends Writable>
     implements GiraphConstants {
+  /** ComputationFactory class - cached for fast access */
+  protected Class<? extends ComputationFactory<I, V, E,
+      ? extends Writable, ? extends Writable>>
+  computationFactoryClass;
   /** Computation class - cached for fast access */
   protected Class<? extends
       Computation<I, V, E, ? extends Writable, ? extends Writable>>
   computationClass;
-  /** Vertex id class - cached for fast access */
-  protected Class<I> vertexIdClass;
-  /** Vertex value class - cached for fast access */
-  protected Class<V> vertexValueClass;
-  /** Edge value class - cached for fast access */
-  protected Class<E> edgeValueClass;
-  /** Incoming message value class - cached for fast access */
-  protected Class<? extends Writable> incomingMessageValueClass;
-  /** Outgoing message value class - cached for fast access */
-  protected Class<? extends Writable> outgoingMessageValueClass;
+  /** Generic types used to describe graph */
+  protected GiraphTypes<I, V, E> giraphTypes;
   /** Vertex edges class - cached for fast access */
   protected Class<? extends OutEdges<I, E>> outEdgesClass;
   /** Input vertex edges class - cached for fast access */
@@ -123,6 +120,10 @@ public class GiraphClasses<I extends WritableComparable,
   public GiraphClasses() {
     // Note: the cast to Object is required in order for javac to accept the
     // downcast.
+    computationFactoryClass = (Class<? extends ComputationFactory<I, V, E,
+          ? extends Writable, ? extends Writable>>) (Object)
+        DefaultComputationFactory.class;
+    giraphTypes = new GiraphTypes<I, V, E>();
     outEdgesClass = (Class<? extends OutEdges<I, E>>) (Object)
         ByteArrayEdges.class;
     inputOutEdgesClass = (Class<? extends OutEdges<I, E>>) (Object)
@@ -151,27 +152,15 @@ public class GiraphClasses<I extends WritableComparable,
    * @param conf Configuration object to read from.
    */
   public GiraphClasses(Configuration conf) {
-    readFromConf(conf);
-  }
-
-  /**
-   * Read classes from Configuration.
-   *
-   * @param conf Configuration to read from.
-   */
-  private void readFromConf(Configuration conf) {
-    // set pre-validated generic parameter types into Configuration
+    giraphTypes = GiraphTypes.readFrom(conf);
+    computationFactoryClass =
+        (Class<? extends ComputationFactory<I, V, E,
+            ? extends Writable, ? extends Writable>>)
+            COMPUTATION_FACTORY_CLASS.get(conf);
     computationClass =
         (Class<? extends
             Computation<I, V, E, ? extends Writable, ? extends Writable>>)
             COMPUTATION_CLASS.get(conf);
-    List<Class<?>> classList =
-        ReflectionUtils.getTypeArguments(Computation.class, computationClass);
-    vertexIdClass = (Class<I>) classList.get(0);
-    vertexValueClass = (Class<V>) classList.get(1);
-    edgeValueClass = (Class<E>) classList.get(2);
-    incomingMessageValueClass = (Class<? extends Writable>) classList.get(3);
-    outgoingMessageValueClass = (Class<? extends Writable>) classList.get(4);
 
     outEdgesClass = (Class<? extends OutEdges<I, E>>)
         VERTEX_EDGES_CLASS.get(conf);
@@ -207,6 +196,11 @@ public class GiraphClasses<I extends WritableComparable,
         VERTEX_INPUT_FILTER_CLASS.get(conf);
   }
 
+  public Class<? extends ComputationFactory<I, V, E,
+      ? extends Writable, ? extends Writable>> getComputationFactoryClass() {
+    return computationFactoryClass;
+  }
+
   /**
    * Get Computation class
    *
@@ -218,13 +212,17 @@ public class GiraphClasses<I extends WritableComparable,
     return computationClass;
   }
 
+  public GiraphTypes<I, V, E> getGiraphTypes() {
+    return giraphTypes;
+  }
+
   /**
    * Get Vertex ID class
    *
    * @return Vertex ID class
    */
   public Class<I> getVertexIdClass() {
-    return vertexIdClass;
+    return giraphTypes.getVertexIdClass();
   }
 
   /**
@@ -233,7 +231,7 @@ public class GiraphClasses<I extends WritableComparable,
    * @return Vertex Value class
    */
   public Class<V> getVertexValueClass() {
-    return vertexValueClass;
+    return giraphTypes.getVertexValueClass();
   }
 
   /**
@@ -242,7 +240,7 @@ public class GiraphClasses<I extends WritableComparable,
    * @return Edge Value class
    */
   public Class<E> getEdgeValueClass() {
-    return edgeValueClass;
+    return giraphTypes.getEdgeValueClass();
   }
 
   /**
@@ -252,7 +250,7 @@ public class GiraphClasses<I extends WritableComparable,
    * @return Message Value class
    */
   public Class<? extends Writable> getIncomingMessageValueClass() {
-    return incomingMessageValueClass;
+    return giraphTypes.getIncomingMessageValueClass();
   }
 
   /**
@@ -262,7 +260,7 @@ public class GiraphClasses<I extends WritableComparable,
    * @return Message Value class
    */
   public Class<? extends Writable> getOutgoingMessageValueClass() {
-    return outgoingMessageValueClass;
+    return giraphTypes.getOutgoingMessageValueClass();
   }
 
   /**
@@ -274,10 +272,11 @@ public class GiraphClasses<I extends WritableComparable,
     return outEdgesClass;
   }
 
-  /* Get Vertex edges class used during edge-based input
- *
- * @return Vertex edges class.
- */
+  /**
+   * Get Vertex edges class used during edge-based input
+   *
+   * @return Vertex edges class.
+   */
   public Class<? extends OutEdges<I, E>> getInputOutEdgesClass() {
     return inputOutEdgesClass;
   }
@@ -486,10 +485,14 @@ public class GiraphClasses<I extends WritableComparable,
       Computation<I, V, E, ? extends Writable, ? extends Writable>>
       computationClass) {
     this.computationClass = computationClass;
-    List<Class<?>> classList =
-        ReflectionUtils.getTypeArguments(Computation.class, computationClass);
-    incomingMessageValueClass = (Class<? extends Writable>) classList.get(3);
-    outgoingMessageValueClass = (Class<? extends Writable>) classList.get(4);
+    if (computationClass != null) {
+      Class<?>[] classList =
+          getTypeArguments(TypesHolder.class, computationClass);
+      giraphTypes.setIncomingMessageValueClass(
+          (Class<? extends Writable>) classList[3]);
+      giraphTypes.setOutgoingMessageValueClass(
+          (Class<? extends Writable>) classList[4]);
+    }
     return this;
   }
 
@@ -500,7 +503,7 @@ public class GiraphClasses<I extends WritableComparable,
    * @return this
    */
   public GiraphClasses setVertexIdClass(Class<I> vertexIdClass) {
-    this.vertexIdClass = vertexIdClass;
+    giraphTypes.setVertexIdClass(vertexIdClass);
     return this;
   }
 
@@ -511,7 +514,7 @@ public class GiraphClasses<I extends WritableComparable,
    * @return this
    */
   public GiraphClasses setVertexValueClass(Class<V> vertexValueClass) {
-    this.vertexValueClass = vertexValueClass;
+    giraphTypes.setVertexValueClass(vertexValueClass);
     return this;
   }
 
@@ -522,7 +525,7 @@ public class GiraphClasses<I extends WritableComparable,
    * @return this
    */
   public GiraphClasses setEdgeValueClass(Class<E> edgeValueClass) {
-    this.edgeValueClass = edgeValueClass;
+    giraphTypes.setEdgeValueClass(edgeValueClass);
     return this;
   }
 
@@ -535,7 +538,7 @@ public class GiraphClasses<I extends WritableComparable,
    */
   public GiraphClasses setIncomingMessageValueClass(
       Class<? extends Writable> incomingMessageValueClass) {
-    this.incomingMessageValueClass = incomingMessageValueClass;
+    giraphTypes.setIncomingMessageValueClass(incomingMessageValueClass);
     return this;
   }
 
@@ -548,7 +551,7 @@ public class GiraphClasses<I extends WritableComparable,
    */
   public GiraphClasses setOutgoingMessageValueClass(
       Class<? extends Writable> outgoingMessageValueClass) {
-    this.outgoingMessageValueClass = outgoingMessageValueClass;
+    giraphTypes.setOutgoingMessageValueClass(outgoingMessageValueClass);
     return this;
   }
 

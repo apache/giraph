@@ -20,9 +20,10 @@ package org.apache.giraph.conf;
 
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.combiner.Combiner;
-import org.apache.giraph.graph.Computation;
 import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.edge.ReuseObjectsOutEdges;
+import org.apache.giraph.graph.Computation;
+import org.apache.giraph.graph.ComputationFactory;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.graph.VertexValueFactory;
 import org.apache.giraph.io.EdgeInputFormat;
@@ -36,6 +37,7 @@ import org.apache.giraph.master.MasterObserver;
 import org.apache.giraph.partition.GraphPartitionerFactory;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.partition.ReusesObjectsPartition;
+import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.giraph.worker.WorkerObserver;
 import org.apache.hadoop.conf.Configuration;
@@ -75,6 +77,27 @@ public class GiraphConfiguration extends Configuration
     super(conf);
     giraphSetParameters = new Configuration(false);
     configureHadoopSecurity();
+  }
+
+  /**
+   * Get name of computation being run. We leave this up to the
+   * {@link ComputationFactory} to decide what to return.
+   *
+   * @return Name of computation being run
+   */
+  public String getComputationName() {
+    ComputationFactory compFactory = ReflectionUtils.newInstance(
+        getComputationFactoryClass());
+    return compFactory.computationName(this);
+  }
+
+  /**
+   * Get the user's subclassed {@link ComputationFactory}
+   *
+   * @return User's computation factory class
+   */
+  public Class<? extends ComputationFactory> getComputationFactoryClass() {
+    return COMPUTATION_FACTORY_CLASS.get(this);
   }
 
   /**
@@ -525,6 +548,7 @@ public class GiraphConfiguration extends Configuration
 
   /**
    * Getter for SPLIT_MASTER_WORKER flag.
+   *
    * @return boolean flag value.
    */
   public final boolean getSplitMasterWorker() {
@@ -570,6 +594,7 @@ public class GiraphConfiguration extends Configuration
   /**
    * Is this a "pure YARN" Giraph job, or is a MapReduce layer (v1 or v2)
    * actually managing our cluster nodes, i.e. each task is a Mapper.
+   *
    * @return TRUE if this is a pure YARN job.
    */
   public boolean isPureYarnJob() {
@@ -579,6 +604,7 @@ public class GiraphConfiguration extends Configuration
   /**
    * Jars required in "Pure YARN" jobs (names only, no paths) should
    * be listed here in full, including Giraph framework jar(s).
+   *
    * @return the comma-separated list of jar names for export to cluster.
    */
   public String getYarnLibJars() {
@@ -587,6 +613,7 @@ public class GiraphConfiguration extends Configuration
 
   /**
    * Populate jar list for Pure YARN jobs.
+   *
    * @param jarList a comma-separated list of jar names
    */
   public void setYarnLibJars(String jarList) {
@@ -596,6 +623,7 @@ public class GiraphConfiguration extends Configuration
   /**
    * Get heap size (in MB) for each task in our Giraph job run,
    * assuming this job will run on the "pure YARN" profile.
+   *
    * @return the heap size for all tasks, in MB
    */
   public int getYarnTaskHeapMb() {
@@ -605,6 +633,7 @@ public class GiraphConfiguration extends Configuration
   /**
    * Set heap size for Giraph tasks in our job run, assuming
    * the job will run on the "pure YARN" profile.
+   *
    * @param heapMb the heap size for all tasks
    */
   public void setYarnTaskHeapMb(int heapMb) {
@@ -635,6 +664,7 @@ public class GiraphConfiguration extends Configuration
 
   /**
    * is this job run a local test?
+   *
    * @return the test status as recorded in the Configuration
    */
   public boolean getLocalTestMode() {
@@ -643,6 +673,7 @@ public class GiraphConfiguration extends Configuration
 
   /**
    * Flag this job as a local test run.
+   *
    * @param flag the test status for this job
    */
   public void setLocalTestMode(boolean flag) {
@@ -652,6 +683,7 @@ public class GiraphConfiguration extends Configuration
   /**
    * The number of server tasks in our ZK quorum for
    * this job run.
+   *
    * @return the number of ZK servers in the quorum
    */
   public int getZooKeeperServerCount() {
@@ -1014,6 +1046,7 @@ public class GiraphConfiguration extends Configuration
 
   /**
    * Get the output directory to write YourKit snapshots to
+   *
    * @param context Map context
    * @return output directory
    */

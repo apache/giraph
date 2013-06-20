@@ -45,15 +45,15 @@ public class FileUtils {
   /**
    * Create a temporary folder that will be removed after the test.
    *
-   * @param vertexClass Used for generating the folder name.
+   * @param computationName Used for generating the folder name.
    * @return File object for the directory.
    */
-  public static File createTestDir(Class<?> vertexClass)
+  public static File createTestDir(String computationName)
     throws IOException {
     String systemTmpDir = System.getProperty("java.io.tmpdir");
     long simpleRandomLong = (long) (Long.MAX_VALUE * Math.random());
     File testTempDir = new File(systemTmpDir, "giraph-" +
-        vertexClass.getSimpleName() + '-' + simpleRandomLong);
+        computationName + '-' + simpleRandomLong);
     if (!testTempDir.mkdir()) {
       throw new IOException("Could not create " + testTempDir);
     }

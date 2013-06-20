@@ -131,6 +131,25 @@ locally first.
 
 -------------------------------
 
+Scripting:
+
+Giraph has support for writing user logic in languages other than Java. A Giraph
+job involves at the very least a Computation and Input/Output Formats. There are
+other optional pieces as well like Aggregators and Combiners.
+
+As of this writing we support writing the Computation logic in Jython. The
+Computation class is at the core of the algorithm so it was a natural starting
+point. Eventually it is our goal to allow users to write any / all components of
+their algorithms in any language they desire.
+
+To use Jython with our job launcher, GiraphRunner, pass the path to the script
+as the Computation class argument. Additionally, you should set the -jythonClass
+option to let Giraph know the name of your Jython Computation class. Lastly, you
+will need to set -typesHolder to a class that extends Giraph's TypesHolder so
+that Giraph can infer the types you use. Look at page-rank.py as an example.
+
+-------------------------------
+
 How to run the unittests on a local pseudo-distributed Hadoop instance:
 
 As mentioned earlier, Giraph supports several versions of Hadoop.  In

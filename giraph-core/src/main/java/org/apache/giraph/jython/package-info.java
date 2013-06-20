@@ -15,24 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.conf;
-
 /**
- * Type of value for a Configuration option
+ * Jython integration.
  */
-public enum ConfOptionType {
-  /** boolean */
-  BOOLEAN,
-  /** class */
-  CLASS,
-  /** enum */
-  ENUM,
-  /** integer */
-  INTEGER,
-  /** float */
-  FLOAT,
-  /** long */
-  LONG,
-  /** string */
-  STRING
-}
+package org.apache.giraph.jython;

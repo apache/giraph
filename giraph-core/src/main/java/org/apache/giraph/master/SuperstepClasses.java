@@ -20,7 +20,9 @@ package org.apache.giraph.master;
 
 import org.apache.giraph.combiner.Combiner;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.conf.TypesHolder;
 import org.apache.giraph.graph.Computation;
+import org.apache.giraph.graph.Language;
 import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.Writable;
@@ -29,7 +31,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.lang.reflect.Modifier;
-import java.util.List;
+
+import static org.apache.giraph.conf.GiraphConstants.COMPUTATION_LANGUAGE;
 
 /**
  * Holds Computation and Combiner class.
@@ -92,17 +95,25 @@ public class SuperstepClasses implements Writable {
    * @param conf Configuration to verify this with
    */
   public void verifyTypesMatch(ImmutableClassesGiraphConfiguration conf) {
-    List<Class<?>> computationTypes = ReflectionUtils.getTypeArguments(
-        Computation.class, computationClass);
-    verifyTypes(conf.getVertexIdClass(), computationTypes.get(0),
+    // In some cases, for example when using Jython, the Computation class may
+    // not be set. This is because it is created by a ComputationFactory
+    // dynamically and not known ahead of time. In this case there is nothing to
+    // verify here so we bail.
+    if (COMPUTATION_LANGUAGE.get(conf) == Language.JYTHON) {
+      return;
+    }
+
+    Class<?>[] computationTypes = ReflectionUtils.getTypeArguments(
+        TypesHolder.class, computationClass);
+    verifyTypes(conf.getVertexIdClass(), computationTypes[0],
         "Vertex id", computationClass);
-    verifyTypes(conf.getVertexValueClass(), computationTypes.get(1),
+    verifyTypes(conf.getVertexValueClass(), computationTypes[1],
         "Vertex value", computationClass);
-    verifyTypes(conf.getEdgeValueClass(), computationTypes.get(2),
+    verifyTypes(conf.getEdgeValueClass(), computationTypes[2],
         "Edge value", computationClass);
-    verifyTypes(conf.getOutgoingMessageValueClass(), computationTypes.get(3),
+    verifyTypes(conf.getOutgoingMessageValueClass(), computationTypes[3],
         "Previous outgoing and new incoming message", computationClass);
-    Class<?> outgoingMessageType = computationTypes.get(4);
+    Class<?> outgoingMessageType = computationTypes[4];
     if (outgoingMessageType.isInterface()) {
       throw new IllegalStateException("verifyTypesMatch: " +
           "Message type must be concrete class " + outgoingMessageType);
@@ -112,11 +123,11 @@ public class SuperstepClasses implements Writable {
           "Message type can't be abstract class" + outgoingMessageType);
     }
     if (combinerClass != null) {
-      List<Class<?>> combinerTypes = ReflectionUtils.getTypeArguments(
+      Class<?>[] combinerTypes = ReflectionUtils.getTypeArguments(
           Combiner.class, combinerClass);
-      verifyTypes(conf.getVertexIdClass(), combinerTypes.get(0),
+      verifyTypes(conf.getVertexIdClass(), combinerTypes[0],
           "Vertex id", combinerClass);
-      verifyTypes(outgoingMessageType, combinerTypes.get(1),
+      verifyTypes(outgoingMessageType, combinerTypes[1],
           "Outgoing message", combinerClass);
     }
   }
@@ -154,7 +165,9 @@ public class SuperstepClasses implements Writable {
 
   @Override
   public String toString() {
-    return "(computation=" + computationClass.getName() + ",combiner=" +
+    String computationName = computationClass == null ? "_not_set_" :
+        computationClass.getName();
+    return "(computation=" + computationName + ",combiner=" +
         ((combinerClass == null) ? "null" : combinerClass.getName()) + ")";
   }
 }

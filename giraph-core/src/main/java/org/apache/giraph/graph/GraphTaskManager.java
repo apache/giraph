@@ -40,7 +40,6 @@ import org.apache.giraph.time.Time;
 import org.apache.giraph.utils.CallableFactory;
 import org.apache.giraph.utils.MemoryUtils;
 import org.apache.giraph.utils.ProgressableUtils;
-import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.giraph.worker.BspServiceWorker;
 import org.apache.giraph.worker.InputSplitsCallable;
 import org.apache.giraph.worker.WorkerContext;
@@ -58,7 +57,6 @@ import org.apache.log4j.Logger;
 import org.apache.log4j.PatternLayout;
 
 import java.io.IOException;
-import java.lang.reflect.Type;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.util.ArrayList;
@@ -69,12 +67,6 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
-
-import static org.apache.giraph.conf.GiraphConstants.EDGE_VALUE_CLASS;
-import static org.apache.giraph.conf.GiraphConstants.INCOMING_MESSAGE_VALUE_CLASS;
-import static org.apache.giraph.conf.GiraphConstants.VERTEX_ID_CLASS;
-import static org.apache.giraph.conf.GiraphConstants.VERTEX_VALUE_CLASS;
-import static org.apache.giraph.conf.GiraphConstants.OUTGOING_MESSAGE_VALUE_CLASS;
 
 /**
  * The Giraph-specific business logic for a single BSP
@@ -175,13 +167,18 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
   public void setup(Path[] zkPathList)
     throws IOException, InterruptedException {
     context.setStatus("setup: Beginning worker setup.");
-    conf = new ImmutableClassesGiraphConfiguration<I, V, E>(
-      context.getConfiguration());
-    determineClassTypes(conf);
+    Configuration hadoopConf = context.getConfiguration();
+    conf = new ImmutableClassesGiraphConfiguration<I, V, E>(hadoopConf);
+    // Write user's graph types (I,V,E,M) back to configuration parameters so
+    // that they are set for quicker access later. These types are often
+    // inferred from the Computation class used.
+    conf.getGiraphTypes().writeIfUnset(conf);
     // configure global logging level for Giraph job
     initializeAndConfigureLogging();
     // init the metrics objects
     setupAndInitializeGiraphMetrics();
+    // One time setup for computation factory
+    conf.createComputationFactory().initComputation(conf);
     // Do some task setup (possibly starting up a Zookeeper service)
     context.setStatus("setup: Initializing Zookeeper services.");
     locateZookeeperClasspath(zkPathList);
@@ -435,32 +432,6 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
 
   public final WorkerContext getWorkerContext() {
     return serviceWorker.getWorkerContext();
-  }
-
- /**
-   * Set the concrete, user-defined choices about generic methods
-   * (validated earlier in GiraphRunner) into the Configuration.
-   * @param conf the Configuration object for this job run.
-   */
-  public void determineClassTypes(Configuration conf) {
-    ImmutableClassesGiraphConfiguration giraphConf =
-        new ImmutableClassesGiraphConfiguration(conf);
-    Class<? extends Computation<I, V, E, Writable, Writable>> computationClass =
-        giraphConf.getComputationClass();
-    List<Class<?>> classList = ReflectionUtils.<Computation>getTypeArguments(
-        Computation.class, computationClass);
-    Type vertexIndexType = classList.get(0);
-    Type vertexValueType = classList.get(1);
-    Type edgeValueType = classList.get(2);
-    Type incomingMessageValueType = classList.get(3);
-    Type outgoingMessageValueType = classList.get(4);
-    VERTEX_ID_CLASS.set(conf, (Class<WritableComparable>) vertexIndexType);
-    VERTEX_VALUE_CLASS.set(conf, (Class<Writable>) vertexValueType);
-    EDGE_VALUE_CLASS.set(conf, (Class<Writable>) edgeValueType);
-    INCOMING_MESSAGE_VALUE_CLASS.set(conf,
-        (Class<Writable>) incomingMessageValueType);
-    OUTGOING_MESSAGE_VALUE_CLASS.set(conf,
-        (Class<Writable>) outgoingMessageValueType);
   }
 
   /**

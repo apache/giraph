@@ -36,6 +36,7 @@ import org.junit.Test;
 
 import java.io.IOException;
 
+import static org.apache.giraph.examples.GeneratedVertexReader.READER_VERTICES;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -158,8 +159,7 @@ public class TestGraphPartitioner extends BspCase {
         outputPath);
     job.getConfiguration().setGraphPartitionerFactoryClass(
         SuperstepHashPartitionerFactory.class);
-    job.getConfiguration().setBoolean(
-        GeneratedVertexReader.REVERSE_ID_ORDER, true);
+    GeneratedVertexReader.REVERSE_ID_ORDER.set(job.getConfiguration(), true);
     assertTrue(job.run(true));
     verifyOutput(hdfs, outputPath);
 
@@ -178,8 +178,8 @@ public class TestGraphPartitioner extends BspCase {
 
     job.getConfiguration().setGraphPartitionerFactoryClass(
         SimpleLongRangePartitionerFactory.class);
-    long readerVertices = job.getConfiguration().getLong(
-        GeneratedVertexReader.READER_VERTICES, -1);
+    long readerVertices =
+        READER_VERTICES.getWithDefault(job.getConfiguration(), -1L);
     job.getConfiguration().setLong(
         GiraphConstants.PARTITION_VERTEX_KEY_SPACE_SIZE, readerVertices);
 

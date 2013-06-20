@@ -24,6 +24,7 @@ import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.edge.ReusableEdge;
+import org.apache.giraph.graph.ComputationFactory;
 import org.apache.giraph.graph.DefaultVertex;
 import org.apache.giraph.graph.Computation;
 import org.apache.giraph.graph.Vertex;
@@ -114,6 +115,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
 
   /**
    * Configure an object with this instance if the object is configurable.
+   *
    * @param obj Object
    */
   public void configureIfPossible(Object obj) {
@@ -134,6 +136,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
 
   /**
    * Get the edge input filter to use
+   *
    * @return EdgeInputFilter
    */
   public EdgeInputFilter getEdgeInputFilter() {
@@ -152,6 +155,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
 
   /**
    * Get the vertex input filter to use
+   *
    * @return VertexInputFilter
    */
   public VertexInputFilter getVertexInputFilter() {
@@ -450,13 +454,44 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   }
 
   /**
+   * Get computation factory class
+   *
+   * @return computation factory class
+   */
+  @Override
+  public Class<? extends ComputationFactory<I, V, E,
+      ? extends Writable, ? extends Writable>>
+  getComputationFactoryClass() {
+    return classes.getComputationFactoryClass();
+  }
+
+  /**
+   * Get computation factory
+   *
+   * @return computation factory
+   */
+  public ComputationFactory<I, V, E, ? extends Writable, ? extends Writable>
+  createComputationFactory() {
+    return ReflectionUtils.newInstance(getComputationFactoryClass(), this);
+  }
+
+  /**
    * Create a user computation
    *
    * @return Instantiated user computation
    */
   public Computation<I, V, E, ? extends Writable, ? extends Writable>
   createComputation() {
-    return ReflectionUtils.newInstance(getComputationClass(), this);
+    return createComputationFactory().getComputation(this);
+  }
+
+  /**
+   * Get user types describing graph (I,V,E,M1,M2)
+   *
+   * @return GiraphTypes
+   */
+  public GiraphTypes<I, V, E> getGiraphTypes() {
+    return classes.getGiraphTypes();
   }
 
   /**
@@ -554,6 +589,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
 
   /**
    * Create job observer
+   *
    * @return GiraphJobObserver set in configuration.
    */
   public GiraphJobObserver getJobObserver() {

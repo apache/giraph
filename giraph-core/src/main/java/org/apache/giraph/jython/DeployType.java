@@ -15,24 +15,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.conf;
+package org.apache.giraph.jython;
 
 /**
- * Type of value for a Configuration option
+ * Type of deployment for a file
  */
-public enum ConfOptionType {
-  /** boolean */
-  BOOLEAN,
-  /** class */
-  CLASS,
-  /** enum */
-  ENUM,
-  /** integer */
-  INTEGER,
-  /** float */
-  FLOAT,
-  /** long */
-  LONG,
-  /** string */
-  STRING
+public enum DeployType {
+  /** Resource packaged with jar */
+  RESOURCE,
+  /** Hadoop's Distributed Cache */
+  DISTRIBUTED_CACHE
 }

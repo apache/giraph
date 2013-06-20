@@ -30,8 +30,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.apache.log4j.Level;
-import org.apache.log4j.LogManager;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.junit.After;
@@ -66,8 +64,8 @@ public class BspCase implements Watcher {
   /** Default path for temporary files */
   static final Path DEFAULT_TEMP_DIR =
       new Path(System.getProperty("java.io.tmpdir"), "_giraphTests");
-  
-  public static final String READER_VERTICES =
+
+  public static final String READER_VERTICES_OPT =
 		  		    "GeneratedVertexReader.reader_vertices";
 
   /** A filter for listing parts files */
@@ -109,7 +107,7 @@ public class BspCase implements Watcher {
       conf.setZooKeeperConfiguration(getZooKeeperList());
     }
     // GeneratedInputSplit will generate 5 vertices
-    conf.setLong(READER_VERTICES, 5);
+    conf.setLong(READER_VERTICES_OPT, 5);
 
     // Setup pathes for temporary files
     Path zookeeperDir = getTempPath("_bspZooKeeper");
