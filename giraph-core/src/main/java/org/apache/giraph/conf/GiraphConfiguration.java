@@ -988,7 +988,7 @@ public class GiraphConfiguration extends Configuration
    *
    * @param conf Configuration
    */
-  public void updateConfiguration(Configuration conf) {
+  public synchronized void updateConfiguration(Configuration conf) {
     if (this != conf) {
       for (Map.Entry<String, String> parameter : giraphSetParameters) {
         conf.set(parameter.getKey(), parameter.getValue());
@@ -997,49 +997,50 @@ public class GiraphConfiguration extends Configuration
   }
 
   @Override
-  public void set(String name, String value) {
+  public synchronized void set(String name, String value) {
     super.set(name, value);
     giraphSetParameters.set(name, value);
   }
 
   @Override
-  public void setIfUnset(String name, String value) {
+  public synchronized void setIfUnset(String name, String value) {
     super.setIfUnset(name, value);
     giraphSetParameters.set(name, get(name, value));
   }
 
   @Override
-  public void setInt(String name, int value) {
+  public synchronized void setInt(String name, int value) {
     super.setInt(name, value);
     giraphSetParameters.setInt(name, value);
   }
 
   @Override
-  public void setLong(String name, long value) {
+  public synchronized void setLong(String name, long value) {
     super.setLong(name, value);
     giraphSetParameters.setLong(name, value);
   }
 
   @Override
-  public void setFloat(String name, float value) {
+  public synchronized void setFloat(String name, float value) {
     super.setFloat(name, value);
     giraphSetParameters.setFloat(name, value);
   }
 
   @Override
-  public void setBoolean(String name, boolean value) {
+  public synchronized void setBoolean(String name, boolean value) {
     super.setBoolean(name, value);
     giraphSetParameters.setBoolean(name, value);
   }
 
   @Override
-  public void setBooleanIfUnset(String name, boolean value) {
+  public synchronized void setBooleanIfUnset(String name, boolean value) {
     super.setBooleanIfUnset(name, value);
     giraphSetParameters.setBoolean(name, getBoolean(name, value));
   }
 
   @Override
-  public void setClass(String name, Class<?> theClass, Class<?> xface) {
+  public synchronized void setClass(String name, Class<?> theClass,
+                                    Class<?> xface) {
     super.setClass(name, theClass, xface);
     giraphSetParameters.setClass(name, theClass, xface);
   }
