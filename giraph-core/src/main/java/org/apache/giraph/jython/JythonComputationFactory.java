@@ -47,13 +47,16 @@ public class JythonComputationFactory implements ComputationFactory {
   /** Type of script path */
   public static final EnumConfOption<DeployType> JYTHON_DEPLOY_TYPE =
       EnumConfOption.create("giraph.jython.deploy.type",
-          DeployType.class, DeployType.DISTRIBUTED_CACHE);
+          DeployType.class, DeployType.DISTRIBUTED_CACHE,
+          "Type of script path");
   /** Path to Jython script */
   public static final StrConfOption JYTHON_SCRIPT_PATH =
-      new StrConfOption("giraph.jython.path", "_script_not_set_");
+      new StrConfOption("giraph.jython.path", "_script_not_set_",
+          "Path to Jython script");
   /** Name of Computation class in Jython script */
   public static final StrConfOption JYTHON_COMPUTATION_CLASS =
-      new StrConfOption("giraph.jython.class", "_computation_class_not_set_");
+      new StrConfOption("giraph.jython.class", "_computation_class_not_set_",
+          "Name of Computation class in Jython script");
 
   /** Logger */
   private static final Logger LOG = Logger.getLogger(JythonUtils.class);

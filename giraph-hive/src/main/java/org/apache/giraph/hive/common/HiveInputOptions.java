@@ -54,15 +54,19 @@ public class HiveInputOptions<C> {
    */
   public HiveInputOptions(String name, Class<C> hiveToTypeClass) {
     classOpt = ClassConfOption.<C>create(key(name, "class"),
-        null, hiveToTypeClass);
+        null, hiveToTypeClass, "Class for converting hive records");
     profileIdOpt = new StrConfOption(key(name, "profileId"),
-        name + "_input_profile");
-    partitionOpt = new StrConfOption(key(name, "partition"), "");
-    splitsOpt = new IntConfOption(key(name, "splits"), 0);
-    databaseOpt = new StrConfOption(key(name, "database"), "default");
-    tableOpt = new StrConfOption(key(name, "table"), "");
-    hostOpt = new StrConfOption(key(name, "metastore.host"), null);
-    portOpt = new IntConfOption(key(name, "metastore.port"), 9083);
+        name + "_input_profile", "Input profile id");
+    partitionOpt = new StrConfOption(key(name, "partition"), "",
+        "Input partition filter");
+    splitsOpt = new IntConfOption(key(name, "splits"), 0, "Number of splits");
+    databaseOpt = new StrConfOption(key(name, "database"), "default",
+        "Input database name");
+    tableOpt = new StrConfOption(key(name, "table"), "", "Input table name");
+    hostOpt = new StrConfOption(key(name, "metastore.host"), null,
+        "Hive Metastore host to use. If blank will infer from HiveConf");
+    portOpt = new IntConfOption(key(name, "metastore.port"), 9083,
+        "Hive Metastore port to use.");
   }
 
   /**

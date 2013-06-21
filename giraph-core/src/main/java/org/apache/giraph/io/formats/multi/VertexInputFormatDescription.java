@@ -52,7 +52,13 @@ public class VertexInputFormatDescription<I extends WritableComparable,
    * [["VIF1",{"p":"v1"}],["VIF2",{"p":"v2","q":"v"}]]
    */
   public static final StrConfOption VERTEX_INPUT_FORMAT_DESCRIPTIONS =
-      new StrConfOption("giraph.multiVertexInput.descriptions", null);
+      new StrConfOption("giraph.multiVertexInput.descriptions", null,
+          "VertexInputFormats description - JSON array containing a JSON " +
+          "array for each vertex input. Vertex input JSON arrays contain " +
+          "one or two elements - first one is the name of vertex input " +
+          "class, and second one is JSON object with all specific parameters " +
+          "for this vertex input. For example: [[\"VIF1\",{\"p\":\"v1\"}]," +
+          "[\"VIF2\",{\"p\":\"v2\",\"q\":\"v\"}]]\"");
 
   /**
    * Constructor with vertex input format class

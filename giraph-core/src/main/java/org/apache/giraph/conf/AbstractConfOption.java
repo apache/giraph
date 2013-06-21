@@ -34,17 +34,29 @@ public abstract class AbstractConfOption
   /** Key for configuration */
   private final String key;
 
+  /** Configuration option description */
+  private final String description;
+
   /**
    * Constructor
    *
    * @param key configuration key
+   * @param description configuration description
    */
-  public AbstractConfOption(String key) {
+  public AbstractConfOption(String key, String description) {
     this.key = key;
+    this.description = description;
   }
 
   public String getKey() {
     return key;
+  }
+
+  /**
+   * @return the description
+   */
+  public String getDescription() {
+    return description;
   }
 
   /**

@@ -43,10 +43,12 @@ public abstract class GeneratedVertexReader<
     extends VertexReader<I, V, E> {
   /** Vertices produced by this reader */
   public static final LongConfOption READER_VERTICES =
-      new LongConfOption("GeneratedVertexReader.reader_vertices", 10);
+      new LongConfOption("GeneratedVertexReader.reader_vertices", 10,
+          "Vertices produced by this reader");
   /** Reverse the order of the vertices? */
   public static final BooleanConfOption REVERSE_ID_ORDER =
-      new BooleanConfOption("GeneratedVertexReader.reverseIdOrder", false);
+      new BooleanConfOption("GeneratedVertexReader.reverseIdOrder", false,
+          "Reverse the order of the vertices?");
   /** Records read so far */
   protected long recordsRead = 0;
   /** Total records to read (on this split alone) */

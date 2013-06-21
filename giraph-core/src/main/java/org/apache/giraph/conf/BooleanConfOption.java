@@ -31,9 +31,11 @@ public class BooleanConfOption extends AbstractConfOption {
    *
    * @param key configuration key
    * @param defaultValue default value
+   * @param description configuration description
    */
-  public BooleanConfOption(String key, boolean defaultValue) {
-    super(key);
+  public BooleanConfOption(String key, boolean defaultValue,
+      String description) {
+    super(key, description);
     this.defaultValue = defaultValue;
     AllOptions.add(this);
   }

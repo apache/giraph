@@ -80,6 +80,7 @@
       <item name="Aggregators" href="aggregators.html"/>
       <item name="Out-of-core" href="ooc.html"/>
       <item name="Javadoc" href="javadoc_modules.html"/>
+      <item name="Options List" href="options.html"/>
       <item name="Presentations" href="presentations.html"/>
       <item name="External Community Wiki" href="https://cwiki.apache.org/confluence/display/GIRAPH" />
     </menu> 

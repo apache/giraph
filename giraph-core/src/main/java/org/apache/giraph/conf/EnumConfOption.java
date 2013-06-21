@@ -38,9 +38,11 @@ public class EnumConfOption<T extends Enum<T>> extends AbstractConfOption {
    * @param key Configuration key
    * @param klass Enum class
    * @param defaultValue default value
+   * @param description description of the option
    */
-  public EnumConfOption(String key, Class<T> klass, T defaultValue) {
-    super(key);
+  public EnumConfOption(String key, Class<T> klass, T defaultValue,
+      String description) {
+    super(key, description);
     this.klass = klass;
     this.defaultValue = defaultValue;
     AllOptions.add(this);
@@ -52,12 +54,13 @@ public class EnumConfOption<T extends Enum<T>> extends AbstractConfOption {
    * @param key String configuration key
    * @param klass enum class
    * @param defaultValue default enum value
+   * @param description description of the option
    * @param <X> enum type
    * @return EnumConfOption
    */
   public static <X extends Enum<X>> EnumConfOption<X>
-  create(String key, Class<X> klass, X defaultValue) {
-    return new EnumConfOption<X>(key, klass, defaultValue);
+  create(String key, Class<X> klass, X defaultValue, String description) {
+    return new EnumConfOption<X>(key, klass, defaultValue, description);
   }
 
   @Override public boolean isDefaultValue(Configuration conf) {

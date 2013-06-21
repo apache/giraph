@@ -38,19 +38,24 @@ public class GiraphHiveConstants {
   /** Class for converting vertices to Hive records */
   public static final ClassConfOption<VertexToHive> VERTEX_TO_HIVE_CLASS =
       ClassConfOption.create("giraph.vertex.to.hive.class", null,
-          VertexToHive.class);
+          VertexToHive.class,
+          "Class for converting vertices to Hive records");
   /** Vertex output profile id */
   public static final StrConfOption HIVE_VERTEX_OUTPUT_PROFILE_ID =
-      new StrConfOption("giraph.hive.output.vertex.profileId", "vertex_output");
+      new StrConfOption("giraph.hive.output.vertex.profileId", "vertex_output",
+          "Vertex output profile id");
   /** Vertex output database name */
   public static final StrConfOption HIVE_VERTEX_OUTPUT_DATABASE =
-      new StrConfOption("giraph.hive.output.vertex.database", "default");
+      new StrConfOption("giraph.hive.output.vertex.database", "default",
+          "Vertex output database name");
   /** Vertex output table name */
   public static final StrConfOption HIVE_VERTEX_OUTPUT_TABLE =
-      new StrConfOption("giraph.hive.output.vertex.table", "");
+      new StrConfOption("giraph.hive.output.vertex.table", "",
+          "Vertex output table name");
   /** Vertex output partition */
   public static final StrConfOption HIVE_VERTEX_OUTPUT_PARTITION =
-      new StrConfOption("giraph.hive.output.vertex.partition", "");
+      new StrConfOption("giraph.hive.output.vertex.partition", "",
+          "Vertex output partition");
 
   /** Don't construct */
   protected GiraphHiveConstants() { }

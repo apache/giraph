@@ -31,9 +31,10 @@ public class IntConfOption extends AbstractConfOption {
    *
    * @param key key
    * @param defaultValue default value
+   * @param description configuration description
    */
-  public IntConfOption(String key, int defaultValue) {
-    super(key);
+  public IntConfOption(String key, int defaultValue, String description) {
+    super(key, description);
     this.defaultValue = defaultValue;
     AllOptions.add(this);
   }
@@ -43,9 +44,10 @@ public class IntConfOption extends AbstractConfOption {
    *
    * @param key key
    * @param defaultValue default value
+   * @param description configuration description
    */
-  public IntConfOption(String key, long defaultValue) {
-    super(key);
+  public IntConfOption(String key, long defaultValue, String description) {
+    super(key, description);
     this.defaultValue = (int) defaultValue;
     AllOptions.add(this);
   }

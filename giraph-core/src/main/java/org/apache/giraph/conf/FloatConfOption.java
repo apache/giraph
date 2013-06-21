@@ -31,9 +31,10 @@ public class FloatConfOption extends AbstractConfOption {
    *
    * @param key Configuration key
    * @param defaultValue default value
+   * @param description configuration description
    */
-  public FloatConfOption(String key, float defaultValue) {
-    super(key);
+  public FloatConfOption(String key, float defaultValue, String description) {
+    super(key, description);
     this.defaultValue = defaultValue;
     AllOptions.add(this);
   }

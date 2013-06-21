@@ -36,9 +36,10 @@ public class StrConfOption extends AbstractConfOption {
    *
    * @param key key
    * @param defaultValue default value
+   * @param description configuration description
    */
-  public StrConfOption(String key, String defaultValue) {
-    super(key);
+  public StrConfOption(String key, String defaultValue, String description) {
+    super(key, description);
     this.defaultValue = defaultValue;
     AllOptions.add(this);
   }

@@ -31,9 +31,10 @@ public class LongConfOption extends AbstractConfOption {
    *
    * @param key key
    * @param defaultValue default value
+   * @param description configuration description
    */
-  public LongConfOption(String key, long defaultValue) {
-    super(key);
+  public LongConfOption(String key, long defaultValue, String description) {
+    super(key, description);
     this.defaultValue = defaultValue;
     AllOptions.add(this);
   }

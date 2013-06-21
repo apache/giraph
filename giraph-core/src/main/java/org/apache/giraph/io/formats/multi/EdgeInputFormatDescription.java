@@ -50,7 +50,13 @@ public class EdgeInputFormatDescription<I extends WritableComparable,
    * [["EIF1",{"p":"v1"}],["EIF2",{"p":"v2","q":"v"}]]
    */
   public static final StrConfOption EDGE_INPUT_FORMAT_DESCRIPTIONS =
-      new StrConfOption("giraph.multiEdgeInput.descriptions", null);
+      new StrConfOption("giraph.multiEdgeInput.descriptions", null,
+          "EdgeInputFormats description - JSON array containing a JSON array " +
+          "for each edge input. Edge input JSON arrays contain one or two " +
+          "elements - first one is the name of edge input class, and second " +
+          "one is JSON object with all specific parameters for this edge " +
+          "input. For example: [[\"EIF1\",{\"p\":\"v1\"}]," +
+          "[\"EIF2\",{\"p\":\"v2\",\"q\":\"v\"}]]");
 
   /**
    * Constructor with edge input format class

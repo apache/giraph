@@ -41,7 +41,8 @@ public abstract class GeneratedEdgeReader<
     extends EdgeReader<I, E> {
   /** Default edges produced by this reader */
   public static final LongConfOption DEFAULT_READER_EDGES =
-    new LongConfOption("GeneratedEdgeReader.reader_edges", 10);
+    new LongConfOption("GeneratedEdgeReader.reader_edges", 10,
+        "Default edges produced by this reader");
   /** Records read so far */
   protected long recordsRead = 0;
   /** Total records to read (on this split alone) */

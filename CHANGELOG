@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-623: Website Documentation: table of parameters (armax00 via nitay)
+
   GIRAPH-694 Setting configuration in GiraphConfiguration causes 
   non thread safe copies (aching)
 

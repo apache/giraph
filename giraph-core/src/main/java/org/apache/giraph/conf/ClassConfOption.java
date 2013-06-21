@@ -42,10 +42,11 @@ public class ClassConfOption<C> extends AbstractConfOption {
    * @param key Key
    * @param defaultClass default class
    * @param interfaceClass interface class
+   * @param description configuration description
    */
   private ClassConfOption(String key, Class<? extends C> defaultClass,
-      Class<C> interfaceClass) {
-    super(key);
+      Class<C> interfaceClass, String description) {
+    super(key, description);
     this.defaultClass = defaultClass;
     this.interfaceClass = interfaceClass;
     AllOptions.add(this);
@@ -57,12 +58,15 @@ public class ClassConfOption<C> extends AbstractConfOption {
    * @param key key
    * @param defaultClass default class
    * @param interfaceClass interface class
+   * @param description configuration description
    * @param <T> type of class
    * @return ClassConfOption
    */
   public static <T> ClassConfOption<T> create(String key,
-      Class<? extends T> defaultClass, Class<T> interfaceClass) {
-    return new ClassConfOption<T>(key, defaultClass, interfaceClass);
+      Class<? extends T> defaultClass, Class<T> interfaceClass,
+      String description) {
+    return new ClassConfOption<T>(key, defaultClass, interfaceClass,
+                                  description);
   }
 
   public Class<? extends C> getDefaultClass() {
