@@ -129,12 +129,30 @@ public abstract class MasterCompute
   }
 
   /**
+   * Get Computation class to be used
+   *
+   * @return Computation class
+   */
+  public final Class<? extends Computation> getComputation() {
+    return superstepClasses.getComputationClass();
+  }
+
+  /**
    * Set Combiner class to be used
    *
    * @param combinerClass Combiner class
    */
   public final void setCombiner(Class<? extends Combiner> combinerClass) {
     superstepClasses.setCombinerClass(combinerClass);
+  }
+
+  /**
+   * Get Combiner class to be used
+   *
+   * @return Combiner class
+   */
+  public final Class<? extends Combiner> getCombiner() {
+    return superstepClasses.getCombinerClass();
   }
 
   @Override
