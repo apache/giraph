@@ -16,11 +16,14 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.comm.messages;
+package org.apache.giraph.comm.messages.out_of_core;
 
+import org.apache.giraph.comm.messages.MessageStoreFactory;
+import org.apache.giraph.comm.messages.MessagesIterable;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.utils.EmptyIterable;
+import org.apache.giraph.utils.ExtendedDataOutput;
 import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -28,7 +31,6 @@ import org.apache.log4j.Logger;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -43,14 +45,15 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.SortedSet;
+import java.util.Map;
+import java.util.NavigableMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.apache.giraph.conf.GiraphConstants.MESSAGES_DIRECTORY;
 
 /**
  * Used for writing and reading collection of messages to the disk.
- * {@link SequentialFileMessageStore#addMessages(MessageStore)}
+ * {@link SequentialFileMessageStore#addMessages(NavigableMap)}
  * should be called only once with the messages we want to store.
  * <p/>
  * It's optimized for retrieving messages in the natural order of vertex ids
@@ -60,7 +63,7 @@ import static org.apache.giraph.conf.GiraphConstants.MESSAGES_DIRECTORY;
  * @param <M> Message data
  */
 public class SequentialFileMessageStore<I extends WritableComparable,
-    M extends Writable> implements BasicMessageStore<I, M> {
+    M extends Writable> implements Writable {
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(SequentialFileMessageStore.class);
@@ -99,8 +102,14 @@ public class SequentialFileMessageStore<I extends WritableComparable,
     file = new File(fileName);
   }
 
-  @Override
-  public void addMessages(MessageStore<I, M> messageStore) throws IOException {
+  /**
+   * Adds messages from one message store to another
+   *
+   * @param messageMap Add the messages from this map to this store
+   * @throws java.io.IOException
+   */
+  public void addMessages(NavigableMap<I, ExtendedDataOutput> messageMap)
+    throws IOException {
     // Writes messages to its file
     if (file.exists()) {
       if (LOG.isDebugEnabled()) {
@@ -118,28 +127,17 @@ public class SequentialFileMessageStore<I extends WritableComparable,
     try {
       out = new DataOutputStream(
           new BufferedOutputStream(new FileOutputStream(file), bufferSize));
-      int destinationVertexIdCount =
-          Iterables.size(messageStore.getDestinationVertices());
+      int destinationVertexIdCount = messageMap.size();
       out.writeInt(destinationVertexIdCount);
 
-      // Since the message store messages might not be sorted, sort them if
-      // necessary
-      SortedSet<I> sortedSet;
-      if (messageStore.getDestinationVertices() instanceof SortedSet) {
-        sortedSet = (SortedSet<I>) messageStore.getDestinationVertices();
-      } else {
-        sortedSet =
-            Sets.newTreeSet(messageStore.getDestinationVertices());
-        for (I destinationVertexId : messageStore.getDestinationVertices()) {
-          sortedSet.add(destinationVertexId);
-        }
-      }
-
       // Dump the vertices and their messages in a sorted order
-      for (I destinationVertexId : sortedSet) {
+      for (Map.Entry<I, ExtendedDataOutput> entry : messageMap.entrySet()) {
+        I destinationVertexId = entry.getKey();
         destinationVertexId.write(out);
-        Iterable<M> messages =
-            messageStore.getVertexMessages(destinationVertexId);
+        ExtendedDataOutput extendedDataOutput = entry.getValue();
+        Iterable<M> messages = new MessagesIterable<M>(
+            config, messageClass, extendedDataOutput.getByteArray(), 0,
+            extendedDataOutput.getPos());
         int messageCount = Iterables.size(messages);
         out.writeInt(messageCount);
         if (LOG.isDebugEnabled()) {
@@ -170,7 +168,6 @@ public class SequentialFileMessageStore<I extends WritableComparable,
    *         correctly
    * @throws IOException
    */
-  @Override
   public Iterable<M> getVertexMessages(I vertexId) throws
       IOException {
     if (LOG.isDebugEnabled()) {
@@ -193,10 +190,9 @@ public class SequentialFileMessageStore<I extends WritableComparable,
     return readMessagesForCurrentVertex();
   }
 
-  @Override
-  public void clearVertexMessages(I vertexId) throws IOException { }
-
-  @Override
+  /**
+   * Clears all resources used by this store.
+   */
   public void clearAll() throws IOException {
     endReading();
     file.delete();
@@ -353,8 +349,8 @@ public class SequentialFileMessageStore<I extends WritableComparable,
    * @return Factory
    */
   public static <I extends WritableComparable, M extends Writable>
-  MessageStoreFactory<I, M, BasicMessageStore<I, M>> newFactory(
-      ImmutableClassesGiraphConfiguration config) {
+  MessageStoreFactory<I, M, SequentialFileMessageStore<I, M>> newFactory(
+      ImmutableClassesGiraphConfiguration<I, ?, ?> config) {
     return new Factory<I, M>(config);
   }
 
@@ -366,9 +362,9 @@ public class SequentialFileMessageStore<I extends WritableComparable,
    */
   private static class Factory<I extends WritableComparable,
       M extends Writable>
-      implements MessageStoreFactory<I, M, BasicMessageStore<I, M>> {
+      implements MessageStoreFactory<I, M, SequentialFileMessageStore<I, M>> {
     /** Hadoop configuration */
-    private final ImmutableClassesGiraphConfiguration config;
+    private final ImmutableClassesGiraphConfiguration<I, ?, ?> config;
     /** Directories in which we'll keep necessary files */
     private final String[] directories;
     /** Buffer size to use when reading and writing */
@@ -381,7 +377,7 @@ public class SequentialFileMessageStore<I extends WritableComparable,
      *
      * @param config Hadoop configuration
      */
-    public Factory(ImmutableClassesGiraphConfiguration config) {
+    public Factory(ImmutableClassesGiraphConfiguration<I, ?, ?> config) {
       this.config = config;
       String jobId = config.get("mapred.job.id", "Unknown Job");
       int taskId   = config.getTaskPartition();
@@ -400,7 +396,7 @@ public class SequentialFileMessageStore<I extends WritableComparable,
     }
 
     @Override
-    public BasicMessageStore<I, M> newStore(Class<M> messageClass) {
+    public SequentialFileMessageStore<I, M> newStore(Class<M> messageClass) {
       int idx = Math.abs(storeCounter.getAndIncrement());
       String fileName =
           directories[idx % directories.length] + "messages-" + idx;

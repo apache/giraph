@@ -21,14 +21,12 @@ package org.apache.giraph.comm.netty;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.comm.WorkerServer;
-import org.apache.giraph.comm.messages.BasicMessageStore;
-import org.apache.giraph.comm.messages.DiskBackedMessageStore;
-import org.apache.giraph.comm.messages.DiskBackedMessageStoreByPartition;
-import org.apache.giraph.comm.messages.FlushableMessageStore;
+import org.apache.giraph.comm.messages.out_of_core.DiskBackedMessageStore;
 import org.apache.giraph.comm.messages.InMemoryMessageStoreFactory;
-import org.apache.giraph.comm.messages.MessageStoreByPartition;
+import org.apache.giraph.comm.messages.MessageStore;
 import org.apache.giraph.comm.messages.MessageStoreFactory;
-import org.apache.giraph.comm.messages.SequentialFileMessageStore;
+import org.apache.giraph.comm.messages.out_of_core.PartitionDiskBackedMessageStore;
+import org.apache.giraph.comm.messages.out_of_core.SequentialFileMessageStore;
 import org.apache.giraph.comm.netty.handler.WorkerRequestServerHandler;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.Vertex;
@@ -107,7 +105,7 @@ public class NettyWorkerServer<I extends WritableComparable,
    *
    * @return Message store factory
    */
-  private MessageStoreFactory<I, Writable, MessageStoreByPartition<I, Writable>>
+  private MessageStoreFactory<I, Writable, MessageStore<I, Writable>>
   createMessageStoreFactory() {
     boolean useOutOfCoreMessaging = USE_OUT_OF_CORE_MESSAGES.get(conf);
     if (!useOutOfCoreMessaging) {
@@ -118,12 +116,13 @@ public class NettyWorkerServer<I extends WritableComparable,
         LOG.info("createMessageStoreFactory: Using DiskBackedMessageStore, " +
             "maxMessagesInMemory = " + maxMessagesInMemory);
       }
-      MessageStoreFactory<I, Writable, BasicMessageStore<I, Writable>>
+      MessageStoreFactory<I, Writable, SequentialFileMessageStore<I, Writable>>
           fileStoreFactory = SequentialFileMessageStore.newFactory(conf);
-      MessageStoreFactory<I, Writable, FlushableMessageStore<I, Writable>>
+      MessageStoreFactory<I, Writable,
+          PartitionDiskBackedMessageStore<I, Writable>>
           partitionStoreFactory =
-          DiskBackedMessageStore.newFactory(conf, fileStoreFactory);
-      return DiskBackedMessageStoreByPartition.newFactory(service,
+          PartitionDiskBackedMessageStore.newFactory(conf, fileStoreFactory);
+      return DiskBackedMessageStore.newFactory(service,
           maxMessagesInMemory, partitionStoreFactory);
     }
   }

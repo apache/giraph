@@ -24,14 +24,12 @@ import com.google.common.collect.Sets;
 import com.google.common.io.Files;
 import org.apache.commons.io.FileUtils;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.comm.messages.BasicMessageStore;
 import org.apache.giraph.comm.messages.ByteArrayMessagesPerVertexStore;
-import org.apache.giraph.comm.messages.DiskBackedMessageStore;
-import org.apache.giraph.comm.messages.DiskBackedMessageStoreByPartition;
-import org.apache.giraph.comm.messages.FlushableMessageStore;
+import org.apache.giraph.comm.messages.out_of_core.DiskBackedMessageStore;
 import org.apache.giraph.comm.messages.MessageStore;
 import org.apache.giraph.comm.messages.MessageStoreFactory;
-import org.apache.giraph.comm.messages.SequentialFileMessageStore;
+import org.apache.giraph.comm.messages.out_of_core.PartitionDiskBackedMessageStore;
+import org.apache.giraph.comm.messages.out_of_core.SequentialFileMessageStore;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
@@ -138,42 +136,25 @@ public class TestMessageStores {
     return allMessages;
   }
 
-  /**
-   * Used for testing only
-   */
-  private static class InputMessageStore extends
-      ByteArrayMessagesPerVertexStore<IntWritable, IntWritable> {
-
-    /**
-     * Constructor
-     *
-     * @param service Service worker
-     * @param config  Hadoop configuration
-     */
-    InputMessageStore(
-        CentralizedServiceWorker<IntWritable, ?, ?> service,
-        ImmutableClassesGiraphConfiguration<IntWritable, ?, ?> config,
-        Map<IntWritable, Collection<IntWritable>> inputMap) throws IOException {
-      super(IntWritable.class, service, config);
-      // Adds all the messages to the store
-      for (Map.Entry<IntWritable, Collection<IntWritable>> entry :
-          inputMap.entrySet()) {
-        int partitionId = getPartitionId(entry.getKey());
-        ByteArrayVertexIdMessages<IntWritable, IntWritable>
-            byteArrayVertexIdMessages =
-            new ByteArrayVertexIdMessages<IntWritable,
-                IntWritable>(IntWritable.class);
-        byteArrayVertexIdMessages.setConf(config);
-        byteArrayVertexIdMessages.initialize();
-        for (IntWritable message : entry.getValue()) {
-          byteArrayVertexIdMessages.add(entry.getKey(), message);
-        }
-        try {
-          addPartitionMessages(partitionId, byteArrayVertexIdMessages);
-        } catch (IOException e) {
-          throw new IllegalStateException("Got IOException", e);
-        }
+  private static void addMessages(
+      MessageStore<IntWritable, IntWritable> messageStore,
+      CentralizedServiceWorker<IntWritable, ?, ?> service,
+      ImmutableClassesGiraphConfiguration<IntWritable, ?, ?> config,
+      Map<IntWritable, Collection<IntWritable>> inputMap) throws IOException {
+    for (Map.Entry<IntWritable, Collection<IntWritable>> entry :
+        inputMap.entrySet()) {
+      int partitionId =
+          service.getVertexPartitionOwner(entry.getKey()).getPartitionId();
+      ByteArrayVertexIdMessages<IntWritable, IntWritable>
+          byteArrayVertexIdMessages =
+          new ByteArrayVertexIdMessages<IntWritable,
+              IntWritable>(IntWritable.class);
+      byteArrayVertexIdMessages.setConf(config);
+      byteArrayVertexIdMessages.initialize();
+      for (IntWritable message : entry.getValue()) {
+        byteArrayVertexIdMessages.add(entry.getKey(), message);
       }
+      messageStore.addPartitionMessages(partitionId, byteArrayVertexIdMessages);
     }
   }
 
@@ -184,8 +165,7 @@ public class TestMessageStores {
     for (int n = 0; n < testData.numTimes; n++) {
       SortedMap<IntWritable, Collection<IntWritable>> batch =
           createRandomMessages(testData);
-      messageStore.addMessages(new InputMessageStore(service, config,
-          batch));
+      addMessages(messageStore, service, config, batch);
       for (Entry<IntWritable, Collection<IntWritable>> entry :
           batch.entrySet()) {
         if (messages.containsKey(entry.getKey())) {
@@ -200,19 +180,24 @@ public class TestMessageStores {
   private <I extends WritableComparable, M extends Writable> boolean
   equalMessages(
       MessageStore<I, M> messageStore,
-      Map<I, Collection<M>> expectedMessages) throws IOException {
-    TreeSet<I> vertexIds = Sets.newTreeSet();
-    Iterables.addAll(vertexIds, messageStore.getDestinationVertices());
-    for (I vertexId : vertexIds) {
-      Iterable<M> expected = expectedMessages.get(vertexId);
-      if (expected == null) {
-        return false;
-      }
-      Iterable<M> actual = messageStore.getVertexMessages(vertexId);
-      if (!CollectionUtils.isEqual(expected, actual)) {
-        System.err.println("equalMessages: For vertexId " + vertexId +
-            " expected " + expected + ", but got " + actual);
-        return false;
+      Map<I, Collection<M>> expectedMessages,
+      TestData testData) throws IOException {
+    for (int partitionId = 0; partitionId < testData.numOfPartitions;
+         partitionId++) {
+      TreeSet<I> vertexIds = Sets.newTreeSet();
+      Iterables.addAll(vertexIds,
+          messageStore.getPartitionDestinationVertices(partitionId));
+      for (I vertexId : vertexIds) {
+        Iterable<M> expected = expectedMessages.get(vertexId);
+        if (expected == null) {
+          return false;
+        }
+        Iterable<M> actual = messageStore.getVertexMessages(vertexId);
+        if (!CollectionUtils.isEqual(expected, actual)) {
+          System.err.println("equalMessages: For vertexId " + vertexId +
+              " expected " + expected + ", but got " + actual);
+          return false;
+        }
       }
     }
     return true;
@@ -220,7 +205,7 @@ public class TestMessageStores {
 
   private <S extends MessageStore<IntWritable, IntWritable>> S doCheckpoint(
       MessageStoreFactory<IntWritable, IntWritable, S> messageStoreFactory,
-      S messageStore) throws IOException {
+      S messageStore, TestData testData) throws IOException {
     File file = new File(directory, "messageStoreTest");
     if (file.exists()) {
       file.delete();
@@ -228,14 +213,20 @@ public class TestMessageStores {
     file.createNewFile();
     DataOutputStream out = new DataOutputStream(new BufferedOutputStream(
         (new FileOutputStream(file))));
-    messageStore.write(out);
+    for (int partitionId = 0; partitionId < testData.numOfPartitions;
+         partitionId++) {
+      messageStore.writePartition(out, partitionId);
+    }
     out.close();
 
     messageStore = messageStoreFactory.newStore(IntWritable.class);
 
     DataInputStream in = new DataInputStream(new BufferedInputStream(
         (new FileInputStream(file))));
-    messageStore.readFields(in);
+    for (int partitionId = 0; partitionId < testData.numOfPartitions;
+         partitionId++) {
+      messageStore.readFieldsForPartition(in, partitionId);
+    }
     in.close();
     file.delete();
 
@@ -250,10 +241,10 @@ public class TestMessageStores {
         new TreeMap<IntWritable, Collection<IntWritable>>();
     S messageStore = messageStoreFactory.newStore(IntWritable.class);
     putNTimes(messageStore, messages, testData);
-    assertTrue(equalMessages(messageStore, messages));
+    assertTrue(equalMessages(messageStore, messages, testData));
     messageStore.clearAll();
-    messageStore = doCheckpoint(messageStoreFactory, messageStore);
-    assertTrue(equalMessages(messageStore, messages));
+    messageStore = doCheckpoint(messageStoreFactory, messageStore, testData);
+    assertTrue(equalMessages(messageStore, messages, testData));
     messageStore.clearAll();
   }
 
@@ -270,31 +261,18 @@ public class TestMessageStores {
   }
 
   @Test
-  public void testDiskBackedMessageStore() {
-    try {
-      MessageStoreFactory<IntWritable, IntWritable,
-          BasicMessageStore<IntWritable, IntWritable>> fileStoreFactory =
-          SequentialFileMessageStore.newFactory(config);
-      MessageStoreFactory<IntWritable, IntWritable,
-          FlushableMessageStore<IntWritable, IntWritable>> diskStoreFactory =
-          DiskBackedMessageStore.newFactory(config, fileStoreFactory);
-      testMessageStore(diskStoreFactory, testData);
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-  }
-
-  @Test
   public void testDiskBackedMessageStoreByPartition() {
     try {
       MessageStoreFactory<IntWritable, IntWritable,
-          BasicMessageStore<IntWritable, IntWritable>> fileStoreFactory =
+          SequentialFileMessageStore<IntWritable, IntWritable>>
+          fileStoreFactory =
           SequentialFileMessageStore.newFactory(config);
       MessageStoreFactory<IntWritable, IntWritable,
-          FlushableMessageStore<IntWritable, IntWritable>> diskStoreFactory =
-          DiskBackedMessageStore.newFactory(config, fileStoreFactory);
-      testMessageStore(DiskBackedMessageStoreByPartition.newFactory(service,
-          testData.maxMessagesInMemory, diskStoreFactory), testData);
+          PartitionDiskBackedMessageStore<IntWritable, IntWritable>>
+          partitionStoreFactory =
+          PartitionDiskBackedMessageStore.newFactory(config, fileStoreFactory);
+      testMessageStore(DiskBackedMessageStore.newFactory(service,
+          testData.maxMessagesInMemory, partitionStoreFactory), testData);
     } catch (IOException e) {
       e.printStackTrace();
     }

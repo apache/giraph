@@ -18,26 +18,39 @@
 
 package org.apache.giraph.comm.messages;
 
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.utils.ReflectionUtils;
+import org.apache.giraph.utils.RepresentativeByteArrayIterable;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 
 /**
- * Factory for message stores
+ * Special iterable that recycles the message
  *
- * @param <I> Vertex id
  * @param <M> Message data
- * @param <MS> Message store
  */
-public interface MessageStoreFactory<I extends WritableComparable,
-    M extends Writable, MS> {
+public class MessagesIterable<M extends Writable>
+    extends RepresentativeByteArrayIterable<M> {
+  /** Message class */
+  private final Class<M> messageClass;
+
   /**
-   * Creates new message store.
+   * Constructor
    *
-   * Note: Combiner class in Configuration can be changed,
-   * this method should return MessageStore which uses current combiner
-   *
-   * @param messageClass Message class held in the store
-   * @return New message store
+   * @param conf Configuration
+   * @param messageClass Message class
+   * @param buf Buffer
+   * @param off Offset to start in the buffer
+   * @param length Length of the buffer
    */
-  MS newStore(Class<M> messageClass);
+  public MessagesIterable(
+      ImmutableClassesGiraphConfiguration conf, Class<M> messageClass,
+      byte[] buf, int off, int length) {
+    super(conf, buf, off, length);
+    this.messageClass = messageClass;
+  }
+
+  @Override
+  protected M createWritable() {
+    return ReflectionUtils.newInstance(messageClass);
+  }
 }

@@ -35,7 +35,7 @@ import org.apache.log4j.Logger;
  */
 public class InMemoryMessageStoreFactory<I extends WritableComparable,
     M extends Writable>
-    implements MessageStoreFactory<I, M, MessageStoreByPartition<I, M>> {
+    implements MessageStoreFactory<I, M, MessageStore<I, M>> {
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(InMemoryMessageStoreFactory.class);
@@ -56,7 +56,7 @@ public class InMemoryMessageStoreFactory<I extends WritableComparable,
   }
 
   @Override
-  public MessageStoreByPartition<I, M> newStore(Class<M> messageClass) {
+  public MessageStore<I, M> newStore(Class<M> messageClass) {
     if (conf.useCombiner()) {
       if (LOG.isInfoEnabled()) {
         LOG.info("newStore: " +

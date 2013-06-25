@@ -18,14 +18,12 @@
 
 package org.apache.giraph.comm.messages;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
@@ -34,7 +32,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
- * Abstract class for {@link MessageStoreByPartition} which allows any kind
+ * Abstract class for {@link MessageStore} which allows any kind
  * of object to hold messages for one vertex.
  * Simple in memory message store implemented with a two level concurrent
  * hash map.
@@ -44,7 +42,7 @@ import org.apache.hadoop.io.WritableComparable;
  * @param <T> Type of object which holds messages for one vertex
  */
 public abstract class SimpleMessageStore<I extends WritableComparable,
-    M extends Writable, T> implements MessageStoreByPartition<I, M>  {
+    M extends Writable, T> implements MessageStore<I, M>  {
   /** Message class */
   protected final Class<M> messageClass;
   /** Service worker */
@@ -150,16 +148,7 @@ public abstract class SimpleMessageStore<I extends WritableComparable,
   public boolean hasMessagesForVertex(I vertexId) {
     ConcurrentMap<I, ?> partitionMap =
         map.get(getPartitionId(vertexId));
-    return (partitionMap == null) ? false : partitionMap.containsKey(vertexId);
-  }
-
-  @Override
-  public Iterable<I> getDestinationVertices() {
-    List<I> vertices = Lists.newArrayList();
-    for (ConcurrentMap<I, ?> partitionMap : map.values()) {
-      vertices.addAll(partitionMap.keySet());
-    }
-    return vertices;
+    return partitionMap != null && partitionMap.containsKey(vertexId);
   }
 
   @Override
@@ -171,15 +160,6 @@ public abstract class SimpleMessageStore<I extends WritableComparable,
     T messages = partitionMap.get(vertexId);
     return (messages == null) ? Collections.<M>emptyList() :
         getMessagesAsIterable(messages);
-  }
-
-  @Override
-  public int getNumberOfMessages() {
-    int numberOfMessages = 0;
-    for (ConcurrentMap<I, T> partitionMap : map.values()) {
-      numberOfMessages += getNumberOfMessagesIn(partitionMap);
-    }
-    return numberOfMessages;
   }
 
   @Override
@@ -197,15 +177,6 @@ public abstract class SimpleMessageStore<I extends WritableComparable,
   }
 
   @Override
-  public void write(DataOutput out) throws IOException {
-    out.writeInt(map.size());
-    for (int partitionId : map.keySet()) {
-      out.writeInt(partitionId);
-      writePartition(out, partitionId);
-    }
-  }
-
-  @Override
   public void readFieldsForPartition(DataInput in,
       int partitionId) throws IOException {
     if (in.readBoolean()) {
@@ -217,15 +188,6 @@ public abstract class SimpleMessageStore<I extends WritableComparable,
         partitionMap.put(vertexId, readFieldsForMessages(in));
       }
       map.put(partitionId, partitionMap);
-    }
-  }
-
-  @Override
-  public void readFields(DataInput in) throws IOException {
-    int numPartitions = in.readInt();
-    for (int p = 0; p < numPartitions; p++) {
-      int partitionId = in.readInt();
-      readFieldsForPartition(in, partitionId);
     }
   }
 

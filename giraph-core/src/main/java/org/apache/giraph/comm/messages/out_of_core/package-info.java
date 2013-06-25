@@ -15,26 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.giraph.comm.messages;
-
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-
-import java.io.IOException;
-
 /**
- * Message stores which has flush operation
- *
- * @param <I> Vertex id
- * @param <M> Message data
+ * Package of out-of-core messages related classes.
  */
-public interface FlushableMessageStore<I extends WritableComparable,
-    M extends Writable> extends MessageStore<I, M> {
-  /**
-   * Flushes messages to the disk.
-   *
-   * @throws IOException
-   */
-  void flush() throws IOException;
-}
+package org.apache.giraph.comm.messages.out_of_core;

@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-697: Clean up message stores (majakabiljo)
+
   GIRAPH-696: Should be able to spill giraph metrics to a specified 
   directory on HDFS (claudio)
 

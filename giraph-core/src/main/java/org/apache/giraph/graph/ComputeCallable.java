@@ -19,7 +19,7 @@ package org.apache.giraph.graph;
 
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.WorkerClientRequestProcessor;
-import org.apache.giraph.comm.messages.MessageStoreByPartition;
+import org.apache.giraph.comm.messages.MessageStore;
 import org.apache.giraph.comm.netty.NettyWorkerClientRequestProcessor;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.io.SimpleVertexWriter;
@@ -81,7 +81,7 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
   /** Thread-safe queue of all partition ids */
   private final BlockingQueue<Integer> partitionIdQueue;
   /** Message store */
-  private final MessageStoreByPartition<I, M1> messageStore;
+  private final MessageStore<I, M1> messageStore;
   /** Configuration */
   private final ImmutableClassesGiraphConfiguration<I, V, E> configuration;
   /** Worker (for NettyWorkerClientRequestProcessor) */
@@ -111,7 +111,7 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
    */
   public ComputeCallable(
       Mapper<?, ?, ?, ?>.Context context, GraphState graphState,
-      MessageStoreByPartition<I, M1> messageStore,
+      MessageStore<I, M1> messageStore,
       BlockingQueue<Integer> partitionIdQueue,
       ImmutableClassesGiraphConfiguration<I, V, E> configuration,
       CentralizedServiceWorker<I, V, E> serviceWorker) {

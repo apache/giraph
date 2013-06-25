@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.comm.messages;
+package org.apache.giraph.comm.messages.out_of_core;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -33,22 +33,23 @@ import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import org.apache.giraph.comm.messages.MessageStoreFactory;
+import org.apache.giraph.comm.messages.MessagesIterable;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.utils.ExtendedDataOutput;
-import org.apache.giraph.utils.ReflectionUtils;
-import org.apache.giraph.utils.RepresentativeByteArrayIterable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
  * Message storage with in-memory map of messages and with support for
- * flushing all the messages to the disk.
+ * flushing all the messages to the disk. Holds messages for a single partition.
  *
  * @param <I> Vertex id
  * @param <M> Message data
  */
-public class DiskBackedMessageStore<I extends WritableComparable,
-    M extends Writable> implements FlushableMessageStore<I, M> {
+public class PartitionDiskBackedMessageStore<I extends WritableComparable,
+    M extends Writable> implements Writable {
   /** Message class */
   private final Class<M> messageClass;
   /**
@@ -64,10 +65,10 @@ public class DiskBackedMessageStore<I extends WritableComparable,
   /** To keep vertex ids which we have messages for */
   private final Set<I> destinationVertices;
   /** File stores in which we keep flushed messages */
-  private final Collection<BasicMessageStore<I, M>> fileStores;
+  private final Collection<SequentialFileMessageStore<I, M>> fileStores;
   /** Factory for creating file stores when flushing */
   private final
-  MessageStoreFactory<I, M, BasicMessageStore<I, M>> fileStoreFactory;
+  MessageStoreFactory<I, M, SequentialFileMessageStore<I, M>> fileStoreFactory;
   /** Lock for disk flushing */
   private final ReadWriteLock rwLock = new ReentrantReadWriteLock(true);
 
@@ -78,10 +79,11 @@ public class DiskBackedMessageStore<I extends WritableComparable,
    * @param config           Hadoop configuration
    * @param fileStoreFactory Factory for creating file stores when flushing
    */
-  public DiskBackedMessageStore(
+  public PartitionDiskBackedMessageStore(
       Class<M> messageClass,
       ImmutableClassesGiraphConfiguration<I, ?, ?> config,
-      MessageStoreFactory<I, M, BasicMessageStore<I, M>> fileStoreFactory) {
+      MessageStoreFactory<I, M, SequentialFileMessageStore<I, M>>
+          fileStoreFactory) {
     inMemoryMessages = new ConcurrentSkipListMap<I, ExtendedDataOutput>();
     this.messageClass = messageClass;
     this.config = config;
@@ -133,158 +135,85 @@ public class DiskBackedMessageStore<I extends WritableComparable,
     return ownsVertexId;
   }
 
-  @Override
-  public void addMessages(MessageStore<I, M> messageStore) throws
-      IOException {
-    for (I destinationVertex : messageStore.getDestinationVertices()) {
-      addVertexMessages(destinationVertex,
-          messageStore.getVertexMessages(destinationVertex));
-    }
-  }
-
   /**
-   * Special iterable that recycles the message
+   * Get the messages for a vertex.
+   *
+   * @param vertexId Vertex id for which we want to get messages
+   * @return Iterable of messages for a vertex id
    */
-  private class MessageIterable extends RepresentativeByteArrayIterable<M> {
-    /**
-     * Constructor
-     *
-     * @param buf Buffer
-     * @param off Offset to start in the buffer
-     * @param length Length of the buffer
-     */
-    public MessageIterable(
-        byte[] buf, int off, int length) {
-      super(config, buf, off, length);
-    }
-
-    @Override
-    protected M createWritable() {
-      return ReflectionUtils.newInstance(messageClass);
-    }
-  }
-
-  @Override
   public Iterable<M> getVertexMessages(I vertexId) throws IOException {
     ExtendedDataOutput extendedDataOutput = inMemoryMessages.get(vertexId);
     if (extendedDataOutput == null) {
       extendedDataOutput = config.createExtendedDataOutput();
     }
-    Iterable<M> combinedIterable = new MessageIterable(
+    Iterable<M> combinedIterable = new MessagesIterable<M>(
+        config, messageClass,
         extendedDataOutput.getByteArray(), 0, extendedDataOutput.getPos());
 
-    for (BasicMessageStore<I, M> fileStore : fileStores) {
+    for (SequentialFileMessageStore<I, M> fileStore : fileStores) {
       combinedIterable = Iterables.concat(combinedIterable,
           fileStore.getVertexMessages(vertexId));
     }
     return combinedIterable;
   }
 
-  @Override
+  /**
+   * Get number of messages in memory
+   *
+   * @return Number of messages in memory
+   */
   public int getNumberOfMessages() {
     return numberOfMessagesInMemory.get();
   }
 
-  @Override
+  /**
+   * Check if we have messages for some vertex
+   *
+   * @param vertexId Id of vertex which we want to check
+   * @return True iff we have messages for vertex with required id
+   */
   public boolean hasMessagesForVertex(I vertexId) {
     return destinationVertices.contains(vertexId);
   }
 
-  @Override
+  /**
+   * Gets vertex ids which we have messages for
+   *
+   * @return Iterable over vertex ids which we have messages for
+   */
   public Iterable<I> getDestinationVertices() {
     return destinationVertices;
   }
 
-  @Override
+  /**
+   * Clears messages for a vertex.
+   *
+   * @param vertexId Vertex id for which we want to clear messages
+   * @throws IOException
+   */
   public void clearVertexMessages(I vertexId) throws IOException {
     inMemoryMessages.remove(vertexId);
   }
 
-  @Override
+  /**
+   * Clears all resources used by this store.
+   *
+   * @throws IOException
+   */
   public void clearAll() throws IOException {
     inMemoryMessages.clear();
     destinationVertices.clear();
-    for (BasicMessageStore<I, M> fileStore : fileStores) {
+    for (SequentialFileMessageStore<I, M> fileStore : fileStores) {
       fileStore.clearAll();
     }
     fileStores.clear();
   }
 
   /**
-   * Special temporary message store for passing along in-memory messages
+   * Flushes messages to the disk.
+   *
+   * @throws IOException
    */
-  private class TemporaryMessageStore implements MessageStore<I, M> {
-    /**
-     * In-memory message map (must be sorted to insure that the ids are
-     * ordered)
-     */
-    private final ConcurrentNavigableMap<I, ExtendedDataOutput>
-    temporaryMessages;
-
-    /**
-     * Constructor.
-     *
-     * @param temporaryMessages Messages to be owned by this object
-     */
-    private TemporaryMessageStore(
-        ConcurrentNavigableMap<I, ExtendedDataOutput>
-            temporaryMessages) {
-      this.temporaryMessages = temporaryMessages;
-    }
-
-    @Override
-    public int getNumberOfMessages() {
-      throw new IllegalAccessError("getNumberOfMessages: Not supported");
-    }
-
-    @Override
-    public boolean hasMessagesForVertex(I vertexId) {
-      return temporaryMessages.containsKey(vertexId);
-    }
-
-    @Override
-    public Iterable<I> getDestinationVertices() {
-      return temporaryMessages.keySet();
-    }
-
-    @Override
-    public void addMessages(MessageStore<I, M> messageStore)
-      throws IOException {
-      throw new IllegalAccessError("addMessages: Not supported");
-    }
-
-    @Override
-    public Iterable<M> getVertexMessages(I vertexId) throws IOException {
-      ExtendedDataOutput extendedDataOutput = temporaryMessages.get(vertexId);
-      if (extendedDataOutput == null) {
-        extendedDataOutput = config.createExtendedDataOutput();
-      }
-      return new MessageIterable(extendedDataOutput.getByteArray(), 0,
-          extendedDataOutput.getPos());
-    }
-
-    @Override
-    public void clearVertexMessages(I vertexId) throws IOException {
-      temporaryMessages.remove(vertexId);
-    }
-
-    @Override
-    public void clearAll() throws IOException {
-      temporaryMessages.clear();
-    }
-
-    @Override
-    public void write(DataOutput dataOutput) throws IOException {
-      throw new IllegalAccessError("write: Not supported");
-    }
-
-    @Override
-    public void readFields(DataInput dataInput) throws IOException {
-      throw new IllegalAccessError("readFields: Not supported");
-    }
-  }
-
-  @Override
   public void flush() throws IOException {
     ConcurrentNavigableMap<I, ExtendedDataOutput> messagesToFlush = null;
     rwLock.writeLock().lock();
@@ -295,9 +224,9 @@ public class DiskBackedMessageStore<I extends WritableComparable,
     } finally {
       rwLock.writeLock().unlock();
     }
-    BasicMessageStore<I, M> fileStore =
+    SequentialFileMessageStore<I, M> fileStore =
         fileStoreFactory.newStore(messageClass);
-    fileStore.addMessages(new TemporaryMessageStore(messagesToFlush));
+    fileStore.addMessages(messagesToFlush);
 
     synchronized (fileStores) {
       fileStores.add(fileStore);
@@ -325,7 +254,7 @@ public class DiskBackedMessageStore<I extends WritableComparable,
 
     // write file stores
     out.writeInt(fileStores.size());
-    for (BasicMessageStore<I, M> fileStore : fileStores) {
+    for (SequentialFileMessageStore<I, M> fileStore : fileStores) {
       fileStore.write(out);
     }
   }
@@ -358,7 +287,7 @@ public class DiskBackedMessageStore<I extends WritableComparable,
     // read file stores
     int numFileStores = in.readInt();
     for (int s = 0; s < numFileStores; s++) {
-      BasicMessageStore<I, M> fileStore =
+      SequentialFileMessageStore<I, M> fileStore =
           fileStoreFactory.newStore(messageClass);
       fileStore.readFields(in);
       fileStores.add(fileStore);
@@ -377,41 +306,44 @@ public class DiskBackedMessageStore<I extends WritableComparable,
    * @return Factory
    */
   public static <I extends WritableComparable, M extends Writable>
-  MessageStoreFactory<I, M, FlushableMessageStore<I, M>> newFactory(
+  MessageStoreFactory<I, M, PartitionDiskBackedMessageStore<I, M>> newFactory(
       ImmutableClassesGiraphConfiguration<I, ?, ?> config,
-      MessageStoreFactory<I, M, BasicMessageStore<I, M>> fileStoreFactory) {
+      MessageStoreFactory<I, M, SequentialFileMessageStore<I, M>>
+          fileStoreFactory) {
     return new Factory<I, M>(config, fileStoreFactory);
   }
 
   /**
-   * Factory for {@link DiskBackedMessageStore}
+   * Factory for {@link PartitionDiskBackedMessageStore}
    *
    * @param <I> Vertex id
    * @param <M> Message data
    */
   private static class Factory<I extends WritableComparable,
       M extends Writable> implements MessageStoreFactory<I, M,
-      FlushableMessageStore<I, M>> {
+      PartitionDiskBackedMessageStore<I, M>> {
     /** Hadoop configuration */
-    private final ImmutableClassesGiraphConfiguration config;
+    private final ImmutableClassesGiraphConfiguration<I, ?, ?> config;
     /** Factory for creating message stores for partitions */
-    private final
-    MessageStoreFactory<I, M, BasicMessageStore<I, M>> fileStoreFactory;
+    private final MessageStoreFactory<I, M, SequentialFileMessageStore<I, M>>
+    fileStoreFactory;
 
     /**
      * @param config           Hadoop configuration
      * @param fileStoreFactory Factory for creating message stores for
      *                         partitions
      */
-    public Factory(ImmutableClassesGiraphConfiguration config,
-        MessageStoreFactory<I, M, BasicMessageStore<I, M>> fileStoreFactory) {
+    public Factory(ImmutableClassesGiraphConfiguration<I, ?, ?> config,
+        MessageStoreFactory<I, M, SequentialFileMessageStore<I, M>>
+            fileStoreFactory) {
       this.config = config;
       this.fileStoreFactory = fileStoreFactory;
     }
 
     @Override
-    public FlushableMessageStore<I, M> newStore(Class<M> messageClass) {
-      return new DiskBackedMessageStore<I, M>(messageClass, config,
+    public PartitionDiskBackedMessageStore<I, M> newStore(
+        Class<M> messageClass) {
+      return new PartitionDiskBackedMessageStore<I, M>(messageClass, config,
           fileStoreFactory);
     }
   }

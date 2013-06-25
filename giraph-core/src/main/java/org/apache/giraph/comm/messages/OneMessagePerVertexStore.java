@@ -22,7 +22,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Collections;
-import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
@@ -58,44 +57,6 @@ public class OneMessagePerVertexStore<I extends WritableComparable,
       ImmutableClassesGiraphConfiguration<I, ?, ?> config) {
     super(messageClass, service, config);
     this.combiner = combiner;
-  }
-
-  /**
-   * If there is already a message related to the vertex id in the
-   * partition map return that message, otherwise create a new one,
-   * put it in the map and return it
-   *
-   * @param vertexId Id of vertex
-   * @param partitionMap Partition map
-   * @return Message for this vertex
-   */
-  private M getOrCreateCurrentMessage(I vertexId,
-      ConcurrentMap<I, M> partitionMap) {
-    M currentMessage = partitionMap.get(vertexId);
-    if (currentMessage == null) {
-      M newMessage = combiner.createInitialMessage();
-      currentMessage = partitionMap.putIfAbsent(vertexId, newMessage);
-      if (currentMessage == null) {
-        currentMessage = newMessage;
-      }
-    }
-    return currentMessage;
-  }
-
-  /**
-   * Add a single message for vertex to a partition map
-   *
-   * @param vertexId Id of vertex which received message
-   * @param message Message to add
-   * @param partitionMap Partition map to add the message to
-   * @throws IOException
-   */
-  private void addVertexMessageToPartition(I vertexId, M message,
-      ConcurrentMap<I, M> partitionMap) throws IOException {
-    M currentMessage = getOrCreateCurrentMessage(vertexId, partitionMap);
-    synchronized (currentMessage) {
-      combiner.combine(vertexId, currentMessage, message);
-    }
   }
 
   @Override
@@ -149,26 +110,6 @@ public class OneMessagePerVertexStore<I extends WritableComparable,
     return message;
   }
 
-  @Override
-  public void addMessages(MessageStore<I, M> messageStore) throws IOException {
-    if (messageStore instanceof OneMessagePerVertexStore) {
-      OneMessagePerVertexStore<I, M> oneMessagePerVertexStore =
-          (OneMessagePerVertexStore<I, M>) messageStore;
-      for (Map.Entry<Integer, ConcurrentMap<I, M>>
-          partitionEntry : oneMessagePerVertexStore.map.entrySet()) {
-        ConcurrentMap<I, M> partitionMap =
-              getOrCreatePartitionMap(partitionEntry.getKey());
-        for (Map.Entry<I, M> vertexEntry :
-            partitionEntry.getValue().entrySet()) {
-          addVertexMessageToPartition(vertexEntry.getKey(),
-              vertexEntry.getValue(), partitionMap);
-        }
-      }
-    } else {
-      throw new IllegalArgumentException("addMessages: Illegal argument " +
-          messageStore.getClass());
-    }
-  }
 
   /**
    * Create new factory for this message store
@@ -180,7 +121,7 @@ public class OneMessagePerVertexStore<I extends WritableComparable,
    * @return Factory
    */
   public static <I extends WritableComparable, M extends Writable>
-  MessageStoreFactory<I, M, MessageStoreByPartition<I, M>> newFactory(
+  MessageStoreFactory<I, M, MessageStore<I, M>> newFactory(
       CentralizedServiceWorker<I, ?, ?> service,
       ImmutableClassesGiraphConfiguration<I, ?, ?> config) {
     return new Factory<I, M>(service, config);
@@ -194,7 +135,7 @@ public class OneMessagePerVertexStore<I extends WritableComparable,
    */
   private static class Factory<I extends WritableComparable,
       M extends Writable>
-      implements MessageStoreFactory<I, M, MessageStoreByPartition<I, M>> {
+      implements MessageStoreFactory<I, M, MessageStore<I, M>> {
     /** Service worker */
     private final CentralizedServiceWorker<I, ?, ?> service;
     /** Hadoop configuration */
@@ -211,7 +152,7 @@ public class OneMessagePerVertexStore<I extends WritableComparable,
     }
 
     @Override
-    public MessageStoreByPartition<I, M> newStore(Class<M> messageClass) {
+    public MessageStore<I, M> newStore(Class<M> messageClass) {
       return new OneMessagePerVertexStore<I, M>(messageClass, service,
           config.<M>createCombiner(), config);
     }

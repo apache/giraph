@@ -16,12 +16,12 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.comm.messages;
+package org.apache.giraph.comm.messages.out_of_core;
 
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
+import org.apache.giraph.comm.messages.MessageStore;
+import org.apache.giraph.comm.messages.MessageStoreFactory;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.giraph.utils.EmptyIterable;
 import org.apache.hadoop.io.Writable;
@@ -31,8 +31,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Collections;
-import java.util.List;
-import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentMap;
 
 /**
@@ -44,9 +42,9 @@ import java.util.concurrent.ConcurrentMap;
  * @param <E> Edge data
  * @param <M> Message data
  */
-public class DiskBackedMessageStoreByPartition<I extends WritableComparable,
+public class DiskBackedMessageStore<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable> implements
-    MessageStoreByPartition<I, M> {
+    MessageStore<I, M> {
   /** Message class */
   private final Class<M> messageClass;
   /** Service worker */
@@ -54,28 +52,29 @@ public class DiskBackedMessageStoreByPartition<I extends WritableComparable,
   /** Number of messages to keep in memory */
   private final int maxNumberOfMessagesInMemory;
   /** Factory for creating file stores when flushing */
-  private final
-  MessageStoreFactory<I, M, FlushableMessageStore<I, M>> fileStoreFactory;
+  private final MessageStoreFactory<I, M, PartitionDiskBackedMessageStore<I, M>>
+  partitionStoreFactory;
   /** Map from partition id to its message store */
-  private final
-  ConcurrentMap<Integer, FlushableMessageStore<I, M>> partitionMessageStores;
+  private final ConcurrentMap<Integer, PartitionDiskBackedMessageStore<I, M>>
+  partitionMessageStores;
+
   /**
    * @param messageClass                Message class held in the store
    * @param service                     Service worker
    * @param maxNumberOfMessagesInMemory Number of messages to keep in memory
-   * @param fileStoreFactory            Factory for creating file stores
-   *                                    when flushing
+   * @param partitionStoreFactory       Factory for creating stores for a
+   *                                    partition
    */
-  public DiskBackedMessageStoreByPartition(
+  public DiskBackedMessageStore(
       Class<M> messageClass,
       CentralizedServiceWorker<I, V, E> service,
       int maxNumberOfMessagesInMemory,
-      MessageStoreFactory<I, M, FlushableMessageStore<I,
-          M>> fileStoreFactory) {
+      MessageStoreFactory<I, M, PartitionDiskBackedMessageStore<I,
+          M>> partitionStoreFactory) {
     this.messageClass = messageClass;
     this.service = service;
     this.maxNumberOfMessagesInMemory = maxNumberOfMessagesInMemory;
-    this.fileStoreFactory = fileStoreFactory;
+    this.partitionStoreFactory = partitionStoreFactory;
     partitionMessageStores = Maps.newConcurrentMap();
   }
 
@@ -83,46 +82,20 @@ public class DiskBackedMessageStoreByPartition<I extends WritableComparable,
   public void addPartitionMessages(
       int partitionId,
       ByteArrayVertexIdMessages<I, M> messages) throws IOException {
-    FlushableMessageStore<I, M> flushableMessageStore =
+    PartitionDiskBackedMessageStore<I, M> partitionMessageStore =
         getMessageStore(partitionId);
-    if (flushableMessageStore instanceof DiskBackedMessageStore) {
-      DiskBackedMessageStore<I, M> diskBackedMessageStore =
-          (DiskBackedMessageStore<I, M>) flushableMessageStore;
-      ByteArrayVertexIdMessages<I, M>.VertexIdMessageIterator
-          vertexIdMessageIterator =
-          messages.getVertexIdMessageIterator();
-      while (vertexIdMessageIterator.hasNext()) {
-        vertexIdMessageIterator.next();
-        boolean ownsVertexId =
-            diskBackedMessageStore.addVertexMessages(
-                vertexIdMessageIterator.getCurrentVertexId(),
-                Collections.singleton(
-                    vertexIdMessageIterator.getCurrentMessage()));
-        if (ownsVertexId) {
-          vertexIdMessageIterator.releaseCurrentVertexId();
-        }
-      }
-    } else {
-      throw new IllegalStateException("addPartitionMessages: Doesn't support " +
-          "class " + flushableMessageStore.getClass());
-    }
-    checkMemory();
-  }
-
-  @Override
-  public void addMessages(MessageStore<I, M> messageStore) throws IOException {
-    for (I destinationVertex : messageStore.getDestinationVertices()) {
-      FlushableMessageStore<I, M> flushableMessageStore =
-          getMessageStore(destinationVertex);
-      if (flushableMessageStore instanceof DiskBackedMessageStore) {
-        DiskBackedMessageStore<I, M> diskBackedMessageStore =
-            (DiskBackedMessageStore<I, M>) flushableMessageStore;
-        Iterable<M> messages =
-            messageStore.getVertexMessages(destinationVertex);
-        diskBackedMessageStore.addVertexMessages(destinationVertex, messages);
-      } else {
-        throw new IllegalStateException("addMessages: Doesn't support " +
-            "class " + flushableMessageStore.getClass());
+    ByteArrayVertexIdMessages<I, M>.VertexIdMessageIterator
+        vertexIdMessageIterator =
+        messages.getVertexIdMessageIterator();
+    while (vertexIdMessageIterator.hasNext()) {
+      vertexIdMessageIterator.next();
+      boolean ownsVertexId =
+          partitionMessageStore.addVertexMessages(
+              vertexIdMessageIterator.getCurrentVertexId(),
+              Collections.singleton(
+                  vertexIdMessageIterator.getCurrentMessage()));
+      if (ownsVertexId) {
+        vertexIdMessageIterator.releaseCurrentVertexId();
       }
     }
     checkMemory();
@@ -138,33 +111,13 @@ public class DiskBackedMessageStoreByPartition<I extends WritableComparable,
   }
 
   @Override
-  public int getNumberOfMessages() {
-    int numOfMessages = 0;
-    for (FlushableMessageStore<I, M> messageStore :
-        partitionMessageStores.values()) {
-      numOfMessages += messageStore.getNumberOfMessages();
-    }
-    return numOfMessages;
-  }
-
-  @Override
   public boolean hasMessagesForVertex(I vertexId) {
     return getMessageStore(vertexId).hasMessagesForVertex(vertexId);
   }
 
   @Override
-  public Iterable<I> getDestinationVertices() {
-    List<I> vertices = Lists.newArrayList();
-    for (FlushableMessageStore<I, M> messageStore :
-        partitionMessageStores.values()) {
-      Iterables.addAll(vertices, messageStore.getDestinationVertices());
-    }
-    return vertices;
-  }
-
-  @Override
   public Iterable<I> getPartitionDestinationVertices(int partitionId) {
-    FlushableMessageStore<I, M> messageStore =
+    PartitionDiskBackedMessageStore<I, M> messageStore =
         partitionMessageStores.get(partitionId);
     if (messageStore == null) {
       return Collections.emptyList();
@@ -182,7 +135,7 @@ public class DiskBackedMessageStoreByPartition<I extends WritableComparable,
 
   @Override
   public void clearPartition(int partitionId) throws IOException {
-    FlushableMessageStore<I, M> messageStore =
+    PartitionDiskBackedMessageStore<I, M> messageStore =
         partitionMessageStores.get(partitionId);
     if (messageStore != null) {
       messageStore.clearAll();
@@ -191,7 +144,7 @@ public class DiskBackedMessageStoreByPartition<I extends WritableComparable,
 
   @Override
   public void clearAll() throws IOException {
-    for (FlushableMessageStore<I, M> messageStore :
+    for (PartitionDiskBackedMessageStore<I, M> messageStore :
         partitionMessageStores.values()) {
       messageStore.clearAll();
     }
@@ -216,7 +169,7 @@ public class DiskBackedMessageStoreByPartition<I extends WritableComparable,
    */
   private boolean memoryFull() {
     int totalMessages = 0;
-    for (FlushableMessageStore<I, M> messageStore :
+    for (PartitionDiskBackedMessageStore<I, M> messageStore :
         partitionMessageStores.values()) {
       totalMessages += messageStore.getNumberOfMessages();
     }
@@ -230,8 +183,8 @@ public class DiskBackedMessageStoreByPartition<I extends WritableComparable,
    */
   private void flushOnePartition() throws IOException {
     int maxMessages = 0;
-    FlushableMessageStore<I, M> biggestStore = null;
-    for (FlushableMessageStore<I, M> messageStore :
+    PartitionDiskBackedMessageStore<I, M> biggestStore = null;
+    for (PartitionDiskBackedMessageStore<I, M> messageStore :
         partitionMessageStores.values()) {
       int numMessages = messageStore.getNumberOfMessages();
       if (numMessages > maxMessages) {
@@ -251,7 +204,7 @@ public class DiskBackedMessageStoreByPartition<I extends WritableComparable,
    * @param vertexId Id of vertex for which we are asking for message store
    * @return Requested message store
    */
-  private FlushableMessageStore<I, M> getMessageStore(I vertexId) {
+  private PartitionDiskBackedMessageStore<I, M> getMessageStore(I vertexId) {
     int partitionId =
         service.getVertexPartitionOwner(vertexId).getPartitionId();
     return getMessageStore(partitionId);
@@ -265,14 +218,15 @@ public class DiskBackedMessageStoreByPartition<I extends WritableComparable,
    *                    store
    * @return Requested message store
    */
-  private FlushableMessageStore<I, M> getMessageStore(int partitionId) {
-    FlushableMessageStore<I, M> messageStore =
+  private PartitionDiskBackedMessageStore<I, M> getMessageStore(
+      int partitionId) {
+    PartitionDiskBackedMessageStore<I, M> messageStore =
         partitionMessageStores.get(partitionId);
     if (messageStore != null) {
       return messageStore;
     }
-    messageStore = fileStoreFactory.newStore(messageClass);
-    FlushableMessageStore<I, M> store =
+    messageStore = partitionStoreFactory.newStore(messageClass);
+    PartitionDiskBackedMessageStore<I, M> store =
         partitionMessageStores.putIfAbsent(partitionId, messageStore);
     return (store == null) ? messageStore : store;
   }
@@ -280,7 +234,7 @@ public class DiskBackedMessageStoreByPartition<I extends WritableComparable,
   @Override
   public void writePartition(DataOutput out,
       int partitionId) throws IOException {
-    FlushableMessageStore<I, M> partitionStore =
+    PartitionDiskBackedMessageStore<I, M> partitionStore =
         partitionMessageStores.get(partitionId);
     out.writeBoolean(partitionStore != null);
     if (partitionStore != null) {
@@ -289,33 +243,11 @@ public class DiskBackedMessageStoreByPartition<I extends WritableComparable,
   }
 
   @Override
-  public void write(DataOutput out) throws IOException {
-    out.writeInt(partitionMessageStores.size());
-    for (Entry<Integer, FlushableMessageStore<I, M>> entry :
-        partitionMessageStores.entrySet()) {
-      out.writeInt(entry.getKey());
-      entry.getValue().write(out);
-    }
-  }
-
-  @Override
   public void readFieldsForPartition(DataInput in,
       int partitionId) throws IOException {
     if (in.readBoolean()) {
-      FlushableMessageStore<I, M> messageStore =
-          fileStoreFactory.newStore(messageClass);
-      messageStore.readFields(in);
-      partitionMessageStores.put(partitionId, messageStore);
-    }
-  }
-
-  @Override
-  public void readFields(DataInput in) throws IOException {
-    int numStores = in.readInt();
-    for (int s = 0; s < numStores; s++) {
-      int partitionId = in.readInt();
-      FlushableMessageStore<I, M> messageStore =
-          fileStoreFactory.newStore(messageClass);
+      PartitionDiskBackedMessageStore<I, M> messageStore =
+          partitionStoreFactory.newStore(messageClass);
       messageStore.readFields(in);
       partitionMessageStores.put(partitionId, messageStore);
     }
@@ -337,17 +269,17 @@ public class DiskBackedMessageStoreByPartition<I extends WritableComparable,
    */
   public static <I extends WritableComparable, V extends Writable,
       E extends Writable, M extends Writable>
-  MessageStoreFactory<I, M, MessageStoreByPartition<I, M>> newFactory(
+  MessageStoreFactory<I, M, MessageStore<I, M>> newFactory(
       CentralizedServiceWorker<I, V, E> service,
       int maxMessagesInMemory,
-      MessageStoreFactory<I, M, FlushableMessageStore<I, M>>
+      MessageStoreFactory<I, M, PartitionDiskBackedMessageStore<I, M>>
           fileStoreFactory) {
     return new Factory<I, V, E, M>(service, maxMessagesInMemory,
         fileStoreFactory);
   }
 
   /**
-   * Factory for {@link DiskBackedMessageStoreByPartition}
+   * Factory for {@link DiskBackedMessageStore}
    *
    * @param <I> Vertex id
    * @param <V> Vertex data
@@ -356,14 +288,15 @@ public class DiskBackedMessageStoreByPartition<I extends WritableComparable,
    */
   private static class Factory<I extends WritableComparable,
       V extends Writable, E extends Writable, M extends Writable>
-      implements MessageStoreFactory<I, M, MessageStoreByPartition<I, M>> {
+      implements MessageStoreFactory<I, M, MessageStore<I, M>> {
     /** Service worker */
     private final CentralizedServiceWorker<I, V, E> service;
     /** Number of messages to keep in memory */
     private final int maxMessagesInMemory;
     /** Factory for creating file stores when flushing */
     private final
-    MessageStoreFactory<I, M, FlushableMessageStore<I, M>> fileStoreFactory;
+    MessageStoreFactory<I, M, PartitionDiskBackedMessageStore<I, M>>
+    fileStoreFactory;
 
     /**
      * @param service             Service worker
@@ -373,7 +306,7 @@ public class DiskBackedMessageStoreByPartition<I extends WritableComparable,
      */
     public Factory(CentralizedServiceWorker<I, V, E> service,
         int maxMessagesInMemory,
-        MessageStoreFactory<I, M, FlushableMessageStore<I, M>>
+        MessageStoreFactory<I, M, PartitionDiskBackedMessageStore<I, M>>
             fileStoreFactory) {
       this.service = service;
       this.maxMessagesInMemory = maxMessagesInMemory;
@@ -381,10 +314,9 @@ public class DiskBackedMessageStoreByPartition<I extends WritableComparable,
     }
 
     @Override
-    public MessageStoreByPartition<I, M> newStore(Class<M> messageClass) {
-      return new DiskBackedMessageStoreByPartition<I, V, E, M>(messageClass,
+    public MessageStore<I, M> newStore(Class<M> messageClass) {
+      return new DiskBackedMessageStore<I, V, E, M>(messageClass,
           service, maxMessagesInMemory, fileStoreFactory);
     }
   }
-
 }

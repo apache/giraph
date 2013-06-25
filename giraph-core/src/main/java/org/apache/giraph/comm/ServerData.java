@@ -21,7 +21,7 @@ package org.apache.giraph.comm;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.aggregators.AllAggregatorServerData;
 import org.apache.giraph.comm.aggregators.OwnerAggregatorServerData;
-import org.apache.giraph.comm.messages.MessageStoreByPartition;
+import org.apache.giraph.comm.messages.MessageStore;
 import org.apache.giraph.comm.messages.MessageStoreFactory;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
@@ -54,21 +54,18 @@ public class ServerData<I extends WritableComparable,
   /** Edge store for this worker. */
   private final EdgeStore<I, V, E> edgeStore;
   /** Message store factory */
-  private final
-  MessageStoreFactory<I, Writable, MessageStoreByPartition<I, Writable>>
+  private final MessageStoreFactory<I, Writable, MessageStore<I, Writable>>
   messageStoreFactory;
   /**
    * Message store for incoming messages (messages which will be consumed
    * in the next super step)
    */
-  private volatile MessageStoreByPartition<I, Writable>
-  incomingMessageStore;
+  private volatile MessageStore<I, Writable> incomingMessageStore;
   /**
    * Message store for current messages (messages which we received in
    * previous super step and which will be consumed in current super step)
    */
-  private volatile MessageStoreByPartition<I, Writable>
-  currentMessageStore;
+  private volatile MessageStore<I, Writable> currentMessageStore;
   /**
    * Map of partition ids to incoming vertex mutations from other workers.
    * (Synchronized access to values)
@@ -95,7 +92,7 @@ public class ServerData<I extends WritableComparable,
   public ServerData(
       CentralizedServiceWorker<I, V, E> service,
       ImmutableClassesGiraphConfiguration<I, V, E> conf,
-      MessageStoreFactory<I, Writable, MessageStoreByPartition<I, Writable>>
+      MessageStoreFactory<I, Writable, MessageStore<I, Writable>>
           messageStoreFactory,
       Mapper<?, ?, ?, ?>.Context context) {
     this.conf = conf;
@@ -136,9 +133,8 @@ public class ServerData<I extends WritableComparable,
    * @param <M> Message data
    * @return Incoming message store
    */
-  public <M extends Writable> MessageStoreByPartition<I, M>
-  getIncomingMessageStore() {
-    return (MessageStoreByPartition<I, M>) incomingMessageStore;
+  public <M extends Writable> MessageStore<I, M> getIncomingMessageStore() {
+    return (MessageStore<I, M>) incomingMessageStore;
   }
 
   /**
@@ -148,9 +144,8 @@ public class ServerData<I extends WritableComparable,
    * @param <M> Message data
    * @return Current message store
    */
-  public <M extends Writable> MessageStoreByPartition<I, M>
-  getCurrentMessageStore() {
-    return (MessageStoreByPartition<I, M>) currentMessageStore;
+  public <M extends Writable> MessageStore<I, M> getCurrentMessageStore() {
+    return (MessageStore<I, M>) currentMessageStore;
   }
 
   /** Prepare for next super step */
