@@ -91,6 +91,7 @@ import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -974,7 +975,11 @@ public class BspServiceMaster<I extends WritableComparable,
     }
 
     if (conf.metricsEnabled()) {
-      aggregatedMetrics.print(superstep, System.err);
+      if (GiraphConstants.METRICS_DIRECTORY.isDefaultValue(conf)) {
+        aggregatedMetrics.print(superstep, System.err);
+      } else {
+        printAggregatedMetricsToHDFS(superstep, aggregatedMetrics);
+      }
     }
 
     if (LOG.isInfoEnabled()) {
@@ -982,6 +987,40 @@ public class BspServiceMaster<I extends WritableComparable,
           " on superstep = " + getSuperstep());
     }
     return globalStats;
+  }
+
+  /**
+   * Write superstep metrics to own file in HDFS
+   * @param superstep the current superstep
+   * @param aggregatedMetrics the aggregated metrics to write
+   */
+  private void printAggregatedMetricsToHDFS(
+      long superstep, AggregatedMetrics aggregatedMetrics) {
+    ImmutableClassesGiraphConfiguration conf = getConfiguration();
+    PrintStream out = null;
+    Path dir = new Path(GiraphConstants.METRICS_DIRECTORY.get(conf));
+    Path outFile = new Path(GiraphConstants.METRICS_DIRECTORY.get(conf) +
+        Path.SEPARATOR_CHAR + "superstep_" + superstep + ".metrics");
+    try {
+      FileSystem fs;
+      fs = FileSystem.get(conf);
+      if (!fs.exists(dir)) {
+        fs.mkdirs(dir);
+      }
+      if (fs.exists(outFile)) {
+        throw new RuntimeException(
+            "printAggregatedMetricsToHDFS: metrics file exists");
+      }
+      out = new PrintStream(fs.create(outFile));
+      aggregatedMetrics.print(superstep, out);
+    } catch (IOException e) {
+      throw new RuntimeException(
+          "printAggregatedMetricsToHDFS: error creating metrics file", e);
+    } finally {
+      if (out != null) {
+        out.close();
+      }
+    }
   }
 
   /**

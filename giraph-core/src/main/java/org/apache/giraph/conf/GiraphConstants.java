@@ -315,6 +315,11 @@ public interface GiraphConstants {
       new BooleanConfOption("giraph.metrics.enable", false,
           "Enable the Metrics system");
 
+  /** Directory in HDFS to write master metrics to, instead of stderr */
+  StrConfOption METRICS_DIRECTORY =
+      new StrConfOption("giraph.metrics.directory", "",
+          "Directory in HDFS to write master metrics to, instead of stderr");
+
   /**
    *  ZooKeeper comma-separated list (if not set,
    *  will start up ZooKeeper locally)

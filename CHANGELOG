@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-696: Should be able to spill giraph metrics to a specified 
+  directory on HDFS (claudio)
+
   GIRAPH-695: Add getCombiner and getComputation methods for 
   MasterCompute (aching)
 
