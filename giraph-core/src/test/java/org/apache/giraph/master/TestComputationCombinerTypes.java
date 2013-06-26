@@ -39,7 +39,7 @@ public class TestComputationCombinerTypes {
   public void testAllMatchWithoutCombiner() {
     SuperstepClasses classes =
         new SuperstepClasses(IntNoOpComputation.class, null);
-    classes.verifyTypesMatch(createConfiguration(IntNoOpComputation.class));
+    classes.verifyTypesMatch(createConfiguration(IntNoOpComputation.class), true);
   }
 
   @Test
@@ -48,7 +48,7 @@ public class TestComputationCombinerTypes {
         new SuperstepClasses(IntIntIntLongDoubleComputation.class,
             IntDoubleCombiner.class);
     classes.verifyTypesMatch(
-        createConfiguration(IntIntIntIntLongComputation.class));
+        createConfiguration(IntIntIntIntLongComputation.class), true);
   }
 
   @Test(expected = IllegalStateException.class)
@@ -56,7 +56,7 @@ public class TestComputationCombinerTypes {
     SuperstepClasses classes =
         new SuperstepClasses(LongIntIntLongIntComputation.class, null);
     classes.verifyTypesMatch(
-        createConfiguration(IntIntIntIntLongComputation.class));
+        createConfiguration(IntIntIntIntLongComputation.class), true);
   }
 
   @Test(expected = IllegalStateException.class)
@@ -64,7 +64,7 @@ public class TestComputationCombinerTypes {
     SuperstepClasses classes =
         new SuperstepClasses(IntLongIntLongIntComputation.class, null);
     classes.verifyTypesMatch(
-        createConfiguration(IntIntIntIntLongComputation.class));
+        createConfiguration(IntIntIntIntLongComputation.class), true);
   }
 
   @Test(expected = IllegalStateException.class)
@@ -72,7 +72,7 @@ public class TestComputationCombinerTypes {
     SuperstepClasses classes =
         new SuperstepClasses(IntIntLongLongIntComputation.class, null);
     classes.verifyTypesMatch(
-        createConfiguration(IntIntIntIntLongComputation.class));
+        createConfiguration(IntIntIntIntLongComputation.class), true);
   }
 
   @Test(expected = IllegalStateException.class)
@@ -80,7 +80,7 @@ public class TestComputationCombinerTypes {
     SuperstepClasses classes =
         new SuperstepClasses(IntIntIntIntLongComputation.class, null);
     classes.verifyTypesMatch(
-        createConfiguration(IntIntIntLongDoubleComputation.class));
+        createConfiguration(IntIntIntLongDoubleComputation.class), true);
   }
 
   @Test(expected = IllegalStateException.class)
@@ -89,7 +89,7 @@ public class TestComputationCombinerTypes {
         new SuperstepClasses(IntIntIntLongDoubleComputation.class,
             DoubleDoubleCombiner.class);
     classes.verifyTypesMatch(
-        createConfiguration(IntIntIntIntLongComputation.class));
+        createConfiguration(IntIntIntIntLongComputation.class), true);
   }
 
   @Test(expected = IllegalStateException.class)
@@ -98,7 +98,7 @@ public class TestComputationCombinerTypes {
         new SuperstepClasses(IntIntIntLongDoubleComputation.class,
             IntLongCombiner.class);
     classes.verifyTypesMatch(
-        createConfiguration(IntIntIntIntLongComputation.class));
+        createConfiguration(IntIntIntIntLongComputation.class), true);
   }
 
   private static ImmutableClassesGiraphConfiguration createConfiguration(

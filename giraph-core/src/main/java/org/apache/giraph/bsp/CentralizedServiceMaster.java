@@ -19,6 +19,7 @@
 package org.apache.giraph.bsp;
 
 import org.apache.giraph.master.MasterAggregatorHandler;
+import org.apache.giraph.master.MasterCompute;
 import org.apache.giraph.master.MasterInfo;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -121,6 +122,13 @@ public interface CentralizedServiceMaster<I extends WritableComparable,
    * @return Master aggregator handler
    */
   MasterAggregatorHandler getAggregatorHandler();
+
+  /**
+   * Get MasterCompute object
+   *
+   * @return MasterCompute object
+   */
+  MasterCompute getMasterCompute();
 
   /**
    * Superstep has finished.

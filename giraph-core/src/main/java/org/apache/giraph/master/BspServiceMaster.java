@@ -717,6 +717,11 @@ public class BspServiceMaster<I extends WritableComparable,
     return aggregatorHandler;
   }
 
+  @Override
+  public MasterCompute getMasterCompute() {
+    return masterCompute;
+  }
+
   /**
    * Read the finalized checkpoint file and associated metadata files for the
    * checkpoint.  Modifies the {@link PartitionOwner} objects to get the
@@ -1636,7 +1641,13 @@ public class BspServiceMaster<I extends WritableComparable,
       globalStats.setHaltComputation(true);
     }
 
-    superstepClasses.verifyTypesMatch(getConfiguration());
+    // Superstep 0 doesn't need to have matching types (Message types may not
+    // match) and if the computation is halted, no need to check any of
+    // the types.
+    if (!globalStats.getHaltComputation()) {
+      superstepClasses.verifyTypesMatch(
+          getConfiguration(), getSuperstep() != 0);
+    }
     getConfiguration().updateSuperstepClasses(superstepClasses);
 
     // Let everyone know the aggregated application state through the

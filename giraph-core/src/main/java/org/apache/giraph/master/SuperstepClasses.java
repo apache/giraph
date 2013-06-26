@@ -93,8 +93,11 @@ public class SuperstepClasses implements Writable {
    * don't match an {@link IllegalStateException} will be thrown.
    *
    * @param conf Configuration to verify this with
+   * @param checkMatchingMesssageTypes Check that the incoming/outgoing
+   *                                   message types match
    */
-  public void verifyTypesMatch(ImmutableClassesGiraphConfiguration conf) {
+  public void verifyTypesMatch(ImmutableClassesGiraphConfiguration conf,
+                               boolean checkMatchingMesssageTypes) {
     // In some cases, for example when using Jython, the Computation class may
     // not be set. This is because it is created by a ComputationFactory
     // dynamically and not known ahead of time. In this case there is nothing to
@@ -111,8 +114,11 @@ public class SuperstepClasses implements Writable {
         "Vertex value", computationClass);
     verifyTypes(conf.getEdgeValueClass(), computationTypes[2],
         "Edge value", computationClass);
-    verifyTypes(conf.getOutgoingMessageValueClass(), computationTypes[3],
-        "Previous outgoing and new incoming message", computationClass);
+
+    if (checkMatchingMesssageTypes) {
+      verifyTypes(conf.getOutgoingMessageValueClass(), computationTypes[3],
+          "Previous outgoing and new incoming message", computationClass);
+    }
     Class<?> outgoingMessageType = computationTypes[4];
     if (outgoingMessageType.isInterface()) {
       throw new IllegalStateException("verifyTypesMatch: " +

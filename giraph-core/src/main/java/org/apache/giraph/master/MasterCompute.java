@@ -134,6 +134,11 @@ public abstract class MasterCompute
    * @return Computation class
    */
   public final Class<? extends Computation> getComputation() {
+    // Might be called prior to classes being set, do not return NPE
+    if (superstepClasses == null) {
+      return null;
+    }
+
     return superstepClasses.getComputationClass();
   }
 
@@ -152,6 +157,11 @@ public abstract class MasterCompute
    * @return Combiner class
    */
   public final Class<? extends Combiner> getCombiner() {
+    // Might be called prior to classes being set, do not return NPE
+    if (superstepClasses == null) {
+      return null;
+    }
+
     return superstepClasses.getCombinerClass();
   }
 

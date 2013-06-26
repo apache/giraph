@@ -34,11 +34,11 @@ public class GiraphTimers extends HadoopCountersBase {
   /** Counter group name for the giraph timers */
   public static final String GROUP_NAME = "Giraph Timers";
   /** Counter name for setup msec */
-  public static final String SETUP_MS_NAME = "Setup (milliseconds)";
+  public static final String SETUP_MS_NAME = "Setup (ms)";
   /** Counter name for total msec */
-  public static final String TOTAL_MS_NAME = "Total (milliseconds)";
+  public static final String TOTAL_MS_NAME = "Total (ms)";
   /** Counter name for shutdown msec */
-  public static final String SHUTDOWN_MS_NAME = "Shutdown (milliseconds)";
+  public static final String SHUTDOWN_MS_NAME = "Shutdown (ms)";
 
   /** Singleton instance for everyone to use */
   private static GiraphTimers INSTANCE;
@@ -103,18 +103,21 @@ public class GiraphTimers extends HadoopCountersBase {
    * Get counter for superstep time in milliseconds
    *
    * @param superstep Integer superstep number.
+   * @param computationName Name of the computation for display (may be null)
    * @return Counter for setup time in milliseconds
    */
-  public GiraphHadoopCounter getSuperstepMs(long superstep) {
+  public GiraphHadoopCounter getSuperstepMs(long superstep,
+                                            String computationName) {
     GiraphHadoopCounter counter = superstepMsec.get(superstep);
     if (counter == null) {
       String counterPrefix;
       if (superstep == -1) {
         counterPrefix = "Input superstep";
       } else {
-        counterPrefix = "Superstep " + superstep;
+        counterPrefix = "Superstep " + superstep +
+            (computationName == null ? "" : " " + computationName);
       }
-      counter = getCounter(counterPrefix + " (milliseconds)");
+      counter = getCounter(counterPrefix + " (ms)");
       superstepMsec.put(superstep, counter);
     }
     return counter;

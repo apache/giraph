@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-698: Expose Computation to a user (aching)
+
   GIRAPH-311:  Master halting in superstep 0 is ignored by workers (majakabiljo)
 
   GIRAPH-688: Make sure Giraph builds against all compatible YARN-enabled Hadoop versions,
