@@ -73,7 +73,7 @@ public class InternalVertexRunner {
    *
    * @param conf GiraphClasses specifying which types to use
    * @param vertexInputData linewise vertex input data
-   * @return linewise output data
+   * @return linewise output data, or null if job fails
    * @throws Exception if anything goes wrong
    */
   public static Iterable<String> run(
@@ -91,7 +91,7 @@ public class InternalVertexRunner {
    * @param conf GiraphClasses specifying which types to use
    * @param vertexInputData linewise vertex input data
    * @param edgeInputData linewise edge input data
-   * @return linewise output data
+   * @return linewise output data, or null if job fails
    * @throws Exception if anything goes wrong
    */
   public static Iterable<String> run(
@@ -174,7 +174,9 @@ public class InternalVertexRunner {
         }
       });
       try {
-        job.run(true);
+        if (!job.run(true)) {
+          return null;
+        }
       } finally {
         executorService.shutdown();
         zookeeper.end();

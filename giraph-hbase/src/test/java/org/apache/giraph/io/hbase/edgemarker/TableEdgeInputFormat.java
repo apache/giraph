@@ -22,6 +22,7 @@ import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.VertexReader;
 import org.apache.giraph.io.hbase.HBaseVertexInputFormat;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Text;
@@ -44,6 +45,8 @@ public class TableEdgeInputFormat extends
   private static final Logger LOG =
       Logger.getLogger(TableEdgeInputFormat.class);
   private static final Text uselessEdgeValue = new Text();
+
+  @Override public void checkInputSpecs(Configuration conf) { }
 
   public VertexReader<Text, Text, Text>
   createVertexReader(InputSplit split,

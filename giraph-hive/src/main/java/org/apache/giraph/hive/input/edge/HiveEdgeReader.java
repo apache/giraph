@@ -19,10 +19,10 @@
 package org.apache.giraph.hive.input.edge;
 
 import org.apache.giraph.hive.common.DefaultConfigurableAndTableSchemaAware;
+import org.apache.giraph.hive.common.HiveUtils;
 import org.apache.giraph.hive.input.RecordReaderWrapper;
 import org.apache.giraph.io.iterables.EdgeWithSource;
 import org.apache.giraph.io.iterables.GiraphReader;
-import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -30,11 +30,8 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 import com.facebook.hiveio.record.HiveReadableRecord;
-import com.facebook.hiveio.schema.HiveTableSchemas;
 
 import java.io.IOException;
-
-import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_EDGE_INPUT;
 
 /**
  * A reader for reading edges from Hive.
@@ -75,24 +72,9 @@ public class HiveEdgeReader<I extends WritableComparable, E extends Writable>
   public void initialize(InputSplit inputSplit, TaskAttemptContext context)
     throws IOException, InterruptedException {
     hiveRecordReader.initialize(inputSplit, context);
-    instantiateHiveToEdgeFromConf();
+    hiveToEdge = HiveUtils.newHiveToEdge(getConf(), getTableSchema());
     hiveToEdge.initializeRecords(
         new RecordReaderWrapper<HiveReadableRecord>(hiveRecordReader));
-  }
-
-  /**
-   * Retrieve the user's {@link HiveToEdge} from the Configuration.
-   *
-   * @throws IOException if anything goes wrong reading from Configuration
-   */
-  private void instantiateHiveToEdgeFromConf() throws IOException {
-    Class<? extends HiveToEdge> klass = HIVE_EDGE_INPUT.getClass(getConf());
-    if (klass == null) {
-      throw new IOException(HIVE_EDGE_INPUT.getClassOpt().getKey() +
-          " not set in conf");
-    }
-    hiveToEdge = ReflectionUtils.newInstance(klass, getConf());
-    HiveTableSchemas.configure(hiveToEdge, getTableSchema());
   }
 
   @Override

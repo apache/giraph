@@ -22,7 +22,9 @@ import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import com.facebook.hiveio.record.HiveRecord;
+import com.facebook.hiveio.output.HiveOutputDescription;
+import com.facebook.hiveio.record.HiveWritableRecord;
+import com.facebook.hiveio.schema.HiveTableSchema;
 
 import java.io.IOException;
 
@@ -35,6 +37,20 @@ import java.io.IOException;
  */
 public interface VertexToHive<I extends WritableComparable, V extends Writable,
     E extends Writable> {
+  /**
+   * Check the output is valid. This method provides information to the user as
+   * early as possible so that they may validate they are using the correct
+   * input and fail the job early rather than getting into it and waiting a long
+   * time only to find out something was misconfigured.
+   *
+   * @param outputDesc HiveOutputDescription
+   * @param schema Hive table schema
+   * @param emptyRecord Example Hive record that you can write to as if you were
+   *                    writing a Vertex. This record will check column types.
+   */
+  void checkOutput(HiveOutputDescription outputDesc, HiveTableSchema schema,
+      HiveWritableRecord emptyRecord);
+
   /**
    * Save vertex to the output. One vertex can be stored to multiple rows in
    * the output.
@@ -50,6 +66,6 @@ public interface VertexToHive<I extends WritableComparable, V extends Writable,
    * @param reusableRecord Record to use for writing data to it.
    * @param recordSaver Saver of records
    */
-  void saveVertex(Vertex<I, V, E> vertex, HiveRecord reusableRecord,
+  void saveVertex(Vertex<I, V, E> vertex, HiveWritableRecord reusableRecord,
       HiveRecordSaver recordSaver) throws IOException, InterruptedException;
 }

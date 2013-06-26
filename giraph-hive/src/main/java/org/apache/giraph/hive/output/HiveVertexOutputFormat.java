@@ -29,8 +29,12 @@ import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
+import com.facebook.hiveio.common.HiveTableDesc;
 import com.facebook.hiveio.output.HiveApiOutputFormat;
+import com.facebook.hiveio.output.HiveOutputDescription;
+import com.facebook.hiveio.record.HiveRecordFactory;
 import com.facebook.hiveio.record.HiveWritableRecord;
+import com.facebook.hiveio.schema.HiveTableSchema;
 
 import java.io.IOException;
 
@@ -38,6 +42,8 @@ import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_OUTP
 import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_OUTPUT_PARTITION;
 import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_OUTPUT_PROFILE_ID;
 import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_OUTPUT_TABLE;
+import static org.apache.giraph.hive.common.HiveUtils.newVertexToHive;
+import static org.apache.giraph.hive.common.HiveUtils.parsePartitionValues;
 
 /**
  * VertexOutputFormat using Hive
@@ -59,16 +65,29 @@ public class HiveVertexOutputFormat<I extends WritableComparable,
     hiveOutputFormat = new HiveApiOutputFormat();
   }
 
+  /**
+   * Create HiveOutputDescription from Configuration
+   *
+   * @return HiveOutputDescription
+   */
+  private HiveOutputDescription makeOutputDesc() {
+    HiveOutputDescription outputDesc = new HiveOutputDescription();
+    HiveTableDesc tableDesc = outputDesc.getTableDesc();
+    tableDesc.setDatabaseName(HIVE_VERTEX_OUTPUT_DATABASE.get(getConf()));
+    tableDesc.setTableName(HIVE_VERTEX_OUTPUT_TABLE.get(getConf()));
+    outputDesc.setPartitionValues(
+        parsePartitionValues(HIVE_VERTEX_OUTPUT_PARTITION.get(getConf())));
+    return outputDesc;
+  }
+
   @Override
   public void setConf(
       ImmutableClassesGiraphConfiguration<I, V, E> conf) {
     super.setConf(conf);
     HiveUtils.initializeHiveOutput(
         hiveOutputFormat,
+        makeOutputDesc(),
         HIVE_VERTEX_OUTPUT_PROFILE_ID.get(conf),
-        HIVE_VERTEX_OUTPUT_DATABASE.get(conf),
-        HIVE_VERTEX_OUTPUT_TABLE.get(conf),
-        HIVE_VERTEX_OUTPUT_PARTITION.get(conf),
         conf);
   }
 
@@ -87,6 +106,10 @@ public class HiveVertexOutputFormat<I extends WritableComparable,
   public void checkOutputSpecs(JobContext context)
     throws IOException, InterruptedException {
     hiveOutputFormat.checkOutputSpecs(context);
+    HiveTableSchema schema = hiveOutputFormat.getTableSchema(getConf());
+    VertexToHive<I, V, E> vertexToHive = newVertexToHive(getConf(), schema);
+    vertexToHive.checkOutput(makeOutputDesc(), schema,
+        HiveRecordFactory.newWritableRecord(schema));
   }
 
   @Override

@@ -20,6 +20,7 @@ package org.apache.giraph.io.internal;
 
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexReader;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -57,6 +58,12 @@ public class WrappedVertexInputFormat<I extends WritableComparable,
   public WrappedVertexInputFormat(
       VertexInputFormat<I, V, E> vertexInputFormat) {
     originalInputFormat = vertexInputFormat;
+  }
+
+  @Override
+  public void checkInputSpecs(Configuration conf) {
+    getConf().updateConfiguration(conf);
+    originalInputFormat.checkInputSpecs(conf);
   }
 
   @Override

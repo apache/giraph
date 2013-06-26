@@ -18,6 +18,7 @@
 package org.apache.giraph.hive.input;
 
 import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.hive.GiraphHiveTestBase;
 import org.apache.giraph.hive.Helpers;
 import org.apache.giraph.hive.computations.ComputationCountEdges;
 import org.apache.giraph.hive.computations.ComputationSumEdges;
@@ -40,13 +41,8 @@ import java.util.Map;
 import static junit.framework.Assert.assertEquals;
 import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_EDGE_INPUT;
 
-public class HiveEdgeInputTest {
+public class HiveEdgeInputTest extends GiraphHiveTestBase {
   private LocalHiveServer hiveServer = new LocalHiveServer("giraph-hive");
-
-  @BeforeClass
-  public static void hushDatanucleusWarnings() {
-    Helpers.silenceDataNucleusLogger();
-  }
 
   @Before
   public void setUp() throws IOException, TException {
@@ -58,7 +54,7 @@ public class HiveEdgeInputTest {
   public void testEdgeInput() throws Exception {
     String tableName = "test1";
     hiveServer.createTable("CREATE TABLE " + tableName +
-        " (i1 BIGINT, i2 BIGINT) " +
+        " (i1 INT, i2 INT) " +
         " ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t'");
     String[] rows = {
         "1\t2",
@@ -88,7 +84,7 @@ public class HiveEdgeInputTest {
     String tableName = "test1";
     String partition = "ds='foobar'";
     hiveServer.createTable("CREATE TABLE " + tableName +
-        " (i1 BIGINT, i2 BIGINT) " +
+        " (i1 INT, i2 INT) " +
         " PARTITIONED BY (ds STRING) " +
         " ROW FORMAT DELIMITED FIELDS TERMINATED BY '\t' ");
     String[] rows = {
@@ -119,7 +115,7 @@ public class HiveEdgeInputTest {
   public void testEdgeInputWithValues() throws Exception {
     String tableName = "test1";
     hiveServer.createTable("CREATE TABLE " + tableName +
-        " (i1 BIGINT, i2 BIGINT, d3 DOUBLE) " +
+        " (i1 INT, i2 INT, d3 DOUBLE) " +
         " ROW FORMAT DELIMITED " +
         " FIELDS TERMINATED BY '\t' " +
         " COLLECTION ITEMS TERMINATED BY ',' ");

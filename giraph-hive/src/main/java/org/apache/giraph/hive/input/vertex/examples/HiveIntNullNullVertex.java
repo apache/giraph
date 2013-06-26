@@ -23,7 +23,11 @@ import org.apache.giraph.hive.input.vertex.SimpleHiveToVertex;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 
+import com.facebook.hiveio.common.HiveType;
+import com.facebook.hiveio.input.HiveInputDescription;
 import com.facebook.hiveio.record.HiveReadableRecord;
+import com.facebook.hiveio.schema.HiveTableSchema;
+import com.google.common.base.Preconditions;
 
 /**
  * Simple HiveToVertex that reads vertices with integer IDs, no vertex values,
@@ -31,6 +35,12 @@ import com.facebook.hiveio.record.HiveReadableRecord;
  */
 public class HiveIntNullNullVertex
     extends SimpleHiveToVertex<IntWritable, NullWritable, NullWritable> {
+  @Override public void checkInput(HiveInputDescription inputDesc,
+      HiveTableSchema schema) {
+    Preconditions.checkArgument(schema.columnType(0) == HiveType.INT);
+    Preconditions.checkArgument(schema.columnType(1) == HiveType.LIST);
+  }
+
   @Override
   public Iterable<Edge<IntWritable, NullWritable>> getEdges(
       HiveReadableRecord record) {

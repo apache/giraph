@@ -18,6 +18,7 @@
 package org.apache.giraph.hive.input;
 
 import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.hive.GiraphHiveTestBase;
 import org.apache.giraph.hive.Helpers;
 import org.apache.giraph.hive.computations.ComputationCountEdges;
 import org.apache.giraph.hive.computations.ComputationSumEdges;
@@ -40,13 +41,8 @@ import java.util.Map;
 import static junit.framework.Assert.assertEquals;
 import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_INPUT;
 
-public class HiveVertexInputTest {
+public class HiveVertexInputTest extends GiraphHiveTestBase {
   private LocalHiveServer hiveServer = new LocalHiveServer("giraph-hive");
-
-  @BeforeClass
-  public static void hushDatanucleusWarnings() {
-    Helpers.silenceDataNucleusLogger();
-  }
 
   @Before
   public void setUp() throws IOException, TException {
@@ -58,7 +54,7 @@ public class HiveVertexInputTest {
   public void testVertexInput() throws Exception {
     String tableName = "test1";
     hiveServer.createTable("CREATE TABLE " + tableName +
-        " (i1 BIGINT, i2 ARRAY<BIGINT>) " +
+        " (i1 INT, i2 ARRAY<BIGINT>) " +
         " ROW FORMAT DELIMITED " +
         " FIELDS TERMINATED BY '\t' " +
         " COLLECTION ITEMS TERMINATED BY ','");
@@ -89,7 +85,7 @@ public class HiveVertexInputTest {
     String tableName = "test1";
     String partition = "ds='foobar'";
     hiveServer.createTable("CREATE TABLE " + tableName +
-        " (i1 BIGINT, i2 ARRAY<BIGINT>) " +
+        " (i1 INT, i2 ARRAY<BIGINT>) " +
         " PARTITIONED BY (ds STRING) " +
         " ROW FORMAT DELIMITED " +
         " FIELDS TERMINATED BY '\t' " +
@@ -121,7 +117,7 @@ public class HiveVertexInputTest {
   public void testValues() throws Exception {
     String tableName = "test1";
     hiveServer.createTable("CREATE TABLE " + tableName +
-        " (i1 BIGINT, d2 DOUBLE, m3 MAP<BIGINT,DOUBLE>) " +
+        " (i1 INT, d2 DOUBLE, m3 MAP<BIGINT,DOUBLE>) " +
         " ROW FORMAT DELIMITED " +
         " FIELDS TERMINATED BY '\t' " +
         " COLLECTION ITEMS TERMINATED BY ',' " +

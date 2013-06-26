@@ -22,6 +22,7 @@ import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.EdgeReader;
 import org.apache.giraph.io.internal.WrappedEdgeReader;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -45,6 +46,12 @@ public class MultiEdgeInputFormat<I extends WritableComparable,
     E extends Writable> extends EdgeInputFormat<I, E> {
   /** Edge input formats */
   private List<EdgeInputFormat<I, E>> edgeInputFormats;
+
+  @Override public void checkInputSpecs(Configuration conf) {
+    for (EdgeInputFormat edgeInputFormat : edgeInputFormats) {
+      edgeInputFormat.checkInputSpecs(conf);
+    }
+  }
 
   @Override
   public void setConf(

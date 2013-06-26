@@ -21,8 +21,13 @@ import org.apache.giraph.hive.common.HiveParsing;
 import org.apache.giraph.hive.input.edge.SimpleHiveToEdge;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
+import org.apache.log4j.Logger;
 
+import com.facebook.hiveio.common.HiveType;
+import com.facebook.hiveio.input.HiveInputDescription;
 import com.facebook.hiveio.record.HiveReadableRecord;
+import com.facebook.hiveio.schema.HiveTableSchema;
+import com.google.common.base.Preconditions;
 
 /**
  * A simple HiveToEdge with integer IDs, no edge value, that assumes the Hive
@@ -30,6 +35,15 @@ import com.facebook.hiveio.record.HiveReadableRecord;
  */
 public class HiveIntNullEdge
     extends SimpleHiveToEdge<IntWritable, NullWritable> {
+  /** Logger */
+  private static final Logger LOG = Logger.getLogger(HiveIntNullEdge.class);
+
+  @Override public void checkInput(HiveInputDescription inputDesc,
+      HiveTableSchema schema) {
+    Preconditions.checkArgument(schema.columnType(0) == HiveType.INT);
+    Preconditions.checkArgument(schema.columnType(1) == HiveType.INT);
+  }
+
   @Override public NullWritable getEdgeValue(HiveReadableRecord hiveRecord) {
     return NullWritable.get();
   }

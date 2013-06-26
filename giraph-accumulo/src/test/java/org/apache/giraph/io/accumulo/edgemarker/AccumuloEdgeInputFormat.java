@@ -24,6 +24,7 @@ import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.VertexReader;
 import org.apache.giraph.io.accumulo.AccumuloVertexInputFormat;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.RecordReader;
@@ -40,6 +41,7 @@ import java.util.regex.Pattern;
  */
 public class AccumuloEdgeInputFormat
     extends AccumuloVertexInputFormat<Text, Text, Text> {
+  @Override public void checkInputSpecs(Configuration conf) { }
 
   private static final Text uselessEdgeValue = new Text();
   public VertexReader<Text, Text, Text>

@@ -20,6 +20,7 @@ package org.apache.giraph.io.internal;
 
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.EdgeReader;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -55,6 +56,12 @@ public class WrappedEdgeInputFormat<I extends WritableComparable,
   public WrappedEdgeInputFormat(
       EdgeInputFormat<I, E> edgeInputFormat) {
     originalInputFormat = edgeInputFormat;
+  }
+
+  @Override
+  public void checkInputSpecs(Configuration conf) {
+    getConf().updateConfiguration(conf);
+    originalInputFormat.checkInputSpecs(conf);
   }
 
   @Override

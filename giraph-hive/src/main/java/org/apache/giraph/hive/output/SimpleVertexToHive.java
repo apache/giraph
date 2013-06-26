@@ -22,7 +22,6 @@ import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import com.facebook.hiveio.record.HiveRecord;
 import com.facebook.hiveio.record.HiveWritableRecord;
 
 import java.io.IOException;
@@ -51,7 +50,7 @@ public abstract class SimpleVertexToHive<I extends WritableComparable,
   @Override
   public final void saveVertex(
       Vertex<I, V, E> vertex,
-      HiveRecord reusableRecord,
+      HiveWritableRecord reusableRecord,
       HiveRecordSaver recordSaver) throws IOException, InterruptedException {
     fillRecord(vertex, reusableRecord);
     recordSaver.save(reusableRecord);

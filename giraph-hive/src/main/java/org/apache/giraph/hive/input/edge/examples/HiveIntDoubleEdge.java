@@ -22,13 +22,24 @@ import org.apache.giraph.hive.input.edge.SimpleHiveToEdge;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.IntWritable;
 
+import com.facebook.hiveio.common.HiveType;
+import com.facebook.hiveio.input.HiveInputDescription;
 import com.facebook.hiveio.record.HiveReadableRecord;
+import com.facebook.hiveio.schema.HiveTableSchema;
+import com.google.common.base.Preconditions;
 
 /**
  * A simple HiveToEdge with integer IDs and double edge values.
  */
 public class HiveIntDoubleEdge
     extends SimpleHiveToEdge<IntWritable, DoubleWritable> {
+  @Override public void checkInput(HiveInputDescription inputDesc,
+      HiveTableSchema schema) {
+    Preconditions.checkArgument(schema.columnType(0) == HiveType.INT);
+    Preconditions.checkArgument(schema.columnType(1) == HiveType.INT);
+    Preconditions.checkArgument(schema.columnType(2) == HiveType.DOUBLE);
+  }
+
   @Override
   public DoubleWritable getEdgeValue(HiveReadableRecord hiveRecord) {
     return HiveParsing.parseDoubleWritable(hiveRecord, 2);

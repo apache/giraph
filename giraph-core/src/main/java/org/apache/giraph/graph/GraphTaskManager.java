@@ -161,7 +161,20 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
   }
 
   /**
+   * Run the user's input checking code.
+   */
+  private void checkInput() {
+    if (conf.hasEdgeInputFormat()) {
+      conf.createWrappedEdgeInputFormat().checkInputSpecs(conf);
+    }
+    if (conf.hasVertexInputFormat()) {
+      conf.createWrappedVertexInputFormat().checkInputSpecs(conf);
+    }
+  }
+
+  /**
    * Called by owner of this GraphTaskManager on each compute node
+   *
    * @param zkPathList the path to the ZK jars we need to run the job
    */
   public void setup(Path[] zkPathList)
@@ -179,6 +192,8 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
     setupAndInitializeGiraphMetrics();
     // One time setup for computation factory
     conf.createComputationFactory().initComputation(conf);
+    // Check input
+    checkInput();
     // Do some task setup (possibly starting up a Zookeeper service)
     context.setStatus("setup: Initializing Zookeeper services.");
     locateZookeeperClasspath(zkPathList);

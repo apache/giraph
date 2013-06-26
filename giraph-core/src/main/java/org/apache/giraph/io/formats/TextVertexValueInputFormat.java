@@ -20,6 +20,7 @@ package org.apache.giraph.io.formats;
 
 import org.apache.giraph.io.VertexValueInputFormat;
 import org.apache.giraph.io.VertexValueReader;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
@@ -46,6 +47,8 @@ public abstract class TextVertexValueInputFormat<I extends WritableComparable,
     extends VertexValueInputFormat<I, V> {
   /** Uses the GiraphTextInputFormat to do everything */
   protected GiraphTextInputFormat textInputFormat = new GiraphTextInputFormat();
+
+  @Override public void checkInputSpecs(Configuration conf) { }
 
   @Override
   public List<InputSplit> getSplits(JobContext context, int minSplitCountHint)

@@ -254,7 +254,7 @@ under the License.
 
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-    <dep.hiveio.version>0.11</dep.hiveio.version>
+    <dep.hiveio.version>0.14</dep.hiveio.version>
     <dep.jython.version>2.5.3</dep.jython.version>
     <dep.typetools.version>0.2.1</dep.typetools.version>
 

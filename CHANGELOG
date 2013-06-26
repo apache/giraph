@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-693: Giraph-Hive check user code as soon as possible (nitay)
+
   GIRAPH-697: Clean up message stores (majakabiljo)
 
   GIRAPH-696: Should be able to spill giraph metrics to a specified 

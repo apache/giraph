@@ -19,6 +19,7 @@
 package org.apache.giraph.hive.input.vertex;
 
 import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.hive.input.HiveInputChecker;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -39,7 +40,7 @@ import java.util.Iterator;
  */
 public interface HiveToVertex<I extends WritableComparable,
     V extends Writable, E extends Writable> extends
-    Iterator<Vertex<I, V, E>> {
+    Iterator<Vertex<I, V, E>>, HiveInputChecker {
   /**
    * Set the records which contain vertex input data
    *

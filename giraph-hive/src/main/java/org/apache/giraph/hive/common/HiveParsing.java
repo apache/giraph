@@ -45,7 +45,7 @@ public class HiveParsing {
    * @return byte
    */
   public static byte parseByte(HiveReadableRecord record, int columnIndex) {
-    return (byte) record.getLong(columnIndex);
+    return record.getByte(columnIndex);
   }
 
   /**
@@ -55,7 +55,7 @@ public class HiveParsing {
    * @return int
    */
   public static int parseInt(HiveReadableRecord record, int columnIndex) {
-    return (int) record.getLong(columnIndex);
+    return record.getInt(columnIndex);
   }
 
   /**

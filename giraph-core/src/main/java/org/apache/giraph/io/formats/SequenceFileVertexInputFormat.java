@@ -20,6 +20,7 @@ package org.apache.giraph.io.formats;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexReader;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -46,6 +47,8 @@ public class SequenceFileVertexInputFormat<I extends WritableComparable,
   /** Internal input format */
   protected SequenceFileInputFormat<I, X> sequenceFileInputFormat =
     new SequenceFileInputFormat<I, X>();
+
+  @Override public void checkInputSpecs(Configuration conf) { }
 
   @Override
   public List<InputSplit> getSplits(JobContext context, int minSplitCountHint)

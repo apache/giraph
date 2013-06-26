@@ -19,8 +19,8 @@
 package org.apache.giraph.hive.output;
 
 import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.hive.common.HiveUtils;
 import org.apache.giraph.io.VertexWriter;
-import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -28,15 +28,11 @@ import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.log4j.Logger;
 
-import com.facebook.hiveio.input.parser.hive.DefaultRecord;
-import com.facebook.hiveio.record.HiveRecord;
+import com.facebook.hiveio.record.HiveRecordFactory;
 import com.facebook.hiveio.record.HiveWritableRecord;
 import com.facebook.hiveio.schema.HiveTableSchema;
-import com.facebook.hiveio.schema.HiveTableSchemas;
 
 import java.io.IOException;
-
-import static org.apache.giraph.hive.common.GiraphHiveConstants.VERTEX_TO_HIVE_CLASS;
 
 /**
  * Vertex writer using Hive.
@@ -55,7 +51,7 @@ public class HiveVertexWriter<I extends WritableComparable, V extends Writable,
   /** Schema for table in Hive */
   private HiveTableSchema tableSchema;
   /** Reusable {@link HiveRecord} */
-  private HiveRecord reusableRecord;
+  private HiveWritableRecord reusableRecord;
   /** User class to write vertices from a HiveRecord */
   private VertexToHive<I, V, E> vertexToHive;
 
@@ -94,27 +90,13 @@ public class HiveVertexWriter<I extends WritableComparable, V extends Writable,
    */
   public void setTableSchema(HiveTableSchema tableSchema) {
     this.tableSchema = tableSchema;
-    reusableRecord = new DefaultRecord(tableSchema.numColumns(),
-        new String[0]);
+    reusableRecord = HiveRecordFactory.newWritableRecord(tableSchema);
   }
 
   @Override
   public void initialize(TaskAttemptContext context)
     throws IOException, InterruptedException {
-    instantiateVertexToHiveFromConf();
-  }
-
-  /**
-   * Initialize VertexToHive instance from our configuration.
-   * @throws IOException errors instantiating
-   */
-  private void instantiateVertexToHiveFromConf() throws IOException {
-    Class<? extends VertexToHive> klass = VERTEX_TO_HIVE_CLASS.get(getConf());
-    if (klass == null) {
-      throw new IOException(VERTEX_TO_HIVE_CLASS.getKey() + " not set in conf");
-    }
-    vertexToHive = ReflectionUtils.newInstance(klass, getConf());
-    HiveTableSchemas.configure(vertexToHive, tableSchema);
+    vertexToHive = HiveUtils.newVertexToHive(getConf(), tableSchema);
   }
 
   @Override

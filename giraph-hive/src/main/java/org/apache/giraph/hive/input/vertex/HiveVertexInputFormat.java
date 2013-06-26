@@ -24,6 +24,7 @@ import org.apache.giraph.hive.common.HiveUtils;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexReader;
 import org.apache.giraph.io.iterables.VertexReaderWrapper;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -32,10 +33,14 @@ import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 import com.facebook.hiveio.input.HiveApiInputFormat;
+import com.facebook.hiveio.input.HiveInputDescription;
 import com.facebook.hiveio.record.HiveReadableRecord;
+import com.facebook.hiveio.schema.HiveTableSchema;
 
 import java.io.IOException;
 import java.util.List;
+
+import static org.apache.giraph.hive.common.HiveUtils.newHiveToVertex;
 
 /**
  * {@link VertexInputFormat} for reading vertices from Hive.
@@ -55,6 +60,15 @@ public class HiveVertexInputFormat<I extends WritableComparable,
    */
   public HiveVertexInputFormat() {
     hiveInputFormat = new HiveApiInputFormat();
+  }
+
+  @Override
+  public void checkInputSpecs(Configuration conf) {
+    HiveInputDescription inputDesc =
+        GiraphHiveConstants.HIVE_VERTEX_INPUT.makeInputDescription(conf);
+    HiveTableSchema schema = getTableSchema();
+    HiveToVertex<I, V, E> hiveToVertex = newHiveToVertex(getConf(), schema);
+    hiveToVertex.checkInput(inputDesc, schema);
   }
 
   @Override
@@ -78,7 +92,7 @@ public class HiveVertexInputFormat<I extends WritableComparable,
   public VertexReader<I, V, E> createVertexReader(InputSplit split,
       TaskAttemptContext context) throws IOException {
     HiveVertexReader<I, V, E> reader = new HiveVertexReader<I, V, E>();
-    reader.setTableSchema(hiveInputFormat.getTableSchema(getConf()));
+    reader.setTableSchema(getTableSchema());
 
     RecordReader<WritableComparable, HiveReadableRecord> baseReader;
     try {
@@ -89,5 +103,14 @@ public class HiveVertexInputFormat<I extends WritableComparable,
 
     reader.setHiveRecordReader(baseReader);
     return new VertexReaderWrapper<I, V, E>(reader);
+  }
+
+  /**
+   * Get Hive table schema
+   *
+   * @return Hive table schema
+   */
+  private HiveTableSchema getTableSchema() {
+    return hiveInputFormat.getTableSchema(getConf());
   }
 }

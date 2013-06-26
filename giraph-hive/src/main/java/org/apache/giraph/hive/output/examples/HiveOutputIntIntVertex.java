@@ -22,13 +22,23 @@ import org.apache.giraph.hive.output.SimpleVertexToHive;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 
+import com.facebook.hiveio.common.HiveType;
+import com.facebook.hiveio.output.HiveOutputDescription;
 import com.facebook.hiveio.record.HiveWritableRecord;
+import com.facebook.hiveio.schema.HiveTableSchema;
+import com.google.common.base.Preconditions;
 
 /**
  * VertexToHive that writes Vertexes with integer IDs and integer values
  */
 public class HiveOutputIntIntVertex extends SimpleVertexToHive<IntWritable,
     IntWritable, NullWritable> {
+  @Override public void checkOutput(HiveOutputDescription outputDesc,
+      HiveTableSchema schema, HiveWritableRecord emptyRecord) {
+    Preconditions.checkArgument(schema.columnType(0) == HiveType.LONG);
+    Preconditions.checkArgument(schema.columnType(1) == HiveType.LONG);
+  }
+
   @Override public void fillRecord(
       Vertex<IntWritable, IntWritable, NullWritable> vertex,
       HiveWritableRecord record) {

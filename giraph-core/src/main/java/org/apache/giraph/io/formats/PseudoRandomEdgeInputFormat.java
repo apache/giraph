@@ -28,6 +28,7 @@ import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.EdgeReader;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -42,6 +43,8 @@ import org.apache.log4j.Logger;
  */
 public class PseudoRandomEdgeInputFormat
     extends EdgeInputFormat<LongWritable, DoubleWritable> {
+  @Override public void checkInputSpecs(Configuration conf) { }
+
   @Override
   public final List<InputSplit> getSplits(final JobContext context,
                                           final int minSplitCountHint)

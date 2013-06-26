@@ -18,18 +18,19 @@
 
 package org.apache.giraph.io;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.util.List;
-
 import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.util.ReflectionUtils;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.List;
 
 /**
  * Common interface for {@link VertexInputFormat} and {@link EdgeInputFormat}.
@@ -41,6 +42,13 @@ import org.apache.hadoop.util.ReflectionUtils;
 public abstract class GiraphInputFormat<I extends WritableComparable,
     V extends Writable, E extends Writable> extends
     DefaultImmutableClassesGiraphConfigurable<I, V, E> {
+  /**
+   * Check that input is valid.
+   *
+   * @param conf Configuration
+   */
+  public abstract void checkInputSpecs(Configuration conf);
+
   /**
    * Get the list of input splits for the format.
    *

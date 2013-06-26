@@ -29,6 +29,7 @@ import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.EdgeReader;
 import org.apache.giraph.io.VertexReader;
 import org.apache.giraph.io.formats.GeneratedVertexInputFormat;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -271,6 +272,7 @@ public class AggregatorsTestComputation extends
    */
   public static class SimpleEdgeInputFormat extends
     EdgeInputFormat<LongWritable, FloatWritable> {
+    @Override public void checkInputSpecs(Configuration conf) { }
 
     @Override
     public EdgeReader<LongWritable, FloatWritable> createEdgeReader(

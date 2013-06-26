@@ -22,6 +22,7 @@ import org.apache.giraph.edge.Edge;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexReader;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
@@ -48,6 +49,8 @@ public abstract class TextVertexInputFormat<I extends WritableComparable,
     extends VertexInputFormat<I, V, E> {
   /** Uses the GiraphTextInputFormat to do everything */
   protected GiraphTextInputFormat textInputFormat = new GiraphTextInputFormat();
+
+  @Override public void checkInputSpecs(Configuration conf) { }
 
   @Override
   public List<InputSplit> getSplits(JobContext context, int minSplitCountHint)

@@ -22,6 +22,7 @@ import org.apache.giraph.bsp.BspInputSplit;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexReader;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -53,6 +54,8 @@ public class InMemoryVertexInputFormat<I extends WritableComparable,
   public static TestGraph getGraph() {
     return GRAPH;
   }
+
+  @Override public void checkInputSpecs(Configuration conf) { }
 
   @Override
   public List<InputSplit> getSplits(JobContext context, int minSplitCountHint)

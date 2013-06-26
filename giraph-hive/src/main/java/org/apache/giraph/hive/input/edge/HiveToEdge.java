@@ -18,6 +18,7 @@
 
 package org.apache.giraph.hive.input.edge;
 
+import org.apache.giraph.hive.input.HiveInputChecker;
 import org.apache.giraph.io.iterables.EdgeWithSource;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -37,7 +38,8 @@ import java.util.Iterator;
  * @param <E> Edge Value
  */
 public interface HiveToEdge<I extends WritableComparable,
-    E extends Writable> extends Iterator<EdgeWithSource<I, E>> {
+    E extends Writable> extends Iterator<EdgeWithSource<I, E>>,
+    HiveInputChecker {
   /**
    * Set the records which contain edge input data
    *

@@ -17,8 +17,21 @@
  */
 package org.apache.giraph.hive;
 
+import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.io.internal.WrappedVertexOutputFormat;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapred.HackJobContext;
+import org.apache.hadoop.mapred.HackTaskAttemptContext;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.TaskAttemptID;
+import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.OutputCommitter;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
+
 import com.google.common.collect.Maps;
 
+import java.io.IOException;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -46,8 +59,23 @@ public class Helpers {
     return values;
   }
 
-  public static void silenceDataNucleusLogger() {
-    Logger logger = Logger.getLogger("org.datanucleus");
-    logger.setLevel(Level.INFO);
+  public static void commitJob(GiraphConfiguration conf)
+    throws IOException, InterruptedException {
+    ImmutableClassesGiraphConfiguration iconf = new ImmutableClassesGiraphConfiguration(conf);
+    WrappedVertexOutputFormat outputFormat = iconf.createWrappedVertexOutputFormat();
+    JobConf jobConf = new JobConf(conf);
+    TaskAttemptContext
+        taskContext = new HackTaskAttemptContext(jobConf, new TaskAttemptID());
+    OutputCommitter outputCommitter = outputFormat.getOutputCommitter(
+        taskContext);
+    JobContext jobContext = new HackJobContext(jobConf, taskContext.getJobID());
+    outputCommitter.commitJob(jobContext);
+  }
+
+  public static JobContext makeJobContext(Configuration conf) {
+    JobConf jobConf = new JobConf(conf);
+    TaskAttemptContext
+        taskContext = new HackTaskAttemptContext(jobConf, new TaskAttemptID());
+    return new HackJobContext(jobConf, taskContext.getJobID());
   }
 }

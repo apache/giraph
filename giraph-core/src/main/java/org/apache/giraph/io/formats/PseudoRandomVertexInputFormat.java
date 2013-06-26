@@ -24,6 +24,7 @@ import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexReader;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -46,6 +47,8 @@ import java.util.Set;
  */
 public class PseudoRandomVertexInputFormat extends
     VertexInputFormat<LongWritable, DoubleWritable, DoubleWritable> {
+  @Override public void checkInputSpecs(Configuration conf) { }
+
   @Override
   public final List<InputSplit> getSplits(final JobContext context,
       final int minSplitCountHint) throws IOException, InterruptedException {

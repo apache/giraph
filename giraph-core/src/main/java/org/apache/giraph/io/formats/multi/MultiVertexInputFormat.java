@@ -22,6 +22,7 @@ import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexReader;
 import org.apache.giraph.io.internal.WrappedVertexReader;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -46,6 +47,12 @@ public class MultiVertexInputFormat<I extends WritableComparable,
     V extends Writable, E extends Writable> extends VertexInputFormat<I, V, E> {
   /** Vertex input formats */
   private List<VertexInputFormat<I, V, E>> vertexInputFormats;
+
+  @Override public void checkInputSpecs(Configuration conf) {
+    for (VertexInputFormat vertexInputFormat : vertexInputFormats) {
+      vertexInputFormat.checkInputSpecs(conf);
+    }
+  }
 
   @Override
   public void setConf(

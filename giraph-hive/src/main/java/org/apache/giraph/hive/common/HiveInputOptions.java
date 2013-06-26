@@ -172,8 +172,8 @@ public class HiveInputOptions<C> {
    */
   public HiveInputDescription makeInputDescription(Configuration conf) {
     HiveInputDescription inputDescription = new HiveInputDescription();
-    inputDescription.setDbName(databaseOpt.get(conf));
-    inputDescription.setTableName(tableOpt.get(conf));
+    inputDescription.getTableDesc().setDatabaseName(databaseOpt.get(conf));
+    inputDescription.getTableDesc().setTableName(tableOpt.get(conf));
     inputDescription.setPartitionFilter(partitionOpt.get(conf));
     inputDescription.setNumSplits(splitsOpt.get(conf));
     inputDescription.getMetastoreDesc().setHost(hostOpt.get(conf));
