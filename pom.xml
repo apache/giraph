@@ -798,7 +798,7 @@ under the License.
     <profile>
       <id>hadoop_yarn</id>
       <properties>
-        <hadoop.version>2.0.3-alpha</hadoop.version>
+        <hadoop.version>SET_HADOOP_VERSION_USING_MVN_DASH_D_OPTION</hadoop.version>
         <munge.symbols>PURE_YARN</munge.symbols>
       </properties>
       <dependencies>

@@ -48,17 +48,16 @@ import java.io.IOException;
  * @param <I> Vertex id
  * @param <V> Vertex data
  * @param <E> Edge data
- * @param <M> Message data
  */
 public class GiraphYarnTask<I extends WritableComparable, V extends Writable,
-    E extends Writable, M extends Writable> {
+    E extends Writable> {
   static {
     Configuration.addDefaultResource(GiraphConstants.GIRAPH_YARN_CONF_FILE);
   }
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(GiraphYarnTask.class);
   /** Manage the framework-agnostic Giraph task for this job run */
-  private GraphTaskManager<I, V, E, M> graphTaskManager;
+  private GraphTaskManager<I, V, E> graphTaskManager;
   /** Giraph task ID number must start @ index 0. Used by ZK, BSP, etc. */
   private final int bspTaskId;
   /** A special "dummy" override of Mapper#Context, used to deliver MRv1 deps */
@@ -74,12 +73,12 @@ public class GiraphYarnTask<I extends WritableComparable, V extends Writable,
    *                      supplied by GiraphApplicationMaster.
    */
   public GiraphYarnTask(final TaskAttemptID taskAttemptId) {
-    conf = new ImmutableClassesGiraphConfiguration<I, V, E, M>(
+    conf = new ImmutableClassesGiraphConfiguration<I, V, E>(
       new GiraphConfiguration());
     bspTaskId = taskAttemptId.getTaskID().getId();
     conf.setInt("mapred.task.partition", bspTaskId);
     proxy = buildProxyMapperContext(taskAttemptId);
-    graphTaskManager = new GraphTaskManager<I, V, E, M>(proxy);
+    graphTaskManager = new GraphTaskManager<I, V, E>(proxy);
   }
 
   /**
@@ -192,7 +191,7 @@ public class GiraphYarnTask<I extends WritableComparable, V extends Writable,
         "a TaskAttemptID for the Giraph job from args: " + printArgs(args));
     }
     try {
-      GiraphYarnTask<?, ?, ?, ?> giraphYarnTask =
+      GiraphYarnTask<?, ?, ?> giraphYarnTask =
         new GiraphYarnTask(getTaskAttemptID(args));
       giraphYarnTask.run();
       // CHECKSTYLE: stop IllegalCatch

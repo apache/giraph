@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-688: Make sure Giraph builds against all compatible YARN-enabled Hadoop versions,
+  warns if none set, works w/new 1.1.0 line (ereisman)
+
   GIRAPH-693: Giraph-Hive check user code as soon as possible (nitay)
 
   GIRAPH-697: Clean up message stores (majakabiljo)
