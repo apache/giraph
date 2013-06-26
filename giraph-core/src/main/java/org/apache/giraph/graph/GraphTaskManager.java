@@ -249,7 +249,7 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
     int numComputeThreads = conf.getNumComputeThreads();
 
     // main superstep processing loop
-    do {
+    while (!finishedSuperstepStats.allVerticesHalted()) {
       final long superstep = serviceWorker.getSuperstep();
       GiraphTimerContext superstepTimerContext =
         getTimerForThisSuperstep(superstep);
@@ -286,7 +286,7 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
       finishedSuperstepStats = completeSuperstepAndCollectStats(
         partitionStatsList, superstepTimerContext);
       // END of superstep compute loop
-    } while (!finishedSuperstepStats.allVerticesHalted());
+    }
 
     if (LOG.isInfoEnabled()) {
       LOG.info("execute: BSP application done (global vertices marked done)");

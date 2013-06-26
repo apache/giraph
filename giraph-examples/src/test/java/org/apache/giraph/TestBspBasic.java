@@ -494,4 +494,18 @@ public class
       assertEquals(32.5, finalSum, 0d);
     }
   }
+
+  /**
+   * Test halting at superstep 0
+   */
+  @Test
+  public void testHaltSuperstep0()
+      throws IOException, InterruptedException, ClassNotFoundException {
+    GiraphConfiguration conf = new GiraphConfiguration();
+    GiraphConstants.MAX_NUMBER_OF_SUPERSTEPS.set(conf, 0);
+    conf.setComputationClass(SimpleMsgComputation.class);
+    conf.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
+    GiraphJob job = prepareJob(getCallingMethodName(), conf);
+    assertTrue(job.run(true));
+  }
 }
