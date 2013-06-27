@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-676: A short tutorial on getting started with Giraph (boshmaf via claudio)
+
   GIRAPH-698: Expose Computation to a user (aching)
 
   GIRAPH-311:  Master halting in superstep 0 is ignored by workers (majakabiljo)

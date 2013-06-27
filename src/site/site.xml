@@ -70,6 +70,7 @@
     
     <menu name="User Docs" inherit="top">
       <item name="Introduction" href="intro.html"/>
+      <item name="Quick Start" href="quick_start.html"/>
       <item name="Building and Testing" href="build.html"/>
       <item name="FAQ" href="faq.html"/>
       <item name="Implementation" href="implementation.html"/>
