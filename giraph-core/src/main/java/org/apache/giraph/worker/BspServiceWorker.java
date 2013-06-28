@@ -83,6 +83,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import net.iharder.Base64;
 
@@ -95,10 +96,13 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 
@@ -920,13 +924,20 @@ public class BspServiceWorker<I extends WritableComparable,
       return;
     }
 
+    final int numPartitions = getPartitionStore().getNumPartitions();
     int numThreads = Math.min(getConfiguration().getNumOutputThreads(),
-        getPartitionStore().getNumPartitions());
+        numPartitions);
     LoggerUtils.setStatusAndLog(getContext(), LOG, Level.INFO,
         "saveVertices: Starting to save " + numLocalVertices + " vertices " +
             "using " + numThreads + " threads");
     final VertexOutputFormat<I, V, E> vertexOutputFormat =
         getConfiguration().createWrappedVertexOutputFormat();
+
+    final Queue<Integer> partitionIdQueue =
+        (numPartitions == 0) ? new LinkedList<Integer>() :
+            new ArrayBlockingQueue<Integer>(numPartitions);
+    Iterables.addAll(partitionIdQueue, getPartitionStore().getPartitionIds());
+
     CallableFactory<Void> callableFactory = new CallableFactory<Void>() {
       @Override
       public Callable<Void> newCallable(int callableId) {
@@ -937,14 +948,19 @@ public class BspServiceWorker<I extends WritableComparable,
                 vertexOutputFormat.createVertexWriter(getContext());
             vertexWriter.setConf(getConfiguration());
             vertexWriter.initialize(getContext());
-            long verticesWritten = 0;
             long nextPrintVertices = 0;
             long nextPrintMsecs = System.currentTimeMillis() + 15000;
             int partitionIndex = 0;
             int numPartitions = getPartitionStore().getNumPartitions();
-            for (Integer partitionId : getPartitionStore().getPartitionIds()) {
+            while (!partitionIdQueue.isEmpty()) {
+              Integer partitionId = partitionIdQueue.poll();
+              if (partitionId == null) {
+                break;
+              }
+
               Partition<I, V, E> partition =
                   getPartitionStore().getPartition(partitionId);
+              long verticesWritten = 0;
               for (Vertex<I, V, E> vertex : partition) {
                 vertexWriter.writeVertex(vertex);
                 ++verticesWritten;

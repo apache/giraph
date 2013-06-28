@@ -18,6 +18,7 @@
 package org.apache.giraph.hive.output;
 
 import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.edge.ByteArrayEdges;
 import org.apache.giraph.hive.GiraphHiveTestBase;
 import org.apache.giraph.hive.Helpers;
@@ -42,6 +43,8 @@ import java.io.IOException;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
+
+import junit.framework.Assert;
 
 public class HiveOutputTest extends GiraphHiveTestBase {
   private LocalHiveServer hiveServer = new LocalHiveServer("giraph-hive");
@@ -88,6 +91,25 @@ public class HiveOutputTest extends GiraphHiveTestBase {
     verifyRecords(inputDesc);
   }
 
+  @Test
+  public void testHiveMultithreadedOutput() throws Exception
+  {
+    String tableName = "test1";
+    hiveServer.createTable("CREATE TABLE " + tableName +
+        " (i1 BIGINT, i2 BIGINT) ");
+
+    GiraphConfiguration conf = new GiraphConfiguration();
+    conf.setVertexOutputFormatThreadSafe(true);
+    conf.setNumOutputThreads(2);
+    GiraphConstants.USER_PARTITION_COUNT.set(conf, 4);
+    runJob(tableName, conf);
+
+    HiveInputDescription inputDesc = new HiveInputDescription();
+    inputDesc.getTableDesc().setTableName(tableName);
+
+    verifyRecords(inputDesc);
+  }
+
   private void runJob(String tableName, GiraphConfiguration conf) throws Exception {
     String[] edges = new String[] {
         "1 2",
@@ -116,7 +138,9 @@ public class HiveOutputTest extends GiraphHiveTestBase {
 
     // Records are in an unknown sort order so we grab their values here
     for (HiveReadableRecord record : records) {
-      data.put(record.getLong(0), record.getLong(1));
+      if (data.put(record.getLong(0), record.getLong(1)) != null) {
+        Assert.fail("Id " + record.getLong(0) + " appears twice in the output");
+      }
     }
 
     assertEquals(3, data.size());
