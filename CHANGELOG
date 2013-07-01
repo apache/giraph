@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-703: create an appropriate way to generate the options.html page using maven.
+  (armax00 via claudio)
+
   GIRAPH-702: Fix multithreaded output (majakabiljo)
 
   GIRAPH-676: A short tutorial on getting started with Giraph (boshmaf via claudio)
