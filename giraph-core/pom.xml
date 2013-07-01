@@ -36,6 +36,7 @@ under the License.
   <properties>
     <export-target.dir>export/target</export-target.dir>
     <top.dir>${project.basedir}/..</top.dir>
+    <project.jar>${project.basedir}/target/giraph-${project.version}-${forHadoop}-jar-with-dependencies.jar</project.jar>
   </properties>
 
   <build>
@@ -102,7 +103,7 @@ under the License.
           <systemProperties>
             <property>
               <name>prop.jarLocation</name>
-              <value>${project.basedir}/target/giraph-${project.version}-${forHadoop}-jar-with-dependencies.jar</value>
+              <value>${project.jar}</value>
             </property>
           </systemProperties>
         </configuration>
@@ -110,6 +111,29 @@ under the License.
       <plugin>
         <groupId>org.apache.rat</groupId>
         <artifactId>apache-rat-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>1.6</version>
+        <executions>
+          <execution>
+            <phase>compile</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <java classname="org.apache.giraph.conf.AllOptions">
+                  <classpath>
+                    <pathelement location="${project.jar}"/>
+                    <pathelement path="${maven.dependency.org.apache.hadoop.hadoop-common.jar.path}"/>
+                  </classpath>
+                  <arg value="${top.dir}/src/site/xdoc/options.xml" />
+                </java>
+              </target>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
