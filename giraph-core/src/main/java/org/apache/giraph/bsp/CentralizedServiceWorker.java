@@ -140,7 +140,7 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
    * @param vertexId Vertex id
    * @return Partition id
    */
-  Integer getPartitionId(I vertexId);
+  int getPartitionId(I vertexId);
 
   /**
    * Whether a partition with given id exists on this worker.

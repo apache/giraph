@@ -97,10 +97,6 @@ public class ServerData<I extends WritableComparable,
       Mapper<?, ?, ?, ?>.Context context) {
     this.conf = conf;
     this.messageStoreFactory = messageStoreFactory;
-    currentMessageStore =
-        messageStoreFactory.newStore(conf.getOutgoingMessageValueClass());
-    incomingMessageStore =
-        messageStoreFactory.newStore(conf.getIncomingMessageValueClass());
     if (GiraphConstants.USE_OUT_OF_CORE_GRAPH.get(conf)) {
       partitionStore =
           new DiskBackedPartitionStore<I, V, E>(conf, context);
@@ -158,7 +154,9 @@ public class ServerData<I extends WritableComparable,
             "Failed to clear previous message store");
       }
     }
-    currentMessageStore = incomingMessageStore;
+    currentMessageStore =
+        incomingMessageStore != null ? incomingMessageStore :
+            messageStoreFactory.newStore(conf.getIncomingMessageValueClass());
     incomingMessageStore =
         messageStoreFactory.newStore(conf.getOutgoingMessageValueClass());
   }

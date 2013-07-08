@@ -335,6 +335,35 @@ public class WritableUtils {
   }
 
   /**
+   * Write ExtendedDataOutput to DataOutput
+   *
+   * @param extendedDataOutput ExtendedDataOutput to write
+   * @param out DataOutput to write to
+   */
+  public static void writeExtendedDataOutput(
+      ExtendedDataOutput extendedDataOutput, DataOutput out)
+    throws IOException {
+    out.writeInt(extendedDataOutput.getPos());
+    out.write(
+        extendedDataOutput.getByteArray(), 0, extendedDataOutput.getPos());
+  }
+
+  /**
+   * Read ExtendedDataOutput from DataInput
+   *
+   * @param in DataInput to read from
+   * @param conf Configuration
+   * @return ExtendedDataOutput read
+   */
+  public static ExtendedDataOutput readExtendedDataOutput(DataInput in,
+      ImmutableClassesGiraphConfiguration conf) throws IOException {
+    int size = in.readInt();
+    byte[] buf = new byte[size];
+    in.readFully(buf);
+    return conf.createExtendedDataOutput(buf, size);
+  }
+
+  /**
    * Write vertex data to byte array with the first 4 bytes as the size of the
    * entire buffer (including the size).
    *

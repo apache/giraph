@@ -1226,10 +1226,8 @@ public class BspServiceWorker<I extends WritableComparable,
                 " on " + partitionsFile);
           }
           partition.readFields(partitionsStream);
-          if (partitionsStream.readBoolean()) {
-            getServerData().getCurrentMessageStore().readFieldsForPartition(
-                partitionsStream, partitionId);
-          }
+          getServerData().getIncomingMessageStore().readFieldsForPartition(
+              partitionsStream, partitionId);
           partitionsStream.close();
           if (LOG.isInfoEnabled()) {
             LOG.info("loadCheckpoint: Loaded partition " +
@@ -1274,6 +1272,7 @@ public class BspServiceWorker<I extends WritableComparable,
           e);
     }
 
+    getServerData().prepareSuperstep();
     // Communication service needs to setup the connections prior to
     // processing vertices
 /*if[HADOOP_NON_SECURE]
@@ -1492,7 +1491,7 @@ else[HADOOP_NON_SECURE]*/
   }
 
   @Override
-  public Integer getPartitionId(I vertexId) {
+  public int getPartitionId(I vertexId) {
     PartitionOwner partitionOwner = getVertexPartitionOwner(vertexId);
     return partitionOwner.getPartitionId();
   }

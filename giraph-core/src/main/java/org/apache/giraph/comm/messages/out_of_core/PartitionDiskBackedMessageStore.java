@@ -38,6 +38,7 @@ import org.apache.giraph.comm.messages.MessageStoreFactory;
 import org.apache.giraph.comm.messages.MessagesIterable;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.utils.ExtendedDataOutput;
+import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -248,8 +249,7 @@ public class PartitionDiskBackedMessageStore<I extends WritableComparable,
     out.writeInt(inMemoryMessages.size());
     for (Entry<I, ExtendedDataOutput> entry : inMemoryMessages.entrySet()) {
       entry.getKey().write(out);
-      out.writeInt(entry.getValue().getPos());
-      out.write(entry.getValue().getByteArray(), 0, entry.getValue().getPos());
+      WritableUtils.writeExtendedDataOutput(entry.getValue(), out);
     }
 
     // write file stores
@@ -277,11 +277,8 @@ public class PartitionDiskBackedMessageStore<I extends WritableComparable,
     for (int m = 0; m < mapSize; m++) {
       I vertexId = config.createVertexId();
       vertexId.readFields(in);
-      int messageBytes = in.readInt();
-      byte[] buf = new byte[messageBytes];
-      ExtendedDataOutput extendedDataOutput =
-          config.createExtendedDataOutput(buf, messageBytes);
-      inMemoryMessages.put(vertexId, extendedDataOutput);
+      inMemoryMessages.put(vertexId,
+          WritableUtils.readExtendedDataOutput(in, config));
     }
 
     // read file stores

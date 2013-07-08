@@ -155,17 +155,13 @@ public abstract class ByteArrayVertexIdData<I extends WritableComparable, T>
 
   @Override
   public void write(DataOutput dataOutput) throws IOException {
-    dataOutput.writeInt(extendedDataOutput.getPos());
-    dataOutput.write(extendedDataOutput.getByteArray(), 0,
-        extendedDataOutput.getPos());
+    WritableUtils.writeExtendedDataOutput(extendedDataOutput, dataOutput);
   }
 
   @Override
   public void readFields(DataInput dataInput) throws IOException {
-    int size = dataInput.readInt();
-    byte[] buf = new byte[size];
-    dataInput.readFully(buf);
-    extendedDataOutput = configuration.createExtendedDataOutput(buf, size);
+    extendedDataOutput =
+        WritableUtils.readExtendedDataOutput(dataInput, configuration);
   }
 
   /**

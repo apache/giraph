@@ -85,6 +85,7 @@ public class RequestTest {
 
     // Start the service
     serverData = MockUtils.createNewServerData(conf, context);
+    serverData.prepareSuperstep();
     workerInfo = new WorkerInfo();
     server = new NettyServer(conf,
         new WorkerRequestServerHandler.Factory(serverData), workerInfo,

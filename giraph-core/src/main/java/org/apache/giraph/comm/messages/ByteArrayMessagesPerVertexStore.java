@@ -26,6 +26,7 @@ import org.apache.giraph.utils.ExtendedDataOutput;
 import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.giraph.utils.RepresentativeByteArrayIterator;
 import org.apache.giraph.utils.VertexIdIterator;
+import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -174,18 +175,13 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
   @Override
   protected void writeMessages(ExtendedDataOutput extendedDataOutput,
       DataOutput out) throws IOException {
-    out.writeInt(extendedDataOutput.getPos());
-    out.write(
-        extendedDataOutput.getByteArray(), 0, extendedDataOutput.getPos());
+    WritableUtils.writeExtendedDataOutput(extendedDataOutput, out);
   }
 
   @Override
   protected ExtendedDataOutput readFieldsForMessages(DataInput in) throws
       IOException {
-    int byteArraySize = in.readInt();
-    byte[] messages = new byte[byteArraySize];
-    in.readFully(messages);
-    return config.createExtendedDataOutput(messages, 0);
+    return WritableUtils.readExtendedDataOutput(in, config);
   }
 
   /**
