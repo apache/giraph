@@ -98,4 +98,17 @@ public class DistributedCacheUtils {
     }
     return remotePath;
   }
+
+  /**
+   * Copy a file to HDFS if it is local, and adds it to the distributed cache.
+   *
+   * @param path path to file
+   * @param conf Configuration
+   * @return remote path to file
+   */
+  public static Path copyAndAdd(Path path, Configuration conf) {
+    Path remotePath = copyToHdfs(path, conf);
+    DistributedCache.addCacheFile(remotePath.toUri(), conf);
+    return remotePath;
+  }
 }

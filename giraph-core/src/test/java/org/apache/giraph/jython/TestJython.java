@@ -26,6 +26,11 @@ import org.apache.giraph.utils.InternalVertexRunner;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.junit.Test;
+import org.python.core.PyDictionary;
+import org.python.core.PyInteger;
+import org.python.core.PyList;
+import org.python.core.PyObject;
+import org.python.util.PythonInterpreter;
 
 import com.google.common.collect.Maps;
 
@@ -33,8 +38,64 @@ import java.util.Map;
 
 import static org.apache.giraph.jython.JythonComputationFactory.JYTHON_DEPLOY_TYPE;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class TestJython {
+  private static final double DELTA = 0.0000001;
+
+  @Test
+  public void testBasic() {
+    String jython =
+        "class Foo:\n" +
+        "    def __init__(self):\n" +
+        "        self.map = {\"32\": 32, \"4.3\": 4.3}\n" +
+        "        self.list = [ 2, 9, 11 ]\n" +
+        "        self.ival = 17\n" +
+        "\n" +
+        "def get_map(foo):\n" +
+        "    return foo.map\n" +
+        "\n" +
+        "def get_list(foo):\n" +
+        "    return foo.list\n" +
+        "\n" +
+        "def get_ival(foo):\n" +
+        "    return foo.ival\n" +
+        "";
+
+    PythonInterpreter interpreter = new PythonInterpreter();
+    interpreter.exec(jython);
+
+    PyObject fooClass = interpreter.get("Foo");
+    PyObject getMapFunc = interpreter.get("get_map");
+    PyObject getListFunc = interpreter.get("get_list");
+    PyObject getIValFunc = interpreter.get("get_ival");
+
+    PyObject foo = fooClass.__call__();
+
+    PyObject mapResult = getMapFunc.__call__(foo);
+    assertTrue(mapResult instanceof PyDictionary);
+    PyDictionary pyMapResult = ((PyDictionary) mapResult);
+    assertEquals(2, pyMapResult.size());
+    Object thirtyTwo = pyMapResult.get("32");
+    assertTrue(thirtyTwo instanceof Integer);
+    assertEquals(32, ((Integer) thirtyTwo).intValue());
+    Object fourPointThree = pyMapResult.get("4.3");
+    assertTrue(fourPointThree instanceof Double);
+    assertEquals(4.3, (Double) fourPointThree, DELTA);
+
+    PyObject listResult = getListFunc.__call__(foo);
+    assertTrue(listResult instanceof PyList);
+    PyList pyListResult = (PyList) listResult;
+    assertEquals(3, pyListResult.size());
+    assertEquals(2, pyListResult.get(0));
+    assertEquals(9, pyListResult.get(1));
+    assertEquals(11, pyListResult.get(2));
+
+    PyObject ivalResult = getIValFunc.__call__(foo);
+    assertTrue(ivalResult instanceof PyInteger);
+    assertEquals(17, ((PyInteger) ivalResult).getValue());
+  }
+
   @Test
   public void testCountEdges() throws Exception {
     String[] edges = new String[] {
@@ -47,7 +108,8 @@ public class TestJython {
     GiraphConfiguration conf = new GiraphConfiguration();
     GiraphTypes types = new GiraphTypes(IntWritable.class, IntWritable.class,
         NullWritable.class, NullWritable.class, NullWritable.class);
-    JythonUtils.init(conf, "count-edges.py", "CountEdges", types);
+    types.writeIfUnset(conf);
+    JythonUtils.init(conf, "count-edges.py", "CountEdges");
     JYTHON_DEPLOY_TYPE.set(conf, DeployType.RESOURCE);
     conf.setOutEdgesClass(ByteArrayEdges.class);
     conf.setEdgeInputFormatClass(IntNullTextEdgeInputFormat.class);

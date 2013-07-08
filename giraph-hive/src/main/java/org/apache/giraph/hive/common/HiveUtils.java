@@ -19,6 +19,7 @@
 package org.apache.giraph.hive.common;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.conf.StrConfOption;
 import org.apache.giraph.hive.input.edge.HiveToEdge;
 import org.apache.giraph.hive.input.vertex.HiveToVertex;
 import org.apache.giraph.hive.output.VertexToHive;
@@ -26,6 +27,7 @@ import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.log4j.Logger;
 import org.apache.thrift.TException;
 
 import com.facebook.hiveio.input.HiveApiInputFormat;
@@ -38,10 +40,16 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
+import java.io.File;
 import java.io.IOException;
+import java.net.URL;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+import static java.lang.System.getenv;
 import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_EDGE_INPUT;
 import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_INPUT;
 import static org.apache.giraph.hive.common.GiraphHiveConstants.VERTEX_TO_HIVE_CLASS;
@@ -51,6 +59,9 @@ import static org.apache.giraph.utils.ReflectionUtils.newInstance;
  * Utility methods for Hive IO
  */
 public class HiveUtils {
+  /** Logger */
+  private static final Logger LOG = Logger.getLogger(HiveUtils.class);
+
   /** Do not instantiate */
   private HiveUtils() {
   }
@@ -117,6 +128,164 @@ public class HiveUtils {
       partitionValues.put(keyVal.get(0), keyVal.get(1));
     }
     return partitionValues;
+  }
+
+  /**
+   * Lookup index of column in {@link HiveTableSchema}, or throw if not found.
+   *
+   * @param schema {@link HiveTableSchema}
+   * @param columnName column name
+   * @return column index
+   */
+  public static int columnIndexOrThrow(HiveTableSchema schema,
+      String columnName) {
+    int index = schema.positionOf(columnName);
+    if (index == -1) {
+      throw new IllegalArgumentException("Column " + columnName +
+          " not found in table " + schema.getTableDesc());
+    }
+    return index;
+  }
+
+  /**
+   * Lookup index of column in {@link HiveTableSchema}, or throw if not found.
+   *
+   * @param schema {@link HiveTableSchema}
+   * @param conf {@link Configuration}
+   * @param confOption {@link StrConfOption}
+   * @return column index
+   */
+  public static int columnIndexOrThrow(HiveTableSchema schema,
+      Configuration conf, StrConfOption confOption) {
+    String columnName = confOption.get(conf);
+    if (columnName == null) {
+      throw new IllegalArgumentException("Column " + confOption.getKey() +
+          " not set in configuration");
+    }
+    return columnIndexOrThrow(schema, columnName);
+  }
+
+  /**
+   * Add hive-site.xml file to tmpfiles in Configuration.
+   *
+   * @param conf Configuration
+   */
+  public static void addHiveSiteXmlToTmpFiles(Configuration conf) {
+    // When output partitions are used, workers register them to the
+    // metastore at cleanup stage, and on HiveConf's initialization, it
+    // looks for hive-site.xml.
+    addToHiveFromClassLoader(conf, "hive-site.xml");
+  }
+
+  /**
+   * Add hive-site-custom.xml to tmpfiles in Configuration.
+   *
+   * @param conf Configuration
+   */
+  public static void addHiveSiteCustomXmlToTmpFiles(Configuration conf) {
+    addToHiveFromClassLoader(conf, "hive-site-custom.xml");
+  }
+
+  /**
+   * Add a file to Configuration tmpfiles from ClassLoader resource
+   *
+   * @param conf Configuration
+   * @param name file name
+   */
+  private static void addToHiveFromClassLoader(Configuration conf,
+      String name) {
+    URL url = conf.getClassLoader().getResource(name);
+    checkNotNull(url);
+    if (LOG.isInfoEnabled()) {
+      LOG.info("addToHiveFromClassLoader: Adding " + name + " at " +
+          url + " to Configuration tmpfiles");
+    }
+    addToStringCollection(conf, "tmpfiles", url.toString());
+  }
+
+  /**
+   * Add jars from HADOOP_CLASSPATH environment variable to tmpjars property
+   * in Configuration.
+   *
+   * @param conf Configuration
+   */
+  public static void addHadoopClasspathToTmpJars(Configuration conf) {
+    // Or, more effectively, we can provide all the jars client needed to
+    // the workers as well
+    String[] hadoopJars = getenv("HADOOP_CLASSPATH").split(File.pathSeparator);
+    if (hadoopJars.length > 0) {
+      if (LOG.isInfoEnabled()) {
+        LOG.info("addHadoopClasspathToTmpJars: Adding HADOOP_CLASSPATH jars " +
+            "at " + Arrays.toString(hadoopJars) + " to Configuration tmpjars");
+      }
+      List<String> hadoopJarURLs = Lists.newArrayList();
+      for (String jarPath : hadoopJars) {
+        File file = new File(jarPath);
+        if (file.exists() && file.isFile()) {
+          hadoopJarURLs.add(file.toURI().toString());
+        }
+      }
+      HiveUtils.addToStringCollection(conf, "tmpjars", hadoopJarURLs);
+    }
+  }
+
+  /**
+   * Handle -hiveconf options, adding them to Configuration
+   *
+   * @param hiveconfArgs array of hiveconf args
+   * @param conf Configuration
+   */
+  public static void processHiveconfOptions(String[] hiveconfArgs,
+      Configuration conf) {
+    for (String hiveconf : hiveconfArgs) {
+      processHiveconfOption(conf, hiveconf);
+    }
+  }
+
+  /**
+   * Process -hiveconf option, adding it to Configuration appropriately.
+   *
+   * @param conf Configuration
+   * @param hiveconf option to process
+   */
+  public static void processHiveconfOption(Configuration conf,
+      String hiveconf) {
+    String[] keyval = hiveconf.split("=", 2);
+    if (keyval.length == 2) {
+      String name = keyval[0];
+      String value = keyval[1];
+      if (name.equals("tmpjars") || name.equals("tmpfiles")) {
+        addToStringCollection(conf, name, value);
+      } else {
+        conf.set(name, value);
+      }
+    }
+  }
+
+  /**
+   * Add string to collection
+   *
+   * @param conf Configuration
+   * @param key key to add
+   * @param values values for collection
+   */
+  public static void addToStringCollection(Configuration conf, String key,
+      String... values) {
+    addToStringCollection(conf, key, Arrays.asList(values));
+  }
+
+  /**
+   * Add string to collection
+   *
+   * @param conf Configuration
+   * @param key to add
+   * @param values values for collection
+   */
+  public static void addToStringCollection(
+      Configuration conf, String key, Collection<String> values) {
+    Collection<String> strings = conf.getStringCollection(key);
+    strings.addAll(values);
+    conf.setStrings(key, strings.toArray(new String[strings.size()]));
   }
 
   /**

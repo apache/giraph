@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-705: Type converters and giraph-hive cleanup (nitay)
+
   GIRAPH-704: Specialized message stores (majakabiljo)
 
   GIRAPH-703: create an appropriate way to generate the options.html page using maven.

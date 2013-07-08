@@ -29,7 +29,6 @@ import org.apache.giraph.jython.DeployType;
 import org.apache.giraph.jython.JythonUtils;
 import org.apache.giraph.utils.DistributedCacheUtils;
 import org.apache.giraph.utils.ReflectionUtils;
-import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.util.ToolRunner;
 
@@ -62,14 +61,14 @@ public class PageRankBenchmark extends GiraphBenchmark {
         JYTHON_DEPLOY_TYPE.set(conf, DeployType.DISTRIBUTED_CACHE);
         String path = BenchmarkOption.SCRIPT_PATH.getOptionValue(cmd);
         Path hadoopPath = new Path(path);
-        Path remotePath = DistributedCacheUtils.copyToHdfs(hadoopPath, conf);
-        DistributedCache.addCacheFile(remotePath.toUri(), conf);
+        Path remotePath = DistributedCacheUtils.copyAndAdd(hadoopPath, conf);
         script = remotePath.toString();
       } else {
         JYTHON_DEPLOY_TYPE.set(conf, DeployType.RESOURCE);
         script = ReflectionUtils.getPackagePath(this) + "/page-rank.py";
       }
-      JythonUtils.init(conf, script, "PageRank", types);
+      types.writeIfUnset(conf);
+      JythonUtils.init(conf, script, "PageRank");
     } else {
       conf.setComputationClass(PageRankComputation.class);
     }

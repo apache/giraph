@@ -97,6 +97,7 @@ public class HiveVertexWriter<I extends WritableComparable, V extends Writable,
   public void initialize(TaskAttemptContext context)
     throws IOException, InterruptedException {
     vertexToHive = HiveUtils.newVertexToHive(getConf(), tableSchema);
+    vertexToHive.initialize();
   }
 
   @Override

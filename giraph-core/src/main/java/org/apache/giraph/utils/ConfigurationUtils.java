@@ -43,7 +43,6 @@ import org.apache.giraph.master.MasterCompute;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.log4j.Level;
@@ -432,12 +431,10 @@ public final class ConfigurationUtils {
     }
 
     Path path = new Path(scriptPath);
-    Path remotePath = DistributedCacheUtils.copyToHdfs(path, conf);
+    Path remotePath = DistributedCacheUtils.copyAndAdd(path, conf);
 
-    DistributedCache.addCacheFile(remotePath.toUri(), conf);
-
-    GiraphTypes types = GiraphTypes.readFrom(conf);
-    JythonUtils.init(conf, scriptPath, jythonClass, types);
+    GiraphTypes.readFrom(conf).writeIfUnset(conf);
+    JythonUtils.init(conf, remotePath.toString(), jythonClass);
   }
 
   /**

@@ -27,6 +27,7 @@ import org.apache.commons.cli.ParseException;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.graph.Computation;
+import org.apache.giraph.hive.common.HiveUtils;
 import org.apache.giraph.hive.input.edge.HiveEdgeInputFormat;
 import org.apache.giraph.hive.input.edge.HiveToEdge;
 import org.apache.giraph.hive.input.vertex.HiveToVertex;
@@ -49,9 +50,7 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
-import java.io.File;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 
 import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_EDGE_INPUT;
@@ -260,7 +259,8 @@ public class HiveGiraphRunner implements Tool {
     }
 
     // additional configuration for Hive
-    adjustConfigurationForHive();
+    HiveUtils.addHadoopClasspathToTmpJars(conf);
+    HiveUtils.addHiveSiteXmlToTmpFiles(conf);
 
     // setup GiraphJob
     GiraphJob job = new GiraphJob(getConf(), getClass().getName());
@@ -315,31 +315,6 @@ public class HiveGiraphRunner implements Tool {
   public void prepareHiveOutput() {
     GiraphConstants.VERTEX_OUTPUT_FORMAT_CLASS.set(conf,
         HiveVertexOutputFormat.class);
-  }
-
-  /**
-   * set hive configuration
-   */
-  private void adjustConfigurationForHive() {
-    // when output partitions are used, workers register them to the
-    // metastore at cleanup stage, and on HiveConf's initialization, it
-    // looks for hive-site.xml.
-    addToStringCollection(conf, "tmpfiles", conf.getClassLoader()
-        .getResource("hive-site.xml").toString());
-
-    // Or, more effectively, we can provide all the jars client needed to
-    // the workers as well
-    String[] hadoopJars = System.getenv("HADOOP_CLASSPATH").split(
-        File.pathSeparator);
-    List<String> hadoopJarURLs = Lists.newArrayList();
-    for (String jarPath : hadoopJars) {
-      File file = new File(jarPath);
-      if (file.exists() && file.isFile()) {
-        String jarURL = file.toURI().toString();
-        hadoopJarURLs.add(jarURL);
-      }
-    }
-    addToStringCollection(conf, "tmpjars", hadoopJarURLs);
   }
 
   /**
@@ -463,31 +438,11 @@ public class HiveGiraphRunner implements Tool {
     isVerbose = cmdln.hasOption("verbose");
 
     // pick up -hiveconf arguments
-    processHiveConfOptions(cmdln);
+    HiveUtils.processHiveconfOptions(cmdln.getOptionValues("hiveconf"), conf);
 
     processMoreArguments(cmdln);
 
     return cmdln;
-  }
-
-  /**
-   * Process -hiveconf options from command line
-   *
-   * @param cmdln Command line options
-   */
-  private void processHiveConfOptions(CommandLine cmdln) {
-    for (String hiveconf : cmdln.getOptionValues("hiveconf")) {
-      String[] keyval = hiveconf.split("=", 2);
-      if (keyval.length == 2) {
-        String name = keyval[0];
-        String value = keyval[1];
-        if (name.equals("tmpjars") || name.equals("tmpfiles")) {
-          addToStringCollection(conf, name, value);
-        } else {
-          conf.set(name, value);
-        }
-      }
-    }
   }
 
   /**
@@ -545,31 +500,6 @@ public class HiveGiraphRunner implements Tool {
     inputOption.append("\"My").append(hiveToObjectClassName).append(
         ", myTableName, a<2 AND b='two', option1=value1, option2=value2\"");
     return inputOption.toString();
-  }
-
-  /**
-   * add string to collection
-   * @param conf Configuration
-   * @param name name to add
-   * @param values values for collection
-   */
-  private static void addToStringCollection(Configuration conf, String name,
-      String... values) {
-    addToStringCollection(conf, name, Arrays.asList(values));
-  }
-
-  /**
-   * add string to collection
-   * @param conf Configuration
-   * @param name to add
-   * @param values values for collection
-   */
-  private static void addToStringCollection(
-      Configuration conf, String name, Collection
-      <? extends String> values) {
-    Collection<String> tmpfiles = conf.getStringCollection(name);
-    tmpfiles.addAll(values);
-    conf.setStrings(name, tmpfiles.toArray(new String[tmpfiles.size()]));
   }
 
   /**

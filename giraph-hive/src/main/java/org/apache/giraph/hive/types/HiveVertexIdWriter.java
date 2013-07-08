@@ -15,23 +15,46 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.hive.output;
+package org.apache.giraph.hive.types;
 
-import org.apache.giraph.hive.common.DefaultConfigurableAndTableSchemaAware;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
+import com.facebook.hiveio.record.HiveWritableRecord;
+
 /**
- * Base class for VertexToHive implementations
+ * Interface for writing Vertex IDs from Hive records
  *
  * @param <I> Vertex ID
- * @param <V> Vertex Value
- * @param <E> Edge Value
  */
-public abstract class AbstractVertexToHive<I extends WritableComparable,
-    V extends Writable, E extends Writable>
-    extends DefaultConfigurableAndTableSchemaAware<I, V, E>
-    implements VertexToHive<I, V, E> {
-  @Override
-  public void initialize() { }
+public interface HiveVertexIdWriter<I extends WritableComparable> {
+  /**
+   * Write Vertex ID to record
+   *
+   * @param id Vertex ID
+   * @param record Hive record
+   */
+  void writeId(I id, HiveWritableRecord record);
+
+  /**
+   * Null implementation that does nothing
+   *
+   * @param <W> Writable type
+   */
+  public static class Null<W extends WritableComparable>
+      implements HiveVertexIdWriter<W> {
+    /** Singleton */
+    private static final Null INSTANCE = new Null();
+
+    /**
+     * Get singleton
+     *
+     * @return singleton instance
+     */
+    public static Null get() {
+      return INSTANCE;
+    }
+
+    @Override
+    public void writeId(W id, HiveWritableRecord record) { }
+  }
 }

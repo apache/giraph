@@ -15,23 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.hive.output;
+package org.apache.giraph.types;
 
-import org.apache.giraph.hive.common.DefaultConfigurableAndTableSchemaAware;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 
 /**
- * Base class for VertexToHive implementations
+ * Converts from Java type to Writable type
  *
- * @param <I> Vertex ID
- * @param <V> Vertex Value
- * @param <E> Edge Value
+ * @param <W> Writable type
+ * @param <J> Java type
  */
-public abstract class AbstractVertexToHive<I extends WritableComparable,
-    V extends Writable, E extends Writable>
-    extends DefaultConfigurableAndTableSchemaAware<I, V, E>
-    implements VertexToHive<I, V, E> {
-  @Override
-  public void initialize() { }
+public interface WritableWrapper<W extends Writable, J> {
+  /**
+   * Convert from java type to writable type
+   *
+   * @param javaValue java type
+   * @return writable value
+   */
+  W wrap(J javaValue);
 }

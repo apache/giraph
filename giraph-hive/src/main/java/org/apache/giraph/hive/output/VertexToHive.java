@@ -38,6 +38,12 @@ import java.io.IOException;
 public interface VertexToHive<I extends WritableComparable, V extends Writable,
     E extends Writable> {
   /**
+   * User initialization before any saveVertex() calls but after Configuration
+   * and HiveTableSchema are guaranteed to be set.
+   */
+  void initialize();
+
+  /**
    * Check the output is valid. This method provides information to the user as
    * early as possible so that they may validate they are using the correct
    * input and fail the job early rather than getting into it and waiting a long

@@ -84,3 +84,4 @@ public abstract class SimpleHiveToEdge<I extends WritableComparable,
     return reusableEdge;
   }
 }
+

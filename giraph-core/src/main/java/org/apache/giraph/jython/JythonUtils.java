@@ -17,9 +17,8 @@
  */
 package org.apache.giraph.jython;
 
-import org.apache.giraph.conf.GiraphConfiguration;
-import org.apache.giraph.conf.GiraphTypes;
 import org.apache.giraph.graph.Language;
+import org.apache.hadoop.conf.Configuration;
 import org.python.core.PyObject;
 
 import static org.apache.giraph.conf.GiraphConstants.COMPUTATION_FACTORY_CLASS;
@@ -61,11 +60,9 @@ public class JythonUtils {
    * @param conf Configuration to se
    * @param scriptPath Path to Jython script (resource or distributed cache)
    * @param klassName Class name of Jython Computation
-   * @param types GiraphTypes
    */
-  public static void init(GiraphConfiguration conf, String scriptPath,
-      String klassName, GiraphTypes types) {
-    types.writeIfUnset(conf);
+  public static void init(Configuration conf, String scriptPath,
+      String klassName) {
     COMPUTATION_LANGUAGE.set(conf, Language.JYTHON);
     COMPUTATION_FACTORY_CLASS.set(conf, JythonComputationFactory.class);
     JYTHON_SCRIPT_PATH.set(conf, scriptPath);
