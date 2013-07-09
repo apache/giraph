@@ -258,6 +258,7 @@ under the License.
     <dep.jython.version>2.5.3</dep.jython.version>
     <dep.typetools.version>0.2.1</dep.typetools.version>
 
+    <zookeeper.version>3.3.3</zookeeper.version>
     <hbase.version>0.90.5</hbase.version>
     <codehaus-jackson.version>1.8.0</codehaus-jackson.version>
     <fasterxml-jackson.version>2.1.0</fasterxml-jackson.version>
@@ -1083,7 +1084,7 @@ under the License.
       <dependency>
         <groupId>org.apache.zookeeper</groupId>
         <artifactId>zookeeper</artifactId>
-        <version>3.3.3</version>
+        <version>${zookeeper.version}</version>
         <exclusions>
           <exclusion>
             <groupId>com.sun.jmx</groupId>
