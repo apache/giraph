@@ -53,7 +53,7 @@ public class SendMessageCache<I extends WritableComparable, M extends Writable>
   @Override
   public ByteArrayVertexIdMessages<I, M> createByteArrayVertexIdData() {
     return new ByteArrayVertexIdMessages<I, M>(
-        getConf().getOutgoingMessageValueClass());
+        getConf().getOutgoingMessageValueFactory());
   }
 
   /**

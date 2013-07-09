@@ -156,9 +156,9 @@ public class ServerData<I extends WritableComparable,
     }
     currentMessageStore =
         incomingMessageStore != null ? incomingMessageStore :
-            messageStoreFactory.newStore(conf.getIncomingMessageValueClass());
+            messageStoreFactory.newStore(conf.getIncomingMessageValueFactory());
     incomingMessageStore =
-        messageStoreFactory.newStore(conf.getOutgoingMessageValueClass());
+        messageStoreFactory.newStore(conf.getOutgoingMessageValueFactory());
   }
 
   /**

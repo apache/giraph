@@ -37,6 +37,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import org.apache.giraph.comm.messages.MessageStoreFactory;
 import org.apache.giraph.comm.messages.MessagesIterable;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.giraph.utils.ExtendedDataOutput;
 import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.Writable;
@@ -51,8 +52,8 @@ import org.apache.hadoop.io.WritableComparable;
  */
 public class PartitionDiskBackedMessageStore<I extends WritableComparable,
     M extends Writable> implements Writable {
-  /** Message class */
-  private final Class<M> messageClass;
+  /** Message value factory */
+  private final MessageValueFactory<M> messageValueFactory;
   /**
    * In-memory message map (must be sorted to insure that the ids are
    * ordered)
@@ -76,17 +77,17 @@ public class PartitionDiskBackedMessageStore<I extends WritableComparable,
   /**
    * Constructor.
    *
-   * @param messageClass     Message class held in the store
-   * @param config           Hadoop configuration
-   * @param fileStoreFactory Factory for creating file stores when flushing
+   * @param messageValueFactory Used to create message values
+   * @param config              Hadoop configuration
+   * @param fileStoreFactory    Factory for creating file stores when flushing
    */
   public PartitionDiskBackedMessageStore(
-      Class<M> messageClass,
+      MessageValueFactory<M> messageValueFactory,
       ImmutableClassesGiraphConfiguration<I, ?, ?> config,
       MessageStoreFactory<I, M, SequentialFileMessageStore<I, M>>
           fileStoreFactory) {
     inMemoryMessages = new ConcurrentSkipListMap<I, ExtendedDataOutput>();
-    this.messageClass = messageClass;
+    this.messageValueFactory = messageValueFactory;
     this.config = config;
     numberOfMessagesInMemory = new AtomicInteger(0);
     destinationVertices =
@@ -148,7 +149,7 @@ public class PartitionDiskBackedMessageStore<I extends WritableComparable,
       extendedDataOutput = config.createExtendedDataOutput();
     }
     Iterable<M> combinedIterable = new MessagesIterable<M>(
-        config, messageClass,
+        config, messageValueFactory,
         extendedDataOutput.getByteArray(), 0, extendedDataOutput.getPos());
 
     for (SequentialFileMessageStore<I, M> fileStore : fileStores) {
@@ -226,7 +227,7 @@ public class PartitionDiskBackedMessageStore<I extends WritableComparable,
       rwLock.writeLock().unlock();
     }
     SequentialFileMessageStore<I, M> fileStore =
-        fileStoreFactory.newStore(messageClass);
+        fileStoreFactory.newStore(messageValueFactory);
     fileStore.addMessages(messagesToFlush);
 
     synchronized (fileStores) {
@@ -285,7 +286,7 @@ public class PartitionDiskBackedMessageStore<I extends WritableComparable,
     int numFileStores = in.readInt();
     for (int s = 0; s < numFileStores; s++) {
       SequentialFileMessageStore<I, M> fileStore =
-          fileStoreFactory.newStore(messageClass);
+          fileStoreFactory.newStore(messageValueFactory);
       fileStore.readFields(in);
       fileStores.add(fileStore);
     }
@@ -339,9 +340,9 @@ public class PartitionDiskBackedMessageStore<I extends WritableComparable,
 
     @Override
     public PartitionDiskBackedMessageStore<I, M> newStore(
-        Class<M> messageClass) {
-      return new PartitionDiskBackedMessageStore<I, M>(messageClass, config,
-          fileStoreFactory);
+        MessageValueFactory<M> messageValueFactory) {
+      return new PartitionDiskBackedMessageStore<I, M>(messageValueFactory,
+          config, fileStoreFactory);
     }
   }
 }

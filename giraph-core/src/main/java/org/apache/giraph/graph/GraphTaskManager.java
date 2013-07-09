@@ -191,7 +191,7 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
     // init the metrics objects
     setupAndInitializeGiraphMetrics();
     // One time setup for computation factory
-    conf.createComputationFactory().initComputation(conf);
+    conf.createComputationFactory().initialize(conf);
     // Check input
     checkInput();
     // Do some task setup (possibly starting up a Zookeeper service)

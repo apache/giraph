@@ -15,31 +15,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.giraph.factories;
 
-package org.apache.giraph.comm.messages;
-
-import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 
 /**
- * Factory for message stores
+ * Factory class to create default edge values.
+ * A user can extend this class in order to customize the creation of new
+ * edge values when an edge is created by the infrastructure.
  *
- * @param <I> Vertex id
- * @param <M> Message data
- * @param <MS> Message store
+ * @param <E> Edge value
  */
-public interface MessageStoreFactory<I extends WritableComparable,
-    M extends Writable, MS> {
+public interface EdgeValueFactory<E extends Writable>
+    extends ValueFactoryBase<E> {
   /**
-   * Creates new message store.
+   * Create a new edge value.
    *
-   * Note: Combiner class in Configuration can be changed,
-   * this method should return MessageStore which uses current combiner
-   *
-   *
-   * @param messageValueFactory Message class held in the store
-   * @return New message store
+   * @return new edge value.
    */
-  MS newStore(MessageValueFactory<M> messageValueFactory);
+  E createEdgeValue();
 }

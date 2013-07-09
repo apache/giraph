@@ -18,17 +18,18 @@
 
 package org.apache.giraph.comm.messages;
 
-import com.google.common.collect.Iterators;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.giraph.utils.ExtendedDataOutput;
-import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.giraph.utils.RepresentativeByteArrayIterator;
 import org.apache.giraph.utils.VertexIdIterator;
 import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+
+import com.google.common.collect.Iterators;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -47,15 +48,15 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
   /**
    * Constructor
    *
-   * @param messageClass Message class held in the store
+   * @param messageValueFactory Message class held in the store
    * @param service Service worker
    * @param config Hadoop configuration
    */
   public ByteArrayMessagesPerVertexStore(
-      Class<M> messageClass,
+      MessageValueFactory<M> messageValueFactory,
       CentralizedServiceWorker<I, ?, ?> service,
       ImmutableClassesGiraphConfiguration<I, ?, ?> config) {
-    super(messageClass, service, config);
+    super(messageValueFactory, service, config);
   }
 
   /**
@@ -130,7 +131,7 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
   @Override
   protected Iterable<M> getMessagesAsIterable(
       ExtendedDataOutput extendedDataOutput) {
-    return new MessagesIterable<M>(config, messageClass,
+    return new MessagesIterable<M>(config, messageValueFactory,
         extendedDataOutput.getByteArray(), 0, extendedDataOutput.getPos());
   }
 
@@ -155,7 +156,7 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
 
     @Override
     protected M createWritable() {
-      return ReflectionUtils.newInstance(messageClass);
+      return messageValueFactory.createMessageValue();
     }
   }
 
@@ -224,9 +225,10 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
     }
 
     @Override
-    public MessageStore<I, M> newStore(Class<M> messageClass) {
-      return new ByteArrayMessagesPerVertexStore<I, M>(
-          messageClass, service, config);
+    public MessageStore<I, M> newStore(
+        MessageValueFactory<M> messageValueFactory) {
+      return new ByteArrayMessagesPerVertexStore<I, M>(messageValueFactory,
+          service, config);
     }
   }
 }

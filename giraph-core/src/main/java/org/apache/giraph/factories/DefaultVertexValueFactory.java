@@ -16,10 +16,10 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.graph;
+package org.apache.giraph.factories;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.hadoop.io.NullWritable;
+import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.Writable;
 
 /**
@@ -34,25 +34,13 @@ public class DefaultVertexValueFactory<V extends Writable>
   private Class<V> vertexValueClass;
 
   @Override
-  public void initialize(
-      ImmutableClassesGiraphConfiguration<?, V, ?> configuration) {
-    vertexValueClass = configuration.getVertexValueClass();
+  public void initialize(ImmutableClassesGiraphConfiguration conf) {
+    vertexValueClass = conf.getVertexValueClass();
   }
 
   @Override
   public V createVertexValue() {
-    if (vertexValueClass == NullWritable.class) {
-      return (V) NullWritable.get();
-    } else {
-      try {
-        return vertexValueClass.newInstance();
-      } catch (InstantiationException e) {
-        throw new IllegalArgumentException(
-            "createVertexValue: Failed to instantiate", e);
-      } catch (IllegalAccessException e) {
-        throw new IllegalArgumentException(
-            "createVertexValue: Illegally accessed", e);
-      }
-    }
+    return WritableUtils.createWritable(vertexValueClass);
   }
 }
+

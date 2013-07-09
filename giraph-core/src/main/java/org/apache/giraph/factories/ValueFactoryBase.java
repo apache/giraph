@@ -15,31 +15,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.giraph.factories;
 
-package org.apache.giraph.comm.messages;
-
-import org.apache.giraph.factories.MessageValueFactory;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 
 /**
- * Factory for message stores
+ * Base interface for factories creating user graph value types (IVEMM)
  *
- * @param <I> Vertex id
- * @param <M> Message data
- * @param <MS> Message store
+ * @param <W> Writable type
  */
-public interface MessageStoreFactory<I extends WritableComparable,
-    M extends Writable, MS> {
+public interface ValueFactoryBase<W extends Writable> {
   /**
-   * Creates new message store.
+   * Initialize factory settings from the conf.
+   * This gets called on startup and also if there are changes to the message
+   * classes used. For example if the user's
+   * {@link org.apache.giraph.master.MasterCompute} changes the
+   * {@link org.apache.giraph.graph.Computation} and the next superstep has a
+   * different message value type.
    *
-   * Note: Combiner class in Configuration can be changed,
-   * this method should return MessageStore which uses current combiner
-   *
-   *
-   * @param messageValueFactory Message class held in the store
-   * @return New message store
+   * @param conf Configuration
    */
-  MS newStore(MessageValueFactory<M> messageValueFactory);
+  void initialize(ImmutableClassesGiraphConfiguration conf);
 }

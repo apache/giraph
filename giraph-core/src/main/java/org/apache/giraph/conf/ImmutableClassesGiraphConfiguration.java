@@ -24,12 +24,14 @@ import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.edge.ReusableEdge;
-import org.apache.giraph.graph.ComputationFactory;
+import org.apache.giraph.factories.ComputationFactory;
+import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.giraph.graph.DefaultVertex;
 import org.apache.giraph.graph.Computation;
+import org.apache.giraph.factories.ValueFactories;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexResolver;
-import org.apache.giraph.graph.VertexValueFactory;
+import org.apache.giraph.factories.VertexValueFactory;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
@@ -64,6 +66,8 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.util.Progressable;
 
+import static org.apache.giraph.utils.ReflectionUtils.getTypeArguments;
+
 /**
  * The classes set here are immutable, the remaining configuration is mutable.
  * Classes are immutable and final to provide the best performance for
@@ -79,8 +83,8 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
     extends GiraphConfiguration {
   /** Holder for all the classes */
   private final GiraphClasses classes;
-  /** Vertex value factory. */
-  private final VertexValueFactory<V> vertexValueFactory;
+  /** Value Factories */
+  private final ValueFactories<I, V, E> valueFactories;
 
   /**
    * Use unsafe serialization? Cached for fast access to instantiate the
@@ -98,19 +102,8 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
     super(conf);
     classes = new GiraphClasses<I, V, E>(conf);
     useUnsafeSerialization = USE_UNSAFE_SERIALIZATION.get(this);
-    try {
-      vertexValueFactory = (VertexValueFactory<V>)
-          classes.getVertexValueFactoryClass().newInstance();
-    } catch (InstantiationException e) {
-      throw new IllegalArgumentException(
-          "ImmutableClassesGiraphConfiguration: Failed to instantiate class " +
-              classes.getVertexValueFactoryClass(), e);
-    } catch (IllegalAccessException e) {
-      throw new IllegalArgumentException(
-          "ImmutableClassesGiraphConfiguration: Illegally accessed class " +
-              classes.getVertexValueFactoryClass(), e);
-    }
-    vertexValueFactory.initialize(this);
+    valueFactories = new ValueFactories<I, V, E>(conf);
+    valueFactories.initializeAll(this);
   }
 
   /**
@@ -482,7 +475,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    */
   public Computation<I, V, E, ? extends Writable, ? extends Writable>
   createComputation() {
-    return createComputationFactory().getComputation(this);
+    return createComputationFactory().createComputation(this);
   }
 
   /**
@@ -520,15 +513,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    * @return Instantiated user vertex index
    */
   public I createVertexId() {
-    try {
-      return getVertexIdClass().newInstance();
-    } catch (InstantiationException e) {
-      throw new IllegalArgumentException(
-          "createVertexId: Failed to instantiate", e);
-    } catch (IllegalAccessException e) {
-      throw new IllegalArgumentException(
-          "createVertexId: Illegally accessed", e);
-    }
+    return valueFactories.getVertexIdFactory().createVertexId();
   }
 
   /**
@@ -547,7 +532,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    */
   @SuppressWarnings("unchecked")
   public V createVertexValue() {
-    return vertexValueFactory.createVertexValue();
+    return valueFactories.getVertexValueFactory().createVertexValue();
   }
 
   /**
@@ -556,7 +541,8 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    * @return User's vertex value factory class
    */
   public Class<? extends VertexValueFactory<V>> getVertexValueFactoryClass() {
-    return classes.getVertexValueFactoryClass();
+    return (Class<? extends VertexValueFactory<V>>)
+        valueFactories.getVertexValueFactory().getClass();
   }
 
   /**
@@ -620,20 +606,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    * @return Instantiated user edge value
    */
   public E createEdgeValue() {
-    if (isEdgeValueNullWritable()) {
-      return (E) NullWritable.get();
-    } else {
-      Class<E> klass = getEdgeValueClass();
-      try {
-        return klass.newInstance();
-      } catch (InstantiationException e) {
-        throw new IllegalArgumentException(
-            "createEdgeValue: Failed to instantiate", e);
-      } catch (IllegalAccessException e) {
-        throw new IllegalArgumentException(
-            "createEdgeValue: Illegally accessed", e);
-      }
-    }
+    return valueFactories.getEdgeValueFactory().createEdgeValue();
   }
 
   /**
@@ -673,6 +646,20 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   }
 
   /**
+   * Get the factory for creating incoming message values
+   *
+   * @param <M> Incoming Message type
+   * @return MessageValueFactory
+   */
+  public <M extends Writable> MessageValueFactory<M>
+  getIncomingMessageValueFactory() {
+    MessageValueFactory<M> factory =
+        INCOMING_MESSAGE_VALUE_FACTORY_CLASS.newInstance(this);
+    factory.initialize(this);
+    return factory;
+  }
+
+  /**
    * Get the user's subclassed outgoing message value class.
    *
    * @param <M> Message data
@@ -683,39 +670,17 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   }
 
   /**
-   * Create incoming message value
+   * Get the factory for creating outgoing message values
    *
-   * @param <M> Message data
-   * @return Incoming message value
+   * @param <M> Outgoing Message type
+   * @return MessageValueFactory
    */
-  public <M extends Writable> M createIncomingMessageValue() {
-    return this.<M>createMessageValue(this.<M>getIncomingMessageValueClass());
-  }
-
-  /**
-   * Create outgoing message value
-   *
-   * @param <M> Message data
-   * @return Outgoing message value
-   */
-  public <M extends Writable> M createOutgoingMessageValue() {
-    return this.<M>createMessageValue(this.<M>getOutgoingMessageValueClass());
-  }
-
-  /**
-   * Create a message value
-   *
-   * @param <M> Message data
-   * @param messageClass Message class
-   * @return Instantiated message value
-   */
-  private <M extends Writable> M createMessageValue(
-      Class<? extends Writable> messageClass) {
-    if (messageClass == NullWritable.class) {
-      return (M) NullWritable.get();
-    } else {
-      return (M) ReflectionUtils.newInstance(messageClass);
-    }
+  public <M extends Writable> MessageValueFactory<M>
+  getOutgoingMessageValueFactory() {
+    MessageValueFactory<M> factory =
+        OUTGOING_MESSAGE_VALUE_FACTORY_CLASS.newInstance(this);
+    factory.initialize(this);
+    return factory;
   }
 
   @Override
@@ -904,7 +869,21 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    * @param superstepClasses SuperstepClasses
    */
   public void updateSuperstepClasses(SuperstepClasses superstepClasses) {
-    classes.setComputationClass(superstepClasses.getComputationClass());
+    Class<? extends Computation> computationClass =
+        superstepClasses.getComputationClass();
+    classes.setComputationClass(computationClass);
+    if (computationClass != null) {
+      Class<?>[] classList =
+          getTypeArguments(TypesHolder.class, computationClass);
+
+      Class<? extends Writable> incomingMsgValueClass =
+          (Class<? extends Writable>) classList[3];
+      classes.setIncomingMessageValueClass(incomingMsgValueClass);
+
+      Class<? extends Writable> outgoingMsgValueClass =
+          (Class<? extends Writable>) classList[4];
+      classes.setOutgoingMessageValueClass(outgoingMsgValueClass);
+    }
     classes.setCombinerClass(superstepClasses.getCombinerClass());
   }
 }

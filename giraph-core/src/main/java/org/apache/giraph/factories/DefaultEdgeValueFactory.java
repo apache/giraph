@@ -15,31 +15,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.giraph.factories;
 
-package org.apache.giraph.comm.messages;
-
-import org.apache.giraph.factories.MessageValueFactory;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 
 /**
- * Factory for message stores
+ * Factory class to create default edge values.
+ * A user can extend this class in order to customize the creation of new
+ * edge values when an edge is created by the infrastructure.
  *
- * @param <I> Vertex id
- * @param <M> Message data
- * @param <MS> Message store
+ * @param <E> Edge Value
  */
-public interface MessageStoreFactory<I extends WritableComparable,
-    M extends Writable, MS> {
-  /**
-   * Creates new message store.
-   *
-   * Note: Combiner class in Configuration can be changed,
-   * this method should return MessageStore which uses current combiner
-   *
-   *
-   * @param messageValueFactory Message class held in the store
-   * @return New message store
-   */
-  MS newStore(MessageValueFactory<M> messageValueFactory);
+public class DefaultEdgeValueFactory<E extends Writable>
+    implements EdgeValueFactory<E> {
+  /** Cached edge value class. */
+  private Class<E> edgeValueClass;
+
+  @Override public void initialize(ImmutableClassesGiraphConfiguration conf) {
+    edgeValueClass = conf.getEdgeValueClass();
+  }
+
+  @Override public E createEdgeValue() {
+    return WritableUtils.createWritable(edgeValueClass);
+  }
 }

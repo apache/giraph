@@ -22,7 +22,7 @@ import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.conf.StrConfOption;
 import org.apache.giraph.graph.Computation;
-import org.apache.giraph.graph.ComputationFactory;
+import org.apache.giraph.factories.ComputationFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.log4j.Logger;
@@ -62,7 +62,7 @@ public class JythonComputationFactory implements ComputationFactory {
   private static final Logger LOG = Logger.getLogger(JythonUtils.class);
 
   @Override
-  public void initComputation(ImmutableClassesGiraphConfiguration conf) {
+  public void initialize(ImmutableClassesGiraphConfiguration conf) {
     String scriptPath = JYTHON_SCRIPT_PATH.get(conf);
     InputStream pythonStream = getPythonScriptStream(conf, scriptPath);
     try {
@@ -130,7 +130,8 @@ public class JythonComputationFactory implements ComputationFactory {
   }
 
   @Override
-  public Computation getComputation(ImmutableClassesGiraphConfiguration conf) {
+  public Computation createComputation(
+      ImmutableClassesGiraphConfiguration conf) {
     PyObject pyComputationModule = JythonUtils.getPythonComputationModule();
     Preconditions.checkNotNull(pyComputationModule);
 

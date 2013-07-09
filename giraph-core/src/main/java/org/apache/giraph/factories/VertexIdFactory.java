@@ -15,33 +15,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.giraph.factories;
 
-package org.apache.giraph.graph;
-
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 
 /**
- * Factory class to create default vertex values.
+ * Factory class to create default vertex IDs.
  * A user can extend this class in order to customize the creation of new
- * vertex values when a vertex is created by the infrastructure
- * (e.g., if edges for a vertex are read).
+ * vertex IDs when an vertex is created by the infrastructure.
  *
- * @param <V> Vertex value
+ * @param <I> Vertex ID
  */
-public interface VertexValueFactory<V extends Writable> {
+public interface VertexIdFactory<I extends WritableComparable>
+    extends ValueFactoryBase<I> {
   /**
-   * Initialize the factory from the configuration.
+   * Create a new edge value.
    *
-   * @param configuration Configuration
+   * @return new edge value.
    */
-  void initialize(
-      ImmutableClassesGiraphConfiguration<?, V, ?> configuration);
-
-  /**
-   * Create a new vertex value.
-   *
-   * @return New vertex value.
-   */
-  V createVertexValue();
+  I createVertexId();
 }
+

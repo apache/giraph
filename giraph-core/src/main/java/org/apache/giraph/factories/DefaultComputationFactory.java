@@ -15,11 +15,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.graph;
+package org.apache.giraph.factories;
 
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.graph.Computation;
 import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -35,13 +36,12 @@ public class DefaultComputationFactory<I extends WritableComparable,
     V extends Writable, E extends Writable>
     implements ComputationFactory<I, V, E, Writable, Writable> {
   @Override
-  public void initComputation(
-      ImmutableClassesGiraphConfiguration<I, V, E> conf) {
+  public void initialize(ImmutableClassesGiraphConfiguration<I, V, E> conf) {
     // Nothing to do here
   }
 
   @Override
-  public Computation<I, V, E, Writable, Writable> getComputation(
+  public Computation<I, V, E, Writable, Writable> createComputation(
       ImmutableClassesGiraphConfiguration<I, V, E> conf) {
     Class<? extends Computation> klass = conf.getComputationClass();
     return ReflectionUtils.newInstance(klass, conf);

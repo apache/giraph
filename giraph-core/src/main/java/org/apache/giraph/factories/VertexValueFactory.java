@@ -16,30 +16,26 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.comm.messages;
+package org.apache.giraph.factories;
 
-import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 
 /**
- * Factory for message stores
+ * Factory class to create default vertex values.
+ * A user can extend this class in order to customize the creation of new
+ * vertex values when a vertex is created by the infrastructure
+ * (e.g., if edges for a vertex are read).
  *
- * @param <I> Vertex id
- * @param <M> Message data
- * @param <MS> Message store
+ * @param <V> Vertex value
  */
-public interface MessageStoreFactory<I extends WritableComparable,
-    M extends Writable, MS> {
+public interface VertexValueFactory<V extends Writable>
+    extends ValueFactoryBase<V> {
   /**
-   * Creates new message store.
+   * Create a new vertex value.
    *
-   * Note: Combiner class in Configuration can be changed,
-   * this method should return MessageStore which uses current combiner
-   *
-   *
-   * @param messageValueFactory Message class held in the store
-   * @return New message store
+   * @return new vertex value.
    */
-  MS newStore(MessageValueFactory<M> messageValueFactory);
+  V createVertexValue();
 }
+
+

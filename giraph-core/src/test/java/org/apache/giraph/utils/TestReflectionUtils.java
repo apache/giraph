@@ -20,13 +20,20 @@ package org.apache.giraph.utils;
 import org.apache.giraph.conf.TypesHolder;
 import org.apache.giraph.edge.ByteArrayEdges;
 import org.apache.giraph.edge.OutEdges;
+import org.apache.giraph.factories.DefaultEdgeValueFactory;
+import org.apache.giraph.factories.DefaultIncomingMessageValueFactory;
+import org.apache.giraph.factories.DefaultOutgoingMessageValueFactory;
+import org.apache.giraph.factories.DefaultVertexIdFactory;
+import org.apache.giraph.factories.DefaultVertexValueFactory;
+import org.apache.giraph.factories.EdgeValueFactory;
+import org.apache.giraph.factories.MessageValueFactory;
+import org.apache.giraph.factories.VertexIdFactory;
+import org.apache.giraph.factories.VertexValueFactory;
 import org.apache.giraph.graph.BasicComputation;
 import org.apache.giraph.graph.Computation;
 import org.apache.giraph.graph.DefaultVertexResolver;
-import org.apache.giraph.graph.DefaultVertexValueFactory;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexResolver;
-import org.apache.giraph.graph.VertexValueFactory;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -75,10 +82,32 @@ public class TestReflectionUtils {
     assertEquals(WritableComparable.class, classes[0]);
     assertEquals(Writable.class, classes[1]);
     assertEquals(Writable.class, classes[2]);
+
+    classes = getTypeArguments(VertexIdFactory.class,
+        DefaultVertexIdFactory.class);
+    assertEquals(1, classes.length);
+    assertEquals(WritableComparable.class, classes[0]);
+
     classes = getTypeArguments(VertexValueFactory.class,
         DefaultVertexValueFactory.class);
     assertEquals(1, classes.length);
     assertEquals(Writable.class, classes[0]);
+
+    classes = getTypeArguments(EdgeValueFactory.class,
+        DefaultEdgeValueFactory.class);
+    assertEquals(1, classes.length);
+    assertEquals(Writable.class, classes[0]);
+
+    classes = getTypeArguments(MessageValueFactory.class,
+        DefaultIncomingMessageValueFactory.class);
+    assertEquals(1, classes.length);
+    assertEquals(Writable.class, classes[0]);
+
+    classes = getTypeArguments(MessageValueFactory.class,
+        DefaultOutgoingMessageValueFactory.class);
+    assertEquals(1, classes.length);
+    assertEquals(Writable.class, classes[0]);
+
     classes = getTypeArguments(OutEdges.class, ByteArrayEdges.class);
     assertEquals(2, classes.length);
     assertEquals(WritableComparable.class, classes[0]);

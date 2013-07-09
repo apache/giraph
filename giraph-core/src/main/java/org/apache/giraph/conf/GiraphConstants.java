@@ -22,14 +22,21 @@ import org.apache.giraph.aggregators.TextAggregatorWriter;
 import org.apache.giraph.combiner.Combiner;
 import org.apache.giraph.edge.ByteArrayEdges;
 import org.apache.giraph.edge.OutEdges;
+import org.apache.giraph.factories.ComputationFactory;
+import org.apache.giraph.factories.DefaultComputationFactory;
+import org.apache.giraph.factories.DefaultEdgeValueFactory;
+import org.apache.giraph.factories.DefaultIncomingMessageValueFactory;
+import org.apache.giraph.factories.DefaultOutgoingMessageValueFactory;
+import org.apache.giraph.factories.DefaultVertexIdFactory;
+import org.apache.giraph.factories.DefaultVertexValueFactory;
+import org.apache.giraph.factories.EdgeValueFactory;
+import org.apache.giraph.factories.MessageValueFactory;
+import org.apache.giraph.factories.VertexIdFactory;
+import org.apache.giraph.factories.VertexValueFactory;
 import org.apache.giraph.graph.Computation;
-import org.apache.giraph.graph.ComputationFactory;
-import org.apache.giraph.graph.DefaultComputationFactory;
 import org.apache.giraph.graph.DefaultVertexResolver;
-import org.apache.giraph.graph.DefaultVertexValueFactory;
 import org.apache.giraph.graph.Language;
 import org.apache.giraph.graph.VertexResolver;
-import org.apache.giraph.graph.VertexValueFactory;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
@@ -72,16 +79,41 @@ public interface GiraphConstants {
       ClassConfOption.create("giraph.computation.factory.class",
           DefaultComputationFactory.class, ComputationFactory.class,
           "Computation factory class - optional");
+
   /** TypesHolder, used if Computation not set - optional */
   ClassConfOption<TypesHolder> TYPES_HOLDER_CLASS =
       ClassConfOption.create("giraph.typesHolder", null,
           TypesHolder.class,
           "TypesHolder, used if Computation not set - optional");
+
+  /** Vertex id factory class - optional */
+  ClassConfOption<VertexIdFactory> VERTEX_ID_FACTORY_CLASS =
+      ClassConfOption.create("giraph.vertexIdFactoryClass",
+          DefaultVertexIdFactory.class, VertexIdFactory.class,
+          "Vertex ID factory class - optional");
   /** Vertex value factory class - optional */
   ClassConfOption<VertexValueFactory> VERTEX_VALUE_FACTORY_CLASS =
       ClassConfOption.create("giraph.vertexValueFactoryClass",
           DefaultVertexValueFactory.class, VertexValueFactory.class,
           "Vertex value factory class - optional");
+  /** Edge value factory class - optional */
+  ClassConfOption<EdgeValueFactory> EDGE_VALUE_FACTORY_CLASS =
+      ClassConfOption.create("giraph.edgeValueFactoryClass",
+          DefaultEdgeValueFactory.class, EdgeValueFactory.class,
+          "Edge value factory class - optional");
+  /** Incoming message value factory class - optional */
+  ClassConfOption<MessageValueFactory>
+  INCOMING_MESSAGE_VALUE_FACTORY_CLASS =
+      ClassConfOption.create("giraph.incomingMessageValueFactoryClass",
+          DefaultIncomingMessageValueFactory.class, MessageValueFactory.class,
+          "Incoming message value factory class - optional");
+  /** Outgoing message value factory class - optional */
+  ClassConfOption<MessageValueFactory>
+  OUTGOING_MESSAGE_VALUE_FACTORY_CLASS =
+      ClassConfOption.create("giraph.outgoingMessageValueFactoryClass",
+          DefaultOutgoingMessageValueFactory.class, MessageValueFactory.class,
+          "Outgoing message value factory class - optional");
+
   /** Vertex edges class - optional */
   ClassConfOption<OutEdges> VERTEX_EDGES_CLASS =
       ClassConfOption.create("giraph.outEdgesClass", ByteArrayEdges.class,
@@ -157,7 +189,6 @@ public interface GiraphConstants {
       ClassConfOption.create("giraph.edgeInputFilterClass",
           DefaultEdgeInputFilter.class, EdgeInputFilter.class,
           "EdgeInputFilter class");
-
   /** VertexInputFilter class */
   ClassConfOption<VertexInputFilter> VERTEX_INPUT_FILTER_CLASS =
       ClassConfOption.create("giraph.vertexInputFilterClass",

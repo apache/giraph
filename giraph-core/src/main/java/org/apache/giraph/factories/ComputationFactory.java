@@ -15,10 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.graph;
+package org.apache.giraph.factories;
 
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.graph.Computation;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -40,7 +41,7 @@ public interface ComputationFactory<I extends WritableComparable,
    *
    * @param conf Configuration
    */
-  void initComputation(ImmutableClassesGiraphConfiguration<I, V, E> conf);
+  void initialize(ImmutableClassesGiraphConfiguration<I, V, E> conf);
 
   /**
    * Get Computation object
@@ -48,7 +49,7 @@ public interface ComputationFactory<I extends WritableComparable,
    * @param conf Configuration
    * @return Computation
    */
-  Computation<I, V, E, M1, M2> getComputation(
+  Computation<I, V, E, M1, M2> createComputation(
       ImmutableClassesGiraphConfiguration<I, V, E> conf);
 
   /**

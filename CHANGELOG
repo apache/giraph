@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-708: Factories for creation of all IVEM types (nitay)
+
   GIRAPH-710: Define zookeeper version in a property to allow build time
   override (apurtell via nitay)
 

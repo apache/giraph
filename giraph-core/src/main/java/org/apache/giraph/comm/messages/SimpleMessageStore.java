@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
+import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -44,7 +45,7 @@ import org.apache.hadoop.io.WritableComparable;
 public abstract class SimpleMessageStore<I extends WritableComparable,
     M extends Writable, T> implements MessageStore<I, M>  {
   /** Message class */
-  protected final Class<M> messageClass;
+  protected final MessageValueFactory<M> messageValueFactory;
   /** Service worker */
   protected final CentralizedServiceWorker<I, ?, ?> service;
   /** Map from partition id to map from vertex id to messages for that vertex */
@@ -55,15 +56,15 @@ public abstract class SimpleMessageStore<I extends WritableComparable,
   /**
    * Constructor
    *
-   * @param messageClass Message class held in the store
+   * @param messageValueFactory Message class held in the store
    * @param service Service worker
    * @param config Giraph configuration
    */
   public SimpleMessageStore(
-      Class<M> messageClass,
+      MessageValueFactory<M> messageValueFactory,
       CentralizedServiceWorker<I, ?, ?> service,
       ImmutableClassesGiraphConfiguration<I, ?, ?> config) {
-    this.messageClass = messageClass;
+    this.messageValueFactory = messageValueFactory;
     this.service = service;
     this.config = config;
     map = new MapMaker().concurrencyLevel(

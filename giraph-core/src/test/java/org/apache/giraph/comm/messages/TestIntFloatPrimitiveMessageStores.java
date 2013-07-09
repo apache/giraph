@@ -24,6 +24,7 @@ import org.apache.giraph.comm.messages.primitives.IntByteArrayMessageStore;
 import org.apache.giraph.comm.messages.primitives.IntFloatMessageStore;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.factories.TestMessageValueFactory;
 import org.apache.giraph.graph.BasicComputation;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.partition.Partition;
@@ -93,7 +94,7 @@ public class TestIntFloatPrimitiveMessageStores {
   createIntFloatMessages() {
     ByteArrayVertexIdMessages<IntWritable, FloatWritable> messages =
         new ByteArrayVertexIdMessages<IntWritable, FloatWritable>(
-            FloatWritable.class);
+            new TestMessageValueFactory<FloatWritable>(FloatWritable.class));
     messages.setConf(createIntFloatConf());
     messages.initialize();
     return messages;
@@ -143,7 +144,8 @@ public class TestIntFloatPrimitiveMessageStores {
   @Test
   public void testIntByteArrayMessageStore() throws IOException {
     IntByteArrayMessageStore<FloatWritable> messageStore =
-        new IntByteArrayMessageStore<FloatWritable>(FloatWritable.class,
+        new IntByteArrayMessageStore<FloatWritable>(new
+            TestMessageValueFactory<FloatWritable>(FloatWritable.class),
             service, createIntFloatConf());
     insertIntFloatMessages(messageStore);
 

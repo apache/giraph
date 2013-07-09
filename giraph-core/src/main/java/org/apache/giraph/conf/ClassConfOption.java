@@ -17,6 +17,7 @@
  */
 package org.apache.giraph.conf;
 
+import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.log4j.Logger;
 
@@ -96,6 +97,25 @@ public class ClassConfOption<C> extends AbstractConfOption {
     sb.append(" [").append(interfaceClass.getSimpleName()).append("] ");
     sb.append(" (").append(getType().toString().toLowerCase()).append(")\n");
     return sb.toString();
+  }
+
+  /**
+   * Create a new instance
+   *
+   * @param conf Configuration
+   * @return new instance of class held by this key
+   */
+  public C newInstance(Configuration conf) {
+    Class<? extends C> klass = get(conf);
+    if (klass == null) {
+      return null;
+    }
+    if (conf instanceof ImmutableClassesGiraphConfiguration) {
+      return ReflectionUtils.newInstance(klass,
+          (ImmutableClassesGiraphConfiguration) conf);
+    } else {
+      return org.apache.hadoop.util.ReflectionUtils.newInstance(klass, conf);
+    }
   }
 
   /**

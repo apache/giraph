@@ -33,6 +33,7 @@ import org.apache.giraph.comm.messages.out_of_core.SequentialFileMessageStore;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.factories.TestMessageValueFactory;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.giraph.utils.CollectionUtils;
 import org.apache.giraph.utils.IntNoOpComputation;
@@ -147,8 +148,8 @@ public class TestMessageStores {
           service.getVertexPartitionOwner(entry.getKey()).getPartitionId();
       ByteArrayVertexIdMessages<IntWritable, IntWritable>
           byteArrayVertexIdMessages =
-          new ByteArrayVertexIdMessages<IntWritable,
-              IntWritable>(IntWritable.class);
+          new ByteArrayVertexIdMessages<IntWritable, IntWritable>(
+              new TestMessageValueFactory(IntWritable.class));
       byteArrayVertexIdMessages.setConf(config);
       byteArrayVertexIdMessages.initialize();
       for (IntWritable message : entry.getValue()) {
@@ -219,7 +220,7 @@ public class TestMessageStores {
     }
     out.close();
 
-    messageStore = messageStoreFactory.newStore(IntWritable.class);
+    messageStore = messageStoreFactory.newStore(new TestMessageValueFactory<IntWritable>(IntWritable.class));
 
     DataInputStream in = new DataInputStream(new BufferedInputStream(
         (new FileInputStream(file))));
@@ -239,7 +240,7 @@ public class TestMessageStores {
       TestData testData) throws IOException {
     SortedMap<IntWritable, Collection<IntWritable>> messages =
         new TreeMap<IntWritable, Collection<IntWritable>>();
-    S messageStore = messageStoreFactory.newStore(IntWritable.class);
+    S messageStore = messageStoreFactory.newStore(new TestMessageValueFactory<IntWritable>(IntWritable.class));
     putNTimes(messageStore, messages, testData);
     assertTrue(equalMessages(messageStore, messages, testData));
     messageStore.clearAll();

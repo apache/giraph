@@ -24,6 +24,7 @@ import org.apache.giraph.comm.messages.primitives.LongByteArrayMessageStore;
 import org.apache.giraph.comm.messages.primitives.LongDoubleMessageStore;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.factories.TestMessageValueFactory;
 import org.apache.giraph.graph.BasicComputation;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.partition.Partition;
@@ -93,7 +94,7 @@ public class TestLongDoublePrimitiveMessageStores {
   createLongDoubleMessages() {
     ByteArrayVertexIdMessages<LongWritable, DoubleWritable> messages =
         new ByteArrayVertexIdMessages<LongWritable, DoubleWritable>(
-            DoubleWritable.class);
+            new TestMessageValueFactory<DoubleWritable>(DoubleWritable.class));
     messages.setConf(createLongDoubleConf());
     messages.initialize();
     return messages;
@@ -143,7 +144,8 @@ public class TestLongDoublePrimitiveMessageStores {
   @Test
   public void testLongByteArrayMessageStore() throws IOException {
     LongByteArrayMessageStore<DoubleWritable> messageStore =
-        new LongByteArrayMessageStore<DoubleWritable>(DoubleWritable.class,
+        new LongByteArrayMessageStore<DoubleWritable>(
+            new TestMessageValueFactory<DoubleWritable>(DoubleWritable.class),
             service, createLongDoubleConf());
     insertLongDoubleMessages(messageStore);
 

@@ -70,7 +70,7 @@ public class SendPartitionCurrentMessagesRequest<I extends WritableComparable,
     // At this moment the Computation class have already been replaced with
     // the new one, and we deal with messages from previous superstep
     vertexIdMessageMap = new ByteArrayVertexIdMessages<I, M>(
-        getConf().getIncomingMessageValueClass());
+        getConf().<M>getIncomingMessageValueFactory());
     vertexIdMessageMap.setConf(getConf());
     vertexIdMessageMap.initialize();
     vertexIdMessageMap.readFields(input);

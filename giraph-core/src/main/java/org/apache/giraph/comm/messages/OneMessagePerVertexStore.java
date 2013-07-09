@@ -18,18 +18,19 @@
 
 package org.apache.giraph.comm.messages;
 
+import org.apache.giraph.bsp.CentralizedServiceWorker;
+import org.apache.giraph.combiner.Combiner;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.factories.MessageValueFactory;
+import org.apache.giraph.utils.ByteArrayVertexIdMessages;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.concurrent.ConcurrentMap;
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.combiner.Combiner;
-import org.apache.giraph.utils.ByteArrayVertexIdMessages;
-import org.apache.giraph.utils.ReflectionUtils;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 
 /**
  * Implementation of {@link SimpleMessageStore} where we have a single
@@ -45,17 +46,17 @@ public class OneMessagePerVertexStore<I extends WritableComparable,
   private final Combiner<I, M> combiner;
 
   /**
-   * @param messageClass Message class held in the store
+   * @param messageValueFactory Message class held in the store
    * @param service  Service worker
    * @param combiner Combiner for messages
    * @param config   Hadoop configuration
    */
   OneMessagePerVertexStore(
-      Class<M> messageClass,
+      MessageValueFactory<M> messageValueFactory,
       CentralizedServiceWorker<I, ?, ?> service,
       Combiner<I, M> combiner,
       ImmutableClassesGiraphConfiguration<I, ?, ?> config) {
-    super(messageClass, service, config);
+    super(messageValueFactory, service, config);
     this.combiner = combiner;
   }
 
@@ -105,7 +106,7 @@ public class OneMessagePerVertexStore<I extends WritableComparable,
 
   @Override
   protected M readFieldsForMessages(DataInput in) throws IOException {
-    M message = ReflectionUtils.newInstance(messageClass);
+    M message = messageValueFactory.createMessageValue();
     message.readFields(in);
     return message;
   }
@@ -152,8 +153,9 @@ public class OneMessagePerVertexStore<I extends WritableComparable,
     }
 
     @Override
-    public MessageStore<I, M> newStore(Class<M> messageClass) {
-      return new OneMessagePerVertexStore<I, M>(messageClass, service,
+    public MessageStore<I, M> newStore(
+        MessageValueFactory<M> messageValueFactory) {
+      return new OneMessagePerVertexStore<I, M>(messageValueFactory, service,
           config.<M>createCombiner(), config);
     }
   }

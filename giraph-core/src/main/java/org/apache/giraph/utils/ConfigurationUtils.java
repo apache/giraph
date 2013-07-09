@@ -32,7 +32,7 @@ import org.apache.giraph.conf.GiraphTypes;
 import org.apache.giraph.conf.TypesHolder;
 import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.graph.Computation;
-import org.apache.giraph.graph.VertexValueFactory;
+import org.apache.giraph.factories.VertexValueFactory;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;

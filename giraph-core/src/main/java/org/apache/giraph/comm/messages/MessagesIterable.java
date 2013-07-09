@@ -19,7 +19,7 @@
 package org.apache.giraph.comm.messages;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.utils.ReflectionUtils;
+import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.giraph.utils.RepresentativeByteArrayIterable;
 import org.apache.hadoop.io.Writable;
 
@@ -31,26 +31,27 @@ import org.apache.hadoop.io.Writable;
 public class MessagesIterable<M extends Writable>
     extends RepresentativeByteArrayIterable<M> {
   /** Message class */
-  private final Class<M> messageClass;
+  private final MessageValueFactory<M> messageValueFactory;
 
   /**
    * Constructor
    *
    * @param conf Configuration
-   * @param messageClass Message class
+   * @param messageValueFactory factory for creating message values
    * @param buf Buffer
    * @param off Offset to start in the buffer
    * @param length Length of the buffer
    */
   public MessagesIterable(
-      ImmutableClassesGiraphConfiguration conf, Class<M> messageClass,
+      ImmutableClassesGiraphConfiguration conf,
+      MessageValueFactory<M> messageValueFactory,
       byte[] buf, int off, int length) {
     super(conf, buf, off, length);
-    this.messageClass = messageClass;
+    this.messageValueFactory = messageValueFactory;
   }
 
   @Override
   protected M createWritable() {
-    return ReflectionUtils.newInstance(messageClass);
+    return messageValueFactory.createMessageValue();
   }
 }

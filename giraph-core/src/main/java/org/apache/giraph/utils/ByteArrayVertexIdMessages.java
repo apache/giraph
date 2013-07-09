@@ -17,6 +17,7 @@
  */
 package org.apache.giraph.utils;
 
+import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -34,18 +35,18 @@ import java.io.IOException;
 public class ByteArrayVertexIdMessages<I extends WritableComparable,
     M extends Writable> extends ByteArrayVertexIdData<I, M> {
   /** Message value class */
-  private Class<M> messageValueClass;
+  private MessageValueFactory<M> messageValueFactory;
   /** Add the message size to the stream? (Depends on the message store) */
   private boolean useMessageSizeEncoding = false;
 
   /**
    * Constructor
    *
-   * @param messageValueClass Class for messages
+   * @param messageValueFactory Class for messages
    */
   public ByteArrayVertexIdMessages(
-      Class<? extends Writable> messageValueClass) {
-    this.messageValueClass = (Class<M>) messageValueClass;
+      MessageValueFactory<M> messageValueFactory) {
+    this.messageValueFactory = messageValueFactory;
   }
 
   /**
@@ -63,7 +64,7 @@ public class ByteArrayVertexIdMessages<I extends WritableComparable,
 
   @Override
   public M createData() {
-    return ReflectionUtils.newInstance(messageValueClass);
+    return messageValueFactory.createMessageValue();
   }
 
   @Override

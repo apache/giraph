@@ -15,31 +15,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.giraph.factories;
 
-package org.apache.giraph.comm.messages;
-
-import org.apache.giraph.factories.MessageValueFactory;
-import org.apache.hadoop.io.Writable;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
- * Factory for message stores
+ * Default {@link VertexIdFactory} that simply uses the default
+ * constructor for the vertex ID class.
  *
- * @param <I> Vertex id
- * @param <M> Message data
- * @param <MS> Message store
+ * @param <I> Vertex ID
  */
-public interface MessageStoreFactory<I extends WritableComparable,
-    M extends Writable, MS> {
-  /**
-   * Creates new message store.
-   *
-   * Note: Combiner class in Configuration can be changed,
-   * this method should return MessageStore which uses current combiner
-   *
-   *
-   * @param messageValueFactory Message class held in the store
-   * @return New message store
-   */
-  MS newStore(MessageValueFactory<M> messageValueFactory);
+public class DefaultVertexIdFactory<I extends WritableComparable>
+    implements VertexIdFactory<I> {
+  /** Cached vertex value class. */
+  private Class<I> vertexIdClass;
+
+  @Override
+  public void initialize(ImmutableClassesGiraphConfiguration conf) {
+    vertexIdClass = conf.getVertexIdClass();
+  }
+
+  @Override
+  public I createVertexId() {
+    return WritableUtils.createWritable(vertexIdClass);
+  }
 }

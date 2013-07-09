@@ -23,7 +23,7 @@ import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.ByteArrayEdges;
 import org.apache.giraph.examples.SimpleSuperstepComputation.SimpleSuperstepVertexInputFormat;
-import org.apache.giraph.graph.VertexValueFactory;
+import org.apache.giraph.factories.VertexValueFactory;
 import org.apache.giraph.io.formats.GeneratedVertexInputFormat;
 import org.apache.giraph.io.formats.JsonBase64VertexInputFormat;
 import org.apache.giraph.io.formats.JsonBase64VertexOutputFormat;
@@ -101,9 +101,7 @@ public class TestComputationTypes {
         VertexValueFactory<DoubleWritable> {
 
       @Override
-      public void initialize(
-          ImmutableClassesGiraphConfiguration<?, DoubleWritable, ?>
-              configuration) {}
+      public void initialize(ImmutableClassesGiraphConfiguration conf) { }
 
       @Override
       public DoubleWritable createVertexValue() {

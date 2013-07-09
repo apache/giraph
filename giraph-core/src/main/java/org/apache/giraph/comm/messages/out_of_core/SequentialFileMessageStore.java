@@ -22,9 +22,9 @@ import org.apache.giraph.comm.messages.MessageStoreFactory;
 import org.apache.giraph.comm.messages.MessagesIterable;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.giraph.utils.EmptyIterable;
 import org.apache.giraph.utils.ExtendedDataOutput;
-import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
@@ -68,7 +68,7 @@ public class SequentialFileMessageStore<I extends WritableComparable,
   private static final Logger LOG =
       Logger.getLogger(SequentialFileMessageStore.class);
   /** Message class */
-  private final Class<M> messageClass;
+  private final MessageValueFactory<M> messageValueFactory;
   /** File in which we store data */
   private final File file;
   /** Configuration which we need for reading data */
@@ -85,18 +85,19 @@ public class SequentialFileMessageStore<I extends WritableComparable,
   /**
    * Stores message on the disk.
    *
-   * @param messageClass Message class held in the store
+   *
+   * @param messageValueFactory Used to create message values
    * @param config       Configuration used later for reading
    * @param bufferSize   Buffer size to use when reading and writing
    * @param fileName     File in which we want to store messages
    * @throws IOException
    */
   public SequentialFileMessageStore(
-      Class<M> messageClass,
+      MessageValueFactory<M> messageValueFactory,
       ImmutableClassesGiraphConfiguration<I, ?, ?> config,
       int bufferSize,
       String fileName) {
-    this.messageClass = messageClass;
+    this.messageValueFactory = messageValueFactory;
     this.config = config;
     this.bufferSize = bufferSize;
     file = new File(fileName);
@@ -136,7 +137,7 @@ public class SequentialFileMessageStore<I extends WritableComparable,
         destinationVertexId.write(out);
         ExtendedDataOutput extendedDataOutput = entry.getValue();
         Iterable<M> messages = new MessagesIterable<M>(
-            config, messageClass, extendedDataOutput.getByteArray(), 0,
+            config, messageValueFactory, extendedDataOutput.getByteArray(), 0,
             extendedDataOutput.getPos());
         int messageCount = Iterables.size(messages);
         out.writeInt(messageCount);
@@ -297,7 +298,7 @@ public class SequentialFileMessageStore<I extends WritableComparable,
     int messagesSize = in.readInt();
     List<M> messages = Lists.newArrayListWithCapacity(messagesSize);
     for (int i = 0; i < messagesSize; i++) {
-      M message = ReflectionUtils.newInstance(messageClass);
+      M message = messageValueFactory.createMessageValue();
       try {
         message.readFields(in);
       } catch (IOException e) {
@@ -396,11 +397,12 @@ public class SequentialFileMessageStore<I extends WritableComparable,
     }
 
     @Override
-    public SequentialFileMessageStore<I, M> newStore(Class<M> messageClass) {
+    public SequentialFileMessageStore<I, M> newStore(
+        MessageValueFactory<M> messageValueFactory) {
       int idx = Math.abs(storeCounter.getAndIncrement());
       String fileName =
           directories[idx % directories.length] + "messages-" + idx;
-      return new SequentialFileMessageStore<I, M>(messageClass, config,
+      return new SequentialFileMessageStore<I, M>(messageValueFactory, config,
           bufferSize, fileName);
     }
   }

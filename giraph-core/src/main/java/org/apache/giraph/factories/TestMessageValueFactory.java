@@ -15,31 +15,39 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.giraph.factories;
 
-package org.apache.giraph.comm.messages;
-
-import org.apache.giraph.factories.MessageValueFactory;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 
 /**
- * Factory for message stores
+ * Message Factory class that allows setting the message value class
  *
- * @param <I> Vertex id
- * @param <M> Message data
- * @param <MS> Message store
+ * @param <M> Message Value class
  */
-public interface MessageStoreFactory<I extends WritableComparable,
-    M extends Writable, MS> {
+public class TestMessageValueFactory<M extends Writable>
+    implements MessageValueFactory<M> {
+  /** The Message Value class */
+  private final Class<M> klass;
+
   /**
-   * Creates new message store.
+   * Constructor
    *
-   * Note: Combiner class in Configuration can be changed,
-   * this method should return MessageStore which uses current combiner
-   *
-   *
-   * @param messageValueFactory Message class held in the store
-   * @return New message store
+   * @param klass Message value class
    */
-  MS newStore(MessageValueFactory<M> messageValueFactory);
+  public TestMessageValueFactory(Class<M> klass) {
+    this.klass = klass;
+  }
+
+  @Override public Class<M> getMessageValueClass() {
+    return klass;
+  }
+
+  @Override public void initialize(
+      ImmutableClassesGiraphConfiguration conf) { }
+
+  @Override public M createMessageValue() {
+    return ReflectionUtils.newInstance(klass);
+  }
 }

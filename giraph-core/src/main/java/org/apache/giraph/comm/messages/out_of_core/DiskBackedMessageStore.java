@@ -22,6 +22,7 @@ import com.google.common.collect.Maps;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.messages.MessageStore;
 import org.apache.giraph.comm.messages.MessageStoreFactory;
+import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.giraph.utils.EmptyIterable;
 import org.apache.hadoop.io.Writable;
@@ -45,8 +46,8 @@ import java.util.concurrent.ConcurrentMap;
 public class DiskBackedMessageStore<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable> implements
     MessageStore<I, M> {
-  /** Message class */
-  private final Class<M> messageClass;
+  /** Message value factory */
+  private final MessageValueFactory<M> messageValueFactory;
   /** Service worker */
   private final CentralizedServiceWorker<I, V, E> service;
   /** Number of messages to keep in memory */
@@ -59,19 +60,21 @@ public class DiskBackedMessageStore<I extends WritableComparable,
   partitionMessageStores;
 
   /**
-   * @param messageClass                Message class held in the store
+   * Constructor
+   *
+   * @param messageValueFactory         Factory for creating message values
    * @param service                     Service worker
    * @param maxNumberOfMessagesInMemory Number of messages to keep in memory
    * @param partitionStoreFactory       Factory for creating stores for a
    *                                    partition
    */
   public DiskBackedMessageStore(
-      Class<M> messageClass,
+      MessageValueFactory<M> messageValueFactory,
       CentralizedServiceWorker<I, V, E> service,
       int maxNumberOfMessagesInMemory,
       MessageStoreFactory<I, M, PartitionDiskBackedMessageStore<I,
           M>> partitionStoreFactory) {
-    this.messageClass = messageClass;
+    this.messageValueFactory = messageValueFactory;
     this.service = service;
     this.maxNumberOfMessagesInMemory = maxNumberOfMessagesInMemory;
     this.partitionStoreFactory = partitionStoreFactory;
@@ -225,7 +228,7 @@ public class DiskBackedMessageStore<I extends WritableComparable,
     if (messageStore != null) {
       return messageStore;
     }
-    messageStore = partitionStoreFactory.newStore(messageClass);
+    messageStore = partitionStoreFactory.newStore(messageValueFactory);
     PartitionDiskBackedMessageStore<I, M> store =
         partitionMessageStores.putIfAbsent(partitionId, messageStore);
     return (store == null) ? messageStore : store;
@@ -247,7 +250,7 @@ public class DiskBackedMessageStore<I extends WritableComparable,
       int partitionId) throws IOException {
     if (in.readBoolean()) {
       PartitionDiskBackedMessageStore<I, M> messageStore =
-          partitionStoreFactory.newStore(messageClass);
+          partitionStoreFactory.newStore(messageValueFactory);
       messageStore.readFields(in);
       partitionMessageStores.put(partitionId, messageStore);
     }
@@ -314,8 +317,9 @@ public class DiskBackedMessageStore<I extends WritableComparable,
     }
 
     @Override
-    public MessageStore<I, M> newStore(Class<M> messageClass) {
-      return new DiskBackedMessageStore<I, V, E, M>(messageClass,
+    public MessageStore<I, M> newStore(
+        MessageValueFactory<M> messageValueFactory) {
+      return new DiskBackedMessageStore<I, V, E, M>(messageValueFactory,
           service, maxMessagesInMemory, fileStoreFactory);
     }
   }

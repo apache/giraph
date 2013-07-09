@@ -22,13 +22,11 @@ import org.apache.giraph.aggregators.TextAggregatorWriter;
 import org.apache.giraph.combiner.Combiner;
 import org.apache.giraph.edge.ByteArrayEdges;
 import org.apache.giraph.edge.OutEdges;
+import org.apache.giraph.factories.ComputationFactory;
+import org.apache.giraph.factories.DefaultComputationFactory;
 import org.apache.giraph.graph.Computation;
-import org.apache.giraph.graph.ComputationFactory;
-import org.apache.giraph.graph.DefaultComputationFactory;
 import org.apache.giraph.graph.DefaultVertexResolver;
-import org.apache.giraph.graph.DefaultVertexValueFactory;
 import org.apache.giraph.graph.VertexResolver;
-import org.apache.giraph.graph.VertexValueFactory;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
@@ -47,8 +45,6 @@ import org.apache.giraph.worker.WorkerContext;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-
-import static org.apache.giraph.utils.ReflectionUtils.getTypeArguments;
 
 /**
  * Holder for classes used by Giraph.
@@ -75,9 +71,6 @@ public class GiraphClasses<I extends WritableComparable,
   protected Class<? extends OutEdges<I, E>> outEdgesClass;
   /** Input vertex edges class - cached for fast access */
   protected Class<? extends OutEdges<I, E>> inputOutEdgesClass;
-
-  /** Vertex value factory class - cached for fast access */
-  protected Class<? extends VertexValueFactory<V>> vertexValueFactoryClass;
 
   /** Graph partitioner factory class - cached for fast access */
   protected Class<? extends GraphPartitionerFactory<I, V, E>>
@@ -128,8 +121,6 @@ public class GiraphClasses<I extends WritableComparable,
         ByteArrayEdges.class;
     inputOutEdgesClass = (Class<? extends OutEdges<I, E>>) (Object)
         ByteArrayEdges.class;
-    vertexValueFactoryClass = (Class<? extends VertexValueFactory<V>>) (Object)
-        DefaultVertexValueFactory.class;
     graphPartitionerFactoryClass =
         (Class<? extends GraphPartitionerFactory<I, V, E>>) (Object)
             HashPartitionerFactory.class;
@@ -166,8 +157,6 @@ public class GiraphClasses<I extends WritableComparable,
         VERTEX_EDGES_CLASS.get(conf);
     inputOutEdgesClass = (Class<? extends OutEdges<I, E>>)
         INPUT_VERTEX_EDGES_CLASS.getWithDefault(conf, outEdgesClass);
-    vertexValueFactoryClass = (Class<? extends VertexValueFactory<V>>)
-        VERTEX_VALUE_FACTORY_CLASS.get(conf);
 
     graphPartitionerFactoryClass =
         (Class<? extends GraphPartitionerFactory<I, V, E>>)
@@ -279,16 +268,6 @@ public class GiraphClasses<I extends WritableComparable,
    */
   public Class<? extends OutEdges<I, E>> getInputOutEdgesClass() {
     return inputOutEdgesClass;
-  }
-
-
-  /**
-   * Get vertex value factory class
-   *
-   * @return Vertex value factory class
-   */
-  public Class<? extends VertexValueFactory<V>> getVertexValueFactoryClass() {
-    return vertexValueFactoryClass;
   }
 
   /**
@@ -485,14 +464,6 @@ public class GiraphClasses<I extends WritableComparable,
       Computation<I, V, E, ? extends Writable, ? extends Writable>>
       computationClass) {
     this.computationClass = computationClass;
-    if (computationClass != null) {
-      Class<?>[] classList =
-          getTypeArguments(TypesHolder.class, computationClass);
-      giraphTypes.setIncomingMessageValueClass(
-          (Class<? extends Writable>) classList[3]);
-      giraphTypes.setOutgoingMessageValueClass(
-          (Class<? extends Writable>) classList[4]);
-    }
     return this;
   }
 
@@ -579,19 +550,6 @@ public class GiraphClasses<I extends WritableComparable,
       Class<? extends OutEdges> inputOutEdgesClass) {
     this.inputOutEdgesClass =
         (Class<? extends OutEdges<I, E>>) inputOutEdgesClass;
-    return this;
-  }
-
-  /**
-   * Set VertexValueFactory class held
-   *
-   * @param vertexValueFactoryClass Vertex value factory class to set
-   * @return this
-   */
-  public GiraphClasses setVertexValueFactoryClass(
-      Class<? extends VertexValueFactory> vertexValueFactoryClass) {
-    this.vertexValueFactoryClass = (Class<? extends VertexValueFactory<V>>)
-        vertexValueFactoryClass;
     return this;
   }
 

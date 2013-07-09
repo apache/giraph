@@ -22,6 +22,7 @@ import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.messages.MessageStore;
 import org.apache.giraph.comm.messages.MessagesIterable;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.giraph.utils.EmptyIterable;
@@ -52,8 +53,8 @@ import java.util.List;
  */
 public class IntByteArrayMessageStore<M extends Writable>
     implements MessageStore<IntWritable, M> {
-  /** Message class */
-  protected final Class<M> messageClass;
+  /** Message value factory */
+  protected final MessageValueFactory<M> messageValueFactory;
   /** Map from partition id to map from vertex id to message */
   private final
   Int2ObjectOpenHashMap<Int2ObjectOpenHashMap<ExtendedDataOutput>> map;
@@ -65,15 +66,15 @@ public class IntByteArrayMessageStore<M extends Writable>
   /**
    * Constructor
    *
-   * @param messageClass Message class held in the store
+   * @param messageValueFactory Factory for creating message values
    * @param service      Service worker
    * @param config       Hadoop configuration
    */
   public IntByteArrayMessageStore(
-      Class<M> messageClass,
+      MessageValueFactory<M> messageValueFactory,
       CentralizedServiceWorker<IntWritable, ?, ?> service,
       ImmutableClassesGiraphConfiguration<IntWritable, ?, ?> config) {
-    this.messageClass = messageClass;
+    this.messageValueFactory = messageValueFactory;
     this.service = service;
     this.config = config;
 
@@ -171,7 +172,7 @@ public class IntByteArrayMessageStore<M extends Writable>
     if (extendedDataOutput == null) {
       return EmptyIterable.get();
     } else {
-      return new MessagesIterable<M>(config, messageClass,
+      return new MessagesIterable<M>(config, messageValueFactory,
           extendedDataOutput.getByteArray(), 0, extendedDataOutput.getPos());
     }
   }

@@ -15,31 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.giraph.factories;
 
-package org.apache.giraph.comm.messages;
-
-import org.apache.giraph.factories.MessageValueFactory;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 
 /**
- * Factory for message stores
+ * Factory class to create default incoming message values.
  *
- * @param <I> Vertex id
- * @param <M> Message data
- * @param <MS> Message store
+ * @param <M> Incoming Message Value
  */
-public interface MessageStoreFactory<I extends WritableComparable,
-    M extends Writable, MS> {
-  /**
-   * Creates new message store.
-   *
-   * Note: Combiner class in Configuration can be changed,
-   * this method should return MessageStore which uses current combiner
-   *
-   *
-   * @param messageValueFactory Message class held in the store
-   * @return New message store
-   */
-  MS newStore(MessageValueFactory<M> messageValueFactory);
+public class DefaultIncomingMessageValueFactory<M extends Writable> extends
+    AbstractMessageValueFactory<M> {
+  @Override protected Class<M> extractMessageValueClass(
+      ImmutableClassesGiraphConfiguration conf) {
+    return conf.getIncomingMessageValueClass();
+  }
 }

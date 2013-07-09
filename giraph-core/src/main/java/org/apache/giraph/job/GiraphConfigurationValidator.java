@@ -22,10 +22,10 @@ import org.apache.giraph.combiner.Combiner;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.OutEdges;
+import org.apache.giraph.factories.DefaultVertexValueFactory;
+import org.apache.giraph.factories.VertexValueFactory;
 import org.apache.giraph.graph.DefaultVertexResolver;
-import org.apache.giraph.graph.DefaultVertexValueFactory;
 import org.apache.giraph.graph.VertexResolver;
-import org.apache.giraph.graph.VertexValueFactory;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
@@ -233,8 +233,8 @@ public class GiraphConfigurationValidator<I extends WritableComparable,
     if (edgeInputFormatClass != null) {
       Class<?>[] classList =
           getTypeArguments(EdgeInputFormat.class, edgeInputFormatClass);
-      checkAssignable(classList, ID_PARAM_INDEX,
-          vertexIndexType(), EdgeInputFormat.class, "vertex index");
+      checkAssignable(classList, ID_PARAM_INDEX, vertexIndexType(),
+          EdgeInputFormat.class, "vertex index");
       checkAssignable(classList, EDGE_PARAM_EDGE_INPUT_FORMAT_INDEX,
           edgeValueType(), EdgeInputFormat.class, "edge value");
     }
@@ -247,8 +247,8 @@ public class GiraphConfigurationValidator<I extends WritableComparable,
     if (vertexCombinerClass != null) {
       Class<?>[] classList =
           getTypeArguments(Combiner.class, vertexCombinerClass);
-      checkEquals(classList, ID_PARAM_INDEX, vertexIndexType(),
-          Combiner.class, "vertex index");
+      checkEquals(classList, ID_PARAM_INDEX, vertexIndexType(), Combiner.class,
+          "vertex index");
       checkEquals(classList, MSG_COMBINER_PARAM_INDEX,
           outgoingMessageValueType(), Combiner.class, "message value");
     }
@@ -320,7 +320,7 @@ public class GiraphConfigurationValidator<I extends WritableComparable,
           "checkClassTypes: " + typeName + " types not equal, " +
               "computation - " + classFromComputation +
               ", " + klass.getSimpleName() + " - " +
-              classList[EDGE_PARAM_EDGE_INPUT_FORMAT_INDEX]);
+              classList[index]);
     }
   }
 

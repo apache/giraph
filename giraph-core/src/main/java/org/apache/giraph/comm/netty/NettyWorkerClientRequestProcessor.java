@@ -219,7 +219,7 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
         serverData.getCurrentMessageStore();
     ByteArrayVertexIdMessages<I, Writable> vertexIdMessages =
         new ByteArrayVertexIdMessages<I, Writable>(
-            configuration.getOutgoingMessageValueClass());
+            configuration.getOutgoingMessageValueFactory());
     vertexIdMessages.setConf(configuration);
     vertexIdMessages.initialize();
     for (I vertexId :
@@ -242,7 +242,7 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
         doRequest(workerInfo, messagesRequest);
         vertexIdMessages =
             new ByteArrayVertexIdMessages<I, Writable>(
-                configuration.getOutgoingMessageValueClass());
+                configuration.getOutgoingMessageValueFactory());
         vertexIdMessages.setConf(configuration);
         vertexIdMessages.initialize();
       }

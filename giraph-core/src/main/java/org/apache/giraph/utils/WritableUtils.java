@@ -25,9 +25,9 @@ import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.zk.ZooKeeperExt;
 import org.apache.giraph.zk.ZooKeeperExt.PathStat;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs.Ids;
@@ -43,6 +43,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import static org.apache.hadoop.util.ReflectionUtils.newInstance;
+
 /**
  * Helper static methods for working with Writable objects.
  */
@@ -51,6 +53,21 @@ public class WritableUtils {
    * Don't construct.
    */
   private WritableUtils() { }
+
+  /**
+   * Instantiate a new Writable, checking for NullWritable along the way.
+   *
+   * @param klass Class
+   * @param <W> type
+   * @return new instance of class
+   */
+  public static <W extends Writable> W createWritable(Class<W> klass) {
+    if (NullWritable.class.equals(klass)) {
+      return (W) NullWritable.get();
+    } else {
+      return ReflectionUtils.newInstance(klass);
+    }
+  }
 
   /**
    * Read fields from byteArray to a Writeable object.
@@ -289,8 +306,7 @@ public class WritableUtils {
       int size = inputStream.readInt();
       List<T> writableList = new ArrayList<T>(size);
       for (int i = 0; i < size; ++i) {
-        T writable =
-            ReflectionUtils.newInstance(writableClass, conf);
+        T writable = newInstance(writableClass, conf);
         writable.readFields(inputStream);
         writableList.add(writable);
       }
