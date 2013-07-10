@@ -24,6 +24,7 @@ import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.messages.MessageStore;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.scripting.ScriptLoader;
 import org.apache.giraph.master.BspServiceMaster;
 import org.apache.giraph.master.MasterAggregatorUsage;
 import org.apache.giraph.master.MasterThread;
@@ -190,10 +191,12 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
     initializeAndConfigureLogging();
     // init the metrics objects
     setupAndInitializeGiraphMetrics();
-    // One time setup for computation factory
-    conf.createComputationFactory().initialize(conf);
     // Check input
     checkInput();
+    // Load any scripts that were deployed
+    ScriptLoader.loadScripts(conf);
+    // One time setup for computation factory
+    conf.createComputationFactory().initialize(conf);
     // Do some task setup (possibly starting up a Zookeeper service)
     context.setStatus("setup: Initializing Zookeeper services.");
     locateZookeeperClasspath(zkPathList);

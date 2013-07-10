@@ -20,12 +20,16 @@ package org.apache.giraph.jython;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphTypes;
 import org.apache.giraph.edge.ByteArrayEdges;
+import org.apache.giraph.graph.Language;
 import org.apache.giraph.io.formats.IdWithValueTextOutputFormat;
 import org.apache.giraph.io.formats.IntNullTextEdgeInputFormat;
+import org.apache.giraph.scripting.DeployType;
+import org.apache.giraph.scripting.ScriptLoader;
 import org.apache.giraph.utils.InternalVertexRunner;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.junit.Test;
+import org.python.core.PyClass;
 import org.python.core.PyDictionary;
 import org.python.core.PyInteger;
 import org.python.core.PyList;
@@ -36,7 +40,6 @@ import com.google.common.collect.Maps;
 
 import java.util.Map;
 
-import static org.apache.giraph.jython.JythonComputationFactory.JYTHON_DEPLOY_TYPE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -66,6 +69,8 @@ public class TestJython {
     interpreter.exec(jython);
 
     PyObject fooClass = interpreter.get("Foo");
+    assertTrue(fooClass instanceof PyClass);
+
     PyObject getMapFunc = interpreter.get("get_map");
     PyObject getListFunc = interpreter.get("get_list");
     PyObject getIValFunc = interpreter.get("get_ival");
@@ -109,8 +114,10 @@ public class TestJython {
     GiraphTypes types = new GiraphTypes(IntWritable.class, IntWritable.class,
         NullWritable.class, NullWritable.class, NullWritable.class);
     types.writeIfUnset(conf);
-    JythonUtils.init(conf, "count-edges.py", "CountEdges");
-    JYTHON_DEPLOY_TYPE.set(conf, DeployType.RESOURCE);
+    ScriptLoader.setScriptsToLoad(conf,
+        "org/apache/giraph/jython/count-edges.py",
+        DeployType.RESOURCE, Language.JYTHON);
+    JythonUtils.init(conf, "CountEdges");
     conf.setOutEdgesClass(ByteArrayEdges.class);
     conf.setEdgeInputFormatClass(IntNullTextEdgeInputFormat.class);
     conf.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);

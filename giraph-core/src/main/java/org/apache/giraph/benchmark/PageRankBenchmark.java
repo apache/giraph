@@ -23,9 +23,11 @@ import org.apache.giraph.combiner.FloatSumCombiner;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphTypes;
 import org.apache.giraph.edge.IntNullArrayEdges;
+import org.apache.giraph.graph.Language;
 import org.apache.giraph.io.formats.PseudoRandomInputFormatConstants;
 import org.apache.giraph.io.formats.PseudoRandomIntNullVertexInputFormat;
-import org.apache.giraph.jython.DeployType;
+import org.apache.giraph.scripting.DeployType;
+import org.apache.giraph.scripting.ScriptLoader;
 import org.apache.giraph.jython.JythonUtils;
 import org.apache.giraph.utils.DistributedCacheUtils;
 import org.apache.giraph.utils.ReflectionUtils;
@@ -35,8 +37,6 @@ import org.apache.hadoop.util.ToolRunner;
 import com.google.common.collect.Sets;
 
 import java.util.Set;
-
-import static org.apache.giraph.jython.JythonComputationFactory.JYTHON_DEPLOY_TYPE;
 
 /**
  * Benchmark for {@link PageRankComputation}
@@ -56,19 +56,22 @@ public class PageRankBenchmark extends GiraphBenchmark {
     if (BenchmarkOption.JYTHON.optionTurnedOn(cmd)) {
       GiraphTypes types = new GiraphTypes();
       types.inferFrom(PageRankComputation.class);
+
       String script;
+      DeployType deployType;
       if (BenchmarkOption.SCRIPT_PATH.optionTurnedOn(cmd)) {
-        JYTHON_DEPLOY_TYPE.set(conf, DeployType.DISTRIBUTED_CACHE);
+        deployType = DeployType.DISTRIBUTED_CACHE;
         String path = BenchmarkOption.SCRIPT_PATH.getOptionValue(cmd);
         Path hadoopPath = new Path(path);
         Path remotePath = DistributedCacheUtils.copyAndAdd(hadoopPath, conf);
         script = remotePath.toString();
       } else {
-        JYTHON_DEPLOY_TYPE.set(conf, DeployType.RESOURCE);
+        deployType = DeployType.RESOURCE;
         script = ReflectionUtils.getPackagePath(this) + "/page-rank.py";
       }
+      ScriptLoader.setScriptsToLoad(conf, script, deployType, Language.JYTHON);
       types.writeIfUnset(conf);
-      JythonUtils.init(conf, script, "PageRank");
+      JythonUtils.init(conf, "PageRank");
     } else {
       conf.setComputationClass(PageRankComputation.class);
     }

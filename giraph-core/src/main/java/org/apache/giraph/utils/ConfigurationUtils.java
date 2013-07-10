@@ -33,11 +33,14 @@ import org.apache.giraph.conf.TypesHolder;
 import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.graph.Computation;
 import org.apache.giraph.factories.VertexValueFactory;
+import org.apache.giraph.graph.Language;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.giraph.io.formats.GiraphFileInputFormat;
 import org.apache.giraph.job.GiraphConfigurationValidator;
+import org.apache.giraph.scripting.DeployType;
+import org.apache.giraph.scripting.ScriptLoader;
 import org.apache.giraph.jython.JythonUtils;
 import org.apache.giraph.master.MasterCompute;
 import org.apache.giraph.partition.Partition;
@@ -433,8 +436,11 @@ public final class ConfigurationUtils {
     Path path = new Path(scriptPath);
     Path remotePath = DistributedCacheUtils.copyAndAdd(path, conf);
 
+    ScriptLoader.setScriptsToLoad(conf, remotePath.toString(),
+        DeployType.DISTRIBUTED_CACHE, Language.JYTHON);
+
     GiraphTypes.readFrom(conf).writeIfUnset(conf);
-    JythonUtils.init(conf, remotePath.toString(), jythonClass);
+    JythonUtils.init(conf, jythonClass);
   }
 
   /**

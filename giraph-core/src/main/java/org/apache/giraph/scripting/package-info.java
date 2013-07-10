@@ -15,14 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.jython;
-
 /**
- * Type of deployment for a file
+ * Scripting with Giraph.
  */
-public enum DeployType {
-  /** Resource packaged with jar */
-  RESOURCE,
-  /** Hadoop's Distributed Cache */
-  DISTRIBUTED_CACHE
-}
+package org.apache.giraph.scripting;

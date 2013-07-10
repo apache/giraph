@@ -19,53 +19,45 @@ package org.apache.giraph.jython;
 
 import org.apache.giraph.graph.Language;
 import org.apache.hadoop.conf.Configuration;
-import org.python.core.PyObject;
+import org.python.util.PythonInterpreter;
 
 import static org.apache.giraph.conf.GiraphConstants.COMPUTATION_FACTORY_CLASS;
 import static org.apache.giraph.conf.GiraphConstants.COMPUTATION_LANGUAGE;
-import static org.apache.giraph.jython.JythonComputationFactory.JYTHON_COMPUTATION_CLASS;
-import static org.apache.giraph.jython.JythonComputationFactory.JYTHON_SCRIPT_PATH;
+import static org.apache.giraph.jython.JythonComputationFactory.JYTHON_COMPUTATION_CLASS_NAME;
 
 /**
  * Helpers for running jobs with Jython.
  */
 public class JythonUtils {
-  /** The Jython compute function, cached here for fast access */
-  private static volatile PyObject JYTHON_COMPUTATION_MODULE;
+  /**
+   * The Jython interpreter. Cached here for fast access. We use a singleton
+   * for this so that we can parse all of the Jython scripts once at startup
+   * and then have their data loaded for the rest of the job.
+   */
+  private static final PythonInterpreter INTERPRETER =
+      new PythonInterpreter();
 
   /** Don't construct */
   private JythonUtils() { }
 
   /**
-   * Set static python computation module stored
+   * Get Jython interpreter
    *
-   * @param mod python computation module
+   * @return interpreter
    */
-  public static void setPythonComputationModule(PyObject mod) {
-    JYTHON_COMPUTATION_MODULE = mod;
-  }
-
-  /**
-   * Get python computation module stored
-   *
-   * @return python computation module
-   */
-  public static PyObject getPythonComputationModule() {
-    return JYTHON_COMPUTATION_MODULE;
+  public static PythonInterpreter getInterpreter() {
+    return INTERPRETER;
   }
 
   /**
    * Sets up the Configuration for using Jython
    *
    * @param conf Configuration to se
-   * @param scriptPath Path to Jython script (resource or distributed cache)
    * @param klassName Class name of Jython Computation
    */
-  public static void init(Configuration conf, String scriptPath,
-      String klassName) {
+  public static void init(Configuration conf, String klassName) {
     COMPUTATION_LANGUAGE.set(conf, Language.JYTHON);
     COMPUTATION_FACTORY_CLASS.set(conf, JythonComputationFactory.class);
-    JYTHON_SCRIPT_PATH.set(conf, scriptPath);
-    JYTHON_COMPUTATION_CLASS.set(conf, klassName);
+    JYTHON_COMPUTATION_CLASS_NAME.set(conf, klassName);
   }
 }
