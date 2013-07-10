@@ -107,7 +107,7 @@ public class JsonStringConfOption extends AbstractConfOption {
     if (jsonStr != null) {
       ObjectMapper mapper = new ObjectMapper();
       try {
-        value = mapper.readValue(jsonStr, typeReference);
+        value = mapper.<T>readValue(jsonStr, typeReference);
       } catch (IOException e) {
         throw new IllegalStateException("Failed to read json from key " +
             getKey() + " with class " + typeReference);
