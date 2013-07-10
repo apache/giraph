@@ -26,6 +26,6 @@ public class ShortToLongWritableWrapper
     implements WritableWrapper<LongWritable, Short> {
   @Override
   public LongWritable wrap(Short javaValue) {
-    return new LongWritable(javaValue.intValue());
+    return new LongWritable(javaValue.longValue());
   }
 }

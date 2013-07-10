@@ -26,6 +26,6 @@ public class ByteToLongWritableWrapper
     implements WritableWrapper<LongWritable, Byte> {
   @Override
   public LongWritable wrap(Byte javaValue) {
-    return new LongWritable(javaValue);
+    return new LongWritable(javaValue.longValue());
   }
 }

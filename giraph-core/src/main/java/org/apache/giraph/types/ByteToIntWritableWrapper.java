@@ -26,6 +26,6 @@ public class ByteToIntWritableWrapper
     implements WritableWrapper<IntWritable, Byte> {
   @Override
   public IntWritable wrap(Byte javaValue) {
-    return new IntWritable(javaValue);
+    return new IntWritable(javaValue.intValue());
   }
 }

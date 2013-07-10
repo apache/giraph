@@ -26,6 +26,6 @@ public class IntToLongWritableWrapper
     implements WritableWrapper<LongWritable, Integer> {
   @Override
   public LongWritable wrap(Integer javaValue) {
-    return new LongWritable(javaValue);
+    return new LongWritable(javaValue.longValue());
   }
 }

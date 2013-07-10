@@ -26,6 +26,6 @@ public class FloatToDoubleWritableWrapper
     implements WritableWrapper<DoubleWritable, Float> {
   @Override
   public DoubleWritable wrap(Float javaValue) {
-    return new DoubleWritable(javaValue);
+    return new DoubleWritable(javaValue.doubleValue());
   }
 }
