@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-715: Fix MessageValueFactory performance regression (nitay)
+
   GIRAPH-709: More flexible Jython script loading (nitay)
 
   GIRAPH-708: Factories for creation of all IVEM types (nitay)

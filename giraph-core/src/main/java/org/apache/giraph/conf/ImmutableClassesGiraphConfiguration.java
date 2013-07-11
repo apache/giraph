@@ -26,12 +26,12 @@ import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.edge.ReusableEdge;
 import org.apache.giraph.factories.ComputationFactory;
 import org.apache.giraph.factories.MessageValueFactory;
-import org.apache.giraph.graph.DefaultVertex;
-import org.apache.giraph.graph.Computation;
 import org.apache.giraph.factories.ValueFactories;
+import org.apache.giraph.factories.VertexValueFactory;
+import org.apache.giraph.graph.Computation;
+import org.apache.giraph.graph.DefaultVertex;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexResolver;
-import org.apache.giraph.factories.VertexValueFactory;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
@@ -103,7 +103,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
     classes = new GiraphClasses<I, V, E>(conf);
     useUnsafeSerialization = USE_UNSAFE_SERIALIZATION.get(this);
     valueFactories = new ValueFactories<I, V, E>(conf);
-    valueFactories.initializeAll(this);
+    valueFactories.initializeIVE(this);
   }
 
   /**
@@ -653,8 +653,9 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    */
   public <M extends Writable> MessageValueFactory<M>
   getIncomingMessageValueFactory() {
-    MessageValueFactory<M> factory =
-        INCOMING_MESSAGE_VALUE_FACTORY_CLASS.newInstance(this);
+    Class<? extends MessageValueFactory> klass =
+        valueFactories.getInMsgFactoryClass();
+    MessageValueFactory<M> factory = ReflectionUtils.newInstance(klass, this);
     factory.initialize(this);
     return factory;
   }
@@ -677,8 +678,9 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    */
   public <M extends Writable> MessageValueFactory<M>
   getOutgoingMessageValueFactory() {
-    MessageValueFactory<M> factory =
-        OUTGOING_MESSAGE_VALUE_FACTORY_CLASS.newInstance(this);
+    Class<? extends MessageValueFactory> klass =
+        valueFactories.getOutMsgFactoryClass();
+    MessageValueFactory<M> factory = ReflectionUtils.newInstance(klass, this);
     factory.initialize(this);
     return factory;
   }

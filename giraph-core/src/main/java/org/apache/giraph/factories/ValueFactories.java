@@ -23,6 +23,8 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 import static org.apache.giraph.conf.GiraphConstants.EDGE_VALUE_FACTORY_CLASS;
+import static org.apache.giraph.conf.GiraphConstants.INCOMING_MESSAGE_VALUE_FACTORY_CLASS;
+import static org.apache.giraph.conf.GiraphConstants.OUTGOING_MESSAGE_VALUE_FACTORY_CLASS;
 import static org.apache.giraph.conf.GiraphConstants.VERTEX_ID_FACTORY_CLASS;
 import static org.apache.giraph.conf.GiraphConstants.VERTEX_VALUE_FACTORY_CLASS;
 
@@ -45,22 +47,12 @@ public class ValueFactories<I extends WritableComparable,
   private final VertexValueFactory<V> vertexValueFactory;
   /** Edge value factory. */
   private final EdgeValueFactory<E> edgeValueFactory;
-
-  /**
-   * Constructor with types
-   *
-   * @param vertexIdFactory vertex id factory
-   * @param vertexValueFactory vertex value factory
-   * @param edgeValueFactory edge value factory
-   */
-  public ValueFactories(
-      VertexIdFactory<I> vertexIdFactory,
-      VertexValueFactory<V> vertexValueFactory,
-      EdgeValueFactory<E> edgeValueFactory) {
-    this.edgeValueFactory = edgeValueFactory;
-    this.vertexIdFactory = vertexIdFactory;
-    this.vertexValueFactory = vertexValueFactory;
-  }
+  // Note that for messages we store the class not the factory itself, because
+  // the factory instance may change per-superstep if the graph types change.
+  /** Incoming message value factory class */
+  private final Class<? extends MessageValueFactory> inMsgFactoryClass;
+  /** Outgoing message value factory class */
+  private final Class<? extends MessageValueFactory> outMsgFactoryClass;
 
   /**
    * Constructor reading from Configuration
@@ -71,6 +63,8 @@ public class ValueFactories<I extends WritableComparable,
     vertexIdFactory = VERTEX_ID_FACTORY_CLASS.newInstance(conf);
     vertexValueFactory = VERTEX_VALUE_FACTORY_CLASS.newInstance(conf);
     edgeValueFactory = EDGE_VALUE_FACTORY_CLASS.newInstance(conf);
+    inMsgFactoryClass = INCOMING_MESSAGE_VALUE_FACTORY_CLASS.get(conf);
+    outMsgFactoryClass = OUTGOING_MESSAGE_VALUE_FACTORY_CLASS.get(conf);
   }
 
   /**
@@ -78,8 +72,7 @@ public class ValueFactories<I extends WritableComparable,
    *
    * @param conf ImmutableClassesGiraphConfiguration
    */
-  public void initializeAll(
-      ImmutableClassesGiraphConfiguration<I, V, E> conf) {
+  public void initializeIVE(ImmutableClassesGiraphConfiguration<I, V, E> conf) {
     vertexIdFactory.initialize(conf);
     vertexValueFactory.initialize(conf);
     edgeValueFactory.initialize(conf);
@@ -89,12 +82,19 @@ public class ValueFactories<I extends WritableComparable,
     return edgeValueFactory;
   }
 
-
   public VertexIdFactory<I> getVertexIdFactory() {
     return vertexIdFactory;
   }
 
   public VertexValueFactory<V> getVertexValueFactory() {
     return vertexValueFactory;
+  }
+
+  public Class<? extends MessageValueFactory> getInMsgFactoryClass() {
+    return inMsgFactoryClass;
+  }
+
+  public Class<? extends MessageValueFactory> getOutMsgFactoryClass() {
+    return outMsgFactoryClass;
   }
 }
