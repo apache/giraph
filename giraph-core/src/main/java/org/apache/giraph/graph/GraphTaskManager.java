@@ -790,6 +790,9 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
       LOG.warn("map: No vertices in the graph, exiting.");
       return true;
     }
+    if (conf.metricsEnabled()) {
+      GiraphMetrics.get().perSuperstep().printSummary(System.err);
+    }
     return false;
   }
 

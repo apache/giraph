@@ -21,7 +21,11 @@ package org.apache.giraph.metrics;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.bsp.BspService;
 
+import com.yammer.metrics.core.Metric;
+import com.yammer.metrics.core.MetricName;
+import com.yammer.metrics.core.MetricPredicate;
 import com.yammer.metrics.core.MetricsRegistry;
+import com.yammer.metrics.reporting.ConsoleReporter;
 import com.yammer.metrics.reporting.JmxReporter;
 
 import java.io.PrintStream;
@@ -100,5 +104,13 @@ public class SuperstepMetricsRegistry extends GiraphMetricsRegistry {
    */
   public void printSummary(PrintStream out) {
     new WorkerSuperstepMetrics().readFromRegistry().print(superstep, out);
+    out.println("");
+    MetricPredicate superstepFilter = new MetricPredicate() {
+      @Override
+      public boolean matches(MetricName name, Metric metric) {
+        return name.getType().equals(getType());
+      }
+    };
+    new ConsoleReporter(getInternalRegistry(), out, superstepFilter).run();
   }
 }

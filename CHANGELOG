@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-718: Output all per-superstep metrics per superstep (majakabiljo)
+
   GIRAPH-716: Stop modifying Configuration since it's not thread-safe (majakabiljo)
 
   GIRAPH-715: Fix MessageValueFactory performance regression (nitay)

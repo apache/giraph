@@ -144,7 +144,6 @@ public class GiraphMetrics {
   public void dumpToStream(PrintStream out) {
     perJobOptional.printToStream(out);
     perJobRequired.printToStream(out);
-    perSuperstep.printToStream(out);
   }
 
   /**
