@@ -39,14 +39,16 @@ public class HadoopUtils {
    * Create a TaskAttemptContext, supporting many Hadoops.
    *
    * @param conf Configuration
+   * @param taskAttemptID TaskAttemptID to use
    * @return TaskAttemptContext
    */
-  public static TaskAttemptContext makeTaskAttemptContext(Configuration conf) {
+  public static TaskAttemptContext makeTaskAttemptContext(Configuration conf,
+      TaskAttemptID taskAttemptID) {
     TaskAttemptContext context;
     /*if[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]
-    context = new TaskAttemptContext(conf, new TaskAttemptID());
+    context = new TaskAttemptContext(conf, taskAttemptID);
     else[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
-    context = new TaskAttemptContextImpl(conf, new TaskAttemptID());
+    context = new TaskAttemptContextImpl(conf, taskAttemptID);
     /*end[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
     return context;
   }
@@ -54,10 +56,61 @@ public class HadoopUtils {
   /**
    * Create a TaskAttemptContext, supporting many Hadoops.
    *
+   * @param conf Configuration
+   * @param taskAttemptContext Use TaskAttemptID from this object
    * @return TaskAttemptContext
    */
-  public static TaskAttemptContext makeTaskContext() {
+  public static TaskAttemptContext makeTaskAttemptContext(Configuration conf,
+      TaskAttemptContext taskAttemptContext) {
+    return makeTaskAttemptContext(conf, taskAttemptContext.getTaskAttemptID());
+  }
+
+  /**
+   * Create a TaskAttemptContext, supporting many Hadoops.
+   *
+   * @param conf Configuration
+   * @return TaskAttemptContext
+   */
+  public static TaskAttemptContext makeTaskAttemptContext(Configuration conf) {
+    return makeTaskAttemptContext(conf, new TaskAttemptID());
+  }
+
+  /**
+   * Create a TaskAttemptContext, supporting many Hadoops.
+   *
+   * @return TaskAttemptContext
+   */
+  public static TaskAttemptContext makeTaskAttemptContext() {
     return makeTaskAttemptContext(new Configuration());
+  }
+
+  /**
+   * Create a JobContext, supporting many Hadoops.
+   *
+   * @param conf Configuration
+   * @param jobID JobID to use
+   * @return JobContext
+   */
+  public static JobContext makeJobContext(Configuration conf, JobID jobID) {
+    JobContext context;
+    /*if[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]
+    context = new JobContext(conf, jobID);
+    else[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
+    context = new JobContextImpl(conf, jobID);
+    /*end[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
+    return context;
+  }
+
+  /**
+   * Create a JobContext, supporting many Hadoops.
+   *
+   * @param conf Configuration
+   * @param jobContext Use JobID from this object
+   * @return JobContext
+   */
+  public static JobContext makeJobContext(Configuration conf,
+      JobContext jobContext) {
+    return makeJobContext(conf, jobContext.getJobID());
   }
 
   /**
@@ -67,13 +120,7 @@ public class HadoopUtils {
    * @return JobContext
    */
   public static JobContext makeJobContext(Configuration conf) {
-    JobContext context;
-    /*if[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]
-    context = new JobContext(conf, new JobID());
-    else[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
-    context = new JobContextImpl(conf, new JobID());
-    /*end[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
-    return context;
+    return makeJobContext(conf, new JobID());
   }
 
   /**

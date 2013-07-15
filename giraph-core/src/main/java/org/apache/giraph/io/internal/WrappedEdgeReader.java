@@ -21,6 +21,7 @@ package org.apache.giraph.io.internal;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.io.EdgeReader;
+import org.apache.giraph.job.HadoopUtils;
 import org.apache.giraph.worker.WorkerAggregatorUsage;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -66,8 +67,8 @@ public class WrappedEdgeReader<I extends WritableComparable,
   @Override
   public void initialize(InputSplit inputSplit,
       TaskAttemptContext context) throws IOException, InterruptedException {
-    getConf().updateConfiguration(context.getConfiguration());
-    baseEdgeReader.initialize(inputSplit, context);
+    baseEdgeReader.initialize(inputSplit,
+        HadoopUtils.makeTaskAttemptContext(getConf(), context));
   }
 
   @Override

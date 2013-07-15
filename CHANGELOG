@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-716: Stop modifying Configuration since it's not thread-safe (majakabiljo)
+
   GIRAPH-715: Fix MessageValueFactory performance regression (nitay)
 
   GIRAPH-709: More flexible Jython script loading (nitay)

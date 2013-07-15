@@ -21,6 +21,7 @@ package org.apache.giraph.io.internal;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.VertexReader;
+import org.apache.giraph.job.HadoopUtils;
 import org.apache.giraph.worker.WorkerAggregatorUsage;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -67,8 +68,8 @@ public class WrappedVertexReader<I extends WritableComparable,
   @Override
   public void initialize(InputSplit inputSplit,
       TaskAttemptContext context) throws IOException, InterruptedException {
-    getConf().updateConfiguration(context.getConfiguration());
-    baseVertexReader.initialize(inputSplit, context);
+    baseVertexReader.initialize(inputSplit,
+        HadoopUtils.makeTaskAttemptContext(getConf(), context));
   }
 
   @Override

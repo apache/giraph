@@ -22,6 +22,7 @@ import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.giraph.io.VertexWriter;
+import org.apache.giraph.job.HadoopUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -64,9 +65,9 @@ public class WrappedVertexOutputFormat<I extends WritableComparable,
   @Override
   public VertexWriter<I, V, E> createVertexWriter(
       TaskAttemptContext context) throws IOException, InterruptedException {
-    getConf().updateConfiguration(context.getConfiguration());
     final VertexWriter<I, V, E> vertexWriter =
-        originalOutputFormat.createVertexWriter(context);
+        originalOutputFormat.createVertexWriter(
+            HadoopUtils.makeTaskAttemptContext(getConf(), context));
     return new VertexWriter<I, V, E>() {
       @Override
       public void setConf(
@@ -78,15 +79,15 @@ public class WrappedVertexOutputFormat<I extends WritableComparable,
       @Override
       public void initialize(
           TaskAttemptContext context) throws IOException, InterruptedException {
-        getConf().updateConfiguration(context.getConfiguration());
-        vertexWriter.initialize(context);
+        vertexWriter.initialize(
+            HadoopUtils.makeTaskAttemptContext(getConf(), context));
       }
 
       @Override
       public void close(
           TaskAttemptContext context) throws IOException, InterruptedException {
-        getConf().updateConfiguration(context.getConfiguration());
-        vertexWriter.close(context);
+        vertexWriter.close(
+            HadoopUtils.makeTaskAttemptContext(getConf(), context));
       }
 
       @Override
@@ -100,66 +101,66 @@ public class WrappedVertexOutputFormat<I extends WritableComparable,
   @Override
   public void checkOutputSpecs(
       JobContext context) throws IOException, InterruptedException {
-    getConf().updateConfiguration(context.getConfiguration());
-    originalOutputFormat.checkOutputSpecs(context);
+    originalOutputFormat.checkOutputSpecs(
+        HadoopUtils.makeJobContext(getConf(), context));
   }
 
   @Override
   public OutputCommitter getOutputCommitter(
       TaskAttemptContext context) throws IOException, InterruptedException {
-    getConf().updateConfiguration(context.getConfiguration());
     final OutputCommitter outputCommitter =
-        originalOutputFormat.getOutputCommitter(context);
+        originalOutputFormat.getOutputCommitter(
+            HadoopUtils.makeTaskAttemptContext(getConf(), context));
     return new OutputCommitter() {
       @Override
       public void setupJob(JobContext context) throws IOException {
-        getConf().updateConfiguration(context.getConfiguration());
-        outputCommitter.setupJob(context);
+        outputCommitter.setupJob(
+            HadoopUtils.makeJobContext(getConf(), context));
       }
 
       @Override
       public void setupTask(TaskAttemptContext context) throws IOException {
-        getConf().updateConfiguration(context.getConfiguration());
-        outputCommitter.setupTask(context);
+        outputCommitter.setupTask(
+            HadoopUtils.makeTaskAttemptContext(getConf(), context));
       }
 
       @Override
       public boolean needsTaskCommit(
           TaskAttemptContext context) throws IOException {
-        getConf().updateConfiguration(context.getConfiguration());
-        return outputCommitter.needsTaskCommit(context);
+        return outputCommitter.needsTaskCommit(
+            HadoopUtils.makeTaskAttemptContext(getConf(), context));
       }
 
       @Override
       public void commitTask(TaskAttemptContext context) throws IOException {
-        getConf().updateConfiguration(context.getConfiguration());
-        outputCommitter.commitTask(context);
+        outputCommitter.commitTask(
+            HadoopUtils.makeTaskAttemptContext(getConf(), context));
       }
 
       @Override
       public void abortTask(TaskAttemptContext context) throws IOException {
-        getConf().updateConfiguration(context.getConfiguration());
-        outputCommitter.abortTask(context);
+        outputCommitter.abortTask(
+            HadoopUtils.makeTaskAttemptContext(getConf(), context));
       }
 
       @Override
       public void cleanupJob(JobContext context) throws IOException {
-        getConf().updateConfiguration(context.getConfiguration());
-        outputCommitter.cleanupJob(context);
+        outputCommitter.cleanupJob(
+            HadoopUtils.makeJobContext(getConf(), context));
       }
 
       /*if_not[HADOOP_NON_COMMIT_JOB]*/
       @Override
       public void commitJob(JobContext context) throws IOException {
-        getConf().updateConfiguration(context.getConfiguration());
-        outputCommitter.commitJob(context);
+        outputCommitter.commitJob(
+            HadoopUtils.makeJobContext(getConf(), context));
       }
 
       @Override
       public void abortJob(JobContext context,
           JobStatus.State state) throws IOException {
-        getConf().updateConfiguration(context.getConfiguration());
-        outputCommitter.abortJob(context, state);
+        outputCommitter.abortJob(
+            HadoopUtils.makeJobContext(getConf(), context), state);
       }
       /*end[HADOOP_NON_COMMIT_JOB]*/
     };

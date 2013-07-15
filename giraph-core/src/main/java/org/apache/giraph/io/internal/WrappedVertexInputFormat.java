@@ -20,6 +20,7 @@ package org.apache.giraph.io.internal;
 
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexReader;
+import org.apache.giraph.job.HadoopUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -62,23 +63,23 @@ public class WrappedVertexInputFormat<I extends WritableComparable,
 
   @Override
   public void checkInputSpecs(Configuration conf) {
-    getConf().updateConfiguration(conf);
-    originalInputFormat.checkInputSpecs(conf);
+    originalInputFormat.checkInputSpecs(getConf());
   }
 
   @Override
   public List<InputSplit> getSplits(JobContext context,
       int minSplitCountHint) throws IOException, InterruptedException {
-    getConf().updateConfiguration(context.getConfiguration());
-    return originalInputFormat.getSplits(context, minSplitCountHint);
+    return originalInputFormat.getSplits(
+        HadoopUtils.makeJobContext(getConf(), context),
+        minSplitCountHint);
   }
 
   @Override
   public VertexReader<I, V, E> createVertexReader(InputSplit split,
       TaskAttemptContext context) throws IOException {
-    getConf().updateConfiguration(context.getConfiguration());
     final VertexReader<I, V, E> vertexReader =
-        originalInputFormat.createVertexReader(split, context);
+        originalInputFormat.createVertexReader(split,
+            HadoopUtils.makeTaskAttemptContext(getConf(), context));
     return new WrappedVertexReader<I, V, E>(vertexReader, getConf());
   }
 

@@ -45,7 +45,6 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.net.DNS;
 
 import java.net.UnknownHostException;
-import java.util.Map;
 
 /**
  * Adds user methods specific to Giraph.  This will be put into an
@@ -57,14 +56,10 @@ import java.util.Map;
  */
 public class GiraphConfiguration extends Configuration
     implements GiraphConstants {
-  /** Configuration with parameters which were set in Giraph */
-  private final Configuration giraphSetParameters;
-
   /**
    * Constructor that creates the configuration
    */
   public GiraphConfiguration() {
-    giraphSetParameters = new Configuration(false);
     configureHadoopSecurity();
   }
 
@@ -75,7 +70,6 @@ public class GiraphConfiguration extends Configuration
    */
   public GiraphConfiguration(Configuration conf) {
     super(conf);
-    giraphSetParameters = new Configuration(false);
     configureHadoopSecurity();
   }
 
@@ -981,68 +975,6 @@ public class GiraphConfiguration extends Configuration
    */
   public boolean isStaticGraph() {
     return STATIC_GRAPH.isTrue(this);
-  }
-
-  /**
-   * Put all parameters set in Giraph to another configuration
-   *
-   * @param conf Configuration
-   */
-  public synchronized void updateConfiguration(Configuration conf) {
-    if (this != conf) {
-      for (Map.Entry<String, String> parameter : giraphSetParameters) {
-        conf.set(parameter.getKey(), parameter.getValue());
-      }
-    }
-  }
-
-  @Override
-  public synchronized void set(String name, String value) {
-    super.set(name, value);
-    giraphSetParameters.set(name, value);
-  }
-
-  @Override
-  public synchronized void setIfUnset(String name, String value) {
-    super.setIfUnset(name, value);
-    giraphSetParameters.set(name, get(name, value));
-  }
-
-  @Override
-  public synchronized void setInt(String name, int value) {
-    super.setInt(name, value);
-    giraphSetParameters.setInt(name, value);
-  }
-
-  @Override
-  public synchronized void setLong(String name, long value) {
-    super.setLong(name, value);
-    giraphSetParameters.setLong(name, value);
-  }
-
-  @Override
-  public synchronized void setFloat(String name, float value) {
-    super.setFloat(name, value);
-    giraphSetParameters.setFloat(name, value);
-  }
-
-  @Override
-  public synchronized void setBoolean(String name, boolean value) {
-    super.setBoolean(name, value);
-    giraphSetParameters.setBoolean(name, value);
-  }
-
-  @Override
-  public synchronized void setBooleanIfUnset(String name, boolean value) {
-    super.setBooleanIfUnset(name, value);
-    giraphSetParameters.setBoolean(name, getBoolean(name, value));
-  }
-
-  @Override
-  public synchronized void setClass(String name, Class<?> theClass,
-                                    Class<?> xface) {
-    super.setClass(name, theClass, xface);
-    giraphSetParameters.setClass(name, theClass, xface);
   }
 
   /**

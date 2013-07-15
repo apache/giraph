@@ -20,6 +20,7 @@ package org.apache.giraph.io.internal;
 
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.EdgeReader;
+import org.apache.giraph.job.HadoopUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -60,23 +61,23 @@ public class WrappedEdgeInputFormat<I extends WritableComparable,
 
   @Override
   public void checkInputSpecs(Configuration conf) {
-    getConf().updateConfiguration(conf);
-    originalInputFormat.checkInputSpecs(conf);
+    originalInputFormat.checkInputSpecs(getConf());
   }
 
   @Override
   public List<InputSplit> getSplits(JobContext context,
       int minSplitCountHint) throws IOException, InterruptedException {
-    getConf().updateConfiguration(context.getConfiguration());
-    return originalInputFormat.getSplits(context, minSplitCountHint);
+    return originalInputFormat.getSplits(
+        HadoopUtils.makeJobContext(getConf(), context),
+        minSplitCountHint);
   }
 
   @Override
   public EdgeReader<I, E> createEdgeReader(InputSplit split,
       TaskAttemptContext context) throws IOException {
-    getConf().updateConfiguration(context.getConfiguration());
     EdgeReader<I, E> edgeReader =
-        originalInputFormat.createEdgeReader(split, context);
+        originalInputFormat.createEdgeReader(split,
+            HadoopUtils.makeTaskAttemptContext(getConf(), context));
     return new WrappedEdgeReader<I, E>(edgeReader, getConf());
   }
 
