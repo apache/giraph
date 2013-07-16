@@ -46,7 +46,7 @@ import static org.apache.giraph.conf.GiraphConstants.MAX_MSG_REQUEST_SIZE;
  * @param <M> Message data
  */
 public class SendMessageCache<I extends WritableComparable, M extends Writable>
-    extends SendCache<I, M, ByteArrayVertexIdMessages<I, M>> {
+    extends SendVertexIdDataCache<I, M, ByteArrayVertexIdMessages<I, M>> {
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(SendMessageCache.class);
@@ -80,7 +80,7 @@ public class SendMessageCache<I extends WritableComparable, M extends Writable>
   @Override
   public ByteArrayVertexIdMessages<I, M> createByteArrayVertexIdData() {
     return new ByteArrayVertexIdMessages<I, M>(
-       getConf().getOutgoingMessageValueFactory());
+        getConf().getOutgoingMessageValueFactory());
   }
 
   /**
@@ -92,8 +92,8 @@ public class SendMessageCache<I extends WritableComparable, M extends Writable>
    * @param message Message to send to remote worker
    * @return Size of messages for the worker.
    */
-  private int addMessage(WorkerInfo workerInfo,
-      int partitionId, I destVertexId, M message) {
+  public int addMessage(WorkerInfo workerInfo,
+                        int partitionId, I destVertexId, M message) {
     return addData(workerInfo, partitionId, destVertexId, message);
   }
 

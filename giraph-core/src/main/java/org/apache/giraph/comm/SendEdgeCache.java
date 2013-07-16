@@ -38,7 +38,7 @@ import static org.apache.giraph.conf.GiraphConstants.MAX_EDGE_REQUEST_SIZE;
  * @param <E> Edge value
  */
 public class SendEdgeCache<I extends WritableComparable, E extends Writable>
-    extends SendCache<I, Edge<I, E>, ByteArrayVertexIdEdges<I, E>> {
+    extends SendVertexIdDataCache<I, Edge<I, E>, ByteArrayVertexIdEdges<I, E>> {
   /**
    * Constructor
    *

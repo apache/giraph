@@ -26,30 +26,35 @@ import org.apache.giraph.partition.PartitionOwner;
 import org.apache.giraph.utils.ByteArrayVertexIdData;
 import org.apache.giraph.utils.PairList;
 import org.apache.giraph.worker.WorkerInfo;
+import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
+import javax.annotation.concurrent.NotThreadSafe;
 import java.util.List;
 import java.util.Map;
 
 /**
- * An abstract structure for caching data indexed by vertex id,
+ * An abstract structure for caching data by partitions
  * to be sent to workers in bulk. Not thread-safe.
  *
  * @param <I> Vertex id
- * @param <T> Data
- * @param <B> Specialization of {@link ByteArrayVertexIdData} for T
+ * @param <D> Data type
  */
+@NotThreadSafe
 @SuppressWarnings("unchecked")
-public abstract class SendCache<I extends WritableComparable, T,
-    B extends ByteArrayVertexIdData<I, T>> {
+public abstract class SendDataCache<I extends WritableComparable,
+    D extends Writable> {
+  /**
+   * Internal cache of partitions (index) to their partition caches of
+   * type D.
+   */
+  private final D[] dataCache;
   /** How big to initially make output streams for each worker's partitions */
   private final int[] initialBufferSizes;
   /** Giraph configuration */
   private final ImmutableClassesGiraphConfiguration conf;
   /** Service worker */
   private final CentralizedServiceWorker serviceWorker;
-  /** Internal cache */
-  private final ByteArrayVertexIdData<I, T>[] dataCache;
   /** Size of data (in bytes) for each worker */
   private final int[] dataSizes;
   /** Total number of workers */
@@ -57,6 +62,8 @@ public abstract class SendCache<I extends WritableComparable, T,
   /** List of partition ids belonging to a worker */
   private final Map<WorkerInfo, List<Integer>> workerPartitions =
       Maps.newHashMap();
+  /** Giraph configuration */
+  private final ImmutableClassesGiraphConfiguration conf;
 
   /**
    * Constructor.
@@ -67,10 +74,10 @@ public abstract class SendCache<I extends WritableComparable, T,
    * @param additionalRequestSize Additional request size (expressed as a
    *                              ratio of the average request size)
    */
-  public SendCache(ImmutableClassesGiraphConfiguration conf,
-                   CentralizedServiceWorker<?, ?, ?> serviceWorker,
-                   int maxRequestSize,
-                   float additionalRequestSize) {
+  public SendDataCache(ImmutableClassesGiraphConfiguration conf,
+                       CentralizedServiceWorker<?, ?, ?> serviceWorker,
+                       int maxRequestSize,
+                       float additionalRequestSize) {
     this.conf = conf;
     this.serviceWorker = serviceWorker;
     int maxPartition = 0;
@@ -85,7 +92,7 @@ public abstract class SendCache<I extends WritableComparable, T,
       workerPartitionIds.add(partitionOwner.getPartitionId());
       maxPartition = Math.max(partitionOwner.getPartitionId(), maxPartition);
     }
-    dataCache = new ByteArrayVertexIdData[maxPartition + 1];
+    dataCache = (D[]) new Writable[maxPartition + 1];
 
     int maxWorker = 0;
     for (WorkerInfo workerInfo : serviceWorker.getWorkerInfoList()) {
@@ -104,95 +111,21 @@ public abstract class SendCache<I extends WritableComparable, T,
   }
 
   /**
-   * Create a new {@link ByteArrayVertexIdData} specialized for the use case.
-   *
-   * @return A new instance of {@link ByteArrayVertexIdData}
-   */
-  public abstract B createByteArrayVertexIdData();
-
-  /**
-   * Add data to the cache.
-   *
-   * @param workerInfo the remote worker destination
-   * @param partitionId the remote Partition this message belongs to
-   * @param destVertexId vertex id that is ultimate destination
-   * @param data Data to send to remote worker
-   * @return Size of messages for the worker.
-   */
-  public int addData(WorkerInfo workerInfo,
-                     int partitionId, I destVertexId, T data) {
-    // Get the data collection
-    ByteArrayVertexIdData<I, T> partitionData =
-      getPartitionData(workerInfo, partitionId);
-    int originalSize = partitionData.getSize();
-    partitionData.add(destVertexId, data);
-    // Update the size of cached, outgoing data per worker
-    dataSizes[workerInfo.getTaskId()] +=
-      partitionData.getSize() - originalSize;
-    return dataSizes[workerInfo.getTaskId()];
-  }
-
-  /**
-   * This method is similar to the method above,
-   * but use a serialized id to replace original I type
-   * destVertexId.
-   *
-   * @param workerInfo The remote worker destination
-   * @param partitionId The remote Partition this message belongs to
-   * @param serializedId The byte array to store the serialized target vertex id
-   * @param idPos The length of bytes of serialized id in the byte array above
-   * @param data Data to send to remote worker
-   * @return The number of bytes added to the target worker
-   */
-  public int addData(WorkerInfo workerInfo, int partitionId,
-    byte[] serializedId, int idPos, T data) {
-    // Get the data collection
-    ByteArrayVertexIdData<I, T> partitionData =
-      getPartitionData(workerInfo, partitionId);
-    int originalSize = partitionData.getSize();
-    partitionData.add(serializedId, idPos, data);
-    // Update the size of cached, outgoing data per worker
-    dataSizes[workerInfo.getTaskId()] +=
-      partitionData.getSize() - originalSize;
-    return dataSizes[workerInfo.getTaskId()];
-  }
-
-  /**
-   * This method tries to get a partition data from the data cache.
-   * If null, it will create one.
-   *
-   * @param workerInfo The remote worker destination
-   * @param partitionId The remote Partition this message belongs to
-   * @return The partition data in data cache
-   */
-  private ByteArrayVertexIdData<I, T> getPartitionData(WorkerInfo workerInfo,
-    int partitionId) {
-    ByteArrayVertexIdData<I, T> partitionData = dataCache[partitionId];
-    if (partitionData == null) {
-      partitionData = createByteArrayVertexIdData();
-      partitionData.setConf(conf);
-      partitionData.initialize(initialBufferSizes[workerInfo.getTaskId()]);
-      dataCache[partitionId] = partitionData;
-    }
-    return partitionData;
-  }
-
-  /**
    * Gets the data for a worker and removes it from the cache.
    *
-   * @param workerInfo The address of the worker who owns the data
+   * @param workerInfo the address of the worker who owns the data
    *                   partitions that are receiving the data
    * @return List of pairs (partitionId, ByteArrayVertexIdData),
    *         where all partition ids belong to workerInfo
    */
-  public PairList<Integer, B>
+  public PairList<Integer, D>
   removeWorkerData(WorkerInfo workerInfo) {
-    PairList<Integer, B> workerData = new PairList<Integer, B>();
+    PairList<Integer, D> workerData = new PairList<Integer, D>();
     List<Integer> partitions = workerPartitions.get(workerInfo);
     workerData.initialize(partitions.size());
     for (Integer partitionId : partitions) {
       if (dataCache[partitionId] != null) {
-        workerData.add(partitionId, (B) dataCache[partitionId]);
+        workerData.add(partitionId, (D) dataCache[partitionId]);
         dataCache[partitionId] = null;
       }
     }
@@ -205,12 +138,12 @@ public abstract class SendCache<I extends WritableComparable, T,
    *
    * @return All data for all vertices for all partitions
    */
-  public PairList<WorkerInfo, PairList<Integer, B>> removeAllData() {
-    PairList<WorkerInfo, PairList<Integer, B>> allData =
-        new PairList<WorkerInfo, PairList<Integer, B>>();
+  public PairList<WorkerInfo, PairList<Integer, D>> removeAllData() {
+    PairList<WorkerInfo, PairList<Integer, D>> allData =
+        new PairList<WorkerInfo, PairList<Integer, D>>();
     allData.initialize(dataSizes.length);
     for (WorkerInfo workerInfo : workerPartitions.keySet()) {
-      PairList<Integer, B> workerData = removeWorkerData(workerInfo);
+      PairList<Integer, D> workerData = removeWorkerData(workerInfo);
       if (!workerData.isEmpty()) {
         allData.add(workerInfo, workerData);
       }
@@ -219,7 +152,49 @@ public abstract class SendCache<I extends WritableComparable, T,
     return allData;
   }
 
-  protected ImmutableClassesGiraphConfiguration getConf() {
+  /**
+   * Get the data cache for a partition id
+   *
+   * @param partitionId Partition id
+   * @return Data cache for a partition
+   */
+  public D getData(int partitionId) {
+    return dataCache[partitionId];
+  }
+
+  /**
+   * Set the data cache for a partition id
+   *
+   * @param partitionId Partition id
+   * @param data Data to be set for a partition id
+   */
+  public void setData(int partitionId, D data) {
+    dataCache[partitionId] = data;
+  }
+
+  /**
+   * Get initial buffer size of a partition.
+   *
+   * @param partitionId Partition id
+   * @return Initial buffer size of a partition
+   */
+  public int getInitialBufferSize(int partitionId) {
+    return initialBufferSizes[partitionId];
+  }
+
+  /**
+   * Increment the data size
+   *
+   * @param partitionId Partition id
+   * @param size Size to increment by
+   * @return new data size
+   */
+  public int incrDataSize(int partitionId, int size) {
+    dataSizes[partitionId] += size;
+    return dataSizes[partitionId];
+  }
+
+  public ImmutableClassesGiraphConfiguration getConf() {
     return conf;
   }
 
