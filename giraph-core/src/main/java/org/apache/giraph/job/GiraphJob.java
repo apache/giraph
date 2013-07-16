@@ -46,7 +46,7 @@ public class GiraphJob {
   /** Internal delegated job to proxy interface requests for Job */
   private final DelegatedJob delegatedJob;
   /** Name of the job */
-  private final String jobName;
+  private String jobName;
   /** Helper configuration from the job */
   private final GiraphConfiguration giraphConfiguration;
 
@@ -108,6 +108,14 @@ public class GiraphJob {
     this.jobName = jobName;
     this.giraphConfiguration = giraphConfiguration;
     this.delegatedJob = new DelegatedJob();
+  }
+
+  public String getJobName() {
+    return jobName;
+  }
+
+  public void setJobName(String jobName) {
+    this.jobName = jobName;
   }
 
   /**
