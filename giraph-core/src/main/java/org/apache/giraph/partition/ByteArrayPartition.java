@@ -17,6 +17,9 @@
  */
 package org.apache.giraph.partition;
 
+import com.google.common.collect.MapMaker;
+import com.google.common.primitives.Ints;
+import org.apache.giraph.edge.Edge;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.utils.UnsafeByteArrayInputStream;
 import org.apache.giraph.utils.WritableUtils;
@@ -24,9 +27,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.util.Progressable;
 
-import com.google.common.collect.MapMaker;
-import com.google.common.primitives.Ints;
-
+import javax.annotation.concurrent.NotThreadSafe;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -43,6 +44,7 @@ import java.util.concurrent.ConcurrentMap;
  * @param <V> Vertex value
  * @param <E> Edge value
  */
+@NotThreadSafe
 public class ByteArrayPartition<I extends WritableComparable,
     V extends Writable, E extends Writable>
     extends BasicPartition<I, V, E>
@@ -55,6 +57,8 @@ public class ByteArrayPartition<I extends WritableComparable,
   private ConcurrentMap<I, byte[]> vertexMap;
   /** Representative vertex */
   private Vertex<I, V, E> representativeVertex;
+  /** Representative combiner vertex */
+  private Vertex<I, V, E> representativeCombinerVertex;
   /** Use unsafe serialization */
   private boolean useUnsafeSerialization;
 
@@ -70,6 +74,11 @@ public class ByteArrayPartition<I extends WritableComparable,
         getConf().getNettyServerExecutionConcurrency()).makeMap();
     representativeVertex = getConf().createVertex();
     representativeVertex.initialize(
+        getConf().createVertexId(),
+        getConf().createVertexValue(),
+        getConf().createOutEdges());
+    representativeCombinerVertex = getConf().createVertex();
+    representativeCombinerVertex.initialize(
         getConf().createVertexId(),
         getConf().createVertexValue(),
         getConf().createOutEdges());
@@ -125,8 +134,57 @@ public class ByteArrayPartition<I extends WritableComparable,
         (ByteArrayPartition<I, V, E>) partition;
     for (Map.Entry<I, byte[]> entry :
         byteArrayPartition.vertexMap.entrySet()) {
-      vertexMap.put(entry.getKey(), entry.getValue());
+
+      byte[] oldVertexBytes =
+          vertexMap.putIfAbsent(entry.getKey(), entry.getValue());
+      if (oldVertexBytes == null) {
+        continue;
+      }
+
+      // Note that vertex combining is going to be expensive compared to
+      // SimplePartition since here we have to deserialize the vertices,
+      // combine them, and then reserialize them.  If the vertex doesn't exist,
+      // just add the new vertex as a byte[]
+      synchronized (this) {
+        // Combine the vertex values
+        WritableUtils.reinitializeVertexFromByteArray(oldVertexBytes,
+            representativeVertex, useUnsafeSerialization, getConf());
+        WritableUtils.reinitializeVertexFromByteArray(entry.getValue(),
+            representativeCombinerVertex, useUnsafeSerialization, getConf());
+        getVertexValueCombiner().combine(representativeVertex.getValue(),
+            representativeCombinerVertex.getValue());
+
+        // Add the edges to the representative vertex
+        for (Edge<I, E> edge : representativeCombinerVertex.getEdges()) {
+          representativeVertex.addEdge(edge);
+        }
+
+        byte[] vertexData = WritableUtils.writeVertexToByteArray(
+            representativeCombinerVertex, useUnsafeSerialization, getConf());
+        vertexMap.put(entry.getKey(), vertexData);
+      }
     }
+  }
+
+  @Override
+  public synchronized boolean putOrCombine(Vertex<I, V, E> vertex) {
+    // Optimistically try to first put and then combine if this fails
+    byte[] vertexData =
+        WritableUtils.writeVertexToByteArray(
+            vertex, useUnsafeSerialization, getConf());
+    byte[] oldVertexBytes = vertexMap.putIfAbsent(vertex.getId(), vertexData);
+    if (oldVertexBytes == null) {
+      return true;
+    }
+
+    WritableUtils.reinitializeVertexFromByteArray(oldVertexBytes,
+        representativeVertex, useUnsafeSerialization, getConf());
+    getVertexValueCombiner().combine(representativeVertex.getValue(),
+        vertex.getValue());
+    vertexMap.put(vertex.getId(),
+        WritableUtils.writeVertexToByteArray(
+            representativeVertex, useUnsafeSerialization, getConf()));
+    return false;
   }
 
   @Override

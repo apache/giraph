@@ -17,7 +17,7 @@
  */
 package org.apache.giraph.jython;
 
-import org.apache.giraph.combiner.Combiner;
+import org.apache.giraph.combiner.MessageCombiner;
 
 import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
@@ -281,8 +281,8 @@ public class JythonJob {
   private final TypeHolder message_value = new TypeHolder();
   /** Computation class */
   private String computation_name;
-  /** Combiner class */
-  private Class<? extends Combiner> combiner;
+  /** MessageCombiner class */
+  private Class<? extends MessageCombiner> messageCombiner;
   /** Java options */
   private final List<String> java_options = Lists.newArrayList();
   /** Giraph options */
@@ -342,12 +342,13 @@ public class JythonJob {
     return giraph_options;
   }
 
-  public Class<? extends Combiner> getCombiner() {
-    return combiner;
+  public Class<? extends MessageCombiner> getMessageCombiner() {
+    return messageCombiner;
   }
 
-  public void setCombiner(Class<? extends Combiner> combiner) {
-    this.combiner = combiner;
+  public void setMessageCombiner(
+      Class<? extends MessageCombiner> messageCombiner) {
+    this.messageCombiner = messageCombiner;
   }
 
   public String getComputation_name() {

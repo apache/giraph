@@ -19,7 +19,7 @@
 package org.apache.giraph;
 
 import org.apache.giraph.aggregators.TextAggregatorWriter;
-import org.apache.giraph.combiner.SimpleSumCombiner;
+import org.apache.giraph.combiner.SimpleSumMessageCombiner;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
@@ -290,7 +290,8 @@ public class
   }
 
   /**
-   * Run a sample BSP job locally with combiner and checkout output value.
+   * Run a sample BSP job locally with message combiner and
+   * checkout output value.
    *
    * @throws IOException
    * @throws ClassNotFoundException
@@ -302,7 +303,7 @@ public class
     GiraphConfiguration conf = new GiraphConfiguration();
     conf.setComputationClass(SimpleCombinerComputation.class);
     conf.setVertexInputFormatClass(SimpleSuperstepVertexInputFormat.class);
-    conf.setCombinerClass(SimpleSumCombiner.class);
+    conf.setMessageCombinerClass(SimpleSumMessageCombiner.class);
     GiraphJob job = prepareJob(getCallingMethodName(), conf);
     assertTrue(job.run(true));
   }

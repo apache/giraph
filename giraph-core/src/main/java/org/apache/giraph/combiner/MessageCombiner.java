@@ -23,22 +23,26 @@ import org.apache.hadoop.io.WritableComparable;
 
 /**
  * Abstract class to extend for combining messages sent to the same vertex.
- * Combiner for applications where each two messages for one vertex can be
- * combined into one.
+ * MessageCombiner for applications where each two messages for one
+ * vertex can be combined into one.
  *
  * @param <I> Vertex id
  * @param <M> Message data
  */
-public abstract class Combiner<I extends WritableComparable,
+public abstract class MessageCombiner<I extends WritableComparable,
     M extends Writable> {
   /**
-   * Combine messageToCombine with originalMessage,
-   * by modifying originalMessage.
+   * Combine messageToCombine with originalMessage, by modifying
+   * originalMessage.  Note that the messageToCombine object
+   * may be reused by the infrastructure, therefore, you cannot directly
+   * use it or any objects from it in original message
    *
    * @param vertexIndex Index of the vertex getting these messages
    * @param originalMessage The first message which we want to combine;
    *                        put the result of combining in this message
    * @param messageToCombine The second message which we want to combine
+   *                         (object may be reused - do not reference it or its
+   *                         member objects)
    */
   public abstract void combine(I vertexIndex, M originalMessage,
       M messageToCombine);

@@ -17,6 +17,8 @@
  */
 package org.apache.giraph.hive.input;
 
+import com.facebook.hiveio.common.HiveMetastores;
+import com.facebook.hiveio.testing.LocalHiveServer;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.hive.GiraphHiveTestBase;
 import org.apache.giraph.hive.Helpers;
@@ -24,15 +26,12 @@ import org.apache.giraph.hive.computations.ComputationCountEdges;
 import org.apache.giraph.hive.computations.ComputationSumEdges;
 import org.apache.giraph.hive.input.vertex.HiveVertexInputFormat;
 import org.apache.giraph.hive.input.vertex.examples.HiveIntDoubleDoubleVertex;
-import org.apache.giraph.hive.input.vertex.examples.HiveIntNullNullVertex;
+import org.apache.giraph.hive.input.vertex.examples.HiveIntIntNullVertex;
 import org.apache.giraph.io.formats.IdWithValueTextOutputFormat;
 import org.apache.giraph.utils.InternalVertexRunner;
 import org.apache.thrift.TException;
 import org.junit.Before;
 import org.junit.Test;
-
-import com.facebook.hiveio.common.HiveMetastores;
-import com.facebook.hiveio.testing.LocalHiveServer;
 
 import java.io.IOException;
 import java.util.Map;
@@ -66,7 +65,7 @@ public class HiveVertexInputTest extends GiraphHiveTestBase {
 
     GiraphConfiguration conf = new GiraphConfiguration();
     HIVE_VERTEX_INPUT.setTable(conf, tableName);
-    HIVE_VERTEX_INPUT.setClass(conf, HiveIntNullNullVertex.class);
+    HIVE_VERTEX_INPUT.setClass(conf, HiveIntIntNullVertex.class);
     conf.setComputationClass(ComputationCountEdges.class);
     conf.setVertexInputFormatClass(HiveVertexInputFormat.class);
     conf.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
@@ -99,7 +98,7 @@ public class HiveVertexInputTest extends GiraphHiveTestBase {
     GiraphConfiguration conf = new GiraphConfiguration();
     HIVE_VERTEX_INPUT.setTable(conf, tableName);
     HIVE_VERTEX_INPUT.setPartition(conf, partition);
-    HIVE_VERTEX_INPUT.setClass(conf, HiveIntNullNullVertex.class);
+    HIVE_VERTEX_INPUT.setClass(conf, HiveIntIntNullVertex.class);
     conf.setComputationClass(ComputationCountEdges.class);
     conf.setVertexInputFormatClass(HiveVertexInputFormat.class);
     conf.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);

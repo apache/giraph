@@ -18,14 +18,15 @@
 
 package org.apache.giraph.partition;
 
+import com.google.common.collect.Maps;
+import org.apache.giraph.edge.Edge;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.util.Progressable;
 
-import com.google.common.collect.Maps;
-
+import javax.annotation.concurrent.ThreadSafe;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -43,6 +44,7 @@ import static org.apache.giraph.conf.GiraphConstants.USE_OUT_OF_CORE_MESSAGES;
  * @param <V> Vertex data
  * @param <E> Edge data
  */
+@ThreadSafe
 @SuppressWarnings("rawtypes")
 public class SimplePartition<I extends WritableComparable,
     V extends Writable, E extends Writable>
@@ -81,9 +83,34 @@ public class SimplePartition<I extends WritableComparable,
   }
 
   @Override
+  public boolean putOrCombine(Vertex<I, V, E> vertex) {
+    Vertex<I, V, E> originalVertex = vertexMap.get(vertex.getId());
+    if (originalVertex == null) {
+      originalVertex =
+          vertexMap.putIfAbsent(vertex.getId(), vertex);
+      if (originalVertex == null) {
+        return true;
+      }
+    }
+
+    synchronized (originalVertex) {
+      // Combine the vertex values
+      getVertexValueCombiner().combine(
+          originalVertex.getValue(), vertex.getValue());
+
+      // Add the edges to the representative vertex
+      for (Edge<I, E> edge : vertex.getEdges()) {
+        originalVertex.addEdge(edge);
+      }
+    }
+
+    return false;
+  }
+
+  @Override
   public void addPartition(Partition<I, V, E> partition) {
     for (Vertex<I, V, E> vertex : partition) {
-      vertexMap.put(vertex.getId(), vertex);
+      putOrCombine(vertex);
     }
   }
 

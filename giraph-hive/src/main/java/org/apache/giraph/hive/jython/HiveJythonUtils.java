@@ -80,7 +80,7 @@ import static org.apache.giraph.conf.GiraphConstants.EDGE_INPUT_FORMAT_CLASS;
 import static org.apache.giraph.conf.GiraphConstants.GRAPH_TYPE_LANGUAGES;
 import static org.apache.giraph.conf.GiraphConstants.MAX_WORKERS;
 import static org.apache.giraph.conf.GiraphConstants.MIN_WORKERS;
-import static org.apache.giraph.conf.GiraphConstants.VERTEX_COMBINER_CLASS;
+import static org.apache.giraph.conf.GiraphConstants.MESSAGE_COMBINER_CLASS;
 import static org.apache.giraph.conf.GiraphConstants.VERTEX_INPUT_FORMAT_CLASS;
 import static org.apache.giraph.conf.GiraphConstants.VERTEX_OUTPUT_FORMAT_CLASS;
 import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_EDGE_INPUT;
@@ -266,8 +266,8 @@ public class HiveJythonUtils {
 
     JythonUtils.init(conf, jythonJob.getComputation_name());
 
-    if (jythonJob.getCombiner() != null) {
-      VERTEX_COMBINER_CLASS.set(conf, jythonJob.getCombiner());
+    if (jythonJob.getMessageCombiner() != null) {
+      MESSAGE_COMBINER_CLASS.set(conf, jythonJob.getMessageCombiner());
     }
 
     conf.setInt(MIN_WORKERS, jythonJob.getWorkers());

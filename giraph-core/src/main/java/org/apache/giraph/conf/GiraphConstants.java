@@ -19,7 +19,7 @@ package org.apache.giraph.conf;
 
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.aggregators.TextAggregatorWriter;
-import org.apache.giraph.combiner.Combiner;
+import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.edge.ByteArrayEdges;
 import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.factories.ComputationFactory;
@@ -34,8 +34,10 @@ import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.giraph.factories.VertexIdFactory;
 import org.apache.giraph.factories.VertexValueFactory;
 import org.apache.giraph.graph.Computation;
+import org.apache.giraph.graph.DefaultVertexValueCombiner;
 import org.apache.giraph.graph.DefaultVertexResolver;
 import org.apache.giraph.graph.Language;
+import org.apache.giraph.graph.VertexValueCombiner;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.EdgeOutputFormat;
@@ -150,15 +152,20 @@ public interface GiraphConstants {
   ClassConfOption<WorkerObserver> WORKER_OBSERVER_CLASSES =
       ClassConfOption.create("giraph.worker.observers", null,
           WorkerObserver.class, "Classes for Worker Observer - optional");
-  /** Vertex combiner class - optional */
-  ClassConfOption<Combiner> VERTEX_COMBINER_CLASS =
-      ClassConfOption.create("giraph.combinerClass", null, Combiner.class,
-          "Vertex combiner class - optional");
+  /** Message combiner class - optional */
+  ClassConfOption<MessageCombiner> MESSAGE_COMBINER_CLASS =
+      ClassConfOption.create("giraph.messageCombinerClass", null,
+          MessageCombiner.class, "Message combiner class - optional");
   /** Vertex resolver class - optional */
   ClassConfOption<VertexResolver> VERTEX_RESOLVER_CLASS =
       ClassConfOption.create("giraph.vertexResolverClass",
           DefaultVertexResolver.class, VertexResolver.class,
           "Vertex resolver class - optional");
+  /** Vertex value combiner class - optional */
+  ClassConfOption<VertexValueCombiner> VERTEX_VALUE_COMBINER_CLASS =
+      ClassConfOption.create("giraph.vertexValueCombinerClass",
+          DefaultVertexValueCombiner.class, VertexValueCombiner.class,
+          "Vertex value combiner class - optional");
 
   /** Which language computation is implemented in */
   EnumConfOption<Language> COMPUTATION_LANGUAGE =
@@ -588,6 +595,20 @@ public interface GiraphConstants {
           "request size is M, and a worker has P partitions, than its " +
           "initial partition buffer size will be (M / P) * (1 + A).");
 
+  /** Maximum size of vertices (in bytes) per peer before flush */
+  IntConfOption MAX_VERTEX_REQUEST_SIZE =
+      new IntConfOption("giraph.vertexRequestSize", 512 * ONE_KB,
+          "Maximum size of vertices (in bytes) per peer before flush");
+
+  /**
+   * Additional size (expressed as a ratio) of each per-partition buffer on
+   * top of the average size for vertices.
+   */
+  FloatConfOption ADDITIONAL_VERTEX_REQUEST_SIZE =
+      new FloatConfOption("giraph.additionalVertexRequestSize", 0.2f,
+          "Additional size (expressed as a ratio) of each per-partition " +
+              "buffer on top of the average size.");
+
   /** Maximum size of edges (in bytes) per peer before flush */
   IntConfOption MAX_EDGE_REQUEST_SIZE =
       new IntConfOption("giraph.edgeRequestSize", 512 * ONE_KB,
@@ -595,7 +616,7 @@ public interface GiraphConstants {
 
   /**
    * Additional size (expressed as a ratio) of each per-partition buffer on
-   * top of the average size.
+   * top of the average size for edges.
    */
   FloatConfOption ADDITIONAL_EDGE_REQUEST_SIZE =
       new FloatConfOption("giraph.additionalEdgeRequestSize", 0.2f,
@@ -665,9 +686,9 @@ public interface GiraphConstants {
   LongConfOption INPUT_SPLIT_MAX_VERTICES =
       new LongConfOption("giraph.InputSplitMaxVertices", -1,
           "To limit outlier vertex input splits from producing too many " +
-          "vertices or to help with testing, the number of vertices loaded " +
-          "from an input split can be limited. By default, everything is " +
-          "loaded.");
+              "vertices or to help with testing, the number of vertices " +
+              "loaded from an input split can be limited. By default, " +
+              "everything is loaded.");
 
   /**
    * To limit outlier vertex input splits from producing too many vertices or
@@ -677,9 +698,9 @@ public interface GiraphConstants {
   LongConfOption INPUT_SPLIT_MAX_EDGES =
       new LongConfOption("giraph.InputSplitMaxEdges", -1,
           "To limit outlier vertex input splits from producing too many " +
-          "vertices or to help with testing, the number of edges loaded " +
-          "from an input split can be limited. By default, everything is " +
-          "loaded.");
+              "vertices or to help with testing, the number of edges loaded " +
+              "from an input split can be limited. By default, everything is " +
+              "loaded.");
 
   /**
    * To minimize network usage when reading input splits,

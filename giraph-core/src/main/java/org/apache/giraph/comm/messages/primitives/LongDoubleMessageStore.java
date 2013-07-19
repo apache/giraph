@@ -19,7 +19,7 @@
 package org.apache.giraph.comm.messages.primitives;
 
 import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.combiner.Combiner;
+import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.comm.messages.MessageStore;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
@@ -43,7 +43,7 @@ import java.util.List;
 
 /**
  * Special message store to be used when ids are LongWritable and messages
- * are DoubleWritable and combiner is used.
+ * are DoubleWritable and messageCombiner is used.
  * Uses fastutil primitive maps in order to decrease number of objects and
  * get better performance.
  */
@@ -51,8 +51,8 @@ public class LongDoubleMessageStore
     implements MessageStore<LongWritable, DoubleWritable> {
   /** Map from partition id to map from vertex id to message */
   private final Int2ObjectOpenHashMap<Long2DoubleOpenHashMap> map;
-  /** Message combiner */
-  private final Combiner<LongWritable, DoubleWritable> combiner;
+  /** Message messageCombiner */
+  private final MessageCombiner<LongWritable, DoubleWritable> messageCombiner;
   /** Service worker */
   private final CentralizedServiceWorker<LongWritable, ?, ?> service;
 
@@ -60,18 +60,19 @@ public class LongDoubleMessageStore
    * Constructor
    *
    * @param service Service worker
-   * @param combiner Message combiner
+   * @param messageCombiner Message messageCombiner
    */
   public LongDoubleMessageStore(
       CentralizedServiceWorker<LongWritable, ?, ?> service,
-      Combiner<LongWritable, DoubleWritable> combiner) {
+      MessageCombiner<LongWritable, DoubleWritable> messageCombiner) {
     this.service = service;
-    this.combiner = combiner;
+    this.messageCombiner =
+        messageCombiner;
 
     map = new Int2ObjectOpenHashMap<Long2DoubleOpenHashMap>();
     for (int partitionId : service.getPartitionStore().getPartitionIds()) {
       Partition<LongWritable, ?, ?> partition =
-          service.getPartitionStore().getPartition(partitionId);
+          service.getPartitionStore().getOrCreatePartition(partitionId);
       Long2DoubleOpenHashMap partitionMap =
           new Long2DoubleOpenHashMap((int) partition.getVertexCount());
       map.put(partitionId, partitionMap);
@@ -109,7 +110,7 @@ public class LongDoubleMessageStore
           reusableVertexId.set(vertexId);
           reusableMessage.set(message);
           reusableCurrentMessage.set(partitionMap.get(vertexId));
-          combiner.combine(reusableVertexId, reusableCurrentMessage,
+          messageCombiner.combine(reusableVertexId, reusableCurrentMessage,
               reusableMessage);
           message = reusableCurrentMessage.get();
         }

@@ -199,15 +199,15 @@ public class TestPartitionStores {
     partitionStore.addPartition(createPartition(conf, 4, v7));
 
     Partition<IntWritable, IntWritable, NullWritable> partition1 =
-        partitionStore.getPartition(1);
+        partitionStore.getOrCreatePartition(1);
     partitionStore.putPartition(partition1);
     Partition<IntWritable, IntWritable, NullWritable> partition2 =
-        partitionStore.getPartition(2);
+        partitionStore.getOrCreatePartition(2);
     partitionStore.putPartition(partition2);
     Partition<IntWritable, IntWritable, NullWritable> partition3 =
         partitionStore.removePartition(3);
     Partition<IntWritable, IntWritable, NullWritable> partition4 =
-        partitionStore.getPartition(4);
+        partitionStore.getOrCreatePartition(4);
     partitionStore.putPartition(partition4);
 
     assertEquals(3, partitionStore.getNumPartitions());
@@ -215,7 +215,7 @@ public class TestPartitionStores {
     int partitionsNumber = 0;
     for (Integer partitionId : partitionStore.getPartitionIds()) {
       Partition<IntWritable, IntWritable, NullWritable> p =
-          partitionStore.getPartition(partitionId);
+          partitionStore.getOrCreatePartition(partitionId);
       partitionStore.putPartition(p);
       partitionsNumber++;
     }
@@ -225,13 +225,13 @@ public class TestPartitionStores {
     assertTrue(partitionStore.hasPartition(2));
     assertFalse(partitionStore.hasPartition(3));
     assertTrue(partitionStore.hasPartition(4));
-    partition = partitionStore.getPartition(1);
+    partition = partitionStore.getOrCreatePartition(1);
     assertEquals(3, partition.getVertexCount());
     partitionStore.putPartition(partition);
-    partition = partitionStore.getPartition(2);
+    partition = partitionStore.getOrCreatePartition(2);
     assertEquals(2, partition.getVertexCount());
     partitionStore.putPartition(partition);
-    partition = partitionStore.getPartition(4);
+    partition = partitionStore.getOrCreatePartition(4);
     assertEquals(1, partition.getVertexCount());
     assertEquals(2, partition.getEdgeCount());
     partitionStore.putPartition(partition);

@@ -82,7 +82,7 @@ public class LongByteArrayMessageStore<M extends Writable>
         new Int2ObjectOpenHashMap<Long2ObjectOpenHashMap<DataInputOutput>>();
     for (int partitionId : service.getPartitionStore().getPartitionIds()) {
       Partition<LongWritable, ?, ?> partition =
-          service.getPartitionStore().getPartition(partitionId);
+          service.getPartitionStore().getOrCreatePartition(partitionId);
       Long2ObjectOpenHashMap<DataInputOutput> partitionMap =
           new Long2ObjectOpenHashMap<DataInputOutput>(
               (int) partition.getVertexCount());

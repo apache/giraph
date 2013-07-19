@@ -81,7 +81,7 @@ public class IntByteArrayMessageStore<M extends Writable>
         new Int2ObjectOpenHashMap<Int2ObjectOpenHashMap<DataInputOutput>>();
     for (int partitionId : service.getPartitionStore().getPartitionIds()) {
       Partition<IntWritable, ?, ?> partition =
-          service.getPartitionStore().getPartition(partitionId);
+          service.getPartitionStore().getOrCreatePartition(partitionId);
       Int2ObjectOpenHashMap<DataInputOutput> partitionMap =
           new Int2ObjectOpenHashMap<DataInputOutput>(
               (int) partition.getVertexCount());

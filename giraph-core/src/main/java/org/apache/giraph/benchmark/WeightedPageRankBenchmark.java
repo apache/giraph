@@ -18,9 +18,9 @@
 package org.apache.giraph.benchmark;
 
 import org.apache.commons.cli.CommandLine;
+import org.apache.giraph.combiner.DoubleSumMessageCombiner;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
-import org.apache.giraph.combiner.DoubleSumCombiner;
 import org.apache.giraph.edge.ArrayListEdges;
 import org.apache.giraph.edge.ByteArrayEdges;
 import org.apache.giraph.edge.HashMapEdges;
@@ -63,9 +63,10 @@ public class WeightedPageRankBenchmark extends GiraphBenchmark {
       "Partitioning algorithm (0 for hash partitioning (default), " +
           "1 for range partitioning)");
   /** Option for type of combiner */
-  private static final BenchmarkOption COMBINER_TYPE = new BenchmarkOption(
-      "t", "combinerType", true,
-      "Combiner type (0 for no combiner, 1 for DoubleSumCombiner (default)");
+  private static final BenchmarkOption MESSAGE_COMBINER_TYPE =
+      new BenchmarkOption("t", "combinerType", true,
+          "MessageCombiner type (0 for no combiner," +
+              " 1 for DoubleSumMessageCombiner (default)");
   /** Option for output format */
   private static final BenchmarkOption OUTPUT_FORMAT = new BenchmarkOption(
       "o", "vertexOutputFormat", true,
@@ -76,7 +77,8 @@ public class WeightedPageRankBenchmark extends GiraphBenchmark {
     return Sets.newHashSet(
         BenchmarkOption.SUPERSTEPS, BenchmarkOption.VERTICES,
         BenchmarkOption.EDGES_PER_VERTEX, BenchmarkOption.LOCAL_EDGES_MIN_RATIO,
-        EDGES_CLASS, EDGE_INPUT, PARTITIONER, COMBINER_TYPE, OUTPUT_FORMAT);
+        EDGES_CLASS, EDGE_INPUT, PARTITIONER,
+        MESSAGE_COMBINER_TYPE, OUTPUT_FORMAT);
   }
 
   /**
@@ -115,8 +117,8 @@ public class WeightedPageRankBenchmark extends GiraphBenchmark {
 
     LOG.info("Using edges class " +
         GiraphConstants.VERTEX_EDGES_CLASS.get(configuration));
-    if (COMBINER_TYPE.getOptionIntValue(cmd, 1) == 1) {
-      configuration.setCombinerClass(DoubleSumCombiner.class);
+    if (MESSAGE_COMBINER_TYPE.getOptionIntValue(cmd, 1) == 1) {
+      configuration.setMessageCombinerClass(DoubleSumMessageCombiner.class);
     }
 
     if (EDGE_INPUT.optionTurnedOn(cmd)) {

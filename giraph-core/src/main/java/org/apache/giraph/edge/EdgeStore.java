@@ -181,7 +181,7 @@ public class EdgeStore<I extends WritableComparable,
             Integer partitionId;
             while ((partitionId = partitionIdQueue.poll()) != null) {
               Partition<I, V, E> partition =
-                  service.getPartitionStore().getPartition(partitionId);
+                  service.getPartitionStore().getOrCreatePartition(partitionId);
               ConcurrentMap<I, OutEdges<I, E>> partitionEdges =
                   transientEdges.remove(partitionId);
               for (I vertexId : partitionEdges.keySet()) {
@@ -196,7 +196,15 @@ public class EdgeStore<I extends WritableComparable,
                       outEdges);
                   partition.putVertex(vertex);
                 } else {
-                  vertex.setEdges(outEdges);
+                  // A vertex may exist with or without edges initially
+                  // and optimize the case of no initial edges
+                  if (vertex.getNumEdges() == 0) {
+                    vertex.setEdges(outEdges);
+                  } else {
+                    for (Edge<I, E> edge : outEdges) {
+                      vertex.addEdge(edge);
+                    }
+                  }
                   // Some Partition implementations (e.g. ByteArrayPartition)
                   // require us to put back the vertex after modifying it.
                   partition.saveVertex(vertex);

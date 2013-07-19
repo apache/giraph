@@ -18,13 +18,14 @@
 
 package org.apache.giraph.job;
 
-import org.apache.giraph.combiner.Combiner;
+import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.factories.DefaultVertexValueFactory;
 import org.apache.giraph.factories.VertexValueFactory;
 import org.apache.giraph.graph.DefaultVertexResolver;
+import org.apache.giraph.graph.VertexValueCombiner;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
@@ -73,6 +74,8 @@ public class GiraphConfigurationValidator<I extends WritableComparable,
   private static final int EDGE_PARAM_OUT_EDGES_INDEX = 1;
   /** V param vertex value factory index in classList */
   private static final int VALUE_PARAM_VERTEX_VALUE_FACTORY_INDEX = 0;
+  /** V param vertex value combiner index in classList */
+  private static final int VALUE_PARAM_VERTEX_VALUE_COMBINER_INDEX = 0;
 
   /**
    * The Configuration object for use in the validation test.
@@ -138,7 +141,8 @@ public class GiraphConfigurationValidator<I extends WritableComparable,
     verifyEdgeInputFormatGenericTypes();
     verifyVertexOutputFormatGenericTypes();
     verifyVertexResolverGenericTypes();
-    verifyVertexCombinerGenericTypes();
+    verifyVertexValueCombinerGenericTypes();
+    verifyMessageCombinerGenericTypes();
     verifyVertexValueFactoryGenericTypes();
   }
 
@@ -240,17 +244,35 @@ public class GiraphConfigurationValidator<I extends WritableComparable,
     }
   }
 
-  /** If there is a combiner type, verify its generic params match the job. */
-  private void verifyVertexCombinerGenericTypes() {
-    Class<? extends Combiner<I, M2>> vertexCombinerClass =
-      conf.getCombinerClass();
-    if (vertexCombinerClass != null) {
+  /**
+   * If there is a vertex value combiner type, verify its
+   * generic params match the job.
+   */
+  private void verifyVertexValueCombinerGenericTypes() {
+    Class<? extends VertexValueCombiner<V>> vertexValueCombiner =
+        conf.getVertexValueCombinerClass();
+    if (vertexValueCombiner != null) {
       Class<?>[] classList =
-          getTypeArguments(Combiner.class, vertexCombinerClass);
-      checkEquals(classList, ID_PARAM_INDEX, vertexIndexType(), Combiner.class,
-          "vertex index");
+          getTypeArguments(VertexValueCombiner.class, vertexValueCombiner);
+      checkAssignable(classList, VALUE_PARAM_VERTEX_VALUE_COMBINER_INDEX,
+          vertexValueType(), VertexValueCombiner.class, "vertex value");
+    }
+  }
+
+  /**
+   * If there is a message combiner type, verify its
+   * generic params match the job.
+   */
+  private void verifyMessageCombinerGenericTypes() {
+    Class<? extends MessageCombiner<I, M2>> messageCombinerClass =
+      conf.getMessageCombinerClass();
+    if (messageCombinerClass != null) {
+      Class<?>[] classList =
+          getTypeArguments(MessageCombiner.class, messageCombinerClass);
+      checkEquals(classList, ID_PARAM_INDEX, vertexIndexType(),
+          MessageCombiner.class, "vertex index");
       checkEquals(classList, MSG_COMBINER_PARAM_INDEX,
-          outgoingMessageValueType(), Combiner.class, "message value");
+          outgoingMessageValueType(), MessageCombiner.class, "message value");
     }
   }
 

@@ -18,14 +18,17 @@
 
 package org.apache.giraph.io;
 
+import com.google.common.collect.Maps;
 import org.apache.giraph.BspCase;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.ByteArrayEdges;
 import org.apache.giraph.edge.Edge;
-import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.factories.VertexValueFactory;
+import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.graph.VertexValueCombiner;
 import org.apache.giraph.io.formats.IdWithValueTextOutputFormat;
+import org.apache.giraph.io.formats.IntIntNullTextVertexInputFormat;
 import org.apache.giraph.io.formats.IntIntTextVertexValueInputFormat;
 import org.apache.giraph.io.formats.IntNullReverseTextEdgeInputFormat;
 import org.apache.giraph.io.formats.IntNullTextEdgeInputFormat;
@@ -36,22 +39,18 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.junit.Test;
 
-import com.google.common.collect.Maps;
-
 import java.io.IOException;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 /**
- * A test case to ensure that loading a graph from a list of edges works as
+ * A test case to ensure that loading a graph from vertices and edges works as
  * expected.
  */
-public class TestEdgeInput extends BspCase {
-  public TestEdgeInput() {
-    super(TestEdgeInput.class.getName());
+public class TestVertexEdgeInput extends BspCase {
+  public TestVertexEdgeInput() {
+    super(TestVertexEdgeInput.class.getName());
   }
 
   // It should be able to build a graph starting from the edges only.
@@ -112,10 +111,66 @@ public class TestEdgeInput extends BspCase {
     assertEquals(2, (int) values.get(4));
   }
 
-  // It should be able to build a graph by specifying vertex data and edges
-  // as separate input formats.
+  /**
+   * Simple vertex value combiner that sums up the vertex values.
+   */
+  public static class IntSumVertexValueCombiner implements VertexValueCombiner<IntWritable> {
+    @Override
+    public void combine(IntWritable originalVertexValue, IntWritable vertexValue) {
+      originalVertexValue.set(originalVertexValue.get() + vertexValue.get());
+    }
+  }
+
+  // It should be able to build a graph by specifying vertex value data
+  // and combining the duplicates (summation).  Edges should be added as well.
   @Test
-  public void testMixedFormat() throws Exception {
+  public void testVertexValueCombiner() throws Exception {
+    String[] vertices = new String[] {
+        "1 75 2",
+        "2 34 3",
+        "3 13",
+        "4 32",
+        "1 11",
+        "2 23 1",
+        "2 3"
+    };
+
+    GiraphConfiguration conf = new GiraphConfiguration();
+    conf.setComputationClass(IntIntNullNoOpComputation.class);
+    conf.setOutEdgesClass(ByteArrayEdges.class);
+    conf.setVertexInputFormatClass(IntIntNullTextVertexInputFormat.class);
+    conf.setVertexValueCombinerClass(IntSumVertexValueCombiner.class);
+    conf.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
+
+    // Run a job with a vertex that does nothing
+    Iterable<String> results = InternalVertexRunner.run(conf, vertices);
+
+    Map<Integer, Integer> values = parseResults(results);
+
+    // Check that all vertices were created
+    assertEquals(4, values.size());
+    // Check that the vertices have been created with correct values
+    assertEquals(86, (int) values.get(1));
+    assertEquals(60, (int) values.get(2));
+    assertEquals(13, (int) values.get(3));
+    assertEquals(32, (int) values.get(4));
+
+    // Run a job with a vertex that counts outgoing edges
+    conf.setComputationClass(ComputationCountEdges.class);
+    results = InternalVertexRunner.run(conf, vertices);
+
+    // Check that the edges were added as well
+    values = parseResults(results);
+    assertEquals(1, (int) values.get(1));
+    assertEquals(2, (int) values.get(2));
+    assertEquals(0, (int) values.get(3));
+    assertEquals(0, (int) values.get(4));
+  }
+
+  // It should be able to build a graph by specifying vertex value data
+  // and edges as separate input formats.
+  @Test
+  public void testMixedVertexValueEdgeFormat() throws Exception {
     String[] vertices = new String[] {
         "1 75",
         "2 34",
@@ -176,6 +231,75 @@ public class TestEdgeInput extends BspCase {
     // Check the number of edges for each vertex
     assertEquals(1, (int) values.get(1));
     assertEquals(2, (int) values.get(2));
+    assertEquals(0, (int) values.get(3));
+    assertEquals(1, (int) values.get(4));
+    assertEquals(1, (int) values.get(5));
+  }
+
+  // It should be able to build a graph by specifying vertices and edges
+  // as separate input formats.
+  @Test
+  public void testMixedVertexEdgeFormat() throws Exception {
+    String[] vertices = new String[] {
+        "1 75 2 3",
+        "2 34 1 5",
+        "3 13",
+        "4 32"
+    };
+    String[] edges = new String[] {
+        "1 2",
+        "2 3",
+        "2 4",
+        "4 1",
+        "5 3"
+    };
+
+    GiraphConfiguration conf = new GiraphConfiguration();
+    conf.setComputationClass(IntIntNullNoOpComputation.class);
+    conf.setOutEdgesClass(ByteArrayEdges.class);
+    conf.setVertexInputFormatClass(IntIntNullTextVertexInputFormat.class);
+    conf.setEdgeInputFormatClass(IntNullTextEdgeInputFormat.class);
+    conf.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
+
+    // Run a job with a vertex that does nothing
+    Iterable<String> results = InternalVertexRunner.run(conf, vertices, edges);
+
+    Map<Integer, Integer> values = parseResults(results);
+
+    // Check that all vertices with either initial values or outgoing edges
+    // have been created
+    assertEquals(5, values.size());
+    // Check that the vertices have been created with correct values
+    assertEquals(75, (int) values.get(1));
+    assertEquals(34, (int) values.get(2));
+    assertEquals(13, (int) values.get(3));
+    assertEquals(32, (int) values.get(4));
+    // A vertex with edges but no initial value should have the default value
+    assertEquals(0, (int) values.get(5));
+
+    // Run a job with a custom VertexValueFactory
+    conf.setVertexValueFactoryClass(TestVertexValueFactory.class);
+    results = InternalVertexRunner.run(conf, vertices, edges);
+    values = parseResults(results);
+    // A vertex with edges but no initial value should have been constructed
+    // by the custom factory
+    assertEquals(3, (int) values.get(5));
+
+    conf = new GiraphConfiguration();
+    conf.setComputationClass(ComputationCountEdges.class);
+    conf.setOutEdgesClass(ByteArrayEdges.class);
+    conf.setVertexInputFormatClass(IntIntNullTextVertexInputFormat.class);
+    conf.setEdgeInputFormatClass(IntNullTextEdgeInputFormat.class);
+    conf.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
+
+    // Run a job with a vertex that counts outgoing edges
+    results = InternalVertexRunner.run(conf, vertices, edges);
+
+    values = parseResults(results);
+
+    // Check the number of edges for each vertex
+    assertEquals(3, (int) values.get(1));
+    assertEquals(4, (int) values.get(2));
     assertEquals(0, (int) values.get(3));
     assertEquals(1, (int) values.get(4));
     assertEquals(1, (int) values.get(5));

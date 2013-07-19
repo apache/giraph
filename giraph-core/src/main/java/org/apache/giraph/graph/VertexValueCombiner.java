@@ -16,25 +16,24 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.combiner;
+package org.apache.giraph.graph;
 
-import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Writable;
 
 /**
- * {@link Combiner} that finds the minimum {@link IntWritable}
+ * When vertex values with the same vertex id are loaded, this
+ * class specifies how to combine their vertex values.  Edges loaded will
+ * be added to the EdgeStore.
+ *
+ * @param <V> Vertex data
  */
-public class MinimumIntCombiner
-    extends Combiner<IntWritable, IntWritable> {
-  @Override
-  public void combine(IntWritable vertexIndex, IntWritable originalMessage,
-      IntWritable messageToCombine) {
-    if (originalMessage.get() > messageToCombine.get()) {
-      originalMessage.set(messageToCombine.get());
-    }
-  }
-
-  @Override
-  public IntWritable createInitialMessage() {
-    return new IntWritable(Integer.MAX_VALUE);
-  }
+public interface VertexValueCombiner<V extends Writable> {
+  /**
+   * Combine a vertex with the original vertex
+   * by modifying originalVertex.
+   *
+   * @param originalVertexValue Combine the other vertex into this one
+   * @param vertexValue Combine into the originalVertex.
+   */
+  void combine(V originalVertexValue, V vertexValue);
 }

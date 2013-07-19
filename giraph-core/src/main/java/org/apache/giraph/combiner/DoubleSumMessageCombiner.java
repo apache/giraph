@@ -22,20 +22,19 @@ import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 
 /**
- * Combiner which finds the minimum of {@link DoubleWritable}.
+ * A combiner that sums double-valued messages
  */
-public class MinimumDoubleCombiner extends
-    Combiner<LongWritable, DoubleWritable> {
+public class DoubleSumMessageCombiner
+    extends
+    MessageCombiner<LongWritable, DoubleWritable> {
   @Override
   public void combine(LongWritable vertexIndex, DoubleWritable originalMessage,
       DoubleWritable messageToCombine) {
-    if (originalMessage.get() > messageToCombine.get()) {
-      originalMessage.set(messageToCombine.get());
-    }
+    originalMessage.set(originalMessage.get() + messageToCombine.get());
   }
 
   @Override
   public DoubleWritable createInitialMessage() {
-    return new DoubleWritable(Double.MAX_VALUE);
+    return new DoubleWritable(0);
   }
 }

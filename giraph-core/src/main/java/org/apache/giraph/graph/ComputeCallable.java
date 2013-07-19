@@ -153,7 +153,7 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
       }
 
       Partition<I, V, E> partition =
-          serviceWorker.getPartitionStore().getPartition(partitionId);
+          serviceWorker.getPartitionStore().getOrCreatePartition(partitionId);
 
       Computation<I, V, E, M1, M2> computation =
           (Computation<I, V, E, M1, M2>) configuration.createComputation();

@@ -18,9 +18,9 @@
 
 package org.apache.giraph.master;
 
-import org.apache.giraph.aggregators.Aggregator;
-import org.apache.giraph.combiner.Combiner;
+import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
+import org.apache.giraph.aggregators.Aggregator;
 import org.apache.giraph.graph.Computation;
 import org.apache.giraph.graph.GraphState;
 import org.apache.hadoop.io.Writable;
@@ -48,7 +48,10 @@ public abstract class MasterCompute
   private MasterAggregatorUsage masterAggregatorUsage;
   /** Graph state */
   private GraphState graphState;
-  /** Computation and Combiner class used, which can be switched by master */
+  /**
+   * Computation and MessageCombiner classes used, which can be
+   * switched by master
+   */
   private SuperstepClasses superstepClasses;
 
   /**
@@ -143,26 +146,27 @@ public abstract class MasterCompute
   }
 
   /**
-   * Set Combiner class to be used
+   * Set MessageCombiner class to be used
    *
-   * @param combinerClass Combiner class
+   * @param combinerClass MessageCombiner class
    */
-  public final void setCombiner(Class<? extends Combiner> combinerClass) {
-    superstepClasses.setCombinerClass(combinerClass);
+  public final void setMessageCombiner(
+      Class<? extends MessageCombiner> combinerClass) {
+    superstepClasses.setMessageCombinerClass(combinerClass);
   }
 
   /**
-   * Get Combiner class to be used
+   * Get MessageCombiner class to be used
    *
-   * @return Combiner class
+   * @return MessageCombiner class
    */
-  public final Class<? extends Combiner> getCombiner() {
+  public final Class<? extends MessageCombiner> getMessageCombiner() {
     // Might be called prior to classes being set, do not return NPE
     if (superstepClasses == null) {
       return null;
     }
 
-    return superstepClasses.getCombinerClass();
+    return superstepClasses.getMessageCombinerClass();
   }
 
   @Override

@@ -17,19 +17,20 @@
  */
 package org.apache.giraph.comm;
 
+import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.graph.GiraphTransferRegulator;
 import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.partition.Partition;
 import org.apache.giraph.partition.PartitionOwner;
+import org.apache.giraph.utils.ExtendedDataOutput;
+import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
 
-import com.google.common.collect.Maps;
+import java.io.IOException;
 
-import java.util.Map;
+import static org.apache.giraph.conf.GiraphConstants.ADDITIONAL_VERTEX_REQUEST_SIZE;
+import static org.apache.giraph.conf.GiraphConstants.MAX_VERTEX_REQUEST_SIZE;
 
 /**
  * Caches partition vertices prior to sending.  Aggregating these requests
@@ -40,93 +41,54 @@ import java.util.Map;
  * @param <E> Edge value
  */
 public class SendPartitionCache<I extends WritableComparable,
-    V extends Writable, E extends Writable> {
+    V extends Writable, E extends Writable> extends
+    SendDataCache<ExtendedDataOutput> {
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(SendPartitionCache.class);
-  /** Input split vertex cache (only used when loading from input split) */
-  private final Map<PartitionOwner, Partition<I, V, E>>
-  ownerPartitionMap = Maps.newHashMap();
-  /** Context */
-  private final Mapper<?, ?, ?, ?>.Context context;
-  /** Configuration */
-  private final ImmutableClassesGiraphConfiguration<I, V, E> configuration;
-  /**
-   *  Regulates the size of outgoing Collections of vertices read
-   * by the local worker during INPUT_SUPERSTEP that are to be
-   * transfered from <code>inputSplitCache</code> to the owner
-   * of their initial, master-assigned Partition.*
-   */
-  private final GiraphTransferRegulator transferRegulator;
 
   /**
    * Constructor.
    *
-   * @param context Context
-   * @param configuration Configuration
+   * @param conf Giraph configuration
+   * @param serviceWorker Service worker
    */
-  public SendPartitionCache(
-      Mapper<?, ?, ?, ?>.Context context,
-      ImmutableClassesGiraphConfiguration<I, V, E> configuration) {
-    this.context = context;
-    this.configuration = configuration;
-    transferRegulator =
-        new GiraphTransferRegulator(configuration);
-    if (LOG.isInfoEnabled()) {
-      LOG.info("SendPartitionCache: maxVerticesPerTransfer = " +
-          transferRegulator.getMaxVerticesPerTransfer());
-      LOG.info("SendPartitionCache: maxEdgesPerTransfer = " +
-          transferRegulator.getMaxEdgesPerTransfer());
-    }
+  public SendPartitionCache(ImmutableClassesGiraphConfiguration<I, V, E> conf,
+                            CentralizedServiceWorker<?, ?, ?> serviceWorker) {
+    super(conf, serviceWorker, MAX_VERTEX_REQUEST_SIZE.get(conf),
+        ADDITIONAL_VERTEX_REQUEST_SIZE.get(conf));
   }
 
   /**
-   * Add a vertex to the cache, returning the partition if full
+   * Add a vertex to the cache.
    *
    * @param partitionOwner Partition owner of the vertex
    * @param vertex Vertex to add
-   * @return A partition to send or null, if requirements are not met
+   * @return Size of partitions for this worker
    */
-  public Partition<I, V, E> addVertex(PartitionOwner partitionOwner,
+  public int addVertex(PartitionOwner partitionOwner,
       Vertex<I, V, E> vertex) {
-    Partition<I, V, E> partition =
-        ownerPartitionMap.get(partitionOwner);
-    if (partition == null) {
-      partition = configuration.createPartition(
-          partitionOwner.getPartitionId(),
-          context);
-      ownerPartitionMap.put(partitionOwner, partition);
+    // Get the data collection
+    ExtendedDataOutput partitionData =
+        getData(partitionOwner.getPartitionId());
+    int taskId = partitionOwner.getWorkerInfo().getTaskId();
+    int originalSize = 0;
+    if (partitionData == null) {
+      partitionData = getConf().createExtendedDataOutput(
+          getInitialBufferSize(taskId));
+      setData(partitionOwner.getPartitionId(), partitionData);
+    } else {
+      originalSize = partitionData.getPos();
     }
-    transferRegulator.incrementCounters(partitionOwner, vertex);
-
-    Vertex<I, V, E> oldVertex = partition.putVertex(vertex);
-    if (oldVertex != null) {
-      LOG.warn("addVertex: Replacing vertex " + oldVertex +
-          " with " + vertex);
-    }
-
-    // Requirements met to transfer?
-    if (transferRegulator.transferThisPartition(partitionOwner)) {
-      return ownerPartitionMap.remove(partitionOwner);
+    try {
+      WritableUtils.<I, V, E>writeVertexToDataOutput(
+          partitionData, vertex, getConf());
+    } catch (IOException e) {
+      throw new IllegalStateException("addVertex: Failed to serialize", e);
     }
 
-    return null;
-  }
-
-  /**
-   * Get the owner partition map (for flushing)
-   *
-   * @return Owner partition map
-   */
-  public Map<PartitionOwner, Partition<I, V, E>> getOwnerPartitionMap() {
-    return ownerPartitionMap;
-  }
-
-  /**
-   * Clear the cache.
-   */
-  public void clear() {
-    ownerPartitionMap.clear();
+    // Update the size of cached, outgoing data per worker
+    return incrDataSize(taskId, partitionData.getPos() - originalSize);
   }
 }
 

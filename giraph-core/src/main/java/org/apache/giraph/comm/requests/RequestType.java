@@ -34,6 +34,8 @@ public enum RequestType {
   /*end[HADOOP_NON_SECURE]*/
   /** Sending vertices request */
   SEND_VERTEX_REQUEST(SendVertexRequest.class),
+  /** Sending vertices request */
+  SEND_WORKER_VERTICES_REQUEST(SendWorkerVerticesRequest.class),
   /** Sending a partition of messages for next superstep */
   SEND_WORKER_MESSAGES_REQUEST(SendWorkerMessagesRequest.class),
   /** Sending one-to-all messages to a worker for next superstep */

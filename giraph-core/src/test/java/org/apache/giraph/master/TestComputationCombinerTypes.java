@@ -18,7 +18,7 @@
 
 package org.apache.giraph.master;
 
-import org.apache.giraph.combiner.Combiner;
+import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.AbstractComputation;
@@ -47,7 +47,7 @@ public class TestComputationCombinerTypes {
   public void testAllMatchWithCombiner() {
     SuperstepClasses classes =
         new SuperstepClasses(IntIntIntLongDoubleComputation.class,
-            IntDoubleCombiner.class);
+            IntDoubleMessageCombiner.class);
     classes.verifyTypesMatch(
         createConfiguration(IntIntIntIntLongComputation.class), true);
   }
@@ -88,7 +88,7 @@ public class TestComputationCombinerTypes {
   public void testDifferentCombinerIdType() {
     SuperstepClasses classes =
         new SuperstepClasses(IntIntIntLongDoubleComputation.class,
-            DoubleDoubleCombiner.class);
+            DoubleDoubleMessageCombiner.class);
     classes.verifyTypesMatch(
         createConfiguration(IntIntIntIntLongComputation.class), true);
   }
@@ -97,7 +97,7 @@ public class TestComputationCombinerTypes {
   public void testDifferentCombinerMessageType() {
     SuperstepClasses classes =
         new SuperstepClasses(IntIntIntLongDoubleComputation.class,
-            IntLongCombiner.class);
+            IntLongMessageCombiner.class);
     classes.verifyTypesMatch(
         createConfiguration(IntIntIntIntLongComputation.class), true);
   }
@@ -138,8 +138,8 @@ public class TestComputationCombinerTypes {
       NoOpComputation<IntWritable, IntWritable, LongWritable, LongWritable,
           IntWritable> { }
 
-  private static class NoOpCombiner<I extends WritableComparable,
-      M extends Writable> extends Combiner<I, M> {
+  private static class NoOpMessageCombiner<I extends WritableComparable,
+      M extends Writable> extends MessageCombiner<I, M> {
     @Override
     public void combine(I vertexIndex, M originalMessage, M messageToCombine) {
     }
@@ -150,12 +150,15 @@ public class TestComputationCombinerTypes {
     }
   }
 
-  private static class IntDoubleCombiner extends NoOpCombiner<IntWritable,
-      DoubleWritable> { }
+  private static class IntDoubleMessageCombiner
+      extends NoOpMessageCombiner<IntWritable,
+                  DoubleWritable> { }
 
-  private static class DoubleDoubleCombiner extends NoOpCombiner<DoubleWritable,
-      DoubleWritable> { }
+  private static class DoubleDoubleMessageCombiner
+      extends NoOpMessageCombiner<DoubleWritable,
+                  DoubleWritable> { }
 
-  private static class IntLongCombiner extends NoOpCombiner<IntWritable,
-      LongWritable> { }
+  private static class IntLongMessageCombiner
+      extends NoOpMessageCombiner<IntWritable,
+                  LongWritable> { }
 }

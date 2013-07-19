@@ -19,7 +19,7 @@
 package org.apache.giraph.comm.messages;
 
 import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.combiner.Combiner;
+import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.comm.messages.primitives.IntByteArrayMessageStore;
 import org.apache.giraph.comm.messages.primitives.IntFloatMessageStore;
 import org.apache.giraph.comm.messages.primitives.LongByteArrayMessageStore;
@@ -70,23 +70,23 @@ public class InMemoryMessageStoreFactory<I extends WritableComparable,
       MessageValueFactory<M> messageValueFactory) {
     Class<M> messageClass = messageValueFactory.getValueClass();
     MessageStore messageStore;
-    if (conf.useCombiner()) {
+    if (conf.useMessageCombiner()) {
       Class<I> vertexIdClass = conf.getVertexIdClass();
       if (vertexIdClass.equals(IntWritable.class) &&
           messageClass.equals(FloatWritable.class)) {
         messageStore = new IntFloatMessageStore(
             (CentralizedServiceWorker<IntWritable, ?, ?>) service,
-            (Combiner<IntWritable, FloatWritable>)
-                conf.<FloatWritable>createCombiner());
+            (MessageCombiner<IntWritable, FloatWritable>)
+                conf.<FloatWritable>createMessageCombiner());
       } else if (vertexIdClass.equals(LongWritable.class) &&
           messageClass.equals(DoubleWritable.class)) {
         messageStore = new LongDoubleMessageStore(
             (CentralizedServiceWorker<LongWritable, ?, ?>) service,
-            (Combiner<LongWritable, DoubleWritable>)
-                conf.<DoubleWritable>createCombiner());
+            (MessageCombiner<LongWritable, DoubleWritable>)
+                conf.<DoubleWritable>createMessageCombiner());
       } else {
         messageStore = new OneMessagePerVertexStore<I, M>(messageValueFactory,
-          service, conf.<M>createCombiner(), conf);
+          service, conf.<M>createMessageCombiner(), conf);
       }
     } else {
       Class<I> vertexIdClass = conf.getVertexIdClass();
@@ -108,8 +108,8 @@ public class InMemoryMessageStoreFactory<I extends WritableComparable,
       LOG.info("newStore: Created " + messageStore.getClass() +
           " for vertex id " + conf.getVertexIdClass() +
           " and message value " + messageClass + " and" +
-          (conf.useCombiner() ? " combiner " + conf.getCombinerClass() :
-              " no combiner"));
+          (conf.useMessageCombiner() ? " message combiner " +
+              conf.getMessageCombinerClass() : " no combiner"));
     }
     return (MessageStore<I, M>) messageStore;
   }

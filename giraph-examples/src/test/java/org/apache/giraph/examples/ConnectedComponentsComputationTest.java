@@ -18,7 +18,7 @@
 
 package org.apache.giraph.examples;
 
-import org.apache.giraph.combiner.MinimumIntCombiner;
+import org.apache.giraph.combiner.MinimumIntMessageCombiner;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.edge.ByteArrayEdges;
 import org.apache.giraph.io.formats.IdWithValueTextOutputFormat;
@@ -68,7 +68,7 @@ public class ConnectedComponentsComputationTest {
         GiraphConfiguration conf = new GiraphConfiguration();
         conf.setComputationClass(ConnectedComponentsComputation.class);
         conf.setOutEdgesClass(ByteArrayEdges.class);
-        conf.setCombinerClass(MinimumIntCombiner.class);
+        conf.setMessageCombinerClass(MinimumIntMessageCombiner.class);
         conf.setVertexInputFormatClass(IntIntNullTextInputFormat.class);
         conf.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
 

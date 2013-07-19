@@ -66,9 +66,10 @@ public interface WorkerClientRequestProcessor<I extends WritableComparable,
    *
    * @param partitionOwner Owner of the vertex
    * @param vertex Vertex to send
+   * @return Returns true iff any network I/O occurred.
    */
-  void sendVertexRequest(PartitionOwner partitionOwner,
-                         Vertex<I, V, E> vertex);
+  boolean sendVertexRequest(PartitionOwner partitionOwner,
+                            Vertex<I, V, E> vertex);
 
   /**
    * Send a partition request (no batching).

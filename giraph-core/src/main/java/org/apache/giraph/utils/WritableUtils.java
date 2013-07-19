@@ -530,7 +530,7 @@ public class WritableUtils {
   }
 
   /**
-   * Reads data from input stream to inizialize Vertex.
+   * Reads data from input stream to initialize Vertex.
    *
    * @param input The input stream
    * @param conf Configuration

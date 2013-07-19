@@ -37,7 +37,7 @@ import javax.annotation.concurrent.NotThreadSafe;
 @NotThreadSafe
 @SuppressWarnings("unchecked")
 public abstract class SendVertexIdDataCache<I extends WritableComparable, T,
-    B extends ByteArrayVertexIdData<I, T>> extends SendDataCache<I, B> {
+    B extends ByteArrayVertexIdData<I, T>> extends SendDataCache<B> {
   /**
    * Constructor.
    *
@@ -73,20 +73,58 @@ public abstract class SendVertexIdDataCache<I extends WritableComparable, T,
   public int addData(WorkerInfo workerInfo,
                      int partitionId, I destVertexId, T data) {
     // Get the data collection
+    ByteArrayVertexIdData<I, T> partitionData =
+        getPartitionData(workerInfo, partitionId);
+    int originalSize = partitionData.getSize();
+    partitionData.add(destVertexId, data);
+    // Update the size of cached, outgoing data per worker
+    return incrDataSize(workerInfo.getTaskId(),
+        partitionData.getSize() - originalSize);
+  }
+
+  /**
+   * This method is similar to the method above,
+   * but use a serialized id to replace original I type
+   * destVertexId.
+   *
+   * @param workerInfo The remote worker destination
+   * @param partitionId The remote Partition this message belongs to
+   * @param serializedId The byte array to store the serialized target vertex id
+   * @param idPos The length of bytes of serialized id in the byte array above
+   * @param data Data to send to remote worker
+   * @return The number of bytes added to the target worker
+   */
+  public int addData(WorkerInfo workerInfo, int partitionId,
+                     byte[] serializedId, int idPos, T data) {
+    // Get the data collection
+    ByteArrayVertexIdData<I, T> partitionData =
+        getPartitionData(workerInfo, partitionId);
+    int originalSize = partitionData.getSize();
+    partitionData.add(serializedId, idPos, data);
+    // Update the size of cached, outgoing data per worker
+    return incrDataSize(workerInfo.getTaskId(),
+        partitionData.getSize() - originalSize);
+  }
+
+  /**
+   * This method tries to get a partition data from the data cache.
+   * If null, it will create one.
+   *
+   * @param workerInfo The remote worker destination
+   * @param partitionId The remote Partition this message belongs to
+   * @return The partition data in data cache
+   */
+  private ByteArrayVertexIdData<I, T> getPartitionData(WorkerInfo workerInfo,
+                                                       int partitionId) {
+    // Get the data collection
     B partitionData = getData(partitionId);
-    int originalSize = 0;
     if (partitionData == null) {
       partitionData = createByteArrayVertexIdData();
       partitionData.setConf(getConf());
       partitionData.initialize(getInitialBufferSize(workerInfo.getTaskId()));
       setData(partitionId, partitionData);
-    } else {
-      originalSize = partitionData.getSize();
     }
-    partitionData.add(destVertexId, data);
 
-    // Update the size of cached, outgoing data per worker
-    return incrDataSize(workerInfo.getTaskId(),
-        partitionData.getSize() - originalSize);
+    return partitionData;
   }
 }

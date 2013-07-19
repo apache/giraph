@@ -222,15 +222,28 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
   }
 
   @Override
-  public Partition<I, V, E> getPartition(Integer id) {
+  public Partition<I, V, E> getOrCreatePartition(Integer id) {
     try {
-      return pool.submit(new GetPartition(id)).get();
+      wLock.lock();
+      Partition<I, V, E> partition =
+          pool.submit(new GetPartition(id)).get();
+      if (partition == null) {
+        Partition<I, V, E> newPartition =
+            conf.createPartition(id, context);
+        pool.submit(
+            new AddPartition(id, newPartition)).get();
+        return newPartition;
+      } else {
+        return partition;
+      }
     } catch (InterruptedException e) {
       throw new IllegalStateException(
-          "getPartition: cannot retrieve partition " + id, e);
+          "getOrCreatePartition: cannot retrieve partition " + id, e);
     } catch (ExecutionException e) {
       throw new IllegalStateException(
-          "getPartition: cannot retrieve partition " + id, e);
+          "getOrCreatePartition: cannot retrieve partition " + id, e);
+    } finally {
+      wLock.unlock();
     }
   }
 
@@ -263,7 +276,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
 
   @Override
   public Partition<I, V, E> removePartition(Integer id) {
-    Partition<I, V, E> partition = getPartition(id);
+    Partition<I, V, E> partition = getOrCreatePartition(id);
     // we put it back, so the partition can turn INACTIVE and be deleted.
     putPartition(partition);
     deletePartition(id);

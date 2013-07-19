@@ -19,6 +19,8 @@
 package org.apache.giraph.partition;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.graph.VertexValueCombiner;
+import org.apache.giraph.utils.VertexIterator;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.util.Progressable;
@@ -44,11 +46,14 @@ public abstract class BasicPartition<I extends WritableComparable,
   private int id;
   /** Context used to report progress */
   private Progressable progressable;
+  /** Vertex value combiner */
+  private VertexValueCombiner<V> vertexValueCombiner;
 
   @Override
   public void initialize(int partitionId, Progressable progressable) {
     setId(partitionId);
     setProgressable(progressable);
+    vertexValueCombiner = conf.createVertexValueCombiner();
   }
 
   @Override
@@ -82,6 +87,21 @@ public abstract class BasicPartition<I extends WritableComparable,
   @Override
   public void setProgressable(Progressable progressable) {
     this.progressable = progressable;
+  }
+
+  public VertexValueCombiner<V> getVertexValueCombiner() {
+    return vertexValueCombiner;
+  }
+
+  @Override
+  public void addPartitionVertices(VertexIterator<I, V, E> vertexIterator) {
+    while (vertexIterator.hasNext()) {
+      vertexIterator.next();
+      // Release the vertex if it was put, otherwise reuse as an optimization
+      if (putOrCombine(vertexIterator.getVertex())) {
+        vertexIterator.releaseVertex();
+      }
+    }
   }
 
   @Override

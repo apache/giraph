@@ -90,7 +90,7 @@ public class NettyWorkerClient<I extends WritableComparable,
   @Override
   public void newSuperstep(SuperstepMetricsRegistry metrics) {
     superstepRequestCounters.clear();
-    superstepRequestCounters.put(RequestType.SEND_VERTEX_REQUEST,
+    superstepRequestCounters.put(RequestType.SEND_WORKER_VERTICES_REQUEST,
         metrics.getCounter(MetricNames.SEND_VERTEX_REQUESTS));
     superstepRequestCounters.put(RequestType.SEND_WORKER_MESSAGES_REQUEST,
         metrics.getCounter(MetricNames.SEND_WORKER_MESSAGES_REQUESTS));

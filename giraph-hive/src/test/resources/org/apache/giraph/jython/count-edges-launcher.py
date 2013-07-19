@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from org.apache.giraph.combiner import DoubleSumCombiner
+from org.apache.giraph.combiner import DoubleSumMessageCombiner
 from org.apache.giraph.edge import ByteArrayEdges
 from org.apache.giraph.jython import JythonJob
 from org.apache.hadoop.io import IntWritable

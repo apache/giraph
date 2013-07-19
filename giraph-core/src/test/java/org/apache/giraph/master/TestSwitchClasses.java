@@ -18,7 +18,7 @@
 
 package org.apache.giraph.master;
 
-import org.apache.giraph.combiner.Combiner;
+import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.graph.AbstractComputation;
 import org.apache.giraph.graph.Vertex;
@@ -40,7 +40,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 
-/** Test switching Computation and Combiner class during application */
+/** Test switching Computation and MessageCombiner class during application */
 public class TestSwitchClasses {
   @Test
   public void testSwitchingClasses() throws Exception {
@@ -57,32 +57,41 @@ public class TestSwitchClasses {
     graph = InternalVertexRunner.run(conf, graph);
 
     Assert.assertEquals(2, graph.getVertices().size());
-    StatusValue value1 = graph.getVertex(id1).getValue();
-    StatusValue value2 = graph.getVertex(id2).getValue();
+  }
 
+  private static void checkVerticesOnFinalSuperstep(
+      Vertex<IntWritable, StatusValue, IntWritable> vertex) {
     // Check that computations were performed in expected order
-    ArrayList<Integer> expectedComputations = Lists.newArrayList(1, 1, 2, 3, 1);
-    checkComputations(expectedComputations, value1.computations);
-    checkComputations(expectedComputations, value2.computations);
-
+    final ArrayList<Integer> expectedComputations =
+        Lists.newArrayList(1, 1, 2, 3, 1);
+    checkComputations(expectedComputations, vertex.getValue().computations);
     // Check that messages were sent in the correct superstep,
     // and combined when needed
-    ArrayList<HashSet<Double>> messages1 =
-        Lists.newArrayList(
-            Sets.<Double>newHashSet(),
-            Sets.<Double>newHashSet(11d),
-            Sets.<Double>newHashSet(11d),
-            Sets.<Double>newHashSet(101.5, 201.5),
-            Sets.<Double>newHashSet(3002d));
-    checkMessages(messages1, value1.messagesReceived);
-    ArrayList<HashSet<Double>> messages2 =
-        Lists.newArrayList(
-            Sets.<Double>newHashSet(),
-            Sets.<Double>newHashSet(12d),
-            Sets.<Double>newHashSet(12d),
-            Sets.<Double>newHashSet(102.5, 202.5),
-            Sets.<Double>newHashSet(3004d));
-    checkMessages(messages2, value2.messagesReceived);
+    switch (vertex.getId().get()) {
+      case 1:
+        ArrayList<HashSet<Double>> messages1 =
+            Lists.newArrayList(
+                Sets.<Double>newHashSet(),
+                Sets.<Double>newHashSet(11d),
+                Sets.<Double>newHashSet(11d),
+                Sets.<Double>newHashSet(101.5, 201.5),
+                Sets.<Double>newHashSet(3002d));
+        checkMessages(messages1, vertex.getValue().messagesReceived);
+        break;
+      case 2:
+        ArrayList<HashSet<Double>> messages2 =
+            Lists.newArrayList(
+                Sets.<Double>newHashSet(),
+                Sets.<Double>newHashSet(12d),
+                Sets.<Double>newHashSet(12d),
+                Sets.<Double>newHashSet(102.5, 202.5),
+                Sets.<Double>newHashSet(3004d));
+        checkMessages(messages2, vertex.getValue().messagesReceived);
+        break;
+      default:
+        throw new IllegalStateException("checkVertices: Illegal vertex " +
+            vertex);
+    }
   }
 
   private static void checkComputations(ArrayList<Integer> expected,
@@ -113,7 +122,7 @@ public class TestSwitchClasses {
       switch ((int) getSuperstep()) {
         case 0:
           setComputation(Computation1.class);
-          setCombiner(MinimumCombiner.class);
+          setMessageCombiner(MinimumMessageCombiner.class);
           break;
         case 1:
           // test classes don't change
@@ -121,11 +130,11 @@ public class TestSwitchClasses {
         case 2:
           setComputation(Computation2.class);
           // test combiner removed
-          setCombiner(null);
+          setMessageCombiner(null);
           break;
         case 3:
           setComputation(Computation3.class);
-          setCombiner(SumCombiner.class);
+          setMessageCombiner(SumMessageCombiner.class);
           break;
         case 4:
           setComputation(Computation1.class);
@@ -147,6 +156,10 @@ public class TestSwitchClasses {
       IntWritable otherId = new IntWritable(3 - vertex.getId().get());
       sendMessage(otherId, new IntWritable(otherId.get() + 10));
       sendMessage(otherId, new IntWritable(otherId.get() + 20));
+      // Check the vertices on the final superstep
+      if (getSuperstep() == 4) {
+        checkVerticesOnFinalSuperstep(vertex);
+      }
     }
   }
 
@@ -179,8 +192,9 @@ public class TestSwitchClasses {
     }
   }
 
-  public static class MinimumCombiner extends Combiner<IntWritable,
-      IntWritable> {
+  public static class MinimumMessageCombiner
+      extends MessageCombiner<IntWritable,
+                  IntWritable> {
     @Override
     public void combine(IntWritable vertexIndex, IntWritable originalMessage,
         IntWritable messageToCombine) {
@@ -194,7 +208,8 @@ public class TestSwitchClasses {
     }
   }
 
-  public static class SumCombiner extends Combiner<IntWritable, IntWritable> {
+  public static class SumMessageCombiner
+      extends MessageCombiner<IntWritable, IntWritable> {
     @Override
     public void combine(IntWritable vertexIndex, IntWritable originalMessage,
         IntWritable messageToCombine) {
@@ -229,6 +244,12 @@ public class TestSwitchClasses {
         messagesList.add(message.get());
       }
       messagesReceived.add(messagesList);
+    }
+
+    @Override
+    public String toString() {
+      return "(computations=" + computations +
+          ",messagesReceived=" + messagesReceived + ")";
     }
 
     @Override

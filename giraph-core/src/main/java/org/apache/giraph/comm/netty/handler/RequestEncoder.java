@@ -94,7 +94,7 @@ public class RequestEncoder extends OneToOneEncoder {
       writableRequest.write(outputStream);
     } catch (IndexOutOfBoundsException e) {
       LOG.error("encode: Most likely the size of request was not properly " +
-          "specified - see getSerializedSize() in " +
+          "specified (this buffer is too small) - see getSerializedSize() in " +
           writableRequest.getType().getRequestClass());
       throw new IllegalStateException(e);
     }

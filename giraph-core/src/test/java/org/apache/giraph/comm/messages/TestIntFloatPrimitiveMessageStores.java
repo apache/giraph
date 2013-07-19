@@ -19,7 +19,7 @@
 package org.apache.giraph.comm.messages;
 
 import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.combiner.FloatSumCombiner;
+import org.apache.giraph.combiner.FloatSumMessageCombiner;
 import org.apache.giraph.comm.messages.primitives.IntByteArrayMessageStore;
 import org.apache.giraph.comm.messages.primitives.IntFloatMessageStore;
 import org.apache.giraph.conf.GiraphConfiguration;
@@ -70,8 +70,8 @@ public class TestIntFloatPrimitiveMessageStores {
         Lists.newArrayList(0, 1));
     Partition partition = Mockito.mock(Partition.class);
     Mockito.when(partition.getVertexCount()).thenReturn(Long.valueOf(1));
-    Mockito.when(partitionStore.getPartition(0)).thenReturn(partition);
-    Mockito.when(partitionStore.getPartition(1)).thenReturn(partition);
+    Mockito.when(partitionStore.getOrCreatePartition(0)).thenReturn(partition);
+    Mockito.when(partitionStore.getOrCreatePartition(1)).thenReturn(partition);
   }
 
   private static class IntFloatNoOpComputation extends
@@ -122,7 +122,7 @@ public class TestIntFloatPrimitiveMessageStores {
   @Test
   public void testIntFloatMessageStore() throws IOException {
     IntFloatMessageStore messageStore =
-        new IntFloatMessageStore(service, new FloatSumCombiner());
+        new IntFloatMessageStore(service, new FloatSumMessageCombiner());
     insertIntFloatMessages(messageStore);
 
     Iterable<FloatWritable> m0 =

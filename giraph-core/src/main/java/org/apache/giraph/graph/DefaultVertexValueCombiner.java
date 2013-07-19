@@ -16,24 +16,25 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.combiner;
+package org.apache.giraph.graph;
 
-import org.apache.hadoop.io.FloatWritable;
-import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
 
 /**
- * A combiner that sums float-valued messages
+ * The default vertex value combining approach is to simply keep the original
+ * value.
+ *
+ * @param <I> Vertex id
+ * @param <V> Vertex data
+ * @param <E> Edge data
  */
-public class FloatSumCombiner extends
-    Combiner<IntWritable, FloatWritable> {
+public class DefaultVertexValueCombiner<I extends WritableComparable,
+    V extends Writable, E extends Writable>
+    implements VertexValueCombiner<V> {
   @Override
-  public void combine(IntWritable vertexIndex, FloatWritable originalMessage,
-      FloatWritable messageToCombine) {
-    originalMessage.set(originalMessage.get() + messageToCombine.get());
-  }
-
-  @Override
-  public FloatWritable createInitialMessage() {
-    return new FloatWritable(0);
+  public void combine(V originalVertexValue,
+                      V vertexValue) {
+    // Keep the original value, do nothing
   }
 }

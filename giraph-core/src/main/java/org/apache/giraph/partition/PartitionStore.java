@@ -30,7 +30,6 @@ import org.apache.hadoop.io.WritableComparable;
  */
 public abstract class PartitionStore<I extends WritableComparable,
     V extends Writable, E extends Writable> {
-
   /**
    * Add a new partition to the store or just the vertices from the partition
    * to the old partition.
@@ -40,17 +39,18 @@ public abstract class PartitionStore<I extends WritableComparable,
   public abstract void addPartition(Partition<I, V, E> partition);
 
   /**
-   * Get a partition. Note: user has to put back it to the store through
-   * {@link #putPartition(Partition)} after use.
+   * Get or create a partition. Note: user has to put back
+   * it to the store through {@link #putPartition(Partition)} after use.
    *
    * @param partitionId Partition id
-   * @return The requested partition
+   * @return The requested partition (never null)
    */
-  public abstract Partition<I, V, E> getPartition(Integer partitionId);
+  public abstract Partition<I, V, E> getOrCreatePartition(Integer partitionId);
 
   /**
    * Put a partition back to the store. Use this method to be put a partition
-   * back after it has been retrieved through {@link #getPartition(Integer)}.
+   * back after it has been retrieved through
+   * {@link #getOrCreatePartition(Integer)}.
    *
    * @param partition Partition
    */

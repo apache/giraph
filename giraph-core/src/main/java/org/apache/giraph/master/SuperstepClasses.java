@@ -18,7 +18,7 @@
 
 package org.apache.giraph.master;
 
-import org.apache.giraph.combiner.Combiner;
+import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.conf.TypesHolder;
 import org.apache.giraph.graph.Computation;
@@ -35,13 +35,13 @@ import java.lang.reflect.Modifier;
 import static org.apache.giraph.conf.GiraphConstants.COMPUTATION_LANGUAGE;
 
 /**
- * Holds Computation and Combiner class.
+ * Holds Computation and MessageCombiner class.
  */
 public class SuperstepClasses implements Writable {
   /** Computation class to be used in the following superstep */
   private Class<? extends Computation> computationClass;
-  /** Combiner class to be used in the following superstep */
-  private Class<? extends Combiner> combinerClass;
+  /** MessageCombiner class to be used in the following superstep */
+  private Class<? extends MessageCombiner> messageCombinerClass;
 
   /**
    * Default constructor
@@ -56,27 +56,28 @@ public class SuperstepClasses implements Writable {
    */
   @SuppressWarnings("unchecked")
   public SuperstepClasses(ImmutableClassesGiraphConfiguration conf) {
-    this(conf.getComputationClass(), conf.getCombinerClass());
+    this(conf.getComputationClass(), conf.getMessageCombinerClass());
   }
 
   /**
    * Constructor
    *
    * @param computationClass Computation class
-   * @param combinerClass Combiner class
+   * @param messageCombinerClass MessageCombiner class
    */
   public SuperstepClasses(Class<? extends Computation> computationClass,
-      Class<? extends Combiner> combinerClass) {
+      Class<? extends MessageCombiner> messageCombinerClass) {
     this.computationClass = computationClass;
-    this.combinerClass = combinerClass;
+    this.messageCombinerClass =
+        messageCombinerClass;
   }
 
   public Class<? extends Computation> getComputationClass() {
     return computationClass;
   }
 
-  public Class<? extends Combiner> getCombinerClass() {
-    return combinerClass;
+  public Class<? extends MessageCombiner> getMessageCombinerClass() {
+    return messageCombinerClass;
   }
 
   public void setComputationClass(
@@ -84,13 +85,15 @@ public class SuperstepClasses implements Writable {
     this.computationClass = computationClass;
   }
 
-  public void setCombinerClass(Class<? extends Combiner> combinerClass) {
-    this.combinerClass = combinerClass;
+  public void setMessageCombinerClass(
+      Class<? extends MessageCombiner> messageCombinerClass) {
+    this.messageCombinerClass =
+        messageCombinerClass;
   }
 
   /**
-   * Verify that types of current Computation and Combiner are valid. If types
-   * don't match an {@link IllegalStateException} will be thrown.
+   * Verify that types of current Computation and MessageCombiner are valid.
+   * If types don't match an {@link IllegalStateException} will be thrown.
    *
    * @param conf Configuration to verify this with
    * @param checkMatchingMesssageTypes Check that the incoming/outgoing
@@ -128,13 +131,13 @@ public class SuperstepClasses implements Writable {
       throw new IllegalStateException("verifyTypesMatch: " +
           "Message type can't be abstract class" + outgoingMessageType);
     }
-    if (combinerClass != null) {
+    if (messageCombinerClass != null) {
       Class<?>[] combinerTypes = ReflectionUtils.getTypeArguments(
-          Combiner.class, combinerClass);
+          MessageCombiner.class, messageCombinerClass);
       verifyTypes(conf.getVertexIdClass(), combinerTypes[0],
-          "Vertex id", combinerClass);
+          "Vertex id", messageCombinerClass);
       verifyTypes(outgoingMessageType, combinerTypes[1],
-          "Outgoing message", combinerClass);
+          "Outgoing message", messageCombinerClass);
     }
   }
 
@@ -160,13 +163,13 @@ public class SuperstepClasses implements Writable {
   @Override
   public void write(DataOutput output) throws IOException {
     WritableUtils.writeClass(computationClass, output);
-    WritableUtils.writeClass(combinerClass, output);
+    WritableUtils.writeClass(messageCombinerClass, output);
   }
 
   @Override
   public void readFields(DataInput input) throws IOException {
     computationClass = WritableUtils.readClass(input);
-    combinerClass = WritableUtils.readClass(input);
+    messageCombinerClass = WritableUtils.readClass(input);
   }
 
   @Override
@@ -174,6 +177,7 @@ public class SuperstepClasses implements Writable {
     String computationName = computationClass == null ? "_not_set_" :
         computationClass.getName();
     return "(computation=" + computationName + ",combiner=" +
-        ((combinerClass == null) ? "null" : combinerClass.getName()) + ")";
+        ((messageCombinerClass == null) ? "null" :
+            messageCombinerClass.getName()) + ")";
   }
 }

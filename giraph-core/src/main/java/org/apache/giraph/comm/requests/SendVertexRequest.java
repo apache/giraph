@@ -29,7 +29,8 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 /**
- * Send a collection of vertices for a partition.
+ * Send a collection of vertices for a partition.  Note that this doesn't
+ * use a cache - might want to optimize in the future.
  *
  * @param <I> Vertex id
  * @param <V> Vertex data

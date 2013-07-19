@@ -20,6 +20,7 @@ package org.apache.giraph.partition;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfigurable;
 import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.utils.VertexIterator;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.util.Progressable;
@@ -70,11 +71,30 @@ public interface Partition<I extends WritableComparable,
   Vertex<I, V, E> removeVertex(I vertexIndex);
 
   /**
-   * Add a partition's vertices
+   * Add a partition's vertices.  If a vertex to be added doesn't exist,
+   * add it.  If the vertex already exists, use the
+   * VertexValueCombiner to combine them.
    *
    * @param partition Partition to add
    */
   void addPartition(Partition<I, V, E> partition);
+
+  /**
+   * Put this vertex or combine it
+   *
+   * @param vertex Vertex to put or combine
+   * @return True if the vertex was put (hint to release object)
+   */
+  boolean putOrCombine(Vertex<I, V, E> vertex);
+
+  /**
+   * Add vertices to a partition.  If a vertex to be added doesn't exist,
+   * add it.  If the vertex already exists, use the
+   * VertexValueCombiner to combine them.
+   *
+   * @param vertexIterator Vertices to add
+   */
+  void addPartitionVertices(VertexIterator<I, V, E> vertexIterator);
 
   /**
    * Get the number of vertices in this partition

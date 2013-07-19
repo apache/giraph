@@ -161,7 +161,7 @@ public class NettyWorkerServer<I extends WritableComparable,
           getPartitionDestinationVertices(partitionId);
       if (!Iterables.isEmpty(destinations)) {
         Partition<I, V, E> partition =
-            service.getPartitionStore().getPartition(partitionId);
+            service.getPartitionStore().getOrCreatePartition(partitionId);
         for (I vertexId : destinations) {
           if (partition.getVertex(vertexId) == null) {
             if (!resolveVertexIndices.put(partitionId, vertexId)) {
@@ -179,7 +179,7 @@ public class NettyWorkerServer<I extends WritableComparable,
     for (Entry<Integer, Collection<I>> e :
         resolveVertexIndices.asMap().entrySet()) {
       Partition<I, V, E> partition =
-          service.getPartitionStore().getPartition(e.getKey());
+          service.getPartitionStore().getOrCreatePartition(e.getKey());
       for (I vertexIndex : e.getValue()) {
         Vertex<I, V, E> originalVertex =
             partition.getVertex(vertexIndex);

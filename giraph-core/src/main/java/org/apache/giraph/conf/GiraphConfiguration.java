@@ -19,13 +19,14 @@
 package org.apache.giraph.conf;
 
 import org.apache.giraph.aggregators.AggregatorWriter;
-import org.apache.giraph.combiner.Combiner;
+import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.edge.ReuseObjectsOutEdges;
 import org.apache.giraph.factories.ComputationFactory;
+import org.apache.giraph.graph.VertexValueCombiner;
+import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.factories.VertexValueFactory;
 import org.apache.giraph.graph.Computation;
-import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.EdgeOutputFormat;
 import org.apache.giraph.io.VertexInputFormat;
@@ -96,7 +97,7 @@ public class GiraphConfiguration extends Configuration
   }
 
   /**
-   * Get the user's subclassed {@link org.apache.giraph.graph.Computation}
+   * Get the user's subclassed {@link Computation}
    *
    * @return User's computation class
    */
@@ -467,22 +468,22 @@ public class GiraphConfiguration extends Configuration
   }
 
   /**
-   * Get the vertex combiner class (optional)
+   * Get the message combiner class (optional)
    *
-   * @return vertexCombinerClass Determines how vertex messages are combined
+   * @return messageCombinerClass Determines how vertex messages are combined
    */
-  public Class<? extends Combiner> getCombinerClass() {
-    return VERTEX_COMBINER_CLASS.get(this);
+  public Class<? extends MessageCombiner> getMessageCombinerClass() {
+    return MESSAGE_COMBINER_CLASS.get(this);
   }
 
   /**
-   * Set the vertex combiner class (optional)
+   * Set the message combiner class (optional)
    *
-   * @param vertexCombinerClass Determines how vertex messages are combined
+   * @param messageCombinerClass Determines how vertex messages are combined
    */
-  public void setCombinerClass(
-      Class<? extends Combiner> vertexCombinerClass) {
-    VERTEX_COMBINER_CLASS.set(this, vertexCombinerClass);
+  public void setMessageCombinerClass(
+      Class<? extends MessageCombiner> messageCombinerClass) {
+    MESSAGE_COMBINER_CLASS.set(this, messageCombinerClass);
   }
 
   /**
@@ -522,6 +523,16 @@ public class GiraphConfiguration extends Configuration
    */
   public final void setResolverCreateVertexOnMessages(boolean v) {
     RESOLVER_CREATE_VERTEX_ON_MSGS.set(this, v);
+  }
+
+  /**
+   * Set the vertex value combiner class (optional)
+   *
+   * @param vertexValueCombinerClass Determines how vertices are combined
+   */
+  public final void setVertexValueCombinerClass(
+      Class<? extends VertexValueCombiner> vertexValueCombinerClass) {
+    VERTEX_VALUE_COMBINER_CLASS.set(this, vertexValueCombinerClass);
   }
 
   /**

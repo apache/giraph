@@ -17,6 +17,8 @@
  */
 package org.apache.giraph.utils;
 
+import com.google.common.base.Splitter;
+import com.google.common.collect.Iterables;
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -25,7 +27,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.giraph.Algorithm;
 import org.apache.giraph.aggregators.AggregatorWriter;
-import org.apache.giraph.combiner.Combiner;
+import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.GiraphTypes;
@@ -35,6 +37,7 @@ import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.factories.VertexValueFactory;
 import org.apache.giraph.graph.Computation;
 import org.apache.giraph.graph.Language;
+import org.apache.giraph.graph.VertexValueCombiner;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.EdgeOutputFormat;
 import org.apache.giraph.io.VertexInputFormat;
@@ -53,9 +56,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.ZooKeeper;
-
-import com.google.common.base.Splitter;
-import com.google.common.collect.Iterables;
 
 import java.io.IOException;
 import java.util.List;
@@ -108,7 +108,7 @@ public final class ConfigurationUtils {
         "for the vertex output");
     OPTIONS.addOption("esd",  "edgeSubDir", true, "subdirectory to be used " +
         "for the edge output");
-    OPTIONS.addOption("c", "combiner", true, "Combiner class");
+    OPTIONS.addOption("c", "combiner", true, "MessageCombiner class");
     OPTIONS.addOption("ve", "outEdges", true, "Vertex edges class");
     OPTIONS.addOption("wc", "workerContext", true, "WorkerContext class");
     OPTIONS.addOption("aw", "aggregatorWriter", true, "AggregatorWriter class");
@@ -277,8 +277,14 @@ public final class ConfigurationUtils {
       TYPES_HOLDER_CLASS.set(conf, typesHolderClass);
     }
     if (cmd.hasOption("c")) {
-      conf.setCombinerClass(
-          (Class<? extends Combiner>) Class.forName(cmd.getOptionValue("c")));
+      conf.setMessageCombinerClass(
+          (Class<? extends MessageCombiner>)
+              Class.forName(cmd.getOptionValue("c")));
+    }
+    if (cmd.hasOption("vc")) {
+      conf.setVertexValueCombinerClass(
+          (Class<? extends VertexValueCombiner>)
+              Class.forName(cmd.getOptionValue("vc")));
     }
     if (cmd.hasOption("ve")) {
       conf.setOutEdgesClass(

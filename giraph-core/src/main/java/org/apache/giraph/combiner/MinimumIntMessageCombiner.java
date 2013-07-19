@@ -18,22 +18,23 @@
 
 package org.apache.giraph.combiner;
 
-import org.apache.hadoop.io.DoubleWritable;
-import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.IntWritable;
 
 /**
- * A combiner that sums double-valued messages
+ * {@link MessageCombiner} that finds the minimum {@link IntWritable}
  */
-public class DoubleSumCombiner extends
-    Combiner<LongWritable, DoubleWritable> {
+public class MinimumIntMessageCombiner
+    extends MessageCombiner<IntWritable, IntWritable> {
   @Override
-  public void combine(LongWritable vertexIndex, DoubleWritable originalMessage,
-      DoubleWritable messageToCombine) {
-    originalMessage.set(originalMessage.get() + messageToCombine.get());
+  public void combine(IntWritable vertexIndex, IntWritable originalMessage,
+      IntWritable messageToCombine) {
+    if (originalMessage.get() > messageToCombine.get()) {
+      originalMessage.set(messageToCombine.get());
+    }
   }
 
   @Override
-  public DoubleWritable createInitialMessage() {
-    return new DoubleWritable(0);
+  public IntWritable createInitialMessage() {
+    return new IntWritable(Integer.MAX_VALUE);
   }
 }

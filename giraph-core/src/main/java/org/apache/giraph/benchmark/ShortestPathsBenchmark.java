@@ -19,7 +19,7 @@
 package org.apache.giraph.benchmark;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.giraph.combiner.MinimumDoubleCombiner;
+import org.apache.giraph.combiner.MinimumDoubleMessageCombiner;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.edge.ArrayListEdges;
@@ -67,7 +67,7 @@ public class ShortestPathsBenchmark extends GiraphBenchmark {
     LOG.info("Using class " + GiraphConstants.COMPUTATION_CLASS.get(conf));
     conf.setVertexInputFormatClass(PseudoRandomVertexInputFormat.class);
     if (!NO_COMBINER.optionTurnedOn(cmd)) {
-      conf.setCombinerClass(MinimumDoubleCombiner.class);
+      conf.setMessageCombinerClass(MinimumDoubleMessageCombiner.class);
     }
     conf.setLong(PseudoRandomInputFormatConstants.AGGREGATE_VERTICES,
         BenchmarkOption.VERTICES.getOptionLongValue(cmd));

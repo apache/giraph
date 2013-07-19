@@ -19,7 +19,7 @@
 package org.apache.giraph.comm.messages.primitives;
 
 import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.combiner.Combiner;
+import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.comm.messages.MessageStore;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
@@ -43,7 +43,7 @@ import java.util.List;
 
 /**
  * Special message store to be used when ids are IntWritable and messages
- * are FloatWritable and combiner is used.
+ * are FloatWritable and messageCombiner is used.
  * Uses fastutil primitive maps in order to decrease number of objects and
  * get better performance.
  */
@@ -51,8 +51,8 @@ public class IntFloatMessageStore
     implements MessageStore<IntWritable, FloatWritable> {
   /** Map from partition id to map from vertex id to message */
   private final Int2ObjectOpenHashMap<Int2FloatOpenHashMap> map;
-  /** Message combiner */
-  private final Combiner<IntWritable, FloatWritable> combiner;
+  /** Message messageCombiner */
+  private final MessageCombiner<IntWritable, FloatWritable> messageCombiner;
   /** Service worker */
   private final CentralizedServiceWorker<IntWritable, ?, ?> service;
 
@@ -60,18 +60,19 @@ public class IntFloatMessageStore
    * Constructor
    *
    * @param service Service worker
-   * @param combiner Message combiner
+   * @param messageCombiner Message messageCombiner
    */
   public IntFloatMessageStore(
       CentralizedServiceWorker<IntWritable, ?, ?> service,
-      Combiner<IntWritable, FloatWritable> combiner) {
+      MessageCombiner<IntWritable, FloatWritable> messageCombiner) {
     this.service = service;
-    this.combiner = combiner;
+    this.messageCombiner =
+        messageCombiner;
 
     map = new Int2ObjectOpenHashMap<Int2FloatOpenHashMap>();
     for (int partitionId : service.getPartitionStore().getPartitionIds()) {
       Partition<IntWritable, ?, ?> partition =
-          service.getPartitionStore().getPartition(partitionId);
+          service.getPartitionStore().getOrCreatePartition(partitionId);
       Int2FloatOpenHashMap partitionMap =
           new Int2FloatOpenHashMap((int) partition.getVertexCount());
       map.put(partitionId, partitionMap);
@@ -109,7 +110,7 @@ public class IntFloatMessageStore
           reusableVertexId.set(vertexId);
           reusableMessage.set(message);
           reusableCurrentMessage.set(partitionMap.get(vertexId));
-          combiner.combine(reusableVertexId, reusableCurrentMessage,
+          messageCombiner.combine(reusableVertexId, reusableCurrentMessage,
               reusableMessage);
           message = reusableCurrentMessage.get();
         }

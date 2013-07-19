@@ -19,7 +19,7 @@
 package org.apache.giraph.conf;
 
 import org.apache.giraph.aggregators.AggregatorWriter;
-import org.apache.giraph.combiner.Combiner;
+import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.edge.OutEdges;
@@ -34,6 +34,7 @@ import org.apache.giraph.graph.Computation;
 import org.apache.giraph.graph.DefaultVertex;
 import org.apache.giraph.graph.Language;
 import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.graph.VertexValueCombiner;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.EdgeOutputFormat;
@@ -87,8 +88,7 @@ import static org.apache.giraph.utils.ReflectionUtils.getTypeArguments;
  */
 @SuppressWarnings("unchecked")
 public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
-    V extends Writable, E extends Writable>
-    extends GiraphConfiguration {
+    V extends Writable, E extends Writable> extends GiraphConfiguration {
   /** Holder for all the classes */
   private final GiraphClasses classes;
   /** Value (IVEMM) Factories */
@@ -429,12 +429,14 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   }
 
   /**
-   * Get the user's subclassed {@link Combiner} class.
+   * Get the user's subclassed
+   * {@link org.apache.giraph.combiner.MessageCombiner} class.
    *
    * @return User's combiner class
    */
-  public Class<? extends Combiner<I, ? extends Writable>> getCombinerClass() {
-    return classes.getCombinerClass();
+  public Class<? extends MessageCombiner<I, ? extends Writable>>
+  getMessageCombinerClass() {
+    return classes.getMessageCombinerClass();
   }
 
   /**
@@ -444,8 +446,9 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    * @return Instantiated user combiner class
    */
   @SuppressWarnings("rawtypes")
-  public <M extends Writable> Combiner<I, M> createCombiner() {
-    Class<? extends Combiner<I, M>> klass = classes.getCombinerClass();
+  public <M extends Writable> MessageCombiner<I, M> createMessageCombiner() {
+    Class<? extends MessageCombiner<I, M>> klass =
+        classes.getMessageCombinerClass();
     return ReflectionUtils.newInstance(klass, this);
   }
 
@@ -454,8 +457,29 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    *
    * @return True iff user set a combiner class
    */
-  public boolean useCombiner() {
-    return classes.hasCombinerClass();
+  public boolean useMessageCombiner() {
+    return classes.hasMessageCombinerClass();
+  }
+
+  /**
+   * Get the user's subclassed
+   * {@link org.apache.giraph.graph.VertexValueCombiner} class.
+   *
+   * @return User's vertex value combiner class
+   */
+  public Class<? extends VertexValueCombiner<V>>
+  getVertexValueCombinerClass() {
+    return classes.getVertexValueCombinerClass();
+  }
+
+  /**
+   * Create a user vertex value combiner class
+   *
+   * @return Instantiated user vertex value combiner class
+   */
+  @SuppressWarnings("rawtypes")
+  public VertexValueCombiner<V> createVertexValueCombiner() {
+    return ReflectionUtils.newInstance(getVertexValueCombinerClass(), this);
   }
 
   /**
@@ -979,7 +1003,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   }
 
   /**
-   * Update Computation and Combiner class used
+   * Update Computation and MessageCombiner class used
    *
    * @param superstepClasses SuperstepClasses
    */
@@ -999,6 +1023,6 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
           (Class<? extends Writable>) classList[4];
       classes.setOutgoingMessageValueClass(outgoingMsgValueClass);
     }
-    classes.setCombinerClass(superstepClasses.getCombinerClass());
+    classes.setMessageCombiner(superstepClasses.getMessageCombinerClass());
   }
 }

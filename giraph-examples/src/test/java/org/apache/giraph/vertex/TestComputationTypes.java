@@ -18,7 +18,7 @@
 
 package org.apache.giraph.vertex;
 
-import org.apache.giraph.combiner.Combiner;
+import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.ByteArrayEdges;
@@ -63,8 +63,9 @@ public class TestComputationTypes {
     /**
      * Matches the {@link GeneratedComputationMatch}
      */
-    private static class GeneratedVertexMatchCombiner extends
-        Combiner<LongWritable, FloatWritable> {
+    private static class GeneratedVertexMatchMessageCombiner
+        extends
+        MessageCombiner<LongWritable, FloatWritable> {
       @Override
       public void combine(LongWritable vertexIndex,
           FloatWritable originalMessage,
@@ -80,8 +81,9 @@ public class TestComputationTypes {
     /**
      * Mismatches the {@link GeneratedComputationMatch}
      */
-    private static class GeneratedVertexMismatchCombiner extends
-        Combiner<LongWritable, DoubleWritable> {
+    private static class GeneratedVertexMismatchMessageCombiner
+        extends
+        MessageCombiner<LongWritable, DoubleWritable> {
       @Override
       public void combine(LongWritable vertexIndex,
           DoubleWritable originalMessage,
@@ -136,8 +138,8 @@ public class TestComputationTypes {
         GiraphConstants.VERTEX_EDGES_CLASS.set(conf, ByteArrayEdges.class);
         GiraphConstants.VERTEX_INPUT_FORMAT_CLASS.set(conf,
             SimpleSuperstepVertexInputFormat.class);
-        GiraphConstants.VERTEX_COMBINER_CLASS.set(conf,
-            GeneratedVertexMatchCombiner.class);
+        GiraphConstants.MESSAGE_COMBINER_CLASS.set(conf,
+            GeneratedVertexMatchMessageCombiner.class);
       @SuppressWarnings("rawtypes")
       GiraphConfigurationValidator<?, ?, ?, ?, ?> validator =
         new GiraphConfigurationValidator(conf);
@@ -203,8 +205,8 @@ public class TestComputationTypes {
       GiraphConstants.VERTEX_EDGES_CLASS.set(conf, ByteArrayEdges.class);
       GiraphConstants.VERTEX_INPUT_FORMAT_CLASS.set(conf,
         SimpleSuperstepVertexInputFormat.class);
-      GiraphConstants.VERTEX_COMBINER_CLASS.set(conf,
-        GeneratedVertexMismatchCombiner.class);
+      GiraphConstants.MESSAGE_COMBINER_CLASS.set(conf,
+        GeneratedVertexMismatchMessageCombiner.class);
       @SuppressWarnings("rawtypes")
       GiraphConfigurationValidator<?, ?, ?, ?, ?> validator =
         new GiraphConfigurationValidator(conf);

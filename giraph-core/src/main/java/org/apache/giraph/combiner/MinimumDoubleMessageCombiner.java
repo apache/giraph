@@ -16,30 +16,27 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.comm.messages;
+package org.apache.giraph.combiner;
 
-import org.apache.giraph.factories.MessageValueFactory;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.LongWritable;
 
 /**
- * Factory for message stores
- *
- * @param <I> Vertex id
- * @param <M> Message data
- * @param <MS> Message store
+ * MessageCombiner which finds the minimum of {@link DoubleWritable}.
  */
-public interface MessageStoreFactory<I extends WritableComparable,
-    M extends Writable, MS> {
-  /**
-   * Creates new message store.
-   *
-   * Note: MessageCombiner class in Configuration can be changed,
-   * this method should return MessageStore which uses current combiner
-   *
-   *
-   * @param messageValueFactory Message class held in the store
-   * @return New message store
-   */
-  MS newStore(MessageValueFactory<M> messageValueFactory);
+public class MinimumDoubleMessageCombiner
+    extends
+    MessageCombiner<LongWritable, DoubleWritable> {
+  @Override
+  public void combine(LongWritable vertexIndex, DoubleWritable originalMessage,
+      DoubleWritable messageToCombine) {
+    if (originalMessage.get() > messageToCombine.get()) {
+      originalMessage.set(messageToCombine.get());
+    }
+  }
+
+  @Override
+  public DoubleWritable createInitialMessage() {
+    return new DoubleWritable(Double.MAX_VALUE);
+  }
 }

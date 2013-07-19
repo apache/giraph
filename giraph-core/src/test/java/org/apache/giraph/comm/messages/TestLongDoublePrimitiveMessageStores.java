@@ -19,7 +19,7 @@
 package org.apache.giraph.comm.messages;
 
 import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.combiner.DoubleSumCombiner;
+import org.apache.giraph.combiner.DoubleSumMessageCombiner;
 import org.apache.giraph.comm.messages.primitives.LongByteArrayMessageStore;
 import org.apache.giraph.comm.messages.primitives.LongDoubleMessageStore;
 import org.apache.giraph.conf.GiraphConfiguration;
@@ -70,8 +70,8 @@ public class TestLongDoublePrimitiveMessageStores {
         Lists.newArrayList(0, 1));
     Partition partition = Mockito.mock(Partition.class);
     Mockito.when(partition.getVertexCount()).thenReturn(Long.valueOf(1));
-    Mockito.when(partitionStore.getPartition(0)).thenReturn(partition);
-    Mockito.when(partitionStore.getPartition(1)).thenReturn(partition);
+    Mockito.when(partitionStore.getOrCreatePartition(0)).thenReturn(partition);
+    Mockito.when(partitionStore.getOrCreatePartition(1)).thenReturn(partition);
   }
 
   private static class LongDoubleNoOpComputation extends
@@ -122,7 +122,7 @@ public class TestLongDoublePrimitiveMessageStores {
   @Test
   public void testLongDoubleMessageStore() throws IOException {
     LongDoubleMessageStore messageStore =
-        new LongDoubleMessageStore(service, new DoubleSumCombiner());
+        new LongDoubleMessageStore(service, new DoubleSumMessageCombiner());
     insertLongDoubleMessages(messageStore);
 
     Iterable<DoubleWritable> m0 =

@@ -18,7 +18,7 @@
 
 package org.apache.giraph.examples;
 
-import org.apache.giraph.combiner.MinimumIntCombiner;
+import org.apache.giraph.combiner.MinimumIntMessageCombiner;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.edge.ByteArrayEdges;
 import org.apache.giraph.graph.Vertex;
@@ -59,7 +59,7 @@ public class ConnectedComponentsComputationTestInMemory {
     GiraphConfiguration conf = new GiraphConfiguration();
     conf.setComputationClass(ConnectedComponentsComputation.class);
     conf.setOutEdgesClass(ByteArrayEdges.class);
-    conf.setCombinerClass(MinimumIntCombiner.class);
+    conf.setMessageCombinerClass(MinimumIntMessageCombiner.class);
 
     TestGraph<IntWritable, IntWritable, NullWritable> graph =
       new TestGraph<IntWritable, IntWritable, NullWritable>(conf);

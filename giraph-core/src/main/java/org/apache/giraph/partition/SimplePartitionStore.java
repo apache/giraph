@@ -18,12 +18,11 @@
 
 package org.apache.giraph.partition;
 
+import com.google.common.collect.Maps;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
-
-import com.google.common.collect.Maps;
 
 import java.util.concurrent.ConcurrentMap;
 
@@ -67,12 +66,22 @@ public class SimplePartitionStore<I extends WritableComparable,
         return;
       }
     }
+    // This is thread-safe
     oldPartition.addPartition(partition);
   }
 
   @Override
-  public Partition<I, V, E> getPartition(Integer partitionId) {
-    return partitions.get(partitionId);
+  public Partition<I, V, E> getOrCreatePartition(Integer partitionId) {
+    Partition<I, V, E> oldPartition = partitions.get(partitionId);
+    if (oldPartition == null) {
+      Partition<I, V, E> newPartition =
+          conf.createPartition(partitionId, context);
+      oldPartition = partitions.putIfAbsent(partitionId, newPartition);
+      if (oldPartition == null) {
+        return newPartition;
+      }
+    }
+    return oldPartition;
   }
 
   @Override

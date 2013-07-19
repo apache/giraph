@@ -55,7 +55,7 @@ public class ByteArrayVertexIdMessages<I extends WritableComparable,
    * deserializd right away, so this won't help.
    */
   private void setUseMessageSizeEncoding() {
-    if (!getConf().useCombiner()) {
+    if (!getConf().useMessageCombiner()) {
       useMessageSizeEncoding = getConf().useMessageSizeEncoding();
     } else {
       useMessageSizeEncoding = false;

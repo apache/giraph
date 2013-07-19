@@ -18,7 +18,7 @@
 
 package org.apache.giraph.examples;
 
-import org.apache.giraph.combiner.MinimumIntCombiner;
+import org.apache.giraph.combiner.MinimumIntMessageCombiner;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.edge.ByteArrayEdges;
@@ -72,7 +72,7 @@ public class TryMultiIpcBindingPortsTest {
         GiraphConstants.FAIL_FIRST_IPC_PORT_BIND_ATTEMPT.set(conf, true);
         conf.setComputationClass(ConnectedComponentsComputation.class);
         conf.setOutEdgesClass(ByteArrayEdges.class);
-        conf.setCombinerClass(MinimumIntCombiner.class);
+        conf.setMessageCombinerClass(MinimumIntMessageCombiner.class);
         conf.setVertexInputFormatClass(IntIntNullTextInputFormat.class);
         conf.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
 

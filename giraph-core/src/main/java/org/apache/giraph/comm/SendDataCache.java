@@ -23,11 +23,8 @@ import com.google.common.collect.Maps;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.partition.PartitionOwner;
-import org.apache.giraph.utils.ByteArrayVertexIdData;
 import org.apache.giraph.utils.PairList;
 import org.apache.giraph.worker.WorkerInfo;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 
 import javax.annotation.concurrent.NotThreadSafe;
 import java.util.List;
@@ -37,13 +34,11 @@ import java.util.Map;
  * An abstract structure for caching data by partitions
  * to be sent to workers in bulk. Not thread-safe.
  *
- * @param <I> Vertex id
- * @param <D> Data type
+ * @param <D> Data type of partition cache
  */
 @NotThreadSafe
 @SuppressWarnings("unchecked")
-public abstract class SendDataCache<I extends WritableComparable,
-    D extends Writable> {
+public abstract class SendDataCache<D> {
   /**
    * Internal cache of partitions (index) to their partition caches of
    * type D.
@@ -51,8 +46,6 @@ public abstract class SendDataCache<I extends WritableComparable,
   private final D[] dataCache;
   /** How big to initially make output streams for each worker's partitions */
   private final int[] initialBufferSizes;
-  /** Giraph configuration */
-  private final ImmutableClassesGiraphConfiguration conf;
   /** Service worker */
   private final CentralizedServiceWorker serviceWorker;
   /** Size of data (in bytes) for each worker */
@@ -92,7 +85,7 @@ public abstract class SendDataCache<I extends WritableComparable,
       workerPartitionIds.add(partitionOwner.getPartitionId());
       maxPartition = Math.max(partitionOwner.getPartitionId(), maxPartition);
     }
-    dataCache = (D[]) new Writable[maxPartition + 1];
+    dataCache = (D[]) new Object[maxPartition + 1];
 
     int maxWorker = 0;
     for (WorkerInfo workerInfo : serviceWorker.getWorkerInfoList()) {

@@ -19,13 +19,15 @@ package org.apache.giraph.conf;
 
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.aggregators.TextAggregatorWriter;
-import org.apache.giraph.combiner.Combiner;
+import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.edge.ByteArrayEdges;
 import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.factories.ComputationFactory;
 import org.apache.giraph.factories.DefaultComputationFactory;
 import org.apache.giraph.graph.Computation;
+import org.apache.giraph.graph.DefaultVertexValueCombiner;
 import org.apache.giraph.graph.DefaultVertexResolver;
+import org.apache.giraph.graph.VertexValueCombiner;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.EdgeOutputFormat;
@@ -92,11 +94,14 @@ public class GiraphClasses<I extends WritableComparable,
 
   /** Aggregator writer class - cached for fast access */
   protected Class<? extends AggregatorWriter> aggregatorWriterClass;
-  /** Combiner class - cached for fast access */
-  protected Class<? extends Combiner<I, ? extends Writable>> combinerClass;
+  /** Message combiner class - cached for fast access */
+  protected Class<? extends MessageCombiner<I, ? extends Writable>>
+  messageCombinerClass;
 
   /** Vertex resolver class - cached for fast access */
   protected Class<? extends VertexResolver<I, V, E>> vertexResolverClass;
+  /** Vertex value combiner class - cached for fast access */
+  protected Class<? extends VertexValueCombiner<V>> vertexValueCombinerClass;
   /** Worker context class - cached for fast access */
   protected Class<? extends WorkerContext> workerContextClass;
   /** Master compute class - cached for fast access */
@@ -131,6 +136,8 @@ public class GiraphClasses<I extends WritableComparable,
     aggregatorWriterClass = TextAggregatorWriter.class;
     vertexResolverClass = (Class<? extends VertexResolver<I, V, E>>)
         (Object) DefaultVertexResolver.class;
+    vertexValueCombinerClass = (Class<? extends VertexValueCombiner<V>>)
+        (Object) DefaultVertexValueCombiner.class;
     workerContextClass = DefaultWorkerContext.class;
     masterComputeClass = DefaultMasterCompute.class;
     partitionClass = (Class<? extends Partition<I, V, E>>) (Object)
@@ -176,10 +183,13 @@ public class GiraphClasses<I extends WritableComparable,
         EDGE_OUTPUT_FORMAT_CLASS.get(conf);
 
     aggregatorWriterClass = AGGREGATOR_WRITER_CLASS.get(conf);
-    combinerClass = (Class<? extends Combiner<I, ? extends Writable>>)
-        VERTEX_COMBINER_CLASS.get(conf);
+    messageCombinerClass =
+        (Class<? extends MessageCombiner<I, ? extends Writable>>)
+        MESSAGE_COMBINER_CLASS.get(conf);
     vertexResolverClass = (Class<? extends VertexResolver<I, V, E>>)
         VERTEX_RESOLVER_CLASS.get(conf);
+    vertexValueCombinerClass = (Class<? extends VertexValueCombiner<V>>)
+        VERTEX_VALUE_COMBINER_CLASS.get(conf);
     workerContextClass = WORKER_CONTEXT_CLASS.get(conf);
     masterComputeClass =  MASTER_COMPUTE_CLASS.get(conf);
     partitionClass = (Class<? extends Partition<I, V, E>>)
@@ -390,21 +400,22 @@ public class GiraphClasses<I extends WritableComparable,
   }
 
   /**
-   * Check if Combiner is set
+   * Check if MessageCombiner is set
    *
-   * @return true if Combiner is set
+   * @return true if MessageCombiner is set
    */
-  public boolean hasCombinerClass() {
-    return combinerClass != null;
+  public boolean hasMessageCombinerClass() {
+    return messageCombinerClass != null;
   }
 
   /**
-   * Get Combiner used
+   * Get MessageCombiner used
    *
-   * @return Combiner
+   * @return MessageCombiner
    */
-  public Class<? extends Combiner<I, ? extends Writable>> getCombinerClass() {
-    return combinerClass;
+  public Class<? extends MessageCombiner<I, ? extends Writable>>
+  getMessageCombinerClass() {
+    return messageCombinerClass;
   }
 
   /**
@@ -423,6 +434,15 @@ public class GiraphClasses<I extends WritableComparable,
    */
   public Class<? extends VertexResolver<I, V, E>> getVertexResolverClass() {
     return vertexResolverClass;
+  }
+
+  /**
+   * Get VertexValueCombiner used
+   *
+   * @return VertexValueCombiner
+   */
+  public Class<? extends VertexValueCombiner<V>> getVertexValueCombinerClass() {
+    return vertexValueCombinerClass;
   }
 
   /**
@@ -639,14 +659,14 @@ public class GiraphClasses<I extends WritableComparable,
   }
 
   /**
-   * Set Combiner class used
+   * Set MessageCombiner class used
    *
-   * @param combinerClass Combiner class to set
+   * @param combinerClass MessageCombiner class to set
    * @return this
    */
-  public GiraphClasses setCombinerClass(
-      Class<? extends Combiner<I, ? extends Writable>> combinerClass) {
-    this.combinerClass = combinerClass;
+  public GiraphClasses setMessageCombiner(
+      Class<? extends MessageCombiner<I, ? extends Writable>> combinerClass) {
+    this.messageCombinerClass = combinerClass;
     return this;
   }
 

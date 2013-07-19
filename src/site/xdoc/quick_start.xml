@@ -224,7 +224,7 @@ usage: org.apache.giraph.utils.ConfigurationUtils [-aw &lt;arg&gt;] [-c &lt;arg&
        &lt;arg&gt;] [-vip &lt;arg&gt;] [-vvf &lt;arg&gt;] [-w &lt;arg&gt;] [-wc &lt;arg&gt;] [-yh &lt;arg&gt;]
        [-yj &lt;arg&gt;]
  -aw,--aggregatorWriter &lt;arg&gt;           AggregatorWriter class
- -c,--combiner &lt;arg&gt;                    Combiner class
+ -c,--messageCombiner &lt;arg&gt;             Message messageCombiner class
  -ca,--customArguments &lt;arg&gt;            provide custom arguments for the
                                         job configuration in the form: -ca
                                         &lt;param1&gt;=&lt;value1&gt;,&lt;param2&gt;=&lt;value2&gt;

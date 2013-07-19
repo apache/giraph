@@ -19,7 +19,7 @@
 package org.apache.giraph.benchmark;
 
 import org.apache.commons.cli.CommandLine;
-import org.apache.giraph.combiner.FloatSumCombiner;
+import org.apache.giraph.combiner.FloatSumMessageCombiner;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphTypes;
 import org.apache.giraph.edge.IntNullArrayEdges;
@@ -76,7 +76,7 @@ public class PageRankBenchmark extends GiraphBenchmark {
       conf.setComputationClass(PageRankComputation.class);
     }
     conf.setOutEdgesClass(IntNullArrayEdges.class);
-    conf.setCombinerClass(FloatSumCombiner.class);
+    conf.setMessageCombinerClass(FloatSumMessageCombiner.class);
     conf.setVertexInputFormatClass(
         PseudoRandomIntNullVertexInputFormat.class);
 

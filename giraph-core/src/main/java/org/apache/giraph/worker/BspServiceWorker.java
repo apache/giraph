@@ -571,7 +571,7 @@ public class BspServiceWorker<I extends WritableComparable,
         new ArrayList<PartitionStats>();
     for (Integer partitionId : getPartitionStore().getPartitionIds()) {
       Partition<I, V, E> partition =
-          getPartitionStore().getPartition(partitionId);
+          getPartitionStore().getOrCreatePartition(partitionId);
       PartitionStats partitionStats =
           new PartitionStats(partition.getId(),
               partition.getVertexCount(),
@@ -974,7 +974,7 @@ public class BspServiceWorker<I extends WritableComparable,
               }
 
               Partition<I, V, E> partition =
-                  getPartitionStore().getPartition(partitionId);
+                  getPartitionStore().getOrCreatePartition(partitionId);
               long verticesWritten = 0;
               for (Vertex<I, V, E> vertex : partition) {
                 vertexWriter.writeVertex(vertex);
@@ -1082,7 +1082,7 @@ public class BspServiceWorker<I extends WritableComparable,
               }
 
               Partition<I, V, E> partition =
-                  getPartitionStore().getPartition(partitionId);
+                  getPartitionStore().getOrCreatePartition(partitionId);
               long vertices = 0;
               long edges = 0;
               long partitionEdgeCount = partition.getEdgeCount();
@@ -1241,7 +1241,7 @@ public class BspServiceWorker<I extends WritableComparable,
     DataOutput metadataOutput = new DataOutputStream(metadataByteStream);
     for (Integer partitionId : getPartitionStore().getPartitionIds()) {
       Partition<I, V, E> partition =
-          getPartitionStore().getPartition(partitionId);
+          getPartitionStore().getOrCreatePartition(partitionId);
       long startPos = verticesOutputStream.getPos();
       partition.write(verticesOutputStream);
       // write messages

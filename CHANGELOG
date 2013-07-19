@@ -710,7 +710,7 @@ Release 1.0.0 - 2013-04-15
   GIRAPH-298: Reduce timeout for TestAutoCheckpoint. (majakabiljo via
   aching)
 	
-  GIRAPH-324: Add option to use combiner in benchmarks. (apresta via
+  GIRAPH-324: Add option to use messageCombiner in benchmarks. (apresta via
   aching)
 
   GIRAPH-191: Random walks on graphs (Gianmarco De Francisci Morales
@@ -843,7 +843,7 @@ Release 1.0.0 - 2013-04-15
   GIRAPH-236: Add FindBugs to maven build (Jan van der Lugt via
   aching).
 
-  GIRAPH-224: Netty server-side combiner (apresta via aching).
+  GIRAPH-224: Netty server-side messageCombiner (apresta via aching).
 
   GIRAPH-251: Allow to access the distributed cache from Vertexes and
   WorkerContext (Gianmarco De Francisci Morales via aching).

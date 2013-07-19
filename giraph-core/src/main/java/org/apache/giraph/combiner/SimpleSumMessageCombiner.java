@@ -22,10 +22,10 @@ import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 
 /**
- * Combiner which sums up {@link IntWritable} message values.
+ * MessageCombiner which sums up {@link IntWritable} message values.
  */
-public class SimpleSumCombiner
-    extends Combiner<LongWritable, IntWritable> {
+public class SimpleSumMessageCombiner
+    extends MessageCombiner<LongWritable, IntWritable> {
 
   @Override
   public void combine(LongWritable vertexIndex, IntWritable originalMessage,

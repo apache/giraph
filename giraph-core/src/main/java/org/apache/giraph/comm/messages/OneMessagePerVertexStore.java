@@ -19,7 +19,7 @@
 package org.apache.giraph.comm.messages;
 
 import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.combiner.Combiner;
+import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
@@ -35,29 +35,30 @@ import java.util.concurrent.ConcurrentMap;
 /**
  * Implementation of {@link SimpleMessageStore} where we have a single
  * message per vertex.
- * Used when {@link Combiner} is provided.
+ * Used when {@link org.apache.giraph.combiner.MessageCombiner} is provided.
  *
  * @param <I> Vertex id
  * @param <M> Message data
  */
 public class OneMessagePerVertexStore<I extends WritableComparable,
     M extends Writable> extends SimpleMessageStore<I, M, M> {
-  /** Combiner for messages */
-  private final Combiner<I, M> combiner;
+  /** MessageCombiner for messages */
+  private final MessageCombiner<I, M> messageCombiner;
 
   /**
    * @param messageValueFactory Message class held in the store
-   * @param service  Service worker
-   * @param combiner Combiner for messages
-   * @param config   Hadoop configuration
+   * @param service Service worker
+   * @param messageCombiner MessageCombiner for messages
+   * @param config Hadoop configuration
    */
   OneMessagePerVertexStore(
       MessageValueFactory<M> messageValueFactory,
       CentralizedServiceWorker<I, ?, ?> service,
-      Combiner<I, M> combiner,
+      MessageCombiner<I, M> messageCombiner,
       ImmutableClassesGiraphConfiguration<I, ?, ?> config) {
     super(messageValueFactory, service, config);
-    this.combiner = combiner;
+    this.messageCombiner =
+        messageCombiner;
   }
 
   @Override
@@ -76,7 +77,7 @@ public class OneMessagePerVertexStore<I extends WritableComparable,
       M currentMessage =
           partitionMap.get(vertexIdMessageIterator.getCurrentVertexId());
       if (currentMessage == null) {
-        M newMessage = combiner.createInitialMessage();
+        M newMessage = messageCombiner.createInitialMessage();
         currentMessage = partitionMap.putIfAbsent(
             vertexIdMessageIterator.releaseCurrentVertexId(), newMessage);
         if (currentMessage == null) {
@@ -84,7 +85,7 @@ public class OneMessagePerVertexStore<I extends WritableComparable,
         }
       }
       synchronized (currentMessage) {
-        combiner.combine(vertexId, currentMessage,
+        messageCombiner.combine(vertexId, currentMessage,
             vertexIdMessageIterator.getCurrentMessage());
       }
     }
@@ -157,7 +158,7 @@ public class OneMessagePerVertexStore<I extends WritableComparable,
     public MessageStore<I, M> newStore(
         MessageValueFactory<M> messageValueFactory) {
       return new OneMessagePerVertexStore<I, M>(messageValueFactory, service,
-          config.<M>createCombiner(), config);
+          config.<M>createMessageCombiner(), config);
     }
   }
 }

@@ -16,30 +16,25 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.comm.messages;
+package org.apache.giraph.combiner;
 
-import org.apache.giraph.factories.MessageValueFactory;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.io.FloatWritable;
+import org.apache.hadoop.io.IntWritable;
 
 /**
- * Factory for message stores
- *
- * @param <I> Vertex id
- * @param <M> Message data
- * @param <MS> Message store
+ * A combiner that sums float-valued messages
  */
-public interface MessageStoreFactory<I extends WritableComparable,
-    M extends Writable, MS> {
-  /**
-   * Creates new message store.
-   *
-   * Note: MessageCombiner class in Configuration can be changed,
-   * this method should return MessageStore which uses current combiner
-   *
-   *
-   * @param messageValueFactory Message class held in the store
-   * @return New message store
-   */
-  MS newStore(MessageValueFactory<M> messageValueFactory);
+public class FloatSumMessageCombiner
+    extends
+    MessageCombiner<IntWritable, FloatWritable> {
+  @Override
+  public void combine(IntWritable vertexIndex, FloatWritable originalMessage,
+      FloatWritable messageToCombine) {
+    originalMessage.set(originalMessage.get() + messageToCombine.get());
+  }
+
+  @Override
+  public FloatWritable createInitialMessage() {
+    return new FloatWritable(0);
+  }
 }
