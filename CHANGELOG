@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-721: Don't call progress on each edge/vertex loaded (majakabiljo)
+
   GIRAPH-720: Provide a way to change job name (majakabiljo)
 
   GIRAPH-718: Output all per-superstep metrics per superstep (majakabiljo)

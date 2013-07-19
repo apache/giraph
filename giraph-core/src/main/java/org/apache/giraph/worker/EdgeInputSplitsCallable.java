@@ -170,7 +170,6 @@ public class EdgeInputSplitsCallable<I extends WritableComparable,
       }
 
       workerClientRequestProcessor.sendEdgeRequest(sourceId, readerEdge);
-      context.progress(); // do this before potential data transfer
 
       // Update status every EDGES_UPDATE_PERIOD edges
       if (inputSplitEdgesLoaded % EDGES_UPDATE_PERIOD == 0) {

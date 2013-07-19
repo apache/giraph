@@ -171,7 +171,6 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
           bspServiceWorker.getVertexPartitionOwner(readerVertex.getId());
       workerClientRequestProcessor.sendVertexRequest(
           partitionOwner, readerVertex);
-      context.progress(); // do this before potential data transfer
       edgesSinceLastUpdate += readerVertex.getNumEdges();
 
       // Update status every VERTICES_UPDATE_PERIOD vertices
