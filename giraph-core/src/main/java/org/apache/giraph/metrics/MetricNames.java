@@ -68,6 +68,9 @@ public interface MetricNames {
   /** Counter of messages sent in superstep */
   String MESSAGES_SENT = "messages-sent";
 
+  /** Counter of messages sent in superstep */
+  String MESSAGE_BYTES_SENT = "message-bytes-sent";
+
   /** Histogram for vertices in mutations requests */
   String VERTICES_IN_MUTATION_REQUEST = "vertices-per-mutations-request";
 

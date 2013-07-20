@@ -869,5 +869,14 @@ public interface GiraphConstants {
           "The application will not mutate the graph topology (the edges). " +
           "It is used to optimise out-of-core graph, by not writing back " +
           "edges every time.");
+
+  /**
+   * This option will enable communication optimization for one-to-all
+   * message sending. For multiple target ids on the same machine,
+   * we only send one message to all the targets.
+   */
+  BooleanConfOption ONE_TO_ALL_MSG_SENDING =
+    new BooleanConfOption("giraph.oneToAllMsgSending", false, "Enable " +
+        "one-to-all message sending strategy");
 }
 // CHECKSTYLE: resume InterfaceIsTypeCheck

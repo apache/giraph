@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-701: Communication improvement using one-to-all message
+  sending (Bingjing via aching)
+
   GIRAPH-721: Don't call progress on each edge/vertex loaded (majakabiljo)
 
   GIRAPH-720: Provide a way to change job name (majakabiljo)

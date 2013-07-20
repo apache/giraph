@@ -40,6 +40,8 @@ public class GiraphStats extends HadoopCountersBase {
   public static final String EDGES_NAME = "Aggregate edges";
   /** sent messages counter name */
   public static final String SENT_MESSAGES_NAME = "Sent messages";
+  /** sent messages counter name */
+  public static final String SENT_MESSAGE_BYTES_NAME = "Sent message bytes";
   /** workers counter name */
   public static final String CURRENT_WORKERS_NAME = "Current workers";
   /** current master partition task counter name */
@@ -68,8 +70,10 @@ public class GiraphStats extends HadoopCountersBase {
   private static final int CURRENT_MASTER_TASK_PARTITION = 6;
   /** Last checkpointed superstep */
   private static final int LAST_CHECKPOINTED_SUPERSTEP = 7;
+  /** Sent message bytes counter */
+  private static final int SENT_MESSAGE_BYTES = 8;
   /** Number of counters in this class */
-  private static final int NUM_COUNTERS = 8;
+  private static final int NUM_COUNTERS = 9;
 
   /** All the counters stored */
   private final GiraphHadoopCounter[] counters;
@@ -87,6 +91,7 @@ public class GiraphStats extends HadoopCountersBase {
     counters[FINISHED_VERTICES] = getCounter(FINISHED_VERTICES_NAME);
     counters[EDGES] = getCounter(EDGES_NAME);
     counters[SENT_MESSAGES] = getCounter(SENT_MESSAGES_NAME);
+    counters[SENT_MESSAGE_BYTES] = getCounter(SENT_MESSAGE_BYTES_NAME);
     counters[CURRENT_WORKERS] = getCounter(CURRENT_WORKERS_NAME);
     counters[CURRENT_MASTER_TASK_PARTITION] =
         getCounter(CURRENT_MASTER_PARTITION_TASK_NAME);
@@ -155,6 +160,15 @@ public class GiraphStats extends HadoopCountersBase {
    */
   public GiraphHadoopCounter getSentMessages() {
     return counters[SENT_MESSAGES];
+  }
+
+  /**
+   * Get SentMessageBytes counter
+   *
+   * @return SentMessageBytes counter
+   */
+  public GiraphHadoopCounter getSentMessageBytes() {
+    return counters[SENT_MESSAGE_BYTES];
   }
 
   /**

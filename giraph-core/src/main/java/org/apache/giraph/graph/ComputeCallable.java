@@ -96,6 +96,8 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
   // Per-Superstep Metrics
   /** Messages sent */
   private final Counter messagesSentCounter;
+  /** Message bytes sent */
+  private final Counter messageBytesSentCounter;
   /** Timer for single compute() call */
   private final Timer computeOneTimer;
 
@@ -127,6 +129,8 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
     // not long-lived, so just instantiating in the constructor is good enough.
     computeOneTimer = metrics.getTimer(TimerDesc.COMPUTE_ONE);
     messagesSentCounter = metrics.getCounter(MetricNames.MESSAGES_SENT);
+    messageBytesSentCounter =
+      metrics.getCounter(MetricNames.MESSAGE_BYTES_SENT);
   }
 
   @Override
@@ -164,6 +168,10 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
         long partitionMsgs = workerClientRequestProcessor.resetMessageCount();
         partitionStats.addMessagesSentCount(partitionMsgs);
         messagesSentCounter.inc(partitionMsgs);
+        long partitionMsgBytes =
+          workerClientRequestProcessor.resetMessageBytesCount();
+        partitionStats.addMessageBytesSentCount(partitionMsgBytes);
+        messageBytesSentCounter.inc(partitionMsgBytes);
         timedLogger.info("call: Completed " +
             partitionStatsList.size() + " partitions, " +
             partitionIdQueue.size() + " remaining " +
@@ -193,6 +201,15 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
     }
     try {
       workerClientRequestProcessor.flush();
+      // The messages flushed out from the cache is
+      // from the last partition processed
+      if (partitionStatsList.size() > 0) {
+        long partitionMsgBytes =
+          workerClientRequestProcessor.resetMessageBytesCount();
+        partitionStatsList.get(partitionStatsList.size() - 1).
+          addMessageBytesSentCount(partitionMsgBytes);
+        messageBytesSentCounter.inc(partitionMsgBytes);
+      }
       aggregatorUsage.finishThreadComputation();
     } catch (IOException e) {
       throw new IllegalStateException("call: Flushing failed.", e);
@@ -211,7 +228,7 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
       Computation<I, V, E, M1, M2> computation,
       Partition<I, V, E> partition) throws IOException, InterruptedException {
     PartitionStats partitionStats =
-        new PartitionStats(partition.getId(), 0, 0, 0, 0);
+        new PartitionStats(partition.getId(), 0, 0, 0, 0, 0);
     // Make sure this is thread-safe across runs
     synchronized (partition) {
       for (Vertex<I, V, E> vertex : partition) {

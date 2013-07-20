@@ -26,6 +26,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 import java.io.IOException;
+import java.util.Iterator;
 
 /**
  * Aggregates IPC requests and sends them off
@@ -41,9 +42,24 @@ public interface WorkerClientRequestProcessor<I extends WritableComparable,
    *
    * @param destVertexId Destination vertex id.
    * @param message Message to send.
-   * @return true if any network I/O occurred.
    */
-  boolean sendMessageRequest(I destVertexId, Writable message);
+  void sendMessageRequest(I destVertexId, Writable message);
+
+  /**
+   * Sends a message through all edges to all destinations.
+   *
+   * @param vertex The source vertex.
+   * @param message  Message to send.
+   */
+  void sendMessageToAllRequest(Vertex<I, V, E> vertex, Writable message);
+
+  /**
+   * Sends a message to the targets in the iterator.
+   *
+   * @param vertexIdIterator The iterator of target vertex ids.
+   * @param message  Message to send.
+   */
+  void sendMessageToAllRequest(Iterator<I> vertexIdIterator, Writable message);
 
   /**
    * Sends a vertex to the appropriate partition owner
@@ -126,4 +142,11 @@ public interface WorkerClientRequestProcessor<I extends WritableComparable,
    * @return Number of messages sent before the reset.
    */
   long resetMessageCount();
+
+  /**
+   * Get the message bytes sent during this superstep and clear them.
+   *
+   * @return Bytes of messages sent before the reset.
+   */
+  long resetMessageBytesCount();
 }

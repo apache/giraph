@@ -1036,4 +1036,20 @@ public class GiraphConfiguration extends Configuration
     value = value.replace("%USER%", get("user.name", "unknown_user"));
     return value;
   }
+
+  /**
+   * Enable communication optimization for one-to-all messages.
+   */
+  public void enableOneToAllMsgSending() {
+    ONE_TO_ALL_MSG_SENDING.set(this, true);
+  }
+
+  /**
+   * Return if one-to-all messsage sending is enabled.
+   *
+   * @return True if this option is enabled.
+   */
+  public boolean isOneToAllMsgSendingEnabled() {
+    return ONE_TO_ALL_MSG_SENDING.isTrue(this);
+  }
 }

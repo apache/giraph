@@ -573,7 +573,7 @@ public class BspServiceWorker<I extends WritableComparable,
               partition.getVertexCount(),
               0,
               partition.getEdgeCount(),
-              0);
+              0, 0);
       partitionStatsList.add(partitionStats);
       getPartitionStore().putPartition(partition);
     }
@@ -741,9 +741,11 @@ public class BspServiceWorker<I extends WritableComparable,
     getGraphTaskManager().notifyFinishedCommunication();
 
     long workerSentMessages = 0;
+    long workerSentMessageBytes = 0;
     long localVertices = 0;
     for (PartitionStats partitionStats : partitionStatsList) {
       workerSentMessages += partitionStats.getMessagesSentCount();
+      workerSentMessageBytes += partitionStats.getMessageBytesSentCount();
       localVertices += partitionStats.getVertexCount();
     }
 
@@ -756,10 +758,12 @@ public class BspServiceWorker<I extends WritableComparable,
     if (LOG.isInfoEnabled()) {
       LOG.info("finishSuperstep: Superstep " + getSuperstep() +
           ", messages = " + workerSentMessages + " " +
+          ", message bytes = " + workerSentMessageBytes + " , " +
           MemoryUtils.getRuntimeMemoryStats());
     }
 
-    writeFinshedSuperstepInfoToZK(partitionStatsList, workerSentMessages);
+    writeFinshedSuperstepInfoToZK(partitionStatsList,
+      workerSentMessages, workerSentMessageBytes);
 
     LoggerUtils.setStatusAndLog(getContext(), LOG, Level.INFO,
         "finishSuperstep: (waiting for rest " +
@@ -854,9 +858,12 @@ public class BspServiceWorker<I extends WritableComparable,
    *
    * @param partitionStatsList List of partition stats from superstep.
    * @param workerSentMessages Number of messages sent in superstep.
+   * @param workerSentMessageBytes Number of message bytes sent
+   *                               in superstep.
    */
   private void writeFinshedSuperstepInfoToZK(
-      List<PartitionStats> partitionStatsList, long workerSentMessages) {
+      List<PartitionStats> partitionStatsList, long workerSentMessages,
+      long workerSentMessageBytes) {
     Collection<PartitionStats> finalizedPartitionStats =
         workerGraphPartitioner.finalizePartitionStats(
             partitionStatsList, getPartitionStore());
@@ -873,6 +880,8 @@ public class BspServiceWorker<I extends WritableComparable,
       workerFinishedInfoObj.put(JSONOBJ_PARTITION_STATS_KEY,
           Base64.encodeBytes(partitionStatsBytes));
       workerFinishedInfoObj.put(JSONOBJ_NUM_MESSAGES_KEY, workerSentMessages);
+      workerFinishedInfoObj.put(JSONOBJ_NUM_MESSAGE_BYTES_KEY,
+        workerSentMessageBytes);
       workerFinishedInfoObj.put(JSONOBJ_METRICS_KEY,
           Base64.encodeBytes(metricsBytes));
     } catch (JSONException e) {

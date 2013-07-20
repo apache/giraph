@@ -89,6 +89,7 @@ public class OneMessagePerVertexStore<I extends WritableComparable,
       }
     }
   }
+
   @Override
   protected Iterable<M> getMessagesAsIterable(M message) {
     return Collections.singleton(message);

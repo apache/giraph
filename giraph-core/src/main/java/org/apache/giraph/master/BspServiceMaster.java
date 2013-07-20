@@ -954,6 +954,9 @@ public class BspServiceMaster<I extends WritableComparable,
         globalStats.addMessageCount(
             workerFinishedInfoObj.getLong(
                 JSONOBJ_NUM_MESSAGES_KEY));
+        globalStats.addMessageBytesCount(
+          workerFinishedInfoObj.getLong(
+              JSONOBJ_NUM_MESSAGE_BYTES_KEY));
         if (conf.metricsEnabled() &&
             workerFinishedInfoObj.has(JSONOBJ_METRICS_KEY)) {
           WorkerSuperstepMetrics workerMetrics = new WorkerSuperstepMetrics();
@@ -1959,6 +1962,7 @@ public class BspServiceMaster<I extends WritableComparable,
     gs.getFinishedVertexes().setValue(globalStats.getFinishedVertexCount());
     gs.getEdges().setValue(globalStats.getEdgeCount());
     gs.getSentMessages().setValue(globalStats.getMessageCount());
+    gs.getSentMessageBytes().setValue(globalStats.getMessageBytesCount());
   }
 
   /**

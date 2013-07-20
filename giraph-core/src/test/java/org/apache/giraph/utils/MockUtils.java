@@ -30,6 +30,10 @@ import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.partition.BasicPartitionOwner;
 import org.apache.giraph.partition.PartitionOwner;
+import org.apache.giraph.partition.PartitionStore;
+import org.apache.giraph.partition.SimplePartition;
+import org.apache.giraph.partition.SimplePartitionStore;
+import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Writable;
@@ -94,6 +98,10 @@ public class MockUtils {
             Mockito.verify(workerClientRequestProcessor).sendMessageRequest
                 (targetVertexId, message);
         }
+        
+        public void verifyMessageSentToAllEdges(Vertex<I, V, E> vertex, M message) {
+          Mockito.verify(workerClientRequestProcessor).sendMessageToAllRequest(vertex, message);
+      }
 
         /** assert that the test vertex has sent no message to a particular vertex */
         public void verifyNoMessageSent() {
@@ -149,6 +157,12 @@ public class MockUtils {
     return env;
   }
 
+  /**
+   * Prepare a mocked CentralizedServiceWorker.
+   *
+   * @param numOfPartitions The number of partitions
+   * @return CentralizedServiceWorker
+   */
   public static CentralizedServiceWorker<IntWritable, IntWritable,
       IntWritable> mockServiceGetVertexPartitionOwner(final int
       numOfPartitions) {
@@ -167,14 +181,24 @@ public class MockUtils {
     return service;
   }
 
+  /**
+   * Prepare a ServerData object.
+   *
+   * @param conf Configuration
+   * @param context Context
+   * @return ServerData
+   */
   public static ServerData<IntWritable, IntWritable, IntWritable>
-  createNewServerData(ImmutableClassesGiraphConfiguration conf,
-      Mapper.Context context) {
-    return new ServerData<IntWritable, IntWritable, IntWritable>(
-        Mockito.mock(CentralizedServiceWorker.class),
-        conf,
-        ByteArrayMessagesPerVertexStore.newFactory(
-            MockUtils.mockServiceGetVertexPartitionOwner(1), conf),
-        context);
+    createNewServerData(
+    ImmutableClassesGiraphConfiguration conf, Mapper.Context context) {
+    CentralizedServiceWorker<IntWritable, IntWritable, IntWritable> serviceWorker =
+      MockUtils.mockServiceGetVertexPartitionOwner(1);
+    ServerData<IntWritable, IntWritable, IntWritable> serverData =
+      new ServerData<IntWritable, IntWritable, IntWritable>(
+      serviceWorker, conf, ByteArrayMessagesPerVertexStore.newFactory(
+        serviceWorker, conf), context);
+    // Here we add a partition to simulate the case that there is one partition.
+    serverData.getPartitionStore().addPartition(new SimplePartition());
+    return serverData;
   }
 }

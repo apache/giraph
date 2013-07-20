@@ -38,6 +38,8 @@ public class PartitionStats implements Writable {
   private long edgeCount = 0;
   /** Messages sent from this partition */
   private long messagesSentCount = 0;
+  /** Message byetes sent from this partition */
+  private long messageBytesSentCount = 0;
 
   /**
    * Default constructor for reflection.
@@ -52,17 +54,20 @@ public class PartitionStats implements Writable {
    * @param finishedVertexCount Finished vertex count.
    * @param edgeCount Edge count.
    * @param messagesSentCount Number of messages sent
+   * @param messageBytesSentCount Number of message bytes sent
    */
   public PartitionStats(int partitionId,
       long vertexCount,
       long finishedVertexCount,
       long edgeCount,
-      long messagesSentCount) {
+      long messagesSentCount,
+      long messageBytesSentCount) {
     this.partitionId = partitionId;
     this.vertexCount = vertexCount;
     this.finishedVertexCount = finishedVertexCount;
     this.edgeCount = edgeCount;
     this.messagesSentCount = messagesSentCount;
+    this.messageBytesSentCount = messageBytesSentCount;
   }
 
   /**
@@ -151,6 +156,24 @@ public class PartitionStats implements Writable {
     return messagesSentCount;
   }
 
+  /**
+   * Add message bytes to messageBytesSentCount.
+   *
+   * @param messageBytesSentCount Number of message bytes to add.
+   */
+  public void addMessageBytesSentCount(long messageBytesSentCount) {
+    this.messageBytesSentCount += messageBytesSentCount;
+  }
+
+  /**
+   * Get the message bytes sent count.
+   *
+   * @return Message bytes sent count.
+   */
+  public long getMessageBytesSentCount() {
+    return messageBytesSentCount;
+  }
+
   @Override
   public void readFields(DataInput input) throws IOException {
     partitionId = input.readInt();
@@ -158,6 +181,7 @@ public class PartitionStats implements Writable {
     finishedVertexCount = input.readLong();
     edgeCount = input.readLong();
     messagesSentCount = input.readLong();
+    messageBytesSentCount = input.readLong();
   }
 
   @Override
@@ -167,12 +191,14 @@ public class PartitionStats implements Writable {
     output.writeLong(finishedVertexCount);
     output.writeLong(edgeCount);
     output.writeLong(messagesSentCount);
+    output.writeLong(messageBytesSentCount);
   }
 
   @Override
   public String toString() {
     return "(id=" + partitionId + ",vtx=" + vertexCount + ",finVtx=" +
         finishedVertexCount + ",edges=" + edgeCount + ",msgsSent=" +
-        messagesSentCount + ")";
+        messagesSentCount + ",msgBytesSent=" +
+          messageBytesSentCount + ")";
   }
 }

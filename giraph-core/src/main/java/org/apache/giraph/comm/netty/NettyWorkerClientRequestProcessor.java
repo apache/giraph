@@ -21,6 +21,7 @@ import org.apache.giraph.bsp.BspService;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.SendEdgeCache;
 import org.apache.giraph.comm.SendMessageCache;
+import org.apache.giraph.comm.SendMessageToAllCache;
 import org.apache.giraph.comm.SendMutationsCache;
 import org.apache.giraph.comm.SendPartitionCache;
 import org.apache.giraph.comm.ServerData;
@@ -31,7 +32,6 @@ import org.apache.giraph.comm.requests.SendPartitionCurrentMessagesRequest;
 import org.apache.giraph.comm.requests.SendPartitionMutationsRequest;
 import org.apache.giraph.comm.requests.SendVertexRequest;
 import org.apache.giraph.comm.requests.SendWorkerEdgesRequest;
-import org.apache.giraph.comm.requests.SendWorkerMessagesRequest;
 import org.apache.giraph.comm.requests.WorkerRequest;
 import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
@@ -57,6 +57,7 @@ import com.yammer.metrics.core.Gauge;
 import com.yammer.metrics.util.PercentGauge;
 
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.Map;
 
 import static org.apache.giraph.conf.GiraphConstants.MAX_EDGE_REQUEST_SIZE;
@@ -90,8 +91,6 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
       new SendMutationsCache<I, V, E>();
   /** NettyClient that could be shared among one or more instances */
   private final WorkerClient<I, V, E> workerClient;
-  /** Messages sent during the last superstep */
-  private long totalMsgsSentInSuperstep = 0;
   /** Maximum size of messages per remote worker to cache before sending */
   private final int maxMessagesSizePerWorker;
   /** Maximum size of edges per remote worker to cache before sending. */
@@ -126,9 +125,17 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
     this.configuration = conf;
 
     sendPartitionCache = new SendPartitionCache<I, V, E>(context, conf);
-    sendMessageCache = new SendMessageCache<I, Writable>(conf, serviceWorker);
     sendEdgeCache = new SendEdgeCache<I, E>(conf, serviceWorker);
     maxMessagesSizePerWorker = MAX_MSG_REQUEST_SIZE.get(conf);
+    if (this.configuration.isOneToAllMsgSendingEnabled()) {
+      sendMessageCache =
+        new SendMessageToAllCache<I, Writable>(conf, serviceWorker,
+          this, maxMessagesSizePerWorker);
+    } else {
+      sendMessageCache =
+        new SendMessageCache<I, Writable>(conf, serviceWorker,
+          this, maxMessagesSizePerWorker);
+    }
     maxEdgesSizePerWorker = MAX_EDGE_REQUEST_SIZE.get(conf);
     maxMutationsPerPartition = MAX_MUTATIONS_PER_REQUEST.get(conf);
     this.serviceWorker = serviceWorker;
@@ -159,34 +166,20 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
   }
 
   @Override
-  public boolean sendMessageRequest(I destVertexId, Writable message) {
-    PartitionOwner owner =
-        serviceWorker.getVertexPartitionOwner(destVertexId);
-    WorkerInfo workerInfo = owner.getWorkerInfo();
-    final int partitionId = owner.getPartitionId();
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("sendMessageRequest: Send bytes (" + message.toString() +
-          ") to " + destVertexId + " on worker " + workerInfo);
-    }
-    ++totalMsgsSentInSuperstep;
+  public void sendMessageRequest(I destVertexId, Writable message) {
+    this.sendMessageCache.sendMessageRequest(destVertexId, message);
+  }
 
-    // Add the message to the cache
-    int workerMessageSize = sendMessageCache.addMessage(
-        workerInfo, partitionId, destVertexId, message);
+  @Override
+  public void sendMessageToAllRequest(
+    Vertex<I, V, E> vertex, Writable message) {
+    this.sendMessageCache.sendMessageToAllRequest(vertex, message);
+  }
 
-    // Send a request if the cache of outgoing message to
-    // the remote worker 'workerInfo' is full enough to be flushed
-    if (workerMessageSize >= maxMessagesSizePerWorker) {
-      PairList<Integer, ByteArrayVertexIdMessages<I, Writable>>
-          workerMessages =
-          sendMessageCache.removeWorkerMessages(workerInfo);
-      WritableRequest writableRequest =
-          new SendWorkerMessagesRequest<I, Writable>(workerMessages);
-      doRequest(workerInfo, writableRequest);
-      return true;
-    }
-
-    return false;
+  @Override
+  public void sendMessageToAllRequest(
+    Iterator<I> vertexIdIterator, Writable message) {
+    this.sendMessageCache.sendMessageToAllRequest(vertexIdIterator, message);
   }
 
   @Override
@@ -405,19 +398,8 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
     sendPartitionCache.clear();
 
     // Execute the remaining sends messages (if any)
-    PairList<WorkerInfo, PairList<Integer,
-        ByteArrayVertexIdMessages<I, Writable>>>
-        remainingMessageCache = sendMessageCache.removeAllMessages();
-    PairList<WorkerInfo,
-        PairList<Integer, ByteArrayVertexIdMessages<I, Writable>>>.Iterator
-        iterator = remainingMessageCache.getIterator();
-    while (iterator.hasNext()) {
-      iterator.next();
-      WritableRequest writableRequest =
-          new SendWorkerMessagesRequest<I, Writable>(
-              iterator.getCurrentSecond());
-      doRequest(iterator.getCurrentFirst(), writableRequest);
-    }
+    // including one-to-one and one-to-all messages.
+    sendMessageCache.flush();
 
     // Execute the remaining sends edges (if any)
     PairList<WorkerInfo, PairList<Integer,
@@ -451,9 +433,12 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
 
   @Override
   public long resetMessageCount() {
-    long messagesSentInSuperstep = totalMsgsSentInSuperstep;
-    totalMsgsSentInSuperstep = 0;
-    return messagesSentInSuperstep;
+    return this.sendMessageCache.resetMessageCount();
+  }
+
+  @Override
+  public long resetMessageBytesCount() {
+    return this.sendMessageCache.resetMessageBytesCount();
   }
 
   /**
@@ -462,8 +447,8 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
    * @param workerInfo Worker info
    * @param writableRequest Request to either submit or run locally
    */
-  private void doRequest(WorkerInfo workerInfo,
-                         WritableRequest writableRequest) {
+  public void doRequest(WorkerInfo workerInfo,
+    WritableRequest writableRequest) {
     // If this is local, execute locally
     if (serviceWorker.getWorkerInfo().getTaskId() ==
         workerInfo.getTaskId()) {

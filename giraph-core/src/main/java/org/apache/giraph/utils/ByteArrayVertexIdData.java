@@ -101,6 +101,22 @@ public abstract class ByteArrayVertexIdData<I extends WritableComparable, T>
   }
 
   /**
+   * Add a serialized vertex id and data.
+   *
+   * @param serializedId The bye array which holds the serialized id.
+   * @param idPos The end position of the serialized id in the byte array.
+   * @param data Data
+   */
+  public void add(byte[] serializedId, int idPos, T data) {
+    try {
+      extendedDataOutput.write(serializedId, 0, idPos);
+      writeData(extendedDataOutput, data);
+    } catch (IOException e) {
+      throw new IllegalStateException("add: IOException", e);
+    }
+  }
+
+  /**
    * Get the number of bytes used.
    *
    * @return Bytes used

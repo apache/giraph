@@ -59,10 +59,8 @@ public class SimpleTriangleClosingComputationTest {
     computation.compute(vertex, Lists.<IntWritable>newArrayList(
       new IntWritable(83), new IntWritable(42)));
 
-    env.verifyMessageSent(new IntWritable(5), new IntWritable(5));
-    env.verifyMessageSent(new IntWritable(5), new IntWritable(7));
-    env.verifyMessageSent(new IntWritable(7), new IntWritable(5));
-    env.verifyMessageSent(new IntWritable(7), new IntWritable(7));
+    env.verifyMessageSentToAllEdges(vertex, new IntWritable(5));
+    env.verifyMessageSentToAllEdges(vertex, new IntWritable(7));
   }
 
   /** Test behavior of compute() with incoming messages (superstep 1) */

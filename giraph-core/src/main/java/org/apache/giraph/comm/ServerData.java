@@ -80,6 +80,8 @@ public class ServerData<I extends WritableComparable,
    * Holds old aggregators from previous superstep
    */
   private final AllAggregatorServerData allAggregatorData;
+  /** Service worker */
+  private final CentralizedServiceWorker<I, V, E> serviceWorker;
 
   /**
    * Constructor.
@@ -95,6 +97,7 @@ public class ServerData<I extends WritableComparable,
       MessageStoreFactory<I, Writable, MessageStore<I, Writable>>
           messageStoreFactory,
       Mapper<?, ?, ?, ?>.Context context) {
+    this.serviceWorker = service;
     this.conf = conf;
     this.messageStoreFactory = messageStoreFactory;
     if (GiraphConstants.USE_OUT_OF_CORE_GRAPH.get(conf)) {
@@ -187,5 +190,14 @@ public class ServerData<I extends WritableComparable,
    */
   public AllAggregatorServerData getAllAggregatorData() {
     return allAggregatorData;
+  }
+
+  /**
+   * Get the reference of the service worker.
+   *
+   * @return CentralizedServiceWorker
+   */
+  public CentralizedServiceWorker<I, V, E> getServiceWorker() {
+    return this.serviceWorker;
   }
 }

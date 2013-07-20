@@ -31,6 +31,7 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
+import java.util.Iterator;
 
 /**
  * Basic abstract class for writing a BSP application for computation.
@@ -155,9 +156,7 @@ public abstract class Computation<I extends WritableComparable,
    * @param message Message data to send
    */
   public void sendMessage(I id, M2 message) {
-    if (workerClientRequestProcessor.sendMessageRequest(id, message)) {
-      graphTaskManager.notifySentMessages();
-    }
+    workerClientRequestProcessor.sendMessageRequest(id, message);
   }
 
   /**
@@ -167,9 +166,19 @@ public abstract class Computation<I extends WritableComparable,
    * @param message Message sent to all edges.
    */
   public void sendMessageToAllEdges(Vertex<I, V, E> vertex, M2 message) {
-    for (Edge<I, E> edge : vertex.getEdges()) {
-      sendMessage(edge.getTargetVertexId(), message);
-    }
+    workerClientRequestProcessor.sendMessageToAllRequest(vertex, message);
+  }
+
+  /**
+   * Send a message to multiple target vertex ids in the iterator.
+   *
+   * @param vertexIdIterator An iterator to multiple target vertex ids.
+   * @param message Message sent to all targets in the iterator.
+   */
+  public void sendMessageToMultipleEdges(
+    Iterator<I> vertexIdIterator, M2 message) {
+    workerClientRequestProcessor.sendMessageToAllRequest(
+      vertexIdIterator, message);
   }
 
   /**

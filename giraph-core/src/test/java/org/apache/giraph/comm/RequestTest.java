@@ -24,6 +24,7 @@ import org.apache.giraph.comm.netty.handler.WorkerRequestServerHandler;
 import org.apache.giraph.comm.requests.SendPartitionMutationsRequest;
 import org.apache.giraph.comm.requests.SendVertexRequest;
 import org.apache.giraph.comm.requests.SendWorkerMessagesRequest;
+import org.apache.giraph.comm.requests.SendWorkerOneToAllMessagesRequest;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
@@ -35,7 +36,9 @@ import org.apache.giraph.graph.VertexMutations;
 import org.apache.giraph.metrics.GiraphMetrics;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.partition.PartitionStore;
+import org.apache.giraph.utils.ByteArrayOneToAllMessages;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
+import org.apache.giraph.utils.ExtendedDataOutput;
 import org.apache.giraph.utils.IntNoOpComputation;
 import org.apache.giraph.utils.MockUtils;
 import org.apache.giraph.utils.PairList;
@@ -186,6 +189,51 @@ public class RequestTest {
     }
     assertEquals(21, keySum);
     assertEquals(35, messageSum);
+  }
+
+  @Test
+  public void sendWorkerOneToAllMessagesRequest() throws IOException {
+    // Data to send
+    ByteArrayOneToAllMessages<IntWritable, IntWritable>
+        dataToSend = new ByteArrayOneToAllMessages<
+        IntWritable, IntWritable>(new TestMessageValueFactory<IntWritable>(IntWritable.class));
+    dataToSend.setConf(conf);
+    dataToSend.initialize();
+    ExtendedDataOutput output = conf.createExtendedDataOutput();
+    for (int i = 1; i <= 7; ++i) {
+      IntWritable vertexId = new IntWritable(i);
+      vertexId.write(output);
+    }
+    dataToSend.add(output.getByteArray(), output.getPos(), 7, new IntWritable(1));
+
+    // Send the request
+    SendWorkerOneToAllMessagesRequest<IntWritable, IntWritable> request =
+      new SendWorkerOneToAllMessagesRequest<IntWritable, IntWritable>(dataToSend, conf);
+    client.sendWritableRequest(workerInfo.getTaskId(), request);
+    client.waitAllRequests();
+
+    // Stop the service
+    client.stop();
+    server.stop();
+
+    // Check the output
+    Iterable<IntWritable> vertices =
+        serverData.getIncomingMessageStore().getPartitionDestinationVertices(0);
+    int keySum = 0;
+    int messageSum = 0;
+    for (IntWritable vertexId : vertices) {
+      keySum += vertexId.get();
+      Iterable<IntWritable> messages =
+          serverData.<IntWritable>getIncomingMessageStore().getVertexMessages(
+              vertexId);
+      synchronized (messages) {
+        for (IntWritable message : messages) {
+          messageSum += message.get();
+        }
+      }
+    }
+    assertEquals(28, keySum);
+    assertEquals(7, messageSum);
   }
 
   @Test
