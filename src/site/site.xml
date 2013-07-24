@@ -78,6 +78,7 @@
       <item name="Page Rank Example" href="pagerank.html"/>
       <item name="Input/Output in Giraph" href="io.html"/>
       <item name="Hive" href="hive.html"/>
+      <item name="Rexster" href="rexster.html"/>
       <item name="Aggregators" href="aggregators.html"/>
       <item name="Out-of-core" href="ooc.html"/>
       <item name="Javadoc" href="javadoc_modules.html"/>

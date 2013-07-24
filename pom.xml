@@ -617,6 +617,7 @@ under the License.
         <module>giraph-hbase</module>
         <module>giraph-hcatalog</module>
         <module>giraph-hive</module>
+        <module>giraph-rexster</module>
       </modules>
       <activation>
         <activeByDefault>true</activeByDefault>
@@ -647,6 +648,7 @@ under the License.
         <module>giraph-hbase</module>
         <module>giraph-hcatalog</module>
         <module>giraph-hive</module>
+        <module>giraph-rexster</module>
       </modules>
       <properties>
         <hadoop.version>1.0.2</hadoop.version>

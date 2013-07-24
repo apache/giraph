@@ -1,0 +1,217 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one
+  ~ or more contributor license agreements.  See the NOTICE file
+  ~ distributed with this work for additional information
+  ~ regarding copyright ownership.  The ASF licenses this file
+  ~ to you under the Apache License, Version 2.0 (the
+  ~ "License"); you may not use this file except in compliance
+  ~ with the License.  You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<document xmlns="http://maven.apache.org/XDOC/2.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/XDOC/2.0
+    http://maven.apache.org/xsd/xdoc-2.0.xsd">
+
+  <properties>
+    <title>Rexster Input with Giraph</title>
+  </properties>
+
+  <body>
+    <section name="Overview">
+      Giraph can use the <a href="http://rexster.tinkerpop.com">Rexster</a>
+      REST API to load graphs into the cluster. In this manner it is possible
+      to load graphs from all the graph databases that
+      <a href="http://blueprints.tinkerpop.com">Blueprints</a> supports.
+      Additionally, a subset of the input graph can be injected by means of
+      <a href="http://rexster.tinkerpop.com">Gramlin</a> scripts. This page
+      is intended to get you started with the Giraph API for Rexster.
+    </section>
+    <section name="The API">
+      Because of how the
+      <a href="https://github.com/tinkerpop/rexster/wiki/Basic-REST-API">Basic
+      Rexster API</a> is organized, the Giraph API requires the user to specify
+      both an <code>VertexInputFormat</code> and a <code>EdgeInputFormat</code>.
+      Even though such a step is required, the user does not have to deal with
+      the Rexster connection, which can be easily configured using the Giraph
+      options provided.<br />
+      The two classes which need to be extended are
+      <code>RexsterVertexInputFormat</code> and
+      <code>RexsterEdgeInputFormat</code>. These two classes only require the
+      user to specify the way in which a JSON object is translated to a Giraph
+      object.
+    </section>
+    <section name="Configuration Options">
+      The configuration options which can be specified by the user of the
+      Rexster input format are the following.<br />
+      <table border='0'>
+       <tr>
+        <th>label</th>
+        <th>type</th>
+        <th>default value</th>
+        <th>description</th>
+       </tr>
+       <tr>
+         <td>giraph.input.rexster.hostname</td>
+         <td>string</td>
+         <td>127.0.0.1</td>
+         <td>Rexster hostname which provides the REST API - required</td>
+       </tr>
+       <tr>
+         <td>giraph.input.rexster.port</td>
+         <td>integer</td>
+         <td>8182</td>
+         <td>Rexster port where to contact the REST API.</td>
+       </tr>
+       <tr>
+         <td>giraph.input.rexster.ssl</td>
+         <td>boolean</td>
+         <td>false</td>
+         <td>
+           Rexster flag to set the connection over SSL instaed of clear-text.
+         </td>
+       </tr>
+       <tr>
+         <td>giraph.input.rexster.graph</td>
+         <td>string</td>
+         <td>graphdb</td>
+         <td>Rexster graph.</td>
+       </tr>
+       <tr>
+         <td>giraph.input.rexster.vertices</td>
+         <td>integer</td>
+         <td>1000</td>
+         <td>
+           Rexster number of estimated vertices in the graph to be loaded.
+         </td>
+       </tr>
+       <tr>
+         <td>giraph.input.rexster.edges</td>
+         <td>integer</td>
+         <td>1000</td>
+         <td>
+           Rexster number of estimated vertices in the graph to be loaded.
+         </td>
+       </tr>
+       <tr>
+         <td>giraph.input.rexster.username</td>
+         <td>string</td>
+         <td></td>
+         <td>Rexster username to access the REST API.</td>
+       </tr>
+       <tr>
+         <td>giraph.input.rexster.password</td>
+         <td>string</td>
+         <td></td>
+         <td>Rexster password to access the REST API.</td>
+       </tr>
+       <tr>
+         <td>giraph.input.rexster.hasGramlin</td>
+         <td>boolean</td>
+         <td>false</td>
+         <td>
+           Gramlin enabled option for Rexster. If the database to which to
+           connect has gramlin extension enabled, it will be possible to
+           provide a Gramlin scriipt.
+         </td>
+       </tr>
+       <tr>
+         <td>giraph.input.rexster.vertices.gramlinScript</td>
+         <td>string</td>
+         <td></td>
+         <td>
+           If the database is Gramlin enabled, the script will be used to
+           retrieve the vertices from the Rexster exposed database.
+         </td>
+       </tr>
+       <tr>
+         <td>"giraph.input.rexster.edges.gramlinScript"</td>
+         <td>string</td>
+         <td></td>
+         <td>
+           If the database is Gramlin enabled, the script will be used to
+           retrieve the edges from the Rexster exposed database.
+         </td>
+       </tr>
+      </table>
+    </section>
+    <section name="Preparation">
+      To be able to test the Rexster API the user needs to prepare the Rexster
+      environment. A guide to set-up a Rexster Server together with a database
+      can be found at the
+      <a href="https://github.com/tinkerpop/rexster/wiki/Getting-Started">
+      Rexster Wiki</a> page.<br />
+      In this brief guide, it will be assumed that an available graph database
+      will be reachable at <a>http://127.0.0.1:8182/graphs/shortest-path/</a>.
+      For the tests, the following database structure was used:<br />
+      <code>
+        {<br />
+        "graph": {<br />
+          "mode": "NORMAL",<br />
+          "vertices": [<br />
+            { "_id": 1, "_type": "vertex" },<br />
+            { "_id": 2, "_type": "vertex" },<br />
+            { "_id": 3, "_type": "vertex" },<br />
+            { "_id": 4, "_type": "vertex" },<br />
+            { "_id": 5, "_type": "vertex" }],<br />
+          "edges": [<br />
+            { "weight": 1, "_id": 0, "_type": "edge", "_outV": 1, "_inV": 2, "_label": "_default" },<br />
+            { "weight": 3, "_id": 1, "_type": "edge", "_outV": 1, "_inV": 4, "_label": "_default" },<br />
+            { "weight": 1, "_id": 2, "_type": "edge", "_outV": 2, "_inV": 1, "_label": "_default" },<br />
+            { "weight": 2, "_id": 3, "_type": "edge", "_outV": 2, "_inV": 3, "_label": "_default" },<br />
+            { "weight": 1, "_id": 4, "_type": "edge", "_outV": 2, "_inV": 4, "_label": "_default" },<br />
+            { "weight": 2, "_id": 5, "_type": "edge", "_outV": 3, "_inV": 2, "_label": "_default" },<br />
+            { "weight": 4, "_id": 6, "_type": "edge", "_outV": 3, "_inV": 5, "_label": "_default" },<br />
+            { "weight": 3, "_id": 7, "_type": "edge", "_outV": 4, "_inV": 1, "_label": "_default" },<br />
+            { "weight": 1, "_id": 8, "_type": "edge", "_outV": 4, "_inV": 2, "_label": "_default" },<br />
+            { "weight": 4, "_id": 9, "_type": "edge", "_outV": 4, "_inV": 5, "_label": "_default" },<br />
+            { "weight": 4, "_id": 10, "_type": "edge", "_outV": 5, "_inV": 4, "_label": "_default" },<br />
+            { "weight": 4, "_id": 11, "_type": "edge", "_outV": 5, "_inV": 3, "_label": "_default" } ]<br />
+        }<br />
+      }
+      </code><br />
+    </section>
+    <section name="Input Example">
+      As anticipated previously, to make use of the Giraph API available for
+      Rexster, it is required to extend the classes
+      <code>RexsterVertexInputFormat</code> and
+      <code>RexsterEdgeInputFormat</code>. In the first class, the only method
+      that has to be implemented is <code>parseVertex</code> to transform a
+      <code>JSONObject</code> object into a <code>Vertex</code> object.
+      Similarly, for the second class the methods that have to be implemented
+      are <code>parseEdge</code>, to extract the <code>Edge</code> object, and
+      the <code>getCurrentSourceId</code> which has to point to the id of
+      the source vertex of the current edge. Examples of such implementations
+      are the classes <code>RexsterLongDoubleFloatVertexInputFormat</code> and
+      <code>RexsterLongFloatEdgeInputFormat</code>.<br />
+      An example that shows how to use these classes to compute the shortest
+      bath algorithm onto the graph database shown previously is provided below.
+      <br />
+      <code>
+        export GIRAPH_CORE_JAR=$GIRAPH_CORE_TARGET_DIR/giraph-$GIRAPH_VERSION-for-$HADOOP_VERSION-jar-with-dependencies.jar<br />
+        export GIRAPH_EXAMPLES_JAR=$GIRAPH_EXAMPLES_TARGET_DIR/giraph-examples-$GIRAPH_VERSION-for-$HADOOP_VERSION-jar-with-dependencies.jar<br />
+        export GIRAPH_REXSTER_JAR=$GIRAPH_REXSTER_TARGET_DIR/giraph-rexster-$GIRAPH_VERSION.jar<br />
+        export HADOOP_CLASSPATH=$GIRAPH_CORE_JAR:$GIRAPH_EXAMPLES_JAR:$GIRAPH_REXSTER_JAR<br /><br />
+        hadoop jar $GIRAPH_EXAMPLES_JAR org.apache.giraph.GiraphRunner -libjars GIRAPH_REXSTER_JAR,$(GIRAPH_CORE_JAR) org.apache.giraph.examples.SimpleShortestPathsComputation -vif org.apache.giraph.rexster.io.RexsterVertexInputFormat -eif org.apache.giraph.rexster.io.RexsterEdgeInputFormat -of org.apache.giraph.io.formats.IdWithValueTextOutputFormat -op outShortestPath -w 1
+      </code><br />
+      The result of this computation is<br />
+      <code>
+        1 --&gt; 1 = 0 <br />
+        1 --&gt; 2 = 1 <br />
+        1 --&gt; 3 = 3 <br />
+        1 --&gt; 4 = 2 <br />
+        1 --&gt; 5 = 6
+      </code><br />
+    </section>
+  </body>
+</document>
