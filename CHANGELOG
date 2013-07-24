@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-722: ProgressableUtils.waitForever is not calling progress (majakabiljo)
+
   GIRAPH-549: Tinkerpop/Blueprints/Rexter InputFormat (armax00 via claudio)
 
   GIRAPH-701: Communication improvement using one-to-all message

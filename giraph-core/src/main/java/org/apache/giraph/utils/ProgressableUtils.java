@@ -41,10 +41,24 @@ public class ProgressableUtils {
   private static final Logger LOG =
       Logger.getLogger(ProgressableUtils.class);
   /** Msecs to refresh the progress meter (one minute) */
-  private static final int MSEC_PERIOD = 60 * 1000;
+  private static final int DEFUALT_MSEC_PERIOD = 60 * 1000;
 
   /** Do not instantiate. */
   private ProgressableUtils() {
+  }
+
+  /**
+   * Wait for executor tasks to terminate, while periodically reporting
+   * progress.
+   *
+   * @param executor     Executor which we are waiting for
+   * @param progressable Progressable for reporting progress (Job context)
+   * @param msecsPeriod How often to report progress
+   */
+  public static void awaitExecutorTermination(ExecutorService executor,
+      Progressable progressable, int msecsPeriod) {
+    waitForever(new ExecutorServiceWaitable(executor), progressable,
+        msecsPeriod);
   }
 
   /**
@@ -107,8 +121,22 @@ public class ProgressableUtils {
    */
   private static <T> T waitForever(Waitable<T> waitable,
       Progressable progressable) {
+    return waitForever(waitable, progressable, DEFUALT_MSEC_PERIOD);
+  }
+
+  /**
+   * Wait forever for waitable to finish. Periodically reports progress.
+   *
+   * @param waitable Waitable which we wait for
+   * @param progressable Progressable for reporting progress (Job context)
+   * @param msecsPeriod How often to report progress
+   * @param <T> Result type
+   * @return Result of waitable
+   */
+  private static <T> T waitForever(Waitable<T> waitable,
+      Progressable progressable, int msecsPeriod) {
     while (true) {
-      waitFor(waitable, progressable, MSEC_PERIOD);
+      waitFor(waitable, progressable, msecsPeriod, msecsPeriod);
       if (waitable.isFinished()) {
         try {
           return waitable.getResult();
@@ -130,15 +158,17 @@ public class ProgressableUtils {
    * @param waitable Waitable which we wait for
    * @param progressable Progressable for reporting progress (Job context)
    * @param msecs Number of milliseconds to wait for
+   * @param msecsPeriod How often to report progress
    * @param <T> Result type
    * @return Result of waitable
    */
   private static <T> T waitFor(Waitable<T> waitable, Progressable progressable,
-      int msecs) {
+      int msecs, int msecsPeriod) {
     long timeoutTimeMsecs = System.currentTimeMillis() + msecs;
     int currentWaitMsecs;
     while (true) {
-      currentWaitMsecs = Math.min(msecs, MSEC_PERIOD);
+      progressable.progress();
+      currentWaitMsecs = Math.min(msecs, msecsPeriod);
       try {
         waitable.waitFor(currentWaitMsecs);
         if (waitable.isFinished()) {
@@ -157,7 +187,6 @@ public class ProgressableUtils {
       if (System.currentTimeMillis() >= timeoutTimeMsecs) {
         return waitable.getTimeoutResult();
       }
-      progressable.progress();
       msecs = Math.max(0, msecs - currentWaitMsecs);
     }
   }
