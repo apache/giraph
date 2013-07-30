@@ -18,6 +18,8 @@
 
 package org.apache.giraph.aggregators;
 
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.hadoop.io.Writable;
 
 /**
@@ -41,14 +43,16 @@ public class AggregatorWrapper<A extends Writable> {
    * @param aggregatorClass Class type of the aggregator
    * @param persistent      False iff aggregator should be reset at the end of
    *                        each super step
+   * @param conf            Configuration
    * @throws IllegalAccessException
    * @throws InstantiationException
    */
   public AggregatorWrapper(Class<? extends Aggregator<A>> aggregatorClass,
-      boolean persistent) throws IllegalAccessException,
+      boolean persistent, ImmutableClassesGiraphConfiguration conf) throws
+      IllegalAccessException,
       InstantiationException {
     this.persistent = persistent;
-    currentAggregator = aggregatorClass.newInstance();
+    currentAggregator = ReflectionUtils.newInstance(aggregatorClass, conf);
     changed = false;
     previousAggregatedValue = currentAggregator.createInitialValue();
   }

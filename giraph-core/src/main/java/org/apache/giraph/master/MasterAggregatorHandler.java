@@ -149,7 +149,7 @@ public class MasterAggregatorHandler implements MasterAggregatorUsage,
         (AggregatorWrapper<A>) aggregatorMap.get(name);
     if (aggregatorWrapper == null) {
       aggregatorWrapper =
-          new AggregatorWrapper<A>(aggregatorClass, persistent);
+          new AggregatorWrapper<A>(aggregatorClass, persistent, conf);
       aggregatorMap.put(name, (AggregatorWrapper<Writable>) aggregatorWrapper);
     }
     return aggregatorWrapper;
