@@ -27,18 +27,5 @@ import org.apache.hadoop.io.Writable;
  * @param <M> Message value
  */
 public interface MessageValueFactory<M extends Writable>
-    extends ValueFactoryBase<M> {
-  /**
-   * Get the java Class representing messages this factory creates
-   *
-   * @return Class<M>
-   */
-  Class<M> getMessageValueClass();
-
-  /**
-   * Create a new message value.
-   *
-   * @return new message value.
-   */
-  M createMessageValue();
+    extends ValueFactory<M> {
 }

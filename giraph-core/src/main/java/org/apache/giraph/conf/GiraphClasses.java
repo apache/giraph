@@ -62,8 +62,8 @@ public class GiraphClasses<I extends WritableComparable,
       ? extends Writable, ? extends Writable>>
   computationFactoryClass;
   /** Computation class - cached for fast access */
-  protected Class<? extends
-      Computation<I, V, E, ? extends Writable, ? extends Writable>>
+  protected Class<? extends Computation<I, V, E,
+      ? extends Writable, ? extends Writable>>
   computationClass;
   /** Generic types used to describe graph */
   protected GiraphTypes<I, V, E> giraphTypes;
@@ -149,8 +149,8 @@ public class GiraphClasses<I extends WritableComparable,
             ? extends Writable, ? extends Writable>>)
             COMPUTATION_FACTORY_CLASS.get(conf);
     computationClass =
-        (Class<? extends
-            Computation<I, V, E, ? extends Writable, ? extends Writable>>)
+        (Class<? extends Computation<I, V, E,
+            ? extends Writable, ? extends Writable>>)
             COMPUTATION_CLASS.get(conf);
 
     outEdgesClass = (Class<? extends OutEdges<I, E>>)
@@ -195,8 +195,8 @@ public class GiraphClasses<I extends WritableComparable,
    *
    * @return Computation class.
    */
-  public Class<? extends
-      Computation<I, V, E, ? extends Writable, ? extends Writable>>
+  public Class<? extends Computation<I, V, E,
+      ? extends Writable, ? extends Writable>>
   getComputationClass() {
     return computationClass;
   }

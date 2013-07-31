@@ -57,6 +57,27 @@ public class GiraphHiveConstants {
       new StrConfOption("giraph.hive.output.vertex.partition", "",
           "Vertex output partition");
 
+  /** Vertex ID hive reader */
+  public static final StrConfOption VERTEX_ID_READER_JYTHON_NAME =
+      new StrConfOption("giraph.hive.jython.vertex.id.reader", null,
+          "Vertex ID hive reader");
+  /** Vertex ID hive writer */
+  public static final StrConfOption VERTEX_ID_WRITER_JYTHON_NAME =
+      new StrConfOption("giraph.hive.jython.vertex.id.writer", null,
+          "Vertex ID hive writer");
+  /** Vertex value hive reader */
+  public static final StrConfOption VERTEX_VALUE_READER_JYTHON_NAME =
+      new StrConfOption("giraph.hive.jython.vertex.value.reader", null,
+          "Vertex value hive reader");
+  /** Vertex value hive writer */
+  public static final StrConfOption VERTEX_VALUE_WRITER_JYTHON_NAME =
+      new StrConfOption("giraph.hive.jython.vertex.value.writer", null,
+          "Vertex value hive writer");
+  /** Edge value hive reader */
+  public static final StrConfOption EDGE_VALUE_READER_JYTHON_NAME =
+      new StrConfOption("giraph.hive.jython.edge.value.reader", null,
+          "Edge value hive reader");
+
   /** Don't construct */
   protected GiraphHiveConstants() { }
 }

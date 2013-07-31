@@ -32,11 +32,14 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import com.google.common.collect.Maps;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 public class Helpers {
+  public static InputStream getResource(String name) {
+    return Helpers.class.getClassLoader().getResourceAsStream(name);
+  }
+
   public static Map<Integer, Double> parseIntDoubleResults(Iterable<String> results) {
     Map<Integer, Double> values = Maps.newHashMap();
     for (String line : results) {

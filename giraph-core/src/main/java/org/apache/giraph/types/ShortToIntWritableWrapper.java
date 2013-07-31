@@ -25,8 +25,8 @@ import org.apache.hadoop.io.IntWritable;
 public class ShortToIntWritableWrapper
     implements WritableWrapper<IntWritable, Short> {
   @Override
-  public IntWritable wrap(Short javaValue) {
-    return new IntWritable(javaValue.intValue());
+  public void wrap(Short javaValue, IntWritable writableValue) {
+    writableValue.set(javaValue);
   }
 }
 

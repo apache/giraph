@@ -25,11 +25,14 @@ import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.edge.ReusableEdge;
 import org.apache.giraph.factories.ComputationFactory;
+import org.apache.giraph.factories.EdgeValueFactory;
 import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.giraph.factories.ValueFactories;
+import org.apache.giraph.factories.VertexIdFactory;
 import org.apache.giraph.factories.VertexValueFactory;
 import org.apache.giraph.graph.Computation;
 import org.apache.giraph.graph.DefaultVertex;
+import org.apache.giraph.graph.Language;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.io.EdgeInputFormat;
@@ -83,8 +86,12 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
     extends GiraphConfiguration {
   /** Holder for all the classes */
   private final GiraphClasses classes;
-  /** Value Factories */
+  /** Value (IVEMM) Factories */
   private final ValueFactories<I, V, E> valueFactories;
+  /** Language values (IVEMM) are implemented in */
+  private final PerGraphTypeEnum<Language> valueLanguages;
+  /** Whether values (IVEMM) need Jython wrappers */
+  private final PerGraphTypeBoolean valueNeedsWrappers;
 
   /**
    * Use unsafe serialization? Cached for fast access to instantiate the
@@ -102,6 +109,10 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
     super(conf);
     classes = new GiraphClasses<I, V, E>(conf);
     useUnsafeSerialization = USE_UNSAFE_SERIALIZATION.get(this);
+    valueLanguages = PerGraphTypeEnum.readFromConf(
+        GiraphConstants.GRAPH_TYPE_LANGUAGES, conf);
+    valueNeedsWrappers = PerGraphTypeBoolean.readFromConf(
+        GiraphConstants.GRAPH_TYPES_NEEDS_WRAPPERS, conf);
     valueFactories = new ValueFactories<I, V, E>(conf);
     valueFactories.initializeIVE(this);
   }
@@ -115,6 +126,14 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
     if (obj instanceof ImmutableClassesGiraphConfigurable) {
       ((ImmutableClassesGiraphConfigurable) obj).setConf(this);
     }
+  }
+
+  public PerGraphTypeBoolean getValueNeedsWrappers() {
+    return valueNeedsWrappers;
+  }
+
+  public PerGraphTypeEnum<Language> getValueLanguages() {
+    return valueLanguages;
   }
 
   /**
@@ -440,8 +459,8 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   }
 
   @Override
-  public Class<? extends
-      Computation<I, V, E, ? extends Writable, ? extends Writable>>
+  public Class<? extends Computation<I, V, E,
+      ? extends Writable, ? extends Writable>>
   getComputationClass() {
     return classes.getComputationClass();
   }
@@ -508,12 +527,21 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   }
 
   /**
+   * Get vertex ID factory
+   *
+   * @return {@link VertexIdFactory}
+   */
+  public VertexIdFactory<I> getVertexIdFactory() {
+    return valueFactories.getVertexIdFactory();
+  }
+
+  /**
    * Create a user vertex index
    *
    * @return Instantiated user vertex index
    */
   public I createVertexId() {
-    return valueFactories.getVertexIdFactory().createVertexId();
+    return getVertexIdFactory().newInstance();
   }
 
   /**
@@ -526,13 +554,22 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   }
 
   /**
+   * Get vertex value factory
+   *
+   * @return {@link VertexValueFactory}
+   */
+  public VertexValueFactory<V> getVertexValueFactory() {
+    return valueFactories.getVertexValueFactory();
+  }
+
+  /**
    * Create a user vertex value
    *
    * @return Instantiated user vertex value
    */
   @SuppressWarnings("unchecked")
   public V createVertexValue() {
-    return valueFactories.getVertexValueFactory().createVertexValue();
+    return getVertexValueFactory().newInstance();
   }
 
   /**
@@ -601,12 +638,21 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   }
 
   /**
+   * Get Factory for creating edge values
+   *
+   * @return {@link EdgeValueFactory}
+   */
+  public EdgeValueFactory<E> getEdgeValueFactory() {
+    return valueFactories.getEdgeValueFactory();
+  }
+
+  /**
    * Create a user edge value
    *
    * @return Instantiated user edge value
    */
   public E createEdgeValue() {
-    return valueFactories.getEdgeValueFactory().createEdgeValue();
+    return getEdgeValueFactory().newInstance();
   }
 
   /**

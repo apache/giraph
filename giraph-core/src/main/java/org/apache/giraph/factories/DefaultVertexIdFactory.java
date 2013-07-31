@@ -38,7 +38,12 @@ public class DefaultVertexIdFactory<I extends WritableComparable>
   }
 
   @Override
-  public I createVertexId() {
+  public Class<I> getValueClass() {
+    return vertexIdClass;
+  }
+
+  @Override
+  public I newInstance() {
     return WritableUtils.createWritable(vertexIdClass);
   }
 }

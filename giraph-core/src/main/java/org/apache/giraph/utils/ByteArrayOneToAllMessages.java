@@ -109,7 +109,7 @@ public class ByteArrayOneToAllMessages<
    * @return A created message object.
    */
   public M createMessage() {
-    return messageValueFactory.createMessageValue();
+    return messageValueFactory.newInstance();
   }
 
   /**

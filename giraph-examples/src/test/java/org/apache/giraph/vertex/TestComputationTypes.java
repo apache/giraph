@@ -104,7 +104,12 @@ public class TestComputationTypes {
       public void initialize(ImmutableClassesGiraphConfiguration conf) { }
 
       @Override
-      public DoubleWritable createVertexValue() {
+      public Class<DoubleWritable> getValueClass() {
+        return DoubleWritable.class;
+      }
+
+      @Override
+      public DoubleWritable newInstance() {
         return new DoubleWritable();
       }
     }

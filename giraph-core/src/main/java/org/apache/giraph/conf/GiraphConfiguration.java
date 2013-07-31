@@ -22,10 +22,10 @@ import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.combiner.Combiner;
 import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.edge.ReuseObjectsOutEdges;
-import org.apache.giraph.graph.Computation;
 import org.apache.giraph.factories.ComputationFactory;
-import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.factories.VertexValueFactory;
+import org.apache.giraph.graph.Computation;
+import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
@@ -95,7 +95,7 @@ public class GiraphConfiguration extends Configuration
   }
 
   /**
-   * Get the user's subclassed {@link Computation}
+   * Get the user's subclassed {@link org.apache.giraph.graph.Computation}
    *
    * @return User's computation class
    */

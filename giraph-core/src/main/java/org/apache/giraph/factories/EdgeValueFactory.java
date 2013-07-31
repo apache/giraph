@@ -27,11 +27,5 @@ import org.apache.hadoop.io.Writable;
  * @param <E> Edge value
  */
 public interface EdgeValueFactory<E extends Writable>
-    extends ValueFactoryBase<E> {
-  /**
-   * Create a new edge value.
-   *
-   * @return new edge value.
-   */
-  E createEdgeValue();
+    extends ValueFactory<E> {
 }

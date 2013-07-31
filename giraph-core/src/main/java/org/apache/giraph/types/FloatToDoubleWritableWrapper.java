@@ -25,7 +25,7 @@ import org.apache.hadoop.io.DoubleWritable;
 public class FloatToDoubleWritableWrapper
     implements WritableWrapper<DoubleWritable, Float> {
   @Override
-  public DoubleWritable wrap(Float javaValue) {
-    return new DoubleWritable(javaValue.doubleValue());
+  public void wrap(Float javaValue, DoubleWritable writableValue) {
+    writableValue.set(javaValue.doubleValue());
   }
 }

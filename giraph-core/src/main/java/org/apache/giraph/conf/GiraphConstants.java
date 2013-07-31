@@ -86,6 +86,17 @@ public interface GiraphConstants {
           TypesHolder.class,
           "TypesHolder, used if Computation not set - optional");
 
+  /** Language user's graph types are implemented in */
+  PerGraphTypeEnumConfOption<Language> GRAPH_TYPE_LANGUAGES =
+      PerGraphTypeEnumConfOption.create("giraph.types.language",
+          Language.class, Language.JAVA,
+          "Language user graph types (IVEMM) are implemented in");
+
+  /** Whether user graph types need wrappers */
+  PerGraphTypeBooleanConfOption GRAPH_TYPES_NEEDS_WRAPPERS =
+      new PerGraphTypeBooleanConfOption("giraph.jython.type.wrappers",
+          false, "Whether user graph types (IVEMM) need Jython wrappers");
+
   /** Vertex id factory class - optional */
   ClassConfOption<VertexIdFactory> VERTEX_ID_FACTORY_CLASS =
       ClassConfOption.create("giraph.vertexIdFactoryClass",

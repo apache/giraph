@@ -29,6 +29,7 @@ import org.apache.giraph.factories.EdgeValueFactory;
 import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.giraph.factories.VertexIdFactory;
 import org.apache.giraph.factories.VertexValueFactory;
+import org.apache.giraph.graph.AbstractComputation;
 import org.apache.giraph.graph.BasicComputation;
 import org.apache.giraph.graph.Computation;
 import org.apache.giraph.graph.DefaultVertexResolver;
@@ -47,19 +48,19 @@ import static org.junit.Assert.assertEquals;
 public class TestReflectionUtils {
   @Test
   public void testPackagePath() {
-    assertEquals("/org/apache/giraph/utils",
+    assertEquals("org/apache/giraph/utils",
         ReflectionUtils.getPackagePath(TestReflectionUtils.class));
-    assertEquals("/org/apache/giraph/utils",
+    assertEquals("org/apache/giraph/utils",
         ReflectionUtils.getPackagePath(getClass()));
-    assertEquals("/org/apache/giraph/utils",
+    assertEquals("org/apache/giraph/utils",
         ReflectionUtils.getPackagePath(this));
   }
 
   private static class IntTypes implements TypesHolder<IntWritable,
       IntWritable, IntWritable, IntWritable, IntWritable> { }
 
-  private static class IntComputation extends Computation<IntWritable,
-        IntWritable, IntWritable, IntWritable, IntWritable> {
+  private static class IntComputation extends AbstractComputation<IntWritable,
+          IntWritable, IntWritable, IntWritable, IntWritable> {
     @Override
     public void compute(Vertex<IntWritable, IntWritable, IntWritable> vertex,
         Iterable<IntWritable> messages) throws IOException {

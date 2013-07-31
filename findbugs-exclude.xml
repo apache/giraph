@@ -60,4 +60,20 @@
   <Match>
     <Bug pattern="UWF_UNWRITTEN_PUBLIC_OR_PROTECTED_FIELD"/>
   </Match>
+  <Match>
+    <Class name="org.apache.giraph.jython.wrappers.JythonWrapperBase"/>
+    <Bug pattern="EQ_OVERRIDING_EQUALS_NOT_SYMMETRIC"/>
+  </Match>
+  <Match>
+    <Class name="org.apache.giraph.jython.JythonWritableWrapper"/>
+    <Bug pattern="EQ_OVERRIDING_EQUALS_NOT_SYMMETRIC"/>
+  </Match>
+  <Match>
+    <Class name="org.apache.giraph.hive.column.HiveColumnWriter"/>
+    <Bug pattern="BC_UNCONFIRMED_CAST"/>
+  </Match>
+  <Match>
+    <Class name="org.apache.giraph.hive.record.HiveRecordWriter"/>
+    <Bug pattern="BC_UNCONFIRMED_CAST"/>
+  </Match>
 </FindBugsFilter>

@@ -15,11 +15,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.giraph.graph;
 
 import org.apache.giraph.comm.WorkerClientRequestProcessor;
-import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfigurable;
 import org.apache.giraph.conf.TypesHolder;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.OutEdges;
@@ -28,15 +27,14 @@ import org.apache.giraph.worker.WorkerContext;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.log4j.Logger;
 
 import java.io.IOException;
 import java.util.Iterator;
 
 /**
- * Basic abstract class for writing a BSP application for computation.
+ * Interface for an application for computation.
  *
- * During the superstep there can be several instances of this class,
+ * During the superstep there can be several instances of this interface,
  * each doing computation on one partition of the graph's vertices.
  *
  * Note that each thread will have its own {@link Computation},
@@ -44,7 +42,7 @@ import java.util.Iterator;
  * However, accessing global data (like data from {@link WorkerContext})
  * is not thread-safe.
  *
- * Objects of this class only live for a single superstep.
+ * Objects of this interface only live for a single superstep.
  *
  * @param <I> Vertex id
  * @param <V> Vertex data
@@ -52,25 +50,12 @@ import java.util.Iterator;
  * @param <M1> Incoming message type
  * @param <M2> Outgoing message type
  */
-public abstract class Computation<I extends WritableComparable,
+public interface Computation<I extends WritableComparable,
     V extends Writable, E extends Writable, M1 extends Writable,
     M2 extends Writable>
-    extends DefaultImmutableClassesGiraphConfigurable<I, V, E>
-    implements TypesHolder<I, V, E, M1, M2>, WorkerAggregatorUsage {
-  /** Logger */
-  private static final Logger LOG = Logger.getLogger(Computation.class);
-
-  /** Global graph state **/
-  private GraphState graphState;
-  /** Handles requests */
-  private WorkerClientRequestProcessor<I, V, E> workerClientRequestProcessor;
-  /** Graph-wide BSP Mapper for this Computation */
-  private GraphTaskManager<I, V, E> graphTaskManager;
-  /** Worker aggregator usage */
-  private WorkerAggregatorUsage workerAggregatorUsage;
-  /** Worker context */
-  private WorkerContext workerContext;
-
+    extends TypesHolder<I, V, E, M1, M2>,
+    ImmutableClassesGiraphConfigurable<I, V, E>,
+    WorkerAggregatorUsage {
   /**
    * Must be defined by user to do computation on a single Vertex.
    *
@@ -79,23 +64,21 @@ public abstract class Computation<I extends WritableComparable,
    *                 superstep.  Each message is only guaranteed to have
    *                 a life expectancy as long as next() is not called.
    */
-  public abstract void compute(Vertex<I, V, E> vertex,
-      Iterable<M1> messages) throws IOException;
+  void compute(Vertex<I, V, E> vertex, Iterable<M1> messages)
+    throws IOException;
 
   /**
    * Prepare for computation. This method is executed exactly once prior to
    * {@link #compute(Vertex, Iterable)} being called for any of the vertices
    * in the partition.
    */
-  public void preSuperstep() {
-  }
+  void preSuperstep();
 
   /**
    * Finish computation. This method is executed exactly once after computation
    * for all vertices in the partition is complete.
    */
-  public void postSuperstep() {
-  }
+  void postSuperstep();
 
   /**
    * Initialize, called by infrastructure before the superstep starts.
@@ -107,27 +90,17 @@ public abstract class Computation<I extends WritableComparable,
    * @param workerAggregatorUsage Worker aggregator usage
    * @param workerContext Worker context
    */
-  public void initialize(
-      GraphState graphState,
+  void initialize(GraphState graphState,
       WorkerClientRequestProcessor<I, V, E> workerClientRequestProcessor,
       GraphTaskManager<I, V, E> graphTaskManager,
-      WorkerAggregatorUsage workerAggregatorUsage,
-      WorkerContext workerContext) {
-    this.graphState = graphState;
-    this.workerClientRequestProcessor = workerClientRequestProcessor;
-    this.graphTaskManager = graphTaskManager;
-    this.workerAggregatorUsage = workerAggregatorUsage;
-    this.workerContext = workerContext;
-  }
+      WorkerAggregatorUsage workerAggregatorUsage, WorkerContext workerContext);
 
   /**
    * Retrieves the current superstep.
    *
    * @return Current superstep
    */
-  public long getSuperstep() {
-    return graphState.getSuperstep();
-  }
+  long getSuperstep();
 
   /**
    * Get the total (all workers) number of vertices that
@@ -135,9 +108,7 @@ public abstract class Computation<I extends WritableComparable,
    *
    * @return Total number of vertices (-1 if first superstep)
    */
-  public long getTotalNumVertices() {
-    return graphState.getTotalNumVertices();
-  }
+  long getTotalNumVertices();
 
   /**
    * Get the total (all workers) number of edges that
@@ -145,9 +116,7 @@ public abstract class Computation<I extends WritableComparable,
    *
    * @return Total number of edges (-1 if first superstep)
    */
-  public long getTotalNumEdges() {
-    return graphState.getTotalNumEdges();
-  }
+  long getTotalNumEdges();
 
   /**
    * Send a message to a vertex id.
@@ -155,9 +124,7 @@ public abstract class Computation<I extends WritableComparable,
    * @param id Vertex id to send the message to
    * @param message Message data to send
    */
-  public void sendMessage(I id, M2 message) {
-    workerClientRequestProcessor.sendMessageRequest(id, message);
-  }
+  void sendMessage(I id, M2 message);
 
   /**
    * Send a message to all edges.
@@ -165,9 +132,7 @@ public abstract class Computation<I extends WritableComparable,
    * @param vertex Vertex whose edges to send the message to.
    * @param message Message sent to all edges.
    */
-  public void sendMessageToAllEdges(Vertex<I, V, E> vertex, M2 message) {
-    workerClientRequestProcessor.sendMessageToAllRequest(vertex, message);
-  }
+  void sendMessageToAllEdges(Vertex<I, V, E> vertex, M2 message);
 
   /**
    * Send a message to multiple target vertex ids in the iterator.
@@ -175,11 +140,7 @@ public abstract class Computation<I extends WritableComparable,
    * @param vertexIdIterator An iterator to multiple target vertex ids.
    * @param message Message sent to all targets in the iterator.
    */
-  public void sendMessageToMultipleEdges(
-    Iterator<I> vertexIdIterator, M2 message) {
-    workerClientRequestProcessor.sendMessageToAllRequest(
-      vertexIdIterator, message);
-  }
+  void sendMessageToMultipleEdges(Iterator<I> vertexIdIterator, M2 message);
 
   /**
    * Sends a request to create a vertex that will be available during the
@@ -189,12 +150,7 @@ public abstract class Computation<I extends WritableComparable,
    * @param value Vertex value
    * @param edges Initial edges
    */
-  public void addVertexRequest(I id, V value,
-      OutEdges<I, E> edges) throws IOException {
-    Vertex<I, V, E> vertex = getConf().createVertex();
-    vertex.initialize(id, value, edges);
-    workerClientRequestProcessor.addVertexRequest(vertex);
-  }
+  void addVertexRequest(I id, V value, OutEdges<I, E> edges) throws IOException;
 
   /**
    * Sends a request to create a vertex that will be available during the
@@ -203,9 +159,7 @@ public abstract class Computation<I extends WritableComparable,
    * @param id Vertex id
    * @param value Vertex value
    */
-  public void addVertexRequest(I id, V value) throws IOException {
-    addVertexRequest(id, value, getConf().createAndInitializeOutEdges());
-  }
+  void addVertexRequest(I id, V value) throws IOException;
 
   /**
    * Request to remove a vertex from the graph
@@ -213,9 +167,7 @@ public abstract class Computation<I extends WritableComparable,
    *
    * @param vertexId Id of the vertex to be removed.
    */
-  public void removeVertexRequest(I vertexId) throws IOException {
-    workerClientRequestProcessor.removeVertexRequest(vertexId);
-  }
+  void removeVertexRequest(I vertexId) throws IOException;
 
   /**
    * Request to add an edge of a vertex in the graph
@@ -224,10 +176,7 @@ public abstract class Computation<I extends WritableComparable,
    * @param sourceVertexId Source vertex id of edge
    * @param edge Edge to add
    */
-  public void addEdgeRequest(I sourceVertexId,
-      Edge<I, E> edge) throws IOException {
-    workerClientRequestProcessor.addEdgeRequest(sourceVertexId, edge);
-  }
+  void addEdgeRequest(I sourceVertexId, Edge<I, E> edge) throws IOException;
 
   /**
    * Request to remove all edges from a given source vertex to a given target
@@ -236,20 +185,15 @@ public abstract class Computation<I extends WritableComparable,
    * @param sourceVertexId Source vertex id
    * @param targetVertexId Target vertex id
    */
-  public void removeEdgesRequest(I sourceVertexId,
-      I targetVertexId) throws IOException {
-    workerClientRequestProcessor.removeEdgesRequest(
-        sourceVertexId, targetVertexId);
-  }
+  void removeEdgesRequest(I sourceVertexId, I targetVertexId)
+    throws IOException;
 
   /**
    * Get the mapper context
    *
    * @return Mapper context
    */
-  public Mapper.Context getContext() {
-    return graphState.getContext();
-  }
+  Mapper.Context getContext();
 
   /**
    * Get the worker context
@@ -258,17 +202,5 @@ public abstract class Computation<I extends WritableComparable,
    * @return WorkerContext context
    */
   @SuppressWarnings("unchecked")
-  public <W extends WorkerContext> W getWorkerContext() {
-    return (W) workerContext;
-  }
-
-  @Override
-  public <A extends Writable> void aggregate(String name, A value) {
-    workerAggregatorUsage.aggregate(name, value);
-  }
-
-  @Override
-  public <A extends Writable> A getAggregatedValue(String name) {
-    return workerAggregatorUsage.<A>getAggregatedValue(name);
-  }
+  <W extends WorkerContext> W getWorkerContext();
 }

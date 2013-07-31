@@ -64,7 +64,7 @@ public class ByteArrayVertexIdMessages<I extends WritableComparable,
 
   @Override
   public M createData() {
-    return messageValueFactory.createMessageValue();
+    return messageValueFactory.newInstance();
   }
 
   @Override

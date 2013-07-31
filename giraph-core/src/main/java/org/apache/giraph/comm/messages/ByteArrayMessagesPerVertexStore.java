@@ -156,7 +156,7 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
 
     @Override
     protected M createWritable() {
-      return messageValueFactory.createMessageValue();
+      return messageValueFactory.newInstance();
     }
   }
 

@@ -25,7 +25,7 @@ import org.apache.hadoop.io.DoubleWritable;
 public class DoubleToDoubleWritableWrapper
     implements WritableWrapper<DoubleWritable, Double> {
   @Override
-  public DoubleWritable wrap(Double javaValue) {
-    return new DoubleWritable(javaValue);
+  public void wrap(Double javaValue, DoubleWritable writableValue) {
+    writableValue.set(javaValue);
   }
 }

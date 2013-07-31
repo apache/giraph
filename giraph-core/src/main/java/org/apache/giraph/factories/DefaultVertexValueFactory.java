@@ -39,7 +39,12 @@ public class DefaultVertexValueFactory<V extends Writable>
   }
 
   @Override
-  public V createVertexValue() {
+  public Class<V> getValueClass() {
+    return vertexValueClass;
+  }
+
+  @Override
+  public V newInstance() {
     return WritableUtils.createWritable(vertexValueClass);
   }
 }

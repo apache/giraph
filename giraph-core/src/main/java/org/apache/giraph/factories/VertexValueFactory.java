@@ -29,13 +29,5 @@ import org.apache.hadoop.io.Writable;
  * @param <V> Vertex value
  */
 public interface VertexValueFactory<V extends Writable>
-    extends ValueFactoryBase<V> {
-  /**
-   * Create a new vertex value.
-   *
-   * @return new vertex value.
-   */
-  V createVertexValue();
+    extends ValueFactory<V> {
 }
-
-

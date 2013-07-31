@@ -29,21 +29,22 @@ import org.apache.giraph.combiner.Combiner;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.GiraphTypes;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.conf.TypesHolder;
 import org.apache.giraph.edge.OutEdges;
-import org.apache.giraph.graph.Computation;
 import org.apache.giraph.factories.VertexValueFactory;
+import org.apache.giraph.graph.Computation;
 import org.apache.giraph.graph.Language;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.giraph.io.formats.GiraphFileInputFormat;
 import org.apache.giraph.job.GiraphConfigurationValidator;
-import org.apache.giraph.scripting.DeployType;
-import org.apache.giraph.scripting.ScriptLoader;
 import org.apache.giraph.jython.JythonUtils;
 import org.apache.giraph.master.MasterCompute;
 import org.apache.giraph.partition.Partition;
+import org.apache.giraph.scripting.DeployType;
+import org.apache.giraph.scripting.ScriptLoader;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -124,6 +125,21 @@ public final class ConfigurationUtils {
    * No constructing this utility class
    */
   private ConfigurationUtils() { }
+
+  /**
+   * Configure an object with an
+   * {@link org.apache.giraph.conf.ImmutableClassesGiraphConfiguration}
+   * if that objects supports it.
+   *
+   * @param object The object to configure
+   * @param configuration The configuration
+   */
+  public static void configureIfPossible(Object object,
+      ImmutableClassesGiraphConfiguration configuration) {
+    if (configuration != null) {
+      configuration.configureIfPossible(object);
+    }
+  }
 
   /**
    * Get a class which is parameterized by the graph types defined by user.

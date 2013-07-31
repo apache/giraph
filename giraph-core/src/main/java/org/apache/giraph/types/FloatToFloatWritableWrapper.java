@@ -25,7 +25,7 @@ import org.apache.hadoop.io.FloatWritable;
 public class FloatToFloatWritableWrapper
     implements WritableWrapper<FloatWritable, Float> {
   @Override
-  public FloatWritable wrap(Float javaValue) {
-    return new FloatWritable(javaValue);
+  public void wrap(Float javaValue, FloatWritable writableValue) {
+    writableValue.set(javaValue);
   }
 }

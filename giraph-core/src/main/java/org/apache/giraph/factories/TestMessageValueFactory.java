@@ -40,14 +40,14 @@ public class TestMessageValueFactory<M extends Writable>
     this.klass = klass;
   }
 
-  @Override public Class<M> getMessageValueClass() {
+  @Override public Class<M> getValueClass() {
     return klass;
   }
 
   @Override public void initialize(
       ImmutableClassesGiraphConfiguration conf) { }
 
-  @Override public M createMessageValue() {
+  @Override public M newInstance() {
     return ReflectionUtils.newInstance(klass);
   }
 }

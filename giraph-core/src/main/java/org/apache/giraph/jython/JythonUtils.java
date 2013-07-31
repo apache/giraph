@@ -18,12 +18,14 @@
 package org.apache.giraph.jython;
 
 import org.apache.giraph.graph.Language;
+import org.apache.giraph.jython.factories.JythonComputationFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.python.core.Py;
+import org.python.core.PyObject;
 import org.python.util.PythonInterpreter;
 
 import static org.apache.giraph.conf.GiraphConstants.COMPUTATION_FACTORY_CLASS;
 import static org.apache.giraph.conf.GiraphConstants.COMPUTATION_LANGUAGE;
-import static org.apache.giraph.jython.JythonComputationFactory.JYTHON_COMPUTATION_CLASS_NAME;
 
 /**
  * Helpers for running jobs with Jython.
@@ -58,6 +60,37 @@ public class JythonUtils {
   public static void init(Configuration conf, String klassName) {
     COMPUTATION_LANGUAGE.set(conf, Language.JYTHON);
     COMPUTATION_FACTORY_CLASS.set(conf, JythonComputationFactory.class);
-    JYTHON_COMPUTATION_CLASS_NAME.set(conf, klassName);
+    JythonOptions.JYTHON_COMPUTATION_CLASS_NAME.set(conf, klassName);
+  }
+
+  /**
+   * Instantiate new instance of the Jython class
+   *
+   * @param className Jython class name
+   * @return new instance of class
+   */
+  public static PyObject newInstance(String className) {
+    PyObject pyClass = JythonUtils.getInterpreter().get(className);
+    PyObject pyObject = pyClass.__call__();
+    return pyObject;
+  }
+
+  /**
+   * Instantiate new instance of the Jython class
+   *
+   * @param <T> Jython type
+   * @param className Jython class name
+   * @param klass Java interface Class
+   * @return new instance of class
+   */
+  public static <T> T newInstance(String className, Class<? extends T> klass) {
+    PyObject pyObject = newInstance(className);
+    Object object = pyObject.__tojava__(klass);
+    if (Py.NoConversion.equals(object)) {
+      throw new IllegalArgumentException("Cannot coerce Jython class " +
+          className + " to Java type " + klass.getSimpleName());
+    } else {
+      return (T) object;
+    }
   }
 }

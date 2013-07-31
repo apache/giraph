@@ -52,6 +52,6 @@ public class MessagesIterable<M extends Writable>
 
   @Override
   protected M createWritable() {
-    return messageValueFactory.createMessageValue();
+    return messageValueFactory.newInstance();
   }
 }

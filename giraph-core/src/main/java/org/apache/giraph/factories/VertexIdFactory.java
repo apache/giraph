@@ -27,12 +27,6 @@ import org.apache.hadoop.io.WritableComparable;
  * @param <I> Vertex ID
  */
 public interface VertexIdFactory<I extends WritableComparable>
-    extends ValueFactoryBase<I> {
-  /**
-   * Create a new edge value.
-   *
-   * @return new edge value.
-   */
-  I createVertexId();
+    extends ValueFactory<I> {
 }
 

@@ -25,7 +25,7 @@ import org.apache.hadoop.io.BooleanWritable;
 public class BooleanToBooleanWritableWrapper
     implements WritableWrapper<BooleanWritable, Boolean> {
   @Override
-  public BooleanWritable wrap(Boolean javaValue) {
-    return new BooleanWritable(javaValue);
+  public void wrap(Boolean javaValue, BooleanWritable writableValue) {
+    writableValue.set(javaValue);
   }
 }

@@ -30,7 +30,7 @@ public interface WritableWrapper<W extends Writable, J> {
    * Convert from java type to writable type
    *
    * @param javaValue java type
-   * @return writable value
+   * @param writableValue writable value
    */
-  W wrap(J javaValue);
+  void wrap(J javaValue, W writableValue);
 }

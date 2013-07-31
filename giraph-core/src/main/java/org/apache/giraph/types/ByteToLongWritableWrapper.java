@@ -25,7 +25,7 @@ import org.apache.hadoop.io.LongWritable;
 public class ByteToLongWritableWrapper
     implements WritableWrapper<LongWritable, Byte> {
   @Override
-  public LongWritable wrap(Byte javaValue) {
-    return new LongWritable(javaValue.longValue());
+  public void wrap(Byte javaValue, LongWritable writableValue) {
+    writableValue.set(javaValue.longValue());
   }
 }

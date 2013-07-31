@@ -43,7 +43,7 @@ public abstract class AbstractMessageValueFactory<M extends Writable>
       ImmutableClassesGiraphConfiguration conf);
 
   @Override
-  public Class<M> getMessageValueClass() {
+  public Class<M> getValueClass() {
     return messageValueClass;
   }
 
@@ -52,7 +52,7 @@ public abstract class AbstractMessageValueFactory<M extends Writable>
     messageValueClass = extractMessageValueClass(conf);
   }
 
-  @Override public M createMessageValue() {
+  @Override public M newInstance() {
     return WritableUtils.createWritable(messageValueClass);
   }
 

@@ -20,7 +20,7 @@ package org.apache.giraph.master;
 
 import org.apache.giraph.combiner.Combiner;
 import org.apache.giraph.conf.GiraphConfiguration;
-import org.apache.giraph.graph.Computation;
+import org.apache.giraph.graph.AbstractComputation;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.utils.InternalVertexRunner;
 import org.apache.giraph.utils.TestGraph;
@@ -136,8 +136,8 @@ public class TestSwitchClasses {
     }
   }
 
-  public static class Computation1 extends Computation<IntWritable,
-      StatusValue, IntWritable, IntWritable, IntWritable> {
+  public static class Computation1 extends AbstractComputation<IntWritable,
+        StatusValue, IntWritable, IntWritable, IntWritable> {
     @Override
     public void compute(Vertex<IntWritable, StatusValue, IntWritable> vertex,
         Iterable<IntWritable> messages) throws IOException {
@@ -150,8 +150,8 @@ public class TestSwitchClasses {
     }
   }
 
-  public static class Computation2 extends Computation<IntWritable,
-      StatusValue, IntWritable, IntWritable, DoubleWritable> {
+  public static class Computation2 extends AbstractComputation<IntWritable,
+        StatusValue, IntWritable, IntWritable, DoubleWritable> {
     @Override
     public void compute(Vertex<IntWritable, StatusValue, IntWritable> vertex,
         Iterable<IntWritable> messages) throws IOException {
@@ -164,8 +164,8 @@ public class TestSwitchClasses {
     }
   }
 
-  public static class Computation3 extends Computation<IntWritable,
-      StatusValue, IntWritable, DoubleWritable, IntWritable> {
+  public static class Computation3 extends AbstractComputation<IntWritable,
+        StatusValue, IntWritable, DoubleWritable, IntWritable> {
     @Override
     public void compute(
         Vertex<IntWritable, StatusValue, IntWritable> vertex,

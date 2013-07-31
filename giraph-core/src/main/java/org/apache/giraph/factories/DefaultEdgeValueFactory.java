@@ -37,7 +37,11 @@ public class DefaultEdgeValueFactory<E extends Writable>
     edgeValueClass = conf.getEdgeValueClass();
   }
 
-  @Override public E createEdgeValue() {
+  @Override public Class<E> getValueClass() {
+    return edgeValueClass;
+  }
+
+  @Override public E newInstance() {
     return WritableUtils.createWritable(edgeValueClass);
   }
 }

@@ -68,7 +68,7 @@ public class InMemoryMessageStoreFactory<I extends WritableComparable,
   @Override
   public MessageStore<I, M> newStore(
       MessageValueFactory<M> messageValueFactory) {
-    Class<M> messageClass = messageValueFactory.getMessageValueClass();
+    Class<M> messageClass = messageValueFactory.getValueClass();
     MessageStore messageStore;
     if (conf.useCombiner()) {
       Class<I> vertexIdClass = conf.getVertexIdClass();

@@ -298,7 +298,7 @@ public class SequentialFileMessageStore<I extends WritableComparable,
     int messagesSize = in.readInt();
     List<M> messages = Lists.newArrayListWithCapacity(messagesSize);
     for (int i = 0; i < messagesSize; i++) {
-      M message = messageValueFactory.createMessageValue();
+      M message = messageValueFactory.newInstance();
       try {
         message.readFields(in);
       } catch (IOException e) {

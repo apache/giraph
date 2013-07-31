@@ -18,9 +18,9 @@
 
 package org.apache.giraph.master;
 
+import org.apache.giraph.aggregators.Aggregator;
 import org.apache.giraph.combiner.Combiner;
 import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
-import org.apache.giraph.aggregators.Aggregator;
 import org.apache.giraph.graph.Computation;
 import org.apache.giraph.graph.GraphState;
 import org.apache.hadoop.io.Writable;

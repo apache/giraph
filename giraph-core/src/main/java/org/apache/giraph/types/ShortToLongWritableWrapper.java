@@ -25,7 +25,7 @@ import org.apache.hadoop.io.LongWritable;
 public class ShortToLongWritableWrapper
     implements WritableWrapper<LongWritable, Short> {
   @Override
-  public LongWritable wrap(Short javaValue) {
-    return new LongWritable(javaValue.longValue());
+  public void wrap(Short javaValue, LongWritable writableValue) {
+    writableValue.set(javaValue);
   }
 }

@@ -49,7 +49,7 @@ public class ReflectionUtils {
    * @return Path to package of class
    */
   public static String getPackagePath(Class klass) {
-    return "/" + klass.getPackage().getName().replaceAll("\\.", "/");
+    return klass.getPackage().getName().replaceAll("\\.", "/");
   }
 
   /**
@@ -108,9 +108,7 @@ public class ReflectionUtils {
       throw new IllegalStateException(
           "newInstance: Illegal access " + theClass.getName(), e);
     }
-    if (configuration != null) {
-      configuration.configureIfPossible(result);
-    }
+    ConfigurationUtils.configureIfPossible(result, configuration);
     return result;
   }
 }

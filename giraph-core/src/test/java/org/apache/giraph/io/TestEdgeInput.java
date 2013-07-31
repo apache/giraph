@@ -228,7 +228,12 @@ public class TestEdgeInput extends BspCase {
     public void initialize(ImmutableClassesGiraphConfiguration conf) { }
 
     @Override
-    public IntWritable createVertexValue() {
+    public Class<IntWritable> getValueClass() {
+      return IntWritable.class;
+    }
+
+    @Override
+    public IntWritable newInstance() {
       return new IntWritable(3);
     }
   }

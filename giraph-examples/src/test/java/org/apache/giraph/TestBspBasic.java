@@ -153,7 +153,7 @@ public class
         immutableClassesGiraphConfiguration.createEdgeValue();
     Writable messageValue =
         immutableClassesGiraphConfiguration.getOutgoingMessageValueFactory()
-            .createMessageValue();
+            .newInstance();
     assertSame(vertexValue.getClass(), NullWritable.class);
     assertSame(vertexValue, edgeValue);
     assertSame(edgeValue, messageValue);

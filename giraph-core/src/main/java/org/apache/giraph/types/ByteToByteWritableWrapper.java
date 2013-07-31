@@ -25,8 +25,8 @@ import org.apache.hadoop.io.ByteWritable;
 public class ByteToByteWritableWrapper
     implements WritableWrapper<ByteWritable, Byte> {
   @Override
-  public ByteWritable wrap(Byte javaValue) {
-    return new ByteWritable(javaValue);
+  public void wrap(Byte javaValue, ByteWritable writableValue) {
+    writableValue.set(javaValue);
   }
 }
 

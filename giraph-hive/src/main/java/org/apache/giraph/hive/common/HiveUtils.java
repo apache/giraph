@@ -42,18 +42,17 @@ import com.google.common.collect.Maps;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static java.lang.System.getenv;
 import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_EDGE_INPUT;
 import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_INPUT;
 import static org.apache.giraph.hive.common.GiraphHiveConstants.VERTEX_TO_HIVE_CLASS;
-import static org.apache.giraph.utils.ReflectionUtils.newInstance;
 
 /**
  * Utility methods for Hive IO
@@ -184,6 +183,34 @@ public class HiveUtils {
    */
   public static void addHiveSiteCustomXmlToTmpFiles(Configuration conf) {
     addToHiveFromClassLoader(conf, "hive-site-custom.xml");
+    addToHiveFromEnv(conf, "HIVE_HOME", "conf/hive-site.xml");
+  }
+
+  /**
+   * Add a file to Configuration tmpfiles from environment variable
+   *
+   * @param conf Configuration
+   * @param envKey environment variable key
+   * @param path search path
+   * @return true if file found and added, false otherwise
+   */
+  private static boolean addToHiveFromEnv(Configuration conf,
+      String envKey, String path) {
+    String envValue = getenv(envKey);
+    if (envValue == null) {
+      return false;
+    }
+    File file = new File(envValue, path);
+    if (file.exists()) {
+      LOG.info("addToHiveFromEnv: Adding " + file.getPath() +
+          " to Configuration tmpfiles");
+    }
+    try {
+      addToStringCollection(conf, "tmpfiles", file.toURI().toURL().toString());
+    } catch (MalformedURLException e) {
+      LOG.error("Failed to get URL for file " + file);
+    }
+    return true;
   }
 
   /**
@@ -191,16 +218,20 @@ public class HiveUtils {
    *
    * @param conf Configuration
    * @param name file name
+   * @return true if file found in class loader, false otherwise
    */
-  private static void addToHiveFromClassLoader(Configuration conf,
+  private static boolean addToHiveFromClassLoader(Configuration conf,
       String name) {
     URL url = conf.getClassLoader().getResource(name);
-    checkNotNull(url);
+    if (url == null) {
+      return false;
+    }
     if (LOG.isInfoEnabled()) {
       LOG.info("addToHiveFromClassLoader: Adding " + name + " at " +
           url + " to Configuration tmpfiles");
     }
     addToStringCollection(conf, "tmpfiles", url.toString());
+    return true;
   }
 
   /**
@@ -212,12 +243,12 @@ public class HiveUtils {
   public static void addHadoopClasspathToTmpJars(Configuration conf) {
     // Or, more effectively, we can provide all the jars client needed to
     // the workers as well
-    String[] hadoopJars = getenv("HADOOP_CLASSPATH").split(File.pathSeparator);
+    String hadoopClasspath = getenv("HADOOP_CLASSPATH");
+    if (hadoopClasspath == null) {
+      return;
+    }
+    String[] hadoopJars = hadoopClasspath.split(File.pathSeparator);
     if (hadoopJars.length > 0) {
-      if (LOG.isInfoEnabled()) {
-        LOG.info("addHadoopClasspathToTmpJars: Adding HADOOP_CLASSPATH jars " +
-            "at " + Arrays.toString(hadoopJars) + " to Configuration tmpjars");
-      }
       List<String> hadoopJarURLs = Lists.newArrayList();
       for (String jarPath : hadoopJars) {
         File file = new File(jarPath);
@@ -308,9 +339,7 @@ public class HiveUtils {
       throw new IOException(VERTEX_TO_HIVE_CLASS.getKey() +
           " not set in conf");
     }
-    VertexToHive<I, V, E> vertexToHive = newInstance(klass, conf);
-    HiveTableSchemas.configure(vertexToHive, schema);
-    return vertexToHive;
+    return newInstance(klass, conf, schema);
   }
 
   /**
@@ -332,9 +361,7 @@ public class HiveUtils {
       throw new IllegalArgumentException(
           HIVE_EDGE_INPUT.getClassOpt().getKey() + " not set in conf");
     }
-    HiveToEdge hiveToEdge = ReflectionUtils.newInstance(klass, conf);
-    HiveTableSchemas.configure(hiveToEdge, schema);
-    return hiveToEdge;
+    return newInstance(klass, conf, schema);
   }
 
   /**
@@ -356,8 +383,29 @@ public class HiveUtils {
       throw new IllegalArgumentException(
           HIVE_VERTEX_INPUT.getClassOpt().getKey() + " not set in conf");
     }
-    HiveToVertex hiveToVertex = ReflectionUtils.newInstance(klass, conf);
-    HiveTableSchemas.configure(hiveToVertex, schema);
-    return hiveToVertex;
+    return newInstance(klass, conf, schema);
+  }
+
+  /**
+   * Create a new instance of a class, configuring it and setting the Hive table
+   * schema if it supports those types.
+   *
+   * @param klass Class to create
+   * @param conf {@link ImmutableClassesGiraphConfiguration} to configure with
+   * @param schema {@link HiveTableSchema} from Hive to set
+   * @param <I> Vertex ID
+   * @param <V> Vertex Value
+   * @param <E> Edge Value
+   * @param <T> type being created
+   * @return new object of type <T>
+   */
+  public static
+  <I extends WritableComparable, V extends Writable, E extends Writable, T>
+  T newInstance(Class<T> klass,
+      ImmutableClassesGiraphConfiguration<I, V, E> conf,
+      HiveTableSchema schema) {
+    T object = ReflectionUtils.<T>newInstance(klass, conf);
+    HiveTableSchemas.configure(object, schema);
+    return object;
   }
 }

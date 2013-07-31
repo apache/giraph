@@ -174,7 +174,7 @@ public class ScriptLoader {
       loadJythonScript(stream);
       break;
     default:
-      LOG.error("Don't know how to load script " + deployedScript);
+      LOG.fatal("Don't know how to load script " + deployedScript);
       throw new IllegalStateException("Don't know how to load script " +
           deployedScript);
     }

@@ -29,7 +29,6 @@ import org.apache.giraph.io.formats.IntNullTextEdgeInputFormat;
 import org.apache.giraph.utils.InternalVertexRunner;
 import org.apache.thrift.TException;
 import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.facebook.hiveio.common.HiveMetastores;

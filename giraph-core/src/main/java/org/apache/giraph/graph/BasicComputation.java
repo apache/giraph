@@ -31,5 +31,5 @@ import org.apache.hadoop.io.WritableComparable;
  */
 public abstract class BasicComputation<I extends WritableComparable,
     V extends Writable, E extends Writable, M extends Writable>
-    extends Computation<I, V, E, M, M> {
+    extends AbstractComputation<I, V, E, M, M> {
 }

@@ -21,6 +21,7 @@ package org.apache.giraph.master;
 import org.apache.giraph.combiner.Combiner;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.graph.AbstractComputation;
 import org.apache.giraph.graph.Computation;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.utils.IntNoOpComputation;
@@ -110,7 +111,7 @@ public class TestComputationCombinerTypes {
 
   public static class NoOpComputation<I extends WritableComparable,
       V extends Writable, E extends Writable, M1 extends Writable,
-      M2 extends Writable> extends Computation<I, V, E, M1, M2> {
+      M2 extends Writable> extends AbstractComputation<I, V, E, M1, M2> {
     @Override
     public void compute(Vertex<I, V, E> vertex,
         Iterable<M1> messages) throws IOException {
