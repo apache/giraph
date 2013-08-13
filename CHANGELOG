@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-692: Add Bracha Toueg Deadlock Detection in the examples 
+  (aarmax00 via claudio)
+
   GIRAPH-717: HiveJythonRunner with support for pure Jython value types (nitay)
 
   GIRAPH-722: ProgressableUtils.waitForever is not calling progress (majakabiljo)
