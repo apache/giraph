@@ -291,8 +291,10 @@ public class UnsafeByteArrayOutputStream extends OutputStream
       }
     }
 
-    buf[pos++] = (byte) ((utflen >>> 8) & 0xFF);
-    buf[pos++] = (byte) ((utflen >>> 0) & 0xFF);
+    ensureSize(utflen + 2);
+
+    buf[pos++] = (byte) (utflen & 0xFF);
+    buf[pos++] = (byte) ((utflen >> 8) & 0xFF);
 
     int i = 0;
     for (i = 0; i < strlen; i++) {
