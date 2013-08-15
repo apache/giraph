@@ -95,6 +95,8 @@ public abstract class ArrayListWritable<M extends Writable> extends ArrayList<M>
     if (this.refClass == null) {
       setClass();
     }
+
+    clear();                              // clear list before storing values
     int numValues = in.readInt();            // read number of values
     ensureCapacity(numValues);
     for (int i = 0; i < numValues; i++) {

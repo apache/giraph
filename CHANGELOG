@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-740: ArrayListWritable object is not cleared in readFields()
+  (korlando via claudio)
+
   GIRAPH-692: Add Bracha Toueg Deadlock Detection in the examples 
   (aarmax00 via claudio)
 
