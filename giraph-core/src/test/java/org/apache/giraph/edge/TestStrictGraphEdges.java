@@ -27,15 +27,15 @@ import org.junit.Test;
 import java.util.Collection;
 import java.util.List;
 
-import static org.apache.giraph.graph.TestVertexAndEdges.instantiateVertexEdges;
+import static org.apache.giraph.graph.TestVertexAndEdges.instantiateOutEdges;
 import static org.junit.Assert.assertEquals;
 
 /**
- * Tests {@link VertexEdges} implementations that disallow parallel edges.
+ * Tests {@link OutEdges} implementations that disallow parallel edges.
  */
 public class TestStrictGraphEdges {
-  /** {@link VertexEdges} classes to be tested. */
-  private Collection<Class<? extends VertexEdges>> edgesClasses =
+  /** {@link OutEdges} classes to be tested. */
+  private Collection<Class<? extends OutEdges>> edgesClasses =
       Lists.newArrayList();
 
   @Before
@@ -45,20 +45,20 @@ public class TestStrictGraphEdges {
   }
 
   /**
-   * Ensures that all strict graph {@link VertexEdges} implementations
+   * Ensures that all strict graph {@link OutEdges} implementations
    * disallow parallel edges.
    */
   @Test
   public void testParallelEdges() {
-    for (Class<? extends VertexEdges> edgesClass : edgesClasses) {
+    for (Class<? extends OutEdges> edgesClass : edgesClasses) {
       testParallelEdgesClass(edgesClass);
     }
   }
 
   private void testParallelEdgesClass(
-      Class<? extends VertexEdges> edgesClass) {
-    VertexEdges<LongWritable, DoubleWritable> edges =
-        instantiateVertexEdges(edgesClass);
+      Class<? extends OutEdges> edgesClass) {
+    OutEdges<LongWritable, DoubleWritable> edges =
+        instantiateOutEdges(edgesClass);
 
     // Initial edges list contains parallel edges.
     List<Edge<LongWritable, DoubleWritable>> initialEdges = Lists.newArrayList(

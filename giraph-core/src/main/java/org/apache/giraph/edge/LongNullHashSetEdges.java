@@ -30,7 +30,7 @@ import java.util.Collection;
 import java.util.Iterator;
 
 /**
- * {@link VertexEdges} implementation with long ids and null edge values,
+ * {@link OutEdges} implementation with long ids and null edge values,
  * backed by a {@link LongOpenHashSet}.
  * Parallel edges are not allowed.
  * Note: this implementation is optimized for fast random access and mutations,
@@ -38,8 +38,8 @@ import java.util.Iterator;
  * {@link LongNullArrayEdges}.
  */
 public class LongNullHashSetEdges
-    implements ReuseObjectsVertexEdges<LongWritable, NullWritable>,
-    MutableVertexEdges<LongWritable, NullWritable> {
+    implements ReuseObjectsOutEdges<LongWritable, NullWritable>,
+    MutableOutEdges<LongWritable, NullWritable> {
   /** Hash set of target vertex ids. */
   private LongOpenHashSet neighbors;
 

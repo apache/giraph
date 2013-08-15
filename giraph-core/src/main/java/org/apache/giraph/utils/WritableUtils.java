@@ -20,7 +20,7 @@ package org.apache.giraph.utils;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.Edge;
-import org.apache.giraph.edge.VertexEdges;
+import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.zk.ZooKeeperExt;
 import org.apache.giraph.zk.ZooKeeperExt.PathStat;
@@ -477,7 +477,7 @@ public class WritableUtils {
     throws IOException {
     vertex.getId().readFields(input);
     vertex.getValue().readFields(input);
-    ((VertexEdges<I, E>) vertex.getEdges()).readFields(input);
+    ((OutEdges<I, E>) vertex.getEdges()).readFields(input);
     if (input.readBoolean()) {
       vertex.voteToHalt();
     } else {
@@ -506,7 +506,7 @@ public class WritableUtils {
     Vertex<I, V, E, M> vertex = conf.createVertex();
     I id = conf.createVertexId();
     V value = conf.createVertexValue();
-    VertexEdges<I, E> edges = conf.createVertexEdges();
+    OutEdges<I, E> edges = conf.createOutEdges();
     vertex.initialize(id, value, edges);
     reinitializeVertexFromDataInput(input, vertex, conf);
     return vertex;
@@ -533,7 +533,7 @@ public class WritableUtils {
     throws IOException {
     vertex.getId().write(output);
     vertex.getValue().write(output);
-    ((VertexEdges<I, E>) vertex.getEdges()).write(output);
+    ((OutEdges<I, E>) vertex.getEdges()).write(output);
     output.writeBoolean(vertex.isHalted());
   }
 }

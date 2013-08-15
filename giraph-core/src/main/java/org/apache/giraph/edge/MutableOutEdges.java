@@ -24,14 +24,14 @@ import org.apache.hadoop.io.WritableComparable;
 import java.util.Iterator;
 
 /**
- * Interface for {@link VertexEdges} implementations that have an optimized
+ * Interface for {@link OutEdges} implementations that have an optimized
  * mutable edge iterator.
  *
  * @param <I> Vertex id
  * @param <E> Edge value
  */
-public interface MutableVertexEdges<I extends WritableComparable,
-    E extends Writable> extends VertexEdges<I, E> {
+public interface MutableOutEdges<I extends WritableComparable,
+    E extends Writable> extends OutEdges<I, E> {
   /**
    * Returns an iterator over edges that can be modified in-place,
    * either by changing the current edge value or by removing the current edge.

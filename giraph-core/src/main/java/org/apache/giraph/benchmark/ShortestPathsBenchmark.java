@@ -41,7 +41,7 @@ public class ShortestPathsBenchmark extends GiraphBenchmark {
   private static final Logger LOG =
       Logger.getLogger(ShortestPathsBenchmark.class);
 
-  /** Option for VertexEdges class */
+  /** Option for OutEdges class */
   private static final BenchmarkOption EDGES_CLASS = new BenchmarkOption(
       "c", "edgesClass", true,
       "Vertex edges class (0 for HashMapEdges, 1 for ArrayListEdges)");
@@ -60,9 +60,9 @@ public class ShortestPathsBenchmark extends GiraphBenchmark {
       CommandLine cmd) {
     conf.setVertexClass(ShortestPathsVertex.class);
     if (EDGES_CLASS.getOptionIntValue(cmd, 1) == 1) {
-      conf.setVertexEdgesClass(ArrayListEdges.class);
+      conf.setOutEdgesClass(ArrayListEdges.class);
     } else {
-      conf.setVertexEdgesClass(HashMapEdges.class);
+      conf.setOutEdgesClass(HashMapEdges.class);
     }
     LOG.info("Using class " + GiraphConstants.VERTEX_CLASS.get(conf));
     conf.setVertexInputFormatClass(PseudoRandomVertexInputFormat.class);

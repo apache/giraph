@@ -21,7 +21,7 @@ import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.aggregators.TextAggregatorWriter;
 import org.apache.giraph.combiner.Combiner;
 import org.apache.giraph.edge.ByteArrayEdges;
-import org.apache.giraph.edge.VertexEdges;
+import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.graph.DefaultVertexResolver;
 import org.apache.giraph.graph.DefaultVertexValueFactory;
 import org.apache.giraph.graph.Vertex;
@@ -66,13 +66,13 @@ public interface GiraphConstants {
       ClassConfOption.create("giraph.vertexValueFactoryClass",
           DefaultVertexValueFactory.class, VertexValueFactory.class);
   /** Vertex edges class - optional */
-  ClassConfOption<VertexEdges> VERTEX_EDGES_CLASS =
-      ClassConfOption.create("giraph.vertexEdgesClass", ByteArrayEdges.class,
-          VertexEdges.class);
+  ClassConfOption<OutEdges> VERTEX_EDGES_CLASS =
+      ClassConfOption.create("giraph.outEdgesClass", ByteArrayEdges.class,
+          OutEdges.class);
   /** Vertex edges class to be used during edge input only - optional */
-  ClassConfOption<VertexEdges> INPUT_VERTEX_EDGES_CLASS =
-      ClassConfOption.create("giraph.inputVertexEdgesClass",
-          ByteArrayEdges.class, VertexEdges.class);
+  ClassConfOption<OutEdges> INPUT_VERTEX_EDGES_CLASS =
+      ClassConfOption.create("giraph.inputOutEdgesClass",
+          ByteArrayEdges.class, OutEdges.class);
 
   /** Class for Master - optional */
   ClassConfOption<MasterCompute> MASTER_COMPUTE_CLASS =

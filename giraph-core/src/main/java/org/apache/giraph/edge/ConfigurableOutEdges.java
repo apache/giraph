@@ -18,17 +18,19 @@
 
 package org.apache.giraph.edge;
 
+import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
- * Empty interface to characterize {@link VertexEdges} implementations that
- * don't keep references to the Edge (or id and value) objects they are passed.
- * The Giraph infrastructure can exploit this characteristic by reusing Edge
- * objects.
+ * Common base class for {@link OutEdges} implementations that require a
+ * configuration.
  *
  * @param <I> Vertex id
  * @param <E> Edge value
  */
-public interface ReuseObjectsVertexEdges<I extends WritableComparable,
-    E extends Writable> extends VertexEdges<I, E> { }
+public abstract class ConfigurableOutEdges<I extends WritableComparable,
+    E extends Writable>
+    extends DefaultImmutableClassesGiraphConfigurable<I, Writable, E,
+    Writable> implements OutEdges<I, E> {
+}

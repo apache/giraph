@@ -31,7 +31,7 @@ import java.util.Iterator;
 import java.util.Map;
 
 /**
- * {@link VertexEdges} implementation backed by an {@link ArrayListMultimap}.
+ * {@link OutEdges} implementation backed by an {@link ArrayListMultimap}.
  * Parallel edges are allowed.
  * Note: this implementation is optimized for fast mutations,
  * but uses more space.
@@ -40,8 +40,8 @@ import java.util.Map;
  * @param <E> Edge value
  */
 public class HashMultimapEdges<I extends WritableComparable, E extends Writable>
-    extends ConfigurableVertexEdges<I, E>
-    implements MultiRandomAccessVertexEdges<I, E> {
+    extends ConfigurableOutEdges<I, E>
+    implements MultiRandomAccessOutEdges<I, E> {
   /** Multimap from target vertex id to edge values. */
   private ArrayListMultimap<I, E> edgeMultimap;
 

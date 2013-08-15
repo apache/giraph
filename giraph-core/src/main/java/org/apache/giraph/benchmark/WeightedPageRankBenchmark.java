@@ -45,7 +45,7 @@ public class WeightedPageRankBenchmark extends GiraphBenchmark {
   private static final Logger LOG =
       Logger.getLogger(WeightedPageRankBenchmark.class);
 
-  /** Option for VertexEdges class */
+  /** Option for OutEdges class */
   private static final BenchmarkOption EDGES_CLASS = new BenchmarkOption(
       "c", "edgesClass", true,
       "Vertex edges class (0 for LongDoubleArrayEdges," +
@@ -92,25 +92,25 @@ public class WeightedPageRankBenchmark extends GiraphBenchmark {
     int edgesClassOption = EDGES_CLASS.getOptionIntValue(cmd, 1);
     switch (edgesClassOption) {
     case 0:
-      configuration.setVertexEdgesClass(LongDoubleArrayEdges.class);
+      configuration.setOutEdgesClass(LongDoubleArrayEdges.class);
       break;
     case 1:
-      configuration.setVertexEdgesClass(ByteArrayEdges.class);
+      configuration.setOutEdgesClass(ByteArrayEdges.class);
       break;
     case 2:
-      configuration.setVertexEdgesClass(ByteArrayEdges.class);
+      configuration.setOutEdgesClass(ByteArrayEdges.class);
       configuration.useUnsafeSerialization(true);
       break;
     case 3:
-      configuration.setVertexEdgesClass(ArrayListEdges.class);
+      configuration.setOutEdgesClass(ArrayListEdges.class);
       break;
     case 4:
-      configuration.setVertexEdgesClass(HashMapEdges.class);
+      configuration.setOutEdgesClass(HashMapEdges.class);
       break;
     default:
-      LOG.info("Unknown VertexEdges class, " +
+      LOG.info("Unknown OutEdges class, " +
           "defaulting to LongDoubleArrayEdges");
-      configuration.setVertexEdgesClass(LongDoubleArrayEdges.class);
+      configuration.setOutEdgesClass(LongDoubleArrayEdges.class);
     }
 
     LOG.info("Using edges class " +

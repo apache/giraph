@@ -19,7 +19,7 @@ package org.apache.giraph.partition;
 
 import org.apache.giraph.edge.ArrayListEdges;
 import org.apache.giraph.edge.EdgeFactory;
-import org.apache.giraph.edge.VertexEdges;
+import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.graph.GiraphTransferRegulator;
 import org.apache.giraph.job.GiraphJob;
 import org.apache.giraph.graph.Vertex;
@@ -71,7 +71,7 @@ public class TestGiraphTransferRegulator {
         .setInt(GiraphTransferRegulator.MAX_VERTICES_PER_TRANSFER, 1);
     job.getConfiguration()
         .setInt(GiraphTransferRegulator.MAX_EDGES_PER_TRANSFER, 3);
-    VertexEdges<IntWritable, DoubleWritable> edges =
+    OutEdges<IntWritable, DoubleWritable> edges =
         new ArrayListEdges<IntWritable, DoubleWritable>();
     edges.initialize(3);
     edges.add(EdgeFactory.create(new IntWritable(2), new DoubleWritable(22)));

@@ -47,10 +47,8 @@ public class PageRankVertex extends RandomWalkVertex<NullWritable> {
         getDanglingProbability() / getTotalNumVertices();
 
     // recompute rank
-    double rank = (1d - teleportationProbability) *
+    return (1d - teleportationProbability) *
         (rankFromNeighbors + danglingContribution) +
         teleportationProbability / getTotalNumVertices();
-
-    return rank;
   }
 }

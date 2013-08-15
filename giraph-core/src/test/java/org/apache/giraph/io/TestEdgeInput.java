@@ -65,7 +65,7 @@ public class TestEdgeInput extends BspCase {
 
     GiraphConfiguration conf = new GiraphConfiguration();
     conf.setVertexClass(TestVertexWithNumEdges.class);
-    conf.setVertexEdgesClass(ByteArrayEdges.class);
+    conf.setOutEdgesClass(ByteArrayEdges.class);
     conf.setEdgeInputFormatClass(IntNullTextEdgeInputFormat.class);
     conf.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
     Iterable<String> results = InternalVertexRunner.run(conf, null, edges);
@@ -94,7 +94,7 @@ public class TestEdgeInput extends BspCase {
 
     GiraphConfiguration conf = new GiraphConfiguration();
     conf.setVertexClass(TestVertexWithNumEdges.class);
-    conf.setVertexEdgesClass(ByteArrayEdges.class);
+    conf.setOutEdgesClass(ByteArrayEdges.class);
     conf.setEdgeInputFormatClass(IntNullReverseTextEdgeInputFormat.class);
     conf.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
     Iterable<String> results = InternalVertexRunner.run(conf, null, edges);
@@ -130,7 +130,7 @@ public class TestEdgeInput extends BspCase {
 
     GiraphConfiguration conf = new GiraphConfiguration();
     conf.setVertexClass(TestVertexDoNothing.class);
-    conf.setVertexEdgesClass(ByteArrayEdges.class);
+    conf.setOutEdgesClass(ByteArrayEdges.class);
     conf.setVertexInputFormatClass(IntIntTextVertexValueInputFormat.class);
     conf.setEdgeInputFormatClass(IntNullTextEdgeInputFormat.class);
     conf.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
@@ -161,7 +161,7 @@ public class TestEdgeInput extends BspCase {
 
     conf = new GiraphConfiguration();
     conf.setVertexClass(TestVertexWithNumEdges.class);
-    conf.setVertexEdgesClass(ByteArrayEdges.class);
+    conf.setOutEdgesClass(ByteArrayEdges.class);
     conf.setVertexInputFormatClass(IntIntTextVertexValueInputFormat.class);
     conf.setEdgeInputFormatClass(IntNullTextEdgeInputFormat.class);
     conf.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
@@ -179,7 +179,7 @@ public class TestEdgeInput extends BspCase {
     assertEquals(1, (int) values.get(5));
   }
 
-  // It should use the specified input VertexEdges class.
+  // It should use the specified input OutEdges class.
   @Test
   public void testDifferentInputEdgesClass() throws Exception {
     String[] edges = new String[] {
@@ -191,8 +191,8 @@ public class TestEdgeInput extends BspCase {
 
     GiraphConfiguration conf = new GiraphConfiguration();
     conf.setVertexClass(TestVertexCheckEdgesType.class);
-    conf.setVertexEdgesClass(ByteArrayEdges.class);
-    conf.setInputVertexEdgesClass(TestVertexEdgesFilterEven.class);
+    conf.setOutEdgesClass(ByteArrayEdges.class);
+    conf.setInputOutEdgesClass(TestOutEdgesFilterEven.class);
     conf.setEdgeInputFormatClass(IntNullTextEdgeInputFormat.class);
     conf.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
     Iterable<String> results = InternalVertexRunner.run(conf, null, edges);
@@ -221,7 +221,7 @@ public class TestEdgeInput extends BspCase {
   public static class TestVertexCheckEdgesType extends TestVertexWithNumEdges {
     @Override
     public void compute(Iterable<NullWritable> messages) throws IOException {
-      assertFalse(getEdges() instanceof TestVertexEdgesFilterEven);
+      assertFalse(getEdges() instanceof TestOutEdgesFilterEven);
       assertTrue(getEdges() instanceof ByteArrayEdges);
       super.compute(messages);
     }
@@ -247,7 +247,7 @@ public class TestEdgeInput extends BspCase {
     }
   }
 
-  public static class TestVertexEdgesFilterEven
+  public static class TestOutEdgesFilterEven
       extends ByteArrayEdges<IntWritable, NullWritable> {
     @Override
     public void add(Edge<IntWritable, NullWritable> edge) {

@@ -1,8 +1,19 @@
 Giraph Change Log
 
-Release 1.1 - unreleased
+Release 1.0.1 - unreleased
   
-Release 1.0 - 2013-04-12
+Release 1.0.0 - 2013-04-15
+
+  GIRAPH-633: Rename VertexEdges to OutEdges (apresta)
+
+  GIRAPH-634: InternalGiraphRunner with TestGraph is broken (majakabiljo)
+
+  GIRAPH-617: Website Documentation: Vertex/Edge Input/Output (apresta)
+
+  GIRAPH-634: InternalGiraphRunner with TestGraph is broken (majakabiljo)
+
+  GIRAPH-630: Convergence detection broken in
+  o.a.g.examples.PageRankVertex. (ssc via aching)
 
   GIRAPH-627: YARN build profile is broken. (rvs via aching)
 
