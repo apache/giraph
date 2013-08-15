@@ -44,7 +44,7 @@ public class TextAggregatorWriter
   /** Signal for "write only the final values" frequency */
   public static final int AT_THE_END = -1;
   /** Signal for "write values in every superstep" frequency */
-  public static final int ALWAYS = -1;
+  public static final int ALWAYS = 1;
   /** The frequency of writing:
    *  - NEVER: never write, files aren't created at all
    *  - AT_THE_END: aggregators are written only when the computation is over
