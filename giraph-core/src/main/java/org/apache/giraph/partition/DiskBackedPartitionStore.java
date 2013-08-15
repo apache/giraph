@@ -402,7 +402,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
     id.readFields(in);
     V value = conf.createVertexValue();
     value.readFields(in);
-    OutEdges<I, E> edges = conf.createOutEdges();
+    OutEdges<I, E> edges = conf.createAndInitializeOutEdges(0);
     vertex.initialize(id, value, edges);
     if (in.readBoolean()) {
       vertex.voteToHalt();

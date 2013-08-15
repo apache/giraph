@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-735: DiskBackedPartitionStore throws NPE due to uninitialized OutEdges
+  (claudio)
+
   GIRAPH-734: DiskBackedPartitionStore attempting to release a lock it doesn't own
   (cmuchinsky via claudio)
 
