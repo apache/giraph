@@ -18,19 +18,24 @@
 
 package org.apache.giraph.edge;
 
-import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
- * Common base class for {@link VertexEdges} implementations that require a
- * configuration.
+ * Interface for {@link OutEdges} implementations that provide efficient
+ * random access to the edges given the target vertex id.
+ * This version is for multigraphs (i.e. there can be parallel edges).
  *
  * @param <I> Vertex id
  * @param <E> Edge value
  */
-public abstract class ConfigurableVertexEdges<I extends WritableComparable,
-    E extends Writable>
-    extends DefaultImmutableClassesGiraphConfigurable<I, Writable, E,
-    Writable> implements VertexEdges<I, E> {
+public interface MultiRandomAccessOutEdges<I extends WritableComparable,
+    E extends Writable> extends OutEdges<I, E> {
+  /**
+   * Return an iterable over the edge values for a given target vertex id.
+   *
+   * @param targetVertexId Target vertex id
+   * @return Iterable of edge values
+   */
+  Iterable<E> getAllEdgeValues(I targetVertexId);
 }

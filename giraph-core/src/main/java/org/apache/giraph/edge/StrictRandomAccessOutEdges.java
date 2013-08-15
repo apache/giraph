@@ -22,20 +22,30 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
- * Interface for {@link VertexEdges} implementations that provide efficient
+ * Interface for {@link OutEdges} implementations that provide efficient
  * random access to the edges given the target vertex id.
- * This version is for multigraphs (i.e. there can be parallel edges).
+ * This version is for strict graphs (i.e. assumes no parallel edges).
  *
  * @param <I> Vertex id
  * @param <E> Edge value
  */
-public interface MultiRandomAccessVertexEdges<I extends WritableComparable,
-    E extends Writable> extends VertexEdges<I, E> {
+public interface StrictRandomAccessOutEdges<I extends WritableComparable,
+    E extends Writable> extends OutEdges<I, E> {
   /**
-   * Return an iterable over the edge values for a given target vertex id.
+   * Return the edge value for the given target vertex id (or null if there
+   * is no edge pointing to it).
    *
    * @param targetVertexId Target vertex id
-   * @return Iterable of edge values
+   * @return Edge value
    */
-  Iterable<E> getAllEdgeValues(I targetVertexId);
+  E getEdgeValue(I targetVertexId);
+
+  /**
+   * Set the edge value for the given target vertex id (if an edge to that
+   * vertex exists).
+   *
+   * @param targetVertexId Target vertex id
+   * @param edgeValue Edge value
+   */
+  void setEdgeValue(I targetVertexId, E edgeValue);
 }

@@ -30,15 +30,15 @@ import java.util.ArrayList;
 import java.util.Iterator;
 
 /**
- * {@link VertexEdges} implementation backed by an {@link ArrayList}.
+ * {@link OutEdges} implementation backed by an {@link ArrayList}.
  * Parallel edges are allowed.
  *
  * @param <I> Vertex id
  * @param <E> Edge value
  */
 public class ArrayListEdges<I extends WritableComparable, E extends Writable>
-    extends ConfigurableVertexEdges<I, E>
-    implements MutableVertexEdges<I, E> {
+    extends ConfigurableOutEdges<I, E>
+    implements MutableOutEdges<I, E> {
   /** List of edges. */
   private ArrayList<Edge<I, E>> edgeList;
 

@@ -67,7 +67,7 @@ public class ConnectedComponentsVertexTest {
 
         GiraphConfiguration conf = new GiraphConfiguration();
         conf.setVertexClass(ConnectedComponentsVertex.class);
-        conf.setVertexEdgesClass(ByteArrayEdges.class);
+        conf.setOutEdgesClass(ByteArrayEdges.class);
         conf.setCombinerClass(MinimumIntCombiner.class);
         conf.setVertexInputFormatClass(IntIntNullTextInputFormat.class);
         conf.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);

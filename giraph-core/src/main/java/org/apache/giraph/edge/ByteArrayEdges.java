@@ -33,7 +33,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 /**
- * {@link VertexEdges} implementation backed by a byte array.
+ * {@link OutEdges} implementation backed by a byte array.
  * Parallel edges are allowed.
  * Note: this implementation is optimized for space usage,
  * but edge removals are expensive.
@@ -42,8 +42,8 @@ import java.util.List;
  * @param <E> Edge value
  */
 public class ByteArrayEdges<I extends WritableComparable, E extends Writable>
-    extends ConfigurableVertexEdges<I, E>
-    implements ReuseObjectsVertexEdges<I, E> {
+    extends ConfigurableOutEdges<I, E>
+    implements ReuseObjectsOutEdges<I, E> {
   /** Serialized edges. */
   private byte[] serializedEdges;
   /** Number of bytes used in serializedEdges. */

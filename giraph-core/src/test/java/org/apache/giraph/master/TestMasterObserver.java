@@ -89,7 +89,7 @@ public class TestMasterObserver {
     conf.set(GiraphConstants.MASTER_OBSERVER_CLASSES.getKey(),
         arrayToString(klasses));
     conf.setVertexClass(NoOpVertex.class);
-    conf.setVertexEdgesClass(ByteArrayEdges.class);
+    conf.setOutEdgesClass(ByteArrayEdges.class);
     conf.setVertexInputFormatClass(IntNullNullTextInputFormat.class);
     InternalVertexRunner.run(conf, graph);
 

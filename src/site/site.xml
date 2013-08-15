@@ -70,6 +70,7 @@
     
     <menu name="User Docs" inherit="top">
       <item name="Page Rank Example" href="pagerank.html"/>
+      <item name="Input/output in Giraph" href="io.html"/>
       <item name="Javadoc" href="javadoc_modules.html"/>
       <item name="Presentations" href="presentations.html"/>
       <item name="External Community Wiki" href="https://cwiki.apache.org/confluence/display/GIRAPH" />

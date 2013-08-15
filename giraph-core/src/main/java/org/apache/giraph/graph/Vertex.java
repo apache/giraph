@@ -21,13 +21,13 @@ package org.apache.giraph.graph;
 import com.google.common.collect.UnmodifiableIterator;
 import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
 import org.apache.giraph.edge.Edge;
-import org.apache.giraph.edge.MultiRandomAccessVertexEdges;
+import org.apache.giraph.edge.MultiRandomAccessOutEdges;
 import org.apache.giraph.edge.MutableEdge;
 import org.apache.giraph.edge.MutableEdgesIterable;
 import org.apache.giraph.edge.MutableEdgesWrapper;
-import org.apache.giraph.edge.MutableVertexEdges;
-import org.apache.giraph.edge.StrictRandomAccessVertexEdges;
-import org.apache.giraph.edge.VertexEdges;
+import org.apache.giraph.edge.MutableOutEdges;
+import org.apache.giraph.edge.OutEdges;
+import org.apache.giraph.edge.StrictRandomAccessOutEdges;
 import org.apache.giraph.partition.PartitionContext;
 import org.apache.giraph.worker.WorkerAggregatorUsage;
 import org.apache.giraph.worker.WorkerContext;
@@ -57,7 +57,7 @@ public abstract class Vertex<I extends WritableComparable,
   /** Vertex value. */
   private V value;
   /** Outgoing edges. */
-  private VertexEdges<I, E> edges;
+  private OutEdges<I, E> edges;
   /** If true, do not do anymore computation on this vertex. */
   private boolean halt;
   /** Global graph state **/
@@ -89,7 +89,7 @@ public abstract class Vertex<I extends WritableComparable,
   public void initialize(I id, V value) {
     this.id = id;
     this.value = value;
-    this.edges = getConf().createAndInitializeVertexEdges(0);
+    this.edges = getConf().createAndInitializeOutEdges(0);
   }
 
   /**
@@ -98,13 +98,13 @@ public abstract class Vertex<I extends WritableComparable,
    * @param edges Iterable of edges
    */
   public void setEdges(Iterable<Edge<I, E>> edges) {
-    // If the iterable is actually an instance of VertexEdges,
+    // If the iterable is actually an instance of OutEdges,
     // we simply take the reference.
-    // Otherwise, we initialize a new VertexEdges.
-    if (edges instanceof VertexEdges) {
-      this.edges = (VertexEdges<I, E>) edges;
+    // Otherwise, we initialize a new OutEdges.
+    if (edges instanceof OutEdges) {
+      this.edges = (OutEdges<I, E>) edges;
     } else {
-      this.edges = getConf().createAndInitializeVertexEdges(edges);
+      this.edges = getConf().createAndInitializeOutEdges(edges);
     }
   }
 
@@ -195,14 +195,14 @@ public abstract class Vertex<I extends WritableComparable,
    * @return An iterable of mutable out-edges
    */
   public Iterable<MutableEdge<I, E>> getMutableEdges() {
-    // If the VertexEdges implementation has a specialized mutable iterator,
+    // If the OutEdges implementation has a specialized mutable iterator,
     // we use that; otherwise, we build a new data structure as we iterate
     // over the current edges.
-    if (edges instanceof MutableVertexEdges) {
+    if (edges instanceof MutableOutEdges) {
       return new Iterable<MutableEdge<I, E>>() {
         @Override
         public Iterator<MutableEdge<I, E>> iterator() {
-          return ((MutableVertexEdges<I, E>) edges).mutableIterator();
+          return ((MutableOutEdges<I, E>) edges).mutableIterator();
         }
       };
     } else {
@@ -212,8 +212,9 @@ public abstract class Vertex<I extends WritableComparable,
 
   /**
    * If a {@link MutableEdgesWrapper} was used to provide a mutable iterator,
-   * copy any remaining edges to the new {@link VertexEdges} data
-   * structure and keep a direct reference to it (thus discarding the wrapper).
+   * copy any remaining edges to the new {@link org.apache.giraph.edge.OutEdges}
+   * data structure and keep a direct reference to it (thus discarding the
+   * wrapper).
    * Called by the Giraph infrastructure after computation.
    */
   public void unwrapMutableEdges() {
@@ -242,10 +243,10 @@ public abstract class Vertex<I extends WritableComparable,
    * @return Edge value (or null if missing)
    */
   public E getEdgeValue(I targetVertexId) {
-    // If the VertexEdges implementation has a specialized random-access
+    // If the OutEdges implementation has a specialized random-access
     // method, we use that; otherwise, we scan the edges.
-    if (edges instanceof StrictRandomAccessVertexEdges) {
-      return ((StrictRandomAccessVertexEdges<I, E>) edges)
+    if (edges instanceof StrictRandomAccessOutEdges) {
+      return ((StrictRandomAccessOutEdges<I, E>) edges)
           .getEdgeValue(targetVertexId);
     } else {
       for (Edge<I, E> edge : edges) {
@@ -265,10 +266,10 @@ public abstract class Vertex<I extends WritableComparable,
    * @param edgeValue Edge value
    */
   public void setEdgeValue(I targetVertexId, E edgeValue) {
-    // If the VertexEdges implementation has a specialized random-access
+    // If the OutEdges implementation has a specialized random-access
     // method, we use that; otherwise, we scan the edges.
-    if (edges instanceof StrictRandomAccessVertexEdges) {
-      ((StrictRandomAccessVertexEdges<I, E>) edges).setEdgeValue(
+    if (edges instanceof StrictRandomAccessOutEdges) {
+      ((StrictRandomAccessOutEdges<I, E>) edges).setEdgeValue(
           targetVertexId, edgeValue);
     } else {
       for (MutableEdge<I, E> edge : getMutableEdges()) {
@@ -291,10 +292,10 @@ public abstract class Vertex<I extends WritableComparable,
    * @return Iterable of edge values
    */
   public Iterable<E> getAllEdgeValues(final I targetVertexId) {
-    // If the VertexEdges implementation has a specialized random-access
+    // If the OutEdges implementation has a specialized random-access
     // method, we use that; otherwise, we scan the edges.
-    if (edges instanceof MultiRandomAccessVertexEdges) {
-      return ((MultiRandomAccessVertexEdges<I, E>) edges)
+    if (edges instanceof MultiRandomAccessOutEdges) {
+      return ((MultiRandomAccessOutEdges<I, E>) edges)
           .getAllEdgeValues(targetVertexId);
     } else {
       return new Iterable<E>() {
@@ -405,7 +406,7 @@ public abstract class Vertex<I extends WritableComparable,
    * @param value Vertex value
    * @param edges Initial edges
    */
-  public void addVertexRequest(I id, V value, VertexEdges<I, E> edges)
+  public void addVertexRequest(I id, V value, OutEdges<I, E> edges)
     throws IOException {
     Vertex<I, V, E, M> vertex = getConf().createVertex();
     vertex.initialize(id, value, edges);
@@ -420,7 +421,7 @@ public abstract class Vertex<I extends WritableComparable,
    * @param value Vertex value
    */
   public void addVertexRequest(I id, V value) throws IOException {
-    addVertexRequest(id, value, getConf().createAndInitializeVertexEdges());
+    addVertexRequest(id, value, getConf().createAndInitializeOutEdges());
   }
 
   /**

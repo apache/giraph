@@ -124,7 +124,7 @@ public class SimpleShortestPathsVertexTest {
     // start from vertex 1
     SOURCE_ID.set(conf, 1);
     conf.setVertexClass(SimpleShortestPathsVertex.class);
-    conf.setVertexEdgesClass(ByteArrayEdges.class);
+    conf.setOutEdgesClass(ByteArrayEdges.class);
     conf.setVertexInputFormatClass(
         JsonLongDoubleFloatDoubleVertexInputFormat.class);
     conf.setVertexOutputFormatClass(

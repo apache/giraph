@@ -73,7 +73,7 @@ public class ByteArrayPartition<I extends WritableComparable,
     representativeVertex.initialize(
         getConf().createVertexId(),
         getConf().createVertexValue(),
-        getConf().createVertexEdges());
+        getConf().createOutEdges());
     useUnsafeSerialization = getConf().useUnsafeSerialization();
   }
 
@@ -194,7 +194,7 @@ public class ByteArrayPartition<I extends WritableComparable,
     representativeVertex.initialize(
         getConf().createVertexId(),
         getConf().createVertexValue(),
-        getConf().createVertexEdges());
+        getConf().createOutEdges());
     useUnsafeSerialization = getConf().useUnsafeSerialization();
     for (int i = 0; i < size; ++i) {
       progress();

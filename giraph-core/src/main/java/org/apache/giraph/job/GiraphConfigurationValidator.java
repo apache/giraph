@@ -21,7 +21,7 @@ package org.apache.giraph.job;
 import org.apache.giraph.combiner.Combiner;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.edge.VertexEdges;
+import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.graph.DefaultVertexResolver;
 import org.apache.giraph.graph.DefaultVertexValueFactory;
 import org.apache.giraph.graph.Vertex;
@@ -118,7 +118,7 @@ public class GiraphConfigurationValidator<I extends WritableComparable,
     vertexValueType = classList.get(VALUE_PARAM_INDEX);
     edgeValueType = classList.get(EDGE_PARAM_INDEX);
     messageValueType = classList.get(MSG_PARAM_INDEX);
-    verifyVertexEdgesGenericTypes();
+    verifyOutEdgesGenericTypes();
     verifyVertexInputFormatGenericTypes();
     verifyEdgeInputFormatGenericTypes();
     verifyVertexOutputFormatGenericTypes();
@@ -165,7 +165,7 @@ public class GiraphConfigurationValidator<I extends WritableComparable,
             VERTEX_RESOLVER_CLASS.getDefaultClass().getCanonicalName());
       }
     }
-    if (conf.getVertexEdgesClass() == null) {
+    if (conf.getOutEdgesClass() == null) {
       if (LOG.isInfoEnabled()) {
         LOG.info("checkConfiguration: No class found for " +
             VERTEX_EDGES_CLASS.getKey() + ", defaulting to " +
@@ -175,15 +175,15 @@ public class GiraphConfigurationValidator<I extends WritableComparable,
   }
 
   /**
-   * Verify matching generic types for a specific VertexEdges class.
+   * Verify matching generic types for a specific OutEdges class.
    *
-   * @param vertexEdgesClass {@link VertexEdges} class to check
+   * @param outEdgesClass {@link org.apache.giraph.edge.OutEdges} class to check
    */
-  private void verifyVertexEdgesGenericTypesClass(
-      Class<? extends VertexEdges<I, E>> vertexEdgesClass) {
+  private void verifyOutEdgesGenericTypesClass(
+      Class<? extends OutEdges<I, E>> outEdgesClass) {
     List<Class<?>> classList = ReflectionUtils.getTypeArguments(
-        VertexEdges.class, vertexEdgesClass);
-    // VertexEdges implementations can be generic, in which case there are no
+        OutEdges.class, outEdgesClass);
+    // OutEdges implementations can be generic, in which case there are no
     // types to check.
     if (classList.isEmpty()) {
       return;
@@ -205,14 +205,14 @@ public class GiraphConfigurationValidator<I extends WritableComparable,
     }
   }
 
-  /** Verify matching generic types in VertexEdges. */
-  private void verifyVertexEdgesGenericTypes() {
-    Class<? extends VertexEdges<I, E>> vertexEdgesClass =
-        conf.getVertexEdgesClass();
-    Class<? extends VertexEdges<I, E>> inputVertexEdgesClass =
-        conf.getInputVertexEdgesClass();
-    verifyVertexEdgesGenericTypesClass(vertexEdgesClass);
-    verifyVertexEdgesGenericTypesClass(inputVertexEdgesClass);
+  /** Verify matching generic types in OutEdges. */
+  private void verifyOutEdgesGenericTypes() {
+    Class<? extends OutEdges<I, E>> outEdgesClass =
+        conf.getOutEdgesClass();
+    Class<? extends OutEdges<I, E>> inputOutEdgesClass =
+        conf.getInputOutEdgesClass();
+    verifyOutEdgesGenericTypesClass(outEdgesClass);
+    verifyOutEdgesGenericTypesClass(inputOutEdgesClass);
   }
 
   /** Verify matching generic types in VertexInputFormat. */

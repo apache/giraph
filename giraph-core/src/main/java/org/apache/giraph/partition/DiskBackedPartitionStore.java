@@ -19,7 +19,7 @@
 package org.apache.giraph.partition;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.edge.VertexEdges;
+import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -381,12 +381,12 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
    * @throws IOException
    */
   @SuppressWarnings("unchecked")
-  private void writeVertexEdges(
+  private void writeOutEdges(
       DataOutput output,
       Vertex<I, V, E, M> vertex)
     throws IOException {
     vertex.getId().write(output);
-    ((VertexEdges<I, E>) vertex.getEdges()).write(output);
+    ((OutEdges<I, E>) vertex.getEdges()).write(output);
   }
 
   /**
@@ -417,12 +417,12 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
    * @param partition The partition owning the vertex
    * @throws IOException
    */
-  private void readVertexEdges(DataInput in, Partition<I, V, E, M> partition)
+  private void readOutEdges(DataInput in, Partition<I, V, E, M> partition)
     throws IOException {
     I id = conf.createVertexId();
     id.readFields(in);
     Vertex<I, V, E, M> v = partition.getVertex(id);
-    VertexEdges<I, E> edges = conf.createVertexEdges();
+    OutEdges<I, E> edges = conf.createOutEdges();
     edges.readFields(in);
     v.setEdges(edges);
   }
@@ -454,7 +454,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
     inputStream = new DataInputStream(
         new BufferedInputStream(new FileInputStream(file)));
     for (int i = 0; i < numVertices; ++i) {
-      readVertexEdges(inputStream, partition);
+      readOutEdges(inputStream, partition);
     }
     inputStream.close();
     /*
@@ -501,7 +501,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
       outputStream = new DataOutputStream(
           new BufferedOutputStream(new FileOutputStream(file)));
       for (Vertex<I, V, E, M> vertex : partition) {
-        writeVertexEdges(outputStream, vertex);
+        writeOutEdges(outputStream, vertex);
       }
       outputStream.close();
     }
@@ -530,7 +530,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
     outputStream = new DataOutputStream(
         new BufferedOutputStream(new FileOutputStream(file, true)));
     for (Vertex<I, V, E, M> vertex : partition) {
-      writeVertexEdges(outputStream, vertex);
+      writeOutEdges(outputStream, vertex);
     }
     outputStream.close();
   }

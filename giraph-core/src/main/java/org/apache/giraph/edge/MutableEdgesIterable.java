@@ -26,7 +26,7 @@ import java.util.Iterator;
 
 /**
  * Helper class to provide a mutable iterable over the edges when the chosen
- * {@link VertexEdges} doesn't offer a specialized one.
+ * {@link OutEdges} doesn't offer a specialized one.
  *
  * @param <I> Vertex id
  * @param <E> Edge value
@@ -48,7 +48,7 @@ public class MutableEdgesIterable<I extends WritableComparable,
   @Override
   public Iterator<MutableEdge<I, E>> iterator() {
     final MutableEdgesWrapper<I, E> mutableEdgesWrapper =
-        MutableEdgesWrapper.wrap((VertexEdges<I, E>) vertex.getEdges(),
+        MutableEdgesWrapper.wrap((OutEdges<I, E>) vertex.getEdges(),
             vertex.getConf());
     vertex.setEdges(mutableEdgesWrapper);
 
@@ -57,7 +57,7 @@ public class MutableEdgesIterable<I extends WritableComparable,
       private Iterator<Edge<I, E>> oldEdgesIterator =
           mutableEdgesWrapper.getOldEdgesIterator();
       /** New edges data structure. */
-      private VertexEdges<I, E> newEdges = mutableEdgesWrapper.getNewEdges();
+      private OutEdges<I, E> newEdges = mutableEdgesWrapper.getNewEdges();
 
       @Override
       public boolean hasNext() {

@@ -30,6 +30,7 @@ import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.combiner.Combiner;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
+import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.graph.VertexValueFactory;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
@@ -39,7 +40,6 @@ import org.apache.giraph.job.GiraphConfigurationValidator;
 import org.apache.giraph.master.MasterCompute;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.edge.VertexEdges;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -91,7 +91,7 @@ public final class ConfigurationUtils {
     OPTIONS.addOption("eip", "edgeInputPath", true, "Edge input path");
     OPTIONS.addOption("op", "outputPath", true, "Vertex output path");
     OPTIONS.addOption("c", "combiner", true, "Combiner class");
-    OPTIONS.addOption("ve", "vertexEdges", true, "Vertex edges class");
+    OPTIONS.addOption("ve", "outEdges", true, "Vertex edges class");
     OPTIONS.addOption("wc", "workerContext", true, "WorkerContext class");
     OPTIONS.addOption("aw", "aggregatorWriter", true, "AggregatorWriter class");
     OPTIONS.addOption("mc", "masterCompute", true, "MasterCompute class");
@@ -214,13 +214,13 @@ public final class ConfigurationUtils {
           (Class<? extends Combiner>) Class.forName(cmd.getOptionValue("c")));
     }
     if (cmd.hasOption("ve")) {
-      giraphConfiguration.setVertexEdgesClass(
-          (Class<? extends VertexEdges>)
+      giraphConfiguration.setOutEdgesClass(
+          (Class<? extends OutEdges>)
               Class.forName(cmd.getOptionValue("ve")));
     }
     if (cmd.hasOption("ive")) {
-      giraphConfiguration.setInputVertexEdgesClass(
-          (Class<? extends VertexEdges>)
+      giraphConfiguration.setInputOutEdgesClass(
+          (Class<? extends OutEdges>)
               Class.forName(cmd.getOptionValue("ive")));
     }
     if (cmd.hasOption("wc")) {

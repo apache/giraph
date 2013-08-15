@@ -55,17 +55,17 @@ public class EdgeStore<I extends WritableComparable,
   private Progressable progressable;
   /** Map used to temporarily store incoming edges. */
   private ConcurrentMap<Integer,
-      ConcurrentMap<I, VertexEdges<I, E>>> transientEdges;
+      ConcurrentMap<I, OutEdges<I, E>>> transientEdges;
   /**
-   * Whether the chosen {@link VertexEdges} implementation allows for Edge
+   * Whether the chosen {@link OutEdges} implementation allows for Edge
    * reuse.
    */
   private boolean reuseEdgeObjects;
   /**
-   * Whether the {@link VertexEdges} class used during input is different
+   * Whether the {@link OutEdges} class used during input is different
    * from the one used during computation.
    */
-  private boolean useInputVertexEdges;
+  private boolean useInputOutEdges;
 
   /**
    * Constructor.
@@ -84,7 +84,7 @@ public class EdgeStore<I extends WritableComparable,
     transientEdges = new MapMaker().concurrencyLevel(
         configuration.getNettyServerExecutionConcurrency()).makeMap();
     reuseEdgeObjects = configuration.reuseEdgeObjects();
-    useInputVertexEdges = configuration.useInputVertexEdges();
+    useInputOutEdges = configuration.useInputOutEdges();
   }
 
   /**
@@ -96,10 +96,10 @@ public class EdgeStore<I extends WritableComparable,
    */
   public void addPartitionEdges(
       int partitionId, ByteArrayVertexIdEdges<I, E> edges) {
-    ConcurrentMap<I, VertexEdges<I, E>> partitionEdges =
+    ConcurrentMap<I, OutEdges<I, E>> partitionEdges =
         transientEdges.get(partitionId);
     if (partitionEdges == null) {
-      ConcurrentMap<I, VertexEdges<I, E>> newPartitionEdges =
+      ConcurrentMap<I, OutEdges<I, E>> newPartitionEdges =
           new MapMaker().concurrencyLevel(
               configuration.getNettyServerExecutionConcurrency()).makeMap();
       partitionEdges = transientEdges.putIfAbsent(partitionId,
@@ -116,38 +116,38 @@ public class EdgeStore<I extends WritableComparable,
       Edge<I, E> edge = reuseEdgeObjects ?
           vertexIdEdgeIterator.getCurrentEdge() :
           vertexIdEdgeIterator.releaseCurrentEdge();
-      VertexEdges<I, E> vertexEdges = partitionEdges.get(vertexId);
-      if (vertexEdges == null) {
-        VertexEdges<I, E> newVertexEdges =
-            configuration.createAndInitializeInputVertexEdges();
-        vertexEdges = partitionEdges.putIfAbsent(vertexId, newVertexEdges);
-        if (vertexEdges == null) {
-          vertexEdges = newVertexEdges;
+      OutEdges<I, E> outEdges = partitionEdges.get(vertexId);
+      if (outEdges == null) {
+        OutEdges<I, E> newOutEdges =
+            configuration.createAndInitializeInputOutEdges();
+        outEdges = partitionEdges.putIfAbsent(vertexId, newOutEdges);
+        if (outEdges == null) {
+          outEdges = newOutEdges;
           // Since we had to use the vertex id as a new key in the map,
           // we need to release the object.
           vertexIdEdgeIterator.releaseCurrentVertexId();
         }
       }
-      synchronized (vertexEdges) {
-        vertexEdges.add(edge);
+      synchronized (outEdges) {
+        outEdges.add(edge);
       }
     }
   }
 
   /**
-   * Convert the input edges to the {@link VertexEdges} data structure used
+   * Convert the input edges to the {@link OutEdges} data structure used
    * for computation (if different).
    *
    * @param inputEdges Input edges
    * @return Compute edges
    */
-  private VertexEdges<I, E> convertInputToComputeEdges(
-      VertexEdges<I, E> inputEdges) {
-    if (!useInputVertexEdges) {
+  private OutEdges<I, E> convertInputToComputeEdges(
+      OutEdges<I, E> inputEdges) {
+    if (!useInputOutEdges) {
       return inputEdges;
     } else {
-      VertexEdges<I, E> computeEdges =
-          configuration.createAndInitializeVertexEdges(inputEdges.size());
+      OutEdges<I, E> computeEdges =
+          configuration.createAndInitializeOutEdges(inputEdges.size());
       for (Edge<I, E> edge : inputEdges) {
         computeEdges.add(edge);
       }
@@ -186,10 +186,10 @@ public class EdgeStore<I extends WritableComparable,
             while ((partitionId = partitionIdQueue.poll()) != null) {
               Partition<I, V, E, M> partition =
                   service.getPartitionStore().getPartition(partitionId);
-              ConcurrentMap<I, VertexEdges<I, E>> partitionEdges =
+              ConcurrentMap<I, OutEdges<I, E>> partitionEdges =
                   transientEdges.remove(partitionId);
               for (I vertexId : partitionEdges.keySet()) {
-                VertexEdges<I, E> vertexEdges = convertInputToComputeEdges(
+                OutEdges<I, E> outEdges = convertInputToComputeEdges(
                     partitionEdges.remove(vertexId));
                 Vertex<I, V, E, M> vertex = partition.getVertex(vertexId);
                 // If the source vertex doesn't exist, create it. Otherwise,
@@ -197,10 +197,10 @@ public class EdgeStore<I extends WritableComparable,
                 if (vertex == null) {
                   vertex = configuration.createVertex();
                   vertex.initialize(vertexId, configuration.createVertexValue(),
-                      vertexEdges);
+                      outEdges);
                   partition.putVertex(vertex);
                 } else {
-                  vertex.setEdges(vertexEdges);
+                  vertex.setEdges(outEdges);
                   // Some Partition implementations (e.g. ByteArrayPartition)
                   // require us to put back the vertex after modifying it.
                   partition.saveVertex(vertex);

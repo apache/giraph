@@ -32,7 +32,7 @@ import java.util.Collection;
 import java.util.Iterator;
 
 /**
- * {@link VertexEdges} implementation with long ids and double edge values,
+ * {@link OutEdges} implementation with long ids and double edge values,
  * backed by a {@link Long2DoubleOpenHashMap}.
  * Parallel edges are not allowed.
  * Note: this implementation is optimized for fast random access and mutations,
@@ -40,9 +40,9 @@ import java.util.Iterator;
  * {@link LongDoubleArrayEdges}.
  */
 public class LongDoubleHashMapEdges
-    implements StrictRandomAccessVertexEdges<LongWritable, DoubleWritable>,
-    ReuseObjectsVertexEdges<LongWritable, DoubleWritable>,
-    MutableVertexEdges<LongWritable, DoubleWritable> {
+    implements StrictRandomAccessOutEdges<LongWritable, DoubleWritable>,
+    ReuseObjectsOutEdges<LongWritable, DoubleWritable>,
+    MutableOutEdges<LongWritable, DoubleWritable> {
   /** Hash map from target vertex id to edge value. */
   private Long2DoubleOpenHashMap edgeMap;
   /** Representative edge value object, used by getEdgeValue(). */

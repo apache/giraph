@@ -221,8 +221,10 @@ public class InternalVertexRunner {
       File zkMgrDir = FileUtils.createTempDir(tmpDir, "_defaultZkManagerDir");
       File checkpointsDir = FileUtils.createTempDir(tmpDir, "_checkpoints");
 
+      conf.setVertexInputFormatClass(InMemoryVertexInputFormat.class);
+
       // Create and configure the job to run the vertex
-      GiraphJob job = new GiraphJob(conf.getVertexClass().getName());
+      GiraphJob job = new GiraphJob(conf, conf.getVertexClass().getName());
 
       InMemoryVertexInputFormat.setGraph(graph);
 

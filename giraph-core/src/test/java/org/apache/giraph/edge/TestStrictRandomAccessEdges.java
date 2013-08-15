@@ -27,16 +27,16 @@ import org.junit.Test;
 import java.util.Collection;
 import java.util.List;
 
-import static org.apache.giraph.graph.TestVertexAndEdges.instantiateVertexEdges;
+import static org.apache.giraph.graph.TestVertexAndEdges.instantiateOutEdges;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
 /**
- * Tests {@link StrictRandomAccessVertexEdges} implementations.
+ * Tests {@link StrictRandomAccessOutEdges} implementations.
  */
 public class TestStrictRandomAccessEdges {
-    /** {@link StrictRandomAccessVertexEdges} classes to be tested. */
-    private Collection<Class<? extends StrictRandomAccessVertexEdges>>
+    /** {@link StrictRandomAccessOutEdges} classes to be tested. */
+    private Collection<Class<? extends StrictRandomAccessOutEdges>>
         edgesClasses = Lists.newArrayList();
 
     @Before
@@ -46,22 +46,22 @@ public class TestStrictRandomAccessEdges {
     }
 
     /**
-     * Ensures that all {@link StrictRandomAccessVertexEdges} implementations
+     * Ensures that all {@link StrictRandomAccessOutEdges} implementations
      * correctly return edge values.
      */
     @Test
     public void testParallelEdges() {
-      for (Class<? extends StrictRandomAccessVertexEdges> edgesClass :
+      for (Class<? extends StrictRandomAccessOutEdges> edgesClass :
           edgesClasses) {
         testParallelEdgesClass(edgesClass);
       }
     }
 
     private void testParallelEdgesClass(
-        Class<? extends StrictRandomAccessVertexEdges> edgesClass) {
-      StrictRandomAccessVertexEdges<LongWritable, DoubleWritable> edges =
-          (StrictRandomAccessVertexEdges<LongWritable, DoubleWritable>)
-              instantiateVertexEdges(edgesClass);
+        Class<? extends StrictRandomAccessOutEdges> edgesClass) {
+      StrictRandomAccessOutEdges<LongWritable, DoubleWritable> edges =
+          (StrictRandomAccessOutEdges<LongWritable, DoubleWritable>)
+              instantiateOutEdges(edgesClass);
 
       // Initial edges list contains parallel edges.
       List<Edge<LongWritable, DoubleWritable>> initialEdges = Lists.newArrayList(

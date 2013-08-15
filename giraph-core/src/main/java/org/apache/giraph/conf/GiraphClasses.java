@@ -21,7 +21,7 @@ import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.aggregators.TextAggregatorWriter;
 import org.apache.giraph.combiner.Combiner;
 import org.apache.giraph.edge.ByteArrayEdges;
-import org.apache.giraph.edge.VertexEdges;
+import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.graph.DefaultVertexResolver;
 import org.apache.giraph.graph.DefaultVertexValueFactory;
 import org.apache.giraph.graph.Vertex;
@@ -70,9 +70,9 @@ public class GiraphClasses<I extends WritableComparable,
   /** Message value class - cached for fast access */
   protected Class<M> messageValueClass;
   /** Vertex edges class - cached for fast access */
-  protected Class<? extends VertexEdges<I, E>> vertexEdgesClass;
+  protected Class<? extends OutEdges<I, E>> outEdgesClass;
   /** Input vertex edges class - cached for fast access */
-  protected Class<? extends VertexEdges<I, E>> inputVertexEdgesClass;
+  protected Class<? extends OutEdges<I, E>> inputOutEdgesClass;
 
   /** Vertex value factory class - cached for fast access */
   protected Class<? extends VertexValueFactory<V>> vertexValueFactoryClass;
@@ -114,9 +114,9 @@ public class GiraphClasses<I extends WritableComparable,
   public GiraphClasses() {
     // Note: the cast to Object is required in order for javac to accept the
     // downcast.
-    vertexEdgesClass = (Class<? extends VertexEdges<I, E>>) (Object)
+    outEdgesClass = (Class<? extends OutEdges<I, E>>) (Object)
         ByteArrayEdges.class;
-    inputVertexEdgesClass = (Class<? extends VertexEdges<I, E>>) (Object)
+    inputOutEdgesClass = (Class<? extends OutEdges<I, E>>) (Object)
         ByteArrayEdges.class;
     vertexValueFactoryClass = (Class<? extends VertexValueFactory<V>>) (Object)
         DefaultVertexValueFactory.class;
@@ -157,10 +157,10 @@ public class GiraphClasses<I extends WritableComparable,
     edgeValueClass = (Class<E>) classList.get(2);
     messageValueClass = (Class<M>) classList.get(3);
 
-    vertexEdgesClass = (Class<? extends VertexEdges<I, E>>)
+    outEdgesClass = (Class<? extends OutEdges<I, E>>)
         VERTEX_EDGES_CLASS.get(conf);
-    inputVertexEdgesClass = (Class<? extends VertexEdges<I, E>>)
-        INPUT_VERTEX_EDGES_CLASS.getWithDefault(conf, vertexEdgesClass);
+    inputOutEdgesClass = (Class<? extends OutEdges<I, E>>)
+        INPUT_VERTEX_EDGES_CLASS.getWithDefault(conf, outEdgesClass);
     vertexValueFactoryClass = (Class<? extends VertexValueFactory<V>>)
         VERTEX_VALUE_FACTORY_CLASS.get(conf);
 
@@ -237,16 +237,16 @@ public class GiraphClasses<I extends WritableComparable,
    *
    * @return Vertex edges class.
    */
-  public Class<? extends VertexEdges<I, E>> getVertexEdgesClass() {
-    return vertexEdgesClass;
+  public Class<? extends OutEdges<I, E>> getOutEdgesClass() {
+    return outEdgesClass;
   }
 
   /* Get Vertex edges class used during edge-based input
  *
  * @return Vertex edges class.
  */
-  public Class<? extends VertexEdges<I, E>> getInputVertexEdgesClass() {
-    return inputVertexEdgesClass;
+  public Class<? extends OutEdges<I, E>> getInputOutEdgesClass() {
+    return inputOutEdgesClass;
   }
 
 
@@ -508,29 +508,29 @@ public class GiraphClasses<I extends WritableComparable,
   }
 
   /**
-   * Set VertexEdges class held
+   * Set OutEdges class held
    *
-   * @param vertexEdgesClass Vertex edges class to set
+   * @param outEdgesClass Vertex edges class to set
    * @return this
    */
-  public GiraphClasses setVertexEdgesClass(
-      Class<? extends VertexEdges> vertexEdgesClass) {
-    this.vertexEdgesClass =
-        (Class<? extends VertexEdges<I, E>>) vertexEdgesClass;
+  public GiraphClasses setOutEdgesClass(
+      Class<? extends OutEdges> outEdgesClass) {
+    this.outEdgesClass =
+        (Class<? extends OutEdges<I, E>>) outEdgesClass;
     return this;
   }
 
   /**
-   * Set VertexEdges class used during edge-input (if different from the one
+   * Set OutEdges class used during edge-input (if different from the one
    * used for computation)
    *
-   * @param inputVertexEdgesClass Input vertex edges class to set
+   * @param inputOutEdgesClass Input vertex edges class to set
    * @return this
    */
-  public GiraphClasses setInputVertexEdgesClass(
-      Class<? extends VertexEdges> inputVertexEdgesClass) {
-    this.inputVertexEdgesClass =
-        (Class<? extends VertexEdges<I, E>>) inputVertexEdgesClass;
+  public GiraphClasses setInputOutEdgesClass(
+      Class<? extends OutEdges> inputOutEdgesClass) {
+    this.inputOutEdgesClass =
+        (Class<? extends OutEdges<I, E>>) inputOutEdgesClass;
     return this;
   }
 

@@ -20,7 +20,6 @@ package org.apache.giraph.examples;
 
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.edge.ByteArrayEdges;
-import org.apache.giraph.examples.RandomWalkVertex.RandomWalkVertexMasterCompute;
 import org.apache.giraph.utils.InternalVertexRunner;
 import org.junit.Test;
 
@@ -46,7 +45,7 @@ public class RandomWalkWithRestartVertexTest {
     conf.setInt(RandomWalkWithRestartVertex.MAX_SUPERSTEPS, 30);
     conf.setFloat(RandomWalkWithRestartVertex.TELEPORTATION_PROBABILITY, 0.25f);
     conf.setVertexClass(RandomWalkWithRestartVertex.class);
-    conf.setVertexEdgesClass(ByteArrayEdges.class);
+    conf.setOutEdgesClass(ByteArrayEdges.class);
     conf.setVertexInputFormatClass(LongDoubleDoubleTextInputFormat.class);
     conf.setVertexOutputFormatClass(
         VertexWithDoubleValueDoubleEdgeTextOutputFormat.class);
@@ -82,7 +81,7 @@ public class RandomWalkWithRestartVertexTest {
     conf.setInt(RandomWalkWithRestartVertex.MAX_SUPERSTEPS, 30);
     conf.setFloat(RandomWalkWithRestartVertex.TELEPORTATION_PROBABILITY, 0.15f);
     conf.setVertexClass(RandomWalkWithRestartVertex.class);
-    conf.setVertexEdgesClass(ByteArrayEdges.class);
+    conf.setOutEdgesClass(ByteArrayEdges.class);
     conf.setVertexInputFormatClass(
         NormalizingLongDoubleDoubleTextInputFormat.class);
     conf.setVertexOutputFormatClass(
