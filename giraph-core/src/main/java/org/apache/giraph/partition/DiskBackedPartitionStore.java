@@ -728,7 +728,9 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
                 "illegal state " + pState + " for partition " + id);
           }
         } finally {
-          wLock.unlock();
+          if (lock.isWriteLockedByCurrentThread()) {
+            wLock.unlock();
+          }
         }
       }
       return partition;
@@ -854,7 +856,9 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
         }
         return null;
       } finally {
-        wLock.unlock();
+        if (lock.isWriteLockedByCurrentThread()) {
+          wLock.unlock();
+        }
       }
     }
   }

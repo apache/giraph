@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-734: DiskBackedPartitionStore attempting to release a lock it doesn't own
+  (cmuchinsky via claudio)
+
   GIRAPH-739: Discrepancy among numeric constants corresponding to frequency of 
   writing in TextAggregatorWriter (korlando via claudio)
 
