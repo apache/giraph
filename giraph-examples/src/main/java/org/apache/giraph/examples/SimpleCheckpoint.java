@@ -161,9 +161,18 @@ public class SimpleCheckpoint implements Tool {
 
     @Override
     public void postApplication() {
-      FINAL_SUM = this.<LongWritable>getAggregatedValue(
-          LongSumAggregator.class.getName()).get();
+      setFinalSum(this.<LongWritable>getAggregatedValue(
+          LongSumAggregator.class.getName()).get());
       LOG.info("FINAL_SUM=" + FINAL_SUM);
+    }
+
+    /**
+     * Set the final sum
+     *
+     * @param value sum
+     */
+    private static void setFinalSum(long value) {
+      FINAL_SUM = value;
     }
 
     @Override

@@ -116,9 +116,13 @@ public class SequentialFileMessageStore<I extends WritableComparable,
       if (LOG.isDebugEnabled()) {
         LOG.debug("addMessages: Deleting " + file);
       }
-      file.delete();
+      if (!file.delete()) {
+        throw new IOException("Failed to delete existing file " + file);
+      }
     }
-    file.createNewFile();
+    if (!file.createNewFile()) {
+      throw new IOException("Failed to create file " + file);
+    }
     if (LOG.isDebugEnabled()) {
       LOG.debug("addMessages: Creating " + file);
     }
@@ -196,7 +200,9 @@ public class SequentialFileMessageStore<I extends WritableComparable,
    */
   public void clearAll() throws IOException {
     endReading();
-    file.delete();
+    if (!file.delete()) {
+      LOG.error("clearAll: Failed to delete file " + file);
+    }
   }
 
   @Override
@@ -390,7 +396,10 @@ public class SequentialFileMessageStore<I extends WritableComparable,
         String directory = path + File.separator + jobId + File.separator +
             taskId + File.separator;
         directories[i++] = directory;
-        new File(directory).mkdirs();
+        if (!new File(directory).mkdirs()) {
+          LOG.error("SequentialFileMessageStore$Factory: Failed to create " +
+              directory);
+        }
       }
       this.bufferSize = GiraphConstants.MESSAGES_BUFFER_SIZE.get(config);
       storeCounter = new AtomicInteger();

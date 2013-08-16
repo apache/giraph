@@ -25,6 +25,7 @@ import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 
+import com.google.common.base.Objects;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 
@@ -133,6 +134,23 @@ public class SimpleTriangleClosingComputation extends BasicComputation<
     @Override
     public int compareTo(Pair other) {
       return other.value - this.value;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      if (this == obj) {
+        return true;
+      }
+      if (obj instanceof Pair) {
+        Pair other = (Pair) obj;
+        return Objects.equal(value, other.value);
+      }
+      return false;
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hashCode(value);
     }
   }
 

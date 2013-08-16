@@ -92,6 +92,7 @@ import java.io.DataInputStream;
 import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -893,7 +894,7 @@ public class BspServiceWorker<I extends WritableComparable,
         "/" + getHostnamePartitionId();
     try {
       getZkExt().createExt(finishedWorkerPath,
-          workerFinishedInfoObj.toString().getBytes(),
+          workerFinishedInfoObj.toString().getBytes(Charset.defaultCharset()),
           Ids.OPEN_ACL_UNSAFE,
           CreateMode.PERSISTENT,
           true);

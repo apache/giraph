@@ -45,6 +45,7 @@ import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -216,7 +217,8 @@ public class ZooKeeperManager {
     public StreamCollector(final InputStream is) {
       super(StreamCollector.class.getName());
       setDaemon(true);
-      InputStreamReader streamReader = new InputStreamReader(is);
+      InputStreamReader streamReader = new InputStreamReader(is,
+          Charset.defaultCharset());
       bufferedReader = new BufferedReader(streamReader);
     }
 
@@ -602,7 +604,7 @@ public class ZooKeeperManager {
    */
   public void onlineZooKeeperServers() {
     Integer taskId = zkServerPortMap.get(myHostname);
-    if ((taskId != null) && (taskId.intValue() == taskPartition)) {
+    if ((taskId != null) && (taskId == taskPartition)) {
       File zkDirFile = new File(this.zkDir);
       try {
         if (LOG.isInfoEnabled()) {

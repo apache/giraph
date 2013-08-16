@@ -22,6 +22,8 @@ import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.log4j.Logger;
 
+import com.google.common.base.Objects;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -183,6 +185,17 @@ public class PartitionBalancer {
     public int compareTo(WorkerInfoAssignments other) {
       return (int)
           (getValue() - ((WorkerInfoAssignments) other).getValue());
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+      return obj instanceof WorkerInfoAssignments &&
+          compareTo((WorkerInfoAssignments) obj) == 0;
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hashCode(value);
     }
   }
 

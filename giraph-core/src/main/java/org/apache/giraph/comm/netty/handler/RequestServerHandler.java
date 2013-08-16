@@ -90,7 +90,7 @@ public abstract class RequestServerHandler<R> extends
       LOG.info("messageReceived: Simulating closing channel on first " +
           "request " + writableRequest.getRequestId() + " from " +
           writableRequest.getClientId());
-      ALREADY_CLOSED_FIRST_REQUEST = true;
+      setAlreadyClosedFirstRequest();
       ctx.getChannel().close();
       return;
     }
@@ -126,6 +126,13 @@ public abstract class RequestServerHandler<R> extends
     buffer.writeLong(writableRequest.getRequestId());
     buffer.writeByte(alreadyDone);
     e.getChannel().write(buffer);
+  }
+
+  /**
+   * Set the flag indicating already closed first request
+   */
+  private static void setAlreadyClosedFirstRequest() {
+    ALREADY_CLOSED_FIRST_REQUEST = true;
   }
 
   /**

@@ -90,4 +90,23 @@ public class JythonWritableWrapper extends JythonWrapperBase
     }
     return result;
   }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj == null) {
+      return false;
+    }
+    if (this == obj) {
+      return true;
+    }
+    if (obj instanceof JythonWritableWrapper) {
+      return compareTo(obj) == 0;
+    }
+    return false;
+  }
+
+  @Override
+  public int hashCode() {
+    return getPyObject().__hash__().asInt();
+  }
 }

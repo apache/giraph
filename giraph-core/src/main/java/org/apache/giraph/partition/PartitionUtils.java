@@ -27,6 +27,7 @@ import org.apache.log4j.Logger;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -53,7 +54,10 @@ public class PartitionUtils {
    * Compare edge counts for Entry<WorkerInfo, VertexEdgeCount> objects.
    */
   private static class EdgeCountComparator implements
-      Comparator<Entry<WorkerInfo, VertexEdgeCount>> {
+      Comparator<Entry<WorkerInfo, VertexEdgeCount>>, Serializable {
+    /** Serialization version. */
+    private static final long serialVersionUID = 1L;
+
     @Override
     public int compare(Entry<WorkerInfo, VertexEdgeCount> worker1,
         Entry<WorkerInfo, VertexEdgeCount> worker2) {
@@ -67,7 +71,10 @@ public class PartitionUtils {
    * {@link VertexEdgeCount}.
    */
   private static class VertexCountComparator implements
-      Comparator<Entry<WorkerInfo, VertexEdgeCount>> {
+      Comparator<Entry<WorkerInfo, VertexEdgeCount>>, Serializable {
+    /** Serialization version. */
+    private static final long serialVersionUID = 1L;
+
     @Override
     public int compare(Entry<WorkerInfo, VertexEdgeCount> worker1,
         Entry<WorkerInfo, VertexEdgeCount> worker2) {

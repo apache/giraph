@@ -68,7 +68,16 @@ public class SimpleFailComputation extends BasicComputation<
       } else {
         vertex.voteToHalt();
       }
-      SUPERSTEP = getSuperstep();
+      setSuperstep(getSuperstep());
     }
+  }
+
+  /**
+   * Set the superstep
+   *
+   * @param superstep to set
+   */
+  private static void setSuperstep(long superstep) {
+    SUPERSTEP = superstep;
   }
 }

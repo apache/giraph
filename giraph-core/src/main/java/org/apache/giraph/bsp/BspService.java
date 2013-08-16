@@ -47,6 +47,7 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.net.UnknownHostException;
+import java.nio.charset.Charset;
 import java.security.InvalidParameterException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -690,8 +691,8 @@ public abstract class BspService<I extends WritableComparable,
         return null;
       }
       jobState =
-          new String(getZkExt().getData(
-              childList.get(childList.size() - 1), true, null));
+          new String(getZkExt().getData(childList.get(childList.size() - 1),
+              true, null), Charset.defaultCharset());
     } catch (KeeperException.NoNodeException e) {
       LOG.info("getJobState: Job state path is empty! - " +
           masterJobStatePath);

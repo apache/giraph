@@ -462,7 +462,9 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
         inputStream = null;
       }
     }
-    file.delete();
+    if (!file.delete()) {
+      LOG.error("loadPartition: Failed to delete file " + file);
+    }
     file = new File(getEdgesPath(id));
     if (LOG.isDebugEnabled()) {
       LOG.debug("loadPartition: loading partition edges " +
@@ -483,7 +485,9 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
      * If the graph is static, keep the file around.
      */
     if (!conf.isStaticGraph()) {
-      file.delete();
+      if (!file.delete()) {
+        LOG.error("loadPartition: Failed to delete file " + file);
+      }
     }
     return partition;
   }
@@ -497,8 +501,12 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
   private void offloadPartition(Partition<I, V, E> partition)
     throws IOException {
     File file = new File(getVerticesPath(partition.getId()));
-    file.getParentFile().mkdirs();
-    file.createNewFile();
+    if (!file.getParentFile().mkdirs()) {
+      LOG.error("offloadPartition: Failed to create directory " + file);
+    }
+    if (!file.createNewFile()) {
+      LOG.error("offloadPartition: Failed to create file " + file);
+    }
     if (LOG.isDebugEnabled()) {
       LOG.debug("offloadPartition: writing partition vertices " +
           partition.getId() + " to " + file.getAbsolutePath());
@@ -522,7 +530,9 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
      * the graph is not changing.
      */
     if (!conf.isStaticGraph() || !file.exists()) {
-      file.createNewFile();
+      if (!file.createNewFile()) {
+        LOG.error("offloadPartition: Failed to create file " + file);
+      }
       if (LOG.isDebugEnabled()) {
         LOG.debug("offloadPartition: writing partition edges " +
             partition.getId() + " to " + file.getAbsolutePath());
@@ -588,9 +598,13 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
    */
   public void deletePartitionFiles(Integer id) {
     File file = new File(getVerticesPath(id));
-    file.delete();
+    if (!file.delete()) {
+      LOG.error("deletePartitionFiles: Failed to delete file " + file);
+    }
     file = new File(getEdgesPath(id));
-    file.delete();
+    if (!file.delete()) {
+      LOG.error("deletePartitionFiles: Failed to delete file " + file);
+    }
   }
 
   /**
@@ -671,7 +685,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
              * Wait until we have space in memory or inactive data for a switch
              */
             while (inMemoryPartitions >= maxInMemoryPartitions &&
-                inactive.size() == 0) {
+                inactive.isEmpty()) {
               notEmpty.await();
             }
             /*

@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.lang.management.ManagementFactory;
+import java.nio.charset.Charset;
 import java.util.Date;
 
 /**
@@ -69,7 +70,7 @@ public class JMap {
     try {
       Process p = Runtime.getRuntime().exec(CMD + ARGS + getProcessId());
       BufferedReader in = new BufferedReader(
-          new InputStreamReader(p.getInputStream()));
+          new InputStreamReader(p.getInputStream(), Charset.defaultCharset()));
       printStream.println("JMap histo dump at " + new Date());
       String line = in.readLine();
       for (int i = 0; i < numLines && line != null; ++i) {

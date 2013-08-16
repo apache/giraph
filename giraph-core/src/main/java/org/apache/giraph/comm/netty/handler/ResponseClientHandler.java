@@ -90,7 +90,7 @@ public class ResponseClientHandler extends SimpleChannelUpstreamHandler {
     if (dropFirstResponse && !ALREADY_DROPPED_FIRST_RESPONSE) {
       LOG.info("messageReceived: Simulating dropped response " + response +
           " for request " + requestId);
-      ALREADY_DROPPED_FIRST_RESPONSE = true;
+      setAlreadyDroppedFirstResponse();
       synchronized (workerIdOutstandingRequestMap) {
         workerIdOutstandingRequestMap.notifyAll();
       }
@@ -121,6 +121,13 @@ public class ResponseClientHandler extends SimpleChannelUpstreamHandler {
     synchronized (workerIdOutstandingRequestMap) {
       workerIdOutstandingRequestMap.notifyAll();
     }
+  }
+
+  /**
+   * Set already dropped first response flag
+   */
+  private static void setAlreadyDroppedFirstResponse() {
+    ALREADY_DROPPED_FIRST_RESPONSE = true;
   }
 
   @Override

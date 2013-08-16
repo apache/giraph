@@ -17,7 +17,9 @@
  */
 package org.apache.giraph.conf;
 
-import static org.apache.giraph.conf.GiraphConstants.COMPUTATION_CLASS;
+import org.apache.log4j.Logger;
+
+import com.google.common.collect.Lists;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -25,9 +27,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
-import org.apache.log4j.Logger;
-
-import com.google.common.collect.Lists;
+import static org.apache.giraph.conf.GiraphConstants.COMPUTATION_CLASS;
 
 /**
  * Tracks all of the Giraph options

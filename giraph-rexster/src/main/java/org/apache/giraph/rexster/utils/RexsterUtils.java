@@ -33,6 +33,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -261,14 +262,14 @@ public abstract class RexsterUtils {
 
       username = GIRAPH_REXSTER_USERNAME.get(conf);
       password = GIRAPH_REXSTER_PASSWORD.get(conf);
-      auth = "Basic " +
-             Base64.encodeBase64URLSafeString(
-                 (username + ":" + password).getBytes());
+      byte[] authBytes = (username + ":" + password).getBytes(
+          Charset.defaultCharset());
+      auth = "Basic " + Base64.encodeBase64URLSafeString(authBytes);
 
       connection = createConnection(url, auth);
       connection.setDoOutput(true);
       is  = connection.getInputStream();
-      isr = new InputStreamReader(is);
+      isr = new InputStreamReader(is, Charset.defaultCharset());
 
       return new BufferedReader(isr);
 

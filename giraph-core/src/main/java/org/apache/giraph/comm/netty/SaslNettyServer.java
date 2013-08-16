@@ -39,6 +39,7 @@ import javax.security.sasl.Sasl;
 import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
 import java.io.IOException;
+import java.nio.charset.Charset;
 
 /**
  * Encapsulates SASL server logic for Giraph BSP worker servers.
@@ -120,7 +121,8 @@ else[HADOOP_1_SECRET_MANAGER]*/
    * @return Base64-encoded string
    */
   static String encodeIdentifier(byte[] identifier) {
-    return new String(Base64.encodeBase64(identifier));
+    return new String(Base64.encodeBase64(identifier),
+        Charset.defaultCharset());
   }
 
   /**
@@ -129,7 +131,8 @@ else[HADOOP_1_SECRET_MANAGER]*/
    * @return password as a char array.
    */
   static char[] encodePassword(byte[] password) {
-    return new String(Base64.encodeBase64(password)).toCharArray();
+    return new String(Base64.encodeBase64(password),
+        Charset.defaultCharset()).toCharArray();
   }
 
   /** CallbackHandler for SASL DIGEST-MD5 mechanism */

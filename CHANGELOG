@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-736: Bring back FindBugs (nitay)
+
   GIRAPH-735: DiskBackedPartitionStore throws NPE due to uninitialized OutEdges
   (claudio)
 

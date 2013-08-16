@@ -19,9 +19,35 @@
 
 <FindBugsFilter>
   <Match>
+    <Class name="org.apache.giraph.hive.column.HiveColumnWriter"/>
+    <Bug pattern="BC_UNCONFIRMED_CAST"/>
+  </Match>
+  <Match>
+    <Class name="org.apache.giraph.hive.record.HiveRecordWriter"/>
+    <Bug pattern="BC_UNCONFIRMED_CAST"/>
+  </Match>
+  <Match>
+    <Class name="org.apache.giraph.conf.AllOptions"/>
     <Bug pattern="DM_DEFAULT_ENCODING"/>
   </Match>
   <Match>
+    <Class name="org.apache.giraph.zk.ZooKeeperManager"/>
+    <Bug pattern="DM_DEFAULT_ENCODING"/>
+  </Match>
+  <Match>
+    <Class name="org.apache.giraph.examples.SimpleFailComputation"/>
+    <Bug pattern="DM_EXIT"/>
+  </Match>
+  <Match>
+    <Class name="org.apache.giraph.graph.GraphMapper$OverrideExceptionHandler"/>
+    <Bug pattern="DM_EXIT"/>
+  </Match>
+  <Match>
+    <Class name="org.apache.giraph.worker.BspServiceWorker"/>
+    <Bug pattern="DM_EXIT"/>
+  </Match>
+  <Match>
+    <Class name="org.apache.giraph.examples.SimpleCheckpoint$SimpleCheckpointComputation"/>
     <Bug pattern="DM_EXIT"/>
   </Match>
   <Match>
@@ -31,49 +57,43 @@
     <Bug pattern="EI_EXPOSE_REP2"/>
   </Match>
   <Match>
-    <Bug pattern="EQ_COMPARETO_USE_OBJECT_EQUALS"/>
+    <Bug pattern="EQ_OVERRIDING_EQUALS_NOT_SYMMETRIC"/>
+    <Class name="org.apache.giraph.jython.wrappers.JythonWrapperBase"/>
   </Match>
   <Match>
+    <Bug pattern="EQ_OVERRIDING_EQUALS_NOT_SYMMETRIC"/>
+    <Class name="org.apache.giraph.jython.wrappers.JythonWritableWrapper"/>
+  </Match>
+  <Match>
+    <Class name="org.apache.giraph.comm.netty.NettyClient"/>
     <Bug pattern="JLM_JSR166_UTILCONCURRENT_MONITORENTER"/>
   </Match>
   <Match>
-    <Bug pattern="NS_DANGEROUS_NON_SHORT_CIRCUIT"/>
+    <Class name="org.apache.giraph.comm.netty.handler.RequestServerHandler"/>
+    <Bug pattern="JLM_JSR166_UTILCONCURRENT_MONITORENTER"/>
   </Match>
   <Match>
-    <Bug pattern="RV_ABSOLUTE_VALUE_OF_HASHCODE"/>
+    <Class name="org.apache.giraph.comm.netty.handler.ResponseClientHandler"/>
+    <Bug pattern="JLM_JSR166_UTILCONCURRENT_MONITORENTER"/>
   </Match>
   <Match>
+    <Class name="org.apache.giraph.io.formats.PseudoRandomLocalEdgesHelper"/>
     <Bug pattern="RV_ABSOLUTE_VALUE_OF_RANDOM_INT"/>
   </Match>
   <Match>
+    <Class name="org.apache.giraph.master.BspServiceMaster"/>
     <Bug pattern="RV_RETURN_VALUE_IGNORED_BAD_PRACTICE"/>
   </Match>
   <Match>
+    <Class name="org.apache.giraph.partition.PartitionBalancer$PartitionOwnerComparator"/>
     <Bug pattern="SE_COMPARATOR_SHOULD_BE_SERIALIZABLE"/>
   </Match>
   <Match>
-    <Bug pattern="ST_WRITE_TO_STATIC_FROM_INSTANCE_METHOD"/>
+    <Class name="org.apache.giraph.partition.DiskBackedPartitionStore$AddPartition"/>
+    <Bug pattern="UL_UNRELEASED_LOCK"/>
   </Match>
   <Match>
-    <Bug pattern="UUF_UNUSED_FIELD"/>
-  </Match>
-  <Match>
-    <Bug pattern="UWF_UNWRITTEN_PUBLIC_OR_PROTECTED_FIELD"/>
-  </Match>
-  <Match>
-    <Class name="org.apache.giraph.jython.wrappers.JythonWrapperBase"/>
-    <Bug pattern="EQ_OVERRIDING_EQUALS_NOT_SYMMETRIC"/>
-  </Match>
-  <Match>
-    <Class name="org.apache.giraph.jython.JythonWritableWrapper"/>
-    <Bug pattern="EQ_OVERRIDING_EQUALS_NOT_SYMMETRIC"/>
-  </Match>
-  <Match>
-    <Class name="org.apache.giraph.hive.column.HiveColumnWriter"/>
-    <Bug pattern="BC_UNCONFIRMED_CAST"/>
-  </Match>
-  <Match>
-    <Class name="org.apache.giraph.hive.record.HiveRecordWriter"/>
-    <Bug pattern="BC_UNCONFIRMED_CAST"/>
+    <Class name="org.apache.giraph.partition.DiskBackedPartitionStore$GetPartition"/>
+    <Bug pattern="UL_UNRELEASED_LOCK"/>
   </Match>
 </FindBugsFilter>

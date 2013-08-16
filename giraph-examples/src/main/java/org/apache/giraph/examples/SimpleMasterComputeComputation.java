@@ -80,7 +80,7 @@ public class SimpleMasterComputeComputation extends BasicComputation<
     public void postApplication() {
     }
 
-    public void setFinalSum(double sum) {
+    public static void setFinalSum(double sum) {
       FINAL_SUM = sum;
     }
 

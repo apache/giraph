@@ -92,7 +92,7 @@ public class SaslServerHandler extends
       LOG.info("messageReceived: Simulating closing channel on first " +
           "request " + writableRequest.getRequestId() + " from " +
           writableRequest.getClientId());
-      ALREADY_CLOSED_FIRST_REQUEST = true;
+      setAlreadyClosedFirstRequest();
       ctx.getChannel().close();
       return;
     }
@@ -150,6 +150,13 @@ public class SaslServerHandler extends
           writableRequest);
       ctx.sendUpstream(e);
     }
+  }
+
+  /**
+   * Set already closed first request flag
+   */
+  private static void setAlreadyClosedFirstRequest() {
+    ALREADY_CLOSED_FIRST_REQUEST = true;
   }
 
   /**

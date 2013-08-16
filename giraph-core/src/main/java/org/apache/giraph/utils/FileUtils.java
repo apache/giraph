@@ -21,6 +21,7 @@ package org.apache.giraph.utils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.log4j.Logger;
 
 import com.google.common.base.Charsets;
 import com.google.common.io.Closeables;
@@ -35,6 +36,8 @@ import java.io.Writer;
  * Helper class for filesystem operations during testing
  */
 public class FileUtils {
+  /** Logger */
+  private static final Logger LOG = Logger.getLogger(FileUtils.class);
 
   /**
    * Utility class should not be instantiatable
@@ -85,7 +88,9 @@ public class FileUtils {
   public static File createTempDir(File parent, String name)
     throws IOException {
     File dir = createTestTempFileOrDir(parent, name, true);
-    dir.delete();
+    if (!dir.delete()) {
+      LOG.error("createTempDir: Failed to create directory " + dir);
+    }
     return dir;
   }
 
@@ -146,9 +151,13 @@ public class FileUtils {
     @Override
     public boolean accept(File f) {
       if (!f.isFile()) {
-        f.listFiles(this);
+        if (f.listFiles(this) == null) {
+          LOG.error("accept: Failed to list files of " + f);
+        }
       }
-      f.delete();
+      if (!f.delete()) {
+        LOG.error("accept: Failed to delete file " + f);
+      }
       return false;
     }
   }
