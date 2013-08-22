@@ -40,6 +40,12 @@ under the License.
   </properties>
 
   <build>
+    <resources>
+      <resource>
+        <directory>src/main/resources</directory>
+        <filtering>true</filtering>
+      </resource>
+    </resources>
     <finalName>giraph-${project.version}-${forHadoop}</finalName>
     <plugins>
       <plugin>

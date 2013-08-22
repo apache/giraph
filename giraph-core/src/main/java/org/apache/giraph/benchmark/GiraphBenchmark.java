@@ -25,6 +25,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.PosixParser;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.job.GiraphJob;
+import org.apache.giraph.utils.LogVersions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Tool;
 import org.apache.log4j.Logger;
@@ -80,8 +81,13 @@ public abstract class GiraphBenchmark implements Tool {
 
     GiraphJob job = new GiraphJob(getConf(), getClass().getName());
     int workers = Integer.parseInt(BenchmarkOption.WORKERS.getOptionValue(cmd));
-    job.getConfiguration().setWorkerConfiguration(workers, workers, 100.0f);
-    prepareConfiguration(job.getConfiguration(), cmd);
+
+    GiraphConfiguration giraphConf = job.getConfiguration();
+    giraphConf.addWorkerObserverClass(LogVersions.class);
+    giraphConf.addMasterObserverClass(LogVersions.class);
+
+    giraphConf.setWorkerConfiguration(workers, workers, 100.0f);
+    prepareConfiguration(giraphConf, cmd);
 
     boolean isVerbose = false;
     if (BenchmarkOption.VERBOSE.optionTurnedOn(cmd)) {
