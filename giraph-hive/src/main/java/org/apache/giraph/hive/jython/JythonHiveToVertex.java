@@ -35,7 +35,7 @@ import com.google.common.collect.ImmutableList;
 import java.util.Iterator;
 
 /**
- * A {@link HiveToVertex} that writes each
+ * A {@link org.apache.giraph.hive.input.vertex.HiveToVertex} that writes each
  * part (vertex ID, vertex value, edges) using separate writers.
  *
  * @param <I> Vertex ID

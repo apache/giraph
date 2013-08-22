@@ -33,7 +33,7 @@ import com.facebook.hiveio.schema.HiveTableSchema;
 import java.util.Iterator;
 
 /**
- * A {@link HiveToEdge} that reads each part
+ * A {@link org.apache.giraph.hive.input.edge.HiveToEdge} that reads each part
  * (vertex ID, edge value) using separate readers.
  *
  * @param <I> Vertex ID

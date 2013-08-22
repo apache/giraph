@@ -32,7 +32,7 @@ import com.facebook.hiveio.record.HiveWritableRecord;
 import com.facebook.hiveio.schema.HiveTableSchema;
 
 /**
- * A {@link VertexToHive} that writes each part
+ * A {@link org.apache.giraph.hive.output.VertexToHive} that writes each part
  * (vertex ID, vertex value, edge value) using separate writers.
  *
  * @param <I> Vertex ID
