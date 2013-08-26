@@ -38,6 +38,7 @@ import org.apache.giraph.graph.DefaultVertexResolver;
 import org.apache.giraph.graph.Language;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.io.EdgeInputFormat;
+import org.apache.giraph.io.EdgeOutputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.giraph.io.filters.DefaultEdgeInputFilter;
@@ -210,6 +211,28 @@ public interface GiraphConstants {
   ClassConfOption<VertexOutputFormat> VERTEX_OUTPUT_FORMAT_CLASS =
       ClassConfOption.create("giraph.vertexOutputFormatClass", null,
           VertexOutputFormat.class, "VertexOutputFormat class");
+  /** EdgeOutputFormat sub-directory */
+  StrConfOption VERTEX_OUTPUT_FORMAT_SUBDIR =
+    new StrConfOption("giraph.vertex.output.subdir", "",
+                      "VertexOutputFormat sub-directory");
+  /** EdgeOutputFormat class */
+  ClassConfOption<EdgeOutputFormat> EDGE_OUTPUT_FORMAT_CLASS =
+      ClassConfOption.create("giraph.edgeOutputFormatClass", null,
+          EdgeOutputFormat.class, "EdgeOutputFormat class");
+  /** EdgeOutputFormat sub-directory */
+  StrConfOption EDGE_OUTPUT_FORMAT_SUBDIR =
+    new StrConfOption("giraph.edge.output.subdir", "edges",
+                      "EdgeOutputFormat sub-directory");
+
+  /** GiraphTextOuputFormat Separator */
+  StrConfOption GIRAPH_TEXT_OUTPUT_FORMAT_SEPARATOR =
+    new StrConfOption("giraph.textoutputformat.separator", "\t",
+                      "GiraphTextOuputFormat Separator");
+  /** Reverse values in the output */
+  BooleanConfOption GIRAPH_TEXT_OUTPUT_FORMAT_REVERSE =
+      new BooleanConfOption("giraph.textoutputformat.reverse", false,
+                            "Reverse values in the output");
+
   /**
    * If you use this option, instead of having saving vertices in the end of
    * application, saveVertex will be called right after each vertex.compute()

@@ -36,6 +36,7 @@ import org.apache.giraph.factories.VertexValueFactory;
 import org.apache.giraph.graph.Computation;
 import org.apache.giraph.graph.Language;
 import org.apache.giraph.io.EdgeInputFormat;
+import org.apache.giraph.io.EdgeOutputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.giraph.io.formats.GiraphFileInputFormat;
@@ -97,10 +98,16 @@ public final class ConfigurationUtils {
     OPTIONS.addOption("w", "workers", true, "Number of workers");
     OPTIONS.addOption("vif", "vertexInputFormat", true, "Vertex input format");
     OPTIONS.addOption("eif", "edgeInputFormat", true, "Edge input format");
-    OPTIONS.addOption("of", "outputFormat", true, "Vertex output format");
+    OPTIONS.addOption("vof", "vertexOutputFormat", true,
+        "Vertex output format");
+    OPTIONS.addOption("eof", "edgeOutputFormat", true, "Edge output format");
     OPTIONS.addOption("vip", "vertexInputPath", true, "Vertex input path");
     OPTIONS.addOption("eip", "edgeInputPath", true, "Edge input path");
-    OPTIONS.addOption("op", "outputPath", true, "Vertex output path");
+    OPTIONS.addOption("op",  "outputPath", true, "Output path");
+    OPTIONS.addOption("vsd",  "vertexSubDir", true, "subdirectory to be used " +
+        "for the vertex output");
+    OPTIONS.addOption("esd",  "edgeSubDir", true, "subdirectory to be used " +
+        "for the edge output");
     OPTIONS.addOption("c", "combiner", true, "Combiner class");
     OPTIONS.addOption("ve", "outEdges", true, "Vertex edges class");
     OPTIONS.addOption("wc", "workerContext", true, "WorkerContext class");
@@ -316,14 +323,46 @@ public final class ConfigurationUtils {
           "InputFormat does not require one.");
       }
     }
-    if (cmd.hasOption("of")) {
+    if (cmd.hasOption("vof")) {
       conf.setVertexOutputFormatClass(
           (Class<? extends VertexOutputFormat>) Class
-              .forName(cmd.getOptionValue("of")));
+              .forName(cmd.getOptionValue("vof")));
     } else {
       if (LOG.isInfoEnabled()) {
-        LOG.info("No output format specified. Ensure your OutputFormat " +
-          "does not require one.");
+        LOG.info("No vertex output format specified. Ensure your " +
+          "OutputFormat does not require one.");
+      }
+    }
+    if (cmd.hasOption("vof")) {
+      if (cmd.hasOption("vsd")) {
+        conf.setVertexOutputFormatSubdir(cmd.getOptionValue("vsd"));
+      }
+    }
+    if (cmd.hasOption("eof")) {
+      conf.setEdgeOutputFormatClass(
+          (Class<? extends EdgeOutputFormat>) Class
+              .forName(cmd.getOptionValue("eof")));
+    } else {
+      if (LOG.isInfoEnabled()) {
+        LOG.info("No edge output format specified. Ensure your " +
+          "OutputFormat does not require one.");
+      }
+    }
+    if (cmd.hasOption("eof")) {
+      if (cmd.hasOption("esd")) {
+        conf.setEdgeOutputFormatSubdir(cmd.getOptionValue("esd"));
+      }
+    }
+    /* check for path clashes */
+    if (cmd.hasOption("vof") && cmd.hasOption("eof") && cmd.hasOption("op")) {
+      if (!cmd.hasOption("vsd") || cmd.hasOption("esd")) {
+        if (!conf.hasEdgeOutputFormatSubdir() ||
+            !conf.hasVertexOutputFormatSubdir()) {
+
+          throw new IllegalArgumentException("If VertexOutputFormat and " +
+              "EdgeOutputFormat are both set, it is mandatory to provide " +
+              "both vertex subdirectory as well as edge subdirectory");
+        }
       }
     }
     if (cmd.hasOption("pc")) {
@@ -385,7 +424,7 @@ public final class ConfigurationUtils {
           Integer.parseInt(cmd.getOptionValue("yh")));
     }
     /*if[PURE_YARN]
-    if (cmd.hasOption("of")) {
+    if (cmd.hasOption("vof") || cmd.hasOption("eof")) {
       if (cmd.hasOption("op")) {
         // For YARN conf to get the out dir we need w/o a Job obj
         Path outputDir =

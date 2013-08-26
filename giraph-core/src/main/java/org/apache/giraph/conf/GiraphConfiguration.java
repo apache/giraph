@@ -27,6 +27,7 @@ import org.apache.giraph.factories.VertexValueFactory;
 import org.apache.giraph.graph.Computation;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.io.EdgeInputFormat;
+import org.apache.giraph.io.EdgeOutputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.giraph.io.filters.EdgeInputFilter;
@@ -345,6 +346,25 @@ public class GiraphConfiguration extends Configuration
     VERTEX_OUTPUT_FORMAT_CLASS.set(this, vertexOutputFormatClass);
   }
 
+
+  /**
+   * Does the job have a {@link EdgeOutputFormat} subdir?
+   *
+   * @return True iff a {@link EdgeOutputFormat} subdir has been specified.
+   */
+  public boolean hasVertexOutputFormatSubdir() {
+    return !VERTEX_OUTPUT_FORMAT_SUBDIR.get(this).isEmpty();
+  }
+
+  /**
+   * Set the vertex output format path
+   *
+   * @param path path where the verteces will be written
+   */
+  public final void setVertexOutputFormatSubdir(String path) {
+    VERTEX_OUTPUT_FORMAT_SUBDIR.set(this, path);
+  }
+
   /**
    * Check if output should be done during computation
    *
@@ -383,6 +403,43 @@ public class GiraphConfiguration extends Configuration
   public final void setVertexOutputFormatThreadSafe(
       boolean vertexOutputFormatThreadSafe) {
     VERTEX_OUTPUT_FORMAT_THREAD_SAFE.set(this, vertexOutputFormatThreadSafe);
+  }
+
+  /**
+   * Does the job have a {@link EdgeOutputFormat}?
+   *
+   * @return True iff a {@link EdgeOutputFormat} has been specified.
+   */
+  public boolean hasEdgeOutputFormat() {
+    return EDGE_OUTPUT_FORMAT_CLASS.get(this) != null;
+  }
+
+  /**
+   * Set the edge output format class (optional)
+   *
+   * @param edgeOutputFormatClass Determines how graph is output
+   */
+  public final void setEdgeOutputFormatClass(
+      Class<? extends EdgeOutputFormat> edgeOutputFormatClass) {
+    EDGE_OUTPUT_FORMAT_CLASS.set(this, edgeOutputFormatClass);
+  }
+
+  /**
+   * Does the job have a {@link EdgeOutputFormat} subdir?
+   *
+   * @return True iff a {@link EdgeOutputFormat} subdir has been specified.
+   */
+  public boolean hasEdgeOutputFormatSubdir() {
+    return !EDGE_OUTPUT_FORMAT_SUBDIR.get(this).isEmpty();
+  }
+
+  /**
+   * Set the edge output format path
+   *
+   * @param path path where the edges will be written
+   */
+  public final void setEdgeOutputFormatSubdir(String path) {
+    EDGE_OUTPUT_FORMAT_SUBDIR.set(this, path);
   }
 
   /**

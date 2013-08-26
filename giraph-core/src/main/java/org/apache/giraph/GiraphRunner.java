@@ -102,7 +102,7 @@ public class GiraphRunner implements Tool {
    */
   private void prepareHadoopMRJob(final GiraphJob job, final CommandLine cmd)
     throws Exception {
-    if (cmd.hasOption("of")) {
+    if (cmd.hasOption("vof") || cmd.hasOption("eof")) {
       if (cmd.hasOption("op")) {
         FileOutputFormat.setOutputPath(job.getInternalJob(),
           new Path(cmd.getOptionValue("op")));

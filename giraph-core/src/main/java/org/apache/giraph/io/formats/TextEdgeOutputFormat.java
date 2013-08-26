@@ -18,11 +18,13 @@
 
 package org.apache.giraph.io.formats;
 
+import static org.apache.giraph.conf.GiraphConstants.EDGE_OUTPUT_FORMAT_SUBDIR;
+
 import java.io.IOException;
 
-import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.io.VertexOutputFormat;
-import org.apache.giraph.io.VertexWriter;
+import org.apache.giraph.edge.Edge;
+import org.apache.giraph.io.EdgeOutputFormat;
+import org.apache.giraph.io.EdgeWriter;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -31,26 +33,24 @@ import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
-import static org.apache.giraph.conf.GiraphConstants.VERTEX_OUTPUT_FORMAT_SUBDIR;
-
 /**
  * Abstract class that users should subclass to use their own text based
- * vertex output format.
+ * edge output format.
  *
  * @param <I> Vertex index value
  * @param <V> Vertex value
  * @param <E> Edge value
  */
 @SuppressWarnings("rawtypes")
-public abstract class TextVertexOutputFormat<I extends WritableComparable,
+public abstract class TextEdgeOutputFormat<I extends WritableComparable,
     V extends Writable, E extends Writable>
-    extends VertexOutputFormat<I, V, E> {
+    extends EdgeOutputFormat<I, V, E> {
   /** Uses the TextOutputFormat to do everything */
   protected GiraphTextOutputFormat textOutputFormat =
     new GiraphTextOutputFormat() {
       @Override
       protected String getSubdir() {
-        return VERTEX_OUTPUT_FORMAT_SUBDIR.get(getConf());
+        return EDGE_OUTPUT_FORMAT_SUBDIR.get(getConf());
       }
     };
 
@@ -67,25 +67,23 @@ public abstract class TextVertexOutputFormat<I extends WritableComparable,
   }
 
   /**
-   * The factory method which produces the {@link TextVertexWriter} used by this
+   * The factory method which produces the {@link TextEdgeWriter} used by this
    * output format.
    *
-   * @param context
-   *          the information about the task
-   * @return
-   *         the text vertex writer to be used
+   * @param context  the information about the task
+   * @return         the text edge writer to be used
    */
   @Override
-  public abstract TextVertexWriter createVertexWriter(TaskAttemptContext
+  public abstract TextEdgeWriter createEdgeWriter(TaskAttemptContext
       context) throws IOException, InterruptedException;
 
   /**
    * Abstract class to be implemented by the user based on their specific
-   * vertex output.  Easiest to ignore the key value separator and only use
+   * edge output.  Easiest to ignore the key value separator and only use
    * key instead.
    */
-  protected abstract class TextVertexWriter
-      extends VertexWriter<I, V, E> {
+  protected abstract class TextEdgeWriter
+      extends EdgeWriter<I, V, E> {
     /** Internal line record writer */
     private RecordWriter<Text, Text> lineRecordWriter;
     /** Context passed to initialize */
@@ -102,14 +100,10 @@ public abstract class TextVertexOutputFormat<I extends WritableComparable,
      * Create the line record writer. Override this to use a different
      * underlying record writer (useful for testing).
      *
-     * @param context
-     *          the context passed to initialize
-     * @return
-     *         the record writer to be used
-     * @throws IOException
-     *           exception that can be thrown during creation
-     * @throws InterruptedException
-     *           exception that can be thrown during creation
+     * @param  context the context passed to initialize
+     * @return the record writer to be used
+     * @throws IOException          exception that can be thrown during creation
+     * @throws InterruptedException exception that can be thrown during creation
      */
     protected RecordWriter<Text, Text> createLineRecordWriter(
         TaskAttemptContext context) throws IOException, InterruptedException {
@@ -143,28 +137,29 @@ public abstract class TextVertexOutputFormat<I extends WritableComparable,
 
   /**
    * Abstract class to be implemented by the user to write a line for each
-   * vertex.
+   * edge.
    */
-  protected abstract class TextVertexWriterToEachLine extends TextVertexWriter {
+  protected abstract class TextEdgeWriterToEachLine extends TextEdgeWriter {
 
-    @SuppressWarnings("unchecked")
     @Override
-    public final void writeVertex(Vertex vertex) throws
-      IOException, InterruptedException {
+    public final void writeEdge(I sourceId, V sourceValue, Edge<I, E> edge)
+      throws IOException, InterruptedException {
+
       // Note we are writing line as key with null value
-      getRecordWriter().write(convertVertexToLine(vertex), null);
+      getRecordWriter().write(
+          convertEdgeToLine(sourceId, sourceValue, edge), null);
     }
 
     /**
-     * Writes a line for the given vertex.
+     * Writes a line for the given edge.
      *
-     * @param vertex
-     *          the current vertex for writing
+     * @param sourceId    the current id of the source vertex
+     * @param sourceValue the current value of the source vertex
+     * @param edge        the current vertex for writing
      * @return the text line to be written
-     * @throws IOException
-     *           exception that can be thrown while writing
+     * @throws IOException exception that can be thrown while writing
      */
-    protected abstract Text convertVertexToLine(Vertex<I, V, E> vertex)
-      throws IOException;
+    protected abstract Text convertEdgeToLine(I sourceId,
+      V sourceValue, Edge<I, E> edge) throws IOException;
   }
 }

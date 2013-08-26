@@ -36,11 +36,13 @@ import org.apache.giraph.graph.Language;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.io.EdgeInputFormat;
+import org.apache.giraph.io.EdgeOutputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.giraph.io.filters.EdgeInputFilter;
 import org.apache.giraph.io.filters.VertexInputFilter;
 import org.apache.giraph.io.internal.WrappedEdgeInputFormat;
+import org.apache.giraph.io.internal.WrappedEdgeOutputFormat;
 import org.apache.giraph.io.internal.WrappedVertexInputFormat;
 import org.apache.giraph.io.internal.WrappedVertexOutputFormat;
 import org.apache.giraph.io.superstep_output.MultiThreadedSuperstepOutput;
@@ -287,6 +289,49 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
         new WrappedVertexOutputFormat<I, V, E>(createVertexOutputFormat());
     configureIfPossible(wrappedVertexOutputFormat);
     return wrappedVertexOutputFormat;
+  }
+
+  @Override
+  public boolean hasEdgeOutputFormat() {
+    return classes.hasEdgeOutputFormat();
+  }
+
+  /**
+   * Get the user's subclassed
+   * {@link org.apache.giraph.io.EdgeOutputFormat}.
+   *
+   * @return User's edge output format class
+   */
+  public Class<? extends EdgeOutputFormat<I, V, E>>
+  getEdgeOutputFormatClass() {
+    return classes.getEdgeOutputFormatClass();
+  }
+
+  /**
+   * Create a user edge output format class.
+   * Note: Giraph should only use WrappedEdgeOutputFormat,
+   * which makes sure that Configuration parameters are set properly.
+   *
+   * @return Instantiated user edge output format class
+   */
+  private EdgeOutputFormat<I, V, E> createEdgeOutputFormat() {
+    Class<? extends EdgeOutputFormat<I, V, E>> klass =
+        getEdgeOutputFormatClass();
+    return ReflectionUtils.newInstance(klass, this);
+  }
+
+  /**
+   * Create a wrapper for user edge output format,
+   * which makes sure that Configuration parameters are set properly in all
+   * methods related to this format.
+   *
+   * @return Wrapper around user edge output format
+   */
+  public WrappedEdgeOutputFormat<I, V, E> createWrappedEdgeOutputFormat() {
+    WrappedEdgeOutputFormat<I, V, E> wrappedEdgeOutputFormat =
+        new WrappedEdgeOutputFormat<I, V, E>(createEdgeOutputFormat());
+    configureIfPossible(wrappedEdgeOutputFormat);
+    return wrappedEdgeOutputFormat;
   }
 
   /**

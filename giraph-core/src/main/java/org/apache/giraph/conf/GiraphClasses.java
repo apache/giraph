@@ -28,6 +28,7 @@ import org.apache.giraph.graph.Computation;
 import org.apache.giraph.graph.DefaultVertexResolver;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.io.EdgeInputFormat;
+import org.apache.giraph.io.EdgeOutputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.giraph.io.filters.DefaultEdgeInputFilter;
@@ -85,6 +86,9 @@ public class GiraphClasses<I extends WritableComparable,
   /** Edge input format class - cached for fast access */
   protected Class<? extends EdgeInputFormat<I, E>>
   edgeInputFormatClass;
+  /** Edge output format class - cached for fast access */
+  protected Class<? extends EdgeOutputFormat<I, V, E>>
+  edgeOutputFormatClass;
 
   /** Aggregator writer class - cached for fast access */
   protected Class<? extends AggregatorWriter> aggregatorWriterClass;
@@ -168,6 +172,8 @@ public class GiraphClasses<I extends WritableComparable,
         VERTEX_OUTPUT_FORMAT_CLASS.get(conf);
     edgeInputFormatClass = (Class<? extends EdgeInputFormat<I, E>>)
         EDGE_INPUT_FORMAT_CLASS.get(conf);
+    edgeOutputFormatClass = (Class<? extends EdgeOutputFormat<I, V, E>>)
+        EDGE_OUTPUT_FORMAT_CLASS.get(conf);
 
     aggregatorWriterClass = AGGREGATOR_WRITER_CLASS.get(conf);
     combinerClass = (Class<? extends Combiner<I, ? extends Writable>>)
@@ -344,6 +350,25 @@ public class GiraphClasses<I extends WritableComparable,
    */
   public Class<? extends EdgeInputFormat<I, E>> getEdgeInputFormatClass() {
     return edgeInputFormatClass;
+  }
+
+  /**
+   * Check if EdgeOutputFormat is set
+   *
+   * @return true if EdgeOutputFormat is set
+   */
+  public boolean hasEdgeOutputFormat() {
+    return edgeOutputFormatClass != null;
+  }
+
+  /**
+   * Get VertexOutputFormat set
+   *
+   * @return VertexOutputFormat
+   */
+  public Class<? extends EdgeOutputFormat<I, V, E>>
+  getEdgeOutputFormatClass() {
+    return edgeOutputFormatClass;
   }
 
   /**

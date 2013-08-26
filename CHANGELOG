@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-732: EdgeOutputFormat (aarmax00 via claudio)
+
   GIRAPH-512: JavaDoc warnings (tdn120 via nitay)
 
   GIRAPH-736: Bring back FindBugs (nitay)
