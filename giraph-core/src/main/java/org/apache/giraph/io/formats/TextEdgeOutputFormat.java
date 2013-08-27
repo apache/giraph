@@ -82,7 +82,8 @@ public abstract class TextEdgeOutputFormat<I extends WritableComparable,
    * edge output.  Easiest to ignore the key value separator and only use
    * key instead.
    */
-  protected abstract class TextEdgeWriter
+  protected abstract class TextEdgeWriter<I extends WritableComparable,
+    V extends Writable, E extends Writable>
       extends EdgeWriter<I, V, E> {
     /** Internal line record writer */
     private RecordWriter<Text, Text> lineRecordWriter;
@@ -139,7 +140,9 @@ public abstract class TextEdgeOutputFormat<I extends WritableComparable,
    * Abstract class to be implemented by the user to write a line for each
    * edge.
    */
-  protected abstract class TextEdgeWriterToEachLine extends TextEdgeWriter {
+  protected abstract class TextEdgeWriterToEachLine<
+    I extends WritableComparable, V extends Writable, E extends Writable>
+    extends TextEdgeWriter<I, V, E> {
 
     @Override
     public final void writeEdge(I sourceId, V sourceValue, Edge<I, E> edge)
@@ -147,7 +150,7 @@ public abstract class TextEdgeOutputFormat<I extends WritableComparable,
 
       // Note we are writing line as key with null value
       getRecordWriter().write(
-          convertEdgeToLine(sourceId, sourceValue, edge), null);
+        convertEdgeToLine(sourceId, sourceValue, edge), null);
     }
 
     /**

@@ -52,8 +52,9 @@ public class SrcIdDstIdEdgeValueTextOutputFormat<I extends WritableComparable,
   /**
    * Edge writer used with {@link SrcIdDstIdEdgeValueTextOutputFormat}.
    */
-  protected class SrcIdDstIdEdgeValueEdgeWriter
-    extends TextEdgeWriterToEachLine {
+  protected class SrcIdDstIdEdgeValueEdgeWriter<I extends WritableComparable,
+    V extends Writable, E extends Writable>
+    extends TextEdgeWriterToEachLine<I, V, E> {
 
     /** Saved delimiter */
     private String delimiter;
