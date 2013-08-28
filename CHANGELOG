@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-727: Support for Watts Strogatz VertexInputFormat (claudio)
+
   GIRAPH-746: Track and log versions of dependencies (nitay)
 
   GIRAPH-751: Build error: convertEdgeToLine in two different classes have the 
