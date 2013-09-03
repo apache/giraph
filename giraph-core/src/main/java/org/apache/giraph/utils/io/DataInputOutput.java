@@ -16,39 +16,36 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.comm.messages;
+package org.apache.giraph.utils.io;
 
-import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.giraph.utils.ExtendedDataInput;
 import org.apache.giraph.utils.Factory;
-import org.apache.giraph.utils.RepresentativeByteArrayIterable;
 import org.apache.hadoop.io.Writable;
 
+import java.io.DataOutput;
+
 /**
- * Special iterable that recycles the message
- *
- * @param <M> Message data
+ * Provides both DataOutput which we can write to and DataInputs which are
+ * going to read data which was written to DataOutput.
  */
-public class MessagesIterable<M extends Writable>
-    extends RepresentativeByteArrayIterable<M> {
-  /** Message class */
-  private final MessageValueFactory<M> messageValueFactory;
+public abstract class DataInputOutput implements
+    Writable, Factory<ExtendedDataInput> {
+  /**
+   * Get DataOutput to write to
+   *
+   * @return DataOutput which we can write to
+   */
+  public abstract DataOutput getDataOutput();
 
   /**
-   * Constructor
+   * Create DataInput which reads data from underlying DataOutput
    *
-   * @param dataInputFactory Factory for data inputs
-   * @param messageValueFactory factory for creating message values
+   * @return DataInput
    */
-  public MessagesIterable(
-      Factory<? extends ExtendedDataInput> dataInputFactory,
-      MessageValueFactory<M> messageValueFactory) {
-    super(dataInputFactory);
-    this.messageValueFactory = messageValueFactory;
-  }
+  public abstract ExtendedDataInput createDataInput();
 
   @Override
-  protected M createWritable() {
-    return messageValueFactory.newInstance();
+  public ExtendedDataInput create() {
+    return createDataInput();
   }
 }

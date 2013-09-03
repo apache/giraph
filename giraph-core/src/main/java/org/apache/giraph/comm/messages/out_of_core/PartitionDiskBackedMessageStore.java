@@ -38,8 +38,7 @@ import org.apache.giraph.comm.messages.MessageStoreFactory;
 import org.apache.giraph.comm.messages.MessagesIterable;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.factories.MessageValueFactory;
-import org.apache.giraph.utils.ExtendedDataOutput;
-import org.apache.giraph.utils.WritableUtils;
+import org.apache.giraph.utils.io.DataInputOutput;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -58,7 +57,7 @@ public class PartitionDiskBackedMessageStore<I extends WritableComparable,
    * In-memory message map (must be sorted to insure that the ids are
    * ordered)
    */
-  private volatile ConcurrentNavigableMap<I, ExtendedDataOutput>
+  private volatile ConcurrentNavigableMap<I, DataInputOutput>
   inMemoryMessages;
   /** Hadoop configuration */
   private final ImmutableClassesGiraphConfiguration<I, ?, ?> config;
@@ -86,7 +85,7 @@ public class PartitionDiskBackedMessageStore<I extends WritableComparable,
       ImmutableClassesGiraphConfiguration<I, ?, ?> config,
       MessageStoreFactory<I, M, SequentialFileMessageStore<I, M>>
           fileStoreFactory) {
-    inMemoryMessages = new ConcurrentSkipListMap<I, ExtendedDataOutput>();
+    inMemoryMessages = new ConcurrentSkipListMap<I, DataInputOutput>();
     this.messageValueFactory = messageValueFactory;
     this.config = config;
     numberOfMessagesInMemory = new AtomicInteger(0);
@@ -112,21 +111,21 @@ public class PartitionDiskBackedMessageStore<I extends WritableComparable,
     destinationVertices.add(vertexId);
     rwLock.readLock().lock();
     try {
-      ExtendedDataOutput extendedDataOutput = inMemoryMessages.get(vertexId);
-      if (extendedDataOutput == null) {
-        ExtendedDataOutput newExtendedDataOutput =
-            config.createExtendedDataOutput();
-        extendedDataOutput =
-            inMemoryMessages.putIfAbsent(vertexId, newExtendedDataOutput);
-        if (extendedDataOutput == null) {
+      DataInputOutput dataInputOutput = inMemoryMessages.get(vertexId);
+      if (dataInputOutput == null) {
+        DataInputOutput newDataInputOutput =
+            config.createMessagesInputOutput();
+        dataInputOutput =
+            inMemoryMessages.putIfAbsent(vertexId, newDataInputOutput);
+        if (dataInputOutput == null) {
           ownsVertexId = true;
-          extendedDataOutput = newExtendedDataOutput;
+          dataInputOutput = newDataInputOutput;
         }
       }
 
-      synchronized (extendedDataOutput) {
+      synchronized (dataInputOutput) {
         for (M message : messages) {
-          message.write(extendedDataOutput);
+          message.write(dataInputOutput.getDataOutput());
           numberOfMessagesInMemory.getAndIncrement();
         }
       }
@@ -144,13 +143,12 @@ public class PartitionDiskBackedMessageStore<I extends WritableComparable,
    * @return Iterable of messages for a vertex id
    */
   public Iterable<M> getVertexMessages(I vertexId) throws IOException {
-    ExtendedDataOutput extendedDataOutput = inMemoryMessages.get(vertexId);
-    if (extendedDataOutput == null) {
-      extendedDataOutput = config.createExtendedDataOutput();
+    DataInputOutput dataInputOutput = inMemoryMessages.get(vertexId);
+    if (dataInputOutput == null) {
+      dataInputOutput = config.createMessagesInputOutput();
     }
     Iterable<M> combinedIterable = new MessagesIterable<M>(
-        config, messageValueFactory,
-        extendedDataOutput.getByteArray(), 0, extendedDataOutput.getPos());
+        dataInputOutput, messageValueFactory);
 
     for (SequentialFileMessageStore<I, M> fileStore : fileStores) {
       combinedIterable = Iterables.concat(combinedIterable,
@@ -217,11 +215,11 @@ public class PartitionDiskBackedMessageStore<I extends WritableComparable,
    * @throws IOException
    */
   public void flush() throws IOException {
-    ConcurrentNavigableMap<I, ExtendedDataOutput> messagesToFlush = null;
+    ConcurrentNavigableMap<I, DataInputOutput> messagesToFlush = null;
     rwLock.writeLock().lock();
     try {
       messagesToFlush = inMemoryMessages;
-      inMemoryMessages = new ConcurrentSkipListMap<I, ExtendedDataOutput>();
+      inMemoryMessages = new ConcurrentSkipListMap<I, DataInputOutput>();
       numberOfMessagesInMemory.set(0);
     } finally {
       rwLock.writeLock().unlock();
@@ -248,9 +246,9 @@ public class PartitionDiskBackedMessageStore<I extends WritableComparable,
 
     // write in-memory messages map
     out.writeInt(inMemoryMessages.size());
-    for (Entry<I, ExtendedDataOutput> entry : inMemoryMessages.entrySet()) {
+    for (Entry<I, DataInputOutput> entry : inMemoryMessages.entrySet()) {
       entry.getKey().write(out);
-      WritableUtils.writeExtendedDataOutput(entry.getValue(), out);
+      entry.getValue().write(out);
     }
 
     // write file stores
@@ -278,8 +276,9 @@ public class PartitionDiskBackedMessageStore<I extends WritableComparable,
     for (int m = 0; m < mapSize; m++) {
       I vertexId = config.createVertexId();
       vertexId.readFields(in);
-      inMemoryMessages.put(vertexId,
-          WritableUtils.readExtendedDataOutput(in, config));
+      DataInputOutput dataInputOutput = config.createMessagesInputOutput();
+      dataInputOutput.readFields(in);
+      inMemoryMessages.put(vertexId, dataInputOutput);
     }
 
     // read file stores

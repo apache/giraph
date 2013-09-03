@@ -18,7 +18,6 @@
 package org.apache.giraph.utils;
 
 import java.util.Iterator;
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.hadoop.io.Writable;
 
 /**
@@ -33,15 +32,11 @@ public abstract class RepresentativeByteArrayIterable<T extends Writable>
   /**
    * Constructor
    *
-   * @param configuration Configuration
-   * @param buf Buffer
-   * @param off Offset to start in the buffer
-   * @param length Length of the buffer
+   * @param dataInputFactory Factory for data inputs
    */
   public RepresentativeByteArrayIterable(
-      ImmutableClassesGiraphConfiguration configuration,
-      byte[] buf, int off, int length) {
-    super(configuration, buf, off, length);
+      Factory<? extends ExtendedDataInput> dataInputFactory) {
+    super(dataInputFactory);
   }
 
   /**
@@ -52,13 +47,11 @@ public abstract class RepresentativeByteArrayIterable<T extends Writable>
     /**
      * Constructor.
      *
-     * @param buf Buffer to read from
-     * @param off Offset to read from in the buffer
-     * @param length Maximum length of the buffer
+     * @param extendedDataInput ExtendedDataInput
      */
     private RepresentativeByteArrayIterableIterator(
-        byte[] buf, int off, int length) {
-      super(configuration, buf, off, length);
+        ExtendedDataInput extendedDataInput) {
+      super(extendedDataInput);
     }
 
     @Override
@@ -69,6 +62,7 @@ public abstract class RepresentativeByteArrayIterable<T extends Writable>
 
   @Override
   public Iterator<T> iterator() {
-    return new RepresentativeByteArrayIterableIterator(buf, off, length);
+    return
+        new RepresentativeByteArrayIterableIterator(dataInputFactory.create());
   }
 }

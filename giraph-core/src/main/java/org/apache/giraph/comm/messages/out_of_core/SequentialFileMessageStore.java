@@ -24,7 +24,7 @@ import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.giraph.utils.EmptyIterable;
-import org.apache.giraph.utils.ExtendedDataOutput;
+import org.apache.giraph.utils.io.DataInputOutput;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
@@ -109,7 +109,7 @@ public class SequentialFileMessageStore<I extends WritableComparable,
    * @param messageMap Add the messages from this map to this store
    * @throws java.io.IOException
    */
-  public void addMessages(NavigableMap<I, ExtendedDataOutput> messageMap)
+  public void addMessages(NavigableMap<I, DataInputOutput> messageMap)
     throws IOException {
     // Writes messages to its file
     if (file.exists()) {
@@ -136,13 +136,12 @@ public class SequentialFileMessageStore<I extends WritableComparable,
       out.writeInt(destinationVertexIdCount);
 
       // Dump the vertices and their messages in a sorted order
-      for (Map.Entry<I, ExtendedDataOutput> entry : messageMap.entrySet()) {
+      for (Map.Entry<I, DataInputOutput> entry : messageMap.entrySet()) {
         I destinationVertexId = entry.getKey();
         destinationVertexId.write(out);
-        ExtendedDataOutput extendedDataOutput = entry.getValue();
+        DataInputOutput dataInputOutput = entry.getValue();
         Iterable<M> messages = new MessagesIterable<M>(
-            config, messageValueFactory, extendedDataOutput.getByteArray(), 0,
-            extendedDataOutput.getPos());
+            dataInputOutput, messageValueFactory);
         int messageCount = Iterables.size(messages);
         out.writeInt(messageCount);
         if (LOG.isDebugEnabled()) {

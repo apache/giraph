@@ -863,6 +863,17 @@ public interface GiraphConstants {
           "Use unsafe serialization?");
 
   /**
+   * Use BigDataIO for messages? If there are super-vertices in the
+   * graph which receive a lot of messages (total serialized size of messages
+   * goes beyond the maximum size of a byte array), setting this option to true
+   * will remove that limit. The maximum memory available for a single vertex
+   * will be limited to the maximum heap size available.
+   */
+  BooleanConfOption USE_BIG_DATA_IO_FOR_MESSAGES =
+      new BooleanConfOption("giraph.useBigDataIOForMessages", false,
+          "Use BigDataIO for messages?");
+
+  /**
    * Maximum number of attempts a master/worker will retry before killing
    * the job.  This directly maps to the number of map task attempts in
    * Hadoop.

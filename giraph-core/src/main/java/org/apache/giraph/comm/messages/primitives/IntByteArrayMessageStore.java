@@ -26,8 +26,7 @@ import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.giraph.utils.EmptyIterable;
-import org.apache.giraph.utils.ExtendedDataOutput;
-import org.apache.giraph.utils.WritableUtils;
+import org.apache.giraph.utils.io.DataInputOutput;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Writable;
 
@@ -57,7 +56,7 @@ public class IntByteArrayMessageStore<M extends Writable>
   protected final MessageValueFactory<M> messageValueFactory;
   /** Map from partition id to map from vertex id to message */
   private final
-  Int2ObjectOpenHashMap<Int2ObjectOpenHashMap<ExtendedDataOutput>> map;
+  Int2ObjectOpenHashMap<Int2ObjectOpenHashMap<DataInputOutput>> map;
   /** Service worker */
   private final CentralizedServiceWorker<IntWritable, ?, ?> service;
   /** Giraph configuration */
@@ -79,12 +78,12 @@ public class IntByteArrayMessageStore<M extends Writable>
     this.config = config;
 
     map =
-        new Int2ObjectOpenHashMap<Int2ObjectOpenHashMap<ExtendedDataOutput>>();
+        new Int2ObjectOpenHashMap<Int2ObjectOpenHashMap<DataInputOutput>>();
     for (int partitionId : service.getPartitionStore().getPartitionIds()) {
       Partition<IntWritable, ?, ?> partition =
           service.getPartitionStore().getPartition(partitionId);
-      Int2ObjectOpenHashMap<ExtendedDataOutput> partitionMap =
-          new Int2ObjectOpenHashMap<ExtendedDataOutput>(
+      Int2ObjectOpenHashMap<DataInputOutput> partitionMap =
+          new Int2ObjectOpenHashMap<DataInputOutput>(
               (int) partition.getVertexCount());
       map.put(partitionId, partitionMap);
     }
@@ -96,34 +95,34 @@ public class IntByteArrayMessageStore<M extends Writable>
    * @param vertexId Id of the vertex
    * @return Map which holds messages for partition which vertex belongs to.
    */
-  private Int2ObjectOpenHashMap<ExtendedDataOutput> getPartitionMap(
+  private Int2ObjectOpenHashMap<DataInputOutput> getPartitionMap(
       IntWritable vertexId) {
     return map.get(service.getPartitionId(vertexId));
   }
 
   /**
-   * Get the extended data output for a vertex id, creating if necessary.
+   * Get the DataInputOutput for a vertex id, creating if necessary.
    *
    * @param partitionMap Partition map to look in
    * @param vertexId     Id of the vertex
-   * @return Extended data output for this vertex id (created if necessary)
+   * @return DataInputOutput for this vertex id (created if necessary)
    */
-  private ExtendedDataOutput getExtendedDataOutput(
-      Int2ObjectOpenHashMap<ExtendedDataOutput> partitionMap,
+  private DataInputOutput getDataInputOutput(
+      Int2ObjectOpenHashMap<DataInputOutput> partitionMap,
       int vertexId) {
-    ExtendedDataOutput extendedDataOutput = partitionMap.get(vertexId);
-    if (extendedDataOutput == null) {
-      extendedDataOutput = config.createExtendedDataOutput();
-      partitionMap.put(vertexId, extendedDataOutput);
+    DataInputOutput dataInputOutput = partitionMap.get(vertexId);
+    if (dataInputOutput == null) {
+      dataInputOutput = config.createMessagesInputOutput();
+      partitionMap.put(vertexId, dataInputOutput);
     }
-    return extendedDataOutput;
+    return dataInputOutput;
   }
 
   @Override
   public void addPartitionMessages(int partitionId,
       ByteArrayVertexIdMessages<IntWritable, M> messages) throws
       IOException {
-    Int2ObjectOpenHashMap<ExtendedDataOutput> partitionMap =
+    Int2ObjectOpenHashMap<DataInputOutput> partitionMap =
         map.get(partitionId);
     synchronized (partitionMap) {
       ByteArrayVertexIdMessages<IntWritable, M>.VertexIdMessageBytesIterator
@@ -137,18 +136,19 @@ public class IntByteArrayMessageStore<M extends Writable>
       if (vertexIdMessageBytesIterator != null) {
         while (vertexIdMessageBytesIterator.hasNext()) {
           vertexIdMessageBytesIterator.next();
+          DataInputOutput dataInputOutput = getDataInputOutput(partitionMap,
+              vertexIdMessageBytesIterator.getCurrentVertexId().get());
           vertexIdMessageBytesIterator.writeCurrentMessageBytes(
-              getExtendedDataOutput(partitionMap,
-                  vertexIdMessageBytesIterator.getCurrentVertexId().get()));
+              dataInputOutput.getDataOutput());
         }
       } else {
         ByteArrayVertexIdMessages<IntWritable, M>.VertexIdMessageIterator
             iterator = messages.getVertexIdMessageIterator();
         while (iterator.hasNext()) {
           iterator.next();
-          iterator.getCurrentMessage().write(
-              getExtendedDataOutput(partitionMap,
-                  iterator.getCurrentVertexId().get()));
+          DataInputOutput dataInputOutput =  getDataInputOutput(partitionMap,
+              iterator.getCurrentVertexId().get());
+          iterator.getCurrentMessage().write(dataInputOutput.getDataOutput());
         }
       }
     }
@@ -167,13 +167,12 @@ public class IntByteArrayMessageStore<M extends Writable>
   @Override
   public Iterable<M> getVertexMessages(
       IntWritable vertexId) throws IOException {
-    ExtendedDataOutput extendedDataOutput =
+    DataInputOutput dataInputOutput =
         getPartitionMap(vertexId).get(vertexId.get());
-    if (extendedDataOutput == null) {
+    if (dataInputOutput == null) {
       return EmptyIterable.get();
     } else {
-      return new MessagesIterable<M>(config, messageValueFactory,
-          extendedDataOutput.getByteArray(), 0, extendedDataOutput.getPos());
+      return new MessagesIterable<M>(dataInputOutput, messageValueFactory);
     }
   }
 
@@ -190,7 +189,7 @@ public class IntByteArrayMessageStore<M extends Writable>
   @Override
   public Iterable<IntWritable> getPartitionDestinationVertices(
       int partitionId) {
-    Int2ObjectOpenHashMap<ExtendedDataOutput> partitionMap =
+    Int2ObjectOpenHashMap<DataInputOutput> partitionMap =
         map.get(partitionId);
     List<IntWritable> vertices =
         Lists.newArrayListWithCapacity(partitionMap.size());
@@ -204,15 +203,15 @@ public class IntByteArrayMessageStore<M extends Writable>
   @Override
   public void writePartition(DataOutput out,
       int partitionId) throws IOException {
-    Int2ObjectOpenHashMap<ExtendedDataOutput> partitionMap =
+    Int2ObjectOpenHashMap<DataInputOutput> partitionMap =
         map.get(partitionId);
     out.writeInt(partitionMap.size());
-    ObjectIterator<Int2ObjectMap.Entry<ExtendedDataOutput>> iterator =
+    ObjectIterator<Int2ObjectMap.Entry<DataInputOutput>> iterator =
         partitionMap.int2ObjectEntrySet().fastIterator();
     while (iterator.hasNext()) {
-      Int2ObjectMap.Entry<ExtendedDataOutput> entry = iterator.next();
+      Int2ObjectMap.Entry<DataInputOutput> entry = iterator.next();
       out.writeInt(entry.getIntKey());
-      WritableUtils.writeExtendedDataOutput(entry.getValue(), out);
+      entry.getValue().write(out);
     }
   }
 
@@ -220,12 +219,13 @@ public class IntByteArrayMessageStore<M extends Writable>
   public void readFieldsForPartition(DataInput in,
       int partitionId) throws IOException {
     int size = in.readInt();
-    Int2ObjectOpenHashMap<ExtendedDataOutput> partitionMap =
-        new Int2ObjectOpenHashMap<ExtendedDataOutput>(size);
+    Int2ObjectOpenHashMap<DataInputOutput> partitionMap =
+        new Int2ObjectOpenHashMap<DataInputOutput>(size);
     while (size-- > 0) {
       int vertexId = in.readInt();
-      partitionMap.put(vertexId,
-          WritableUtils.readExtendedDataOutput(in, config));
+      DataInputOutput dataInputOutput = config.createMessagesInputOutput();
+      dataInputOutput.readFields(in);
+      partitionMap.put(vertexId, dataInputOutput);
     }
     synchronized (map) {
       map.put(partitionId, partitionMap);

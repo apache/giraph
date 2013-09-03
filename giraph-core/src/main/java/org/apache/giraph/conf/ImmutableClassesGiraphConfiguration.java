@@ -62,6 +62,9 @@ import org.apache.giraph.utils.ExtendedDataOutput;
 import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.giraph.utils.UnsafeByteArrayInputStream;
 import org.apache.giraph.utils.UnsafeByteArrayOutputStream;
+import org.apache.giraph.utils.io.BigDataInputOutput;
+import org.apache.giraph.utils.io.DataInputOutput;
+import org.apache.giraph.utils.io.ExtendedDataInputOutput;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.giraph.worker.WorkerObserver;
 import org.apache.hadoop.conf.Configuration;
@@ -100,6 +103,11 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    * extended data input/output classes
    */
   private final boolean useUnsafeSerialization;
+  /**
+   * Use BigDataIO for messages? Cached for fast access to instantiate the
+   * extended data input/output classes for messages
+   */
+  private final boolean useBigDataIOForMessages;
 
   /**
    * Constructor.  Takes the configuration and then gets the classes out of
@@ -111,6 +119,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
     super(conf);
     classes = new GiraphClasses<I, V, E>(conf);
     useUnsafeSerialization = USE_UNSAFE_SERIALIZATION.get(this);
+    useBigDataIOForMessages = USE_BIG_DATA_IO_FOR_MESSAGES.get(this);
     valueLanguages = PerGraphTypeEnum.readFromConf(
         GiraphConstants.GRAPH_TYPE_LANGUAGES, conf);
     valueNeedsWrappers = PerGraphTypeBoolean.readFromConf(
@@ -894,6 +903,19 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    */
   public boolean useUnsafeSerialization() {
     return useUnsafeSerialization;
+  }
+
+  /**
+   * Create DataInputOutput to store messages
+   *
+   * @return DataInputOutput object
+   */
+  public DataInputOutput createMessagesInputOutput() {
+    if (useBigDataIOForMessages) {
+      return new BigDataInputOutput(this);
+    } else {
+      return new ExtendedDataInputOutput(this);
+    }
   }
 
   /**

@@ -22,10 +22,10 @@ import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
-import org.apache.giraph.utils.ExtendedDataOutput;
+import org.apache.giraph.utils.ExtendedDataInput;
 import org.apache.giraph.utils.RepresentativeByteArrayIterator;
 import org.apache.giraph.utils.VertexIdIterator;
-import org.apache.giraph.utils.WritableUtils;
+import org.apache.giraph.utils.io.DataInputOutput;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -44,7 +44,7 @@ import java.util.concurrent.ConcurrentMap;
  * @param <M> Message data
  */
 public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
-    M extends Writable> extends SimpleMessageStore<I, M, ExtendedDataOutput> {
+    M extends Writable> extends SimpleMessageStore<I, M, DataInputOutput> {
   /**
    * Constructor
    *
@@ -68,30 +68,27 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
    * @param iterator Special iterator that can release ownerhips of vertex ids
    * @return Extended data output for this vertex id (created if necessary)
    */
-  private ExtendedDataOutput getExtendedDataOutput(
-      ConcurrentMap<I, ExtendedDataOutput> partitionMap,
+  private DataInputOutput getDataInputOutput(
+      ConcurrentMap<I, DataInputOutput> partitionMap,
       VertexIdIterator<I> iterator) {
-    ExtendedDataOutput extendedDataOutput =
+    DataInputOutput dataInputOutput =
         partitionMap.get(iterator.getCurrentVertexId());
-    if (extendedDataOutput == null) {
-      ExtendedDataOutput newExtendedDataOutput =
-          config.createExtendedDataOutput();
-      extendedDataOutput =
-          partitionMap.putIfAbsent(
-              iterator.releaseCurrentVertexId(),
-              newExtendedDataOutput);
-      if (extendedDataOutput == null) {
-        extendedDataOutput = newExtendedDataOutput;
+    if (dataInputOutput == null) {
+      DataInputOutput newDataOutput = config.createMessagesInputOutput();
+      dataInputOutput = partitionMap.putIfAbsent(
+          iterator.releaseCurrentVertexId(), newDataOutput);
+      if (dataInputOutput == null) {
+        dataInputOutput = newDataOutput;
       }
     }
-    return extendedDataOutput;
+    return dataInputOutput;
   }
 
   @Override
   public void addPartitionMessages(
       int partitionId,
       ByteArrayVertexIdMessages<I, M> messages) throws IOException {
-    ConcurrentMap<I, ExtendedDataOutput> partitionMap =
+    ConcurrentMap<I, DataInputOutput> partitionMap =
         getOrCreatePartitionMap(partitionId);
     ByteArrayVertexIdMessages<I, M>.VertexIdMessageBytesIterator
         vertexIdMessageBytesIterator =
@@ -104,12 +101,12 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
     if (vertexIdMessageBytesIterator != null) {
       while (vertexIdMessageBytesIterator.hasNext()) {
         vertexIdMessageBytesIterator.next();
-        ExtendedDataOutput extendedDataOutput =
-            getExtendedDataOutput(partitionMap, vertexIdMessageBytesIterator);
+        DataInputOutput dataInputOutput =
+            getDataInputOutput(partitionMap, vertexIdMessageBytesIterator);
 
-        synchronized (extendedDataOutput) {
+        synchronized (dataInputOutput) {
           vertexIdMessageBytesIterator.writeCurrentMessageBytes(
-              extendedDataOutput);
+              dataInputOutput.getDataOutput());
         }
       }
     } else {
@@ -117,12 +114,12 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
           vertexIdMessageIterator = messages.getVertexIdMessageIterator();
       while (vertexIdMessageIterator.hasNext()) {
         vertexIdMessageIterator.next();
-        ExtendedDataOutput extendedDataOutput =
-            getExtendedDataOutput(partitionMap, vertexIdMessageIterator);
+        DataInputOutput dataInputOutput =
+            getDataInputOutput(partitionMap, vertexIdMessageIterator);
 
-        synchronized (extendedDataOutput) {
+        synchronized (dataInputOutput) {
           vertexIdMessageIterator.getCurrentMessage().write(
-              extendedDataOutput);
+              dataInputOutput.getDataOutput());
         }
       }
     }
@@ -130,9 +127,8 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
 
   @Override
   protected Iterable<M> getMessagesAsIterable(
-      ExtendedDataOutput extendedDataOutput) {
-    return new MessagesIterable<M>(config, messageValueFactory,
-        extendedDataOutput.getByteArray(), 0, extendedDataOutput.getPos());
+      DataInputOutput dataInputOutput) {
+    return new MessagesIterable<M>(dataInputOutput, messageValueFactory);
   }
 
   /**
@@ -143,15 +139,10 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
     /**
      * Constructor
      *
-     * @param configuration Configuration
-     * @param buf buffer to read from
-     * @param off Offset into the buffer to start from
-     * @param length Length of the buffer
+     * @param dataInput DataInput containing the messages
      */
-    public RepresentativeMessageIterator(
-        ImmutableClassesGiraphConfiguration configuration,
-        byte[] buf, int off, int length) {
-      super(configuration, buf, off, length);
+    public RepresentativeMessageIterator(ExtendedDataInput dataInput) {
+      super(dataInput);
     }
 
     @Override
@@ -162,27 +153,27 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
 
   @Override
   protected int getNumberOfMessagesIn(
-      ConcurrentMap<I, ExtendedDataOutput> partitionMap) {
+      ConcurrentMap<I, DataInputOutput> partitionMap) {
     int numberOfMessages = 0;
-    for (ExtendedDataOutput extendedDataOutput : partitionMap.values()) {
+    for (DataInputOutput dataInputOutput : partitionMap.values()) {
       numberOfMessages += Iterators.size(
-          new RepresentativeMessageIterator(config,
-              extendedDataOutput.getByteArray(), 0,
-              extendedDataOutput.getPos()));
+          new RepresentativeMessageIterator(dataInputOutput.createDataInput()));
     }
     return numberOfMessages;
   }
 
   @Override
-  protected void writeMessages(ExtendedDataOutput extendedDataOutput,
+  protected void writeMessages(DataInputOutput dataInputOutput,
       DataOutput out) throws IOException {
-    WritableUtils.writeExtendedDataOutput(extendedDataOutput, out);
+    dataInputOutput.write(out);
   }
 
   @Override
-  protected ExtendedDataOutput readFieldsForMessages(DataInput in) throws
+  protected DataInputOutput readFieldsForMessages(DataInput in) throws
       IOException {
-    return WritableUtils.readExtendedDataOutput(in, config);
+    DataInputOutput dataInputOutput = config.createMessagesInputOutput();
+    dataInputOutput.readFields(in);
+    return dataInputOutput;
   }
 
   /**

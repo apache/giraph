@@ -19,7 +19,6 @@ package org.apache.giraph.utils;
 
 import java.io.IOException;
 import java.util.Iterator;
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.hadoop.io.Writable;
 
 /**
@@ -35,18 +34,12 @@ public abstract class ByteArrayIterator<T extends Writable> implements
   protected final ExtendedDataInput extendedDataInput;
 
   /**
-   * Constructor
+   * Wrap ExtendedDataInput in ByteArrayIterator
    *
-   * @param configuration Configuration
-   * @param buf Buffer
-   * @param off Offset to start in the buffer
-   * @param length Length of the buffer
+   * @param extendedDataInput ExtendedDataInput
    */
-  public ByteArrayIterator(
-      ImmutableClassesGiraphConfiguration configuration,
-      byte[] buf, int off, int length) {
-    extendedDataInput =
-        configuration.createExtendedDataInput(buf, off, length);
+  public ByteArrayIterator(ExtendedDataInput extendedDataInput) {
+    this.extendedDataInput = extendedDataInput;
   }
 
   @Override

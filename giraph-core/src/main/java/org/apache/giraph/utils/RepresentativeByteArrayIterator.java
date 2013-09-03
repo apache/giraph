@@ -18,7 +18,6 @@
 package org.apache.giraph.utils;
 
 import java.io.IOException;
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.hadoop.io.Writable;
 
 /**
@@ -33,17 +32,12 @@ public abstract class RepresentativeByteArrayIterator<T extends
   private final T representativeWritable = createWritable();
 
   /**
-   * Constructor
+   * Wrap ExtendedDataInput in ByteArrayIterator
    *
-   * @param configuration Configuration
-   * @param buf buffer to read from
-   * @param off Offset into the buffer to start from
-   * @param length Length of the buffer
+   * @param extendedDataInput ExtendedDataInput
    */
-  public RepresentativeByteArrayIterator(
-      ImmutableClassesGiraphConfiguration configuration,
-      byte[] buf, int off, int length) {
-    super(configuration, buf, off, length);
+  public RepresentativeByteArrayIterator(ExtendedDataInput extendedDataInput) {
+    super(extendedDataInput);
   }
 
   @Override

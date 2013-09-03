@@ -186,8 +186,7 @@ public class ByteArrayVertexIdMessages<I extends WritableComparable,
      *
      * @param dataOutput Where the current message will be written to
      */
-    public void writeCurrentMessageBytes(
-        ExtendedDataOutput dataOutput) {
+    public void writeCurrentMessageBytes(DataOutput dataOutput) {
       try {
         dataOutput.write(getByteArray(), messageOffset, messageBytes);
       } catch (IOException e) {
