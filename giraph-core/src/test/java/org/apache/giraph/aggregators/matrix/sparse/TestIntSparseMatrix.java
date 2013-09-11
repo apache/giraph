@@ -16,39 +16,38 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.aggregators.matrix;
+package org.apache.giraph.aggregators.matrix.sparse;
 
 import static org.junit.Assert.assertEquals;
 
 import org.apache.giraph.utils.WritableUtils;
 import org.junit.Test;
 
-public class TestDoubleMatrix {
-  private static double E = 0.0001f;
+public class TestIntSparseMatrix {
 
   @Test
   public void testVectorAdd() {
     // The default value should be 0
-    DoubleVector vec1 = new DoubleVector();
-    assertEquals(0.0, vec1.get(0), E);
+    IntSparseVector vec1 = new IntSparseVector();
+    assertEquals(0, vec1.get(0));
 
     // Basic get/set
-    vec1.set(0, 0.1);
-    vec1.set(10, 1.4);
-    assertEquals(0.1, vec1.get(0), E);
-    assertEquals(0.0, vec1.get(5), E);
-    assertEquals(1.4, vec1.get(10), E);
+    vec1.set(0, 1);
+    vec1.set(10, 14);
+    assertEquals(1, vec1.get(0));
+    assertEquals(0, vec1.get(5));
+    assertEquals(14, vec1.get(10));
 
     // Add another vector
-    DoubleVector vec2 = new DoubleVector();
-    vec2.set(0, 0.5);
-    vec2.set(5, 1.7);
+    IntSparseVector vec2 = new IntSparseVector();
+    vec2.set(0, 5);
+    vec2.set(5, 17);
 
     vec1.add(vec2);
-    assertEquals(0.6, vec1.get(0), E);
-    assertEquals(1.7, vec1.get(5), E);
-    assertEquals(1.4, vec1.get(10), E);
-    assertEquals(0.0, vec1.get(15), E);
+    assertEquals(6, vec1.get(0));
+    assertEquals(17, vec1.get(5));
+    assertEquals(14, vec1.get(10));
+    assertEquals(0, vec1.get(15));
   }
 
   @Test
@@ -56,19 +55,19 @@ public class TestDoubleMatrix {
     int size = 100;
 
     // Serialize from
-    DoubleVector from = new DoubleVector(size);
-    from.set(0, 10.0);
-    from.set(10, 5.0);
-    from.set(12, 1.0);
+    IntSparseVector from = new IntSparseVector(size);
+    from.set(0, 10);
+    from.set(10, 5);
+    from.set(12, 1);
     byte[] data = WritableUtils.writeToByteArray(from);
 
     // De-serialize to
-    DoubleVector to = new DoubleVector();
+    IntSparseVector to = new IntSparseVector();
     WritableUtils.readFieldsFromByteArray(data, to);
 
     // The vectors should be equal
     for (int i = 0; i < size; ++i) {
-      assertEquals(from.get(i), to.get(i), E);
+      assertEquals(from.get(i), to.get(i));
     }
   }
 }

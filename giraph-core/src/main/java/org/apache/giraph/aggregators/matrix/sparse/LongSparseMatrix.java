@@ -16,28 +16,28 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.aggregators.matrix;
+package org.apache.giraph.aggregators.matrix.sparse;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 /**
- * A double matrix holds the values of the entries in double vectors. It keeps
- * one double aggregator per matrix row.
+ * A long matrix holds the values of the entries in long vectors. It keeps one
+ * long aggregator per matrix row.
  */
-public class DoubleMatrix {
+public class LongSparseMatrix {
   /** The number of rows in the matrix */
   private int numRows;
   /** The rows of the matrix */
-  private Int2ObjectOpenHashMap<DoubleVector> rows;
+  private Int2ObjectOpenHashMap<LongSparseVector> rows;
 
   /**
    * Create a new matrix with the given number of rows.
    *
    * @param numRows the number of rows.
    */
-  public DoubleMatrix(int numRows) {
+  public LongSparseMatrix(int numRows) {
     this.numRows = numRows;
-    rows = new Int2ObjectOpenHashMap<DoubleVector>(numRows);
+    rows = new Int2ObjectOpenHashMap<LongSparseVector>(numRows);
     rows.defaultReturnValue(null);
   }
 
@@ -47,7 +47,7 @@ public class DoubleMatrix {
   public void initialize() {
     rows.clear();
     for (int i = 0; i < numRows; ++i) {
-      setRow(i, new DoubleVector());
+      setRow(i, new LongSparseVector());
     }
   }
 
@@ -67,7 +67,7 @@ public class DoubleMatrix {
    * @param j the column
    * @return the value of the entry
    */
-  public double get(int i, int j) {
+  public long get(int i, int j) {
     return rows.get(i).get(j);
   }
 
@@ -78,7 +78,7 @@ public class DoubleMatrix {
    * @param j the column
    * @param v the value of the entry
    */
-  public void set(int i, int j, double v) {
+  public void set(int i, int j, long v) {
     rows.get(i).set(j, v);
   }
 
@@ -88,17 +88,17 @@ public class DoubleMatrix {
    * @param i the row number
    * @return the row of the matrix
    */
-  DoubleVector getRow(int i) {
+  LongSparseVector getRow(int i) {
     return rows.get(i);
   }
 
   /**
-   * Set the double vector as the row specified.
+   * Set the long vector as the row specified.
    *
    * @param i the row
    * @param vec the vector to set as the row
    */
-  void setRow(int i, DoubleVector vec) {
+  void setRow(int i, LongSparseVector vec) {
     rows.put(i, vec);
   }
 }

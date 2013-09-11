@@ -16,29 +16,41 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.aggregators.matrix;
+package org.apache.giraph.aggregators.matrix.dense;
 
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import java.util.ArrayList;
 
 /**
- * A int matrix holds the values of the entries in int vectors. It keeps one
- * int aggregator per matrix row.
+ * A long matrix holds the values of the entries in long vectors. It keeps one
+ * long aggregator per matrix row.
  */
-public class IntMatrix {
+public class LongDenseMatrix {
   /** The number of rows in the matrix */
   private int numRows;
+  /** The number of columns in the matrix */
+  private int numColumns;
   /** The rows of the matrix */
-  private Int2ObjectOpenHashMap<IntVector> rows;
+  private ArrayList<LongDenseVector> rows = null;
 
   /**
-   * Create a new matrix with the given number of rows.
+   * Create a new matrix with the same number of rows and columns.
    *
-   * @param numRows the number of rows.
+   * @param size the number of rows and columns
    */
-  public IntMatrix(int numRows) {
+  public LongDenseMatrix(int size) {
+    this(size, size);
+  }
+
+  /**
+   * Create a new matrix with the given number of rows and columns.
+   *
+   * @param numRows the number of rows
+   * @param numColumns the number of columns
+   */
+  public LongDenseMatrix(int numRows, int numColumns) {
     this.numRows = numRows;
-    rows = new Int2ObjectOpenHashMap<IntVector>(numRows);
-    rows.defaultReturnValue(null);
+    this.numColumns = numColumns;
+    rows = new ArrayList<LongDenseVector>();
   }
 
   /**
@@ -47,17 +59,26 @@ public class IntMatrix {
   public void initialize() {
     rows.clear();
     for (int i = 0; i < numRows; ++i) {
-      setRow(i, new IntVector());
+      rows.add(new LongDenseVector(numColumns));
     }
   }
 
   /**
    * Get the number of rows in the matrix.
    *
-   * @return the number of rows.
+   * @return the number of rows
    */
   public int getNumRows() {
     return numRows;
+  }
+
+  /**
+   * Get the number of the columns in the matrix.
+   *
+   * @return the number of rows
+   */
+  public int getNumColumns() {
+    return numColumns;
   }
 
   /**
@@ -67,7 +88,7 @@ public class IntMatrix {
    * @param j the column
    * @return the value of the entry
    */
-  public int get(int i, int j) {
+  public long get(int i, int j) {
     return rows.get(i).get(j);
   }
 
@@ -78,7 +99,7 @@ public class IntMatrix {
    * @param j the column
    * @param v the value of the entry
    */
-  public void set(int i, int j, int v) {
+  public void set(int i, int j, long v) {
     rows.get(i).set(j, v);
   }
 
@@ -88,17 +109,19 @@ public class IntMatrix {
    * @param i the row number
    * @return the row of the matrix
    */
-  IntVector getRow(int i) {
+  LongDenseVector getRow(int i) {
     return rows.get(i);
   }
 
   /**
-   * Set the int vector as the row specified.
+   * Add the long vector as a row in the matrix.
    *
-   * @param i the row
-   * @param vec the vector to set as the row
+   * @param vec the vector to add
    */
-  void setRow(int i, IntVector vec) {
-    rows.put(i, vec);
+  void addRow(LongDenseVector vec) {
+    if (rows.size() >= numRows) {
+      throw new RuntimeException("Cannot add more rows!");
+    }
+    rows.add(vec);
   }
 }

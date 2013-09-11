@@ -16,28 +16,28 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.aggregators.matrix;
+package org.apache.giraph.aggregators.matrix.sparse;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 /**
- * A long matrix holds the values of the entries in long vectors. It keeps one
- * long aggregator per matrix row.
+ * A float matrix holds the values of the entries in float vectors. It keeps one
+ * float aggregator per matrix row.
  */
-public class LongMatrix {
+public class FloatSparseMatrix {
   /** The number of rows in the matrix */
   private int numRows;
   /** The rows of the matrix */
-  private Int2ObjectOpenHashMap<LongVector> rows;
+  private Int2ObjectOpenHashMap<FloatSparseVector> rows;
 
   /**
    * Create a new matrix with the given number of rows.
    *
    * @param numRows the number of rows.
    */
-  public LongMatrix(int numRows) {
+  public FloatSparseMatrix(int numRows) {
     this.numRows = numRows;
-    rows = new Int2ObjectOpenHashMap<LongVector>(numRows);
+    rows = new Int2ObjectOpenHashMap<FloatSparseVector>(numRows);
     rows.defaultReturnValue(null);
   }
 
@@ -47,7 +47,7 @@ public class LongMatrix {
   public void initialize() {
     rows.clear();
     for (int i = 0; i < numRows; ++i) {
-      setRow(i, new LongVector());
+      setRow(i, new FloatSparseVector());
     }
   }
 
@@ -67,7 +67,7 @@ public class LongMatrix {
    * @param j the column
    * @return the value of the entry
    */
-  public long get(int i, int j) {
+  public float get(int i, int j) {
     return rows.get(i).get(j);
   }
 
@@ -78,7 +78,7 @@ public class LongMatrix {
    * @param j the column
    * @param v the value of the entry
    */
-  public void set(int i, int j, long v) {
+  public void set(int i, int j, float v) {
     rows.get(i).set(j, v);
   }
 
@@ -88,17 +88,17 @@ public class LongMatrix {
    * @param i the row number
    * @return the row of the matrix
    */
-  LongVector getRow(int i) {
+  FloatSparseVector getRow(int i) {
     return rows.get(i);
   }
 
   /**
-   * Set the long vector as the row specified.
+   * Set the float vector as the row specified.
    *
    * @param i the row
    * @param vec the vector to set as the row
    */
-  void setRow(int i, LongVector vec) {
+  void setRow(int i, FloatSparseVector vec) {
     rows.put(i, vec);
   }
 }

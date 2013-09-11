@@ -16,22 +16,23 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.aggregators.matrix;
+package org.apache.giraph.aggregators.matrix.sparse;
 
 import org.apache.giraph.aggregators.BasicAggregator;
 
 /**
- * The double vector aggregator is used to aggregate double vectors.
+ * The float vector aggregator is used to aggregate float vectors.
  */
-public class DoubleVectorSumAggregator extends BasicAggregator<DoubleVector> {
+public class IntSparseVectorSumAggregator extends
+    BasicAggregator<IntSparseVector> {
 
   @Override
-  public DoubleVector createInitialValue() {
-    return new DoubleVector();
+  public IntSparseVector createInitialValue() {
+    return new IntSparseVector();
   }
 
   @Override
-  public void aggregate(DoubleVector vector) {
+  public void aggregate(IntSparseVector vector) {
     getAggregatedValue().add(vector);
   }
 }

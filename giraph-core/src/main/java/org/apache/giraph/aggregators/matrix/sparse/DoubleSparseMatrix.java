@@ -16,28 +16,28 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.aggregators.matrix;
+package org.apache.giraph.aggregators.matrix.sparse;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 
 /**
- * A float matrix holds the values of the entries in float vectors. It keeps one
- * float aggregator per matrix row.
+ * A double matrix holds the values of the entries in double vectors. It keeps
+ * one double aggregator per matrix row.
  */
-public class FloatMatrix {
+public class DoubleSparseMatrix {
   /** The number of rows in the matrix */
   private int numRows;
   /** The rows of the matrix */
-  private Int2ObjectOpenHashMap<FloatVector> rows;
+  private Int2ObjectOpenHashMap<DoubleSparseVector> rows;
 
   /**
    * Create a new matrix with the given number of rows.
    *
    * @param numRows the number of rows.
    */
-  public FloatMatrix(int numRows) {
+  public DoubleSparseMatrix(int numRows) {
     this.numRows = numRows;
-    rows = new Int2ObjectOpenHashMap<FloatVector>(numRows);
+    rows = new Int2ObjectOpenHashMap<DoubleSparseVector>(numRows);
     rows.defaultReturnValue(null);
   }
 
@@ -47,7 +47,7 @@ public class FloatMatrix {
   public void initialize() {
     rows.clear();
     for (int i = 0; i < numRows; ++i) {
-      setRow(i, new FloatVector());
+      setRow(i, new DoubleSparseVector());
     }
   }
 
@@ -67,7 +67,7 @@ public class FloatMatrix {
    * @param j the column
    * @return the value of the entry
    */
-  public float get(int i, int j) {
+  public double get(int i, int j) {
     return rows.get(i).get(j);
   }
 
@@ -78,7 +78,7 @@ public class FloatMatrix {
    * @param j the column
    * @param v the value of the entry
    */
-  public void set(int i, int j, float v) {
+  public void set(int i, int j, double v) {
     rows.get(i).set(j, v);
   }
 
@@ -88,17 +88,17 @@ public class FloatMatrix {
    * @param i the row number
    * @return the row of the matrix
    */
-  FloatVector getRow(int i) {
+  DoubleSparseVector getRow(int i) {
     return rows.get(i);
   }
 
   /**
-   * Set the float vector as the row specified.
+   * Set the double vector as the row specified.
    *
    * @param i the row
    * @param vec the vector to set as the row
    */
-  void setRow(int i, FloatVector vec) {
+  void setRow(int i, DoubleSparseVector vec) {
     rows.put(i, vec);
   }
 }

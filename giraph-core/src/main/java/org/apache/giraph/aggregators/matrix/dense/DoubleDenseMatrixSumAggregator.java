@@ -16,18 +16,20 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.aggregators.matrix;
+package org.apache.giraph.aggregators.matrix.dense;
 
 import org.apache.giraph.aggregators.AggregatorUsage;
+import org.apache.giraph.aggregators.matrix.MatrixSumAggregator;
 import org.apache.giraph.master.MasterAggregatorUsage;
 import org.apache.giraph.worker.WorkerAggregatorUsage;
 
 /**
- * The long matrix aggregator is used to register and aggregate long matrices.
+ * The double dense matrix aggregator is used to register and aggregate double
+ * dense matrices.
  */
-public class LongMatrixSumAggregator extends MatrixSumAggregator {
-  /** sparse vector with single entry */
-  private LongVector singletonVector = new LongVector();
+public class DoubleDenseMatrixSumAggregator extends MatrixSumAggregator {
+  /** Dense vector with a single entry */
+  private DoubleDenseVector singletonVector = new DoubleDenseVector();
 
   /**
    * Create a new matrix aggregator with the given prefix name for the vector
@@ -35,12 +37,12 @@ public class LongMatrixSumAggregator extends MatrixSumAggregator {
    *
    * @param name the prefix for the row vector aggregators
    */
-  public LongMatrixSumAggregator(String name) {
+  public DoubleDenseMatrixSumAggregator(String name) {
     super(name);
   }
 
   /**
-   * Register the long vector aggregators, one for each row of the matrix.
+   * Register the double vector aggregators, one for each row of the matrix.
    *
    * @param numRows the number of rows
    * @param master the master to register the aggregators
@@ -48,8 +50,11 @@ public class LongMatrixSumAggregator extends MatrixSumAggregator {
   public void register(int numRows, MasterAggregatorUsage master)
     throws InstantiationException, IllegalAccessException {
     for (int i = 0; i < numRows; ++i) {
-      master.registerAggregator(getRowAggregatorName(i),
-          LongVectorSumAggregator.class);
+      boolean success = master.registerAggregator(getRowAggregatorName(i),
+          DoubleDenseVectorSumAggregator.class);
+      if (!success) {
+        throw new RuntimeException("Aggregator already registered");
+      }
     }
   }
 
@@ -61,21 +66,21 @@ public class LongMatrixSumAggregator extends MatrixSumAggregator {
    * @param v the value
    * @param worker the worker to aggregate
    */
-  public void aggregate(int i, int j, long v, WorkerAggregatorUsage worker) {
-    singletonVector.clear();
-    singletonVector.set(j, v);
+  public void aggregate(int i, int j, double v, WorkerAggregatorUsage worker) {
+    singletonVector.setSingleton(j, v);
     worker.aggregate(getRowAggregatorName(i), singletonVector);
   }
 
   /**
    * Set the values of the matrix to the master specified. This is typically
-   * used in the master, to build an external LongMatrix and only set it at
+   * used in the master, to build an external DoubleMatrix and only set it at
    * the end.
    *
    * @param matrix the matrix to set the values
    * @param master the master
    */
-  public void setMatrix(LongMatrix matrix, MasterAggregatorUsage master) {
+  public void setMatrix(DoubleDenseMatrix matrix,
+      MasterAggregatorUsage master) {
     int numRows = matrix.getNumRows();
     for (int i = 0; i < numRows; ++i) {
       master.setAggregatedValue(getRowAggregatorName(i), matrix.getRow(i));
@@ -87,13 +92,14 @@ public class LongMatrixSumAggregator extends MatrixSumAggregator {
    *
    * @param numRows the number of rows
    * @param aggUser the master or worker
-   * @return the long matrix
+   * @return the double matrix
    */
-  public LongMatrix getMatrix(int numRows, AggregatorUsage aggUser) {
-    LongMatrix matrix = new LongMatrix(numRows);
+  public DoubleDenseMatrix getMatrix(int numRows, AggregatorUsage aggUser) {
+    DoubleDenseMatrix matrix = new DoubleDenseMatrix(numRows, 1);
     for (int i = 0; i < numRows; ++i) {
-      LongVector vec = aggUser.getAggregatedValue(getRowAggregatorName(i));
-      matrix.setRow(i, vec);
+      DoubleDenseVector vec = aggUser.getAggregatedValue(
+          getRowAggregatorName(i));
+      matrix.addRow(vec);
     }
     return matrix;
   }

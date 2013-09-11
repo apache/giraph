@@ -18,16 +18,21 @@
 
 package org.apache.giraph.aggregators.matrix;
 
+import java.util.ArrayList;
+
 /**
  * The abstract matrix aggregator contains the prefix name of the vector
- * aggregators the have the values of the rows.
+ * aggregators that have the values of the rows. It also cashes the names to
+ * avoid creating the same string multiples times.
  */
 public abstract class MatrixSumAggregator {
   /**
-   * The prefix name of the double vector aggregators. The aggregator names are
-   * created as (name0, name1, ...).
+   * The prefix name of the vector aggregators. The aggregator names are created
+   * as (name0, name1, ...).
    */
   private String name;
+  /** Cache the names of the columns */
+  private ArrayList<String> names = new ArrayList<String>();
 
   /**
    * Create a new matrix aggregator with the given prefix name for the vector
@@ -46,6 +51,9 @@ public abstract class MatrixSumAggregator {
    * @return the name of the aggregator
    */
   protected String getRowAggregatorName(int i) {
-    return name + i;
+    for (int n = names.size(); n <= i; ++n) {
+      names.add(name + n);
+    }
+    return names.get(i);
   }
 }

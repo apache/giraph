@@ -16,9 +16,10 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.aggregators.matrix;
+package org.apache.giraph.aggregators.matrix.sparse;
 
 import org.apache.giraph.aggregators.AggregatorUsage;
+import org.apache.giraph.aggregators.matrix.MatrixSumAggregator;
 import org.apache.giraph.master.MasterAggregatorUsage;
 import org.apache.giraph.worker.WorkerAggregatorUsage;
 
@@ -26,9 +27,9 @@ import org.apache.giraph.worker.WorkerAggregatorUsage;
  * The double matrix aggregator is used to register and aggregate double
  * matrices.
  */
-public class DoubleMatrixSumAggregator extends MatrixSumAggregator {
+public class DoubleSparseMatrixSumAggregator extends MatrixSumAggregator {
   /** sparse vector with single entry */
-  private DoubleVector singletonVector = new DoubleVector();
+  private DoubleSparseVector singletonVector = new DoubleSparseVector();
 
   /**
    * Create a new matrix aggregator with the given prefix name for the vector
@@ -36,7 +37,7 @@ public class DoubleMatrixSumAggregator extends MatrixSumAggregator {
    *
    * @param name the prefix for the row vector aggregators
    */
-  public DoubleMatrixSumAggregator(String name) {
+  public DoubleSparseMatrixSumAggregator(String name) {
     super(name);
   }
 
@@ -50,7 +51,7 @@ public class DoubleMatrixSumAggregator extends MatrixSumAggregator {
     throws InstantiationException, IllegalAccessException {
     for (int i = 0; i < numRows; ++i) {
       master.registerAggregator(getRowAggregatorName(i),
-          DoubleVectorSumAggregator.class);
+          DoubleSparseVectorSumAggregator.class);
     }
   }
 
@@ -76,7 +77,8 @@ public class DoubleMatrixSumAggregator extends MatrixSumAggregator {
    * @param matrix the matrix to set the values
    * @param master the master
    */
-  public void setMatrix(DoubleMatrix matrix, MasterAggregatorUsage master) {
+  public void setMatrix(DoubleSparseMatrix matrix,
+      MasterAggregatorUsage master) {
     int numRows = matrix.getNumRows();
     for (int i = 0; i < numRows; ++i) {
       master.setAggregatedValue(getRowAggregatorName(i), matrix.getRow(i));
@@ -90,10 +92,11 @@ public class DoubleMatrixSumAggregator extends MatrixSumAggregator {
    * @param aggUser the master or worker
    * @return the double matrix
    */
-  public DoubleMatrix getMatrix(int numRows, AggregatorUsage aggUser) {
-    DoubleMatrix matrix = new DoubleMatrix(numRows);
+  public DoubleSparseMatrix getMatrix(int numRows, AggregatorUsage aggUser) {
+    DoubleSparseMatrix matrix = new DoubleSparseMatrix(numRows);
     for (int i = 0; i < numRows; ++i) {
-      DoubleVector vec = aggUser.getAggregatedValue(getRowAggregatorName(i));
+      DoubleSparseVector vec = aggUser.getAggregatedValue(
+          getRowAggregatorName(i));
       matrix.setRow(i, vec);
     }
     return matrix;

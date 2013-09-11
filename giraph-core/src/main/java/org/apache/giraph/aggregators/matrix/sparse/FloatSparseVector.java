@@ -16,31 +16,31 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.aggregators.matrix;
+package org.apache.giraph.aggregators.matrix.sparse;
 
+import it.unimi.dsi.fastutil.ints.Int2FloatMap;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Map.Entry;
 
-import it.unimi.dsi.fastutil.ints.Int2LongOpenHashMap;
+import it.unimi.dsi.fastutil.ints.Int2FloatOpenHashMap;
 
 import org.apache.hadoop.io.Writable;
 
 /**
- * The long vector holds the values of a particular row.
+ * The float vector holds the values of a particular row.
  */
-public class LongVector implements Writable {
+public class FloatSparseVector implements Writable {
   /**
    * The entries of the vector are (key, value) pairs of the form (row, value)
    */
-  private Int2LongOpenHashMap entries = null;
+  private Int2FloatOpenHashMap entries = null;
 
   /**
    * Create a new vector with default size.
    */
-  public LongVector() {
-    initialize(Int2LongOpenHashMap.DEFAULT_INITIAL_SIZE);
+  public FloatSparseVector() {
+    initialize(Int2FloatOpenHashMap.DEFAULT_INITIAL_SIZE);
   }
 
   /**
@@ -48,7 +48,7 @@ public class LongVector implements Writable {
    *
    * @param size the size of the vector
    */
-  public LongVector(int size) {
+  public FloatSparseVector(int size) {
     initialize(size);
   }
 
@@ -58,8 +58,8 @@ public class LongVector implements Writable {
    * @param size the size of the vector
    */
   private void initialize(int size) {
-    entries = new Int2LongOpenHashMap(size);
-    entries.defaultReturnValue(0L);
+    entries = new Int2FloatOpenHashMap(size);
+    entries.defaultReturnValue(0.0f);
   }
 
   /**
@@ -68,7 +68,7 @@ public class LongVector implements Writable {
    * @param i the entry
    * @return the value of the entry.
    */
-  long get(int i) {
+  public float get(int i) {
     return entries.get(i);
   }
 
@@ -78,14 +78,14 @@ public class LongVector implements Writable {
    * @param i the entry
    * @param value the value to set to the entry
    */
-  void set(int i, long value) {
+  public void set(int i, float value) {
     entries.put(i, value);
   }
 
   /**
    * Clear the contents of the vector.
    */
-  void clear() {
+  public void clear() {
     entries.clear();
   }
 
@@ -95,18 +95,18 @@ public class LongVector implements Writable {
    *
    * @param other the vector to add.
    */
-  void add(LongVector other) {
-    for (Entry<Integer, Long> kv : other.entries.entrySet()) {
-      entries.addTo(kv.getKey(), kv.getValue());
+  public void add(FloatSparseVector other) {
+    for (Int2FloatMap.Entry entry : other.entries.int2FloatEntrySet()) {
+      entries.addTo(entry.getIntKey(), entry.getFloatValue());
     }
   }
 
   @Override
   public void write(DataOutput out) throws IOException {
     out.writeInt(entries.size());
-    for (Entry<Integer, Long> kv : entries.entrySet()) {
-      out.writeInt(kv.getKey());
-      out.writeLong(kv.getValue());
+    for (Int2FloatMap.Entry entry : entries.int2FloatEntrySet()) {
+      out.writeInt(entry.getIntKey());
+      out.writeFloat(entry.getFloatValue());
     }
   }
 
@@ -116,7 +116,7 @@ public class LongVector implements Writable {
     initialize(size);
     for (int i = 0; i < size; ++i) {
       int row = in.readInt();
-      long value = in.readLong();
+      float value = in.readFloat();
       entries.put(row, value);
     }
   }

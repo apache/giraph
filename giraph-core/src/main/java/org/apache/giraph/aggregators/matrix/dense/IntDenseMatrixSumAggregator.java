@@ -16,18 +16,20 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.aggregators.matrix;
+package org.apache.giraph.aggregators.matrix.dense;
 
 import org.apache.giraph.aggregators.AggregatorUsage;
+import org.apache.giraph.aggregators.matrix.MatrixSumAggregator;
 import org.apache.giraph.master.MasterAggregatorUsage;
 import org.apache.giraph.worker.WorkerAggregatorUsage;
 
 /**
- * The int matrix aggregator is used to register and aggregate int matrices.
+ * The int dense matrix aggregator is used to register and aggregate int dense
+ * matrices.
  */
-public class IntMatrixSumAggregator extends MatrixSumAggregator {
-  /** sparse vector with single entry */
-  private IntVector singletonVector = new IntVector();
+public class IntDenseMatrixSumAggregator extends MatrixSumAggregator {
+  /** Dense vector with a single entry */
+  private IntDenseVector singletonVector = new IntDenseVector();
 
   /**
    * Create a new matrix aggregator with the given prefix name for the vector
@@ -35,7 +37,7 @@ public class IntMatrixSumAggregator extends MatrixSumAggregator {
    *
    * @param name the prefix for the row vector aggregators
    */
-  public IntMatrixSumAggregator(String name) {
+  public IntDenseMatrixSumAggregator(String name) {
     super(name);
   }
 
@@ -48,8 +50,11 @@ public class IntMatrixSumAggregator extends MatrixSumAggregator {
   public void register(int numRows, MasterAggregatorUsage master)
     throws InstantiationException, IllegalAccessException {
     for (int i = 0; i < numRows; ++i) {
-      master.registerAggregator(getRowAggregatorName(i),
-          IntVectorSumAggregator.class);
+      boolean success = master.registerAggregator(getRowAggregatorName(i),
+          IntDenseVectorSumAggregator.class);
+      if (!success) {
+        throw new RuntimeException("Aggregator already registered");
+      }
     }
   }
 
@@ -62,8 +67,7 @@ public class IntMatrixSumAggregator extends MatrixSumAggregator {
    * @param worker the worker to aggregate
    */
   public void aggregate(int i, int j, int v, WorkerAggregatorUsage worker) {
-    singletonVector.clear();
-    singletonVector.set(j, v);
+    singletonVector.setSingleton(j, v);
     worker.aggregate(getRowAggregatorName(i), singletonVector);
   }
 
@@ -75,7 +79,7 @@ public class IntMatrixSumAggregator extends MatrixSumAggregator {
    * @param matrix the matrix to set the values
    * @param master the master
    */
-  public void setMatrix(IntMatrix matrix, MasterAggregatorUsage master) {
+  public void setMatrix(IntDenseMatrix matrix, MasterAggregatorUsage master) {
     int numRows = matrix.getNumRows();
     for (int i = 0; i < numRows; ++i) {
       master.setAggregatedValue(getRowAggregatorName(i), matrix.getRow(i));
@@ -89,11 +93,11 @@ public class IntMatrixSumAggregator extends MatrixSumAggregator {
    * @param aggUser the master or worker
    * @return the int matrix
    */
-  public IntMatrix getMatrix(int numRows, AggregatorUsage aggUser) {
-    IntMatrix matrix = new IntMatrix(numRows);
+  public IntDenseMatrix getMatrix(int numRows, AggregatorUsage aggUser) {
+    IntDenseMatrix matrix = new IntDenseMatrix(numRows, 1);
     for (int i = 0; i < numRows; ++i) {
-      IntVector vec = aggUser.getAggregatedValue(getRowAggregatorName(i));
-      matrix.setRow(i, vec);
+      IntDenseVector vec = aggUser.getAggregatedValue(getRowAggregatorName(i));
+      matrix.addRow(vec);
     }
     return matrix;
   }

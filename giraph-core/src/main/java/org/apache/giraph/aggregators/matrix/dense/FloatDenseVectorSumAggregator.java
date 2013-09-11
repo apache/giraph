@@ -16,22 +16,23 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.aggregators.matrix;
+package org.apache.giraph.aggregators.matrix.dense;
 
 import org.apache.giraph.aggregators.BasicAggregator;
 
 /**
- * The float vector aggregator is used to aggregate float vectors.
+ * The float dense vector aggregator is used to aggregate float dense vectors.
  */
-public class IntVectorSumAggregator extends BasicAggregator<IntVector> {
+public class FloatDenseVectorSumAggregator extends
+    BasicAggregator<FloatDenseVector> {
 
   @Override
-  public IntVector createInitialValue() {
-    return new IntVector();
+  public FloatDenseVector createInitialValue() {
+    return new FloatDenseVector();
   }
 
   @Override
-  public void aggregate(IntVector vector) {
+  public void aggregate(FloatDenseVector vector) {
     getAggregatedValue().add(vector);
   }
 }

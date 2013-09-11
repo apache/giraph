@@ -16,22 +16,23 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.aggregators.matrix;
+package org.apache.giraph.aggregators.matrix.sparse;
 
 import org.apache.giraph.aggregators.BasicAggregator;
 
 /**
  * The long vector aggregator is used to aggregate long vectors.
  */
-public class LongVectorSumAggregator extends BasicAggregator<LongVector> {
+public class LongSparseVectorSumAggregator extends
+    BasicAggregator<LongSparseVector> {
 
   @Override
-  public LongVector createInitialValue() {
-    return new LongVector();
+  public LongSparseVector createInitialValue() {
+    return new LongSparseVector();
   }
 
   @Override
-  public void aggregate(LongVector vector) {
+  public void aggregate(LongSparseVector vector) {
     getAggregatedValue().add(vector);
   }
 }

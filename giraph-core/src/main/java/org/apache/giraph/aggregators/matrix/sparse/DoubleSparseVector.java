@@ -16,31 +16,31 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.aggregators.matrix;
+package org.apache.giraph.aggregators.matrix.sparse;
 
+import it.unimi.dsi.fastutil.ints.Int2DoubleMap;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.Map.Entry;
 
-import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
+import it.unimi.dsi.fastutil.ints.Int2DoubleOpenHashMap;
 
 import org.apache.hadoop.io.Writable;
 
 /**
- * The int vector holds the values of a particular row.
+ * The double vector holds the values of a particular row.
  */
-public class IntVector implements Writable {
+public class DoubleSparseVector implements Writable {
   /**
    * The entries of the vector are (key, value) pairs of the form (row, value)
    */
-  private Int2IntOpenHashMap entries = null;
+  private Int2DoubleOpenHashMap entries = null;
 
   /**
    * Create a new vector with default size.
    */
-  public IntVector() {
-    initialize(Int2IntOpenHashMap.DEFAULT_INITIAL_SIZE);
+  public DoubleSparseVector() {
+    initialize(Int2DoubleOpenHashMap.DEFAULT_INITIAL_SIZE);
   }
 
   /**
@@ -48,7 +48,7 @@ public class IntVector implements Writable {
    *
    * @param size the size of the vector
    */
-  public IntVector(int size) {
+  public DoubleSparseVector(int size) {
     initialize(size);
   }
 
@@ -58,8 +58,8 @@ public class IntVector implements Writable {
    * @param size the size of the vector
    */
   private void initialize(int size) {
-    entries = new Int2IntOpenHashMap(size);
-    entries.defaultReturnValue(0);
+    entries = new Int2DoubleOpenHashMap(size);
+    entries.defaultReturnValue(0.0f);
   }
 
   /**
@@ -68,7 +68,7 @@ public class IntVector implements Writable {
    * @param i the entry
    * @return the value of the entry.
    */
-  int get(int i) {
+  public double get(int i) {
     return entries.get(i);
   }
 
@@ -78,14 +78,14 @@ public class IntVector implements Writable {
    * @param i the entry
    * @param value the value to set to the entry
    */
-  void set(int i, int value) {
+  public void set(int i, double value) {
     entries.put(i, value);
   }
 
   /**
    * Clear the contents of the vector.
    */
-  void clear() {
+  public void clear() {
     entries.clear();
   }
 
@@ -95,18 +95,18 @@ public class IntVector implements Writable {
    *
    * @param other the vector to add.
    */
-  void add(IntVector other) {
-    for (Entry<Integer, Integer> entry : other.entries.entrySet()) {
-      entries.addTo(entry.getKey(), entry.getValue());
+  public void add(DoubleSparseVector other) {
+    for (Int2DoubleMap.Entry entry : other.entries.int2DoubleEntrySet()) {
+      entries.addTo(entry.getIntKey(), entry.getDoubleValue());
     }
   }
 
   @Override
   public void write(DataOutput out) throws IOException {
     out.writeInt(entries.size());
-    for (Entry<Integer, Integer> entry : entries.entrySet()) {
-      out.writeInt(entry.getKey());
-      out.writeInt(entry.getValue());
+    for (Int2DoubleMap.Entry entry : entries.int2DoubleEntrySet()) {
+      out.writeInt(entry.getIntKey());
+      out.writeDouble(entry.getDoubleValue());
     }
   }
 
@@ -116,7 +116,7 @@ public class IntVector implements Writable {
     initialize(size);
     for (int i = 0; i < size; ++i) {
       int row = in.readInt();
-      int value = in.readInt();
+      double value = in.readDouble();
       entries.put(row, value);
     }
   }
