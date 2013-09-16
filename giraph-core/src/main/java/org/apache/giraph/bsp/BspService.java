@@ -137,6 +137,8 @@ public abstract class BspService<I extends WritableComparable,
       "/_partitionExchangeDir";
   /** Denotes that the superstep is done */
   public static final String SUPERSTEP_FINISHED_NODE = "/_superstepFinished";
+  /** Denotes that computation should be halted */
+  public static final String HALT_COMPUTATION_NODE = "/_haltComputation";
   /** Denotes which workers have been cleaned up */
   public static final String CLEANED_UP_DIR = "/_cleanedUpDir";
   /** JSON partition stats key */
@@ -200,6 +202,8 @@ public abstract class BspService<I extends WritableComparable,
   protected final String checkpointBasePath;
   /** Path to the master election path */
   protected final String masterElectionPath;
+  /** If this path exists computation will be halted */
+  protected final String haltComputationPath;
   /** Private ZooKeeper instance that implements the service */
   private final ZooKeeperExt zk;
   /** Has the Connection occurred? */
@@ -318,6 +322,12 @@ public abstract class BspService<I extends WritableComparable,
         CHECKPOINT_DIRECTORY.getWithDefault(getConfiguration(),
             CHECKPOINT_DIRECTORY.getDefaultValue() + "/" + getJobId());
     masterElectionPath = basePath + MASTER_ELECTION_DIR;
+    haltComputationPath = basePath + HALT_COMPUTATION_NODE;
+    getContext().getCounter(GiraphConstants.ZOOKEEPER_HALT_NODE_COUNTER_GROUP,
+        haltComputationPath);
+    if (LOG.isInfoEnabled()) {
+      LOG.info("BspService: Path to create to halt is " + haltComputationPath);
+    }
     if (LOG.isInfoEnabled()) {
       LOG.info("BspService: Connecting to ZooKeeper with job " + jobId +
           ", " + getTaskPartition() + " on " + serverPortList);

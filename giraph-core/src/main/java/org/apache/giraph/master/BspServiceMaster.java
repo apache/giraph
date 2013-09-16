@@ -1634,6 +1634,11 @@ public class BspServiceMaster<I extends WritableComparable,
         globalStats.getVertexCount() &&
         globalStats.getMessageCount() == 0)) {
       globalStats.setHaltComputation(true);
+    } else if (getZkExt().exists(haltComputationPath, false) != null) {
+      if (LOG.isInfoEnabled()) {
+        LOG.info("Halting computation because halt zookeeper node was created");
+      }
+      globalStats.setHaltComputation(true);
     }
 
     // If we have completed the maximum number of supersteps, stop

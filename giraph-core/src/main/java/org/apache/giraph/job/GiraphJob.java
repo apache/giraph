@@ -242,6 +242,13 @@ public class GiraphJob {
 
     GiraphJobObserver jobObserver = conf.getJobObserver();
     jobObserver.launchingJob(submittedJob);
+    submittedJob.submit();
+    if (LOG.isInfoEnabled()) {
+      LOG.info("run: Tracking URL: " + submittedJob.getTrackingURL());
+    }
+    HaltApplicationUtils.printHaltInfo(submittedJob, conf);
+    jobObserver.jobRunning(submittedJob);
+
     boolean passed = submittedJob.waitForCompletion(verbose);
     jobObserver.jobFinished(submittedJob, passed);
 

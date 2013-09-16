@@ -31,6 +31,13 @@ public interface GiraphJobObserver {
   void launchingJob(Job jobToSubmit);
 
   /**
+   * Callback after job was submitted.
+   * For example, you can track its progress here.
+   * @param submittedJob Job which was submitted.
+   */
+  void jobRunning(Job submittedJob);
+
+  /**
    * Callback when job finishes.
    * @param submittedJob Job that ran in hadoop.
    * @param passed true if job succeeded.

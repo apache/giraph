@@ -47,6 +47,7 @@ import org.apache.giraph.io.filters.EdgeInputFilter;
 import org.apache.giraph.io.filters.VertexInputFilter;
 import org.apache.giraph.job.DefaultJobObserver;
 import org.apache.giraph.job.GiraphJobObserver;
+import org.apache.giraph.job.HaltApplicationUtils;
 import org.apache.giraph.master.DefaultMasterCompute;
 import org.apache.giraph.master.MasterCompute;
 import org.apache.giraph.master.MasterObserver;
@@ -923,5 +924,27 @@ public interface GiraphConstants {
   BooleanConfOption ONE_TO_ALL_MSG_SENDING =
     new BooleanConfOption("giraph.oneToAllMsgSending", false, "Enable " +
         "one-to-all message sending strategy");
+
+  /**
+   * This counter group will contain one counter whose name is the ZooKeeper
+   * server:port which this job is using
+   */
+  String ZOOKEEPER_SERVER_PORT_COUNTER_GROUP = "Zookeeper server:port";
+
+  /**
+   * This counter group will contain one counter whose name is the ZooKeeper
+   * node path which should be created to trigger computation halt
+   */
+  String ZOOKEEPER_HALT_NODE_COUNTER_GROUP = "Zookeeper halt node";
+
+  /**
+   * Which class to use to write instructions on how to halt the application
+   */
+  ClassConfOption<HaltApplicationUtils.HaltInstructionsWriter>
+  HALT_INSTRUCTIONS_WRITER_CLASS = ClassConfOption.create(
+      "giraph.haltInstructionsWriter",
+      HaltApplicationUtils.DefaultHaltInstructionsWriter.class,
+      HaltApplicationUtils.HaltInstructionsWriter.class,
+      "Class used to write instructions on how to halt the application");
 }
 // CHECKSTYLE: resume InterfaceIsTypeCheck

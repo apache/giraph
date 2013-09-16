@@ -370,6 +370,8 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
     }
     zkManager.onlineZooKeeperServers();
     serverPortList = zkManager.getZooKeeperServerPortString();
+    context.getCounter(GiraphConstants.ZOOKEEPER_SERVER_PORT_COUNTER_GROUP,
+        serverPortList);
     return false;
   }
 
