@@ -1,6 +1,14 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-771: Upgrade hive-io to 0.17 (majakabiljo)
+
+  GIRAPH-756: Provide a way to halt running application (majakabiljo)
+
+  GIRAPH-753: Efficient dense matrix aggregators (herald via apresta)
+
+  GIRAPH-752: Better support for supernodes (majakabiljo)
+
   GIRAPH-727: Support for Watts Strogatz VertexInputFormat (claudio)
 
   GIRAPH-746: Track and log versions of dependencies (nitay)
