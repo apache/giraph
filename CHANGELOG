@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-761: GiraphFileInputFormat ignores hidden file filter in
+  folders (Manuel Lagang via aching)
+
   GIRAPH-771: Upgrade hive-io to 0.17 (majakabiljo)
 
   GIRAPH-756: Provide a way to halt running application (majakabiljo)

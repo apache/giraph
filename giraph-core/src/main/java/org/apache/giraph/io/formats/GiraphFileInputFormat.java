@@ -252,7 +252,8 @@ end[HADOOP_NON_SECURE]*/
       } else {
         for (FileStatus globStat: matches) {
           if (globStat.isDir()) {
-            Collections.addAll(result, fs.listStatus(globStat.getPath()));
+            Collections.addAll(result, fs.listStatus(globStat.getPath(),
+                inputFilter));
           } else {
             result.add(globStat);
           }
