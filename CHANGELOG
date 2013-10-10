@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-776: Update Giraph to use HiveIO 0.18 (gmalewicz via majakabiljo)
+
   GIRAPH-775: Vertex value combiner (aching)
 
   GIRAPH-761: GiraphFileInputFormat ignores hidden file filter in

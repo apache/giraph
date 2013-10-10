@@ -28,7 +28,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
-import org.apache.thrift.TException;
 
 import com.facebook.hiveio.input.HiveApiInputFormat;
 import com.facebook.hiveio.input.HiveInputDescription;
@@ -76,11 +75,16 @@ public class HiveUtils {
   public static void initializeHiveInput(HiveApiInputFormat hiveInputFormat,
       HiveInputDescription inputDescription, String profileId,
       Configuration conf) {
-    hiveInputFormat.setMyProfileId(profileId);
-    HiveApiInputFormat.setProfileInputDesc(conf, inputDescription, profileId);
-    HiveTableSchema schema = HiveTableSchemas.lookup(conf,
-        inputDescription.getTableDesc());
-    HiveTableSchemas.put(conf, profileId, schema);
+    try {
+      hiveInputFormat.setMyProfileId(profileId);
+      HiveApiInputFormat.setProfileInputDesc(conf, inputDescription, profileId);
+      HiveTableSchema schema = HiveTableSchemas.lookup(
+          conf, inputDescription.getTableDesc());
+      HiveTableSchemas.put(conf, profileId, schema);
+    } catch (IOException e) {
+      throw new IllegalStateException(
+          "initializeHiveInput: IOException occurred", e);
+    }
   }
 
   /**
@@ -93,16 +97,16 @@ public class HiveUtils {
    */
   public static void initializeHiveOutput(HiveApiOutputFormat hiveOutputFormat,
       HiveOutputDescription outputDesc, String profileId, Configuration conf) {
-    hiveOutputFormat.setMyProfileId(profileId);
     try {
+      hiveOutputFormat.setMyProfileId(profileId);
       HiveApiOutputFormat.initProfile(conf, outputDesc, profileId);
-    } catch (TException e) {
+      HiveTableSchema schema = HiveTableSchemas.lookup(
+          conf, outputDesc.getTableDesc());
+      HiveTableSchemas.put(conf, profileId, schema);
+    } catch (IOException e) {
       throw new IllegalStateException(
-          "initializeHiveOutput: TException occurred", e);
+          "initializeHiveOutput: IOException occurred", e);
     }
-    HiveTableSchema schema = HiveTableSchemas.lookup(conf,
-        outputDesc.getTableDesc());
-    HiveTableSchemas.put(conf, profileId, schema);
   }
 
   /**
