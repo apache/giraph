@@ -1,0 +1,14 @@
+<property>
+  <name>mapred.tasktracker.map.tasks.maximum</name>
+  <value>4</value>
+</property>
+
+<property>
+  <name>mapred.map.tasks</name>
+  <value>4</value>
+</property>
+
+After preparing the local filesystem with:
+
+rm -rf /tmp/hadoop-<username>
+/path/to/hadoop/bin/hadoop namenode -format
