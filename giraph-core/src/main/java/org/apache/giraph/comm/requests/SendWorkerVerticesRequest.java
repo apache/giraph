@@ -115,7 +115,8 @@ public class SendWorkerVerticesRequest<I extends WritableComparable,
 
   @Override
   public int getSerializedSize() {
-    int size = 0;
+    // 4 for number of partitions
+    int size = super.getSerializedSize() + 4;
     PairList<Integer, ExtendedDataOutput>.Iterator iterator =
         workerPartitions.getIterator();
     while (iterator.hasNext()) {
