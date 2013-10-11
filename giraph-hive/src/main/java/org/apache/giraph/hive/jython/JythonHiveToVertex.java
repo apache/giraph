@@ -85,14 +85,14 @@ public class JythonHiveToVertex<I extends WritableComparable,
 
   @Override
   public I getVertexId(HiveReadableRecord record) {
-    I vertexId = getConf().getVertexIdFactory().newInstance();
+    I vertexId = getReusableVertexId();
     vertexIdReader.readFields(vertexId, record);
     return vertexId;
   }
 
   @Override
   public V getVertexValue(HiveReadableRecord record) {
-    V vertexValue = getConf().getVertexValueFactory().newInstance();
+    V vertexValue = getReusableVertexValue();
     vertexValueReader.readFields(vertexValue, record);
     return vertexValue;
   }

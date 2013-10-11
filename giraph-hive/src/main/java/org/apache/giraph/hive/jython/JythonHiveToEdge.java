@@ -85,21 +85,21 @@ public class JythonHiveToEdge<I extends WritableComparable, E extends Writable>
 
   @Override
   public I getSourceVertexId(HiveReadableRecord record) {
-    I sourceId = getConf().getVertexIdFactory().newInstance();
+    I sourceId = getReusableSourceVertexId();
     sourceIdReader.readFields(sourceId, record);
     return sourceId;
   }
 
   @Override
   public I getTargetVertexId(HiveReadableRecord record) {
-    I targetId = getConf().getVertexIdFactory().newInstance();
+    I targetId = getReusableTargetVertexId();
     targetIdReader.readFields(targetId, record);
     return targetId;
   }
 
   @Override
   public E getEdgeValue(HiveReadableRecord record) {
-    E edgeValue = getConf().getEdgeValueFactory().newInstance();
+    E edgeValue = getReusableEdgeValue();
     edgeValueReader.readFields(edgeValue, record);
     return edgeValue;
   }

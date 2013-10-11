@@ -19,9 +19,9 @@ package org.apache.giraph.hive.input.vertex.examples;
 
 import com.facebook.hiveio.common.HiveType;
 import com.facebook.hiveio.input.HiveInputDescription;
+import com.facebook.hiveio.input.parser.Records;
 import com.facebook.hiveio.record.HiveReadableRecord;
 import com.facebook.hiveio.schema.HiveTableSchema;
-import com.google.common.base.Preconditions;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.hive.common.HiveParsing;
 import org.apache.giraph.hive.input.vertex.SimpleHiveToVertex;
@@ -36,8 +36,8 @@ public class HiveIntIntNullVertex
     extends SimpleHiveToVertex<IntWritable, IntWritable, NullWritable> {
   @Override public void checkInput(HiveInputDescription inputDesc,
       HiveTableSchema schema) {
-    Preconditions.checkArgument(schema.columnType(0) == HiveType.INT);
-    Preconditions.checkArgument(schema.columnType(1) == HiveType.LIST);
+    Records.verifyType(0, HiveType.INT, schema);
+    Records.verifyType(1, HiveType.LIST, schema);
   }
 
   @Override
@@ -48,11 +48,11 @@ public class HiveIntIntNullVertex
 
   @Override
   public IntWritable getVertexId(HiveReadableRecord record) {
-    return HiveParsing.parseIntID(record, 0);
+    return HiveParsing.parseIntID(record, 0, getReusableVertexId());
   }
 
   @Override
   public IntWritable getVertexValue(HiveReadableRecord record) {
-    return new IntWritable();
+    return getReusableVertexValue();
   }
 }

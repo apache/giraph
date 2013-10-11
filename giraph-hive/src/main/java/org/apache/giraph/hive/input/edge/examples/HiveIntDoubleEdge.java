@@ -24,9 +24,9 @@ import org.apache.hadoop.io.IntWritable;
 
 import com.facebook.hiveio.common.HiveType;
 import com.facebook.hiveio.input.HiveInputDescription;
+import com.facebook.hiveio.input.parser.Records;
 import com.facebook.hiveio.record.HiveReadableRecord;
 import com.facebook.hiveio.schema.HiveTableSchema;
-import com.google.common.base.Preconditions;
 
 /**
  * A simple HiveToEdge with integer IDs and double edge values.
@@ -35,23 +35,24 @@ public class HiveIntDoubleEdge
     extends SimpleHiveToEdge<IntWritable, DoubleWritable> {
   @Override public void checkInput(HiveInputDescription inputDesc,
       HiveTableSchema schema) {
-    Preconditions.checkArgument(schema.columnType(0) == HiveType.INT);
-    Preconditions.checkArgument(schema.columnType(1) == HiveType.INT);
-    Preconditions.checkArgument(schema.columnType(2) == HiveType.DOUBLE);
+    Records.verifyType(0, HiveType.INT, schema);
+    Records.verifyType(1, HiveType.INT, schema);
+    Records.verifyType(2, HiveType.DOUBLE, schema);
   }
 
   @Override
   public DoubleWritable getEdgeValue(HiveReadableRecord hiveRecord) {
-    return HiveParsing.parseDoubleWritable(hiveRecord, 2);
+    return HiveParsing.parseDoubleWritable(hiveRecord, 2,
+        getReusableEdgeValue());
   }
 
   @Override
   public IntWritable getSourceVertexId(HiveReadableRecord hiveRecord) {
-    return HiveParsing.parseIntID(hiveRecord, 0);
+    return HiveParsing.parseIntID(hiveRecord, 0, getReusableSourceVertexId());
   }
 
   @Override
   public IntWritable getTargetVertexId(HiveReadableRecord hiveRecord) {
-    return HiveParsing.parseIntID(hiveRecord, 1);
+    return HiveParsing.parseIntID(hiveRecord, 1, getReusableTargetVertexId());
   }
 }

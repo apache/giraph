@@ -25,9 +25,9 @@ import org.apache.hadoop.io.IntWritable;
 
 import com.facebook.hiveio.common.HiveType;
 import com.facebook.hiveio.input.HiveInputDescription;
+import com.facebook.hiveio.input.parser.Records;
 import com.facebook.hiveio.record.HiveReadableRecord;
 import com.facebook.hiveio.schema.HiveTableSchema;
-import com.google.common.base.Preconditions;
 
 /**
  * Simple HiveToVertex that reads vertices with integer IDs, Double vertex
@@ -37,9 +37,9 @@ public class HiveIntDoubleDoubleVertex extends SimpleHiveToVertex<IntWritable,
     DoubleWritable, DoubleWritable> {
   @Override public void checkInput(HiveInputDescription inputDesc,
       HiveTableSchema schema) {
-    Preconditions.checkArgument(schema.columnType(0) == HiveType.INT);
-    Preconditions.checkArgument(schema.columnType(1) == HiveType.DOUBLE);
-    Preconditions.checkArgument(schema.columnType(2) == HiveType.MAP);
+    Records.verifyType(0, HiveType.INT, schema);
+    Records.verifyType(1, HiveType.DOUBLE, schema);
+    Records.verifyType(2, HiveType.MAP, schema);
   }
 
   @Override public Iterable<Edge<IntWritable, DoubleWritable>> getEdges(
@@ -49,11 +49,11 @@ public class HiveIntDoubleDoubleVertex extends SimpleHiveToVertex<IntWritable,
 
   @Override
   public IntWritable getVertexId(HiveReadableRecord record) {
-    return HiveParsing.parseIntID(record, 0);
+    return HiveParsing.parseIntID(record, 0, getReusableVertexId());
   }
 
   @Override
   public DoubleWritable getVertexValue(HiveReadableRecord record) {
-    return HiveParsing.parseDoubleWritable(record, 1);
+    return HiveParsing.parseDoubleWritable(record, 1, getReusableVertexValue());
   }
 }

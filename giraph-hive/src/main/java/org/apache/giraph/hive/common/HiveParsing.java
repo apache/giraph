@@ -62,33 +62,40 @@ public class HiveParsing {
    * Parse a Integer ID from a Hive record
    * @param record Hive record to parse
    * @param columnIndex offset of column in row
-   * @return LongWritable ID
+   * @param reusableId Reusable vertex id object
+   * @return IntWritable ID
    */
   public static IntWritable parseIntID(HiveReadableRecord record,
-      int columnIndex) {
-    return new IntWritable(parseInt(record, columnIndex));
+      int columnIndex, IntWritable reusableId) {
+    reusableId.set(parseInt(record, columnIndex));
+    return reusableId;
   }
 
   /**
    * Parse a Long ID from a Hive record
    * @param record Hive record to parse
    * @param columnIndex offset of column in row
+   * @param reusableId Reusable vertex id object
    * @return LongWritable ID
    */
   public static LongWritable parseLongID(HiveReadableRecord record,
-      int columnIndex) {
-    return new LongWritable(record.getLong(columnIndex));
+      int columnIndex, LongWritable reusableId) {
+    reusableId.set(record.getLong(columnIndex));
+    return reusableId;
   }
 
   /**
    * Parse a weight from a Hive record
    * @param record Hive record to parse
    * @param columnIndex offset of column in row
+   * @param reusableDoubleWritable Reusable DoubleWritable object
+   *
    * @return DoubleWritable weight
    */
   public static DoubleWritable parseDoubleWritable(HiveReadableRecord record,
-      int columnIndex) {
-    return new DoubleWritable(record.getDouble(columnIndex));
+      int columnIndex, DoubleWritable reusableDoubleWritable) {
+    reusableDoubleWritable.set(record.getDouble(columnIndex));
+    return reusableDoubleWritable;
   }
 
   /**

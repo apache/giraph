@@ -25,9 +25,9 @@ import org.apache.hadoop.io.NullWritable;
 
 import com.facebook.hiveio.common.HiveType;
 import com.facebook.hiveio.input.HiveInputDescription;
+import com.facebook.hiveio.input.parser.Records;
 import com.facebook.hiveio.record.HiveReadableRecord;
 import com.facebook.hiveio.schema.HiveTableSchema;
-import com.google.common.base.Preconditions;
 
 /**
  * Simple HiveToVertex that reads vertices with integer IDs, no vertex values,
@@ -37,8 +37,8 @@ public class HiveIntNullNullVertex
     extends SimpleHiveToVertex<IntWritable, NullWritable, NullWritable> {
   @Override public void checkInput(HiveInputDescription inputDesc,
       HiveTableSchema schema) {
-    Preconditions.checkArgument(schema.columnType(0) == HiveType.INT);
-    Preconditions.checkArgument(schema.columnType(1) == HiveType.LIST);
+    Records.verifyType(0, HiveType.INT, schema);
+    Records.verifyType(1, HiveType.LIST, schema);
   }
 
   @Override
@@ -47,11 +47,13 @@ public class HiveIntNullNullVertex
     return HiveParsing.parseIntNullEdges(record, 1);
   }
 
-  @Override public IntWritable getVertexId(HiveReadableRecord record) {
-    return HiveParsing.parseIntID(record, 0);
+  @Override
+  public IntWritable getVertexId(HiveReadableRecord record) {
+    return HiveParsing.parseIntID(record, 0, getReusableVertexId());
   }
 
-  @Override public NullWritable getVertexValue(HiveReadableRecord record) {
+  @Override
+  public NullWritable getVertexValue(HiveReadableRecord record) {
     return NullWritable.get();
   }
 }

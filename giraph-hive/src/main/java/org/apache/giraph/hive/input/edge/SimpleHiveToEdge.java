@@ -67,6 +67,7 @@ public abstract class SimpleHiveToEdge<I extends WritableComparable,
   @Override
   public void initializeRecords(Iterator<HiveReadableRecord> records) {
     this.records = records;
+    reusableEdge.setSourceVertexId(getConf().createVertexId());
     reusableEdge.setEdge(getConf().createReusableEdge());
   }
 
@@ -82,6 +83,18 @@ public abstract class SimpleHiveToEdge<I extends WritableComparable,
     reusableEdge.setTargetVertexId(getTargetVertexId(record));
     reusableEdge.setEdgeValue(getEdgeValue(record));
     return reusableEdge;
+  }
+
+  protected I getReusableSourceVertexId() {
+    return reusableEdge.getSourceVertexId();
+  }
+
+  protected I getReusableTargetVertexId() {
+    return reusableEdge.getTargetVertexId();
+  }
+
+  protected E getReusableEdgeValue() {
+    return reusableEdge.getEdgeValue();
   }
 }
 

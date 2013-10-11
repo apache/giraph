@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-779: Make it easier to reuse objects with hive-io input (majakabiljo)
+
   GIRAPH-778: Testing with TestGraph is broken (majakabiljo)
 
   GIRAPH-777: Fix bug from GIRAPH-775 (majakabiljo)

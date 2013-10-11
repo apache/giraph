@@ -18,8 +18,8 @@
 
 package org.apache.giraph.hive.input.vertex;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.Edge;
+import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -43,7 +43,14 @@ public abstract class SimpleHiveToVertex<I extends WritableComparable,
   private Iterator<HiveReadableRecord> records;
 
   /** Reusable vertex object */
-  private Vertex<I, V, E> reusableVertex = null;
+  private Vertex<I, V, E> reusableVertex;
+
+  /** Reusable vertex id */
+  private I reusableVertexId;
+  /** Reusable vertex value */
+  private V reusableVertexValue;
+  /** Reusable edges */
+  private OutEdges<I, E> reusableOutEdges;
 
   /**
    * Read the Vertex's ID from the HiveRecord given.
@@ -70,17 +77,12 @@ public abstract class SimpleHiveToVertex<I extends WritableComparable,
   public abstract Iterable<Edge<I, E>> getEdges(HiveReadableRecord record);
 
   @Override
-  public void setConf(
-      ImmutableClassesGiraphConfiguration<I, V, E> conf) {
-    super.setConf(conf);
-    if (conf.reuseVertexObjects()) {
-      reusableVertex = getConf().createVertex();
-    }
-  }
-
-  @Override
   public void initializeRecords(Iterator<HiveReadableRecord> records) {
     this.records = records;
+    reusableVertex = getConf().createVertex();
+    reusableVertexId = getConf().createVertexId();
+    reusableVertexValue = getConf().createVertexValue();
+    reusableOutEdges = getConf().createOutEdges();
   }
 
   @Override
@@ -94,11 +96,25 @@ public abstract class SimpleHiveToVertex<I extends WritableComparable,
     I id = getVertexId(record);
     V value = getVertexValue(record);
     Iterable<Edge<I, E>> edges = getEdges(record);
-    Vertex<I, V, E> vertex = reusableVertex;
-    if (vertex == null) {
-      vertex = getConf().createVertex();
-    }
-    vertex.initialize(id, value, edges);
-    return vertex;
+    reusableVertex.initialize(id, value, edges);
+    return reusableVertex;
+  }
+
+  protected I getReusableVertexId() {
+    return reusableVertexId;
+  }
+
+  protected V getReusableVertexValue() {
+    return reusableVertexValue;
+  }
+
+  /**
+   * Get reusable OutEdges object
+   *
+   * @param <OE> Type of OutEdges
+   * @return Reusable OutEdges object
+   */
+  protected <OE extends OutEdges<I, E>> OE getReusableOutEdges() {
+    return (OE) reusableOutEdges;
   }
 }
