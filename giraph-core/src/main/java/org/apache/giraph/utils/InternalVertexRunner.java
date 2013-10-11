@@ -21,6 +21,7 @@ package org.apache.giraph.utils;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.io.formats.GiraphFileInputFormat;
+import org.apache.giraph.io.formats.InMemoryVertexOutputFormat;
 import org.apache.giraph.job.GiraphJob;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Writable;
@@ -194,8 +195,8 @@ public class InternalVertexRunner {
   }
 
   /**
-   * Attempts to run the vertex internally in the current JVM, reading and
-   * writing to an in-memory graph. Will start its own zookeeper
+   * Attempts to run the vertex internally in the current JVM,
+   * reading from an in-memory graph. Will start its own zookeeper
    * instance.
    *
    * @param <I> Vertex ID
@@ -203,12 +204,11 @@ public class InternalVertexRunner {
    * @param <E> Edge Value
    * @param conf GiraphClasses specifying which types to use
    * @param graph input graph
-   * @return iterable output data
    * @throws Exception if anything goes wrong
    */
   public static <I extends WritableComparable,
     V extends Writable,
-    E extends Writable> TestGraph<I, V, E> run(
+    E extends Writable> void run(
       GiraphConfiguration conf,
       TestGraph<I, V, E> graph) throws Exception {
     File tmpDir = null;
@@ -266,10 +266,33 @@ public class InternalVertexRunner {
         executorService.shutdown();
         zookeeper.end();
       }
-      return graph;
     } finally {
       FileUtils.delete(tmpDir);
     }
+  }
+
+  /**
+   * Attempts to run the vertex internally in the current JVM, reading and
+   * writing to an in-memory graph. Will start its own zookeeper
+   * instance.
+   *
+   * @param <I> Vertex ID
+   * @param <V> Vertex Value
+   * @param <E> Edge Value
+   * @param conf GiraphClasses specifying which types to use
+   * @param graph input graph
+   * @return Output graph
+   * @throws Exception if anything goes wrong
+   */
+  public static <I extends WritableComparable,
+      V extends Writable,
+      E extends Writable> TestGraph<I, V, E> runWithInMemoryOutput(
+      GiraphConfiguration conf,
+      TestGraph<I, V, E> graph) throws Exception {
+    conf.setVertexOutputFormatClass(InMemoryVertexOutputFormat.class);
+    InMemoryVertexOutputFormat.initializeOutputGraph(conf);
+    InternalVertexRunner.run(conf, graph);
+    return InMemoryVertexOutputFormat.getOutputGraph();
   }
 
   /**

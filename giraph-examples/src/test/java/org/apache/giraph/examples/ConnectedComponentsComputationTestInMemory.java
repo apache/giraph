@@ -82,7 +82,7 @@ public class ConnectedComponentsComputationTestInMemory {
 
     // run internally
     TestGraph<IntWritable, IntWritable, NullWritable> results =
-      InternalVertexRunner.run(conf, graph);
+        InternalVertexRunner.runWithInMemoryOutput(conf, graph);
 
     SetMultimap<Integer, Integer> components = parseResults(results);
 

@@ -54,7 +54,7 @@ public class TestSwitchClasses {
     graph.addVertex(id1, new StatusValue());
     IntWritable id2 = new IntWritable(2);
     graph.addVertex(id2, new StatusValue());
-    graph = InternalVertexRunner.run(conf, graph);
+    graph = InternalVertexRunner.runWithInMemoryOutput(conf, graph);
 
     Assert.assertEquals(2, graph.getVertices().size());
   }

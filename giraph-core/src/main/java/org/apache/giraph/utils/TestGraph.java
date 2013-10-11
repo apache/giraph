@@ -73,6 +73,17 @@ public class TestGraph<I extends WritableComparable,
   }
 
   /**
+   * Add vertex
+   *
+   * @param vertex Vertex
+   * @return this
+   */
+  public TestGraph<I, V, E> addVertex(Vertex<I, V, E> vertex) {
+    vertices.put(vertex.getId(), vertex);
+    return this;
+  }
+
+  /**
    * Add vertex with given ID
    *
    * @param id the index
