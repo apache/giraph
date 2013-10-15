@@ -15,7 +15,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-GIRAPH_ENV_DIR="$( cd -P "$( dirname "$0" )" && pwd )"
+GIRAPH_ENV_DIR="$( cd -P "$( dirname "${BASH_SOURCE:-0}" )" && pwd )"
 source $GIRAPH_ENV_DIR/giraph-env
 
 CLASS=org.apache.giraph.zk.ZooKeeperNodeCreator
