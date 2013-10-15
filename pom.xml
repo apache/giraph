@@ -1056,12 +1056,32 @@ under the License.
       </dependency>
       <dependency>
         <groupId>org.apache.giraph</groupId>
+        <artifactId>giraph-examples</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.giraph</groupId>
         <artifactId>giraph-hcatalog</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.giraph</groupId>
         <artifactId>giraph-hive</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.giraph</groupId>
+        <artifactId>giraph-hbase</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.giraph</groupId>
+        <artifactId>giraph-accumulo</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.giraph</groupId>
+        <artifactId>giraph-rexster</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
@@ -1254,6 +1274,7 @@ under the License.
   <modules>
     <module>giraph-core</module>
     <module>giraph-examples</module>
+    <module>giraph-dist</module>
   </modules>
 
 </project>
