@@ -28,6 +28,7 @@ import org.apache.giraph.graph.DefaultVertexResolver;
 import org.apache.giraph.graph.VertexValueCombiner;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.io.EdgeInputFormat;
+import org.apache.giraph.io.EdgeOutputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.hadoop.conf.Configuration;
@@ -140,6 +141,7 @@ public class GiraphConfigurationValidator<I extends WritableComparable,
     verifyVertexInputFormatGenericTypes();
     verifyEdgeInputFormatGenericTypes();
     verifyVertexOutputFormatGenericTypes();
+    verifyEdgeOutputFormatGenericTypes();
     verifyVertexResolverGenericTypes();
     verifyVertexValueCombinerGenericTypes();
     verifyMessageCombinerGenericTypes();
@@ -276,11 +278,27 @@ public class GiraphConfigurationValidator<I extends WritableComparable,
     }
   }
 
-  /** Verify that the output format's generic params match the job. */
+  /** Verify that the vertex output format's generic params match the job. */
   private void verifyVertexOutputFormatGenericTypes() {
+    Class<? extends EdgeOutputFormat<I, V, E>>
+      edgeOutputFormatClass = conf.getEdgeOutputFormatClass();
+    if (conf.hasEdgeOutputFormat()) {
+      Class<?>[] classList =
+        getTypeArguments(EdgeOutputFormat.class, edgeOutputFormatClass);
+      checkAssignable(classList, ID_PARAM_INDEX, vertexIndexType(),
+          VertexOutputFormat.class, "vertex index");
+      checkAssignable(classList, VALUE_PARAM_INDEX, vertexValueType(),
+          VertexOutputFormat.class, "vertex value");
+      checkAssignable(classList, EDGE_PARAM_INDEX, edgeValueType(),
+          VertexOutputFormat.class, "edge value");
+    }
+  }
+
+  /** Verify that the edge output format's generic params match the job. */
+  private void verifyEdgeOutputFormatGenericTypes() {
     Class<? extends VertexOutputFormat<I, V, E>>
       vertexOutputFormatClass = conf.getVertexOutputFormatClass();
-    if (vertexOutputFormatClass != null) {
+    if (conf.hasVertexOutputFormat()) {
       Class<?>[] classList =
         getTypeArguments(VertexOutputFormat.class, vertexOutputFormatClass);
       checkAssignable(classList, ID_PARAM_INDEX, vertexIndexType(),

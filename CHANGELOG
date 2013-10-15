@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-773: Cannot use only EdgeOutputFormat (armax00 via claudio)
+
   GIRAPH-779: Make it easier to reuse objects with hive-io input (majakabiljo)
 
   GIRAPH-778: Testing with TestGraph is broken (majakabiljo)
@@ -27,9 +29,9 @@ Release 1.1.0 - unreleased
   GIRAPH-746: Track and log versions of dependencies (nitay)
 
   GIRAPH-751: Build error: convertEdgeToLine in two different classes have the 
-  same erasure, yet neither overrides the other (aarmax0 via claudio)
+  same erasure, yet neither overrides the other (armax00 via claudio)
 
-  GIRAPH-732: EdgeOutputFormat (aarmax00 via claudio)
+  GIRAPH-732: EdgeOutputFormat (armax00 via claudio)
 
   GIRAPH-512: JavaDoc warnings (tdn120 via nitay)
 

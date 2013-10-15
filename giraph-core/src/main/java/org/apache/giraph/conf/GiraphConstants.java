@@ -229,7 +229,7 @@ public interface GiraphConstants {
           EdgeOutputFormat.class, "EdgeOutputFormat class");
   /** EdgeOutputFormat sub-directory */
   StrConfOption EDGE_OUTPUT_FORMAT_SUBDIR =
-    new StrConfOption("giraph.edge.output.subdir", "edges",
+    new StrConfOption("giraph.edge.output.subdir", "",
                       "EdgeOutputFormat sub-directory");
 
   /** GiraphTextOuputFormat Separator */
