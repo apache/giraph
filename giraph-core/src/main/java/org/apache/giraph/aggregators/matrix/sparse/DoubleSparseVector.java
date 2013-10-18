@@ -19,11 +19,13 @@
 package org.apache.giraph.aggregators.matrix.sparse;
 
 import it.unimi.dsi.fastutil.ints.Int2DoubleMap;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
 import it.unimi.dsi.fastutil.ints.Int2DoubleOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectIterator;
 
 import org.apache.hadoop.io.Writable;
 
@@ -96,7 +98,10 @@ public class DoubleSparseVector implements Writable {
    * @param other the vector to add.
    */
   public void add(DoubleSparseVector other) {
-    for (Int2DoubleMap.Entry entry : other.entries.int2DoubleEntrySet()) {
+    ObjectIterator<Int2DoubleMap.Entry> iter =
+        other.entries.int2DoubleEntrySet().fastIterator();
+    while (iter.hasNext()) {
+      Int2DoubleMap.Entry entry = iter.next();
       entries.addTo(entry.getIntKey(), entry.getDoubleValue());
     }
   }
@@ -104,7 +109,10 @@ public class DoubleSparseVector implements Writable {
   @Override
   public void write(DataOutput out) throws IOException {
     out.writeInt(entries.size());
-    for (Int2DoubleMap.Entry entry : entries.int2DoubleEntrySet()) {
+    ObjectIterator<Int2DoubleMap.Entry> iter =
+        entries.int2DoubleEntrySet().fastIterator();
+    while (iter.hasNext()) {
+      Int2DoubleMap.Entry entry = iter.next();
       out.writeInt(entry.getIntKey());
       out.writeDouble(entry.getDoubleValue());
     }

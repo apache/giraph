@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-786: XSparseVector create a lot of objects in add/write
+  (ikabiljo via majakabiljo)
+
   GIRAPH-773: Cannot use only EdgeOutputFormat (armax00 via claudio)
 
   GIRAPH-779: Make it easier to reuse objects with hive-io input (majakabiljo)

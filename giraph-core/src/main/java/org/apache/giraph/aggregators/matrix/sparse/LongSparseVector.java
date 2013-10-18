@@ -19,11 +19,13 @@
 package org.apache.giraph.aggregators.matrix.sparse;
 
 import it.unimi.dsi.fastutil.ints.Int2LongMap;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
 import it.unimi.dsi.fastutil.ints.Int2LongOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectIterator;
 
 import org.apache.hadoop.io.Writable;
 
@@ -96,17 +98,23 @@ public class LongSparseVector implements Writable {
    * @param other the vector to add.
    */
   public void add(LongSparseVector other) {
-    for (Int2LongMap.Entry kv : other.entries.int2LongEntrySet()) {
-      entries.addTo(kv.getIntKey(), kv.getLongValue());
+    ObjectIterator<Int2LongMap.Entry> iter =
+        other.entries.int2LongEntrySet().fastIterator();
+    while (iter.hasNext()) {
+      Int2LongMap.Entry entry = iter.next();
+      entries.addTo(entry.getIntKey(), entry.getLongValue());
     }
   }
 
   @Override
   public void write(DataOutput out) throws IOException {
     out.writeInt(entries.size());
-    for (Int2LongMap.Entry kv : entries.int2LongEntrySet()) {
-      out.writeInt(kv.getIntKey());
-      out.writeLong(kv.getLongValue());
+    ObjectIterator<Int2LongMap.Entry> iter =
+        entries.int2LongEntrySet().fastIterator();
+    while (iter.hasNext()) {
+      Int2LongMap.Entry entry = iter.next();
+      out.writeInt(entry.getIntKey());
+      out.writeLong(entry.getLongValue());
     }
   }
 

@@ -19,11 +19,13 @@
 package org.apache.giraph.aggregators.matrix.sparse;
 
 import it.unimi.dsi.fastutil.ints.Int2IntMap;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectIterator;
 
 import org.apache.hadoop.io.Writable;
 
@@ -96,7 +98,10 @@ public class IntSparseVector implements Writable {
    * @param other the vector to add.
    */
   public void add(IntSparseVector other) {
-    for (Int2IntMap.Entry entry : other.entries.int2IntEntrySet()) {
+    ObjectIterator<Int2IntMap.Entry> iter =
+        other.entries.int2IntEntrySet().fastIterator();
+    while (iter.hasNext()) {
+      Int2IntMap.Entry entry = iter.next();
       entries.addTo(entry.getIntKey(), entry.getIntValue());
     }
   }
@@ -104,7 +109,10 @@ public class IntSparseVector implements Writable {
   @Override
   public void write(DataOutput out) throws IOException {
     out.writeInt(entries.size());
-    for (Int2IntMap.Entry entry : entries.int2IntEntrySet()) {
+    ObjectIterator<Int2IntMap.Entry> iter =
+        entries.int2IntEntrySet().fastIterator();
+    while (iter.hasNext()) {
+      Int2IntMap.Entry entry = iter.next();
       out.writeInt(entry.getIntKey());
       out.writeInt(entry.getIntValue());
     }
