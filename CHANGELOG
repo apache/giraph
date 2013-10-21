@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-787: Use HiveIO 1.9 (gmalewicz via aching)
+
   GIRAPH-786: XSparseVector create a lot of objects in add/write
   (ikabiljo via majakabiljo)
 
