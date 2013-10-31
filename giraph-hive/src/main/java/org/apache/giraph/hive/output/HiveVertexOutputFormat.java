@@ -19,7 +19,6 @@
 package org.apache.giraph.hive.output;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.hive.common.HiveUtils;
 import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.giraph.io.VertexWriter;
 import org.apache.hadoop.io.Writable;
@@ -84,11 +83,8 @@ public class HiveVertexOutputFormat<I extends WritableComparable,
   public void setConf(
       ImmutableClassesGiraphConfiguration<I, V, E> conf) {
     super.setConf(conf);
-    HiveUtils.initializeHiveOutput(
-        hiveOutputFormat,
-        makeOutputDesc(),
-        HIVE_VERTEX_OUTPUT_PROFILE_ID.get(conf),
-        conf);
+    hiveOutputFormat.initialize(makeOutputDesc(),
+        HIVE_VERTEX_OUTPUT_PROFILE_ID.get(conf), conf);
   }
 
   @Override

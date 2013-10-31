@@ -26,6 +26,7 @@ import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.Computation;
 import org.apache.giraph.hive.common.HiveUtils;
 import org.apache.giraph.hive.input.edge.HiveEdgeInputFormat;
@@ -276,7 +277,58 @@ public class HiveGiraphRunner implements Tool {
   }
 
   /**
-   * Prepare vertex input settings in Configuration
+   * Create ImmutableClassesGiraphConfiguration from provided Configuration
+   * which is going to copy all the values set to it to this original
+   * Configuration
+   *
+   * @param conf Configuration to create ImmutableClassesGiraphConfiguration
+   *             from and update with any changes to the returned configuration
+   * @return ImmutableClassesGiraphConfiguration
+   */
+  private ImmutableClassesGiraphConfiguration createGiraphConf(
+      final Configuration conf) {
+    return new ImmutableClassesGiraphConfiguration(conf) {
+      @Override
+      public void set(String name, String value) {
+        super.set(name, value);
+        conf.set(name, value);
+      }
+    };
+  }
+
+  /**
+   * Create ImmutableClassesGiraphConfiguration from provided Configuration
+   * which is going to copy all the values set to it to provided
+   * InputFormatDescription
+   *
+   * @param conf Configuration to create ImmutableClassesGiraphConfiguration
+   *             from
+   * @param inputFormatDescription InputFormatDescription to update with any
+   *                               changes to the returned configuration
+   * @return ImmutableClassesGiraphConfiguration
+   */
+  private ImmutableClassesGiraphConfiguration createGiraphConf(
+      Configuration conf,
+      final InputFormatDescription inputFormatDescription) {
+    return new ImmutableClassesGiraphConfiguration(conf) {
+      @Override
+      public void set(String name, String value) {
+        super.set(name, value);
+        inputFormatDescription.addParameter(name, value);
+      }
+    };
+  }
+
+  /**
+   * Prepare vertex input settings in Configuration.
+   *
+   * For all Hive vertex inputs, add the user settings to the configuration.
+   * Additionally, this checks the input specs for every input and caches
+   * metadata information into the configuration to eliminate worker access to
+   * the metastore and fail earlier in the case that metadata doesn't exist.
+   * In the case of multiple vertex input descriptions, metadata is cached in
+   * each vertex input format description and then saved into a single
+   * Configuration via JSON.
    */
   @SuppressWarnings("unchecked")
   public void prepareHiveVertexInputs() {
@@ -284,7 +336,27 @@ public class HiveGiraphRunner implements Tool {
       GiraphConstants.VERTEX_INPUT_FORMAT_CLASS.set(conf,
           vertexInputDescriptions.get(0).getInputFormatClass());
       vertexInputDescriptions.get(0).putParametersToConfiguration(conf);
+      // Create VertexInputFormat in order to initialize the Configuration with
+      // data from metastore, and check it
+      createGiraphConf(conf).createWrappedVertexInputFormat()
+          .checkInputSpecs(conf);
     } else {
+      // For each of the VertexInputFormats we'll prepare Configuration
+      // parameters
+      for (int i = 0; i < vertexInputDescriptions.size(); i++) {
+        // Create a copy of the Configuration in order not to mess up the
+        // original one
+        Configuration confCopy = new Configuration(conf);
+        final VertexInputFormatDescription vertexInputDescription =
+            vertexInputDescriptions.get(i);
+        GiraphConstants.VERTEX_INPUT_FORMAT_CLASS.set(confCopy,
+            vertexInputDescription.getInputFormatClass());
+        vertexInputDescription.putParametersToConfiguration(confCopy);
+        // Create VertexInputFormat in order to initialize its description with
+        // data from metastore, and check it
+        createGiraphConf(confCopy, vertexInputDescription)
+            .createWrappedVertexInputFormat().checkInputSpecs(confCopy);
+      }
       GiraphConstants.VERTEX_INPUT_FORMAT_CLASS.set(conf,
           MultiVertexInputFormat.class);
       VertexInputFormatDescription.VERTEX_INPUT_FORMAT_DESCRIPTIONS.set(conf,
@@ -293,7 +365,15 @@ public class HiveGiraphRunner implements Tool {
   }
 
   /**
-   * Prepare edge input settings in Configuration
+   * Prepare edge input settings in Configuration.
+   *
+   * For all Hive edge inputs, add the user settings to the configuration.
+   * Additionally, this checks the input specs for every input and caches
+   * metadata information into the configuration to eliminate worker access to
+   * the metastore and fail earlier in the case that metadata doesn't exist.
+   * In the case of multiple edge input descriptions, metadata is cached in each
+   * vertex input format description and then saved into a single
+   * Configuration via JSON.
    */
   @SuppressWarnings("unchecked")
   public void prepareHiveEdgeInputs() {
@@ -301,7 +381,27 @@ public class HiveGiraphRunner implements Tool {
       GiraphConstants.EDGE_INPUT_FORMAT_CLASS.set(conf,
           edgeInputDescriptions.get(0).getInputFormatClass());
       edgeInputDescriptions.get(0).putParametersToConfiguration(conf);
+      // Create EdgeInputFormat in order to initialize the Configuration with
+      // data from metastore, and check it
+      createGiraphConf(conf).createWrappedEdgeInputFormat()
+          .checkInputSpecs(conf);
     } else {
+      // For each of the EdgeInputFormats we'll prepare Configuration
+      // parameters
+      for (int i = 0; i < edgeInputDescriptions.size(); i++) {
+        // Create a copy of the Configuration in order not to mess up the
+        // original one
+        Configuration confCopy = new Configuration(conf);
+        final EdgeInputFormatDescription edgeInputDescription =
+            edgeInputDescriptions.get(i);
+        GiraphConstants.EDGE_INPUT_FORMAT_CLASS.set(confCopy,
+            edgeInputDescription.getInputFormatClass());
+        edgeInputDescription.putParametersToConfiguration(confCopy);
+        // Create EdgeInputFormat in order to initialize its description with
+        // data from metastore, and check it
+        createGiraphConf(confCopy, edgeInputDescription)
+            .createWrappedEdgeInputFormat().checkInputSpecs(confCopy);
+      }
       GiraphConstants.EDGE_INPUT_FORMAT_CLASS.set(conf,
           MultiEdgeInputFormat.class);
       EdgeInputFormatDescription.EDGE_INPUT_FORMAT_DESCRIPTIONS.set(conf,
@@ -310,11 +410,18 @@ public class HiveGiraphRunner implements Tool {
   }
 
   /**
-   * Prepare output settings in Configuration
+   * Prepare output settings in Configuration.
+   *
+   * This caches metadata information into the configuration to eliminate worker
+   * access to the metastore.
    */
   public void prepareHiveOutput() {
     GiraphConstants.VERTEX_OUTPUT_FORMAT_CLASS.set(conf,
         HiveVertexOutputFormat.class);
+    // Output format will be checked by Hadoop, here we only create it in
+    // order to initialize the Configuration with data from metastore.
+    // Can't check it here since we don't have JobContext yet
+    createGiraphConf(conf).createWrappedVertexOutputFormat();
   }
 
   /**

@@ -40,7 +40,6 @@ import com.facebook.hiveio.schema.HiveTableSchema;
 import java.io.IOException;
 import java.util.List;
 
-
 /**
  * {@link EdgeInputFormat} for reading edges from Hive.
  *
@@ -71,8 +70,7 @@ public class HiveEdgeInputFormat<I extends WritableComparable,
   public void setConf(
       ImmutableClassesGiraphConfiguration<I, Writable, E> conf) {
     super.setConf(conf);
-    HiveUtils.initializeHiveInput(
-        hiveInputFormat,
+    hiveInputFormat.initialize(
         GiraphHiveConstants.HIVE_EDGE_INPUT.makeInputDescription(conf),
         GiraphHiveConstants.HIVE_EDGE_INPUT.getProfileID(conf),
         conf);

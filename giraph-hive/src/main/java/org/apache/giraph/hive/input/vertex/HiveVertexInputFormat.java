@@ -20,7 +20,6 @@ package org.apache.giraph.hive.input.vertex;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.hive.common.GiraphHiveConstants;
-import org.apache.giraph.hive.common.HiveUtils;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexReader;
 import org.apache.giraph.io.iterables.VertexReaderWrapper;
@@ -72,11 +71,9 @@ public class HiveVertexInputFormat<I extends WritableComparable,
   }
 
   @Override
-  public void setConf(
-      ImmutableClassesGiraphConfiguration<I, V, E> conf) {
+  public void setConf(ImmutableClassesGiraphConfiguration<I, V, E> conf) {
     super.setConf(conf);
-    HiveUtils.initializeHiveInput(
-        hiveInputFormat,
+    hiveInputFormat.initialize(
         GiraphHiveConstants.HIVE_VERTEX_INPUT.makeInputDescription(conf),
         GiraphHiveConstants.HIVE_VERTEX_INPUT.getProfileID(conf),
         conf);
