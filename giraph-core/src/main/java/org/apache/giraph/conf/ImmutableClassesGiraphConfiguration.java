@@ -51,6 +51,7 @@ import org.apache.giraph.io.superstep_output.NoOpSuperstepOutput;
 import org.apache.giraph.io.superstep_output.SuperstepOutput;
 import org.apache.giraph.io.superstep_output.SynchronizedSuperstepOutput;
 import org.apache.giraph.job.GiraphJobObserver;
+import org.apache.giraph.job.GiraphJobRetryChecker;
 import org.apache.giraph.master.MasterCompute;
 import org.apache.giraph.master.MasterObserver;
 import org.apache.giraph.master.SuperstepClasses;
@@ -695,6 +696,15 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    */
   public GiraphJobObserver getJobObserver() {
     return ReflectionUtils.newInstance(getJobObserverClass(), this);
+  }
+
+  /**
+   * Create job retry checker
+   *
+   * @return GiraphJobRetryChecker set in configuration.
+   */
+  public GiraphJobRetryChecker getJobRetryChecker() {
+    return ReflectionUtils.newInstance(getJobRetryCheckerClass(), this);
   }
 
   /**

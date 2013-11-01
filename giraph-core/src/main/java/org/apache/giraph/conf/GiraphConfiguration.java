@@ -34,6 +34,7 @@ import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.giraph.io.filters.EdgeInputFilter;
 import org.apache.giraph.io.filters.VertexInputFilter;
 import org.apache.giraph.job.GiraphJobObserver;
+import org.apache.giraph.job.GiraphJobRetryChecker;
 import org.apache.giraph.master.MasterCompute;
 import org.apache.giraph.master.MasterObserver;
 import org.apache.giraph.partition.GraphPartitionerFactory;
@@ -296,6 +297,25 @@ public class GiraphConfiguration extends Configuration
    */
   public void setJobObserverClass(Class<? extends GiraphJobObserver> klass) {
     JOB_OBSERVER_CLASS.set(this, klass);
+  }
+
+  /**
+   * Get job retry checker class
+   *
+   * @return GiraphJobRetryChecker class set.
+   */
+  public Class<? extends GiraphJobRetryChecker> getJobRetryCheckerClass() {
+    return JOB_RETRY_CHECKER_CLASS.get(this);
+  }
+
+  /**
+   * Set job retry checker class
+   *
+   * @param klass GiraphJobRetryChecker class to set.
+   */
+  public void setJobRetryCheckerClass(
+      Class<? extends GiraphJobRetryChecker> klass) {
+    JOB_RETRY_CHECKER_CLASS.set(this, klass);
   }
 
   /**

@@ -47,8 +47,10 @@ import org.apache.giraph.io.filters.DefaultEdgeInputFilter;
 import org.apache.giraph.io.filters.DefaultVertexInputFilter;
 import org.apache.giraph.io.filters.EdgeInputFilter;
 import org.apache.giraph.io.filters.VertexInputFilter;
+import org.apache.giraph.job.DefaultGiraphJobRetryChecker;
 import org.apache.giraph.job.DefaultJobObserver;
 import org.apache.giraph.job.GiraphJobObserver;
+import org.apache.giraph.job.GiraphJobRetryChecker;
 import org.apache.giraph.job.HaltApplicationUtils;
 import org.apache.giraph.master.DefaultMasterCompute;
 import org.apache.giraph.master.MasterCompute;
@@ -192,6 +194,13 @@ public interface GiraphConstants {
       ClassConfOption.create("giraph.jobObserverClass",
           DefaultJobObserver.class, GiraphJobObserver.class,
           "Observer class to watch over job status - optional");
+
+  /** Observer class to watch over job status - optional */
+  ClassConfOption<GiraphJobRetryChecker> JOB_RETRY_CHECKER_CLASS =
+      ClassConfOption.create("giraph.jobRetryCheckerClass",
+          DefaultGiraphJobRetryChecker.class, GiraphJobRetryChecker.class,
+          "Class which decides whether a failed job should be retried - " +
+              "optional");
 
   // At least one of the input format classes is required.
   /** VertexInputFormat class */

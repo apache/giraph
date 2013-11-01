@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-790: Add a way to automatically retry a job (majakabiljo)
+
   GIRAPH-789: Upgrade hive-io to 0.20 - less metastore accesses (majakabiljo)
 
   GIRAPH-787: Use HiveIO 1.9 (gmalewicz via aching)

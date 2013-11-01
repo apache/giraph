@@ -231,27 +231,37 @@ public class GiraphJob {
     ImmutableClassesGiraphConfiguration conf =
         new ImmutableClassesGiraphConfiguration(giraphConfiguration);
     checkLocalJobRunnerConfiguration(conf);
-    Job submittedJob = new Job(conf, jobName);
-    if (submittedJob.getJar() == null) {
-      submittedJob.setJarByClass(getClass());
+
+    int tryCount = 0;
+    GiraphJobRetryChecker retryChecker = conf.getJobRetryChecker();
+    while (true) {
+      tryCount++;
+      Job submittedJob = new Job(conf, jobName);
+      if (submittedJob.getJar() == null) {
+        submittedJob.setJarByClass(getClass());
+      }
+      submittedJob.setNumReduceTasks(0);
+      submittedJob.setMapperClass(GraphMapper.class);
+      submittedJob.setInputFormatClass(BspInputFormat.class);
+      submittedJob.setOutputFormatClass(BspOutputFormat.class);
+
+      GiraphJobObserver jobObserver = conf.getJobObserver();
+      jobObserver.launchingJob(submittedJob);
+      submittedJob.submit();
+      if (LOG.isInfoEnabled()) {
+        LOG.info("run: Tracking URL: " + submittedJob.getTrackingURL());
+      }
+      HaltApplicationUtils.printHaltInfo(submittedJob, conf);
+      jobObserver.jobRunning(submittedJob);
+
+      boolean passed = submittedJob.waitForCompletion(verbose);
+      jobObserver.jobFinished(submittedJob, passed);
+      if (passed || !retryChecker.shouldRetry(submittedJob, tryCount)) {
+        return passed;
+      }
+      if (LOG.isInfoEnabled()) {
+        LOG.info("run: Retrying job, " + tryCount + " try");
+      }
     }
-    submittedJob.setNumReduceTasks(0);
-    submittedJob.setMapperClass(GraphMapper.class);
-    submittedJob.setInputFormatClass(BspInputFormat.class);
-    submittedJob.setOutputFormatClass(BspOutputFormat.class);
-
-    GiraphJobObserver jobObserver = conf.getJobObserver();
-    jobObserver.launchingJob(submittedJob);
-    submittedJob.submit();
-    if (LOG.isInfoEnabled()) {
-      LOG.info("run: Tracking URL: " + submittedJob.getTrackingURL());
-    }
-    HaltApplicationUtils.printHaltInfo(submittedJob, conf);
-    jobObserver.jobRunning(submittedJob);
-
-    boolean passed = submittedJob.waitForCompletion(verbose);
-    jobObserver.jobFinished(submittedJob, passed);
-
-    return passed;
   }
 }
