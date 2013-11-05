@@ -444,6 +444,9 @@ public class HiveGiraphRunner implements Tool {
       throw new InterruptedException();
     }
 
+    // pick up -hiveconf arguments (put -D arguments from command line to conf)
+    HiveUtils.processHiveconfOptions(cmdln.getOptionValues("hiveconf"), conf);
+
     // Giraph classes
     String computationClassStr = cmdln.getOptionValue("computationClass");
     if (computationClassStr != null) {
@@ -543,9 +546,6 @@ public class HiveGiraphRunner implements Tool {
     workers = Integer.parseInt(workersStr);
 
     isVerbose = cmdln.hasOption("verbose");
-
-    // pick up -hiveconf arguments
-    HiveUtils.processHiveconfOptions(cmdln.getOptionValues("hiveconf"), conf);
 
     processMoreArguments(cmdln);
 
