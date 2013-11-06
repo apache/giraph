@@ -38,6 +38,7 @@ import org.apache.log4j.Logger;
 import org.jboss.netty.channel.ChannelHandlerContext;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
+import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -108,7 +109,12 @@ public class SaslServerHandler extends
           LOG.debug("No saslNettyServer for " + ctx.getChannel() +
               " yet; creating now, with secret manager: " + secretManager);
         }
-        saslNettyServer = new SaslNettyServer(secretManager);
+        try {
+          saslNettyServer = new SaslNettyServer(secretManager,
+            AuthMethod.SIMPLE);
+        } catch (IOException ioe) { //TODO:
+          throw new RuntimeException(ioe);
+        }
         NettyServer.CHANNEL_SASL_NETTY_SERVERS.set(ctx.getChannel(),
             saslNettyServer);
       } else {

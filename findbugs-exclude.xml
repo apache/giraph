@@ -43,6 +43,10 @@
     <Bug pattern="DM_EXIT"/>
   </Match>
   <Match>
+    <Class name="org.apache.giraph.yarn.GiraphYarnTask$OverrideExceptionHandler"/>
+    <Bug pattern="DM_EXIT"/>
+  </Match>
+  <Match>
     <Class name="org.apache.giraph.worker.BspServiceWorker"/>
     <Bug pattern="DM_EXIT"/>
   </Match>

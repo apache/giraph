@@ -50,6 +50,10 @@ explicitly specify it with "mvn -Phadoop_0.20.203 <goals>".
 
   You may tell maven to use this version with "mvn -Phadoop_0.23 <goals>".
 
+- Apache Hadoop Yarn with 2.2.0
+
+  You may tell maven to use this version with "mvn -Phadoop_yarn -Dhadoop.version=2.2.0 <goals>".
+
 - Apache Hadoop 3.0.0-SNAPSHOT
 
   You may tell maven to use this version with "mvn -Phadoop_trunk <goals>".

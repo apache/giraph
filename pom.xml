@@ -868,78 +868,24 @@ under the License.
          All profiles below are munge-free: avoid introducing any munge
          flags on any of the following profiles. -->
     <profile>
-      <id>hadoop_2.0.0</id>
-      <properties>
-        <hadoop.version>2.0.0-alpha</hadoop.version>
-      </properties>
-      <dependencies>
-        <!-- sorted lexicographically -->
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-common</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-common</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-core</artifactId>
-        </dependency>
-      </dependencies>
-    </profile>
-
-    <profile>
-      <id>hadoop_2.0.1</id>
-      <properties>
-        <hadoop.version>2.0.1-alpha</hadoop.version>
-      </properties>
-      <dependencies>
-        <!-- sorted lexicographically -->
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-common</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-common</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-core</artifactId>
-        </dependency>
-      </dependencies>
-    </profile>
-
-    <profile>
-      <id>hadoop_2.0.2</id>
-      <properties>
-        <hadoop.version>2.0.2-alpha</hadoop.version>
-      </properties>
-      <dependencies>
-        <!-- sorted lexicographically -->
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-common</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-common</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-mapreduce-client-core</artifactId>
-        </dependency>
-      </dependencies>
-    </profile>
-
-    <profile>
-       <id>hadoop_2.0.3</id>
+       <id>2.1.1-SNAPSHOT</id>
        <properties>
-         <hadoop.version>2.0.3-alpha</hadoop.version>
+         <hadoop.version>2.1.1-SNAPSHOT</hadoop.version>
        </properties>
        <dependencies>
          <!-- sorted lexicographically -->
+        <dependency>
+          <groupId>commons-configuration</groupId>
+          <artifactId>commons-configuration</artifactId>
+        </dependency>
+        <dependency>
+          <groupId>commons-httpclient</groupId>
+          <artifactId>commons-httpclient</artifactId>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-auth</artifactId>
+        </dependency>
          <dependency>
            <groupId>org.apache.hadoop</groupId>
            <artifactId>hadoop-common</artifactId>
@@ -956,7 +902,41 @@ under the License.
      </profile>
 
     <profile>
-      <id>hadoop_trunk</id>
+       <id>2.2.0</id>
+       <properties>
+         <hadoop.version>2.2.0</hadoop.version>
+       </properties>
+       <dependencies>
+         <!-- sorted lexicographically -->
+        <dependency>
+          <groupId>commons-configuration</groupId>
+          <artifactId>commons-configuration</artifactId>
+        </dependency>
+        <dependency>
+          <groupId>commons-httpclient</groupId>
+          <artifactId>commons-httpclient</artifactId>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-auth</artifactId>
+        </dependency>
+         <dependency>
+           <groupId>org.apache.hadoop</groupId>
+           <artifactId>hadoop-common</artifactId>
+         </dependency>
+         <dependency>
+           <groupId>org.apache.hadoop</groupId>
+           <artifactId>hadoop-mapreduce-client-common</artifactId>
+         </dependency>
+         <dependency>
+           <groupId>org.apache.hadoop</groupId>
+           <artifactId>hadoop-mapreduce-client-core</artifactId>
+         </dependency>
+       </dependencies>
+     </profile>
+
+    <profile>
+      <id>hadoop_snapshot</id>
       <properties>
         <hadoop.version>3.0.0-SNAPSHOT</hadoop.version>
       </properties>

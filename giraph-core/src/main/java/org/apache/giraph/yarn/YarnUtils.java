@@ -68,7 +68,8 @@ public class YarnUtils {
     for (String fileName : giraphConf.getYarnLibJars().split(",")) {
       if (fileName.length() > 0) {
         Path filePath = new Path(baseDir, fileName);
-        LOG.info("Adding " + fileName + " to LocalResources for export.");
+        LOG.info("Adding " + fileName + " to LocalResources for export.to " +
+          filePath);
         if (fileName.contains("giraph-core")) {
           coreJarFound = true;
         }
@@ -97,6 +98,7 @@ public class YarnUtils {
     }
     classPath += System.getenv("CLASSPATH");
     for (String baseDir : classPath.split(":")) {
+      LOG.info("Class path name " + baseDir);
       if (baseDir.length() > 0) {
         // lose the globbing chars that will fail in File#listFiles
         final int lastFileSep = baseDir.lastIndexOf("/");
@@ -106,6 +108,7 @@ public class YarnUtils {
             baseDir = baseDir.substring(0, lastFileSep);
           }
         }
+        LOG.info("base path checking " + baseDir);
         populateJarList(new File(baseDir), jarPaths, fileNames);
       }
       if (jarPaths.size() >= fileNames.size()) {
@@ -153,7 +156,7 @@ public class YarnUtils {
     resource.setType(LocalResourceType.FILE); // use FILE, even for jars!
     resource.setVisibility(LocalResourceVisibility.APPLICATION);
     localResources.put(target.getName(), resource);
-    LOG.info("Registered file in LocalResources: " + target.getName());
+    LOG.info("Registered file in LocalResources :: " + target);
   }
 
   /**
@@ -180,7 +183,7 @@ public class YarnUtils {
     for (String cpEntry : giraphConf.getStrings(
       YarnConfiguration.YARN_APPLICATION_CLASSPATH,
       YarnConfiguration.DEFAULT_YARN_APPLICATION_CLASSPATH)) {
-      classPathEnv.append(':').append(cpEntry.trim());
+      classPathEnv.append(':').append(cpEntry.trim()); //TODO: Separator
     }
     for (String cpEntry : giraphConf.getStrings(
       MRJobConfig.MAPREDUCE_APPLICATION_CLASSPATH,
@@ -220,7 +223,9 @@ public class YarnUtils {
     File confFile = new File(System.getProperty("java.io.tmpdir"),
       GiraphConstants.GIRAPH_YARN_CONF_FILE);
     if (confFile.exists()) {
-      confFile.delete();
+      if (!confFile.delete()) {
+        LOG.warn("Unable to delete file " + confFile);
+      }
     }
     String localConfPath = confFile.getAbsolutePath();
     FileOutputStream fos = null;

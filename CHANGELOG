@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-737: Giraph Application Master: Move to new and stable YARN API (mislam via ereisman)
+
   GIRAPH-791: HiveGiraphRunner picks -D options too late (majakabiljo)
 
   GIRAPH-790: Add a way to automatically retry a job (majakabiljo)

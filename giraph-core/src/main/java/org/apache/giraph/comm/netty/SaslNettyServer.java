@@ -40,6 +40,7 @@ import javax.security.sasl.SaslException;
 import javax.security.sasl.SaslServer;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 
 /**
  * Encapsulates SASL server logic for Giraph BSP worker servers.
@@ -59,9 +60,26 @@ public class SaslNettyServer extends SaslRpcServer {
    *
    * @param secretManager supplied by SaslServerHandler.
    */
-  public SaslNettyServer(JobTokenSecretManager secretManager) {
+  public SaslNettyServer(JobTokenSecretManager secretManager)
+    throws IOException {
+    this(secretManager, AuthMethod.SIMPLE);
+  }
+
+  /**
+   * Constructor
+   *
+   * @param secretManager supplied by SaslServerHandler.
+   * @param authMethod Authentication method
+   */
+  public SaslNettyServer(JobTokenSecretManager secretManager,
+    AuthMethod authMethod) throws IOException {
+/*if[HADOOP_1_SECRET_MANAGER]
+else[HADOOP_1_SECRET_MANAGER]*/
+    super(authMethod);
+/*end[HADOOP_1_SECRET_MANAGER]*/
     if (LOG.isDebugEnabled()) {
-      LOG.debug("SaslNettyServer: Secret manager is: " + secretManager);
+      LOG.debug("SaslNettyServer: Secret manager is: " + secretManager +
+        " with authmethod " + authMethod);
     }
 /*if[HADOOP_1_SECRET_MANAGER]
 else[HADOOP_1_SECRET_MANAGER]*/
