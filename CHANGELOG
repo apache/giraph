@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-738: Fix typos in quick start guide (aladagemre via claudio)
+
   GIRAPH-755: Make ZooKeeper port list available to input/output format (armax00 via claudio)
 
   GIRAPH-737: Giraph Application Master: Move to new and stable YARN API (mislam via ereisman)
