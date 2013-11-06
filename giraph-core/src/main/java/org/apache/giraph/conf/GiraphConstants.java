@@ -404,9 +404,23 @@ public interface GiraphConstants {
 
   /**
    *  ZooKeeper comma-separated list (if not set,
-   *  will start up ZooKeeper locally)
+   *  will start up ZooKeeper locally). Consider that after locally-starting
+   *  zookeeper, this parameter will updated the configuration with the corrent
+   *  configuration value.
    */
   String ZOOKEEPER_LIST = "giraph.zkList";
+
+  /**
+   * Zookeeper List will always hold a value during the computation while
+   * this option provides information regarding whether the zookeeper was
+   * internally started or externally provided.
+   */
+  BooleanConfOption ZOOKEEPER_IS_EXTERNAL =
+    new BooleanConfOption("giraph.zkIsExternal", true,
+                          "Zookeeper List will always hold a value during " +
+                          "the computation while this option provides " +
+                          "information regarding whether the zookeeper was " +
+                          "internally started or externally provided.");
 
   /** ZooKeeper session millisecond timeout */
   IntConfOption ZOOKEEPER_SESSION_TIMEOUT =

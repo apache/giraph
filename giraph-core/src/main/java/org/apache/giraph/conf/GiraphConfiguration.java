@@ -731,6 +731,27 @@ public class GiraphConfiguration extends Configuration
     return get(ZOOKEEPER_LIST);
   }
 
+  /**
+   * Set the ZooKeeper list to the provided list. This method is used when the
+   * ZooKeeper is started internally and will set the zkIsExternal option to
+   * false as well.
+   *
+   * @param zkList list of strings, comma separated of zookeeper servers
+   */
+  public void setZookeeperList(String zkList) {
+    set(ZOOKEEPER_LIST, zkList);
+    ZOOKEEPER_IS_EXTERNAL.set(this, false);
+  }
+
+  /**
+   * Was ZooKeeper provided externally?
+   *
+   * @return true iff was zookeeper is external
+   */
+  public boolean isZookeeperExternal() {
+    return ZOOKEEPER_IS_EXTERNAL.get(this);
+  }
+
   public String getLocalLevel() {
     return LOG_LEVEL.get(this);
   }

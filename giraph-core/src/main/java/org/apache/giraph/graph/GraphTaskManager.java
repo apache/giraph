@@ -144,8 +144,6 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
   private GiraphTimerContext communicationTimerContext;
   /** Timer for WorkerContext#preSuperstep() */
   private GiraphTimer wcPreSuperstepTimer;
-  /** Zookeeper host:port list */
-  private String serverPortList;
   /** The Hadoop Mapper#Context for this job */
   private Mapper<?, ?, ?, ?>.Context context;
   /** is this GraphTaskManager the master? */
@@ -200,7 +198,7 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
     // Do some task setup (possibly starting up a Zookeeper service)
     context.setStatus("setup: Initializing Zookeeper services.");
     locateZookeeperClasspath(zkPathList);
-    serverPortList = conf.getZookeeperList();
+    String serverPortList = conf.getZookeeperList();
     if (serverPortList == null && startZooKeeperManager()) {
       return; // ZK connect/startup failed
     }
@@ -219,7 +217,7 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
     }
     int sessionMsecTimeout = conf.getZooKeeperSessionTimeout();
     try {
-      instantiateBspService(serverPortList, sessionMsecTimeout);
+      instantiateBspService(sessionMsecTimeout);
     } catch (IOException e) {
       LOG.error("setup: Caught exception just before end of setup", e);
       if (zkManager != null) {
@@ -369,7 +367,8 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
       return true;
     }
     zkManager.onlineZooKeeperServers();
-    serverPortList = zkManager.getZooKeeperServerPortString();
+    String serverPortList = zkManager.getZooKeeperServerPortString();
+    conf.setZookeeperList(serverPortList);
     context.getCounter(GiraphConstants.ZOOKEEPER_SERVER_PORT_COUNTER_GROUP,
         serverPortList);
     return false;
@@ -493,9 +492,9 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
    *    ZooKeeper.
    * 2) If split master/worker, masters also run ZooKeeper
    *
-   * 3) If split master/worker == true and <code>giraph.zkList</code> is set,
-   *    the master will not instantiate a ZK instance, but will assume
-   *    a quorum is already active on the cluster for Giraph to use.
+   * 3) If split master/worker == true and <code>giraph.zkList</code> is
+   *    externally provided, the master will not instantiate a ZK instance, but
+   *    will assume a quorum is already active on the cluster for Giraph to use.
    *
    * @param conf Configuration to use
    * @param zkManager ZooKeeper manager to help determine whether to run
@@ -507,7 +506,7 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
       ZooKeeperManager zkManager) {
     boolean splitMasterWorker = conf.getSplitMasterWorker();
     int taskPartition = conf.getTaskPartition();
-    boolean zkAlreadyProvided = conf.getZookeeperList() != null;
+    boolean zkAlreadyProvided = conf.isZookeeperExternal();
     GraphFunctions functions = GraphFunctions.UNKNOWN;
     // What functions should this mapper do?
     if (!splitMasterWorker) {
@@ -538,18 +537,17 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
   /**
    * Instantiate the appropriate BspService object (Master or Worker)
    * for this compute node.
-   * @param serverPortList host:port list for connecting to ZK quorum
    * @param sessionMsecTimeout configurable session timeout
    */
-  private void instantiateBspService(String serverPortList,
-    int sessionMsecTimeout) throws IOException, InterruptedException {
+  private void instantiateBspService(int sessionMsecTimeout)
+    throws IOException, InterruptedException {
     if (graphFunctions.isMaster()) {
       if (LOG.isInfoEnabled()) {
         LOG.info("setup: Starting up BspServiceMaster " +
           "(master thread)...");
       }
       serviceMaster = new BspServiceMaster<I, V, E>(
-        serverPortList, sessionMsecTimeout, context, this);
+        sessionMsecTimeout, context, this);
       masterThread = new MasterThread<I, V, E>(serviceMaster, context);
       masterThread.start();
     }
@@ -558,10 +556,7 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
         LOG.info("setup: Starting up BspServiceWorker...");
       }
       serviceWorker = new BspServiceWorker<I, V, E>(
-        serverPortList,
-        sessionMsecTimeout,
-        context,
-        this);
+        sessionMsecTimeout, context, this);
       if (LOG.isInfoEnabled()) {
         LOG.info("setup: Registering health of this worker...");
       }

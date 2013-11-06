@@ -253,13 +253,11 @@ public abstract class BspService<I extends WritableComparable,
   /**
    * Constructor.
    *
-   * @param serverPortList ZooKeeper server port list
    * @param sessionMsecTimeout ZooKeeper session timeount in milliseconds
    * @param context Mapper context
    * @param graphTaskManager GraphTaskManager for this compute node
    */
-  public BspService(String serverPortList,
-      int sessionMsecTimeout,
+  public BspService(int sessionMsecTimeout,
       Mapper<?, ?, ?, ?>.Context context,
       GraphTaskManager<I, V, E> graphTaskManager) {
     this.vertexInputSplitsEvents = new InputSplitEvents(context);
@@ -322,6 +320,7 @@ public abstract class BspService<I extends WritableComparable,
         CHECKPOINT_DIRECTORY.getWithDefault(getConfiguration(),
             CHECKPOINT_DIRECTORY.getDefaultValue() + "/" + getJobId());
     masterElectionPath = basePath + MASTER_ELECTION_DIR;
+    String serverPortList = conf.getZookeeperList();
     haltComputationPath = basePath + HALT_COMPUTATION_NODE;
     getContext().getCounter(GiraphConstants.ZOOKEEPER_HALT_NODE_COUNTER_GROUP,
         haltComputationPath);

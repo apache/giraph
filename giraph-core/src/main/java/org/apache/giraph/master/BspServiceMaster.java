@@ -187,17 +187,15 @@ public class BspServiceMaster<I extends WritableComparable,
   /**
    * Constructor for setting up the master.
    *
-   * @param serverPortList ZooKeeper server port list
    * @param sessionMsecTimeout Msecs to timeout connecting to ZooKeeper
    * @param context Mapper context
    * @param graphTaskManager GraphTaskManager for this compute node
    */
   public BspServiceMaster(
-      String serverPortList,
       int sessionMsecTimeout,
       Mapper<?, ?, ?, ?>.Context context,
       GraphTaskManager<I, V, E> graphTaskManager) {
-    super(serverPortList, sessionMsecTimeout, context, graphTaskManager);
+    super(sessionMsecTimeout, context, graphTaskManager);
     workerWroteCheckpoint = new PredicateLock(context);
     registerBspEvent(workerWroteCheckpoint);
     superstepStateChanged = new PredicateLock(context);
@@ -1768,7 +1766,7 @@ public class BspServiceMaster<I extends WritableComparable,
     // and the master can do any final cleanup if the ZooKeeper service was
     // provided (not dynamically started) and we don't want to keep the data
     try {
-      if (getConfiguration().getZookeeperList() != null &&
+      if (getConfiguration().isZookeeperExternal() &&
           KEEP_ZOOKEEPER_DATA.isFalse(getConfiguration())) {
         if (LOG.isInfoEnabled()) {
           LOG.info("cleanupZooKeeper: Removing the following path " +

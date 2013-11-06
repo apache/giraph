@@ -169,7 +169,6 @@ public class BspServiceWorker<I extends WritableComparable,
   /**
    * Constructor for setting up the worker.
    *
-   * @param serverPortList ZooKeeper server port list
    * @param sessionMsecTimeout Msecs to timeout connecting to ZooKeeper
    * @param context Mapper context
    * @param graphTaskManager GraphTaskManager for this compute node
@@ -177,12 +176,11 @@ public class BspServiceWorker<I extends WritableComparable,
    * @throws InterruptedException
    */
   public BspServiceWorker(
-    String serverPortList,
     int sessionMsecTimeout,
     Mapper<?, ?, ?, ?>.Context context,
     GraphTaskManager<I, V, E> graphTaskManager)
     throws IOException, InterruptedException {
-    super(serverPortList, sessionMsecTimeout, context, graphTaskManager);
+    super(sessionMsecTimeout, context, graphTaskManager);
     ImmutableClassesGiraphConfiguration<I, V, E> conf = getConfiguration();
     partitionExchangeChildrenChanged = new PredicateLock(context);
     registerBspEvent(partitionExchangeChildrenChanged);

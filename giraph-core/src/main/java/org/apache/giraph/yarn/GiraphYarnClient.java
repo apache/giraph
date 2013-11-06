@@ -455,11 +455,11 @@ public class GiraphYarnClient {
    * removed as we expand the functionality of the "pure YARN" Giraph profile.
    */
   private void checkJobLocalZooKeeperSupported() {
+    final boolean isZkExternal = giraphConf.isZookeeperExternal();
     final String checkZkList = giraphConf.getZookeeperList();
-    if (checkZkList == null || checkZkList.isEmpty()) {
+    if (!isZkExternal || checkZkList.isEmpty()) {
       throw new IllegalArgumentException("Giraph on YARN does not currently" +
-        "support Giraph-managed ZK instances: use a standalone ZooKeeper: '" +
-        checkZkList + "'");
+          "support Giraph-managed ZK instances: use a standalone ZooKeeper.");
     }
   }
 
