@@ -218,9 +218,10 @@ $HADOOP_HOME/bin/hadoop jar $GIRAPH_HOME/giraph-examples/target/giraph-examples-
       <p>This will output the following:</p>
       <source>
 usage: org.apache.giraph.utils.ConfigurationUtils [-aw &lt;arg&gt;] [-c &lt;arg&gt;]
-       [-ca &lt;arg&gt;] [-cf &lt;arg&gt;] [-eif &lt;arg&gt;] [-eip &lt;arg&gt;] [-h] [-la] [-mc
-       &lt;arg&gt;] [-vof &lt;arg&gt;] [-op &lt;arg&gt;] [-pc &lt;arg&gt;] [-q] [-ve &lt;arg&gt;] [-vif
-       &lt;arg&gt;] [-vip &lt;arg&gt;] [-vvf &lt;arg&gt;] [-w &lt;arg&gt;] [-wc &lt;arg&gt;] [-yh &lt;arg&gt;]
+       [-ca &lt;arg&gt;] [-cf &lt;arg&gt;] [-eif &lt;arg&gt;] [-eip &lt;arg&gt;] [-eof &lt;arg&gt;]
+       [-esd &lt;arg&gt;] [-h] [-jyc &lt;arg&gt;] [-la] [-mc &lt;arg&gt;] [-op &lt;arg&gt;] [-pc
+       &lt;arg&gt;] [-q] [-th &lt;arg&gt;] [-ve &lt;arg&gt;] [-vif &lt;arg&gt;] [-vip &lt;arg&gt;] [-vof
+       &lt;arg&gt;] [-vsd &lt;arg&gt;] [-vvf &lt;arg&gt;] [-w &lt;arg&gt;] [-wc &lt;arg&gt;] [-yh &lt;arg&gt;]
        [-yj &lt;arg&gt;]
  -aw,--aggregatorWriter &lt;arg&gt;           AggregatorWriter class
  -c,--messageCombiner &lt;arg&gt;             Message messageCombiner class
@@ -234,16 +235,25 @@ usage: org.apache.giraph.utils.ConfigurationUtils [-aw &lt;arg&gt;] [-c &lt;arg&
  -eif,--edgeInputFormat &lt;arg&gt;           Edge input format
  -eip,--edgeInputPath &lt;arg&gt;             Edge input path
  -eof,--vertexOutputFormat &lt;arg&gt;               Edge output format
+ -esd,--edgeSubDir &lt;arg&gt;                subdirectory to be used for the
+                                        edge output
  -h,--help                              Help
+ -jyc,--jythonClass &lt;arg&gt;               Jython class name, used if
+                                        computation passed in is a python
+                                        script
  -la,--listAlgorithms                   List supported algorithms
  -mc,--masterCompute &lt;arg&gt;              MasterCompute class
- -vof,--vertexOutputFormat &lt;arg&gt;               Vertex output format
  -op,--outputPath &lt;arg&gt;                 Vertex output path
  -pc,--partitionClass &lt;arg&gt;             Partition class
  -q,--quiet                             Quiet output
+ -th,--typesHolder &lt;arg&gt;                Class that holds types. Needed
+                                        only if Computation is not set
  -ve,--outEdges &lt;arg&gt;                   Vertex edges class
  -vif,--vertexInputFormat &lt;arg&gt;         Vertex input format
  -vip,--vertexInputPath &lt;arg&gt;           Vertex input path
+ -vof,--vertexOutputFormat &lt;arg&gt;        Vertex output format
+ -vsd,--vertexSubDir &lt;arg&gt;              subdirectory to be used for the
+                                        vertex output
  -vvf,--vertexValueFactoryClass &lt;arg&gt;   Vertex value factory class
  -w,--workers &lt;arg&gt;                     Number of workers
  -wc,--workerContext &lt;arg&gt;              WorkerContext class
