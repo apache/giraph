@@ -252,34 +252,45 @@ under the License.
     <buildtype>test</buildtype>
 
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.maven.version>3.0.0</project.maven.version>
+    <project.enforcer.skip>false</project.enforcer.skip>
+    <project.enforcer.fail>true</project.enforcer.fail>
+    <project.build.targetJdk>1.7</project.build.targetJdk>
+    <giraph.maven.dependency.plugin.skip>false</giraph.maven.dependency.plugin.skip>
+    <giraph.maven.duplicate.finder.skip>false</giraph.maven.duplicate.finder.skip>
 
+    <dep.avro.version>1.3.3</dep.avro.version>
     <dep.accumulo.version>1.4.0</dep.accumulo.version>
     <dep.gora.version>0.3</dep.gora.version>
     <dep.airline.version>0.5</dep.airline.version>
     <dep.base64.version>2.3.8</dep.base64.version>
     <dep.cli-parser.version>1.1</dep.cli-parser.version>
-    <dep.codehaus-jackson.version>1.8.0</dep.codehaus-jackson.version>
+    <dep.codehaus-jackson.version>1.9.2</dep.codehaus-jackson.version>
+    <dep.commons-codec.version>1.8</dep.commons-codec.version>
     <dep.commons-cli.version>1.2</dep.commons-cli.version>
     <dep.commons-collections.version>3.2.1</dep.commons-collections.version>
     <dep.commons-configuration.version>1.6</dep.commons-configuration.version>
     <dep.commons-httpclient.version>3.0.1</dep.commons-httpclient.version>
-    <dep.commons-io.version>2.1</dep.commons-io.version>
     <dep.commons-logging.version>1.0.4</dep.commons-logging.version>
+    <dep.commons-io.version>2.1</dep.commons-io.version>
     <dep.commons-net.version>3.1</dep.commons-net.version>
-    <dep.facebook-hadoop.version>0.20.0</dep.facebook-hadoop.version>
-    <dep.fasterxml-jackson.version>2.1.0</dep.fasterxml-jackson.version>
-    <dep.fastutil.version>6.5.3</dep.fastutil.version>
+    <dep.fasterxml-jackson.version>2.1.2</dep.fasterxml-jackson.version>
+    <dep.fastutil.version>6.5.4</dep.fastutil.version>
+    <dep.google.findbugs.version>2.0.2</dep.google.findbugs.version>
+    <dep.guava.version>14.0.1</dep.guava.version>
     <dep.hbase.version>0.90.5</dep.hbase.version>
-    <dep.guava.version>12.0</dep.guava.version>
     <dep.hcatalog.version>0.5.0-incubating</dep.hcatalog.version>
     <dep.hive.version>0.11.0</dep.hive.version>
     <dep.hiveio.version>0.20</dep.hiveio.version>
     <dep.json.version>20090211</dep.json.version>
-    <dep.junit.version>4.8</dep.junit.version>
+    <dep.junit.version>4.11</dep.junit.version>
     <dep.jython.version>2.5.3</dep.jython.version>
-    <dep.mockito.version>1.8.5</dep.mockito.version>
+    <dep.libthrift.version>0.9.0</dep.libthrift.version>
+    <dep.log4j.version>1.2.17</dep.log4j.version>
+    <dep.mockito.version>1.9.5</dep.mockito.version>
     <dep.netty.version>3.5.3.Final</dep.netty.version>
-    <dep.slf4j.version>1.7.2</dep.slf4j.version>
+    <dep.slf4j.version>1.7.5</dep.slf4j.version>
+    <dep.tinkerpop.rexter.version>2.3.0</dep.tinkerpop.rexter.version>
     <dep.typetools.version>0.2.1</dep.typetools.version>
     <dep.yammer-metrics.version>2.2.0</dep.yammer-metrics.version>
     <dep.yourkit-api.version>9.5.6</dep.yourkit-api.version>
@@ -312,8 +323,148 @@ under the License.
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-dependency-plugin</artifactId>
+          <version>2.7</version>
+          <configuration>
+            <skip>${giraph.maven.dependency.plugin.skip}</skip>
+            <failOnWarning>true</failOnWarning>
+            <ignoreNonCompile>true</ignoreNonCompile>
+          </configuration>
+          <executions>
+            <execution>
+              <id>default</id>
+              <phase>process-test-classes</phase>
+              <goals>
+                <goal>analyze-only</goal>
+                <goal>analyze-duplicate</goal>
+                <goal>analyze-dep-mgt</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
+          <groupId>com.ning.maven.plugins</groupId>
+          <artifactId>maven-duplicate-finder-plugin</artifactId>
+          <version>1.0.4</version>
+          <executions>
+            <execution>
+              <id>default</id>
+              <phase>process-test-classes</phase>
+              <goals>
+                <goal>check</goal>
+              </goals>
+            </execution>
+          </executions>
+          <configuration>
+              <skip>${giraph.maven.duplicate.finder.skip}</skip>
+              <failBuildInCaseOfConflict>true</failBuildInCaseOfConflict>
+              <exceptions>
+                <exception>
+                  <conflictingDependencies>
+                    <dependency>
+                      <groupId>commons-beanutils</groupId>
+                      <artifactId>commons-beanutils</artifactId>
+                    </dependency>
+                    <dependency>
+                      <groupId>commons-beanutils</groupId>
+                      <artifactId>commons-beanutils-core</artifactId>
+                    </dependency>
+                    <dependency>
+                      <groupId>commons-collections</groupId>
+                      <artifactId>commons-collections</artifactId>
+                    </dependency>
+                  </conflictingDependencies>
+                  <classes>
+                    <class>org.apache.commons.collections.ArrayStack</class>
+                    <class>org.apache.commons.collections.Buffer</class>
+                    <class>org.apache.commons.collections.BufferUnderflowException</class>
+                    <class>org.apache.commons.collections.FastHashMap</class>
+                  </classes>
+                </exception>
+                <exception>
+                  <conflictingDependencies>
+                    <dependency>
+                      <groupId>commons-beanutils</groupId>
+                      <artifactId>commons-beanutils</artifactId>
+                    </dependency>
+                    <dependency>
+                      <groupId>commons-beanutils</groupId>
+                      <artifactId>commons-beanutils-core</artifactId>
+                    </dependency>
+                  </conflictingDependencies>
+                  <packages>
+                    <package>org.apache.commons.beanutils</package>
+                  </packages>
+                </exception>
+                <exception>
+                  <conflictingDependencies>
+                    <dependency>
+                      <groupId>org.datanucleus</groupId>
+                      <artifactId>datanucleus-core</artifactId>
+                    </dependency>
+                    <dependency>
+                      <groupId>org.datanucleus</groupId>
+                      <artifactId>datanucleus-rdbms</artifactId>
+                    </dependency>
+                    <dependency>
+                      <groupId>org.datanucleus</groupId>
+                      <artifactId>datanucleus-connectionpool</artifactId>
+                    </dependency>
+                </conflictingDependencies>
+                <resources>
+                  <resource>plugin.xml</resource>
+                </resources>
+                </exception>
+              </exceptions>
+            <!-- Ruby, jython, hive-exec are difficult -->
+            <ignoredDependencies>
+              <dependency>
+                <groupId>org.jruby</groupId>
+                <artifactId>jruby-complete</artifactId>
+              </dependency>
+              <dependency>
+                <groupId>org.python</groupId>
+                <artifactId>jython</artifactId>
+              </dependency>
+              <dependency>
+                <groupId>org.apache.hive</groupId>
+                <artifactId>hive-exec</artifactId>
+              </dependency>
+            </ignoredDependencies>
+            <ignoredResources>
+              <ignoredResource>.*\.html</ignoredResource>
+              <ignoredResource>META-INF/.*</ignoredResource>
+              <ignoredResource>about_files/.*</ignoredResource>
+              <ignoredResource>plugin\.properties</ignoredResource>
+              <ignoredResource>.*\.java</ignoredResource>
+            </ignoredResources>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>com.ning.maven.plugins</groupId>
+          <artifactId>maven-dependency-versions-check-plugin</artifactId>
+          <version>2.0.2</version>
+          <configuration>
+            <skip>${giraph.maven.duplicate.finder.skip}</skip>
+            <failBuildInCaseOfConflict>true</failBuildInCaseOfConflict>
+          </configuration>
+          <executions>
+            <execution>
+              <id>default</id>
+                <phase>validate</phase>
+                <goals>
+                  <goal>check</goal>
+                </goals>
+            </execution>
+          </executions>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-assembly-plugin</artifactId>
           <version>2.4</version>
+          <configuration>
+            <tarLongFileMode>gnu</tarLongFileMode>
+          </configuration>
           <executions>
             <execution>
               <id>build-fat-jar</id>
@@ -328,7 +479,7 @@ under the License.
                     <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
                   </manifest>
                   <manifestEntries>
-                    <Build-Jdk>${java.version}</Build-Jdk>
+                    <Build-Jdk>${project.build.targetJdk}</Build-Jdk>
                     <Build-Time>${maven.build.timestamp}</Build-Time>
                     <Git-Commit-Branch>${mvngit.branch}</Git-Commit-Branch>
                     <Git-Commit-Hash>${mvngit.commit.id}</Git-Commit-Hash>
@@ -371,29 +522,71 @@ under the License.
           <artifactId>maven-compiler-plugin</artifactId>
           <version>3.0</version>
           <configuration>
-            <source>1.6</source>
-            <target>1.6</target>
+            <source>${project.build.targetJdk}</source>
+            <target>${project.build.targetJdk}</target>
           </configuration>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-enforcer-plugin</artifactId>
-          <version>1.0.1</version>
+          <version>1.2</version>
           <executions>
             <execution>
-              <id>enforce-maven</id>
+              <id>default</id>
+              <phase>validate</phase>
               <goals>
                 <goal>enforce</goal>
               </goals>
-              <configuration>
-                <rules>
-                  <requireMavenVersion>
-                    <version>3.0.0</version>
-                  </requireMavenVersion>
-                </rules>
-              </configuration>
             </execution>
           </executions>
+          <configuration>
+            <skip>${project.enforcer.skip}</skip>
+            <fail>${project.enforcer.fail}</fail>
+            <failFast>false</failFast>
+            <rules>
+              <!-- The following dependencies are hazardous for builds. -->
+              <bannedDependencies>
+                <excludes>
+                  <!-- clashes with commons-logging:commons-logging -->
+                  <exclude>commons-logging:commons-logging-api</exclude>
+                  <!-- clashes with cglib:cglib-nodep -->
+                  <exclude>cglib:cglib</exclude>
+                  <!-- use guava -->
+                  <exclude>com.google.collections:google-collections</exclude>
+                  <!-- but not the badly numbered ones... -->
+                  <exclude>com.google.guava:guava</exclude>
+                  <!-- Clashes with com.google.code.findbugs:annotations and having both jars -->
+                  <!-- as a dependency then clashes with the dependency checker (because it   -->
+                  <!-- is not very good at handling annotations). Use the annotations jar     -->
+                  <!-- instead which has all jsr305 annotations and the additional findbugs   -->
+                  <!-- stuff. -->
+                  <exclude>com.google.code.findbugs:jsr305</exclude>
+                  <!-- Use the official version at javax.servlet:javax.servlet-api -->
+                  <exclude>org.eclipse.jetty.orbit:javax.servlet</exclude>
+                  <!-- Renamed airlift modules -->
+                  <exclude>io.airlift:discovery-experimental</exclude>
+                  <exclude>io.airlift:event-experimental</exclude>
+                  <exclude>io.airlift:http-client-experimental</exclude>
+                  <exclude>io.airlift:jmx-http-experimental</exclude>
+                  <exclude>io.airlift:jmx-http-rpc-experimental</exclude>
+                  <exclude>io.airlift:rack-experimental</exclude>
+                  <exclude>io.airlift:rack-launcher-experimental</exclude>
+                  <exclude>io.airlift:rack-packaging-experimental</exclude>
+                  <exclude>io.airlift:rack-server-base-experimental</exclude>
+                </excludes>
+                <includes>
+                  <!-- whitelist the well numbered guava releases -->
+                  <include>com.google.guava:guava:[10.0.1,)</include>
+                </includes>
+              </bannedDependencies>
+              <requireMavenVersion>
+                <version>${project.maven.version}</version>
+              </requireMavenVersion>
+              <requireJavaVersion>
+                <version>${project.build.targetJdk}</version>
+              </requireJavaVersion>
+            </rules>
+          </configuration>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -406,7 +599,7 @@ under the License.
                 <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
               </manifest>
               <manifestEntries>
-                <Build-Jdk>${java.version}</Build-Jdk>
+                <Build-Jdk>${project.build.targetJdk}</Build-Jdk>
                 <Build-Time>${maven.build.timestamp}</Build-Time>
                 <Git-Commit-Branch>${mvngit.branch}</Git-Commit-Branch>
                 <Git-Commit-Hash>${mvngit.commit.id}</Git-Commit-Hash>
@@ -429,14 +622,6 @@ under the License.
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-javadoc-plugin</artifactId>
           <version>2.9</version>
-          <executions>
-            <execution>
-              <id>attach-javadocs</id>
-              <goals>
-                <goal>jar</goal>
-              </goals>
-            </execution>
-          </executions>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -608,6 +793,22 @@ under the License.
         <groupId>com.github.koraktor</groupId>
         <artifactId>mavanagaiata</artifactId>
       </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>com.ning.maven.plugins</groupId>
+        <artifactId>maven-dependency-versions-check-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>com.ning.maven.plugins</groupId>
+        <artifactId>maven-duplicate-finder-plugin</artifactId>
+      </plugin>
     </plugins>
   </build>
 
@@ -640,6 +841,28 @@ under the License.
           <artifactId>hadoop-core</artifactId>
           <version>${hadoop.version}</version>
           <scope>provided</scope>
+          <exclusions>
+            <exclusion>
+              <groupId>org.eclipse.jdt</groupId>
+              <artifactId>core</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.mortbay.jetty</groupId>
+              <artifactId>jetty</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.mortbay.jetty</groupId>
+              <artifactId>jsp-api-2.1</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>tomcat</groupId>
+              <artifactId>jasper-compiler</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>tomcat</groupId>
+              <artifactId>jasper-runtime</artifactId>
+            </exclusion>
+          </exclusions>
         </dependency>
       </dependencies>
     </profile>
@@ -668,6 +891,32 @@ under the License.
           <artifactId>hadoop-core</artifactId>
           <version>${hadoop.version}</version>
           <scope>provided</scope>
+          <exclusions>
+            <exclusion>
+              <groupId>commons-httpclient</groupId>
+              <artifactId>commons-httpclient</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.eclipse.jdt</groupId>
+              <artifactId>core</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.mortbay.jetty</groupId>
+              <artifactId>jetty</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.mortbay.jetty</groupId>
+              <artifactId>jsp-api-2.1</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>tomcat</groupId>
+              <artifactId>jasper-compiler</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>tomcat</groupId>
+              <artifactId>jasper-runtime</artifactId>
+            </exclusion>
+          </exclusions>
         </dependency>
       </dependencies>
     </profile>
@@ -678,6 +927,8 @@ under the License.
         <module>giraph-accumulo</module>
         <module>giraph-hbase</module>
         <module>giraph-hcatalog</module>
+        <module>giraph-hive</module>
+        <module>giraph-rexster</module>
       </modules>
       <properties>
         <hadoop.version>0.20.2</hadoop.version>
@@ -705,6 +956,7 @@ under the License.
         <module>giraph-hbase</module>
         <module>giraph-hcatalog</module>
         <module>giraph-hive</module>
+        <module>giraph-rexster</module>
       </modules>
       <properties>
         <hadoop.version>0.20.0</hadoop.version>
@@ -715,6 +967,10 @@ under the License.
         <dependency>
           <groupId>com.facebook.hadoop</groupId>
           <artifactId>hadoop-core</artifactId>
+          <version>${hadoop.version}</version>
+          <scope>provided</scope>
+          <exclusions>
+          </exclusions>
         </dependency>
         <dependency>
           <groupId>commons-collections</groupId>
@@ -723,10 +979,7 @@ under the License.
         <dependency>
           <groupId>commons-httpclient</groupId>
           <artifactId>commons-httpclient</artifactId>
-        </dependency>
-        <dependency>
-          <groupId>commons-logging</groupId>
-          <artifactId>commons-logging-api</artifactId>
+          <scope>test</scope>
         </dependency>
       </dependencies>
     </profile>
@@ -736,6 +989,8 @@ under the License.
       <properties>
         <hadoop.version>0.23.1</hadoop.version>
         <munge.symbols>HADOOP_1_SECRET_MANAGER</munge.symbols>
+        <!-- TODO: add this check eventually -->
+        <project.enforcer.skip>true</project.enforcer.skip>
       </properties>
       <dependencies>
         <!-- sorted lexicographically -->
@@ -763,6 +1018,8 @@ under the License.
       <properties>
         <hadoop.version>2.0.0-cdh4.1.2</hadoop.version> 
         <munge.symbols>HADOOP_1_SECRET_MANAGER</munge.symbols>
+        <!-- TODO: add this check eventually -->
+        <project.enforcer.skip>true</project.enforcer.skip>
       </properties>
       <dependencies>
         <dependency>
@@ -822,6 +1079,8 @@ under the License.
       <properties>
         <hadoop.version>SET_HADOOP_VERSION_USING_MVN_DASH_D_OPTION</hadoop.version>
         <munge.symbols>PURE_YARN</munge.symbols>
+        <!-- TODO: add this check eventually -->
+        <project.enforcer.skip>true</project.enforcer.skip>
       </properties>
       <dependencies>
         <!-- sorted lexicographically -->
@@ -840,27 +1099,27 @@ under the License.
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-yarn-common</artifactId>
-	      <version>${hadoop.version}</version>
+          <version>${hadoop.version}</version>
         </dependency>
         <dependency>
-	      <groupId>org.apache.hadoop</groupId>
-	      <artifactId>hadoop-yarn-server-common</artifactId>
-	      <version>${hadoop.version}</version>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-yarn-server-common</artifactId>
+          <version>${hadoop.version}</version>
         </dependency>
         <dependency>
-	      <groupId>org.apache.hadoop</groupId>
-	      <artifactId>hadoop-yarn-server-resourcemanager</artifactId>
-	      <version>${hadoop.version}</version>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-yarn-server-resourcemanager</artifactId>
+          <version>${hadoop.version}</version>
         </dependency>
         <dependency>
-	      <groupId>org.apache.hadoop</groupId>
-	      <artifactId>hadoop-yarn-server-nodemanager</artifactId>
-	      <version>${hadoop.version}</version>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-yarn-server-nodemanager</artifactId>
+          <version>${hadoop.version}</version>
         </dependency>
         <dependency>
-	      <groupId>org.apache.hadoop</groupId>
-	      <artifactId>hadoop-yarn-server-tests</artifactId>
-	      <version>${hadoop.version}</version>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-yarn-server-tests</artifactId>
+          <version>${hadoop.version}</version>
           <type>test-jar</type>
         </dependency>
       </dependencies>
@@ -873,6 +1132,8 @@ under the License.
        <id>2.1.1-SNAPSHOT</id>
        <properties>
          <hadoop.version>2.1.1-SNAPSHOT</hadoop.version>
+         <!-- TODO: add this check eventually -->
+         <project.enforcer.skip>true</project.enforcer.skip>
        </properties>
        <dependencies>
          <!-- sorted lexicographically -->
@@ -907,6 +1168,8 @@ under the License.
        <id>2.2.0</id>
        <properties>
          <hadoop.version>2.2.0</hadoop.version>
+         <!-- TODO: add this check eventually -->
+         <project.enforcer.skip>true</project.enforcer.skip>
        </properties>
        <dependencies>
          <!-- sorted lexicographically -->
@@ -941,6 +1204,8 @@ under the License.
       <id>hadoop_snapshot</id>
       <properties>
         <hadoop.version>3.0.0-SNAPSHOT</hadoop.version>
+        <!-- TODO: add this check eventually -->
+        <project.enforcer.skip>true</project.enforcer.skip>
       </properties>
       <dependencies>
         <!-- sorted lexicographically -->
@@ -979,11 +1244,27 @@ under the License.
         <groupId>com.facebook.hiveio</groupId>
         <artifactId>hive-io-exp-core</artifactId>
         <version>${dep.hiveio.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>commons-beanutils</groupId>
+            <artifactId>commons-beanutils-core</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>com.facebook.hiveio</groupId>
         <artifactId>hive-io-exp-testing</artifactId>
         <version>${dep.hiveio.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.zookeeper</groupId>
+            <artifactId>zookeeper</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>com.google.guava</groupId>
@@ -1017,9 +1298,67 @@ under the License.
         <version>${dep.cli-parser.version}</version>
       </dependency>
       <dependency>
-        <groupId>commons-io</groupId>
-        <artifactId>commons-io</artifactId>
-        <version>${dep.commons-io.version}</version>
+        <groupId>com.google.code.findbugs</groupId>
+        <artifactId>annotations</artifactId>
+        <version>${dep.google.findbugs.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.tinkerpop.blueprints</groupId>
+        <artifactId>blueprints-core</artifactId>
+        <version>${dep.tinkerpop.rexter.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.tinkerpop.rexster</groupId>
+        <artifactId>rexster-core</artifactId>
+        <version>${dep.tinkerpop.rexter.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>javax.xml.stream</groupId>
+            <artifactId>stax-api</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>com.tinkerpop.rexster</groupId>
+        <artifactId>rexster-protocol</artifactId>
+        <version>${dep.tinkerpop.rexter.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.glassfish.grizzly</groupId>
+            <artifactId>grizzly-framework</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>com.tinkerpop.rexster</groupId>
+        <artifactId>rexster-server</artifactId>
+        <version>${dep.tinkerpop.rexter.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.glassfish.grizzly</groupId>
+            <artifactId>grizzly-framework</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.glassfish.grizzly</groupId>
+            <artifactId>grizzly-portunif</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.glassfish.grizzly</groupId>
+            <artifactId>grizzly-rcm</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>commons-cli</groupId>
@@ -1027,9 +1366,29 @@ under the License.
         <version>${dep.commons-cli.version}</version>
       </dependency>
       <dependency>
+        <groupId>commons-codec</groupId>
+        <artifactId>commons-codec</artifactId>
+        <version>${dep.commons-codec.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>commons-io</groupId>
+        <artifactId>commons-io</artifactId>
+        <version>${dep.commons-io.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>commons-logging</groupId>
+        <artifactId>commons-logging</artifactId>
+        <version>${dep.commons-logging.version}</version>
+      </dependency>
+      <dependency>
         <groupId>com.facebook.thirdparty.yourkit-api</groupId>
         <artifactId>yjp-controller-api-redist</artifactId>
         <version>${dep.yourkit-api.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>log4j</groupId>
+        <artifactId>log4j</artifactId>
+        <version>${dep.log4j.version}</version>
       </dependency>
       <dependency>
         <groupId>io.airlift</groupId>
@@ -1065,6 +1424,16 @@ under the License.
         <groupId>org.apache.giraph</groupId>
         <artifactId>giraph-hcatalog</artifactId>
         <version>${project.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging-api</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.apache.giraph</groupId>
@@ -1090,6 +1459,16 @@ under the License.
         <groupId>org.apache.gora</groupId>
         <artifactId>gora-core</artifactId>
         <version>${dep.gora.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-core</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.apache.hcatalog</groupId>
@@ -1100,17 +1479,108 @@ under the License.
             <groupId>org.apache.pig</groupId>
             <artifactId>pig</artifactId>
           </exclusion>
+          <exclusion>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging-api</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.hive</groupId>
+            <artifactId>hive-common</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.hive</groupId>
+            <artifactId>hive-shims</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.zookeeper</groupId>
+            <artifactId>zookeeper</artifactId>
+          </exclusion>
         </exclusions>
       </dependency>
       <dependency>
         <groupId>org.apache.hive</groupId>
         <artifactId>hive-exec</artifactId>
         <version>${dep.hive.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>asm</groupId>
+            <artifactId>asm</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.json</groupId>
+            <artifactId>json</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.iq80.snappy</groupId>
+            <artifactId>snappy</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.apache.hive</groupId>
         <artifactId>hive-metastore</artifactId>
         <version>${dep.hive.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>asm</groupId>
+            <artifactId>asm</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging-api</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.avro</groupId>
+            <artifactId>avro</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.zookeeper</groupId>
+            <artifactId>zookeeper</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.datanucleus</groupId>
+            <artifactId>datanucleus-enhancer</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-all</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.thrift</groupId>
+        <artifactId>libthrift</artifactId>
+        <version>${dep.libthrift.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.apache.zookeeper</groupId>
@@ -1128,6 +1598,10 @@ under the License.
           <exclusion>
             <groupId>javax.jms</groupId>
             <artifactId>jms</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
@@ -1181,16 +1655,35 @@ under the License.
         <version>${dep.commons-net.version}</version>
       </dependency>
       <dependency>
-        <groupId>com.facebook.hadoop</groupId>
-        <artifactId>hadoop-core</artifactId>
-        <version>${dep.facebook-hadoop.version}</version>
-        <scope>provided</scope>
-      </dependency>
-      <dependency>
         <groupId>org.apache.accumulo</groupId>
         <artifactId>accumulo-core</artifactId>
         <version>${dep.accumulo.version}</version>
         <scope>provided</scope>
+        <exclusions>
+          <exclusion>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging-api</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hadoop</groupId>
+        <artifactId>avro</artifactId>
+        <version>${dep.avro.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>org.apache.ant</groupId>
+            <artifactId>ant</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.apache.hadoop</groupId>
@@ -1221,6 +1714,68 @@ under the License.
         <artifactId>hbase</artifactId>
         <version>${dep.hbase.version}</version>
         <scope>provided</scope>
+        <exclusions>
+          <exclusion>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.sun.jersey</groupId>
+            <artifactId>jersey-server</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>commons-httpclient</groupId>
+            <artifactId>commons-httpclient</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.avro</groupId>
+            <artifactId>avro</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-core</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.thrift</groupId>
+            <artifactId>thrift</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.mortbay.jetty</groupId>
+            <artifactId>servlet-api-2.5</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.mortbay.jetty</groupId>
+            <artifactId>jetty</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.mortbay.jetty</groupId>
+            <artifactId>jsp-api-2.1</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>tomcat</groupId>
+            <artifactId>jasper-compiler</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>tomcat</groupId>
+            <artifactId>jasper-runtime</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>javax.ws.rs</groupId>
+            <artifactId>jsr311-api</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
 
       <!-- runtime dependencies. sorted lexicographically. -->
@@ -1228,27 +1783,63 @@ under the License.
         <groupId>commons-configuration</groupId>
         <artifactId>commons-configuration</artifactId>
         <version>${dep.commons-configuration.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+          </exclusion>
+        </exclusions>
         <scope>runtime</scope>
       </dependency>
       <dependency>
         <groupId>commons-httpclient</groupId>
         <artifactId>commons-httpclient</artifactId>
         <version>${dep.commons-httpclient.version}</version>
-        <scope>runtime</scope>
-      </dependency>
-      <dependency>
-        <groupId>commons-logging</groupId>
-        <artifactId>commons-logging-api</artifactId>
-        <version>${dep.commons-logging.version}</version>
-        <scope>runtime</scope>
+        <scope>test</scope>
+        <exclusions>
+          <exclusion>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
 
       <!-- test dependencies. sorted lexicographically. -->
       <dependency>
         <groupId>com.facebook.hadoop</groupId>
         <artifactId>hadoop-test</artifactId>
-        <version>${dep.facebook-hadoop.version}</version>
+        <version>${hadoop.version}</version>
         <scope>test</scope>
+        <exclusions>
+          <exclusion>
+            <groupId>commons-httpclient</groupId>
+            <artifactId>commons-httpclient</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-core</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>com.facebook.hiveio</groupId>
+        <artifactId>hive-io-exp-core</artifactId>
+        <version>${dep.hiveio.version}</version>
+        <type>test-jar</type>
+        <exclusions>
+          <exclusion>
+            <groupId>commons-beanutils</groupId>
+            <artifactId>commons-beanutils-core</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>junit</groupId>
@@ -1268,10 +1859,52 @@ under the License.
         <type>test-jar</type>
         <version>${dep.hbase.version}</version>
         <scope>test</scope>
+        <exclusions>
+          <exclusion>
+            <groupId>com.sun.jersey</groupId>
+            <artifactId>jersey-server</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>commons-httpclient</groupId>
+            <artifactId>commons-httpclient</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>avro</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.hadoop</groupId>
+            <artifactId>hadoop-core</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.thrift</groupId>
+            <artifactId>thrift</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>tomcat</groupId>
+            <artifactId>jasper-compiler</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>tomcat</groupId>
+            <artifactId>jasper-runtime</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>javax.ws.rs</groupId>
+            <artifactId>jsr311-api</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.mockito</groupId>
-        <artifactId>mockito-all</artifactId>
+        <artifactId>mockito-core</artifactId>
         <version>${dep.mockito.version}</version>
         <scope>test</scope>
       </dependency>

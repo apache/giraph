@@ -443,6 +443,10 @@ under the License.
       <artifactId>yjp-controller-api-redist</artifactId>
     </dependency>
     <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>annotations</artifactId>
+    </dependency>
+    <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
     </dependency>
@@ -463,8 +467,8 @@ under the License.
       <artifactId>commons-io</artifactId>
     </dependency>
     <dependency>
-      <groupId>io.airlift</groupId>
-      <artifactId>airline</artifactId>
+      <groupId>log4j</groupId>
+      <artifactId>log4j</artifactId>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
@@ -502,14 +506,6 @@ under the License.
       <groupId>org.python</groupId>
       <artifactId>jython</artifactId>
     </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-log4j12</artifactId>
-    </dependency>
 
     <!-- test dependencies. sorted lexicographically. -->
     <dependency>
@@ -519,7 +515,12 @@ under the License.
     </dependency>
     <dependency>
       <groupId>org.mockito</groupId>
-      <artifactId>mockito-all</artifactId>
+      <artifactId>mockito-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
       <scope>test</scope>
     </dependency>
  </dependencies>

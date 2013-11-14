@@ -1532,10 +1532,9 @@ else[HADOOP_NON_SECURE]*/
         getPartitionExchangeChildrenChangedEvent().waitForever();
         getPartitionExchangeChildrenChangedEvent().reset();
       }
-    } catch (KeeperException e) {
-      throw new RuntimeException(e);
-    } catch (InterruptedException e) {
-      throw new RuntimeException(e);
+    } catch (KeeperException | InterruptedException e) {
+      throw new RuntimeException(
+          "exchangeVertexPartitions: Got runtime exception", e);
     }
 
     if (LOG.isInfoEnabled()) {
