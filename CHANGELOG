@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-793: Create necessary documentation for Giraph-Gora integration 
+  (enato2099 via claudio)
+
   GIRAPH-760: Create EdgeOutputFormat to Apache Gora (renato2099 via claudio)
 
   GIRAPH-759: Create EdgeInputFormat from Apache Gora (renato2099 via claudio)
