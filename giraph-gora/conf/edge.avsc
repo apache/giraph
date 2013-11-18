@@ -1,0 +1,12 @@
+{
+  "type": "record",
+  "name": "GEdge",
+  "namespace": "org.apache.giraph.gora.generated",
+  "fields" : [
+    {"name": "edgeId", "type": "string"},
+    {"name": "edgeWeight", "type": "float"},
+    {"name": "vertexInId", "type": "string"},
+    {"name": "vertexOutId", "type": "string"},
+    {"name": "label", "type": "string"}
+  ]
+}
