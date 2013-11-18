@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-759: Create EdgeInputFormat from Apache Gora (renato2099 via claudio)
+
   GIRAPH-758: Create VertexOutputFormat to Apache Gora (renato2099 via claudio)
   
   GIRAPH-757: Create VertexInputFormat from Apache Gora (renato2099 via claudio)
