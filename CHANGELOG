@@ -1,12 +1,20 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-758: Create VertexOutputFormat to Apache Gora (renato2099 via claudio)
+  
   GIRAPH-757: Create VertexInputFormat from Apache Gora (renato2099 via claudio)
 
   GIRAPH-442: FileNotFoundException: <baseDirectory>/_zkServer is checked before it is created
   (miteshsjat via claudio)
 
   GIRAPH-796: Site build error with maven 3.1 (armax00 via claudio)
+
+  GIRAPH-782: giraph script can't find GIRAPH_ENV_DIR when called via $PATH (rvs)
+
+  GIRAPH-783: giraph bin script should pick up giraph-core jar to pass to hadoop (rvs) 
+
+  GIRAPH-781: binary tarball lacks /bin and /conf directories (rvs)
 
   GIRAPH-749: Update documentation according to the new EdgeOutputFormat API 
   (armax00 via claudio)
