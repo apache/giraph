@@ -289,6 +289,14 @@ public class ZooKeeperManager {
       LOG.error("createCandidateStamp: Failed to mkdirs " +
           baseDirectory);
     }
+    try {
+      fs.mkdirs(serverDirectory);
+      LOG.info("createCandidateStamp: Made the directory " +
+          serverDirectory);
+    } catch (IOException e) {
+      LOG.error("createCandidateStamp: Failed to mkdirs " +
+          serverDirectory);
+    }
     // Check that the base directory exists and is a directory
     try {
       if (!fs.getFileStatus(baseDirectory).isDir()) {

@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-442: FileNotFoundException: <baseDirectory>/_zkServer is checked before it is created
+  (miteshsjat via claudio)
+
   GIRAPH-796: Site build error with maven 3.1 (armax00 via claudio)
 
   GIRAPH-749: Update documentation according to the new EdgeOutputFormat API 
