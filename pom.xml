@@ -254,6 +254,7 @@ under the License.
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
     <dep.accumulo.version>1.4.0</dep.accumulo.version>
+    <dep.gora.version>0.3</dep.gora.version>
     <dep.airline.version>0.5</dep.airline.version>
     <dep.base64.version>2.3.8</dep.base64.version>
     <dep.cli-parser.version>1.1</dep.cli-parser.version>
@@ -618,6 +619,7 @@ under the License.
         <module>giraph-hbase</module>
         <module>giraph-hcatalog</module>
         <module>giraph-hive</module>
+        <module>giraph-gora</module>
         <module>giraph-rexster</module>
       </modules>
       <activation>
@@ -1083,6 +1085,11 @@ under the License.
         <groupId>org.apache.giraph</groupId>
         <artifactId>giraph-rexster</artifactId>
         <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.gora</groupId>
+        <artifactId>gora-core</artifactId>
+        <version>${dep.gora.version}</version>
       </dependency>
       <dependency>
         <groupId>org.apache.hcatalog</groupId>

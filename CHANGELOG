@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-757: Create VertexInputFormat from Apache Gora (renato2099 via claudio)
+
   GIRAPH-442: FileNotFoundException: <baseDirectory>/_zkServer is checked before it is created
   (miteshsjat via claudio)
 
