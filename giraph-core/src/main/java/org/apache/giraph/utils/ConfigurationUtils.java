@@ -401,6 +401,12 @@ public final class ConfigurationUtils {
     // Now, we parse options that are specific to Hadoop MR Job
     if (cmd.hasOption("vif")) {
       if (cmd.hasOption("vip")) {
+        if (FileSystem.get(new Configuration()).listStatus(
+              new Path(cmd.getOptionValue("vip"))) == null) {
+          throw new IllegalArgumentException(
+              "Invalid vertex input path (-vip): " +
+              cmd.getOptionValue("vip"));
+        }
         GiraphFileInputFormat.addVertexInputPath(conf,
           new Path(cmd.getOptionValue("vip")));
       } else {
@@ -412,6 +418,12 @@ public final class ConfigurationUtils {
     }
     if (cmd.hasOption("eif")) {
       if (cmd.hasOption("eip")) {
+        if (FileSystem.get(new Configuration()).listStatus(
+              new Path(cmd.getOptionValue("eip"))) == null) {
+          throw new IllegalArgumentException(
+              "Invalid edge input path (-eip): " +
+              cmd.getOptionValue("eip"));
+        }
         GiraphFileInputFormat.addEdgeInputPath(conf,
           new Path(cmd.getOptionValue("eip")));
       } else {
