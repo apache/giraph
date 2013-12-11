@@ -989,8 +989,10 @@ under the License.
       <properties>
         <hadoop.version>0.23.1</hadoop.version>
         <munge.symbols>HADOOP_1_SECRET_MANAGER</munge.symbols>
-        <!-- TODO: add this check eventually -->
+        <!-- TODO: add these checks eventually -->
         <project.enforcer.skip>true</project.enforcer.skip>
+        <giraph.maven.dependency.plugin.skip>true</giraph.maven.dependency.plugin.skip>
+        <giraph.maven.duplicate.finder.skip>true</giraph.maven.duplicate.finder.skip>
       </properties>
       <dependencies>
         <!-- sorted lexicographically -->
@@ -1018,8 +1020,10 @@ under the License.
       <properties>
         <hadoop.version>2.0.0-cdh4.1.2</hadoop.version> 
         <munge.symbols>HADOOP_1_SECRET_MANAGER</munge.symbols>
-        <!-- TODO: add this check eventually -->
+        <!-- TODO: add these checks eventually -->
         <project.enforcer.skip>true</project.enforcer.skip>
+        <giraph.maven.dependency.plugin.skip>true</giraph.maven.dependency.plugin.skip>
+        <giraph.maven.duplicate.finder.skip>true</giraph.maven.duplicate.finder.skip>
       </properties>
       <dependencies>
         <dependency>
@@ -1079,8 +1083,10 @@ under the License.
       <properties>
         <hadoop.version>SET_HADOOP_VERSION_USING_MVN_DASH_D_OPTION</hadoop.version>
         <munge.symbols>PURE_YARN</munge.symbols>
-        <!-- TODO: add this check eventually -->
+        <!-- TODO: add these checks eventually -->
         <project.enforcer.skip>true</project.enforcer.skip>
+        <giraph.maven.dependency.plugin.skip>true</giraph.maven.dependency.plugin.skip>
+        <giraph.maven.duplicate.finder.skip>true</giraph.maven.duplicate.finder.skip>
       </properties>
       <dependencies>
         <!-- sorted lexicographically -->
@@ -1132,8 +1138,10 @@ under the License.
        <id>2.1.1-SNAPSHOT</id>
        <properties>
          <hadoop.version>2.1.1-SNAPSHOT</hadoop.version>
-         <!-- TODO: add this check eventually -->
+         <!-- TODO: add these checks eventually -->
          <project.enforcer.skip>true</project.enforcer.skip>
+         <giraph.maven.dependency.plugin.skip>true</giraph.maven.dependency.plugin.skip>
+         <giraph.maven.duplicate.finder.skip>true</giraph.maven.duplicate.finder.skip>
        </properties>
        <dependencies>
          <!-- sorted lexicographically -->
@@ -1168,8 +1176,10 @@ under the License.
        <id>2.2.0</id>
        <properties>
          <hadoop.version>2.2.0</hadoop.version>
-         <!-- TODO: add this check eventually -->
+         <!-- TODO: add these checks eventually -->
          <project.enforcer.skip>true</project.enforcer.skip>
+         <giraph.maven.dependency.plugin.skip>true</giraph.maven.dependency.plugin.skip>
+         <giraph.maven.duplicate.finder.skip>true</giraph.maven.duplicate.finder.skip>
        </properties>
        <dependencies>
          <!-- sorted lexicographically -->
@@ -1204,8 +1214,10 @@ under the License.
       <id>hadoop_snapshot</id>
       <properties>
         <hadoop.version>3.0.0-SNAPSHOT</hadoop.version>
-        <!-- TODO: add this check eventually -->
+        <!-- TODO: add these checks eventually -->
         <project.enforcer.skip>true</project.enforcer.skip>
+        <giraph.maven.dependency.plugin.skip>true</giraph.maven.dependency.plugin.skip>
+        <giraph.maven.duplicate.finder.skip>true</giraph.maven.duplicate.finder.skip>
       </properties>
       <dependencies>
         <!-- sorted lexicographically -->
