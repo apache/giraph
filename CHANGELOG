@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-810: Giraph should track aggregate statistics over lifetime of the computation
+  (rvesse via majakabiljo)
+
   GIRAPH-785: Improve GraphPartitionerFactory usage (ikabiljo via majakabiljo)
 
   GIRAPH-815: Exclude dependency and duplicate finder checks to profile we do not check (aching)

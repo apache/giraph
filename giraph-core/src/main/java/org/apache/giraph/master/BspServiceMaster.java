@@ -1970,6 +1970,9 @@ public class BspServiceMaster<I extends WritableComparable,
     gs.getEdges().setValue(globalStats.getEdgeCount());
     gs.getSentMessages().setValue(globalStats.getMessageCount());
     gs.getSentMessageBytes().setValue(globalStats.getMessageBytesCount());
+    gs.getAggregateSentMessages().increment(globalStats.getMessageCount());
+    gs.getAggregateSentMessageBytes()
+      .increment(globalStats.getMessageBytesCount());
   }
 
   /**
