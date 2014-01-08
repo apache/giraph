@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-742: Worker task finishSuperstep status reporting the wrong superstep number
+  (cmuchins via majakabiljo)
+
   GIRAPH-810: Giraph should track aggregate statistics over lifetime of the computation
   (rvesse via majakabiljo)
 

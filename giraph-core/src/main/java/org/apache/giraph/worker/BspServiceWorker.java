@@ -789,11 +789,11 @@ public class BspServiceWorker<I extends WritableComparable,
           " with global stats " + globalStats + " and classes " +
           superstepClasses);
     }
-    incrCachedSuperstep();
     getContext().setStatus("finishSuperstep: (all workers done) " +
         getGraphTaskManager().getGraphFunctions().toString() +
         " - Attempt=" + getApplicationAttempt() +
         ", Superstep=" + getSuperstep());
+    incrCachedSuperstep();
     getConfiguration().updateSuperstepClasses(superstepClasses);
 
     return new FinishedSuperstepStats(
