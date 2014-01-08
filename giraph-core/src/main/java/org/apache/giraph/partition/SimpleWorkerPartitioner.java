@@ -18,57 +18,28 @@
 
 package org.apache.giraph.partition;
 
-import com.google.common.collect.Lists;
+import java.util.Collection;
+import java.util.List;
+
 import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-import java.util.Collection;
-import java.util.List;
+import com.google.common.collect.Lists;
 
 /**
- * A range-based worker partitioner where equal-sized ranges of vertex ids
- * are deterministically assigned to partitions.
- * The user has to define a mapping from vertex ids to long keys dense in
- * [0, keySpaceSize).
+ * Abstracts and implements all WorkerGraphPartitioner logic on top of a single
+ * user function - getPartitionIndex.
  *
  * @param <I> Vertex id type
  * @param <V> Vertex value type
  * @param <E> Edge value type
  */
-public abstract class SimpleRangeWorkerPartitioner<I extends
-    WritableComparable, V extends Writable, E extends Writable>
+public abstract class SimpleWorkerPartitioner<I extends WritableComparable,
+    V extends Writable, E extends Writable>
     implements WorkerGraphPartitioner<I, V, E> {
   /** List of {@link PartitionOwner}s for this worker. */
   private List<PartitionOwner> partitionOwnerList = Lists.newArrayList();
-  /** Vertex keys space size. */
-  private long keySpaceSize;
-
-  /**
-   * Constructor.
-   *
-   * @param keySpaceSize Vertex keys space size.
-   */
-  public SimpleRangeWorkerPartitioner(long keySpaceSize) {
-    this.keySpaceSize = keySpaceSize;
-  }
-
-  /**
-   * Get key space size (can be used when implementing vertexKeyFromId()).
-   *
-   * @return Key space size.
-   */
-  public long getKeySpaceSize() {
-    return keySpaceSize;
-  }
-
-  /**
-   * Convert a vertex id to a unique long key in [0, keySpaceSize].
-   *
-   * @param id Vertex id
-   * @return Unique long key
-   */
-  protected abstract long vertexKeyFromId(I id);
 
   @Override
   public PartitionOwner createPartitionOwner() {
@@ -77,10 +48,8 @@ public abstract class SimpleRangeWorkerPartitioner<I extends
 
   @Override
   public PartitionOwner getPartitionOwner(I vertexId) {
-    long rangeSize = keySpaceSize / partitionOwnerList.size();
     return partitionOwnerList.get(
-        Math.min((int) (vertexKeyFromId(vertexId) / rangeSize),
-            partitionOwnerList.size() - 1));
+        getPartitionIndex(vertexId, partitionOwnerList.size()));
   }
 
   @Override
@@ -92,8 +61,7 @@ public abstract class SimpleRangeWorkerPartitioner<I extends
   }
 
   @Override
-  public PartitionExchange updatePartitionOwners(
-      WorkerInfo myWorkerInfo,
+  public PartitionExchange updatePartitionOwners(WorkerInfo myWorkerInfo,
       Collection<? extends PartitionOwner> masterSetPartitionOwners,
       PartitionStore<I, V, E> partitionStore) {
     return PartitionBalancer.updatePartitionOwners(partitionOwnerList,
@@ -104,4 +72,14 @@ public abstract class SimpleRangeWorkerPartitioner<I extends
   public Collection<? extends PartitionOwner> getPartitionOwners() {
     return partitionOwnerList;
   }
+
+  /**
+   * Calculates in which partition current vertex belongs to,
+   * from interval [0, partitionCount).
+   *
+   * @param id Vertex id
+   * @param partitionCount Number of partitions
+   * @return partition
+   */
+  protected abstract int getPartitionIndex(I id, int partitionCount);
 }

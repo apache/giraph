@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-785: Improve GraphPartitionerFactory usage (ikabiljo via majakabiljo)
+
   GIRAPH-815: Exclude dependency and duplicate finder checks to profile we do not check (aching)
 
   GIRAPH-798: Upgrade Giraph to Java7 and fix all dependencies (aching)

@@ -18,6 +18,9 @@
 
 package org.apache.giraph.partition;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.worker.WorkerInfo;
@@ -25,22 +28,17 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-
 /**
- * A range-based master partitioner where equal-sized ranges of partitions
- * are deterministically assigned to workers.
+ * Abstracts and implements all MasterGraphPartitioner logic on top of a single
+ * user function - getWorkerIndex.
  *
  * @param <I> Vertex id type
  * @param <V> Vertex value type
  * @param <E> Edge value type
  */
-public class SimpleRangeMasterPartitioner<I extends WritableComparable,
-    V extends Writable, E extends Writable> implements
-    MasterGraphPartitioner<I, V, E> {
+public abstract class SimpleMasterPartitioner<I extends WritableComparable,
+    V extends Writable, E extends Writable>
+    implements MasterGraphPartitioner<I, V, E> {
   /** Class logger */
   private static Logger LOG = Logger.getLogger(HashMasterPartitioner.class);
   /** Provided configuration */
@@ -51,10 +49,10 @@ public class SimpleRangeMasterPartitioner<I extends WritableComparable,
   /**
    * Constructor.
    *
-   * @param conf Configuration used.
+   * @param conf
+   *          Configuration used.
    */
-  public SimpleRangeMasterPartitioner(
-      ImmutableClassesGiraphConfiguration conf) {
+  public SimpleMasterPartitioner(ImmutableClassesGiraphConfiguration conf) {
     this.conf = conf;
   }
 
@@ -63,29 +61,13 @@ public class SimpleRangeMasterPartitioner<I extends WritableComparable,
       Collection<WorkerInfo> availableWorkerInfos, int maxWorkers) {
     int partitionCount = PartitionUtils.computePartitionCount(
         availableWorkerInfos, maxWorkers, conf);
-    int rangeSize = partitionCount / availableWorkerInfos.size();
+    ArrayList<WorkerInfo> workerList =
+        new ArrayList<WorkerInfo>(availableWorkerInfos);
 
     partitionOwnerList = new ArrayList<PartitionOwner>();
-    Iterator<WorkerInfo> workerIt = availableWorkerInfos.iterator();
-    WorkerInfo currentWorker = null;
-
-    int i = 0;
-    for (; i < partitionCount; ++i) {
-      if (i % rangeSize == 0) {
-        if (!workerIt.hasNext()) {
-          break;
-        }
-        currentWorker = workerIt.next();
-      }
-      partitionOwnerList.add(new BasicPartitionOwner(i, currentWorker));
-    }
-
-    // Distribute the remainder among all workers.
-    if (i < partitionCount) {
-      workerIt = availableWorkerInfos.iterator();
-      for (; i < partitionCount; ++i) {
-        partitionOwnerList.add(new BasicPartitionOwner(i, workerIt.next()));
-      }
+    for (int i = 0; i < partitionCount; i++) {
+      partitionOwnerList.add(new BasicPartitionOwner(i, workerList.get(
+          getWorkerIndex(i, partitionCount, workerList.size()))));
     }
 
     return partitionOwnerList;
@@ -97,11 +79,8 @@ public class SimpleRangeMasterPartitioner<I extends WritableComparable,
       Collection<WorkerInfo> availableWorkers,
       int maxWorkers,
       long superstep) {
-    return PartitionBalancer.balancePartitionsAcrossWorkers(
-        conf,
-        partitionOwnerList,
-        allPartitionStatsList,
-        availableWorkers);
+    return PartitionBalancer.balancePartitionsAcrossWorkers(conf,
+        partitionOwnerList, allPartitionStatsList, availableWorkers);
   }
 
   @Override
@@ -113,4 +92,15 @@ public class SimpleRangeMasterPartitioner<I extends WritableComparable,
   public PartitionStats createPartitionStats() {
     return new PartitionStats();
   }
+
+  /**
+   * Calculates worker that should be responsible for passed partition.
+   *
+   * @param partition Current partition
+   * @param partitionCount Number of partitions
+   * @param workerCount Number of workers
+   * @return index of worker responsible for current partition
+   */
+  protected abstract int getWorkerIndex(
+      int partition, int partitionCount, int workerCount);
 }

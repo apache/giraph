@@ -195,11 +195,20 @@ public class PartitionUtils {
     }
     int maxPartitions = getMaxPartitions(conf);
     if (partitionCount > maxPartitions) {
+      // try to keep partitionCount divisible by number of workers
+      // in order to keep the balance
+      int reducedPartitions = (maxPartitions / availableWorkerInfos.size()) *
+          availableWorkerInfos.size();
+      if (reducedPartitions == 0) {
+        reducedPartitions = maxPartitions;
+      }
       LOG.warn("computePartitionCount: " +
-          "Reducing the partitionCount to " + maxPartitions +
-          " from " + partitionCount);
-      partitionCount = maxPartitions;
+          "Reducing the partitionCount to " + reducedPartitions +
+          " from " + partitionCount + " because of " + maxPartitions +
+          " limit");
+      partitionCount = reducedPartitions;
     }
+
     return partitionCount;
   }
 

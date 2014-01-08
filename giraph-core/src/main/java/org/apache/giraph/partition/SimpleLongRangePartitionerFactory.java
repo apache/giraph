@@ -31,47 +31,32 @@ import org.apache.hadoop.io.Writable;
  * @param <V> Vertex value type
  * @param <E> Edge value type
  */
-public class SimpleLongRangePartitionerFactory<V extends Writable,
-    E extends Writable>
-    implements GraphPartitionerFactory<LongWritable, V, E> {
-  /** Configuration. */
-  private ImmutableClassesGiraphConfiguration conf;
+public class SimpleLongRangePartitionerFactory
+    <V extends Writable, E extends Writable>
+    extends SimplePartitionerFactory<LongWritable, V, E> {
+
   /** Vertex key space size. */
   private long keySpaceSize;
 
   @Override
-  public MasterGraphPartitioner<LongWritable, V, E>
-  createMasterGraphPartitioner() {
-    return new SimpleRangeMasterPartitioner<LongWritable, V, E>(conf);
+  protected int getPartition(LongWritable id, int partitionCount) {
+    return getPartitionInRange(id.get(), keySpaceSize, partitionCount);
   }
 
   @Override
-  public WorkerGraphPartitioner<LongWritable, V, E>
-  createWorkerGraphPartitioner() {
-    return new SimpleRangeWorkerPartitioner<LongWritable, V, E>(
-        keySpaceSize) {
-      @Override
-      protected long vertexKeyFromId(LongWritable id) {
-        // The modulo is just a safeguard in case keySpaceSize is incorrect.
-        return id.get() % keySpaceSize;
-      }
-    };
+  protected int getWorker(int partition, int partitionCount, int workerCount) {
+    return getPartitionInRange(partition, partitionCount, workerCount);
   }
 
   @Override
   public void setConf(ImmutableClassesGiraphConfiguration conf) {
-    this.conf = conf;
-    keySpaceSize = conf.getLong(GiraphConstants.PARTITION_VERTEX_KEY_SPACE_SIZE,
-        -1);
+    super.setConf(conf);
+    keySpaceSize =
+          conf.getLong(GiraphConstants.PARTITION_VERTEX_KEY_SPACE_SIZE, -1);
     if (keySpaceSize == -1) {
-      throw new IllegalStateException("Need to specify " + GiraphConstants
-          .PARTITION_VERTEX_KEY_SPACE_SIZE + " when using " +
-          "SimpleRangePartitioner");
+      throw new IllegalStateException("Need to specify " +
+          GiraphConstants.PARTITION_VERTEX_KEY_SPACE_SIZE +
+          " when using SimpleLongRangePartitionerFactory");
     }
-  }
-
-  @Override
-  public ImmutableClassesGiraphConfiguration getConf() {
-    return conf;
   }
 }
