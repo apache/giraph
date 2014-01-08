@@ -156,6 +156,8 @@ public class EdgeStore<I extends WritableComparable,
    * Note: this method is not thread-safe.
    */
   public void moveEdgesToVertices() {
+    final boolean createSourceVertex = configuration.
+        getCreateSourceVertex();
     if (transientEdges.isEmpty()) {
       if (LOG.isInfoEnabled()) {
         LOG.info("moveEdgesToVertices: No edges to move");
@@ -191,10 +193,13 @@ public class EdgeStore<I extends WritableComparable,
                 // If the source vertex doesn't exist, create it. Otherwise,
                 // just set the edges.
                 if (vertex == null) {
-                  vertex = configuration.createVertex();
-                  vertex.initialize(vertexId, configuration.createVertexValue(),
-                      outEdges);
-                  partition.putVertex(vertex);
+                  if (createSourceVertex) {
+                    // createVertex only if it is allowed by configuration
+                    vertex = configuration.createVertex();
+                    vertex.initialize(vertexId,
+                        configuration.createVertexValue(), outEdges);
+                    partition.putVertex(vertex);
+                  }
                 } else {
                   // A vertex may exist with or without edges initially
                   // and optimize the case of no initial edges

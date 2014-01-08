@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-820: add a configuration option to skip creating source vertices present only 
+  in edge input (pavanka via majakabiljo)
+
   GIRAPH-742: Worker task finishSuperstep status reporting the wrong superstep number
   (cmuchins via majakabiljo)
 

@@ -970,6 +970,15 @@ public interface GiraphConstants {
         "one-to-all message sending strategy");
 
   /**
+   * This option can be used to specify if a source vertex present in edge
+   * input but not in vertex input can be created
+   */
+  BooleanConfOption CREATE_EDGE_SOURCE_VERTICES =
+      new BooleanConfOption("giraph.createEdgeSourceVertices", true,
+          "Create a source vertex if present in edge input but not " +
+          "necessarily in vertex input");
+
+  /**
    * This counter group will contain one counter whose name is the ZooKeeper
    * server:port which this job is using
    */

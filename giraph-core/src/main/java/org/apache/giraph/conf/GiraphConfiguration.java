@@ -1161,4 +1161,20 @@ public class GiraphConfiguration extends Configuration
   public boolean isOneToAllMsgSendingEnabled() {
     return ONE_TO_ALL_MSG_SENDING.isTrue(this);
   }
+
+  /**
+   * Get option whether to create a source vertex present only in edge input
+   * @return CREATE_EDGE_SOURCE_VERTICES option
+   */
+  public boolean getCreateSourceVertex() {
+    return CREATE_EDGE_SOURCE_VERTICES.get(this);
+  }
+
+  /**
+   * set option whether to create a source vertex present only in edge input
+   * @param createVertex create source vertex option
+   */
+  public void setCreateSourceVertex(boolean createVertex) {
+    CREATE_EDGE_SOURCE_VERTICES.set(this, createVertex);
+  }
 }
