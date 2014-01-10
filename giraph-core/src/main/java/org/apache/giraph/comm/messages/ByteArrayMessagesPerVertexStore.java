@@ -25,6 +25,7 @@ import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.giraph.utils.ExtendedDataInput;
 import org.apache.giraph.utils.RepresentativeByteArrayIterator;
 import org.apache.giraph.utils.VertexIdIterator;
+import org.apache.giraph.utils.VerboseByteArrayMessageWrite;
 import org.apache.giraph.utils.io.DataInputOutput;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -118,8 +119,8 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
             getDataInputOutput(partitionMap, vertexIdMessageIterator);
 
         synchronized (dataInputOutput) {
-          vertexIdMessageIterator.getCurrentMessage().write(
-              dataInputOutput.getDataOutput());
+          VerboseByteArrayMessageWrite.verboseWriteCurrentMessage(
+              vertexIdMessageIterator, dataInputOutput.getDataOutput());
         }
       }
     }

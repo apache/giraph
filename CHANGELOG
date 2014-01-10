@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-821: proper handling of NegativeArraySizeException for all ByteArray backed
+  messagestores (pavanka via majakabiljo)
+
   GIRAPH-820: add a configuration option to skip creating source vertices present only 
   in edge input (pavanka via majakabiljo)
 

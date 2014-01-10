@@ -189,6 +189,14 @@ public class ByteArrayVertexIdMessages<I extends WritableComparable,
     public void writeCurrentMessageBytes(DataOutput dataOutput) {
       try {
         dataOutput.write(getByteArray(), messageOffset, messageBytes);
+      } catch (NegativeArraySizeException e) {
+        throw new RuntimeException("The numbers of bytes sent to vertex " +
+            vertexId + " exceeded the max capacity of " +
+            "its ExtendedDataOutput. Please consider setting " +
+            "giraph.useBigDataIOForMessages=true. If there are super-vertices" +
+            " in the graph which receive a lot of messages (total serialized " +
+            "size of messages goes beyond the maximum size of a byte array), " +
+            "setting this option to true will remove that limit");
       } catch (IOException e) {
         throw new IllegalStateException("writeCurrentMessageBytes: Got " +
             "IOException", e);

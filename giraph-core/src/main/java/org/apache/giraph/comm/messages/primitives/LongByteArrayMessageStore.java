@@ -26,6 +26,7 @@ import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.giraph.utils.EmptyIterable;
+import org.apache.giraph.utils.VerboseByteArrayMessageWrite;
 import org.apache.giraph.utils.io.DataInputOutput;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
@@ -149,7 +150,8 @@ public class LongByteArrayMessageStore<M extends Writable>
           iterator.next();
           DataInputOutput dataInputOutput =  getDataInputOutput(partitionMap,
               iterator.getCurrentVertexId().get());
-          iterator.getCurrentMessage().write(dataInputOutput.getDataOutput());
+          VerboseByteArrayMessageWrite.verboseWriteCurrentMessage(iterator,
+              dataInputOutput.getDataOutput());
         }
       }
     }
