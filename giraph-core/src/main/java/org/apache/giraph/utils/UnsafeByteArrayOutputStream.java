@@ -256,7 +256,8 @@ public class UnsafeByteArrayOutputStream extends OutputStream
     int len = s.length();
     ensureSize(len);
     for (int i = 0; i < len; i++) {
-      buf[pos++] = (byte) s.charAt(i);
+      int v = s.charAt(i);
+      writeByte(v);
     }
   }
 
@@ -264,11 +265,10 @@ public class UnsafeByteArrayOutputStream extends OutputStream
   public void writeChars(String s) throws IOException {
     // Note that this code is mostly copied from DataOutputStream
     int len = s.length();
-    ensureSize(len);
+    ensureSize(len * SIZE_OF_CHAR);
     for (int i = 0; i < len; i++) {
       int v = s.charAt(i);
-      buf[pos++] = (byte) ((v >>> 8) & 0xFF);
-      buf[pos++] = (byte) ((v >>> 0) & 0xFF);
+      writeChar(v);
     }
   }
 
@@ -291,8 +291,8 @@ public class UnsafeByteArrayOutputStream extends OutputStream
       }
     }
 
-    buf[pos++] = (byte) ((utflen >>> 8) & 0xFF);
-    buf[pos++] = (byte) ((utflen >>> 0) & 0xFF);
+    ensureSize(utflen + SIZE_OF_SHORT);
+    writeShort(utflen);
 
     int i = 0;
     for (i = 0; i < strlen; i++) {
