@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-823: upgrade hiveio to version 0.21 from olderversion 0.20 (pavanka via majakabiljo)
+
   GIRAPH-724: UnsafeByteArrayOutputStream.writeUTF should call ensureSize (yhdong via majakabiljo)
 
   GIRAPH-821: proper handling of NegativeArraySizeException for all ByteArray backed
