@@ -1,0 +1,32 @@
+<assembly>
+  <id>distribution</id>
+  <formats>
+    <format>zip</format>
+  </formats>
+  <fileSets>
+    <fileSet>
+      <directory>src</directory>
+    </fileSet>
+    <fileSet>
+      <directory>target/apidocs</directory>
+    </fileSet>
+    <fileSet>
+      <directory>target/site</directory>
+    </fileSet>
+    <fileSet>
+      <directory>target</directory>
+      <includes>
+        <include>giraph-kibble-*.jar</include>
+      </includes>
+    </fileSet>
+  </fileSets>
+  <files>
+    <file>
+      <source>pom.xml</source>
+      <outputDirectory>src</outputDirectory>
+    </file>
+    <file>
+      <outputDirectory>/</outputDirectory>
+    </file>
+  </files>
+</assembly>
