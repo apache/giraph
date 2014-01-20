@@ -129,8 +129,8 @@ public class InternalVertexRunner {
       conf.setWorkerConfiguration(1, 1, 100.0f);
       GiraphConstants.SPLIT_MASTER_WORKER.set(conf, false);
       GiraphConstants.LOCAL_TEST_MODE.set(conf, true);
-      conf.set(GiraphConstants.ZOOKEEPER_LIST, "localhost:" +
-          String.valueOf(LOCAL_ZOOKEEPER_PORT));
+      conf.setZookeeperList("localhost:" +
+        String.valueOf(LOCAL_ZOOKEEPER_PORT));
 
       conf.set(GiraphConstants.ZOOKEEPER_DIR, zkDir.toString());
       GiraphConstants.ZOOKEEPER_MANAGER_DIRECTORY.set(conf,
@@ -230,7 +230,7 @@ public class InternalVertexRunner {
       conf.setWorkerConfiguration(1, 1, 100.0f);
       GiraphConstants.SPLIT_MASTER_WORKER.set(conf, false);
       GiraphConstants.LOCAL_TEST_MODE.set(conf, true);
-      conf.set(GiraphConstants.ZOOKEEPER_LIST, "localhost:" +
+      GiraphConstants.ZOOKEEPER_LIST.set(conf, "localhost:" +
           String.valueOf(LOCAL_ZOOKEEPER_PORT));
 
       conf.set(GiraphConstants.ZOOKEEPER_DIR, zkDir.toString());

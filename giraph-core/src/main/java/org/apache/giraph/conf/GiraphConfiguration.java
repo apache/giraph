@@ -625,7 +625,7 @@ public class GiraphConfiguration extends Configuration
    *        (i.e. zk1:2221,zk2:2221)
    */
   public final void setZooKeeperConfiguration(String serverList) {
-    set(ZOOKEEPER_LIST, serverList);
+    ZOOKEEPER_LIST.set(this, serverList);
   }
 
   /**
@@ -728,7 +728,7 @@ public class GiraphConfiguration extends Configuration
    * @return ZooKeeper list of strings, comma separated or null if none set.
    */
   public String getZookeeperList() {
-    return get(ZOOKEEPER_LIST);
+    return ZOOKEEPER_LIST.get(this);
   }
 
   /**
@@ -739,7 +739,7 @@ public class GiraphConfiguration extends Configuration
    * @param zkList list of strings, comma separated of zookeeper servers
    */
   public void setZookeeperList(String zkList) {
-    set(ZOOKEEPER_LIST, zkList);
+    ZOOKEEPER_LIST.set(this, zkList);
     ZOOKEEPER_IS_EXTERNAL.set(this, false);
   }
 

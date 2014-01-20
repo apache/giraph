@@ -199,7 +199,7 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
     context.setStatus("setup: Initializing Zookeeper services.");
     locateZookeeperClasspath(zkPathList);
     String serverPortList = conf.getZookeeperList();
-    if (serverPortList == null && startZooKeeperManager()) {
+    if (serverPortList.isEmpty() && startZooKeeperManager()) {
       return; // ZK connect/startup failed
     }
     if (zkManager != null && zkManager.runsZooKeeper()) {

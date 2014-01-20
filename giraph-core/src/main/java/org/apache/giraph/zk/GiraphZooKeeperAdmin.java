@@ -19,6 +19,7 @@ package org.apache.giraph.zk;
 
 
 import org.apache.giraph.bsp.BspService;
+import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.Tool;
@@ -76,17 +77,18 @@ public class GiraphZooKeeperAdmin implements Watcher, Tool {
    */
   @Override
   public int run(String[] args) {
-    final int zkPort = ZOOKEEPER_SERVER_PORT.get(getConf());
-    final String zkBasePath = getConf().get(
+    final GiraphConfiguration giraphConf = new GiraphConfiguration(getConf());
+    final int zkPort = ZOOKEEPER_SERVER_PORT.get(giraphConf);
+    final String zkBasePath = giraphConf.get(
       GiraphConstants.BASE_ZNODE_KEY, "") + BspService.BASE_DIR;
     final String[] zkServerList;
-    try {
-      zkServerList = getConf()
-        .get(GiraphConstants.ZOOKEEPER_LIST).split(",");
-    } catch (NullPointerException npe) {
+    String zkServerListStr = giraphConf.getZookeeperList();
+    if (zkServerListStr.isEmpty()) {
       throw new IllegalStateException("GiraphZooKeeperAdmin requires a list " +
         "of ZooKeeper servers to clean.");
     }
+    zkServerList = zkServerListStr.split(",");
+
     out.println("[GIRAPH-ZKADMIN] Attempting to clean Zookeeper " +
       "hosts at: " + Arrays.deepToString(zkServerList));
     out.println("[GIRAPH-ZKADMIN] Connecting on port: " + zkPort);

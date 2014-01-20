@@ -408,7 +408,12 @@ public interface GiraphConstants {
    *  zookeeper, this parameter will updated the configuration with the corrent
    *  configuration value.
    */
-  String ZOOKEEPER_LIST = "giraph.zkList";
+  StrConfOption ZOOKEEPER_LIST =
+      new StrConfOption("giraph.zkList", "",
+          "ZooKeeper comma-separated list (if not set, will start up " +
+          "ZooKeeper locally). Consider that after locally-starting " +
+          "zookeeper, this parameter will updated the configuration with " +
+          "the corrent configuration value.");
 
   /**
    * Zookeeper List will always hold a value during the computation while
