@@ -79,7 +79,7 @@
     </dependency>
     <dependency>
       <groupId>org.apache.giraph</groupId>
-      <artifactId>giraph-rexster</artifactId>
+      <artifactId>giraph-rexster-io</artifactId>
     </dependency>
     <dependency>
       <groupId>org.apache.giraph</groupId>

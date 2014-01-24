@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-829: Compilation error due to wrong rexster jar file (armax00 via claudio)
+
   GIRAPH-803: Rexster I/O new complete API (armax00 via claudio)
 
   GIRAPH-805: getZookeeperList can return null (armax00 via claudio)
