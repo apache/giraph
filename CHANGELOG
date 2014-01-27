@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-831: waitUntilAllTasksDone waits forever (without debug information) (aching)
+
   GIRAPH-830: directMemory used in netty message (pavanka via aching)
 
   GIRAPH-829: Compilation error due to wrong rexster jar file (armax00 via claudio)

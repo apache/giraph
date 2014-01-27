@@ -1004,5 +1004,14 @@ public interface GiraphConstants {
       HaltApplicationUtils.DefaultHaltInstructionsWriter.class,
       HaltApplicationUtils.HaltInstructionsWriter.class,
       "Class used to write instructions on how to halt the application");
+
+  /**
+   * Maximum timeout (in milliseconds) for waiting for all tasks
+   * to complete after the job is done.  Defaults to 15 minutes.
+   */
+  IntConfOption WAIT_TASK_DONE_TIMEOUT_MS =
+      new IntConfOption("giraph.waitTaskDoneTimeoutMs", MINUTES.toMillis(15),
+          "Maximum timeout (in ms) for waiting for all all tasks to " +
+              "complete");
 }
 // CHECKSTYLE: resume InterfaceIsTypeCheck

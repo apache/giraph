@@ -1177,4 +1177,24 @@ public class GiraphConfiguration extends Configuration
   public void setCreateSourceVertex(boolean createVertex) {
     CREATE_EDGE_SOURCE_VERTICES.set(this, createVertex);
   }
+
+  /**
+   * Get the maximum timeout (in milliseconds) for waiting for all tasks
+   * to complete after the job is done.
+   *
+   * @return Wait task done timeout in milliseconds.
+   */
+  public int getWaitTaskDoneTimeoutMs() {
+    return WAIT_TASK_DONE_TIMEOUT_MS.get(this);
+  }
+
+  /**
+   * Set the maximum timeout (in milliseconds) for waiting for all tasks
+   * to complete after the job is done.
+   *
+   * @param ms Milliseconds to set
+   */
+  public void setWaitTaskDoneTimeoutMs(int ms) {
+    WAIT_TASK_DONE_TIMEOUT_MS.set(this, ms);
+  }
 }
