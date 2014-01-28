@@ -35,12 +35,10 @@ under the License.
 
   <properties>
     <top.dir>${project.basedir}/..</top.dir>
-    <!-- TODO: guava r06 is too old for checking -->
+    <!-- TODO: Skip until duplicate classes are fixed in the future -->
     <project.enforcer.skip>true</project.enforcer.skip>
     <!-- TODO: Fix HBase duplicate classes in the future -->
     <giraph.maven.duplicate.finder.skip>true</giraph.maven.duplicate.finder.skip>
-    <!-- TODO: Fix HBase dependencies in the future -->
-    <giraph.maven.dependency.plugin.skip>true</giraph.maven.dependency.plugin.skip>
   </properties>
 
   <build>
@@ -145,8 +143,6 @@ under the License.
     <dependency>
       <groupId>com.google.guava</groupId>
       <artifactId>guava</artifactId>
-      <!-- TODO: guava r06 is too old for checking -->
-      <version>r06</version>
     </dependency>
     <dependency>
       <groupId>log4j</groupId>
@@ -159,6 +155,13 @@ under the License.
     <dependency>
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase</artifactId>
+    </dependency>
+
+    <!-- runtime dependency -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <scope>runtime</scope>
     </dependency>
 
     <!-- test dependencies. sorted lexicographically. -->

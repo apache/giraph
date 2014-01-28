@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-833: Upgrade to ZooKeeper 3.4.5 (aching)
+
   GIRAPH-836: Delay hive preparation until after the arguments are parsed (this allows 
   functionality such as creating a table) (aching)
 

@@ -18,6 +18,9 @@
 
 package org.apache.giraph.utils;
 
+import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableList;
+import com.google.common.io.Files;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.io.formats.GiraphFileInputFormat;
@@ -29,21 +32,16 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.log4j.Logger;
-import org.apache.zookeeper.server.NIOServerCnxn;
 import org.apache.zookeeper.server.ServerConfig;
 import org.apache.zookeeper.server.ZooKeeperServerMain;
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig;
 
-import com.google.common.base.Charsets;
-import com.google.common.collect.ImmutableList;
-import com.google.common.io.Files;
-
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.util.Properties;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * A base class for running internal tests on a vertex
@@ -81,6 +79,48 @@ public class InternalVertexRunner {
       GiraphConfiguration conf,
       String[] vertexInputData) throws Exception {
     return run(conf, vertexInputData, null);
+  }
+
+  /**
+   * Run the standalone ZooKeeper process and the job.
+   *
+   * @param quorumPeerConfig Quorum peer configuration
+   * @param giraphJob Giraph job to run
+   * @return True if successful, false otherwise
+   */
+  private static boolean runZooKeeperAndJob(QuorumPeerConfig quorumPeerConfig,
+                                            GiraphJob giraphJob) {
+    final InternalZooKeeper zookeeper = new InternalZooKeeper();
+    final ServerConfig zkConfig = new ServerConfig();
+    zkConfig.readFrom(quorumPeerConfig);
+
+    ExecutorService executorService = Executors.newSingleThreadExecutor();
+    executorService.execute(new Runnable() {
+      @Override
+      public void run() {
+        try {
+          zookeeper.runFromConfig(zkConfig);
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
+      }
+    });
+    try {
+      return giraphJob.run(true);
+    } catch (InterruptedException |
+        ClassNotFoundException | IOException e) {
+      LOG.error("runZooKeeperAndJob: Got exception on running", e);
+    } finally {
+      zookeeper.end();
+      executorService.shutdown();
+      try {
+        executorService.awaitTermination(1, TimeUnit.MINUTES);
+      } catch (InterruptedException e) {
+        LOG.error("runZooKeeperAndJob: Interrupted on waiting", e);
+      }
+    }
+
+    return false;
   }
 
   /**
@@ -158,29 +198,9 @@ public class InternalVertexRunner {
       QuorumPeerConfig qpConfig = new QuorumPeerConfig();
       qpConfig.parseProperties(zkProperties);
 
-      // Create and run the zookeeper instance
-      final InternalZooKeeper zookeeper = new InternalZooKeeper();
-      final ServerConfig zkConfig = new ServerConfig();
-      zkConfig.readFrom(qpConfig);
-
-      ExecutorService executorService = Executors.newSingleThreadExecutor();
-      executorService.execute(new Runnable() {
-        @Override
-        public void run() {
-          try {
-            zookeeper.runFromConfig(zkConfig);
-          } catch (IOException e) {
-            throw new RuntimeException(e);
-          }
-        }
-      });
-      try {
-        if (!job.run(true)) {
-          return null;
-        }
-      } finally {
-        executorService.shutdown();
-        zookeeper.end();
+      boolean success = runZooKeeperAndJob(qpConfig, job);
+      if (!success) {
+        return null;
       }
 
       File outFile = new File(outputDir, "part-m-00000");
@@ -244,28 +264,7 @@ public class InternalVertexRunner {
       QuorumPeerConfig qpConfig = new QuorumPeerConfig();
       qpConfig.parseProperties(zkProperties);
 
-      // Create and run the zookeeper instance
-      final InternalZooKeeper zookeeper = new InternalZooKeeper();
-      final ServerConfig zkConfig = new ServerConfig();
-      zkConfig.readFrom(qpConfig);
-
-      ExecutorService executorService = Executors.newSingleThreadExecutor();
-      executorService.execute(new Runnable() {
-        @Override
-        public void run() {
-          try {
-            zookeeper.runFromConfig(zkConfig);
-          } catch (IOException e) {
-            throw new RuntimeException(e);
-          }
-        }
-      });
-      try {
-        job.run(true);
-      } finally {
-        executorService.shutdown();
-        zookeeper.end();
-      }
+      runZooKeeperAndJob(qpConfig, job);
     } finally {
       FileUtils.delete(tmpDir);
     }
@@ -324,27 +323,7 @@ public class InternalVertexRunner {
      * Shutdown the ZooKeeper instance.
      */
     void end() {
-      if (getCnxnFactory() != null) {
-        shutdown();
-      }
-    }
-
-    /**
-     * Get the ZooKeeper connection factory using reflection.
-     * @return {@link NIOServerCnxn.Factory} from ZooKeeper
-     */
-    private NIOServerCnxn.Factory getCnxnFactory() {
-      NIOServerCnxn.Factory factory = null;
-      try {
-        Field field = ZooKeeperServerMain.class.getDeclaredField("cnxnFactory");
-        field.setAccessible(true);
-        factory = (NIOServerCnxn.Factory) field.get(this);
-        // CHECKSTYLE: stop IllegalCatch
-      } catch (Exception e) {
-        // CHECKSTYLE: resume IllegalCatch
-        LOG.error("Couldn't get cnxn factory", e);
-      }
-      return factory;
+      shutdown();
     }
   }
 }

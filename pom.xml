@@ -278,7 +278,7 @@ under the License.
     <dep.fastutil.version>6.5.4</dep.fastutil.version>
     <dep.google.findbugs.version>2.0.2</dep.google.findbugs.version>
     <dep.guava.version>14.0.1</dep.guava.version>
-    <dep.hbase.version>0.90.5</dep.hbase.version>
+    <dep.hbase.version>0.94.16</dep.hbase.version>
     <dep.hcatalog.version>0.5.0-incubating</dep.hcatalog.version>
     <dep.hive.version>0.11.0</dep.hive.version>
     <dep.hiveio.version>0.21</dep.hiveio.version>
@@ -294,7 +294,7 @@ under the License.
     <dep.typetools.version>0.2.1</dep.typetools.version>
     <dep.yammer-metrics.version>2.2.0</dep.yammer-metrics.version>
     <dep.yourkit-api.version>9.5.6</dep.yourkit-api.version>
-    <dep.zookeeper.version>3.3.3</dep.zookeeper.version>
+    <dep.zookeeper.version>3.4.5</dep.zookeeper.version>
 
     <forHadoop>for-hadoop-${hadoop.version}</forHadoop>
   </properties>
@@ -953,7 +953,6 @@ under the License.
       <id>hadoop_facebook</id>
       <modules>
         <module>giraph-accumulo</module>
-        <module>giraph-hbase</module>
         <module>giraph-hcatalog</module>
         <module>giraph-hive</module>
       </modules>
@@ -1345,6 +1344,10 @@ under the License.
             <artifactId>commons-logging</artifactId>
           </exclusion>
           <exclusion>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+          </exclusion>
+          <exclusion>
             <groupId>io.netty</groupId>
             <artifactId>netty</artifactId>
           </exclusion>
@@ -1669,6 +1672,10 @@ under the License.
           <exclusion>
             <groupId>com.sun.jdmk</groupId>
             <artifactId>jmxtools</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.jboss.netty</groupId>
+            <artifactId>netty</artifactId>
           </exclusion>
           <exclusion>
             <groupId>javax.jms</groupId>

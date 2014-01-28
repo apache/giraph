@@ -127,6 +127,13 @@ under the License.
       <artifactId>json</artifactId>
     </dependency>
 
+    <!-- runtime dependency -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+
     <!-- test dependencies. sorted lexicographically. -->
     <dependency>
       <groupId>com.tinkerpop.blueprints</groupId>

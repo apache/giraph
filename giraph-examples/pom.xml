@@ -409,6 +409,13 @@ under the License.
       <type>test-jar</type>
     </dependency>
 
+    <!-- runtime dependency -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+
     <!-- test dependencies. sorted lexicographically. -->
     <dependency>
       <groupId>junit</groupId>
@@ -418,11 +425,6 @@ under the License.
     <dependency>
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-api</artifactId>
       <scope>test</scope>
     </dependency>
  </dependencies>

@@ -104,6 +104,14 @@ under the License.
       <groupId>org.apache.zookeeper</groupId>
       <artifactId>zookeeper</artifactId>
     </dependency>
+
+    <!-- runtime dependency -->
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+
     <!-- test dependencies. sorted lexicographically. -->
     <dependency>
       <groupId>junit</groupId>

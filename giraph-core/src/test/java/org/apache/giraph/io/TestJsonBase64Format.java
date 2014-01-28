@@ -71,7 +71,6 @@ public class TestJsonBase64Format extends BspCase {
         PseudoRandomInputFormatConstants.EDGES_PER_VERTEX, 2);
     job.getConfiguration().setInt(
         WeightedPageRankComputation.SUPERSTEP_COUNT, 2);
-
     assertTrue(job.run(true));
 
     Path outputPath2 = getTempPath(getCallingMethodName() + "2");
