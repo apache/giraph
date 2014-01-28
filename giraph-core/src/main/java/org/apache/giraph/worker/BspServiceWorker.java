@@ -159,6 +159,8 @@ public class BspServiceWorker<I extends WritableComparable,
 
   /** array of observers to call back to */
   private final WorkerObserver[] observers;
+  /** Writer for worker progress */
+  private final WorkerProgressWriter workerProgressWriter;
 
   // Per-Superstep Metrics
   /** Timer for WorkerContext#postSuperstep */
@@ -169,18 +171,16 @@ public class BspServiceWorker<I extends WritableComparable,
   /**
    * Constructor for setting up the worker.
    *
-   * @param sessionMsecTimeout Msecs to timeout connecting to ZooKeeper
    * @param context Mapper context
    * @param graphTaskManager GraphTaskManager for this compute node
    * @throws IOException
    * @throws InterruptedException
    */
   public BspServiceWorker(
-    int sessionMsecTimeout,
     Mapper<?, ?, ?, ?>.Context context,
     GraphTaskManager<I, V, E> graphTaskManager)
     throws IOException, InterruptedException {
-    super(sessionMsecTimeout, context, graphTaskManager);
+    super(context, graphTaskManager);
     ImmutableClassesGiraphConfiguration<I, V, E> conf = getConfiguration();
     partitionExchangeChildrenChanged = new PredicateLock(context);
     registerBspEvent(partitionExchangeChildrenChanged);
@@ -206,6 +206,9 @@ public class BspServiceWorker<I extends WritableComparable,
       conf.addWorkerObserverClass(JMapHistoDumper.class);
     }
     observers = conf.createWorkerObservers();
+
+    workerProgressWriter = conf.trackJobProgressOnClient() ?
+        new WorkerProgressWriter(myProgressPath, getZkExt()) : null;
 
     GiraphMetrics.get().addSuperstepResetObserver(this);
   }
@@ -515,6 +518,7 @@ public class BspServiceWorker<I extends WritableComparable,
     } else {
       vertexEdgeCount = new VertexEdgeCount();
     }
+    WorkerProgress.get().finishLoadingVertices();
 
     if (getConfiguration().hasEdgeInputFormat()) {
       // Ensure the edge InputSplits are ready for processing
@@ -531,6 +535,7 @@ public class BspServiceWorker<I extends WritableComparable,
       }
       getContext().progress();
     }
+    WorkerProgress.get().finishLoadingEdges();
 
     if (LOG.isInfoEnabled()) {
       LOG.info("setup: Finally loaded a total of " + vertexEdgeCount);
@@ -951,10 +956,21 @@ public class BspServiceWorker<I extends WritableComparable,
             new ArrayBlockingQueue<Integer>(numPartitions);
     Iterables.addAll(partitionIdQueue, getPartitionStore().getPartitionIds());
 
+    long verticesToStore = 0;
+    for (int partitionId : getPartitionStore().getPartitionIds()) {
+      verticesToStore +=  getPartitionStore().getOrCreatePartition(
+          partitionId).getVertexCount();
+    }
+    WorkerProgress.get().startStoring(
+        verticesToStore, getPartitionStore().getNumPartitions());
+
     CallableFactory<Void> callableFactory = new CallableFactory<Void>() {
       @Override
       public Callable<Void> newCallable(int callableId) {
         return new Callable<Void>() {
+          /** How often to update WorkerProgress */
+          private static final long VERTICES_TO_UPDATE_PROGRESS = 100000;
+
           @Override
           public Void call() throws Exception {
             VertexWriter<I, V, E> vertexWriter =
@@ -962,6 +978,7 @@ public class BspServiceWorker<I extends WritableComparable,
             vertexWriter.setConf(getConfiguration());
             vertexWriter.initialize(getContext());
             long nextPrintVertices = 0;
+            long nextUpdateProgressVertices = 0;
             long nextPrintMsecs = System.currentTimeMillis() + 15000;
             int partitionIndex = 0;
             int numPartitions = getPartitionStore().getNumPartitions();
@@ -989,9 +1006,18 @@ public class BspServiceWorker<I extends WritableComparable,
                   nextPrintMsecs = System.currentTimeMillis() + 15000;
                   nextPrintVertices = verticesWritten + 250000;
                 }
+
+                if (verticesWritten >= nextUpdateProgressVertices) {
+                  WorkerProgress.get().addVerticesStored(
+                      VERTICES_TO_UPDATE_PROGRESS);
+                  nextUpdateProgressVertices += VERTICES_TO_UPDATE_PROGRESS;
+                }
               }
               getPartitionStore().putPartition(partition);
               ++partitionIndex;
+              WorkerProgress.get().addVerticesStored(
+                  verticesWritten % VERTICES_TO_UPDATE_PROGRESS);
+              WorkerProgress.get().incrementPartitionsStored();
             }
             vertexWriter.close(getContext()); // the temp results are saved now
             return null;
@@ -1147,6 +1173,11 @@ public class BspServiceWorker<I extends WritableComparable,
     setCachedSuperstep(getSuperstep() - 1);
     saveVertices(finishedSuperstepStats.getLocalVertexCount());
     saveEdges();
+    WorkerProgress.get().finishStoring();
+    if (workerProgressWriter != null) {
+      WorkerProgress.writeToZnode(getZkExt(), myProgressPath);
+      workerProgressWriter.stop();
+    }
     getPartitionStore().shutdown();
     // All worker processes should denote they are done by adding special
     // znode.  Once the number of znodes equals the number of partitions

@@ -174,6 +174,7 @@ public class EdgeInputSplitsCallable<I extends WritableComparable,
       // Update status every EDGES_UPDATE_PERIOD edges
       if (inputSplitEdgesLoaded % EDGES_UPDATE_PERIOD == 0) {
         totalEdgesMeter.mark(EDGES_UPDATE_PERIOD);
+        WorkerProgress.get().addEdgesLoaded(EDGES_UPDATE_PERIOD);
         LoggerUtils.setStatusAndLog(context, LOG, Level.INFO,
             "readEdgeInputSplit: Loaded " +
                 totalEdgesMeter.count() + " edges at " +
@@ -197,6 +198,10 @@ public class EdgeInputSplitsCallable<I extends WritableComparable,
 
     totalEdgesFiltered.inc(inputSplitEdgesFiltered);
     totalEdgesMeter.mark(inputSplitEdgesLoaded % EDGES_UPDATE_PERIOD);
+
+    WorkerProgress.get().addEdgesLoaded(
+        inputSplitEdgesLoaded % EDGES_UPDATE_PERIOD);
+    WorkerProgress.get().incrementEdgeInputSplitsLoaded();
 
     return new VertexEdgeCount(0, inputSplitEdgesLoaded);
   }

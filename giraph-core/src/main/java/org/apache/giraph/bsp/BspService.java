@@ -137,6 +137,8 @@ public abstract class BspService<I extends WritableComparable,
       "/_partitionExchangeDir";
   /** Denotes that the superstep is done */
   public static final String SUPERSTEP_FINISHED_NODE = "/_superstepFinished";
+  /** Stores progress info for workers */
+  public static final String WORKER_PROGRESSES = "/_workerProgresses";
   /** Denotes that computation should be halted */
   public static final String HALT_COMPUTATION_NODE = "/_haltComputation";
   /** Denotes which workers have been cleaned up */
@@ -202,6 +204,8 @@ public abstract class BspService<I extends WritableComparable,
   protected final String checkpointBasePath;
   /** Path to the master election path */
   protected final String masterElectionPath;
+  /** Stores progress info of this worker */
+  protected final String myProgressPath;
   /** If this path exists computation will be halted */
   protected final String haltComputationPath;
   /** Private ZooKeeper instance that implements the service */
@@ -253,11 +257,10 @@ public abstract class BspService<I extends WritableComparable,
   /**
    * Constructor.
    *
-   * @param sessionMsecTimeout ZooKeeper session timeount in milliseconds
    * @param context Mapper context
    * @param graphTaskManager GraphTaskManager for this compute node
    */
-  public BspService(int sessionMsecTimeout,
+  public BspService(
       Mapper<?, ?, ?, ?>.Context context,
       GraphTaskManager<I, V, E> graphTaskManager) {
     this.vertexInputSplitsEvents = new InputSplitEvents(context);
@@ -307,6 +310,8 @@ public abstract class BspService<I extends WritableComparable,
     this.checkpointFrequency = conf.getCheckpointFrequency();
 
     basePath = ZooKeeperManager.getBasePath(conf) + BASE_DIR + "/" + jobId;
+    getContext().getCounter(GiraphConstants.ZOOKEEPER_BASE_PATH_COUNTER_GROUP,
+        basePath);
     masterJobStatePath = basePath + MASTER_JOB_STATE_NODE;
     vertexInputSplitsPaths = new InputSplitPaths(basePath,
         VERTEX_INPUT_SPLIT_DIR, VERTEX_INPUT_SPLIT_DONE_DIR,
@@ -320,6 +325,7 @@ public abstract class BspService<I extends WritableComparable,
         CHECKPOINT_DIRECTORY.getWithDefault(getConfiguration(),
             CHECKPOINT_DIRECTORY.getDefaultValue() + "/" + getJobId());
     masterElectionPath = basePath + MASTER_ELECTION_DIR;
+    myProgressPath = basePath + WORKER_PROGRESSES + "/" + taskPartition;
     String serverPortList = conf.getZookeeperList();
     haltComputationPath = basePath + HALT_COMPUTATION_NODE;
     getContext().getCounter(GiraphConstants.ZOOKEEPER_HALT_NODE_COUNTER_GROUP,
@@ -333,7 +339,7 @@ public abstract class BspService<I extends WritableComparable,
     }
     try {
       this.zk = new ZooKeeperExt(serverPortList,
-                                 sessionMsecTimeout,
+                                 conf.getZooKeeperSessionTimeout(),
                                  conf.getZookeeperOpsMaxAttempts(),
                                  conf.getZookeeperOpsRetryWaitMsecs(),
                                  this,
@@ -344,7 +350,6 @@ public abstract class BspService<I extends WritableComparable,
       throw new RuntimeException(e);
     }
   }
-
 
   /**
    * Get the superstep from a ZooKeeper path

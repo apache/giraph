@@ -45,6 +45,7 @@ import org.apache.giraph.worker.BspServiceWorker;
 import org.apache.giraph.worker.InputSplitsCallable;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.giraph.worker.WorkerObserver;
+import org.apache.giraph.worker.WorkerProgress;
 import org.apache.giraph.zk.ZooKeeperManager;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -215,9 +216,8 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
       Thread.sleep(GiraphConstants.DEFAULT_ZOOKEEPER_INIT_LIMIT *
         GiraphConstants.DEFAULT_ZOOKEEPER_TICK_TIME);
     }
-    int sessionMsecTimeout = conf.getZooKeeperSessionTimeout();
     try {
-      instantiateBspService(sessionMsecTimeout);
+      instantiateBspService();
     } catch (IOException e) {
       LOG.error("setup: Caught exception just before end of setup", e);
       if (zkManager != null) {
@@ -537,17 +537,15 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
   /**
    * Instantiate the appropriate BspService object (Master or Worker)
    * for this compute node.
-   * @param sessionMsecTimeout configurable session timeout
    */
-  private void instantiateBspService(int sessionMsecTimeout)
+  private void instantiateBspService()
     throws IOException, InterruptedException {
     if (graphFunctions.isMaster()) {
       if (LOG.isInfoEnabled()) {
         LOG.info("setup: Starting up BspServiceMaster " +
           "(master thread)...");
       }
-      serviceMaster = new BspServiceMaster<I, V, E>(
-        sessionMsecTimeout, context, this);
+      serviceMaster = new BspServiceMaster<I, V, E>(context, this);
       masterThread = new MasterThread<I, V, E>(serviceMaster, context);
       masterThread.start();
     }
@@ -555,8 +553,7 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
       if (LOG.isInfoEnabled()) {
         LOG.info("setup: Starting up BspServiceWorker...");
       }
-      serviceWorker = new BspServiceWorker<I, V, E>(
-        sessionMsecTimeout, context, this);
+      serviceWorker = new BspServiceWorker<I, V, E>(context, this);
       if (LOG.isInfoEnabled()) {
         LOG.info("setup: Registering health of this worker...");
       }
@@ -711,10 +708,18 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
       int numThreads) {
     final BlockingQueue<Integer> computePartitionIdQueue =
       new ArrayBlockingQueue<Integer>(numPartitions);
+    long verticesToCompute = 0;
     for (Integer partitionId :
       serviceWorker.getPartitionStore().getPartitionIds()) {
       computePartitionIdQueue.add(partitionId);
+      verticesToCompute +=
+          serviceWorker.getPartitionStore().getOrCreatePartition(
+              partitionId).getVertexCount();
     }
+    WorkerProgress.get().startSuperstep(
+        serviceWorker.getSuperstep(),
+        verticesToCompute,
+        serviceWorker.getPartitionStore().getNumPartitions());
 
     GiraphTimerContext computeAllTimerContext = computeAll.time();
     timeToFirstMessageTimerContext = timeToFirstMessage.time();

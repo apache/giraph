@@ -1197,4 +1197,13 @@ public class GiraphConfiguration extends Configuration
   public void setWaitTaskDoneTimeoutMs(int ms) {
     WAIT_TASK_DONE_TIMEOUT_MS.set(this, ms);
   }
+
+  /**
+   * Check whether to track job progress on client or not
+   *
+   * @return True if job progress should be tracked on client
+   */
+  public boolean trackJobProgressOnClient() {
+    return TRACK_JOB_PROGRESS_ON_CLIENT.get(this);
+  }
 }

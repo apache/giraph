@@ -35,6 +35,7 @@ import org.apache.giraph.time.Times;
 import org.apache.giraph.utils.MemoryUtils;
 import org.apache.giraph.utils.TimedLogger;
 import org.apache.giraph.worker.WorkerContext;
+import org.apache.giraph.worker.WorkerProgress;
 import org.apache.giraph.worker.WorkerThreadAggregatorUsage;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -74,6 +75,8 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
   private static final Logger LOG  = Logger.getLogger(ComputeCallable.class);
   /** Class time object */
   private static final Time TIME = SystemTime.get();
+  /** How often to update WorkerProgress */
+  private static final long VERTICES_TO_UPDATE_PROGRESS = 100000;
   /** Context */
   private final Mapper<?, ?, ?, ?>.Context context;
   /** Graph state */
@@ -229,6 +232,7 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
       Partition<I, V, E> partition) throws IOException, InterruptedException {
     PartitionStats partitionStats =
         new PartitionStats(partition.getId(), 0, 0, 0, 0, 0);
+    long verticesComputedProgress = 0;
     // Make sure this is thread-safe across runs
     synchronized (partition) {
       for (Vertex<I, V, E> vertex : partition) {
@@ -260,10 +264,18 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
         // Add statistics for this vertex
         partitionStats.incrVertexCount();
         partitionStats.addEdgeCount(vertex.getNumEdges());
+
+        verticesComputedProgress++;
+        if (verticesComputedProgress == VERTICES_TO_UPDATE_PROGRESS) {
+          WorkerProgress.get().addVerticesComputed(verticesComputedProgress);
+          verticesComputedProgress = 0;
+        }
       }
 
       messageStore.clearPartition(partition.getId());
     }
+    WorkerProgress.get().addVerticesComputed(verticesComputedProgress);
+    WorkerProgress.get().incrementPartitionsComputed();
     return partitionStats;
   }
 }

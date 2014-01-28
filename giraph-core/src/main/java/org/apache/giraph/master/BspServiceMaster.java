@@ -187,15 +187,13 @@ public class BspServiceMaster<I extends WritableComparable,
   /**
    * Constructor for setting up the master.
    *
-   * @param sessionMsecTimeout Msecs to timeout connecting to ZooKeeper
    * @param context Mapper context
    * @param graphTaskManager GraphTaskManager for this compute node
    */
   public BspServiceMaster(
-      int sessionMsecTimeout,
       Mapper<?, ?, ?, ?>.Context context,
       GraphTaskManager<I, V, E> graphTaskManager) {
-    super(sessionMsecTimeout, context, graphTaskManager);
+    super(context, graphTaskManager);
     workerWroteCheckpoint = new PredicateLock(context);
     registerBspEvent(workerWroteCheckpoint);
     superstepStateChanged = new PredicateLock(context);
@@ -1724,6 +1722,10 @@ public class BspServiceMaster<I extends WritableComparable,
         (getGraphTaskManager().getGraphFunctions() ==
         GraphFunctions.ALL_EXCEPT_ZOOKEEPER)) {
       maxTasks *= 2;
+    }
+    if (getConfiguration().trackJobProgressOnClient()) {
+      // For job client
+      maxTasks++;
     }
     List<String> cleanedUpChildrenList = null;
     while (true) {

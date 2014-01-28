@@ -252,9 +252,14 @@ public class GiraphJob {
         LOG.info("run: Tracking URL: " + submittedJob.getTrackingURL());
       }
       HaltApplicationUtils.printHaltInfo(submittedJob, conf);
+      JobProgressTracker jobProgressTracker = conf.trackJobProgressOnClient() ?
+          new JobProgressTracker(submittedJob, conf) : null;
       jobObserver.jobRunning(submittedJob);
 
       boolean passed = submittedJob.waitForCompletion(verbose);
+      if (jobProgressTracker != null) {
+        jobProgressTracker.stop();
+      }
       jobObserver.jobFinished(submittedJob, passed);
       if (passed || !retryChecker.shouldRetry(submittedJob, tryCount)) {
         return passed;

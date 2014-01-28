@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-792: Print job progress to command line (majakabiljo)
+
   GIRAPH-831: waitUntilAllTasksDone waits forever (without debug information) (aching)
 
   GIRAPH-830: directMemory used in netty message (pavanka via aching)

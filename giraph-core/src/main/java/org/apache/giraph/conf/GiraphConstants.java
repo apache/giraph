@@ -996,6 +996,12 @@ public interface GiraphConstants {
   String ZOOKEEPER_HALT_NODE_COUNTER_GROUP = "Zookeeper halt node";
 
   /**
+   * This counter group will contain one counter whose name is the ZooKeeper
+   * node path which contains all data about this job
+   */
+  String ZOOKEEPER_BASE_PATH_COUNTER_GROUP = "Zookeeper base path";
+
+  /**
    * Which class to use to write instructions on how to halt the application
    */
   ClassConfOption<HaltApplicationUtils.HaltInstructionsWriter>
@@ -1013,5 +1019,10 @@ public interface GiraphConstants {
       new IntConfOption("giraph.waitTaskDoneTimeoutMs", MINUTES.toMillis(15),
           "Maximum timeout (in ms) for waiting for all all tasks to " +
               "complete");
+
+  /** Whether to track job progress on client or not */
+  BooleanConfOption TRACK_JOB_PROGRESS_ON_CLIENT =
+      new BooleanConfOption("giraph.trackJobProgressOnClient", true,
+          "Whether to track job progress on client or not");
 }
 // CHECKSTYLE: resume InterfaceIsTypeCheck

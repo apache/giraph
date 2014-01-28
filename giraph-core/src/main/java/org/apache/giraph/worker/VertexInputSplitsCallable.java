@@ -176,6 +176,7 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
       // Update status every VERTICES_UPDATE_PERIOD vertices
       if (inputSplitVerticesLoaded % VERTICES_UPDATE_PERIOD == 0) {
         totalVerticesMeter.mark(VERTICES_UPDATE_PERIOD);
+        WorkerProgress.get().addVerticesLoaded(VERTICES_UPDATE_PERIOD);
         totalEdgesMeter.mark(edgesSinceLastUpdate);
         inputSplitEdgesLoaded += edgesSinceLastUpdate;
         edgesSinceLastUpdate = 0;
@@ -208,6 +209,11 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
     totalVerticesFilteredCounter.inc(inputSplitVerticesFiltered);
 
     vertexReader.close();
+
+    WorkerProgress.get().addVerticesLoaded(
+        inputSplitVerticesLoaded % VERTICES_UPDATE_PERIOD);
+    WorkerProgress.get().incrementVertexInputSplitsLoaded();
+
     return new VertexEdgeCount(inputSplitVerticesLoaded,
         inputSplitEdgesLoaded + edgesSinceLastUpdate);
   }
