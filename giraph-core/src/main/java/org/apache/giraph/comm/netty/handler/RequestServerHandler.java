@@ -121,7 +121,7 @@ public abstract class RequestServerHandler<R> extends
     }
 
     // Send the response with the request id
-    ChannelBuffer buffer = ChannelBuffers.directBuffer(RESPONSE_BYTES);
+    ChannelBuffer buffer = ChannelBuffers.buffer(RESPONSE_BYTES);
     buffer.writeInt(myTaskInfo.getTaskId());
     buffer.writeLong(writableRequest.getRequestId());
     buffer.writeByte(alreadyDone);
