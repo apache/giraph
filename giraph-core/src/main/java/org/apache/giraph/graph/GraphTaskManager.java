@@ -173,6 +173,19 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
   }
 
   /**
+   * In order for job client to know which ZooKeeper the job is using,
+   * we create a counter with server:port as its name inside of
+   * ZOOKEEPER_SERVER_PORT_COUNTER_GROUP.
+   *
+   * @param serverPortList Server:port list for ZooKeeper used
+   */
+  private void createZooKeeperCounter(String serverPortList) {
+    // Getting the counter will actually create it.
+    context.getCounter(GiraphConstants.ZOOKEEPER_SERVER_PORT_COUNTER_GROUP,
+        serverPortList);
+  }
+
+  /**
    * Called by owner of this GraphTaskManager on each compute node
    *
    * @param zkPathList the path to the ZK jars we need to run the job
@@ -200,8 +213,12 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
     context.setStatus("setup: Initializing Zookeeper services.");
     locateZookeeperClasspath(zkPathList);
     String serverPortList = conf.getZookeeperList();
-    if (serverPortList.isEmpty() && startZooKeeperManager()) {
-      return; // ZK connect/startup failed
+    if (serverPortList.isEmpty()) {
+      if (startZooKeeperManager()) {
+        return; // ZK connect/startup failed
+      }
+    } else {
+      createZooKeeperCounter(serverPortList);
     }
     if (zkManager != null && zkManager.runsZooKeeper()) {
       if (LOG.isInfoEnabled()) {
@@ -369,8 +386,7 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
     zkManager.onlineZooKeeperServers();
     String serverPortList = zkManager.getZooKeeperServerPortString();
     conf.setZookeeperList(serverPortList);
-    context.getCounter(GiraphConstants.ZOOKEEPER_SERVER_PORT_COUNTER_GROUP,
-        serverPortList);
+    createZooKeeperCounter(serverPortList);
     return false;
   }
 

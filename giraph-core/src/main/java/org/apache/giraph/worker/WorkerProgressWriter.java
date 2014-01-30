@@ -55,8 +55,9 @@ public class WorkerProgressWriter {
             Thread.sleep((long) (WRITE_UPDATE_PERIOD_MILLISECONDS * factor));
           }
         } catch (InterruptedException e) {
+          // Thread is interrupted when stop is called, we can just log this
           if (LOG.isInfoEnabled()) {
-            LOG.info("run: WorkerProgressWriter interrupted", e);
+            LOG.info("run: WorkerProgressWriter interrupted");
           }
         }
       }
