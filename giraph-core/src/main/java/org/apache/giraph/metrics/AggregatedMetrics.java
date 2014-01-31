@@ -64,6 +64,8 @@ public class AggregatedMetrics {
    */
   public AggregatedMetrics add(WorkerSuperstepMetrics workerMetrics,
                                String hostname) {
+    add(GraphTaskManager.TIMER_SUPERSTEP_TIME,
+        workerMetrics.getSuperstepTimer(), hostname);
     add(GraphTaskManager.TIMER_COMMUNICATION_TIME,
         workerMetrics.getCommTimer(), hostname);
     add(GraphTaskManager.TIMER_COMPUTE_ALL,
@@ -85,6 +87,7 @@ public class AggregatedMetrics {
    * @return this
    */
   public AggregatedMetrics print(long superstep, PrintStream out) {
+    AggregatedMetric superstepTime = get(GraphTaskManager.TIMER_SUPERSTEP_TIME);
     AggregatedMetric commTime = get(GraphTaskManager.TIMER_COMMUNICATION_TIME);
     AggregatedMetric computeAll = get(GraphTaskManager.TIMER_COMPUTE_ALL);
     AggregatedMetric timeToFirstMsg =
@@ -95,6 +98,7 @@ public class AggregatedMetrics {
 
     out.println();
     out.println("--- METRICS: superstep " + superstep + " ---");
+    printAggregatedMetric(out, "superstep time", "ms", superstepTime);
     printAggregatedMetric(out, "compute all partitions", "ms", computeAll);
     printAggregatedMetric(out, "user compute time", "ms", userComputeTime);
     printAggregatedMetric(out, "network communication time", "ms", commTime);

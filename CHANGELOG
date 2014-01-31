@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-834: Metrcis missing superstep time (armax00 via claudio)
+
   GIRAPH-819: Number of Containers Required for a Job (Rafal Wojdyla via ereisman)
 
   GIRAPH-832: Test don't finish after GIRAPH-792 (majakabiljo)

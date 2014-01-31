@@ -25,6 +25,7 @@ import org.apache.giraph.graph.GraphTaskManager;
 import org.apache.giraph.graph.VertexEdgeCount;
 import org.apache.giraph.io.superstep_output.SuperstepOutput;
 import org.apache.giraph.master.MasterInfo;
+import org.apache.giraph.metrics.GiraphTimerContext;
 import org.apache.giraph.partition.PartitionOwner;
 import org.apache.giraph.partition.PartitionStats;
 import org.apache.giraph.partition.PartitionStore;
@@ -129,10 +130,13 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
    * worker level statistics after the computation.
    *
    * @param partitionStatsList All the partition stats for this worker
+   * @param superstepTimerContext superstep timer context only given when the
+   *      function needs to stop the timer, otherwise null.
    * @return Stats of the superstep completion
    */
   FinishedSuperstepStats finishSuperstep(
-      List<PartitionStats> partitionStatsList);
+      List<PartitionStats> partitionStatsList,
+      GiraphTimerContext superstepTimerContext);
 
   /**
    * Get the partition id that a vertex id would belong to.

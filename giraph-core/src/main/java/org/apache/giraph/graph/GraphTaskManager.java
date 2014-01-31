@@ -410,8 +410,12 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
   private FinishedSuperstepStats completeSuperstepAndCollectStats(
     List<PartitionStats> partitionStatsList,
     GiraphTimerContext superstepTimerContext) {
-    finishedSuperstepStats = serviceWorker.finishSuperstep(partitionStatsList);
-    superstepTimerContext.stop();
+
+    // the superstep timer is stopped inside the finishSuperstep function
+    // (otherwise metrics are not available at the end of the computation
+    //  using giraph.metrics.enable=true).
+    finishedSuperstepStats =
+      serviceWorker.finishSuperstep(partitionStatsList, superstepTimerContext);
     if (conf.metricsEnabled()) {
       GiraphMetrics.get().perSuperstep().printSummary(System.err);
     }

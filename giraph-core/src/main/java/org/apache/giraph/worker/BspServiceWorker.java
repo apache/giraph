@@ -587,7 +587,7 @@ public class BspServiceWorker<I extends WritableComparable,
     workerGraphPartitioner.finalizePartitionStats(
         partitionStatsList, getPartitionStore());
 
-    return finishSuperstep(partitionStatsList);
+    return finishSuperstep(partitionStatsList, null);
   }
 
   /**
@@ -730,7 +730,8 @@ public class BspServiceWorker<I extends WritableComparable,
 
   @Override
   public FinishedSuperstepStats finishSuperstep(
-      List<PartitionStats> partitionStatsList) {
+      List<PartitionStats> partitionStatsList,
+      GiraphTimerContext superstepTimerContext) {
     // This barrier blocks until success (or the master signals it to
     // restart).
     //
@@ -769,6 +770,9 @@ public class BspServiceWorker<I extends WritableComparable,
           MemoryUtils.getRuntimeMemoryStats());
     }
 
+    if (superstepTimerContext != null) {
+      superstepTimerContext.stop();
+    }
     writeFinshedSuperstepInfoToZK(partitionStatsList,
       workerSentMessages, workerSentMessageBytes);
 
