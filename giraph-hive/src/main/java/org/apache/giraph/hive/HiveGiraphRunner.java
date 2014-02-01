@@ -526,6 +526,14 @@ public class HiveGiraphRunner implements Tool {
 
     String dbName = cmdln.getOptionValue("dbName", "default");
 
+    workers = Integer.parseInt(workersStr);
+
+    isVerbose = cmdln.hasOption("verbose");
+
+    // Processing more arguments should precede Hive preparation to
+    // allow metastore changes (i.e. creating tables that don't exist)
+    processMoreArguments(cmdln);
+
     if (hasVertexInput()) {
       HIVE_VERTEX_INPUT.getDatabaseOpt().set(conf, dbName);
       prepareHiveVertexInputs();
@@ -542,12 +550,6 @@ public class HiveGiraphRunner implements Tool {
     } else {
       LOG.warn("run: Warning - Output will be skipped!");
     }
-
-    workers = Integer.parseInt(workersStr);
-
-    isVerbose = cmdln.hasOption("verbose");
-
-    processMoreArguments(cmdln);
 
     return cmdln;
   }
