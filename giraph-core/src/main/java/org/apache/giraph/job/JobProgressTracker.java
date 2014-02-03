@@ -66,7 +66,8 @@ public class JobProgressTracker implements Watcher {
     final String basePath = CounterUtils.waitAndGetCounterNameFromGroup(
         submittedJob, GiraphConstants.ZOOKEEPER_BASE_PATH_COUNTER_GROUP);
     // Connect to ZooKeeper
-    zk = new ZooKeeperExt(
+    if (zkServer != null && basePath != null) {
+      zk = new ZooKeeperExt(
         zkServer,
         conf.getZooKeeperSessionTimeout(),
         conf.getZookeeperOpsMaxAttempts(),
@@ -77,62 +78,64 @@ public class JobProgressTracker implements Watcher {
           public void progress() {
           }
         });
-    writerThread = new Thread(new Runnable() {
-      @Override
-      public void run() {
-        String workerProgressBasePath = basePath + BspService.WORKER_PROGRESSES;
-        try {
-          while (!finished) {
-            if (zk.exists(workerProgressBasePath, false) != null) {
-              // Get locations of all worker progresses
-              List<String> workerProgressPaths = zk.getChildrenExt(
-                  workerProgressBasePath, false, false, true);
-              List<WorkerProgress> workerProgresses =
-                  new ArrayList<WorkerProgress>(workerProgressPaths.size());
-              // Read all worker progresses
-              for (String workerProgressPath : workerProgressPaths) {
-                WorkerProgress workerProgress = new WorkerProgress();
-                byte[] zkData = zk.getData(workerProgressPath, false, null);
-                WritableUtils.readFieldsFromByteArray(zkData, workerProgress);
-                workerProgresses.add(workerProgress);
-              }
-              // Combine and log
-              CombinedWorkerProgress combinedWorkerProgress =
-                  new CombinedWorkerProgress(workerProgresses);
-              if (LOG.isInfoEnabled()) {
-                LOG.info(combinedWorkerProgress.toString());
-              }
-              // Check if application is done
-              if (combinedWorkerProgress.isDone(conf.getMaxWorkers())) {
-                break;
-              }
-            }
-            Thread.sleep(UPDATE_MILLISECONDS);
-          }
-        } catch (InterruptedException | KeeperException e) {
-          if (LOG.isInfoEnabled()) {
-            LOG.info("run: Exception occurred", e);
-          }
-        } finally {
+      writerThread = new Thread(new Runnable() {
+        @Override
+        public void run() {
+          String workerProgressBasePath = basePath +
+            BspService.WORKER_PROGRESSES;
           try {
-            // Create a node so master knows we stopped communicating with
-            // ZooKeeper and it's safe to cleanup
-            zk.createExt(
+            while (!finished) {
+              if (zk.exists(workerProgressBasePath, false) != null) {
+                // Get locations of all worker progresses
+                List<String> workerProgressPaths = zk.getChildrenExt(
+                  workerProgressBasePath, false, false, true);
+                List<WorkerProgress> workerProgresses =
+                  new ArrayList<WorkerProgress>(workerProgressPaths.size());
+                // Read all worker progresses
+                for (String workerProgressPath : workerProgressPaths) {
+                  WorkerProgress workerProgress = new WorkerProgress();
+                  byte[] zkData = zk.getData(workerProgressPath, false, null);
+                  WritableUtils.readFieldsFromByteArray(zkData, workerProgress);
+                  workerProgresses.add(workerProgress);
+                }
+                // Combine and log
+                CombinedWorkerProgress combinedWorkerProgress =
+                  new CombinedWorkerProgress(workerProgresses);
+                if (LOG.isInfoEnabled()) {
+                  LOG.info(combinedWorkerProgress.toString());
+                }
+                // Check if application is done
+                if (combinedWorkerProgress.isDone(conf.getMaxWorkers())) {
+                  break;
+                }
+              }
+              Thread.sleep(UPDATE_MILLISECONDS);
+            }
+          } catch (InterruptedException | KeeperException e) {
+            if (LOG.isInfoEnabled()) {
+              LOG.info("run: Exception occurred", e);
+            }
+          } finally {
+            try {
+              // Create a node so master knows we stopped communicating with
+              // ZooKeeper and it's safe to cleanup
+              zk.createExt(
                 basePath + BspService.CLEANED_UP_DIR + "/client",
                 null,
                 ZooDefs.Ids.OPEN_ACL_UNSAFE,
                 CreateMode.PERSISTENT,
                 true);
-            zk.close();
-          } catch (InterruptedException | KeeperException e) {
-            if (LOG.isInfoEnabled()) {
-              LOG.info("run: Exception occurred", e);
+              zk.close();
+            } catch (InterruptedException | KeeperException e) {
+              if (LOG.isInfoEnabled()) {
+                LOG.info("run: Exception occurred", e);
+              }
             }
           }
         }
-      }
-    });
-    writerThread.start();
+      });
+      writerThread.start();
+    }
   }
 
   /**

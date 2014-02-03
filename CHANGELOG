@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-835: org.apache.giraph.hive.input.CheckInputTest Fails because JobProgressTracker
+  doesn't check null (akila via majakabiljo)
+
   GIRAPH-834: Metrcis missing superstep time (armax00 via claudio)
 
   GIRAPH-819: Number of Containers Required for a Job (Rafal Wojdyla via ereisman)
