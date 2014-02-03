@@ -93,15 +93,23 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
     // 3. Run all supersteps until complete
     try {
       long startMillis = System.currentTimeMillis();
+      long initializeMillis = 0;
       long endMillis = 0;
       bspServiceMaster.setup();
       if (bspServiceMaster.becomeMaster()) {
+        // First call to checkWorkers waits for all pending resources.
+        // If these resources are still available at subsequent calls it just
+        // reads zookeeper for the list of healthy workers.
+        bspServiceMaster.checkWorkers();
+        initializeMillis = System.currentTimeMillis();
+        GiraphTimers.getInstance().getInitializeMs().increment(
+            initializeMillis - startMillis);
         // Attempt to create InputSplits if necessary. Bail out if that fails.
         if (bspServiceMaster.getRestartedSuperstep() !=
             BspService.UNSET_SUPERSTEP ||
             (bspServiceMaster.createVertexInputSplits() != -1 &&
                 bspServiceMaster.createEdgeInputSplits() != -1)) {
-          long setupMillis = System.currentTimeMillis() - startMillis;
+          long setupMillis = System.currentTimeMillis() - initializeMillis;
           GiraphTimers.getInstance().getSetupMs().increment(setupMillis);
           setupSecs = setupMillis / 1000.0d;
           SuperstepState superstepState = SuperstepState.INITIAL;
@@ -169,11 +177,11 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
               (System.currentTimeMillis() - endMillis) /
               1000.0d + " seconds.");
           LOG.info("total: Took " +
-              ((System.currentTimeMillis() - startMillis) /
+              ((System.currentTimeMillis() - initializeMillis) /
               1000.0d) + " seconds.");
         }
         GiraphTimers.getInstance().getTotalMs().
-          increment(System.currentTimeMillis() - startMillis);
+          increment(System.currentTimeMillis() - initializeMillis);
       }
       bspServiceMaster.postApplication();
       // CHECKSTYLE: stop IllegalCatchCheck

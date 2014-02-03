@@ -21,11 +21,13 @@ package org.apache.giraph.bsp;
 import org.apache.giraph.master.MasterAggregatorHandler;
 import org.apache.giraph.master.MasterCompute;
 import org.apache.giraph.master.MasterInfo;
+import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.zookeeper.KeeperException;
 
 import java.io.IOException;
+import java.util.List;
 
 /**
  * At most, there will be one active master at a time, but many threads can
@@ -56,6 +58,16 @@ public interface CentralizedServiceMaster<I extends WritableComparable,
    * @return Master information
    */
   MasterInfo getMasterInfo();
+
+  /**
+   * Check all the {@link org.apache.giraph.worker.WorkerInfo} objects to ensure
+   * that a minimum number of good workers exists out of the total that have
+   * reported.
+   *
+   * @return List of of healthy workers such that the minimum has been
+   *         met, otherwise null
+   */
+  List<WorkerInfo> checkWorkers();
 
   /**
    * Create the {@link BspInputSplit} objects from the index range based on the

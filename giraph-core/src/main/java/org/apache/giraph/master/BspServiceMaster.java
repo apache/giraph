@@ -459,14 +459,8 @@ public class BspServiceMaster<I extends WritableComparable,
     }
   }
 
-  /**
-   * Check all the {@link WorkerInfo} objects to ensure that a minimum
-   * number of good workers exists out of the total that have reported.
-   *
-   * @return List of of healthy workers such that the minimum has been
-   *         met, otherwise null
-   */
-  private List<WorkerInfo> checkWorkers() {
+  @Override
+  public List<WorkerInfo> checkWorkers() {
     boolean failJob = true;
     long failWorkerCheckMsecs =
         SystemTime.get().getMilliseconds() + maxSuperstepWaitMsecs;

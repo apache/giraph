@@ -39,18 +39,22 @@ public class GiraphTimers extends HadoopCountersBase {
   public static final String TOTAL_MS_NAME = "Total (ms)";
   /** Counter name for shutdown msec */
   public static final String SHUTDOWN_MS_NAME = "Shutdown (ms)";
+  /** Counter name for initialize msec */
+  public static final String INITIALIZE_MS_NAME = "Initialize (ms)";
 
   /** Singleton instance for everyone to use */
   private static GiraphTimers INSTANCE;
 
   /** Setup time in msec */
   private static final int SETUP_MS = 0;
-  /** Total time in msec */
+  /** Total time in msec (doesn't include initialize time) */
   private static final int TOTAL_MS = 1;
   /** Shutdown time in msec */
   private static final int SHUTDOWN_MS = 2;
+  /** Total time it takes to get minimum machines */
+  private static final int INITIALIZE_MS = 3;
   /** How many whole job counters we have */
-  private static final int NUM_COUNTERS = 3;
+  private static final int NUM_COUNTERS = 4;
 
   /** superstep time in msec */
   private final Map<Long, GiraphHadoopCounter> superstepMsec;
@@ -69,6 +73,7 @@ public class GiraphTimers extends HadoopCountersBase {
     jobCounters[SETUP_MS] = getCounter(SETUP_MS_NAME);
     jobCounters[TOTAL_MS] = getCounter(TOTAL_MS_NAME);
     jobCounters[SHUTDOWN_MS] = getCounter(SHUTDOWN_MS_NAME);
+    jobCounters[INITIALIZE_MS] = getCounter(INITIALIZE_MS_NAME);
     superstepMsec = Maps.newHashMap();
   }
 
@@ -124,7 +129,8 @@ public class GiraphTimers extends HadoopCountersBase {
   }
 
   /**
-   * Get counter for total time in milliseconds.
+   * Get counter for total time in milliseconds (doesn't include initialize
+   * time).
    *
    * @return Counter for total time in milliseconds.
    */
@@ -139,6 +145,16 @@ public class GiraphTimers extends HadoopCountersBase {
    */
   public GiraphHadoopCounter getShutdownMs() {
     return jobCounters[SHUTDOWN_MS];
+  }
+
+  /**
+   * Get counter for initializing the process,
+   * having to wait for a minimum number of processes to be available
+   * before setup step
+   * @return Counter for initializing in milliseconds
+   */
+  public GiraphHadoopCounter getInitializeMs() {
+    return jobCounters[INITIALIZE_MS];
   }
 
   /**
