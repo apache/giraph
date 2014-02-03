@@ -124,11 +124,11 @@ public class NettyWorkerAggregatorRequestProcessor
   public void distributeAggregators(
       Iterable<byte[]> aggregatorDataList) throws IOException {
     for (byte[] aggregatorData : aggregatorDataList) {
-      SendAggregatorsToWorkerRequest request =
-          new SendAggregatorsToWorkerRequest(aggregatorData,
-              serviceWorker.getWorkerInfo().getTaskId());
       for (WorkerInfo worker : serviceWorker.getWorkerInfoList()) {
         if (!isThisWorker(worker)) {
+          SendAggregatorsToWorkerRequest request =
+              new SendAggregatorsToWorkerRequest(aggregatorData,
+                  serviceWorker.getWorkerInfo().getTaskId());
           workerClient.sendWritableRequest(worker.getTaskId(), request);
         }
         progressable.progress();
