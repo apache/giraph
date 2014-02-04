@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-843: remove rexter from hadoop_facebook profile (pavanka via aching)
+
   GIRAPH-838: setup time & total time counter also include time spent waiting for machines
   (pavanka via majakabiljo)
 

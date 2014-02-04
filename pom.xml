@@ -956,7 +956,6 @@ under the License.
         <module>giraph-hbase</module>
         <module>giraph-hcatalog</module>
         <module>giraph-hive</module>
-        <module>giraph-rexster</module>
       </modules>
       <properties>
         <hadoop.version>0.20.0</hadoop.version>
