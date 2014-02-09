@@ -21,6 +21,13 @@ under the License.
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.apache</groupId>
+    <artifactId>apache</artifactId>
+    <version>13</version>
+  </parent>
+
   <groupId>org.apache.giraph</groupId>
   <artifactId>giraph-parent</artifactId>
   <packaging>pom</packaging>
@@ -261,6 +268,7 @@ under the License.
 
     <dep.avro.version>1.3.3</dep.avro.version>
     <dep.accumulo.version>1.4.0</dep.accumulo.version>
+    <dep.asm.version>3.2</dep.asm.version>
     <dep.gora.version>0.3</dep.gora.version>
     <dep.airline.version>0.5</dep.airline.version>
     <dep.base64.version>2.3.8</dep.base64.version>
@@ -282,6 +290,9 @@ under the License.
     <dep.hcatalog.version>0.5.0-incubating</dep.hcatalog.version>
     <dep.hive.version>0.11.0</dep.hive.version>
     <dep.hiveio.version>0.21</dep.hiveio.version>
+    <dep.jaxb-impl.version>2.2.4-1</dep.jaxb-impl.version>
+    <dep.jersey.version>1.17</dep.jersey.version>
+    <dep.jetty.version>6.1.26</dep.jetty.version>
     <dep.json.version>20090211</dep.json.version>
     <dep.junit.version>4.11</dep.junit.version>
     <dep.jython.version>2.5.3</dep.jython.version>
@@ -289,6 +300,7 @@ under the License.
     <dep.log4j.version>1.2.17</dep.log4j.version>
     <dep.mockito.version>1.9.5</dep.mockito.version>
     <dep.netty.version>3.5.3.Final</dep.netty.version>
+    <dep.paranamer.version>2.3</dep.paranamer.version>
     <dep.slf4j.version>1.7.5</dep.slf4j.version>
     <dep.tinkerpop.rexter.version>2.4.0</dep.tinkerpop.rexter.version>
     <dep.typetools.version>0.2.1</dep.typetools.version>
@@ -429,6 +441,18 @@ under the License.
               <dependency>
                 <groupId>org.apache.hive</groupId>
                 <artifactId>hive-exec</artifactId>
+              </dependency>
+              <dependency>
+                <groupId>stax</groupId>
+                <artifactId>stax-api</artifactId>
+              </dependency>
+              <dependency>
+                <groupId>asm</groupId>
+                <artifactId>asm</artifactId>
+              </dependency>
+              <dependency>
+                <groupId>com.sun.jersey</groupId>
+                <artifactId>jersey-core</artifactId>
               </dependency>
             </ignoredDependencies>
             <ignoredResources>
@@ -823,9 +847,6 @@ under the License.
         <module>giraph-gora</module>
         <module>giraph-rexster</module>
       </modules>
-      <activation>
-        <activeByDefault>true</activeByDefault>
-      </activation>
       <properties>
         <hadoop.version>0.20.203.0</hadoop.version>
         <munge.symbols>HADOOP_NON_JOBCONTEXT_IS_INTERFACE,HADOOP_1_SECURITY,HADOOP_1_SECRET_MANAGER</munge.symbols>
@@ -868,16 +889,20 @@ under the License.
     </profile>
 
     <profile>
-      <id>hadoop_1.0</id>
+      <id>hadoop_1</id>
       <modules>
         <module>giraph-accumulo</module>
         <module>giraph-hbase</module>
         <module>giraph-hcatalog</module>
         <module>giraph-hive</module>
+        <module>giraph-gora</module>
         <module>giraph-rexster</module>
       </modules>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
       <properties>
-        <hadoop.version>1.0.2</hadoop.version>
+        <hadoop.version>1.2.1</hadoop.version>
         <munge.symbols>HADOOP_NON_JOBCONTEXT_IS_INTERFACE,HADOOP_1_SECURITY,HADOOP_1_SECRET_MANAGER</munge.symbols>
       </properties>
       <dependencies>
@@ -892,10 +917,6 @@ under the License.
           <version>${hadoop.version}</version>
           <scope>provided</scope>
           <exclusions>
-            <exclusion>
-              <groupId>commons-httpclient</groupId>
-              <artifactId>commons-httpclient</artifactId>
-            </exclusion>
             <exclusion>
               <groupId>org.eclipse.jdt</groupId>
               <artifactId>core</artifactId>
@@ -1171,7 +1192,15 @@ under the License.
      </profile>
 
     <profile>
-       <id>2.2.0</id>
+       <id>hadoop_2</id>
+      <modules>
+        <module>giraph-accumulo</module>
+        <module>giraph-hbase</module>
+        <module>giraph-hcatalog</module>
+        <module>giraph-hive</module>
+        <module>giraph-gora</module>
+        <module>giraph-rexster</module>
+      </modules>
        <properties>
          <hadoop.version>2.2.0</hadoop.version>
          <!-- TODO: add these checks eventually -->
@@ -1250,6 +1279,11 @@ under the License.
   <dependencyManagement>
     <dependencies>
       <!-- compile dependencies. sorted lexicographically. -->
+      <dependency>
+        <groupId>asm</groupId>
+        <artifactId>asm</artifactId>
+        <version>${dep.asm.version}</version>
+      </dependency>
       <dependency>
         <groupId>com.facebook.hiveio</groupId>
         <artifactId>hive-io-exp-core</artifactId>
@@ -1534,6 +1568,16 @@ under the License.
         <version>${project.version}</version>
       </dependency>
       <dependency>
+        <groupId>org.apache.giraph</groupId>
+        <artifactId>giraph-kibble</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.giraph</groupId>
+        <artifactId>giraph-gora</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
         <groupId>org.apache.gora</groupId>
         <artifactId>gora-core</artifactId>
         <version>${dep.gora.version}</version>
@@ -1703,6 +1747,26 @@ under the License.
         <version>${dep.typetools.version}</version>
       </dependency>
       <dependency>
+        <groupId>com.sun.xml.bind</groupId>
+        <artifactId>jaxb-impl</artifactId>
+        <version>${dep.jaxb-impl.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sun.jersey</groupId>
+        <artifactId>jersey-core</artifactId>
+        <version>${dep.jersey.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.sun.jersey</groupId>
+        <artifactId>jersey-json</artifactId>
+        <version>${dep.jersey.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.mortbay.jetty</groupId>
+        <artifactId>jetty</artifactId>
+        <version>${dep.jetty.version}</version>
+      </dependency>
+      <dependency>
         <groupId>org.json</groupId>
         <artifactId>json</artifactId>
         <version>${dep.json.version}</version>
@@ -1711,6 +1775,11 @@ under the License.
         <groupId>org.python</groupId>
         <artifactId>jython</artifactId>
         <version>${dep.jython.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.thoughtworks.paranamer</groupId>
+        <artifactId>paranamer</artifactId>
+        <version>${dep.paranamer.version}</version>
       </dependency>
       <dependency>
         <groupId>org.slf4j</groupId>

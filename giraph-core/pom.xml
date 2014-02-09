@@ -133,6 +133,7 @@ under the License.
                   <classpath>
                     <pathelement location="${project.jar}"/>
                     <pathelement path="${maven.dependency.org.apache.hadoop.hadoop-common.jar.path}"/>
+                    <pathelement path="${maven.dependency.org.apache.hadoop.hadoop-core.jar.path}"/>
                   </classpath>
                   <arg value="${top.dir}/src/site/xdoc/options.xml" />
                 </java>
@@ -165,9 +166,6 @@ under the License.
   <profiles>
     <profile>
       <id>hadoop_0.20.203</id>
-      <activation>
-        <activeByDefault>true</activeByDefault>
-      </activation>
       <build>
         <plugins>
           <plugin>
@@ -191,7 +189,10 @@ under the License.
     </profile>
 
     <profile>
-      <id>hadoop_1.0</id>
+      <id>hadoop_1</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
       <build>
         <plugins>
           <plugin>
@@ -333,6 +334,25 @@ under the License.
     </profile>
 
     <!-- Unmunged profiles are below. -->
+    <profile>
+      <id>hadoop_2</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+              <excludes>
+                <exclude>**/yarn/**</exclude>
+              </excludes>
+              <testExcludes>
+                <exclude>**/yarn/**</exclude>
+              </testExcludes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
 
     <profile>
       <id>hadoop_2.0.0</id>

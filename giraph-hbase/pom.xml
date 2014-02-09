@@ -89,6 +89,18 @@ under the License.
   <profiles>
     <profile>
       <id>hadoop_0.20.203</id>
+      <dependencies>
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-test</artifactId>
+          <version>${hadoop.version}</version>
+          <scope>test</scope>
+        </dependency>
+      </dependencies>
+    </profile>
+
+    <profile>
+      <id>hadoop_1</id>
       <activation>
         <activeByDefault>true</activeByDefault>
       </activation>
@@ -103,11 +115,11 @@ under the License.
     </profile>
 
     <profile>
-      <id>hadoop_1.0</id>
+      <id>hadoop_2</id>
       <dependencies>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
-          <artifactId>hadoop-test</artifactId>
+          <artifactId>hadoop-minicluster</artifactId>
           <version>${hadoop.version}</version>
           <scope>test</scope>
         </dependency>

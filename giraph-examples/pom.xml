@@ -103,9 +103,6 @@ under the License.
   <profiles>
     <profile>
       <id>hadoop_0.20.203</id>
-      <activation>
-        <activeByDefault>true</activeByDefault>
-      </activation>
       <build>
         <plugins>
           <plugin>
@@ -129,7 +126,10 @@ under the License.
     </profile>
 
     <profile>
-      <id>hadoop_1.0</id>
+      <id>hadoop_1</id>
+      <activation>
+        <activeByDefault>true</activeByDefault>
+      </activation>
       <build>
         <plugins>
           <plugin>
@@ -271,6 +271,26 @@ under the License.
     </profile>
 
     <!-- The profiles below do not (yet) include any munge flags -->
+    <profile>
+      <id>hadoop_2</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+              <excludes>
+                <exclude>**/yarn/**</exclude>
+              </excludes>
+              <testExcludes>
+                <exclude>**/yarn/**</exclude>
+              </testExcludes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
     <profile>
       <id>hadoop_2.0.0</id>
       <build>
