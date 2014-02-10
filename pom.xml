@@ -309,6 +309,7 @@ under the License.
     <dep.zookeeper.version>3.4.5</dep.zookeeper.version>
 
     <forHadoop>for-hadoop-${hadoop.version}</forHadoop>
+    <munge.symbols>NO_MUNGE_SYMBOLS</munge.symbols>
   </properties>
 
   <build>
