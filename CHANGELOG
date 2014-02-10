@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+
+  GIRAPH-844: TextInputFormat for SimpleShortestPaths (ssc)
+
   GIRAPH-841: fix missing munge symbols error for non-munge-using profiles (Eugene Koontz via rvs)
 
   GIRAPH-794: add support for generic hadoop1 and hadoop2 profiles (rvs)

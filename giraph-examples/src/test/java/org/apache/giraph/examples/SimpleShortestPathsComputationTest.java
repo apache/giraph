@@ -40,6 +40,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import static org.apache.giraph.examples.SimpleShortestPathsComputation.SOURCE_ID;
 import static org.junit.Assert.assertEquals;
@@ -114,7 +115,7 @@ public class SimpleShortestPathsComputationTest {
    * A local integration test on toy data
    */
   @Test
-  public void testToyData() throws Exception {
+  public void testToyDataJson() throws Exception {
 
     // a small four vertex graph
     String[] graph = new String[] {
@@ -137,18 +138,18 @@ public class SimpleShortestPathsComputationTest {
     // run internally
     Iterable<String> results = InternalVertexRunner.run(conf, graph);
 
-    Map<Long, Double> distances = parseDistances(results);
+    Map<Long, Double> distances = parseDistancesJson(results);
 
     // verify results
     assertNotNull(distances);
-    assertEquals(4, (int) distances.size());
-    assertEquals(0.0, (double) distances.get(1L), 0d);
-    assertEquals(1.0, (double) distances.get(2L), 0d);
-    assertEquals(2.0, (double) distances.get(3L), 0d);
-    assertEquals(4.0, (double) distances.get(4L), 0d);
+    assertEquals(4, distances.size());
+    assertEquals(0.0, distances.get(1L), 0d);
+    assertEquals(1.0, distances.get(2L), 0d);
+    assertEquals(2.0, distances.get(3L), 0d);
+    assertEquals(4.0, distances.get(4L), 0d);
   }
 
-  private Map<Long, Double> parseDistances(Iterable<String> results) {
+  private Map<Long, Double> parseDistancesJson(Iterable<String> results) {
     Map<Long, Double> distances =
         Maps.newHashMapWithExpectedSize(Iterables.size(results));
     for (String line : results) {
@@ -159,6 +160,56 @@ public class SimpleShortestPathsComputationTest {
         throw new IllegalArgumentException(
             "Couldn't get vertex from line " + line, e);
       }
+    }
+    return distances;
+  }
+
+  /**
+   * A local integration test on toy data
+   */
+  @Test
+  public void testToyData() throws Exception {
+
+    // a small four vertex graph
+    String[] graph = new String[] {
+        "1 2:1.0 3:3.0",
+        "2 3:1.0 4:10.0",
+        "3 4:2.0",
+        "4"
+    };
+
+    GiraphConfiguration conf = new GiraphConfiguration();
+    // start from vertex 1
+    SOURCE_ID.set(conf, 1);
+    conf.setComputationClass(SimpleShortestPathsComputation.class);
+    conf.setOutEdgesClass(ByteArrayEdges.class);
+    conf.setVertexInputFormatClass(LongDoubleFloatTextInputFormat.class);
+    conf.setVertexOutputFormatClass(
+        VertexWithDoubleValueNullEdgeTextOutputFormat.class);
+
+    // run internally
+    Iterable<String> results = InternalVertexRunner.run(conf, graph);
+
+    Map<Long, Double> distances = parseDistances(results);
+
+    // verify results
+    assertNotNull(distances);
+    assertEquals(4, distances.size());
+    assertEquals(0.0, distances.get(1L), 0d);
+    assertEquals(1.0, distances.get(2L), 0d);
+    assertEquals(2.0, distances.get(3L), 0d);
+    assertEquals(4.0, distances.get(4L), 0d);
+  }
+
+  private Map<Long, Double> parseDistances(Iterable<String> results) {
+    Map<Long, Double> distances =
+        Maps.newHashMapWithExpectedSize(Iterables.size(results));
+
+    Pattern separator = Pattern.compile("[\t]");
+
+    for (String line : results) {
+      String[] tokens = separator.split(line);
+      distances.put(Long.parseLong(tokens[0]), Double.parseDouble(tokens[1]));
     }
     return distances;
   }
