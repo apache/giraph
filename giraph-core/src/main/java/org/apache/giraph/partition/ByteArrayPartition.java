@@ -151,17 +151,7 @@ public class ByteArrayPartition<I extends WritableComparable,
             representativeVertex, useUnsafeSerialization, getConf());
         WritableUtils.reinitializeVertexFromByteArray(entry.getValue(),
             representativeCombinerVertex, useUnsafeSerialization, getConf());
-        getVertexValueCombiner().combine(representativeVertex.getValue(),
-            representativeCombinerVertex.getValue());
-
-        // Add the edges to the representative vertex
-        for (Edge<I, E> edge : representativeCombinerVertex.getEdges()) {
-          representativeVertex.addEdge(edge);
-        }
-
-        byte[] vertexData = WritableUtils.writeVertexToByteArray(
-            representativeCombinerVertex, useUnsafeSerialization, getConf());
-        vertexMap.put(entry.getKey(), vertexData);
+        combine(representativeVertex, representativeCombinerVertex);
       }
     }
   }
@@ -179,12 +169,28 @@ public class ByteArrayPartition<I extends WritableComparable,
 
     WritableUtils.reinitializeVertexFromByteArray(oldVertexBytes,
         representativeVertex, useUnsafeSerialization, getConf());
+    combine(representativeVertex, vertex);
+    return false;
+  }
+
+  /**
+   * Combine two vertices together and store the serialized bytes
+   * in the vertex map.
+   *
+   * @param representativeVertex existing vertex
+   * @param representativeCombinerVertex new vertex to combine
+   */
+  private void combine(Vertex<I, V, E> representativeVertex,
+      Vertex<I, V, E> representativeCombinerVertex) {
     getVertexValueCombiner().combine(representativeVertex.getValue(),
-        vertex.getValue());
-    vertexMap.put(vertex.getId(),
+        representativeCombinerVertex.getValue());
+    // Add the edges to the representative vertex
+    for (Edge<I, E> edge : representativeCombinerVertex.getEdges()) {
+      representativeVertex.addEdge(edge);
+    }
+    vertexMap.put(representativeCombinerVertex.getId(),
         WritableUtils.writeVertexToByteArray(
             representativeVertex, useUnsafeSerialization, getConf()));
-    return false;
   }
 
   @Override

@@ -238,4 +238,52 @@ public class TestPartitionStores {
     partitionStore.deletePartition(2);
     assertEquals(2, partitionStore.getNumPartitions());
   }
+  
+  @Test
+  public void testEdgeCombineWithSimplePartition() throws IOException {
+    testEdgeCombine(SimplePartition.class);
+  }
+  
+  @Test
+  public void testEdgeCombineWithByteArrayPartition() throws IOException {
+    testEdgeCombine(ByteArrayPartition.class);
+  }
+  
+  private void testEdgeCombine(Class<? extends Partition> partitionClass)
+      throws IOException {
+    Vertex<IntWritable, IntWritable, NullWritable> v1 = conf.createVertex();
+    v1.initialize(new IntWritable(1), new IntWritable(1));
+    Vertex<IntWritable, IntWritable, NullWritable> v2 = conf.createVertex();
+    v2.initialize(new IntWritable(2), new IntWritable(2));
+    Vertex<IntWritable, IntWritable, NullWritable> v3 = conf.createVertex();
+    v3.initialize(new IntWritable(3), new IntWritable(3));
+    Vertex<IntWritable, IntWritable, NullWritable> v1e2 = conf.createVertex();
+    v1e2.initialize(new IntWritable(1), new IntWritable(1));
+    v1e2.addEdge(EdgeFactory.create(new IntWritable(2)));
+    Vertex<IntWritable, IntWritable, NullWritable> v1e3 = conf.createVertex();
+    v1e3.initialize(new IntWritable(1), new IntWritable(1));
+    v1e3.addEdge(EdgeFactory.create(new IntWritable(3)));
+
+    GiraphConfiguration newconf = new GiraphConfiguration(conf);
+    newconf.setPartitionClass(partitionClass);
+    Partition<IntWritable, IntWritable, NullWritable> partition =
+        (new ImmutableClassesGiraphConfiguration<IntWritable, IntWritable,
+            NullWritable>(newconf)).createPartition(1, context);
+    assertEquals(partitionClass, partition.getClass());
+    partition.putVertex(v1);
+    partition.putVertex(v2);
+    partition.putVertex(v3);
+    assertEquals(3, partition.getVertexCount());
+    assertEquals(0, partition.getEdgeCount());
+    partition.putOrCombine(v1e2);
+    assertEquals(3, partition.getVertexCount());
+    assertEquals(1, partition.getEdgeCount());
+    partition.putOrCombine(v1e3);
+    assertEquals(3, partition.getVertexCount());
+    assertEquals(2, partition.getEdgeCount());
+    v1 = partition.getVertex(new IntWritable(1));
+    assertEquals(new IntWritable(1), v1.getId());
+    assertEquals(new IntWritable(1), v1.getValue());
+    assertEquals(2, v1.getNumEdges());
+  }
 }

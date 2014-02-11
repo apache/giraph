@@ -1,6 +1,7 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-816: ByteArrayPartition not combining vertex edges (cmuchins via majakabiljo)
 
   GIRAPH-844: TextInputFormat for SimpleShortestPaths (ssc)
 
