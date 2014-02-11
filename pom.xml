@@ -773,6 +773,12 @@ under the License.
                 <exclude>**/*.ipr</exclude>
                 <!-- test resources (for Giraph on YARN profile) -->
                 <exclude>**/test/resources/**</exclude>
+                <!-- Gora configs -->
+                <exclude>giraph-gora/conf/*</exclude>
+                <!-- Rexster resource -->
+                <exclude>giraph-rexster/giraph-kibble/src/main/resources/META-INF/services/com.tinkerpop.rexster.extension.RexsterExtension</exclude> 
+                <!-- site images -->
+                <exclude>src/site/resources/images/*.svg</exclude> 
               </excludes>
           </configuration>
         </plugin>
@@ -838,6 +844,26 @@ under the License.
   </build>
 
   <profiles>
+    <profile>
+      <id>release</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-gpg-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>sign-artifacts</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>sign</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
     <profile>
       <id>hadoop_0.20.203</id>
       <modules>
