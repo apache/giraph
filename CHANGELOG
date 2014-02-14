@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-854: fix for test fail due to GIRAPH-840 (pavanka via majakabiljo)
+
   GIRAPH-853: Fix concurrency issue in GiraphMetrics (majakabiljo)
 
   GIRAPH-840: Upgrade to netty 4 (pavanka via majakabiljo)

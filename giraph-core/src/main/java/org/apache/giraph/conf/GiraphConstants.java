@@ -471,12 +471,12 @@ public interface GiraphConstants {
 
   /** Use netty pooled memory buffer allocator */
   BooleanConfOption NETTY_USE_POOLED_ALLOCATOR = new BooleanConfOption(
-      "giraph.useNettyPooledAllocator", true, "Should netty use pooled " +
+      "giraph.useNettyPooledAllocator", false, "Should netty use pooled " +
       "memory allocator?");
 
   /** Use direct memory buffers in netty */
   BooleanConfOption NETTY_USE_DIRECT_MEMORY = new BooleanConfOption(
-      "giraph.useNettyDirectMemory", true, "Should netty use direct " +
+      "giraph.useNettyDirectMemory", false, "Should netty use direct " +
       "memory buffers");
 
   /** How big to make the encoder buffer? */
