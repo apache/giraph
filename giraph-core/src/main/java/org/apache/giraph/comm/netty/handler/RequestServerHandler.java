@@ -25,13 +25,10 @@ import org.apache.giraph.time.SystemTime;
 import org.apache.giraph.time.Time;
 import org.apache.giraph.time.Times;
 import org.apache.log4j.Logger;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.ExceptionEvent;
-import org.jboss.netty.channel.MessageEvent;
-import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 
 import static org.apache.giraph.conf.GiraphConstants.NETTY_SIMULATE_FIRST_REQUEST_CLOSED;
 
@@ -41,7 +38,7 @@ import static org.apache.giraph.conf.GiraphConstants.NETTY_SIMULATE_FIRST_REQUES
  * @param <R> Request type
  */
 public abstract class RequestServerHandler<R> extends
-    SimpleChannelUpstreamHandler {
+  ChannelInboundHandlerAdapter {
   /** Number of bytes in the encoded response */
   public static final int RESPONSE_BYTES = 13;
   /** Time class to use */
@@ -77,13 +74,13 @@ public abstract class RequestServerHandler<R> extends
   }
 
   @Override
-  public void messageReceived(
-      ChannelHandlerContext ctx, MessageEvent e) {
+  public void channelRead(ChannelHandlerContext ctx, Object msg)
+    throws Exception {
     if (LOG.isTraceEnabled()) {
-      LOG.trace("messageReceived: Got " + e.getMessage().getClass());
+      LOG.trace("messageReceived: Got " + msg.getClass());
     }
 
-    WritableRequest writableRequest = (WritableRequest) e.getMessage();
+    WritableRequest writableRequest = (WritableRequest) msg;
 
     // Simulate a closed connection on the first request (if desired)
     if (closeFirstRequest && !ALREADY_CLOSED_FIRST_REQUEST) {
@@ -91,7 +88,7 @@ public abstract class RequestServerHandler<R> extends
           "request " + writableRequest.getRequestId() + " from " +
           writableRequest.getClientId());
       setAlreadyClosedFirstRequest();
-      ctx.getChannel().close();
+      ctx.close();
       return;
     }
 
@@ -121,11 +118,11 @@ public abstract class RequestServerHandler<R> extends
     }
 
     // Send the response with the request id
-    ChannelBuffer buffer = ChannelBuffers.buffer(RESPONSE_BYTES);
+    ByteBuf buffer = ctx.alloc().buffer(RESPONSE_BYTES);
     buffer.writeInt(myTaskInfo.getTaskId());
     buffer.writeLong(writableRequest.getRequestId());
     buffer.writeByte(alreadyDone);
-    e.getChannel().write(buffer);
+    ctx.writeAndFlush(buffer);
   }
 
   /**
@@ -143,28 +140,28 @@ public abstract class RequestServerHandler<R> extends
   public abstract void processRequest(R request);
 
   @Override
-  public void channelConnected(ChannelHandlerContext ctx,
-                               ChannelStateEvent e) throws Exception {
+  public void channelActive(ChannelHandlerContext ctx) throws Exception {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("channelConnected: Connected the channel on " +
-          ctx.getChannel().getRemoteAddress());
+      LOG.debug("channelActive: Connected the channel on " +
+          ctx.channel().remoteAddress());
     }
+    ctx.fireChannelActive();
   }
 
   @Override
-  public void channelClosed(ChannelHandlerContext ctx,
-                            ChannelStateEvent e) throws Exception {
+  public void channelInactive(ChannelHandlerContext ctx) throws Exception {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("channelClosed: Closed the channel on " +
-          ctx.getChannel().getRemoteAddress() + " with event " +
-          e);
+      LOG.debug("channelInactive: Closed the channel on " +
+          ctx.channel().remoteAddress());
     }
+    ctx.fireChannelInactive();
   }
 
   @Override
-  public void exceptionCaught(ChannelHandlerContext ctx, ExceptionEvent e) {
+  public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
+    throws Exception {
     LOG.warn("exceptionCaught: Channel failed with " +
-        "remote address " + ctx.getChannel().getRemoteAddress(), e.getCause());
+        "remote address " + ctx.channel().remoteAddress(), cause.getCause());
   }
 
   /**

@@ -33,23 +33,11 @@ import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.TaskInfo;
+import org.apache.giraph.utils.PipelineUtils;
 import org.apache.giraph.utils.ProgressableUtils;
 import org.apache.giraph.utils.TimedLogger;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
-import org.jboss.netty.bootstrap.ClientBootstrap;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
-import org.jboss.netty.channel.ChannelLocal;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.Channels;
-import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
-import org.jboss.netty.handler.codec.frame.FixedLengthFrameDecoder;
-import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder;
-import org.jboss.netty.handler.execution.ExecutionHandler;
-import org.jboss.netty.handler.execution.MemoryAwareThreadPoolExecutor;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
@@ -64,11 +52,24 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+
+import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.FixedLengthFrameDecoder;
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.DefaultEventExecutorGroup;
+import io.netty.util.concurrent.EventExecutorGroup;
 
 import static org.apache.giraph.conf.GiraphConstants.CLIENT_RECEIVE_BUFFER_SIZE;
 import static org.apache.giraph.conf.GiraphConstants.CLIENT_SEND_BUFFER_SIZE;
@@ -79,7 +80,6 @@ import static org.apache.giraph.conf.GiraphConstants.NETTY_CLIENT_EXECUTION_THRE
 import static org.apache.giraph.conf.GiraphConstants.NETTY_CLIENT_USE_EXECUTION_HANDLER;
 import static org.apache.giraph.conf.GiraphConstants.NETTY_MAX_CONNECTION_FAILURES;
 import static org.apache.giraph.conf.GiraphConstants.WAITING_REQUEST_MSECS;
-import static org.jboss.netty.channel.Channels.pipeline;
 
 /**
  * Netty client for sending requests.  Thread-safe.
@@ -106,15 +106,15 @@ public class NettyClient {
   public static final int MAX_CONNECTION_MILLISECONDS_DEFAULT = 30 * 1000;
 /*if_not[HADOOP_NON_SECURE]*/
   /** Used to authenticate with other workers acting as servers */
-  public static final ChannelLocal<SaslNettyClient> SASL =
-      new ChannelLocal<SaslNettyClient>();
+  public static final AttributeKey<SaslNettyClient> SASL =
+      AttributeKey.valueOf("saslNettyClient");
 /*end[HADOOP_NON_SECURE]*/
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(NettyClient.class);
   /** Context used to report progress */
   private final Mapper<?, ?, ?, ?>.Context context;
   /** Client bootstrap */
-  private final ClientBootstrap bootstrap;
+  private final Bootstrap bootstrap;
   /**
    * Map of the peer connections, mapping from remote socket address to client
    * meta data
@@ -133,8 +133,12 @@ public class NettyClient {
   clientRequestIdRequestInfoMap;
   /** Number of channels per server */
   private final int channelsPerServer;
-  /** Byte counter for this client */
-  private final ByteCounter byteCounter = new ByteCounter();
+  /** Inbound byte counter for this client */
+  private final InboundByteCounter inboundByteCounter = new
+      InboundByteCounter();
+  /** Outbound byte counter for this client */
+  private final OutboundByteCounter outboundByteCounter = new
+      OutboundByteCounter();
   /** Send buffer size */
   private final int sendBufferSize;
   /** Receive buffer size */
@@ -151,10 +155,8 @@ public class NettyClient {
   private final int waitingRequestMsecs;
   /** Timed logger for printing request debugging */
   private final TimedLogger requestLogger = new TimedLogger(15 * 1000, LOG);
-  /** Boss factory service */
-  private final ExecutorService bossExecutorService;
-  /** Worker factory service */
-  private final ExecutorService workerExecutorService;
+  /** Worker executor group */
+  private final EventLoopGroup workerGroup;
   /** Address request id generator */
   private final AddressRequestIdGenerator addressRequestIdGenerator =
       new AddressRequestIdGenerator();
@@ -165,11 +167,11 @@ public class NettyClient {
   /** Maximum number of attempts to resolve an address*/
   private final int maxResolveAddressAttempts;
   /** Use execution handler? */
-  private final boolean useExecutionHandler;
-  /** Execution handler (if used) */
-  private final ExecutionHandler executionHandler;
-  /** Name of the handler before the execution handler (if used) */
-  private final String handlerBeforeExecutionHandler;
+  private final boolean useExecutionGroup;
+  /** EventExecutor Group (if used) */
+  private final EventExecutorGroup executionGroup;
+  /** Name of the handler to use execution group for (if used) */
+  private final String handlerToUseExecutionGroup;
   /** When was the last time we checked if we should resend some requests */
   private final AtomicLong lastTimeCheckedRequestsForProblems =
       new AtomicLong(0);
@@ -218,99 +220,110 @@ public class NettyClient {
     clientRequestIdRequestInfoMap =
         new MapMaker().concurrencyLevel(maxPoolSize).makeMap();
 
-    handlerBeforeExecutionHandler =
+    handlerToUseExecutionGroup =
         NETTY_CLIENT_EXECUTION_AFTER_HANDLER.get(conf);
-    useExecutionHandler = NETTY_CLIENT_USE_EXECUTION_HANDLER.get(conf);
-    if (useExecutionHandler) {
+    useExecutionGroup = NETTY_CLIENT_USE_EXECUTION_HANDLER.get(conf);
+    if (useExecutionGroup) {
       int executionThreads = NETTY_CLIENT_EXECUTION_THREADS.get(conf);
-      executionHandler = new ExecutionHandler(
-          new MemoryAwareThreadPoolExecutor(
-              executionThreads, 1048576, 1048576, 1, TimeUnit.HOURS,
-              new ThreadFactoryBuilder().setNameFormat("netty-client-exec-%d")
-                  .build()));
+      executionGroup = new DefaultEventExecutorGroup(executionThreads,
+          new ThreadFactoryBuilder().setNameFormat("netty-client-exec-%d")
+              .build());
       if (LOG.isInfoEnabled()) {
         LOG.info("NettyClient: Using execution handler with " +
             executionThreads + " threads after " +
-            handlerBeforeExecutionHandler + ".");
+            handlerToUseExecutionGroup + ".");
       }
     } else {
-      executionHandler = null;
+      executionGroup = null;
     }
 
-    bossExecutorService = Executors.newCachedThreadPool(
-        new ThreadFactoryBuilder().setNameFormat(
-            "netty-client-boss-%d").build());
-    workerExecutorService = Executors.newCachedThreadPool(
+    workerGroup = new NioEventLoopGroup(maxPoolSize,
         new ThreadFactoryBuilder().setNameFormat(
             "netty-client-worker-%d").build());
 
-    // Configure the client.
-    bootstrap = new ClientBootstrap(
-        new NioClientSocketChannelFactory(
-            bossExecutorService,
-            workerExecutorService,
-            maxPoolSize));
-    bootstrap.setOption("connectTimeoutMillis",
-        MAX_CONNECTION_MILLISECONDS_DEFAULT);
-    bootstrap.setOption("tcpNoDelay", true);
-    bootstrap.setOption("keepAlive", true);
-    bootstrap.setOption("sendBufferSize", sendBufferSize);
-    bootstrap.setOption("receiveBufferSize", receiveBufferSize);
+    bootstrap = new Bootstrap();
+    bootstrap.group(workerGroup)
+        .channel(NioSocketChannel.class)
+        .option(ChannelOption.CONNECT_TIMEOUT_MILLIS,
+            MAX_CONNECTION_MILLISECONDS_DEFAULT)
+        .option(ChannelOption.TCP_NODELAY, true)
+        .option(ChannelOption.SO_KEEPALIVE, true)
+        .option(ChannelOption.SO_SNDBUF, sendBufferSize)
+        .option(ChannelOption.SO_RCVBUF, receiveBufferSize)
+        .option(ChannelOption.ALLOCATOR, conf.getNettyAllocator())
+        .handler(new ChannelInitializer<SocketChannel>() {
+          @Override
+          protected void initChannel(SocketChannel ch) throws Exception {
+      /*if_not[HADOOP_NON_SECURE]*/
+            if (conf.authenticate()) {
+              LOG.info("Using Netty with authentication.");
 
-    // Set up the pipeline factory.
-    bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
-      @Override
-      public ChannelPipeline getPipeline() throws Exception {
-/*if_not[HADOOP_NON_SECURE]*/
-        if (conf.authenticate()) {
-          LOG.info("Using Netty with authentication.");
+              // Our pipeline starts with just byteCounter, and then we use
+              // addLast() to incrementally add pipeline elements, so that we
+              // can name them for identification for removal or replacement
+              // after client is authenticated by server.
+              // After authentication is complete, the pipeline's SASL-specific
+              // functionality is removed, restoring the pipeline to exactly the
+              // same configuration as it would be without authentication.
+              PipelineUtils.addLastWithExecutorCheck("clientInboundByteCounter",
+                  inboundByteCounter, handlerToUseExecutionGroup,
+                  executionGroup, ch);
+              PipelineUtils.addLastWithExecutorCheck(
+                  "clientOutboundByteCounter",
+                  outboundByteCounter, handlerToUseExecutionGroup,
+                  executionGroup, ch);
 
-          // Our pipeline starts with just byteCounter, and then we use
-          // addLast() to incrementally add pipeline elements, so that we can
-          // name them for identification for removal or replacement after
-          // client is authenticated by server.
-          // After authentication is complete, the pipeline's SASL-specific
-          // functionality is removed, restoring the pipeline to exactly the
-          // same configuration as it would be without authentication.
-          ChannelPipeline pipeline = Channels.pipeline(
-              byteCounter);
-          // The following pipeline component is needed to decode the server's
-          // SASL tokens. It is replaced with a FixedLengthFrameDecoder (same
-          // as used with the non-authenticated pipeline) after authentication
-          // completes (as in non-auth pipeline below).
-          pipeline.addLast("length-field-based-frame-decoder",
-              new LengthFieldBasedFrameDecoder(1024, 0, 4, 0, 4));
-          pipeline.addLast("request-encoder", new RequestEncoder(conf));
-          // The following pipeline component responds to the server's SASL
-          // tokens with its own responses. Both client and server share the
-          // same Hadoop Job token, which is used to create the SASL tokens to
-          // authenticate with each other.
-          // After authentication finishes, this pipeline component is removed.
-          pipeline.addLast("sasl-client-handler",
-              new SaslClientHandler(conf));
-          pipeline.addLast("response-handler",
-              new ResponseClientHandler(clientRequestIdRequestInfoMap, conf));
-          return pipeline;
-        } else {
-          LOG.info("Using Netty without authentication.");
+              // The following pipeline component is needed to decode the
+              // server's SASL tokens. It is replaced with a
+              // FixedLengthFrameDecoder (same as used with the
+              // non-authenticated pipeline) after authentication
+              // completes (as in non-auth pipeline below).
+              PipelineUtils.addLastWithExecutorCheck(
+                  "length-field-based-frame-decoder",
+                  new LengthFieldBasedFrameDecoder(1024, 0, 4, 0, 4),
+                  handlerToUseExecutionGroup, executionGroup, ch);
+              PipelineUtils.addLastWithExecutorCheck("request-encoder",
+                  new RequestEncoder(conf), handlerToUseExecutionGroup,
+                  executionGroup, ch);
+              // The following pipeline component responds to the server's SASL
+              // tokens with its own responses. Both client and server share the
+              // same Hadoop Job token, which is used to create the SASL
+              // tokens to authenticate with each other.
+              // After authentication finishes, this pipeline component
+              // is removed.
+              PipelineUtils.addLastWithExecutorCheck("sasl-client-handler",
+                  new SaslClientHandler(conf), handlerToUseExecutionGroup,
+                  executionGroup, ch);
+              PipelineUtils.addLastWithExecutorCheck("response-handler",
+                  new ResponseClientHandler(clientRequestIdRequestInfoMap,
+                      conf), handlerToUseExecutionGroup, executionGroup, ch);
+            } else {
+              LOG.info("Using Netty without authentication.");
 /*end[HADOOP_NON_SECURE]*/
-          ChannelPipeline pipeline = pipeline();
-          pipeline.addLast("clientByteCounter", byteCounter);
-          pipeline.addLast("responseFrameDecoder",
-              new FixedLengthFrameDecoder(RequestServerHandler.RESPONSE_BYTES));
-          pipeline.addLast("requestEncoder", new RequestEncoder(conf));
-          pipeline.addLast("responseClientHandler",
-              new ResponseClientHandler(clientRequestIdRequestInfoMap, conf));
-          if (executionHandler != null) {
-            pipeline.addAfter(handlerBeforeExecutionHandler,
-                "executionHandler", executionHandler);
+              PipelineUtils.addLastWithExecutorCheck("clientInboundByteCounter",
+                  inboundByteCounter, handlerToUseExecutionGroup,
+                  executionGroup, ch);
+              PipelineUtils.addLastWithExecutorCheck(
+                  "clientOutboundByteCounter",
+                  outboundByteCounter, handlerToUseExecutionGroup,
+                  executionGroup, ch);
+              PipelineUtils.addLastWithExecutorCheck(
+                  "fixed-length-frame-decoder",
+                  new FixedLengthFrameDecoder(
+                      RequestServerHandler.RESPONSE_BYTES),
+                 handlerToUseExecutionGroup, executionGroup, ch);
+              PipelineUtils.addLastWithExecutorCheck("request-encoder",
+                    new RequestEncoder(conf), handlerToUseExecutionGroup,
+                  executionGroup, ch);
+              PipelineUtils.addLastWithExecutorCheck("response-handler",
+                    new ResponseClientHandler(clientRequestIdRequestInfoMap,
+                        conf), handlerToUseExecutionGroup, executionGroup, ch);
+
+/*if_not[HADOOP_NON_SECURE]*/
+            }
+/*end[HADOOP_NON_SECURE]*/
           }
-          return pipeline;
-/*if_not[HADOOP_NON_SECURE]*/
-        }
-/*end[HADOOP_NON_SECURE]*/
-      }
-    });
+        });
   }
 
   /**
@@ -399,7 +412,7 @@ public class NettyClient {
         if (!future.isSuccess()) {
           LOG.warn("connectAllAddresses: Future failed " +
               "to connect with " + waitingConnection.address + " with " +
-              failures + " failures because of " + future.getCause());
+              failures + " failures because of " + future.cause());
 
           ChannelFuture connectionFuture =
               bootstrap.connect(waitingConnection.address);
@@ -407,13 +420,13 @@ public class NettyClient {
               waitingConnection.address, waitingConnection.taskId));
           ++failures;
         } else {
-          Channel channel = future.getChannel();
+          Channel channel = future.channel();
           if (LOG.isDebugEnabled()) {
             LOG.debug("connectAllAddresses: Connected to " +
-                channel.getRemoteAddress() + ", open = " + channel.isOpen());
+                channel.remoteAddress() + ", open = " + channel.isOpen());
           }
 
-          if (channel.getRemoteAddress() == null) {
+          if (channel.remoteAddress() == null) {
             throw new IllegalStateException(
                 "connectAllAddresses: Null remote address!");
           }
@@ -429,7 +442,7 @@ public class NettyClient {
               rotater = newRotater;
             }
           }
-          rotater.addChannel(future.getChannel());
+          rotater.addChannel(future.channel());
           ++connected;
         }
       }
@@ -485,14 +498,14 @@ public class NettyClient {
    */
   private void authenticateOnChannel(Integer taskId, Channel channel) {
     try {
-      SaslNettyClient saslNettyClient = SASL.get(channel);
-      if (SASL.get(channel) == null) {
+      SaslNettyClient saslNettyClient = channel.attr(SASL).get();
+      if (channel.attr(SASL).get() == null) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("authenticateOnChannel: Creating saslNettyClient now " +
               "for channel: " + channel);
         }
         saslNettyClient = new SaslNettyClient();
-        SASL.set(channel, saslNettyClient);
+        channel.attr(SASL).set(saslNettyClient);
       }
       if (!saslNettyClient.isComplete()) {
         if (LOG.isDebugEnabled()) {
@@ -550,11 +563,11 @@ public class NettyClient {
                   done + " connections closed, releasing " +
                   "NettyClient.bootstrap resources now.");
             }
-            bossExecutorService.shutdownNow();
-            workerExecutorService.shutdownNow();
-            bootstrap.releaseExternalResources();
-            if (useExecutionHandler) {
-              executionHandler.releaseExternalResources();
+            workerGroup.shutdownGracefully();
+            ProgressableUtils.awaitTerminationFuture(executionGroup, context);
+            if (executionGroup != null) {
+              executionGroup.shutdownGracefully();
+              ProgressableUtils.awaitTerminationFuture(executionGroup, context);
             }
           }
         }
@@ -576,7 +589,7 @@ public class NettyClient {
     }
 
     // Return this channel if it is connected
-    if (channel.isConnected()) {
+    if (channel.isActive()) {
       return channel;
     }
 
@@ -588,7 +601,7 @@ public class NettyClient {
     if (LOG.isInfoEnabled()) {
       LOG.info("getNextChannel: Fixing disconnected channel to " +
           remoteServer + ", open = " + channel.isOpen() + ", " +
-          "bound = " + channel.isBound());
+          "bound = " + channel.isRegistered());
     }
     int reconnectFailures = 0;
     while (reconnectFailures < maxConnectionFailures) {
@@ -599,14 +612,14 @@ public class NettyClient {
           LOG.info("getNextChannel: Connected to " + remoteServer + "!");
         }
         addressChannelMap.get(remoteServer).addChannel(
-            connectionFuture.getChannel());
-        return connectionFuture.getChannel();
+            connectionFuture.channel());
+        return connectionFuture.channel();
       }
       ++reconnectFailures;
       LOG.warn("getNextChannel: Failed to reconnect to " +  remoteServer +
           " on attempt " + reconnectFailures + " out of " +
           maxConnectionFailures + " max attempts, sleeping for 5 secs",
-          connectionFuture.getCause());
+          connectionFuture.cause());
       try {
         Thread.sleep(5000);
       } catch (InterruptedException e) {
@@ -628,7 +641,8 @@ public class NettyClient {
       WritableRequest request) {
     InetSocketAddress remoteServer = taskIdAddressMap.get(destTaskId);
     if (clientRequestIdRequestInfoMap.isEmpty()) {
-      byteCounter.resetAll();
+      inboundByteCounter.resetAll();
+      outboundByteCounter.resetAll();
     }
     boolean registerRequest = true;
 /*if_not[HADOOP_NON_SECURE]*/
@@ -671,7 +685,8 @@ public class NettyClient {
     waitSomeRequests(0);
     if (LOG.isInfoEnabled()) {
       LOG.info("waitAllRequests: Finished all requests. " +
-          byteCounter.getMetrics());
+          inboundByteCounter.getMetrics() + "\n" + outboundByteCounter
+          .getMetrics());
     }
   }
 
@@ -715,7 +730,8 @@ public class NettyClient {
           waitingRequestMsecs + " msecs, " +
           clientRequestIdRequestInfoMap.size() +
           " open requests, waiting for it to be <= " + maxOpenRequests +
-          ", " + byteCounter.getMetrics());
+          ", " + inboundByteCounter.getMetrics() + "\n" +
+          outboundByteCounter.getMetrics());
 
       if (clientRequestIdRequestInfoMap.size() < MAX_REQUESTS_TO_LIST) {
         for (Map.Entry<ClientRequestId, RequestInfo> entry :
@@ -789,17 +805,17 @@ public class NettyClient {
       }
       // If not connected anymore, request failed, or the request is taking
       // too long, re-establish and resend
-      if (!writeFuture.getChannel().isConnected() ||
+      if (!writeFuture.channel().isActive() ||
           (writeFuture.isDone() && !writeFuture.isSuccess()) ||
           (requestInfo.getElapsedMsecs() > maxRequestMilliseconds)) {
         LOG.warn("checkRequestsForProblems: Problem with request id " +
             entry.getKey() + " connected = " +
-            writeFuture.getChannel().isConnected() +
+            writeFuture.channel().isActive() +
             ", future done = " + writeFuture.isDone() + ", " +
             "success = " + writeFuture.isSuccess() + ", " +
-            "cause = " + writeFuture.getCause() + ", " +
+            "cause = " + writeFuture.cause() + ", " +
             "elapsed time = " + requestInfo.getElapsedMsecs() + ", " +
-            "destination = " + writeFuture.getChannel().getRemoteAddress() +
+            "destination = " + writeFuture.channel().remoteAddress() +
             " " + requestInfo);
         addedRequestIds.add(entry.getKey());
         addedRequestInfos.add(new RequestInfo(

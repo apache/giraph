@@ -20,9 +20,11 @@ package org.apache.giraph.comm.netty;
 
 import java.util.List;
 import com.google.common.collect.Lists;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
+
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
+
 
 /**
  * Maintains multiple channels and rotates between them.  This is thread-safe.

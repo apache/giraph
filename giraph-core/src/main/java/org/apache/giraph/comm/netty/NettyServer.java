@@ -31,37 +31,35 @@ import org.apache.giraph.comm.netty.handler.WorkerRequestReservedMap;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.TaskInfo;
+import org.apache.giraph.utils.PipelineUtils;
 import org.apache.giraph.utils.ProgressableUtils;
 import org.apache.hadoop.util.Progressable;
 import org.apache.log4j.Logger;
-import org.jboss.netty.bootstrap.ServerBootstrap;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelException;
-import org.jboss.netty.channel.ChannelFactory;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.channel.ChannelLocal;
-import org.jboss.netty.channel.ChannelPipeline;
-import org.jboss.netty.channel.ChannelPipelineFactory;
-import org.jboss.netty.channel.ChannelStateEvent;
-import org.jboss.netty.channel.Channels;
-import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
-import org.jboss.netty.channel.group.ChannelGroup;
-import org.jboss.netty.channel.group.DefaultChannelGroup;
-import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
-import org.jboss.netty.handler.codec.frame.LengthFieldBasedFrameDecoder;
-import org.jboss.netty.handler.execution.ExecutionHandler;
-import org.jboss.netty.handler.execution.MemoryAwareThreadPoolExecutor;
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.channel.group.ChannelGroup;
+import io.netty.channel.group.DefaultChannelGroup;
+import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.DefaultEventExecutorGroup;
+import io.netty.util.concurrent.EventExecutorGroup;
+import io.netty.util.concurrent.ImmediateEventExecutor;
+import io.netty.channel.AdaptiveRecvByteBufAllocator;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 import static org.apache.giraph.conf.GiraphConstants.MAX_IPC_PORT_BIND_ATTEMPTS;
-import static org.jboss.netty.channel.Channels.pipeline;
 
 /**
  * This server uses Netty and will implement all Giraph communication
@@ -73,9 +71,8 @@ public class NettyServer {
 
 /*if_not[HADOOP_NON_SECURE]*/
   /** Used to authenticate with netty clients */
-  public static final ChannelLocal<SaslNettyServer>
-  CHANNEL_SASL_NETTY_SERVERS =
-    new ChannelLocal<SaslNettyServer>();
+  public static final AttributeKey<SaslNettyServer>
+  CHANNEL_SASL_NETTY_SERVERS = AttributeKey.valueOf("channelSaslServers");
 /*end[HADOOP_NON_SECURE]*/
 
   /** Class logger */
@@ -84,10 +81,9 @@ public class NettyServer {
   private final ImmutableClassesGiraphConfiguration conf;
   /** Progressable for reporting progress */
   private final Progressable progressable;
-  /** Factory of channels */
-  private ChannelFactory channelFactory;
   /** Accepted channels */
-  private final ChannelGroup accepted = new DefaultChannelGroup();
+  private final ChannelGroup accepted = new DefaultChannelGroup(
+      ImmediateEventExecutor.INSTANCE);
   /** Local hostname */
   private final String localHostname;
   /** Address of the server */
@@ -106,24 +102,26 @@ public class NettyServer {
 /*end[HADOOP_NON_SECURE]*/
   /** Server bootstrap */
   private ServerBootstrap bootstrap;
-  /** Byte counter for this client */
-  private final ByteCounter byteCounter = new ByteCounter();
+  /** Inbound byte counter for this client */
+  private final InboundByteCounter inByteCounter = new InboundByteCounter();
+  /** Outbound byte counter for this client */
+  private final OutboundByteCounter outByteCounter = new OutboundByteCounter();
   /** Send buffer size */
   private final int sendBufferSize;
   /** Receive buffer size */
   private final int receiveBufferSize;
-  /** Boss factory service */
-  private final ExecutorService bossExecutorService;
-  /** Worker factory service */
-  private final ExecutorService workerExecutorService;
+  /** Boss eventloop group */
+  private final EventLoopGroup bossGroup;
+  /** Worker eventloop group */
+  private final EventLoopGroup workerGroup;
   /** Request completed map per worker */
   private final WorkerRequestReservedMap workerRequestReservedMap;
-  /** Use execution handler? */
-  private final boolean useExecutionHandler;
+  /** Use execution group? */
+  private final boolean useExecutionGroup;
   /** Execution handler (if used) */
-  private final ExecutionHandler executionHandler;
+  private final EventExecutorGroup executionGroup;
   /** Name of the handler before the execution handler (if used) */
-  private final String handlerBeforeExecutionHandler;
+  private final String handlerToUseExecutionGroup;
 
   /**
    * Constructor for creating the server
@@ -148,12 +146,15 @@ public class NettyServer {
 
     workerRequestReservedMap = new WorkerRequestReservedMap(conf);
 
-    bossExecutorService = Executors.newCachedThreadPool(
+    maxPoolSize = GiraphConstants.NETTY_SERVER_THREADS.get(conf);
+
+    bossGroup = new NioEventLoopGroup(4,
         new ThreadFactoryBuilder().setNameFormat(
-            "netty-server-boss-%d").build());
-    workerExecutorService = Executors.newCachedThreadPool(
+          "netty-server-boss-%d").build());
+
+    workerGroup = new NioEventLoopGroup(maxPoolSize,
         new ThreadFactoryBuilder().setNameFormat(
-            "netty-server-worker-%d").build());
+          "netty-server-worker-%d").build());
 
     try {
       this.localHostname = conf.getLocalHostname();
@@ -161,35 +162,26 @@ public class NettyServer {
       throw new IllegalStateException("NettyServer: unable to get hostname");
     }
 
-    maxPoolSize = GiraphConstants.NETTY_SERVER_THREADS.get(conf);
-
     tcpBacklog = conf.getInt(GiraphConstants.TCP_BACKLOG.getKey(),
         conf.getInt(GiraphConstants.MAX_WORKERS,
             GiraphConstants.TCP_BACKLOG.getDefaultValue()));
 
-    channelFactory = new NioServerSocketChannelFactory(
-        bossExecutorService,
-        workerExecutorService,
-        maxPoolSize);
-
-    handlerBeforeExecutionHandler =
+    handlerToUseExecutionGroup =
         GiraphConstants.NETTY_SERVER_EXECUTION_AFTER_HANDLER.get(conf);
-    useExecutionHandler =
+    useExecutionGroup =
         GiraphConstants.NETTY_SERVER_USE_EXECUTION_HANDLER.get(conf);
-    if (useExecutionHandler) {
+    if (useExecutionGroup) {
       int executionThreads = conf.getNettyServerExecutionThreads();
-      executionHandler = new ExecutionHandler(
-          new MemoryAwareThreadPoolExecutor(
-              executionThreads, 1048576, 1048576, 1, TimeUnit.HOURS,
-              new ThreadFactoryBuilder().setNameFormat("netty-server-exec-%d").
-                  build()));
+      executionGroup = new DefaultEventExecutorGroup(executionThreads,
+          new ThreadFactoryBuilder().setNameFormat("netty-server-exec-%d").
+              build());
       if (LOG.isInfoEnabled()) {
-        LOG.info("NettyServer: Using execution handler with " +
-            executionThreads + " threads after " +
-            handlerBeforeExecutionHandler + ".");
+        LOG.info("NettyServer: Using execution group with " +
+            executionThreads + " threads for " +
+            handlerToUseExecutionGroup + ".");
       }
     } else {
-      executionHandler = null;
+      executionGroup = null;
     }
   }
 
@@ -217,26 +209,27 @@ public class NettyServer {
    * Start the server with the appropriate port
    */
   public void start() {
-    bootstrap = new ServerBootstrap(channelFactory);
-    // Set up the pipeline factory.
-    bootstrap.setOption("child.keepAlive", true);
-    bootstrap.setOption("child.tcpNoDelay", true);
-    bootstrap.setOption("child.sendBufferSize", sendBufferSize);
-    bootstrap.setOption("child.receiveBufferSize", receiveBufferSize);
-    bootstrap.setOption("backlog", tcpBacklog);
-    bootstrap.setOption("child.receiveBufferSizePredictorFactory",
-        new WrappedAdaptiveReceiveBufferSizePredictorFactory(
-            receiveBufferSize / 4,
-            receiveBufferSize,
-            receiveBufferSize));
+    bootstrap = new ServerBootstrap();
+    bootstrap.group(bossGroup, workerGroup)
+        .channel(NioServerSocketChannel.class)
+        .option(ChannelOption.SO_BACKLOG, tcpBacklog)
+        .option(ChannelOption.ALLOCATOR, conf.getNettyAllocator())
+        .childOption(ChannelOption.SO_KEEPALIVE, true)
+        .childOption(ChannelOption.TCP_NODELAY, true)
+        .childOption(ChannelOption.SO_SNDBUF, sendBufferSize)
+        .childOption(ChannelOption.SO_RCVBUF, receiveBufferSize)
+        .childOption(ChannelOption.ALLOCATOR, conf.getNettyAllocator())
+        .childOption(ChannelOption.RCVBUF_ALLOCATOR,
+            new AdaptiveRecvByteBufAllocator(receiveBufferSize / 4,
+                receiveBufferSize, receiveBufferSize));
 
     /**
      * Pipeline setup: depends on whether configured to use authentication
      * or not.
      */
-    bootstrap.setPipelineFactory(new ChannelPipelineFactory() {
+    bootstrap.childHandler(new ChannelInitializer<SocketChannel>() {
       @Override
-      public ChannelPipeline getPipeline() throws Exception {
+      protected void initChannel(SocketChannel ch) throws Exception {
 /*if_not[HADOOP_NON_SECURE]*/
         if (conf.authenticate()) {
           LOG.info("start: Will use Netty pipeline with " +
@@ -245,48 +238,60 @@ public class NettyServer {
           // pipeline components SaslServerHandler and ResponseEncoder are
           // removed, leaving the pipeline the same as in the non-authenticated
           // configuration except for the presence of the Authorize component.
-          return Channels.pipeline(
-              byteCounter,
+          PipelineUtils.addLastWithExecutorCheck("serverInboundByteCounter",
+              inByteCounter, handlerToUseExecutionGroup, executionGroup, ch);
+          PipelineUtils.addLastWithExecutorCheck("serverOutboundByteCounter",
+              outByteCounter, handlerToUseExecutionGroup, executionGroup, ch);
+          PipelineUtils.addLastWithExecutorCheck("requestFrameDecoder",
               new LengthFieldBasedFrameDecoder(1024 * 1024 * 1024, 0, 4, 0, 4),
-              new RequestDecoder(conf, byteCounter),
-              // Removed after authentication completes:
+              handlerToUseExecutionGroup, executionGroup, ch);
+          PipelineUtils.addLastWithExecutorCheck("requestDecoder",
+              new RequestDecoder(conf, inByteCounter),
+              handlerToUseExecutionGroup, executionGroup, ch);
+          // Removed after authentication completes:
+          PipelineUtils.addLastWithExecutorCheck("saslServerHandler",
               saslServerHandlerFactory.newHandler(conf),
-              new AuthorizeServerHandler(),
+              handlerToUseExecutionGroup, executionGroup, ch);
+          PipelineUtils.addLastWithExecutorCheck("authorizeServerHandler",
+              new AuthorizeServerHandler(), handlerToUseExecutionGroup,
+              executionGroup, ch);
+          PipelineUtils.addLastWithExecutorCheck("requestServerHandler",
               requestServerHandlerFactory.newHandler(workerRequestReservedMap,
-                  conf, myTaskInfo),
-              // Removed after authentication completes:
-              new ResponseEncoder());
+                  conf, myTaskInfo), handlerToUseExecutionGroup,
+              executionGroup, ch);
+          // Removed after authentication completes:
+          PipelineUtils.addLastWithExecutorCheck("responseEncoder",
+              new ResponseEncoder(), handlerToUseExecutionGroup,
+              executionGroup, ch);
         } else {
           LOG.info("start: Using Netty without authentication.");
 /*end[HADOOP_NON_SECURE]*/
-          ChannelPipeline pipeline = pipeline();
-
           // Store all connected channels in order to ensure that we can close
           // them on stop(), or else stop() may hang waiting for the
           // connections to close on their own
-          pipeline.addLast("connectedChannels",
-              new SimpleChannelUpstreamHandler() {
+          ch.pipeline().addLast("connectedChannels",
+              new ChannelInboundHandlerAdapter() {
                 @Override
-                public void channelConnected(ChannelHandlerContext ctx,
-                    ChannelStateEvent e) throws Exception {
-                  super.channelConnected(ctx, e);
-                  accepted.add(e.getChannel());
+                public void channelActive(ChannelHandlerContext ctx)
+                  throws Exception {
+                  accepted.add(ctx.channel());
+                  ctx.fireChannelActive();
                 }
               });
-          pipeline.addLast("serverByteCounter", byteCounter);
-          pipeline.addLast("requestFrameDecoder",
-              new LengthFieldBasedFrameDecoder(
-                  1024 * 1024 * 1024, 0, 4, 0, 4));
-          pipeline.addLast("requestDecoder",
-              new RequestDecoder(conf, byteCounter));
-          pipeline.addLast("requestProcessor",
+          PipelineUtils.addLastWithExecutorCheck("serverInboundByteCounter",
+              inByteCounter, handlerToUseExecutionGroup, executionGroup, ch);
+          PipelineUtils.addLastWithExecutorCheck("serverOutboundByteCounter",
+              outByteCounter, handlerToUseExecutionGroup, executionGroup, ch);
+          PipelineUtils.addLastWithExecutorCheck("requestFrameDecoder",
+              new LengthFieldBasedFrameDecoder(1024 * 1024 * 1024, 0, 4, 0, 4),
+              handlerToUseExecutionGroup, executionGroup, ch);
+          PipelineUtils.addLastWithExecutorCheck("requestDecoder",
+              new RequestDecoder(conf, inByteCounter),
+              handlerToUseExecutionGroup, executionGroup, ch);
+          PipelineUtils.addLastWithExecutorCheck("requestServerHandler",
               requestServerHandlerFactory.newHandler(
-                  workerRequestReservedMap, conf, myTaskInfo));
-          if (executionHandler != null) {
-            pipeline.addAfter(handlerBeforeExecutionHandler,
-                "executionHandler", executionHandler);
-          }
-          return pipeline;
+                  workerRequestReservedMap, conf, myTaskInfo),
+              handlerToUseExecutionGroup, executionGroup, ch);
 /*if_not[HADOOP_NON_SECURE]*/
         }
 /*end[HADOOP_NON_SECURE]*/
@@ -323,13 +328,16 @@ public class NettyServer {
       }
 
       try {
-        Channel ch = bootstrap.bind(myAddress);
-        accepted.add(ch);
-
+        ChannelFuture f = bootstrap.bind(myAddress).sync();
+        accepted.add(f.channel());
         break;
-      } catch (ChannelException e) {
+      } catch (InterruptedException e) {
+        throw new IllegalStateException(e);
+        // CHECKSTYLE: stop IllegalCatchCheck
+      } catch (Exception e) {
+        // CHECKSTYLE: resume IllegalCatchCheck
         LOG.warn("start: Likely failed to bind on attempt " +
-            bindAttempts + " to port " + bindPort, e);
+            bindAttempts + " to port " + bindPort, e.getCause());
         ++bindAttempts;
         bindPort += portIncrementConstant;
       }
@@ -345,8 +353,7 @@ public class NettyServer {
           "communication server: " + myAddress + " with up to " +
           maxPoolSize + " threads on bind attempt " + bindAttempts +
           " with sendBufferSize = " + sendBufferSize +
-          " receiveBufferSize = " + receiveBufferSize + " backlog = " +
-          bootstrap.getOption("backlog"));
+          " receiveBufferSize = " + receiveBufferSize);
     }
   }
 
@@ -358,19 +365,16 @@ public class NettyServer {
       LOG.info("stop: Halting netty server");
     }
     ProgressableUtils.awaitChannelGroupFuture(accepted.close(), progressable);
-    bossExecutorService.shutdownNow();
-    ProgressableUtils.awaitExecutorTermination(bossExecutorService,
-        progressable);
-    workerExecutorService.shutdownNow();
-    ProgressableUtils.awaitExecutorTermination(workerExecutorService,
-        progressable);
     if (LOG.isInfoEnabled()) {
       LOG.info("stop: Start releasing resources");
     }
-    bootstrap.releaseExternalResources();
-    channelFactory.releaseExternalResources();
-    if (useExecutionHandler) {
-      executionHandler.releaseExternalResources();
+    bossGroup.shutdownGracefully();
+    workerGroup.shutdownGracefully();
+    ProgressableUtils.awaitTerminationFuture(bossGroup, progressable);
+    ProgressableUtils.awaitTerminationFuture(workerGroup, progressable);
+    if (useExecutionGroup) {
+      executionGroup.shutdownGracefully();
+      ProgressableUtils.awaitTerminationFuture(executionGroup, progressable);
     }
     if (LOG.isInfoEnabled()) {
       LOG.info("stop: Netty server halted");

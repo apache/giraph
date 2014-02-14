@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-840: Upgrade to netty 4 (pavanka via majakabiljo)
+
   GIRAPH-816: ByteArrayPartition not combining vertex edges (cmuchins via majakabiljo)
 
   GIRAPH-844: TextInputFormat for SimpleShortestPaths (ssc)

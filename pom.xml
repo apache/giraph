@@ -299,7 +299,7 @@ under the License.
     <dep.libthrift.version>0.9.0</dep.libthrift.version>
     <dep.log4j.version>1.2.17</dep.log4j.version>
     <dep.mockito.version>1.9.5</dep.mockito.version>
-    <dep.netty.version>3.5.3.Final</dep.netty.version>
+    <dep.netty.version>4.0.14.Final</dep.netty.version>
     <dep.paranamer.version>2.3</dep.paranamer.version>
     <dep.slf4j.version>1.7.5</dep.slf4j.version>
     <dep.tinkerpop.rexter.version>2.4.0</dep.tinkerpop.rexter.version>
@@ -1410,7 +1410,7 @@ under the License.
           </exclusion>
           <exclusion>
             <groupId>io.netty</groupId>
-            <artifactId>netty</artifactId>
+            <artifactId>netty-all</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
@@ -1536,7 +1536,7 @@ under the License.
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
-        <artifactId>netty</artifactId>
+        <artifactId>netty-all</artifactId>
         <version>${dep.netty.version}</version>
       </dependency>
       <dependency>

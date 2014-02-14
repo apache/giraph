@@ -47,6 +47,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.net.DNS;
 
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.UnpooledByteBufAllocator;
+
 import java.net.UnknownHostException;
 
 /**
@@ -59,6 +63,9 @@ import java.net.UnknownHostException;
  */
 public class GiraphConfiguration extends Configuration
     implements GiraphConstants {
+  /** ByteBufAllocator to be used by netty */
+  private ByteBufAllocator nettyBufferAllocator = null;
+
   /**
    * Constructor that creates the configuration
    */
@@ -838,6 +845,25 @@ public class GiraphConfiguration extends Configuration
     } else {
       return getNettyServerThreads();
     }
+  }
+
+  /**
+   * Used by netty client and server to create ByteBufAllocator
+   *
+   * @return ByteBufAllocator
+   */
+  public ByteBufAllocator getNettyAllocator() {
+    if (nettyBufferAllocator == null) {
+      if (NETTY_USE_POOLED_ALLOCATOR.get(this)) { // Use pooled allocator
+        nettyBufferAllocator = new PooledByteBufAllocator(
+            NETTY_USE_DIRECT_MEMORY.get(this));
+      } else { // Use un-pooled allocator
+        // Note: Current default settings create un-pooled heap allocator
+        nettyBufferAllocator = new UnpooledByteBufAllocator(
+            NETTY_USE_DIRECT_MEMORY.get(this));
+      }
+    }
+    return nettyBufferAllocator;
   }
 
   public int getZookeeperConnectionAttempts() {

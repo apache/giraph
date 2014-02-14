@@ -21,29 +21,28 @@ package org.apache.giraph.comm.netty.handler;
 import org.apache.giraph.comm.requests.RequestType;
 import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.log4j.Logger;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBufferOutputStream;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufOutputStream;
+import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
 
 /**
  * How a server should respond to a client. Currently only used for
  * responding to client's SASL messages, and removed after client
  * authenticates.
  */
-public class ResponseEncoder extends OneToOneEncoder {
+public class ResponseEncoder extends ChannelOutboundHandlerAdapter {
   /** Class logger. */
   private static final Logger LOG = Logger.getLogger(ResponseEncoder.class);
   /** Holds the place of the message length until known. */
   private static final byte[] LENGTH_PLACEHOLDER = new byte[4];
 
   @Override
-  protected Object encode(ChannelHandlerContext ctx,
-      Channel channel, Object msg) throws Exception {
+  public void write(ChannelHandlerContext ctx, Object msg,
+    ChannelPromise promise) throws Exception {
     if (LOG.isDebugEnabled()) {
-      LOG.debug("encode(" + ctx + "," + channel + "," + msg);
+      LOG.debug("write(" + ctx + "," + msg);
     }
 
     if (!(msg instanceof WritableRequest)) {
@@ -54,10 +53,10 @@ public class ResponseEncoder extends OneToOneEncoder {
     }
     @SuppressWarnings("unchecked")
     WritableRequest writableRequest =
-      (WritableRequest) msg;
-    ChannelBufferOutputStream outputStream =
-      new ChannelBufferOutputStream(ChannelBuffers.dynamicBuffer(
-        10, ctx.getChannel().getConfig().getBufferFactory()));
+        (WritableRequest) msg;
+    ByteBuf buf = ctx.alloc().buffer(10);
+    ByteBufOutputStream outputStream =
+        new ByteBufOutputStream(buf);
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("encode: Encoding a message of type " + msg.getClass());
@@ -71,14 +70,15 @@ public class ResponseEncoder extends OneToOneEncoder {
     writableRequest.write(outputStream);
 
     outputStream.flush();
+    outputStream.close();
 
     // Set the correct size at the end.
-    ChannelBuffer encodedBuffer = outputStream.buffer();
-    encodedBuffer.setInt(0, encodedBuffer.writerIndex() - 4);
+    buf.setInt(0, buf.writerIndex() - 4);
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("encode: Encoding a message of type " + msg.getClass());
     }
+    ctx.write(buf, promise);
 /*if[HADOOP_NON_SECURE]
 else[HADOOP_NON_SECURE]*/
     if (writableRequest.getType() == RequestType.SASL_COMPLETE_REQUEST) {
@@ -88,13 +88,13 @@ else[HADOOP_NON_SECURE]*/
       // the ResponseEncoder to remove itself also.
       if (LOG.isDebugEnabled()) {
         LOG.debug("encode: Removing RequestEncoder handler: no longer needed," +
-            " since client: " + ctx.getChannel().getRemoteAddress() + " has " +
+            " since client: " + ctx.channel().remoteAddress() + " has " +
             "completed authenticating.");
       }
-      ctx.getPipeline().remove(this);
+      ctx.pipeline().remove(this);
     }
 /*end[HADOOP_NON_SECURE]*/
-    return encodedBuffer;
+    ctx.write(buf, promise);
   }
 }
 

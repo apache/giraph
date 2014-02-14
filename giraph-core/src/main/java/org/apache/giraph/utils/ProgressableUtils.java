@@ -20,8 +20,9 @@ package org.apache.giraph.utils;
 
 import org.apache.hadoop.util.Progressable;
 import org.apache.log4j.Logger;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.group.ChannelGroupFuture;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.group.ChannelGroupFuture;
+import io.netty.util.concurrent.EventExecutorGroup;
 
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -71,6 +72,17 @@ public class ProgressableUtils {
   public static void awaitExecutorTermination(ExecutorService executor,
       Progressable progressable) {
     waitForever(new ExecutorServiceWaitable(executor), progressable);
+  }
+
+  /**
+   * Wait for executorgroup to terminate, while periodically reporting progress
+   *
+   * @param group ExecutorGroup whose termination we are awaiting
+   * @param progressable Progressable for reporting progress (Job context)
+   */
+  public static void awaitTerminationFuture(EventExecutorGroup group,
+                                            Progressable progressable) {
+    waitForever(new FutureWaitable<>(group.terminationFuture()), progressable);
   }
 
   /**

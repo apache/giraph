@@ -25,17 +25,17 @@ import org.apache.giraph.time.SystemTime;
 import org.apache.giraph.time.Time;
 import org.apache.giraph.time.Times;
 import org.apache.log4j.Logger;
-import org.jboss.netty.buffer.ChannelBuffer;
-import org.jboss.netty.buffer.ChannelBufferOutputStream;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelHandlerContext;
-import org.jboss.netty.handler.codec.oneone.OneToOneEncoder;
+
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufOutputStream;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelPromise;
 
 /**
  * Requests have a request type and an encoded request.
  */
-public class RequestEncoder extends OneToOneEncoder {
+public class RequestEncoder extends ChannelOutboundHandlerAdapter {
   /** Time class to use */
   private static final Time TIME = SystemTime.get();
   /** Class logger */
@@ -62,8 +62,9 @@ public class RequestEncoder extends OneToOneEncoder {
   }
 
   @Override
-  protected Object encode(ChannelHandlerContext ctx,
-                          Channel channel, Object msg) throws Exception {
+  public void write(ChannelHandlerContext ctx, Object msg,
+    ChannelPromise promise)
+    throws Exception {
     if (!(msg instanceof WritableRequest)) {
       throw new IllegalArgumentException(
           "encode: Got a message of type " + msg.getClass());
@@ -73,21 +74,18 @@ public class RequestEncoder extends OneToOneEncoder {
     if (LOG.isDebugEnabled()) {
       startEncodingNanoseconds = TIME.getNanoseconds();
     }
+    ByteBuf buf;
     WritableRequest writableRequest = (WritableRequest) msg;
     int requestSize = writableRequest.getSerializedSize();
-    ChannelBuffer channelBuffer;
     if (requestSize == WritableRequest.UNKNOWN_SIZE) {
-      channelBuffer = ChannelBuffers.dynamicBuffer(
-          bufferStartingSize,
-          ctx.getChannel().getConfig().getBufferFactory());
+      buf = ctx.alloc().buffer(bufferStartingSize);
     } else {
       requestSize += LENGTH_PLACEHOLDER.length + 1;
-      channelBuffer = useDirectBuffers ?
-          ChannelBuffers.directBuffer(requestSize) :
-          ChannelBuffers.buffer(requestSize);
+      buf = useDirectBuffers ? ctx.alloc().directBuffer(requestSize) :
+          ctx.alloc().buffer(requestSize);
     }
-    ChannelBufferOutputStream outputStream =
-        new ChannelBufferOutputStream(channelBuffer);
+    ByteBufOutputStream outputStream =
+        new ByteBufOutputStream(buf);
     outputStream.write(LENGTH_PLACEHOLDER);
     outputStream.writeByte(writableRequest.getType().ordinal());
     try {
@@ -102,15 +100,14 @@ public class RequestEncoder extends OneToOneEncoder {
     outputStream.close();
 
     // Set the correct size at the end
-    ChannelBuffer encodedBuffer = outputStream.buffer();
-    encodedBuffer.setInt(0, encodedBuffer.writerIndex() - 4);
+    buf.setInt(0, buf.writerIndex() - 4);
     if (LOG.isDebugEnabled()) {
       LOG.debug("encode: Client " + writableRequest.getClientId() + ", " +
           "requestId " + writableRequest.getRequestId() +
-          ", size = " + encodedBuffer.writerIndex() + ", " +
+          ", size = " + buf.readableBytes() + ", " +
           writableRequest.getType() + " took " +
           Times.getNanosSince(TIME, startEncodingNanoseconds) + " ns");
     }
-    return encodedBuffer;
+    ctx.writeAndFlush(buf, promise);
   }
 }

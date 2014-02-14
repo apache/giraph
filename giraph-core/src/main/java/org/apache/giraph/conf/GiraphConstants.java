@@ -469,6 +469,16 @@ public interface GiraphConstants {
   IntConfOption TCP_BACKLOG = new IntConfOption("giraph.tcpBacklog", 1,
       "TCP backlog (defaults to number of workers)");
 
+  /** Use netty pooled memory buffer allocator */
+  BooleanConfOption NETTY_USE_POOLED_ALLOCATOR = new BooleanConfOption(
+      "giraph.useNettyPooledAllocator", true, "Should netty use pooled " +
+      "memory allocator?");
+
+  /** Use direct memory buffers in netty */
+  BooleanConfOption NETTY_USE_DIRECT_MEMORY = new BooleanConfOption(
+      "giraph.useNettyDirectMemory", true, "Should netty use direct " +
+      "memory buffers");
+
   /** How big to make the encoder buffer? */
   IntConfOption NETTY_REQUEST_ENCODER_BUFFER_SIZE =
       new IntConfOption("giraph.nettyRequestEncoderBufferSize", 32 * ONE_KB,
@@ -502,7 +512,7 @@ public interface GiraphConstants {
   /** Where to place the netty client execution handle? */
   StrConfOption NETTY_CLIENT_EXECUTION_AFTER_HANDLER =
       new StrConfOption("giraph.nettyClientExecutionAfterHandler",
-          "requestEncoder",
+          "request-encoder",
           "Where to place the netty client execution handle?");
 
   /** Use the execution handler in netty on the server? */
