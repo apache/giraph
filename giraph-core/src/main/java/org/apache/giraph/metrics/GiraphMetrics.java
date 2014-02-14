@@ -119,7 +119,7 @@ public class GiraphMetrics {
    *
    * @param observer SuperstepObserver to watch
    */
-  public void addSuperstepResetObserver(
+  public synchronized void addSuperstepResetObserver(
       ResetSuperstepMetricsObserver observer) {
     observers.add(observer);
   }
@@ -129,7 +129,7 @@ public class GiraphMetrics {
    *
    * @param superstep long number of superstep
    */
-  public void resetSuperstepMetrics(long superstep) {
+  public synchronized void resetSuperstepMetrics(long superstep) {
     perSuperstep.setSuperstep(superstep);
     for (ResetSuperstepMetricsObserver observer : observers) {
       observer.newSuperstep(perSuperstep);
