@@ -18,6 +18,14 @@
 
 package org.apache.giraph.master;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashSet;
+
+import junit.framework.Assert;
+
 import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.graph.AbstractComputation;
@@ -31,14 +39,6 @@ import org.junit.Test;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-
-import junit.framework.Assert;
-
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashSet;
 
 /** Test switching Computation and MessageCombiner class during application */
 public class TestSwitchClasses {
@@ -135,9 +135,14 @@ public class TestSwitchClasses {
         case 3:
           setComputation(Computation3.class);
           setMessageCombiner(SumMessageCombiner.class);
+          setIncomingMessage(DoubleWritable.class);
+          setOutgoingMessage(IntWritable.class);
           break;
         case 4:
           setComputation(Computation1.class);
+          // message types removed
+          setIncomingMessage(null);
+          setOutgoingMessage(null);
           break;
         default:
           haltComputation();
@@ -178,11 +183,11 @@ public class TestSwitchClasses {
   }
 
   public static class Computation3 extends AbstractComputation<IntWritable,
-        StatusValue, IntWritable, DoubleWritable, IntWritable> {
+        StatusValue, IntWritable, Writable, Writable> {
     @Override
     public void compute(
         Vertex<IntWritable, StatusValue, IntWritable> vertex,
-        Iterable<DoubleWritable> messages) throws IOException {
+        Iterable<Writable> messages) throws IOException {
       vertex.getValue().computations.add(3);
       vertex.getValue().addDoubleMessages(messages);
 
@@ -238,10 +243,10 @@ public class TestSwitchClasses {
       messagesReceived.add(messagesList);
     }
 
-    public void addDoubleMessages(Iterable<DoubleWritable> messages) {
+    public void addDoubleMessages(Iterable<Writable> messages) {
       HashSet<Double> messagesList = new HashSet<Double>();
-      for (DoubleWritable message : messages) {
-        messagesList.add(message.get());
+      for (Writable message : messages) {
+        messagesList.add(((DoubleWritable)message).get());
       }
       messagesReceived.add(messagesList);
     }

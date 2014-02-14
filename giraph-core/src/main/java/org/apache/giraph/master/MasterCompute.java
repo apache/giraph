@@ -18,9 +18,9 @@
 
 package org.apache.giraph.master;
 
+import org.apache.giraph.aggregators.Aggregator;
 import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
-import org.apache.giraph.aggregators.Aggregator;
 import org.apache.giraph.graph.Computation;
 import org.apache.giraph.graph.GraphState;
 import org.apache.hadoop.io.Writable;
@@ -167,6 +167,24 @@ public abstract class MasterCompute
     }
 
     return superstepClasses.getMessageCombinerClass();
+  }
+
+  /**
+   * Set incoming message class to be used
+   * @param incomingMessageClass incoming message class
+   */
+  public final void setIncomingMessage(
+      Class<? extends Writable> incomingMessageClass) {
+    superstepClasses.setIncomingMessageClass(incomingMessageClass);
+  }
+
+  /**
+   * Set outgoing message class to be used
+   * @param outgoingMessageClass outgoing message class
+   */
+  public final void setOutgoingMessage(
+      Class<? extends Writable> outgoingMessageClass) {
+    superstepClasses.setOutgoingMessageClass(outgoingMessageClass);
   }
 
   @Override

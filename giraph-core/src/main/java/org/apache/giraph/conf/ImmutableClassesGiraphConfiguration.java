@@ -34,8 +34,8 @@ import org.apache.giraph.graph.Computation;
 import org.apache.giraph.graph.DefaultVertex;
 import org.apache.giraph.graph.Language;
 import org.apache.giraph.graph.Vertex;
-import org.apache.giraph.graph.VertexValueCombiner;
 import org.apache.giraph.graph.VertexResolver;
+import org.apache.giraph.graph.VertexValueCombiner;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.EdgeOutputFormat;
 import org.apache.giraph.io.VertexInputFormat;
@@ -75,8 +75,6 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.util.Progressable;
-
-import static org.apache.giraph.utils.ReflectionUtils.getTypeArguments;
 
 /**
  * The classes set here are immutable, the remaining configuration is mutable.
@@ -1021,16 +1019,14 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
     Class<? extends Computation> computationClass =
         superstepClasses.getComputationClass();
     classes.setComputationClass(computationClass);
-    if (computationClass != null) {
-      Class<?>[] classList =
-          getTypeArguments(TypesHolder.class, computationClass);
-
-      Class<? extends Writable> incomingMsgValueClass =
-          (Class<? extends Writable>) classList[3];
+    Class<? extends Writable> incomingMsgValueClass =
+        superstepClasses.getIncomingMessageClass();
+    if (incomingMsgValueClass != null) {
       classes.setIncomingMessageValueClass(incomingMsgValueClass);
-
-      Class<? extends Writable> outgoingMsgValueClass =
-          (Class<? extends Writable>) classList[4];
+    }
+    Class<? extends Writable> outgoingMsgValueClass =
+        superstepClasses.getOutgoingMessageClass();
+    if (outgoingMsgValueClass != null) {
       classes.setOutgoingMessageValueClass(outgoingMsgValueClass);
     }
     classes.setMessageCombiner(superstepClasses.getMessageCombinerClass());

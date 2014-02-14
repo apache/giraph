@@ -18,6 +18,13 @@
 
 package org.apache.giraph.master;
 
+import static org.apache.giraph.conf.GiraphConstants.COMPUTATION_LANGUAGE;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.lang.reflect.Modifier;
+
 import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.conf.TypesHolder;
@@ -26,22 +33,23 @@ import org.apache.giraph.graph.Language;
 import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.Writable;
-
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.lang.reflect.Modifier;
-
-import static org.apache.giraph.conf.GiraphConstants.COMPUTATION_LANGUAGE;
+import org.apache.log4j.Logger;
 
 /**
  * Holds Computation and MessageCombiner class.
  */
 public class SuperstepClasses implements Writable {
+  /** Class logger */
+  private static final Logger LOG = Logger.getLogger(SuperstepClasses.class);
+
   /** Computation class to be used in the following superstep */
   private Class<? extends Computation> computationClass;
   /** MessageCombiner class to be used in the following superstep */
   private Class<? extends MessageCombiner> messageCombinerClass;
+  /** Incoming message class to be used in the following superstep */
+  private Class<? extends Writable> incomingMessageClass;
+  /** Outgoing message class to be used in the following superstep */
+  private Class<? extends Writable> outgoingMessageClass;
 
   /**
    * Default constructor
@@ -80,6 +88,38 @@ public class SuperstepClasses implements Writable {
     return messageCombinerClass;
   }
 
+  /**
+   * Get incoming message class, either set directly, or through Computation
+   * @return incoming message class
+   */
+  public Class<? extends Writable> getIncomingMessageClass() {
+    if (incomingMessageClass != null) {
+      return incomingMessageClass;
+    }
+    if (computationClass == null) {
+      return null;
+    }
+    Class[] computationTypes = ReflectionUtils.getTypeArguments(
+        TypesHolder.class, computationClass);
+    return computationTypes[3];
+  }
+
+  /**
+   * Get outgoing message class, either set directly, or through Computation
+   * @return outgoing message class
+   */
+  public Class<? extends Writable> getOutgoingMessageClass() {
+    if (outgoingMessageClass != null) {
+      return outgoingMessageClass;
+    }
+    if (computationClass == null) {
+      return null;
+    }
+    Class[] computationTypes = ReflectionUtils.getTypeArguments(
+        TypesHolder.class, computationClass);
+    return computationTypes[4];
+  }
+
   public void setComputationClass(
       Class<? extends Computation> computationClass) {
     this.computationClass = computationClass;
@@ -87,8 +127,17 @@ public class SuperstepClasses implements Writable {
 
   public void setMessageCombinerClass(
       Class<? extends MessageCombiner> messageCombinerClass) {
-    this.messageCombinerClass =
-        messageCombinerClass;
+    this.messageCombinerClass = messageCombinerClass;
+  }
+
+  public void setIncomingMessageClass(
+      Class<? extends Writable> incomingMessageClass) {
+    this.incomingMessageClass = incomingMessageClass;
+  }
+
+  public void setOutgoingMessageClass(
+      Class<? extends Writable> outgoingMessageClass) {
+    this.outgoingMessageClass = outgoingMessageClass;
   }
 
   /**
@@ -118,11 +167,13 @@ public class SuperstepClasses implements Writable {
     verifyTypes(conf.getEdgeValueClass(), computationTypes[2],
         "Edge value", computationClass);
 
+    Class<?> incomingMessageType = getIncomingMessageClass();
+    Class<?> outgoingMessageType = getOutgoingMessageClass();
+
     if (checkMatchingMesssageTypes) {
-      verifyTypes(conf.getOutgoingMessageValueClass(), computationTypes[3],
-          "Previous outgoing and new incoming message", computationClass);
+      verifyTypes(incomingMessageType, conf.getOutgoingMessageValueClass(),
+          "New incoming and previous outgoing message", computationClass);
     }
-    Class<?> outgoingMessageType = computationTypes[4];
     if (outgoingMessageType.isInterface()) {
       throw new IllegalStateException("verifyTypesMatch: " +
           "Message type must be concrete class " + outgoingMessageType);
@@ -154,9 +205,15 @@ public class SuperstepClasses implements Writable {
   private void verifyTypes(Class<?> expected, Class<?> actual,
       String typeDesc, Class<?> mainClass) {
     if (!expected.equals(actual)) {
-      throw new IllegalStateException("verifyTypes: " + typeDesc + " types " +
-          "don't match, in " + mainClass.getName() + " " + expected +
+      if (actual.isAssignableFrom(expected)) {
+        LOG.warn("verifyTypes: proceeding with assignable types : " +
+          typeDesc + " types, in " + mainClass.getName() + " " + expected +
           " expected, but " + actual + " found");
+      } else {
+        throw new IllegalStateException("verifyTypes: " + typeDesc +
+            " types " + "don't match, in " + mainClass.getName() + " " +
+            expected + " expected, but " + actual + " found");
+      }
     }
   }
 
@@ -164,20 +221,30 @@ public class SuperstepClasses implements Writable {
   public void write(DataOutput output) throws IOException {
     WritableUtils.writeClass(computationClass, output);
     WritableUtils.writeClass(messageCombinerClass, output);
+    WritableUtils.writeClass(incomingMessageClass, output);
+    WritableUtils.writeClass(outgoingMessageClass, output);
   }
 
   @Override
   public void readFields(DataInput input) throws IOException {
     computationClass = WritableUtils.readClass(input);
     messageCombinerClass = WritableUtils.readClass(input);
+    incomingMessageClass = WritableUtils.readClass(input);
+    outgoingMessageClass = WritableUtils.readClass(input);
   }
 
   @Override
   public String toString() {
     String computationName = computationClass == null ? "_not_set_" :
         computationClass.getName();
-    return "(computation=" + computationName + ",combiner=" +
-        ((messageCombinerClass == null) ? "null" :
-            messageCombinerClass.getName()) + ")";
+    String combinerName = (messageCombinerClass == null) ? "null" :
+        messageCombinerClass.getName();
+    String incomingName = (incomingMessageClass == null) ? "null" :
+      incomingMessageClass.getName();
+    String outgoingName = (outgoingMessageClass == null) ? "null" :
+      outgoingMessageClass.getName();
+
+    return "(computation=" + computationName + ",combiner=" + combinerName +
+        ",incoming=" + incomingName + ",outgoing=" + outgoingName + ")";
   }
 }
