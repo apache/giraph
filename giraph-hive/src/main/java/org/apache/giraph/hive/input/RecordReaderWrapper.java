@@ -51,11 +51,9 @@ public class RecordReaderWrapper<T> extends AbstractIterator<T> {
         return null;
       }
       return recordReader.getCurrentValue();
-    } catch (IOException e) {
-      throw new IllegalStateException("computeNext: IOException occurred");
-    } catch (InterruptedException e) {
+    } catch (IOException | InterruptedException e) {
       throw new IllegalStateException(
-          "computeNext: InterruptedException occurred");
+          "computeNext: Unexpected exception occurred", e);
     }
   }
 }
