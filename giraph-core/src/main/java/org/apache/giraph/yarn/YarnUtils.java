@@ -33,6 +33,7 @@ import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
+import org.apache.hadoop.util.StringUtils;
 import java.io.File;
 import java.io.IOException;
 import java.util.Map;
@@ -187,7 +188,8 @@ public class YarnUtils {
     }
     for (String cpEntry : giraphConf.getStrings(
       MRJobConfig.MAPREDUCE_APPLICATION_CLASSPATH,
-      MRJobConfig.DEFAULT_MAPREDUCE_APPLICATION_CLASSPATH)) {
+      StringUtils.getStrings(
+        MRJobConfig.DEFAULT_MAPREDUCE_APPLICATION_CLASSPATH))) {
       classPathEnv.append(':').append(cpEntry.trim());
     }
     // add the runtime classpath needed for tests to work
