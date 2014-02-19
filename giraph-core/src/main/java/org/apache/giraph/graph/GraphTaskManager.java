@@ -211,7 +211,6 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
     conf.createComputationFactory().initialize(conf);
     // Do some task setup (possibly starting up a Zookeeper service)
     context.setStatus("setup: Initializing Zookeeper services.");
-    locateZookeeperClasspath(zkPathList);
     String serverPortList = conf.getZookeeperList();
     if (serverPortList.isEmpty()) {
       if (startZooKeeperManager()) {
@@ -581,44 +580,6 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
   }
 
   /**
-   * Attempt to locate the local copies of the ZK jar files, assuming
-   * the underlying cluster framework has provided them for us.
-   * @param fileClassPaths the path to the ZK jars on the local cluster.
-   */
-  private void locateZookeeperClasspath(Path[] fileClassPaths)
-    throws IOException {
-    String zkClasspath = null;
-    if (fileClassPaths == null) {
-      if (LOG.isInfoEnabled()) {
-        LOG.info("Distributed cache is empty. Assuming fatjar.");
-      }
-      String jarFile = context.getJar();
-      if (jarFile == null) {
-        jarFile = findContainingJar(getClass());
-      }
-      // Pure YARN profiles will use unpacked resources, so calls
-      // to "findContainingJar()" in that context can return NULL!
-      zkClasspath = null == jarFile ?
-          "./*" : jarFile.replaceFirst("file:", "");
-    } else {
-      StringBuilder sb = new StringBuilder();
-      sb.append(fileClassPaths[0]);
-
-      for (int i = 1; i < fileClassPaths.length; i++) {
-        sb.append(":");
-        sb.append(fileClassPaths[i]);
-      }
-      zkClasspath = sb.toString();
-    }
-
-    if (LOG.isInfoEnabled()) {
-      LOG.info("setup: classpath @ " + zkClasspath + " for job " +
-          context.getJobName());
-    }
-    conf.setZooKeeperJar(zkClasspath);
-  }
-
-  /**
    * Initialize the root logger and appender to the settings in conf.
    */
   private void initializeAndConfigureLogging() {
@@ -884,14 +845,29 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
     try {
       if (masterThread != null) {
         masterThread.join();
+        LOG.info("cleanup: Joined with master thread");
       }
     } catch (InterruptedException e) {
       // cleanup phase -- just log the error
       LOG.error("cleanup: Master thread couldn't join");
     }
     if (zkManager != null) {
-      zkManager.offlineZooKeeperServers(ZooKeeperManager.State.FINISHED);
+      LOG.info("cleanup: Offlining ZooKeeper servers");
+      try {
+        zkManager.offlineZooKeeperServers(ZooKeeperManager.State.FINISHED);
+      // We need this here cause apparently exceptions are eaten by Hadoop
+      // when they come from the cleanup lifecycle and it's useful to know
+      // if something is wrong.
+      //
+      // And since it's cleanup nothing too bad should happen if we don't
+      // propagate and just allow the job to finish normally.
+      // CHECKSTYLE: stop IllegalCatch
+      } catch (Throwable e) {
+      // CHECKSTYLE: resume IllegalCatch
+        LOG.error("cleanup: Error offlining zookeeper", e);
+      }
     }
+
     // Stop tracking metrics
     GiraphMetrics.get().shutdown();
   }

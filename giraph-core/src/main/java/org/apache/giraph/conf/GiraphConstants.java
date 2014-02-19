@@ -446,9 +446,6 @@ public interface GiraphConstants {
   IntConfOption ZOOKEEPER_SERVER_PORT =
       new IntConfOption("giraph.zkServerPort", 22181, "ZooKeeper port to use");
 
-  /** Location of the ZooKeeper jar - Used internally, not meant for users */
-  String ZOOKEEPER_JAR = "giraph.zkJar";
-
   /** Local ZooKeeper directory to use */
   String ZOOKEEPER_DIR = "giraph.zkDir";
 

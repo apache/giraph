@@ -633,14 +633,13 @@ public class ZooKeeperManager {
             "onlineZooKeeperServers: java.home is not set!");
       }
       commandList.add(javaHome + "/bin/java");
+      commandList.add("-cp");
+      commandList.add(System.getProperty("java.class.path"));
       String zkJavaOptsString = GiraphConstants.ZOOKEEPER_JAVA_OPTS.get(conf);
       String[] zkJavaOptsArray = zkJavaOptsString.split(" ");
       if (zkJavaOptsArray != null) {
         commandList.addAll(Arrays.asList(zkJavaOptsArray));
       }
-      commandList.add("-cp");
-      Path fullJarPath = new Path(conf.get(GiraphConstants.ZOOKEEPER_JAR));
-      commandList.add(fullJarPath.toString());
       commandList.add(QuorumPeerMain.class.getName());
       commandList.add(configFilePath);
       processBuilder.command(commandList);
@@ -806,18 +805,18 @@ public class ZooKeeperManager {
   }
 
   /**
-   * Wait for all map tasks to signal completion.  Will wait up to
+   * Wait for all workers to signal completion.  Will wait up to
    * WAIT_TASK_DONE_TIMEOUT_MS milliseconds for this to complete before
    * reporting an error.
    *
-   * @param totalMapTasks Number of map tasks to wait for
+   * @param totalWorkers Number of workers to wait for
    */
-  private void waitUntilAllTasksDone(int totalMapTasks) {
+  private void waitUntilAllTasksDone(int totalWorkers) {
     int attempt = 0;
     long maxMs = time.getMilliseconds() +
         conf.getWaitTaskDoneTimeoutMs();
     while (true) {
-      boolean[] taskDoneArray = new boolean[totalMapTasks];
+      boolean[] taskDoneArray = new boolean[totalWorkers];
       try {
         FileStatus [] fileStatusArray =
             fs.listStatus(taskDirectory);
@@ -834,12 +833,12 @@ public class ZooKeeperManager {
         }
         if (LOG.isInfoEnabled()) {
           LOG.info("waitUntilAllTasksDone: Got " + totalDone +
-              " and " + totalMapTasks +
+              " and " + totalWorkers +
               " desired (polling period is " +
               pollMsecs + ") on attempt " +
               attempt);
         }
-        if (totalDone >= totalMapTasks) {
+        if (totalDone >= totalWorkers) {
           break;
         } else {
           StringBuilder sb = new StringBuilder();
@@ -882,8 +881,15 @@ public class ZooKeeperManager {
     }
     synchronized (this) {
       if (zkProcess != null) {
-        int totalMapTasks = conf.getMapTasks();
-        waitUntilAllTasksDone(totalMapTasks);
+        boolean isYarnJob = GiraphConstants.IS_PURE_YARN_JOB.get(conf);
+        int totalWorkers = conf.getMapTasks();
+        // A Yarn job always spawns MAX_WORKERS + 1 containers
+        if (isYarnJob) {
+          totalWorkers = conf.getInt(GiraphConstants.MAX_WORKERS, 0) + 1;
+        }
+        LOG.info("offlineZooKeeperServers: Will wait for " +
+            totalWorkers + " tasks");
+        waitUntilAllTasksDone(totalWorkers);
         zkProcess.destroy();
         int exitValue = -1;
         File zkDirFile;

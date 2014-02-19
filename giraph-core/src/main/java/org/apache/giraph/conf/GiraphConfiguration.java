@@ -800,15 +800,6 @@ public class GiraphConfiguration extends Configuration
     return ZOOKEEPER_SERVER_COUNT.get(this);
   }
 
-  /**
-   * Set the ZooKeeper jar classpath
-   *
-   * @param classPath Classpath for the ZooKeeper jar
-   */
-  public void setZooKeeperJar(String classPath) {
-    set(ZOOKEEPER_JAR, classPath);
-  }
-
   public int getZooKeeperSessionTimeout() {
     return ZOOKEEPER_SESSION_TIMEOUT.get(this);
   }

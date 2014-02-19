@@ -113,7 +113,6 @@ public class GiraphYarnClient {
    * @return true if job is successful
    */
   public boolean run(final boolean verbose) throws YarnException, IOException {
-    checkJobLocalZooKeeperSupported();
     // init our connection to YARN ResourceManager RPC
     LOG.info("Running Client");
     yarnClient.start();
