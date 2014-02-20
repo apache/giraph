@@ -1,6 +1,10 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-814: Incorrect MapReduce application classpath processing (AlexJF via claudio)
+
+  GIRAPH-850: Improve internal zookeeper launching (AlexJF via claudio)
+
   GIRAPH-855: RecordReaderWrapper swallows exceptions (aching)
 
   GIRAPH-848: Allowing plain computation with types being configurable (ikabiljo via majakabiljo)
