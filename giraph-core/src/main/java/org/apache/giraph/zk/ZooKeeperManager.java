@@ -21,6 +21,7 @@ package org.apache.giraph.zk;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
+import com.google.common.util.concurrent.Uninterruptibles;
 import org.apache.commons.io.FileUtils;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
@@ -52,6 +53,7 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import static org.apache.giraph.conf.GiraphConstants.BASE_ZNODE_KEY;
 import static org.apache.giraph.conf.GiraphConstants.ZOOKEEPER_MANAGER_DIRECTORY;
@@ -310,7 +312,7 @@ public class ZooKeeperManager {
               "for base directory " + baseDirectory + ".  If there is an " +
               "issue with this directory, please set an accesible " +
               "base directory with the Hadoop configuration option " +
-              ZOOKEEPER_MANAGER_DIRECTORY.getKey());
+              ZOOKEEPER_MANAGER_DIRECTORY.getKey(), e);
     }
 
     Path myCandidacyPath = new Path(
@@ -329,19 +331,44 @@ public class ZooKeeperManager {
   }
 
   /**
+   * Create a new file with retries if it fails.
+   *
+   * @param fs File system where the new file is created
+   * @param path Path of the new file
+   * @param maxAttempts Maximum number of attempts
+   * @param retryWaitMsecs Milliseconds to wait before retrying
+   */
+  private static void createNewFileWithRetries(
+      FileSystem fs, Path path, int maxAttempts, int retryWaitMsecs) {
+    int attempt = 0;
+    while (attempt < maxAttempts) {
+      try {
+        fs.createNewFile(path);
+        return;
+      } catch (IOException e) {
+        LOG.warn("createNewFileWithRetries: Failed to create file at path " +
+            path + " on attempt " + attempt + " of " + maxAttempts + ".", e);
+      }
+      ++attempt;
+      Uninterruptibles.sleepUninterruptibly(
+          retryWaitMsecs, TimeUnit.MILLISECONDS);
+    }
+    throw new IllegalStateException(
+        "createNewFileWithRetries: Failed to create file at path " +
+            path + " after " + attempt + " attempts");
+  }
+
+  /**
    * Every task must create a stamp to let the ZooKeeper servers know that
    * they can shutdown.  This also lets the task know that it was already
    * completed.
    */
   private void createZooKeeperClosedStamp() {
-    try {
-      LOG.info("createZooKeeperClosedStamp: Creating my filestamp " +
-          myClosedPath);
-      fs.createNewFile(myClosedPath);
-    } catch (IOException e) {
-      LOG.error("createZooKeeperClosedStamp: Failed (maybe previous task " +
-          "failed) to create filestamp " + myClosedPath);
-    }
+    LOG.info("createZooKeeperClosedStamp: Creating my filestamp " +
+        myClosedPath);
+    createNewFileWithRetries(fs, myClosedPath,
+        conf.getHdfsFileCreationRetries(),
+        conf.getHdfsFileCreationRetryWaitMs());
   }
 
   /**

@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-860: Giraph jobs can hang forever if HDFS filestamps aren't 
+  created (aching)
+
   GIRAPH-858: tests fail for hadoop_facebook because of dependency issues
   (pavanka via aching)
 

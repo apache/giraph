@@ -1223,4 +1223,19 @@ public class GiraphConfiguration extends Configuration
   public boolean trackJobProgressOnClient() {
     return TRACK_JOB_PROGRESS_ON_CLIENT.get(this);
   }
+
+  /**
+   * @return Number of retries when creating an HDFS file before failing.
+   */
+  public int getHdfsFileCreationRetries() {
+    return HDFS_FILE_CREATION_RETRIES.get(this);
+  }
+
+  /**
+   * @return Milliseconds to wait before retrying an HDFS file creation
+   *         operation.
+   */
+  public int getHdfsFileCreationRetryWaitMs() {
+    return HDFS_FILE_CREATION_RETRY_WAIT_MS.get(this);
+  }
 }

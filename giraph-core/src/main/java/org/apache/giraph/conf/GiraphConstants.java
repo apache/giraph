@@ -1031,5 +1031,15 @@ public interface GiraphConstants {
   BooleanConfOption TRACK_JOB_PROGRESS_ON_CLIENT =
       new BooleanConfOption("giraph.trackJobProgressOnClient", true,
           "Whether to track job progress on client or not");
+
+  /** Number of retries for creating the HDFS files */
+  IntConfOption HDFS_FILE_CREATION_RETRIES =
+      new IntConfOption("giraph.hdfs.file.creation.retries", 10,
+          "Retries to create an HDFS file before failing");
+
+  /** Number of milliseconds to wait before retrying HDFS file creation */
+  IntConfOption HDFS_FILE_CREATION_RETRY_WAIT_MS =
+      new IntConfOption("giraph.hdfs.file.creation.retry.wait.ms", 30_000,
+          "Milliseconds to wait prior to retrying creation of an HDFS file");
 }
 // CHECKSTYLE: resume InterfaceIsTypeCheck
