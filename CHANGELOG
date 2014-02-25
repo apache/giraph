@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-858: tests fail for hadoop_facebook because of dependency issues
+  (pavanka via aching)
+
   GIRAPH-814: Incorrect MapReduce application classpath processing (AlexJF via claudio)
 
   GIRAPH-850: Improve internal zookeeper launching (AlexJF via claudio)

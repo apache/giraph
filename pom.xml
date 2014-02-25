@@ -299,6 +299,8 @@ under the License.
     <dep.libthrift.version>0.9.0</dep.libthrift.version>
     <dep.log4j.version>1.2.17</dep.log4j.version>
     <dep.mockito.version>1.9.5</dep.mockito.version>
+    <!-- note: old version of netty is required by hadoop_facebook for tests to succeed -->
+    <dep.oldnetty.version>3.2.2.Final</dep.oldnetty.version>
     <dep.netty.version>4.0.14.Final</dep.netty.version>
     <dep.paranamer.version>2.3</dep.paranamer.version>
     <dep.slf4j.version>1.7.5</dep.slf4j.version>
@@ -846,6 +848,9 @@ under the License.
   <profiles>
     <profile>
       <id>release</id>
+      <modules>
+        <module>giraph-dist</module>
+      </modules>
       <build>
         <plugins>
           <plugin>
@@ -873,6 +878,7 @@ under the License.
         <module>giraph-hive</module>
         <module>giraph-gora</module>
         <module>giraph-rexster</module>
+        <module>giraph-dist</module>
       </modules>
       <properties>
         <hadoop.version>0.20.203.0</hadoop.version>
@@ -924,6 +930,7 @@ under the License.
         <module>giraph-hive</module>
         <module>giraph-gora</module>
         <module>giraph-rexster</module>
+        <module>giraph-dist</module>
       </modules>
       <activation>
         <activeByDefault>true</activeByDefault>
@@ -977,6 +984,7 @@ under the License.
         <module>giraph-hcatalog</module>
         <module>giraph-hive</module>
         <module>giraph-rexster</module>
+        <module>giraph-dist</module>
       </modules>
       <properties>
         <hadoop.version>0.20.2</hadoop.version>
@@ -1032,6 +1040,9 @@ under the License.
 
     <profile>
       <id>hadoop_0.23</id>
+      <modules>
+        <module>giraph-dist</module>
+      </modules>
       <properties>
         <hadoop.version>0.23.1</hadoop.version>
         <munge.symbols>HADOOP_1_SECRET_MANAGER</munge.symbols>
@@ -1063,6 +1074,9 @@ under the License.
 
     <profile>
       <id>hadoop_cdh4.1.2</id>
+      <modules>
+        <module>giraph-dist</module>
+      </modules>
       <properties>
         <hadoop.version>2.0.0-cdh4.1.2</hadoop.version> 
         <munge.symbols>HADOOP_1_SECRET_MANAGER</munge.symbols>
@@ -1126,6 +1140,9 @@ under the License.
       MapReduce classes to perform work. -->
     <profile>
       <id>hadoop_yarn</id>
+      <modules>
+        <module>giraph-dist</module>
+      </modules>
       <properties>
         <hadoop.version>SET_HADOOP_VERSION_USING_MVN_DASH_D_OPTION</hadoop.version>
         <munge.symbols>PURE_YARN</munge.symbols>
@@ -1182,6 +1199,9 @@ under the License.
          flags on any of the following profiles. -->
     <profile>
        <id>2.1.1-SNAPSHOT</id>
+       <modules>
+         <module>giraph-dist</module>
+       </modules>
        <properties>
          <hadoop.version>2.1.1-SNAPSHOT</hadoop.version>
          <!-- TODO: add these checks eventually -->
@@ -1227,6 +1247,7 @@ under the License.
         <module>giraph-hive</module>
         <module>giraph-gora</module>
         <module>giraph-rexster</module>
+        <module>giraph-dist</module>
       </modules>
        <properties>
          <hadoop.version>2.2.0</hadoop.version>
@@ -1266,6 +1287,9 @@ under the License.
 
     <profile>
       <id>hadoop_snapshot</id>
+      <modules>
+        <module>giraph-dist</module>
+      </modules>
       <properties>
         <hadoop.version>3.0.0-SNAPSHOT</hadoop.version>
         <!-- TODO: add these checks eventually -->
@@ -2092,7 +2116,6 @@ under the License.
   <modules>
     <module>giraph-core</module>
     <module>giraph-examples</module>
-    <module>giraph-dist</module>
   </modules>
 
 </project>

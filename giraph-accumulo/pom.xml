@@ -142,6 +142,12 @@ under the License.
           <artifactId>hadoop-test</artifactId>
           <scope>test</scope>
         </dependency>
+        <dependency>
+          <groupId>org.jboss.netty</groupId>
+          <artifactId>netty</artifactId>
+          <version>${dep.oldnetty.version}</version>
+          <scope>test</scope>
+        </dependency>
       </dependencies>
     </profile>
   </profiles>
