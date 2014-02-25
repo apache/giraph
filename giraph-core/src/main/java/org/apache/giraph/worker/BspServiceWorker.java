@@ -207,6 +207,7 @@ public class BspServiceWorker<I extends WritableComparable,
     }
     observers = conf.createWorkerObservers();
 
+    WorkerProgress.get().setTaskId(getTaskPartition());
     workerProgressWriter = conf.trackJobProgressOnClient() ?
         new WorkerProgressWriter(myProgressPath, getZkExt()) : null;
 

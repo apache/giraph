@@ -50,6 +50,7 @@ public class WorkerProgressWriter {
       public void run() {
         try {
           while (!finished) {
+            WorkerProgress.get().updateMemory();
             WorkerProgress.writeToZnode(zk, myProgressPath);
             double factor = 1 + Math.random();
             Thread.sleep((long) (WRITE_UPDATE_PERIOD_MILLISECONDS * factor));

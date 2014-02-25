@@ -20,11 +20,21 @@ package org.apache.giraph.job;
 
 import org.apache.giraph.worker.WorkerProgress;
 
+import com.google.common.collect.Iterables;
+
+import java.text.DecimalFormat;
+
+import javax.annotation.concurrent.NotThreadSafe;
+
 /**
  * Class which combines multiple workers' progresses to get overall
  * application progress
  */
+@NotThreadSafe
 public class CombinedWorkerProgress extends WorkerProgress {
+  /** Decimal format which rounds numbers to two decimal places */
+  public static final DecimalFormat DECIMAL_FORMAT = new DecimalFormat("#.##");
+
   /**
    * How many workers have reported that they are in highest reported
    * superstep
@@ -34,6 +44,10 @@ public class CombinedWorkerProgress extends WorkerProgress {
    * How many workers reported that they finished application
    */
   private int workersDone = 0;
+  /** Minimum amount of free memory on a worker */
+  private double minFreeMemoryMB = Double.MAX_VALUE;
+  /** Name of the worker with min free memory */
+  private int workerWithMinFreeMemory;
 
   /**
    * Constructor
@@ -75,6 +89,15 @@ public class CombinedWorkerProgress extends WorkerProgress {
       if (workerProgress.isStoringDone()) {
         workersDone++;
       }
+
+      if (workerProgress.getFreeMemoryMB() < minFreeMemoryMB) {
+        minFreeMemoryMB = workerProgress.getFreeMemoryMB();
+        workerWithMinFreeMemory = workerProgress.getTaskId();
+      }
+      freeMemoryMB += workerProgress.getFreeMemoryMB();
+    }
+    if (!Iterables.isEmpty(workerProgresses)) {
+      freeMemoryMB /= Iterables.size(workerProgresses);
     }
   }
 
@@ -113,6 +136,10 @@ public class CombinedWorkerProgress extends WorkerProgress {
       sb.append(partitionsStored).append(" out of ").append(
           partitionsToStore).append(" partitions stored");
     }
+    sb.append("; min free memory on worker ").append(
+        workerWithMinFreeMemory).append(" - ").append(
+        DECIMAL_FORMAT.format(minFreeMemoryMB)).append("MB, average ").append(
+        DECIMAL_FORMAT.format(freeMemoryMB)).append("MB");
     return sb.toString();
   }
 }

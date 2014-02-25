@@ -18,6 +18,7 @@
 
 package org.apache.giraph.worker;
 
+import org.apache.giraph.utils.MemoryUtils;
 import org.apache.giraph.utils.WritableUtils;
 import org.apache.giraph.zk.ZooKeeperExt;
 import org.apache.hadoop.io.Writable;
@@ -81,6 +82,12 @@ public class WorkerProgress implements Writable {
   protected int partitionsStored = 0;
   /** Whether worker finished storing data */
   protected boolean storingDone = false;
+
+  /** Id of the mapper */
+  protected int taskId;
+
+  /** Free memory */
+  protected double freeMemoryMB;
 
   /**
    * Get singleton instance of WorkerProgress.
@@ -253,6 +260,17 @@ public class WorkerProgress implements Writable {
     storingDone = true;
   }
 
+  public synchronized void setTaskId(int taskId) {
+    this.taskId = taskId;
+  }
+
+  /**
+   * Update memory info
+   */
+  public synchronized void updateMemory() {
+    freeMemoryMB = MemoryUtils.freeMemoryMB();
+  }
+
   public synchronized long getCurrentSuperstep() {
     return currentSuperstep;
   }
@@ -317,6 +335,14 @@ public class WorkerProgress implements Writable {
     return currentSuperstep == Long.MAX_VALUE;
   }
 
+  public synchronized int getTaskId() {
+    return taskId;
+  }
+
+  public synchronized double getFreeMemoryMB() {
+    return freeMemoryMB;
+  }
+
   @Override
   public synchronized void write(DataOutput dataOutput) throws IOException {
     dataOutput.writeLong(currentSuperstep);
@@ -340,6 +366,10 @@ public class WorkerProgress implements Writable {
     dataOutput.writeInt(partitionsToStore);
     dataOutput.writeInt(partitionsStored);
     dataOutput.writeBoolean(storingDone);
+
+    dataOutput.writeInt(taskId);
+
+    dataOutput.writeDouble(freeMemoryMB);
   }
 
   @Override
@@ -365,5 +395,9 @@ public class WorkerProgress implements Writable {
     partitionsToStore = dataInput.readInt();
     partitionsStored = dataInput.readInt();
     storingDone = dataInput.readBoolean();
+
+    taskId = dataInput.readInt();
+
+    freeMemoryMB = dataInput.readDouble();
   }
 }
