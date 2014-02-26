@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-865: Job client shouldn't crash when JobProgressTracker gets 
+  exception (majakabiljo)
+
   GIRAPH-856: Log amount of free memory on the command line (majakabiljo)
 
   GIRAPH-860: Giraph jobs can hang forever if HDFS filestamps aren't 

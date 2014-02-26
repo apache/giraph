@@ -29,7 +29,6 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.Progressable;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.WatchedEvent;
 import org.apache.zookeeper.Watcher;
 import org.apache.zookeeper.ZooDefs;
@@ -111,7 +110,7 @@ public class JobProgressTracker implements Watcher {
               }
               Thread.sleep(UPDATE_MILLISECONDS);
             }
-          } catch (InterruptedException | KeeperException e) {
+          } catch (Exception e) {
             if (LOG.isInfoEnabled()) {
               LOG.info("run: Exception occurred", e);
             }
@@ -126,7 +125,7 @@ public class JobProgressTracker implements Watcher {
                 CreateMode.PERSISTENT,
                 true);
               zk.close();
-            } catch (InterruptedException | KeeperException e) {
+            } catch (Exception e) {
               if (LOG.isInfoEnabled()) {
                 LOG.info("run: Exception occurred", e);
               }
