@@ -110,7 +110,9 @@ public class JobProgressTracker implements Watcher {
               }
               Thread.sleep(UPDATE_MILLISECONDS);
             }
+            // CHECKSTYLE: stop IllegalCatchCheck
           } catch (Exception e) {
+            // CHECKSTYLE: resume IllegalCatchCheck
             if (LOG.isInfoEnabled()) {
               LOG.info("run: Exception occurred", e);
             }
@@ -125,7 +127,9 @@ public class JobProgressTracker implements Watcher {
                 CreateMode.PERSISTENT,
                 true);
               zk.close();
+              // CHECKSTYLE: stop IllegalCatchCheck
             } catch (Exception e) {
+              // CHECKSTYLE: resume IllegalCatchCheck
               if (LOG.isInfoEnabled()) {
                 LOG.info("run: Exception occurred", e);
               }
