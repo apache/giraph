@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+
+  GIRAPH-867: Fix comments in PageRankComputation (ssc)
+  
   GIRAPH-866: Fix checkstyle error from GIRAPH-865 (majakabiljo)
 
   GIRAPH-865: Job client shouldn't crash when JobProgressTracker gets 

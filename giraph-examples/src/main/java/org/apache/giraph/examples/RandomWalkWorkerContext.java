@@ -63,7 +63,7 @@ public class RandomWalkWorkerContext extends WorkerContext {
     if (MAX_SUPERSTEPS == 0) {
       throw new IllegalStateException(
           RandomWalkWorkerContext.class.getSimpleName() +
-              " was not initialized. Realunch your job " +
+              " was not initialized. Relaunch your job " +
               "by setting the appropriate WorkerContext");
     }
     return MAX_SUPERSTEPS;
@@ -76,7 +76,7 @@ public class RandomWalkWorkerContext extends WorkerContext {
     if (TELEPORTATION_PROBABILITY == 0) {
       throw new IllegalStateException(
           RandomWalkWorkerContext.class.getSimpleName() +
-              " was not initialized. Realunch your job " +
+              " was not initialized. Relaunch your job " +
               "by setting the appropriate WorkerContext");
     }
     return TELEPORTATION_PROBABILITY;

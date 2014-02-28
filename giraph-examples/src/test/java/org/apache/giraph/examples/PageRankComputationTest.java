@@ -18,8 +18,9 @@
 
 package org.apache.giraph.examples;
 
+import org.apache.giraph.combiner.DoubleSumMessageCombiner;
 import org.apache.giraph.conf.GiraphConfiguration;
-import org.apache.giraph.edge.ByteArrayEdges;
+import org.apache.giraph.edge.LongNullArrayEdges;
 import org.apache.giraph.utils.InternalVertexRunner;
 import org.junit.Test;
 
@@ -52,7 +53,8 @@ public class PageRankComputationTest {
     conf.setFloat(
         RandomWalkWithRestartComputation.TELEPORTATION_PROBABILITY, 0.15f);
     conf.setComputationClass(PageRankComputation.class);
-    conf.setOutEdgesClass(ByteArrayEdges.class);
+    conf.setMessageCombinerClass(DoubleSumMessageCombiner.class);
+    conf.setOutEdgesClass(LongNullArrayEdges.class);
     conf.setVertexInputFormatClass(LongDoubleNullTextInputFormat.class);
     conf.setVertexOutputFormatClass(
         VertexWithDoubleValueNullEdgeTextOutputFormat.class);

@@ -40,17 +40,17 @@ public abstract class RandomWalkComputation<E extends Writable>
   /** Configuration parameter for the teleportation probability */
   static final String TELEPORTATION_PROBABILITY = RandomWalkComputation.class
       .getName() + ".teleportationProbability";
-  /** Name of aggregator for the probability of dangling vertices */
+  /** Name of aggregator for the probability assigned to dangling vertices */
   static final String CUMULATIVE_DANGLING_PROBABILITY =
       RandomWalkComputation.class.getName() + ".cumulativeDanglingProbability";
-  /** Name of aggregator for the probability of all vertices */
+  /** Name of aggregator for the probability assigned to all vertices */
   static final String CUMULATIVE_PROBABILITY = RandomWalkComputation.class
       .getName() + ".cumulativeProbability";
-    /** Name of aggregator for the probability of dangling vertices */
+    /** Name of aggregator for the number of dangling vertices */
   static final String NUM_DANGLING_VERTICES = RandomWalkComputation.class
       .getName() + ".numDanglingVertices";
   /** Name of aggregator for the L1 norm of the probability difference, used
-   * for covergence detection */
+   * for convergence detection */
   static final String L1_NORM_OF_PROBABILITY_DIFFERENCE =
       RandomWalkComputation.class.getName() + ".l1NormOfProbabilityDifference";
   /** Reusable {@link DoubleWritable} instance to avoid object instantiation */
@@ -85,7 +85,7 @@ public abstract class RandomWalkComputation<E extends Writable>
    * @param messages Messages received in the previous step.
    * @param teleportationProbability Probability of teleporting to another
    *          vertex.
-   * @return The new probability distribution value.
+   * @return The new probability value.
    */
   protected abstract double recompute(
       Vertex<LongWritable, DoubleWritable, E> vertex,

@@ -30,10 +30,12 @@ import org.apache.hadoop.io.NullWritable;
  * http://en.wikipedia.org/wiki/PageRank
  */
 public class PageRankComputation extends RandomWalkComputation<NullWritable> {
+
   @Override
   protected double transitionProbability(
       Vertex<LongWritable, DoubleWritable, NullWritable> vertex,
       double stateProbability, Edge<LongWritable, NullWritable> edge) {
+    // Uniform transition probability
     return stateProbability / vertex.getNumEdges();
   }
 
@@ -41,13 +43,13 @@ public class PageRankComputation extends RandomWalkComputation<NullWritable> {
   protected double recompute(
       Vertex<LongWritable, DoubleWritable, NullWritable> vertex,
       Iterable<DoubleWritable> partialRanks, double teleportationProbability) {
-    // rank contribution from incident neighbors
+    // Rank contribution from incident neighbors
     double rankFromNeighbors = MathUtils.sum(partialRanks);
-    // rank contribution from dangling vertices
+    // Rank contribution from dangling vertices
     double danglingContribution =
         getDanglingProbability() / getTotalNumVertices();
 
-    // recompute rank
+    // Recompute rank
     return (1d - teleportationProbability) *
         (rankFromNeighbors + danglingContribution) +
         teleportationProbability / getTotalNumVertices();

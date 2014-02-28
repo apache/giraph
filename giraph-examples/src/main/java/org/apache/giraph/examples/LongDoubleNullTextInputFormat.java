@@ -37,7 +37,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 /**
- * Input format for unweighted graphs with long ids and double vertex values
+ * Input format for unweighted graphs with long ids.
  */
 public class LongDoubleNullTextInputFormat
     extends TextVertexInputFormat<LongWritable, DoubleWritable, NullWritable>
