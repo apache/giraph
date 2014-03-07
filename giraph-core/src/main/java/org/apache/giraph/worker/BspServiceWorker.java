@@ -1180,7 +1180,6 @@ public class BspServiceWorker<I extends WritableComparable,
     saveEdges();
     WorkerProgress.get().finishStoring();
     if (workerProgressWriter != null) {
-      WorkerProgress.writeToZnode(getZkExt(), myProgressPath);
       workerProgressWriter.stop();
     }
     getPartitionStore().shutdown();

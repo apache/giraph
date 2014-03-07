@@ -35,6 +35,10 @@ public class WorkerProgressWriter {
   private final Thread writerThread;
   /** Whether worker finished application */
   private volatile boolean finished = false;
+  /** Path where this worker's progress should be stored */
+  private final String myProgressPath;
+  /** ZooKeeperExt */
+  private final ZooKeeperExt zk;
 
   /**
    * Constructor, starts separate thread to periodically update worker's
@@ -43,15 +47,17 @@ public class WorkerProgressWriter {
    * @param myProgressPath Path where this worker's progress should be stored
    * @param zk ZooKeeperExt
    */
-  public WorkerProgressWriter(final String myProgressPath,
-      final ZooKeeperExt zk) {
+  public WorkerProgressWriter(String myProgressPath, ZooKeeperExt zk) {
+    this.myProgressPath = myProgressPath;
+    this.zk = zk;
     writerThread = new Thread(new Runnable() {
       @Override
       public void run() {
         try {
           while (!finished) {
             WorkerProgress.get().updateMemory();
-            WorkerProgress.writeToZnode(zk, myProgressPath);
+            WorkerProgress.writeToZnode(WorkerProgressWriter.this.zk,
+                WorkerProgressWriter.this.myProgressPath);
             double factor = 1 + Math.random();
             Thread.sleep((long) (WRITE_UPDATE_PERIOD_MILLISECONDS * factor));
           }
@@ -69,8 +75,10 @@ public class WorkerProgressWriter {
   /**
    * Stop the thread which writes worker's progress
    */
-  public void stop() {
+  public void stop() throws InterruptedException {
     finished = true;
     writerThread.interrupt();
+    writerThread.join();
+    WorkerProgress.writeToZnode(zk, myProgressPath);
   }
 }
