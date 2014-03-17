@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-869: Log Vertex/Edge Count for All Workers (yhdong via majakabiljo)
+
   GIRAPH-868: Fix race condition with WorkerProgress (majakabiljo)
 
   GIRAPH-867: Fix comments in PageRankComputation (ssc)
