@@ -175,7 +175,7 @@ under the License.
       <artifactId>giraph-kibble</artifactId>
       <version>${project.version}</version>
       <scope>system</scope>
-      <systemPath>${top.dir}/giraph-rexster/giraph-kibble/target/giraph-kibble-${project.version}.jar</systemPath>
+      <systemPath>${top.dir}/giraph-rexster/giraph-kibble/target/giraph-kibble-${project.version}-jar-with-dependencies.jar</systemPath>
     </dependency>
   </dependencies>
 </project>
