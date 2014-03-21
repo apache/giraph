@@ -134,15 +134,14 @@ public class ResponseClientHandler extends ChannelInboundHandlerAdapter {
       LOG.debug("channelClosed: Closed the channel on " +
           ctx.channel().remoteAddress());
     }
+    ctx.fireChannelInactive();
   }
 
   @Override
   public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
     throws Exception {
-    if (LOG.isDebugEnabled()) {
-      LOG.warn("exceptionCaught: Channel failed with " +
-          "remote address " + ctx.channel().remoteAddress(), cause.getCause());
-    }
+    LOG.warn("exceptionCaught: Channel failed with " +
+        "remote address " + ctx.channel().remoteAddress(), cause);
   }
 }
 

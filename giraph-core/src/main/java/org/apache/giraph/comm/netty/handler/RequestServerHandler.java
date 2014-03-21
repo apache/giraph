@@ -161,7 +161,7 @@ public abstract class RequestServerHandler<R> extends
   public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
     throws Exception {
     LOG.warn("exceptionCaught: Channel failed with " +
-        "remote address " + ctx.channel().remoteAddress(), cause.getCause());
+        "remote address " + ctx.channel().remoteAddress(), cause);
   }
 
   /**
