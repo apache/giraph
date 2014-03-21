@@ -543,6 +543,9 @@ public class NettyClient {
    * Stop the client.
    */
   public void stop() {
+    if (LOG.isInfoEnabled()) {
+      LOG.info("stop: Halting netty client");
+    }
     // Close connections asynchronously, in a Netty-approved
     // way, without cleaning up thread pools until all channels
     // in addressChannelMap are closed (success or failure)
@@ -561,17 +564,22 @@ public class NettyClient {
             if (LOG.isInfoEnabled()) {
               LOG.info("stop: reached wait threshold, " +
                   done + " connections closed, releasing " +
-                  "NettyClient.bootstrap resources now.");
+                  "resources now.");
             }
             workerGroup.shutdownGracefully();
-            ProgressableUtils.awaitTerminationFuture(executionGroup, context);
             if (executionGroup != null) {
               executionGroup.shutdownGracefully();
-              ProgressableUtils.awaitTerminationFuture(executionGroup, context);
             }
           }
         }
       });
+    }
+    ProgressableUtils.awaitTerminationFuture(workerGroup, context);
+    if (executionGroup != null) {
+      ProgressableUtils.awaitTerminationFuture(executionGroup, context);
+    }
+    if (LOG.isInfoEnabled()) {
+      LOG.info("stop: Netty client halted");
     }
   }
 
