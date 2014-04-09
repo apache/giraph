@@ -1,6 +1,9 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-884: ByteArrayEdges.iterator() throws NPE when no edges are present
+  (cmuchinsky via claudio)
+
   GIRAPH-872: Minor inconsistencies with netty handler logic after netty 4 upgrade
   (cmuchinsky via claudio)
 
