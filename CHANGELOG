@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-864: 'mvn clean test' fails for rexster (armax00 via claudio)
+
   GIRAPH-884: ByteArrayEdges.iterator() throws NPE when no edges are present
   (cmuchinsky via claudio)
 
