@@ -102,7 +102,8 @@ public class ServerData<I extends WritableComparable,
     this.messageStoreFactory = messageStoreFactory;
     if (GiraphConstants.USE_OUT_OF_CORE_GRAPH.get(conf)) {
       partitionStore =
-          new DiskBackedPartitionStore<I, V, E>(conf, context);
+          new DiskBackedPartitionStore<I, V, E>(conf, context,
+              getServiceWorker());
     } else {
       partitionStore =
           new SimplePartitionStore<I, V, E>(conf, context);

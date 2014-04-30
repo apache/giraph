@@ -18,6 +18,11 @@
 
 package org.apache.giraph.comm.messages;
 
+import java.io.IOException;
+import java.util.Iterator;
+
+import junit.framework.Assert;
+
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.combiner.DoubleSumMessageCombiner;
 import org.apache.giraph.comm.messages.primitives.LongByteArrayMessageStore;
@@ -33,6 +38,7 @@ import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.Writable;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -42,14 +48,10 @@ import org.mockito.stubbing.Answer;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
-import junit.framework.Assert;
-
-import java.io.IOException;
-import java.util.Iterator;
-
 public class TestLongDoublePrimitiveMessageStores {
   private static final int NUM_PARTITIONS = 2;
-  private static CentralizedServiceWorker<LongWritable, ?, ?> service;
+  private static CentralizedServiceWorker<LongWritable, Writable, Writable>
+    service;
 
   @Before
   public void prepare() throws IOException {
@@ -83,8 +85,9 @@ public class TestLongDoublePrimitiveMessageStores {
     }
   }
 
-  private static ImmutableClassesGiraphConfiguration<LongWritable, ?, ?>
-  createLongDoubleConf() {
+  private static ImmutableClassesGiraphConfiguration<LongWritable, Writable,
+    Writable> createLongDoubleConf() {
+
     GiraphConfiguration initConf = new GiraphConfiguration();
     initConf.setComputationClass(LongDoubleNoOpComputation.class);
     return new ImmutableClassesGiraphConfiguration(initConf);

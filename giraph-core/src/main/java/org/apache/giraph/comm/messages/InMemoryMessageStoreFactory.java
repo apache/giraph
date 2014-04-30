@@ -75,15 +75,15 @@ public class InMemoryMessageStoreFactory<I extends WritableComparable,
       if (vertexIdClass.equals(IntWritable.class) &&
           messageClass.equals(FloatWritable.class)) {
         messageStore = new IntFloatMessageStore(
-            (CentralizedServiceWorker<IntWritable, ?, ?>) service,
+            (CentralizedServiceWorker<IntWritable, Writable, Writable>) service,
             (MessageCombiner<IntWritable, FloatWritable>)
                 conf.<FloatWritable>createMessageCombiner());
       } else if (vertexIdClass.equals(LongWritable.class) &&
           messageClass.equals(DoubleWritable.class)) {
         messageStore = new LongDoubleMessageStore(
-            (CentralizedServiceWorker<LongWritable, ?, ?>) service,
-            (MessageCombiner<LongWritable, DoubleWritable>)
-                conf.<DoubleWritable>createMessageCombiner());
+          (CentralizedServiceWorker<LongWritable, Writable, Writable>) service,
+          (MessageCombiner<LongWritable, DoubleWritable>)
+              conf.<DoubleWritable>createMessageCombiner());
       } else {
         messageStore = new OneMessagePerVertexStore<I, M>(messageValueFactory,
           service, conf.<M>createMessageCombiner(), conf);
@@ -92,12 +92,14 @@ public class InMemoryMessageStoreFactory<I extends WritableComparable,
       Class<I> vertexIdClass = conf.getVertexIdClass();
       if (vertexIdClass.equals(IntWritable.class)) {
         messageStore = new IntByteArrayMessageStore<M>(messageValueFactory,
-            (CentralizedServiceWorker<IntWritable, ?, ?>) service,
-            (ImmutableClassesGiraphConfiguration<IntWritable, ?, ?>) conf);
+          (CentralizedServiceWorker<IntWritable, Writable, Writable>) service,
+          (ImmutableClassesGiraphConfiguration<IntWritable, Writable, Writable>)
+            conf);
       } else if (vertexIdClass.equals(LongWritable.class)) {
         messageStore = new LongByteArrayMessageStore<M>(messageValueFactory,
-            (CentralizedServiceWorker<LongWritable, ?, ?>) service,
-            (ImmutableClassesGiraphConfiguration<LongWritable, ?, ?>) conf);
+          (CentralizedServiceWorker<LongWritable, Writable, Writable>) service,
+          (ImmutableClassesGiraphConfiguration<LongWritable, Writable,
+           Writable>) conf);
       } else {
         messageStore = new ByteArrayMessagesPerVertexStore<I, M>(
           messageValueFactory, service, conf);

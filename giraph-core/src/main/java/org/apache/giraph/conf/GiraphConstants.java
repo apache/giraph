@@ -874,6 +874,11 @@ public interface GiraphConstants {
       new IntConfOption("giraph.maxPartitionsInMemory", 10,
           "Maximum number of partitions to hold in memory for each worker.");
 
+  /** Set number of sticky partitions if sticky mode is enabled.  */
+  IntConfOption MAX_STICKY_PARTITIONS =
+      new IntConfOption("giraph.stickyPartitions", 0,
+          "Set number of sticky partitions if sticky mode is enabled.");
+
   /** Keep the zookeeper output for debugging? Default is to remove it. */
   BooleanConfOption KEEP_ZOOKEEPER_DATA =
       new BooleanConfOption("giraph.keepZooKeeperData", false,

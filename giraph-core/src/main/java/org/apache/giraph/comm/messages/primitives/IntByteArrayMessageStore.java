@@ -72,8 +72,9 @@ public class IntByteArrayMessageStore<M extends Writable>
    */
   public IntByteArrayMessageStore(
       MessageValueFactory<M> messageValueFactory,
-      CentralizedServiceWorker<IntWritable, ?, ?> service,
-      ImmutableClassesGiraphConfiguration<IntWritable, ?, ?> config) {
+      CentralizedServiceWorker<IntWritable, Writable, Writable> service,
+      ImmutableClassesGiraphConfiguration<IntWritable, Writable, Writable>
+        config) {
     this.messageValueFactory = messageValueFactory;
     this.service = service;
     this.config = config;
@@ -81,12 +82,13 @@ public class IntByteArrayMessageStore<M extends Writable>
     map =
         new Int2ObjectOpenHashMap<Int2ObjectOpenHashMap<DataInputOutput>>();
     for (int partitionId : service.getPartitionStore().getPartitionIds()) {
-      Partition<IntWritable, ?, ?> partition =
+      Partition<IntWritable, Writable, Writable> partition =
           service.getPartitionStore().getOrCreatePartition(partitionId);
       Int2ObjectOpenHashMap<DataInputOutput> partitionMap =
           new Int2ObjectOpenHashMap<DataInputOutput>(
               (int) partition.getVertexCount());
       map.put(partitionId, partitionMap);
+      service.getPartitionStore().putPartition(partition);
     }
   }
 

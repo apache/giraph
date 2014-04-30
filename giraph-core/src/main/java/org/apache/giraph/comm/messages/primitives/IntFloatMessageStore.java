@@ -22,10 +22,13 @@ import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.comm.messages.MessageStore;
 import org.apache.giraph.partition.Partition;
+
+import org.apache.giraph.partition.PartitionStore;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.giraph.utils.EmptyIterable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Writable;
 
 import com.google.common.collect.Lists;
 
@@ -63,7 +66,7 @@ public class IntFloatMessageStore
    * @param messageCombiner Message messageCombiner
    */
   public IntFloatMessageStore(
-      CentralizedServiceWorker<IntWritable, ?, ?> service,
+      CentralizedServiceWorker<IntWritable, Writable, Writable> service,
       MessageCombiner<IntWritable, FloatWritable> messageCombiner) {
     this.service = service;
     this.messageCombiner =
@@ -71,11 +74,14 @@ public class IntFloatMessageStore
 
     map = new Int2ObjectOpenHashMap<Int2FloatOpenHashMap>();
     for (int partitionId : service.getPartitionStore().getPartitionIds()) {
-      Partition<IntWritable, ?, ?> partition =
-          service.getPartitionStore().getOrCreatePartition(partitionId);
+      PartitionStore<IntWritable, Writable, Writable> partitionStore =
+        service.getPartitionStore();
+      Partition<IntWritable, Writable, Writable> partition =
+        partitionStore.getOrCreatePartition(partitionId);
       Int2FloatOpenHashMap partitionMap =
           new Int2FloatOpenHashMap((int) partition.getVertexCount());
       map.put(partitionId, partitionMap);
+      partitionStore.putPartition(partition);
     }
   }
 

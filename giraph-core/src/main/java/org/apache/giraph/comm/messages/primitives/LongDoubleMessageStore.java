@@ -27,6 +27,8 @@ import org.apache.giraph.utils.EmptyIterable;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 
+import org.apache.hadoop.io.Writable;
+
 import com.google.common.collect.Lists;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -63,7 +65,7 @@ public class LongDoubleMessageStore
    * @param messageCombiner Message messageCombiner
    */
   public LongDoubleMessageStore(
-      CentralizedServiceWorker<LongWritable, ?, ?> service,
+      CentralizedServiceWorker<LongWritable, Writable, Writable> service,
       MessageCombiner<LongWritable, DoubleWritable> messageCombiner) {
     this.service = service;
     this.messageCombiner =
@@ -71,11 +73,12 @@ public class LongDoubleMessageStore
 
     map = new Int2ObjectOpenHashMap<Long2DoubleOpenHashMap>();
     for (int partitionId : service.getPartitionStore().getPartitionIds()) {
-      Partition<LongWritable, ?, ?> partition =
+      Partition<LongWritable, Writable, Writable> partition =
           service.getPartitionStore().getOrCreatePartition(partitionId);
       Long2DoubleOpenHashMap partitionMap =
           new Long2DoubleOpenHashMap((int) partition.getVertexCount());
       map.put(partitionId, partitionMap);
+      service.getPartitionStore().putPartition(partition);
     }
   }
 

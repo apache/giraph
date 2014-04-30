@@ -18,20 +18,12 @@
 
 package org.apache.giraph.partition;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.edge.OutEdges;
-import org.apache.giraph.graph.Vertex;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-import org.apache.hadoop.mapreduce.Mapper;
-import org.apache.hadoop.mapreduce.Mapper.Context;
-import org.apache.log4j.Logger;
-
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
-import com.google.common.hash.HashFunction;
-import com.google.common.hash.Hashing;
+import static org.apache.giraph.conf.GiraphConstants.MAX_PARTITIONS_IN_MEMORY;
+import static org.apache.giraph.conf.GiraphConstants.MAX_STICKY_PARTITIONS;
+import static org.apache.giraph.conf.GiraphConstants.NUM_COMPUTE_THREADS;
+import static org.apache.giraph.conf.GiraphConstants.NUM_INPUT_THREADS;
+import static org.apache.giraph.conf.GiraphConstants.NUM_OUTPUT_THREADS;
+import static org.apache.giraph.conf.GiraphConstants.PARTITIONS_DIRECTORY;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -43,28 +35,75 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.Collections;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Set;
-import java.util.concurrent.AbstractExecutorService;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
-import static org.apache.giraph.conf.GiraphConstants.MAX_PARTITIONS_IN_MEMORY;
-import static org.apache.giraph.conf.GiraphConstants.PARTITIONS_DIRECTORY;
+import org.apache.giraph.bsp.CentralizedServiceWorker;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.edge.OutEdges;
+import org.apache.giraph.graph.Vertex;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Mapper.Context;
+import org.apache.log4j.Logger;
+
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
+import com.google.common.hash.HashFunction;
+import com.google.common.hash.Hashing;
 
 /**
  * Disk-backed PartitionStore. Partitions are stored in memory on a LRU basis.
- * Thread-safe, but expects the caller to synchronized between deletes, adds,
- * puts and gets.
+ * The operations are thread-safe, and guarantees safety for concurrent
+ * execution of different operations on each partition.<br />
+ * <br />
+ * The algorithm implemented by this class is quite intricate due to the
+ * interaction of several locks to guarantee performance. For this reason, here
+ * follows an overview of the implemented algorithm.<br />
+ * <b>ALGORITHM</b>:
+ * In general, the partition store keeps N partitions in memory. To improve
+ * I/O performance, part of the N partitions are kept in memory in a sticky
+ * manner while preserving the capability of each thread to swap partitions on
+ * the disk. This means that, for T threads, at least T partitions must remain
+ * non-sticky. The number of sicky partitions can also be specified manually.
+ * <b>CONCURRENCY</b>:
+ * <ul>
+ *   <li>
+ *     <b>Meta Partition Lock</b>.All the partitions are held in a
+ *     container, called the MetaPartition. This object contains also meta
+ *     information about the partition. All these objects are used to
+ *     atomically operate on partitions. In fact, each time a thread accesses
+ *     a partition, it will firstly acquire a lock on the container,
+ *     guaranteeing exclusion in managing the partition. Besides, this
+ *     partition-based lock allows the threads to concurrently operate on
+ *     different partitions, guaranteeing performance.
+ *   </li>
+ *   <li>
+ *     <b>Meta Partition Container</b>. All the references to the meta
+ *     partition objects are kept in a concurrent hash map. This ADT guarantees
+ *     performance and atomic access to each single reference, which is then
+ *     use for atomic operations on partitions, as previously described.
+ *   </li>
+ *   <li>
+ *     <b>LRU Lock</b>. Finally, an additional ADT is used to keep the LRU
+ *     order of unused partitions. In this case, the ADT is not thread safe and
+ *     to guarantee safety, we use its intrinsic lock. Additionally, this lock
+ *     is used for all in memory count changes. In fact, the amount of elements
+ *     in memory and the inactive partitions are very strictly related and this
+ *     justifies the sharing of the same lock.
+ *   </li>
+ * </ul>
+ * <b>XXX</b>:<br/>
+ * while most of the concurrent behaviors are gracefully handled, the
+ * concurrent call of {@link #getOrCreatePartition(Integer partitionId)} and
+ * {@link #deletePartition(Integer partitionId)} need yet to be handled. Since
+ * the usage of this class does not currently incure in this type of concurrent
+ * behavior, it has been left as a future work.
  *
  * @param <I> Vertex id
  * @param <V> Vertex data
@@ -78,36 +117,14 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
   private static final Logger LOG =
       Logger.getLogger(DiskBackedPartitionStore.class);
   /** States the partition can be found in */
-  private enum State { ACTIVE, INACTIVE, LOADING, OFFLOADING, ONDISK };
-  /** Global lock to the whole partition */
-  private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
-  /**
-   * Global write lock. Must be hold to modify class state for read and write.
-   * Conditions are bond to this lock.
-   */
-  private final Lock wLock = lock.writeLock();
-  /** The ids of the partitions contained in the store */
-  private final Set<Integer> partitionIds = Sets.newHashSet();
-  /** Partitions' states store */
-  private final Map<Integer, State> states = Maps.newHashMap();
-  /** Current active partitions, which have not been put back yet */
-  private final Map<Integer, Partition<I, V, E>> active = Maps.newHashMap();
+  private enum State { INIT, ACTIVE, INACTIVE, ONDISK };
+
+  /** Hash map containing all the partitions  */
+  private final ConcurrentMap<Integer, MetaPartition> partitions =
+    Maps.newConcurrentMap();
   /** Inactive partitions to re-activate or spill to disk to make space */
-  private final Map<Integer, Partition<I, V, E>> inactive =
-      Maps.newLinkedHashMap();
-  /** Ids of partitions stored on disk and number of vertices contained */
-  private final Map<Integer, Integer> onDisk = Maps.newHashMap();
-  /** Per-partition users counters (clearly only for active partitions) */
-  private final Map<Integer, Integer> counters = Maps.newHashMap();
-  /** These Conditions are used to partitions' change of state */
-  private final Map<Integer, Condition> pending = Maps.newHashMap();
-  /**
-   * Used to signal threads waiting to load partitions. Can be used when new
-   * inactive partitions are avaiable, or when free slots are available.
-   */
-  private final Condition notEmpty = wLock.newCondition();
-  /** Executors for users requests. Uses caller threads */
-  private final ExecutorService pool = new DirectExecutorService();
+  private final Map<Integer, MetaPartition> lru = Maps.newLinkedHashMap();
+
   /** Giraph configuration */
   private final
   ImmutableClassesGiraphConfiguration<I, V, E> conf;
@@ -117,24 +134,68 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
   private final String[] basePaths;
   /** Used to hash partition Ids */
   private final HashFunction hasher = Hashing.murmur3_32();
-  /** Maximum number of slots */
-  private final int maxInMemoryPartitions;
+  /** Maximum number of slots. Read-only value, no need for concurrency
+      safety. */
+  private final int maxPartitionsInMem;
   /** Number of slots used */
-  private int inMemoryPartitions;
+  private AtomicInteger numPartitionsInMem;
+  /** service worker reference */
+  private CentralizedServiceWorker<I, V, E> serviceWorker;
+  /** mumber of slots that are always kept in memory */
+  private AtomicLong numOfStickyPartitions;
+  /** counter */
+  private long passedThroughEdges;
 
   /**
    * Constructor
    *
    * @param conf Configuration
    * @param context Context
+   * @param serviceWorker service worker reference
    */
   public DiskBackedPartitionStore(
       ImmutableClassesGiraphConfiguration<I, V, E> conf,
-      Mapper<?, ?, ?, ?>.Context context) {
+      Mapper<?, ?, ?, ?>.Context context,
+      CentralizedServiceWorker<I, V, E> serviceWorker) {
     this.conf = conf;
     this.context = context;
+    this.serviceWorker = serviceWorker;
+
+    this.passedThroughEdges = 0;
+    this.numPartitionsInMem = new AtomicInteger(0);
+
     // We must be able to hold at least one partition in memory
-    maxInMemoryPartitions = Math.max(MAX_PARTITIONS_IN_MEMORY.get(conf), 1);
+    this.maxPartitionsInMem = Math.max(MAX_PARTITIONS_IN_MEMORY.get(conf), 1);
+
+    int numInputThreads = NUM_INPUT_THREADS.get(conf);
+    int numComputeThreads = NUM_COMPUTE_THREADS.get(conf);
+    int numOutputThreads = NUM_OUTPUT_THREADS.get(conf);
+
+    int maxThreads =
+      Math.max(numInputThreads,
+        Math.max(numComputeThreads, numOutputThreads));
+
+    // check if the sticky partition option is set and, if so, set the
+    long maxSticky = MAX_STICKY_PARTITIONS.get(conf);
+
+    // number of sticky partitions
+    if (maxSticky > 0 && maxPartitionsInMem - maxSticky >= maxThreads) {
+      this.numOfStickyPartitions = new AtomicLong(maxSticky);
+    } else {
+      if (maxPartitionsInMem - maxSticky >= maxThreads) {
+        if (LOG.isInfoEnabled()) {
+          LOG.info("giraph.maxSticky parameter unset or improperly set " +
+            "resetting to automatically computed value.");
+        }
+      }
+
+      if (maxPartitionsInMem == 1 || maxThreads >= maxPartitionsInMem) {
+        this.numOfStickyPartitions = new AtomicLong(0);
+      } else {
+        this.numOfStickyPartitions =
+          new AtomicLong(maxPartitionsInMem - maxThreads);
+      }
+    }
 
     // Take advantage of multiple disks
     String[] userPaths = PARTITIONS_DIRECTORY.getArray(conf);
@@ -145,172 +206,124 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
     }
     if (LOG.isInfoEnabled()) {
       LOG.info("DiskBackedPartitionStore with maxInMemoryPartitions=" +
-          maxInMemoryPartitions + ", isStaticGraph=" + conf.isStaticGraph());
+        maxPartitionsInMem + ", isStaticGraph=" + conf.isStaticGraph());
     }
   }
 
   @Override
   public Iterable<Integer> getPartitionIds() {
-    try {
-      return pool.submit(new Callable<Iterable<Integer>>() {
-
-        @Override
-        public Iterable<Integer> call() throws Exception {
-          wLock.lock();
-          try {
-            return Iterables.unmodifiableIterable(partitionIds);
-          } finally {
-            wLock.unlock();
-          }
-        }
-      }).get();
-    } catch (InterruptedException e) {
-      throw new IllegalStateException(
-          "getPartitionIds: cannot retrieve partition ids", e);
-    } catch (ExecutionException e) {
-      throw new IllegalStateException(
-          "getPartitionIds: cannot retrieve partition ids", e);
-    }
+    return Iterables.unmodifiableIterable(partitions.keySet());
   }
 
   @Override
   public boolean hasPartition(final Integer id) {
-    try {
-      return pool.submit(new Callable<Boolean>() {
-
-        @Override
-        public Boolean call() throws Exception {
-          wLock.lock();
-          try {
-            return partitionIds.contains(id);
-          } finally {
-            wLock.unlock();
-          }
-        }
-      }).get();
-    } catch (InterruptedException e) {
-      throw new IllegalStateException(
-          "hasPartition: cannot check partition", e);
-    } catch (ExecutionException e) {
-      throw new IllegalStateException(
-          "hasPartition: cannot check partition", e);
-    }
+    return partitions.containsKey(id);
   }
 
   @Override
   public int getNumPartitions() {
-    try {
-      return pool.submit(new Callable<Integer>() {
-
-        @Override
-        public Integer call() throws Exception {
-          wLock.lock();
-          try {
-            return partitionIds.size();
-          } finally {
-            wLock.unlock();
-          }
-        }
-      }).get();
-    } catch (InterruptedException e) {
-      throw new IllegalStateException(
-          "getNumPartitions: cannot retrieve partition ids", e);
-    } catch (ExecutionException e) {
-      throw new IllegalStateException(
-          "getNumPartitions: cannot retrieve partition ids", e);
-    }
+    return partitions.size();
   }
 
   @Override
   public Partition<I, V, E> getOrCreatePartition(Integer id) {
-    try {
-      wLock.lock();
-      Partition<I, V, E> partition =
-          pool.submit(new GetPartition(id)).get();
-      if (partition == null) {
-        Partition<I, V, E> newPartition =
-            conf.createPartition(id, context);
-        pool.submit(
-            new AddPartition(id, newPartition)).get();
-        return newPartition;
-      } else {
-        return partition;
+    MetaPartition meta = new MetaPartition(id);
+    MetaPartition temp;
+
+    temp = partitions.putIfAbsent(id, meta);
+    if (temp != null) {
+      meta = temp;
+    }
+
+    synchronized (meta) {
+      if (temp == null && numOfStickyPartitions.getAndDecrement() > 0) {
+        meta.setSticky();
       }
-    } catch (InterruptedException e) {
-      throw new IllegalStateException(
-          "getOrCreatePartition: cannot retrieve partition " + id, e);
-    } catch (ExecutionException e) {
-      throw new IllegalStateException(
-          "getOrCreatePartition: cannot retrieve partition " + id, e);
-    } finally {
-      wLock.unlock();
+      getPartition(meta);
+      if (meta.getPartition() == null) {
+        Partition<I, V, E> partition = conf.createPartition(id, context);
+        meta.setPartition(partition);
+        addPartition(meta, partition);
+        if (meta.getState() == State.INIT) {
+          LOG.warn("Partition was still INIT after ADD (not possibile).");
+        }
+        // This get is necessary. When creating a new partition, it will be
+        // placed by default as INACTIVE. However, here the user will retrieve
+        // a reference to it, and hence there is the need to update the
+        // reference count, as well as the state of the object.
+        getPartition(meta);
+        if (meta.getState() == State.INIT) {
+          LOG.warn("Partition was still INIT after GET (not possibile).");
+        }
+      }
+
+      if (meta.getState() == State.INIT) {
+        String msg = "Getting a partition which is in INIT state is " +
+                     "not allowed. " + meta;
+        LOG.error(msg);
+        throw new IllegalStateException(msg);
+      }
+
+      return meta.getPartition();
     }
   }
 
   @Override
   public void putPartition(Partition<I, V, E> partition) {
     Integer id = partition.getId();
-    try {
-      pool.submit(new PutPartition(id, partition)).get();
-    } catch (InterruptedException e) {
-      throw new IllegalStateException(
-          "putPartition: cannot put back partition " + id, e);
-    } catch (ExecutionException e) {
-      throw new IllegalStateException(
-          "putPartition: cannot put back partition " + id, e);
-    }
+    MetaPartition meta = partitions.get(id);
+    putPartition(meta);
   }
 
   @Override
   public void deletePartition(Integer id) {
-    try {
-      pool.submit(new DeletePartition(id)).get();
-    } catch (InterruptedException e) {
-      throw new IllegalStateException(
-          "deletePartition: cannot delete partition " + id, e);
-    } catch (ExecutionException e) {
-      throw new IllegalStateException(
-          "deletePartition: cannot delete partition " + id, e);
+    if (hasPartition(id)) {
+      MetaPartition meta = partitions.get(id);
+      deletePartition(meta);
     }
   }
 
   @Override
   public Partition<I, V, E> removePartition(Integer id) {
-    Partition<I, V, E> partition = getOrCreatePartition(id);
-    // we put it back, so the partition can turn INACTIVE and be deleted.
-    putPartition(partition);
-    deletePartition(id);
-    return partition;
+    if (hasPartition(id)) {
+      MetaPartition meta;
+
+      meta = partitions.get(id);
+      synchronized (meta) {
+        getPartition(meta);
+        putPartition(meta);
+        deletePartition(id);
+      }
+      return meta.getPartition();
+    }
+    return null;
   }
 
   @Override
   public void addPartition(Partition<I, V, E> partition) {
     Integer id = partition.getId();
-    try {
-      pool.submit(new AddPartition(partition.getId(), partition)).get();
-    } catch (InterruptedException e) {
-      throw new IllegalStateException(
-          "addPartition: cannot add partition " + id, e);
-    } catch (ExecutionException e) {
-      throw new IllegalStateException(
-          "addPartition: cannot add partition " + id, e);
+    MetaPartition meta = new MetaPartition(id);
+    MetaPartition temp;
+
+    meta.setPartition(partition);
+    temp = partitions.putIfAbsent(id, meta);
+    if (temp != null) {
+      meta = temp;
+    }
+
+    synchronized (meta) {
+      if (temp == null && numOfStickyPartitions.getAndDecrement() > 0) {
+        meta.setSticky();
+      }
+      addPartition(meta, partition);
     }
   }
 
   @Override
   public void shutdown() {
-    try {
-      pool.shutdown();
-      try {
-        if (!pool.awaitTermination(120, TimeUnit.SECONDS)) {
-          pool.shutdownNow();
-        }
-      } catch (InterruptedException e) {
-        pool.shutdownNow();
-      }
-    } finally {
-      for (Integer id : onDisk.values()) {
-        deletePartitionFiles(id);
+    for (MetaPartition e : partitions.values()) {
+      if (e.getState() == State.ONDISK) {
+        deletePartitionFiles(e.getId());
       }
     }
   }
@@ -318,60 +331,10 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append(partitionIds.toString());
-    sb.append("\nActive\n");
-    for (Entry<Integer, Partition<I, V, E>> e : active.entrySet()) {
-      sb.append(e.getKey() + ":" + e.getValue() + "\n");
-    }
-    sb.append("Inactive\n");
-    for (Entry<Integer, Partition<I, V, E>> e : inactive.entrySet()) {
-      sb.append(e.getKey() + ":" + e.getValue() + "\n");
-    }
-    sb.append("OnDisk\n");
-    for (Entry<Integer, Integer> e : onDisk.entrySet()) {
-      sb.append(e.getKey() + ":" + e.getValue() + "\n");
-    }
-    sb.append("Counters\n");
-    for (Entry<Integer, Integer> e : counters.entrySet()) {
-      sb.append(e.getKey() + ":" + e.getValue() + "\n");
-    }
-    sb.append("Pending\n");
-    for (Entry<Integer, Condition> e : pending.entrySet()) {
-      sb.append(e.getKey() + "\n");
+    for (MetaPartition e : partitions.values()) {
+      sb.append(e.toString() + "\n");
     }
     return sb.toString();
-  }
-
-  /**
-   * Increment the number of active users for a partition. Caller should hold
-   * the global write lock.
-   *
-   * @param id The id of the counter to increment
-   * @return The new value
-   */
-  private Integer incrementCounter(Integer id) {
-    Integer count = counters.get(id);
-    if (count == null) {
-      count = 0;
-    }
-    counters.put(id, ++count);
-    return count;
-  }
-
-  /**
-   * Decrement the number of active users for a partition. Caller should hold
-   * the global write lock.
-   *
-   * @param id The id of the counter to decrement
-   * @return The new value
-   */
-  private Integer decrementCounter(Integer id) {
-    Integer count = counters.get(id);
-    if (count == null) {
-      throw new IllegalStateException("no counter for partition " + id);
-    }
-    counters.put(id, --count);
-    return count;
   }
 
   /**
@@ -381,8 +344,9 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
    * @param vertex The vertex to serialize
    * @throws IOException
    */
-  private void writeVertexData(DataOutput output,
-      Vertex<I, V, E> vertex) throws IOException {
+  private void writeVertexData(DataOutput output, Vertex<I, V, E> vertex)
+    throws IOException {
+
     vertex.getId().write(output);
     vertex.getValue().write(output);
     output.writeBoolean(vertex.isHalted());
@@ -398,8 +362,10 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
   @SuppressWarnings("unchecked")
   private void writeOutEdges(DataOutput output, Vertex<I, V, E> vertex)
     throws IOException {
+
     vertex.getId().write(output);
-    ((OutEdges<I, E>) vertex.getEdges()).write(output);
+    OutEdges<I, E> edges = (OutEdges<I, E>) vertex.getEdges();
+    edges.write(output);
   }
 
   /**
@@ -411,6 +377,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
    */
   private void readVertexData(DataInput in, Vertex<I, V, E> vertex)
     throws IOException {
+
     I id = conf.createVertexId();
     id.readFields(in);
     V value = conf.createVertexValue();
@@ -434,13 +401,14 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
   @SuppressWarnings("unchecked")
   private void readOutEdges(DataInput in, Partition<I, V, E> partition)
     throws IOException {
+
     I id = conf.createVertexId();
     id.readFields(in);
     Vertex<I, V, E> v = partition.getVertex(id);
-    ((OutEdges<I, E>) v.getEdges()).readFields(in);
+    OutEdges<I, E> edges = (OutEdges<I, E>) v.getEdges();
+    edges.readFields(in);
     partition.saveVertex(v);
   }
-
 
   /**
    * Load a partition from disk. It deletes the files after the load,
@@ -451,56 +419,53 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
    * @return The partition
    * @throws IOException
    */
-  private Partition<I, V, E> loadPartition(Integer id, int numVertices)
+  private Partition<I, V, E> loadPartition(int id, long numVertices)
     throws IOException {
-    Partition<I, V, E> partition =
-        conf.createPartition(id, context);
+
+    Partition<I, V, E> partition = conf.createPartition(id, context);
+
+    // Vertices
     File file = new File(getVerticesPath(id));
     if (LOG.isDebugEnabled()) {
       LOG.debug("loadPartition: loading partition vertices " +
-          partition.getId() + " from " + file.getAbsolutePath());
+        partition.getId() + " from " + file.getAbsolutePath());
     }
-    DataInputStream inputStream = null;
-    try {
-      inputStream = new DataInputStream(
-          new BufferedInputStream(new FileInputStream(file)));
-      for (int i = 0; i < numVertices; ++i) {
-        Vertex<I, V , E> vertex = conf.createVertex();
-        readVertexData(inputStream, vertex);
-        partition.putVertex(vertex);
-      }
-    } finally {
-      if (inputStream != null) {
-        inputStream.close();
-        inputStream = null;
-      }
+
+    FileInputStream filein = new FileInputStream(file);
+    BufferedInputStream bufferin = new BufferedInputStream(filein);
+    DataInputStream inputStream  = new DataInputStream(bufferin);
+    for (int i = 0; i < numVertices; ++i) {
+      Vertex<I, V , E> vertex = conf.createVertex();
+      readVertexData(inputStream, vertex);
+      partition.putVertex(vertex);
     }
+    inputStream.close();
     if (!file.delete()) {
-      LOG.error("loadPartition: Failed to delete file " + file);
+      String msg = "loadPartition: failed to delete " + file.getAbsolutePath();
+      LOG.error(msg);
+      throw new IllegalStateException(msg);
     }
+
+    // Edges
     file = new File(getEdgesPath(id));
+
     if (LOG.isDebugEnabled()) {
       LOG.debug("loadPartition: loading partition edges " +
-          partition.getId() + " from " + file.getAbsolutePath());
+        partition.getId() + " from " + file.getAbsolutePath());
     }
-    try {
-      inputStream = new DataInputStream(
-          new BufferedInputStream(new FileInputStream(file)));
-      for (int i = 0; i < numVertices; ++i) {
-        readOutEdges(inputStream, partition);
-      }
-    } finally {
-      if (inputStream != null) {
-        inputStream.close();
-      }
+
+    filein = new FileInputStream(file);
+    bufferin = new BufferedInputStream(filein);
+    inputStream  = new DataInputStream(bufferin);
+    for (int i = 0; i < numVertices; ++i) {
+      readOutEdges(inputStream, partition);
     }
-    /*
-     * If the graph is static, keep the file around.
-     */
-    if (!conf.isStaticGraph()) {
-      if (!file.delete()) {
-        LOG.error("loadPartition: Failed to delete file " + file);
-      }
+    inputStream.close();
+    // If the graph is static, keep the file around.
+    if (!conf.isStaticGraph() && !file.delete()) {
+      String msg = "loadPartition: failed to delete " + file.getAbsolutePath();
+      LOG.error(msg);
+      throw new IllegalStateException(msg);
     }
     return partition;
   }
@@ -508,59 +473,66 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
   /**
    * Write a partition to disk.
    *
-   * @param partition The partition to offload
+   * @param meta meta partition containing the partition to offload
    * @throws IOException
    */
-  private void offloadPartition(Partition<I, V, E> partition)
-    throws IOException {
+  private void offloadPartition(MetaPartition meta) throws IOException {
+
+    Partition<I, V, E> partition = meta.getPartition();
     File file = new File(getVerticesPath(partition.getId()));
-    if (!file.getParentFile().mkdirs()) {
-      LOG.error("offloadPartition: Failed to create directory " + file);
+    File parent = file.getParentFile();
+    if (!parent.exists() && !parent.mkdirs() && LOG.isDebugEnabled()) {
+      LOG.debug("offloadPartition: directory " + parent.getAbsolutePath() +
+        " already exists.");
     }
+
     if (!file.createNewFile()) {
-      LOG.error("offloadPartition: Failed to create file " + file);
+      String msg = "offloadPartition: file " + parent.getAbsolutePath() +
+        " already exists.";
+      LOG.error(msg);
+      throw new IllegalStateException(msg);
     }
+
     if (LOG.isDebugEnabled()) {
       LOG.debug("offloadPartition: writing partition vertices " +
-          partition.getId() + " to " + file.getAbsolutePath());
+        partition.getId() + " to " + file.getAbsolutePath());
     }
-    DataOutputStream outputStream = null;
-    try {
-      outputStream = new DataOutputStream(
-          new BufferedOutputStream(new FileOutputStream(file)));
-      for (Vertex<I, V, E> vertex : partition) {
-        writeVertexData(outputStream, vertex);
-      }
-    } finally {
-      if (outputStream != null) {
-        outputStream.close();
-        outputStream = null;
-      }
+
+    FileOutputStream fileout = new FileOutputStream(file);
+    BufferedOutputStream bufferout = new BufferedOutputStream(fileout);
+    DataOutputStream outputStream  = new DataOutputStream(bufferout);
+    for (Vertex<I, V, E> vertex : partition) {
+      writeVertexData(outputStream, vertex);
     }
+    outputStream.close();
+
+    // Avoid writing back edges if we have already written them once and
+    // the graph is not changing.
+    // If we are in the input superstep, we need to write the files
+    // at least the first time, even though the graph is static.
     file = new File(getEdgesPath(partition.getId()));
-    /*
-     * Avoid writing back edges if we have already written them once and
-     * the graph is not changing.
-     */
-    if (!conf.isStaticGraph() || !file.exists()) {
-      if (!file.createNewFile()) {
-        LOG.error("offloadPartition: Failed to create file " + file);
+    if (meta.getPrevVertexCount() != partition.getVertexCount() ||
+        !conf.isStaticGraph() || !file.exists()) {
+
+      meta.setPrevVertexCount(partition.getVertexCount());
+
+      if (!file.createNewFile() && LOG.isDebugEnabled()) {
+        LOG.debug("offloadPartition: file " + file.getAbsolutePath() +
+            " already exists.");
       }
+
       if (LOG.isDebugEnabled()) {
         LOG.debug("offloadPartition: writing partition edges " +
-            partition.getId() + " to " + file.getAbsolutePath());
+          partition.getId() + " to " + file.getAbsolutePath());
       }
-      try {
-        outputStream = new DataOutputStream(
-            new BufferedOutputStream(new FileOutputStream(file)));
-        for (Vertex<I, V, E> vertex : partition) {
-          writeOutEdges(outputStream, vertex);
-        }
-      } finally {
-        if (outputStream != null) {
-          outputStream.close();
-        }
+
+      fileout = new FileOutputStream(file);
+      bufferout = new BufferedOutputStream(fileout);
+      outputStream = new DataOutputStream(bufferout);
+      for (Vertex<I, V, E> vertex : partition) {
+        writeOutEdges(outputStream, vertex);
       }
+      outputStream.close();
     }
   }
 
@@ -568,40 +540,34 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
    * Append a partition on disk at the end of the file. Expects the caller
    * to hold the global lock.
    *
+   * @param meta      meta partition container for the partitiont to save
+   *                  to disk
    * @param partition The partition
    * @throws IOException
    */
-  private void addToOOCPartition(Partition<I, V, E> partition)
-    throws IOException {
+  private void addToOOCPartition(MetaPartition meta,
+    Partition<I, V, E> partition) throws IOException {
+
     Integer id = partition.getId();
-    Integer count = onDisk.get(id);
-    onDisk.put(id, count + (int) partition.getVertexCount());
     File file = new File(getVerticesPath(id));
     DataOutputStream outputStream = null;
-    try {
-      outputStream = new DataOutputStream(
-          new BufferedOutputStream(new FileOutputStream(file, true)));
-      for (Vertex<I, V, E> vertex : partition) {
-        writeVertexData(outputStream, vertex);
-      }
-    } finally {
-      if (outputStream != null) {
-        outputStream.close();
-        outputStream = null;
-      }
+
+    FileOutputStream fileout = new FileOutputStream(file, true);
+    BufferedOutputStream bufferout = new BufferedOutputStream(fileout);
+    outputStream = new DataOutputStream(bufferout);
+    for (Vertex<I, V, E> vertex : partition) {
+      writeVertexData(outputStream, vertex);
     }
+    outputStream.close();
+
     file = new File(getEdgesPath(id));
-    try {
-      outputStream = new DataOutputStream(
-          new BufferedOutputStream(new FileOutputStream(file, true)));
-      for (Vertex<I, V, E> vertex : partition) {
-        writeOutEdges(outputStream, vertex);
-      }
-    } finally {
-      if (outputStream != null) {
-        outputStream.close();
-      }
+    fileout = new FileOutputStream(file, true);
+    bufferout = new BufferedOutputStream(fileout);
+    outputStream = new DataOutputStream(bufferout);
+    for (Vertex<I, V, E> vertex : partition) {
+      writeOutEdges(outputStream, vertex);
     }
+    outputStream.close();
   }
 
   /**
@@ -610,13 +576,22 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
    * @param id The id of the partition owning the file.
    */
   public void deletePartitionFiles(Integer id) {
+    // File containing vertices
     File file = new File(getVerticesPath(id));
-    if (!file.delete()) {
-      LOG.error("deletePartitionFiles: Failed to delete file " + file);
+    if (file.exists() && !file.delete()) {
+      String msg = "deletePartitionFiles: Failed to delete file " +
+        file.getAbsolutePath();
+      LOG.error(msg);
+      throw new IllegalStateException(msg);
     }
+
+    // File containing edges
     file = new File(getEdgesPath(id));
-    if (!file.delete()) {
-      LOG.error("deletePartitionFiles: Failed to delete file " + file);
+    if (file.exists() && !file.delete()) {
+      String msg = "deletePartitionFiles: Failed to delete file " +
+        file.getAbsolutePath();
+      LOG.error(msg);
+      throw new IllegalStateException(msg);
     }
   }
 
@@ -628,7 +603,7 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
    */
   private String getPartitionPath(Integer partitionId) {
     int hash = hasher.hashInt(partitionId).asInt();
-    int idx  = Math.abs(hash % basePaths.length);
+    int idx = Math.abs(hash % basePaths.length);
     return basePaths[idx] + "/partition-" + partitionId;
   }
 
@@ -653,238 +628,368 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
   }
 
   /**
-   * Task that gets a partition from the store
+   * Removes and returns the last recently used entry.
+   *
+   * @return The last recently used entry.
    */
-  private class GetPartition implements Callable<Partition<I, V, E>> {
-    /** Partition id */
-    private Integer id;
-
-    /**
-     * Constructor
-     *
-     * @param id Partition id
-     */
-    public GetPartition(Integer id) {
-      this.id = id;
-    }
-
-    /**
-     * Removes and returns the last recently used entry.
-     *
-     * @return The last recently used entry.
-     */
-    private Entry<Integer, Partition<I, V, E>> getLRUEntry() {
-      Iterator<Entry<Integer, Partition<I, V, E>>> i =
-          inactive.entrySet().iterator();
-      Entry<Integer, Partition<I, V, E>> lruEntry = i.next();
+  private MetaPartition getLRUPartition() {
+    synchronized (lru) {
+      Iterator<Entry<Integer, MetaPartition>> i =
+          lru.entrySet().iterator();
+      Entry<Integer, MetaPartition> entry = i.next();
       i.remove();
-      return lruEntry;
+      return entry.getValue();
     }
+  }
 
-    @Override
-    public Partition<I, V, E> call() throws Exception {
-      Partition<I, V, E> partition = null;
+  /**
+   * Method that gets a partition from the store.
+   * The partition is produced as a side effect of the computation and is
+   * reflected inside the META object provided as parameter.
+   * This function is thread-safe since it locks the whole computation
+   * on the metapartition provided.<br />
+   * <br />
+   * <b>ONDISK case</b><br />
+   * When a thread tries to access an element on disk, it waits until it
+   * space in memory and inactive data to swap resources.
+   * It is possible that multiple threads wait for a single
+   * partition to be restored from disk. The semantic of this
+   * function is that only the first thread interested will be
+   * in charge to load it back to memory, hence waiting on 'lru'.
+   * The others, will be waiting on the lock to be available,
+   * preventing consistency issues.<br />
+   * <br />
+   * <b>Deadlock</b><br />
+   * The code of this method can in principle lead to a deadlock, due to the
+   * fact that two locks are held together while running the "wait" method.
+   * However, this problem does not occur. The two locks held are:
+   * <ol>
+   *  <li><b>Meta Object</b>, which is the object the thread is trying to
+   *  acquire and is currently stored on disk.</li>
+   *  <li><b>LRU data structure</b>, which keeps track of the objects which are
+   *  inactive and hence swappable.</li>
+   * </ol>
+   * It is not possible that two getPartition calls cross because this means
+   * that LRU objects are both INACTIVE and ONDISK at the same time, which is
+   * not possible.
+   *
+   * @param meta meta partition container with the partition itself
+   */
+  @edu.umd.cs.findbugs.annotations.SuppressWarnings(
+    value = "TLW_TWO_LOCK_WAIT",
+    justification = "The two locks held do not produce a deadlock")
+  private void getPartition(MetaPartition meta) {
+    synchronized (meta) {
+      boolean isNotDone = true;
 
-      while (partition == null) {
-        wLock.lock();
-        try {
-          State pState = states.get(id);
-          switch (pState) {
+      if (meta.getState() != State.INIT) {
+        State state;
+
+        while (isNotDone) {
+          state = meta.getState();
+          switch (state) {
           case ONDISK:
-            Entry<Integer, Partition<I, V, E>> lru = null;
-            states.put(id, State.LOADING);
-            int numVertices = onDisk.remove(id);
-            /*
-             * Wait until we have space in memory or inactive data for a switch
-             */
-            while (inMemoryPartitions >= maxInMemoryPartitions &&
-                inactive.isEmpty()) {
-              notEmpty.await();
+            MetaPartition swapOutPartition = null;
+            long numVertices = meta.getVertexCount();
+
+          synchronized (lru) {
+            try {
+              while (numPartitionsInMem.get() >= maxPartitionsInMem &&
+                     lru.isEmpty()) {
+                // notification for threads waiting on this are
+                // required in two cases:
+                // a) when an element is added to the LRU (hence
+                //    a new INACTIVE partition is added).
+                // b) when additioanl space is available in memory (hence
+                //    in memory counter is decreased).
+                lru.wait();
+              }
+            } catch (InterruptedException e) {
+              LOG.error("getPartition: error while waiting on " +
+                "LRU data structure: " + e.getMessage());
+              throw new IllegalStateException(e);
             }
-            /*
-             * we have to make some space first
-             */
-            if (inMemoryPartitions >= maxInMemoryPartitions) {
-              lru = getLRUEntry();
-              states.put(lru.getKey(), State.OFFLOADING);
-              pending.get(lru.getKey()).signalAll();
-            } else { // there is space, just add it to the in-memory partitions
-              inMemoryPartitions++;
+
+            // We have to make some space first, by removing the least used
+            // partition (hence the first in the LRU data structure).
+            //
+            // NB: In case the LRU is not empty, we are _swapping_ elements.
+            //     This, means that there is no need to "make space" by
+            //     changing the in-memory counter. Differently, if the element
+            //     can directly be placed into memory, the memory usage
+            //     increases by one.
+            if (numPartitionsInMem.get() >= maxPartitionsInMem &&
+                !lru.isEmpty()) {
+              swapOutPartition = getLRUPartition();
+            } else if (numPartitionsInMem.get() < maxPartitionsInMem) {
+              numPartitionsInMem.getAndIncrement();
+            } else {
+              String msg = "lru is empty and there is not space in memory, " +
+                           "hence the partition cannot be loaded.";
+              LOG.error(msg);
+              throw new IllegalStateException(msg);
             }
-            /*
-             * do IO without contention, the threads interested to these
-             * partitions will subscribe to the relative Condition.
-             */
-            wLock.unlock();
-            if (lru != null) {
-              offloadPartition(lru.getValue());
+          }
+
+            if (swapOutPartition != null) {
+              synchronized (swapOutPartition) {
+                if (swapOutPartition.isSticky()) {
+                  String msg = "Partition " + meta.getId() + " is sticky " +
+                    " and cannot be offloaded.";
+                  LOG.error(msg);
+                  throw new IllegalStateException(msg);
+                }
+                // safety check
+                if (swapOutPartition.getState() != State.INACTIVE) {
+                  String msg = "Someone is holding the partition with id " +
+                    swapOutPartition.getId() + " but is supposed to be " +
+                    "inactive.";
+                  LOG.error(msg);
+                  throw new IllegalStateException(msg);
+                }
+
+                try {
+                  offloadPartition(swapOutPartition);
+                  Partition<I, V, E> p = swapOutPartition.getPartition();
+                  swapOutPartition.setOnDisk(p);
+                  // notify all the threads waiting to the offloading process,
+                  // that they are allowed again to access the
+                  // swapped-out object.
+                  swapOutPartition.notifyAll();
+                } catch (IOException e)  {
+                  LOG.error("getPartition: Failed while Offloading " +
+                    "New Partition: " + e.getMessage());
+                  throw new IllegalStateException(e);
+                }
+              }
             }
-            partition = loadPartition(id, numVertices);
-            wLock.lock();
-            /*
-             * update state and signal the pending threads
-             */
-            if (lru != null) {
-              states.put(lru.getKey(), State.ONDISK);
-              onDisk.put(lru.getKey(), (int) lru.getValue().getVertexCount());
-              pending.get(lru.getKey()).signalAll();
+
+            // If it was needed, the partition to be swpped out is on disk.
+            // Additionally, we are guaranteed that we have a free spot in
+            // memory, in fact,
+            // a) either there was space in memory, and hence the in memory
+            //    counter was incremented reserving the space for this element.
+            // b) or the space has been created by swapping out the partition
+            //    that was inactive in the LRU.
+            // This means that, even in the case that concurrently swapped
+            // element is restored back to memory, there must have been
+            // place for only an additional partition.
+            Partition<I, V, E> partition;
+            try {
+              partition = loadPartition(meta.getId(), numVertices);
+            } catch (IOException e)  {
+              LOG.error("getPartition: Failed while Loading Partition from " +
+                "disk: " + e.getMessage());
+              throw new IllegalStateException(e);
             }
-            active.put(id, partition);
-            states.put(id, State.ACTIVE);
-            pending.get(id).signalAll();
-            incrementCounter(id);
+            meta.setActive(partition);
+
+            isNotDone = false;
             break;
           case INACTIVE:
-            partition = inactive.remove(id);
-            active.put(id, partition);
-            states.put(id, State.ACTIVE);
-            incrementCounter(id);
+            MetaPartition p = null;
+
+            if (meta.isSticky()) {
+              meta.setActive();
+              isNotDone = false;
+              break;
+            }
+
+          synchronized (lru) {
+            p = lru.remove(meta.getId());
+          }
+            if (p == meta && p.getState() == State.INACTIVE) {
+              meta.setActive();
+              isNotDone = false;
+            } else {
+              try {
+                // A thread could wait here when an inactive partition is
+                // concurrently swapped to disk. In fact, the meta object is
+                // locked but, even though the object is inactive, it is not
+                // present in the LRU ADT.
+                // The thread need to be signaled when the partition is
+                // finally swapped out of the disk.
+                meta.wait();
+              } catch (InterruptedException e) {
+                LOG.error("getPartition: error while waiting on " +
+                  "previously Inactive Partition: " + e.getMessage());
+                throw new IllegalStateException(e);
+              }
+              isNotDone = true;
+            }
             break;
           case ACTIVE:
-            partition = active.get(id);
-            incrementCounter(id);
-            break;
-          case LOADING:
-            pending.get(id).await();
-            break;
-          case OFFLOADING:
-            pending.get(id).await();
+            meta.incrementReferences();
+            isNotDone = false;
             break;
           default:
-            throw new IllegalStateException(
-                "illegal state " + pState + " for partition " + id);
-          }
-        } finally {
-          if (lock.isWriteLockedByCurrentThread()) {
-            wLock.unlock();
+            throw new IllegalStateException("illegal state " + meta.getState() +
+              " for partition " + meta.getId());
           }
         }
-      }
-      return partition;
-    }
-  }
-
-  /**
-   * Task that puts a partition back to the store
-   */
-  private class PutPartition implements Callable<Void> {
-    /** Partition id */
-    private Integer id;
-
-    /**
-     * Constructor
-     *
-     * @param id The partition id
-     * @param partition The partition
-     */
-    public PutPartition(Integer id, Partition<I, V, E> partition) {
-      this.id = id;
-    }
-
-    @Override
-    public Void call() throws Exception {
-      wLock.lock();
-      try {
-        if (decrementCounter(id) == 0) {
-          inactive.put(id, active.remove(id));
-          states.put(id, State.INACTIVE);
-          pending.get(id).signalAll();
-          notEmpty.signal();
-        }
-        return null;
-      } finally {
-        wLock.unlock();
       }
     }
   }
 
   /**
-   * Task that adds a partition to the store
+   * Method that puts a partition back to the store. This function is
+   * thread-safe using meta partition intrinsic lock.
+   *
+   * @param meta meta partition container with the partition itself
    */
-  private class AddPartition implements Callable<Void> {
-    /** Partition id */
-    private Integer id;
-    /** Partition */
-    private Partition<I, V, E> partition;
+  private void putPartition(MetaPartition meta) {
+    synchronized (meta) {
+      if (meta.getState() != State.ACTIVE) {
+        String msg = "It is not possible to put back a partition which is " +
+          "not ACTIVE.\n" + meta.toString();
+        LOG.error(msg);
+        throw new IllegalStateException(msg);
+      }
 
-    /**
-     * Constructor
-     *
-     * @param id The partition id
-     * @param partition The partition
-     */
-    public AddPartition(Integer id, Partition<I, V, E> partition) {
-      this.id = id;
-      this.partition = partition;
+      if (meta.decrementReferences() == 0) {
+        meta.setState(State.INACTIVE);
+        if (!meta.isSticky()) {
+          synchronized (lru) {
+            lru.put(meta.getId(), meta);
+            lru.notifyAll();  // notify every waiting process about the fact
+                              // that the LRU is not empty anymore
+          }
+        }
+        meta.notifyAll(); // needed for the threads that are waiting for the
+                          // partition to become inactive, when
+                          // trying to delete the partition
+      }
     }
+  }
 
-    @Override
-    public Void call() throws Exception {
+  /**
+   * Task that adds a partition to the store.
+   * This function is thread-safe since it locks using the intrinsic lock of
+   * the meta partition.
+   *
+   * @param meta meta partition container with the partition itself
+   * @param partition partition to be added
+   */
+  private void addPartition(MetaPartition meta, Partition<I, V, E> partition) {
+    synchronized (meta) {
+      // If the state of the partition is INIT, this means that the META
+      // object was just created, and hence the partition is new.
+      if (meta.getState() == State.INIT) {
+        // safety check to guarantee that the partition was set.
+        if (partition == null) {
+          String msg = "No partition was provided.";
+          LOG.error(msg);
+          throw new IllegalStateException(msg);
+        }
 
-      wLock.lock();
-      try {
-        if (partitionIds.contains(id)) {
-          Partition<I, V, E> existing = null;
-          boolean isOOC = false;
-          boolean done  = false;
-          while (!done) {
-            State pState = states.get(id);
-            switch (pState) {
-            case ONDISK:
-              isOOC = true;
-              done  = true;
-              break;
-            /*
-             * just add data to the in-memory partitions,
-             * concurrency should be managed by the caller.
-             */
-            case INACTIVE:
-              existing = inactive.get(id);
-              done = true;
-              break;
-            case ACTIVE:
-              existing = active.get(id);
-              done = true;
-              break;
-            case LOADING:
-              pending.get(id).await();
-              break;
-            case OFFLOADING:
-              pending.get(id).await();
-              break;
-            default:
-              throw new IllegalStateException(
-                  "illegal state " + pState + " for partition " + id);
+        // safety check to guarantee that the partition provided is the one
+        // that is also set in the meta partition.
+        if (partition != meta.getPartition()) {
+          String msg = "Partition and Meta-Partition should " +
+            "contain the same data";
+          LOG.error(msg);
+          throw new IllegalStateException(msg);
+        }
+
+        synchronized (lru) {
+          if (numPartitionsInMem.get() < maxPartitionsInMem || meta.isSticky) {
+            meta.setState(State.INACTIVE);
+            numPartitionsInMem.getAndIncrement();
+            if (!meta.isSticky) {
+              lru.put(meta.getId(), meta);
+              lru.notifyAll();  // signaling that at least one element is
+                                // present in the LRU ADT.
             }
+            return; // this is used to exit the function and avoid using the
+                    // else clause. This is required to keep only this part of
+                    // the code under lock and aoivd keeping the lock when
+                    // performing the Offload I/O
           }
-          if (isOOC) {
-            addToOOCPartition(partition);
-          } else {
-            existing.addPartition(partition);
+        }
+
+        // ELSE
+        try {
+          offloadPartition(meta);
+          meta.setOnDisk(partition);
+        } catch (IOException e)  {
+          LOG.error("addPartition: Failed while Offloading New Partition: " +
+            e.getMessage());
+          throw new IllegalStateException(e);
+        }
+      } else {
+        Partition<I, V, E> existing = null;
+        boolean isOOC = false;
+        boolean isNotDone = true;
+        State state;
+
+        while (isNotDone) {
+          state = meta.getState();
+          switch (state) {
+          case ONDISK:
+            isOOC = true;
+            isNotDone = false;
+            meta.addToVertexCount(partition.getVertexCount());
+            break;
+          case INACTIVE:
+            MetaPartition p = null;
+
+            if (meta.isSticky()) {
+              existing = meta.getPartition();
+              isNotDone = false;
+              break;
+            }
+
+          synchronized (lru) {
+            p = lru.get(meta.getId());
+          }
+            // this check is safe because, even though we are out of the LRU
+            // lock, we still hold the lock on the partition. This means that
+            // a) if the partition was removed from the LRU, p will be null
+            //    and the current thread will wait.
+            // b) if the partition was not removed, its state cannot be
+            //    modified since the lock is held on meta, which refers to
+            //    the same object.
+            if (p == meta) {
+              existing = meta.getPartition();
+              isNotDone = false;
+            } else {
+              try {
+                // A thread could wait here when an inactive partition is
+                // concurrently swapped to disk. In fact, the meta object is
+                // locked but, even though the object is inactive, it is not
+                // present in the LRU ADT.
+                // The thread need to be signaled when the partition is finally
+                // swapped out of the disk.
+                meta.wait();
+              } catch (InterruptedException e) {
+                LOG.error("addPartition: error while waiting on " +
+                  "previously inactive partition: " + e.getMessage());
+                throw new IllegalStateException(e);
+              }
+
+              isNotDone = true;
+            }
+            break;
+          case ACTIVE:
+            existing = meta.getPartition();
+            isNotDone = false;
+            break;
+          default:
+            throw new IllegalStateException("illegal state " + state +
+              " for partition " + meta.getId());
+          }
+        }
+
+        if (isOOC) {
+          try {
+            addToOOCPartition(meta, partition);
+          } catch (IOException e) {
+            LOG.error("addPartition: Failed while Adding to OOC Partition: " +
+              e.getMessage());
+            throw new IllegalStateException(e);
           }
         } else {
-          Condition newC = wLock.newCondition();
-          pending.put(id, newC);
-          partitionIds.add(id);
-          if (inMemoryPartitions < maxInMemoryPartitions) {
-            inMemoryPartitions++;
-            states.put(id, State.INACTIVE);
-            inactive.put(id, partition);
-            notEmpty.signal();
-          } else {
-            states.put(id, State.OFFLOADING);
-            onDisk.put(id, (int) partition.getVertexCount());
-            wLock.unlock();
-            offloadPartition(partition);
-            wLock.lock();
-            states.put(id, State.ONDISK);
-            newC.signalAll();
-          }
-        }
-        return null;
-      } finally {
-        if (lock.isWriteLockedByCurrentThread()) {
-          wLock.unlock();
+          existing.addPartition(partition);
         }
       }
     }
@@ -892,131 +997,272 @@ public class DiskBackedPartitionStore<I extends WritableComparable,
 
   /**
    * Task that deletes a partition to the store
+   * This function is thread-safe using the intrinsic lock of the meta
+   * partition object
+   *
+   * @param meta meta partition container with the partition itself
    */
-  private class DeletePartition implements Callable<Void> {
-    /** Partition id */
-    private Integer id;
+  private void deletePartition(MetaPartition meta) {
+    synchronized (meta) {
+      boolean isDone = false;
+      int id = meta.getId();
 
-    /**
-     * Constructor
-     *
-     * @param id The partition id
-     */
-    public DeletePartition(Integer id) {
-      this.id = id;
-    }
+      State state;
+      while (!isDone) {
+        state = meta.getState();
+        switch (state) {
+        case ONDISK:
+          deletePartitionFiles(id);
+          isDone = true;
+          break;
+        case INACTIVE:
+          MetaPartition p;
 
-    @Override
-    public Void call() throws Exception {
-      boolean done = false;
+          if (meta.isSticky()) {
+            isDone = true;
+            numPartitionsInMem.getAndDecrement();
+            break;
+          }
 
-      wLock.lock();
-      try {
-        while (!done) {
-          State pState = states.get(id);
-          switch (pState) {
-          case ONDISK:
-            onDisk.remove(id);
-            deletePartitionFiles(id);
-            done = true;
+        synchronized (lru) {
+          p = lru.remove(id);
+          if (p == meta && p.getState() == State.INACTIVE) {
+            isDone = true;
+            numPartitionsInMem.getAndDecrement();
+            lru.notifyAll(); // notify all waiting processes that there is now
+                             // at least one new free place in memory.
+            // XXX: attention, here a race condition with getPartition is
+            //      possible, since changing lru is separated by the removal
+            //      of the element from the parittions ADT.
             break;
-          case INACTIVE:
-            inactive.remove(id);
-            inMemoryPartitions--;
-            notEmpty.signal();
-            done = true;
-            break;
-          case ACTIVE:
-            pending.get(id).await();
-            break;
-          case LOADING:
-            pending.get(id).await();
-            break;
-          case OFFLOADING:
-            pending.get(id).await();
-            break;
-          default:
-            throw new IllegalStateException(
-                "illegal state " + pState + " for partition " + id);
           }
         }
-        partitionIds.remove(id);
-        states.remove(id);
-        counters.remove(id);
-        pending.remove(id).signalAll();
-        return null;
-      } finally {
-        wLock.unlock();
+          try {
+            // A thread could wait here when an inactive partition is
+            // concurrently swapped to disk. In fact, the meta object is
+            // locked but, even though the object is inactive, it is not
+            // present in the LRU ADT.
+            // The thread need to be signaled when the partition is
+            // finally swapped out of the disk.
+            meta.wait();
+          } catch (InterruptedException e) {
+            LOG.error("deletePartition: error while waiting on " +
+              "previously inactive partition: " + e.getMessage());
+            throw new IllegalStateException(e);
+          }
+          isDone = false;
+          break;
+        case ACTIVE:
+          try {
+            // the thread waits that the object to be deleted becomes inactive,
+            // otherwise the deletion is not possible.
+            // The thread needs to be signaled when the partition becomes
+            // inactive.
+            meta.wait();
+          } catch (InterruptedException e) {
+            LOG.error("deletePartition: error while waiting on " +
+              "active partition: " + e.getMessage());
+            throw new IllegalStateException(e);
+          }
+          break;
+        default:
+          throw new IllegalStateException("illegal state " + state +
+            " for partition " + id);
+        }
       }
+      partitions.remove(id);
     }
   }
 
   /**
-   * Direct Executor that executes tasks within the calling threads.
+   * Partition container holding additional meta data associated with each
+   * partition.
    */
-  private class DirectExecutorService extends AbstractExecutorService {
-    /** Executor state */
-    private volatile boolean shutdown = false;
-
+  private class MetaPartition {
+    // ---- META INFORMATION ----
+    /** ID of the partition */
+    private int id;
+    /** State in which the partition is */
+    private State state;
     /**
-     * Constructor
+     * Counter used to keep track of the number of references retained by
+     * user-threads
      */
-    public DirectExecutorService() { }
+    private int references;
+    /** Number of vertices contained in the partition */
+    private long vertexCount;
+    /** Previous number of vertices contained in the partition */
+    private long prevVertexCount;
+    /**
+     * Sticky bit; if set, this partition is never supposed to be
+     * written to disk
+     */
+    private boolean isSticky;
+
+    // ---- PARTITION ----
+    /** the actual partition. Depending on the state of the partition,
+        this object could be empty. */
+    private Partition<I, V, E> partition;
 
     /**
-     * Execute the task in the calling thread.
+     * Initialization of the metadata enriched partition.
      *
-     * @param task Task to execute
+     * @param id id of the partition
      */
-    public void execute(Runnable task) {
-      task.run();
+    public MetaPartition(int id) {
+      this.id = id;
+      this.state = State.INIT;
+      this.references = 0;
+      this.vertexCount = 0;
+      this.prevVertexCount = 0;
+      this.isSticky = false;
+
+      this.partition = null;
     }
 
     /**
-     * Shutdown the executor.
+     * @return the id
      */
-    public void shutdown() {
-      this.shutdown = true;
+    public int getId() {
+      return id;
     }
 
     /**
-     * Shutdown the executor and return the current queue (empty).
-     *
-     * @return The list of awaiting tasks
+     * @return the state
      */
-    public List<Runnable> shutdownNow() {
-      this.shutdown = true;
-      return Collections.emptyList();
+    public State getState() {
+      return state;
     }
 
     /**
-     * Return current shutdown state.
+     * This function sets the metadata for on-disk partition.
      *
-     * @return Shutdown state
+     * @param partition partition related to this container
      */
-    public boolean isShutdown() {
-      return shutdown;
+    public void setOnDisk(Partition<I, V, E> partition) {
+      this.state = State.ONDISK;
+      this.partition = null;
+      this.vertexCount = partition.getVertexCount();
     }
 
     /**
-     * Return current termination state.
      *
-     * @return Termination state
      */
-    public boolean isTerminated() {
-      return shutdown;
+    public void setActive() {
+      this.setActive(null);
     }
 
     /**
-     * Do nothing and return shutdown state.
      *
-     * @param timeout Timeout
-     * @param unit Time unit
-     * @return Shutdown state
+     * @param partition the partition associate to this container
      */
-    public boolean awaitTermination(long timeout, TimeUnit unit)
-      throws InterruptedException {
-      return shutdown;
+    public void setActive(Partition<I, V, E> partition) {
+      if (partition != null) {
+        this.partition = partition;
+      }
+      this.state = State.ACTIVE;
+      this.prevVertexCount = this.vertexCount;
+      this.vertexCount = 0;
+      this.incrementReferences();
+    }
+
+    /**
+     * @param state the state to set
+     */
+    public void setState(State state) {
+      this.state = state;
+    }
+
+    /**
+     * @return decremented references
+     */
+    public int decrementReferences() {
+      if (references > 0) {
+        references -= 1;
+      }
+      return references;
+    }
+
+    /**
+     * @return incremented references
+     */
+    public int incrementReferences() {
+      return ++references;
+    }
+
+    /**
+     * set previous number of vertexes
+     * @param vertexCount number of vertexes
+     */
+    public void setPrevVertexCount(long vertexCount) {
+      this.prevVertexCount = vertexCount;
+    }
+
+    /**
+     * @return the vertexCount
+     */
+    public long getPrevVertexCount() {
+      return prevVertexCount;
+    }
+
+    /**
+     * @return the vertexCount
+     */
+    public long getVertexCount() {
+      return vertexCount;
+    }
+
+    /**
+     * @param inc amount to add to the vertex count
+     */
+    public void addToVertexCount(long inc) {
+      this.vertexCount += inc;
+      this.prevVertexCount = vertexCount;
+    }
+
+    /**
+     * @return the partition
+     */
+    public Partition<I, V, E> getPartition() {
+      return partition;
+    }
+
+    /**
+     * @param partition the partition to set
+     */
+    public void setPartition(Partition<I, V, E> partition) {
+      this.partition = partition;
+    }
+
+    /**
+     * Set sticky bit to this partition
+     */
+    public void setSticky() {
+      this.isSticky = true;
+    }
+
+    /**
+     * Get sticky bit to this partition
+     * @return boolean ture iff the sticky bit is set
+     */
+    public boolean isSticky() {
+      return this.isSticky;
+    }
+
+    @Override
+    public String toString() {
+      StringBuffer sb = new StringBuffer();
+
+      sb.append("Meta Data: { ");
+      sb.append("ID: " + id + "; ");
+      sb.append("State: " + state + "; ");
+      sb.append("Number of References: " + references + "; ");
+      sb.append("Number of Vertices: " + vertexCount + "; ");
+      sb.append("Previous number of Vertices: " + prevVertexCount + "; ");
+      sb.append("Is Sticky: " + isSticky + "; ");
+      sb.append("Partition: " + partition + "; }");
+
+      return sb.toString();
     }
   }
 }

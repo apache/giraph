@@ -73,8 +73,9 @@ public class LongByteArrayMessageStore<M extends Writable>
    */
   public LongByteArrayMessageStore(
       MessageValueFactory<M> messageValueFactory,
-      CentralizedServiceWorker<LongWritable, ?, ?> service,
-      ImmutableClassesGiraphConfiguration<LongWritable, ?, ?> config) {
+      CentralizedServiceWorker<LongWritable, Writable, Writable> service,
+      ImmutableClassesGiraphConfiguration<LongWritable, Writable, Writable>
+        config) {
     this.messageValueFactory = messageValueFactory;
     this.service = service;
     this.config = config;
@@ -82,12 +83,13 @@ public class LongByteArrayMessageStore<M extends Writable>
     map =
         new Int2ObjectOpenHashMap<Long2ObjectOpenHashMap<DataInputOutput>>();
     for (int partitionId : service.getPartitionStore().getPartitionIds()) {
-      Partition<LongWritable, ?, ?> partition =
+      Partition<LongWritable, Writable, Writable> partition =
           service.getPartitionStore().getOrCreatePartition(partitionId);
       Long2ObjectOpenHashMap<DataInputOutput> partitionMap =
           new Long2ObjectOpenHashMap<DataInputOutput>(
               (int) partition.getVertexCount());
       map.put(partitionId, partitionMap);
+      service.getPartitionStore().putPartition(partition);
     }
   }
 

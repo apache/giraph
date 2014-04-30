@@ -962,9 +962,12 @@ public class BspServiceWorker<I extends WritableComparable,
     Iterables.addAll(partitionIdQueue, getPartitionStore().getPartitionIds());
 
     long verticesToStore = 0;
-    for (int partitionId : getPartitionStore().getPartitionIds()) {
-      verticesToStore +=  getPartitionStore().getOrCreatePartition(
-          partitionId).getVertexCount();
+    PartitionStore<I, V, E> partitionStore = getPartitionStore();
+    for (int partitionId : partitionStore.getPartitionIds()) {
+      Partition<I, V, E> partition =
+        partitionStore.getOrCreatePartition(partitionId);
+      verticesToStore += partition.getVertexCount();
+      partitionStore.putPartition(partition);
     }
     WorkerProgress.get().startStoring(
         verticesToStore, getPartitionStore().getNumPartitions());

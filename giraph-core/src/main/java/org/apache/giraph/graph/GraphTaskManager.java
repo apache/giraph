@@ -34,8 +34,10 @@ import org.apache.giraph.metrics.GiraphTimer;
 import org.apache.giraph.metrics.GiraphTimerContext;
 import org.apache.giraph.metrics.ResetSuperstepMetricsObserver;
 import org.apache.giraph.metrics.SuperstepMetricsRegistry;
+import org.apache.giraph.partition.Partition;
 import org.apache.giraph.partition.PartitionOwner;
 import org.apache.giraph.partition.PartitionStats;
+import org.apache.giraph.partition.PartitionStore;
 import org.apache.giraph.time.SystemTime;
 import org.apache.giraph.time.Time;
 import org.apache.giraph.utils.CallableFactory;
@@ -690,12 +692,14 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
     final BlockingQueue<Integer> computePartitionIdQueue =
       new ArrayBlockingQueue<Integer>(numPartitions);
     long verticesToCompute = 0;
-    for (Integer partitionId :
-      serviceWorker.getPartitionStore().getPartitionIds()) {
+    PartitionStore<I, V, E> partitionStore = serviceWorker.getPartitionStore();
+    for (Integer partitionId : partitionStore.getPartitionIds()) {
       computePartitionIdQueue.add(partitionId);
-      verticesToCompute +=
-          serviceWorker.getPartitionStore().getOrCreatePartition(
-              partitionId).getVertexCount();
+
+      Partition<I, V, E> partition =
+        partitionStore.getOrCreatePartition(partitionId);
+      verticesToCompute += partition.getVertexCount();
+      partitionStore.putPartition(partition);
     }
     WorkerProgress.get().startSuperstep(
         serviceWorker.getSuperstep(),

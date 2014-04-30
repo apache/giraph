@@ -18,6 +18,11 @@
 
 package org.apache.giraph.comm.messages;
 
+import java.io.IOException;
+import java.util.Iterator;
+
+import junit.framework.Assert;
+
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.combiner.FloatSumMessageCombiner;
 import org.apache.giraph.comm.messages.primitives.IntByteArrayMessageStore;
@@ -33,6 +38,7 @@ import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.Writable;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -42,14 +48,10 @@ import org.mockito.stubbing.Answer;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
-import junit.framework.Assert;
-
-import java.io.IOException;
-import java.util.Iterator;
-
 public class TestIntFloatPrimitiveMessageStores {
   private static final int NUM_PARTITIONS = 2;
-  private static CentralizedServiceWorker<IntWritable, ?, ?> service;
+  private static CentralizedServiceWorker<IntWritable, Writable, Writable>
+    service;
 
   @Before
   public void prepare() throws IOException {
@@ -83,8 +85,9 @@ public class TestIntFloatPrimitiveMessageStores {
     }
   }
 
-  private static ImmutableClassesGiraphConfiguration<IntWritable, ?, ?>
-  createIntFloatConf() {
+  private static ImmutableClassesGiraphConfiguration<IntWritable, Writable,
+    Writable> createIntFloatConf() {
+
     GiraphConfiguration initConf = new GiraphConfiguration();
     initConf.setComputationClass(IntFloatNoOpComputation.class);
     return new ImmutableClassesGiraphConfiguration(initConf);
