@@ -54,10 +54,9 @@ public class YourKitContext {
   /**
    * Capture a snapshot
    * @param flags See {@link com.yourkit.api.ProfilingModes}
-   * @param context map context
-   * @param name unique name for this snapshot
+   * @param destPath where to store snapshot
    */
-  private void snapshot(long flags, Mapper.Context context, String name) {
+  private void snapshot(long flags, String destPath) {
     if (yourKitController != null) {
       String path;
       try {
@@ -67,56 +66,95 @@ public class YourKitContext {
         // CHECKSTYLE: resume IllegalCatch
         return;
       }
-      File destFile = new File(SLASH_JOINER.join(
-          "/tmp", context.getJobID(), context.getTaskAttemptID(),
-          name + ".snapshot"));
       try {
+        File destFile = new File(destPath);
         Files.createParentDirs(destFile);
         Files.move(new File(path), destFile);
       } catch (IOException e) {
         LOG.error("Failed to move YourKit snapshot file from " + path +
-            " to " + destFile.getPath(), e);
+            " to " + destPath, e);
       }
     }
   }
 
   /**
-   * This method is just a convenient replacement of
-   * {@link #captureSnapshot(long, java.io.File)} with
-   * {@link com.yourkit.api.ProfilingModes#SNAPSHOT_WITH_HEAP} for the flags.
+   * Capture snapshot with all recorded data including heap dump.
    *
    * WARNING: This is likely to be VERY slow for large jobs.
    *
-   * @param context map context
-   * @param name unique name for this snapshot
+   * @param destPath path to store snapshot file
+   */
+  public void snapshotWithMemory(String destPath) {
+    snapshot(ProfilingModes.SNAPSHOT_WITH_HEAP, destPath);
+  }
+
+  /**
+   * Capture snapshot with all recorded data including heap dump.
+   * The snapshot file is saved in log directory, or /tmp as default.
+   *
+   * WARNING: This is likely to be VERY slow for large jobs.
+   *
+   * @param context context
+   * @param name    snapshot file name
    */
   public void snapshotWithMemory(Mapper.Context context, String name) {
-    snapshot(ProfilingModes.SNAPSHOT_WITH_HEAP, context, name);
+    snapshot(ProfilingModes.SNAPSHOT_WITH_HEAP,
+        SLASH_JOINER.join(System.getProperty("hadoop.log.dir", "/tmp"),
+            "userlogs", context.getTaskAttemptID(), name + ".snapshot"));
   }
 
   /**
-   * This method is just a convenient replacement of
-   * {@link #captureSnapshot(long, java.io.File)} with
-   * {@link com.yourkit.api.ProfilingModes#SNAPSHOT_WITHOUT_HEAP} for the flags.
+   * Capture snapshot with all recorded data except for heap dump.
    *
-   * @param context map context
-   * @param name unique name for this snapshot
+   * @param destPath path to store snapshot file
+   */
+  public void snapshotCPUOnly(String destPath) {
+    snapshot(ProfilingModes.SNAPSHOT_WITHOUT_HEAP, destPath);
+  }
+
+  /**
+   * Capture snapshot with all recorded data except for heap dump.
+   * The snapshot file is saved in log directory, or /tmp as default.
+   *
+   * @param context context
+   * @param name    snapshot file name
    */
   public void snapshotCPUOnly(Mapper.Context context, String name) {
-    snapshot(ProfilingModes.SNAPSHOT_WITHOUT_HEAP, context, name);
+    snapshot(ProfilingModes.SNAPSHOT_WITHOUT_HEAP,
+        SLASH_JOINER.join(System.getProperty("hadoop.log.dir", "/tmp"),
+            "userlogs", context.getTaskAttemptID(), name + ".snapshot"));
   }
 
   /**
-   * Stop profiling CPU
+   * Stop recording
    */
   public void stop() {
     if (yourKitController != null) {
       try {
-        yourKitController.stopCPUProfiling();
+        yourKitController.disableStackTelemetry();
+        LOG.info("Disabled YourKit stack telemetry");
         // CHECKSTYLE: stop IllegalCatch
       } catch (Exception e) {
         // CHECKSTYLE: resume IllegalCatch
-        LOG.error("Failed to stop YourKit CPU profiling", e);
+        LOG.error("Failed to stop stack telemetry", e);
+      }
+
+      try {
+        yourKitController.stopCPUProfiling();
+        LOG.info("Stopped Yourkit CPU profiling");
+        // CHECKSTYLE: stop IllegalCatch
+      } catch (Exception e) {
+        // CHECKSTYLE: resume IllegalCatch
+        LOG.error("Failed to stop YourKit profiling", e);
+      }
+
+      try {
+        yourKitController.stopAllocationRecording();
+        LOG.info("Stopped Yourkit allocation recording");
+        // CHECKSTYLE: stop IllegalCatch
+      } catch (Exception e) {
+        // CHECKSTYLE: resume IllegalCatch
+        LOG.error("Failed to stop YourKit allocation recording", e);
       }
     }
   }

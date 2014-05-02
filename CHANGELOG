@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-889: Update Yourkit Profiler (yhdong via pavanka)
+
   GIRAPH-891: Make MessageStoreFactory configurable (rohankarwa via majakabiljo)
 
   GIRAPH-825: Fix DiskBackedPartitionStore to work with current trunk (armax00 via claudio)

@@ -18,7 +18,6 @@
 
 package org.apache.giraph.utils;
 
-import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.log4j.Logger;
 
 import com.yourkit.api.Controller;
@@ -31,9 +30,7 @@ import com.yourkit.api.ProfilingModes;
  *  - http://www.yourkit.com/docs/95/help/api.jsp
  *  - http://www.yourkit.com/docs/95/api/index.html
  *
- * This class is a simple helper around the API mentioned above that allows you
- * to easily wrap code with
- * {@link YourKitProfiler#startProfile(GiraphConfiguration)}
+ * This class is a simple helper around the API mentioned above
  * followed by any amount of snapshotX calls and finally
  * {@link YourKitContext#stop()}.
  * See also {@link YourKitContext}.
@@ -45,30 +42,74 @@ import com.yourkit.api.ProfilingModes;
 public class YourKitProfiler {
   /** Logger */
   private static final Logger LOG = Logger.getLogger(YourKitProfiler.class);
+  /** Record every ALLOCATION_RECORDING_INTERVAL'th allocation */
+  private static final int ALLOCATION_RECORDING_INTERVAL = 1000;
 
   /** Don't construct, allow inheritance */
   protected YourKitProfiler() { }
 
   /**
-   * Convenient replacement of {@link #startProfilingCPU(long)} with
-   * {@link ProfilingModes#CPU_TRACING} for the mode.
+   * Create a YourKit controller and do some or all of
+   * {@link Controller#enableExceptionTelemetry()}
+   * {@link Controller#startCPUProfiling(long, String, String)}
+   * {@link Controller#startAllocationRecording(boolean, int, boolean,
+   * int, boolean, boolean)}
+   * based on boolean config options passed as method parameters
    *
-   * @param conf GiraphConfiguration
-   * @return profiler context
+   * @param enableStackTelemetry      enable stack telementry
+   * @param enableCPUProfilling       enable CPU profilling
+   * @param enableAllocationRecording enable allocation recording
+   *
+   * @return profiler context, or null if controller cannot be created
    */
-  public static YourKitContext startProfile(GiraphConfiguration conf) {
-    Controller controller = null;
+  public static YourKitContext startProfile(boolean enableStackTelemetry,
+                                            boolean enableCPUProfilling,
+                                            boolean enableAllocationRecording) {
+    Controller controller;
     try {
       controller = new Controller();
-      controller.enableStackTelemetry();
-      controller.startCPUProfiling(ProfilingModes.CPU_SAMPLING,
-          Controller.DEFAULT_FILTERS);
-      LOG.debug("Started YourKit profiling CPU");
       // CHECKSTYLE: stop IllegalCatch
     } catch (Exception e) {
       // CHECKSTYLE: resume IllegalCatch
-      LOG.debug("Failed to start YourKit CPU profiling", e);
+      LOG.info("Failed to set up YourKit controller", e);
+      return null;
     }
+
+    try {
+      if (enableStackTelemetry) {
+        controller.enableStackTelemetry();
+        LOG.info("Enabled Yourkit stack telemetry");
+      }
+      // CHECKSTYLE: stop IllegalCatch
+    } catch (Exception e) {
+      // CHECKSTYLE: resume IllegalCatch
+      LOG.info("Failed to enable YourKit stack telemetry", e);
+    }
+
+    try {
+      if (enableCPUProfilling) {
+        controller.startCPUProfiling(ProfilingModes.CPU_SAMPLING,
+          Controller.DEFAULT_FILTERS, Controller.DEFAULT_WALLTIME_SPEC);
+        LOG.info("Started YourKit CPU profiling");
+      }
+      // CHECKSTYLE: stop IllegalCatch
+    } catch (Exception e) {
+      // CHECKSTYLE: resume IllegalCatch
+      LOG.info("Failed to start YourKit CPU profiling", e);
+    }
+
+    try {
+      if (enableAllocationRecording) {
+        controller.startAllocationRecording(true, ALLOCATION_RECORDING_INTERVAL,
+            false, -1, true, false);
+        LOG.info("Started YourKit allocation recording");
+      }
+      // CHECKSTYLE: stop IllegalCatch
+    } catch (Exception e) {
+      // CHECKSTYLE: resume IllegalCatch
+      LOG.info("Failed to start YourKit allocation recording", e);
+    }
+
     return new YourKitContext(controller);
   }
 }
