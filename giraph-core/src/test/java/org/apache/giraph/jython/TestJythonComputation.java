@@ -17,7 +17,11 @@
  */
 package org.apache.giraph.jython;
 
+import org.apache.giraph.comm.messages.InMemoryMessageStoreFactory;
+import org.apache.giraph.comm.messages.MessageStoreFactory;
+import org.apache.giraph.comm.messages.out_of_core.DiskBackedMessageStoreFactory;
 import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.GiraphTypes;
 import org.apache.giraph.edge.ByteArrayEdges;
 import org.apache.giraph.graph.Language;
@@ -37,8 +41,19 @@ import java.util.Map;
 import static org.junit.Assert.assertEquals;
 
 public class TestJythonComputation {
+
   @Test
-  public void testCountEdges() throws Exception {
+  public void testCountEdgesDiskBackedMessageStoreFactory() throws Exception {
+    testCountEdges(DiskBackedMessageStoreFactory.class);
+  }
+
+  @Test
+  public void testCountEdgesInMemoryMessageStoreFactory() throws Exception {
+    testCountEdges(InMemoryMessageStoreFactory.class);
+  }
+
+  public void testCountEdges(Class<? extends MessageStoreFactory>
+  messageStoreFactoryClass) throws Exception {
     String[] edges = new String[] {
         "1 2",
         "2 3",
@@ -57,6 +72,8 @@ public class TestJythonComputation {
     conf.setOutEdgesClass(ByteArrayEdges.class);
     conf.setEdgeInputFormatClass(IntNullTextEdgeInputFormat.class);
     conf.setVertexOutputFormatClass(IdWithValueTextOutputFormat.class);
+    GiraphConstants.MESSAGE_STORE_FACTORY_CLASS.set(conf,
+        messageStoreFactoryClass);
     Iterable<String> results = InternalVertexRunner.run(conf, null, edges);
 
     Map<Integer, Integer> values = parseResults(results);

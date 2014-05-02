@@ -18,6 +18,12 @@
 
 package org.apache.giraph.comm.messages;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.Collections;
+import java.util.concurrent.ConcurrentMap;
+
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
@@ -25,12 +31,6 @@ import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.util.Collections;
-import java.util.concurrent.ConcurrentMap;
 
 /**
  * Implementation of {@link SimpleMessageStore} where we have a single
@@ -140,9 +140,9 @@ public class OneMessagePerVertexStore<I extends WritableComparable,
       M extends Writable>
       implements MessageStoreFactory<I, M, MessageStore<I, M>> {
     /** Service worker */
-    private final CentralizedServiceWorker<I, ?, ?> service;
+    private CentralizedServiceWorker<I, ?, ?> service;
     /** Hadoop configuration */
-    private final ImmutableClassesGiraphConfiguration<I, ?, ?> config;
+    private ImmutableClassesGiraphConfiguration<I, ?, ?> config;
 
     /**
      * @param service Worker service
@@ -159,6 +159,18 @@ public class OneMessagePerVertexStore<I extends WritableComparable,
         MessageValueFactory<M> messageValueFactory) {
       return new OneMessagePerVertexStore<I, M>(messageValueFactory, service,
           config.<M>createMessageCombiner(), config);
+    }
+
+    @Override
+    public void initialize(CentralizedServiceWorker<I, ?, ?> service,
+        ImmutableClassesGiraphConfiguration<I, ?, ?> conf) {
+      this.service = service;
+      this.config = conf;
+    }
+
+    @Override
+    public boolean shouldTraverseMessagesInOrder() {
+      return false;
     }
   }
 }

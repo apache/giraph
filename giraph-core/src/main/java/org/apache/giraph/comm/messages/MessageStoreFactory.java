@@ -18,6 +18,8 @@
 
 package org.apache.giraph.comm.messages;
 
+import org.apache.giraph.bsp.CentralizedServiceWorker;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -42,4 +44,24 @@ public interface MessageStoreFactory<I extends WritableComparable,
    * @return New message store
    */
   MS newStore(MessageValueFactory<M> messageValueFactory);
+
+  /**
+   * Implementation class should use this method of initialization
+   * of any required internal state.
+   *
+   * @param service Service to get partition mappings
+   * @param conf Configuration
+   */
+  void initialize(CentralizedServiceWorker<I, ?, ?> service,
+      ImmutableClassesGiraphConfiguration<I, ?, ?> conf);
+
+  /**
+   * This method is more for the performance optimization. If the message
+   * traversal would be done in order then data structure which is optimized
+   * for such traversal can be used.
+   *
+   * @return true if the messages would be traversed in order
+   * else return false
+   */
+  boolean shouldTraverseMessagesInOrder();
 }

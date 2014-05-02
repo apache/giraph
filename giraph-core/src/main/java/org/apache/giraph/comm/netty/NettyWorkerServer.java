@@ -21,18 +21,15 @@ package org.apache.giraph.comm.netty;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.comm.WorkerServer;
-import org.apache.giraph.comm.messages.out_of_core.DiskBackedMessageStore;
-import org.apache.giraph.comm.messages.InMemoryMessageStoreFactory;
 import org.apache.giraph.comm.messages.MessageStore;
 import org.apache.giraph.comm.messages.MessageStoreFactory;
-import org.apache.giraph.comm.messages.out_of_core.PartitionDiskBackedMessageStore;
-import org.apache.giraph.comm.messages.out_of_core.SequentialFileMessageStore;
 import org.apache.giraph.comm.netty.handler.WorkerRequestServerHandler;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexMutations;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.partition.Partition;
+import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -46,8 +43,7 @@ import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.Map.Entry;
 
-import static org.apache.giraph.conf.GiraphConstants.MAX_MESSAGES_IN_MEMORY;
-import static org.apache.giraph.conf.GiraphConstants.USE_OUT_OF_CORE_MESSAGES;
+import static org.apache.giraph.conf.GiraphConstants.MESSAGE_STORE_FACTORY_CLASS;
 
 /**
  * Netty worker server that implement {@link WorkerServer} and contains
@@ -107,24 +103,14 @@ public class NettyWorkerServer<I extends WritableComparable,
    */
   private MessageStoreFactory<I, Writable, MessageStore<I, Writable>>
   createMessageStoreFactory() {
-    boolean useOutOfCoreMessaging = USE_OUT_OF_CORE_MESSAGES.get(conf);
-    if (!useOutOfCoreMessaging) {
-      return new InMemoryMessageStoreFactory<I, Writable>(service, conf);
-    } else {
-      int maxMessagesInMemory = MAX_MESSAGES_IN_MEMORY.get(conf);
-      if (LOG.isInfoEnabled()) {
-        LOG.info("createMessageStoreFactory: Using DiskBackedMessageStore, " +
-            "maxMessagesInMemory = " + maxMessagesInMemory);
-      }
-      MessageStoreFactory<I, Writable, SequentialFileMessageStore<I, Writable>>
-          fileStoreFactory = SequentialFileMessageStore.newFactory(conf);
-      MessageStoreFactory<I, Writable,
-          PartitionDiskBackedMessageStore<I, Writable>>
-          partitionStoreFactory =
-          PartitionDiskBackedMessageStore.newFactory(conf, fileStoreFactory);
-      return DiskBackedMessageStore.newFactory(service,
-          maxMessagesInMemory, partitionStoreFactory);
-    }
+    Class<? extends MessageStoreFactory> messageStoreFactoryClass =
+        MESSAGE_STORE_FACTORY_CLASS.get(conf);
+
+    MessageStoreFactory messageStoreFactoryInstance =
+        ReflectionUtils.newInstance(messageStoreFactoryClass);
+    messageStoreFactoryInstance.initialize(service, conf);
+
+    return messageStoreFactoryInstance;
   }
 
   @Override

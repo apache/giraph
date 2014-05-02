@@ -20,6 +20,8 @@ package org.apache.giraph.conf;
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.aggregators.TextAggregatorWriter;
 import org.apache.giraph.combiner.MessageCombiner;
+import org.apache.giraph.comm.messages.InMemoryMessageStoreFactory;
+import org.apache.giraph.comm.messages.MessageStoreFactory;
 import org.apache.giraph.edge.ByteArrayEdges;
 import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.factories.ComputationFactory;
@@ -91,6 +93,13 @@ public interface GiraphConstants {
       ClassConfOption.create("giraph.typesHolder", null,
           TypesHolder.class,
           "TypesHolder, used if Computation not set - optional");
+
+  /** Message Store Factory */
+  ClassConfOption<MessageStoreFactory> MESSAGE_STORE_FACTORY_CLASS =
+      ClassConfOption.create("giraph.messageStoreFactoryClass",
+          InMemoryMessageStoreFactory.class,
+          MessageStoreFactory.class,
+          "Message Store Factory Class that is to be used");
 
   /** Language user's graph types are implemented in */
   PerGraphTypeEnumConfOption<Language> GRAPH_TYPE_LANGUAGES =
@@ -833,10 +842,6 @@ public interface GiraphConstants {
           "Comma-separated list of directories in the local file system for " +
           "out-of-core messages.");
 
-  /** Whether or not to use out-of-core messages */
-  BooleanConfOption USE_OUT_OF_CORE_MESSAGES =
-      new BooleanConfOption("giraph.useOutOfCoreMessages", false,
-          "Whether or not to use out-of-core messages");
   /**
    * If using out-of-core messaging, it tells how much messages do we keep
    * in memory.

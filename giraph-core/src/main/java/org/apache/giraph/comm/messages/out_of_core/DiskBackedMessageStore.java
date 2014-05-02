@@ -19,6 +19,7 @@
 package org.apache.giraph.comm.messages.out_of_core;
 
 import com.google.common.collect.Maps;
+
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.messages.MessageStore;
 import org.apache.giraph.comm.messages.MessageStoreFactory;
@@ -27,7 +28,6 @@ import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.giraph.utils.EmptyIterable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -273,54 +273,13 @@ public class DiskBackedMessageStore<I extends WritableComparable,
   public static <I extends WritableComparable, V extends Writable,
       E extends Writable, M extends Writable>
   MessageStoreFactory<I, M, MessageStore<I, M>> newFactory(
-      CentralizedServiceWorker<I, V, E> service,
+    CentralizedServiceWorker<I, V, E> service,
       int maxMessagesInMemory,
       MessageStoreFactory<I, M, PartitionDiskBackedMessageStore<I, M>>
           fileStoreFactory) {
-    return new Factory<I, V, E, M>(service, maxMessagesInMemory,
+    return new DiskBackedMessageStoreFactory<I, V, E, M>(service,
+        maxMessagesInMemory,
         fileStoreFactory);
   }
-
-  /**
-   * Factory for {@link DiskBackedMessageStore}
-   *
-   * @param <I> Vertex id
-   * @param <V> Vertex data
-   * @param <E> Edge data
-   * @param <M> Message data
-   */
-  private static class Factory<I extends WritableComparable,
-      V extends Writable, E extends Writable, M extends Writable>
-      implements MessageStoreFactory<I, M, MessageStore<I, M>> {
-    /** Service worker */
-    private final CentralizedServiceWorker<I, V, E> service;
-    /** Number of messages to keep in memory */
-    private final int maxMessagesInMemory;
-    /** Factory for creating file stores when flushing */
-    private final
-    MessageStoreFactory<I, M, PartitionDiskBackedMessageStore<I, M>>
-    fileStoreFactory;
-
-    /**
-     * @param service             Service worker
-     * @param maxMessagesInMemory Number of messages to keep in memory
-     * @param fileStoreFactory    Factory for creating file stores when
-     *                            flushing
-     */
-    public Factory(CentralizedServiceWorker<I, V, E> service,
-        int maxMessagesInMemory,
-        MessageStoreFactory<I, M, PartitionDiskBackedMessageStore<I, M>>
-            fileStoreFactory) {
-      this.service = service;
-      this.maxMessagesInMemory = maxMessagesInMemory;
-      this.fileStoreFactory = fileStoreFactory;
-    }
-
-    @Override
-    public MessageStore<I, M> newStore(
-        MessageValueFactory<M> messageValueFactory) {
-      return new DiskBackedMessageStore<I, V, E, M>(messageValueFactory,
-          service, maxMessagesInMemory, fileStoreFactory);
-    }
-  }
 }
+

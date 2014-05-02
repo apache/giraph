@@ -18,9 +18,6 @@
 
 package org.apache.giraph.comm.messages.out_of_core;
 
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
@@ -34,6 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.messages.MessageStoreFactory;
 import org.apache.giraph.comm.messages.MessagesIterable;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
@@ -41,6 +39,10 @@ import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.giraph.utils.io.DataInputOutput;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 /**
  * Message storage with in-memory map of messages and with support for
@@ -263,7 +265,7 @@ public class PartitionDiskBackedMessageStore<I extends WritableComparable,
     // read destination vertices
     int numVertices = in.readInt();
     for (int v = 0; v < numVertices; v++) {
-      I vertexId = (I) config.createVertexId();
+      I vertexId = config.createVertexId();
       vertexId.readFields(in);
       destinationVertices.add(vertexId);
     }
@@ -342,6 +344,23 @@ public class PartitionDiskBackedMessageStore<I extends WritableComparable,
         MessageValueFactory<M> messageValueFactory) {
       return new PartitionDiskBackedMessageStore<I, M>(messageValueFactory,
           config, fileStoreFactory);
+    }
+
+    @Override
+    public void initialize(CentralizedServiceWorker<I, ?, ?> service,
+        ImmutableClassesGiraphConfiguration<I, ?, ?> conf) {
+      /* Implementation of this method is required if the class is to
+       * be exposed publicly and allow instantiating the class via the
+       * configuration parameter MESSAGE_STORE_FACTORY_CLASS. As this is
+       * a private class, hence the implementation of this method is skipped
+       * as the caller knows the specific required constructor parameters
+       * for instantiation.
+      */
+    }
+
+    @Override
+    public boolean shouldTraverseMessagesInOrder() {
+      return true;
     }
   }
 }

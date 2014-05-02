@@ -51,18 +51,14 @@ public class InMemoryMessageStoreFactory<I extends WritableComparable,
       Logger.getLogger(InMemoryMessageStoreFactory.class);
 
   /** Service worker */
-  private final CentralizedServiceWorker<I, ?, ?> service;
+  private CentralizedServiceWorker<I, ?, ?> service;
   /** Hadoop configuration */
-  private final ImmutableClassesGiraphConfiguration<I, ?, ?> conf;
+  private ImmutableClassesGiraphConfiguration<I, ?, ?> conf;
 
   /**
-   * @param service Worker service
-   * @param conf    Configuration
+   * Default constructor allowing class invocation via Reflection.
    */
-  public InMemoryMessageStoreFactory(CentralizedServiceWorker<I, ?, ?> service,
-      ImmutableClassesGiraphConfiguration<I, ?, ?> conf) {
-    this.service = service;
-    this.conf = conf;
+  public InMemoryMessageStoreFactory() {
   }
 
   @Override
@@ -113,6 +109,18 @@ public class InMemoryMessageStoreFactory<I extends WritableComparable,
           (conf.useMessageCombiner() ? " message combiner " +
               conf.getMessageCombinerClass() : " no combiner"));
     }
-    return (MessageStore<I, M>) messageStore;
+    return messageStore;
+  }
+
+  @Override
+  public void initialize(CentralizedServiceWorker<I, ?, ?> service,
+      ImmutableClassesGiraphConfiguration<I, ?, ?> conf) {
+    this.service = service;
+    this.conf = conf;
+  }
+
+  @Override
+  public boolean shouldTraverseMessagesInOrder() {
+    return false;
   }
 }

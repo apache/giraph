@@ -18,24 +18,24 @@
 
 package org.apache.giraph.comm.messages;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.concurrent.ConcurrentMap;
+
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.giraph.utils.ExtendedDataInput;
 import org.apache.giraph.utils.RepresentativeByteArrayIterator;
-import org.apache.giraph.utils.VertexIdIterator;
 import org.apache.giraph.utils.VerboseByteArrayMessageWrite;
+import org.apache.giraph.utils.VertexIdIterator;
 import org.apache.giraph.utils.io.DataInputOutput;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 import com.google.common.collect.Iterators;
-
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.util.concurrent.ConcurrentMap;
 
 /**
  * Implementation of {@link SimpleMessageStore} where multiple messages are
@@ -202,9 +202,9 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
   private static class Factory<I extends WritableComparable, M extends Writable>
       implements MessageStoreFactory<I, M, MessageStore<I, M>> {
     /** Service worker */
-    private final CentralizedServiceWorker<I, ?, ?> service;
+    private CentralizedServiceWorker<I, ?, ?> service;
     /** Hadoop configuration */
-    private final ImmutableClassesGiraphConfiguration<I, ?, ?> config;
+    private ImmutableClassesGiraphConfiguration<I, ?, ?> config;
 
     /**
      * @param service Worker service
@@ -221,6 +221,18 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
         MessageValueFactory<M> messageValueFactory) {
       return new ByteArrayMessagesPerVertexStore<I, M>(messageValueFactory,
           service, config);
+    }
+
+    @Override
+    public void initialize(CentralizedServiceWorker<I, ?, ?> service,
+        ImmutableClassesGiraphConfiguration<I, ?, ?> conf) {
+      this.service = service;
+      this.config = conf;
+    }
+
+    @Override
+    public boolean shouldTraverseMessagesInOrder() {
+      return false;
     }
   }
 }
