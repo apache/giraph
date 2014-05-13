@@ -155,23 +155,7 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
     SuperstepMetricsRegistry smr = GiraphMetrics.get().perSuperstep();
     localRequests = smr.getCounter(MetricNames.LOCAL_REQUESTS);
     remoteRequests = smr.getCounter(MetricNames.REMOTE_REQUESTS);
-    final Gauge<Long> totalRequests = smr.getGauge(MetricNames.TOTAL_REQUESTS,
-        new Gauge<Long>() {
-          @Override
-          public Long value() {
-            return localRequests.count() + remoteRequests.count();
-          }
-        }
-    );
-    smr.getGauge(MetricNames.PERCENT_LOCAL_REQUESTS, new PercentGauge() {
-      @Override protected double getNumerator() {
-        return localRequests.count();
-      }
-
-      @Override protected double getDenominator() {
-        return totalRequests.value();
-      }
-    });
+    setupGauges(smr, localRequests, remoteRequests);
   }
 
   @Override
@@ -486,5 +470,37 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
           workerInfo.getTaskId(), writableRequest);
       remoteRequests.inc();
     }
+  }
+
+  /**
+   * Sets up gauges for superstep metrics.
+   * This has to be static so that internal objects created here don't
+   * hold references to this$0. Otherwise we memory leaking
+   * NettyWorkerClientRequestProcessor objects.
+   *
+   * @param smr metric registry for current superstep
+   * @param localRequests counter for local requests
+   * @param remoteRequests counter for remote requests
+   */
+  private static void setupGauges(SuperstepMetricsRegistry smr,
+                                  final Counter localRequests,
+                                  final Counter remoteRequests) {
+    final Gauge<Long> totalRequests = smr.getGauge(MetricNames.TOTAL_REQUESTS,
+        new Gauge<Long>() {
+          @Override
+          public Long value() {
+            return localRequests.count() + remoteRequests.count();
+          }
+        }
+    );
+    smr.getGauge(MetricNames.PERCENT_LOCAL_REQUESTS, new PercentGauge() {
+      @Override protected double getNumerator() {
+        return localRequests.count();
+      }
+
+      @Override protected double getDenominator() {
+        return totalRequests.value();
+      }
+    });
   }
 }
