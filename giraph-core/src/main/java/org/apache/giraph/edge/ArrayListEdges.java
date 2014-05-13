@@ -19,6 +19,7 @@
 package org.apache.giraph.edge;
 
 import com.google.common.collect.Lists;
+import org.apache.giraph.utils.Trimmable;
 import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -38,7 +39,7 @@ import java.util.Iterator;
  */
 public class ArrayListEdges<I extends WritableComparable, E extends Writable>
     extends ConfigurableOutEdges<I, E>
-    implements MutableOutEdges<I, E> {
+    implements MutableOutEdges<I, E>, Trimmable {
   /** List of edges. */
   private ArrayList<Edge<I, E>> edgeList;
 
@@ -115,5 +116,10 @@ public class ArrayListEdges<I extends WritableComparable, E extends Writable>
       WritableUtils.readEdge(in, edge);
       edgeList.add(edge);
     }
+  }
+
+  @Override
+  public void trim() {
+    edgeList.trimToSize();
   }
 }

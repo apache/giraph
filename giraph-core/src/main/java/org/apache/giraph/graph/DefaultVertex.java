@@ -19,6 +19,7 @@ package org.apache.giraph.graph;
 
 import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
 import org.apache.giraph.edge.Edge;
+import org.apache.giraph.utils.Trimmable;
 import org.apache.giraph.edge.MultiRandomAccessOutEdges;
 import org.apache.giraph.edge.MutableEdge;
 import org.apache.giraph.edge.MutableEdgesIterable;
@@ -43,7 +44,7 @@ import java.util.Iterator;
 public class DefaultVertex<I extends WritableComparable,
     V extends Writable, E extends Writable>
     extends DefaultImmutableClassesGiraphConfigurable<I, V, E>
-    implements Vertex<I, V, E> {
+    implements Vertex<I, V, E>, Trimmable {
   /** Vertex id. */
   private I id;
   /** Vertex value. */
@@ -212,6 +213,13 @@ public class DefaultVertex<I extends WritableComparable,
   @Override
   public boolean isHalted() {
     return halt;
+  }
+
+  @Override
+  public void trim() {
+    if (edges instanceof Trimmable) {
+      ((Trimmable) edges).trim();
+    }
   }
 
   @Override

@@ -34,6 +34,7 @@ import org.apache.giraph.time.Time;
 import org.apache.giraph.time.Times;
 import org.apache.giraph.utils.MemoryUtils;
 import org.apache.giraph.utils.TimedLogger;
+import org.apache.giraph.utils.Trimmable;
 import org.apache.giraph.worker.WorkerContext;
 import org.apache.giraph.worker.WorkerProgress;
 import org.apache.giraph.worker.WorkerThreadAggregatorUsage;
@@ -250,6 +251,10 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
           }
           // Need to unwrap the mutated edges (possibly)
           vertex.unwrapMutableEdges();
+          //Compact edges representation if possible
+          if (vertex instanceof Trimmable) {
+            ((Trimmable) vertex).trim();
+          }
           // Write vertex to superstep output (no-op if it is not used)
           vertexWriter.writeVertex(vertex);
           // Need to save the vertex changes (possibly)

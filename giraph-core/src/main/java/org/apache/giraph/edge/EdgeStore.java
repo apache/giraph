@@ -25,6 +25,7 @@ import org.apache.giraph.partition.Partition;
 import org.apache.giraph.utils.ByteArrayVertexIdEdges;
 import org.apache.giraph.utils.CallableFactory;
 import org.apache.giraph.utils.ProgressableUtils;
+import org.apache.giraph.utils.Trimmable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.util.Progressable;
@@ -198,6 +199,9 @@ public class EdgeStore<I extends WritableComparable,
                     vertex = configuration.createVertex();
                     vertex.initialize(vertexId,
                         configuration.createVertexValue(), outEdges);
+                    if (vertex instanceof Trimmable) {
+                      ((Trimmable) vertex).trim();
+                    }
                     partition.putVertex(vertex);
                   }
                 } else {
@@ -209,6 +213,9 @@ public class EdgeStore<I extends WritableComparable,
                     for (Edge<I, E> edge : outEdges) {
                       vertex.addEdge(edge);
                     }
+                  }
+                  if (vertex instanceof Trimmable) {
+                    ((Trimmable) vertex).trim();
                   }
                   // Some Partition implementations (e.g. ByteArrayPartition)
                   // require us to put back the vertex after modifying it.

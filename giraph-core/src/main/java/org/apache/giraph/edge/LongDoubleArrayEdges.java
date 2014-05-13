@@ -25,6 +25,7 @@ import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongIterator;
 
 import org.apache.giraph.utils.EdgeIterables;
+import org.apache.giraph.utils.Trimmable;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 
@@ -42,7 +43,7 @@ import java.util.Iterator;
  */
 public class LongDoubleArrayEdges
     implements ReuseObjectsOutEdges<LongWritable, DoubleWritable>,
-    MutableOutEdges<LongWritable, DoubleWritable> {
+    MutableOutEdges<LongWritable, DoubleWritable>, Trimmable {
   /** Array of target vertex ids. */
   private LongArrayList neighbors;
   /** Array of edge values. */
@@ -75,7 +76,7 @@ public class LongDoubleArrayEdges
    * If the backing arrays are more than four times as big as the number of
    * elements, halve their size.
    */
-  private void trim() {
+  private void trimBack() {
     if (neighbors.elements().length > 4 * neighbors.size()) {
       neighbors.trim(neighbors.elements().length / 2);
       edgeValues.trim(neighbors.elements().length / 2);
@@ -99,7 +100,7 @@ public class LongDoubleArrayEdges
       edgeValues.set(i, edgeValues.popDouble());
     }
     // If needed after the removal, trim the arrays.
-    trim();
+    trimBack();
   }
 
   @Override
@@ -227,5 +228,11 @@ public class LongDoubleArrayEdges
       neighbors.add(in.readLong());
       edgeValues.add(in.readDouble());
     }
+  }
+
+  @Override
+  public void trim() {
+    neighbors.trim();
+    edgeValues.trim();
   }
 }

@@ -24,6 +24,7 @@ import it.unimi.dsi.fastutil.longs.Long2DoubleOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
 
 import org.apache.giraph.utils.EdgeIterables;
+import org.apache.giraph.utils.Trimmable;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
 
@@ -43,7 +44,7 @@ import java.util.Iterator;
 public class LongDoubleHashMapEdges
     implements StrictRandomAccessOutEdges<LongWritable, DoubleWritable>,
     ReuseObjectsOutEdges<LongWritable, DoubleWritable>,
-    MutableOutEdges<LongWritable, DoubleWritable> {
+    MutableOutEdges<LongWritable, DoubleWritable>, Trimmable {
   /** Hash map from target vertex id to edge value. */
   private Long2DoubleOpenHashMap edgeMap;
   /** Representative edge value object, used by getEdgeValue(). */
@@ -123,6 +124,11 @@ public class LongDoubleHashMapEdges
         return representativeEdge;
       }
     };
+  }
+
+  @Override
+  public void trim() {
+    edgeMap.trim();
   }
 
   /** Helper class for a mutable edge that modifies the backing map entry. */

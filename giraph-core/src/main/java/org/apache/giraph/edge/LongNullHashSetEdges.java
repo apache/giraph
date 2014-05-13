@@ -22,6 +22,7 @@ import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 
 import org.apache.giraph.utils.EdgeIterables;
+import org.apache.giraph.utils.Trimmable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
 
@@ -41,7 +42,8 @@ import java.util.Iterator;
 public class LongNullHashSetEdges
     implements ReuseObjectsOutEdges<LongWritable, NullWritable>,
     MutableOutEdges<LongWritable, NullWritable>,
-    StrictRandomAccessOutEdges<LongWritable, NullWritable> {
+    StrictRandomAccessOutEdges<LongWritable, NullWritable>,
+    Trimmable {
   /** Hash set of target vertex ids. */
   private LongOpenHashSet neighbors;
 
@@ -142,5 +144,10 @@ public class LongNullHashSetEdges
     // No operation.
     // Only set value for an existing edge.
     // If the edge exist, the Null value is already there.
+  }
+
+  @Override
+  public void trim() {
+    neighbors.trim();
   }
 }

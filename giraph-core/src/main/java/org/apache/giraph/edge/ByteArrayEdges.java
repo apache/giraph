@@ -22,6 +22,7 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.UnmodifiableIterator;
 import org.apache.giraph.utils.ExtendedDataInput;
 import org.apache.giraph.utils.ExtendedDataOutput;
+import org.apache.giraph.utils.Trimmable;
 import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -29,6 +30,7 @@ import org.apache.hadoop.io.WritableComparable;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -44,7 +46,7 @@ import java.util.List;
  */
 public class ByteArrayEdges<I extends WritableComparable, E extends Writable>
     extends ConfigurableOutEdges<I, E>
-    implements ReuseObjectsOutEdges<I, E> {
+    implements ReuseObjectsOutEdges<I, E>, Trimmable {
   /** Serialized edges. */
   private byte[] serializedEdges;
   /** Number of bytes used in serializedEdges. */
@@ -131,6 +133,15 @@ public class ByteArrayEdges<I extends WritableComparable, E extends Writable>
   @Override
   public int size() {
     return edgeCount;
+  }
+
+  @Override
+  public void trim() {
+    if (serializedEdges != null &&
+        serializedEdges.length > serializedEdgesBytesUsed) {
+      serializedEdges =
+          Arrays.copyOf(serializedEdges, serializedEdgesBytesUsed);
+    }
   }
 
   /**

@@ -22,6 +22,7 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.UnmodifiableIterator;
 
 import org.apache.giraph.utils.EdgeIterables;
+import org.apache.giraph.utils.Trimmable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -42,7 +43,7 @@ import java.util.Map;
  */
 public class HashMultimapEdges<I extends WritableComparable, E extends Writable>
     extends ConfigurableOutEdges<I, E>
-    implements MultiRandomAccessOutEdges<I, E> {
+    implements MultiRandomAccessOutEdges<I, E>, Trimmable {
   /** Multimap from target vertex id to edge values. */
   private ArrayListMultimap<I, E> edgeMultimap;
 
@@ -147,5 +148,10 @@ public class HashMultimapEdges<I extends WritableComparable, E extends Writable>
       edgeValue.readFields(in);
       edgeMultimap.put(targetVertexId, edgeValue);
     }
+  }
+
+  @Override
+  public void trim() {
+    edgeMultimap.trimToSize();
   }
 }

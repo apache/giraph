@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-895 : Trim the edges in Giraph (edunov via pavanka)
+
   GIRAPH-889: Update Yourkit Profiler (yhdong via pavanka)
 
   GIRAPH-891: Make MessageStoreFactory configurable (rohankarwa via majakabiljo)

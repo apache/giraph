@@ -19,6 +19,7 @@
 package org.apache.giraph.edge;
 
 import org.apache.giraph.utils.EdgeIterables;
+import org.apache.giraph.utils.Trimmable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 
@@ -40,7 +41,7 @@ import java.util.Iterator;
  * but edge removals are expensive.
  */
 public class IntNullArrayEdges
-    implements ReuseObjectsOutEdges<IntWritable, NullWritable> {
+    implements ReuseObjectsOutEdges<IntWritable, NullWritable>, Trimmable {
   /** Array of target vertex ids */
   private IntArrayList neighbors;
 
@@ -135,5 +136,10 @@ public class IntNullArrayEdges
     for (int i = 0; i < numEdges; ++i) {
       neighbors.add(in.readInt());
     }
+  }
+
+  @Override
+  public void trim() {
+    neighbors.trim();
   }
 }

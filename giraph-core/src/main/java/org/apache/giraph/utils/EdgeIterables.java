@@ -151,5 +151,8 @@ public class EdgeIterables {
     for (Edge<I, E> edge : edgesIterable) {
       edges.add(edge);
     }
+    if (edges instanceof Trimmable) {
+      ((Trimmable) edges).trim();
+    }
   }
 }
