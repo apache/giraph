@@ -34,6 +34,8 @@ public class JMap {
   public static final String CMD = "jmap ";
   /** Arguments to pass in to command */
   public static final String ARGS = " -histo ";
+  /** This option will print out onlu live objects */
+  private static String LIVE_HISTO_OPTION = " -histo:live ";
 
   /** Do not construct */
   protected JMap() { }
@@ -55,6 +57,17 @@ public class JMap {
    * Run jmap, print numLines of output from it to stderr.
    *
    * @param numLines Number of lines to print
+   * @param liveObjectsOnly Should we only print non GC-able objects?
+   */
+  public static void heapHistogramDump(int numLines,
+                                       boolean liveObjectsOnly) {
+    heapHistogramDump(numLines, liveObjectsOnly, System.err);
+  }
+
+  /**
+   * Run jmap, print numLines of output from it to stderr.
+   *
+   * @param numLines Number of lines to print
    */
   public static void heapHistogramDump(int numLines) {
     heapHistogramDump(numLines, System.err);
@@ -67,11 +80,27 @@ public class JMap {
    * @param printStream Stream to print to
    */
   public static void heapHistogramDump(int numLines, PrintStream printStream) {
+    heapHistogramDump(numLines, false, printStream);
+  }
+
+  /**
+   * Run jmap, print numLines of output from it to stream passed in.
+   *
+   * @param numLines Number of lines to print
+   * @param liveObjectsOnly Should we only print non GC-able objects?
+   * @param printStream Stream to print to
+   */
+  private static void heapHistogramDump(int numLines,
+                                        boolean liveObjectsOnly,
+                                        PrintStream printStream) {
     try {
-      Process p = Runtime.getRuntime().exec(CMD + ARGS + getProcessId());
+      String args = liveObjectsOnly ? LIVE_HISTO_OPTION : ARGS;
+      Process p = Runtime.getRuntime().exec(CMD + args + getProcessId());
       BufferedReader in = new BufferedReader(
           new InputStreamReader(p.getInputStream(), Charset.defaultCharset()));
-      printStream.println("JMap histo dump at " + new Date());
+      printStream.println("JMap " +
+          (liveObjectsOnly ? "histo:live" : "histo") +
+          " dump at " + new Date());
       String line = in.readLine();
       for (int i = 0; i < numLines && line != null; ++i) {
         printStream.println("--\t" + line);

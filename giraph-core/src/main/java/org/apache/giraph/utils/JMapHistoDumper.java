@@ -36,6 +36,8 @@ public class JMapHistoDumper implements MasterObserver, WorkerObserver {
   private int sleepMillis;
   /** How many lines of output to print */
   private int linesToPrint;
+  /** Should only print live objects */
+  private boolean liveObjectsOnly;
 
   /** The jmap printing thread */
   private Thread thread;
@@ -75,7 +77,7 @@ public class JMapHistoDumper implements MasterObserver, WorkerObserver {
       @Override
       public void run() {
         while (!stop) {
-          JMap.heapHistogramDump(linesToPrint);
+          JMap.heapHistogramDump(linesToPrint, liveObjectsOnly);
           try {
             Thread.sleep(sleepMillis);
           } catch (InterruptedException e) {
@@ -100,6 +102,7 @@ public class JMapHistoDumper implements MasterObserver, WorkerObserver {
   public void setConf(ImmutableClassesGiraphConfiguration configuration) {
     sleepMillis = GiraphConstants.JMAP_SLEEP_MILLIS.get(configuration);
     linesToPrint = GiraphConstants.JMAP_PRINT_LINES.get(configuration);
+    liveObjectsOnly = GiraphConstants.JMAP_LIVE_ONLY.get(configuration);
   }
 
   @Override

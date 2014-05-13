@@ -1,7 +1,9 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
-  GIRAPH-895 : Trim the edges in Giraph (edunov via pavanka)
+  GIRAPH-897: Add an option to dump only live objects to JMap (edunov via pavanka)  
+
+  GIRAPH-895: Trim the edges in Giraph (edunov via pavanka)
 
   GIRAPH-889: Update Yourkit Profiler (yhdong via pavanka)
 

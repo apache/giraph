@@ -393,6 +393,15 @@ public interface GiraphConstants {
           "Configuration key for how many lines to print");
 
   /**
+   * Configuration key for printing live objects only
+   * This option will trigger Full GC for every jmap dump
+   * and so can significantly hinder performance.
+   */
+  BooleanConfOption JMAP_LIVE_ONLY =
+      new BooleanConfOption("giraph.jmap.histo.live", false,
+          "Only print live objects in jmap?");
+
+  /**
    * Minimum percent of the maximum number of workers that have responded
    * in order to continue progressing. (float)
    */
