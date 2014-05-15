@@ -1008,7 +1008,6 @@ under the License.
     <profile>
       <id>hadoop_facebook</id>
       <modules>
-        <module>giraph-accumulo</module>
         <module>giraph-hcatalog</module>
         <module>giraph-hive</module>
       </modules>
