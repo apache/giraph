@@ -23,6 +23,8 @@ import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.comm.messages.InMemoryMessageStoreFactory;
 import org.apache.giraph.comm.messages.MessageStoreFactory;
 import org.apache.giraph.edge.ByteArrayEdges;
+import org.apache.giraph.edge.EdgeStoreFactory;
+import org.apache.giraph.edge.InMemoryEdgeStoreFactory;
 import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.factories.ComputationFactory;
 import org.apache.giraph.factories.DefaultComputationFactory;
@@ -93,6 +95,13 @@ public interface GiraphConstants {
       ClassConfOption.create("giraph.typesHolder", null,
           TypesHolder.class,
           "TypesHolder, used if Computation not set - optional");
+
+  /** Edge Store Factory */
+  ClassConfOption<EdgeStoreFactory> EDGE_STORE_FACTORY_CLASS =
+      ClassConfOption.create("giraph.edgeStoreFactoryClass",
+          InMemoryEdgeStoreFactory.class,
+          EdgeStoreFactory.class,
+          "Edge Store Factory class to use for creating edgeStore");
 
   /** Message Store Factory */
   ClassConfOption<MessageStoreFactory> MESSAGE_STORE_FACTORY_CLASS =

@@ -22,6 +22,7 @@ import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.EdgeFactory;
+import org.apache.giraph.edge.EdgeStoreFactory;
 import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.edge.ReusableEdge;
 import org.apache.giraph.factories.ComputationFactory;
@@ -765,6 +766,17 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
     } else {
       return EdgeFactory.createReusable(createVertexId(), createEdgeValue());
     }
+  }
+
+  /**
+   * Create edge store factory
+   *
+   * @return edge store factory
+   */
+  public EdgeStoreFactory<I, V, E> createEdgeStoreFactory() {
+    Class<? extends EdgeStoreFactory> edgeStoreFactoryClass =
+        EDGE_STORE_FACTORY_CLASS.get(this);
+    return ReflectionUtils.newInstance(edgeStoreFactoryClass);
   }
 
   /**

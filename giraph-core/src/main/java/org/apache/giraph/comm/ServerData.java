@@ -26,6 +26,7 @@ import org.apache.giraph.comm.messages.MessageStoreFactory;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.EdgeStore;
+import org.apache.giraph.edge.EdgeStoreFactory;
 import org.apache.giraph.graph.VertexMutations;
 import org.apache.giraph.partition.DiskBackedPartitionStore;
 import org.apache.giraph.partition.PartitionStore;
@@ -108,7 +109,9 @@ public class ServerData<I extends WritableComparable,
       partitionStore =
           new SimplePartitionStore<I, V, E>(conf, context);
     }
-    edgeStore = new EdgeStore<I, V, E>(service, conf, context);
+    EdgeStoreFactory<I, V, E> edgeStoreFactory = conf.createEdgeStoreFactory();
+    edgeStoreFactory.initialize(service, conf, context);
+    edgeStore = edgeStoreFactory.newStore();
     ownerAggregatorData = new OwnerAggregatorServerData(context, conf);
     allAggregatorData = new AllAggregatorServerData(context, conf);
   }

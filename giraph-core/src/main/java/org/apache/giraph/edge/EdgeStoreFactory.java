@@ -18,31 +18,37 @@
 
 package org.apache.giraph.edge;
 
-import org.apache.giraph.utils.ByteArrayVertexIdEdges;
+import org.apache.giraph.bsp.CentralizedServiceWorker;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.util.Progressable;
 
 /**
- * Collects incoming edges for vertices owned by this worker.
- *
- * @param <I> Vertex id
- * @param <V> Vertex value
- * @param <E> Edge value
+ * Factory to create a new Edge Store
+ * @param <I> vertex id
+ * @param <V> vertex value
+ * @param <E> edge value
  */
-public interface EdgeStore<I extends WritableComparable,
-   V extends Writable, E extends Writable> {
-  /**
-   * Add edges belonging to a given partition on this worker.
-   * Note: This method is thread-safe.
-   *
-   * @param partitionId Partition id for the incoming edges.
-   * @param edges Incoming edges
-   */
-  void addPartitionEdges(int partitionId, ByteArrayVertexIdEdges<I, E> edges);
+public interface EdgeStoreFactory<I extends WritableComparable,
+  V extends Writable, E extends Writable> {
 
   /**
-   * Move all edges from temporary storage to their source vertices.
-   * Note: this method is not thread-safe.
+   * Creates new edge store.
+   *
+   * @return edge store
    */
-  void moveEdgesToVertices();
+  EdgeStore<I, V, E> newStore();
+
+  /**
+   * Implementation class should use this method of initialization
+   * of any required internal state.
+   *
+   * @param service Service to get partition mappings
+   * @param conf Configuration
+   * @param progressable Progressable
+   */
+  void initialize(CentralizedServiceWorker<I, V, E> service,
+    ImmutableClassesGiraphConfiguration<I, V, E> conf,
+    Progressable progressable);
 }
