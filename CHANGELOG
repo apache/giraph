@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-899: Remove hcatalog from hadoop_facebook profile
+
   GIRAPH-873: Specialized edge stores 
  
   GIRAPH-898: Remove giraph-accumulo from Facebook profile (edunov via majakabiljo)
