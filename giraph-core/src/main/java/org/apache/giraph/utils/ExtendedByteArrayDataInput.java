@@ -26,7 +26,7 @@ import java.io.IOException;
  * Provides access to a internals of ByteArrayInputStream
  */
 public class ExtendedByteArrayDataInput extends ByteArrayInputStream
-    implements ExtendedDataInput {
+  implements ExtendedDataInput {
   /** Internal data input */
   private final DataInput dataInput;
   /**

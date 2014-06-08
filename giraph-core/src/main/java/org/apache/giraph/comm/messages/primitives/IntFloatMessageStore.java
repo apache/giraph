@@ -22,9 +22,10 @@ import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.comm.messages.MessageStore;
 import org.apache.giraph.partition.Partition;
-
 import org.apache.giraph.partition.PartitionStore;
-import org.apache.giraph.utils.ByteArrayVertexIdMessages;
+
+import org.apache.giraph.utils.VertexIdMessageIterator;
+import org.apache.giraph.utils.VertexIdMessages;
 import org.apache.giraph.utils.EmptyIterable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
@@ -97,7 +98,7 @@ public class IntFloatMessageStore
 
   @Override
   public void addPartitionMessages(int partitionId,
-      ByteArrayVertexIdMessages<IntWritable, FloatWritable> messages) throws
+      VertexIdMessages<IntWritable, FloatWritable> messages) throws
       IOException {
     IntWritable reusableVertexId = new IntWritable();
     FloatWritable reusableMessage = new FloatWritable();
@@ -105,8 +106,7 @@ public class IntFloatMessageStore
 
     Int2FloatOpenHashMap partitionMap = map.get(partitionId);
     synchronized (partitionMap) {
-      ByteArrayVertexIdMessages<IntWritable,
-          FloatWritable>.VertexIdMessageIterator
+      VertexIdMessageIterator<IntWritable, FloatWritable>
           iterator = messages.getVertexIdMessageIterator();
       while (iterator.hasNext()) {
         iterator.next();

@@ -18,55 +18,35 @@
 package org.apache.giraph.utils;
 
 import java.io.IOException;
-import java.util.Iterator;
 import org.apache.hadoop.io.Writable;
 
 /**
- * This iterator is designed to deserialize a byte array on the fly to
- * provide new copies of writable objects when desired.  It does not reuse
- * objects, and instead creates a new one for every next().
+ * The objects provided by this iterator have lifetimes only until next() is
+ * called.  In that sense, the object provided is only a representative object.
  *
  * @param <T> Type that extends Writable that will be iterated
  */
-public abstract class ByteArrayIterator<T extends Writable> implements
-    Iterator<T> {
-  /** Data input */
-  protected final ExtendedDataInput extendedDataInput;
+public abstract class RepresentativeByteStructIterator<T extends
+    Writable> extends ByteStructIterator<T> {
+  /** Representative writable */
+  private final T representativeWritable = createWritable();
 
   /**
    * Wrap ExtendedDataInput in ByteArrayIterator
    *
    * @param extendedDataInput ExtendedDataInput
    */
-  public ByteArrayIterator(ExtendedDataInput extendedDataInput) {
-    this.extendedDataInput = extendedDataInput;
-  }
-
-  @Override
-  public boolean hasNext() {
-    return extendedDataInput.available() > 0;
+  public RepresentativeByteStructIterator(ExtendedDataInput extendedDataInput) {
+    super(extendedDataInput);
   }
 
   @Override
   public T next() {
-    T writable = createWritable();
     try {
-      writable.readFields(extendedDataInput);
+      representativeWritable.readFields(extendedDataInput);
     } catch (IOException e) {
       throw new IllegalStateException("next: readFields got IOException", e);
     }
-    return writable;
+    return representativeWritable;
   }
-
-  @Override
-  public void remove() {
-    throw new IllegalAccessError("remove: Not supported");
-  }
-
-  /**
-   * Must be able to create the writable object
-   *
-   * @return New writable
-   */
-  protected abstract T createWritable();
 }

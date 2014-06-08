@@ -30,10 +30,7 @@ import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.partition.BasicPartitionOwner;
 import org.apache.giraph.partition.PartitionOwner;
-import org.apache.giraph.partition.PartitionStore;
 import org.apache.giraph.partition.SimplePartition;
-import org.apache.giraph.partition.SimplePartitionStore;
-import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Writable;
@@ -196,7 +193,7 @@ public class MockUtils {
     ServerData<IntWritable, IntWritable, IntWritable> serverData =
       new ServerData<IntWritable, IntWritable, IntWritable>(
       serviceWorker, conf, ByteArrayMessagesPerVertexStore.newFactory(
-        serviceWorker, conf), context);
+          serviceWorker, conf), context);
     // Here we add a partition to simulate the case that there is one partition.
     serverData.getPartitionStore().addPartition(new SimplePartition());
     return serverData;

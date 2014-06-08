@@ -33,7 +33,8 @@ import java.io.IOException;
  */
 @SuppressWarnings("unchecked")
 public class ByteArrayVertexIdEdges<I extends WritableComparable,
-    E extends Writable> extends ByteArrayVertexIdData<I, Edge<I, E>> {
+    E extends Writable> extends ByteArrayVertexIdData<I, Edge<I,
+    E>> implements VertexIdEdges<I, E> {
   /**
    * Cast the {@link ImmutableClassesGiraphConfiguration} so it can be used
    * to generate edge objects.
@@ -62,37 +63,9 @@ public class ByteArrayVertexIdEdges<I extends WritableComparable,
     WritableUtils.readEdge(in, edge);
   }
 
-  /**
-   * Get an iterator over the pairs.
-   *
-   * @return Iterator
-   */
-  public VertexIdEdgeIterator getVertexIdEdgeIterator() {
-    return new VertexIdEdgeIterator();
-  }
-
-  /**
-   * Special iterator that reuses vertex ids and edge objects so that the
-   * lifetime of the object is only until next() is called.
-   */
-  public class VertexIdEdgeIterator extends VertexIdDataIterator {
-    /**
-     * Get the current edge.
-     *
-     * @return Current edge
-     */
-    public Edge<I, E> getCurrentEdge() {
-      return getCurrentData();
-    }
-
-    /**
-     * Release the current edge.
-     *
-     * @return Released edge
-     */
-    public Edge<I, E> releaseCurrentEdge() {
-      return releaseCurrentData();
-    }
+  @Override
+  public ByteStructVertexIdEdgeIterator<I, E> getVertexIdEdgeIterator() {
+    return new ByteStructVertexIdEdgeIterator<>(this);
   }
 }
 

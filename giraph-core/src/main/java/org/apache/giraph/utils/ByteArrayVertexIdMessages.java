@@ -15,6 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package org.apache.giraph.utils;
 
 import org.apache.giraph.factories.MessageValueFactory;
@@ -33,7 +34,8 @@ import java.io.IOException;
  */
 @SuppressWarnings("unchecked")
 public class ByteArrayVertexIdMessages<I extends WritableComparable,
-    M extends Writable> extends ByteArrayVertexIdData<I, M> {
+  M extends Writable> extends ByteArrayVertexIdData<I, M>
+  implements VertexIdMessages<I, M> {
   /** Message value class */
   private MessageValueFactory<M> messageValueFactory;
   /** Add the message size to the stream? (Depends on the message store) */
@@ -52,7 +54,7 @@ public class ByteArrayVertexIdMessages<I extends WritableComparable,
   /**
    * Set whether message sizes should be encoded.  This should only be a
    * possibility when not combining.  When combining, all messages need to be
-   * deserializd right away, so this won't help.
+   * de-serialized right away, so this won't help.
    */
   private void setUseMessageSizeEncoding() {
     if (!getConf().useMessageCombiner()) {
@@ -89,45 +91,31 @@ public class ByteArrayVertexIdMessages<I extends WritableComparable,
     setUseMessageSizeEncoding();
   }
 
-  /**
-   * Get specialized iterator that will instiantiate the vertex id and
-   * message of this object.
-   *
-   * @return Special iterator that reuses vertex ids and messages unless
-   *         specified
-   */
-  public VertexIdMessageIterator getVertexIdMessageIterator() {
-    return new VertexIdMessageIterator();
+  @Override
+  public ByteStructVertexIdMessageIterator<I, M> getVertexIdMessageIterator() {
+    return new ByteStructVertexIdMessageIterator<>(this);
   }
 
-  /**
-   * Special iterator that reuses vertex ids and message objects so that the
-   * lifetime of the object is only until next() is called.
-   */
-  public class VertexIdMessageIterator extends VertexIdDataIterator {
-    /**
-     * Get the current message.
-     *
-     * @return Current message
-     */
-    public M getCurrentMessage() {
-      return getCurrentData();
-    }
-  }
-
-  /**
-   * Get specialized iterator that will instiantiate the vertex id and
-   * message of this object.  It will only produce message bytes, not actual
-   * messages and expects a different encoding.
-   *
-   * @return Special iterator that reuses vertex ids (unless released) and
-   *         copies message bytes
-   */
-  public VertexIdMessageBytesIterator getVertexIdMessageBytesIterator() {
+  @Override
+  public ByteStructVertexIdMessageBytesIterator<I, M>
+  getVertexIdMessageBytesIterator() {
     if (!useMessageSizeEncoding) {
       return null;
     }
-    return new VertexIdMessageBytesIterator();
+    return new ByteStructVertexIdMessageBytesIterator<I, M>(this) {
+      @Override
+      public void writeCurrentMessageBytes(DataOutput dataOutput) {
+        try {
+          dataOutput.write(extendedDataOutput.getByteArray(),
+            messageOffset, messageBytes);
+        } catch (NegativeArraySizeException e) {
+          VerboseByteStructMessageWrite.handleNegativeArraySize(vertexId);
+        } catch (IOException e) {
+          throw new IllegalStateException("writeCurrentMessageBytes: Got " +
+              "IOException", e);
+        }
+      }
+    };
   }
 
   @Override
@@ -140,67 +128,5 @@ public class ByteArrayVertexIdMessages<I extends WritableComparable,
   public void readFields(DataInput dataInput) throws IOException {
     useMessageSizeEncoding = dataInput.readBoolean();
     super.readFields(dataInput);
-  }
-
-  /**
-   * Special iterator that reuses vertex ids and messages bytes so that the
-   * lifetime of the object is only until next() is called.
-   *
-   * Vertex id ownership can be released if desired through
-   * releaseCurrentVertexId().  This optimization allows us to cut down
-   * on the number of objects instantiated and garbage collected.  Messages
-   * can only be copied to an ExtendedDataOutput object
-   *
-   * Not thread-safe.
-   */
-  public class VertexIdMessageBytesIterator extends VertexIdDataIterator {
-    /** Last message offset */
-    private int messageOffset = -1;
-    /** Number of bytes in the last message */
-    private int messageBytes = -1;
-
-    /**
-     * Moves to the next element in the iteration.
-     */
-    @Override
-    public void next() {
-      if (vertexId == null) {
-        vertexId = getConf().createVertexId();
-      }
-
-      try {
-        vertexId.readFields(extendedDataInput);
-        messageBytes = extendedDataInput.readInt();
-        messageOffset = extendedDataInput.getPos();
-        if (extendedDataInput.skipBytes(messageBytes) != messageBytes) {
-          throw new IllegalStateException("next: Failed to skip " +
-              messageBytes);
-        }
-      } catch (IOException e) {
-        throw new IllegalStateException("next: IOException", e);
-      }
-    }
-
-    /**
-     * Write the current message to an ExtendedDataOutput object
-     *
-     * @param dataOutput Where the current message will be written to
-     */
-    public void writeCurrentMessageBytes(DataOutput dataOutput) {
-      try {
-        dataOutput.write(getByteArray(), messageOffset, messageBytes);
-      } catch (NegativeArraySizeException e) {
-        throw new RuntimeException("The numbers of bytes sent to vertex " +
-            vertexId + " exceeded the max capacity of " +
-            "its ExtendedDataOutput. Please consider setting " +
-            "giraph.useBigDataIOForMessages=true. If there are super-vertices" +
-            " in the graph which receive a lot of messages (total serialized " +
-            "size of messages goes beyond the maximum size of a byte array), " +
-            "setting this option to true will remove that limit");
-      } catch (IOException e) {
-        throw new IllegalStateException("writeCurrentMessageBytes: Got " +
-            "IOException", e);
-      }
-    }
   }
 }

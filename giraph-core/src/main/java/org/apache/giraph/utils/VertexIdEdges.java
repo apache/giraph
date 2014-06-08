@@ -16,33 +16,25 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.edge;
+package org.apache.giraph.utils;
 
-import org.apache.giraph.utils.VertexIdEdges;
+import org.apache.giraph.edge.Edge;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
- * Collects incoming edges for vertices owned by this worker.
+ * Stores vertex id and out-edges of a vertex
  *
- * @param <I> Vertex id
- * @param <V> Vertex value
- * @param <E> Edge value
+ * @param <I> vertexId type parameter
+ * @param <E> edge type parameter
  */
-public interface EdgeStore<I extends WritableComparable,
-   V extends Writable, E extends Writable> {
+public interface VertexIdEdges<I extends WritableComparable,
+    E extends Writable> extends VertexIdData<I, Edge<I, E>> {
   /**
-   * Add edges belonging to a given partition on this worker.
-   * Note: This method is thread-safe.
+   * Get an iterator over the pairs.
    *
-   * @param partitionId Partition id for the incoming edges.
-   * @param edges Incoming edges
+   * @return Iterator
    */
-  void addPartitionEdges(int partitionId, VertexIdEdges<I, E> edges);
-
-  /**
-   * Move all edges from temporary storage to their source vertices.
-   * Note: this method is not thread-safe.
-   */
-  void moveEdgesToVertices();
+  VertexIdEdgeIterator<I, E> getVertexIdEdgeIterator();
 }
+

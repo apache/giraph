@@ -19,27 +19,29 @@
 package org.apache.giraph.utils;
 
 /**
- * UnsafeByteArrayInputStream
+ * Utilities class for byte operations and constants
  */
-public class UnsafeByteArrayInputStream extends UnsafeArrayReads {
+public class ByteUtils {
+  /** Bytes used in a boolean */
+  public static final int SIZE_OF_BOOLEAN = 1;
+  /** Bytes used in a byte */
+  public static final int SIZE_OF_BYTE = 1;
+  /** Bytes used in a char */
+  public static final int SIZE_OF_CHAR = Character.SIZE / Byte.SIZE;
+  /** Bytes used in a short */
+  public static final int SIZE_OF_SHORT = Short.SIZE / Byte.SIZE;
+  /** Bytes used in an int */
+  public static final int SIZE_OF_INT = Integer.SIZE / Byte.SIZE;
+  /** Bytes used in a long */
+  public static final int SIZE_OF_LONG = Long.SIZE / Byte.SIZE;
+  /** Bytes used in a float */
+  public static final int SIZE_OF_FLOAT = Float.SIZE / Byte.SIZE;
+  /** Bytes used in a double */
+  public static final int SIZE_OF_DOUBLE = Double.SIZE / Byte.SIZE;
 
   /**
-   * Constructor
-   *
-   * @param buf Buffer to read from
+   * Private Constructor
    */
-  public UnsafeByteArrayInputStream(byte[] buf) {
-    super(buf);
-  }
-
-  /**
-   * Constructor.
-   *
-   * @param buf Buffer to read from
-   * @param offset Offsetin the buffer to start reading from
-   * @param length Max length of the buffer to read
-   */
-  public UnsafeByteArrayInputStream(byte[] buf, int offset, int length) {
-    super(buf, offset, length);
+  private ByteUtils() {
   }
 }

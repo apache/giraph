@@ -80,13 +80,13 @@ public abstract class RequestServerHandler<R> extends
       LOG.trace("messageReceived: Got " + msg.getClass());
     }
 
-    WritableRequest writableRequest = (WritableRequest) msg;
+    WritableRequest request = (WritableRequest) msg;
 
     // Simulate a closed connection on the first request (if desired)
     if (closeFirstRequest && !ALREADY_CLOSED_FIRST_REQUEST) {
       LOG.info("messageReceived: Simulating closing channel on first " +
-          "request " + writableRequest.getRequestId() + " from " +
-          writableRequest.getClientId());
+          "request " + request.getRequestId() + " from " +
+          request.getClientId());
       setAlreadyClosedFirstRequest();
       ctx.close();
       return;
@@ -95,24 +95,24 @@ public abstract class RequestServerHandler<R> extends
     // Only execute this request exactly once
     int alreadyDone = 1;
     if (workerRequestReservedMap.reserveRequest(
-        writableRequest.getClientId(),
-        writableRequest.getRequestId())) {
+        request.getClientId(),
+        request.getRequestId())) {
       if (LOG.isDebugEnabled()) {
         startProcessingNanoseconds = TIME.getNanoseconds();
       }
-      processRequest((R) writableRequest);
+      processRequest((R) request);
       if (LOG.isDebugEnabled()) {
         LOG.debug("messageReceived: Processing client " +
-            writableRequest.getClientId() + ", " +
-            "requestId " + writableRequest.getRequestId() +
-            ", " +  writableRequest.getType() + " took " +
+            request.getClientId() + ", " +
+            "requestId " + request.getRequestId() +
+            ", " +  request.getType() + " took " +
             Times.getNanosSince(TIME, startProcessingNanoseconds) + " ns");
       }
       alreadyDone = 0;
     } else {
       LOG.info("messageReceived: Request id " +
-          writableRequest.getRequestId() + " from client " +
-          writableRequest.getClientId() +
+          request.getRequestId() + " from client " +
+          request.getClientId() +
           " was already processed, " +
           "not processing again.");
     }
@@ -120,9 +120,10 @@ public abstract class RequestServerHandler<R> extends
     // Send the response with the request id
     ByteBuf buffer = ctx.alloc().buffer(RESPONSE_BYTES);
     buffer.writeInt(myTaskInfo.getTaskId());
-    buffer.writeLong(writableRequest.getRequestId());
+    buffer.writeLong(request.getRequestId());
     buffer.writeByte(alreadyDone);
-    ctx.writeAndFlush(buffer);
+
+    ctx.write(buffer);
   }
 
   /**

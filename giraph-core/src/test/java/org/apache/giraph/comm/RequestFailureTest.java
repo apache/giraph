@@ -27,6 +27,7 @@ import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.factories.TestMessageValueFactory;
+import org.apache.giraph.utils.VertexIdMessages;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.giraph.utils.IntNoOpComputation;
 import org.apache.giraph.utils.MockUtils;
@@ -48,6 +49,7 @@ import static org.mockito.Mockito.when;
 /**
  * Test all the netty failure scenarios
  */
+@SuppressWarnings("unchecked")
 public class RequestFailureTest {
   /** Configuration */
   private ImmutableClassesGiraphConfiguration conf;
@@ -75,10 +77,10 @@ public class RequestFailureTest {
   private WritableRequest getRequest() {
     // Data to send
     final int partitionId = 0;
-    PairList<Integer, ByteArrayVertexIdMessages<IntWritable,
+    PairList<Integer, VertexIdMessages<IntWritable,
                 IntWritable>>
         dataToSend = new PairList<Integer,
-        ByteArrayVertexIdMessages<IntWritable, IntWritable>>();
+        VertexIdMessages<IntWritable, IntWritable>>();
     dataToSend.initialize();
     ByteArrayVertexIdMessages<IntWritable,
             IntWritable> vertexIdMessages =
@@ -97,6 +99,7 @@ public class RequestFailureTest {
     // Send the request
     SendWorkerMessagesRequest<IntWritable, IntWritable> request =
         new SendWorkerMessagesRequest<IntWritable, IntWritable>(dataToSend);
+    request.setConf(conf);
     return request;
   }
 

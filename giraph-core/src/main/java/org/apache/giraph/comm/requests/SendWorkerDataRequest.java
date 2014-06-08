@@ -18,7 +18,7 @@
 
 package org.apache.giraph.comm.requests;
 
-import org.apache.giraph.utils.ByteArrayVertexIdData;
+import org.apache.giraph.utils.VertexIdData;
 import org.apache.giraph.utils.PairList;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
@@ -33,10 +33,12 @@ import java.io.IOException;
  *
  * @param <I> Vertex id
  * @param <T> Data
- * @param <B> Specialization of {@link ByteArrayVertexIdData} for T
+ * @param <B> Specialization of
+ * {@link org.apache.giraph.utils.VertexIdData} for T
  */
+@SuppressWarnings("unchecked")
 public abstract class SendWorkerDataRequest<I extends WritableComparable, T,
-    B extends ByteArrayVertexIdData<I, T>>
+    B extends VertexIdData<I, T>>
     extends WritableRequest implements WorkerRequest {
   /** Class logger */
   private static final Logger LOG =
@@ -56,8 +58,7 @@ public abstract class SendWorkerDataRequest<I extends WritableComparable, T,
   /**
    * Constructor used to send request.
    *
-   * @param partVertData Map of remote partitions =>
-   *                     ByteArrayVertexIdData
+   * @param partVertData Map of remote partitions => VertexIdData
    */
   public SendWorkerDataRequest(
       PairList<Integer, B> partVertData) {
@@ -65,11 +66,13 @@ public abstract class SendWorkerDataRequest<I extends WritableComparable, T,
   }
 
   /**
-   * Create a new {@link ByteArrayVertexIdData} specialized for the use case.
+   * Create a new {@link org.apache.giraph.utils.VertexIdData}
+   * specialized for the use case.
    *
-   * @return A new instance of {@link ByteArrayVertexIdData}
+   * @return A new instance of
+   * {@link org.apache.giraph.utils.VertexIdData}
    */
-  public abstract B createByteArrayVertexIdData();
+  public abstract B createVertexIdData();
 
   @Override
   public void readFieldsRequest(DataInput input) throws IOException {
@@ -78,7 +81,7 @@ public abstract class SendWorkerDataRequest<I extends WritableComparable, T,
     partitionVertexData.initialize(numPartitions);
     while (numPartitions-- > 0) {
       final int partitionId = input.readInt();
-      B vertexIdData = createByteArrayVertexIdData();
+      B vertexIdData = createVertexIdData();
       vertexIdData.setConf(getConf());
       vertexIdData.readFields(input);
       partitionVertexData.add(partitionId, vertexIdData);

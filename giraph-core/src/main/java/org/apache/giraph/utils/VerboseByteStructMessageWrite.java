@@ -25,9 +25,11 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 /** Verbose Error mesage for ByteArray based messages */
-public class VerboseByteArrayMessageWrite {
-  /** Do not construct */
-  protected VerboseByteArrayMessageWrite() {
+public class VerboseByteStructMessageWrite {
+  /**
+   * Private Constructor
+   */
+  private VerboseByteStructMessageWrite() {
   }
 
   /**
@@ -42,19 +44,29 @@ public class VerboseByteArrayMessageWrite {
    * @throws RuntimeException
    */
   public static <I extends WritableComparable, M extends Writable> void
-  verboseWriteCurrentMessage(
-    ByteArrayVertexIdMessages<I, M>.VertexIdMessageIterator
-    iterator, DataOutput out) throws IOException {
+  verboseWriteCurrentMessage(VertexIdMessageIterator<I, M> iterator,
+    DataOutput out) throws IOException {
     try {
       iterator.getCurrentMessage().write(out);
     } catch (NegativeArraySizeException e) {
-      throw new RuntimeException("The numbers of bytes sent to vertex " +
-          iterator.getCurrentVertexId() + " exceeded the max capacity of " +
-          "its ExtendedDataOutput. Please consider setting " +
-          "giraph.useBigDataIOForMessages=true. If there are super-vertices" +
-          " in the graph which receive a lot of messages (total serialized " +
-          "size of messages goes beyond the maximum size of a byte array), " +
-          "setting this option to true will remove that limit");
+      handleNegativeArraySize(iterator.getCurrentVertexId());
     }
+  }
+
+  /**
+   * message to present on NegativeArraySizeException
+   *
+   * @param vertexId vertexId
+   * @param <I> vertexId type
+   */
+  public static <I extends WritableComparable> void handleNegativeArraySize(
+      I vertexId) {
+    throw new RuntimeException("The numbers of bytes sent to vertex " +
+        vertexId + " exceeded the max capacity of " +
+        "its ExtendedDataOutput. Please consider setting " +
+        "giraph.useBigDataIOForMessages=true. If there are super-vertices" +
+        " in the graph which receive a lot of messages (total serialized " +
+        "size of messages goes beyond the maximum size of a byte array), " +
+        "setting this option to true will remove that limit");
   }
 }

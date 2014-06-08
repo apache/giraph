@@ -20,7 +20,7 @@ package org.apache.giraph.comm;
 
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.utils.ByteArrayVertexIdData;
+import org.apache.giraph.utils.VertexIdData;
 import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -32,12 +32,12 @@ import javax.annotation.concurrent.NotThreadSafe;
  *
  * @param <I> Vertex id
  * @param <T> Data
- * @param <B> Specialization of {@link ByteArrayVertexIdData} for T
+ * @param <B> Specialization of {@link VertexIdData} for T
  */
 @NotThreadSafe
 @SuppressWarnings("unchecked")
 public abstract class SendVertexIdDataCache<I extends WritableComparable, T,
-    B extends ByteArrayVertexIdData<I, T>> extends SendDataCache<B> {
+    B extends VertexIdData<I, T>> extends SendDataCache<B> {
   /**
    * Constructor.
    *
@@ -55,11 +55,11 @@ public abstract class SendVertexIdDataCache<I extends WritableComparable, T,
   }
 
   /**
-   * Create a new {@link ByteArrayVertexIdData} specialized for the use case.
+   * Create a new {@link VertexIdData} specialized for the use case.
    *
-   * @return A new instance of {@link ByteArrayVertexIdData}
+   * @return A new instance of {@link VertexIdData}
    */
-  public abstract B createByteArrayVertexIdData();
+  public abstract B createVertexIdData();
 
   /**
    * Add data to the cache.
@@ -73,7 +73,7 @@ public abstract class SendVertexIdDataCache<I extends WritableComparable, T,
   public int addData(WorkerInfo workerInfo,
                      int partitionId, I destVertexId, T data) {
     // Get the data collection
-    ByteArrayVertexIdData<I, T> partitionData =
+    VertexIdData<I, T> partitionData =
         getPartitionData(workerInfo, partitionId);
     int originalSize = partitionData.getSize();
     partitionData.add(destVertexId, data);
@@ -97,7 +97,7 @@ public abstract class SendVertexIdDataCache<I extends WritableComparable, T,
   public int addData(WorkerInfo workerInfo, int partitionId,
                      byte[] serializedId, int idPos, T data) {
     // Get the data collection
-    ByteArrayVertexIdData<I, T> partitionData =
+    VertexIdData<I, T> partitionData =
         getPartitionData(workerInfo, partitionId);
     int originalSize = partitionData.getSize();
     partitionData.add(serializedId, idPos, data);
@@ -114,12 +114,12 @@ public abstract class SendVertexIdDataCache<I extends WritableComparable, T,
    * @param partitionId The remote Partition this message belongs to
    * @return The partition data in data cache
    */
-  private ByteArrayVertexIdData<I, T> getPartitionData(WorkerInfo workerInfo,
+  private VertexIdData<I, T> getPartitionData(WorkerInfo workerInfo,
                                                        int partitionId) {
     // Get the data collection
     B partitionData = getData(partitionId);
     if (partitionData == null) {
-      partitionData = createByteArrayVertexIdData();
+      partitionData = createVertexIdData();
       partitionData.setConf(getConf());
       partitionData.initialize(getInitialBufferSize(workerInfo.getTaskId()));
       setData(partitionId, partitionData);

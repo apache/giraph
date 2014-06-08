@@ -27,7 +27,7 @@ import org.apache.hadoop.io.Writable;
  *
  * @param <T> Type that extends Writable that will be iterated
  */
-public abstract class ByteArrayIterable<T extends Writable> implements
+public abstract class ByteStructIterable<T extends Writable> implements
     Iterable<T> {
   /** Factory for data input */
   protected final Factory<? extends ExtendedDataInput> dataInputFactory;
@@ -37,7 +37,7 @@ public abstract class ByteArrayIterable<T extends Writable> implements
    *
    * @param dataInputFactory Factory for data inputs
    */
-  public ByteArrayIterable(
+  public ByteStructIterable(
       Factory<? extends ExtendedDataInput> dataInputFactory) {
     this.dataInputFactory = dataInputFactory;
   }
@@ -49,28 +49,13 @@ public abstract class ByteArrayIterable<T extends Writable> implements
    */
   protected abstract T createWritable();
 
-  /**
-   * Iterator over the internal byte array
-   */
-  private class ByteArrayIterableIterator extends ByteArrayIterator<T> {
-    /**
-     * Constructor.
-     *
-     * @param dataInputFactory Factory for data input
-     */
-    private ByteArrayIterableIterator(
-        Factory<? extends ExtendedDataInput> dataInputFactory) {
-      super(dataInputFactory.create());
-    }
-
-    @Override
-    protected T createWritable() {
-      return ByteArrayIterable.this.createWritable();
-    }
-  }
-
   @Override
   public Iterator<T> iterator() {
-    return new ByteArrayIterableIterator(dataInputFactory);
+    return new ByteStructIterator<T>(dataInputFactory.create()) {
+      @Override
+      protected T createWritable() {
+        return ByteStructIterable.this.createWritable();
+      }
+    };
   }
 }

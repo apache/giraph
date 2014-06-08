@@ -28,7 +28,8 @@ import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.factories.MessageValueFactory;
-import org.apache.giraph.utils.ByteArrayVertexIdMessages;
+import org.apache.giraph.utils.VertexIdMessageIterator;
+import org.apache.giraph.utils.VertexIdMessages;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -64,11 +65,11 @@ public class OneMessagePerVertexStore<I extends WritableComparable,
   @Override
   public void addPartitionMessages(
       int partitionId,
-      ByteArrayVertexIdMessages<I, M> messages) throws IOException {
+      VertexIdMessages<I, M> messages) throws IOException {
     ConcurrentMap<I, M> partitionMap =
         getOrCreatePartitionMap(partitionId);
-    ByteArrayVertexIdMessages<I, M>.VertexIdMessageIterator
-        vertexIdMessageIterator = messages.getVertexIdMessageIterator();
+    VertexIdMessageIterator<I, M> vertexIdMessageIterator =
+      messages.getVertexIdMessageIterator();
     // This loop is a little complicated as it is optimized to only create
     // the minimal amount of vertex id and message objects as possible.
     while (vertexIdMessageIterator.hasNext()) {

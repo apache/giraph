@@ -30,7 +30,7 @@ import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.partition.PartitionOwner;
 import org.apache.giraph.utils.ByteArrayOneToAllMessages;
-import org.apache.giraph.utils.ByteArrayVertexIdMessages;
+import org.apache.giraph.utils.VertexIdMessages;
 import org.apache.giraph.utils.ExtendedDataOutput;
 import org.apache.giraph.utils.PairList;
 import org.apache.giraph.worker.WorkerInfo;
@@ -249,7 +249,7 @@ public class SendMessageToAllCache<I extends WritableComparable,
         }
         ++totalMsgsSentInSuperstep;
         if (workerMessageSize >= maxMessagesSizePerWorker) {
-          PairList<Integer, ByteArrayVertexIdMessages<I, M>>
+          PairList<Integer, VertexIdMessages<I, M>>
             workerMessages = removeWorkerMessages(workerInfoList[i]);
           writableRequest =
             new SendWorkerMessagesRequest<I, M>(workerMessages);

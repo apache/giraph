@@ -16,33 +16,35 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.edge;
+package org.apache.giraph.utils;
 
-import org.apache.giraph.utils.VertexIdEdges;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
- * Collects incoming edges for vertices owned by this worker.
+ * VertexIdMessages
  *
- * @param <I> Vertex id
- * @param <V> Vertex value
- * @param <E> Edge value
+ * @param <I> vertexId type parameter
+ * @param <M> message type parameter
  */
-public interface EdgeStore<I extends WritableComparable,
-   V extends Writable, E extends Writable> {
+public interface VertexIdMessages<I extends WritableComparable,
+  M extends Writable> extends VertexIdData<I, M> {
   /**
-   * Add edges belonging to a given partition on this worker.
-   * Note: This method is thread-safe.
+   * Get specialized iterator that will instantiate the vertex id and
+   * message of this object.  It will only produce message bytes, not actual
+   * messages and expects a different encoding.
    *
-   * @param partitionId Partition id for the incoming edges.
-   * @param edges Incoming edges
+   * @return Special iterator that reuses vertex ids (unless released) and
+   *         copies message bytes
    */
-  void addPartitionEdges(int partitionId, VertexIdEdges<I, E> edges);
+  VertexIdMessageBytesIterator<I, M> getVertexIdMessageBytesIterator();
 
   /**
-   * Move all edges from temporary storage to their source vertices.
-   * Note: this method is not thread-safe.
+   * Get specialized iterator that will instiantiate the vertex id and
+   * message of this object.
+   *
+   * @return Special iterator that reuses vertex ids and messages unless
+   *         specified
    */
-  void moveEdgesToVertices();
+  VertexIdMessageIterator<I, M> getVertexIdMessageIterator();
 }

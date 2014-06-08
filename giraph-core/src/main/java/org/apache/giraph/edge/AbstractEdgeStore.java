@@ -24,9 +24,10 @@ import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.partition.Partition;
-import org.apache.giraph.utils.ByteArrayVertexIdEdges;
 import org.apache.giraph.utils.CallableFactory;
 import org.apache.giraph.utils.ProgressableUtils;
+import org.apache.giraph.utils.VertexIdEdgeIterator;
+import org.apache.giraph.utils.VertexIdEdges;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.util.Progressable;
@@ -146,15 +147,15 @@ public abstract class AbstractEdgeStore<I extends WritableComparable,
    * @return out-edges for the vertex
    */
   protected abstract OutEdges<I, E> getVertexOutEdges(
-    ByteArrayVertexIdEdges<I, E>.VertexIdEdgeIterator vertexIdEdgeIterator,
+    VertexIdEdgeIterator<I, E> vertexIdEdgeIterator,
     Map<K, OutEdges<I, E>> partitionEdgesIn);
 
   @Override
   public void addPartitionEdges(
-    int partitionId, ByteArrayVertexIdEdges<I, E> edges) {
+    int partitionId, VertexIdEdges<I, E> edges) {
     Map<K, OutEdges<I, E>> partitionEdges = getPartitionEdges(partitionId);
 
-    ByteArrayVertexIdEdges<I, E>.VertexIdEdgeIterator vertexIdEdgeIterator =
+    VertexIdEdgeIterator<I, E> vertexIdEdgeIterator =
         edges.getVertexIdEdgeIterator();
     while (vertexIdEdgeIterator.hasNext()) {
       vertexIdEdgeIterator.next();

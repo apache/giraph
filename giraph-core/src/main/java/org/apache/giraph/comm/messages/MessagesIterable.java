@@ -21,7 +21,7 @@ package org.apache.giraph.comm.messages;
 import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.giraph.utils.ExtendedDataInput;
 import org.apache.giraph.utils.Factory;
-import org.apache.giraph.utils.RepresentativeByteArrayIterable;
+import org.apache.giraph.utils.RepresentativeByteStructIterable;
 import org.apache.hadoop.io.Writable;
 
 /**
@@ -30,7 +30,7 @@ import org.apache.hadoop.io.Writable;
  * @param <M> Message data
  */
 public class MessagesIterable<M extends Writable>
-    extends RepresentativeByteArrayIterable<M> {
+    extends RepresentativeByteStructIterable<M> {
   /** Message class */
   private final MessageValueFactory<M> messageValueFactory;
 

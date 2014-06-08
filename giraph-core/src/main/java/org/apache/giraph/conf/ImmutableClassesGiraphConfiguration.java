@@ -1023,6 +1023,18 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   }
 
   /**
+   * Create extendedDataInput based on extendedDataOutput
+   *
+   * @param extendedDataOutput extendedDataOutput
+   * @return extendedDataInput
+   */
+  public ExtendedDataInput createExtendedDataInput(
+    ExtendedDataOutput extendedDataOutput) {
+    return createExtendedDataInput(extendedDataOutput.getByteArray(), 0,
+        extendedDataOutput.getPos());
+  }
+
+  /**
    * Update Computation and MessageCombiner class used
    *
    * @param superstepClasses SuperstepClasses

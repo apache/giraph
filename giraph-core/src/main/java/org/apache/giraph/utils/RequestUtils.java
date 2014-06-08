@@ -18,28 +18,38 @@
 
 package org.apache.giraph.utils;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufInputStream;
+import org.apache.giraph.comm.requests.WritableRequest;
+
+import java.io.IOException;
+import org.apache.log4j.Logger;
+
 /**
- * UnsafeByteArrayInputStream
+ * RequestUtils utility class
  */
-public class UnsafeByteArrayInputStream extends UnsafeArrayReads {
+public class RequestUtils {
+  /** Logger */
+  public static final Logger LOG = Logger.getLogger(RequestUtils.class);
 
   /**
-   * Constructor
-   *
-   * @param buf Buffer to read from
+   * Private Constructor
    */
-  public UnsafeByteArrayInputStream(byte[] buf) {
-    super(buf);
+  private RequestUtils() {
   }
 
   /**
-   * Constructor.
+   * decodeWritableRequest based on predicate
    *
-   * @param buf Buffer to read from
-   * @param offset Offsetin the buffer to start reading from
-   * @param length Max length of the buffer to read
+   * @param buf ByteBuf
+   * @param request writableRequest
+   * @return properly initialized writableRequest
+   * @throws IOException
    */
-  public UnsafeByteArrayInputStream(byte[] buf, int offset, int length) {
-    super(buf, offset, length);
+  public static WritableRequest decodeWritableRequest(ByteBuf buf,
+    WritableRequest request) throws IOException {
+    ByteBufInputStream input = new ByteBufInputStream(buf);
+    request.readFields(input);
+    return request;
   }
 }

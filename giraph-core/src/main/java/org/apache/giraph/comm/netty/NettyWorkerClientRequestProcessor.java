@@ -48,10 +48,10 @@ import org.apache.giraph.metrics.MetricNames;
 import org.apache.giraph.metrics.SuperstepMetricsRegistry;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.partition.PartitionOwner;
-import org.apache.giraph.utils.ByteArrayVertexIdEdges;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.giraph.utils.ExtendedDataOutput;
 import org.apache.giraph.utils.PairList;
+import org.apache.giraph.utils.VertexIdEdges;
 import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -302,7 +302,7 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
     // Send a request if the cache of outgoing edges to the remote worker is
     // full
     if (workerEdgesSize >= maxEdgesSizePerWorker) {
-      PairList<Integer, ByteArrayVertexIdEdges<I, E>> workerEdges =
+      PairList<Integer, VertexIdEdges<I, E>> workerEdges =
           sendEdgeCache.removeWorkerEdges(workerInfo);
       WritableRequest writableRequest =
           new SendWorkerEdgesRequest<I, E>(workerEdges);
@@ -414,10 +414,10 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
 
     // Execute the remaining sends edges (if any)
     PairList<WorkerInfo, PairList<Integer,
-        ByteArrayVertexIdEdges<I, E>>>
+        VertexIdEdges<I, E>>>
         remainingEdgeCache = sendEdgeCache.removeAllEdges();
     PairList<WorkerInfo,
-        PairList<Integer, ByteArrayVertexIdEdges<I, E>>>.Iterator
+        PairList<Integer, VertexIdEdges<I, E>>>.Iterator
         edgeIterator = remainingEdgeCache.getIterator();
     while (edgeIterator.hasNext()) {
       edgeIterator.next();

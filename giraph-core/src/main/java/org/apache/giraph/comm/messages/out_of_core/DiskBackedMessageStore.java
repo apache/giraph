@@ -24,8 +24,9 @@ import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.messages.MessageStore;
 import org.apache.giraph.comm.messages.MessageStoreFactory;
 import org.apache.giraph.factories.MessageValueFactory;
-import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.giraph.utils.EmptyIterable;
+import org.apache.giraph.utils.VertexIdMessageIterator;
+import org.apache.giraph.utils.VertexIdMessages;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import java.io.DataInput;
@@ -84,10 +85,10 @@ public class DiskBackedMessageStore<I extends WritableComparable,
   @Override
   public void addPartitionMessages(
       int partitionId,
-      ByteArrayVertexIdMessages<I, M> messages) throws IOException {
+      VertexIdMessages<I, M> messages) throws IOException {
     PartitionDiskBackedMessageStore<I, M> partitionMessageStore =
         getMessageStore(partitionId);
-    ByteArrayVertexIdMessages<I, M>.VertexIdMessageIterator
+    VertexIdMessageIterator<I, M>
         vertexIdMessageIterator =
         messages.getVertexIdMessageIterator();
     while (vertexIdMessageIterator.hasNext()) {

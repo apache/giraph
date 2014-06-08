@@ -21,7 +21,7 @@ package org.apache.giraph.comm.messages;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import org.apache.giraph.utils.ByteArrayVertexIdMessages;
+import org.apache.giraph.utils.VertexIdMessages;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -75,7 +75,7 @@ public interface MessageStore<I extends WritableComparable,
    * @throws IOException
    */
   void addPartitionMessages(
-      int partitionId, ByteArrayVertexIdMessages<I, M> messages)
+      int partitionId, VertexIdMessages<I, M> messages)
     throws IOException;
 
   /**

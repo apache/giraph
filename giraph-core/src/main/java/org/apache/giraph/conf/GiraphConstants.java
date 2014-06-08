@@ -791,7 +791,7 @@ public interface GiraphConstants {
           "Overrides default partition count calculation if not -1");
 
   /** Vertex key space size for
-   * {@link org.apache.giraph.partition.SimpleRangeWorkerPartitioner}
+   * {@link org.apache.giraph.partition.SimpleWorkerPartitioner}
    */
   String PARTITION_VERTEX_KEY_SPACE_SIZE = "giraph.vertexKeySpaceSize";
 

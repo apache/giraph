@@ -23,6 +23,7 @@ import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.utils.ByteArrayVertexIdEdges;
 import org.apache.giraph.utils.PairList;
+import org.apache.giraph.utils.VertexIdEdges;
 import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -38,7 +39,7 @@ import static org.apache.giraph.conf.GiraphConstants.MAX_EDGE_REQUEST_SIZE;
  * @param <E> Edge value
  */
 public class SendEdgeCache<I extends WritableComparable, E extends Writable>
-    extends SendVertexIdDataCache<I, Edge<I, E>, ByteArrayVertexIdEdges<I, E>> {
+    extends SendVertexIdDataCache<I, Edge<I, E>, VertexIdEdges<I, E>> {
   /**
    * Constructor
    *
@@ -52,7 +53,7 @@ public class SendEdgeCache<I extends WritableComparable, E extends Writable>
   }
 
   @Override
-  public ByteArrayVertexIdEdges<I, E> createByteArrayVertexIdData() {
+  public VertexIdEdges<I, E> createVertexIdData() {
     return new ByteArrayVertexIdEdges<I, E>();
   }
 
@@ -78,7 +79,7 @@ public class SendEdgeCache<I extends WritableComparable, E extends Writable>
    * @return List of pairs (partitionId, ByteArrayVertexIdEdges),
    *         where all partition ids belong to workerInfo
    */
-  public PairList<Integer, ByteArrayVertexIdEdges<I, E>>
+  public PairList<Integer, VertexIdEdges<I, E>>
   removeWorkerEdges(WorkerInfo workerInfo) {
     return removeWorkerData(workerInfo);
   }
@@ -88,7 +89,7 @@ public class SendEdgeCache<I extends WritableComparable, E extends Writable>
    *
    * @return All vertex edges for all partitions
    */
-  public PairList<WorkerInfo, PairList<Integer, ByteArrayVertexIdEdges<I, E>>>
+  public PairList<WorkerInfo, PairList<Integer, VertexIdEdges<I, E>>>
   removeAllEdges() {
     return removeAllData();
   }

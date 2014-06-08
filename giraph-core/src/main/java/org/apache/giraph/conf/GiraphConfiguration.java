@@ -847,7 +847,7 @@ public class GiraphConfiguration extends Configuration
     if (nettyBufferAllocator == null) {
       if (NETTY_USE_POOLED_ALLOCATOR.get(this)) { // Use pooled allocator
         nettyBufferAllocator = new PooledByteBufAllocator(
-            NETTY_USE_DIRECT_MEMORY.get(this));
+          NETTY_USE_DIRECT_MEMORY.get(this));
       } else { // Use un-pooled allocator
         // Note: Current default settings create un-pooled heap allocator
         nettyBufferAllocator = new UnpooledByteBufAllocator(

@@ -22,7 +22,8 @@ import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.comm.messages.MessageStore;
 import org.apache.giraph.partition.Partition;
-import org.apache.giraph.utils.ByteArrayVertexIdMessages;
+import org.apache.giraph.utils.VertexIdMessageIterator;
+import org.apache.giraph.utils.VertexIdMessages;
 import org.apache.giraph.utils.EmptyIterable;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -94,7 +95,7 @@ public class LongDoubleMessageStore
 
   @Override
   public void addPartitionMessages(int partitionId,
-      ByteArrayVertexIdMessages<LongWritable, DoubleWritable> messages) throws
+      VertexIdMessages<LongWritable, DoubleWritable> messages) throws
       IOException {
     LongWritable reusableVertexId = new LongWritable();
     DoubleWritable reusableMessage = new DoubleWritable();
@@ -102,9 +103,8 @@ public class LongDoubleMessageStore
 
     Long2DoubleOpenHashMap partitionMap = map.get(partitionId);
     synchronized (partitionMap) {
-      ByteArrayVertexIdMessages<LongWritable,
-          DoubleWritable>.VertexIdMessageIterator
-          iterator = messages.getVertexIdMessageIterator();
+      VertexIdMessageIterator<LongWritable, DoubleWritable> iterator =
+        messages.getVertexIdMessageIterator();
       while (iterator.hasNext()) {
         iterator.next();
         long vertexId = iterator.getCurrentVertexId().get();

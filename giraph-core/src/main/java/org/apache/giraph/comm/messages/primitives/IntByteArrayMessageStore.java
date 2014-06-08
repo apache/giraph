@@ -24,9 +24,11 @@ import org.apache.giraph.comm.messages.MessagesIterable;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.giraph.partition.Partition;
-import org.apache.giraph.utils.ByteArrayVertexIdMessages;
+import org.apache.giraph.utils.VertexIdMessageBytesIterator;
+import org.apache.giraph.utils.VertexIdMessageIterator;
+import org.apache.giraph.utils.VertexIdMessages;
 import org.apache.giraph.utils.EmptyIterable;
-import org.apache.giraph.utils.VerboseByteArrayMessageWrite;
+import org.apache.giraph.utils.VerboseByteStructMessageWrite;
 import org.apache.giraph.utils.io.DataInputOutput;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Writable;
@@ -123,12 +125,12 @@ public class IntByteArrayMessageStore<M extends Writable>
 
   @Override
   public void addPartitionMessages(int partitionId,
-      ByteArrayVertexIdMessages<IntWritable, M> messages) throws
+      VertexIdMessages<IntWritable, M> messages) throws
       IOException {
     Int2ObjectOpenHashMap<DataInputOutput> partitionMap =
         map.get(partitionId);
     synchronized (partitionMap) {
-      ByteArrayVertexIdMessages<IntWritable, M>.VertexIdMessageBytesIterator
+      VertexIdMessageBytesIterator<IntWritable, M>
           vertexIdMessageBytesIterator =
           messages.getVertexIdMessageBytesIterator();
       // Try to copy the message buffer over rather than
@@ -145,13 +147,13 @@ public class IntByteArrayMessageStore<M extends Writable>
               dataInputOutput.getDataOutput());
         }
       } else {
-        ByteArrayVertexIdMessages<IntWritable, M>.VertexIdMessageIterator
+        VertexIdMessageIterator<IntWritable, M>
             iterator = messages.getVertexIdMessageIterator();
         while (iterator.hasNext()) {
           iterator.next();
           DataInputOutput dataInputOutput =  getDataInputOutput(partitionMap,
               iterator.getCurrentVertexId().get());
-          VerboseByteArrayMessageWrite.verboseWriteCurrentMessage(iterator,
+          VerboseByteStructMessageWrite.verboseWriteCurrentMessage(iterator,
               dataInputOutput.getDataOutput());
         }
       }

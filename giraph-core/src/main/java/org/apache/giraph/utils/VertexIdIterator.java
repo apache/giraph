@@ -18,7 +18,6 @@
 
 package org.apache.giraph.utils;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.hadoop.io.WritableComparable;
 
 /**
@@ -27,38 +26,18 @@ import org.apache.hadoop.io.WritableComparable;
  *
  * @param <I> Vertex id
  */
-public abstract class VertexIdIterator<I extends WritableComparable> {
-  /** Reader of the serialized edges */
-  protected final ExtendedDataInput extendedDataInput;
-
-  /** Current vertex id */
-  protected I vertexId;
-
-  /**
-   * Constructor.
-   *
-   * @param extendedDataOutput Extended data output
-   * @param configuration Configuration
-   */
-  public VertexIdIterator(
-      ExtendedDataOutput extendedDataOutput,
-      ImmutableClassesGiraphConfiguration<I, ?, ?> configuration) {
-    extendedDataInput = configuration.createExtendedDataInput(
-        extendedDataOutput.getByteArray(), 0, extendedDataOutput.getPos());
-  }
-
+public interface VertexIdIterator<I extends WritableComparable> {
   /**
    * Returns true if the iteration has more elements.
    *
    * @return True if the iteration has more elements.
    */
-  public boolean hasNext() {
-    return extendedDataInput.available() > 0;
-  }
+  boolean hasNext();
+
   /**
    * Moves to the next element in the iteration.
    */
-  public abstract void next();
+  void next();
 
   /**
    * Get the current vertex id.  Ihis object's contents are only guaranteed
@@ -67,9 +46,8 @@ public abstract class VertexIdIterator<I extends WritableComparable> {
    *
    * @return Current vertex id
    */
-  public I getCurrentVertexId() {
-    return vertexId;
-  }
+  I getCurrentVertexId();
+
   /**
    * The backing store of the current vertex id is now released.
    * Further calls to getCurrentVertexId () without calling next()
@@ -77,9 +55,6 @@ public abstract class VertexIdIterator<I extends WritableComparable> {
    *
    * @return Current vertex id that was released
    */
-  public I releaseCurrentVertexId() {
-    I releasedVertexId = vertexId;
-    vertexId = null;
-    return releasedVertexId;
-  }
+  I releaseCurrentVertexId();
 }
+

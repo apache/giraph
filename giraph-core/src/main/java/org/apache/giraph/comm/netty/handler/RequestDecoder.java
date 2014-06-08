@@ -22,14 +22,14 @@ import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.comm.netty.InboundByteCounter;
 import org.apache.giraph.comm.requests.RequestType;
 import org.apache.giraph.comm.requests.WritableRequest;
-import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.giraph.time.SystemTime;
 import org.apache.giraph.time.Time;
 import org.apache.giraph.time.Times;
+import org.apache.giraph.utils.ReflectionUtils;
+import org.apache.giraph.utils.RequestUtils;
 import org.apache.log4j.Logger;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufInputStream;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.util.ReferenceCountUtil;
@@ -56,7 +56,7 @@ public class RequestDecoder extends ChannelInboundHandlerAdapter {
    * @param byteCounter Keeps track of the decoded bytes
    */
   public RequestDecoder(ImmutableClassesGiraphConfiguration conf,
-                        InboundByteCounter byteCounter) {
+    InboundByteCounter byteCounter) {
     this.conf = conf;
     this.byteCounter = byteCounter;
   }
@@ -80,26 +80,23 @@ public class RequestDecoder extends ChannelInboundHandlerAdapter {
     }
 
     // Decode the request
-    ByteBuf buffer = (ByteBuf) msg;
-    ByteBufInputStream inputStream = new ByteBufInputStream(buffer);
-    int enumValue = inputStream.readByte();
+    ByteBuf buf = (ByteBuf) msg;
+    int enumValue = buf.readByte();
     RequestType type = RequestType.values()[enumValue];
-    Class<? extends WritableRequest> writableRequestClass =
-        type.getRequestClass();
+    Class<? extends WritableRequest> requestClass = type.getRequestClass();
+    WritableRequest request =
+        ReflectionUtils.newInstance(requestClass, conf);
+    request = RequestUtils.decodeWritableRequest(buf, request);
 
-    WritableRequest writableRequest =
-        ReflectionUtils.newInstance(writableRequestClass, conf);
-    writableRequest.readFields(inputStream);
     if (LOG.isDebugEnabled()) {
-      LOG.debug("decode: Client " + writableRequest.getClientId() +
-          ", requestId " + writableRequest.getRequestId() +
-          ", " +  writableRequest.getType() + ", with size " +
-          buffer.array().length + " took " +
+      LOG.debug("decode: Client " + request.getClientId() +
+          ", requestId " + request.getRequestId() +
+          ", " +  request.getType() + ", with size " +
+          buf.writerIndex() + " took " +
           Times.getNanosSince(TIME, startDecodingNanoseconds) + " ns");
     }
-    // release bytebuf
-    ReferenceCountUtil.release(buffer);
+    ReferenceCountUtil.release(buf);
     // fire writableRequest object to upstream handlers
-    ctx.fireChannelRead(writableRequest);
+    ctx.fireChannelRead(request);
   }
 }

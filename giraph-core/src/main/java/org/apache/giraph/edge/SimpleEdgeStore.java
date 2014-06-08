@@ -20,7 +20,7 @@ package org.apache.giraph.edge;
 
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.utils.ByteArrayVertexIdEdges;
+import org.apache.giraph.utils.VertexIdEdgeIterator;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.util.Progressable;
@@ -101,7 +101,7 @@ public class SimpleEdgeStore<I extends WritableComparable,
 
   @Override
   protected OutEdges<I, E> getVertexOutEdges(
-      ByteArrayVertexIdEdges<I, E>.VertexIdEdgeIterator vertexIdEdgeIterator,
+      VertexIdEdgeIterator<I, E> vertexIdEdgeIterator,
       Map<I, OutEdges<I, E>> partitionEdgesIn) {
     ConcurrentMap<I, OutEdges<I, E>> partitionEdges =
         (ConcurrentMap<I, OutEdges<I, E>>) partitionEdgesIn;

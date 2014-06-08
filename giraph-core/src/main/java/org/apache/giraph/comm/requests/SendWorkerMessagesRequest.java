@@ -19,6 +19,7 @@
 package org.apache.giraph.comm.requests;
 
 import org.apache.giraph.comm.ServerData;
+import org.apache.giraph.utils.VertexIdMessages;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.giraph.utils.PairList;
 import org.apache.hadoop.io.Writable;
@@ -34,26 +35,26 @@ import java.io.IOException;
  */
 @SuppressWarnings("unchecked")
 public class SendWorkerMessagesRequest<I extends WritableComparable,
-    M extends Writable>
-    extends SendWorkerDataRequest<I, M, ByteArrayVertexIdMessages<I, M>> {
-  /**
-   * Constructor used for reflection only
-   */
-  public SendWorkerMessagesRequest() { }
+    M extends Writable> extends SendWorkerDataRequest<I, M,
+    VertexIdMessages<I, M>> {
+
+  /** Default constructor */
+  public SendWorkerMessagesRequest() {
+  }
 
   /**
    * Constructor used to send request.
    *
    * @param partVertMsgs Map of remote partitions =>
-   *                     ByteArrayVertexIdMessages
+   *                     VertexIdMessages
    */
   public SendWorkerMessagesRequest(
-      PairList<Integer, ByteArrayVertexIdMessages<I, M>> partVertMsgs) {
+      PairList<Integer, VertexIdMessages<I, M>> partVertMsgs) {
     this.partitionVertexData = partVertMsgs;
   }
 
   @Override
-  public ByteArrayVertexIdMessages<I, M> createByteArrayVertexIdData() {
+  public VertexIdMessages<I, M> createVertexIdData() {
     return new ByteArrayVertexIdMessages<I, M>(
         getConf().getOutgoingMessageValueFactory());
   }
@@ -65,7 +66,7 @@ public class SendWorkerMessagesRequest<I extends WritableComparable,
 
   @Override
   public void doRequest(ServerData serverData) {
-    PairList<Integer, ByteArrayVertexIdMessages<I, M>>.Iterator
+    PairList<Integer, VertexIdMessages<I, M>>.Iterator
         iterator = partitionVertexData.getIterator();
     while (iterator.hasNext()) {
       iterator.next();

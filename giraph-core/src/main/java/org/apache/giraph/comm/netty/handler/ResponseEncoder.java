@@ -18,14 +18,16 @@
 
 package org.apache.giraph.comm.netty.handler;
 
+import io.netty.buffer.ByteBufOutputStream;
 import org.apache.giraph.comm.requests.RequestType;
 import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.log4j.Logger;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufOutputStream;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
+
+import static org.apache.giraph.utils.ByteUtils.SIZE_OF_INT;
 
 /**
  * How a server should respond to a client. Currently only used for
@@ -35,8 +37,6 @@ import io.netty.channel.ChannelOutboundHandlerAdapter;
 public class ResponseEncoder extends ChannelOutboundHandlerAdapter {
   /** Class logger. */
   private static final Logger LOG = Logger.getLogger(ResponseEncoder.class);
-  /** Holds the place of the message length until known. */
-  private static final byte[] LENGTH_PLACEHOLDER = new byte[4];
 
   @Override
   public void write(ChannelHandlerContext ctx, Object msg,
@@ -52,28 +52,27 @@ public class ResponseEncoder extends ChannelOutboundHandlerAdapter {
               " WritableRequest.");
     }
     @SuppressWarnings("unchecked")
-    WritableRequest writableRequest =
-        (WritableRequest) msg;
+    WritableRequest writableRequest = (WritableRequest) msg;
+
     ByteBuf buf = ctx.alloc().buffer(10);
-    ByteBufOutputStream outputStream =
-        new ByteBufOutputStream(buf);
+    ByteBufOutputStream output = new ByteBufOutputStream(buf);
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("encode: Encoding a message of type " + msg.getClass());
     }
-    outputStream.write(LENGTH_PLACEHOLDER);
 
+    // Space is reserved now to be filled later by the serialize request size
+    output.writeInt(0);
     // write type of object.
-    outputStream.writeByte(writableRequest.getType().ordinal());
-
+    output.writeByte(writableRequest.getType().ordinal());
     // write the object itself.
-    writableRequest.write(outputStream);
+    writableRequest.write(output);
 
-    outputStream.flush();
-    outputStream.close();
+    output.flush();
+    output.close();
 
     // Set the correct size at the end.
-    buf.setInt(0, buf.writerIndex() - 4);
+    buf.setInt(0, buf.writerIndex() - SIZE_OF_INT);
 
     if (LOG.isDebugEnabled()) {
       LOG.debug("encode: Encoding a message of type " + msg.getClass());

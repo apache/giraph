@@ -18,35 +18,55 @@
 package org.apache.giraph.utils;
 
 import java.io.IOException;
+import java.util.Iterator;
 import org.apache.hadoop.io.Writable;
 
 /**
- * The objects provided by this iterator have lifetimes only until next() is
- * called.  In that sense, the object provided is only a representative object.
+ * This iterator is designed to deserialize a byte array on the fly to
+ * provide new copies of writable objects when desired.  It does not reuse
+ * objects, and instead creates a new one for every next().
  *
  * @param <T> Type that extends Writable that will be iterated
  */
-public abstract class RepresentativeByteArrayIterator<T extends
-    Writable> extends ByteArrayIterator<T> {
-  /** Representative writable */
-  private final T representativeWritable = createWritable();
+public abstract class ByteStructIterator<T extends Writable> implements
+    Iterator<T> {
+  /** Data input */
+  protected final ExtendedDataInput extendedDataInput;
 
   /**
    * Wrap ExtendedDataInput in ByteArrayIterator
    *
    * @param extendedDataInput ExtendedDataInput
    */
-  public RepresentativeByteArrayIterator(ExtendedDataInput extendedDataInput) {
-    super(extendedDataInput);
+  public ByteStructIterator(ExtendedDataInput extendedDataInput) {
+    this.extendedDataInput = extendedDataInput;
+  }
+
+  @Override
+  public boolean hasNext() {
+    return extendedDataInput.available() > 0;
   }
 
   @Override
   public T next() {
+    T writable = createWritable();
     try {
-      representativeWritable.readFields(extendedDataInput);
+      writable.readFields(extendedDataInput);
     } catch (IOException e) {
       throw new IllegalStateException("next: readFields got IOException", e);
     }
-    return representativeWritable;
+    return writable;
   }
+
+  @Override
+  public void remove() {
+    throw new UnsupportedOperationException("remove: Not supported");
+  }
+
+  /**
+   * Must be able to create the writable object
+   *
+   * @return New writable
+   */
+  protected abstract T createWritable();
 }

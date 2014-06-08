@@ -26,11 +26,12 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.factories.MessageValueFactory;
-import org.apache.giraph.utils.ByteArrayVertexIdMessages;
-import org.apache.giraph.utils.ExtendedDataInput;
-import org.apache.giraph.utils.RepresentativeByteArrayIterator;
-import org.apache.giraph.utils.VerboseByteArrayMessageWrite;
 import org.apache.giraph.utils.VertexIdIterator;
+import org.apache.giraph.utils.VertexIdMessageBytesIterator;
+import org.apache.giraph.utils.VertexIdMessageIterator;
+import org.apache.giraph.utils.VertexIdMessages;
+import org.apache.giraph.utils.RepresentativeByteStructIterator;
+import org.apache.giraph.utils.VerboseByteStructMessageWrite;
 import org.apache.giraph.utils.io.DataInputOutput;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -39,7 +40,8 @@ import com.google.common.collect.Iterators;
 
 /**
  * Implementation of {@link SimpleMessageStore} where multiple messages are
- * stored per vertex as byte arrays.  Used when there is no combiner provided.
+ * stored per vertex as byte backed datastructures.
+ * Used when there is no combiner provided.
  *
  * @param <I> Vertex id
  * @param <M> Message data
@@ -88,10 +90,10 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
   @Override
   public void addPartitionMessages(
       int partitionId,
-      ByteArrayVertexIdMessages<I, M> messages) throws IOException {
+      VertexIdMessages<I, M> messages) throws IOException {
     ConcurrentMap<I, DataInputOutput> partitionMap =
         getOrCreatePartitionMap(partitionId);
-    ByteArrayVertexIdMessages<I, M>.VertexIdMessageBytesIterator
+    VertexIdMessageBytesIterator<I, M>
         vertexIdMessageBytesIterator =
         messages.getVertexIdMessageBytesIterator();
     // Try to copy the message buffer over rather than
@@ -111,7 +113,7 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
         }
       }
     } else {
-      ByteArrayVertexIdMessages<I, M>.VertexIdMessageIterator
+      VertexIdMessageIterator<I, M>
           vertexIdMessageIterator = messages.getVertexIdMessageIterator();
       while (vertexIdMessageIterator.hasNext()) {
         vertexIdMessageIterator.next();
@@ -119,7 +121,7 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
             getDataInputOutput(partitionMap, vertexIdMessageIterator);
 
         synchronized (dataInputOutput) {
-          VerboseByteArrayMessageWrite.verboseWriteCurrentMessage(
+          VerboseByteStructMessageWrite.verboseWriteCurrentMessage(
               vertexIdMessageIterator, dataInputOutput.getDataOutput());
         }
       }
@@ -132,33 +134,19 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
     return new MessagesIterable<M>(dataInputOutput, messageValueFactory);
   }
 
-  /**
-   * Special iterator only for counting messages
-   */
-  private class RepresentativeMessageIterator extends
-      RepresentativeByteArrayIterator<M> {
-    /**
-     * Constructor
-     *
-     * @param dataInput DataInput containing the messages
-     */
-    public RepresentativeMessageIterator(ExtendedDataInput dataInput) {
-      super(dataInput);
-    }
-
-    @Override
-    protected M createWritable() {
-      return messageValueFactory.newInstance();
-    }
-  }
-
   @Override
   protected int getNumberOfMessagesIn(
       ConcurrentMap<I, DataInputOutput> partitionMap) {
     int numberOfMessages = 0;
     for (DataInputOutput dataInputOutput : partitionMap.values()) {
       numberOfMessages += Iterators.size(
-          new RepresentativeMessageIterator(dataInputOutput.createDataInput()));
+          new RepresentativeByteStructIterator<M>(
+              dataInputOutput.createDataInput()) {
+            @Override
+            protected M createWritable() {
+              return messageValueFactory.newInstance();
+            }
+          });
     }
     return numberOfMessages;
   }

@@ -70,7 +70,6 @@ public class InboundByteCounter extends ChannelInboundHandlerAdapter implements
             "size = " + receivedBytes + ", total bytes = " +
             getBytesReceived());
       }
-
     }
     ctx.fireChannelRead(msg);
   }

@@ -16,33 +16,32 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.edge;
+package org.apache.giraph.utils;
 
-import org.apache.giraph.utils.VertexIdEdges;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
+import java.io.DataOutput;
+
 /**
- * Collects incoming edges for vertices owned by this worker.
+ * Special iterator that reuses vertex ids and messages bytes so that the
+ * lifetime of the object is only until next() is called.
  *
- * @param <I> Vertex id
- * @param <V> Vertex value
- * @param <E> Edge value
+ * Vertex id ownership can be released if desired through
+ * releaseCurrentVertexId().  This optimization allows us to cut down
+ * on the number of objects instantiated and garbage collected.  Messages
+ * can only be copied to an ExtendedDataOutput object
+ *
+ * @param <I> vertexId type parameter
+ * @param <M> message type parameter
  */
-public interface EdgeStore<I extends WritableComparable,
-   V extends Writable, E extends Writable> {
-  /**
-   * Add edges belonging to a given partition on this worker.
-   * Note: This method is thread-safe.
-   *
-   * @param partitionId Partition id for the incoming edges.
-   * @param edges Incoming edges
-   */
-  void addPartitionEdges(int partitionId, VertexIdEdges<I, E> edges);
+public interface VertexIdMessageBytesIterator<I extends WritableComparable,
+    M extends Writable> extends VertexIdDataIterator<I, M> {
 
   /**
-   * Move all edges from temporary storage to their source vertices.
-   * Note: this method is not thread-safe.
+   * Write the current message to an ExtendedDataOutput object
+   *
+   * @param dataOutput Where the current message will be written to
    */
-  void moveEdgesToVertices();
+  void writeCurrentMessageBytes(DataOutput dataOutput);
 }

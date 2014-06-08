@@ -18,6 +18,7 @@
 
 package org.apache.giraph.comm.netty.handler;
 
+import io.netty.buffer.ByteBufOutputStream;
 import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
@@ -27,25 +28,23 @@ import org.apache.giraph.time.Times;
 import org.apache.log4j.Logger;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufOutputStream;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
+
+import static org.apache.giraph.utils.ByteUtils.SIZE_OF_BYTE;
+import static org.apache.giraph.utils.ByteUtils.SIZE_OF_INT;
 
 /**
  * Requests have a request type and an encoded request.
  */
 public class RequestEncoder extends ChannelOutboundHandlerAdapter {
-  /** Time class to use */
-  private static final Time TIME = SystemTime.get();
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(RequestEncoder.class);
-  /** Holds the place of the message length until known */
-  private static final byte[] LENGTH_PLACEHOLDER = new byte[4];
+  /** Time class to use */
+  private static final Time TIME = SystemTime.get();
   /** Buffer starting size */
   private final int bufferStartingSize;
-  /** Whether or not to use direct byte buffers */
-  private final boolean useDirectBuffers;
   /** Start nanoseconds for the encoding time */
   private long startEncodingNanoseconds = -1;
 
@@ -57,14 +56,11 @@ public class RequestEncoder extends ChannelOutboundHandlerAdapter {
   public RequestEncoder(GiraphConfiguration conf) {
     bufferStartingSize =
         GiraphConstants.NETTY_REQUEST_ENCODER_BUFFER_SIZE.get(conf);
-    useDirectBuffers =
-        GiraphConstants.NETTY_REQUEST_ENCODER_USE_DIRECT_BUFFERS.get(conf);
   }
 
   @Override
   public void write(ChannelHandlerContext ctx, Object msg,
-    ChannelPromise promise)
-    throws Exception {
+    ChannelPromise promise) throws Exception {
     if (!(msg instanceof WritableRequest)) {
       throw new IllegalArgumentException(
           "encode: Got a message of type " + msg.getClass());
@@ -74,40 +70,41 @@ public class RequestEncoder extends ChannelOutboundHandlerAdapter {
     if (LOG.isDebugEnabled()) {
       startEncodingNanoseconds = TIME.getNanoseconds();
     }
+
     ByteBuf buf;
-    WritableRequest writableRequest = (WritableRequest) msg;
-    int requestSize = writableRequest.getSerializedSize();
+    WritableRequest request = (WritableRequest) msg;
+    int requestSize = request.getSerializedSize();
     if (requestSize == WritableRequest.UNKNOWN_SIZE) {
       buf = ctx.alloc().buffer(bufferStartingSize);
     } else {
-      requestSize += LENGTH_PLACEHOLDER.length + 1;
-      buf = useDirectBuffers ? ctx.alloc().directBuffer(requestSize) :
-          ctx.alloc().buffer(requestSize);
+      requestSize +=  SIZE_OF_INT + SIZE_OF_BYTE;
+      buf = ctx.alloc().buffer(requestSize);
     }
-    ByteBufOutputStream outputStream =
-        new ByteBufOutputStream(buf);
-    outputStream.write(LENGTH_PLACEHOLDER);
-    outputStream.writeByte(writableRequest.getType().ordinal());
+    ByteBufOutputStream output = new ByteBufOutputStream(buf);
+
+    // This will later be filled with the correct size of serialized request
+    output.writeInt(0);
+    output.writeByte(request.getType().ordinal());
     try {
-      writableRequest.write(outputStream);
+      request.write(output);
     } catch (IndexOutOfBoundsException e) {
-      LOG.error("encode: Most likely the size of request was not properly " +
-          "specified (this buffer is too small) - see getSerializedSize() in " +
-          writableRequest.getType().getRequestClass());
+      LOG.error("write: Most likely the size of request was not properly " +
+          "specified (this buffer is too small) - see getSerializedSize() " +
+          "in " + request.getType().getRequestClass());
       throw new IllegalStateException(e);
     }
-    outputStream.flush();
-    outputStream.close();
+    output.flush();
+    output.close();
 
     // Set the correct size at the end
-    buf.setInt(0, buf.writerIndex() - 4);
+    buf.setInt(0, buf.writerIndex() - SIZE_OF_INT);
     if (LOG.isDebugEnabled()) {
-      LOG.debug("encode: Client " + writableRequest.getClientId() + ", " +
-          "requestId " + writableRequest.getRequestId() +
+      LOG.debug("write: Client " + request.getClientId() + ", " +
+          "requestId " + request.getRequestId() +
           ", size = " + buf.readableBytes() + ", " +
-          writableRequest.getType() + " took " +
+          request.getType() + " took " +
           Times.getNanosSince(TIME, startEncodingNanoseconds) + " ns");
     }
-    ctx.writeAndFlush(buf, promise);
+    ctx.write(buf, promise);
   }
 }

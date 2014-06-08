@@ -36,6 +36,7 @@ import org.apache.giraph.graph.VertexMutations;
 import org.apache.giraph.metrics.GiraphMetrics;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.partition.PartitionStore;
+import org.apache.giraph.utils.VertexIdMessages;
 import org.apache.giraph.utils.ByteArrayOneToAllMessages;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.giraph.utils.ExtendedDataOutput;
@@ -64,6 +65,7 @@ import static org.mockito.Mockito.when;
 /**
  * Test all the different netty requests.
  */
+@SuppressWarnings("unchecked")
 public class RequestTest {
   /** Configuration */
   private ImmutableClassesGiraphConfiguration conf;
@@ -141,16 +143,15 @@ public class RequestTest {
   @Test
   public void sendWorkerMessagesRequest() throws IOException {
     // Data to send
-    PairList<Integer, ByteArrayVertexIdMessages<IntWritable,
+    PairList<Integer, VertexIdMessages<IntWritable,
             IntWritable>>
-        dataToSend = new PairList<Integer,
-        ByteArrayVertexIdMessages<IntWritable, IntWritable>>();
+        dataToSend = new PairList<>();
     dataToSend.initialize();
     int partitionId = 0;
     ByteArrayVertexIdMessages<IntWritable,
             IntWritable> vertexIdMessages =
-        new ByteArrayVertexIdMessages<IntWritable, IntWritable>(
-            new TestMessageValueFactory<IntWritable>(IntWritable.class));
+        new ByteArrayVertexIdMessages<>(
+            new TestMessageValueFactory<>(IntWritable.class));
     vertexIdMessages.setConf(conf);
     vertexIdMessages.initialize();
     dataToSend.add(partitionId, vertexIdMessages);
@@ -163,7 +164,9 @@ public class RequestTest {
 
     // Send the request
     SendWorkerMessagesRequest<IntWritable, IntWritable> request =
-      new SendWorkerMessagesRequest<IntWritable, IntWritable>(dataToSend);
+      new SendWorkerMessagesRequest<>(dataToSend);
+    request.setConf(conf);
+
     client.sendWritableRequest(workerInfo.getTaskId(), request);
     client.waitAllRequests();
 
@@ -195,8 +198,8 @@ public class RequestTest {
   public void sendWorkerOneToAllMessagesRequest() throws IOException {
     // Data to send
     ByteArrayOneToAllMessages<IntWritable, IntWritable>
-        dataToSend = new ByteArrayOneToAllMessages<
-        IntWritable, IntWritable>(new TestMessageValueFactory<IntWritable>(IntWritable.class));
+        dataToSend = new ByteArrayOneToAllMessages<>(new
+        TestMessageValueFactory<>(IntWritable.class));
     dataToSend.setConf(conf);
     dataToSend.initialize();
     ExtendedDataOutput output = conf.createExtendedDataOutput();
@@ -208,7 +211,7 @@ public class RequestTest {
 
     // Send the request
     SendWorkerOneToAllMessagesRequest<IntWritable, IntWritable> request =
-      new SendWorkerOneToAllMessagesRequest<IntWritable, IntWritable>(dataToSend, conf);
+      new SendWorkerOneToAllMessagesRequest<>(dataToSend, conf);
     client.sendWritableRequest(workerInfo.getTaskId(), request);
     client.waitAllRequests();
 

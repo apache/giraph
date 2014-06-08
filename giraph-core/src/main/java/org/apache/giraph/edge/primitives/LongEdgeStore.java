@@ -22,7 +22,7 @@ import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.AbstractEdgeStore;
 import org.apache.giraph.edge.OutEdges;
-import org.apache.giraph.utils.ByteArrayVertexIdEdges;
+import org.apache.giraph.utils.VertexIdEdgeIterator;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.Progressable;
@@ -113,8 +113,7 @@ public class LongEdgeStore<V extends Writable, E extends Writable>
 
   @Override
   protected OutEdges<LongWritable, E> getVertexOutEdges(
-    ByteArrayVertexIdEdges<LongWritable, E>.VertexIdEdgeIterator
-      vertexIdEdgeIterator,
+    VertexIdEdgeIterator<LongWritable, E> vertexIdEdgeIterator,
     Map<Long, OutEdges<LongWritable, E>> partitionEdgesIn) {
     Long2ObjectMap<OutEdges<LongWritable, E>> partitionEdges =
         (Long2ObjectMap<OutEdges<LongWritable, E>>) partitionEdgesIn;

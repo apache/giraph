@@ -22,12 +22,21 @@ import java.io.OutputStream;
 import java.lang.reflect.Field;
 import java.util.Arrays;
 
+import static org.apache.giraph.utils.ByteUtils.SIZE_OF_BOOLEAN;
+import static org.apache.giraph.utils.ByteUtils.SIZE_OF_BYTE;
+import static org.apache.giraph.utils.ByteUtils.SIZE_OF_CHAR;
+import static org.apache.giraph.utils.ByteUtils.SIZE_OF_SHORT;
+import static org.apache.giraph.utils.ByteUtils.SIZE_OF_INT;
+import static org.apache.giraph.utils.ByteUtils.SIZE_OF_LONG;
+import static org.apache.giraph.utils.ByteUtils.SIZE_OF_FLOAT;
+import static org.apache.giraph.utils.ByteUtils.SIZE_OF_DOUBLE;
+
 /**
  * Byte array output stream that uses Unsafe methods to serialize/deserialize
  * much faster
  */
 public class UnsafeByteArrayOutputStream extends OutputStream
-    implements ExtendedDataOutput {
+  implements ExtendedDataOutput {
   static {
     try {
       Field field = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
@@ -42,24 +51,6 @@ public class UnsafeByteArrayOutputStream extends OutputStream
     }
   }
 
-  /** Bytes used in a boolean */
-  public static final int SIZE_OF_BOOLEAN = 1;
-  /** Bytes used in a byte */
-  public static final int SIZE_OF_BYTE = 1;
-  /** Bytes used in a char */
-  public static final int SIZE_OF_CHAR = 2;
-  /** Bytes used in a short */
-  public static final int SIZE_OF_SHORT = 2;
-  /** Bytes used in a medium */
-  public static final int SIZE_OF_MEDIUM = 3;
-  /** Bytes used in an int */
-  public static final int SIZE_OF_INT = 4;
-  /** Bytes used in a float */
-  public static final int SIZE_OF_FLOAT = 4;
-  /** Bytes used in a long */
-  public static final int SIZE_OF_LONG = 8;
-  /** Bytes used in a double */
-  public static final int SIZE_OF_DOUBLE = 8;
   /** Default number of bytes */
   private static final int DEFAULT_BYTES = 32;
   /** Access to the unsafe class */
@@ -68,12 +59,6 @@ public class UnsafeByteArrayOutputStream extends OutputStream
   /** Offset of a byte array */
   private static final long BYTE_ARRAY_OFFSET  =
       UNSAFE.arrayBaseOffset(byte[].class);
-  /** Offset of a long array */
-  private static final long LONG_ARRAY_OFFSET =
-      UNSAFE.arrayBaseOffset(long[].class);
-  /** Offset of a double array */
-  private static final long DOUBLE_ARRAY_OFFSET =
-      UNSAFE.arrayBaseOffset(double[].class);
 
   /** Byte buffer */
   private byte[] buf;
@@ -142,7 +127,15 @@ public class UnsafeByteArrayOutputStream extends OutputStream
   @Override
   public byte[] toByteArray() {
     return Arrays.copyOf(buf, pos);
+  }
 
+  @Override
+  public byte[] toByteArray(int offset, int length) {
+    if (offset + length > pos) {
+      throw new IndexOutOfBoundsException(String.format("Offset: %d + " +
+          "Length: %d exceeds the size of buf : %d", offset, length, pos));
+    }
+    return Arrays.copyOfRange(buf, offset, length);
   }
 
   @Override
@@ -212,10 +205,15 @@ public class UnsafeByteArrayOutputStream extends OutputStream
   }
 
   @Override
-  public void skipBytes(int bytesToSkip) {
-    if ((pos + bytesToSkip) > buf.length) {
-      buf = Arrays.copyOf(buf, Math.max(buf.length << 1, pos + bytesToSkip));
+  public void ensureWritable(int minSize) {
+    if ((pos + minSize) > buf.length) {
+      buf = Arrays.copyOf(buf, Math.max(buf.length << 1, pos + minSize));
     }
+  }
+
+  @Override
+  public void skipBytes(int bytesToSkip) {
+    ensureWritable(bytesToSkip);
     pos += bytesToSkip;
   }
 
