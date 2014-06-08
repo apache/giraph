@@ -18,7 +18,8 @@
 
 package org.apache.giraph.partition;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
+import org.apache.giraph.worker.LocalData;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -32,10 +33,13 @@ import org.apache.hadoop.io.WritableComparable;
  */
 @SuppressWarnings("rawtypes")
 public class HashRangePartitionerFactory<I extends WritableComparable,
-    V extends Writable, E extends Writable>
-    implements GraphPartitionerFactory<I, V, E> {
-  /** Saved configuration */
-  private ImmutableClassesGiraphConfiguration<I, V, E> conf;
+  V extends Writable, E extends Writable>
+  extends DefaultImmutableClassesGiraphConfigurable<I, V, E>
+  implements GraphPartitionerFactory<I, V, E> {
+
+  @Override
+  public void initialize(LocalData<I, V, E, ? extends Writable> localData) {
+  }
 
   @Override
   public MasterGraphPartitioner<I, V, E> createMasterGraphPartitioner() {
@@ -45,15 +49,5 @@ public class HashRangePartitionerFactory<I extends WritableComparable,
   @Override
   public WorkerGraphPartitioner<I, V, E> createWorkerGraphPartitioner() {
     return new HashRangeWorkerPartitioner<I, V, E>();
-  }
-
-  @Override
-  public ImmutableClassesGiraphConfiguration getConf() {
-    return conf;
-  }
-
-  @Override
-  public void setConf(ImmutableClassesGiraphConfiguration conf) {
-    this.conf = conf;
   }
 }

@@ -19,13 +19,16 @@
 package org.apache.giraph.partition;
 
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
 import com.google.common.collect.Lists;
+import org.apache.log4j.Logger;
 
 /**
  * Abstracts and implements all WorkerGraphPartitioner logic on top of a single
@@ -38,8 +41,13 @@ import com.google.common.collect.Lists;
 public abstract class SimpleWorkerPartitioner<I extends WritableComparable,
     V extends Writable, E extends Writable>
     implements WorkerGraphPartitioner<I, V, E> {
+  /** Logger instance */
+  private static final Logger LOG = Logger.getLogger(
+      SimpleWorkerPartitioner.class);
   /** List of {@link PartitionOwner}s for this worker. */
   private List<PartitionOwner> partitionOwnerList = Lists.newArrayList();
+  /** List of available workers */
+  private Set<WorkerInfo> availableWorkers = new HashSet<>();
 
   @Override
   public PartitionOwner createPartitionOwner() {
@@ -49,7 +57,8 @@ public abstract class SimpleWorkerPartitioner<I extends WritableComparable,
   @Override
   public PartitionOwner getPartitionOwner(I vertexId) {
     return partitionOwnerList.get(
-        getPartitionIndex(vertexId, partitionOwnerList.size()));
+        getPartitionIndex(vertexId, partitionOwnerList.size(),
+            availableWorkers.size()));
   }
 
   @Override
@@ -64,8 +73,11 @@ public abstract class SimpleWorkerPartitioner<I extends WritableComparable,
   public PartitionExchange updatePartitionOwners(WorkerInfo myWorkerInfo,
       Collection<? extends PartitionOwner> masterSetPartitionOwners,
       PartitionStore<I, V, E> partitionStore) {
-    return PartitionBalancer.updatePartitionOwners(partitionOwnerList,
-        myWorkerInfo, masterSetPartitionOwners, partitionStore);
+    PartitionExchange exchange = PartitionBalancer.updatePartitionOwners(
+        partitionOwnerList, myWorkerInfo, masterSetPartitionOwners,
+        partitionStore);
+    extractAvailableWorkers();
+    return exchange;
   }
 
   @Override
@@ -74,12 +86,26 @@ public abstract class SimpleWorkerPartitioner<I extends WritableComparable,
   }
 
   /**
+   * Update availableWorkers
+   */
+  public void extractAvailableWorkers() {
+    availableWorkers.clear();
+    for (PartitionOwner partitionOwner : partitionOwnerList) {
+      availableWorkers.add(partitionOwner.getWorkerInfo());
+    }
+    LOG.info("After updating partitionOwnerList " + availableWorkers.size() +
+        " workers are available");
+  }
+
+  /**
    * Calculates in which partition current vertex belongs to,
    * from interval [0, partitionCount).
    *
    * @param id Vertex id
    * @param partitionCount Number of partitions
+   * @param workerCount Number of active workers
    * @return partition
    */
-  protected abstract int getPartitionIndex(I id, int partitionCount);
+  protected abstract int getPartitionIndex(I id, int partitionCount,
+    int workerCount);
 }

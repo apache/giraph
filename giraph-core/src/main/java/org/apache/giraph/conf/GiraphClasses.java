@@ -31,6 +31,7 @@ import org.apache.giraph.graph.VertexValueCombiner;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.EdgeOutputFormat;
+import org.apache.giraph.io.MappingInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.giraph.io.filters.DefaultEdgeInputFilter;
@@ -85,6 +86,9 @@ public class GiraphClasses<I extends WritableComparable,
   /** Vertex output format class - cached for fast access */
   protected Class<? extends VertexOutputFormat<I, V, E>>
   vertexOutputFormatClass;
+  /** Mapping input format - cached for fast access */
+  protected Class<? extends MappingInputFormat<I, V, E, ? extends Writable>>
+  mappingInputFormatClass;
   /** Edge input format class - cached for fast access */
   protected Class<? extends EdgeInputFormat<I, E>>
   edgeInputFormatClass;
@@ -113,8 +117,7 @@ public class GiraphClasses<I extends WritableComparable,
   /** Edge Input Filter class */
   protected Class<? extends EdgeInputFilter<I, E>> edgeInputFilterClass;
   /** Vertex Input Filter class */
-  protected Class<? extends VertexInputFilter<I, V, E>>
-  vertexInputFilterClass;
+  protected Class<? extends VertexInputFilter<I, V, E>> vertexInputFilterClass;
 
   /**
    * Empty constructor. Initialize with default classes or null.
@@ -181,6 +184,9 @@ public class GiraphClasses<I extends WritableComparable,
         EDGE_INPUT_FORMAT_CLASS.get(conf);
     edgeOutputFormatClass = (Class<? extends EdgeOutputFormat<I, V, E>>)
         EDGE_OUTPUT_FORMAT_CLASS.get(conf);
+    mappingInputFormatClass = (Class<? extends MappingInputFormat<I, V, E,
+        ? extends Writable>>)
+        MAPPING_INPUT_FORMAT_CLASS.get(conf);
 
     aggregatorWriterClass = AGGREGATOR_WRITER_CLASS.get(conf);
     messageCombinerClass =
@@ -335,6 +341,15 @@ public class GiraphClasses<I extends WritableComparable,
   }
 
   /**
+   * Check if MappingInputFormat is set
+   *
+   * @return true if MappingInputFormat is set
+   */
+  public boolean hasMappingInputFormat() {
+    return mappingInputFormatClass != null;
+  }
+
+  /**
    * Get VertexOutputFormat set
    *
    * @return VertexOutputFormat
@@ -342,6 +357,11 @@ public class GiraphClasses<I extends WritableComparable,
   public Class<? extends VertexOutputFormat<I, V, E>>
   getVertexOutputFormatClass() {
     return vertexOutputFormatClass;
+  }
+
+  public Class<? extends MappingInputFormat<I, V, E, ? extends Writable>>
+  getMappingInputFormatClass() {
+    return mappingInputFormatClass;
   }
 
   /**

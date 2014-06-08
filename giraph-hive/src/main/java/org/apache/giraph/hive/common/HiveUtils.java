@@ -20,6 +20,7 @@ package org.apache.giraph.hive.common;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.conf.StrConfOption;
+import org.apache.giraph.hive.input.mapping.HiveToMapping;
 import org.apache.giraph.hive.input.edge.HiveToEdge;
 import org.apache.giraph.hive.input.vertex.HiveToVertex;
 import org.apache.giraph.hive.output.VertexToHive;
@@ -46,12 +47,14 @@ import java.util.Map;
 
 import static java.lang.System.getenv;
 import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_EDGE_INPUT;
+import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_MAPPING_INPUT;
 import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_INPUT;
 import static org.apache.giraph.hive.common.GiraphHiveConstants.VERTEX_TO_HIVE_CLASS;
 
 /**
  * Utility methods for Hive IO
  */
+@SuppressWarnings("unchecked")
 public class HiveUtils {
   /** Logger */
   private static final Logger LOG = Logger.getLogger(HiveUtils.class);
@@ -337,6 +340,31 @@ public class HiveUtils {
     if (klass == null) {
       throw new IllegalArgumentException(
           HIVE_VERTEX_INPUT.getClassOpt().getKey() + " not set in conf");
+    }
+    return newInstance(klass, conf, schema);
+  }
+
+  /**
+   * Create a new HiveToMapping
+   *
+   * @param conf ImmutableClassesGiraphConfiguration
+   * @param schema HiveTableSchema
+   * @param <I> vertexId type
+   * @param <V> vertexValue type
+   * @param <E> edgeValue type
+   * @param <B> mappingTarget type
+   * @return HiveToMapping
+   */
+  public static <I extends WritableComparable, V extends Writable,
+    E extends Writable, B extends Writable>
+  HiveToMapping<I, B> newHiveToMapping(
+    ImmutableClassesGiraphConfiguration<I, V, E> conf,
+    HiveTableSchema schema) {
+    Class<? extends HiveToMapping> klass = HIVE_MAPPING_INPUT.getClass(conf);
+    if (klass == null) {
+      throw new IllegalArgumentException(
+          HIVE_MAPPING_INPUT.getClassOpt().getKey() + " not set in conf"
+      );
     }
     return newInstance(klass, conf, schema);
   }

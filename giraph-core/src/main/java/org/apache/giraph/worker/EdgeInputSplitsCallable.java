@@ -48,6 +48,7 @@ import java.io.IOException;
  * @param <V> Vertex value
  * @param <E> Edge value
  */
+@SuppressWarnings("unchecked")
 public class EdgeInputSplitsCallable<I extends WritableComparable,
     V extends Writable, E extends Writable>
     extends InputSplitsCallable<I, V, E> {
@@ -62,10 +63,14 @@ public class EdgeInputSplitsCallable<I extends WritableComparable,
 
   /** Aggregator handler */
   private final WorkerThreadAggregatorUsage aggregatorUsage;
+  /** Bsp service worker (only use thread-safe methods) */
+  private final BspServiceWorker<I, V, E> bspServiceWorker;
   /** Edge input format */
   private final EdgeInputFormat<I, E> edgeInputFormat;
   /** Input split max edges (-1 denotes all) */
   private final long inputSplitMaxEdges;
+  /** Can embedInfo in vertexIds */
+  private final boolean canEmbedInIds;
 
   /** Filter to use */
   private final EdgeInputFilter<I, E> edgeInputFilter;
@@ -97,11 +102,19 @@ public class EdgeInputSplitsCallable<I extends WritableComparable,
         zooKeeperExt);
     this.edgeInputFormat = edgeInputFormat;
 
+    this.bspServiceWorker = bspServiceWorker;
     inputSplitMaxEdges = configuration.getInputSplitMaxEdges();
     // Initialize aggregator usage.
     this.aggregatorUsage = bspServiceWorker.getAggregatorHandler()
       .newThreadAggregatorUsage();
     edgeInputFilter = configuration.getEdgeInputFilter();
+    canEmbedInIds = bspServiceWorker
+        .getLocalData()
+        .getMappingStoreOps() != null &&
+        bspServiceWorker
+            .getLocalData()
+            .getMappingStoreOps()
+            .hasEmbedding();
 
     // Initialize Metrics
     totalEdgesMeter = getTotalEdgesLoadedMeter();
@@ -156,6 +169,16 @@ public class EdgeInputSplitsCallable<I extends WritableComparable,
         throw new IllegalArgumentException(
             "readInputSplit: Edge reader returned an edge " +
                 "without a value!  - " + readerEdge);
+      }
+      if (canEmbedInIds) {
+        bspServiceWorker
+            .getLocalData()
+            .getMappingStoreOps()
+            .embedTargetInfo(sourceId);
+        bspServiceWorker
+            .getLocalData()
+            .getMappingStoreOps()
+            .embedTargetInfo(readerEdge.getTargetVertexId());
       }
 
       ++inputSplitEdgesLoaded;

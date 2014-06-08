@@ -18,6 +18,7 @@
 
 package org.apache.giraph.partition;
 
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collection;
 
@@ -47,6 +48,7 @@ public class SimpleRangePartitionFactoryTest {
     ArrayList<WorkerInfo> infos = new ArrayList<WorkerInfo>();
     for (int i = 0; i < numWorkers; i++) {
       WorkerInfo info = new WorkerInfo();
+      info.setInetSocketAddress(new InetSocketAddress(8080));
       info.setTaskId(i);
       infos.add(info);
     }

@@ -107,7 +107,8 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
         // Attempt to create InputSplits if necessary. Bail out if that fails.
         if (bspServiceMaster.getRestartedSuperstep() !=
             BspService.UNSET_SUPERSTEP ||
-            (bspServiceMaster.createVertexInputSplits() != -1 &&
+            (bspServiceMaster.createMappingInputSplits() != -1 &&
+                bspServiceMaster.createVertexInputSplits() != -1 &&
                 bspServiceMaster.createEdgeInputSplits() != -1)) {
           long setupMillis = System.currentTimeMillis() - initializeMillis;
           GiraphTimers.getInstance().getSetupMs().increment(setupMillis);
@@ -123,7 +124,7 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
             superstepState = bspServiceMaster.coordinateSuperstep();
             long superstepMillis = System.currentTimeMillis() -
                 startSuperstepMillis;
-            superstepSecsMap.put(Long.valueOf(cachedSuperstep),
+            superstepSecsMap.put(cachedSuperstep,
                 superstepMillis / 1000.0d);
             if (LOG.isInfoEnabled()) {
               LOG.info("masterThread: Coordination of superstep " +

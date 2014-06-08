@@ -20,6 +20,7 @@ package org.apache.giraph.hive.common;
 
 import org.apache.giraph.conf.ClassConfOption;
 import org.apache.giraph.conf.StrConfOption;
+import org.apache.giraph.hive.input.mapping.HiveToMapping;
 import org.apache.giraph.hive.input.edge.HiveToEdge;
 import org.apache.giraph.hive.input.vertex.HiveToVertex;
 import org.apache.giraph.hive.output.VertexToHive;
@@ -28,6 +29,9 @@ import org.apache.giraph.hive.output.VertexToHive;
  * Constants for giraph-hive
  */
 public class GiraphHiveConstants {
+  /** Options for configuring mapping input */
+  public static final HiveInputOptions<HiveToMapping> HIVE_MAPPING_INPUT =
+      new HiveInputOptions<>("mapping", HiveToMapping.class);
   /** Options for configuring vertex input */
   public static final HiveInputOptions<HiveToVertex> HIVE_VERTEX_INPUT =
       new HiveInputOptions<HiveToVertex>("vertex", HiveToVertex.class);

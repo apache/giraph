@@ -71,6 +71,16 @@ public interface CentralizedServiceMaster<I extends WritableComparable,
 
   /**
    * Create the {@link BspInputSplit} objects from the index range based on the
+   * user-defined MappingInputFormat.  The {@link BspInputSplit} objects will
+   * processed by the workers later on during the INPUT_SUPERSTEP.
+   *
+   * @return Number of splits. Returns -1 on failure to create
+   *         valid input splits.
+   */
+  int createMappingInputSplits();
+
+  /**
+   * Create the {@link BspInputSplit} objects from the index range based on the
    * user-defined VertexInputFormat.  The {@link BspInputSplit} objects will
    * processed by the workers later on during the INPUT_SUPERSTEP.
    *

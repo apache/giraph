@@ -19,12 +19,15 @@
 package org.apache.giraph.worker;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.edge.Edge;
+import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexEdgeCount;
 import org.apache.giraph.io.GiraphInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexReader;
 import org.apache.giraph.io.filters.VertexInputFilter;
+import org.apache.giraph.mapping.translate.TranslateEdge;
 import org.apache.giraph.partition.PartitionOwner;
 import org.apache.giraph.utils.LoggerUtils;
 import org.apache.giraph.utils.MemoryUtils;
@@ -50,6 +53,7 @@ import java.io.IOException;
  * @param <V> Vertex value
  * @param <E> Edge value
  */
+@SuppressWarnings("unchecked")
 public class VertexInputSplitsCallable<I extends WritableComparable,
     V extends Writable, E extends Writable>
     extends InputSplitsCallable<I, V, E> {
@@ -69,6 +73,15 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
   private final BspServiceWorker<I, V, E> bspServiceWorker;
   /** Filter to select which vertices to keep */
   private final VertexInputFilter<I, V, E> vertexInputFilter;
+  /** Can embedInfo in vertexIds */
+  private final boolean canEmbedInIds;
+  /**
+   * Whether the chosen {@link OutEdges} implementation allows for Edge
+   * reuse.
+   */
+  private boolean reuseEdgeObjects;
+  /** Used to translate Edges during vertex input phase based on localData */
+  private final TranslateEdge<I, E> translateEdge;
 
   // Metrics
   /** number of vertices loaded meter across all readers */
@@ -102,6 +115,15 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
     inputSplitMaxVertices = configuration.getInputSplitMaxVertices();
     this.bspServiceWorker = bspServiceWorker;
     vertexInputFilter = configuration.getVertexInputFilter();
+    reuseEdgeObjects = configuration.reuseEdgeObjects();
+    canEmbedInIds = bspServiceWorker
+        .getLocalData()
+        .getMappingStoreOps() != null &&
+        bspServiceWorker
+            .getLocalData()
+            .getMappingStoreOps()
+            .hasEmbedding();
+    translateEdge = bspServiceWorker.getTranslateEdge();
 
     // Initialize Metrics
     totalVerticesMeter = getTotalVerticesLoadedMeter();
@@ -151,6 +173,12 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
             "readInputSplit: Vertex reader returned a vertex " +
                 "without an id!  - " + readerVertex);
       }
+      if (canEmbedInIds) {
+        bspServiceWorker
+            .getLocalData()
+            .getMappingStoreOps()
+            .embedTargetInfo(readerVertex.getId());
+      }
       if (readerVertex.getValue() == null) {
         readerVertex.setValue(configuration.createVertexValue());
       }
@@ -165,6 +193,37 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
           inputSplitVerticesFiltered = 0;
         }
         continue;
+      }
+
+      // Before saving to partition-store translate all edges (if present)
+      if (translateEdge != null) {
+        // only iff vertexInput reads edges also
+        if (readerVertex.getEdges() != null && readerVertex.getNumEdges() > 0) {
+          OutEdges<I, E> vertexOutEdges = configuration
+              .createAndInitializeOutEdges(readerVertex.getNumEdges());
+          // TODO : this works for generic OutEdges, can create a better api
+          // to support more efficient translation for specific types
+
+          // NOTE : for implementations where edge is reusable, space is
+          // consumed by the OutEdges data structure itself, but if not reusable
+          // space is consumed by the newly created edge -> and the new OutEdges
+          // data structure just holds a reference to the newly created edge
+          // so in any way we virtually hold edges twice - similar to
+          // OutEdges.trim() -> this has the same complexity as OutEdges.trim()
+          for (Edge<I, E> edge : readerVertex.getEdges()) {
+            if (reuseEdgeObjects) {
+              bspServiceWorker
+                  .getLocalData()
+                  .getMappingStoreOps()
+                  .embedTargetInfo(edge.getTargetVertexId());
+              vertexOutEdges.add(edge); // edge can be re-used
+            } else { // edge objects cannot be reused - so create new edges
+              vertexOutEdges.add(configuration.createEdge(translateEdge, edge));
+            }
+          }
+          // set out edges to translated instance -> old instance is released
+          readerVertex.setEdges(vertexOutEdges);
+        }
       }
 
       PartitionOwner partitionOwner =

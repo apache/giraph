@@ -31,6 +31,8 @@ import org.apache.giraph.graph.Computation;
 import org.apache.giraph.hive.common.HiveUtils;
 import org.apache.giraph.hive.input.edge.HiveEdgeInputFormat;
 import org.apache.giraph.hive.input.edge.HiveToEdge;
+import org.apache.giraph.hive.input.mapping.HiveMappingInputFormat;
+import org.apache.giraph.hive.input.mapping.HiveToMapping;
 import org.apache.giraph.hive.input.vertex.HiveToVertex;
 import org.apache.giraph.hive.input.vertex.HiveVertexInputFormat;
 import org.apache.giraph.hive.output.HiveVertexOutputFormat;
@@ -55,6 +57,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_EDGE_INPUT;
+import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_MAPPING_INPUT;
 import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_INPUT;
 import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_OUTPUT_DATABASE;
 import static org.apache.giraph.hive.common.GiraphHiveConstants.HIVE_VERTEX_OUTPUT_PARTITION;
@@ -87,6 +90,8 @@ public class HiveGiraphRunner implements Tool {
   private List<EdgeInputFormatDescription> edgeInputDescriptions =
       Lists.newArrayList();
 
+  /** Hive Mapping reader */
+  private Class<? extends HiveToMapping> hiveToMappingClass;
   /** Hive Vertex writer */
   private Class<? extends VertexToHive> vertexToHiveClass;
   /** Skip output? (Useful for testing without writing) */
@@ -234,6 +239,36 @@ public class HiveGiraphRunner implements Tool {
     HIVE_VERTEX_OUTPUT_TABLE.set(conf, tableName);
     if (partitionFilter != null) {
       HIVE_VERTEX_OUTPUT_PARTITION.set(conf, partitionFilter);
+    }
+  }
+
+  /**
+   * Check if mapping input is set
+   *
+   * @return true if mapping input is set
+   */
+  public boolean hasMappingInput() {
+    return hiveToMappingClass != null;
+  }
+
+  /**
+   * Set mapping input
+   *
+   * @param hiveToMappingClass class for reading mapping entries from Hive.
+   * @param tableName Table name
+   * @param partitionFilter Partition filter, or null if no filter used
+   */
+  public void setMappingInput(
+      Class<? extends HiveToMapping> hiveToMappingClass, String tableName,
+      String partitionFilter) {
+    this.hiveToMappingClass = hiveToMappingClass;
+    conf.set(HIVE_MAPPING_INPUT.getClassOpt().getKey(),
+        hiveToMappingClass.getName());
+    conf.set(HIVE_MAPPING_INPUT.getProfileIdOpt().getKey(),
+        "mapping_input_profile");
+    conf.set(HIVE_MAPPING_INPUT.getTableOpt().getKey(), tableName);
+    if (partitionFilter != null) {
+      conf.set(HIVE_MAPPING_INPUT.getPartitionOpt().getKey(), partitionFilter);
     }
   }
 
@@ -425,6 +460,22 @@ public class HiveGiraphRunner implements Tool {
   }
 
   /**
+   * Prepare input settings in Configuration
+   *
+   * This caches metadata information into the configuration to eliminate worker
+   * access to the metastore.
+   */
+  public void prepareHiveMappingInput() {
+    GiraphConstants.MAPPING_INPUT_FORMAT_CLASS.set(conf,
+        HiveMappingInputFormat.class);
+
+    Configuration confCopy = new Configuration(conf);
+    createGiraphConf(confCopy)
+        .createWrappedMappingInputFormat()
+        .checkInputSpecs(confCopy);
+  }
+
+  /**
    * process arguments
    * @param args to process
    * @return CommandLine instance
@@ -456,6 +507,17 @@ public class HiveGiraphRunner implements Tool {
       throw new IllegalArgumentException(
           "Need the Giraph " + Computation.class.getSimpleName() +
               " class name (-computationClass) to use");
+    }
+
+    String mappingInput = cmdln.getOptionValue("mappingInput");
+    if (mappingInput != null) {
+      String[] parameters = split(mappingInput, ",", 3);
+      if (parameters.length < 2) {
+        throw new IllegalStateException("Illegal mappingInput description " +
+            mappingInput + " - HiveToMapping class and table name needed");
+      }
+      setMappingInput(findClass(parameters[0], HiveToMapping.class),
+          parameters[1], elementOrNull(parameters, 2));
     }
 
     String[] vertexInputs = cmdln.getOptionValues("vertexInput");
@@ -534,6 +596,11 @@ public class HiveGiraphRunner implements Tool {
     // allow metastore changes (i.e. creating tables that don't exist)
     processMoreArguments(cmdln);
 
+    if (mappingInput != null) { // mapping input is provided
+      HIVE_MAPPING_INPUT.getDatabaseOpt().set(conf, dbName);
+      prepareHiveMappingInput();
+    }
+
     if (hasVertexInput()) {
       HIVE_VERTEX_INPUT.getDatabaseOpt().set(conf, dbName);
       prepareHiveVertexInputs();
@@ -572,6 +639,12 @@ public class HiveGiraphRunner implements Tool {
     }
 
     options.addOption("db", "dbName", true, "Hive database name");
+
+    // Mapping input settings
+    options.addOption("mi", "mappingInput", true, "Giraph " +
+        HiveToMapping.class.getSimpleName() + " class to use, table name and " +
+        "partition filter (optional). Example:\n" +
+        "\"MyHiveToMapping, myTableName, a=1,b=two");
 
     // Vertex input settings
     options.addOption("vi", "vertexInput", true, getInputOptionDescription(

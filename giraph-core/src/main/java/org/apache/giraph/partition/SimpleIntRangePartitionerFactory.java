@@ -31,14 +31,26 @@ import org.apache.hadoop.io.Writable;
  * @param <V> Vertex value type
  * @param <E> Edge value type
  */
-public class SimpleIntRangePartitionerFactory
-    <V extends Writable, E extends Writable>
-    extends SimplePartitionerFactory<IntWritable, V, E> {
+public class SimpleIntRangePartitionerFactory<V extends Writable,
+  E extends Writable> extends SimplePartitionerFactory<IntWritable, V, E> {
 
   /** Vertex key space size. */
   private int keySpaceSize;
 
   @Override
+  protected int getPartition(IntWritable id, int partitionCount,
+    int workerCount) {
+    return getPartition(id, partitionCount);
+  }
+
+  /**
+   * Calculates in which partition current vertex belongs to,
+   * from interval [0, partitionCount).
+   *
+   * @param id Vertex id
+   * @param partitionCount Number of partitions
+   * @return partition
+   */
   protected int getPartition(IntWritable id, int partitionCount) {
     return getPartitionInRange(id.get(), keySpaceSize, partitionCount);
   }

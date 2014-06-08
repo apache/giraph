@@ -18,6 +18,7 @@
 
 package org.apache.giraph.conf;
 
+import com.google.common.base.Preconditions;
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.edge.Edge;
@@ -39,12 +40,14 @@ import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.graph.VertexValueCombiner;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.EdgeOutputFormat;
+import org.apache.giraph.io.MappingInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.giraph.io.filters.EdgeInputFilter;
 import org.apache.giraph.io.filters.VertexInputFilter;
 import org.apache.giraph.io.internal.WrappedEdgeInputFormat;
 import org.apache.giraph.io.internal.WrappedEdgeOutputFormat;
+import org.apache.giraph.io.internal.WrappedMappingInputFormat;
 import org.apache.giraph.io.internal.WrappedVertexInputFormat;
 import org.apache.giraph.io.internal.WrappedVertexOutputFormat;
 import org.apache.giraph.io.superstep_output.MultiThreadedSuperstepOutput;
@@ -53,6 +56,9 @@ import org.apache.giraph.io.superstep_output.SuperstepOutput;
 import org.apache.giraph.io.superstep_output.SynchronizedSuperstepOutput;
 import org.apache.giraph.job.GiraphJobObserver;
 import org.apache.giraph.job.GiraphJobRetryChecker;
+import org.apache.giraph.mapping.MappingStore;
+import org.apache.giraph.mapping.MappingStoreOps;
+import org.apache.giraph.mapping.translate.TranslateEdge;
 import org.apache.giraph.master.MasterCompute;
 import org.apache.giraph.master.MasterObserver;
 import org.apache.giraph.master.SuperstepClasses;
@@ -65,6 +71,7 @@ import org.apache.giraph.utils.ExtendedDataOutput;
 import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.giraph.utils.UnsafeByteArrayInputStream;
 import org.apache.giraph.utils.UnsafeByteArrayOutputStream;
+import org.apache.giraph.utils.WritableUtils;
 import org.apache.giraph.utils.io.BigDataInputOutput;
 import org.apache.giraph.utils.io.DataInputOutput;
 import org.apache.giraph.utils.io.ExtendedDataInputOutput;
@@ -91,6 +98,8 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
     V extends Writable, E extends Writable> extends GiraphConfiguration {
   /** Holder for all the classes */
   private final GiraphClasses classes;
+  /** Mapping target class */
+  private Class<? extends Writable> mappingTargetClass = null;
   /** Value (IVEMM) Factories */
   private final ValueFactories<I, V, E> valueFactories;
   /** Language values (IVEMM) are implemented in */
@@ -145,6 +154,27 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
 
   public PerGraphTypeEnum<Language> getValueLanguages() {
     return valueLanguages;
+  }
+
+  /**
+   * Get the class used for edge translation during vertex input
+   *
+   * @return edge translation class
+   */
+  public Class<? extends TranslateEdge> edgeTranslationClass() {
+    return EDGE_TRANSLATION_CLASS.get(this);
+  }
+
+  /**
+   * Instance of TranslateEdge that contains helper method for edge translation
+   *
+   * @return instance of TranslateEdge
+   */
+  public TranslateEdge<I, E> edgeTranslationInstance() {
+    if (edgeTranslationClass() != null) {
+      return ReflectionUtils.newInstance(edgeTranslationClass(), this);
+    }
+    return null;
   }
 
   /**
@@ -274,6 +304,25 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   }
 
   /**
+   * Get MappingInputFormatClass
+   *
+   * @return MappingInputFormatClass
+   */
+  public Class<? extends MappingInputFormat<I, V, E, ? extends Writable>>
+  getMappingInputFormatClass() {
+    return classes.getMappingInputFormatClass();
+  }
+
+  /**
+   * Check if mappingInputFormat is set
+   *
+   * @return true if mappingInputFormat is set
+   */
+  public boolean hasMappingInputFormat() {
+    return classes.hasMappingInputFormat();
+  }
+
+  /**
    * Create a user vertex output format class.
    * Note: Giraph should only use WrappedVertexOutputFormat,
    * which makes sure that Configuration parameters are set properly.
@@ -283,6 +332,20 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   private VertexOutputFormat<I, V, E> createVertexOutputFormat() {
     Class<? extends VertexOutputFormat<I, V, E>> klass =
         getVertexOutputFormatClass();
+    return ReflectionUtils.newInstance(klass, this);
+  }
+
+  /**
+   * Create a user mapping input format class.
+   * Note: Giraph should only use WrappedMappingInputFormat,
+   * which makes sure that Configuration parameters are set properly.
+   *
+   * @return Instantiated user mapping input format class
+   */
+  private MappingInputFormat<I, V, E, ? extends Writable>
+  createMappingInputFormat() {
+    Class<? extends MappingInputFormat<I, V, E, ? extends Writable>> klass =
+        getMappingInputFormatClass();
     return ReflectionUtils.newInstance(klass, this);
   }
 
@@ -298,6 +361,22 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
         new WrappedVertexOutputFormat<I, V, E>(createVertexOutputFormat());
     configureIfPossible(wrappedVertexOutputFormat);
     return wrappedVertexOutputFormat;
+  }
+
+  /**
+   * Create a wrapper for user mapping input format,
+   * which makes sure that Configuration parameters are set properly in all
+   * methods related to this format.
+   *
+   * @return Wrapper around user mapping input format
+   */
+  public WrappedMappingInputFormat<I, V, E, ? extends Writable>
+  createWrappedMappingInputFormat() {
+    WrappedMappingInputFormat<I, V, E, ? extends Writable>
+      wrappedMappingInputFormat =
+        new WrappedMappingInputFormat<>(createMappingInputFormat());
+    configureIfPossible(wrappedMappingInputFormat);
+    return wrappedMappingInputFormat;
   }
 
   @Override
@@ -756,6 +835,24 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   }
 
   /**
+   * Create edge based on #createEdge definition
+   *
+   * @param translateEdge instance of TranslateEdge
+   * @param edge edge to be translated
+   * @return translated edge
+   */
+  public Edge<I, E> createEdge(TranslateEdge<I, E>
+    translateEdge, Edge<I, E> edge) {
+    I translatedId = translateEdge.translateId(edge.getTargetVertexId());
+    if (isEdgeValueNullWritable()) {
+      return (Edge<I, E>) EdgeFactory.create(translatedId);
+    } else {
+      return EdgeFactory.create(translatedId,
+        translateEdge.cloneValue(edge.getValue()));
+    }
+  }
+
+  /**
    * Create a reusable edge.
    *
    * @return Instantiated reusable edge.
@@ -853,6 +950,74 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    */
   public boolean useInputOutEdges() {
     return classes.getInputOutEdgesClass() != classes.getOutEdgesClass();
+  }
+
+  /**
+   * Get MappingStore class to be used
+   *
+   * @return MappingStore class set by user
+   */
+  public Class<? extends MappingStore> getMappingStoreClass() {
+    return MAPPING_STORE_CLASS.get(this);
+  }
+
+  /**
+   * Create a {@link org.apache.giraph.mapping.MappingStore} instance
+   *
+   * @return MappingStore Instance
+   */
+  public MappingStore<I, ? extends Writable> createMappingStore() {
+    if (getMappingStoreClass() != null) {
+      return ReflectionUtils.newInstance(getMappingStoreClass(), this);
+    } else {
+      return null;
+    }
+  }
+
+  /**
+   * Get MappingStoreOps class to be used
+   *
+   * @return MappingStoreOps class set by user
+   */
+  public Class<? extends MappingStoreOps> getMappingStoreOpsClass() {
+    return MAPPING_STORE_OPS_CLASS.get(this);
+  }
+
+  /**
+   * Create a {@link org.apache.giraph.mapping.MappingStoreOps} instance
+   *
+   * @return MappingStoreOps Instance
+   */
+  public MappingStoreOps<I, ? extends Writable> createMappingStoreOps() {
+    if (getMappingStoreOpsClass() != null) {
+      return ReflectionUtils.newInstance(getMappingStoreOpsClass(), this);
+    } else {
+      return null;
+    }
+  }
+
+  /**
+   * Get mappingTarget class
+   *
+   * @return mappingTarget class
+   */
+  public Class<? extends Writable> getMappingTargetClass() {
+    if (mappingTargetClass == null) {
+      Class<?>[] classList = ReflectionUtils.getTypeArguments(
+        MappingStore.class, getMappingStoreClass());
+      Preconditions.checkArgument(classList.length == 2);
+      mappingTargetClass = (Class<? extends Writable>) classList[1];
+    }
+    return mappingTargetClass;
+  }
+
+  /**
+   * Create and return mappingTarget instance
+   *
+   * @return mappingTarget instance
+   */
+  public Writable createMappingTarget() {
+    return WritableUtils.createWritable(getMappingTargetClass());
   }
 
   /**

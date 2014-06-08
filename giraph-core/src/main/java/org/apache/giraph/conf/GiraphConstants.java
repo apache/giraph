@@ -45,6 +45,7 @@ import org.apache.giraph.graph.VertexValueCombiner;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.EdgeOutputFormat;
+import org.apache.giraph.io.MappingInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexOutputFormat;
 import org.apache.giraph.io.filters.DefaultEdgeInputFilter;
@@ -56,6 +57,9 @@ import org.apache.giraph.job.DefaultJobObserver;
 import org.apache.giraph.job.GiraphJobObserver;
 import org.apache.giraph.job.GiraphJobRetryChecker;
 import org.apache.giraph.job.HaltApplicationUtils;
+import org.apache.giraph.mapping.MappingStore;
+import org.apache.giraph.mapping.MappingStoreOps;
+import org.apache.giraph.mapping.translate.TranslateEdge;
 import org.apache.giraph.master.DefaultMasterCompute;
 import org.apache.giraph.master.MasterCompute;
 import org.apache.giraph.master.MasterObserver;
@@ -79,6 +83,30 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 public interface GiraphConstants {
   /** 1KB in bytes */
   int ONE_KB = 1024;
+
+  /** Mapping related information */
+  ClassConfOption<? extends MappingStore> MAPPING_STORE_CLASS =
+      ClassConfOption.create("giraph.mappingStoreClass", null,
+          MappingStore.class, "MappingStore Class");
+
+  /** Class to use for performing read operations on mapping store */
+  ClassConfOption<? extends MappingStoreOps> MAPPING_STORE_OPS_CLASS =
+      ClassConfOption.create("giraph.mappingStoreOpsClass", null,
+          MappingStoreOps.class, "MappingStoreOps class");
+
+  /** Upper value of LongByteMappingStore */
+  IntConfOption LB_MAPPINGSTORE_UPPER =
+      new IntConfOption("giraph.lbMappingStoreUpper", -1,
+          "'upper' value used by lbmappingstore");
+  /** Lower value of LongByteMappingStore */
+  IntConfOption LB_MAPPINGSTORE_LOWER =
+      new IntConfOption("giraph.lbMappingStoreLower", -1,
+          "'lower' value used by lbMappingstore");
+  /** Class used to conduct expensive edge translation during vertex input */
+  ClassConfOption EDGE_TRANSLATION_CLASS =
+      ClassConfOption.create("giraph.edgeTranslationClass", null,
+          TranslateEdge.class, "Class used to conduct expensive edge " +
+              "translation during vertex input phase");
 
   /** Computation class - required */
   ClassConfOption<Computation> COMPUTATION_CLASS =
@@ -230,6 +258,10 @@ public interface GiraphConstants {
   ClassConfOption<EdgeInputFormat> EDGE_INPUT_FORMAT_CLASS =
       ClassConfOption.create("giraph.edgeInputFormatClass", null,
           EdgeInputFormat.class, "EdgeInputFormat class");
+  /** MappingInputFormat class */
+  ClassConfOption<MappingInputFormat> MAPPING_INPUT_FORMAT_CLASS =
+      ClassConfOption.create("giraph.mappingInputFormatClass", null,
+          MappingInputFormat.class, "MappingInputFormat class");
 
   /** EdgeInputFilter class */
   ClassConfOption<EdgeInputFilter> EDGE_INPUT_FILTER_CLASS =

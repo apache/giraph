@@ -40,6 +40,7 @@ import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.GiraphInputFormat;
 import org.apache.giraph.graph.GraphTaskManager;
+import org.apache.giraph.io.MappingInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.partition.MasterGraphPartitioner;
 import org.apache.giraph.partition.PartitionOwner;
@@ -119,7 +120,7 @@ import static org.apache.giraph.conf.GiraphConstants.USE_INPUT_SPLIT_LOCALITY;
  * @param <V> Vertex data
  * @param <E> Edge data
  */
-@SuppressWarnings("rawtypes")
+@SuppressWarnings("rawtypes, unchecked")
 public class BspServiceMaster<I extends WritableComparable,
     V extends Writable, E extends Writable>
     extends BspService<I, V, E>
@@ -217,7 +218,7 @@ public class BspServiceMaster<I extends WritableComparable,
     observers = conf.createMasterObservers();
 
     GiraphMetrics.get().addSuperstepResetObserver(this);
-    GiraphStats.init(context);
+    GiraphStats.init((Mapper.Context) context);
   }
 
   @Override
@@ -673,6 +674,17 @@ public class BspServiceMaster<I extends WritableComparable,
     }
 
     return splitList.size();
+  }
+
+  @Override
+  public int createMappingInputSplits() {
+    if (!getConfiguration().hasMappingInputFormat()) {
+      return 0;
+    }
+    MappingInputFormat<I, V, E, ? extends Writable> mappingInputFormat =
+      getConfiguration().createWrappedMappingInputFormat();
+    return createInputSplits(mappingInputFormat, mappingInputSplitsPaths,
+      "Mapping");
   }
 
   @Override
@@ -1589,8 +1601,12 @@ public class BspServiceMaster<I extends WritableComparable,
 
     if (getSuperstep() == INPUT_SUPERSTEP) {
       // Initialize aggregators before coordinating
-      // vertex loading and edge loading
       initializeAggregatorInputSuperstep();
+      if (getConfiguration().hasMappingInputFormat()) {
+        coordinateInputSplits(mappingInputSplitsPaths, mappingInputSplitsEvents,
+            "Mapping");
+      }
+      // vertex loading and edge loading
       if (getConfiguration().hasVertexInputFormat()) {
         coordinateInputSplits(vertexInputSplitsPaths, vertexInputSplitsEvents,
             "Vertex");

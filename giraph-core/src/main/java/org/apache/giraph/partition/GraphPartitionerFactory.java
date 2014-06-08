@@ -19,6 +19,7 @@
 package org.apache.giraph.partition;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfigurable;
+import org.apache.giraph.worker.LocalData;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -32,7 +33,14 @@ import org.apache.hadoop.io.WritableComparable;
 @SuppressWarnings("rawtypes")
 public interface GraphPartitionerFactory<I extends WritableComparable,
     V extends Writable, E extends Writable> extends
-    ImmutableClassesGiraphConfigurable {
+    ImmutableClassesGiraphConfigurable<I, V, E> {
+
+  /**
+   * Use some local data present in the worker
+   *
+   * @param localData localData present in the worker
+   */
+  void initialize(LocalData<I, V, E, ? extends Writable> localData);
   /**
    * Create the {@link MasterGraphPartitioner} used by the master.
    * Instantiated once by the master and reused.

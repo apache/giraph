@@ -18,7 +18,8 @@
 
 package org.apache.giraph.partition;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
+import org.apache.giraph.worker.LocalData;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -33,14 +34,17 @@ import org.apache.hadoop.io.WritableComparable;
  * @param <E> Edge value
  */
 public abstract class SimplePartitionerFactory<I extends WritableComparable,
-    V extends Writable, E extends Writable>
-    implements GraphPartitionerFactory<I, V, E> {
-  /** Configuration. */
-  private ImmutableClassesGiraphConfiguration conf;
+  V extends Writable, E extends Writable>
+  extends DefaultImmutableClassesGiraphConfigurable<I, V, E>
+  implements GraphPartitionerFactory<I, V, E> {
+
+  @Override
+  public void initialize(LocalData<I, V, E, ? extends Writable> localData) {
+  }
 
   @Override
   public final MasterGraphPartitioner<I, V, E> createMasterGraphPartitioner() {
-    return new SimpleMasterPartitioner<I, V, E>(conf) {
+    return new SimpleMasterPartitioner<I, V, E>(getConf()) {
       @Override
       protected int getWorkerIndex(int partition, int partitionCount,
           int workerCount) {
@@ -54,20 +58,12 @@ public abstract class SimplePartitionerFactory<I extends WritableComparable,
   public final WorkerGraphPartitioner<I, V, E> createWorkerGraphPartitioner() {
     return new SimpleWorkerPartitioner<I, V, E>() {
       @Override
-      protected int getPartitionIndex(I id, int partitionCount) {
-        return SimplePartitionerFactory.this.getPartition(id, partitionCount);
+      protected int getPartitionIndex(I id, int partitionCount,
+        int workerCount) {
+        return SimplePartitionerFactory.this.getPartition(id,
+            partitionCount, workerCount);
       }
     };
-  }
-
-  @Override
-  public void setConf(ImmutableClassesGiraphConfiguration conf) {
-    this.conf = conf;
-  }
-
-  @Override
-  public final ImmutableClassesGiraphConfiguration getConf() {
-    return conf;
   }
 
   /**
@@ -76,9 +72,12 @@ public abstract class SimplePartitionerFactory<I extends WritableComparable,
    *
    * @param id Vertex id
    * @param partitionCount Number of partitions
+   * @param workerCount Number of workers
    * @return partition
    */
-  protected abstract int getPartition(I id, int partitionCount);
+  protected abstract int getPartition(I id, int partitionCount,
+    int workerCount);
+
   /**
    * Calculates worker that should be responsible for passed partition.
    *
