@@ -18,11 +18,12 @@
 
 package org.apache.giraph.aggregators.matrix.dense;
 
+import it.unimi.dsi.fastutil.floats.FloatArrayList;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import it.unimi.dsi.fastutil.floats.FloatArrayList;
 import org.apache.hadoop.io.Writable;
 
 /**
@@ -31,7 +32,7 @@ import org.apache.hadoop.io.Writable;
  */
 public class FloatDenseVector implements Writable {
   /** The entries of the vector. */
-  private FloatArrayList entries = new FloatArrayList();
+  private final FloatArrayList entries = new FloatArrayList();
   /** If true, this vector is singleton */
   private boolean isSingleton = false;
   /** The index of the singleton */
@@ -92,7 +93,7 @@ public class FloatDenseVector implements Writable {
     if (i >= entries.size()) {
       return 0.0f;
     }
-    return entries.get(i);
+    return entries.getFloat(i);
   }
 
   /**
@@ -117,12 +118,12 @@ public class FloatDenseVector implements Writable {
     }
     if (other.isSingleton) {
       ensureCapacity(other.singletonIndex + 1);
-      entries.set(other.singletonIndex, entries.get(other.singletonIndex) +
+      entries.set(other.singletonIndex, entries.getFloat(other.singletonIndex) +
           other.singletonValue);
     } else {
       ensureCapacity(other.entries.size());
       for (int i = 0; i < other.entries.size(); ++i) {
-        entries.set(i, entries.get(i) + other.entries.get(i));
+        entries.set(i, entries.getFloat(i) + other.entries.getFloat(i));
       }
     }
   }
@@ -147,7 +148,7 @@ public class FloatDenseVector implements Writable {
     } else {
       out.writeInt(entries.size());
       for (int i = 0; i < entries.size(); ++i) {
-        out.writeFloat(entries.get(i));
+        out.writeFloat(entries.getFloat(i));
       }
     }
   }

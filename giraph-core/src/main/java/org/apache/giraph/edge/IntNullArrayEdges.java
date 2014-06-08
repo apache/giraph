@@ -18,13 +18,6 @@
 
 package org.apache.giraph.edge;
 
-import org.apache.giraph.utils.EdgeIterables;
-import org.apache.giraph.utils.Trimmable;
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.NullWritable;
-
-import com.google.common.collect.UnmodifiableIterator;
-
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntIterator;
 
@@ -32,6 +25,13 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Iterator;
+
+import org.apache.giraph.utils.EdgeIterables;
+import org.apache.giraph.utils.Trimmable;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.NullWritable;
+
+import com.google.common.collect.UnmodifiableIterator;
 
 /**
  * Implementation of {@link OutEdges} with int ids and null edge
@@ -91,7 +91,7 @@ public class IntNullArrayEdges
     // Thanks to the constant-time implementation of removeAt(int),
     // we can remove all matching edges in linear time.
     for (int i = neighbors.size() - 1; i >= 0; --i) {
-      if (neighbors.get(i) == targetVertexId.get()) {
+      if (neighbors.getInt(i) == targetVertexId.get()) {
         removeAt(i);
       }
     }
@@ -102,9 +102,9 @@ public class IntNullArrayEdges
     // Returns an iterator that reuses objects.
     return new UnmodifiableIterator<Edge<IntWritable, NullWritable>>() {
       /** Wrapped neighbors iterator. */
-      private IntIterator neighborsIt = neighbors.iterator();
+      private final IntIterator neighborsIt = neighbors.iterator();
       /** Representative edge object. */
-      private Edge<IntWritable, NullWritable> representativeEdge =
+      private final Edge<IntWritable, NullWritable> representativeEdge =
           EdgeFactory.create(new IntWritable(), NullWritable.get());
 
       @Override

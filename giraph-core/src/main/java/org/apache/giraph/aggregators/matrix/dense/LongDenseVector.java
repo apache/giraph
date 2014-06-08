@@ -18,11 +18,12 @@
 
 package org.apache.giraph.aggregators.matrix.dense;
 
+import it.unimi.dsi.fastutil.longs.LongArrayList;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import it.unimi.dsi.fastutil.longs.LongArrayList;
 import org.apache.hadoop.io.Writable;
 
 /**
@@ -31,7 +32,7 @@ import org.apache.hadoop.io.Writable;
  */
 public class LongDenseVector implements Writable {
   /** The entries of the vector. */
-  private LongArrayList entries = new LongArrayList();
+  private final LongArrayList entries = new LongArrayList();
   /** If true, this vector is singleton */
   private boolean isSingleton = false;
   /** The index of the singleton */
@@ -92,7 +93,7 @@ public class LongDenseVector implements Writable {
     if (i >= entries.size()) {
       return 0L;
     }
-    return entries.get(i);
+    return entries.getLong(i);
   }
 
   /**
@@ -117,12 +118,12 @@ public class LongDenseVector implements Writable {
     }
     if (other.isSingleton) {
       ensureCapacity(other.singletonIndex + 1);
-      entries.set(other.singletonIndex, entries.get(other.singletonIndex) +
+      entries.set(other.singletonIndex, entries.getLong(other.singletonIndex) +
           other.singletonValue);
     } else {
       ensureCapacity(other.entries.size());
       for (int i = 0; i < other.entries.size(); ++i) {
-        entries.set(i, entries.get(i) + other.entries.get(i));
+        entries.set(i, entries.getLong(i) + other.entries.getLong(i));
       }
     }
   }
@@ -147,7 +148,7 @@ public class LongDenseVector implements Writable {
     } else {
       out.writeInt(entries.size());
       for (int i = 0; i < entries.size(); ++i) {
-        out.writeLong(entries.get(i));
+        out.writeLong(entries.getLong(i));
       }
     }
   }

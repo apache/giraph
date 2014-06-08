@@ -21,15 +21,15 @@ package org.apache.giraph.edge;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import it.unimi.dsi.fastutil.longs.LongIterator;
 
-import org.apache.giraph.utils.EdgeIterables;
-import org.apache.giraph.utils.Trimmable;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.NullWritable;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.Iterator;
+
+import org.apache.giraph.utils.EdgeIterables;
+import org.apache.giraph.utils.Trimmable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.NullWritable;
 
 /**
  * Implementation of {@link OutEdges} with long ids and null edge
@@ -97,7 +97,7 @@ public class LongNullArrayEdges
     // Thanks to the constant-time implementation of removeAt(int),
     // we can remove all matching edges in linear time.
     for (int i = neighbors.size() - 1; i >= 0; --i) {
-      if (neighbors.get(i) == targetVertexId.get()) {
+      if (neighbors.getLong(i) == targetVertexId.get()) {
         removeAt(i);
       }
     }
@@ -122,16 +122,17 @@ public class LongNullArrayEdges
       /** Current position in the array. */
       private int offset = 0;
       /** Representative edge object. */
-      private MutableEdge<LongWritable, NullWritable> representativeEdge =
+      private final MutableEdge<LongWritable, NullWritable> representativeEdge =
           EdgeFactory.createReusable(new LongWritable());
 
+      @Override
       public boolean hasNext() {
         return offset < neighbors.size();
       }
 
       @Override
       public MutableEdge<LongWritable, NullWritable> next() {
-        representativeEdge.getTargetVertexId().set(neighbors.get(offset++));
+        representativeEdge.getTargetVertexId().set(neighbors.getLong(offset++));
         return representativeEdge;
       }
 

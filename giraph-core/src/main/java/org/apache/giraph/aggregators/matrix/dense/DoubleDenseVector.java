@@ -18,11 +18,12 @@
 
 package org.apache.giraph.aggregators.matrix.dense;
 
+import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import it.unimi.dsi.fastutil.doubles.DoubleArrayList;
 import org.apache.hadoop.io.Writable;
 
 /**
@@ -33,7 +34,7 @@ import org.apache.hadoop.io.Writable;
  */
 public class DoubleDenseVector implements Writable {
   /** The entries of the vector. */
-  private DoubleArrayList entries = new DoubleArrayList();
+  private final DoubleArrayList entries = new DoubleArrayList();
   /** If true, this vector is singleton */
   private boolean isSingleton = false;
   /** The index of the singleton */
@@ -94,7 +95,7 @@ public class DoubleDenseVector implements Writable {
     if (i >= entries.size()) {
       return 0.0;
     }
-    return entries.get(i);
+    return entries.getDouble(i);
   }
 
   /**
@@ -119,12 +120,12 @@ public class DoubleDenseVector implements Writable {
     }
     if (other.isSingleton) {
       ensureCapacity(other.singletonIndex + 1);
-      entries.set(other.singletonIndex, entries.get(other.singletonIndex) +
-          other.singletonValue);
+      entries.set(other.singletonIndex,
+          entries.getDouble(other.singletonIndex) + other.singletonValue);
     } else {
       ensureCapacity(other.entries.size());
       for (int i = 0; i < other.entries.size(); ++i) {
-        entries.set(i, entries.get(i) + other.entries.get(i));
+        entries.set(i, entries.getDouble(i) + other.entries.getDouble(i));
       }
     }
   }
@@ -149,7 +150,7 @@ public class DoubleDenseVector implements Writable {
     } else {
       out.writeInt(entries.size());
       for (int i = 0; i < entries.size(); ++i) {
-        out.writeDouble(entries.get(i));
+        out.writeDouble(entries.getDouble(i));
       }
     }
   }

@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-910: removing unnecessary boxing in some places in giraph-core (pavanka)  
+
   GIRAPH-908: support for partitioned input in giraph (pavanka)
 
   GIRAPH-907: refactor giraph code to support multiple implementations of vertexId data (pavanka)  
