@@ -18,6 +18,7 @@
 
 package org.apache.giraph.worker;
 
+import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
 import org.apache.giraph.graph.GraphState;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -27,7 +28,9 @@ import org.apache.hadoop.mapreduce.Mapper;
  * on a per-worker basis. There's one WorkerContext per worker.
  */
 @SuppressWarnings("rawtypes")
-public abstract class WorkerContext implements WorkerAggregatorUsage {
+public abstract class WorkerContext
+  extends DefaultImmutableClassesGiraphConfigurable
+  implements WorkerAggregatorUsage {
   /** Global graph state */
   private GraphState graphState;
   /** Worker aggregator usage */
@@ -36,7 +39,7 @@ public abstract class WorkerContext implements WorkerAggregatorUsage {
   /**
    * Set the graph state.
    *
-   *  @param graphState Used to set the graph state.
+   * @param graphState Used to set the graph state.
    */
   public void setGraphState(GraphState graphState) {
     this.graphState = graphState;
