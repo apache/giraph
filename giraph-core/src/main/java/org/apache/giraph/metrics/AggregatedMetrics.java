@@ -30,9 +30,6 @@ import java.util.Map;
  * Map of a bunch of aggregated metrics
  */
 public class AggregatedMetrics {
-  /** counter for user compute time in milliseconds */
-  public static final String USER_COMPUTE_MS = "user-compute-ms";
-
   /** Mapping from name to aggregated metric */
   private Map<String, AggregatedMetric> metrics = Maps.newHashMap();
 
@@ -74,8 +71,6 @@ public class AggregatedMetrics {
         workerMetrics.getTimeToFirstMsg(), hostname);
     add(BspServiceWorker.TIMER_WAIT_REQUESTS,
         workerMetrics.getWaitRequestsTimer(), hostname);
-    add(USER_COMPUTE_MS,
-        workerMetrics.getUserComputeTime(), hostname);
     return this;
   }
 
@@ -94,13 +89,11 @@ public class AggregatedMetrics {
         get(GraphTaskManager.TIMER_TIME_TO_FIRST_MSG);
     AggregatedMetric waitRequestsMicros = get(
         BspServiceWorker.TIMER_WAIT_REQUESTS);
-    AggregatedMetric userComputeTime = get(USER_COMPUTE_MS);
 
     out.println();
     out.println("--- METRICS: superstep " + superstep + " ---");
     printAggregatedMetric(out, "superstep time", "ms", superstepTime);
     printAggregatedMetric(out, "compute all partitions", "ms", computeAll);
-    printAggregatedMetric(out, "user compute time", "ms", userComputeTime);
     printAggregatedMetric(out, "network communication time", "ms", commTime);
     printAggregatedMetric(out, "time to first message", "us", timeToFirstMsg);
     printAggregatedMetric(out, "wait requests time", "us", waitRequestsMicros);

@@ -28,7 +28,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.io.PrintStream;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Per-superstep metrics for a Worker.
@@ -44,8 +43,6 @@ public class WorkerSuperstepMetrics implements Writable {
   private LongAndTimeUnit superstepTimer;
   /** Time spent waiting for other workers to finish */
   private LongAndTimeUnit waitRequestsTimer;
-  /** Time spent in Vertex#compute */
-  private LongAndTimeUnit userComputeTime;
 
   /**
    * Constructor
@@ -56,10 +53,6 @@ public class WorkerSuperstepMetrics implements Writable {
     timeToFirstMsg = new LongAndTimeUnit();
     superstepTimer = new LongAndTimeUnit();
     waitRequestsTimer = new LongAndTimeUnit();
-
-    // Note this one is not backed by a GiraphTimer, but rather a real Timer
-    userComputeTime = new LongAndTimeUnit();
-    userComputeTime.setTimeUnit(TimeUnit.MILLISECONDS);
   }
 
   /**
@@ -68,13 +61,11 @@ public class WorkerSuperstepMetrics implements Writable {
    * @return this object, for chaining
    */
   public WorkerSuperstepMetrics readFromRegistry() {
-    SuperstepMetricsRegistry ssm = GiraphMetrics.get().perSuperstep();
     readGiraphTimer(GraphTaskManager.TIMER_COMMUNICATION_TIME, commTimer);
     readGiraphTimer(GraphTaskManager.TIMER_COMPUTE_ALL, computeAllTimer);
     readGiraphTimer(GraphTaskManager.TIMER_TIME_TO_FIRST_MSG, timeToFirstMsg);
     readGiraphTimer(GraphTaskManager.TIMER_SUPERSTEP_TIME, superstepTimer);
     readGiraphTimer(BspServiceWorker.TIMER_WAIT_REQUESTS, waitRequestsTimer);
-    userComputeTime.setValue((long) ssm.getTimer(TimerDesc.COMPUTE_ONE).sum());
     return this;
   }
 
@@ -108,7 +99,6 @@ public class WorkerSuperstepMetrics implements Writable {
     out.println("--- METRICS: superstep " + superstep + " ---");
     out.println("  superstep time: " + superstepTimer);
     out.println("  compute all partitions: " + computeAllTimer);
-    out.println("  user compute time: " + userComputeTime);
     out.println("  network communication time: " + commTimer);
     out.println("  time to first message: " + timeToFirstMsg);
     out.println("  wait on requests time: " + waitRequestsTimer);
@@ -150,13 +140,6 @@ public class WorkerSuperstepMetrics implements Writable {
     return waitRequestsTimer.getValue();
   }
 
-  /**
-   * @return milliseconds in user compute code
-   */
-  public long getUserComputeTime() {
-    return userComputeTime.getValue();
-  }
-
   @Override
   public void readFields(DataInput dataInput) throws IOException {
     commTimer.setValue(dataInput.readLong());
@@ -164,7 +147,6 @@ public class WorkerSuperstepMetrics implements Writable {
     timeToFirstMsg.setValue(dataInput.readLong());
     superstepTimer.setValue(dataInput.readLong());
     waitRequestsTimer.setValue(dataInput.readLong());
-    userComputeTime.setValue(dataInput.readLong());
   }
 
   @Override
@@ -174,6 +156,5 @@ public class WorkerSuperstepMetrics implements Writable {
     dataOutput.writeLong(timeToFirstMsg.getValue());
     dataOutput.writeLong(superstepTimer.getValue());
     dataOutput.writeLong(waitRequestsTimer.getValue());
-    dataOutput.writeLong(userComputeTime.getValue());
   }
 }

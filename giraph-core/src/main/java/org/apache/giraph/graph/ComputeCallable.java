@@ -26,7 +26,6 @@ import org.apache.giraph.io.SimpleVertexWriter;
 import org.apache.giraph.metrics.GiraphMetrics;
 import org.apache.giraph.metrics.MetricNames;
 import org.apache.giraph.metrics.SuperstepMetricsRegistry;
-import org.apache.giraph.metrics.TimerDesc;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.partition.PartitionStats;
 import org.apache.giraph.time.SystemTime;
@@ -46,8 +45,6 @@ import org.apache.log4j.Logger;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.yammer.metrics.core.Counter;
-import com.yammer.metrics.core.Timer;
-import com.yammer.metrics.core.TimerContext;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -102,8 +99,6 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
   private final Counter messagesSentCounter;
   /** Message bytes sent */
   private final Counter messageBytesSentCounter;
-  /** Timer for single compute() call */
-  private final Timer computeOneTimer;
 
   /**
    * Constructor
@@ -129,9 +124,6 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
     this.graphState = graphState;
 
     SuperstepMetricsRegistry metrics = GiraphMetrics.get().perSuperstep();
-    // Normally we would use ResetSuperstepMetricsObserver but this class is
-    // not long-lived, so just instantiating in the constructor is good enough.
-    computeOneTimer = metrics.getTimer(TimerDesc.COMPUTE_ONE);
     messagesSentCounter = metrics.getCounter(MetricNames.MESSAGES_SENT);
     messageBytesSentCounter =
       metrics.getCounter(MetricNames.MESSAGE_BYTES_SENT);
@@ -243,12 +235,7 @@ public class ComputeCallable<I extends WritableComparable, V extends Writable,
         }
         if (!vertex.isHalted()) {
           context.progress();
-          TimerContext computeOneTimerContext = computeOneTimer.time();
-          try {
-            computation.compute(vertex, messages);
-          } finally {
-            computeOneTimerContext.stop();
-          }
+          computation.compute(vertex, messages);
           // Need to unwrap the mutated edges (possibly)
           vertex.unwrapMutableEdges();
           //Compact edges representation if possible

@@ -258,18 +258,6 @@ public class GiraphMetricsRegistry {
   }
 
   /**
-   * Create a new {@link Timer} from the description and registers it under the
-   * given group and name.
-   *
-   * @param timerDesc TimerDesc describing the timer
-   * @return new {@link Timer}
-   */
-  public Timer getTimer(TimerDesc timerDesc) {
-    return getTimer(timerDesc.getName(), timerDesc.getDurationUnit(),
-        timerDesc.getTimeUnit());
-  }
-
-  /**
    * Creates a new {@link Timer} and registers it under the given
    * group and name.
    *
