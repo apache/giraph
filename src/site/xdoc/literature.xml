@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+-->
+
+<document xmlns="http://maven.apache.org/XDOC/2.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/XDOC/2.0 http://maven.apache.org/xsd/xdoc-2.0.xsd">
+  <properties>
+    <title>Literature about Apache Giraph</title>
+  </properties>
+
+  <body>
+
+    <section name="Books">
+		<table>
+	        <tr>
+				<td>		<b>Giraph in Action</b> (<a href="http://www.manning.com/martella">MANNING</a>)<br/> 
+		Giraph in Action teaches you how to apply the Apache Giraph programming model to real-world graph data examples. The book starts by showing you how to mine graph data 
+		using the most straightforward algorithms. Then, you'll dive into the Giraph architecture and the main APIs as you discover how to model and process more complex scenarios. 
+		Along the way, you'll pick up techniques for handling data from disparate sources, swapping data in and out of memory, and running Giraph in the cloud.
+                </td>
+                <td><img src="http://www.manning.com/martella/martella_cover150.jpg"/><br/>
+                <i>You can use coupon "<b>giraph38</b>" to get <b>38%</b> off Giraph in Action (all formats)".</i></td>
+			</tr>
+		</table>
+    </section>
+ 
+    <section name="Research Articles">
+			
+	   	<p>Xin, R. S., Crankshaw, D., Dave, A., Gonzalez, J. E., Franklin, M. J., &amp; Stoica, I. <i>GraphX: Unifying Data-Parallel and Graph-Parallel Analytics</i>. 
+		arXiv preprint arXiv:1402.2394. (2014)<br/>
+         <a href="http://arxiv.org/pdf/1402.2394">http://arxiv.org/pdf/1402.2394</a>
+         </p>
+		
+		<p>Martella, Claudio et al. <i>Spinner: scalable graph partitioning for the cloud.</i> arXiv, (2014). <br/>
+		<a href="http://arxiv.org/pdf/1404.3861v1.pdf">http://arxiv.org/pdf/1404.3861v1.pdf</a>
+        </p>
+		
+        <p>Khayyat, Zuhair, et al. <i>Mizan: a system for dynamic load balancing in large-scale graph processing.</i> 
+        Proceedings of the 8th ACM European Conference on Computer Systems. ACM, (2013). <br/>
+        <a href="http://www.cs.cornell.edu/~djwill/pubs/mizan.pdf">http://www.cs.cornell.edu/~djwill/pubs/mizan.pdf</a>
+        </p>
+		
+        <p>Salihoglu, Semih, &amp; Jennifer Widom. <i>Gps: A graph processing system.</i> 
+        Proceedings of the 25th International Conference on Scientific and Statistical Database Management. ACM, (2013).<br/>
+        <a href="http://ilpubs.stanford.edu:8090/1039/7/gps_ssdbm.pdf">http://ilpubs.stanford.edu:8090/1039/7/gps_ssdbm.pdf</a>
+        </p>		
+		
+		<p>Tian, Y., Balmin, A., Corsten, S. A., Tatikonda, S., &amp; McPherson, J. <i>From <b>Think Like a Vertex</b> to <b>Think Like a Graph</b></i>. 
+		Proceedings of the VLDB Endowment, 7(3). (2013)<br/>
+        <a href="http://researcher.ibm.com/researcher/files/us-ytian/giraph++.pdf">http://researcher.ibm.com/researcher/files/us-ytian/giraph++.pdf</a>
+        </p>
+ 
+		<p>Schelter, S., Ewen, S., Tzoumas, K., &amp; Markl, V. <i>All roads lead to Rome: optimistic recovery for distributed iterative data processing</i>. 
+		In Proceedings of the 22nd ACM international conference on Conference on information &amp; knowledge management (pp. 1919-1928). ACM. (2013, October).<br/>
+         <a href="http://stratosphere.eu/assets/papers/optimistic.pdf">http://stratosphere.eu/assets/papers/optimistic.pdf</a>
+         </p>
+ 
+        <p>Ewen, S., Tzoumas, K., Kaufmann, M., &amp; Markl, V. <i>Spinning fast iterative data flows</i>. Proceedings of the VLDB Endowment, 5(11), 1268-1279. (2012).<br/>
+         <a href="http://arxiv.org/pdf/1208.0088.pdf?origin=publication_detail">http://arxiv.org/pdf/1208.0088.pdf?origin=publication_detail</a>
+        </p>
+		
+		<p>Malewicz, Grzegorz, et al. <i>Pregel: a system for large-scale graph processing.</i> Proceedings of the 2010 ACM SIGMOD International Conference on Management of data. ACM, (2010). <br/>
+		<a href="http://static.cs.brown.edu/courses/csci2270/papers/pregel.pdf">http://static.cs.brown.edu/courses/csci2270/papers/pregel.pdf</a>
+		</p>
+				
+     	<p>Valiant, Leslie G. <i>A bridging model for parallel computation.</i> Communications of the ACM 33.8 : 103-111. (1990).<br/>
+	    <a href="http://web.mit.edu/6.976/www/handout/valiant2.pdf">http://web.mit.edu/6.976/www/handout/valiant2.pdf</a>
+		</p>
+		
+		
+		
+		
+		<p>Hong, Sungpack, et al. <i>Green-Marl: a DSL for easy and efficient graph analysis.</i> ACM SIGARCH Computer Architecture News. Vol. 40. No. 1. ACM, (2012). <br/>
+		<a href="http://www.cl.cam.ac.uk/~ey204/teaching/ACS/R202_2012_2013/papers/S7_Network_Structure/papers/hong_asplos_2012.pdf">http://www.cl.cam.ac.uk/~ey204/teaching/ACS/R202_2012_2013/papers/S7_Network_Structure/papers/hong_asplos_2012.pdf</a>
+	    </p>
+	    
+		<p>Salihoglu, Semih, and Jennifer Widom. <i>Optimizing Graph Algorithms on Pregel-like Systems.</i> (2014). <br/>
+		<a href="http://ilpubs.stanford.edu:8090/1077/3/p535-salihoglu.pdf">http://ilpubs.stanford.edu:8090/1077/3/p535-salihoglu.pdf</a>
+		</p>
+		
+		<p>Salihoglu, Semih, and Jennifer Widom. <i>HelP: High-level Primitives For Large-Scale Graph Processing.</i> <br/>
+		<a href="http://ilpubs.stanford.edu:8090/1085/2/primitives_tr_sig_alternate.pdf">http://ilpubs.stanford.edu:8090/1085/2/primitives_tr_sig_alternate.pdf</a>
+ 		</p>
+ 		
+     </section>
+
+  </body>
+</document>
