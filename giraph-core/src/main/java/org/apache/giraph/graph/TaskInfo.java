@@ -48,7 +48,7 @@ public abstract class TaskInfo implements Writable {
    * @return Hostname
    */
   public String getHostname() {
-    return hostname;
+    return hostname.toLowerCase();
   }
 
   /**
