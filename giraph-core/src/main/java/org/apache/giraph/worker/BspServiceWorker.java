@@ -320,7 +320,7 @@ public class BspServiceWorker<I extends WritableComparable,
    *
    * @return Count of mapping entries loaded
    */
-  private Integer loadMapping() throws KeeperException,
+  private long loadMapping() throws KeeperException,
     InterruptedException {
     List<String> inputSplitPathList =
         getZkExt().getChildrenExt(mappingInputSplitsPaths.getPath(),
@@ -341,7 +341,7 @@ public class BspServiceWorker<I extends WritableComparable,
             this,
             getZkExt());
 
-    int entriesLoaded = 0;
+    long entriesLoaded = 0;
     // Determine how many threads to use based on the number of input splits
     int maxInputSplitThreads = inputSplitPathList.size();
     int numThreads = Math.min(getConfiguration().getNumInputSplitsThreads(),
@@ -577,7 +577,7 @@ public class BspServiceWorker<I extends WritableComparable,
     aggregatorHandler.prepareSuperstep(workerAggregatorRequestProcessor);
 
     VertexEdgeCount vertexEdgeCount;
-    int entriesLoaded = 0;
+    long entriesLoaded;
 
     if (getConfiguration().hasMappingInputFormat()) {
       // Ensure the mapping InputSplits are ready for processing
@@ -673,12 +673,13 @@ public class BspServiceWorker<I extends WritableComparable,
       }
     }
 
+    // remove mapping store if possible
+    localData.removeMappingStoreIfPossible();
+
     if (getConfiguration().hasEdgeInputFormat()) {
       // Move edges from temporary storage to their source vertices.
       getServerData().getEdgeStore().moveEdgesToVertices();
     }
-
-    localData.removeMappingStoreIfPossible();
 
     // Generate the partition stats for the input superstep and process
     // if necessary
