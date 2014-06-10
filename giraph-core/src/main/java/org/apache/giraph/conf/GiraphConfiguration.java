@@ -335,6 +335,15 @@ public class GiraphConfiguration extends Configuration
   }
 
   /**
+   * Check whether to enable heap memory supervisor thread
+   *
+   * @return true if jmap dumper is reactively enabled
+   */
+  public boolean isReactiveJmapHistogramDumpEnabled() {
+    return REACTIVE_JMAP_ENABLE.get(this);
+  }
+
+  /**
    * Set mapping from a key name to a list of classes.
    *
    * @param name String key name to use.

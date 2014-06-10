@@ -54,6 +54,7 @@ import org.apache.giraph.metrics.ResetSuperstepMetricsObserver;
 import org.apache.giraph.metrics.SuperstepMetricsRegistry;
 import org.apache.giraph.metrics.WorkerSuperstepMetrics;
 import org.apache.giraph.utils.JMapHistoDumper;
+import org.apache.giraph.utils.ReactiveJMapHistoDumper;
 import org.apache.giraph.utils.ProgressableUtils;
 import org.apache.giraph.time.SystemTime;
 import org.apache.giraph.time.Time;
@@ -214,6 +215,9 @@ public class BspServiceMaster<I extends WritableComparable,
         getGraphPartitionerFactory().createMasterGraphPartitioner();
     if (conf.isJMapHistogramDumpEnabled()) {
       conf.addMasterObserverClass(JMapHistoDumper.class);
+    }
+    if (conf.isReactiveJmapHistogramDumpEnabled()) {
+      conf.addMasterObserverClass(ReactiveJMapHistoDumper.class);
     }
     observers = conf.createMasterObservers();
 

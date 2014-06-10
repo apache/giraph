@@ -443,6 +443,22 @@ public interface GiraphConstants {
           "Only print live objects in jmap?");
 
   /**
+   * Option used by ReactiveJMapHistoDumper to check for an imminent
+   * OOM in worker or master process
+   */
+  IntConfOption MIN_FREE_MBS_ON_HEAP =
+      new IntConfOption("giraph.heap.minFreeMb", 128, "Option used by " +
+          "worker and master observers to check for imminent OOM exception");
+  /**
+   * Option can be used to enable reactively dumping jmap histo when
+   * OOM is imminent
+   */
+  BooleanConfOption REACTIVE_JMAP_ENABLE =
+      new BooleanConfOption("giraph.heap.enableReactiveJmapDumping", false,
+          "Option to enable dumping jmap histogram reactively based on " +
+              "free memory on heap");
+
+  /**
    * Minimum percent of the maximum number of workers that have responded
    * in order to continue progressing. (float)
    */

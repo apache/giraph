@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-842: option to dump histogram of memory usage when heap is low on memory (pavanka)
+
   GIRAPH-904: Giraph can hang when hostnames include uppercase letters (netj via pavanka)
 
   GIRAPH-900: Remove timers for compute method (majakabiljo via pavanka)

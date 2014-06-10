@@ -63,6 +63,7 @@ import org.apache.giraph.partition.PartitionStore;
 import org.apache.giraph.partition.WorkerGraphPartitioner;
 import org.apache.giraph.utils.CallableFactory;
 import org.apache.giraph.utils.JMapHistoDumper;
+import org.apache.giraph.utils.ReactiveJMapHistoDumper;
 import org.apache.giraph.utils.LoggerUtils;
 import org.apache.giraph.utils.MemoryUtils;
 import org.apache.giraph.utils.ProgressableUtils;
@@ -213,6 +214,9 @@ public class BspServiceWorker<I extends WritableComparable,
 
     if (conf.isJMapHistogramDumpEnabled()) {
       conf.addWorkerObserverClass(JMapHistoDumper.class);
+    }
+    if (conf.isReactiveJmapHistogramDumpEnabled()) {
+      conf.addWorkerObserverClass(ReactiveJMapHistoDumper.class);
     }
     observers = conf.createWorkerObservers();
 
