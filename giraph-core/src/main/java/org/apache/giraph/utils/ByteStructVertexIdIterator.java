@@ -54,7 +54,7 @@ public abstract class ByteStructVertexIdIterator<I extends WritableComparable>
 
   @Override
   public boolean hasNext() {
-    return extendedDataInput.available() > 0;
+    return !extendedDataInput.endOfInput();
   }
 
   @Override

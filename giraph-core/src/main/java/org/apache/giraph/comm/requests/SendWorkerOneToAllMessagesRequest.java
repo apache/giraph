@@ -116,7 +116,7 @@ public class SendWorkerOneToAllMessagesRequest<I extends WritableComparable,
     int idCount = 0;
     int partitionId = 0;
     try {
-      while (reader.available() != 0) {
+      while (!reader.endOfInput()) {
         msg.readFields(reader);
         idCount = reader.readInt();
         for (int i = 0; i < idCount; i++) {

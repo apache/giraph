@@ -84,6 +84,11 @@ public class UnsafeArrayReads extends UnsafeReads {
     return (int) (bufLength - pos);
   }
 
+  @Override
+  public boolean endOfInput() {
+    return available() == 0;
+  }
+
 
   @Override
   public int getPos() {

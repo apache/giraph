@@ -44,7 +44,7 @@ public abstract class ByteStructIterator<T extends Writable> implements
 
   @Override
   public boolean hasNext() {
-    return extendedDataInput.available() > 0;
+    return !extendedDataInput.endOfInput();
   }
 
   @Override

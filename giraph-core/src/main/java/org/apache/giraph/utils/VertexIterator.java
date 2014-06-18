@@ -77,7 +77,7 @@ public class VertexIterator<I extends WritableComparable,
    * @return True if the iteration has more elements.
    */
   public boolean hasNext() {
-    return extendedDataInput.available() > 0;
+    return !extendedDataInput.endOfInput();
   }
 
   /**

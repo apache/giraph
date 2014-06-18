@@ -159,7 +159,7 @@ public class ByteArrayEdges<I extends WritableComparable, E extends Writable>
 
     @Override
     public boolean hasNext() {
-      return serializedEdges != null && extendedDataInput.available() > 0;
+      return serializedEdges != null && !extendedDataInput.endOfInput();
     }
 
     @Override

@@ -57,6 +57,11 @@ public class ExtendedByteArrayDataInput extends ByteArrayInputStream
   }
 
   @Override
+  public boolean endOfInput() {
+    return available() == 0;
+  }
+
+  @Override
   public void readFully(byte[] b) throws IOException {
     dataInput.readFully(b);
   }
