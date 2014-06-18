@@ -121,14 +121,12 @@ public abstract class AbstractEdgeStore<I extends WritableComparable,
   protected abstract Map<K, OutEdges<I, E>> getPartitionEdges(int partitionId);
 
   /**
-   * Remove and return the OutEdges for a given partition
+   * Return the OutEdges for a given partition
    *
    * @param entry for vertexId key
-   * @param partitionEdges map of out-edges for vertices in a partition
    * @return out edges
    */
-  protected abstract OutEdges<I, E> removePartitionEdges(Et entry,
-    Map<K, OutEdges<I, E>> partitionEdges);
+  protected abstract OutEdges<I, E> getPartitionEdges(Et entry);
 
   /**
    * Get iterator for partition edges
@@ -223,10 +221,10 @@ public abstract class AbstractEdgeStore<I extends WritableComparable,
               // process all vertices in given partition
               while (iterator.hasNext()) {
                 Et entry = iterator.next();
-                I vertexId = getVertexId(entry,
-                    representativeVertexId);
+                I vertexId = getVertexId(entry, representativeVertexId);
                 OutEdges<I, E> outEdges = convertInputToComputeEdges(
-                    removePartitionEdges(entry, partitionEdges));
+                  getPartitionEdges(entry));
+                iterator.remove();
                 Vertex<I, V, E> vertex = partition.getVertex(vertexId);
                 // If the source vertex doesn't exist, create it. Otherwise,
                 // just set the edges.

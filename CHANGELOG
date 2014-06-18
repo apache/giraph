@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-922: SimpleEdgeStore has a bug causing NPE (pavanka)
+
   GIRAPH-915: With BigDataIO some messages can get ignored (majakabiljo via pavanka)
 
   GIRAPH-918: GIRAPH-908 has a small bug reg counting entries (pavanka)

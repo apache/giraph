@@ -87,10 +87,9 @@ public class SimpleEdgeStore<I extends WritableComparable,
   }
 
   @Override
-  protected OutEdges<I, E> removePartitionEdges(
-      Map.Entry<I, OutEdges<I, E>> entry,
-      Map<I, OutEdges<I, E>> partitionEdges) {
-    return partitionEdges.put(entry.getKey(), null);
+  protected OutEdges<I, E> getPartitionEdges(
+    Map.Entry<I, OutEdges<I, E>> entry) {
+    return entry.getValue();
   }
 
   @Override

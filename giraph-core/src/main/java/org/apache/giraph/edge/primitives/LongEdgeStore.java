@@ -76,10 +76,9 @@ public class LongEdgeStore<V extends Writable, E extends Writable>
 
 
   @Override
-  protected OutEdges<LongWritable, E> removePartitionEdges(
-      Long2ObjectMap.Entry<OutEdges<LongWritable, E>> entry,
-      Map<Long, OutEdges<LongWritable, E>> partitionEdges) {
-    return partitionEdges.put(entry.getLongKey(), null);
+  protected OutEdges<LongWritable, E> getPartitionEdges(
+    Long2ObjectMap.Entry<OutEdges<LongWritable, E>> entry) {
+    return entry.getValue();
   }
 
   @Override

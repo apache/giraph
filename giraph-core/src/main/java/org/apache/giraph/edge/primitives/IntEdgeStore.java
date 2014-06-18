@@ -75,10 +75,9 @@ public class IntEdgeStore<V extends Writable, E extends Writable>
   }
 
   @Override
-  protected OutEdges<IntWritable, E> removePartitionEdges(
-    Int2ObjectMap.Entry<OutEdges<IntWritable, E>> entry,
-    Map<Integer, OutEdges<IntWritable, E>> partitionEdges) {
-    return partitionEdges.put(entry.getIntKey(), null);
+  protected OutEdges<IntWritable, E> getPartitionEdges(
+    Int2ObjectMap.Entry<OutEdges<IntWritable, E>> entry) {
+    return entry.getValue();
   }
 
   @Override
