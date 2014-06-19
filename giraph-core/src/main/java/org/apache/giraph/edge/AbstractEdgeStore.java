@@ -224,7 +224,6 @@ public abstract class AbstractEdgeStore<I extends WritableComparable,
                 I vertexId = getVertexId(entry, representativeVertexId);
                 OutEdges<I, E> outEdges = convertInputToComputeEdges(
                   getPartitionEdges(entry));
-                iterator.remove();
                 Vertex<I, V, E> vertex = partition.getVertex(vertexId);
                 // If the source vertex doesn't exist, create it. Otherwise,
                 // just set the edges.
@@ -250,6 +249,7 @@ public abstract class AbstractEdgeStore<I extends WritableComparable,
                   // require us to put back the vertex after modifying it.
                   partition.saveVertex(vertex);
                 }
+                iterator.remove();
               }
               // Some PartitionStore implementations
               // (e.g. DiskBackedPartitionStore) require us to put back the
