@@ -432,6 +432,7 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
     serviceWorker.prepareSuperstep();
 
     serviceWorker.getWorkerContext().setGraphState(graphState);
+    serviceWorker.getWorkerContext().setupSuperstep(serviceWorker);
     GiraphTimerContext preSuperstepTimer = wcPreSuperstepTimer.time();
     serviceWorker.getWorkerContext().preSuperstep();
     preSuperstepTimer.stop();

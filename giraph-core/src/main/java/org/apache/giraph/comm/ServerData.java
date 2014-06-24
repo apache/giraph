@@ -36,6 +36,9 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -83,6 +86,13 @@ public class ServerData<I extends WritableComparable,
   private final AllAggregatorServerData allAggregatorData;
   /** Service worker */
   private final CentralizedServiceWorker<I, V, E> serviceWorker;
+
+  /** Store for current messages from other workers to this worker */
+  private volatile List<Writable> currentWorkerToWorkerMessages =
+      Collections.synchronizedList(new ArrayList<Writable>());
+  /** Store for message from other workers to this worker for next superstep */
+  private volatile List<Writable> incomingWorkerToWorkerMessages =
+      Collections.synchronizedList(new ArrayList<Writable>());
 
   /**
    * Constructor.
@@ -166,6 +176,10 @@ public class ServerData<I extends WritableComparable,
             messageStoreFactory.newStore(conf.getIncomingMessageValueFactory());
     incomingMessageStore =
         messageStoreFactory.newStore(conf.getOutgoingMessageValueFactory());
+
+    currentWorkerToWorkerMessages = incomingWorkerToWorkerMessages;
+    incomingWorkerToWorkerMessages =
+        Collections.synchronizedList(new ArrayList<Writable>());
   }
 
   /**
@@ -203,5 +217,26 @@ public class ServerData<I extends WritableComparable,
    */
   public CentralizedServiceWorker<I, V, E> getServiceWorker() {
     return this.serviceWorker;
+  }
+
+  /**
+   * Get and clear worker to worker messages for this superstep. Can be
+   * called only once per superstep.
+   *
+   * @return List of messages for this worker
+   */
+  public List<Writable> getAndClearCurrentWorkerToWorkerMessages() {
+    List<Writable> ret = currentWorkerToWorkerMessages;
+    currentWorkerToWorkerMessages = null;
+    return ret;
+  }
+
+  /**
+   * Add incoming message to this worker for next superstep. Thread-safe.
+   *
+   * @param message Message received
+   */
+  public void addIncomingWorkerToWorkerMessage(Writable message) {
+    incomingWorkerToWorkerMessages.add(message);
   }
 }

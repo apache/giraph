@@ -98,6 +98,8 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -175,7 +177,7 @@ public class BspServiceMaster<I extends WritableComparable,
   private MasterServer masterServer;
   /** Master info */
   private MasterInfo masterInfo;
-  /** List of workers in current superstep */
+  /** List of workers in current superstep, sorted by task id */
   private List<WorkerInfo> chosenWorkerInfoList = Lists.newArrayList();
   /** Limit locality information added to each InputSplit znode */
   private final int localityLimit = 5;
@@ -1555,6 +1557,13 @@ public class BspServiceMaster<I extends WritableComparable,
       setJobStateFailed("coordinateSuperstep: Not enough healthy workers for " +
                     "superstep " + getSuperstep());
     } else {
+      // Sort this list, so order stays the same over supersteps
+      Collections.sort(chosenWorkerInfoList, new Comparator<WorkerInfo>() {
+        @Override
+        public int compare(WorkerInfo wi1, WorkerInfo wi2) {
+          return Integer.compare(wi1.getTaskId(), wi2.getTaskId());
+        }
+      });
       for (WorkerInfo workerInfo : chosenWorkerInfoList) {
         String workerInfoHealthyPath =
             getWorkerInfoHealthyPath(getApplicationAttempt(),
