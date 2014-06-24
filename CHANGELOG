@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-916: Wrong number of vertices stored reported to command line (majakabiljo)
+
   GIRAPH-919: Add worker to worker communication (majakabiljo)
 
   GIRAPH-922: SimpleEdgeStore has a bug causing NPE (pavanka)

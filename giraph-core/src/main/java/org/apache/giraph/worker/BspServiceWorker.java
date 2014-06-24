@@ -1109,7 +1109,7 @@ public class BspServiceWorker<I extends WritableComparable,
             vertexWriter.setConf(getConfiguration());
             vertexWriter.initialize(getContext());
             long nextPrintVertices = 0;
-            long nextUpdateProgressVertices = 0;
+            long nextUpdateProgressVertices = VERTICES_TO_UPDATE_PROGRESS;
             long nextPrintMsecs = System.currentTimeMillis() + 15000;
             int partitionIndex = 0;
             int numPartitions = getPartitionStore().getNumPartitions();
