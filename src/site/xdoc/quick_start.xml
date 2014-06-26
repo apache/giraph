@@ -52,7 +52,7 @@ under the License.
           <li>Network mask: <tt>255.255.255.0</tt></li>
         </ul>
         <li>Apache Hadoop 0.20.203.0-RC1</li>
-        <li>Apache Giraph 1.1.0-SNAPSHOT</li>
+        <li>Apache Giraph 1.1.0</li>
       </ul>
     </section>
     <section name="Deploying Hadoop" id="qs_section_2">
@@ -195,7 +195,7 @@ su - hduser</source>
 source $HOME/.bashrc
 cd $GIRAPH_HOME
 mvn package -DskipTests</source>
-    <p>The argument <tt>-DskipTests</tt> will skip the testing phase. This may take a while on the first run because Maven is downloading the most recent artifacts (plugin JARs and other files) into your local repository. You may also need to execute the command a couple of times before it succeeds. This is because the remote server may time out before your downloads are complete. Once the packaging is successful, you will have the Giraph core JAR <tt>$GIRAPH_HOME/giraph-core/target/giraph-1.1.0-SNAPSHOT-for-hadoop-0.20.203.0-jar-with-dependencies.jar</tt> and Giraph examples JAR <tt>$GIRAPH_HOME/giraph-examples/target/giraph-examples-1.1.0-SNAPSHOT-for-hadoop-0.20.203.0-jar-with-dependencies.jar</tt>. You are done with deploying Giraph.</p>
+    <p>The argument <tt>-DskipTests</tt> will skip the testing phase. This may take a while on the first run because Maven is downloading the most recent artifacts (plugin JARs and other files) into your local repository. You may also need to execute the command a couple of times before it succeeds. This is because the remote server may time out before your downloads are complete. Once the packaging is successful, you will have the Giraph core JAR <tt>$GIRAPH_HOME/giraph-core/target/giraph-1.1.0-for-hadoop-0.20.203.0-jar-with-dependencies.jar</tt> and Giraph examples JAR <tt>$GIRAPH_HOME/giraph-examples/target/giraph-examples-1.1.0-for-hadoop-0.20.203.0-jar-with-dependencies.jar</tt>. You are done with deploying Giraph.</p>
     </section>
   
     <section name="Running a Giraph job" id="qs_section_6">
@@ -212,9 +212,9 @@ $HADOOP_HOME/bin/hadoop dfs -copyFromLocal /tmp/tiny_graph.txt /user/hduser/inpu
 $HADOOP_HOME/bin/hadoop dfs -ls /user/hduser/input</source>
       <p>We will use <tt>IdWithValueTextOutputFormat</tt> output file format, where each line consists of <tt>source_id length</tt> for each node in the input graph (the source node has a length of 0, by convention). You can now run the example by:</p>
       <source>
-$HADOOP_HOME/bin/hadoop jar $GIRAPH_HOME/giraph-examples/target/giraph-examples-1.1.0-SNAPSHOT-for-hadoop-0.20.203.0-jar-with-dependencies.jar org.apache.giraph.GiraphRunner org.apache.giraph.examples.SimpleShortestPathsComputation -vif org.apache.giraph.io.formats.JsonLongDoubleFloatDoubleVertexInputFormat -vip /user/hduser/input/tiny_graph.txt -vof org.apache.giraph.io.formats.IdWithValueTextOutputFormat -op /user/hduser/output/shortestpaths -w 1</source>
+$HADOOP_HOME/bin/hadoop jar $GIRAPH_HOME/giraph-examples/target/giraph-examples-1.1.0-for-hadoop-0.20.203.0-jar-with-dependencies.jar org.apache.giraph.GiraphRunner org.apache.giraph.examples.SimpleShortestPathsComputation -vif org.apache.giraph.io.formats.JsonLongDoubleFloatDoubleVertexInputFormat -vip /user/hduser/input/tiny_graph.txt -vof org.apache.giraph.io.formats.IdWithValueTextOutputFormat -op /user/hduser/output/shortestpaths -w 1</source>
       <p>Notice that the job is computed using a single worker using the argument <tt>-w</tt>. To get more information about running a Giraph job, run the following command:</p>
-      <source>$HADOOP_HOME/bin/hadoop jar $GIRAPH_HOME/giraph-examples/target/giraph-examples-1.1.0-SNAPSHOT-for-hadoop-0.20.203.0-jar-with-dependencies.jar org.apache.giraph.GiraphRunner -h</source>
+      <source>$HADOOP_HOME/bin/hadoop jar $GIRAPH_HOME/giraph-examples/target/giraph-examples-1.1.0-for-hadoop-0.20.203.0-jar-with-dependencies.jar org.apache.giraph.GiraphRunner -h</source>
       <p>This will output the following:</p>
       <source>
 usage: org.apache.giraph.utils.ConfigurationUtils [-aw &lt;arg&gt;] [-c &lt;arg&gt;]
