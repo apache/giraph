@@ -613,6 +613,11 @@ public interface GiraphConstants {
       new BooleanConfOption("giraph.nettySimulateFirstResponseFailed", false,
           "Netty simulate a first response failed");
 
+  /** Netty - set which compression to use */
+  StrConfOption NETTY_COMPRESSION_ALGORITHM =
+      new StrConfOption("giraph.nettyCompressionAlgorithm", "",
+          "Which compression algorithm to use in netty");
+
   /** Max resolve address attempts */
   IntConfOption MAX_RESOLVE_ADDRESS_ATTEMPTS =
       new IntConfOption("giraph.maxResolveAddressAttempts", 5,

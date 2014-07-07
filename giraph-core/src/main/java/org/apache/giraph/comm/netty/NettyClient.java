@@ -268,11 +268,20 @@ public class NettyClient {
               PipelineUtils.addLastWithExecutorCheck("clientInboundByteCounter",
                   inboundByteCounter, handlerToUseExecutionGroup,
                   executionGroup, ch);
+              if (conf.doCompression()) {
+                PipelineUtils.addLastWithExecutorCheck("compressionDecoder",
+                    conf.getNettyCompressionDecoder(),
+                    handlerToUseExecutionGroup, executionGroup, ch);
+              }
               PipelineUtils.addLastWithExecutorCheck(
                   "clientOutboundByteCounter",
                   outboundByteCounter, handlerToUseExecutionGroup,
                   executionGroup, ch);
-
+              if (conf.doCompression()) {
+                PipelineUtils.addLastWithExecutorCheck("compressionEncoder",
+                    conf.getNettyCompressionEncoder(),
+                    handlerToUseExecutionGroup, executionGroup, ch);
+              }
               // The following pipeline component is needed to decode the
               // server's SASL tokens. It is replaced with a
               // FixedLengthFrameDecoder (same as used with the
@@ -303,10 +312,20 @@ public class NettyClient {
               PipelineUtils.addLastWithExecutorCheck("clientInboundByteCounter",
                   inboundByteCounter, handlerToUseExecutionGroup,
                   executionGroup, ch);
+              if (conf.doCompression()) {
+                PipelineUtils.addLastWithExecutorCheck("compressionDecoder",
+                    conf.getNettyCompressionDecoder(),
+                    handlerToUseExecutionGroup, executionGroup, ch);
+              }
               PipelineUtils.addLastWithExecutorCheck(
                   "clientOutboundByteCounter",
                   outboundByteCounter, handlerToUseExecutionGroup,
                   executionGroup, ch);
+              if (conf.doCompression()) {
+                PipelineUtils.addLastWithExecutorCheck("compressionEncoder",
+                    conf.getNettyCompressionEncoder(),
+                    handlerToUseExecutionGroup, executionGroup, ch);
+              }
               PipelineUtils.addLastWithExecutorCheck(
                   "fixed-length-frame-decoder",
                   new FixedLengthFrameDecoder(

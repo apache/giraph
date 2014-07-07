@@ -19,6 +19,12 @@
 package org.apache.giraph.conf;
 
 import com.google.common.base.Preconditions;
+import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.handler.codec.MessageToByteEncoder;
+import io.netty.handler.codec.compression.JdkZlibDecoder;
+import io.netty.handler.codec.compression.JdkZlibEncoder;
+import io.netty.handler.codec.compression.SnappyFramedDecoder;
+import io.netty.handler.codec.compression.SnappyFramedEncoder;
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.edge.Edge;
@@ -1219,5 +1225,53 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
       classes.setOutgoingMessageValueClass(outgoingMsgValueClass);
     }
     classes.setMessageCombiner(superstepClasses.getMessageCombinerClass());
+  }
+
+  /**
+   * Has the user enabled compression in netty client & server
+   *
+   * @return true if ok to do compression of netty requests
+   */
+  public boolean doCompression() {
+    switch (GiraphConstants.NETTY_COMPRESSION_ALGORITHM.get(this)) {
+    case "SNAPPY":
+      return true;
+    case "INFLATE":
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  /**
+   * Get encoder for message compression in netty
+   *
+   * @return message to byte encoder
+   */
+  public MessageToByteEncoder getNettyCompressionEncoder() {
+    switch (GiraphConstants.NETTY_COMPRESSION_ALGORITHM.get(this)) {
+    case "SNAPPY":
+      return new SnappyFramedEncoder();
+    case "INFLATE":
+      return new JdkZlibEncoder();
+    default:
+      return null;
+    }
+  }
+
+  /**
+   * Get decoder for message decompression in netty
+   *
+   * @return byte to message decoder
+   */
+  public ByteToMessageDecoder getNettyCompressionDecoder() {
+    switch (GiraphConstants.NETTY_COMPRESSION_ALGORITHM.get(this)) {
+    case "SNAPPY":
+      return new SnappyFramedDecoder(true);
+    case "INFLATE":
+      return new JdkZlibDecoder();
+    default:
+      return null;
+    }
   }
 }

@@ -240,8 +240,18 @@ public class NettyServer {
           // configuration except for the presence of the Authorize component.
           PipelineUtils.addLastWithExecutorCheck("serverInboundByteCounter",
               inByteCounter, handlerToUseExecutionGroup, executionGroup, ch);
+          if (conf.doCompression()) {
+            PipelineUtils.addLastWithExecutorCheck("compressionDecoder",
+                conf.getNettyCompressionDecoder(),
+                handlerToUseExecutionGroup, executionGroup, ch);
+          }
           PipelineUtils.addLastWithExecutorCheck("serverOutboundByteCounter",
               outByteCounter, handlerToUseExecutionGroup, executionGroup, ch);
+          if (conf.doCompression()) {
+            PipelineUtils.addLastWithExecutorCheck("compressionEncoder",
+                conf.getNettyCompressionEncoder(),
+                handlerToUseExecutionGroup, executionGroup, ch);
+          }
           PipelineUtils.addLastWithExecutorCheck("requestFrameDecoder",
               new LengthFieldBasedFrameDecoder(1024 * 1024 * 1024, 0, 4, 0, 4),
               handlerToUseExecutionGroup, executionGroup, ch);
@@ -280,8 +290,18 @@ public class NettyServer {
               });
           PipelineUtils.addLastWithExecutorCheck("serverInboundByteCounter",
               inByteCounter, handlerToUseExecutionGroup, executionGroup, ch);
+          if (conf.doCompression()) {
+            PipelineUtils.addLastWithExecutorCheck("compressionDecoder",
+                conf.getNettyCompressionDecoder(),
+                handlerToUseExecutionGroup, executionGroup, ch);
+          }
           PipelineUtils.addLastWithExecutorCheck("serverOutboundByteCounter",
               outByteCounter, handlerToUseExecutionGroup, executionGroup, ch);
+          if (conf.doCompression()) {
+            PipelineUtils.addLastWithExecutorCheck("compressionEncoder",
+                conf.getNettyCompressionEncoder(),
+                handlerToUseExecutionGroup, executionGroup, ch);
+          }
           PipelineUtils.addLastWithExecutorCheck("requestFrameDecoder",
               new LengthFieldBasedFrameDecoder(1024 * 1024 * 1024, 0, 4, 0, 4),
               handlerToUseExecutionGroup, executionGroup, ch);

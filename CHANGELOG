@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-713: Provide an option to do request compression (pavanka)
+
   GIRAPH-923: Upgrade Netty version to a latest stable one (pavanka)
 
   GIRAPH-916: Wrong number of vertices stored reported to command line (majakabiljo)
