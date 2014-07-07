@@ -854,9 +854,12 @@ public class GiraphConfiguration extends Configuration
    */
   public ByteBufAllocator getNettyAllocator() {
     if (nettyBufferAllocator == null) {
+      int nArenas = Math.max(GiraphConstants.NETTY_CLIENT_THREADS.get(this),
+          GiraphConstants.NETTY_SERVER_THREADS.get(this));
       if (NETTY_USE_POOLED_ALLOCATOR.get(this)) { // Use pooled allocator
         nettyBufferAllocator = new PooledByteBufAllocator(
-          NETTY_USE_DIRECT_MEMORY.get(this));
+            NETTY_USE_DIRECT_MEMORY.get(this), nArenas, nArenas,
+            8192, 11, 0, 0, 0);
       } else { // Use un-pooled allocator
         // Note: Current default settings create un-pooled heap allocator
         nettyBufferAllocator = new UnpooledByteBufAllocator(
