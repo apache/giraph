@@ -883,11 +883,13 @@ public class BspServiceMaster<I extends WritableComparable,
 
           masterInfo = new MasterInfo();
           masterServer =
-              new NettyMasterServer(getConfiguration(), this, getContext());
+              new NettyMasterServer(getConfiguration(), this, getContext(),
+                  getGraphTaskManager().createUncaughtExceptionHandler());
           masterInfo.setInetSocketAddress(masterServer.getMyAddress());
           masterInfo.setTaskId(getTaskPartition());
           masterClient =
-              new NettyMasterClient(getContext(), getConfiguration(), this);
+              new NettyMasterClient(getContext(), getConfiguration(), this,
+                  getGraphTaskManager().createUncaughtExceptionHandler());
 
           if (LOG.isInfoEnabled()) {
             LOG.info("becomeMaster: I am now the master!");
@@ -1397,8 +1399,7 @@ public class BspServiceMaster<I extends WritableComparable,
 
       // Did a worker die?
       try {
-        if ((getSuperstep() > 0) &&
-            !superstepChosenWorkerAlive(
+        if (!superstepChosenWorkerAlive(
                 workerInfoHealthyPath,
                 workerInfoList)) {
           return false;

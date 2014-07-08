@@ -33,6 +33,7 @@ import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.TaskInfo;
 import org.apache.giraph.utils.PipelineUtils;
 import org.apache.giraph.utils.ProgressableUtils;
+import org.apache.giraph.utils.ThreadUtils;
 import org.apache.hadoop.util.Progressable;
 import org.apache.log4j.Logger;
 import io.netty.bootstrap.ServerBootstrap;
@@ -53,8 +54,6 @@ import io.netty.util.concurrent.DefaultEventExecutorGroup;
 import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.channel.AdaptiveRecvByteBufAllocator;
-
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -122,6 +121,8 @@ public class NettyServer {
   private final EventExecutorGroup executionGroup;
   /** Name of the handler before the execution handler (if used) */
   private final String handlerToUseExecutionGroup;
+  /** Handles all uncaught exceptions in netty threads */
+  private final Thread.UncaughtExceptionHandler exceptionHandler;
 
   /**
    * Constructor for creating the server
@@ -130,10 +131,12 @@ public class NettyServer {
    * @param requestServerHandlerFactory Factory for request handlers
    * @param myTaskInfo Current task info
    * @param progressable Progressable for reporting progress
+   * @param exceptionHandler handle uncaught exceptions
    */
   public NettyServer(ImmutableClassesGiraphConfiguration conf,
       RequestServerHandler.Factory requestServerHandlerFactory,
-      TaskInfo myTaskInfo, Progressable progressable) {
+      TaskInfo myTaskInfo, Progressable progressable,
+      Thread.UncaughtExceptionHandler exceptionHandler) {
     this.conf = conf;
     this.progressable = progressable;
     this.requestServerHandlerFactory = requestServerHandlerFactory;
@@ -141,6 +144,7 @@ public class NettyServer {
     this.saslServerHandlerFactory = new SaslServerHandler.Factory();
     /*end[HADOOP_NON_SECURE]*/
     this.myTaskInfo = myTaskInfo;
+    this.exceptionHandler = exceptionHandler;
     sendBufferSize = GiraphConstants.SERVER_SEND_BUFFER_SIZE.get(conf);
     receiveBufferSize = GiraphConstants.SERVER_RECEIVE_BUFFER_SIZE.get(conf);
 
@@ -149,12 +153,12 @@ public class NettyServer {
     maxPoolSize = GiraphConstants.NETTY_SERVER_THREADS.get(conf);
 
     bossGroup = new NioEventLoopGroup(4,
-        new ThreadFactoryBuilder().setNameFormat(
-          "netty-server-boss-%d").build());
+        ThreadUtils.createThreadFactory(
+            "netty-server-boss-%d", exceptionHandler));
 
     workerGroup = new NioEventLoopGroup(maxPoolSize,
-        new ThreadFactoryBuilder().setNameFormat(
-          "netty-server-worker-%d").build());
+        ThreadUtils.createThreadFactory(
+            "netty-server-worker-%d", exceptionHandler));
 
     try {
       this.localHostname = conf.getLocalHostname();
@@ -173,8 +177,8 @@ public class NettyServer {
     if (useExecutionGroup) {
       int executionThreads = conf.getNettyServerExecutionThreads();
       executionGroup = new DefaultEventExecutorGroup(executionThreads,
-          new ThreadFactoryBuilder().setNameFormat("netty-server-exec-%d").
-              build());
+          ThreadUtils.createThreadFactory(
+              "netty-server-exec-%d", exceptionHandler));
       if (LOG.isInfoEnabled()) {
         LOG.info("NettyServer: Using execution group with " +
             executionThreads + " threads for " +
@@ -194,13 +198,16 @@ public class NettyServer {
    * @param myTaskInfo Current task info
    * @param progressable Progressable for reporting progress
    * @param saslServerHandlerFactory  Factory for SASL handlers
+   * @param exceptionHandler handle uncaught exceptions
    */
   public NettyServer(ImmutableClassesGiraphConfiguration conf,
                      RequestServerHandler.Factory requestServerHandlerFactory,
                      TaskInfo myTaskInfo,
                      Progressable progressable,
-                     SaslServerHandler.Factory saslServerHandlerFactory) {
-    this(conf, requestServerHandlerFactory, myTaskInfo, progressable);
+                     SaslServerHandler.Factory saslServerHandlerFactory,
+                     Thread.UncaughtExceptionHandler exceptionHandler) {
+    this(conf, requestServerHandlerFactory, myTaskInfo,
+        progressable, exceptionHandler);
     this.saslServerHandlerFactory = saslServerHandlerFactory;
   }
 /*end[HADOOP_NON_SECURE]*/
@@ -267,8 +274,8 @@ public class NettyServer {
               executionGroup, ch);
           PipelineUtils.addLastWithExecutorCheck("requestServerHandler",
               requestServerHandlerFactory.newHandler(workerRequestReservedMap,
-                  conf, myTaskInfo), handlerToUseExecutionGroup,
-              executionGroup, ch);
+                  conf, myTaskInfo, exceptionHandler),
+              handlerToUseExecutionGroup, executionGroup, ch);
           // Removed after authentication completes:
           PipelineUtils.addLastWithExecutorCheck("responseEncoder",
               new ResponseEncoder(), handlerToUseExecutionGroup,
@@ -310,7 +317,7 @@ public class NettyServer {
               handlerToUseExecutionGroup, executionGroup, ch);
           PipelineUtils.addLastWithExecutorCheck("requestServerHandler",
               requestServerHandlerFactory.newHandler(
-                  workerRequestReservedMap, conf, myTaskInfo),
+                  workerRequestReservedMap, conf, myTaskInfo, exceptionHandler),
               handlerToUseExecutionGroup, executionGroup, ch);
 /*if_not[HADOOP_NON_SECURE]*/
         }
@@ -404,5 +411,6 @@ public class NettyServer {
   public InetSocketAddress getMyAddress() {
     return myAddress;
   }
+
 }
 

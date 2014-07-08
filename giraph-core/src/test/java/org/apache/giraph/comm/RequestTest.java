@@ -95,10 +95,11 @@ public class RequestTest {
     workerInfo = new WorkerInfo();
     server = new NettyServer(conf,
         new WorkerRequestServerHandler.Factory(serverData), workerInfo,
-            context);
+            context, new MockExceptionHandler());
     server.start();
     workerInfo.setInetSocketAddress(server.getMyAddress());
-    client = new NettyClient(context, conf, new WorkerInfo());
+    client = new NettyClient(context, conf, new WorkerInfo(),
+        new MockExceptionHandler());
     client.connectAllAddresses(
         Lists.<WorkerInfo>newArrayList(workerInfo));
   }

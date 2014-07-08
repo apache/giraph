@@ -911,7 +911,37 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
     }
   }
 
+  /**
+   * Creates exception handler that will terminate process gracefully in case
+   * of any uncaught exception.
+   * @return new exception handler object.
+   */
+  public Thread.UncaughtExceptionHandler createUncaughtExceptionHandler() {
+    return new OverrideExceptionHandler();
+  }
+
   public ImmutableClassesGiraphConfiguration<I, V, E> getConf() {
     return conf;
+  }
+
+
+  /**
+   * Default handler for uncaught exceptions.
+   * It will do the best to clean up and then will terminate current giraph job.
+   */
+  class OverrideExceptionHandler implements Thread.UncaughtExceptionHandler {
+    @Override
+    public void uncaughtException(final Thread t, final Throwable e) {
+      try {
+        LOG.fatal(
+            "uncaughtException: OverrideExceptionHandler on thread " +
+                t.getName() + ", msg = " +  e.getMessage() + ", exiting...", e);
+
+        zooKeeperCleanup();
+        workerFailureCleanup();
+      } finally {
+        System.exit(1);
+      }
+    }
   }
 }

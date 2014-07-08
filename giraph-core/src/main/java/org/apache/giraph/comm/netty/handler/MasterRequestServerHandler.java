@@ -36,13 +36,15 @@ public class MasterRequestServerHandler extends
    * @param conf                     Configuration
    * @param myTaskInfo               Current task info
    * @param aggregatorHandler        Master aggregator handler
+   * @param exceptionHandler         Handles uncaught exceptions
    */
   public MasterRequestServerHandler(
       WorkerRequestReservedMap workerRequestReservedMap,
       ImmutableClassesGiraphConfiguration conf,
       TaskInfo myTaskInfo,
-      MasterAggregatorHandler aggregatorHandler) {
-    super(workerRequestReservedMap, conf, myTaskInfo);
+      MasterAggregatorHandler aggregatorHandler,
+      Thread.UncaughtExceptionHandler exceptionHandler) {
+    super(workerRequestReservedMap, conf, myTaskInfo, exceptionHandler);
     this.aggregatorHandler = aggregatorHandler;
   }
 
@@ -71,9 +73,10 @@ public class MasterRequestServerHandler extends
     public RequestServerHandler newHandler(
         WorkerRequestReservedMap workerRequestReservedMap,
         ImmutableClassesGiraphConfiguration conf,
-        TaskInfo myTaskInfo) {
+        TaskInfo myTaskInfo,
+        Thread.UncaughtExceptionHandler exceptionHandler) {
       return new MasterRequestServerHandler(workerRequestReservedMap, conf,
-          myTaskInfo, aggregatorHandler);
+          myTaskInfo, aggregatorHandler, exceptionHandler);
     }
   }
 }

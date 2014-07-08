@@ -49,13 +49,15 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
   @Override
   public void setup(Context context)
     throws IOException, InterruptedException {
-    // Setting the default handler for uncaught exceptions.
-    Thread.setDefaultUncaughtExceptionHandler(
-        new OverrideExceptionHandler());
-
     // Execute all Giraph-related role(s) assigned to this compute node.
     // Roles can include "master," "worker," "zookeeper," or . . . ?
     graphTaskManager = new GraphTaskManager<I, V, E>(context);
+
+    // Setting the default handler for uncaught exceptions.
+    Thread.setDefaultUncaughtExceptionHandler(
+        graphTaskManager.createUncaughtExceptionHandler());
+
+
     graphTaskManager.setup(
       DistributedCache.getLocalCacheArchives(context.getConfiguration()));
   }
@@ -96,6 +98,7 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
       // CHECKSTYLE: stop IllegalCatch
     } catch (RuntimeException e) {
       // CHECKSTYLE: resume IllegalCatch
+      LOG.error("Caught an unrecoverable exception " + e.getMessage(), e);
       graphTaskManager.zooKeeperCleanup();
       graphTaskManager.workerFailureCleanup();
       throw new IllegalStateException(
@@ -103,16 +106,4 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
     }
   }
 
-  /**
-    * Default handler for uncaught exceptions.
-    */
-  class OverrideExceptionHandler implements Thread.UncaughtExceptionHandler {
-    @Override
-    public void uncaughtException(final Thread t, final Throwable e) {
-      LOG.fatal(
-        "uncaughtException: OverrideExceptionHandler on thread " +
-         t.getName() + ", msg = " +  e.getMessage() + ", exiting...", e);
-      System.exit(1);
-    }
-  }
 }

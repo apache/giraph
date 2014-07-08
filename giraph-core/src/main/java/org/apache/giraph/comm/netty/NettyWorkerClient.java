@@ -74,13 +74,17 @@ public class NettyWorkerClient<I extends WritableComparable,
    * @param context Context from mapper
    * @param configuration Configuration
    * @param service Used to get partition mapping
+   * @param exceptionHandler handler for uncaught exception. Will
+   *                         terminate job.
    */
   public NettyWorkerClient(
       Mapper<?, ?, ?, ?>.Context context,
       ImmutableClassesGiraphConfiguration<I, V, E> configuration,
-      CentralizedServiceWorker<I, V, E> service) {
+      CentralizedServiceWorker<I, V, E> service,
+      Thread.UncaughtExceptionHandler exceptionHandler) {
     this.nettyClient =
-        new NettyClient(context, configuration, service.getWorkerInfo());
+        new NettyClient(context, configuration, service.getWorkerInfo(),
+            exceptionHandler);
     this.conf = configuration;
     this.service = service;
     this.superstepRequestCounters = Maps.newHashMap();

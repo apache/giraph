@@ -77,10 +77,12 @@ public class NettyWorkerServer<I extends WritableComparable,
    * @param conf Configuration
    * @param service Service to get partition mappings
    * @param context Mapper context
+   * @param exceptionHandler handle uncaught exceptions
    */
   public NettyWorkerServer(ImmutableClassesGiraphConfiguration<I, V, E> conf,
       CentralizedServiceWorker<I, V, E> service,
-      Mapper<?, ?, ?, ?>.Context context) {
+      Mapper<?, ?, ?, ?>.Context context,
+      Thread.UncaughtExceptionHandler exceptionHandler) {
     this.conf = conf;
     this.service = service;
     this.context = context;
@@ -91,7 +93,7 @@ public class NettyWorkerServer<I extends WritableComparable,
 
     nettyServer = new NettyServer(conf,
         new WorkerRequestServerHandler.Factory<I, V, E>(serverData),
-        service.getWorkerInfo(), context);
+        service.getWorkerInfo(), context, exceptionHandler);
     nettyServer.start();
   }
 

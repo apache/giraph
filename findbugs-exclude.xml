@@ -39,11 +39,7 @@
     <Bug pattern="DM_EXIT"/>
   </Match>
   <Match>
-    <Class name="org.apache.giraph.graph.GraphMapper$OverrideExceptionHandler"/>
-    <Bug pattern="DM_EXIT"/>
-  </Match>
-  <Match>
-    <Class name="org.apache.giraph.yarn.GiraphYarnTask$OverrideExceptionHandler"/>
+    <Class name="org.apache.giraph.graph.GraphTaskManager$OverrideExceptionHandler"/>
     <Bug pattern="DM_EXIT"/>
   </Match>
   <Match>

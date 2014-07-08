@@ -54,12 +54,16 @@ public class NettyMasterClient implements MasterClient {
    * @param context Context from mapper
    * @param configuration Configuration
    * @param service Centralized service
+   * @param exceptionHandler handler for uncaught exception. Will
+   *                         terminate job.
    */
   public NettyMasterClient(Mapper<?, ?, ?, ?>.Context context,
                            ImmutableClassesGiraphConfiguration configuration,
-                           CentralizedServiceMaster<?, ?, ?> service) {
+                           CentralizedServiceMaster<?, ?, ?> service,
+                           Thread.UncaughtExceptionHandler exceptionHandler) {
     this.nettyClient =
-        new NettyClient(context, configuration, service.getMasterInfo());
+        new NettyClient(context, configuration, service.getMasterInfo(),
+            exceptionHandler);
     this.service = service;
     this.progressable = context;
     maxBytesPerAggregatorRequest = configuration.getInt(

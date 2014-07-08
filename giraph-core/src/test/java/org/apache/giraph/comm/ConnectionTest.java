@@ -70,11 +70,12 @@ public class ConnectionTest {
     NettyServer server =
         new NettyServer(conf,
             new WorkerRequestServerHandler.Factory(serverData), workerInfo,
-            context);
+            context, new MockExceptionHandler());
     server.start();
     workerInfo.setInetSocketAddress(server.getMyAddress());
 
-    NettyClient client = new NettyClient(context, conf, new WorkerInfo());
+    NettyClient client = new NettyClient(context, conf, new WorkerInfo(),
+        new MockExceptionHandler());
     client.connectAllAddresses(
         Lists.<WorkerInfo>newArrayList(workerInfo));
 
@@ -101,7 +102,8 @@ public class ConnectionTest {
     WorkerInfo workerInfo1 = new WorkerInfo();
     workerInfo1.setTaskId(1);
     NettyServer server1 =
-        new NettyServer(conf, requestServerHandlerFactory, workerInfo1, context);
+        new NettyServer(conf, requestServerHandlerFactory, workerInfo1,
+            context, new MockExceptionHandler());
     server1.start();
     workerInfo1.setInetSocketAddress(server1.getMyAddress());
 
@@ -109,7 +111,7 @@ public class ConnectionTest {
     workerInfo1.setTaskId(2);
     NettyServer server2 =
         new NettyServer(conf, requestServerHandlerFactory, workerInfo2,
-            context);
+            context, new MockExceptionHandler());
     server2.start();
     workerInfo2.setInetSocketAddress(server2.getMyAddress());
 
@@ -117,11 +119,12 @@ public class ConnectionTest {
     workerInfo1.setTaskId(3);
     NettyServer server3 =
         new NettyServer(conf, requestServerHandlerFactory, workerInfo3,
-            context);
+            context, new MockExceptionHandler());
     server3.start();
     workerInfo3.setInetSocketAddress(server3.getMyAddress());
 
-    NettyClient client = new NettyClient(context, conf, new WorkerInfo());
+    NettyClient client = new NettyClient(context, conf, new WorkerInfo(),
+        new MockExceptionHandler());
     List<WorkerInfo> addresses = Lists.<WorkerInfo>newArrayList(workerInfo1,
         workerInfo2, workerInfo3);
     client.connectAllAddresses(addresses);
@@ -148,16 +151,19 @@ public class ConnectionTest {
     WorkerInfo workerInfo = new WorkerInfo();
     NettyServer server = new NettyServer(conf,
         new WorkerRequestServerHandler.Factory(serverData), workerInfo,
-            context);
+            context, new MockExceptionHandler());
     server.start();
     workerInfo.setInetSocketAddress(server.getMyAddress());
 
     List<WorkerInfo> addresses = Lists.<WorkerInfo>newArrayList(workerInfo);
-    NettyClient client1 = new NettyClient(context, conf, new WorkerInfo());
+    NettyClient client1 = new NettyClient(context, conf, new WorkerInfo(),
+        new MockExceptionHandler());
     client1.connectAllAddresses(addresses);
-    NettyClient client2 = new NettyClient(context, conf, new WorkerInfo());
+    NettyClient client2 = new NettyClient(context, conf, new WorkerInfo(),
+        new MockExceptionHandler());
     client2.connectAllAddresses(addresses);
-    NettyClient client3 = new NettyClient(context, conf, new WorkerInfo());
+    NettyClient client3 = new NettyClient(context, conf, new WorkerInfo(),
+        new MockExceptionHandler());
     client3.connectAllAddresses(addresses);
 
     client1.stop();

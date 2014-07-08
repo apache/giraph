@@ -56,6 +56,8 @@ public abstract class RequestServerHandler<R> extends
   private final TaskInfo myTaskInfo;
   /** Start nanoseconds for the processing time */
   private long startProcessingNanoseconds = -1;
+  /** Handler for uncaught exceptions */
+  private final Thread.UncaughtExceptionHandler exceptionHandler;
 
   /**
    * Constructor
@@ -63,14 +65,17 @@ public abstract class RequestServerHandler<R> extends
    * @param workerRequestReservedMap Worker request reservation map
    * @param conf Configuration
    * @param myTaskInfo Current task info
+   * @param exceptionHandler Handles uncaught exceptions
    */
   public RequestServerHandler(
       WorkerRequestReservedMap workerRequestReservedMap,
       ImmutableClassesGiraphConfiguration conf,
-      TaskInfo myTaskInfo) {
+      TaskInfo myTaskInfo,
+      Thread.UncaughtExceptionHandler exceptionHandler) {
     this.workerRequestReservedMap = workerRequestReservedMap;
     closeFirstRequest = NETTY_SIMULATE_FIRST_REQUEST_CLOSED.get(conf);
     this.myTaskInfo = myTaskInfo;
+    this.exceptionHandler = exceptionHandler;
   }
 
   @Override
@@ -159,10 +164,9 @@ public abstract class RequestServerHandler<R> extends
   }
 
   @Override
-  public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause)
-    throws Exception {
-    LOG.warn("exceptionCaught: Channel failed with " +
-        "remote address " + ctx.channel().remoteAddress(), cause);
+  public void exceptionCaught(
+      ChannelHandlerContext ctx, Throwable cause) throws Exception {
+    exceptionHandler.uncaughtException(Thread.currentThread(), cause);
   }
 
   /**
@@ -175,11 +179,13 @@ public abstract class RequestServerHandler<R> extends
      * @param workerRequestReservedMap Worker request reservation map
      * @param conf Configuration to use
      * @param myTaskInfo Current task info
+     * @param exceptionHandler Handles uncaught exceptions
      * @return New {@link RequestServerHandler}
      */
     RequestServerHandler newHandler(
         WorkerRequestReservedMap workerRequestReservedMap,
         ImmutableClassesGiraphConfiguration conf,
-        TaskInfo myTaskInfo);
+        TaskInfo myTaskInfo,
+        Thread.UncaughtExceptionHandler exceptionHandler);
   }
 }

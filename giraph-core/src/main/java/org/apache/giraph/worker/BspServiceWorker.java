@@ -197,10 +197,12 @@ public class BspServiceWorker<I extends WritableComparable,
     workerGraphPartitioner =
         getGraphPartitionerFactory().createWorkerGraphPartitioner();
     workerInfo = new WorkerInfo();
-    workerServer = new NettyWorkerServer<I, V, E>(conf, this, context);
+    workerServer = new NettyWorkerServer<I, V, E>(conf, this, context,
+        graphTaskManager.createUncaughtExceptionHandler());
     workerInfo.setInetSocketAddress(workerServer.getMyAddress());
     workerInfo.setTaskId(getTaskPartition());
-    workerClient = new NettyWorkerClient<I, V, E>(context, conf, this);
+    workerClient = new NettyWorkerClient<I, V, E>(context, conf, this,
+        graphTaskManager.createUncaughtExceptionHandler());
 
     workerAggregatorRequestProcessor =
         new NettyWorkerAggregatorRequestProcessor(getContext(), conf, this);

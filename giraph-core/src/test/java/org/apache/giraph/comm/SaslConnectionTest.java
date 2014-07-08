@@ -85,11 +85,13 @@ public class SaslConnectionTest {
             new WorkerRequestServerHandler.Factory(serverData),
             workerInfo,
             context,
-            mockedSaslServerFactory);
+            mockedSaslServerFactory,
+            new MockExceptionHandler());
     server.start();
     workerInfo.setInetSocketAddress(server.getMyAddress());
 
-    NettyClient client = new NettyClient(context, conf, new WorkerInfo());
+    NettyClient client = new NettyClient(context, conf, new WorkerInfo(),
+        new MockExceptionHandler());
     client.connectAllAddresses(Lists.<WorkerInfo>newArrayList(workerInfo));
 
     client.stop();

@@ -39,13 +39,15 @@ public class NettyMasterServer implements MasterServer {
    * @param conf Hadoop configuration
    * @param service Centralized service
    * @param progressable Progressable for reporting progress
+   * @param exceptionHandler to handle uncaught exceptions
    */
   public NettyMasterServer(ImmutableClassesGiraphConfiguration conf,
       CentralizedServiceMaster<?, ?, ?> service,
-      Progressable progressable) {
+      Progressable progressable,
+      Thread.UncaughtExceptionHandler exceptionHandler) {
     nettyServer = new NettyServer(conf,
         new MasterRequestServerHandler.Factory(service.getAggregatorHandler()),
-        service.getMasterInfo(), progressable);
+        service.getMasterInfo(), progressable, exceptionHandler);
     nettyServer.start();
   }
 

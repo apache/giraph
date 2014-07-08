@@ -166,19 +166,6 @@ public class GiraphYarnTask<I extends WritableComparable, V extends Writable,
   }
 
   /**
-    * Default handler for uncaught exceptions.
-    */
-  class OverrideExceptionHandler implements Thread.UncaughtExceptionHandler {
-    @Override
-    public void uncaughtException(final Thread t, final Throwable e) {
-      LOG.fatal(
-        "uncaughtException: OverrideExceptionHandler on thread " +
-         t.getName() + ", msg = " +  e.getMessage() + ", exiting...", e);
-      System.exit(1);
-    }
-  }
-
-  /**
    * Task entry point.
    * @param args CLI arguments injected by GiraphApplicationMaster to hand off
    *             job, task, and attempt ID's to this (and every) Giraph task.

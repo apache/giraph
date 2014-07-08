@@ -46,12 +46,14 @@ public class WorkerRequestServerHandler<I extends WritableComparable,
    * @param workerRequestReservedMap Worker request reservation map
    * @param conf                     Configuration
    * @param myTaskInfo               Current task info
+   * @param exceptionHandler         Handles uncaught exceptions
    */
   public WorkerRequestServerHandler(ServerData<I, V, E> serverData,
       WorkerRequestReservedMap workerRequestReservedMap,
       ImmutableClassesGiraphConfiguration conf,
-      TaskInfo myTaskInfo) {
-    super(workerRequestReservedMap, conf, myTaskInfo);
+      TaskInfo myTaskInfo,
+      Thread.UncaughtExceptionHandler exceptionHandler) {
+    super(workerRequestReservedMap, conf, myTaskInfo, exceptionHandler);
     this.serverData = serverData;
   }
 
@@ -80,9 +82,10 @@ public class WorkerRequestServerHandler<I extends WritableComparable,
     public RequestServerHandler newHandler(
         WorkerRequestReservedMap workerRequestReservedMap,
         ImmutableClassesGiraphConfiguration conf,
-        TaskInfo myTaskInfo) {
+        TaskInfo myTaskInfo,
+        Thread.UncaughtExceptionHandler exceptionHandler) {
       return new WorkerRequestServerHandler<I, V, E, Writable>(serverData,
-          workerRequestReservedMap, conf, myTaskInfo);
+          workerRequestReservedMap, conf, myTaskInfo, exceptionHandler);
     }
   }
 }

@@ -35,6 +35,7 @@ import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.TaskInfo;
 import org.apache.giraph.utils.PipelineUtils;
 import org.apache.giraph.utils.ProgressableUtils;
+import org.apache.giraph.utils.ThreadUtils;
 import org.apache.giraph.utils.TimedLogger;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
@@ -42,7 +43,6 @@ import org.apache.log4j.Logger;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -175,6 +175,12 @@ public class NettyClient {
   /** When was the last time we checked if we should resend some requests */
   private final AtomicLong lastTimeCheckedRequestsForProblems =
       new AtomicLong(0);
+  /**
+   * Logger used to dump stack traces for every exception that happens
+   * in netty client threads.
+   */
+  private final LogOnErrorChannelFutureListener logErrorListener =
+      new LogOnErrorChannelFutureListener();
 
   /**
    * Only constructor
@@ -182,10 +188,13 @@ public class NettyClient {
    * @param context Context for progress
    * @param conf Configuration
    * @param myTaskInfo Current task info
+   * @param exceptionHandler handler for uncaught exception. Will
+   *                         terminate job.
    */
   public NettyClient(Mapper<?, ?, ?, ?>.Context context,
                      final ImmutableClassesGiraphConfiguration conf,
-                     TaskInfo myTaskInfo) {
+                     TaskInfo myTaskInfo,
+                     final Thread.UncaughtExceptionHandler exceptionHandler) {
     this.context = context;
     this.myTaskInfo = myTaskInfo;
     this.channelsPerServer = GiraphConstants.CHANNELS_PER_SERVER.get(conf);
@@ -226,8 +235,8 @@ public class NettyClient {
     if (useExecutionGroup) {
       int executionThreads = NETTY_CLIENT_EXECUTION_THREADS.get(conf);
       executionGroup = new DefaultEventExecutorGroup(executionThreads,
-          new ThreadFactoryBuilder().setNameFormat("netty-client-exec-%d")
-              .build());
+          ThreadUtils.createThreadFactory(
+              "netty-client-exec-%d", exceptionHandler));
       if (LOG.isInfoEnabled()) {
         LOG.info("NettyClient: Using execution handler with " +
             executionThreads + " threads after " +
@@ -238,8 +247,8 @@ public class NettyClient {
     }
 
     workerGroup = new NioEventLoopGroup(maxPoolSize,
-        new ThreadFactoryBuilder().setNameFormat(
-            "netty-client-worker-%d").build());
+        ThreadUtils.createThreadFactory(
+            "netty-client-worker-%d", exceptionHandler));
 
     bootstrap = new Bootstrap();
     bootstrap.group(workerGroup)
@@ -696,6 +705,7 @@ public class NettyClient {
     }
     ChannelFuture writeFuture = channel.write(request);
     newRequestInfo.setWriteFuture(writeFuture);
+    writeFuture.addListener(logErrorListener);
 
     if (limitNumberOfOpenRequests &&
         clientRequestIdRequestInfoMap.size() > maxNumberOfOpenRequests) {
@@ -868,6 +878,7 @@ public class NettyClient {
       }
       ChannelFuture writeFuture = channel.write(requestInfo.getRequest());
       requestInfo.setWriteFuture(writeFuture);
+      writeFuture.addListener(logErrorListener);
     }
     addedRequestIds.clear();
     addedRequestInfos.clear();
@@ -905,5 +916,20 @@ public class NettyClient {
           "resolve " + address + " in " +  resolveAttempts + " tries.");
     }
     return address;
+  }
+
+  /**
+   * This listener class just dumps exception stack traces if
+   * something happens.
+   */
+  private static class LogOnErrorChannelFutureListener
+      implements ChannelFutureListener {
+
+    @Override
+    public void operationComplete(ChannelFuture future) throws Exception {
+      if (future.isDone() && !future.isSuccess()) {
+        LOG.error("Request failed", future.cause());
+      }
+    }
   }
 }

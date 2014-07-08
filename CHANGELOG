@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-903: Detect crashes of Netty threads (edunov via pavanka)
+
   GIRAPH-925: Unit tests should pass even if zookeeper port not available (edunov via pavanka)
 
   GIRAPH-713: Provide an option to do request compression (pavanka)
