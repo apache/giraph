@@ -16,14 +16,12 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.comm.messages.primitives;
+package org.apache.giraph.comm.messages.primitives.long_id;
 
 import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.comm.messages.MessageStore;
 import org.apache.giraph.comm.messages.MessagesIterable;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.factories.MessageValueFactory;
-import org.apache.giraph.partition.Partition;
 import org.apache.giraph.utils.VertexIdMessageBytesIterator;
 import org.apache.giraph.utils.VertexIdMessageIterator;
 import org.apache.giraph.utils.VertexIdMessages;
@@ -33,18 +31,13 @@ import org.apache.giraph.utils.io.DataInputOutput;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 
-import com.google.common.collect.Lists;
-
-import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectMap;
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap;
-import it.unimi.dsi.fastutil.longs.LongIterator;
 import it.unimi.dsi.fastutil.objects.ObjectIterator;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
-import java.util.List;
 
 /**
  * Special message store to be used when ids are LongWritable and no combiner
@@ -55,55 +48,26 @@ import java.util.List;
  * @param <M> Message type
  */
 public class LongByteArrayMessageStore<M extends Writable>
-    implements MessageStore<LongWritable, M> {
-  /** Message value factory */
-  protected final MessageValueFactory<M> messageValueFactory;
-  /** Map from partition id to map from vertex id to message */
-  private final
-  Int2ObjectOpenHashMap<Long2ObjectOpenHashMap<DataInputOutput>> map;
-  /** Service worker */
-  private final CentralizedServiceWorker<LongWritable, ?, ?> service;
-  /** Giraph configuration */
-  private final ImmutableClassesGiraphConfiguration<LongWritable, ?, ?> config;
+  extends LongAbstractMessageStore<M, DataInputOutput> {
 
   /**
    * Constructor
    *
    * @param messageValueFactory Factory for creating message values
-   * @param service      Service worker
-   * @param config       Hadoop configuration
+   * @param service             Service worker
+   * @param config              Hadoop configuration
    */
   public LongByteArrayMessageStore(
       MessageValueFactory<M> messageValueFactory,
       CentralizedServiceWorker<LongWritable, Writable, Writable> service,
-      ImmutableClassesGiraphConfiguration<LongWritable, Writable, Writable>
-        config) {
-    this.messageValueFactory = messageValueFactory;
-    this.service = service;
-    this.config = config;
-
-    map =
-        new Int2ObjectOpenHashMap<Long2ObjectOpenHashMap<DataInputOutput>>();
-    for (int partitionId : service.getPartitionStore().getPartitionIds()) {
-      Partition<LongWritable, Writable, Writable> partition =
-          service.getPartitionStore().getOrCreatePartition(partitionId);
-      Long2ObjectOpenHashMap<DataInputOutput> partitionMap =
-          new Long2ObjectOpenHashMap<DataInputOutput>(
-              (int) partition.getVertexCount());
-      map.put(partitionId, partitionMap);
-      service.getPartitionStore().putPartition(partition);
-    }
+      ImmutableClassesGiraphConfiguration<LongWritable,
+          Writable, Writable> config) {
+    super(messageValueFactory, service, config);
   }
 
-  /**
-   * Get map which holds messages for partition which vertex belongs to.
-   *
-   * @param vertexId Id of the vertex
-   * @return Map which holds messages for partition which vertex belongs to.
-   */
-  private Long2ObjectOpenHashMap<DataInputOutput> getPartitionMap(
-      LongWritable vertexId) {
-    return map.get(service.getPartitionId(vertexId));
+  @Override
+  public boolean isPointerListEncoding() {
+    return false;
   }
 
   /**
@@ -114,8 +78,7 @@ public class LongByteArrayMessageStore<M extends Writable>
    * @return DataInputOutput for this vertex id (created if necessary)
    */
   private DataInputOutput getDataInputOutput(
-      Long2ObjectOpenHashMap<DataInputOutput> partitionMap,
-      long vertexId) {
+    Long2ObjectOpenHashMap<DataInputOutput> partitionMap, long vertexId) {
     DataInputOutput dataInputOutput = partitionMap.get(vertexId);
     if (dataInputOutput == null) {
       dataInputOutput = config.createMessagesInputOutput();
@@ -126,10 +89,8 @@ public class LongByteArrayMessageStore<M extends Writable>
 
   @Override
   public void addPartitionMessages(int partitionId,
-      VertexIdMessages<LongWritable, M> messages) throws
-      IOException {
-    Long2ObjectOpenHashMap<DataInputOutput> partitionMap =
-        map.get(partitionId);
+    VertexIdMessages<LongWritable, M> messages) throws IOException {
+    Long2ObjectOpenHashMap<DataInputOutput> partitionMap = map.get(partitionId);
     synchronized (partitionMap) {
       VertexIdMessageBytesIterator<LongWritable, M>
           vertexIdMessageBytesIterator =
@@ -162,18 +123,12 @@ public class LongByteArrayMessageStore<M extends Writable>
   }
 
   @Override
-  public void clearPartition(int partitionId) throws IOException {
-    map.get(partitionId).clear();
-  }
-
-  @Override
-  public boolean hasMessagesForVertex(LongWritable vertexId) {
-    return getPartitionMap(vertexId).containsKey(vertexId.get());
+  public void finalizeStore() {
   }
 
   @Override
   public Iterable<M> getVertexMessages(
-      LongWritable vertexId) throws IOException {
+    LongWritable vertexId) throws IOException {
     DataInputOutput dataInputOutput =
         getPartitionMap(vertexId).get(vertexId.get());
     if (dataInputOutput == null) {
@@ -184,32 +139,8 @@ public class LongByteArrayMessageStore<M extends Writable>
   }
 
   @Override
-  public void clearVertexMessages(LongWritable vertexId) throws IOException {
-    getPartitionMap(vertexId).remove(vertexId.get());
-  }
-
-  @Override
-  public void clearAll() throws IOException {
-    map.clear();
-  }
-
-  @Override
-  public Iterable<LongWritable> getPartitionDestinationVertices(
-      int partitionId) {
-    Long2ObjectOpenHashMap<DataInputOutput> partitionMap =
-        map.get(partitionId);
-    List<LongWritable> vertices =
-        Lists.newArrayListWithCapacity(partitionMap.size());
-    LongIterator iterator = partitionMap.keySet().iterator();
-    while (iterator.hasNext()) {
-      vertices.add(new LongWritable(iterator.nextLong()));
-    }
-    return vertices;
-  }
-
-  @Override
-  public void writePartition(DataOutput out,
-      int partitionId) throws IOException {
+  public void writePartition(DataOutput out, int partitionId)
+    throws IOException {
     Long2ObjectOpenHashMap<DataInputOutput> partitionMap =
         map.get(partitionId);
     out.writeInt(partitionMap.size());
@@ -224,7 +155,7 @@ public class LongByteArrayMessageStore<M extends Writable>
 
   @Override
   public void readFieldsForPartition(DataInput in,
-      int partitionId) throws IOException {
+    int partitionId) throws IOException {
     int size = in.readInt();
     Long2ObjectOpenHashMap<DataInputOutput> partitionMap =
         new Long2ObjectOpenHashMap<DataInputOutput>(size);

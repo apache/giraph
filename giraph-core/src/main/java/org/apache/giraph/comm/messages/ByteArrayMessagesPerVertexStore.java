@@ -62,6 +62,11 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
     super(messageValueFactory, service, config);
   }
 
+  @Override
+  public boolean isPointerListEncoding() {
+    return false;
+  }
+
   /**
    * Get the extended data output for a vertex id from the iterator, creating
    * if necessary.  This method will take ownership of the vertex id from the
@@ -89,12 +94,10 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
 
   @Override
   public void addPartitionMessages(
-      int partitionId,
-      VertexIdMessages<I, M> messages) throws IOException {
+    int partitionId, VertexIdMessages<I, M> messages) throws IOException {
     ConcurrentMap<I, DataInputOutput> partitionMap =
         getOrCreatePartitionMap(partitionId);
-    VertexIdMessageBytesIterator<I, M>
-        vertexIdMessageBytesIterator =
+    VertexIdMessageBytesIterator<I, M> vertexIdMessageBytesIterator =
         messages.getVertexIdMessageBytesIterator();
     // Try to copy the message buffer over rather than
     // doing a deserialization of a message just to know its size.  This
@@ -113,8 +116,8 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
         }
       }
     } else {
-      VertexIdMessageIterator<I, M>
-          vertexIdMessageIterator = messages.getVertexIdMessageIterator();
+      VertexIdMessageIterator<I, M> vertexIdMessageIterator =
+          messages.getVertexIdMessageIterator();
       while (vertexIdMessageIterator.hasNext()) {
         vertexIdMessageIterator.next();
         DataInputOutput dataInputOutput =
@@ -188,7 +191,7 @@ public class ByteArrayMessagesPerVertexStore<I extends WritableComparable,
    * @param <M> Message data
    */
   private static class Factory<I extends WritableComparable, M extends Writable>
-      implements MessageStoreFactory<I, M, MessageStore<I, M>> {
+    implements MessageStoreFactory<I, M, MessageStore<I, M>> {
     /** Service worker */
     private CentralizedServiceWorker<I, ?, ?> service;
     /** Hadoop configuration */

@@ -24,7 +24,7 @@ import org.apache.giraph.comm.netty.handler.WorkerRequestServerHandler;
 import org.apache.giraph.comm.requests.SendPartitionMutationsRequest;
 import org.apache.giraph.comm.requests.SendVertexRequest;
 import org.apache.giraph.comm.requests.SendWorkerMessagesRequest;
-import org.apache.giraph.comm.requests.SendWorkerOneToAllMessagesRequest;
+import org.apache.giraph.comm.requests.SendWorkerOneMessageToManyRequest;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
@@ -36,8 +36,8 @@ import org.apache.giraph.graph.VertexMutations;
 import org.apache.giraph.metrics.GiraphMetrics;
 import org.apache.giraph.partition.Partition;
 import org.apache.giraph.partition.PartitionStore;
+import org.apache.giraph.utils.ByteArrayOneMessageToManyIds;
 import org.apache.giraph.utils.VertexIdMessages;
-import org.apache.giraph.utils.ByteArrayOneToAllMessages;
 import org.apache.giraph.utils.ByteArrayVertexIdMessages;
 import org.apache.giraph.utils.ExtendedDataOutput;
 import org.apache.giraph.utils.IntNoOpComputation;
@@ -196,10 +196,10 @@ public class RequestTest {
   }
 
   @Test
-  public void sendWorkerOneToAllMessagesRequest() throws IOException {
+  public void sendWorkerIndividualMessagesRequest() throws IOException {
     // Data to send
-    ByteArrayOneToAllMessages<IntWritable, IntWritable>
-        dataToSend = new ByteArrayOneToAllMessages<>(new
+    ByteArrayOneMessageToManyIds<IntWritable, IntWritable>
+        dataToSend = new ByteArrayOneMessageToManyIds<>(new
         TestMessageValueFactory<>(IntWritable.class));
     dataToSend.setConf(conf);
     dataToSend.initialize();
@@ -211,8 +211,8 @@ public class RequestTest {
     dataToSend.add(output.getByteArray(), output.getPos(), 7, new IntWritable(1));
 
     // Send the request
-    SendWorkerOneToAllMessagesRequest<IntWritable, IntWritable> request =
-      new SendWorkerOneToAllMessagesRequest<>(dataToSend, conf);
+    SendWorkerOneMessageToManyRequest<IntWritable, IntWritable> request =
+      new SendWorkerOneMessageToManyRequest<>(dataToSend, conf);
     client.sendWritableRequest(workerInfo.getTaskId(), request);
     client.waitAllRequests();
 

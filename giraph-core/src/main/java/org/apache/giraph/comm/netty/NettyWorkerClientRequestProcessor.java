@@ -22,9 +22,9 @@ import com.yammer.metrics.core.Gauge;
 import com.yammer.metrics.util.PercentGauge;
 import org.apache.giraph.bsp.BspService;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
+import org.apache.giraph.comm.SendOneMessageToManyCache;
 import org.apache.giraph.comm.SendEdgeCache;
 import org.apache.giraph.comm.SendMessageCache;
-import org.apache.giraph.comm.SendMessageToAllCache;
 import org.apache.giraph.comm.SendMutationsCache;
 import org.apache.giraph.comm.SendPartitionCache;
 import org.apache.giraph.comm.ServerData;
@@ -134,9 +134,9 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
         GiraphConfiguration.MAX_MSG_REQUEST_SIZE.get(conf);
     maxVerticesSizePerWorker =
         GiraphConfiguration.MAX_VERTEX_REQUEST_SIZE.get(conf);
-    if (this.configuration.isOneToAllMsgSendingEnabled()) {
+    if (this.configuration.useOneMessageToManyIdsEncoding()) {
       sendMessageCache =
-        new SendMessageToAllCache<I, Writable>(conf, serviceWorker,
+        new SendOneMessageToManyCache<I, Writable>(conf, serviceWorker,
           this, maxMessagesSizePerWorker);
     } else {
       sendMessageCache =
@@ -395,7 +395,7 @@ public class NettyWorkerClientRequestProcessor<I extends WritableComparable,
   @Override
   public void flush() throws IOException {
     // Execute the remaining sends messages (if any)
-    // including one-to-one and one-to-all messages.
+    // including individual and compact messages.
     sendMessageCache.flush();
 
     // Execute the remaining sends vertices (if any)

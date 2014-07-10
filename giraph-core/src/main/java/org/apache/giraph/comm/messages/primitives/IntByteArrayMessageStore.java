@@ -94,6 +94,11 @@ public class IntByteArrayMessageStore<M extends Writable>
     }
   }
 
+  @Override
+  public boolean isPointerListEncoding() {
+    return false;
+  }
+
   /**
    * Get map which holds messages for partition which vertex belongs to.
    *
@@ -158,6 +163,10 @@ public class IntByteArrayMessageStore<M extends Writable>
         }
       }
     }
+  }
+
+  @Override
+  public void finalizeStore() {
   }
 
   @Override

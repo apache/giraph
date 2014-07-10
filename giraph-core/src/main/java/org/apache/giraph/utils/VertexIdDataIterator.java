@@ -41,6 +41,13 @@ public interface VertexIdDataIterator<I extends WritableComparable, T>
   T getCurrentData();
 
   /**
+   * Get serialized size of current data
+   *
+   * @return serialized size of data
+   */
+  int getCurrentDataSize();
+
+  /**
    * Release the current data object.
    *
    * @return Released data object

@@ -63,6 +63,11 @@ public class OneMessagePerVertexStore<I extends WritableComparable,
   }
 
   @Override
+  public boolean isPointerListEncoding() {
+    return false;
+  }
+
+  @Override
   public void addPartitionMessages(
       int partitionId,
       VertexIdMessages<I, M> messages) throws IOException {

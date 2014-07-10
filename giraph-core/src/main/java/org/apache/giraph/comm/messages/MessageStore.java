@@ -34,6 +34,14 @@ import org.apache.hadoop.io.WritableComparable;
 public interface MessageStore<I extends WritableComparable,
     M extends Writable> {
   /**
+   * True if this message-store encodes messages as a list of long pointers
+   * to compact serialized messages
+   *
+   * @return true if we encode messages as a list of pointers
+   */
+  boolean isPointerListEncoding();
+
+  /**
    * Gets messages for a vertex.  The lifetime of every message is only
    * guaranteed until the iterator's next() method is called. Do not hold
    * references to objects returned by this iterator.
@@ -77,6 +85,13 @@ public interface MessageStore<I extends WritableComparable,
   void addPartitionMessages(
       int partitionId, VertexIdMessages<I, M> messages)
     throws IOException;
+
+  /**
+   * Called before start of computation in bspworker
+   * Since it is run from a single thread while the store is not being
+   * accessed by any other thread - this is ensured to be thread-safe
+   */
+  void finalizeStore();
 
   /**
    * Gets vertex ids from selected partition which we have messages for

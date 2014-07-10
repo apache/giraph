@@ -122,7 +122,7 @@ public class NettyWorkerServer<I extends WritableComparable,
 
   @Override
   public void prepareSuperstep() {
-    serverData.prepareSuperstep();
+    serverData.prepareSuperstep(); // updates the current message-store
     resolveMutations();
   }
 

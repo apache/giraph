@@ -24,12 +24,12 @@ import java.util.Iterator;
 
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.netty.NettyWorkerClientRequestProcessor;
+import org.apache.giraph.comm.requests.SendWorkerOneMessageToManyRequest;
 import org.apache.giraph.comm.requests.SendWorkerMessagesRequest;
-import org.apache.giraph.comm.requests.SendWorkerOneToAllMessagesRequest;
 import org.apache.giraph.comm.requests.WritableRequest;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.partition.PartitionOwner;
-import org.apache.giraph.utils.ByteArrayOneToAllMessages;
+import org.apache.giraph.utils.ByteArrayOneMessageToManyIds;
 import org.apache.giraph.utils.VertexIdMessages;
 import org.apache.giraph.utils.ExtendedDataOutput;
 import org.apache.giraph.utils.PairList;
@@ -38,22 +38,26 @@ import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.log4j.Logger;
 
+import javax.annotation.concurrent.NotThreadSafe;
+
 /**
  * Aggregates the messages to be sent to workers so they can be sent
- * in bulk.  Not thread-safe.
+ * in bulk.
  *
  * @param <I> Vertex id
  * @param <M> Message data
  */
-public class SendMessageToAllCache<I extends WritableComparable,
-    M extends Writable> extends SendMessageCache<I, M> {
+@NotThreadSafe
+@SuppressWarnings("unchecked")
+public class SendOneMessageToManyCache<I extends WritableComparable,
+  M extends Writable> extends SendMessageCache<I, M> {
   /** Class logger */
   private static final Logger LOG =
-      Logger.getLogger(SendMessageToAllCache.class);
-  /** Cache serialized messages for each worker */
-  private final ByteArrayOneToAllMessages<I, M>[] oneToAllMsgCache;
-  /** Tracking one-to-all message sizes for each worker */
-  private final int[] oneToAllMsgSizes;
+      Logger.getLogger(SendOneMessageToManyCache.class);
+  /** Cache serialized one to many messages for each worker */
+  private final ByteArrayOneMessageToManyIds<I, M>[] msgVidsCache;
+  /** Tracking message-vertexIds sizes for each worker */
+  private final int[] msgVidsSizes;
   /** Reused byte array to serialize target ids on each worker */
   private final ExtendedDataOutput[] idSerializer;
   /** Reused int array to count target id distribution */
@@ -74,14 +78,14 @@ public class SendMessageToAllCache<I extends WritableComparable,
    * @param processor NettyWorkerClientRequestProcessor
    * @param maxMsgSize Max message size sent to a worker
    */
-  public SendMessageToAllCache(ImmutableClassesGiraphConfiguration conf,
-      CentralizedServiceWorker<?, ?, ?> serviceWorker,
-      NettyWorkerClientRequestProcessor<I, ?, ?> processor,
-      int maxMsgSize) {
+  public SendOneMessageToManyCache(ImmutableClassesGiraphConfiguration conf,
+    CentralizedServiceWorker<?, ?, ?> serviceWorker,
+    NettyWorkerClientRequestProcessor<I, ?, ?> processor,
+    int maxMsgSize) {
     super(conf, serviceWorker, processor, maxMsgSize);
     int numWorkers = getNumWorkers();
-    oneToAllMsgCache = new ByteArrayOneToAllMessages[numWorkers];
-    oneToAllMsgSizes = new int[numWorkers];
+    msgVidsCache = new ByteArrayOneMessageToManyIds[numWorkers];
+    msgVidsSizes = new int[numWorkers];
     idSerializer = new ExtendedDataOutput[numWorkers];
     // InitialBufferSizes is alo initialized based on the number of workers.
     // As a result, initialBufferSizes is the same as idSerializer in length
@@ -106,7 +110,7 @@ public class SendMessageToAllCache<I extends WritableComparable,
 
   /**
    * Reset ExtendedDataOutput array for id serialization
-   * in next "one-to-all" message sending.
+   * in next message-Vids encoding
    */
   private void resetIdSerializers() {
     for (int i = 0; i < this.idSerializer.length; i++) {
@@ -117,15 +121,14 @@ public class SendMessageToAllCache<I extends WritableComparable,
   }
 
   /**
-   * Reset id counter for next "one-to-all" message sending.
+   * Reset id counter for next message-vertexIds encoding
    */
   private void resetIdCounter() {
     Arrays.fill(idCounter, 0);
   }
 
   /**
-   * Add message with multiple ids to
-   * one-to-all message cache.
+   * Add message with multiple target ids to message cache.
    *
    * @param workerInfo The remote worker destination
    * @param ids A byte array to hold serialized vertex ids
@@ -135,63 +138,61 @@ public class SendMessageToAllCache<I extends WritableComparable,
    * @param message Message to send to remote worker
    * @return The size of messages for the worker.
    */
-  private int addOneToAllMessage(
+  private int addOneToManyMessage(
     WorkerInfo workerInfo, byte[] ids, int idPos, int count, M message) {
     // Get the data collection
-    ByteArrayOneToAllMessages<I, M> workerData =
-      oneToAllMsgCache[workerInfo.getTaskId()];
+    ByteArrayOneMessageToManyIds<I, M> workerData =
+      msgVidsCache[workerInfo.getTaskId()];
     if (workerData == null) {
-      workerData = new ByteArrayOneToAllMessages<I, M>(
+      workerData = new ByteArrayOneMessageToManyIds<I, M>(
         getConf().getOutgoingMessageValueFactory());
       workerData.setConf(getConf());
       workerData.initialize(getSendWorkerInitialBufferSize(
         workerInfo.getTaskId()));
-      oneToAllMsgCache[workerInfo.getTaskId()] = workerData;
+      msgVidsCache[workerInfo.getTaskId()] = workerData;
     }
     workerData.add(ids, idPos, count, message);
     // Update the size of cached, outgoing data per worker
-    oneToAllMsgSizes[workerInfo.getTaskId()] =
+    msgVidsSizes[workerInfo.getTaskId()] =
       workerData.getSize();
-    return oneToAllMsgSizes[workerInfo.getTaskId()];
+    return msgVidsSizes[workerInfo.getTaskId()];
   }
 
   /**
-   * Gets the one-to-all
-   * messages for a worker and removes it from the cache.
-   * Here the ByteArrayOneToAllMessages returned could be null.
-   * But when invoking this method, we also check if the data size sent
-   * to this worker is above the threshold. Therefore, it doesn't matter
-   * if the result is null or not.
+   * Gets the messages + vertexIds for a worker and removes it from the cache.
+   * Here the {@link org.apache.giraph.utils.ByteArrayOneMessageToManyIds}
+   * returned could be null.But when invoking this method, we also check if
+   * the data size sent to this worker is above the threshold.
+   * Therefore, it doesn't matter if the result is null or not.
    *
-   * @param workerInfo The target worker where one-to-all messages
-   *                   go to.
-   * @return ByteArrayOneToAllMessages that belong to the workerInfo
+   * @param workerInfo Target worker to which one messages - many ids are sent
+   * @return {@link org.apache.giraph.utils.ByteArrayOneMessageToManyIds}
+   *         that belong to the workerInfo
    */
-  private ByteArrayOneToAllMessages<I, M>
-  removeWorkerOneToAllMessages(WorkerInfo workerInfo) {
-    ByteArrayOneToAllMessages<I, M> workerData =
-      oneToAllMsgCache[workerInfo.getTaskId()];
+  private ByteArrayOneMessageToManyIds<I, M>
+  removeWorkerMsgVids(WorkerInfo workerInfo) {
+    ByteArrayOneMessageToManyIds<I, M> workerData =
+      msgVidsCache[workerInfo.getTaskId()];
     if (workerData != null) {
-      oneToAllMsgCache[workerInfo.getTaskId()] = null;
-      oneToAllMsgSizes[workerInfo.getTaskId()] = 0;
+      msgVidsCache[workerInfo.getTaskId()] = null;
+      msgVidsSizes[workerInfo.getTaskId()] = 0;
     }
     return workerData;
   }
 
   /**
-   * Gets all the one-to-all
-   * messages and removes them from the cache.
+   * Gets all messages - vertexIds and removes them from the cache.
    *
    * @return All vertex messages for all workers
    */
-  private PairList<WorkerInfo, ByteArrayOneToAllMessages<I, M>>
-  removeAllOneToAllMessages() {
-    PairList<WorkerInfo, ByteArrayOneToAllMessages<I, M>> allData =
-      new PairList<WorkerInfo, ByteArrayOneToAllMessages<I, M>>();
-    allData.initialize(oneToAllMsgCache.length);
+  private PairList<WorkerInfo, ByteArrayOneMessageToManyIds<I, M>>
+  removeAllMsgVids() {
+    PairList<WorkerInfo, ByteArrayOneMessageToManyIds<I, M>> allData =
+      new PairList<WorkerInfo, ByteArrayOneMessageToManyIds<I, M>>();
+    allData.initialize(msgVidsCache.length);
     for (WorkerInfo workerInfo : getWorkerPartitions().keySet()) {
-      ByteArrayOneToAllMessages<I, M> workerData =
-        removeWorkerOneToAllMessages(workerInfo);
+      ByteArrayOneMessageToManyIds<I, M> workerData =
+        removeWorkerMsgVids(workerInfo);
       if (workerData != null && !workerData.isEmpty()) {
         allData.add(workerInfo, workerData);
       }
@@ -251,8 +252,7 @@ public class SendMessageToAllCache<I extends WritableComparable,
         if (workerMessageSize >= maxMessagesSizePerWorker) {
           PairList<Integer, VertexIdMessages<I, M>>
             workerMessages = removeWorkerMessages(workerInfoList[i]);
-          writableRequest =
-            new SendWorkerMessagesRequest<I, M>(workerMessages);
+          writableRequest = new SendWorkerMessagesRequest<>(workerMessages);
           totalMsgBytesSentInSuperstep += writableRequest.getSerializedSize();
           clientProcessor.doRequest(workerInfoList[i], writableRequest);
           // Notify sending
@@ -261,9 +261,9 @@ public class SendMessageToAllCache<I extends WritableComparable,
       } else if (idCounter[i] > 1) {
         serializedId = idSerializer[i].getByteArray();
         idSerializerPos = idSerializer[i].getPos();
-        workerMessageSize = addOneToAllMessage(
-          workerInfoList[i], serializedId, idSerializerPos, idCounter[i],
-          message);
+        workerMessageSize = addOneToManyMessage(
+            workerInfoList[i], serializedId, idSerializerPos, idCounter[i],
+            message);
 
         if (LOG.isTraceEnabled()) {
           LOG.trace("sendMessageToAllRequest: Send bytes (" +
@@ -272,11 +272,10 @@ public class SendMessageToAllCache<I extends WritableComparable,
         }
         totalMsgsSentInSuperstep += idCounter[i];
         if (workerMessageSize >= maxMessagesSizePerWorker) {
-          ByteArrayOneToAllMessages<I, M> workerOneToAllMessages =
-            removeWorkerOneToAllMessages(workerInfoList[i]);
-          writableRequest =
-            new SendWorkerOneToAllMessagesRequest<I, M>(
-              workerOneToAllMessages, getConf());
+          ByteArrayOneMessageToManyIds<I, M> workerMsgVids =
+            removeWorkerMsgVids(workerInfoList[i]);
+          writableRequest =  new SendWorkerOneMessageToManyRequest<>(
+            workerMsgVids, getConf());
           totalMsgBytesSentInSuperstep += writableRequest.getSerializedSize();
           clientProcessor.doRequest(workerInfoList[i], writableRequest);
           // Notify sending
@@ -289,20 +288,19 @@ public class SendMessageToAllCache<I extends WritableComparable,
   @Override
   public void flush() {
     super.flush();
-    PairList<WorkerInfo, ByteArrayOneToAllMessages<I, M>>
-    remainingOneToAllMessageCache =
-      removeAllOneToAllMessages();
+    PairList<WorkerInfo, ByteArrayOneMessageToManyIds<I, M>>
+    remainingMsgVidsCache = removeAllMsgVids();
     PairList<WorkerInfo,
-    ByteArrayOneToAllMessages<I, M>>.Iterator
-    oneToAllMsgIterator = remainingOneToAllMessageCache.getIterator();
-    while (oneToAllMsgIterator.hasNext()) {
-      oneToAllMsgIterator.next();
+        ByteArrayOneMessageToManyIds<I, M>>.Iterator
+    msgIdsIterator = remainingMsgVidsCache.getIterator();
+    while (msgIdsIterator.hasNext()) {
+      msgIdsIterator.next();
       WritableRequest writableRequest =
-        new SendWorkerOneToAllMessagesRequest<I, M>(
-          oneToAllMsgIterator.getCurrentSecond(), getConf());
+        new SendWorkerOneMessageToManyRequest<>(
+            msgIdsIterator.getCurrentSecond(), getConf());
       totalMsgBytesSentInSuperstep += writableRequest.getSerializedSize();
       clientProcessor.doRequest(
-        oneToAllMsgIterator.getCurrentFirst(), writableRequest);
+        msgIdsIterator.getCurrentFirst(), writableRequest);
     }
   }
 }

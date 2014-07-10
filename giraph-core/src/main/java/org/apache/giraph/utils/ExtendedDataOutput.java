@@ -82,4 +82,3 @@ public interface ExtendedDataOutput extends DataOutput {
    */
   void reset();
 }
-

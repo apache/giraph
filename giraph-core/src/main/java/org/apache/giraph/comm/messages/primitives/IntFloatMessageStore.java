@@ -86,6 +86,11 @@ public class IntFloatMessageStore
     }
   }
 
+  @Override
+  public boolean isPointerListEncoding() {
+    return false;
+  }
+
   /**
    * Get map which holds messages for partition which vertex belongs to.
    *
@@ -123,6 +128,10 @@ public class IntFloatMessageStore
         partitionMap.put(vertexId, message);
       }
     }
+  }
+
+  @Override
+  public void finalizeStore() {
   }
 
   @Override

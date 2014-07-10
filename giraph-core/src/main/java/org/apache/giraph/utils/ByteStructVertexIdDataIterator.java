@@ -39,6 +39,8 @@ public class ByteStructVertexIdDataIterator<I extends WritableComparable, T>
   extends ByteStructVertexIdIterator<I> implements VertexIdDataIterator<I, T> {
   /** VertexIdData to iterate over */
   protected AbstractVertexIdData<I, T> vertexIdData;
+  /** Serialized size of the message object in bytestore */
+  protected int dataSize;
   /** Current data. */
   private T data;
 
@@ -63,10 +65,17 @@ public class ByteStructVertexIdDataIterator<I extends WritableComparable, T>
     }
     try {
       vertexId.readFields(extendedDataInput);
+      int initial = extendedDataInput.getPos();
       vertexIdData.readData(extendedDataInput, data);
+      dataSize = extendedDataInput.getPos() - initial;
     } catch (IOException e) {
       throw new IllegalStateException("next: IOException", e);
     }
+  }
+
+  @Override
+  public int getCurrentDataSize() {
+    return dataSize;
   }
 
   @Override

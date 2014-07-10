@@ -176,6 +176,8 @@ public class ServerData<I extends WritableComparable,
             messageStoreFactory.newStore(conf.getIncomingMessageValueFactory());
     incomingMessageStore =
         messageStoreFactory.newStore(conf.getOutgoingMessageValueFactory());
+    // finalize current message-store before resolving mutations
+    currentMessageStore.finalizeStore();
 
     currentWorkerToWorkerMessages = incomingWorkerToWorkerMessages;
     incomingWorkerToWorkerMessages =

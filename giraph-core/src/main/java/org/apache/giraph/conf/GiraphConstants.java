@@ -21,6 +21,7 @@ import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.aggregators.TextAggregatorWriter;
 import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.comm.messages.InMemoryMessageStoreFactory;
+import org.apache.giraph.comm.messages.MessageEncodeAndStoreType;
 import org.apache.giraph.comm.messages.MessageStoreFactory;
 import org.apache.giraph.edge.ByteArrayEdges;
 import org.apache.giraph.edge.EdgeStoreFactory;
@@ -556,12 +557,6 @@ public interface GiraphConstants {
       new IntConfOption("giraph.nettyRequestEncoderBufferSize", 32 * ONE_KB,
           "How big to make the encoder buffer?");
 
-  /** Whether or not netty request encoder should use direct byte buffers */
-  BooleanConfOption NETTY_REQUEST_ENCODER_USE_DIRECT_BUFFERS =
-      new BooleanConfOption("giraph.nettyRequestEncoderUseDirectBuffers",
-                            false, "Whether or not netty request encoder " +
-                                   "should use direct byte buffers");
-
   /** Netty client threads */
   IntConfOption NETTY_CLIENT_THREADS =
       new IntConfOption("giraph.nettyClientThreads", 4, "Netty client threads");
@@ -1054,13 +1049,14 @@ public interface GiraphConstants {
           "edges every time.");
 
   /**
-   * This option will enable communication optimization for one-to-all
-   * message sending. For multiple target ids on the same machine,
-   * we only send one message to all the targets.
+   * This option will tell which message encode & store enum to use when
+   * combining is not enabled
    */
-  BooleanConfOption ONE_TO_ALL_MSG_SENDING =
-    new BooleanConfOption("giraph.oneToAllMsgSending", false, "Enable " +
-        "one-to-all message sending strategy");
+  EnumConfOption<MessageEncodeAndStoreType> MESSAGE_ENCODE_AND_STORE_TYPE =
+      EnumConfOption.create("giraph.messageEncodeAndStoreType",
+          MessageEncodeAndStoreType.class,
+          MessageEncodeAndStoreType.BYTEARRAY_PER_PARTITION,
+          "Select the message_encode_and_store_type to use");
 
   /**
    * This option can be used to specify if a source vertex present in edge

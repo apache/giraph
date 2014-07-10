@@ -22,8 +22,10 @@ import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.comm.messages.primitives.IntByteArrayMessageStore;
 import org.apache.giraph.comm.messages.primitives.IntFloatMessageStore;
-import org.apache.giraph.comm.messages.primitives.LongByteArrayMessageStore;
+import org.apache.giraph.comm.messages.primitives.long_id.LongByteArrayMessageStore;
 import org.apache.giraph.comm.messages.primitives.LongDoubleMessageStore;
+import org.apache.giraph.comm.messages.primitives.long_id.LongPointerListMessageStore;
+import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.hadoop.io.DoubleWritable;
@@ -43,6 +45,7 @@ import org.apache.log4j.Logger;
  * @param <I> Vertex id
  * @param <M> Message data
  */
+@SuppressWarnings("unchecked")
 public class InMemoryMessageStoreFactory<I extends WritableComparable,
     M extends Writable>
     implements MessageStoreFactory<I, M, MessageStore<I, M>> {
@@ -51,14 +54,87 @@ public class InMemoryMessageStoreFactory<I extends WritableComparable,
       Logger.getLogger(InMemoryMessageStoreFactory.class);
 
   /** Service worker */
-  private CentralizedServiceWorker<I, ?, ?> service;
+  protected CentralizedServiceWorker<I, ?, ?> service;
   /** Hadoop configuration */
-  private ImmutableClassesGiraphConfiguration<I, ?, ?> conf;
+  protected ImmutableClassesGiraphConfiguration<I, ?, ?> conf;
 
   /**
    * Default constructor allowing class invocation via Reflection.
    */
   public InMemoryMessageStoreFactory() {
+  }
+
+  /**
+   * MessageStore to be used when combiner is enabled
+   *
+   * @param messageValueFactory message value factory
+   * @return message store
+   */
+  protected MessageStore<I, M> newStoreWithCombiner(
+    MessageValueFactory<M> messageValueFactory) {
+    Class<M> messageClass = messageValueFactory.getValueClass();
+    MessageStore messageStore;
+    Class<I> vertexIdClass = conf.getVertexIdClass();
+    if (vertexIdClass.equals(IntWritable.class) &&
+        messageClass.equals(FloatWritable.class)) {
+      messageStore = new IntFloatMessageStore(
+          (CentralizedServiceWorker<IntWritable, Writable, Writable>) service,
+          (MessageCombiner<IntWritable, FloatWritable>)
+              conf.<FloatWritable>createMessageCombiner());
+    } else if (vertexIdClass.equals(LongWritable.class) &&
+        messageClass.equals(DoubleWritable.class)) {
+      messageStore = new LongDoubleMessageStore(
+          (CentralizedServiceWorker<LongWritable, Writable, Writable>) service,
+          (MessageCombiner<LongWritable, DoubleWritable>)
+              conf.<DoubleWritable>createMessageCombiner());
+    } else {
+      messageStore = new OneMessagePerVertexStore(messageValueFactory,
+          service, conf.<M>createMessageCombiner(), conf);
+    }
+    return messageStore;
+  }
+
+  /**
+   * MessageStore to be used when combiner is not enabled
+   *
+   * @param messageValueFactory message value factory
+   * @return message store
+   */
+  protected MessageStore<I, M> newStoreWithoutCombiner(
+    MessageValueFactory<M> messageValueFactory) {
+    MessageStore messageStore = null;
+    MessageEncodeAndStoreType encodeAndStore = GiraphConstants
+        .MESSAGE_ENCODE_AND_STORE_TYPE.get(conf);
+    Class<I> vertexIdClass = conf.getVertexIdClass();
+    if (vertexIdClass.equals(IntWritable.class)) { // INT
+      messageStore = new IntByteArrayMessageStore(messageValueFactory,
+          service, conf);
+    } else if (vertexIdClass.equals(LongWritable.class)) { // LONG
+      if (encodeAndStore.equals(
+          MessageEncodeAndStoreType.BYTEARRAY_PER_PARTITION) ||
+          encodeAndStore.equals(
+            MessageEncodeAndStoreType.EXTRACT_BYTEARRAY_PER_PARTITION)) {
+        messageStore = new LongByteArrayMessageStore(messageValueFactory,
+            service, conf);
+      } else if (encodeAndStore.equals(
+          MessageEncodeAndStoreType.POINTER_LIST_PER_VERTEX)) {
+        messageStore = new LongPointerListMessageStore(messageValueFactory,
+            service, conf);
+      }
+    } else { // GENERAL
+      if (encodeAndStore.equals(
+          MessageEncodeAndStoreType.BYTEARRAY_PER_PARTITION) ||
+          encodeAndStore.equals(
+              MessageEncodeAndStoreType.EXTRACT_BYTEARRAY_PER_PARTITION)) {
+        messageStore = new ByteArrayMessagesPerVertexStore<>(
+            messageValueFactory, service, conf);
+      } else if (encodeAndStore.equals(
+          MessageEncodeAndStoreType.POINTER_LIST_PER_VERTEX)) {
+        messageStore = new PointerListPerVertexStore(messageValueFactory,
+            service, conf);
+      }
+    }
+    return messageStore;
   }
 
   @Override
@@ -67,39 +143,9 @@ public class InMemoryMessageStoreFactory<I extends WritableComparable,
     Class<M> messageClass = messageValueFactory.getValueClass();
     MessageStore messageStore;
     if (conf.useMessageCombiner()) {
-      Class<I> vertexIdClass = conf.getVertexIdClass();
-      if (vertexIdClass.equals(IntWritable.class) &&
-          messageClass.equals(FloatWritable.class)) {
-        messageStore = new IntFloatMessageStore(
-            (CentralizedServiceWorker<IntWritable, Writable, Writable>) service,
-            (MessageCombiner<IntWritable, FloatWritable>)
-                conf.<FloatWritable>createMessageCombiner());
-      } else if (vertexIdClass.equals(LongWritable.class) &&
-          messageClass.equals(DoubleWritable.class)) {
-        messageStore = new LongDoubleMessageStore(
-          (CentralizedServiceWorker<LongWritable, Writable, Writable>) service,
-          (MessageCombiner<LongWritable, DoubleWritable>)
-              conf.<DoubleWritable>createMessageCombiner());
-      } else {
-        messageStore = new OneMessagePerVertexStore<I, M>(messageValueFactory,
-          service, conf.<M>createMessageCombiner(), conf);
-      }
+      messageStore = newStoreWithCombiner(messageValueFactory);
     } else {
-      Class<I> vertexIdClass = conf.getVertexIdClass();
-      if (vertexIdClass.equals(IntWritable.class)) {
-        messageStore = new IntByteArrayMessageStore<M>(messageValueFactory,
-          (CentralizedServiceWorker<IntWritable, Writable, Writable>) service,
-          (ImmutableClassesGiraphConfiguration<IntWritable, Writable, Writable>)
-            conf);
-      } else if (vertexIdClass.equals(LongWritable.class)) {
-        messageStore = new LongByteArrayMessageStore<M>(messageValueFactory,
-          (CentralizedServiceWorker<LongWritable, Writable, Writable>) service,
-          (ImmutableClassesGiraphConfiguration<LongWritable, Writable,
-           Writable>) conf);
-      } else {
-        messageStore = new ByteArrayMessagesPerVertexStore<I, M>(
-          messageValueFactory, service, conf);
-      }
+      messageStore = newStoreWithoutCombiner(messageValueFactory);
     }
 
     if (LOG.isInfoEnabled()) {

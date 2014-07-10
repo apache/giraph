@@ -139,6 +139,10 @@ public abstract class SimpleMessageStore<I extends WritableComparable,
   }
 
   @Override
+  public void finalizeStore() {
+  }
+
+  @Override
   public Iterable<I> getPartitionDestinationVertices(int partitionId) {
     ConcurrentMap<I, ?> partitionMap = map.get(partitionId);
     return (partitionMap == null) ? Collections.<I>emptyList() :

@@ -1176,23 +1176,18 @@ public class GiraphConfiguration extends Configuration
   }
 
   /**
-   * Enable communication optimization for one-to-all messages.
-   */
-  public void enableOneToAllMsgSending() {
-    ONE_TO_ALL_MSG_SENDING.set(this, true);
-  }
-
-  /**
-   * Return if one-to-all messsage sending is enabled.
+   * Return if oneMessageToManyIds encoding can be enabled
    *
-   * @return True if this option is enabled.
+   * @return True if this option is true.
    */
-  public boolean isOneToAllMsgSendingEnabled() {
-    return ONE_TO_ALL_MSG_SENDING.isTrue(this);
+  public boolean useOneMessageToManyIdsEncoding() {
+    return MESSAGE_ENCODE_AND_STORE_TYPE.get(this)
+      .useOneMessageToManyIdsEncoding();
   }
 
   /**
    * Get option whether to create a source vertex present only in edge input
+   *
    * @return CREATE_EDGE_SOURCE_VERTICES option
    */
   public boolean getCreateSourceVertex() {

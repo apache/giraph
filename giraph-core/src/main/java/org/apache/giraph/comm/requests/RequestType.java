@@ -38,9 +38,9 @@ public enum RequestType {
   SEND_WORKER_VERTICES_REQUEST(SendWorkerVerticesRequest.class),
   /** Sending a partition of messages for next superstep */
   SEND_WORKER_MESSAGES_REQUEST(SendWorkerMessagesRequest.class),
-  /** Sending one-to-all messages to a worker for next superstep */
-  SEND_WORKER_ONETOALL_MESSAGES_REQUEST(
-    SendWorkerOneToAllMessagesRequest.class),
+  /** Sending one message to many ids in a single request */
+  SEND_WORKER_ONE_MESSAGE_TO_MANY_REQUEST(
+      SendWorkerOneMessageToManyRequest.class),
   /**
    * Sending a partition of messages for current superstep
    * (used during partition exchange)

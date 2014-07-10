@@ -83,6 +83,11 @@ public class LongDoubleMessageStore
     }
   }
 
+  @Override
+  public boolean isPointerListEncoding() {
+    return false;
+  }
+
   /**
    * Get map which holds messages for partition which vertex belongs to.
    *
@@ -120,6 +125,10 @@ public class LongDoubleMessageStore
         partitionMap.put(vertexId, message);
       }
     }
+  }
+
+  @Override
+  public void finalizeStore() {
   }
 
   @Override

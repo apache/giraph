@@ -83,6 +83,11 @@ public class DiskBackedMessageStore<I extends WritableComparable,
   }
 
   @Override
+  public boolean isPointerListEncoding() {
+    return false;
+  }
+
+  @Override
   public void addPartitionMessages(
       int partitionId,
       VertexIdMessages<I, M> messages) throws IOException {
@@ -103,6 +108,10 @@ public class DiskBackedMessageStore<I extends WritableComparable,
       }
     }
     checkMemory();
+  }
+
+  @Override
+  public void finalizeStore() {
   }
 
   @Override

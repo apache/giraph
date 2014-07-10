@@ -18,36 +18,29 @@
 
 package org.apache.giraph.utils;
 
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
-
 /**
- * Special iterator that reuses vertex ids and message objects so that the
- * lifetime of the object is only until next() is called.
- *
- * @param <I> vertexId type parameter
- * @param <M> message type parameter
+ * UnsafeReusableByteArrayInput is a data structure to read from a
+ * byte buffer with a read pointer that can be moved to desired location
  */
-public interface VertexIdMessageIterator<I extends WritableComparable,
-    M extends Writable> extends VertexIdDataIterator<I, M> {
-  /**
-   * Get the current message.
-   *
-   * @return Current message
-   */
-  M getCurrentMessage();
+public class UnsafeReusableByteArrayInput extends UnsafeArrayReads {
 
   /**
-   * Get the serialized size of current message
-   *
-   * @return serialized size of current message
+   * Default Constructor
    */
-  int getCurrentMessageSize();
+  public UnsafeReusableByteArrayInput() {
+    super(null, 0, 0);
+  }
 
   /**
-   * Return true of current message is new
+   * Initialize the object with all required parameters
    *
-   * @return true if current message is new
+   * @param buf byte buffer
+   * @param offset offset in the buffer
+   * @param length length of the valid data
    */
-  boolean isNewMessage();
+  public void initialize(byte[] buf, int offset, int length) {
+    this.buf = buf;
+    this.pos = offset;
+    this.bufLength = length;
+  }
 }
