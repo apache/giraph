@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-929: setIfUnset for EnumConfOption (pavanka)  
+
   GIRAPH-912: Support succinct representation of messages in messagestores (pavanka)
 
   GIRAPH-903: Detect crashes of Netty threads (edunov via pavanka)

@@ -95,4 +95,16 @@ public class EnumConfOption<T extends Enum<T>> extends AbstractConfOption {
   public void set(Configuration conf, Enum<T> value) {
     conf.set(getKey(), value.name());
   }
+
+  /**
+   * Set value if it's not already present
+   *
+   * @param conf Configuration
+   * @param value to set
+   */
+  public void setIfUnset(Configuration conf, Enum<T> value) {
+    if (!contains(conf)) {
+      set(conf, value);
+    }
+  }
 }
