@@ -39,7 +39,6 @@ import org.apache.giraph.factories.ValueFactories;
 import org.apache.giraph.factories.VertexIdFactory;
 import org.apache.giraph.factories.VertexValueFactory;
 import org.apache.giraph.graph.Computation;
-import org.apache.giraph.graph.DefaultVertex;
 import org.apache.giraph.graph.Language;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexResolver;
@@ -90,6 +89,7 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.util.Progressable;
 
+
 /**
  * The classes set here are immutable, the remaining configuration is mutable.
  * Classes are immutable and final to provide the best performance for
@@ -112,6 +112,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
   private final PerGraphTypeEnum<Language> valueLanguages;
   /** Whether values (IVEMM) need Jython wrappers */
   private final PerGraphTypeBoolean valueNeedsWrappers;
+
 
   /**
    * Use unsafe serialization? Cached for fast access to instantiate the
@@ -675,12 +676,12 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    * @return Instantiated vertex
    */
   public Vertex<I, V, E> createVertex() {
-    Vertex<I, V, E> vertex = new DefaultVertex<I, V, E>();
-    vertex.setConf(this);
-    return vertex;
+    Class vertexClass = classes.getVertexClass();
+    return (Vertex<I, V, E>) ReflectionUtils.newInstance(vertexClass, this);
   }
 
-  /**
+
+ /**
    * Get the user's subclassed vertex index class.
    *
    * @return User's vertex index class

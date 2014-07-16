@@ -39,11 +39,13 @@ import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.giraph.factories.VertexIdFactory;
 import org.apache.giraph.factories.VertexValueFactory;
 import org.apache.giraph.graph.Computation;
-import org.apache.giraph.graph.DefaultVertexValueCombiner;
+import org.apache.giraph.graph.DefaultVertex;
 import org.apache.giraph.graph.DefaultVertexResolver;
+import org.apache.giraph.graph.DefaultVertexValueCombiner;
 import org.apache.giraph.graph.Language;
-import org.apache.giraph.graph.VertexValueCombiner;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexResolver;
+import org.apache.giraph.graph.VertexValueCombiner;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.EdgeOutputFormat;
 import org.apache.giraph.io.MappingInputFormat;
@@ -274,7 +276,11 @@ public interface GiraphConstants {
       ClassConfOption.create("giraph.vertexInputFilterClass",
           DefaultVertexInputFilter.class, VertexInputFilter.class,
           "VertexInputFilter class");
-
+  /** Vertex class */
+  ClassConfOption<Vertex> VERTEX_CLASS =
+      ClassConfOption.create("giraph.vertexClass",
+          DefaultVertex.class, Vertex.class,
+          "Vertex class");
   /** VertexOutputFormat class */
   ClassConfOption<VertexOutputFormat> VERTEX_OUTPUT_FORMAT_CLASS =
       ClassConfOption.create("giraph.vertexOutputFormatClass", null,

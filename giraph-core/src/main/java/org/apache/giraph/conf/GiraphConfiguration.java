@@ -23,6 +23,7 @@ import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.edge.ReuseObjectsOutEdges;
 import org.apache.giraph.factories.ComputationFactory;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.graph.VertexValueCombiner;
 import org.apache.giraph.graph.VertexResolver;
 import org.apache.giraph.factories.VertexValueFactory;
@@ -171,6 +172,16 @@ public class GiraphConfiguration extends Configuration
       Class<? extends OutEdges> outEdgesClass) {
     VERTEX_EDGES_CLASS.set(this, outEdgesClass);
   }
+
+  /**
+   * Set the vertex implementation class
+   *
+   * @param vertexClass class of the vertex implementation
+   */
+  public final void setVertexClass(Class<? extends Vertex> vertexClass) {
+    VERTEX_CLASS.set(this, vertexClass);
+  }
+
 
   /**
    * Set the vertex edges class used during edge-based input (if different

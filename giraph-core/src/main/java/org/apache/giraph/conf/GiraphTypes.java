@@ -17,6 +17,8 @@
  */
 package org.apache.giraph.conf;
 
+import org.apache.giraph.graph.DefaultVertex;
+import org.apache.giraph.graph.Vertex;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -28,6 +30,7 @@ import static org.apache.giraph.conf.GiraphConstants.INCOMING_MESSAGE_VALUE_CLAS
 import static org.apache.giraph.conf.GiraphConstants.OUTGOING_MESSAGE_VALUE_CLASS;
 import static org.apache.giraph.conf.GiraphConstants.VERTEX_ID_CLASS;
 import static org.apache.giraph.conf.GiraphConstants.VERTEX_VALUE_CLASS;
+import static org.apache.giraph.conf.GiraphConstants.VERTEX_CLASS;
 import static org.apache.giraph.utils.ConfigurationUtils.getTypesHolderClass;
 import static org.apache.giraph.utils.ReflectionUtils.getTypeArguments;
 
@@ -50,6 +53,9 @@ public class GiraphTypes<I extends WritableComparable, V extends Writable,
   private Class<? extends Writable> incomingMessageValueClass;
   /** Outgoing message value class */
   private Class<? extends Writable> outgoingMessageValueClass;
+  /** Vertex implementation class */
+  private Class<? extends Vertex> vertexClass = DefaultVertex.class;
+
 
   /**
    * Empty Constructor
@@ -128,6 +134,7 @@ public class GiraphTypes<I extends WritableComparable, V extends Writable,
     edgeValueClass = (Class<E>) EDGE_VALUE_CLASS.get(conf);
     incomingMessageValueClass = INCOMING_MESSAGE_VALUE_CLASS.get(conf);
     outgoingMessageValueClass = OUTGOING_MESSAGE_VALUE_CLASS.get(conf);
+    vertexClass = VERTEX_CLASS.get(conf);
   }
 
   /**
@@ -187,6 +194,10 @@ public class GiraphTypes<I extends WritableComparable, V extends Writable,
 
   public Class<V> getVertexValueClass() {
     return vertexValueClass;
+  }
+
+  public Class<? extends Vertex> getVertexClass() {
+    return vertexClass;
   }
 
   public void setEdgeValueClass(Class<E> edgeValueClass) {

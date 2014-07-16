@@ -25,10 +25,11 @@ import org.apache.giraph.edge.OutEdges;
 import org.apache.giraph.factories.ComputationFactory;
 import org.apache.giraph.factories.DefaultComputationFactory;
 import org.apache.giraph.graph.Computation;
-import org.apache.giraph.graph.DefaultVertexValueCombiner;
 import org.apache.giraph.graph.DefaultVertexResolver;
-import org.apache.giraph.graph.VertexValueCombiner;
 import org.apache.giraph.graph.VertexResolver;
+import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.graph.VertexValueCombiner;
+import org.apache.giraph.graph.DefaultVertexValueCombiner;
 import org.apache.giraph.io.EdgeInputFormat;
 import org.apache.giraph.io.EdgeOutputFormat;
 import org.apache.giraph.io.MappingInputFormat;
@@ -235,6 +236,17 @@ public class GiraphClasses<I extends WritableComparable,
   public Class<I> getVertexIdClass() {
     return giraphTypes.getVertexIdClass();
   }
+
+
+  /**
+   * Get Vertex implementation class
+   *
+   * @return Vertex implementation class
+   */
+  public Class<? extends Vertex> getVertexClass() {
+    return giraphTypes.getVertexClass();
+  }
+
 
   /**
    * Get Vertex Value class

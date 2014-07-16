@@ -433,6 +433,7 @@ public final class ConfigurationUtils {
         }
       }
     }
+
     // YARN-ONLY OPTIONS
     if (cmd.hasOption("yj")) {
       conf.setYarnLibJars(cmd.getOptionValue("yj"));
