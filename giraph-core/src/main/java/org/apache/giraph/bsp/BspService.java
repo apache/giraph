@@ -54,6 +54,7 @@ import java.util.Collections;
 import java.util.List;
 
 import static org.apache.giraph.conf.GiraphConstants.CHECKPOINT_DIRECTORY;
+import static org.apache.giraph.conf.GiraphConstants.RESTART_JOB_ID;
 
 /**
  * Zookeeper-based implementation of {@link CentralizedService}.
@@ -198,6 +199,11 @@ public abstract class BspService<I extends WritableComparable,
    */
   public static final String CHECKPOINT_VALID_POSTFIX = ".valid";
   /**
+   * If at the end of a checkpoint file,
+   * indicates that we store WorkerContext and aggregator handler data.
+   */
+  public static final String CHECKPOINT_DATA_POSTFIX = ".data";
+  /**
    * If at the end of a checkpoint file, indicates the stitched checkpoint
    * file prefixes.  A checkpoint is not valid if this file does not exist.
    */
@@ -226,6 +232,8 @@ public abstract class BspService<I extends WritableComparable,
   protected final String cleanedUpPath;
   /** Path to the checkpoint's root (including job id) */
   protected final String checkpointBasePath;
+  /** Old checkpoint in case we want to restart some job */
+  protected final String savedCheckpointBasePath;
   /** Path to the master election path */
   protected final String masterElectionPath;
   /** Stores progress info of this worker */
@@ -350,6 +358,12 @@ public abstract class BspService<I extends WritableComparable,
         EDGE_INPUT_SPLITS_ALL_READY_NODE, EDGE_INPUT_SPLITS_ALL_DONE_NODE);
     applicationAttemptsPath = basePath + APPLICATION_ATTEMPTS_DIR;
     cleanedUpPath = basePath + CLEANED_UP_DIR;
+
+    String restartJobId = RESTART_JOB_ID.get(conf);
+    savedCheckpointBasePath =
+        CHECKPOINT_DIRECTORY.getWithDefault(getConfiguration(),
+            CHECKPOINT_DIRECTORY.getDefaultValue() + "/" +
+                (restartJobId == null ? getJobId() : restartJobId));
     checkpointBasePath =
         CHECKPOINT_DIRECTORY.getWithDefault(getConfiguration(),
             CHECKPOINT_DIRECTORY.getDefaultValue() + "/" + getJobId());
@@ -572,6 +586,16 @@ public abstract class BspService<I extends WritableComparable,
    */
   public final String getCheckpointBasePath(long superstep) {
     return checkpointBasePath + "/" + superstep;
+  }
+
+  /**
+   * In case when we restart another job this will give us a path
+   * to saved checkpoint.
+   * @param superstep superstep to use
+   * @return Direcory path for restarted job based on the superstep
+   */
+  public final String getSavedCheckpointBasePath(long superstep) {
+    return savedCheckpointBasePath + "/" + superstep;
   }
 
   /**

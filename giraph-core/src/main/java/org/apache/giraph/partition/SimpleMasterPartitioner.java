@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import com.google.common.collect.Lists;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.Writable;
@@ -71,6 +72,11 @@ public abstract class SimpleMasterPartitioner<I extends WritableComparable,
     }
 
     return partitionOwnerList;
+  }
+
+  @Override
+  public void setPartitionOwners(Collection<PartitionOwner> partitionOwners) {
+    partitionOwnerList = Lists.newArrayList(partitionOwners);
   }
 
   @Override

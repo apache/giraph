@@ -309,14 +309,12 @@ public class PartitionBalancer {
    * @param myWorkerInfo Worker info
    * @param masterSetPartitionOwners Master set partition owners, received
    *        prior to beginning the superstep
-   * @param partitionStore Partition store for the given worker
    * @return Information for the partition exchange.
    */
   public static PartitionExchange updatePartitionOwners(
       List<PartitionOwner> partitionOwnerList,
       WorkerInfo myWorkerInfo,
-      Collection<? extends PartitionOwner> masterSetPartitionOwners,
-      PartitionStore partitionStore) {
+      Collection<? extends PartitionOwner> masterSetPartitionOwners) {
     partitionOwnerList.clear();
     partitionOwnerList.addAll(masterSetPartitionOwners);
 

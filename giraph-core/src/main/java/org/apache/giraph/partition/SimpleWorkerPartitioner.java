@@ -71,11 +71,9 @@ public abstract class SimpleWorkerPartitioner<I extends WritableComparable,
 
   @Override
   public PartitionExchange updatePartitionOwners(WorkerInfo myWorkerInfo,
-      Collection<? extends PartitionOwner> masterSetPartitionOwners,
-      PartitionStore<I, V, E> partitionStore) {
+      Collection<? extends PartitionOwner> masterSetPartitionOwners) {
     PartitionExchange exchange = PartitionBalancer.updatePartitionOwners(
-        partitionOwnerList, myWorkerInfo, masterSetPartitionOwners,
-        partitionStore);
+        partitionOwnerList, myWorkerInfo, masterSetPartitionOwners);
     extractAvailableWorkers();
     return exchange;
   }

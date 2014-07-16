@@ -44,13 +44,9 @@ public class AggregatorWrapper<A extends Writable> {
    * @param persistent      False iff aggregator should be reset at the end of
    *                        each super step
    * @param conf            Configuration
-   * @throws IllegalAccessException
-   * @throws InstantiationException
    */
   public AggregatorWrapper(Class<? extends Aggregator<A>> aggregatorClass,
-      boolean persistent, ImmutableClassesGiraphConfiguration conf) throws
-      IllegalAccessException,
-      InstantiationException {
+      boolean persistent, ImmutableClassesGiraphConfiguration conf) {
     this.persistent = persistent;
     currentAggregator = ReflectionUtils.newInstance(aggregatorClass, conf);
     changed = false;

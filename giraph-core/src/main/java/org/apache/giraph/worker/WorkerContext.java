@@ -25,6 +25,9 @@ import org.apache.giraph.graph.GraphState;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.Mapper;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -33,9 +36,8 @@ import java.util.List;
  */
 @SuppressWarnings("rawtypes")
 public abstract class WorkerContext
-    extends DefaultImmutableClassesGiraphConfigurable
-    implements WorkerAggregatorUsage {
-
+  extends DefaultImmutableClassesGiraphConfigurable
+  implements WorkerAggregatorUsage, Writable {
   /** Global graph state */
   private GraphState graphState;
   /** Worker aggregator usage */
@@ -202,5 +204,13 @@ public abstract class WorkerContext
   @Override
   public <A extends Writable> A getAggregatedValue(String name) {
     return workerAggregatorUsage.<A>getAggregatedValue(name);
+  }
+
+  @Override
+  public void write(DataOutput dataOutput) throws IOException {
+  }
+
+  @Override
+  public void readFields(DataInput dataInput) throws IOException {
   }
 }

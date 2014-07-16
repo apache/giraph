@@ -18,6 +18,7 @@
 
 package org.apache.giraph.partition;
 
+import com.google.common.collect.Lists;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.Writable;
@@ -72,6 +73,11 @@ public class HashMasterPartitioner<I extends WritableComparable,
     }
     this.partitionOwnerList = ownerList;
     return ownerList;
+  }
+
+  @Override
+  public void setPartitionOwners(Collection<PartitionOwner> partitionOwners) {
+    this.partitionOwnerList = Lists.newArrayList(partitionOwners);
   }
 
   @Override

@@ -70,10 +70,13 @@ import org.apache.giraph.utils.ProgressableUtils;
 import org.apache.giraph.utils.WritableUtils;
 import org.apache.giraph.zk.BspEvent;
 import org.apache.giraph.zk.PredicateLock;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.io.compress.CompressionCodec;
+import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.log4j.Level;
@@ -92,9 +95,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import net.iharder.Base64;
 
-import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
-import java.io.DataOutput;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -110,6 +111,7 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -566,7 +568,7 @@ public class BspServiceWorker<I extends WritableComparable,
     Collection<? extends PartitionOwner> masterSetPartitionOwners =
         startSuperstep();
     workerGraphPartitioner.updatePartitionOwners(
-        getWorkerInfo(), masterSetPartitionOwners, getPartitionStore());
+        getWorkerInfo(), masterSetPartitionOwners);
 
     /*if[HADOOP_NON_SECURE]
       workerClient.setup();
@@ -1370,72 +1372,41 @@ public class BspServiceWorker<I extends WritableComparable,
     // Algorithm:
     // For each partition, dump vertices and messages
     Path metadataFilePath =
-        new Path(getCheckpointBasePath(getSuperstep()) + "." +
-            getHostnamePartitionId() +
-            CHECKPOINT_METADATA_POSTFIX);
-    Path verticesFilePath =
-        new Path(getCheckpointBasePath(getSuperstep()) + "." +
-            getHostnamePartitionId() +
-            CHECKPOINT_VERTICES_POSTFIX);
+        createCheckpointFilePathSafe(CHECKPOINT_METADATA_POSTFIX);
     Path validFilePath =
-        new Path(getCheckpointBasePath(getSuperstep()) + "." +
-            getHostnamePartitionId() +
-            CHECKPOINT_VALID_POSTFIX);
+        createCheckpointFilePathSafe(CHECKPOINT_VALID_POSTFIX);
+    Path checkpointFilePath =
+        createCheckpointFilePathSafe(CHECKPOINT_DATA_POSTFIX);
 
-    // Remove these files if they already exist (shouldn't though, unless
-    // of previous failure of this worker)
-    if (getFs().delete(validFilePath, false)) {
-      LOG.warn("storeCheckpoint: Removed valid file " +
-          validFilePath);
-    }
-    if (getFs().delete(metadataFilePath, false)) {
-      LOG.warn("storeCheckpoint: Removed metadata file " +
-          metadataFilePath);
-    }
-    if (getFs().delete(verticesFilePath, false)) {
-      LOG.warn("storeCheckpoint: Removed file " + verticesFilePath);
-    }
 
-    FSDataOutputStream verticesOutputStream =
-        getFs().create(verticesFilePath);
-    ByteArrayOutputStream metadataByteStream = new ByteArrayOutputStream();
-    DataOutput metadataOutput = new DataOutputStream(metadataByteStream);
-    for (Integer partitionId : getPartitionStore().getPartitionIds()) {
-      Partition<I, V, E> partition =
-          getPartitionStore().getOrCreatePartition(partitionId);
-      long startPos = verticesOutputStream.getPos();
-      partition.write(verticesOutputStream);
-      // write messages
-      getServerData().getCurrentMessageStore().writePartition(
-          verticesOutputStream, partition.getId());
-      // Write the metadata for this partition
-      // Format:
-      // <index count>
-      //   <index 0 start pos><partition id>
-      //   <index 1 start pos><partition id>
-      metadataOutput.writeLong(startPos);
-      metadataOutput.writeInt(partition.getId());
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("storeCheckpoint: Vertex file starting " +
-            "offset = " + startPos + ", length = " +
-            (verticesOutputStream.getPos() - startPos) +
-            ", partition = " + partition.toString());
-      }
-      getPartitionStore().putPartition(partition);
-      getContext().progress();
-    }
     // Metadata is buffered and written at the end since it's small and
     // needs to know how many partitions this worker owns
     FSDataOutputStream metadataOutputStream =
         getFs().create(metadataFilePath);
     metadataOutputStream.writeInt(getPartitionStore().getNumPartitions());
-    metadataOutputStream.write(metadataByteStream.toByteArray());
-    metadataOutputStream.close();
-    verticesOutputStream.close();
-    if (LOG.isInfoEnabled()) {
-      LOG.info("storeCheckpoint: Finished metadata (" +
-          metadataFilePath + ") and vertices (" + verticesFilePath + ").");
+
+    for (Integer partitionId : getPartitionStore().getPartitionIds()) {
+      metadataOutputStream.writeInt(partitionId);
     }
+    metadataOutputStream.close();
+
+    storeCheckpointVertices();
+
+    FSDataOutputStream checkpointOutputStream =
+        getFs().create(checkpointFilePath);
+    workerContext.write(checkpointOutputStream);
+    getContext().progress();
+
+    for (Integer partitionId : getPartitionStore().getPartitionIds()) {
+      // write messages
+      checkpointOutputStream.writeInt(partitionId);
+      getServerData().getCurrentMessageStore().writePartition(
+          checkpointOutputStream, partitionId);
+      getContext().progress();
+
+    }
+
+    checkpointOutputStream.close();
 
     getFs().createNewFile(validFilePath);
 
@@ -1462,116 +1433,247 @@ public class BspServiceWorker<I extends WritableComparable,
     }
   }
 
+  /**
+   * Create checkpoint file safely. If file already exists remove it first.
+   * @param name file extension
+   * @return full file path to newly created file
+   * @throws IOException
+   */
+  private Path createCheckpointFilePathSafe(String name) throws IOException {
+    Path validFilePath = new Path(getCheckpointBasePath(getSuperstep()) + "." +
+        getTaskPartition() + name);
+    // Remove these files if they already exist (shouldn't though, unless
+    // of previous failure of this worker)
+    if (getFs().delete(validFilePath, false)) {
+      LOG.warn("storeCheckpoint: Removed " + name + " file " +
+          validFilePath);
+    }
+    return validFilePath;
+  }
+
+  /**
+   * Returns path to saved checkpoint.
+   * Doesn't check if file actually exists.
+   * @param superstep saved superstep.
+   * @param name extension name
+   * @return fill file path to checkpoint file
+   */
+  private Path getSavedCheckpoint(long superstep, String name) {
+    return new Path(getSavedCheckpointBasePath(superstep) + "." +
+        getTaskPartition() + name);
+  }
+
+  /**
+   * Save partitions. To speed up this operation
+   * runs in multiple threads.
+   */
+  private void storeCheckpointVertices() {
+    final int numPartitions = getPartitionStore().getNumPartitions();
+    int numThreads = Math.min(
+        GiraphConstants.NUM_CHECKPOINT_IO_THREADS.get(getConfiguration()),
+        numPartitions);
+
+    final Queue<Integer> partitionIdQueue =
+        (numPartitions == 0) ? new LinkedList<Integer>() :
+            new ArrayBlockingQueue<Integer>(numPartitions);
+    Iterables.addAll(partitionIdQueue, getPartitionStore().getPartitionIds());
+
+    final CompressionCodec codec =
+        new CompressionCodecFactory(getConfiguration())
+            .getCodecByClassName(
+                GiraphConstants.CHECKPOINT_COMPRESSION_CODEC
+                    .get(getConfiguration()));
+
+    long t0 = System.currentTimeMillis();
+
+    CallableFactory<Void> callableFactory = new CallableFactory<Void>() {
+      @Override
+      public Callable<Void> newCallable(int callableId) {
+        return new Callable<Void>() {
+
+          @Override
+          public Void call() throws Exception {
+            while (!partitionIdQueue.isEmpty()) {
+              Integer partitionId = partitionIdQueue.poll();
+              if (partitionId == null) {
+                break;
+              }
+              Path path =
+                  createCheckpointFilePathSafe("_" + partitionId +
+                      CHECKPOINT_VERTICES_POSTFIX);
+
+              FSDataOutputStream uncompressedStream =
+                  getFs().create(path);
+
+
+              DataOutputStream stream = codec == null ? uncompressedStream :
+                  new DataOutputStream(
+                      codec.createOutputStream(uncompressedStream));
+
+              Partition<I, V, E> partition =
+                  getPartitionStore().getOrCreatePartition(partitionId);
+
+              partition.write(stream);
+
+              getPartitionStore().putPartition(partition);
+
+              stream.close();
+              uncompressedStream.close();
+            }
+            return null;
+          }
+
+
+        };
+      }
+    };
+
+    ProgressableUtils.getResultsWithNCallables(callableFactory, numThreads,
+        "checkpoint-vertices-%d", getContext());
+
+    LOG.info("Save checkpoint in " + (System.currentTimeMillis() - t0) +
+        " ms, using " + numThreads + " threads");
+  }
+
+  /**
+   * Load saved partitions in multiple threads.
+   * @param superstep superstep to load
+   * @param partitions list of partitions to load
+   */
+  private void loadCheckpointVertices(final long superstep,
+                                      List<Integer> partitions) {
+    int numThreads = Math.min(
+        GiraphConstants.NUM_CHECKPOINT_IO_THREADS.get(getConfiguration()),
+        partitions.size());
+
+    final Queue<Integer> partitionIdQueue =
+        new ConcurrentLinkedQueue<>(partitions);
+
+    final CompressionCodec codec =
+        new CompressionCodecFactory(getConfiguration())
+            .getCodecByClassName(
+                GiraphConstants.CHECKPOINT_COMPRESSION_CODEC
+                    .get(getConfiguration()));
+
+    long t0 = System.currentTimeMillis();
+
+    CallableFactory<Void> callableFactory = new CallableFactory<Void>() {
+      @Override
+      public Callable<Void> newCallable(int callableId) {
+        return new Callable<Void>() {
+
+          @Override
+          public Void call() throws Exception {
+            while (!partitionIdQueue.isEmpty()) {
+              Integer partitionId = partitionIdQueue.poll();
+              if (partitionId == null) {
+                break;
+              }
+              Path path =
+                  getSavedCheckpoint(superstep, "_" + partitionId +
+                      CHECKPOINT_VERTICES_POSTFIX);
+
+              FSDataInputStream compressedStream =
+                  getFs().open(path);
+
+              DataInputStream stream = codec == null ? compressedStream :
+                  new DataInputStream(
+                      codec.createInputStream(compressedStream));
+
+              Partition<I, V, E> partition =
+                  getConfiguration().createPartition(partitionId, getContext());
+
+              partition.readFields(stream);
+
+              getPartitionStore().addPartition(partition);
+
+              stream.close();
+            }
+            return null;
+          }
+
+        };
+      }
+    };
+
+    ProgressableUtils.getResultsWithNCallables(callableFactory, numThreads,
+        "load-vertices-%d", getContext());
+
+    LOG.info("Loaded checkpoint in " + (System.currentTimeMillis() - t0) +
+        " ms, using " + numThreads + " threads");
+  }
+
   @Override
   public VertexEdgeCount loadCheckpoint(long superstep) {
-    try {
-      // clear old message stores
-      getServerData().getIncomingMessageStore().clearAll();
-      getServerData().getCurrentMessageStore().clearAll();
-    } catch (IOException e) {
-      throw new RuntimeException(
-          "loadCheckpoint: Failed to clear message stores ", e);
-    }
+    Path metadataFilePath =
+        getSavedCheckpoint(superstep, CHECKPOINT_METADATA_POSTFIX);
 
+    Path checkpointFilePath =
+        getSavedCheckpoint(superstep, CHECKPOINT_DATA_POSTFIX);
     // Algorithm:
     // Examine all the partition owners and load the ones
     // that match my hostname and id from the master designated checkpoint
     // prefixes.
-    long startPos = 0;
-    int loadedPartitions = 0;
-    for (PartitionOwner partitionOwner :
-      workerGraphPartitioner.getPartitionOwners()) {
-      if (partitionOwner.getWorkerInfo().equals(getWorkerInfo())) {
-        String metadataFile =
-            partitionOwner.getCheckpointFilesPrefix() +
-            CHECKPOINT_METADATA_POSTFIX;
-        String partitionsFile =
-            partitionOwner.getCheckpointFilesPrefix() +
-            CHECKPOINT_VERTICES_POSTFIX;
-        try {
-          int partitionId = -1;
-          DataInputStream metadataStream =
-              getFs().open(new Path(metadataFile));
-          int partitions = metadataStream.readInt();
-          for (int i = 0; i < partitions; ++i) {
-            startPos = metadataStream.readLong();
-            partitionId = metadataStream.readInt();
-            if (partitionId == partitionOwner.getPartitionId()) {
-              break;
-            }
-          }
-          if (partitionId != partitionOwner.getPartitionId()) {
-            throw new IllegalStateException(
-                "loadCheckpoint: " + partitionOwner +
-                " not found!");
-          }
-          metadataStream.close();
-          Partition<I, V, E> partition =
-              getConfiguration().createPartition(partitionId, getContext());
-          DataInputStream partitionsStream =
-              getFs().open(new Path(partitionsFile));
-          if (partitionsStream.skip(startPos) != startPos) {
-            throw new IllegalStateException(
-                "loadCheckpoint: Failed to skip " + startPos +
-                " on " + partitionsFile);
-          }
-          partition.readFields(partitionsStream);
-          getServerData().getIncomingMessageStore().readFieldsForPartition(
-              partitionsStream, partitionId);
-          partitionsStream.close();
-          if (LOG.isInfoEnabled()) {
-            LOG.info("loadCheckpoint: Loaded partition " +
-                partition);
-          }
-          if (getPartitionStore().hasPartition(partitionId)) {
-            throw new IllegalStateException(
-                "loadCheckpoint: Already has partition owner " +
-                    partitionOwner);
-          }
-          getPartitionStore().addPartition(partition);
-          getContext().progress();
-          ++loadedPartitions;
-        } catch (IOException e) {
-          throw new RuntimeException(
-              "loadCheckpoint: Failed to get partition owner " +
-                  partitionOwner, e);
-        }
-      }
-    }
-    if (LOG.isInfoEnabled()) {
-      LOG.info("loadCheckpoint: Loaded " + loadedPartitions +
-          " partitions of out " +
-          workerGraphPartitioner.getPartitionOwners().size() +
-          " total.");
-    }
-
-    // Load global stats and superstep classes
-    GlobalStats globalStats = new GlobalStats();
-    SuperstepClasses superstepClasses = new SuperstepClasses();
-    String finalizedCheckpointPath =
-        getCheckpointBasePath(superstep) + CHECKPOINT_FINALIZED_POSTFIX;
     try {
+      DataInputStream metadataStream =
+          getFs().open(metadataFilePath);
+
+      int partitions = metadataStream.readInt();
+      List<Integer> partitionIds = new ArrayList<>(partitions);
+      for (int i = 0; i < partitions; i++) {
+        int partitionId = metadataStream.readInt();
+        partitionIds.add(partitionId);
+      }
+
+      loadCheckpointVertices(superstep, partitionIds);
+
+      getContext().progress();
+
+      metadataStream.close();
+
+      DataInputStream checkpointStream =
+          getFs().open(checkpointFilePath);
+      workerContext.readFields(checkpointStream);
+
+      // Load global stats and superstep classes
+      GlobalStats globalStats = new GlobalStats();
+      SuperstepClasses superstepClasses = new SuperstepClasses();
+      String finalizedCheckpointPath =
+          getSavedCheckpointBasePath(superstep) + CHECKPOINT_FINALIZED_POSTFIX;
       DataInputStream finalizedStream =
           getFs().open(new Path(finalizedCheckpointPath));
       globalStats.readFields(finalizedStream);
       superstepClasses.readFields(finalizedStream);
       getConfiguration().updateSuperstepClasses(superstepClasses);
-    } catch (IOException e) {
-      throw new IllegalStateException(
-          "loadCheckpoint: Failed to load global stats and superstep classes",
-          e);
-    }
+      getServerData().resetMessageStores();
 
-    getServerData().prepareSuperstep();
-    // Communication service needs to setup the connections prior to
-    // processing vertices
+      for (int i = 0; i < partitions; i++) {
+        int partitionId = checkpointStream.readInt();
+        getServerData().getCurrentMessageStore().readFieldsForPartition(
+            checkpointStream, partitionId);
+      }
+      checkpointStream.close();
+
+      if (LOG.isInfoEnabled()) {
+        LOG.info("loadCheckpoint: Loaded " +
+            workerGraphPartitioner.getPartitionOwners().size() +
+            " total.");
+      }
+
+      // Communication service needs to setup the connections prior to
+      // processing vertices
 /*if[HADOOP_NON_SECURE]
     workerClient.setup();
 else[HADOOP_NON_SECURE]*/
-    workerClient.setup(getConfiguration().authenticate());
+      workerClient.setup(getConfiguration().authenticate());
 /*end[HADOOP_NON_SECURE]*/
-    return new VertexEdgeCount(globalStats.getVertexCount(),
-        globalStats.getEdgeCount());
+      return new VertexEdgeCount(globalStats.getVertexCount(),
+          globalStats.getEdgeCount());
+
+    } catch (IOException e) {
+      throw new RuntimeException(
+          "loadCheckpoint: Failed for superstep=" + superstep, e);
+    }
   }
 
   /**
@@ -1651,7 +1753,7 @@ else[HADOOP_NON_SECURE]*/
     // 5. Add the partitions to myself.
     PartitionExchange partitionExchange =
         workerGraphPartitioner.updatePartitionOwners(
-            getWorkerInfo(), masterSetPartitionOwners, getPartitionStore());
+            getWorkerInfo(), masterSetPartitionOwners);
     workerClient.openConnections();
 
     Map<WorkerInfo, List<Integer>> sendWorkerPartitionMap =

@@ -47,6 +47,13 @@ public interface MasterGraphPartitioner<I extends WritableComparable,
       Collection<WorkerInfo> availableWorkerInfos, int maxWorkers);
 
   /**
+   * Sets partition owners for the graph.
+   * Used then loading from checkpoint.
+   * @param partitionOwners assigned partition owners.
+   */
+  void setPartitionOwners(Collection<PartitionOwner> partitionOwners);
+
+  /**
    * After the worker stats have been merged to a single list, the master can
    * use this information to send commands to the workers for any
    * {@link Partition} changes. This protocol is specific to the

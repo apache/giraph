@@ -161,6 +161,23 @@ public class ServerData<I extends WritableComparable,
     return (MessageStore<I, M>) currentMessageStore;
   }
 
+  /**
+   * Re-initialize message stores.
+   * Discards old values if any.
+   * @throws IOException
+   */
+  public void resetMessageStores() throws IOException {
+    if (currentMessageStore != null) {
+      currentMessageStore.clearAll();
+      currentMessageStore = null;
+    }
+    if (incomingMessageStore != null) {
+      incomingMessageStore.clearAll();
+      incomingMessageStore = null;
+    }
+    prepareSuperstep();
+  }
+
   /** Prepare for next super step */
   public void prepareSuperstep() {
     if (currentMessageStore != null) {

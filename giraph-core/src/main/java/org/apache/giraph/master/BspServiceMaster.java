@@ -18,6 +18,8 @@
 
 package org.apache.giraph.master;
 
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.giraph.bsp.ApplicationState;
 import org.apache.giraph.bsp.BspInputFormat;
@@ -42,6 +44,7 @@ import org.apache.giraph.io.GiraphInputFormat;
 import org.apache.giraph.graph.GraphTaskManager;
 import org.apache.giraph.io.MappingInputFormat;
 import org.apache.giraph.io.VertexInputFormat;
+import org.apache.giraph.partition.BasicPartitionOwner;
 import org.apache.giraph.partition.MasterGraphPartitioner;
 import org.apache.giraph.partition.PartitionOwner;
 import org.apache.giraph.partition.PartitionStats;
@@ -100,10 +103,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.Callable;
@@ -272,6 +273,7 @@ public class BspServiceMaster<I extends WritableComparable,
           Ids.OPEN_ACL_UNSAFE,
           CreateMode.PERSISTENT_SEQUENTIAL,
           true);
+      LOG.info("setJobState: " + jobState);
     } catch (KeeperException.NodeExistsException e) {
       throw new IllegalStateException(
           "setJobState: Imposible that " +
@@ -740,20 +742,18 @@ public class BspServiceMaster<I extends WritableComparable,
    * finalized checkpoint file and setting it.
    *
    * @param superstep Checkpoint set to examine.
-   * @param partitionOwners Partition owners to modify with checkpoint
-   *        prefixes
    * @throws IOException
    * @throws InterruptedException
    * @throws KeeperException
+   * @return Collection of generated partition owners.
    */
-  private void prepareCheckpointRestart(
-    long superstep,
-    Collection<PartitionOwner> partitionOwners)
+  private Collection<PartitionOwner> prepareCheckpointRestart(long superstep)
     throws IOException, KeeperException, InterruptedException {
+    List<PartitionOwner> partitionOwners = new ArrayList<>();
     FileSystem fs = getFs();
-    List<Path> validMetadataPathList = new ArrayList<Path>();
     String finalizedCheckpointPath =
-        getCheckpointBasePath(superstep) + CHECKPOINT_FINALIZED_POSTFIX;
+        getSavedCheckpointBasePath(superstep) + CHECKPOINT_FINALIZED_POSTFIX;
+    LOG.info("Loading checkpoint from " + finalizedCheckpointPath);
     DataInputStream finalizedStream =
         fs.open(new Path(finalizedCheckpointPath));
     GlobalStats globalStats = new GlobalStats();
@@ -763,51 +763,46 @@ public class BspServiceMaster<I extends WritableComparable,
     superstepClasses.readFields(finalizedStream);
     getConfiguration().updateSuperstepClasses(superstepClasses);
     int prefixFileCount = finalizedStream.readInt();
-    for (int i = 0; i < prefixFileCount; ++i) {
-      String metadataFilePath =
-          finalizedStream.readUTF() + CHECKPOINT_METADATA_POSTFIX;
-      validMetadataPathList.add(new Path(metadataFilePath));
+
+
+    Int2ObjectMap<WorkerInfo> workersMap = new Int2ObjectOpenHashMap<>();
+    for (WorkerInfo worker : chosenWorkerInfoList) {
+      workersMap.put(worker.getTaskId(), worker);
     }
+    String checkpointFile =
+        finalizedStream.readUTF();
+    for (int i = 0; i < prefixFileCount; ++i) {
+      int mrTaskId = finalizedStream.readInt();
+
+      DataInputStream metadataStream = fs.open(new Path(checkpointFile +
+          "." + mrTaskId + CHECKPOINT_METADATA_POSTFIX));
+      long partitions = metadataStream.readInt();
+      WorkerInfo worker = workersMap.get(mrTaskId);
+      for (long p = 0; p < partitions; ++p) {
+        int partitionId = metadataStream.readInt();
+        PartitionOwner partitionOwner = new BasicPartitionOwner(partitionId,
+            worker);
+        partitionOwners.add(partitionOwner);
+        LOG.info("prepareCheckpointRestart partitionId=" + partitionId +
+            " assigned to " + partitionOwner);
+      }
+      metadataStream.close();
+    }
+    //Ordering appears to be important as of right now we rely on this ordering
+    //in WorkerGraphPartitioner
+    Collections.sort(partitionOwners, new Comparator<PartitionOwner>() {
+      @Override
+      public int compare(PartitionOwner p1, PartitionOwner p2) {
+        return Integer.compare(p1.getPartitionId(), p2.getPartitionId());
+      }
+    });
+
 
     aggregatorHandler.readFields(finalizedStream);
     masterCompute.readFields(finalizedStream);
     finalizedStream.close();
 
-    Map<Integer, PartitionOwner> idOwnerMap =
-        new HashMap<Integer, PartitionOwner>();
-    for (PartitionOwner partitionOwner : partitionOwners) {
-      if (idOwnerMap.put(partitionOwner.getPartitionId(),
-          partitionOwner) != null) {
-        throw new IllegalStateException(
-            "prepareCheckpointRestart: Duplicate partition " +
-                partitionOwner);
-      }
-    }
-    // Reading the metadata files.  Simply assign each partition owner
-    // the correct file prefix based on the partition id.
-    for (Path metadataPath : validMetadataPathList) {
-      String checkpointFilePrefix = metadataPath.toString();
-      checkpointFilePrefix =
-          checkpointFilePrefix.substring(
-              0,
-              checkpointFilePrefix.length() -
-              CHECKPOINT_METADATA_POSTFIX.length());
-      DataInputStream metadataStream = fs.open(metadataPath);
-      long partitions = metadataStream.readInt();
-      for (long i = 0; i < partitions; ++i) {
-        long dataPos = metadataStream.readLong();
-        int partitionId = metadataStream.readInt();
-        PartitionOwner partitionOwner = idOwnerMap.get(partitionId);
-        if (LOG.isInfoEnabled()) {
-          LOG.info("prepareSuperstepRestart: File " + metadataPath +
-              " with position " + dataPos +
-              ", partition id = " + partitionId +
-              " assigned to " + partitionOwner);
-        }
-        partitionOwner.setCheckpointFilesPrefix(checkpointFilePrefix);
-      }
-      metadataStream.close();
-    }
+    return partitionOwners;
   }
 
   @Override
@@ -1085,11 +1080,9 @@ public class BspServiceMaster<I extends WritableComparable,
         getZkExt().getData(superstepFinishedNode, false, null));
 
     finalizedOutputStream.writeInt(chosenWorkerInfoList.size());
+    finalizedOutputStream.writeUTF(getCheckpointBasePath(superstep));
     for (WorkerInfo chosenWorkerInfo : chosenWorkerInfoList) {
-      String chosenWorkerInfoPrefix =
-          getCheckpointBasePath(superstep) + "." +
-              chosenWorkerInfo.getHostnameId();
-      finalizedOutputStream.writeUTF(chosenWorkerInfoPrefix);
+      finalizedOutputStream.writeInt(chosenWorkerInfo.getTaskId());
     }
     aggregatorHandler.write(finalizedOutputStream);
     masterCompute.write(finalizedOutputStream);
@@ -1104,18 +1097,10 @@ public class BspServiceMaster<I extends WritableComparable,
    * the workers will know how to do the exchange.  If this was a restarted
    * superstep, then make sure to provide information on where to find the
    * checkpoint file.
-   *
-   * @param allPartitionStatsList All partition stats
-   * @param chosenWorkerInfoList All the chosen worker infos
-   * @param masterGraphPartitioner Master graph partitioner
    */
-  private void assignPartitionOwners(
-      List<PartitionStats> allPartitionStatsList,
-      List<WorkerInfo> chosenWorkerInfoList,
-      MasterGraphPartitioner<I, V, E> masterGraphPartitioner) {
+  private void assignPartitionOwners() {
     Collection<PartitionOwner> partitionOwners;
-    if (getSuperstep() == INPUT_SUPERSTEP ||
-        getSuperstep() == getRestartedSuperstep()) {
+    if (getSuperstep() == INPUT_SUPERSTEP) {
       partitionOwners =
           masterGraphPartitioner.createInitialPartitionOwners(
               chosenWorkerInfoList, maxWorkers);
@@ -1123,6 +1108,22 @@ public class BspServiceMaster<I extends WritableComparable,
         throw new IllegalStateException(
             "assignAndExchangePartitions: No partition owners set");
       }
+    } else if (getRestartedSuperstep() == getSuperstep()) {
+      // If restarted, prepare the checkpoint restart
+      try {
+        partitionOwners = prepareCheckpointRestart(getSuperstep());
+      } catch (IOException e) {
+        throw new IllegalStateException(
+            "assignPartitionOwners: IOException on preparing", e);
+      } catch (KeeperException e) {
+        throw new IllegalStateException(
+            "assignPartitionOwners: KeeperException on preparing", e);
+      } catch (InterruptedException e) {
+        throw new IllegalStateException(
+            "assignPartitionOwners: InteruptedException on preparing",
+            e);
+      }
+      masterGraphPartitioner.setPartitionOwners(partitionOwners);
     } else {
       partitionOwners =
           masterGraphPartitioner.generateChangedPartitionOwners(
@@ -1136,22 +1137,7 @@ public class BspServiceMaster<I extends WritableComparable,
     }
     checkPartitions(masterGraphPartitioner.getCurrentPartitionOwners());
 
-    // If restarted, prepare the checkpoint restart
-    if (getRestartedSuperstep() == getSuperstep()) {
-      try {
-        prepareCheckpointRestart(getSuperstep(), partitionOwners);
-      } catch (IOException e) {
-        throw new IllegalStateException(
-            "assignPartitionOwners: IOException on preparing", e);
-      } catch (KeeperException e) {
-        throw new IllegalStateException(
-            "assignPartitionOwners: KeeperException on preparing", e);
-      } catch (InterruptedException e) {
-        throw new IllegalStateException(
-            "assignPartitionOwners: InteruptedException on preparing",
-            e);
-      }
-    }
+
 
     // There will be some exchange of partitions
     if (!partitionOwners.isEmpty()) {
@@ -1240,24 +1226,35 @@ public class BspServiceMaster<I extends WritableComparable,
     // 1. Remove all old input split data
     // 2. Increase the application attempt and set to the correct checkpoint
     // 3. Send command to all workers to restart their tasks
-    try {
-      getZkExt().deleteExt(vertexInputSplitsPaths.getPath(), -1,
-          true);
-      getZkExt().deleteExt(edgeInputSplitsPaths.getPath(), -1,
-          true);
-    } catch (InterruptedException e) {
-      throw new RuntimeException(
-          "restartFromCheckpoint: InterruptedException", e);
-    } catch (KeeperException e) {
-      throw new RuntimeException(
-          "restartFromCheckpoint: KeeperException", e);
-    }
+    zkDeleteNode(vertexInputSplitsPaths.getPath());
+    zkDeleteNode(edgeInputSplitsPaths.getPath());
+
     setApplicationAttempt(getApplicationAttempt() + 1);
     setCachedSuperstep(checkpoint);
     setRestartedSuperstep(checkpoint);
     setJobState(ApplicationState.START_SUPERSTEP,
         getApplicationAttempt(),
         checkpoint);
+  }
+
+  /**
+   * Safely removes node from zookeeper.
+   * Ignores if node is already removed. Can only throw runtime exception if
+   * anything wrong.
+   * @param path path to the node to be removed.
+   */
+  private void zkDeleteNode(String path) {
+    try {
+      getZkExt().deleteExt(path, -1, true);
+    } catch (KeeperException.NoNodeException e) {
+      LOG.info("zkDeleteNode: node has already been removed " + path);
+    } catch (InterruptedException e) {
+      throw new RuntimeException(
+          "zkDeleteNode: InterruptedException", e);
+    } catch (KeeperException e) {
+      throw new RuntimeException(
+          "zkDeleteNode: KeeperException", e);
+    }
   }
 
   /**
@@ -1277,7 +1274,7 @@ public class BspServiceMaster<I extends WritableComparable,
     if (lastCheckpointedSuperstep == -1) {
       try {
         FileStatus[] fileStatusArray =
-            getFs().listStatus(new Path(checkpointBasePath),
+            getFs().listStatus(new Path(savedCheckpointBasePath),
                 new FinalizedCheckpointPathFilter());
         if (fileStatusArray == null) {
           return -1;
@@ -1582,9 +1579,7 @@ public class BspServiceMaster<I extends WritableComparable,
 
     GiraphStats.getInstance().
         getCurrentWorkers().setValue(chosenWorkerInfoList.size());
-    assignPartitionOwners(allPartitionStatsList,
-        chosenWorkerInfoList,
-        masterGraphPartitioner);
+    assignPartitionOwners();
 
     // We need to finalize aggregators from previous superstep (send them to
     // worker owners) after new worker assignments

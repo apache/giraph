@@ -66,7 +66,7 @@ public class SimpleRangePartitionFactoryTest {
 
     WorkerGraphPartitioner<LongWritable, Writable, Writable> workerPartitioner =
         factory.createWorkerGraphPartitioner();
-    workerPartitioner.updatePartitionOwners(null, owners, null);
+    workerPartitioner.updatePartitionOwners(null, owners);
     LongWritable longWritable = new LongWritable();
 
     int[] partitions = new int[keySpaceSize];

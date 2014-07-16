@@ -75,14 +75,11 @@ public interface WorkerGraphPartitioner<I extends WritableComparable,
    * @param myWorkerInfo Worker info.
    * @param masterSetPartitionOwners Master set partition owners, received
    *        prior to beginning the superstep
-   * @param partitionStore Partition store for this worker
-   *        (can be used to fill the return map of partitions to send)
    * @return Information for the partition exchange.
    */
   PartitionExchange updatePartitionOwners(
       WorkerInfo myWorkerInfo,
-      Collection<? extends PartitionOwner> masterSetPartitionOwners,
-      PartitionStore<I, V, E> partitionStore);
+      Collection<? extends PartitionOwner> masterSetPartitionOwners);
 
   /**
    * Get a collection of the {@link PartitionOwner} objects.

@@ -880,6 +880,13 @@ public interface GiraphConstants {
   String RESTART_SUPERSTEP = "giraph.restartSuperstep";
 
   /**
+   * If application is restarted manually we need to specify job ID
+   * to restart from.
+   */
+  StrConfOption RESTART_JOB_ID = new StrConfOption("giraph.restart.jobId",
+      null, "Which job ID should I try to restart?");
+
+  /**
    * Base ZNode for Giraph's state in the ZooKeeper cluster.  Must be a root
    * znode on the cluster beginning with "/"
    */
@@ -1124,5 +1131,17 @@ public interface GiraphConstants {
   IntConfOption HDFS_FILE_CREATION_RETRY_WAIT_MS =
       new IntConfOption("giraph.hdfs.file.creation.retry.wait.ms", 30_000,
           "Milliseconds to wait prior to retrying creation of an HDFS file");
+
+  /** Number of threads for writing and reading checkpoints */
+  IntConfOption NUM_CHECKPOINT_IO_THREADS =
+      new IntConfOption("giraph.checkpoint.io.threads", 8,
+          "Number of threads for writing and reading checkpoints");
+
+  /** Compression algorithm to be used for checkpointing */
+  StrConfOption CHECKPOINT_COMPRESSION_CODEC =
+      new StrConfOption("giraph.checkpoint.compression.codec",
+          "org.apache.hadoop.io.compress.DefaultCodec",
+          "Defines compression algorithm we will be using for " +
+              "storing checkpoint");
 }
 // CHECKSTYLE: resume InterfaceIsTypeCheck

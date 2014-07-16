@@ -65,6 +65,6 @@ public class ExtendedDataInputOutput extends DataInputOutput {
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    WritableUtils.readExtendedDataOutput(in, conf);
+    dataOutput = WritableUtils.readExtendedDataOutput(in, conf);
   }
 }

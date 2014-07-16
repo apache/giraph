@@ -65,10 +65,9 @@ public class HashWorkerPartitioner<I extends WritableComparable,
   @Override
   public PartitionExchange updatePartitionOwners(
       WorkerInfo myWorkerInfo,
-      Collection<? extends PartitionOwner> masterSetPartitionOwners,
-      PartitionStore<I, V, E> partitionStore) {
+      Collection<? extends PartitionOwner> masterSetPartitionOwners) {
     return PartitionBalancer.updatePartitionOwners(partitionOwnerList,
-        myWorkerInfo, masterSetPartitionOwners, partitionStore);
+        myWorkerInfo, masterSetPartitionOwners);
   }
 
   @Override
