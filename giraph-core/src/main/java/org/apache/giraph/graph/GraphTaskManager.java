@@ -38,8 +38,6 @@ import org.apache.giraph.partition.Partition;
 import org.apache.giraph.partition.PartitionOwner;
 import org.apache.giraph.partition.PartitionStats;
 import org.apache.giraph.partition.PartitionStore;
-import org.apache.giraph.time.SystemTime;
-import org.apache.giraph.time.Time;
 import org.apache.giraph.utils.CallableFactory;
 import org.apache.giraph.utils.MemoryUtils;
 import org.apache.giraph.utils.ProgressableUtils;
@@ -102,8 +100,6 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
   /** Name of metric for time from first message till last message flushed */
   public static final String TIMER_COMMUNICATION_TIME = "communication-time-ms";
 
-  /** Time instance used for timing in this class */
-  private static final Time TIME = SystemTime.get();
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(GraphTaskManager.class);
   /** Coordination service worker */
@@ -304,6 +300,7 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
       }
       finishedSuperstepStats = completeSuperstepAndCollectStats(
         partitionStatsList, superstepTimerContext);
+
       // END of superstep compute loop
     }
 

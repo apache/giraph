@@ -26,6 +26,8 @@ import org.apache.giraph.comm.WorkerClient;
 import org.apache.giraph.comm.WorkerClientRequestProcessor;
 import org.apache.giraph.comm.WorkerServer;
 import org.apache.giraph.comm.aggregators.WorkerAggregatorRequestProcessor;
+import org.apache.giraph.comm.messages.MessageStore;
+import org.apache.giraph.comm.messages.queue.AsyncMessageStoreWrapper;
 import org.apache.giraph.comm.netty.NettyWorkerAggregatorRequestProcessor;
 import org.apache.giraph.comm.netty.NettyWorkerClient;
 import org.apache.giraph.comm.netty.NettyWorkerClientRequestProcessor;
@@ -890,6 +892,12 @@ public class BspServiceWorker<I extends WritableComparable,
     }
 
     aggregatorHandler.finishSuperstep(workerAggregatorRequestProcessor);
+
+    MessageStore<I, Writable> incomingMessageStore =
+        getServerData().getIncomingMessageStore();
+    if (incomingMessageStore instanceof AsyncMessageStoreWrapper) {
+      ((AsyncMessageStoreWrapper) incomingMessageStore).waitToComplete();
+    }
 
     if (LOG.isInfoEnabled()) {
       LOG.info("finishSuperstep: Superstep " + getSuperstep() +

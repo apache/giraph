@@ -1143,5 +1143,13 @@ public interface GiraphConstants {
           "org.apache.hadoop.io.compress.DefaultCodec",
           "Defines compression algorithm we will be using for " +
               "storing checkpoint");
+
+  /** Number of threads to use in async message store, 0 means
+   * we should not use async message processing */
+  IntConfOption ASYNC_MESSAGE_STORE_THREADS_COUNT =
+      new IntConfOption("giraph.async.message.store.threads", 0,
+          "Number of threads to be used in async message store.");
+
+
 }
 // CHECKSTYLE: resume InterfaceIsTypeCheck

@@ -24,8 +24,9 @@ import org.apache.giraph.comm.messages.primitives.IntByteArrayMessageStore;
 import org.apache.giraph.comm.messages.primitives.IntFloatMessageStore;
 import org.apache.giraph.comm.messages.primitives.long_id.LongByteArrayMessageStore;
 import org.apache.giraph.comm.messages.primitives.LongDoubleMessageStore;
-import org.apache.giraph.comm.messages.primitives.long_id.LongPointerListMessageStore;
+import org.apache.giraph.comm.messages.queue.AsyncMessageStoreWrapper;
 import org.apache.giraph.conf.GiraphConstants;
+import org.apache.giraph.comm.messages.primitives.long_id.LongPointerListMessageStore;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.factories.MessageValueFactory;
 import org.apache.hadoop.io.DoubleWritable;
@@ -155,6 +156,16 @@ public class InMemoryMessageStoreFactory<I extends WritableComparable,
           (conf.useMessageCombiner() ? " message combiner " +
               conf.getMessageCombinerClass() : " no combiner"));
     }
+
+    int asyncMessageStoreThreads =
+        GiraphConstants.ASYNC_MESSAGE_STORE_THREADS_COUNT.get(conf);
+    if (asyncMessageStoreThreads > 0) {
+      messageStore = new AsyncMessageStoreWrapper(
+          messageStore,
+          service.getPartitionStore().getPartitionIds(),
+          asyncMessageStoreThreads);
+    }
+
     return messageStore;
   }
 

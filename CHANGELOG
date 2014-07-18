@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-927: Decouple netty server threads from message processing (edunov via pavanka)  
+
   GIRAPH-924: Fix checkpointing (edunov via majakabiljo)
 
   GIRAPH-921: Create ByteValueVertex to store vertex values as bytes without object instance (akyrola via majakabiljo)

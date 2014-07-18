@@ -71,9 +71,17 @@ public class TestCheckpointing extends BspCase {
     super(TestCheckpointing.class.getName());
   }
 
+  @Test
+  public void testBspCheckpoint() throws InterruptedException, IOException, ClassNotFoundException {
+    testBspCheckpoint(false);
+  }
 
   @Test
-  public void testBspCheckpoint()
+  public void testAsyncMessageStoreCheckpoint() throws InterruptedException, IOException, ClassNotFoundException {
+    testBspCheckpoint(true);
+  }
+
+  public void testBspCheckpoint(boolean useAsyncMessageStore)
       throws IOException, InterruptedException, ClassNotFoundException {
     Path checkpointsDir = getTempPath("checkpointing");
     Path outputPath = getTempPath(getCallingMethodName());
@@ -88,6 +96,9 @@ public class TestCheckpointing extends BspCase {
     conf.setVertexOutputFormatClass(SimpleSuperstepComputation.SimpleSuperstepVertexOutputFormat.class);
     conf.set("mapred.job.id", TEST_JOB_ID);
     conf.set(KEY_MIN_SUPERSTEP, "0");
+    if (useAsyncMessageStore) {
+      GiraphConstants.ASYNC_MESSAGE_STORE_THREADS_COUNT.set(conf, 2);
+    }
     GiraphJob job = prepareJob(getCallingMethodName(), conf, outputPath);
 
     GiraphConfiguration configuration = job.getConfiguration();
