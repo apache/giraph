@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-932: Adding .arcconfig to GIRAPH for Arcanist support (aching)
+
   GIRAPH-927: Decouple netty server threads from message processing (edunov via pavanka)  
 
   GIRAPH-924: Fix checkpointing (edunov via majakabiljo)
