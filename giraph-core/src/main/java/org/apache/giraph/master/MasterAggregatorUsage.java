@@ -20,6 +20,7 @@ package org.apache.giraph.master;
 
 import org.apache.giraph.aggregators.Aggregator;
 import org.apache.giraph.aggregators.AggregatorUsage;
+import org.apache.giraph.utils.WritableFactory;
 import org.apache.hadoop.io.Writable;
 
 /**
@@ -37,6 +38,21 @@ public interface MasterAggregatorUsage extends AggregatorUsage {
    */
   <A extends Writable> boolean registerAggregator(String name,
       Class<? extends Aggregator<A>> aggregatorClass) throws
+      InstantiationException, IllegalAccessException;
+
+  /**
+   * Register an aggregator in preSuperstep() and/or preApplication(). This
+   * aggregator will have its value reset at the end of each super step.
+   *
+   * Aggregator should either implement Writable, or have no-arg constructor.
+   *
+   * @param name of aggregator
+   * @param aggregatorFactory aggregator factory
+   * @param <A> Aggregator type
+   * @return True iff aggregator wasn't already registered
+   */
+  <A extends Writable> boolean registerAggregator(String name,
+      WritableFactory<? extends Aggregator<A>> aggregatorFactory) throws
       InstantiationException, IllegalAccessException;
 
   /**

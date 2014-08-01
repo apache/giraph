@@ -18,13 +18,10 @@
 
 package org.apache.giraph.comm.aggregators;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.aggregators.Aggregator;
-import org.apache.giraph.utils.ReflectionUtils;
-import org.apache.giraph.worker.WorkerInfo;
-import org.apache.hadoop.io.Writable;
-
 import java.util.List;
+
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.worker.WorkerInfo;
 
 /**
  * Class for aggregator constants and utility methods
@@ -36,6 +33,7 @@ public class AggregatorUtils {
    */
   public static final String SPECIAL_COUNT_AGGREGATOR =
       "__aggregatorRequestCount";
+
   /** How big a single aggregator request can be (in bytes) */
   public static final String MAX_BYTES_PER_AGGREGATOR_REQUEST =
       "giraph.maxBytesPerAggregatorRequest";
@@ -56,37 +54,6 @@ public class AggregatorUtils {
 
   /** Do not instantiate */
   private AggregatorUtils() { }
-
-  /**
-   * Get aggregator class from class name, catch all exceptions.
-   *
-   * @param aggregatorClassName Class nam of aggregator class
-   * @return Aggregator class
-   */
-  public static Class<Aggregator<Writable>> getAggregatorClass(String
-      aggregatorClassName) {
-    try {
-      return (Class<Aggregator<Writable>>) Class.forName(aggregatorClassName);
-    } catch (ClassNotFoundException e) {
-      throw new IllegalStateException("getAggregatorClass: " +
-          "ClassNotFoundException for aggregator class " + aggregatorClassName,
-          e);
-    }
-  }
-
-  /**
-   * Create new aggregator instance from aggregator class,
-   * catch all exceptions.
-   *
-   * @param aggregatorClass Class of aggregator
-   * @param conf Configuration
-   * @return New aggregator
-   */
-  public static Aggregator<Writable> newAggregatorInstance(
-      Class<Aggregator<Writable>> aggregatorClass,
-      ImmutableClassesGiraphConfiguration conf) {
-    return ReflectionUtils.newInstance(aggregatorClass, conf);
-  }
 
   /**
    * Get owner of aggregator with selected name from the list of workers

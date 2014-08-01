@@ -18,6 +18,12 @@
 
 package org.apache.giraph.comm;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.comm.aggregators.AllAggregatorServerData;
 import org.apache.giraph.comm.aggregators.OwnerAggregatorServerData;
@@ -35,12 +41,6 @@ import org.apache.giraph.partition.SimplePartitionStore;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Anything that the server stores
@@ -123,7 +123,7 @@ public class ServerData<I extends WritableComparable,
     EdgeStoreFactory<I, V, E> edgeStoreFactory = conf.createEdgeStoreFactory();
     edgeStoreFactory.initialize(service, conf, context);
     edgeStore = edgeStoreFactory.newStore();
-    ownerAggregatorData = new OwnerAggregatorServerData(context, conf);
+    ownerAggregatorData = new OwnerAggregatorServerData(context);
     allAggregatorData = new AllAggregatorServerData(context, conf);
   }
 

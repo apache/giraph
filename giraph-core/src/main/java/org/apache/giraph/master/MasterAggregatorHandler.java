@@ -18,15 +18,24 @@
 
 package org.apache.giraph.master;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.bsp.SuperstepState;
-import org.apache.giraph.comm.MasterClient;
-import org.apache.giraph.comm.aggregators.AggregatorUtils;
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.util.AbstractMap;
+import java.util.Map;
+
 import org.apache.giraph.aggregators.Aggregator;
 import org.apache.giraph.aggregators.AggregatorWrapper;
 import org.apache.giraph.aggregators.AggregatorWriter;
+import org.apache.giraph.aggregators.ClassAggregatorFactory;
 import org.apache.giraph.bsp.BspService;
+import org.apache.giraph.bsp.SuperstepState;
+import org.apache.giraph.comm.MasterClient;
+import org.apache.giraph.comm.aggregators.AggregatorUtils;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.utils.MasterLoggingAggregator;
+import org.apache.giraph.utils.WritableFactory;
+import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.Progressable;
 import org.apache.log4j.Logger;
@@ -34,12 +43,6 @@ import org.apache.log4j.Logger;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
-
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
-import java.util.AbstractMap;
-import java.util.Map;
 
 /** Handler for aggregators on master */
 public class MasterAggregatorHandler implements MasterAggregatorUsage,
@@ -106,7 +109,17 @@ public class MasterAggregatorHandler implements MasterAggregatorUsage,
       Class<? extends Aggregator<A>> aggregatorClass) throws
       InstantiationException, IllegalAccessException {
     checkAggregatorName(name);
-    return registerAggregator(name, aggregatorClass, false) != null;
+    ClassAggregatorFactory<A> aggregatorFactory =
+        new ClassAggregatorFactory<A>(aggregatorClass, conf);
+    return registerAggregator(name, aggregatorFactory, false) != null;
+  }
+
+  @Override
+  public <A extends Writable> boolean registerAggregator(String name,
+      WritableFactory<? extends Aggregator<A>> aggregator) throws
+      InstantiationException, IllegalAccessException {
+    checkAggregatorName(name);
+    return registerAggregator(name, aggregator, false) != null;
   }
 
   @Override
@@ -114,7 +127,9 @@ public class MasterAggregatorHandler implements MasterAggregatorUsage,
       Class<? extends Aggregator<A>> aggregatorClass) throws
       InstantiationException, IllegalAccessException {
     checkAggregatorName(name);
-    return registerAggregator(name, aggregatorClass, true) != null;
+    ClassAggregatorFactory<A> aggregatorFactory =
+        new ClassAggregatorFactory<A>(aggregatorClass, conf);
+    return registerAggregator(name, aggregatorFactory, true) != null;
   }
 
   /**
@@ -134,22 +149,22 @@ public class MasterAggregatorHandler implements MasterAggregatorUsage,
   /**
    * Helper function for registering aggregators.
    *
-   * @param name            Name of the aggregator
-   * @param aggregatorClass Class of the aggregator
-   * @param persistent      Whether aggregator is persistent or not
-   * @param <A>             Aggregated value type
+   * @param name              Name of the aggregator
+   * @param aggregatorFactory Aggregator factory
+   * @param persistent        Whether aggregator is persistent or not
+   * @param <A>               Aggregated value type
    * @return Newly registered aggregator or aggregator which was previously
    *         created with selected name, if any
    */
   private <A extends Writable> AggregatorWrapper<A> registerAggregator
-  (String name, Class<? extends Aggregator<A>> aggregatorClass,
+  (String name, WritableFactory<? extends Aggregator<A>> aggregatorFactory,
       boolean persistent) throws InstantiationException,
       IllegalAccessException {
     AggregatorWrapper<A> aggregatorWrapper =
         (AggregatorWrapper<A>) aggregatorMap.get(name);
     if (aggregatorWrapper == null) {
       aggregatorWrapper =
-          new AggregatorWrapper<A>(aggregatorClass, persistent, conf);
+          new AggregatorWrapper<A>(aggregatorFactory, persistent, conf);
       aggregatorMap.put(name, (AggregatorWrapper<Writable>) aggregatorWrapper);
     }
     return aggregatorWrapper;
@@ -207,7 +222,7 @@ public class MasterAggregatorHandler implements MasterAggregatorUsage,
       for (Map.Entry<String, AggregatorWrapper<Writable>> entry :
           aggregatorMap.entrySet()) {
         masterClient.sendAggregator(entry.getKey(),
-            entry.getValue().getAggregatorClass(),
+            entry.getValue().getAggregatorFactory(),
             entry.getValue().getPreviousAggregatedValue());
         progressable.progress();
       }
@@ -322,7 +337,7 @@ public class MasterAggregatorHandler implements MasterAggregatorUsage,
     for (Map.Entry<String, AggregatorWrapper<Writable>> entry :
         aggregatorMap.entrySet()) {
       out.writeUTF(entry.getKey());
-      out.writeUTF(entry.getValue().getAggregatorClass().getName());
+      entry.getValue().getAggregatorFactory().write(out);
       out.writeBoolean(entry.getValue().isPersistent());
       entry.getValue().getPreviousAggregatedValue().write(out);
       progressable.progress();
@@ -336,15 +351,16 @@ public class MasterAggregatorHandler implements MasterAggregatorUsage,
     try {
       for (int i = 0; i < numAggregators; i++) {
         String aggregatorName = in.readUTF();
-        String aggregatorClassName = in.readUTF();
+        WritableFactory<Aggregator<Writable>> aggregatorFactory =
+            WritableUtils.readWritableObject(in, conf);
         boolean isPersistent = in.readBoolean();
-        AggregatorWrapper<Writable> aggregator = registerAggregator(
+        AggregatorWrapper<Writable> aggregatorWrapper = registerAggregator(
             aggregatorName,
-            AggregatorUtils.getAggregatorClass(aggregatorClassName),
+            aggregatorFactory,
             isPersistent);
-        Writable value = aggregator.createInitialValue();
+        Writable value = aggregatorWrapper.createInitialValue();
         value.readFields(in);
-        aggregator.setPreviousAggregatedValue(value);
+        aggregatorWrapper.setPreviousAggregatedValue(value);
         progressable.progress();
       }
     } catch (InstantiationException e) {

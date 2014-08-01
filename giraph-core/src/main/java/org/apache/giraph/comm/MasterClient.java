@@ -18,10 +18,11 @@
 
 package org.apache.giraph.comm;
 
-import org.apache.giraph.aggregators.Aggregator;
-import org.apache.hadoop.io.Writable;
-
 import java.io.IOException;
+
+import org.apache.giraph.aggregators.Aggregator;
+import org.apache.giraph.utils.WritableFactory;
+import org.apache.hadoop.io.Writable;
 
 /**
  * Interface for master to send messages to workers
@@ -36,12 +37,12 @@ public interface MasterClient {
    * Sends aggregator to its owner
    *
    * @param aggregatorName Name of the aggregator
-   * @param aggregatorClass Class of the aggregator
+   * @param aggregatorFactory Aggregator factory
    * @param aggregatedValue Value of the aggregator
    * @throws IOException
    */
   void sendAggregator(String aggregatorName,
-      Class<? extends Aggregator> aggregatorClass,
+      WritableFactory<? extends Aggregator> aggregatorFactory,
       Writable aggregatedValue) throws IOException;
 
   /**

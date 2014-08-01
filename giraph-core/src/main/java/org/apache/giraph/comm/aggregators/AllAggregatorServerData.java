@@ -18,22 +18,24 @@
 
 package org.apache.giraph.comm.aggregators;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentMap;
+
 import org.apache.giraph.aggregators.Aggregator;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.master.MasterInfo;
+import org.apache.giraph.utils.Factory;
 import org.apache.giraph.utils.TaskIdsPermitsBarrier;
+import org.apache.giraph.utils.WritableFactory;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.Progressable;
 import org.apache.log4j.Logger;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentMap;
 
 /**
  * Accepts aggregators and their values from previous superstep from master
@@ -49,16 +51,9 @@ public class AllAggregatorServerData {
   /** Class logger */
   private static final Logger LOG =
       Logger.getLogger(AllAggregatorServerData.class);
-  /**
-   * Map from aggregator class to aggregator object which we need in order
-   * to create initial aggregated values
-   */
-  private final
-  ConcurrentMap<Class<Aggregator<Writable>>, Aggregator<Writable>>
-  aggregatorTypesMap = Maps.newConcurrentMap();
-  /** Map of aggregator classes */
-  private final ConcurrentMap<String, Class<Aggregator<Writable>>>
-  aggregatorClassMap = Maps.newConcurrentMap();
+  /** Map of aggregator factories */
+  private final ConcurrentMap<String, WritableFactory<Aggregator<Writable>>>
+  aggregatorFactoriesMap = Maps.newConcurrentMap();
   /** Map of values of aggregators from previous superstep */
   private final ConcurrentMap<String, Writable>
   aggregatedValuesMap = Maps.newConcurrentMap();
@@ -104,16 +99,12 @@ public class AllAggregatorServerData {
   /**
    * Register the class of the aggregator, received by master or worker.
    *
-   * @param name            Aggregator name
-   * @param aggregatorClass Class of the aggregator
+   * @param name              Aggregator name
+   * @param aggregatorFactory Aggregator factory
    */
   public void registerAggregatorClass(String name,
-      Class<Aggregator<Writable>> aggregatorClass) {
-    aggregatorClassMap.put(name, aggregatorClass);
-    if (!aggregatorTypesMap.containsKey(aggregatorClass)) {
-      aggregatorTypesMap.putIfAbsent(aggregatorClass,
-          AggregatorUtils.newAggregatorInstance(aggregatorClass, conf));
-    }
+      WritableFactory<Aggregator<Writable>> aggregatorFactory) {
+    aggregatorFactoriesMap.put(name, aggregatorFactory);
     progressable.progress();
   }
 
@@ -139,10 +130,10 @@ public class AllAggregatorServerData {
    * @return Empty aggregated value for this aggregator
    */
   public Writable createAggregatorInitialValue(String name) {
-    Class<Aggregator<Writable>> aggregatorClass = aggregatorClassMap.get(name);
-    Aggregator<Writable> aggregator = aggregatorTypesMap.get(aggregatorClass);
-    synchronized (aggregator) {
-      return aggregator.createInitialValue();
+    WritableFactory<Aggregator<Writable>> aggregatorFactory =
+        aggregatorFactoriesMap.get(name);
+    synchronized (aggregatorFactory) {
+      return aggregatorFactory.create().createInitialValue();
     }
   }
 
@@ -211,29 +202,25 @@ public class AllAggregatorServerData {
    * @param workerIds All workers in the job apart from the current one
    * @param previousAggregatedValuesMap Map of values from previous
    *                                    superstep to fill out
-   * @param currentAggregatorMap Map of aggregators for current superstep to
-   *                             fill out. All aggregators in this map will
-   *                             be set to initial value.
+   * @param currentAggregatorFactoryMap Map of aggregators factories for
+   *                                    current superstep to fill out.
    */
   public void fillNextSuperstepMapsWhenReady(
       Set<Integer> workerIds,
       Map<String, Writable> previousAggregatedValuesMap,
-      Map<String, Aggregator<Writable>> currentAggregatorMap) {
+      Map<String, Factory<Aggregator<Writable>>> currentAggregatorFactoryMap) {
     workersBarrier.waitForRequiredPermits(workerIds);
     if (LOG.isDebugEnabled()) {
       LOG.debug("fillNextSuperstepMapsWhenReady: Aggregators ready");
     }
     previousAggregatedValuesMap.clear();
     previousAggregatedValuesMap.putAll(aggregatedValuesMap);
-    for (Map.Entry<String, Class<Aggregator<Writable>>> entry :
-        aggregatorClassMap.entrySet()) {
-      Aggregator<Writable> aggregator =
-          currentAggregatorMap.get(entry.getKey());
-      if (aggregator == null) {
-        currentAggregatorMap.put(entry.getKey(),
-            AggregatorUtils.newAggregatorInstance(entry.getValue(), conf));
-      } else {
-        aggregator.reset();
+    for (Map.Entry<String, WritableFactory<Aggregator<Writable>>> entry :
+        aggregatorFactoriesMap.entrySet()) {
+      Factory<Aggregator<Writable>> aggregatorFactory =
+          currentAggregatorFactoryMap.get(entry.getKey());
+      if (aggregatorFactory == null) {
+        currentAggregatorFactoryMap.put(entry.getKey(), entry.getValue());
       }
     }
   }

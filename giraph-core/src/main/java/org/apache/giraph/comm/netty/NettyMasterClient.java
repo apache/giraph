@@ -18,19 +18,20 @@
 
 package org.apache.giraph.comm.netty;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import java.io.IOException;
+
+import org.apache.giraph.aggregators.Aggregator;
 import org.apache.giraph.bsp.CentralizedServiceMaster;
 import org.apache.giraph.comm.MasterClient;
 import org.apache.giraph.comm.aggregators.AggregatorUtils;
 import org.apache.giraph.comm.aggregators.SendAggregatorCache;
 import org.apache.giraph.comm.requests.SendAggregatorsToOwnerRequest;
-import org.apache.giraph.aggregators.Aggregator;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.utils.WritableFactory;
 import org.apache.giraph.worker.WorkerInfo;
-import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.util.Progressable;
-
-import java.io.IOException;
 
 /**
  * Netty implementation of {@link MasterClient}
@@ -39,7 +40,7 @@ public class NettyMasterClient implements MasterClient {
   /** Netty client that does the actual I/O */
   private final NettyClient nettyClient;
   /** Worker information for current superstep */
-  private CentralizedServiceMaster<?, ?, ?> service;
+  private final CentralizedServiceMaster<?, ?, ?> service;
   /** Cached map of partition ids to serialized aggregator data */
   private final SendAggregatorCache sendAggregatorCache =
       new SendAggregatorCache();
@@ -78,12 +79,12 @@ public class NettyMasterClient implements MasterClient {
 
   @Override
   public void sendAggregator(String aggregatorName,
-      Class<? extends Aggregator> aggregatorClass,
+      WritableFactory<? extends Aggregator> aggregatorFactory,
       Writable aggregatedValue) throws IOException {
     WorkerInfo owner =
         AggregatorUtils.getOwner(aggregatorName, service.getWorkerInfoList());
     int currentSize = sendAggregatorCache.addAggregator(owner.getTaskId(),
-        aggregatorName, aggregatorClass, aggregatedValue);
+        aggregatorName, aggregatorFactory, aggregatedValue);
     if (currentSize >= maxBytesPerAggregatorRequest) {
       flushAggregatorsToWorker(owner);
     }

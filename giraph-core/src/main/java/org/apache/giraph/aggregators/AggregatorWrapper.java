@@ -19,7 +19,7 @@
 package org.apache.giraph.aggregators;
 
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.utils.ReflectionUtils;
+import org.apache.giraph.utils.WritableFactory;
 import org.apache.hadoop.io.Writable;
 
 /**
@@ -34,21 +34,25 @@ public class AggregatorWrapper<A extends Writable> {
   private final boolean persistent;
   /** Value aggregated in previous super step */
   private A previousAggregatedValue;
+  /** Aggregator factory */
+  private final WritableFactory<? extends Aggregator<A>> aggregatorFactory;
   /** Aggregator for next super step */
   private final Aggregator<A> currentAggregator;
   /** Whether anyone changed current value since the moment it was reset */
   private boolean changed;
 
   /**
-   * @param aggregatorClass Class type of the aggregator
-   * @param persistent      False iff aggregator should be reset at the end of
-   *                        each super step
-   * @param conf            Configuration
+   * @param aggregatorFactory Aggregator Factory
+   * @param persistent        False iff aggregator should be reset at the end
+   *                          of each super step
+   * @param conf              Configuration
    */
-  public AggregatorWrapper(Class<? extends Aggregator<A>> aggregatorClass,
+  public AggregatorWrapper(
+      WritableFactory<? extends Aggregator<A>> aggregatorFactory,
       boolean persistent, ImmutableClassesGiraphConfiguration conf) {
     this.persistent = persistent;
-    currentAggregator = ReflectionUtils.newInstance(aggregatorClass, conf);
+    this.aggregatorFactory = aggregatorFactory;
+    currentAggregator = aggregatorFactory.create();
     changed = false;
     previousAggregatedValue = currentAggregator.createInitialValue();
   }
@@ -140,7 +144,7 @@ public class AggregatorWrapper<A extends Writable> {
    *
    * @return Aggregator class
    */
-  public Class<? extends Aggregator> getAggregatorClass() {
-    return currentAggregator.getClass();
+  public WritableFactory<? extends Aggregator<A>> getAggregatorFactory() {
+    return aggregatorFactory;
   }
 }

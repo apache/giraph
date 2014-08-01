@@ -18,24 +18,25 @@
 
 package org.apache.giraph.worker;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import java.io.IOException;
+import java.util.Map;
+import java.util.Set;
+
+import org.apache.giraph.aggregators.Aggregator;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.comm.aggregators.WorkerAggregatorRequestProcessor;
 import org.apache.giraph.comm.aggregators.AggregatedValueOutputStream;
 import org.apache.giraph.comm.aggregators.AggregatorUtils;
 import org.apache.giraph.comm.aggregators.AllAggregatorServerData;
 import org.apache.giraph.comm.aggregators.OwnerAggregatorServerData;
-import org.apache.giraph.aggregators.Aggregator;
+import org.apache.giraph.comm.aggregators.WorkerAggregatorRequestProcessor;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.utils.Factory;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.Progressable;
 import org.apache.log4j.Logger;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-
-import java.io.IOException;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * Handler for aggregators on worker. Provides the aggregated values and
@@ -58,10 +59,13 @@ public class WorkerAggregatorHandler implements WorkerThreadAggregatorUsage {
   private static final Logger LOG =
       Logger.getLogger(WorkerAggregatorHandler.class);
   /** Map of values from previous superstep */
-  private Map<String, Writable> previousAggregatedValueMap =
+  private final Map<String, Writable> previousAggregatedValueMap =
       Maps.newHashMap();
+  /** Map of aggregator factories for current superstep */
+  private final Map<String, Factory<Aggregator<Writable>>>
+  currentAggregatorFactoryMap = Maps.newHashMap();
   /** Map of aggregators for current superstep */
-  private Map<String, Aggregator<Writable>> currentAggregatorMap =
+  private final Map<String, Aggregator<Writable>> currentAggregatorMap =
       Maps.newHashMap();
   /** Service worker */
   private final CentralizedServiceWorker<?, ?, ?> serviceWorker;
@@ -143,10 +147,30 @@ public class WorkerAggregatorHandler implements WorkerThreadAggregatorUsage {
     // Wait for all other aggregators and store them
     allAggregatorData.fillNextSuperstepMapsWhenReady(
         getOtherWorkerIdsSet(), previousAggregatedValueMap,
-        currentAggregatorMap);
+        currentAggregatorFactoryMap);
+    fillAndInitAggregatorsMap(currentAggregatorMap);
     allAggregatorData.reset();
     if (LOG.isDebugEnabled()) {
       LOG.debug("prepareSuperstep: Aggregators prepared");
+    }
+  }
+
+  /**
+   * Fills aggregators map from currentAggregatorFactoryMap.
+   * All aggregators in this map will be set to initial value.
+   * @param aggregatorMap Map to fill.
+   */
+  private void fillAndInitAggregatorsMap(
+      Map<String, Aggregator<Writable>> aggregatorMap) {
+    for (Map.Entry<String, Factory<Aggregator<Writable>>> entry :
+        currentAggregatorFactoryMap.entrySet()) {
+      Aggregator<Writable> aggregator =
+          aggregatorMap.get(entry.getKey());
+      if (aggregator == null) {
+        aggregatorMap.put(entry.getKey(), entry.getValue().create());
+      } else {
+        aggregator.reset();
+      }
     }
   }
 
@@ -286,13 +310,7 @@ public class WorkerAggregatorHandler implements WorkerThreadAggregatorUsage {
     public ThreadLocalWorkerAggregatorUsage() {
       threadAggregatorMap = Maps.newHashMapWithExpectedSize(
           WorkerAggregatorHandler.this.currentAggregatorMap.size());
-      for (Map.Entry<String, Aggregator<Writable>> entry :
-          WorkerAggregatorHandler.this.currentAggregatorMap.entrySet()) {
-        threadAggregatorMap.put(entry.getKey(),
-            AggregatorUtils.newAggregatorInstance(
-                (Class<Aggregator<Writable>>) entry.getValue().getClass(),
-                conf));
-      }
+      fillAndInitAggregatorsMap(threadAggregatorMap);
     }
 
     @Override

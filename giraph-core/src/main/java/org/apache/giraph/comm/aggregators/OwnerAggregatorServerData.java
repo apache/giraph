@@ -18,9 +18,14 @@
 
 package org.apache.giraph.comm.aggregators;
 
+import java.util.AbstractMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentMap;
+
 import org.apache.giraph.aggregators.Aggregator;
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.utils.TaskIdsPermitsBarrier;
+import org.apache.giraph.utils.WritableFactory;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.Progressable;
 import org.apache.log4j.Logger;
@@ -28,11 +33,6 @@ import org.apache.log4j.Logger;
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
-
-import java.util.AbstractMap;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentMap;
 
 /**
  * Class for holding aggregators which current worker owns,
@@ -73,19 +73,14 @@ public class OwnerAggregatorServerData {
   private final TaskIdsPermitsBarrier workersBarrier;
   /** Progressable used to report progress */
   private final Progressable progressable;
-  /** Configuration */
-  private final ImmutableClassesGiraphConfiguration conf;
 
   /**
    * Constructor
    *
    * @param progressable Progressable used to report progress
-   * @param conf         Configuration
    */
-  public OwnerAggregatorServerData(Progressable progressable,
-      ImmutableClassesGiraphConfiguration conf) {
+  public OwnerAggregatorServerData(Progressable progressable) {
     this.progressable = progressable;
-    this.conf = conf;
     workersBarrier = new TaskIdsPermitsBarrier(progressable);
   }
 
@@ -93,15 +88,14 @@ public class OwnerAggregatorServerData {
    * Register an aggregator which current worker owns. Thread-safe.
    *
    * @param name Name of aggregator
-   * @param aggregatorClass Aggregator class
+   * @param aggregatorFactory Aggregator factory
    */
   public void registerAggregator(String name,
-      Class<Aggregator<Writable>> aggregatorClass) {
+      WritableFactory<Aggregator<Writable>> aggregatorFactory) {
     if (LOG.isDebugEnabled() && myAggregatorMap.isEmpty()) {
       LOG.debug("registerAggregator: The first registration after a reset()");
     }
-    myAggregatorMap.putIfAbsent(name,
-        AggregatorUtils.newAggregatorInstance(aggregatorClass, conf));
+    myAggregatorMap.putIfAbsent(name, aggregatorFactory.create());
     progressable.progress();
   }
 

@@ -18,15 +18,17 @@
 
 package org.apache.giraph.comm.requests;
 
+import java.io.DataInput;
+import java.io.IOException;
+
+import org.apache.giraph.aggregators.Aggregator;
 import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.comm.aggregators.AggregatorUtils;
 import org.apache.giraph.comm.aggregators.AllAggregatorServerData;
-import org.apache.giraph.aggregators.Aggregator;
+import org.apache.giraph.utils.WritableFactory;
+import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
-
-import java.io.DataInput;
-import java.io.IOException;
 
 /**
  * Request to send final aggregatd values from master to worker which owns
@@ -59,23 +61,22 @@ public class SendAggregatorsToOwnerRequest
       int numAggregators = input.readInt();
       for (int i = 0; i < numAggregators; i++) {
         String aggregatorName = input.readUTF();
-        String aggregatorClassName = input.readUTF();
+        WritableFactory<Aggregator<Writable>> aggregatorFactory =
+            WritableUtils.readWritableObject(input, conf);
         if (aggregatorName.equals(AggregatorUtils.SPECIAL_COUNT_AGGREGATOR)) {
           LongWritable count = new LongWritable(0);
           count.readFields(input);
           aggregatorData.receivedRequestCountFromMaster(count.get(),
               getSenderTaskId());
         } else {
-          Class<Aggregator<Writable>> aggregatorClass =
-              AggregatorUtils.getAggregatorClass(aggregatorClassName);
           aggregatorData.registerAggregatorClass(aggregatorName,
-              aggregatorClass);
+              aggregatorFactory);
           Writable aggregatorValue =
               aggregatorData.createAggregatorInitialValue(aggregatorName);
           aggregatorValue.readFields(input);
           aggregatorData.setAggregatorValue(aggregatorName, aggregatorValue);
           serverData.getOwnerAggregatorData().registerAggregator(
-              aggregatorName, aggregatorClass);
+              aggregatorName, aggregatorFactory);
         }
       }
     } catch (IOException e) {

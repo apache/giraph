@@ -23,6 +23,7 @@ import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
 import org.apache.giraph.graph.Computation;
 import org.apache.giraph.graph.GraphState;
+import org.apache.giraph.utils.WritableFactory;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.Mapper;
 
@@ -192,6 +193,13 @@ public abstract class MasterCompute
     String name, Class<? extends Aggregator<A>> aggregatorClass)
     throws InstantiationException, IllegalAccessException {
     return masterAggregatorUsage.registerAggregator(name, aggregatorClass);
+  }
+
+  @Override
+  public final <A extends Writable> boolean registerAggregator(
+    String name, WritableFactory<? extends Aggregator<A>> aggregator)
+    throws InstantiationException, IllegalAccessException {
+    return masterAggregatorUsage.registerAggregator(name, aggregator);
   }
 
   @Override

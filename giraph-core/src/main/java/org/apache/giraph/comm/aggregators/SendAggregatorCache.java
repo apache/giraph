@@ -18,14 +18,15 @@
 
 package org.apache.giraph.comm.aggregators;
 
+import java.io.IOException;
+import java.util.Map;
+
 import org.apache.giraph.aggregators.Aggregator;
+import org.apache.giraph.utils.WritableFactory;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
 
 import com.google.common.collect.Maps;
-
-import java.io.IOException;
-import java.util.Map;
 
 /**
  * Takes and serializes aggregators and keeps them grouped by owner
@@ -41,20 +42,20 @@ public class SendAggregatorCache extends CountingCache {
    *
    * @param taskId Task id of worker which owns the aggregator
    * @param aggregatorName Name of the aggregator
-   * @param aggregatorClass Class of the aggregator
+   * @param aggregatorFactory Aggregator factory
    * @param aggregatedValue Value of the aggregator
    * @return Number of bytes in serialized data for this worker
    * @throws IOException
    */
   public int addAggregator(Integer taskId, String aggregatorName,
-      Class<? extends Aggregator> aggregatorClass,
+      WritableFactory<? extends Aggregator> aggregatorFactory,
       Writable aggregatedValue) throws IOException {
     AggregatorOutputStream out = aggregatorMap.get(taskId);
     if (out == null) {
       out = new AggregatorOutputStream();
       aggregatorMap.put(taskId, out);
     }
-    return out.addAggregator(aggregatorName, aggregatorClass,
+    return out.addAggregator(aggregatorName, aggregatorFactory,
         aggregatedValue);
   }
 
@@ -86,6 +87,6 @@ public class SendAggregatorCache extends CountingCache {
     // current number of requests, plus one for the last flush
     long totalCount = getCount(taskId) + 1;
     addAggregator(taskId, AggregatorUtils.SPECIAL_COUNT_AGGREGATOR,
-        Aggregator.class, new LongWritable(totalCount));
+        null, new LongWritable(totalCount));
   }
 }

@@ -18,10 +18,12 @@
 
 package org.apache.giraph.comm.aggregators;
 
-import org.apache.giraph.aggregators.Aggregator;
-import org.apache.hadoop.io.Writable;
-
 import java.io.IOException;
+
+import org.apache.giraph.aggregators.Aggregator;
+import org.apache.giraph.utils.WritableFactory;
+import org.apache.giraph.utils.WritableUtils;
+import org.apache.hadoop.io.Writable;
 
 /**
  * Implementation of {@link CountingOutputStream} which allows writing of
@@ -32,17 +34,17 @@ public class AggregatorOutputStream extends CountingOutputStream {
    * Write aggregator to the stream and increment internal counter
    *
    * @param aggregatorName Name of the aggregator
-   * @param aggregatorClass Class of aggregator
+   * @param aggregatorFactory Aggregator factory
    * @param aggregatedValue Value of aggregator
    * @return Number of bytes occupied by the stream
    * @throws IOException
    */
   public int addAggregator(String aggregatorName,
-      Class<? extends Aggregator> aggregatorClass,
+      WritableFactory<? extends Aggregator> aggregatorFactory,
       Writable aggregatedValue) throws IOException {
     incrementCounter();
     dataOutput.writeUTF(aggregatorName);
-    dataOutput.writeUTF(aggregatorClass.getName());
+    WritableUtils.writeWritableObject(aggregatorFactory, dataOutput);
     aggregatedValue.write(dataOutput);
     return getSize();
   }

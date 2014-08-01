@@ -18,6 +18,18 @@
 
 package org.apache.giraph.utils;
 
+import static org.apache.hadoop.util.ReflectionUtils.newInstance;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInput;
+import java.io.DataInputStream;
+import java.io.DataOutput;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.OutEdges;
@@ -32,18 +44,6 @@ import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.ZooDefs.Ids;
 import org.apache.zookeeper.data.Stat;
-
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataInput;
-import java.io.DataInputStream;
-import java.io.DataOutput;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-
-import static org.apache.hadoop.util.ReflectionUtils.newInstance;
 
 /**
  * Helper static methods for working with Writable objects.
@@ -68,6 +68,23 @@ public class WritableUtils {
       return ReflectionUtils.newInstance(klass);
     }
   }
+
+  /**
+   * Instantiate a new Writable, checking for NullWritable along the way.
+   *
+   * @param klass Class
+   * @param configuration Configuration
+   * @param <W> type
+   * @return new instance of class
+   */
+  public static <W extends Writable> W createWritable(
+      Class<W> klass,
+      ImmutableClassesGiraphConfiguration configuration) {
+    W result = createWritable(klass);
+    ConfigurationUtils.configureIfPossible(result, configuration);
+    return result;
+  }
+
 
   /**
    * Read fields from byteArray to a Writeable object.
@@ -610,6 +627,49 @@ public class WritableUtils {
         return (Class<T>) Class.forName(className);
       } catch (ClassNotFoundException e) {
         throw new IllegalStateException("readClass: No class found " +
+            className);
+      }
+    } else {
+      return null;
+    }
+  }
+
+  /**
+   * Write object to output stream
+   * @param object Object
+   * @param output Output stream
+   * @throws IOException
+   */
+  public static void writeWritableObject(
+    Writable object, DataOutput output)
+    throws IOException {
+    output.writeBoolean(object != null);
+    if (object != null) {
+      output.writeUTF(object.getClass().getName());
+      object.write(output);
+    }
+  }
+
+  /**
+   * Reads object from input stream
+   * @param input Input stream
+   * @param conf Configuration
+   * @param <T> Object type
+   * @return Object
+   * @throws IOException
+   */
+  public static <T extends Writable>
+  T readWritableObject(DataInput input,
+      ImmutableClassesGiraphConfiguration conf) throws IOException {
+    if (input.readBoolean()) {
+      String className = input.readUTF();
+      try {
+        T object =
+            (T) ReflectionUtils.newInstance(Class.forName(className), conf);
+        object.readFields(input);
+        return object;
+      } catch (ClassNotFoundException e) {
+        throw new IllegalStateException("readWritableObject: No class found " +
             className);
       }
     } else {
