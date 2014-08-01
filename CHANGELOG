@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-936: AsyncMessageStoreWrapper threads are not daemonized (edunov via majakabiljo)
+
   GIRAPH-934: Allow having state in aggregators (ikabiljo via majakabiljo)
 
   GIRAPH-932: Adding .arcconfig to GIRAPH for Arcanist support (aching)

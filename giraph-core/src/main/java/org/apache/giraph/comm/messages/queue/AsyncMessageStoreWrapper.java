@@ -60,7 +60,7 @@ public final class AsyncMessageStoreWrapper<I extends WritableComparable,
   /** Executor that processes messages in background */
   private static final ExecutorService EXECUTOR_SERVICE =
       Executors.newCachedThreadPool(
-          new ThreadFactoryBuilder()
+          new ThreadFactoryBuilder().setDaemon(true)
               .setNameFormat("AsyncMessageStoreWrapper-%d").build());
 
   /** Number of threads that will process messages in background */
