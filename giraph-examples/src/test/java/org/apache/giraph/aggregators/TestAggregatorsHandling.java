@@ -129,8 +129,8 @@ public class TestAggregatorsHandling extends BspCase {
 
     AggregatorWrapper<Writable> regularAgg =
         getAggregatorMap(restartedHandler).get(regularAggName);
-    assertTrue(
-        regularAgg.getAggregatorClass().equals(LongSumAggregator.class));
+    assertTrue(regularAgg.getAggregatorFactory().create().getClass().equals(
+        LongSumAggregator.class));
     assertEquals(regularValue, regularAgg.getPreviousAggregatedValue());
     assertEquals(regularValue,
         restartedHandler.<LongWritable>getAggregatedValue(regularAggName));
@@ -138,7 +138,7 @@ public class TestAggregatorsHandling extends BspCase {
 
     AggregatorWrapper<Writable> persistentAgg =
         getAggregatorMap(restartedHandler).get(persistentAggName);
-    assertTrue(persistentAgg.getAggregatorClass().equals
+    assertTrue(persistentAgg.getAggregatorFactory().create().getClass().equals
         (DoubleOverwriteAggregator.class));
     assertEquals(persistentValue, persistentAgg.getPreviousAggregatedValue());
     assertEquals(persistentValue,
