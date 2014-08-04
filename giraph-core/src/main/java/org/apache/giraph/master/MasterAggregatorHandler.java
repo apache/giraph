@@ -337,7 +337,8 @@ public class MasterAggregatorHandler implements MasterAggregatorUsage,
     for (Map.Entry<String, AggregatorWrapper<Writable>> entry :
         aggregatorMap.entrySet()) {
       out.writeUTF(entry.getKey());
-      entry.getValue().getAggregatorFactory().write(out);
+      WritableUtils.writeWritableObject(
+          entry.getValue().getAggregatorFactory(), out);
       out.writeBoolean(entry.getValue().isPersistent());
       entry.getValue().getPreviousAggregatedValue().write(out);
       progressable.progress();
