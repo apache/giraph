@@ -52,15 +52,23 @@ public class ReactiveJMapHistoDumper extends
   private volatile boolean stop = false;
 
   @Override
-  public void preApplication() {
+  public void preLoad() {
     // This is called by both WorkerObserver and MasterObserver
     startSupervisorThread();
   }
 
   @Override
-  public void postApplication() {
+  public void postSave() {
     // This is called by both WorkerObserver and MasterObserver
     joinSupervisorThread();
+  }
+
+  @Override
+  public void preApplication() {
+  }
+
+  @Override
+  public void postApplication() {
   }
 
   /**

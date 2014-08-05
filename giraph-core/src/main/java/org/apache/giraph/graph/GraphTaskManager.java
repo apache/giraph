@@ -255,6 +255,7 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
     if (checkTaskState()) {
       return;
     }
+    preLoadOnWorkerObservers();
     finishedSuperstepStats = serviceWorker.setup();
     if (collectInputSuperstepStats(finishedSuperstepStats)) {
       return;
@@ -830,6 +831,26 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
   }
 
   /**
+   * Executes preLoad() on worker observers.
+   */
+  private void preLoadOnWorkerObservers() {
+    for (WorkerObserver obs : serviceWorker.getWorkerObservers()) {
+      obs.preLoad();
+      context.progress();
+    }
+  }
+
+  /**
+   * Executes postSave() on worker observers.
+   */
+  private void postSaveOnWorkerObservers() {
+    for (WorkerObserver obs : serviceWorker.getWorkerObservers()) {
+      obs.postSave();
+      context.progress();
+    }
+  }
+
+  /**
    * Called by owner of this GraphTaskManager object on each compute node
    */
   public void cleanup()
@@ -843,6 +864,7 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
 
     if (serviceWorker != null) {
       serviceWorker.cleanup(finishedSuperstepStats);
+      postSaveOnWorkerObservers();
     }
     try {
       if (masterThread != null) {

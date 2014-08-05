@@ -45,15 +45,23 @@ public class JMapHistoDumper implements MasterObserver, WorkerObserver {
   private boolean stop = false;
 
   @Override
-  public void preApplication() {
+  public void preLoad() {
     // This is called by both WorkerObserver and MasterObserver
     startJMapThread();
   }
 
   @Override
-  public void postApplication() {
+  public void postSave() {
     // This is called by both WorkerObserver and MasterObserver
     joinJMapThread();
+  }
+
+  @Override
+  public void preApplication() {
+  }
+
+  @Override
+  public void postApplication() {
   }
 
   /**
