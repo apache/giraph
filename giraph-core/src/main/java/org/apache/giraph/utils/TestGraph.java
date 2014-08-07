@@ -18,6 +18,11 @@
 
 package org.apache.giraph.utils;
 
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map.Entry;
+
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.Edge;
@@ -29,11 +34,6 @@ import org.apache.hadoop.io.WritableComparable;
 import com.google.common.base.Objects;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map.Entry;
 
 /**
  * TestGraph class for in-memory testing.
@@ -47,9 +47,9 @@ public class TestGraph<I extends WritableComparable,
                        E extends Writable>
                        implements Iterable<Vertex<I, V, E>> {
   /** The vertex values */
-  private final HashMap<I, Vertex<I, V, E>> vertices = Maps.newHashMap();
+  protected HashMap<I, Vertex<I, V, E>> vertices = Maps.newHashMap();
   /** The configuration */
-  private ImmutableClassesGiraphConfiguration<I, V, E> conf;
+  protected ImmutableClassesGiraphConfiguration<I, V, E> conf;
 
   /**
    * Constructor requiring classes
@@ -112,7 +112,7 @@ public class TestGraph<I extends WritableComparable,
       vertices.put(vertexId, v);
     }
     vertices.get(vertexId)
-      .addEdge((Edge<I, E>) EdgeFactory.create(edgePair.getKey(),
+      .addEdge(EdgeFactory.create(edgePair.getKey(),
                                                edgePair.getValue()));
     return this;
   }
@@ -132,7 +132,7 @@ public class TestGraph<I extends WritableComparable,
       vertices.put(vertexId, v);
     }
     vertices.get(vertexId)
-      .addEdge((Edge<I, E>) EdgeFactory.create(toVertex, edgeValue));
+      .addEdge(EdgeFactory.create(toVertex, edgeValue));
     return this;
   }
   /**
@@ -149,6 +149,7 @@ public class TestGraph<I extends WritableComparable,
    *
    * @return the iterator
    */
+  @Override
   public Iterator<Vertex<I, V, E>> iterator() {
     return vertices.values().iterator();
   }
@@ -173,7 +174,7 @@ public class TestGraph<I extends WritableComparable,
   createEdges(Entry<I, E>... destEdgess) {
     List<Edge<I, E>> edgesList = Lists.newArrayList();
     for (Entry<I, E> e: destEdgess) {
-      edgesList.add((Edge<I, E>) EdgeFactory.create(e.getKey(), e.getValue()));
+      edgesList.add(EdgeFactory.create(e.getKey(), e.getValue()));
     }
     return edgesList;
   }

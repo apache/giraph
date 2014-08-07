@@ -18,13 +18,13 @@
 
 package org.apache.giraph.conf;
 
-import com.google.common.base.Preconditions;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.handler.codec.compression.JdkZlibDecoder;
 import io.netty.handler.codec.compression.JdkZlibEncoder;
 import io.netty.handler.codec.compression.SnappyFramedDecoder;
 import io.netty.handler.codec.compression.SnappyFramedEncoder;
+
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.edge.Edge;
@@ -89,6 +89,8 @@ import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.util.Progressable;
 
+import com.google.common.base.Preconditions;
+
 
 /**
  * The classes set here are immutable, the remaining configuration is mutable.
@@ -150,8 +152,8 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    * @param obj Object
    */
   public void configureIfPossible(Object obj) {
-    if (obj instanceof ImmutableClassesGiraphConfigurable) {
-      ((ImmutableClassesGiraphConfigurable) obj).setConf(this);
+    if (obj instanceof GiraphConfigurationSettable) {
+      ((GiraphConfigurationSettable) obj).setConf(this);
     }
   }
 
@@ -520,6 +522,7 @@ public class ImmutableClassesGiraphConfiguration<I extends WritableComparable,
    *
    * @return User's combiner class
    */
+  @Override
   public Class<? extends MessageCombiner<I, ? extends Writable>>
   getMessageCombinerClass() {
     return classes.getMessageCombinerClass();

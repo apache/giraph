@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-935: Loosen modifiers when needed (ikabiljo via majakabiljo)
+
   GIRAPH-937 - Upgrade Hive I/O to 0.26. (aching)
 
   GIRAPH-893: Implement preLoad & postSave on workerObservers (pavanka)

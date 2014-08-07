@@ -52,7 +52,7 @@ public class OneMessagePerVertexStore<I extends WritableComparable,
    * @param messageCombiner MessageCombiner for messages
    * @param config Hadoop configuration
    */
-  OneMessagePerVertexStore(
+  public OneMessagePerVertexStore(
       MessageValueFactory<M> messageValueFactory,
       CentralizedServiceWorker<I, ?, ?> service,
       MessageCombiner<I, M> messageCombiner,
