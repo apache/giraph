@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-943: Perf regression due to netty 4.0.21 (pavanka)
+
   GIRAPH-935: Loosen modifiers when needed (ikabiljo via majakabiljo)
 
   GIRAPH-937 - Upgrade Hive I/O to 0.26. (aching)
