@@ -1059,7 +1059,7 @@ under the License.
       </modules>
       <properties>
         <hadoop.version>0.20.0</hadoop.version>
-        <munge.symbols>HADOOP_NON_SECURE,HADOOP_NON_JOBCONTEXT_IS_INTERFACE</munge.symbols>
+        <munge.symbols>HADOOP_NON_SECURE,HADOOP_NON_JOBCONTEXT_IS_INTERFACE,HADOOP_JOB_ID_AVAILABLE</munge.symbols>
       </properties>
       <dependencies>
         <!-- sorted lexicographically -->

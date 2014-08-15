@@ -16,27 +16,16 @@
  * limitations under the License.
  */
 
-package org.apache.giraph.job;
-
-import org.apache.hadoop.mapreduce.Job;
+package org.apache.giraph.bsp;
 
 /**
- * Class to decide whether a GiraphJob should be restarted after failure.
+ * Enum represents possible checkpoint state.
  */
-public interface GiraphJobRetryChecker {
-  /**
-   * Check if the job should be retried
-   *
-   * @param submittedJob Job that ran and failed
-   * @param tryCount How many times have we tried to run the job until now
-   *
-   * @return True iff job should be retried
-   */
-  boolean shouldRetry(Job submittedJob, int tryCount);
-
-  /**
-   * The job has been checkpointed and halted. Should we now restart it?
-   * @return true if checkpointed job should be automatically restarted.
-   */
-  boolean shouldRestartCheckpoint();
+public enum CheckpointStatus {
+  /** Do nothing, no checkpoint required */
+  NONE,
+  /** Regular checkpoint */
+  CHECKPOINT,
+  /** Do checkpoint and then halt further computation */
+  CHECKPOINT_AND_HALT
 }

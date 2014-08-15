@@ -96,6 +96,8 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
       long initializeMillis = 0;
       long endMillis = 0;
       bspServiceMaster.setup();
+      SuperstepState superstepState = SuperstepState.INITIAL;
+
       if (bspServiceMaster.becomeMaster()) {
         // First call to checkWorkers waits for all pending resources.
         // If these resources are still available at subsequent calls it just
@@ -113,11 +115,9 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
           long setupMillis = System.currentTimeMillis() - initializeMillis;
           GiraphTimers.getInstance().getSetupMs().increment(setupMillis);
           setupSecs = setupMillis / 1000.0d;
-          SuperstepState superstepState = SuperstepState.INITIAL;
-          long cachedSuperstep = BspService.UNSET_SUPERSTEP;
-          while (superstepState != SuperstepState.ALL_SUPERSTEPS_DONE) {
+          while (!superstepState.isExecutionComplete()) {
             long startSuperstepMillis = System.currentTimeMillis();
-            cachedSuperstep = bspServiceMaster.getSuperstep();
+            long cachedSuperstep = bspServiceMaster.getSuperstep();
             GiraphMetrics.get().resetSuperstepMetrics(cachedSuperstep);
             Class<? extends Computation> computationClass =
                 bspServiceMaster.getMasterCompute().getComputation();
@@ -153,7 +153,7 @@ public class MasterThread<I extends WritableComparable, V extends Writable,
           bspServiceMaster.setJobState(ApplicationState.FINISHED, -1, -1);
         }
       }
-      bspServiceMaster.cleanup();
+      bspServiceMaster.cleanup(superstepState);
       if (!superstepSecsMap.isEmpty()) {
         GiraphTimers.getInstance().getShutdownMs().
           increment(System.currentTimeMillis() - endMillis);

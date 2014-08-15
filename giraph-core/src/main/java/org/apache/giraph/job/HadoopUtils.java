@@ -18,6 +18,7 @@
 package org.apache.giraph.job;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
@@ -99,6 +100,20 @@ public class HadoopUtils {
     context = new JobContextImpl(conf, jobID);
     /*end[HADOOP_NON_JOBCONTEXT_IS_INTERFACE]*/
     return context;
+  }
+
+  /**
+   * Get Job ID from job.
+   * May return null for hadoop 0.20.203
+   * @param job submitted job
+   * @return JobId for submitted job.
+   */
+  public static JobID getJobID(Job job) {
+    /*if[HADOOP_JOB_ID_AVAILABLE]
+    return job.getID();
+    else[HADOOP_JOB_ID_AVAILABLE]*/
+    return job.getJobID();
+    /*end[HADOOP_JOB_ID_AVAILABLE]*/
   }
 
   /**

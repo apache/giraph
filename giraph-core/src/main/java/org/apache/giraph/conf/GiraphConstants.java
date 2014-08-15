@@ -1137,12 +1137,16 @@ public interface GiraphConstants {
       new IntConfOption("giraph.checkpoint.io.threads", 8,
           "Number of threads for writing and reading checkpoints");
 
-  /** Compression algorithm to be used for checkpointing */
+  /**
+   * Compression algorithm to be used for checkpointing.
+   * Defined by extension for hadoop compatibility reasons.
+  */
   StrConfOption CHECKPOINT_COMPRESSION_CODEC =
       new StrConfOption("giraph.checkpoint.compression.codec",
-          "org.apache.hadoop.io.compress.DefaultCodec",
+          ".deflate",
           "Defines compression algorithm we will be using for " +
-              "storing checkpoint");
+              "storing checkpoint. Available options include but " +
+              "not restricted to: .deflate, .gz, .bz2, .lzo");
 
   /** Number of threads to use in async message store, 0 means
    * we should not use async message processing */

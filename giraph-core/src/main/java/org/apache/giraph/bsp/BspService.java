@@ -24,13 +24,16 @@ import org.apache.giraph.graph.GraphTaskManager;
 import org.apache.giraph.graph.InputSplitEvents;
 import org.apache.giraph.graph.InputSplitPaths;
 import org.apache.giraph.partition.GraphPartitionerFactory;
+import org.apache.giraph.utils.CheckpointingUtils;
 import org.apache.giraph.worker.WorkerInfo;
 import org.apache.giraph.zk.BspEvent;
 import org.apache.giraph.zk.PredicateLock;
 import org.apache.giraph.zk.ZooKeeperExt;
 import org.apache.giraph.zk.ZooKeeperManager;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -50,10 +53,10 @@ import java.net.UnknownHostException;
 import java.nio.charset.Charset;
 import java.security.InvalidParameterException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import static org.apache.giraph.conf.GiraphConstants.CHECKPOINT_DIRECTORY;
 import static org.apache.giraph.conf.GiraphConstants.RESTART_JOB_ID;
 
 /**
@@ -162,6 +165,8 @@ public abstract class BspService<I extends WritableComparable,
   public static final String WORKER_PROGRESSES = "/_workerProgresses";
   /** Denotes that computation should be halted */
   public static final String HALT_COMPUTATION_NODE = "/_haltComputation";
+  /** User sets this flag to checkpoint and stop the job */
+  public static final String FORCE_CHECKPOINT_USER_FLAG = "/_checkpointAndStop";
   /** Denotes which workers have been cleaned up */
   public static final String CLEANED_UP_DIR = "/_cleanedUpDir";
   /** JSON partition stats key */
@@ -283,8 +288,6 @@ public abstract class BspService<I extends WritableComparable,
   private final GraphTaskManager<I, V, E> graphTaskManager;
   /** File system */
   private final FileSystem fs;
-  /** Checkpoint frequency */
-  private final int checkpointFrequency;
 
   /**
    * Constructor.
@@ -325,13 +328,6 @@ public abstract class BspService<I extends WritableComparable,
     this.taskPartition = conf.getTaskPartition();
     this.restartedSuperstep = conf.getLong(
         GiraphConstants.RESTART_SUPERSTEP, UNSET_SUPERSTEP);
-    this.cachedSuperstep = restartedSuperstep;
-    if ((restartedSuperstep != UNSET_SUPERSTEP) &&
-        (restartedSuperstep < 0)) {
-      throw new IllegalArgumentException(
-          "BspService: Invalid superstep to restart - " +
-              restartedSuperstep);
-    }
     try {
       this.hostname = conf.getLocalHostname();
     } catch (UnknownHostException e) {
@@ -339,8 +335,6 @@ public abstract class BspService<I extends WritableComparable,
     }
     this.hostnamePartitionId = hostname + "_" + getTaskPartition();
     this.graphPartitionerFactory = conf.createGraphPartitioner();
-
-    this.checkpointFrequency = conf.getCheckpointFrequency();
 
     basePath = ZooKeeperManager.getBasePath(conf) + BASE_DIR + "/" + jobId;
     getContext().getCounter(GiraphConstants.ZOOKEEPER_BASE_PATH_COUNTER_GROUP,
@@ -360,13 +354,14 @@ public abstract class BspService<I extends WritableComparable,
     cleanedUpPath = basePath + CLEANED_UP_DIR;
 
     String restartJobId = RESTART_JOB_ID.get(conf);
+
     savedCheckpointBasePath =
-        CHECKPOINT_DIRECTORY.getWithDefault(getConfiguration(),
-            CHECKPOINT_DIRECTORY.getDefaultValue() + "/" +
-                (restartJobId == null ? getJobId() : restartJobId));
-    checkpointBasePath =
-        CHECKPOINT_DIRECTORY.getWithDefault(getConfiguration(),
-            CHECKPOINT_DIRECTORY.getDefaultValue() + "/" + getJobId());
+        CheckpointingUtils.getCheckpointBasePath(getConfiguration(),
+            restartJobId == null ? getJobId() : restartJobId);
+
+    checkpointBasePath = CheckpointingUtils.
+        getCheckpointBasePath(getConfiguration(), getJobId());
+
     masterElectionPath = basePath + MASTER_ELECTION_DIR;
     myProgressPath = basePath + WORKER_PROGRESSES + "/" + taskPartition;
     String serverPortList = conf.getZookeeperList();
@@ -392,6 +387,24 @@ public abstract class BspService<I extends WritableComparable,
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
+
+    //Trying to restart from the latest superstep
+    if (restartJobId != null &&
+        restartedSuperstep == UNSET_SUPERSTEP) {
+      try {
+        restartedSuperstep = getLastCheckpointedSuperstep();
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    }
+    this.cachedSuperstep = restartedSuperstep;
+    if ((restartedSuperstep != UNSET_SUPERSTEP) &&
+        (restartedSuperstep < 0)) {
+      throw new IllegalArgumentException(
+          "BspService: Invalid superstep to restart - " +
+              restartedSuperstep);
+    }
+
   }
 
   /**
@@ -640,28 +653,6 @@ public abstract class BspService<I extends WritableComparable,
           "setRestartedSuperstep: Bad argument " + superstep);
     }
     restartedSuperstep = superstep;
-  }
-
-  /**
-   * Should checkpoint on this superstep?  If checkpointing, always
-   * checkpoint the first user superstep.  If restarting, the first
-   * checkpoint is after the frequency has been met.
-   *
-   * @param superstep Decide if checkpointing no this superstep
-   * @return True if this superstep should be checkpointed, false otherwise
-   */
-  public final boolean checkpointFrequencyMet(long superstep) {
-    if (checkpointFrequency == 0) {
-      return false;
-    }
-    long firstCheckpoint = INPUT_SUPERSTEP + 1;
-    if (getRestartedSuperstep() != UNSET_SUPERSTEP) {
-      firstCheckpoint = getRestartedSuperstep() + checkpointFrequency;
-    }
-    if (superstep < firstCheckpoint) {
-      return false;
-    }
-    return ((superstep - firstCheckpoint) % checkpointFrequency) == 0;
   }
 
   /**
@@ -1241,4 +1232,41 @@ public abstract class BspService<I extends WritableComparable,
     }
     return eventProcessed;
   }
+
+  /**
+   * Get the last saved superstep.
+   *
+   * @return Last good superstep number
+   * @throws IOException
+   */
+  protected long getLastCheckpointedSuperstep() throws IOException {
+    FileStatus[] fileStatusArray =
+        getFs().listStatus(new Path(savedCheckpointBasePath),
+            new FinalizedCheckpointPathFilter());
+    if (fileStatusArray == null) {
+      return -1;
+    }
+    Arrays.sort(fileStatusArray);
+    long lastCheckpointedSuperstep = getCheckpoint(
+        fileStatusArray[fileStatusArray.length - 1].getPath());
+    if (LOG.isInfoEnabled()) {
+      LOG.info("getLastGoodCheckpoint: Found last good checkpoint " +
+          lastCheckpointedSuperstep + " from " +
+          fileStatusArray[fileStatusArray.length - 1].
+              getPath().toString());
+    }
+    return lastCheckpointedSuperstep;
+  }
+
+  /**
+   * Only get the finalized checkpoint files
+   */
+  private static class FinalizedCheckpointPathFilter implements PathFilter {
+    @Override
+    public boolean accept(Path path) {
+      return path.getName().endsWith(BspService.CHECKPOINT_FINALIZED_POSTFIX);
+    }
+
+  }
+
 }

@@ -21,6 +21,7 @@ package org.apache.giraph.bsp;
 import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.comm.WorkerClient;
 import org.apache.giraph.graph.FinishedSuperstepStats;
+import org.apache.giraph.graph.GlobalStats;
 import org.apache.giraph.graph.GraphTaskManager;
 import org.apache.giraph.graph.VertexEdgeCount;
 import org.apache.giraph.io.superstep_output.SuperstepOutput;
@@ -237,4 +238,11 @@ public interface CentralizedServiceWorker<I extends WritableComparable,
    */
   void cleanup(FinishedSuperstepStats finishedSuperstepStats)
     throws IOException, InterruptedException;
+
+  /**
+   * Loads Global stats from zookeeper.
+   * @return global stats stored in zookeeper for
+   * previous superstep.
+   */
+  GlobalStats getGlobalStats();
 }

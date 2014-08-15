@@ -676,4 +676,67 @@ public class WritableUtils {
       return null;
     }
   }
+
+  /**
+   * Writes a list of Writable objects into output stream.
+   * This method is trying to optimize space occupied by class information only
+   * storing class object if it is different from the previous one
+   * as in most cases arrays tend to have objects of the same type inside.
+   * @param list serialized object
+   * @param output the output stream
+   * @throws IOException
+   */
+  public static void writeList(List<Writable> list, DataOutput output)
+    throws IOException {
+    output.writeInt(list.size());
+    Class<? extends Writable> clazz = null;
+    for (Writable element : list) {
+      output.writeBoolean(element == null);
+      if (element != null) {
+        if (element.getClass() != clazz) {
+          clazz = element.getClass();
+          output.writeBoolean(true);
+          writeClass(clazz, output);
+        } else {
+          output.writeBoolean(false);
+        }
+        element.write(output);
+      }
+    }
+  }
+
+  /**
+   * Reads list of Writable objects from data input stream.
+   * Input stream should have class information along with object data.
+   * @param input input stream
+   * @return deserialized list
+   * @throws IOException
+   */
+  public static List<Writable> readList(DataInput input) throws IOException {
+    try {
+
+      int size = input.readInt();
+      List<Writable> res = new ArrayList<>(size);
+      Class<? extends Writable> clazz = null;
+      for (int i = 0; i < size; i++) {
+        boolean isNull = input.readBoolean();
+        if (isNull) {
+          res.add(null);
+        } else {
+          boolean hasClassInfo = input.readBoolean();
+          if (hasClassInfo) {
+            clazz = readClass(input);
+          }
+          Writable element = clazz.newInstance();
+          element.readFields(input);
+          res.add(element);
+        }
+      }
+      return res;
+
+    } catch (InstantiationException | IllegalAccessException e) {
+      throw new IllegalStateException("unable to instantiate object", e);
+    }
+  }
+
 }

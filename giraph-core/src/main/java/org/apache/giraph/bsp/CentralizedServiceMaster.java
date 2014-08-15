@@ -175,7 +175,9 @@ public interface CentralizedServiceMaster<I extends WritableComparable,
    *
    * @throws IOException
    * @throws InterruptedException
+   * @param superstepState what was the state
+   *                       of the last complete superstep?
    */
-  void cleanup()
+  void cleanup(SuperstepState superstepState)
     throws IOException, InterruptedException;
 }

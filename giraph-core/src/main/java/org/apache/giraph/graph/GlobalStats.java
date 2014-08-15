@@ -22,6 +22,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.giraph.bsp.CheckpointStatus;
 import org.apache.giraph.partition.PartitionStats;
 import org.apache.hadoop.io.Writable;
 
@@ -41,6 +42,12 @@ public class GlobalStats implements Writable {
   private long messageBytesCount = 0;
   /** Whether the computation should be halted */
   private boolean haltComputation = false;
+  /**
+   * Master's decision on whether we should checkpoint and
+   * what to do next.
+   */
+  private CheckpointStatus checkpointStatus =
+      CheckpointStatus.NONE;
 
   /**
    * Add the stats of a partition to the global stats.
@@ -81,6 +88,14 @@ public class GlobalStats implements Writable {
     haltComputation = value;
   }
 
+  public CheckpointStatus getCheckpointStatus() {
+    return checkpointStatus;
+  }
+
+  public void setCheckpointStatus(CheckpointStatus checkpointStatus) {
+    this.checkpointStatus = checkpointStatus;
+  }
+
   /**
    * Add messages to the global stats.
    *
@@ -107,6 +122,11 @@ public class GlobalStats implements Writable {
     messageCount = input.readLong();
     messageBytesCount = input.readLong();
     haltComputation = input.readBoolean();
+    if (input.readBoolean()) {
+      checkpointStatus = CheckpointStatus.values()[input.readInt()];
+    } else {
+      checkpointStatus = null;
+    }
   }
 
   @Override
@@ -117,6 +137,10 @@ public class GlobalStats implements Writable {
     output.writeLong(messageCount);
     output.writeLong(messageBytesCount);
     output.writeBoolean(haltComputation);
+    output.writeBoolean(checkpointStatus != null);
+    if (checkpointStatus != null) {
+      output.writeInt(checkpointStatus.ordinal());
+    }
   }
 
   @Override
@@ -124,6 +148,7 @@ public class GlobalStats implements Writable {
     return "(vtx=" + vertexCount + ",finVtx=" +
         finishedVertexCount + ",edges=" + edgeCount + ",msgCount=" +
         messageCount + ",msgBytesCount=" +
-          messageBytesCount + ",haltComputation=" + haltComputation + ")";
+          messageBytesCount + ",haltComputation=" + haltComputation +
+        ", checkpointStatus=" + checkpointStatus + ')';
   }
 }

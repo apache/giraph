@@ -21,6 +21,7 @@ package org.apache.giraph.worker;
 import org.apache.giraph.bsp.ApplicationState;
 import org.apache.giraph.bsp.BspService;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
+import org.apache.giraph.bsp.CheckpointStatus;
 import org.apache.giraph.comm.ServerData;
 import org.apache.giraph.comm.WorkerClient;
 import org.apache.giraph.comm.WorkerClientRequestProcessor;
@@ -540,7 +541,8 @@ public class BspServiceWorker<I extends WritableComparable,
     // 6. Wait for superstep INPUT_SUPERSTEP to complete.
     if (getRestartedSuperstep() != UNSET_SUPERSTEP) {
       setCachedSuperstep(getRestartedSuperstep());
-      return new FinishedSuperstepStats(0, false, 0, 0, true);
+      return new FinishedSuperstepStats(0, false, 0, 0, true,
+          CheckpointStatus.NONE);
     }
 
     JSONObject jobState = getJobState();
@@ -557,7 +559,8 @@ public class BspServiceWorker<I extends WritableComparable,
                 getApplicationAttempt());
           }
           setRestartedSuperstep(getSuperstep());
-          return new FinishedSuperstepStats(0, false, 0, 0, true);
+          return new FinishedSuperstepStats(0, false, 0, 0, true,
+              CheckpointStatus.NONE);
         }
       } catch (JSONException e) {
         throw new RuntimeException(
@@ -946,7 +949,8 @@ public class BspServiceWorker<I extends WritableComparable,
         globalStats.getHaltComputation(),
         globalStats.getVertexCount(),
         globalStats.getEdgeCount(),
-        false);
+        false,
+        globalStats.getCheckpointStatus());
   }
 
   /**
@@ -1314,8 +1318,11 @@ public class BspServiceWorker<I extends WritableComparable,
     throws IOException, InterruptedException {
     workerClient.closeConnections();
     setCachedSuperstep(getSuperstep() - 1);
-    saveVertices(finishedSuperstepStats.getLocalVertexCount());
-    saveEdges();
+    if (finishedSuperstepStats.getCheckpointStatus() !=
+        CheckpointStatus.CHECKPOINT_AND_HALT) {
+      saveVertices(finishedSuperstepStats.getLocalVertexCount());
+      saveEdges();
+    }
     WorkerProgress.get().finishStoring();
     if (workerProgressWriter != null) {
       workerProgressWriter.stop();
@@ -1414,6 +1421,10 @@ public class BspServiceWorker<I extends WritableComparable,
 
     }
 
+    List<Writable> w2wMessages =
+        getServerData().getCurrentWorkerToWorkerMessages();
+    WritableUtils.writeList(w2wMessages, checkpointOutputStream);
+
     checkpointOutputStream.close();
 
     getFs().createNewFile(validFilePath);
@@ -1488,9 +1499,9 @@ public class BspServiceWorker<I extends WritableComparable,
 
     final CompressionCodec codec =
         new CompressionCodecFactory(getConfiguration())
-            .getCodecByClassName(
+            .getCodec(new Path(
                 GiraphConstants.CHECKPOINT_COMPRESSION_CODEC
-                    .get(getConfiguration()));
+                    .get(getConfiguration())));
 
     long t0 = System.currentTimeMillis();
 
@@ -1559,9 +1570,9 @@ public class BspServiceWorker<I extends WritableComparable,
 
     final CompressionCodec codec =
         new CompressionCodecFactory(getConfiguration())
-            .getCodecByClassName(
+            .getCodec(new Path(
                 GiraphConstants.CHECKPOINT_COMPRESSION_CODEC
-                    .get(getConfiguration()));
+                    .get(getConfiguration())));
 
     long t0 = System.currentTimeMillis();
 
@@ -1660,6 +1671,10 @@ public class BspServiceWorker<I extends WritableComparable,
         getServerData().getCurrentMessageStore().readFieldsForPartition(
             checkpointStream, partitionId);
       }
+
+      List<Writable> w2wMessages = WritableUtils.readList(checkpointStream);
+      getServerData().getCurrentWorkerToWorkerMessages().addAll(w2wMessages);
+
       checkpointStream.close();
 
       if (LOG.isInfoEnabled()) {
@@ -1919,5 +1934,19 @@ else[HADOOP_NON_SECURE]*/
   @Override
   public SuperstepOutput<I, V, E> getSuperstepOutput() {
     return superstepOutput;
+  }
+
+  @Override
+  public GlobalStats getGlobalStats() {
+    GlobalStats globalStats = new GlobalStats();
+    if (getSuperstep() > Math.max(INPUT_SUPERSTEP, getRestartedSuperstep())) {
+      String superstepFinishedNode =
+          getSuperstepFinishedPath(getApplicationAttempt(),
+              getSuperstep() - 1);
+      WritableUtils.readFieldsFromZnode(
+          getZkExt(), superstepFinishedNode, false, null,
+          globalStats);
+    }
+    return globalStats;
   }
 }

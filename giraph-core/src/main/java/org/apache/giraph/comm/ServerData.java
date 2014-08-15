@@ -269,4 +269,14 @@ public class ServerData<I extends WritableComparable,
   public void addIncomingWorkerToWorkerMessage(Writable message) {
     incomingWorkerToWorkerMessages.add(message);
   }
+
+
+  /**
+   * Get worker to worker messages received in previous superstep.
+   * @return list of current worker to worker messages.
+   */
+  public List<Writable> getCurrentWorkerToWorkerMessages() {
+    return currentWorkerToWorkerMessages;
+  }
+
 }

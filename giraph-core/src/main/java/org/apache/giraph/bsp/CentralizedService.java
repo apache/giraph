@@ -51,15 +51,6 @@ public interface CentralizedService<I extends WritableComparable,
   long getRestartedSuperstep();
 
   /**
-   * Given a superstep, should it be checkpointed based on the
-   * checkpoint frequency?
-   *
-   * @param superstep superstep to check against frequency
-   * @return true if checkpoint frequency met or superstep is 1.
-   */
-  boolean checkpointFrequencyMet(long superstep);
-
-  /**
    * Get list of workers
    *
    * @return List of workers

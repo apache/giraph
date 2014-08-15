@@ -24,6 +24,7 @@ import org.apache.commons.io.FilenameUtils;
 import org.apache.giraph.bsp.ApplicationState;
 import org.apache.giraph.bsp.BspInputFormat;
 import org.apache.giraph.bsp.CentralizedServiceMaster;
+import org.apache.giraph.bsp.CheckpointStatus;
 import org.apache.giraph.bsp.SuperstepState;
 import org.apache.giraph.comm.MasterClient;
 import org.apache.giraph.comm.MasterServer;
@@ -56,6 +57,7 @@ import org.apache.giraph.metrics.GiraphTimerContext;
 import org.apache.giraph.metrics.ResetSuperstepMetricsObserver;
 import org.apache.giraph.metrics.SuperstepMetricsRegistry;
 import org.apache.giraph.metrics.WorkerSuperstepMetrics;
+import org.apache.giraph.utils.CheckpointingUtils;
 import org.apache.giraph.utils.JMapHistoDumper;
 import org.apache.giraph.utils.ReactiveJMapHistoDumper;
 import org.apache.giraph.utils.ProgressableUtils;
@@ -67,10 +69,8 @@ import org.apache.giraph.worker.WorkerInfo;
 import org.apache.giraph.zk.BspEvent;
 import org.apache.giraph.zk.PredicateLock;
 import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -99,7 +99,6 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
@@ -189,6 +188,11 @@ public class BspServiceMaster<I extends WritableComparable,
   /** MasterCompute time */
   private GiraphTimer masterComputeTimer;
 
+  /** Checkpoint frequency */
+  private final int checkpointFrequency;
+  /** Current checkpoint status */
+  private CheckpointStatus checkpointStatus;
+
   /**
    * Constructor for setting up the master.
    *
@@ -223,6 +227,9 @@ public class BspServiceMaster<I extends WritableComparable,
       conf.addMasterObserverClass(ReactiveJMapHistoDumper.class);
     }
     observers = conf.createMasterObservers();
+
+    this.checkpointFrequency = conf.getCheckpointFrequency();
+    this.checkpointStatus = CheckpointStatus.NONE;
 
     GiraphMetrics.get().addSuperstepResetObserver(this);
     GiraphStats.init((Mapper.Context) context);
@@ -365,7 +372,11 @@ public class BspServiceMaster<I extends WritableComparable,
         @SuppressWarnings("deprecation")
         JobID jobId = JobID.forName(getJobId());
         RunningJob job = jobClient.getJob(jobId);
-        job.killJob();
+        if (job != null) {
+          job.killJob();
+        } else {
+          LOG.error("Jon not found for jobId=" + getJobId());
+        }
       }
     } catch (IOException ioe) {
       throw new RuntimeException(ioe);
@@ -1196,11 +1207,11 @@ public class BspServiceMaster<I extends WritableComparable,
    *
    * @param chosenWorkerInfoHealthPath Path to the healthy workers in ZooKeeper
    * @param chosenWorkerInfoList List of the healthy workers
-   * @return true if they are all alive, false otherwise.
+   * @return a list of dead workers. Empty list if all workers are alive.
    * @throws InterruptedException
    * @throws KeeperException
    */
-  private boolean superstepChosenWorkerAlive(
+  private Collection<WorkerInfo> superstepChosenWorkerAlive(
     String chosenWorkerInfoHealthPath,
     List<WorkerInfo> chosenWorkerInfoList)
     throws KeeperException, InterruptedException {
@@ -1208,16 +1219,13 @@ public class BspServiceMaster<I extends WritableComparable,
         getWorkerInfosFromPath(chosenWorkerInfoHealthPath, false);
     Set<WorkerInfo> chosenWorkerInfoHealthySet =
         new HashSet<WorkerInfo>(chosenWorkerInfoHealthyList);
-    boolean allChosenWorkersHealthy = true;
+    List<WorkerInfo> deadWorkers = new ArrayList<>();
     for (WorkerInfo chosenWorkerInfo : chosenWorkerInfoList) {
       if (!chosenWorkerInfoHealthySet.contains(chosenWorkerInfo)) {
-        allChosenWorkersHealthy = false;
-        LOG.error("superstepChosenWorkerAlive: Missing chosen " +
-            "worker " + chosenWorkerInfo +
-            " on superstep " + getSuperstep());
+        deadWorkers.add(chosenWorkerInfo);
       }
     }
-    return allChosenWorkersHealthy;
+    return deadWorkers;
   }
 
   @Override
@@ -1257,37 +1265,13 @@ public class BspServiceMaster<I extends WritableComparable,
     }
   }
 
-  /**
-   * Only get the finalized checkpoint files
-   */
-  public static class FinalizedCheckpointPathFilter implements PathFilter {
-    @Override
-    public boolean accept(Path path) {
-      return path.getName().endsWith(BspService.CHECKPOINT_FINALIZED_POSTFIX);
-    }
-  }
-
   @Override
   public long getLastGoodCheckpoint() throws IOException {
     // Find the last good checkpoint if none have been written to the
     // knowledge of this master
     if (lastCheckpointedSuperstep == -1) {
       try {
-        FileStatus[] fileStatusArray =
-            getFs().listStatus(new Path(savedCheckpointBasePath),
-                new FinalizedCheckpointPathFilter());
-        if (fileStatusArray == null) {
-          return -1;
-        }
-        Arrays.sort(fileStatusArray);
-        lastCheckpointedSuperstep = getCheckpoint(
-            fileStatusArray[fileStatusArray.length - 1].getPath());
-        if (LOG.isInfoEnabled()) {
-          LOG.info("getLastGoodCheckpoint: Found last good checkpoint " +
-              lastCheckpointedSuperstep + " from " +
-              fileStatusArray[fileStatusArray.length - 1].
-                  getPath().toString());
-        }
+        lastCheckpointedSuperstep = getLastCheckpointedSuperstep();
       } catch (IOException e) {
         LOG.fatal("getLastGoodCheckpoint: No last good checkpoints can be " +
             "found, killing the job.", e);
@@ -1306,12 +1290,15 @@ public class BspServiceMaster<I extends WritableComparable,
    *        hostname and id
    * @param workerInfoList List of the workers to wait for
    * @param event Event to wait on for a chance to be done.
+   * @param ignoreDeath In case if worker died after making it through
+   *                    barrier, we will ignore death if set to true.
    * @return True if barrier was successful, false if there was a worker
    *         failure
    */
   private boolean barrierOnWorkerList(String finishedWorkerPath,
       List<WorkerInfo> workerInfoList,
-      BspEvent event) {
+      BspEvent event,
+      boolean ignoreDeath) {
     try {
       getZkExt().createOnceExt(finishedWorkerPath,
           null,
@@ -1339,6 +1326,7 @@ public class BspServiceMaster<I extends WritableComparable,
     final int defaultTaskTimeoutMsec = 10 * 60 * 1000;  // from TaskTracker
     final int taskTimeoutMsec = getContext().getConfiguration().getInt(
         "mapred.task.timeout", defaultTaskTimeoutMsec);
+    List<WorkerInfo> deadWorkers = new ArrayList<>();
     while (true) {
       try {
         finishedHostnameIdList =
@@ -1389,6 +1377,15 @@ public class BspServiceMaster<I extends WritableComparable,
         break;
       }
 
+      for (WorkerInfo deadWorker : deadWorkers) {
+        if (!finishedHostnameIdList.contains(deadWorker.getHostnameId())) {
+          LOG.error("barrierOnWorkerList: no results arived from " +
+              "worker that was pronounced dead: " + deadWorker +
+              " on superstep " + getSuperstep());
+          return false;
+        }
+      }
+
       // Wait for a signal or timeout
       event.waitMsecs(taskTimeoutMsec / 2);
       event.reset();
@@ -1396,9 +1393,13 @@ public class BspServiceMaster<I extends WritableComparable,
 
       // Did a worker die?
       try {
-        if (!superstepChosenWorkerAlive(
+        deadWorkers.addAll(superstepChosenWorkerAlive(
                 workerInfoHealthyPath,
-                workerInfoList)) {
+                workerInfoList));
+        if (!ignoreDeath && deadWorkers.size() > 0) {
+          LOG.error("barrierOnWorkerList: Missing chosen " +
+              "workers " + deadWorkers +
+              " on superstep " + getSuperstep());
           return false;
         }
       } catch (KeeperException e) {
@@ -1462,7 +1463,8 @@ public class BspServiceMaster<I extends WritableComparable,
     String logPrefix = "coordinate" + inputSplitsType + "InputSplits";
     if (!barrierOnWorkerList(inputSplitPaths.getDonePath(),
         chosenWorkerInfoList,
-        inputSplitEvents.getDoneStateChanged())) {
+        inputSplitEvents.getDoneStateChanged(),
+        false)) {
       throw new IllegalStateException(logPrefix + ": Worker failed during " +
           "input split (currently not supported)");
     }
@@ -1589,14 +1591,15 @@ public class BspServiceMaster<I extends WritableComparable,
 
     // Finalize the valid checkpoint file prefixes and possibly
     // the aggregators.
-    if (checkpointFrequencyMet(getSuperstep())) {
+    if (checkpointStatus != CheckpointStatus.NONE) {
       String workerWroteCheckpointPath =
           getWorkerWroteCheckpointPath(getApplicationAttempt(),
               getSuperstep());
       // first wait for all the workers to write their checkpoint data
       if (!barrierOnWorkerList(workerWroteCheckpointPath,
           chosenWorkerInfoList,
-          getWorkerWroteCheckpointEvent())) {
+          getWorkerWroteCheckpointEvent(),
+          checkpointStatus == CheckpointStatus.CHECKPOINT_AND_HALT)) {
         return SuperstepState.WORKER_FAILURE;
       }
       try {
@@ -1605,6 +1608,9 @@ public class BspServiceMaster<I extends WritableComparable,
         throw new IllegalStateException(
             "coordinateSuperstep: IOException on finalizing checkpoint",
             e);
+      }
+      if (checkpointStatus == CheckpointStatus.CHECKPOINT_AND_HALT) {
+        return SuperstepState.CHECKPOINT_AND_HALT;
       }
     }
 
@@ -1630,7 +1636,8 @@ public class BspServiceMaster<I extends WritableComparable,
         getWorkerFinishedPath(getApplicationAttempt(), getSuperstep());
     if (!barrierOnWorkerList(finishedWorkerPath,
         chosenWorkerInfoList,
-        getSuperstepStateChangedEvent())) {
+        getSuperstepStateChangedEvent(),
+        false)) {
       return SuperstepState.WORKER_FAILURE;
     }
 
@@ -1677,10 +1684,14 @@ public class BspServiceMaster<I extends WritableComparable,
     }
     getConfiguration().updateSuperstepClasses(superstepClasses);
 
+    //Signal workers that we want to checkpoint
+    checkpointStatus = getCheckpointStatus(getSuperstep() + 1);
+    globalStats.setCheckpointStatus(checkpointStatus);
     // Let everyone know the aggregated application state through the
     // superstep finishing znode.
     String superstepFinishedNode =
         getSuperstepFinishedPath(getApplicationAttempt(), getSuperstep());
+
     WritableUtils.writeToZnode(
         getZkExt(), superstepFinishedNode, -1, globalStats, superstepClasses);
     updateCounters(globalStats);
@@ -1700,6 +1711,43 @@ public class BspServiceMaster<I extends WritableComparable,
     aggregatorHandler.writeAggregators(getSuperstep(), superstepState);
 
     return superstepState;
+  }
+
+  /**
+   * Should checkpoint on this superstep?  If checkpointing, always
+   * checkpoint the first user superstep.  If restarting, the first
+   * checkpoint is after the frequency has been met.
+   *
+   * @param superstep Decide if checkpointing no this superstep
+   * @return True if this superstep should be checkpointed, false otherwise
+   */
+  private CheckpointStatus getCheckpointStatus(long superstep) {
+    try {
+      if (getZkExt().
+          exists(basePath + FORCE_CHECKPOINT_USER_FLAG, false) != null) {
+        return CheckpointStatus.CHECKPOINT_AND_HALT;
+      }
+    } catch (KeeperException e) {
+      throw new IllegalStateException(
+          "cleanupZooKeeper: Got KeeperException", e);
+    } catch (InterruptedException e) {
+      throw new IllegalStateException(
+          "cleanupZooKeeper: Got IllegalStateException", e);
+    }
+    if (checkpointFrequency == 0) {
+      return CheckpointStatus.NONE;
+    }
+    long firstCheckpoint = INPUT_SUPERSTEP + 1;
+    if (getRestartedSuperstep() != UNSET_SUPERSTEP) {
+      firstCheckpoint = getRestartedSuperstep() + checkpointFrequency;
+    }
+    if (superstep < firstCheckpoint) {
+      return CheckpointStatus.NONE;
+    }
+    if (((superstep - firstCheckpoint) % checkpointFrequency) == 0) {
+      return CheckpointStatus.CHECKPOINT;
+    }
+    return CheckpointStatus.NONE;
   }
 
   /**
@@ -1837,7 +1885,7 @@ public class BspServiceMaster<I extends WritableComparable,
   }
 
   @Override
-  public void cleanup() throws IOException {
+  public void cleanup(SuperstepState superstepState) throws IOException {
     ImmutableClassesGiraphConfiguration conf = getConfiguration();
 
     // All master processes should denote they are done by adding special
@@ -1872,7 +1920,8 @@ public class BspServiceMaster<I extends WritableComparable,
       getGraphTaskManager().setIsMaster(true);
       cleanUpZooKeeper();
       // If desired, cleanup the checkpoint directory
-      if (GiraphConstants.CLEANUP_CHECKPOINTS_AFTER_SUCCESS.get(conf)) {
+      if (superstepState == SuperstepState.ALL_SUPERSTEPS_DONE &&
+          GiraphConstants.CLEANUP_CHECKPOINTS_AFTER_SUCCESS.get(conf)) {
         boolean success =
             getFs().delete(new Path(checkpointBasePath), true);
         if (LOG.isInfoEnabled()) {
@@ -1881,6 +1930,12 @@ public class BspServiceMaster<I extends WritableComparable,
               success + " since the job " + getContext().getJobName() +
               " succeeded ");
         }
+      }
+      if (superstepState == SuperstepState.CHECKPOINT_AND_HALT) {
+        getFs().create(CheckpointingUtils.getCheckpointMarkPath(conf,
+            getJobId()), true);
+        failJob(new Exception("Checkpoint and halt requested. " +
+            "Killing this job."));
       }
       aggregatorHandler.close();
       masterClient.closeConnections();

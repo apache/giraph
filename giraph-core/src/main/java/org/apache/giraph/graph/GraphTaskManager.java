@@ -21,6 +21,7 @@ package org.apache.giraph.graph;
 import org.apache.giraph.bsp.BspService;
 import org.apache.giraph.bsp.CentralizedServiceMaster;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
+import org.apache.giraph.bsp.CheckpointStatus;
 import org.apache.giraph.comm.messages.MessageStore;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
@@ -120,7 +121,7 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
   private GraphFunctions graphFunctions = GraphFunctions.UNKNOWN;
   /** Superstep stats */
   private FinishedSuperstepStats finishedSuperstepStats =
-      new FinishedSuperstepStats(0, false, 0, 0, false);
+      new FinishedSuperstepStats(0, false, 0, 0, false, CheckpointStatus.NONE);
 
   // Per-Job Metrics
   /** Timer for WorkerContext#preApplication() */
@@ -281,7 +282,18 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
       context.progress();
       serviceWorker.exchangeVertexPartitions(masterAssignedPartitionOwners);
       context.progress();
-      graphState = checkSuperstepRestarted(superstep, graphState);
+      boolean hasBeenRestarted = checkSuperstepRestarted(superstep);
+
+      GlobalStats globalStats = serviceWorker.getGlobalStats();
+
+      if (hasBeenRestarted) {
+        graphState = new GraphState(superstep,
+            finishedSuperstepStats.getVertexCount(),
+            finishedSuperstepStats.getEdgeCount(),
+            context);
+      } else if (storeCheckpoint(globalStats.getCheckpointStatus())) {
+        break;
+      }
       prepareForSuperstep(graphState);
       context.progress();
       MessageStore<I, Writable> messageStore =
@@ -735,11 +747,9 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
   /**
    * Handle the event that this superstep is a restart of a failed one.
    * @param superstep current superstep
-   * @param graphState the BSP graph state
    * @return the graph state, updated if this is a restart superstep
    */
-  private GraphState checkSuperstepRestarted(long superstep,
-    GraphState graphState) throws IOException {
+  private boolean checkSuperstepRestarted(long superstep) throws IOException {
     // Might need to restart from another superstep
     // (manually or automatic), or store a checkpoint
     if (serviceWorker.getRestartedSuperstep() == superstep) {
@@ -750,15 +760,25 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
         serviceWorker.getRestartedSuperstep());
       finishedSuperstepStats = new FinishedSuperstepStats(0, false,
           vertexEdgeCount.getVertexCount(), vertexEdgeCount.getEdgeCount(),
-          false);
-      graphState = new GraphState(superstep,
-          finishedSuperstepStats.getVertexCount(),
-          finishedSuperstepStats.getEdgeCount(),
-          context);
-    } else if (serviceWorker.checkpointFrequencyMet(superstep)) {
+          false, CheckpointStatus.NONE);
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Check if it's time to checkpoint and actually does checkpointing
+   * if it is.
+   * @param checkpointStatus master's decision
+   * @return true if we need to stop computation after checkpoint
+   * @throws IOException
+   */
+  private boolean storeCheckpoint(CheckpointStatus checkpointStatus)
+    throws IOException {
+    if (checkpointStatus != CheckpointStatus.NONE) {
       serviceWorker.storeCheckpoint();
     }
-    return graphState;
+    return checkpointStatus == CheckpointStatus.CHECKPOINT_AND_HALT;
   }
 
   /**
