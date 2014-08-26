@@ -150,7 +150,7 @@ public class ScriptLoader {
    *
    * @param conf Configuration
    */
-  public static void loadScripts(Configuration conf) {
+  public static void loadScripts(Configuration conf) throws IOException {
     List<DeployedScript> deployedScripts = getScriptsToLoad(conf);
     if (deployedScripts == null) {
       return;
@@ -167,7 +167,7 @@ public class ScriptLoader {
    * @param deployedScript the deployed script
    */
   public static void loadScript(Configuration conf,
-      DeployedScript deployedScript) {
+      DeployedScript deployedScript) throws IOException {
     InputStream stream = openScriptInputStream(conf, deployedScript);
     switch (deployedScript.getLanguage()) {
     case JYTHON:
@@ -180,7 +180,7 @@ public class ScriptLoader {
     }
 
     LOADED_SCRIPTS.add(deployedScript);
-    Closeables.closeQuietly(stream);
+    Closeables.close(stream, true);
   }
 
   /**

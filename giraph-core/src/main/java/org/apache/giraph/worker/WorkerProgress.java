@@ -19,17 +19,9 @@
 package org.apache.giraph.worker;
 
 import org.apache.giraph.utils.MemoryUtils;
-import org.apache.giraph.utils.WritableUtils;
-import org.apache.giraph.zk.ZooKeeperExt;
-import org.apache.hadoop.io.Writable;
-import org.apache.log4j.Logger;
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.KeeperException;
-import org.apache.zookeeper.ZooDefs;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
+import com.facebook.swift.codec.ThriftField;
+import com.facebook.swift.codec.ThriftStruct;
 
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -38,9 +30,8 @@ import javax.annotation.concurrent.ThreadSafe;
  * ZooKeeper with {@link WorkerProgressWriter}.
  */
 @ThreadSafe
-public class WorkerProgress implements Writable {
-  /** Class logger */
-  private static final Logger LOG = Logger.getLogger(WorkerProgress.class);
+@ThriftStruct
+public class WorkerProgress {
   /** Singleton instance for everyone to use */
   private static final WorkerProgress INSTANCE = new WorkerProgress();
 
@@ -99,45 +90,6 @@ public class WorkerProgress implements Writable {
   }
 
   /**
-   * Write worker's progress to znode
-   *
-   * @param zk ZooKeeperExt
-   * @param myProgressPath Path to write the progress to
-   */
-  public static void writeToZnode(ZooKeeperExt zk, String myProgressPath) {
-    byte[] byteArray = WritableUtils.writeToByteArray(get());
-    try {
-      zk.createOrSetExt(myProgressPath,
-          byteArray,
-          ZooDefs.Ids.OPEN_ACL_UNSAFE,
-          CreateMode.PERSISTENT,
-          true,
-          -1);
-    } catch (KeeperException | InterruptedException e) {
-      if (LOG.isInfoEnabled()) {
-        LOG.info("writeToZnode: " + e.getClass().getName() +
-            " exception occurred", e);
-      }
-    }
-  }
-
-  public synchronized boolean isLoadingVerticesDone() {
-    return loadingVerticesDone;
-  }
-
-  public synchronized boolean isLoadingEdgesDone() {
-    return loadingEdgesDone;
-  }
-
-  public synchronized boolean isComputationDone() {
-    return computationDone;
-  }
-
-  public synchronized boolean isStoringDone() {
-    return storingDone;
-  }
-
-  /**
    * Add number of vertices loaded
    *
    * @param verticesLoaded How many vertices were loaded since the last
@@ -188,8 +140,8 @@ public class WorkerProgress implements Writable {
   /**
    * Notify this class that next computation superstep is starting
    *
-   * @param superstep Superstep which is starting
-   * @param verticesToCompute How many vertices are there to compute
+   * @param superstep           Superstep which is starting
+   * @param verticesToCompute   How many vertices are there to compute
    * @param partitionsToCompute How many partitions are there to compute
    */
   public synchronized void startSuperstep(long superstep,
@@ -221,7 +173,7 @@ public class WorkerProgress implements Writable {
   /**
    * Notify this class that worker is starting to store data
    *
-   * @param verticesToStore How many vertices should be stored
+   * @param verticesToStore   How many vertices should be stored
    * @param partitionsToStore How many partitions should be stored
    */
   public synchronized void startStoring(long verticesToStore,
@@ -260,10 +212,6 @@ public class WorkerProgress implements Writable {
     storingDone = true;
   }
 
-  public synchronized void setTaskId(int taskId) {
-    this.taskId = taskId;
-  }
-
   /**
    * Update memory info
    */
@@ -271,56 +219,99 @@ public class WorkerProgress implements Writable {
     freeMemoryMB = MemoryUtils.freeMemoryMB();
   }
 
+  @ThriftField(1)
   public synchronized long getCurrentSuperstep() {
     return currentSuperstep;
   }
 
+  @ThriftField(2)
   public synchronized long getVerticesLoaded() {
     return verticesLoaded;
   }
 
+  @ThriftField(3)
   public synchronized int getVertexInputSplitsLoaded() {
     return vertexInputSplitsLoaded;
   }
 
+  @ThriftField(4)
+  public synchronized boolean isLoadingVerticesDone() {
+    return loadingVerticesDone;
+  }
+
+  @ThriftField(5)
   public synchronized long getEdgesLoaded() {
     return edgesLoaded;
   }
 
+  @ThriftField(6)
   public synchronized int getEdgeInputSplitsLoaded() {
     return edgeInputSplitsLoaded;
   }
 
+  @ThriftField(7)
+  public synchronized boolean isLoadingEdgesDone() {
+    return loadingEdgesDone;
+  }
+
+  @ThriftField(8)
   public synchronized long getVerticesToCompute() {
     return verticesToCompute;
   }
 
+  @ThriftField(9)
   public synchronized long getVerticesComputed() {
     return verticesComputed;
   }
 
+  @ThriftField(10)
   public synchronized int getPartitionsToCompute() {
     return partitionsToCompute;
   }
 
+  @ThriftField(11)
   public synchronized int getPartitionsComputed() {
     return partitionsComputed;
   }
 
+  @ThriftField(12)
+  public synchronized boolean isComputationDone() {
+    return computationDone;
+  }
+
+  @ThriftField(13)
   public synchronized long getVerticesToStore() {
     return verticesToStore;
   }
 
+  @ThriftField(14)
   public synchronized long getVerticesStored() {
     return verticesStored;
   }
 
+  @ThriftField(15)
   public synchronized int getPartitionsToStore() {
     return partitionsToStore;
   }
 
+  @ThriftField(16)
   public synchronized int getPartitionsStored() {
     return partitionsStored;
+  }
+
+  @ThriftField(17)
+  public synchronized boolean isStoringDone() {
+    return storingDone;
+  }
+
+  @ThriftField(18)
+  public synchronized int getTaskId() {
+    return taskId;
+  }
+
+  @ThriftField(19)
+  public synchronized double getFreeMemoryMB() {
+    return freeMemoryMB;
   }
 
   public synchronized boolean isInputSuperstep() {
@@ -335,69 +326,98 @@ public class WorkerProgress implements Writable {
     return currentSuperstep == Long.MAX_VALUE;
   }
 
-  public synchronized int getTaskId() {
-    return taskId;
+  @ThriftField
+  public void setCurrentSuperstep(long currentSuperstep) {
+    this.currentSuperstep = currentSuperstep;
   }
 
-  public synchronized double getFreeMemoryMB() {
-    return freeMemoryMB;
+  @ThriftField
+  public void setVerticesLoaded(long verticesLoaded) {
+    this.verticesLoaded = verticesLoaded;
   }
 
-  @Override
-  public synchronized void write(DataOutput dataOutput) throws IOException {
-    dataOutput.writeLong(currentSuperstep);
-
-    dataOutput.writeLong(verticesLoaded);
-    dataOutput.writeInt(vertexInputSplitsLoaded);
-    dataOutput.writeBoolean(loadingVerticesDone);
-    dataOutput.writeLong(edgesLoaded);
-    dataOutput.writeInt(edgeInputSplitsLoaded);
-    dataOutput.writeBoolean(loadingEdgesDone);
-
-    dataOutput.writeLong(verticesToCompute);
-    dataOutput.writeLong(verticesComputed);
-    dataOutput.writeInt(partitionsToCompute);
-    dataOutput.writeInt(partitionsComputed);
-
-    dataOutput.writeBoolean(computationDone);
-
-    dataOutput.writeLong(verticesToStore);
-    dataOutput.writeLong(verticesStored);
-    dataOutput.writeInt(partitionsToStore);
-    dataOutput.writeInt(partitionsStored);
-    dataOutput.writeBoolean(storingDone);
-
-    dataOutput.writeInt(taskId);
-
-    dataOutput.writeDouble(freeMemoryMB);
+  @ThriftField
+  public void setVertexInputSplitsLoaded(int vertexInputSplitsLoaded) {
+    this.vertexInputSplitsLoaded = vertexInputSplitsLoaded;
   }
 
-  @Override
-  public synchronized void readFields(DataInput dataInput) throws IOException {
-    currentSuperstep = dataInput.readLong();
+  @ThriftField
+  public void setLoadingVerticesDone(boolean loadingVerticesDone) {
+    this.loadingVerticesDone = loadingVerticesDone;
+  }
 
-    verticesLoaded = dataInput.readLong();
-    vertexInputSplitsLoaded = dataInput.readInt();
-    loadingVerticesDone = dataInput.readBoolean();
-    edgesLoaded = dataInput.readLong();
-    edgeInputSplitsLoaded = dataInput.readInt();
-    loadingEdgesDone = dataInput.readBoolean();
+  @ThriftField
+  public void setEdgesLoaded(long edgesLoaded) {
+    this.edgesLoaded = edgesLoaded;
+  }
 
-    verticesToCompute = dataInput.readLong();
-    verticesComputed = dataInput.readLong();
-    partitionsToCompute = dataInput.readInt();
-    partitionsComputed = dataInput.readInt();
+  @ThriftField
+  public void setEdgeInputSplitsLoaded(int edgeInputSplitsLoaded) {
+    this.edgeInputSplitsLoaded = edgeInputSplitsLoaded;
+  }
 
-    computationDone = dataInput.readBoolean();
+  @ThriftField
+  public void setLoadingEdgesDone(boolean loadingEdgesDone) {
+    this.loadingEdgesDone = loadingEdgesDone;
+  }
 
-    verticesToStore = dataInput.readLong();
-    verticesStored = dataInput.readLong();
-    partitionsToStore = dataInput.readInt();
-    partitionsStored = dataInput.readInt();
-    storingDone = dataInput.readBoolean();
+  @ThriftField
+  public void setVerticesToCompute(long verticesToCompute) {
+    this.verticesToCompute = verticesToCompute;
+  }
 
-    taskId = dataInput.readInt();
+  @ThriftField
+  public void setVerticesComputed(long verticesComputed) {
+    this.verticesComputed = verticesComputed;
+  }
 
-    freeMemoryMB = dataInput.readDouble();
+  @ThriftField
+  public void setPartitionsToCompute(int partitionsToCompute) {
+    this.partitionsToCompute = partitionsToCompute;
+  }
+
+  @ThriftField
+  public void setPartitionsComputed(int partitionsComputed) {
+    this.partitionsComputed = partitionsComputed;
+  }
+
+  @ThriftField
+  public void setComputationDone(boolean computationDone) {
+    this.computationDone = computationDone;
+  }
+
+  @ThriftField
+  public void setVerticesToStore(long verticesToStore) {
+    this.verticesToStore = verticesToStore;
+  }
+
+  @ThriftField
+  public void setVerticesStored(long verticesStored) {
+    this.verticesStored = verticesStored;
+  }
+
+  @ThriftField
+  public void setPartitionsToStore(int partitionsToStore) {
+    this.partitionsToStore = partitionsToStore;
+  }
+
+  @ThriftField
+  public void setPartitionsStored(int partitionsStored) {
+    this.partitionsStored = partitionsStored;
+  }
+
+  @ThriftField
+  public void setStoringDone(boolean storingDone) {
+    this.storingDone = storingDone;
+  }
+
+  @ThriftField
+  public void setFreeMemoryMB(double freeMemoryMB) {
+    this.freeMemoryMB = freeMemoryMB;
+  }
+
+  @ThriftField
+  public synchronized void setTaskId(int taskId) {
+    this.taskId = taskId;
   }
 }

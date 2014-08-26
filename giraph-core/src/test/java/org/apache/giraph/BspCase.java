@@ -268,8 +268,8 @@ public class BspCase implements Watcher {
           numResults++;
         }
       } finally {
-        Closeables.closeQuietly(in);
-        Closeables.closeQuietly(reader);
+        Closeables.close(in, true);
+        Closeables.close(reader, true);
       }
     }
     return numResults;

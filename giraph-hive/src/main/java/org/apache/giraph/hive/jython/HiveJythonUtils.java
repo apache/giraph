@@ -176,7 +176,7 @@ public class HiveJythonUtils {
       jythonJob = parseJythonStreams(interpreter, streams);
     } finally {
       for (InputStream stream : streams) {
-        Closeables.closeQuietly(stream);
+        Closeables.close(stream, true);
       }
     }
     return jythonJob;

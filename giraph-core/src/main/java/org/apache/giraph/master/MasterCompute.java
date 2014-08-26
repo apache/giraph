@@ -19,6 +19,7 @@
 package org.apache.giraph.master;
 
 import org.apache.giraph.aggregators.Aggregator;
+import org.apache.giraph.bsp.CentralizedServiceMaster;
 import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
 import org.apache.giraph.graph.Computation;
@@ -46,7 +47,7 @@ public abstract class MasterCompute
   /** If true, do not do anymore computation on this vertex. */
   private boolean halt = false;
   /** Master aggregator usage */
-  private MasterAggregatorUsage masterAggregatorUsage;
+  private CentralizedServiceMaster serviceMaster;
   /** Graph state */
   private GraphState graphState;
   /**
@@ -192,14 +193,16 @@ public abstract class MasterCompute
   public final <A extends Writable> boolean registerAggregator(
     String name, Class<? extends Aggregator<A>> aggregatorClass)
     throws InstantiationException, IllegalAccessException {
-    return masterAggregatorUsage.registerAggregator(name, aggregatorClass);
+    return serviceMaster.getAggregatorHandler().registerAggregator(
+        name, aggregatorClass);
   }
 
   @Override
   public final <A extends Writable> boolean registerAggregator(
     String name, WritableFactory<? extends Aggregator<A>> aggregator)
     throws InstantiationException, IllegalAccessException {
-    return masterAggregatorUsage.registerAggregator(name, aggregator);
+    return serviceMaster.getAggregatorHandler().registerAggregator(
+        name, aggregator);
   }
 
   @Override
@@ -207,28 +210,37 @@ public abstract class MasterCompute
       String name,
       Class<? extends Aggregator<A>> aggregatorClass) throws
       InstantiationException, IllegalAccessException {
-    return masterAggregatorUsage.registerPersistentAggregator(
+    return serviceMaster.getAggregatorHandler().registerPersistentAggregator(
         name, aggregatorClass);
   }
 
   @Override
   public final <A extends Writable> A getAggregatedValue(String name) {
-    return masterAggregatorUsage.<A>getAggregatedValue(name);
+    return serviceMaster.getAggregatorHandler().<A>getAggregatedValue(name);
   }
 
   @Override
   public final <A extends Writable> void setAggregatedValue(
       String name, A value) {
-    masterAggregatorUsage.setAggregatedValue(name, value);
+    serviceMaster.getAggregatorHandler().setAggregatedValue(name, value);
+  }
+
+  /**
+   * Call this to log a line to command line of the job. Use in moderation -
+   * it's a synchronous call to Job client
+   *
+   * @param line Line to print
+   */
+  public void logToCommandLine(String line) {
+    serviceMaster.getJobProgressTracker().logInfo(line);
   }
 
   final void setGraphState(GraphState graphState) {
     this.graphState = graphState;
   }
 
-  final void setMasterAggregatorUsage(MasterAggregatorUsage
-      masterAggregatorUsage) {
-    this.masterAggregatorUsage = masterAggregatorUsage;
+  final void setMasterService(CentralizedServiceMaster serviceMaster) {
+    this.serviceMaster = serviceMaster;
   }
 
   final void setSuperstepClasses(SuperstepClasses superstepClasses) {

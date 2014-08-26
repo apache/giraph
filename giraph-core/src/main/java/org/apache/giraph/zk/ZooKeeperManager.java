@@ -619,13 +619,13 @@ public class ZooKeeperManager {
                 myidWriter = new FileWriter(zkDir + "/myid");
                 myidWriter.write(i + "\n");
               } finally {
-                Closeables.closeQuietly(myidWriter);
+                Closeables.close(myidWriter, true);
               }
             }
           }
         }
       } finally {
-        Closeables.closeQuietly(writer);
+        Closeables.close(writer, true);
       }
     } catch (IOException e) {
       throw new IllegalStateException(

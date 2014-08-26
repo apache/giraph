@@ -239,6 +239,9 @@ public class GiraphJob {
     int tryCount = 0;
     GiraphJobRetryChecker retryChecker = conf.getJobRetryChecker();
     while (true) {
+      JobProgressTrackerService jobProgressTrackerService =
+          JobProgressTrackerService.createJobProgressServer(conf);
+
       tryCount++;
       Job submittedJob = new Job(conf, jobName);
       if (submittedJob.getJar() == null) {
@@ -253,16 +256,17 @@ public class GiraphJob {
       jobObserver.launchingJob(submittedJob);
       submittedJob.submit();
       if (LOG.isInfoEnabled()) {
-        LOG.info("run: Tracking URL: " + submittedJob.getTrackingURL());
+        LOG.info("Tracking URL: " + submittedJob.getTrackingURL());
+        LOG.info(
+            "Waiting for resources... Job will start only when it gets all " +
+                (conf.getMinWorkers() + 1) + " mappers");
       }
-      HaltApplicationUtils.printHaltInfo(submittedJob, conf);
-      JobProgressTracker jobProgressTracker = conf.trackJobProgressOnClient() ?
-          new JobProgressTracker(submittedJob, conf) : null;
       jobObserver.jobRunning(submittedJob);
+      HaltApplicationUtils.printHaltInfo(submittedJob, conf);
 
       boolean passed = submittedJob.waitForCompletion(verbose);
-      if (jobProgressTracker != null) {
-        jobProgressTracker.stop();
+      if (jobProgressTrackerService != null) {
+        jobProgressTrackerService.stop(passed);
       }
       jobObserver.jobFinished(submittedJob, passed);
 

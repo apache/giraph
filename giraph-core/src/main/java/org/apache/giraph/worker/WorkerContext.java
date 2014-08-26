@@ -206,6 +206,16 @@ public abstract class WorkerContext
     return workerAggregatorUsage.<A>getAggregatedValue(name);
   }
 
+  /**
+   * Call this to log a line to command line of the job. Use in moderation -
+   * it's a synchronous call to Job client
+   *
+   * @param line Line to print
+   */
+  public void logToCommandLine(String line) {
+    serviceWorker.getJobProgressTracker().logInfo(line);
+  }
+
   @Override
   public void write(DataOutput dataOutput) throws IOException {
   }

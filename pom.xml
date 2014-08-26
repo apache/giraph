@@ -289,6 +289,7 @@ under the License.
     <dep.commons-logging.version>1.1.1</dep.commons-logging.version>
     <dep.commons-io.version>2.1</dep.commons-io.version>
     <dep.commons-net.version>3.1</dep.commons-net.version>
+    <dep.facebook-swift.version>0.13.1</dep.facebook-swift.version>
     <dep.fasterxml-jackson.version>2.1.2</dep.fasterxml-jackson.version>
     <dep.fastutil.version>6.5.4</dep.fastutil.version>
     <dep.google.findbugs.version>2.0.2</dep.google.findbugs.version>
@@ -309,7 +310,7 @@ under the License.
     <!-- note: old version of netty is required by hadoop_facebook for tests to succeed -->
     <dep.oldnetty.version>3.2.2.Final</dep.oldnetty.version>
     <dep.netty.version>4.0.14.Final</dep.netty.version>
-    <dep.paranamer.version>2.3</dep.paranamer.version>
+    <dep.paranamer.version>2.5.2</dep.paranamer.version>
     <dep.slf4j.version>1.7.5</dep.slf4j.version>
     <dep.tinkerpop.rexter.version>2.4.0</dep.tinkerpop.rexter.version>
     <dep.typetools.version>0.2.1</dep.typetools.version>
@@ -1389,6 +1390,14 @@ under the License.
             <groupId>commons-beanutils</groupId>
             <artifactId>commons-beanutils-core</artifactId>
           </exclusion>
+          <exclusion>
+            <groupId>io.airlift</groupId>
+            <artifactId>units</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>javax.validation</groupId>
+            <artifactId>validation-api</artifactId>
+          </exclusion>
         </exclusions>
       </dependency>
       <dependency>
@@ -1403,6 +1412,14 @@ under the License.
           <exclusion>
             <groupId>org.apache.zookeeper</groupId>
             <artifactId>zookeeper</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>io.airlift</groupId>
+            <artifactId>units</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>javax.validation</groupId>
+            <artifactId>validation-api</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
@@ -1592,6 +1609,60 @@ under the License.
         <groupId>com.facebook.thirdparty.yourkit-api</groupId>
         <artifactId>yjp-controller-api-redist</artifactId>
         <version>${dep.yourkit-api.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.facebook.nifty</groupId>
+        <artifactId>nifty-client</artifactId>
+        <version>${dep.facebook-swift.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>com.facebook.swift</groupId>
+        <artifactId>swift-codec</artifactId>
+        <version>${dep.facebook-swift.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.thrift</groupId>
+            <artifactId>libthrift</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.ow2.asm</groupId>
+            <artifactId>asm-all</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
+        <groupId>com.facebook.swift</groupId>
+        <artifactId>swift-annotations</artifactId>
+        <version>${dep.facebook-swift.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.facebook.swift</groupId>
+        <artifactId>swift-service</artifactId>
+        <version>${dep.facebook-swift.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>commons-beanutils</groupId>
+            <artifactId>commons-beanutils-core</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>org.apache.thrift</groupId>
+            <artifactId>libthrift</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>log4j</groupId>
@@ -2085,6 +2156,14 @@ under the License.
           <exclusion>
             <groupId>commons-beanutils</groupId>
             <artifactId>commons-beanutils-core</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>io.airlift</groupId>
+            <artifactId>units</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>javax.validation</groupId>
+            <artifactId>validation-api</artifactId>
           </exclusion>
         </exclusions>
       </dependency>

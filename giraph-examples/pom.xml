@@ -226,14 +226,6 @@ under the License.
           </plugin>
         </plugins>
       </build>
-      <dependencies>
-        <dependency>
-          <groupId>org.jboss.netty</groupId>
-          <artifactId>netty</artifactId>
-          <version>${dep.oldnetty.version}</version>
-          <scope>test</scope>
-        </dependency>
-      </dependencies>
     </profile>
 
     <profile>

@@ -23,6 +23,7 @@ import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.GraphTaskManager;
 import org.apache.giraph.graph.InputSplitEvents;
 import org.apache.giraph.graph.InputSplitPaths;
+import org.apache.giraph.job.JobProgressTracker;
 import org.apache.giraph.partition.GraphPartitionerFactory;
 import org.apache.giraph.utils.CheckpointingUtils;
 import org.apache.giraph.worker.WorkerInfo;
@@ -161,8 +162,6 @@ public abstract class BspService<I extends WritableComparable,
       "/_partitionExchangeDir";
   /** Denotes that the superstep is done */
   public static final String SUPERSTEP_FINISHED_NODE = "/_superstepFinished";
-  /** Stores progress info for workers */
-  public static final String WORKER_PROGRESSES = "/_workerProgresses";
   /** Denotes that computation should be halted */
   public static final String HALT_COMPUTATION_NODE = "/_haltComputation";
   /** User sets this flag to checkpoint and stop the job */
@@ -241,8 +240,6 @@ public abstract class BspService<I extends WritableComparable,
   protected final String savedCheckpointBasePath;
   /** Path to the master election path */
   protected final String masterElectionPath;
-  /** Stores progress info of this worker */
-  protected final String myProgressPath;
   /** If this path exists computation will be halted */
   protected final String haltComputationPath;
   /** Private ZooKeeper instance that implements the service */
@@ -363,7 +360,6 @@ public abstract class BspService<I extends WritableComparable,
         getCheckpointBasePath(getConfiguration(), getJobId());
 
     masterElectionPath = basePath + MASTER_ELECTION_DIR;
-    myProgressPath = basePath + WORKER_PROGRESSES + "/" + taskPartition;
     String serverPortList = conf.getZookeeperList();
     haltComputationPath = basePath + HALT_COMPUTATION_NODE;
     getContext().getCounter(GiraphConstants.ZOOKEEPER_HALT_NODE_COUNTER_GROUP,
@@ -404,7 +400,6 @@ public abstract class BspService<I extends WritableComparable,
           "BspService: Invalid superstep to restart - " +
               restartedSuperstep);
     }
-
   }
 
   /**
@@ -1256,6 +1251,11 @@ public abstract class BspService<I extends WritableComparable,
               getPath().toString());
     }
     return lastCheckpointedSuperstep;
+  }
+
+  @Override
+  public JobProgressTracker getJobProgressTracker() {
+    return getGraphTaskManager().getJobProgressTracker();
   }
 
   /**

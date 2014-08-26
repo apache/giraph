@@ -307,6 +307,7 @@ public class BspServiceMaster<I extends WritableComparable,
    * @param reason The reason the job failed
    */
   private void setJobStateFailed(String reason) {
+    getGraphTaskManager().getJobProgressTracker().logFailure(reason);
     setJobState(ApplicationState.FAILED, -1, -1, false);
     failJob(new IllegalStateException(reason));
   }
@@ -644,7 +645,8 @@ public class BspServiceMaster<I extends WritableComparable,
           "check input of " + inputFormat.getClass().getName() + "!");
       getContext().setStatus("Failing job due to 0 input splits, " +
           "check input of " + inputFormat.getClass().getName() + "!");
-      setJobStateFailed("0 input splits");
+      setJobStateFailed("Please check your input tables - partitions which " +
+          "you specified are missing. Failing the job!!!");
     }
     if (minSplitCountHint > splitList.size()) {
       LOG.warn(logPrefix + ": Number of inputSplits=" +
@@ -885,7 +887,7 @@ public class BspServiceMaster<I extends WritableComparable,
               getContext());
           aggregatorHandler.initialize(this);
           masterCompute = getConfiguration().createMasterCompute();
-          masterCompute.setMasterAggregatorUsage(aggregatorHandler);
+          masterCompute.setMasterService(this);
 
           masterInfo = new MasterInfo();
           masterServer =
@@ -1789,10 +1791,6 @@ public class BspServiceMaster<I extends WritableComparable,
         (getGraphTaskManager().getGraphFunctions() ==
         GraphFunctions.ALL_EXCEPT_ZOOKEEPER)) {
       maxTasks *= 2;
-    }
-    if (getConfiguration().trackJobProgressOnClient()) {
-      // For job client
-      maxTasks++;
     }
     List<String> cleanedUpChildrenList = null;
     while (true) {

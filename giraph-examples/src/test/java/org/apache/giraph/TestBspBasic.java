@@ -461,8 +461,8 @@ public class
           assertEquals(numVertices, (long) vertexCounts.get(maxSuperstep));
 
         } finally {
-          Closeables.closeQuietly(in);
-          Closeables.closeQuietly(reader);
+          Closeables.close(in, true);
+          Closeables.close(reader, true);
         }
       }
     } finally {

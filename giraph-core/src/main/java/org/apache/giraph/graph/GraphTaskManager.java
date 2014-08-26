@@ -25,6 +25,7 @@ import org.apache.giraph.bsp.CheckpointStatus;
 import org.apache.giraph.comm.messages.MessageStore;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.job.JobProgressTracker;
 import org.apache.giraph.scripting.ScriptLoader;
 import org.apache.giraph.master.BspServiceMaster;
 import org.apache.giraph.master.MasterAggregatorUsage;
@@ -69,6 +70,7 @@ import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -122,6 +124,8 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
   /** Superstep stats */
   private FinishedSuperstepStats finishedSuperstepStats =
       new FinishedSuperstepStats(0, false, 0, 0, false, CheckpointStatus.NONE);
+  /** Job progress tracker */
+  private JobProgressTrackerClient jobProgressTracker;
 
   // Per-Job Metrics
   /** Timer for WorkerContext#preApplication() */
@@ -194,6 +198,7 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
     context.setStatus("setup: Beginning worker setup.");
     Configuration hadoopConf = context.getConfiguration();
     conf = new ImmutableClassesGiraphConfiguration<I, V, E>(hadoopConf);
+    initializeJobProgressTracker();
     // Write user's graph types (I,V,E,M) back to configuration parameters so
     // that they are set for quicker access later. These types are often
     // inferred from the Computation class used.
@@ -242,6 +247,26 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
         "setup: Offlining servers due to exception...", e);
     }
     context.setStatus(getGraphFunctions().toString() + " starting...");
+  }
+
+  /**
+   * Create and connect a client to JobProgressTrackerService,
+   * or no-op implementation if progress shouldn't be tracked or something
+   * goes wrong
+   */
+  private void initializeJobProgressTracker() {
+    if (!conf.trackJobProgressOnClient()) {
+      jobProgressTracker = new JobProgressTrackerClientNoOp();
+    } else {
+      try {
+        jobProgressTracker = new RetryableJobProgressTrackerClient(conf);
+      } catch (InterruptedException | ExecutionException e) {
+        LOG.warn("createJobProgressClient: Exception occurred while trying to" +
+            " connect to JobProgressTracker - not reporting progress", e);
+        jobProgressTracker = new JobProgressTrackerClientNoOp();
+      }
+    }
+    jobProgressTracker.mapperStarted();
   }
 
   /**
@@ -483,6 +508,10 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
 
   public final WorkerContext getWorkerContext() {
     return serviceWorker.getWorkerContext();
+  }
+
+  public JobProgressTracker getJobProgressTracker() {
+    return jobProgressTracker;
   }
 
   /**
@@ -878,6 +907,7 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
     if (LOG.isInfoEnabled()) {
       LOG.info("cleanup: Starting for " + getGraphFunctions());
     }
+    jobProgressTracker.cleanup();
     if (done) {
       return;
     }

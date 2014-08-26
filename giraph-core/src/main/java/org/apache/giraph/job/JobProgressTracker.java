@@ -18,138 +18,53 @@
 
 package org.apache.giraph.job;
 
-import org.apache.giraph.bsp.BspService;
-import org.apache.giraph.conf.GiraphConfiguration;
-import org.apache.giraph.conf.GiraphConstants;
-import org.apache.giraph.utils.CounterUtils;
-import org.apache.giraph.utils.WritableUtils;
+import org.apache.giraph.conf.IntConfOption;
+import org.apache.giraph.conf.StrConfOption;
 import org.apache.giraph.worker.WorkerProgress;
-import org.apache.giraph.zk.ZooKeeperExt;
-import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.util.Progressable;
-import org.apache.log4j.Logger;
-import org.apache.zookeeper.CreateMode;
-import org.apache.zookeeper.WatchedEvent;
-import org.apache.zookeeper.Watcher;
-import org.apache.zookeeper.ZooDefs;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import com.facebook.swift.service.ThriftMethod;
+import com.facebook.swift.service.ThriftService;
 
 /**
- * Class which tracks job's progress on client
+ * Interface for job progress tracker on job client
  */
-public class JobProgressTracker implements Watcher {
-  /** Class logger */
-  private static final Logger LOG = Logger.getLogger(JobProgressTracker.class);
-  /** How often to print job's progress */
-  private static final int UPDATE_MILLISECONDS = 5 * 1000;
-  /** Thread which periodically writes job's progress */
-  private Thread writerThread;
-  /** ZooKeeperExt */
-  private ZooKeeperExt zk;
-  /** Whether application is finished */
-  private volatile boolean finished = false;
+@ThriftService
+public interface JobProgressTracker {
+  /** Host on which job progress service runs */
+  StrConfOption JOB_PROGRESS_SERVICE_HOST =
+      new StrConfOption("giraph.jobProgressServiceHost", null,
+          "Host on which job progress service runs");
+  /** Port which job progress service uses */
+  IntConfOption JOB_PROGRESS_SERVICE_PORT =
+      new IntConfOption("giraph.jobProgressServicePort", -1,
+          "Port which job progress service uses");
+
+  /** Notify JobProgressTracker that mapper started */
+  @ThriftMethod
+  void mapperStarted();
 
   /**
-   * Constructor
+   * Call this when you want to log an info line from any mapper to command line
    *
-   * @param submittedJob Job to track
-   * @param conf Configuration
+   * @param logLine Line to log
    */
-  public JobProgressTracker(final Job submittedJob,
-      final GiraphConfiguration conf) throws IOException, InterruptedException {
-    String zkServer = CounterUtils.waitAndGetCounterNameFromGroup(
-        submittedJob, GiraphConstants.ZOOKEEPER_SERVER_PORT_COUNTER_GROUP);
-    final String basePath = CounterUtils.waitAndGetCounterNameFromGroup(
-        submittedJob, GiraphConstants.ZOOKEEPER_BASE_PATH_COUNTER_GROUP);
-    // Connect to ZooKeeper
-    if (zkServer != null && basePath != null) {
-      zk = new ZooKeeperExt(
-        zkServer,
-        conf.getZooKeeperSessionTimeout(),
-        conf.getZookeeperOpsMaxAttempts(),
-        conf.getZookeeperOpsRetryWaitMsecs(),
-        this,
-        new Progressable() {
-          @Override
-          public void progress() {
-          }
-        });
-      writerThread = new Thread(new Runnable() {
-        @Override
-        public void run() {
-          String workerProgressBasePath = basePath +
-            BspService.WORKER_PROGRESSES;
-          try {
-            while (!finished) {
-              if (zk.exists(workerProgressBasePath, false) != null) {
-                // Get locations of all worker progresses
-                List<String> workerProgressPaths = zk.getChildrenExt(
-                  workerProgressBasePath, false, false, true);
-                List<WorkerProgress> workerProgresses =
-                  new ArrayList<WorkerProgress>(workerProgressPaths.size());
-                // Read all worker progresses
-                for (String workerProgressPath : workerProgressPaths) {
-                  WorkerProgress workerProgress = new WorkerProgress();
-                  byte[] zkData = zk.getData(workerProgressPath, false, null);
-                  WritableUtils.readFieldsFromByteArray(zkData, workerProgress);
-                  workerProgresses.add(workerProgress);
-                }
-                // Combine and log
-                CombinedWorkerProgress combinedWorkerProgress =
-                  new CombinedWorkerProgress(workerProgresses);
-                if (LOG.isInfoEnabled()) {
-                  LOG.info(combinedWorkerProgress.toString());
-                }
-                // Check if application is done
-                if (combinedWorkerProgress.isDone(conf.getMaxWorkers())) {
-                  break;
-                }
-              }
-              Thread.sleep(UPDATE_MILLISECONDS);
-            }
-            // CHECKSTYLE: stop IllegalCatchCheck
-          } catch (Exception e) {
-            // CHECKSTYLE: resume IllegalCatchCheck
-            if (LOG.isInfoEnabled()) {
-              LOG.info("run: Exception occurred", e);
-            }
-          } finally {
-            try {
-              // Create a node so master knows we stopped communicating with
-              // ZooKeeper and it's safe to cleanup
-              zk.createExt(
-                basePath + BspService.CLEANED_UP_DIR + "/client",
-                null,
-                ZooDefs.Ids.OPEN_ACL_UNSAFE,
-                CreateMode.PERSISTENT,
-                true);
-              zk.close();
-              // CHECKSTYLE: stop IllegalCatchCheck
-            } catch (Exception e) {
-              // CHECKSTYLE: resume IllegalCatchCheck
-              if (LOG.isInfoEnabled()) {
-                LOG.info("run: Exception occurred", e);
-              }
-            }
-          }
-        }
-      });
-      writerThread.start();
-    }
-  }
+  @ThriftMethod
+  void logInfo(String logLine);
 
   /**
-   * Stop the thread which logs application progress
+   * Notify that job is failing
+   *
+   * @param reason Reason for failure
    */
-  public void stop() {
-    finished = true;
-  }
+  @ThriftMethod
+  void logFailure(String reason);
 
-  @Override
-  public void process(WatchedEvent event) {
-  }
+  /**
+   * Workers should call this method to update their progress
+   *
+   * @param workerProgress Progress of the worker
+   */
+  @ThriftMethod
+  void updateProgress(WorkerProgress workerProgress);
 }
 

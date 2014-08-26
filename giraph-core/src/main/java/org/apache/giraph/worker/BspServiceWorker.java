@@ -229,7 +229,8 @@ public class BspServiceWorker<I extends WritableComparable,
 
     WorkerProgress.get().setTaskId(getTaskPartition());
     workerProgressWriter = conf.trackJobProgressOnClient() ?
-        new WorkerProgressWriter(myProgressPath, getZkExt()) : null;
+        new WorkerProgressWriter(graphTaskManager.getJobProgressTracker()) :
+        null;
 
     GiraphMetrics.get().addSuperstepResetObserver(this);
   }

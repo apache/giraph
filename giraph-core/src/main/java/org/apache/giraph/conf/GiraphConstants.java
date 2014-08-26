@@ -1119,7 +1119,7 @@ public interface GiraphConstants {
 
   /** Whether to track job progress on client or not */
   BooleanConfOption TRACK_JOB_PROGRESS_ON_CLIENT =
-      new BooleanConfOption("giraph.trackJobProgressOnClient", true,
+      new BooleanConfOption("giraph.trackJobProgressOnClient", false,
           "Whether to track job progress on client or not");
 
   /** Number of retries for creating the HDFS files */

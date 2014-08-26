@@ -19,6 +19,8 @@
 package org.apache.giraph.bsp;
 
 import java.util.List;
+
+import org.apache.giraph.job.JobProgressTracker;
 import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
@@ -56,4 +58,11 @@ public interface CentralizedService<I extends WritableComparable,
    * @return List of workers
    */
   List<WorkerInfo> getWorkerInfoList();
+
+  /**
+   * Get JobProgressTracker to report progress to
+   *
+   * @return JobProgressTrackerClient
+   */
+  JobProgressTracker getJobProgressTracker();
 }
