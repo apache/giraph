@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-931: Provide a Strongly Connected Components algorithm (gianluca via majakabiljo)
+
   GIRAPH-933: Checkpointing improvements (edunov via majakabiljo)
 
   GIRAPH-943: Perf regression due to netty 4.0.21 (pavanka)
