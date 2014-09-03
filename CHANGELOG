@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-945: Always use job Configuration to create Configuration (majakabiljo)
+
   GIRAPH-931: Provide a Strongly Connected Components algorithm (gianluca via majakabiljo)
 
   GIRAPH-933: Checkpointing improvements (edunov via majakabiljo)

@@ -70,7 +70,8 @@ public final class ConfigurationUtils {
   /** Class logger */
   private static final Logger LOG =
     Logger.getLogger(ConfigurationUtils.class);
-  /** The base path for output dirs as saved in GiraphConfiguration */
+  /*if[PURE_YARN]
+  // The base path for output dirs as saved in GiraphConfiguration
   private static final Path BASE_OUTPUT_PATH;
   static {
     // whether local or remote, if there's no *-site.xml's to find, we're done
@@ -80,6 +81,7 @@ public final class ConfigurationUtils {
       throw new IllegalStateException("Error locating default base path!", ioe);
     }
   }
+  end[PURE_YARN]*/
   /** Maintains our accepted options in case the caller wants to add some */
   private static Options OPTIONS;
 

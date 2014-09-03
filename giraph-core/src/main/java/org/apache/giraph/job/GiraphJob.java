@@ -64,9 +64,12 @@ public class GiraphJob {
     /**
      * Constructor
      *
+     * @param conf Configuration
      * @throws IOException
      */
-    DelegatedJob() throws IOException { }
+    DelegatedJob(Configuration conf) throws IOException {
+      super(conf);
+    }
 
     @Override
     public Configuration getConfiguration() {
@@ -111,7 +114,7 @@ public class GiraphJob {
                    String jobName) throws IOException {
     this.jobName = jobName;
     this.giraphConfiguration = giraphConfiguration;
-    this.delegatedJob = new DelegatedJob();
+    this.delegatedJob = new DelegatedJob(giraphConfiguration);
   }
 
   public String getJobName() {
