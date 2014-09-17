@@ -20,15 +20,19 @@ package org.apache.giraph.comm.messages;
 
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.combiner.MessageCombiner;
+import org.apache.giraph.comm.messages.primitives.IdByteArrayMessageStore;
+import org.apache.giraph.comm.messages.primitives.IdOneMessagePerVertexStore;
 import org.apache.giraph.comm.messages.primitives.IntByteArrayMessageStore;
 import org.apache.giraph.comm.messages.primitives.IntFloatMessageStore;
-import org.apache.giraph.comm.messages.primitives.long_id.LongByteArrayMessageStore;
 import org.apache.giraph.comm.messages.primitives.LongDoubleMessageStore;
+import org.apache.giraph.comm.messages.primitives.long_id.LongByteArrayMessageStore;
+import org.apache.giraph.comm.messages.primitives.long_id.LongPointerListMessageStore;
 import org.apache.giraph.comm.messages.queue.AsyncMessageStoreWrapper;
 import org.apache.giraph.conf.GiraphConstants;
-import org.apache.giraph.comm.messages.primitives.long_id.LongPointerListMessageStore;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.factories.MessageValueFactory;
+import org.apache.giraph.types.ops.PrimitiveIdTypeOps;
+import org.apache.giraph.types.ops.TypeOpsUtils;
 import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.IntWritable;
@@ -89,8 +93,17 @@ public class InMemoryMessageStoreFactory<I extends WritableComparable,
           (MessageCombiner<LongWritable, DoubleWritable>)
               conf.<DoubleWritable>createMessageCombiner());
     } else {
-      messageStore = new OneMessagePerVertexStore(messageValueFactory,
-          service, conf.<M>createMessageCombiner(), conf);
+      PrimitiveIdTypeOps<I> idTypeOps =
+          TypeOpsUtils.getPrimitiveIdTypeOpsOrNull(vertexIdClass);
+      if (idTypeOps != null) {
+        messageStore = new IdOneMessagePerVertexStore<>(
+            messageValueFactory, service, conf.<M>createMessageCombiner(),
+            conf);
+      } else {
+        messageStore =
+            new OneMessagePerVertexStore<I, M>(messageValueFactory, service,
+                conf.<M>createMessageCombiner(), conf);
+      }
     }
     return messageStore;
   }
@@ -127,11 +140,18 @@ public class InMemoryMessageStoreFactory<I extends WritableComparable,
           MessageEncodeAndStoreType.BYTEARRAY_PER_PARTITION) ||
           encodeAndStore.equals(
               MessageEncodeAndStoreType.EXTRACT_BYTEARRAY_PER_PARTITION)) {
-        messageStore = new ByteArrayMessagesPerVertexStore<>(
-            messageValueFactory, service, conf);
+        PrimitiveIdTypeOps<I> idTypeOps =
+            TypeOpsUtils.getPrimitiveIdTypeOpsOrNull(vertexIdClass);
+        if (idTypeOps != null) {
+          messageStore = new IdByteArrayMessageStore<>(
+              messageValueFactory, service, conf);
+        } else {
+          messageStore = new ByteArrayMessagesPerVertexStore<>(
+              messageValueFactory, service, conf);
+        }
       } else if (encodeAndStore.equals(
           MessageEncodeAndStoreType.POINTER_LIST_PER_VERTEX)) {
-        messageStore = new PointerListPerVertexStore(messageValueFactory,
+        messageStore = new PointerListPerVertexStore<>(messageValueFactory,
             service, conf);
       }
     }
