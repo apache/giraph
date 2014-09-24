@@ -930,7 +930,7 @@ under the License.
       </modules>
       <properties>
         <hadoop.version>0.20.203.0</hadoop.version>
-        <munge.symbols>HADOOP_NON_JOBCONTEXT_IS_INTERFACE,HADOOP_1_SECURITY,HADOOP_1_SECRET_MANAGER</munge.symbols>
+        <munge.symbols>HADOOP_NON_JOBCONTEXT_IS_INTERFACE,HADOOP_1_SECURITY,HADOOP_1_SECRET_MANAGER,STATIC_SASL_SYMBOL</munge.symbols>
       </properties>
       <dependencies>
         <!-- sorted lexicographically -->
@@ -985,7 +985,7 @@ under the License.
       </activation>
       <properties>
         <hadoop.version>1.2.1</hadoop.version>
-        <munge.symbols>HADOOP_NON_JOBCONTEXT_IS_INTERFACE,HADOOP_1_SECURITY,HADOOP_1_SECRET_MANAGER</munge.symbols>
+        <munge.symbols>HADOOP_NON_JOBCONTEXT_IS_INTERFACE,HADOOP_1_SECURITY,HADOOP_1_SECRET_MANAGER,STATIC_SASL_SYMBOL</munge.symbols>
       </properties>
       <dependencies>
         <!-- sorted lexicographically -->
@@ -1036,7 +1036,7 @@ under the License.
       </modules>
       <properties>
         <hadoop.version>0.20.2</hadoop.version>
-        <munge.symbols>HADOOP_NON_SECURE,HADOOP_NON_JOBCONTEXT_IS_INTERFACE,HADOOP_NON_COMMIT_JOB</munge.symbols>
+        <munge.symbols>HADOOP_NON_SECURE,HADOOP_NON_JOBCONTEXT_IS_INTERFACE,HADOOP_NON_COMMIT_JOB,STATIC_SASL_SYMBOL</munge.symbols>
       </properties>
       <dependencies>
         <!-- sorted lexicographically -->
@@ -1060,7 +1060,7 @@ under the License.
       </modules>
       <properties>
         <hadoop.version>0.20.0</hadoop.version>
-        <munge.symbols>HADOOP_NON_SECURE,HADOOP_NON_JOBCONTEXT_IS_INTERFACE,HADOOP_JOB_ID_AVAILABLE</munge.symbols>
+        <munge.symbols>HADOOP_NON_SECURE,HADOOP_NON_JOBCONTEXT_IS_INTERFACE,HADOOP_JOB_ID_AVAILABLE,STATIC_SASL_SYMBOL</munge.symbols>
       </properties>
       <dependencies>
         <!-- sorted lexicographically -->
@@ -1091,7 +1091,7 @@ under the License.
       </modules>
       <properties>
         <hadoop.version>0.23.1</hadoop.version>
-        <munge.symbols>HADOOP_1_SECRET_MANAGER</munge.symbols>
+        <munge.symbols>HADOOP_1_SECRET_MANAGER,STATIC_SASL_SYMBOL</munge.symbols>
         <!-- TODO: add these checks eventually -->
         <project.enforcer.skip>true</project.enforcer.skip>
         <giraph.maven.dependency.plugin.skip>true</giraph.maven.dependency.plugin.skip>
@@ -1125,7 +1125,7 @@ under the License.
       </modules>
       <properties>
         <hadoop.version>2.0.0-cdh4.1.2</hadoop.version> 
-        <munge.symbols>HADOOP_1_SECRET_MANAGER</munge.symbols>
+        <munge.symbols>HADOOP_1_SECRET_MANAGER,STATIC_SASL_SYMBOL</munge.symbols>
         <!-- TODO: add these checks eventually -->
         <project.enforcer.skip>true</project.enforcer.skip>
         <giraph.maven.dependency.plugin.skip>true</giraph.maven.dependency.plugin.skip>
@@ -1191,7 +1191,7 @@ under the License.
       </modules>
       <properties>
         <hadoop.version>SET_HADOOP_VERSION_USING_MVN_DASH_D_OPTION</hadoop.version>
-        <munge.symbols>PURE_YARN</munge.symbols>
+        <munge.symbols>PURE_YARN,STATIC_SASL_SYMBOL</munge.symbols>
         <!-- TODO: add these checks eventually -->
         <project.enforcer.skip>true</project.enforcer.skip>
         <giraph.maven.dependency.plugin.skip>true</giraph.maven.dependency.plugin.skip>
@@ -1240,9 +1240,6 @@ under the License.
       </dependencies>
     </profile>
 
-    <!-- Help keep future Hadoop versions munge-free:
-         All profiles below are munge-free: avoid introducing any munge
-         flags on any of the following profiles. -->
     <profile>
        <id>2.1.1-SNAPSHOT</id>
        <modules>
@@ -1250,6 +1247,7 @@ under the License.
        </modules>
        <properties>
          <hadoop.version>2.1.1-SNAPSHOT</hadoop.version>
+         <munge.symbols>STATIC_SASL_SYMBOL</munge.symbols>
          <!-- TODO: add these checks eventually -->
          <project.enforcer.skip>true</project.enforcer.skip>
          <giraph.maven.dependency.plugin.skip>true</giraph.maven.dependency.plugin.skip>
@@ -1284,6 +1282,9 @@ under the License.
        </dependencies>
      </profile>
 
+    <!-- Help keep future Hadoop versions munge-free:
+         All profiles below are munge-free: avoid introducing any munge
+         flags on any of the following profiles. -->
     <profile>
        <id>hadoop_2</id>
       <modules>
@@ -1296,7 +1297,7 @@ under the License.
         <module>giraph-dist</module>
       </modules>
        <properties>
-         <hadoop.version>2.2.0</hadoop.version>
+         <hadoop.version>2.5.1</hadoop.version>
          <!-- TODO: add these checks eventually -->
          <project.enforcer.skip>true</project.enforcer.skip>
          <giraph.maven.dependency.plugin.skip>true</giraph.maven.dependency.plugin.skip>
