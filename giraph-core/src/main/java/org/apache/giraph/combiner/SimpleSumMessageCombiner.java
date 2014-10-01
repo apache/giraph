@@ -19,16 +19,16 @@
 package org.apache.giraph.combiner;
 
 import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.WritableComparable;
 
 /**
  * MessageCombiner which sums up {@link IntWritable} message values.
  */
 public class SimpleSumMessageCombiner
-    extends MessageCombiner<LongWritable, IntWritable> {
+    extends MessageCombiner<WritableComparable, IntWritable> {
 
   @Override
-  public void combine(LongWritable vertexIndex, IntWritable originalMessage,
+  public void combine(WritableComparable vertexIndex, IntWritable originalMessage,
       IntWritable messageToCombine) {
     originalMessage.set(originalMessage.get() + messageToCombine.get());
   }

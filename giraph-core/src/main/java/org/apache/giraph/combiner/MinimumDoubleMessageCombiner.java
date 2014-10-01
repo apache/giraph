@@ -19,16 +19,16 @@
 package org.apache.giraph.combiner;
 
 import org.apache.hadoop.io.DoubleWritable;
-import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.WritableComparable;
 
 /**
  * MessageCombiner which finds the minimum of {@link DoubleWritable}.
  */
 public class MinimumDoubleMessageCombiner
     extends
-    MessageCombiner<LongWritable, DoubleWritable> {
+    MessageCombiner<WritableComparable, DoubleWritable> {
   @Override
-  public void combine(LongWritable vertexIndex, DoubleWritable originalMessage,
+  public void combine(WritableComparable vertexIndex, DoubleWritable originalMessage,
       DoubleWritable messageToCombine) {
     if (originalMessage.get() > messageToCombine.get()) {
       originalMessage.set(messageToCombine.get());
