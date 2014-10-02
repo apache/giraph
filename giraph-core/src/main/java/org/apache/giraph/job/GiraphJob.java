@@ -254,6 +254,9 @@ public class GiraphJob {
       submittedJob.setMapperClass(GraphMapper.class);
       submittedJob.setInputFormatClass(BspInputFormat.class);
       submittedJob.setOutputFormatClass(BspOutputFormat.class);
+      if (jobProgressTrackerService != null) {
+        jobProgressTrackerService.setJob(submittedJob);
+      }
 
       GiraphJobObserver jobObserver = conf.getJobObserver();
       jobObserver.launchingJob(submittedJob);

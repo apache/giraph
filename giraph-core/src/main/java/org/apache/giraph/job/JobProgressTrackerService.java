@@ -19,7 +19,9 @@
 package org.apache.giraph.job;
 
 import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.worker.WorkerProgress;
+import org.apache.hadoop.mapreduce.Job;
 import org.apache.log4j.Logger;
 
 import com.facebook.swift.codec.ThriftCodecManager;
@@ -28,6 +30,7 @@ import com.facebook.swift.service.ThriftServer;
 import com.facebook.swift.service.ThriftServerConfig;
 import com.facebook.swift.service.ThriftServiceProcessor;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.Map;
@@ -58,6 +61,8 @@ public class JobProgressTrackerService implements JobProgressTracker {
   /** Map of worker progresses */
   private final Map<Integer, WorkerProgress> workerProgresses =
       new ConcurrentHashMap<>();
+  /** Job */
+  private Job job;
 
   /**
    * Constructor
@@ -107,12 +112,49 @@ public class JobProgressTrackerService implements JobProgressTracker {
     writerThread.start();
   }
 
+  public void setJob(Job job) {
+    this.job = job;
+  }
+
+  /**
+   * Called when job got all mappers, used to check MAX_ALLOWED_JOB_TIME_MS
+   * and potentially start a thread which will kill the job after this time
+   */
+  private void jobGotAllMappers() {
+    final long maxAllowedJobTimeMs =
+        GiraphConstants.MAX_ALLOWED_JOB_TIME_MS.get(conf);
+    if (maxAllowedJobTimeMs > 0) {
+      // Start a thread which will kill the job if running for too long
+      new Thread(new Runnable() {
+        @Override
+        public void run() {
+          try {
+            Thread.sleep(maxAllowedJobTimeMs);
+            try {
+              LOG.warn("Killing job because it took longer than " +
+                  maxAllowedJobTimeMs + " milliseconds");
+              job.killJob();
+            } catch (IOException e) {
+              LOG.warn("Failed to kill job", e);
+            }
+          } catch (InterruptedException e) {
+            if (LOG.isDebugEnabled()) {
+              LOG.debug("Thread checking for jobs max allowed time " +
+                  "interrupted");
+            }
+          }
+        }
+      }).start();
+    }
+  }
+
   @Override
   public synchronized void mapperStarted() {
     mappersStarted++;
     if (LOG.isInfoEnabled()) {
       if (mappersStarted == conf.getMaxWorkers() + 1) {
         LOG.info("Got all " + mappersStarted + " mappers");
+        jobGotAllMappers();
       } else {
         if (System.currentTimeMillis() - lastTimeMappersStartedLogged >
             UPDATE_MILLISECONDS) {

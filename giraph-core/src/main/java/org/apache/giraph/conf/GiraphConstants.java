@@ -251,6 +251,16 @@ public interface GiraphConstants {
           "Class which decides whether a failed job should be retried - " +
               "optional");
 
+  /**
+   * Maximum allowed time for job to run after getting all resources before it
+   * will be killed, in milliseconds (-1 if it has no limit)
+   */
+  LongConfOption MAX_ALLOWED_JOB_TIME_MS =
+      new LongConfOption("giraph.maxAllowedJobTimeMilliseconds", -1,
+          "Maximum allowed time for job to run after getting all resources " +
+              "before it will be killed, in milliseconds " +
+              "(-1 if it has no limit)");
+
   // At least one of the input format classes is required.
   /** VertexInputFormat class */
   ClassConfOption<VertexInputFormat> VERTEX_INPUT_FORMAT_CLASS =
