@@ -18,18 +18,19 @@
 
 package org.apache.giraph.examples;
 
+import static org.junit.Assert.assertEquals;
+
 import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.combiner.MinimumIntMessageCombiner;
 import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.WritableComparable;
 import org.junit.Test;
-
-import static org.junit.Assert.assertEquals;
 
 public class MinimumIntCombinerTest {
 
   @Test
   public void testCombiner() throws Exception {
-    MessageCombiner<IntWritable, IntWritable>
+    MessageCombiner<WritableComparable, IntWritable>
         messageCombiner =
         new MinimumIntMessageCombiner();
 

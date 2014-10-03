@@ -18,20 +18,6 @@
 
 package org.apache.giraph.comm.messages.primitives;
 
-import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.combiner.MessageCombiner;
-import org.apache.giraph.comm.messages.MessageStore;
-import org.apache.giraph.partition.Partition;
-import org.apache.giraph.utils.VertexIdMessageIterator;
-import org.apache.giraph.utils.VertexIdMessages;
-import org.apache.giraph.utils.EmptyIterable;
-import org.apache.hadoop.io.DoubleWritable;
-import org.apache.hadoop.io.LongWritable;
-
-import org.apache.hadoop.io.Writable;
-
-import com.google.common.collect.Lists;
-
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.longs.Long2DoubleMap;
 import it.unimi.dsi.fastutil.longs.Long2DoubleOpenHashMap;
@@ -44,6 +30,19 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.giraph.bsp.CentralizedServiceWorker;
+import org.apache.giraph.combiner.MessageCombiner;
+import org.apache.giraph.comm.messages.MessageStore;
+import org.apache.giraph.partition.Partition;
+import org.apache.giraph.utils.EmptyIterable;
+import org.apache.giraph.utils.VertexIdMessageIterator;
+import org.apache.giraph.utils.VertexIdMessages;
+import org.apache.hadoop.io.DoubleWritable;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Writable;
+
+import com.google.common.collect.Lists;
+
 /**
  * Special message store to be used when ids are LongWritable and messages
  * are DoubleWritable and messageCombiner is used.
@@ -55,7 +54,8 @@ public class LongDoubleMessageStore
   /** Map from partition id to map from vertex id to message */
   private final Int2ObjectOpenHashMap<Long2DoubleOpenHashMap> map;
   /** Message messageCombiner */
-  private final MessageCombiner<LongWritable, DoubleWritable> messageCombiner;
+  private final
+  MessageCombiner<? super LongWritable, DoubleWritable> messageCombiner;
   /** Service worker */
   private final CentralizedServiceWorker<LongWritable, ?, ?> service;
 
@@ -67,7 +67,7 @@ public class LongDoubleMessageStore
    */
   public LongDoubleMessageStore(
       CentralizedServiceWorker<LongWritable, Writable, Writable> service,
-      MessageCombiner<LongWritable, DoubleWritable> messageCombiner) {
+      MessageCombiner<? super LongWritable, DoubleWritable> messageCombiner) {
     this.service = service;
     this.messageCombiner =
         messageCombiner;

@@ -28,8 +28,8 @@ public class FloatSumMessageCombiner
     extends
     MessageCombiner<WritableComparable, FloatWritable> {
   @Override
-  public void combine(WritableComparable vertexIndex, FloatWritable originalMessage,
-      FloatWritable messageToCombine) {
+  public void combine(WritableComparable vertexIndex,
+      FloatWritable originalMessage, FloatWritable messageToCombine) {
     originalMessage.set(originalMessage.get() + messageToCombine.get());
   }
 

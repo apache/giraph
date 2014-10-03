@@ -28,8 +28,8 @@ public class MinimumDoubleMessageCombiner
     extends
     MessageCombiner<WritableComparable, DoubleWritable> {
   @Override
-  public void combine(WritableComparable vertexIndex, DoubleWritable originalMessage,
-      DoubleWritable messageToCombine) {
+  public void combine(WritableComparable vertexIndex,
+      DoubleWritable originalMessage, DoubleWritable messageToCombine) {
     if (originalMessage.get() > messageToCombine.get()) {
       originalMessage.set(messageToCombine.get());
     }

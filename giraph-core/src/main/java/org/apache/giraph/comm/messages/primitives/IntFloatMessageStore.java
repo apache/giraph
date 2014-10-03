@@ -18,21 +18,6 @@
 
 package org.apache.giraph.comm.messages.primitives;
 
-import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.combiner.MessageCombiner;
-import org.apache.giraph.comm.messages.MessageStore;
-import org.apache.giraph.partition.Partition;
-import org.apache.giraph.partition.PartitionStore;
-
-import org.apache.giraph.utils.VertexIdMessageIterator;
-import org.apache.giraph.utils.VertexIdMessages;
-import org.apache.giraph.utils.EmptyIterable;
-import org.apache.hadoop.io.FloatWritable;
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.Writable;
-
-import com.google.common.collect.Lists;
-
 import it.unimi.dsi.fastutil.ints.Int2FloatMap;
 import it.unimi.dsi.fastutil.ints.Int2FloatOpenHashMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
@@ -45,6 +30,20 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
+import org.apache.giraph.bsp.CentralizedServiceWorker;
+import org.apache.giraph.combiner.MessageCombiner;
+import org.apache.giraph.comm.messages.MessageStore;
+import org.apache.giraph.partition.Partition;
+import org.apache.giraph.partition.PartitionStore;
+import org.apache.giraph.utils.EmptyIterable;
+import org.apache.giraph.utils.VertexIdMessageIterator;
+import org.apache.giraph.utils.VertexIdMessages;
+import org.apache.hadoop.io.FloatWritable;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Writable;
+
+import com.google.common.collect.Lists;
+
 /**
  * Special message store to be used when ids are IntWritable and messages
  * are FloatWritable and messageCombiner is used.
@@ -56,7 +55,8 @@ public class IntFloatMessageStore
   /** Map from partition id to map from vertex id to message */
   private final Int2ObjectOpenHashMap<Int2FloatOpenHashMap> map;
   /** Message messageCombiner */
-  private final MessageCombiner<IntWritable, FloatWritable> messageCombiner;
+  private final
+  MessageCombiner<? super IntWritable, FloatWritable> messageCombiner;
   /** Service worker */
   private final CentralizedServiceWorker<IntWritable, ?, ?> service;
 
@@ -68,10 +68,9 @@ public class IntFloatMessageStore
    */
   public IntFloatMessageStore(
       CentralizedServiceWorker<IntWritable, Writable, Writable> service,
-      MessageCombiner<IntWritable, FloatWritable> messageCombiner) {
+      MessageCombiner<? super IntWritable, FloatWritable> messageCombiner) {
     this.service = service;
-    this.messageCombiner =
-        messageCombiner;
+    this.messageCombiner = messageCombiner;
 
     map = new Int2ObjectOpenHashMap<Int2FloatOpenHashMap>();
     for (int partitionId : service.getPartitionStore().getPartitionIds()) {

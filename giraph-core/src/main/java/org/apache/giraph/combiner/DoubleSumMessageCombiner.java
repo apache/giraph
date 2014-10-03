@@ -28,8 +28,8 @@ public class DoubleSumMessageCombiner
     extends
     MessageCombiner<WritableComparable, DoubleWritable> {
   @Override
-  public void combine(WritableComparable vertexIndex, DoubleWritable originalMessage,
-      DoubleWritable messageToCombine) {
+  public void combine(WritableComparable vertexIndex,
+      DoubleWritable originalMessage, DoubleWritable messageToCombine) {
     originalMessage.set(originalMessage.get() + messageToCombine.get());
   }
 

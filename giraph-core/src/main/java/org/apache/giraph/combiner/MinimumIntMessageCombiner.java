@@ -27,8 +27,8 @@ import org.apache.hadoop.io.WritableComparable;
 public class MinimumIntMessageCombiner
     extends MessageCombiner<WritableComparable, IntWritable> {
   @Override
-  public void combine(WritableComparable vertexIndex, IntWritable originalMessage,
-      IntWritable messageToCombine) {
+  public void combine(WritableComparable vertexIndex,
+      IntWritable originalMessage, IntWritable messageToCombine) {
     if (originalMessage.get() > messageToCombine.get()) {
       originalMessage.set(messageToCombine.get());
     }
