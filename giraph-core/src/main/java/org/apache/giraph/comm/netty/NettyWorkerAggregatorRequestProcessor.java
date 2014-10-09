@@ -18,20 +18,21 @@
 
 package org.apache.giraph.comm.netty;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import java.io.IOException;
+
 import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.comm.aggregators.WorkerAggregatorRequestProcessor;
+import org.apache.giraph.comm.GlobalCommType;
 import org.apache.giraph.comm.WorkerClient;
 import org.apache.giraph.comm.aggregators.AggregatorUtils;
-import org.apache.giraph.comm.aggregators.SendAggregatedValueCache;
-import org.apache.giraph.comm.requests.SendAggregatorsToMasterRequest;
+import org.apache.giraph.comm.aggregators.SendGlobalCommCache;
+import org.apache.giraph.comm.aggregators.WorkerAggregatorRequestProcessor;
 import org.apache.giraph.comm.requests.SendAggregatorsToWorkerRequest;
+import org.apache.giraph.comm.requests.SendReducedToMasterRequest;
 import org.apache.giraph.comm.requests.SendWorkerAggregatorsRequest;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.Progressable;
-
-import java.io.IOException;
 
 /**
  * Netty implementation of {@link WorkerAggregatorRequestProcessor}
@@ -45,8 +46,8 @@ public class NettyWorkerAggregatorRequestProcessor
   /** Service worker */
   private final CentralizedServiceWorker<?, ?, ?> serviceWorker;
   /** Cached map of partition ids to serialized aggregator data */
-  private final SendAggregatedValueCache sendAggregatedValueCache =
-      new SendAggregatedValueCache();
+  private final SendGlobalCommCache sendReducedValuesCache =
+      new SendGlobalCommCache(false);
   /** How big a single aggregator request can be */
   private final int maxBytesPerAggregatorRequest;
 
@@ -71,16 +72,16 @@ public class NettyWorkerAggregatorRequestProcessor
   }
 
   @Override
-  public boolean sendAggregatedValue(String aggregatorName,
-      Writable aggregatedValue) throws IOException {
+  public boolean sendReducedValue(String name,
+      Writable reducedValue) throws IOException {
     WorkerInfo owner =
-        AggregatorUtils.getOwner(aggregatorName,
+        AggregatorUtils.getOwner(name,
             serviceWorker.getWorkerInfoList());
     if (isThisWorker(owner)) {
       return false;
     } else {
-      int currentSize = sendAggregatedValueCache.addAggregator(
-          owner.getTaskId(), aggregatorName, aggregatedValue);
+      int currentSize = sendReducedValuesCache.addValue(owner.getTaskId(),
+          name, GlobalCommType.REDUCED_VALUE, reducedValue);
       if (currentSize >= maxBytesPerAggregatorRequest) {
         flushAggregatorsToWorker(owner);
       }
@@ -92,12 +93,12 @@ public class NettyWorkerAggregatorRequestProcessor
   public void flush() throws IOException {
     for (WorkerInfo workerInfo : serviceWorker.getWorkerInfoList()) {
       if (!isThisWorker(workerInfo)) {
-        sendAggregatedValueCache.addCountAggregator(workerInfo.getTaskId());
+        sendReducedValuesCache.addSpecialCount(workerInfo.getTaskId());
         flushAggregatorsToWorker(workerInfo);
         progressable.progress();
       }
     }
-    sendAggregatedValueCache.reset();
+    sendReducedValuesCache.reset();
   }
 
   /**
@@ -106,22 +107,21 @@ public class NettyWorkerAggregatorRequestProcessor
    * @param worker Worker which we want to send aggregators to
    */
   private void flushAggregatorsToWorker(WorkerInfo worker) {
-    byte[] aggregatorData =
-        sendAggregatedValueCache.removeAggregators(worker.getTaskId());
+    byte[] data =
+        sendReducedValuesCache.removeSerialized(worker.getTaskId());
     workerClient.sendWritableRequest(worker.getTaskId(),
-        new SendWorkerAggregatorsRequest(aggregatorData,
+        new SendWorkerAggregatorsRequest(data,
             serviceWorker.getWorkerInfo().getTaskId()));
   }
 
   @Override
-  public void sendAggregatedValuesToMaster(
-      byte[] aggregatorData) throws IOException {
+  public void sendReducedValuesToMaster(byte[] data) throws IOException {
     workerClient.sendWritableRequest(serviceWorker.getMasterInfo().getTaskId(),
-        new SendAggregatorsToMasterRequest(aggregatorData));
+        new SendReducedToMasterRequest(data));
   }
 
   @Override
-  public void distributeAggregators(
+  public void distributeReducedValues(
       Iterable<byte[]> aggregatorDataList) throws IOException {
     for (byte[] aggregatorData : aggregatorDataList) {
       for (WorkerInfo worker : serviceWorker.getWorkerInfoList()) {

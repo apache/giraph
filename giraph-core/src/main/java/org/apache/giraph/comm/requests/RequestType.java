@@ -54,7 +54,7 @@ public enum RequestType {
   /** Send aggregated values from one worker's vertices */
   SEND_WORKER_AGGREGATORS_REQUEST(SendWorkerAggregatorsRequest.class),
   /** Send aggregated values from worker owner to master */
-  SEND_AGGREGATORS_TO_MASTER_REQUEST(SendAggregatorsToMasterRequest.class),
+  SEND_AGGREGATORS_TO_MASTER_REQUEST(SendReducedToMasterRequest.class),
   /** Send aggregators from master to worker owners */
   SEND_AGGREGATORS_TO_OWNER_REQUEST(SendAggregatorsToOwnerRequest.class),
   /** Send aggregators from worker owner to other workers */

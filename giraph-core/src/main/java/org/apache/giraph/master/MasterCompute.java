@@ -24,6 +24,7 @@ import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
 import org.apache.giraph.graph.Computation;
 import org.apache.giraph.graph.GraphState;
+import org.apache.giraph.reducers.ReduceOperation;
 import org.apache.giraph.utils.WritableFactory;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -43,7 +44,7 @@ import org.apache.hadoop.mapreduce.Mapper;
  */
 public abstract class MasterCompute
     extends DefaultImmutableClassesGiraphConfigurable
-    implements MasterAggregatorUsage, Writable {
+    implements MasterAggregatorUsage, MasterGlobalCommUsage, Writable {
   /** If true, do not do anymore computation on this vertex. */
   private boolean halt = false;
   /** Master aggregator usage */
@@ -190,10 +191,33 @@ public abstract class MasterCompute
   }
 
   @Override
+  public final <S, R extends Writable> void registerReduce(
+      String name, ReduceOperation<S, R> reduceOp) {
+    serviceMaster.getGlobalCommHandler().registerReduce(name, reduceOp);
+  }
+
+  @Override
+  public final <S, R extends Writable> void registerReduce(
+      String name, ReduceOperation<S, R> reduceOp, R globalInitialValue) {
+    serviceMaster.getGlobalCommHandler().registerReduce(
+        name, reduceOp, globalInitialValue);
+  }
+
+  @Override
+  public final <T extends Writable> T getReduced(String name) {
+    return serviceMaster.getGlobalCommHandler().getReduced(name);
+  }
+
+  @Override
+  public final void broadcast(String name, Writable object) {
+    serviceMaster.getGlobalCommHandler().broadcast(name, object);
+  }
+
+  @Override
   public final <A extends Writable> boolean registerAggregator(
     String name, Class<? extends Aggregator<A>> aggregatorClass)
     throws InstantiationException, IllegalAccessException {
-    return serviceMaster.getAggregatorHandler().registerAggregator(
+    return serviceMaster.getAggregatorTranslationHandler().registerAggregator(
         name, aggregatorClass);
   }
 
@@ -201,7 +225,7 @@ public abstract class MasterCompute
   public final <A extends Writable> boolean registerAggregator(
     String name, WritableFactory<? extends Aggregator<A>> aggregator)
     throws InstantiationException, IllegalAccessException {
-    return serviceMaster.getAggregatorHandler().registerAggregator(
+    return serviceMaster.getAggregatorTranslationHandler().registerAggregator(
         name, aggregator);
   }
 
@@ -210,19 +234,21 @@ public abstract class MasterCompute
       String name,
       Class<? extends Aggregator<A>> aggregatorClass) throws
       InstantiationException, IllegalAccessException {
-    return serviceMaster.getAggregatorHandler().registerPersistentAggregator(
-        name, aggregatorClass);
+    return serviceMaster.getAggregatorTranslationHandler()
+        .registerPersistentAggregator(name, aggregatorClass);
   }
 
   @Override
   public final <A extends Writable> A getAggregatedValue(String name) {
-    return serviceMaster.getAggregatorHandler().<A>getAggregatedValue(name);
+    return serviceMaster.getAggregatorTranslationHandler()
+        .<A>getAggregatedValue(name);
   }
 
   @Override
   public final <A extends Writable> void setAggregatedValue(
       String name, A value) {
-    serviceMaster.getAggregatorHandler().setAggregatedValue(name, value);
+    serviceMaster.getAggregatorTranslationHandler()
+        .setAggregatedValue(name, value);
   }
 
   /**

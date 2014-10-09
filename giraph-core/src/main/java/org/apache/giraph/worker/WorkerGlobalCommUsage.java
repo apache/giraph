@@ -15,31 +15,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.giraph.comm.aggregators;
+package org.apache.giraph.worker;
 
 import org.apache.hadoop.io.Writable;
 
-import java.io.IOException;
-
 /**
- * Implementation of {@link CountingOutputStream} which allows writing of
- * aggregator values in the form of pair (name, value)
+ * Methods on worker can access broadcasted values and provide
+ * values to reduce through this interface
  */
-public class AggregatedValueOutputStream extends CountingOutputStream {
+public interface WorkerGlobalCommUsage {
   /**
-   * Write aggregator to the stream and increment internal counter
-   *
-   * @param aggregatorName Name of the aggregator
-   * @param aggregatedValue Value of aggregator
-   * @return Number of bytes occupied by the stream
-   * @throws IOException
+   * Reduce given value.
+   * @param name Name of the reducer
+   * @param value Single value to reduce
    */
-  public int addAggregator(String aggregatorName,
-      Writable aggregatedValue) throws IOException {
-    incrementCounter();
-    dataOutput.writeUTF(aggregatorName);
-    aggregatedValue.write(dataOutput);
-    return getSize();
-  }
+  void reduce(String name, Object value);
+  /**
+   * Get value broadcasted from master
+   * @param name Name of the broadcasted value
+   * @return Broadcasted value
+   * @param <B> Broadcast value type
+   */
+  <B extends Writable> B getBroadcast(String name);
 }

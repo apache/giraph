@@ -20,32 +20,52 @@ package org.apache.giraph.comm.aggregators;
 
 import java.io.IOException;
 
-import org.apache.giraph.aggregators.Aggregator;
-import org.apache.giraph.utils.WritableFactory;
+import org.apache.giraph.comm.GlobalCommType;
 import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.Writable;
 
 /**
  * Implementation of {@link CountingOutputStream} which allows writing of
- * aggregators in the form of triple (name, classname, value)
+ * reduced values in the form of pair (name, type, value)
+ *
+ * There are two modes:
+ * - when class of the value is written into the stream.
+ * - when it isn't, and reader needs to know Class of the value in order
+ *   to read it.
  */
-public class AggregatorOutputStream extends CountingOutputStream {
+public class GlobalCommValueOutputStream extends CountingOutputStream {
+  /** whether to write Class object for values into the stream */
+  private final boolean writeClass;
+
   /**
-   * Write aggregator to the stream and increment internal counter
+   * Constructor
    *
-   * @param aggregatorName Name of the aggregator
-   * @param aggregatorFactory Aggregator factory
-   * @param aggregatedValue Value of aggregator
+   * @param writeClass boolean whether to write Class object for values
+   */
+  public GlobalCommValueOutputStream(boolean writeClass) {
+    this.writeClass = writeClass;
+  }
+
+  /**
+   * Write global communication object to the stream
+   * and increment internal counter
+   *
+   * @param name Name
+   * @param type Global communication type
+   * @param value Object value
    * @return Number of bytes occupied by the stream
    * @throws IOException
    */
-  public int addAggregator(String aggregatorName,
-      WritableFactory<? extends Aggregator> aggregatorFactory,
-      Writable aggregatedValue) throws IOException {
+  public int addValue(String name, GlobalCommType type,
+      Writable value) throws IOException {
     incrementCounter();
-    dataOutput.writeUTF(aggregatorName);
-    WritableUtils.writeWritableObject(aggregatorFactory, dataOutput);
-    aggregatedValue.write(dataOutput);
+    dataOutput.writeUTF(name);
+    dataOutput.writeByte(type.ordinal());
+    if (writeClass) {
+      WritableUtils.writeWritableObject(value, dataOutput);
+    } else {
+      value.write(dataOutput);
+    }
     return getSize();
   }
 }

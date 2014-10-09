@@ -23,9 +23,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 
-import org.apache.giraph.aggregators.Aggregator;
+import org.apache.giraph.reducers.ReduceOperation;
+import org.apache.giraph.reducers.Reducer;
 import org.apache.giraph.utils.TaskIdsPermitsBarrier;
-import org.apache.giraph.utils.WritableFactory;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.util.Progressable;
 import org.apache.log4j.Logger;
@@ -62,13 +62,12 @@ public class OwnerAggregatorServerData {
   private static final Logger LOG =
       Logger.getLogger(OwnerAggregatorServerData.class);
   /** Map of aggregators which current worker owns */
-  private final ConcurrentMap<String, Aggregator<Writable>>
-  myAggregatorMap = Maps.newConcurrentMap();
+  private final ConcurrentMap<String, Reducer<Object, Writable>>
+  myReducerMap = Maps.newConcurrentMap();
   /**
    * Counts the requests with partial aggregated values from other workers.
-   * It uses values from special aggregators
-   * (named AggregatorUtils.SPECIAL_COUNT_AGGREGATOR)
-   * to know how many requests it has to receive.
+   * It uses GlobalCommType.SPECIAL_COUNT to know how many requests it
+   * has to receive.
    */
   private final TaskIdsPermitsBarrier workersBarrier;
   /** Progressable used to report progress */
@@ -85,49 +84,50 @@ public class OwnerAggregatorServerData {
   }
 
   /**
-   * Register an aggregator which current worker owns. Thread-safe.
+   * Register a reducer which current worker owns. Thread-safe.
    *
    * @param name Name of aggregator
-   * @param aggregatorFactory Aggregator factory
+   * @param reduceOp Reduce operation
    */
-  public void registerAggregator(String name,
-      WritableFactory<Aggregator<Writable>> aggregatorFactory) {
-    if (LOG.isDebugEnabled() && myAggregatorMap.isEmpty()) {
+  public void registerReducer(String name,
+      ReduceOperation<Object, Writable> reduceOp) {
+    if (LOG.isDebugEnabled() && myReducerMap.isEmpty()) {
       LOG.debug("registerAggregator: The first registration after a reset()");
     }
-    myAggregatorMap.putIfAbsent(name, aggregatorFactory.create());
+    myReducerMap.putIfAbsent(name, new Reducer<>(reduceOp));
     progressable.progress();
   }
 
   /**
-   * Aggregate partial value of one of current worker's aggregators.
+   * Reduce partial value of one of current worker's reducers.
    *
-   * Thread-safe. Call only after aggregators have been registered.
+   * Thread-safe. Call only after reducers have been registered.
    *
-   * @param name Name of the aggregator
-   * @param value Value to aggregate to it
+   * @param name Name of the reducer
+   * @param value Value to reduce to it
    */
-  public void aggregate(String name, Writable value) {
-    Aggregator<Writable> aggregator = myAggregatorMap.get(name);
-    synchronized (aggregator) {
-      aggregator.aggregate(value);
+  public void reduce(String name, Writable value) {
+    Reducer<Object, Writable> reducer = myReducerMap.get(name);
+    synchronized (reducer) {
+      reducer.reducePartial(value);
     }
     progressable.progress();
   }
 
+
   /**
-   * Create initial aggregated value for an aggregator. Used so requests
+   * Create initial value for a reducer. Used so requests
    * would be able to deserialize data.
    *
-   * Thread-safe. Call only after aggregators have been registered.
+   * Thread-safe. Call only after reducer has been registered.
    *
-   * @param name Name of the aggregator
-   * @return Empty aggregated value for this aggregator
+   * @param name Name of the reducer
+   * @return Empty value
    */
-  public Writable createAggregatorInitialValue(String name) {
-    Aggregator<Writable> aggregator = myAggregatorMap.get(name);
-    synchronized (aggregator) {
-      return aggregator.createInitialValue();
+  public Writable createInitialValue(String name) {
+    Reducer<Object, Writable> reducer = myReducerMap.get(name);
+    synchronized (reducer) {
+      return reducer.createInitialValue();
     }
   }
 
@@ -159,20 +159,20 @@ public class OwnerAggregatorServerData {
    * @return Iterable through final aggregated values which this worker owns
    */
   public Iterable<Map.Entry<String, Writable>>
-  getMyAggregatorValuesWhenReady(Set<Integer> workerIds) {
+  getMyReducedValuesWhenReady(Set<Integer> workerIds) {
     workersBarrier.waitForRequiredPermits(workerIds);
     if (LOG.isDebugEnabled()) {
       LOG.debug("getMyAggregatorValuesWhenReady: Values ready");
     }
-    return Iterables.transform(myAggregatorMap.entrySet(),
-        new Function<Map.Entry<String, Aggregator<Writable>>,
+    return Iterables.transform(myReducerMap.entrySet(),
+        new Function<Map.Entry<String, Reducer<Object, Writable>>,
             Map.Entry<String, Writable>>() {
           @Override
           public Map.Entry<String, Writable> apply(
-              Map.Entry<String, Aggregator<Writable>> aggregator) {
+              Map.Entry<String, Reducer<Object, Writable>> aggregator) {
             return new AbstractMap.SimpleEntry<String, Writable>(
                 aggregator.getKey(),
-                aggregator.getValue().getAggregatedValue());
+                aggregator.getValue().getCurrentValue());
           }
         });
   }
@@ -181,9 +181,10 @@ public class OwnerAggregatorServerData {
    * Prepare for next superstep
    */
   public void reset() {
-    myAggregatorMap.clear();
+    myReducerMap.clear();
     if (LOG.isDebugEnabled()) {
       LOG.debug("reset: Ready for next superstep");
     }
   }
+
 }

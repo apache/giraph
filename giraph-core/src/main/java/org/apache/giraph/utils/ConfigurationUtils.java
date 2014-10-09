@@ -17,8 +17,12 @@
  */
 package org.apache.giraph.utils;
 
-import com.google.common.base.Splitter;
-import com.google.common.collect.Iterables;
+import static org.apache.giraph.conf.GiraphConstants.COMPUTATION_CLASS;
+import static org.apache.giraph.conf.GiraphConstants.TYPES_HOLDER_CLASS;
+
+import java.io.IOException;
+import java.util.List;
+
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -29,6 +33,7 @@ import org.apache.giraph.Algorithm;
 import org.apache.giraph.aggregators.AggregatorWriter;
 import org.apache.giraph.combiner.MessageCombiner;
 import org.apache.giraph.conf.GiraphConfiguration;
+import org.apache.giraph.conf.GiraphConfigurationSettable;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.GiraphTypes;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
@@ -57,11 +62,8 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.ZooKeeper;
 
-import java.io.IOException;
-import java.util.List;
-
-import static org.apache.giraph.conf.GiraphConstants.COMPUTATION_CLASS;
-import static org.apache.giraph.conf.GiraphConstants.TYPES_HOLDER_CLASS;
+import com.google.common.base.Splitter;
+import com.google.common.collect.Iterables;
 
 /**
  * Translate command line args into Configuration Key-Value pairs.
@@ -147,6 +149,10 @@ public final class ConfigurationUtils {
       ImmutableClassesGiraphConfiguration configuration) {
     if (configuration != null) {
       configuration.configureIfPossible(object);
+    } else if (object instanceof GiraphConfigurationSettable) {
+      throw new IllegalArgumentException(
+          "Trying to configure configurable object without value, " +
+          object.getClass());
     }
   }
 

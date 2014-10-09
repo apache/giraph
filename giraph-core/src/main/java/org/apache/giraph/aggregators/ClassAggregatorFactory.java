@@ -21,8 +21,6 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
-import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.giraph.utils.WritableFactory;
 import org.apache.giraph.utils.WritableUtils;
@@ -36,7 +34,6 @@ import com.google.common.base.Preconditions;
  * @param <T> Aggregated value type
  */
 public class ClassAggregatorFactory<T extends Writable>
-    extends DefaultImmutableClassesGiraphConfigurable
     implements WritableFactory<Aggregator<T>> {
   /** Aggregator class */
   private Class<? extends Aggregator<T>> aggregatorClass;
@@ -51,26 +48,14 @@ public class ClassAggregatorFactory<T extends Writable>
    */
   public ClassAggregatorFactory(
       Class<? extends Aggregator<T>> aggregatorClass) {
-    this(aggregatorClass, null);
-
-  }
-
-  /**
-   * Constructor
-   * @param aggregatorClass Aggregator class
-   * @param conf Configuration
-   */
-  public ClassAggregatorFactory(Class<? extends Aggregator<T>> aggregatorClass,
-      ImmutableClassesGiraphConfiguration conf) {
     Preconditions.checkNotNull(aggregatorClass,
         "aggregatorClass cannot be null in ClassAggregatorFactory");
     this.aggregatorClass = aggregatorClass;
-    setConf(conf);
   }
 
   @Override
   public Aggregator<T> create() {
-    return ReflectionUtils.newInstance(aggregatorClass, getConf());
+    return ReflectionUtils.newInstance(aggregatorClass, null);
   }
 
   @Override

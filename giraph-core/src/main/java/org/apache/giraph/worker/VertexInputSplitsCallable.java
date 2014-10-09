@@ -18,6 +18,8 @@
 
 package org.apache.giraph.worker;
 
+import java.io.IOException;
+
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.OutEdges;
@@ -41,8 +43,6 @@ import org.apache.log4j.Logger;
 
 import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Meter;
-
-import java.io.IOException;
 
 /**
  * Load as many vertex input splits as possible.
@@ -79,7 +79,7 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
    * Whether the chosen {@link OutEdges} implementation allows for Edge
    * reuse.
    */
-  private boolean reuseEdgeObjects;
+  private final boolean reuseEdgeObjects;
   /** Used to translate Edges during vertex input phase based on localData */
   private final TranslateEdge<I, E> translateEdge;
 
@@ -152,13 +152,13 @@ public class VertexInputSplitsCallable<I extends WritableComparable,
         vertexInputFormat.createVertexReader(inputSplit, context);
     vertexReader.setConf(configuration);
 
-    WorkerThreadAggregatorUsage aggregatorUsage =
+    WorkerThreadGlobalCommUsage globalCommUsage =
       this.bspServiceWorker
         .getAggregatorHandler().newThreadAggregatorUsage();
 
     vertexReader.initialize(inputSplit, context);
     // Set aggregator usage to vertex reader
-    vertexReader.setWorkerAggregatorUse(aggregatorUsage);
+    vertexReader.setWorkerGlobalCommUsage(globalCommUsage);
 
     long inputSplitVerticesLoaded = 0;
     long inputSplitVerticesFiltered = 0;

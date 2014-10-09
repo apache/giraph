@@ -18,19 +18,19 @@
 
 package org.apache.giraph.graph;
 
+import java.io.IOException;
+import java.util.Iterator;
+
 import org.apache.giraph.comm.WorkerClientRequestProcessor;
-import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.OutEdges;
-import org.apache.giraph.worker.WorkerAggregatorUsage;
+import org.apache.giraph.worker.WorkerAggregatorDelegator;
 import org.apache.giraph.worker.WorkerContext;
+import org.apache.giraph.worker.WorkerGlobalCommUsage;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.log4j.Logger;
-
-import java.io.IOException;
-import java.util.Iterator;
 
 /**
  * See {@link Computation} for explanation of the interface.
@@ -52,7 +52,7 @@ import java.util.Iterator;
 public abstract class AbstractComputation<I extends WritableComparable,
     V extends Writable, E extends Writable, M1 extends Writable,
     M2 extends Writable>
-    extends DefaultImmutableClassesGiraphConfigurable<I, V, E>
+    extends WorkerAggregatorDelegator<I, V, E>
     implements Computation<I, V, E, M1, M2> {
   /** Logger */
   private static final Logger LOG = Logger.getLogger(AbstractComputation.class);
@@ -63,8 +63,6 @@ public abstract class AbstractComputation<I extends WritableComparable,
   private WorkerClientRequestProcessor<I, V, E> workerClientRequestProcessor;
   /** Graph-wide BSP Mapper for this Computation */
   private GraphTaskManager<I, V, E> graphTaskManager;
-  /** Worker aggregator usage */
-  private WorkerAggregatorUsage workerAggregatorUsage;
   /** Worker context */
   private WorkerContext workerContext;
 
@@ -76,6 +74,7 @@ public abstract class AbstractComputation<I extends WritableComparable,
    *                 superstep.  Each message is only guaranteed to have
    *                 a life expectancy as long as next() is not called.
    */
+  @Override
   public abstract void compute(Vertex<I, V, E> vertex,
       Iterable<M1> messages) throws IOException;
 
@@ -103,7 +102,7 @@ public abstract class AbstractComputation<I extends WritableComparable,
    * @param graphState Graph state
    * @param workerClientRequestProcessor Processor for handling requests
    * @param graphTaskManager Graph-wide BSP Mapper for this Vertex
-   * @param workerAggregatorUsage Worker aggregator usage
+   * @param workerGlobalCommUsage Worker global communication usage
    * @param workerContext Worker context
    */
   @Override
@@ -111,12 +110,12 @@ public abstract class AbstractComputation<I extends WritableComparable,
       GraphState graphState,
       WorkerClientRequestProcessor<I, V, E> workerClientRequestProcessor,
       GraphTaskManager<I, V, E> graphTaskManager,
-      WorkerAggregatorUsage workerAggregatorUsage,
+      WorkerGlobalCommUsage workerGlobalCommUsage,
       WorkerContext workerContext) {
     this.graphState = graphState;
     this.workerClientRequestProcessor = workerClientRequestProcessor;
     this.graphTaskManager = graphTaskManager;
-    this.workerAggregatorUsage = workerAggregatorUsage;
+    this.setWorkerGlobalCommUsage(workerGlobalCommUsage);
     this.workerContext = workerContext;
   }
 
@@ -273,15 +272,5 @@ public abstract class AbstractComputation<I extends WritableComparable,
   @Override
   public <W extends WorkerContext> W getWorkerContext() {
     return (W) workerContext;
-  }
-
-  @Override
-  public <A extends Writable> void aggregate(String name, A value) {
-    workerAggregatorUsage.aggregate(name, value);
-  }
-
-  @Override
-  public <A extends Writable> A getAggregatedValue(String name) {
-    return workerAggregatorUsage.<A>getAggregatedValue(name);
   }
 }

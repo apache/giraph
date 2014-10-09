@@ -18,13 +18,13 @@
 
 package org.apache.giraph.comm.netty;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
-import org.apache.giraph.bsp.CentralizedServiceMaster;
-import org.apache.giraph.comm.netty.handler.MasterRequestServerHandler;
-import org.apache.giraph.comm.MasterServer;
-import org.apache.hadoop.util.Progressable;
-
 import java.net.InetSocketAddress;
+
+import org.apache.giraph.bsp.CentralizedServiceMaster;
+import org.apache.giraph.comm.MasterServer;
+import org.apache.giraph.comm.netty.handler.MasterRequestServerHandler;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.hadoop.util.Progressable;
 
 /**
  * Netty implementation of {@link MasterServer}
@@ -46,7 +46,7 @@ public class NettyMasterServer implements MasterServer {
       Progressable progressable,
       Thread.UncaughtExceptionHandler exceptionHandler) {
     nettyServer = new NettyServer(conf,
-        new MasterRequestServerHandler.Factory(service.getAggregatorHandler()),
+        new MasterRequestServerHandler.Factory(service.getGlobalCommHandler()),
         service.getMasterInfo(), progressable, exceptionHandler);
     nettyServer.start();
   }

@@ -18,6 +18,8 @@
 
 package org.apache.giraph.worker;
 
+import java.io.IOException;
+
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.graph.VertexEdgeCount;
@@ -36,8 +38,6 @@ import org.apache.log4j.Logger;
 
 import com.yammer.metrics.core.Counter;
 import com.yammer.metrics.core.Meter;
-
-import java.io.IOException;
 
 /**
  * Load as many edge input splits as possible.
@@ -62,7 +62,7 @@ public class EdgeInputSplitsCallable<I extends WritableComparable,
       EdgeInputSplitsCallable.class);
 
   /** Aggregator handler */
-  private final WorkerThreadAggregatorUsage aggregatorUsage;
+  private final WorkerThreadGlobalCommUsage globalCommUsage;
   /** Bsp service worker (only use thread-safe methods) */
   private final BspServiceWorker<I, V, E> bspServiceWorker;
   /** Edge input format */
@@ -105,7 +105,7 @@ public class EdgeInputSplitsCallable<I extends WritableComparable,
     this.bspServiceWorker = bspServiceWorker;
     inputSplitMaxEdges = configuration.getInputSplitMaxEdges();
     // Initialize aggregator usage.
-    this.aggregatorUsage = bspServiceWorker.getAggregatorHandler()
+    this.globalCommUsage = bspServiceWorker.getAggregatorHandler()
       .newThreadAggregatorUsage();
     edgeInputFilter = configuration.getEdgeInputFilter();
     canEmbedInIds = bspServiceWorker
@@ -147,7 +147,7 @@ public class EdgeInputSplitsCallable<I extends WritableComparable,
 
     edgeReader.initialize(inputSplit, context);
     // Set aggregator usage to edge reader
-    edgeReader.setWorkerAggregatorUse(aggregatorUsage);
+    edgeReader.setWorkerGlobalCommUsage(globalCommUsage);
 
     long inputSplitEdgesLoaded = 0;
     long inputSplitEdgesFiltered = 0;

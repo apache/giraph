@@ -18,20 +18,20 @@
 
 package org.apache.giraph.worker;
 
+import java.io.IOException;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.io.GiraphInputFormat;
 import org.apache.giraph.io.MappingInputFormat;
 import org.apache.giraph.io.MappingReader;
-import org.apache.giraph.mapping.MappingStore;
 import org.apache.giraph.mapping.MappingEntry;
+import org.apache.giraph.mapping.MappingStore;
 import org.apache.giraph.zk.ZooKeeperExt;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Mapper;
-
-import java.io.IOException;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Load as many mapping input splits as possible.
@@ -89,11 +89,11 @@ public class MappingInputSplitsCallable<I extends WritableComparable,
         mappingInputFormat.createMappingReader(inputSplit, context);
     mappingReader.setConf(configuration);
 
-    WorkerThreadAggregatorUsage aggregatorUsage = this.bspServiceWorker
+    WorkerThreadGlobalCommUsage globalCommUsage = this.bspServiceWorker
         .getAggregatorHandler().newThreadAggregatorUsage();
 
     mappingReader.initialize(inputSplit, context);
-    mappingReader.setWorkerAggregatorUse(aggregatorUsage);
+    mappingReader.setWorkerGlobalCommUsage(globalCommUsage);
 
     int entriesLoaded = 0;
     MappingStore<I, B> mappingStore =

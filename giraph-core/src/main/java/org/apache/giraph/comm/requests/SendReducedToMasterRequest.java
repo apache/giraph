@@ -18,15 +18,15 @@
 
 package org.apache.giraph.comm.requests;
 
-import org.apache.giraph.master.MasterAggregatorHandler;
-
 import java.io.IOException;
+
+import org.apache.giraph.master.MasterAggregatorHandler;
 
 /**
  * Request to send final aggregated values from worker which owns
  * aggregators to the master
  */
-public class SendAggregatorsToMasterRequest extends ByteArrayRequest
+public class SendReducedToMasterRequest extends ByteArrayRequest
     implements MasterRequest {
 
   /**
@@ -34,20 +34,20 @@ public class SendAggregatorsToMasterRequest extends ByteArrayRequest
    *
    * @param data Serialized aggregator data
    */
-  public SendAggregatorsToMasterRequest(byte[] data) {
+  public SendReducedToMasterRequest(byte[] data) {
     super(data);
   }
 
   /**
    * Constructor used for reflection only
    */
-  public SendAggregatorsToMasterRequest() {
+  public SendReducedToMasterRequest() {
   }
 
   @Override
   public void doRequest(MasterAggregatorHandler aggregatorHandler) {
     try {
-      aggregatorHandler.acceptAggregatedValues(getDataInput());
+      aggregatorHandler.acceptReducedValues(getDataInput());
     } catch (IOException e) {
       throw new IllegalStateException("doRequest: " +
           "IOException occurred while processing request", e);

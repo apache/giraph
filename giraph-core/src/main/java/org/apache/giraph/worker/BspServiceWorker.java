@@ -18,6 +18,27 @@
 
 package org.apache.giraph.worker;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Queue;
+import java.util.Set;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.TimeUnit;
+
+import net.iharder.Base64;
+
 import org.apache.giraph.bsp.ApplicationState;
 import org.apache.giraph.bsp.BspService;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
@@ -66,10 +87,10 @@ import org.apache.giraph.partition.PartitionStore;
 import org.apache.giraph.partition.WorkerGraphPartitioner;
 import org.apache.giraph.utils.CallableFactory;
 import org.apache.giraph.utils.JMapHistoDumper;
-import org.apache.giraph.utils.ReactiveJMapHistoDumper;
 import org.apache.giraph.utils.LoggerUtils;
 import org.apache.giraph.utils.MemoryUtils;
 import org.apache.giraph.utils.ProgressableUtils;
+import org.apache.giraph.utils.ReactiveJMapHistoDumper;
 import org.apache.giraph.utils.WritableUtils;
 import org.apache.giraph.zk.BspEvent;
 import org.apache.giraph.zk.PredicateLock;
@@ -96,26 +117,6 @@ import org.json.JSONObject;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import net.iharder.Base64;
-
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.Queue;
-import java.util.Set;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.TimeUnit;
 
 /**
  * ZooKeeper-based implementation of {@link CentralizedServiceWorker}.
@@ -162,10 +163,10 @@ public class BspServiceWorker<I extends WritableComparable,
   private final WorkerContext workerContext;
 
   /** Handler for aggregators */
-  private final WorkerAggregatorHandler aggregatorHandler;
+  private final WorkerAggregatorHandler globalCommHandler;
 
   /** Superstep output */
-  private SuperstepOutput<I, V, E> superstepOutput;
+  private final SuperstepOutput<I, V, E> superstepOutput;
 
   /** array of observers to call back to */
   private final WorkerObserver[] observers;
@@ -212,10 +213,10 @@ public class BspServiceWorker<I extends WritableComparable,
     workerAggregatorRequestProcessor =
         new NettyWorkerAggregatorRequestProcessor(getContext(), conf, this);
 
-    aggregatorHandler = new WorkerAggregatorHandler(this, conf, context);
+    globalCommHandler = new WorkerAggregatorHandler(this, conf, context);
 
     workerContext = conf.createWorkerContext();
-    workerContext.setWorkerAggregatorUsage(aggregatorHandler);
+    workerContext.setWorkerGlobalCommUsage(globalCommHandler);
 
     superstepOutput = conf.createSuperstepOutput(context);
 
@@ -584,7 +585,7 @@ public class BspServiceWorker<I extends WritableComparable,
 
     // Initialize aggregator at worker side during setup.
     // Do this just before vertex and edge loading.
-    aggregatorHandler.prepareSuperstep(workerAggregatorRequestProcessor);
+    globalCommHandler.prepareSuperstep(workerAggregatorRequestProcessor);
 
     VertexEdgeCount vertexEdgeCount;
     long entriesLoaded;
@@ -895,7 +896,7 @@ public class BspServiceWorker<I extends WritableComparable,
       postSuperstepCallbacks();
     }
 
-    aggregatorHandler.finishSuperstep(workerAggregatorRequestProcessor);
+    globalCommHandler.finishSuperstep(workerAggregatorRequestProcessor);
 
     MessageStore<I, Writable> incomingMessageStore =
         getServerData().getIncomingMessageStore();
@@ -1920,15 +1921,16 @@ else[HADOOP_NON_SECURE]*/
     return workerServer.getServerData();
   }
 
+
   @Override
   public WorkerAggregatorHandler getAggregatorHandler() {
-    return aggregatorHandler;
+    return globalCommHandler;
   }
 
   @Override
   public void prepareSuperstep() {
     if (getSuperstep() != INPUT_SUPERSTEP) {
-      aggregatorHandler.prepareSuperstep(workerAggregatorRequestProcessor);
+      globalCommHandler.prepareSuperstep(workerAggregatorRequestProcessor);
     }
   }
 

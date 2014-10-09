@@ -18,10 +18,10 @@
 
 package org.apache.giraph.comm.netty.handler;
 
-import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.comm.requests.MasterRequest;
-import org.apache.giraph.master.MasterAggregatorHandler;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.TaskInfo;
+import org.apache.giraph.master.MasterAggregatorHandler;
 
 /** Handler for requests on master */
 public class MasterRequestServerHandler extends

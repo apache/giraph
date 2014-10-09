@@ -18,6 +18,10 @@
 
 package org.apache.giraph.bsp;
 
+import java.io.IOException;
+import java.util.List;
+
+import org.apache.giraph.master.AggregatorToGlobalCommTranslation;
 import org.apache.giraph.master.MasterAggregatorHandler;
 import org.apache.giraph.master.MasterCompute;
 import org.apache.giraph.master.MasterInfo;
@@ -25,9 +29,6 @@ import org.apache.giraph.worker.WorkerInfo;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.zookeeper.KeeperException;
-
-import java.io.IOException;
-import java.util.List;
 
 /**
  * At most, there will be one active master at a time, but many threads can
@@ -139,11 +140,18 @@ public interface CentralizedServiceMaster<I extends WritableComparable,
     long desiredSuperstep);
 
   /**
-   * Get master aggregator handler
+   * Get handler for global communication
    *
-   * @return Master aggregator handler
+   * @return Global communication handler
    */
-  MasterAggregatorHandler getAggregatorHandler();
+  MasterAggregatorHandler getGlobalCommHandler();
+
+  /**
+   * Handler for aggregators to reduce/broadcast translation
+   *
+   * @return aggregator translation handler
+   */
+  AggregatorToGlobalCommTranslation getAggregatorTranslationHandler();
 
   /**
    * Get MasterCompute object

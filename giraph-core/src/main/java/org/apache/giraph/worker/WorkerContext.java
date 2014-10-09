@@ -18,17 +18,17 @@
 
 package org.apache.giraph.worker;
 
-import org.apache.giraph.bsp.CentralizedServiceWorker;
-import org.apache.giraph.comm.requests.SendWorkerToWorkerMessageRequest;
-import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
-import org.apache.giraph.graph.GraphState;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.mapreduce.Mapper;
-
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.List;
+
+import org.apache.giraph.bsp.CentralizedServiceWorker;
+import org.apache.giraph.comm.requests.SendWorkerToWorkerMessageRequest;
+import org.apache.giraph.graph.GraphState;
+import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.mapreduce.Mapper;
 
 /**
  * WorkerContext allows for the execution of user code
@@ -36,12 +36,10 @@ import java.util.List;
  */
 @SuppressWarnings("rawtypes")
 public abstract class WorkerContext
-  extends DefaultImmutableClassesGiraphConfigurable
-  implements WorkerAggregatorUsage, Writable {
+  extends WorkerAggregatorDelegator<WritableComparable, Writable, Writable>
+  implements Writable {
   /** Global graph state */
   private GraphState graphState;
-  /** Worker aggregator usage */
-  private WorkerAggregatorUsage workerAggregatorUsage;
 
   /** Service worker */
   private CentralizedServiceWorker serviceWorker;
@@ -68,16 +66,6 @@ public abstract class WorkerContext
     this.serviceWorker = serviceWorker;
     workerList = serviceWorker.getWorkerInfoList();
     myWorkerIndex = workerList.indexOf(serviceWorker.getWorkerInfo());
-  }
-
-  /**
-   * Set worker aggregator usage
-   *
-   * @param workerAggregatorUsage Worker aggregator usage
-   */
-  public void setWorkerAggregatorUsage(
-      WorkerAggregatorUsage workerAggregatorUsage) {
-    this.workerAggregatorUsage = workerAggregatorUsage;
   }
 
   /**
@@ -194,16 +182,6 @@ public abstract class WorkerContext
    */
   public Mapper.Context getContext() {
     return graphState.getContext();
-  }
-
-  @Override
-  public <A extends Writable> void aggregate(String name, A value) {
-    workerAggregatorUsage.aggregate(name, value);
-  }
-
-  @Override
-  public <A extends Writable> A getAggregatedValue(String name) {
-    return workerAggregatorUsage.<A>getAggregatedValue(name);
   }
 
   /**

@@ -20,8 +20,6 @@ package org.apache.giraph.comm;
 
 import java.io.IOException;
 
-import org.apache.giraph.aggregators.Aggregator;
-import org.apache.giraph.utils.WritableFactory;
 import org.apache.hadoop.io.Writable;
 
 /**
@@ -36,19 +34,18 @@ public interface MasterClient {
   /**
    * Sends aggregator to its owner
    *
-   * @param aggregatorName Name of the aggregator
-   * @param aggregatorFactory Aggregator factory
-   * @param aggregatedValue Value of the aggregator
+   * @param name Name of the object
+   * @param type Global communication type
+   * @param value Object value
    * @throws IOException
    */
-  void sendAggregator(String aggregatorName,
-      WritableFactory<? extends Aggregator> aggregatorFactory,
-      Writable aggregatedValue) throws IOException;
+  void sendToOwner(String name, GlobalCommType type, Writable value)
+    throws IOException;
 
   /**
    * Flush aggregated values cache.
    */
-  void finishSendingAggregatedValues() throws IOException;
+  void finishSendingValues() throws IOException;
 
   /**
    * Flush all outgoing messages.  This will synchronously ensure that all

@@ -21,11 +21,9 @@ package org.apache.giraph.comm.requests;
 import java.io.DataInput;
 import java.io.IOException;
 
-import org.apache.giraph.aggregators.Aggregator;
+import org.apache.giraph.comm.GlobalCommType;
 import org.apache.giraph.comm.ServerData;
-import org.apache.giraph.comm.aggregators.AggregatorUtils;
 import org.apache.giraph.comm.aggregators.AllAggregatorServerData;
-import org.apache.giraph.utils.WritableFactory;
 import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Writable;
@@ -58,23 +56,17 @@ public class SendAggregatorsToWorkerRequest extends
     DataInput input = getDataInput();
     AllAggregatorServerData aggregatorData = serverData.getAllAggregatorData();
     try {
-      int numAggregators = input.readInt();
-      for (int i = 0; i < numAggregators; i++) {
-        String aggregatorName = input.readUTF();
-        WritableFactory<Aggregator<Writable>> aggregatorFactory =
-            WritableUtils.readWritableObject(input, conf);
-        if (aggregatorName.equals(AggregatorUtils.SPECIAL_COUNT_AGGREGATOR)) {
-          LongWritable count = new LongWritable(0);
-          count.readFields(input);
-          aggregatorData.receivedRequestCountFromWorker(count.get(),
+      int num = input.readInt();
+      for (int i = 0; i < num; i++) {
+        String name = input.readUTF();
+        GlobalCommType type = GlobalCommType.values()[input.readByte()];
+        Writable value = WritableUtils.readWritableObject(input, conf);
+        if (type == GlobalCommType.SPECIAL_COUNT) {
+          aggregatorData.receivedRequestCountFromWorker(
+              ((LongWritable) value).get(),
               getSenderTaskId());
         } else {
-          aggregatorData.registerAggregatorClass(aggregatorName,
-              aggregatorFactory);
-          Writable aggregatorValue =
-              aggregatorData.createAggregatorInitialValue(aggregatorName);
-          aggregatorValue.readFields(input);
-          aggregatorData.setAggregatorValue(aggregatorName, aggregatorValue);
+          aggregatorData.receiveValueFromMaster(name, type, value);
         }
       }
     } catch (IOException e) {

@@ -18,17 +18,17 @@
 
 package org.apache.giraph.io.internal;
 
+import java.io.IOException;
+
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.io.EdgeReader;
 import org.apache.giraph.job.HadoopUtils;
-import org.apache.giraph.worker.WorkerAggregatorUsage;
+import org.apache.giraph.worker.WorkerGlobalCommUsage;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-
-import java.io.IOException;
 
 /**
  * For internal use only.
@@ -72,9 +72,10 @@ public class WrappedEdgeReader<I extends WritableComparable,
   }
 
   @Override
-  public void setWorkerAggregatorUse(WorkerAggregatorUsage agg) {
-    // Set aggregator usage for edge reader
-    baseEdgeReader.setWorkerAggregatorUse(agg);
+  public void setWorkerGlobalCommUsage(WorkerGlobalCommUsage usage) {
+    super.setWorkerGlobalCommUsage(usage);
+    // Set global communication usage for edge reader
+    baseEdgeReader.setWorkerGlobalCommUsage(usage);
   }
 
   @Override

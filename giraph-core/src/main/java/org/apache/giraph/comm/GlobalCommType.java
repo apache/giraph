@@ -15,17 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.giraph.worker;
+package org.apache.giraph.comm;
 
 /**
- * {@link WorkerAggregatorUsage} which can be used in each of the
- * computation threads.
+ * Type tag distinguishing different global communication messages.
  */
-public interface WorkerThreadAggregatorUsage extends WorkerAggregatorUsage {
-  /**
-   * Call this after thread's computation is finished,
-   * i.e. when all vertices have provided their values to aggregators
-   */
-  void finishThreadComputation();
+public enum GlobalCommType {
+  /** ReduceOperation object */
+  REDUCE_OPERATIONS,
+  /** Reduced value object */
+  REDUCED_VALUE,
+  /** Broadcasted value */
+  BROADCAST,
+  /** Special count used internally for counting requests */
+  SPECIAL_COUNT;
 }
