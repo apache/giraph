@@ -94,11 +94,10 @@
         <item name="Out-of-core" href="ooc.html"/>
         <item name="Implementation" href="implementation.html"/>
         <item name="Page Rank Example" href="pagerank.html"/>
-        <item name="Input/Output in Giraph" href="io.html">
-          <item name="Hive" href="hive.html"/>
-	  <item name="Gora" href="gora.html"/>
-    	  <item name="Rexster I/O" href="rexster.html"/>
-        </item>
+        <item name="Input/Output in Giraph" href="io.html"/>
+        <item name="Hive I/O" href="hive.html"/>
+	<item name="Gora I/O" href="gora.html"/>
+    	<item name="Rexster I/O" href="rexster.html"/>
       </item>
       <item name="How to generate patches?" href="generating_patches.html" />
       <item name="How to build this site?" href="build_site.html" />
