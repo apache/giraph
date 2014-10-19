@@ -19,11 +19,8 @@ package org.apache.giraph.io.gora;
 
 import java.io.IOException;
 
-import junit.framework.Assert;
-
 import org.apache.avro.util.Utf8;
 import org.apache.giraph.edge.Edge;
-import org.apache.giraph.io.gora.GoraEdgeOutputFormat;
 import org.apache.giraph.io.gora.generated.GEdge;
 import org.apache.giraph.io.gora.generated.GEdgeResult;
 import org.apache.gora.persistency.Persistent;
@@ -31,6 +28,7 @@ import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.junit.Assert;
 
 /**
  * Implementation of a specific writer for a generated data bean.
@@ -63,11 +61,11 @@ public class GoraTestEdgeOutputFormat
       GEdgeResult tmpGEdge = new GEdgeResult();
       Utf8 keyLabel = new Utf8(srcId.toString() + "-" +
       edge.getTargetVertexId().toString());
-      tmpGEdge.setEdgeId(keyLabel);
+      tmpGEdge.setEdgeId(keyLabel.toString());
       tmpGEdge.setEdgeWeight(edge.getValue().get());
-      tmpGEdge.setVertexInId(new Utf8(srcId.toString()));
-      tmpGEdge.setVertexOutId(new Utf8(edge.getTargetVertexId().toString()));
-      tmpGEdge.setLabel(keyLabel);
+      tmpGEdge.setVertexInId(srcId.toString());
+      tmpGEdge.setVertexOutId(edge.getTargetVertexId().toString());
+      tmpGEdge.setLabel(keyLabel.toString());
       getLogger().debug("GoraObject created: " + tmpGEdge.toString());
       return tmpGEdge;
     }
@@ -80,6 +78,7 @@ public class GoraTestEdgeOutputFormat
       return goraKey;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public void writeEdge(LongWritable srcId, DoubleWritable srcValue,
         Edge<LongWritable, FloatWritable> edge)
@@ -105,13 +104,13 @@ public class GoraTestEdgeOutputFormat
      * @param edgeWeight Edge wight.
      * @return GEdge created.
      */
-    private GEdge createEdge(String id, String vertexInId,
+    private GEdgeResult createEdge(String id, String vertexInId,
         String vertexOutId, String edgeLabel, float edgeWeight) {
-      GEdge newEdge = new GEdge();
-      newEdge.setEdgeId(new Utf8(id));
-      newEdge.setVertexInId(new Utf8(vertexInId));
-      newEdge.setVertexOutId(new Utf8(vertexOutId));
-      newEdge.setLabel(new Utf8(edgeLabel));
+      GEdgeResult newEdge = new GEdgeResult();
+      newEdge.setEdgeId(id);
+      newEdge.setVertexInId(vertexInId);
+      newEdge.setVertexOutId(vertexOutId);
+      newEdge.setLabel(edgeLabel);
       newEdge.setEdgeWeight(edgeWeight);
       return newEdge;
     }

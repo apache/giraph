@@ -19,10 +19,8 @@ package org.apache.giraph.io.gora;
 
 import java.io.IOException;
 
-import org.apache.avro.util.Utf8;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.EdgeFactory;
-import org.apache.giraph.io.gora.GoraEdgeInputFormat;
 import org.apache.giraph.io.gora.generated.GEdge;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
@@ -82,10 +80,10 @@ public class GoraTestEdgeInputFormat
   private static GEdge createEdge(String id, String vertexInId,
       String vertexOutId, String edgeLabel, float edgeWeight) {
     GEdge newEdge = new GEdge();
-    newEdge.setEdgeId(new Utf8(id));
-    newEdge.setVertexInId(new Utf8(vertexInId));
-    newEdge.setVertexOutId(new Utf8(vertexOutId));
-    newEdge.setLabel(new Utf8(edgeLabel));
+    newEdge.setEdgeId(id);
+    newEdge.setVertexInId(vertexInId);
+    newEdge.setVertexOutId(vertexOutId);
+    newEdge.setLabel(edgeLabel);
     newEdge.setEdgeWeight(edgeWeight);
     return newEdge;
   }
@@ -109,11 +107,11 @@ public class GoraTestEdgeInputFormat
       Edge<LongWritable, FloatWritable> edge = null;
       GEdge goraEdge = (GEdge) goraObject;
       Long dest;
-      Long value;
+      Float value;
       dest = Long.valueOf(goraEdge.getVertexOutId().toString());
       this.sourceId = new LongWritable();
       this.sourceId.set(Long.valueOf(goraEdge.getVertexInId().toString()));
-      value = (long) goraEdge.getEdgeWeight();
+      value = (float) goraEdge.getEdgeWeight();
       edge = EdgeFactory.create(new LongWritable(dest),
           new FloatWritable(value));
       return edge;

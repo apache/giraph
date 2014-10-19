@@ -20,7 +20,6 @@ package org.apache.giraph.io.gora;
 import java.io.IOException;
 import java.util.Set;
 
-import org.apache.avro.util.Utf8;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.graph.Vertex;
@@ -75,12 +74,13 @@ public class GoraGVertexVertexInputFormat
       GVertex tmpGVertex = (GVertex) goraObject;
 
       LongWritable vrtxId = new LongWritable(
-          Long.parseLong(tmpGVertex.getVertexId().toString()));
-      DoubleWritable vrtxValue = new DoubleWritable(tmpGVertex.getValue());
+        Long.parseLong(tmpGVertex.getVertexId().toString()));
+      DoubleWritable vrtxValue = new DoubleWritable(
+        tmpGVertex.getVertexValue());
       vertex.initialize(vrtxId, vrtxValue);
       if (tmpGVertex.getEdges() != null && !tmpGVertex.getEdges().isEmpty()) {
-        Set<Utf8> keyIt = tmpGVertex.getEdges().keySet();
-        for (Utf8 key : keyIt) {
+        Set<CharSequence> keyIt = tmpGVertex.getEdges().keySet();
+        for (CharSequence key : keyIt) {
           String keyVal = key.toString();
           String valVal = tmpGVertex.getEdges().get(key).toString();
           Edge<LongWritable, FloatWritable> edge;

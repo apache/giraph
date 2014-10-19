@@ -30,12 +30,12 @@ import java.util.List;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.VertexInputFormat;
 import org.apache.giraph.io.VertexReader;
-import org.apache.giraph.io.gora.utils.KeyFactory;
 import org.apache.giraph.io.gora.utils.ExtraGoraInputFormat;
 import org.apache.giraph.io.gora.utils.GoraUtils;
+import org.apache.giraph.io.gora.utils.KeyFactory;
 import org.apache.gora.persistency.Persistent;
-import org.apache.gora.query.Query;
 import org.apache.gora.query.Result;
+import org.apache.gora.query.impl.QueryBase;
 import org.apache.gora.store.DataStore;
 import org.apache.gora.util.GoraException;
 import org.apache.hadoop.conf.Configuration;
@@ -115,7 +115,7 @@ public abstract class GoraVertexInputFormat<
       setPersistentClass((Class<? extends Persistent>) persistentClass);
       setDatastoreClass((Class<? extends DataStore>) dataStoreClass);
       setKeyFactoryClass(keyFactoryClass);
-      setDataStore(createDataStore());
+      setDataStore(createDataStore(conf));
       GORA_INPUT_FORMAT.setDataStore(getDataStore());
     } catch (ClassNotFoundException e) {
       LOG.error("Error while reading Gora Input parameters");
@@ -170,8 +170,9 @@ public abstract class GoraVertexInputFormat<
       setStartKey(kFact.buildKey(sKey));
       setEndKey(kFact.buildKey(eKey));
     }
-    Query tmpQuery = GoraUtils.getQuery(
+    QueryBase tmpQuery = GoraUtils.getQuery(
         getDataStore(), getStartKey(), getEndKey());
+    tmpQuery.setConf(getConf());
     GORA_INPUT_FORMAT.setQuery(tmpQuery);
     List<InputSplit> splits = GORA_INPUT_FORMAT.getSplits(context);
     return splits;
@@ -179,12 +180,13 @@ public abstract class GoraVertexInputFormat<
 
   /**
    * Gets the data store object initialized.
+   * @param conf Configuration
    * @return DataStore created
    */
-  public DataStore createDataStore() {
+  public DataStore createDataStore(Configuration conf) {
     DataStore dsCreated = null;
     try {
-      dsCreated = GoraUtils.createSpecificDataStore(getDatastoreClass(),
+      dsCreated = GoraUtils.createSpecificDataStore(conf, getDatastoreClass(),
           getKeyClass(), getPersistentClass());
     } catch (GoraException e) {
       LOG.error("Error creating data store.");

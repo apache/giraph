@@ -21,9 +21,6 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
 
-import junit.framework.Assert;
-
-import org.apache.avro.util.Utf8;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.VertexWriter;
@@ -34,6 +31,7 @@ import org.apache.hadoop.io.DoubleWritable;
 import org.apache.hadoop.io.FloatWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.junit.Assert;
 
 /**
  * Implementation of a specific reader for a generated data bean.
@@ -64,20 +62,21 @@ public class GoraTestVertexOutputFormat
     protected Persistent getGoraVertex(
         Vertex<LongWritable, DoubleWritable, FloatWritable> vertex) {
       GVertexResult tmpGVertex = new GVertexResult();
-      tmpGVertex.setVertexId(new Utf8(vertex.getId().toString()));
-      tmpGVertex.setValue(Float.parseFloat(vertex.getValue().toString()));
+      tmpGVertex.setVertexId(vertex.getId().toString());
+      tmpGVertex.setVertexValue(Float.parseFloat(vertex.getValue().toString()));
       Iterator<Edge<LongWritable, FloatWritable>> it =
           vertex.getEdges().iterator();
       while (it.hasNext()) {
         Edge<LongWritable, FloatWritable> edge = it.next();
-        tmpGVertex.putToEdges(
-            new Utf8(edge.getTargetVertexId().toString()),
-            new Utf8(edge.getValue().toString()));
+        tmpGVertex.getEdges().put(
+            edge.getTargetVertexId().toString(),
+            edge.getValue().toString());
       }
       getLogger().debug("GoraObject created: " + tmpGVertex.toString());
       return tmpGVertex;
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public void writeVertex(
       Vertex<LongWritable, DoubleWritable, FloatWritable> vertex)
@@ -94,12 +93,12 @@ public class GoraTestVertexOutputFormat
      * @param edges Set of edges.
      * @return GVertex created.
      */
-    public GVertex createVertex(String id, Map<String, String> edges) {
-      GVertex newVrtx = new GVertex();
-      newVrtx.setVertexId(new Utf8(id));
+    public GVertexResult createVertex(String id, Map<String, String> edges) {
+      GVertexResult newVrtx = new GVertexResult();
+      newVrtx.setVertexId(id);
       if (edges != null) {
         for (String edgeId : edges.keySet())
-          newVrtx.putToEdges(new Utf8(edgeId), new Utf8(edges.get(edgeId)));
+          newVrtx.getEdges().put(edgeId, edges.get(edgeId));
       }
       return newVrtx;
     }

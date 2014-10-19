@@ -60,8 +60,8 @@ public class TestGoraEdgeInputFormat {
     GIRAPH_GORA_START_KEY.set(conf,"1");
     GIRAPH_GORA_END_KEY.set(conf,"3");
     conf.set("io.serializations",
-        "org.apache.hadoop.io.serializer.WritableSerialization," +
-        "org.apache.hadoop.io.serializer.JavaSerialization");
+        "org.apache.hadoop.io.serializer.JavaSerialization," +
+        "org.apache.hadoop.io.serializer.WritableSerialization");
     conf.setComputationClass(EmptyComputation.class);
     conf.setEdgeInputFormatClass(GoraGEdgeEdgeInputFormat.class);
     results = InternalVertexRunner.run(conf, new String[0], new String[0]);

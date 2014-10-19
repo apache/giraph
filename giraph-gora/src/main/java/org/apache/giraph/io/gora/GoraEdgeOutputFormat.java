@@ -30,11 +30,12 @@ import org.apache.giraph.io.gora.utils.GoraUtils;
 import org.apache.gora.persistency.Persistent;
 import org.apache.gora.store.DataStore;
 import org.apache.gora.util.GoraException;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.JobContext;
-import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.OutputCommitter;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.log4j.Logger;
 
 /**
@@ -83,12 +84,13 @@ public abstract class GoraEdgeOutputFormat<I extends WritableComparable,
 
   /**
    * Gets the data store object initialized.
+   * @param conf Configuration
    * @return DataStore created
    */
-  public DataStore createDataStore() {
+  public DataStore createDataStore(Configuration conf) {
     DataStore dsCreated = null;
     try {
-      dsCreated = GoraUtils.createSpecificDataStore(getDatastoreClass(),
+      dsCreated = GoraUtils.createSpecificDataStore(conf, getDatastoreClass(),
           getKeyClass(), getPersistentClass());
     } catch (GoraException e) {
       getLogger().error("Error creating data store.");
@@ -159,7 +161,7 @@ public abstract class GoraEdgeOutputFormat<I extends WritableComparable,
         setKeyClass(keyClass);
         setPersistentClass((Class<? extends Persistent>) persistentClass);
         setDatastoreClass((Class<? extends DataStore>) dataStoreClass);
-        setDataStore(createDataStore());
+        setDataStore(createDataStore(context.getConfiguration()));
         if (getDataStore() != null) {
           getLogger().debug("The data store has been created.");
         }
