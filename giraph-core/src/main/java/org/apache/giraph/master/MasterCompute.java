@@ -25,7 +25,6 @@ import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
 import org.apache.giraph.graph.Computation;
 import org.apache.giraph.graph.GraphState;
 import org.apache.giraph.reducers.ReduceOperation;
-import org.apache.giraph.utils.WritableFactory;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.Mapper;
 
@@ -219,14 +218,6 @@ public abstract class MasterCompute
     throws InstantiationException, IllegalAccessException {
     return serviceMaster.getAggregatorTranslationHandler().registerAggregator(
         name, aggregatorClass);
-  }
-
-  @Override
-  public final <A extends Writable> boolean registerAggregator(
-    String name, WritableFactory<? extends Aggregator<A>> aggregator)
-    throws InstantiationException, IllegalAccessException {
-    return serviceMaster.getAggregatorTranslationHandler().registerAggregator(
-        name, aggregator);
   }
 
   @Override

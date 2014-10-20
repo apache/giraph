@@ -22,8 +22,10 @@ import java.io.DataOutput;
 import java.io.IOException;
 
 import org.apache.giraph.aggregators.Aggregator;
+import org.apache.giraph.conf.GiraphConfigurationSettable;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.reducers.OnSameReduceOperation;
-import org.apache.giraph.utils.WritableFactory;
+import org.apache.giraph.utils.ReflectionUtils;
 import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.Writable;
 
@@ -33,11 +35,13 @@ import org.apache.hadoop.io.Writable;
  * @param <A> Aggregation object type
  */
 public class AggregatorReduceOperation<A extends Writable>
-    extends OnSameReduceOperation<A> {
-  /** Aggregator factory */
-  private WritableFactory<? extends Aggregator<A>> aggregatorFactory;
+    extends OnSameReduceOperation<A> implements GiraphConfigurationSettable {
+  /** Aggregator class */
+  private Class<? extends Aggregator<A>> aggregatorClass;
   /** Aggregator */
   private Aggregator<A> aggregator;
+  /** Configuration */
+  private ImmutableClassesGiraphConfiguration<?, ?, ?> conf;
 
   /** Constructor */
   public AggregatorReduceOperation() {
@@ -45,18 +49,32 @@ public class AggregatorReduceOperation<A extends Writable>
 
   /**
    * Constructor
-   * @param aggregatorFactory Aggregator factory
+   * @param aggregatorClass Aggregator class
+   * @param conf Configuration
    */
   public AggregatorReduceOperation(
-      WritableFactory<? extends Aggregator<A>> aggregatorFactory) {
-    this.aggregatorFactory = aggregatorFactory;
-    this.aggregator = aggregatorFactory.create();
-    this.aggregator.setAggregatedValue(null);
+      Class<? extends Aggregator<A>> aggregatorClass,
+      ImmutableClassesGiraphConfiguration<?, ?, ?> conf) {
+    this.aggregatorClass = aggregatorClass;
+    this.conf = conf;
+    initAggregator();
+  }
+
+  /** Initialize aggregator */
+  private void initAggregator() {
+    aggregator = ReflectionUtils.newInstance(aggregatorClass, conf);
+    aggregator.setAggregatedValue(null);
   }
 
   @Override
   public A createInitialValue() {
-    return aggregator.createInitialValue();
+    A agg = aggregator.createInitialValue();
+    if (agg == null) {
+      throw new IllegalStateException(
+          "Aggregators initial value must not be null, but is for " +
+          aggregator);
+    }
+    return agg;
   }
 
   /**
@@ -64,29 +82,37 @@ public class AggregatorReduceOperation<A extends Writable>
    * @return copy
    */
   public AggregatorReduceOperation<A> createCopy() {
-    return new AggregatorReduceOperation<>(aggregatorFactory);
+    return new AggregatorReduceOperation<>(aggregatorClass, conf);
+  }
+
+  public Class<? extends Aggregator<A>> getAggregatorClass() {
+    return aggregatorClass;
   }
 
   @Override
-  public synchronized void reduceSingle(A curValue, A valueToReduce) {
+  public synchronized A reduceSingle(A curValue, A valueToReduce) {
     aggregator.setAggregatedValue(curValue);
     aggregator.aggregate(valueToReduce);
-    if (curValue != aggregator.getAggregatedValue()) {
-      throw new IllegalStateException(
-          "Aggregator " + aggregator + " aggregates by creating new value");
-    }
+    A aggregated = aggregator.getAggregatedValue();
     aggregator.setAggregatedValue(null);
+    return aggregated;
+  }
+
+  @Override
+  public void setConf(ImmutableClassesGiraphConfiguration conf) {
+    this.conf = conf;
   }
 
   @Override
   public void write(DataOutput out) throws IOException {
-    WritableUtils.writeWritableObject(aggregatorFactory, out);
+    WritableUtils.writeClass(aggregatorClass, out);
   }
 
   @Override
   public void readFields(DataInput in) throws IOException {
-    aggregatorFactory = WritableUtils.readWritableObject(in, null);
-    aggregator = aggregatorFactory.create();
-    this.aggregator.setAggregatedValue(null);
+    aggregatorClass = WritableUtils.readClass(in);
+    initAggregator();
   }
+
+
 }

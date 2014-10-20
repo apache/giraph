@@ -895,7 +895,7 @@ public class BspServiceMaster<I extends WritableComparable,
           globalCommHandler = new MasterAggregatorHandler(
               getConfiguration(), getContext());
           aggregatorTranslation = new AggregatorToGlobalCommTranslation(
-              globalCommHandler);
+              getConfiguration(), globalCommHandler);
 
           globalCommHandler.initialize(this);
           masterCompute = getConfiguration().createMasterCompute();

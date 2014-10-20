@@ -18,6 +18,7 @@
 package org.apache.giraph.worker;
 
 import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
+import org.apache.giraph.master.AggregatorBroadcast;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
@@ -64,6 +65,7 @@ public abstract class WorkerAggregatorDelegator<I extends WritableComparable,
 
   @Override
   public final <A extends Writable> A getAggregatedValue(String name) {
-    return this.<A>getBroadcast(name);
+    AggregatorBroadcast<A> broadcast = workerGlobalCommUsage.getBroadcast(name);
+    return broadcast.getValue();
   }
 }

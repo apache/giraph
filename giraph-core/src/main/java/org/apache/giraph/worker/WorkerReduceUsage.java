@@ -15,20 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.reducers;
-
-import org.apache.hadoop.io.Writable;
+package org.apache.giraph.worker;
 
 /**
- * ReduceOperation object when single object being reduced is of
- * same type as reduced value.
- *
- * @param <R> Reduced object type.
+ * Methods on worker can provide values to reduce through this interface
  */
-public abstract class OnSameReduceOperation<R extends Writable>
-    implements ReduceOperation<R, R> {
-  @Override
-  public final R reducePartial(R curValue, R valueToReduce) {
-    return reduceSingle(curValue, valueToReduce);
-  }
+public interface WorkerReduceUsage {
+  /**
+   * Reduce given value.
+   * @param name Name of the reducer
+   * @param value Single value to reduce
+   */
+  void reduce(String name, Object value);
 }

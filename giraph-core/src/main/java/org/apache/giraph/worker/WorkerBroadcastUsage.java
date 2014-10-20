@@ -15,14 +15,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.utils;
+package org.apache.giraph.worker;
 
 import org.apache.hadoop.io.Writable;
 
 /**
- * Factory that can be serialized.
- * @param <T> Type of object factory creates
+ * Methods on worker can access broadcasted values through this interface
  */
-public interface WritableFactory<T> extends Writable, Factory<T> {
-
+public interface WorkerBroadcastUsage {
+  /**
+   * Get value broadcasted from master
+   * @param name Name of the broadcasted value
+   * @return Broadcasted value
+   * @param <B> Broadcast value type
+   */
+  <B extends Writable> B getBroadcast(String name);
 }

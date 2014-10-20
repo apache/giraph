@@ -15,58 +15,61 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.giraph.aggregators;
+package org.apache.giraph.master;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.giraph.aggregators.Aggregator;
+import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
 import org.apache.giraph.utils.ReflectionUtils;
-import org.apache.giraph.utils.WritableFactory;
 import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.Writable;
 
-import com.google.common.base.Preconditions;
-
 /**
- * Aggregator factory based on aggregatorClass.
+ * Writable representation of aggregated value
  *
- * @param <T> Aggregated value type
+ * @param <A> Aggregation object type
  */
-public class ClassAggregatorFactory<T extends Writable>
-    implements WritableFactory<Aggregator<T>> {
+public class AggregatorBroadcast<A extends Writable>
+  extends DefaultImmutableClassesGiraphConfigurable
+  implements Writable {
   /** Aggregator class */
-  private Class<? extends Aggregator<T>> aggregatorClass;
+  private Class<? extends Aggregator<A>> aggregatorClass;
+  /** Aggregated value */
+  private A value;
 
   /** Constructor */
-  public ClassAggregatorFactory() {
+  public AggregatorBroadcast() {
   }
 
   /**
    * Constructor
    * @param aggregatorClass Aggregator class
+   * @param value Aggregated value
    */
-  public ClassAggregatorFactory(
-      Class<? extends Aggregator<T>> aggregatorClass) {
-    Preconditions.checkNotNull(aggregatorClass,
-        "aggregatorClass cannot be null in ClassAggregatorFactory");
+  public AggregatorBroadcast(
+      Class<? extends Aggregator<A>> aggregatorClass, A value) {
     this.aggregatorClass = aggregatorClass;
+    this.value = value;
+  }
+
+  public A getValue() {
+    return value;
   }
 
   @Override
-  public Aggregator<T> create() {
-    return ReflectionUtils.newInstance(aggregatorClass, null);
+  public void write(DataOutput out) throws IOException {
+    WritableUtils.writeClass(aggregatorClass, out);
+    value.write(out);
   }
 
   @Override
   public void readFields(DataInput in) throws IOException {
     aggregatorClass = WritableUtils.readClass(in);
-  }
-
-  @Override
-  public void write(DataOutput out) throws IOException {
-    Preconditions.checkNotNull(aggregatorClass,
-        "aggregatorClass cannot be null in ClassAggregatorFactory");
-    WritableUtils.writeClass(aggregatorClass, out);
+    value = ReflectionUtils.newInstance(aggregatorClass, getConf())
+        .createInitialValue();
+    value.readFields(in);
   }
 }

@@ -745,13 +745,15 @@ public class WritableUtils {
    * @param reusableOut Reusable output stream to serialize into
    * @param reusableIn Reusable input stream to deserialize out of
    * @param original Original value of which to make a copy
+   * @param conf Configuration
    * @param <T> Type of the object
    * @return Copy of the original value
    */
   public static <T extends Writable> T createCopy(
       UnsafeByteArrayOutputStream reusableOut,
-      UnsafeReusableByteArrayInput reusableIn, T original) {
-    T copy = (T) createWritable(original.getClass(), null);
+      UnsafeReusableByteArrayInput reusableIn, T original,
+      ImmutableClassesGiraphConfiguration conf) {
+    T copy = (T) createWritable(original.getClass(), conf);
 
     try {
       reusableOut.reset();

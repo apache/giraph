@@ -17,24 +17,11 @@
  */
 package org.apache.giraph.worker;
 
-import org.apache.hadoop.io.Writable;
 
 /**
  * Methods on worker can access broadcasted values and provide
  * values to reduce through this interface
  */
-public interface WorkerGlobalCommUsage {
-  /**
-   * Reduce given value.
-   * @param name Name of the reducer
-   * @param value Single value to reduce
-   */
-  void reduce(String name, Object value);
-  /**
-   * Get value broadcasted from master
-   * @param name Name of the broadcasted value
-   * @return Broadcasted value
-   * @param <B> Broadcast value type
-   */
-  <B extends Writable> B getBroadcast(String name);
+public interface WorkerGlobalCommUsage
+    extends WorkerBroadcastUsage, WorkerReduceUsage {
 }

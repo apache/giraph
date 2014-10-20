@@ -28,6 +28,7 @@ import org.apache.giraph.bsp.BspService;
 import org.apache.giraph.bsp.SuperstepState;
 import org.apache.giraph.comm.GlobalCommType;
 import org.apache.giraph.comm.MasterClient;
+import org.apache.giraph.comm.aggregators.AggregatorUtils;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.reducers.ReduceOperation;
 import org.apache.giraph.reducers.Reducer;
@@ -61,6 +62,9 @@ public class MasterAggregatorHandler
   /** Progressable used to report progress */
   private final Progressable progressable;
 
+  /** Conf */
+  private final ImmutableClassesGiraphConfiguration<?, ?, ?> conf;
+
   /**
    * Constructor
    *
@@ -71,6 +75,7 @@ public class MasterAggregatorHandler
       ImmutableClassesGiraphConfiguration<?, ?, ?> conf,
       Progressable progressable) {
     this.progressable = progressable;
+    this.conf = conf;
     aggregatorWriter = conf.createAggregatorWriter();
   }
 
@@ -86,10 +91,18 @@ public class MasterAggregatorHandler
       R globalInitialValue) {
     if (reducerMap.containsKey(name)) {
       throw new IllegalArgumentException(
-          "Reducer with name " + name + " was already registered");
+          "Reducer with name " + name + " was already registered, " +
+          " and is " + reducerMap.get(name) + ", and we are trying to " +
+          " register " + reduceOp);
     }
     if (reduceOp == null) {
-      throw new IllegalArgumentException("null reduce cannot be registered");
+      throw new IllegalArgumentException(
+          "null reducer cannot be registered, with name " + name);
+    }
+    if (globalInitialValue == null) {
+      throw new IllegalArgumentException(
+          "global initial value for reducer cannot be null, but is for " +
+          reduceOp + " with naem" + name);
     }
 
     Reducer<S, R> reducer = new Reducer<>(reduceOp, globalInitialValue);
@@ -98,7 +111,13 @@ public class MasterAggregatorHandler
 
   @Override
   public <T extends Writable> T getReduced(String name) {
-    return (T) reducedMap.get(name);
+    T value = (T) reducedMap.get(name);
+    if (value == null) {
+      LOG.warn("getReduced: " +
+        AggregatorUtils.getUnregisteredReducerMessage(name,
+            reducedMap.size() != 0, conf));
+    }
+    return value;
   }
 
   @Override
@@ -310,14 +329,14 @@ public class MasterAggregatorHandler
     for (int i = 0; i < numReducers; i++) {
       String name = in.readUTF();
       Reducer<Object, Writable> reducer = new Reducer<>();
-      reducer.readFields(in);
+      reducer.readFields(in, conf);
       reducerMap.put(name, reducer);
     }
 
     int numBroadcast = in.readInt();
     for (int i = 0; i < numBroadcast; i++) {
       String name = in.readUTF();
-      Writable value = WritableUtils.readWritableObject(in, null);
+      Writable value = WritableUtils.readWritableObject(in, conf);
       broadcastMap.put(name, value);
     }
   }

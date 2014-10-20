@@ -64,9 +64,10 @@ public class ReducersBenchmark extends GiraphBenchmark {
     }
 
     @Override
-    public void reduceSingle(
+    public LongWritable reduceSingle(
         LongWritable curValue, LongWritable valueToReduce) {
       curValue.set(curValue.get() + valueToReduce.get());
+      return curValue;
     }
 
     @Override
