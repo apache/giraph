@@ -686,21 +686,24 @@ public class WritableUtils {
    * @param output the output stream
    * @throws IOException
    */
-  public static void writeList(List<Writable> list, DataOutput output)
+  public static void writeList(List<? extends Writable> list, DataOutput output)
     throws IOException {
-    output.writeInt(list.size());
-    Class<? extends Writable> clazz = null;
-    for (Writable element : list) {
-      output.writeBoolean(element == null);
-      if (element != null) {
-        if (element.getClass() != clazz) {
-          clazz = element.getClass();
-          output.writeBoolean(true);
-          writeClass(clazz, output);
-        } else {
-          output.writeBoolean(false);
+    output.writeBoolean(list != null);
+    if (list != null) {
+      output.writeInt(list.size());
+      Class<? extends Writable> clazz = null;
+      for (Writable element : list) {
+        output.writeBoolean(element == null);
+        if (element != null) {
+          if (element.getClass() != clazz) {
+            clazz = element.getClass();
+            output.writeBoolean(true);
+            writeClass(clazz, output);
+          } else {
+            output.writeBoolean(false);
+          }
+          element.write(output);
         }
-        element.write(output);
       }
     }
   }
@@ -712,24 +715,27 @@ public class WritableUtils {
    * @return deserialized list
    * @throws IOException
    */
-  public static List<Writable> readList(DataInput input) throws IOException {
+  public static List<? extends Writable> readList(DataInput input)
+    throws IOException {
     try {
-
-      int size = input.readInt();
-      List<Writable> res = new ArrayList<>(size);
-      Class<? extends Writable> clazz = null;
-      for (int i = 0; i < size; i++) {
-        boolean isNull = input.readBoolean();
-        if (isNull) {
-          res.add(null);
-        } else {
-          boolean hasClassInfo = input.readBoolean();
-          if (hasClassInfo) {
-            clazz = readClass(input);
+      List<Writable> res = null;
+      if (input.readBoolean()) {
+        int size = input.readInt();
+        res = new ArrayList<>(size);
+        Class<? extends Writable> clazz = null;
+        for (int i = 0; i < size; i++) {
+          boolean isNull = input.readBoolean();
+          if (isNull) {
+            res.add(null);
+          } else {
+            boolean hasClassInfo = input.readBoolean();
+            if (hasClassInfo) {
+              clazz = readClass(input);
+            }
+            Writable element = clazz.newInstance();
+            element.readFields(input);
+            res.add(element);
           }
-          Writable element = clazz.newInstance();
-          element.readFields(input);
-          res.add(element);
         }
       }
       return res;
@@ -773,6 +779,81 @@ public class WritableUtils {
           original.getClass(), e);
     }
     return copy;
+  }
+
+  /**
+   * Writes primitive int array of ints into output stream.
+   * Array can be null or empty.
+   * @param array array to be written
+   * @param dataOutput output stream
+   * @throws IOException
+   */
+  public static void writeIntArray(int[] array, DataOutput dataOutput)
+    throws IOException {
+    if (array != null) {
+      dataOutput.writeInt(array.length);
+      for (int r : array) {
+        dataOutput.writeInt(r);
+      }
+    } else {
+      dataOutput.writeInt(-1);
+    }
+  }
+
+  /**
+   * Reads primitive int array from input stream.
+   * @param dataInput input stream to read from
+   * @return may return null or empty array.
+   * @throws IOException
+   */
+  public static int[] readIntArray(DataInput dataInput)
+    throws IOException {
+    int [] res = null;
+    int size = dataInput.readInt();
+    if (size >= 0) {
+      res = new int[size];
+      for (int i = 0; i < size; i++) {
+        res[i] = dataInput.readInt();
+      }
+    }
+    return res;
+  }
+
+  /**
+   * Writes primitive long array of ints into output stream.
+   * Array can be null or empty.
+   * @param array array to be written
+   * @param dataOutput output stream
+   * @throws IOException
+   */
+  public static void writeLongArray(DataOutput dataOutput, long[] array)
+    throws IOException {
+    if (array != null) {
+      dataOutput.writeInt(array.length);
+      for (long r : array) {
+        dataOutput.writeLong(r);
+      }
+    } else {
+      dataOutput.writeInt(-1);
+    }
+  }
+  /**
+   * Reads primitive long array from input stream.
+   * @param dataInput input stream to read from
+   * @return may return null or empty array.
+   * @throws IOException
+   */
+  public static long[] readLongArray(DataInput dataInput)
+    throws IOException {
+    long [] res = null;
+    int size = dataInput.readInt();
+    if (size >= 0) {
+      res = new long[size];
+      for (int i = 0; i < size; i++) {
+        res[i] = dataInput.readLong();
+      }
+    }
+    return res;
   }
 
 }

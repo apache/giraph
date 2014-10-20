@@ -31,10 +31,7 @@ import org.apache.giraph.zk.BspEvent;
 import org.apache.giraph.zk.PredicateLock;
 import org.apache.giraph.zk.ZooKeeperExt;
 import org.apache.giraph.zk.ZooKeeperManager;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -52,9 +49,7 @@ import org.json.JSONObject;
 import java.io.IOException;
 import java.net.UnknownHostException;
 import java.nio.charset.Charset;
-import java.security.InvalidParameterException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -190,28 +185,7 @@ public abstract class BspService<I extends WritableComparable,
   public static final String WORKER_SUFFIX = "_worker";
   /** Suffix denotes a master */
   public static final String MASTER_SUFFIX = "_master";
-  /** If at the end of a checkpoint file, indicates metadata */
-  public static final String CHECKPOINT_METADATA_POSTFIX = ".metadata";
-  /**
-   * If at the end of a checkpoint file, indicates vertices, edges,
-   * messages, etc.
-   */
-  public static final String CHECKPOINT_VERTICES_POSTFIX = ".vertices";
-  /**
-   * If at the end of a checkpoint file, indicates metadata and data is valid
-   * for the same filenames without .valid
-   */
-  public static final String CHECKPOINT_VALID_POSTFIX = ".valid";
-  /**
-   * If at the end of a checkpoint file,
-   * indicates that we store WorkerContext and aggregator handler data.
-   */
-  public static final String CHECKPOINT_DATA_POSTFIX = ".data";
-  /**
-   * If at the end of a checkpoint file, indicates the stitched checkpoint
-   * file prefixes.  A checkpoint is not valid if this file does not exist.
-   */
-  public static final String CHECKPOINT_FINALIZED_POSTFIX = ".finalized";
+
   /** Class logger */
   private static final Logger LOG = Logger.getLogger(BspService.class);
   /** Path to the job's root */
@@ -606,22 +580,6 @@ public abstract class BspService<I extends WritableComparable,
     return savedCheckpointBasePath + "/" + superstep;
   }
 
-  /**
-   * Get the checkpoint from a finalized checkpoint path
-   *
-   * @param finalizedPath Path of the finalized checkpoint
-   * @return Superstep referring to a checkpoint of the finalized path
-   */
-  public static long getCheckpoint(Path finalizedPath) {
-    if (!finalizedPath.getName().endsWith(CHECKPOINT_FINALIZED_POSTFIX)) {
-      throw new InvalidParameterException(
-          "getCheckpoint: " + finalizedPath + "Doesn't end in " +
-              CHECKPOINT_FINALIZED_POSTFIX);
-    }
-    String checkpointString =
-        finalizedPath.getName().replace(CHECKPOINT_FINALIZED_POSTFIX, "");
-    return Long.parseLong(checkpointString);
-  }
 
   /**
    * Get the ZooKeeperExt instance.
@@ -1235,22 +1193,8 @@ public abstract class BspService<I extends WritableComparable,
    * @throws IOException
    */
   protected long getLastCheckpointedSuperstep() throws IOException {
-    FileStatus[] fileStatusArray =
-        getFs().listStatus(new Path(savedCheckpointBasePath),
-            new FinalizedCheckpointPathFilter());
-    if (fileStatusArray == null) {
-      return -1;
-    }
-    Arrays.sort(fileStatusArray);
-    long lastCheckpointedSuperstep = getCheckpoint(
-        fileStatusArray[fileStatusArray.length - 1].getPath());
-    if (LOG.isInfoEnabled()) {
-      LOG.info("getLastGoodCheckpoint: Found last good checkpoint " +
-          lastCheckpointedSuperstep + " from " +
-          fileStatusArray[fileStatusArray.length - 1].
-              getPath().toString());
-    }
-    return lastCheckpointedSuperstep;
+    return CheckpointingUtils.getLastCheckpointedSuperstep(getFs(),
+        savedCheckpointBasePath);
   }
 
   @Override
@@ -1258,15 +1202,5 @@ public abstract class BspService<I extends WritableComparable,
     return getGraphTaskManager().getJobProgressTracker();
   }
 
-  /**
-   * Only get the finalized checkpoint files
-   */
-  private static class FinalizedCheckpointPathFilter implements PathFilter {
-    @Override
-    public boolean accept(Path path) {
-      return path.getName().endsWith(BspService.CHECKPOINT_FINALIZED_POSTFIX);
-    }
-
-  }
 
 }

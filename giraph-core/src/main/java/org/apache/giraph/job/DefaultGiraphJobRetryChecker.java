@@ -32,7 +32,8 @@ public class DefaultGiraphJobRetryChecker implements GiraphJobRetryChecker {
   }
 
   @Override
-  public boolean shouldRestartCheckpoint() {
-    return false;
+  public String shouldRestartCheckpoint(Job lastAttempt) {
+    return null;
   }
+
 }

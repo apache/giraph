@@ -24,13 +24,9 @@ import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.GraphMapper;
-import org.apache.giraph.utils.CheckpointingUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.JobID;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
@@ -276,22 +272,12 @@ public class GiraphJob {
       }
       jobObserver.jobFinished(submittedJob, passed);
 
-      FileSystem fs = FileSystem.get(conf);
-      JobID jobID = HadoopUtils.getJobID(submittedJob);
-      if (jobID != null) {
-        Path checkpointMark =
-            CheckpointingUtils.getCheckpointMarkPath(conf, jobID.toString());
-
-        if (fs.exists(checkpointMark)) {
-          if (retryChecker.shouldRestartCheckpoint()) {
-            GiraphConstants.RESTART_JOB_ID.set(conf, jobID.toString());
-            continue;
-          }
+      if (!passed) {
+        String restartFrom = retryChecker.shouldRestartCheckpoint(submittedJob);
+        if (restartFrom != null) {
+          GiraphConstants.RESTART_JOB_ID.set(conf, restartFrom);
+          continue;
         }
-      } else {
-        LOG.warn("jobID is null, are you using hadoop 0.20.203? " +
-            "Please report this issue here " +
-            "https://issues.apache.org/jira/browse/GIRAPH-933");
       }
 
       if (passed || !retryChecker.shouldRetry(submittedJob, tryCount)) {

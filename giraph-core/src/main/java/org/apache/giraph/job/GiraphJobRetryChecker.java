@@ -20,6 +20,9 @@ package org.apache.giraph.job;
 
 import org.apache.hadoop.mapreduce.Job;
 
+import java.io.IOException;
+
+
 /**
  * Class to decide whether a GiraphJob should be restarted after failure.
  */
@@ -36,7 +39,9 @@ public interface GiraphJobRetryChecker {
 
   /**
    * The job has been checkpointed and halted. Should we now restart it?
-   * @return true if checkpointed job should be automatically restarted.
+   * @param lastAttempt latest failed job
+   * @return JobID of job to be restarted or null if
+   * we don't want to restart anything
    */
-  boolean shouldRestartCheckpoint();
+  String shouldRestartCheckpoint(Job lastAttempt) throws IOException;
 }

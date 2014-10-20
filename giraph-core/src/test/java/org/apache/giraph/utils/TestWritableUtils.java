@@ -61,10 +61,48 @@ public class TestWritableUtils {
     DataInputStream input =
         new DataInputStream(new ByteArrayInputStream(data));
 
-    List<Writable> result = WritableUtils.readList(input);
+    List<Writable> result = (List<Writable>) WritableUtils.readList(input);
 
     Assert.assertEquals(list, result);
 
   }
+
+  @Test
+  public void testIntArray() throws IOException {
+    int[] array = new int[] {1, 2, 3, 4, 5};
+    ByteArrayOutputStream bos = new ByteArrayOutputStream();
+    DataOutputStream dos = new DataOutputStream(bos);
+    WritableUtils.writeIntArray(array, dos);
+    dos.close();
+
+    byte[] data = bos.toByteArray();
+
+    DataInputStream input =
+        new DataInputStream(new ByteArrayInputStream(data));
+
+    int[] result = WritableUtils.readIntArray(input);
+
+    Assert.assertArrayEquals(array, result);
+  }
+
+  @Test
+  public void testLongArray() throws IOException {
+    long[] array = new long[] {1, 2, 3, 4, 5};
+    ByteArrayOutputStream bos = new ByteArrayOutputStream();
+    DataOutputStream dos = new DataOutputStream(bos);
+    WritableUtils.writeLongArray(dos, array);
+    dos.close();
+
+    byte[] data = bos.toByteArray();
+
+    DataInputStream input =
+        new DataInputStream(new ByteArrayInputStream(data));
+
+    long[] result = WritableUtils.readLongArray(input);
+
+    Assert.assertArrayEquals(array, result);
+  }
+
+
 
 }

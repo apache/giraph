@@ -86,6 +86,7 @@ import org.apache.giraph.partition.PartitionStats;
 import org.apache.giraph.partition.PartitionStore;
 import org.apache.giraph.partition.WorkerGraphPartitioner;
 import org.apache.giraph.utils.CallableFactory;
+import org.apache.giraph.utils.CheckpointingUtils;
 import org.apache.giraph.utils.JMapHistoDumper;
 import org.apache.giraph.utils.LoggerUtils;
 import org.apache.giraph.utils.MemoryUtils;
@@ -1388,12 +1389,12 @@ public class BspServiceWorker<I extends WritableComparable,
 
     // Algorithm:
     // For each partition, dump vertices and messages
-    Path metadataFilePath =
-        createCheckpointFilePathSafe(CHECKPOINT_METADATA_POSTFIX);
-    Path validFilePath =
-        createCheckpointFilePathSafe(CHECKPOINT_VALID_POSTFIX);
-    Path checkpointFilePath =
-        createCheckpointFilePathSafe(CHECKPOINT_DATA_POSTFIX);
+    Path metadataFilePath = createCheckpointFilePathSafe(
+        CheckpointingUtils.CHECKPOINT_METADATA_POSTFIX);
+    Path validFilePath = createCheckpointFilePathSafe(
+        CheckpointingUtils.CHECKPOINT_VALID_POSTFIX);
+    Path checkpointFilePath = createCheckpointFilePathSafe(
+        CheckpointingUtils.CHECKPOINT_DATA_POSTFIX);
 
 
     // Metadata is buffered and written at the end since it's small and
@@ -1521,7 +1522,7 @@ public class BspServiceWorker<I extends WritableComparable,
               }
               Path path =
                   createCheckpointFilePathSafe("_" + partitionId +
-                      CHECKPOINT_VERTICES_POSTFIX);
+                      CheckpointingUtils.CHECKPOINT_VERTICES_POSTFIX);
 
               FSDataOutputStream uncompressedStream =
                   getFs().create(path);
@@ -1592,7 +1593,7 @@ public class BspServiceWorker<I extends WritableComparable,
               }
               Path path =
                   getSavedCheckpoint(superstep, "_" + partitionId +
-                      CHECKPOINT_VERTICES_POSTFIX);
+                      CheckpointingUtils.CHECKPOINT_VERTICES_POSTFIX);
 
               FSDataInputStream compressedStream =
                   getFs().open(path);
@@ -1626,11 +1627,11 @@ public class BspServiceWorker<I extends WritableComparable,
 
   @Override
   public VertexEdgeCount loadCheckpoint(long superstep) {
-    Path metadataFilePath =
-        getSavedCheckpoint(superstep, CHECKPOINT_METADATA_POSTFIX);
+    Path metadataFilePath = getSavedCheckpoint(
+        superstep, CheckpointingUtils.CHECKPOINT_METADATA_POSTFIX);
 
-    Path checkpointFilePath =
-        getSavedCheckpoint(superstep, CHECKPOINT_DATA_POSTFIX);
+    Path checkpointFilePath = getSavedCheckpoint(
+        superstep, CheckpointingUtils.CHECKPOINT_DATA_POSTFIX);
     // Algorithm:
     // Examine all the partition owners and load the ones
     // that match my hostname and id from the master designated checkpoint
@@ -1659,8 +1660,8 @@ public class BspServiceWorker<I extends WritableComparable,
       // Load global stats and superstep classes
       GlobalStats globalStats = new GlobalStats();
       SuperstepClasses superstepClasses = new SuperstepClasses();
-      String finalizedCheckpointPath =
-          getSavedCheckpointBasePath(superstep) + CHECKPOINT_FINALIZED_POSTFIX;
+      String finalizedCheckpointPath = getSavedCheckpointBasePath(superstep) +
+          CheckpointingUtils.CHECKPOINT_FINALIZED_POSTFIX;
       DataInputStream finalizedStream =
           getFs().open(new Path(finalizedCheckpointPath));
       globalStats.readFields(finalizedStream);
@@ -1674,7 +1675,8 @@ public class BspServiceWorker<I extends WritableComparable,
             checkpointStream, partitionId);
       }
 
-      List<Writable> w2wMessages = WritableUtils.readList(checkpointStream);
+      List<Writable> w2wMessages = (List<Writable>) WritableUtils.readList(
+          checkpointStream);
       getServerData().getCurrentWorkerToWorkerMessages().addAll(w2wMessages);
 
       checkpointStream.close();
