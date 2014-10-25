@@ -272,6 +272,8 @@ under the License.
     <project.build.targetJdk>1.7</project.build.targetJdk>
     <giraph.maven.dependency.plugin.skip>false</giraph.maven.dependency.plugin.skip>
     <giraph.maven.duplicate.finder.skip>false</giraph.maven.duplicate.finder.skip>
+    <!-- This lets modules skip unit tests. More details: GIRAPH-957 --> 
+    <surefire.skip>false</surefire.skip>
 
     <dep.avro.version>1.7.6</dep.avro.version>
     <dep.accumulo.version>1.4.0</dep.accumulo.version>
