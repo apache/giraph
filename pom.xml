@@ -717,6 +717,7 @@ under the License.
                 <exclude>.reviewboardrc</exclude>
                 <exclude>.git/**</exclude>
                 <exclude>.gitignore</exclude>
+                <exclude>.arcconfig</exclude>
                 <exclude>*.patch</exclude>
                 <exclude>.idea/**</exclude>
                 <exclude>**/*.iml</exclude>
