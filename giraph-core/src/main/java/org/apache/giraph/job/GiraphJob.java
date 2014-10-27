@@ -218,14 +218,14 @@ public class GiraphJob {
     giraphConfiguration.setBoolean("mapreduce.job.user.classpath.first", true);
 
     // If the checkpoint frequency is 0 (no failure handling), set the max
-    // tasks attempts to be 0 to encourage faster failure of unrecoverable jobs
+    // tasks attempts to be 1 to encourage faster failure of unrecoverable jobs
     if (giraphConfiguration.getCheckpointFrequency() == 0) {
       int oldMaxTaskAttempts = giraphConfiguration.getMaxTaskAttempts();
-      giraphConfiguration.setMaxTaskAttempts(0);
+      giraphConfiguration.setMaxTaskAttempts(1);
       if (LOG.isInfoEnabled()) {
         LOG.info("run: Since checkpointing is disabled (default), " +
             "do not allow any task retries (setting " +
-            GiraphConstants.MAX_TASK_ATTEMPTS.getKey() + " = 0, " +
+            GiraphConstants.MAX_TASK_ATTEMPTS.getKey() + " = 1, " +
             "old value = " + oldMaxTaskAttempts + ")");
       }
     }
