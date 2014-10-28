@@ -26,6 +26,7 @@ import java.util.Map.Entry;
 import org.apache.giraph.aggregators.Aggregator;
 import org.apache.giraph.comm.aggregators.AggregatorUtils;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.utils.MasterLoggingAggregator;
 import org.apache.hadoop.io.Writable;
 import org.apache.log4j.Logger;
 
@@ -71,6 +72,7 @@ public class AggregatorToGlobalCommTranslation
       MasterGlobalCommUsage globalComm) {
     this.conf = conf;
     this.globalComm = globalComm;
+    MasterLoggingAggregator.registerAggregator(this, conf);
   }
 
   @Override
@@ -141,6 +143,11 @@ public class AggregatorToGlobalCommTranslation
       entry.getValue().setCurrentValue(null);
     }
     initAggregatorValues.clear();
+  }
+
+  /** Prepare before calling master compute */
+  public void prepareSuperstep() {
+    MasterLoggingAggregator.logAggregatedValue(this, conf);
   }
 
   @Override

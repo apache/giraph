@@ -18,15 +18,19 @@
 
 package org.apache.giraph.benchmark;
 
+import java.io.IOException;
+import java.util.Set;
+
 import org.apache.commons.cli.CommandLine;
 import org.apache.giraph.aggregators.LongSumAggregator;
-import org.apache.giraph.graph.BasicComputation;
 import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
+import org.apache.giraph.graph.BasicComputation;
+import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.formats.PseudoRandomInputFormatConstants;
 import org.apache.giraph.io.formats.PseudoRandomVertexInputFormat;
 import org.apache.giraph.master.DefaultMasterCompute;
-import org.apache.giraph.graph.Vertex;
+import org.apache.giraph.utils.MasterLoggingAggregator;
 import org.apache.giraph.worker.DefaultWorkerContext;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.DoubleWritable;
@@ -34,9 +38,6 @@ import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.util.ToolRunner;
 
 import com.google.common.collect.Sets;
-
-import java.io.IOException;
-import java.util.Set;
 
 /**
  * Benchmark for aggregators. Also checks the correctness.
@@ -123,6 +124,7 @@ public class AggregatorsBenchmark extends GiraphBenchmark {
     public void preSuperstep() {
       addToWorkerAggregators(1);
       checkAggregators();
+      MasterLoggingAggregator.aggregate("everything fine", this, getConf());
     }
 
     @Override
@@ -214,6 +216,7 @@ public class AggregatorsBenchmark extends GiraphBenchmark {
     conf.setLong(PseudoRandomInputFormatConstants.EDGES_PER_VERTEX, 1);
     conf.setInt(AGGREGATORS_NUM, AGGREGATORS.getOptionIntValue(cmd));
     conf.setInt("workers", conf.getInt(GiraphConstants.MAX_WORKERS, -1));
+    MasterLoggingAggregator.setUseMasterLoggingAggregator(true, conf);
   }
 
   /**
