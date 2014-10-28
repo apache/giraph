@@ -1668,6 +1668,8 @@ public class BspServiceMaster<I extends WritableComparable,
     // Collect aggregator values, then run the master.compute() and
     // finally save the aggregator values
     globalCommHandler.prepareSuperstep();
+    aggregatorTranslation.prepareSuperstep();
+
     SuperstepClasses superstepClasses =
       prepareMasterCompute(getSuperstep() + 1);
     doMasterCompute();
