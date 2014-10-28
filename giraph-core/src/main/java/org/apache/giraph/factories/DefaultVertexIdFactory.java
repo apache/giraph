@@ -31,9 +31,12 @@ public class DefaultVertexIdFactory<I extends WritableComparable>
     implements VertexIdFactory<I> {
   /** Cached vertex value class. */
   private Class<I> vertexIdClass;
+  /** Configuration */
+  private ImmutableClassesGiraphConfiguration conf;
 
   @Override
   public void initialize(ImmutableClassesGiraphConfiguration conf) {
+    this.conf = conf;
     vertexIdClass = conf.getVertexIdClass();
   }
 
@@ -44,6 +47,6 @@ public class DefaultVertexIdFactory<I extends WritableComparable>
 
   @Override
   public I newInstance() {
-    return WritableUtils.createWritable(vertexIdClass);
+    return WritableUtils.createWritable(vertexIdClass, conf);
   }
 }

@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.1.0 - unreleased
+  GIRAPH-955: Allow vertex/edge/message value to be configurable (ikabiljo via majakabiljo)
+
   GIRAPH-938: Allow fast working with primitives generically (ikabiljo via pavanka)
 
   GIRAPH-945: Always use job Configuration to create Configuration (majakabiljo)

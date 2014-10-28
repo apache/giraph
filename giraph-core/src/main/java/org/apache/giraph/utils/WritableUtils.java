@@ -62,11 +62,7 @@ public class WritableUtils {
    * @return new instance of class
    */
   public static <W extends Writable> W createWritable(Class<W> klass) {
-    if (NullWritable.class.equals(klass)) {
-      return (W) NullWritable.get();
-    } else {
-      return ReflectionUtils.newInstance(klass);
-    }
+    return createWritable(klass, null);
   }
 
   /**
@@ -80,7 +76,12 @@ public class WritableUtils {
   public static <W extends Writable> W createWritable(
       Class<W> klass,
       ImmutableClassesGiraphConfiguration configuration) {
-    W result = createWritable(klass);
+    W result;
+    if (NullWritable.class.equals(klass)) {
+      result = (W) NullWritable.get();
+    } else {
+      result = ReflectionUtils.newInstance(klass);
+    }
     ConfigurationUtils.configureIfPossible(result, configuration);
     return result;
   }
