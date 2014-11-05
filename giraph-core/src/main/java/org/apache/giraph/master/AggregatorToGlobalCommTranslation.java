@@ -27,6 +27,7 @@ import org.apache.giraph.aggregators.Aggregator;
 import org.apache.giraph.comm.aggregators.AggregatorUtils;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.utils.MasterLoggingAggregator;
+import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.Writable;
 import org.apache.log4j.Logger;
 
@@ -284,7 +285,8 @@ public class AggregatorToGlobalCommTranslation
     @Override
     public void readFields(DataInput in) throws IOException {
       persistent = in.readBoolean();
-      reduceOp = new AggregatorReduceOperation<>();
+      reduceOp = WritableUtils.createWritable(
+          AggregatorReduceOperation.class, conf);
       reduceOp.readFields(in);
       currentValue = null;
     }
