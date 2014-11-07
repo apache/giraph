@@ -238,7 +238,11 @@ public class HiveGiraphRunner implements Tool {
     HIVE_VERTEX_OUTPUT_PROFILE_ID.set(conf, "vertex_output_profile");
     HIVE_VERTEX_OUTPUT_TABLE.set(conf, tableName);
     if (partitionFilter != null) {
-      HIVE_VERTEX_OUTPUT_PARTITION.set(conf, partitionFilter);
+      HIVE_VERTEX_OUTPUT_PARTITION.set(conf,
+          // People often put quotes around partition values by mistake,
+          // and it's invalid to have it, so remove all quotes from
+          // partitionFilter
+          partitionFilter.replaceAll("'", ""));
     }
   }
 
