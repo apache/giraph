@@ -87,7 +87,7 @@ public class WorkerAggregatorHandler implements WorkerThreadGlobalCommUsage {
     B value = (B) broadcastedMap.get(name);
     if (value == null) {
       LOG.warn("getBroadcast: " +
-          AggregatorUtils.getUnregisteredAggregatorMessage(name,
+          AggregatorUtils.getUnregisteredBroadcastMessage(name,
               broadcastedMap.size() != 0, conf));
     }
     return value;
@@ -103,7 +103,7 @@ public class WorkerAggregatorHandler implements WorkerThreadGlobalCommUsage {
       }
     } else {
       throw new IllegalStateException("reduce: " +
-          AggregatorUtils.getUnregisteredAggregatorMessage(name,
+          AggregatorUtils.getUnregisteredReducerMessage(name,
               reducerMap.size() != 0, conf));
     }
   }
@@ -122,7 +122,7 @@ public class WorkerAggregatorHandler implements WorkerThreadGlobalCommUsage {
       }
     } else {
       throw new IllegalStateException("reduce: " +
-          AggregatorUtils.getUnregisteredAggregatorMessage(name,
+          AggregatorUtils.getUnregisteredReducerMessage(name,
               reducerMap.size() != 0, conf));
     }
   }
@@ -309,7 +309,7 @@ public class WorkerAggregatorHandler implements WorkerThreadGlobalCommUsage {
             entry.getValue().getReduceOp();
 
         ReduceOperation<Object, Writable> threadLocalCopy =
-            WritableUtils.createCopy(out, in, globalReduceOp);
+            WritableUtils.createCopy(out, in, globalReduceOp, conf);
 
         threadReducerMap.put(entry.getKey(), new Reducer<>(threadLocalCopy));
       }

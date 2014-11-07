@@ -24,13 +24,9 @@ import org.apache.giraph.conf.GiraphConfiguration;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.graph.GraphMapper;
-import org.apache.giraph.utils.CheckpointingUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.ipc.Client;
 import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.JobID;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
@@ -222,14 +218,14 @@ public class GiraphJob {
     giraphConfiguration.setBoolean("mapreduce.job.user.classpath.first", true);
 
     // If the checkpoint frequency is 0 (no failure handling), set the max
-    // tasks attempts to be 0 to encourage faster failure of unrecoverable jobs
+    // tasks attempts to be 1 to encourage faster failure of unrecoverable jobs
     if (giraphConfiguration.getCheckpointFrequency() == 0) {
       int oldMaxTaskAttempts = giraphConfiguration.getMaxTaskAttempts();
-      giraphConfiguration.setMaxTaskAttempts(0);
+      giraphConfiguration.setMaxTaskAttempts(1);
       if (LOG.isInfoEnabled()) {
         LOG.info("run: Since checkpointing is disabled (default), " +
             "do not allow any task retries (setting " +
-            GiraphConstants.MAX_TASK_ATTEMPTS.getKey() + " = 0, " +
+            GiraphConstants.MAX_TASK_ATTEMPTS.getKey() + " = 1, " +
             "old value = " + oldMaxTaskAttempts + ")");
       }
     }
@@ -276,22 +272,12 @@ public class GiraphJob {
       }
       jobObserver.jobFinished(submittedJob, passed);
 
-      FileSystem fs = FileSystem.get(conf);
-      JobID jobID = HadoopUtils.getJobID(submittedJob);
-      if (jobID != null) {
-        Path checkpointMark =
-            CheckpointingUtils.getCheckpointMarkPath(conf, jobID.toString());
-
-        if (fs.exists(checkpointMark)) {
-          if (retryChecker.shouldRestartCheckpoint()) {
-            GiraphConstants.RESTART_JOB_ID.set(conf, jobID.toString());
-            continue;
-          }
+      if (!passed) {
+        String restartFrom = retryChecker.shouldRestartCheckpoint(submittedJob);
+        if (restartFrom != null) {
+          GiraphConstants.RESTART_JOB_ID.set(conf, restartFrom);
+          continue;
         }
-      } else {
-        LOG.warn("jobID is null, are you using hadoop 0.20.203? " +
-            "Please report this issue here " +
-            "https://issues.apache.org/jira/browse/GIRAPH-933");
       }
 
       if (passed || !retryChecker.shouldRetry(submittedJob, tryCount)) {

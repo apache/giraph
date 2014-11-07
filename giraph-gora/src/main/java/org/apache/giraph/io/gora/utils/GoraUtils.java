@@ -20,6 +20,7 @@ package org.apache.giraph.io.gora.utils;
 import org.apache.gora.persistency.Persistent;
 import org.apache.gora.query.Query;
 import org.apache.gora.query.Result;
+import org.apache.gora.query.impl.QueryBase;
 import org.apache.gora.store.DataStore;
 import org.apache.gora.store.DataStoreFactory;
 import org.apache.gora.util.GoraException;
@@ -36,11 +37,6 @@ public class GoraUtils {
   private static Class<? extends DataStore> DATASTORECLASS;
 
   /**
-   * Attribute handling configuration for data stores.
-   */
-  private static Configuration CONF = new Configuration();
-
-  /**
    * The default constructor is set to be private by default so that the
    * class is not instantiated.
    */
@@ -49,6 +45,7 @@ public class GoraUtils {
   /**
    * Creates a generic data store using the data store class.
    * set using the class property
+   * @param conf Configuration
    * @param <K> key class
    * @param <T> value class
    * @param keyClass key class used
@@ -58,20 +55,22 @@ public class GoraUtils {
    */
   @SuppressWarnings("unchecked")
   public static <K, T extends Persistent> DataStore<K, T>
-  createDataStore(Class<K> keyClass, Class<T> persistentClass)
+  createDataStore(Configuration conf,
+      Class<K> keyClass, Class<T> persistentClass)
     throws GoraException {
     DataStoreFactory.createProps();
     DataStore<K, T> dataStore =
         DataStoreFactory.createDataStore((Class<? extends DataStore<K, T>>)
                                           DATASTORECLASS,
                                           keyClass, persistentClass,
-                                          getConf());
+                                          conf);
 
     return dataStore;
   }
 
   /**
    * Creates a specific data store specified by.
+   * @param conf Configuration
    * @param <K> key class
    * @param <T> value class
    * @param dataStoreClass  Defines the type of data store used.
@@ -81,10 +80,11 @@ public class GoraUtils {
    * @throws GoraException  if an error occurs.
    */
   public static <K, T extends Persistent> DataStore<K, T>
-  createSpecificDataStore(Class<? extends DataStore> dataStoreClass,
+  createSpecificDataStore(Configuration conf,
+      Class<? extends DataStore> dataStoreClass,
       Class<K> keyClass, Class<T> persistentClass) throws GoraException {
     DATASTORECLASS = dataStoreClass;
-    return createDataStore(keyClass, persistentClass);
+    return createDataStore(conf, keyClass, persistentClass);
   }
 
   /**
@@ -98,7 +98,7 @@ public class GoraUtils {
    */
   public static <K, T extends Persistent> Result<K, T>
   getRequest(DataStore<K, T> pDataStore, K pStartKey, K pEndKey) {
-    Query<K, T> query = getQuery(pDataStore, pStartKey, pEndKey);
+    QueryBase query = getQuery(pDataStore, pStartKey, pEndKey);
     return getRequest(pDataStore, query);
   }
 
@@ -137,9 +137,9 @@ public class GoraUtils {
    * @param <T> value class
    * @return range query object.
    */
-  public static <K, T extends Persistent> Query<K, T>
-  getQuery(DataStore<K, T> pDataStore, K pStartKey, K pEndKey) {
-    Query<K, T> query = pDataStore.newQuery();
+  public static <K, T extends Persistent> QueryBase
+  getQuery(DataStore pDataStore, K pStartKey, K pEndKey) {
+    QueryBase query = (QueryBase) pDataStore.newQuery();
     query.setStartKey(pStartKey);
     query.setEndKey(pEndKey);
     return query;
@@ -174,21 +174,5 @@ public class GoraUtils {
     query.setStartKey(null);
     query.setEndKey(null);
     return query;
-  }
-
-  /**
-   * Gets the configuration object.
-   * @return the configuration object.
-   */
-  public static Configuration getConf() {
-    return CONF;
-  }
-
-  /**
-   * Sets the configuration object.
-   * @param conf to be set as the configuration object.
-   */
-  public static void setConf(Configuration conf) {
-    CONF = conf;
   }
 }

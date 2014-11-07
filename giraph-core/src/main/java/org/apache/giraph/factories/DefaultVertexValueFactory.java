@@ -32,9 +32,12 @@ public class DefaultVertexValueFactory<V extends Writable>
     implements VertexValueFactory<V> {
   /** Cached vertex value class. */
   private Class<V> vertexValueClass;
+  /** Configuration */
+  private ImmutableClassesGiraphConfiguration conf;
 
   @Override
   public void initialize(ImmutableClassesGiraphConfiguration conf) {
+    this.conf = conf;
     vertexValueClass = conf.getVertexValueClass();
   }
 
@@ -45,7 +48,6 @@ public class DefaultVertexValueFactory<V extends Writable>
 
   @Override
   public V newInstance() {
-    return WritableUtils.createWritable(vertexValueClass);
+    return WritableUtils.createWritable(vertexValueClass, conf);
   }
 }
-

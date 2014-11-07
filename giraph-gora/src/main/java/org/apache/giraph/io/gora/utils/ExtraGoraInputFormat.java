@@ -28,6 +28,7 @@ import org.apache.gora.persistency.Persistent;
 import org.apache.gora.persistency.impl.PersistentBase;
 import org.apache.gora.query.PartitionQuery;
 import org.apache.gora.query.Query;
+import org.apache.gora.query.impl.PartitionQueryImpl;
 import org.apache.gora.store.DataStore;
 import org.apache.gora.util.IOUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -83,17 +84,21 @@ public class ExtraGoraInputFormat<K, T extends PersistentBase>
     return new GoraRecordReader<K, T>(partitionQuery, context);
   }
 
+  /**
+   * Gets splits.
+   * @param context for the job.
+   * @return List<InputSplit> splits found
+   */
   @Override
   public List<InputSplit> getSplits(JobContext context) throws IOException,
       InterruptedException {
     List<PartitionQuery<K, T>> queries =
         getDataStore().getPartitions(getQuery());
     List<InputSplit> splits = new ArrayList<InputSplit>(queries.size());
-
     for (PartitionQuery<K, T> partQuery : queries) {
+      ((PartitionQueryImpl) partQuery).setConf(context.getConfiguration());
       splits.add(new GoraInputSplit(context.getConfiguration(), partQuery));
     }
-
     return splits;
   }
 

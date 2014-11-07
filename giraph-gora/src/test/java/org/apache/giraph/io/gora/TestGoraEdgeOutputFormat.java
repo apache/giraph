@@ -68,7 +68,7 @@ public class TestGoraEdgeOutputFormat {
     set(conf, "org.apache.gora.memory.store.MemStore");
     GIRAPH_GORA_OUTPUT_KEY_CLASS.set(conf, "java.lang.String");
     GIRAPH_GORA_OUTPUT_PERSISTENT_CLASS.
-    set(conf,"org.apache.giraph.io.gora.generated.GEdge");
+    set(conf,"org.apache.giraph.io.gora.generated.GEdgeResult");
     conf.setEdgeOutputFormatClass(GoraTestEdgeOutputFormat.class);
     results = InternalVertexRunner.run(conf, new String[0], new String[0]);
     Assert.assertNotNull(results);

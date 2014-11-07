@@ -77,7 +77,7 @@ public class SendAggregatorsToOwnerRequest
           if (type == GlobalCommType.REDUCE_OPERATIONS) {
             ReduceOperation<Object, Writable> reduceOpCopy =
                 (ReduceOperation<Object, Writable>)
-                WritableUtils.createCopy(reusedOut, reusedIn, value);
+                WritableUtils.createCopy(reusedOut, reusedIn, value, conf);
 
             serverData.getOwnerAggregatorData().registerReducer(
                 name, reduceOpCopy);

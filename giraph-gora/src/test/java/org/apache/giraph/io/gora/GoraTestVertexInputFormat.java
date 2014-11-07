@@ -18,11 +18,9 @@
 package org.apache.giraph.io.gora;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.avro.util.Utf8;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.edge.EdgeFactory;
 import org.apache.giraph.graph.Vertex;
@@ -78,10 +76,10 @@ public class GoraTestVertexInputFormat
    */
   public static GVertex createVertex(String id, Map<String, String> edges) {
     GVertex newVrtx = new GVertex();
-    newVrtx.setVertexId(new Utf8(id));
+    newVrtx.setVertexId(id);
     if (edges != null) {
       for (String edgeId : edges.keySet())
-        newVrtx.putToEdges(new Utf8(edgeId), new Utf8(edges.get(edgeId)));
+        newVrtx.getEdges().put(edgeId, edges.get(edgeId));
     }
     return newVrtx;
   }
@@ -106,11 +104,11 @@ public class GoraTestVertexInputFormat
 
       LongWritable vrtxId = new LongWritable(
           Long.parseLong(tmpGVertex.getVertexId().toString()));
-      DoubleWritable vrtxValue = new DoubleWritable(tmpGVertex.getValue());
+      DoubleWritable vrtxValue = new DoubleWritable(tmpGVertex.getVertexValue());
       vertex.initialize(vrtxId, vrtxValue);
       if (tmpGVertex.getEdges() != null && !tmpGVertex.getEdges().isEmpty()) {
-        Set<Utf8> keyIt = tmpGVertex.getEdges().keySet();
-        for (Utf8 key : keyIt) {
+        Set<CharSequence> keyIt = tmpGVertex.getEdges().keySet();
+        for (CharSequence key : keyIt) {
           String keyVal = key.toString();
           String valVal = tmpGVertex.getEdges().get(key).toString();
           Edge<LongWritable, FloatWritable> edge;

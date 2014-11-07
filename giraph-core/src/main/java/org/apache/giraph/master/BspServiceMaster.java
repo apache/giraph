@@ -772,8 +772,8 @@ public class BspServiceMaster<I extends WritableComparable,
     throws IOException, KeeperException, InterruptedException {
     List<PartitionOwner> partitionOwners = new ArrayList<>();
     FileSystem fs = getFs();
-    String finalizedCheckpointPath =
-        getSavedCheckpointBasePath(superstep) + CHECKPOINT_FINALIZED_POSTFIX;
+    String finalizedCheckpointPath = getSavedCheckpointBasePath(superstep) +
+        CheckpointingUtils.CHECKPOINT_FINALIZED_POSTFIX;
     LOG.info("Loading checkpoint from " + finalizedCheckpointPath);
     DataInputStream finalizedStream =
         fs.open(new Path(finalizedCheckpointPath));
@@ -796,7 +796,7 @@ public class BspServiceMaster<I extends WritableComparable,
       int mrTaskId = finalizedStream.readInt();
 
       DataInputStream metadataStream = fs.open(new Path(checkpointFile +
-          "." + mrTaskId + CHECKPOINT_METADATA_POSTFIX));
+          "." + mrTaskId + CheckpointingUtils.CHECKPOINT_METADATA_POSTFIX));
       long partitions = metadataStream.readInt();
       WorkerInfo worker = workersMap.get(mrTaskId);
       for (long p = 0; p < partitions; ++p) {
@@ -895,7 +895,7 @@ public class BspServiceMaster<I extends WritableComparable,
           globalCommHandler = new MasterAggregatorHandler(
               getConfiguration(), getContext());
           aggregatorTranslation = new AggregatorToGlobalCommTranslation(
-              globalCommHandler);
+              getConfiguration(), globalCommHandler);
 
           globalCommHandler.initialize(this);
           masterCompute = getConfiguration().createMasterCompute();
@@ -1081,7 +1081,7 @@ public class BspServiceMaster<I extends WritableComparable,
     throws IOException, KeeperException, InterruptedException {
     Path finalizedCheckpointPath =
         new Path(getCheckpointBasePath(superstep) +
-            CHECKPOINT_FINALIZED_POSTFIX);
+            CheckpointingUtils.CHECKPOINT_FINALIZED_POSTFIX);
     try {
       getFs().delete(finalizedCheckpointPath, false);
     } catch (IOException e) {
@@ -1668,6 +1668,8 @@ public class BspServiceMaster<I extends WritableComparable,
     // Collect aggregator values, then run the master.compute() and
     // finally save the aggregator values
     globalCommHandler.prepareSuperstep();
+    aggregatorTranslation.prepareSuperstep();
+
     SuperstepClasses superstepClasses =
       prepareMasterCompute(getSuperstep() + 1);
     doMasterCompute();
@@ -1761,7 +1763,7 @@ public class BspServiceMaster<I extends WritableComparable,
     if (checkpointFrequency == 0) {
       return CheckpointStatus.NONE;
     }
-    long firstCheckpoint = INPUT_SUPERSTEP + 1;
+    long firstCheckpoint = INPUT_SUPERSTEP + 1 + checkpointFrequency;
     if (getRestartedSuperstep() != UNSET_SUPERSTEP) {
       firstCheckpoint = getRestartedSuperstep() + checkpointFrequency;
     }

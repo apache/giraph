@@ -19,7 +19,6 @@ package org.apache.giraph.io.gora;
 
 import java.io.IOException;
 
-import org.apache.avro.util.Utf8;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.io.gora.generated.GEdgeResult;
 import org.apache.gora.persistency.Persistent;
@@ -57,9 +56,9 @@ public class GoraGEdgeEdgeOutputFormat
     protected Persistent getGoraEdge(LongWritable srcId,
         DoubleWritable srcValue, Edge<LongWritable, FloatWritable> edge) {
       GEdgeResult tmpGEdge = new GEdgeResult();
-      tmpGEdge.setEdgeId(new Utf8(srcId.toString()));
+      tmpGEdge.setEdgeId(srcId.toString());
       tmpGEdge.setEdgeWeight(edge.getValue().get());
-      tmpGEdge.setVertexOutId(new Utf8(edge.getTargetVertexId().toString()));
+      tmpGEdge.setVertexOutId(edge.getTargetVertexId().toString());
       getLogger().debug("GoraObject created: " + tmpGEdge.toString());
       return tmpGEdge;
     }

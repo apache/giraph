@@ -20,7 +20,6 @@ package org.apache.giraph.io.gora;
 import java.io.IOException;
 import java.util.Iterator;
 
-import org.apache.avro.util.Utf8;
 import org.apache.giraph.edge.Edge;
 import org.apache.giraph.graph.Vertex;
 import org.apache.giraph.io.VertexWriter;
@@ -60,15 +59,15 @@ public class GoraGVertexVertexOutputFormat
     protected Persistent getGoraVertex(
         Vertex<LongWritable, DoubleWritable, FloatWritable> vertex) {
       GVertexResult tmpGVertex = new GVertexResult();
-      tmpGVertex.setVertexId(new Utf8(vertex.getId().toString()));
-      tmpGVertex.setValue(Float.parseFloat(vertex.getValue().toString()));
+      tmpGVertex.setVertexId(vertex.getId().toString());
+      tmpGVertex.setVertexValue(Float.parseFloat(vertex.getValue().toString()));
       Iterator<Edge<LongWritable, FloatWritable>> it =
           vertex.getEdges().iterator();
       while (it.hasNext()) {
         Edge<LongWritable, FloatWritable> edge = it.next();
-        tmpGVertex.putToEdges(
-            new Utf8(edge.getTargetVertexId().toString()),
-            new Utf8(edge.getValue().toString()));
+        tmpGVertex.getEdges().put(
+            edge.getTargetVertexId().toString(),
+            edge.getValue().toString());
       }
       return tmpGVertex;
     }

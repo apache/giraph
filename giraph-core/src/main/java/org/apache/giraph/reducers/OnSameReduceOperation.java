@@ -28,7 +28,7 @@ import org.apache.hadoop.io.Writable;
 public abstract class OnSameReduceOperation<R extends Writable>
     implements ReduceOperation<R, R> {
   @Override
-  public final void reducePartial(R curValue, R valueToReduce) {
-    reduceSingle(curValue, valueToReduce);
+  public final R reducePartial(R curValue, R valueToReduce) {
+    return reduceSingle(curValue, valueToReduce);
   }
 }

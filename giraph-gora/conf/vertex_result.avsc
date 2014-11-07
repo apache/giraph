@@ -1,0 +1,10 @@
+{
+  "type": "record",
+  "name": "GVertexResult",
+  "namespace": "org.apache.giraph.io.gora.generated",
+  "fields" : [
+    {"name": "vertexId", "type": "string"},
+    {"name": "vertexValue", "type": "float"},
+    {"name": "edges", "type": {"type": "map", "values": "string"}}
+  ]
+}

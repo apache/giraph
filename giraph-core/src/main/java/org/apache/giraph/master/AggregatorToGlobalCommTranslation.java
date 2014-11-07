@@ -24,10 +24,12 @@ import java.util.HashMap;
 import java.util.Map.Entry;
 
 import org.apache.giraph.aggregators.Aggregator;
-import org.apache.giraph.aggregators.ClassAggregatorFactory;
-import org.apache.giraph.conf.DefaultImmutableClassesGiraphConfigurable;
-import org.apache.giraph.utils.WritableFactory;
+import org.apache.giraph.comm.aggregators.AggregatorUtils;
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
+import org.apache.giraph.utils.MasterLoggingAggregator;
+import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.Writable;
+import org.apache.log4j.Logger;
 
 import com.google.common.base.Preconditions;
 
@@ -36,8 +38,11 @@ import com.google.common.base.Preconditions;
  * reduce and broadcast operations supported by the MasterAggregatorHandler.
  */
 public class AggregatorToGlobalCommTranslation
-    extends DefaultImmutableClassesGiraphConfigurable
     implements MasterAggregatorUsage, Writable {
+  /** Class logger */
+  private static final Logger LOG =
+      Logger.getLogger(AggregatorToGlobalCommTranslation.class);
+
   /** Class providing reduce and broadcast interface to use */
   private final MasterGlobalCommUsage globalComm;
   /** List of registered aggregators */
@@ -45,21 +50,65 @@ public class AggregatorToGlobalCommTranslation
   registeredAggregators = new HashMap<>();
 
   /**
+   * List of init aggregator values, in case someone tries to
+   * access aggregator immediatelly after registering it.
+   *
+   * Instead of simply returning value, we need to store it during
+   * that superstep, so consecutive calls will return identical object,
+   * which they can modify.
+   */
+  private final HashMap<String, Writable>
+  initAggregatorValues = new HashMap<>();
+
+  /** Conf */
+  private final ImmutableClassesGiraphConfiguration<?, ?, ?> conf;
+
+  /**
    * Constructor
+   * @param conf Configuration
    * @param globalComm Global communication interface
    */
-  public AggregatorToGlobalCommTranslation(MasterGlobalCommUsage globalComm) {
+  public AggregatorToGlobalCommTranslation(
+      ImmutableClassesGiraphConfiguration<?, ?, ?> conf,
+      MasterGlobalCommUsage globalComm) {
+    this.conf = conf;
     this.globalComm = globalComm;
+    MasterLoggingAggregator.registerAggregator(this, conf);
   }
 
   @Override
   public <A extends Writable> A getAggregatedValue(String name) {
-    return globalComm.getReduced(name);
+    AggregatorWrapper<Writable> agg = registeredAggregators.get(name);
+    if (agg == null) {
+      LOG.warn("getAggregatedValue: " +
+        AggregatorUtils.getUnregisteredAggregatorMessage(name,
+            registeredAggregators.size() != 0, conf));
+      // to make sure we are not accessing reducer of the same name.
+      return null;
+    }
+
+    A value = globalComm.getReduced(name);
+    if (value == null) {
+      value = (A) initAggregatorValues.get(name);
+    }
+
+    if (value == null) {
+      value = (A) agg.getReduceOp().createInitialValue();
+      initAggregatorValues.put(name, value);
+    }
+
+    Preconditions.checkState(value != null);
+    return value;
   }
 
   @Override
   public <A extends Writable> void setAggregatedValue(String name, A value) {
     AggregatorWrapper<Writable> aggregator = registeredAggregators.get(name);
+    if (aggregator == null) {
+      throw new IllegalArgumentException("setAggregatedValue: "  +
+          AggregatorUtils.getUnregisteredAggregatorMessage(name,
+              registeredAggregators.size() != 0, conf));
+    }
     aggregator.setCurrentValue(value);
   }
 
@@ -72,14 +121,15 @@ public class AggregatorToGlobalCommTranslation
     // register reduce with the same value
     for (Entry<String, AggregatorWrapper<Writable>> entry :
         registeredAggregators.entrySet()) {
-      Writable value = entry.getValue().currentValue != null ?
-          entry.getValue().getCurrentValue() :
-            globalComm.getReduced(entry.getKey());
+      Writable value = entry.getValue().getCurrentValue();
       if (value == null) {
-        value = entry.getValue().getReduceOp().createInitialValue();
+        value = globalComm.getReduced(entry.getKey());
       }
+      Preconditions.checkState(value != null);
 
-      globalComm.broadcast(entry.getKey(), value);
+      globalComm.broadcast(entry.getKey(), new AggregatorBroadcast<>(
+          entry.getValue().getReduceOp().getAggregatorClass(), value));
+
       // Always register clean instance of reduceOp, not to conflict with
       // reduceOp from previous superstep.
       AggregatorReduceOperation<Writable> cleanReduceOp =
@@ -93,31 +143,26 @@ public class AggregatorToGlobalCommTranslation
       }
       entry.getValue().setCurrentValue(null);
     }
+    initAggregatorValues.clear();
+  }
+
+  /** Prepare before calling master compute */
+  public void prepareSuperstep() {
+    MasterLoggingAggregator.logAggregatedValue(this, conf);
   }
 
   @Override
   public <A extends Writable> boolean registerAggregator(String name,
       Class<? extends Aggregator<A>> aggregatorClass) throws
       InstantiationException, IllegalAccessException {
-    ClassAggregatorFactory<A> aggregatorFactory =
-        new ClassAggregatorFactory<A>(aggregatorClass);
-    return registerAggregator(name, aggregatorFactory, false) != null;
-  }
-
-  @Override
-  public <A extends Writable> boolean registerAggregator(String name,
-      WritableFactory<? extends Aggregator<A>> aggregator) throws
-      InstantiationException, IllegalAccessException {
-    return registerAggregator(name, aggregator, false) != null;
+    return registerAggregator(name, aggregatorClass, false) != null;
   }
 
   @Override
   public <A extends Writable> boolean registerPersistentAggregator(String name,
       Class<? extends Aggregator<A>> aggregatorClass) throws
       InstantiationException, IllegalAccessException {
-    ClassAggregatorFactory<A> aggregatorFactory =
-        new ClassAggregatorFactory<A>(aggregatorClass);
-    return registerAggregator(name, aggregatorFactory, true) != null;
+    return registerAggregator(name, aggregatorClass, true) != null;
   }
 
   @Override
@@ -140,27 +185,35 @@ public class AggregatorToGlobalCommTranslation
       agg.readFields(in);
       registeredAggregators.put(name, agg);
     }
+    initAggregatorValues.clear();
   }
 
   /**
    * Helper function for registering aggregators.
    *
-   * @param name              Name of the aggregator
-   * @param aggregatorFactory Aggregator factory
-   * @param persistent        Whether aggregator is persistent or not
-   * @param <A>               Aggregated value type
+   * @param name            Name of the aggregator
+   * @param aggregatorClass Aggregator class
+   * @param persistent      Whether aggregator is persistent or not
+   * @param <A>             Aggregated value type
    * @return Newly registered aggregator or aggregator which was previously
    *         created with selected name, if any
    */
   private <A extends Writable> AggregatorWrapper<A> registerAggregator
-  (String name, WritableFactory<? extends Aggregator<A>> aggregatorFactory,
+  (String name, Class<? extends Aggregator<A>> aggregatorClass,
       boolean persistent) throws InstantiationException,
       IllegalAccessException {
     AggregatorWrapper<A> aggregatorWrapper =
         (AggregatorWrapper<A>) registeredAggregators.get(name);
     if (aggregatorWrapper == null) {
       aggregatorWrapper =
-          new AggregatorWrapper<A>(aggregatorFactory, persistent);
+          new AggregatorWrapper<A>(aggregatorClass, persistent);
+      // postMasterCompute uses previously reduced value to broadcast,
+      // unless current value is set. After aggregator is registered,
+      // there was no previously reduced value, so set current value
+      // to default to avoid calling getReduced() on unregistered reducer.
+      // (which logs unnecessary warnings)
+      aggregatorWrapper.setCurrentValue(
+          aggregatorWrapper.getReduceOp().createInitialValue());
       registeredAggregators.put(
           name, (AggregatorWrapper<Writable>) aggregatorWrapper);
     }
@@ -171,7 +224,7 @@ public class AggregatorToGlobalCommTranslation
    * Object holding all needed data related to single Aggregator
    * @param <A> Aggregated value type
    */
-  private static class AggregatorWrapper<A extends Writable>
+  private class AggregatorWrapper<A extends Writable>
       implements Writable {
     /** False iff aggregator should be reset at the end of each super step */
     private boolean persistent;
@@ -186,14 +239,14 @@ public class AggregatorToGlobalCommTranslation
 
     /**
      * Constructor
-     * @param aggregatorFactory Aggregator factory
+     * @param aggregatorClass Aggregator class
      * @param persistent Is persistent
      */
     public AggregatorWrapper(
-        WritableFactory<? extends Aggregator<A>> aggregatorFactory,
+        Class<? extends Aggregator<A>> aggregatorClass,
         boolean persistent) {
       this.persistent = persistent;
-      this.reduceOp = new AggregatorReduceOperation<>(aggregatorFactory);
+      this.reduceOp = new AggregatorReduceOperation<>(aggregatorClass, conf);
     }
 
     public AggregatorReduceOperation<A> getReduceOp() {
@@ -232,7 +285,8 @@ public class AggregatorToGlobalCommTranslation
     @Override
     public void readFields(DataInput in) throws IOException {
       persistent = in.readBoolean();
-      reduceOp = new AggregatorReduceOperation<>();
+      reduceOp = WritableUtils.createWritable(
+          AggregatorReduceOperation.class, conf);
       reduceOp.readFields(in);
       currentValue = null;
     }

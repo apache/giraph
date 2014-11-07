@@ -32,8 +32,11 @@ public class DefaultEdgeValueFactory<E extends Writable>
     implements EdgeValueFactory<E> {
   /** Cached edge value class. */
   private Class<E> edgeValueClass;
+  /** Configuration */
+  private ImmutableClassesGiraphConfiguration conf;
 
   @Override public void initialize(ImmutableClassesGiraphConfiguration conf) {
+    this.conf = conf;
     edgeValueClass = conf.getEdgeValueClass();
   }
 
@@ -42,6 +45,6 @@ public class DefaultEdgeValueFactory<E extends Writable>
   }
 
   @Override public E newInstance() {
-    return WritableUtils.createWritable(edgeValueClass);
+    return WritableUtils.createWritable(edgeValueClass, conf);
   }
 }

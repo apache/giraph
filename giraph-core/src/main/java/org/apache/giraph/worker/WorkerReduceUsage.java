@@ -15,25 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.giraph.job;
-
-import org.apache.hadoop.mapreduce.Job;
+package org.apache.giraph.worker;
 
 /**
- * Default implementation of {@link GiraphJobRetryChecker},
- * which never retries the job.
+ * Methods on worker can provide values to reduce through this interface
  */
-public class DefaultGiraphJobRetryChecker implements GiraphJobRetryChecker {
-  @Override
-  public boolean shouldRetry(Job submittedJob, int tryCount) {
-    // By default, don't retry failed jobs
-    return false;
-  }
-
-  @Override
-  public String shouldRestartCheckpoint(Job lastAttempt) {
-    return null;
-  }
-
+public interface WorkerReduceUsage {
+  /**
+   * Reduce given value.
+   * @param name Name of the reducer
+   * @param value Single value to reduce
+   */
+  void reduce(String name, Object value);
 }

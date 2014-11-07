@@ -43,15 +43,21 @@ public interface ReduceOperation<S, R extends Writable> extends Writable {
    * Add a new value.
    * Needs to be commutative and associative
    *
+   * Commonly, returned value should be same as curValue argument.
+   *
    * @param curValue Partial value into which to reduce and store the result
    * @param valueToReduce Single value to be reduced
+   * @return reduced value
    */
-  void reduceSingle(R curValue, S valueToReduce);
+  R reduceSingle(R curValue, S valueToReduce);
   /**
    * Add partially reduced value to current partially reduced value.
    *
+   * Commonly, returned value should be same as curValue argument.
+   *
    * @param curValue Partial value into which to reduce and store the result
    * @param valueToReduce Partial value to be reduced
+   * @return reduced value
    */
-  void reducePartial(R curValue, R valueToReduce);
+  R reducePartial(R curValue, R valueToReduce);
 }

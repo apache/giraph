@@ -19,12 +19,18 @@ package org.apache.giraph.comm.netty;
 
 import org.apache.commons.net.util.Base64;
 import org.apache.hadoop.classification.InterfaceStability;
+/*if_not[STATIC_SASL_SYMBOL]*/
+import org.apache.hadoop.conf.Configuration;
+/*end[STATIC_SASL_SYMBOL]*/
 /*if[HADOOP_1_SECURITY]
 else[HADOOP_1_SECURITY]*/
 import org.apache.hadoop.ipc.StandbyException;
 /*end[HADOOP_1_SECURITY]*/
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
+/*if_not[STATIC_SASL_SYMBOL]*/
+import org.apache.hadoop.security.SaslPropertiesResolver;
+/*end[STATIC_SASL_SYMBOL]*/
 import org.apache.hadoop.security.SaslRpcServer;
 import org.apache.log4j.Logger;
 
@@ -92,9 +98,20 @@ else[HADOOP_1_SECRET_MANAGER]*/
     try {
       SaslDigestCallbackHandler ch =
           new SaslNettyServer.SaslDigestCallbackHandler(secretManager);
-      saslServer = Sasl.createSaslServer(SaslNettyServer.AuthMethod.DIGEST
-          .getMechanismName(), null, SaslRpcServer.SASL_DEFAULT_REALM,
-          SaslRpcServer.SASL_PROPS, ch);
+      /*if[STATIC_SASL_SYMBOL]
+      saslServer =
+          Sasl.createSaslServer(
+              SaslNettyServer.AuthMethod.DIGEST.getMechanismName(), null,
+              SaslRpcServer.SASL_DEFAULT_REALM, SaslRpcServer.SASL_PROPS, ch);
+      else[STATIC_SASL_SYMBOL]*/
+      SaslPropertiesResolver saslPropsResolver =
+          SaslPropertiesResolver.getInstance(new Configuration());
+      saslServer =
+          Sasl.createSaslServer(
+              SaslNettyServer.AuthMethod.DIGEST.getMechanismName(), null,
+              SaslRpcServer.SASL_DEFAULT_REALM,
+              saslPropsResolver.getDefaultProperties(), ch);
+      /*end[STATIC_SASL_SYMBOL]*/
     } catch (SaslException e) {
       LOG.error("SaslNettyServer: Could not create SaslServer: " + e);
     }

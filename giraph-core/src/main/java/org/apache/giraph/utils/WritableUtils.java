@@ -62,11 +62,7 @@ public class WritableUtils {
    * @return new instance of class
    */
   public static <W extends Writable> W createWritable(Class<W> klass) {
-    if (NullWritable.class.equals(klass)) {
-      return (W) NullWritable.get();
-    } else {
-      return ReflectionUtils.newInstance(klass);
-    }
+    return createWritable(klass, null);
   }
 
   /**
@@ -80,7 +76,12 @@ public class WritableUtils {
   public static <W extends Writable> W createWritable(
       Class<W> klass,
       ImmutableClassesGiraphConfiguration configuration) {
-    W result = createWritable(klass);
+    W result;
+    if (NullWritable.class.equals(klass)) {
+      result = (W) NullWritable.get();
+    } else {
+      result = ReflectionUtils.newInstance(klass);
+    }
     ConfigurationUtils.configureIfPossible(result, configuration);
     return result;
   }
@@ -686,21 +687,24 @@ public class WritableUtils {
    * @param output the output stream
    * @throws IOException
    */
-  public static void writeList(List<Writable> list, DataOutput output)
+  public static void writeList(List<? extends Writable> list, DataOutput output)
     throws IOException {
-    output.writeInt(list.size());
-    Class<? extends Writable> clazz = null;
-    for (Writable element : list) {
-      output.writeBoolean(element == null);
-      if (element != null) {
-        if (element.getClass() != clazz) {
-          clazz = element.getClass();
-          output.writeBoolean(true);
-          writeClass(clazz, output);
-        } else {
-          output.writeBoolean(false);
+    output.writeBoolean(list != null);
+    if (list != null) {
+      output.writeInt(list.size());
+      Class<? extends Writable> clazz = null;
+      for (Writable element : list) {
+        output.writeBoolean(element == null);
+        if (element != null) {
+          if (element.getClass() != clazz) {
+            clazz = element.getClass();
+            output.writeBoolean(true);
+            writeClass(clazz, output);
+          } else {
+            output.writeBoolean(false);
+          }
+          element.write(output);
         }
-        element.write(output);
       }
     }
   }
@@ -712,24 +716,27 @@ public class WritableUtils {
    * @return deserialized list
    * @throws IOException
    */
-  public static List<Writable> readList(DataInput input) throws IOException {
+  public static List<? extends Writable> readList(DataInput input)
+    throws IOException {
     try {
-
-      int size = input.readInt();
-      List<Writable> res = new ArrayList<>(size);
-      Class<? extends Writable> clazz = null;
-      for (int i = 0; i < size; i++) {
-        boolean isNull = input.readBoolean();
-        if (isNull) {
-          res.add(null);
-        } else {
-          boolean hasClassInfo = input.readBoolean();
-          if (hasClassInfo) {
-            clazz = readClass(input);
+      List<Writable> res = null;
+      if (input.readBoolean()) {
+        int size = input.readInt();
+        res = new ArrayList<>(size);
+        Class<? extends Writable> clazz = null;
+        for (int i = 0; i < size; i++) {
+          boolean isNull = input.readBoolean();
+          if (isNull) {
+            res.add(null);
+          } else {
+            boolean hasClassInfo = input.readBoolean();
+            if (hasClassInfo) {
+              clazz = readClass(input);
+            }
+            Writable element = clazz.newInstance();
+            element.readFields(input);
+            res.add(element);
           }
-          Writable element = clazz.newInstance();
-          element.readFields(input);
-          res.add(element);
         }
       }
       return res;
@@ -745,13 +752,15 @@ public class WritableUtils {
    * @param reusableOut Reusable output stream to serialize into
    * @param reusableIn Reusable input stream to deserialize out of
    * @param original Original value of which to make a copy
+   * @param conf Configuration
    * @param <T> Type of the object
    * @return Copy of the original value
    */
   public static <T extends Writable> T createCopy(
       UnsafeByteArrayOutputStream reusableOut,
-      UnsafeReusableByteArrayInput reusableIn, T original) {
-    T copy = (T) createWritable(original.getClass(), null);
+      UnsafeReusableByteArrayInput reusableIn, T original,
+      ImmutableClassesGiraphConfiguration conf) {
+    T copy = (T) createWritable(original.getClass(), conf);
 
     try {
       reusableOut.reset();
@@ -771,6 +780,81 @@ public class WritableUtils {
           original.getClass(), e);
     }
     return copy;
+  }
+
+  /**
+   * Writes primitive int array of ints into output stream.
+   * Array can be null or empty.
+   * @param array array to be written
+   * @param dataOutput output stream
+   * @throws IOException
+   */
+  public static void writeIntArray(int[] array, DataOutput dataOutput)
+    throws IOException {
+    if (array != null) {
+      dataOutput.writeInt(array.length);
+      for (int r : array) {
+        dataOutput.writeInt(r);
+      }
+    } else {
+      dataOutput.writeInt(-1);
+    }
+  }
+
+  /**
+   * Reads primitive int array from input stream.
+   * @param dataInput input stream to read from
+   * @return may return null or empty array.
+   * @throws IOException
+   */
+  public static int[] readIntArray(DataInput dataInput)
+    throws IOException {
+    int [] res = null;
+    int size = dataInput.readInt();
+    if (size >= 0) {
+      res = new int[size];
+      for (int i = 0; i < size; i++) {
+        res[i] = dataInput.readInt();
+      }
+    }
+    return res;
+  }
+
+  /**
+   * Writes primitive long array of ints into output stream.
+   * Array can be null or empty.
+   * @param array array to be written
+   * @param dataOutput output stream
+   * @throws IOException
+   */
+  public static void writeLongArray(DataOutput dataOutput, long[] array)
+    throws IOException {
+    if (array != null) {
+      dataOutput.writeInt(array.length);
+      for (long r : array) {
+        dataOutput.writeLong(r);
+      }
+    } else {
+      dataOutput.writeInt(-1);
+    }
+  }
+  /**
+   * Reads primitive long array from input stream.
+   * @param dataInput input stream to read from
+   * @return may return null or empty array.
+   * @throws IOException
+   */
+  public static long[] readLongArray(DataInput dataInput)
+    throws IOException {
+    long [] res = null;
+    int size = dataInput.readInt();
+    if (size >= 0) {
+      res = new long[size];
+      for (int i = 0; i < size; i++) {
+        res[i] = dataInput.readLong();
+      }
+    }
+    return res;
   }
 
 }

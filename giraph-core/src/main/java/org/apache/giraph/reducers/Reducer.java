@@ -21,6 +21,7 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.utils.WritableUtils;
 import org.apache.hadoop.io.Writable;
 
@@ -32,7 +33,7 @@ import org.apache.hadoop.io.Writable;
  * @param <S> Single value type, objects passed on workers
  * @param <R> Reduced value type
  */
-public class Reducer<S, R extends Writable> implements Writable {
+public class Reducer<S, R extends Writable> {
   /** Reduce operations */
   private ReduceOperation<S, R> reduceOp;
   /** Current (partially) reduced value*/
@@ -49,7 +50,7 @@ public class Reducer<S, R extends Writable> implements Writable {
    */
   public Reducer(ReduceOperation<S, R> reduceOp) {
     this.reduceOp = reduceOp;
-    this.currentValue = reduceOp.createInitialValue();
+    this.currentValue = createInitialValue();
   }
   /**
    * Constructor
@@ -66,21 +67,26 @@ public class Reducer<S, R extends Writable> implements Writable {
    * @param valueToReduce Single value to reduce
    */
   public void reduceSingle(S valueToReduce) {
-    reduceOp.reduceSingle(currentValue, valueToReduce);
+    currentValue = reduceOp.reduceSingle(currentValue, valueToReduce);
   }
   /**
    * Reduce given partially reduced value into current reduced value.
    * @param valueToReduce Partial value to reduce
    */
   public void reducePartial(R valueToReduce) {
-    reduceOp.reducePartial(currentValue, valueToReduce);
+    currentValue = reduceOp.reducePartial(currentValue, valueToReduce);
   }
   /**
    * Return new initial reduced value.
    * @return New initial reduced value
    */
   public R createInitialValue() {
-    return reduceOp.createInitialValue();
+    R value = reduceOp.createInitialValue();
+    if (value == null) {
+      throw new IllegalStateException(
+          "Initial value for reducer cannot be null, but is for " + reduceOp);
+    }
+    return value;
   }
 
   public ReduceOperation<S, R> getReduceOp() {
@@ -95,16 +101,31 @@ public class Reducer<S, R extends Writable> implements Writable {
     this.currentValue = currentValue;
   }
 
-  @Override
+  /**
+   * Serialize the fields of this object to <code>out</code>.
+   *
+   * @param out <code>DataOuput</code> to serialize this object into.
+   * @throws IOException
+   */
   public void write(DataOutput out) throws IOException {
     WritableUtils.writeWritableObject(reduceOp, out);
     currentValue.write(out);
   }
 
-  @Override
-  public void readFields(DataInput in) throws IOException {
-    reduceOp = WritableUtils.readWritableObject(in, null);
-    currentValue = reduceOp.createInitialValue();
+  /**
+   * Deserialize the fields of this object from <code>in</code>.
+   *
+   * <p>For efficiency, implementations should attempt to re-use storage in the
+   * existing object where possible.</p>
+   *
+   * @param in <code>DataInput</code> to deseriablize this object from.
+   * @param conf Configuration
+   * @throws IOException
+   */
+  public void readFields(DataInput in,
+      ImmutableClassesGiraphConfiguration conf) throws IOException {
+    reduceOp = WritableUtils.readWritableObject(in, conf);
+    currentValue = createInitialValue();
     currentValue.readFields(in);
   }
 }
