@@ -1,11 +1,14 @@
 Giraph Change Log
 
-Release 1.1.0 - unreleased
+Release 1.2.0 - unreleased
   GIRAPH-964: Remove quotes from output partition specification in hive-io (majakabiljo)
 
   GIRAPH-963: Aggregators may not be initialized properly (edunov via majakabiljo)
 
   GIRAPH-955: Allow vertex/edge/message value to be configurable (ikabiljo via majakabiljo)
+
+Release 1.1.0 - 2014-11-19
+  GIRAPH-961: Internals of MasterLoggingAggregator have been incorrectly removed
 
   GIRAPH-938: Allow fast working with primitives generically (ikabiljo via pavanka)
 
