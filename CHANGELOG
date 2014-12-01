@@ -1,6 +1,8 @@
 Giraph Change Log
 
 Release 1.2.0 - unreleased
+  GIRAPH-966: Add a way to ignore some thread exceptions (majakabiljo)
+
   GIRAPH-964: Remove quotes from output partition specification in hive-io (majakabiljo)
 
   GIRAPH-963: Aggregators may not be initialized properly (edunov via majakabiljo)

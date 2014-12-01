@@ -36,6 +36,7 @@ import org.apache.giraph.bsp.CentralizedServiceMaster;
 import org.apache.giraph.bsp.CentralizedServiceWorker;
 import org.apache.giraph.bsp.CheckpointStatus;
 import org.apache.giraph.comm.messages.MessageStore;
+import org.apache.giraph.conf.ClassConfOption;
 import org.apache.giraph.conf.GiraphConstants;
 import org.apache.giraph.conf.ImmutableClassesGiraphConfiguration;
 import org.apache.giraph.job.JobProgressTracker;
@@ -92,6 +93,17 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
     Configuration.addDefaultResource("giraph-site.xml");
   }
   end[PURE_YARN]*/
+  /**
+   * Class which checks if an exception on some thread should cause worker
+   * to fail
+   */
+  public static final ClassConfOption<CheckerIfWorkerShouldFailAfterException>
+  CHECKER_IF_WORKER_SHOULD_FAIL_AFTER_EXCEPTION_CLASS = ClassConfOption.create(
+      "giraph.checkerIfWorkerShouldFailAfterExceptionClass",
+      FailWithEveryException.class,
+      CheckerIfWorkerShouldFailAfterException.class,
+      "Class which checks if an exception on some thread should cause worker " +
+          "to fail, by default all exceptions cause failure");
   /** Name of metric for superstep time in msec */
   public static final String TIMER_SUPERSTEP_TIME = "superstep-time-ms";
   /** Name of metric for compute on all vertices in msec */
@@ -976,7 +988,9 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
    * @return new exception handler object.
    */
   public Thread.UncaughtExceptionHandler createUncaughtExceptionHandler() {
-    return new OverrideExceptionHandler();
+    return new OverrideExceptionHandler(
+        CHECKER_IF_WORKER_SHOULD_FAIL_AFTER_EXCEPTION_CLASS.newInstance(
+            getConf()));
   }
 
   public ImmutableClassesGiraphConfiguration<I, V, E> getConf() {
@@ -989,8 +1003,25 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
    * It will do the best to clean up and then will terminate current giraph job.
    */
   class OverrideExceptionHandler implements Thread.UncaughtExceptionHandler {
+    /** Checker if worker should fail after a thread gets an exception */
+    private final CheckerIfWorkerShouldFailAfterException checker;
+
+    /**
+     * Constructor
+     *
+     * @param checker Checker if worker should fail after a thread gets an
+     *                exception
+     */
+    public OverrideExceptionHandler(
+        CheckerIfWorkerShouldFailAfterException checker) {
+      this.checker = checker;
+    }
+
     @Override
     public void uncaughtException(final Thread t, final Throwable e) {
+      if (!checker.checkIfWorkerShouldFail(t, e)) {
+        return;
+      }
       try {
         LOG.fatal(
             "uncaughtException: OverrideExceptionHandler on thread " +
@@ -1001,6 +1032,31 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
       } finally {
         System.exit(1);
       }
+    }
+  }
+
+  /**
+   * Interface to check if worker should fail after a thread gets an exception
+   */
+  public interface CheckerIfWorkerShouldFailAfterException {
+    /**
+     * Check if worker should fail after a thread gets an exception
+     *
+     * @param thread Thread which raised the exception
+     * @param exception Exception which occurred
+     * @return True iff worker should fail after this exception
+     */
+    boolean checkIfWorkerShouldFail(Thread thread, Throwable exception);
+  }
+
+  /**
+   * Class to use by default, where each exception causes job failure
+   */
+  public static class FailWithEveryException
+      implements CheckerIfWorkerShouldFailAfterException {
+    @Override
+    public boolean checkIfWorkerShouldFail(Thread thread, Throwable exception) {
+      return true;
     }
   }
 }
