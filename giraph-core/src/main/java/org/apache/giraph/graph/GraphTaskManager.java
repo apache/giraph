@@ -100,7 +100,7 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
   public static final ClassConfOption<CheckerIfWorkerShouldFailAfterException>
   CHECKER_IF_WORKER_SHOULD_FAIL_AFTER_EXCEPTION_CLASS = ClassConfOption.create(
       "giraph.checkerIfWorkerShouldFailAfterExceptionClass",
-      FailWithEveryException.class,
+      FailWithEveryExceptionOccurred.class,
       CheckerIfWorkerShouldFailAfterException.class,
       "Class which checks if an exception on some thread should cause worker " +
           "to fail, by default all exceptions cause failure");
@@ -1052,7 +1052,7 @@ public class GraphTaskManager<I extends WritableComparable, V extends Writable,
   /**
    * Class to use by default, where each exception causes job failure
    */
-  public static class FailWithEveryException
+  public static class FailWithEveryExceptionOccurred
       implements CheckerIfWorkerShouldFailAfterException {
     @Override
     public boolean checkIfWorkerShouldFail(Thread thread, Throwable exception) {

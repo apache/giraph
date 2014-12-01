@@ -52,14 +52,12 @@ public class GraphMapper<I extends WritableComparable, V extends Writable,
     // Execute all Giraph-related role(s) assigned to this compute node.
     // Roles can include "master," "worker," "zookeeper," or . . . ?
     graphTaskManager = new GraphTaskManager<I, V, E>(context);
+    graphTaskManager.setup(
+      DistributedCache.getLocalCacheArchives(context.getConfiguration()));
 
     // Setting the default handler for uncaught exceptions.
     Thread.setDefaultUncaughtExceptionHandler(
         graphTaskManager.createUncaughtExceptionHandler());
-
-
-    graphTaskManager.setup(
-      DistributedCache.getLocalCacheArchives(context.getConfiguration()));
   }
 
   /**
